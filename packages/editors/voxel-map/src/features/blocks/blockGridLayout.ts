@@ -40,3 +40,29 @@ export function blockCellRect(
     size: cellSize - (margin * 2)
   };
 }
+
+export interface BlockScrollWindow {
+  scrollTop: number;
+  height: number;
+}
+
+export function revealCellScrollTop(
+  rect: BlockCellRect,
+  view: BlockScrollWindow
+): number | null {
+  const { scrollTop, height } = view;
+  if (height <= 0) {
+    return null;
+  }
+
+  if (rect.y < scrollTop) {
+    return rect.y;
+  }
+
+  const bottom = rect.y + rect.size;
+  if (bottom > scrollTop + height) {
+    return bottom - height;
+  }
+
+  return null;
+}

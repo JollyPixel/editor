@@ -19,6 +19,7 @@ import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { GridRenderer } from "../../scene/GridRenderer.ts";
+import type { LocalBrush } from "../painting/index.ts";
 import { parseVoxelWorld } from "./parseVoxelWorld.ts";
 import type { EventInput } from "../../shared/domEvents.ts";
 
@@ -48,10 +49,16 @@ export class MapConfigPanel extends LitElement {
   declare gridRenderer: GridRenderer | undefined;
 
   @property({ attribute: false })
+  declare localBrush: LocalBrush | undefined;
+
+  @property({ attribute: false })
   declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
 
   @state()
   private declare _gridVisible: boolean;
+
+  @state()
+  private declare _skyRadius: number;
 
   @query("#file-input")
   declare private _fileInput: HTMLInputElement;
@@ -60,6 +67,8 @@ export class MapConfigPanel extends LitElement {
     super();
     this.engine = undefined;
     this._gridVisible = true;
+    this._skyRadius = 0;
+    this.localBrush = undefined;
   }
 
   override willUpdate(
@@ -71,6 +80,12 @@ export class MapConfigPanel extends LitElement {
     ) {
       this._gridVisible = this.gridRenderer.visible;
     }
+    if (
+      changedProperties.has("localBrush") &&
+      this.localBrush
+    ) {
+      this._skyRadius = this.localBrush.skyRadius;
+    }
   }
 
   override render() {
@@ -81,6 +96,16 @@ export class MapConfigPanel extends LitElement {
         .value=${this._gridVisible}
         @jolly-change=${this.#onGridVisibleChange}
       ></jolly-checkbox>
+
+      <jolly-slider
+        label="Sky radius"
+        min="0"
+        max="32"
+        step="1"
+        .value=${this._skyRadius}
+        @jolly-input=${this.#onSkyRadiusChange}
+        @jolly-change=${this.#onSkyRadiusChange}
+      ></jolly-slider>
 
       <div class="actions">
         <jolly-button @click=${this.#onSave}>Save JSON</jolly-button>
@@ -95,6 +120,15 @@ export class MapConfigPanel extends LitElement {
   ): void {
     this._gridVisible = event.detail.value;
     this.gridRenderer?.setVisible(this._gridVisible);
+  }
+
+  #onSkyRadiusChange(
+    event: CustomEvent<JollyChangeDetail<number>>
+  ): void {
+    this._skyRadius = event.detail.value;
+    if (this.localBrush) {
+      this.localBrush.skyRadius = this._skyRadius;
+    }
   }
 
   #onSave(): void {

@@ -20,15 +20,66 @@ interface CellLike {
   z: number;
 }
 
+function createRamp(
+  cell: CellLike
+): THREE.Mesh {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute([
+      0, 0, 0, 0, 1, 1, 1, 1, 1,
+      0, 0, 0, 1, 1, 1, 1, 0, 0
+    ], 3)
+  );
+
+  const mesh = new THREE.Mesh(geometry);
+  mesh.position.set(cell.x, cell.y, cell.z);
+
+  return mesh;
+}
+
+function createScene(
+  place: (camera: THREE.PerspectiveCamera) => void
+): {
+  camera: THREE.PerspectiveCamera;
+  resolver: BrushAimResolver;
+  addBlock: (cell: CellLike) => void;
+} {
+  const solid = new THREE.Group();
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+  place(camera);
+  camera.updateMatrixWorld(true);
+
+  return {
+    camera,
+    resolver: new BrushAimResolver({
+      camera,
+      solid,
+      groundPlaneSize: 64,
+      maxDistance: 32
+    }),
+    addBlock(cell: CellLike): void {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+      mesh.position.set(cell.x + 0.5, cell.y + 0.5, cell.z + 0.5);
+      solid.add(mesh);
+      solid.updateMatrixWorld(true);
+    }
+  };
+}
+
 function createResolver(
   blocks: CellLike[],
-  place: (camera: THREE.PerspectiveCamera) => void
+  place: (camera: THREE.PerspectiveCamera) => void,
+  ramps: CellLike[] = []
 ): BrushAimResolver {
   const solid = new THREE.Group();
   for (const block of blocks) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.position.set(block.x + 0.5, block.y + 0.5, block.z + 0.5);
     solid.add(mesh);
+  }
+  for (const ramp of ramps) {
+    solid.add(createRamp(ramp));
   }
   solid.updateMatrixWorld(true);
 
@@ -60,7 +111,10 @@ describe("BrushAimResolver.aimAtHeight", () => {
 
     assert.deepStrictEqual(
       resolver.aimAtHeight(kPointer, 3, "place"),
-      { x: 0, y: 3, z: 0 }
+      {
+        cell: { x: 0, y: 3, z: 0 },
+        cursor: { x: 0, y: 3, z: 0 }
+      }
     );
   });
 
@@ -72,7 +126,10 @@ describe("BrushAimResolver.aimAtHeight", () => {
 
     assert.deepStrictEqual(
       resolver.aimAtHeight(kPointer, 4, "place"),
-      { x: 0, y: 4, z: 0 }
+      {
+        cell: { x: 0, y: 4, z: 0 },
+        cursor: { x: 0, y: 4, z: 0 }
+      }
     );
   });
 
@@ -84,7 +141,10 @@ describe("BrushAimResolver.aimAtHeight", () => {
 
     assert.deepStrictEqual(
       resolver.aimAtHeight(kPointer, 0, "place"),
-      { x: 0, y: 0, z: -1 }
+      {
+        cell: { x: 0, y: 0, z: -1 },
+        cursor: { x: 0, y: 0, z: 0 }
+      }
     );
   });
 
@@ -96,7 +156,23 @@ describe("BrushAimResolver.aimAtHeight", () => {
 
     assert.deepStrictEqual(
       resolver.aimAtHeight(kPointer, 0, "remove"),
-      { x: 0, y: 0, z: 0 }
+      {
+        cell: { x: 0, y: 0, z: 0 },
+        cursor: { x: 0, y: 0, z: 0 }
+      }
+    );
+  });
+
+  test("reads the cursor off the height row, not off the surface", () => {
+    const resolver = createResolver(
+      [{ x: 0, y: 0, z: 0 }],
+      aimingDownAtFace
+    );
+    const bare = createResolver([], aimingDownAtFace);
+
+    assert.deepStrictEqual(
+      resolver.aimAtHeight(kPointer, 0, "place")?.cursor,
+      bare.aimAtHeight(kPointer, 0, "place")?.cursor
     );
   });
 
@@ -116,5 +192,190 @@ describe("BrushAimResolver.aimAtHeight", () => {
     });
 
     assert.strictEqual(resolver.aimAtHeight(kPointer, 0, "place"), null);
+  });
+});
+
+describe("BrushAimResolver.resolve", () => {
+  test("places against the box face the ray enters", () => {
+    const resolver = createResolver([{ x: 0, y: 0, z: 0 }], (camera) => {
+      camera.position.set(0.5, 0.5, -4);
+      camera.lookAt(0.5, 0.5, 0);
+    });
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 0, z: -1 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("places in front of a ramp slope instead of above it", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(0.5, 0.5, -3);
+      camera.lookAt(0.5, 0.15, 0.15);
+    }, [{ x: 0, y: 0, z: 0 }]);
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 0, z: -1 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("places above a ramp slope aimed at from overhead", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(0.5, 4, 0.2);
+      camera.lookAt(0.5, 0.55, 0.55);
+    }, [{ x: 0, y: 0, z: 0 }]);
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 1, z: 0 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("places on the ground where the ray lands", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(2.5, 5, 2.5);
+      camera.lookAt(2.5, 0, 2.5);
+    });
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 2, y: 0, z: 2 },
+      remove: { x: 2, y: 0, z: 2 }
+    });
+  });
+});
+
+describe("BrushAimResolver aim hold", () => {
+  function lookStraightDown(
+    camera: THREE.PerspectiveCamera
+  ): void {
+    camera.position.set(0.5, 10, 0.5);
+    camera.lookAt(0.5, 0, 0.5);
+  }
+
+  test("holds the aim while the pointer and the camera stay still", () => {
+    const scene = createScene(lookStraightDown);
+    const before = scene.resolver.resolve(kPointer);
+
+    scene.addBlock({ x: 0, y: 0, z: 0 });
+
+    assert.deepStrictEqual(scene.resolver.resolve(kPointer), before);
+    assert.deepStrictEqual(before, {
+      place: { x: 0, y: 0, z: 0 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("aims again once the pointer moves", () => {
+    const scene = createScene(lookStraightDown);
+    scene.resolver.resolve(kPointer);
+    scene.addBlock({ x: 0, y: 0, z: 0 });
+
+    assert.deepStrictEqual(
+      scene.resolver.resolve(new THREE.Vector2(0.01, 0)),
+      {
+        place: { x: 0, y: 1, z: 0 },
+        remove: { x: 0, y: 0, z: 0 }
+      }
+    );
+  });
+
+  test("aims again once the camera moves", () => {
+    const scene = createScene(lookStraightDown);
+    scene.resolver.resolve(kPointer);
+    scene.addBlock({ x: 0, y: 0, z: 0 });
+    scene.camera.position.setY(9);
+    scene.camera.updateMatrixWorld(true);
+
+    assert.deepStrictEqual(scene.resolver.resolve(kPointer), {
+      place: { x: 0, y: 1, z: 0 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("aims again once the reach changed", () => {
+    const scene = createScene(lookStraightDown);
+    scene.resolver.resolve(kPointer);
+    scene.addBlock({ x: 0, y: 0, z: 0 });
+    scene.resolver.maxDistance = 20;
+
+    assert.deepStrictEqual(scene.resolver.resolve(kPointer), {
+      place: { x: 0, y: 1, z: 0 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+});
+
+describe("BrushAimResolver sky shell", () => {
+  function createSkyResolver(
+    skyRadius: number,
+    place: (camera: THREE.PerspectiveCamera) => void
+  ): BrushAimResolver {
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+    place(camera);
+    camera.updateMatrixWorld(true);
+
+    return new BrushAimResolver({
+      camera,
+      solid: new THREE.Group(),
+      groundPlaneSize: 64,
+      maxDistance: 32,
+      skyRadius
+    });
+  }
+
+  function lookUp(
+    camera: THREE.PerspectiveCamera
+  ): void {
+    camera.position.set(0.5, 4.5, 0.5);
+    camera.lookAt(0.5, 20, 0.5);
+  }
+
+  test("catches a ray the ground plane never meets", () => {
+    const resolver = createSkyResolver(10, lookUp);
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 14, z: 0 },
+      remove: { x: 0, y: 14, z: 0 }
+    });
+  });
+
+  test("leaves the sky alone while the shell is disabled", () => {
+    const resolver = createSkyResolver(0, lookUp);
+
+    assert.strictEqual(resolver.resolve(kPointer), null);
+  });
+
+  test("keeps the ground for a ray that reaches it", () => {
+    const resolver = createSkyResolver(10, (camera) => {
+      camera.position.set(0.5, 4, 0.5);
+      camera.lookAt(0.5, 0, 0.5);
+    });
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 0, z: 0 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("catches a ground hit that lies out of reach", () => {
+    const resolver = createSkyResolver(10, (camera) => {
+      camera.position.set(0.5, 40.5, 0.5);
+      camera.lookAt(0.5, 0, 0.5);
+    });
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 30, z: 0 },
+      remove: { x: 0, y: 30, z: 0 }
+    });
+  });
+
+  test("never reaches further than the brush", () => {
+    const resolver = createSkyResolver(50, lookUp);
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 36, z: 0 },
+      remove: { x: 0, y: 36, z: 0 }
+    });
   });
 });

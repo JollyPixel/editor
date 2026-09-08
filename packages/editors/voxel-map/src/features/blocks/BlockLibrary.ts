@@ -28,9 +28,9 @@ import {
 } from "./blockMarks.ts";
 
 // Registers the Three.js block grid.
-import "./BlockLibraryViewport.ts";
+import { BlockLibraryViewport } from "./BlockLibraryViewport.ts";
 
-export type BlockLibraryLayout = "compact" | "fill";
+export type BlockLibraryLayout = "compact";
 
 export interface BlockSelectionChangeDetail {
   block: ResolvedBlockDefinition | null;
@@ -57,16 +57,6 @@ export class BlockLibrary extends LitElement {
 
     :host([layout="compact"]) {
       min-height: 200px;
-    }
-
-    :host([layout="fill"]) {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
-    :host([layout="fill"]) block-library-viewport {
-      flex: 1 1 auto;
-      min-height: 0;
     }
 
     .brush-row {
@@ -125,6 +115,9 @@ export class BlockLibrary extends LitElement {
   @query("block-editor-dialog")
   declare private _dialog: BlockEditorDialog;
 
+  @query("block-library-viewport")
+  declare private _viewport: BlockLibraryViewport | null;
+
   #subscriptions: Array<() => void> = [];
 
   constructor() {
@@ -145,6 +138,7 @@ export class BlockLibrary extends LitElement {
 
   readonly #onSelectedBlockChange = () => {
     this.#resolveSelection();
+    void this.#revealSelection();
   };
 
   readonly #onBlockRegistryChanged = () => {
@@ -214,6 +208,7 @@ export class BlockLibrary extends LitElement {
           @jolly-change=${this.#onRotationChange}
         ></jolly-button-group>
         <jolly-checkbox
+          align="end"
           label="Flip Y"
           .value=${this._flipY}
           @jolly-change=${this.#onFlipYToggle}
@@ -269,6 +264,16 @@ export class BlockLibrary extends LitElement {
 
     await this.updateComplete;
     await this._dialog?.openForEdit();
+  }
+
+  async #revealSelection(): Promise<void> {
+    const id = this._selectedId;
+    if (id === null) {
+      return;
+    }
+
+    await this.updateComplete;
+    this._viewport?.revealBlock(id);
   }
 
   #refreshMarks(): void {

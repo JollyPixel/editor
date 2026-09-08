@@ -10,6 +10,7 @@ import type {
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 import {
   blockCellRect,
+  revealCellScrollTop,
   type BlockCellRect,
   type BlockGridLayout
 } from "./blockGridLayout.ts";
@@ -40,12 +41,6 @@ export class BlockLibraryViewport extends LitElement {
       --block-grid-inset: 5px;
     }
 
-    :host([layout="fill"]) {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-
     .scroller {
       position: relative;
       overflow-x: hidden;
@@ -57,11 +52,6 @@ export class BlockLibraryViewport extends LitElement {
       background: var(--jolly-well-bg, #0e1316);
       border-radius: var(--jolly-radius-sm, 3px);
       cursor: pointer;
-    }
-
-    :host([layout="fill"]) .scroller {
-      flex: 1 1 auto;
-      max-height: none;
     }
 
     .scroller > canvas {
@@ -157,6 +147,28 @@ export class BlockLibraryViewport extends LitElement {
     if (changed.has("blocks")) {
       this.#renderer?.setBlocks(this.blocks);
       this.#syncGrid();
+    }
+  }
+
+  revealBlock(
+    id: number
+  ): void {
+    const grid = this._grid;
+    const scroller = this._scroller;
+    const index = this.blocks.findIndex((block) => block.id === id);
+    if (grid === null || index < 0 || !scroller) {
+      return;
+    }
+
+    const scrollTop = revealCellScrollTop(
+      blockCellRect(index, grid),
+      {
+        scrollTop: scroller.scrollTop,
+        height: scroller.clientHeight
+      }
+    );
+    if (scrollTop !== null) {
+      scroller.scrollTop = scrollTop;
     }
   }
 

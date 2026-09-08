@@ -26,15 +26,16 @@ import {
 } from "./model/BrushStroke.ts";
 import {
   BrushAimResolver,
-  type BrushAim
+  type BrushAim,
+  type BrushHeightAim
 } from "./interaction/BrushAimResolver.ts";
 import { BrushPreview } from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
+import { pickBlockAt } from "./interaction/pickBlockAt.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
-const kDefaultStampInterval = 70;
-const kDefaultStampCells = 2;
+const kDefaultSkyRadius = 24;
 
 export interface LocalBrushOptions {
   engine: VoxelEngine;
@@ -52,19 +53,15 @@ export interface LocalBrushOptions {
    */
   maxDistance?: number;
   /**
+   * Camera-centred shell for aiming at empty sky, in world units; 0 disables
+   * it and leaves the ground plane as the only fallback.
+   * @default 24
+   */
+  skyRadius?: number;
+  /**
    * Cursor tint, usually the local peer's collaboration color.
    */
   color?: THREE.ColorRepresentation;
-  /**
-   * Minimum held-stroke delay in milliseconds; the first stamp is immediate.
-   * @default 70
-   */
-  stampInterval?: number;
-  /**
-   * Maximum travel per stamp, in cells; excess waits for later stamps.
-   * @default 2
-   */
-  stampCells?: number;
 }
 
 /**
@@ -87,9 +84,6 @@ export class LocalBrush extends ActorComponent {
   #stroke: BrushStroke | null = null;
   #frameAim: BrushAim | null | undefined;
   #frameCenter: VoxelCoord | null | undefined;
-  #stampInterval: number;
-  #stampCells: number;
-  #sinceStamp = 0;
 
   constructor(
     actor: Actor,
@@ -106,9 +100,8 @@ export class LocalBrush extends ActorComponent {
       selection = editorState.selection,
       groundPlaneSize = 4096,
       maxDistance = kDefaultMaxDistance,
-      color,
-      stampInterval = kDefaultStampInterval,
-      stampCells = kDefaultStampCells
+      skyRadius = kDefaultSkyRadius,
+      color
     } = options;
 
     this.engine = engine;
@@ -119,11 +112,9 @@ export class LocalBrush extends ActorComponent {
       camera,
       solid: engine.root,
       groundPlaneSize,
-      maxDistance
+      maxDistance,
+      skyRadius
     });
-    this.#stampInterval = stampInterval;
-    this.#stampCells = stampCells;
-
     this.#preview = new BrushPreview({
       actor,
       camera,
@@ -146,20 +137,19 @@ export class LocalBrush extends ActorComponent {
     this.#preview.markDirty();
   }
 
-  get stampInterval(): number {
-    return this.#stampInterval;
+  get skyRadius(): number {
+    return this.#aimer.skyRadius;
   }
 
-  set stampInterval(value: number) {
-    this.#stampInterval = Math.max(0, value);
-  }
+  set skyRadius(
+    value: number
+  ) {
+    if (value === this.#aimer.skyRadius) {
+      return;
+    }
 
-  get stampCells(): number {
-    return this.#stampCells;
-  }
-
-  set stampCells(value: number) {
-    this.#stampCells = Math.max(1, value);
+    this.#aimer.skyRadius = value;
+    this.#preview.markDirty();
   }
 
   override destroy(): void {
@@ -167,13 +157,9 @@ export class LocalBrush extends ActorComponent {
     super.destroy();
   }
 
-  update(
-    deltaTime = 0
-  ) {
+  update() {
     this.#frameAim = undefined;
     this.#frameCenter = undefined;
-    // The loop hands out seconds; the stamp interval reads in milliseconds.
-    this.#sinceStamp += deltaTime * 1000;
 
     const { input } = this.actor.world;
     const isCtrl = input.keyboard.isDown("ControlLeft") ||
@@ -192,6 +178,9 @@ export class LocalBrush extends ActorComponent {
 
     if (isCtrl) {
       this.#endStroke();
+      if (input.mouse.wasJustPressed("left")) {
+        this.#pickBlock();
+      }
       if (input.mouse.isDown("scrollUp")) {
         this.#brush.resize(1);
         this.#preview.markDirty();
@@ -237,21 +226,34 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
-    const center = this.#aimAtHeight(stroke);
-    if (center === null) {
+    const aim = this.#aimAtHeight(stroke);
+    if (aim === null) {
       return;
     }
 
+    const center = stroke.steer(aim.cell, aim.cursor);
     this.#frameCenter = center;
-    if (this.#sinceStamp < this.#stampInterval) {
-      return;
-    }
     if (!stroke.trails(center)) {
       return;
     }
 
-    this.#sinceStamp = 0;
-    this.#apply(stroke, stroke.advance(center, this.#stampCells));
+    this.#apply(stroke, stroke.advance(center));
+  }
+
+  #pickBlock(): void {
+    const center = this.#resolveAim()?.remove;
+    if (center === undefined) {
+      return;
+    }
+
+    const blockId = pickBlockAt(
+      this.engine,
+      center,
+      this.#brush.size
+    );
+    if (blockId !== null) {
+      this.#brush.blockId = blockId;
+    }
   }
 
   #beginStroke(
@@ -289,9 +291,12 @@ export class LocalBrush extends ActorComponent {
     });
 
     this.#stroke = stroke;
-    this.#frameCenter = center;
-    this.#sinceStamp = 0;
-    this.#apply(stroke, stroke.advance(center));
+    const target = stroke.steer(
+      center,
+      this.#aimAtHeight(stroke)?.cursor ?? center
+    );
+    this.#frameCenter = target;
+    this.#apply(stroke, stroke.advance(target));
   }
 
   #endStroke(): void {
@@ -327,7 +332,7 @@ export class LocalBrush extends ActorComponent {
 
   #aimAtHeight(
     stroke: BrushStroke
-  ): VoxelCoord | null {
+  ): BrushHeightAim | null {
     const { input } = this.actor.world;
 
     return this.#aimer.aimAtHeight(
@@ -357,9 +362,16 @@ export class LocalBrush extends ActorComponent {
     }
 
     const stroke = this.#stroke;
-    this.#frameCenter = stroke === null ?
-      this.#resolveAim()?.remove ?? null :
-      this.#aimAtHeight(stroke);
+    if (stroke === null) {
+      this.#frameCenter = this.#resolveAim()?.remove ?? null;
+
+      return this.#frameCenter;
+    }
+
+    const aim = this.#aimAtHeight(stroke);
+    this.#frameCenter = aim === null ?
+      null :
+      stroke.steer(aim.cell, aim.cursor);
 
     return this.#frameCenter;
   }
