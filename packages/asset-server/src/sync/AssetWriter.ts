@@ -15,7 +15,7 @@ import {
   isStatePath,
   normalizeAssetPath
 } from "../sources/paths.ts";
-import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
+import { AssetPathEscapeError } from "../sources/errors/AssetPathEscapeError.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import { CatalogIdentitySidecar } from "../catalog/CatalogIdentitySidecar.ts";
 import { contentHash } from "../utils/contentHash.ts";

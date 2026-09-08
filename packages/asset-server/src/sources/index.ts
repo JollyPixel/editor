@@ -1,4 +1,5 @@
 export type { AssetSource } from "./AssetSource.ts";
+export { AssetPathEscapeError } from "./errors/index.ts";
 export {
   DEFAULT_IGNORED_PATHS,
   FilesystemAssetSource,

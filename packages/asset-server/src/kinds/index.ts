@@ -4,6 +4,7 @@ export type {
   SnapshotPolicy
 } from "./AssetKindHandler.ts";
 export { AssetKindRegistry } from "./AssetKindRegistry.ts";
+export { UnknownAssetKindError } from "./errors/index.ts";
 export {
   binaryAssetHandler,
   BINARY_KIND
