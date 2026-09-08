@@ -31,6 +31,7 @@ import {
 } from "./interaction/BrushAimResolver.ts";
 import { BrushPreview } from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
+import { pickBlockAt } from "./interaction/pickBlockAt.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
@@ -177,6 +178,9 @@ export class LocalBrush extends ActorComponent {
 
     if (isCtrl) {
       this.#endStroke();
+      if (input.mouse.wasJustPressed("left")) {
+        this.#pickBlock();
+      }
       if (input.mouse.isDown("scrollUp")) {
         this.#brush.resize(1);
         this.#preview.markDirty();
@@ -234,6 +238,22 @@ export class LocalBrush extends ActorComponent {
     }
 
     this.#apply(stroke, stroke.advance(center));
+  }
+
+  #pickBlock(): void {
+    const center = this.#resolveAim()?.remove;
+    if (center === undefined) {
+      return;
+    }
+
+    const blockId = pickBlockAt(
+      this.engine,
+      center,
+      this.#brush.size
+    );
+    if (blockId !== null) {
+      this.#brush.blockId = blockId;
+    }
   }
 
   #beginStroke(

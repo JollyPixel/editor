@@ -28,7 +28,7 @@ import {
 } from "./blockMarks.ts";
 
 // Registers the Three.js block grid.
-import "./BlockLibraryViewport.ts";
+import { BlockLibraryViewport } from "./BlockLibraryViewport.ts";
 
 export type BlockLibraryLayout = "compact" | "fill";
 
@@ -125,6 +125,9 @@ export class BlockLibrary extends LitElement {
   @query("block-editor-dialog")
   declare private _dialog: BlockEditorDialog;
 
+  @query("block-library-viewport")
+  declare private _viewport: BlockLibraryViewport | null;
+
   #subscriptions: Array<() => void> = [];
 
   constructor() {
@@ -145,6 +148,7 @@ export class BlockLibrary extends LitElement {
 
   readonly #onSelectedBlockChange = () => {
     this.#resolveSelection();
+    void this.#revealSelection();
   };
 
   readonly #onBlockRegistryChanged = () => {
@@ -269,6 +273,16 @@ export class BlockLibrary extends LitElement {
 
     await this.updateComplete;
     await this._dialog?.openForEdit();
+  }
+
+  async #revealSelection(): Promise<void> {
+    const id = this._selectedId;
+    if (id === null) {
+      return;
+    }
+
+    await this.updateComplete;
+    this._viewport?.revealBlock(id);
   }
 
   #refreshMarks(): void {

@@ -99,6 +99,9 @@ export class TextureEditor extends LitElement {
       },
       uv: {
         deselectOnEmptyClick: false
+      },
+      history: {
+        enabled: true
       }
     });
     if (!this.isConnected) {

@@ -10,6 +10,7 @@ import type {
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 import {
   blockCellRect,
+  revealCellScrollTop,
   type BlockCellRect,
   type BlockGridLayout
 } from "./blockGridLayout.ts";
@@ -157,6 +158,28 @@ export class BlockLibraryViewport extends LitElement {
     if (changed.has("blocks")) {
       this.#renderer?.setBlocks(this.blocks);
       this.#syncGrid();
+    }
+  }
+
+  revealBlock(
+    id: number
+  ): void {
+    const grid = this._grid;
+    const scroller = this._scroller;
+    const index = this.blocks.findIndex((block) => block.id === id);
+    if (grid === null || index < 0 || !scroller) {
+      return;
+    }
+
+    const scrollTop = revealCellScrollTop(
+      blockCellRect(index, grid),
+      {
+        scrollTop: scroller.scrollTop,
+        height: scroller.clientHeight
+      }
+    );
+    if (scrollTop !== null) {
+      scroller.scrollTop = scrollTop;
     }
   }
 

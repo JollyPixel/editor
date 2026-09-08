@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   blockCellRect,
-  computeBlockGridLayout
+  computeBlockGridLayout,
+  revealCellScrollTop
 } from "../../../src/features/blocks/blockGridLayout.ts";
 
 describe("computeBlockGridLayout", () => {
@@ -82,5 +83,37 @@ describe("blockCellRect", () => {
 
     assert.equal(rect.size, 1);
     assert.equal(rect.x, 1.5);
+  });
+});
+
+describe("revealCellScrollTop", () => {
+  const rect = { x: 0, y: 128, size: 64 };
+
+  it("keeps a visible cell where it is", () => {
+    assert.equal(
+      revealCellScrollTop(rect, { scrollTop: 100, height: 200 }),
+      null
+    );
+  });
+
+  it("aligns a cell scrolled past the top", () => {
+    assert.equal(
+      revealCellScrollTop(rect, { scrollTop: 160, height: 200 }),
+      128
+    );
+  });
+
+  it("aligns a cell below the fold on its bottom edge", () => {
+    assert.equal(
+      revealCellScrollTop(rect, { scrollTop: 0, height: 100 }),
+      92
+    );
+  });
+
+  it("does nothing without a measured window", () => {
+    assert.equal(
+      revealCellScrollTop(rect, { scrollTop: 0, height: 0 }),
+      null
+    );
   });
 });
