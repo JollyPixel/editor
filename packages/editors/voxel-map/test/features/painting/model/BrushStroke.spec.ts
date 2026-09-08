@@ -48,24 +48,27 @@ describe("BrushStroke", () => {
     );
   });
 
-  test("walks no further than the limit, then resumes there", () => {
+  test("holds its goal until the cursor reaches another cell", () => {
     const stroke = createStroke();
 
-    stroke.advance({ x: 0, y: 0, z: 0 });
+    stroke.steer({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
 
     assert.deepStrictEqual(
-      stroke.advance({ x: 4, y: 0, z: 0 }, 2),
-      [
-        { x: 1, y: 0, z: 0 },
-        { x: 2, y: 0, z: 0 }
-      ]
+      stroke.steer({ x: 5, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }),
+      { x: 0, y: 0, z: 0 }
     );
     assert.deepStrictEqual(
-      stroke.advance({ x: 4, y: 0, z: 0 }, 2),
-      [
-        { x: 3, y: 0, z: 0 },
-        { x: 4, y: 0, z: 0 }
-      ]
+      stroke.steer({ x: 5, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }),
+      { x: 5, y: 0, z: 0 }
+    );
+  });
+
+  test("locks the goal it steers to on the stroke height", () => {
+    const stroke = createStroke();
+
+    assert.deepStrictEqual(
+      stroke.steer({ x: 2, y: 9, z: 3 }, { x: 2, y: 9, z: 3 }),
+      { x: 2, y: 0, z: 3 }
     );
   });
 

@@ -21,6 +21,11 @@ export interface BrushAim {
   remove: VoxelCoord;
 }
 
+export interface BrushHeightAim {
+  cell: VoxelCoord;
+  cursor: VoxelCoord;
+}
+
 export interface BrushAimResolverOptions {
   camera: THREE.PerspectiveCamera;
   solid: THREE.Object3D;
@@ -37,6 +42,9 @@ export class BrushAimResolver {
   #groundPlaneSize: number;
   #maxDistance: number;
   #raycaster = new THREE.Raycaster();
+  #aim: BrushAim | null = null;
+  #aimPointer = new THREE.Vector2(NaN, NaN);
+  #aimView = new THREE.Matrix4();
 
   constructor(
     options: BrushAimResolverOptions
@@ -55,9 +63,31 @@ export class BrushAimResolver {
     value: number
   ) {
     this.#maxDistance = value;
+    this.#aimPointer.set(NaN, NaN);
   }
 
   resolve(
+    pointer: THREE.Vector2
+  ): BrushAim | null {
+    if (this.#holdsAim(pointer)) {
+      return this.#aim;
+    }
+
+    this.#aimPointer.copy(pointer);
+    this.#aimView.copy(this.#camera.matrixWorld);
+    this.#aim = this.#castAim(pointer);
+
+    return this.#aim;
+  }
+
+  #holdsAim(
+    pointer: THREE.Vector2
+  ): boolean {
+    return this.#aimPointer.equals(pointer) &&
+      this.#aimView.equals(this.#camera.matrixWorld);
+  }
+
+  #castAim(
     pointer: THREE.Vector2
   ): BrushAim | null {
     const hit = castViewRay(this.#camera, this.#solid, {
@@ -105,7 +135,7 @@ export class BrushAimResolver {
     pointer: THREE.Vector2,
     height: number,
     mode: StrokeMode
-  ): VoxelCoord | null {
+  ): BrushHeightAim | null {
     this.#raycaster.setFromCamera(
       pointer,
       this.#camera
@@ -127,15 +157,23 @@ export class BrushAimResolver {
       return null;
     }
 
+    const row = voxelCellOf(point);
     const cell = this.#surfaceCellAt(
       distance,
       mode
-    ) ?? voxelCellOf(point);
+    ) ?? row;
 
     return {
-      x: cell.x,
-      y: height,
-      z: cell.z
+      cell: {
+        x: cell.x,
+        y: height,
+        z: cell.z
+      },
+      cursor: {
+        x: row.x,
+        y: height,
+        z: row.z
+      }
     };
   }
 

@@ -28,8 +28,6 @@ interface BrushHarnessOptions {
   maxDistance?: number;
   filled?: boolean;
   blocks?: CellLike[];
-  stampInterval?: number;
-  stampCells?: number;
 }
 
 interface CellLike {
@@ -46,6 +44,7 @@ interface BrushHarness {
   removed: VoxelEntryLike[];
   placed: VoxelEntryLike[];
   previewUpdates: number;
+  addBlock(cell: CellLike): void;
   press(action: MouseAction): void;
   settle(): void;
   release(): void;
@@ -69,9 +68,7 @@ function createHarness(
   const {
     maxDistance,
     filled = false,
-    blocks = [],
-    stampInterval,
-    stampCells
+    blocks = []
   } = options;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(60, 2, 0.1, 100);
@@ -96,12 +93,16 @@ function createHarness(
     }
   };
   const root = new THREE.Group();
-  for (const block of blocks) {
+  function addBlock(cell: CellLike): void {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    mesh.position.set(block.x + 0.5, block.y + 0.5, block.z + 0.5);
+    mesh.position.set(cell.x + 0.5, cell.y + 0.5, cell.z + 0.5);
     root.add(mesh);
+    root.updateMatrixWorld(true);
+    occupied.add(cellKey(cell));
   }
-  root.updateMatrixWorld(true);
+  for (const block of blocks) {
+    addBlock(block);
+  }
   const engine = {
     root,
     world: {
@@ -170,9 +171,7 @@ function createHarness(
     engine: engine as unknown as VoxelEngine,
     camera,
     groundPlaneSize: 10,
-    maxDistance,
-    stampInterval,
-    stampCells
+    maxDistance
   });
   kBrushes.push(brush);
 
@@ -180,6 +179,7 @@ function createHarness(
   brush.onCursorChange = (cursor) => cursors.push(cursor);
 
   return {
+    addBlock,
     brush,
     camera,
     operations,
@@ -216,6 +216,14 @@ function createHarness(
       hovering = value;
     }
   };
+}
+
+function sortCells(
+  cells: CellLike[]
+): CellLike[] {
+  return [...cells].sort(
+    (left, right) => cellKey(left).localeCompare(cellKey(right))
+  );
 }
 
 function cellKey(
@@ -291,9 +299,6 @@ describe("LocalBrush mesh synchronization", () => {
 describe("LocalBrush stroke", () => {
   afterEach(resetEditorState);
 
-  // Frame deltas are seconds; 0.1 is long enough to stamp again.
-  const kFrame = 0.1;
-
   test("keeps painting while the button stays down", () => {
     editorState.selection.selectVoxelLayer("Ground");
     const harness = createHarness();
@@ -302,7 +307,7 @@ describe("LocalBrush stroke", () => {
     harness.brush.update();
     harness.settle();
     harness.setPointer(0.3, 0);
-    harness.brush.update(kFrame);
+    harness.brush.update();
 
     assert.strictEqual(
       harness.operations.filter((operation) => operation !== "flush").length,
@@ -319,7 +324,7 @@ describe("LocalBrush stroke", () => {
     harness.settle();
     harness.setPointer(0.3, 0);
     for (let stamp = 0; stamp < 3; stamp++) {
-      harness.brush.update(kFrame);
+      harness.brush.update();
     }
 
     const positions = harness.placed.map(({ position }) => position);
@@ -339,60 +344,30 @@ describe("LocalBrush stroke", () => {
     }
   });
 
-  test("waits for the stamp interval before painting again", () => {
+  test("paints the whole run a fast pointer skipped in one stamp", () => {
     editorState.selection.selectVoxelLayer("Ground");
-    const harness = createHarness({ stampInterval: 70 });
+    const harness = createHarness();
 
     harness.press("left");
     harness.brush.update();
     harness.settle();
-    harness.setPointer(0.3, 0);
-    harness.brush.update(0.01);
-    harness.brush.update(0.01);
-
-    assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
-
-    harness.brush.update(0.07);
-
-    assert.strictEqual(harness.operations.length, 4);
-  });
-
-  test("travels no further than its cell budget per stamp", () => {
-    editorState.selection.selectVoxelLayer("Ground");
-    const harness = createHarness({ stampCells: 2 });
-
-    harness.press("left");
-    harness.brush.update();
-    harness.settle();
+    const first = harness.placed.at(-1)!.position;
     harness.setPointer(0.5, 0);
-    harness.brush.update(kFrame);
+    harness.brush.update();
+    const last = harness.placed.at(-1)!.position;
 
+    const steps = Math.max(
+      Math.abs(last.x - first.x),
+      Math.abs(last.z - first.z)
+    );
+    assert.ok(steps > 1, "the pointer skipped more than one cell");
+    assert.strictEqual(harness.placed.length, steps + 1);
     assert.deepStrictEqual(harness.operations, [
       "set:1",
       "flush",
-      "set:2",
+      `set:${steps}`,
       "flush"
     ]);
-  });
-
-  test("catches up with a pointer that stopped moving", () => {
-    editorState.selection.selectVoxelLayer("Ground");
-    const harness = createHarness({ stampCells: 1 });
-
-    harness.press("left");
-    harness.brush.update();
-    harness.settle();
-    harness.setPointer(0.3, 0);
-    harness.setMouseMoving(false);
-    const target = harness.placed.length;
-    for (let stamp = 0; stamp < 4; stamp++) {
-      harness.brush.update(kFrame);
-    }
-
-    assert.ok(
-      harness.placed.length > target,
-      "the stroke keeps walking toward the pointer it trails"
-    );
   });
 
   test("stamps a cell once per stroke", () => {
@@ -402,8 +377,8 @@ describe("LocalBrush stroke", () => {
     harness.press("left");
     harness.brush.update();
     harness.settle();
-    harness.brush.update(kFrame);
-    harness.brush.update(kFrame);
+    harness.brush.update();
+    harness.brush.update();
 
     assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
   });
@@ -417,7 +392,7 @@ describe("LocalBrush stroke", () => {
     harness.settle();
     harness.setPointer(0.3, 0.2);
     for (let stamp = 0; stamp < 3; stamp++) {
-      harness.brush.update(kFrame);
+      harness.brush.update();
     }
 
     assert.ok(
@@ -439,12 +414,87 @@ describe("LocalBrush stroke", () => {
     harness.brush.update();
     harness.settle();
     for (let stamp = 0; stamp < 3; stamp++) {
-      harness.brush.update(kFrame);
+      harness.brush.update();
     }
 
     assert.deepStrictEqual(
       harness.placed.map(({ position }) => position),
       [{ x: 0, y: 0, z: -1 }]
+    );
+  });
+
+  test("holds still while the pointer stays on its cell", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness({
+      blocks: [{ x: 0, y: 0, z: 0 }]
+    });
+    harness.camera.position.set(0.5, 1.2, -3);
+    harness.camera.lookAt(0.5, 0.4, 0);
+    harness.camera.updateMatrixWorld(true);
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    for (const { position } of harness.placed) {
+      harness.addBlock(position);
+    }
+    for (let stamp = 0; stamp < 3; stamp++) {
+      harness.brush.update();
+    }
+
+    assert.deepStrictEqual(
+      harness.placed.map(({ position }) => position),
+      [{ x: 0, y: 0, z: -1 }]
+    );
+  });
+
+  test("resumes once the pointer reaches another cell", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness({
+      blocks: [{ x: 0, y: 0, z: 0 }]
+    });
+    harness.camera.position.set(0.5, 1.2, -3);
+    harness.camera.lookAt(0.5, 0.4, 0);
+    harness.camera.updateMatrixWorld(true);
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    for (const { position } of harness.placed) {
+      harness.addBlock(position);
+    }
+    harness.brush.update();
+    harness.setPointer(0.5, 0);
+    harness.brush.update();
+
+    assert.ok(
+      harness.placed.length > 1,
+      "a moved pointer stamps again"
+    );
+  });
+
+  test("removes exactly the cells a still cursor placed", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.size = 2;
+    const harness = createHarness();
+    harness.camera.position.set(0.5, 6, -5.5);
+    harness.camera.lookAt(0.5, 0, 0.5);
+    harness.camera.updateMatrixWorld(true);
+
+    harness.press("left");
+    harness.brush.update();
+    harness.release();
+    harness.brush.update();
+    for (const { position } of harness.placed) {
+      harness.addBlock(position);
+    }
+
+    harness.press("right");
+    harness.brush.update();
+
+    assert.deepStrictEqual(
+      sortCells(harness.removed.map(({ position }) => position)),
+      sortCells(harness.placed.map(({ position }) => position))
     );
   });
 
@@ -456,7 +506,7 @@ describe("LocalBrush stroke", () => {
     harness.brush.update();
     harness.release();
     harness.setPointer(0.3, 0);
-    harness.brush.update(kFrame);
+    harness.brush.update();
 
     assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
   });
@@ -468,11 +518,11 @@ describe("LocalBrush stroke", () => {
     harness.press("left");
     harness.brush.update();
     harness.release();
-    harness.brush.update(kFrame);
+    harness.brush.update();
 
     harness.setButtonDown("left");
     harness.setPointer(0.3, 0);
-    harness.brush.update(kFrame);
+    harness.brush.update();
 
     assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
   });
@@ -485,11 +535,11 @@ describe("LocalBrush stroke", () => {
     harness.brush.update();
     harness.settle();
     harness.setButtonDown("middle");
-    harness.brush.update(kFrame);
+    harness.brush.update();
 
     harness.setButtonDown("left");
     harness.setPointer(0.3, 0);
-    harness.brush.update(kFrame);
+    harness.brush.update();
 
     assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
   });

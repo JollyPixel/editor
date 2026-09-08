@@ -36,6 +36,8 @@ export class BrushStroke {
 
   #stamped = new Set<string>();
   #last: VoxelCoord | null = null;
+  #cursor: VoxelCoord | null = null;
+  #target: VoxelCoord | null = null;
 
   constructor(
     options: BrushStrokeOptions
@@ -56,12 +58,20 @@ export class BrushStroke {
     };
   }
 
-  /**
-   * Walks toward `center` by at most `limit` cells, resuming on the next call.
-   */
-  advance(
+  steer(
     center: VoxelCoord,
-    limit = Number.POSITIVE_INFINITY
+    cursor: VoxelCoord
+  ): VoxelCoord {
+    if (this.#target === null || !sameCell(this.#cursor, cursor)) {
+      this.#cursor = cursor;
+      this.#target = this.lock(center);
+    }
+
+    return this.#target;
+  }
+
+  advance(
+    center: VoxelCoord
   ): VoxelCoord[] {
     const target = this.lock(center);
     const previous = this.#last;
@@ -72,7 +82,7 @@ export class BrushStroke {
       return [target];
     }
 
-    const cells = lineBetween(previous, target, limit);
+    const cells = lineBetween(previous, target);
     if (cells.length > 0) {
       this.#last = cells[cells.length - 1];
     }
@@ -83,18 +93,12 @@ export class BrushStroke {
   trails(
     center: VoxelCoord
   ): boolean {
-    const target = this.lock(center);
-
-    return this.#last !== null && (
-      this.#last.x !== target.x ||
-      this.#last.y !== target.y ||
-      this.#last.z !== target.z
+    return this.#last !== null && !sameCell(
+      this.#last,
+      this.lock(center)
     );
   }
 
-  /**
-   * Returns unstamped cells and records them as stamped.
-   */
   claim(
     cells: Iterable<VoxelCoord>
   ): VoxelCoord[] {
@@ -114,13 +118,19 @@ export class BrushStroke {
   }
 }
 
-/**
- * Cells joining `from` to `to`, `from` excluded and `to` included.
- */
+function sameCell(
+  left: VoxelCoord | null,
+  right: VoxelCoord
+): boolean {
+  return left !== null &&
+    left.x === right.x &&
+    left.y === right.y &&
+    left.z === right.z;
+}
+
 function lineBetween(
   from: VoxelCoord,
-  to: VoxelCoord,
-  limit: number
+  to: VoxelCoord
 ): VoxelCoord[] {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -134,9 +144,8 @@ function lineBetween(
     return [];
   }
 
-  const walked = Math.min(steps, Math.max(1, Math.floor(limit)));
   const cells: VoxelCoord[] = [];
-  for (let step = 1; step <= walked; step++) {
+  for (let step = 1; step <= steps; step++) {
     const ratio = step / steps;
     cells.push({
       x: from.x + Math.round(dx * ratio),
