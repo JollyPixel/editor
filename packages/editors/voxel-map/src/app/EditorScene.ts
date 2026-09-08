@@ -59,6 +59,7 @@ export interface EditorSceneOptions {
 export interface EditorSceneHandles {
   engine: VoxelEngine;
   gridRenderer: GridRenderer;
+  localBrush: LocalBrush;
 }
 
 export class EditorScene extends Systems.Scene {
@@ -79,6 +80,7 @@ export class EditorScene extends Systems.Scene {
 
   engine: VoxelEngine;
   gridRenderer: GridRenderer;
+  localBrush: LocalBrush;
 
   get ready(): Promise<EditorSceneHandles> {
     return this.#handles.promise;
@@ -240,6 +242,8 @@ export class EditorScene extends Systems.Scene {
         color: this.#identity?.color
       });
 
+    this.localBrush = brush;
+
     if (this.#voxelRoom) {
       const peerBrushes = world.createActor("peer-brushes")
         .addComponentAndGet(PeerBrushes, {
@@ -278,7 +282,8 @@ export class EditorScene extends Systems.Scene {
 
     this.#handles.resolve({
       engine,
-      gridRenderer: this.gridRenderer
+      gridRenderer: this.gridRenderer,
+      localBrush: this.localBrush
     });
   }
 

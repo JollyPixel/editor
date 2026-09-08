@@ -26,6 +26,7 @@ interface VoxelEntryLike {
 
 interface BrushHarnessOptions {
   maxDistance?: number;
+  skyRadius?: number;
   filled?: boolean;
   blocks?: CellLike[];
 }
@@ -67,6 +68,7 @@ function createHarness(
 ): BrushHarness {
   const {
     maxDistance,
+    skyRadius,
     filled = false,
     blocks = []
   } = options;
@@ -171,7 +173,8 @@ function createHarness(
     engine: engine as unknown as VoxelEngine,
     camera,
     groundPlaneSize: 10,
-    maxDistance
+    maxDistance,
+    skyRadius
   });
   kBrushes.push(brush);
 
@@ -703,7 +706,10 @@ describe("LocalBrush reach", () => {
   });
 
   test("aims at nothing past the reach", () => {
-    const harness = createHarness({ maxDistance: 5 });
+    const harness = createHarness({
+      maxDistance: 5,
+      skyRadius: 0
+    });
 
     harness.brush.update();
 
@@ -713,7 +719,10 @@ describe("LocalBrush reach", () => {
 
   test("places and removes nothing past the reach", () => {
     editorState.selection.selectVoxelLayer("Ground");
-    const harness = createHarness({ maxDistance: 5 });
+    const harness = createHarness({
+      maxDistance: 5,
+      skyRadius: 0
+    });
 
     harness.press("left");
     harness.brush.update();
@@ -735,7 +744,10 @@ describe("LocalBrush reach", () => {
   });
 
   test("aims again once the reach is widened", () => {
-    const harness = createHarness({ maxDistance: 5 });
+    const harness = createHarness({
+      maxDistance: 5,
+      skyRadius: 0
+    });
 
     harness.brush.update();
     harness.brush.maxDistance = 20;
@@ -746,5 +758,91 @@ describe("LocalBrush reach", () => {
       position: { x: 0, y: 0, z: 0 },
       size: 1
     });
+  });
+});
+
+describe("LocalBrush sky shell", () => {
+  afterEach(resetEditorState);
+
+  function aimAtTheSky(
+    harness: BrushHarness
+  ): void {
+    harness.camera.position.set(0.5, 4.5, 0.5);
+    harness.camera.lookAt(0.5, 20, 0.5);
+    harness.camera.updateMatrixWorld(true);
+  }
+
+  test("catches the sky on the radius it ships with", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness();
+    aimAtTheSky(harness);
+
+    assert.strictEqual(harness.brush.skyRadius, 24);
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(
+      harness.placed.map(({ position }) => position),
+      [{ x: 0, y: 28, z: 0 }]
+    );
+  });
+
+  test("places a cell on the shell when nothing is under the ray", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness({ skyRadius: 10 });
+    aimAtTheSky(harness);
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(
+      harness.placed.map(({ position }) => position),
+      [{ x: 0, y: 14, z: 0 }]
+    );
+  });
+
+  test("paints nothing in the sky while the shell is disabled", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness({ skyRadius: 0 });
+    aimAtTheSky(harness);
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, []);
+  });
+
+  test("drags a sky stroke along the height it started on", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness({ skyRadius: 10 });
+    aimAtTheSky(harness);
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setPointer(0.2, 0);
+    harness.brush.update();
+
+    assert.ok(harness.placed.length > 1, "the stroke kept painting");
+    assert.ok(
+      harness.placed.every(({ position }) => position.y === 14),
+      "every cell sits on the height the stroke started on"
+    );
+  });
+
+  test("follows the shell radius it is given", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness({ skyRadius: 10 });
+    aimAtTheSky(harness);
+    harness.brush.skyRadius = 6;
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(
+      harness.placed.map(({ position }) => position),
+      [{ x: 0, y: 10, z: 0 }]
+    );
   });
 });

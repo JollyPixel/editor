@@ -34,6 +34,7 @@ import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
+const kDefaultSkyRadius = 24;
 
 export interface LocalBrushOptions {
   engine: VoxelEngine;
@@ -50,6 +51,12 @@ export interface LocalBrushOptions {
    * @default 32
    */
   maxDistance?: number;
+  /**
+   * Camera-centred shell for aiming at empty sky, in world units; 0 disables
+   * it and leaves the ground plane as the only fallback.
+   * @default 24
+   */
+  skyRadius?: number;
   /**
    * Cursor tint, usually the local peer's collaboration color.
    */
@@ -92,6 +99,7 @@ export class LocalBrush extends ActorComponent {
       selection = editorState.selection,
       groundPlaneSize = 4096,
       maxDistance = kDefaultMaxDistance,
+      skyRadius = kDefaultSkyRadius,
       color
     } = options;
 
@@ -103,7 +111,8 @@ export class LocalBrush extends ActorComponent {
       camera,
       solid: engine.root,
       groundPlaneSize,
-      maxDistance
+      maxDistance,
+      skyRadius
     });
     this.#preview = new BrushPreview({
       actor,
@@ -124,6 +133,21 @@ export class LocalBrush extends ActorComponent {
     }
 
     this.#aimer.maxDistance = value;
+    this.#preview.markDirty();
+  }
+
+  get skyRadius(): number {
+    return this.#aimer.skyRadius;
+  }
+
+  set skyRadius(
+    value: number
+  ) {
+    if (value === this.#aimer.skyRadius) {
+      return;
+    }
+
+    this.#aimer.skyRadius = value;
     this.#preview.markDirty();
   }
 

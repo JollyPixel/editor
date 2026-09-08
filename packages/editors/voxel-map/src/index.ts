@@ -131,8 +131,13 @@ await loadRuntime(runtime, {
   maxFps: Infinity
 });
 
-const { engine, gridRenderer } = await editorScene.ready;
+const {
+  engine,
+  gridRenderer,
+  localBrush
+} = await editorScene.ready;
 if (sidebar) {
   sidebar.engine = engine;
   sidebar.gridRenderer = gridRenderer;
+  sidebar.localBrush = localBrush;
 }

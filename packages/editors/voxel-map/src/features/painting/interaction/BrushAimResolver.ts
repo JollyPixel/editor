@@ -15,6 +15,8 @@ import type { StrokeMode } from "../model/BrushStroke.ts";
 const kPlane = new THREE.Plane();
 const kPlanePoint = new THREE.Vector3();
 const kUp = new THREE.Vector3(0, 1, 0);
+const kSphere = new THREE.Sphere();
+const kSpherePoint = new THREE.Vector3();
 
 export interface BrushAim {
   place: VoxelCoord;
@@ -31,6 +33,7 @@ export interface BrushAimResolverOptions {
   solid: THREE.Object3D;
   groundPlaneSize: number;
   maxDistance: number;
+  skyRadius?: number;
 }
 
 /**
@@ -41,6 +44,7 @@ export class BrushAimResolver {
   #solid: THREE.Object3D;
   #groundPlaneSize: number;
   #maxDistance: number;
+  #skyRadius: number;
   #raycaster = new THREE.Raycaster();
   #aim: BrushAim | null = null;
   #aimPointer = new THREE.Vector2(NaN, NaN);
@@ -53,6 +57,7 @@ export class BrushAimResolver {
     this.#solid = options.solid;
     this.#groundPlaneSize = options.groundPlaneSize;
     this.#maxDistance = options.maxDistance;
+    this.#skyRadius = Math.max(0, options.skyRadius ?? 0);
   }
 
   get maxDistance(): number {
@@ -63,6 +68,17 @@ export class BrushAimResolver {
     value: number
   ) {
     this.#maxDistance = value;
+    this.#aimPointer.set(NaN, NaN);
+  }
+
+  get skyRadius(): number {
+    return this.#skyRadius;
+  }
+
+  set skyRadius(
+    value: number
+  ) {
+    this.#skyRadius = Math.max(0, value);
     this.#aimPointer.set(NaN, NaN);
   }
 
@@ -99,7 +115,7 @@ export class BrushAimResolver {
       hit === null ||
       hit.distance > this.#maxDistance
     ) {
-      return null;
+      return this.#skyAim();
     }
 
     if (hit.ground) {
@@ -127,6 +143,29 @@ export class BrushAimResolver {
         hit.point,
         hit.normal
       ),
+      remove: cell
+    };
+  }
+
+  #skyAim(): BrushAim | null {
+    const radius = Math.min(this.#skyRadius, this.#maxDistance);
+    if (radius <= 0) {
+      return null;
+    }
+
+    kSphere.set(this.#camera.position, radius);
+    const point = this.#raycaster.ray.intersectSphere(
+      kSphere,
+      kSpherePoint
+    );
+    if (point === null) {
+      return null;
+    }
+
+    const cell = voxelCellOf(point);
+
+    return {
+      place: cell,
       remove: cell
     };
   }

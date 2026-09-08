@@ -31,6 +31,7 @@ import type {
 } from "../features/blocks/BlockLibrary.ts";
 import type { LayerManager } from "../features/layers/LayerManager.ts";
 import type { GridRenderer } from "../scene/GridRenderer.ts";
+import type { LocalBrush } from "../features/painting/index.ts";
 import { ViewFocus } from "../scene/viewFocus.ts";
 
 import "../features/registerElements.ts";
@@ -109,6 +110,9 @@ export class EditorSidebar extends LitElement {
 
   @property({ attribute: false })
   declare gridRenderer: GridRenderer | undefined;
+
+  @property({ attribute: false })
+  declare localBrush: LocalBrush | undefined;
 
   @property({ attribute: false })
   declare textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
@@ -347,6 +351,7 @@ export class EditorSidebar extends LitElement {
         <map-config-panel
           .engine=${this.engine}
           .gridRenderer=${this.gridRenderer}
+          .localBrush=${this.localBrush}
           .onLoadWorld=${this.onLoadWorld}
           @world-loaded=${() => this.requestUpdate()}
         ></map-config-panel>
