@@ -194,6 +194,14 @@ describe("UVController — deselectOnEmptyClick: false", () => {
     assert.strictEqual(map.selectedRegionId, second.id);
     controller.handleStart({ x: 2, y: 2 });
 
+    assert.strictEqual(
+      map.selectedRegionId,
+      second.id,
+      "the miss kept the selection, so the cycle restarts on the painted region"
+    );
+
+    controller.handleStart({ x: 2, y: 2 });
+
     assert.strictEqual(map.selectedRegionId, first.id);
   });
 });
@@ -399,7 +407,7 @@ describe("UVController — cycling through an overlapping stack", () => {
     assert.strictEqual(map.selectedFace, "back");
   });
 
-  test("an external selection change resets the cycle", () => {
+  test("an external selection change restarts the cycle on the selected face", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.setState(region.id, "free");
@@ -415,8 +423,17 @@ describe("UVController — cycling through an overlapping stack", () => {
 
     assert.strictEqual(
       map.selectedFace,
-      "front",
-      "the cycle restarts at the top of the stack, not where it left off"
+      "top",
+      "the overlay paints the selected face last, so it is the one hit first"
+    );
+
+    controller.handleEnd();
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(
+      map.selectedFace,
+      "bottom",
+      "the cycle then advances from the selected face"
     );
   });
 
@@ -458,6 +475,68 @@ describe("UVController — cycling through an overlapping stack", () => {
       stored.rectFor("front"),
       { x: 0, y: 0, width: 8, height: 8 },
       "front must stay where it was"
+    );
+  });
+
+  test("a face dragged over another one stays selected on the next click", () => {
+    const { map, controller } = makeSetup();
+    const below = map.create({ id: "below", width: 8, height: 8 });
+    const above = map.create({ id: "above", width: 8, height: 8 });
+    map.showAll = true;
+    map.move(below.id, { x: 0, y: 0, width: 8, height: 8 });
+    map.move(above.id, { x: 16, y: 16, width: 8, height: 8 });
+
+    // Drag "above" until its top-left corner overlaps "below".
+    controller.handleStart({ x: 20, y: 20 });
+    controller.handleMove({ x: 8, y: 8 });
+    controller.handleEnd();
+
+    controller.handleStart({ x: 6, y: 6 });
+
+    assert.strictEqual(
+      map.selectedRegionId,
+      "above",
+      "the region painted on top wins the hit, not the one created first"
+    );
+
+    controller.handleEnd();
+    controller.handleStart({ x: 6, y: 6 });
+
+    assert.strictEqual(
+      map.selectedRegionId,
+      "above",
+      "repeat clicks must not cycle down into a region that only overlaps"
+    );
+  });
+
+  test("a partly overlapped region is unreachable under the one on top", () => {
+    const { map, controller } = makeSetup();
+    map.restore({
+      id: "below",
+      color: "#f00",
+      state: "stacked",
+      rect: { x: 0, y: 0, width: 8, height: 8 }
+    });
+    map.restore({
+      id: "above",
+      color: "#0f0",
+      state: "stacked",
+      rect: { x: 4, y: 4, width: 8, height: 8 }
+    });
+    map.showAll = true;
+
+    for (let index = 0; index < 4; index++) {
+      controller.handleStart({ x: 6, y: 6 });
+      controller.handleEnd();
+      assert.strictEqual(map.selectedRegionId, "above");
+    }
+
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(
+      map.selectedRegionId,
+      "below",
+      "the uncovered part of the region below stays selectable"
     );
   });
 

@@ -5,6 +5,7 @@ import { contrastingColor } from "@jolly-pixel/color";
 import { SVG_NS } from "../constants.ts";
 import {
   geometryAt,
+  geometryKey,
   rectOf,
   triangleCornerOf
 } from "../../uv/geometry.ts";
@@ -58,23 +59,6 @@ function entryKey(
   face: UVSlot | null
 ): string {
   return `${id}:${face ?? "*"}`;
-}
-
-function geometryKey(
-  geometry: UVGeometry
-): string {
-  const rect = rectOf(geometry);
-  const { x, y, width, height } = rect;
-
-  if (!("shape" in geometry)) {
-    return `${x},${y},${width},${height}`;
-  }
-
-  const shape = geometry.shape === "compound" ?
-    `compound:${JSON.stringify(geometry.parts)}` :
-    `triangle:${geometry.corner}`;
-
-  return `${shape}:${x},${y},${width},${height}`;
 }
 
 function faceLabel(

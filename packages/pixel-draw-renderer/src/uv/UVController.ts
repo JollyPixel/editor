@@ -3,6 +3,7 @@ import {
   clampRectPosition
 } from "../utils/math.ts";
 import {
+  geometryKey,
   pointInGeometry,
   rectOf
 } from "./geometry.ts";
@@ -59,6 +60,38 @@ function stackKey(
     .join("|");
 }
 
+function topIndex(
+  candidates: HitCandidate[],
+  selectedRegionId: string | null,
+  selectedFace: UVSlot | null
+): number {
+  if (selectedRegionId === null) {
+    return candidates.length - 1;
+  }
+
+  const painted = candidates.findIndex(
+    ({ region, face }) => region.id === selectedRegionId &&
+      (selectedFace === null || face === selectedFace)
+  );
+
+  return painted === -1 ? candidates.length - 1 : painted;
+}
+
+function topStack(
+  candidates: HitCandidate[],
+  selectedRegionId: string | null,
+  selectedFace: UVSlot | null
+): HitCandidate[] {
+  const top = candidates[
+    topIndex(candidates, selectedRegionId, selectedFace)
+  ];
+  const key = geometryKey(top.geometry);
+
+  return candidates.filter(
+    (candidate) => geometryKey(candidate.geometry) === key
+  );
+}
+
 /**
  * Advances repeat clicks through overlapping UV regions.
  */
@@ -84,8 +117,8 @@ export class UVController {
   handleStart(
     pos: Vec2
   ): void {
-    const candidates = this.#hitStack(pos);
-    if (candidates.length === 0) {
+    const hits = this.#hitStack(pos);
+    if (hits.length === 0) {
       this.#pick = null;
       if (this.#deselectOnEmptyClick) {
         this.#uvMap.select(null);
@@ -94,10 +127,19 @@ export class UVController {
       return;
     }
 
+    const selectedRegionId = this.#uvMap.selectedRegionId;
+    const selectedFace = this.#uvMap.selectedFace;
+    const candidates = topStack(hits, selectedRegionId, selectedFace);
     const key = stackKey(candidates);
     const index = this.#shouldAdvance(key) ?
       (this.#pick!.index + 1) % candidates.length :
-      0;
+      Math.max(
+        candidates.findIndex(
+          ({ region, face }) => region.id === selectedRegionId &&
+            (selectedFace === null || face === selectedFace)
+        ),
+        0
+      );
     const { region, face, geometry } = candidates[index];
     const grouped = region.state === "unfolded";
     const rect = grouped ? region.bounds : rectOf(geometry);

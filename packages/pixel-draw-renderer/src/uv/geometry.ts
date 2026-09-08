@@ -43,6 +43,22 @@ export function geometryAt(
     .toJSON();
 }
 
+export function geometryKey(
+  geometry: UVGeometry
+): string {
+  const { x, y, width, height } = rectOf(geometry);
+
+  if (!("shape" in geometry)) {
+    return `${x},${y},${width},${height}`;
+  }
+
+  const shape = geometry.shape === "compound" ?
+    `compound:${JSON.stringify(geometry.parts)}` :
+    `triangle:${geometry.corner}`;
+
+  return `${shape}:${x},${y},${width},${height}`;
+}
+
 export function pointInGeometry(
   pos: Vec2,
   geometry: UVGeometry

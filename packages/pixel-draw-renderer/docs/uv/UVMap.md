@@ -171,7 +171,7 @@ Unfolding repacks from any state, so a free region's hand-placed faces are lost.
 select(id: string | null, face?: UVSlot): void
 ```
 
-Selects a region or clears selection with `null`. For a free region, an omitted or inactive face falls back to the first active face; every other state ignores `face`. Repeated clicks on coincident faces cycle through them in `UV_FACES` order; a click outside every region restarts that cycle whether or not it clears the selection.
+Selects a region or clears selection with `null`. For a free region, an omitted or inactive face falls back to the first active face; every other state ignores `face`. A click picks the face the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in `UV_FACES` order through the faces *exactly coincident* with it — a face that merely overlaps sits below and is never reachable there, only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
 
 ### `restore(region)` / `restoreState(region)`
 
