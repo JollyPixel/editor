@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   type UVSlot
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -38,7 +38,7 @@ export function createCubeShape(
 }
 
 function createFaceLabels(): THREE.Object3D[] {
-  return UV_FACES.map((face) => {
+  return DEFAULT_UV_SLOTS.map((face) => {
     const label = createFaceLabel(face);
     const faceObject = new THREE.Object3D();
     const halfSize = PREVIEW_SHAPE_SIZE / 2;

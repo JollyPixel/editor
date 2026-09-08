@@ -68,6 +68,14 @@ A consumer-defined texture mapping identifier such as `front`, `top`, or `top.1`
 
 The collection of UV regions and its current region and slot selection.
 
+### UV Target
+
+The part of a UV map addressed by an interaction or change. A target identifies a region and may identify one slot within it.
+
+### UV Movement Scope
+
+Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions have region scope; free regions have slot scope.
+
 ### History Entry
 
 The reversible record of one local edit, used by undo and redo.

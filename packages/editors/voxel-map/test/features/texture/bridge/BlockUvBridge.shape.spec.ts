@@ -119,11 +119,11 @@ describe("BlockUvBridge / shape footprint", () => {
           continue;
         }
 
-        for (const { face } of region.facesOf()) {
-          if (face === null) {
+        for (const { slot } of region.slotsOf()) {
+          if (slot === null) {
             continue;
           }
-          uv.move("block-1", region.rectFor(face), face);
+          uv.move("block-1", region.rectFor(slot), slot);
         }
 
         const updated = engine.blockRegistry.get(1)!;
@@ -206,13 +206,13 @@ describe("BlockUvBridge / shape footprint", () => {
       try {
         bridge.setActiveTileset("atlas", 16);
         uv.setState("block-1", "free");
-        const before = uv.get("block-1")!.facesOf();
+        const before = uv.get("block-1")!.slotsOf();
 
         uv.setState("block-1", "stacked");
         uv.setState("block-1", "free");
 
         assert.deepEqual(
-          uv.get("block-1")!.facesOf(),
+          uv.get("block-1")!.slotsOf(),
           before,
           `${shapeId} lost face geometry`
         );
@@ -233,14 +233,14 @@ describe("BlockUvBridge / shape footprint", () => {
       try {
         bridge.setActiveTileset("atlas", 16);
         uv.setState("block-1", "free");
-        const before = uv.get("block-1")!.facesOf();
+        const before = uv.get("block-1")!.slotsOf();
 
         uv.setState("block-1", "stacked");
         uv.restore(uv.get("block-1")!.toJSON());
         uv.setState("block-1", "free");
 
         assert.deepEqual(
-          uv.get("block-1")!.facesOf(),
+          uv.get("block-1")!.slotsOf(),
           before,
           `${shapeId} lost face geometry through serialization`
         );

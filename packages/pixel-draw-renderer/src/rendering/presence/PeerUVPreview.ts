@@ -23,17 +23,12 @@ export interface PeerUVPreviewState {
   color: string;
 }
 
-interface PeerBorder {
-  border: UVRegionBorder;
-  isTriangle: boolean;
-}
-
 /**
  * Renders non-authoritative peer UV drag borders.
  */
 export class PeerUVPreview extends PeerRegistry<
   PeerUVPreviewState,
-  PeerBorder
+  UVRegionBorder
 > {
   #svg: SVGElement;
   #viewport: DefaultViewport;
@@ -93,22 +88,11 @@ export class PeerUVPreview extends PeerRegistry<
     clientId: string,
     state: PeerUVPreviewState
   ): void {
-    const isTriangle = "shape" in state.geometry;
-    const existing = this.view(clientId);
-    if (
-      existing &&
-      existing.isTriangle !== isTriangle
-    ) {
-      existing.border.remove();
-      this.clearView(clientId);
-    }
-
     const border = this.view(
       clientId
-    )?.border ?? this.#createBorder(
+    ) ?? this.#createBorder(
       clientId,
-      state.geometry,
-      isTriangle
+      state.geometry
     );
     const style: UVRegionBorderStyle = {
       color: state.color,
@@ -129,23 +113,19 @@ export class PeerUVPreview extends PeerRegistry<
   }
 
   protected disposeView(
-    view: PeerBorder
+    view: UVRegionBorder
   ): void {
-    view.border.remove();
+    view.remove();
   }
 
   #createBorder(
     clientId: string,
-    geometry: UVGeometry,
-    isTriangle: boolean
+    geometry: UVGeometry
   ): UVRegionBorder {
     const border = new UVRegionBorder(
       geometry
     );
-    this.setView(clientId, {
-      border,
-      isTriangle
-    });
+    this.setView(clientId, border);
 
     return border;
   }

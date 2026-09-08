@@ -8,7 +8,7 @@ import {
   Face,
   type BlockShape
 } from "@jolly-pixel/voxel.renderer";
-import { UV_FACES } from "@jolly-pixel/pixel-draw.renderer";
+import { DEFAULT_UV_SLOTS } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
@@ -32,7 +32,7 @@ describe("blockShapeUv", () => {
     const topology = blockShapeUv(shapeOf("cube"));
 
     assert.equal(topology.isBox, true);
-    assert.deepEqual(topology.activeFaces, [...UV_FACES]);
+    assert.deepEqual(topology.activeFaces, [...DEFAULT_UV_SLOTS]);
     assert.deepEqual(topology.triangles, {});
   });
 
@@ -81,7 +81,7 @@ describe("blockShapeUv", () => {
   it("gives a cube face the whole tile", () => {
     const topology = blockShapeUv(shapeOf("cube"));
 
-    for (const face of UV_FACES) {
+    for (const face of DEFAULT_UV_SLOTS) {
       assert.deepEqual(
         topology.bounds[face],
         { u0: 0, v0: 0, u1: 1, v1: 1 },

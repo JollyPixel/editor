@@ -37,8 +37,8 @@ interface UVRegionCreateOptions {
   width: number;
   height: number;
   name?: string;
-  activeFaces?: readonly UVSlot[];
-  faceGeometries?: Partial<Record<UVSlot, UVSlotGeometryTemplate>>;
+  activeSlots?: readonly UVSlot[];
+  slotGeometries?: Partial<Record<UVSlot, UVSlotGeometryTemplate>>;
   state?: UVRegionState;
   id?: string;
   color?: string;
@@ -47,22 +47,24 @@ interface UVRegionCreateOptions {
 
 `width` and `height` are clamped to the canvas. The default `id` comes from `crypto.randomUUID()` and the default color comes from the built-in palette.
 
-A region with `activeFaces` or `faceGeometries` starts free. Other regions start stacked. Pass `state` to override that default; `"unfolded"` packs the net at creation and clamps it into the canvas.
+A region with `activeSlots` or `slotGeometries` starts free. Other regions start stacked. Pass `state` to override that default; `"unfolded"` packs the net at creation and clamps it into the canvas.
 
 ## Events
 
 | Type | Payload |
 |---|---|
+| `"changed"` | none |
 | `"region-created"` | `region` |
 | `"region-deleted"` | `region` |
 | `"region-moved"` | `region`, `face`, `previousRect` |
 | `"region-dragging"` | `id`, `face`, `rect`, `geometry` |
+| `"region-drag-ended"` | `id`, `committed` |
 | `"region-state-changed"` | `region`, `previous` |
-| `"selection-changed"` | `selectedRegionId`, `selectedFace` |
+| `"selection-changed"` | `selectedRegionId`, `selectedSlot` |
 | `"visibility-changed"` | `showAll` |
 | `"label-visibility-changed"` | `showRegionLabels` |
 
-`face` is `null` for anything but a free region, since stacked and unfolded regions move whole. `"region-dragging"` is a preview event; it does not mutate the map.
+`face` is `null` for anything but a free region, since stacked and unfolded regions move whole. `"region-dragging"` is a preview event; it does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
 
 ## Properties
 
@@ -74,14 +76,14 @@ get regions(): IterableIterator<UVRegion>
 
 Live view in insertion order. `UVMap` is also iterable. Spread either value to take a snapshot.
 
-### `selectedRegionId` / `selectedFace`
+### `selectedRegionId` / `selectedSlot`
 
 ```ts
 get selectedRegionId(): string | null
-get selectedFace(): UVSlot | null
+get selectedSlot(): UVSlot | null
 ```
 
-The current selection. Only a free region carries a selected face; it takes the requested active face or falls back to its first one in `UV_FACES` order. Stacked and unfolded regions leave `selectedFace` as `null`, so clicking one cell of a net selects the region rather than that cell.
+The current selection. Only a free region carries a selected slot; it takes the requested active slot or falls back to the first active slot in the region's declared order. Stacked and unfolded regions leave the selected slot as `null`, so clicking one cell of a net selects the region rather than that cell.
 
 ### `showAll`
 
@@ -135,26 +137,26 @@ delete(id: string): boolean
 
 Removes a region and emits `"region-deleted"`. Deleting the selected region also clears selection and emits `"selection-changed"`. Returns `false` for an unknown id.
 
-### `move(id, rect, face?)`
+### `move(id, rect, slot?)`
 
 ```ts
-move(id: string, rect: SelectionRect, face?: UVSlot): boolean
+move(id: string, rect: SelectionRect, slot?: UVSlot): boolean
 ```
 
-Moves one face of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `face` is ignored. The rectangle is clamped to the canvas. Returns `false` when the id is unknown or a free region has no `face`.
+Moves one slot of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `slot` is ignored. The rectangle is clamped to the canvas. Returns `false` when the id is unknown or a free region has no `slot`.
 
-### `previewMove(id, rect, face?)`
+### `previewMove(id, rect, slot?)`
 
 ```ts
-previewMove(id: string, rect: SelectionRect, face?: UVSlot): void
+previewMove(id: string, rect: SelectionRect, slot?: UVSlot): void
 ```
 
 Emits `"region-dragging"` with clamped preview geometry. The stored region, history and network state remain unchanged.
 
-### `setState(id, state, face?)`
+### `setState(id, state, slot?)`
 
 ```ts
-setState(id: string, state: UVRegionState, face?: UVSlot): boolean
+setState(id: string, state: UVRegionState, slot?: UVSlot): boolean
 ```
 
 Moves a region to one of the three states, emitting `"region-state-changed"` with the previous region as serialized data. Returns `false` for an unknown id or a transition that changes nothing.
@@ -165,13 +167,13 @@ Moves a region to one of the three states, emitting `"region-state-changed"` wit
 
 Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because `uv-state` history entries carry the whole previous region.
 
-### `select(id, face?)`
+### `select(id, slot?)`
 
 ```ts
-select(id: string | null, face?: UVSlot): void
+select(id: string | null, slot?: UVSlot): void
 ```
 
-Selects a region or clears selection with `null`. For a free region, an omitted or inactive face falls back to the first active face; every other state ignores `face`. Repeated clicks on coincident faces cycle through them in `UV_FACES` order; a click outside every region restarts that cycle whether or not it clears the selection.
+Selects a region or clears selection with `null`. For a free region, an omitted or inactive slot falls back to the first active slot; every other state ignores `slot`. A click picks the slot the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in region order through the slots that are exactly coincident with it. A slot that merely overlaps sits below and is reachable only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
 
 ### `restore(region)` / `restoreState(region)`
 

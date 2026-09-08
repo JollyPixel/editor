@@ -62,7 +62,7 @@ export class UvToolbarController implements ReactiveController {
   #statePopup: PopoverController;
 
   #selectedRegionId: string | null = null;
-  #selectedFace: UVSlot | null = null;
+  #selectedSlot: UVSlot | null = null;
   #selectedState: UVRegionState | null = null;
   #showAll = false;
   #showRegionLabels = false;
@@ -101,8 +101,8 @@ export class UvToolbarController implements ReactiveController {
     return this.#selectedRegionId;
   }
 
-  get selectedFace(): UVSlot | null {
-    return this.#selectedFace;
+  get selectedSlot(): UVSlot | null {
+    return this.#selectedSlot;
   }
 
   attach(
@@ -148,8 +148,8 @@ export class UvToolbarController implements ReactiveController {
       name: `ramp-${++this.#uvNextId}`,
       ...kUvCreateSize,
       state: "stacked",
-      activeFaces: ["back", "left", "right", "top", "bottom"],
-      faceGeometries: {
+      activeSlots: ["back", "left", "right", "top", "bottom"],
+      slotGeometries: {
         left: {
           shape: "triangle",
           corner: "bottom-right"
@@ -191,7 +191,7 @@ export class UvToolbarController implements ReactiveController {
     this.#canvas?.uv.setState(
       this.#selectedRegionId,
       state,
-      state === "stacked" ? this.#selectedFace ?? undefined : undefined
+      state === "stacked" ? this.#selectedSlot ?? undefined : undefined
     );
   }
 
@@ -332,7 +332,7 @@ export class UvToolbarController implements ReactiveController {
   #sync(): void {
     const uv = this.#canvas?.uv;
     this.#selectedRegionId = uv?.selectedRegionId ?? null;
-    this.#selectedFace = uv?.selectedFace ?? null;
+    this.#selectedSlot = uv?.selectedSlot ?? null;
     this.#selectedState = this.#selectedRegionId ?
       uv?.get(this.#selectedRegionId)?.state ?? null :
       null;

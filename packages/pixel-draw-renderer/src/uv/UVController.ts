@@ -3,9 +3,11 @@ import {
   clampRectPosition
 } from "../utils/math.ts";
 import {
+  geometryKey,
   pointInGeometry,
   rectOf
 } from "./geometry.ts";
+import { uvTargetKey } from "./UVTarget.ts";
 import type { UVMap } from "./UVMap.ts";
 import type {
   UVSlot,
@@ -54,9 +56,44 @@ interface PickState {
 function stackKey(
   candidates: HitCandidate[]
 ): string {
-  return candidates
-    .map((candidate) => `${candidate.region.id}:${candidate.face ?? "*"}`)
-    .join("|");
+  return JSON.stringify(
+    candidates.map((candidate) => uvTargetKey({
+      regionId: candidate.region.id,
+      slot: candidate.face
+    }))
+  );
+}
+
+function topIndex(
+  candidates: HitCandidate[],
+  selectedRegionId: string | null,
+  selectedSlot: UVSlot | null
+): number {
+  if (selectedRegionId === null) {
+    return candidates.length - 1;
+  }
+
+  const painted = candidates.findIndex(
+    ({ region, face }) => region.id === selectedRegionId &&
+      (selectedSlot === null || face === selectedSlot)
+  );
+
+  return painted === -1 ? candidates.length - 1 : painted;
+}
+
+function topStack(
+  candidates: HitCandidate[],
+  selectedRegionId: string | null,
+  selectedSlot: UVSlot | null
+): HitCandidate[] {
+  const top = candidates[
+    topIndex(candidates, selectedRegionId, selectedSlot)
+  ];
+  const key = geometryKey(top.geometry);
+
+  return candidates.filter(
+    (candidate) => geometryKey(candidate.geometry) === key
+  );
 }
 
 /**
@@ -84,8 +121,8 @@ export class UVController {
   handleStart(
     pos: Vec2
   ): void {
-    const candidates = this.#hitStack(pos);
-    if (candidates.length === 0) {
+    const hits = this.#hitStack(pos);
+    if (hits.length === 0) {
       this.#pick = null;
       if (this.#deselectOnEmptyClick) {
         this.#uvMap.select(null);
@@ -94,12 +131,21 @@ export class UVController {
       return;
     }
 
+    const selectedRegionId = this.#uvMap.selectedRegionId;
+    const selectedSlot = this.#uvMap.selectedSlot;
+    const candidates = topStack(hits, selectedRegionId, selectedSlot);
     const key = stackKey(candidates);
     const index = this.#shouldAdvance(key) ?
       (this.#pick!.index + 1) % candidates.length :
-      0;
+      Math.max(
+        candidates.findIndex(
+          ({ region, face }) => region.id === selectedRegionId &&
+            (selectedSlot === null || face === selectedSlot)
+        ),
+        0
+      );
     const { region, face, geometry } = candidates[index];
-    const grouped = region.state === "unfolded";
+    const grouped = region.movementScope === "region";
     const rect = grouped ? region.bounds : rectOf(geometry);
 
     this.#uvMap.select(region.id, face ?? undefined);
@@ -107,7 +153,7 @@ export class UVController {
       key,
       index,
       regionId: this.#uvMap.selectedRegionId!,
-      face: this.#uvMap.selectedFace
+      face: this.#uvMap.selectedSlot
     };
     this.#drag = {
       id: region.id,
@@ -157,11 +203,12 @@ export class UVController {
     const { id, face, baseRect, liveRect } = this.#drag;
     this.#drag = null;
 
+    let committed = false;
     if (
       liveRect.x !== baseRect.x ||
       liveRect.y !== baseRect.y
     ) {
-      this.#uvMap.move(
+      committed = this.#uvMap.move(
         id,
         liveRect,
         face ?? undefined
@@ -172,6 +219,10 @@ export class UVController {
       face,
       null
     );
+    this.#uvMap.emit("region-drag-ended", {
+      id,
+      committed
+    });
   }
 
   cancelDrag(): void {
@@ -190,6 +241,10 @@ export class UVController {
       this.#drag.baseRect,
       this.#drag.face ?? undefined
     );
+    this.#uvMap.emit("region-drag-ended", {
+      id: this.#drag.id,
+      committed: false
+    });
     this.#drag = null;
   }
 
@@ -215,7 +270,7 @@ export class UVController {
     }
 
     return this.#uvMap.selectedRegionId === this.#pick.regionId &&
-      this.#uvMap.selectedFace === this.#pick.face;
+      this.#uvMap.selectedSlot === this.#pick.face;
   }
 
   #hitStack(
@@ -231,7 +286,7 @@ export class UVController {
         continue;
       }
 
-      for (const { face, geometry } of region.facesOf()) {
+      for (const { slot: face, geometry } of region.slotsOf()) {
         if (pointInGeometry(pos, geometry)) {
           candidates.push({
             region,

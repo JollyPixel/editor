@@ -167,8 +167,8 @@ export class UVGeometryBinding {
   }
 
   #applyRegion(): void {
-    for (const { face, geometry } of this.#region.facesOf()) {
-      this.applyFace(face, geometry);
+    for (const { slot, geometry } of this.#region.slotsOf()) {
+      this.applyFace(slot, geometry);
     }
   }
 }

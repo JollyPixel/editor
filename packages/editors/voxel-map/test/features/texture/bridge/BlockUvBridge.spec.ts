@@ -55,7 +55,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
 
       const region = uv.get("block-1")!;
       // The ramp's upright quad is PosZ, which maps to "front", not "back".
-      assert.deepEqual(region.facesOf().map(({ face }) => face), [
+      assert.deepEqual(region.slotsOf().map(({ slot }) => slot), [
         "front", "left", "right", "top", "bottom"
       ]);
       assert.deepEqual(region.geometryFor("left"), {
@@ -112,7 +112,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
 
       const region = uv.get("block-1")!;
       assert.equal(region.state, "free");
-      assert.deepEqual(region.faces, ["top"]);
+      assert.deepEqual(region.slots, ["top"]);
       assert.deepEqual(region.rectFor("top"), {
         x: 32,
         y: 16,
@@ -683,7 +683,7 @@ describe("BlockUvBridge — unfolding a block region", () => {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "unfolded");
 
-      for (const { geometry } of uv.get("block-1")!.facesOf()) {
+      for (const { geometry } of uv.get("block-1")!.slotsOf()) {
         const rect = "shape" in geometry ? geometry.rect : geometry;
         assert.equal(rect.x % 16, 0, "x is on a tile boundary");
         assert.equal(rect.y % 16, 0, "y is on a tile boundary");

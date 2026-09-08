@@ -10,8 +10,9 @@ import type {
   Vec2
 } from "../types.ts";
 import { UVSlotMap } from "./UVSlotMap.ts";
+import { UVRegionCollection } from "./UVRegionCollection.ts";
 import {
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   UVRegion,
   type UVSlot,
   type UVRegionData,
@@ -33,8 +34,8 @@ export interface UVRegionCreateOptions {
   width: number;
   height: number;
   name?: string;
-  activeFaces?: readonly UVSlot[];
-  faceGeometries?: Partial<Record<UVSlot, UVSlotGeometryTemplate>>;
+  activeSlots?: readonly UVSlot[];
+  slotGeometries?: Partial<Record<UVSlot, UVSlotGeometryTemplate>>;
   /**
    * @default "free" for regions with topology, otherwise "stacked"
    */
@@ -55,15 +56,15 @@ export type UVSlotGeometryTemplate =
 
 // CONSTANTS
 const kCascadeStep = 16;
-const kDefaultFace: UVSlot = "front";
+const kDefaultSlot: UVSlot = "front";
 
 export class UVMap extends Emitter<
   UVMapEvent
 > implements Iterable<UVRegion> {
   #getCanvasSize: () => Vec2;
-  #regions = new Map<string, UVRegion>();
+  #regions = new UVRegionCollection();
   #selectedRegionId: string | null = null;
-  #selectedFace: UVSlot | null = null;
+  #selectedSlot: UVSlot | null = null;
   #showAll = false;
   #showRegionLabels = false;
   #cascadeIndex = 0;
@@ -88,8 +89,8 @@ export class UVMap extends Emitter<
     return this.#selectedRegionId;
   }
 
-  get selectedFace(): UVSlot | null {
-    return this.#selectedFace;
+  get selectedSlot(): UVSlot | null {
+    return this.#selectedSlot;
   }
 
   get showAll(): boolean {
@@ -105,6 +106,7 @@ export class UVMap extends Emitter<
 
     this.#showAll = value;
     this.emit("visibility-changed", { showAll: value });
+    this.emit("changed");
   }
 
   get showRegionLabels(): boolean {
@@ -120,6 +122,7 @@ export class UVMap extends Emitter<
 
     this.#showRegionLabels = value;
     this.emit("label-visibility-changed", { showRegionLabels: value });
+    this.emit("changed");
   }
 
   get(
@@ -140,10 +143,11 @@ export class UVMap extends Emitter<
 
   select(
     id: string | null,
-    face?: UVSlot
+    slot?: UVSlot
   ): void {
-    if (this.#applySelection(id, face ?? null)) {
+    if (this.#applySelection(id, slot ?? null)) {
       this.#emitSelectionChanged();
+      this.emit("changed");
     }
   }
 
@@ -170,13 +174,22 @@ export class UVMap extends Emitter<
       name: options.name,
       color: options.color ?? this.#palette.next()
     };
-    const hasTopology = options.activeFaces !== undefined || options.faceGeometries !== undefined;
+    const { activeSlots, slotGeometries } = options;
+    const hasTopology = activeSlots !== undefined || slotGeometries !== undefined;
     const state = options.state ?? (hasTopology ? "free" : "stacked");
+    const slots = [
+      ...new Set([
+        ...DEFAULT_UV_SLOTS,
+        ...(activeSlots ?? []),
+        ...Object.keys(slotGeometries ?? {})
+      ])
+    ];
     const faces = UVSlotMap.map(
-      (face) => this.#geometryFrom(options.faceGeometries?.[face], rect)
+      (slot) => this.#geometryFrom(slotGeometries?.[slot], rect),
+      slots
     );
     const activeFaces = [
-      ...(options.activeFaces ?? UV_FACES)
+      ...(activeSlots ?? DEFAULT_UV_SLOTS)
     ];
     let region: UVRegion;
     if (state === "stacked") {
@@ -206,10 +219,11 @@ export class UVMap extends Emitter<
         spread;
     }
 
-    this.#regions.set(region.id, region);
+    this.#regions.set(region);
     this.emit("region-created", {
       region
     });
+    this.emit("changed");
 
     return region;
   }
@@ -224,11 +238,12 @@ export class UVMap extends Emitter<
       return this.#regions.get(stored.id) ?? stored;
     }
 
-    this.#regions.set(stored.id, stored);
+    this.#regions.set(stored);
 
     this.emit("region-created", {
       region: stored
     });
+    this.emit("changed");
 
     return stored;
   }
@@ -245,7 +260,7 @@ export class UVMap extends Emitter<
     const selectionChanged = this.#selectedRegionId === id;
     if (selectionChanged) {
       this.#selectedRegionId = null;
-      this.#selectedFace = null;
+      this.#selectedSlot = null;
     }
     this.emit(
       "region-deleted",
@@ -254,6 +269,7 @@ export class UVMap extends Emitter<
     if (selectionChanged) {
       this.#emitSelectionChanged();
     }
+    this.emit("changed");
 
     return true;
   }
@@ -261,20 +277,20 @@ export class UVMap extends Emitter<
   move(
     id: string,
     rect: SelectionRect,
-    face?: UVSlot
+    slot?: UVSlot
   ): boolean {
     const region = this.#regions.get(id);
     if (!region) {
       return false;
     }
 
-    const target = this.#resolveFace(region, face);
+    const target = this.#resolveSlot(region, slot);
     if (target === undefined) {
       return false;
     }
 
     const previousRect = region.rectFor(
-      target ?? kDefaultFace
+      target ?? kDefaultSlot
     );
     const clamped = clampRectSize(
       rect,
@@ -284,13 +300,14 @@ export class UVMap extends Emitter<
       clamped,
       target ?? undefined
     );
-    this.#regions.set(id, moved);
+    this.#regions.set(moved);
 
     this.emit("region-moved", {
       region: moved,
       face: target,
       previousRect
     });
+    this.emit("changed");
 
     return true;
   }
@@ -298,16 +315,16 @@ export class UVMap extends Emitter<
   previewMove(
     id: string,
     rect: SelectionRect,
-    face?: UVSlot
+    slot?: UVSlot
   ): void {
     const region = this.#regions.get(id);
     if (!region) {
       return;
     }
 
-    const target = this.#resolveFace(
+    const target = this.#resolveSlot(
       region,
-      face
+      slot
     );
     if (target === undefined) {
       return;
@@ -331,14 +348,14 @@ export class UVMap extends Emitter<
   setState(
     id: string,
     state: UVRegionState,
-    face?: UVSlot
+    slot?: UVSlot
   ): boolean {
     return this.#changeState(
       id,
       (region) => {
         switch (state) {
           case "stacked":
-            return region.stack(face);
+            return region.stack(slot);
           case "unfolded":
             return this.#clamped(region.unfold());
           default:
@@ -382,12 +399,11 @@ export class UVMap extends Emitter<
     }
 
     const previous = region.toJSON();
-    this.#regions.set(id, next);
+    this.#regions.set(next);
 
-    // Normalize selection before events expose the new state.
     const selectionChanged = this.#applySelection(
       this.#selectedRegionId,
-      this.#selectedFace
+      this.#selectedSlot
     );
 
     this.emit("region-state-changed", {
@@ -397,31 +413,32 @@ export class UVMap extends Emitter<
     if (selectionChanged) {
       this.#emitSelectionChanged();
     }
+    this.emit("changed");
 
     return true;
   }
 
-  #resolveFace(
+  #resolveSlot(
     region: UVRegion,
-    face: UVSlot | undefined
+    slot: UVSlot | undefined
   ): UVSlot | null | undefined {
-    if (region.state !== "free") {
+    if (region.movementScope === "region") {
       return null;
     }
 
-    return face !== undefined && region.faces.includes(face) ?
-      face :
+    return slot !== undefined && region.slots.includes(slot) ?
+      slot :
       undefined;
   }
 
   #applySelection(
     id: string | null,
-    face: UVSlot | null
+    slot: UVSlot | null
   ): boolean {
     if (id === null) {
-      const changed = this.#selectedRegionId !== null || this.#selectedFace !== null;
+      const changed = this.#selectedRegionId !== null || this.#selectedSlot !== null;
       this.#selectedRegionId = null;
-      this.#selectedFace = null;
+      this.#selectedSlot = null;
 
       return changed;
     }
@@ -431,17 +448,17 @@ export class UVMap extends Emitter<
       return false;
     }
 
-    const activeFaces = region.facesOf()
-      .map(({ face: activeFace }) => activeFace)
-      .filter((activeFace) => activeFace !== null);
-    let nextFace: UVSlot | null = null;
-    if (region.state === "free") {
-      const firstActiveFace = activeFaces[0] ?? null;
-      nextFace = face !== null && activeFaces.includes(face) ? face : firstActiveFace;
+    const activeSlots = region.slotsOf()
+      .map(({ slot }) => slot)
+      .filter((slot) => slot !== null);
+    let nextSlot: UVSlot | null = null;
+    if (region.movementScope === "slot") {
+      const firstActiveSlot = activeSlots[0] ?? null;
+      nextSlot = slot !== null && activeSlots.includes(slot) ? slot : firstActiveSlot;
     }
-    const changed = this.#selectedRegionId !== id || this.#selectedFace !== nextFace;
+    const changed = this.#selectedRegionId !== id || this.#selectedSlot !== nextSlot;
     this.#selectedRegionId = id;
-    this.#selectedFace = nextFace;
+    this.#selectedSlot = nextSlot;
 
     return changed;
   }
@@ -449,7 +466,7 @@ export class UVMap extends Emitter<
   #emitSelectionChanged(): void {
     this.emit("selection-changed", {
       selectedRegionId: this.#selectedRegionId,
-      selectedFace: this.#selectedFace
+      selectedSlot: this.#selectedSlot
     });
   }
 

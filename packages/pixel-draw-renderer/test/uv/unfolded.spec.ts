@@ -10,7 +10,7 @@ import { UVMap } from "#src/uv/UVMap.ts";
 import { UVController } from "#src/uv/UVController.ts";
 import {
   UVRegion,
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   type UVSlot
 } from "#src/uv/UVRegion.ts";
 import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
@@ -52,7 +52,7 @@ function rects(
   region: UVRegion
 ): Record<UVSlot, SelectionRect> {
   return Object.fromEntries(
-    region.facesOf().map(({ face, geometry }) => [face, "shape" in geometry ? geometry.rect : geometry])
+    region.slotsOf().map(({ slot, geometry }) => [slot, "shape" in geometry ? geometry.rect : geometry])
   );
 }
 
@@ -76,7 +76,7 @@ describe("UVRegion — unfold", () => {
     const bounds = { x: 0, y: 0, width: 8, height: 12 };
 
     assert.deepStrictEqual(unfolded.bounds, bounds);
-    for (const face of UV_FACES) {
+    for (const face of DEFAULT_UV_SLOTS) {
       assert.deepStrictEqual(unfolded.rectFor(face), bounds);
     }
   });
@@ -140,11 +140,11 @@ describe("UVRegion — unfold", () => {
   });
 
   test("facesOf yields one entry per active face, none of them null", () => {
-    const faces = stackedRegion().unfold().facesOf();
+    const faces = stackedRegion().unfold().slotsOf();
 
     assert.deepStrictEqual(
-      faces.map(({ face }) => face),
-      [...UV_FACES]
+      faces.map(({ slot }) => slot),
+      [...DEFAULT_UV_SLOTS]
     );
   });
 });
@@ -282,7 +282,7 @@ describe("UVMap — setState unfolded", () => {
     map.select(region.id, "top");
 
     assert.strictEqual(map.selectedRegionId, region.id);
-    assert.strictEqual(map.selectedFace, null);
+    assert.strictEqual(map.selectedSlot, null);
   });
 
   test("moves as a whole, reporting a null face", () => {

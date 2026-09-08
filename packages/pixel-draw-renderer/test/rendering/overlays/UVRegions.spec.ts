@@ -288,7 +288,7 @@ describe("UVRegionLayer — free regions", () => {
       id: "r1"
     });
     map.setState(region.id, "free");
-    // "front" is first in UV_FACES, so raising it is a real reorder.
+    // "front" is the first default slot, so raising it is a real reorder.
     map.select("r1", "front");
 
     assert.strictEqual(

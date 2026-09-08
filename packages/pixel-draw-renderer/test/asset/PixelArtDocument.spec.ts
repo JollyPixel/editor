@@ -142,6 +142,26 @@ describe("PixelArtDocument", () => {
     );
   });
 
+  test("rejects a stacked slot that the region does not carry", () => {
+    assert.throws(
+      () => decodePixelArtDocument(bytes({
+        version: 1,
+        size: { x: 1, y: 1 },
+        pixels: "",
+        uvRegions: [
+          {
+            id: "broken",
+            color: "#fff",
+            state: "stacked",
+            rect: { x: 0, y: 0, width: 1, height: 1 },
+            stackedFace: "missing"
+          }
+        ]
+      })),
+      InvalidPixelArtDocumentError
+    );
+  });
+
   test("rejects a size the buffer would refuse", () => {
     const buffer = new PixelBuffer({
       size: { x: 2, y: 2 },

@@ -119,6 +119,7 @@ interface MockUVMap {
   on(type: string, listener: (event: any) => void): void;
   off(type: string, listener: (event: any) => void): void;
   simulateDragging(payload: UVGhostPayload): void;
+  simulateDragEnded(regionId: string, committed: boolean): void;
   simulateMoved(regionId: string): void;
 }
 
@@ -145,6 +146,12 @@ function createMockUVMap(): MockUVMap {
     },
     simulateDragging(payload) {
       emit("region-dragging", payload);
+    },
+    simulateDragEnded(regionId, committed) {
+      emit("region-drag-ended", {
+        id: regionId,
+        committed
+      });
     },
     simulateMoved(regionId) {
       emit("region-moved", { region: { id: regionId }, face: null, previousRect: { x: 0, y: 0, width: 1, height: 1 } });
@@ -333,6 +340,21 @@ describe("UVGhostSync — local drag reporting", () => {
     await nextFrame();
     assert.strictEqual(room.presenceUpdates.length, 1, "only the latest snapshot is sent");
   });
+
+  test("a cancelled drag clears presence immediately", async() => {
+    const room = createMockRoom();
+    const canvas = createMockCanvas();
+    const sync = new UVGhostSync({ room });
+    sync.attach(asHost(canvas));
+
+    canvas.uv.simulateDragging(kPayload);
+    canvas.uv.simulateDragEnded(kPayload.id, false);
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, [
+      { uvGhost: null }
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -389,6 +411,13 @@ describe("UVGhostSync — remote peers", () => {
 
     room.simulatePresence("peer-B", { uvGhost: "not-an-object" });
     room.simulatePresence("peer-B", { uvGhost: { face: null } });
+    room.simulatePresence("peer-B", {
+      uvGhost: {
+        id: "region-A",
+        face: null,
+        geometry: { shape: "unknown" }
+      }
+    });
 
     assert.strictEqual(canvas.setCalls.length, 0);
   });

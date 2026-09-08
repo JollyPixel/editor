@@ -20,7 +20,7 @@ UVRegion.from(value: UVRegion | UVRegionData): UVRegion
 type UVSlot = string;
 
 // The six default names of a box; a shape may name further slots.
-const UV_FACES: readonly UVSlot[];
+const DEFAULT_UV_SLOTS: readonly UVSlot[];
 
 type UVTriangle = {
   shape: "triangle";
@@ -88,35 +88,37 @@ Slot names are labels. The consumer decides how `"front"`, `"top"` and any furth
 | `name` | `string \| undefined` | Optional display label. |
 | `color` | `string` | CSS color used by the UV overlay. |
 | `state` | `UVRegionState` | Current geometry mode. |
-| `faces` | `readonly UVSlot[]` | Every slot the region carries geometry for, active or not. |
+| `slots` | `readonly UVSlot[]` | Every slot the region carries geometry for, active or not. |
+| `activeSlots` | `readonly UVSlot[]` | Active slots in consumer-defined order. |
+| `movementScope` | `"region" \| "slot"` | Whether dragging moves the region or one slot. |
 | `stackedFace` | `UVSlot \| null` | Slot `rect` was taken from, when stacked. |
 | `bounds` | `SelectionRect` | The shared rectangle when stacked, otherwise the union of the active faces. |
 
 ## Methods
 
-### `rectFor(face)`
+### `rectFor(slot)`
 
 ```ts
-rectFor(face: UVSlot): SelectionRect
+rectFor(slot: UVSlot): SelectionRect
 ```
 
-Returns a copy of the rectangle sampled by `face`. Only a free region answers per face; a stacked or unfolded region returns `bounds` whatever slot is asked for, because it moves as one.
+Returns a copy of the rectangle sampled by `slot`. Only a free region answers per slot; a stacked or unfolded region returns `bounds` whatever slot is asked for, because it moves as one.
 
-### `geometryFor(face)`
+### `geometryFor(slot)`
 
 ```ts
-geometryFor(face: UVSlot): UVGeometry
+geometryFor(slot: UVSlot): UVGeometry
 ```
 
 Returns a copy of the slot's geometry. A stacked region always returns its shared rectangle. An unfolded region returns the cell the net gave that slot, which is what `rectFor()` will not tell you.
 
-### `facesOf()`
+### `slotsOf()`
 
 ```ts
-facesOf(): { face: UVSlot | null; geometry: UVGeometry }[]
+slotsOf(): { slot: UVSlot | null; geometry: UVGeometry }[]
 ```
 
-Returns copied geometry in the region's own slot order. A stacked region returns one entry with `face: null`. Unfolded and free regions both return one entry per active slot, so an overlay draws and hit-tests every cell of a net individually even though dragging any of them moves all six.
+Returns copied geometry in the region's own slot order. A stacked region returns one entry with `slot: null`. Unfolded and free regions both return one entry per active slot, so an overlay draws and hit-tests every cell of a net individually even though dragging any of them moves the whole region.
 
 ### `free()`
 
@@ -140,13 +142,13 @@ Unfolding always repacks, whatever state it starts from, so a hand-arranged free
 
 Nothing here knows about the canvas. A net larger than the texture keeps going past the edge; [`UVMap.setState()`](./UVMap.md#setstateid-state-face) is what pulls it back inside.
 
-### `stack(face?)`
+### `stack(slot?)`
 
 ```ts
-stack(face?: UVSlot): UVRegion
+stack(slot?: UVSlot): UVRegion
 ```
 
-Uses the largest active face's rectangle as the shared rectangle, so a partial slot such as a stair's tread never becomes the region's footprint. `face` only picks between equally large ones, and a rectangle wins over a triangle or a compound at the same size. Face topology is retained, but per-face positions are not: every slot is stacked on the shared rectangle.
+Uses the largest active slot's rectangle as the shared rectangle, so a partial slot such as a stair's tread never becomes the region's footprint. `slot` only picks between equally large ones, and a rectangle wins over a triangle or a compound at the same size. Slot topology is retained, but per-slot positions are not: every slot is stacked on the shared rectangle.
 
 Stacking a net therefore lands the region on whichever cell won, which for equal-sized faces is the first one in `activeFaces` order. That is the cell the net started from, so `unfold()` followed by `stack()` returns a box region to the rectangle it began with.
 

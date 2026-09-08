@@ -53,7 +53,10 @@ import type {
   UVRegion,
   UVRegionData
 } from "./uv/UVRegion.ts";
-import { UVGeometryValue } from "./uv/UVGeometryValue.ts";
+import {
+  pointInGeometry,
+  rectOf
+} from "./uv/geometry.ts";
 import type { UVGeometry } from "./uv/types.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { resolveColor } from "./utils/colors.ts";
@@ -442,14 +445,16 @@ export class PixelArtCanvas {
       return this.document.buffer.hasTransparency(geometry);
     }
 
-    const value = UVGeometryValue.from(geometry);
-    const bounds = value.bounds;
+    const bounds = rectOf(geometry);
     const maxX = Math.ceil(bounds.x + bounds.width);
     const maxY = Math.ceil(bounds.y + bounds.height);
     for (let y = Math.floor(bounds.y); y < maxY; y++) {
       for (let x = Math.floor(bounds.x); x < maxX; x++) {
         if (
-          value.contains({ x: x + 0.5, y: y + 0.5 }) &&
+          pointInGeometry(
+            { x: x + 0.5, y: y + 0.5 },
+            geometry
+          ) &&
           this.document.buffer.samplePixel(x, y)[3] < 255
         ) {
           return true;

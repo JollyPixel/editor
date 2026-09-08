@@ -44,6 +44,28 @@ const kTriangleGhost: PeerUVPreviewState = {
   },
   color: "#00ff00"
 };
+const kCompoundGhost: PeerUVPreviewState = {
+  id: "region-C",
+  face: "front",
+  geometry: {
+    shape: "compound",
+    rect: {
+      x: 1,
+      y: 2,
+      width: 4,
+      height: 4
+    },
+    parts: [
+      {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1
+      }
+    ]
+  },
+  color: "#0000ff"
+};
 
 describe("PeerUVPreview — set", () => {
   test("renders a dashed rect border at the projected screen position, with no contrasting casing", () => {
@@ -173,6 +195,22 @@ describe("PeerUVPreview — set", () => {
       2,
       "old polygon elements removed"
     );
+  });
+
+  test("switching from a triangle to a compound recreates the SVG geometry", () => {
+    const svg = makeSvg();
+    const viewport = makeViewport();
+    const ghosts = new PeerUVPreview(
+      svg,
+      viewport,
+      makeUvOverlay(svg, viewport)
+    );
+
+    ghosts.set("peer-A", kTriangleGhost);
+    ghosts.set("peer-A", kCompoundGhost);
+
+    assert.strictEqual(svg.querySelectorAll("polygon").length, 0);
+    assert.strictEqual(svg.querySelectorAll("path").length, 2);
   });
 });
 
