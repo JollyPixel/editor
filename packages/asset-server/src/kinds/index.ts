@@ -5,13 +5,4 @@ export type {
 } from "./AssetKindHandler.ts";
 export { AssetKindRegistry } from "./AssetKindRegistry.ts";
 export { UnknownAssetKindError } from "./errors/index.ts";
-export {
-  binaryAssetHandler,
-  BINARY_KIND
-} from "./binary.ts";
-export type { BinaryAssetState } from "./binary.ts";
-export {
-  textureAssetHandler,
-  TEXTURE_KIND
-} from "./texture.ts";
-export type { TextureAssetHandlerOptions } from "./texture.ts";
+export * from "./handlers/index.ts";

@@ -16,8 +16,8 @@ import {
 import {
   bytes,
   text
-} from "../helpers/bytes.ts";
-import { assetEvent } from "../helpers/events.ts";
+} from "../../helpers/bytes.ts";
+import { assetEvent } from "../../helpers/events.ts";
 
 describe("textureAssetHandler", () => {
   test("claims the common image extensions", () => {

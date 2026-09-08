@@ -16,8 +16,8 @@ import {
 import {
   bytes,
   text
-} from "../helpers/bytes.ts";
-import { assetEvent } from "../helpers/events.ts";
+} from "../../helpers/bytes.ts";
+import { assetEvent } from "../../helpers/events.ts";
 
 describe("binaryAssetHandler", () => {
   test("starts from empty bytes", async() => {

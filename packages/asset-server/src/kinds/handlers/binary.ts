@@ -2,14 +2,14 @@
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import type { AssetKindHandler } from "./AssetKindHandler.ts";
+import type { AssetKindHandler } from "../AssetKindHandler.ts";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
   ASSET_UPDATED,
   decodeContent,
   isAssetEvent
-} from "../events/AssetEvents.ts";
+} from "../../events/AssetEvents.ts";
 
 export const BINARY_KIND = "binary";
 

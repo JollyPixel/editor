@@ -6,7 +6,7 @@ import type { AssetKindHandler } from "./AssetKindHandler.ts";
 import {
   binaryAssetHandler,
   BINARY_KIND
-} from "./binary.ts";
+} from "./handlers/binary.ts";
 import { UnknownAssetKindError } from "./errors/UnknownAssetKindError.ts";
 
 interface RegisteredKind {
