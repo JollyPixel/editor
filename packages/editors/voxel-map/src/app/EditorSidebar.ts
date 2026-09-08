@@ -296,6 +296,7 @@ export class EditorSidebar extends LitElement {
         .engine=${this.engine}
         .brush=${this.state.brush}
         .worldStore=${this.state.world}
+        .shell=${this.state.shell}
         .layout=${this._tab === "blocks" ? "fill" : "compact"}
         @block-selection-change=${this.#onBlockSelectionChange}
       ></block-library>

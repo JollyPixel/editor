@@ -11,7 +11,10 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { computeBlockGridLayout } from "./blockGridLayout.ts";
+import {
+  computeBlockGridLayout,
+  type BlockGridLayout
+} from "./blockGridLayout.ts";
 
 // CONSTANTS
 // Extra resolution keeps cube silhouettes smooth after MSAA resolves.
@@ -21,7 +24,9 @@ const kCameraFov = 45;
 const kCameraZ = 2.2;
 const kAmbientIntensity = 1.5;
 const kDirIntensity = 1.2;
-const kSelectedBackground = new THREE.Color(0x2a3a5a);
+const kFitFactor = 0.78;
+const kFitRadius = Math.tan((kCameraFov * Math.PI) / 360) *
+  kCameraZ * kFitFactor;
 
 export interface CellEntry {
   blockId: number;
@@ -37,8 +42,27 @@ export interface BlockLibraryRendererOptions {
   blocks?: ResolvedBlockDefinition[];
 }
 
+function fitGeometry(
+  geometry: THREE.BufferGeometry
+): void {
+  geometry.computeBoundingSphere();
+  const sphere = geometry.boundingSphere;
+  if (sphere === null || sphere.radius <= 0) {
+    return;
+  }
+
+  const { center, radius } = sphere;
+  geometry.translate(-center.x, -center.y, -center.z);
+  geometry.scale(
+    kFitRadius / radius,
+    kFitRadius / radius,
+    kFitRadius / radius
+  );
+}
+
 export class BlockLibraryRenderer {
   readonly canvas: HTMLCanvasElement;
+  onLayoutChange: (() => void) | null = null;
 
   #renderer: THREE.WebGLRenderer;
   #scene: THREE.Scene;
@@ -46,7 +70,6 @@ export class BlockLibraryRenderer {
   #cells: CellEntry[] = [];
   #shapeRegistry: BlockShapeRegistry;
   #tilesetManager: TilesetManager;
-  #selectedId: number | null = null;
   #raf = -1;
   #rot = 0;
   #cols = 1;
@@ -136,6 +159,13 @@ export class BlockLibraryRenderer {
     this.#relayout();
   }
 
+  get layout(): BlockGridLayout {
+    return {
+      cols: this.#cols,
+      cellSize: this.#cellSize
+    };
+  }
+
   getBlockAtPointer(
     px: number,
     py: number
@@ -148,12 +178,6 @@ export class BlockLibraryRenderer {
     );
 
     return cell?.blockId ?? null;
-  }
-
-  setSelectedBlock(
-    id: number | null
-  ): void {
-    this.#selectedId = id;
   }
 
   dispose(): void {
@@ -172,8 +196,11 @@ export class BlockLibraryRenderer {
   ): THREE.Mesh | THREE.Group {
     const shape = this.#shapeRegistry.get(block.shapeId);
     if (!shape) {
+      const fallback = new THREE.BoxGeometry(1, 1, 1);
+      fitGeometry(fallback);
+
       return new THREE.Mesh(
-        new THREE.BoxGeometry(0.8, 0.8, 0.8),
+        fallback,
         new THREE.MeshLambertMaterial({ color: 0xaaaaaa })
       );
     }
@@ -195,8 +222,7 @@ export class BlockLibraryRenderer {
       shape
     );
 
-    // Shape space is 0 to 1, so recenter the preview on the origin.
-    const centered = Float32Array.from(positions, (value) => value - 0.5);
+    const vertices = Float32Array.from(positions);
     const atlasUvs = Float32Array.from(uvs);
 
     for (const range of ranges) {
@@ -226,10 +252,11 @@ export class BlockLibraryRenderer {
     }
 
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(centered, 3));
+    geo.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
     geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
     geo.setAttribute("uv", new THREE.BufferAttribute(atlasUvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
+    fitGeometry(geo);
 
     return new THREE.Mesh(geo, mat);
   }
@@ -243,12 +270,18 @@ export class BlockLibraryRenderer {
       this.#container.clientWidth - paddingH
     );
 
+    const changed = layout.cols !== this.#cols ||
+      layout.cellSize !== this.#cellSize;
     this.#cols = layout.cols;
     this.#cellSize = layout.cellSize;
 
     for (let i = 0; i < this.#cells.length; i++) {
       this.#cells[i].x = i % this.#cols;
       this.#cells[i].y = Math.floor(i / this.#cols);
+    }
+
+    if (changed) {
+      this.onLayoutChange?.();
     }
   }
 
@@ -318,10 +351,6 @@ export class BlockLibraryRenderer {
       this.#renderer.setScissor(x, y, cellSize, cellSize);
       this.#renderer.setScissorTest(true);
       this.#renderer.clearDepth();
-
-      this.#scene.background = cell.blockId === this.#selectedId
-        ? kSelectedBackground
-        : null;
 
       this.#renderer.render(this.#scene, this.#camera);
 

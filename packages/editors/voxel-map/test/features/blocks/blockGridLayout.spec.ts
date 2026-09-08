@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { computeBlockGridLayout } from "../../../src/features/blocks/blockGridLayout.ts";
+import {
+  blockCellRect,
+  computeBlockGridLayout
+} from "../../../src/features/blocks/blockGridLayout.ts";
 
 describe("computeBlockGridLayout", () => {
   it("fits as many 64px cells as the width allows", () => {
@@ -41,5 +44,43 @@ describe("computeBlockGridLayout", () => {
       cols: 1,
       cellSize: 1
     });
+  });
+});
+
+describe("blockCellRect", () => {
+  const layout = { cols: 4, cellSize: 64 };
+
+  it("places the first cell at the grid origin", () => {
+    assert.deepEqual(blockCellRect(0, layout), { x: 0, y: 0, size: 64 });
+  });
+
+  it("walks a row before wrapping", () => {
+    assert.deepEqual(blockCellRect(3, layout), { x: 192, y: 0, size: 64 });
+    assert.deepEqual(blockCellRect(4, layout), { x: 0, y: 64, size: 64 });
+  });
+
+  it("stacks rows downward", () => {
+    assert.deepEqual(blockCellRect(9, layout), { x: 64, y: 128, size: 64 });
+  });
+
+  it("follows a single column layout", () => {
+    assert.deepEqual(
+      blockCellRect(2, { cols: 1, cellSize: 40 }),
+      { x: 0, y: 80, size: 40 }
+    );
+  });
+
+  it("shrinks the rect on every side of the inset", () => {
+    assert.deepEqual(
+      blockCellRect(1, layout, 3),
+      { x: 67, y: 3, size: 58 }
+    );
+  });
+
+  it("never inverts a rect smaller than the inset", () => {
+    const rect = blockCellRect(0, { cols: 2, cellSize: 4 }, 10);
+
+    assert.equal(rect.size, 1);
+    assert.equal(rect.x, 1.5);
   });
 });

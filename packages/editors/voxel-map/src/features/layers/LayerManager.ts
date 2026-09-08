@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import { LitElement, html } from "lit";
 import {
   customElement,
   property,
@@ -24,6 +24,7 @@ import {
 } from "../../app/state/index.ts";
 import { ViewFocus } from "../../scene/viewFocus.ts";
 import { AddLayerDialog } from "./AddLayerDialog.ts";
+import { layerManagerStyles } from "./LayerManager.styles.ts";
 import { MergeLayerDialog } from "./MergeLayerDialog.ts";
 import {
   cloneLayerEntry,
@@ -48,19 +49,7 @@ import {
 
 @customElement("layer-manager")
 export class LayerManager extends LitElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
-      overflow: hidden;
-    }
-
-    .tree-host {
-      flex: 1;
-      overflow-y: auto;
-    }
-  `;
+  static override styles = layerManagerStyles;
 
   @property({ attribute: false })
   declare world: VoxelWorld | undefined;
