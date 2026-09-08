@@ -11,10 +11,6 @@ export const SYSTEM_ACTOR: EventStore.Actor = {
   source: "fs-watcher"
 };
 
-/**
- * Every backend of the store, so a behaviour is pinned once for all of them
- * instead of drifting between two copies of the same suite.
- */
 export const backends: {
   name: string;
   create(): Promise<EventStore.EventStore>;

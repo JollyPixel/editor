@@ -38,7 +38,6 @@
     "@openally/emitt": "1.0.1"
   },
   "devDependencies": {
-    "@jolly-pixel/bench": "*",
-    "tstyche": "7.2.3"
+    "@jolly-pixel/bench": "*"
   }
 }

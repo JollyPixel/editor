@@ -1,15 +1,20 @@
 // Import Internal Dependencies
-import type { EventStore } from "../EventStore.ts";
+import type {
+  EventDataMap,
+  TypedEventStore
+} from "../EventStore.ts";
 import { createMemoryEventStore } from "./memory/index.ts";
 
 export const persistence = {
   memory: createMemoryEventStore,
-  sqlite: async(
+  sqlite: async<
+    TMap extends EventDataMap = EventDataMap
+  >(
     location?: string
-  ): Promise<EventStore> => {
+  ): Promise<TypedEventStore<TMap>> => {
     const { createSqliteEventStore } = await import("./sqlite/index.ts");
 
-    return createSqliteEventStore(location);
+    return createSqliteEventStore<TMap>(location);
   }
 } as const;
 

@@ -3,12 +3,20 @@ export type {
   AppendInput,
   CompactOptions,
   CompactReport,
+  EventDataMap,
+  EventListener,
   EventReader,
   EventStore,
   EventStoreEventMap,
+  EventType,
   EventWriter,
   Event,
   ListAllOptions,
-  ListFromCheckpointsOptions
+  ListFromCheckpointsOptions,
+  SubscribeOptions,
+  TypedAppendInput,
+  TypedEvent,
+  TypedEventStore,
+  TypedEventWriter
 } from "./EventStore.ts";
 export * from "./persistence/index.ts";

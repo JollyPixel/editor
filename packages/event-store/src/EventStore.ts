@@ -1,22 +1,49 @@
 // Import Third-party Dependencies
-import type { TypedEventEmitter } from "@openally/emitt";
-import type { Result } from "@openally/result";
+import type {
+  TypedEventEmitter
+} from "@openally/emitt";
+import type {
+  Result
+} from "@openally/result";
 
-/** Identifies the origin of an appended event. */
-export type Actor =
-  | { type: "user"; id: string; }
-  | { type: "system"; source: string; };
+type ActorUser = {
+  type: "user";
+  id: string;
+};
+type ActorSystem = {
+  type: "system";
+  source: string;
+};
+export type Actor = ActorUser | ActorSystem;
 
-export interface Event {
+export type EventDataMap = Record<string, unknown>;
+
+export type EventType<
+  TMap extends EventDataMap
+> = keyof TMap & string;
+
+interface EventEnvelope {
   eventId: number;
   assetType: string;
   assetId: string;
-  eventType: string;
-  eventData: unknown;
   eventVersion: number;
   actor: Actor;
   createdAt: string;
 }
+
+export interface Event extends EventEnvelope {
+  eventType: string;
+  eventData: unknown;
+}
+
+export type TypedEvent<
+  TMap extends EventDataMap
+> = {
+  [K in EventType<TMap>]: EventEnvelope & {
+    eventType: K;
+    eventData: TMap[K];
+  };
+}[EventType<TMap>];
 
 export interface AppendInput {
   assetType: string;
@@ -26,15 +53,20 @@ export interface AppendInput {
   actor: Actor;
 }
 
+export type TypedAppendInput<
+  TMap extends EventDataMap,
+  K extends EventType<TMap> = EventType<TMap>
+> = {
+  assetType: string;
+  assetId: string;
+  eventType: K;
+  eventData: TMap[K];
+  actor: Actor;
+};
+
 export interface ListAllOptions {
-  /**
-   * Returns events with an eventId greater than this value.
-   * @default 0
-   */
   fromEventId?: number;
-  /** Matches event types by prefix. */
   eventTypePrefix?: string;
-  /** Maximum events to return. */
   limit?: number;
 }
 
@@ -44,24 +76,23 @@ export interface EventWriter {
   ): Result<Event, Error>;
 }
 
+export interface TypedEventWriter<
+  TMap extends EventDataMap
+> {
+  append: <K extends EventType<TMap>>(
+    input: TypedAppendInput<TMap, K>
+  ) => Result<Event, Error>;
+}
+
 export interface ListFromCheckpointsOptions {
-  /**
-   * Event types that replace an asset's whole state. The newest one on each
-   * asset bounds the slice returned for that asset.
-   */
   checkpointEventTypes: readonly string[];
   eventTypePrefix?: string;
 }
 
 export interface CompactOptions {
-  /**
-   * Event types that replace an asset's whole state. Events stored before
-   * an asset's newest one are superseded and removed.
-   */
   checkpointEventTypes: readonly string[];
   /**
-   * Reclaims the space freed by the removal. Backends holding no file
-   * ignore it.
+   * Reclaims freed storage when supported.
    * @default true
    */
   reclaim?: boolean;
@@ -78,49 +109,51 @@ export interface EventReader {
     fromVersion?: number
   ): Event[];
 
-  /**
-   * Returns the newest matching version for one asset, or `0`.
-   * Event types are matched exactly.
-   */
-  lastVersionOf(
+  listFromCheckpoint(
     assetId: string,
-    eventTypes: readonly string[]
-  ): number;
+    checkpointEventTypes: readonly string[]
+  ): Event[];
 
-  /** Lists every stream in eventId order. */
   listAll(
     options?: ListAllOptions
   ): Event[];
 
-  /**
-   * Lists, per asset, its newest checkpoint event and everything appended
-   * after it, across every stream in eventId order.
-   *
-   * An asset holding no checkpoint yields its whole stream. A reader whose
-   * fold restarts from a checkpoint uses this instead of `listAll` so its
-   * cost tracks current state rather than history depth.
-   */
   listFromCheckpoints(
     options: ListFromCheckpointsOptions
   ): Event[];
 }
 
+export interface SubscribeOptions {
+  eventTypePrefix?: string;
+}
+
+export type EventListener = (
+  event: Event
+) => void;
+
 export interface EventStore {
   readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
   readonly reader: EventReader;
 
-  /**
-   * Removes every event stored before each asset's newest checkpoint.
-   *
-   * Destructive and irreversible. Surviving events keep their event ids and
-   * versions, so a position held elsewhere stays valid.
-   */
+  subscribe(
+    listener: EventListener,
+    options?: SubscribeOptions
+  ): () => void;
+
   compact(
     options: CompactOptions
   ): CompactReport;
 
   close(): void;
   [Symbol.dispose](): void;
+}
+
+export interface TypedEventStore<
+  TMap extends EventDataMap
+> extends EventStore {
+  readonly writer:
+    & TypedEventWriter<TMap>
+    & TypedEventEmitter<EventStoreEventMap>;
 }
 
 export type EventStoreEventMap = {

@@ -17,20 +17,22 @@ import {
 } from "#src/persistence/sqlite/index.ts";
 import { append } from "../helpers/backends.ts";
 
-/**
- * Everything the shared conformance suite cannot express, because it only
- * holds for the persistent backend.
- */
 describe("SqliteEventStore — durability", () => {
   test("data survives across instances backed by the same file", async(t) => {
     const file = path.join(
       os.tmpdir(),
       `event-store-${process.pid}-${Date.now()}.sqlite`
     );
-    t.after(() => fs.rmSync(file, { force: true }));
+    t.after(
+      () => fs.rmSync(file, { force: true })
+    );
 
     using first = await EventStore.persistence.sqlite(file);
-    append(first, "a1", { x: 1 });
+    append(
+      first,
+      "a1",
+      { x: 1 }
+    );
     first.close();
 
     using second = await EventStore.persistence.sqlite(file);
@@ -42,10 +44,36 @@ describe("SqliteEventStore — durability", () => {
   });
 });
 
+describe("SqliteEventStore — location", () => {
+  test("creates the directories its file lives in", async(t) => {
+    const root = path.join(
+      os.tmpdir(),
+      `event-store-${process.pid}-${Date.now()}-nested`
+    );
+    t.after(
+      () => fs.rmSync(root, { force: true, recursive: true })
+    );
+
+    const file = path.join(root, ".state", "events.db");
+    using store = await EventStore.persistence.sqlite(file);
+    append(store, "a1", { x: 1 });
+
+    assert.strictEqual(fs.statSync(file).isFile(), true);
+  });
+
+  test("does not touch the filesystem for an in-memory store", async() => {
+    using store = await EventStore.persistence.sqlite(":memory:");
+    append(store, "a1", { x: 1 });
+
+    assert.strictEqual(fs.existsSync(":memory:"), false);
+  });
+});
+
 describe("SqliteEventStore — version invariant", () => {
   test("the schema rejects a duplicate version for one asset", () => {
     using db = new DatabaseSync(":memory:");
     db.exec(SQL_SCHEMA);
+
     const insert = db.prepare(
       `INSERT INTO events (asset_type, asset_id, event_type, event_data,
         event_version, actor, created_at)
@@ -64,7 +92,9 @@ describe("SqliteEventStore — version invariant", () => {
       os.tmpdir(),
       `event-store-race-${process.pid}-${Date.now()}.sqlite`
     );
-    t.after(() => fs.rmSync(file, { force: true }));
+    t.after(
+      () => fs.rmSync(file, { force: true })
+    );
 
     using first = await EventStore.persistence.sqlite(file);
     using second = await EventStore.persistence.sqlite(file);
@@ -83,8 +113,15 @@ describe("SqliteEventStore — subpath entrypoint", () => {
   test("exposes the same factory as persistence.sqlite", async() => {
     using store = await createSqliteEventStore();
 
-    const event = append(store, "a1", { x: 1 });
+    const event = append(
+      store,
+      "a1",
+      { x: 1 }
+    );
 
-    assert.strictEqual(event.eventVersion, 1);
+    assert.strictEqual(
+      event.eventVersion,
+      1
+    );
   });
 });

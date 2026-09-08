@@ -1,10 +1,15 @@
 // Import Internal Dependencies
-import type { EventStore } from "../../EventStore.ts";
+import type {
+  EventDataMap,
+  TypedEventStore
+} from "../../EventStore.ts";
 import { createEventStore } from "../createEventStore.ts";
 import { MemoryEventLog } from "./log.ts";
 
-export function createMemoryEventStore(): EventStore {
-  return createEventStore(
+export function createMemoryEventStore<
+  TMap extends EventDataMap = EventDataMap
+>(): TypedEventStore<TMap> {
+  return createEventStore<TMap>(
     new MemoryEventLog()
   );
 }

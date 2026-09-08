@@ -59,8 +59,8 @@ export function countingReads(
 
   const reader: EventStore.EventReader = {
     list: (...parameters) => count(store.reader.list(...parameters)),
-    lastVersionOf: (...parameters) => store.reader.lastVersionOf(
-      ...parameters
+    listFromCheckpoint: (...parameters) => count(
+      store.reader.listFromCheckpoint(...parameters)
     ),
     listAll: (...parameters) => count(store.reader.listAll(...parameters)),
     listFromCheckpoints: (...parameters) => count(
@@ -80,6 +80,7 @@ export function countingReads(
     store: {
       writer: store.writer,
       reader,
+      subscribe: (listener, options) => store.subscribe(listener, options),
       compact: (options) => store.compact(options),
       close: () => store.close(),
       [Symbol.dispose]: () => store.close()

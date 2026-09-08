@@ -71,7 +71,9 @@ Snapshots double as replay checkpoints. `acquire` folds only from the newest
 `asset.created`, `asset.updated` or `asset.deleted`, so replay cost tracks
 edits since the last snapshot rather than the whole history. The fold yields
 periodically, so a long stream cannot hold the event loop while other rooms
-resolve, and concurrent callers share one replay.
+resolve, and concurrent callers share one replay. It re-reads the tail until
+the stream stops growing, because events appended while it yielded land before
+the entry starts following the log.
 
 Those three types are exported as `ASSET_CHECKPOINT_EVENT_TYPES`. Loading a
 projection uses the same bound: `AssetProjector.load()` and

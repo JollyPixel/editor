@@ -8,6 +8,7 @@ import {
   STATE_GITIGNORE_CONTENT,
   STATE_GITIGNORE_PATH
 } from "./constants.ts";
+import type { AssetEventDataMap } from "./events/AssetEvents.ts";
 import { CatalogIdentitySidecar } from "./catalog/CatalogIdentitySidecar.ts";
 import { AssetKindRegistry } from "./kinds/AssetKindRegistry.ts";
 import type {
@@ -32,7 +33,7 @@ import {
 
 export interface AssetBackendOptions {
   source: AssetSource;
-  eventStore: EventStore.EventStore;
+  eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   /**
    * Kind handlers. The built-in `binary` fallback is always present and
    * claims whatever these do not.
@@ -79,7 +80,7 @@ export interface AssetBackendInternals {
 
 export interface AssetBackend extends AsyncDisposable {
   readonly source: AssetSource;
-  readonly eventStore: EventStore.EventStore;
+  readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   readonly kinds: AssetKindRegistry;
   readonly writer: AssetWriter;
   readonly catalog: CatalogProjection;

@@ -4,7 +4,6 @@ export type {
   AssetWorkspace,
   AssetWorkspaceOptions
 } from "./createAssetWorkspace.ts";
-export { openAssetEventStore } from "./openAssetEventStore.ts";
 export { seedAssetSource } from "./seedAssetSource.ts";
 export type {
   AssetSeedFactory,

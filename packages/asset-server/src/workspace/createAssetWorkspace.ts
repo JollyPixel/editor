@@ -1,5 +1,8 @@
+// Import Node.js Dependencies
+import path from "node:path";
+
 // Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
+import * as EventStore from "@jolly-pixel/event-store";
 import {
   Server,
   type Extension,
@@ -7,10 +10,14 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import { EVENTS_DB_PATH } from "../constants.ts";
 import type { AssetSource } from "../sources/AssetSource.ts";
 import { FilesystemAssetSource } from "../sources/persistence/FilesystemAssetSource.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
-import { ASSET_CHECKPOINT_EVENT_TYPES } from "../events/AssetEvents.ts";
+import {
+  ASSET_CHECKPOINT_EVENT_TYPES,
+  type AssetEventDataMap
+} from "../events/AssetEvents.ts";
 import {
   createAssetBackend,
   type AssetBackend,
@@ -20,7 +27,6 @@ import {
   silentLogger,
   type Logger
 } from "../logger.ts";
-import { openAssetEventStore } from "./openAssetEventStore.ts";
 import {
   seedAssetSource,
   type AssetSeedMap
@@ -49,7 +55,7 @@ export interface AssetWorkspaceOptions {
   /**
    * @default sqlite log inside the workspace state directory
    */
-  eventStore?: EventStore.EventStore;
+  eventStore?: EventStore.TypedEventStore<AssetEventDataMap>;
   /**
    * Network server hosting the catalog and asset rooms. Pass one already
    * carrying extensions instead of letting the workspace build it.
@@ -79,7 +85,7 @@ export interface AssetWorkspaceOptions {
 
 export interface AssetWorkspace extends AsyncDisposable {
   readonly source: AssetSource;
-  readonly eventStore: EventStore.EventStore;
+  readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   readonly backend: AssetBackend;
   readonly server: Server;
 
@@ -115,7 +121,10 @@ export async function createAssetWorkspace(
   }
 
   const ownsEventStore = options.eventStore === undefined;
-  const eventStore = options.eventStore ?? await openAssetEventStore(root);
+  const eventStore = options.eventStore ??
+    await EventStore.persistence.sqlite<AssetEventDataMap>(
+      path.join(root, EVENTS_DB_PATH)
+    );
 
   if (compactOnOpen) {
     const report = eventStore.compact({

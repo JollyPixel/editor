@@ -1,5 +1,7 @@
 // Import Third-party Dependencies
-import { Emitter } from "@openally/emitt";
+import {
+  Emitter
+} from "@openally/emitt";
 import {
   wrap,
   type Result
@@ -12,7 +14,9 @@ import type {
   EventStoreEventMap,
   EventWriter
 } from "../EventStore.ts";
-import type { EventLog } from "./EventLog.ts";
+import type {
+  EventLog
+} from "./EventLog.ts";
 
 export class EventStoreWriter extends Emitter<
   EventStoreEventMap

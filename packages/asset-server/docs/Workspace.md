@@ -61,12 +61,10 @@ events and the reclaimed file is the one the back-end opens. See
 
 ## Event log
 
-```ts
-openAssetEventStore(root: string): Promise<EventStore>
-```
-
-Opens `.jollypixel/events.db` under the root, creating the state directory
-first: sqlite will not create its file inside a directory that is missing.
+Without an `eventStore` option the workspace opens a sqlite log at
+`.jollypixel/events.db` under the root, and the backend creates the directories
+it needs. Pass `eventStore` to bring your own, in which case `close()` leaves
+it open.
 
 ## Seeding
 

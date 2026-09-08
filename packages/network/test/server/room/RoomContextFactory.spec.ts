@@ -86,10 +86,11 @@ function createFailingEventStore(): EventStore.EventStore {
     writer: new FailingEventWriter(),
     reader: {
       list: () => [],
-      lastVersionOf: () => 0,
+      listFromCheckpoint: () => [],
       listAll: () => [],
       listFromCheckpoints: () => []
     },
+    subscribe: () => () => void 0,
     compact: () => {
       return {
         removed: 0,
