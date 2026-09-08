@@ -20,15 +20,37 @@ interface CellLike {
   z: number;
 }
 
+function createRamp(
+  cell: CellLike
+): THREE.Mesh {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute([
+      0, 0, 0, 0, 1, 1, 1, 1, 1,
+      0, 0, 0, 1, 1, 1, 1, 0, 0
+    ], 3)
+  );
+
+  const mesh = new THREE.Mesh(geometry);
+  mesh.position.set(cell.x, cell.y, cell.z);
+
+  return mesh;
+}
+
 function createResolver(
   blocks: CellLike[],
-  place: (camera: THREE.PerspectiveCamera) => void
+  place: (camera: THREE.PerspectiveCamera) => void,
+  ramps: CellLike[] = []
 ): BrushAimResolver {
   const solid = new THREE.Group();
   for (const block of blocks) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.position.set(block.x + 0.5, block.y + 0.5, block.z + 0.5);
     solid.add(mesh);
+  }
+  for (const ramp of ramps) {
+    solid.add(createRamp(ramp));
   }
   solid.updateMatrixWorld(true);
 
@@ -116,5 +138,55 @@ describe("BrushAimResolver.aimAtHeight", () => {
     });
 
     assert.strictEqual(resolver.aimAtHeight(kPointer, 0, "place"), null);
+  });
+});
+
+describe("BrushAimResolver.resolve", () => {
+  test("places against the box face the ray enters", () => {
+    const resolver = createResolver([{ x: 0, y: 0, z: 0 }], (camera) => {
+      camera.position.set(0.5, 0.5, -4);
+      camera.lookAt(0.5, 0.5, 0);
+    });
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 0, z: -1 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("places in front of a ramp slope instead of above it", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(0.5, 0.5, -3);
+      camera.lookAt(0.5, 0.15, 0.15);
+    }, [{ x: 0, y: 0, z: 0 }]);
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 0, z: -1 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("places above a ramp slope aimed at from overhead", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(0.5, 4, 0.2);
+      camera.lookAt(0.5, 0.55, 0.55);
+    }, [{ x: 0, y: 0, z: 0 }]);
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 0, y: 1, z: 0 },
+      remove: { x: 0, y: 0, z: 0 }
+    });
+  });
+
+  test("places on the ground where the ray lands", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(2.5, 5, 2.5);
+      camera.lookAt(2.5, 0, 2.5);
+    });
+
+    assert.deepStrictEqual(resolver.resolve(kPointer), {
+      place: { x: 2, y: 0, z: 2 },
+      remove: { x: 2, y: 0, z: 2 }
+    });
   });
 });

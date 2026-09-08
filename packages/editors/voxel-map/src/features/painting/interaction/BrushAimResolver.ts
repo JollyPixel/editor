@@ -8,6 +8,7 @@ import {
 
 // Import Internal Dependencies
 import { castViewRay } from "../../../scene/viewFocus.ts";
+import { cellFaceStep } from "./cellFaceStep.ts";
 import type { StrokeMode } from "../model/BrushStroke.ts";
 
 // CONSTANTS
@@ -50,7 +51,9 @@ export class BrushAimResolver {
     return this.#maxDistance;
   }
 
-  set maxDistance(value: number) {
+  set maxDistance(
+    value: number
+  ) {
     this.#maxDistance = value;
   }
 
@@ -62,17 +65,39 @@ export class BrushAimResolver {
       groundPlaneSize: this.#groundPlaneSize,
       raycaster: this.#raycaster
     });
-    if (hit === null || hit.distance > this.#maxDistance) {
+    if (
+      hit === null ||
+      hit.distance > this.#maxDistance
+    ) {
       return null;
     }
 
-    return {
-      place: voxelPositionOf(hit.point, hit.normal, "front"),
-      remove: voxelPositionOf(
+    if (hit.ground) {
+      const ground = voxelPositionOf(
         hit.point,
         hit.normal,
-        hit.ground ? "front" : "back"
-      )
+        "front"
+      );
+
+      return {
+        place: ground,
+        remove: ground
+      };
+    }
+
+    const cell = voxelPositionOf(
+      hit.point,
+      hit.normal,
+      "back"
+    );
+
+    return {
+      place: this.#neighbourOf(
+        cell,
+        hit.point,
+        hit.normal
+      ),
+      remove: cell
     };
   }
 
@@ -81,20 +106,31 @@ export class BrushAimResolver {
     height: number,
     mode: StrokeMode
   ): VoxelCoord | null {
-    this.#raycaster.setFromCamera(pointer, this.#camera);
+    this.#raycaster.setFromCamera(
+      pointer,
+      this.#camera
+    );
     kPlane.set(kUp, -(height + 0.5));
 
-    const point = this.#raycaster.ray.intersectPlane(kPlane, kPlanePoint);
+    const point = this.#raycaster.ray.intersectPlane(
+      kPlane,
+      kPlanePoint
+    );
     if (point === null) {
       return null;
     }
 
-    const distance = point.distanceTo(this.#raycaster.ray.origin);
+    const distance = point.distanceTo(
+      this.#raycaster.ray.origin
+    );
     if (distance > this.#maxDistance) {
       return null;
     }
 
-    const cell = this.#surfaceCellAt(distance, mode) ?? voxelCellOf(point);
+    const cell = this.#surfaceCellAt(
+      distance,
+      mode
+    ) ?? voxelCellOf(point);
 
     return {
       x: cell.x,
@@ -107,15 +143,54 @@ export class BrushAimResolver {
     distance: number,
     mode: StrokeMode
   ): VoxelCoord | null {
-    const [hit] = this.#raycaster.intersectObject(this.#solid, true);
-    if (hit === undefined || hit.distance >= distance) {
+    const [hit] = this.#raycaster.intersectObject(
+      this.#solid,
+      true
+    );
+    if (
+      hit === undefined ||
+      hit.distance >= distance
+    ) {
       return null;
     }
 
-    return voxelPositionOf(
+    const normal = hit.face?.normal ?? kUp;
+    const cell = voxelPositionOf(
       hit.point,
-      hit.face?.normal ?? kUp,
-      mode === "place" ? "front" : "back"
+      normal,
+      "back"
     );
+
+    return mode === "place" ?
+      this.#neighbourOf(
+        cell,
+        hit.point,
+        normal
+      ) :
+      cell;
+  }
+
+  #neighbourOf(
+    cell: VoxelCoord,
+    point: THREE.Vector3,
+    normal: THREE.Vector3
+  ): VoxelCoord {
+    const step = cellFaceStep(
+      this.#raycaster.ray,
+      cell
+    );
+    if (step === null) {
+      return voxelPositionOf(
+        point,
+        normal,
+        "front"
+      );
+    }
+
+    return {
+      x: cell.x + step.x,
+      y: cell.y + step.y,
+      z: cell.z + step.z
+    };
   }
 }
