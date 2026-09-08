@@ -6,5 +6,5 @@ export const TAB_EXAMPLE = createSimpleExample(
   "containers/tab",
   "Tab",
   "Containers",
-  tabs
+  () => tabs("paint")
 );
