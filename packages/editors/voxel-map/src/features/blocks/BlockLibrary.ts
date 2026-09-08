@@ -18,8 +18,14 @@ import {
   editorState,
   type BrushStore,
   type RotationMode,
+  type ShellStore,
   type WorldStore
 } from "../../app/state/index.ts";
+import {
+  mergeSelfBlockMark,
+  selfBlockMark,
+  type BlockMarkMap
+} from "./blockMarks.ts";
 
 // Registers the Three.js block grid.
 import "./BlockLibraryViewport.ts";
@@ -92,6 +98,9 @@ export class BlockLibrary extends LitElement {
   @property({ attribute: false })
   declare worldStore: WorldStore;
 
+  @property({ attribute: false })
+  declare shell: ShellStore;
+
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
 
@@ -110,6 +119,9 @@ export class BlockLibrary extends LitElement {
   @state()
   private declare _flipY: boolean;
 
+  @state()
+  private declare _marks: BlockMarkMap;
+
   @query("block-editor-dialog")
   declare private _dialog: BlockEditorDialog;
 
@@ -121,12 +133,14 @@ export class BlockLibrary extends LitElement {
     this.engine = undefined;
     this.brush = editorState.brush;
     this.worldStore = editorState.world;
+    this.shell = editorState.shell;
     this.layout = "compact";
     this._selectedId = null;
     this._selectedBlock = null;
     this._blocks = [];
     this._rotationMode = this.brush.rotationMode;
     this._flipY = this.brush.flipY;
+    this._marks = new Map();
   }
 
   readonly #onSelectedBlockChange = () => {
@@ -148,14 +162,21 @@ export class BlockLibrary extends LitElement {
     this._flipY = this.brush.flipY;
   };
 
+  readonly #onMarksChange = () => {
+    this.#refreshMarks();
+  };
+
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
       this.brush.watch("blockChange", this.#onSelectedBlockChange),
       this.worldStore.watch("blockRegistryChanged", this.#onBlockRegistryChanged),
       this.brush.watch("rotationModeChange", this.#onRotationModeChange),
-      this.brush.watch("flipYChange", this.#onFlipYChange)
+      this.brush.watch("flipYChange", this.#onFlipYChange),
+      this.shell.watch("blockSelectionsChange", this.#onMarksChange),
+      this.shell.watch("peersChange", this.#onMarksChange)
     );
+    this.#refreshMarks();
   }
 
   override disconnectedCallback() {
@@ -179,7 +200,7 @@ export class BlockLibrary extends LitElement {
       <block-library-viewport
         .engine=${this.engine}
         .blocks=${this._blocks}
-        .selectedId=${this._selectedId}
+        .marks=${this._marks}
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
@@ -250,8 +271,17 @@ export class BlockLibrary extends LitElement {
     await this._dialog?.openForEdit();
   }
 
+  #refreshMarks(): void {
+    this._marks = mergeSelfBlockMark(
+      this.shell.blockSelections,
+      this._selectedId,
+      selfBlockMark(this.shell.peers)
+    );
+  }
+
   #resolveSelection(): void {
     this._selectedId = this.brush.blockId;
+    this.#refreshMarks();
     const block = this.engine?.blockRegistry.get(this._selectedId ?? 0) ?? null;
     if (block === this._selectedBlock) {
       return;

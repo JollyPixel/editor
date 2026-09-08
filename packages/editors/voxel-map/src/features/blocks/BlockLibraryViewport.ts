@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
-import { customElement, property, query } from "lit/decorators.js";
+import { LitElement, html, css, nothing } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import type {
   VoxelEngine,
   ResolvedBlockDefinition
@@ -8,17 +8,36 @@ import type {
 
 // Import Internal Dependencies
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
+import {
+  blockCellRect,
+  type BlockCellRect,
+  type BlockGridLayout
+} from "./blockGridLayout.ts";
+import {
+  blockMarkNames,
+  resolveBlockMarks,
+  type BlockMarkMap,
+  type BlockMarkView
+} from "./blockMarks.ts";
 import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 
 // CONSTANTS
 const kBlockSelectEvent = "block-select";
 const kBlockEditEvent = "block-edit";
+const kCellInset = 3;
+
+interface MarkedCell {
+  rect: BlockCellRect;
+  view: BlockMarkView;
+}
 
 @customElement("block-library-viewport")
 export class BlockLibraryViewport extends LitElement {
   static override styles = css`
     :host {
       display: block;
+
+      --block-grid-inset: 5px;
     }
 
     :host([layout="fill"]) {
@@ -28,12 +47,13 @@ export class BlockLibraryViewport extends LitElement {
     }
 
     .scroller {
+      position: relative;
       overflow-x: hidden;
       overflow-y: auto;
       scrollbar-gutter: stable;
       min-height: 100px;
       max-height: 240px;
-      padding: 5px;
+      padding: var(--block-grid-inset);
       background: var(--jolly-well-bg, #0e1316);
       border-radius: var(--jolly-radius-sm, 3px);
       cursor: pointer;
@@ -42,6 +62,51 @@ export class BlockLibraryViewport extends LitElement {
     :host([layout="fill"]) .scroller {
       flex: 1 1 auto;
       max-height: none;
+    }
+
+    .scroller > canvas {
+      position: relative;
+      z-index: 1;
+    }
+
+    .layer {
+      position: absolute;
+      inset-block-start: var(--block-grid-inset);
+      inset-inline-start: var(--block-grid-inset);
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .layer.highlights {
+      z-index: 0;
+    }
+
+    .layer.marks {
+      z-index: 2;
+    }
+
+    .highlight {
+      position: absolute;
+      border-radius: var(--jolly-radius-sm, 3px);
+      box-sizing: border-box;
+    }
+
+    .marker {
+      position: absolute;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+      gap: 2px;
+      padding: 4px;
+      box-sizing: border-box;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px var(--jolly-well-bg, #0e1316);
     }
   `;
 
@@ -52,10 +117,13 @@ export class BlockLibraryViewport extends LitElement {
   declare blocks: ResolvedBlockDefinition[];
 
   @property({ attribute: false })
-  declare selectedId: number | null;
+  declare marks: BlockMarkMap;
 
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
+
+  @state()
+  private declare _grid: BlockGridLayout | null;
 
   @query(".scroller")
   declare private _scroller: HTMLDivElement;
@@ -66,8 +134,9 @@ export class BlockLibraryViewport extends LitElement {
     super();
     this.engine = undefined;
     this.blocks = [];
-    this.selectedId = null;
+    this.marks = new Map();
     this.layout = "compact";
+    this._grid = null;
   }
 
   override disconnectedCallback() {
@@ -87,18 +156,88 @@ export class BlockLibraryViewport extends LitElement {
 
     if (changed.has("blocks")) {
       this.#renderer?.setBlocks(this.blocks);
-    }
-    if (changed.has("selectedId")) {
-      this.#renderer?.setSelectedBlock(this.selectedId);
+      this.#syncGrid();
     }
   }
 
   override render() {
+    const cells = this.#markedCells();
+
     return html`<div
       class="scroller"
       @click=${this.#onClick}
       @dblclick=${this.#onDoubleClick}
+    >
+      <div class="layer highlights">
+        ${cells.map((cell) => this.#renderHighlight(cell))}
+      </div>
+      <div class="layer marks">
+        ${cells.map((cell) => this.#renderMarker(cell))}
+      </div>
+    </div>`;
+  }
+
+  #renderHighlight(
+    cell: MarkedCell
+  ) {
+    const { color } = cell.view.highlight;
+
+    return html`<div
+      class="highlight"
+      style=${[
+        `left:${cell.rect.x}px`,
+        `top:${cell.rect.y}px`,
+        `width:${cell.rect.size}px`,
+        `height:${cell.rect.size}px`,
+        `background:${color}`
+      ].join(";")}
     ></div>`;
+  }
+
+  #renderMarker(
+    cell: MarkedCell
+  ) {
+    if (cell.view.dots.length === 0) {
+      return nothing;
+    }
+
+    return html`<div
+      class="marker"
+      title=${blockMarkNames(cell.view)}
+      style=${[
+        `left:${cell.rect.x}px`,
+        `top:${cell.rect.y}px`,
+        `width:${cell.rect.size}px`,
+        `height:${cell.rect.size}px`
+      ].join(";")}
+    >
+      ${cell.view.dots.map((dot) => html`<span
+        class="dot"
+        style=${`background:${dot.color}`}
+      ></span>`)}
+    </div>`;
+  }
+
+  #markedCells(): MarkedCell[] {
+    const grid = this._grid;
+    if (grid === null) {
+      return [];
+    }
+
+    const cells: MarkedCell[] = [];
+    this.blocks.forEach((block, index) => {
+      const view = resolveBlockMarks(this.marks.get(block.id));
+      if (view === null) {
+        return;
+      }
+
+      cells.push({
+        rect: blockCellRect(index, grid, kCellInset),
+        view
+      });
+    });
+
+    return cells;
   }
 
   #build(): void {
@@ -112,7 +251,25 @@ export class BlockLibraryViewport extends LitElement {
       tilesetManager: this.engine.tilesetManager,
       blocks: this.blocks
     });
-    this.#renderer.setSelectedBlock(this.selectedId);
+    this.#renderer.onLayoutChange = () => this.#syncGrid();
+    this.#syncGrid();
+  }
+
+  #syncGrid(): void {
+    const grid = this.#renderer?.layout;
+    if (grid === undefined) {
+      return;
+    }
+
+    if (
+      this._grid !== null &&
+      this._grid.cols === grid.cols &&
+      this._grid.cellSize === grid.cellSize
+    ) {
+      return;
+    }
+
+    this._grid = grid;
   }
 
   #onClick(

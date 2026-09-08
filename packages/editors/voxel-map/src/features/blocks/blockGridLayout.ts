@@ -19,3 +19,24 @@ export function computeBlockGridLayout(
     cellSize: Math.max(1, Math.floor(width / cols))
   };
 }
+
+export interface BlockCellRect {
+  x: number;
+  y: number;
+  size: number;
+}
+
+export function blockCellRect(
+  index: number,
+  layout: BlockGridLayout,
+  inset = 0
+): BlockCellRect {
+  const { cols, cellSize } = layout;
+  const margin = Math.max(0, Math.min(inset, (cellSize - 1) / 2));
+
+  return {
+    x: ((index % cols) * cellSize) + margin,
+    y: (Math.floor(index / cols) * cellSize) + margin,
+    size: cellSize - (margin * 2)
+  };
+}

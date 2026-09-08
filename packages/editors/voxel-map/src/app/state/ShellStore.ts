@@ -2,6 +2,7 @@
 import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { BlockMarkMap } from "../../features/blocks/blockMarks.ts";
 import { EditorStore } from "./EditorStore.ts";
 
 // CONSTANTS
@@ -22,13 +23,21 @@ export function isSidebarTab(
 }
 
 export type ShellStoreEvents = {
-  tabChange: (tab: SidebarTab) => void;
-  peersChange: (peers: readonly PresencePeer[]) => void;
+  tabChange: (
+    tab: SidebarTab
+  ) => void;
+  peersChange: (
+    peers: readonly PresencePeer[]
+  ) => void;
+  blockSelectionsChange: (
+    selections: BlockMarkMap
+  ) => void;
 };
 
 export class ShellStore extends EditorStore<ShellStoreEvents> {
   #tab: SidebarTab = "general";
   #peers: readonly PresencePeer[] = [];
+  #blockSelections: BlockMarkMap = new Map();
 
   get tab(): SidebarTab {
     return this.#tab;
@@ -56,6 +65,20 @@ export class ShellStore extends EditorStore<ShellStoreEvents> {
     this.emit(
       "peersChange",
       this.#peers
+    );
+  }
+
+  get blockSelections(): BlockMarkMap {
+    return this.#blockSelections;
+  }
+
+  set blockSelections(
+    selections: BlockMarkMap
+  ) {
+    this.#blockSelections = selections;
+    this.emit(
+      "blockSelectionsChange",
+      selections
     );
   }
 }
