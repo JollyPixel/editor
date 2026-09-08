@@ -21,6 +21,7 @@ import type {
 import {
   editorState,
   isSidebarTab,
+  isTextureTab,
   type EditorState,
   type LayerSelection,
   type SidebarTab
@@ -37,7 +38,7 @@ import { ViewFocus } from "../scene/viewFocus.ts";
 import "../features/registerElements.ts";
 
 // CONSTANTS
-const kBlockLibrarySlot = "block-library";
+const kTextureEditorSlot = "texture-editor";
 
 @customElement("editor-sidebar")
 export class EditorSidebar extends LitElement {
@@ -82,16 +83,6 @@ export class EditorSidebar extends LitElement {
 
     .column jolly-folder {
       flex: 0 0 auto;
-    }
-
-    .blocks jolly-folder {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
-    texture-editor {
-      flex: 1 1 auto;
-      min-height: 0;
     }
 
     .hint {
@@ -144,15 +135,14 @@ export class EditorSidebar extends LitElement {
   @query("jolly-folder[key='block-library']")
   private declare _blockFolder: HTMLElementTagNameMap["jolly-folder"] | null;
 
+  @query("block-library")
+  private declare _blockLibrary: BlockLibrary | null;
+
   @query("jolly-folder[key='layers']")
   private declare _layersFolder: HTMLElementTagNameMap["jolly-folder"] | null;
 
   @query("layer-manager")
   private declare _layerManager: LayerManager | null;
-
-  get #blockLibrary(): BlockLibrary | null {
-    return this.querySelector("block-library");
-  }
 
   #subscriptions: Array<() => void> = [];
 
@@ -212,12 +202,12 @@ export class EditorSidebar extends LitElement {
 
   readonly #addBlock = async(): Promise<void> => {
     this.#openBlockLibrary();
-    await this.#blockLibrary?.addBlock();
+    await this._blockLibrary?.addBlock();
   };
 
   readonly #editBlock = async(): Promise<void> => {
     this.#openBlockLibrary();
-    await this.#blockLibrary?.editBlock();
+    await this._blockLibrary?.editBlock();
   };
 
   readonly #addLayer = async(): Promise<void> => {
@@ -267,11 +257,11 @@ export class EditorSidebar extends LitElement {
         <jolly-tab value="general" label="General">
           ${this.#renderGeneral()}
         </jolly-tab>
-        <jolly-tab value="paint" label="Paint">
-          ${this.#renderPaint()}
-        </jolly-tab>
         <jolly-tab value="blocks" label="Blocks">
           ${this.#renderBlocks()}
+        </jolly-tab>
+        <jolly-tab value="paint" label="Paint">
+          ${this.#renderPaint()}
         </jolly-tab>
         <jolly-tab value="layers" label="Layers">
           ${this.#renderLayers()}
@@ -281,7 +271,7 @@ export class EditorSidebar extends LitElement {
   }
 
   protected override updated(): void {
-    render(this.#renderBlockLibrary(), this);
+    render(this.#renderTextureEditor(), this);
   }
 
   #onTabChange(
@@ -293,25 +283,24 @@ export class EditorSidebar extends LitElement {
     }
   }
 
-  #renderBlockLibrary() {
+  #renderTextureEditor() {
     return html`
-      <block-library
-        slot=${kBlockLibrarySlot}
+      <texture-editor
+        slot=${kTextureEditorSlot}
         .engine=${this.engine}
         .brush=${this.state.brush}
         .worldStore=${this.state.world}
-        .shell=${this.state.shell}
-        .layout=${this._tab === "blocks" ? "fill" : "compact"}
-        @block-selection-change=${this.#onBlockSelectionChange}
-      ></block-library>
+        .active=${isTextureTab(this._tab)}
+        .room=${this.textureRoom}
+      ></texture-editor>
     `;
   }
 
-  #renderBlockLibrarySlot(
+  #renderTextureEditorSlot(
     tab: SidebarTab
   ) {
     return this._tab === tab ?
-      html`<slot name=${kBlockLibrarySlot}></slot>` :
+      html`<slot name=${kTextureEditorSlot}></slot>` :
       nothing;
   }
 
@@ -466,6 +455,14 @@ export class EditorSidebar extends LitElement {
   #renderPaint() {
     return html`
       <div class="column">
+        ${this.#renderTextureEditorSlot("paint")}
+      </div>
+    `;
+  }
+
+  #renderBlocks() {
+    return html`
+      <div class="column">
         <jolly-folder
           flush
           key="block-library"
@@ -473,32 +470,16 @@ export class EditorSidebar extends LitElement {
           storage-key="voxel-map:folder:block-library"
         >
           ${this.#renderBlockActions("actions")}
-          ${this.#renderBlockLibrarySlot("paint")}
+          <block-library
+            .engine=${this.engine}
+            .brush=${this.state.brush}
+            .worldStore=${this.state.world}
+            .shell=${this.state.shell}
+            @block-selection-change=${this.#onBlockSelectionChange}
+          ></block-library>
         </jolly-folder>
 
-        <texture-editor
-          .engine=${this.engine}
-          .brush=${this.state.brush}
-          .worldStore=${this.state.world}
-          .active=${this._tab === "paint"}
-          .room=${this.textureRoom}
-        ></texture-editor>
-      </div>
-    `;
-  }
-
-  #renderBlocks() {
-    return html`
-      <div class="column blocks">
-        <jolly-folder
-          .collapsible=${false}
-          flush
-          key="block-library-fill"
-          label="Block Library"
-        >
-          ${this.#renderBlockActions("actions")}
-          ${this.#renderBlockLibrarySlot("blocks")}
-        </jolly-folder>
+        ${this.#renderTextureEditorSlot("blocks")}
       </div>
     `;
   }

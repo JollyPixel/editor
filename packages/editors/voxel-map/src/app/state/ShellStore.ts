@@ -8,8 +8,8 @@ import { EditorStore } from "./EditorStore.ts";
 // CONSTANTS
 const kSidebarTabs = [
   "general",
-  "paint",
   "blocks",
+  "paint",
   "layers"
 ] as const;
 const kSidebarTabSet: ReadonlySet<string> = new Set(kSidebarTabs);
@@ -20,6 +20,13 @@ export function isSidebarTab(
   value: string
 ): value is SidebarTab {
   return kSidebarTabSet.has(value);
+}
+
+// Tabs the single texture editor is projected into.
+export function isTextureTab(
+  tab: SidebarTab
+): boolean {
+  return tab === "blocks" || tab === "paint";
 }
 
 export type ShellStoreEvents = {

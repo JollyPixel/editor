@@ -41,12 +41,6 @@ export class BlockLibraryViewport extends LitElement {
       --block-grid-inset: 5px;
     }
 
-    :host([layout="fill"]) {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-
     .scroller {
       position: relative;
       overflow-x: hidden;
@@ -58,11 +52,6 @@ export class BlockLibraryViewport extends LitElement {
       background: var(--jolly-well-bg, #0e1316);
       border-radius: var(--jolly-radius-sm, 3px);
       cursor: pointer;
-    }
-
-    :host([layout="fill"]) .scroller {
-      flex: 1 1 auto;
-      max-height: none;
     }
 
     .scroller > canvas {

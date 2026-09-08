@@ -16,6 +16,7 @@ export {
 export {
   ShellStore,
   isSidebarTab,
+  isTextureTab,
   type ShellStoreEvents,
   type SidebarTab
 } from "./ShellStore.ts";

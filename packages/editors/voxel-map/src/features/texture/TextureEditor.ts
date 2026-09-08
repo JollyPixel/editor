@@ -28,7 +28,9 @@ export class TextureEditor extends LitElement {
   static override styles = css`
     :host {
       display: flex;
+      flex: 1 1 auto;
       flex-direction: column;
+      min-height: 0;
     }
 
     jolly-toolbar {

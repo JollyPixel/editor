@@ -8,7 +8,8 @@ import type { PresencePeer } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   ShellStore,
-  isSidebarTab
+  isSidebarTab,
+  isTextureTab
 } from "../../../src/app/state/index.ts";
 
 describe("ShellStore", () => {
@@ -47,5 +48,12 @@ describe("ShellStore", () => {
     assert.equal(isSidebarTab("blocks"), true);
     assert.equal(isSidebarTab("layers"), true);
     assert.equal(isSidebarTab("nope"), false);
+  });
+
+  it("hosts the texture editor on the blocks and paint tabs only", () => {
+    assert.equal(isTextureTab("blocks"), true);
+    assert.equal(isTextureTab("paint"), true);
+    assert.equal(isTextureTab("general"), false);
+    assert.equal(isTextureTab("layers"), false);
   });
 });
