@@ -10,8 +10,9 @@ import {
   decodePixelArtDocument,
   encodePixelArtDocument,
   InvalidPixelArtDocumentError,
-  loadPixelArtDocument
-} from "#src/asset/PixelArtDocument.ts";
+  deserializePixelBuffer,
+  serializePixelBuffer
+} from "#src/serialization/index.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 
 function bytes(
@@ -34,9 +35,9 @@ describe("PixelArtDocument", () => {
     );
 
     const target = new PixelBuffer({ size: { x: 1, y: 1 } });
-    loadPixelArtDocument(
-      target,
-      decodePixelArtDocument(encodePixelArtDocument(source))
+    deserializePixelBuffer(
+      decodePixelArtDocument(encodePixelArtDocument(serializePixelBuffer(source))),
+      target
     );
 
     assert.deepEqual(target.size(), { x: 3, y: 2 });
@@ -58,9 +59,9 @@ describe("PixelArtDocument", () => {
     });
 
     const target = new PixelBuffer({ size: { x: 4, y: 4 } });
-    loadPixelArtDocument(
-      target,
-      decodePixelArtDocument(encodePixelArtDocument(source))
+    deserializePixelBuffer(
+      decodePixelArtDocument(encodePixelArtDocument(serializePixelBuffer(source))),
+      target
     );
 
     assert.deepEqual(
@@ -84,9 +85,9 @@ describe("PixelArtDocument", () => {
       }
     });
 
-    loadPixelArtDocument(
-      target,
-      decodePixelArtDocument(encodePixelArtDocument(source))
+    deserializePixelBuffer(
+      decodePixelArtDocument(encodePixelArtDocument(serializePixelBuffer(source))),
+      target
     );
 
     assert.deepEqual([...target.uvRegions], []);
@@ -169,12 +170,12 @@ describe("PixelArtDocument", () => {
     });
 
     assert.throws(
-      () => loadPixelArtDocument(buffer, {
+      () => deserializePixelBuffer({
         version: 1,
         size: { x: 99, y: 2 },
         pixels: "",
         uvRegions: []
-      }),
+      }, buffer),
       InvalidPixelArtDocumentError
     );
   });
@@ -183,12 +184,12 @@ describe("PixelArtDocument", () => {
     const buffer = new PixelBuffer({ size: { x: 2, y: 2 } });
 
     assert.throws(
-      () => loadPixelArtDocument(buffer, {
+      () => deserializePixelBuffer({
         version: 1,
         size: { x: 2, y: 2 },
         pixels: "AAAA",
         uvRegions: []
-      }),
+      }, buffer),
       InvalidPixelArtDocumentError
     );
   });

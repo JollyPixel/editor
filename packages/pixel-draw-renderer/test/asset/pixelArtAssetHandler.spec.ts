@@ -21,8 +21,9 @@ import {
   PIXEL_ART_KIND
 } from "#src/asset/pixelArtAssetHandler.ts";
 import {
-  encodePixelArtDocument
-} from "#src/asset/PixelArtDocument.ts";
+  encodePixelArtDocument,
+  serializePixelBuffer
+} from "#src/serialization/index.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
@@ -57,7 +58,7 @@ function event(
 function documentEvent(
   buffer: PixelBuffer
 ): EventStore.Event {
-  const data = encodePixelArtDocument(buffer);
+  const data = encodePixelArtDocument(serializePixelBuffer(buffer));
 
   return event(ASSET_CREATED, {
     path: "a.pixelart",

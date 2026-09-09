@@ -9,8 +9,8 @@ import { deflateSync } from "node:zlib";
 
 // Import Internal Dependencies
 import {
-  createPixelArtBufferFromPng
-} from "#src/asset/PixelArtDocument.ts";
+  createPixelBufferFromPng
+} from "#src/buffer/fromPng.ts";
 
 // CONSTANTS
 const kSignature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
@@ -63,9 +63,9 @@ function truecolorPng(
   ]));
 }
 
-describe("createPixelArtBufferFromPng", () => {
+describe("createPixelBufferFromPng", () => {
   test("sizes the buffer to the image and keeps its exact samples", async() => {
-    const buffer = await createPixelArtBufferFromPng(
+    const buffer = await createPixelBufferFromPng(
       truecolorPng(3, 2)
     );
 
@@ -78,7 +78,7 @@ describe("createPixelArtBufferFromPng", () => {
   });
 
   test("keeps the default ceiling for images smaller than it", async() => {
-    const buffer = await createPixelArtBufferFromPng(
+    const buffer = await createPixelBufferFromPng(
       truecolorPng(4, 4)
     );
 
@@ -86,7 +86,7 @@ describe("createPixelArtBufferFromPng", () => {
   });
 
   test("raises the ceiling so an oversized atlas still fits", async() => {
-    const buffer = await createPixelArtBufferFromPng(
+    const buffer = await createPixelBufferFromPng(
       truecolorPng(2049, 1)
     );
 
@@ -95,7 +95,7 @@ describe("createPixelArtBufferFromPng", () => {
   });
 
   test("honours an explicit maxSize", async() => {
-    const buffer = await createPixelArtBufferFromPng(
+    const buffer = await createPixelBufferFromPng(
       truecolorPng(4, 4),
       { maxSize: 64 }
     );

@@ -9,6 +9,9 @@ import {
 } from "@jolly-pixel/asset-server/plugins/vite.ts";
 import {
   encodePixelArtDocument,
+  serializePixelBuffer
+} from "@jolly-pixel/pixel-draw.renderer";
+import {
   pixelArtAssetHandler
 } from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
 import {
@@ -55,7 +58,7 @@ export default defineConfig({
       ],
       seed: {
         "textures/block.pixelart": () => encodePixelArtDocument(
-          tileset.buffer
+          serializePixelBuffer(tileset.buffer)
         ),
         "maps/overworld.voxelmap.json": () => {
           const state = new VoxelMapState(kChunkSize);

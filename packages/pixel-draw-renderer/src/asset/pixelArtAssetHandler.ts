@@ -16,13 +16,11 @@ import {
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
 import { isPixelNetworkCommand } from "../network/PixelCommandValidator.ts";
 import {
-  createPixelArtBuffer,
   decodePixelArtDocument,
-  encodePixelArtDocument,
-  loadPixelArtDocument
-} from "./PixelArtDocument.ts";
+  encodePixelArtDocument
+} from "../serialization/document.ts";
 import { PixelArtAssetExtension } from "./PixelArtAssetExtension.ts";
-import type { PixelArtState } from "./PixelArtState.ts";
+import { PixelArtState } from "./PixelArtState.ts";
 import type { Vec2 } from "../types.ts";
 
 export const PIXEL_ART_KIND = "pixelart";
@@ -73,7 +71,7 @@ export function pixelArtAssetHandler(
     contentTypes: kContentTypes,
 
     create(): PixelArtState {
-      return { buffer: createPixelArtBuffer(defaultSize) };
+      return new PixelArtState(defaultSize);
     },
 
     apply(
@@ -82,7 +80,7 @@ export function pixelArtAssetHandler(
     ): void {
       // Ignore malformed events to retain the last valid replay state.
       try {
-        applyEvent(state, event, defaultSize);
+        applyEvent(state, event);
       }
       catch (error) {
         console.error(
@@ -96,7 +94,7 @@ export function pixelArtAssetHandler(
       state: PixelArtState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodePixelArtDocument(state.buffer)
+        encodePixelArtDocument(state.toJSON())
       );
     },
 
@@ -113,8 +111,7 @@ export function pixelArtAssetHandler(
 
 function applyEvent(
   state: PixelArtState,
-  event: EventStore.Event,
-  defaultSize: Vec2
+  event: EventStore.Event
 ): void {
   const parsed = parseAssetEvent(event);
   if (parsed.ok) {
@@ -123,19 +120,14 @@ function applyEvent(
       assetEvent.eventType === ASSET_CREATED ||
       assetEvent.eventType === ASSET_UPDATED
     ) {
-      loadPixelArtDocument(
-        state.buffer,
+      state.load(
         decodePixelArtDocument(
           decodeContent(assetEvent.eventData.content)
         )
       );
     }
     else if (assetEvent.eventType === ASSET_DELETED) {
-      state.buffer.replacePixels(
-        new Uint8ClampedArray(defaultSize.x * defaultSize.y * 4),
-        defaultSize
-      );
-      state.buffer.uvRegions.clear();
+      state.clear();
     }
 
     return;

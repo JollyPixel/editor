@@ -10,17 +10,13 @@ export { PixelArtAssetExtension } from "./PixelArtAssetExtension.ts";
 export type {
   PixelArtAssetExtensionOptions
 } from "./PixelArtAssetExtension.ts";
-export type { PixelArtState } from "./PixelArtState.ts";
+export { PixelArtState } from "./PixelArtState.ts";
 export {
-  createPixelArtBuffer,
-  createPixelArtBufferFromPng,
   decodePixelArtDocument,
   encodePixelArtDocument,
-  InvalidPixelArtDocumentError,
-  loadPixelArtDocument,
-  pixelArtSnapshot
-} from "./PixelArtDocument.ts";
-export type {
-  PixelArtBufferFromPngOptions,
-  PixelArtDocumentData
-} from "./PixelArtDocument.ts";
+  parsePixelArtDocument,
+  serializePixelBuffer
+} from "../serialization/index.ts";
+export {
+  InvalidPixelArtDocumentError
+} from "../serialization/errors/InvalidPixelArtDocumentError.ts";

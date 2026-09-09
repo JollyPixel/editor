@@ -9,7 +9,7 @@ import {
   isPixelNetworkCommand,
   PIXEL_NETWORK_ACTIONS
 } from "../network/PixelCommandValidator.ts";
-import { pixelArtSnapshot } from "./PixelArtDocument.ts";
+import { pixelArtSnapshot } from "../serialization/buffer.ts";
 import type { PixelArtState } from "./PixelArtState.ts";
 
 export interface PixelArtAssetExtensionOptions {
@@ -96,7 +96,6 @@ export class PixelArtAssetExtension extends network.Extension {
       return;
     }
 
-    // Append applies the event before peers receive it.
     const appended = await context.eventStore.append({
       assetType: this.name,
       assetId: this.#assetId,

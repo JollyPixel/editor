@@ -30,8 +30,9 @@ import {
 import {
   decodePixelArtDocument,
   encodePixelArtDocument,
-  loadPixelArtDocument
-} from "#src/asset/PixelArtDocument.ts";
+  deserializePixelBuffer,
+  serializePixelBuffer
+} from "#src/serialization/index.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
@@ -153,7 +154,7 @@ function bufferFromFile(
   data: Uint8Array
 ): PixelBuffer {
   const buffer = new PixelBuffer({ size: kSize });
-  loadPixelArtDocument(buffer, decodePixelArtDocument(data));
+  deserializePixelBuffer(decodePixelArtDocument(data), buffer);
 
   return buffer;
 }
@@ -167,7 +168,9 @@ describe("pixel-art asset kind over a real back-end", () => {
       await fs.mkdir(path.join(root, "textures"), { recursive: true });
       await fs.writeFile(
         path.join(root, kDocumentPath),
-        encodePixelArtDocument(new PixelBuffer({ size: kSize }))
+        encodePixelArtDocument(
+          serializePixelBuffer(new PixelBuffer({ size: kSize }))
+        )
       );
 
       const timers = manualTimers();
@@ -247,7 +250,9 @@ describe("pixel-art asset kind over a real back-end", () => {
       using eventStore = EventStore.persistence.memory();
       await fs.writeFile(
         path.join(root, "a.pixelart"),
-        encodePixelArtDocument(new PixelBuffer({ size: kSize }))
+        encodePixelArtDocument(
+          serializePixelBuffer(new PixelBuffer({ size: kSize }))
+        )
       );
 
       await using backend = await createAssetBackend({
