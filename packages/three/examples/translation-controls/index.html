@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Area Box - @jolly-pixel/three</title>
+  <title>Translation Controls - @jolly-pixel/three</title>
   <link rel="stylesheet" href="/main.css">
 </head>
 
@@ -17,25 +17,17 @@
       heading="Controls"
     >
       <jolly-control
-        description="Select"
-        details="Click an area to select it, click the ground to deselect."
-      ><kbd>Click</kbd></jolly-control>
-      <jolly-control
-        description="Move"
-        details="Drag the selected volume to move it on the ground plane."
-      ><kbd>Drag</kbd></jolly-control>
-      <jolly-control
-        description="Resize"
-        details="Drag a face arrow to move that face alone."
-      ><kbd>Drag arrow</kbd></jolly-control>
-      <jolly-control
-        description="Move vertically"
-        details="Hold Shift while dragging the volume, with move axes set to XYZ."
-      ><kbd>Shift</kbd> + <kbd>Drag</kbd></jolly-control>
+        description="Translate"
+        details="Drag one colored handle to move the cube on that axis."
+      ><kbd>Drag handle</kbd></jolly-control>
       <jolly-control
         description="Ignore the grid"
         details="Hold Alt during a gesture to suspend snapping."
-      ><kbd>Alt</kbd></jolly-control>
+      ><kbd>Alt</kbd> + <kbd>Drag</kbd></jolly-control>
+      <jolly-control
+        description="Orbit"
+        details="Drag outside the gizmo to orbit the camera."
+      ><kbd>Drag</kbd></jolly-control>
     </jolly-controls>
     <jolly-dock-layout storage-key="three-examples:layout">
       <jolly-dock
@@ -49,7 +41,7 @@
       ></jolly-dock>
     </jolly-dock-layout>
   </jolly-scope>
-  <script type="module" src="./scripts/demo-area-box.ts"></script>
+  <script type="module" src="./main.ts"></script>
 </body>
 
 </html>

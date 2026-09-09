@@ -2,20 +2,14 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { UpdatableControls } from "./common.ts";
+import type { UpdatableControls } from "../../shared/common.ts";
 
 // CONSTANTS
 const kDefaultMoveSpeed = 4;
-// Radians of camera rotation per pixel of pointer-locked mouse movement.
 const kLookSpeed = 0.0025;
-// Keeps the camera just short of a straight-up/down look (gimbal lock).
 const kMaxPitch = Math.PI / 2 - 0.01;
 
 export interface FreeFlyCameraOptions {
-  /**
-   * World units per second.
-   * @default 4
-   */
   moveSpeed?: number;
 }
 
@@ -24,13 +18,6 @@ export interface FreeFlyCameraResult {
   controls: UpdatableControls;
 }
 
-/**
- * WASD + mouse-look free-fly ("no-clip") camera: click the canvas to lock
- * the pointer, then look around freely and move exactly along that look
- * direction on all three axes (Space/Shift for straight up/down instead).
- * Unlike `OrbitControls` (orbits a fixed target) or a walk camera (stays
- * level), this behaves like a spectator camera in a 3D world.
- */
 export function createFreeFlyCamera(
   canvas: HTMLCanvasElement,
   position: THREE.Vector3Like,

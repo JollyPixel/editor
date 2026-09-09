@@ -11,22 +11,20 @@ import {
 import {
   Grid,
   PeerFrustum
-} from "../../src/index.ts";
-import { PeerFrustumSync } from "../../src/network/index.ts";
+} from "../../../src/index.ts";
+import { PeerFrustumSync } from "../../../src/network/index.ts";
 import {
   createRenderer,
   createScene,
   startLoop
-} from "./utils/common.ts";
-import { createFreeFlyCamera } from "./utils/free-fly-camera.ts";
-import { createMirrorRoom } from "./utils/mirror-room.ts";
-import {
-  createExamplePane
-} from "./utils/example-switcher.ts";
-import { mountPerformanceStats } from "./utils/performance-stats.ts";
+} from "../../shared/common.ts";
+import { createExamplePane } from "../../shared/example-pane.ts";
+import { mountPerformanceStats } from "../../shared/performance-stats.ts";
+import { PEER_FRUSTUM_ROOM } from "../../shared/rooms.ts";
+import { createFreeFlyCamera } from "./free-fly-camera.ts";
+import { createMirrorRoom } from "./mirror-room.ts";
 
 // CONSTANTS
-const kRoomId = "three:peer-frustum-demo";
 const kUsernameStorageKey = "peer-frustum-demo:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
@@ -87,10 +85,9 @@ const networkClient = new network.Client({
     peerId: kLocalPeerId
   }
 });
-const room = networkClient.room(kRoomId);
+const room = networkClient.room(PEER_FRUSTUM_ROOM);
 room.join();
 
-// Broadcasts this tab's camera as its "player" pose
 const peerFrustumSync = new PeerFrustumSync({
   room,
   parent: scene,
@@ -160,7 +157,6 @@ function refreshSession(): void {
 
   presenceKey = key;
   sessionState.peers = room.peers.size;
-  // Colors here are derived from the peer list, so they shift on join/leave.
   peerFrustumSync.refreshColors();
   selfFrustum.color = colorForPeer(kLocalPeerId);
   sessionFolder.refresh();

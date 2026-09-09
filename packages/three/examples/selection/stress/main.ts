@@ -9,27 +9,21 @@ import {
   PeerSelectionRegistry,
   MergedSelectionOverlay,
   type HighlightEntry
-} from "../../src/index.ts";
+} from "../../../src/index.ts";
 import {
   createRenderer,
   createScene,
   createOrbitCamera,
   startLoop
-} from "./utils/common.ts";
-import { createExamplePane } from "./utils/example-switcher.ts";
-import { mountPerformanceStats } from "./utils/performance-stats.ts";
+} from "../../shared/common.ts";
+import { createExamplePane } from "../../shared/example-pane.ts";
+import { mountPerformanceStats } from "../../shared/performance-stats.ts";
 
 // CONSTANTS
-// Pointer must stay within this many CSS pixels between down/up to count as
-// a click rather than an orbit drag.
 const kClickDragThresholdPx = 4;
-// World-space gap between instances in the cube grid - wide enough that the
-// (fairly large) torus knot instances below don't overlap each other.
 const kInstanceSpacing = 2.6;
 const kDefaultInstanceCount = 100;
 const kMaxInstanceCount = 3000;
-// "outline" mode's "Random Selection > count" caps here regardless of
-// `instanceCount` - see `randomSelectionMax`'s own doc comment for why.
 const kOutlineSelectionCap = 100;
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
@@ -393,8 +387,6 @@ stressFolder
     max: kMaxInstanceCount,
     step: 1
   })
-  // Rebuild only on release, like Grid's own "extent" - rebuilding mid-drag
-  // would rewrite thousands of instance matrices per slider tick.
   .on("change", ({ value, last }) => {
     if (last) {
       spawnInstances(Math.round(value));

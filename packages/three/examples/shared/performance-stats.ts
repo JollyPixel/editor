@@ -9,7 +9,6 @@ export interface PerformanceStats {
   dispose(): void;
 }
 
-/** Mounts the shared compact performance HUD used by every three example. */
 export function mountPerformanceStats(
   renderer: THREE.WebGPURenderer
 ): PerformanceStats {

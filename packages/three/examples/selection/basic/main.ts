@@ -8,16 +8,16 @@ import {
   type SelectionManager,
   PeerSelectionRegistry,
   type SelectionTechnique
-} from "../../src/index.ts";
+} from "../../../src/index.ts";
 import {
   createRenderer,
   createScene,
   createOrbitCamera,
   startLoop
-} from "./utils/common.ts";
-import { createExamplePane } from "./utils/example-switcher.ts";
-import { bindSelectionAndPeerPanel } from "./utils/selection-panel.ts";
-import { PeerColorPaletteAllocator } from "./network/PeerColorPaletteAllocator.ts";
+} from "../../shared/common.ts";
+import { createExamplePane } from "../../shared/example-pane.ts";
+import { bindSelectionAndPeerPanel } from "../shared/selection-panel.ts";
+import { PeerColorPaletteAllocator } from "./PeerColorPaletteAllocator.ts";
 
 // CONSTANTS
 const kClickDragThresholdPx = 4;
@@ -117,7 +117,6 @@ canvas.addEventListener("pointerup", (event) => {
 
   const movedPx = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
   if (movedPx > kClickDragThresholdPx) {
-    // OrbitControls drag, not a selection click.
     return;
   }
 
@@ -160,8 +159,7 @@ function updateHover(): void {
 
 function handleClick(): void {
   const hit = pickMesh();
-  // refreshStatus() runs from the manager's own "selectionChange" listener,
-  // which also keeps the outliner in sync - no need to call it here too.
+
   selection.select(hit ? resolvePickId(hit) : null);
 }
 
@@ -184,7 +182,6 @@ function refreshOutliner(): void {
   tree.nodes = outlinerNodes.map(withPeerBadges);
 }
 
-/** Radians/second - a negative value orbits the opposite direction. */
 interface PriorityOrbiter {
   id: string;
   mesh: THREE.Mesh;
@@ -371,10 +368,6 @@ function advanceOrbiters(): void {
   applyOrbiterPositions();
 }
 
-/**
- * Jumps every orbiter to a new random angle instantly - the "reshuffle now"
- * button's handler, works whether or not `orbitEnabled` is currently on.
- */
 function reshuffleOrbiters(): void {
   for (const orbiter of priorityOrbiters) {
     orbiter.angle = Math.random() * Math.PI * 2;

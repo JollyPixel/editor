@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Selection: Stress - @jolly-pixel/three</title>
+  <title>Selection - @jolly-pixel/three</title>
   <link rel="stylesheet" href="/main.css">
 </head>
 
@@ -12,6 +12,17 @@
   <canvas tabindex="-1"></canvas>
   <jolly-scope>
     <jolly-dock-layout storage-key="three-examples:layout">
+      <jolly-dock
+        id="outliner"
+        key="outliner"
+        side="left"
+        align="start"
+        overlay
+        collapsible
+        size="220"
+      >
+        <jolly-pane key="scene" heading="Scene"></jolly-pane>
+      </jolly-dock>
       <jolly-dock
         id="tools"
         key="tools"
@@ -23,7 +34,7 @@
       ></jolly-dock>
     </jolly-dock-layout>
   </jolly-scope>
-  <script type="module" src="./scripts/selection-stress.ts"></script>
+  <script type="module" src="./main.ts"></script>
 </body>
 
 </html>

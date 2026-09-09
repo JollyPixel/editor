@@ -23,9 +23,9 @@ import {
   createScene,
   createOrbitCamera,
   startLoop
-} from "./utils/common.ts";
-import { createExamplePane } from "./utils/example-switcher.ts";
-import { mountPerformanceStats } from "./utils/performance-stats.ts";
+} from "../shared/common.ts";
+import { createExamplePane } from "../shared/example-pane.ts";
+import { mountPerformanceStats } from "../shared/performance-stats.ts";
 
 // CONSTANTS
 const kSnapOptions: Record<string, number> = {
@@ -171,7 +171,7 @@ interactionFolder
   })
   .on("change", ({ value }) => {
     controls.resizeAxes = value;
-    // Re-attaching applies the policy to the arrows already in the scene.
+
     const { area } = controls;
     if (area !== null) {
       controls.detach();

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Translation Controls - @jolly-pixel/three</title>
+  <title>Grid - @jolly-pixel/three</title>
   <link rel="stylesheet" href="/main.css">
 </head>
 
@@ -17,17 +17,17 @@
       heading="Controls"
     >
       <jolly-control
-        description="Translate"
-        details="Drag one colored handle to move the cube on that axis."
-      ><kbd>Drag handle</kbd></jolly-control>
-      <jolly-control
-        description="Ignore the grid"
-        details="Hold Alt during a gesture to suspend snapping."
-      ><kbd>Alt</kbd> + <kbd>Drag</kbd></jolly-control>
-      <jolly-control
         description="Orbit"
-        details="Drag outside the gizmo to orbit the camera."
+        details="Drag with the primary mouse button to orbit around the grid."
       ><kbd>Drag</kbd></jolly-control>
+      <jolly-control
+        description="Pan"
+        details="Drag with the secondary mouse button to pan the camera target."
+      ><kbd>Right drag</kbd></jolly-control>
+      <jolly-control
+        description="Zoom"
+        details="Use the mouse wheel to change the camera distance."
+      ><kbd>Wheel</kbd></jolly-control>
     </jolly-controls>
     <jolly-dock-layout storage-key="three-examples:layout">
       <jolly-dock
@@ -41,7 +41,7 @@
       ></jolly-dock>
     </jolly-dock-layout>
   </jolly-scope>
-  <script type="module" src="./scripts/demo-translation-controls.ts"></script>
+  <script type="module" src="./main.ts"></script>
 </body>
 
 </html>

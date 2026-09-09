@@ -13,25 +13,25 @@ import {
   PeerSelectionRegistry,
   PeerHoverRegistry,
   type SelectionRenderMode
-} from "../../src/index.ts";
+} from "../../../src/index.ts";
 import {
   PeerFrustumSync,
   PeerSelectionSync,
   PeerHoverSync
-} from "../../src/network/index.ts";
+} from "../../../src/network/index.ts";
 import {
   createRenderer,
   createScene,
   createOrbitCamera,
   startLoop
-} from "./utils/common.ts";
-import { createExamplePane } from "./utils/example-switcher.ts";
-import { bindSelectionAndPeerPanel } from "./utils/selection-panel.ts";
-import { mountPerformanceStats } from "./utils/performance-stats.ts";
+} from "../../shared/common.ts";
+import { PEER_SELECTION_ROOM } from "../../shared/rooms.ts";
+import { createExamplePane } from "../../shared/example-pane.ts";
+import { bindSelectionAndPeerPanel } from "../shared/selection-panel.ts";
+import { mountPerformanceStats } from "../../shared/performance-stats.ts";
 
 // CONSTANTS
 const kClickDragThresholdPx = 4;
-const kRoomId = "three:peer-selection-demo";
 const kUsernameStorageKey = "peer-selection-demo:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
@@ -109,7 +109,7 @@ const networkClient = new network.Client({
     username
   }
 });
-const room = networkClient.room(kRoomId);
+const room = networkClient.room(PEER_SELECTION_ROOM);
 room.join();
 
 const colorPalette = new ColorPalette();

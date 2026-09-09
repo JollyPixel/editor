@@ -2,9 +2,6 @@
 import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-/**
- * Creates a `WebGPURenderer` fitted to the current window.
- */
 export async function createRenderer(
   canvas: HTMLCanvasElement,
   antialias = true
@@ -23,9 +20,6 @@ export async function createRenderer(
   return renderer;
 }
 
-/**
- * Keeps camera aspect and renderer size in sync with the window.
- */
 export function onWindowResize(
   camera: THREE.PerspectiveCamera,
   renderer: THREE.WebGPURenderer
@@ -40,9 +34,6 @@ export function onWindowResize(
   });
 }
 
-/**
- * Creates a `Scene` with a solid background color.
- */
 export function createScene(
   background: THREE.ColorRepresentation = "#1a1a2e"
 ): THREE.Scene {
@@ -59,9 +50,6 @@ export interface CreateOrbitCameraResult {
   controls: OrbitControls;
 }
 
-/**
- * Creates a `PerspectiveCamera` and `OrbitControls` wired to the canvas.
- */
 export function createOrbitCamera(
   canvas: HTMLCanvasElement,
   position: THREE.Vector3Like,
@@ -103,27 +91,15 @@ export interface StartLoopOptions {
   renderer: THREE.WebGPURenderer;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
-  /**
-   * Anything exposing a parameterless `update()`, called once per frame
-   * before rendering — `OrbitControls` and `createFreeFlyCamera`'s
-   * `controls` both satisfy this.
-   */
+
   controls: UpdatableControls;
   onFrame?: () => void;
   onBeforeRender?: () => void;
   onAfterRender?: () => void;
-  /**
-   * Overrides the frame's draw call, in place of the default
-   * `renderer.render(scene, camera)` - e.g. a `HighlightPass`'s own
-   * `render()`, which must run in `renderer.render`'s place once it owns the
-   * frame's `RenderPipeline`.
-   */
+
   render?: () => void;
 }
 
-/**
- * Starts the render loop and registers the resize handler.
- */
 export function startLoop(
   options: StartLoopOptions
 ): void {

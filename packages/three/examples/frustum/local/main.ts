@@ -3,15 +3,15 @@ import * as THREE from "three/webgpu";
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PeerFrustum } from "../../src/index.ts";
+import { PeerFrustum } from "../../../src/index.ts";
 import {
   createRenderer,
   createScene,
   createOrbitCamera,
   startLoop
-} from "./utils/common.ts";
-import { createExamplePane } from "./utils/example-switcher.ts";
-import { mountPerformanceStats } from "./utils/performance-stats.ts";
+} from "../../shared/common.ts";
+import { createExamplePane } from "../../shared/example-pane.ts";
+import { mountPerformanceStats } from "../../shared/performance-stats.ts";
 
 // CONSTANTS
 const kFovRange = { min: 20, max: 120, step: 1 };
@@ -20,7 +20,6 @@ const kNearRange = { min: 0.05, max: 5, step: 0.05 };
 const kDepthRange = { min: 0.5, max: 6, step: 0.1 };
 const kSpeedRange = { min: 0.1, max: 2, step: 0.1 };
 const kMaxNearRatio = 0.95;
-
 const kLookAtTarget = new THREE.Vector3(0, 1, 0);
 const kRestingPosition = new THREE.Vector3(-3, 2, 3);
 const kOrbitRadius = 4;
@@ -110,7 +109,7 @@ function bindFrustumControls(
     .on("change", ({ value, last }) => last && rebuildFrustum({ aspect: value }));
   frustumFolder
     .addBinding(geometry, "near", kNearRange)
-    // Rebuild only on release; rebuilding mid-drag disposes the slider and corrupts the value.
+
     .on("change", ({ value, last }) => last && rebuildFrustum({ near: value }));
   frustumFolder
     .addBinding(geometry, "depth", kDepthRange)

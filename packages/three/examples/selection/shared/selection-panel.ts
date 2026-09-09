@@ -23,9 +23,6 @@ export interface SelectionPeerPanel {
   peerVisibilityFolder: ReturnType<Pane["addFolder"]>;
 }
 
-/**
- * Builds the selection controls shared by the selection examples.
- */
 export function bindSelectionAndPeerPanel(
   options: SelectionPeerPanelOptions
 ): SelectionPeerPanel {

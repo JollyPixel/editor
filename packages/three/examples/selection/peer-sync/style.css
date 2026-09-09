@@ -1,0 +1,21 @@
+.peer-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.peer-legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cfcfe0;
+}
+
+.peer-legend-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
