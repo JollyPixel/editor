@@ -54,10 +54,10 @@
     }
   },
   "dependencies": {
-    "@jolly-pixel/color": "1.0.0",
     "three": "0.185.1"
   },
   "devDependencies": {
+    "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@jolly-pixel/ui": "1.0.1"
   }

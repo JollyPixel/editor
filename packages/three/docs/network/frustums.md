@@ -74,8 +74,14 @@ renderer.setAnimationLoop(() => {
 | `hideWithin` | `0` | Distance from the source below which a frustum is hidden |
 | `fadeWithin` | `0` | Distance from the source below which a frustum fades toward hidden |
 | `label` | `identity.username` | Resolve a remote display name |
-| `color` | deterministic peer color | Resolve a remote color |
-| `frustum` | `{}` | Shared `PeerFrustum` options except `color` and `displayName` |
+| `color` | `frustum.color` | Resolve a remote color per peer |
+| `frustum` | `{}` | Shared `PeerFrustum` options except `displayName` |
+
+The sync assigns no color of its own. Without a `color` callback every peer
+gets `frustum.color`, falling back to `PeerFrustum.Defaults.color`; the
+callback overrides it per peer. `@jolly-pixel/three` ships no palette, so
+resolve peer colors with your own allocator (`createDefaultColorAllocator()`
+covers the common case).
 
 Call `update()` once per render tick. It publishes after a position or
 quaternion component changes by more than `1e-4` and the throttle interval has
@@ -98,7 +104,8 @@ clamps to `0..1`, and turns the line material transparent below `1`.
 one that has left. Use it to move a local camera onto a peer's viewpoint.
 
 `detach()` stops local pose reports but leaves remote frustums visible.
-`refreshColors()` reruns the color callback for current peers. `destroy()`
+`refreshColors()` reruns the color callback for current peers, and does
+nothing when no callback was given. `destroy()`
 detaches, removes room listeners, and disposes remote frustums.
 
 The entry point exports `PeerFrustumPose` and

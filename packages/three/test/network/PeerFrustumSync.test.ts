@@ -251,6 +251,61 @@ describe("colors", () => {
 
     assert.deepEqual(seen, [{ username: "Alice" }]);
   });
+
+  test("falls back to the PeerFrustum default without a color option", () => {
+    const room = new FakeRoom("three:peer-frustum-test");
+    const parent = new THREE.Object3D();
+    const sync = new PeerFrustumSync({ room, parent });
+    room.addPeer("alice", { presence: { frustum: pose(1) } });
+    sync.attach(new THREE.Object3D());
+
+    const [frustum] = frustumsOf(parent);
+    assert.equal(
+      frustum.color,
+      PeerFrustum.Defaults.color
+    );
+  });
+
+  test("gives every peer frustum.color, and refreshColors() keeps it", () => {
+    const room = new FakeRoom("three:peer-frustum-test");
+    const parent = new THREE.Object3D();
+    const sync = new PeerFrustumSync({
+      room,
+      parent,
+      frustum: { color: "#abcdef" }
+    });
+    room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.addPeer("bob", { presence: { frustum: pose(2) } });
+    sync.attach(new THREE.Object3D());
+
+    const frustums = frustumsOf(parent);
+    assert.deepEqual(
+      frustums.map((frustum) => frustum.color),
+      ["#abcdef", "#abcdef"]
+    );
+
+    sync.refreshColors();
+    assert.deepEqual(
+      frustums.map((frustum) => frustum.color),
+      ["#abcdef", "#abcdef"]
+    );
+  });
+
+  test("lets the color callback override frustum.color", () => {
+    const room = new FakeRoom("three:peer-frustum-test");
+    const parent = new THREE.Object3D();
+    const sync = new PeerFrustumSync({
+      room,
+      parent,
+      frustum: { color: "#abcdef" },
+      color: () => "#123456"
+    });
+    room.addPeer("alice", { presence: { frustum: pose(1) } });
+    sync.attach(new THREE.Object3D());
+
+    const [frustum] = frustumsOf(parent);
+    assert.equal(frustum.color, "#123456");
+  });
 });
 
 describe("local reporting", () => {

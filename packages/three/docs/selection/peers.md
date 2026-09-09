@@ -51,9 +51,10 @@ Changes dispatch `peerSelectionChange` or `peerHoverChange`. Both events are
 }
 ```
 
-The default allocator hashes peer ids across eight colors. Supply the same
-custom `PeerColorAllocator` to both registries when selection and hover must
-share a stateful palette:
+The default allocator, exported as `createDefaultColorAllocator()`, hashes peer
+ids across eight colors and never releases. Supply the same custom
+`PeerColorAllocator` to both registries when selection and hover must share a
+stateful palette:
 
 ```ts
 interface PeerColorAllocator {
