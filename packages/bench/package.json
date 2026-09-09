@@ -27,6 +27,6 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "tinybench": "6.1.3"
+    "tinybench": "6.1.4"
   }
 }
