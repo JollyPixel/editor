@@ -27,3 +27,22 @@ test("internal runtime helpers are absent from the package API", () => {
     keyof typeof RuntimePackage
   >();
 });
+
+test("Runtime options accept both focus hint forms", () => {
+  expect<boolean>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["focusHint"]
+  >();
+  expect<{
+    position: RuntimePackage.FocusHintPosition;
+    inset: number;
+    text: string;
+  }>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["focusHint"]
+  >();
+  expect<"top-center">().type.toBeAssignableTo<
+    RuntimePackage.FocusHintPosition
+  >();
+  expect<"top">().type.not.toBeAssignableTo<
+    RuntimePackage.FocusHintPosition
+  >();
+});

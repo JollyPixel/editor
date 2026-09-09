@@ -64,7 +64,8 @@ const runtime = await Runtime.create("#game-container > canvas", {
   includePerformanceStats: {
     position: "top-right"
   },
-  focusCanvas: false
+  focusCanvas: false,
+  focusHint: true
 });
 const { world } = runtime;
 const offline = new URLSearchParams(location.search).has("offline");

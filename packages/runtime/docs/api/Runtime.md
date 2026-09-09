@@ -8,6 +8,17 @@ the standard startup sequence.
 
 ```ts
 type PerformanceStatsPosition = "top-left" | "top-right";
+type FocusHintPosition =
+  | "top-left"   | "top-center"    | "top-right"
+  | "middle-left"| "center"        | "middle-right"
+  | "bottom-left"| "bottom-center" | "bottom-right";
+
+interface FocusHintOptions {
+  position?: FocusHintPosition;
+  inset?: number;
+  text?: string;
+}
+
 type RuntimeCanvasTarget = HTMLCanvasElement | string;
 
 interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
@@ -16,6 +27,7 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
     position?: PerformanceStatsPosition;
   };
   focusCanvas?: boolean;
+  focusHint?: boolean | FocusHintOptions;
   context?: TContext;
   audio?: GlobalAudio;
   assets?: RuntimeAssetOptions;
@@ -81,6 +93,7 @@ It also rejects when the selector matches no element or a non-canvas element.
 |---|---|---|
 | `includePerformanceStats` | `false` | Creates a `StatsRecorder`. `true` also mounts the default HUD. |
 | `focusCanvas` | `true` | Restores canvas focus after page clicks while the runtime is running. |
+| `focusHint` | `false` | Shows a hint over the canvas while it does not hold keyboard focus. |
 | `context` | `undefined` | Supplies the world's typed application context. |
 | `audio` | Engine default | Supplies the world's global audio service. |
 | `assets` | Empty catalog and default loaders | Configures the runtime asset coordinator. |
@@ -104,6 +117,41 @@ runtime.stats?.end();
 
 See [frame scheduling and performance](../guides/frame-scheduling-and-performance.md)
 for loop and HUD configuration.
+
+### Canvas focus hint
+
+The canvas only receives keyboard and mouse input while it holds focus, and
+nothing on screen says so. Set `focusHint` to display a translucent
+"Click to focus" label over the canvas whenever focus is elsewhere. The hint
+hides itself as soon as the canvas is focused again.
+
+```ts
+const runtime = await Runtime.create("canvas", {
+  focusCanvas: false,
+  focusHint: {
+    position: "bottom-center",
+    inset: 24,
+    text: "Cliquez pour prendre le focus"
+  }
+});
+```
+
+| Option | Default | Behavior |
+|---|---|---|
+| `position` | `"top-center"` | Anchor within the canvas, among the nine listed values. |
+| `inset` | `12` | Distance in pixels between the hint and the canvas edges. |
+| `text` | `"Click to focus"` | Label displayed inside the hint. |
+
+Passing `true` uses every default. The hint is mounted on `document.body` with
+`position: fixed` and tracks the canvas bounding box, so it follows a canvas
+docked in an editor pane. It never captures pointer events: a click over the
+hint reaches the canvas underneath and focuses it.
+
+An anchor is clamped to `inset` when the hint is larger than the canvas along
+that axis.
+
+Combine it with `focusCanvas: false`. The default `focusCanvas: true` restores
+canvas focus after every document click, so the hint would only ever flash.
 
 ## Services
 
@@ -170,6 +218,8 @@ updates performance statistics when present and calls `world.tick()`.
 
 `stop()` is also idempotent. It stops and disconnects the world, stops the loop,
 marks input as exited, and removes the focus listeners.
+
+The focus hint, when enabled, is mounted by `start()` and removed by `stop()`.
 
 `dispose()` calls `stop()`, removes the mounted performance HUD, and disposes
 the world. Do not reuse the runtime after disposal.

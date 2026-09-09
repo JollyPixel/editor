@@ -16,7 +16,6 @@ export interface MountedPerformanceStats {
   dispose(): void;
 }
 
-/** Mounts the default performance HUD and owns its DOM lifecycle. */
 export async function mountPerformanceStats(
   recorder: StatsRecorder,
   position: PerformanceStatsPosition
