@@ -9,10 +9,9 @@ import {
   applyCommandToBuffer
 } from "./PixelCommandApplier.ts";
 import {
-  isPixelNetworkAction,
-  isPixelNetworkCommand,
-  PIXEL_NETWORK_ACTIONS
+  satisfiesPixelDomainRules
 } from "./PixelCommandValidator.ts";
+import { pixelProtocols } from "./PixelCommand.schema.ts";
 import {
   PixelCommandArbiter
 } from "./PixelCommandArbiter.ts";
@@ -52,10 +51,10 @@ export interface PixelSyncServerOptions {
  * Owns one buffer and applies accepted commands to it directly.
  * Persistent hosts append commands accepted by `PixelCommandArbiter`.
  */
-export class PixelSyncServer extends network.Extension {
+export class PixelSyncServer extends network.Extension<PixelNetworkCommand> {
   readonly id: string;
   readonly name = "pixel-draw.renderer";
-  readonly events = PIXEL_NETWORK_ACTIONS;
+  readonly protocols = pixelProtocols;
   readonly buffer: PixelBuffer;
 
   #arbiter: PixelCommandArbiter;
@@ -91,16 +90,16 @@ export class PixelSyncServer extends network.Extension {
 
   onMessage(
     clientId: string,
-    payload: unknown,
+    command: PixelNetworkCommand,
     context: network.RoomContext
   ): void {
-    if (!isPixelNetworkCommand(payload)) {
+    if (!satisfiesPixelDomainRules(command)) {
       return;
     }
 
     try {
       this.receive({
-        ...payload,
+        ...command,
         clientId
       }, context);
     }
@@ -111,21 +110,6 @@ export class PixelSyncServer extends network.Extension {
 
       throw error;
     }
-  }
-
-  override getEventName(
-    payload: unknown
-  ): string {
-    if (
-      typeof payload === "object" &&
-      payload !== null &&
-      "action" in payload &&
-      isPixelNetworkAction(payload.action)
-    ) {
-      return payload.action;
-    }
-
-    return "invalid";
   }
 
   receive(

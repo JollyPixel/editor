@@ -4,9 +4,6 @@ import * as network from "@jolly-pixel/network";
 // Import Internal Dependencies
 import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
 
-// CONSTANTS
-export const UNKNOWN_ASSET_ACTION = "invalid";
-
 export interface AssetRoomMessage {
   readonly type: string;
   readonly data: unknown;
@@ -19,7 +16,7 @@ export interface AssetArbitration<TCommand = unknown> {
 
 export interface AssetLiveProtocol<TCommand = unknown> {
   readonly commandEventType: string;
-  readonly actions: readonly string[];
+  readonly protocols: network.MessageProtocols;
 
   parse(
     payload: unknown
@@ -42,11 +39,10 @@ export class AssetRoomExtension<
 > extends network.Extension {
   readonly id: string;
   readonly name: string;
-  override readonly events: readonly string[];
+  readonly protocols: network.MessageProtocols;
 
   #assetId: string;
   #protocol: AssetLiveProtocol<TCommand>;
-  #actions: ReadonlySet<string>;
 
   constructor(
     binding: AssetRoomBinding,
@@ -56,10 +52,9 @@ export class AssetRoomExtension<
 
     this.id = binding.roomId;
     this.name = binding.kind;
-    this.events = protocol.actions;
+    this.protocols = protocol.protocols;
     this.#assetId = binding.assetId;
     this.#protocol = protocol;
-    this.#actions = new Set(protocol.actions);
   }
 
   onClientConnect(
@@ -73,22 +68,6 @@ export class AssetRoomExtension<
 
   onClientDisconnect(): void {
     return void 0;
-  }
-
-  override getEventName(
-    payload: unknown
-  ): string {
-    if (
-      typeof payload === "object" &&
-      payload !== null &&
-      "action" in payload &&
-      typeof payload.action === "string" &&
-      this.#actions.has(payload.action)
-    ) {
-      return payload.action;
-    }
-
-    return UNKNOWN_ASSET_ACTION;
   }
 
   async onMessage(

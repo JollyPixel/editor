@@ -10,9 +10,9 @@
     "dev": "vite",
     "preview": "vite preview",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p vite/tsconfig.json",
-    "lint": "eslint src/**/*.ts test/**/*.ts vite/**/*.ts vite.config.ts"
+    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "lint": "eslint src test vite vite.config.ts"
   },
   "repository": {
     "type": "git",

@@ -75,6 +75,22 @@ export function isPixelNetworkAction(
     PIXEL_NETWORK_ACTIONS.some((action) => action === value);
 }
 
+export function satisfiesPixelDomainRules(
+  command: PixelNetworkCommand
+): boolean {
+  switch (command.action) {
+    case "select-edit":
+      return command.metadata.positions.length === command.metadata.colors.length;
+    case "uv-region-created":
+    case "uv-region-state-changed":
+      return isUVRegionData(command.metadata.region);
+    case "uv-region-moved":
+      return command.metadata.face === null || isUVSlot(command.metadata.face);
+    default:
+      return true;
+  }
+}
+
 export function isPixelNetworkCommand(
   value: unknown
 ): value is PixelNetworkCommand {

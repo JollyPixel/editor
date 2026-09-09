@@ -327,6 +327,7 @@ describe("applyCommandToBuffer — uv-region-moved", () => {
         action: "uv-region-moved",
         metadata: {
           id: "no-such-region",
+          face: null,
           rect: { x: 0, y: 0, width: 1, height: 1 }
         }
       });

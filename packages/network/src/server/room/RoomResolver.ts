@@ -1,8 +1,8 @@
 // Import Internal Dependencies
-import type { Extension } from "../extension/Extension.ts";
+import type { AnyExtension } from "../extension/Extension.ts";
 
 export interface RoomResolution {
-  extension: Extension;
+  extension: AnyExtension;
   /**
    * Flush hook called before extension disposal.
    */

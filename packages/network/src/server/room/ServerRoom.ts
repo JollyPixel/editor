@@ -7,17 +7,20 @@ import {
   type Logger
 } from "../logger.ts";
 import type {
-  Extension,
+  AnyExtension,
   RoomBroadcast
 } from "../extension/Extension.ts";
 import { RightsTable } from "../rights/RightsTable.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
 import { RoomMembers } from "./RoomMembers.ts";
 import { RoomContextFactory } from "./RoomContextFactory.ts";
+import { MessageParser } from "../../protocol/MessageParser.ts";
 import {
   JOIN_EVENT,
+  MESSAGE_EVENT,
   PRESENCE_EVENT
 } from "../../protocol/constants.ts";
+import { describeErrors } from "../../protocol/schema.ts";
 import type {
   ClientHandle,
   PeerMetadata
@@ -61,16 +64,18 @@ export class ServerRoom {
     return this.#members.size;
   }
 
-  #extension: Extension;
+  #extension: AnyExtension;
   #rights: RightsGate;
   #members = new RoomMembers();
   #logger: Logger;
   #context: RoomContextFactory;
   #roomBroadcast: RoomBroadcast;
+  #inbound: MessageParser | null;
+  #outbound: MessageParser | null;
 
   constructor(
     id: string,
-    extension: Extension,
+    extension: AnyExtension,
     rights: RightsTable = new RightsTable(),
     options: ServerRoomOptions = {}
   ) {
@@ -81,13 +86,15 @@ export class ServerRoom {
       room: this.id
     });
 
+    const { inbound, outbound } = MessageParser.fromProtocols(
+      extension.protocols
+    );
+    this.#inbound = inbound;
+    this.#outbound = outbound;
+
     this.#roomBroadcast = {
       broadcast: (payload) => this.#broadcast(payload),
-      sendTo: (clientId, payload) => this.#members.get(clientId)?.handle.send({
-        room: this.id,
-        kind: "message",
-        payload
-      })
+      sendTo: (clientId, payload) => this.#sendTo(clientId, payload)
     };
     this.#context = new RoomContextFactory({
       roomId: this.id,
@@ -100,7 +107,14 @@ export class ServerRoom {
   #authorize(
     options: AuthorizeOptions
   ): boolean {
-    const { clientId, role, event, target, reason, label } = options;
+    const {
+      clientId,
+      role,
+      event,
+      target,
+      reason,
+      label
+    } = options;
     if (this.#rights.canWrite(role, event)) {
       return true;
     }
@@ -157,11 +171,7 @@ export class ServerRoom {
     await this.#extension.onClientConnect(
       {
         id: client.id,
-        send: (data) => client.send({
-          room: this.id,
-          kind: "message",
-          payload: data
-        })
+        send: (data) => this.#sendTo(client.id, data)
       },
       identity,
       this.#context.create(clientId)
@@ -194,7 +204,6 @@ export class ServerRoom {
   async leave(
     clientId: string
   ): Promise<void> {
-    // Resolve before removal because membership owns the actor identity.
     const actor = this.#context.resolveActor(clientId);
     this.#members.remove(clientId);
     this.#members.send({
@@ -264,25 +273,54 @@ export class ServerRoom {
     clientId: string,
     payload: unknown
   ): Promise<void> {
-    const role = this.#members.get(clientId)?.role ?? kDefaultRole;
+    const record = this.#members.get(clientId);
+    const role = record?.role ?? kDefaultRole;
 
-    if (this.#rights.configured) {
-      const event = this.#extension.getEventName(payload);
-      if (!this.#authorize({
+    if (this.#inbound === null) {
+      await this.#extension.onMessage(
         clientId,
-        role,
-        event,
-        target: this.#members.get(clientId)?.handle,
-        reason: `role "${role}" cannot write "${event}"`,
-        label: "message"
-      })) {
-        return;
-      }
+        payload,
+        this.#context.create(clientId)
+      );
+
+      return;
+    }
+
+    const parsed = this.#inbound.parse(payload);
+    if (!parsed.ok) {
+      const reason = describeErrors(parsed.val);
+      record?.handle.send({
+        room: this.id,
+        kind: "error",
+        event: MESSAGE_EVENT,
+        reason
+      });
+      this.#logger
+        .withMetadata({
+          clientId,
+          outcome: "dropped",
+          reason
+        })
+        .debug("message");
+
+      return;
+    }
+
+    const { event, message } = parsed.val;
+    if (this.#rights.configured && !this.#authorize({
+      clientId,
+      role,
+      event,
+      target: record?.handle,
+      reason: `role "${role}" cannot write "${event}"`,
+      label: "message"
+    })) {
+      return;
     }
 
     await this.#extension.onMessage(
       clientId,
-      payload,
+      message,
       this.#context.create(clientId)
     );
   }
@@ -292,19 +330,78 @@ export class ServerRoom {
     await this.#extension.dispose?.();
   }
 
+  #outboundEvent(
+    payload: unknown
+  ): string | null {
+    if (this.#outbound === null) {
+      return null;
+    }
+
+    const parsed = this.#outbound.parse(payload);
+    if (!parsed.ok) {
+      this.#logger
+        .withMetadata({
+          outcome: "dropped",
+          reason: describeErrors(parsed.val)
+        })
+        .error("outbound payload does not match the extension protocol");
+
+      return null;
+    }
+
+    return parsed.val.event;
+  }
+
   #broadcast(
     payload: unknown
   ): void {
-    const event = this.#rights.configured ?
-      this.#extension.getEventName(payload) :
-      undefined;
+    if (this.#outbound !== null) {
+      const event = this.#outboundEvent(payload);
+      if (event === null) {
+        return;
+      }
+
+      this.#members.send({
+        room: this.id,
+        kind: "message",
+        payload
+      }, {
+        predicate: (role) => this.#rights.check(role, event) !== "void"
+      });
+
+      return;
+    }
 
     this.#members.send({
       room: this.id,
       kind: "message",
       payload
-    }, {
-      predicate: event ? (role) => this.#rights.check(role, event) !== "void" : undefined
+    });
+  }
+
+  #sendTo(
+    clientId: string,
+    payload: unknown
+  ): void {
+    const record = this.#members.get(clientId);
+    if (record === undefined) {
+      return;
+    }
+
+    if (this.#outbound !== null) {
+      const event = this.#outboundEvent(payload);
+      if (event === null) {
+        return;
+      }
+      if (this.#rights.check(record.role, event) === "void") {
+        return;
+      }
+    }
+
+    record.handle.send({
+      room: this.id,
+      kind: "message",
+      payload
     });
   }
 }

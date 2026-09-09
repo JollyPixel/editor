@@ -18,6 +18,7 @@ import {
   RightsTable,
   type ClientHandle
 } from "#src/index.ts";
+import { actionProtocols } from "../helpers/protocols.ts";
 
 function createClient(
   id: string
@@ -46,7 +47,8 @@ function createHarness(
     eventStore: EventStore.persistence.memory()
   });
   rooms.register(new PresenceOnlyExtension("lobby", "lobby", {
-    broadcast: true
+    broadcast: true,
+    protocols: actionProtocols
   }));
 
   return {
@@ -80,21 +82,6 @@ describe("EnvelopeDispatcher — routing", () => {
         outcome: "dropped",
         reason: "unregistered room"
       }
-    );
-  });
-
-  test("ignores a kind the server never originates", async() => {
-    const { dispatcher, sessions } = createHarness();
-    const { client } = createClient("A");
-    sessions.open(client);
-
-    assert.deepEqual(
-      await dispatcher.dispatch("A", {
-        room: "lobby",
-        kind: "peer-left",
-        clientId: "B"
-      }),
-      { outcome: "ignored" }
     );
   });
 });
@@ -187,14 +174,14 @@ describe("EnvelopeDispatcher — membership gate", () => {
       await dispatcher.dispatch("A", {
         room: "lobby",
         kind: "message",
-        payload: { hello: "world" }
+        payload: { action: "voxel-set" }
       }),
       { outcome: "handled" }
     );
     assert.deepEqual(b.sent, [{
       room: "lobby",
       kind: "message",
-      payload: { hello: "world" }
+      payload: { action: "voxel-set" }
     }]);
   });
 

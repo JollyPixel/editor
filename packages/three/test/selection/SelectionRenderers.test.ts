@@ -55,7 +55,7 @@ function createRegistry(
         const overlay = new TestOverlay(
           options.color,
           options.opacity,
-          options.xray
+          options.xray ?? false
         );
         overlays.push(overlay);
 

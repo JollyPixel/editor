@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { inflateEdgesGeometry } from "#src/selection/overlays/inflateEdgesGeometry.ts";
 
 function nearestVertex(
-  position: THREE.BufferAttribute,
+  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   target: THREE.Vector3
 ): THREE.Vector3 {
   let best = new THREE.Vector3();

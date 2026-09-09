@@ -8,16 +8,10 @@ import {
   serializeVoxelWorld
 } from "../serialization/world.ts";
 import type { VoxelWorldJSON } from "../serialization/types.ts";
-import {
-  VOXEL_BLOCK_HOOK_ACTIONS,
-  VOXEL_LAYER_HOOK_ACTIONS,
-  type VoxelLayerHookAction
-} from "../hooks.ts";
+import { type VoxelLayerHookAction } from "../hooks.ts";
 import { BlockRegistry } from "../blocks/BlockRegistry.ts";
-import {
-  isVoxelBlockCommand,
-  isVoxelNetworkCommand
-} from "./VoxelCommandValidator.ts";
+import { isVoxelBlockCommand } from "./VoxelCommandValidator.ts";
+import { voxelProtocols } from "./VoxelCommand.schema.ts";
 import { VoxelCommandArbiter } from "./VoxelCommandArbiter.ts";
 import { applyBlockCommand } from "./applyBlockCommand.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
@@ -58,15 +52,12 @@ export interface VoxelSyncServerOptions {
   blocks?: BlockRegistry;
 }
 
-export class VoxelSyncServer extends network.Extension {
+export class VoxelSyncServer extends network.Extension<VoxelNetworkCommand> {
   readonly id: string;
   readonly name = "voxel.renderer";
   readonly world: VoxelWorld;
   readonly blocks: BlockRegistry;
-  readonly events: readonly string[] = [
-    ...VOXEL_LAYER_HOOK_ACTIONS,
-    ...VOXEL_BLOCK_HOOK_ACTIONS
-  ];
+  readonly protocols = voxelProtocols;
 
   #arbiter: VoxelCommandArbiter;
 
@@ -105,25 +96,13 @@ export class VoxelSyncServer extends network.Extension {
     // The room owns client bookkeeping.
   }
 
-  getEventName(
-    payload: unknown
-  ): string {
-    return isVoxelNetworkCommand(payload)
-      ? payload.action
-      : "unknown";
-  }
-
   onMessage(
     _clientId: string,
-    payload: unknown,
+    command: VoxelNetworkCommand,
     context: network.RoomContext
   ): void {
-    if (!isVoxelNetworkCommand(payload)) {
-      return;
-    }
-
     this.receive(
-      payload,
+      command,
       context
     );
   }
@@ -168,13 +147,6 @@ export class VoxelSyncServer extends network.Extension {
     }
 
     this.#arbiter.record(admitted);
-    this.#broadcast(admitted, context);
-  }
-
-  #broadcast(
-    cmd: VoxelNetworkCommand,
-    context: network.RoomContext
-  ): void {
     context.room.broadcast({
       type: "command",
       data: cmd

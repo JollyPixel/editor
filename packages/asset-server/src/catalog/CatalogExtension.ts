@@ -1,16 +1,15 @@
 // Import Third-party Dependencies
 import {
+  defineMessageProtocol,
   Extension,
+  NO_MESSAGES,
   type ClientHandle,
+  type MessageProtocols,
   type PeerMetadata,
   type RoomBroadcast,
   type RoomContext
 } from "@jolly-pixel/network";
 import type { AssetManifestData } from "@jolly-pixel/asset";
-import {
-  defineSchema,
-  Validator
-} from "ata-validator";
 
 // Import Internal Dependencies
 import type {
@@ -19,17 +18,6 @@ import type {
 } from "./CatalogProjection.ts";
 
 // CONSTANTS
-const kEnvelopeValidator = new Validator(
-  defineSchema({
-    type: "object",
-    properties: {
-      type: { type: "string" }
-    },
-    required: ["type"]
-  }),
-  { useDefaults: false }
-);
-
 export const CATALOG_ROOM = "asset-catalog";
 
 export const CATALOG_SNAPSHOT = "catalog:snapshot";
@@ -38,6 +26,39 @@ export const CATALOG_CHANGED = "catalog:changed";
 export type CatalogMessage =
   | { type: typeof CATALOG_SNAPSHOT; manifest: AssetManifestData; }
   | { type: typeof CATALOG_CHANGED; change: CatalogChange; };
+
+export const catalogProtocols: MessageProtocols = {
+  inbound: NO_MESSAGES,
+  outbound: defineMessageProtocol({
+    discriminator: "type",
+    schema: {
+      oneOf: [
+        {
+          type: "object",
+          properties: {
+            type: { const: CATALOG_SNAPSHOT },
+            manifest: { type: "object" }
+          },
+          required: [
+            "type",
+            "manifest"
+          ]
+        },
+        {
+          type: "object",
+          properties: {
+            type: { const: CATALOG_CHANGED },
+            change: { type: "object" }
+          },
+          required: [
+            "type",
+            "change"
+          ]
+        }
+      ]
+    }
+  })
+};
 
 export interface CatalogExtensionOptions {
   projection: CatalogProjection;
@@ -54,10 +75,7 @@ export interface CatalogExtensionOptions {
 export class CatalogExtension extends Extension {
   readonly id: string;
   readonly name = CATALOG_ROOM;
-  override readonly events: readonly string[] = [
-    CATALOG_SNAPSHOT,
-    CATALOG_CHANGED
-  ];
+  readonly protocols: MessageProtocols = catalogProtocols;
 
   #projection: CatalogProjection;
   #broadcast: RoomBroadcast | null = null;
@@ -78,14 +96,6 @@ export class CatalogExtension extends Extension {
       "changed",
       this.#onChanged
     );
-  }
-
-  override getEventName(
-    payload: unknown
-  ): string {
-    const envelope = kEnvelopeValidator.validate(payload);
-
-    return envelope.valid ? envelope.data.type : CATALOG_CHANGED;
   }
 
   onClientConnect(

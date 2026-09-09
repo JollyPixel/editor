@@ -34,12 +34,13 @@ import {
   COUNTER_INCREMENTED,
   type CounterState
 } from "./helpers/kinds.ts";
-import { manualTimers } from "./helpers/timers.ts";
 import { bytes } from "./helpers/bytes.ts";
+import { counterProtocols } from "./helpers/protocols.ts";
 
 class CounterExtension extends Extension {
   readonly id: string;
   readonly name: string;
+  readonly protocols = counterProtocols;
   readonly assetId: string;
 
   constructor(
@@ -115,7 +116,7 @@ async function catalogOverHttp(
 }
 
 describe("asset-server — end to end", () => {
-  test("cold start, live edit, external drift and catalog agree", async() => {
+  test("cold start, live edit, external drift and catalog agree", async(t) => {
     await using workspace = await tempWorkspace();
     using eventStore = EventStore.persistence.memory();
 
@@ -131,13 +132,12 @@ describe("asset-server — end to end", () => {
     );
 
     const source = new FilesystemAssetSource(workspace.root);
-    const timers = manualTimers();
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     await using backend = await createAssetBackend({
       source,
       eventStore,
       handlers: [editableCounter()],
       snapshot: { delay: 1_000, maxDelay: 5_000 },
-      timers,
       watch: false
     });
 
@@ -200,7 +200,7 @@ describe("asset-server — end to end", () => {
       "0"
     );
 
-    timers.advance(1_000);
+    t.mock.timers.tick(1_000);
     await backend.flush(counterRecord.id);
 
     assert.strictEqual(

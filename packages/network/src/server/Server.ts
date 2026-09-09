@@ -2,7 +2,11 @@
 import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import { Envelope } from "../protocol/Envelope.ts";
+import {
+  describeEnvelopeParseError,
+  Envelope,
+  type ClientEnvelope
+} from "../protocol/Envelope.ts";
 import { errorMessage } from "./errors.ts";
 import {
   createLogger,
@@ -14,12 +18,12 @@ import {
 } from "./rights/RightsTable.ts";
 import {
   Extension,
+  type AnyExtension,
   type WorkerExtensionDescriptor
 } from "./extension/Extension.ts";
 import { WorkerExtensionProxy } from "./extension/worker/WorkerExtensionProxy.ts";
 import { RoomRegistry } from "./room/RoomRegistry.ts";
 import type { RoomResolver } from "./room/RoomResolver.ts";
-import type { Timers } from "./room/timers.ts";
 import { ClientSessions } from "./ClientSessions.ts";
 import {
   EnvelopeDispatcher,
@@ -42,11 +46,6 @@ export interface ServerOptions {
    * @default 30_000
    */
   roomGraceMs?: number;
-  /**
-   * Clock behind room eviction. Injected so a caller can drive the grace
-   * period instead of waiting on it.
-   */
-  timers?: Timers;
 }
 
 /**
@@ -88,8 +87,7 @@ export class Server {
       logger: this.logger,
       rights: new RightsTable(options.rights),
       eventStore,
-      graceMs: options.roomGraceMs,
-      timers: options.timers
+      graceMs: options.roomGraceMs
     });
     this.#dispatcher = new EnvelopeDispatcher({
       rooms: this.#rooms,
@@ -98,7 +96,7 @@ export class Server {
   }
 
   register(
-    extension: Extension | WorkerExtensionDescriptor
+    extension: AnyExtension | WorkerExtensionDescriptor
   ): void {
     const resolvedExtension = extension instanceof Extension ?
       extension :
@@ -164,11 +162,11 @@ export class Server {
     clientId: string,
     raw: unknown
   ): Promise<void> {
-    const parsed = Envelope.parse(raw);
+    const parsed = Envelope.parseClient(raw);
     if (!parsed.ok) {
       this.#logEnvelope({ clientId }, {
         outcome: "dropped",
-        reason: `malformed envelope: ${parsed.val}`
+        reason: `malformed envelope: ${describeEnvelopeParseError(parsed.val)}`
       });
 
       return Promise.resolve();
@@ -212,7 +210,7 @@ export class Server {
 
   async #processMessage(
     clientId: string,
-    envelope: Envelope
+    envelope: ClientEnvelope
   ): Promise<void> {
     const outcome = await this.#dispatcher.dispatch(clientId, envelope)
       .catch((error): DispatchOutcome => {

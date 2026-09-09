@@ -23,10 +23,16 @@ import {
   type ClientHandle,
   type RoomContext
 } from "#src/index.ts";
+import {
+  actionProtocols,
+  OPAQUE_PROTOCOLS,
+  syncProtocols
+} from "../../helpers/protocols.ts";
 
 class RecordingExtension extends Extension {
   readonly id = "pixel-draw";
   readonly name = "pixel-draw";
+  readonly protocols = OPAQUE_PROTOCOLS;
   connected: string[] = [];
   disconnected: string[] = [];
   messages: { clientId: string; payload: unknown; }[] = [];
@@ -64,6 +70,7 @@ class RecordingExtension extends Extension {
 class RightsAwareExtension extends Extension {
   readonly id = "pixel-draw";
   readonly name = "pixel-draw";
+  readonly protocols = actionProtocols;
   messages: { clientId: string; payload: unknown; }[] = [];
   contexts: RoomContext[] = [];
 
@@ -77,12 +84,6 @@ class RightsAwareExtension extends Extension {
 
   onClientDisconnect(): void {
     // Not exercised by these rights tests.
-  }
-
-  override getEventName(
-    payload: unknown
-  ): string {
-    return (payload as { action: string; }).action;
   }
 
   onMessage(
@@ -583,5 +584,140 @@ describe("ServerRoom — event store: actor injection", () => {
       type: "user",
       id: "alice"
     });
+  });
+});
+
+class SyncExtension extends Extension {
+  readonly id = "pixel-draw";
+  readonly name = "pixel-draw";
+  readonly protocols = syncProtocols;
+  contexts: RoomContext[] = [];
+  received: unknown[] = [];
+
+  onClientConnect(
+    _client: ClientHandle,
+    _identity: unknown,
+    context: RoomContext
+  ): void {
+    this.contexts.push(context);
+  }
+
+  onClientDisconnect(): void {
+    // Not exercised by these tests.
+  }
+
+  onMessage(
+    _clientId: string,
+    message: unknown,
+    context: RoomContext
+  ): void {
+    this.received.push(message);
+    this.contexts.push(context);
+  }
+}
+
+describe("ServerRoom — inbound protocol", () => {
+  test("hands the extension a parsed message", async() => {
+    const extension = new SyncExtension();
+    const a = createClient("A");
+    const room = createRoom(extension);
+    await room.join("A", a.client, {});
+
+    await room.message("A", { action: "voxel-set" });
+
+    assert.deepEqual(extension.received, [{ action: "voxel-set" }]);
+  });
+
+  test("answers a payload the protocol rejects with an \"error\" envelope", async() => {
+    const extension = new SyncExtension();
+    const a = createClient("A");
+    const room = createRoom(extension);
+    await room.join("A", a.client, {});
+    a.sent.length = 0;
+
+    await room.message("A", { action: "not-a-known-action" });
+
+    assert.deepEqual(extension.received, []);
+    assert.strictEqual(a.sent.length, 1);
+
+    const sent = a.sent[0] as { room: string; kind: string; event: string; reason: string; };
+    assert.strictEqual(sent.room, "pixel-draw");
+    assert.strictEqual(sent.kind, "error");
+    assert.strictEqual(sent.event, "$message");
+    assert.notStrictEqual(sent.reason, "");
+  });
+});
+
+describe("ServerRoom — outbound protocol", () => {
+  test("keys the broadcast read gate on the command action, not on the envelope type", async() => {
+    const extension = new SyncExtension();
+    const a = createClient("A");
+    const b = createClient("B");
+    const room = createRoom(extension, new RightsTable({
+      blocked: { "pixel-draw.voxel-set": "void" },
+      allowed: { "pixel-draw.voxel-set": "read" }
+    }));
+    await room.join("A", a.client, { role: "blocked" });
+    await room.join("B", b.client, { role: "allowed" });
+    a.sent.length = 0;
+    b.sent.length = 0;
+
+    const payload = { type: "command", data: { action: "voxel-set" } };
+    extension.contexts.at(-1)!.room.broadcast(payload);
+
+    assert.deepEqual(a.sent, []);
+    assert.deepEqual(b.sent, [{
+      room: "pixel-draw",
+      kind: "message",
+      payload
+    }]);
+  });
+
+  test("gates a snapshot on the reserved \"$snapshot\" event", async() => {
+    const extension = new SyncExtension();
+    const a = createClient("A");
+    const b = createClient("B");
+    const room = createRoom(extension, new RightsTable({
+      blocked: { "pixel-draw.$snapshot": "void" },
+      allowed: { "pixel-draw.$snapshot": "read" }
+    }));
+    await room.join("A", a.client, { role: "blocked" });
+    await room.join("B", b.client, { role: "allowed" });
+    a.sent.length = 0;
+    b.sent.length = 0;
+
+    extension.contexts.at(-1)!.room.broadcast({ type: "snapshot", data: {} });
+
+    assert.deepEqual(a.sent, []);
+    assert.strictEqual(b.sent.length, 1);
+  });
+
+  test("drops a payload that does not match the outbound protocol", async() => {
+    const extension = new SyncExtension();
+    const a = createClient("A");
+    const room = createRoom(extension);
+    await room.join("A", a.client, {});
+    a.sent.length = 0;
+
+    extension.contexts.at(-1)!.room.broadcast({ type: "command", data: { action: "unheard-of" } });
+
+    assert.deepEqual(a.sent, []);
+  });
+
+  test("filters a scoped sendTo the same way as a broadcast", async() => {
+    const extension = new SyncExtension();
+    const a = createClient("A");
+    const room = createRoom(extension, new RightsTable({
+      blocked: { "pixel-draw.voxel-set": "void" }
+    }));
+    await room.join("A", a.client, { role: "blocked" });
+    a.sent.length = 0;
+
+    extension.contexts.at(-1)!.room.sendTo("A", {
+      type: "command",
+      data: { action: "voxel-set" }
+    });
+
+    assert.deepEqual(a.sent, []);
   });
 });

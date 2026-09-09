@@ -8,7 +8,12 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import { Envelope } from "../protocol/Envelope.ts";
+import {
+  describeEnvelopeParseError,
+  Envelope,
+  type ClientEnvelope,
+  type ServerEnvelope
+} from "../protocol/Envelope.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
 import type {
   Peer,
@@ -16,8 +21,10 @@ import type {
 } from "../protocol/types.ts";
 import type {
   Room,
-  RoomEventMap
+  RoomEventMap,
+  RoomOptions
 } from "./Room.ts";
+import type { RoomMessageParser } from "../protocol/MessageParser.ts";
 import {
   createLogger,
   type Logger
@@ -44,7 +51,9 @@ export type ClientEventMap = {
 
 // Client mutates this emitter. Consumers receive only the `Room` surface.
 type InternalRoom<ClientMessage = any, ServerMessage = any> =
-  Room<ClientMessage, ServerMessage> & Emitter<RoomEventMap<ServerMessage>>;
+  Room<ClientMessage, ServerMessage>
+  & Emitter<RoomEventMap<ServerMessage>>
+  & { parser: RoomMessageParser<ServerMessage> | undefined; };
 
 function getDefaultUrl(): string {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -105,7 +114,8 @@ export class Client extends Emitter<ClientEventMap> {
   }
 
   room<ClientMessage = unknown, ServerMessage = unknown>(
-    name: string
+    name: string,
+    options: RoomOptions<ServerMessage> = {}
   ): Room<ClientMessage, ServerMessage> {
     const existing = this.#rooms.get(name);
     if (existing) {
@@ -121,6 +131,7 @@ export class Client extends Emitter<ClientEventMap> {
         id: name,
         clientId: this.id,
         peers,
+        parser: options.parser,
         join: () => {
           if (joined) {
             return;
@@ -164,7 +175,7 @@ export class Client extends Emitter<ClientEventMap> {
   }
 
   #send(
-    envelope: Envelope
+    envelope: ClientEnvelope
   ): void {
     Envelope.stringify(envelope)
       .orTee((error) => this.#logger
@@ -175,7 +186,7 @@ export class Client extends Emitter<ClientEventMap> {
 
   #dispatch(
     raw: string,
-    envelope: Envelope
+    envelope: ClientEnvelope
   ): void {
     if (this.#ready) {
       this.#socket.send(raw);
@@ -193,19 +204,19 @@ export class Client extends Emitter<ClientEventMap> {
   #handleMessage(
     raw: string
   ): void {
-    Envelope.parse(raw)
+    Envelope.parseServer(raw)
       .orTee((error) => this.#logger
-        .withMetadata({ raw, error })
+        .withMetadata({ raw, error: describeEnvelopeParseError(error) })
         .warn("dropped malformed envelope"))
       .andThen((envelope) => this.#roomFor(envelope))
       .andTee(([room, envelope]) => this.#dispatchEnvelope(room, envelope));
   }
 
   #roomFor(
-    envelope: Envelope
-  ): Result<[InternalRoom, Envelope], void> {
+    envelope: ServerEnvelope
+  ): Result<[InternalRoom, ServerEnvelope], void> {
     const room = this.#rooms.get(envelope.room);
-    const result: Result<[InternalRoom, Envelope], void> = room ?
+    const result: Result<[InternalRoom, ServerEnvelope], void> = room ?
       Ok([room, envelope]) :
       Err(undefined);
 
@@ -216,7 +227,7 @@ export class Client extends Emitter<ClientEventMap> {
 
   #dispatchEnvelope(
     room: InternalRoom,
-    envelope: Envelope
+    envelope: ServerEnvelope
   ): void {
     // Client owns the writable map behind the public readonly view.
     const peers = room.peers as Map<string, Peer>;
@@ -229,20 +240,31 @@ export class Client extends Emitter<ClientEventMap> {
       .with({ kind: "peer-presence" }, (envelope) => this.#handlePeerPresence(room, peers, envelope))
       .with({ kind: "denied" }, (envelope) => this.#handleDenied(room, envelope))
       .with({ kind: "error" }, (envelope) => this.#handleError(room, envelope))
-      .otherwise(() => void 0);
+      .exhaustive();
   }
 
   #handleRoomMessage(
     room: InternalRoom,
-    envelope: Extract<Envelope, { kind: "message"; }>
+    envelope: Extract<ServerEnvelope, { kind: "message"; }>
   ): void {
-    room.emit("message", envelope.payload);
+    if (room.parser === undefined) {
+      room.emit("message", envelope.payload);
+
+      return;
+    }
+
+    room.parser.parse(envelope.payload)
+      .andTee((parsed) => room.emit("message", parsed.message))
+      .orTee((errors) => room.emit("malformed", {
+        payload: envelope.payload,
+        errors
+      }));
   }
 
   #handleSync(
     room: InternalRoom,
     peers: Map<string, Peer>,
-    envelope: Extract<Envelope, { kind: "sync"; }>
+    envelope: Extract<ServerEnvelope, { kind: "sync"; }>
   ): void {
     for (const member of envelope.members) {
       peers.set(member.clientId, {
@@ -260,7 +282,7 @@ export class Client extends Emitter<ClientEventMap> {
   #handlePeerJoined(
     room: InternalRoom,
     peers: Map<string, Peer>,
-    envelope: Extract<Envelope, { kind: "peer-joined"; }>
+    envelope: Extract<ServerEnvelope, { kind: "peer-joined"; }>
   ): void {
     peers.set(envelope.clientId, {
       clientId: envelope.clientId,
@@ -276,7 +298,7 @@ export class Client extends Emitter<ClientEventMap> {
   #handlePeerLeft(
     room: InternalRoom,
     peers: Map<string, Peer>,
-    envelope: Extract<Envelope, { kind: "peer-left"; }>
+    envelope: Extract<ServerEnvelope, { kind: "peer-left"; }>
   ): void {
     peers.delete(envelope.clientId);
 
@@ -288,7 +310,7 @@ export class Client extends Emitter<ClientEventMap> {
   #handlePeerPresence(
     room: InternalRoom,
     peers: Map<string, Peer>,
-    envelope: Extract<Envelope, { kind: "peer-presence"; }>
+    envelope: Extract<ServerEnvelope, { kind: "peer-presence"; }>
   ): void {
     const peer = peers.get(envelope.clientId);
     if (peer) {
@@ -303,7 +325,7 @@ export class Client extends Emitter<ClientEventMap> {
 
   #handleDenied(
     room: InternalRoom,
-    envelope: Extract<Envelope, { kind: "denied"; }>
+    envelope: Extract<ServerEnvelope, { kind: "denied"; }>
   ): void {
     room.emit("denied", {
       event: envelope.event,
@@ -313,7 +335,7 @@ export class Client extends Emitter<ClientEventMap> {
 
   #handleError(
     room: InternalRoom,
-    envelope: Extract<Envelope, { kind: "error"; }>
+    envelope: Extract<ServerEnvelope, { kind: "error"; }>
   ): void {
     room.emit("error", {
       event: envelope.event,

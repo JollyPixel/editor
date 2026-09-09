@@ -20,9 +20,10 @@
     "build": "tsc",
     "dev": "vite",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only",
+    "test": "npm run typecheck && c8 -r html npm run test-only",
     "test:e2e": "playwright test",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "repository": {
     "type": "git",

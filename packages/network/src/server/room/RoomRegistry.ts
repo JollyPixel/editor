@@ -3,31 +3,26 @@ import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import { ServerRoom } from "./ServerRoom.ts";
-import { errorMessage } from "../errors.ts";
+import {
+  errorMessage,
+  UngatedExtensionError
+} from "../errors.ts";
 import type { Logger } from "../logger.ts";
 import type { RightsTable } from "../rights/RightsTable.ts";
-import type { Extension } from "../extension/Extension.ts";
+import type { AnyExtension } from "../extension/Extension.ts";
 import type {
   RoomResolution,
   RoomResolver
 } from "./RoomResolver.ts";
-import {
-  systemTimers,
-  type TimerHandle,
-  type Timers
-} from "./timers.ts";
 
 // CONSTANTS
 const kDefaultRoomGraceMs = 30_000;
 
-/**
- * Static entries have no resolution and are never evicted.
- */
 interface RoomEntry {
   name: string;
   room: ServerRoom;
   resolution: RoomResolution | null;
-  evictionHandle: TimerHandle | null;
+  evictionHandle: NodeJS.Timeout | null;
 }
 
 export interface RoomRegistryOptions {
@@ -40,11 +35,6 @@ export interface RoomRegistryOptions {
    * @default 30_000
    */
   graceMs?: number;
-  /**
-   * Clock behind eviction. Injected so a caller can drive the grace period
-   * instead of waiting on it.
-   */
-  timers?: Timers;
 }
 
 /**
@@ -56,11 +46,7 @@ export class RoomRegistry {
   #eventStore: EventStore.EventStore;
   #resolver: RoomResolver | null;
   #graceMs: number;
-  #timers: Timers;
   #entries = new Map<string, RoomEntry>();
-  /**
-   * In-flight teardowns that replacement rooms must await.
-   */
   #evictions = new Map<string, Promise<void>>();
 
   constructor(
@@ -71,7 +57,6 @@ export class RoomRegistry {
     this.#eventStore = options.eventStore;
     this.#resolver = options.resolver ?? null;
     this.#graceMs = options.graceMs ?? kDefaultRoomGraceMs;
-    this.#timers = options.timers ?? systemTimers;
   }
 
   setResolver(
@@ -81,7 +66,7 @@ export class RoomRegistry {
   }
 
   register(
-    extension: Extension
+    extension: AnyExtension
   ): void {
     this.#add(extension.id, extension, null);
     this.#logger
@@ -89,9 +74,6 @@ export class RoomRegistry {
       .info("room registered");
   }
 
-  /**
-   * Creates an unknown room only when `options.create` is true.
-   */
   async resolve(
     name: string,
     options: { create: boolean; }
@@ -104,7 +86,6 @@ export class RoomRegistry {
       return null;
     }
 
-    // Wait for prior teardown so the replacement sees flushed state.
     await this.#evictions.get(name);
 
     const resolution = await this.#resolveOnce(name);
@@ -112,7 +93,6 @@ export class RoomRegistry {
       return null;
     }
 
-    // Reuse a room resolved while this call awaited the resolver.
     const raced = this.#entries.get(name);
     if (raced !== undefined) {
       return raced.room;
@@ -126,9 +106,6 @@ export class RoomRegistry {
     return entry.room;
   }
 
-  /**
-   * Removes a member, then updates the room's eviction timer.
-   */
   async leave(
     name: string,
     clientId: string
@@ -146,9 +123,6 @@ export class RoomRegistry {
     }
   }
 
-  /**
-   * Arms eviction only for empty, dynamically resolved rooms.
-   */
   syncEviction(
     name: string
   ): void {
@@ -169,20 +143,13 @@ export class RoomRegistry {
       return;
     }
 
-    entry.evictionHandle = this.#timers.setTimeout(
+    entry.evictionHandle = setTimeout(
       () => void this.#evict(entry),
       entry.resolution.graceMs ?? this.#graceMs
     );
+    entry.evictionHandle.unref();
   }
 
-  /**
-   * Resolves once in-flight evictions have finished, for one room or all
-   * of them.
-   *
-   * Eviction starts on a timer and tears down asynchronously, so a caller
-   * that needs to observe the flushed state of an evicted room awaits this
-   * instead of racing the teardown.
-   */
   async settled(
     name?: string
   ): Promise<void> {
@@ -215,9 +182,18 @@ export class RoomRegistry {
 
   #add(
     name: string,
-    extension: Extension,
+    extension: AnyExtension,
     resolution: RoomResolution | null
   ): RoomEntry {
+    if (
+      this.#rights.configured &&
+      extension.protocols.inbound === null
+    ) {
+      throw new UngatedExtensionError(
+        `extension "${extension.name}" declares no inbound message protocol, so a rights table cannot gate it`
+      );
+    }
+
     const entry: RoomEntry = {
       name,
       room: new ServerRoom(
@@ -263,7 +239,7 @@ export class RoomRegistry {
       return;
     }
 
-    this.#timers.clearTimeout(entry.evictionHandle);
+    clearTimeout(entry.evictionHandle);
     entry.evictionHandle = null;
   }
 
@@ -280,7 +256,6 @@ export class RoomRegistry {
 
     this.#entries.delete(entry.name);
 
-    // Publish teardown first so replacement resolution waits for the flush.
     const teardown = this.#teardown(entry)
       .finally(() => this.#evictions.delete(entry.name));
     this.#evictions.set(entry.name, teardown);
@@ -292,7 +267,6 @@ export class RoomRegistry {
     entry: RoomEntry
   ): Promise<void> {
     try {
-      // Flush persisted state before releasing the extension.
       await entry.resolution?.onEvict?.();
     }
     catch (error) {

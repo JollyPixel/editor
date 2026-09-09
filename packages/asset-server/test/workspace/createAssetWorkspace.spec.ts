@@ -31,6 +31,7 @@ import {
   counterHandler,
   type CounterState
 } from "../helpers/kinds.ts";
+import { counterProtocols } from "../helpers/protocols.ts";
 import { bytes } from "../helpers/bytes.ts";
 
 // CONSTANTS
@@ -42,6 +43,7 @@ const kCompactionActor: EventStore.Actor = {
 class CounterExtension extends Extension {
   readonly id: string;
   readonly name = "counter";
+  readonly protocols = counterProtocols;
 
   constructor(
     binding: AssetRoomBinding<CounterState>

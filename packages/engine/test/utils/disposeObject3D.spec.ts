@@ -9,7 +9,7 @@ import * as THREE from "three/webgpu";
 import { disposeObject3D } from "../../src/utils/disposeObject3D.ts";
 
 function countDisposals(
-  target: THREE.EventDispatcher
+  target: THREE.BufferGeometry | THREE.Material | THREE.Texture
 ): () => number {
   let disposals = 0;
   target.addEventListener("dispose", () => disposals++);

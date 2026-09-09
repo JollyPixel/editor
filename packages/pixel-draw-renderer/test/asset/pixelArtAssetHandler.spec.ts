@@ -15,6 +15,7 @@ import {
   type AssetLiveProtocol,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
+import { protocolEvents } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -249,7 +250,7 @@ describe("pixelArtAssetHandler", () => {
 
     assert.strictEqual(protocol.commandEventType, PIXEL_ART_COMMAND);
     assert.deepEqual(
-      [...protocol.actions],
+      protocolEvents(protocol.protocols.inbound!),
       [...PIXEL_NETWORK_ACTIONS]
     );
   });

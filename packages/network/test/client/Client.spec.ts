@@ -8,7 +8,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Client } from "#src/index.ts";
+import {
+  Client,
+  MessageParser
+} from "#src/index.ts";
+import { actionCommandProtocol } from "../helpers/protocols.ts";
 
 type Listener = (event: any) => void;
 
@@ -345,5 +349,51 @@ describe("Client — updatePresence", () => {
       socket.sent.map((raw) => JSON.parse(raw)),
       [{ room: "pixel-draw", kind: "presence", patch: { cursor: { x: 9, y: 9 } } }]
     );
+  });
+});
+
+describe("Client — room parser", () => {
+  test("emits parsed messages and reports rejected payloads as \"malformed\"", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw", {
+      parser: new MessageParser(actionCommandProtocol)
+    });
+    room.join();
+
+    const messages: unknown[] = [];
+    const malformed: unknown[] = [];
+    room.on("message", (payload) => messages.push(payload));
+    room.on("malformed", (event) => malformed.push(event.payload));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "message",
+      payload: { action: "voxel-set" }
+    });
+    socket.receive({
+      room: "pixel-draw",
+      kind: "message",
+      payload: { action: "unheard-of" }
+    });
+
+    assert.deepEqual(messages, [{ action: "voxel-set" }]);
+    assert.deepEqual(malformed, [{ action: "unheard-of" }]);
+  });
+
+  test("passes payloads straight through when no parser is supplied", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+    room.join();
+
+    const messages: unknown[] = [];
+    room.on("message", (payload) => messages.push(payload));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "message",
+      payload: { anything: true }
+    });
+
+    assert.deepEqual(messages, [{ anything: true }]);
   });
 });

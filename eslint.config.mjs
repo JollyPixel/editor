@@ -1,9 +1,13 @@
-import { typescriptConfig, globals } from "@openally/config.eslint";
+import {
+  typescriptConfig,
+  globals
+} from "@openally/config.eslint";
 
 export default [
   {
     ignores: [
-      "**/coverage/**"
+      "**/coverage/**",
+      "**/generated/**"
     ],
     languageOptions: {
       sourceType: "module",
@@ -16,7 +20,9 @@ export default [
     rules: {
       "@stylistic/no-mixed-operators": "off",
       "max-classes-per-file": "off",
-      "max-params": ["error", { max: 5 }]
+      "max-params": [
+        "error", { max: 5 }
+      ]
     }
   })
 ];

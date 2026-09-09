@@ -7,7 +7,11 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { toUint8Array } from "js-base64";
-import type { RoomContext, RoomEventStoreHandle } from "@jolly-pixel/network";
+import {
+  MessageParser,
+  type RoomContext,
+  type RoomEventStoreHandle
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -16,10 +20,6 @@ import {
 } from "#src/network/PixelSyncServer.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 interface MockClient extends ClientHandle {
   received: unknown[];
@@ -47,8 +47,8 @@ function makeServer(
 
 // receive() never touches eventStore, so every RoomContext in this file shares one unused stub.
 const unusedEventStore: RoomEventStoreHandle = {
-  append: () => true,
-  list: () => []
+  append: async() => true,
+  list: async() => []
 };
 
 /**
@@ -59,6 +59,9 @@ const unusedEventStore: RoomEventStoreHandle = {
 const noopRoom: RoomContext = {
   room: {
     broadcast: () => {
+      // no observers
+    },
+    sendTo: () => {
       // no observers
     }
   },
@@ -77,7 +80,10 @@ function observe(
   server.onClientConnect(client);
 
   return {
-    room: { broadcast: (payload) => client.send(payload) },
+    room: {
+      broadcast: (payload) => client.send(payload),
+      sendTo: (_clientId, payload) => client.send(payload)
+    },
     eventStore: unusedEventStore
   };
 }
@@ -574,7 +580,6 @@ describe("PixelSyncServer — snapshot", () => {
   test("includes the buffer's current UV regions, for late-joining clients", () => {
     const server = makeServer();
     server.receive(uvCreatedCmd({
-      state: "stacked",
       region: {
         state: "stacked",
         id: "r1",
@@ -665,31 +670,24 @@ describe("PixelSyncServer — incoming message validation", () => {
     );
   });
 
-  test("drops commands with invalid headers", () => {
+  test("rejects a command with an invalid header through the inbound protocol", () => {
     const server = makeServer();
-    const client = createClient("observer");
-    const room = observe(server, client);
-    client.received.length = 0;
+    const parser = new MessageParser(server.protocols.inbound!);
 
-    server.onMessage("connection-A", {
-      ...strokeCmd(),
-      timestamp: Number.NaN
-    }, room);
-
-    assert.strictEqual(client.received.length, 0);
+    assert.strictEqual(parser.parse({ ...strokeCmd(), timestamp: Number.NaN }).ok, false);
+    assert.strictEqual(parser.parse({ ...strokeCmd(), seq: -1 }).ok, false);
+    assert.strictEqual(parser.parse({ ...strokeCmd(), clientId: 42 }).ok, false);
   });
 
   test("exposes command actions for rights lookup", () => {
     const server = makeServer();
+    const parser = new MessageParser(server.protocols.inbound!);
 
-    assert.ok(server.events.includes("stroke"));
-    assert.strictEqual(
-      server.getEventName(strokeCmd()),
-      "stroke"
-    );
-    assert.strictEqual(
-      server.getEventName({ unexpected: true }),
-      "invalid"
-    );
+    assert.ok(parser.events.includes("stroke"));
+
+    const parsed = parser.parse(strokeCmd());
+    assert.strictEqual(parsed.ok, true);
+    assert.strictEqual(parsed.val.event, "stroke");
+    assert.strictEqual(parser.parse({ unexpected: true }).ok, false);
   });
 });

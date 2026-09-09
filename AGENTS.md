@@ -18,7 +18,7 @@
 - Put tests under the package's `test/` directory.
 - Use `happy-dom` when DOM mocking is needed.
 - Use `tstyche` for testing types.
-- Run the relevant package tests and `npm run lint`.
+- Run the relevant package tests, `npm run typecheck`, and `npm run lint`.
 
 ## Package routing
 

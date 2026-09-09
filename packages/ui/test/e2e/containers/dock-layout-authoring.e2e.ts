@@ -148,7 +148,7 @@ test.describe("DockLayout", () => {
     await open(page);
 
     const dock = page.locator("jolly-dock[key='left']");
-    const originalSize = await dock.evaluate((element) => element.size);
+    const originalSize = await dock.evaluate((element: HTMLElement & { size: number; }) => element.size);
     const handle = dock.locator(".resize-handle");
 
     await handle.dblclick();
@@ -168,7 +168,7 @@ test.describe("DockLayout", () => {
     await page.mouse.move(point.x + 3, point.y);
     await page.mouse.up();
 
-    await expect.poll(() => dock.evaluate((element) => element.size)).toBe(originalSize);
+    await expect.poll(() => dock.evaluate((element: HTMLElement & { size: number; }) => element.size)).toBe(originalSize);
 
     await handle.dblclick();
     await expect.poll(() => widthOf(dock)).toBe(originalSize);

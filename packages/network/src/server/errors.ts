@@ -3,3 +3,5 @@ export function errorMessage(
 ): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+export class UngatedExtensionError extends Error {}

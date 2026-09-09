@@ -66,7 +66,6 @@ export class ClientSessions {
     const previous = lanes.get(lane) ?? Promise.resolve();
     const next = previous.then(task, task);
 
-    // Remove the tail only when no newer task has replaced it.
     const tail: Promise<void> = next
       .catch(() => void 0)
       .then(() => {

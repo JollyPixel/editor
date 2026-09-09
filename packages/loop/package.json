@@ -9,10 +9,11 @@
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only",
-    "lint": "eslint \"src/**/*.ts\"",
+    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "lint": "eslint src test",
     "bench": "jolly-bench",
-    "dev": "vite"
+    "dev": "vite",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

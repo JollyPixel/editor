@@ -74,10 +74,11 @@ $ npm run build
 ```
 
 ## Test
-Running test with npm workspace:
+Run tests for one workspace, then run the repository type checks:
 
 ```bash
 $ npm run test -w <workspace>
+$ npm run typecheck
 ```
 
 ## Linter

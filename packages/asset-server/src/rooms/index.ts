@@ -1,6 +1,5 @@
 export {
-  AssetRoomExtension,
-  UNKNOWN_ASSET_ACTION
+  AssetRoomExtension
 } from "./AssetRoomExtension.ts";
 export type {
   AssetArbitration,

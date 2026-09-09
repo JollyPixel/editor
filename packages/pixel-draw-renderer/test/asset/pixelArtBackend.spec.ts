@@ -17,8 +17,7 @@ import {
 } from "@jolly-pixel/network";
 import {
   assetRoomName,
-  createAssetBackend,
-  type Timers
+  createAssetBackend
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
@@ -48,47 +47,6 @@ const kRed = {
   a: 255
 };
 const kDocumentPath = "textures/hero.pixelart";
-
-interface ScheduledTask {
-  id: number;
-  at: number;
-  handler: () => void;
-}
-
-interface ManualTimers extends Timers {
-  now: number;
-  advance(ms: number): void;
-}
-
-function manualTimers(): ManualTimers {
-  let nextId = 1;
-  let tasks: ScheduledTask[] = [];
-
-  return {
-    now: 0,
-    setTimeout(handler, ms) {
-      const task: ScheduledTask = {
-        id: nextId++,
-        at: this.now + ms,
-        handler
-      };
-      tasks.push(task);
-
-      return task.id;
-    },
-    clearTimeout(handle) {
-      tasks = tasks.filter((task) => task.id !== handle);
-    },
-    advance(ms) {
-      this.now += ms;
-      const due = tasks.filter((task) => task.at <= this.now);
-      tasks = tasks.filter((task) => task.at > this.now);
-      for (const task of due) {
-        task.handler();
-      }
-    }
-  };
-}
 
 function tempRoot(): Promise<string> {
   return fs.mkdtemp(
@@ -160,7 +118,7 @@ function bufferFromFile(
 }
 
 describe("pixel-art asset kind over a real back-end", () => {
-  test("edits reach the file and a cold replay agrees with live state", async() => {
+  test("edits reach the file and a cold replay agrees with live state", async(t) => {
     const root = await tempRoot();
 
     try {
@@ -173,7 +131,7 @@ describe("pixel-art asset kind over a real back-end", () => {
         )
       );
 
-      const timers = manualTimers();
+      t.mock.timers.enable({ apis: ["setTimeout"] });
       await using backend = await createAssetBackend({
         source: new FilesystemAssetSource(root),
         eventStore,
@@ -182,7 +140,6 @@ describe("pixel-art asset kind over a real back-end", () => {
           delay: 1_000,
           maxDelay: 5_000
         },
-        timers,
         watch: false
       });
 
@@ -219,7 +176,7 @@ describe("pixel-art asset kind over a real back-end", () => {
         [255, 255, 255, 255]
       );
 
-      timers.advance(1_000);
+      t.mock.timers.tick(1_000);
       await backend.flush(record.id);
 
       const onDisk = bufferFromFile(

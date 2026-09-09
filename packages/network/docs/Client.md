@@ -36,7 +36,7 @@ interface ClientOptions {
 
 - `id` — stable connection id, reused across every room.
 - `ready` — whether the socket finished opening. The `"ready"` event fires once at that point.
-- `room(name)` — returns the handle for `name`; the same name always returns the same instance. It does not join.
+- `room(name, options?)` — returns the handle for `name`; the same name always returns the same instance, and only the first call's options apply. It does not join.
 - `destroy()` — closes the socket.
 
 `identity.role` feeds the server's rights table when one is configured — see [Rights](./Rights.md).
@@ -71,6 +71,10 @@ interface Peer {
   readonly identity: PeerMetadata;
   readonly presence: PeerMetadata;
 }
+
+interface RoomOptions<ServerMessage = unknown> {
+  parser?: RoomMessageParser<ServerMessage>;
+}
 ```
 
 - `join()` — joins on the server, carrying the client's identity. No-op once joined.
@@ -90,6 +94,26 @@ Any number of listeners per event; `off` removes only the listener passed in. Li
 | `peer-left` | `{ clientId }` | a remote peer leaves or disconnects |
 | `peer-presence` | `{ clientId, patch }` | a remote presence patch arrives — `peers` is already updated |
 | `denied` | `{ event, reason }` | the server refused one of your own actions on rights grounds |
-| `error` | `{ event, reason }` | server-side extension flow failed (persistence, infrastructure) |
+| `error` | `{ event, reason }` | server-side extension flow failed (persistence, infrastructure), or the room refused your payload |
+| `malformed` | `{ payload, errors }` | an inbound payload failed this room's parser (only with `options.parser`) |
 
 `denied` and `error` share a shape but not a meaning: `denied` means you aren't allowed, `error` means it broke.
+
+## Parsing inbound payloads
+
+By default `message` hands you the payload the server sent, untouched and typed only by the `ServerMessage` parameter. Pass a parser to have the room check it instead:
+
+```ts
+import { MessageParser } from "@jolly-pixel/network/parser";
+
+const room = client.room("voxel-map", {
+  parser: new MessageParser(voxelServerMessages)
+});
+
+room.on("message", (message) => applyCommand(message));
+room.on("malformed", ({ payload, errors }) => logger.warn({ payload, errors }));
+```
+
+A payload that matches emits `message`; one that doesn't emits `malformed` and never reaches the `message` listeners.
+
+`options.parser` accepts anything shaped like `RoomMessageParser`, so you can supply a validator compiled ahead of time instead. `MessageParser` compiles schemas at runtime and lives behind its own subpath for that reason: importing it adds a JSON Schema compiler to a browser bundle, and a client that never passes a parser never pays for one.

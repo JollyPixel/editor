@@ -311,7 +311,9 @@ describe("PixelStrokeGhostSync — local stroke reporting", () => {
 
     await nextFrame();
     assert.strictEqual(room.presenceUpdates.length, 1, "only the latest snapshot is sent");
-    assert.strictEqual(room.presenceUpdates[0].strokeGhost.length, 2);
+    const { strokeGhost } = room.presenceUpdates[0];
+    assert.ok(Array.isArray(strokeGhost));
+    assert.strictEqual(strokeGhost.length, 2);
   });
 
   test("enableGhostPreview: false never sends", async() => {

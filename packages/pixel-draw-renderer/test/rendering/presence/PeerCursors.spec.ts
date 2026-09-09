@@ -27,7 +27,9 @@ function makeMutableViewport(): MutableViewport {
     camera: {
       x: 0,
       y: 0
-    }
+    },
+    canvasWidth: 800,
+    canvasHeight: 600
   };
 }
 

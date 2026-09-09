@@ -54,7 +54,8 @@ async function waitFor(
 }
 
 describe("ReconciliationWatcher — debounce", () => {
-  test("coalesces a burst of notifications into one pass", async() => {
+  test("coalesces a burst of notifications into one pass", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await syncHarness();
     let passes = 0;
     const original = harness.reconciler.reconcile.bind(harness.reconciler);
@@ -67,7 +68,7 @@ describe("ReconciliationWatcher — debounce", () => {
     harness.watcher.notify("a.png");
     harness.watcher.notify("b.png");
     harness.watcher.notify("c.png");
-    harness.timers.advance(100);
+    t.mock.timers.tick(100);
     await harness.watcher.settle();
 
     assert.strictEqual(passes, 1);
@@ -91,13 +92,23 @@ describe("ReconciliationWatcher — debounce", () => {
     assert.strictEqual(passes, 2);
   });
 
-  test("close leaves no timer armed", async() => {
+  test("close leaves no timer armed", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     const harness = await syncHarness();
+    let passes = 0;
+    const original = harness.reconciler.reconcile.bind(harness.reconciler);
+    harness.reconciler.reconcile = () => {
+      passes += 1;
+
+      return original();
+    };
 
     harness.watcher.notify("a.png");
     await harness.watcher.close();
+    t.mock.timers.tick(1_000);
+    await harness.watcher.settle();
 
-    assert.strictEqual(harness.timers.scheduled, 0);
+    assert.strictEqual(passes, 0);
     await harness[Symbol.asyncDispose]();
   });
 
@@ -111,7 +122,8 @@ describe("ReconciliationWatcher — debounce", () => {
 });
 
 describe("ReconciliationWatcher — round trip", () => {
-  test("an editor write reaches disk and comes back silent", async() => {
+  test("an editor write reaches disk and comes back silent", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await syncHarness();
 
     await harness.writer.create({
@@ -123,13 +135,14 @@ describe("ReconciliationWatcher — round trip", () => {
     const before = lifecycleCount(harness.eventStore);
 
     harness.watcher.notify("a.png");
-    harness.timers.advance(100);
+    t.mock.timers.tick(100);
     await harness.watcher.settle();
 
     assert.strictEqual(lifecycleCount(harness.eventStore), before);
   });
 
-  test("an external edit becomes an event and leaves the file alone", async() => {
+  test("an external edit becomes an event and leaves the file alone", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await syncHarness();
     await harness.writer.create({
       path: "a.png",
@@ -141,7 +154,7 @@ describe("ReconciliationWatcher — round trip", () => {
 
     await harness.source.write("a.png", bytes("edited"));
     harness.watcher.notify("a.png");
-    harness.timers.advance(100);
+    t.mock.timers.tick(100);
     await harness.watcher.settle();
     await harness.projector.flush();
 

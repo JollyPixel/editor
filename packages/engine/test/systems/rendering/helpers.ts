@@ -29,7 +29,12 @@ export function createRenderComponent(
     threeCamera: camera,
     depth,
     viewport,
-    prepareRender: mock.fn()
+    prepareRender: mock.fn((
+      _canvasWidth: number,
+      _canvasHeight: number
+    ) => {
+      // no-op
+    })
   } satisfies RenderComponent & { prepareRender: ReturnType<typeof mock.fn>; };
 }
 

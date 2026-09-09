@@ -19,10 +19,11 @@
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "bench": "node --max-old-space-size=8192 bench/mesh-build.bench.ts",
     "bench:compare": "node --max-old-space-size=8192 bench/mesh-compare.bench.ts",
-    "test": "npm run test-types && c8 -r html npm run test-only",
+    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
     "clean": "rm -f cpu-profile-*.* heap-profile-*.*",
     "lint": "eslint src test",
-    "test-types": "tsc -p test/tsconfig.json"
+    "test-types": "tsc -p test/tsconfig.json",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

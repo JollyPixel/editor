@@ -11,8 +11,7 @@ import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { Server, type ClientHandle } from "@jolly-pixel/network";
 import {
   assetRoomName,
-  createAssetBackend,
-  type Timers
+  createAssetBackend
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
@@ -22,53 +21,15 @@ import {
   voxelMapAssetHandler,
   VoxelMapState
 } from "../../src/asset/index.ts";
-import { decodeVoxelDocument, encodeVoxelDocument } from "../../src/serialization/index.ts";
+import {
+  decodeVoxelDocument,
+  encodeVoxelDocument
+} from "../../src/serialization/index.ts";
 import { voxelSetCmd } from "../helpers/networkCommands.ts";
 
 // CONSTANTS
 const kChunkSize = 16;
 const kDocumentPath = "maps/overworld.voxelmap.json";
-
-interface ScheduledTask {
-  id: number;
-  at: number;
-  handler: () => void;
-}
-
-interface ManualTimers extends Timers {
-  now: number;
-  advance(ms: number): void;
-}
-
-function manualTimers(): ManualTimers {
-  let nextId = 1;
-  let tasks: ScheduledTask[] = [];
-
-  return {
-    now: 0,
-    setTimeout(handler, ms) {
-      const task: ScheduledTask = {
-        id: nextId++,
-        at: this.now + ms,
-        handler
-      };
-      tasks.push(task);
-
-      return task.id;
-    },
-    clearTimeout(handle) {
-      tasks = tasks.filter((task) => task.id !== handle);
-    },
-    advance(ms) {
-      this.now += ms;
-      const due = tasks.filter((task) => task.at <= this.now);
-      tasks = tasks.filter((task) => task.at > this.now);
-      for (const task of due) {
-        task.handler();
-      }
-    }
-  };
-}
 
 function client(
   id: string
@@ -112,7 +73,7 @@ function replay(
 }
 
 describe("voxel-map asset kind over a real back-end", () => {
-  test("edits reach the file and a cold replay agrees with live state", async() => {
+  test("edits reach the file and a cold replay agrees with live state", async(t) => {
     const root = await fs.mkdtemp(
       path.join(os.tmpdir(), "jolly-voxel-map-asset-")
     );
@@ -125,7 +86,7 @@ describe("voxel-map asset kind over a real back-end", () => {
         seededDocument()
       );
 
-      const timers = manualTimers();
+      t.mock.timers.enable({ apis: ["setTimeout"] });
       await using backend = await createAssetBackend({
         source: new FilesystemAssetSource(root),
         eventStore,
@@ -138,7 +99,6 @@ describe("voxel-map asset kind over a real back-end", () => {
             }
           })
         ],
-        timers,
         watch: false
       });
 
@@ -182,7 +142,7 @@ describe("voxel-map asset kind over a real back-end", () => {
         undefined
       );
 
-      timers.advance(1_000);
+      t.mock.timers.tick(1_000);
       await backend.flush(record.id);
 
       const onDisk = stateFromFile(

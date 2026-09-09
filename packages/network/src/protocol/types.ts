@@ -1,12 +1,16 @@
+// Import Internal Dependencies
+import type {
+  peerMetadataSchema,
+  peerSchema
+} from "./Envelope.schema.ts";
+import type { Infer } from "./schema.ts";
+
 export interface ClientHandle {
   readonly id: string;
-  send(data: unknown): void;
+  send(
+    data: unknown
+  ): void;
 }
 
-export type PeerMetadata = Record<string, unknown>;
-
-export interface Peer {
-  readonly clientId: string;
-  readonly identity: PeerMetadata;
-  readonly presence: PeerMetadata;
-}
+export type PeerMetadata = Infer<typeof peerMetadataSchema>;
+export type Peer = Readonly<Infer<typeof peerSchema>>;

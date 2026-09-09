@@ -8,9 +8,10 @@ import http from "node:http";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import type {
-  ClientHandle,
-  RoomContext
+import {
+  protocolEvents,
+  type ClientHandle,
+  type RoomContext
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -215,11 +216,10 @@ describe("CatalogExtension — broadcast", () => {
       })
     });
 
-    assert.strictEqual(
-      extension.getEventName({ type: CATALOG_CHANGED }),
-      CATALOG_CHANGED
+    assert.deepEqual(
+      protocolEvents(extension.protocols.outbound!),
+      [CATALOG_SNAPSHOT, CATALOG_CHANGED]
     );
-    assert.strictEqual(extension.getEventName(null), CATALOG_CHANGED);
     extension.dispose();
   });
 });

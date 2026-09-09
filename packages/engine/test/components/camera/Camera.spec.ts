@@ -41,7 +41,7 @@ function createActorMock() {
           return { x: 0, y: 0 };
         }),
         keyboard: {
-          isDown: mock.fn(() => false)
+          isDown: mock.fn((_key: string) => false)
         },
         mouse: {
           isDown: mock.fn(() => false),

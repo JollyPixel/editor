@@ -11,6 +11,7 @@ import {
   PixelArtCanvas,
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
+import { SelectEngine } from "#src/tools/SelectEngine.ts";
 import type { ClipboardAdapter } from "#src/clipboard/types.ts";
 import {
   mockContextOf,
@@ -552,7 +553,9 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     manager.destroy();
   });
 
-  test("a failed import reports paste-failed and hands the mode back", async() => {
+  test("a failed import reports paste-failed and hands the mode back", async(
+    context
+  ) => {
     const manager = makeManager({
       clipboard: makeRasterClipboard()
     });
@@ -562,19 +565,18 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     mockContextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
 
-    const original = manager.tools.select.importSelection;
-    Object.assign(manager.tools.select, {
-      importSelection: () => {
+    context.mock.method(
+      SelectEngine.prototype,
+      "importSelection",
+      () => {
         throw new Error("boom");
       }
-    });
+    );
 
     const result = await withBitmapSource(
       source,
       () => manager.pasteClipboard()
     );
-    Object.assign(manager.tools.select, { importSelection: original });
-
     assert.strictEqual(result.code, "paste-failed");
     assert.strictEqual(manager.mode, "paint", "mode rolled back");
     assert.strictEqual(manager.tools.select.hasSelection, false);
