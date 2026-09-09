@@ -4,44 +4,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grid - @jolly-pixel/three</title>
-  <link rel="stylesheet" href="/main.css">
+  <title>Examples - @jolly-pixel/three</title>
+  <link rel="stylesheet" href="./landing.css">
 </head>
 
 <body>
-  <canvas tabindex="-1"></canvas>
-  <jolly-scope>
-    <jolly-controls
-      position="bottom-left"
-      max-entries-per-row="3"
-      heading="Controls"
-    >
-      <jolly-control
-        description="Orbit"
-        details="Drag with the primary mouse button to orbit around the grid."
-      ><kbd>Drag</kbd></jolly-control>
-      <jolly-control
-        description="Pan"
-        details="Drag with the secondary mouse button to pan the camera target."
-      ><kbd>Right drag</kbd></jolly-control>
-      <jolly-control
-        description="Zoom"
-        details="Use the mouse wheel to change the camera distance."
-      ><kbd>Wheel</kbd></jolly-control>
-    </jolly-controls>
-    <jolly-dock-layout storage-key="three-examples:layout">
-      <jolly-dock
-        id="tools"
-        key="tools"
-        side="right"
-        align="start"
-        overlay
-        collapsible
-        size="340"
-      ></jolly-dock>
-    </jolly-dock-layout>
-  </jolly-scope>
-  <script type="module" src="./scripts/demo-grid.ts"></script>
+  <main>
+    <header>
+      <h1>@jolly-pixel/three</h1>
+      <p>Interactive examples. Press <kbd>F3</kbd> in any example to toggle its dock.</p>
+    </header>
+    <div id="examples"></div>
+  </main>
+  <script type="module" src="./landing.ts"></script>
 </body>
 
 </html>

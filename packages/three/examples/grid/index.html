@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grid - @jolly-pixel/three</title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+
+<body>
+  <canvas tabindex="-1"></canvas>
+  <jolly-scope>
+    <jolly-controls
+      position="bottom-left"
+      max-entries-per-row="3"
+      heading="Controls"
+    >
+      <jolly-control
+        description="Orbit"
+        details="Drag with the primary mouse button to orbit around the grid."
+      ><kbd>Drag</kbd></jolly-control>
+      <jolly-control
+        description="Pan"
+        details="Drag with the secondary mouse button to pan the camera target."
+      ><kbd>Right drag</kbd></jolly-control>
+      <jolly-control
+        description="Zoom"
+        details="Use the mouse wheel to change the camera distance."
+      ><kbd>Wheel</kbd></jolly-control>
+    </jolly-controls>
+  </jolly-scope>
+  <script type="module" src="./main.ts"></script>
+</body>
+
+</html>

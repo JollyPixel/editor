@@ -1,3 +1,7 @@
+// Import Node.js Dependencies
+import { fileURLToPath } from "node:url";
+import { globSync } from "node:fs";
+
 // Import Third-party Dependencies
 import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
@@ -8,24 +12,46 @@ import {
   createWebSocketNetworkPlugin
 } from "@jolly-pixel/network/plugins/vite.ts";
 
-// CONSTANTS
-// Must match examples/scripts/demo-peer-frustum-sync.ts's room id.
-const kPeerFrustumDemoRoom = "three:peer-frustum-demo";
-// Must match examples/scripts/demo-peer-selection-sync.ts's room id.
-const kPeerSelectionDemoRoom = "three:peer-selection-demo";
+// Import Internal Dependencies
+import {
+  PEER_FRUSTUM_ROOM,
+  PEER_SELECTION_ROOM
+} from "./examples/shared/rooms.ts";
 
-// https://vitejs.dev/config/
+// CONSTANTS
+const kExamplesRoot = fileURLToPath(
+  new URL("examples", import.meta.url)
+);
+const kPages = globSync("**/index.html", {
+  cwd: kExamplesRoot,
+  exclude: (entry) => entry === "dist"
+}).map((page) => page.replaceAll("\\", "/"));
+
 export default defineConfig({
   root: "examples",
+  build: {
+    rollupOptions: {
+      input: Object.fromEntries(
+        kPages.map((page) => [
+          page.replace(/[/]?index\.html$/, "") || "index",
+          fileURLToPath(new URL(`examples/${page}`, import.meta.url))
+        ])
+      )
+    }
+  },
   server: {
     allowedHosts: true
   },
   plugins: [
-    checker({ typescript: true }),
+    checker({
+      typescript: {
+        tsconfigPath: "examples/tsconfig.json"
+      }
+    }),
     createWebSocketNetworkPlugin({
       extensions: [
-        new PresenceOnlyExtension(kPeerFrustumDemoRoom),
-        new PresenceOnlyExtension(kPeerSelectionDemoRoom)
+        new PresenceOnlyExtension(PEER_FRUSTUM_ROOM),
+        new PresenceOnlyExtension(PEER_SELECTION_ROOM)
       ]
     })
   ]

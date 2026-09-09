@@ -343,6 +343,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
   readonly zAxisColor: GridColor;
   readonly fade: GridFadeValue;
   readonly infiniteGrid: boolean;
+  readonly extent: number;
   followCamera: boolean;
 
   readonly #uniforms: GridUniforms;
@@ -427,6 +428,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
     this.zAxisColor = new GridColor(uniforms.zAxisColor.value);
     this.fade = fade;
     this.infiniteGrid = infiniteGrid;
+    this.extent = extent;
     this.followCamera = options.followCamera ?? (fade.from !== "origin");
     this.frustumCulled = false;
     this.visible = options.enabled ?? defaults.enabled;
@@ -460,13 +462,11 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
     _scene: unknown,
     camera: THREE.Camera
   ): void => {
-    // Target mode keeps the shader fade anchor synchronized in both grid modes.
     this.fade.trackTarget(
       this.#uniforms.targetPosition.value,
       camera.position
     );
 
-    // Infinite mode reconstructs world positions without moving the mesh.
     if (this.infiniteGrid) {
       return;
     }
@@ -497,6 +497,72 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
     value: boolean
   ) {
     this.visible = value;
+  }
+
+  toOptions(): GridOptions {
+    return {
+      plane: this.plane.value,
+      extent: this.extent,
+      cell: {
+        style: this.cellStyle.value,
+        size: this.cellSize,
+        color: this.cellColor.value,
+        thickness: this.cellThickness
+      },
+      section: {
+        style: this.sectionStyle.value,
+        size: this.sectionSize,
+        color: this.sectionColor.value,
+        thickness: this.sectionThickness
+      },
+      crossSize: this.crossSize,
+      hideCellOnSection: this.hideCellOnSection,
+      hideCellOnSectionFadeWidth: this.hideCellOnSectionFadeWidth,
+      fade: {
+        from: this.fade.from,
+        target: this.fade.target ?? undefined,
+        distance: this.fadeDistance,
+        strength: this.fadeStrength
+      },
+      axes: {
+        show: this.showAxes,
+        thickness: this.axisThickness,
+        xColor: this.xAxisColor.value,
+        yColor: this.yAxisColor.value,
+        zColor: this.zAxisColor.value
+      },
+      offset: this.offset,
+      enabled: this.enabled,
+      followCamera: this.followCamera,
+      infiniteGrid: this.infiniteGrid
+    };
+  }
+
+  cloneWith(
+    overrides: GridOptions = {}
+  ): Grid {
+    const options = this.toOptions();
+
+    return new Grid({
+      ...options,
+      ...overrides,
+      cell: {
+        ...options.cell,
+        ...overrides.cell
+      },
+      section: {
+        ...options.section,
+        ...overrides.section
+      },
+      fade: {
+        ...options.fade,
+        ...overrides.fade
+      },
+      axes: {
+        ...options.axes,
+        ...overrides.axes
+      }
+    });
   }
 
   dispose(): void {
