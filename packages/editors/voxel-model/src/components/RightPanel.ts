@@ -14,11 +14,11 @@ import {
 // Import Internal Dependencies
 import type ModelManager from "../three/ModelManager.ts";
 import type GroupManager from "../three/GroupManager.ts";
-import type ThreeSceneManager from "../three/ThreeSceneManager.ts";
+import type { ModelSceneComponent } from "../three/ModelSceneComponent.ts";
 
 export class RightPanel extends LitElement {
   private modelManager: ModelManager | null = null;
-  private sceneManager: ThreeSceneManager | null = null;
+  private sceneManager: ModelSceneComponent | null = null;
 
   @state()
   private declare nodes: TreeNode[];
@@ -83,6 +83,7 @@ export class RightPanel extends LitElement {
 
     if (this.selected.length === 0) {
       this.modelManager?.selectGroup(null);
+      this.dispatchGroupSelected(null);
 
       return;
     }
@@ -94,8 +95,17 @@ export class RightPanel extends LitElement {
     const group = this.modelManager.getGroupByUUID(this.selected[0]);
     if (group) {
       this.modelManager.selectGroup(group);
+      this.dispatchGroupSelected(group);
     }
   };
+
+  private dispatchGroupSelected(
+    group: GroupManager | null
+  ): void {
+    document.dispatchEvent(new CustomEvent("groupSelected", {
+      detail: { group }
+    }));
+  }
 
   private handleToggleExpand = (
     event: CustomEvent<JollyToggleExpandDetail>
@@ -106,11 +116,6 @@ export class RightPanel extends LitElement {
       this.expanded.filter((expandedId) => expandedId !== id);
   };
 
-  /**
-   * The tree is the source of truth for hierarchy; the 3D scene follows it,
-   * not the other way round. `resolveReparent` already ran the structural
-   * guard, so a moved id landing under a new parent here can't be a cycle.
-   */
   private handleReparent = (
     event: CustomEvent<JollyReparentDetail>
   ): void => {
@@ -135,7 +140,7 @@ export class RightPanel extends LitElement {
     this.modelManager = modelManager;
   }
 
-  public setSceneManager(sceneManager: ThreeSceneManager): void {
+  public setSceneManager(sceneManager: ModelSceneComponent): void {
     this.sceneManager = sceneManager;
   }
 

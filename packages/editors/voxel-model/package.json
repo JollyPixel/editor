@@ -15,6 +15,7 @@
     "dist"
   ],
   "dependencies": {
+    "@jolly-pixel/editor.pixel-art": "1.1.0",
     "@jolly-pixel/engine": "4.0.0",
     "@jolly-pixel/pixel-draw.renderer": "3.0.0",
     "@jolly-pixel/runtime": "4.0.0",

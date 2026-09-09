@@ -1,16 +1,24 @@
 // Import Third-party Dependencies
-import { LitElement, css, html, type TemplateResult } from "lit";
+import {
+  LitElement,
+  css,
+  html,
+  type PropertyValues,
+  type TemplateResult
+} from "lit";
 import { state, query } from "lit/decorators.js";
-import { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  type Mode,
+  type PixelArtCanvas,
+  type PixelArtCanvasOptions
+} from "@jolly-pixel/pixel-draw.renderer";
+import { type PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import "./tabs/Paint.ts";
 import "./tabs/Build.ts";
 
 // CONSTANTS
-const kBuildComponentSelector = "jolly-model-editor-build";
-const kPaintComponentSelector = "jolly-model-editor-paint";
 const kTextureSize = { x: 64, y: 64 };
 const kDefaultZoom = {
   default: 4,
@@ -19,21 +27,17 @@ const kDefaultZoom = {
   sensitivity: 0.1
 };
 
+type LeftPanelMode = "paint" | "build" | "animate";
+
 export class LeftPanel extends LitElement {
   @state()
-  declare mode: "paint" | "build" | "animate";
+  declare mode: LeftPanelMode;
 
-  @query(kBuildComponentSelector)
-  declare buildComponent: any;
+  @query("pixel-draw-panel")
+  declare private panelElement: PixelDrawPanel;
 
-  @query(kPaintComponentSelector)
-  declare paintComponent: any;
-
-  private canvasManager: PixelArtCanvas;
-
-  private lastReparentedMode: "paint" | "build" | "animate" | null = null;
-  private hasInitializedCenter: boolean = false;
-  private hasInitialized: boolean = false;
+  #canvasManager: PixelArtCanvas | null = null;
+  #resizeObserver: ResizeObserver | null = null;
 
   static override styles = css`
     :host {
@@ -45,153 +49,88 @@ export class LeftPanel extends LitElement {
     }
 
     jolly-tabs {
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow: auto;
+      flex-shrink: 0;
     }
 
-    #leftPanelContent {
+    jolly-tabs::part(list) {
       display: flex;
-      flex-direction: column;
+    }
+
+    jolly-tabs::part(tab) {
+      flex: 1 1 0;
+      text-align: center;
+    }
+
+    pixel-draw-panel {
+      flex: 1;
+      min-height: 200px;
     }
   `;
 
   constructor() {
     super();
     this.mode = "build";
+  }
 
-    // Create a temporary container for the PixelArtCanvas
-    const containerDiv = document.createElement("div");
+  get canvasManager(): PixelArtCanvas | null {
+    return this.#canvasManager;
+  }
 
-    // Initialize PixelArtCanvas with the temporary container
-    this.canvasManager = new PixelArtCanvas(containerDiv, {
+  public onResize(): void {
+    this.panelElement?.onResize();
+  }
+
+  override async firstUpdated(): Promise<void> {
+    const options: PixelArtCanvasOptions = {
       texture: { size: kTextureSize },
       defaultMode: "move",
       zoom: kDefaultZoom,
-      brush: {
-        size: 8
-      }
-    });
+      brush: { size: 8 }
+    };
+
+    this.#canvasManager = await this.panelElement.initialize(options);
+    this.#canvasManager.uv.showAll = true;
+    this.#canvasManager.mode = this.#canvasModeForTab(this.mode);
+
+    this.#resizeObserver = new ResizeObserver(() => this.panelElement.onResize());
+    this.#resizeObserver.observe(this.panelElement);
   }
 
-  public getSharedPixelArtCanvas(): PixelArtCanvas {
-    return this.canvasManager;
+  override updated(
+    changedProperties: PropertyValues<this>
+  ): void {
+    if (changedProperties.has("mode") && this.#canvasManager) {
+      this.#canvasManager.mode = this.#canvasModeForTab(this.mode);
+    }
   }
 
-  public getActiveComponent(): any {
-    const selector = (this.mode === "build") ? kBuildComponentSelector : kPaintComponentSelector;
-
-    return this.renderRoot.querySelector(selector);
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = null;
   }
 
-  private updateCanvasMode(): void {
-    const newMode = (this.mode === "paint") ? "paint" : "move";
-    this.canvasManager.mode = newMode;
+  #canvasModeForTab(
+    mode: LeftPanelMode
+  ): Mode {
+    return mode === "build" ? "uv" : "paint";
   }
 
   private handleTabChange = (
     event: CustomEvent<{ value: string; }>
   ): void => {
-    this.mode = event.detail.value as "paint" | "build" | "animate";
+    this.mode = event.detail.value as LeftPanelMode;
   };
-
-  private syncTextureSizeInputs(): void {
-    const textureSize = this.canvasManager.textureSize;
-
-    if (!this.buildComponent) {
-      return;
-    }
-
-    const textureSizeXInput = this.buildComponent.renderRoot.querySelector("#textureSizeX") as HTMLSelectElement;
-    const textureSizeYInput = this.buildComponent.renderRoot.querySelector("#textureSizeY") as HTMLSelectElement;
-
-    if (textureSizeXInput) {
-      textureSizeXInput.value = String(textureSize.x);
-    }
-
-    if (textureSizeYInput) {
-      textureSizeYInput.value = String(textureSize.y);
-    }
-  }
-
-  private async initializeReparenting(): Promise<void> {
-    if (!this.buildComponent || !this.paintComponent) {
-      throw new Error("LeftPanel: Build or Paint component not found");
-    }
-
-    // Wait for both components to be fully updated
-    await Promise.all([this.buildComponent.updateComplete, this.paintComponent.updateComplete]);
-
-    if (!this.buildComponent.texturePreviewElement || !this.paintComponent.texturePreviewElement) {
-      throw new Error("LeftPanel: texturePreviewElement not found on Build or Paint component");
-    }
-
-    // Reparent to the active component and center texture
-    this.reparentCanvasToActiveTab();
-
-    // Synchronize texture size inputs with PixelArtCanvas state
-    this.syncTextureSizeInputs();
-
-    this.hasInitialized = true;
-  }
-
-  private reparentCanvasToActiveTab(): void {
-    const activeComponent = this.getActiveComponent();
-
-    // Only reparent if we have a valid active component with preview element
-    if (!activeComponent?.texturePreviewElement) {
-      return;
-    }
-
-    if (this.lastReparentedMode !== this.mode) {
-      this.canvasManager.reparentCanvasTo(activeComponent.texturePreviewElement);
-
-      if (!this.hasInitializedCenter) {
-        this.canvasManager.centerTexture();
-        this.hasInitializedCenter = true;
-      }
-
-      this.lastReparentedMode = this.mode;
-    }
-  }
-
-  override async firstUpdated(): Promise<void> {
-    try {
-      await this.initializeReparenting();
-    }
-    catch (error) {
-      console.error(error);
-    }
-  }
-
-  override updated(): void {
-    if (!this.hasInitialized) {
-      return;
-    }
-
-    try {
-      this.updateCanvasMode();
-      this.reparentCanvasToActiveTab();
-      this.canvasManager.onResize();
-    }
-    catch (error) {
-      console.error(error);
-    }
-  }
 
   override render(): TemplateResult {
     return html`
-      <div id="leftPanelContent">
-        <jolly-tabs .value=${this.mode} @jolly-tab-change=${this.handleTabChange}>
-          <jolly-tab value="build" label="Build">
-            <jolly-model-editor-build></jolly-model-editor-build>
-          </jolly-tab>
-          <jolly-tab value="paint" label="Paint">
-            <jolly-model-editor-paint></jolly-model-editor-paint>
-          </jolly-tab>
-          <jolly-tab value="animate" label="Animate" disabled></jolly-tab>
-        </jolly-tabs>
-      </div>
+      <jolly-tabs .value=${this.mode} @jolly-tab-change=${this.handleTabChange}>
+        <jolly-tab value="build" label="Build"></jolly-tab>
+        <jolly-tab value="paint" label="Paint"></jolly-tab>
+        <jolly-tab value="animate" label="Animate" disabled></jolly-tab>
+      </jolly-tabs>
+      <jolly-model-editor-build ?hidden=${this.mode !== "build"}></jolly-model-editor-build>
+      <pixel-draw-panel></pixel-draw-panel>
     `;
   }
 }
