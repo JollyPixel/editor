@@ -98,7 +98,7 @@ export class CatalogExtension extends Extension {
     );
   }
 
-  onClientConnect(
+  override onClientConnect(
     client: ClientHandle,
     _identity: PeerMetadata,
     context: RoomContext
@@ -112,17 +112,13 @@ export class CatalogExtension extends Extension {
     } satisfies CatalogMessage);
   }
 
-  onClientDisconnect(
+  override onClientDisconnect(
     clientId: string
   ): void {
     this.#members.delete(clientId);
     if (this.#members.size === 0) {
       this.#broadcast = null;
     }
-  }
-
-  onMessage(): void {
-    return void 0;
   }
 
   override dispose(): void {

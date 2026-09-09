@@ -33,6 +33,12 @@ export interface DispatchArgsMap {
 
 export type DispatchMethod = keyof DispatchArgsMap;
 
+export const DISPATCH_METHODS: DispatchMethod[] = [
+  "onClientConnect",
+  "onClientDisconnect",
+  "onMessage"
+];
+
 export type WorkerDispatch = {
   [TMethod in DispatchMethod]: {
     type: "dispatch";
@@ -54,6 +60,7 @@ export type MainToWorkerMessage = WorkerDispatch | WorkerContextResponse;
 
 export interface WorkerReady {
   type: "ready";
+  methods: DispatchMethod[];
 }
 
 export interface WorkerDispatchResult {

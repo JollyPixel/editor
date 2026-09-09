@@ -36,15 +36,7 @@ class AssetExtension extends Extension {
     this.protocols = protocols;
   }
 
-  onClientConnect(): void {
-    return void 0;
-  }
-
-  onClientDisconnect(): void {
-    return void 0;
-  }
-
-  onMessage(
+  override onMessage(
     _clientId: string,
     payload: unknown
   ): void {

@@ -66,6 +66,7 @@ export class WorkerExtensionProxy extends Extension {
   #transport: WorkerTransport | undefined;
 
   #readyPromise!: Promise<void>;
+  #implemented: Set<DispatchMethod> | undefined;
   #resolveReady: (() => void) | undefined;
   #rejectReady: ((error: Error) => void) | undefined;
 
@@ -73,10 +74,7 @@ export class WorkerExtensionProxy extends Extension {
   #dispatchCalls = new PendingCallRegistry<void>();
   #dispatchChain: Promise<void> = Promise.resolve();
   #restartTimestamps: number[] = [];
-
-  // Captured on first dispatch and stable for the room's lifetime.
   #roomBroadcast: RoomBroadcast | undefined;
-  // Valid only during a serialized dispatch.
   #currentEventStore: RoomEventStoreHandle | undefined;
 
   constructor(
@@ -97,7 +95,7 @@ export class WorkerExtensionProxy extends Extension {
     this.#spawn();
   }
 
-  onClientConnect(
+  override onClientConnect(
     client: ClientHandle,
     identity: PeerMetadata,
     context: RoomContext
@@ -109,7 +107,7 @@ export class WorkerExtensionProxy extends Extension {
     );
   }
 
-  onClientDisconnect(
+  override onClientDisconnect(
     clientId: string,
     context: RoomContext
   ): Promise<void> {
@@ -120,7 +118,7 @@ export class WorkerExtensionProxy extends Extension {
     );
   }
 
-  onMessage(
+  override onMessage(
     clientId: string,
     payload: unknown,
     context: RoomContext
@@ -146,6 +144,7 @@ export class WorkerExtensionProxy extends Extension {
     };
 
     const { promise, resolve, reject } = Promise.withResolvers<void>();
+    this.#implemented = undefined;
     this.#readyPromise = promise;
     this.#resolveReady = resolve;
     this.#rejectReady = reject;
@@ -198,6 +197,10 @@ export class WorkerExtensionProxy extends Extension {
 
     await this.#readyPromise;
 
+    if (this.#implemented?.has(method) === false) {
+      return;
+    }
+
     this.#roomBroadcast ??= context.room;
     this.#currentEventStore = context.eventStore;
 
@@ -229,7 +232,8 @@ export class WorkerExtensionProxy extends Extension {
     message: WorkerToMainMessage
   ): void {
     match(message)
-      .with({ type: "ready" }, () => {
+      .with({ type: "ready" }, (message) => {
+        this.#implemented = new Set(message.methods);
         this.#resolveReady?.();
       })
       .with({ type: "dispatch-result" }, (message) => {

@@ -39,23 +39,25 @@ export interface RoomContext {
   readonly eventStore: RoomEventStoreHandle;
 }
 
-export abstract class Extension<TMessage = unknown> {
+export abstract class Extension<
+  TMessage = unknown
+> {
   abstract readonly id: string;
   abstract readonly name: string;
   abstract readonly protocols: MessageProtocols;
 
-  abstract onClientConnect(
+  onClientConnect?(
     client: ClientHandle,
     identity: PeerMetadata,
     context: RoomContext
   ): void | Promise<void>;
 
-  abstract onClientDisconnect(
+  onClientDisconnect?(
     clientId: string,
     context: RoomContext
   ): void | Promise<void>;
 
-  abstract onMessage(
+  onMessage?(
     clientId: string,
     message: TMessage,
     context: RoomContext

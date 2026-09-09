@@ -43,7 +43,7 @@ class RecordingExtension extends Extension {
     this.protocols = protocols;
   }
 
-  onClientConnect(
+  override onClientConnect(
     client: ClientHandle,
     _identity: unknown,
     context: RoomContext
@@ -53,7 +53,7 @@ class RecordingExtension extends Extension {
     this.context = context;
   }
 
-  onClientDisconnect(
+  override onClientDisconnect(
     clientId: string,
     context: RoomContext
   ): void {
@@ -61,7 +61,7 @@ class RecordingExtension extends Extension {
     this.context = context;
   }
 
-  onMessage(
+  override onMessage(
     clientId: string,
     payload: unknown,
     context: RoomContext

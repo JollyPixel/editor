@@ -168,7 +168,7 @@ export class ServerRoom {
       role
     });
 
-    await this.#extension.onClientConnect(
+    await this.#extension.onClientConnect?.(
       {
         id: client.id,
         send: (data) => this.#sendTo(client.id, data)
@@ -212,7 +212,7 @@ export class ServerRoom {
       clientId
     }, { excludeClientId: clientId });
 
-    await this.#extension.onClientDisconnect(
+    await this.#extension.onClientDisconnect?.(
       clientId,
       this.#context.create(clientId, actor)
     );
@@ -277,11 +277,7 @@ export class ServerRoom {
     const role = record?.role ?? kDefaultRole;
 
     if (this.#inbound === null) {
-      await this.#extension.onMessage(
-        clientId,
-        payload,
-        this.#context.create(clientId)
-      );
+      await this.#deliverMessage(clientId, payload);
 
       return;
     }
@@ -315,6 +311,25 @@ export class ServerRoom {
       reason: `role "${role}" cannot write "${event}"`,
       label: "message"
     })) {
+      return;
+    }
+
+    await this.#deliverMessage(clientId, message);
+  }
+
+  async #deliverMessage(
+    clientId: string,
+    message: unknown
+  ): Promise<void> {
+    if (typeof this.#extension.onMessage !== "function") {
+      this.#logger
+        .withMetadata({
+          clientId,
+          outcome: "unhandled",
+          reason: "extension does not implement onMessage"
+        })
+        .debug("message");
+
       return;
     }
 

@@ -52,15 +52,7 @@ class CounterExtension extends Extension {
     this.assetId = binding.assetId;
   }
 
-  onClientConnect(): void {
-    return void 0;
-  }
-
-  onClientDisconnect(): void {
-    return void 0;
-  }
-
-  async onMessage(
+  override async onMessage(
     _clientId: string,
     _payload: unknown,
     context: RoomContext

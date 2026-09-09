@@ -103,9 +103,22 @@ export const workerToMainSchema = defineSchema({
     {
       type: "object",
       properties: {
-        type: { const: "ready" }
+        type: { const: "ready" },
+        methods: {
+          type: "array",
+          items: {
+            enum: [
+              "onClientConnect",
+              "onClientDisconnect",
+              "onMessage"
+            ]
+          }
+        }
       },
-      required: ["type"]
+      required: [
+        "type",
+        "methods"
+      ]
     },
     {
       type: "object",
