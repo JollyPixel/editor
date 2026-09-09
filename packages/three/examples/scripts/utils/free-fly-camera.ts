@@ -59,7 +59,10 @@ export function createFreeFlyCamera(
   const worldUp = new THREE.Vector3(0, 1, 0);
   const movement = new THREE.Vector3();
 
-  canvas.addEventListener("click", () => canvas.requestPointerLock());
+  canvas.addEventListener(
+    "click",
+    () => canvas.requestPointerLock()
+  );
 
   document.addEventListener("mousemove", (event) => {
     if (document.pointerLockElement !== canvas) {
@@ -72,8 +75,14 @@ export function createFreeFlyCamera(
     camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, "YXZ"));
   });
 
-  document.addEventListener("keydown", (event) => pressedKeys.add(event.code));
-  document.addEventListener("keyup", (event) => pressedKeys.delete(event.code));
+  document.addEventListener(
+    "keydown",
+    (event) => pressedKeys.add(event.code)
+  );
+  document.addEventListener(
+    "keyup",
+    (event) => pressedKeys.delete(event.code)
+  );
 
   function update(): void {
     const delta = clock.getDelta();
@@ -107,5 +116,8 @@ export function createFreeFlyCamera(
     }
   }
 
-  return { camera, controls: { update } };
+  return {
+    camera,
+    controls: { update }
+  };
 }

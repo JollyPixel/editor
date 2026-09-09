@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { ColorPalette } from "@jolly-pixel/color";
 import type * as network from "@jolly-pixel/network/client";
 import type * as THREE from "three";
 
@@ -60,17 +59,19 @@ export interface PeerFrustumSyncOptions<
     identity: network.PeerMetadata
   ) => string | undefined;
   /**
-   * Returns a remote peer's frustum color.
-   * @default a deterministic color from the built-in palette
+   * Returns a remote peer's frustum color, overriding `frustum.color`.
+   * Omit to give every peer the same color.
+   * @default `frustum.color`, else the `PeerFrustum` default
    */
   color?: (
     clientId: string,
     identity: network.PeerMetadata
   ) => THREE.ColorRepresentation;
   /**
-   * Shared frustum options excluding `color` and `displayName`.
+   * Shared frustum options excluding `displayName`. `color` here applies to
+   * every peer; the `color` callback overrides it per peer.
    */
-  frustum?: Omit<PeerFrustumOptions, "color" | "displayName">;
+  frustum?: Omit<PeerFrustumOptions, "displayName">;
 }
 
 function defaultLabel(
@@ -94,12 +95,11 @@ export class PeerFrustumSync<
     clientId: string,
     identity: network.PeerMetadata
   ) => string | undefined;
-  #color: (
+  #color: ((
     clientId: string,
     identity: network.PeerMetadata
-  ) => THREE.ColorRepresentation;
-  #frustumOptions: Omit<PeerFrustumOptions, "color" | "displayName">;
-  #palette = new ColorPalette();
+  ) => THREE.ColorRepresentation) | undefined;
+  #frustumOptions: Omit<PeerFrustumOptions, "displayName">;
   #peers = new Map<string, PeerFrustum>();
   #poses = new Map<string, PeerFrustumPose>();
   #source: THREE.Object3D | undefined;
@@ -137,9 +137,7 @@ export class PeerFrustumSync<
     this.#hideWithin = options.hideWithin ?? kDefaultHideWithin;
     this.#fadeWithin = options.fadeWithin ?? kDefaultFadeWithin;
     this.#label = options.label ?? defaultLabel;
-    this.#color = options.color ?? (
-      (clientId) => this.#palette.forKey(clientId)
-    );
+    this.#color = options.color;
     this.#frustumOptions = options.frustum ?? {};
 
     this.#room.on("sync", this.#onSync);
@@ -215,9 +213,14 @@ export class PeerFrustumSync<
   }
 
   refreshColors(): void {
+    const color = this.#color;
+    if (color === undefined) {
+      return;
+    }
+
     for (const [clientId, frustum] of this.#peers) {
       const identity = this.#room.peers.get(clientId)?.identity ?? {};
-      frustum.color = this.#color(clientId, identity);
+      frustum.color = color(clientId, identity);
     }
   }
 
@@ -352,7 +355,9 @@ export class PeerFrustumSync<
   ): PeerFrustum {
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
-      color: this.#color(clientId, identity),
+      ...this.#color && {
+        color: this.#color(clientId, identity)
+      },
       displayName: this.#label(clientId, identity)
     });
     this.#parent.add(frustum);

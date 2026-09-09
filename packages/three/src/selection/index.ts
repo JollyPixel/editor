@@ -84,7 +84,10 @@ export {
   type HighlightTarget,
   type PeerHighlightPassOptions
 } from "./postprocess/PeerHighlightPass.ts";
-export type { PeerColorAllocator } from "./peer/PeerColorAllocator.ts";
+export {
+  createDefaultColorAllocator,
+  type PeerColorAllocator
+} from "./peer/PeerColorAllocator.ts";
 export {
   PeerSelectionRegistry,
   type PeerSelectionChangeEventDetail,

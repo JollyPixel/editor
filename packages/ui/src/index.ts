@@ -328,6 +328,7 @@ export type {
   JollyToggleExpandDetail,
   JollyToggleLockDetail,
   JollyToggleVisibleDetail,
+  TreeBadge,
   TreeDropAccept,
   TreeDropWhere,
   TreeNode

@@ -1,14 +1,13 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { TreeView } from "@jolly-pixel/arbor";
+import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   SelectionSystem,
   type SelectionManager,
   PeerSelectionRegistry,
-  type SelectionTechnique,
-  type PeerSelectionChangeEventDetail
+  type SelectionTechnique
 } from "../../src/index.ts";
 import {
   createRenderer,
@@ -43,8 +42,7 @@ const selectableMeshes: THREE.Mesh[] = [];
 const pickToId = new Map<THREE.Mesh, string>();
 const displayNames = new Map<string, string>();
 
-const idToNode = new Map<string, HTMLLIElement>();
-const nodeToId = new Map<HTMLLIElement, string>();
+const outlinerNodes: TreeNode[] = [];
 
 const peerRegistry = new PeerSelectionRegistry({
   colorAllocator: new PeerColorPaletteAllocator()
@@ -58,36 +56,38 @@ const selection = new SelectionSystem({
   chips: true
 });
 const selectionManager = selection.manager;
-const treeView = new TreeView(
-  document.querySelector("#outliner") as HTMLDivElement
+const { priorityOrbiters, wall, applyOrbiterPositions } = spawnSelectableMeshes(scene, selectionManager);
+
+const outlinerPane = document.querySelector<HTMLElementTagNameMap["jolly-pane"]>(
+  "#outliner jolly-pane"
 );
-const { priorityOrbiters, wall, applyOrbiterPositions } = spawnSelectableMeshes(scene, selectionManager, treeView);
+if (outlinerPane === null) {
+  throw new Error("selection: no #outliner jolly-pane in this page's HTML");
+}
 
-peerRegistry.addEventListener("peerSelectionChange", (event) => {
-  const { objectId, previousObjectId } = (event as CustomEvent<PeerSelectionChangeEventDetail>).detail;
+const tree = document.createElement("jolly-tree");
+tree.expanded = ["cluster"];
+outlinerPane.append(tree);
+refreshOutliner();
 
-  if (previousObjectId) {
-    refreshChips(previousObjectId);
-  }
-  if (objectId) {
-    refreshChips(objectId);
-  }
+peerRegistry.addEventListener("peerSelectionChange", () => {
+  refreshOutliner();
 });
 
-treeView.addEventListener("selectionChange", () => {
-  const node = treeView.selector.firstSelectedNode as HTMLLIElement | null;
-  selection.select(node ? (nodeToId.get(node) ?? null) : null);
+tree.addEventListener("jolly-select", (event) => {
+  selection.select(event.detail.selected[0] ?? null);
+});
+
+tree.addEventListener("jolly-toggle-expand", (event) => {
+  const { id, expanded } = event.detail;
+  tree.expanded = expanded ?
+    [...tree.expanded, id] :
+    tree.expanded.filter((expandedId) => expandedId !== id);
 });
 
 selection.addEventListener("selectionChange", () => {
-  treeView.selector.clear();
-
   const id = selection.selected;
-  const node = id ? idToNode.get(id) : undefined;
-  if (node) {
-    treeView.selector.add(node);
-    treeView.scrollIntoView(node);
-  }
+  tree.selected = id ? [id] : [];
 
   refreshStatus();
 });
@@ -165,38 +165,23 @@ function handleClick(): void {
   selection.select(hit ? resolvePickId(hit) : null);
 }
 
-function createTreeNode(
-  label: string
-): HTMLLIElement {
-  const nodeElt = document.createElement("li");
-  const spanElt = document.createElement("span");
-  spanElt.textContent = label;
-  nodeElt.appendChild(spanElt);
-
-  const presenceElt = document.createElement("span");
-  presenceElt.className = "presence";
-  nodeElt.appendChild(presenceElt);
-
-  return nodeElt;
+function withPeerBadges(
+  node: TreeNode
+): TreeNode {
+  return {
+    ...node,
+    badges: peerRegistry.selectorsOf(node.id).map((peerId) => {
+      return {
+        color: peerRegistry.colorOf(peerId),
+        title: peerId
+      };
+    }),
+    children: node.children?.map(withPeerBadges)
+  };
 }
 
-function refreshChips(
-  objectId: string
-): void {
-  const node = idToNode.get(objectId);
-  const presenceElt = node?.querySelector<HTMLSpanElement>(":scope > .presence");
-  if (!presenceElt) {
-    return;
-  }
-
-  presenceElt.replaceChildren(...peerRegistry.selectorsOf(objectId).map((peerId) => {
-    const chipElt = document.createElement("span");
-    chipElt.className = "peer-chip";
-    chipElt.style.backgroundColor = peerRegistry.colorOf(peerId);
-    chipElt.title = peerId;
-
-    return chipElt;
-  }));
+function refreshOutliner(): void {
+  tree.nodes = outlinerNodes.map(withPeerBadges);
 }
 
 /** Radians/second - a negative value orbits the opposite direction. */
@@ -215,8 +200,7 @@ interface SpawnedScene {
 
 function spawnSelectableMeshes(
   target: THREE.Scene,
-  selection: SelectionManager,
-  outline: TreeView
+  selection: SelectionManager
 ): SpawnedScene {
   function registerStandalone(
     id: string,
@@ -231,9 +215,7 @@ function spawnSelectableMeshes(
     pickToId.set(mesh, id);
     displayNames.set(id, name);
 
-    const node = outline.append(createTreeNode(name), "item");
-    idToNode.set(id, node);
-    nodeToId.set(node, id);
+    outlinerNodes.push({ id, label: name });
   }
 
   registerStandalone(
@@ -270,9 +252,12 @@ function spawnSelectableMeshes(
   selection.register("cluster", cluster);
   displayNames.set("cluster", "Cluster (group)");
 
-  const clusterNode = outline.append(createTreeNode("Cluster"), "group");
-  idToNode.set("cluster", clusterNode);
-  nodeToId.set(clusterNode, "cluster");
+  const clusterChildren: TreeNode[] = [];
+  outlinerNodes.push({
+    id: "cluster",
+    label: "Cluster",
+    children: clusterChildren
+  });
 
   const clusterParts: [string, THREE.Mesh, THREE.Vector3Tuple][] = [
     ["Sphere", new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), material("#d97a4a")), [0, 1.2, 0]],
@@ -291,9 +276,7 @@ function spawnSelectableMeshes(
     pickToId.set(mesh, id);
     displayNames.set(id, `${mesh.name} (part of Cluster)`);
 
-    const partNode = outline.append(createTreeNode(name), "item", clusterNode);
-    idToNode.set(id, partNode);
-    nodeToId.set(partNode, id);
+    clusterChildren.push({ id, label: name });
   }
 
   const priorityOrbitCenter = cone.position.clone();
