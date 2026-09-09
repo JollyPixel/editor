@@ -14,7 +14,17 @@ function sampleNodes(): TreeNode[] {
       visible: true,
       locked: false,
       children: [
-        { id: "camera", label: "Camera", icon: "info", visible: true, locked: false },
+        {
+          id: "camera",
+          label: "Camera",
+          icon: "info",
+          visible: true,
+          locked: false,
+          badges: [
+            { color: "#e0567a", title: "Ada" },
+            { color: "#4ad991", title: "Lin" }
+          ]
+        },
         {
           id: "props",
           label: "Props",

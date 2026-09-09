@@ -6,6 +6,11 @@ export type TreeDropWhere =
   | "inside"
   | "below";
 
+export interface TreeBadge {
+  color: string;
+  title?: string;
+}
+
 export interface TreeNode<TData = unknown> {
   id: string;
   label: string;
@@ -14,6 +19,7 @@ export interface TreeNode<TData = unknown> {
   visible?: boolean;
   locked?: boolean;
   renamable?: boolean;
+  badges?: TreeBadge[];
   data?: TData;
 }
 

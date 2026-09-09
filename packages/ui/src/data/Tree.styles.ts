@@ -84,6 +84,22 @@ export const treeStyles = css`
     ${truncate}
   }
 
+  .badges {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--jolly-space-1, 4px);
+    padding-inline: var(--jolly-space-1, 4px);
+  }
+
+  .badge {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--jolly-surface, ${kFallback.controlBg});
+  }
+
   .rename {
     min-width: 0;
     padding: 0;

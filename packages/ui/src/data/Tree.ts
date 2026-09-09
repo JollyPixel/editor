@@ -187,6 +187,7 @@ export class Tree<TData = unknown> extends LitElement {
           <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
         `}
         ${this.#renderLabel(node)}
+        ${this.#renderBadges(node)}
         ${node.visible === undefined ? nothing : html`
           <button
             class="visible-toggle"
@@ -281,6 +282,27 @@ export class Tree<TData = unknown> extends LitElement {
     ) {
       this.renderRoot.querySelector<HTMLInputElement>(".rename")?.focus();
     }
+  }
+
+  #renderBadges(
+    node: TreeNode<TData>
+  ): TemplateResult | typeof nothing {
+    const badges = node.badges;
+    if (badges === undefined || badges.length === 0) {
+      return nothing;
+    }
+
+    return html`
+      <span class="badges">${badges.map((badge) => html`
+        <span
+          class="badge"
+          role="img"
+          aria-label=${badge.title ?? "Badge"}
+          title=${badge.title ?? nothing}
+          style="background: ${badge.color}"
+        ></span>
+      `)}</span>
+    `;
   }
 
   #renderLabel(

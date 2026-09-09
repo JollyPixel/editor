@@ -58,6 +58,23 @@ paints no drop indicator and never reaches `jolly-reparent`. A predicate that
 runs on every pointer move should stay cheap. The structural rule runs first,
 so `acceptDrop` is never asked about a move that is already impossible.
 
+## Marking a row with badges
+
+`TreeNode.badges` renders a list of `{ color, title }` as small dots between
+the label and the visibility toggle. The tree resolves neither field and emits
+nothing for a dot: a badge is display only, and what it stands for is consumer
+knowledge (see ADR-0030).
+
+```ts
+node.badges = peersOn(node.id).map((peer) => ({
+  color: peer.color,
+  title: peer.name
+}));
+```
+
+`title` fills both the tooltip and the dot's accessible label. Rows with an
+empty or absent list render no badge container at all.
+
 ## Renaming a row in place
 
 `renamable` turns on inline label editing, and every row opts in for itself

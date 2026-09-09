@@ -10,11 +10,19 @@
 
 <body>
   <canvas tabindex="-1"></canvas>
-  <div id="outliner">
-    <h2>Scene</h2>
-  </div>
   <jolly-scope>
     <jolly-dock-layout storage-key="three-examples:layout">
+      <jolly-dock
+        id="outliner"
+        key="outliner"
+        side="left"
+        align="start"
+        overlay
+        collapsible
+        size="220"
+      >
+        <jolly-pane key="scene" heading="Scene"></jolly-pane>
+      </jolly-dock>
       <jolly-dock
         id="tools"
         key="tools"
