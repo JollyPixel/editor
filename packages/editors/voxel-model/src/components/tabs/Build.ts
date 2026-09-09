@@ -1,278 +1,255 @@
 // Import Third-party Dependencies
 import { LitElement, css, html } from "lit";
-import { query } from "lit/decorators.js";
-
-// Import Internal Dependencies
+import { state } from "lit/decorators.js";
+import * as THREE from "three";
+import { type JollyChangeDetail, type JollyOption } from "@jolly-pixel/ui";
 import { type PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
+// Import Internal Dependencies
+import type GroupManager from "../../three/GroupManager.ts";
+
+// CONSTANTS
+type TransformMode = "pos" | "angle" | "size" | "pivot" | "scale";
+type Vector3Value = { x: number; y: number; z: number; };
+
+const kTransformModes: JollyOption<TransformMode>[] = [
+  { value: "pos", label: "Pos" },
+  { value: "angle", label: "Angle" },
+  { value: "size", label: "Size" },
+  { value: "pivot", label: "Pivot" },
+  { value: "scale", label: "Scale" }
+];
+
+const kTextureSizeValues = [16, 32, 64, 128, 256, 512, 1024, 2048];
+const kTextureSizeOptions: JollyOption<number>[] = kTextureSizeValues.map((value) => {
+  return { value, label: String(value) };
+});
+
 export class Build extends LitElement {
-  @query("#texturePreview")
-  declare texturePreviewElement: HTMLDivElement;
+  @state()
+  private declare mode: TransformMode;
 
-  @query("#textureSizeX")
-  declare textureSizeXElement: HTMLSelectElement;
+  @state()
+  private declare axisValues: Vector3Value;
 
-  @query("#textureSizeY")
-  declare textureSizeYElement: HTMLSelectElement;
+  @state()
+  private declare textureSize: { x: number; y: number; };
+
+  #selectedGroup: GroupManager | null = null;
+  #hasSyncedTextureSize = false;
 
   static override styles = css`
     :host {
       display: flex;
       flex-direction: column;
-      flex-grow: 1;
-      gap: 5px;
-
+      flex-shrink: 0;
+      gap: var(--jolly-space-3, 12px);
       box-sizing: border-box;
+      padding: var(--jolly-space-2, 8px);
+    }
+
+    :host([hidden]) {
+      display: none;
     }
 
     section {
       display: flex;
       flex-direction: column;
-      width: 100%;
-      background: orange;
-      box-sizing: border-box;
-      border: 2px solid #222;
-      border-radius: 5px;
+      gap: var(--jolly-space-2, 8px);
     }
 
-    #build {
-      padding: 5px;
+    jolly-vector3 {
+      max-width: 100%;
     }
 
-    ul {
-      height: 30px;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      background: blue;
-
-      box-sizing: border-box;
-
-      border: 2px solid #222;
-      border-radius: 5px;
-
-      list-style: none;
-    }
-
-    ul > li {
-      flex: 1;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      background: #AAA;
-      border: 2px solid #CCC;
-    }
-
-    ul > li:hover {
-      color: #fff;
-      cursor: pointer;
-      background: #444;
-    }
-
-    #axis-input-row  {
-      display: flex;
-      gap: 5px;
-      margin-top: 10px;
-    }
-
-    #axis-input-row  > .axis-input {
-      position: relative;
-      flex: 1;
-      height: 40px;
-      display: flex;
-    }
-
-    #axis-input-row > .axis-input > input {
-      flex: 1;
-      border-radius: 5px;
-      padding-left: 15px;
-      box-sizing: border-box;
-      width: 100%;
-      border: 2px solid #AAA;
-      border-radius: 5px;
-    }
-
-    #axis-input-row  > .axis-input > .color-indicator {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 10px;
-      height: 10px;
-      border-top-left-radius: 3px;
-      z-index: 10;
-    }
-
-    #axis-input-row  > .axis-input:nth-child(1) > .color-indicator {
-      border-top: 3px solid #ff0000;
-      border-left: 3px solid #ff0000;
-    }
-
-    #axis-input-row  > .axis-input:nth-child(2) > .color-indicator {
-      border-top: 3px solid #00ff00;
-      border-left: 3px solid #00ff00;
-    }
-
-    #axis-input-row > .axis-input:nth-child(3) > .color-indicator {
-      border-top: 3px solid #0000ff;
-      border-left: 3px solid #0000ff;
-    }
-
-    #texture {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      min-height: 300px;
-      padding-top: 5px;
-    }
-
-    #texture > .setting-row {
-      padding: 0 5px;
-      display: flex;
-      box-sizing: border-box;
-      gap: 5px;
-    }
-    #texture > .setting-row > label {
-      margin-right: 10px;
-    }
-
-    #texturePreview {
-      position: relative;
-      flex: 1;
-      width: 100%;
-      min-height: 200px;
-      background: #AAA;
-      box-sizing: border-box;
+    jolly-property-row jolly-select {
+      flex: 1 1 0;
+      min-width: 0;
     }
   `;
 
-  private getLeftPanel(): any {
+  constructor() {
+    super();
+    this.mode = "pos";
+    this.axisValues = { x: 0, y: 0, z: 0 };
+    this.textureSize = { x: 64, y: 64 };
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener("groupSelected", this.#onGroupSelected);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    document.removeEventListener("groupSelected", this.#onGroupSelected);
+  }
+
+  override updated(): void {
+    if (this.#hasSyncedTextureSize) {
+      return;
+    }
+
+    const manager = this.#getPixelArtCanvas();
+    if (!manager) {
+      return;
+    }
+
+    this.textureSize = { ...manager.textureSize };
+    this.#hasSyncedTextureSize = true;
+  }
+
+  #getLeftPanel(): any {
     const rootNode = this.getRootNode() as ShadowRoot;
 
     return rootNode?.host;
   }
 
-  private getPixelArtCanvas(): PixelArtCanvas | null {
-    const leftPanel = this.getLeftPanel();
+  #getPixelArtCanvas(): PixelArtCanvas | null {
+    const leftPanel = this.#getLeftPanel();
 
-    if (!leftPanel || typeof leftPanel.getSharedPixelArtCanvas !== "function") {
-      return null;
-    }
-
-    return leftPanel.getSharedPixelArtCanvas();
+    return leftPanel?.canvasManager ?? null;
   }
 
-  private handleTextureSizeChange(): void {
-    const manager = this.getPixelArtCanvas();
+  readonly #onGroupSelected = (
+    event: Event
+  ): void => {
+    const { group } = (event as CustomEvent<{ group: GroupManager | null; }>).detail;
+    this.#selectedGroup = group;
+    this.#syncAxisValues();
+  };
 
-    if (!manager || !this.textureSizeXElement || !this.textureSizeYElement) {
+  #syncAxisValues(): void {
+    if (!this.#selectedGroup) {
       return;
     }
 
-    const x = parseInt(this.textureSizeXElement.value, 10);
-    const y = parseInt(this.textureSizeYElement.value, 10);
-
-    manager.textureSize = { x, y };
+    this.axisValues = this.#readAxisValues(this.#selectedGroup, this.mode);
   }
 
-  override updated(): void {
-    const manager = this.getPixelArtCanvas();
+  #readAxisValues(
+    group: GroupManager,
+    mode: TransformMode
+  ): Vector3Value {
+    switch (mode) {
+      case "pos":
+        return group.getPosition();
+      case "angle": {
+        const rotation = group.getRotation();
 
+        return {
+          x: THREE.MathUtils.radToDeg(rotation.x),
+          y: THREE.MathUtils.radToDeg(rotation.y),
+          z: THREE.MathUtils.radToDeg(rotation.z)
+        };
+      }
+      case "size":
+        return group.getSize();
+      case "pivot":
+        return group.getPivotOffset();
+      case "scale":
+        return group.getScale();
+      default:
+        return { x: 0, y: 0, z: 0 };
+    }
+  }
+
+  #handleModeChange(
+    event: CustomEvent<JollyChangeDetail<TransformMode>>
+  ): void {
+    this.mode = event.detail.value;
+    this.#syncAxisValues();
+  }
+
+  #handleVectorChange(
+    event: CustomEvent<JollyChangeDetail<Vector3Value>>
+  ): void {
+    this.axisValues = event.detail.value;
+    this.#applyAxisValues();
+  }
+
+  #applyAxisValues(): void {
+    if (!this.#selectedGroup) {
+      return;
+    }
+
+    const { x, y, z } = this.axisValues;
+
+    switch (this.mode) {
+      case "pos":
+        this.#selectedGroup.setPosition(new THREE.Vector3(x, y, z));
+        break;
+      case "angle":
+        this.#selectedGroup.setRotation(new THREE.Euler(
+          THREE.MathUtils.degToRad(x),
+          THREE.MathUtils.degToRad(y),
+          THREE.MathUtils.degToRad(z)
+        ));
+        break;
+      case "size":
+        this.#selectedGroup.resize(new THREE.Vector3(x, y, z));
+        break;
+      case "pivot":
+        this.#selectedGroup.setPivotOffset(new THREE.Vector3(x, y, z));
+        break;
+      case "scale":
+        this.#selectedGroup.setScale(new THREE.Vector3(x, y, z));
+        break;
+      default:
+        break;
+    }
+  }
+
+  #handleTextureSizeChange(
+    axis: "x" | "y",
+    event: CustomEvent<JollyChangeDetail<number>>
+  ): void {
+    const manager = this.#getPixelArtCanvas();
     if (!manager) {
-      console.warn("Build: No canvas manager available");
-
       return;
     }
 
-    if (!this.texturePreviewElement) {
-      console.error("Build: texturePreview element not found");
-
-      return;
-    }
-
-    const rect = this.texturePreviewElement.getBoundingClientRect();
-
-    if ((rect.width > 0) && (rect.height > 0)) {
-      manager.reparentCanvasTo(this.texturePreviewElement);
-    }
+    this.textureSize = {
+      ...this.textureSize,
+      [axis]: event.detail.value
+    };
+    manager.textureSize = this.textureSize;
   }
 
   override render() {
-    return html`
-      <section id="build">
-        <ul>
-          <li>Pos</li>
-          <li>Angle</li>
-          <li>Size</li>
-          <li>Pivot</li>
-          <li>Scale</li>
-        </ul>
+    const disabled = this.#selectedGroup === null;
 
-        <div id="axis-input-row">
-          <div class="axis-input">
-            <input type="number" id="x" name="x" />
-            <div class="color-indicator"></div>
-          </div>
-          <div class="axis-input">
-            <input type="number" id="y" name="y" />
-            <div class="color-indicator"></div>
-          </div>
-          <div class="axis-input">
-            <input type="number" id="z" name="z" />
-            <div class="color-indicator"></div>
-          </div>
-        </div>
+    return html`
+      <section id="transform">
+        <jolly-button-group
+          .options=${kTransformModes}
+          .value=${this.mode}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<TransformMode>>) => this.#handleModeChange(event)}
+        ></jolly-button-group>
+
+        <jolly-vector3
+          step="0.1"
+          ?disabled=${disabled}
+          .value=${this.axisValues}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vector3Value>>) => this.#handleVectorChange(event)}
+        ></jolly-vector3>
       </section>
 
-
       <section id="texture">
-        <div class="setting-row">
-          <label>Texture Size</label>
-          <select id="textureSizeX" name="textureSizeX" @change="${this.handleTextureSizeChange}">
-            <option value="16">16</option>
-            <option value="32">32</option>
-            <option value="64">64</option>
-            <option value="128">128</option>
-            <option value="256">256</option>
-            <option value="512">512</option>
-            <option value="1024">1024</option>
-            <option value="2048">2048</option>
-          </select>
-          <select id="textureSizeY" name="textureSizeY" @change="${this.handleTextureSizeChange}">
-            <option value="16">16</option>
-            <option value="32">32</option>
-            <option value="64">64</option>
-            <option value="128">128</option>
-            <option value="256">256</option>
-            <option value="512">512</option>
-            <option value="1024">1024</option>
-            <option value="2048">2048</option>
-          </select>
-        </div>
-        <div class="setting-row">
-          <label for="unwrapMode">Unwrap Mode</label>
-          <select id="unwrapMode" name="unwrapMode">
-            <option value="complete">Complete</option>
-            <option value="stack">Stack</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-
-        <div class="setting-row">
-          <ul>
-            <li>0°</li>
-            <li>90°</li>
-            <li>180°</li>
-            <li>270°</li>
-          </ul>
-          <button>H</button>
-          <button>V</button>
-        </div>
-
-        <div id="texturePreview"></div>
+        <jolly-property-row label="Texture">
+          <jolly-select
+            label="W"
+            .options=${kTextureSizeOptions}
+            .value=${this.textureSize.x}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => this.#handleTextureSizeChange("x", event)}
+          ></jolly-select>
+          <jolly-select
+            label="H"
+            .options=${kTextureSizeOptions}
+            .value=${this.textureSize.y}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => this.#handleTextureSizeChange("y", event)}
+          ></jolly-select>
+        </jolly-property-row>
       </section>
     `;
   }

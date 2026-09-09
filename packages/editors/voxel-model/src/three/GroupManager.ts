@@ -156,6 +156,59 @@ export default class GroupManager {
     }
   }
 
+  public getPosition(): THREE.Vector3 {
+    return this.group.position.clone();
+  }
+
+  public setPosition(position: THREE.Vector3): void {
+    this.group.position.copy(position);
+  }
+
+  public getRotation(): THREE.Euler {
+    return this.group.rotation.clone();
+  }
+
+  public setRotation(rotation: THREE.Euler): void {
+    this.group.rotation.copy(rotation);
+  }
+
+  public getScale(): THREE.Vector3 {
+    return this.mesh.scale.clone();
+  }
+
+  public setScale(scale: THREE.Vector3): void {
+    this.mesh.scale.copy(scale);
+  }
+
+  public getPivotOffset(): THREE.Vector3 {
+    return this.mesh.position.clone();
+  }
+
+  public setPivotOffset(offset: THREE.Vector3): void {
+    this.mesh.position.copy(offset);
+  }
+
+  public getSize(): THREE.Vector3 {
+    const { width, height, depth } = (this.mesh.geometry as THREE.BoxGeometry).parameters;
+
+    return new THREE.Vector3(width, height, depth);
+  }
+
+  /**
+   * Rebuilds the box and edge geometries at the new size. The pivot-point
+   * marker and selection outline color are untouched.
+   */
+  public resize(size: THREE.Vector3): void {
+    const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
+
+    this.mesh.geometry.dispose();
+    this.mesh.geometry = geometry;
+
+    const edgesGeometry = new THREE.EdgesGeometry(geometry);
+    this.edges.geometry.dispose();
+    this.edges.geometry = edgesGeometry;
+  }
+
   public dispose(): void {
     // Dispose geometries
     if (this.mesh.geometry) {
