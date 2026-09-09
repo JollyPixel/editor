@@ -253,4 +253,25 @@ export const exampleStyles = `
   .loading-preview jolly-loading {
     font-size: 16px;
   }
+
+  .log-example {
+    display: grid;
+    gap: var(--jolly-space-4);
+    max-width: 720px;
+  }
+
+  .log-stage {
+    position: relative;
+    min-height: 260px;
+    overflow: hidden;
+    border: 1px solid var(--jolly-border);
+    border-radius: var(--jolly-radius-md);
+    background: var(--jolly-surface-sunken);
+  }
+
+  .log-stage jolly-log {
+    position: absolute;
+    inset-inline-start: var(--jolly-space-3);
+    inset-block-end: var(--jolly-space-3);
+  }
 `;

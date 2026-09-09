@@ -363,6 +363,20 @@ export {
 export {
   Loading
 } from "./feedback/Loading.ts";
+export {
+  LogElement,
+  type LogLiveness
+} from "./feedback/Log.ts";
+export {
+  LogQueue
+} from "./feedback/LogQueue.ts";
+export type {
+  LogContent,
+  LogEntry,
+  LogListener,
+  LogQueueOptions,
+  LogScheduler
+} from "./feedback/LogQueue.types.ts";
 
 // Facade
 export {

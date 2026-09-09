@@ -36,6 +36,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api), usage i
 | [0028](./0028-axis-key-is-the-domain-identity.md) | A vector field's axis key is its domain identity |
 | [0029](./0029-presence-selection-is-an-intent.md) | A presence row raises a selection intent, and stays read-only |
 | [0030](./0030-tree-badges-are-opaque-dots.md) | `jolly-tree` badges are opaque dots |
+| [0031](./0031-a-log-is-not-a-toast.md) | `jolly-log` is an ambient feed, and `jolly-toast` stays deferred |
 
 ## Scope boundary
 
@@ -43,8 +44,10 @@ result of a real trade-off. API reference lives in [`docs/api`](../api), usage i
 composites stay in editors and are built from these parts. Asset and object reference pickers, block
 and tileset libraries, 3D preview tiles, and curve and gradient editors are out of scope.
 
-`jolly-split`, `jolly-menu` and `jolly-toast` are deferred rather than rejected: no consumer in this
-repository names one, so there is nothing to validate a design against.
+`jolly-split` and `jolly-menu` are deferred rather than rejected: no consumer in this
+repository names one, so there is nothing to validate a design against. `jolly-toast` stays deferred
+for a different reason: `editors/voxel-map` needed an ambient feed, not an alert, and got
+`jolly-log` instead. See [ADR-0031](./0031-a-log-is-not-a-toast.md).
 
 ## Open questions
 

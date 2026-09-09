@@ -77,9 +77,26 @@ export class EditorScene extends Systems.Scene {
   #handles = Promise.withResolvers<EditorSceneHandles>();
   #subscriptions: Array<() => void> = [];
 
+  #orbiting = false;
+
   #onExitOrbitFocusKey = (): void => {
     this.#freeFlyCamera?.exitOrbitFocus();
+    this.#announceCameraMode();
   };
+
+  #announceCameraMode(): void {
+    const orbiting = this.#freeFlyCamera?.isOrbiting ?? false;
+    if (orbiting === this.#orbiting) {
+      return;
+    }
+
+    this.#orbiting = orbiting;
+    this.editorState.log.push(
+      orbiting
+        ? "Camera switched to pivot"
+        : "Camera switched to free fly"
+    );
+  }
 
   editorState: EditorState;
 
@@ -253,7 +270,10 @@ export class EditorScene extends Systems.Scene {
         selection: this.editorState.selection,
         color: this.#identity?.color
       });
-    brush.onFocusRequest = (point) => freeFlyCamera.enterOrbitFocus(point);
+    brush.onFocusRequest = (point) => {
+      freeFlyCamera.enterOrbitFocus(point);
+      this.#announceCameraMode();
+    };
 
     this.localBrush = brush;
 

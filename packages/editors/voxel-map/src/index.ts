@@ -110,6 +110,14 @@ const editorScene = new EditorScene(
   }
 );
 
+const activityLog = document.querySelector("jolly-log");
+if (activityLog) {
+  activityLog.entries = editorState.log.entries;
+  editorState.log.subscribe((entries) => {
+    activityLog.entries = entries;
+  });
+}
+
 const sidebar = document.querySelector<EditorSidebar>("#sidebar");
 if (sidebar) {
   sidebar.state = editorState;

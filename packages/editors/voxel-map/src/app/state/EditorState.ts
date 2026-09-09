@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { LogQueue } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import { BrushStore } from "./BrushStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
@@ -9,6 +12,7 @@ export class EditorState {
   readonly brush = new BrushStore();
   readonly shell = new ShellStore();
   readonly world = new WorldStore();
+  readonly log = new LogQueue();
 }
 
 export const editorState = new EditorState();
