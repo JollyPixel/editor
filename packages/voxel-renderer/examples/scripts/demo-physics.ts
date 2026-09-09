@@ -3,10 +3,7 @@ import RAPIER from "@dimforge/rapier3d";
 import {
   Camera3DControls
 } from "@jolly-pixel/engine";
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -193,6 +190,4 @@ world.createActor("sphere")
 
 const pane = createExamplePane();
 pane.hidden = true;
-loadRuntime(
-  runtime
-).catch(console.error);
+runtime.load().catch(console.error);

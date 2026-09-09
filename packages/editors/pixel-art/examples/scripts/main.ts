@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 import {
   Dock,
   type ThemePreferences
@@ -115,7 +112,7 @@ async function initRuntime(): Promise<void> {
   const sceneReady = new Promise<void>((resolve) => {
     previewScene.once("awake", resolve);
   });
-  const runtimeReady = loadRuntime(runtime, {
+  const runtimeReady = runtime.load({
     skipLoadingScreen: true,
     scene: previewScene
   });

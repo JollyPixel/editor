@@ -1,22 +1,14 @@
 export {
-  loadRuntime,
-  type LoadRuntimeOptions
-} from "./bootstrap/loadRuntime.ts";
-export {
-  AnimationLoopFrameSource,
-  type AnimationLoopRenderer
-} from "./AnimationLoopFrameSource.ts";
-export {
   Runtime,
+  type FocusHintOptions,
+  type FocusHintPosition,
   type PerformanceStatsPosition,
   type RuntimeCanvasTarget,
+  type RuntimeLoadOptions,
   type RuntimeOptions
 } from "./Runtime.ts";
-export {
-  resolveRuntimeCanvas
-} from "./resolveRuntimeCanvas.ts";
-export {
-  type RuntimeAssetCatalog,
-  type RuntimeAssetLoaderDefinition,
-  type RuntimeAssetOptions
+export type {
+  RuntimeAssetCatalog,
+  RuntimeAssetLoaderDefinition,
+  RuntimeAssetOptions
 } from "./assets/RuntimeAssetOptions.ts";

@@ -15,6 +15,10 @@ import {
   AnimationLoopFrameSource
 } from "./AnimationLoopFrameSource.ts";
 import {
+  bootstrapRuntime,
+  type RuntimeLoadOptions
+} from "./bootstrap/bootstrapRuntime.ts";
+import {
   createRuntimeAssetCoordinator
 } from "./assets/createRuntimeAssetCoordinator.ts";
 import type {
@@ -35,8 +39,22 @@ import type {
 import type {
   PerformanceStatsPosition
 } from "./stats/resolveStatsOverlayX.ts";
+import {
+  mountFocusHint,
+  type FocusHintOptions,
+  type MountedFocusHint
+} from "./ui/focus/mountFocusHint.ts";
+import type {
+  FocusHintPosition
+} from "./ui/focus/resolveFocusHintPlacement.ts";
 
-export type { PerformanceStatsPosition, RuntimeCanvasTarget };
+export type {
+  FocusHintOptions,
+  FocusHintPosition,
+  PerformanceStatsPosition,
+  RuntimeCanvasTarget,
+  RuntimeLoadOptions
+};
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -56,6 +74,7 @@ export interface RuntimeOptions<
    * @default true
    */
   focusCanvas?: boolean;
+  focusHint?: boolean | FocusHintOptions;
   /**
    * Optional context object passed to the World.
    */
@@ -90,7 +109,9 @@ export class Runtime<
 
   #isRunning = false;
   #focusCanvas: boolean;
+  #focusHint: FocusHintOptions | null;
   #statsOverlay: MountedPerformanceStats | null = null;
+  #focusHintOverlay: MountedFocusHint | null = null;
 
   #focusCanvasHandler = () => {
     if (document.activeElement !== this.canvas) {
@@ -111,6 +132,7 @@ export class Runtime<
   ) {
     this.canvas = canvas;
     this.#focusCanvas = options.focusCanvas ?? true;
+    this.#focusHint = resolveFocusHintOptions(options.focusHint);
     const assetCoordinator = createRuntimeAssetCoordinator(
       this.manager,
       assets
@@ -169,6 +191,12 @@ export class Runtime<
     return this.#isRunning;
   }
 
+  load(
+    options: RuntimeLoadOptions<TContext> = {}
+  ): Promise<void> {
+    return bootstrapRuntime(this, options);
+  }
+
   start() {
     if (this.#isRunning) {
       return;
@@ -184,6 +212,12 @@ export class Runtime<
       document.addEventListener(
         "click",
         this.#focusCanvasHandler
+      );
+    }
+    if (this.#focusHint !== null) {
+      this.#focusHintOverlay = mountFocusHint(
+        this.canvas,
+        this.#focusHint
       );
     }
 
@@ -221,6 +255,8 @@ export class Runtime<
         this.#focusCanvasHandler
       );
     }
+    this.#focusHintOverlay?.dispose();
+    this.#focusHintOverlay = null;
 
     this.world.disconnect();
   }
@@ -256,4 +292,14 @@ export class Runtime<
       settings.position ?? "top-left"
     );
   }
+}
+
+function resolveFocusHintOptions(
+  option: boolean | FocusHintOptions | undefined
+): FocusHintOptions | null {
+  if (!option) {
+    return null;
+  }
+
+  return option === true ? {} : option;
 }

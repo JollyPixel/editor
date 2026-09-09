@@ -66,10 +66,7 @@ lifecycle.
 Pass the catalog URL when creating the runtime, then load the initial scene:
 
 ```ts
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 
 const runtime = await Runtime.create("canvas", {
   assets: {
@@ -77,13 +74,13 @@ const runtime = await Runtime.create("canvas", {
   }
 });
 
-await loadRuntime(runtime, {
+await runtime.load({
   scene: new GameScene()
 });
 ```
 
-`Runtime.create()` fetches and parses the manifest. `loadRuntime()` prepares the
-initial scene's dependencies before starting the game loop.
+`Runtime.create()` fetches and parses the manifest. `runtime.load()` prepares
+the initial scene's dependencies before starting the game loop.
 
 ## Load dynamic content
 

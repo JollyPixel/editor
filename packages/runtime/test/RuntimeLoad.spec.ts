@@ -17,14 +17,12 @@ import { RuntimeSceneLoader } from "../src/assets/RuntimeSceneLoader.ts";
 
 const kBrowserWindow = new Window();
 
-let loadRuntimeFn: typeof import("../src/bootstrap/loadRuntime.ts").loadRuntime;
+let RuntimeClass: typeof import("../src/Runtime.ts").Runtime;
 
 before(async() => {
   installBrowserGlobals();
 
-  ({ loadRuntime: loadRuntimeFn } = await import(
-    "../src/bootstrap/loadRuntime.ts"
-  ));
+  ({ Runtime: RuntimeClass } = await import("../src/Runtime.ts"));
 });
 
 class TestScene extends Systems.Scene {
@@ -46,33 +44,36 @@ function createFakeRuntime(
   );
 
   const startCalls: string[] = [];
-  const runtime = {
-    canvas,
-    // configureRuntimeDevice writes the detected refresh rate here.
-    loop: { scheduler: { maxFps: Infinity } },
-    world: {
-      renderer: {
-        getSource: () => {
-          return { setPixelRatio: () => void 0 };
-        }
+  const runtime = Object.assign(
+    Object.create(RuntimeClass.prototype),
+    {
+      canvas,
+      // configureRuntimeDevice writes the detected refresh rate here.
+      loop: { scheduler: { maxFps: Infinity } },
+      world: {
+        renderer: {
+          getSource: () => {
+            return { setPixelRatio: () => void 0 };
+          }
+        },
+        assetCoordinator: coordinator,
+        sceneManager
       },
-      assetCoordinator: coordinator,
-      sceneManager
-    },
-    start: () => {
-      startCalls.push("start");
+      start: () => {
+        startCalls.push("start");
+      }
     }
-  } as unknown as Runtime;
+  ) as Runtime;
 
   return { runtime, startCalls };
 }
 
-describe("loadRuntime (skipLoadingScreen)", () => {
+describe("Runtime.load (skipLoadingScreen)", () => {
   test("never mounts the loading screen and shows the canvas immediately", async() => {
     const container = document.createElement("div");
     const { runtime, startCalls } = createFakeRuntime();
 
-    await loadRuntimeFn(runtime, {
+    await runtime.load({
       skipLoadingScreen: true,
       loadingContainer: container
     });
@@ -84,11 +85,11 @@ describe("loadRuntime (skipLoadingScreen)", () => {
 
   test("rethrows failures without building a loading screen error panel", async() => {
     const container = document.createElement("div");
-    const { runtime } = createFakeRuntime(true);
+    const { runtime, startCalls } = createFakeRuntime(true);
     const scene = new TestScene("failing", { assets: [] });
 
     await assert.rejects(
-      () => loadRuntimeFn(runtime, {
+      () => runtime.load({
         skipLoadingScreen: true,
         loadingContainer: container,
         scene
@@ -97,6 +98,7 @@ describe("loadRuntime (skipLoadingScreen)", () => {
     );
 
     assert.strictEqual(container.childElementCount, 0);
+    assert.deepStrictEqual(startCalls, []);
   });
 });
 

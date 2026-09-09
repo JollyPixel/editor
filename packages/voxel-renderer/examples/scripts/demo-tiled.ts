@@ -3,10 +3,7 @@ import {
   Camera3DControls,
   Systems
 } from "@jolly-pixel/engine";
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -85,7 +82,7 @@ const { world } = runtime;
 world.logger.setLevel("debug");
 world.logger.enableNamespace("*");
 
-await loadRuntime(runtime, {
+await runtime.load({
   scene: new TiledScene(),
   skipLoadingScreen: true
 })

@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 import type * as THREE from "three";
 import * as network from "@jolly-pixel/network/client";
 import type * as networkTypes from "@jolly-pixel/network";
@@ -67,7 +64,8 @@ const runtime = await Runtime.create("#game-container > canvas", {
   includePerformanceStats: {
     position: "top-right"
   },
-  focusCanvas: false
+  focusCanvas: false,
+  focusHint: true
 });
 const { world } = runtime;
 const offline = new URLSearchParams(location.search).has("offline");
@@ -133,7 +131,7 @@ if (sidebar) {
   });
 }
 
-await loadRuntime(runtime, {
+await runtime.load({
   scene: editorScene,
   skipLoadingScreen: true,
   maxFps: Infinity

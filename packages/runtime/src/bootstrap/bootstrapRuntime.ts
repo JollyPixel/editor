@@ -12,7 +12,7 @@ import type { Runtime } from "../Runtime.ts";
 import { RuntimeLoadingScreen } from "../ui/RuntimeLoadingScreen.ts";
 import { configureRuntimeDevice } from "./configureRuntimeDevice.ts";
 
-export interface LoadRuntimeOptions<
+export interface RuntimeLoadOptions<
   TContext = Systems.WorldDefaultContext
 > {
   /**
@@ -45,11 +45,11 @@ export interface LoadRuntimeOptions<
   maxFps?: number;
 }
 
-export async function loadRuntime<
+export async function bootstrapRuntime<
   TContext = Systems.WorldDefaultContext
 >(
   runtime: Runtime<TContext>,
-  options: LoadRuntimeOptions<TContext> = {}
+  options: RuntimeLoadOptions<TContext> = {}
 ): Promise<void> {
   const {
     loadingDelay = 850,
