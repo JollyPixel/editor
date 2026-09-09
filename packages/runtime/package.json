@@ -26,7 +26,8 @@
   },
   "keywords": [],
   "files": [
-    "dist"
+    "dist",
+    "docs"
   ],
   "directories": {
     "doc": "docs",
