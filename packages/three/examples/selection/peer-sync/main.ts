@@ -20,81 +20,101 @@ import {
   PeerHoverSync
 } from "../../../src/network/index.ts";
 import {
-  createRenderer,
-  createScene,
-  createOrbitCamera,
-  startLoop
-} from "../../shared/common.ts";
+  createExample,
+  orbitCamera
+} from "../../shared/example.ts";
 import { PEER_SELECTION_ROOM } from "../../shared/rooms.ts";
-import { createExamplePane } from "../../shared/example-pane.ts";
 import { bindSelectionAndPeerPanel } from "../shared/selection-panel.ts";
-import { mountPerformanceStats } from "../../shared/performance-stats.ts";
+import { onCanvasPick } from "../shared/pointer-picking.ts";
+import {
+  Selectables,
+  addSelectionLighting,
+  selectionMaterial,
+  hexOf
+} from "../shared/selectables.ts";
 
 // CONSTANTS
-const kClickDragThresholdPx = 4;
 const kUsernameStorageKey = "peer-selection-demo:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
 });
 const kModeStorageKey = "peer-selection-demo:mode";
-const kKnownTechniques: readonly SelectionRenderMode[] = ["outline", "highlight", "highlightJfa"];
+const kKnownTechniques: readonly SelectionRenderMode[] = [
+  "outline",
+  "highlight",
+  "highlightJfa"
+];
 const kModeStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
 });
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
-
-const scene = createScene("#1a1a2e");
-scene.add(new THREE.AmbientLight("#ffffff", 0.7));
-
-const keyLight = new THREE.DirectionalLight("#ffffff", 0.8);
-keyLight.position.set(4, 6, 3);
-scene.add(keyLight);
-
-const { camera, controls } = createOrbitCamera(
+const {
   canvas,
-  { x: 6, y: 5, z: 8 },
-  { x: 0, y: 0.5, z: 0 }
-);
+  renderer,
+  scene,
+  camera,
+  pane,
+  start
+} = await createExample({
+  title: "Peer Selection (over network)",
+  camera: orbitCamera(
+    { x: 6, y: 5, z: 8 },
+    { x: 0, y: 0.5, z: 0 }
+  )
+});
 
-function material(
-  color: THREE.ColorRepresentation = "#4a90d9"
-): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color });
-}
+addSelectionLighting(scene);
 
-const selectableMeshes: THREE.Mesh[] = [];
-const pickToId = new Map<THREE.Mesh, string>();
-const displayNames = new Map<string, string>();
+const selectables = new Selectables();
 
 function spawn(
   id: string,
-  name: string,
+  label: string,
   mesh: THREE.Mesh,
   position: THREE.Vector3Tuple
 ): void {
-  mesh.name = name;
+  mesh.name = label;
   mesh.position.set(...position);
-  scene.add(mesh);
-  selectableMeshes.push(mesh);
-  pickToId.set(mesh, id);
-  displayNames.set(id, name);
+  scene.add(selectables.add({ id, label, object: mesh }));
 }
 
-spawn("box", "Box", new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), material()), [-6, 0.7, 0]);
-spawn("cone", "Cone", new THREE.Mesh(new THREE.ConeGeometry(1, 1.8, 8), material()), [-3, 0.9, 0]);
-spawn("icosahedron", "Icosahedron", new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), material()), [0, 1, 0]);
-spawn("sphere", "Sphere", new THREE.Mesh(new THREE.SphereGeometry(0.9, 24, 16), material("#d94a90")), [3, 1, 0]);
+spawn(
+  "box",
+  "Box",
+  new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), selectionMaterial()),
+  [-6, 0.7, 0]
+);
+spawn(
+  "cone",
+  "Cone",
+  new THREE.Mesh(new THREE.ConeGeometry(1, 1.8, 8), selectionMaterial()),
+  [-3, 0.9, 0]
+);
+spawn(
+  "icosahedron",
+  "Icosahedron",
+  new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), selectionMaterial()),
+  [0, 1, 0]
+);
+spawn(
+  "sphere",
+  "Sphere",
+  new THREE.Mesh(
+    new THREE.SphereGeometry(0.9, 24, 16),
+    selectionMaterial("#d94a90")
+  ),
+  [3, 1, 0]
+);
 spawn(
   "torusKnot",
   "Torus Knot",
-  new THREE.Mesh(new THREE.TorusKnotGeometry(0.8, 0.28, 200, 32), material("#4ad991")),
+  new THREE.Mesh(
+    new THREE.TorusKnotGeometry(0.8, 0.28, 200, 32),
+    selectionMaterial("#4ad991")
+  ),
   [6, 1, 0]
 );
 
-const pane = createExamplePane({ title: "Peer Selection (over network)" });
-const performanceStats = mountPerformanceStats(renderer);
 const username = await resolveStoredPrompt({
   title: "Join peer selection session",
   label: "Username",
@@ -113,6 +133,10 @@ const room = networkClient.room(PEER_SELECTION_ROOM);
 room.join();
 
 const colorPalette = new ColorPalette();
+const colorAllocator = {
+  colorOf: (peerId: string) => colorPalette.forKey(peerId),
+  release: () => void 0
+};
 
 const peerFrustumSync = new PeerFrustumSync({
   room,
@@ -121,115 +145,51 @@ const peerFrustumSync = new PeerFrustumSync({
 });
 peerFrustumSync.attach(camera);
 
-const peerRegistry = new PeerSelectionRegistry({
-  colorAllocator: {
-    colorOf: (peerId) => colorPalette.forKey(peerId),
-    release: () => void 0
-  }
-});
+const peerRegistry = new PeerSelectionRegistry({ colorAllocator });
+const peerHoverRegistry = new PeerHoverRegistry({ colorAllocator });
 
-const peerHoverRegistry = new PeerHoverRegistry({
-  colorAllocator: {
-    colorOf: (peerId) => colorPalette.forKey(peerId),
-    release: () => void 0
-  }
-});
-
-const storedTechnique = kModeStorage.get(kModeStorageKey) as SelectionRenderMode | null;
+const storedTechnique = kModeStorage.get(
+  kModeStorageKey
+) as SelectionRenderMode | null;
 const selection = new SelectionSystem({
   renderer,
   scene,
   camera,
-  mode: storedTechnique && kKnownTechniques.includes(storedTechnique) ? storedTechnique : "outline",
+  mode: storedTechnique && kKnownTechniques.includes(storedTechnique) ?
+    storedTechnique :
+    "outline",
   peerSelections: peerRegistry,
   peerHovers: peerHoverRegistry,
   chips: true
 });
-const selectionManager = selection.manager;
-for (const mesh of selectableMeshes) {
-  selection.register(pickToId.get(mesh)!, mesh);
+for (const { id, object } of selectables.items) {
+  selection.register(id, object);
 }
 
 const peerSelectionSync = new PeerSelectionSync({
   room,
   registry: peerRegistry,
-  selection: selectionManager
+  selection: selection.manager
 });
 
 const peerHoverSync = new PeerHoverSync({
   room,
   registry: peerHoverRegistry,
-  selection: selectionManager
+  selection: selection.manager
 });
 
-const raycaster = new THREE.Raycaster();
-const pointerNdc = new THREE.Vector2();
+let hoveredId: string | null = null;
 
-let hovered: THREE.Mesh | null = null;
-let pointerDownAt: { x: number; y: number; } | null = null;
-
-canvas.addEventListener("pointermove", (event) => {
-  updatePointerNdc(event);
-  updateHover();
+onCanvasPick(canvas, {
+  camera,
+  pick: (raycaster) => selectables.pick(raycaster),
+  onHover: (id) => {
+    hoveredId = id;
+    selection.hover(id);
+    refreshStatus();
+  },
+  onClick: (id) => selection.select(id)
 });
-
-canvas.addEventListener("pointerdown", (event) => {
-  pointerDownAt = { x: event.clientX, y: event.clientY };
-});
-
-canvas.addEventListener("pointerup", (event) => {
-  const downAt = pointerDownAt;
-  pointerDownAt = null;
-
-  if (!downAt) {
-    return;
-  }
-
-  const movedPx = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
-  if (movedPx > kClickDragThresholdPx) {
-    return;
-  }
-
-  updatePointerNdc(event);
-  handleClick();
-});
-
-function updatePointerNdc(
-  event: PointerEvent
-): void {
-  const rect = canvas.getBoundingClientRect();
-  pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-}
-
-function pickMesh(): THREE.Mesh | null {
-  raycaster.setFromCamera(pointerNdc, camera);
-  const [hit] = raycaster.intersectObjects(selectableMeshes, false);
-
-  return (hit?.object as THREE.Mesh | undefined) ?? null;
-}
-
-function resolvePickId(
-  hit: THREE.Mesh
-): string {
-  const id = pickToId.get(hit);
-  if (!id) {
-    throw new Error(`No selection id registered for mesh "${hit.name}"`);
-  }
-
-  return id;
-}
-
-function updateHover(): void {
-  hovered = pickMesh();
-  selection.hover(hovered ? resolvePickId(hovered) : null);
-  refreshStatus();
-}
-
-function handleClick(): void {
-  const hit = pickMesh();
-  selection.select(hit ? resolvePickId(hit) : null);
-}
 
 const sessionFolder = pane.addFolder({ title: "Session" });
 const status = {
@@ -257,27 +217,23 @@ peersListElt.className = "peer-legend";
 peersRow.appendChild(peersListElt);
 peersFolder.element.append(peersRow);
 
-function selectedLabel(
-  objectId: string | null
-): string {
-  return objectId ? (displayNames.get(objectId) ?? objectId) : "-";
-}
-
 function refreshPeersLegend(): void {
-  const rows: { name: string; color: string; selectedLabel: string; }[] = [
+  const rows: { name: string; color: string; selected: string; }[] = [
     {
       name: `${username} (you)`,
-      color: `#${new THREE.Color(selection.appearance.selected.color).getHexString()}`,
-      selectedLabel: selectedLabel(selection.selected)
+      color: hexOf(selection.appearance.selected.color),
+      selected: selectables.labelOf(selection.selected)
     }
   ];
 
   for (const [clientId, peer] of room.peers) {
-    const peerUsername = typeof peer.identity.username === "string" ? peer.identity.username : "Guest";
+    const peerUsername = typeof peer.identity.username === "string" ?
+      peer.identity.username :
+      "Guest";
     rows.push({
       name: peerUsername,
       color: colorPalette.forKey(clientId),
-      selectedLabel: selectedLabel(peerRegistry.selectionOf(clientId))
+      selected: selectables.labelOf(peerRegistry.selectionOf(clientId))
     });
   }
 
@@ -289,15 +245,17 @@ function refreshPeersLegend(): void {
     dotElt.className = "peer-legend-dot";
     dotElt.style.backgroundColor = row.color;
     chipElt.appendChild(dotElt);
-    chipElt.appendChild(document.createTextNode(`${row.name} → ${row.selectedLabel}`));
+    chipElt.appendChild(
+      document.createTextNode(`${row.name} → ${row.selected}`)
+    );
 
     return chipElt;
   }));
 }
 
 function refreshStatus(): void {
-  status.hovered = hovered?.name ?? "-";
-  status.selected = selectedLabel(selection.selected);
+  status.hovered = selectables.labelOf(hoveredId);
+  status.selected = selectables.labelOf(selection.selected);
   sessionFolder.refresh();
   refreshPeersLegend();
 }
@@ -316,17 +274,11 @@ bindSelectionAndPeerPanel({
   onModeChange: (mode) => kModeStorage.set(kModeStorageKey, mode)
 });
 
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls,
-  onFrame: () => {
+start({
+  update: () => {
     peerFrustumSync.update();
     selection.update();
   },
-  onBeforeRender: () => performanceStats.begin(),
-  onAfterRender: () => performanceStats.end(),
   render: () => selection.render()
 });
 

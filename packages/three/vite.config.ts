@@ -33,7 +33,7 @@ export default defineConfig({
     rollupOptions: {
       input: Object.fromEntries(
         kPages.map((page) => [
-          page.replace(/[\/]?index\.html$/, "") || "index",
+          page.replace(/[/]?index\.html$/, "") || "index",
           fileURLToPath(new URL(`examples/${page}`, import.meta.url))
         ])
       )

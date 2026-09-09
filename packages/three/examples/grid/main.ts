@@ -1,32 +1,27 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   Grid,
-  type GridPlane,
-  type GridStyle,
-  type GridFadeFrom
+  type GridOptions
 } from "../../src/index.ts";
 import {
-  createRenderer,
-  createScene,
-  createOrbitCamera,
-  startLoop
-} from "../shared/common.ts";
-import { createExamplePane } from "../shared/example-pane.ts";
-import { mountPerformanceStats } from "../shared/performance-stats.ts";
+  createExample,
+  orbitCamera
+} from "../shared/example.ts";
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
+// CONSTANTS
+const kOrbitRadius = 4;
+const kOrbitSpeed = 0.6;
 
-const scene = createScene();
-const { camera, controls } = createOrbitCamera(
-  canvas,
-  { x: 8, y: 6, z: 8 },
-  { x: 0, y: 0, z: 0 }
-);
+const { scene, pane, start } = await createExample({
+  title: "Grid",
+  camera: orbitCamera(
+    { x: 8, y: 6, z: 8 },
+    { x: 0, y: 0, z: 0 }
+  )
+});
 
 scene.add(
   new THREE.AmbientLight("#ffffff", 0.6)
@@ -41,8 +36,6 @@ const referenceCube = new THREE.Mesh(
 referenceCube.position.y = 0.5;
 scene.add(referenceCube);
 
-const kOrbitRadius = 4;
-const kOrbitSpeed = 0.6;
 const orbitTimer = new THREE.Timer();
 let orbitElapsedSeconds = 0;
 
@@ -63,12 +56,6 @@ function updateReferenceCube(): void {
   );
 }
 
-const pane = createExamplePane({
-  title: "Grid"
-});
-
-const performanceStats = mountPerformanceStats(renderer);
-
 const gridFolder = pane.addFolder({
   title: "Grid"
 });
@@ -76,8 +63,11 @@ const axesFolder = pane.addFolder({
   title: "Axes"
 });
 
-let grid: Grid;
-let extentValue = 400;
+let grid = new Grid({
+  fade: { target: referenceCube }
+});
+scene.add(grid);
+bindGridControls(grid);
 
 function bindGridControls(
   target: Grid
@@ -111,7 +101,7 @@ function bindGridControls(
     .addBinding({ infiniteGrid: target.infiniteGrid }, "infiniteGrid")
     .on("change", ({ value }) => rebuildGrid({ infiniteGrid: value }));
   gridFolder
-    .addBinding({ extent: extentValue }, "extent", {
+    .addBinding({ extent: target.extent }, "extent", {
       min: 5,
       max: 500,
       step: 5
@@ -132,7 +122,7 @@ function bindGridControls(
         target: "target"
       }
     })
-    .on("change", ({ value }) => rebuildGrid({ fadeFrom: value }));
+    .on("change", ({ value }) => rebuildGrid({ fade: { from: value } }));
   gridFolder.addBinding(target, "fadeDistance", {
     min: 10,
     max: 500,
@@ -152,7 +142,7 @@ function bindGridControls(
         cross: "cross"
       }
     })
-    .on("change", ({ value }) => rebuildGrid({ cellStyle: value }));
+    .on("change", ({ value }) => rebuildGrid({ cell: { style: value } }));
   gridFolder.addBinding(target, "cellSize", {
     min: 0.1,
     max: 10,
@@ -181,7 +171,7 @@ function bindGridControls(
         cross: "cross"
       }
     })
-    .on("change", ({ value }) => rebuildGrid({ sectionStyle: value }));
+    .on("change", ({ value }) => rebuildGrid({ section: { style: value } }));
   gridFolder.addBinding(target, "sectionSize", {
     min: 2,
     max: 50,
@@ -214,79 +204,18 @@ function bindGridControls(
   });
 }
 
-interface GridOverrides {
-  plane?: GridPlane;
-  cellStyle?: GridStyle;
-  sectionStyle?: GridStyle;
-  fadeFrom?: GridFadeFrom;
-  infiniteGrid?: boolean;
-  extent?: number;
-}
-
 function rebuildGrid(
-  overrides: GridOverrides = {}
+  overrides: GridOptions
 ): void {
-  queueMicrotask(() => rebuildGridNow(overrides));
-}
+  queueMicrotask(() => {
+    const next = grid.cloneWith(overrides);
+    scene.remove(grid);
+    grid.dispose();
 
-function rebuildGridNow(
-  overrides: GridOverrides
-): void {
-  scene.remove(grid);
-  grid.dispose();
-  extentValue = overrides.extent ?? extentValue;
-
-  grid = new Grid({
-    plane: overrides.plane ?? grid.plane.value,
-    extent: extentValue,
-    cell: {
-      style: overrides.cellStyle ?? grid.cellStyle.value,
-      size: grid.cellSize,
-      color: grid.cellColor.value,
-      thickness: grid.cellThickness
-    },
-    section: {
-      style: overrides.sectionStyle ?? grid.sectionStyle.value,
-      size: grid.sectionSize,
-      color: grid.sectionColor.value,
-      thickness: grid.sectionThickness
-    },
-    crossSize: grid.crossSize,
-    hideCellOnSection: grid.hideCellOnSection,
-    hideCellOnSectionFadeWidth: grid.hideCellOnSectionFadeWidth,
-    fade: {
-      from: overrides.fadeFrom ?? grid.fade.from,
-      target: referenceCube,
-      distance: grid.fadeDistance,
-      strength: grid.fadeStrength
-    },
-    axes: {
-      show: grid.showAxes,
-      thickness: grid.axisThickness,
-      xColor: grid.xAxisColor.value,
-      yColor: grid.yAxisColor.value,
-      zColor: grid.zAxisColor.value
-    },
-    offset: grid.offset,
-    enabled: grid.enabled,
-    followCamera: grid.followCamera,
-    infiniteGrid: overrides.infiniteGrid ?? grid.infiniteGrid
+    grid = next;
+    scene.add(grid);
+    bindGridControls(grid);
   });
-  scene.add(grid);
-  bindGridControls(grid);
 }
 
-grid = new Grid();
-scene.add(grid);
-
-bindGridControls(grid);
-
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls,
-  onFrame: updateReferenceCube,
-  onBeforeRender: () => performanceStats.begin(),
-  onAfterRender: () => performanceStats.end()
-});
+start({ update: updateReferenceCube });

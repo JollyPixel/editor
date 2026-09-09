@@ -1,29 +1,24 @@
 // Import Internal Dependencies
 import {
-  EXAMPLES,
   EXAMPLE_GROUPS,
-  type ExampleEntry
+  type ExampleGroup
 } from "./shared/manifest.ts";
 
 const container = document.querySelector("#examples") as HTMLElement;
 
 container.append(
-  createSection("Components", EXAMPLES),
-  ...EXAMPLE_GROUPS.map(
-    (group) => createSection(group.label, group.examples)
-  )
+  ...EXAMPLE_GROUPS.map(createSection)
 );
 
 function createSection(
-  label: string,
-  examples: ExampleEntry[]
+  group: ExampleGroup
 ): HTMLElement {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
-  heading.textContent = label;
+  heading.textContent = group.label;
 
   const list = document.createElement("ul");
-  for (const example of examples) {
+  for (const example of group.examples) {
     const item = document.createElement("li");
     const link = document.createElement("a");
     link.href = example.path;

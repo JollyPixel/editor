@@ -155,6 +155,7 @@ readonly plane: GridPlaneValue
 readonly cellStyle: GridStyleValue
 readonly sectionStyle: GridStyleValue
 readonly infiniteGrid: boolean
+readonly extent: number
 
 cellSize: number
 sectionSize: number
@@ -240,6 +241,31 @@ interface GridDefaults {
 `GridCellDefaults`, `GridSectionDefaults`, `GridFadeDefaults`, `GridAxesDefaults`, and `GridExtentDefaults` are also exported.
 
 ## Methods
+
+### `toOptions()`
+
+```ts
+toOptions(): GridOptions
+```
+
+Reads the grid's current state back as a fully populated `GridOptions`, live property mutations included. `fade.target` is omitted when no target is set.
+
+### `cloneWith()`
+
+```ts
+cloneWith(overrides?: GridOptions): Grid
+```
+
+Builds a new `Grid` from `toOptions()` with `overrides` applied. The `cell`, `section`, `fade`, and `axes` groups merge field by field, so an override names only what changes. Use it for settings fixed at construction (`plane`, `extent`, `infiniteGrid`, `cell.style`, `section.style`, `fade.from`).
+
+The source grid is left untouched: remove and `dispose()` it yourself once the replacement is added.
+
+```ts
+const next = grid.cloneWith({ cell: { style: "cross" } });
+scene.remove(grid);
+grid.dispose();
+scene.add(next);
+```
 
 ### `dispose()`
 

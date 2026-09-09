@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
+  ColorPalette,
   formatHex,
   parseColor
 } from "@jolly-pixel/color";
@@ -19,13 +20,10 @@ import {
   type AreaBoxOptions
 } from "../../src/index.ts";
 import {
-  createRenderer,
-  createScene,
-  createOrbitCamera,
-  startLoop
-} from "../shared/common.ts";
-import { createExamplePane } from "../shared/example-pane.ts";
-import { mountPerformanceStats } from "../shared/performance-stats.ts";
+  createExample,
+  orbitCamera
+} from "../shared/example.ts";
+import { pointerNdc } from "../shared/pointer.ts";
 
 // CONSTANTS
 const kSnapOptions: Record<string, number> = {
@@ -42,17 +40,29 @@ const kBounds = new THREE.Box3(
   new THREE.Vector3(-16, 0, -16),
   new THREE.Vector3(16, 8, 16)
 );
-const kPalette = ["#4da3ff", "#f4a261", "#8ecf72", "#c792ea", "#f28ab2"];
+const kPalette = new ColorPalette();
 const kExtentRange = { min: 1, max: 24, step: 1 };
 const kCoordRange = { min: -20, max: 20, step: 1 };
 const kOpacityRange = { min: 0, max: 1, step: 0.05 };
 const kEdgeWidthRange = { min: 1, max: 6, step: 1 };
 const kLabelWidth = "13ch";
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
+const {
+  canvas,
+  scene,
+  camera,
+  controls: orbit,
+  pane,
+  start
+} = await createExample({
+  title: "Area Box",
+  background: "#12181d",
+  camera: orbitCamera(
+    { x: 14, y: 14, z: 18 },
+    { x: 0, y: 0, z: 0 }
+  )
+});
 
-const scene = createScene("#12181d");
 scene.add(new Grid({
   cell: {
     style: "cross",
@@ -70,12 +80,6 @@ scene.add(new Grid({
   },
   hideCellOnSection: true
 }));
-
-const { camera, controls: orbit } = createOrbitCamera(
-  canvas,
-  { x: 14, y: 14, z: 18 },
-  { x: 0, y: 0, z: 0 }
-);
 
 const controls = new AreaBoxControls(camera, canvas, {
   snap: 1,
@@ -120,11 +124,6 @@ const readout = {
   min: "-",
   size: "-"
 };
-
-const pane = createExamplePane({
-  title: "Area Box"
-});
-const performanceStats = mountPerformanceStats(renderer);
 
 const selectionFolder = pane.addFolder({
   title: "Selection"
@@ -187,7 +186,7 @@ interactionFolder
 function createAreaDialog() {
   const draft = {
     displayName: "Area",
-    color: withAlpha(kPalette[0], AreaBox.Defaults.opacity),
+    color: withAlpha(paletteColor(0), AreaBox.Defaults.opacity),
     position: { x: 0, y: 0, z: 0 },
     size: { x: 4, y: 1, z: 4 },
     edgeOpacity: AreaBox.Defaults.edges.opacity,
@@ -241,7 +240,7 @@ function createAreaDialog() {
     const fill = parseColor(draft.color);
     const area = addArea({
       displayName: draft.displayName,
-      color: fill === null ? kPalette[0] : formatHex(fill),
+      color: fill === null ? paletteColor(0) : formatHex(fill),
       position: draft.position,
       size: draft.size,
       opacity: fill === null ? AreaBox.Defaults.opacity : fill.a,
@@ -262,7 +261,7 @@ function createAreaDialog() {
     open(): void {
       draft.displayName = `Area ${createdCount + 1}`;
       draft.color = withAlpha(
-        kPalette[createdCount % kPalette.length],
+        paletteColor(createdCount),
         AreaBox.Defaults.opacity
       );
       draft.position = {
@@ -311,19 +310,16 @@ function select(
 }
 
 const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
 
 canvas.addEventListener("pointerdown", (event) => {
   if (event.button !== 0 || controls.isOverHandle(event)) {
     return;
   }
 
-  const rect = canvas.getBoundingClientRect();
-  pointer.set(
-    (((event.clientX - rect.left) / rect.width) * 2) - 1,
-    (-((event.clientY - rect.top) / rect.height) * 2) + 1
+  raycaster.setFromCamera(
+    pointerNdc(canvas, event),
+    camera
   );
-  raycaster.setFromCamera(pointer, camera);
 
   const hits = raycaster.intersectObjects(
     areas.map((area) => area.fill),
@@ -348,27 +344,24 @@ controls.addEventListener("change", refreshReadout);
 
 select(addArea({
   displayName: "Spawn",
-  color: kPalette[0],
+  color: paletteColor(0),
   position: { x: -2, y: 0, z: -2 },
   size: { x: 6, y: 1, z: 4 }
 }));
 
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls: orbit,
-  onBeforeRender: () => performanceStats.begin(),
-  onAfterRender: () => performanceStats.end()
-});
+start();
+
+function paletteColor(
+  index: number
+): string {
+  return kPalette.colors[index % kPalette.colors.length];
+}
 
 function withAlpha(
   hex: string,
   alpha: number
 ): string {
-  const channel = Math.round(alpha * 255)
-    .toString(16)
-    .padStart(2, "0");
+  const color = parseColor(hex);
 
-  return `${hex}${channel}`;
+  return color === null ? hex : formatHex({ ...color, a: alpha }, true);
 }

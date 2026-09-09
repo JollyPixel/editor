@@ -13,7 +13,10 @@ export function mountPerformanceStats(
   renderer: THREE.WebGPURenderer
 ): PerformanceStats {
   const recorder = new StatsRecorder();
-  registerRendererMetrics(recorder, renderer);
+  registerRendererMetrics(
+    recorder,
+    renderer
+  );
 
   const stats = document.createElement("jolly-stats");
   stats.recorder = recorder;
@@ -33,7 +36,9 @@ export function mountPerformanceStats(
 
   const scope = document.querySelector("jolly-scope");
   if (scope === null) {
-    throw new Error("mountPerformanceStats: no jolly-scope in this page");
+    throw new Error(
+      "mountPerformanceStats: no jolly-scope in this page"
+    );
   }
   scope.append(floating);
 

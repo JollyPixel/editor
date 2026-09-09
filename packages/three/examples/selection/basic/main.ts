@@ -1,51 +1,53 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import { ColorPalette } from "@jolly-pixel/color";
 import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   SelectionSystem,
-  type SelectionManager,
-  PeerSelectionRegistry,
-  type SelectionTechnique
+  PeerSelectionRegistry
 } from "../../../src/index.ts";
 import {
-  createRenderer,
-  createScene,
-  createOrbitCamera,
-  startLoop
-} from "../../shared/common.ts";
-import { createExamplePane } from "../../shared/example-pane.ts";
+  createExample,
+  orbitCamera
+} from "../../shared/example.ts";
 import { bindSelectionAndPeerPanel } from "../shared/selection-panel.ts";
-import { PeerColorPaletteAllocator } from "./PeerColorPaletteAllocator.ts";
+import { onCanvasPick } from "../shared/pointer-picking.ts";
+import {
+  Selectables,
+  addSelectionLighting,
+  selectionMaterial
+} from "../shared/selectables.ts";
 
 // CONSTANTS
-const kClickDragThresholdPx = 4;
+const kNoneOption = "";
+const kPriorityOrbitRadius = 1.3;
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
-
-const scene = createScene("#1a1a2e");
-scene.add(new THREE.AmbientLight("#ffffff", 0.7));
-
-const keyLight = new THREE.DirectionalLight("#ffffff", 0.8);
-keyLight.position.set(4, 6, 3);
-scene.add(keyLight);
-
-const { camera, controls } = createOrbitCamera(
+const {
   canvas,
-  { x: 6, y: 5, z: 8 },
-  { x: 0, y: 0.5, z: 0 }
-);
+  renderer,
+  scene,
+  camera,
+  pane,
+  start
+} = await createExample({
+  title: "Selection",
+  stats: false,
+  camera: orbitCamera(
+    { x: 6, y: 5, z: 8 },
+    { x: 0, y: 0.5, z: 0 }
+  )
+});
 
-const selectableMeshes: THREE.Mesh[] = [];
-const pickToId = new Map<THREE.Mesh, string>();
-const displayNames = new Map<string, string>();
+addSelectionLighting(scene);
 
-const outlinerNodes: TreeNode[] = [];
-
+const colorPalette = new ColorPalette();
 const peerRegistry = new PeerSelectionRegistry({
-  colorAllocator: new PeerColorPaletteAllocator()
+  colorAllocator: {
+    colorOf: (peerId) => colorPalette.forKey(peerId),
+    release: () => void 0
+  }
 });
 const selection = new SelectionSystem({
   renderer,
@@ -55,8 +57,180 @@ const selection = new SelectionSystem({
   peerSelections: peerRegistry,
   chips: true
 });
-const selectionManager = selection.manager;
-const { priorityOrbiters, wall, applyOrbiterPositions } = spawnSelectableMeshes(scene, selectionManager);
+
+const selectables = new Selectables();
+const outlinerNodes: TreeNode[] = [];
+
+interface PriorityOrbiter {
+  mesh: THREE.Mesh;
+  angle: number;
+  speed: number;
+}
+
+function registerStandalone(
+  id: string,
+  label: string,
+  mesh: THREE.Mesh
+): THREE.Mesh {
+  mesh.name = label;
+  scene.add(mesh);
+  selection.register(id, mesh);
+  selectables.add({ id, label, object: mesh });
+  outlinerNodes.push({ id, label });
+
+  return mesh;
+}
+
+const box = registerStandalone(
+  "box",
+  "Box",
+  new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), selectionMaterial())
+);
+const cone = registerStandalone(
+  "cone",
+  "Cone",
+  new THREE.Mesh(new THREE.ConeGeometry(1, 1.8, 8), selectionMaterial())
+);
+const icosahedron = registerStandalone(
+  "icosahedron",
+  "Icosahedron",
+  new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), selectionMaterial())
+);
+const torusKnot = registerStandalone(
+  "torusKnot",
+  "Torus Knot",
+  new THREE.Mesh(
+    new THREE.TorusKnotGeometry(0.8, 0.28, 200, 32),
+    selectionMaterial("#4ad991")
+  )
+);
+box.position.set(-6, 0.7, 0);
+cone.position.set(-3.3, 0.9, 0);
+icosahedron.position.set(-0.7, 1, 0);
+torusKnot.position.set(1.8, 1, 0);
+
+const cluster = new THREE.Group();
+cluster.name = "Cluster";
+cluster.position.set(4.5, 0, 0);
+scene.add(cluster);
+selection.register("cluster", cluster);
+selectables.add(
+  {
+    id: "cluster",
+    label: "Cluster (group)",
+    object: cluster
+  },
+  false
+);
+
+const clusterChildren: TreeNode[] = [];
+outlinerNodes.push({
+  id: "cluster",
+  label: "Cluster",
+  children: clusterChildren
+});
+
+const kClusterParts: [string, THREE.Mesh, THREE.Vector3Tuple][] = [
+  [
+    "Sphere",
+    new THREE.Mesh(
+      new THREE.SphereGeometry(0.6, 16, 12),
+      selectionMaterial("#d97a4a")
+    ),
+    [0, 1.2, 0]
+  ],
+  [
+    "Torus",
+    new THREE.Mesh(
+      new THREE.TorusGeometry(0.6, 0.2, 8, 16),
+      selectionMaterial("#d97a4a")
+    ),
+    [-1, 0.5, 0.3]
+  ],
+  [
+    "Cylinder",
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.5, 1.2, 12),
+      selectionMaterial("#d97a4a")
+    ),
+    [1, 0.6, -0.3]
+  ]
+];
+
+for (const [index, [name, mesh, position]] of kClusterParts.entries()) {
+  mesh.name = `Cluster.${name}`;
+  mesh.position.set(...position);
+  cluster.add(mesh);
+
+  const id = `cluster-${index}`;
+  selection.register(id, mesh);
+  selectables.add({
+    id,
+    label: `${mesh.name} (part of Cluster)`,
+    object: mesh
+  });
+
+  clusterChildren.push({ id, label: name });
+}
+
+const priorityOrbitCenter = cone.position.clone();
+const priorityOrbiters: PriorityOrbiter[] = [
+  {
+    mesh: registerStandalone(
+      "orbiterBox",
+      "Orbiter Box",
+      new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.6, 0.6),
+        selectionMaterial("#8c5a6b")
+      )
+    ),
+    angle: 0,
+    speed: 0.6
+  },
+  {
+    mesh: registerStandalone(
+      "orbiterTetra",
+      "Orbiter Tetra",
+      new THREE.Mesh(
+        new THREE.TetrahedronGeometry(0.55),
+        selectionMaterial("#5a8c7a")
+      )
+    ),
+    angle: (Math.PI * 2) / 3,
+    speed: -0.45
+  },
+  {
+    mesh: registerStandalone(
+      "orbiterOcta",
+      "Orbiter Octa",
+      new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.55),
+        selectionMaterial("#8c7a5a")
+      )
+    ),
+    angle: (Math.PI * 4) / 3,
+    speed: 0.8
+  }
+];
+
+function applyOrbiterPositions(): void {
+  for (const orbiter of priorityOrbiters) {
+    orbiter.mesh.position.set(
+      priorityOrbitCenter.x + (Math.cos(orbiter.angle) * kPriorityOrbitRadius),
+      priorityOrbitCenter.y,
+      priorityOrbitCenter.z + (Math.sin(orbiter.angle) * kPriorityOrbitRadius)
+    );
+  }
+}
+applyOrbiterPositions();
+
+const wall = new THREE.Mesh(
+  new THREE.BoxGeometry(1.4, 1.4, 1.4),
+  new THREE.MeshStandardMaterial({ color: "#2a2a38" })
+);
+wall.name = "Occluder Wall";
+wall.position.set(0.6, 1.8, 1.6);
+scene.add(wall);
 
 const outlinerPane = document.querySelector<HTMLElementTagNameMap["jolly-pane"]>(
   "#outliner jolly-pane"
@@ -92,76 +266,18 @@ selection.addEventListener("selectionChange", () => {
   refreshStatus();
 });
 
-const raycaster = new THREE.Raycaster();
-const pointerNdc = new THREE.Vector2();
+let hoveredId: string | null = null;
 
-let hovered: THREE.Mesh | null = null;
-let pointerDownAt: { x: number; y: number; } | null = null;
-
-canvas.addEventListener("pointermove", (event) => {
-  updatePointerNdc(event);
-  updateHover();
+onCanvasPick(canvas, {
+  camera,
+  pick: (raycaster) => selectables.pick(raycaster),
+  onHover: (id) => {
+    hoveredId = id;
+    selection.hover(id);
+    refreshStatus();
+  },
+  onClick: (id) => selection.select(id)
 });
-
-canvas.addEventListener("pointerdown", (event) => {
-  pointerDownAt = { x: event.clientX, y: event.clientY };
-});
-
-canvas.addEventListener("pointerup", (event) => {
-  const downAt = pointerDownAt;
-  pointerDownAt = null;
-
-  if (!downAt) {
-    return;
-  }
-
-  const movedPx = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
-  if (movedPx > kClickDragThresholdPx) {
-    return;
-  }
-
-  updatePointerNdc(event);
-  handleClick();
-});
-
-function updatePointerNdc(
-  event: PointerEvent
-): void {
-  const rect = canvas.getBoundingClientRect();
-  pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-}
-
-function pickMesh(): THREE.Mesh | null {
-  raycaster.setFromCamera(pointerNdc, camera);
-  const [hit] = raycaster.intersectObjects(selectableMeshes, false);
-
-  return (hit?.object as THREE.Mesh | undefined) ?? null;
-}
-
-function resolvePickId(
-  hit: THREE.Mesh
-): string {
-  const id = pickToId.get(hit);
-  if (!id) {
-    throw new Error(`No selection id registered for mesh "${hit.name}"`);
-  }
-
-  return id;
-}
-
-function updateHover(): void {
-  const hit = pickMesh();
-  hovered = hit;
-  selection.hover(hit ? resolvePickId(hit) : null);
-  refreshStatus();
-}
-
-function handleClick(): void {
-  const hit = pickMesh();
-
-  selection.select(hit ? resolvePickId(hit) : null);
-}
 
 function withPeerBadges(
   node: TreeNode
@@ -180,177 +296,6 @@ function withPeerBadges(
 
 function refreshOutliner(): void {
   tree.nodes = outlinerNodes.map(withPeerBadges);
-}
-
-interface PriorityOrbiter {
-  id: string;
-  mesh: THREE.Mesh;
-  angle: number;
-  speed: number;
-}
-
-interface SpawnedScene {
-  priorityOrbiters: PriorityOrbiter[];
-  wall: THREE.Mesh;
-  applyOrbiterPositions: () => void;
-}
-
-function spawnSelectableMeshes(
-  target: THREE.Scene,
-  selection: SelectionManager
-): SpawnedScene {
-  function registerStandalone(
-    id: string,
-    name: string,
-    mesh: THREE.Mesh,
-    technique?: SelectionTechnique
-  ): void {
-    mesh.name = name;
-    target.add(mesh);
-    selection.register(id, mesh, { technique });
-    selectableMeshes.push(mesh);
-    pickToId.set(mesh, id);
-    displayNames.set(id, name);
-
-    outlinerNodes.push({ id, label: name });
-  }
-
-  registerStandalone(
-    "box",
-    "Box",
-    new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), material())
-  );
-  registerStandalone(
-    "cone",
-    "Cone",
-    new THREE.Mesh(new THREE.ConeGeometry(1, 1.8, 8), material())
-  );
-  registerStandalone(
-    "icosahedron",
-    "Icosahedron",
-    new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), material())
-  );
-  registerStandalone(
-    "torusKnot",
-    "Torus Knot",
-    new THREE.Mesh(new THREE.TorusKnotGeometry(0.8, 0.28, 200, 32), material("#4ad991"))
-  );
-
-  const [box, cone, icosahedron, torusKnot] = selectableMeshes;
-  box.position.set(-6, 0.7, 0);
-  cone.position.set(-3.3, 0.9, 0);
-  icosahedron.position.set(-0.7, 1, 0);
-  torusKnot.position.set(1.8, 1, 0);
-
-  const cluster = new THREE.Group();
-  cluster.name = "Cluster";
-  cluster.position.set(4.5, 0, 0);
-  target.add(cluster);
-  selection.register("cluster", cluster);
-  displayNames.set("cluster", "Cluster (group)");
-
-  const clusterChildren: TreeNode[] = [];
-  outlinerNodes.push({
-    id: "cluster",
-    label: "Cluster",
-    children: clusterChildren
-  });
-
-  const clusterParts: [string, THREE.Mesh, THREE.Vector3Tuple][] = [
-    ["Sphere", new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), material("#d97a4a")), [0, 1.2, 0]],
-    ["Torus", new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.2, 8, 16), material("#d97a4a")), [-1, 0.5, 0.3]],
-    ["Cylinder", new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 12), material("#d97a4a")), [1, 0.6, -0.3]]
-  ];
-
-  for (const [index, [name, mesh, position]] of clusterParts.entries()) {
-    mesh.name = `Cluster.${name}`;
-    mesh.position.set(...position);
-    cluster.add(mesh);
-
-    const id = `cluster-${index}`;
-    selection.register(id, mesh);
-    selectableMeshes.push(mesh);
-    pickToId.set(mesh, id);
-    displayNames.set(id, `${mesh.name} (part of Cluster)`);
-
-    clusterChildren.push({ id, label: name });
-  }
-
-  const priorityOrbitCenter = cone.position.clone();
-  const priorityOrbitRadius = 1.3;
-
-  interface SpawnOrbiterOptions {
-    id: string;
-    name: string;
-    geometry: THREE.BufferGeometry;
-    color: THREE.ColorRepresentation;
-    angle: number;
-    speed: number;
-  }
-
-  function spawnOrbiter(
-    options: SpawnOrbiterOptions
-  ): PriorityOrbiter {
-    const { id, name, geometry, color, angle, speed } = options;
-    const mesh = new THREE.Mesh(geometry, material(color));
-    registerStandalone(id, name, mesh);
-
-    return { id, mesh, angle, speed };
-  }
-
-  const priorityOrbiters: PriorityOrbiter[] = [
-    spawnOrbiter({
-      id: "orbiterBox",
-      name: "Orbiter Box",
-      geometry: new THREE.BoxGeometry(0.6, 0.6, 0.6),
-      color: "#8c5a6b",
-      angle: 0,
-      speed: 0.6
-    }),
-    spawnOrbiter({
-      id: "orbiterTetra",
-      name: "Orbiter Tetra",
-      geometry: new THREE.TetrahedronGeometry(0.55),
-      color: "#5a8c7a",
-      angle: (Math.PI * 2) / 3,
-      speed: -0.45
-    }),
-    spawnOrbiter({
-      id: "orbiterOcta",
-      name: "Orbiter Octa",
-      geometry: new THREE.OctahedronGeometry(0.55),
-      color: "#8c7a5a",
-      angle: (Math.PI * 4) / 3,
-      speed: 0.8
-    })
-  ];
-
-  function applyOrbiterPositions(): void {
-    for (const orbiter of priorityOrbiters) {
-      orbiter.mesh.position.set(
-        priorityOrbitCenter.x + (Math.cos(orbiter.angle) * priorityOrbitRadius),
-        priorityOrbitCenter.y,
-        priorityOrbitCenter.z + (Math.sin(orbiter.angle) * priorityOrbitRadius)
-      );
-    }
-  }
-  applyOrbiterPositions();
-
-  const wall = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 1.4, 1.4),
-    new THREE.MeshStandardMaterial({ color: "#2a2a38" })
-  );
-  wall.name = "Occluder Wall";
-  wall.position.set(0.6, 1.8, 1.6);
-  target.add(wall);
-
-  return { priorityOrbiters, wall, applyOrbiterPositions };
-}
-
-function material(
-  color: THREE.ColorRepresentation = "#4a90d9"
-): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color });
 }
 
 const orbitClock = new THREE.Clock();
@@ -375,7 +320,6 @@ function reshuffleOrbiters(): void {
   applyOrbiterPositions();
 }
 
-const pane = createExamplePane({ title: "Selection" });
 const statusFolder = pane.addFolder({ title: "Status" });
 const status = {
   hovered: "-",
@@ -386,9 +330,8 @@ statusFolder.addMonitor(status, "hovered");
 statusFolder.addMonitor(status, "selected");
 
 function refreshStatus(): void {
-  status.hovered = hovered?.name ?? "-";
-  status.selected = selection.selected ?
-    (displayNames.get(selection.selected) ?? selection.selected) : "-";
+  status.hovered = selectables.labelOf(hoveredId);
+  status.selected = selectables.labelOf(selection.selected);
   statusFolder.refresh();
 }
 
@@ -425,9 +368,8 @@ bindSelectionAndPeerPanel({
   }
 });
 
-const kNoneOption = "";
 const presenceOptions: Record<string, string> = { "(none)": kNoneOption };
-for (const [id, label] of displayNames) {
+for (const { id, label } of selectables.items) {
   presenceOptions[label] = id;
 }
 
@@ -456,12 +398,8 @@ for (const peerId of Object.keys(fakePeers) as (keyof typeof fakePeers)[]) {
 selection.select("cone");
 refreshStatus();
 
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls,
-  onFrame: () => {
+start({
+  update: () => {
     advanceOrbiters();
     selection.update();
   },

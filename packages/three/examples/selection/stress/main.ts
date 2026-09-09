@@ -11,73 +11,85 @@ import {
   type HighlightEntry
 } from "../../../src/index.ts";
 import {
-  createRenderer,
-  createScene,
-  createOrbitCamera,
-  startLoop
-} from "../../shared/common.ts";
-import { createExamplePane } from "../../shared/example-pane.ts";
-import { mountPerformanceStats } from "../../shared/performance-stats.ts";
+  createExample,
+  orbitCamera
+} from "../../shared/example.ts";
+import { onCanvasPick } from "../shared/pointer-picking.ts";
+import { addSelectionLighting } from "../shared/selectables.ts";
+import { InstanceGrid } from "./InstanceGrid.ts";
+import { InstanceSelection } from "./InstanceSelection.ts";
+import { SimulatedPeers } from "./SimulatedPeers.ts";
 
 // CONSTANTS
-const kClickDragThresholdPx = 4;
-const kInstanceSpacing = 2.6;
 const kDefaultInstanceCount = 100;
 const kMaxInstanceCount = 3000;
 const kOutlineSelectionCap = 100;
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
+type RenderMode = "outline" | "peerColors" | "peerColorsJfa";
 
-const scene = createScene("#101018");
-scene.add(new THREE.AmbientLight("#ffffff", 0.7));
-
-const keyLight = new THREE.DirectionalLight("#ffffff", 0.8);
-keyLight.position.set(4, 6, 3);
-scene.add(keyLight);
-
-const { camera, controls } = createOrbitCamera(
+const {
   canvas,
-  { x: 14, y: 12, z: 18 },
-  { x: 0, y: 0, z: 0 }
-);
+  renderer,
+  scene,
+  camera,
+  pane,
+  start
+} = await createExample({
+  title: "Stress",
+  background: "#101018",
+  camera: orbitCamera(
+    { x: 14, y: 12, z: 18 },
+    { x: 0, y: 0, z: 0 }
+  )
+});
+
+addSelectionLighting(scene);
 camera.far = 500;
 camera.updateProjectionMatrix();
 
 const selectionManager = new SelectionManager();
-
 const highlight = new HighlightPass(renderer, scene, camera);
 const highlightJfa = new HighlightPassJfa(renderer, scene, camera);
 const peerRegistry = new PeerSelectionRegistry();
+const peers = new SimulatedPeers(peerRegistry);
 
-type RenderMode = "outline" | "peerColors" | "peerColorsJfa";
+const grid = new InstanceGrid(
+  new THREE.TorusKnotGeometry(0.6, 0.22, 128, 24),
+  new THREE.MeshStandardMaterial({ color: "#4a90d9" }),
+  kMaxInstanceCount
+);
+scene.add(grid.mesh);
+
+const selection = new InstanceSelection(grid);
+
 let renderMode: RenderMode = "outline";
-let activePeerNames: string[] = [];
+let selectionOverlay: MergedSelectionOverlay | null = null;
+let hoverOverlay: MergedSelectionOverlay | null = null;
 
-function refreshPeerColors(): void {
-  const localIds = selectedInstanceId === null ? randomSelectedInstanceIds : [selectedInstanceId];
-  const localIdSet = new Set(localIds);
-  const hoverId = hoveredInstanceId !== null && !localIdSet.has(hoveredInstanceId) ? hoveredInstanceId : null;
-
-  const entries: HighlightEntry[] = localIds.map((instanceId) => {
+function refreshHighlightEntries(): void {
+  const { appearance } = selectionManager;
+  const entries: HighlightEntry[] = selection.selected.map((instanceId) => {
     return {
-      target: instancedMesh,
+      target: grid.mesh,
       instanceId,
-      color: selectionManager.appearance.selected.color,
+      color: appearance.selected.color,
       priority: true
     };
   });
-  if (hoverId !== null) {
+
+  const { hovered } = selection;
+  if (hovered !== null) {
     entries.push({
-      target: instancedMesh,
-      instanceId: hoverId,
-      color: selectionManager.appearance.hovered.color
+      target: grid.mesh,
+      instanceId: hovered,
+      color: appearance.hovered.color
     });
   }
 
+  const taken = new Set(selection.selected);
   for (const objectId of peerRegistry.selectedObjectIds()) {
     const instanceId = Number(objectId);
-    if (localIdSet.has(instanceId) || instanceId === hoverId) {
+    if (taken.has(instanceId) || instanceId === hovered) {
       continue;
     }
 
@@ -86,297 +98,109 @@ function refreshPeerColors(): void {
       continue;
     }
 
-    entries.push({ target: instancedMesh, instanceId, color: peerRegistry.colorOf(peerId) });
+    entries.push({
+      target: grid.mesh,
+      instanceId,
+      color: peerRegistry.colorOf(peerId)
+    });
   }
 
   highlight.entries = entries;
   highlightJfa.entries = entries;
 }
 
-peerRegistry.addEventListener("peerSelectionChange", () => refreshPeerColors());
-
-function clearPeerColors(): void {
-  for (const peerName of activePeerNames) {
-    peerRegistry.select(peerName, null);
-  }
-  activePeerNames = [];
-}
-
-function randomizePeerColors(
-  peerCount: number
-): void {
-  clearPeerColors();
-  if (peerCount <= 0 || instanceCount === 0) {
-    return;
-  }
-
-  const picked = pickRandomInstanceIds(instanceCount, peerCount);
-  picked.forEach((instanceId, index) => {
-    const peerName = `Peer ${index + 1}`;
-    activePeerNames.push(peerName);
-    peerRegistry.select(peerName, String(instanceId));
-  });
-}
-
-function nearestInstanceIdsToPosition(
-  origin: THREE.Vector3,
-  count: number,
-  excludeId: number | null,
-  want: number
-): number[] {
-  const distances: { id: number; distanceSquared: number; }[] = [];
-  for (let i = 0; i < count; i++) {
-    if (i === excludeId) {
-      continue;
-    }
-    distances.push({ id: i, distanceSquared: gridPosition(i, count).distanceToSquared(origin) });
-  }
-  distances.sort((a, b) => a.distanceSquared - b.distanceSquared);
-
-  return distances.slice(0, Math.max(want, 0)).map(({ id }) => id);
-}
-
-function clusterPeerColorsAroundSelection(
-  peerCount: number
-): void {
-  if (instanceCount === 0) {
-    return;
-  }
-
-  if (selectedInstanceId === null) {
-    const [centerId] = nearestInstanceIdsToPosition(new THREE.Vector3(), instanceCount, null, 1);
-    if (centerId === undefined) {
-      return;
-    }
-
-    randomSelectedInstanceIds = [];
-    selectedInstanceId = centerId;
-    rebuildOverlays();
-  }
-
-  const localId = selectedInstanceId;
-  if (localId === null) {
-    return;
-  }
-
-  clearPeerColors();
-  if (peerCount <= 0) {
-    return;
-  }
-
-  const centerPosition = gridPosition(localId, instanceCount);
-  const nearestIds = nearestInstanceIdsToPosition(centerPosition, instanceCount, localId, peerCount);
-  nearestIds.forEach((instanceId, index) => {
-    const peerName = `Peer ${index + 1}`;
-    activePeerNames.push(peerName);
-    peerRegistry.select(peerName, String(instanceId));
-  });
-}
-
-const heavyGeometry = new THREE.TorusKnotGeometry(0.6, 0.22, 128, 24);
-const heavyMaterial = new THREE.MeshStandardMaterial({ color: "#4a90d9" });
-
-const instancedMesh = new THREE.InstancedMesh(heavyGeometry, heavyMaterial, kMaxInstanceCount);
-instancedMesh.count = 0;
-scene.add(instancedMesh);
-
-let instanceCount = 0;
-
-let selectedInstanceId: number | null = null;
-let hoveredInstanceId: number | null = null;
-let randomSelectedInstanceIds: number[] = [];
-
-let selectionOverlay: MergedSelectionOverlay | null = null;
-let hoverOverlay: MergedSelectionOverlay | null = null;
-
-function clearSelectionOverlay(): void {
+function rebuildOverlays(): void {
   selectionOverlay?.dispose();
   selectionOverlay = null;
-}
-
-function clearHoverOverlay(): void {
   hoverOverlay?.dispose();
   hoverOverlay = null;
-}
-
-function instanceProxyMesh(
-  instanceId: number
-): THREE.Mesh {
-  const mesh = new THREE.Mesh(heavyGeometry);
-  mesh.matrixAutoUpdate = false;
-  instancedMesh.getMatrixAt(instanceId, mesh.matrix);
-  mesh.updateMatrixWorld(true);
-
-  return mesh;
-}
-
-function rebuildOverlays(): void {
-  clearSelectionOverlay();
-  clearHoverOverlay();
-
-  const selectedIds = selectedInstanceId === null ? randomSelectedInstanceIds : [selectedInstanceId];
-  const hoverSuppressed = hoveredInstanceId !== null && hoveredInstanceId === selectedInstanceId;
-  const hoverIds = !hoverSuppressed && hoveredInstanceId !== null ? [hoveredInstanceId] : [];
 
   if (renderMode === "outline") {
-    if (hoverIds.length > 0) {
+    const { appearance } = selectionManager;
+    const { hovered } = selection;
+
+    if (hovered !== null) {
       hoverOverlay = new MergedSelectionOverlay({
         parent: scene,
-        targets: hoverIds.map(instanceProxyMesh),
-        color: selectionManager.appearance.hovered.color,
-        opacity: selectionManager.appearance.hovered.opacity,
-        linewidth: selectionManager.appearance.outline.linewidth,
-        xray: selectionManager.appearance.xray
+        targets: [grid.proxyMesh(hovered)],
+        color: appearance.hovered.color,
+        opacity: appearance.hovered.opacity,
+        linewidth: appearance.outline.linewidth,
+        xray: appearance.xray
       });
     }
-    if (selectedIds.length > 0) {
+    if (selection.selected.length > 0) {
       selectionOverlay = new MergedSelectionOverlay({
         parent: scene,
-        targets: selectedIds.map(instanceProxyMesh),
-        color: selectionManager.appearance.selected.color,
+        targets: selection.selected.map((id) => grid.proxyMesh(id)),
+        color: appearance.selected.color,
         opacity: 1,
-        linewidth: selectionManager.appearance.outline.linewidth,
+        linewidth: appearance.outline.linewidth,
         xray: true
       });
     }
   }
-  refreshPeerColors();
-}
 
-function clearRandomSelection(): void {
-  randomSelectedInstanceIds = [];
-  rebuildOverlays();
-}
-
-function randomizeSelection(
-  count: number
-): void {
-  selectedInstanceId = null;
-  randomSelectedInstanceIds = pickRandomInstanceIds(instanceCount, count);
-  rebuildOverlays();
-}
-
-function pickRandomInstanceIds(
-  count: number,
-  pickCount: number
-): number[] {
-  const pool = Array.from({ length: count }, (_, index) => index);
-  const n = Math.min(Math.max(pickCount, 0), pool.length);
-
-  for (let i = 0; i < n; i++) {
-    const j = i + Math.floor(Math.random() * (pool.length - i));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-
-  return pool.slice(0, n);
-}
-
-function gridPosition(
-  index: number,
-  count: number
-): THREE.Vector3 {
-  const side = Math.ceil(Math.cbrt(count));
-  const centerOffset = ((side - 1) * kInstanceSpacing) / 2;
-  const x = index % side;
-  const y = Math.floor(index / side) % side;
-  const z = Math.floor(index / (side * side));
-
-  return new THREE.Vector3(
-    x * kInstanceSpacing - centerOffset,
-    y * kInstanceSpacing - centerOffset,
-    z * kInstanceSpacing - centerOffset
-  );
+  refreshHighlightEntries();
 }
 
 function spawnInstances(
   count: number
 ): void {
-  selectedInstanceId = null;
-  hoveredInstanceId = null;
-  randomSelectedInstanceIds = [];
-  clearSelectionOverlay();
-  clearHoverOverlay();
-  clearPeerColors();
+  selection.clear();
+  peers.clear();
+  grid.spawn(count);
+  rebuildOverlays();
+}
 
-  const matrix = new THREE.Matrix4();
-  for (let i = 0; i < count; i++) {
-    matrix.setPosition(gridPosition(i, count));
-    instancedMesh.setMatrixAt(i, matrix);
+function clusterPeersAroundSelection(
+  peerCount: number
+): void {
+  if (grid.count === 0) {
+    return;
   }
 
-  instancedMesh.instanceMatrix.needsUpdate = true;
-  instancedMesh.count = count;
-  instancedMesh.computeBoundingSphere();
-  instanceCount = count;
+  if (selection.anchorId === null) {
+    const [centerId] = grid.nearestIds(new THREE.Vector3(), 1);
+    if (centerId === undefined) {
+      return;
+    }
 
-  refreshPeerColors();
+    selection.select(centerId);
+    rebuildOverlays();
+  }
+
+  const anchorId = selection.anchorId;
+  if (anchorId === null) {
+    return;
+  }
+
+  peers.assign(
+    grid.nearestIds(grid.positionOf(anchorId), peerCount, anchorId)
+  );
 }
+
+peerRegistry.addEventListener("peerSelectionChange", refreshHighlightEntries);
+
+onCanvasPick(canvas, {
+  camera,
+  pick: (raycaster) => {
+    const [hit] = raycaster.intersectObject(grid.mesh, false);
+
+    return hit?.instanceId ?? null;
+  },
+  onHover: (instanceId) => {
+    if (selection.hover(instanceId)) {
+      rebuildOverlays();
+    }
+  },
+  onClick: (instanceId) => {
+    selection.select(instanceId);
+    rebuildOverlays();
+  }
+});
 
 spawnInstances(kDefaultInstanceCount);
-
-const raycaster = new THREE.Raycaster();
-const pointerNdc = new THREE.Vector2();
-let pointerDownAt: { x: number; y: number; } | null = null;
-
-canvas.addEventListener("pointermove", (event) => {
-  updatePointerNdc(event);
-  updateHover();
-});
-
-canvas.addEventListener("pointerdown", (event) => {
-  pointerDownAt = { x: event.clientX, y: event.clientY };
-});
-
-canvas.addEventListener("pointerup", (event) => {
-  const downAt = pointerDownAt;
-  pointerDownAt = null;
-
-  if (!downAt) {
-    return;
-  }
-
-  const movedPx = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
-  if (movedPx > kClickDragThresholdPx) {
-    return;
-  }
-
-  updatePointerNdc(event);
-  handleClick();
-});
-
-function updatePointerNdc(
-  event: PointerEvent
-): void {
-  const rect = canvas.getBoundingClientRect();
-  pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-}
-
-function pickInstanceId(): number | null {
-  raycaster.setFromCamera(pointerNdc, camera);
-  const [hit] = raycaster.intersectObject(instancedMesh, false);
-
-  return hit?.instanceId ?? null;
-}
-
-function updateHover(): void {
-  const id = pickInstanceId();
-  if (id === hoveredInstanceId) {
-    return;
-  }
-
-  hoveredInstanceId = id;
-  rebuildOverlays();
-}
-
-function handleClick(): void {
-  randomSelectedInstanceIds = [];
-  selectedInstanceId = pickInstanceId();
-  rebuildOverlays();
-}
-
-const pane = createExamplePane({ title: "Stress" });
-const performanceStats = mountPerformanceStats(renderer);
 
 const stressFolder = pane.addFolder({ title: "Stress Test" });
 const stressSettings = { instanceCount: kDefaultInstanceCount };
@@ -390,7 +214,7 @@ stressFolder
   .on("change", ({ value, last }) => {
     if (last) {
       spawnInstances(Math.round(value));
-      syncCountLimitsToInstanceCount();
+      syncCountLimits();
     }
   });
 
@@ -415,7 +239,7 @@ selectionFolder
   })
   .on("change", ({ value }) => {
     renderMode = value;
-    syncCountLimitsToInstanceCount();
+    syncCountLimits();
     rebuildOverlays();
     updateControlVisibility();
   });
@@ -428,12 +252,6 @@ const xrayBinding = selectionFolder
     rebuildOverlays();
   });
 
-function updateControlVisibility(): void {
-  xrayBinding.hidden = renderMode !== "outline";
-  edgeThicknessBinding.hidden = renderMode !== "peerColors";
-  ringThicknessBinding.hidden = renderMode !== "peerColorsJfa";
-}
-
 const randomFolder = pane.addFolder({ title: "Random Selection" });
 const randomSettings = { count: 0 };
 const randomCountBinding = randomFolder
@@ -443,16 +261,17 @@ const randomCountBinding = randomFolder
     max: randomSelectionMax(),
     step: 1
   })
-  .on("change", ({ value, last }) => {
+  .on("change", ({ last }) => {
     if (last) {
-      randomizeSelection(Math.round(value));
+      randomizeSelection();
     }
   });
 randomFolder.addButton({ title: "Randomize" }).on("click", () => {
-  randomizeSelection(Math.round(randomSettings.count));
+  randomizeSelection();
 });
 randomFolder.addButton({ title: "Clear" }).on("click", () => {
-  clearRandomSelection();
+  selection.select(null);
+  rebuildOverlays();
 });
 
 const peerColorsFolder = pane.addFolder({ title: "Peer Colors" });
@@ -461,41 +280,23 @@ const peerCountBinding = peerColorsFolder
   .addBinding(peerColorsSettings, "peerCount", {
     label: "peer count",
     min: 0,
-    max: instanceCount,
+    max: grid.count,
     step: 1
   })
   .on("change", ({ value, last }) => {
     if (last) {
-      randomizePeerColors(Math.round(value));
+      peers.assign(grid.randomIds(Math.round(value)));
     }
   });
 peerColorsFolder.addButton({ title: "Randomize assignment" }).on("click", () => {
-  randomizePeerColors(Math.round(peerColorsSettings.peerCount));
+  peers.assign(grid.randomIds(Math.round(peerColorsSettings.peerCount)));
 });
-
-function randomSelectionMax(): number {
-  return renderMode === "outline" ? Math.min(instanceCount, kOutlineSelectionCap) : instanceCount;
-}
-
-function syncCountLimitsToInstanceCount(): void {
-  const randomMax = randomSelectionMax();
-  (randomCountBinding.element as HTMLElementTagNameMap["jolly-slider"]).max = randomMax;
-  randomSettings.count = Math.min(randomSettings.count, randomMax);
-  randomCountBinding.refresh();
-  if (randomSelectedInstanceIds.length > randomMax) {
-    randomSelectedInstanceIds = randomSelectedInstanceIds.slice(0, randomMax);
-  }
-
-  (peerCountBinding.element as HTMLElementTagNameMap["jolly-slider"]).max = instanceCount;
-  peerColorsSettings.peerCount = Math.min(peerColorsSettings.peerCount, instanceCount);
-  peerCountBinding.refresh();
-}
 
 const clusterHintRow = document.createElement("jolly-property-row");
 clusterHintRow.description = "Packs peers tightly around your selection to stress the priority guarantee.";
 peerColorsFolder.element.append(clusterHintRow);
 peerColorsFolder.addButton({ title: "Cluster around selection" }).on("click", () => {
-  clusterPeerColorsAroundSelection(Math.round(peerColorsSettings.peerCount));
+  clusterPeersAroundSelection(Math.round(peerColorsSettings.peerCount));
 });
 
 const highlightSettings = { edgeThickness: highlight.edgeThickness };
@@ -512,13 +313,45 @@ const ringThicknessBinding = peerColorsFolder
     highlightJfa.ringThickness = value;
   });
 
+function randomizeSelection(): void {
+  selection.randomize(Math.round(randomSettings.count));
+  rebuildOverlays();
+}
+
+function setSliderMax(
+  binding: { element: HTMLElement; },
+  max: number
+): void {
+  (binding.element as HTMLElementTagNameMap["jolly-slider"]).max = max;
+}
+
+function randomSelectionMax(): number {
+  return renderMode === "outline" ?
+    Math.min(grid.count, kOutlineSelectionCap) :
+    grid.count;
+}
+
+function syncCountLimits(): void {
+  const randomMax = randomSelectionMax();
+  setSliderMax(randomCountBinding, randomMax);
+  randomSettings.count = Math.min(randomSettings.count, randomMax);
+  randomCountBinding.refresh();
+  selection.truncate(randomMax);
+
+  setSliderMax(peerCountBinding, grid.count);
+  peerColorsSettings.peerCount = Math.min(peerColorsSettings.peerCount, grid.count);
+  peerCountBinding.refresh();
+}
+
+function updateControlVisibility(): void {
+  xrayBinding.hidden = renderMode !== "outline";
+  edgeThicknessBinding.hidden = renderMode !== "peerColors";
+  ringThicknessBinding.hidden = renderMode !== "peerColorsJfa";
+}
+
 updateControlVisibility();
 
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls,
+start({
   render: () => {
     if (renderMode === "peerColors") {
       highlight.render();
@@ -529,7 +362,5 @@ startLoop({
     else {
       renderer.render(scene, camera);
     }
-  },
-  onBeforeRender: () => performanceStats.begin(),
-  onAfterRender: () => performanceStats.end()
+  }
 });

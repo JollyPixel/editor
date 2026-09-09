@@ -1,17 +1,12 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { PeerFrustum } from "../../../src/index.ts";
 import {
-  createRenderer,
-  createScene,
-  createOrbitCamera,
-  startLoop
-} from "../../shared/common.ts";
-import { createExamplePane } from "../../shared/example-pane.ts";
-import { mountPerformanceStats } from "../../shared/performance-stats.ts";
+  createExample,
+  orbitCamera
+} from "../../shared/example.ts";
 
 // CONSTANTS
 const kFovRange = { min: 20, max: 120, step: 1 };
@@ -25,23 +20,17 @@ const kRestingPosition = new THREE.Vector3(-3, 2, 3);
 const kOrbitRadius = 4;
 const kOrbitHeight = 2;
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
+const { scene, pane, start } = await createExample({
+  title: "Peer Frustum",
+  background: "#1e2a30",
+  camera: orbitCamera(
+    { x: 6, y: 5, z: 8 },
+    { x: 0, y: 1, z: 0 }
+  )
+});
 
-const scene = createScene("#1e2a30");
 scene.add(new THREE.AxesHelper(1));
 scene.add(new THREE.GridHelper(20, 20, "#3a4750", "#2a3439"));
-
-const { camera, controls } = createOrbitCamera(
-  canvas,
-  { x: 6, y: 5, z: 8 },
-  { x: 0, y: 1, z: 0 }
-);
-
-const pane = createExamplePane({
-  title: "Peer Frustum"
-});
-const performanceStats = mountPerformanceStats(renderer);
 
 const frustumFolder = pane.addFolder({
   title: "Frustum"
@@ -109,7 +98,6 @@ function bindFrustumControls(
     .on("change", ({ value, last }) => last && rebuildFrustum({ aspect: value }));
   frustumFolder
     .addBinding(geometry, "near", kNearRange)
-
     .on("change", ({ value, last }) => last && rebuildFrustum({ near: value }));
   frustumFolder
     .addBinding(geometry, "depth", kDepthRange)
@@ -128,33 +116,29 @@ type GeometryOverrides = Partial<typeof geometry>;
 function rebuildFrustum(
   overrides: GeometryOverrides = {}
 ): void {
-  queueMicrotask(() => rebuildFrustumNow(overrides));
-}
+  queueMicrotask(() => {
+    Object.assign(geometry, overrides);
+    geometry.near = Math.min(
+      geometry.near,
+      geometry.depth * kMaxNearRatio
+    );
 
-function rebuildFrustumNow(
-  overrides: GeometryOverrides
-): void {
-  Object.assign(geometry, overrides);
-  geometry.near = Math.min(
-    geometry.near,
-    geometry.depth * kMaxNearRatio
-  );
+    const { color, displayName, showNameBox, visible } = frustum;
+    scene.remove(frustum);
+    frustum.dispose();
 
-  const { color, displayName, showNameBox, visible } = frustum;
-  scene.remove(frustum);
-  frustum.dispose();
+    frustum = new PeerFrustum({
+      ...geometry,
+      color,
+      displayName,
+      showNameBox
+    });
+    frustum.visible = visible;
+    scene.add(frustum);
+    applyPose();
 
-  frustum = new PeerFrustum({
-    ...geometry,
-    color,
-    displayName,
-    showNameBox
+    bindFrustumControls(frustum);
   });
-  frustum.visible = visible;
-  scene.add(frustum);
-  applyPose();
-
-  bindFrustumControls(frustum);
 }
 
 frustum = new PeerFrustum({
@@ -178,12 +162,4 @@ poseFolder
   });
 poseFolder.addBinding(pose, "speed", kSpeedRange);
 
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls,
-  onFrame: updatePose,
-  onBeforeRender: () => performanceStats.begin(),
-  onAfterRender: () => performanceStats.end()
-});
+start({ update: updatePose });

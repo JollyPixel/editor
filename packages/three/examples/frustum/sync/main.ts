@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network/client";
+import { ColorPalette } from "@jolly-pixel/color";
 import {
   LocalStorageAdapter,
-  peerColor,
   resolveStoredPrompt,
   type PresencePeer
 } from "@jolly-pixel/ui";
@@ -13,15 +13,9 @@ import {
   PeerFrustum
 } from "../../../src/index.ts";
 import { PeerFrustumSync } from "../../../src/network/index.ts";
-import {
-  createRenderer,
-  createScene,
-  startLoop
-} from "../../shared/common.ts";
-import { createExamplePane } from "../../shared/example-pane.ts";
-import { mountPerformanceStats } from "../../shared/performance-stats.ts";
+import { createExample } from "../../shared/example.ts";
 import { PEER_FRUSTUM_ROOM } from "../../shared/rooms.ts";
-import { createFreeFlyCamera } from "./free-fly-camera.ts";
+import { freeFlyCamera } from "./free-fly-camera.ts";
 import { createMirrorRoom } from "./mirror-room.ts";
 
 // CONSTANTS
@@ -34,10 +28,17 @@ const kLocalPeerId = crypto.randomUUID();
 const kBackground = "#1e2a30";
 const kRoomSize = 20;
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
+const {
+  scene,
+  camera,
+  pane,
+  start
+} = await createExample({
+  title: "Peer Frustum (over network)",
+  background: kBackground,
+  camera: freeFlyCamera({ x: 0, y: 2, z: 8 })
+});
 
-const scene = createScene(kBackground);
 scene.add(new Grid({
   extent: kRoomSize,
   followCamera: false,
@@ -55,21 +56,12 @@ scene.add(new Grid({
   }
 }));
 
-const { camera, controls } = createFreeFlyCamera(
-  canvas,
-  { x: 0, y: 2, z: 8 }
-);
-
 const mirrorRoom = createMirrorRoom(camera, {
   size: kRoomSize,
   backdrop: kBackground
 });
 scene.add(mirrorRoom.group);
 
-const pane = createExamplePane({
-  title: "Peer Frustum (over network)"
-});
-const performanceStats = mountPerformanceStats(renderer);
 const username = await resolveStoredPrompt({
   title: "Join peer frustum session",
   label: "Username",
@@ -88,40 +80,26 @@ const networkClient = new network.Client({
 const room = networkClient.room(PEER_FRUSTUM_ROOM);
 room.join();
 
+const colorPalette = new ColorPalette();
+
 const peerFrustumSync = new PeerFrustumSync({
   room,
   parent: scene,
-  color: (clientId, identity) => colorForPeer(
+  color: (clientId, identity) => colorPalette.forKey(
     readPeerId(identity) ?? clientId
   )
 });
 peerFrustumSync.attach(camera);
 
 const selfFrustum = new PeerFrustum({
-  color: colorForPeer(kLocalPeerId),
+  color: colorPalette.forKey(kLocalPeerId),
   displayName: username
 });
 mirrorRoom.showOnlyInMirrors(selfFrustum);
 scene.add(selfFrustum);
 
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls,
-  onFrame: () => {
-    peerFrustumSync.update();
-    selfFrustum.position.copy(camera.position);
-    selfFrustum.quaternion.copy(camera.quaternion);
-    refreshSession();
-  },
-  onBeforeRender: () => performanceStats.begin(),
-  onAfterRender: () => performanceStats.end()
-});
-
 const sessionFolder = pane.addFolder({ title: "Session" });
 const presence = sessionFolder.addPresence();
-let presenceKey = "";
 const sessionState = {
   you: username,
   peers: 0,
@@ -146,38 +124,24 @@ sessionFolder.addMonitors(sessionState, {
   controls: { label: "controls" }
 });
 
-function refreshSession(): void {
-  const peers = presencePeers();
-  const key = peers.map(
-    (peer) => `${peer.clientId}:${peer.displayName}:${peer.color}:${peer.self}`
-  ).join("|");
-  if (key === presenceKey) {
-    return;
-  }
+room.on("sync", refreshSession);
+room.on("peer-joined", refreshSession);
+room.on("peer-left", refreshSession);
+refreshSession();
 
-  presenceKey = key;
+start({
+  update: () => {
+    peerFrustumSync.update();
+    selfFrustum.position.copy(camera.position);
+    selfFrustum.quaternion.copy(camera.quaternion);
+  }
+});
+
+function refreshSession(): void {
   sessionState.peers = room.peers.size;
   peerFrustumSync.refreshColors();
-  selfFrustum.color = colorForPeer(kLocalPeerId);
   sessionFolder.refresh();
-  presence.update(peers);
-}
-
-function colorForPeer(
-  peerId: string
-): string {
-  return peerColor(
-    orderedPeerIds().indexOf(peerId)
-  );
-}
-
-function orderedPeerIds(): string[] {
-  return [
-    kLocalPeerId,
-    ...[...room.peers.values()].map(
-      (peer) => readPeerId(peer.identity) ?? peer.clientId
-    )
-  ].sort();
+  presence.update(presencePeers());
 }
 
 function presencePeers(): PresencePeer[] {
@@ -186,7 +150,7 @@ function presencePeers(): PresencePeer[] {
       return {
         clientId: peer.clientId,
         displayName: readUsername(peer.identity),
-        color: colorForPeer(readPeerId(peer.identity) ?? peer.clientId)
+        color: colorPalette.forKey(readPeerId(peer.identity) ?? peer.clientId)
       };
     })
     .sort((a, b) => a.clientId.localeCompare(b.clientId));
@@ -195,7 +159,7 @@ function presencePeers(): PresencePeer[] {
     {
       clientId: kLocalPeerId,
       displayName: username,
-      color: colorForPeer(kLocalPeerId),
+      color: colorPalette.forKey(kLocalPeerId),
       self: true
     },
     ...remote

@@ -9,21 +9,24 @@ export interface ExampleGroup {
 }
 
 // CONSTANTS
-export const EXAMPLES: ExampleEntry[] = [
-  {
-    label: "Grid",
-    path: "/grid/"
-  },
-  {
-    label: "Area Box",
-    path: "/area-box/"
-  },
-  {
-    label: "Translation Controls",
-    path: "/translation-controls/"
-  }
-];
 export const EXAMPLE_GROUPS: ExampleGroup[] = [
+  {
+    label: "Components",
+    examples: [
+      {
+        label: "Grid",
+        path: "/grid/"
+      },
+      {
+        label: "Area Box",
+        path: "/area-box/"
+      },
+      {
+        label: "Translation Controls",
+        path: "/translation-controls/"
+      }
+    ]
+  },
   {
     label: "Frustum",
     examples: [
@@ -55,11 +58,9 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
     ]
   }
 ];
+
 export function exampleOptions(): Record<string, string> {
   const options: Record<string, string> = { Home: "/" };
-  for (const example of EXAMPLES) {
-    options[example.label] = example.path;
-  }
   for (const group of EXAMPLE_GROUPS) {
     for (const example of group.examples) {
       options[`${group.label}: ${example.label}`] = example.path;

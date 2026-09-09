@@ -13,13 +13,9 @@ import {
   type TranslationSpace
 } from "../../src/index.ts";
 import {
-  createRenderer,
-  createScene,
-  createOrbitCamera,
-  startLoop
-} from "../shared/common.ts";
-import { createExamplePane } from "../shared/example-pane.ts";
-import { mountPerformanceStats } from "../shared/performance-stats.ts";
+  createExample,
+  orbitCamera
+} from "../shared/example.ts";
 
 // CONSTANTS
 const kSnapOptions: Record<string, number> = {
@@ -45,9 +41,22 @@ const kOutlineScaleRange = { min: 1.01, max: 1.5, step: 0.01 };
 const kSizeRange = { min: 0.02, max: 0.1, step: 0.005 };
 const kCenterRadiusRange = { min: 0.05, max: 0.3, step: 0.01 };
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const renderer = await createRenderer(canvas);
-const scene = createScene("#161a21");
+const {
+  canvas,
+  scene,
+  camera,
+  controls: orbit,
+  pane,
+  start
+} = await createExample({
+  title: "Translation Controls",
+  background: "#161a21",
+  camera: orbitCamera(
+    { x: 8, y: 7, z: 10 },
+    { x: 0, y: 1, z: 0 }
+  )
+});
+
 scene.add(new Grid({
   cell: {
     style: "cross",
@@ -65,12 +74,6 @@ scene.add(new Grid({
   },
   hideCellOnSection: true
 }));
-
-const { camera, controls: orbit } = createOrbitCamera(
-  canvas,
-  { x: 8, y: 7, z: 10 },
-  { x: 0, y: 1, z: 0 }
-);
 
 scene.add(
   new THREE.HemisphereLight("#dceaff", "#151820", 2.5),
@@ -107,11 +110,6 @@ const readout = {
   position: formatVector(target.position),
   state: "idle"
 };
-
-const pane = createExamplePane({
-  title: "Translation Controls"
-});
-const performanceStats = mountPerformanceStats(renderer);
 
 const statusFolder = pane.addFolder({ title: "Target" });
 statusFolder.addMonitor(readout, "position", { label: "Position" });
@@ -245,11 +243,4 @@ function rebuild(): void {
   translation = createTranslationControls();
 }
 
-startLoop({
-  renderer,
-  scene,
-  camera,
-  controls: orbit,
-  onBeforeRender: () => performanceStats.begin(),
-  onAfterRender: () => performanceStats.end()
-});
+start();

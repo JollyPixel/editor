@@ -41,6 +41,33 @@ not pages themselves.
 `vite.config.ts` collects build inputs by globbing `**/index.html`, so no
 build wiring is needed.
 
+## The page
+
+An `index.html` needs a `<canvas>` and a `<jolly-scope>`; `createExample()`
+builds the right-hand `#tools` dock inside that scope on its own. Declare a
+`jolly-dock-layout` in the page only to add a dock of your own, as
+`selection/basic` does for its outliner.
+
+## The bootstrap
+
+`shared/example.ts` owns the renderer, scene, camera, dock pane, stats overlay
+and animation loop:
+
+```ts
+const { scene, pane, start } = await createExample({
+  title: "Grid",
+  background: "#1a1a2e",
+  camera: orbitCamera({ x: 8, y: 6, z: 8 }, { x: 0, y: 0, z: 0 })
+});
+
+start({ update: tickScene });
+```
+
+`start()` renders `scene` through `camera` unless the example passes its own
+`render`, which replaces that call rather than adding to it. Pass a camera
+factory other than `orbitCamera` to drive the camera differently;
+`frustum/sync/free-fly-camera.ts` is one.
+
 ## Where code goes
 
 Keep a helper inside the example that uses it. Move it up to the family's
