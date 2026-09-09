@@ -50,6 +50,7 @@ import { GRAPH_EXAMPLE } from "./examples/monitors/graph.ts";
 import { FACADE_PARITY_EXAMPLE } from "./examples/scenarios/facadeParity.ts";
 import { STATS_CYCLE_EXAMPLE } from "./examples/scenarios/statsCycle.ts";
 import { PROGRESS_EXAMPLE } from "./examples/feedback/progress.ts";
+import { LOG_EXAMPLE } from "./examples/feedback/log.ts";
 import {
   VECTOR2_EXAMPLE,
   VECTOR2_XZ_EXAMPLE
@@ -118,6 +119,7 @@ export const manifest: readonly GalleryExample[] = [
   MONITOR_EXAMPLE,
   GRAPH_EXAMPLE,
   PROGRESS_EXAMPLE,
+  LOG_EXAMPLE,
   VECTOR2_EXAMPLE,
   VECTOR2_XZ_EXAMPLE,
   VECTOR3_EXAMPLE,

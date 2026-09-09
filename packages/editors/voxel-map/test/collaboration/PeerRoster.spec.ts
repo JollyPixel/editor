@@ -7,8 +7,12 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
+import { render } from "lit";
 import type * as network from "@jolly-pixel/network";
-import type { PresencePeer } from "@jolly-pixel/ui";
+import {
+  LogQueue,
+  type PresencePeer
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -31,17 +35,19 @@ type RoomEvent = "sync" | "peer-joined" | "peer-left";
 
 interface RosterHarness {
   roster: PeerRoster;
+  log: LogQueue;
   addPeer(clientId: string, identity?: network.PeerMetadata): void;
   removePeer(clientId: string): void;
-  emit(event: RoomEvent): void;
+  emit(event: RoomEvent, clientId?: string): void;
   listenerCount(event: RoomEvent): number;
 }
 
 function createHarness(
-  shell: ShellStore = editorState.shell
+  shell: ShellStore = editorState.shell,
+  log: LogQueue = new LogQueue()
 ): RosterHarness {
   const peerMap = new Map<string, network.Peer>();
-  const listeners = new Map<string, Set<() => void>>();
+  const listeners = new Map<string, Set<(event: { clientId: string; }) => void>>();
   const room = {
     id: "voxel-room",
     clientId: "local",
@@ -50,7 +56,7 @@ function createHarness(
     leave: () => void 0,
     send: () => void 0,
     updatePresence: () => void 0,
-    on: (event: string, listener: () => void) => {
+    on: (event: string, listener: (event: { clientId: string; }) => void) => {
       let bucket = listeners.get(event);
       if (!bucket) {
         bucket = new Set();
@@ -58,16 +64,18 @@ function createHarness(
       }
       bucket.add(listener);
     },
-    off: (event: string, listener: () => void) => {
+    off: (event: string, listener: (event: { clientId: string; }) => void) => {
       listeners.get(event)?.delete(listener);
     }
   } as unknown as network.Room<any, any>;
 
   return {
+    log,
     roster: new PeerRoster({
       room,
       identity: kLocalIdentity,
-      shell
+      shell,
+      log
     }),
     addPeer(clientId, identity = {}) {
       peerMap.set(clientId, {
@@ -79,9 +87,9 @@ function createHarness(
     removePeer(clientId) {
       peerMap.delete(clientId);
     },
-    emit(event) {
+    emit(event, clientId = "client-a") {
       for (const listener of listeners.get(event) ?? []) {
-        listener();
+        listener({ clientId });
       }
     },
     listenerCount(event) {
@@ -92,6 +100,17 @@ function createHarness(
 
 function currentPeers(): readonly PresencePeer[] {
   return editorState.shell.peers;
+}
+
+function messagesOf(
+  log: LogQueue
+): string[] {
+  return log.entries.map((entry) => {
+    const container = document.createElement("div");
+    render(entry.content, container);
+
+    return container.textContent?.trim() ?? "";
+  });
 }
 
 describe("PeerRoster", () => {
@@ -178,6 +197,46 @@ describe("PeerRoster", () => {
     harness.emit("peer-left");
 
     assert.strictEqual(currentPeers().length, 1);
+  });
+
+  test("announces a peer that joined", () => {
+    const harness = createHarness();
+    harness.addPeer("client-a", { username: "Alan", peerId: "a" });
+
+    harness.emit("peer-joined", "client-a");
+
+    assert.deepStrictEqual(messagesOf(harness.log), ["Alan has joined"]);
+  });
+
+  test("announces a peer that left under its last known name", () => {
+    const harness = createHarness();
+    harness.addPeer("client-a", { username: "Alan", peerId: "a" });
+    harness.emit("peer-joined", "client-a");
+
+    harness.removePeer("client-a");
+    harness.emit("peer-left", "client-a");
+
+    assert.deepStrictEqual(messagesOf(harness.log), [
+      "Alan has left",
+      "Alan has joined"
+    ]);
+  });
+
+  test("says nothing for the members carried by the join sync", () => {
+    const harness = createHarness();
+    harness.addPeer("client-a", { username: "Alan", peerId: "a" });
+
+    harness.emit("sync");
+
+    assert.deepStrictEqual(messagesOf(harness.log), []);
+  });
+
+  test("says nothing about the local peer", () => {
+    const harness = createHarness();
+
+    harness.emit("peer-joined", "local-peer");
+
+    assert.deepStrictEqual(messagesOf(harness.log), []);
   });
 
   test("empties the roster and unsubscribes on dispose", () => {

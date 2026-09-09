@@ -66,3 +66,29 @@ jolly-pane::part(content) {
   scrollbar-width: thin;
   scrollbar-color: #2a3a4a #0a0f12;
 }
+
+#game-container::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  width: 420px;
+  height: 220px;
+  background: linear-gradient(
+    to bottom right,
+    rgb(0 0 0 / 0.8),
+    transparent 70%
+  );
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+#game-container:has(jolly-log[empty])::before {
+  opacity: 0;
+}
+
+#game-container jolly-log {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-start: 16px;
+}

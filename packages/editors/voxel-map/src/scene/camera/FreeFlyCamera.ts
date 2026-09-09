@@ -278,7 +278,13 @@ export class FreeFlyCamera extends CameraComponent {
       Math.min(this.#maxPitch, result.pitch)
     );
     this.#vel.set(0, 0, 0);
-    this.#orbitFocus.updatePose(transform, this.#yaw, this.#pitch, 0, this.#responsiveness);
+    this.#orbitFocus.updatePose(
+      transform,
+      this.#yaw,
+      this.#pitch,
+      0,
+      this.#responsiveness
+    );
   }
 
   exitOrbitFocus(): void {
@@ -399,10 +405,21 @@ export class FreeFlyCamera extends CameraComponent {
     }
 
     if (this.#orbitFocus?.isOrbiting) {
-      this.#orbitFocus.updatePose(transform, this.#yaw, this.#pitch, deltaTime, this.#responsiveness);
+      this.#orbitFocus.updatePose(
+        transform,
+        this.#yaw,
+        this.#pitch,
+        deltaTime,
+        this.#responsiveness
+      );
     }
     if (this.#elasticFocus) {
-      this.#elasticFocus.updatePose(transform, this.#orientation, deltaTime, this.#responsiveness);
+      this.#elasticFocus.updatePose(
+        transform,
+        this.#orientation,
+        deltaTime,
+        this.#responsiveness
+      );
     }
   }
 }
