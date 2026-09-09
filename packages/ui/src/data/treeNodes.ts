@@ -66,6 +66,26 @@ export function findParentId<TData>(
   return undefined;
 }
 
+/** Node ids from the root down to `id` itself, inclusive. */
+export function ancestorChain<TData>(
+  nodes: readonly TreeNode<TData>[],
+  id: string
+): string[] {
+  const chain = [id];
+  let current = id;
+
+  for (;;) {
+    const parentId = findParentId(nodes, current);
+    if (parentId === undefined || parentId === null) {
+      break;
+    }
+    chain.unshift(parentId);
+    current = parentId;
+  }
+
+  return chain;
+}
+
 export function isSelfOrDescendant<TData>(
   nodes: readonly TreeNode<TData>[],
   ancestorId: string,

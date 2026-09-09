@@ -21,3 +21,20 @@ export function resolveRowDropZone(
 
   return "inside";
 }
+
+/**
+ * Past the edge row, horizontal position picks how far to promote the
+ * dragged node: band 0 is the root's own indent, and each step right moves
+ * one level deeper, capping at `chainLength - 1` (the edge row's own depth,
+ * a no-op when that row is the node being dragged).
+ */
+export function resolveDropDepth(
+  clientX: number,
+  containerLeft: number,
+  indentUnit: number,
+  chainLength: number
+): number {
+  const depth = Math.floor((clientX - containerLeft) / indentUnit);
+
+  return Math.min(Math.max(depth, 0), chainLength - 1);
+}

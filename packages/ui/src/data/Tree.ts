@@ -12,9 +12,13 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { canDrop } from "./resolveReparent.ts";
+import {
+  canDrop,
+  resolveDepthDropTarget
+} from "./resolveReparent.ts";
 import { resolveRename } from "./resolveRename.ts";
 import { resolveRowDropZone } from "./dropZone.ts";
+import { beginRowDrag } from "./rowDragSession.ts";
 import { resolveSelection } from "./selection.ts";
 import {
   findNode,
@@ -45,8 +49,8 @@ interface MoveState {
 }
 
 // CONSTANTS
-const kDraggingClass = "jolly-tree-dragging";
 const kRowDragThreshold = 4;
+const kDefaultIndent = 16;
 
 /**
  * A generic tree of `{ id, label, children }` rows, with drag and drop
@@ -156,6 +160,9 @@ export class Tree<TData = unknown> extends LitElement {
     const isMoveCursor = this._moveState?.cursorId === node.id;
     const expandedState = isBranch ? String(isExpanded) : nothing;
     const isHidden = node.visible === false;
+    // Exposed as a custom property, not just inline padding, so the
+    // `inside` drop indicator can start its border at the same offset.
+    const rowIndent = `calc(${depth} * var(--jolly-tree-indent, 16px))`;
 
     return html`
       <div
@@ -169,7 +176,7 @@ export class Tree<TData = unknown> extends LitElement {
         data-drop=${drop ?? nothing}
         data-move-cursor=${isMoveCursor ? "true" : nothing}
         data-hidden=${isHidden ? "true" : nothing}
-        style="padding-inline-start: calc(${depth} * var(--jolly-tree-indent, 16px))"
+        style="--jolly-tree-row-indent: ${rowIndent}; padding-inline-start: var(--jolly-tree-row-indent)"
         @click=${(event: MouseEvent) => this.#onRowClick(event, node.id)}
         @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, node.id)}
         @pointerdown=${(event: PointerEvent) => this.#onRowPointerDown(event, node.id)}
@@ -697,97 +704,25 @@ export class Tree<TData = unknown> extends LitElement {
     movedIds: string[],
     options: { element: HTMLElement; threshold: number; }
   ): void {
-    const { element, threshold } = options;
-    const pointerId = event.pointerId;
-    const originX = event.clientX;
-    const originY = event.clientY;
-    const self = this;
-    let armed = false;
-
-    function arm(): void {
-      armed = true;
-      element.setPointerCapture(pointerId);
-      self.#suppressClick = true;
-      self._dragMovedIds = movedIds;
-      document.documentElement.classList.add(kDraggingClass);
-    }
-
-    function onMove(
-      moveEvent: PointerEvent
-    ): void {
-      if (moveEvent.pointerId !== pointerId) {
-        return;
-      }
-      if (!armed) {
-        const distance = Math.hypot(moveEvent.clientX - originX, moveEvent.clientY - originY);
-        if (distance < threshold) {
-          return;
+    beginRowDrag(event, options, {
+      onArm: () => {
+        this.#suppressClick = true;
+        this._dragMovedIds = movedIds;
+      },
+      onMove: (clientX, clientY) => this.#previewDrop(clientX, clientY, movedIds),
+      onFinish: (commit) => {
+        const preview = this._dragPreview;
+        this._dragPreview = null;
+        this._dragMovedIds = null;
+        if (commit && preview !== null) {
+          emitDataEvent(this, "jolly-reparent", {
+            movedIds,
+            targetId: preview.targetId,
+            where: preview.where
+          });
         }
-        arm();
       }
-      self.#previewDrop(moveEvent.clientX, moveEvent.clientY, movedIds);
-    }
-
-    function onKeyDown(
-      keyEvent: KeyboardEvent
-    ): void {
-      if (keyEvent.key !== "Escape") {
-        return;
-      }
-      keyEvent.preventDefault();
-      finish(false);
-    }
-
-    function finish(
-      commit: boolean
-    ): void {
-      element.removeEventListener("pointermove", onMove);
-      element.removeEventListener("pointerup", onUp);
-      element.removeEventListener("pointercancel", onCancel);
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (!armed) {
-        return;
-      }
-
-      if (element.hasPointerCapture(pointerId)) {
-        element.releasePointerCapture(pointerId);
-      }
-      document.documentElement.classList.remove(kDraggingClass);
-
-      const preview = self._dragPreview;
-      self._dragPreview = null;
-      self._dragMovedIds = null;
-      if (commit && preview !== null) {
-        emitDataEvent(self, "jolly-reparent", {
-          movedIds,
-          targetId: preview.targetId,
-          where: preview.where
-        });
-      }
-    }
-
-    function onUp(
-      upEvent: PointerEvent
-    ): void {
-      if (upEvent.pointerId === pointerId) {
-        finish(true);
-      }
-    }
-    function onCancel(
-      cancelEvent: PointerEvent
-    ): void {
-      if (cancelEvent.pointerId === pointerId) {
-        finish(false);
-      }
-    }
-
-    if (threshold === 0) {
-      arm();
-    }
-    element.addEventListener("pointermove", onMove);
-    element.addEventListener("pointerup", onUp);
-    element.addEventListener("pointercancel", onCancel);
-    document.addEventListener("keydown", onKeyDown, true);
+    });
   }
 
   #previewDrop(
@@ -795,10 +730,14 @@ export class Tree<TData = unknown> extends LitElement {
     clientY: number,
     movedIds: string[]
   ): void {
+    const rows = this.#visibleRows();
+    const firstRow = rows[0];
+    const lastRow = rows[rows.length - 1];
+
     const target = this.shadowRoot?.elementFromPoint(clientX, clientY) ?? null;
     const rowElement = target instanceof Element ? target.closest<HTMLElement>(".row") : null;
     if (rowElement === null) {
-      this._dragPreview = null;
+      this._dragPreview = this.#resolveEdgeDrop(firstRow, lastRow, clientX, clientY, movedIds);
 
       return;
     }
@@ -813,6 +752,20 @@ export class Tree<TData = unknown> extends LitElement {
     const rect = rowElement.getBoundingClientRect();
     const where = resolveRowDropZone(clientY - rect.top, rect.height);
 
+    // On the outer edge of the last or first row: same depth gesture, so
+    // promoting past a childless edge row reads the same as the dead zone
+    // beyond it.
+    if (lastRow !== undefined && targetId === lastRow.node.id && where === "below") {
+      this._dragPreview = this.#resolveDepthDrop(lastRow, clientX, movedIds, "below");
+
+      return;
+    }
+    if (firstRow !== undefined && targetId === firstRow.node.id && where === "above") {
+      this._dragPreview = this.#resolveDepthDrop(firstRow, clientX, movedIds, "above");
+
+      return;
+    }
+
     this._dragPreview = canDrop({
       nodes: this.nodes,
       movedIds,
@@ -822,6 +775,50 @@ export class Tree<TData = unknown> extends LitElement {
     }) ?
       { targetId, where } :
       null;
+  }
+
+  #resolveEdgeDrop(
+    firstRow: FlatTreeRow<TData> | undefined,
+    lastRow: FlatTreeRow<TData> | undefined,
+    clientX: number,
+    clientY: number,
+    movedIds: string[]
+  ): DragPreview | null {
+    if (firstRow === undefined || lastRow === undefined) {
+      return null;
+    }
+
+    const containerTop = this.renderRoot.querySelector(".rows")?.getBoundingClientRect().top;
+    const isAboveEverything = containerTop !== undefined && clientY < containerTop;
+
+    return isAboveEverything ?
+      this.#resolveDepthDrop(firstRow, clientX, movedIds, "above") :
+      this.#resolveDepthDrop(lastRow, clientX, movedIds, "below");
+  }
+
+  #resolveDepthDrop(
+    row: FlatTreeRow<TData>,
+    clientX: number,
+    movedIds: string[],
+    where: "above" | "below"
+  ): DragPreview | null {
+    const containerLeft = this.renderRoot.querySelector(".rows")?.getBoundingClientRect().left;
+    if (containerLeft === undefined) {
+      return null;
+    }
+
+    return resolveDepthDropTarget({
+      nodes: this.nodes,
+      movedIds,
+      rowId: row.node.id,
+      clientX,
+      containerLeft,
+      indentUnit: parseFloat(
+        getComputedStyle(this).getPropertyValue("--jolly-tree-indent")
+      ) || kDefaultIndent,
+      where,
+      accept: this.acceptDrop
+    });
   }
 }
 

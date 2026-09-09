@@ -58,6 +58,17 @@ paints no drop indicator and never reaches `jolly-reparent`. A predicate that
 runs on every pointer move should stay cheap. The structural rule runs first,
 so `acceptDrop` is never asked about a move that is already impossible.
 
+## Promoting a nested row back out while dragging
+
+Dropping below the last visible row is not restricted to that row's own
+level. Horizontal position picks the depth: each ancestor of the last row
+owns the indent band at its own depth, root leftmost through the last row's
+own depth rightmost. Dragging a nested row into the band under its parent's
+indent (or further left, under an outer ancestor, or straight to the
+container's edge for the root) reparents it there instead of leaving it
+under its original parent. The drop indicator's line starts at that band's
+indent, so the target depth is visible before release.
+
 ## Marking a row with badges
 
 `TreeNode.badges` renders a list of `{ color, title }` as small dots between

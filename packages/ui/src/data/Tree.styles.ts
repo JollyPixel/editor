@@ -166,16 +166,37 @@ export const treeStyles = css`
     opacity: 0.4;
   }
 
-  .row[data-drop="above"] {
-    box-shadow: inset 0 1px 0 0 var(--jolly-accent-fill, ${kFallback.focusRing});
+  /*
+   * Pseudo-elements, not box-shadow: each needs its own inline-start so it
+   * hugs the row's content instead of also spanning the blank indent gutter
+   * to its left.
+   */
+  .row[data-drop="above"]::after,
+  .row[data-drop="below"]::after {
+    content: "";
+    position: absolute;
+    inset-inline: var(--jolly-tree-row-indent, 0px) 0;
+    height: 1px;
+    background: var(--jolly-accent-fill, ${kFallback.focusRing});
+    pointer-events: none;
   }
 
-  .row[data-drop="below"] {
-    box-shadow: inset 0 -1px 0 0 var(--jolly-accent-fill, ${kFallback.focusRing});
+  .row[data-drop="above"]::after {
+    top: 0;
   }
 
-  .row[data-drop="inside"] {
-    box-shadow: inset 0 0 0 1px var(--jolly-accent-fill, ${kFallback.focusRing});
+  .row[data-drop="below"]::after {
+    bottom: 0;
+  }
+
+  .row[data-drop="inside"]::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline: var(--jolly-tree-row-indent, 0px) 0;
+    border: 1px solid var(--jolly-accent-fill, ${kFallback.focusRing});
+    border-radius: inherit;
+    pointer-events: none;
   }
 
   .row[data-move-cursor="true"] {
