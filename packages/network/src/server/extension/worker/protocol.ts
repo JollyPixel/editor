@@ -1,6 +1,29 @@
+// Import Third-party Dependencies
+import { Validator } from "ata-validator";
+
 // Import Internal Dependencies
+import {
+  hostWorkerDataSchema,
+  mainToWorkerSchema,
+  workerToMainSchema
+} from "./protocol.schema.ts";
 import type { RoomAppendInput } from "../Extension.ts";
 import type { PeerMetadata } from "../../../protocol/types.ts";
+
+// CONSTANTS
+const kValidatorOptions = { useDefaults: false };
+const kHostWorkerData = new Validator(
+  hostWorkerDataSchema,
+  kValidatorOptions
+);
+const kMainToWorker = new Validator(
+  mainToWorkerSchema,
+  kValidatorOptions
+);
+const kWorkerToMain = new Validator(
+  workerToMainSchema,
+  kValidatorOptions
+);
 
 export interface DispatchArgsMap {
   onClientConnect: [clientId: string, identity: PeerMetadata];
@@ -70,4 +93,22 @@ export interface HostWorkerData {
   modulePath: string;
   exportName?: string;
   extensionWorkerData?: unknown;
+}
+
+export function isHostWorkerData(
+  value: unknown
+): value is HostWorkerData {
+  return kHostWorkerData.isValidObject(value);
+}
+
+export function isMainToWorkerMessage(
+  value: unknown
+): value is MainToWorkerMessage {
+  return kMainToWorker.isValidObject(value);
+}
+
+export function isWorkerToMainMessage(
+  value: unknown
+): value is WorkerToMainMessage {
+  return kWorkerToMain.isValidObject(value);
 }

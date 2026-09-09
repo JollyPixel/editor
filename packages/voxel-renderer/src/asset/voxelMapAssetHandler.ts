@@ -15,6 +15,7 @@ import {
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
+import { voxelProtocols } from "../network/VoxelCommand.schema.ts";
 import {
   isVoxelBlockCommand,
   isVoxelNetworkCommand
@@ -131,7 +132,7 @@ export function voxelMapAssetHandler(
 
       return {
         commandEventType: VOXEL_MAP_COMMAND,
-        actions: VOXEL_MAP_ACTIONS,
+        protocols: voxelProtocols,
 
         parse(payload) {
           return isVoxelNetworkCommand(payload) ? payload : null;

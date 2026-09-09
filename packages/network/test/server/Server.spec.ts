@@ -12,13 +12,20 @@ import * as EventStore from "@jolly-pixel/event-store";
 import {
   Server,
   Extension,
+  UngatedExtensionError,
   type ClientHandle,
+  type MessageProtocols,
   type RoomContext
 } from "#src/index.ts";
+import {
+  actionProtocols,
+  OPAQUE_PROTOCOLS
+} from "../helpers/protocols.ts";
 
 class RecordingExtension extends Extension {
   readonly id: string;
   readonly name: string;
+  readonly protocols: MessageProtocols;
   connected: string[] = [];
   disconnected: string[] = [];
   messages: { clientId: string; payload: unknown; }[] = [];
@@ -27,11 +34,13 @@ class RecordingExtension extends Extension {
 
   constructor(
     id: string,
-    name: string = id
+    name: string = id,
+    protocols: MessageProtocols = OPAQUE_PROTOCOLS
   ) {
     super();
     this.id = id;
     this.name = name;
+    this.protocols = protocols;
   }
 
   onClientConnect(
@@ -59,12 +68,6 @@ class RecordingExtension extends Extension {
   ): void {
     this.messages.push({ clientId, payload });
     this.context = context;
-  }
-
-  override getEventName(
-    payload: unknown
-  ): string {
-    return (payload as { action: string; }).action;
   }
 }
 
@@ -185,6 +188,24 @@ describe("Server", () => {
       await server.handleMessage("A", { room: "pixel-draw", kind: "message", payload: {} });
     });
     assert.deepEqual(extension.connected, []);
+    assert.deepEqual(extension.messages, []);
+  });
+
+  test("drops an envelope of a kind only the server originates", async() => {
+    const server = new Server();
+    const extension = new RecordingExtension("pixel-draw");
+    server.register(extension);
+
+    const { client } = createClient("A");
+    server.handleConnect(client);
+
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", {
+      room: "pixel-draw",
+      kind: "peer-left",
+      clientId: "B"
+    });
+
     assert.deepEqual(extension.messages, []);
   });
 });
@@ -468,7 +489,7 @@ describe("Server — rights: denied join", () => {
     "a client denied at join is not tracked as a room member, so later messages/presence never reach the extension",
     async() => {
       const server = new Server({ rights: { viewer: { "pixel-draw.$join": "void" } } });
-      const extension = new RecordingExtension("pixel-draw");
+      const extension = new RecordingExtension("pixel-draw", "pixel-draw", actionProtocols);
       server.register(extension);
 
       const { client, sent } = createClient("A");
@@ -506,7 +527,7 @@ describe("Server — rights: denied join", () => {
     const server = new Server({
       rights: { viewer: { "pixel-draw.voxel-set": "read" } }
     });
-    const extension = new RecordingExtension("pixel-draw");
+    const extension = new RecordingExtension("pixel-draw", "pixel-draw", actionProtocols);
     server.register(extension);
 
     const { client, sent } = createClient("A");
@@ -533,8 +554,8 @@ describe("Server — rights: denied join", () => {
     const server = new Server({
       rights: { viewer: { "voxel.renderer.voxel-set": "read" } }
     });
-    const worldOne = new RecordingExtension("voxel-map:world-1", "voxel.renderer");
-    const worldTwo = new RecordingExtension("voxel-map:world-2", "voxel.renderer");
+    const worldOne = new RecordingExtension("voxel-map:world-1", "voxel.renderer", actionProtocols);
+    const worldTwo = new RecordingExtension("voxel-map:world-2", "voxel.renderer", actionProtocols);
     server.register(worldOne);
     server.register(worldTwo);
 
@@ -596,6 +617,25 @@ describe("Server — event store", () => {
     assert.deepEqual(
       eventStore.reader.list("asset-1").map((event) => event.eventData),
       [{ x: 1 }]
+    );
+  });
+});
+
+describe("Server — rights: extension gating contract", () => {
+  test("refuses an extension with no inbound protocol when a rights table is configured", () => {
+    const server = new Server({ rights: { viewer: { "pixel-draw.$join": "void" } } });
+
+    assert.throws(
+      () => server.register(new RecordingExtension("pixel-draw")),
+      UngatedExtensionError
+    );
+  });
+
+  test("admits an extension with no inbound protocol when no rights table is configured", () => {
+    const server = new Server();
+
+    assert.doesNotThrow(
+      () => server.register(new RecordingExtension("pixel-draw"))
     );
   });
 });

@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test": "npm run typecheck && c8 -r html npm run test-only",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "eslint src test",
     "bench": "jolly-bench"
   },
   "publishConfig": {

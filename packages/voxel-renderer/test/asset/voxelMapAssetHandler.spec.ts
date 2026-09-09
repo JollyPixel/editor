@@ -11,6 +11,7 @@ import {
   type AssetEventData,
   type AssetLiveProtocol
 } from "@jolly-pixel/asset-server";
+import { protocolEvents } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -20,7 +21,10 @@ import {
   voxelMapAssetHandler,
   VoxelMapState
 } from "../../src/asset/index.ts";
-import { decodeVoxelDocument, encodeVoxelDocument } from "../../src/serialization/index.ts";
+import {
+  decodeVoxelDocument,
+  encodeVoxelDocument
+} from "../../src/serialization/index.ts";
 import { resolveBlockDefinition } from "../../src/blocks/index.ts";
 import type { VoxelNetworkCommand } from "../../src/network/index.ts";
 import {
@@ -328,8 +332,10 @@ describe("voxelMapAssetHandler", () => {
     const { protocol } = live();
 
     assert.strictEqual(protocol.commandEventType, VOXEL_MAP_COMMAND);
-    assert.deepEqual([...protocol.actions], [...VOXEL_MAP_ACTIONS]);
-    assert.ok(protocol.actions.includes("world-replace"));
+    const events = protocolEvents(protocol.protocols.inbound!);
+
+    assert.deepEqual(events.toSorted(), [...VOXEL_MAP_ACTIONS].toSorted());
+    assert.ok(events.includes("world-replace"));
   });
 
   test("live() rejects a payload that is not a voxel command", () => {

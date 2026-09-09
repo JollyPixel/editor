@@ -8,7 +8,7 @@ import type {
   ClientSession,
   ClientSessions
 } from "./ClientSessions.ts";
-import type { Envelope } from "../protocol/Envelope.ts";
+import type { ClientEnvelope } from "../protocol/Envelope.ts";
 
 /**
  * Result logged once for each dispatched envelope.
@@ -37,12 +37,9 @@ export class EnvelopeDispatcher {
     this.#sessions = options.sessions;
   }
 
-  /**
-   * Only joins may resolve or create unknown rooms.
-   */
   async dispatch(
     clientId: string,
-    envelope: Envelope
+    envelope: ClientEnvelope
   ): Promise<DispatchOutcome> {
     const session = this.#sessions.get(clientId);
     if (session === undefined) {
@@ -67,15 +64,13 @@ export class EnvelopeDispatcher {
       .with({ kind: "leave" }, (envelope) => this.#handleLeave(session, envelope))
       .with({ kind: "message" }, (envelope) => this.#handleMessage(session, room, envelope))
       .with({ kind: "presence" }, (envelope) => this.#handlePresence(session, room, envelope))
-      .otherwise((): DispatchOutcome => {
-        return { outcome: "ignored" };
-      });
+      .exhaustive();
   }
 
   async #handleJoin(
     session: ClientSession,
     room: ServerRoom,
-    envelope: Extract<Envelope, { kind: "join"; }>
+    envelope: Extract<ClientEnvelope, { kind: "join"; }>
   ): Promise<DispatchOutcome> {
     if (session.rooms.has(envelope.room)) {
       return {
@@ -102,14 +97,13 @@ export class EnvelopeDispatcher {
       return { outcome: "joined" };
     }
     finally {
-      // A denied join may leave a new room empty; start its eviction timer.
       this.#rooms.syncEviction(envelope.room);
     }
   }
 
   async #handleLeave(
     session: ClientSession,
-    envelope: Extract<Envelope, { kind: "leave"; }>
+    envelope: Extract<ClientEnvelope, { kind: "leave"; }>
   ): Promise<DispatchOutcome> {
     if (!session.rooms.delete(envelope.room)) {
       return {
@@ -118,7 +112,10 @@ export class EnvelopeDispatcher {
       };
     }
 
-    await this.#rooms.leave(envelope.room, session.handle.id);
+    await this.#rooms.leave(
+      envelope.room,
+      session.handle.id
+    );
 
     return { outcome: "left" };
   }
@@ -126,7 +123,7 @@ export class EnvelopeDispatcher {
   async #handleMessage(
     session: ClientSession,
     room: ServerRoom,
-    envelope: Extract<Envelope, { kind: "message"; }>
+    envelope: Extract<ClientEnvelope, { kind: "message"; }>
   ): Promise<DispatchOutcome> {
     if (!session.rooms.has(envelope.room)) {
       return {
@@ -146,7 +143,7 @@ export class EnvelopeDispatcher {
   #handlePresence(
     session: ClientSession,
     room: ServerRoom,
-    envelope: Extract<Envelope, { kind: "presence"; }>
+    envelope: Extract<ClientEnvelope, { kind: "presence"; }>
   ): DispatchOutcome {
     if (!session.rooms.has(envelope.room)) {
       return {
@@ -157,7 +154,7 @@ export class EnvelopeDispatcher {
 
     room.updatePresence(
       session.handle.id,
-      envelope.patch ?? Object.create(null)
+      envelope.patch
     );
 
     return { outcome: "handled" };

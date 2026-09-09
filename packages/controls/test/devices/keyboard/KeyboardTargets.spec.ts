@@ -88,7 +88,6 @@ describe("Controls.Keyboard targets", () => {
     test("Escape is not prevented, so native dialog can close on it", () => {
       const event = documentAdapter.dispatchEvent(
         "keydown",
-        // @ts-expect-error
         { code: "Escape" }
       );
 

@@ -3,7 +3,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { RoomContext, RoomEventStoreHandle } from "@jolly-pixel/network";
+import {
+  MessageParser,
+  protocolEvents,
+  type RoomContext,
+  type RoomEventStoreHandle
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -38,16 +43,11 @@ function createClient(id: string): MockClient {
   };
 }
 
-// receive() never touches eventStore, so every RoomContext in this file shares one unused stub.
 const unusedEventStore: RoomEventStoreHandle = {
   append: () => Promise.resolve(true),
   list: () => Promise.resolve([])
 };
 
-/**
- * A RoomContext delivering every broadcast to `deliver`, which defaults to
- * dropping them for the tests that only care about the server's own state.
- */
 function roomContext(
   deliver: (payload: unknown) => void = () => void 0
 ): RoomContext {
@@ -62,11 +62,6 @@ function roomContext(
 
 const noopRoom = roomContext();
 
-/**
- * Connects a client and returns a RoomContext that forwards broadcasts
- * straight to it — the single-client fake a unit test needs to observe
- * `receive()`'s broadcasts.
- */
 function observe(
   server: VoxelSyncServer,
   client: MockClient
@@ -393,26 +388,32 @@ describe("VoxelSyncServer — rights", () => {
     assert.equal(new VoxelSyncServer({ id: "voxel-map:world-2" }).name, "voxel.renderer");
   });
 
-  it("exposes its full action vocabulary via events", () => {
+  it("declares its full action vocabulary through the inbound protocol", () => {
     const server = new VoxelSyncServer();
+    const events = protocolEvents(server.protocols.inbound!);
 
-    assert.ok(server.events.includes("voxel-set"));
-    assert.ok(server.events.includes("object-added"));
-    assert.ok(server.events.includes("block-defined"));
-    assert.ok(server.events.includes("block-removed"));
-    assert.equal(server.events.length, 21);
+    assert.ok(events.includes("voxel-set"));
+    assert.ok(events.includes("object-added"));
+    assert.ok(events.includes("block-defined"));
+    assert.ok(events.includes("block-removed"));
+    assert.ok(events.includes("world-replace"));
+    assert.equal(events.length, 22);
   });
 
-  it("getEventName() reads the command's action", () => {
+  it("parses a command to its action through the inbound protocol", () => {
     const server = new VoxelSyncServer();
+    const parser = new MessageParser(server.protocols.inbound!);
 
-    assert.equal(server.getEventName(voxelSetCmd()), "voxel-set");
+    const parsed = parser.parse(voxelSetCmd());
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.val.event, "voxel-set");
   });
 
-  it("getEventName() returns \"unknown\" for a payload that isn't a VoxelNetworkCommand", () => {
+  it("rejects a payload that is not a VoxelNetworkCommand", () => {
     const server = new VoxelSyncServer();
+    const parser = new MessageParser(server.protocols.inbound!);
 
-    assert.equal(server.getEventName({ not: "a command" }), "unknown");
+    assert.equal(parser.parse({ not: "a command" }).ok, false);
   });
 });
 

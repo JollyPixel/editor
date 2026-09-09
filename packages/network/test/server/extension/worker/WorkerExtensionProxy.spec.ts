@@ -9,6 +9,10 @@ import { setImmediate as flushMacrotask } from "node:timers/promises";
 // Import Internal Dependencies
 import { WorkerExtensionProxy } from "#src/server/extension/worker/WorkerExtensionProxy.ts";
 import { createLogger } from "#src/server/logger.ts";
+import {
+  actionProtocols,
+  OPAQUE_PROTOCOLS
+} from "../../../helpers/protocols.ts";
 import type {
   RoomContext,
   WorkerExtensionDescriptor
@@ -36,6 +40,7 @@ function createDescriptor(
   return {
     id: "room-1",
     name: "ext",
+    protocols: OPAQUE_PROTOCOLS,
     modulePath: "irrelevant.js",
     ...overrides
   };
@@ -63,23 +68,16 @@ describe("WorkerExtensionProxy — readiness", () => {
   });
 });
 
-describe("WorkerExtensionProxy — getEventName", () => {
-  test("runs on the main thread, never touching the worker transport", () => {
+describe("WorkerExtensionProxy — protocols", () => {
+  test("exposes the descriptor's protocols without touching the worker transport", () => {
     const { factory, transports } = createFakeTransportFactory();
     const proxy = new WorkerExtensionProxy(
-      createDescriptor({ getEventName: (payload) => (payload as { action: string; }).action }),
+      createDescriptor({ protocols: actionProtocols }),
       { logger: createLogger(), transportFactory: factory }
     );
 
-    assert.equal(proxy.getEventName({ action: "voxel-set" }), "voxel-set");
+    assert.equal(proxy.protocols, actionProtocols);
     assert.deepEqual(transports[0].sent, []);
-  });
-
-  test("falls back to the base Extension's throwing default when the descriptor doesn't supply one", () => {
-    const { factory } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
-
-    assert.throws(() => proxy.getEventName({}), /must be implemented/);
   });
 });
 

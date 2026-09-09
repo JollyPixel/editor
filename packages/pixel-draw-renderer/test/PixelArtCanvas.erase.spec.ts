@@ -129,8 +129,10 @@ describe("PixelArtCanvas — erase mode", () => {
     stroke(manager.canvas(), [[100, 100]], 2);
 
     assert.strictEqual(events.length, 1);
-    const [position] = strokedPositions(events[0]);
-    assert.deepStrictEqual(events[0].metadata.color, kTransparent);
+    const event = events[0];
+    const [position] = strokedPositions(event);
+    assert.strictEqual(event.action, "stroke");
+    assert.deepStrictEqual(event.metadata.color, kTransparent);
     assert.deepStrictEqual(
       manager.document.buffer.samplePixel(position.x, position.y),
       [0, 0, 0, 0]

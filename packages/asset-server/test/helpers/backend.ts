@@ -16,7 +16,6 @@ import {
   type AssetKindHandler,
   type SnapshotPolicy
 } from "#src/index.ts";
-import { manualTimers, type ManualTimers } from "./timers.ts";
 
 export interface SyncHarness extends AsyncDisposable {
   readonly source: MemoryAssetSource;
@@ -30,7 +29,6 @@ export interface SyncHarness extends AsyncDisposable {
   readonly watcher: ReconciliationWatcher;
   readonly identity: CatalogIdentitySidecar;
   readonly kinds: AssetKindRegistry;
-  readonly timers: ManualTimers;
 }
 
 export interface SyncHarnessOptions {
@@ -95,8 +93,10 @@ export function countingReads(
 }
 
 /**
- * Wires source, state, projector and scheduler over in-memory backends,
- * with manual timers so nothing in the sync suite sleeps.
+ * Wires source, state, projector and scheduler over in-memory backends.
+ *
+ * Suites that depend on the snapshot or debounce cadence enable
+ * `t.mock.timers` before calling this.
  */
 export async function syncHarness(
   options: SyncHarnessOptions = {}
@@ -113,14 +113,11 @@ export async function syncHarness(
   const states = new AssetStateStore({ eventStore, kinds });
   states.start();
 
-  const timers = manualTimers();
   const scheduler = new SnapshotScheduler({
     eventStore,
     states,
     projector,
-    snapshot: options.snapshot,
-    timers,
-    now: () => timers.now
+    snapshot: options.snapshot
   });
   scheduler.start();
 
@@ -142,7 +139,6 @@ export async function syncHarness(
   const watcher = new ReconciliationWatcher({
     source,
     reconciler,
-    timers,
     debounce: 100
   });
 
@@ -158,7 +154,6 @@ export async function syncHarness(
     watcher,
     identity,
     kinds,
-    timers,
     async [Symbol.asyncDispose]() {
       await watcher.close();
       await scheduler.close();

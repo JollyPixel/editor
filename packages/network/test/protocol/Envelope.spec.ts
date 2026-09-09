@@ -6,52 +6,33 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Envelope } from "#src/protocol/Envelope.ts";
+import {
+  describeEnvelopeParseError,
+  Envelope,
+  type ClientEnvelope,
+  type EnvelopeParseError
+} from "#src/protocol/Envelope.ts";
 
-describe("Envelope.parse", () => {
-  test("parses a valid JSON string into an envelope", () => {
-    const result = Envelope.parse(JSON.stringify({ room: "pixel-draw", kind: "leave" }));
+function errorOf(
+  result: { ok: boolean; val: unknown; }
+): EnvelopeParseError {
+  assert.equal(result.ok, false);
+
+  return result.val as EnvelopeParseError;
+}
+
+describe("Envelope.parseClient", () => {
+  test("parses a valid JSON string into a client envelope", () => {
+    const result = Envelope.parseClient(
+      JSON.stringify({ room: "pixel-draw", kind: "leave" })
+    );
 
     assert.equal(result.ok, true);
     assert.deepEqual(result.val, { room: "pixel-draw", kind: "leave" });
   });
 
-  test("accepts a \"denied\" envelope", () => {
-    const result = Envelope.parse({
-      room: "pixel-draw",
-      kind: "denied",
-      event: "$join",
-      reason: "role \"viewer\" is not permitted to join this room"
-    });
-
-    assert.equal(result.ok, true);
-    assert.deepEqual(result.val, {
-      room: "pixel-draw",
-      kind: "denied",
-      event: "$join",
-      reason: "role \"viewer\" is not permitted to join this room"
-    });
-  });
-
-  test("accepts an \"error\" envelope", () => {
-    const result = Envelope.parse({
-      room: "pixel-draw",
-      kind: "error",
-      event: "pixel-set",
-      reason: "disk full"
-    });
-
-    assert.equal(result.ok, true);
-    assert.deepEqual(result.val, {
-      room: "pixel-draw",
-      kind: "error",
-      event: "pixel-set",
-      reason: "disk full"
-    });
-  });
-
   test("accepts an already-deserialized object", () => {
-    const result = Envelope.parse({
+    const result = Envelope.parseClient({
       room: "pixel-draw",
       kind: "message",
       payload: { hello: "world" }
@@ -65,64 +46,162 @@ describe("Envelope.parse", () => {
     });
   });
 
-  test("fails with the JSON parse error message for malformed JSON", () => {
-    const result = Envelope.parse("{not json");
+  test("accepts a join envelope without identity", () => {
+    const result = Envelope.parseClient({ room: "pixel-draw", kind: "join" });
 
-    assert.equal(result.ok, false);
-    assert.match((result as { val: string; }).val, /invalid JSON/);
+    assert.equal(result.ok, true);
   });
 
-  test("fails with a descriptive error for a JSON value that isn't an envelope shape", () => {
-    const result = Envelope.parse(JSON.stringify({ hello: "world" }));
+  test("rejects a server-only kind", () => {
+    for (const kind of ["sync", "peer-joined", "peer-left", "denied", "error"]) {
+      const result = Envelope.parseClient({ room: "pixel-draw", kind });
 
-    assert.equal(result.ok, false);
-    assert.equal((result as { val: string; }).val, "missing \"room\" or \"kind\" property");
+      assert.equal(result.ok, false, `expected "${kind}" to be rejected`);
+      assert.equal(errorOf(result).reason, "malformed");
+    }
   });
 
-  test("fails with a descriptive error when kind is unrecognized", () => {
-    const result = Envelope.parse({ room: "pixel-draw", kind: "unknown-kind" });
+  test("rejects a presence envelope without a patch", () => {
+    const result = Envelope.parseClient({ room: "pixel-draw", kind: "presence" });
 
-    assert.equal(result.ok, false);
-    assert.equal((result as { val: string; }).val, "unrecognized \"kind\": \"unknown-kind\"");
+    assert.equal(errorOf(result).reason, "malformed");
   });
 
-  test("fails with a descriptive error when room is missing or not a string", () => {
-    const missingRoom = Envelope.parse({ kind: "leave" });
-    assert.equal(missingRoom.ok, false);
-    assert.equal((missingRoom as { val: string; }).val, "missing \"room\" or \"kind\" property");
+  test("rejects a message envelope without a payload", () => {
+    const result = Envelope.parseClient({ room: "pixel-draw", kind: "message" });
 
-    const invalidRoom = Envelope.parse({ room: 42, kind: "leave" });
-    assert.equal(invalidRoom.ok, false);
-    assert.equal((invalidRoom as { val: string; }).val, "\"room\" must be a string");
+    assert.equal(errorOf(result).reason, "malformed");
   });
 
-  test("fails with a descriptive error for non-object input", () => {
-    const nullResult = Envelope.parse(null);
-    assert.equal(nullResult.ok, false);
-    assert.equal((nullResult as { val: string; }).val, "expected an object, received object");
+  test("rejects an identity that is not an object", () => {
+    const result = Envelope.parseClient({
+      room: "pixel-draw",
+      kind: "join",
+      identity: "anonymous"
+    });
 
-    const numberResult = Envelope.parse(42);
-    assert.equal(numberResult.ok, false);
-    assert.equal((numberResult as { val: string; }).val, "expected an object, received number");
+    assert.equal(errorOf(result).reason, "malformed");
+  });
 
-    // A string is JSON.parse'd first, so an unparseable one fails as invalid JSON
-    // rather than reaching the object-shape check.
-    const result = Envelope.parse("just a string");
-    assert.equal(result.ok, false);
-    assert.match((result as { val: string; }).val, /invalid JSON/);
+  test("reports invalid JSON apart from a malformed shape", () => {
+    const result = Envelope.parseClient("{not json");
+
+    assert.equal(errorOf(result).reason, "invalid-json");
+    assert.match(describeEnvelopeParseError(errorOf(result)), /invalid JSON/);
+  });
+
+  test("rejects a value that is not an envelope shape", () => {
+    for (const value of [null, 42, { hello: "world" }, { kind: "leave" }, { room: 42, kind: "leave" }]) {
+      const result = Envelope.parseClient(value);
+
+      assert.equal(result.ok, false, `expected ${JSON.stringify(value)} to be rejected`);
+    }
+  });
+
+  test("rejects an unrecognized kind", () => {
+    const result = Envelope.parseClient({ room: "pixel-draw", kind: "unknown-kind" });
+
+    assert.equal(errorOf(result).reason, "malformed");
+    assert.notEqual(describeEnvelopeParseError(errorOf(result)), "");
+  });
+});
+
+describe("Envelope.parseServer", () => {
+  test("accepts a denied envelope", () => {
+    const result = Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$join",
+      reason: "role \"viewer\" is not permitted to join this room"
+    });
+
+    assert.equal(result.ok, true);
+  });
+
+  test("accepts an error envelope", () => {
+    const result = Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "error",
+      event: "pixel-set",
+      reason: "disk full"
+    });
+
+    assert.equal(result.ok, true);
+  });
+
+  test("accepts a sync envelope carrying members", () => {
+    const result = Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "sync",
+      members: [
+        {
+          clientId: "a",
+          identity: { name: "ada" },
+          presence: {}
+        }
+      ]
+    });
+
+    assert.equal(result.ok, true);
+  });
+
+  test("rejects a sync envelope without members", () => {
+    const result = Envelope.parseServer({ room: "pixel-draw", kind: "sync" });
+
+    assert.equal(errorOf(result).reason, "malformed");
+  });
+
+  test("rejects a sync envelope whose members are not peers", () => {
+    const result = Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "sync",
+      members: [{ clientId: 42 }]
+    });
+
+    assert.equal(errorOf(result).reason, "malformed");
+  });
+
+  test("rejects a peer-joined envelope with a non-string clientId", () => {
+    const result = Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "peer-joined",
+      clientId: 42,
+      identity: {}
+    });
+
+    assert.equal(errorOf(result).reason, "malformed");
+  });
+
+  test("rejects a client-only kind", () => {
+    for (const kind of ["join", "leave", "presence"]) {
+      const result = Envelope.parseServer({ room: "pixel-draw", kind });
+
+      assert.equal(result.ok, false, `expected "${kind}" to be rejected`);
+    }
+  });
+
+  test("accepts a message envelope, which travels in both directions", () => {
+    const envelope = {
+      room: "pixel-draw",
+      kind: "message",
+      payload: { hello: "world" }
+    };
+
+    assert.equal(Envelope.parseServer(envelope).ok, true);
+    assert.equal(Envelope.parseClient(envelope).ok, true);
   });
 });
 
 describe("Envelope.stringify", () => {
-  test("serializes an envelope to a JSON string round-trippable by parse", () => {
-    const envelope: Envelope = { room: "pixel-draw", kind: "leave" };
+  test("serializes an envelope to a JSON string round-trippable by parseClient", () => {
+    const envelope: ClientEnvelope = { room: "pixel-draw", kind: "leave" };
     const stringified = Envelope.stringify(envelope);
 
     assert.equal(stringified.ok, true);
     const raw = (stringified as { val: string; }).val;
     assert.equal(typeof raw, "string");
 
-    const parsed = Envelope.parse(raw);
+    const parsed = Envelope.parseClient(raw);
     assert.equal(parsed.ok, true);
     assert.deepEqual(parsed.val, envelope);
   });

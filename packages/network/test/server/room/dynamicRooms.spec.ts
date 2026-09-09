@@ -10,22 +10,30 @@ import {
   Server,
   Extension,
   type ClientHandle,
+  type MessageProtocols,
   type RoomResolution
 } from "#src/index.ts";
+import {
+  actionProtocols,
+  OPAQUE_PROTOCOLS
+} from "../../helpers/protocols.ts";
 
 class AssetExtension extends Extension {
   readonly id: string;
   readonly name: string;
+  readonly protocols: MessageProtocols;
   disposed = 0;
   messages: unknown[] = [];
 
   constructor(
     id: string,
-    name: string
+    name: string,
+    protocols: MessageProtocols = OPAQUE_PROTOCOLS
   ) {
     super();
     this.id = id;
     this.name = name;
+    this.protocols = protocols;
   }
 
   onClientConnect(): void {
@@ -370,7 +378,7 @@ describe("Server — room lifetime regressions", () => {
     });
     server.setRoomResolver((name): RoomResolution => {
       return {
-        extension: new AssetExtension(name, "kind"),
+        extension: new AssetExtension(name, "kind", actionProtocols),
         onEvict: () => {
           evicted.push(name);
         }

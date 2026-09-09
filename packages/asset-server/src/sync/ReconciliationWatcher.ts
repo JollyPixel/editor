@@ -7,11 +7,6 @@ import {
   type Logger
 } from "../logger.ts";
 import type { Reconciler } from "./Reconciler.ts";
-import {
-  systemTimers,
-  type TimerHandle,
-  type Timers
-} from "../utils/timers.ts";
 
 // CONSTANTS
 const kDefaultDebounce = 200;
@@ -25,7 +20,6 @@ export interface ReconciliationWatcherOptions {
    * @default 200
    */
   debounce?: number;
-  timers?: Timers;
   logger?: Logger;
 }
 
@@ -36,11 +30,10 @@ export class ReconciliationWatcher {
   #source: AssetSource;
   #reconciler: Reconciler;
   #debounce: number;
-  #timers: Timers;
   #logger: Logger;
 
   #unwatch: (() => void) | null = null;
-  #handle: TimerHandle | null = null;
+  #handle: NodeJS.Timeout | null = null;
   #running: Promise<void> | null = null;
   #again = false;
 
@@ -50,7 +43,6 @@ export class ReconciliationWatcher {
     this.#source = options.source;
     this.#reconciler = options.reconciler;
     this.#debounce = options.debounce ?? kDefaultDebounce;
-    this.#timers = options.timers ?? systemTimers;
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -77,17 +69,18 @@ export class ReconciliationWatcher {
       .debug("filesystem change observed");
 
     if (this.#handle !== null) {
-      this.#timers.clearTimeout(this.#handle);
+      clearTimeout(this.#handle);
     }
-    this.#handle = this.#timers.setTimeout(
+    this.#handle = setTimeout(
       () => void this.run(),
       this.#debounce
     );
+    this.#handle.unref();
   }
 
   run(): Promise<void> {
     if (this.#handle !== null) {
-      this.#timers.clearTimeout(this.#handle);
+      clearTimeout(this.#handle);
       this.#handle = null;
     }
 
@@ -113,7 +106,7 @@ export class ReconciliationWatcher {
       this.#unwatch = null;
     }
     if (this.#handle !== null) {
-      this.#timers.clearTimeout(this.#handle);
+      clearTimeout(this.#handle);
       this.#handle = null;
     }
 

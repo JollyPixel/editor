@@ -274,7 +274,7 @@ test.describe("Floating", () => {
     });
 
     const floating = page.locator("jolly-floating");
-    await floating.evaluate((element) => {
+    await floating.evaluate((element: HTMLElement) => {
       element.hidden = true;
     });
     await expect(floating).toBeHidden();
@@ -282,7 +282,7 @@ test.describe("Floating", () => {
     await reloadGallery(page);
     await expect(floating).toBeHidden();
 
-    await floating.evaluate((element) => {
+    await floating.evaluate((element: HTMLElement) => {
       element.hidden = false;
     });
     await reloadGallery(page);

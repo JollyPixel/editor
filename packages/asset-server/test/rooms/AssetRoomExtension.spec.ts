@@ -6,15 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  ClientHandle,
-  RoomContext
+import {
+  MessageParser,
+  protocolEvents,
+  type ClientHandle,
+  type RoomContext
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import { counterCommandProtocols } from "../helpers/protocols.ts";
 import {
   AssetRoomExtension,
-  UNKNOWN_ASSET_ACTION,
   type AssetLiveProtocol,
   type AssetRoomBinding
 } from "#src/index.ts";
@@ -60,7 +62,7 @@ function harness(
 
   const extension = new AssetRoomExtension<Command>(kBinding, {
     commandEventType: "counter.command",
-    actions: ["increment"],
+    protocols: counterCommandProtocols,
 
     parse(payload) {
       return typeof payload === "object" &&
@@ -134,7 +136,7 @@ describe("AssetRoomExtension", () => {
 
     assert.strictEqual(extension.id, "counter:asset-1");
     assert.strictEqual(extension.name, "counter");
-    assert.deepEqual([...extension.events], ["increment"]);
+    assert.deepEqual(protocolEvents(extension.protocols.inbound!), ["increment"]);
   });
 
   test("sends the protocol snapshot to a connecting client", () => {
@@ -151,30 +153,22 @@ describe("AssetRoomExtension", () => {
     ]);
   });
 
-  test("names a declared action", () => {
+  test("resolves a declared action through the inbound protocol", () => {
     const { extension } = harness();
+    const parser = new MessageParser(extension.protocols.inbound!);
 
-    assert.strictEqual(
-      extension.getEventName({ action: "increment" }),
-      "increment"
-    );
+    const parsed = parser.parse({ action: "increment" });
+    assert.strictEqual(parsed.ok, true);
+    assert.strictEqual(parsed.val.event, "increment");
   });
 
-  test("names an undeclared or malformed payload", () => {
+  test("rejects an undeclared or malformed payload", () => {
     const { extension } = harness();
+    const parser = new MessageParser(extension.protocols.inbound!);
 
-    assert.strictEqual(
-      extension.getEventName({ action: "decrement" }),
-      UNKNOWN_ASSET_ACTION
-    );
-    assert.strictEqual(
-      extension.getEventName({ type: "command" }),
-      UNKNOWN_ASSET_ACTION
-    );
-    assert.strictEqual(
-      extension.getEventName(null),
-      UNKNOWN_ASSET_ACTION
-    );
+    assert.strictEqual(parser.parse({ action: "decrement" }).ok, false);
+    assert.strictEqual(parser.parse({ type: "command" }).ok, false);
+    assert.strictEqual(parser.parse(null).ok, false);
   });
 
   test("ignores a payload the protocol cannot parse", async() => {

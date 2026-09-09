@@ -7,96 +7,100 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
+import * as clientValidator from "./generated/client.compiled.ts";
+import * as serverValidator from "./generated/server.compiled.ts";
 import type {
-  Peer,
-  PeerMetadata
-} from "./types.ts";
+  clientEnvelopeSchema,
+  serverEnvelopeSchema
+} from "./Envelope.schema.ts";
+import {
+  describeErrors,
+  type Infer,
+  type ValidationError
+} from "./schema.ts";
 
-export type Envelope =
-  | { room: string; kind: "join"; identity?: PeerMetadata; }
-  | { room: string; kind: "leave"; }
-  | { room: string; kind: "message"; payload: unknown; }
-  | { room: string; kind: "presence"; patch: PeerMetadata; }
-  | { room: string; kind: "sync"; members: Peer[]; }
-  | { room: string; kind: "peer-joined"; clientId: string; identity: PeerMetadata; }
-  | { room: string; kind: "peer-left"; clientId: string; }
-  | { room: string; kind: "peer-presence"; clientId: string; patch: PeerMetadata; }
-  | { room: string; kind: "denied"; event: string; reason: string; }
-  | { room: string; kind: "error"; event: string; reason: string; };
+export type ClientEnvelope = Infer<typeof clientEnvelopeSchema>;
+export type ServerEnvelope = Infer<typeof serverEnvelopeSchema>;
+export type Envelope = ClientEnvelope | ServerEnvelope;
 
-type EnvelopeCandidate = Record<string, unknown>;
+export type EnvelopeKind = Envelope["kind"];
 
-const ENVELOPE_KINDS: readonly Envelope["kind"][] = [
-  "join",
-  "leave",
-  "message",
-  "presence",
-  "sync",
-  "peer-joined",
-  "peer-left",
-  "peer-presence",
-  "denied",
-  "error"
-] as const;
+export type EnvelopeParseError =
+  | { reason: "invalid-json"; message: string; }
+  | { reason: "malformed"; errors: readonly ValidationError[]; };
+
+function isClientEnvelope(
+  value: unknown
+): value is ClientEnvelope {
+  return clientValidator.isValid(value) === true;
+}
+
+function isServerEnvelope(
+  value: unknown
+): value is ServerEnvelope {
+  return serverValidator.isValid(value) === true;
+}
+
+function malformed(
+  errors: readonly ValidationError[]
+): EnvelopeParseError {
+  return {
+    reason: "malformed",
+    errors
+  };
+}
 
 function parseJson(
   raw: unknown
-): Result<unknown, string> {
+): Result<unknown, EnvelopeParseError> {
   if (typeof raw !== "string") {
     return Ok(raw);
   }
 
   return wrap<unknown, Error>(() => JSON.parse(raw))
-    .mapErr((error) => `invalid JSON: ${error.message}`);
+    .mapErr((error): EnvelopeParseError => {
+      return {
+        reason: "invalid-json",
+        message: error.message
+      };
+    });
 }
 
-function assertObject(
-  value: unknown
-): Result<EnvelopeCandidate, string> {
-  return typeof value === "object" && value !== null ?
-    Ok(value as EnvelopeCandidate) :
-    Err(`expected an object, received ${typeof value}`);
-}
-
-function assertHasRoomAndKind(
-  value: EnvelopeCandidate
-): Result<EnvelopeCandidate, string> {
-  return "room" in value && "kind" in value ?
-    Ok(value) :
-    Err("missing \"room\" or \"kind\" property");
-}
-
-function assertRoom(
-  value: EnvelopeCandidate
-): Result<EnvelopeCandidate, string> {
-  return typeof value.room === "string" ?
-    Ok(value) :
-    Err("\"room\" must be a string");
-}
-
-function isEnvelopeKind(
-  value: string
-): value is Envelope["kind"] {
-  return ENVELOPE_KINDS.some((kind) => kind === value);
-}
-
-function assertKind(
-  value: EnvelopeCandidate
-): Result<Envelope, string> {
-  return typeof value.kind === "string" && isEnvelopeKind(value.kind) ?
-    Ok(value as Envelope) :
-    Err(`unrecognized "kind": ${JSON.stringify(value.kind)}`);
+export function describeEnvelopeParseError(
+  error: EnvelopeParseError
+): string {
+  return error.reason === "invalid-json" ?
+    `invalid JSON: ${error.message}` :
+    describeErrors(error.errors);
 }
 
 export const Envelope = {
-  parse(
+  parseClient(
     raw: unknown
-  ): Result<Envelope, string> {
-    return parseJson(raw)
-      .andThen(assertObject)
-      .andThen(assertHasRoomAndKind)
-      .andThen(assertRoom)
-      .andThen(assertKind);
+  ): Result<ClientEnvelope, EnvelopeParseError> {
+    return parseJson(raw).andThen((value) => {
+      if (isClientEnvelope(value)) {
+        return Ok(value);
+      }
+
+      return Err(
+        malformed(clientValidator.validate(value).errors)
+      );
+    });
+  },
+
+  parseServer(
+    raw: unknown
+  ): Result<ServerEnvelope, EnvelopeParseError> {
+    return parseJson(raw).andThen((value) => {
+      if (isServerEnvelope(value)) {
+        return Ok(value);
+      }
+
+      return Err(
+        malformed(serverValidator.validate(value).errors)
+      );
+    });
   },
 
   stringify(

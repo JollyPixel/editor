@@ -1,4 +1,6 @@
 // Import Internal Dependencies
+import type { RoomMessageParser } from "../protocol/MessageParser.ts";
+import type { ValidationError } from "../protocol/schema.ts";
 import type {
   PeerMetadata,
   Peer
@@ -29,6 +31,15 @@ export interface RoomErrorEvent {
   reason: string;
 }
 
+export interface RoomMalformedEvent {
+  payload: unknown;
+  errors: readonly ValidationError[];
+}
+
+export interface RoomOptions<ServerMessage = unknown> {
+  parser?: RoomMessageParser<ServerMessage>;
+}
+
 export type RoomEventMap<ServerMessage = unknown> = {
   message: (payload: ServerMessage) => void;
   sync: (event: RoomSyncEvent) => void;
@@ -37,6 +48,7 @@ export type RoomEventMap<ServerMessage = unknown> = {
   "peer-presence": (event: RoomPeerPresenceEvent) => void;
   denied: (event: RoomDeniedEvent) => void;
   error: (event: RoomErrorEvent) => void;
+  malformed: (event: RoomMalformedEvent) => void;
 };
 
 export interface Room<

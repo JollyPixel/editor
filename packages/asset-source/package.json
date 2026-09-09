@@ -19,7 +19,7 @@
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src test"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

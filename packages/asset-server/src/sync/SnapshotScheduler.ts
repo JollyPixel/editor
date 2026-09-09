@@ -17,11 +17,6 @@ import {
 import type { SnapshotPolicy } from "../kinds/AssetKindHandler.ts";
 import type { AssetStateStore } from "./AssetStateStore.ts";
 import type { AssetProjector } from "./AssetProjector.ts";
-import {
-  systemTimers,
-  type TimerHandle,
-  type Timers
-} from "../utils/timers.ts";
 import { TaskChain } from "../utils/TaskChain.ts";
 
 // CONSTANTS
@@ -29,7 +24,7 @@ const kDefaultDelay = 2_000;
 const kDefaultMaxDelay = 30_000;
 
 interface PendingSnapshot {
-  handle: TimerHandle;
+  handle: NodeJS.Timeout;
   firstEventAt: number;
 }
 
@@ -38,8 +33,6 @@ export interface SnapshotSchedulerOptions {
   states: AssetStateStore;
   projector: AssetProjector;
   snapshot?: SnapshotPolicy;
-  timers?: Timers;
-  now?: () => number;
   logger?: Logger;
 }
 
@@ -53,8 +46,6 @@ export class SnapshotScheduler {
   #states: AssetStateStore;
   #projector: AssetProjector;
   #policy: Required<SnapshotPolicy>;
-  #timers: Timers;
-  #now: () => number;
   #logger: Logger;
 
   #pending = new Map<string, PendingSnapshot>();
@@ -71,8 +62,6 @@ export class SnapshotScheduler {
       delay: options.snapshot?.delay ?? kDefaultDelay,
       maxDelay: options.snapshot?.maxDelay ?? kDefaultMaxDelay
     };
-    this.#timers = options.timers ?? systemTimers;
-    this.#now = options.now ?? Date.now;
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -109,23 +98,26 @@ export class SnapshotScheduler {
     };
 
     const pending = this.#pending.get(assetId);
-    const firstEventAt = pending?.firstEventAt ?? this.#now();
+    const firstEventAt = pending?.firstEventAt ?? Date.now();
     if (pending !== undefined) {
-      this.#timers.clearTimeout(pending.handle);
+      clearTimeout(pending.handle);
     }
 
-    const elapsed = this.#now() - firstEventAt;
+    const elapsed = Date.now() - firstEventAt;
     const delay = Math.max(
       0,
       Math.min(policy.delay, policy.maxDelay - elapsed)
     );
 
+    const handle = setTimeout(
+      () => void this.snapshot(assetId),
+      delay
+    );
+    handle.unref();
+
     this.#pending.set(assetId, {
       firstEventAt,
-      handle: this.#timers.setTimeout(
-        () => void this.snapshot(assetId),
-        delay
-      )
+      handle
     });
   }
 
@@ -165,7 +157,7 @@ export class SnapshotScheduler {
   ): Promise<boolean> {
     const pending = this.#pending.get(assetId);
     if (pending !== undefined) {
-      this.#timers.clearTimeout(pending.handle);
+      clearTimeout(pending.handle);
       this.#pending.delete(assetId);
     }
 

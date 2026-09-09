@@ -2,6 +2,7 @@
 import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
+import type { MessageProtocols } from "../../protocol/MessageProtocol.ts";
 import type {
   ClientHandle,
   PeerMetadata
@@ -38,19 +39,10 @@ export interface RoomContext {
   readonly eventStore: RoomEventStoreHandle;
 }
 
-export abstract class Extension {
+export abstract class Extension<TMessage = unknown> {
   abstract readonly id: string;
   abstract readonly name: string;
-
-  readonly events: readonly string[] = [];
-
-  getEventName(
-    _payload: unknown
-  ): string {
-    throw new Error(
-      `${this.constructor.name}: getEventName() must be implemented to use a configured rights table`
-    );
-  }
+  abstract readonly protocols: MessageProtocols;
 
   abstract onClientConnect(
     client: ClientHandle,
@@ -65,12 +57,14 @@ export abstract class Extension {
 
   abstract onMessage(
     clientId: string,
-    payload: unknown,
+    message: TMessage,
     context: RoomContext
   ): void | Promise<void>;
 
   dispose?(): void | Promise<void>;
 }
+
+export type AnyExtension = Extension<unknown>;
 
 /**
  * Configures an extension hosted in a worker thread.
@@ -78,7 +72,7 @@ export abstract class Extension {
 export interface WorkerExtensionDescriptor {
   id: string;
   name: string;
-  getEventName?: (payload: unknown) => string;
+  protocols: MessageProtocols;
   modulePath: string | URL;
   exportName?: string;
   workerData?: unknown;

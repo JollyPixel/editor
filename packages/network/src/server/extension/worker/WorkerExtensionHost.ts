@@ -19,33 +19,15 @@ import type {
 } from "../../../protocol/types.ts";
 import { createLogger } from "../../logger.ts";
 import { PendingCallRegistry } from "./PendingCallRegistry.ts";
-import type {
-  ContextCallMethod,
-  HostWorkerData,
-  MainToWorkerMessage,
-  WorkerContextResponse,
-  WorkerDispatch,
-  WorkerDispatchResult,
-  WorkerReady
+import {
+  isHostWorkerData,
+  isMainToWorkerMessage,
+  type ContextCallMethod,
+  type WorkerContextResponse,
+  type WorkerDispatch,
+  type WorkerDispatchResult,
+  type WorkerReady
 } from "./protocol.ts";
-
-function isHostWorkerData(
-  value: unknown
-): value is HostWorkerData {
-  return typeof value === "object" && value !== null &&
-    "id" in value && typeof value.id === "string" &&
-    "modulePath" in value && typeof value.modulePath === "string";
-}
-
-const kMainToWorkerTypes = new Set(["dispatch", "context-response"]);
-
-function isMainToWorkerMessage(
-  value: unknown
-): value is MainToWorkerMessage {
-  return typeof value === "object" && value !== null &&
-    "type" in value && typeof value.type === "string" &&
-    kMainToWorkerTypes.has(value.type);
-}
 
 if (!parentPort) {
   throw new Error("WorkerExtensionHost must run inside a worker_threads.Worker");
@@ -103,9 +85,6 @@ async function requestList(
   });
 }
 
-/**
- * Proxies context calls to the main thread, which owns client routing.
- */
 function createContext(): RoomContext {
   return {
     room: {

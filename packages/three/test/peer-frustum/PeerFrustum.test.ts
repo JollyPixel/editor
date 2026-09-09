@@ -94,7 +94,7 @@ describe("constructor", () => {
   test("does not create a label when no name is provided", () => {
     const frustum = new PeerFrustum();
 
-    assert.strictEqual(frustum.label, null);
+    assert.equal(frustum.label, null);
     assert.strictEqual(frustum.children.length, 0);
   });
 
@@ -142,11 +142,12 @@ describe("color", () => {
 describe("displayName", () => {
   test("creates a label lazily if none exists yet", () => {
     const frustum = new PeerFrustum();
-    assert.strictEqual(frustum.label, null);
+    assert.equal(frustum.label, null);
 
     frustum.displayName = "Carol";
 
-    assert.ok(frustum.label instanceof PeerFrustumLabel);
+    const label: unknown = frustum.label;
+    assert.ok(label instanceof PeerFrustumLabel);
     assert.strictEqual(frustum.children.length, 1);
   });
 

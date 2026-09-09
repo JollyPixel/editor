@@ -16,6 +16,10 @@ import {
 
 // Import Internal Dependencies
 import {
+  counterCommandProtocols,
+  counterProtocols
+} from "../helpers/protocols.ts";
+import {
   assetRoomName,
   CatalogProjection,
   parseAssetRoomName,
@@ -29,7 +33,6 @@ import {
   COUNTER_INCREMENTED,
   type CounterState
 } from "../helpers/kinds.ts";
-import { manualTimers, type ManualTimers } from "../helpers/timers.ts";
 import { bytes } from "../helpers/bytes.ts";
 
 // CONSTANTS
@@ -41,6 +44,7 @@ const kActor: EventStore.Actor = {
 class CounterExtension extends Extension {
   readonly id: string;
   readonly name: string;
+  readonly protocols = counterProtocols;
   readonly state: CounterState;
   disposed = 0;
 
@@ -96,7 +100,7 @@ function liveCounter(): AssetKindHandler<CounterState, CounterCommand> {
     live: (binding) => {
       return {
         commandEventType: COUNTER_INCREMENTED,
-        actions: ["increment"],
+        protocols: counterCommandProtocols,
         parse: (payload) => (isCounterCommand(payload) ? payload : null),
         snapshot: () => {
           return { value: binding.state.value };
@@ -146,7 +150,6 @@ interface RoomHarness extends AsyncDisposable {
   readonly sync: SyncHarness;
   readonly server: Server;
   readonly catalog: CatalogProjection;
-  readonly serverTimers: ManualTimers;
   readonly assetId: string;
   readonly clients: Map<string, ClientHandle & { received: unknown[]; }>;
   join(clientId: string, room?: string): Promise<void>;
@@ -173,10 +176,8 @@ async function roomHarness(
   catalog.load();
   catalog.start();
 
-  const serverTimers = manualTimers();
   const server = new Server({
     eventStore: sync.eventStore,
-    timers: serverTimers,
     roomGraceMs: graceMs
   });
   registerAssetRooms({
@@ -194,7 +195,6 @@ async function roomHarness(
     sync,
     server,
     catalog,
-    serverTimers,
     clients,
     assetId: created.assetId,
     async join(clientId, room = assetRoomName("counter", created.assetId)) {
@@ -324,21 +324,23 @@ describe("registerAssetRooms — admission", () => {
 });
 
 describe("registerAssetRooms — eviction", () => {
-  test("a rejoin inside the grace period keeps the same extension", async() => {
+  test("a rejoin inside the grace period keeps the same extension", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await roomHarness({ graceMs: 1_000 });
 
     await harness.join("A");
     const room = assetRoomName("counter", harness.assetId);
     await harness.server.handleMessage("A", { room, kind: "leave" });
 
-    harness.serverTimers.advance(500);
+    t.mock.timers.tick(500);
     await harness.join("B");
-    harness.serverTimers.advance(1_000);
+    t.mock.timers.tick(1_000);
 
     assert.strictEqual(harness.sync.states.has(harness.assetId), true);
   });
 
-  test("expiry flushes the asset before releasing its state", async() => {
+  test("expiry flushes the asset before releasing its state", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await roomHarness({ graceMs: 100 });
     const room = assetRoomName("counter", harness.assetId);
 
@@ -350,7 +352,7 @@ describe("registerAssetRooms — eviction", () => {
     });
     await harness.server.handleMessage("A", { room, kind: "leave" });
 
-    harness.serverTimers.advance(100);
+    t.mock.timers.tick(100);
     await harness.server.settled(room);
 
     assert.strictEqual(
@@ -362,7 +364,8 @@ describe("registerAssetRooms — eviction", () => {
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
 
-  test("opening and closing the same asset room repeatedly leaks nothing", async() => {
+  test("opening and closing the same asset room repeatedly leaks nothing", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await roomHarness({ graceMs: 100 });
     const room = assetRoomName("counter", harness.assetId);
 
@@ -372,12 +375,17 @@ describe("registerAssetRooms — eviction", () => {
         room,
         kind: "leave"
       });
-      harness.serverTimers.advance(100);
+      t.mock.timers.tick(100);
       await harness.server.settled(room);
     }
 
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
-    assert.strictEqual(harness.serverTimers.scheduled, 0);
+
+    // Nothing is left armed: a later jump evicts nothing new.
+    t.mock.timers.tick(10_000);
+    await harness.server.settled();
+
+    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
 
   test("a message from a client that never joined is dropped", async() => {

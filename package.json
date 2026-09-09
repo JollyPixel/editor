@@ -13,7 +13,8 @@
     "clear": "clear-ts-build",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "typecheck": "npm run typecheck --ws --if-present"
   },
   "workspaces": [
     "packages/bench",

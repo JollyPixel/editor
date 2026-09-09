@@ -22,9 +22,12 @@ import { WebsocketTransport } from "#src/transport/websocket.ts";
 import {
   DEFAULT_WEBSOCKET_PATH
 } from "#src/transport/constants.ts";
+import { OPAQUE_PROTOCOLS } from "../helpers/protocols.ts";
 
 class RecordingExtension extends Extension {
+  readonly protocols = OPAQUE_PROTOCOLS;
   readonly id = "test-ns";
+  readonly name = "test-ns";
   connected: ClientHandle[] = [];
   disconnected: string[] = [];
   messages: { clientId: string; payload: unknown; }[] = [];
@@ -159,7 +162,9 @@ describe("WebsocketTransport + Client (integration)", () => {
     const server = new Server();
     const joined = new RecordingExtension();
     class UnusedExtension extends Extension {
+      readonly protocols = OPAQUE_PROTOCOLS;
       readonly id = "unused";
+      readonly name = "unused";
       connected: ClientHandle[] = [];
       onClientConnect(client: ClientHandle): void {
         this.connected.push(client);

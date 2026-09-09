@@ -24,7 +24,7 @@
     "test-only:node": "node --test \"test/png/**/*.spec.ts\" \"test/*.spec.ts\"",
     "test-only:dom": "node --import ./test/setup.ts --test \"test/raster/**/*.spec.ts\"",
     "test": "npm run typecheck && c8 -r html npm run test-only",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "eslint src test",
     "bench": "jolly-bench"
   },
   "publishConfig": {

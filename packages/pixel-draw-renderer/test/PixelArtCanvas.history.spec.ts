@@ -488,8 +488,8 @@ interface RecordingRoom extends Room<PixelNetworkCommand, PixelServerMessage> {
 
 // receive() never touches eventStore, so this fake room doesn't need a real one.
 const unusedEventStore: RoomEventStoreHandle = {
-  append: () => true,
-  list: () => []
+  append: async() => true,
+  list: async() => []
 };
 
 function isServerMessage(value: unknown): value is PixelServerMessage {
@@ -527,7 +527,10 @@ function makeServerBackedRoom(
   // just forwards straight back to the same client, mirroring `observe()` in
   // PixelSyncServer.spec.ts.
   const serverRoom: RoomContext = {
-    room: { broadcast: handleFromServer },
+    room: {
+      broadcast: handleFromServer,
+      sendTo: (_clientId, payload) => handleFromServer(payload)
+    },
     eventStore: unusedEventStore
   };
 

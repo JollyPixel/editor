@@ -5,6 +5,7 @@ import {
   type PeerMetadata,
   type RoomContext
 } from "#src/index.ts";
+import { OPAQUE_PROTOCOLS } from "../helpers/protocols.ts";
 
 export interface FixtureWorkerData {
   greeting?: string;
@@ -16,6 +17,7 @@ export interface FixtureWorkerData {
  * goes through, as opposed to WorkerExtensionProxy.spec.ts's FakeWorkerTransport.
  */
 export default class FixtureExtension extends Extension {
+  readonly protocols = OPAQUE_PROTOCOLS;
   readonly id = "fixture";
   readonly name = "fixture";
 

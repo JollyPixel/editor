@@ -20,14 +20,16 @@ import {
   type WorkerTransport,
   type WorkerTransportFactory
 } from "./WorkerTransport.ts";
-import type {
-  DispatchArgsMap,
-  DispatchMethod,
-  HostWorkerData,
-  WorkerContextCall,
-  WorkerContextResponse,
-  WorkerToMainMessage
+import {
+  isWorkerToMainMessage,
+  type DispatchArgsMap,
+  type DispatchMethod,
+  type HostWorkerData,
+  type WorkerContextCall,
+  type WorkerContextResponse,
+  type WorkerToMainMessage
 } from "./protocol.ts";
+import type { MessageProtocols } from "../../../protocol/MessageProtocol.ts";
 import type {
   ClientHandle,
   PeerMetadata
@@ -50,22 +52,13 @@ function resolveHostEntryUrl(): URL {
     new URL("./WorkerExtensionHost.js", import.meta.url);
 }
 
-const kWorkerToMainTypes = new Set(["ready", "dispatch-result", "context-call"]);
-
-function isWorkerToMainMessage(
-  value: unknown
-): value is WorkerToMainMessage {
-  return typeof value === "object" && value !== null &&
-    "type" in value && typeof value.type === "string" &&
-    kWorkerToMainTypes.has(value.type);
-}
-
 /**
  * Presents a worker-hosted extension through the normal Extension API.
  */
 export class WorkerExtensionProxy extends Extension {
   readonly id: string;
   readonly name: string;
+  readonly protocols: MessageProtocols;
 
   #descriptor: WorkerExtensionDescriptor;
   #logger: Logger;
@@ -93,6 +86,7 @@ export class WorkerExtensionProxy extends Extension {
     super();
     this.id = descriptor.id;
     this.name = descriptor.name;
+    this.protocols = descriptor.protocols;
     this.#descriptor = descriptor;
     this.#logger = options.logger.withContext({
       room: descriptor.id
@@ -101,14 +95,6 @@ export class WorkerExtensionProxy extends Extension {
       ((workerData) => new NodeWorkerTransport(resolveHostEntryUrl(), workerData));
 
     this.#spawn();
-  }
-
-  override getEventName(
-    payload: unknown
-  ): string {
-    return this.#descriptor.getEventName ?
-      this.#descriptor.getEventName(payload) :
-      super.getEventName(payload);
   }
 
   onClientConnect(

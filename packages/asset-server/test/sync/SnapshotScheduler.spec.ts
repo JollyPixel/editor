@@ -53,7 +53,8 @@ function increment(
 }
 
 describe("SnapshotScheduler — cadence", () => {
-  test("snapshots after the quiet period", async() => {
+  test("snapshots after the quiet period", async(t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     await using harness = await syncHarness({
       handlers: [counterHandler()],
       snapshot: { delay: 1_000, maxDelay: 10_000 }
@@ -63,13 +64,14 @@ describe("SnapshotScheduler — cadence", () => {
     increment(harness, assetId);
     assert.strictEqual(harness.scheduler.pending, 1);
 
-    harness.timers.advance(1_000);
+    t.mock.timers.tick(1_000);
     await harness.scheduler.flush();
 
     assert.strictEqual(text(await harness.source.read("a.counter")), "1");
   });
 
-  test("several events inside one quiet period produce one write", async() => {
+  test("several events inside one quiet period produce one write", async(t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     await using harness = await syncHarness({
       handlers: [counterHandler()],
       snapshot: { delay: 1_000, maxDelay: 10_000 }
@@ -87,18 +89,19 @@ describe("SnapshotScheduler — cadence", () => {
     };
 
     increment(harness, assetId);
-    harness.timers.advance(400);
+    t.mock.timers.tick(400);
     increment(harness, assetId);
-    harness.timers.advance(400);
+    t.mock.timers.tick(400);
     increment(harness, assetId);
-    harness.timers.advance(1_000);
+    t.mock.timers.tick(1_000);
     await harness.scheduler.flush();
 
     assert.strictEqual(writes, 1);
     assert.strictEqual(text(await harness.source.read("a.counter")), "3");
   });
 
-  test("the max delay caps a continuously edited asset", async() => {
+  test("the max delay caps a continuously edited asset", async(t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     await using harness = await syncHarness({
       handlers: [counterHandler()],
       snapshot: { delay: 1_000, maxDelay: 2_500 }
@@ -108,7 +111,7 @@ describe("SnapshotScheduler — cadence", () => {
     // Never quiesces: an event every 500ms keeps resetting the debounce.
     for (let index = 0; index < 5; index++) {
       increment(harness, assetId);
-      harness.timers.advance(500);
+      t.mock.timers.tick(500);
     }
     await harness.scheduler.flush();
 
@@ -119,7 +122,8 @@ describe("SnapshotScheduler — cadence", () => {
     );
   });
 
-  test("a zero delay snapshots on the next timer turn", async() => {
+  test("a zero delay snapshots on the next timer turn", async(t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     await using harness = await syncHarness({
       handlers: [counterHandler()],
       snapshot: { delay: 0, maxDelay: 10_000 }
@@ -127,13 +131,14 @@ describe("SnapshotScheduler — cadence", () => {
     const assetId = await counterAsset(harness);
 
     increment(harness, assetId);
-    harness.timers.advance(0);
+    t.mock.timers.tick(0);
     await harness.scheduler.flush();
 
     assert.strictEqual(text(await harness.source.read("a.counter")), "1");
   });
 
-  test("a kind can override the default quiet period", async() => {
+  test("a kind can override the default quiet period", async(t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     await using harness = await syncHarness({
       handlers: [counterHandler({ delay: 100 })],
       snapshot: { delay: 1_000, maxDelay: 10_000 }
@@ -141,13 +146,14 @@ describe("SnapshotScheduler — cadence", () => {
     const assetId = await counterAsset(harness);
 
     increment(harness, assetId);
-    harness.timers.advance(100);
+    t.mock.timers.tick(100);
     await harness.scheduler.flush();
 
     assert.strictEqual(text(await harness.source.read("a.counter")), "1");
   });
 
-  test("a kind can override the default maximum delay", async() => {
+  test("a kind can override the default maximum delay", async(t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     await using harness = await syncHarness({
       handlers: [counterHandler({ maxDelay: 200 })],
       snapshot: { delay: 1_000, maxDelay: 10_000 }
@@ -155,7 +161,7 @@ describe("SnapshotScheduler — cadence", () => {
     const assetId = await counterAsset(harness);
 
     increment(harness, assetId);
-    harness.timers.advance(200);
+    t.mock.timers.tick(200);
     await harness.scheduler.flush();
 
     assert.strictEqual(text(await harness.source.read("a.counter")), "1");

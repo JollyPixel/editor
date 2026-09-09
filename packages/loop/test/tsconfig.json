@@ -1,9 +1,10 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     "rootDir": "..",
     "noEmit": true,
-    "composite": false
+    "composite": false,
+    "rewriteRelativeImportExtensions": false
   },
   "include": [
     "../src",

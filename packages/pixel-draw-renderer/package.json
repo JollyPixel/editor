@@ -20,8 +20,9 @@
     "bench": "jolly-bench --ignore browser.bench.ts",
     "bench:browser": "node bench/browser.bench.ts",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only",
-    "lint": "eslint src/**/*.ts"
+    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

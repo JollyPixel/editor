@@ -166,6 +166,7 @@ describe("PixelSyncClient — UV region echoes", () => {
 
     canvas.uv.create({ id: "cube-a", width: 8, height: 8 });
     const [command] = room.sent;
+    assert.strictEqual(command.action, "uv-region-created");
 
     room.deliver({
       ...command,

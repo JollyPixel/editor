@@ -15,9 +15,9 @@ import {
 
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
+import { pixelProtocols } from "../network/PixelCommand.schema.ts";
 import {
-  isPixelNetworkCommand,
-  PIXEL_NETWORK_ACTIONS
+  isPixelNetworkCommand
 } from "../network/PixelCommandValidator.ts";
 import {
   decodePixelArtDocument,
@@ -112,7 +112,7 @@ export function pixelArtAssetHandler(
 
       return {
         commandEventType: PIXEL_ART_COMMAND,
-        actions: PIXEL_NETWORK_ACTIONS,
+        protocols: pixelProtocols,
 
         parse(payload) {
           return isPixelNetworkCommand(payload) ? payload : null;

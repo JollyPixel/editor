@@ -19,7 +19,6 @@ createAssetBackend(options: AssetBackendOptions): Promise<AssetBackend>
 | `watch` | `true` | Watch sources that implement `watch()`. |
 | `reconcileDebounce` | `200` ms | Quiet period before external changes are scanned. |
 | `logger` | silent | A `loglayer` logger. |
-| `timers` | system timers | Injectable clock used by scheduling. |
 
 A handler may override either default snapshot delay. See
 [Asset kinds](./AssetKinds.md#snapshot-policy).

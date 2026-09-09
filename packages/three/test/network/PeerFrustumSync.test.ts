@@ -153,7 +153,7 @@ describe("remote peers", () => {
     sync.attach(new THREE.Object3D());
 
     const first = sync.poseOf("alice");
-    first!.position.x = 99;
+    (first!.position as { x: number; }).x = 99;
 
     assert.equal(sync.poseOf("alice")?.position.x, 1);
   });

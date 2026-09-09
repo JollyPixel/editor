@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { WorkerExtensionProxy } from "#src/server/extension/worker/WorkerExtensionProxy.ts";
 import { createLogger } from "#src/server/logger.ts";
+import { OPAQUE_PROTOCOLS } from "../../../helpers/protocols.ts";
 import type {
   ClientHandle,
   RoomBroadcast,
@@ -51,6 +52,7 @@ describe("WorkerExtensionProxy — real worker_threads.Worker (e2e)", () => {
       {
         id: "fixture",
         name: "fixture",
+        protocols: OPAQUE_PROTOCOLS,
         modulePath: fixtureUrl,
         workerData: { greeting: "hi" }
       },
@@ -98,6 +100,7 @@ describe("WorkerExtensionProxy — real worker_threads.Worker (e2e)", () => {
             eventType: "connected",
             eventData: {},
             eventVersion: 1,
+            actor: { type: "system", source: "test" },
             createdAt: ""
           }
         ])

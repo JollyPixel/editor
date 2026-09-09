@@ -22,7 +22,6 @@ import { AssetWriter } from "./sync/AssetWriter.ts";
 import { SnapshotScheduler } from "./sync/SnapshotScheduler.ts";
 import { Reconciler } from "./sync/Reconciler.ts";
 import { ReconciliationWatcher } from "./sync/ReconciliationWatcher.ts";
-import type { Timers } from "./utils/timers.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogExtension } from "./catalog/CatalogExtension.ts";
 import { registerAssetRooms } from "./rooms/registerAssetRooms.ts";
@@ -58,7 +57,6 @@ export interface AssetBackendOptions {
    * one reconciliation pass.
    */
   reconcileDebounce?: number;
-  timers?: Timers;
   logger?: Logger;
 }
 
@@ -112,7 +110,6 @@ export async function createAssetBackend(
     reconcileOnStart = true,
     watch = true,
     reconcileDebounce,
-    timers,
     logger = silentLogger()
   } = options;
 
@@ -140,7 +137,6 @@ export async function createAssetBackend(
     states,
     projector,
     snapshot,
-    timers,
     logger
   });
   scheduler.start();
@@ -166,7 +162,6 @@ export async function createAssetBackend(
     source,
     reconciler,
     debounce: reconcileDebounce,
-    timers,
     logger
   });
 

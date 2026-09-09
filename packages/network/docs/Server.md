@@ -18,11 +18,6 @@ interface ServerOptions {
    * @default 30_000
    */
   roomGraceMs?: number;
-  /**
-   * Clock behind room eviction. Injected so a caller can drive the grace
-   * period instead of waiting on it.
-   */
-  timers?: Timers;
 }
 ```
 
@@ -77,6 +72,3 @@ in-progress eviction to finish.
   one room or all of them. Eviction starts on a timer and tears down
   asynchronously, so a caller that needs an evicted room's flushed state
   awaits this rather than racing the teardown.
-- `timers` (`ServerOptions`) replaces the clock behind the grace period.
-  `systemTimers` is the default; a test supplies one it advances by hand, so
-  eviction is deterministic instead of wall-clock bound.
