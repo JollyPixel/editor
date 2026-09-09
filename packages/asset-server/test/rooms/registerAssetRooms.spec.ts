@@ -88,10 +88,58 @@ function editableCounter(): AssetKindHandler<CounterState> {
   };
 }
 
+function liveCounter(): AssetKindHandler<CounterState, CounterCommand> {
+  const handler = counterHandler({ delay: 0, maxDelay: 0 });
+
+  return {
+    ...handler,
+    live: (binding) => {
+      return {
+        commandEventType: COUNTER_INCREMENTED,
+        actions: ["increment"],
+        parse: (payload) => (isCounterCommand(payload) ? payload : null),
+        snapshot: () => {
+          return { value: binding.state.value };
+        },
+        arbitrate: (command) => {
+          return { command };
+        }
+      };
+    }
+  };
+}
+
+type CounterKind = "extension" | "live" | "plain";
+
+const counterKinds: Record<CounterKind, () => AssetKindHandler<CounterState>> = {
+  extension: editableCounter,
+  live: liveCounter,
+  plain: () => counterHandler()
+};
+
+interface CounterCommand {
+  action: "increment";
+}
+
+function isCounterCommand(
+  payload: unknown
+): payload is CounterCommand {
+  return typeof payload === "object" &&
+    payload !== null &&
+    "action" in payload &&
+    payload.action === "increment";
+}
+
 function client(
   id: string
-): ClientHandle {
-  return { id, send: () => void 0 };
+): ClientHandle & { received: unknown[]; } {
+  const received: unknown[] = [];
+
+  return {
+    id,
+    received,
+    send: (payload) => received.push(payload)
+  };
 }
 
 interface RoomHarness extends AsyncDisposable {
@@ -100,15 +148,17 @@ interface RoomHarness extends AsyncDisposable {
   readonly catalog: CatalogProjection;
   readonly serverTimers: ManualTimers;
   readonly assetId: string;
+  readonly clients: Map<string, ClientHandle & { received: unknown[]; }>;
   join(clientId: string, room?: string): Promise<void>;
+  send(clientId: string, payload: unknown): Promise<void>;
 }
 
 async function roomHarness(
-  options: { graceMs?: number; withExtension?: boolean; } = {}
+  options: { graceMs?: number; kind?: CounterKind; } = {}
 ): Promise<RoomHarness> {
-  const { graceMs = 1_000, withExtension = true } = options;
+  const { graceMs = 1_000, kind = "extension" } = options;
   const sync = await syncHarness({
-    handlers: [withExtension ? editableCounter() : counterHandler()],
+    handlers: [counterKinds[kind]()],
     snapshot: { delay: 0, maxDelay: 0 }
   });
 
@@ -138,15 +188,27 @@ async function roomHarness(
     scheduler: sync.scheduler
   });
 
+  const clients = new Map<string, ClientHandle & { received: unknown[]; }>();
+
   return {
     sync,
     server,
     catalog,
     serverTimers,
+    clients,
     assetId: created.assetId,
     async join(clientId, room = assetRoomName("counter", created.assetId)) {
-      server.handleConnect(client(clientId));
+      const handle = client(clientId);
+      clients.set(clientId, handle);
+      server.handleConnect(handle);
       await server.handleMessage(clientId, { room, kind: "join" });
+    },
+    send(clientId, payload) {
+      return server.handleMessage(clientId, {
+        room: assetRoomName("counter", created.assetId),
+        kind: "message",
+        payload
+      });
     },
     async [Symbol.asyncDispose]() {
       await server.close();
@@ -212,11 +274,44 @@ describe("registerAssetRooms — admission", () => {
   });
 
   test("a kind whose handler builds no extension is refused", async() => {
-    await using harness = await roomHarness({ withExtension: false });
+    await using harness = await roomHarness({ kind: "plain" });
 
     await harness.join("A");
 
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
+  });
+
+  test("a kind exposing a live protocol is hosted by the room extension", async() => {
+    await using harness = await roomHarness({ kind: "live" });
+
+    await harness.join("A");
+
+    assert.strictEqual(harness.sync.states.has(harness.assetId), true);
+    assert.deepEqual(
+      harness.clients.get("A")!.received.at(-1),
+      {
+        room: assetRoomName("counter", harness.assetId),
+        kind: "message",
+        payload: {
+          type: "snapshot",
+          data: { value: 0 }
+        }
+      }
+    );
+  });
+
+  test("a live protocol appends its command event type", async() => {
+    await using harness = await roomHarness({ kind: "live" });
+
+    await harness.join("A");
+    await harness.send("A", { action: "increment" });
+    await harness.send("A", { action: "decrement" });
+
+    const appended = harness.sync.eventStore.reader
+      .list(harness.assetId)
+      .filter((event) => event.eventType === COUNTER_INCREMENTED);
+
+    assert.strictEqual(appended.length, 1);
   });
 
   test("an asset id belonging to another kind is refused", async() => {

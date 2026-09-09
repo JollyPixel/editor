@@ -6,10 +6,6 @@ export {
 export type {
   PixelArtAssetHandlerOptions
 } from "./pixelArtAssetHandler.ts";
-export { PixelArtAssetExtension } from "./PixelArtAssetExtension.ts";
-export type {
-  PixelArtAssetExtensionOptions
-} from "./PixelArtAssetExtension.ts";
 export { PixelArtState } from "./PixelArtState.ts";
 export {
   decodePixelArtDocument,

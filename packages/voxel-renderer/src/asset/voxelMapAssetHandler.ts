@@ -8,7 +8,9 @@ import {
   decodeContent,
   parseAssetEvent,
   type AssetKindHandler,
+  type AssetLiveProtocol,
   type AssetRoomBinding,
+  type AssetRoomMessage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 
@@ -22,14 +24,23 @@ import {
   encodeVoxelDocument,
   parseVoxelDocument
 } from "../serialization/document.ts";
-import { VoxelMapAssetExtension } from "./VoxelMapAssetExtension.ts";
 import { VoxelMapState } from "./VoxelMapState.ts";
+import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
+import {
+  VOXEL_BLOCK_HOOK_ACTIONS,
+  VOXEL_LAYER_HOOK_ACTIONS
+} from "../hooks.ts";
 import { applyBlockCommand } from "../network/applyBlockCommand.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
 
 export const VOXEL_MAP_KIND = "voxelmap";
 export const VOXEL_MAP_COMMAND = "voxelmap.command";
+export const VOXEL_MAP_ACTIONS: readonly string[] = [
+  ...VOXEL_LAYER_HOOK_ACTIONS,
+  ...VOXEL_BLOCK_HOOK_ACTIONS,
+  "world-replace"
+];
 
 // CONSTANTS
 const kDefaultMatch = ["**/*.voxelmap.json"] as const;
@@ -66,7 +77,7 @@ export interface VoxelMapAssetHandlerOptions {
 
 export function voxelMapAssetHandler(
   options: VoxelMapAssetHandlerOptions = {}
-): AssetKindHandler<VoxelMapState> {
+): AssetKindHandler<VoxelMapState, VoxelNetworkCommand> {
   const {
     match = kDefaultMatch,
     chunkSize = kDefaultChunkSize,
@@ -112,13 +123,54 @@ export function voxelMapAssetHandler(
       );
     },
 
-    createExtension(
+    live(
       binding: AssetRoomBinding<VoxelMapState>
-    ) {
-      return new VoxelMapAssetExtension(binding, {
+    ): AssetLiveProtocol<VoxelNetworkCommand> {
+      const arbiter = new VoxelCommandArbiter({ conflictResolver });
+      const { state } = binding;
+
+      return {
         commandEventType: VOXEL_MAP_COMMAND,
-        conflictResolver
-      });
+        actions: VOXEL_MAP_ACTIONS,
+
+        parse(payload) {
+          return isVoxelNetworkCommand(payload) ? payload : null;
+        },
+
+        snapshot() {
+          return state.toJSON();
+        },
+
+        arbitrate(command) {
+          if (command.action === "world-replace") {
+            return { command };
+          }
+
+          const admitted = arbiter.admit(command);
+          if (admitted === null) {
+            return null;
+          }
+
+          return {
+            command: admitted,
+            commit: () => arbiter.record(admitted)
+          };
+        },
+
+        broadcast(command): AssetRoomMessage {
+          if (command.action === "world-replace") {
+            return {
+              type: "snapshot",
+              data: state.toJSON()
+            };
+          }
+
+          return {
+            type: "command",
+            data: command
+          };
+        }
+      };
     }
   };
 }

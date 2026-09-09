@@ -34,9 +34,13 @@ and names without a colon are rejected.
 A room is created when:
 
 - the room name parses as `${kind}:${assetId}`;
-- the kind is registered and provides `createExtension`;
+- the kind is registered and provides `live` or `createExtension`;
 - the catalog contains the asset under that kind;
 - the created extension uses the requested room name as its `id`.
+
+A kind that provides `live` is hosted by `AssetRoomExtension`, which owns
+the snapshot-on-connect, arbitrate-append-broadcast and rights-event-name
+plumbing. `createExtension` bypasses it and takes precedence.
 
 The handler receives the live state through `AssetRoomBinding`:
 
@@ -62,3 +66,5 @@ server evicts all resolved rooms through the same path.
 
 Rights use the extension's `name`, which asset handlers normally set to the
 asset kind. This gives every room of one kind the same rights scope.
+`AssetRoomExtension` names each event after the command's `action` when the
+protocol declares it, and `invalid` otherwise.

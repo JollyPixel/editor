@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type {
+  Extension,
   RoomResolution,
   Server
 } from "@jolly-pixel/network";
@@ -11,7 +12,12 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import { AssetRoomExtension } from "./AssetRoomExtension.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
+import type {
+  AssetKindHandler,
+  AssetRoomBinding
+} from "../kinds/AssetKindHandler.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import type { AssetStateStore } from "../sync/AssetStateStore.ts";
 import type { AssetProjector } from "../sync/AssetProjector.ts";
@@ -39,6 +45,24 @@ export interface AssetRoomsOptions {
   scheduler: SnapshotScheduler;
   graceMs?: number;
   logger?: Logger;
+}
+
+type AssetExtensionFactory = (
+  binding: AssetRoomBinding
+) => Extension;
+
+function extensionFactory(
+  handler: AssetKindHandler
+): AssetExtensionFactory | null {
+  const { createExtension, live } = handler;
+  if (createExtension !== undefined) {
+    return createExtension;
+  }
+  if (live === undefined) {
+    return null;
+  }
+
+  return (binding) => new AssetRoomExtension(binding, live(binding));
 }
 
 export function registerAssetRooms(
@@ -80,8 +104,8 @@ export function registerAssetRooms(
       return refuse("unknown kind");
     }
 
-    const handler = kinds.get(kind);
-    if (handler.createExtension === undefined) {
+    const createRoomExtension = extensionFactory(kinds.get(kind));
+    if (createRoomExtension === null) {
       return refuse("kind has no extension");
     }
 
@@ -94,12 +118,13 @@ export function registerAssetRooms(
     }
 
     const entry = await states.acquire(assetId, kind);
-    const extension = handler.createExtension({
+    const binding: AssetRoomBinding = {
       assetId,
       kind,
       roomId: roomName,
       state: entry.state
-    });
+    };
+    const extension = createRoomExtension(binding);
     if (extension.id !== roomName) {
       states.release(assetId);
 

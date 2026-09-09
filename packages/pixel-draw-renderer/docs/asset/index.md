@@ -35,6 +35,10 @@ be there tomorrow.
 
 Both share `PixelCommandArbiter`, which resolves conflicts without touching a
 buffer. That separation is what lets the asset room append rather than mutate.
+`PixelSyncServer` calls `accept()`, which resolves and records in one step
+because it applies the command immediately. The asset room calls `admit()`
+and commits the returned arbitration only once the append lands, so a refused
+append leaves no trace in the conflict trackers.
 
 ## The `.pixelart` document
 
@@ -60,6 +64,23 @@ class PixelArtState {
 
 `clear()` returns the buffer to the handler's `defaultSize` and drops every UV
 region; it is what `ASSET_DELETED` folds to.
+
+## The live protocol
+
+`live()` returns the pixel-art half of an asset room; asset-server's
+`AssetRoomExtension` owns the room lifecycle around it.
+
+```ts
+function live(
+  binding: AssetRoomBinding<PixelArtState>
+): AssetLiveProtocol<PixelNetworkCommand>;
+```
+
+It builds one `PixelCommandArbiter` per room, snapshots with
+`pixelArtSnapshot()`, accepts `PIXEL_NETWORK_ACTIONS`, and appends admitted
+commands under `PIXEL_ART_COMMAND`. Arbitration stamps the sender's
+server-side `clientId` onto the command, so a spoofed id never reaches the
+log.
 
 ## Why the room never writes
 

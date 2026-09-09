@@ -1,15 +1,12 @@
 export {
   voxelMapAssetHandler,
+  VOXEL_MAP_ACTIONS,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND
 } from "./voxelMapAssetHandler.ts";
 export type {
   VoxelMapAssetHandlerOptions
 } from "./voxelMapAssetHandler.ts";
-export { VoxelMapAssetExtension } from "./VoxelMapAssetExtension.ts";
-export type {
-  VoxelMapAssetExtensionOptions
-} from "./VoxelMapAssetExtension.ts";
 export { VoxelMapState } from "./VoxelMapState.ts";
 export {
   decodeVoxelDocument,

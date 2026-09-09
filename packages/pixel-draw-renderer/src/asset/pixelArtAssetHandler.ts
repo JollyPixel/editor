@@ -8,19 +8,25 @@ import {
   decodeContent,
   parseAssetEvent,
   type AssetKindHandler,
+  type AssetLiveProtocol,
   type AssetRoomBinding,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
-import { isPixelNetworkCommand } from "../network/PixelCommandValidator.ts";
+import {
+  isPixelNetworkCommand,
+  PIXEL_NETWORK_ACTIONS
+} from "../network/PixelCommandValidator.ts";
 import {
   decodePixelArtDocument,
   encodePixelArtDocument
 } from "../serialization/document.ts";
-import { PixelArtAssetExtension } from "./PixelArtAssetExtension.ts";
 import { PixelArtState } from "./PixelArtState.ts";
+import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
+import { pixelArtSnapshot } from "../serialization/buffer.ts";
+import type { PixelNetworkCommand } from "../network/types.ts";
 import type { Vec2 } from "../types.ts";
 
 export const PIXEL_ART_KIND = "pixelart";
@@ -56,7 +62,7 @@ export interface PixelArtAssetHandlerOptions {
  */
 export function pixelArtAssetHandler(
   options: PixelArtAssetHandlerOptions = {}
-): AssetKindHandler<PixelArtState> {
+): AssetKindHandler<PixelArtState, PixelNetworkCommand> {
   const {
     match = kDefaultMatch,
     defaultSize = kDefaultSize,
@@ -98,13 +104,31 @@ export function pixelArtAssetHandler(
       );
     },
 
-    createExtension(
+    live(
       binding: AssetRoomBinding<PixelArtState>
-    ) {
-      return new PixelArtAssetExtension(binding, {
+    ): AssetLiveProtocol<PixelNetworkCommand> {
+      const arbiter = new PixelCommandArbiter({ conflictResolver });
+      const { state } = binding;
+
+      return {
         commandEventType: PIXEL_ART_COMMAND,
-        conflictResolver
-      });
+        actions: PIXEL_NETWORK_ACTIONS,
+
+        parse(payload) {
+          return isPixelNetworkCommand(payload) ? payload : null;
+        },
+
+        snapshot() {
+          return pixelArtSnapshot(state.buffer);
+        },
+
+        arbitrate(command, clientId) {
+          return arbiter.admit(state.buffer, {
+            ...command,
+            clientId
+          });
+        }
+      };
     }
   };
 }

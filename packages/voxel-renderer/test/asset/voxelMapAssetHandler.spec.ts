@@ -8,11 +8,13 @@ import {
   ASSET_CREATED,
   ASSET_DELETED,
   encodeContent,
-  type AssetEventData
+  type AssetEventData,
+  type AssetLiveProtocol
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {
+  VOXEL_MAP_ACTIONS,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND,
   voxelMapAssetHandler,
@@ -21,8 +23,32 @@ import {
 import { decodeVoxelDocument, encodeVoxelDocument } from "../../src/serialization/index.ts";
 import { resolveBlockDefinition } from "../../src/blocks/index.ts";
 import type { VoxelNetworkCommand } from "../../src/network/index.ts";
-import { blockDefinedCmd, voxelSetCmd } from "../helpers/networkCommands.ts";
+import {
+  blockDefinedCmd,
+  voxelSetCmd,
+  worldReplaceCmd
+} from "../helpers/networkCommands.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
+
+interface LiveHarness {
+  protocol: AssetLiveProtocol<VoxelNetworkCommand>;
+  state: VoxelMapState;
+}
+
+function live(): LiveHarness {
+  const handler = voxelMapAssetHandler({ chunkSize: 16 });
+  const state = handler.create("asset-1");
+
+  return {
+    state,
+    protocol: handler.live!({
+      assetId: "asset-1",
+      kind: VOXEL_MAP_KIND,
+      roomId: `${VOXEL_MAP_KIND}:asset-1`,
+      state
+    })
+  };
+}
 
 function event(
   eventType: string,
@@ -298,18 +324,100 @@ describe("voxelMapAssetHandler", () => {
     );
   });
 
-  test("createExtension binds the room id and the kind", () => {
-    const handler = voxelMapAssetHandler();
-    const state = handler.create("asset-1");
-    const extension = handler.createExtension!({
-      assetId: "asset-1",
-      kind: VOXEL_MAP_KIND,
-      roomId: `${VOXEL_MAP_KIND}:asset-1`,
-      state
-    });
+  test("live() declares the voxel command stream", () => {
+    const { protocol } = live();
 
-    assert.strictEqual(extension.id, `${VOXEL_MAP_KIND}:asset-1`);
-    assert.strictEqual(extension.name, VOXEL_MAP_KIND);
+    assert.strictEqual(protocol.commandEventType, VOXEL_MAP_COMMAND);
+    assert.deepEqual([...protocol.actions], [...VOXEL_MAP_ACTIONS]);
+    assert.ok(protocol.actions.includes("world-replace"));
+  });
+
+  test("live() rejects a payload that is not a voxel command", () => {
+    const { protocol } = live();
+
+    assert.strictEqual(protocol.parse({ action: "voxel-set" }), null);
+    assert.strictEqual(protocol.parse(null), null);
+  });
+
+  test("an uncommitted arbitration leaves the tracker untouched", () => {
+    const { protocol } = live();
+
+    protocol.arbitrate(
+      voxelSetCmd({ timestamp: 2_000, clientId: "alice" }),
+      "alice"
+    );
+
+    assert.notStrictEqual(
+      protocol.arbitrate(
+        voxelSetCmd({ timestamp: 1_000, clientId: "bob" }),
+        "bob"
+      ),
+      null
+    );
+  });
+
+  test("a committed arbitration rejects the older write", () => {
+    const { protocol } = live();
+
+    protocol.arbitrate(
+      voxelSetCmd({ timestamp: 2_000, clientId: "alice" }),
+      "alice"
+    )!.commit!();
+
+    assert.strictEqual(
+      protocol.arbitrate(
+        voxelSetCmd({ timestamp: 1_000, clientId: "bob" }),
+        "bob"
+      ),
+      null
+    );
+  });
+
+  test("world-replace skips arbitration and broadcasts a snapshot", () => {
+    const { protocol, state } = live();
+    const command = worldReplaceCmd();
+
+    const arbitration = protocol.arbitrate(command, "alice");
+    assert.notStrictEqual(arbitration, null);
+
+    assert.deepEqual(
+      protocol.broadcast!(arbitration!.command),
+      {
+        type: "snapshot",
+        data: state.toJSON()
+      }
+    );
+  });
+
+  test("any other command broadcasts itself", () => {
+    const { protocol } = live();
+    const command = voxelSetCmd({});
+
+    assert.deepEqual(
+      protocol.broadcast!(command),
+      {
+        type: "command",
+        data: command
+      }
+    );
+  });
+
+  test("live() gives each room its own conflict tracker", () => {
+    const first = live().protocol;
+    const second = live().protocol;
+
+    first.arbitrate(
+      voxelSetCmd({ timestamp: 2_000, clientId: "alice" }),
+      "alice"
+    )!.commit!();
+
+    assert.notStrictEqual(
+      second.arbitrate(
+        voxelSetCmd({ timestamp: 1_000, clientId: "bob" }),
+        "bob"
+      ),
+      null
+    );
   });
 });
 
