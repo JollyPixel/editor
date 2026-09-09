@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 import {
   Control,
   Controls,
@@ -241,7 +241,7 @@ world.createActor("hud")
     onRefresh: syncStats
   });
 
-await loadRuntime(runtime, {
+await runtime.load({
   skipLoadingScreen: true
 });
 

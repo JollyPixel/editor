@@ -1,8 +1,8 @@
 # Customizing the loading screen
 
-[`loadRuntime()`](../api/loadRuntime.md) mounts a `jolly-loading` element while
-it configures the device and prepares startup assets. The element is supplied
-by `@jolly-pixel/ui`.
+[`runtime.load()`](../api/Runtime.md#loading-and-startup) mounts a
+`jolly-loading` element while it configures the device and prepares startup
+assets. The element is supplied by `@jolly-pixel/ui`.
 
 ## Choose the container
 
@@ -15,7 +15,7 @@ if (container === null) {
   throw new Error("Game shell was not found.");
 }
 
-await loadRuntime(runtime, {
+await runtime.load({
   loadingContainer: container,
   scene: new GameScene()
 });
@@ -31,7 +31,7 @@ timer, although device, asset, scene, and screen animations still determine the
 actual startup time.
 
 ```ts
-await loadRuntime(runtime, {
+await runtime.load({
   loadingDelay: 0,
   scene: new GameScene()
 });
@@ -80,7 +80,7 @@ the underlying element's properties and methods.
 Use `skipLoadingScreen` when the host application owns startup feedback:
 
 ```ts
-await loadRuntime(runtime, {
+await runtime.load({
   skipLoadingScreen: true,
   scene: new GameScene()
 });
@@ -89,4 +89,3 @@ await loadRuntime(runtime, {
 The runtime shows the canvas immediately and ignores `loadingDelay` and
 `loadingContainer`. Device setup and startup loading still run before the game
 loop starts.
-

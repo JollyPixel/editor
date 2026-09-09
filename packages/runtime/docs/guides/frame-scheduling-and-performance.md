@@ -32,11 +32,11 @@ pause state, and frame-source behavior.
 
 ## Control startup device settings
 
-`loadRuntime()` uses GPU detection to choose a render cap and pixel ratio. Pass
+`runtime.load()` uses GPU detection to choose a render cap and pixel ratio. Pass
 `maxFps` when the application has its own cap:
 
 ```ts
-await loadRuntime(runtime, {
+await runtime.load({
   scene: new GameScene(),
   maxFps: 144
 });
@@ -83,4 +83,3 @@ const recorder = runtime.stats;
 
 See the [`StatsRecorder` reference](../../../ui/docs/api/stats/stats-recorder.md)
 for the recorder API.
-

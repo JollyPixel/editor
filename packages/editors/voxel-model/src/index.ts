@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 import "@jolly-pixel/ui";
 import {
   DEFAULT_UV_SLOTS,
@@ -79,7 +76,7 @@ const runtime = await Runtime.create("#threeRenderer canvas", {
 });
 
 const modelScene = new ModelEditorScene();
-await loadRuntime(runtime, {
+await runtime.load({
   scene: modelScene,
   skipLoadingScreen: true,
   maxFps: Infinity

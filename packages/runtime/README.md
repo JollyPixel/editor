@@ -52,17 +52,14 @@ Start by creating an **HTML** file with a canvas and an ECMAScript `module` scri
 > [!TIP]
 > The `tabindex="-1"` attribute on the canvas allows it to receive keyboard focus, which is required for capturing input events.
 
-Then in your main script, create a `Runtime` instance and call `loadRuntime` to bootstrap everything:
+Then in your main script, create and load a `Runtime`:
 
 - Detect GPU capabilities
 - Load startup assets and the initial scene
 - Start the world and game loop
 
 ```ts
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 
 const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true,
@@ -72,10 +69,9 @@ const runtime = await Runtime.create("canvas", {
   }
 });
 
-loadRuntime(
-  runtime,
-  { scene: new GameScene() }
-).catch(console.error);
+runtime.load({
+  scene: new GameScene()
+}).catch(console.error);
 ```
 
 Vite serves `public/assets.json` during development and copies it to the build
@@ -99,13 +95,10 @@ The guides cover runtime setup and customization:
 
 ## 📚 API
 
-- [`Runtime`](./docs/api/Runtime.md): construction, services, and lifecycle.
-- [`loadRuntime`](./docs/api/loadRuntime.md): startup options, loading, and
-  error behavior.
+- [`Runtime`](./docs/api/Runtime.md): construction, loading, services, and
+  lifecycle.
 - [Runtime asset options](./docs/api/runtime-assets.md): catalogs and platform
   loaders.
-- [Runtime canvas](./docs/api/runtime-canvas.md): canvas targets and selector
-  resolution.
 - [`SceneManager`](../engine/docs/systems/scene-manager.md): scene-load state,
   progress, and activation gates.
 

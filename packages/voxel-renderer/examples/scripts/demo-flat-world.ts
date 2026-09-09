@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import { Camera3DControls } from "@jolly-pixel/engine";
-import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 import * as network from "@jolly-pixel/network/client";
 
 // Registers the declarative controls declared by the example page.
@@ -92,12 +92,8 @@ const brush = world.createActor("brush")
   });
 brush.onBrushMoved = (position) => peers.report(position);
 
-await loadRuntime(runtime);
+await runtime.load();
 
-/**
- * Voxel edits ride the engine hook into `VoxelSyncClient`; brush positions ride
- * the room's presence channel (see PeerBrushes). Both share one WebSocket.
- */
 function initializeWebsocketTransport(): network.Room<
   VoxelNetworkCommand,
   VoxelServerMessage

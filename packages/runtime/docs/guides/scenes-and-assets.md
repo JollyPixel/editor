@@ -36,11 +36,11 @@ shows how to create typed references and declare `scene.assets`.
 
 ## Load the initial scene
 
-Pass the scene to `loadRuntime()`. Its assets are prepared before the runtime
+Pass the scene to `runtime.load()`. Its assets are prepared before the runtime
 starts:
 
 ```ts
-await loadRuntime(runtime, {
+await runtime.load({
   scene: new GameScene()
 });
 ```
@@ -48,14 +48,15 @@ await loadRuntime(runtime, {
 Additional references can share the same startup boundary:
 
 ```ts
-await loadRuntime(runtime, {
+await runtime.load({
   assets: [sharedUiReference],
   scene: new GameScene()
 });
 ```
 
 Additional assets load before the scene. See the
-[`loadRuntime()` reference](../api/loadRuntime.md) for the full startup order.
+[`Runtime.load()` reference](../api/Runtime.md#loading-and-startup) for the full
+startup order.
 
 ## Change scenes
 
@@ -98,4 +99,3 @@ await batch.done;
 Each batch owns its totals, failures, status, and completion promise. The asset
 package's [`AssetLoadBatch` reference](../../../asset/docs/api/runtime/AssetLoadBatch.md)
 describes retries and overlapping batches.
-

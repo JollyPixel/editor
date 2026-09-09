@@ -93,7 +93,7 @@ Create `index.html` in your project root:
 Create `src/main.ts`:
 
 ```ts
-import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/runtime";
 
 const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true
@@ -102,7 +102,7 @@ const runtime = await Runtime.create("canvas", {
 // Add actors, components, and systems via the runtime API, for example:
 // runtime.world.addActor(...);
 
-loadRuntime(runtime).catch(console.error);
+runtime.load().catch(console.error);
 ```
 
 ## 5. Run Your Game

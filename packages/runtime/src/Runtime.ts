@@ -15,6 +15,10 @@ import {
   AnimationLoopFrameSource
 } from "./AnimationLoopFrameSource.ts";
 import {
+  bootstrapRuntime,
+  type RuntimeLoadOptions
+} from "./bootstrap/bootstrapRuntime.ts";
+import {
   createRuntimeAssetCoordinator
 } from "./assets/createRuntimeAssetCoordinator.ts";
 import type {
@@ -36,7 +40,11 @@ import type {
   PerformanceStatsPosition
 } from "./stats/resolveStatsOverlayX.ts";
 
-export type { PerformanceStatsPosition, RuntimeCanvasTarget };
+export type {
+  PerformanceStatsPosition,
+  RuntimeCanvasTarget,
+  RuntimeLoadOptions
+};
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -167,6 +175,12 @@ export class Runtime<
 
   get running() {
     return this.#isRunning;
+  }
+
+  load(
+    options: RuntimeLoadOptions<TContext> = {}
+  ): Promise<void> {
+    return bootstrapRuntime(this, options);
   }
 
   start() {
