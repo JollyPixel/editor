@@ -6,20 +6,16 @@ import type {
   PixelBufferHookEvent
 } from "../buffer/hooks.ts";
 import type {
+  PixelBufferSnapshot
+} from "../serialization/types.ts";
+import type {
   UVSlot,
-  UVGeometry,
-  UVRegionData
+  UVGeometry
 } from "../uv/UVRegion.ts";
-import type { SelectionRect, Vec2 } from "../types.ts";
+import type { SelectionRect } from "../types.ts";
 
-export interface PixelBufferSnapshot {
-  size: Vec2;
-  /**
-   * Base64-encoded RGBA8 data.
-   */
-  pixels: string;
-  uvRegions: UVRegionData[];
-}
+export type { PixelBufferSnapshot };
+
 export type PixelNetworkCommand = PixelBufferHookEvent & network.NetworkCommandHeader;
 
 export type PixelServerMessage = network.NetworkServerMessage<

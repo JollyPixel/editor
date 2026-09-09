@@ -2,6 +2,9 @@
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { Extension } from "@jolly-pixel/network";
 
+// Import Internal Dependencies
+import type { AssetLiveProtocol } from "../rooms/AssetRoomExtension.ts";
+
 export interface SnapshotPolicy {
   /**
    * Quiet period, in milliseconds, after the last event for an asset.
@@ -20,20 +23,17 @@ export interface SnapshotPolicy {
 export interface AssetRoomBinding<TState = unknown> {
   readonly assetId: string;
   readonly kind: string;
-  /**
-   * Room name clients joined. The Extension must expose it as its `id`.
-   */
   readonly roomId: string;
-  /**
-   * State-store-owned live state, mutated only through appended events.
-   */
   readonly state: TState;
 }
 
 /**
  * Folds an asset event stream and serializes its projected state.
  */
-export interface AssetKindHandler<TState = unknown> {
+export interface AssetKindHandler<
+  TState = unknown,
+  TCommand = unknown
+> {
   readonly kind: string;
   readonly match: readonly string[];
   readonly snapshot?: SnapshotPolicy;
@@ -51,6 +51,10 @@ export interface AssetKindHandler<TState = unknown> {
   serialize(
     state: TState
   ): Promise<Uint8Array>;
+
+  live?(
+    binding: AssetRoomBinding<TState>
+  ): AssetLiveProtocol<TCommand>;
 
   createExtension?(
     binding: AssetRoomBinding<TState>

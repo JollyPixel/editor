@@ -2,10 +2,10 @@
 import fs from "node:fs/promises";
 
 // Import Third-party Dependencies
-import type { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  createPixelArtBufferFromPng
-} from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
+  createPixelBufferFromPng,
+  type PixelBuffer
+} from "@jolly-pixel/pixel-draw.renderer";
 import {
   resolveTilesetDefinition,
   type ResolvedTilesetDefinition,
@@ -34,7 +34,7 @@ export async function readTilesetSeed(
     definition
   } = options;
 
-  const buffer = await createPixelArtBufferFromPng(
+  const buffer = await createPixelBufferFromPng(
     await fs.readFile(file)
   );
   const size = buffer.size();

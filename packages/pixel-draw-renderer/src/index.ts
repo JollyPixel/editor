@@ -30,6 +30,22 @@ export {
   type PixelBufferOptions
 } from "./buffer/PixelBuffer.ts";
 export type { DefaultPixelBuffer } from "./buffer/types.ts";
+export {
+  createPixelBufferFromPng,
+  type PixelBufferFromPngOptions
+} from "./buffer/fromPng.ts";
+export {
+  decodePixelArtDocument,
+  encodePixelArtDocument,
+  InvalidPixelArtDocumentError,
+  parsePixelArtDocument,
+  pixelArtSnapshot,
+  serializePixelBuffer,
+  deserializePixelBuffer,
+  PIXEL_ART_DOCUMENT_VERSION,
+  type PixelArtDocumentData,
+  type PixelBufferSnapshot
+} from "./serialization/index.ts";
 export type {
   PixelBufferHookAction,
   PixelBufferHookEvent,
@@ -118,7 +134,6 @@ export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
 // PixelSyncServer pulls worker_threads through the network server barrel.
 // Use the network subpath to keep browser bundles clean.
 export type {
-  PixelBufferSnapshot,
   PixelNetworkCommand,
   PixelServerMessage,
   SelectionGhostPayload,

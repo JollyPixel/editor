@@ -5,6 +5,7 @@ import * as network from "@jolly-pixel/network";
 import { DEFAULT_UV_SLOTS } from "../uv/UVRegion.ts";
 import { uvTargetKey } from "../uv/UVTarget.ts";
 import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
+import type { Vec2 } from "../types.ts";
 import type { PixelNetworkCommand } from "./types.ts";
 
 export type PixelStrokeCommand = Extract<
@@ -15,6 +16,11 @@ export type PixelSelectEditCommand = Extract<
   PixelNetworkCommand,
   { action: "select-edit"; }
 >;
+export interface PixelArbitration {
+  readonly command: PixelNetworkCommand;
+  commit(): void;
+}
+
 export type PixelUvRegionCommand = Extract<
   PixelNetworkCommand,
   { action: "uv-region-moved" | "uv-region-deleted" | "uv-region-state-changed"; }
@@ -84,38 +90,50 @@ export class PixelCommandArbiter {
     this.#regionTracker = new network.ConflictTracker(resolver);
   }
 
+  admit(
+    buffer: PixelBuffer,
+    command: PixelNetworkCommand
+  ): PixelArbitration | null {
+    switch (command.action) {
+      case "stroke":
+        return this.#admitStroke(command);
+      case "select-edit":
+        return this.#admitSelectEdit(command);
+      case "uv-region-moved":
+      case "uv-region-deleted":
+      case "uv-region-state-changed":
+        return this.#admitUvRegion(buffer, command);
+      case "resized":
+      case "texture-replaced":
+        return buffer.acceptsSize(command.metadata.size) ?
+          settled(command) :
+          null;
+      default:
+        return settled(command);
+    }
+  }
+
   accept(
     buffer: PixelBuffer,
     command: PixelNetworkCommand
   ): PixelNetworkCommand | null {
-    switch (command.action) {
-      case "stroke":
-        return this.#acceptStroke(command);
-      case "select-edit":
-        return this.#acceptSelectEdit(command);
-      case "uv-region-moved":
-      case "uv-region-deleted":
-      case "uv-region-state-changed":
-        return this.#acceptUvRegion(buffer, command);
-      case "resized":
-      case "texture-replaced":
-        return buffer.acceptsSize(command.metadata.size) ? command : null;
-      default:
-        return command;
+    const arbitration = this.admit(buffer, command);
+    if (arbitration === null) {
+      return null;
     }
+    arbitration.commit();
+
+    return arbitration.command;
   }
 
-  #acceptStroke(
+  #admitStroke(
     command: PixelStrokeCommand
-  ): PixelStrokeCommand | null {
+  ): PixelArbitration | null {
     const accepted: PixelStrokeCommand["metadata"]["positions"] = [];
 
     for (const position of command.metadata.positions) {
-      const key = `${position.x},${position.y}`;
-
-      if (this.#pixelTracker.resolve(key, command) === "accept") {
+      if (this.#pixelTracker.resolve(pixelKey(position), command) === "accept") {
         accepted.push(position);
-        this.#pixelTracker.record(key, command);
       }
     }
 
@@ -123,30 +141,27 @@ export class PixelCommandArbiter {
       return null;
     }
 
-    return {
+    return this.#pixelArbitration({
       ...command,
       metadata: {
         ...command.metadata,
         positions: accepted
       }
-    };
+    }, accepted);
   }
 
-  #acceptSelectEdit(
+  #admitSelectEdit(
     command: PixelSelectEditCommand
-  ): PixelSelectEditCommand | null {
+  ): PixelArbitration | null {
     const acceptedPositions: PixelSelectEditCommand["metadata"]["positions"] = [];
     const acceptedColors: PixelSelectEditCommand["metadata"]["colors"] = [];
 
     command.metadata.positions.forEach((position, index) => {
-      const key = `${position.x},${position.y}`;
-
-      if (this.#pixelTracker.resolve(key, command) === "accept") {
+      if (this.#pixelTracker.resolve(pixelKey(position), command) === "accept") {
         acceptedPositions.push(position);
         acceptedColors.push(
           command.metadata.colors[index]
         );
-        this.#pixelTracker.record(key, command);
       }
     });
 
@@ -154,19 +169,19 @@ export class PixelCommandArbiter {
       return null;
     }
 
-    return {
+    return this.#pixelArbitration({
       ...command,
       metadata: {
         positions: acceptedPositions,
         colors: acceptedColors
       }
-    };
+    }, acceptedPositions);
   }
 
-  #acceptUvRegion(
+  #admitUvRegion(
     buffer: PixelBuffer,
     command: PixelUvRegionCommand
-  ): PixelUvRegionCommand | null {
+  ): PixelArbitration | null {
     const keys = uvConflictKeys(command, buffer);
     const rejected = keys.some(
       (key) => this.#regionTracker.resolve(key, command) === "reject"
@@ -175,10 +190,42 @@ export class PixelCommandArbiter {
       return null;
     }
 
-    for (const key of keys) {
-      this.#regionTracker.record(key, command);
-    }
-
-    return command;
+    return {
+      command,
+      commit: () => {
+        for (const key of keys) {
+          this.#regionTracker.record(key, command);
+        }
+      }
+    };
   }
+
+  #pixelArbitration(
+    command: PixelNetworkCommand,
+    positions: readonly Vec2[]
+  ): PixelArbitration {
+    return {
+      command,
+      commit: () => {
+        for (const position of positions) {
+          this.#pixelTracker.record(pixelKey(position), command);
+        }
+      }
+    };
+  }
+}
+
+function pixelKey(
+  position: Vec2
+): string {
+  return `${position.x},${position.y}`;
+}
+
+function settled(
+  command: PixelNetworkCommand
+): PixelArbitration {
+  return {
+    command,
+    commit: () => void 0
+  };
 }

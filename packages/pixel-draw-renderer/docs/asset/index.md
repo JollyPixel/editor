@@ -35,53 +35,52 @@ be there tomorrow.
 
 Both share `PixelCommandArbiter`, which resolves conflicts without touching a
 buffer. That separation is what lets the asset room append rather than mutate.
+`PixelSyncServer` calls `accept()`, which resolves and records in one step
+because it applies the command immediately. The asset room calls `admit()`
+and commits the returned arbitration only once the append lands, so a refused
+append leaves no trace in the conflict trackers.
 
 ## The `.pixelart` document
 
-The kind matches `**/*.pixelart` by default and stores JSON:
+The kind matches `**/*.pixelart` by default. The format itself, its codec and
+the PNG seeding helper live in
+[`Serialization`](../serialization/index.md) and ship from the package root,
+so a browser can read a document without importing this subpath.
+
+## `PixelArtState`
+
+The fold target. It owns a `PixelBuffer` and delegates every format concern:
 
 ```ts
-interface PixelArtDocumentData {
-  readonly version: 1;
-  readonly size: Vec2;
-  /** Base64 RGBA, row-major, 4 bytes per pixel. */
-  readonly pixels: string;
-  readonly uvRegions: UVRegionData[];
+class PixelArtState {
+  readonly buffer: PixelBuffer;
+
+  constructor(size: Vec2);
+  toJSON(): PixelArtDocumentData;
+  load(document: PixelArtDocumentData): void;
+  clear(): void;
 }
 ```
 
-Deliberately not a PNG. The document carries UV regions, which an image
-format cannot, and encoding one needs no image codec on the server, where
-`canvas.toBlob` does not exist. The payload matches `PixelBufferSnapshot`, so
-the file and the wire agree.
+`clear()` returns the buffer to the handler's `defaultSize` and drops every UV
+region; it is what `ASSET_DELETED` folds to.
 
-`decodePixelArtDocument` validates rather than asserts, because a document
-reaches it from persistence: an unsupported version, a non-integer size, or
-pixels shorter than the declared size all throw
-`InvalidPixelArtDocumentError`.
+## The live protocol
 
-A loaded document is complete state, not a patch. UV regions are cleared
-before the document's are applied.
-
-## Seeding a document from an image
+`live()` returns the pixel-art half of an asset room; asset-server's
+`AssetRoomExtension` owns the room lifecycle around it.
 
 ```ts
-import {
-  createPixelArtBufferFromPng,
-  encodePixelArtDocument
-} from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
-
-const buffer = await createPixelArtBufferFromPng(
-  await fs.readFile("textures/tileset.png")
-);
-const document = encodePixelArtDocument(buffer);
+function live(
+  binding: AssetRoomBinding<PixelArtState>
+): AssetLiveProtocol<PixelNetworkCommand>;
 ```
 
-The buffer is sized to the image and holds its exact samples, decoded by
-[`decodePng`](https://github.com/JollyPixel/editor/blob/main/packages/image/docs/png.md). UV regions stay empty, since PNG cannot carry
-them. `maxSize` defaults to the image's own dimensions when they exceed
-`PixelBuffer`'s 2048 ceiling, so an oversized atlas still fits; pass it
-explicitly to pin a different bound.
+It builds one `PixelCommandArbiter` per room, snapshots with
+`pixelArtSnapshot()`, accepts `PIXEL_NETWORK_ACTIONS`, and appends admitted
+commands under `PIXEL_ART_COMMAND`. Arbitration stamps the sender's
+server-side `clientId` onto the command, so a spoofed id never reaches the
+log.
 
 ## Why the room never writes
 

@@ -168,6 +168,7 @@ manager.redo();
 - [`Keybindings`](./docs/input/Keybindings.md)
 - [`Network`](./docs/network/index.md)
 - [`Asset kind`](./docs/asset/index.md)
+- [`Serialization`](./docs/serialization/index.md)
 
 ### Internal
 

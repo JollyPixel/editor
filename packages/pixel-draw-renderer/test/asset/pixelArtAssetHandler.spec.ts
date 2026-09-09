@@ -11,7 +11,9 @@ import {
   ASSET_CREATED,
   ASSET_DELETED,
   encodeContent,
-  type AssetEventData
+  type AssetEventData,
+  type AssetLiveProtocol,
+  type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
@@ -21,8 +23,12 @@ import {
   PIXEL_ART_KIND
 } from "#src/asset/pixelArtAssetHandler.ts";
 import {
-  encodePixelArtDocument
-} from "#src/asset/PixelArtDocument.ts";
+  encodePixelArtDocument,
+  serializePixelBuffer
+} from "#src/serialization/index.ts";
+import { pixelArtSnapshot } from "#src/serialization/buffer.ts";
+import { PIXEL_NETWORK_ACTIONS } from "#src/network/PixelCommandValidator.ts";
+import type { PixelArtState } from "#src/asset/PixelArtState.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
@@ -57,7 +63,7 @@ function event(
 function documentEvent(
   buffer: PixelBuffer
 ): EventStore.Event {
-  const data = encodePixelArtDocument(buffer);
+  const data = encodePixelArtDocument(serializePixelBuffer(buffer));
 
   return event(ASSET_CREATED, {
     path: "a.pixelart",
@@ -80,6 +86,40 @@ function strokeCommand(
     clientId: "client-A",
     seq: 1,
     timestamp: 1000
+  };
+}
+
+function binding(
+  state: PixelArtState
+): AssetRoomBinding<PixelArtState> {
+  return {
+    assetId: "asset-1",
+    kind: PIXEL_ART_KIND,
+    roomId: `${PIXEL_ART_KIND}:asset-1`,
+    state
+  };
+}
+
+function liveProtocol(): AssetLiveProtocol<PixelNetworkCommand> {
+  const handler = pixelArtAssetHandler();
+
+  return handler.live!(binding(handler.create("asset-1")));
+}
+
+function stroke(
+  positions: { x: number; y: number; }[],
+  timestamp = 1000,
+  clientId = "client-A"
+): PixelNetworkCommand {
+  return {
+    action: "stroke",
+    metadata: {
+      color: kRed,
+      positions
+    },
+    clientId,
+    seq: 1,
+    timestamp
   };
 }
 
@@ -204,17 +244,76 @@ describe("pixelArtAssetHandler", () => {
     assert.deepEqual(second.buffer.pixels(), first.buffer.pixels());
   });
 
-  test("createExtension binds the room id and the kind", () => {
-    const handler = pixelArtAssetHandler();
-    const state = handler.create("asset-1");
-    const extension = handler.createExtension!({
-      assetId: "asset-1",
-      kind: PIXEL_ART_KIND,
-      roomId: `${PIXEL_ART_KIND}:asset-1`,
-      state
-    });
+  test("live() declares the pixel command stream", () => {
+    const protocol = liveProtocol();
 
-    assert.strictEqual(extension.id, `${PIXEL_ART_KIND}:asset-1`);
-    assert.strictEqual(extension.name, PIXEL_ART_KIND);
+    assert.strictEqual(protocol.commandEventType, PIXEL_ART_COMMAND);
+    assert.deepEqual(
+      [...protocol.actions],
+      [...PIXEL_NETWORK_ACTIONS]
+    );
+  });
+
+  test("live() rejects a payload that is not a pixel command", () => {
+    const protocol = liveProtocol();
+
+    assert.strictEqual(protocol.parse({ action: "stroke" }), null);
+    assert.strictEqual(protocol.parse(null), null);
+  });
+
+  test("live() stamps the server-side client id onto the command", () => {
+    const protocol = liveProtocol();
+    const arbitration = protocol.arbitrate(
+      stroke([{ x: 1, y: 1 }], 1_000, "spoofed"),
+      "alice"
+    );
+
+    assert.notStrictEqual(arbitration, null);
+    assert.strictEqual(arbitration!.command.clientId, "alice");
+  });
+
+  test("live() gives each room its own conflict tracker", () => {
+    const first = liveProtocol();
+    const second = liveProtocol();
+
+    first.arbitrate(stroke([{ x: 0, y: 0 }], 2_000), "alice")!.commit!();
+
+    assert.notStrictEqual(
+      second.arbitrate(stroke([{ x: 0, y: 0 }], 1_000), "bob"),
+      null
+    );
+  });
+
+  test("an uncommitted arbitration leaves the tracker untouched", () => {
+    const protocol = liveProtocol();
+
+    protocol.arbitrate(stroke([{ x: 0, y: 0 }], 2_000), "alice");
+
+    assert.notStrictEqual(
+      protocol.arbitrate(stroke([{ x: 0, y: 0 }], 1_000), "bob"),
+      null
+    );
+  });
+
+  test("a committed arbitration rejects the older write", () => {
+    const protocol = liveProtocol();
+
+    protocol.arbitrate(stroke([{ x: 0, y: 0 }], 2_000), "alice")!.commit!();
+
+    assert.strictEqual(
+      protocol.arbitrate(stroke([{ x: 0, y: 0 }], 1_000), "bob"),
+      null
+    );
+  });
+
+  test("live() snapshots the current buffer", () => {
+    const handler = pixelArtAssetHandler({ defaultSize: { x: 2, y: 2 } });
+    const state = handler.create("asset-1");
+    const protocol = handler.live!(binding(state));
+
+    assert.deepEqual(
+      protocol.snapshot(),
+      pixelArtSnapshot(state.buffer)
+    );
   });
 });
