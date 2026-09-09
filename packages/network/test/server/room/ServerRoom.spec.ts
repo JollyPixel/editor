@@ -39,7 +39,7 @@ class RecordingExtension extends Extension {
   handles = new Map<string, ClientHandle>();
   contexts: RoomContext[] = [];
 
-  onClientConnect(
+  override onClientConnect(
     client: ClientHandle,
     _identity: unknown,
     context: RoomContext
@@ -49,7 +49,7 @@ class RecordingExtension extends Extension {
     this.contexts.push(context);
   }
 
-  onClientDisconnect(
+  override onClientDisconnect(
     clientId: string,
     context: RoomContext
   ): void {
@@ -57,7 +57,7 @@ class RecordingExtension extends Extension {
     this.contexts.push(context);
   }
 
-  onMessage(
+  override onMessage(
     clientId: string,
     payload: unknown,
     context: RoomContext
@@ -74,7 +74,7 @@ class RightsAwareExtension extends Extension {
   messages: { clientId: string; payload: unknown; }[] = [];
   contexts: RoomContext[] = [];
 
-  onClientConnect(
+  override onClientConnect(
     _client: ClientHandle,
     _identity: unknown,
     context: RoomContext
@@ -82,11 +82,7 @@ class RightsAwareExtension extends Extension {
     this.contexts.push(context);
   }
 
-  onClientDisconnect(): void {
-    // Not exercised by these rights tests.
-  }
-
-  onMessage(
+  override onMessage(
     clientId: string,
     payload: unknown,
     context: RoomContext
@@ -594,7 +590,7 @@ class SyncExtension extends Extension {
   contexts: RoomContext[] = [];
   received: unknown[] = [];
 
-  onClientConnect(
+  override onClientConnect(
     _client: ClientHandle,
     _identity: unknown,
     context: RoomContext
@@ -602,11 +598,7 @@ class SyncExtension extends Extension {
     this.contexts.push(context);
   }
 
-  onClientDisconnect(): void {
-    // Not exercised by these tests.
-  }
-
-  onMessage(
+  override onMessage(
     _clientId: string,
     message: unknown,
     context: RoomContext
@@ -717,6 +709,60 @@ describe("ServerRoom — outbound protocol", () => {
       type: "command",
       data: { action: "voxel-set" }
     });
+
+    assert.deepEqual(a.sent, []);
+  });
+});
+
+class HooklessExtension extends Extension {
+  readonly id = "hookless";
+  readonly name = "hookless";
+  readonly protocols = OPAQUE_PROTOCOLS;
+}
+
+describe("ServerRoom — extension without lifecycle hooks", () => {
+  test("join still admits the client and notifies existing members", async() => {
+    const room = createRoom(new HooklessExtension());
+    const a = createClient("A");
+    const b = createClient("B");
+
+    assert.equal(await room.join("A", a.client, {}), true);
+    assert.equal(await room.join("B", b.client, { username: "bob" }), true);
+
+    assert.deepEqual(a.sent, [{
+      room: "hookless",
+      kind: "peer-joined",
+      clientId: "B",
+      identity: { username: "bob" }
+    }]);
+  });
+
+  test("leave still broadcasts peer-left to remaining members", async() => {
+    const room = createRoom(new HooklessExtension());
+    const a = createClient("A");
+    const b = createClient("B");
+
+    await room.join("A", a.client, {});
+    await room.join("B", b.client, {});
+    a.sent.length = 0;
+
+    await room.leave("B");
+
+    assert.deepEqual(a.sent, [{
+      room: "hookless",
+      kind: "peer-left",
+      clientId: "B"
+    }]);
+  });
+
+  test("message is dropped without reaching any client", async() => {
+    const room = createRoom(new HooklessExtension());
+    const a = createClient("A");
+
+    await room.join("A", a.client, {});
+    a.sent.length = 0;
+
+    await room.message("A", { any: "payload" });
 
     assert.deepEqual(a.sent, []);
   });

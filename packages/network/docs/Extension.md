@@ -8,13 +8,13 @@ abstract class Extension<TMessage = unknown> {
   abstract readonly name: string;
   abstract readonly protocols: MessageProtocols;
 
-  abstract onClientConnect(
+  onClientConnect?(
     client: ClientHandle,
     identity: PeerMetadata,
     context: RoomContext
   ): void | Promise<void>;
-  abstract onClientDisconnect(clientId: string, context: RoomContext): void | Promise<void>;
-  abstract onMessage(clientId: string, message: TMessage, context: RoomContext): void | Promise<void>;
+  onClientDisconnect?(clientId: string, context: RoomContext): void | Promise<void>;
+  onMessage?(clientId: string, message: TMessage, context: RoomContext): void | Promise<void>;
 }
 
 interface RoomContext {
@@ -127,11 +127,22 @@ const variant = defineSchema({
 
 ## Callbacks
 
+All three are optional. Implement only the ones the feature needs; the room
+skips the rest, and a missing hook never allocates its `RoomContext`.
+
 - `onClientConnect` — the client is already admitted. Its `client.send()` is pre-scoped to this room and filtered by the outbound protocol.
 - `onClientDisconnect` — explicit `leave()` or socket drop. Never gated; a member can always leave.
 - `onMessage` — a message that parsed against the inbound protocol and passed its write check. A rejected or denied payload never reaches here.
 
 `context` is built for the triggering client.
+
+Because `Extension` declares the hooks itself, an implementation needs the
+`override` modifier, as `dispose` already does.
+
+A message that parses and passes its write check but finds no `onMessage` is
+dropped silently; the room logs it at `debug` level with `outcome: "unhandled"`.
+Declare [`NO_MESSAGE_PROTOCOLS`](./Server.md) instead when clients should be
+told the room takes no messages.
 
 ## Worker extensions
 
@@ -164,6 +175,10 @@ server.register({
 - `workerData` — the constructor's argument; must be structured-cloneable (no functions or live objects).
 - `rpcTimeoutMs` (default `10_000`) — timeout for calls to the worker and calls from the worker into `RoomContext`.
 - `maxRestarts` / `restartWindowMs` (default `5` / `60_000`) — restart limit after crashes or RPC timeouts. Once reached, further messages are logged and dropped.
+
+The worker reports which hooks its extension implements as part of its ready
+handshake, so an omitted hook costs no round-trip: the proxy resolves the call
+on the main thread without touching the transport.
 
 Each registration owns one worker and processes its calls sequentially. A slow handler delays later calls to that extension, but does not block the main thread or other rooms. Per-client ordering still applies; see [Server](./Server.md).
 

@@ -18,6 +18,20 @@ import type {
   WorkerExtensionDescriptor
 } from "#src/index.ts";
 import { createFakeTransportFactory } from "../../../helpers/FakeWorkerTransport.ts";
+import {
+  DISPATCH_METHODS,
+  type DispatchMethod,
+  type WorkerReady
+} from "#src/server/extension/worker/protocol.ts";
+
+function readyMessage(
+  methods: DispatchMethod[] = DISPATCH_METHODS
+): WorkerReady {
+  return {
+    type: "ready",
+    methods
+  };
+}
 
 function createContext(
   overrides: Partial<RoomContext["eventStore"]> = {}
@@ -55,12 +69,46 @@ describe("WorkerExtensionProxy — readiness", () => {
     await flushMacrotask();
     assert.deepEqual(transports[0].sent, []);
 
-    transports[0].simulateMessage({ type: "ready" });
+    transports[0].simulateMessage(readyMessage());
     await flushMacrotask();
     assert.equal(transports[0].sent.length, 1);
 
     const sent = transports[0].sent[0] as { type: string; id: string; method: string; };
     assert.equal(sent.type, "dispatch");
+    assert.equal(sent.method, "onMessage");
+
+    transports[0].simulateMessage({ type: "dispatch-result", id: sent.id, ok: true });
+    await pending;
+  });
+});
+
+describe("WorkerExtensionProxy — hooks the worker does not implement", () => {
+  test("resolves without posting a dispatch", async() => {
+    const { factory, transports } = createFakeTransportFactory();
+    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+
+    transports[0].simulateMessage(readyMessage(["onMessage"]));
+
+    await proxy.onClientConnect(
+      { id: "A", send: () => void 0 },
+      {},
+      createContext()
+    );
+    await proxy.onClientDisconnect("A", createContext());
+
+    assert.deepEqual(transports[0].sent, []);
+  });
+
+  test("still dispatches the hooks the worker does implement", async() => {
+    const { factory, transports } = createFakeTransportFactory();
+    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+
+    transports[0].simulateMessage(readyMessage(["onMessage"]));
+
+    const pending = proxy.onMessage("A", { hello: "world" }, createContext());
+    await flushMacrotask();
+
+    const sent = transports[0].sent[0] as { type: string; id: string; method: string; };
     assert.equal(sent.method, "onMessage");
 
     transports[0].simulateMessage({ type: "dispatch-result", id: sent.id, ok: true });
@@ -96,7 +144,7 @@ describe("WorkerExtensionProxy — context-call routing", () => {
     });
 
     const pending = proxy.onMessage("A", {}, context);
-    transports[0].simulateMessage({ type: "ready" });
+    transports[0].simulateMessage(readyMessage());
     await flushMacrotask();
     const dispatchMsg = transports[0].sent[0] as { id: string; };
 
@@ -129,7 +177,7 @@ describe("WorkerExtensionProxy — context-call routing", () => {
     context.room.sendTo = (clientId, payload) => sends.push([clientId, payload]);
 
     const pending = proxy.onMessage("A", {}, context);
-    transports[0].simulateMessage({ type: "ready" });
+    transports[0].simulateMessage(readyMessage());
     await flushMacrotask();
     const dispatchMsg = transports[0].sent[0] as { id: string; };
 
@@ -154,7 +202,7 @@ describe("WorkerExtensionProxy — crash and restart", () => {
     );
 
     const pending = proxy.onMessage("A", {}, createContext());
-    transports[0].simulateMessage({ type: "ready" });
+    transports[0].simulateMessage(readyMessage());
 
     await assert.rejects(pending, /timed out/);
     assert.equal(transports.length, 2);
@@ -168,7 +216,7 @@ describe("WorkerExtensionProxy — crash and restart", () => {
     );
 
     const pending = proxy.onMessage("A", {}, createContext());
-    transports[0].simulateMessage({ type: "ready" });
+    transports[0].simulateMessage(readyMessage());
     await flushMacrotask();
 
     transports[0].simulateError(new Error("boom"));
@@ -185,12 +233,12 @@ describe("WorkerExtensionProxy — crash and restart", () => {
     );
 
     const first = proxy.onMessage("A", {}, createContext());
-    transports[0].simulateMessage({ type: "ready" });
+    transports[0].simulateMessage(readyMessage());
     await assert.rejects(first, /timed out/);
     assert.equal(transports.length, 2);
 
     const second = proxy.onMessage("A", {}, createContext());
-    transports[1].simulateMessage({ type: "ready" });
+    transports[1].simulateMessage(readyMessage());
     await assert.rejects(second, /timed out/);
     assert.equal(transports.length, 2);
 

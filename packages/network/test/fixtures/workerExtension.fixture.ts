@@ -30,7 +30,7 @@ export default class FixtureExtension extends Extension {
     this.#greeting = workerData?.greeting ?? "hello";
   }
 
-  async onClientConnect(
+  override async onClientConnect(
     client: ClientHandle,
     identity: PeerMetadata,
     context: RoomContext
@@ -44,14 +44,14 @@ export default class FixtureExtension extends Extension {
     });
   }
 
-  onClientDisconnect(
+  override onClientDisconnect(
     clientId: string,
     context: RoomContext
   ): void {
     context.room.sendTo(clientId, { type: "bye" });
   }
 
-  async onMessage(
+  override async onMessage(
     clientId: string,
     payload: unknown,
     context: RoomContext

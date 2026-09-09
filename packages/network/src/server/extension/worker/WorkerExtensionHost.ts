@@ -20,6 +20,7 @@ import type {
 import { createLogger } from "../../logger.ts";
 import { PendingCallRegistry } from "./PendingCallRegistry.ts";
 import {
+  DISPATCH_METHODS,
   isHostWorkerData,
   isMainToWorkerMessage,
   type ContextCallMethod,
@@ -115,7 +116,7 @@ async function dispatch(
     .with({ method: "onClientConnect" }, (message) => {
       const [clientId, identity] = message.args;
 
-      return extension.onClientConnect(
+      return extension.onClientConnect?.(
         createClientHandle(clientId),
         identity,
         createContext()
@@ -124,7 +125,7 @@ async function dispatch(
     .with({ method: "onClientDisconnect" }, (message) => {
       const [clientId] = message.args;
 
-      return extension.onClientDisconnect(
+      return extension.onClientDisconnect?.(
         clientId,
         createContext()
       );
@@ -132,7 +133,7 @@ async function dispatch(
     .with({ method: "onMessage" }, (message) => {
       const [clientId, payload] = message.args;
 
-      return extension.onMessage(
+      return extension.onMessage?.(
         clientId,
         payload,
         createContext()
@@ -197,6 +198,9 @@ port.on("message", (raw: unknown) => {
 });
 
 const ready: WorkerReady = {
-  type: "ready"
+  type: "ready",
+  methods: DISPATCH_METHODS.filter(
+    (method) => typeof extension[method] === "function"
+  )
 };
 port.postMessage(ready);

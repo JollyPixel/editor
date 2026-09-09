@@ -8,10 +8,6 @@ import {
   OPAQUE_PROTOCOLS,
   type MessageProtocols
 } from "../../protocol/MessageProtocol.ts";
-import type {
-  ClientHandle,
-  PeerMetadata
-} from "../../protocol/types.ts";
 
 // CONSTANTS
 const kDefaultExtensionName = "presence-only";
@@ -22,7 +18,7 @@ export interface PresenceOnlyExtensionOptions {
 }
 
 /**
- * Provides presence-only rooms with the required extension lifecycle.
+ * Provides presence-only rooms, optionally relaying opaque payloads.
  */
 export class PresenceOnlyExtension extends Extension {
   readonly id: string;
@@ -37,35 +33,20 @@ export class PresenceOnlyExtension extends Extension {
     options?: PresenceOnlyExtensionOptions
   ) {
     super();
+
     this.id = id;
     this.name = name;
     this.#broadcast = options?.broadcast ?? false;
-    this.protocols = options?.protocols ??
-      (this.#broadcast ? OPAQUE_PROTOCOLS : NO_MESSAGE_PROTOCOLS);
+    this.protocols = options?.protocols ?? (
+      this.#broadcast ? OPAQUE_PROTOCOLS : NO_MESSAGE_PROTOCOLS
+    );
   }
 
-  onClientConnect(
-    _client: ClientHandle,
-    _identity: PeerMetadata,
-    _context: RoomContext
-  ): void {
-    // Do nothing
-  }
-
-  onClientDisconnect(
-    _clientId: string,
-    _context: RoomContext
-  ): void {
-    // Do nothing
-  }
-
-  onMessage(
+  override onMessage(
     _clientId: string,
     payload: unknown,
     context: RoomContext
   ): void {
-    if (this.#broadcast) {
-      context.room.broadcast(payload);
-    }
+    this.#broadcast && context.room.broadcast(payload);
   }
 }

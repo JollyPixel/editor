@@ -32,19 +32,19 @@ class RecordingExtension extends Extension {
   disconnected: string[] = [];
   messages: { clientId: string; payload: unknown; }[] = [];
 
-  onClientConnect(
+  override onClientConnect(
     client: ClientHandle
   ): void {
     this.connected.push(client);
   }
 
-  onClientDisconnect(
+  override onClientDisconnect(
     clientId: string
   ): void {
     this.disconnected.push(clientId);
   }
 
-  onMessage(
+  override onMessage(
     clientId: string,
     payload: unknown
   ): void {
@@ -166,14 +166,8 @@ describe("WebsocketTransport + Client (integration)", () => {
       readonly id = "unused";
       readonly name = "unused";
       connected: ClientHandle[] = [];
-      onClientConnect(client: ClientHandle): void {
+      override onClientConnect(client: ClientHandle): void {
         this.connected.push(client);
-      }
-      onClientDisconnect(): void {
-        // unused in this test
-      }
-      onMessage(): void {
-        // unused in this test
       }
     }
     const unused = new UnusedExtension();

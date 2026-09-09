@@ -81,7 +81,7 @@ export class VoxelSyncServer extends network.Extension<VoxelNetworkCommand> {
     });
   }
 
-  onClientConnect(
+  override onClientConnect(
     client: network.ClientHandle
   ): void {
     client.send({
@@ -90,13 +90,7 @@ export class VoxelSyncServer extends network.Extension<VoxelNetworkCommand> {
     });
   }
 
-  onClientDisconnect(
-    _clientId: string
-  ): void {
-    // The room owns client bookkeeping.
-  }
-
-  onMessage(
+  override onMessage(
     _clientId: string,
     command: VoxelNetworkCommand,
     context: network.RoomContext

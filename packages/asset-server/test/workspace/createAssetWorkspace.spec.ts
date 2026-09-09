@@ -52,15 +52,7 @@ class CounterExtension extends Extension {
     this.id = binding.roomId;
   }
 
-  onClientConnect(): void {
-    return void 0;
-  }
-
-  onClientDisconnect(): void {
-    return void 0;
-  }
-
-  onMessage(
+  override onMessage(
     _clientId: string,
     _payload: unknown,
     _context: RoomContext

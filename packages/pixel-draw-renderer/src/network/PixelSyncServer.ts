@@ -73,7 +73,7 @@ export class PixelSyncServer extends network.Extension<PixelNetworkCommand> {
     });
   }
 
-  onClientConnect(
+  override onClientConnect(
     client: network.ClientHandle
   ): void {
     client.send({
@@ -82,13 +82,7 @@ export class PixelSyncServer extends network.Extension<PixelNetworkCommand> {
     });
   }
 
-  onClientDisconnect(
-    _clientId: string
-  ): void {
-    // The room owns client-list bookkeeping.
-  }
-
-  onMessage(
+  override onMessage(
     clientId: string,
     command: PixelNetworkCommand,
     context: network.RoomContext

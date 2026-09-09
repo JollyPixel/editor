@@ -48,19 +48,18 @@ describe("PresenceOnlyExtension", () => {
     assert.strictEqual(extension.name, "custom-name");
   });
 
-  test("lifecycle hooks are callable no-ops", () => {
+  test("leaves the connection hooks undefined", () => {
+    const extension = new PresenceOnlyExtension("room-a");
+
+    assert.strictEqual(extension.onClientConnect, undefined);
+    assert.strictEqual(extension.onClientDisconnect, undefined);
+  });
+
+  test("onMessage is a no-op when broadcast is disabled", () => {
     const extension = new PresenceOnlyExtension("room-a");
 
     assert.strictEqual(
-      extension.onClientConnect(kClient, {}, kContext),
-      undefined
-    );
-    assert.strictEqual(
-      extension.onClientDisconnect(kClient.id, kContext),
-      undefined
-    );
-    assert.strictEqual(
-      extension.onMessage(kClient.id, { any: "payload" }, kContext),
+      extension.onMessage?.(kClient.id, { any: "payload" }, kContext),
       undefined
     );
   });

@@ -57,7 +57,7 @@ export class AssetRoomExtension<
     this.#protocol = protocol;
   }
 
-  onClientConnect(
+  override onClientConnect(
     client: network.ClientHandle
   ): void {
     client.send({
@@ -66,11 +66,7 @@ export class AssetRoomExtension<
     });
   }
 
-  onClientDisconnect(): void {
-    return void 0;
-  }
-
-  async onMessage(
+  override async onMessage(
     clientId: string,
     payload: unknown,
     context: network.RoomContext
