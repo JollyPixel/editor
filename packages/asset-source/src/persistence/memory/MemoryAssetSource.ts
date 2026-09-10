@@ -34,6 +34,14 @@ export class MemoryAssetSource implements AssetSource {
     return Uint8Array.from(data);
   }
 
+  async exists(
+    path: string
+  ): Promise<boolean> {
+    return this.#files.has(
+      normalizeAssetPath(path)
+    );
+  }
+
   async write(
     path: string,
     data: Uint8Array
@@ -42,6 +50,23 @@ export class MemoryAssetSource implements AssetSource {
       normalizeAssetPath(path),
       Uint8Array.from(data)
     );
+  }
+
+  async writeIfAbsent(
+    path: string,
+    data: Uint8Array
+  ): Promise<boolean> {
+    const key = normalizeAssetPath(path);
+    if (this.#files.has(key)) {
+      return false;
+    }
+
+    this.#files.set(
+      key,
+      Uint8Array.from(data)
+    );
+
+    return true;
   }
 
   async delete(

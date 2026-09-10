@@ -72,6 +72,17 @@ describe("FilesystemAssetSource — atomic write", () => {
     assert.deepEqual(entries, ["sprite.png"]);
   });
 
+  test("leaves no temporary file after a conditional write", async() => {
+    await using workspace = await tempWorkspace();
+    const source = new FilesystemAssetSource(workspace.root);
+
+    await source.writeIfAbsent("sprite.png", bytes("hello"));
+    await source.writeIfAbsent("sprite.png", bytes("ignored"));
+
+    const entries = await fs.readdir(workspace.root);
+    assert.deepEqual(entries, ["sprite.png"]);
+  });
+
   test("an interrupted write leaves the previous content readable", async() => {
     await using workspace = await tempWorkspace();
     const source = new FilesystemAssetSource(workspace.root);

@@ -22,8 +22,12 @@ describe("AssetSource", () => {
   test("exposes byte storage operations", () => {
     expect(source.read("sprite.png"))
       .type.toBe<Promise<Uint8Array>>();
+    expect(source.exists("sprite.png"))
+      .type.toBe<Promise<boolean>>();
     expect(source.write("sprite.png", new Uint8Array()))
       .type.toBe<Promise<void>>();
+    expect(source.writeIfAbsent("sprite.png", new Uint8Array()))
+      .type.toBe<Promise<boolean>>();
     expect(source.delete("sprite.png"))
       .type.toBe<Promise<void>>();
     expect(source.list())

@@ -74,4 +74,25 @@ describe("seedAssetSource", () => {
 
     assert.strictEqual(calls, 0);
   });
+
+  test("does not replace a document created after the existence check", async() => {
+    const source = new MemoryAssetSource();
+    const exists = source.exists.bind(source);
+    source.exists = async(assetPath) => {
+      const present = await exists(assetPath);
+      await source.write(assetPath, bytes("concurrent"));
+
+      return present;
+    };
+
+    const written = await seedAssetSource(source, {
+      "a.bin": () => bytes("starter")
+    });
+
+    assert.deepStrictEqual(written, []);
+    assert.strictEqual(
+      text(await source.read("a.bin")),
+      "concurrent"
+    );
+  });
 });

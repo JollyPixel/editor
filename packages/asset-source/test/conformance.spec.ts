@@ -78,6 +78,54 @@ for (const implementation of implementations) {
       );
     });
 
+    test("reports whether a path exists", async() => {
+      await using fixture = await implementation.create();
+
+      assert.strictEqual(
+        await fixture.source.exists("sprite.png"),
+        false
+      );
+
+      await fixture.source.write("sprite.png", bytes("hello"));
+
+      assert.strictEqual(
+        await fixture.source.exists("sprite.png"),
+        true
+      );
+    });
+
+    test("writes a missing path without replacing it", async() => {
+      await using fixture = await implementation.create();
+
+      assert.strictEqual(
+        await fixture.source.writeIfAbsent("sprite.png", bytes("one")),
+        true
+      );
+      assert.strictEqual(
+        await fixture.source.writeIfAbsent("sprite.png", bytes("two")),
+        false
+      );
+      assert.strictEqual(
+        text(await fixture.source.read("sprite.png")),
+        "one"
+      );
+    });
+
+    test("allows only one concurrent conditional write", async() => {
+      await using fixture = await implementation.create();
+
+      const outcomes = await Promise.all([
+        fixture.source.writeIfAbsent("sprite.png", bytes("one")),
+        fixture.source.writeIfAbsent("sprite.png", bytes("two"))
+      ]);
+
+      assert.deepEqual(outcomes.sort(), [false, true]);
+      assert.match(
+        text(await fixture.source.read("sprite.png")),
+        /^(one|two)$/
+      );
+    });
+
     test("deleting a missing path is a no-op", async() => {
       await using fixture = await implementation.create();
 
@@ -93,6 +141,10 @@ for (const implementation of implementations) {
       await fixture.source.delete("sprite.png");
 
       assert.deepEqual(await fixture.source.list(), []);
+      assert.strictEqual(
+        await fixture.source.exists("sprite.png"),
+        false
+      );
     });
 
     test("list returns sorted root-relative POSIX paths", async() => {
@@ -112,7 +164,13 @@ for (const implementation of implementations) {
     test("nested paths round-trip", async() => {
       await using fixture = await implementation.create();
 
-      await fixture.source.write("deep/nested/dir/file.bin", bytes("x"));
+      assert.strictEqual(
+        await fixture.source.writeIfAbsent(
+          "deep/nested/dir/file.bin",
+          bytes("x")
+        ),
+        true
+      );
 
       assert.strictEqual(
         text(await fixture.source.read("deep/nested/dir/file.bin")),
@@ -141,6 +199,14 @@ for (const implementation of implementations) {
       );
       await assert.rejects(
         () => fixture.source.read("../outside.png"),
+        { name: "AssetPathEscapeError" }
+      );
+      await assert.rejects(
+        () => fixture.source.exists("../outside.png"),
+        { name: "AssetPathEscapeError" }
+      );
+      await assert.rejects(
+        () => fixture.source.writeIfAbsent("../outside.png", bytes("x")),
         { name: "AssetPathEscapeError" }
       );
       await assert.rejects(

@@ -6,10 +6,19 @@ export interface AssetSource {
     path: string
   ): Promise<Uint8Array>;
 
+  exists(
+    path: string
+  ): Promise<boolean>;
+
   write(
     path: string,
     data: Uint8Array
   ): Promise<void>;
+
+  writeIfAbsent(
+    path: string,
+    data: Uint8Array
+  ): Promise<boolean>;
 
   delete(
     path: string

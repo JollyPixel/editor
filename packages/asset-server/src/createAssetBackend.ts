@@ -114,7 +114,10 @@ export async function createAssetBackend(
   } = options;
 
   const kinds = new AssetKindRegistry(handlers);
-  await ensureGitignore(source);
+  await source.writeIfAbsent(
+    STATE_GITIGNORE_PATH,
+    new TextEncoder().encode(STATE_GITIGNORE_CONTENT)
+  );
 
   const state = await ProjectionState.load(source, logger);
   const projector = new AssetProjector({
@@ -236,33 +239,4 @@ export async function createAssetBackend(
   };
 
   return backend;
-}
-
-async function ensureGitignore(
-  source: AssetSource
-): Promise<void> {
-  try {
-    await source.read(STATE_GITIGNORE_PATH);
-
-    return;
-  }
-  catch (error) {
-    if (!isNotFound(error)) {
-      return;
-    }
-  }
-
-  await source.write(
-    STATE_GITIGNORE_PATH,
-    new TextEncoder().encode(STATE_GITIGNORE_CONTENT)
-  );
-}
-
-function isNotFound(
-  error: unknown
-): boolean {
-  return typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "ENOENT";
 }
