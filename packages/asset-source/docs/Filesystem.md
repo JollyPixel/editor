@@ -30,6 +30,11 @@ Writes replace a file through a temporary file and rename. An interrupted
 write leaves the previous file readable, and temporary files are excluded from
 listings.
 
+`writeIfAbsent()` writes a temporary file and then links it into place. The
+link fails when the destination is occupied, so concurrent conditional writes
+cannot replace each other. Filesystems without hard-link support reject this
+operation. `exists()` checks the path without reading the file.
+
 ## Ignored paths
 
 The `ignore` option adds case-insensitive globs to `DEFAULT_IGNORED_PATHS`:

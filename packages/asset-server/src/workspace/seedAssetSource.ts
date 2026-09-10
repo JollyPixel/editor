@@ -11,30 +11,18 @@ export async function seedAssetSource(
   const written: string[] = [];
 
   for (const [assetPath, build] of Object.entries(seed)) {
-    if (await exists(source, assetPath)) {
+    if (await source.exists(assetPath)) {
       continue;
     }
 
-    await source.write(
+    const didWrite = await source.writeIfAbsent(
       assetPath,
       await build()
     );
-    written.push(assetPath);
+    if (didWrite) {
+      written.push(assetPath);
+    }
   }
 
   return written;
-}
-
-async function exists(
-  source: AssetSource,
-  assetPath: string
-): Promise<boolean> {
-  try {
-    await source.read(assetPath);
-
-    return true;
-  }
-  catch {
-    return false;
-  }
 }

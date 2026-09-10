@@ -17,9 +17,9 @@ const source = new MemoryAssetSource([
 ]);
 ```
 
-The constructor and `write` copy their input bytes. `read` also returns a copy,
-so changing a supplied or returned array does not change the stored asset.
-Each source has its own data.
+The constructor, `write` and `writeIfAbsent` copy their input bytes. `read` also
+returns a copy, so changing a supplied or returned array does not change the
+stored asset. Each source has its own data.
 
 The source implements the shared [`AssetSource`](./AssetSource.md) storage
 contract. It does not provide `isIgnored` or `watch`.

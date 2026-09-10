@@ -11,6 +11,7 @@ import {
 } from "./ignoredPaths.ts";
 import { listFiles } from "./listFiles.ts";
 import { writeFileAtomically } from "./writeFileAtomically.ts";
+import { writeFileIfAbsent } from "./writeFileIfAbsent.ts";
 
 export interface FilesystemAssetSourceOptions {
   /**
@@ -65,11 +66,39 @@ export class FilesystemAssetSource implements AssetSource {
     );
   }
 
+  async exists(
+    assetPath: string
+  ): Promise<boolean> {
+    try {
+      await fs.access(
+        await this.#paths.contained(assetPath)
+      );
+
+      return true;
+    }
+    catch (error) {
+      if (isNotFound(error)) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
   async write(
     assetPath: string,
     data: Uint8Array
   ): Promise<void> {
     await writeFileAtomically(
+      await this.#paths.contained(assetPath),
+      data
+    );
+  }
+
+  async writeIfAbsent(
+    assetPath: string,
+    data: Uint8Array
+  ): Promise<boolean> {
+    return writeFileIfAbsent(
       await this.#paths.contained(assetPath),
       data
     );
@@ -104,4 +133,16 @@ export class FilesystemAssetSource implements AssetSource {
 
     return () => watcher.close();
   }
+}
+
+function isNotFound(
+  error: unknown
+): boolean {
+  return typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (
+      error.code === "ENOENT" ||
+      error.code === "ENOTDIR"
+    );
 }
