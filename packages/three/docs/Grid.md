@@ -38,6 +38,7 @@ interface GridCellOptions {
 }
 
 interface GridSectionOptions {
+  show?: boolean;
   style?: GridStyle;
   size?: number;
   color?: THREE.ColorRepresentation;
@@ -103,6 +104,7 @@ Set `infiniteGrid: true` to draw a full-viewport grid without a visible edge. In
 | `cell.size` | `1` | Fine-grid spacing in world units. |
 | `cell.color` | `"#393939"` | Fine-grid color. |
 | `cell.thickness` | `1` | Fine-grid width in pixels. |
+| `section.show` | `true` | Shows or hides the section grid. |
 | `section.style` | `"lines"` | Draws continuous section lines or crosses. |
 | `section.size` | `10` | Number of cells between section lines. |
 | `section.color` | `"#787878"` | Section-line color. |
@@ -111,7 +113,7 @@ Set `infiniteGrid: true` to draw a full-viewport grid without a visible edge. In
 | `hideCellOnSection` | `false` | Suppresses fine lines where section lines are drawn. |
 | `hideCellOnSectionFadeWidth` | `0.5` | Width of that suppression fade, in cells. Used by the `"lines"` cell style. |
 
-Styles are fixed after construction. Sizes, colors, thicknesses, and overlap settings are live.
+Styles are fixed after construction. Visibility, sizes, colors, thicknesses, and overlap settings are live. When sections are hidden, `hideCellOnSection` does not suppress the fine grid.
 
 ## Fade and positioning options
 
@@ -161,6 +163,7 @@ cellSize: number
 sectionSize: number
 cellThickness: number
 sectionThickness: number
+showSection: boolean
 crossSize: number
 hideCellOnSection: boolean
 hideCellOnSectionFadeWidth: number
@@ -214,6 +217,7 @@ static readonly Grid.Defaults: GridDefaults
 
 ```ts
 Grid.Defaults.cell.color = "#2a2a2a";
+Grid.Defaults.section.show = false;
 Grid.Defaults.plane = new GridPlaneValue("xy");
 
 const grid = new Grid();

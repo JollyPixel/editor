@@ -164,6 +164,7 @@ function bindGridControls(
   });
 
   gridFolder.addSeparator();
+  gridFolder.addBinding(target, "showSection");
   gridFolder
     .addBinding({ sectionStyle: target.sectionStyle.value }, "sectionStyle", {
       options: {

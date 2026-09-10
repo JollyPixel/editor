@@ -71,6 +71,16 @@ describe("accessors", () => {
     assert.ok(grid.showAxes);
   });
 
+  test("showSection round-trips true/false", () => {
+    const grid = new Grid();
+    grid.showSection = false;
+
+    assert.strictEqual(grid.showSection, false);
+
+    grid.showSection = true;
+    assert.ok(grid.showSection);
+  });
+
   test("enabled round-trips true/false and mirrors visible", () => {
     const grid = new Grid();
     grid.enabled = false;

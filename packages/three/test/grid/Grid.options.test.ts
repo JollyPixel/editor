@@ -21,6 +21,7 @@ describe("toOptions()", () => {
         thickness: 3
       },
       section: {
+        show: false,
         style: "cross",
         size: 8,
         color: "#040506",
@@ -58,6 +59,7 @@ describe("toOptions()", () => {
         thickness: 3
       },
       section: {
+        show: false,
         style: "cross",
         size: 8,
         color: "#040506",
@@ -89,12 +91,14 @@ describe("toOptions()", () => {
   test("reports live property mutations", () => {
     const grid = new Grid();
     grid.cellSize = 7;
+    grid.showSection = false;
     grid.showAxes = false;
     grid.enabled = false;
 
     const options = grid.toOptions();
 
     assert.strictEqual(options.cell?.size, 7);
+    assert.strictEqual(options.section?.show, false);
     assert.strictEqual(options.axes?.show, false);
     assert.strictEqual(options.enabled, false);
   });
@@ -137,6 +141,19 @@ describe("cloneWith()", () => {
     assert.strictEqual(derived.cellStyle.value, "cross");
     assert.strictEqual(derived.cellSize, 3);
     assert.strictEqual(derived.cellThickness, 4);
+  });
+
+  test("preserves section visibility when overriding another section option", () => {
+    const grid = new Grid({
+      section: {
+        show: false,
+        size: 8
+      }
+    });
+    const derived = grid.cloneWith({ section: { size: 12 } });
+
+    assert.strictEqual(derived.showSection, false);
+    assert.strictEqual(derived.sectionSize, 12);
   });
 
   test("leaves the source grid untouched", () => {

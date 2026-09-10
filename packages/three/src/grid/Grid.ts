@@ -46,6 +46,7 @@ const kNumberUniformKeys = [
 // Boolean properties stored as 0 or 1 in a `GridUniforms` entry.
 const kBooleanUniformKeys = [
   "hideCellOnSection",
+  "showSection",
   "showAxes"
 ] as const;
 
@@ -73,6 +74,11 @@ export interface GridCellOptions {
 }
 
 export interface GridSectionOptions {
+  /**
+   * Show the section grid.
+   * @default true
+   */
+  show?: boolean;
   /**
    * Section style.
    * @default "lines"
@@ -224,6 +230,7 @@ export interface GridCellDefaults {
 }
 
 export interface GridSectionDefaults {
+  show: boolean;
   style: GridStyleValue;
   size: number;
   color: THREE.ColorRepresentation;
@@ -288,6 +295,7 @@ export interface Grid {
   axisThickness: number;
   offset: number;
   hideCellOnSection: boolean;
+  showSection: boolean;
   showAxes: boolean;
 }
 
@@ -304,6 +312,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
       thickness: 1
     },
     section: {
+      show: true,
       style: new GridStyleValue("lines", "sectionStyle"),
       size: 10,
       color: "#787878",
@@ -391,6 +400,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
       sectionColor: section.color ?? defaults.section.color,
       cellThickness: cell.thickness ?? defaults.cell.thickness,
       sectionThickness: section.thickness ?? defaults.section.thickness,
+      showSection: section.show ?? defaults.section.show,
       crossSize: options.crossSize ?? defaults.crossSize,
       hideCellOnSection: options.hideCellOnSection ?? defaults.hideCellOnSection,
       hideCellOnSectionFadeWidth: options.hideCellOnSectionFadeWidth ?? defaults.hideCellOnSectionFadeWidth,
@@ -510,6 +520,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
         thickness: this.cellThickness
       },
       section: {
+        show: this.showSection,
         style: this.sectionStyle.value,
         size: this.sectionSize,
         color: this.sectionColor.value,

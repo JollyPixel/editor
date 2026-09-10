@@ -62,6 +62,7 @@ export interface GridUniformOptions {
   sectionColor: THREE.ColorRepresentation;
   cellThickness: number;
   sectionThickness: number;
+  showSection: boolean;
   crossSize: number;
   hideCellOnSection: boolean;
   hideCellOnSectionFadeWidth: number;
@@ -88,6 +89,7 @@ export function createGridUniforms(
     sectionColor: uniform(new THREE.Color(options.sectionColor)),
     cellThickness: uniform(options.cellThickness, "float"),
     sectionThickness: uniform(options.sectionThickness, "float"),
+    showSection: uniform(options.showSection ? 1 : 0, "float"),
     crossSize: uniform(options.crossSize, "float"),
     hideCellOnSection: uniform(options.hideCellOnSection ? 1 : 0, "float"),
     hideCellOnSectionFadeWidth: uniform(options.hideCellOnSectionFadeWidth, "float"),
@@ -372,16 +374,18 @@ export function buildGridMaterial(
         worldUV.div(uniforms.cellSize),
         uniforms.cellThickness
       );
-    const sectionLine = sectionStyle === "cross" ?
-      pristineCross(
-        worldUV.div(uniforms.cellSize.mul(uniforms.sectionSize)),
-        uniforms.sectionThickness,
-        uniforms.crossSize
-      ) :
-      pristineGrid(
-        worldUV.div(uniforms.cellSize.mul(uniforms.sectionSize)),
-        uniforms.sectionThickness
-      );
+    const sectionLine = (
+      sectionStyle === "cross" ?
+        pristineCross(
+          worldUV.div(uniforms.cellSize.mul(uniforms.sectionSize)),
+          uniforms.sectionThickness,
+          uniforms.crossSize
+        ) :
+        pristineGrid(
+          worldUV.div(uniforms.cellSize.mul(uniforms.sectionSize)),
+          uniforms.sectionThickness
+        )
+    ).mul(uniforms.showSection);
 
     // Fade out the fine grid once it goes sub-pixel.
     const fineDeriv = fwidth(worldUV.div(uniforms.cellSize));
@@ -400,10 +404,12 @@ export function buildGridMaterial(
       );
 
     // Hide the fine grid where the section grid covers it.
+    const hideCellOnSection = uniforms.hideCellOnSection
+      .mul(uniforms.showSection);
     const fineSectionMask = mix(
       float(1),
       float(1).sub(sectionLatticeMask),
-      uniforms.hideCellOnSection
+      hideCellOnSection
     );
     const fadedFine = fineLine
       .mul(fineFade)
