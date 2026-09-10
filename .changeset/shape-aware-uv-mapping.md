@@ -1,7 +1,6 @@
 ---
 "@jolly-pixel/voxel.renderer": minor
 "@jolly-pixel/pixel-draw.renderer": minor
-"@jolly-pixel/editor.voxel-map": minor
 ---
 
 Map every UV face to the shape it belongs to, so a pole or slab edits and

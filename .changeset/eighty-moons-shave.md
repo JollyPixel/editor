@@ -1,7 +1,6 @@
 ---
 "@jolly-pixel/pixel-draw.renderer": minor
 "@jolly-pixel/voxel.renderer": minor
-"@jolly-pixel/editor.pixel-art": patch
 ---
 
 Add `decodePng` and `createPixelArtBufferFromPng`, a single environment-agnostic

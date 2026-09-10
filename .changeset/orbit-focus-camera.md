@@ -1,5 +1,4 @@
 ---
-"@jolly-pixel/editor.voxel-map": minor
 "@jolly-pixel/controls": patch
 ---
 

@@ -10,7 +10,7 @@
 - Before editing TypeScript or JavaScript under `packages/**`, read and follow
   `.github/CODE_STYLE.md`.
 - Update Markdown API documentation when changing a public API.
-- Keep release changeset summaries to two or three lines.
+- Keep release changeset summaries to two or three lines and never add changesets for workspace with private:true enabled in package.json.
 
 ## Validation
 

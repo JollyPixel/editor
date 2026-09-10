@@ -1,6 +1,5 @@
 ---
 "@jolly-pixel/ui": minor
-"@jolly-pixel/editor.voxel-map": minor
 ---
 
 `jolly-folder` reads its content inset from `--jolly-folder-indent`, drops it
