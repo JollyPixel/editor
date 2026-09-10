@@ -23,6 +23,7 @@ import { resolveSelection } from "./selection.ts";
 import {
   findNode,
   flattenVisible,
+  hasChildren,
   type FlatTreeRow
 } from "./treeNodes.ts";
 import { emitDataEvent } from "./events.ts";
@@ -91,6 +92,13 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare renamable: boolean;
 
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "indent-guides"
+  })
+  declare indentGuides: boolean;
+
   /**
    * Domain veto for a candidate drop. Consulted while dragging as well as on
    * commit, so a move this rejects never paints a drop indicator.
@@ -125,6 +133,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.reorderable = false;
     this.rowDrag = false;
     this.renamable = false;
+    this.indentGuides = false;
     this.acceptDrop = null;
     this._renamingId = null;
     this._anchorId = null;
@@ -152,7 +161,7 @@ export class Tree<TData = unknown> extends LitElement {
     active: boolean
   ): TemplateResult {
     const { node, depth } = row;
-    const isBranch = node.children !== undefined;
+    const isBranch = hasChildren(node);
     const isExpanded = this.expanded.includes(node.id);
     const isSelected = this.selected.includes(node.id);
     const isDragSource = this._dragMovedIds?.includes(node.id) ?? false;
@@ -519,7 +528,7 @@ export class Tree<TData = unknown> extends LitElement {
         break;
       }
       case "ArrowRight": {
-        if (activeRow.node.children === undefined) {
+        if (!hasChildren(activeRow.node)) {
           break;
         }
         event.preventDefault();
@@ -536,7 +545,7 @@ export class Tree<TData = unknown> extends LitElement {
       }
       case "ArrowLeft": {
         event.preventDefault();
-        if (activeRow.node.children !== undefined && this.expanded.includes(activeRow.node.id)) {
+        if (hasChildren(activeRow.node) && this.expanded.includes(activeRow.node.id)) {
           emitDataEvent(this, "jolly-toggle-expand", { id: activeRow.node.id, expanded: false });
         }
         else if (activeRow.parentId !== null) {

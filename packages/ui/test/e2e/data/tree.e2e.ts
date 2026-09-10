@@ -36,3 +36,20 @@ test.describe("Tree badges", () => {
     ).toHaveCount(0);
   });
 });
+
+test.describe("Tree indent guides", () => {
+  test("widens the guide band by one indent unit per ancestor", async({ page }) => {
+    await gotoGallery(page, {
+      example: "data/tree",
+      chrome: "off"
+    });
+
+    const rootWidth = await page.locator('jolly-tree .row[data-id="scene"]')
+      .evaluate((element) => getComputedStyle(element, "::before").width);
+    const nestedWidth = await page.locator('jolly-tree .row[data-id="camera"]')
+      .evaluate((element) => getComputedStyle(element, "::before").width);
+
+    expect(rootWidth).toBe("0px");
+    expect(nestedWidth).toBe("16px");
+  });
+});

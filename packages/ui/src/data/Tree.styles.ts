@@ -47,11 +47,12 @@ export const treeStyles = css`
   .toggle,
   .toggle-spacer {
     flex: 0 0 auto;
-    width: var(--jolly-control-height, 20px);
-    height: var(--jolly-control-height, 20px);
+    width: 12px;
+    height: 12px;
   }
 
   .toggle {
+    position: relative;
     display: grid;
     place-items: center;
     padding: 0;
@@ -61,9 +62,15 @@ export const treeStyles = css`
     cursor: pointer;
   }
 
+  .toggle::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+
   .toggle jolly-icon {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     transform-origin: center;
     transition: transform var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
@@ -167,18 +174,30 @@ export const treeStyles = css`
   }
 
   /*
-   * Pseudo-elements, not box-shadow: each needs its own inline-start so it
-   * hugs the row's content instead of also spanning the blank indent gutter
-   * to its left.
+   * Always generated, invisible by default, and only ever repositioned or
+   * made visible by a "data-drop" rule below: Chromium has been seen to
+   * leave a stale sliver painted where this pseudo-element used to be when
+   * it is instead created and destroyed by an attribute selector starting
+   * or stopping matching. Toggling opacity on a box that always exists
+   * does not have that failure mode.
+   *
+   * Pseudo-element, not box-shadow, for the above/below line: it needs its
+   * own inline-start so it hugs the row's content instead of also spanning
+   * the blank indent gutter to its left.
    */
-  .row[data-drop="above"]::after,
-  .row[data-drop="below"]::after {
+  .row::after {
     content: "";
     position: absolute;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .row[data-drop="above"]::after,
+  .row[data-drop="below"]::after {
     inset-inline: var(--jolly-tree-row-indent, 0px) 0;
     height: 1px;
     background: var(--jolly-accent-fill, ${kFallback.focusRing});
-    pointer-events: none;
+    opacity: 1;
   }
 
   .row[data-drop="above"]::after {
@@ -190,17 +209,37 @@ export const treeStyles = css`
   }
 
   .row[data-drop="inside"]::after {
-    content: "";
-    position: absolute;
     inset-block: 0;
     inset-inline: var(--jolly-tree-row-indent, 0px) 0;
     border: 1px solid var(--jolly-accent-fill, ${kFallback.focusRing});
     border-radius: inherit;
-    pointer-events: none;
+    opacity: 1;
   }
 
   .row[data-move-cursor="true"] {
     outline: 1px dashed var(--jolly-accent-fill, ${kFallback.focusRing});
     outline-offset: -1px;
+  }
+
+  /*
+   * One line per ancestor level, centered in that level's indent unit.
+   * Confined to the row's own indent width, so it never reaches into the
+   * toggle or label, which start right at that width's edge.
+   */
+  :host([indent-guides]) .row::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--jolly-tree-row-indent, 0px);
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong})) 0,
+      var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong})) 1px,
+      transparent 1px,
+      transparent var(--jolly-tree-indent, 16px)
+    );
+    background-position: calc(var(--jolly-tree-indent, 16px) / 2) 0;
+    pointer-events: none;
   }
 `;

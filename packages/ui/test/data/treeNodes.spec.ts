@@ -8,6 +8,7 @@ import {
   findNode,
   findParentId,
   flattenVisible,
+  hasChildren,
   isSelfOrDescendant
 } from "../../src/data/treeNodes.ts";
 import type { TreeNode } from "../../src/data/Tree.types.ts";
@@ -113,6 +114,20 @@ describe("Data.ancestorChain", () => {
 
   test("stops at the id itself for an unknown id", () => {
     assert.deepEqual(ancestorChain(kTree, "missing"), ["missing"]);
+  });
+});
+
+describe("Data.hasChildren", () => {
+  test("is false for a leaf without a children array", () => {
+    assert.equal(hasChildren({ id: "b", label: "B" }), false);
+  });
+
+  test("is false for a branch emptied down to no children", () => {
+    assert.equal(hasChildren({ id: "a", label: "A", children: [] }), false);
+  });
+
+  test("is true for a branch with at least one child", () => {
+    assert.equal(hasChildren(kTree[0]), true);
   });
 });
 

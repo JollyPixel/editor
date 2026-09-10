@@ -24,6 +24,7 @@ tree.expanded = ["scene"];
 | `reorderable` | `boolean` | `false` |
 | `rowDrag` | `boolean` | `false` |
 | `renamable` | `boolean` | `false` |
+| `indentGuides` | `boolean` | `false` |
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 
 The component does not mutate these arrays after user input. Consumers write
@@ -99,3 +100,11 @@ same way a drop does not move a node. A blank field or a name equal to the
 current label commits nothing, so a stray edit never erases a label nor sends
 a redundant write. Double-click on an opted-in row renames instead of emitting
 `jolly-activate`.
+
+## Showing parent/child indent guides
+
+`indentGuides` draws one vertical line per ancestor level, centered in that
+level's indent unit, purely from CSS. Each row only paints guides across its
+own indent width, so the lines never reach into the toggle or label. Override
+`--jolly-tree-guide-color` to change their color and `--jolly-tree-indent` to
+change the spacing between them (defaults to 16px).

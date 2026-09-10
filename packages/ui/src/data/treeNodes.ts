@@ -7,6 +7,17 @@ export interface FlatTreeRow<TData = unknown> {
   parentId: string | null;
 }
 
+/**
+ * A node with `children: []` is still a container (drop target for a first
+ * child), but it has nothing to expand, so it is not a branch for toggle and
+ * keyboard navigation purposes.
+ */
+export function hasChildren<TData>(
+  node: TreeNode<TData>
+): boolean {
+  return node.children !== undefined && node.children.length > 0;
+}
+
 export function flattenVisible<TData>(
   nodes: readonly TreeNode<TData>[],
   expanded: ReadonlySet<string>,
