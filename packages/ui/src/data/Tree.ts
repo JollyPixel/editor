@@ -53,16 +53,6 @@ interface MoveState {
 const kRowDragThreshold = 4;
 const kDefaultIndent = 16;
 
-/**
- * A generic tree of `{ id, label, children }` rows, with drag and drop
- * reparenting, keyboard navigation and optional visibility/lock toggles.
- * Knows nothing about what a row represents.
- *
- * Fully controlled: `nodes`, `selected` and `expanded` are consumer owned,
- * the same as `value` on a field. A drop, a toggle or a selection change
- * emits an intent event; the element repaints only once the consumer writes
- * the new value back. See `docs/api/data/tree.md`.
- */
 @customElement("jolly-tree")
 export class Tree<TData = unknown> extends LitElement {
   static override styles = treeStyles;
@@ -99,10 +89,6 @@ export class Tree<TData = unknown> extends LitElement {
   })
   declare indentGuides: boolean;
 
-  /**
-   * Domain veto for a candidate drop. Consulted while dragging as well as on
-   * commit, so a move this rejects never paints a drop indicator.
-   */
   @property({ attribute: false })
   declare acceptDrop: TreeDropAccept | null;
 
@@ -169,8 +155,6 @@ export class Tree<TData = unknown> extends LitElement {
     const isMoveCursor = this._moveState?.cursorId === node.id;
     const expandedState = isBranch ? String(isExpanded) : nothing;
     const isHidden = node.visible === false;
-    // Exposed as a custom property, not just inline padding, so the
-    // `inside` drop indicator can start its border at the same offset.
     const rowIndent = `calc(${depth} * var(--jolly-tree-indent, 16px))`;
 
     return html`
@@ -243,10 +227,6 @@ export class Tree<TData = unknown> extends LitElement {
     return flattenVisible(this.nodes, new Set(this.expanded));
   }
 
-  /**
-   * Row the roving tabindex sits on: the first selected row when one is
-   * visible, otherwise the first visible row.
-   */
   #activeId(
     rows: readonly FlatTreeRow<TData>[]
   ): string | null {
@@ -390,10 +370,6 @@ export class Tree<TData = unknown> extends LitElement {
     }
   }
 
-  /**
-   * Emits the edit unless it was cancelled, left blank, or left unchanged.
-   * The label is not written here: `nodes` stays consumer owned.
-   */
   #commitRename(
     target: EventTarget | null,
     node: TreeNode<TData>
@@ -486,13 +462,6 @@ export class Tree<TData = unknown> extends LitElement {
     emitDataEvent(this, "jolly-select", { selected: [id] });
   }
 
-  /**
-   * Keyboard half of navigation, selection and reparenting.
-   *
-   * The drag handle is pointer-only; a row's own roving tabindex is the
-   * keyboard entry point for reordering (Space arms it), which scales to a
-   * tree of many rows better than a separately focusable grip per row would.
-   */
   #onKeyDown = (
     event: KeyboardEvent
   ): void => {
@@ -761,9 +730,6 @@ export class Tree<TData = unknown> extends LitElement {
     const rect = rowElement.getBoundingClientRect();
     const where = resolveRowDropZone(clientY - rect.top, rect.height);
 
-    // On the outer edge of the last or first row: same depth gesture, so
-    // promoting past a childless edge row reads the same as the dead zone
-    // beyond it.
     if (lastRow !== undefined && targetId === lastRow.node.id && where === "below") {
       this._dragPreview = this.#resolveDepthDrop(lastRow, clientX, movedIds, "below");
 

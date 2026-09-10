@@ -46,7 +46,6 @@ export function canDrop<TData>(
 export interface ResolveDepthDropOptions<TData> {
   nodes: TreeNode<TData>[];
   movedIds: string[];
-  /** The last row below, or the first row above. */
   rowId: string;
   clientX: number;
   containerLeft: number;
@@ -60,12 +59,6 @@ export interface DepthDropTarget {
   where: TreeDropWhere;
 }
 
-/**
- * Past the last row (or before the first), horizontal position picks how
- * far to promote the dragged node: each of that row's ancestors owns the
- * indent band at its own depth, root leftmost through the row's own depth
- * rightmost (a no-op band when that row is the node being dragged).
- */
 export function resolveDepthDropTarget<TData>(
   options: ResolveDepthDropOptions<TData>
 ): DepthDropTarget | null {
@@ -74,7 +67,12 @@ export function resolveDepthDropTarget<TData>(
   } = options;
 
   const chain = ancestorChain(nodes, rowId);
-  const depth = resolveDropDepth(clientX, containerLeft, indentUnit, chain.length);
+  const depth = resolveDropDepth(
+    clientX,
+    containerLeft,
+    indentUnit,
+    chain.length
+  );
   const targetId = chain[depth];
 
   return canDrop({

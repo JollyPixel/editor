@@ -173,18 +173,6 @@ export const treeStyles = css`
     opacity: 0.4;
   }
 
-  /*
-   * Always generated, invisible by default, and only ever repositioned or
-   * made visible by a "data-drop" rule below: Chromium has been seen to
-   * leave a stale sliver painted where this pseudo-element used to be when
-   * it is instead created and destroyed by an attribute selector starting
-   * or stopping matching. Toggling opacity on a box that always exists
-   * does not have that failure mode.
-   *
-   * Pseudo-element, not box-shadow, for the above/below line: it needs its
-   * own inline-start so it hugs the row's content instead of also spanning
-   * the blank indent gutter to its left.
-   */
   .row::after {
     content: "";
     position: absolute;
@@ -221,11 +209,6 @@ export const treeStyles = css`
     outline-offset: -1px;
   }
 
-  /*
-   * One line per ancestor level, centered in that level's indent unit.
-   * Confined to the row's own indent width, so it never reaches into the
-   * toggle or label, which start right at that width's edge.
-   */
   :host([indent-guides]) .row::before {
     content: "";
     position: absolute;

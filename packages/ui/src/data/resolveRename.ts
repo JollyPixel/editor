@@ -1,6 +1,3 @@
-/**
- * Resolves what an inline label edit commits to.
- */
 export function resolveRename(
   currentLabel: string,
   draft: string

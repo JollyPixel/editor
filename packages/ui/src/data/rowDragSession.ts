@@ -7,24 +7,16 @@ export interface RowDragOptions {
 }
 
 export interface RowDragCallbacks {
-  /** Fires once, when the drag first passes `threshold`. */
   onArm(): void;
   onMove(
     clientX: number,
     clientY: number
   ): void;
-  /** Fires once on release, `commit` false on Escape or pointer cancel. */
   onFinish(
     commit: boolean
   ): void;
 }
 
-/**
- * Threshold-armed pointer drag: below `threshold` a plain click still works,
- * past it pointer capture and the dragging cursor take over until release
- * or Escape. Knows nothing about rows or drop targets; the tree decides what
- * armed, moved and finished mean.
- */
 export function beginRowDrag(
   event: PointerEvent,
   options: RowDragOptions,
@@ -51,7 +43,10 @@ export function beginRowDrag(
       return;
     }
     if (!armed) {
-      const distance = Math.hypot(moveEvent.clientX - originX, moveEvent.clientY - originY);
+      const distance = Math.hypot(
+        moveEvent.clientX - originX,
+        moveEvent.clientY - originY
+      );
       if (distance < threshold) {
         return;
       }

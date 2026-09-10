@@ -7,11 +7,6 @@ export interface FlatTreeRow<TData = unknown> {
   parentId: string | null;
 }
 
-/**
- * A node with `children: []` is still a container (drop target for a first
- * child), but it has nothing to expand, so it is not a branch for toggle and
- * keyboard navigation purposes.
- */
 export function hasChildren<TData>(
   node: TreeNode<TData>
 ): boolean {
@@ -77,7 +72,6 @@ export function findParentId<TData>(
   return undefined;
 }
 
-/** Node ids from the root down to `id` itself, inclusive. */
 export function ancestorChain<TData>(
   nodes: readonly TreeNode<TData>[],
   id: string
@@ -107,7 +101,10 @@ export function isSelfOrDescendant<TData>(
   }
 
   const ancestor = findNode(nodes, ancestorId);
-  if (ancestor === null || ancestor.children === undefined) {
+  if (
+    ancestor === null ||
+    ancestor.children === undefined
+  ) {
     return false;
   }
 
