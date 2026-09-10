@@ -11,6 +11,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import { encodePng } from "@jolly-pixel/image";
 import { decodeRasterCanvas } from "@jolly-pixel/image/raster";
+import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { renderIcon } from "../common/icons.ts";
@@ -49,10 +50,6 @@ export class HistoryFileToolbarController implements ReactiveController {
     this.#canRedo = canvas.canRedo();
   }
 
-  /**
-   * PixelArtCanvas reports history state through the onHistoryChange
-   * constructor option rather than an event emitter; the host forwards it.
-   */
   onHistoryChange(
     state: HistoryState
   ): void {
@@ -69,23 +66,29 @@ export class HistoryFileToolbarController implements ReactiveController {
     this.#canvas?.redo();
   }
 
-  clearTexture(): void {
-    if (!this.#canvas) {
+  async clearTexture(): Promise<void> {
+    const canvas = this.#canvas;
+    if (!canvas) {
       return;
     }
 
-    const size = this.#canvas.textureSize;
+    const confirmed = await showConfirm({
+      title: "Clear texture",
+      message: "Clear the entire texture and make every pixel transparent?",
+      confirmLabel: "Clear",
+      danger: true
+    });
+    if (!confirmed || this.#canvas !== canvas) {
+      return;
+    }
+
+    const size = canvas.textureSize;
     const blank = document.createElement("canvas");
     blank.width = size.x;
     blank.height = size.y;
-    this.#canvas.texture = blank;
+    canvas.texture = blank;
   }
 
-  /**
-   * Reads the texture's own samples and encodes them directly. `toDataURL`
-   * would go through the canvas backing store, which premultiplies, so
-   * low-alpha pixels would not survive the export.
-   */
   async #onExportPng(): Promise<void> {
     if (!this.#canvas) {
       return;
@@ -202,7 +205,7 @@ export class HistoryFileToolbarController implements ReactiveController {
         <button
           class="rail-btn" part="clear-texture-button"
           aria-label="Clear texture"
-          @click=${() => this.clearTexture()}
+          @click=${() => void this.clearTexture()}
         >
           ${renderIcon("clearTexture")}
           <span class="tooltip">Clear texture</span>

@@ -1,6 +1,6 @@
 # PixelDrawPanel
 
-Drop-in web component with a mode rail, color controls, canvas and floating toolbars wired to a `PixelArtCanvas`. Undo, redo, import, export and transparent-texture reset remain visible at the bottom. UV and Select actions appear at the top in their respective modes.
+Drop-in web component with a mode rail, color controls, canvas and floating toolbars wired to a `PixelArtCanvas`. Undo, redo, import, export and transparent-texture reset remain visible at the bottom. Resetting the texture requires confirmation. UV and Select actions appear at the top in their respective modes.
 
 The mode rail carries Move, Paint, Erase, Fill, Select and UV. Erase runs the brush against transparency, so the brush size slider stays available there and both mouse buttons erase.
 
