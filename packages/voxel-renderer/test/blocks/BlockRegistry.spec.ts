@@ -3,7 +3,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { type BlockDefinition, BlockRegistry } from "../../src/blocks/index.ts";
+import {
+  resolveBlockDefinition,
+  type BlockDefinition,
+  BlockRegistry
+} from "../../src/blocks/index.ts";
 import { FACE } from "../../src/utils/math.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 
@@ -84,7 +88,8 @@ describe("BlockRegistry — registration resolves the authored definition", () =
       name: "A",
       shapeId: "cube",
       collidable: true,
-      faceTextures: {}
+      faceTextures: {},
+      properties: {}
     });
   });
 
@@ -252,5 +257,102 @@ describe("BlockRegistry — removal", () => {
     registry.clear();
 
     assert.deepEqual([...registry.getAll()], []);
+  });
+});
+
+describe("BlockRegistry — custom properties", () => {
+  it("defaults to an empty map", () => {
+    const registry = new BlockRegistry([makeDef(1)]);
+
+    assert.deepEqual(registry.get(1)?.properties, {});
+    assert.deepEqual(registry.propertiesOf(1), {});
+  });
+
+  it("keeps every scalar value", () => {
+    const registry = new BlockRegistry([
+      makeBlockDef(1, "cube", {
+        properties: {
+          hardness: 5,
+          material: "stone",
+          flammable: false
+        }
+      })
+    ]);
+
+    assert.deepEqual(registry.propertiesOf(1), {
+      hardness: 5,
+      material: "stone",
+      flammable: false
+    });
+  });
+
+  it("drops values that are not a finite scalar", () => {
+    const registry = new BlockRegistry([
+      makeBlockDef(1, "cube", {
+        properties: {
+          kept: 1,
+          nested: { deep: true },
+          list: [1, 2],
+          nothing: null,
+          missing: undefined,
+          notANumber: NaN,
+          endless: Infinity
+        } as never
+      })
+    ]);
+
+    assert.deepEqual(registry.propertiesOf(1), { kept: 1 });
+  });
+
+  it("ignores a __proto__ key instead of polluting the prototype", () => {
+    const registry = new BlockRegistry([
+      makeBlockDef(1, "cube", {
+        properties: JSON.parse(
+          '{ "__proto__": { "polluted": true }, "safe": 1 }'
+        )
+      })
+    ]);
+
+    const properties = registry.propertiesOf(1);
+
+    assert.deepEqual(properties, { safe: 1 });
+    assert.equal(
+      ({} as Record<string, unknown>).polluted,
+      undefined
+    );
+    assert.equal(Object.getPrototypeOf(properties), Object.prototype);
+  });
+
+  it("hands out a copy that callers may mutate freely", () => {
+    const source = { hardness: 5 };
+    const registry = new BlockRegistry([
+      makeBlockDef(1, "cube", { properties: source })
+    ]);
+
+    const first = registry.propertiesOf(1)!;
+    first.hardness = 99;
+    source.hardness = 42;
+
+    assert.deepEqual(registry.propertiesOf(1), { hardness: 5 });
+    assert.notEqual(first, registry.propertiesOf(1));
+  });
+
+  it("returns undefined for an unregistered id", () => {
+    const registry = new BlockRegistry([makeDef(1)]);
+
+    assert.equal(registry.propertiesOf(404), undefined);
+    assert.equal(registry.propertiesOf(0), undefined);
+  });
+});
+
+describe("resolveBlockDefinition — properties are idempotent", () => {
+  it("survives a second resolution unchanged", () => {
+    const once = resolveBlockDefinition(
+      makeBlockDef(1, "cube", { properties: { hardness: 5 } })
+    );
+    const twice = resolveBlockDefinition(once);
+
+    assert.deepEqual(twice.properties, { hardness: 5 });
+    assert.notEqual(twice.properties, once.properties);
   });
 });

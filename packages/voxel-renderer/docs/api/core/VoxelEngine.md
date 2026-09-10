@@ -346,6 +346,20 @@ should use; writing straight to `blockRegistry` emits nothing.
 Registers a batch, marking the chunks dirty once and emitting one event per
 definition. An empty batch does nothing.
 
+#### `blockAt(position: THREE.Vector3Like): ResolvedBlockDefinition | undefined`
+
+Resolves the voxel at a world position to its block definition, reading the
+highest-priority layer that holds one. Returns `undefined` for air and for a
+voxel whose block is no longer registered. The definition is the stored one, not
+a copy; do not mutate it.
+
+#### `blockPropertiesAt(position: THREE.Vector3Like): BlockProperties | undefined`
+
+Same lookup, returning a fresh copy of the block's
+[custom properties](../blocks/BlockDefinition.md#custom-properties) that the
+caller owns. Returns `undefined` for air and for an unregistered block, and an
+empty object for a block carrying no properties.
+
 #### `removeBlock(blockId: number): boolean`
 
 Unregisters a definition, marks every chunk dirty, and emits `onBlockUpdated`.

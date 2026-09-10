@@ -95,3 +95,67 @@ describe("VoxelEngine — block definitions", () => {
     assert.deepEqual(events, []);
   });
 });
+
+describe("VoxelEngine — block lookup by position", () => {
+  it("joins a placed voxel to its definition and properties", () => {
+    const engine = makeEngine();
+    engine.defineBlock(
+      makeBlockDef(kLeavesId, "cube", {
+        name: "Leaves",
+        properties: { hardness: 1, flammable: true }
+      })
+    );
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", {
+      position: { x: 1, y: 2, z: 3 },
+      blockId: kLeavesId
+    });
+
+    assert.equal(engine.blockAt({ x: 1, y: 2, z: 3 })?.name, "Leaves");
+    assert.deepEqual(
+      engine.blockPropertiesAt({ x: 1, y: 2, z: 3 }),
+      { hardness: 1, flammable: true }
+    );
+  });
+
+  it("hands out a copy that does not write back into the registry", () => {
+    const engine = makeEngine();
+    engine.defineBlock(
+      makeBlockDef(kLeavesId, "cube", { properties: { hardness: 1 } })
+    );
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: kLeavesId
+    });
+
+    engine.blockPropertiesAt({ x: 0, y: 0, z: 0 })!.hardness = 99;
+
+    assert.deepEqual(
+      engine.blockPropertiesAt({ x: 0, y: 0, z: 0 }),
+      { hardness: 1 }
+    );
+  });
+
+  it("reports air as absent", () => {
+    const engine = makeEngine();
+    engine.world.addLayer("Ground");
+
+    assert.equal(engine.blockAt({ x: 9, y: 9, z: 9 }), undefined);
+    assert.equal(engine.blockPropertiesAt({ x: 9, y: 9, z: 9 }), undefined);
+  });
+
+  it("reports a voxel whose block was unregistered as absent", () => {
+    const engine = makeEngine();
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: kCubeId
+    });
+
+    engine.removeBlock(kCubeId);
+
+    assert.equal(engine.blockAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.equal(engine.blockPropertiesAt({ x: 0, y: 0, z: 0 }), undefined);
+  });
+});

@@ -23,6 +23,7 @@ class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   unregister(id: number): boolean;
   clear(): void;
   get(id: number): ResolvedBlockDefinition | undefined;
+  propertiesOf(id: number): BlockProperties | undefined;
   has(id: number): boolean;
   getAll(): IterableIterator<ResolvedBlockDefinition>;
   [Symbol.iterator](): IterableIterator<ResolvedBlockDefinition>;
@@ -46,7 +47,19 @@ does not reuse gaps. It is not clamped to `MAX_BLOCK_ID`; packing a larger ID
 fails when the voxel is written.
 
 `version` increments for each completed registration. Geometry caches use it to
-detect stale compiled block data.
+detect stale compiled block data. It rises for any registration, including one
+that only changes [custom properties](./BlockDefinition.md#custom-properties),
+so a property-only edit still invalidates compiled geometry.
+
+`get()` returns the stored definition, not a copy. It is called once per voxel
+on the collision path, so treat the result as read-only; mutating it corrupts
+the registry and skips the resolution rules.
+
+`propertiesOf()` returns a fresh copy of a block's custom properties, which the
+caller owns and may mutate. It returns `undefined` for an unregistered ID, and
+an empty object for a block that has none. Use
+[`VoxelEngine.blockPropertiesAt()`](../core/VoxelEngine.md#blockpropertiesatposition-threevector3like-blockproperties--undefined)
+to look them up by world position instead of by ID.
 
 ## Creating blocks from a tileset
 
@@ -66,7 +79,7 @@ interface BlocksFromTilesetOptions {
 type BlockOverrides = Partial<
   Pick<
     ResolvedBlockDefinition,
-    "name" | "shapeId" | "collidable" | "transparent"
+    "name" | "shapeId" | "collidable" | "transparent" | "properties"
   >
 >;
 

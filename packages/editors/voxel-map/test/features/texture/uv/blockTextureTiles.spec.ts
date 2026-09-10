@@ -28,6 +28,7 @@ function makeBlock(
     name: `Block${id}`,
     shapeId: "cube",
     collidable: true,
+    properties: {},
     faceTextures: options.faceTextures ?? {},
     defaultTexture: options.defaultTexture
   };

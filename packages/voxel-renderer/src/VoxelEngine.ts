@@ -31,7 +31,9 @@ import type {
 } from "./hooks.ts";
 import {
   resolveBlockDefinition,
-  type BlockDefinition
+  type BlockDefinition,
+  type BlockProperties,
+  type ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
 import type {
@@ -251,6 +253,22 @@ export class VoxelEngine {
         block
       });
     }
+  }
+
+  blockAt(
+    position: THREE.Vector3Like
+  ): ResolvedBlockDefinition | undefined {
+    const entry = this.world.getVoxelAt(position);
+
+    return entry && this.blockRegistry.get(entry.blockId);
+  }
+
+  blockPropertiesAt(
+    position: THREE.Vector3Like
+  ): BlockProperties | undefined {
+    const entry = this.world.getVoxelAt(position);
+
+    return entry && this.blockRegistry.propertiesOf(entry.blockId);
   }
 
   removeBlock(

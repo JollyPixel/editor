@@ -25,6 +25,7 @@ export function makeBlock(
     name: `Block${id}`,
     shapeId: "cube",
     collidable: true,
+    properties: {},
     faceTextures: {},
     defaultTexture: { ...placement }
   };

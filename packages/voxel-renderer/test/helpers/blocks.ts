@@ -20,6 +20,7 @@ export function makeBlockDef(
     faceTextures: {},
     defaultTexture: DEFAULT_TEXTURE,
     collidable: true,
+    properties: {},
     ...overrides
   };
 }

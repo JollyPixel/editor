@@ -11,7 +11,7 @@ const kDefaultLimit = 255;
 export type BlockOverrides = Partial<
   Pick<
     ResolvedBlockDefinition,
-    "name" | "shapeId" | "collidable" | "transparent"
+    "name" | "shapeId" | "collidable" | "transparent" | "properties"
   >
 >;
 
@@ -51,6 +51,7 @@ export function* blocksFromTileset(
         name: `Block ${blockId}`,
         shapeId: "cube",
         collidable: false,
+        properties: {},
         faceTextures: {},
         defaultTexture: {
           tilesetId,
