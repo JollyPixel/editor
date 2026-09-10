@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/asset",
   "description": "Platform-agnostic asset references and loading orchestration for browser and Node.js runtimes",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

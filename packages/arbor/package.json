@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/arbor",
   "description": "Robust, stylable tree view widget for HTML5 apps with drag'n'drop support",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

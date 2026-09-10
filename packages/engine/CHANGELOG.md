@@ -1,5 +1,36 @@
 # @jolly-pixel/engine
 
+## 5.0.0
+
+### Major Changes
+
+- [#516](https://github.com/JollyPixel/editor/pull/516) [`66ee3e0`](https://github.com/JollyPixel/editor/commit/66ee3e0740bcf6ec96a507ad47c9d565a9750a48) Thanks [@fraxken](https://github.com/fraxken)! - Implement a new loop engine/workspace
+
+- [#514](https://github.com/JollyPixel/editor/pull/514) [`cd200eb`](https://github.com/JollyPixel/editor/commit/cd200ebf5440b27cecc74221104deae7e7bf9be6) Thanks [@fraxken](https://github.com/fraxken)! - Drop the `get`/`set` prefixes from device methods.
+
+### Minor Changes
+
+- [#489](https://github.com/JollyPixel/editor/pull/489) [`e83c39b`](https://github.com/JollyPixel/editor/commit/e83c39bdc271493400eecce3acd9b6568262f845) Thanks [@fraxken](https://github.com/fraxken)! - Move input controls inside the new @jolly-pixel/controls package (workspace)
+
+- [#559](https://github.com/JollyPixel/editor/pull/559) [`981f340`](https://github.com/JollyPixel/editor/commit/981f340f5933b21508a8b5acca991c8e44b451d0) Thanks [@fraxken](https://github.com/fraxken)! - Add `AxisMap`, `Axis`, and normalized axis sources for named movement input.
+  Export `AtomicInput` and its action types, including `ANY` and `NONE` keyboard
+  sentinels.
+
+- [#534](https://github.com/JollyPixel/editor/pull/534) [`e55decb`](https://github.com/JollyPixel/editor/commit/e55decba8f0dbc35f1351ea3218360de0b5dbfc1) Thanks [@fraxken](https://github.com/fraxken)! - Add `disposeObject3D` covering geometries, materials, opt-in textures, skeletons,
+  render targets and self-disposing nodes, with a single disposal per shared resource.
+
+### Patch Changes
+
+- [#524](https://github.com/JollyPixel/editor/pull/524) [`82ce3e8`](https://github.com/JollyPixel/editor/commit/82ce3e8139f436f25676c1b7bcd8447e1b4db416) Thanks [@fraxken](https://github.com/fraxken)! - Preserve mouse transitions across fixed-step samples and rendered updates.
+
+- [#539](https://github.com/JollyPixel/editor/pull/539) [`3bde59b`](https://github.com/JollyPixel/editor/commit/3bde59b0a25d61653b3200849c64bf93c3d30c8d) Thanks [@fraxken](https://github.com/fraxken)! - Rebuild the layers tab around one tree holding objects as rows, with a single
+  add dialog, per-object color and lock, and editable properties. Adds
+  `AreaBox.color`, `VoxelObjectJSON.color`/`locked`, and stops `disposeObject3D`
+  freeing the resources a self-disposing node already released.
+- Updated dependencies [[`18842ab`](https://github.com/JollyPixel/editor/commit/18842abe5ad347f63eacf8254d0685cba235adee), [`2db69a8`](https://github.com/JollyPixel/editor/commit/2db69a870c0ef3f5375c53cf2661ef23d43584a4), [`c9fa209`](https://github.com/JollyPixel/editor/commit/c9fa2090fc08b3151f107290459dbd050a584186), [`981f340`](https://github.com/JollyPixel/editor/commit/981f340f5933b21508a8b5acca991c8e44b451d0), [`6ec74fd`](https://github.com/JollyPixel/editor/commit/6ec74fdc2662bb3a2dc3744edcd1d2b9dc80ae24), [`c5e4f38`](https://github.com/JollyPixel/editor/commit/c5e4f38bafbc56cfba7a5de5d5f66e3ed1cf6f65), [`82ce3e8`](https://github.com/JollyPixel/editor/commit/82ce3e8139f436f25676c1b7bcd8447e1b4db416), [`cd200eb`](https://github.com/JollyPixel/editor/commit/cd200ebf5440b27cecc74221104deae7e7bf9be6), [`29c5ecb`](https://github.com/JollyPixel/editor/commit/29c5ecb28e364f5d9a96f787647c6dfd3d7b1454)]:
+  - @jolly-pixel/asset@1.1.0
+  - @jolly-pixel/controls@2.0.0
+
 ## 4.0.0
 
 ### Major Changes

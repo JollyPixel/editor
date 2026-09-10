@@ -1,5 +1,128 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 4.0.0
+
+### Major Changes
+
+- [#618](https://github.com/JollyPixel/editor/pull/618) [`d6b2a37`](https://github.com/JollyPixel/editor/commit/d6b2a37da51adcbfc84267c5276958299f58eb7b) Thanks [@fraxken](https://github.com/fraxken)! - Replace the per-kind room extension with a declarative `live()` protocol hosted
+  by asset-server's new `AssetRoomExtension`. `PixelArtAssetExtension` and
+  `VoxelMapAssetExtension` are removed; `PixelCommandArbiter.admit()` now defers
+  recording to the returned arbitration, so a refused append no longer poisons
+  the conflict trackers.
+
+- [#608](https://github.com/JollyPixel/editor/pull/608) [`ad9861d`](https://github.com/JollyPixel/editor/commit/ad9861dedfc2839f1dba4d6ae496f40737682fc7) Thanks [@fraxken](https://github.com/fraxken)! - Replace face-named UV runtime APIs with `DEFAULT_UV_SLOTS`, `slots`, `slotsOf()`, `selectedSlot`, and slot-named create options.
+  Consolidate UV storage, geometry, overlay projection, drag cleanup, target keys, and validation while retaining the existing serialized region fields.
+
+- [#550](https://github.com/JollyPixel/editor/pull/550) [`e282c08`](https://github.com/JollyPixel/editor/commit/e282c08f6857bc99dc33f343a831395d0e8716fd) Thanks [@fraxken](https://github.com/fraxken)! - Rename `PixelCursorSyncOptions.getLabel` to `label` and add a `color` callback,
+  so a host can key peer cursor colors on a stable identity field instead of the
+  per-connection `clientId`.
+
+- [#618](https://github.com/JollyPixel/editor/pull/618) [`8c634f1`](https://github.com/JollyPixel/editor/commit/8c634f1add3ec76e3a63d62bf6ae5bbd97e91a63) Thanks [@fraxken](https://github.com/fraxken)! - Split `src/asset` into `src/serialization` (document format, codec, buffer
+  mapping) and `src/asset` (asset-server handler, extension, `PixelArtState`).
+  The codec now ships from the package root, so reading a `.pixelart` document
+  no longer pulls `@jolly-pixel/asset-server` into the graph.
+
+- [#564](https://github.com/JollyPixel/editor/pull/564) [`1541725`](https://github.com/JollyPixel/editor/commit/1541725c977cc4b74cf05045c2674585150a1383) Thanks [@fraxken](https://github.com/fraxken)! - Remove `decodePng`, `InvalidPngError`, `DecodedPng` and `decodeRasterCanvas`
+  from the public API; they now live in `@jolly-pixel/image`. `decodeRasterBlob`
+  keeps its name and shape, and `encodeSelectionPng` output is now byte-exact
+  rather than round-tripped through a premultiplying canvas.
+
+- [#623](https://github.com/JollyPixel/editor/pull/623) [`02b3b44`](https://github.com/JollyPixel/editor/commit/02b3b44814abf14c24bfea237afababa6ff8b09c) Thanks [@fraxken](https://github.com/fraxken)! - Parse the wire with JSON Schema instead of hand-rolled guards. Envelopes split
+  by direction (`Envelope.parseClient` / `parseServer`), and an extension now
+  declares `protocols` in place of `events` and `getEventName`, so the room parses
+  payloads and derives rights keys from the schema variant that matched.
+  
+  This fixes broadcast filtering: outbound payloads were gated on an event name
+  they never carried, so with a rights table configured a `voxel.renderer.*` rule
+  filtered the wrong key on every fan-out.
+
+- [#519](https://github.com/JollyPixel/editor/pull/519) [`a0f07ca`](https://github.com/JollyPixel/editor/commit/a0f07ca1f5d8ba66dd4819688602b51942036c1b) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/color`: a dependency-free CSS color parser, converter, formatter and
+  deterministic palette, replacing `colorjs.io` and the duplicated color helpers across the editors.
+
+- [#578](https://github.com/JollyPixel/editor/pull/578) [`7ed65f3`](https://github.com/JollyPixel/editor/commit/7ed65f3b58bf7127b65965a1b3b88c8adada0c3c) Thanks [@fraxken](https://github.com/fraxken)! - Texture a block per shape slot instead of per face, so stairs expose every quad
+  they render: `faceTextures` is keyed by slot, `UVFace` is an open string, and a
+  slot holding several polygons draws as a compound outlined along the union of
+  its parts, so a stair side reads as one L rather than two stacked rectangles.
+  Collapsing a region stacks every slot on the shared rectangle and always takes
+  the largest face. The `PosX`, `NegX`, `PosY` and `NegY` projectors no longer
+  mirror their tile, with the horizontal faces keyed to the back of the block.
+
+- [#601](https://github.com/JollyPixel/editor/pull/601) [`7b3c9de`](https://github.com/JollyPixel/editor/commit/7b3c9dec8aa72719a9e5f5df601cfd693fcaff26) Thanks [@fraxken](https://github.com/fraxken)! - Add an `unfolded` UV region state that packs the active faces into a net and
+  drags them as one, and rename the pair around it: `collapsed` is now `stacked`
+  and `uncollapsed` is now `free`. `UVMap.collapse()`/`uncollapse()` are replaced
+  by `setState(id, state, face?)`, `UVRegion` gains `stack()`/`unfold()`/`free()`
+  plus `bounds` and `translated()`, and `state` is required on `UVRegionData`, so
+  documents written with the old names no longer load. The pixel-art toolbar
+  swaps its single toggle for a state dropdown, and unfolding a voxel-map block
+  claims one atlas tile per face.
+
+### Minor Changes
+
+- [#526](https://github.com/JollyPixel/editor/pull/526) [`c2319ad`](https://github.com/JollyPixel/editor/commit/c2319adfeda24c36072c54a15ad8879b77d57645) Thanks [@fraxken](https://github.com/fraxken)! - Add `decodePng` and `createPixelArtBufferFromPng`, a single environment-agnostic
+  PNG path shared by the Node seed pipeline and by browsers without `ImageDecoder`,
+  where texture imports previously went through a premultiplying canvas.
+  Also add `resolveTilesetDefinition`, so a seeded document and a loaded texture
+  derive the same tile grid.
+
+- [#528](https://github.com/JollyPixel/editor/pull/528) [`d6f6a22`](https://github.com/JollyPixel/editor/commit/d6f6a22e8d9a5644b1e27622aa00d5e1af594702) Thanks [@fraxken](https://github.com/fraxken)! - Cut editor boot time by stopping the client from re-uploading its whole
+  placeholder atlas on every load, resuming asset replay from the last snapshot
+  checkpoint, and letting rooms resolve without blocking one another.
+
+- [#575](https://github.com/JollyPixel/editor/pull/575) [`055990e`](https://github.com/JollyPixel/editor/commit/055990eb87908a5fc721a47b8d0b9ad456afabef) Thanks [@fraxken](https://github.com/fraxken)! - Selection overlay shows its size ("16×16") next to the outline, anchored
+  below the bottom-right corner. Opt out with `select.sizeLabel: false`.
+  `DefaultViewport` gains `canvasWidth` / `canvasHeight`.
+
+- [#524](https://github.com/JollyPixel/editor/pull/524) [`7ec0367`](https://github.com/JollyPixel/editor/commit/7ec0367c989129c9081530a9aa69f6321be929fe) Thanks [@fraxken](https://github.com/fraxken)! - `CanvasBuffer` now emits `changed` with dirty bounds, plus `resized` and `replaced`. `PixelDocument` forwards them and is exposed as `PixelArtCanvas.document`, replacing `PixelDocument.onChange`/`offChange`.
+
+- [#565](https://github.com/JollyPixel/editor/pull/565) [`a50002e`](https://github.com/JollyPixel/editor/commit/a50002e7ba24d1b529c21e9c966ccc86e8c9f977) Thanks [@fraxken](https://github.com/fraxken)! - Map every UV face to the shape it belongs to, so a pole or slab edits and
+  renders over the part of its tile the geometry actually covers.
+  
+  - Built-in shapes state each face's UVs as its own footprint, exposed through
+    `projectFaceUv()`, `faceUvs()` and `projectedFace()`.
+  - The voxel-map UV editor derives per-face regions from the block's shape and
+    leaves only a plain cube collapsible.
+  - A collapse round-trip keeps each face's own size, and collapses onto the
+    largest active face rather than the smallest.
+  - Chunk materials clamp each face to its atlas rect, so atlases ship unpadded
+    and a UV rect at a fractional offset stops sampling the tile gutter.
+
+- [#599](https://github.com/JollyPixel/editor/pull/599) [`18c4ea9`](https://github.com/JollyPixel/editor/commit/18c4ea96c24b9dc85bf33cb86250d847c56ef7c8) Thanks [@fraxken](https://github.com/fraxken)! - Add an erase mode: the brush drawing `brush.erase` (transparent by default,
+  overridable with the new `brush.eraseColor` option) with the same size, line
+  and mouse-button behavior as painting.
+
+- [#482](https://github.com/JollyPixel/editor/pull/482) [`8444ce6`](https://github.com/JollyPixel/editor/commit/8444ce69ba3162983f8eac4349f536371c036029) Thanks [@fraxken](https://github.com/fraxken)! - Refactor internal APIs and Types
+
+- [#579](https://github.com/JollyPixel/editor/pull/579) [`72fb83a`](https://github.com/JollyPixel/editor/commit/72fb83abb6ff6a568b552e4baa85d5ce1755f21c) Thanks [@fraxken](https://github.com/fraxken)! - Add `uv.deselectOnEmptyClick` to `PixelArtCanvasOptions`, controlling whether a
+  UV-mode click outside every visible region clears the selection (default `true`).
+  The voxel-map texture editor disables it so the block library keeps ownership of
+  the UV selection, and now also wires `PixelStrokeGhostSync` and
+  `SelectionGhostSync` so peers see strokes and selections before they commit.
+
+### Patch Changes
+
+- [#521](https://github.com/JollyPixel/editor/pull/521) [`02bc332`](https://github.com/JollyPixel/editor/commit/02bc3329e46bf536727ad696140dc7d09ccccb92) Thanks [@fraxken](https://github.com/fraxken)! - Refactor voxel-map editor to use @jolly-pixel/ui components (+ diverses bug fixes)
+
+- [#612](https://github.com/JollyPixel/editor/pull/612) [`6b09dd6`](https://github.com/JollyPixel/editor/commit/6b09dd6faa48f8d8600cf4a8e8a3b9126b24afb9) Thanks [@fraxken](https://github.com/fraxken)! - Parse asset event payloads instead of validating them. `isAssetEvent` becomes
+  `parseAssetEvent`, returning `Result<AssetEvent, AssetEventRejection>` that
+  separates a foreign event from a malformed one; payload types now derive from
+  the JSON Schemas that check them, and `decodeContent` takes `AssetInlineContent`
+  so it can no longer throw.
+
+- [#628](https://github.com/JollyPixel/editor/pull/628) [`423db10`](https://github.com/JollyPixel/editor/commit/423db105df46e6ec7bb692beec0a37b1f9332fad) Thanks [@fraxken](https://github.com/fraxken)! - `Extension.onClientConnect`, `onClientDisconnect` and `onMessage` are now
+  optional; the room skips a hook it does not find and drops such a message with a
+  `debug` log. Implementations need the `override` modifier, as `dispose` already
+  did, and a worker extension reports its hooks at ready time so an omitted one
+  costs no RPC round-trip.
+
+- [#608](https://github.com/JollyPixel/editor/pull/608) [`2667412`](https://github.com/JollyPixel/editor/commit/266741294201a94f3d86644de3a2922c5d4237be) Thanks [@fraxken](https://github.com/fraxken)! - A UV click now picks the face painted on top, and repeat clicks cycle only
+  through the faces exactly coincident with it. A face that merely overlaps is
+  below it and can no longer be selected through it.
+- Updated dependencies [[`d6b2a37`](https://github.com/JollyPixel/editor/commit/d6b2a37da51adcbfc84267c5276958299f58eb7b), [`ac9bcf8`](https://github.com/JollyPixel/editor/commit/ac9bcf8696b154763828b36d09511c046cd4f036), [`d6f6a22`](https://github.com/JollyPixel/editor/commit/d6f6a22e8d9a5644b1e27622aa00d5e1af594702), [`c9fa209`](https://github.com/JollyPixel/editor/commit/c9fa2090fc08b3151f107290459dbd050a584186), [`402c2d9`](https://github.com/JollyPixel/editor/commit/402c2d952e774d2c96ead24b7c8d11ef568128a9), [`6b09dd6`](https://github.com/JollyPixel/editor/commit/6b09dd6faa48f8d8600cf4a8e8a3b9126b24afb9), [`423db10`](https://github.com/JollyPixel/editor/commit/423db105df46e6ec7bb692beec0a37b1f9332fad), [`02b3b44`](https://github.com/JollyPixel/editor/commit/02b3b44814abf14c24bfea237afababa6ff8b09c), [`1541725`](https://github.com/JollyPixel/editor/commit/1541725c977cc4b74cf05045c2674585150a1383), [`a9a6ca8`](https://github.com/JollyPixel/editor/commit/a9a6ca8279097ff6e64a800f797a96ab21597e1b), [`402c2d9`](https://github.com/JollyPixel/editor/commit/402c2d952e774d2c96ead24b7c8d11ef568128a9), [`4ad1299`](https://github.com/JollyPixel/editor/commit/4ad12991dc15ff5bb2ac158f9d6d6b0ce6023fd4)]:
+  - @jolly-pixel/asset-server@2.0.0
+  - @jolly-pixel/event-store@3.0.0
+  - @jolly-pixel/network@2.0.0
+  - @jolly-pixel/image@1.1.0
+
 ## 3.0.0
 
 ### Major Changes

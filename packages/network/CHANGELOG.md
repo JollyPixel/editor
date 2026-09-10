@@ -1,5 +1,45 @@
 # @jolly-pixel/network
 
+## 2.0.0
+
+### Major Changes
+
+- [#623](https://github.com/JollyPixel/editor/pull/623) [`02b3b44`](https://github.com/JollyPixel/editor/commit/02b3b44814abf14c24bfea237afababa6ff8b09c) Thanks [@fraxken](https://github.com/fraxken)! - Parse the wire with JSON Schema instead of hand-rolled guards. Envelopes split
+  by direction (`Envelope.parseClient` / `parseServer`), and an extension now
+  declares `protocols` in place of `events` and `getEventName`, so the room parses
+  payloads and derives rights keys from the schema variant that matched.
+  
+  This fixes broadcast filtering: outbound payloads were gated on an event name
+  they never carried, so with a rights table configured a `voxel.renderer.*` rule
+  filtered the wrong key on every fan-out.
+
+### Minor Changes
+
+- [#528](https://github.com/JollyPixel/editor/pull/528) [`d6f6a22`](https://github.com/JollyPixel/editor/commit/d6f6a22e8d9a5644b1e27622aa00d5e1af594702) Thanks [@fraxken](https://github.com/fraxken)! - Cut editor boot time by stopping the client from re-uploading its whole
+  placeholder atlas on every load, resuming asset replay from the last snapshot
+  checkpoint, and letting rooms resolve without blocking one another.
+
+- [#571](https://github.com/JollyPixel/editor/pull/571) [`c9fa209`](https://github.com/JollyPixel/editor/commit/c9fa2090fc08b3151f107290459dbd050a584186) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse` tracks whether the pointer sits over the canvas as `hovering`, with
+  `enter` and `leave` events, so a consumer can tell a live `position` from the
+  stale one left behind when the pointer moves onto surrounding UI.
+  `SyncAdapter.notifyLocal()` replays an event to the handler captured at
+  `attach()`, which `VoxelSyncClient` now uses so a peer's edit reaches local
+  observers, and hiding, showing or removing a layer marks every layer's chunks
+  dirty for cross-layer face culling.
+
+- [#628](https://github.com/JollyPixel/editor/pull/628) [`423db10`](https://github.com/JollyPixel/editor/commit/423db105df46e6ec7bb692beec0a37b1f9332fad) Thanks [@fraxken](https://github.com/fraxken)! - `Extension.onClientConnect`, `onClientDisconnect` and `onMessage` are now
+  optional; the room skips a hook it does not find and drops such a message with a
+  `debug` log. Implementations need the `override` modifier, as `dispose` already
+  did, and a worker extension reports its hooks at ready time so an omitted one
+  costs no RPC round-trip.
+
+- [#520](https://github.com/JollyPixel/editor/pull/520) [`a9a6ca8`](https://github.com/JollyPixel/editor/commit/a9a6ca8279097ff6e64a800f797a96ab21597e1b) Thanks [@fraxken](https://github.com/fraxken)! - Add presence and locking: a `PresenceSource` port, a `path` property claiming a field lock on focus, and `RoomPresenceSource` under the new `./network` subpath.
+
+### Patch Changes
+
+- Updated dependencies [[`d6f6a22`](https://github.com/JollyPixel/editor/commit/d6f6a22e8d9a5644b1e27622aa00d5e1af594702), [`402c2d9`](https://github.com/JollyPixel/editor/commit/402c2d952e774d2c96ead24b7c8d11ef568128a9), [`402c2d9`](https://github.com/JollyPixel/editor/commit/402c2d952e774d2c96ead24b7c8d11ef568128a9), [`4ad1299`](https://github.com/JollyPixel/editor/commit/4ad12991dc15ff5bb2ac158f9d6d6b0ce6023fd4)]:
+  - @jolly-pixel/event-store@3.0.0
+
 ## 1.1.0
 
 ### Minor Changes
