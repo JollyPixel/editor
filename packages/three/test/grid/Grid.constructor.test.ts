@@ -88,6 +88,7 @@ describe("constructor", () => {
     assert.strictEqual(grid.fadeStrength, 1);
     assert.strictEqual(grid.axisThickness, 2);
     assert.strictEqual(grid.offset, 0);
+    assert.ok(grid.showSection);
     assert.ok(grid.showAxes);
     assert.strictEqual(grid.cellColor.value, "#393939");
     assert.strictEqual(grid.sectionColor.value, "#787878");
@@ -159,6 +160,7 @@ describe("constructor", () => {
         thickness: 3
       },
       section: {
+        show: false,
         style: "cross",
         size: 8,
         color: "#222222",
@@ -191,6 +193,7 @@ describe("constructor", () => {
     assert.strictEqual(grid.sectionColor.value, "#222222");
     assert.strictEqual(grid.cellThickness, 3);
     assert.strictEqual(grid.sectionThickness, 4);
+    assert.strictEqual(grid.showSection, false);
     assert.strictEqual(grid.crossSize, 0.3);
     assert.ok(grid.hideCellOnSection);
     assert.strictEqual(grid.hideCellOnSectionFadeWidth, 1.5);
@@ -217,6 +220,19 @@ describe("Grid.Defaults", () => {
     }
     finally {
       Grid.Defaults.cell.size = original;
+    }
+  });
+
+  test("Grid.Defaults.section.show controls section visibility", () => {
+    const original = Grid.Defaults.section.show;
+    try {
+      Grid.Defaults.section.show = false;
+      const grid = new Grid();
+
+      assert.strictEqual(grid.showSection, false);
+    }
+    finally {
+      Grid.Defaults.section.show = original;
     }
   });
 
