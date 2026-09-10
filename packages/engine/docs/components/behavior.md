@@ -8,7 +8,7 @@ capabilities to an Actor. It provides:
   `actor.behaviors`, making it discoverable from other actors
 - **Decorators** — declarative metadata for scene properties,
   component references, input listeners, and
-  [signals](../actor/signal.md)
+  [signals](./signal.md)
 
 ```ts
 import {

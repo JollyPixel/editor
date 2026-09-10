@@ -15,9 +15,9 @@ $ npm i @jolly-pixel/asset-server
 ```
 
 `@jolly-pixel/asset-server` runs on the server. Browser code should use
-[`@jolly-pixel/asset`](../asset) for asset records and catalogs.
+[`@jolly-pixel/asset`](../asset/README.md) for asset records and catalogs.
 Physical storage providers are supplied by
-[`@jolly-pixel/asset-source`](../asset-source).
+[`@jolly-pixel/asset-source`](../asset-source/README.md).
 
 ## 👀 Usage example
 

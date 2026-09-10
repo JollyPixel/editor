@@ -79,4 +79,4 @@ See [docs/Extension.md](./docs/Extension.md) for the protocol shape and [docs/Ri
 4. `room.updatePresence(patch)` exchanges `"presence"`/`"peer-presence"` envelopes, merged and relayed by the server, gated on `${extension.name}.$presence`. Extensions aren't involved.
 5. `room.leave()` or a socket disconnect drops the client from the room, discarding its identity/presence, broadcasts `"peer-left"`, and calls `Extension.onClientDisconnect()`. Never gated.
 
-See [docs/](./docs/) for the API reference, and [docs/Rights.md](./docs/Rights.md) for the rights model the gating above relies on.
+See [docs/](./docs/index.md) for the API reference, and [docs/Rights.md](./docs/Rights.md) for the rights model the gating above relies on.

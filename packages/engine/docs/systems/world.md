@@ -2,7 +2,7 @@
 
 The `World` is the central orchestrator of the engine. It
 wires together the [SceneManager](scene-manager.md),
-[Renderer](renderer.md), [Input](../controls/input.md),
+[Renderer](renderer.md), [Input](../../../controls/docs/input.md),
 and [Audio](../audio/audio.md) systems and drives the main
 **connect → update → render** loop.
 
@@ -74,7 +74,7 @@ game.connect();
 
 Internally this:
 
-1. Connects the [Input](../controls/input.md) system.
+1. Connects the [Input](../../../controls/docs/input.md) system.
 2. Registers the renderer's `resize` callback on the window
    adapter.
 3. Calls `scene.awake()`, which awakens all existing actors and
@@ -146,7 +146,7 @@ One frame, in order:
    starts pending components. The snapshot is reused by every `fixedUpdate`
    and `update` call in the frame.
 2. Runs `schedule.steps` fixed steps, each preceded by an
-   [Input](../controls/input.md) update.
+   [Input](../../../controls/docs/input.md) update.
 3. Updates input once more if the frame ran no step at all.
 4. On a drawn frame, publishes transient input accumulated across the fixed
    samples, calls `sceneManager.update(deltaTime, alpha)`, then
@@ -210,5 +210,5 @@ if (input.keyboard.isDown("Space")) {
 
 - [SceneManager](scene-manager.md): actor tree, lifecycle, and destruction
 - [Renderer](renderer.md): rendering pipeline
-- [Input](../controls/input.md): input handling
+- [Input](../../../controls/docs/input.md): input handling
 - [Actor](../actor/actor.md): the engine's core entity

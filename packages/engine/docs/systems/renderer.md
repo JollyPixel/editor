@@ -212,7 +212,7 @@ correctly. The renderer must not be used after disposal.
 
 ## Events
 
-`ThreeRenderer` extends `EventEmitter` and emits:
+`ThreeRenderer` extends `Emitter` (from [`@openally/emitt`](https://github.com/OpenAlly/npm-packages/tree/main/src/emitt)) and emits:
 
 | Event | Payload | When it fires |
 | ----- | ------- | ------------- |
