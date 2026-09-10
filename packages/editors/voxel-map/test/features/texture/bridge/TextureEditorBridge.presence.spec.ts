@@ -21,6 +21,14 @@ describe("TextureEditorBridge / room presence", () => {
     const calls: string[] = [];
     const room = {
       peers: new Map(),
+
+      role: "default",
+
+      rights: {},
+
+      access: "write" as const,
+
+      can: () => "write" as const,
       on: (event: string) => calls.push(`subscribe:${event}`),
       off: () => void 0,
       join: () => calls.push("join"),
@@ -47,6 +55,14 @@ describe("TextureEditorBridge / room presence", () => {
     const patches: Record<string, unknown>[] = [];
     const room = {
       peers: new Map(),
+
+      role: "default",
+
+      rights: {},
+
+      access: "write" as const,
+
+      can: () => "write" as const,
       on: () => void 0,
       off: () => void 0,
       join: () => void 0,

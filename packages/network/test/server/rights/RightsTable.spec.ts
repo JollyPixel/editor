@@ -44,10 +44,10 @@ describe("RightsTable — configured", () => {
     assert.strictEqual(table.check("editor", "voxel-set"), "write");
   });
 
-  test("check() fails open to \"write\" for an unknown role", () => {
+  test("check() denies a role absent from a configured table", () => {
     const table = new RightsTable({ viewer: { "voxel-set": "void" } });
 
-    assert.strictEqual(table.check("unknown-role", "voxel-set"), "write");
+    assert.strictEqual(table.check("unknown-role", "voxel-set"), "void");
   });
 
   test("check() fails open to \"write\" for a known role with an unlisted event", () => {

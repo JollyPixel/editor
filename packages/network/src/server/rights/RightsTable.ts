@@ -3,13 +3,11 @@ import picomatch from "picomatch";
 
 // Import Internal Dependencies
 import { RightsGate } from "./RightsGate.ts";
+import { UnknownDefaultRoleError } from "../errors.ts";
+import type { Right } from "../../protocol/types.ts";
 
-/**
- * "void": cannot receive or send.
- * "read": can receive, cannot send.
- * "write": can receive and send.
- */
-export type Right = "read" | "write" | "void";
+// CONSTANTS
+const kImplicitDefaultRole = "default";
 
 export type RightsMap = Record<string, Record<string, Right>>;
 
@@ -20,14 +18,19 @@ interface Permission {
 
 /**
  * Per-role access lookup by glob against `${extension.name}.${event}`.
- * Missing table/role/no match defaults to "write".
+ * No table means "write"; with one, an absent role is "void".
  */
 export class RightsTable {
+  readonly defaultRole: string;
+
   #rules: Map<string, Permission[]> | undefined;
 
   constructor(
-    table?: RightsMap
+    table?: RightsMap,
+    defaultRole?: string
   ) {
+    this.defaultRole = defaultRole ?? kImplicitDefaultRole;
+
     if (!table || Object.keys(table).length === 0) {
       this.#rules = undefined;
 
@@ -45,19 +48,36 @@ export class RightsTable {
         })
       ])
     );
+
+    if (
+      defaultRole !== undefined &&
+      !this.#rules.has(defaultRole)
+    ) {
+      throw new UnknownDefaultRoleError(
+        `defaultRole "${defaultRole}" is not a role of the rights table`
+      );
+    }
   }
 
   get configured(): boolean {
     return this.#rules !== undefined;
   }
 
+  get roles(): readonly string[] {
+    return this.#rules === undefined ? [] : [...this.#rules.keys()];
+  }
+
   check(
     role: string,
     key: string
   ): Right {
-    const rules = this.#rules?.get(role);
-    if (!rules) {
+    if (this.#rules === undefined) {
       return "write";
+    }
+
+    const rules = this.#rules.get(role);
+    if (rules === undefined) {
+      return "void";
     }
 
     const rule = rules.find(

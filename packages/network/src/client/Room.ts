@@ -3,7 +3,9 @@ import type { RoomMessageParser } from "../protocol/MessageParser.ts";
 import type { ValidationError } from "../protocol/schema.ts";
 import type {
   PeerMetadata,
-  Peer
+  Peer,
+  Right,
+  RoomRights
 } from "../protocol/types.ts";
 
 export interface RoomPeerEvent {
@@ -15,6 +17,7 @@ export interface RoomPeerPresenceEvent extends RoomPeerEvent {
 }
 
 export interface RoomSyncEvent {
+  self: string;
   clientIds: string[];
 }
 
@@ -23,9 +26,6 @@ export interface RoomDeniedEvent {
   reason: string;
 }
 
-/**
- * An infrastructure failure, distinct from an RBAC denial.
- */
 export interface RoomErrorEvent {
   event: string;
   reason: string;
@@ -58,7 +58,13 @@ export interface Room<
   readonly id: string;
   readonly clientId: string;
   readonly peers: ReadonlyMap<string, Peer>;
+  readonly role: string;
+  readonly rights: RoomRights;
+  readonly access: Right;
 
+  can(
+    event: string
+  ): Right;
   join(): void;
   send(
     payload: ClientMessage

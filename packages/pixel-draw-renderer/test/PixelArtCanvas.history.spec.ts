@@ -538,6 +538,14 @@ function makeServerBackedRoom(
     id: "test-room",
     clientId,
     peers: new Map(),
+
+    role: "default",
+
+    rights: {},
+
+    access: "write" as const,
+
+    can: () => "write" as const,
     sentCommands,
     serverRoom,
     on: (type, listener) => {

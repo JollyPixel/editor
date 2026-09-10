@@ -144,8 +144,8 @@ export class BlockSelectionPresence {
       const bucket = marks.get(blockId) ?? [];
       bucket.push({
         clientId,
-        displayName: readUsername(peer.identity),
-        color: peerColor(clientId, peer.identity)
+        displayName: readUsername(peer.profile),
+        color: peerColor(clientId, peer.profile)
       });
       marks.set(blockId, bucket);
     }

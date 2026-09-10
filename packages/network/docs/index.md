@@ -10,6 +10,7 @@ pieces fit together; the pages below are the contract for each one.
 - [Client](./Client.md) — connecting, and obtaining a `Room`.
 - [Server](./Server.md) — hosting rooms and dispatching envelopes.
 - [Extension](./Extension.md) — declaring the inbound/outbound protocols of a feature.
+- [Authentication](./Authentication.md) — deciding who a connection is.
 - [Rights](./Rights.md) — the role-based table gating both directions.
 - [Transports](./Transports.md) — the transport port, and the WebSocket implementation.
 

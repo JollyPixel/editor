@@ -20,10 +20,10 @@ const kPresenceCursorKey = "cursor";
 export interface PixelCursorSyncOptions {
   room: network.Room<PixelNetworkCommand, PixelServerMessage>;
   /**
-   * Extracts a display label from a peer's identity.
-   * @default reads `identity.username` when it's a string
+   * Extracts a display label from a peer's profile.
+   * @default reads `profile.username` when it's a string
    */
-  label?: (identity: network.PeerMetadata) => string | undefined;
+  label?: (profile: network.PeerMetadata) => string | undefined;
   /**
    * Chooses the color of a remote peer's cursor.
    *
@@ -31,14 +31,14 @@ export interface PixelCursorSyncOptions {
    */
   color?: (
     clientId: string,
-    identity: network.PeerMetadata
+    profile: network.PeerMetadata
   ) => string;
 }
 
 function defaultLabel(
-  identity: network.PeerMetadata
+  profile: network.PeerMetadata
 ): string | undefined {
-  return typeof identity.username === "string" ? identity.username : undefined;
+  return typeof profile.username === "string" ? profile.username : undefined;
 }
 
 /**
@@ -46,10 +46,10 @@ function defaultLabel(
  */
 export class PixelCursorSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
-  #label: (identity: network.PeerMetadata) => string | undefined;
+  #label: (profile: network.PeerMetadata) => string | undefined;
   #color: (
     clientId: string,
-    identity: network.PeerMetadata
+    profile: network.PeerMetadata
   ) => string;
   #palette = new ColorPalette();
   #canvas: PixelArtCanvas | undefined;
@@ -178,7 +178,7 @@ export class PixelCursorSync {
 
     this.#applyPeer(
       clientId,
-      peer.identity,
+      peer.profile,
       peer.presence
     );
   }
@@ -191,17 +191,17 @@ export class PixelCursorSync {
       return;
     }
 
-    const identity = this.#room.peers.get(clientId)?.identity ?? {};
+    const profile = this.#room.peers.get(clientId)?.profile ?? {};
     this.#applyPeer(
       clientId,
-      identity,
+      profile,
       patch
     );
   }
 
   #applyPeer(
     clientId: string,
-    identity: network.PeerMetadata,
+    profile: network.PeerMetadata,
     presence: network.PeerMetadata
   ): void {
     if (!this.#canvas) {
@@ -211,8 +211,8 @@ export class PixelCursorSync {
     const rawPos = presence[kPresenceCursorKey];
     this.#canvas.peerPresence.cursors.set(clientId, {
       pos: isVec2(rawPos) ? rawPos : null,
-      color: this.#color(clientId, identity),
-      label: this.#label(identity)
+      color: this.#color(clientId, profile),
+      label: this.#label(profile)
     });
     this.#renderedPeers.add(clientId);
   }

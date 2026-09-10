@@ -155,7 +155,7 @@ export class PeerBrushes extends ActorComponent {
 
     const mesh = this.#meshFor(
       clientId,
-      peerColor(clientId, peer.identity)
+      peerColor(clientId, peer.profile)
     );
     const peerCursor = this.#cursors.get(clientId) ?? null;
 

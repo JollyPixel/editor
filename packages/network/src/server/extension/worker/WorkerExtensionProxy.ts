@@ -7,7 +7,8 @@ import {
   type RoomBroadcast,
   type RoomContext,
   type RoomEventStoreHandle,
-  type WorkerExtensionDescriptor
+  type WorkerExtensionDescriptor,
+  type RoomPeer
 } from "../Extension.ts";
 import type { Logger } from "../../logger.ts";
 import { errorMessage } from "../../errors.ts";
@@ -30,10 +31,7 @@ import {
   type WorkerToMainMessage
 } from "./protocol.ts";
 import type { MessageProtocols } from "../../../protocol/MessageProtocol.ts";
-import type {
-  ClientHandle,
-  PeerMetadata
-} from "../../../protocol/types.ts";
+import type { ClientHandle } from "../../../protocol/types.ts";
 
 // CONSTANTS
 const kDefaultRpcTimeoutMs = 10_000;
@@ -97,12 +95,12 @@ export class WorkerExtensionProxy extends Extension {
 
   override onClientConnect(
     client: ClientHandle,
-    identity: PeerMetadata,
+    peer: RoomPeer,
     context: RoomContext
   ): Promise<void> {
     return this.#dispatch(
       "onClientConnect",
-      [client.id, identity],
+      [client.id, peer],
       context
     );
   }

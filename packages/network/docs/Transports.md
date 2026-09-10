@@ -33,6 +33,11 @@ interface WebsocketVitePluginOptions {
    */
   rights?: RightsMap;
   /**
+   * Forwarded to the underlying Server. See ./Authentication.md.
+   */
+  defaultRole?: string;
+  auth?: AuthenticationProvider;
+  /**
    * Dedicated path, kept off Vite HMR.
    * @default "/ws-sync"
    */
@@ -58,3 +63,12 @@ new WebsocketTransport({
   path: "/ws-sync"
 });
 ```
+
+The transport authenticates before it opens a session: it filters the upgrade
+by path, calls `server.authenticate({ clientId, url, headers })`, and only then
+calls `handleConnect`. A refused connection is closed with code `4401` and
+never reaches the server's session table.
+
+It also negotiates the subprotocol, selecting the bare `jolly-pixel` value so a
+credential offered as `jolly-pixel.auth.<base64url>` is never echoed back. See
+[Authentication](./Authentication.md#the-handshake).

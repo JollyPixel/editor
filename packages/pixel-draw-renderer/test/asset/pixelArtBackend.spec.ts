@@ -152,7 +152,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       const room = assetRoomName(PIXEL_ART_KIND, record.id);
 
       const peer = client("A");
-      server.handleConnect(peer);
+      server.handleConnect(peer, { subject: peer.id, role: "default" });
       await server.handleMessage("A", {
         room,
         kind: "join"
@@ -224,8 +224,8 @@ describe("pixel-art asset kind over a real back-end", () => {
       backend.attach(server);
       const room = assetRoomName(PIXEL_ART_KIND, record.id);
 
-      server.handleConnect(client("A"));
-      server.handleConnect(client("B"));
+      server.handleConnect(client("A"), { subject: "A", role: "default" });
+      server.handleConnect(client("B"), { subject: "B", role: "default" });
       await server.handleMessage("A", {
         room,
         kind: "join"

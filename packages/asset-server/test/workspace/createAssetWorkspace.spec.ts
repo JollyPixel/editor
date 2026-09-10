@@ -103,7 +103,7 @@ describe("createAssetWorkspace", () => {
     assert.strictEqual(record.kind, "counter");
 
     // The asset room resolves through the server the workspace built.
-    workspace.server.handleConnect(client("A"));
+    workspace.server.handleConnect(client("A"), { subject: "A", role: "default" });
     const joined = await workspace.server.handleMessage("A", {
       room: assetRoomName(record.kind, record.id),
       kind: "join"
@@ -208,7 +208,7 @@ describe("createAssetWorkspace", () => {
       backend: { watch: false }
     });
 
-    workspace.server.handleConnect(client("A"));
+    workspace.server.handleConnect(client("A"), { subject: "A", role: "default" });
     const joined = await workspace.server.handleMessage("A", {
       room: "static-room",
       kind: "join"

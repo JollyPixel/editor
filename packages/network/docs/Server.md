@@ -12,6 +12,16 @@ interface ServerOptions {
    * Omitted means unrestricted access.
    */
   rights?: RightsMap;
+  /**
+   * Role granted to clients an authentication provider does not elevate.
+   * Must name a role of `rights` when one is configured.
+   * @default "default"
+   */
+  defaultRole?: string;
+  /**
+   * @default a bypass provider granting `defaultRole` to everyone
+   */
+  auth?: AuthenticationProvider;
   eventStore?: EventStore.EventStore;
   /**
    * Empty resolved-room grace period in milliseconds.
@@ -25,8 +35,10 @@ interface ServerOptions {
 - `close()` — stops workers and disposes rooms. Call it before process exit when using worker extensions. Also available as `[Symbol.asyncDispose]` for `await using`.
 - `logger` — a `loglayer` `ILogLayer` passed to every room.
 - `rights` — see [Rights](./Rights.md). One table for the whole server; there is no per-room override.
+- `auth`, `defaultRole` — see [Authentication](./Authentication.md). Constructing a server whose `defaultRole` is absent from `rights` throws `UnknownDefaultRoleError`.
+- `authenticate(attempt)` — runs the provider against `{ clientId, url, headers }`, filling in `defaultRole`. Returns the `PeerIdentity` to admit, or `null` to refuse. Transports call it before opening a session.
 
-Transport implementations call `handleConnect`, `handleDisconnect` and `handleMessage`. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are handled in arrival order per room, so a slow join on one room does not hold up a join on another; `handleDisconnect` waits for every room still in flight.
+Transport implementations call `authenticate`, `handleConnect`, `handleDisconnect` and `handleMessage`. `handleConnect` takes the identity `authenticate` returned, and that identity is the only source of the connection's role and event-store actor for its whole lifetime. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are handled in arrival order per room, so a slow join on one room does not hold up a join on another; `handleDisconnect` waits for every room still in flight.
 
 ## Dynamic rooms
 

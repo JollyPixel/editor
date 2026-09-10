@@ -11,6 +11,7 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import {
   protocolEvents,
   type ClientHandle,
+  type RoomPeer,
   type RoomContext
 } from "@jolly-pixel/network";
 
@@ -64,6 +65,17 @@ function client(
   return { id, send: () => void 0 };
 }
 
+function peer(
+  clientId: string
+): RoomPeer {
+  return {
+    clientId,
+    identity: { subject: clientId, role: "default" },
+    profile: {},
+    presence: {}
+  };
+}
+
 describe("CatalogExtension — join", () => {
   test("sends the snapshot to the joining client", async() => {
     await using harness = await syncHarness();
@@ -79,7 +91,7 @@ describe("CatalogExtension — join", () => {
 
     const extension = new CatalogExtension({ projection });
     const room = fakeRoom();
-    extension.onClientConnect(client("A"), {}, room.context);
+    extension.onClientConnect(client("A"), peer("A"), room.context);
 
     assert.strictEqual(room.direct.length, 1);
     assert.deepEqual(room.direct[0], {
@@ -101,8 +113,8 @@ describe("CatalogExtension — join", () => {
 
     const extension = new CatalogExtension({ projection });
     const room = fakeRoom();
-    extension.onClientConnect(client("A"), {}, room.context);
-    extension.onClientConnect(client("B"), {}, room.context);
+    extension.onClientConnect(client("A"), peer("A"), room.context);
+    extension.onClientConnect(client("B"), peer("B"), room.context);
 
     assert.deepEqual(
       room.direct.map((entry) => entry.clientId),
@@ -123,7 +135,7 @@ describe("CatalogExtension — broadcast", () => {
 
     const extension = new CatalogExtension({ projection });
     const room = fakeRoom();
-    extension.onClientConnect(client("A"), {}, room.context);
+    extension.onClientConnect(client("A"), peer("A"), room.context);
 
     await harness.writer.create({
       path: "a.png",
@@ -149,7 +161,7 @@ describe("CatalogExtension — broadcast", () => {
 
     const extension = new CatalogExtension({ projection });
     const room = fakeRoom();
-    extension.onClientConnect(client("A"), {}, room.context);
+    extension.onClientConnect(client("A"), peer("A"), room.context);
 
     harness.eventStore.writer.append({
       assetType: "counter",
@@ -173,7 +185,7 @@ describe("CatalogExtension — broadcast", () => {
 
     const extension = new CatalogExtension({ projection });
     const room = fakeRoom();
-    extension.onClientConnect(client("A"), {}, room.context);
+    extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.onClientDisconnect("A");
 
     await harness.writer.create({
@@ -196,7 +208,7 @@ describe("CatalogExtension — broadcast", () => {
 
     const extension = new CatalogExtension({ projection });
     const room = fakeRoom();
-    extension.onClientConnect(client("A"), {}, room.context);
+    extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.dispose();
 
     await harness.writer.create({

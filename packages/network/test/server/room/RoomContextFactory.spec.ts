@@ -16,9 +16,9 @@ import * as EventStore from "@jolly-pixel/event-store";
 // Import Internal Dependencies
 import { RoomContextFactory } from "#src/server/room/RoomContextFactory.ts";
 import { RoomMembers } from "#src/server/room/RoomMembers.ts";
+import type { PeerIdentity } from "#src/server/auth/AuthenticationProvider.ts";
 import type {
   ClientHandle,
-  PeerMetadata,
   RoomBroadcast
 } from "#src/index.ts";
 
@@ -58,14 +58,14 @@ function createFactory(
 function addMember(
   members: RoomMembers,
   clientId: string,
-  identity: PeerMetadata
+  identity: PeerIdentity
 ): unknown[] {
   const { client, sent } = createClient(clientId);
   members.add(clientId, {
     handle: client,
     identity,
-    presence: {},
-    role: "default"
+    profile: {},
+    presence: {}
   });
 
   return sent;
@@ -105,33 +105,13 @@ function createFailingEventStore(): EventStore.EventStore {
 }
 
 describe("RoomContextFactory — actor resolution", () => {
-  test("prefers a stable userId from the member identity", () => {
+  test("uses the authenticated subject as the actor id", () => {
     const members = new RoomMembers();
-    addMember(members, "client-1", { userId: "user-42" });
+    addMember(members, "client-1", { subject: "user-42", role: "default" });
 
     assert.deepEqual(createFactory(members).resolveActor("client-1"), {
       type: "user",
       id: "user-42"
-    });
-  });
-
-  test("falls back to the clientId when the identity has no userId", () => {
-    const members = new RoomMembers();
-    addMember(members, "client-1", { username: "bob" });
-
-    assert.deepEqual(createFactory(members).resolveActor("client-1"), {
-      type: "user",
-      id: "client-1"
-    });
-  });
-
-  test("falls back to the clientId when the userId is not a string", () => {
-    const members = new RoomMembers();
-    addMember(members, "client-1", { userId: 42 });
-
-    assert.deepEqual(createFactory(members).resolveActor("client-1"), {
-      type: "user",
-      id: "client-1"
     });
   });
 
@@ -146,7 +126,7 @@ describe("RoomContextFactory — actor resolution", () => {
 describe("RoomContextFactory — event store handle", () => {
   test("stamps appends with the resolved actor", async() => {
     const members = new RoomMembers();
-    addMember(members, "client-1", { userId: "user-42" });
+    addMember(members, "client-1", { subject: "user-42", role: "default" });
 
     using eventStore = EventStore.persistence.memory();
     const context = createFactory(members, eventStore).create("client-1");
@@ -168,7 +148,7 @@ describe("RoomContextFactory — event store handle", () => {
 
   test("keeps an explicitly passed actor after the member is removed", async() => {
     const members = new RoomMembers();
-    addMember(members, "client-1", { userId: "user-42" });
+    addMember(members, "client-1", { subject: "user-42", role: "default" });
 
     using eventStore = EventStore.persistence.memory();
     const factory = createFactory(members, eventStore);
@@ -193,7 +173,7 @@ describe("RoomContextFactory — event store handle", () => {
 
   test("reports a rejected append to its author as an \"error\" envelope", async() => {
     const members = new RoomMembers();
-    const sent = addMember(members, "client-1", {});
+    const sent = addMember(members, "client-1", { subject: "client-1", role: "default" });
 
     const context = createFactory(members, createFailingEventStore())
       .create("client-1");
@@ -215,7 +195,7 @@ describe("RoomContextFactory — event store handle", () => {
 
   test("a rejected append for an unknown member notifies nobody", async() => {
     const members = new RoomMembers();
-    const sent = addMember(members, "client-1", {});
+    const sent = addMember(members, "client-1", { subject: "client-1", role: "default" });
 
     const context = createFactory(members, createFailingEventStore())
       .create("ghost");

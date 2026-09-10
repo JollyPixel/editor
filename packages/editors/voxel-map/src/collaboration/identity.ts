@@ -21,26 +21,26 @@ export function toPeerMetadata(
 }
 
 export function readUsername(
-  identity: network.PeerMetadata | undefined
+  profile: network.PeerMetadata | undefined
 ): string {
-  return typeof identity?.username === "string"
-    ? identity.username
+  return typeof profile?.username === "string"
+    ? profile.username
     : kFallbackUsername;
 }
 
 export function readPeerId(
-  identity: network.PeerMetadata | undefined
+  profile: network.PeerMetadata | undefined
 ): string | undefined {
-  return typeof identity?.peerId === "string"
-    ? identity.peerId
+  return typeof profile?.peerId === "string"
+    ? profile.peerId
     : undefined;
 }
 
 export function peerColor(
   clientId: string,
-  identity: network.PeerMetadata | undefined
+  profile: network.PeerMetadata | undefined
 ): string {
   return colorFromKey(
-    readPeerId(identity) ?? clientId
+    readPeerId(profile) ?? clientId
   );
 }

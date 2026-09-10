@@ -83,7 +83,8 @@ export class EnvelopeDispatcher {
       const admitted = await room.join(
         session.handle.id,
         session.handle,
-        envelope.identity ?? Object.create(null)
+        session.identity,
+        envelope.profile ?? Object.create(null)
       );
       if (!admitted) {
         return {

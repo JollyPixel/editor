@@ -2,8 +2,8 @@
 import {
   Extension,
   type ClientHandle,
-  type PeerMetadata,
-  type RoomContext
+  type RoomContext,
+  type RoomPeer
 } from "#src/index.ts";
 import { OPAQUE_PROTOCOLS } from "../helpers/protocols.ts";
 
@@ -32,7 +32,7 @@ export default class FixtureExtension extends Extension {
 
   override async onClientConnect(
     client: ClientHandle,
-    identity: PeerMetadata,
+    peer: RoomPeer,
     context: RoomContext
   ): Promise<void> {
     client.send({ type: "welcome", greeting: this.#greeting });
@@ -40,7 +40,7 @@ export default class FixtureExtension extends Extension {
       assetType: "fixture",
       assetId: client.id,
       eventType: "connected",
-      eventData: identity
+      eventData: peer.profile
     });
   }
 

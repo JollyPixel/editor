@@ -192,7 +192,7 @@ async function roomHarness(
     async join(clientId, room = assetRoomName("counter", created.assetId)) {
       const handle = client(clientId);
       clients.set(clientId, handle);
-      server.handleConnect(handle);
+      server.handleConnect(handle, { subject: handle.id, role: "default" });
       await server.handleMessage(clientId, { room, kind: "join" });
     },
     send(clientId, payload) {
@@ -384,7 +384,7 @@ describe("registerAssetRooms — eviction", () => {
     await using harness = await roomHarness();
     const room = assetRoomName("counter", harness.assetId);
 
-    harness.server.handleConnect(client("A"));
+    harness.server.handleConnect(client("A"), { subject: "A", role: "default" });
     await harness.server.handleMessage("A", {
       room,
       kind: "message",

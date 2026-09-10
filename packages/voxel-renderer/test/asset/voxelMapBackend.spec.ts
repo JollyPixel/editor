@@ -110,7 +110,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       backend.attach(server);
       const room = assetRoomName(VOXEL_MAP_KIND, record.id);
 
-      server.handleConnect(client("A"));
+      server.handleConnect(client("A"), { subject: "A", role: "default" });
       await server.handleMessage("A", {
         room,
         kind: "join"
@@ -193,8 +193,8 @@ describe("voxel-map asset kind over a real back-end", () => {
       backend.attach(server);
       const room = assetRoomName(VOXEL_MAP_KIND, record.id);
 
-      server.handleConnect(client("A"));
-      server.handleConnect(client("B"));
+      server.handleConnect(client("A"), { subject: "A", role: "default" });
+      server.handleConnect(client("B"), { subject: "B", role: "default" });
       await server.handleMessage("A", {
         room,
         kind: "join"

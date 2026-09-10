@@ -4,17 +4,19 @@ import type {
   ClientHandle,
   PeerMetadata
 } from "../../protocol/types.ts";
+import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 
 export interface PeerRecord {
   handle: ClientHandle;
-  identity: PeerMetadata;
+  identity: PeerIdentity;
+  profile: PeerMetadata;
   presence: PeerMetadata;
-  role: string;
 }
 
 export interface RoomMemberSnapshot {
   clientId: string;
-  identity: PeerMetadata;
+  role: string;
+  profile: PeerMetadata;
   presence: PeerMetadata;
 }
 
@@ -62,7 +64,8 @@ export class RoomMembers {
     return [...this.#members].map(([clientId, record]) => {
       return {
         clientId,
-        identity: record.identity,
+        role: record.identity.role,
+        profile: record.profile,
         presence: record.presence
       };
     });
@@ -83,7 +86,7 @@ export class RoomMembers {
       }
       if (
         predicate &&
-        !predicate(record.role)
+        !predicate(record.identity.role)
       ) {
         continue;
       }

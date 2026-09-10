@@ -114,11 +114,11 @@ async function dispatch(
 ): Promise<void> {
   await match(message)
     .with({ method: "onClientConnect" }, (message) => {
-      const [clientId, identity] = message.args;
+      const [clientId, peer] = message.args;
 
       return extension.onClientConnect?.(
         createClientHandle(clientId),
-        identity,
+        peer,
         createContext()
       );
     })

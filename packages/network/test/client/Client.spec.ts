@@ -129,11 +129,11 @@ describe("Client — ready", () => {
   });
 });
 
-describe("Client — join identity", () => {
-  test("includes the connection's identity on every room's join envelope", () => {
+describe("Client — join profile", () => {
+  test("includes the connection's profile on every room's join envelope", () => {
     const { client, socket } = createOpenClient({
       url: "ws://localhost/ws-sync",
-      identity: { username: "alice" }
+      profile: { username: "alice" }
     });
 
     client.room("pixel-draw").join();
@@ -141,19 +141,19 @@ describe("Client — join identity", () => {
 
     const joins = socket.sent.map((raw) => JSON.parse(raw));
     assert.deepEqual(joins, [
-      { room: "pixel-draw", kind: "join", identity: { username: "alice" } },
-      { room: "voxel-map", kind: "join", identity: { username: "alice" } }
+      { room: "pixel-draw", kind: "join", profile: { username: "alice" } },
+      { room: "voxel-map", kind: "join", profile: { username: "alice" } }
     ]);
   });
 
-  test("defaults to an empty identity when none is provided", () => {
+  test("defaults to an empty profile when none is provided", () => {
     const { client, socket } = createOpenClient();
 
     client.room("pixel-draw").join();
 
     assert.deepEqual(
       JSON.parse(socket.sent[0]!),
-      { room: "pixel-draw", kind: "join", identity: {} }
+      { room: "pixel-draw", kind: "join", profile: {} }
     );
   });
 });
@@ -166,14 +166,56 @@ describe("Client — peers mirror", () => {
     socket.receive({
       room: "pixel-draw",
       kind: "sync",
+      self: "A",
+      rights: { "voxel-set": "read" },
       members: [
-        { clientId: "B", identity: { username: "bob" }, presence: { cursor: { x: 1, y: 2 } } }
+        {
+          clientId: "B",
+          role: "viewer",
+          profile: { username: "bob" },
+          presence: { cursor: { x: 1, y: 2 } }
+        }
       ]
     });
 
     assert.deepEqual([...room.peers.entries()], [
-      ["B", { clientId: "B", identity: { username: "bob" }, presence: { cursor: { x: 1, y: 2 } } }]
+      [
+        "B",
+        {
+          clientId: "B",
+          role: "viewer",
+          profile: { username: "bob" },
+          presence: { cursor: { x: 1, y: 2 } }
+        }
+      ]
     ]);
+    assert.strictEqual(room.clientId, "A");
+    assert.strictEqual(room.can("voxel-set"), "read");
+    assert.strictEqual(room.can("unknown"), "void");
+    assert.strictEqual(room.access, "read");
+  });
+
+  test("keeps the local client out of peers while adopting its own role", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+    const synced: string[][] = [];
+    room.on("sync", (event) => synced.push(event.clientIds));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "sync",
+      self: "A",
+      rights: { "voxel-set": "write" },
+      members: [
+        { clientId: "A", role: "editor", profile: {}, presence: {} },
+        { clientId: "B", role: "viewer", profile: {}, presence: {} }
+      ]
+    });
+
+    assert.deepEqual([...room.peers.keys()], ["B"]);
+    assert.deepEqual(synced, [["B"]]);
+    assert.strictEqual(room.role, "editor");
+    assert.strictEqual(room.access, "write");
   });
 
   test("sync fires \"sync\" with the peers already present", () => {
@@ -185,9 +227,13 @@ describe("Client — peers mirror", () => {
     socket.receive({
       room: "pixel-draw",
       kind: "sync",
+      self: "A",
+      role: "default",
+
+      rights: {},
       members: [
-        { clientId: "B", identity: {}, presence: {} },
-        { clientId: "C", identity: {}, presence: {} }
+        { clientId: "B", role: "default", profile: {}, presence: {} },
+        { clientId: "C", role: "default", profile: {}, presence: {} }
       ]
     });
 
@@ -204,13 +250,15 @@ describe("Client — peers mirror", () => {
       room: "pixel-draw",
       kind: "peer-joined",
       clientId: "B",
-      identity: { username: "bob" }
+      role: "editor",
+      profile: { username: "bob" }
     });
 
     assert.deepEqual(joined, ["B"]);
     assert.deepEqual(room.peers.get("B"), {
       clientId: "B",
-      identity: { username: "bob" },
+      role: "editor",
+      profile: { username: "bob" },
       presence: {}
     });
   });
@@ -225,7 +273,8 @@ describe("Client — peers mirror", () => {
       room: "pixel-draw",
       kind: "peer-joined",
       clientId: "B",
-      identity: {}
+      role: "default",
+      profile: {}
     });
     socket.receive({
       room: "pixel-draw",
@@ -250,7 +299,8 @@ describe("Client — peers mirror", () => {
       room: "pixel-draw",
       kind: "peer-joined",
       clientId: "B",
-      identity: { username: "bob" }
+      role: "default",
+      profile: { username: "bob" }
     });
     socket.receive({
       room: "pixel-draw",

@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { identityOf } from "../../helpers/identity.ts";
 import {
   Server,
   Extension,
@@ -110,7 +111,7 @@ async function join(
   clientId: string,
   room: string
 ): Promise<void> {
-  server.handleConnect(client(clientId));
+  server.handleConnect(client(clientId), identityOf(client(clientId)));
   await server.handleMessage(clientId, { room, kind: "join" });
 }
 
@@ -148,7 +149,7 @@ describe("Server — dynamic room resolution", () => {
   test("a message to a never-joined dynamic room is dropped", async() => {
     const { server, created } = harness();
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), identityOf(client("A")));
     await server.handleMessage("A", {
       room: "pixelart:asset-1",
       kind: "message",
@@ -162,7 +163,7 @@ describe("Server — dynamic room resolution", () => {
   test("without a resolver, a join to an unknown room is dropped", async() => {
     const server = new Server();
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), identityOf(client("A")));
     await server.handleMessage("A", {
       room: "pixelart:asset-1",
       kind: "join"
@@ -182,7 +183,7 @@ describe("Server — dynamic room resolution", () => {
       throw new Error("resolver exploded");
     });
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), identityOf(client("A")));
     await server.handleMessage("A", {
       room: "pixelart:asset-1",
       kind: "join"
@@ -344,7 +345,7 @@ describe("Server — room lifetime regressions", () => {
     });
 
     // dropped as "client has not joined room", and must not disarm the timer
-    server.handleConnect(client("Z"));
+    server.handleConnect(client("Z"), identityOf(client("Z")));
     await server.handleMessage("Z", {
       room: "pixelart:asset-1",
       kind: "message",
@@ -377,7 +378,7 @@ describe("Server — room lifetime regressions", () => {
       };
     });
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), identityOf(client("A")));
     await server.handleMessage("A", {
       room: "kind:asset-1",
       kind: "join",
@@ -399,8 +400,8 @@ describe("Server — room lifetime regressions", () => {
       return { extension: new AssetExtension("ext-id", "kind") };
     });
 
-    server.handleConnect({ id: "A", send: (data) => sent.push(data) });
-    server.handleConnect({ id: "B", send: (data) => sent.push(data) });
+    server.handleConnect({ id: "A", send: (data) => sent.push(data) }, identityOf("A"));
+    server.handleConnect({ id: "B", send: (data) => sent.push(data) }, identityOf("B"));
     await server.handleMessage("A", { room: "kind:asset-1", kind: "join" });
     await server.handleMessage("B", { room: "kind:asset-1", kind: "join" });
 
@@ -449,7 +450,7 @@ describe("Server — room lifetime regressions", () => {
     await flush();
     assert.deepEqual(order, ["resolve", "evict:start"]);
 
-    server.handleConnect(client("B"));
+    server.handleConnect(client("B"), identityOf(client("B")));
     const rejoin = server.handleMessage("B", {
       room: "pixelart:asset-1",
       kind: "join"
@@ -486,7 +487,7 @@ describe("dynamic rooms — concurrent joins", () => {
       return { extension: new AssetExtension(name, "pixelart") };
     });
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), identityOf(client("A")));
     const slow = server.handleMessage("A", {
       room: "pixelart:slow",
       kind: "join"
@@ -506,7 +507,7 @@ describe("dynamic rooms — concurrent joins", () => {
     const { server, extensions } = harness();
     const room = "pixelart:a1";
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), identityOf(client("A")));
     const join = server.handleMessage("A", { room, kind: "join" });
     const message = server.handleMessage("A", {
       room,
@@ -546,7 +547,7 @@ describe("dynamic rooms — concurrent joins", () => {
       };
     });
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), identityOf(client("A")));
     const join = server.handleMessage("A", {
       room: "pixelart:a1",
       kind: "join"

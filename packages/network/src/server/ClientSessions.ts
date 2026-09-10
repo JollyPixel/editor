@@ -1,8 +1,10 @@
 // Import Internal Dependencies
 import type { ClientHandle } from "../protocol/types.ts";
+import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
 
 export interface ClientSession {
   handle: ClientHandle;
+  identity: PeerIdentity;
   rooms: Set<string>;
 }
 
@@ -27,10 +29,12 @@ export class ClientSessions {
   }
 
   open(
-    handle: ClientHandle
+    handle: ClientHandle,
+    identity: PeerIdentity
   ): void {
     this.#sessions.set(handle.id, {
       handle,
+      identity,
       rooms: new Set()
     });
   }

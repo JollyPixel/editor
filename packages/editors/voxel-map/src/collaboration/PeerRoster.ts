@@ -104,10 +104,10 @@ export class PeerRoster {
       .map((peer) => {
         return {
           clientId: peer.clientId,
-          displayName: readUsername(peer.identity),
+          displayName: readUsername(peer.profile),
           color: peerColor(
             peer.clientId,
-            peer.identity
+            peer.profile
           )
         };
       })

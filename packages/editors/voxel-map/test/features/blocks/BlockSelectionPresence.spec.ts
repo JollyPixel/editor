@@ -39,6 +39,14 @@ function createHarness(): PresenceHarness {
     id: "voxel-room",
     clientId: "local",
     peers,
+
+    role: "default",
+
+    rights: {},
+
+    access: "write" as const,
+
+    can: () => "write" as const,
     join: () => void 0,
     leave: () => void 0,
     send: () => void 0,
@@ -66,7 +74,8 @@ function createHarness(): PresenceHarness {
     addPeer(clientId, block) {
       peers.set(clientId, {
         clientId,
-        identity: { username: clientId, peerId: clientId },
+        role: "default",
+        profile: { username: clientId, peerId: clientId },
         presence: block === undefined ? {} : { block }
       });
     },

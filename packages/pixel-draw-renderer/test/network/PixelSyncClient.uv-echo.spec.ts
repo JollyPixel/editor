@@ -51,6 +51,14 @@ function createEchoRoom(
     id: "uv-echo-room",
     clientId,
     peers: new Map(),
+
+    role: "default",
+
+    rights: {},
+
+    access: "write" as const,
+
+    can: () => "write" as const,
     sent,
     deliver,
     on: (type, listener) => {

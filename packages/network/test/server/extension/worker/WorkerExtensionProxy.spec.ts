@@ -91,7 +91,12 @@ describe("WorkerExtensionProxy — hooks the worker does not implement", () => {
 
     await proxy.onClientConnect(
       { id: "A", send: () => void 0 },
-      {},
+      {
+        clientId: "A",
+        identity: { subject: "A", role: "default" },
+        profile: {},
+        presence: {}
+      },
       createContext()
     );
     await proxy.onClientDisconnect("A", createContext());

@@ -5,7 +5,7 @@ import {
   NO_MESSAGES,
   type ClientHandle,
   type MessageProtocols,
-  type PeerMetadata,
+  type RoomPeer,
   type RoomBroadcast,
   type RoomContext
 } from "@jolly-pixel/network";
@@ -100,7 +100,7 @@ export class CatalogExtension extends Extension {
 
   override onClientConnect(
     client: ClientHandle,
-    _identity: PeerMetadata,
+    _peer: RoomPeer,
     context: RoomContext
   ): void {
     this.#broadcast = context.room;

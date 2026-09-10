@@ -69,7 +69,12 @@ describe("WorkerExtensionProxy — real worker_threads.Worker (e2e)", () => {
       const client: ClientHandle = { id: "A", send: () => void 0 };
       const appended: unknown[] = [];
 
-      await proxy.onClientConnect(client, { username: "alice" }, createContext(room, {
+      await proxy.onClientConnect(client, {
+        clientId: "A",
+        identity: { subject: "A", role: "default" },
+        profile: { username: "alice" },
+        presence: {}
+      }, createContext(room, {
         append: (input) => {
           appended.push(input);
 

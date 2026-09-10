@@ -173,7 +173,7 @@ describe("asset-server — end to end", () => {
     backend.attach(server);
     const room = assetRoomName("counter", counterRecord.id);
 
-    server.handleConnect(client("A"));
+    server.handleConnect(client("A"), { subject: "A", role: "default" });
     await server.handleMessage("A", { room, kind: "join" });
     for (let index = 0; index < 3; index++) {
       await server.handleMessage("A", {

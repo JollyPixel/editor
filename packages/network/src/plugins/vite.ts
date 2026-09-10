@@ -7,10 +7,13 @@ import { WebsocketTransport } from "../transport/websocket.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
 import type { Extension } from "../server/extension/Extension.ts";
 import type { RightsMap } from "../server/rights/RightsTable.ts";
+import type { AuthenticationProvider } from "../server/auth/AuthenticationProvider.ts";
 
 export interface WebsocketVitePluginOptions {
   extensions?: Extension[];
   rights?: RightsMap;
+  defaultRole?: string;
+  auth?: AuthenticationProvider;
   /**
    * Server to mount, constructed internally when omitted.
    */
@@ -28,10 +31,16 @@ export function createWebSocketNetworkPlugin(
   const {
     path = DEFAULT_WEBSOCKET_PATH,
     extensions = [],
-    rights
+    rights,
+    defaultRole,
+    auth
   } = options;
 
-  const server = options.server ?? new Server({ rights });
+  const server = options.server ?? new Server({
+    rights,
+    defaultRole,
+    auth
+  });
   for (const extension of extensions) {
     server.register(extension);
   }

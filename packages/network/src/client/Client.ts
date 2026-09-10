@@ -14,10 +14,17 @@ import {
   type ClientEnvelope,
   type ServerEnvelope
 } from "../protocol/Envelope.ts";
-import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
+import {
+  DEFAULT_WEBSOCKET_PATH,
+  UNAUTHORIZED_CLOSE_CODE,
+  WEBSOCKET_AUTH_PROTOCOL_PREFIX,
+  WEBSOCKET_PROTOCOL
+} from "../transport/constants.ts";
 import type {
   Peer,
-  PeerMetadata
+  PeerMetadata,
+  Right,
+  RoomRights
 } from "../protocol/types.ts";
 import type {
   Room,
@@ -36,9 +43,10 @@ export interface ClientOptions {
    */
   url?: string;
   /**
-   * Static metadata sent with each join request.
+   * Untrusted, presentational metadata sent with each join request.
    */
-  identity?: PeerMetadata;
+  profile?: PeerMetadata;
+  credential?: string;
   /**
    * @default a `console`-backed logger
    */
@@ -47,13 +55,90 @@ export interface ClientOptions {
 
 export type ClientEventMap = {
   ready: () => void;
+  unauthorized: () => void;
 };
 
 // Client mutates this emitter. Consumers receive only the `Room` surface.
 type InternalRoom<ClientMessage = any, ServerMessage = any> =
   Room<ClientMessage, ServerMessage>
   & Emitter<RoomEventMap<ServerMessage>>
-  & { parser: RoomMessageParser<ServerMessage> | undefined; };
+  & {
+    parser: RoomMessageParser<ServerMessage> | undefined;
+    adopt(
+      envelope: Extract<ServerEnvelope, { kind: "sync"; }>
+    ): void;
+  };
+
+const kNoRights: RoomRights = Object.freeze({});
+const kDefaultRole = "default";
+
+function base64url(
+  value: string
+): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+}
+
+function protocolsFor(
+  credential: string | undefined
+): string[] {
+  return credential === undefined ?
+    [WEBSOCKET_PROTOCOL] :
+    [WEBSOCKET_PROTOCOL, WEBSOCKET_AUTH_PROTOCOL_PREFIX + base64url(credential)];
+}
+
+type RoomState = Pick<
+  Room,
+  "clientId" | "role" | "rights" | "access"
+>;
+
+function defineRoomState<TTarget extends object>(
+  target: TTarget,
+  state: {
+    clientId: () => string;
+    role: () => string;
+    rights: () => RoomRights;
+    access: () => Right;
+  }
+): TTarget & RoomState {
+  return Object.defineProperties(target, {
+    clientId: {
+      enumerable: true,
+      get: state.clientId
+    },
+    role: {
+      enumerable: true,
+      get: state.role
+    },
+    rights: {
+      enumerable: true,
+      get: state.rights
+    },
+    access: {
+      enumerable: true,
+      get: state.access
+    }
+  }) as TTarget & RoomState;
+}
+
+function accessOf(
+  rights: RoomRights
+): Right {
+  const values = Object.values(rights);
+  if (values.includes("write")) {
+    return "write";
+  }
+
+  return values.includes("read") ? "read" : "void";
+}
 
 function getDefaultUrl(): string {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -64,11 +149,10 @@ function getDefaultUrl(): string {
 export class Client extends Emitter<ClientEventMap> {
   readonly id: string = crypto.randomUUID();
 
-  #identity: PeerMetadata;
+  #profile: PeerMetadata;
   #logger: Logger;
   #socket: WebSocket;
   #ready = false;
-  // Makes `#send` warn when queued messages can no longer flush.
   #closed = false;
   #destroyed = false;
   #queue: string[] = [];
@@ -78,10 +162,11 @@ export class Client extends Emitter<ClientEventMap> {
     options: ClientOptions
   ) {
     super();
-    this.#identity = options.identity ?? {};
+    this.#profile = options.profile ?? {};
     this.#logger = options.logger ?? createLogger();
     this.#socket = new WebSocket(
-      options.url ?? getDefaultUrl()
+      options.url ?? getDefaultUrl(),
+      protocolsFor(options.credential)
     );
 
     this.#socket.addEventListener("open", () => {
@@ -101,6 +186,12 @@ export class Client extends Emitter<ClientEventMap> {
     this.#socket.addEventListener("close", (event) => {
       this.#ready = false;
       this.#closed = true;
+      if (event.code === UNAUTHORIZED_CLOSE_CODE) {
+        this.#destroyed = true;
+        this.emit("unauthorized");
+
+        return;
+      }
       if (!this.#destroyed) {
         this.#logger
           .withMetadata({ code: event.code, reason: event.reason })
@@ -124,13 +215,15 @@ export class Client extends Emitter<ClientEventMap> {
 
     const peers = new Map<string, Peer>();
     let joined = false;
+    let rights: RoomRights = kNoRights;
+    let selfId = this.id;
+    let role = kDefaultRole;
 
-    const room: InternalRoom<ClientMessage, ServerMessage> = Object.assign(
-      new Emitter<RoomEventMap<ServerMessage>>(),
-      {
+    const room: InternalRoom<ClientMessage, ServerMessage> = defineRoomState(
+      Object.assign(new Emitter<RoomEventMap<ServerMessage>>(), {
         id: name,
-        clientId: this.id,
         peers,
+        can: (event: string) => rights[event] ?? "void",
         parser: options.parser,
         join: () => {
           if (joined) {
@@ -140,7 +233,7 @@ export class Client extends Emitter<ClientEventMap> {
           this.#send({
             room: name,
             kind: "join",
-            identity: this.#identity
+            profile: this.#profile
           });
         },
         send: (payload: ClientMessage) => this.#send({
@@ -160,7 +253,22 @@ export class Client extends Emitter<ClientEventMap> {
           });
           this.#rooms.delete(name);
           peers.clear();
+          rights = kNoRights;
+          role = kDefaultRole;
+        },
+        adopt: (envelope: Extract<ServerEnvelope, { kind: "sync"; }>) => {
+          selfId = envelope.self;
+          rights = envelope.rights;
+          role = envelope.members
+            .find((member) => member.clientId === envelope.self)?.role ??
+            kDefaultRole;
         }
+      }),
+      {
+        clientId: () => selfId,
+        role: () => role,
+        rights: () => rights,
+        access: () => accessOf(rights)
       }
     );
 
@@ -266,16 +374,21 @@ export class Client extends Emitter<ClientEventMap> {
     peers: Map<string, Peer>,
     envelope: Extract<ServerEnvelope, { kind: "sync"; }>
   ): void {
-    for (const member of envelope.members) {
+    room.adopt(envelope);
+    const remote = envelope.members
+      .filter((member) => member.clientId !== envelope.self);
+    for (const member of remote) {
       peers.set(member.clientId, {
         clientId: member.clientId,
-        identity: member.identity,
+        role: member.role,
+        profile: member.profile,
         presence: member.presence
       });
     }
 
     room.emit("sync", {
-      clientIds: envelope.members.map((member) => member.clientId)
+      self: envelope.self,
+      clientIds: remote.map((member) => member.clientId)
     });
   }
 
@@ -286,7 +399,8 @@ export class Client extends Emitter<ClientEventMap> {
   ): void {
     peers.set(envelope.clientId, {
       clientId: envelope.clientId,
-      identity: envelope.identity,
+      role: envelope.role,
+      profile: envelope.profile,
       presence: {}
     });
 
