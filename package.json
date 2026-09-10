@@ -51,8 +51,8 @@
   },
   "homepage": "https://github.com/JollyPixel/editor#readme",
   "devDependencies": {
-    "@changesets/changelog-github": "^1.0.0",
-    "@changesets/cli": "^3.0.0",
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/cli": "3.0.2",
     "@openally/config.eslint": "2.4.3",
     "@openally/config.typescript": "1.3.0",
     "@playwright/test": "1.62.1",
