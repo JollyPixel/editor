@@ -14,6 +14,11 @@ import {
 } from "./shape/shapeSlots.ts";
 import type { BlockShapeID } from "./shape/BlockShape.ts";
 
+export type BlockProperties = Record<
+  string,
+  string | number | boolean
+>;
+
 export interface BlockDefinition {
   id: number;
   name: string;
@@ -40,17 +45,23 @@ export interface BlockDefinition {
    * Tileset used by tile references that omit one; dropped once resolved.
    */
   defaultTilesetId?: string;
+  properties?: BlockProperties;
 }
 
 export type ResolvedBlockDefinition =
   & Omit<
     BlockDefinition,
-    "faceTextures" | "defaultTexture" | "collidable" | "defaultTilesetId"
+    | "faceTextures"
+    | "defaultTexture"
+    | "collidable"
+    | "defaultTilesetId"
+    | "properties"
   >
   & {
     faceTextures: Record<string, ResolvedTileRef>;
     defaultTexture?: ResolvedTileRef;
     collidable: boolean;
+    properties: BlockProperties;
   };
 
 /**
@@ -79,6 +90,29 @@ export function tileRefForSlot(
     block.defaultTexture;
 }
 
+export function resolveBlockProperties(
+  properties: BlockProperties = {}
+): BlockProperties {
+  const resolved: BlockProperties = {};
+
+  for (const key of Object.keys(properties)) {
+    if (key === "__proto__") {
+      continue;
+    }
+
+    const value = properties[key];
+    if (
+      typeof value === "string" ||
+      typeof value === "boolean" ||
+      (typeof value === "number" && Number.isFinite(value))
+    ) {
+      resolved[key] = value;
+    }
+  }
+
+  return resolved;
+}
+
 export function resolveBlockDefinition(
   def: BlockDefinition
 ): ResolvedBlockDefinition {
@@ -87,13 +121,15 @@ export function resolveBlockDefinition(
     defaultTexture,
     collidable = true,
     defaultTilesetId,
+    properties,
     ...rest
   } = def;
 
   const resolved: ResolvedBlockDefinition = {
     ...rest,
     collidable,
-    faceTextures: {}
+    faceTextures: {},
+    properties: resolveBlockProperties(properties)
   };
 
   for (const key of Object.keys(faceTextures)) {

@@ -46,6 +46,7 @@ describe("shapeTextureLayout", () => {
       name: "cube",
       shapeId: "cube",
       collidable: true,
+      properties: {},
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 },
       faceTextures: {
         top: { tilesetId: "atlas", col: 2, row: 1 }

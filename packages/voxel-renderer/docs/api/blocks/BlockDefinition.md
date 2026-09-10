@@ -13,6 +13,7 @@ interface BlockDefinition {
   collidable?: boolean;
   transparent?: boolean;
   defaultTilesetId?: string;
+  properties?: BlockProperties;
 }
 ```
 
@@ -35,6 +36,41 @@ registry.register({
 });
 ```
 
+## Custom properties
+
+```ts
+type BlockProperties = Record<string, string | number | boolean>;
+```
+
+`properties` carries arbitrary data for game code: script behavior, physics
+tuning, anything the renderer itself does not read. Nothing in the meshing,
+collision, or texturing path looks at it.
+
+```ts
+registry.register({
+  id: 1,
+  name: "Ice",
+  shapeId: "cube",
+  properties: {
+    friction: 0.02,
+    material: "ice",
+    slippery: true
+  }
+});
+```
+
+Values are limited to `string`, `boolean`, and finite `number`. Anything else,
+including nested objects, arrays, `null`, `undefined`, `NaN`, and `Infinity`, is
+dropped when the definition is resolved, as is a `__proto__` key. The limit
+holds for definitions arriving from a saved document or a remote peer, so a
+hostile payload cannot smuggle a nested value or reach the prototype chain.
+Resolved definitions always carry a `properties` map, empty when none were
+authored.
+
+Because values are flat scalars, a copy is shallow and cheap. Read them with
+[`BlockRegistry.propertiesOf()`](./BlockRegistry.md) or, keyed by a world
+position, with [`VoxelEngine.blockPropertiesAt()`](../core/VoxelEngine.md).
+
 ## ResolvedBlockDefinition
 
 `BlockRegistry` stores resolved definitions. Defaults have been applied, tuple
@@ -44,12 +80,17 @@ tile references have been expanded, and `defaultTilesetId` is no longer present.
 type ResolvedBlockDefinition =
   & Omit<
     BlockDefinition,
-    "faceTextures" | "defaultTexture" | "collidable" | "defaultTilesetId"
+    | "faceTextures"
+    | "defaultTexture"
+    | "collidable"
+    | "defaultTilesetId"
+    | "properties"
   >
   & {
     faceTextures: Record<string, ResolvedTileRef>;
     defaultTexture?: ResolvedTileRef;
     collidable: boolean;
+    properties: BlockProperties;
   };
 
 function resolveBlockDefinition(

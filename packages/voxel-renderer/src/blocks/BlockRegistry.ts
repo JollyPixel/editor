@@ -6,6 +6,7 @@ import {
 import {
   resolveBlockDefinition,
   type BlockDefinition,
+  type BlockProperties,
   type ResolvedBlockDefinition
 } from "./BlockDefinition.ts";
 
@@ -100,6 +101,14 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     id: number
   ): ResolvedBlockDefinition | undefined {
     return this.#blocks.get(id);
+  }
+
+  propertiesOf(
+    id: number
+  ): BlockProperties | undefined {
+    const block = this.#blocks.get(id);
+
+    return block && { ...block.properties };
   }
 
   has(

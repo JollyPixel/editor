@@ -420,3 +420,54 @@ describe("voxel world round-trip", () => {
     assert.equal(restored.getLayer("Ground")?.id, originalId);
   });
 });
+
+describe("block properties round-trip", () => {
+  it("survives a save and load through the registry", () => {
+    const source = new BlockRegistry([
+      makeBlockDef(1, "cube", {
+        properties: { hardness: 5, material: "stone", solid: true }
+      })
+    ]);
+    const json = serializeVoxelWorld(new VoxelWorld(16), { blocks: source });
+
+    const restored = new BlockRegistry();
+    deserializeVoxelWorld(
+      JSON.parse(JSON.stringify(json)),
+      new VoxelWorld(16),
+      { blocks: restored }
+    );
+
+    assert.deepEqual(restored.propertiesOf(1), {
+      hardness: 5,
+      material: "stone",
+      solid: true
+    });
+  });
+
+  it("scrubs non-scalar properties from an untrusted document", () => {
+    const json = JSON.parse(`{
+      "version": 1,
+      "chunkSize": 16,
+      "tilesets": [],
+      "layers": [],
+      "blocks": [{
+        "id": 1,
+        "name": "Hostile",
+        "shapeId": "cube",
+        "faceTextures": {},
+        "collidable": true,
+        "properties": {
+          "kept": "yes",
+          "nested": { "deep": true },
+          "__proto__": { "polluted": true }
+        }
+      }]
+    }`);
+
+    const restored = new BlockRegistry();
+    deserializeVoxelWorld(json, new VoxelWorld(16), { blocks: restored });
+
+    assert.deepEqual(restored.propertiesOf(1), { kept: "yes" });
+    assert.equal(({} as Record<string, unknown>).polluted, undefined);
+  });
+});

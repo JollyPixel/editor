@@ -232,6 +232,7 @@ function buildBlocks(
       id: blockId,
       name: `${tilesetId}_${localId}`,
       shapeId: ctx.options.defaultShapeId ?? "cube",
+      properties: {},
       faceTextures: {},
       defaultTexture: {
         col: props.coords.x,
