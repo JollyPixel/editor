@@ -47,11 +47,12 @@ export const treeStyles = css`
   .toggle,
   .toggle-spacer {
     flex: 0 0 auto;
-    width: var(--jolly-control-height, 20px);
-    height: var(--jolly-control-height, 20px);
+    width: 12px;
+    height: 12px;
   }
 
   .toggle {
+    position: relative;
     display: grid;
     place-items: center;
     padding: 0;
@@ -61,9 +62,15 @@ export const treeStyles = css`
     cursor: pointer;
   }
 
+  .toggle::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+
   .toggle jolly-icon {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     transform-origin: center;
     transition: transform var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
@@ -166,20 +173,56 @@ export const treeStyles = css`
     opacity: 0.4;
   }
 
-  .row[data-drop="above"] {
-    box-shadow: inset 0 1px 0 0 var(--jolly-accent-fill, ${kFallback.focusRing});
+  .row::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
   }
 
-  .row[data-drop="below"] {
-    box-shadow: inset 0 -1px 0 0 var(--jolly-accent-fill, ${kFallback.focusRing});
+  .row[data-drop="above"]::after,
+  .row[data-drop="below"]::after {
+    inset-inline: var(--jolly-tree-row-indent, 0px) 0;
+    height: 1px;
+    background: var(--jolly-accent-fill, ${kFallback.focusRing});
+    opacity: 1;
   }
 
-  .row[data-drop="inside"] {
-    box-shadow: inset 0 0 0 1px var(--jolly-accent-fill, ${kFallback.focusRing});
+  .row[data-drop="above"]::after {
+    top: 0;
+  }
+
+  .row[data-drop="below"]::after {
+    bottom: 0;
+  }
+
+  .row[data-drop="inside"]::after {
+    inset-block: 0;
+    inset-inline: var(--jolly-tree-row-indent, 0px) 0;
+    border: 1px solid var(--jolly-accent-fill, ${kFallback.focusRing});
+    border-radius: inherit;
+    opacity: 1;
   }
 
   .row[data-move-cursor="true"] {
     outline: 1px dashed var(--jolly-accent-fill, ${kFallback.focusRing});
     outline-offset: -1px;
+  }
+
+  :host([indent-guides]) .row::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--jolly-tree-row-indent, 0px);
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong})) 0,
+      var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong})) 1px,
+      transparent 1px,
+      transparent var(--jolly-tree-indent, 16px)
+    );
+    background-position: calc(var(--jolly-tree-indent, 16px) / 2) 0;
+    pointer-events: none;
   }
 `;

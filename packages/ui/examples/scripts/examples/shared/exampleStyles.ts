@@ -274,4 +274,31 @@ export const exampleStyles = `
     inset-inline-start: var(--jolly-space-3);
     inset-block-end: var(--jolly-space-3);
   }
+
+  .tree-demo {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--jolly-space-4);
+  }
+
+  .tree-demo jolly-tree {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .tree-demo-options {
+    display: grid;
+    flex: 0 0 200px;
+    gap: var(--jolly-space-2);
+    padding: var(--jolly-space-3);
+    border: 1px solid var(--jolly-border);
+    border-radius: var(--jolly-radius-md);
+    background: var(--jolly-surface-sunken);
+  }
+
+  .tree-demo-options h3 {
+    margin: 0;
+    font-size: 0.9em;
+    color: var(--jolly-text-muted);
+  }
 `;

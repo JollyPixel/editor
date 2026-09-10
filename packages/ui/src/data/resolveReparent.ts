@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import { isSelfOrDescendant } from "./treeNodes.ts";
+import { resolveDropDepth } from "./dropZone.ts";
+import {
+  ancestorChain,
+  isSelfOrDescendant
+} from "./treeNodes.ts";
 import type {
   TreeDropAccept,
   TreeDropWhere,
@@ -37,6 +41,45 @@ export function canDrop<TData>(
   }
 
   return accept === null || accept({ movedIds, targetId, where });
+}
+
+export interface ResolveDepthDropOptions<TData> {
+  nodes: TreeNode<TData>[];
+  movedIds: string[];
+  rowId: string;
+  clientX: number;
+  containerLeft: number;
+  indentUnit: number;
+  where: "above" | "below";
+  accept?: TreeDropAccept | null;
+}
+
+export interface DepthDropTarget {
+  targetId: string;
+  where: TreeDropWhere;
+}
+
+export function resolveDepthDropTarget<TData>(
+  options: ResolveDepthDropOptions<TData>
+): DepthDropTarget | null {
+  const {
+    nodes, movedIds, rowId, clientX, containerLeft, indentUnit, where, accept = null
+  } = options;
+
+  const chain = ancestorChain(nodes, rowId);
+  const depth = resolveDropDepth(
+    clientX,
+    containerLeft,
+    indentUnit,
+    chain.length
+  );
+  const targetId = chain[depth];
+
+  return canDrop({
+    nodes, movedIds, targetId, where, accept
+  }) ?
+    { targetId, where } :
+    null;
 }
 
 export function resolveReparent<TData>(

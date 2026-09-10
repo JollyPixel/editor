@@ -24,6 +24,7 @@ tree.expanded = ["scene"];
 | `reorderable` | `boolean` | `false` |
 | `rowDrag` | `boolean` | `false` |
 | `renamable` | `boolean` | `false` |
+| `indentGuides` | `boolean` | `false` |
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 
 The component does not mutate these arrays after user input. Consumers write
@@ -58,6 +59,17 @@ paints no drop indicator and never reaches `jolly-reparent`. A predicate that
 runs on every pointer move should stay cheap. The structural rule runs first,
 so `acceptDrop` is never asked about a move that is already impossible.
 
+## Promoting a nested row back out while dragging
+
+Dropping below the last visible row is not restricted to that row's own
+level. Horizontal position picks the depth: each ancestor of the last row
+owns the indent band at its own depth, root leftmost through the last row's
+own depth rightmost. Dragging a nested row into the band under its parent's
+indent (or further left, under an outer ancestor, or straight to the
+container's edge for the root) reparents it there instead of leaving it
+under its original parent. The drop indicator's line starts at that band's
+indent, so the target depth is visible before release.
+
 ## Marking a row with badges
 
 `TreeNode.badges` renders a list of `{ color, title }` as small dots between
@@ -88,3 +100,11 @@ same way a drop does not move a node. A blank field or a name equal to the
 current label commits nothing, so a stray edit never erases a label nor sends
 a redundant write. Double-click on an opted-in row renames instead of emitting
 `jolly-activate`.
+
+## Showing parent/child indent guides
+
+`indentGuides` draws one vertical line per ancestor level, centered in that
+level's indent unit, purely from CSS. Each row only paints guides across its
+own indent width, so the lines never reach into the toggle or label. Override
+`--jolly-tree-guide-color` to change their color and `--jolly-tree-indent` to
+change the spacing between them (defaults to 16px).

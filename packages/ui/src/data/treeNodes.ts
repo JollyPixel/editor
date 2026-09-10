@@ -7,6 +7,12 @@ export interface FlatTreeRow<TData = unknown> {
   parentId: string | null;
 }
 
+export function hasChildren<TData>(
+  node: TreeNode<TData>
+): boolean {
+  return node.children !== undefined && node.children.length > 0;
+}
+
 export function flattenVisible<TData>(
   nodes: readonly TreeNode<TData>[],
   expanded: ReadonlySet<string>,
@@ -66,6 +72,25 @@ export function findParentId<TData>(
   return undefined;
 }
 
+export function ancestorChain<TData>(
+  nodes: readonly TreeNode<TData>[],
+  id: string
+): string[] {
+  const chain = [id];
+  let current = id;
+
+  for (;;) {
+    const parentId = findParentId(nodes, current);
+    if (parentId === undefined || parentId === null) {
+      break;
+    }
+    chain.unshift(parentId);
+    current = parentId;
+  }
+
+  return chain;
+}
+
 export function isSelfOrDescendant<TData>(
   nodes: readonly TreeNode<TData>[],
   ancestorId: string,
@@ -76,7 +101,10 @@ export function isSelfOrDescendant<TData>(
   }
 
   const ancestor = findNode(nodes, ancestorId);
-  if (ancestor === null || ancestor.children === undefined) {
+  if (
+    ancestor === null ||
+    ancestor.children === undefined
+  ) {
     return false;
   }
 
