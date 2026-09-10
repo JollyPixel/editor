@@ -1,5 +1,192 @@
 # @jolly-pixel/voxel.renderer
 
+## 4.0.0
+
+### Major Changes
+
+- [#618](https://github.com/JollyPixel/editor/pull/618) [`d6b2a37`](https://github.com/JollyPixel/editor/commit/d6b2a37da51adcbfc84267c5276958299f58eb7b) Thanks [@fraxken](https://github.com/fraxken)! - Replace the per-kind room extension with a declarative `live()` protocol hosted
+  by asset-server's new `AssetRoomExtension`. `PixelArtAssetExtension` and
+  `VoxelMapAssetExtension` are removed; `PixelCommandArbiter.admit()` now defers
+  recording to the returned arbitration, so a refused append no longer poisons
+  the conflict trackers.
+
+- [#546](https://github.com/JollyPixel/editor/pull/546) [`a865770`](https://github.com/JollyPixel/editor/commit/a865770108f0a79438a3b48f4f42267a637525f5) Thanks [@fraxken](https://github.com/fraxken)! - Model four packed or normalized concepts as value objects: `VoxelTransform` for
+  rotation and flip bits, `AtlasLayout` for the atlas tile grid, `VoxelFootprint`
+  for an object's whole-cell area, and `ChunkGeometryKey` for a draw group. Each
+  owns its invariant in one place, so `ChunkGeometryKey` now rejects a tileset id
+  ending in `:cutout` rather than silently aliasing two draw groups, and a
+  rotation outside `0..3` wraps instead of spilling into the flip bits.
+  
+  BREAKING: `normalizeVoxelExtent()`, `voxelObjectFootprint()` and
+  `VoxelObjectFootprint` are replaced by `VoxelFootprint`, `packTransform()` and
+  `unpackTransform()` by `VoxelTransform`, and `AtlasLayout` is a class rather
+  than a plain interface.
+
+- [#541](https://github.com/JollyPixel/editor/pull/541) [`3a0c3e5`](https://github.com/JollyPixel/editor/commit/3a0c3e55d59e2252a8112c8df76072ad95b88ae5) Thanks [@fraxken](https://github.com/fraxken)! - Enforce the reserved air id at the write path. `packVoxel()` now throws on block
+  id 0 instead of storing a phantom voxel, and `BlockRegistry`'s constructor
+  rejects an air definition like `register()` already did rather than skipping it.
+  `AIR_BLOCK_ID` and `isAir()` are exported.
+
+- [#580](https://github.com/JollyPixel/editor/pull/580) [`8840d6e`](https://github.com/JollyPixel/editor/commit/8840d6ea92beb5ce75fe620422590d74ebc4f40c) Thanks [@fraxken](https://github.com/fraxken)! - Flip the meaning of `VoxelWorld.moveLayer()` directions: `"up"` now raises a
+  layer's compositing priority and `"down"` lowers it. The voxel-map layer tree
+  lists layers highest priority first, so the layer on top renders on top.
+
+- [#581](https://github.com/JollyPixel/editor/pull/581) [`3606760`](https://github.com/JollyPixel/editor/commit/360676096137146945381e2a0ace6597bad45ecd) Thanks [@fraxken](https://github.com/fraxken)! - `VoxelCommandArbiter.resolve()` is replaced by `admit()`, returning the part of a
+  command that wins conflict resolution. Bulk voxel commands now contend cell by
+  cell instead of bypassing the arbiter entirely.
+
+- [#542](https://github.com/JollyPixel/editor/pull/542) [`75a794e`](https://github.com/JollyPixel/editor/commit/75a794eb9612d34f36872e1790000ca63fc24d27) Thanks [@fraxken](https://github.com/fraxken)! - Extract `TilesetAtlas` so a registered atlas owns its grid, textures and padding,
+  leaving `TilesetManager` a registry: `atlas()`/`has()`/`definitions()` replace the
+  `get*` accessors, and `updateSourceImage`/`updateSourceRegion` collapse into
+  `TilesetAtlas.updateSource(image, bounds?)`.
+  
+  `TilesetLoader` becomes `loadTilesets()`, which fetches in parallel and feeds
+  `VoxelEngineOptions.tilesets`; `getDefaultBlocks` moves to `blocksFromTileset` in
+  `blocks/`, and `enableTileWrapping` moves to `mesh/`.
+
+- [#541](https://github.com/JollyPixel/editor/pull/541) [`d0b5763`](https://github.com/JollyPixel/editor/commit/d0b57630d69f2c95a39c8683020dca5bde7be3f3) Thanks [@fraxken](https://github.com/fraxken)! - Rename the block and tile types after their intent: `BlockDefinition` is now the
+  authoring form (formerly `BlockDefinitionIn`) and `ResolvedBlockDefinition` what
+  `BlockRegistry` stores; likewise `TileRef` is the authoring union and
+  `ResolvedTileRef` the object form. `BlockRegistry.register()` no longer mutates
+  the definition it is given.
+
+- [#547](https://github.com/JollyPixel/editor/pull/547) [`c96a308`](https://github.com/JollyPixel/editor/commit/c96a3085c263ca29f6028e468c6680944b6cea0b) Thanks [@fraxken](https://github.com/fraxken)! - Move layer, voxel and object mutations from `VoxelEngine` to `VoxelWorld`, which
+  now emits the hook events and applies remote commands itself. `VoxelEngine` keeps
+  rendering, tilesets and persistence, and delegates its chunk meshes, materials,
+  rebuild queue and view-distance culling to collaborators under `src/render`.
+  Remote `cloned` and `merged` commands were silently dropped and now apply;
+  `applyCommandToWorld()` is replaced by `world.applyRemoteCommand()`.
+
+- [#623](https://github.com/JollyPixel/editor/pull/623) [`02b3b44`](https://github.com/JollyPixel/editor/commit/02b3b44814abf14c24bfea237afababa6ff8b09c) Thanks [@fraxken](https://github.com/fraxken)! - Parse the wire with JSON Schema instead of hand-rolled guards. Envelopes split
+  by direction (`Envelope.parseClient` / `parseServer`), and an extension now
+  declares `protocols` in place of `events` and `getEventName`, so the room parses
+  payloads and derives rights keys from the schema variant that matched.
+  
+  This fixes broadcast filtering: outbound payloads were gated on an event name
+  they never carried, so with a rights table configured a `voxel.renderer.*` rule
+  filtered the wrong key on every fan-out.
+
+- [#566](https://github.com/JollyPixel/editor/pull/566) [`07b6dee`](https://github.com/JollyPixel/editor/commit/07b6dee9aecb69bced511459adc8237523da142e) Thanks [@fraxken](https://github.com/fraxken)! - `defineFace()` replaces `projectedFace()` and resolves both `uvs` and `cull`,
+  so `FaceDefinition` has no optional member left, and `BlockShapeBase` derives
+  `occludes()` from the shape's own geometry. `shapeFaceRange()` is gone; each
+  range now carries the `definitions` it was built from.
+
+- [#578](https://github.com/JollyPixel/editor/pull/578) [`7ed65f3`](https://github.com/JollyPixel/editor/commit/7ed65f3b58bf7127b65965a1b3b88c8adada0c3c) Thanks [@fraxken](https://github.com/fraxken)! - Texture a block per shape slot instead of per face, so stairs expose every quad
+  they render: `faceTextures` is keyed by slot, `UVFace` is an open string, and a
+  slot holding several polygons draws as a compound outlined along the union of
+  its parts, so a stair side reads as one L rather than two stacked rectangles.
+  Collapsing a region stacks every slot on the shared rectangle and always takes
+  the largest face. The `PosX`, `NegX`, `PosY` and `NegY` projectors no longer
+  mirror their tile, with the horizontal faces keyed to the back of the block.
+
+- [#543](https://github.com/JollyPixel/editor/pull/543) [`f001d51`](https://github.com/JollyPixel/editor/commit/f001d5188499208fd1fd688189c7a3163543819f) Thanks [@fraxken](https://github.com/fraxken)! - `serialization/` now owns the document format end to end: `VoxelSerializer` is
+  replaced by `serializeVoxelWorld()` / `deserializeVoxelWorld()` (and
+  `VoxelEngine.serializer` is gone), while `asset/VoxelMapDocument.ts` folds into
+  a `VoxelMapState` class with `toJSON()` / `load()` / `clear()`.
+
+### Minor Changes
+
+- [#589](https://github.com/JollyPixel/editor/pull/589) [`d601a72`](https://github.com/JollyPixel/editor/commit/d601a7201d33a3f1210d7025cf4b6163b7c42d3e) Thanks [@fraxken](https://github.com/fraxken)! - Add `VoxelDebugger.chunkBounds`, outlining every registered chunk independently of `mode`.
+
+- [#526](https://github.com/JollyPixel/editor/pull/526) [`c2319ad`](https://github.com/JollyPixel/editor/commit/c2319adfeda24c36072c54a15ad8879b77d57645) Thanks [@fraxken](https://github.com/fraxken)! - Add `decodePng` and `createPixelArtBufferFromPng`, a single environment-agnostic
+  PNG path shared by the Node seed pipeline and by browsers without `ImageDecoder`,
+  where texture imports previously went through a premultiplying canvas.
+  Also add `resolveTilesetDefinition`, so a seeded document and a loaded texture
+  derive the same tile grid.
+
+- [#593](https://github.com/JollyPixel/editor/pull/593) [`c641170`](https://github.com/JollyPixel/editor/commit/c641170ff382d41426cfa5252e59df44a28bef97) Thanks [@fraxken](https://github.com/fraxken)! - Fix `VoxelLayer.clone()` dropping every voxel, and make layer clone and merge
+  usable: a clone lands above its source under a derived unique name, and a merge
+  consumes the source, keeping the higher layer's voxels. Adds
+  `VoxelWorld.moveObjectToLayer()` so reparenting an object is one conflict-keyed
+  command instead of a remove/add pair that could duplicate it.
+
+- [#571](https://github.com/JollyPixel/editor/pull/571) [`c9fa209`](https://github.com/JollyPixel/editor/commit/c9fa2090fc08b3151f107290459dbd050a584186) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse` tracks whether the pointer sits over the canvas as `hovering`, with
+  `enter` and `leave` events, so a consumer can tell a live `position` from the
+  stale one left behind when the pointer moves onto surrounding UI.
+  `SyncAdapter.notifyLocal()` replays an event to the handler captured at
+  `attach()`, which `VoxelSyncClient` now uses so a peer's edit reaches local
+  observers, and hiding, showing or removing a layer marks every layer's chunks
+  dirty for cross-layer face culling.
+
+- [#524](https://github.com/JollyPixel/editor/pull/524) [`7ec0367`](https://github.com/JollyPixel/editor/commit/7ec0367c989129c9081530a9aa69f6321be929fe) Thanks [@fraxken](https://github.com/fraxken)! - Add `padAtlasRegion` and `TilesetManager.updateSourceRegion` to repad only the tiles a dirty rectangle touches, making per-frame atlas updates affordable.
+
+- [#540](https://github.com/JollyPixel/editor/pull/540) [`517da9b`](https://github.com/JollyPixel/editor/commit/517da9b21ad2a12f7fdf697505be55e951c8ac2b) Thanks [@fraxken](https://github.com/fraxken)! - Absorb voxel utilities the voxel-map editor was reimplementing: registry
+  enumeration, object extent normalization (Tiled extents now snap), and
+  world-to-voxel cell conversion. `BlockDefinitionIn` defaults its optional fields.
+
+- [#560](https://github.com/JollyPixel/editor/pull/560) [`7c8d128`](https://github.com/JollyPixel/editor/commit/7c8d128164d8c550db7ebd19529e19ee505ee6fa) Thanks [@fraxken](https://github.com/fraxken)! - Synchronize and persist block definitions: `onBlockUpdated` hooks published by
+  `VoxelSyncClient` keep Block Library edits across restarts, and
+  `VoxelSyncServer` now throws on invalid commands instead of logging them.
+
+- [#565](https://github.com/JollyPixel/editor/pull/565) [`a50002e`](https://github.com/JollyPixel/editor/commit/a50002e7ba24d1b529c21e9c966ccc86e8c9f977) Thanks [@fraxken](https://github.com/fraxken)! - Map every UV face to the shape it belongs to, so a pole or slab edits and
+  renders over the part of its tile the geometry actually covers.
+  
+  - Built-in shapes state each face's UVs as its own footprint, exposed through
+    `projectFaceUv()`, `faceUvs()` and `projectedFace()`.
+  - The voxel-map UV editor derives per-face regions from the block's shape and
+    leaves only a plain cube collapsible.
+  - A collapse round-trip keeps each face's own size, and collapses onto the
+    largest active face rather than the smallest.
+  - Chunk materials clamp each face to its atlas rect, so atlases ship unpadded
+    and a UV rect at a fractional offset stops sampling the tile gutter.
+
+- [#565](https://github.com/JollyPixel/editor/pull/565) [`a50002e`](https://github.com/JollyPixel/editor/commit/a50002e7ba24d1b529c21e9c966ccc86e8c9f977) Thanks [@fraxken](https://github.com/fraxken)! - Add `buildShapeGeometry()`, which triangulates a `BlockShape` and reports the
+  vertex range each face slot owns. UV editing in voxel-map now derives its
+  topology from the shape, so every built-in and custom shape is supported.
+
+- [#539](https://github.com/JollyPixel/editor/pull/539) [`3bde59b`](https://github.com/JollyPixel/editor/commit/3bde59b0a25d61653b3200849c64bf93c3d30c8d) Thanks [@fraxken](https://github.com/fraxken)! - Rebuild the layers tab around one tree holding objects as rows, with a single
+  add dialog, per-object color and lock, and editable properties. Adds
+  `AreaBox.color`, `VoxelObjectJSON.color`/`locked`, and stops `disposeObject3D`
+  freeing the resources a self-disposing node already released.
+
+- [#566](https://github.com/JollyPixel/editor/pull/566) [`211ff42`](https://github.com/JollyPixel/editor/commit/211ff429c636962c59802316999a1ebd8721b11b) Thanks [@fraxken](https://github.com/fraxken)! - `voxelPositionOf` now resolves the cell from a small offset against the normal
+  and steps one major axis for the front side, so a slanted face such as a ramp
+  slope no longer resolves to the cell below or to the ramp's own cell.
+
+- [#591](https://github.com/JollyPixel/editor/pull/591) [`eec5e52`](https://github.com/JollyPixel/editor/commit/eec5e52f462e33212e05f474e9ed44aee5a33a82) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` takes an `acceptDrop` domain veto, consulted while dragging and on
+  commit. `VoxelWorld.moveLayerTo()` moves a layer to an absolute index and emits
+  a `layer-moved` command. The voxel-map layer tree is reordered by drag instead
+  of the arrow buttons, which are gone.
+
+- [#545](https://github.com/JollyPixel/editor/pull/545) [`cf785ad`](https://github.com/JollyPixel/editor/commit/cf785ad789a8824abda7ca23db31b0082d9d8f07) Thanks [@fraxken](https://github.com/fraxken)! - Add new registerMany() API on BlockShapeRegistry
+
+- [#547](https://github.com/JollyPixel/editor/pull/547) [`00b8340`](https://github.com/JollyPixel/editor/commit/00b8340d211bf933b53c38a8ad28298dfbe86004) Thanks [@fraxken](https://github.com/fraxken)! - Build chunks nearest the camera first: `rebuildFocus` is renamed `focus`, is
+  resampled as the focus moves, and `VoxelRenderer` can track an `Object3D`.
+  Adds an opt-in `viewDistance` that stops meshing chunks beyond a chunk radius
+  and either hides or unloads the ones that leave it.
+
+### Patch Changes
+
+- [#548](https://github.com/JollyPixel/editor/pull/548) [`abdd66e`](https://github.com/JollyPixel/editor/commit/abdd66ee70b63b22acabef3ab58e4a7231057627) Thanks [@fraxken](https://github.com/fraxken)! - Scope mesh occlusion to the layer it belongs to. A translucent layer
+  (`0 < opacity < 1`) is now occluded only by its own voxels: its faces survive
+  against opaque neighbours in other layers, and it no longer occludes them or
+  wins compositing over the voxels it covers.
+
+- [#612](https://github.com/JollyPixel/editor/pull/612) [`6b09dd6`](https://github.com/JollyPixel/editor/commit/6b09dd6faa48f8d8600cf4a8e8a3b9126b24afb9) Thanks [@fraxken](https://github.com/fraxken)! - Parse asset event payloads instead of validating them. `isAssetEvent` becomes
+  `parseAssetEvent`, returning `Result<AssetEvent, AssetEventRejection>` that
+  separates a foreign event from a malformed one; payload types now derive from
+  the JSON Schemas that check them, and `decodeContent` takes `AssetInlineContent`
+  so it can no longer throw.
+
+- [#628](https://github.com/JollyPixel/editor/pull/628) [`423db10`](https://github.com/JollyPixel/editor/commit/423db105df46e6ec7bb692beec0a37b1f9332fad) Thanks [@fraxken](https://github.com/fraxken)! - `Extension.onClientConnect`, `onClientDisconnect` and `onMessage` are now
+  optional; the room skips a hook it does not find and drops such a message with a
+  `debug` log. Implementations need the `override` modifier, as `dispose` already
+  did, and a worker extension reports its hooks at ready time so an omitted one
+  costs no RPC round-trip.
+
+- [#548](https://github.com/JollyPixel/editor/pull/548) [`2d7654d`](https://github.com/JollyPixel/editor/commit/2d7654dca12f7790da7719b84fd635fe80bb27d7) Thanks [@fraxken](https://github.com/fraxken)! - Cull the face two neighbours of the same transparent block share. Emitting both
+  put two coplanar quads on one plane, which z-fought into visible crackling
+  across dense foliage. A transparent block still hides nothing of a different
+  block, so its alpha holes keep revealing what is behind them.
+
+- [#544](https://github.com/JollyPixel/editor/pull/544) [`e2aae06`](https://github.com/JollyPixel/editor/commit/e2aae062e7bd773bf5f756da9aba25388ec3e305) Thanks [@fraxken](https://github.com/fraxken)! - Rework API documentation and README.md
+- Updated dependencies [[`d6b2a37`](https://github.com/JollyPixel/editor/commit/d6b2a37da51adcbfc84267c5276958299f58eb7b), [`ac9bcf8`](https://github.com/JollyPixel/editor/commit/ac9bcf8696b154763828b36d09511c046cd4f036), [`66ee3e0`](https://github.com/JollyPixel/editor/commit/66ee3e0740bcf6ec96a507ad47c9d565a9750a48), [`18842ab`](https://github.com/JollyPixel/editor/commit/18842abe5ad347f63eacf8254d0685cba235adee), [`d6f6a22`](https://github.com/JollyPixel/editor/commit/d6f6a22e8d9a5644b1e27622aa00d5e1af594702), [`c9fa209`](https://github.com/JollyPixel/editor/commit/c9fa2090fc08b3151f107290459dbd050a584186), [`402c2d9`](https://github.com/JollyPixel/editor/commit/402c2d952e774d2c96ead24b7c8d11ef568128a9), [`6b09dd6`](https://github.com/JollyPixel/editor/commit/6b09dd6faa48f8d8600cf4a8e8a3b9126b24afb9), [`e83c39b`](https://github.com/JollyPixel/editor/commit/e83c39bdc271493400eecce3acd9b6568262f845), [`981f340`](https://github.com/JollyPixel/editor/commit/981f340f5933b21508a8b5acca991c8e44b451d0), [`423db10`](https://github.com/JollyPixel/editor/commit/423db105df46e6ec7bb692beec0a37b1f9332fad), [`c5e4f38`](https://github.com/JollyPixel/editor/commit/c5e4f38bafbc56cfba7a5de5d5f66e3ed1cf6f65), [`02b3b44`](https://github.com/JollyPixel/editor/commit/02b3b44814abf14c24bfea237afababa6ff8b09c), [`a9a6ca8`](https://github.com/JollyPixel/editor/commit/a9a6ca8279097ff6e64a800f797a96ab21597e1b), [`402c2d9`](https://github.com/JollyPixel/editor/commit/402c2d952e774d2c96ead24b7c8d11ef568128a9), [`82ce3e8`](https://github.com/JollyPixel/editor/commit/82ce3e8139f436f25676c1b7bcd8447e1b4db416), [`3bde59b`](https://github.com/JollyPixel/editor/commit/3bde59b0a25d61653b3200849c64bf93c3d30c8d), [`e55decb`](https://github.com/JollyPixel/editor/commit/e55decba8f0dbc35f1351ea3218360de0b5dbfc1), [`cd200eb`](https://github.com/JollyPixel/editor/commit/cd200ebf5440b27cecc74221104deae7e7bf9be6), [`4ad1299`](https://github.com/JollyPixel/editor/commit/4ad12991dc15ff5bb2ac158f9d6d6b0ce6023fd4)]:
+  - @jolly-pixel/asset-server@2.0.0
+  - @jolly-pixel/engine@5.0.0
+  - @jolly-pixel/asset@1.1.0
+  - @jolly-pixel/event-store@3.0.0
+  - @jolly-pixel/network@2.0.0
+
 ## 3.0.0
 
 ### Major Changes

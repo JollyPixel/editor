@@ -1,5 +1,11 @@
 # @jolly-pixel/resize-handle
 
+## 1.2.0
+
+### Minor Changes
+
+- [#477](https://github.com/JollyPixel/editor/pull/477) [`cd04886`](https://github.com/JollyPixel/editor/commit/cd048869b91af6a09ff56c73b8701b47fc13d78e) Thanks [@fraxken](https://github.com/fraxken)! - Add `CornerResizeHandle` for resizing both axes at once from a single pointer drag.
+
 ## 1.1.0
 
 ### Minor Changes
