@@ -1,8 +1,8 @@
 # Architecture Decision Records
 
 Decisions behind `@jolly-pixel/ui` that are hard to reverse, surprising without context, or the
-result of a real trade-off. API reference lives in [`docs/api`](../api), usage in
-[`docs/guides`](../guides).
+result of a real trade-off. API reference lives in [`docs/api`](../api/README.md), usage in
+[`docs/guides`](../guides/README.md).
 
 | # | Decision |
 |---|---|

@@ -76,7 +76,7 @@ world management update them. Application code should use the corresponding
 
 ## Methods
 
-### toJSON(): VoxelLayerJSON
+### `toJSON(): VoxelLayerJSON`
 
 Returns the serializable layer state.
 
@@ -97,7 +97,7 @@ interface VoxelLayerJSON {
 > Used by `serializeVoxelWorld()`. See
 > [serialization](../serialization/serialization.md).
 
-### getOrCreateChunk(cx: number, cy: number, cz: number): VoxelChunk
+### `getOrCreateChunk(cx: number, cy: number, cz: number): VoxelChunk`
 
 Returns the `VoxelChunk` at the given chunk coordinates, creating it if it does not exist.
 
@@ -105,7 +105,7 @@ Returns the `VoxelChunk` at the given chunk coordinates, creating it if it does 
 const chunk = layer.getOrCreateChunk(0, 0, 0);
 ```
 
-### getChunk(cx: number, cy: number, cz: number): VoxelChunk | undefined
+### `getChunk(cx: number, cy: number, cz: number): VoxelChunk | undefined`
 
 Returns the `VoxelChunk` at the given chunk coordinates, or `undefined` if none exists.
 
@@ -114,7 +114,7 @@ const chunk = layer.getChunk(1, 0, -2);
 if (!chunk) {}
 ```
 
-### getVoxelAt(position: Vector3Like): VoxelEntry | undefined
+### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
 
 Read a voxel at world-space `position` (offset is applied).
 Returns a freshly built `VoxelEntry`, or `undefined` if empty. See the
@@ -124,11 +124,11 @@ Returns a freshly built `VoxelEntry`, or `undefined` if empty. See the
 const entry = layer.getVoxelAt({ x: 10, y: 5, z: 0 });
 ```
 
-### getPackedVoxelAt(position: Vector3Like): PackedVoxel
+### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
 
 Allocation-free `getVoxelAt`, returning `VOXEL_ABSENT` (`-1`) for air.
 
-### setVoxelAt(position: Vector3Like, entry: VoxelEntry): void
+### `setVoxelAt(position: Vector3Like, entry: VoxelEntry): void`
 
 Set a voxel at world-space `position`. Allocates a chunk if necessary and marks it dirty for rebuild.
 
@@ -136,11 +136,11 @@ Set a voxel at world-space `position`. Allocates a chunk if necessary and marks 
 layer.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: 3, transform: 0 });
 ```
 
-### setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel): void
+### `setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel): void`
 
 Allocation-free `setVoxelAt`, taking the value `packVoxel()` produces.
 
-### removeVoxelAt(position: Vector3Like): void
+### `removeVoxelAt(position: Vector3Like): void`
 
 Remove the voxel at the given world-space `position`. If the containing chunk becomes empty it is freed.
 
@@ -148,14 +148,14 @@ Remove the voxel at the given world-space `position`. If the containing chunk be
 layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
 ```
 
-### centerToWorld(): Vector3 | null
+### `centerToWorld(): Vector3 | null`
 
 Returns the world-space center of all voxels in the given layer, accounting for the layer offset.
 When the layer has no voxels the layer offset itself is returned as a `Vector3`.
 Every current implementation path returns a `Vector3`; the public declaration
 remains nullable.
 
-### markChunkDirty(cx: number, cy: number, cz: number): void
+### `markChunkDirty(cx: number, cy: number, cz: number): void`
 
 Mark the chunk at the given chunk coordinates as dirty so it will be rebuilt.
 
@@ -163,7 +163,7 @@ Mark the chunk at the given chunk coordinates as dirty so it will be rebuilt.
 layer.markChunkDirty(0, 0, 0);
 ```
 
-### getChunks(): IterableIterator<VoxelChunk>
+### `getChunks(): IterableIterator<VoxelChunk>`
 
 Iterate allocated chunks in this layer.
 
@@ -173,7 +173,7 @@ for (const chunk of layer.getChunks()) {
 }
 ```
 
-### clone(options?: Partial<VoxelLayerOptions>): VoxelLayer
+### `clone(options?: Partial<VoxelLayerOptions>): VoxelLayer`
 
 Creates a detached copy of the layer, including its voxels and properties. Use
 `VoxelWorld.cloneLayer()` or `VoxelEngine.cloneLayer()` when the clone should be
@@ -183,7 +183,7 @@ The copy owns its own chunks, offset and properties; editing it never reaches
 the source. `options.chunkSize` is ignored, since the copied chunks are built
 for the source's chunk size.
 
-### mergeFrom(source: VoxelLayer, options?: VoxelLayerMergeOptions): void
+### `mergeFrom(source: VoxelLayer, options?: VoxelLayerMergeOptions): void`
 
 Copies every voxel from `source` into this layer, resolved in world space so
 layer offsets are honoured. Prefer the world or engine merge method when the
@@ -193,7 +193,7 @@ operation must update world state or emit hooks.
 voxels at the same world position. Pass `false` to fill only the positions this
 layer leaves empty.
 
-### drainPendingRemovals(): IterableIterator<VoxelChunk>
+### `drainPendingRemovals(): IterableIterator<VoxelChunk>`
 
 Consumes chunks that became empty and were removed from storage. Renderers use
 this iterator to dispose stale meshes; ordinary callers rarely need it.
