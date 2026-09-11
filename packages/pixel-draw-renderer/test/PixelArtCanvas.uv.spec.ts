@@ -19,8 +19,10 @@ import {
 } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — uv mode", () => {
-  // 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
-  // client 84 + n*4 -> texture n.
+  /*
+   * 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
+   * client 84 + n*4 -> texture n.
+   */
 
   function makeManager(
     options: PixelArtCanvasOptions = {}
@@ -90,11 +92,13 @@ describe("PixelArtCanvas — uv mode", () => {
   test("Delete in select mode does not delete a UV region selected earlier (regression)", () => {
     const manager = makeManager();
 
-    // Select a UV region from outside uv mode (e.g. a consumer's own
-    // 3D-scene click), then switch to select mode without ever entering
-    // uv mode. Selection persists across mode changes by design (see
-    // uv/UVMap.md), so it must NOT be treated as "the active uv delete
-    // target" once in a different mode.
+    /*
+     * Select a UV region from outside uv mode (e.g. a consumer's own
+     * 3D-scene click), then switch to select mode without ever entering
+     * uv mode. Selection persists across mode changes by design (see
+     * uv/UVMap.md), so it must NOT be treated as "the active uv delete
+     * target" once in a different mode.
+     */
     const region = manager.uv.create({
       width: 4,
       height: 4
@@ -471,10 +475,12 @@ describe("PixelArtCanvas — uv mode", () => {
 });
 
 describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => {
-  // resizeCanvas() shifts the camera to keep content centered, so every
-  // overlay computed from the old camera position must redraw itself
-  // against the new one — same as after a pan/zoom. onResize() previously
-  // resized the SVG element itself but never told the overlays to redraw.
+  /*
+   * resizeCanvas() shifts the camera to keep content centered, so every
+   * overlay computed from the old camera position must redraw itself
+   * against the new one — same as after a pan/zoom. onResize() previously
+   * resized the SVG element itself but never told the overlays to redraw.
+   */
 
   function makeResizableContainer(): {
     container: HTMLDivElement;
@@ -528,15 +534,19 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
       zoom: { default: 4 }
     });
 
-    // First cascade position -> rect {x:0,y:0,...}. 200x200 container, zoom
-    // 4 -> centered camera (84, 84), so the overlay starts at screen (84, 84).
+    /*
+     * First cascade position -> rect {x:0,y:0,...}. 200x200 container, zoom
+     * 4 -> centered camera (84, 84), so the overlay starts at screen (84, 84).
+     */
     manager.uv.create({ width: 4, height: 4 });
     manager.uv.showAll = true;
 
-    // Each UV entry is a <g> of two rects: the inset casing, then the colored
-    // border on the region's own bounds — the one to measure. Every other
-    // overlay group — brush highlight, peer cursors — carries a "visibility"
-    // attribute, which UVRegionLayer never sets.
+    /*
+     * Each UV entry is a <g> of two rects: the inset casing, then the colored
+     * border on the region's own bounds — the one to measure. Every other
+     * overlay group — brush highlight, peer cursors — carries a "visibility"
+     * attribute, which UVRegionLayer never sets.
+     */
     const svg = children.find(
       (c) => !("getContext" in c)
     ) as SVGElement;
@@ -544,8 +554,10 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
     assert.strictEqual(rect.getAttribute("x"), "84");
     assert.strictEqual(rect.getAttribute("y"), "84");
 
-    // Grow the container -> camera shifts by half the size delta (see
-    // Viewport.resizeCanvas): (300-200)/2 = 50 -> new camera (134, 134).
+    /*
+     * Grow the container -> camera shifts by half the size delta (see
+     * Viewport.resizeCanvas): (300-200)/2 = 50 -> new camera (134, 134).
+     */
     setSize(300, 300);
     manager.onResize();
 
@@ -594,8 +606,10 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
       })
     );
 
-    // Direct children only, excluding BrushHighlightView's nested rects;
-    // the selection outline is the direct rect explicitly marked visible.
+    /*
+     * Direct children only, excluding BrushHighlightView's nested rects;
+     * the selection outline is the direct rect explicitly marked visible.
+     */
     const svg = children.find((c) => !("getContext" in c)) as SVGElement;
     const rect = [...svg.querySelectorAll(":scope > rect")]
       .find((el) => el.getAttribute("visibility") === "visible")!;

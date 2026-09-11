@@ -70,8 +70,10 @@ describe("Controls.Mouse wheel", () => {
   });
 
   test("accumulates several wheel events arriving within one frame", () => {
-    // Two upward notches in the same frame must not cancel or be discarded:
-    // the deltas used to be replaced rather than summed, dropping the first.
+    /*
+     * Two upward notches in the same frame must not cancel or be discarded:
+     * the deltas used to be replaced rather than summed, dropping the first.
+     */
     canvas.dispatchWheelEvent({ wheelDelta: 120 });
     canvas.dispatchWheelEvent({ wheelDelta: 120 });
     mouse.update();

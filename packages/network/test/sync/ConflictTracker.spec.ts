@@ -75,9 +75,11 @@ describe("ConflictTracker — record", () => {
   test("a command not recorded is not remembered by resolve()", () => {
     const tracker = new ConflictTracker(new LastWriteWinsResolver());
 
-    // Resolved (and would be accepted) but deliberately never recorded —
-    // mirrors a command that was accepted by the resolver but failed to
-    // apply downstream, so it must not poison later resolutions at the key.
+    /*
+     * Resolved (and would be accepted) but deliberately never recorded —
+     * mirrors a command that was accepted by the resolver but failed to
+     * apply downstream, so it must not poison later resolutions at the key.
+     */
     tracker.resolve("k", header({ clientId: "A", timestamp: 900 }));
 
     assert.strictEqual(

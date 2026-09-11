@@ -216,26 +216,35 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     assert.equal(client.received.length, 0);
   });
 
-  it("accepts an older-timestamped command from the SAME client (undo/redo replay ordering) and broadcasts it", () => {
-    const server = new VoxelSyncServer();
-    server.world.addLayer("Ground");
+  it(
+    "accepts an older-timestamped command from the SAME client (undo/redo replay ordering) and broadcasts it",
+    () => {
+      const server = new VoxelSyncServer();
+      server.world.addLayer("Ground");
 
-    const client = createClient("A");
-    const room = observe(server, client);
-    client.received.length = 0;
+      const client = createClient("A");
+      const room = observe(server, client);
+      client.received.length = 0;
 
-    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-A" }), room);
-    client.received.length = 0;
+      server.receive(
+        voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-A" }),
+        room
+      );
+      client.received.length = 0;
 
-    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }), room);
+      server.receive(
+        voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }),
+        room
+      );
 
-    assert.equal(client.received.length, 1);
-    const layer = server.world.getLayer("Ground");
-    assert.ok(layer !== undefined);
-    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
-    assert.ok(entry);
-    assert.equal(entry.blockId, 1);
-  });
+      assert.equal(client.received.length, 1);
+      const layer = server.world.getLayer("Ground");
+      assert.ok(layer !== undefined);
+      const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
+      assert.ok(entry);
+      assert.equal(entry.blockId, 1);
+    }
+  );
 
   it("resolves tie by lexicographic clientId", () => {
     const server = new VoxelSyncServer();
@@ -243,8 +252,14 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
 
     const ts = 1000;
     // "client-B" > "client-A" lexicographically
-    server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }), noopRoom);
-    server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-B" }), noopRoom);
+    server.receive(
+      voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }),
+      noopRoom
+    );
+    server.receive(
+      voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-B" }),
+      noopRoom
+    );
 
     const layer = server.world.getLayer("Ground");
     assert.ok(layer !== undefined);

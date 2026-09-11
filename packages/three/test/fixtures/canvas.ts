@@ -1,7 +1,9 @@
-// happy-dom provides real <canvas> elements (DOM tree, sizing, style) but no
-// 2D rendering context, so installCanvasMock patches getContext("2d") to
-// return a no-op-drawing stub. PeerFrustum's label only needs the context to
-// not throw — pixel output isn't asserted on.
+/*
+ * happy-dom provides real <canvas> elements (DOM tree, sizing, style) but no
+ * 2D rendering context, so installCanvasMock patches getContext("2d") to
+ * return a no-op-drawing stub. PeerFrustum's label only needs the context to
+ * not throw — pixel output isn't asserted on.
+ */
 export class MockCanvasRenderingContext2D {
   fillStyle: string | CanvasGradient | CanvasPattern = "#000000";
   strokeStyle: string | CanvasGradient | CanvasPattern = "#000000";

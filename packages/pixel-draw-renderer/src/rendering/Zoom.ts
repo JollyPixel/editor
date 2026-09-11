@@ -3,8 +3,10 @@ import {
   clamp
 } from "../utils/math.ts";
 
-// CONSTANTS
-// Finer wheel deltas scale below this full sensitivity step.
+/*
+ * CONSTANTS
+ * Finer wheel deltas scale below this full sensitivity step.
+ */
 const kReferenceNotch = 100;
 
 export interface ZoomOptions {

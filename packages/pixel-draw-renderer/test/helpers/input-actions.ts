@@ -1,9 +1,11 @@
 // Import Internal Dependencies
 import type { InputActions } from "#src/input/InputActions.ts";
 
-// Recorded arguments for every InputActions callback, keyed by callback name.
-// Typing to `keyof InputActions` makes a mistyped key a compile error instead
-// of a silently-undefined read.
+/*
+ * Recorded arguments for every InputActions callback, keyed by callback name.
+ * Typing to `keyof InputActions` makes a mistyped key a compile error instead
+ * of a silently-undefined read.
+ */
 export type InputActionCalls = Record<keyof InputActions, unknown[][]>;
 
 // Return values for callbacks that control drag tracking or browser defaults.

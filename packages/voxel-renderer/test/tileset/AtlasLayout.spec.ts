@@ -149,8 +149,10 @@ describe("AtlasLayout#uvFor", () => {
     });
 
     it("reads real source texels at a fractional index", () => {
-      // A UV region dragged off the tile grid lands here; without a gutter
-      // the window is a plain sub-rect of the source image.
+      /*
+       * A UV region dragged off the tile grid lands here; without a gutter
+       * the window is a plain sub-rect of the source image.
+       */
       const image = 64;
       const uv = layout.uvFor(1.5, 0);
 

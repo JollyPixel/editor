@@ -557,8 +557,10 @@ describe("Containers.reconcileLayout", () => {
     };
     const snapshot = reconcileLayout(stored, declared);
 
-    // Written before the two records were kept apart: what a pane floats at
-    // is also what it is remembered at.
+    /*
+     * Written before the two records were kept apart: what a pane floats at
+     * is also what it is remembered at.
+     */
     assert.deepEqual(snapshot.geometry.assets, snapshot.floating.assets);
     assert.equal(snapshot.geometry.assets.width, 200);
   });

@@ -362,8 +362,10 @@ test.describe("arrow-key stepping", () => {
     await input.press("ArrowDown");
     await input.press("ArrowDown");
     await input.press("Alt+ArrowUp");
-    // Regression case: a coarse step from a value an Alt press just refined must land relative to
-    // that value (0.481 + 0.1), not snap to the nearest whole multiple of the coarse step (0.6).
+    /*
+     * Regression case: a coarse step from a value an Alt press just refined must land relative to
+     * that value (0.481 + 0.1), not snap to the nearest whole multiple of the coarse step (0.6).
+     */
     await input.press("Shift+ArrowUp");
 
     expect(await changes(page)).toEqual([0.49, 0.48, 0.481, 0.581]);
@@ -480,8 +482,10 @@ test.describe("checkbox", () => {
 
     const input = row(page, "jolly-checkbox", "locked").locator("input");
 
-    // Forced: Playwright reads aria-disabled as not operable, which is
-    // exactly the point of it.
+    /*
+     * Forced: Playwright reads aria-disabled as not operable, which is
+     * exactly the point of it.
+     */
     await input.click({ force: true });
 
     expect(await changes(page)).toEqual([]);

@@ -183,8 +183,10 @@ describe("TileSet.getTileProperties — UV math", () => {
   });
 
   it("UV offset for (col=2, row=1) → offsetU=0.5, offsetV=0", () => {
-    // col=2 → offsetU = 2/4 = 0.5
-    // row=1 → offsetV = 1 - (1+1)/2 = 0
+    /*
+     * col=2 → offsetU = 2/4 = 0.5
+     * row=1 → offsetV = 1 - (1+1)/2 = 0
+     */
     const props = ts.getTileProperties(7);
     assert.ok(props !== null);
     assert.ok(approxEqual(props.uv.offset.x, 0.5));

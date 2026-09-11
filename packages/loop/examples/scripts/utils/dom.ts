@@ -1,6 +1,3 @@
-/**
- * Returns a required element or throws immediately.
- */
 export function requireElement<TElement extends Element>(
   selector: string
 ): TElement {
@@ -12,9 +9,6 @@ export function requireElement<TElement extends Element>(
   return element;
 }
 
-/**
- * Returns the canvas 2D context or throws immediately.
- */
 export function requireContext2d(
   canvas: HTMLCanvasElement
 ): CanvasRenderingContext2D {

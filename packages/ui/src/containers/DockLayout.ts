@@ -234,15 +234,19 @@ export class DockLayout extends LitElement {
       ghost: frame === null,
       ghostElement: () => {
         const ghost = headerGhost(pane);
-        // Only "heading" needs putting back: it is the one thing the header
-        // shows that a clone of the attributes alone does not carry.
+        /*
+         * Only "heading" needs putting back: it is the one thing the header
+         * shows that a clone of the attributes alone does not carry.
+         */
         ghost.heading = pane.heading;
 
         return ghost;
       },
-      // Every dock takes the pane across its whole surface, its own dock
-      // included: one gesture moves a pane from any dock to any other, with no
-      // detour through a floating window.
+      /*
+       * Every dock takes the pane across its whole surface, its own dock
+       * included: one gesture moves a pane from any dock to any other, with no
+       * detour through a floating window.
+       */
       zones: () => this.docks().map((dock) => {
         return {
           id: dock.layoutKey,
@@ -253,9 +257,11 @@ export class DockLayout extends LitElement {
           line: (index: number) => dock.insertionLine(index)
         };
       }),
-      // A window is dragged by its whole box, so a dock it has entered arms
-      // even when the cursor is still short of it. Without a window there is
-      // nothing but the cursor to go by.
+      /*
+       * A window is dragged by its whole box, so a dock it has entered arms
+       * even when the cursor is still short of it. Without a window there is
+       * nothing but the cursor to go by.
+       */
       probe: frame === null ?
         undefined :
         (clientX: number, clientY: number) => {
@@ -269,8 +275,10 @@ export class DockLayout extends LitElement {
           };
         },
       onStart: () => {
-        // Exactly one source ghosts: a docked pane dims in the slot it keeps,
-        // and a floating one hands that over to the window carrying it.
+        /*
+         * Exactly one source ghosts: a docked pane dims in the slot it keeps,
+         * and a floating one hands that over to the window carrying it.
+         */
         if (frame === null) {
           pane.dragging = true;
         }
@@ -279,9 +287,11 @@ export class DockLayout extends LitElement {
         }
       },
       onPreview: (result) => {
-        // The window keeps following the pointer even over an armed dock: it
-        // is dimmed, so the insertion line stays readable underneath it, and
-        // a window that stopped dead would read as a dropped gesture.
+        /*
+         * The window keeps following the pointer even over an armed dock: it
+         * is dimmed, so the insertion line stays readable underneath it, and
+         * a window that stopped dead would read as a dropped gesture.
+         */
         frame?.moveTo(
           startX + result.x - originX,
           startY + result.y - originY
@@ -440,8 +450,10 @@ export class DockLayout extends LitElement {
     const others = list.filter((candidate) => candidate !== pane);
     const reference = others[target] ?? null;
 
-    // Reinserting a pane before the sibling it already precedes would
-    // reparent it for nothing, tearing down and rebuilding its subtree.
+    /*
+     * Reinserting a pane before the sibling it already precedes would
+     * reparent it for nothing, tearing down and rebuilding its subtree.
+     */
     if (from !== -1 && reference === (list[from + 1] ?? null)) {
       return;
     }
@@ -477,8 +489,10 @@ export class DockLayout extends LitElement {
     );
 
     const frame = document.createElement("jolly-floating");
-    // A window narrower than the pane was in its dock would otherwise be hung
-    // off a grab offset past its own edge, and land away from the cursor.
+    /*
+     * A window narrower than the pane was in its dock would otherwise be hung
+     * off a grab offset past its own edge, and land away from the cursor.
+     */
     frame.x = grab.x - Math.min(grab.offsetX, Math.max(width - kGrabInset, 0));
     frame.y = grab.y - Math.min(grab.offsetY, Math.max(height - kGrabInset, 0));
     frame.width = width;
@@ -550,8 +564,10 @@ export class DockLayout extends LitElement {
       const index = new Map(
         this.panes().map((pane) => [pane.layoutKey, pane])
       );
-      // Replaced rather than merged, so a reset forgets the sizes panes were
-      // given since instead of handing them back on the next drag out.
+      /*
+       * Replaced rather than merged, so a reset forgets the sizes panes were
+       * given since instead of handing them back on the next drag out.
+       */
       this.#geometry = new Map(
         Object.entries(snapshot.geometry)
       );
@@ -705,8 +721,10 @@ export class DockLayout extends LitElement {
         );
       }
 
-      // Copied on the way out: the snapshot is handed to callers, and what
-      // they get must not reach back into the cache behind it.
+      /*
+       * Copied on the way out: the snapshot is handed to callers, and what
+       * they get must not reach back into the cache behind it.
+       */
       const remembered = this.#geometry.get(
         pane.layoutKey
       );

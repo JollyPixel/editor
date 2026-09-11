@@ -142,8 +142,10 @@ function makeCollider(
   const world = makeMockWorld();
   const rapier = makeMockRapier();
   const collider = new RapierVoxelCollider({
-    // trimesh()'s no-op setTranslation() returns void, not `this`, so the mock
-    // does not structurally satisfy RapierColliderDesc — narrow instead of `any`.
+    /*
+     * trimesh()'s no-op setTranslation() returns void, not `this`, so the mock
+     * does not structurally satisfy RapierColliderDesc — narrow instead of `any`.
+     */
     api: rapier as unknown as RapierAPI,
     world,
     blockRegistry: new BlockRegistry(blocks),

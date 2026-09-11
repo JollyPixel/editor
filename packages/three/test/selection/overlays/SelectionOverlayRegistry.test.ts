@@ -7,7 +7,9 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { SelectionOutline, SelectionBoundingBox } from "#src/index.ts";
-import { createDefaultSelectionOverlayRegistry } from "#src/selection/overlays/builtinSelectionOverlayFactories.ts";
+import {
+  createDefaultSelectionOverlayRegistry
+} from "#src/selection/overlays/builtinSelectionOverlayFactories.ts";
 
 // CONSTANTS
 const kRegistry = createDefaultSelectionOverlayRegistry();

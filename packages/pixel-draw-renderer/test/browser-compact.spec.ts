@@ -34,7 +34,8 @@ describe("Network client browser compatibility", () => {
           .join("\n");
 
         assert.fail(
-          `'${entryName}' is not browser-compatible (it cannot be bundled for a "browser" platform):\n${reasons || error.message}`
+          `'${entryName}' is not browser-compatible `
+          + `(it cannot be bundled for a "browser" platform):\n${reasons || error.message}`
         );
       }
     });

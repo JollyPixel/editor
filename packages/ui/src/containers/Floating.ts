@@ -188,12 +188,16 @@ export class Floating extends LitElement {
       this.clampToView
     );
     installResizeCursorStyles(this.ownerDocument);
-    // A window nobody has touched yet still has to sit above static content:
-    // without a baseline stack value it keeps z-index "auto" and paints
-    // beneath any later, non-positioned sibling in the same stacking context.
+    /*
+     * A window nobody has touched yet still has to sit above static content:
+     * without a baseline stack value it keeps z-index "auto" and paints
+     * beneath any later, non-positioned sibling in the same stacking context.
+     */
     this.#raise();
-    // Picks up a pane authored (or restored) already collapsed, since that
-    // never fires the `jolly-toggle` a click does.
+    /*
+     * Picks up a pane authored (or restored) already collapsed, since that
+     * never fires the `jolly-toggle` a click does.
+     */
     this.#syncCollapsed();
   }
 
@@ -216,9 +220,11 @@ export class Floating extends LitElement {
       this.#connectResizeHandles();
     }
 
-    // Visibility never goes through a drag commit, so it saves itself. The
-    // first pass carries no previous value, and writing there would save a
-    // default over what was just restored.
+    /*
+     * Visibility never goes through a drag commit, so it saves itself. The
+     * first pass carries no previous value, and writing there would save a
+     * default over what was just restored.
+     */
     if (changed.get("hidden") !== undefined) {
       this.#state.write("hidden", String(this.hidden));
     }
@@ -353,8 +359,10 @@ export class Floating extends LitElement {
     const collapsed = this.pane()?.collapsed ?? false;
     this.#collapsed = collapsed;
     this.#applyGeometry();
-    // Dragging the height handles while collapsed would fight the header-only
-    // height every frame and, worse, persist that as the remembered size.
+    /*
+     * Dragging the height handles while collapsed would fight the header-only
+     * height every frame and, worse, persist that as the remembered size.
+     */
     this._bottomHandle?.classList.toggle("disabled", collapsed);
     this._cornerHandle?.classList.toggle("disabled", collapsed);
   }
@@ -448,9 +456,11 @@ export class Floating extends LitElement {
   #readSize(): void {
     const rect = this.getBoundingClientRect();
     this.width = rect.width;
-    // Collapsed, the box is its own header's height, not the height worth
-    // remembering: that stays whatever it was before folding, the same way a
-    // collapsed dock leaves `#readSize` without touching its own `size`.
+    /*
+     * Collapsed, the box is its own header's height, not the height worth
+     * remembering: that stays whatever it was before folding, the same way a
+     * collapsed dock leaves `#readSize` without touching its own `size`.
+     */
     if (this.#collapsed) {
       return;
     }

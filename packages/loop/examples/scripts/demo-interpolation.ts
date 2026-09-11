@@ -139,9 +139,6 @@ function drawSquare(
   context.fillText(label, kMargin, y - 8);
 }
 
-/**
- * Draws recent positions so repeated samples expose stuttering.
- */
 function drawTrail(
   trail: number[],
   y: number,

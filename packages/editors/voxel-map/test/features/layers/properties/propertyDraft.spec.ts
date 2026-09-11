@@ -47,8 +47,10 @@ describe("propertiesOf", () => {
   });
 
   test("drops a blank key instead of storing it", () => {
-    // A row is blank while it is being typed, which is exactly why rows are
-    // addressed by index rather than by key.
+    /*
+     * A row is blank while it is being typed, which is exactly why rows are
+     * addressed by index rather than by key.
+     */
     assert.deepEqual(
       propertiesOf([
         { key: "", value: "orphan" },

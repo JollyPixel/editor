@@ -103,16 +103,19 @@ describe("dashed", () => {
     assert.ok(outline.geometry.getAttribute("lineDistance"));
   });
 
-  test("still applies color/opacity/linewidth/xray - LineDashedMaterial is a LineBasicMaterial subclass", () => {
-    const outline = new SelectionOutline({
-      target: createTarget(), dashed: true, color: "#ff0000", opacity: 0.5, linewidth: 3, xray: true
-    });
+  test(
+    "still applies color/opacity/linewidth/xray - LineDashedMaterial is a LineBasicMaterial subclass",
+    () => {
+      const outline = new SelectionOutline({
+        target: createTarget(), dashed: true, color: "#ff0000", opacity: 0.5, linewidth: 3, xray: true
+      });
 
-    assert.strictEqual(`#${outline.material.color.getHexString()}`, "#ff0000");
-    assert.strictEqual(outline.material.opacity, 0.5);
-    assert.strictEqual(outline.material.linewidth, 3);
-    assert.strictEqual(outline.material.depthTest, false);
-  });
+      assert.strictEqual(`#${outline.material.color.getHexString()}`, "#ff0000");
+      assert.strictEqual(outline.material.opacity, 0.5);
+      assert.strictEqual(outline.material.linewidth, 3);
+      assert.strictEqual(outline.material.depthTest, false);
+    }
+  );
 });
 
 describe("color", () => {

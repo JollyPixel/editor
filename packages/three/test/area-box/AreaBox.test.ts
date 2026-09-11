@@ -193,9 +193,11 @@ describe("render order", () => {
   test("draws the fill and edges above a transparent ground grid", () => {
     const area = new AreaBox();
 
-    // A camera-following grid sorts as the nearest transparent object and
-    // would otherwise paint its lines over the area at full strength, which
-    // no amount of `opacity` can compensate for.
+    /*
+     * A camera-following grid sorts as the nearest transparent object and
+     * would otherwise paint its lines over the area at full strength, which
+     * no amount of `opacity` can compensate for.
+     */
     assert.ok(area.fill.renderOrder > 0);
     assert.ok(area.edges!.renderOrder > area.fill.renderOrder);
   });
@@ -223,8 +225,10 @@ describe("color", () => {
 
     area.color = "#ff0000";
 
-    // Identical to an area built red and emphasised the same way: the
-    // recolour must neither drop the emphasis nor apply it twice.
+    /*
+     * Identical to an area built red and emphasised the same way: the
+     * recolour must neither drop the emphasis nor apply it twice.
+     */
     const reference = new AreaBox({ color: "#ff0000" });
     reference.state = "active";
 

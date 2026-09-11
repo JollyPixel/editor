@@ -131,8 +131,10 @@ export {
   type UVNormalizedRect
 } from "./uv/UVRegion.ts";
 export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
-// PixelSyncServer pulls worker_threads through the network server barrel.
-// Use the network subpath to keep browser bundles clean.
+/*
+ * PixelSyncServer pulls worker_threads through the network server barrel.
+ * Use the network subpath to keep browser bundles clean.
+ */
 export type {
   PixelNetworkCommand,
   PixelServerMessage,

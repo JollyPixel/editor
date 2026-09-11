@@ -102,8 +102,10 @@ describe("TiledConverter.convert — output structure", () => {
   });
 
   it("non-zero tiles produce voxels at the expected keys", () => {
-    // 2-wide map: col=i%2, row=floor(i/2). layerMode=flat → Y=0
-    // i=0: GID=1, key "0,0,0"; i=1: GID=2, key "1,0,0"; i=3: GID=3, key "1,0,1"
+    /*
+     * 2-wide map: col=i%2, row=floor(i/2). layerMode=flat → Y=0
+     * i=0: GID=1, key "0,0,0"; i=1: GID=2, key "1,0,0"; i=3: GID=3, key "1,0,1"
+     */
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
     const voxels = result.layers[0].voxels;
     assert.ok("0,0,0" in voxels, "expected voxel at 0,0,0");
@@ -119,10 +121,28 @@ describe("TiledConverter.convert — layerMode", () => {
     const map = makeMinimalMap([1, 0, 0, 0], {
       layers: [
         {
-          type: "tilelayer", id: 1, name: "L0", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+          type: "tilelayer",
+          id: 1,
+          name: "L0",
+          visible: true,
+          opacity: 1,
+          x: 0,
+          y: 0,
+          data: [1, 0, 0, 0],
+          width: 2,
+          height: 2
         },
         {
-          type: "tilelayer", id: 2, name: "L1", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+          type: "tilelayer",
+          id: 2,
+          name: "L1",
+          visible: true,
+          opacity: 1,
+          x: 0,
+          y: 0,
+          data: [1, 0, 0, 0],
+          width: 2,
+          height: 2
         }
       ]
     });
@@ -138,10 +158,28 @@ describe("TiledConverter.convert — layerMode", () => {
     const map = makeMinimalMap([1, 0, 0, 0], {
       layers: [
         {
-          type: "tilelayer", id: 1, name: "L0", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+          type: "tilelayer",
+          id: 1,
+          name: "L0",
+          visible: true,
+          opacity: 1,
+          x: 0,
+          y: 0,
+          data: [1, 0, 0, 0],
+          width: 2,
+          height: 2
         },
         {
-          type: "tilelayer", id: 2, name: "L1", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+          type: "tilelayer",
+          id: 2,
+          name: "L1",
+          visible: true,
+          opacity: 1,
+          x: 0,
+          y: 0,
+          data: [1, 0, 0, 0],
+          width: 2,
+          height: 2
         }
       ]
     });

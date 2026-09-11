@@ -30,9 +30,11 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     ({ container } = makeContainer());
   });
 
-  // 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
-  // client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
-  // no floor-rounding ambiguity).
+  /*
+   * 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
+   * client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
+   * no floor-rounding ambiguity).
+   */
 
   function makeManager(
     options: PixelArtCanvasOptions = {}
@@ -169,33 +171,36 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("rotate/flip fire onDrawEnd and a 'select-edit' onBufferUpdated (network hook) each, same as move/delete/paste", () => {
-    let drawEndCount = 0;
-    const events: PixelBufferHookEvent[] = [];
-    const manager = makeManager({
-      onDrawEnd: () => {
-        drawEndCount++;
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
-    const canvas = manager.canvas();
+  test(
+    "rotate/flip fire onDrawEnd and a 'select-edit' onBufferUpdated each, same as move/delete/paste",
+    () => {
+      let drawEndCount = 0;
+      const events: PixelBufferHookEvent[] = [];
+      const manager = makeManager({
+        onDrawEnd: () => {
+          drawEndCount++;
+        },
+        onBufferUpdated: (event) => events.push(event)
+      });
+      const canvas = manager.canvas();
 
-    paintHorizontalPair(manager);
-    drawEndCount = 0;
-    events.length = 0;
+      paintHorizontalPair(manager);
+      drawEndCount = 0;
+      events.length = 0;
 
-    manager.mode = "select";
-    selectHorizontalPair(canvas);
+      manager.mode = "select";
+      selectHorizontalPair(canvas);
 
-    window.dispatchEvent(rotateKey());
-    window.dispatchEvent(flipHorizontalKey());
-    window.dispatchEvent(flipVerticalKey());
+      window.dispatchEvent(rotateKey());
+      window.dispatchEvent(flipHorizontalKey());
+      window.dispatchEvent(flipVerticalKey());
 
-    assert.strictEqual(drawEndCount, 3);
-    assert.strictEqual(events.length, 3);
-    for (const event of events) {
-      assert.strictEqual(event.action, "select-edit");
+      assert.strictEqual(drawEndCount, 3);
+      assert.strictEqual(events.length, 3);
+      for (const event of events) {
+        assert.strictEqual(event.action, "select-edit");
+      }
+      manager.destroy();
     }
-    manager.destroy();
-  });
+  );
 });

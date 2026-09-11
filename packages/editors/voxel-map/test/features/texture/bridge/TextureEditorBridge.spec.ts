@@ -134,28 +134,31 @@ function makeScheduler() {
 }
 
 describe("TextureEditorBridge / transparency auto-sync", () => {
-  it("flips transparent false -> true once its tile gains alpha, and leaves an unaffected block alone", () => {
-    const { engine, dirtyReasons } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(makeBlock(1, {
-      transparent: false,
-      defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
-    }));
-    engine.blockRegistry.register(makeBlock(2, {
-      transparent: false,
-      defaultTexture: { tilesetId: "atlas", col: 1, row: 0 }
-    }));
+  it(
+    "flips transparent false -> true once its tile gains alpha, and leaves an unaffected block alone",
+    () => {
+      const { engine, dirtyReasons } = makeFakeVoxelEngine();
+      engine.blockRegistry.register(makeBlock(1, {
+        transparent: false,
+        defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
+      }));
+      engine.blockRegistry.register(makeBlock(2, {
+        transparent: false,
+        defaultTexture: { tilesetId: "atlas", col: 1, row: 0 }
+      }));
 
-    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
-    bridge.attach(makeFakeManager((rect) => rect.x === 0));
-    bridge.loadTileset(engine, "atlas");
+      const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+      bridge.attach(makeFakeManager((rect) => rect.x === 0));
+      bridge.loadTileset(engine, "atlas");
 
-    bridge.syncToThree();
+      bridge.syncToThree();
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
-    assert.equal(engine.blockRegistry.get(2)!.transparent, false);
-    assert.deepEqual(dirtyReasons, ["block-defined"]);
-    bridge.destroy();
-  });
+      assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+      assert.equal(engine.blockRegistry.get(2)!.transparent, false);
+      assert.deepEqual(dirtyReasons, ["block-defined"]);
+      bridge.destroy();
+    }
+  );
 
   it("is a no-op once the flag already matches the tile's actual transparency", () => {
     const { engine, dirtyReasons } = makeFakeVoxelEngine();
@@ -356,8 +359,10 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
     bridge.loadTileset(engine, "atlas");
     updatedTilesets.length = 0;
 
-    // What a room snapshot lands as: CanvasBuffer.loadTexture swaps the
-    // element, so the padded atlas has to be rebuilt whole.
+    /*
+     * What a room snapshot lands as: CanvasBuffer.loadTexture swaps the
+     * element, so the padded atlas has to be rebuilt whole.
+     */
     manager.document.emit("replaced", { size: { x: 64, y: 64 } });
     scheduler.frame();
 
@@ -411,8 +416,10 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
     bridge.attach(manager);
     bridge.loadTileset(engine, "atlas");
 
-    // Both blocks now read as opaque. Make every tile read transparent, but
-    // report an edit inside tile (0, 0) only.
+    /*
+     * Both blocks now read as opaque. Make every tile read transparent, but
+     * report an edit inside tile (0, 0) only.
+     */
     transparent = true;
     manager.document.emit("changed", {
       bounds: { x: 4, y: 4, width: 2, height: 2 }
@@ -628,8 +635,10 @@ describe("TextureEditorBridge / placeholder atlas", () => {
       access: "write" as const,
 
       can: () => "write" as const,
-      // Keyed by event: the bridge also subscribes to the presence events, and
-      // a snapshot delivered to those would be read as a peer update.
+      /*
+       * Keyed by event: the bridge also subscribes to the presence events, and
+       * a snapshot delivered to those would be read as a peer update.
+       */
       on: (
         event: string,
         listener: (message: PixelServerMessage) => void

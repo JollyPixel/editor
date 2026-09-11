@@ -118,8 +118,10 @@ function visibleArrowCount(
 ): number {
   let count = 0;
   area.traverse((child) => {
-    // The arrows share one InstancedMesh: the policy is expressed as its
-    // instance count, ground-axis slots first.
+    /*
+     * The arrows share one InstancedMesh: the policy is expressed as its
+     * instance count, ground-axis slots first.
+     */
     if (child instanceof THREE.InstancedMesh && child.visible) {
       count = child.count;
     }
@@ -424,8 +426,10 @@ describe("vertical modifier", () => {
   test("honours Shift pressed after the drag started", () => {
     const harness = createHarness({ moveAxes: "xyz" });
 
-    // The gesture starts without the modifier, as it does when a user reaches
-    // for Shift a moment after grabbing the box.
+    /*
+     * The gesture starts without the modifier, as it does when a user reaches
+     * for Shift a moment after grabbing the box.
+     */
     harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
     harness.send({
       type: "pointermove",
@@ -461,8 +465,10 @@ describe("attach from a pointer event", () => {
     harness.scene.add(other);
     harness.render();
 
-    // The press lands on an area the controls are not attached to yet: the
-    // host picks it and hands the same event over.
+    /*
+     * The press lands on an area the controls are not attached to yet: the
+     * host picks it and hands the same event over.
+     */
     const press = pointerAt({
       camera: harness.camera,
       element: harness.element,
@@ -578,8 +584,10 @@ describe("handle picking stays live", () => {
       true
     );
 
-    // Pulling the camera back rescales the arrows, which InstancedMesh's
-    // cached bounding sphere would not know about.
+    /*
+     * Pulling the camera back rescales the arrows, which InstancedMesh's
+     * cached bounding sphere would not know about.
+     */
     harness.camera.position.set(30, 60, 70);
     harness.camera.lookAt(0, 0, 0);
     harness.render();

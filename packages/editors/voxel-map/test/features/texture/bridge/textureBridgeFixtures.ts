@@ -8,8 +8,10 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
 
-// Ghost previews coalesce their presence updates through
-// requestAnimationFrame, which happy-dom does not expose globally.
+/*
+ * Ghost previews coalesce their presence updates through
+ * requestAnimationFrame, which happy-dom does not expose globally.
+ */
 const kFrames = new Map<number, () => void>();
 let nextFrameHandle = 0;
 Object.assign(globalThis, {

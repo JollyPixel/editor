@@ -212,8 +212,10 @@ describe("voxelMapAssetHandler", () => {
       }))
     );
 
-    // Applying the command twice would move x to 4.
-    // The expected value verifies single application.
+    /*
+     * Applying the command twice would move x to 4.
+     * The expected value verifies single application.
+     */
     assert.deepEqual(layer.offset, {
       x: 2,
       y: 0,

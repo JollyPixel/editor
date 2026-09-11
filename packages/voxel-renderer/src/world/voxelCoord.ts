@@ -1,8 +1,10 @@
 // Import Internal Dependencies
 import type { VoxelCoord } from "./types.ts";
 
-// CONSTANTS
-// Pulls the point just inside the cell owning the surface it sits on.
+/*
+ * CONSTANTS
+ * Pulls the point just inside the cell owning the surface it sits on.
+ */
 const kSurfaceEpsilon = 1e-4;
 
 export function voxelCellOf(

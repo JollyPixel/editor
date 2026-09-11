@@ -28,8 +28,10 @@ export function mergeChunkGeometries(
     };
   }
 
-  // Sizing the output up front keeps this to two allocations instead of the
-  // repeated reallocation (and boxed doubles) a `number[]` would cost.
+  /*
+   * Sizing the output up front keeps this to two allocations instead of the
+   * repeated reallocation (and boxed doubles) a `number[]` would cost.
+   */
   let positionLength = 0;
   let indexLength = 0;
   for (const geometry of geometries.values()) {
@@ -63,8 +65,10 @@ export function mergeChunkGeometries(
     positions.set(position.array, positionCursor);
     positionCursor += position.array.length;
 
-    // Indices are rebased onto the merged vertex range, so they cannot be
-    // copied verbatim the way positions can.
+    /*
+     * Indices are rebased onto the merged vertex range, so they cannot be
+     * copied verbatim the way positions can.
+     */
     const source = index.array;
     for (let i = 0; i < source.length; i++) {
       indices[indexCursor + i] = source[i] + indexOffset;

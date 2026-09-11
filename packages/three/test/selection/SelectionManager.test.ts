@@ -7,7 +7,9 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { SelectionManager, SelectionOutline, SelectionBoundingBox } from "#src/index.ts";
-import { createDefaultSelectionOverlayRegistry } from "#src/selection/overlays/builtinSelectionOverlayFactories.ts";
+import {
+  createDefaultSelectionOverlayRegistry
+} from "#src/selection/overlays/builtinSelectionOverlayFactories.ts";
 
 function createManagerWithMeshAndGroup(): {
   manager: SelectionManager;
@@ -232,7 +234,10 @@ describe("bounding box options", () => {
     tunedManager.select("group-1");
 
     const overlay = group.children.at(-1) as SelectionBoundingBox;
-    assert.strictEqual((overlay.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>).material.opacity, 0.3);
+    assert.strictEqual(
+      (overlay.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>).material.opacity,
+      0.3
+    );
 
     manager.dispose();
     tunedManager.dispose();
@@ -254,7 +259,10 @@ describe("bounding box options", () => {
 
     const overlay = group.children.at(-1) as SelectionBoundingBox;
     assert.strictEqual(overlay.children.length, 1);
-    assert.strictEqual((overlay.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>).material.opacity, 0.5);
+    assert.strictEqual(
+      (overlay.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>).material.opacity,
+      0.5
+    );
     assert.strictEqual(manager.appearance.bounds.fillOpacity, 0.5);
   });
 });

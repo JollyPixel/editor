@@ -478,7 +478,8 @@ describe("AssetProjector — malformed events", () => {
 });
 
 describe("AssetProjector — rejected events", () => {
-  test("warns about a malformed event, naming the offending field",
+  test(
+    "warns about a malformed event, naming the offending field",
     async() => {
       const source = new MemoryAssetSource();
       using eventStore = EventStore.persistence.memory();
@@ -510,9 +511,11 @@ describe("AssetProjector — rejected events", () => {
       assert.strictEqual(warnings.length, 1);
       assert.strictEqual(warnings[0].metadata.reason, "malformed");
       assert.match(String(warnings[0].metadata.detail), /kind/);
-    });
+    }
+  );
 
-  test("does not warn about an asset event type it does not know",
+  test(
+    "does not warn about an asset event type it does not know",
     async() => {
       const source = new MemoryAssetSource();
       using eventStore = EventStore.persistence.memory();
@@ -544,7 +547,8 @@ describe("AssetProjector — rejected events", () => {
         records.filter((record) => record.level === "warn"),
         []
       );
-    });
+    }
+  );
 
   test("skips a content reference rather than throwing", async() => {
     const source = new MemoryAssetSource();

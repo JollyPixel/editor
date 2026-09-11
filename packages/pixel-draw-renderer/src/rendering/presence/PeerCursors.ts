@@ -21,7 +21,6 @@ interface PeerCursorElements {
 }
 
 // CONSTANTS
-// This pointer stays screen-sized because its group is translated, not scaled.
 const kArrowPath = "M0,0 L0,15.5 L3.6,12 L6.3,18.3 L8.6,17.3 L6,11.2 L11,11.2 Z";
 const kLabelFontSize = 11;
 const kLabelOffsetX = 13;

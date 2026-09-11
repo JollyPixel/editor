@@ -16,12 +16,8 @@ export function clampRectSize(
   rect: SelectionRect,
   size: Vec2
 ): SelectionRect {
-  const width = clamp(
-    rect.width, 1, Math.max(1, size.x)
-  );
-  const height = clamp(
-    rect.height, 1, Math.max(1, size.y)
-  );
+  const width = clamp(rect.width, 1, Math.max(1, size.x));
+  const height = clamp(rect.height, 1, Math.max(1, size.y));
 
   return {
     width,

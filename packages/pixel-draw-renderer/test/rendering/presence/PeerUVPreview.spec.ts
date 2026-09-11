@@ -151,27 +151,30 @@ describe("PeerUVPreview — set", () => {
     );
   });
 
-  test("a later set() for the same peer with the same shape family reuses the border (no duplicate elements)", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
-    const ghosts = new PeerUVPreview(
-      svg,
-      viewport,
-      makeUvOverlay(svg, viewport)
-    );
+  test(
+    "a later set() for the same peer with the same shape family reuses the border (no duplicate elements)",
+    () => {
+      const svg = makeSvg();
+      const viewport = makeViewport();
+      const ghosts = new PeerUVPreview(
+        svg,
+        viewport,
+        makeUvOverlay(svg, viewport)
+      );
 
-    ghosts.set("peer-A", kRectGhost);
-    ghosts.set(
-      "peer-A",
-      { ...kRectGhost, geometry: { x: 0, y: 0, width: 1, height: 1 } }
-    );
+      ghosts.set("peer-A", kRectGhost);
+      ghosts.set(
+        "peer-A",
+        { ...kRectGhost, geometry: { x: 0, y: 0, width: 1, height: 1 } }
+      );
 
-    assert.strictEqual(
-      svg.querySelectorAll("rect").length,
-      2,
-      "two rect elements created"
-    );
-  });
+      assert.strictEqual(
+        svg.querySelectorAll("rect").length,
+        2,
+        "two rect elements created"
+      );
+    }
+  );
 
   test("switching shape family (rect -> triangle) for the same peer recreates the border", () => {
     const svg = makeSvg();
@@ -376,55 +379,58 @@ describe("PeerUVPreview — destroy", () => {
 });
 
 describe("PeerUVPreview — suppresses the classical UVRegionLayer border", () => {
-  test("hides the region's classical border while a peer's ghost for it is active, restores it once cleared", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
-    const uvMap = makeUvMap();
-    const uvOverlay = makeUvOverlay(svg, viewport, uvMap);
-    const ghosts = new PeerUVPreview(svg, viewport, uvOverlay);
+  test(
+    "hides the region's classical border while a peer's ghost for it is active, restores it once cleared",
+    () => {
+      const svg = makeSvg();
+      const viewport = makeViewport();
+      const uvMap = makeUvMap();
+      const uvOverlay = makeUvOverlay(svg, viewport, uvMap);
+      const ghosts = new PeerUVPreview(svg, viewport, uvOverlay);
 
-    const region = uvMap.create({
-      width: 2,
-      height: 3,
-      id: "region-A",
-      color: "#123456"
-    });
-    uvMap.select(region.id);
-    // classical border: casing + stroke, visible once selected.
-    assert.strictEqual(
-      svg.querySelectorAll("rect").length,
-      2,
-      "classical border present before any ghost"
-    );
+      const region = uvMap.create({
+        width: 2,
+        height: 3,
+        id: "region-A",
+        color: "#123456"
+      });
+      uvMap.select(region.id);
+      // classical border: casing + stroke, visible once selected.
+      assert.strictEqual(
+        svg.querySelectorAll("rect").length,
+        2,
+        "classical border present before any ghost"
+      );
 
-    ghosts.set(
-      "peer-A",
-      { ...kRectGhost, id: region.id, face: null }
-    );
-    // classical border gone; only the (dashed) ghost border remains.
-    const rectsWhileDragging = svg.querySelectorAll("rect");
-    assert.strictEqual(
-      rectsWhileDragging.length,
-      2,
-      "only the ghost border remains"
-    );
-    assert.ok(
-      rectsWhileDragging[1].getAttribute("stroke-dasharray"),
-      "the remaining border is the dashed ghost"
-    );
+      ghosts.set(
+        "peer-A",
+        { ...kRectGhost, id: region.id, face: null }
+      );
+      // classical border gone; only the (dashed) ghost border remains.
+      const rectsWhileDragging = svg.querySelectorAll("rect");
+      assert.strictEqual(
+        rectsWhileDragging.length,
+        2,
+        "only the ghost border remains"
+      );
+      assert.ok(
+        rectsWhileDragging[1].getAttribute("stroke-dasharray"),
+        "the remaining border is the dashed ghost"
+      );
 
-    ghosts.remove("peer-A");
-    const rectsAfterClear = svg.querySelectorAll("rect");
-    assert.strictEqual(
-      rectsAfterClear.length,
-      2,
-      "classical border restored"
-    );
-    assert.ok(
-      !rectsAfterClear[1].hasAttribute("stroke-dasharray"),
-      "the restored border is solid, not the ghost"
-    );
-  });
+      ghosts.remove("peer-A");
+      const rectsAfterClear = svg.querySelectorAll("rect");
+      assert.strictEqual(
+        rectsAfterClear.length,
+        2,
+        "classical border restored"
+      );
+      assert.ok(
+        !rectsAfterClear[1].hasAttribute("stroke-dasharray"),
+        "the restored border is solid, not the ghost"
+      );
+    }
+  );
 
   test("a ghost for an unrelated region doesn't suppress this region's classical border", () => {
     const svg = makeSvg();

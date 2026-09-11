@@ -14,9 +14,11 @@ export default defineConfig({
     glsl(),
     wasm()
   ],
-  // @dimforge/rapier3d uses a static `import ... from "*.wasm"` that Vite's
-  // pre-bundler (esbuild) cannot handle. Excluding it forces Vite to serve
-  // the package as-is, letting the browser load the WASM binary directly.
+  /*
+   * @dimforge/rapier3d uses a static `import ... from "*.wasm"` that Vite's
+   * pre-bundler (esbuild) cannot handle. Excluding it forces Vite to serve
+   * the package as-is, letting the browser load the WASM binary directly.
+   */
   optimizeDeps: {
     exclude: ["@dimforge/rapier3d"]
   }

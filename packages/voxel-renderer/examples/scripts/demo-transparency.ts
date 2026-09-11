@@ -232,10 +232,12 @@ function applyMaterialState(
 ): void {
   material.alphaTest = materialState.alphaTest;
   material.flatShading = materialState.flatShading;
-  // Opaque materials write depth whatever the panel says; the toggle is about
-  // what blending does without it.
-  // `side` is deliberately left alone: the engine picks it per material, and
-  // overwriting it here would put the cutout pass back to single-sided.
+  /*
+   * Opaque materials write depth whatever the panel says; the toggle is about
+   * what blending does without it.
+   * `side` is deliberately left alone: the engine picks it per material, and
+   * overwriting it here would put the cutout pass back to single-sided.
+   */
   if (material.transparent) {
     material.depthWrite = materialState.depthWrite;
   }
@@ -252,8 +254,10 @@ function updateLayer(
   options: { visible?: boolean; opacity?: number; }
 ): void {
   engine.world.updateLayer(name, options);
-  // An opacity change dirties every layer; flush so the panel and the frame
-  // never disagree about what the scene looks like.
+  /*
+   * An opacity change dirties every layer; flush so the panel and the frame
+   * never disagree about what the scene looks like.
+   */
   engine.flush();
   syncStats();
 }

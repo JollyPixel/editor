@@ -120,8 +120,10 @@ export class HistoryFileToolbarController implements ReactiveController {
     anchor.download = "texture.png";
     anchor.click();
 
-    // Revoking synchronously cancels the download on some browsers, which
-    // have not read the URL by the time click() returns.
+    /*
+     * Revoking synchronously cancels the download on some browsers, which
+     * have not read the URL by the time click() returns.
+     */
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 

@@ -133,8 +133,10 @@ describe("Actor", () => {
 
       const destroySpies: ReturnType<typeof mock.fn>[] = [];
 
-      // Create three mock components whose destroy() splices themselves
-      // from actor.components, reproducing the real ActorComponent behavior
+      /*
+       * Create three mock components whose destroy() splices themselves
+       * from actor.components, reproducing the real ActorComponent behavior
+       */
       for (let i = 0; i < 3; i++) {
         const spy = mock.fn();
         const component = {

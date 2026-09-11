@@ -32,15 +32,18 @@ describe("VoxelEngine — chunk rebuild orchestration", () => {
     assert.equal(engine.root.children.length, meshCountAfterFirstTick);
   });
 
-  it("init() rebuilds meshes for voxels already present before initialization (e.g. after deserialize)", () => {
-    const engine = makeEngine();
-    engine.world.addLayer("Ground");
-    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+  it(
+    "init() rebuilds meshes for voxels already present before initialization (e.g. after deserialize)",
+    () => {
+      const engine = makeEngine();
+      engine.world.addLayer("Ground");
+      engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
 
-    engine.init();
+      engine.init();
 
-    assert.equal(engine.root.children.length, 1);
-  });
+      assert.equal(engine.root.children.length, 1);
+    }
+  );
 
   it("dispose() removes all chunk meshes from root", () => {
     const engine = makeEngine();
@@ -78,8 +81,10 @@ describe("VoxelEngine — rebuild queue wiring", () => {
     engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.tick(0);
 
-    // The chunk was meshed, so a further edit must dirty it again rather than
-    // being swallowed by the clear that ran before the mesh.
+    /*
+     * The chunk was meshed, so a further edit must dirty it again rather than
+     * being swallowed by the clear that ran before the mesh.
+     */
     engine.world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId });
 
     assert.equal(engine.world.getLayer("Ground")!.getChunk(0, 0, 0)!.dirty, true);

@@ -40,8 +40,10 @@ describe("TextureEditorBridge / room presence", () => {
 
     bridge.attach(makeFakeManager(() => false), room);
 
-    // Both the document and the cursor sync must be listening first: a
-    // snapshot or a presence patch arriving before them would be dropped.
+    /*
+     * Both the document and the cursor sync must be listening first: a
+     * snapshot or a presence patch arriving before them would be dropped.
+     */
     assert.equal(calls.at(-1), "join");
     assert.equal(
       calls.filter((call) => call === "subscribe:peer-presence").length,
@@ -75,8 +77,10 @@ describe("TextureEditorBridge / room presence", () => {
 
     bridge.attach(manager, room);
 
-    // Both previews are non-authoritative: without them a peer only sees a
-    // stroke or a selection once it commits.
+    /*
+     * Both previews are non-authoritative: without them a peer only sees a
+     * stroke or a selection once it commits.
+     */
     assert.equal(typeof manager.onStrokeProgress, "function");
     manager.onStrokeProgress!([{ x: 1, y: 2, color: { r: 255, g: 0, b: 0, a: 255 } }]);
     manager.selectionEvents.emit("selection-progress", {

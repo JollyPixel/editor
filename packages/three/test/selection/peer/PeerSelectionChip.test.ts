@@ -88,7 +88,11 @@ describe("label", () => {
 
     chip.label = undefined;
 
-    assert.strictEqual(context.fillTextCallCount, callsBefore, "must not draw text once the label is cleared");
+    assert.strictEqual(
+      context.fillTextCallCount,
+      callsBefore,
+      "must not draw text once the label is cleared"
+    );
   });
 });
 

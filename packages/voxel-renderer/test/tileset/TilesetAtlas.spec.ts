@@ -48,8 +48,10 @@ describe("TilesetAtlas — resolved definition", () => {
 });
 
 describe("TilesetAtlas — padding", () => {
-  // node:test has no DOM, so padAtlas() cannot rasterize: this is the
-  // unpadded fallback contract.
+  /*
+   * node:test has no DOM, so padAtlas() cannot rasterize: this is the
+   * unpadded fallback contract.
+   */
   it("falls back to the source texture when the environment cannot rasterize", () => {
     const texture = mockTexture(64, 64);
     const atlas = new TilesetAtlas(

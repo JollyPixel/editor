@@ -24,9 +24,11 @@ test.describe("DockLayout keyboard", () => {
     await grip.press(" ");
     await grip.press("ArrowLeft");
 
-    // Discarding the emptied window re-runs the host slot change. The sync
-    // behind it must see the move, or it reconciles the pane straight back
-    // out into a fresh window.
+    /*
+     * Discarding the emptied window re-runs the host slot change. The sync
+     * behind it must see the move, or it reconciles the pane straight back
+     * out into a fresh window.
+     */
     await expect(page.locator("jolly-floating")).toHaveCount(0);
     await expect(paneKeysOf(page, "left")).resolves.toEqual([
       "hierarchy",

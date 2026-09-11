@@ -4,9 +4,11 @@ import { Window } from "happy-dom";
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
 
-// happy-dom has no browser to run in, so DOM-touching src/ code (instanceof
-// checks, document.createElement) needs these globals, wired through
-// `node --import ./test/setup.ts`.
+/*
+ * happy-dom has no browser to run in, so DOM-touching src/ code (instanceof
+ * checks, document.createElement) needs these globals, wired through
+ * `node --import ./test/setup.ts`.
+ */
 Object.assign(globalThis, {
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,

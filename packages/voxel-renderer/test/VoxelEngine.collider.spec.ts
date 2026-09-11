@@ -13,8 +13,10 @@ import {
   CUBE_ID as kCubeId
 } from "./helpers/engine.ts";
 
-// No physics backend here on purpose: importing a Rapier symbol would defeat
-// the point of these tests.
+/*
+ * No physics backend here on purpose: importing a Rapier symbol would defeat
+ * the point of these tests.
+ */
 function makeFakeCollider() {
   const rebuilt: { key: string; collision: VoxelChunkCollision; }[] = [];
   const removed: string[] = [];

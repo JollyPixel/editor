@@ -185,8 +185,10 @@ describe("Built-in shapes — construction", () => {
   });
 
   it("keeps a slab's occlusion tied to its type, not its id", () => {
-    // A "slabTop" reading as a bottom slab (or vice versa) leaves a hole
-    // wherever the mesher trusts the name over the constructor argument.
+    /*
+     * A "slabTop" reading as a bottom slab (or vice versa) leaves a hole
+     * wherever the mesher trusts the name over the constructor argument.
+     */
     for (const id of ["myBottomSlab", "slab"]) {
       const bottom = new Slab("bottom", id);
       assert.ok(bottom.occludes(FACE.NegY));

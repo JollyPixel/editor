@@ -6,7 +6,6 @@ import { PixelBuffer } from "./PixelBuffer.ts";
 import type { Vec2 } from "../types.ts";
 
 // CONSTANTS
-// Mirrors PixelBuffer's own ceiling, which the decoded image may exceed.
 const kDefaultMaxSize = 2048;
 
 export interface PixelBufferFromPngOptions {

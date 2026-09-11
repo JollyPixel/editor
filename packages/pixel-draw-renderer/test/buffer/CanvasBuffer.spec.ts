@@ -16,8 +16,10 @@ import {
   readPixel
 } from "../fixtures/canvas.ts";
 
-// CONSTANTS
-// Small master canvas size for fast tests (real default is 2048)
+/*
+ * CONSTANTS
+ * Small master canvas size for fast tests (real default is 2048)
+ */
 const kTestMaxSize = 32;
 
 describe("CanvasBuffer", () => {
@@ -112,42 +114,47 @@ describe("CanvasBuffer", () => {
       assert.strictEqual(ctx.putImageDataCallCount - before, 1);
     });
 
-    test("leaves pixels inside the bounding box but outside the drawn set untouched on the canvas mirror", () => {
-      const buf = new CanvasBuffer({
-        size: { x: 8, y: 8 },
-        maxSize: kTestMaxSize
-      });
-      // Pre-existing pixel that sits strictly inside the bounding box of the
-      // upcoming sparse drawPixels call, but isn't one of the drawn positions.
-      buf.drawPixels(
-        [
-          { x: 2, y: 2 }
-        ],
-        { r: 1, g: 2, b: 3, a: 4 }
-      );
+    test(
+      "leaves pixels inside the bounding box but outside the drawn set untouched on the canvas mirror",
+      () => {
+        const buf = new CanvasBuffer({
+          size: { x: 8, y: 8 },
+          maxSize: kTestMaxSize
+        });
+        /*
+         * Pre-existing pixel that sits strictly inside the bounding box of the
+         * upcoming sparse drawPixels call, but isn't one of the drawn positions.
+         */
+        buf.drawPixels(
+          [
+            { x: 2, y: 2 }
+          ],
+          { r: 1, g: 2, b: 3, a: 4 }
+        );
 
-      // Sparse diagonal draw whose bounding box covers (2,2).
-      buf.drawPixels(
-        [
-          { x: 0, y: 0 },
-          { x: 4, y: 4 }
-        ],
-        { r: 100, g: 100, b: 100, a: 255 }
-      );
+        // Sparse diagonal draw whose bounding box covers (2,2).
+        buf.drawPixels(
+          [
+            { x: 0, y: 0 },
+            { x: 4, y: 4 }
+          ],
+          { r: 100, g: 100, b: 100, a: 255 }
+        );
 
-      assert.deepStrictEqual(
-        buf.samplePixel(2, 2),
-        [1, 2, 3, 4]
-      );
-      assert.deepStrictEqual(
-        buf.samplePixel(0, 0),
-        [100, 100, 100, 255]
-      );
-      assert.deepStrictEqual(
-        buf.samplePixel(4, 4),
-        [100, 100, 100, 255]
-      );
-    });
+        assert.deepStrictEqual(
+          buf.samplePixel(2, 2),
+          [1, 2, 3, 4]
+        );
+        assert.deepStrictEqual(
+          buf.samplePixel(0, 0),
+          [100, 100, 100, 255]
+        );
+        assert.deepStrictEqual(
+          buf.samplePixel(4, 4),
+          [100, 100, 100, 255]
+        );
+      }
+    );
 
     test("accepts a lazy iterable (generator), not just an array", () => {
       const buf = new CanvasBuffer({

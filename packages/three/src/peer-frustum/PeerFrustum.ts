@@ -124,9 +124,7 @@ export class PeerFrustum extends THREE.LineSegments<
     }
 
     super(
-      PeerFrustum.#buildGeometry(
-        fov, aspect, near, depth, showApex
-      ),
+      PeerFrustum.#buildGeometry(fov, aspect, near, depth, showApex),
       new THREE.LineBasicMaterial({ color })
     );
 

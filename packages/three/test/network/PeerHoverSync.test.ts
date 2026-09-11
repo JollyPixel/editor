@@ -21,8 +21,10 @@ function setup(
     registry,
     selection,
     throttleMs: options.throttleMs ?? 0,
-    // Off by default - a test only opts in explicitly (see "resync" below),
-    // so an unrelated test never has a live interval running under it.
+    /*
+     * Off by default - a test only opts in explicitly (see "resync" below),
+     * so an unrelated test never has a live interval running under it.
+     */
     resyncIntervalMs: options.resyncIntervalMs ?? 0,
     presenceKey: options.presenceKey
   });

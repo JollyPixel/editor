@@ -12,15 +12,21 @@ const kCanvas2DStub = new Proxy({}, {
 
     return target[property];
   },
-  set(target: Record<string, unknown>, property: string, value: unknown) {
+  set(
+    target: Record<string, unknown>,
+    property: string,
+    value: unknown
+  ) {
     target[property] = value;
 
     return true;
   }
 });
 
-// Element constructors are copied wholesale: decorated Lit components
-// reference them at module scope, so a missing one throws on import.
+/*
+ * Element constructors are copied wholesale: decorated Lit components
+ * reference them at module scope, so a missing one throws on import.
+ */
 const kElementConstructors = Object.fromEntries(
   Object.keys(kEmulatedBrowserWindow)
     .filter((key) => key.startsWith("HTML") && key.endsWith("Element"))
@@ -39,7 +45,5 @@ Object.assign(globalThis, {
 });
 
 Object.assign(kEmulatedBrowserWindow.HTMLCanvasElement.prototype, {
-  getContext: (
-    contextId: string
-  ) => (contextId === "2d" ? kCanvas2DStub : null)
+  getContext: (contextId: string) => (contextId === "2d" ? kCanvas2DStub : null)
 });

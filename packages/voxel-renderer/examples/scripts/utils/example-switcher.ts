@@ -63,15 +63,19 @@ export function createExamplePane(
     });
 
   const preferences = document.createElement("jolly-theme-preferences");
-  // Two rows at the top of the pane rather than flattened into it, see
-  // @jolly-pixel/ui docs/api/theme/theme-preferences.md.
+  /*
+   * Two rows at the top of the pane rather than flattened into it, see
+   * @jolly-pixel/ui docs/api/theme/theme-preferences.md.
+   */
   preferences.layout = "stack";
   preferences.storageKey = "voxel-renderer-examples";
   chrome.element.append(preferences);
 
-  // Not `grow`: it would claim leftover flex space even with little content.
-  // `max-height: 100%` in main.css caps it instead, so it only scrolls its
-  // own content once that would otherwise exceed the dock.
+  /*
+   * Not `grow`: it would claim leftover flex space even with little content.
+   * `max-height: 100%` in main.css caps it instead, so it only scrolls its
+   * own content once that would otherwise exceed the dock.
+   */
   const pane = new Pane({
     title,
     container: dock.element,

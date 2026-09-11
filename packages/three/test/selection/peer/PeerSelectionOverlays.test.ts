@@ -53,19 +53,23 @@ describe("peer selection", () => {
 
     assert.strictEqual(mesh.children.length, 1);
     assert.ok("material" in mesh.children[0]);
-    const material = (mesh.children[0] as THREE.LineSegments | THREE.Mesh).material as THREE.LineBasicMaterial;
+    const overlay = mesh.children[0] as THREE.LineSegments | THREE.Mesh;
+    const material = overlay.material as THREE.LineBasicMaterial;
     assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-a"));
   });
 
-  test("a second peer on the same object still produces exactly one overlay, in the first peer's color", () => {
-    const { registry, mesh } = createHarness();
-    registry.select("peer-a", "mesh-1");
-    registry.select("peer-b", "mesh-1");
+  test(
+    "a second peer on the same object still produces exactly one overlay, in the first peer's color",
+    () => {
+      const { registry, mesh } = createHarness();
+      registry.select("peer-a", "mesh-1");
+      registry.select("peer-b", "mesh-1");
 
-    assert.strictEqual(mesh.children.length, 1);
-    const material = (mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
-    assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-a"));
-  });
+      assert.strictEqual(mesh.children.length, 1);
+      const material = (mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
+      assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-a"));
+    }
+  );
 
   test("the primary peer deselecting updates the same overlay instance to the next peer's color", () => {
     const { registry, mesh } = createHarness();
@@ -76,7 +80,11 @@ describe("peer selection", () => {
     registry.select("peer-a", null);
 
     assert.strictEqual(mesh.children.length, 1);
-    assert.strictEqual(mesh.children[0], overlayBefore, "must reuse the same overlay instance, not rebuild it");
+    assert.strictEqual(
+      mesh.children[0],
+      overlayBefore,
+      "must reuse the same overlay instance, not rebuild it"
+    );
     const material = (mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
     assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-b"));
   });
@@ -166,11 +174,13 @@ describe("visibility", () => {
     const { registry, visibility, mesh } = createHarness({ visibility: true });
     // Behind the camera.
     mesh.position.set(0, 0, 10);
-    // `update()` only evaluates currently peer-selected ids (see its own doc
-    // comment), so the selection must exist first - registers with the
-    // default "unseen" visible=true, then this `update()` evaluates it for
-    // real (a flip, since nothing was tracked yet) and dispatches
-    // `visibilityChange`, which re-runs `#refresh` and picks up the result.
+    /*
+     * `update()` only evaluates currently peer-selected ids (see its own doc
+     * comment), so the selection must exist first - registers with the
+     * default "unseen" visible=true, then this `update()` evaluates it for
+     * real (a flip, since nothing was tracked yet) and dispatches
+     * `visibilityChange`, which re-runs `#refresh` and picks up the result.
+     */
     registry.select("peer-a", "mesh-1");
     visibility!.update();
 
@@ -200,7 +210,11 @@ describe("visibility", () => {
 
     selection.select("mesh-1");
 
-    assert.strictEqual(mesh.children.length, 1, "local selection must render regardless of camera visibility");
+    assert.strictEqual(
+      mesh.children.length,
+      1,
+      "local selection must render regardless of camera visibility"
+    );
   });
 
   test("omitting visibility preserves always-visible behavior", () => {

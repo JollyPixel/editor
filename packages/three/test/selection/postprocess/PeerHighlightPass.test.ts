@@ -151,30 +151,35 @@ describe("local selection", () => {
     assert.strictEqual(entries[0].priority, true);
   });
 
-  test("a group target is pushed as its own entry too - not skipped the way a highlight-technique mesh would be", () => {
-    // `SelectionManager` still renders a local `SelectionBoundingBox` for a
-    // group regardless of technique (see its own "highlight technique"
-    // test suite) - this is the other half of that: a group's local
-    // selection is also pushed into `HighlightPass` unconditionally,
-    // same as a mesh's, since the HighlightPass entries setter already
-    // traverses a group entry to its own meshes. Both are intentional and
-    // meant to render together for a group - the wireframe/fill box reads
-    // as "this is a group", the per-mesh colored outline as "here's what's
-    // in it and whose selection color it's in" - not a redundancy to
-    // resolve by picking one.
-    const { selection, highlight } = createHarness();
-    const group = new THREE.Group();
-    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
-    selection.register("group-1", group);
+  test(
+    "a group target is pushed as its own entry too - not skipped the way a highlight-technique mesh would be",
+    () => {
+      /*
+       * `SelectionManager` still renders a local `SelectionBoundingBox` for a
+       * group regardless of technique (see its own "highlight technique"
+       * test suite) - this is the other half of that: a group's local
+       * selection is also pushed into `HighlightPass` unconditionally,
+       * same as a mesh's, since the HighlightPass entries setter already
+       * traverses a group entry to its own meshes. Both are intentional and
+       * meant to render together for a group - the wireframe/fill box reads
+       * as "this is a group", the per-mesh colored outline as "here's what's
+       * in it and whose selection color it's in" - not a redundancy to
+       * resolve by picking one.
+       */
+      const { selection, highlight } = createHarness();
+      const group = new THREE.Group();
+      group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+      selection.register("group-1", group);
 
-    selection.select("group-1");
+      selection.select("group-1");
 
-    const entries = lastEntries(highlight);
-    assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].target, group);
-    assert.strictEqual(entries[0].color, selection.appearance.selected.color);
-    assert.strictEqual(entries[0].priority, true);
-  });
+      const entries = lastEntries(highlight);
+      assert.strictEqual(entries.length, 1);
+      assert.strictEqual(entries[0].target, group);
+      assert.strictEqual(entries[0].color, selection.appearance.selected.color);
+      assert.strictEqual(entries[0].priority, true);
+    }
+  );
 
   test("wins over a peer claim using the local selection color", () => {
     const { selection, registry, highlight } = createHarness();
@@ -268,12 +273,18 @@ describe("peer hover", () => {
     assert.strictEqual(entries[0].target, mesh);
     assert.strictEqual(entries[0].isolated, true);
     assert.ok(!entries[0].priority, "a peer hover entry should not be marked priority");
-    assert.notStrictEqual(entries[0].color, hoverRegistry!.colorOf("peer-a"), "must be darkened, not the raw peer color");
+    assert.notStrictEqual(
+      entries[0].color,
+      hoverRegistry!.colorOf("peer-a"),
+      "must be darkened, not the raw peer color"
+    );
   });
 
   test("without a hoverRegistry, a peer hover is never included - unchanged behavior", () => {
-    // No `hover: true` here - `createHarness`'s default omits `hoverRegistry`
-    // entirely, matching an existing caller that hasn't opted in.
+    /*
+     * No `hover: true` here - `createHarness`'s default omits `hoverRegistry`
+     * entirely, matching an existing caller that hasn't opted in.
+     */
     const { registry, highlight } = createHarness();
     registry.select("peer-a", "mesh-1");
 
@@ -323,9 +334,15 @@ describe("peer hover", () => {
     hoverRegistry!.hover("peer-b", "mesh-1");
 
     assert.strictEqual(lastEntries(highlight).length, 1);
-    // `#darken` returns a fresh `THREE.Color` per call - compare by value,
-    // not identity.
-    assert.deepStrictEqual(lastEntries(highlight)[0].color, afterFirst, "must stay in the first peer's darkened color");
+    /*
+     * `#darken` returns a fresh `THREE.Color` per call - compare by value,
+     * not identity.
+     */
+    assert.deepStrictEqual(
+      lastEntries(highlight)[0].color,
+      afterFirst,
+      "must stay in the first peer's darkened color"
+    );
   });
 
   test("a peer hover entry reappears once the suppressing selector clears", () => {
@@ -361,11 +378,13 @@ describe("visibility", () => {
     const { registry, visibility, mesh, highlight } = createHarness({ visibility: true });
     // Behind the camera.
     mesh.position.set(0, 0, 10);
-    // `update()` only evaluates currently peer-selected ids (see its own doc
-    // comment), so the selection must exist first - registers with the
-    // default "unseen" visible=true, then this `update()` evaluates it for
-    // real (a flip) and dispatches `visibilityChange`, which re-runs
-    // `refresh()` and picks up the result.
+    /*
+     * `update()` only evaluates currently peer-selected ids (see its own doc
+     * comment), so the selection must exist first - registers with the
+     * default "unseen" visible=true, then this `update()` evaluates it for
+     * real (a flip) and dispatches `visibilityChange`, which re-runs
+     * `refresh()` and picks up the result.
+     */
     registry.select("peer-a", "mesh-1");
     visibility!.update();
 
@@ -417,16 +436,19 @@ describe("visibility", () => {
 });
 
 describe("refresh", () => {
-  test("recomputes and pushes entries on demand, without needing a peerSelectionChange/selectionChange event", () => {
-    const { registry, highlight, peerHighlight } = createHarness();
-    registry.select("peer-a", "mesh-1");
-    const callsBefore = highlight.calls.length;
+  test(
+    "recomputes and pushes entries on demand, without needing a peerSelectionChange/selectionChange event",
+    () => {
+      const { registry, highlight, peerHighlight } = createHarness();
+      registry.select("peer-a", "mesh-1");
+      const callsBefore = highlight.calls.length;
 
-    peerHighlight.refresh();
+      peerHighlight.refresh();
 
-    assert.strictEqual(highlight.calls.length, callsBefore + 1);
-    assert.strictEqual(lastEntries(highlight)[0].color, registry.colorOf("peer-a"));
-  });
+      assert.strictEqual(highlight.calls.length, callsBefore + 1);
+      assert.strictEqual(lastEntries(highlight)[0].color, registry.colorOf("peer-a"));
+    }
+  );
 });
 
 describe("dispose", () => {

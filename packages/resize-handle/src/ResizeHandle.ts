@@ -117,9 +117,6 @@ export class ResizeHandle extends EventTarget implements ResizeHandleLike {
     });
   }
 
-  /**
-   * Stops interaction and removes a handle created by this instance.
-   */
   dispose(): void {
     if (this.#disposed) {
       return;

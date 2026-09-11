@@ -284,8 +284,10 @@ test.describe("manifest sweep", () => {
       await expect(page.locator("gallery-root main > *").first())
         .toBeAttached();
 
-      // Selecting in-page, not a second goto: a reload discards the tree without ever
-      // calling the teardown this is meant to exercise.
+      /*
+       * Selecting in-page, not a second goto: a reload discards the tree without ever
+       * calling the teardown this is meant to exercise.
+       */
       const next = manifest.find((entry) => entry.id !== example.id) ?? example;
       await page.locator(
         `gallery-root nav a[data-example-id="${next.id}"]`

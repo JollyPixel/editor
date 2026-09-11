@@ -187,8 +187,10 @@ describe("Controls.Mouse motion", () => {
       canvas.dispatchMouseEvent("mousemove", { clientX: 250, clientY: 200 });
     }
 
-    // getBoundingClientRect() forces style and layout in a real browser, at
-    // up to the mouse's polling rate. Offsets carry the same value for free.
+    /*
+     * getBoundingClientRect() forces style and layout in a real browser, at
+     * up to the mouse's polling rate. Offsets carry the same value for free.
+     */
     assert.strictEqual(canvas.boundingClientRectCalls, 0);
     assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 150 });
   });

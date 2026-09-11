@@ -111,8 +111,6 @@ state.addMonitors(readout, {
 const totals = pane.addFolder({ title: "Since start", expanded: true });
 totals.addMonitors(readout, {
   simulated: { label: "simulated" },
-  // `elapsed - time` is accumulator + dropped time, not lag against the wall
-  // clock: elapsed is already clamped and scaled.
   unstepped: { label: "unstepped" },
   droppedMs: {
     label: "dropped",
@@ -144,10 +142,6 @@ loop.start({
   }
 });
 
-/**
- * Applies a slider to the scheduler and flags the change on the plot, so the
- * frames drawn before it are not mistaken for the new setting.
- */
 function bindSetting(
   key: keyof typeof settings,
   options: BindingOptions<number>,
@@ -162,9 +156,6 @@ function bindSetting(
     });
 }
 
-/**
- * Keeps the plot reference lines on the values the scheduler holds now.
- */
 function syncLimits(): void {
   plot.limits = {
     maxFrameDelta: loop.scheduler.maxFrameDelta,
@@ -172,11 +163,6 @@ function syncLimits(): void {
   };
 }
 
-/**
- * Per second counters. Frame rate is measured here rather than in the package:
- * `@jolly-pixel/ui` already owns metric aggregation, and a second copy of a
- * rolling average is how the same value ends up computed three different ways.
- */
 function tickWindow(): void {
   const now = performance.now();
   const windowMs = now - windowStartedAt;

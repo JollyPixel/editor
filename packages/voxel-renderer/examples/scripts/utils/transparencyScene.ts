@@ -185,9 +185,11 @@ function buildWindowWall(
   fill(engine, Ground, TransparencyBlock.Window, {
     x0: 20, x1: 21, y0: 3, y1: 3, z0: 21, z1: 21
   });
-  // Something to look for through the windows. A block flush against the wall
-  // would sit against the window's far face and cull it — the opening needs
-  // air behind it for its own frame to be there to see.
+  /*
+   * Something to look for through the windows. A block flush against the wall
+   * would sit against the window's far face and cull it — the opening needs
+   * air behind it for its own frame to be there to see.
+   */
   fill(engine, Ground, TransparencyBlock.Ruby, {
     x0: 20, x1: 21, y0: 2, y1: 4, z0: 18, z1: 18
   });

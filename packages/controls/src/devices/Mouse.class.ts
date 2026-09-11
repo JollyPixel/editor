@@ -85,9 +85,11 @@ export class Mouse extends Emitter<
     event: WheelEvent
   ): [number, number] {
     if (isApplePlatform()) {
-      // Note that deltaMode MUST be accessed BEFORE delta* in order to get
-      // non-pixel values in Firefox.
-      // See https://github.com/w3c/uievents/issues/181
+      /*
+       * Note that deltaMode MUST be accessed BEFORE delta* in order to get
+       * non-pixel values in Firefox.
+       * See https://github.com/w3c/uievents/issues/181
+       */
 
       switch (event.deltaMode) {
         case event.DOM_DELTA_LINE:
@@ -702,8 +704,10 @@ export class Mouse extends Emitter<
   #onMouseMove = (event: MouseEvent) => {
     this.#canvasEvent = event;
     event.preventDefault();
-    // A move over the canvas proves the pointer is there, even when the
-    // matching enter was missed, as when the window regains focus under it.
+    /*
+     * A move over the canvas proves the pointer is there, even when the
+     * matching enter was missed, as when the window regains focus under it.
+     */
     this.#setHovering(true);
 
     if (this.#wantsPointerLock) {

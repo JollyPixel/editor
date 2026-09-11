@@ -16,8 +16,10 @@ import {
 } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — line tool (Shift)", () => {
-  // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
-  // client(100,100) -> texture (8,8); client(128,100) -> texture (15,8).
+  /*
+   * 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
+   * client(100,100) -> texture (8,8); client(128,100) -> texture (15,8).
+   */
 
   function makeManager(onBufferUpdated: PixelBufferHookListener): PixelArtCanvas {
     return createPixelArtCanvas({
@@ -118,35 +120,44 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     manager.destroy();
   });
 
-  test("holding Shift through a commit re-arms the line from the committed endpoint (chained polyline)", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = makeManager((event) => events.push(event));
-    const canvas = manager.canvas();
+  test(
+    "holding Shift through a commit re-arms the line from the committed endpoint (chained polyline)",
+    () => {
+      const events: PixelBufferHookEvent[] = [];
+      const manager = makeManager((event) => events.push(event));
+      const canvas = manager.canvas();
 
-    moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
-    moveTo(canvas, 128, 100);
+      moveTo(canvas, 100, 100);
+      window.dispatchEvent(shiftKeyDown());
+      moveTo(canvas, 128, 100);
 
-    canvas.dispatchEvent(new MouseEvent("mousedown", {
-      button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
-    }));
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
+      }));
 
-    assert.strictEqual(events.length, 1, "first segment committed");
+      assert.strictEqual(events.length, 1, "first segment committed");
 
-    // Shift is still held (no keyup dispatched): moving and clicking again
-    // should chain a second segment starting where the first one ended,
-    // without requiring the user to release and re-press Shift.
-    moveTo(canvas, 128, 128);
-    canvas.dispatchEvent(new MouseEvent("mousedown", {
-      button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
-    }));
+      /*
+       * Shift is still held (no keyup dispatched): moving and clicking again
+       * should chain a second segment starting where the first one ended,
+       * without requiring the user to release and re-press Shift.
+       */
+      moveTo(canvas, 128, 128);
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
+      }));
 
-    assert.strictEqual(events.length, 2, "second segment chained without re-pressing Shift");
-    const secondEvent = events[1];
-    assert.strictEqual(secondEvent.action, "stroke");
-    assert.strictEqual(secondEvent.metadata.positions.length, 8, "vertical 8px segment from the first segment's endpoint");
-    manager.destroy();
-  });
+      assert.strictEqual(events.length, 2, "second segment chained without re-pressing Shift");
+      const secondEvent = events[1];
+      assert.strictEqual(secondEvent.action, "stroke");
+      assert.strictEqual(
+        secondEvent.metadata.positions.length,
+        8,
+        "vertical 8px segment from the first segment's endpoint"
+      );
+      manager.destroy();
+    }
+  );
 
   test("releasing Shift after a commit does not re-arm the line tool", () => {
     const events: PixelBufferHookEvent[] = [];
@@ -173,7 +184,11 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     assert.strictEqual(events.length, 2, "first is the committed line, second is a normal freehand stroke");
     const freehandEvent = events[1];
     assert.strictEqual(freehandEvent.action, "stroke");
-    assert.notStrictEqual(freehandEvent.metadata.positions.length, 8, "not a rasterized 8px line — a freehand stroke instead");
+    assert.notStrictEqual(
+      freehandEvent.metadata.positions.length,
+      8,
+      "not a rasterized 8px line — a freehand stroke instead"
+    );
     manager.destroy();
   });
 
@@ -191,7 +206,11 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
 
     window.dispatchEvent(shiftKeyDown());
 
-    assert.strictEqual(events.length, 1, "the in-progress freehand stroke was committed when Shift armed the line");
+    assert.strictEqual(
+      events.length,
+      1,
+      "the in-progress freehand stroke was committed when Shift armed the line"
+    );
 
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -241,7 +260,11 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     }));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    assert.strictEqual(events.length, 1, "after blur cancels the line, mousedown behaves as a normal freehand stroke");
+    assert.strictEqual(
+      events.length,
+      1,
+      "after blur cancels the line, mousedown behaves as a normal freehand stroke"
+    );
     manager.destroy();
   });
 
@@ -261,7 +284,11 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
 
     const event = events[0];
     assert.strictEqual(event.action, "stroke");
-    assert.strictEqual(event.metadata.positions.length, 8, "start should still be (8,8), not reset by the repeat event");
+    assert.strictEqual(
+      event.metadata.positions.length,
+      8,
+      "start should still be (8,8), not reset by the repeat event"
+    );
     manager.destroy();
   });
 });

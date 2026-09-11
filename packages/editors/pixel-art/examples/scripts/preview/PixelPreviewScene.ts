@@ -105,8 +105,10 @@ export class PixelPreviewScene extends Systems.Scene {
       getMeshes: () => this.#previewGallery.meshes
     });
 
-    // SceneManager calls awake next frame, after Runtime.load() resolves.
-    // World-dependent callers must wait for this event.
+    /*
+     * SceneManager calls awake next frame, after Runtime.load() resolves.
+     * World-dependent callers must wait for this event.
+     */
     this.emit("awake");
   }
 

@@ -40,8 +40,10 @@ export function quaternionToEuler(
     };
   }
 
-  // Gimbal lock: X and Z become coupled around this axis, so Z collapses to
-  // zero and X absorbs the combined rotation.
+  /*
+   * Gimbal lock: X and Z become coupled around this axis, so Z collapses to
+   * zero and X absorbs the combined rotation.
+   */
   return {
     x: Math.atan2(m32, m22),
     y,

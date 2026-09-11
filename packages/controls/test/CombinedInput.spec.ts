@@ -164,8 +164,10 @@ describe("Controls.CombinedInput", () => {
         "mousedown",
         { button: 0, preventDefault: () => void 0 }
       );
-      // Two ticks: the second clears `wasJustPressed`, leaving the button held
-      // but no longer freshly pressed, which is what the default state needs.
+      /*
+       * Two ticks: the second clears `wasJustPressed`, leaving the button held
+       * but no longer freshly pressed, which is what the default state needs.
+       */
       input.mouse.update();
       input.mouse.update();
 

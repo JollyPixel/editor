@@ -47,77 +47,82 @@ function createContext(
 }
 
 describe("WorkerExtensionProxy — real worker_threads.Worker (e2e)", () => {
-  test("runs a real Extension inside a worker: connect, message, eventStore round-trip, disconnect", async() => {
-    const proxy = new WorkerExtensionProxy(
-      {
-        id: "fixture",
-        name: "fixture",
-        protocols: OPAQUE_PROTOCOLS,
-        modulePath: fixtureUrl,
-        workerData: { greeting: "hi" }
-      },
-      { logger: createLogger() }
-    );
+  test(
+    "runs a real Extension inside a worker: connect, message, eventStore round-trip, disconnect",
+    async() => {
+      const proxy = new WorkerExtensionProxy(
+        {
+          id: "fixture",
+          name: "fixture",
+          protocols: OPAQUE_PROTOCOLS,
+          modulePath: fixtureUrl,
+          workerData: { greeting: "hi" }
+        },
+        { logger: createLogger() }
+      );
 
-    try {
-      const { room, sent } = createSharedRoom();
+      try {
+        const { room, sent } = createSharedRoom();
 
-      // A worker-hosted extension can't hold onto the literal ClientHandle it was
-      // passed (it's synthesized locally in the worker) — its .send() is proxied
-      // through the same stable roomBroadcast.sendTo every later out-of-band send
-      // uses, exactly like ServerRoom's real #members.get(clientId)?.handle.send.
-      const client: ClientHandle = { id: "A", send: () => void 0 };
-      const appended: unknown[] = [];
+        /*
+         * A worker-hosted extension can't hold onto the literal ClientHandle it was
+         * passed (it's synthesized locally in the worker) — its .send() is proxied
+         * through the same stable roomBroadcast.sendTo every later out-of-band send
+         * uses, exactly like ServerRoom's real #members.get(clientId)?.handle.send.
+         */
+        const client: ClientHandle = { id: "A", send: () => void 0 };
+        const appended: unknown[] = [];
 
-      await proxy.onClientConnect(client, {
-        clientId: "A",
-        identity: { subject: "A", role: "default" },
-        profile: { username: "alice" },
-        presence: {}
-      }, createContext(room, {
-        append: (input) => {
-          appended.push(input);
+        await proxy.onClientConnect(client, {
+          clientId: "A",
+          identity: { subject: "A", role: "default" },
+          profile: { username: "alice" },
+          presence: {}
+        }, createContext(room, {
+          append: (input) => {
+            appended.push(input);
 
-          return Promise.resolve(true);
-        }
-      }));
-      assert.deepEqual(sent, [{ type: "welcome", greeting: "hi" }]);
-      assert.equal(appended.length, 1);
-      assert.deepEqual(appended[0], {
-        assetType: "fixture",
-        assetId: "A",
-        eventType: "connected",
-        eventData: { username: "alice" }
-      });
-      sent.length = 0;
-
-      await proxy.onMessage("A", { compute: true }, createContext(room));
-      assert.equal(sent.length, 1);
-      assert.equal((sent[0] as { type: string; }).type, "result");
-      sent.length = 0;
-
-      await proxy.onMessage("A", { hello: "world" }, createContext(room, {
-        list: () => Promise.resolve([
-          {
-            eventId: 1,
-            assetType: "fixture",
-            assetId: "A",
-            eventType: "connected",
-            eventData: {},
-            eventVersion: 1,
-            actor: { type: "system", source: "test" },
-            createdAt: ""
+            return Promise.resolve(true);
           }
-        ])
-      }));
-      assert.deepEqual(sent, [{ type: "history", count: 1 }]);
-      sent.length = 0;
+        }));
+        assert.deepEqual(sent, [{ type: "welcome", greeting: "hi" }]);
+        assert.equal(appended.length, 1);
+        assert.deepEqual(appended[0], {
+          assetType: "fixture",
+          assetId: "A",
+          eventType: "connected",
+          eventData: { username: "alice" }
+        });
+        sent.length = 0;
 
-      await proxy.onClientDisconnect("A", createContext(room));
-      assert.deepEqual(sent, [{ type: "bye" }]);
+        await proxy.onMessage("A", { compute: true }, createContext(room));
+        assert.equal(sent.length, 1);
+        assert.equal((sent[0] as { type: string; }).type, "result");
+        sent.length = 0;
+
+        await proxy.onMessage("A", { hello: "world" }, createContext(room, {
+          list: () => Promise.resolve([
+            {
+              eventId: 1,
+              assetType: "fixture",
+              assetId: "A",
+              eventType: "connected",
+              eventData: {},
+              eventVersion: 1,
+              actor: { type: "system", source: "test" },
+              createdAt: ""
+            }
+          ])
+        }));
+        assert.deepEqual(sent, [{ type: "history", count: 1 }]);
+        sent.length = 0;
+
+        await proxy.onClientDisconnect("A", createContext(room));
+        assert.deepEqual(sent, [{ type: "bye" }]);
+      }
+      finally {
+        await proxy.close();
+      }
     }
-    finally {
-      await proxy.close();
-    }
-  });
+  );
 });

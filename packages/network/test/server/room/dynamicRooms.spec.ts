@@ -422,8 +422,10 @@ describe("Server — room lifetime regressions", () => {
 
       return {
         extension: new AssetExtension(name, "kind"),
-        // one-shot gate: only the first eviction blocks, so close() below
-        // is not left waiting on a promise nothing resolves
+        /*
+         * one-shot gate: only the first eviction blocks, so close() below
+         * is not left waiting on a promise nothing resolves
+         */
         onEvict: (): Promise<void> => {
           if (order.includes("evict:start")) {
             return Promise.resolve();

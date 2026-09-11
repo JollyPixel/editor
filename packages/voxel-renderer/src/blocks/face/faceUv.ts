@@ -5,9 +5,11 @@ import type {
   Vec3
 } from "../../utils/math.ts";
 
-// CONSTANTS
-// Each projector looks at its face from outside the block, so `u` runs to the
-// viewer's right and `v` upwards. Getting an axis backwards mirrors the tile.
+/*
+ * CONSTANTS
+ * Each projector looks at its face from outside the block, so `u` runs to the
+ * viewer's right and `v` upwards. Getting an axis backwards mirrors the tile.
+ */
 const kFaceProjectors: readonly ((vertex: Vec3) => Vec2)[] = [
   ([, y, z]) => [1 - z, y],
   ([, y, z]) => [z, y],

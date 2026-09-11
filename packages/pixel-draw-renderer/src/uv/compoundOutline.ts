@@ -3,8 +3,6 @@ import type { Vec2 } from "../types.ts";
 import type { UVCompoundPart } from "./types.ts";
 
 // CONSTANTS
-// Vertices are keyed at this precision, so edges meeting after a float
-// division still cancel.
 const kQuantum = 1e6;
 const kEpsilon = 1e-9;
 const kTwoPi = Math.PI * 2;
@@ -14,10 +12,6 @@ interface Edge {
   to: Vec2;
 }
 
-/**
- * Traces the union of a compound's parts into closed loops, expressed in the
- * `0` to `1` space the parts use.
- */
 export function compoundOutline(
   parts: readonly UVCompoundPart[]
 ): Vec2[][] | null {

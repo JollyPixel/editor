@@ -232,10 +232,12 @@ describe("InputController custom keybindings", () => {
   });
 
   test("matches by the character produced (event.key), not physical key position — correct on AZERTY", () => {
-    // AZERTY: the physical key that produces the "z" character sits where
-    // QWERTY has "W", so the browser reports key: "z", code: "KeyW". Undo
-    // must still fire — matching on event.code here would require the
-    // QWERTY-position Z key instead, which is the wrong key on this layout.
+    /*
+     * AZERTY: the physical key that produces the "z" character sits where
+     * QWERTY has "W", so the browser reports key: "z", code: "KeyW". Undo
+     * must still fire — matching on event.code here would require the
+     * QWERTY-position Z key instead, which is the wrong key on this layout.
+     */
     const { actions, calls } = makeActions();
     const ctrl = new InputController({
       canvas,

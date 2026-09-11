@@ -60,8 +60,10 @@ export class MouseCanvasAdapter extends CanvasAdapter {
       writable: false
     });
 
-    // Browsers expose offsets relative to the target's box. The fallback
-    // covers environments where these properties are unavailable.
+    /*
+     * Browsers expose offsets relative to the target's box. The fallback
+     * covers environments where these properties are unavailable.
+     */
     Object.defineProperty(event, "offsetX", {
       value: eventData.omitOffsets ?
         undefined :

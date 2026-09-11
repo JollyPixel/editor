@@ -422,18 +422,21 @@ describe("VoxelLayer mergeFrom", () => {
     assert.deepEqual(target.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
 
-  it("applies source offset: voxel at local (1,0,0) with source offset {5,0,0} lands at world (6,0,0)", () => {
-    const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
-    const target = makeLayer({ id: "tgt", name: "Target" });
-    const entry = makeVoxelEntry(3, 0);
-    // Local (1,0,0) → world (6,0,0)
-    source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
+  it(
+    "applies source offset: voxel at local (1,0,0) with source offset {5,0,0} lands at world (6,0,0)",
+    () => {
+      const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
+      const target = makeLayer({ id: "tgt", name: "Target" });
+      const entry = makeVoxelEntry(3, 0);
+      // Local (1,0,0) → world (6,0,0)
+      source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
 
-    target.mergeFrom(source);
+      target.mergeFrom(source);
 
-    assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
-    assert.equal(target.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
-  });
+      assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
+      assert.equal(target.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
+    }
+  );
 
   it("applies target offset: target with offset {3,0,0} stores world (6,0,0) at local (3,0,0)", () => {
     const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });

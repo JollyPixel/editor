@@ -20,7 +20,8 @@ function gaussianPdf(
   sigma: TslNode<"float">
 ): TslNode<"float"> {
   return float(0.39894).mul(
-    exp(float(-0.5).mul(x).mul(x).div(sigma.mul(sigma))).div(sigma)
+    exp(float(-0.5).mul(x).mul(x)
+      .div(sigma.mul(sigma))).div(sigma)
   );
 }
 
@@ -35,7 +36,8 @@ export function buildSeparableBlur(
     const sigma = kernelRadius.div(2).toVar();
     const weightSum = gaussianPdf(float(0), sigma).toVar();
     const diffuseSum = blurSourceTexture.sample(uvNode).mul(weightSum).toVar();
-    const delta = blurDirectionNode.mul(invSizeNode).mul(kernelRadius).div(MAX_BLUR_RADIUS).toVar();
+    const delta = blurDirectionNode.mul(invSizeNode).mul(kernelRadius).div(MAX_BLUR_RADIUS)
+      .toVar();
     const uvOffset = delta.toVar();
 
     Loop({ start: int(1), end: int(MAX_BLUR_RADIUS), type: "int", condition: "<=" }, ({ i }) => {

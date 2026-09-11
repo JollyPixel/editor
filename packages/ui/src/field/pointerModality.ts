@@ -18,9 +18,7 @@ export function ensureModalityTracking(): void {
     return;
   }
 
-  document.documentElement.setAttribute(
-    kTrackedAttr, ""
-  );
+  document.documentElement.setAttribute(kTrackedAttr, "");
 
   window.addEventListener(
     "pointerdown",

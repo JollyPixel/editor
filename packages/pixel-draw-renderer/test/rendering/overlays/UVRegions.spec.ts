@@ -14,8 +14,10 @@ import {
   makeUvMap
 } from "../../helpers/overlay.ts";
 
-// Every entry renders a <g> holding the casing stroke and, over it, the
-// region-colored one.
+/*
+ * Every entry renders a <g> holding the casing stroke and, over it, the
+ * region-colored one.
+ */
 function borders(
   svg: SVGElement
 ): SVGRectElement[] {
@@ -93,15 +95,19 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
     new UVRegionLayer(svg, makeViewport(), map);
 
-    // The first cascade position is (0, 0) — flush with the canvas edge,
-    // where a straddling casing would paint its outer half onto the page and
-    // read as an extra pixel of canvas.
+    /*
+     * The first cascade position is (0, 0) — flush with the canvas edge,
+     * where a straddling casing would paint its outer half onto the page and
+     * read as an extra pixel of canvas.
+     */
     const region = map.create({ width: 2, height: 3, id: "r1" });
     map.select(region.id);
 
     const [casing] = casings(svg);
-    // 2px border and 4px casing, both centered on their own rect: insetting
-    // the casing by 1px aligns the two outer edges exactly.
+    /*
+     * 2px border and 4px casing, both centered on their own rect: insetting
+     * the casing by 1px aligns the two outer edges exactly.
+     */
     assert.strictEqual(casing.getAttribute("x"), "1");
     assert.strictEqual(casing.getAttribute("y"), "1");
     assert.strictEqual(casing.getAttribute("width"), "6");
@@ -391,8 +397,10 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
     map.setState(region.id, "free");
     map.select("r1", "front");
 
-    // Selected face: 3px border, everything else 2px — each casing shows 1px
-    // on either side of its border.
+    /*
+     * Selected face: 3px border, everything else 2px — each casing shows 1px
+     * on either side of its border.
+     */
     assert.deepStrictEqual(
       casings(svg).map(
         (casing) => casing.style.strokeWidth

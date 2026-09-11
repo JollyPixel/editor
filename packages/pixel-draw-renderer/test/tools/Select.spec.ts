@@ -17,10 +17,12 @@ const kColorC: RGBA8 = { r: 30, g: 0, b: 0, a: 255 };
 const kColorD: RGBA8 = { r: 40, g: 0, b: 0, a: 255 };
 const kColorE: RGBA8 = { r: 50, g: 0, b: 0, a: 255 };
 const kColorF: RGBA8 = { r: 60, g: 0, b: 0, a: 255 };
-// 2 wide x 3 tall, row-major:
-// A B
-// C D
-// E F
+/*
+ * 2 wide x 3 tall, row-major:
+ * A B
+ * C D
+ * E F
+ */
 const k2x3Snapshot: RGBA8[] = [
   kColorA,
   kColorB,
@@ -95,8 +97,10 @@ describe("Select", () => {
     });
 
     test("rotate is repeatable — two rotations (180deg) reverse the row-major content", () => {
-      // Even x even dims: center-pivot rounding never drifts, so the rect
-      // returns to its exact original position/size after 2 rotations.
+      /*
+       * Even x even dims: center-pivot rounding never drifts, so the rect
+       * returns to its exact original position/size after 2 rotations.
+       */
       const tool = makeSelectedWith({
         x: 0,
         y: 0,
@@ -335,16 +339,19 @@ describe("Select", () => {
       assert.deepStrictEqual(tool.rect, result!.dest);
     });
 
-    test("finishMove returns null (but still resolves to 'selected') when the drag never moved the rect", () => {
-      const tool = makeSelected();
-      tool.startMove({ x: 1, y: 1 });
-      tool.updateMove({ x: 1, y: 1 });
+    test(
+      "finishMove returns null (but still resolves to 'selected') when the drag never moved the rect",
+      () => {
+        const tool = makeSelected();
+        tool.startMove({ x: 1, y: 1 });
+        tool.updateMove({ x: 1, y: 1 });
 
-      const result = tool.finishMove();
+        const result = tool.finishMove();
 
-      assert.strictEqual(result, null);
-      assert.strictEqual(tool.state, "selected");
-    });
+        assert.strictEqual(result, null);
+        assert.strictEqual(tool.state, "selected");
+      }
+    );
 
     test("finishMove returns null while not moving", () => {
       const tool = makeSelected();
@@ -481,9 +488,11 @@ describe("Select", () => {
   });
 
   describe("shape (mask-aware) selection", () => {
-    // 2 wide x 2 tall selection where only the top-left/bottom-right cells
-    // are actually part of the shape (a checkerboard-ish mask, chosen so
-    // rotate/flip visibly move the "gap" around).
+    /*
+     * 2 wide x 2 tall selection where only the top-left/bottom-right cells
+     * are actually part of the shape (a checkerboard-ish mask, chosen so
+     * rotate/flip visibly move the "gap" around).
+     */
     const kMask = [true, false, false, true];
 
     test("mask defaults to all-true after a rectangle-drag finishCreate", () => {

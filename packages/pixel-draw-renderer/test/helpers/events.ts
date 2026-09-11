@@ -1,5 +1,7 @@
-// DOM event factories/dispatchers shared across the input and canvas specs.
-// The global event constructors are happy-dom's, registered in test/setup.ts.
+/*
+ * DOM event factories/dispatchers shared across the input and canvas specs.
+ * The global event constructors are happy-dom's, registered in test/setup.ts.
+ */
 
 export function shiftKeyDown(
   repeat = false

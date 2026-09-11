@@ -15,9 +15,6 @@ export interface ShapeSelection {
 }
 
 export class ShapeSelect {
-  /**
-   * Returns null for selections smaller than two pixels.
-   */
   static compute(
     buffer: DefaultPixelBuffer,
     seed: Vec2

@@ -20,9 +20,6 @@ export interface ExamplePaneOptions {
   title?: string;
 }
 
-/**
- * Adds navigation controls and a page pane to `#tools`. `F3` toggles the dock.
- */
 export function createExamplePane(
   options: ExamplePaneOptions = {}
 ): Pane {
@@ -56,7 +53,6 @@ export function createExamplePane(
     });
 
   const preferences = document.createElement("jolly-theme-preferences");
-  // Keep preferences stacked. See the UI theme-preferences API docs.
   preferences.layout = "stack";
   preferences.storageKey = "loop-examples";
   chrome.element.append(preferences);
@@ -82,9 +78,6 @@ export function createExamplePane(
   return pane;
 }
 
-/**
- * Normalizes `/index.html` to the switcher's `/` route.
- */
 function currentExample(): string {
   const { pathname } = window.location;
 

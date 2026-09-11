@@ -39,34 +39,37 @@ const kMaskedGhost: PeerSelectionOutlineState = {
 };
 
 describe("PeerSelectionOutlines — set", () => {
-  test("renders a dashed rect border at the projected screen position for a plain (unmasked) selection", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
-    const ghosts = new PeerSelectionOutlines(svg, viewport);
+  test(
+    "renders a dashed rect border at the projected screen position for a plain (unmasked) selection",
+    () => {
+      const svg = makeSvg();
+      const viewport = makeViewport();
+      const ghosts = new PeerSelectionOutlines(svg, viewport);
 
-    ghosts.set("peer-A", kRectGhost);
+      ghosts.set("peer-A", kRectGhost);
 
-    const rects = svg.querySelectorAll("rect");
-    assert.strictEqual(rects.length, 1);
-    // zoom 4, camera (0,0): x=2*4=8, y=3*4=12, width=5*4=20, height=6*4=24
-    assert.strictEqual(rects[0].getAttribute("x"), "8");
-    assert.strictEqual(rects[0].getAttribute("y"), "12");
-    assert.strictEqual(rects[0].getAttribute("width"), "20");
-    assert.strictEqual(rects[0].getAttribute("height"), "24");
-    assert.strictEqual(
-      rects[0].getAttribute("stroke"),
-      "#ff0000"
-    );
-    assert.ok(
-      rects[0].getAttribute("stroke-dasharray"),
-      "the stroke is dashed"
-    );
-    assert.strictEqual(
-      svg.querySelector("path")?.getAttribute("visibility"),
-      "hidden",
-      "the path element still exists in the DOM, just hidden"
-    );
-  });
+      const rects = svg.querySelectorAll("rect");
+      assert.strictEqual(rects.length, 1);
+      // zoom 4, camera (0,0): x=2*4=8, y=3*4=12, width=5*4=20, height=6*4=24
+      assert.strictEqual(rects[0].getAttribute("x"), "8");
+      assert.strictEqual(rects[0].getAttribute("y"), "12");
+      assert.strictEqual(rects[0].getAttribute("width"), "20");
+      assert.strictEqual(rects[0].getAttribute("height"), "24");
+      assert.strictEqual(
+        rects[0].getAttribute("stroke"),
+        "#ff0000"
+      );
+      assert.ok(
+        rects[0].getAttribute("stroke-dasharray"),
+        "the stroke is dashed"
+      );
+      assert.strictEqual(
+        svg.querySelector("path")?.getAttribute("visibility"),
+        "hidden",
+        "the path element still exists in the DOM, just hidden"
+      );
+    }
+  );
 
   test("a mask that is entirely true renders as the plain rect fast path", () => {
     const svg = makeSvg();

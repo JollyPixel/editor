@@ -15,8 +15,10 @@ import {
 } from "../../helpers/overlay.ts";
 
 describe("UVRegionLayer — face labels", () => {
-  // makeViewport() zooms 4x and labels need 40 screen px, so a labelled
-  // rect must be at least 10 texture px wide/tall.
+  /*
+   * makeViewport() zooms 4x and labels need 40 screen px, so a labelled
+   * rect must be at least 10 texture px wide/tall.
+   */
   const kLabelSize = 12;
 
   function setup(): { svg: SVGElement; map: ReturnType<typeof makeUvMap>; } {

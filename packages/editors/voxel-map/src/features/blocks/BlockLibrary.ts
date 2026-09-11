@@ -12,7 +12,6 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-// Also registers the configuration modal element.
 import { BlockEditorDialog } from "./BlockEditorDialog.ts";
 import {
   editorState,

@@ -18,27 +18,32 @@ export interface CameraOptions {
   /**
    * Perspective FOV in degrees.
    * @default 45
-   **/
+   */
   fov?: number;
-  /** Near clipping plane.
+  /**
+   * Near clipping plane.
    * @default 0.1
-   **/
+   */
   near?: number;
-  /** Far clipping plane.
+  /**
+   * Far clipping plane.
    * @default 10000
-   **/
+   */
   far?: number;
-  /** Ortho mode half-height in world units.
+  /**
+   * Ortho mode half-height in world units.
    * @default 1
-   **/
+   */
   orthographicScale?: number;
-  /** Normalized viewport rect. null = full canvas.
+  /**
+   * Normalized viewport rect. null = full canvas.
    * @default null
-   **/
+   */
   viewport?: RenderViewport | null;
-  /** Render depth/order. Lower = rendered first.
+  /**
+   * Render depth/order. Lower = rendered first.
    * @default 0
-   **/
+   */
   depth?: number;
   /**
    * Whether to automatically add a THREE.AudioListener to the camera for 3D audio.
@@ -64,7 +69,6 @@ export class CameraComponent<
   #lastCanvasHeight = 0;
   #registered = false;
 
-  // Reused by prepareRender — avoid per-frame allocations.
   #worldPosition = new THREE.Vector3();
   #worldQuaternion = new THREE.Quaternion();
   #worldScale = new THREE.Vector3();
@@ -135,11 +139,6 @@ export class CameraComponent<
     }
   }
 
-  /**
-   * The actor's transform is the single source of truth for the camera pose,
-   * so three must not recompose `matrixWorld` from the camera's own local
-   * transform after `prepareRender` wrote it.
-   */
   #createThreeCamera(): THREE.PerspectiveCamera | THREE.OrthographicCamera {
     const camera = this.#projectionMode === "orthographic"
       ? new THREE.OrthographicCamera(-1, 1, 1, -1, this.#near, this.#far)
@@ -154,15 +153,10 @@ export class CameraComponent<
     this.#registered = true;
   }
 
-  /**
-   * Called by RenderStrategy every frame before draw.
-   * Syncs transform + updates projection.
-   **/
   prepareRender(
     canvasWidth: number,
     canvasHeight: number
   ): void {
-    // Sync camera world transform from actor's scene graph
     this.actor.object3D.updateWorldMatrix(true, false);
     this.#threeCamera.matrixWorld.copy(
       this.actor.object3D.matrixWorld
@@ -171,8 +165,6 @@ export class CameraComponent<
       .copy(this.#threeCamera.matrixWorld)
       .invert();
 
-    // Keep position/quaternion readable — the camera has no parent, so its
-    // local transform equals its world transform.
     this.#threeCamera.matrixWorld.decompose(
       this.#worldPosition,
       this.#worldQuaternion,
@@ -182,13 +174,10 @@ export class CameraComponent<
     this.#threeCamera.quaternion.copy(this.#worldQuaternion);
     this.#threeCamera.scale.copy(this.#worldScale);
 
-    // matrixWorldAutoUpdate is off, so three never walks the camera's children;
-    // an attached AudioListener would otherwise stay at the origin.
     for (const child of this.#threeCamera.children) {
       child.updateMatrixWorld(true);
     }
 
-    // Update projection when canvas resizes or settings changed
     const canvasChanged = canvasWidth !== this.#lastCanvasWidth ||
       canvasHeight !== this.#lastCanvasHeight;
     if (this.#projectionDirty || canvasChanged) {
@@ -288,8 +277,6 @@ export class CameraComponent<
     this.#projectionMode = mode;
     this.#threeCamera = this.#createThreeCamera();
 
-    // Carry over what the discarded camera owned: attached objects (typically
-    // the AudioListener) and the layer mask.
     if (previous.children.length > 0) {
       this.#threeCamera.add(...previous.children);
     }

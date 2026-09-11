@@ -36,7 +36,9 @@ function createHarness(
     camera.position.set(0, 0, 0);
     camera.lookAt(0, 0, -1);
     camera.updateMatrixWorld();
-    visibility = new PeerSelectionVisibility({ registry: selectionRegistry, selection, camera, hoverRegistry });
+    visibility = new PeerSelectionVisibility(
+      { registry: selectionRegistry, selection, camera, hoverRegistry }
+    );
   }
 
   const overlays = new PeerHoverOverlays({
@@ -78,14 +80,17 @@ describe("peer hover", () => {
     assert.strictEqual(materialOf(mesh).opacity, 0.7);
   });
 
-  test("a second peer on the same object still produces exactly one overlay, in the first peer's color", () => {
-    const { hoverRegistry, mesh } = createHarness();
-    hoverRegistry.hover("peer-a", "mesh-1");
-    hoverRegistry.hover("peer-b", "mesh-1");
+  test(
+    "a second peer on the same object still produces exactly one overlay, in the first peer's color",
+    () => {
+      const { hoverRegistry, mesh } = createHarness();
+      hoverRegistry.hover("peer-a", "mesh-1");
+      hoverRegistry.hover("peer-b", "mesh-1");
 
-    assert.strictEqual(mesh.children.length, 1);
-    assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
-  });
+      assert.strictEqual(mesh.children.length, 1);
+      assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
+    }
+  );
 
   test("the primary peer un-hovering updates the same overlay instance to the next peer's color", () => {
     const { hoverRegistry, mesh } = createHarness();
@@ -95,7 +100,11 @@ describe("peer hover", () => {
 
     hoverRegistry.hover("peer-a", null);
 
-    assert.strictEqual(mesh.children[0], overlayBefore, "must reuse the same overlay instance, not rebuild it");
+    assert.strictEqual(
+      mesh.children[0],
+      overlayBefore,
+      "must reuse the same overlay instance, not rebuild it"
+    );
     assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-b"));
   });
 
@@ -135,9 +144,11 @@ describe("priority rule: any selector suppresses hover", () => {
   test("the local selection suppresses a peer's hover overlay", () => {
     const { selection, hoverRegistry, mesh } = createHarness();
     hoverRegistry.hover("peer-a", "mesh-1");
-    // `SelectionManager.select` builds its own overlay directly, unlike
-    // `PeerSelectionRegistry.select`'s pure bookkeeping - only that one
-    // overlay should remain once the peer's is suppressed.
+    /*
+     * `SelectionManager.select` builds its own overlay directly, unlike
+     * `PeerSelectionRegistry.select`'s pure bookkeeping - only that one
+     * overlay should remain once the peer's is suppressed.
+     */
     selection.select("mesh-1");
 
     assert.strictEqual(mesh.children.length, 1, "only the local selection's own overlay should remain");
@@ -158,8 +169,10 @@ describe("priority rule: local hover wins over peer hover", () => {
   test("local hover on the object suppresses a peer's hover overlay", () => {
     const { selection, hoverRegistry, mesh } = createHarness();
     hoverRegistry.hover("peer-a", "mesh-1");
-    // `SelectionManager.hover` builds its own overlay directly - only that
-    // one should remain once the peer's is suppressed.
+    /*
+     * `SelectionManager.hover` builds its own overlay directly - only that
+     * one should remain once the peer's is suppressed.
+     */
     selection.hover("mesh-1");
 
     assert.strictEqual(mesh.children.length, 1, "only the local hover's own overlay should remain");

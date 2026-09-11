@@ -212,7 +212,9 @@ const hardLatticeMask = Fn(([cellIndex, sectionSize]: [Node<"vec2">, Node<"float
 /**
  * Soft per-cell falloff for `hideCellOnSection` on line cells.
  */
-const softLatticeMask = Fn(([cellIndex, sectionSize, fadeWidth]: [Node<"vec2">, Node<"float">, Node<"float">]) => {
+const softLatticeMask = Fn((
+  [cellIndex, sectionSize, fadeWidth]: [Node<"vec2">, Node<"float">, Node<"float">]
+) => {
   const halfSection = sectionSize.mul(0.5);
   const distToLatticeX = abs(
     mod(cellIndex.x.add(halfSection), sectionSize).sub(halfSection)
@@ -226,7 +228,8 @@ const softLatticeMask = Fn(([cellIndex, sectionSize, fadeWidth]: [Node<"vec2">, 
     float(1).sub(smoothstep(0, width, distToLatticeX)),
     float(1).sub(smoothstep(0, width, distToLatticeY))
   );
-});
+}
+);
 
 interface PlaneComponents {
   u: Node<"float">;
@@ -428,9 +431,7 @@ export function buildGridMaterial(
       .mul(uniforms.showAxes);
     const withUAxis = mix(gridColor, uAxisColor, uAxisMask);
     const finalColor = mix(withUAxis, vAxisColor, vAxisMask);
-    const maskWithAxes = max(
-      gridMask, max(uAxisMask, vAxisMask)
-    );
+    const maskWithAxes = max(gridMask, max(uAxisMask, vAxisMask));
 
     const dist = fadeFrom === "origin" ?
       length(vec2(u, v)) :

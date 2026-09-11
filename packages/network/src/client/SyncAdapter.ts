@@ -42,9 +42,7 @@ export abstract class SyncAdapter<
   ) {
     super();
     this.room = room;
-    this.room.on(
-      "message", this.#onMessage
-    );
+    this.room.on("message", this.#onMessage);
   }
 
   get ready(): boolean {
@@ -83,9 +81,7 @@ export abstract class SyncAdapter<
 
   destroy(): void {
     this.detach();
-    this.room.off(
-      "message", this.#onMessage
-    );
+    this.room.off("message", this.#onMessage);
   }
 
   protected notifyLocal(

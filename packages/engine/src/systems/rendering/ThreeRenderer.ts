@@ -86,10 +86,6 @@ export interface ResolvedRendererSettings {
   toneMappingExposure: number;
 }
 
-/**
- * Merges renderer options with the engine defaults. Pure and DOM-free so the
- * resulting configuration can be asserted without a GPU context.
- */
 export function resolveRendererSettings(
   options: Pick<ThreeRendererOptions, "webgpu" | "output"> = {},
   devicePixelRatio: number = globalThis.window?.devicePixelRatio ?? 1
@@ -151,12 +147,6 @@ export class ThreeRenderer<
     this.setRenderMode(renderMode);
   }
 
-  /**
-   * Builds and initializes a `ThreeRenderer`. `THREE.WebGPURenderer` requires
-   * an asynchronous `init()` call before first use (it negotiates a WebGPU
-   * adapter, falling back to a WebGL2 backend when WebGPU isn't available) —
-   * this factory is the only way to obtain a ready-to-use instance.
-   */
   static async create<
     TContext = WorldDefaultContext
   >(
@@ -200,12 +190,6 @@ export class ThreeRenderer<
     }
   }
 
-  /**
-   * No-op in "direct" mode — direct rendering reads `threeCamera` fresh every
-   * frame instead of caching a per-component render pass. Kept on the public
-   * API so `CameraComponent.setProjectionMode` doesn't need to know whether
-   * the active render mode cares.
-   */
   updateRenderComponent(
     _component: RenderComponent
   ): void {
@@ -233,13 +217,9 @@ export class ThreeRenderer<
     this.markRenderOrderDirty();
     this.#refreshRenderOrder();
 
-    // The new strategy owns fresh render targets, so it must be sized even when
-    // no ResizeObserver callback happened since the last resize.
     this.#resizeDirty = true;
     this.resize();
 
-    // Guard: skip clear when the framebuffer still has zero dimensions
-    // (e.g. at construction time before the first ResizeObserver callback).
     if (this.#pendingResizeWidth > 0 && this.#pendingResizeHeight > 0) {
       this.clear();
     }
@@ -322,9 +302,10 @@ export class ThreeRenderer<
   draw() {
     this.resize();
 
-    // Guard: skip draw when the framebuffer still has zero dimensions
-    // (e.g. before the first ResizeObserver callback fires).
-    if (this.#pendingResizeWidth === 0 || this.#pendingResizeHeight === 0) {
+    if (
+      this.#pendingResizeWidth === 0 ||
+      this.#pendingResizeHeight === 0
+    ) {
       return;
     }
 
@@ -385,7 +366,6 @@ async function createWebGPURenderer(
   renderer.shadowMap.enabled = settings.shadows.enabled;
   renderer.shadowMap.type = settings.shadows.type;
   renderer.setSize(0, 0, false);
-  // DirectRenderStrategy owns clearing so multiple cameras can share a frame.
   renderer.autoClear = false;
   renderer.outputColorSpace = settings.outputColorSpace;
   renderer.toneMapping = settings.toneMapping;

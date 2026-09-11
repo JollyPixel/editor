@@ -85,8 +85,10 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     const geometry = firstGeometry(f);
     const normals = geometry.getAttribute("normal");
 
-    // A cube's six faces only ever point down an axis, so every component
-    // decodes back to exactly -1, 0 or 1.
+    /*
+     * A cube's six faces only ever point down an axis, so every component
+     * decodes back to exactly -1, 0 or 1.
+     */
     for (let i = 0; i < normals.count; i++) {
       for (const component of [normals.getX(i), normals.getY(i), normals.getZ(i)]) {
         assert.ok(

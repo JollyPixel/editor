@@ -198,8 +198,6 @@ export class SelectionClipboard {
       );
     }
 
-    // A readable system clipboard without an image wins over our own stale
-    // copy: the user's last copy happened elsewhere.
     return pasteFailure("no-image");
   }
 

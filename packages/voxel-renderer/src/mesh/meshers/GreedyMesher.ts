@@ -94,17 +94,21 @@ export class GreedyMesher implements Mesher {
   #sliceMin: Int32Array[] = [];
   #sliceMax: Int32Array[] = [];
 
-  // Extents of the slice being swept, set by `#sweep()` so the two passes over
-  // it agree without recomputing them.
+  /*
+   * Extents of the slice being swept, set by `#sweep()` so the two passes over
+   * it agree without recomputing them.
+   */
   #uMin = 0;
   #uMax = -1;
   #vMin = 0;
   #vMax = -1;
 
-  // The three world axes of the direction being swept: the one the slices are
-  // perpendicular to, plus the two in-plane axes the mask is indexed by. All
-  // derived from the direction, so `#sweep()` sets them once per pass rather
-  // than threading them through every slice.
+  /*
+   * The three world axes of the direction being swept: the one the slices are
+   * perpendicular to, plus the two in-plane axes the mask is indexed by. All
+   * derived from the direction, so `#sweep()` sets them once per pass rather
+   * than threading them through every slice.
+   */
   #axis = 0;
   #uAxis = 0;
   #vAxis = 0;
@@ -222,8 +226,10 @@ export class GreedyMesher implements Mesher {
       this.#grid[linearIdx] = local + 1;
       filled = true;
 
-      // Slices perpendicular to X are indexed by lx and spanned by (ly, lz);
-      // the other two axes follow the same (uAxis, vAxis) order `#sweep()` uses.
+      /*
+       * Slices perpendicular to X are indexed by lx and spanned by (ly, lz);
+       * the other two axes follow the same (uAxis, vAxis) order `#sweep()` uses.
+       */
       widenSlice(sliceMinX, sliceMaxX, lx * 2, ly, lz);
       widenSlice(sliceMinY, sliceMaxY, ly * 2, lx, lz);
       widenSlice(sliceMinZ, sliceMaxZ, lz * 2, lx, ly);
@@ -375,8 +381,10 @@ export class GreedyMesher implements Mesher {
     const directionBit = 1 << direction;
     const offset = FACE_OFFSETS[direction];
     const opposite = FACE_OPPOSITE[direction];
-    // Walking the grid by stride keeps the (u, v) → linear index mapping out of
-    // the inner loop, which runs over the whole bounding box on every slice.
+    /*
+     * Walking the grid by stride keeps the (u, v) → linear index mapping out of
+     * the inner loop, which runs over the whole bounding box on every slice.
+     */
     const strideU = strideOf(uAxis, size);
     const strideV = strideOf(vAxis, size);
     const sliceBase = slice * strideOf(axis, size);

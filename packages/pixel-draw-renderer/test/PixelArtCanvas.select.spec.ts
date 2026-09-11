@@ -36,9 +36,11 @@ describe("PixelArtCanvas — select mode", () => {
     ({ container } = makeContainer());
   });
 
-  // 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
-  // client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
-  // no floor-rounding ambiguity).
+  /*
+   * 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
+   * client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
+   * no floor-rounding ambiguity).
+   */
 
   function makeManager(
     options: PixelArtCanvasOptions = {}
@@ -53,7 +55,7 @@ describe("PixelArtCanvas — select mode", () => {
     });
   }
 
-  test("dragging out a rectangle then Delete replaces it with the dominant surrounding color (white background)", () => {
+  test("Delete replaces a dragged rectangle with the dominant surrounding color (white here)", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -155,8 +157,10 @@ describe("PixelArtCanvas — select mode", () => {
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
 
-    // Mid-drag, before mouseup. The canvas mock ignores transforms, so texture
-    // positions map directly to raw pixels on the interactive canvas.
+    /*
+     * Mid-drag, before mouseup. The canvas mock ignores transforms, so texture
+     * positions map directly to raw pixels on the interactive canvas.
+     */
     const midDragPixels = canvasPixels(canvas);
     assert.deepStrictEqual(
       readPixel(midDragPixels, { x: 2, y: 2 }, canvas.width),
@@ -199,10 +203,12 @@ describe("PixelArtCanvas — select mode", () => {
       mouseEvent("mousemove", 100, 100)
     );
 
-    // Mid-drag: the original must stay visually intact — no erase-color
-    // flash where the real content still lives (previously it briefly
-    // "disappeared", only to reappear on drop once the commit-level fix
-    // skipped the actual erase).
+    /*
+     * Mid-drag: the original must stay visually intact — no erase-color
+     * flash where the real content still lives (previously it briefly
+     * "disappeared", only to reappear on drop once the commit-level fix
+     * skipped the actual erase).
+     */
     const midDrag = readPixel(
       canvasPixels(canvas),
       { x: 2, y: 2 },
@@ -255,7 +261,7 @@ describe("PixelArtCanvas — select mode", () => {
       manager.destroy();
     });
 
-    test("dragging an existing selection switches the cursor to grabbing, and back to grab on release", () => {
+    test("dragging an existing selection sets the cursor to grabbing, and back to grab on release", () => {
       const manager = makeManager();
       const canvas = manager.canvas();
 
@@ -364,7 +370,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.destroy();
   });
 
-  test("a click-only drag (no movement) on an existing selection commits nothing — the selection just stays put", () => {
+  test("a click-only drag (no movement) on an existing selection commits nothing and stays put", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -475,7 +481,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.destroy();
   });
 
-  test("onDrawEnd fires after a select-mode commit, and onBufferUpdated emits a 'select-edit' network hook", () => {
+  test("onDrawEnd fires after a select-mode commit, and onBufferUpdated emits a 'select-edit' hook", () => {
     let drawEndCount = 0;
     const events: PixelBufferHookEvent[] = [];
     const manager = makeManager({
@@ -557,7 +563,7 @@ describe("PixelArtCanvas — select mode", () => {
       manager.destroy();
     });
 
-    test("undoing a select-edit outside select mode restores the pixels but does not reactivate the selection", () => {
+    test("undoing a select-edit outside select mode restores pixels, not the selection", () => {
       const manager = makeManager({
         history: { enabled: true }
       });
@@ -595,7 +601,7 @@ describe("PixelArtCanvas — select mode", () => {
       manager.mode = "select";
       assert.ok(
         !manager.tools.select.rotate(),
-        "an undo that happened outside select mode must not resurrect the old selection once select mode is re-entered"
+        "an undo outside select mode must not resurrect the old selection when select mode is re-entered"
       );
 
       manager.destroy();
@@ -653,8 +659,10 @@ describe("PixelArtCanvas — select mode", () => {
 
       await manager.copySelection();
 
-      // Move the original away so the paste's target square is empty,
-      // making the paste's undo/redo effect on that pixel observable.
+      /*
+       * Move the original away so the paste's target square is empty,
+       * making the paste's undo/redo effect on that pixel observable.
+       */
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
       canvas.dispatchEvent(
@@ -665,8 +673,10 @@ describe("PixelArtCanvas — select mode", () => {
         [255, 255, 255, 255]
       );
 
-      // Paste centres the 2x1 copy on the cursor, so aiming at (3,2) puts
-      // its black left-hand pixel back on (2,2).
+      /*
+       * Paste centres the 2x1 copy on the cursor, so aiming at (3,2) puts
+       * its black left-hand pixel back on (2,2).
+       */
       canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
       await manager.pasteClipboard();
       assert.deepStrictEqual(
@@ -770,10 +780,12 @@ describe("PixelArtCanvas — select mode", () => {
         [255, 0, 0, 255]
       );
 
-      // If the selection box hadn't resynced to the pre-rotate rect on undo,
-      // this second rotate would erase/rotate from the stale post-rotate
-      // footprint instead, leaving (2,2) behind and corrupting (4,3), which
-      // was never part of the selection.
+      /*
+       * If the selection box hadn't resynced to the pre-rotate rect on undo,
+       * this second rotate would erase/rotate from the stale post-rotate
+       * footprint instead, leaving (2,2) behind and corrupting (4,3), which
+       * was never part of the selection.
+       */
       window.dispatchEvent(rotateKey());
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),

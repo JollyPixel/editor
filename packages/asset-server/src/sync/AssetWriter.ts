@@ -114,7 +114,11 @@ export class AssetWriter {
     };
 
     const appended = this.#append(
-      assetId, kind, ASSET_CREATED, assetData, input
+      assetId,
+      kind,
+      ASSET_CREATED,
+      assetData,
+      input
     );
     if (!appended.ok) {
       return appended;

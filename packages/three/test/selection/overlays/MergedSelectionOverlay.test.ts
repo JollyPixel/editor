@@ -41,7 +41,10 @@ describe("constructor", () => {
 
     const overlay = new MergedSelectionOverlay({ parent, targets, color: "#ffffff" });
 
-    assert.strictEqual(overlay.object.geometry.getAttribute("position").count, expectedPerTarget * targets.length);
+    assert.strictEqual(
+      overlay.object.geometry.getAttribute("position").count,
+      expectedPerTarget * targets.length
+    );
   });
 
   test("bakes each target's world position into the merged geometry", () => {
@@ -59,8 +62,10 @@ describe("constructor", () => {
     for (let i = 0; i < position.count; i++) {
       xs.add(Math.round(position.getX(i)));
     }
-    // Box half-extent is 0.5, so vertices cluster around each target's own x
-    // (-0.5/+0.5 offset rounds back to the target's own integer x).
+    /*
+     * Box half-extent is 0.5, so vertices cluster around each target's own x
+     * (-0.5/+0.5 offset rounds back to the target's own integer x).
+     */
     assert.ok(xs.has(0) || xs.has(-1) || xs.has(1));
     assert.ok(xs.has(5) || xs.has(4) || xs.has(6));
   });

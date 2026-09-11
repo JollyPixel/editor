@@ -89,8 +89,10 @@ export class PeerBrushes extends ActorComponent {
   update(): void {
     const seen = new Set<string>();
 
-    // `room.peers` only ever holds remote peers: the server sends its sync
-    // snapshot before adding the joiner to the member list.
+    /*
+     * `room.peers` only ever holds remote peers: the server sends its sync
+     * snapshot before adding the joiner to the member list.
+     */
     for (const [clientId, peer] of this.#room.peers) {
       seen.add(clientId);
       moveHighlight(

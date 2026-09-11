@@ -38,8 +38,10 @@ async function readBrush(
 test("picking a foreground color via the swatch updates the brush and the paint", async({ page }) => {
   await setMode(page, "paint");
 
-  // Hit the real swatch UI.
-  // Both pickers live in document.body, so target the visible input.
+  /*
+   * Hit the real swatch UI.
+   * Both pickers live in document.body, so target the visible input.
+   */
   await page.locator("color-swatch.fg").locator("button").click();
   await page.locator("jolly-color-picker input.hex:visible").fill("#ff00ff");
   await page.locator("jolly-color-picker input.hex:visible").press("Enter");
@@ -74,8 +76,10 @@ test("the eyedropper picks a canvas pixel into the primary color", async({ page 
     () => readPixel(page, 5, 30)
   ).toEqual({ r: 0x33, g: 0x55, b: 0xff, a: 255 });
 
-  // Picking disarms the tool: the next click paints normally, with the
-  // freshly-picked color.
+  /*
+   * Picking disarms the tool: the next click paints normally, with the
+   * freshly-picked color.
+   */
   await clickTexturePixel(page, 15, 32);
   await expect.poll(
     () => readPixel(page, 15, 32)

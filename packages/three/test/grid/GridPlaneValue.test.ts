@@ -105,8 +105,10 @@ describe("GridPlaneValue", () => {
       return box;
     }
 
-    // rotateX/rotateY bake the rotation into vertex data via cos/sin(π/2),
-    // which isn't exactly 0 in floating point.
+    /*
+     * rotateX/rotateY bake the rotation into vertex data via cos/sin(π/2),
+     * which isn't exactly 0 in floating point.
+     */
     function assertNear(
       actual: number,
       expected: number

@@ -10,9 +10,11 @@ import { decodePng } from "#src/png/decodePng.ts";
 import { chooseFilter } from "#src/png/filters.ts";
 import { PNG_SIGNATURE } from "../fixtures/png.ts";
 
-// CONSTANTS
-// RGB under a low alpha, which a premultiplying canvas would return as
-// (170, 85, 85, 3).
+/*
+ * CONSTANTS
+ * RGB under a low alpha, which a premultiplying canvas would return as
+ * (170, 85, 85, 3).
+ */
 const kFragilePixels = [
   200, 100, 50, 3,
   0, 0, 0, 0
@@ -196,8 +198,10 @@ describe("encodePng", () => {
     });
   });
 
-  // chooseFilter works on bytes, so these use one byte per pixel: the
-  // predictors are then readable as plain numbers rather than as channels.
+  /*
+   * chooseFilter works on bytes, so these use one byte per pixel: the
+   * predictors are then readable as plain numbers rather than as channels.
+   */
   describe("chooseFilter", () => {
     const bytesPerPixel = 1;
 

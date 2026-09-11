@@ -18,9 +18,11 @@ import type {
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PeerUVPreviewState } from "#src/rendering/presence/PeerUVPreview.ts";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------------------
+ */
 
 interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
   presenceUpdates: network.PeerMetadata[];
@@ -112,7 +114,11 @@ function createMockRoom(): MockRoom {
     simulateStateChangedCommand(regionId) {
       emit("message", {
         type: "command",
-        data: { clientId: "peer-B", action: "uv-region-state-changed", metadata: { region: { id: regionId } } }
+        data: {
+          clientId: "peer-B",
+          action: "uv-region-state-changed",
+          metadata: { region: { id: regionId } }
+        }
       });
     },
     simulateSnapshot() {
@@ -162,7 +168,10 @@ function createMockUVMap(): MockUVMap {
       });
     },
     simulateMoved(regionId) {
-      emit("region-moved", { region: { id: regionId }, face: null, previousRect: { x: 0, y: 0, width: 1, height: 1 } });
+      emit(
+        "region-moved",
+        { region: { id: regionId }, face: null, previousRect: { x: 0, y: 0, width: 1, height: 1 } }
+      );
     }
   };
 }
@@ -215,8 +224,10 @@ function createMockCanvas(): MockCanvas {
   return canvas;
 }
 
-// UVGhostSync is typed against the concrete PixelArtCanvas, but only uses the
-// structural subset MockCanvas implements.
+/*
+ * UVGhostSync is typed against the concrete PixelArtCanvas, but only uses the
+ * structural subset MockCanvas implements.
+ */
 function asHost(
   canvas: MockCanvas
 ): PixelArtCanvas {
@@ -235,9 +246,11 @@ function nextFrame(): Promise<void> {
   });
 }
 
-// ---------------------------------------------------------------------------
-// attach / detach
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * attach / detach
+ * ---------------------------------------------------------------------------
+ */
 
 describe("UVGhostSync — attach", () => {
   test("throws when a canvas is already attached", () => {
@@ -287,9 +300,11 @@ describe("UVGhostSync — detach", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Local drag -> presence (rAF-gated)
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Local drag -> presence (rAF-gated)
+ * ---------------------------------------------------------------------------
+ */
 
 describe("UVGhostSync — local drag reporting", () => {
   test("forwards a local region-dragging event as a presence update on the next frame", async() => {
@@ -312,10 +327,12 @@ describe("UVGhostSync — local drag reporting", () => {
     const sync = new UVGhostSync({ room });
     sync.attach(asHost(canvas));
 
-    // Mirrors the real race: handleMove() queues an rAF send, then the
-    // synchronous handleEnd()/uvMap.move() commit fires "region-moved"
-    // before that frame runs — the stale pre-commit geometry must never
-    // reach the wire and resurrect a ghost peers just saw cleared.
+    /*
+     * Mirrors the real race: handleMove() queues an rAF send, then the
+     * synchronous handleEnd()/uvMap.move() commit fires "region-moved"
+     * before that frame runs — the stale pre-commit geometry must never
+     * reach the wire and resurrect a ghost peers just saw cleared.
+     */
     canvas.uv.simulateDragging(kPayload);
     canvas.uv.simulateMoved(kPayload.id);
 
@@ -365,9 +382,11 @@ describe("UVGhostSync — local drag reporting", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Remote peers -> overlay
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Remote peers -> overlay
+ * ---------------------------------------------------------------------------
+ */
 
 describe("UVGhostSync — remote peers", () => {
   test("a uvGhost presence patch updates the overlay", () => {
@@ -442,13 +461,17 @@ describe("UVGhostSync — remote peers", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Reconciliation with the authoritative pipeline
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Reconciliation with the authoritative pipeline
+ * ---------------------------------------------------------------------------
+ */
 
 describe("UVGhostSync — reconciliation", () => {
-  // Region identity remains the stable reconciliation key when a custom
-  // server produces commands without normalizing client identity.
+  /*
+   * Region identity remains the stable reconciliation key when a custom
+   * server produces commands without normalizing client identity.
+   */
   test("an incoming uv-region-moved command clears ghosts by region id, not by clientId", () => {
     const room = createMockRoom();
     const canvas = createMockCanvas();
@@ -495,9 +518,11 @@ describe("UVGhostSync — reconciliation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// destroy
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * destroy
+ * ---------------------------------------------------------------------------
+ */
 
 describe("UVGhostSync — destroy", () => {
   test("removes only its own listeners and detaches the canvas", () => {

@@ -23,8 +23,10 @@ test.describe("Dock layout transparent scenario", () => {
   test("a floating window has a real stacking position before any interaction", async({ page }) => {
     await gotoGallery(page, { example: kPlacementExample });
 
-    // Nothing here has been clicked or focused yet, so this is exactly the
-    // "just mounted" state that used to leave z-index at "auto".
+    /*
+     * Nothing here has been clicked or focused yet, so this is exactly the
+     * "just mounted" state that used to leave z-index at "auto".
+     */
     const zIndex = await page.locator("jolly-floating").evaluate(
       (element) => getComputedStyle(element).zIndex
     );
@@ -36,10 +38,12 @@ test.describe("Dock layout transparent scenario", () => {
     await gotoGallery(page, { example: kExample });
 
     const chrome = page.locator("jolly-pane[key='chrome']");
-    // `jolly-theme-preferences` and its two controls are all `display:
-    // contents`, so they never report a usable box themselves — the density
-    // select nested three shadow roots down is the first real one, and
-    // stands in for "how far this control's rendered content actually goes".
+    /*
+     * `jolly-theme-preferences` and its two controls are all `display:
+     * contents`, so they never report a usable box themselves — the density
+     * select nested three shadow roots down is the first real one, and
+     * stands in for "how far this control's rendered content actually goes".
+     */
     const select = chrome.locator("jolly-select select");
     await expect(select).toBeVisible();
 
@@ -62,8 +66,10 @@ test.describe("Dock layout transparent scenario", () => {
     });
 
     expect(measurements.controlHeight).toBeGreaterThan(0);
-    // The pane's occupied extent has to reach at least as far as the
-    // control it is holding, not stop short at the header.
+    /*
+     * The pane's occupied extent has to reach at least as far as the
+     * control it is holding, not stop short at the header.
+     */
     expect(measurements.occupiedBottom).toBeGreaterThanOrEqual(
       measurements.controlBottom - 1
     );
@@ -76,15 +82,19 @@ test.describe("Dock layout transparent scenario", () => {
     const preferences = chrome.locator("jolly-theme-preferences");
     await expect(chrome.locator("jolly-select select")).toBeVisible();
 
-    // The stretch only shows once the pane body has room to spare, which is
-    // what a locked chrome pane above a shorter sibling ends up with.
+    /*
+     * The stretch only shows once the pane body has room to spare, which is
+     * what a locked chrome pane above a shorter sibling ends up with.
+     */
     await chrome.evaluate((pane) => {
       pane.style.flex = "0 0 auto";
       pane.style.height = "400px";
     });
 
-    // Every host down this chain is `display: contents`, so the button group
-    // and the select are the first elements with a real box.
+    /*
+     * Every host down this chain is `display: contents`, so the button group
+     * and the select are the first elements with a real box.
+     */
     async function measure(): Promise<{
       display: string;
       themeHeight: number;
@@ -111,10 +121,12 @@ test.describe("Dock layout transparent scenario", () => {
       });
     }
 
-    // Flattened into the pane's column, the controls are flex items whose
-    // "1 1 96px" basis is read as height, so they stretch into the spare room
-    // and push density away from theme. A grid host keeps both at their own
-    // height, at the top of the pane.
+    /*
+     * Flattened into the pane's column, the controls are flex items whose
+     * "1 1 96px" basis is read as height, so they stretch into the spare room
+     * and push density away from theme. A grid host keeps both at their own
+     * height, at the top of the pane.
+     */
     const flattened = await measure();
     expect(flattened.display).toBe("contents");
 

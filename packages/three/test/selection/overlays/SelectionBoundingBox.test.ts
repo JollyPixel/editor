@@ -113,7 +113,9 @@ describe("fillOpacity", () => {
   });
 
   test("builds a fill mesh matching the wireframe's own color when fillOpacity > 0", () => {
-    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#ff00ff", fillOpacity: 0.3 });
+    const box = new SelectionBoundingBox(
+      { target: createGroupOfTwoBoxes(), color: "#ff00ff", fillOpacity: 0.3 }
+    );
 
     assert.strictEqual(box.children.length, 1);
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
@@ -187,7 +189,9 @@ describe("color", () => {
   });
 
   test("also updates the fill mesh's own color, when one exists", () => {
-    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#000000", fillOpacity: 0.3 });
+    const box = new SelectionBoundingBox(
+      { target: createGroupOfTwoBoxes(), color: "#000000", fillOpacity: 0.3 }
+    );
     box.color = "#00ff00";
 
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;

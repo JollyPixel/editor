@@ -216,8 +216,10 @@ export function reconcileLayout(
     };
   }
 
-  // A pane only appears under "floating" while it is in a window, and a
-  // window on screen outranks a memory of one, so that record is read first.
+  /*
+   * A pane only appears under "floating" while it is in a window, and a
+   * window on screen outranks a memory of one, so that record is read first.
+   */
   const geometry: Record<string, FloatingState> = {};
   for (const pane of declaredOrder) {
     const remembered = stored?.floating[pane] ??

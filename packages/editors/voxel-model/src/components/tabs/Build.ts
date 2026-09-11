@@ -224,14 +224,18 @@ export class Build extends LitElement {
         <jolly-button-group
           .options=${kTransformModes}
           .value=${this.mode}
-          @jolly-change=${(event: CustomEvent<JollyChangeDetail<TransformMode>>) => this.#handleModeChange(event)}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<TransformMode>>) => {
+            this.#handleModeChange(event);
+          }}
         ></jolly-button-group>
 
         <jolly-vector3
           step="0.1"
           ?disabled=${disabled}
           .value=${this.axisValues}
-          @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vector3Value>>) => this.#handleVectorChange(event)}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vector3Value>>) => {
+            this.#handleVectorChange(event);
+          }}
         ></jolly-vector3>
       </section>
 
@@ -241,13 +245,17 @@ export class Build extends LitElement {
             label="W"
             .options=${kTextureSizeOptions}
             .value=${this.textureSize.x}
-            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => this.#handleTextureSizeChange("x", event)}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
+              this.#handleTextureSizeChange("x", event);
+            }}
           ></jolly-select>
           <jolly-select
             label="H"
             .options=${kTextureSizeOptions}
             .value=${this.textureSize.y}
-            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => this.#handleTextureSizeChange("y", event)}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
+              this.#handleTextureSizeChange("y", event);
+            }}
           ></jolly-select>
         </jolly-property-row>
       </section>

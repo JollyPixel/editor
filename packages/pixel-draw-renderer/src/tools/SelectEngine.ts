@@ -313,8 +313,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
           currentMask
         );
       }
-      // A completed move writes the content, so a floating selection stops
-      // being floating here.
       this.#publishSelectionState();
     }
   }
@@ -327,10 +325,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     return this.#select.exportSnapshot();
   }
 
-  /**
-   * Installs `snapshot` as a floating selection. Any selection already active
-   * is deselected first, which deposits it if it was itself floating.
-   */
   importSelection(
     snapshot: SelectionSnapshot
   ): boolean {
@@ -364,8 +358,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       return false;
     }
 
-    // A floating selection owns no buffer footprint: deleting it cancels the
-    // paste rather than depositing it.
     if (this.#select.floating) {
       this.discard();
 
@@ -480,21 +472,11 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     return true;
   }
 
-  /**
-   * Deselects, depositing a floating selection into the buffer first so that
-   * pixels the user can see are never destroyed by a stray click or a mode
-   * change.
-   */
   clear(): void {
     this.#depositFloating();
     this.discard();
   }
 
-  /**
-   * Deselects without depositing. For callers that replace the buffer
-   * wholesale (resize, texture replacement, snapshot load), where the
-   * floating rect no longer maps to anything.
-   */
   discard(): void {
     const interruptedGesture = this.#select.state === "creating" || this.#select.state === "moving";
 
@@ -510,10 +492,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.#publishSelectionState();
   }
 
-  /**
-   * Writes floating content at its current rect. No source is erased: a
-   * floating selection has no footprint to vacate.
-   */
   #depositFloating(): void {
     if (
       this.#select.state !== "selected" ||
@@ -529,8 +507,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       return;
     }
 
-    // Flip the flag first: the commit runs history and hook callbacks that
-    // may read back the tool's state.
     this.#select.markDeposited();
     this.#commitFootprintChange({
       oldRect: rect,
@@ -607,7 +583,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     );
     this.#canvasBuffer.copyToMaster();
 
-    // Sampling after repaint still reads the updated buffer state.
     const afterColors = this.#canvasBuffer.samplePixels(
       positions
     );

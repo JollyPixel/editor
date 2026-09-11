@@ -28,8 +28,10 @@ export class VoxelCommandArbiter {
   admit<TCommand extends VoxelNetworkCommand>(
     command: TCommand
   ): TCommand | null {
-    // Narrowing only ever drops entries, never changing the action the
-    // caller resolved the command to.
+    /*
+     * Narrowing only ever drops entries, never changing the action the
+     * caller resolved the command to.
+     */
     return this.#admit(command) as TCommand | null;
   }
 

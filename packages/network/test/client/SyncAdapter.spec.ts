@@ -17,10 +17,12 @@ import {
   type NetworkServerMessage
 } from "#src/index.ts";
 
-// ---------------------------------------------------------------------------
-// A minimal concrete target/event/command triple, standing in for a real
-// domain (PixelArtCanvas + PixelBufferHookEvent, VoxelEngine + VoxelLayerHookEvent, ...).
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * A minimal concrete target/event/command triple, standing in for a real
+ * domain (PixelArtCanvas + PixelBufferHookEvent, VoxelEngine + VoxelLayerHookEvent, ...).
+ * ---------------------------------------------------------------------------
+ */
 
 interface TestEvent {
   action: string;

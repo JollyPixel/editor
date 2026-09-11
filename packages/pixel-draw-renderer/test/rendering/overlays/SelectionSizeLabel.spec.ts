@@ -15,8 +15,10 @@ import {
   makeBrush
 } from "../../helpers/overlay.ts";
 
-// CONSTANTS
-// Mirrors the label's own estimate: 6.2px per glyph at font-size 10.
+/*
+ * CONSTANTS
+ * Mirrors the label's own estimate: 6.2px per glyph at font-size 10.
+ */
 const kCharWidth = 6.2;
 
 function makeLabel(

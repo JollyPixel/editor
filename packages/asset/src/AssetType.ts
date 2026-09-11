@@ -1,5 +1,4 @@
 // CONSTANTS
-// Keeps TValue in the structural type without adding runtime state.
 declare const kAssetValueTypeBrand: unique symbol;
 
 /**

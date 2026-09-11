@@ -35,25 +35,28 @@ describe("constructor", () => {
     assert.strictEqual(crh.handleElt.parentElement, target);
   });
 
-  test("handle element gets resize-handle, corner and <vertical>-<horizontal> classes for the visual corner it sits at", () => {
-    const container = makeContainer();
-    const target = makeTarget(container);
-    // Anchoring the left and top edges puts the handle itself bottom-right.
-    const crh = new CornerResizeHandle(target, {
-      horizontal: "left",
-      vertical: "top"
-    });
+  test(
+    "handle gets resize-handle, corner and <vertical>-<horizontal> classes for the visual corner it sits at",
+    () => {
+      const container = makeContainer();
+      const target = makeTarget(container);
+      // Anchoring the left and top edges puts the handle itself bottom-right.
+      const crh = new CornerResizeHandle(target, {
+        horizontal: "left",
+        vertical: "top"
+      });
 
-    assert.ok(
-      crh.handleElt.classList.contains("resize-handle")
-    );
-    assert.ok(
-      crh.handleElt.classList.contains("corner")
-    );
-    assert.ok(
-      crh.handleElt.classList.contains("bottom-right")
-    );
-  });
+      assert.ok(
+        crh.handleElt.classList.contains("resize-handle")
+      );
+      assert.ok(
+        crh.handleElt.classList.contains("corner")
+      );
+      assert.ok(
+        crh.handleElt.classList.contains("bottom-right")
+      );
+    }
+  );
 
   test("anchoring the right and bottom edges puts the handle top-left", () => {
     const container = makeContainer();
@@ -74,8 +77,10 @@ describe("constructor", () => {
       vertical: "top"
     });
 
-    // Pointer-only: the target's own edge ResizeHandle instances already
-    // give a keyboard/screen-reader user full access to each axis.
+    /*
+     * Pointer-only: the target's own edge ResizeHandle instances already
+     * give a keyboard/screen-reader user full access to each axis.
+     */
     assert.equal(crh.handleElt.getAttribute("aria-hidden"), "true");
     assert.equal(crh.handleElt.hasAttribute("tabindex"), false);
     assert.equal(crh.handleElt.hasAttribute("role"), false);

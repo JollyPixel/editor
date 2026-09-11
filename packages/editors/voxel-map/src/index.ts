@@ -40,7 +40,6 @@ import "./shared/domEvents.ts";
 import "./app/sidebarIcons.ts";
 
 // CONSTANTS
-// Used offline or when the shared document has no tileset.
 const kFallbackTileset: TilesetDefinition = {
   id: "default",
   src: "textures/tileset.png",

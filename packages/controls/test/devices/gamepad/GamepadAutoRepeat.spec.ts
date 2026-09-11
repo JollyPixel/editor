@@ -53,8 +53,10 @@ describe("Controls.Gamepad auto repeat", () => {
     // First update creates auto repeat
     gamepad.update();
 
-    // Advance time past the auto repeat delay
-    // 600ms later (delay is 500ms)
+    /*
+     * Advance time past the auto repeat delay
+     * 600ms later (delay is 500ms)
+     */
     mockTime = 1600;
 
     // Second update should trigger auto repeat

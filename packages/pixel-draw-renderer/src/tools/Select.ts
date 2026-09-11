@@ -45,12 +45,6 @@ export class Select {
     return this.#mask;
   }
 
-  /**
-   * Whether the content lives only in the floating layer, with no footprint
-   * of its own in the buffer yet (a paste). Such a selection must not erase
-   * a source when it moves, and must be deposited rather than dropped when
-   * it is deselected.
-   */
   get floating(): boolean {
     return this.#floating;
   }
@@ -116,10 +110,6 @@ export class Select {
     this.#floating = false;
   }
 
-  /**
-   * Masked-out cells are holes, not grab handles: a click through one starts
-   * a new selection instead of dragging the shape it belongs to.
-   */
   hitTest(
     pos: Vec2
   ): boolean {
@@ -222,7 +212,6 @@ export class Select {
       snapshot,
       mask
     );
-    // History replay restores buffer-backed content.
     this.#floating = false;
   }
 
@@ -238,11 +227,6 @@ export class Select {
     this.#floating = false;
   }
 
-  /**
-   * Clears the floating flag without clearing the selection. Keeps `floating`
-   * honest for anything that re-enters through the deposit's own commit
-   * callbacks, before the deselect that follows resets the whole state.
-   */
   markDeposited(): void {
     this.#floating = false;
   }
@@ -394,9 +378,6 @@ export class Select {
     };
   }
 
-  /**
-   * Uses the dominant border color, or `fallback` without in-bounds neighbors.
-   */
   static dominantBorderColor(
     buffer: DefaultPixelBuffer,
     rect: SelectionRect,
@@ -454,9 +435,6 @@ export class Select {
     return best ?? fallback;
   }
 
-  /**
-   * Keeps local and peer vacated-footprint colors consistent.
-   */
   static resolveEraseColor(
     buffer: DefaultPixelBuffer,
     rect: SelectionRect,

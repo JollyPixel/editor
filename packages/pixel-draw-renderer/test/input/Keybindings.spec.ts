@@ -188,8 +188,10 @@ describe("Keybindings.match", () => {
   });
 
   test("matches by the character produced (event.key), not physical key position — correct on AZERTY", () => {
-    // AZERTY: the physical key that produces the "z" character sits where
-    // QWERTY has "W", so the browser reports key: "z", code: "KeyW".
+    /*
+     * AZERTY: the physical key that produces the "z" character sits where
+     * QWERTY has "W", so the browser reports key: "z", code: "KeyW".
+     */
     const keybindings = new Keybindings();
     const azertyZ = keydown({
       key: "z",

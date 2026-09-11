@@ -91,8 +91,10 @@ test.describe("DockLayout", () => {
   test("a solid dock scrolls its packed panes, and an aligned overlay can scroll", async({ page }) => {
     await open(page);
 
-    // A solid dock is bounded by the edge of the page. An aligned overlay can
-    // also scroll when its content is taller than the viewport.
+    /*
+     * A solid dock is bounded by the edge of the page. An aligned overlay can
+     * also scroll when its content is taller than the viewport.
+     */
     await expect.poll(
       () => partStyleOf(
         page.locator("jolly-dock[key='left']"),
@@ -108,8 +110,10 @@ test.describe("DockLayout", () => {
       )
     ).toBe("auto");
 
-    // And it casts the shorter elevation: these sit a gap apart in a column,
-    // near enough that a window's shadow would pool between them.
+    /*
+     * And it casts the shorter elevation: these sit a gap apart in a column,
+     * near enough that a window's shadow would pool between them.
+     */
     const cast = await shadowBlurOf(page.locator("jolly-pane[key='hud']"));
     expect(cast).toBeGreaterThan(0);
     expect(cast).toBeLessThan(
@@ -120,8 +124,10 @@ test.describe("DockLayout", () => {
   test("packing panes to one edge does not realign their text", async({ page }) => {
     await open(page);
 
-    // "align" is also a legacy presentational attribute, and the UA maps it
-    // onto text-align for custom elements too.
+    /*
+     * "align" is also a legacy presentational attribute, and the UA maps it
+     * onto text-align for custom elements too.
+     */
     await expect.poll(
       () => page.locator("jolly-dock[key='right']").evaluate(
         (element) => getComputedStyle(element).textAlign
@@ -144,33 +150,42 @@ test.describe("DockLayout", () => {
     );
   });
 
-  test("a jittery click on a collapsed dock's handle does not corrupt its remembered size", async({ page }) => {
-    await open(page);
+  test(
+    "a jittery click on a collapsed dock's handle does not corrupt its remembered size",
+    async({ page }) => {
+      await open(page);
 
-    const dock = page.locator("jolly-dock[key='left']");
-    const originalSize = await dock.evaluate((element: HTMLElement & { size: number; }) => element.size);
-    const handle = dock.locator(".resize-handle");
+      const dock = page.locator("jolly-dock[key='left']");
+      const originalSize = await dock.evaluate((element: HTMLElement & { size: number; }) => element.size);
+      const handle = dock.locator(".resize-handle");
 
-    await handle.dblclick();
-    await expect.poll(() => widthOf(dock)).toBe(0);
+      await handle.dblclick();
+      await expect.poll(() => widthOf(dock)).toBe(0);
 
-    // Collapsing moves the handle to where the dock's now-zero-width edge
-    // sits, so its position has to be read after collapsing, not before.
-    const point = await centerOf(handle);
+      /*
+       * Collapsing moves the handle to where the dock's now-zero-width edge
+       * sits, so its position has to be read after collapsing, not before.
+       */
+      const point = await centerOf(handle);
 
-    // A double-click is two independent click cycles under the hood, each
-    // driving the resize handle's own pointerdown/pointerup. A couple of
-    // pixels of real-world jitter on either one reads as a resize drag on the
-    // collapsed (0px) dock, which is nearly impossible to force on purpose
-    // and exactly why this is hard to reproduce by hand.
-    await page.mouse.move(point.x, point.y);
-    await page.mouse.down();
-    await page.mouse.move(point.x + 3, point.y);
-    await page.mouse.up();
+      /*
+       * A double-click is two independent click cycles under the hood, each
+       * driving the resize handle's own pointerdown/pointerup. A couple of
+       * pixels of real-world jitter on either one reads as a resize drag on the
+       * collapsed (0px) dock, which is nearly impossible to force on purpose
+       * and exactly why this is hard to reproduce by hand.
+       */
+      await page.mouse.move(point.x, point.y);
+      await page.mouse.down();
+      await page.mouse.move(point.x + 3, point.y);
+      await page.mouse.up();
 
-    await expect.poll(() => dock.evaluate((element: HTMLElement & { size: number; }) => element.size)).toBe(originalSize);
+      await expect
+        .poll(() => dock.evaluate((element: HTMLElement & { size: number; }) => element.size))
+        .toBe(originalSize);
 
-    await handle.dblclick();
-    await expect.poll(() => widthOf(dock)).toBe(originalSize);
-  });
+      await handle.dblclick();
+      await expect.poll(() => widthOf(dock)).toBe(originalSize);
+    }
+  );
 });

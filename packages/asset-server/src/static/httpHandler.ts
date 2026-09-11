@@ -144,8 +144,6 @@ async function serve(
     bytes = await source.read(assetPath);
   }
   catch (error) {
-    // The source rejects what its own containment check refuses, a symlink
-    // out of the root above all.
     if (error instanceof AssetPathEscapeError) {
       end(response, 403);
 

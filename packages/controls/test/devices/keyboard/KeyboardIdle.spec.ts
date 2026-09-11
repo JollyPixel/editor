@@ -44,8 +44,10 @@ describe("Controls.Keyboard idle gating", () => {
     assert.strictEqual(keyboard.isDown("KeyW"), false);
     assert.strictEqual(keyboard.wasJustReleased("KeyW"), true);
 
-    // The settling tick must still run even though nothing is held, or
-    // wasJustReleased would stay true forever.
+    /*
+     * The settling tick must still run even though nothing is held, or
+     * wasJustReleased would stay true forever.
+     */
     keyboard.update();
     assert.strictEqual(keyboard.wasJustReleased("KeyW"), false);
     assert.strictEqual(keyboard.wasActive, false);

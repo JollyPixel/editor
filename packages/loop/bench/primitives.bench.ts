@@ -16,7 +16,6 @@ import {
 } from "../src/index.ts";
 
 // CONSTANTS
-// Read results land here so V8 cannot elide the calls being measured.
 const kSink = { value: 0 };
 
 /**

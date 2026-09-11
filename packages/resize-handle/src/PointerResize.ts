@@ -5,9 +5,6 @@ export interface PointerCoordinate {
 
 export interface PointerResizeOptions {
   handle: HTMLElement;
-  /**
-   * classList token applied to <html> while dragging
-   */
   dragToken: string;
   canStart: () => boolean;
   onStart: (

@@ -18,23 +18,9 @@ export interface RenderViewport {
 
 export interface RenderComponent {
   readonly threeCamera: THREE.Camera;
-
-  /** Render sort order — lower value rendered first (background), higher on top.
-   * @default 0
-   */
   readonly depth: number;
-
-  /**
-   * Normalized viewport rect (values in [0, 1], y=0 is bottom per WebGL convention).
-   * null means full canvas.
-   */
   readonly viewport: Readonly<RenderViewport> | null;
 
-  /**
-   * Called by the render strategy before each draw.
-   * Implementations should sync their THREE.Camera transform from the actor
-   * and update the projection matrix when canvas size changes.
-   */
   prepareRender(
     canvasWidth: number,
     canvasHeight: number
@@ -42,8 +28,12 @@ export interface RenderComponent {
 }
 
 export type RendererEvents = {
-  resize: (size: { width: number; height: number; }) => void;
-  draw: (params: { source: THREE.WebGPURenderer; }) => void;
+  resize: (
+    size: { width: number; height: number; }
+  ) => void;
+  draw: (
+    params: { source: THREE.WebGPURenderer; }
+  ) => void;
 };
 
 export interface Renderer<
@@ -53,17 +43,22 @@ export interface Renderer<
   readonly canvas: HTMLCanvasElement;
 
   getSource(): T;
-  setRenderMode(mode: RenderMode): this;
-  setRatio(ratio: number | null): this;
+  setRenderMode(
+    mode: RenderMode
+  ): this;
+  setRatio(
+    ratio: number | null
+  ): this;
 
-  addRenderComponent(component: RenderComponent): void;
-  removeRenderComponent(component: RenderComponent): void;
-  /**
-   * Signals that a registered component swapped its `threeCamera` instance, so
-   * the renderer can rebind anything keyed on it (composer render passes).
-   */
-  updateRenderComponent(component: RenderComponent): void;
-  /** Signals that a registered component changed its `depth`. */
+  addRenderComponent(
+    component: RenderComponent
+  ): void;
+  removeRenderComponent(
+    component: RenderComponent
+  ): void;
+  updateRenderComponent(
+    component: RenderComponent
+  ): void;
   markRenderOrderDirty(): void;
 
   on<Key extends keyof Events>(
@@ -87,10 +82,5 @@ export interface Renderer<
     callback: (event: { source: T; }) => void
   ): void;
   clear(): void;
-
-  /**
-   * Releases every GPU resource held by the renderer and stops observing resize.
-   * The renderer must not be used afterwards.
-   */
   dispose(): void;
 }

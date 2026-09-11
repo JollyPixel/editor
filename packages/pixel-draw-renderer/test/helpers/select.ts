@@ -4,8 +4,10 @@ import type {
 } from "#src/PixelArtCanvas.ts";
 import { mouseEvent } from "./events.ts";
 
-// Rotate/flip keybindings, shared between the standalone R/H/V coverage and
-// the undo/redo-of-a-transform coverage in the select-mode specs.
+/*
+ * Rotate/flip keybindings, shared between the standalone R/H/V coverage and
+ * the undo/redo-of-a-transform coverage in the select-mode specs.
+ */
 export function rotateKey(): KeyboardEvent {
   return new KeyboardEvent(
     "keydown",

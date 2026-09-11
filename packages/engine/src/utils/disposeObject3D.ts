@@ -155,8 +155,10 @@ function disposeTexture(
 ): void {
   texture.dispose();
 
-  // ImageBitmap keeps CPU-side resources alive until it is closed,
-  // and three.js leaves that call to the application.
+  /*
+   * ImageBitmap keeps CPU-side resources alive until it is closed,
+   * and three.js leaves that call to the application.
+   */
   const { image } = texture;
   if (
     typeof ImageBitmap !== "undefined" &&

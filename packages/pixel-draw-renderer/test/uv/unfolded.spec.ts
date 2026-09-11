@@ -185,7 +185,8 @@ describe("UVRegion — transitions out of unfolded", () => {
     const rect = { x: 12, y: 20, width: 4, height: 4 };
 
     assert.deepStrictEqual(
-      stackedRegion(rect).unfold().stack().rectFor("front"),
+      stackedRegion(rect).unfold().stack()
+        .rectFor("front"),
       rect
     );
   });

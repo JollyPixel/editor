@@ -60,19 +60,23 @@ async function initRuntime(): Promise<void> {
     drawPanel.onResize();
   });
 
-  // jolly-theme-preferences owns the toggle and its persistence; setting
-  // `target` after both elements exist re-applies it (ThemePreferences'
-  // `updated()` hook), since `pixel-draw-panel` lives outside the preferences
-  // element's own tree and can't be found via `.closest("jolly-scope")`.
+  /*
+   * jolly-theme-preferences owns the toggle and its persistence; setting
+   * `target` after both elements exist re-applies it (ThemePreferences'
+   * `updated()` hook), since `pixel-draw-panel` lives outside the preferences
+   * element's own tree and can't be found via `.closest("jolly-scope")`.
+   */
   const themePreferences = document.querySelector<ThemePreferences>("#theme-preferences")!;
   themePreferences.target = drawPanel;
   await themePreferences.updateComplete;
 
-  // Theming applies to the 2D panel regardless of whether the 3D preview
-  // runtime is running; only the scene-appearance side effect is 3D-only.
-  // `--color-*` (the panel's CSS) and `--demo-*` (the page backdrop's CSS)
-  // both resolve "auto" on their own via `color-scheme`; only this resolved
-  // value, needed by the non-CSS 3D scene, is main.ts's to compute.
+  /*
+   * Theming applies to the 2D panel regardless of whether the 3D preview
+   * runtime is running; only the scene-appearance side effect is 3D-only.
+   * `--color-*` (the panel's CSS) and `--demo-*` (the page backdrop's CSS)
+   * both resolve "auto" on their own via `color-scheme`; only this resolved
+   * value, needed by the non-CSS 3D scene, is main.ts's to compute.
+   */
   let applySceneAppearance: (theme: Exclude<ThemeMode, "auto">) => void = noop;
   function syncResolvedTheme(): void {
     const resolvedTheme = resolveTheme(drawPanel.theme);
@@ -88,11 +92,13 @@ async function initRuntime(): Promise<void> {
   });
   syncResolvedTheme();
 
-  // The 3D preview runtime (camera, orbit controls, UV region meshes) is
-  // pure overhead for tests that only exercise the 2D pixel canvas: its
-  // WebGPU-fallback render loop runs continuously and competes with every
-  // CDP-dispatched pointer event for the main thread. Tests that don't
-  // assert on preview meshes skip it with `?runtime=off` (see gotoDemo()).
+  /*
+   * The 3D preview runtime (camera, orbit controls, UV region meshes) is
+   * pure overhead for tests that only exercise the 2D pixel canvas: its
+   * WebGPU-fallback render loop runs continuously and competes with every
+   * CDP-dispatched pointer event for the main thread. Tests that don't
+   * assert on preview meshes skip it with `?runtime=off` (see gotoDemo()).
+   */
   if (new URLSearchParams(window.location.search).get("runtime") === "off") {
     const syncReady = initializeDemoSync(canvasManager);
     await syncReady;

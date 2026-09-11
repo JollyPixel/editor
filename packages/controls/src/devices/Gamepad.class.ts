@@ -27,8 +27,10 @@ export type GamepadIndex = 0 | 1 | 2 | 3;
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Gamepad/buttons
  */
 export const GamepadButton = {
-  // Face buttons (right side)
-  // Bottom button (Xbox: A, PlayStation: Cross)
+  /*
+   * Face buttons (right side)
+   * Bottom button (Xbox: A, PlayStation: Cross)
+   */
   A: 0,
   // Right button (Xbox: B, PlayStation: Circle)
   B: 1,
@@ -37,8 +39,10 @@ export const GamepadButton = {
   // Top button (Xbox: Y, PlayStation: Triangle)
   Y: 3,
 
-  // Shoulder buttons
-  // L1
+  /*
+   * Shoulder buttons
+   * L1
+   */
   LeftBumper: 4,
   // R1
   RightBumper: 5,
@@ -47,14 +51,18 @@ export const GamepadButton = {
   // R2
   RightTrigger: 7,
 
-  // Center buttons
-  // Back/Share button
+  /*
+   * Center buttons
+   * Back/Share button
+   */
   Select: 8,
   // Start/Options button
   Start: 9,
 
-  // Stick buttons (press down on analog stick)
-  // L3
+  /*
+   * Stick buttons (press down on analog stick)
+   * L3
+   */
   LeftStick: 10,
   // R3
   RightStick: 11,
@@ -65,8 +73,10 @@ export const GamepadButton = {
   DPadLeft: 14,
   DPadRight: 15,
 
-  // Special buttons (may not be present on all controllers)
-  // Xbox and PlayStation button
+  /*
+   * Special buttons (may not be present on all controllers)
+   * Xbox and PlayStation button
+   */
   Home: 16
 } as const;
 
@@ -332,8 +342,10 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
   }
 
   update() {
-    // `gamepadconnected` may not fire for a controller present at page load.
-    // Poll slowly until one is found, then resume per-frame polling.
+    /*
+     * `gamepadconnected` may not fire for a controller present at page load.
+     * Poll slowly until one is found, then resume per-frame polling.
+     */
     if (!this.#sawGamepad && this.connectedGamepads <= 0) {
       if (this.#idlePollCountdown > 0) {
         this.#idlePollCountdown--;
