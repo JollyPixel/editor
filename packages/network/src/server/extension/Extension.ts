@@ -7,6 +7,14 @@ import type {
   ClientHandle,
   PeerMetadata
 } from "../../protocol/types.ts";
+import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
+
+export interface RoomPeer {
+  readonly clientId: string;
+  readonly identity: PeerIdentity;
+  readonly profile: PeerMetadata;
+  readonly presence: PeerMetadata;
+}
 
 export interface RoomBroadcast {
   broadcast(
@@ -48,7 +56,7 @@ export abstract class Extension<
 
   onClientConnect?(
     client: ClientHandle,
-    identity: PeerMetadata,
+    peer: RoomPeer,
     context: RoomContext
   ): void | Promise<void>;
 

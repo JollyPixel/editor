@@ -10,7 +10,7 @@ abstract class Extension<TMessage = unknown> {
 
   onClientConnect?(
     client: ClientHandle,
-    identity: PeerMetadata,
+    peer: RoomPeer,
     context: RoomContext
   ): void | Promise<void>;
   onClientDisconnect?(clientId: string, context: RoomContext): void | Promise<void>;
@@ -20,6 +20,13 @@ abstract class Extension<TMessage = unknown> {
 interface RoomContext {
   readonly room: RoomBroadcast;
   readonly eventStore: RoomEventStoreHandle;
+}
+
+interface RoomPeer {
+  readonly clientId: string;
+  readonly identity: PeerIdentity;
+  readonly profile: PeerMetadata;
+  readonly presence: PeerMetadata;
 }
 
 interface RoomBroadcast {
@@ -219,6 +226,7 @@ and cached handles here.
 type RoomAppendInput = Omit<EventStore.AppendInput, "actor">;
 ```
 
-The server fills in `actor` from the member's identity. It uses `userId` when
-present and otherwise falls back to the transport client ID. Extensions cannot
-set or omit the actor.
+The server fills in `actor` from the member's authenticated identity: its
+`subject`, decided at the handshake by an
+[authentication provider](./Authentication.md). Extensions cannot set or omit
+the actor, and no client payload can influence it.

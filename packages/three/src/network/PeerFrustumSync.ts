@@ -52,11 +52,11 @@ export interface PeerFrustumSyncOptions<
   fadeWithin?: number;
   /**
    * Returns a peer's display label.
-   * @default reads `identity.username` when it's a string
+   * @default reads `profile.username` when it's a string
    */
   label?: (
     clientId: string,
-    identity: network.PeerMetadata
+    profile: network.PeerMetadata
   ) => string | undefined;
   /**
    * Returns a remote peer's frustum color, overriding `frustum.color`.
@@ -65,7 +65,7 @@ export interface PeerFrustumSyncOptions<
    */
   color?: (
     clientId: string,
-    identity: network.PeerMetadata
+    profile: network.PeerMetadata
   ) => THREE.ColorRepresentation;
   /**
    * Shared frustum options excluding `displayName`. `color` here applies to
@@ -76,9 +76,9 @@ export interface PeerFrustumSyncOptions<
 
 function defaultLabel(
   _clientId: string,
-  identity: network.PeerMetadata
+  profile: network.PeerMetadata
 ): string | undefined {
-  return typeof identity.username === "string" ? identity.username : undefined;
+  return typeof profile.username === "string" ? profile.username : undefined;
 }
 
 export class PeerFrustumSync<
@@ -93,11 +93,11 @@ export class PeerFrustumSync<
   #fadeWithin: number;
   #label: (
     clientId: string,
-    identity: network.PeerMetadata
+    profile: network.PeerMetadata
   ) => string | undefined;
   #color: ((
     clientId: string,
-    identity: network.PeerMetadata
+    profile: network.PeerMetadata
   ) => THREE.ColorRepresentation) | undefined;
   #frustumOptions: Omit<PeerFrustumOptions, "displayName">;
   #peers = new Map<string, PeerFrustum>();
@@ -219,8 +219,8 @@ export class PeerFrustumSync<
     }
 
     for (const [clientId, frustum] of this.#peers) {
-      const identity = this.#room.peers.get(clientId)?.identity ?? {};
-      frustum.color = color(clientId, identity);
+      const profile = this.#room.peers.get(clientId)?.profile ?? {};
+      frustum.color = color(clientId, profile);
     }
   }
 
@@ -251,7 +251,7 @@ export class PeerFrustumSync<
   #reconcilePeers(): void {
     for (const [clientId, peer] of this.#room.peers) {
       if (!this.#peers.has(clientId)) {
-        this.#applyPeer(clientId, peer.identity, peer.presence);
+        this.#applyPeer(clientId, peer.profile, peer.presence);
       }
     }
   }
@@ -266,7 +266,7 @@ export class PeerFrustumSync<
 
     this.#applyPeer(
       clientId,
-      peer.identity,
+      peer.profile,
       peer.presence
     );
   }
@@ -279,17 +279,17 @@ export class PeerFrustumSync<
       return;
     }
 
-    const identity = this.#room.peers.get(clientId)?.identity ?? {};
+    const profile = this.#room.peers.get(clientId)?.profile ?? {};
     this.#applyPeer(
       clientId,
-      identity,
+      profile,
       patch
     );
   }
 
   #applyPeer(
     clientId: string,
-    identity: network.PeerMetadata,
+    profile: network.PeerMetadata,
     presence: network.PeerMetadata
   ): void {
     const pose = decodePeerFrustumPose(presence[this.#presenceKey]);
@@ -307,7 +307,7 @@ export class PeerFrustumSync<
 
     this.#poses.set(clientId, pose);
 
-    const frustum = this.#peers.get(clientId) ?? this.#createPeer(clientId, identity);
+    const frustum = this.#peers.get(clientId) ?? this.#createPeer(clientId, profile);
     frustum.visible = true;
     frustum.position.copy(pose.position);
     frustum.quaternion.copy(pose.quaternion);
@@ -351,14 +351,14 @@ export class PeerFrustumSync<
 
   #createPeer(
     clientId: string,
-    identity: network.PeerMetadata
+    profile: network.PeerMetadata
   ): PeerFrustum {
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
       ...this.#color && {
-        color: this.#color(clientId, identity)
+        color: this.#color(clientId, profile)
       },
-      displayName: this.#label(clientId, identity)
+      displayName: this.#label(clientId, profile)
     });
     this.#parent.add(frustum);
     this.#peers.set(clientId, frustum);

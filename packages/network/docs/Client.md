@@ -6,7 +6,8 @@ Browser/Node side of the wire. Owns one socket and hands out room-scoped `Room` 
 import * as network from "@jolly-pixel/network";
 
 const client = new network.Client({
-  identity: { username: "alice" }
+  profile: { username: "alice" },
+  credential: password
 });
 
 const room = client.room("echo");
@@ -27,9 +28,13 @@ interface ClientOptions {
    */
   url?: string;
   /**
-   * Static metadata attached to every join.
+   * Untrusted, presentational metadata attached to every join.
    */
-  identity?: PeerMetadata;
+  profile?: PeerMetadata;
+  /**
+   * Opaque credential offered during the handshake.
+   */
+  credential?: string;
   logger?: Logger;
 }
 ```
@@ -39,7 +44,7 @@ interface ClientOptions {
 - `room(name, options?)` — returns the handle for `name`; the same name always returns the same instance, and only the first call's options apply. It does not join.
 - `destroy()` — closes the socket.
 
-`identity.role` feeds the server's rights table when one is configured — see [Rights](./Rights.md).
+`profile` is untrusted: the server never reads a role or a user id from it. The connection's role comes from [authentication](./Authentication.md), and `credential` is what the server's provider inspects to decide it.
 
 ## Room
 
@@ -68,7 +73,8 @@ interface Room<ClientMessage = unknown, ServerMessage = unknown> {
 
 interface Peer {
   readonly clientId: string;
-  readonly identity: PeerMetadata;
+  readonly role: string;
+  readonly profile: PeerMetadata;
   readonly presence: PeerMetadata;
 }
 
@@ -77,11 +83,13 @@ interface RoomOptions<ServerMessage = unknown> {
 }
 ```
 
-- `join()` — joins on the server, carrying the client's identity. No-op once joined.
+- `join()` — joins on the server, carrying the client's profile. No-op once joined.
 - `send(payload)` — sends a room-scoped message; the payload passes through untouched.
 - `updatePresence(patch)` — per-room dynamic metadata (cursor position, ...), shallow-merged server-side and relayed to peers as `"peer-presence"`.
 - `leave()` — leaves, clears the local peer cache, drops the room from the client.
 - `peers` — remote peers only, never the local client. Seeded on join, then kept current by the peer events.
+- `clientId` — the id peers see, learned from the server on join. Before that it is a local placeholder.
+- `role`, `rights`, `can(event)`, `access` — this connection's own access, resolved server-side and delivered with the join snapshot. See [Rights](./Rights.md#reading-rights-on-the-client).
 
 ## Events
 
@@ -90,6 +98,7 @@ Any number of listeners per event; `off` removes only the listener passed in. Li
 | Event | Payload | Fired when |
 |---|---|---|
 | `message` | `ServerMessage` | the room's extension sends to this client |
+| `sync` | `{ self, clientIds }` | your join was admitted — `clientId`, `role`, `rights` and `peers` are now current. `clientIds` lists remote peers only |
 | `peer-joined` | `{ clientId }` | a remote peer joins after you |
 | `peer-left` | `{ clientId }` | a remote peer leaves or disconnects |
 | `peer-presence` | `{ clientId, patch }` | a remote presence patch arrives — `peers` is already updated |
@@ -98,6 +107,8 @@ Any number of listeners per event; `off` removes only the listener passed in. Li
 | `malformed` | `{ payload, errors }` | an inbound payload failed this room's parser (only with `options.parser`) |
 
 `denied` and `error` share a shape but not a meaning: `denied` means you aren't allowed, `error` means it broke.
+
+The client itself emits `"ready"` when the socket opens and `"unauthorized"` when the server refused the handshake — see [Authentication](./Authentication.md#rejection).
 
 ## Parsing inbound payloads
 

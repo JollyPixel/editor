@@ -33,7 +33,7 @@ export async function initializeDemoSync(
   canvasManager: PixelArtCanvas
 ): Promise<void> {
   const networkClient = new network.Client({
-    identity: {
+    profile: {
       username: await resolveUsername()
     }
   });

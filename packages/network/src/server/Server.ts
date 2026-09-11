@@ -23,6 +23,12 @@ import {
 } from "./extension/Extension.ts";
 import { WorkerExtensionProxy } from "./extension/worker/WorkerExtensionProxy.ts";
 import { RoomRegistry } from "./room/RoomRegistry.ts";
+import { BypassAuthentication } from "./auth/providers/BypassAuthentication.ts";
+import type {
+  AuthenticationAttempt,
+  AuthenticationProvider,
+  PeerIdentity
+} from "./auth/AuthenticationProvider.ts";
 import type { RoomResolver } from "./room/RoomResolver.ts";
 import { ClientSessions } from "./ClientSessions.ts";
 import {
@@ -40,6 +46,8 @@ interface EnvelopeFields {
 export interface ServerOptions {
   logger?: Logger;
   rights?: RightsMap;
+  defaultRole?: string;
+  auth?: AuthenticationProvider;
   eventStore?: EventStore.EventStore;
   /**
    * Empty resolved-room grace period in milliseconds.
@@ -55,6 +63,8 @@ export class Server {
   readonly logger: Logger;
 
   #rooms: RoomRegistry;
+  #rights: RightsTable;
+  #auth: AuthenticationProvider;
   #sessions = new ClientSessions();
   #dispatcher: EnvelopeDispatcher;
   #workerProxies: WorkerExtensionProxy[] = [];
@@ -83,9 +93,11 @@ export class Server {
       })
       .error("append event"));
 
+    this.#rights = new RightsTable(options.rights, options.defaultRole);
+    this.#auth = options.auth ?? new BypassAuthentication();
     this.#rooms = new RoomRegistry({
       logger: this.logger,
-      rights: new RightsTable(options.rights),
+      rights: this.#rights,
       eventStore,
       graceMs: options.roomGraceMs
     });
@@ -109,20 +121,12 @@ export class Server {
     this.#rooms.register(resolvedExtension);
   }
 
-  /**
-   * Sets the resolver for rooms not registered in advance.
-   */
   setRoomResolver(
     resolver: RoomResolver | null
   ): void {
     this.#rooms.setResolver(resolver);
   }
 
-  /**
-   * Resolves once in-flight room evictions have finished, for one room or
-   * all of them. Callers that need an evicted room's state flushed await
-   * this after the grace period elapses.
-   */
   settled(
     roomName?: string
   ): Promise<void> {
@@ -142,12 +146,26 @@ export class Server {
     await this.close();
   }
 
+  authenticate(
+    attempt: AuthenticationAttempt
+  ): PeerIdentity | null | Promise<PeerIdentity | null> {
+    return this.#auth.authenticate({
+      ...attempt,
+      defaultRole: this.#rights.defaultRole
+    });
+  }
+
   handleConnect(
-    client: ClientHandle
+    client: ClientHandle,
+    identity: PeerIdentity
   ): void {
-    this.#sessions.open(client);
+    this.#sessions.open(client, identity);
     this.logger
-      .withMetadata({ clientId: client.id })
+      .withMetadata({
+        clientId: client.id,
+        subject: identity.subject,
+        role: identity.role
+      })
       .debug("client connected");
   }
 

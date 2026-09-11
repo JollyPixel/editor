@@ -7,8 +7,10 @@ import {
   mainToWorkerSchema,
   workerToMainSchema
 } from "./protocol.schema.ts";
-import type { RoomAppendInput } from "../Extension.ts";
-import type { PeerMetadata } from "../../../protocol/types.ts";
+import type {
+  RoomAppendInput,
+  RoomPeer
+} from "../Extension.ts";
 
 // CONSTANTS
 const kValidatorOptions = { useDefaults: false };
@@ -26,7 +28,7 @@ const kWorkerToMain = new Validator(
 );
 
 export interface DispatchArgsMap {
-  onClientConnect: [clientId: string, identity: PeerMetadata];
+  onClientConnect: [clientId: string, peer: RoomPeer];
   onClientDisconnect: [clientId: string];
   onMessage: [clientId: string, payload: unknown];
 }

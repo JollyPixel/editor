@@ -1,20 +1,35 @@
 // Import Internal Dependencies
 import { defineSchema } from "./schema.ts";
 
+export const rightSchema = defineSchema({
+  enum: [
+    "read",
+    "write",
+    "void"
+  ]
+});
+
 export const peerMetadataSchema = defineSchema({
   type: "object"
+});
+
+export const roomRightsSchema = defineSchema({
+  type: "object",
+  additionalProperties: rightSchema
 });
 
 export const peerSchema = defineSchema({
   type: "object",
   properties: {
     clientId: { type: "string" },
-    identity: peerMetadataSchema,
+    role: { type: "string" },
+    profile: peerMetadataSchema,
     presence: peerMetadataSchema
   },
   required: [
     "clientId",
-    "identity",
+    "role",
+    "profile",
     "presence"
   ]
 });
@@ -24,7 +39,7 @@ export const joinEnvelopeSchema = defineSchema({
   properties: {
     room: { type: "string" },
     kind: { const: "join" },
-    identity: peerMetadataSchema
+    profile: peerMetadataSchema
   },
   required: [
     "room",
@@ -77,6 +92,8 @@ export const syncEnvelopeSchema = defineSchema({
   properties: {
     room: { type: "string" },
     kind: { const: "sync" },
+    self: { type: "string" },
+    rights: roomRightsSchema,
     members: {
       type: "array",
       items: peerSchema
@@ -85,6 +102,8 @@ export const syncEnvelopeSchema = defineSchema({
   required: [
     "room",
     "kind",
+    "self",
+    "rights",
     "members"
   ]
 });
@@ -95,13 +114,15 @@ export const peerJoinedEnvelopeSchema = defineSchema({
     room: { type: "string" },
     kind: { const: "peer-joined" },
     clientId: { type: "string" },
-    identity: peerMetadataSchema
+    role: { type: "string" },
+    profile: peerMetadataSchema
   },
   required: [
     "room",
     "kind",
     "clientId",
-    "identity"
+    "role",
+    "profile"
   ]
 });
 

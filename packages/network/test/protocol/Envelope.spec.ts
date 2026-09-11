@@ -73,11 +73,11 @@ describe("Envelope.parseClient", () => {
     assert.equal(errorOf(result).reason, "malformed");
   });
 
-  test("rejects an identity that is not an object", () => {
+  test("rejects a profile that is not an object", () => {
     const result = Envelope.parseClient({
       room: "pixel-draw",
       kind: "join",
-      identity: "anonymous"
+      profile: "anonymous"
     });
 
     assert.equal(errorOf(result).reason, "malformed");
@@ -129,14 +129,17 @@ describe("Envelope.parseServer", () => {
     assert.equal(result.ok, true);
   });
 
-  test("accepts a sync envelope carrying members", () => {
+  test("accepts a sync envelope carrying self, rights and members", () => {
     const result = Envelope.parseServer({
       room: "pixel-draw",
       kind: "sync",
+      self: "a",
+      rights: { "voxel-set": "read" },
       members: [
         {
           clientId: "a",
-          identity: { name: "ada" },
+          role: "viewer",
+          profile: { name: "ada" },
           presence: {}
         }
       ]
@@ -146,7 +149,24 @@ describe("Envelope.parseServer", () => {
   });
 
   test("rejects a sync envelope without members", () => {
-    const result = Envelope.parseServer({ room: "pixel-draw", kind: "sync" });
+    const result = Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "sync",
+      self: "a",
+      rights: {}
+    });
+
+    assert.equal(errorOf(result).reason, "malformed");
+  });
+
+  test("rejects a sync envelope whose rights are not a known right", () => {
+    const result = Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "sync",
+      self: "a",
+      rights: { "voxel-set": "admin" },
+      members: []
+    });
 
     assert.equal(errorOf(result).reason, "malformed");
   });
@@ -155,6 +175,10 @@ describe("Envelope.parseServer", () => {
     const result = Envelope.parseServer({
       room: "pixel-draw",
       kind: "sync",
+      self: "a",
+      role: "default",
+
+      rights: {},
       members: [{ clientId: 42 }]
     });
 

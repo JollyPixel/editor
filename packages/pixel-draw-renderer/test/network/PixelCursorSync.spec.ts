@@ -46,6 +46,14 @@ function createMockRoom(
     id: "test-room",
     clientId,
     peers: peersMap,
+
+    role: "default",
+
+    rights: {},
+
+    access: "write" as const,
+
+    can: () => "write" as const,
     on: (type, listener) => {
       let set = listeners.get(type);
       if (!set) {
@@ -70,8 +78,8 @@ function createMockRoom(
     leave() {
       // Unused by PixelCursorSync.
     },
-    addPeer(id, identity = {}, presence = {}) {
-      peersMap.set(id, { clientId: id, identity, presence });
+    addPeer(id, profile = {}, presence = {}) {
+      peersMap.set(id, { clientId: id, role: "default", profile, presence });
     },
     simulateJoin(id) {
       emit("peer-joined", { clientId: id });

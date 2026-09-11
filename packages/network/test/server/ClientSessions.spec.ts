@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { identityOf } from "../helpers/identity.ts";
 import { ClientSessions } from "#src/server/ClientSessions.ts";
 
 function handle(
@@ -24,7 +25,7 @@ describe("ClientSessions", () => {
   test("opens and closes a session", () => {
     const sessions = new ClientSessions();
 
-    sessions.open(handle("A"));
+    sessions.open(handle("A"), identityOf(handle("A")));
     assert.strictEqual(sessions.size, 1);
     assert.deepEqual([...sessions.get("A")!.rooms], []);
 
@@ -86,7 +87,7 @@ describe("ClientSessions", () => {
   test("a settled queue prunes itself so a disconnect leaks nothing", async() => {
     const sessions = new ClientSessions();
 
-    sessions.open(handle("A"));
+    sessions.open(handle("A"), identityOf(handle("A")));
     await sessions.enqueue("A", async() => void 0);
     sessions.close("A");
     await flush();
@@ -98,8 +99,8 @@ describe("ClientSessions", () => {
   test("clear drops every session", () => {
     const sessions = new ClientSessions();
 
-    sessions.open(handle("A"));
-    sessions.open(handle("B"));
+    sessions.open(handle("A"), identityOf(handle("A")));
+    sessions.open(handle("B"), identityOf(handle("B")));
     sessions.clear();
 
     assert.strictEqual(sessions.size, 0);

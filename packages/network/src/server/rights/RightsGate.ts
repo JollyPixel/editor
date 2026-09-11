@@ -1,8 +1,9 @@
 // Import Internal Dependencies
+import type { RightsTable } from "./RightsTable.ts";
 import type {
   Right,
-  RightsTable
-} from "./RightsTable.ts";
+  RoomRights
+} from "../../protocol/types.ts";
 
 /**
  * Read-only view of a `RightsTable` bound to one extension namespace.
@@ -38,5 +39,17 @@ export class RightsGate {
     event: string
   ): boolean {
     return this.check(role, event) === "write";
+  }
+
+  resolve(
+    role: string,
+    events: Iterable<string>
+  ): RoomRights {
+    const rights: Record<string, Right> = {};
+    for (const event of events) {
+      rights[event] = this.check(role, event);
+    }
+
+    return rights;
   }
 }

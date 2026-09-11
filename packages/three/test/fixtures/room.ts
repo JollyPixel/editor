@@ -2,8 +2,10 @@
 import type {
   Peer,
   PeerMetadata,
+  Right,
   Room,
-  RoomEventMap
+  RoomEventMap,
+  RoomRights
 } from "@jolly-pixel/network/client";
 
 /**
@@ -19,6 +21,10 @@ export class FakeRoom<
   readonly patches: PeerMetadata[] = [];
   readonly sent: ClientMessage[] = [];
 
+  role = "default";
+  rights: RoomRights = {};
+  access: Right = "write";
+
   #listeners = new Map<string, Set<(...args: any[]) => void>>();
 
   constructor(
@@ -29,6 +35,12 @@ export class FakeRoom<
 
   get lastPatch(): PeerMetadata | undefined {
     return this.patches.at(-1);
+  }
+
+  can(
+    event: string
+  ): Right {
+    return this.rights[event] ?? this.access;
   }
 
   join(): void {
@@ -86,7 +98,10 @@ export class FakeRoom<
   emitSync(
     ...clientIds: string[]
   ): void {
-    this.emit("sync", { clientIds });
+    this.emit("sync", {
+      self: this.clientId,
+      clientIds
+    });
   }
 
   emitJoin(
@@ -114,7 +129,8 @@ export class FakeRoom<
   ): void {
     this.peers.set(clientId, {
       clientId,
-      identity: peer.identity ?? {},
+      role: peer.role ?? "default",
+      profile: peer.profile ?? {},
       presence: peer.presence ?? {}
     });
   }

@@ -620,6 +620,14 @@ describe("TextureEditorBridge / placeholder atlas", () => {
     const room = {
       clientId: "local",
       peers: new Map(),
+
+      role: "default",
+
+      rights: {},
+
+      access: "write" as const,
+
+      can: () => "write" as const,
       // Keyed by event: the bridge also subscribes to the presence events, and
       // a snapshot delivered to those would be read as a peer update.
       on: (

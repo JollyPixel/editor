@@ -24,10 +24,18 @@ const server = new Server({
 
 ## Roles
 
-A role is a plain string read from `identity.role` when the client joins, falling back to `"default"`.
+A role is a plain string. The keys of the table are the server's role vocabulary, and [authentication](./Authentication.md) decides which one a connection gets. Clients cannot name their own role.
 
-> [!WARNING]
-> The role is supplied by the client and never verified. This is not authentication. Resolve the real identity yourself (session, JWT, ...) before building the `identity` you pass to `room.join()`.
+`defaultRole` picks the role for connections nothing elevates, and must be one of the table's keys:
+
+```ts
+new Server({
+  rights: { viewer: { ... }, editor: { ... } },
+  defaultRole: "viewer"
+});
+```
+
+Omit both `rights` and `defaultRole` and an implicit `"default"` role applies, with `"write"` everywhere.
 
 ## Keys
 
@@ -54,7 +62,15 @@ Domain event names come from the extension's [message protocols](./Extension.md#
 
 `"void"` is real fan-out filtering: the payload never reaches that client, whether it came from `broadcast()` or `sendTo()`. For `$join`, `"read"` behaves like `"void"` — admission is binary.
 
-Anything unmatched fails open to `"write"`: no table, an unknown role, or a key no pattern matches. A typo grants access rather than revoking it.
+Unmatched keys resolve in two different ways, because they mean different things:
+
+| Case | Right |
+|---|---|
+| No table at all | `"write"` — RBAC is opt-in |
+| A role absent from a configured table | `"void"` — the table is an allowlist |
+| A listed role, no pattern matching the key | `"write"` — put exceptions before catch-alls |
+
+A role the table never mentions is a mismatch between authentication and rights, so it is denied rather than waved through. Within a role the host wrote, an unmatched key still falls open; close it with a `*` catch-all.
 
 ## Ungated extensions
 
@@ -63,3 +79,22 @@ An extension whose `protocols.inbound` is `null` accepts any payload without par
 ## Denials
 
 A rejected join, presence update or send never reaches the extension. The offending client — and only that client — receives a `"denied"` event naming the event (`"$join"`, `"$presence"`, or the domain event) and a reason.
+
+## Reading rights on the client
+
+A joining client is told its own resolved rights, so UI can adapt before it is denied anything:
+
+```ts
+room.on("sync", () => {
+  if (room.access === "read") {
+    disableEditing();
+  }
+  paintTool.enabled = room.can("voxel-set") === "write";
+});
+```
+
+`room.rights` maps `$presence` plus every inbound and outbound event of the room's extension to a right. `can(event)` looks one up, returning `"void"` for an event the map does not mention. `access` summarises: `"write"` when anything is writable, else `"read"` when anything is receivable, else `"void"` — good enough to decide whether to show an editing surface, never enough for per-tool decisions.
+
+`$join` is absent from the map: a role denied `$join` is not in the room to receive it.
+
+The map is a UI affordance. The server still gates every write, and `"denied"` remains the authority.

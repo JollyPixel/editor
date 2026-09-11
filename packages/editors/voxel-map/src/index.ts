@@ -81,7 +81,7 @@ if (!offline) {
   const textureRecord = catalog.firstOfKind("pixelart");
   worldRecord = catalog.firstOfKind("voxelmap");
   const networkClient = new network.Client({
-    identity: toPeerMetadata(identity)
+    profile: toPeerMetadata(identity)
   });
   textureRoom = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
     assetRoomName(textureRecord.kind, textureRecord.id.value)

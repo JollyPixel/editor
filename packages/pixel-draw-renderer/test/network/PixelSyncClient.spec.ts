@@ -100,6 +100,14 @@ function createMockRoom(
     id: "test-room",
     clientId,
     peers: new Map(),
+
+    role: "default",
+
+    rights: {},
+
+    access: "write" as const,
+
+    can: () => "write" as const,
     sentCommands,
     on: (type, listener) => {
       let set = listeners.get(type);

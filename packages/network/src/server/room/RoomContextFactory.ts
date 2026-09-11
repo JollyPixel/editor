@@ -35,26 +35,15 @@ export class RoomContextFactory {
     this.#eventStore = options.eventStore ?? EventStore.persistence.memory();
   }
 
-  /**
-   * Uses stable `userId` when present, otherwise `clientId`.
-   */
   resolveActor(
     clientId: string
   ): EventStore.Actor {
-    const identity = this.#members.get(clientId)?.identity;
-    const userId = typeof identity?.userId === "string" ?
-      identity.userId :
-      clientId;
-
     return {
       type: "user",
-      id: userId
+      id: this.#members.get(clientId)?.identity.subject ?? clientId
     };
   }
 
-  /**
-   * Pass `actor` explicitly when the member record is already gone.
-   */
   create(
     clientId: string,
     actor: EventStore.Actor = this.resolveActor(clientId)
@@ -73,9 +62,6 @@ export class RoomContextFactory {
     };
   }
 
-  /**
-   * Reports a rejected append back to its author as an "error" envelope.
-   */
   async #append(
     clientId: string,
     input: RoomAppendInput,

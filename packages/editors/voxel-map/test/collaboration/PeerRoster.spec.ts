@@ -52,6 +52,14 @@ function createHarness(
     id: "voxel-room",
     clientId: "local",
     peers: peerMap,
+
+    role: "default",
+
+    rights: {},
+
+    access: "write" as const,
+
+    can: () => "write" as const,
     join: () => void 0,
     leave: () => void 0,
     send: () => void 0,
@@ -77,10 +85,11 @@ function createHarness(
       shell,
       log
     }),
-    addPeer(clientId, identity = {}) {
+    addPeer(clientId, profile = {}) {
       peerMap.set(clientId, {
         clientId,
-        identity,
+        role: "default",
+        profile,
         presence: {}
       });
     },

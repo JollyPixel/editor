@@ -66,6 +66,9 @@ export async function gotoDemo(
     blank.height = size.y;
     canvasManager.texture = blank;
     canvasManager.uv.clear();
+    // The blank replace is a local edit, so it lands on the undo stack;
+    // drop it so each test starts with an empty page-local history.
+    canvasManager.document.history.clear();
   }, TEXTURE_SIZE);
 }
 

@@ -10,6 +10,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 import {
   Server,
   type Extension,
+  type AuthenticationProvider,
   type RightsMap
 } from "@jolly-pixel/network";
 
@@ -68,6 +69,8 @@ export interface AssetWorkspaceOptions {
    */
   extensions?: Extension[];
   rights?: RightsMap;
+  defaultRole?: string;
+  auth?: AuthenticationProvider;
   logger?: Logger;
   /**
    * Grace period, in milliseconds, before an empty asset room is evicted.
@@ -111,6 +114,8 @@ export async function createAssetWorkspace(
     seed,
     extensions = [],
     rights,
+    defaultRole,
+    auth,
     logger = silentLogger(),
     roomGraceMs,
     compactOnOpen = true,
@@ -148,6 +153,8 @@ export async function createAssetWorkspace(
   const server = options.server ?? new Server({
     eventStore,
     rights,
+    defaultRole,
+    auth,
     roomGraceMs,
     logger: options.logger
   });

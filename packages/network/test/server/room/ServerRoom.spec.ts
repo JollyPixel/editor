@@ -14,6 +14,7 @@ import { Emitter } from "@openally/emitt";
 import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
+import { identityOf } from "../../helpers/identity.ts";
 import {
   ServerRoom
 } from "#src/server/room/ServerRoom.ts";
@@ -103,6 +104,14 @@ function createClient(
   };
 }
 
+function withoutSync(
+  sent: unknown[]
+): unknown[] {
+  return sent.filter(
+    (envelope) => (envelope as { kind?: string; }).kind !== "sync"
+  );
+}
+
 function createRoom(
   extension: Extension,
   rights?: RightsTable,
@@ -151,33 +160,62 @@ describe("ServerRoom", () => {
     const b = createClient("B");
     const room = createRoom(extension);
 
-    await room.join("A", a.client, {});
-    assert.deepEqual(a.sent, []);
+    await room.join("A", a.client, identityOf("A"), {});
+    assert.deepEqual(withoutSync(a.sent), []);
 
-    await room.join("B", b.client, { username: "bob" });
-    assert.deepEqual(a.sent, [{
+    await room.join("B", b.client, identityOf("B"), { username: "bob" });
+    assert.deepEqual(withoutSync(a.sent), [{
       room: "pixel-draw",
       kind: "peer-joined",
       clientId: "B",
-      identity: { username: "bob" }
+      role: "default",
+      profile: { username: "bob" }
     }]);
     assert.deepEqual(extension.connected, ["A", "B"]);
   });
 
-  test("join sends a sync snapshot of pre-existing members to the joiner, omitted when there are none", async() => {
+  test("join always sends a sync snapshot naming the joiner and including it in the members", async() => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
 
-    await room.join("A", a.client, { username: "alice" });
-    assert.deepEqual(a.sent, []);
+    await room.join("A", a.client, identityOf("A"), { username: "alice" });
+    assert.deepEqual(a.sent, [{
+      room: "pixel-draw",
+      kind: "sync",
+      self: "A",
+      rights: { $presence: "write" },
+      members: [
+        {
+          clientId: "A",
+          role: "default",
+          profile: { username: "alice" },
+          presence: {}
+        }
+      ]
+    }]);
 
-    await room.join("B", b.client, {});
+    await room.join("B", b.client, identityOf("B"), {});
     assert.deepEqual(b.sent, [{
       room: "pixel-draw",
       kind: "sync",
-      members: [{ clientId: "A", identity: { username: "alice" }, presence: {} }]
+      self: "B",
+      rights: { $presence: "write" },
+      members: [
+        {
+          clientId: "A",
+          role: "default",
+          profile: { username: "alice" },
+          presence: {}
+        },
+        {
+          clientId: "B",
+          role: "default",
+          profile: {},
+          presence: {}
+        }
+      ]
     }]);
   });
 
@@ -186,10 +224,10 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const room = createRoom(extension);
 
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
     extension.handles.get("A")?.send({ type: "snapshot" });
 
-    assert.deepEqual(a.sent, [{
+    assert.deepEqual(withoutSync(a.sent), [{
       room: "pixel-draw",
       kind: "message",
       payload: { type: "snapshot" }
@@ -201,8 +239,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join("A", a.client, {});
-    await room.join("B", b.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join("B", b.client, identityOf("B"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -218,8 +256,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join("A", a.client, {});
-    await room.join("B", b.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join("B", b.client, identityOf("B"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -243,7 +281,9 @@ describe("ServerRoom", () => {
 
   test("message forwards clientId and payload to the extension", async() => {
     const extension = new RecordingExtension();
+    const a = createClient("A");
     const room = createRoom(extension);
+    await room.join("A", a.client, identityOf("A"), {});
 
     await room.message("A", { hello: "world" });
 
@@ -255,8 +295,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join("A", a.client, {});
-    await room.join("B", b.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join("B", b.client, identityOf("B"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -266,14 +306,24 @@ describe("ServerRoom", () => {
     assert.deepEqual(b.sent, [{ room: "pixel-draw", kind: "message", payload: { hello: "world" } }]);
   });
 
-  test("room.broadcast is a no-op before any client has joined", async() => {
+  test("room.broadcast is a no-op once every member has left", async() => {
+    const extension = new RecordingExtension();
+    const a = createClient("A");
+    const room = createRoom(extension);
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.leave("A");
+    const context = extension.contexts.at(-1)!;
+
+    assert.doesNotThrow(() => context.room.broadcast({ hello: "world" }));
+  });
+
+  test("a message from a non-member never reaches the extension", async() => {
     const extension = new RecordingExtension();
     const room = createRoom(extension);
 
     await room.message("nobody", { hello: "world" });
-    const context = extension.contexts.at(-1)!;
 
-    assert.doesNotThrow(() => context.room.broadcast({ hello: "world" }));
+    assert.deepEqual(extension.messages, []);
   });
 });
 
@@ -283,10 +333,10 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "write" } }));
 
-    const admitted = await room.join("A", a.client, { role: "viewer" });
+    const admitted = await room.join("A", a.client, identityOf("A", "viewer"), {});
 
     assert.strictEqual(admitted, true);
-    assert.deepEqual(a.sent, []);
+    assert.deepEqual(withoutSync(a.sent), []);
   });
 
   test("a role with \"void\" on $join is denied and never becomes a member", async() => {
@@ -294,7 +344,7 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "void" } }));
 
-    const admitted = await room.join("A", a.client, { role: "viewer" });
+    const admitted = await room.join("A", a.client, identityOf("A", "viewer"), {});
 
     assert.strictEqual(admitted, false);
     assert.deepEqual(a.sent, [{
@@ -310,15 +360,15 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "read" } }));
 
-    assert.strictEqual(await room.join("A", a.client, { role: "viewer" }), false);
+    assert.strictEqual(await room.join("A", a.client, identityOf("A", "viewer"), {}), false);
   });
 
-  test("an unrecognized role fails open (admitted) even when rights is configured", async() => {
+  test("a role absent from a configured rights table is denied", async() => {
     const extension = new RightsAwareExtension();
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "void" } }));
 
-    assert.strictEqual(await room.join("A", a.client, {}), true);
+    assert.strictEqual(await room.join("A", a.client, identityOf("A"), {}), false);
   });
 
   test("a glob pattern (\"pixel-draw.*\") matches the namespaced $join key", async() => {
@@ -326,7 +376,7 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.*": "void" } }));
 
-    assert.strictEqual(await room.join("A", a.client, { role: "viewer" }), false);
+    assert.strictEqual(await room.join("A", a.client, identityOf("A", "viewer"), {}), false);
   });
 });
 
@@ -335,7 +385,7 @@ describe("ServerRoom — rights: $presence", () => {
     const extension = new RightsAwareExtension();
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$presence": "write" } }));
-    await room.join("A", a.client, { role: "viewer" });
+    await room.join("A", a.client, identityOf("A", "viewer"), {});
 
     assert.doesNotThrow(() => room.updatePresence("A", { cursor: { x: 1, y: 1 } }));
   });
@@ -345,8 +395,8 @@ describe("ServerRoom — rights: $presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$presence": "void" } }));
-    await room.join("A", a.client, { role: "viewer" });
-    await room.join("B", b.client, {});
+    await room.join("A", a.client, identityOf("A", "viewer"), {});
+    await room.join("B", b.client, identityOf("B"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -366,8 +416,8 @@ describe("ServerRoom — rights: $presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$presence": "void" } }));
-    await room.join("A", a.client, {});
-    await room.join("B", b.client, { role: "viewer" });
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join("B", b.client, identityOf("B", "viewer"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -382,7 +432,7 @@ describe("ServerRoom — rights: message write gate", () => {
     const extension = new RightsAwareExtension();
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ editor: { "pixel-draw.voxel-set": "write" } }));
-    await room.join("A", a.client, { role: "editor" });
+    await room.join("A", a.client, identityOf("A", "editor"), {});
 
     await room.message("A", { action: "voxel-set" });
 
@@ -393,7 +443,7 @@ describe("ServerRoom — rights: message write gate", () => {
     const extension = new RightsAwareExtension();
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.voxel-set": "read" } }));
-    await room.join("A", a.client, { role: "viewer" });
+    await room.join("A", a.client, identityOf("A", "viewer"), {});
     a.sent.length = 0;
 
     await room.message("A", { action: "voxel-set" });
@@ -418,7 +468,7 @@ describe("ServerRoom — rights: message write gate", () => {
         "pixel-draw.*": "read"
       }
     }));
-    const admitted = await room.join("A", a.client, { role: "viewer" });
+    const admitted = await room.join("A", a.client, identityOf("A", "viewer"), {});
 
     await room.message("A", { action: "voxel-set" });
     await room.message("A", { action: "object-added" });
@@ -437,8 +487,8 @@ describe("ServerRoom — rights: broadcast read gate", () => {
       blocked: { "pixel-draw.voxel-set": "void" },
       allowed: { "pixel-draw.voxel-set": "read" }
     }));
-    await room.join("A", a.client, { role: "blocked" });
-    await room.join("B", b.client, { role: "allowed" });
+    await room.join("A", a.client, identityOf("A", "blocked"), {});
+    await room.join("B", b.client, identityOf("B", "allowed"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -456,7 +506,9 @@ describe("ServerRoom — rights: broadcast read gate", () => {
 describe("ServerRoom — event store: append", () => {
   test("defaults to an in-memory store and returns true on success", async() => {
     const extension = new RecordingExtension();
+    const a = createClient("A");
     const room = createRoom(extension);
+    await room.join("A", a.client, identityOf("A"), {});
 
     await room.message("A", {});
     const { eventStore } = extension.contexts.at(-1)!;
@@ -472,7 +524,7 @@ describe("ServerRoom — event store: append", () => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const room = createRoom(extension, undefined, createFailingEventStore());
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
     a.sent.length = 0;
 
     const { eventStore } = extension.contexts.at(-1)!;
@@ -495,6 +547,8 @@ describe("ServerRoom — event store: append", () => {
     const extensionB = new RecordingExtension();
     const roomA = createRoom(extensionA, undefined, eventStore);
     const roomB = createRoom(extensionB, undefined, eventStore);
+    await roomA.join("A", createClient("A").client, identityOf("A"), {});
+    await roomB.join("B", createClient("B").client, identityOf("B"), {});
 
     await roomA.message("A", {});
     await extensionA.contexts.at(-1)!.eventStore.append({
@@ -517,7 +571,7 @@ describe("ServerRoom — event store: RoomContext passed to the extension expose
     const extension = new RecordingExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
 
     await room.message("A", { hello: "world" });
     const { eventStore } = extension.contexts.at(-1)!;
@@ -535,7 +589,7 @@ describe("ServerRoom — event store: actor injection", () => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const room = createRoom(extension, undefined, eventStore);
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
 
     await extension.contexts.at(-1)!.eventStore.append({
       assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
@@ -547,12 +601,12 @@ describe("ServerRoom — event store: actor injection", () => {
     });
   });
 
-  test("prefers a stable userId from the member identity", async() => {
+  test("uses the authenticated subject as the actor id", async() => {
     const eventStore = EventStore.persistence.memory();
     const extension = new RecordingExtension();
     const a = createClient("A");
     const room = createRoom(extension, undefined, eventStore);
-    await room.join("A", a.client, { userId: "alice" });
+    await room.join("A", a.client, { subject: "alice", role: "default" }, {});
 
     await extension.contexts.at(-1)!.eventStore.append({
       assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
@@ -564,12 +618,12 @@ describe("ServerRoom — event store: actor injection", () => {
     });
   });
 
-  test("keeps the identity actor for appends made during onClientDisconnect", async() => {
+  test("keeps the subject actor for appends made during onClientDisconnect", async() => {
     const eventStore = EventStore.persistence.memory();
     const extension = new RecordingExtension();
     const a = createClient("A");
     const room = createRoom(extension, undefined, eventStore);
-    await room.join("A", a.client, { userId: "alice" });
+    await room.join("A", a.client, { subject: "alice", role: "default" }, {});
 
     await room.leave("A");
     await extension.contexts.at(-1)!.eventStore.append({
@@ -613,7 +667,7 @@ describe("ServerRoom — inbound protocol", () => {
     const extension = new SyncExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
 
     await room.message("A", { action: "voxel-set" });
 
@@ -624,7 +678,7 @@ describe("ServerRoom — inbound protocol", () => {
     const extension = new SyncExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
     a.sent.length = 0;
 
     await room.message("A", { action: "not-a-known-action" });
@@ -649,8 +703,8 @@ describe("ServerRoom — outbound protocol", () => {
       blocked: { "pixel-draw.voxel-set": "void" },
       allowed: { "pixel-draw.voxel-set": "read" }
     }));
-    await room.join("A", a.client, { role: "blocked" });
-    await room.join("B", b.client, { role: "allowed" });
+    await room.join("A", a.client, identityOf("A", "blocked"), {});
+    await room.join("B", b.client, identityOf("B", "allowed"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -673,8 +727,8 @@ describe("ServerRoom — outbound protocol", () => {
       blocked: { "pixel-draw.$snapshot": "void" },
       allowed: { "pixel-draw.$snapshot": "read" }
     }));
-    await room.join("A", a.client, { role: "blocked" });
-    await room.join("B", b.client, { role: "allowed" });
+    await room.join("A", a.client, identityOf("A", "blocked"), {});
+    await room.join("B", b.client, identityOf("B", "allowed"), {});
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -688,7 +742,7 @@ describe("ServerRoom — outbound protocol", () => {
     const extension = new SyncExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
     a.sent.length = 0;
 
     extension.contexts.at(-1)!.room.broadcast({ type: "command", data: { action: "unheard-of" } });
@@ -702,7 +756,7 @@ describe("ServerRoom — outbound protocol", () => {
     const room = createRoom(extension, new RightsTable({
       blocked: { "pixel-draw.voxel-set": "void" }
     }));
-    await room.join("A", a.client, { role: "blocked" });
+    await room.join("A", a.client, identityOf("A", "blocked"), {});
     a.sent.length = 0;
 
     extension.contexts.at(-1)!.room.sendTo("A", {
@@ -726,14 +780,15 @@ describe("ServerRoom — extension without lifecycle hooks", () => {
     const a = createClient("A");
     const b = createClient("B");
 
-    assert.equal(await room.join("A", a.client, {}), true);
-    assert.equal(await room.join("B", b.client, { username: "bob" }), true);
+    assert.equal(await room.join("A", a.client, identityOf("A"), {}), true);
+    assert.equal(await room.join("B", b.client, identityOf("B"), { username: "bob" }), true);
 
-    assert.deepEqual(a.sent, [{
+    assert.deepEqual(withoutSync(a.sent), [{
       room: "hookless",
       kind: "peer-joined",
       clientId: "B",
-      identity: { username: "bob" }
+      role: "default",
+      profile: { username: "bob" }
     }]);
   });
 
@@ -742,8 +797,8 @@ describe("ServerRoom — extension without lifecycle hooks", () => {
     const a = createClient("A");
     const b = createClient("B");
 
-    await room.join("A", a.client, {});
-    await room.join("B", b.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join("B", b.client, identityOf("B"), {});
     a.sent.length = 0;
 
     await room.leave("B");
@@ -759,7 +814,7 @@ describe("ServerRoom — extension without lifecycle hooks", () => {
     const room = createRoom(new HooklessExtension());
     const a = createClient("A");
 
-    await room.join("A", a.client, {});
+    await room.join("A", a.client, identityOf("A"), {});
     a.sent.length = 0;
 
     await room.message("A", { any: "payload" });

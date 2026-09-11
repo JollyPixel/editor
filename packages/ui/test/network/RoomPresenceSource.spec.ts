@@ -26,9 +26,17 @@ class FakeRoom implements Room {
   readonly id = "gallery";
   readonly clientId = "local-uuid-nobody-sees";
   readonly peers = new Map<string, Peer>();
+
+  readonly role = "default";
+  readonly rights = {};
+  readonly access = "write" as const;
   readonly patches: PeerMetadata[] = [];
 
   #listeners = new Map<string, Set<(...args: any[]) => void>>();
+
+  can(): "write" {
+    return "write";
+  }
 
   join(): void {
     // No transport to join.
@@ -79,7 +87,7 @@ class FakeRoom implements Room {
   ): void {
     this.peers.set(transportId, {
       clientId: transportId,
-      identity: {},
+      role: "default", profile: {},
       presence: { jolly: stamp }
     });
   }
@@ -140,7 +148,7 @@ describe("RoomPresenceSource — identity", () => {
     const { room, source } = createSource();
     room.peers.set("transport-7", {
       clientId: "transport-7",
-      identity: {},
+      role: "default", profile: {},
       presence: {}
     });
 

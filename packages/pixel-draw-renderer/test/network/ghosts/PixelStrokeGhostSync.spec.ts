@@ -46,6 +46,14 @@ function createMockRoom(): MockRoom {
     id: "test-room",
     clientId: "local-A",
     peers,
+
+    role: "default",
+
+    rights: {},
+
+    access: "write" as const,
+
+    can: () => "write" as const,
     on: (type, listener) => {
       let set = listeners.get(type);
       if (!set) {
@@ -73,7 +81,7 @@ function createMockRoom(): MockRoom {
     addPeer(clientId, presence) {
       peers.set(clientId, {
         clientId,
-        identity: {},
+        role: "default", profile: {},
         presence
       });
     },

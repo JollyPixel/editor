@@ -181,7 +181,7 @@ describe("remote peers", () => {
   test("reads the display name from the peer identity", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", {
-      identity: { username: "Alice" },
+      profile: { username: "Alice" },
       presence: { frustum: pose(1) }
     });
 
@@ -243,7 +243,7 @@ describe("colors", () => {
       }
     });
     room.addPeer("alice", {
-      identity: { username: "Alice" },
+      profile: { username: "Alice" },
       presence: { frustum: pose(1) }
     });
 
@@ -526,7 +526,7 @@ describe("proximity fade", () => {
       fadeWithin: 3
     });
     room.addPeer("alice", {
-      identity: { username: "Alice" },
+      profile: { username: "Alice" },
       presence: { frustum: pose(2) }
     });
     sync.attach(new THREE.Object3D());
