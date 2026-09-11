@@ -40,8 +40,10 @@ function makeCulledEngine(
   const engine = makeBaseEngine({
     layers: ["Ground"],
     debug: { chunkBounds: true },
-    // Drain the whole queue: the assertions expect every admitted chunk to be
-    // meshed and registered by the end of a single tick.
+    /*
+     * Drain the whole queue: the assertions expect every admitted chunk to be
+     * meshed and registered by the end of a single tick.
+     */
     rebuildBudgetMs: 0,
     viewDistance: {
       chunks: 1,

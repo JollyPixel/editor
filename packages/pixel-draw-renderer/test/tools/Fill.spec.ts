@@ -79,8 +79,10 @@ describe("Fill", () => {
     });
 
     test("does not leak diagonally through a colorB wall (4-directional connectivity only)", () => {
-      // 3x3 grid: corners are colorA, everything else (edges + center) is
-      // colorB. The corners are only diagonally adjacent to each other.
+      /*
+       * 3x3 grid: corners are colorA, everything else (edges + center) is
+       * colorB. The corners are only diagonally adjacent to each other.
+       */
       const buf = new PixelBuffer({
         size: { x: 3, y: 3 },
         maxSize: kTestMaxSize
@@ -242,20 +244,23 @@ describe("Fill", () => {
       );
     });
 
-    test("has no fillColor bail-out — still returns the region even if it would already equal a hypothetical fillColor", () => {
-      const buf = new PixelBuffer({
-        size: { x: 4, y: 4 },
-        defaultColor: kColorA,
-        maxSize: kTestMaxSize
-      });
+    test(
+      "has no fillColor bail-out — still returns the region even if it would already equal a fillColor",
+      () => {
+        const buf = new PixelBuffer({
+          size: { x: 4, y: 4 },
+          defaultColor: kColorA,
+          maxSize: kTestMaxSize
+        });
 
-      const region = Fill.connectedRegion(
-        buf,
-        { x: 1, y: 1 }
-      );
+        const region = Fill.connectedRegion(
+          buf,
+          { x: 1, y: 1 }
+        );
 
-      assert.strictEqual(region.length, 16);
-    });
+        assert.strictEqual(region.length, 16);
+      }
+    );
 
     test("returns [] when the seed is out of bounds", () => {
       const buf = new PixelBuffer({
@@ -272,8 +277,10 @@ describe("Fill", () => {
 
   describe("matchAll", () => {
     test("matches every pixel of the given color, including disconnected regions", () => {
-      // Two 2x2 colorA blobs separated by a full-height colorB column —
-      // matchAll (unlike floodFill) should return both, connectivity aside.
+      /*
+       * Two 2x2 colorA blobs separated by a full-height colorB column —
+       * matchAll (unlike floodFill) should return both, connectivity aside.
+       */
       const buf = new PixelBuffer({
         size: { x: 5, y: 2 },
         maxSize: kTestMaxSize

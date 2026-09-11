@@ -83,31 +83,13 @@ function drawPaddedTile(
   const dy = (row * cellSize) + padding;
   const last = size - 1;
 
-  context.drawImage(
-    image, sx, sy, size, size, dx, dy, size, size
-  );
-  context.drawImage(
-    image, sx, sy, 1, size, dx - padding, dy, padding, size
-  );
-  context.drawImage(
-    image, sx + last, sy, 1, size, dx + size, dy, padding, size
-  );
-  context.drawImage(
-    image, sx, sy, size, 1, dx, dy - padding, size, padding
-  );
-  context.drawImage(
-    image, sx, sy + last, size, 1, dx, dy + size, size, padding
-  );
-  context.drawImage(
-    image, sx, sy, 1, 1, dx - padding, dy - padding, padding, padding
-  );
-  context.drawImage(
-    image, sx + last, sy, 1, 1, dx + size, dy - padding, padding, padding
-  );
-  context.drawImage(
-    image, sx, sy + last, 1, 1, dx - padding, dy + size, padding, padding
-  );
-  context.drawImage(
-    image, sx + last, sy + last, 1, 1, dx + size, dy + size, padding, padding
-  );
+  context.drawImage(image, sx, sy, size, size, dx, dy, size, size);
+  context.drawImage(image, sx, sy, 1, size, dx - padding, dy, padding, size);
+  context.drawImage(image, sx + last, sy, 1, size, dx + size, dy, padding, size);
+  context.drawImage(image, sx, sy, size, 1, dx, dy - padding, size, padding);
+  context.drawImage(image, sx, sy + last, size, 1, dx, dy + size, size, padding);
+  context.drawImage(image, sx, sy, 1, 1, dx - padding, dy - padding, padding, padding);
+  context.drawImage(image, sx + last, sy, 1, 1, dx + size, dy - padding, padding, padding);
+  context.drawImage(image, sx, sy + last, 1, 1, dx - padding, dy + size, padding, padding);
+  context.drawImage(image, sx + last, sy + last, 1, 1, dx + size, dy + size, padding, padding);
 }

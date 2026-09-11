@@ -76,9 +76,7 @@ export class UINode<TContext = WorldDefaultContext> extends ActorComponent<TCont
     }
     else {
       this.updateToWorldPosition();
-      this.actor.world.renderer.on(
-        "resize", this.updateToWorldPosition.bind(this)
-      );
+      this.actor.world.renderer.on("resize", this.updateToWorldPosition.bind(this));
     }
   }
 

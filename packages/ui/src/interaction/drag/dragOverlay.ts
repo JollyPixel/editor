@@ -166,8 +166,10 @@ export function createDragOverlay(
     options.element !== undefined &&
     options.element !== null
   ) {
-    // Only a replica needs lifting off the page: the chip is already a solid
-    // block of accent, and reads as carried without one.
+    /*
+     * Only a replica needs lifting off the page: the chip is already a solid
+     * block of accent, and reads as carried without one.
+     */
     ghost.style.boxShadow = "var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 0.3))";
   }
 
@@ -198,8 +200,10 @@ export function createDragOverlay(
             `background-color ${kZoneFade}ms var(--jolly-easing, ease)`,
           ...kIdleZone
         });
-        // Zones appear the instant a drag begins, all of them at once. Fading
-        // them in is what keeps that from reading as the layout flinching.
+        /*
+         * Zones appear the instant a drag begins, all of them at once. Fading
+         * them in is what keeps that from reading as the layout flinching.
+         */
         band.animate(
           [{ opacity: 0 }, { opacity: 1 }],
           { duration: kZoneFade, easing: "ease-out" }

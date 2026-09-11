@@ -18,8 +18,10 @@ export const TRANSFORM_EXAMPLE: GalleryExample = {
       rotation: { x: 0, y: 0, z: 0, w: 1 },
       scale: { x: 1, y: 1, z: 1 }
     };
-    // Locking is per sub-row: rotation is held by a peer, position and
-    // scale stay editable.
+    /*
+     * Locking is per sub-row: rotation is held by a peer, position and
+     * scale stay editable.
+     */
     transform.state = {
       rotation: {
         lockedBy: {

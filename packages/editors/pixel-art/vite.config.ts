@@ -48,8 +48,10 @@ export default defineConfig({
       extensions: [
         // Must match examples/scripts/demo/DemoSync.ts's default room.
         pixelSyncServer("pixel-draw:demo-canvas"),
-        // One isolated room per Playwright worker (see test/e2e/constants.ts)
-        // so e2e tests can run in parallel instead of sharing one buffer.
+        /*
+         * One isolated room per Playwright worker (see test/e2e/constants.ts)
+         * so e2e tests can run in parallel instead of sharing one buffer.
+         */
         ...Array.from(
           { length: WORKER_COUNT },
           (_, index) => pixelSyncServer(testRoomId(index))

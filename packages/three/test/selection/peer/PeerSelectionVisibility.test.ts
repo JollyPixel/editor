@@ -177,10 +177,12 @@ describe("hoverRegistry", () => {
     selection.register("mesh-1", mesh);
     mesh.position.set(0, 0, 10);
 
-    // No `hoverRegistry` passed here - a hover-only id (no selector) is
-    // never added to the tracked set, so `update()` never evaluates it,
-    // regardless of the peer hover state a caller happens to track
-    // elsewhere.
+    /*
+     * No `hoverRegistry` passed here - a hover-only id (no selector) is
+     * never added to the tracked set, so `update()` never evaluates it,
+     * regardless of the peer hover state a caller happens to track
+     * elsewhere.
+     */
     const visibility = new PeerSelectionVisibility({ registry, selection, camera });
     hoverRegistry.hover("peer-a", "mesh-1");
 

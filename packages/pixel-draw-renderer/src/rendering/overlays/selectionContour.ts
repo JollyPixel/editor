@@ -5,16 +5,12 @@ import type {
 } from "../../types.ts";
 
 // CONSTANTS
-// Screen-space (y-down) unit steps, ordered so `(direction + 1) % 4` is a
-// clockwise quarter turn.
 const kDirections: readonly Vec2[] = [
   { x: 1, y: 0 },
   { x: 0, y: 1 },
   { x: -1, y: 0 },
   { x: 0, y: -1 }
 ];
-
-// Right, straight, left, back: the sharpest clockwise turn wins.
 const kTurnPreference: readonly number[] = [1, 0, 3, 2];
 
 export interface SelectionContourScreen {
@@ -37,14 +33,6 @@ export function selectionContourPath(
   return `M ${loop.map(toScreenPoint).join(" L ")} Z`;
 }
 
-/**
- * Traces a selection mask into closed contour loops.
- *
- * Cells touching only at a corner share a boundary vertex, so a vertex can
- * start two edges. Edges are therefore keyed by origin *and* direction, and
- * the walk always takes the sharpest clockwise turn, which keeps such cells
- * in separate loops (4-connected foreground).
- */
 export function traceSelectionContour(
   width: number,
   height: number,
@@ -155,8 +143,6 @@ function walkLoop(
     }
 
     const next = nextDirection(edges, vertex, direction);
-    // Unreachable for a well-formed mask; closing the partial loop keeps a
-    // malformed one from hanging or crashing the overlay.
     if (next === -1) {
       break;
     }

@@ -17,9 +17,11 @@ import type {
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { Vec2 } from "#src/types.ts";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------------------
+ */
 
 interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
   presenceUpdates: network.PeerMetadata[];
@@ -141,17 +143,21 @@ function createMockCanvas(): MockCanvas {
   return canvas;
 }
 
-// PixelCursorSync is typed against the concrete PixelArtCanvas, but only
-// uses the structural subset MockCanvas implements.
+/*
+ * PixelCursorSync is typed against the concrete PixelArtCanvas, but only
+ * uses the structural subset MockCanvas implements.
+ */
 function asHost(
   canvas: MockCanvas
 ): PixelArtCanvas {
   return canvas as unknown as PixelArtCanvas;
 }
 
-// ---------------------------------------------------------------------------
-// attach / detach
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * attach / detach
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelCursorSync — attach", () => {
   test("sets canvas.onCursorMove", () => {
@@ -229,9 +235,11 @@ describe("PixelCursorSync — detach", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Local cursor -> presence
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Local cursor -> presence
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelCursorSync — local cursor reporting", () => {
   test("forwards a local cursor move as a presence update", () => {
@@ -272,9 +280,11 @@ describe("PixelCursorSync — local cursor reporting", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Remote peers -> overlay
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Remote peers -> overlay
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelCursorSync — remote peers", () => {
   test("onPeerPresence with a cursor patch updates the overlay", () => {
@@ -370,9 +380,11 @@ describe("PixelCursorSync — remote peers", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Coexists with other room listeners
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Coexists with other room listeners
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelCursorSync — coexists with other room listeners", () => {
   test("doesn't clobber peer-joined/peer-left/peer-presence listeners registered before construction", () => {
@@ -399,9 +411,11 @@ describe("PixelCursorSync — coexists with other room listeners", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// destroy
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * destroy
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelCursorSync — destroy", () => {
   test("removes only its own listeners and detaches the canvas", () => {

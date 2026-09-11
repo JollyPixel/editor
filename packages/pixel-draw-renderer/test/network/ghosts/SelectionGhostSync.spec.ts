@@ -20,9 +20,11 @@ import type { SelectionProgressEvent } from "#src/tools/SelectEngine.events.ts";
 import type { PeerSelectionOutlineState } from "#src/rendering/presence/PeerSelectionOutlines.ts";
 import type { PeerFloatingSelectionState } from "#src/rendering/presence/PeerFloatingSelections.ts";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------------------
+ */
 
 interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
   presenceUpdates: network.PeerMetadata[];
@@ -234,8 +236,10 @@ function createMockCanvas(): MockCanvas {
   return canvas;
 }
 
-// SelectionGhostSync is typed against the concrete PixelArtCanvas, but only
-// uses the structural subset MockCanvas implements.
+/*
+ * SelectionGhostSync is typed against the concrete PixelArtCanvas, but only
+ * uses the structural subset MockCanvas implements.
+ */
 function asHost(
   canvas: MockCanvas
 ): PixelArtCanvas {
@@ -260,9 +264,11 @@ function nextFrame(): Promise<void> {
   });
 }
 
-// ---------------------------------------------------------------------------
-// attach / detach
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * attach / detach
+ * ---------------------------------------------------------------------------
+ */
 
 describe("SelectionGhostSync — attach", () => {
   test("throws when a canvas is already attached", () => {
@@ -315,9 +321,11 @@ describe("SelectionGhostSync — detach", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Local progress -> presence (rAF-gated)
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Local progress -> presence (rAF-gated)
+ * ---------------------------------------------------------------------------
+ */
 
 describe("SelectionGhostSync — local progress reporting", () => {
   test("forwards a local creating-phase event as a presence update on the next frame", async() => {
@@ -390,9 +398,11 @@ describe("SelectionGhostSync — local progress reporting", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Remote peers -> overlays
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Remote peers -> overlays
+ * ---------------------------------------------------------------------------
+ */
 
 describe("SelectionGhostSync — remote peers", () => {
   test("a creating-phase presence patch sets the border overlay and clears any stale floating ghost", () => {
@@ -498,9 +508,11 @@ describe("SelectionGhostSync — remote peers", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Reconciliation with the authoritative pipeline
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Reconciliation with the authoritative pipeline
+ * ---------------------------------------------------------------------------
+ */
 
 describe("SelectionGhostSync — reconciliation", () => {
   test("an incoming select-edit command clears both overlays by content, not by clientId", () => {
@@ -542,9 +554,11 @@ describe("SelectionGhostSync — reconciliation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// destroy
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * destroy
+ * ---------------------------------------------------------------------------
+ */
 
 describe("SelectionGhostSync — destroy", () => {
   test("removes only its own listeners and detaches the canvas", () => {

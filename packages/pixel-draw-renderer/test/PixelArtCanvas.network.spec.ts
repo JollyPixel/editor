@@ -293,41 +293,44 @@ describe("PixelArtCanvas — applyRemoteCommand", () => {
     manager.destroy();
   });
 
-  test("select-edit: applies each position's own color without re-emitting onBufferUpdated (echo guard)", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
+  test(
+    "select-edit: applies each position's own color without re-emitting onBufferUpdated (echo guard)",
+    () => {
+      const events: PixelBufferHookEvent[] = [];
+      const manager = new PixelArtCanvas(container, {
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        },
+        onBufferUpdated: (event) => events.push(event)
+      });
 
-    manager.applyRemoteCommand({
-      action: "select-edit",
-      metadata: {
-        positions: [
-          { x: 0, y: 0 },
-          { x: 1, y: 0 }
-        ],
-        colors: [
-          { r: 1, g: 2, b: 3, a: 255 },
-          { r: 9, g: 8, b: 7, a: 255 }
-        ]
-      }
-    });
+      manager.applyRemoteCommand({
+        action: "select-edit",
+        metadata: {
+          positions: [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 }
+          ],
+          colors: [
+            { r: 1, g: 2, b: 3, a: 255 },
+            { r: 9, g: 8, b: 7, a: 255 }
+          ]
+        }
+      });
 
-    assert.strictEqual(events.length, 0);
-    assert.deepStrictEqual(
-      [...manager.texture.subarray(0, 4)],
-      [1, 2, 3, 255]
-    );
-    assert.deepStrictEqual(
-      [...manager.texture.subarray(4, 8)],
-      [9, 8, 7, 255]
-    );
-    manager.destroy();
-  });
+      assert.strictEqual(events.length, 0);
+      assert.deepStrictEqual(
+        [...manager.texture.subarray(0, 4)],
+        [1, 2, 3, 255]
+      );
+      assert.deepStrictEqual(
+        [...manager.texture.subarray(4, 8)],
+        [9, 8, 7, 255]
+      );
+      manager.destroy();
+    }
+  );
 
   test("select-edit: still calls onDrawEnd so external consumers can sync", () => {
     let drawEndCalls = 0;

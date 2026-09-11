@@ -87,37 +87,46 @@ describe("peer selection", () => {
     assert.strictEqual(mesh.children.length, 0);
   });
 
-  // A same-count "swap" (e.g. peer-a leaves, peer-c joins) is never actually
-  // reachable as a single refresh in practice - `PeerSelectionRegistry.select`
-  // changes one object's selector count by exactly 1 per call, so the count
-  // always passes through a transient 1 (disposing the row) or 3 (rebuilding
-  // it) in between. The real trigger for "refresh called again with the
-  // selector set unchanged" is a `visibilityChange` sweep touching an
-  // unrelated object - `#onVisibilityChange` re-refreshes every currently
-  // peer-selected id, this one included, even though nothing about it
-  // actually changed.
-  test("recolors existing chips in place on a visibilityChange sweep that doesn't touch this object's own selectors", () => {
-    const { selection, registry, visibility, mesh } = createHarness({ visibility: true });
-    // Visible throughout.
-    mesh.position.set(0, 0, -10);
-    registry.select("peer-a", "mesh-1");
-    registry.select("peer-b", "mesh-1");
-    visibility!.update();
-    const group = mesh.children[0] as THREE.Group;
-    const chipBefore = group.children[0];
+  /*
+   * A same-count "swap" (e.g. peer-a leaves, peer-c joins) is never actually
+   * reachable as a single refresh in practice - `PeerSelectionRegistry.select`
+   * changes one object's selector count by exactly 1 per call, so the count
+   * always passes through a transient 1 (disposing the row) or 3 (rebuilding
+   * it) in between. The real trigger for "refresh called again with the
+   * selector set unchanged" is a `visibilityChange` sweep touching an
+   * unrelated object - `#onVisibilityChange` re-refreshes every currently
+   * peer-selected id, this one included, even though nothing about it
+   * actually changed.
+   */
+  test(
+    "recolors chips in place on a visibilityChange sweep that doesn't touch this object's own selectors",
+    () => {
+      const { selection, registry, visibility, mesh } = createHarness({ visibility: true });
+      // Visible throughout.
+      mesh.position.set(0, 0, -10);
+      registry.select("peer-a", "mesh-1");
+      registry.select("peer-b", "mesh-1");
+      visibility!.update();
+      const group = mesh.children[0] as THREE.Group;
+      const chipBefore = group.children[0];
 
-    const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    selection.register("mesh-2", otherMesh);
-    // Starts not visible - a real flip once evaluated.
-    otherMesh.position.set(0, 0, 10);
-    registry.select("peer-c", "mesh-2");
-    visibility!.update();
+      const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+      selection.register("mesh-2", otherMesh);
+      // Starts not visible - a real flip once evaluated.
+      otherMesh.position.set(0, 0, 10);
+      registry.select("peer-c", "mesh-2");
+      visibility!.update();
 
-    assert.strictEqual(mesh.children.length, 1, "must still be exactly one group");
-    const groupAfter = mesh.children[0] as THREE.Group;
-    assert.strictEqual(groupAfter.children.length, 2);
-    assert.strictEqual(groupAfter.children[0], chipBefore, "must reuse the same chip instance, not rebuild it");
-  });
+      assert.strictEqual(mesh.children.length, 1, "must still be exactly one group");
+      const groupAfter = mesh.children[0] as THREE.Group;
+      assert.strictEqual(groupAfter.children.length, 2);
+      assert.strictEqual(
+        groupAfter.children[0],
+        chipBefore,
+        "must reuse the same chip instance, not rebuild it"
+      );
+    }
+  );
 });
 
 describe("overflow cap", () => {
@@ -135,7 +144,11 @@ describe("overflow cap", () => {
     assert.strictEqual((group.children[2] as PeerSelectionChip).color, registry.colorOf("peer-c"));
     const badge = group.children[3] as PeerSelectionChip;
     assert.strictEqual(badge.label, "+1");
-    assert.notStrictEqual(badge.color, registry.colorOf("peer-d"), "the overflow badge is never colored like a real peer");
+    assert.notStrictEqual(
+      badge.color,
+      registry.colorOf("peer-d"),
+      "the overflow badge is never colored like a real peer"
+    );
   });
 
   test("six selectors still show only three chips plus one overflow badge labeled \"+3\"", () => {
@@ -149,33 +162,42 @@ describe("overflow cap", () => {
     assert.strictEqual((group.children[3] as PeerSelectionChip).label, "+3");
   });
 
-  test("the overflow badge relabels in place when the overflow count changes but the slot count doesn't", () => {
-    const { selection, registry, visibility, mesh } = createHarness({ visibility: true });
-    // Stays visible throughout - see PeerSelectionChips' own test above for
-    // why a visibilityChange sweep is the real trigger for a same-slot-count
-    // re-refresh.
-    mesh.position.set(0, 0, -10);
-    for (const peerId of ["peer-a", "peer-b", "peer-c", "peer-d"]) {
-      registry.select(peerId, "mesh-1");
+  test(
+    "the overflow badge relabels in place when the overflow count changes but the slot count doesn't",
+    () => {
+      const { selection, registry, visibility, mesh } = createHarness({ visibility: true });
+      /*
+       * Stays visible throughout - see PeerSelectionChips' own test above for
+       * why a visibilityChange sweep is the real trigger for a same-slot-count
+       * re-refresh.
+       */
+      mesh.position.set(0, 0, -10);
+      for (const peerId of ["peer-a", "peer-b", "peer-c", "peer-d"]) {
+        registry.select(peerId, "mesh-1");
+      }
+      visibility!.update();
+      const group = mesh.children[0] as THREE.Group;
+      const badgeBefore = group.children[3];
+      assert.strictEqual((badgeBefore as PeerSelectionChip).label, "+1");
+
+      // 5 selectors now - still 3 + 1 overflow slot.
+      registry.select("peer-e", "mesh-1");
+      const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+      selection.register("mesh-2", otherMesh);
+      otherMesh.position.set(0, 0, 10);
+      registry.select("peer-f", "mesh-2");
+      visibility!.update();
+
+      const groupAfter = mesh.children[0] as THREE.Group;
+      assert.strictEqual(
+        groupAfter.children.length,
+        4,
+        "slot count unchanged (still capped at 3 + 1 overflow)"
+      );
+      assert.strictEqual(groupAfter.children[3], badgeBefore, "must reuse the same badge chip instance");
+      assert.strictEqual((groupAfter.children[3] as PeerSelectionChip).label, "+2");
     }
-    visibility!.update();
-    const group = mesh.children[0] as THREE.Group;
-    const badgeBefore = group.children[3];
-    assert.strictEqual((badgeBefore as PeerSelectionChip).label, "+1");
-
-    // 5 selectors now - still 3 + 1 overflow slot.
-    registry.select("peer-e", "mesh-1");
-    const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    selection.register("mesh-2", otherMesh);
-    otherMesh.position.set(0, 0, 10);
-    registry.select("peer-f", "mesh-2");
-    visibility!.update();
-
-    const groupAfter = mesh.children[0] as THREE.Group;
-    assert.strictEqual(groupAfter.children.length, 4, "slot count unchanged (still capped at 3 + 1 overflow)");
-    assert.strictEqual(groupAfter.children[3], badgeBefore, "must reuse the same badge chip instance");
-    assert.strictEqual((groupAfter.children[3] as PeerSelectionChip).label, "+2");
-  });
+  );
 });
 
 describe("visibility", () => {

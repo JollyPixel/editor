@@ -2,8 +2,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-// CONSTANTS
-// Static `import`/`export ... from "..."`, excluding the type-only forms which are erased at compile time.
+/*
+ * CONSTANTS
+ * Static `import`/`export ... from "..."`, excluding the type-only forms which are erased at compile time.
+ */
 const kStaticSpecifier = /^\s*(?:import|export)\s+(?!type\s)(?:[^"';]*?\sfrom\s+)?["']([^"']+)["']/gm;
 
 /**

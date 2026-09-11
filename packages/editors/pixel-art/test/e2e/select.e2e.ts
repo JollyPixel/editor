@@ -24,8 +24,10 @@ test.beforeEach(async({ page }) => {
 });
 
 test("creates a rectangle selection and moves it", async({ page }) => {
-  // Two dragStroke calls plus WebGL trace capture run close to the
-  // default budget.
+  /*
+   * Two dragStroke calls plus WebGL trace capture run close to the
+   * default budget.
+   */
   test.slow();
   await setMode(page, "paint");
   await clickTexturePixel(page, 42, 2);
@@ -111,14 +113,18 @@ test("Ctrl+C / Ctrl+V duplicates the selection in place", async({ page }) => {
   await expect(page.locator("pixel-draw-panel").locator(".clipboard-status"))
     .toContainText(/Copied/);
 
-  // Paste centres the 4x4 copy on the cursor, so aim at the selection's own
-  // centre to duplicate it in place.
+  /*
+   * Paste centres the 4x4 copy on the cursor, so aim at the selection's own
+   * centre to duplicate it in place.
+   */
   const center = await textureToScreenPoint(page, 43, 17);
   await page.mouse.move(center.x, center.y);
   await page.keyboard.press("Control+v");
 
-  // A fresh paste doesn't erase its source when moved — dragging the
-  // pasted copy away should leave the original pixel untouched.
+  /*
+   * A fresh paste doesn't erase its source when moved — dragging the
+   * pasted copy away should leave the original pixel untouched.
+   */
   await dragStroke(page, [
     { x: 42, y: 16 },
     { x: 42, y: 21 }
@@ -249,8 +255,10 @@ test("R rotates a non-square selection 90deg clockwise around its center", async
 
   await page.keyboard.press("r");
 
-  // Old 2-wide x 1-tall footprint is vacated except where the new
-  // 1-wide x 2-tall footprint overlaps it.
+  /*
+   * Old 2-wide x 1-tall footprint is vacated except where the new
+   * 1-wide x 2-tall footprint overlaps it.
+   */
   await expect.poll(
     () => readPixel(page, 46, 16)
   ).toMatchObject({ a: 0 });
@@ -285,47 +293,54 @@ test("V flips a selection vertically", async({ page }) => {
   ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
 });
 
-test("Shape (magic-wand) selects a contiguous blob, and Delete only erases the masked pixels", async({ page }) => {
-  // Several dragStroke/click calls plus WebGL trace capture run close to
-  // the default budget.
-  test.slow();
-  await setMode(page, "paint");
-  // A pixel inside the future bounding rect, but not part of the blob.
-  await setBrushColor(page, "primary", "#00ffaa");
-  await clickTexturePixel(page, 57, 3);
+test(
+  "Shape (magic-wand) selects a contiguous blob, and Delete only erases the masked pixels",
+  async({ page }) => {
+    /*
+     * Several dragStroke/click calls plus WebGL trace capture run close to
+     * the default budget.
+     */
+    test.slow();
+    await setMode(page, "paint");
+    // A pixel inside the future bounding rect, but not part of the blob.
+    await setBrushColor(page, "primary", "#00ffaa");
+    await clickTexturePixel(page, 57, 3);
 
-  // An L-shaped blob: (55,1)-(57,1), (55,2), (55,3).
-  await setBrushColor(page, "primary", "#000000");
-  await dragStroke(page, [
-    { x: 55, y: 1 },
-    { x: 57, y: 1 }
-  ]);
-  await clickTexturePixel(page, 55, 2);
-  await clickTexturePixel(page, 55, 3);
+    // An L-shaped blob: (55,1)-(57,1), (55,2), (55,3).
+    await setBrushColor(page, "primary", "#000000");
+    await dragStroke(page, [
+      { x: 55, y: 1 },
+      { x: 57, y: 1 }
+    ]);
+    await clickTexturePixel(page, 55, 2);
+    await clickTexturePixel(page, 55, 3);
 
-  await setMode(page, "select");
-  await page.mouse.move(0, 0);
-  await page.getByRole("button", { name: "Select", exact: true }).hover();
-  await page.getByRole("button", { name: "Shape" }).click();
+    await setMode(page, "select");
+    await page.mouse.move(0, 0);
+    await page.getByRole("button", { name: "Select", exact: true }).hover();
+    await page.getByRole("button", { name: "Shape" }).click();
 
-  await clickTexturePixel(page, 56, 1);
-  await expect.poll(() => page.evaluate(() => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    await clickTexturePixel(page, 56, 1);
+    await expect.poll(() => page.evaluate(() => {
+      const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
 
-    return panel!.canvasManager!.tools.select.hasSelection;
-  })).toBe(true);
+      return panel!.canvasManager!.tools.select.hasSelection;
+    })).toBe(true);
 
-  await page.keyboard.press("Delete");
+    await page.keyboard.press("Delete");
 
-  await expect.poll(
-    () => readPixel(page, 56, 1)
-  ).toMatchObject({ a: 0 });
-  await expect.poll(
-    () => readPixel(page, 55, 3)
-  ).toMatchObject({ a: 0 });
-  // Bounding-rect corner that was never part of the blob: a mask-aware
-  // delete must leave it untouched.
-  await expect.poll(
-    () => readPixel(page, 57, 3)
-  ).toEqual({ r: 0, g: 255, b: 170, a: 255 });
-});
+    await expect.poll(
+      () => readPixel(page, 56, 1)
+    ).toMatchObject({ a: 0 });
+    await expect.poll(
+      () => readPixel(page, 55, 3)
+    ).toMatchObject({ a: 0 });
+    /*
+     * Bounding-rect corner that was never part of the blob: a mask-aware
+     * delete must leave it untouched.
+     */
+    await expect.poll(
+      () => readPixel(page, 57, 3)
+    ).toEqual({ r: 0, g: 255, b: 170, a: 255 });
+  }
+);

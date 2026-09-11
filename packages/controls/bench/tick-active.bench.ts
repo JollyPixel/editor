@@ -37,10 +37,6 @@ const suite = defineSuite("controls / tick — active", (bench) => {
       keyboardOnly.input.keyboard.update();
     }))
     .add("Mouse#update() — 2 buttons held + movement", batched(() => {
-      // `update()` consumes `newPosition`; re-arm it so every iteration takes
-      // the moved branch rather than the first one taking it and the rest not.
-      // The event object is reused so the task measures `update()`, not the
-      // fixture's own allocation.
       movement.clientX = movement.clientX === 900 ? 904 : 900;
       active.canvas.dispatch("mousemove", movement);
       active.input.mouse.update();

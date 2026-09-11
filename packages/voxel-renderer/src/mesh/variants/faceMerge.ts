@@ -46,8 +46,10 @@ export function describeMerge(
   const uAxis = axis === 0 ? 1 : 0;
   const vAxis = axis === 2 ? 1 : 2;
 
-  // Bit `(v << 1) | u` per visited corner; all four must show up exactly once
-  // in both position and tile space.
+  /*
+   * Bit `(v << 1) | u` per visited corner; all four must show up exactly once
+   * in both position and tile space.
+   */
   let cornerMask = 0;
   let uvMask = 0;
 
@@ -72,8 +74,10 @@ export function describeMerge(
     return null;
   }
 
-  // Walk from corner 0 to the corner reached by moving along uAxis alone: the
-  // tile coordinate that changes there is the one that follows uAxis.
+  /*
+   * Walk from corner 0 to the corner reached by moving along uAxis alone: the
+   * tile coordinate that changes there is the one that follows uAxis.
+   */
   for (let i = 1; i < 4; i++) {
     if (
       positions[(i * 3) + vAxis] === positions[vAxis] &&

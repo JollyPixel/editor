@@ -26,27 +26,30 @@ describe("InputController secondary (right-click) mouse events", () => {
     viewport.centerTexture();
   });
 
-  test("mousedown (right button) triggers onSecondaryDown with the resolved texture position and ctrlKey", () => {
-    const { actions, calls } = makeActions();
-    const ctrl = new InputController({
-      canvas,
-      viewport,
-      actions
-    });
+  test(
+    "mousedown (right button) triggers onSecondaryDown with the resolved texture position and ctrlKey",
+    () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-    canvas.dispatchEvent(new MouseEvent("mousedown", {
-      button: 2,
-      buttons: 2,
-      clientX: 100,
-      clientY: 100,
-      ctrlKey: true,
-      bubbles: true
-    }));
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 2,
+        buttons: 2,
+        clientX: 100,
+        clientY: 100,
+        ctrlKey: true,
+        bubbles: true
+      }));
 
-    assert.strictEqual(calls.onSecondaryDown.length, 1);
-    assert.ok(calls.onSecondaryDown[0][2]);
-    ctrl.destroy();
-  });
+      assert.strictEqual(calls.onSecondaryDown.length, 1);
+      assert.ok(calls.onSecondaryDown[0][2]);
+      ctrl.destroy();
+    }
+  );
 
   test("dragging after right mousedown fires onSecondaryMove", () => {
     const { actions, calls } = makeActions();

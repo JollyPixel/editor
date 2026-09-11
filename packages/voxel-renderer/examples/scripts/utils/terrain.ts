@@ -4,13 +4,17 @@ import {
   hash2D
 } from "./noise.ts";
 
-// CONSTANTS
-// Leaves reach two voxels away from the trunk; keep whole trees inside the world.
+/*
+ * CONSTANTS
+ * Leaves reach two voxels away from the trunk; keep whole trees inside the world.
+ */
 const kTreeMargin = 2;
 const kMinTrunkHeight = 4;
 const kMaxTrunkHeight = 6;
-// Pushes the noise histogram towards the low end so plains dominate and peaks
-// stay rare, instead of the uniformly bumpy terrain raw fBm produces.
+/*
+ * Pushes the noise histogram towards the low end so plains dominate and peaks
+ * stay rare, instead of the uniformly bumpy terrain raw fBm produces.
+ */
 const kHeightExponent = 1.7;
 
 /**

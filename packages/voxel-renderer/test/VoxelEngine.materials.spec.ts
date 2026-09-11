@@ -45,8 +45,10 @@ describe("VoxelEngine — layer opacity on the material", () => {
     assert.equal(mesh.material.transparent, true);
     assert.equal(mesh.material.opacity, 0.5);
     assert.equal(mesh.material.depthWrite, true);
-    // The mesher emits both faces of a voxel, so a second pass over the same
-    // quads would only blend them twice.
+    /*
+     * The mesher emits both faces of a voxel, so a second pass over the same
+     * quads would only blend them twice.
+     */
     assert.equal(mesh.material.side, THREE.FrontSide);
   });
 
@@ -67,8 +69,10 @@ describe("VoxelEngine — layer opacity on the material", () => {
     const cutout = meshes.find((mesh) => mesh.name.endsWith(":cutout"));
     assert.equal(meshes.length, 2);
     assert.ok(solid && cutout);
-    // Same texture and render queue, opposite sides: the solid pass keeps its
-    // back faces culled, the cutout one shows them through its own holes.
+    /*
+     * Same texture and render queue, opposite sides: the solid pass keeps its
+     * back faces culled, the cutout one shows them through its own holes.
+     */
     assert.equal(solid.material.map, cutout.material.map);
     assert.equal(solid.material.transparent, false);
     assert.equal(cutout.material.transparent, false);
@@ -91,8 +95,10 @@ describe("VoxelEngine — layer opacity on the material", () => {
     const engine = makeEngine();
     engine.world.addLayer("A", { opacity: 0.5 });
     engine.world.addLayer("B", { opacity: 0.5001 });
-    // Distinct positions, otherwise the higher-priority layer wins compositing
-    // and the other emits no mesh at all.
+    /*
+     * Distinct positions, otherwise the higher-priority layer wins compositing
+     * and the other emits no mesh at all.
+     */
     engine.world.setVoxel("A", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.world.setVoxel("B", { position: { x: 8, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();

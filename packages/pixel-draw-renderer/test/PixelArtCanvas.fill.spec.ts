@@ -71,8 +71,10 @@ describe("PixelArtCanvas — fill mode", () => {
   });
 
   describe("fill mode", () => {
-    // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
-    // client(100,100) -> texture (8,8).
+    /*
+     * 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
+     * client(100,100) -> texture (8,8).
+     */
 
     test("click flood-fills the connected region as a single stroke", () => {
       const events: unknown[] = [];
@@ -188,62 +190,67 @@ describe("PixelArtCanvas — fill mode", () => {
 
   describe("global fill behavior", () => {
     // 8x8 texture, zoom 1 -> centered camera (96, 96). client(96+x, 96+y) -> texture (x, y).
-    test("recolors every disconnected same-colored pixel on the canvas, not just the seed's connected region", () => {
-      const manager = new PixelArtCanvas(container, {
-        texture: {
-          maxSize: 32,
-          size: { x: 8, y: 8 }
-        },
-        zoom: { default: 1 },
-        brush: {
-          size: 1,
-          maxSize: 1,
-          color: "#000000"
-        }
-      });
-      const canvas = children[0];
+    test(
+      "recolors every disconnected same-colored pixel on the canvas, not just the seed's connected region",
+      () => {
+        const manager = new PixelArtCanvas(container, {
+          texture: {
+            maxSize: 32,
+            size: { x: 8, y: 8 }
+          },
+          zoom: { default: 1 },
+          brush: {
+            size: 1,
+            maxSize: 1,
+            color: "#000000"
+          }
+        });
+        const canvas = children[0];
 
-      // Two disconnected single-pixel black dots, far apart, on the default white background.
-      // texture (2, 2)
-      paintOnePixel(canvas, 98, 98);
-      // texture (6, 6)
-      paintOnePixel(canvas, 102, 102);
-      assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 2, y: 2 }, 8),
-        [0, 0, 0, 255]
-      );
-      assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 6, y: 6 }, 8),
-        [0, 0, 0, 255]
-      );
+        /*
+         * Two disconnected single-pixel black dots, far apart, on the default white background.
+         * texture (2, 2)
+         */
+        paintOnePixel(canvas, 98, 98);
+        // texture (6, 6)
+        paintOnePixel(canvas, 102, 102);
+        assert.deepStrictEqual(
+          readPixel(manager.texture, { x: 2, y: 2 }, 8),
+          [0, 0, 0, 255]
+        );
+        assert.deepStrictEqual(
+          readPixel(manager.texture, { x: 6, y: 6 }, 8),
+          [0, 0, 0, 255]
+        );
 
-      manager.mode = "fill";
-      manager.tools.fill.global = true;
-      manager.brush.primary.set("#FF0000");
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0,
-        buttons: 1,
-        clientX: 98,
-        clientY: 98,
-        bubbles: true
-      }));
+        manager.mode = "fill";
+        manager.tools.fill.global = true;
+        manager.brush.primary.set("#FF0000");
+        canvas.dispatchEvent(new MouseEvent("mousedown", {
+          button: 0,
+          buttons: 1,
+          clientX: 98,
+          clientY: 98,
+          bubbles: true
+        }));
 
-      assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 2, y: 2 }, 8),
-        [255, 0, 0, 255]
-      );
-      assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 6, y: 6 }, 8),
-        [255, 0, 0, 255],
-        "the disconnected dot elsewhere on the canvas is recolored too"
-      );
-      assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 3, y: 3 }, 8),
-        [255, 255, 255, 255],
-        "untouched background stays white"
-      );
-      manager.destroy();
-    });
+        assert.deepStrictEqual(
+          readPixel(manager.texture, { x: 2, y: 2 }, 8),
+          [255, 0, 0, 255]
+        );
+        assert.deepStrictEqual(
+          readPixel(manager.texture, { x: 6, y: 6 }, 8),
+          [255, 0, 0, 255],
+          "the disconnected dot elsewhere on the canvas is recolored too"
+        );
+        assert.deepStrictEqual(
+          readPixel(manager.texture, { x: 3, y: 3 }, 8),
+          [255, 255, 255, 255],
+          "untouched background stays white"
+        );
+        manager.destroy();
+      }
+    );
 
     test("right-click recolors with the secondary color instead of primary", () => {
       const manager = new PixelArtCanvas(container, {

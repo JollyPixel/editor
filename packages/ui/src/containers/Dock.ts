@@ -181,8 +181,6 @@ export class Dock extends LitElement {
   protected override willUpdate(
     changed: Map<PropertyKey, unknown>
   ): void {
-    // An overlay dock is content-sized by definition; stretching would leave
-    // one pane covering the whole viewport edge.
     if (
       changed.has("overlay") &&
       this.overlay &&
@@ -191,9 +189,6 @@ export class Dock extends LitElement {
       this.align = "start";
     }
 
-    // Restoring persisted size/collapsed only touches reactive properties,
-    // so it belongs before the first render commits rather than in
-    // firstUpdated, where setting them would schedule a redundant update.
     if (
       !this.hasUpdated &&
       !this.#managed
@@ -454,10 +449,12 @@ export class Dock extends LitElement {
   }
 
   #readSize(): void {
-    // A collapsed dock has no size worth remembering: its own handle stays
-    // interactive at 0px, and a click that jitters by even a couple of
-    // pixels reads as a resize drag there, which would otherwise overwrite
-    // the size the dock is meant to reopen at.
+    /*
+     * A collapsed dock has no size worth remembering: its own handle stays
+     * interactive at 0px, and a click that jitters by even a couple of
+     * pixels reads as a resize drag there, which would otherwise overwrite
+     * the size the dock is meant to reopen at.
+     */
     if (this.collapsed) {
       return;
     }
@@ -474,8 +471,10 @@ export class Dock extends LitElement {
   #applySize(): void {
     const dimension = this.#dimension();
     const inert = this.collapsed || (this.empty && !this.overlay);
-    // Disabling the handle is the primary fix: with no box to grab, dragging
-    // it should not be possible in the first place, jitter or not.
+    /*
+     * Disabling the handle is the primary fix: with no box to grab, dragging
+     * it should not be possible in the first place, jitter or not.
+     */
     this._handle?.classList.toggle("disabled", inert);
 
     if (inert) {

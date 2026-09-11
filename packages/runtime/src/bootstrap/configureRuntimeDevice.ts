@@ -23,9 +23,11 @@ export async function configureRuntimeDevice<TContext>(
   } = await getGPUTier();
 
   if (tier < 1) {
-    // tier 0 also covers "couldn't be determined" (e.g. no WebGL context
-    // available to probe, as in headless/sandboxed browsers): fall back to
-    // safe defaults instead of refusing to boot.
+    /*
+     * tier 0 also covers "couldn't be determined" (e.g. no WebGL context
+     * available to probe, as in headless/sandboxed browsers): fall back to
+     * safe defaults instead of refusing to boot.
+     */
     console.warn(
       "GPU tier could not be determined; falling back to default settings."
     );

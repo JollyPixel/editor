@@ -218,23 +218,37 @@ export class HighlightPassJfa {
     this.#jfaStepMaterial = new THREE.NodeMaterial();
     this.#jfaStepMaterial.name = "HighlightPassJfa.jfaStep";
     this.#jfaStepMaterial.fragmentNode = buildJfaPropagateStep(
-      this.#jfaPositionSourceTexture, this.#jfaColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
+      this.#jfaPositionSourceTexture,
+      this.#jfaColorSourceTexture,
+      jfaStepNode,
+      invSizeNode,
+      resolutionNode
     );
 
     this.#jfaPriorityStepMaterial = new THREE.NodeMaterial();
     this.#jfaPriorityStepMaterial.name = "HighlightPassJfa.jfaPriorityStep";
     this.#jfaPriorityStepMaterial.fragmentNode = buildJfaPropagateStep(
-      this.#jfaPriorityPositionSourceTexture, this.#jfaPriorityColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
+      this.#jfaPriorityPositionSourceTexture,
+      this.#jfaPriorityColorSourceTexture,
+      jfaStepNode,
+      invSizeNode,
+      resolutionNode
     );
 
     this.#jfaIsolatedStepMaterial = new THREE.NodeMaterial();
     this.#jfaIsolatedStepMaterial.name = "HighlightPassJfa.jfaIsolatedStep";
     this.#jfaIsolatedStepMaterial.fragmentNode = buildJfaPropagateStep(
-      this.#jfaIsolatedPositionSourceTexture, this.#jfaIsolatedColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
+      this.#jfaIsolatedPositionSourceTexture,
+      this.#jfaIsolatedColorSourceTexture,
+      jfaStepNode,
+      invSizeNode,
+      resolutionNode
     );
 
     const sharedChannel: JfaRingChannel = {
-      positionTexture: this.#finalPositionTexture, colorTexture: this.#finalColorTexture, maskTexture: this.#maskTexture
+      positionTexture: this.#finalPositionTexture,
+      colorTexture: this.#finalColorTexture,
+      maskTexture: this.#maskTexture
     };
     const priorityChannel: JfaRingChannel = {
       positionTexture: this.#finalPriorityPositionTexture,
@@ -251,7 +265,12 @@ export class HighlightPassJfa {
     this.#compositeMaterial.name = "HighlightPassJfa.composite";
     this.#compositeMaterial.fragmentNode = buildJfaRingComposite(
       {
-        resolutionNode, ringThicknessNode, borderThicknessNode, isolatedFillOpacityNode, hasPriorityNode, hasIsolatedNode
+        resolutionNode,
+        ringThicknessNode,
+        borderThicknessNode,
+        isolatedFillOpacityNode,
+        hasPriorityNode,
+        hasIsolatedNode
       },
       sharedChannel,
       priorityChannel,
@@ -265,7 +284,10 @@ export class HighlightPassJfa {
   }
 
   #createSeedRenderTarget(
-    nearestFilter: { magFilter: THREE.MagnificationTextureFilter; minFilter: THREE.MinificationTextureFilter; }
+    nearestFilter: {
+      magFilter: THREE.MagnificationTextureFilter;
+      minFilter: THREE.MinificationTextureFilter;
+    }
   ): THREE.RenderTarget {
     const target = new THREE.RenderTarget(1, 1, {
       depthBuffer: false, type: THREE.FloatType, count: 2, ...nearestFilter
@@ -401,7 +423,11 @@ export class HighlightPassJfa {
     const scene = this.#scene;
     const camera = this.#camera;
 
-    if (this.#entryByMesh.size === 0 && this.#isolatedEntryByMesh.size === 0 && this.#instancedMask.size === 0) {
+    if (
+      this.#entryByMesh.size === 0
+      && this.#isolatedEntryByMesh.size === 0
+      && this.#instancedMask.size === 0
+    ) {
       if (this.#lastEntryCount > 0) {
         this.#clearComposite();
         this.#lastEntryCount = 0;
@@ -416,7 +442,10 @@ export class HighlightPassJfa {
     this.#hasIsolatedUniform.value = isolatedPresent ? 1 : 0;
 
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    const isolatedResolutionScale = Math.max(1, (size.width * size.height) / kIsolatedRefreshIntervalReferencePixels);
+    const isolatedResolutionScale = Math.max(
+      1,
+      (size.width * size.height) / kIsolatedRefreshIntervalReferencePixels
+    );
     const isolatedRefreshInterval = Math.min(
       kIsolatedRefreshIntervalMax,
       Math.round(kIsolatedRefreshIntervalBase * isolatedResolutionScale)
@@ -446,54 +475,28 @@ export class HighlightPassJfa {
     renderer.autoClear = true;
     renderer.setClearColor(0x000000, 0);
 
-    renderer.setRenderObjectFunction((
-      object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
+    renderer.setRenderObjectFunction(
       // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
-    ) => {
-      if (object instanceof THREE.InstancedMesh) {
-        const instanced = this.#instancedMask.materialsFor(object);
-        if (instanced) {
-          renderer.renderObject(
-            object, objectScene, objectCamera, geometry, instanced.material, group, lightsNode, clippingContext
-          );
-
-          return;
-        }
-      }
-
-      if (!(object instanceof THREE.Mesh)) {
-        return;
-      }
-      const color = this.#entryByMesh.get(object);
-      if (color === undefined) {
-        return;
-      }
-
-      this.#maskColor.copy(color);
-      renderer.renderObject(object, objectScene, objectCamera, geometry, this.#maskMaterial, group, lightsNode, clippingContext);
-    });
-
-    renderer.setRenderTarget(this.#renderTargetMask);
-    renderer.render(scene, camera);
-
-    if (hasPriority) {
-      renderer.autoClear = false;
-      renderer.setRenderObjectFunction((
-        object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
-        // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
-      ) => {
+      (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
         if (object instanceof THREE.InstancedMesh) {
           const instanced = this.#instancedMask.materialsFor(object);
           if (instanced) {
             renderer.renderObject(
-              object, objectScene, objectCamera, geometry, instanced.priorityMaterial, group, lightsNode, clippingContext
+              object,
+              objectScene,
+              objectCamera,
+              geometry,
+              instanced.material,
+              group,
+              lightsNode,
+              clippingContext
             );
 
             return;
           }
         }
 
-        if (!(object instanceof THREE.Mesh) || !this.#priorityMeshes.has(object)) {
+        if (!(object instanceof THREE.Mesh)) {
           return;
         }
         const color = this.#entryByMesh.get(object);
@@ -503,9 +506,65 @@ export class HighlightPassJfa {
 
         this.#maskColor.copy(color);
         renderer.renderObject(
-          object, objectScene, objectCamera, geometry, this.#priorityMaskMaterial, group, lightsNode, clippingContext
+          object,
+          objectScene,
+          objectCamera,
+          geometry,
+          this.#maskMaterial,
+          group,
+          lightsNode,
+          clippingContext
         );
-      });
+      }
+    );
+
+    renderer.setRenderTarget(this.#renderTargetMask);
+    renderer.render(scene, camera);
+
+    if (hasPriority) {
+      renderer.autoClear = false;
+      renderer.setRenderObjectFunction(
+        // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
+        (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
+          if (object instanceof THREE.InstancedMesh) {
+            const instanced = this.#instancedMask.materialsFor(object);
+            if (instanced) {
+              renderer.renderObject(
+                object,
+                objectScene,
+                objectCamera,
+                geometry,
+                instanced.priorityMaterial,
+                group,
+                lightsNode,
+                clippingContext
+              );
+
+              return;
+            }
+          }
+
+          if (!(object instanceof THREE.Mesh) || !this.#priorityMeshes.has(object)) {
+            return;
+          }
+          const color = this.#entryByMesh.get(object);
+          if (color === undefined) {
+            return;
+          }
+
+          this.#maskColor.copy(color);
+          renderer.renderObject(
+            object,
+            objectScene,
+            objectCamera,
+            geometry,
+            this.#priorityMaskMaterial,
+            group,
+            lightsNode,
+            clippingContext
+          );
+        }
+      );
       renderer.render(scene, camera);
 
       renderer.autoClear = true;
@@ -515,23 +574,30 @@ export class HighlightPassJfa {
 
     if (hasIsolated) {
       renderer.autoClear = true;
-      renderer.setRenderObjectFunction((
-        object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
+      renderer.setRenderObjectFunction(
         // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
-      ) => {
-        if (!(object instanceof THREE.Mesh)) {
-          return;
-        }
-        const color = this.#isolatedEntryByMesh.get(object);
-        if (color === undefined) {
-          return;
-        }
+        (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
+          if (!(object instanceof THREE.Mesh)) {
+            return;
+          }
+          const color = this.#isolatedEntryByMesh.get(object);
+          if (color === undefined) {
+            return;
+          }
 
-        this.#maskColor.copy(color);
-        renderer.renderObject(
-          object, objectScene, objectCamera, geometry, this.#priorityMaskMaterial, group, lightsNode, clippingContext
-        );
-      });
+          this.#maskColor.copy(color);
+          renderer.renderObject(
+            object,
+            objectScene,
+            objectCamera,
+            geometry,
+            this.#priorityMaskMaterial,
+            group,
+            lightsNode,
+            clippingContext
+          );
+        }
+      );
       renderer.setRenderTarget(this.#renderTargetIsolatedMask);
       renderer.render(scene, camera);
     }
@@ -576,8 +642,12 @@ export class HighlightPassJfa {
       sourceIsA = !sourceIsA;
 
       if (hasPriority) {
-        const prioritySource = prioritySourceIsA ? this.#renderTargetPrioritySeedA : this.#renderTargetPrioritySeedB;
-        const priorityDest = prioritySourceIsA ? this.#renderTargetPrioritySeedB : this.#renderTargetPrioritySeedA;
+        const prioritySource = prioritySourceIsA
+          ? this.#renderTargetPrioritySeedA
+          : this.#renderTargetPrioritySeedB;
+        const priorityDest = prioritySourceIsA
+          ? this.#renderTargetPrioritySeedB
+          : this.#renderTargetPrioritySeedA;
 
         this.#jfaPriorityPositionSourceTexture.value = prioritySource.textures[0];
         this.#jfaPriorityColorSourceTexture.value = prioritySource.textures[1];
@@ -590,8 +660,12 @@ export class HighlightPassJfa {
       }
 
       if (hasIsolated) {
-        const isolatedSource = isolatedSourceIsA ? this.#renderTargetIsolatedSeedA : this.#renderTargetIsolatedSeedB;
-        const isolatedDest = isolatedSourceIsA ? this.#renderTargetIsolatedSeedB : this.#renderTargetIsolatedSeedA;
+        const isolatedSource = isolatedSourceIsA
+          ? this.#renderTargetIsolatedSeedA
+          : this.#renderTargetIsolatedSeedB;
+        const isolatedDest = isolatedSourceIsA
+          ? this.#renderTargetIsolatedSeedB
+          : this.#renderTargetIsolatedSeedA;
 
         this.#jfaIsolatedPositionSourceTexture.value = isolatedSource.textures[0];
         this.#jfaIsolatedColorSourceTexture.value = isolatedSource.textures[1];
@@ -609,12 +683,16 @@ export class HighlightPassJfa {
     this.#finalColorTexture.value = finalTarget.textures[1];
 
     if (hasPriority) {
-      const finalPriorityTarget = prioritySourceIsA ? this.#renderTargetPrioritySeedA : this.#renderTargetPrioritySeedB;
+      const finalPriorityTarget = prioritySourceIsA
+        ? this.#renderTargetPrioritySeedA
+        : this.#renderTargetPrioritySeedB;
       this.#finalPriorityPositionTexture.value = finalPriorityTarget.textures[0];
       this.#finalPriorityColorTexture.value = finalPriorityTarget.textures[1];
     }
     if (hasIsolated) {
-      const finalIsolatedTarget = isolatedSourceIsA ? this.#renderTargetIsolatedSeedA : this.#renderTargetIsolatedSeedB;
+      const finalIsolatedTarget = isolatedSourceIsA
+        ? this.#renderTargetIsolatedSeedA
+        : this.#renderTargetIsolatedSeedB;
       this.#finalIsolatedPositionTexture.value = finalIsolatedTarget.textures[0];
       this.#finalIsolatedColorTexture.value = finalIsolatedTarget.textures[1];
     }

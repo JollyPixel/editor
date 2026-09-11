@@ -26,10 +26,12 @@ const kPlatformMax = 19;
 const kPlatformHeight = 2;
 const kSphereRadius = 0.5;
 
-// @dimforge/rapier3d 0.19.x loads its WASM binary via a static bundler import
-// (`import * as wasm from "./rapier_wasm3d_bg.wasm"`) — no explicit init() call
-// is required. Vite serves the .wasm file directly when the package is excluded
-// from pre-bundling (see vite.config.ts → optimizeDeps.exclude).
+/*
+ * @dimforge/rapier3d 0.19.x loads its WASM binary via a static bundler import
+ * (`import * as wasm from "./rapier_wasm3d_bg.wasm"`) — no explicit init() call
+ * is required. Vite serves the .wasm file directly when the package is excluded
+ * from pre-bundling (see vite.config.ts → optimizeDeps.exclude).
+ */
 const rapierWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
 
 const runtime = await Runtime.create("canvas", {
@@ -66,8 +68,10 @@ world.createActor("camera")
       .lookAt({ x: 16, y: 1, z: 16 });
   });
 
-// One block type — collidable fullCube so RapierVoxelCollider creates box
-// colliders for every voxel (compound cuboid strategy, one per solid block).
+/*
+ * One block type — collidable fullCube so RapierVoxelCollider creates box
+ * colliders for every voxel (compound cuboid strategy, one per solid block).
+ */
 const voxelBlocks: BlockDefinition[] = [
   {
     id: 1,
@@ -109,8 +113,10 @@ const voxelBlocks: BlockDefinition[] = [
   }
 ];
 
-// VoxelRenderer with Rapier physics enabled: RapierVoxelCollider builds box
-// colliders for every collidable chunk during awake() and each dirty rebuild.
+/*
+ * VoxelRenderer with Rapier physics enabled: RapierVoxelCollider builds box
+ * colliders for every collidable chunk during awake() and each dirty rebuild.
+ */
 const voxelMap = world.createActor("map")
   .addComponentAndGet(
     VoxelRenderer,
@@ -130,18 +136,22 @@ const voxelMap = world.createActor("map")
     }
   );
 
-// ── Flat 32 × 32 ground at y = 0 ─────────────────────────────────────────────
-// Four 16 × 16 chunks, each getting a compound-cuboid collider built from the
-// 16 × 16 = 256 individual voxels (box colliders, most performant strategy).
+/*
+ * ── Flat 32 × 32 ground at y = 0 ─────────────────────────────────────────────
+ * Four 16 × 16 chunks, each getting a compound-cuboid collider built from the
+ * 16 × 16 = 256 individual voxels (box colliders, most performant strategy).
+ */
 for (let x = 0; x < kTerrainSize; x++) {
   for (let z = 0; z < kTerrainSize; z++) {
     voxelMap.engine.world.setVoxel("Ground", { position: { x, y: 0, z }, blockId: 1 });
   }
 }
 
-// ── Raised platform (8 × 8, 2 layers) ────────────────────────────────────────
-// Sits in the centre of the terrain. The sphere drops onto it, then rolls off
-// the edge and continues across the flat ground below.
+/*
+ * ── Raised platform (8 × 8, 2 layers) ────────────────────────────────────────
+ * Sits in the centre of the terrain. The sphere drops onto it, then rolls off
+ * the edge and continues across the flat ground below.
+ */
 for (let y = 1; y <= kPlatformHeight; y++) {
   for (let x = kPlatformMin; x <= kPlatformMax; x++) {
     for (let z = kPlatformMin; z <= kPlatformMax; z++) {
@@ -150,10 +160,12 @@ for (let y = 1; y <= kPlatformHeight; y++) {
   }
 }
 
-// ── Sphere physics body ───────────────────────────────────────────────────────
-// Dynamic ball placed above the platform centre.
-// linearDamping is set high enough that the sphere decelerates promptly when
-// the player releases the arrow keys (terminal speed ≈ 3 m/s at force 0.15).
+/*
+ * ── Sphere physics body ───────────────────────────────────────────────────────
+ * Dynamic ball placed above the platform centre.
+ * linearDamping is set high enough that the sphere decelerates promptly when
+ * the player releases the arrow keys (terminal speed ≈ 3 m/s at force 0.15).
+ */
 const sphereBodyDesc = RAPIER.RigidBodyDesc.dynamic()
   .setTranslation(15.5, 9, 15.5)
   .setLinearDamping(3.0)
@@ -175,11 +187,13 @@ const sphereMesh = new THREE.Mesh(
 );
 scene.add(sphereMesh);
 
-// ── Physics integration ───────────────────────────────────────────────────────
-// Step Rapier once per fixed tick (60 Hz), before sceneManager.fixedUpdate().
-// SphereController then reads input, applies its impulse and records the
-// stepped position in its fixedUpdate(); its update() only interpolates the
-// mesh between the last two steps.
+/*
+ * ── Physics integration ───────────────────────────────────────────────────────
+ * Step Rapier once per fixed tick (60 Hz), before sceneManager.fixedUpdate().
+ * SphereController then reads input, applies its impulse and records the
+ * stepped position in its fixedUpdate(); its update() only interpolates the
+ * mesh between the last two steps.
+ */
 world.on("beforeFixedUpdate", (_dt) => {
   rapierWorld.step();
 });

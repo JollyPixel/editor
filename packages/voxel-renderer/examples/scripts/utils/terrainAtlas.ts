@@ -5,9 +5,11 @@ import {
 } from "../../../src/index.ts";
 import { TerrainBlock, type TerrainBlockId } from "./terrain.ts";
 
-// CONSTANTS
-// Tiles are flat colours, so they only need to be wide enough for the atlas
-// half-texel inset to have something to bite into.
+/*
+ * CONSTANTS
+ * Tiles are flat colours, so they only need to be wide enough for the atlas
+ * half-texel inset to have something to bite into.
+ */
 const kTileSize = 8;
 const kCols = 4;
 
@@ -72,8 +74,10 @@ function toBlockDefinition(
     name: spec.name,
     shapeId: "cube",
     collidable: spec.collidable ?? true,
-    // Every face of a block shares its single colour; lighting alone separates
-    // the top from the sides.
+    /*
+     * Every face of a block shares its single colour; lighting alone separates
+     * the top from the sides.
+     */
     faceTextures: {},
     defaultTexture: {
       col: index % kCols,

@@ -53,8 +53,10 @@ describe("VoxelMeshBuilder — opacity affects occlusion", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    // 12 faces minus the 2 the cubes share: keeping them stacks coincident
-    // blended quads, which reads as a checkerboard through the volume.
+    /*
+     * 12 faces minus the 2 the cubes share: keeping them stacks coincident
+     * blended quads, which reads as a checkerboard through the volume.
+     */
     assert.equal(countChunkVertices(f), 40);
   });
 
@@ -70,8 +72,10 @@ describe("VoxelMeshBuilder — opacity affects occlusion", () => {
     );
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    // The translucent layer is skipped rather than ending the search, so the
-    // opaque layer under it still hides the PosX face: 5 faces = 20 verts.
+    /*
+     * The translucent layer is skipped rather than ending the search, so the
+     * opaque layer under it still hides the PosX face: 5 faces = 20 verts.
+     */
     assert.equal(countChunkVertices(f), 20);
   });
 
@@ -106,8 +110,10 @@ describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () =
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
 
-    // The cube keeps all 6 faces; the leaves still lose the one the opaque
-    // cube covers, which nothing can see through anyway. 24 + 20.
+    /*
+     * The cube keeps all 6 faces; the leaves still lose the one the opaque
+     * cube covers, which nothing can see through anyway. 24 + 20.
+     */
     assert.equal(countChunkVertices(f), 44);
   });
 
@@ -125,8 +131,10 @@ describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () =
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
 
-    // The canopy case: emitting both would put two coplanar quads on the
-    // shared plane, which z-fight. 5 faces each.
+    /*
+     * The canopy case: emitting both would put two coplanar quads on the
+     * shared plane, which z-fight. 5 faces each.
+     */
     assert.equal(countChunkVertices(f), 40);
   });
 
@@ -170,8 +178,10 @@ describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () =
 describe("VoxelMeshBuilder — neighbour lookups across chunks and layer offsets", () => {
   it("culls against an opaque layer whose offset shifts it onto a different chunk grid", () => {
     const f = makeFixture();
-    // Offset by 2 on X, so this layer's chunk boundaries sit mid-way through
-    // the meshed layer's — the neighbour lookup cannot assume a shared grid.
+    /*
+     * Offset by 2 on X, so this layer's chunk boundaries sit mid-way through
+     * the meshed layer's — the neighbour lookup cannot assume a shared grid.
+     */
     const shifted = f.world.addLayer("shifted");
     shifted.offset = { x: 2, y: 0, z: 0 };
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
@@ -180,8 +190,10 @@ describe("VoxelMeshBuilder — neighbour lookups across chunks and layer offsets
     // Not adjacent: all 6 faces emitted.
     assert.equal(countChunkVertices(f), 24);
 
-    // World x=1 is adjacent, but the offset puts it in the shifted layer's
-    // chunk (-1,0,0) — a different grid cell than the chunk being meshed.
+    /*
+     * World x=1 is adjacent, but the offset puts it in the shifted layer's
+     * chunk (-1,0,0) — a different grid cell than the chunk being meshed.
+     */
     shifted.setVoxelAt({ x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
     assert.equal(countChunkVertices(f), 20);

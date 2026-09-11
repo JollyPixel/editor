@@ -28,17 +28,21 @@ describe("AreaBoxFill", () => {
       const color = new THREE.Color(kColor);
       const fill = createFill();
 
-      // The fill is smoked so that blending it over the scene darkens what
-      // shows through instead of washing it out.
+      /*
+       * The fill is smoked so that blending it over the scene darkens what
+       * shows through instead of washing it out.
+       */
       assert.ok(fill.material.color.r < color.r);
       assert.ok(fill.material.color.g < color.g);
       assert.ok(fill.material.color.b < color.b);
     });
 
     test("draws above a transparent ground grid", () => {
-      // A camera-following grid sorts as the nearest transparent object and
-      // would otherwise paint its lines over the area at full strength,
-      // which no amount of `opacity` can compensate for.
+      /*
+       * A camera-following grid sorts as the nearest transparent object and
+       * would otherwise paint its lines over the area at full strength,
+       * which no amount of `opacity` can compensate for.
+       */
       assert.ok(createFill().renderOrder > 0);
     });
 
@@ -61,9 +65,11 @@ describe("AreaBoxFill", () => {
       assert.equal(colors.count, 24);
       assert.equal(fill.material.vertexColors, true);
 
-      // Group order is +X, -X, +Y, -Y, +Z, -Z: the top face is the
-      // brightest and the bottom one the darkest, so the faces stay
-      // distinguishable without a light in the scene.
+      /*
+       * Group order is +X, -X, +Y, -Y, +Z, -Z: the top face is the
+       * brightest and the bottom one the darkest, so the faces stay
+       * distinguishable without a light in the scene.
+       */
       const top = colors.getX(8);
       const bottom = colors.getX(12);
       const side = colors.getX(0);
@@ -114,8 +120,10 @@ describe("AreaBoxFill", () => {
 
       fill.emphasize(1.05, 0.24);
 
-      // Brighter, and still blue: lerping to white would cost it its
-      // identity.
+      /*
+       * Brighter, and still blue: lerping to white would cost it its
+       * identity.
+       */
       const active = fill.material.color;
       assert.ok(active.b > idle.b);
       assert.ok(active.b > active.r);

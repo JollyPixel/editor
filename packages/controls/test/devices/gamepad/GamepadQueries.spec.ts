@@ -23,20 +23,23 @@ describe("Controls.Gamepad queries", () => {
   });
 
   describe("button/axis queries", () => {
-    test("isButtonDown / wasButtonJustPressed / wasButtonJustReleased / buttonValue resolve a named button", () => {
-      gamepad.buttons[0][0] = {
-        isDown: true,
-        wasJustPressed: true,
-        wasJustReleased: false,
-        value: 0.75
-      };
+    test(
+      "isButtonDown / wasButtonJustPressed / wasButtonJustReleased / buttonValue resolve a named button",
+      () => {
+        gamepad.buttons[0][0] = {
+          isDown: true,
+          wasJustPressed: true,
+          wasJustReleased: false,
+          value: 0.75
+        };
 
-      assert.strictEqual(gamepad.isButtonDown(0, "A"), true);
-      assert.strictEqual(gamepad.wasButtonJustPressed(0, "A"), true);
-      assert.strictEqual(gamepad.wasButtonJustReleased(0, "A"), false);
-      assert.strictEqual(gamepad.buttonValue(0, "A"), 0.75);
-      assert.strictEqual(gamepad.isButtonDown(0, 0), true);
-    });
+        assert.strictEqual(gamepad.isButtonDown(0, "A"), true);
+        assert.strictEqual(gamepad.wasButtonJustPressed(0, "A"), true);
+        assert.strictEqual(gamepad.wasButtonJustReleased(0, "A"), false);
+        assert.strictEqual(gamepad.buttonValue(0, "A"), 0.75);
+        assert.strictEqual(gamepad.isButtonDown(0, 0), true);
+      }
+    );
 
     test("throws for an out-of-range button", () => {
       assert.throws(() => gamepad.isButtonDown(0, 999), /Invalid gamepad info/);

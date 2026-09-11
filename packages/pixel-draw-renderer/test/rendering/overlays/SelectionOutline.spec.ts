@@ -288,8 +288,10 @@ describe("SelectionOutline", () => {
     });
 
     test("an L-shape traces its true concave outline (6 corners), not the bounding rect's 4", () => {
-      // X .
-      // X X
+      /*
+       * X .
+       * X X
+       */
       const loops = traceSelectionContour(
         2,
         2,
@@ -316,13 +318,17 @@ describe("SelectionOutline", () => {
       );
     });
 
-    // Corner-touching cells share a boundary vertex, so that vertex starts
-    // two edges. Keying edges by origin alone dropped one and the walk then
-    // dereferenced a consumed edge (TypeError), which silently aborted
-    // SelectEngine.importSelection halfway through a paste.
+    /*
+     * Corner-touching cells share a boundary vertex, so that vertex starts
+     * two edges. Keying edges by origin alone dropped one and the walk then
+     * dereferenced a consumed edge (TypeError), which silently aborted
+     * SelectEngine.importSelection halfway through a paste.
+     */
     test("two cells touching only at a corner trace as two separate loops", () => {
-      // X .
-      // . X
+      /*
+       * X .
+       * . X
+       */
       const loops = traceSelectionContour(
         2,
         2,
@@ -338,8 +344,10 @@ describe("SelectionOutline", () => {
     });
 
     test("the anti-diagonal traces as two separate loops", () => {
-      // . X
-      // X .
+      /*
+       * . X
+       * X .
+       */
       const loops = traceSelectionContour(
         2,
         2,
@@ -365,8 +373,10 @@ describe("SelectionOutline", () => {
     });
 
     test("a corner-touching pair joined by a third cell stays one loop", () => {
-      // X X
-      // . X
+      /*
+       * X X
+       * . X
+       */
       const loops = traceSelectionContour(
         2,
         2,

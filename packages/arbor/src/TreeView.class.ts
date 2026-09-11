@@ -192,9 +192,15 @@ export class TreeView extends EventTarget {
     }
 
     if (referenceElement.parentElement) {
-      referenceElement.parentElement.insertBefore(element, referenceElement);
+      referenceElement.parentElement.insertBefore(
+        element,
+        referenceElement
+      );
       if (childrenElt) {
-        referenceElement.parentElement.insertBefore(childrenElt, element.nextSibling);
+        referenceElement.parentElement.insertBefore(
+          childrenElt,
+          element.nextSibling
+        );
       }
     }
 
@@ -576,8 +582,6 @@ export class TreeView extends EventTarget {
       return false;
     }
 
-    // If we're dragging nodes from the current tree view
-    // Prevent dropping into descendant
     if (this.isDraggingNodes) {
       if (
         dropLocation.where === "inside" &&
@@ -689,11 +693,17 @@ export class TreeView extends EventTarget {
       }
 
       selectedNode.parentElement!.removeChild(selectedNode);
-      newParent?.insertBefore(selectedNode, referenceElt);
+      newParent?.insertBefore(
+        selectedNode,
+        referenceElt
+      );
       referenceElt = selectedNode.nextElementSibling;
 
       if (draggedChildren) {
-        newParent?.insertBefore(draggedChildren, referenceElt);
+        newParent?.insertBefore(
+          draggedChildren,
+          referenceElt
+        );
         referenceElt = draggedChildren.nextElementSibling;
       }
     }

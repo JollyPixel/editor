@@ -37,10 +37,12 @@ export async function gotoDemo(
 ): Promise<void> {
   const { runtime = false } = options;
 
-  // The demo prompts for a username via a jolly-pixel/ui <jolly-dialog>,
-  // which (unlike window.prompt) never auto-dismisses in a headless
-  // browser, so it would hang __pixelSyncReady forever. Seed the session
-  // storage key it checks before any script on the page runs.
+  /*
+   * The demo prompts for a username via a jolly-pixel/ui <jolly-dialog>,
+   * which (unlike window.prompt) never auto-dismisses in a headless
+   * browser, so it would hang __pixelSyncReady forever. Seed the session
+   * storage key it checks before any script on the page runs.
+   */
   await page.addInitScript(() => {
     sessionStorage.setItem("pixel-draw-demo:username", "E2E");
   });
@@ -52,12 +54,14 @@ export async function gotoDemo(
     () => (window as unknown as { __pixelSyncReady?: boolean; }).__pixelSyncReady === true
   );
 
-  // Each worker reuses one sync room across every test file (see
-  // testRoomId()), with no per-test reset: a previous test's fire-and-forget
-  // network op (e.g. a texture replace) can still be in flight when this
-  // page joins the same room and lands after this test starts painting,
-  // silently overwriting it. Blanking here mirrors global-setup.ts's
-  // once-per-run reset, giving every test its own settled starting state.
+  /*
+   * Each worker reuses one sync room across every test file (see
+   * testRoomId()), with no per-test reset: a previous test's fire-and-forget
+   * network op (e.g. a texture replace) can still be in flight when this
+   * page joins the same room and lands after this test starts painting,
+   * silently overwriting it. Blanking here mirrors global-setup.ts's
+   * once-per-run reset, giving every test its own settled starting state.
+   */
   await page.evaluate((size) => {
     const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
     const canvasManager = panel!.canvasManager!;
@@ -66,8 +70,10 @@ export async function gotoDemo(
     blank.height = size.y;
     canvasManager.texture = blank;
     canvasManager.uv.clear();
-    // The blank replace is a local edit, so it lands on the undo stack;
-    // drop it so each test starts with an empty page-local history.
+    /*
+     * The blank replace is a local edit, so it lands on the undo stack;
+     * drop it so each test starts with an empty page-local history.
+     */
     canvasManager.document.history.clear();
   }, TEXTURE_SIZE);
 }

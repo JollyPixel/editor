@@ -19,9 +19,6 @@ const kRefreshIntervalMs = 150;
 const kTabSwitchMs = 5000;
 const kLiveMode = "live";
 
-/**
- * Drops frames to simulate a hidden tab. Demo use only.
- */
 class GatedFrameSource implements FrameSource {
   #inner: FrameSource;
   #gatedUntil = 0;
@@ -61,8 +58,6 @@ const loop = new GameLoop({ source });
 
 const injection = {
   overload: false,
-  // Sits well over the step budget below, so the toggle either clearly panics
-  // or clearly does not.
   workPerFrameMs: 120
 };
 
@@ -149,8 +144,6 @@ totals
     plot.clear();
   });
 
-// A replay freezes its own totals on the panel; the live loop keeps running
-// behind it and must not write into them.
 loop.on("clamp", () => {
   if (readout.mode === kLiveMode) {
     readout.clamps++;
@@ -177,26 +170,18 @@ loop.start({
     }
     refresh();
 
-    // End-of-frame work becomes the next delta. Past the step budget, the
-    // extra simulation time is dropped instead of stepped.
     if (injection.overload) {
       burn(injection.workPerFrameMs);
     }
   }
 });
 
-/**
- * Milliseconds of simulation one frame may run before the budget drops time.
- */
 function budgetOf(
   scheduler: FrameScheduler
 ): number {
   return scheduler.maxStepsPerFrame * scheduler.fixedDelta;
 }
 
-/**
- * Points the plot reference lines and the budget readout at one scheduler.
- */
 function useLimits(
   scheduler: FrameScheduler
 ): void {
@@ -214,9 +199,6 @@ function stall(
   burn(durationMs);
 }
 
-/**
- * Replays a shared scenario through a temporary scheduler.
- */
 function replayTape(
   tape: FrameTape
 ): void {
@@ -269,7 +251,6 @@ function refresh(): void {
   }
   refreshedAt = now;
 
-  // Keep live frame-rate reporting active while replay values stay frozen.
   if (readout.mode === kLiveMode) {
     const { scheduler } = loop;
     readout.behind = `${(scheduler.elapsed - scheduler.time).toFixed(0)} ms`;

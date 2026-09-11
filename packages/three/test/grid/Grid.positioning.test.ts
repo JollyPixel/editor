@@ -292,23 +292,26 @@ describe("target fade mode via onBeforeRender", () => {
     assert.strictEqual(grid.position.z, 5);
   });
 
-  test("does not reposition on onBeforeRender in infinite mode, but still tracks fade.target's world position", () => {
-    const target = new THREE.Object3D();
-    target.position.set(3, 0, -7);
+  test(
+    "does not reposition on onBeforeRender in infinite mode, but still tracks fade.target's world position",
+    () => {
+      const target = new THREE.Object3D();
+      target.position.set(3, 0, -7);
 
-    const grid = new Grid({
-      infiniteGrid: true,
-      fade: {
-        from: "target",
-        target
-      }
-    });
-    const camera = new THREE.PerspectiveCamera();
+      const grid = new Grid({
+        infiniteGrid: true,
+        fade: {
+          from: "target",
+          target
+        }
+      });
+      const camera = new THREE.PerspectiveCamera();
 
-    triggerRender(grid, camera);
+      triggerRender(grid, camera);
 
-    assert.strictEqual(grid.position.x, 0);
-    assert.strictEqual(grid.position.y, 0);
-    assert.strictEqual(grid.position.z, 0);
-  });
+      assert.strictEqual(grid.position.x, 0);
+      assert.strictEqual(grid.position.y, 0);
+      assert.strictEqual(grid.position.z, 0);
+    }
+  );
 });

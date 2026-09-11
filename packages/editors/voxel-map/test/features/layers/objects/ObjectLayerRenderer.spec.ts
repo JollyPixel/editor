@@ -214,8 +214,10 @@ describe("ObjectLayerRenderer areas", () => {
     editorState.selection.selectObjectLayer("Objects");
     const harness = createHarness(layers);
 
-    // Visibility follows the eye toggles alone: selecting one layer no
-    // longer blanks the others, nor does selecting a voxel layer.
+    /*
+     * Visibility follows the eye toggles alone: selecting one layer no
+     * longer blanks the others, nor does selecting a voxel layer.
+     */
     assert.equal(harness.areaOf("spawn").visible, true);
     assert.equal(harness.areaOf("trigger").visible, true);
 
@@ -298,8 +300,10 @@ describe("ObjectLayerRenderer areas", () => {
   });
 
   test("touches no GPU resource when a hook repeats the stored area", () => {
-    // Rebuilding the edge buffers or the label texture from a UI event
-    // destroys resources the frame being encoded still references.
+    /*
+     * Rebuilding the edge buffers or the label texture from a UI event
+     * destroys resources the frame being encoded still references.
+     */
     editorState.selection.selectObjectLayer("Objects");
     const harness = createHarness();
     const area = harness.areaOf("spawn");

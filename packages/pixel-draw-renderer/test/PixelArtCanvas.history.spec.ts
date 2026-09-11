@@ -474,11 +474,13 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Multiplayer collision handling: undo replays with the original action's
-// timestamp so the server's per-pixel LastWriteWinsResolver can re-race it
-// fairly against a peer's edit made in between.
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Multiplayer collision handling: undo replays with the original action's
+ * timestamp so the server's per-pixel LastWriteWinsResolver can re-race it
+ * fairly against a peer's edit made in between.
+ * ---------------------------------------------------------------------------
+ */
 
 interface RecordingRoom extends Room<PixelNetworkCommand, PixelServerMessage> {
   sentCommands: PixelNetworkCommand[];
@@ -523,9 +525,11 @@ function makeServerBackedRoom(
     emit("message", data);
   }
 
-  // Normally provided by Server/ServerRoom — this single-client fake
-  // just forwards straight back to the same client, mirroring `observe()` in
-  // PixelSyncServer.spec.ts.
+  /*
+   * Normally provided by Server/ServerRoom — this single-client fake
+   * just forwards straight back to the same client, mirroring `observe()` in
+   * PixelSyncServer.spec.ts.
+   */
   const serverRoom: RoomContext = {
     room: {
       broadcast: handleFromServer,
@@ -668,9 +672,11 @@ describe("PixelArtCanvas — history + network collision handling", () => {
       [0, 0, 255, 255]
     );
 
-    // A undoes their old stroke at t=3000. The replay is stamped with the
-    // ORIGINAL timestamp (1000), so it loses to B's timestamp (2000) under
-    // the server's per-pixel LastWriteWinsResolver.
+    /*
+     * A undoes their old stroke at t=3000. The replay is stamped with the
+     * ORIGINAL timestamp (1000), so it loses to B's timestamp (2000) under
+     * the server's per-pixel LastWriteWinsResolver.
+     */
     t.mock.timers.tick(2000);
     manager.undo();
 
@@ -696,8 +702,10 @@ describe("PixelArtCanvas — history + network collision handling", () => {
     const client = new PixelSyncClient({ room });
     client.attach(manager);
 
-    // texture (2,2) -> painted black, then selected and deleted (a
-    // "select-edit" commit, dominant-border-color erase -> white).
+    /*
+     * texture (2,2) -> painted black, then selected and deleted (a
+     * "select-edit" commit, dominant-border-color erase -> white).
+     */
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
@@ -727,52 +735,59 @@ describe("PixelArtCanvas — history + network collision handling", () => {
     manager.destroy();
   });
 
-  test("regression: undoing overlapping same-client strokes (a chained Line's joint pixel) reverts on the server", (t) => {
-    t.mock.timers.enable({ apis: ["Date"] });
+  test(
+    "regression: undoing overlapping same-client strokes (a chained Line's joint pixel) reverts server-side",
+    (t) => {
+      t.mock.timers.enable({ apis: ["Date"] });
 
-    const server = new PixelSyncServer({
-      buffer: new PixelBuffer({ size: { x: 8, y: 8 } })
-    });
-    const { manager, canvas } = createPixelArtCanvas({
-      zoom: { default: 4 },
-      brush: { size: 1, maxSize: 1 },
-      history: { enabled: true }
-    });
-    const room = makeServerBackedRoom(server, "A");
-    const client = new PixelSyncClient({ room });
-    client.attach(manager);
+      const server = new PixelSyncServer({
+        buffer: new PixelBuffer({ size: { x: 8, y: 8 } })
+      });
+      const { manager, canvas } = createPixelArtCanvas({
+        zoom: { default: 4 },
+        brush: { size: 1, maxSize: 1 },
+        history: { enabled: true }
+      });
+      const room = makeServerBackedRoom(server, "A");
+      const client = new PixelSyncClient({ room });
+      client.attach(manager);
 
-    // Two overlapping strokes touching the same pixel, mirroring a
-    // shift-chained Line's shared joint point: segment 1 paints (1,1) at
-    // t=1000, segment 2 repaints the same pixel at t=2000.
-    t.mock.timers.tick(1000);
-    paintOnePixel(canvas, [[88, 88]]);
-    t.mock.timers.tick(1000);
-    paintOnePixel(canvas, [[88, 88]]);
+      /*
+       * Two overlapping strokes touching the same pixel, mirroring a
+       * shift-chained Line's shared joint point: segment 1 paints (1,1) at
+       * t=1000, segment 2 repaints the same pixel at t=2000.
+       */
+      t.mock.timers.tick(1000);
+      paintOnePixel(canvas, [[88, 88]]);
+      t.mock.timers.tick(1000);
+      paintOnePixel(canvas, [[88, 88]]);
 
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(1, 1),
-      [0, 0, 0, 255]
-    );
+      assert.deepStrictEqual(
+        server.buffer.samplePixel(1, 1),
+        [0, 0, 0, 255]
+      );
 
-    // Undo is LIFO: segment 2 (t=2000) replays first, then segment 1
-    // (t=1000) — an older-timestamped replay arriving after a newer one, at
-    // the same pixel, from the same client.
-    t.mock.timers.tick(1000);
-    manager.undo();
-    manager.undo();
+      /*
+       * Undo is LIFO: segment 2 (t=2000) replays first, then segment 1
+       * (t=1000) — an older-timestamped replay arriving after a newer one, at
+       * the same pixel, from the same client.
+       */
+      t.mock.timers.tick(1000);
+      manager.undo();
+      manager.undo();
 
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 1, y: 1 }, 8),
-      [255, 255, 255, 255],
-      "local buffer fully reverted"
-    );
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(1, 1),
-      [255, 255, 255, 255],
-      "the server must also fully revert — previously stuck at segment 1's color"
-    );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 1, y: 1 }, 8),
+        [255, 255, 255, 255],
+        "local buffer fully reverted"
+      );
+      assert.deepStrictEqual(
+        server.buffer.samplePixel(1, 1),
+        [255, 255, 255, 255],
+        "the server must also fully revert — previously stuck at segment 1's color"
+      );
 
-    manager.destroy();
-  });
+      manager.destroy();
+    }
+  );
 });

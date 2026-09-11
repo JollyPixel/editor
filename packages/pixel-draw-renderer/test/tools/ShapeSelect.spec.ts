@@ -155,8 +155,10 @@ describe("ShapeSelect", () => {
         result!.rect,
         { x: 0, y: 0, width: 5, height: 5 }
       );
-      // Every cell in the 5x5 box should end up selected: the border itself
-      // plus the fully enclosed 3x3 interior hole.
+      /*
+       * Every cell in the 5x5 box should end up selected: the border itself
+       * plus the fully enclosed 3x3 interior hole.
+       */
       assert.deepStrictEqual(
         result!.mask,
         new Array(25).fill(true)
@@ -164,10 +166,12 @@ describe("ShapeSelect", () => {
     });
 
     test("an L-shaped region (concave, no enclosed hole) keeps its true concave outline", () => {
-      // 3x3 buffer, black L-shape: full left column + full bottom row.
-      // . . .
-      // X . .
-      // X X X
+      /*
+       * 3x3 buffer, black L-shape: full left column + full bottom row.
+       * . . .
+       * X . .
+       * X X X
+       */
       const buf = new PixelBuffer({
         size: { x: 3, y: 3 },
         defaultColor: kOutside,
@@ -197,9 +201,11 @@ describe("ShapeSelect", () => {
     });
 
     test("discards the result when hole-filling still leaves 1 or fewer selected cells", () => {
-      // A single isolated pixel has no possible hole to fill either way —
-      // covered above — this test instead checks a 2-pixel line is kept
-      // (sanity boundary check around the >1 threshold).
+      /*
+       * A single isolated pixel has no possible hole to fill either way —
+       * covered above — this test instead checks a 2-pixel line is kept
+       * (sanity boundary check around the >1 threshold).
+       */
       const buf = new PixelBuffer({
         size: { x: 4, y: 4 },
         defaultColor: kOutside,

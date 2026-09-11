@@ -40,13 +40,15 @@ for (const { def, texture } of await loadTilesets([
 console.log("[tileset-demo] Tileset loaded. defaultTilesetId:", tilesetManager.defaultTilesetId);
 // console.log("[tileset-demo] Definitions:", tilesetManager.definitions());
 
-// // Log all UV regions for verification
-// for (let row = 0; row < kRows; row++) {
-//   for (let col = 0; col < kCols; col++) {
-//     const uv = tilesetManager.atlas().uvFor(col, row);
-//     console.log(`  tile(col=${col}, row=${row}):`, uv);
-//   }
-// }
+/*
+ * // Log all UV regions for verification
+ * for (let row = 0; row < kRows; row++) {
+ *   for (let col = 0; col < kCols; col++) {
+ *     const uv = tilesetManager.atlas().uvFor(col, row);
+ *     console.log(`  tile(col=${col}, row=${row}):`, uv);
+ *   }
+ * }
+ */
 
 // ── Renderer ──────────────────────────────────────────────────────────────────
 

@@ -18,8 +18,7 @@ describe("browser compatibility", () => {
     const offenders = [...eagerGraph(kEntryPoint)]
       .flatMap(([file, specifiers]) => specifiers
         .filter((specifier) => specifier.startsWith("node:"))
-        .map((specifier) => `${path.relative(kSrcDir, file)} -> ${specifier}`)
-      );
+        .map((specifier) => `${path.relative(kSrcDir, file)} -> ${specifier}`));
 
     assert.deepEqual(
       offenders,

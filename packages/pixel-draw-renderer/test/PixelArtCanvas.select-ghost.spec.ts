@@ -32,8 +32,10 @@ describe("PixelArtCanvas — select ghost events", () => {
     ({ container } = makeContainer());
   });
 
-  // Same 200x200/8x8/zoom-4 setup as PixelArtCanvas.select.spec.ts: client
-  // 84 + n*4 -> texture n.
+  /*
+   * Same 200x200/8x8/zoom-4 setup as PixelArtCanvas.select.spec.ts: client
+   * 84 + n*4 -> texture n.
+   */
   function makeManager(
     options: PixelArtCanvasOptions = {}
   ): PixelArtCanvas {
@@ -87,19 +89,22 @@ describe("PixelArtCanvas — select ghost events", () => {
       assert.strictEqual(events.counts.idle, 0, "not finished yet");
     });
 
-    test("finishing a valid new selection emits selection-idle exactly once, never selection-committed", () => {
-      const manager = makeManager();
-      const canvas = manager.canvas();
-      manager.mode = "select";
-      const events = recordEvents(manager);
+    test(
+      "finishing a valid new selection emits selection-idle exactly once, never selection-committed",
+      () => {
+        const manager = makeManager();
+        const canvas = manager.canvas();
+        manager.mode = "select";
+        const events = recordEvents(manager);
 
-      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-      canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+        canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+        canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+        canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-      assert.strictEqual(events.counts.idle, 1);
-      assert.strictEqual(events.counts.committed, 0);
-    });
+        assert.strictEqual(events.counts.idle, 1);
+        assert.strictEqual(events.counts.committed, 0);
+      }
+    );
 
     test("a degenerate (1x1) marquee still emits selection-idle on mouseup", () => {
       const manager = makeManager();
@@ -199,8 +204,10 @@ describe("PixelArtCanvas — select ghost events", () => {
       canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
       assert.strictEqual(events.counts.idle, 0, "sanity: nothing cleared it yet");
 
-      // Directly exercised through the public clear-on-mode-switch surface:
-      // toggling shape mode while a gesture is active clears it.
+      /*
+       * Directly exercised through the public clear-on-mode-switch surface:
+       * toggling shape mode while a gesture is active clears it.
+       */
       manager.tools.select.shape = true;
 
       assert.strictEqual(events.counts.idle, 1);

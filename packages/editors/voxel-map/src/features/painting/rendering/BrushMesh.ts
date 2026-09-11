@@ -17,7 +17,6 @@ import {
 } from "../model/BrushStyle.ts";
 
 // CONSTANTS
-// The extra 0.01 per side prevents z-fighting with the chunk mesh.
 const kInflate = 0.01;
 const kDefaultHighlight = 0x9df6ff;
 

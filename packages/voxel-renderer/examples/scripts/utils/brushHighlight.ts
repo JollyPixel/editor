@@ -98,7 +98,7 @@ export class HighlightBox extends THREE.Group {
   }
 
   /**
-    * Shows the hit face, or hides it when `normal` is `null`.
+   * Shows the hit face, or hides it when `normal` is `null`.
    */
   setFace(
     normal: THREE.Vector3 | null

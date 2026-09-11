@@ -37,9 +37,11 @@ export interface ColorChangeDetail {
   opacity: number;
 }
 
-// Registers the bundled Roboto Mono face on `document`: the popover renders
-// in the top layer (native Popover API), still inside this shadow tree, but
-// "@font-face" declared inside a shadow root is ignored by the browser.
+/*
+ * Registers the bundled Roboto Mono face on `document`: the popover renders
+ * in the top layer (native Popover API), still inside this shadow tree, but
+ * "@font-face" declared inside a shadow root is ignored by the browser.
+ */
 ensureFontFace();
 
 /**

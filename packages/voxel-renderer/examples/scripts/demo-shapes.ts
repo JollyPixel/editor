@@ -200,8 +200,10 @@ for (let i = 0; i < kShapes.length; i++) {
   wireMesh.position.set(x, 0, z);
   scene.add(wireMesh);
 
-  // HTML label — updated each frame via 3D→2D projection
-  // Float slightly above the shape (y=1.5 covers the tallest shape)
+  /*
+   * HTML label — updated each frame via 3D→2D projection
+   * Float slightly above the shape (y=1.5 covers the tallest shape)
+   */
   labelEntries.push(createLabel(label, new THREE.Vector3(x + 0.5, 1.5, z + 0.5)));
 }
 
@@ -217,9 +219,11 @@ await startLoop({
   controls,
   labelEntries,
   onFrame: () => {
-    // ViewHelper's runtime checks `renderer.isWebGPURenderer` and supports
-    // WebGPURenderer, but @types/three's declaration hasn't caught up and
-    // still narrows `render()` to WebGLRenderer only.
+    /*
+     * ViewHelper's runtime checks `renderer.isWebGPURenderer` and supports
+     * WebGPURenderer, but @types/three's declaration hasn't caught up and
+     * still narrows `render()` to WebGLRenderer only.
+     */
     helper.render(renderer as unknown as Parameters<ViewHelper["render"]>[0]);
   }
 });

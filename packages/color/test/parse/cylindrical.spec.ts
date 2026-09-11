@@ -7,8 +7,10 @@ import { parseColor } from "../../src/parse/index.ts";
 import { formatHex } from "../../src/format.ts";
 import { rgbToHsl } from "../../src/convert/hsl.ts";
 
-// CONSTANTS
-// hsl(210 40% 17%) is the same color in every notation below.
+/*
+ * CONSTANTS
+ * hsl(210 40% 17%) is the same color in every notation below.
+ */
 const kHex = "#1a2b3d";
 const kHslFixtures: [string, string][] = [
   ["hsl(210, 40%, 17%)", kHex],

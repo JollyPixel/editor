@@ -4,8 +4,10 @@ import * as THREE from "three";
 // CONSTANTS
 const kViewportSize = 200;
 
-// happy-dom lays nothing out, so `getBoundingClientRect()` returns zeros and
-// every NDC conversion would divide by zero. Tests stub a square viewport.
+/*
+ * happy-dom lays nothing out, so `getBoundingClientRect()` returns zeros and
+ * every NDC conversion would divide by zero. Tests stub a square viewport.
+ */
 export function createPointerTarget(
   size = kViewportSize
 ): HTMLElement {

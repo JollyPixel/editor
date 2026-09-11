@@ -19,10 +19,12 @@ const kColorC: RGBA8 = { r: 30, g: 0, b: 0, a: 255 };
 const kColorD: RGBA8 = { r: 40, g: 0, b: 0, a: 255 };
 const kColorE: RGBA8 = { r: 50, g: 0, b: 0, a: 255 };
 const kColorF: RGBA8 = { r: 60, g: 0, b: 0, a: 255 };
-// 2 wide x 3 tall, row-major:
-// A B
-// C D
-// E F
+/*
+ * 2 wide x 3 tall, row-major:
+ * A B
+ * C D
+ * E F
+ */
 const k2x3Snapshot: RGBA8[] = [
   kColorA,
   kColorB,
@@ -129,8 +131,10 @@ describe("Select — static helpers", () => {
         { x: 2, y: 3 },
         { x: 3, y: 3 }
       ], kRed);
-      // The ring around a (2,2,2,2) rect has 12 cells; paint 7 of them blue,
-      // outnumbering the 5 still at the canvas's default white.
+      /*
+       * The ring around a (2,2,2,2) rect has 12 cells; paint 7 of them blue,
+       * outnumbering the 5 still at the canvas's default white.
+       */
       const blue: RGBA8 = {
         r: 0, g: 0, b: 255, a: 255
       };
@@ -176,8 +180,10 @@ describe("Select — static helpers", () => {
         maxSize: kTestMaxSize
       });
 
-      // Rect at the top-left corner: only its right and bottom borders have
-      // in-bounds neighbors, all still the canvas default (white).
+      /*
+       * Rect at the top-left corner: only its right and bottom borders have
+       * in-bounds neighbors, all still the canvas default (white).
+       */
       assert.deepStrictEqual(
         Select.dominantBorderColor(
           buf,
@@ -209,9 +215,11 @@ describe("Select — static helpers", () => {
     });
 
     test("rotateSnapshotCW rotates a non-square grid 90 degrees clockwise", () => {
-      // A B      E C A
-      // C D  ->  F D B
-      // E F
+      /*
+       * A B      E C A
+       * C D  ->  F D B
+       * E F
+       */
       assert.deepStrictEqual(
         Select.rotateSnapshotCW(k2x3Snapshot, 2, 3),
         [kColorE, kColorC, kColorA, kColorF, kColorD, kColorB]

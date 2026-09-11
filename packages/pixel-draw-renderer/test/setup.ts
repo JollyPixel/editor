@@ -9,10 +9,12 @@ import {
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
 
-// happy-dom has no layout engine and no 2D canvas context, so the emulated
-// window is registered on globalThis once per test process (wired through
-// `node --import ./test/setup.ts`). getComputedStyle returns a fixed
-// background-color the PixelArtCanvas suite asserts against.
+/*
+ * happy-dom has no layout engine and no 2D canvas context, so the emulated
+ * window is registered on globalThis once per test process (wired through
+ * `node --import ./test/setup.ts`). getComputedStyle returns a fixed
+ * background-color the PixelArtCanvas suite asserts against.
+ */
 Object.assign(globalThis, {
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,

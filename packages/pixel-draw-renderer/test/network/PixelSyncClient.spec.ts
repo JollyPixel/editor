@@ -21,9 +21,11 @@ import type {
 } from "#src/buffer/hooks.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------------------
+ */
 
 interface MockManager {
   onBufferUpdated: PixelBufferHookListener | undefined;
@@ -68,10 +70,12 @@ function createMockManager(): MockManager {
   return manager;
 }
 
-// PixelSyncClient is typed against the concrete PixelArtCanvas, but only uses
-// the structural subset MockManager implements (onBufferUpdated,
-// applyRemoteCommand, loadSnapshot). This single helper documents that seam so
-// the individual call sites stay cast-free.
+/*
+ * PixelSyncClient is typed against the concrete PixelArtCanvas, but only uses
+ * the structural subset MockManager implements (onBufferUpdated,
+ * applyRemoteCommand, loadSnapshot). This single helper documents that seam so
+ * the individual call sites stay cast-free.
+ */
 function asHost(
   manager: MockManager
 ): PixelArtCanvas {
@@ -143,9 +147,11 @@ function createMockRoom(
   return room;
 }
 
-// ---------------------------------------------------------------------------
-// attach / detach
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * attach / detach
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelSyncClient — attach", () => {
   test("sets manager.onBufferUpdated", () => {
@@ -216,9 +222,11 @@ describe("PixelSyncClient — chaining onBufferUpdated", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Local mutations forwarded to the room
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Local mutations forwarded to the room
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelSyncClient — local mutations forwarded to the room", () => {
   test("sends a command when an attached manager fires a stroke", () => {
@@ -269,9 +277,11 @@ describe("PixelSyncClient — local mutations forwarded to the room", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Remote commands
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Remote commands
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelSyncClient — remote commands", () => {
   test("routes a mutation command to the attached manager", () => {
@@ -333,9 +343,11 @@ describe("PixelSyncClient — remote commands", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Snapshot loading
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Snapshot loading
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelSyncClient — snapshot loading", () => {
   test("calls manager.loadSnapshot with decoded pixels when a snapshot arrives", () => {
@@ -375,9 +387,11 @@ describe("PixelSyncClient — snapshot loading", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// ready
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * ready
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelSyncClient — ready", () => {
   test("ready is false until the first snapshot, then dispatches a \"ready\" event", () => {
@@ -415,9 +429,11 @@ describe("PixelSyncClient — ready", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// destroy
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * destroy
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelSyncClient — destroy", () => {
   test("detaches the canvas and stops listening for room messages", () => {

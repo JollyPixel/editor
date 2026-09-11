@@ -264,9 +264,11 @@ describe("InputController", () => {
   });
 
   describe("onTextureCursorMove", () => {
-    // With this viewport (200x200 canvas, 16x16 texture, zoom 4), the
-    // texture is centered with camera = (68, 68). client(100,100) -> texture
-    // (8,8).
+    /*
+     * With this viewport (200x200 canvas, 16x16 texture, zoom 4), the
+     * texture is centered with camera = (68, 68). client(100,100) -> texture
+     * (8,8).
+     */
 
     test("fires with the resolved texture position on mousemove", () => {
       const { actions, calls } = makeActions();

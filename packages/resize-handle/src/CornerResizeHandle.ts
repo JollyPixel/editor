@@ -109,8 +109,6 @@ export class CornerResizeHandle extends EventTarget implements ResizeHandleLike 
 
     this.#pointerResize = new PointerResize({
       handle: this.#handleElt,
-      // nwse/nesw follows the resulting visual corner: top-left and
-      // bottom-right share nwse, top-right and bottom-left share nesw.
       dragToken: (horizontal === "right") === (vertical === "bottom") ?
         "nwse" :
         "nesw",
@@ -121,9 +119,6 @@ export class CornerResizeHandle extends EventTarget implements ResizeHandleLike 
     });
   }
 
-  /**
-   * Stops interaction and removes a handle created by this instance.
-   */
   dispose(): void {
     if (this.#disposed) {
       return;
@@ -160,8 +155,6 @@ export class CornerResizeHandle extends EventTarget implements ResizeHandleLike 
     horizontal: "left" | "right",
     vertical: "top" | "bottom"
   ): void {
-    // The class names the corner the handle visually sits at, which is the
-    // side opposite each anchor edge.
     const visualHorizontal = horizontal === "left" ?
       "right" :
       "left";

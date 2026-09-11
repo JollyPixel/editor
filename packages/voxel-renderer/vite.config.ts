@@ -17,8 +17,6 @@ import {
 } from "./examples/scripts/utils/flatWorld.ts";
 
 // CONSTANTS
-// Authoritative world for the flat-world example, seeded before any client
-// connects so the first snapshot already carries the floor.
 const kFlatWorld = new VoxelWorld(CHUNK_SIZE);
 seedFlatWorld(kFlatWorld);
 
@@ -43,11 +41,11 @@ export default defineConfig({
       ]
     })
   ],
-  // @dimforge/rapier3d uses a static `import ... from "*.wasm"` that Vite's
-  // pre-bundler (esbuild) cannot handle. Excluding it forces Vite to serve
-  // the package as-is, letting the browser load the WASM binary directly.
+  /**
+   * Exclude @dimforge/rapier3d from Vite's pre-bundling, so the browser can
+   * load the WASM binary directly.
+   */
   optimizeDeps: {
     exclude: ["@dimforge/rapier3d"]
   }
 });
-

@@ -155,9 +155,11 @@ describe("GreedyMesher — merge boundaries", () => {
     fill(mixed, { from: [0, 0, 0], to: [1, 0, 0], blockId: kCubeId });
     fill(mixed, { from: [2, 0, 0], to: [3, 0, 0], blockId: kOtherCubeId });
 
-    // The uniform strip collapses to 6 quads. Splitting it in two halves stops
-    // the merge at the block change, leaving each half with its own 5 quads —
-    // the sixth is the culled face where the halves meet.
+    /*
+     * The uniform strip collapses to 6 quads. Splitting it in two halves stops
+     * the merge at the block change, leaving each half with its own 5 quads —
+     * the sixth is the culled face where the halves meet.
+     */
     assert.equal(countVertices(build(uniform)), 6 * 4);
     assert.equal(countVertices(build(mixed)), 10 * 4);
   });
@@ -172,8 +174,10 @@ describe("GreedyMesher — merge boundaries", () => {
       transform: new VoxelTransform({ rotation: 1 }).packed
     });
 
-    // A rotated cube turns its tile sideways, so it cannot share a quad with
-    // an unrotated one even though both are the same block.
+    /*
+     * A rotated cube turns its tile sideways, so it cannot share a quad with
+     * an unrotated one even though both are the same block.
+     */
     assert.equal(countVertices(build(f)), 10 * 4);
   });
 
@@ -216,8 +220,10 @@ describe("GreedyMesher — non-cube shapes", () => {
     fill(f, { from: [0, 0, 0], to: [3, 0, 0], blockId: kRampId });
     build(f);
 
-    // A ramp's base (NegY) and back (PosZ) are full quads and merge over the
-    // four voxels; the slope, the two triangles and the ends stay per-voxel.
+    /*
+     * A ramp's base (NegY) and back (PosZ) are full quads and merge over the
+     * four voxels; the slope, the two triangles and the ends stay per-voxel.
+     */
     assert.equal(f.builder.stats.mergedFaces, 6);
   });
 
@@ -348,8 +354,10 @@ describe("GreedyMesher — tiled attribute layout", () => {
 
     const [geometry] = [...build(f)!.values()];
 
-    // Tiled UVs are scaled by the merged span, so they run past 1 and cannot
-    // be stored normalized.
+    /*
+     * Tiled UVs are scaled by the merged span, so they run past 1 and cannot
+     * be stored normalized.
+     */
     assert.ok(geometry.getAttribute("uv").array instanceof Float32Array);
 
     const region = geometry.getAttribute("tileRegion");
@@ -370,8 +378,10 @@ describe("GreedyMesher — tiled attribute layout", () => {
     const [geometry] = [...build(f)!.values()];
     const repeat = geometry.getAttribute("tileRepeat");
 
-    // A 4x4 slab merges into one quad per direction, so the top face repeats
-    // its tile 4 times on each axis.
+    /*
+     * A 4x4 slab merges into one quad per direction, so the top face repeats
+     * its tile 4 times on each axis.
+     */
     let sawFullSpan = false;
     for (let i = 0; i < repeat.count; i++) {
       assert.ok(Number.isInteger(repeat.getX(i)), `u repeat ${repeat.getX(i)}`);

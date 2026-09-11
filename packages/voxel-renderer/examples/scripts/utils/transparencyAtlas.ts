@@ -226,10 +226,30 @@ const kBlockSpecs: BlockSpec[] = [
     transparent: true
   },
   // Reuse the stone and plank tiles; only the shape changes.
-  { id: TransparencyBlock.StoneRamp, name: "StoneRamp", shapeId: "ramp", paint: speckled("#9a9aa2", "#84848c") },
-  { id: TransparencyBlock.StoneStair, name: "StoneStair", shapeId: "stair", paint: speckled("#9a9aa2", "#84848c") },
-  { id: TransparencyBlock.PlankSlab, name: "PlankSlab", shapeId: "slabBottom", paint: striped("#b98a4d", "#9c703b") },
-  { id: TransparencyBlock.StonePole, name: "StonePole", shapeId: "poleY", paint: speckled("#9a9aa2", "#84848c") },
+  {
+    id: TransparencyBlock.StoneRamp,
+    name: "StoneRamp",
+    shapeId: "ramp",
+    paint: speckled("#9a9aa2", "#84848c")
+  },
+  {
+    id: TransparencyBlock.StoneStair,
+    name: "StoneStair",
+    shapeId: "stair",
+    paint: speckled("#9a9aa2", "#84848c")
+  },
+  {
+    id: TransparencyBlock.PlankSlab,
+    name: "PlankSlab",
+    shapeId: "slabBottom",
+    paint: striped("#b98a4d", "#9c703b")
+  },
+  {
+    id: TransparencyBlock.StonePole,
+    name: "StonePole",
+    shapeId: "poleY",
+    paint: speckled("#9a9aa2", "#84848c")
+  },
   // Same tiles as Leaves and Grate, minus the flag.
   {
     id: TransparencyBlock.LeavesSolid,

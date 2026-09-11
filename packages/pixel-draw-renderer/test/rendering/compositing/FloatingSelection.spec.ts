@@ -293,42 +293,45 @@ describe("FloatingSelection", () => {
       );
     });
 
-    test("blanking the source only erases masked-true cells, leaving masked-false cells' underlying content", () => {
-      const overlay = new FloatingSelection();
-      overlay.create({
-        sourceRect: {
-          x: 0,
-          y: 0,
+    test(
+      "blanking the source only erases masked-true cells, leaving masked-false cells' underlying content",
+      () => {
+        const overlay = new FloatingSelection();
+        overlay.create({
+          sourceRect: {
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 1
+          },
+          pixels: [kRed, kBlue],
+          mask: [true, false],
+          eraseColor: kErase
+        });
+        overlay.updatePosition({
+          x: 5,
+          y: 5,
           width: 2,
           height: 1
-        },
-        pixels: [kRed, kBlue],
-        mask: [true, false],
-        eraseColor: kErase
-      });
-      overlay.updatePosition({
-        x: 5,
-        y: 5,
-        width: 2,
-        height: 1
-      });
+        });
 
-      const dest = makeDest();
-      overlay.draw(
-        mockContextOf(dest).asRenderingContext()
-      );
+        const dest = makeDest();
+        overlay.draw(
+          mockContextOf(dest).asRenderingContext()
+        );
 
-      assert.deepStrictEqual(
-        pixelAt(dest, 0, 0),
-        [9, 9, 9, 255],
-        "masked-true source cell blanked"
-      );
-      assert.deepStrictEqual(
-        pixelAt(dest, 1, 0),
-        [0, 0, 0, 0],
-        "masked-false source cell left alone (nothing drawn)"
-      );
-    });
+        assert.deepStrictEqual(
+          pixelAt(dest, 0, 0),
+          [9, 9, 9, 255],
+          "masked-true source cell blanked"
+        );
+        assert.deepStrictEqual(
+          pixelAt(dest, 1, 0),
+          [0, 0, 0, 0],
+          "masked-false source cell left alone (nothing drawn)"
+        );
+      }
+    );
 
     test("omitting mask behaves exactly like an all-true mask (backward compatible)", () => {
       const overlay = new FloatingSelection();

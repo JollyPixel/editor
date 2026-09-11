@@ -246,33 +246,49 @@ export class HighlightPass {
     this.#priorityEdgeDetectionMaterial = new THREE.NodeMaterial();
     this.#priorityEdgeDetectionMaterial.name = "HighlightPass.priorityEdgeDetection";
     this.#priorityEdgeDetectionMaterial.fragmentNode = buildEdgeDetection(
-      this.#priorityMaskDownSampleTexture, invSizeNode
+      this.#priorityMaskDownSampleTexture,
+      invSizeNode
     );
 
     this.#isolatedEdgeDetectionMaterial = new THREE.NodeMaterial();
     this.#isolatedEdgeDetectionMaterial.name = "HighlightPass.isolatedEdgeDetection";
     this.#isolatedEdgeDetectionMaterial.fragmentNode = buildEdgeDetection(
-      this.#isolatedMaskDownSampleTexture, invSizeNode
+      this.#isolatedMaskDownSampleTexture,
+      invSizeNode
     );
 
     this.#blurMaterial1 = new THREE.NodeMaterial();
     this.#blurMaterial1.name = "HighlightPass.blur1";
     this.#blurMaterial1.fragmentNode = buildSeparableBlur(
-      this.#blurSourceTexture, blurDirectionNode, invSizeNode, edgeThicknessNode
+      this.#blurSourceTexture,
+      blurDirectionNode,
+      invSizeNode,
+      edgeThicknessNode
     );
 
     this.#blurMaterial2 = new THREE.NodeMaterial();
     this.#blurMaterial2.name = "HighlightPass.blur2";
     this.#blurMaterial2.fragmentNode = buildSeparableBlur(
-      this.#blurSourceTexture, blurDirectionNode, invSizeNode, float(MAX_BLUR_RADIUS)
+      this.#blurSourceTexture,
+      blurDirectionNode,
+      invSizeNode,
+      float(MAX_BLUR_RADIUS)
     );
 
     this.#compositeMaterial = new THREE.NodeMaterial();
     this.#compositeMaterial.name = "HighlightPass.composite";
     this.#compositeMaterial.fragmentNode = buildHighlightComposite(
       { edge1: this.#edge1Texture, edge2: this.#edge2Texture, mask: this.#maskTexture },
-      { edge1: this.#priorityEdge1Texture, edge2: this.#priorityEdge2Texture, mask: this.#priorityMaskTexture },
-      { edge1: this.#isolatedEdge1Texture, edge2: this.#isolatedEdge2Texture, mask: this.#isolatedMaskTexture },
+      {
+        edge1: this.#priorityEdge1Texture,
+        edge2: this.#priorityEdge2Texture,
+        mask: this.#priorityMaskTexture
+      },
+      {
+        edge1: this.#isolatedEdge1Texture,
+        edge2: this.#isolatedEdge2Texture,
+        mask: this.#isolatedMaskTexture
+      },
       edgeGlowNode
     );
 
@@ -402,7 +418,11 @@ export class HighlightPass {
     const scene = this.#scene;
     const camera = this.#camera;
 
-    if (this.#entryByMesh.size === 0 && this.#instancedMask.size === 0 && this.#isolatedEntryByMesh.size === 0) {
+    if (
+      this.#entryByMesh.size === 0
+      && this.#instancedMask.size === 0
+      && this.#isolatedEntryByMesh.size === 0
+    ) {
       if (this.#lastEntryCount > 0) {
         this.#clearComposite();
         this.#lastEntryCount = 0;
@@ -428,32 +448,48 @@ export class HighlightPass {
     renderer.autoClear = true;
     renderer.setClearColor(0x000000, 0);
 
-    renderer.setRenderObjectFunction((
-      object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
+    renderer.setRenderObjectFunction(
       // eslint-disable-next-line max-params -- external callback contract
-    ) => {
-      if (object instanceof THREE.InstancedMesh) {
-        const instanced = this.#instancedMask.materialsFor(object);
-        if (instanced) {
-          renderer.renderObject(
-            object, objectScene, objectCamera, geometry, instanced.material, group, lightsNode, clippingContext
-          );
+      (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
+        if (object instanceof THREE.InstancedMesh) {
+          const instanced = this.#instancedMask.materialsFor(object);
+          if (instanced) {
+            renderer.renderObject(
+              object,
+              objectScene,
+              objectCamera,
+              geometry,
+              instanced.material,
+              group,
+              lightsNode,
+              clippingContext
+            );
 
+            return;
+          }
+        }
+
+        if (!(object instanceof THREE.Mesh)) {
           return;
         }
-      }
+        const color = this.#entryByMesh.get(object);
+        if (color === undefined) {
+          return;
+        }
 
-      if (!(object instanceof THREE.Mesh)) {
-        return;
+        this.#maskColor.copy(color);
+        renderer.renderObject(
+          object,
+          objectScene,
+          objectCamera,
+          geometry,
+          this.#maskMaterial,
+          group,
+          lightsNode,
+          clippingContext
+        );
       }
-      const color = this.#entryByMesh.get(object);
-      if (color === undefined) {
-        return;
-      }
-
-      this.#maskColor.copy(color);
-      renderer.renderObject(object, objectScene, objectCamera, geometry, this.#maskMaterial, group, lightsNode, clippingContext);
-    });
+    );
 
     renderer.setRenderTarget(this.#renderTargetMask);
     renderer.render(scene, camera);
@@ -462,35 +498,49 @@ export class HighlightPass {
 
     if (hasPriority) {
       renderer.autoClear = false;
-      renderer.setRenderObjectFunction((
-        object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
+      renderer.setRenderObjectFunction(
         // eslint-disable-next-line max-params -- external callback contract
-      ) => {
-        if (object instanceof THREE.InstancedMesh) {
-          const instanced = this.#instancedMask.materialsFor(object);
-          if (instanced) {
-            renderer.renderObject(
-              object, objectScene, objectCamera, geometry, instanced.priorityMaterial, group, lightsNode, clippingContext
-            );
+        (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
+          if (object instanceof THREE.InstancedMesh) {
+            const instanced = this.#instancedMask.materialsFor(object);
+            if (instanced) {
+              renderer.renderObject(
+                object,
+                objectScene,
+                objectCamera,
+                geometry,
+                instanced.priorityMaterial,
+                group,
+                lightsNode,
+                clippingContext
+              );
 
+              return;
+            }
+          }
+
+          if (!(object instanceof THREE.Mesh) || !this.#priorityMeshes.has(object)) {
             return;
           }
-        }
 
-        if (!(object instanceof THREE.Mesh) || !this.#priorityMeshes.has(object)) {
-          return;
-        }
+          const color = this.#entryByMesh.get(object);
+          if (color === undefined) {
+            return;
+          }
 
-        const color = this.#entryByMesh.get(object);
-        if (color === undefined) {
-          return;
+          this.#maskColor.copy(color);
+          renderer.renderObject(
+            object,
+            objectScene,
+            objectCamera,
+            geometry,
+            this.#priorityMaskMaterial,
+            group,
+            lightsNode,
+            clippingContext
+          );
         }
-
-        this.#maskColor.copy(color);
-        renderer.renderObject(
-          object, objectScene, objectCamera, geometry, this.#priorityMaskMaterial, group, lightsNode, clippingContext
-        );
-      });
+      );
       renderer.render(scene, camera);
 
       renderer.autoClear = true;
@@ -508,23 +558,30 @@ export class HighlightPass {
 
     if (hasIsolated) {
       renderer.autoClear = true;
-      renderer.setRenderObjectFunction((
-        object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
+      renderer.setRenderObjectFunction(
         // eslint-disable-next-line max-params -- external callback contract
-      ) => {
-        if (!(object instanceof THREE.Mesh)) {
-          return;
-        }
-        const color = this.#isolatedEntryByMesh.get(object);
-        if (color === undefined) {
-          return;
-        }
+        (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
+          if (!(object instanceof THREE.Mesh)) {
+            return;
+          }
+          const color = this.#isolatedEntryByMesh.get(object);
+          if (color === undefined) {
+            return;
+          }
 
-        this.#maskColor.copy(color);
-        renderer.renderObject(
-          object, objectScene, objectCamera, geometry, this.#priorityMaskMaterial, group, lightsNode, clippingContext
-        );
-      });
+          this.#maskColor.copy(color);
+          renderer.renderObject(
+            object,
+            objectScene,
+            objectCamera,
+            geometry,
+            this.#priorityMaskMaterial,
+            group,
+            lightsNode,
+            clippingContext
+          );
+        }
+      );
       renderer.setRenderTarget(this.#renderTargetIsolatedMask);
       renderer.render(scene, camera);
     }

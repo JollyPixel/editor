@@ -569,7 +569,11 @@ describe("FreeFlyCamera orbit focus (elastic)", () => {
     harness.stopLookDrag();
 
     const pivotAfter = harness.camera.orbitPivot as THREE.Vector3Like;
-    assert.deepEqual(pivotArray(pivotAfter), pivotArray(pivotBefore), "the pivot moved from mouse-look alone");
+    assert.deepEqual(
+      pivotArray(pivotAfter),
+      pivotArray(pivotBefore),
+      "the pivot moved from mouse-look alone"
+    );
     assert.ok(
       harness.position.distanceTo(positionBefore) > 1e-3,
       "the camera did not move while looking around"

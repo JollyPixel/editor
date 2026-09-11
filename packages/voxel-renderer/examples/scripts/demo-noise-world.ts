@@ -112,8 +112,10 @@ const cameraActor = world.createActor("camera")
 
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
-    // Terrain is generated from the origin outwards, so without a focus the
-    // chunks under the camera would be the last ones meshed.
+    /*
+     * Terrain is generated from the origin outwards, so without a focus the
+     * chunks under the camera would be the last ones meshed.
+     */
     focus: cameraActor.object3D,
     greedy: true,
     chunkSize: settings.chunkSize,
@@ -178,8 +180,10 @@ meshFolder.addMonitors(meshStats, {
   faces: { label: "faces", format: formatCount },
   culled: { label: "culled", format: formatPercent },
   merged: { label: "merged", format: formatPercent },
-  // Named apart from the renderer's own counters: these cover every built
-  // chunk, not just what survived frustum culling this frame.
+  /*
+   * Named apart from the renderer's own counters: these cover every built
+   * chunk, not just what survived frustum culling this frame.
+   */
   triangles: { label: "mesh tris", format: formatCount },
   vertices: { label: "mesh verts", format: formatCount },
   meshes: { label: "meshes" },
@@ -233,8 +237,10 @@ controlsFolder
     engine.debug.chunkBounds = value;
   });
 
-// Chunks are meshed over several frames (the engine tick is budgeted), so the
-// mesh counters are polled with the renderer counters on the same cadence.
+/*
+ * Chunks are meshed over several frames (the engine tick is budgeted), so the
+ * mesh counters are polled with the renderer counters on the same cadence.
+ */
 world.createActor("hud")
   .addComponent(RendererStats, {
     folder: meshFolder,
@@ -341,8 +347,10 @@ function applyViewDistance(): void {
     fog.far = settings.size * 1.7;
   }
   else {
-    // Ends on the hysteresis border, so a chunk is fully fogged out by the
-    // time it is dropped.
+    /*
+     * Ends on the hysteresis border, so a chunk is fully fogged out by the
+     * time it is dropped.
+     */
     fog.far = (distance + 1) * settings.chunkSize;
     fog.near = fog.far * 0.55;
   }
@@ -407,8 +415,10 @@ function buildWorld(
   );
   const generateMs = performance.now() - generateStart;
 
-  // The renderer would mesh these chunks on its next update anyway; ticking
-  // here makes the cost measurable instead of hiding it in a frame spike.
+  /*
+   * The renderer would mesh these chunks on its next update anyway; ticking
+   * here makes the cost measurable instead of hiding it in a frame spike.
+   */
   const meshStart = performance.now();
   engine.tick(0);
   const meshMs = performance.now() - meshStart;

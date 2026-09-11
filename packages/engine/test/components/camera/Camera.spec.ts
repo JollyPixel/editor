@@ -21,8 +21,10 @@ function createRendererMock() {
 }
 
 function createActorMock() {
-  // A parent keeps global transform helpers working, exactly like a root actor
-  // added to the scene graph by SceneManager.
+  /*
+   * A parent keeps global transform helpers working, exactly like a root actor
+   * added to the scene graph by SceneManager.
+   */
   const parent = new THREE.Scene();
   const object3D = new THREE.Group();
   parent.add(object3D);

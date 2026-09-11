@@ -23,8 +23,10 @@ import { boxFaceRanges } from "../../examples/scripts/preview/shapes/faceRanges.
 // CONSTANTS
 const kTextureSize: Vec2 = { x: 64, y: 64 };
 
-// A four-vertex quad, one per box face slot, so a face range of
-// { start, count } lands on exactly one vertex pair per assertion.
+/*
+ * A four-vertex quad, one per box face slot, so a face range of
+ * { start, count } lands on exactly one vertex pair per assertion.
+ */
 function makeGeometry(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   const uvs: number[] = [];

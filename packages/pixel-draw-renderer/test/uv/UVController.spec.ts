@@ -18,8 +18,10 @@ import type { SelectionRect } from "#src/types.ts";
 
 type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
 
-// UVController only calls overlay.setLiveOverride; FakeOverlay implements that
-// structural subset and is cast to UVRegionLayer at the single injection site.
+/*
+ * UVController only calls overlay.setLiveOverride; FakeOverlay implements that
+ * structural subset and is cast to UVRegionLayer at the single injection site.
+ */
 class FakeOverlay {
   overrides: { id: string; face: UVSlot | null; rect: SelectionRect | null; }[] = [];
 

@@ -101,11 +101,18 @@ export class TreeViewSelector {
 
     const element = ancestorElement;
 
-    if (this.nodes.length > 0 && this.nodes[0].parentElement !== element.parentElement) {
+    if (
+      this.nodes.length > 0 &&
+      this.nodes[0].parentElement !== element.parentElement
+    ) {
       return selectionChanged;
     }
 
-    if (this.#multipleSelection && event.shiftKey && this.nodes.length > 0) {
+    if (
+      this.#multipleSelection &&
+      event.shiftKey &&
+      this.nodes.length > 0
+    ) {
       const startElement = this.firstSelectedNode;
       const elements: Element[] = [];
       let inside = false;
@@ -113,15 +120,24 @@ export class TreeViewSelector {
       for (let i = 0; i < element.parentElement!.children.length; i++) {
         const child = element.parentElement!.children[i];
 
-        if (child === startElement || child === element) {
-          if (inside || startElement === element) {
+        if (
+          child === startElement ||
+          child === element
+        ) {
+          if (
+            inside ||
+            startElement === element
+          ) {
             elements.push(child);
             break;
           }
           inside = true;
         }
 
-        if (inside && child.tagName === "LI") {
+        if (
+          inside &&
+          child.tagName === "LI"
+        ) {
           elements.push(child);
         }
       }

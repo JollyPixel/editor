@@ -1,9 +1,11 @@
-// Canvas 2D fixture. happy-dom provides real <canvas> elements but no 2D
-// rendering context, so installCanvasMock patches getContext("2d") to return
-// a pixel-backed context. The raster ladder only ever creates, writes, reads
-// and blits whole buffers, so this mock covers exactly those four calls; the
-// fill/stroke/path emulation the pixel-draw-renderer fixture carries has no
-// caller here.
+/*
+ * Canvas 2D fixture. happy-dom provides real <canvas> elements but no 2D
+ * rendering context, so installCanvasMock patches getContext("2d") to return
+ * a pixel-backed context. The raster ladder only ever creates, writes, reads
+ * and blits whole buffers, so this mock covers exactly those four calls; the
+ * fill/stroke/path emulation the pixel-draw-renderer fixture carries has no
+ * caller here.
+ */
 
 class MockImageData {
   data: Uint8ClampedArray;
@@ -44,8 +46,10 @@ export class MockCanvas2DContext {
     return this.#pixels;
   }
 
-  // Setting canvas.width/height clears the canvas in a browser; mirror that
-  // by reallocating a zeroed buffer whenever the live dimensions change.
+  /*
+   * Setting canvas.width/height clears the canvas in a browser; mirror that
+   * by reallocating a zeroed buffer whenever the live dimensions change.
+   */
   #syncSize(): void {
     if (
       this.canvas.width === this.#width &&

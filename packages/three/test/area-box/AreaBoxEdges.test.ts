@@ -34,14 +34,18 @@ describe("AreaBoxEdges", () => {
     });
 
     test("draws fat lines at the requested pixel width", () => {
-      // Fat lines rather than LineSegments: line width is capped at one
-      // pixel on both renderers, so a plain line cannot draw a thicker rim.
+      /*
+       * Fat lines rather than LineSegments: line width is capped at one
+       * pixel on both renderers, so a plain line cannot draw a thicker rim.
+       */
       assert.equal(createEdges({ width: 3 }).material.linewidth, 3);
     });
 
     test("stays opaque at a full opacity", () => {
-      // A transparent Line2NodeMaterial samples a full-screen copy of the
-      // opaque pass, which three recreates mid-encode on a canvas resize.
+      /*
+       * A transparent Line2NodeMaterial samples a full-screen copy of the
+       * opaque pass, which three recreates mid-encode on a canvas resize.
+       */
       assert.equal(createEdges({ opacity: 1 }).material.transparent, false);
     });
 
@@ -78,8 +82,10 @@ describe("AreaBoxEdges", () => {
     });
 
     test("keeps the instanced buffers on a resize to the same size", () => {
-      // setPositions() swaps in fresh buffers, and destroying the previous
-      // ones mid-frame faults the WebGPU queue.
+      /*
+       * setPositions() swaps in fresh buffers, and destroying the previous
+       * ones mid-frame faults the WebGPU queue.
+       */
       const edges = createEdges();
 
       edges.resize({ x: 6, y: 3, z: 4 });

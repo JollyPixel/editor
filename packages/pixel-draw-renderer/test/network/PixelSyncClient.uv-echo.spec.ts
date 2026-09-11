@@ -137,10 +137,12 @@ describe("PixelSyncClient — UV region echoes", () => {
     canvas.destroy();
   });
 
-  // Regression: UVMap.restore() used to emit region-created unconditionally,
-  // so a duplicate command had listeners build a second view of a region they
-  // already tracked. In the examples gallery that orphaned a preview mesh in
-  // the Three.js scene, which is the "one UV region, several cubes" report.
+  /*
+   * Regression: UVMap.restore() used to emit region-created unconditionally,
+   * so a duplicate command had listeners build a second view of a region they
+   * already tracked. In the examples gallery that orphaned a preview mesh in
+   * the Three.js scene, which is the "one UV region, several cubes" report.
+   */
   test("a duplicated remote create updates the region instead of recreating it", () => {
     const { canvas, room, created } = attachedCanvas();
 

@@ -34,8 +34,10 @@ import {
   VOXEL_TRANSFORM_MASK
 } from "../../world/VoxelTransform.ts";
 
-// CONSTANTS
-// A packed transform uses bits 0-4, so a block has at most 32 variants.
+/*
+ * CONSTANTS
+ * A packed transform uses bits 0-4, so a block has at most 32 variants.
+ */
 const kTransformCount = VOXEL_TRANSFORM_MASK + 1;
 const kOcclusionUnknown = -1;
 /**
@@ -147,8 +149,10 @@ export class BlockVariantCache {
     transform: number
   ): number {
     const key = (blockId * kTransformCount) + (transform & VOXEL_TRANSFORM_MASK);
-    // Unsigned so a negative key (never produced by a packed voxel, but cheap
-    // to rule out) misses the table instead of reading `undefined`.
+    /*
+     * Unsigned so a negative key (never produced by a packed voxel, but cheap
+     * to rule out) misses the table instead of reading `undefined`.
+     */
     if (key >>> 0 < this.#occlusion.length) {
       const cached = this.#occlusion[key];
       if (cached !== kOcclusionUnknown) {
@@ -264,8 +268,10 @@ export class BlockVariantCache {
       selfOcclusionMask,
       mergeFaces: indexMergeFaces(faces),
       sweepIndex: 0,
-      // No mesher epoch is ever negative, so a freshly compiled variant always
-      // reads as "not yet seen in this chunk".
+      /*
+       * No mesher epoch is ever negative, so a freshly compiled variant always
+       * reads as "not yet seen in this chunk".
+       */
       sweepEpoch: -1
     };
   }
@@ -294,8 +300,10 @@ export class BlockVariantCache {
     const tileUvs = new Float32Array(vertexCount * 2);
 
     for (let i = 0; i < vertexCount; i++) {
-      // flipY mirrors the face, so vertices are stored in reverse order to
-      // keep the winding (and therefore the front side) correct.
+      /*
+       * flipY mirrors the face, so vertices are stored in reverse order to
+       * keep the winding (and therefore the front side) correct.
+       */
       const vi = flipY ? vertexCount - 1 - i : i;
       const vertex = rotateVertex(
         faceDef.vertices[vi],
@@ -308,8 +316,10 @@ export class BlockVariantCache {
       const tileUV = faceDef.uvs[vi];
       tileUvs[i * 2] = tileUV[0];
       tileUvs[(i * 2) + 1] = tileUV[1];
-      // `fround` reproduces the float32 staging buffer these used to pass
-      // through, so the quantised result is unchanged.
+      /*
+       * `fround` reproduces the float32 staging buffer these used to pass
+       * through, so the quantised result is unchanged.
+       */
       uvs[i * 2] = toUnorm16(
         Math.fround(uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]))
       );

@@ -22,9 +22,11 @@ test.beforeEach(async({ page }) => {
 });
 
 test("contiguous fill stays inside a painted boundary", async({ page }) => {
-  // Four dragStroke calls plus WebGL trace capture run close to the
-  // default budget; give it the same headroom as the other ring-boundary
-  // test below instead of risking a spurious timeout.
+  /*
+   * Four dragStroke calls plus WebGL trace capture run close to the
+   * default budget; give it the same headroom as the other ring-boundary
+   * test below instead of risking a spurious timeout.
+   */
   test.slow();
   await setMode(page, "paint");
   // Build a ring boundary for flood-fill containment.

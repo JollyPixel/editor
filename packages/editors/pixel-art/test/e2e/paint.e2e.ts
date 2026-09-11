@@ -12,8 +12,10 @@ import {
   setBrushColor
 } from "./utils.ts";
 
-// This file uses texture slice x:0-15, y:0-15 on the shared 80x80 canvas.
-// Tests also keep mini-zones separate so order never matters.
+/*
+ * This file uses texture slice x:0-15, y:0-15 on the shared 80x80 canvas.
+ * Tests also keep mini-zones separate so order never matters.
+ */
 
 test.beforeEach(async({ page }) => {
   await gotoDemo(page);

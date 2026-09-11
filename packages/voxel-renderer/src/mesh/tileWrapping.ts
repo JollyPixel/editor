@@ -58,8 +58,10 @@ export function enableTileWrapping(
   }
 
   const tileRegion = attribute<"vec4">("tileRegion", "vec4");
-  // Must be declared as `uvec2` then converted: the WebGPU backend uploads it as an
-  // integer attribute, so `vec2` would reinterpret the bits rather than convert them.
+  /*
+   * Must be declared as `uvec2` then converted: the WebGPU backend uploads it as an
+   * integer attribute, so `vec2` would reinterpret the bits rather than convert them.
+   */
   const tileRepeat = vec2(attribute<"uvec2">("tileRepeat", "uvec2"));
 
   // Fold tile-space UVs into 0..1, while preserving the far edge.
@@ -75,12 +77,16 @@ export function enableTileWrapping(
     tileRegion.xy.add(tileFrac.mul(tileRegion.zw))
   ).level(float(0));
 
-  // `materialColor` re-samples the atlas at raw UVs; read material.color directly.
-  // Opacity is omitted: setupDiffuseColor() applies it after this node.
+  /*
+   * `materialColor` re-samples the atlas at raw UVs; read material.color directly.
+   * Opacity is omitted: setupDiffuseColor() applies it after this node.
+   */
   const tint = reference("color", "color", material);
 
-  // The WebGPU build aliases the classic material names onto their node
-  // variants, so `colorNode` exists at runtime but not on the classic type.
+  /*
+   * The WebGPU build aliases the classic material names onto their node
+   * variants, so `colorNode` exists at runtime but not on the classic type.
+   */
   (material as { colorNode?: unknown; }).colorNode = vec4(tint, float(1))
     .mul(sampledDiffuseColor);
 }

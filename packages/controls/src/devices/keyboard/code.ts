@@ -12,7 +12,8 @@ import {
  * @see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
  */
 export type KeyCode =
-  | "Digit0" | "Digit1" | "Digit2" | "Digit3" | "Digit4" | "Digit5" | "Digit6" | "Digit7" | "Digit8" | "Digit9"
+  | "Digit0" | "Digit1" | "Digit2" | "Digit3" | "Digit4"
+  | "Digit5" | "Digit6" | "Digit7" | "Digit8" | "Digit9"
   | "Minus" | "Equal" | "Backspace" | "Tab" | "Comma" | "Period" | "Slash" | "Space" | "CapsLock"
   | "KeyA" | "KeyS" | "KeyD" | "KeyF" | "KeyG" | "KeyH" | "KeyJ" | "KeyK" | "KeyL"
   | "KeyQ" | "KeyW" | "KeyE" | "KeyR" | "KeyT" | "KeyY" | "KeyU" | "KeyI" | "KeyO" | "KeyP"
@@ -34,7 +35,8 @@ export type KeyCode =
   | "Fn" | "FnLock"
   | "AudioVolumeMute" | "AudioVolumeUp" | "AudioVolumeDown"
   | "PrintScreen" | "Pause"
-  | "BrowserBack" | "BrowserForward" | "BrowserFavorites" | "BrowserRefresh" | "BrowserStop" | "BrowserSearch" | "BrowserHome"
+  | "BrowserBack" | "BrowserForward" | "BrowserFavorites" | "BrowserRefresh"
+  | "BrowserStop" | "BrowserSearch" | "BrowserHome"
   | "LaunchApp2" | "LaunchApp1"
   | "MediaPlayPause" | "MediaStop" | "MediaTrackNext" | "MediaTrackPrevious"
   | "Power" | "Sleep" | "WakeUp";

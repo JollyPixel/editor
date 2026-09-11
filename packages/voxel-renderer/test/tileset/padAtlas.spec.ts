@@ -58,8 +58,10 @@ class RecordingCanvas {
 }
 
 describe("padAtlas without a DOM", () => {
-  // Every case below bails out before touching the DOM, so these hold in the
-  // plain node:test environment where `document` is undefined.
+  /*
+   * Every case below bails out before touching the DOM, so these hold in the
+   * plain node:test environment where `document` is undefined.
+   */
   const image = {} as CanvasImageSource;
 
   it("returns null when padding is disabled", () => {

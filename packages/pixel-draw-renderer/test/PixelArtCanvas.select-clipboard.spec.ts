@@ -80,9 +80,11 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     ({ container } = makeContainer());
   });
 
-  // 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
-  // client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
-  // no floor-rounding ambiguity).
+  /*
+   * 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
+   * client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
+   * no floor-rounding ambiguity).
+   */
 
   function makeManager(
     options: PixelArtCanvasOptions = {}
@@ -97,52 +99,57 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     });
   }
 
-  test("copy then paste duplicates in place; moving the duplicate away leaves the original untouched", async() => {
-    const manager = makeManager();
-    const canvas = manager.canvas();
+  test(
+    "copy then paste duplicates in place; moving the duplicate away leaves the original untouched",
+    async() => {
+      const manager = makeManager();
+      const canvas = manager.canvas();
 
-    manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.mode = "select";
-    canvas.dispatchEvent(
-      mouseEvent("mousedown", 92, 92)
-    );
-    canvas.dispatchEvent(
-      mouseEvent("mousemove", 96, 92)
-    );
-    canvas.dispatchEvent(
-      new MouseEvent("mouseup", { bubbles: true })
-    );
+      manager.commitPixels([{ x: 2, y: 2 }]);
+      manager.mode = "select";
+      canvas.dispatchEvent(
+        mouseEvent("mousedown", 92, 92)
+      );
+      canvas.dispatchEvent(
+        mouseEvent("mousemove", 96, 92)
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
-    await manager.copySelection();
-    await manager.pasteClipboard();
+      await manager.copySelection();
+      await manager.pasteClipboard();
 
-    // The cursor never left the source, so the duplicate landed back on it
-    // and is now the active selection. Dragging it away must relocate only
-    // the *duplicate*, leaving the original in place. (Regression: a naive
-    // move erases its source unconditionally, which would wipe out the
-    // original here since source === original spot.)
-    canvas.dispatchEvent(
-      mouseEvent("mousedown", 92, 92)
-    );
-    canvas.dispatchEvent(
-      mouseEvent("mousemove", 100, 100)
-    );
-    canvas.dispatchEvent(
-      new MouseEvent("mouseup", { bubbles: true })
-    );
+      /*
+       * The cursor never left the source, so the duplicate landed back on it
+       * and is now the active selection. Dragging it away must relocate only
+       * the *duplicate*, leaving the original in place. (Regression: a naive
+       * move erases its source unconditionally, which would wipe out the
+       * original here since source === original spot.)
+       */
+      canvas.dispatchEvent(
+        mouseEvent("mousedown", 92, 92)
+      );
+      canvas.dispatchEvent(
+        mouseEvent("mousemove", 100, 100)
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8),
-      [0, 0, 0, 255],
-      "original survives the duplicate's first move"
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 4, y: 4 }, 8),
-      [0, 0, 0, 255],
-      "duplicate landed at destination"
-    );
-    manager.destroy();
-  });
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [0, 0, 0, 255],
+        "original survives the duplicate's first move"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 4, y: 4 }, 8),
+        [0, 0, 0, 255],
+        "duplicate landed at destination"
+      );
+      manager.destroy();
+    }
+  );
 
   test("moving an already-relocated duplicate a second time erases its (now real) previous spot", async() => {
     const manager = makeManager();
@@ -174,8 +181,10 @@ describe("PixelArtCanvas — select mode clipboard", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    // Second move: the duplicate now legitimately owns (4,4) — moving it
-    // again to (6,6) must erase (4,4) for real this time.
+    /*
+     * Second move: the duplicate now legitimately owns (4,4) — moving it
+     * again to (6,6) must erase (4,4) for real this time.
+     */
     canvas.dispatchEvent(
       mouseEvent("mousedown", 100, 100)
     );
@@ -291,8 +300,10 @@ describe("PixelArtCanvas — select mode clipboard", () => {
   });
 
   test("a paste too large for the texture is pinned to the origin, keeping its overflow", async() => {
-    // 10 wide on an 8-wide texture: it cannot be centred anywhere, so its
-    // top-left is pinned in view and the tail hangs off the right edge.
+    /*
+     * 10 wide on an 8-wide texture: it cannot be centred anywhere, so its
+     * top-left is pinned in view and the tail hangs off the right edge.
+     */
     const source = document.createElement("canvas");
     source.width = 10;
     source.height = 1;
@@ -441,10 +452,12 @@ describe("PixelArtCanvas — select mode clipboard", () => {
   });
 
   test("a paste whose opaque pixels touch only diagonally still yields a live selection", async() => {
-    // The contour tracer used to throw on a corner-touching mask, aborting
-    // importSelection after the pixels were floating but before the outline
-    // was drawn and the state published: no marching ants, a toolbar that
-    // believed nothing was selected, yet draggable pixels.
+    /*
+     * The contour tracer used to throw on a corner-touching mask, aborting
+     * importSelection after the pixels were floating but before the outline
+     * was drawn and the state published: no marching ants, a toolbar that
+     * believed nothing was selected, yet draggable pixels.
+     */
     const source = document.createElement("canvas");
     source.width = 2;
     source.height = 2;
@@ -491,8 +504,10 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 92, 92));
     await withBitmapSource(source, () => manager.pasteClipboard());
 
-    // Click far away: a new marquee starts, and the paste lands rather than
-    // vanishing.
+    /*
+     * Click far away: a new marquee starts, and the paste lands rather than
+     * vanishing.
+     */
     canvas.dispatchEvent(mouseEvent("mousedown", 108, 108));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 

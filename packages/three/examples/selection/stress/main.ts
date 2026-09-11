@@ -223,8 +223,8 @@ const selectionFolder = pane.addFolder({ title: "Selection" });
 const perfHintRow = document.createElement("jolly-property-row");
 perfHintRow.label = "perf note";
 perfHintRow.description = "\"outline\" re-merges geometry on every change and is local-only, so its own " +
-  "\"count\" caps lower below; both \"peer colors\" modes never rebuild geometry, stay uncapped, and are the " +
-  "only modes where peers are visible.";
+  "\"count\" caps lower below; both \"peer colors\" modes never rebuild geometry, stay uncapped, " +
+  "and are the only modes where peers are visible.";
 selectionFolder.element.append(perfHintRow);
 
 const modeSettings: { mode: RenderMode; } = { mode: renderMode };
@@ -308,7 +308,11 @@ const edgeThicknessBinding = peerColorsFolder
 
 const highlightJfaSettings = { ringThickness: highlightJfa.ringThickness };
 const ringThicknessBinding = peerColorsFolder
-  .addBinding(highlightJfaSettings, "ringThickness", { label: "JFA ring thickness (px)", min: 1, max: 10, step: 1 })
+  .addBinding(
+    highlightJfaSettings,
+    "ringThickness",
+    { label: "JFA ring thickness (px)", min: 1, max: 10, step: 1 }
+  )
   .on("change", ({ value }) => {
     highlightJfa.ringThickness = value;
   });

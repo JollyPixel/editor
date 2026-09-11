@@ -64,8 +64,7 @@ describe("Zoom", () => {
       const before = zoom.value;
       const after = zoom.applyDelta(-1);
 
-      assert.ok(
-        after > before, `zoom ${after} should be greater than ${before}`);
+      assert.ok(after > before, `zoom ${after} should be greater than ${before}`);
       assert.strictEqual(zoom.value, after);
     });
 

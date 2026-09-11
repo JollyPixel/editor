@@ -71,8 +71,10 @@ describe("Systems.World", () => {
   let sceneManager: ReturnType<typeof createMockSceneManager>;
   let renderer: ReturnType<typeof createMockRenderer>;
   let input: ReturnType<typeof createMockInput>;
-  // The world neither reads a clock nor owns a scheduler, so the test owns
-  // both: it decides the frame, the world executes it.
+  /*
+   * The world neither reads a clock nor owns a scheduler, so the test owns
+   * both: it decides the frame, the world executes it.
+   */
   let now: number;
   let scheduler: FrameScheduler;
 
@@ -230,8 +232,10 @@ describe("Systems.World", () => {
       tick();
       input.update.mock.resetCalls();
 
-      // Three steps: the first sees the press edge, the next two diff against
-      // it and correctly do not, so a jump fires once rather than three times.
+      /*
+       * Three steps: the first sees the press edge, the next two diff against
+       * it and correctly do not, so a jump fires once rather than three times.
+       */
       tick(3 * kFixedDelta60);
 
       assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 3);
@@ -277,8 +281,10 @@ describe("Systems.World", () => {
       tick(1000 / 144);
       tick(1000 / 144);
 
-      // Every sample lands before the step it feeds, never after it, so no
-      // edge is diffed away before a step has seen it.
+      /*
+       * Every sample lands before the step it feeds, never after it, so no
+       * edge is diffed away before a step has seen it.
+       */
       assert.deepStrictEqual(stepsWhenSampled, [0, 0, 0, 0]);
       assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
     });
@@ -335,8 +341,10 @@ describe("Systems.World", () => {
 
       world.start();
       tick();
-      // Half speed: 100ms of wall clock is 50ms of simulation, one step of
-      // 33.3ms with the remainder left in the accumulator.
+      /*
+       * Half speed: 100ms of wall clock is 50ms of simulation, one step of
+       * 33.3ms with the remainder left in the accumulator.
+       */
       tick(100);
 
       assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
@@ -344,8 +352,10 @@ describe("Systems.World", () => {
 
     test("should not advance a scheduler of its own", () => {
       world.start();
-      // Two ticks off the same schedule run twice: the world holds no
-      // accumulator, so replaying one is not de-duplicated.
+      /*
+       * Two ticks off the same schedule run twice: the world holds no
+       * accumulator, so replaying one is not de-duplicated.
+       */
       const schedule = scheduler.advance(0);
       world.tick(schedule);
       world.tick(schedule);

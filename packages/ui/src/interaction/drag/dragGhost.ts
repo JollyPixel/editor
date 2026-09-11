@@ -93,13 +93,17 @@ export function headerGhost<T extends GhostSource>(
     height: `${source.headerRect().height}px`,
     overflow: "hidden"
   });
-  // A throwaway replica answers for nothing: leaving the identity on it would
-  // put a second element under the same key and id into the document, where
-  // "getElementById" and every key-based query would find it.
+  /*
+   * A throwaway replica answers for nothing: leaving the identity on it would
+   * put a second element under the same key and id into the document, where
+   * "getElementById" and every key-based query would find it.
+   */
   ghost.removeAttribute("key");
   ghost.removeAttribute("id");
-  // The source dims itself in place. A ghost that did the same would read as a
-  // second dropped element rather than the one being carried.
+  /*
+   * The source dims itself in place. A ghost that did the same would read as a
+   * second dropped element rather than the one being carried.
+   */
   ghost.removeAttribute("dragging");
   ghost.storage = new MemoryStorageAdapter();
   ghost.inert = true;

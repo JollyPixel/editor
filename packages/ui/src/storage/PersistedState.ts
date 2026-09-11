@@ -35,8 +35,10 @@ export class PersistedState implements ReactiveController {
   }
 
   hostConnected(): void {
-    // The controller resolves storage lazily because element properties may
-    // arrive after construction and before connection.
+    /*
+     * The controller resolves storage lazily because element properties may
+     * arrive after construction and before connection.
+     */
   }
 
   read(

@@ -16,9 +16,11 @@ import {
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 import { UVRegion, type UVSlot, type UVRegionData } from "#src/uv/UVRegion.ts";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------------------
+ */
 
 interface MockClient extends ClientHandle {
   received: unknown[];
@@ -135,9 +137,11 @@ function uvMovedCmd(
   };
 }
 
-// ---------------------------------------------------------------------------
-// receive: uv-region-* — per-region LWW conflict resolution
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * receive: uv-region-* — per-region LWW conflict resolution
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelSyncServer — receive: uv-region-created", () => {
   test("applies unconditionally (idempotent by unique id) and broadcasts", () => {

@@ -234,7 +234,7 @@ describe("ServerRoom", () => {
     }]);
   });
 
-  test("leave broadcasts peer-left to remaining members, excluding the leaver, and notifies the extension", async() => {
+  test("leave broadcasts peer-left to members other than the leaver and notifies the extension", async() => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const b = createClient("B");
@@ -251,7 +251,7 @@ describe("ServerRoom", () => {
     assert.deepEqual(extension.disconnected, ["B"]);
   });
 
-  test("updatePresence merges into stored state and broadcasts to other members, excluding the sender", async() => {
+  test("updatePresence merges into state and broadcasts to members other than the sender", async() => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const b = createClient("B");
@@ -290,7 +290,7 @@ describe("ServerRoom", () => {
     assert.deepEqual(extension.messages, [{ clientId: "A", payload: { hello: "world" } }]);
   });
 
-  test("the RoomContext's room.broadcast sends to every current member, envelope-wrapped like a scoped send", async() => {
+  test("room.broadcast reaches every current member, envelope-wrapped like a scoped send", async() => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const b = createClient("B");
@@ -460,8 +460,10 @@ describe("ServerRoom — rights: message write gate", () => {
   test("a glob pattern (\"pixel-draw.*\") covers every event without listing each one", async() => {
     const extension = new RightsAwareExtension();
     const a = createClient("A");
-    // "pixel-draw.*" also matches "pixel-draw.$join" — list the more specific
-    // rule first so join stays admitted (first match wins, see RightsTable).
+    /*
+     * "pixel-draw.*" also matches "pixel-draw.$join" — list the more specific
+     * rule first so join stays admitted (first match wins, see RightsTable).
+     */
     const room = createRoom(extension, new RightsTable({
       viewer: {
         "pixel-draw.$join": "write",
@@ -479,7 +481,7 @@ describe("ServerRoom — rights: message write gate", () => {
 });
 
 describe("ServerRoom — rights: broadcast read gate", () => {
-  test("a role with \"void\" on the event is excluded from the broadcast; \"read\" still receives it", async() => {
+  test(`a role with "void" on the event is excluded from the broadcast; "read" still gets it`, async() => {
     const extension = new RightsAwareExtension();
     const a = createClient("A");
     const b = createClient("B");
@@ -566,7 +568,7 @@ describe("ServerRoom — event store: append", () => {
   });
 });
 
-describe("ServerRoom — event store: RoomContext passed to the extension exposes the eventStore facade", () => {
+describe("ServerRoom — event store: RoomContext passed to extensions exposes the eventStore facade", () => {
   test("the extension can append and read events through context.eventStore", async() => {
     const extension = new RecordingExtension();
     const a = createClient("A");

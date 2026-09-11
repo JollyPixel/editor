@@ -47,8 +47,10 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     ({ container } = makeContainer());
   });
 
-  // Same 200x200/8x8/zoom-4 setup as PixelArtCanvas.select.spec.ts: client
-  // 84 + n*4 -> texture n.
+  /*
+   * Same 200x200/8x8/zoom-4 setup as PixelArtCanvas.select.spec.ts: client
+   * 84 + n*4 -> texture n.
+   */
   function makeManager(
     options: PixelArtCanvasOptions = {}
   ): PixelArtCanvas {
@@ -117,9 +119,11 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
-    // 3x3 black border around (2,2)-(4,4); the interior (3,3) is left at
-    // the canvas's own default (opaque white) — a different color than
-    // the border, so it reads as an enclosed hole to fill.
+    /*
+     * 3x3 black border around (2,2)-(4,4); the interior (3,3) is left at
+     * the canvas's own default (opaque white) — a different color than
+     * the border, so it reads as an enclosed hole to fill.
+     */
     const border = [
       { x: 2, y: 2 },
       { x: 3, y: 2 },
@@ -152,8 +156,10 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
-    // Two adjacent but differently-colored pixels: flood fill from (2,2)
-    // only matches black, and has no same-colored neighbor.
+    /*
+     * Two adjacent but differently-colored pixels: flood fill from (2,2)
+     * only matches black, and has no same-colored neighbor.
+     */
     manager.brush.primary.set("#000000");
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.brush.primary.set("#FF0000");
@@ -221,76 +227,83 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     manager.destroy();
   });
 
-  test("moving a concave (L-shaped) selection only touches its masked cells, at both source and destination", () => {
-    const manager = makeManager({ select: { eraseColor: "#FF00FF" } });
-    const canvas = manager.canvas();
+  test(
+    "moving a concave (L-shaped) selection only touches its masked cells, at both source and destination",
+    () => {
+      const manager = makeManager({ select: { eraseColor: "#FF00FF" } });
+      const canvas = manager.canvas();
 
-    // L-shape within a 2x2 bounding box: (2,2)-(2,3)-(3,3) are black;
-    // (3,2) is deliberately left out (the concave "gap").
-    manager.commitPixels([
-      { x: 2, y: 2 },
-      { x: 2, y: 3 },
-      { x: 3, y: 3 }
-    ]);
-    // A sentinel at the move's destination gap, to prove the paint step
-    // skips masked-false destination cells too.
-    manager.brush.primary.set("#0000FF");
-    manager.commitPixels([{ x: 5, y: 4 }]);
+      /*
+       * L-shape within a 2x2 bounding box: (2,2)-(2,3)-(3,3) are black;
+       * (3,2) is deliberately left out (the concave "gap").
+       */
+      manager.commitPixels([
+        { x: 2, y: 2 },
+        { x: 2, y: 3 },
+        { x: 3, y: 3 }
+      ]);
+      /*
+       * A sentinel at the move's destination gap, to prove the paint step
+       * skips masked-false destination cells too.
+       */
+      manager.brush.primary.set("#0000FF");
+      manager.commitPixels([{ x: 5, y: 4 }]);
 
-    manager.mode = "select";
-    manager.tools.select.shape = true;
-    // texture (2,2).
-    click(canvas, 92, 92);
+      manager.mode = "select";
+      manager.tools.select.shape = true;
+      // texture (2,2).
+      click(canvas, 92, 92);
 
-    // Drag by (+2, +2): (2,2)-(2,3)-(3,3) -> (4,4)-(4,5)-(5,5).
-    canvas.dispatchEvent(
-      mouseEvent("mousedown", 92, 92)
-    );
-    canvas.dispatchEvent(
-      mouseEvent("mousemove", 100, 100)
-    );
-    canvas.dispatchEvent(
-      new MouseEvent("mouseup", { bubbles: true })
-    );
+      // Drag by (+2, +2): (2,2)-(2,3)-(3,3) -> (4,4)-(4,5)-(5,5).
+      canvas.dispatchEvent(
+        mouseEvent("mousedown", 92, 92)
+      );
+      canvas.dispatchEvent(
+        mouseEvent("mousemove", 100, 100)
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 3, y: 2 }, 8),
-      [255, 255, 255, 255],
-      "the L-shape's own gap was never selected — untouched, not the erase color"
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8),
-      [255, 0, 255, 255],
-      "source erased"
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 3 }, 8),
-      [255, 0, 255, 255]
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 3, y: 3 }, 8),
-      [255, 0, 255, 255]
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 4, y: 4 }, 8),
-      [0, 0, 0, 255],
-      "destination painted"
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 4, y: 5 }, 8),
-      [0, 0, 0, 255]
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 5, y: 5 }, 8),
-      [0, 0, 0, 255]
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 5, y: 4 }, 8),
-      [0, 0, 255, 255],
-      "destination's own gap (the sentinel) is untouched by the masked paint"
-    );
-    manager.destroy();
-  });
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [255, 255, 255, 255],
+        "the L-shape's own gap was never selected — untouched, not the erase color"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [255, 0, 255, 255],
+        "source erased"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 3 }, 8),
+        [255, 0, 255, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 3 }, 8),
+        [255, 0, 255, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 4, y: 4 }, 8),
+        [0, 0, 0, 255],
+        "destination painted"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 4, y: 5 }, 8),
+        [0, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 5, y: 5 }, 8),
+        [0, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 5, y: 4 }, 8),
+        [0, 0, 255, 255],
+        "destination's own gap (the sentinel) is untouched by the masked paint"
+      );
+      manager.destroy();
+    }
+  );
 
   test("moving a shape with transparent erase does not leave its source edge in the drag preview", () => {
     const manager = makeManager({
@@ -361,11 +374,13 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       "sanity: undo restored the L-shape"
     );
 
-    // If the resynced selection had degraded to a solid 2x2 rect instead of
-    // the true L-shaped mask, this second move's erase step (over the
-    // resynced oldRect/oldMask) would also vacate (3,2) — which was never
-    // part of the shape. The destination is chosen far away so the paint
-    // step can't independently touch (3,2) and confound the assertion.
+    /*
+     * If the resynced selection had degraded to a solid 2x2 rect instead of
+     * the true L-shaped mask, this second move's erase step (over the
+     * resynced oldRect/oldMask) would also vacate (3,2) — which was never
+     * part of the shape. The destination is chosen far away so the paint
+     * step can't independently touch (3,2) and confound the assertion.
+     */
     canvas.dispatchEvent(
       mouseEvent("mousedown", 92, 92)
     );

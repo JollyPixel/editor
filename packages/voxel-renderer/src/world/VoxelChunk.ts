@@ -119,9 +119,7 @@ export class VoxelChunk {
   ): void {
     const [lx, ly, lz] = coords;
 
-    this.setPackedAt(
-      lx, ly, lz, packVoxel(entry.blockId, entry.transform)
-    );
+    this.setPackedAt(lx, ly, lz, packVoxel(entry.blockId, entry.transform));
   }
 
   setPackedAt(

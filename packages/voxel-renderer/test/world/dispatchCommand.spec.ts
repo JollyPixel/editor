@@ -119,8 +119,10 @@ describe("VoxelWorld.applyRemoteCommand — reordered", () => {
     const world = makeWorld();
     world.addLayer("Base");
     world.addLayer("Top");
-    // After sort (descending): [Top(order=1), Base(order=0)]
-    // Moving Base "up" raises its priority, swapping it with Top.
+    /*
+     * After sort (descending): [Top(order=1), Base(order=0)]
+     * Moving Base "up" raises its priority, swapping it with Top.
+     */
     world.applyRemoteCommand({
       action: "reordered",
       layerName: "Base",
@@ -401,8 +403,10 @@ describe("VoxelWorld.applyRemoteCommand — merged", () => {
 
 describe("VoxelWorld.applyRemoteCommand — exhaustiveness", () => {
   it("handles every action the hook union declares", () => {
-    // Ties this check to the real source of truth instead of a hand-rolled
-    // list, so a new/renamed action can't silently drop out of coverage.
+    /*
+     * Ties this check to the real source of truth instead of a hand-rolled
+     * list, so a new/renamed action can't silently drop out of coverage.
+     */
     assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 19);
 
     for (const action of VOXEL_LAYER_HOOK_ACTIONS) {

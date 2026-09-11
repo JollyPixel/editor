@@ -29,7 +29,8 @@ export type AppendedSceneEntry<TContext> = {
   /**
    * All actors created during the scene's awake(),
    * tracked for cleanup on removeScene.
-   **/
+   *
+   */
   ownedActors: ReadonlySet<Actor<TContext>>;
 };
 
@@ -513,8 +514,6 @@ export class SceneManager<
     while (i < this.componentsToBeStarted.length) {
       const component = this.componentsToBeStarted[i];
 
-      // If the component to be started is part of an actor
-      // which will not be updated, skip it until next loop
       if (!this.#registeredActors.has(component.actor)) {
         i++;
         continue;
@@ -581,11 +580,6 @@ export class SceneManager<
     });
 
     this.unregisterActor(actor);
-
-    // For root actors (parent === null): removes from tree.children and fires
-    // the removeCallback that detaches actor.object3D from the THREE.Scene.
-    // For non-root actors this is a no-op; actor.destroy() handles removal
-    // from the parent's children list via parent.remove(this).
     this.tree.remove(actor);
     actor.destroy();
   }

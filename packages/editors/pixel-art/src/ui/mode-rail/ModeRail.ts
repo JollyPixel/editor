@@ -104,8 +104,10 @@ export class ModeRail extends LitElement {
 
     this.dispatchEvent(customEvent);
     this.#closeFlyout();
-    // Clicking focuses the button, which would keep the flyout open via
-    // the :focus-within keyboard-accessibility fallback.
+    /*
+     * Clicking focuses the button, which would keep the flyout open via
+     * the :focus-within keyboard-accessibility fallback.
+     */
     (event.currentTarget as HTMLElement).blur();
   }
 
@@ -234,8 +236,10 @@ export class ModeRail extends LitElement {
             aria-label=${label}
             @click=${(event: MouseEvent) => {
               onClick();
-              // Clicking focuses the button, which would keep the flyout
-              // open via the :focus-within keyboard-accessibility fallback.
+              /*
+               * Clicking focuses the button, which would keep the flyout
+               * open via the :focus-within keyboard-accessibility fallback.
+               */
               (event.currentTarget as HTMLElement).blur();
             }}
           >

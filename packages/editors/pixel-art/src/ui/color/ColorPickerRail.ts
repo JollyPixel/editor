@@ -63,10 +63,6 @@ export class ColorPickerRail extends LitElement {
     );
   }
 
-  /**
-    * ColorSwatch repaints from setColor();
-    * property bindings alone are not enough after firstUpdated().
-   */
   override updated(
     changedProperties: PropertyValues<this>
   ): void {

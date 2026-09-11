@@ -7,7 +7,7 @@ import type { ConsoleAdapter } from "../adapters/console.ts";
 export type LogLevel = "void" | "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 
 // CONSTANTS
-export const kLogLevelValue: Record<LogLevel, number> = {
+const kLogLevelValue: Record<LogLevel, number> = {
   void: 0,
   trace: 10,
   debug: 20,

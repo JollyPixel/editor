@@ -11,8 +11,10 @@ import type {
 const kDefaultColor = 0xFF3B30;
 // Drawn after the world so the depth-test-free lines land on top.
 const kRenderOrder = 999;
-// Twelve edges of the unit cube spanning [0,1] on every axis, so a chunk box
-// is placed with `position = world origin` and `scale = chunk size`.
+/*
+ * Twelve edges of the unit cube spanning [0,1] on every axis, so a chunk box
+ * is placed with `position = world origin` and `scale = chunk size`.
+ */
 const kBoxEdgePositions = new Float32Array([
   0, 0, 0, 1, 0, 0,
   1, 0, 0, 1, 0, 1,

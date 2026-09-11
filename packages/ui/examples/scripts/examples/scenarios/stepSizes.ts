@@ -104,7 +104,10 @@ function buildRange(
   return bind(field);
 }
 
-/** The write back every consumer owes a controlled element, on both events since a drag only ever fires `jolly-input` until release. */
+/**
+ * The write back every consumer owes a controlled element, on both events
+ * since a drag only ever fires `jolly-input` until release.
+ */
 function bind<
   TValue,
   TField extends HTMLElement & { value: TValue; }

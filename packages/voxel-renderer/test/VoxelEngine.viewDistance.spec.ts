@@ -184,8 +184,10 @@ describe("VoxelEngine — view distance", () => {
     engine.focus = { x: 2, y: 2, z: 2 };
     engine.tick(0);
 
-    // Chunk 0 is 8 units away: outside the admit radius, inside the retain
-    // radius, so it must not flip.
+    /*
+     * Chunk 0 is 8 units away: outside the admit radius, inside the retain
+     * radius, so it must not flip.
+     */
     engine.focus = { x: 10, y: 2, z: 2 };
     engine.tick(0);
 

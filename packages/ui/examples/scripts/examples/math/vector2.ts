@@ -34,8 +34,10 @@ export const VECTOR2_XZ_EXAMPLE: GalleryExample = {
     return renderStateMatrix<Vector2>(host, {
       liveInput: true,
       create() {
-        // Authored as markup, the path a Lit template takes: the pair arrives
-        // as an attribute after the constructor, before the value.
+        /*
+         * Authored as markup, the path a Lit template takes: the pair arrives
+         * as an attribute after the constructor, before the value.
+         */
         const holder = document.createElement("div");
         holder.innerHTML = `
           <jolly-vector2 label="Size" axes="xz" step="1" min="1"></jolly-vector2>

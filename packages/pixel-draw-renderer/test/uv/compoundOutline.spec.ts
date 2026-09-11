@@ -7,8 +7,10 @@ import { compoundOutline } from "../../src/uv/compoundOutline.ts";
 import type { UVCompoundPart } from "../../src/uv/types.ts";
 import type { Vec2 } from "../../src/types.ts";
 
-// CONSTANTS
-// The two quads a stair emits for its side slot, an L open at the top left.
+/*
+ * CONSTANTS
+ * The two quads a stair emits for its side slot, an L open at the top left.
+ */
 const kStairSide: readonly UVCompoundPart[] = [
   { x: 0, y: 0.5, width: 1, height: 0.5 },
   { x: 0.5, y: 0, width: 0.5, height: 0.5 }

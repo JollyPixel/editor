@@ -4,12 +4,14 @@ import { test, expect, type Page } from "@playwright/test";
 // Import Internal Dependencies
 import { gotoDemo } from "./utils.ts";
 
-// `--color-bg-surface` is a `light-dark()` value (PixelDrawPanel.styles.ts):
-// getComputedStyle().getPropertyValue() on a custom property returns the
-// literal, unresolved function text, not the resolved color — same
-// resolveThemeColor() gotcha documented in packages/ui/src/theme/resolveThemeToken.ts.
-// Resolve it the same way that helper does: apply it to a real CSS
-// property (color) on an already-rendered element and read that instead.
+/*
+ * `--color-bg-surface` is a `light-dark()` value (PixelDrawPanel.styles.ts):
+ * getComputedStyle().getPropertyValue() on a custom property returns the
+ * literal, unresolved function text, not the resolved color — same
+ * resolveThemeColor() gotcha documented in packages/ui/src/theme/resolveThemeToken.ts.
+ * Resolve it the same way that helper does: apply it to a real CSS
+ * property (color) on an already-rendered element and read that instead.
+ */
 const kLightBgSurface = "rgb(238, 243, 248)";
 const kDarkBgSurface = "rgb(19, 27, 36)";
 
@@ -40,9 +42,11 @@ test.beforeEach(async({ page }) => {
 test("defaults to the \"auto\" theme", async({ page }) => {
   const panel = page.locator("pixel-draw-panel");
 
-  // "auto" is applyAppearance()'s absent-attribute case (packages/ui's
-  // preferences.ts), not a written "theme=auto" attribute — read the
-  // resolved property instead of asserting on the attribute.
+  /*
+   * "auto" is applyAppearance()'s absent-attribute case (packages/ui's
+   * preferences.ts), not a written "theme=auto" attribute — read the
+   * resolved property instead of asserting on the attribute.
+   */
   await expect.poll(() => readTheme(page)).toBe("auto");
   await expect(panel).not.toHaveAttribute("theme");
   await expect(page.locator("html")).toHaveAttribute(

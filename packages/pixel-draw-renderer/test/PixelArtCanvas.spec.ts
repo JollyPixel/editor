@@ -496,8 +496,10 @@ describe("PixelArtCanvas", () => {
   });
 
   describe("secondary color (right-click)", () => {
-    // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
-    // client(100,100) -> texture (8,8); client(110,100) -> texture (10,8).
+    /*
+     * 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
+     * client(100,100) -> texture (8,8); client(110,100) -> texture (10,8).
+     */
 
     function makeManager(
       onBufferUpdated: (event: unknown) => void
@@ -755,8 +757,10 @@ describe("PixelArtCanvas", () => {
       const perFrame = displayCtx.drawImageCallCount;
       assert.ok(perFrame > 0, "centerTexture should repaint once");
 
-      // A single buffer mutation must drive exactly one drawFrame via the
-      // CanvasBuffer "changed" signal — not two (a leftover explicit call).
+      /*
+       * A single buffer mutation must drive exactly one drawFrame via the
+       * CanvasBuffer "changed" signal — not two (a leftover explicit call).
+       */
       displayCtx.drawImageCallCount = 0;
       manager.commitPixels([{ x: 1, y: 1 }, { x: 2, y: 2 }]);
 

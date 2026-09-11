@@ -12,8 +12,10 @@ import {
 } from "#src/clipboard/selectionImage.ts";
 import type { SelectionSnapshot } from "#src/clipboard/types.ts";
 
-// CONSTANTS
-// RGB under a low alpha: a canvas round-trip would return (170, 85, 85, 3).
+/*
+ * CONSTANTS
+ * RGB under a low alpha: a canvas round-trip would return (170, 85, 85, 3).
+ */
 const kFragilePixels = [
   200, 100, 50, 3,
   0, 0, 0, 0

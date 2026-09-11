@@ -31,8 +31,10 @@ test.describe("DockLayout drag", () => {
   test("a click on the grip does not block the next drag", async({ page }) => {
     await open(page);
 
-    // A press released below the movement threshold is a click, not a drag,
-    // and has to end the session all the same.
+    /*
+     * A press released below the movement threshold is a click, not a drag,
+     * and has to end the session all the same.
+     */
     await page.locator("jolly-pane[key='hierarchy'] .grip").click();
     await expect(
       page.locator("jolly-pane[key='hierarchy']")
@@ -99,8 +101,10 @@ test.describe("DockLayout drag", () => {
     expect(carried.width).toBeCloseTo(source.width, 0);
     // Clipped to its header, so it cannot cover the insertion line below it.
     expect(carried.height).toBeCloseTo(sourceHeader.height, 0);
-    // Clipped, not folded: a collapsed clone would turn its chevron and report
-    // a state the pane being carried is not in.
+    /*
+     * Clipped, not folded: a collapsed clone would turn its chevron and report
+     * a state the pane being carried is not in.
+     */
     await expect(ghost).not.toHaveAttribute("collapsed");
 
     await page.mouse.up();
@@ -113,8 +117,10 @@ test.describe("DockLayout drag", () => {
     const inspector = page.locator("jolly-pane[key='inspector']");
     const source = await boxOf(inspector);
     const header = await boxOf(inspector.locator(".header"));
-    // Grabbed well off centre, so a ghost merely trailing the cursor would
-    // land somewhere else entirely.
+    /*
+     * Grabbed well off centre, so a ghost merely trailing the cursor would
+     * land somewhere else entirely.
+     */
     const from = {
       x: header.x + header.width - 40,
       y: header.y + (header.height / 2)
@@ -141,8 +147,10 @@ test.describe("DockLayout drag", () => {
     await page.mouse.down();
     await page.mouse.move(from.x + 40, from.y + 60, { steps: 12 });
 
-    // Outside every scope host, the ghost resolves its tokens only because the
-    // overlay copied them across. A fallback would read as a different blue.
+    /*
+     * Outside every scope host, the ghost resolves its tokens only because the
+     * overlay copied them across. A fallback would read as a different blue.
+     */
     const ghost = page.locator(".jolly-drag-ghost");
     await expect.poll(() => partStyleOf(ghost, ".header", "background-color")).toBe(
       await partStyleOf(inspector, ".header", "background-color")
@@ -162,8 +170,10 @@ test.describe("DockLayout drag", () => {
     await page.mouse.move(from.x - 120, from.y + 40, { steps: 12 });
 
     await expect(page.locator(".jolly-drag-overlay")).toHaveCount(1);
-    // The window itself is the thing following the cursor, so the overlay
-    // carries nothing: no replica, and the chip stays hidden.
+    /*
+     * The window itself is the thing following the cursor, so the overlay
+     * carries nothing: no replica, and the chip stays hidden.
+     */
     await expect(page.locator(".jolly-drag-overlay > jolly-pane")).toHaveCount(0);
     await expect(page.locator(".jolly-drag-ghost")).toBeHidden();
 
@@ -216,9 +226,11 @@ test.describe("DockLayout drag", () => {
     await expect(armed).toHaveCount(0);
     const idle = await styleOf(zones.first(), "background-color");
 
-    // Then into the middle of the right dock, which is the only one that may
-    // arm there. A dock arms across the whole of itself, so its middle is as
-    // good a target as its edge.
+    /*
+     * Then into the middle of the right dock, which is the only one that may
+     * arm there. A dock arms across the whole of itself, so its middle is as
+     * good a target as its edge.
+     */
     const dock = await boxOf(page.locator("jolly-dock[key='right']"));
     await page.mouse.move(dock.x + (dock.width / 2), 300, { steps: 12 });
     await expect(armed).toHaveCount(1);
@@ -233,8 +245,10 @@ test.describe("DockLayout drag", () => {
   test("a docked pane moves to another dock in one gesture", async({ page }) => {
     await open(page);
 
-    // No detour through a floating window: the pane leaves one dock and
-    // arrives in the other on a single press.
+    /*
+     * No detour through a floating window: the pane leaves one dock and
+     * arrives in the other on a single press.
+     */
     const dock = await boxOf(page.locator("jolly-dock[key='right']"));
     await dragTo(
       page,
@@ -278,9 +292,11 @@ test.describe("DockLayout drag", () => {
     );
     await page.mouse.move(header.x, header.y);
     await page.mouse.down();
-    // Empty dock, below everything the pane draws but above the middle of the
-    // box it was handed. Resolved against that box this read as a drop before
-    // the pane, with the line drawn at the top of the dock.
+    /*
+     * Empty dock, below everything the pane draws but above the middle of the
+     * box it was handed. Resolved against that box this read as a drop before
+     * the pane, with the line drawn at the top of the dock.
+     */
     const aim = contentBottom + 40;
     expect(aim).toBeLessThan(middle);
     await page.mouse.move(dock.x + (dock.width / 2), aim, { steps: 12 });
@@ -342,8 +358,10 @@ test.describe("DockLayout drag", () => {
 
     const dock = page.locator("jolly-dock[key='left']");
     const box = await boxOf(dock);
-    // A floating pane crosses no dock on its way anywhere, so every dock takes
-    // it across its whole surface rather than on its outer band alone.
+    /*
+     * A floating pane crosses no dock on its way anywhere, so every dock takes
+     * it across its whole surface rather than on its outer band alone.
+     */
     await dragTo(
       page,
       page.locator("jolly-floating jolly-pane[key='assets'] .header"),
@@ -366,8 +384,10 @@ test.describe("DockLayout drag", () => {
 
     const frame = page.locator("jolly-floating");
     const origin = await boxOf(frame);
-    // Well under the size the left dock will stretch the pane to, so a window
-    // sized from its dock cannot pass for one that remembered.
+    /*
+     * Well under the size the left dock will stretch the pane to, so a window
+     * sized from its dock cannot pass for one that remembered.
+     */
     await resizeFrame(page, { width: 170, height: 130 });
     const resized = await boxOf(frame);
     expect(resized.width).toBeLessThan(origin.width);
@@ -393,8 +413,10 @@ test.describe("DockLayout drag", () => {
     const restored = await boxOf(frame);
     expect(restored.width).toBeCloseTo(resized.width, 0);
     expect(restored.height).toBeCloseTo(resized.height, 0);
-    // Dropped under the cursor even though it came back narrower than the
-    // pane was in its dock.
+    /*
+     * Dropped under the cursor even though it came back narrower than the
+     * pane was in its dock.
+     */
     expect(700 - restored.x).toBeGreaterThan(0);
     expect(700 - restored.x).toBeLessThan(restored.width);
   });
@@ -418,8 +440,10 @@ test.describe("DockLayout drag", () => {
     };
     await page.mouse.move(target.x, target.y, { steps: 16 });
 
-    // Over an armed dock the window used to stop dead, which reads as a
-    // gesture that has already been dropped.
+    /*
+     * Over an armed dock the window used to stop dead, which reads as a
+     * gesture that has already been dropped.
+     */
     const moved = await boxOf(frame);
     expect(Math.round(moved.x)).toBe(Math.round(target.x - grabX));
     expect(Math.round(moved.y)).toBe(Math.round(target.y - grabY));
@@ -464,8 +488,10 @@ test.describe("DockLayout drag", () => {
 
     const dock = await boxOf(page.locator("jolly-dock[key='right']"));
     const header = page.locator("jolly-floating jolly-pane[key='assets'] .header");
-    // Half the window is over the dock while the cursor is still 60px shy of
-    // it, which is the whole point: the eye follows the window, not the arrow.
+    /*
+     * Half the window is over the dock while the cursor is still 60px shy of
+     * it, which is the whole point: the eye follows the window, not the arrow.
+     */
     await dragTo(page, header, {
       x: dock.x - 60,
       y: dock.y + 200
@@ -494,8 +520,10 @@ test.describe("DockLayout drag", () => {
     await page.mouse.move(header.x, header.y);
     await page.mouse.down();
 
-    // There is nothing to insert between, so the line would only ever say the
-    // pane lands where it already is.
+    /*
+     * There is nothing to insert between, so the line would only ever say the
+     * pane lands where it already is.
+     */
     for (const y of [header.y + 60, dock.y + dock.height - 20]) {
       await page.mouse.move(header.x, y, { steps: 8 });
       await expect(page.locator(".jolly-drag-insertion")).toBeHidden();

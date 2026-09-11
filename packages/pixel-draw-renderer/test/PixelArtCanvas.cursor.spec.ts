@@ -18,8 +18,10 @@ describe("PixelArtCanvas — onCursorMove", () => {
     });
     manager.onCursorMove = (pos) => positions.push(pos);
 
-    // 8x8 texture, zoom 4, 200x200 container -> centered camera (84,84);
-    // client(100,100) -> texture floor((100-84)/4) = (4,4).
+    /*
+     * 8x8 texture, zoom 4, 200x200 container -> centered camera (84,84);
+     * client(100,100) -> texture floor((100-84)/4) = (4,4).
+     */
     canvas.dispatchEvent(new MouseEvent("mousemove", {
       clientX: 100,
       clientY: 100,
@@ -81,9 +83,11 @@ describe("PixelArtCanvas — onCursorMove", () => {
   test("peerPresence.cursors renders into the canvas's own overlay SVG", () => {
     const { manager, children } = createPixelArtCanvas();
     assert.ok(manager.peerPresence instanceof PeerPresence);
-    // children[0] is the interactive canvas, children[1] the SVG overlay
-    // (see test/helpers/dom.ts). SelectionOutline also owns <path>s (created
-    // eagerly, just hidden), so assert on the delta rather than an absolute count.
+    /*
+     * children[0] is the interactive canvas, children[1] the SVG overlay
+     * (see test/helpers/dom.ts). SelectionOutline also owns <path>s (created
+     * eagerly, just hidden), so assert on the delta rather than an absolute count.
+     */
     const svg = children[1] as unknown as SVGElement;
     const baseline = svg.querySelectorAll("path").length;
 

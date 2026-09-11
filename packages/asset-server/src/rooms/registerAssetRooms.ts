@@ -27,9 +27,11 @@ import {
   type Logger
 } from "../logger.ts";
 
-// Re-exported so a host wiring rooms needs one import, not two. The
-// definitions live in `@jolly-pixel/asset` because the browser needs them
-// to build the same room name.
+/*
+ * Re-exported so a host wiring rooms needs one import, not two. The
+ * definitions live in `@jolly-pixel/asset` because the browser needs them
+ * to build the same room name.
+ */
 export {
   assetRoomName,
   parseAssetRoomName,

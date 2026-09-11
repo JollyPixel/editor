@@ -157,8 +157,10 @@ describe("SelectionSystem", () => {
     const previous = presentations[0];
     assert.strictEqual(presentations.length, 1);
 
-    // The second renderer is created by the existing factory. Mark it as
-    // failing immediately after construction through an appearance event.
+    /*
+     * The second renderer is created by the existing factory. Mark it as
+     * failing immediately after construction through an appearance event.
+     */
     system.manager.addEventListener("techniqueChange", () => {
       presentations.at(-1)!.failSync = true;
     }, { once: true });

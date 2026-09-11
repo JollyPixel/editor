@@ -96,8 +96,10 @@ async function uvSnapshot(
 }
 
 test.beforeEach(async({ page }) => {
-  // Preview meshes live in the 3D runtime; every test in this file either
-  // drags a region in front of it or asserts on __uvPreviewMeshCount.
+  /*
+   * Preview meshes live in the 3D runtime; every test in this file either
+   * drags a region in front of it or asserts on __uvPreviewMeshCount.
+   */
   await gotoDemo(page, undefined, { runtime: true });
   await resetRegions(page);
   await setMode(page, "uv");
@@ -323,9 +325,11 @@ test("each region owns exactly one preview mesh", async({ page }) => {
 });
 
 test("a re-sent create for a known region does not add a second preview mesh", async({ page }) => {
-  // Replays the command a peer echo or a resync delivers. UVMap.restore()
-  // used to emit region-created for an id it already held, so the gallery
-  // built a second mesh and orphaned the first in the scene.
+  /*
+   * Replays the command a peer echo or a resync delivers. UVMap.restore()
+   * used to emit region-created for an id it already held, so the gallery
+   * built a second mesh and orphaned the first in the scene.
+   */
   const regionId = await page.evaluate(`(() => {
     const region = Array.from((${uvPanel.toString()})().uv.regions)[0];
 
@@ -349,8 +353,10 @@ test("a re-sent create for a known region does not add a second preview mesh", a
     return creations;
   })()`) as number;
 
-  // The gallery also guards against a duplicate id, so assert the root cause
-  // too: without it the leak returns for any other region-created listener.
+  /*
+   * The gallery also guards against a duplicate id, so assert the root cause
+   * too: without it the leak returns for any other region-created listener.
+   */
   expect(created).toBe(0);
   expect(await previewMeshCount(page)).toBe(1);
   expect(await page.evaluate(

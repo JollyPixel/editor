@@ -212,9 +212,11 @@ describe("UVMap — restore", () => {
     );
   });
 
-  // A duplicated or echoed uv-region-created command used to emit a second
-  // region-created for a region the listener already tracked, which had the
-  // examples gallery build a second preview mesh and orphan the first.
+  /*
+   * A duplicated or echoed uv-region-created command used to emit a second
+   * region-created for a region the listener already tracked, which had the
+   * examples gallery build a second preview mesh and orphan the first.
+   */
   test("restoring a known id reports a state change, not a second creation", () => {
     const map = makeMap();
     const created: EventPayload<"region-created">[] = [];
@@ -316,8 +318,10 @@ describe("UVMap — clear", () => {
     const first = map.create({ width: 4, height: 4 });
     map.create({ width: 4, height: 4 });
 
-    // The voxel-map bridge puts a block region back as soon as it is
-    // deleted; clearing must not feed that re-insertion back into itself.
+    /*
+     * The voxel-map bridge puts a block region back as soon as it is
+     * deleted; clearing must not feed that re-insertion back into itself.
+     */
     let restored = 0;
     map.on("region-deleted", ({ region }) => {
       if (region.id === first.id && restored < 8) {

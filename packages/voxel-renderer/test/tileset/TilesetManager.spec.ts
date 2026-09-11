@@ -118,14 +118,19 @@ describe("TilesetManager UV lookup", () => {
 
     beforeEach(() => {
       manager = new TilesetManager();
-      manager.registerTexture(makeDef({ id: "terrain", tileSize: 16, cols: 4, rows: 4 }), mockTexture(64, 64));
+      manager.registerTexture(
+        makeDef({ id: "terrain", tileSize: 16, cols: 4, rows: 4 }),
+        mockTexture(64, 64)
+      );
     });
 
     it("tile (col=0, row=0): offsetU/offsetV/scale (inset by half-texel)", () => {
-      // halfTexel = 0.5 / (cols*tileSize) = 0.5 / 64 = 0.0078125
-      // offsetU = 0 + halfTexel = 0.0078125
-      // offsetV = 1 - (0+1)/4 + halfTexel = 0.7578125
-      // scaleU = scaleV = (tileSize - 1) / imgW = 15/64 = 0.234375
+      /*
+       * halfTexel = 0.5 / (cols*tileSize) = 0.5 / 64 = 0.0078125
+       * offsetU = 0 + halfTexel = 0.0078125
+       * offsetV = 1 - (0+1)/4 + halfTexel = 0.7578125
+       * scaleU = scaleV = (tileSize - 1) / imgW = 15/64 = 0.234375
+       */
       const uv = manager.atlas().uvFor(0, 0);
       assert.ok(approxEqual(uv.offsetU, 0.0078125));
       assert.ok(approxEqual(uv.offsetV, 0.7578125));

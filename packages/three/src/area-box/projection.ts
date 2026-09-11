@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
-// CONSTANTS
-// Reject angles below about four degrees, where the result diverges.
+/*
+ * CONSTANTS
+ * Reject angles below about four degrees, where the result diverges.
+ */
 const kParallelEpsilon = 0.005;
 
 const _delta = new THREE.Vector3();

@@ -169,8 +169,10 @@ function buildRow<
       field.value = detail.value;
     }
   }
-  // A scrub only ever fires jolly-input until release, so jolly-change alone would leave the
-  // number or slider static on screen for the whole drag.
+  /*
+   * A scrub only ever fires jolly-input until release, so jolly-change alone would leave the
+   * number or slider static on screen for the whole drag.
+   */
   if (options.liveInput) {
     field.addEventListener(
       "jolly-input",

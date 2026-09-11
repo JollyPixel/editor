@@ -488,8 +488,10 @@ describe("BlockUvBridge / selection at boot", () => {
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
     engine.blockRegistry.register(makeBlock(2, { col: 1, row: 0, tilesetId: "atlas" }));
 
-    // Boot state: block 1 is selected and emits no selectedBlockChange of
-    // its own, so nothing but the rebuild can apply the highlight.
+    /*
+     * Boot state: block 1 is selected and emits no selectedBlockChange of
+     * its own, so nothing but the rebuild can apply the highlight.
+     */
     editorState.brush.blockId = 1;
 
     const uv = makeUv();

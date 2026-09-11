@@ -203,8 +203,10 @@ export class FramePlot {
     context.font = "11px monospace";
     context.textAlign = "left";
     context.fillStyle = kColors.text;
-    // Every lane auto-scales to its window. Without the top printed, the same
-    // settings can draw two plots that look nothing alike.
+    /*
+     * Every lane auto-scales to its window. Without the top printed, the same
+     * settings can draw two plots that look nothing alike.
+     */
     context.fillText(`${lane.label} (top ${lane.format(scale)})`, 8, top + 15);
     if (last) {
       context.fillStyle = lane.color;
@@ -360,8 +362,10 @@ function createLanes(): Lane[] {
     {
       label: "steps per frame",
       value: ({ steps }) => steps,
-      // The budget is part of the scale, so its line is on screen before the
-      // first frame ever reaches it.
+      /*
+       * The budget is part of the scale, so its line is on screen before the
+       * first frame ever reaches it.
+       */
       scale: (samples, { maxStepsPerFrame = 0 }) => Math.max(
         2,
         maxStepsPerFrame,
@@ -370,8 +374,10 @@ function createLanes(): Lane[] {
       format: (value) => `${value}`,
       style: "bar",
       color: kColors.normal,
-      // Read from the live limit, never from the first panic in the window:
-      // that one reports the budget as it was, not as it is now.
+      /*
+       * Read from the live limit, never from the first panic in the window:
+       * that one reports the budget as it was, not as it is now.
+       */
       reference: (_samples, { maxStepsPerFrame }) => (
         maxStepsPerFrame === undefined ?
           null :

@@ -63,7 +63,10 @@ function createDescriptor(
 describe("WorkerExtensionProxy — readiness", () => {
   test("buffers a dispatch until the worker signals ready, then sends it", async() => {
     const { factory, transports } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+    const proxy = new WorkerExtensionProxy(
+      createDescriptor(),
+      { logger: createLogger(), transportFactory: factory }
+    );
 
     const pending = proxy.onMessage("A", { hello: "world" }, createContext());
     await flushMacrotask();
@@ -85,7 +88,10 @@ describe("WorkerExtensionProxy — readiness", () => {
 describe("WorkerExtensionProxy — hooks the worker does not implement", () => {
   test("resolves without posting a dispatch", async() => {
     const { factory, transports } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+    const proxy = new WorkerExtensionProxy(
+      createDescriptor(),
+      { logger: createLogger(), transportFactory: factory }
+    );
 
     transports[0].simulateMessage(readyMessage(["onMessage"]));
 
@@ -106,7 +112,10 @@ describe("WorkerExtensionProxy — hooks the worker does not implement", () => {
 
   test("still dispatches the hooks the worker does implement", async() => {
     const { factory, transports } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+    const proxy = new WorkerExtensionProxy(
+      createDescriptor(),
+      { logger: createLogger(), transportFactory: factory }
+    );
 
     transports[0].simulateMessage(readyMessage(["onMessage"]));
 
@@ -135,67 +144,88 @@ describe("WorkerExtensionProxy — protocols", () => {
 });
 
 describe("WorkerExtensionProxy — context-call routing", () => {
-  test("routes an eventStore.append context-call to the real RoomContext for the in-flight dispatch", async() => {
-    const { factory, transports } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+  test(
+    "routes an eventStore.append context-call to the real RoomContext for the in-flight dispatch",
+    async() => {
+      const { factory, transports } = createFakeTransportFactory();
+      const proxy = new WorkerExtensionProxy(
+        createDescriptor(),
+        { logger: createLogger(), transportFactory: factory }
+      );
 
-    const appended: unknown[] = [];
-    const context = createContext({
-      append: (input) => {
-        appended.push(input);
+      const appended: unknown[] = [];
+      const context = createContext({
+        append: (input) => {
+          appended.push(input);
 
-        return Promise.resolve(true);
-      }
-    });
+          return Promise.resolve(true);
+        }
+      });
 
-    const pending = proxy.onMessage("A", {}, context);
-    transports[0].simulateMessage(readyMessage());
-    await flushMacrotask();
-    const dispatchMsg = transports[0].sent[0] as { id: string; };
+      const pending = proxy.onMessage("A", {}, context);
+      transports[0].simulateMessage(readyMessage());
+      await flushMacrotask();
+      const dispatchMsg = transports[0].sent[0] as { id: string; };
 
-    transports[0].simulateMessage({
-      type: "context-call",
-      id: "call-1",
-      method: "eventStore.append",
-      args: [{ assetType: "texture", assetId: "a1", eventType: "e", eventData: {} }]
-    });
-    await flushMacrotask();
+      transports[0].simulateMessage({
+        type: "context-call",
+        id: "call-1",
+        method: "eventStore.append",
+        args: [{ assetType: "texture", assetId: "a1", eventType: "e", eventData: {} }]
+      });
+      await flushMacrotask();
 
-    assert.equal(appended.length, 1);
-    const response = transports[0].sent.at(-1) as { type: string; id: string; ok: boolean; value: boolean; };
-    assert.equal(response.type, "context-response");
-    assert.equal(response.ok, true);
-    assert.equal(response.value, true);
+      assert.equal(appended.length, 1);
+      const response = transports[0].sent.at(-1) as {
+        type: string;
+        id: string;
+        ok: boolean;
+        value: boolean;
+      };
+      assert.equal(response.type, "context-response");
+      assert.equal(response.ok, true);
+      assert.equal(response.value, true);
 
-    transports[0].simulateMessage({ type: "dispatch-result", id: dispatchMsg.id, ok: true });
-    await pending;
-  });
+      transports[0].simulateMessage({ type: "dispatch-result", id: dispatchMsg.id, ok: true });
+      await pending;
+    }
+  );
 
-  test("room.broadcast and client.send context-calls use the stable broadcaster, not the in-flight dispatch", async() => {
-    const { factory, transports } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+  test(
+    "room.broadcast and client.send context-calls use the stable broadcaster, not the in-flight dispatch",
+    async() => {
+      const { factory, transports } = createFakeTransportFactory();
+      const proxy = new WorkerExtensionProxy(
+        createDescriptor(),
+        { logger: createLogger(), transportFactory: factory }
+      );
 
-    const broadcasts: unknown[] = [];
-    const sends: [string, unknown][] = [];
-    const context = createContext();
-    context.room.broadcast = (payload) => broadcasts.push(payload);
-    context.room.sendTo = (clientId, payload) => sends.push([clientId, payload]);
+      const broadcasts: unknown[] = [];
+      const sends: [string, unknown][] = [];
+      const context = createContext();
+      context.room.broadcast = (payload) => broadcasts.push(payload);
+      context.room.sendTo = (clientId, payload) => sends.push([clientId, payload]);
 
-    const pending = proxy.onMessage("A", {}, context);
-    transports[0].simulateMessage(readyMessage());
-    await flushMacrotask();
-    const dispatchMsg = transports[0].sent[0] as { id: string; };
+      const pending = proxy.onMessage("A", {}, context);
+      transports[0].simulateMessage(readyMessage());
+      await flushMacrotask();
+      const dispatchMsg = transports[0].sent[0] as { id: string; };
 
-    transports[0].simulateMessage({ type: "context-call", method: "room.broadcast", args: [{ hello: "world" }] });
-    transports[0].simulateMessage({ type: "context-call", method: "client.send", args: ["A", { type: "ack" }] });
-    await flushMacrotask();
+      transports[0].simulateMessage(
+        { type: "context-call", method: "room.broadcast", args: [{ hello: "world" }] }
+      );
+      transports[0].simulateMessage(
+        { type: "context-call", method: "client.send", args: ["A", { type: "ack" }] }
+      );
+      await flushMacrotask();
 
-    assert.deepEqual(broadcasts, [{ hello: "world" }]);
-    assert.deepEqual(sends, [["A", { type: "ack" }]]);
+      assert.deepEqual(broadcasts, [{ hello: "world" }]);
+      assert.deepEqual(sends, [["A", { type: "ack" }]]);
 
-    transports[0].simulateMessage({ type: "dispatch-result", id: dispatchMsg.id, ok: true });
-    await pending;
-  });
+      transports[0].simulateMessage({ type: "dispatch-result", id: dispatchMsg.id, ok: true });
+      await pending;
+    }
+  );
 });
 
 describe("WorkerExtensionProxy — crash and restart", () => {
@@ -230,32 +260,38 @@ describe("WorkerExtensionProxy — crash and restart", () => {
     assert.equal(transports.length, 2);
   });
 
-  test("exceeding the restart cap marks the extension dead; further dispatches are dropped without spawning", async() => {
-    const { factory, transports } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(
-      createDescriptor({ rpcTimeoutMs: 5, maxRestarts: 1, restartWindowMs: 60_000 }),
-      { logger: createLogger(), transportFactory: factory }
-    );
+  test(
+    "exceeding the restart cap marks the extension dead; further dispatches are dropped without spawning",
+    async() => {
+      const { factory, transports } = createFakeTransportFactory();
+      const proxy = new WorkerExtensionProxy(
+        createDescriptor({ rpcTimeoutMs: 5, maxRestarts: 1, restartWindowMs: 60_000 }),
+        { logger: createLogger(), transportFactory: factory }
+      );
 
-    const first = proxy.onMessage("A", {}, createContext());
-    transports[0].simulateMessage(readyMessage());
-    await assert.rejects(first, /timed out/);
-    assert.equal(transports.length, 2);
+      const first = proxy.onMessage("A", {}, createContext());
+      transports[0].simulateMessage(readyMessage());
+      await assert.rejects(first, /timed out/);
+      assert.equal(transports.length, 2);
 
-    const second = proxy.onMessage("A", {}, createContext());
-    transports[1].simulateMessage(readyMessage());
-    await assert.rejects(second, /timed out/);
-    assert.equal(transports.length, 2);
+      const second = proxy.onMessage("A", {}, createContext());
+      transports[1].simulateMessage(readyMessage());
+      await assert.rejects(second, /timed out/);
+      assert.equal(transports.length, 2);
 
-    await proxy.onMessage("A", {}, createContext());
-    assert.equal(transports.length, 2);
-  });
+      await proxy.onMessage("A", {}, createContext());
+      assert.equal(transports.length, 2);
+    }
+  );
 });
 
 describe("WorkerExtensionProxy — close", () => {
   test("terminates the current transport", async() => {
     const { factory, transports } = createFakeTransportFactory();
-    const proxy = new WorkerExtensionProxy(createDescriptor(), { logger: createLogger(), transportFactory: factory });
+    const proxy = new WorkerExtensionProxy(
+      createDescriptor(),
+      { logger: createLogger(), transportFactory: factory }
+    );
 
     await proxy.close();
     assert.equal(transports[0].terminated, true);

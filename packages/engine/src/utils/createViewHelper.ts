@@ -14,9 +14,11 @@ export function createViewHelper(
     world.renderer.canvas
   );
   world.renderer.onDraw(() => {
-    // ViewHelper's runtime checks `renderer.isWebGPURenderer` and supports
-    // WebGPURenderer, but @types/three's declaration hasn't caught up and
-    // still narrows `render()` to WebGLRenderer only.
+    /*
+     * ViewHelper's runtime checks `renderer.isWebGPURenderer` and supports
+     * WebGPURenderer, but @types/three's declaration hasn't caught up and
+     * still narrows `render()` to WebGLRenderer only.
+     */
     helper.render(world.renderer.getSource() as unknown as Parameters<ViewHelper["render"]>[0]);
   });
 

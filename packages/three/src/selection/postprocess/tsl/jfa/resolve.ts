@@ -55,11 +55,20 @@ export function buildJfaRingComposite(
   isolated: JfaRingChannel
 ) {
   const {
-    resolutionNode, ringThicknessNode, borderThicknessNode, isolatedFillOpacityNode, hasPriorityNode, hasIsolatedNode
+    resolutionNode,
+    ringThicknessNode,
+    borderThicknessNode,
+    isolatedFillOpacityNode,
+    hasPriorityNode,
+    hasIsolatedNode
   } = uniforms;
   const noFillNode = float(0);
   const ringOnlyShape: JfaRingShape = { ringThicknessNode, borderThicknessNode, fillOpacityNode: noFillNode };
-  const isolatedShape: JfaRingShape = { ringThicknessNode, borderThicknessNode, fillOpacityNode: isolatedFillOpacityNode };
+  const isolatedShape: JfaRingShape = {
+    ringThicknessNode,
+    borderThicknessNode,
+    fillOpacityNode: isolatedFillOpacityNode
+  };
 
   return Fn(() => {
     const uvNode = uv();

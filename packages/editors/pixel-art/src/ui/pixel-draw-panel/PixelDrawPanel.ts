@@ -106,9 +106,6 @@ export class PixelDrawPanel extends LitElement {
       "colorpicked",
       this.#onColorPicked
     );
-    // "auto" resolves via CSS, but the canvas is JS-painted (see
-    // #syncCanvasBackground) — it needs its own live-toggle hookup to track
-    // an OS scheme change mid-session instead of the CSS cascade doing it.
     this.#prefersDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
     this.#prefersDarkQuery.addEventListener("change", this.#onPrefersColorSchemeChange);
     this.#syncAmbientTheme();
@@ -186,7 +183,7 @@ export class PixelDrawPanel extends LitElement {
   }
 
   /**
-    * A pick spans two controllers: color state and picker-armed state.
+   * A pick spans two controllers: color state and picker-armed state.
    */
   readonly #onColorPicked = (
     event: CustomEvent<ColorChangeDetail>
@@ -266,7 +263,9 @@ export class PixelDrawPanel extends LitElement {
           .selectShape=${this.#toolOptions.selectShape}
           @mode-change=${(event: CustomEvent<Mode>) => this.#toolOptions.setMode(event.detail)}
           @pick-color-toggle=${() => this.#toolOptions.togglePickColor()}
-          @mode-variant-change=${(event: CustomEvent<ModeVariantDetail>) => this.#onModeVariantChange(event.detail)}
+          @mode-variant-change=${(event: CustomEvent<ModeVariantDetail>) => {
+            this.#onModeVariantChange(event.detail);
+          }}
         ></mode-rail>
 
         <div class="rail-divider"></div>
@@ -274,9 +273,13 @@ export class PixelDrawPanel extends LitElement {
         <color-picker-rail
           part="color-picker"
           .foreground=${this.#colors.foreground}
-          .background=${this.#colors.background}
-          @foreground-change=${(event: CustomEvent<ColorChangeDetail>) => this.#colors.onForegroundChange(event)}
-          @background-change=${(event: CustomEvent<ColorChangeDetail>) => this.#colors.onBackgroundChange(event)}
+          @foreground-change=${(event: CustomEvent<ColorChangeDetail>) => {
+            this.#colors.onForegroundChange(event);
+          }}
+          @background-change=${(event: CustomEvent<ColorChangeDetail>) => {
+            this.#colors.onBackgroundChange(event);
+          }}
+            this.#colors.onBackgroundChange(event)}
           @swap=${() => this.#colors.swap()}
         ></color-picker-rail>
       </div>

@@ -1,8 +1,10 @@
 // Import Internal Dependencies
 import type { FaceRanges } from "../../../../src/mesh-texturing/types.ts";
 
-// CONSTANTS
-// THREE.BoxGeometry emits its six faces in this order, four vertices each.
+/*
+ * CONSTANTS
+ * THREE.BoxGeometry emits its six faces in this order, four vertices each.
+ */
 const kBoxFaceRanges: FaceRanges = {
   right: [{ start: 0, count: 4 }],
   left: [{ start: 4, count: 4 }],

@@ -54,8 +54,10 @@ export class FlatWorldBrush extends ActorComponent {
     this.#engine = options.engine;
     this.#camera = options.camera;
 
-    // Catches clicks aimed at a hole punched through the floor, so a cell can
-    // always be built back.
+    /*
+     * Catches clicks aimed at a hole punched through the floor, so a cell can
+     * always be built back.
+     */
     this.#plane = new THREE.Mesh(
       new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE)
         .rotateX(-Math.PI / 2)
@@ -77,8 +79,10 @@ export class FlatWorldBrush extends ActorComponent {
       return;
     }
 
-    // The ground plane has no voxel behind it, so there's nothing to sit the
-    // highlight over: fall back to the placement cell, same as a real hit.
+    /*
+     * The ground plane has no voxel behind it, so there's nothing to sit the
+     * highlight over: fall back to the placement cell, same as a real hit.
+     */
     const isGroundHit = hit.object === this.#plane;
     const placeTarget = FlatWorldBrush.#hitToVoxelPos(hit, true);
     const hitTarget = isGroundHit ? placeTarget : FlatWorldBrush.#hitToVoxelPos(hit, false);

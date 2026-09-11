@@ -1,6 +1,8 @@
-// DOM element factories shared across the input and canvas specs. happy-dom
-// has no layout engine, so getBoundingClientRect must be stubbed wherever the
-// code under test measures an element.
+/*
+ * DOM element factories shared across the input and canvas specs. happy-dom
+ * has no layout engine, so getBoundingClientRect must be stubbed wherever the
+ * code under test measures an element.
+ */
 
 /**
  * Stubs getBoundingClientRect on an element (happy-dom returns zeros). Anchored

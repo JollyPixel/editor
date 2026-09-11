@@ -234,8 +234,10 @@ describe("PeerFloatingSelections — set + draw", () => {
         blankSource: false
       }
     );
-    // The buffer changes after the gesture started; the cached snapshot should
-    // still reflect the original red pixel, not this new one.
+    /*
+     * The buffer changes after the gesture started; the cached snapshot should
+     * still reflect the original red pixel, not this new one.
+     */
     buf.drawPixels([{ x: 0, y: 0 }], kBlue);
     ghosts.set(
       "peer-A",

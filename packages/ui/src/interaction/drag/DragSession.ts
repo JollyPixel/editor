@@ -179,8 +179,10 @@ export function startDragSession(
     if (visuals) {
       const rect = source.getBoundingClientRect();
       const element = ghost ? ghostElement?.() ?? null : null;
-      // Nothing has moved yet, so the source still sits where it was grabbed
-      // and the offset taken at pointerdown still holds.
+      /*
+       * Nothing has moved yet, so the source still sits where it was grabbed
+       * and the offset taken at pointerdown still holds.
+       */
       if (element !== null) {
         ghostX = originX - rect.x;
         ghostY = originY - rect.y;

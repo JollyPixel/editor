@@ -4,10 +4,12 @@ import {
   toRGBA8
 } from "@jolly-pixel/color";
 
-// Canvas 2D fixture. happy-dom provides real <canvas> elements (events,
-// sizing, DOM tree, style) but no 2D rendering context, so installCanvasMock
-// patches getContext("2d") to return a pixel-backed MockCanvas2DContext. Only
-// the context is emulated; the element itself is happy-dom's own.
+/*
+ * Canvas 2D fixture. happy-dom provides real <canvas> elements (events,
+ * sizing, DOM tree, style) but no 2D rendering context, so installCanvasMock
+ * patches getContext("2d") to return a pixel-backed MockCanvas2DContext. Only
+ * the context is emulated; the element itself is happy-dom's own.
+ */
 
 // Helpers
 function parseCSSColor(
@@ -91,8 +93,10 @@ export class MockCanvas2DContext {
     return this as unknown as CanvasRenderingContext2D;
   }
 
-  // Setting canvas.width/height clears the canvas in a browser; mirror that by
-  // reallocating a zeroed buffer whenever the live dimensions change.
+  /*
+   * Setting canvas.width/height clears the canvas in a browser; mirror that by
+   * reallocating a zeroed buffer whenever the live dimensions change.
+   */
   #syncSize(): void {
     if (
       this.canvas.width === this.#width &&

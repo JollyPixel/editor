@@ -83,6 +83,8 @@ export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
   protected renderValue(): TemplateResult {
     const point = this.#point;
     const label = this.label === "" ? "Point" : this.label;
+    const padX = point ? this.#ratio(point.x) : 0.5;
+    const padY = point ? this.#ratio(point.y) : 0.5;
 
     return html`
       <div
@@ -95,7 +97,7 @@ export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
             : `${formatNumber(point.x, this.step)}, ${formatNumber(point.y, this.step)}`
         }
         tabindex=${this.editable ? "0" : "-1"}
-        style="--jolly-pad-x:${point ? this.#ratio(point.x) : 0.5}; --jolly-pad-y:${point ? this.#ratio(point.y) : 0.5}"
+        style="--jolly-pad-x:${padX}; --jolly-pad-y:${padY}"
         ?data-mixed=${point === undefined}
         @pointerdown=${this.#onPointerDown}
         @keydown=${this.#onKeyDown}

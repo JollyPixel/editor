@@ -72,9 +72,11 @@ describe("LastWriteWinsResolver — same client (undo/redo replay ordering)", ()
   test("accepts even when the incoming timestamp is older than the existing one", () => {
     const resolver = new LastWriteWinsResolver();
 
-    // Mirrors undo replaying two overlapping edits newest-first: the first
-    // replay (of the more recent edit) lands with the newer timestamp, then
-    // the second replay (of the older edit) arrives with an older one.
+    /*
+     * Mirrors undo replaying two overlapping edits newest-first: the first
+     * replay (of the more recent edit) lands with the newer timestamp, then
+     * the second replay (of the older edit) arrives with an older one.
+     */
     const existing = header({ clientId: "A", timestamp: 2000 });
     const incoming = header({ clientId: "A", timestamp: 500 });
 
@@ -89,11 +91,14 @@ describe("LastWriteWinsResolver — same client (undo/redo replay ordering)", ()
     assert.strictEqual(resolver.resolve({ incoming, existing }), "accept");
   });
 
-  test("a different client with an older timestamp is still rejected (short-circuit is same-client only)", () => {
-    const resolver = new LastWriteWinsResolver();
-    const existing = header({ clientId: "A", timestamp: 2000 });
-    const incoming = header({ clientId: "B", timestamp: 500 });
+  test(
+    "a different client with an older timestamp is still rejected (short-circuit is same-client only)",
+    () => {
+      const resolver = new LastWriteWinsResolver();
+      const existing = header({ clientId: "A", timestamp: 2000 });
+      const incoming = header({ clientId: "B", timestamp: 500 });
 
-    assert.strictEqual(resolver.resolve({ incoming, existing }), "reject");
-  });
+      assert.strictEqual(resolver.resolve({ incoming, existing }), "reject");
+    }
+  );
 });

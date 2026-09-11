@@ -121,10 +121,18 @@ export function bindSelectionAndPeerPanel(
     isolatedFillOpacity: appearance.highlightJfa.isolatedFillOpacity
   };
   only(["highlightJfa"], peerFolder
-    .addBinding(highlightJfaSettings, "ringThickness", { label: "ring thickness (px)", min: 1, max: 10, step: 1 })
+    .addBinding(
+      highlightJfaSettings,
+      "ringThickness",
+      { label: "ring thickness (px)", min: 1, max: 10, step: 1 }
+    )
     .on("change", ({ value }) => selection.configure({ highlightJfa: { ringThickness: value } })));
   only(["highlightJfa"], peerFolder
-    .addBinding(highlightJfaSettings, "borderThickness", { label: "border thickness (px)", min: 0, max: 10, step: 1 })
+    .addBinding(
+      highlightJfaSettings,
+      "borderThickness",
+      { label: "border thickness (px)", min: 0, max: 10, step: 1 }
+    )
     .on("change", ({ value }) => selection.configure({ highlightJfa: { borderThickness: value } })));
   only(["highlightJfa"], peerFolder
     .addBinding(highlightJfaSettings, "isolatedFillOpacity", {

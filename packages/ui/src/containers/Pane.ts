@@ -354,8 +354,10 @@ export class PaneElement extends LitElement {
       return rect.height;
     }
 
-    // Folded content measures nothing, and reordered children are not in
-    // document order, so the header is the floor and every child is asked.
+    /*
+     * Folded content measures nothing, and reordered children are not in
+     * document order, so the header is the floor and every child is asked.
+     */
     let bottom = this._header?.getBoundingClientRect().bottom ?? rect.top;
     for (const child of children) {
       bottom = Math.max(bottom, contentBottom(child));

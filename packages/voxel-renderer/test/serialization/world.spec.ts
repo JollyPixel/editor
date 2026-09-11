@@ -191,8 +191,7 @@ describe("deserializeVoxelWorld", () => {
         }]
       },
       world
-    )
-    );
+    ));
 
     // Only the valid key "0,0,0" should be present
     assert.ok(world.getVoxelAt({ x: 0, y: 0, z: 0 }) !== undefined);

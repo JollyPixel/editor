@@ -78,7 +78,8 @@ export class PeerSelectionVisibility extends EventTarget {
   update(): void {
     this.#camera.updateMatrixWorld();
     this.#viewProjectionMatrix.multiplyMatrices(
-      this.#camera.projectionMatrix, this.#camera.matrixWorldInverse
+      this.#camera.projectionMatrix,
+      this.#camera.matrixWorldInverse
     );
     this.#frustum.setFromProjectionMatrix(this.#viewProjectionMatrix);
     this.#camera.getWorldPosition(this.#cameraPosition);

@@ -125,8 +125,10 @@ test.describe("DockLayout persistence", () => {
     }
     await expect(dock).toHaveAttribute("empty");
 
-    // The dock kept its place in the flow, so its band is where it collapsed
-    // to, not against the viewport edge the page may not even start at.
+    /*
+     * The dock kept its place in the flow, so its band is where it collapsed
+     * to, not against the viewport edge the page may not even start at.
+     */
     const edge = await boxOf(dock);
     await dragTo(
       page,

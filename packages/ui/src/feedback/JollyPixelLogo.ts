@@ -1,9 +1,12 @@
 /* eslint-disable @stylistic/max-len */
-// Canonical JollyPixel SVG, embedded so runtime consumers need no public asset.
+
 // Import Third-party Dependencies
 import { svg } from "lit";
 
 // CONSTANTS
+/*
+ * Canonical JollyPixel SVG, embedded so runtime consumers need no public asset.
+ */
 export const JOLLY_PIXEL_LOGO = svg`
 <svg class="logo" role="img" aria-label="JollyPixel" id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 252 252">
   <defs>

@@ -33,6 +33,14 @@ function createPass(
   );
 }
 
+function createInstancedMesh(): THREE.InstancedMesh {
+  return new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial(),
+    10
+  );
+}
+
 describe("constructor", () => {
   test("defaults edgeThickness to 1 and edgeGlow to 0", () => {
     const highlight = createPass();
@@ -166,7 +174,7 @@ describe("entries", () => {
 
   test("accepts a single instanced entry (InstancedMesh + instanceId)", () => {
     const highlight = createPass();
-    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    const instancedMesh = createInstancedMesh();
 
     assert.doesNotThrow(() => {
       highlight.entries = [{ target: instancedMesh, instanceId: 3, color: "#ff0000" }];
@@ -175,7 +183,7 @@ describe("entries", () => {
 
   test("accepts multiple instanced entries on the same InstancedMesh", () => {
     const highlight = createPass();
-    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    const instancedMesh = createInstancedMesh();
 
     assert.doesNotThrow(() => {
       highlight.entries = [
@@ -188,7 +196,7 @@ describe("entries", () => {
 
   test("accepts a mix of instanced and whole-object entries", () => {
     const highlight = createPass();
-    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    const instancedMesh = createInstancedMesh();
     const wholeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
     assert.doesNotThrow(() => {
@@ -201,7 +209,7 @@ describe("entries", () => {
 
   test("accepts a priority instanced entry", () => {
     const highlight = createPass();
-    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    const instancedMesh = createInstancedMesh();
 
     assert.doesNotThrow(() => {
       highlight.entries = [
@@ -212,7 +220,7 @@ describe("entries", () => {
 
   test("rebuilding entries for the same InstancedMesh across calls does not throw", () => {
     const highlight = createPass();
-    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    const instancedMesh = createInstancedMesh();
 
     highlight.entries = [{ target: instancedMesh, instanceId: 0, color: "#ff0000" }];
     assert.doesNotThrow(() => {
@@ -270,7 +278,7 @@ describe("dispose", () => {
 
   test("does not throw after instanced entries were set", () => {
     const highlight = createPass();
-    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    const instancedMesh = createInstancedMesh();
     highlight.entries = [{ target: instancedMesh, instanceId: 0, color: "#ff0000", priority: true }];
 
     assert.doesNotThrow(() => highlight.dispose());

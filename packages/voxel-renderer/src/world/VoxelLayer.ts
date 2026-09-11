@@ -20,11 +20,13 @@ import type {
   VoxelCoord
 } from "./types.ts";
 
-// CONSTANTS
-// Chunk coordinates are packed into a single int32 so the chunk map keeps
-// Smi keys: 11 bits for X and Z, 10 for Y, since voxel worlds are far wider
-// than they are tall. Creating a chunk outside that range throws rather than
-// aliasing onto another one.
+/*
+ * CONSTANTS
+ * Chunk coordinates are packed into a single int32 so the chunk map keeps
+ * Smi keys: 11 bits for X and Z, 10 for Y, since voxel worlds are far wider
+ * than they are tall. Creating a chunk outside that range throws rather than
+ * aliasing onto another one.
+ */
 const kChunkBitsY = 10;
 const kChunkBitsXZ = 11;
 const kChunkBiasY = 1 << (kChunkBitsY - 1);
@@ -118,14 +120,16 @@ export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
   /**
    * Draw order;
    * higher values render above lower ones.
-   **/
+   *
+   */
   order: number;
   /** Size of one voxel chunk (required). */
   chunkSize: number;
   /**
    * World-space offset applied to voxels.
    * @default { x: 0, y: 0, z: 0 }
-   **/
+   *
+   */
   offset?: VoxelCoord;
 }
 
@@ -291,8 +295,10 @@ export class VoxelLayer {
     cy: number,
     cz: number
   ): VoxelChunk | undefined {
-    // No chunk can exist outside the packable range, so this answers rather
-    // than throwing — `markChunkDirty` walks past the edge of the world.
+    /*
+     * No chunk can exist outside the packable range, so this answers rather
+     * than throwing — `markChunkDirty` walks past the edge of the world.
+     */
     if (!inChunkRange(cx, cy, cz)) {
       return undefined;
     }

@@ -149,58 +149,61 @@ test.describe("quaternion: Euler entry", () => {
 });
 
 test.describe("transform: independent sub-rows", () => {
-  test("relays scale's own commit as one merged change, untouched by position or rotation", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/transform",
-      chrome: "off"
-    });
-
-    // Count only the transform's re-dispatched event.
-    await page.evaluate(() => {
-      function deepQuerySelector(
-        root: ParentNode,
-        selector: string
-      ): Element | null {
-        const direct = root.querySelector(selector);
-        if (direct !== null) {
-          return direct;
-        }
-
-        for (const host of root.querySelectorAll("*")) {
-          const found = host.shadowRoot === null || host.shadowRoot === undefined
-            ? null
-            : deepQuerySelector(host.shadowRoot, selector);
-          if (found !== null) {
-            return found;
-          }
-        }
-
-        return null;
-      }
-
-      const transform = deepQuerySelector(document, "jolly-transform");
-      window.__changes = [];
-      transform?.addEventListener("jolly-change", (event) => {
-        // composedPath()[0] preserves the origin across the shadow boundary.
-        if (event.composedPath()[0] === transform) {
-          window.__changes?.push((event as CustomEvent).detail.value);
-        }
+  test(
+    "relays scale's own commit as one merged change, untouched by position or rotation",
+    async({ page }) => {
+      await gotoGallery(page, {
+        example: "math/transform",
+        chrome: "off"
       });
-    });
 
-    const scaleX = page.locator("jolly-transform jolly-vector3[label='Scale']")
-      .locator('.axis-box[data-axis="x"] input');
-    await scaleX.fill("2");
-    await scaleX.press("Enter");
+      // Count only the transform's re-dispatched event.
+      await page.evaluate(() => {
+        function deepQuerySelector(
+          root: ParentNode,
+          selector: string
+        ): Element | null {
+          const direct = root.querySelector(selector);
+          if (direct !== null) {
+            return direct;
+          }
 
-    expect(await changes(page)).toEqual([
-      {
-        position: { x: 0, y: 1, z: 0 },
-        rotation: { x: 0, y: 0, z: 0, w: 1 },
-        scale: { x: 2, y: 1, z: 1 }
-      }
-    ]);
-  });
+          for (const host of root.querySelectorAll("*")) {
+            const found = host.shadowRoot === null || host.shadowRoot === undefined
+              ? null
+              : deepQuerySelector(host.shadowRoot, selector);
+            if (found !== null) {
+              return found;
+            }
+          }
+
+          return null;
+        }
+
+        const transform = deepQuerySelector(document, "jolly-transform");
+        window.__changes = [];
+        transform?.addEventListener("jolly-change", (event) => {
+          // composedPath()[0] preserves the origin across the shadow boundary.
+          if (event.composedPath()[0] === transform) {
+            window.__changes?.push((event as CustomEvent).detail.value);
+          }
+        });
+      });
+
+      const scaleX = page.locator("jolly-transform jolly-vector3[label='Scale']")
+        .locator('.axis-box[data-axis="x"] input');
+      await scaleX.fill("2");
+      await scaleX.press("Enter");
+
+      expect(await changes(page)).toEqual([
+        {
+          position: { x: 0, y: 1, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 2, y: 1, z: 1 }
+        }
+      ]);
+    }
+  );
 });
 
 test.describe("transform: stacked label position", () => {

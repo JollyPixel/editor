@@ -17,9 +17,11 @@ import type {
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PeerStrokePixel, Vec2 } from "#src/types.ts";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------------------
+ */
 
 interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
   presenceUpdates: network.PeerMetadata[];
@@ -94,7 +96,11 @@ function createMockRoom(): MockRoom {
     simulateStrokeCommand(positions) {
       emit("message", {
         type: "command",
-        data: { clientId: "peer-B", action: "stroke", metadata: { positions, color: { r: 0, g: 0, b: 0, a: 255 } } }
+        data: {
+          clientId: "peer-B",
+          action: "stroke",
+          metadata: { positions, color: { r: 0, g: 0, b: 0, a: 255 } }
+        }
       });
     },
     simulateWholeCanvasCommand() {
@@ -163,8 +169,10 @@ function createMockCanvas(): MockCanvas {
   return canvas;
 }
 
-// PixelStrokeGhostSync is typed against the concrete PixelArtCanvas, but only
-// uses the structural subset MockCanvas implements.
+/*
+ * PixelStrokeGhostSync is typed against the concrete PixelArtCanvas, but only
+ * uses the structural subset MockCanvas implements.
+ */
 function asHost(
   canvas: MockCanvas
 ): PixelArtCanvas {
@@ -179,9 +187,11 @@ function nextFrame(): Promise<void> {
   });
 }
 
-// ---------------------------------------------------------------------------
-// attach / detach
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * attach / detach
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelStrokeGhostSync — attach", () => {
   test("sets canvas.onStrokeProgress", () => {
@@ -273,9 +283,11 @@ describe("PixelStrokeGhostSync — detach", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Local progress -> presence (rAF-gated)
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Local progress -> presence (rAF-gated)
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelStrokeGhostSync — local stroke reporting", () => {
   test("forwards local stroke pixels as a presence update on the next frame", async() => {
@@ -292,21 +304,26 @@ describe("PixelStrokeGhostSync — local stroke reporting", () => {
     assert.deepStrictEqual(room.presenceUpdates[0], { strokeGhost: [kPixel] });
   });
 
-  test("an empty-array progress report (gesture just committed) cancels a pending pre-commit send", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new PixelStrokeGhostSync({ room });
-    sync.attach(asHost(canvas));
+  test(
+    "an empty-array progress report (gesture just committed) cancels a pending pre-commit send",
+    async() => {
+      const room = createMockRoom();
+      const canvas = createMockCanvas();
+      const sync = new PixelStrokeGhostSync({ room });
+      sync.attach(asHost(canvas));
 
-    // Mirrors the real race: a stroke tick queues an rAF send, then the
-    // synchronous commit (endStroke/commit/handleEnd) reports [] before that
-    // frame fires — the stale pre-commit pixels must never reach the wire.
-    canvas.triggerProgress([kPixel]);
-    canvas.triggerProgress([]);
+      /*
+       * Mirrors the real race: a stroke tick queues an rAF send, then the
+       * synchronous commit (endStroke/commit/handleEnd) reports [] before that
+       * frame fires — the stale pre-commit pixels must never reach the wire.
+       */
+      canvas.triggerProgress([kPixel]);
+      canvas.triggerProgress([]);
 
-    await nextFrame();
-    assert.strictEqual(room.presenceUpdates.length, 0);
-  });
+      await nextFrame();
+      assert.strictEqual(room.presenceUpdates.length, 0);
+    }
+  );
 
   test("coalesces multiple updates within the same frame into a single send", async() => {
     const room = createMockRoom();
@@ -337,9 +354,11 @@ describe("PixelStrokeGhostSync — local stroke reporting", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Remote peers -> overlay
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Remote peers -> overlay
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelStrokeGhostSync — remote peers", () => {
   test("a strokeGhost presence patch updates the overlay", () => {
@@ -406,9 +425,11 @@ describe("PixelStrokeGhostSync — remote peers", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Reconciliation with the authoritative pipeline
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Reconciliation with the authoritative pipeline
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelStrokeGhostSync — reconciliation", () => {
   test("an incoming stroke command clears ghosts by overlapping pixel, not by clientId", () => {
@@ -460,9 +481,11 @@ describe("PixelStrokeGhostSync — reconciliation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// destroy
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * destroy
+ * ---------------------------------------------------------------------------
+ */
 
 describe("PixelStrokeGhostSync — destroy", () => {
   test("removes only its own listeners and detaches the canvas", () => {

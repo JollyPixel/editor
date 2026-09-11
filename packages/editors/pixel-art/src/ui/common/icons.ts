@@ -39,9 +39,11 @@ export type IconName =
   | "label"
   | "eye";
 
-// Registers pixel-art-specific glyphs into @jolly-pixel/ui's shared icon
-// registry ("eye" reuses the ui builtin as-is).
-// Pan hand.
+/*
+ * Registers pixel-art-specific glyphs into @jolly-pixel/ui's shared icon
+ * registry ("eye" reuses the ui builtin as-is).
+ * Pan hand.
+ */
 registerIcon("move", svg`
     <path
       d="M6 9v5"
@@ -143,8 +145,10 @@ registerIcon("fill", svg`
     <circle cx="18.5" cy="19.5" r="1.9" fill="currentColor" />
   `);
 
-// Bucket's neighbor fill, generalized: every matching cell, not just the
-// connected region.
+/*
+ * Bucket's neighbor fill, generalized: every matching cell, not just the
+ * connected region.
+ */
 registerIcon("fillGlobal", svg`
     <rect x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
     <rect x="13" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
