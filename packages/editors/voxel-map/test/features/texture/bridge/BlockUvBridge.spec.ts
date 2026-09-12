@@ -146,6 +146,29 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
       bridge.dispose();
     }
   });
+
+  it("renames the region when the block definition is renamed", () => {
+    const { engine } = makeFakeVoxelEngine();
+    engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, engine);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      assert.equal(uv.get("block-1")?.name, "Block1");
+
+      engine.blockRegistry.register({
+        ...makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }),
+        name: "Grass"
+      });
+      editorState.world.emit("blockRegistryChanged");
+
+      assert.equal(uv.get("block-1")?.name, "Grass");
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
 });
 
 describe("BlockUvBridge / region-moved", () => {

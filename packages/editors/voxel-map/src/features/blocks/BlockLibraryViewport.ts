@@ -78,8 +78,9 @@ export class BlockLibraryViewport extends LitElement {
 
     .highlight {
       position: absolute;
-      border-radius: var(--jolly-radius-sm, 3px);
+      border-radius: var(--jolly-radius-sm, 4px);
       box-sizing: border-box;
+      border: 2px dashed transparent;
     }
 
     .marker {
@@ -202,7 +203,7 @@ export class BlockLibraryViewport extends LitElement {
         `top:${cell.rect.y}px`,
         `width:${cell.rect.size}px`,
         `height:${cell.rect.size}px`,
-        `background:${color}`
+        `border-color:${color}`
       ].join(";")}
     ></div>`;
   }
