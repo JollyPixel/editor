@@ -9,10 +9,6 @@ import { fillTransition, truncate } from "../theme/styles/mixins.ts";
  * Shared field layout and state styles.
  */
 export const fieldStyles = css`
-  /*
-   * Rows carry no outer spacing. The container that stacks them owns the gap,
-   * so a consumer can stack fields flush when that is what they want.
-   */
   :host {
     --jolly-field-active-color: light-dark(
       var(--jolly-neutral-600),
@@ -50,10 +46,6 @@ export const fieldStyles = css`
     ${fillTransition}
   }
 
-  /*
-   * Flattened into the row's flex items by default, so inline layout is
-   * unaffected by the grouping these wrap for stacked layout.
-   */
   .leading,
   .content {
     display: contents;
@@ -73,10 +65,6 @@ export const fieldStyles = css`
     gap: var(--jolly-space-1, 4px);
   }
 
-  /*
-   * The gutter sits only on the label's line, so the value line needs a
-   * matching inset to keep both lines starting at the same edge.
-   */
   :host([label-position="top"]) .content {
     padding-inline-start: calc(
       var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px)
@@ -92,18 +80,10 @@ export const fieldStyles = css`
     padding-inline-start: 0;
   }
 
-  /*
-   * Locating the active row in a long pane. Deliberately fainter than the
-   * control's own focus tint, so the two read as a hierarchy and not a clash.
-   */
   .row:focus-within {
     background: var(--jolly-row-bg-focus);
   }
 
-  /*
-   * Zero width by default. A collaborative container opts its subtree in, which
-   * buys back the fixed inset that keeps lock state from shifting the row.
-   */
   .gutter {
     display: flex;
     align-items: center;
@@ -115,44 +95,25 @@ export const fieldStyles = css`
     overflow: hidden;
   }
 
-  /*
-   * Without a label the gap after a collapsed gutter is an inset paid for
-   * nothing. Locked keeps it: there the gutter paints an icon.
-   */
   :host([unlabeled]:not([locked])) .gutter {
     margin-inline-end: calc(var(--jolly-space-1, 4px) * -1);
   }
 
-  /* No label column to inset for, so both edges fall back to the row inset. */
   :host([unlabeled]:not([locked])) .row {
     padding-inline-start: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
   }
 
-  /*
-   * A lock always has to be visible, even where nothing reserved room for it.
-   * Opting the subtree in is what turns this from a widening row into a fixed
-   * inset; without it the lock still shows, it just costs a shift.
-   */
   :host([locked]) .gutter {
     width: max(var(--jolly-gutter-width, 0px), 14px);
     overflow: visible;
   }
 
-  /*
-   * Icons default to the 16px display size, which overflows the gutter. The
-   * lock is chrome inside a 14px box, so it is sized to the box it sits in.
-   */
   .gutter > jolly-icon {
     width: 14px;
     height: 14px;
     color: var(--jolly-locked-ring, var(--jolly-locked));
   }
 
-  /*
-   * A configured width aligns value columns across fields. The cap stops a long
-   * label from eating the value area; a field packed beside another on one line
-   * lifts it, since there the label is legitimately most of the row.
-   */
   .label {
     flex: 0 0 auto;
     width: var(--jolly-label-width, auto);
@@ -177,11 +138,6 @@ export const fieldStyles = css`
     min-width: 0;
     font-variant-numeric: var(--jolly-font-numeric, tabular-nums);
   }
-
-  /*
-   * Base input styles shared by field controls. Boundaries are carried by the
-   * fill, so there is no border to state here.
-   */
   .value input:not([type="color"]),
   .value select {
     flex: 1 1 auto;
@@ -202,20 +158,12 @@ export const fieldStyles = css`
     background: var(--jolly-control-bg-hover);
   }
 
-  /*
-   * Focus is a fill step rather than an outline. The step has to beat hover,
-   * because both are the same channel.
-   */
   .value input:focus,
   .value select:focus {
     background: var(--jolly-control-bg-focus);
     outline: none;
   }
 
-  /*
-   * Numeric and monitor-style rows read better against the trailing edge, where
-   * the digits line up down the pane.
-   */
   :host([align="end"]) .value input,
   :host([align="end"]) .value select {
     text-align: end;
@@ -241,10 +189,6 @@ export const fieldStyles = css`
     background: var(--jolly-control-bg-muted);
   }
 
-  /*
-   * Modified and locked both want the leading bar, so locked takes it: a locked
-   * field is not editable, which makes reverting moot anyway.
-   */
   :host([modified]:not([locked])) {
     box-shadow: inset 2px 0 0 0 var(--jolly-field-active-color);
     border-radius: var(--jolly-radius-sm, 2px);
@@ -261,11 +205,6 @@ export const fieldStyles = css`
     );
   }
 
-  /*
-   * A container can reserve one trailing column across sibling fields. The
-   * negative margin absorbs the row gap; padding restores it for presence,
-   * while the revert button cancels that padding to stay joined to the value.
-   */
   .trailing {
     display: flex;
     align-items: center;
@@ -281,11 +220,6 @@ export const fieldStyles = css`
     padding-inline-start: 0;
   }
 
-  /*
-   * The muted action stays visible while a modified value can be restored.
-   * It joins the value edge and uses the full control height, so its hover fill
-   * reads as trailing field chrome instead of a highlight behind the glyph.
-   */
   .revert {
     display: flex;
     align-items: center;
@@ -312,7 +246,6 @@ export const fieldStyles = css`
     height: 14px;
   }
 
-  /* Filled values and the trailing action form a single control silhouette. */
   .value:has(+ .trailing > .revert) input[type="text"]:last-child,
   .value:has(+ .trailing > .revert) select {
     border-start-end-radius: 0;
@@ -353,7 +286,6 @@ export const fieldStyles = css`
     font-size: 0.85em;
   }
 
-  /* Tooltips grow inward to stay within the field bounds. */
   [data-tooltip] {
     position: relative;
   }
@@ -378,10 +310,6 @@ export const fieldStyles = css`
       transform var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
 
-  /*
-   * Offset on the tooltip rather than as gutter padding, which would widen the
-   * gutter on exactly the rows that must not change width.
-   */
   .gutter[data-tooltip]::after {
     left: 3px;
   }
@@ -395,7 +323,6 @@ export const fieldStyles = css`
     transform: translateY(0);
   }
 
-  /* Align help and error text with the value area. */
   .description,
   .error {
     display: flex;
@@ -409,7 +336,6 @@ export const fieldStyles = css`
     font-size: 0.9em;
   }
 
-  /* No label column to clear, so they follow the value back to the row inset. */
   :host([unlabeled]:not([locked])) .description,
   :host([unlabeled]:not([locked])) .error {
     margin-inline-start: calc(

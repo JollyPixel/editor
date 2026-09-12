@@ -37,9 +37,6 @@ const kDensitySuffix = ":density";
 
 export type ThemePreferencesLayout = "inline" | "stack";
 
-/**
- * Persists and applies a theme and density pair to a scope host.
- */
 @customElement("jolly-theme-preferences")
 export class ThemePreferences extends LitElement {
   static override styles = css`
@@ -93,11 +90,6 @@ export class ThemePreferences extends LitElement {
     this.#applyPreferences();
   }
 
-  /**
-   * A consumer sets `target` imperatively when it lives outside this
-   * element's own tree (so `.closest("jolly-scope")` can't find it) — most
-   * often after both elements exist, which is later than `connectedCallback`.
-   */
   protected override updated(
     changed: Map<PropertyKey, unknown>
   ): void {
@@ -125,7 +117,11 @@ export class ThemePreferences extends LitElement {
       return;
     }
 
-    applyAppearance(target, this.#theme(), this.#density());
+    applyAppearance(
+      target,
+      this.#theme(),
+      this.#density()
+    );
   }
 
   #target(): HTMLElement | null {
@@ -135,13 +131,19 @@ export class ThemePreferences extends LitElement {
   #theme(): ThemeMode {
     const value = this.#stored(kThemeSuffix);
 
-    return resolveThemePreference(value, this.defaultTheme);
+    return resolveThemePreference(
+      value,
+      this.defaultTheme
+    );
   }
 
   #density(): Density {
     const value = this.#stored(kDensitySuffix);
 
-    return resolveDensityPreference(value, this.defaultDensity);
+    return resolveDensityPreference(
+      value,
+      this.defaultDensity
+    );
   }
 
   #stored(

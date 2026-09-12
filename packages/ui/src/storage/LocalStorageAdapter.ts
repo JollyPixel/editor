@@ -2,9 +2,6 @@
 import type { StorageAdapter } from "./StorageAdapter.ts";
 import { MemoryStorageAdapter } from "./MemoryStorageAdapter.ts";
 
-/**
- * The `Storage` API used by this package.
- */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(
@@ -14,9 +11,6 @@ export interface StorageLike {
 }
 
 export interface LocalStorageAdapterOptions {
-  /**
-   * Resolves storage inside a `try` for sandboxed iframes.
-   */
   resolve?: () => StorageLike | undefined;
 }
 
@@ -33,9 +27,6 @@ function isStorageLike(
     typeof value.getItem === "function";
 }
 
-/**
- * Wraps `localStorage` and permanently falls back to memory after a failure.
- */
 export class LocalStorageAdapter implements StorageAdapter {
   #fallback = new MemoryStorageAdapter();
   #storage: StorageLike | null = null;

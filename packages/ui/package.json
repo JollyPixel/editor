@@ -32,7 +32,8 @@
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "npm run typecheck && c8 -r html npm run test-only",
     "test:e2e": "playwright test",
-    "lint": "eslint src test",
+    "lint": "eslint src test && npm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" \"examples/**/*.css\" --cache",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "publishConfig": {
@@ -71,6 +72,9 @@
   },
   "devDependencies": {
     "@jolly-pixel/network": "2.0.0",
-    "lit": "3.3.3"
+    "lit": "3.3.3",
+    "postcss-lit": "1.4.1",
+    "stylelint": "17.15.0",
+    "stylelint-config-recommended": "18.0.0"
   }
 }

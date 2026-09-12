@@ -24,17 +24,20 @@ import "../../controls/Select.ts";
 
 // CONSTANTS
 const kOptions: JollyOption<Density>[] = [
-  { value: "compact", label: "Compact" },
-  { value: "default", label: "Default" },
-  { value: "comfortable", label: "Comfortable" }
+  {
+    value: "compact",
+    label: "Compact"
+  },
+  {
+    value: "default",
+    label: "Default"
+  },
+  {
+    value: "comfortable",
+    label: "Comfortable"
+  }
 ];
 
-/**
- * A `jolly-select` pre-wired to `Density`, the toggle every gallery and
- * example page rebuilds by hand otherwise. Controlled, like every other
- * element: it emits `jolly-change` and leaves applying `density` to a scope
- * host to the consumer.
- */
 @customElement("jolly-density-control")
 export class DensityControl extends LitElement {
   static override styles = css`

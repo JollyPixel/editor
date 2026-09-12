@@ -16,11 +16,17 @@ const kDefaultHistorySize = 60;
 const kDefaultRefreshInterval = 250;
 
 export interface StatsRecorderOptions {
-  /** Maximum snapshots retained for each metric. */
+  /**
+   * Maximum snapshots retained for each metric.
+   */
   historySize?: number;
-  /** Refresh window duration in milliseconds. */
+  /**
+   * Refresh window duration in milliseconds.
+   */
   refreshInterval?: number;
-  /** Injectable timing and memory source for headless use and tests. */
+  /**
+   * Injectable timing and memory source for headless use and tests.
+   */
   performance?: StatsPerformance;
 }
 
@@ -39,7 +45,6 @@ interface MetricState {
   historyIndex: number;
 }
 
-/** DOM-free timing and metric aggregation shared by every stats display. */
 export class StatsRecorder {
   readonly #historySize: number;
   readonly #refreshInterval: number;
@@ -75,7 +80,6 @@ export class StatsRecorder {
     }
   }
 
-  /** Registered metrics in cycle order. */
   get definitions(): readonly MetricDefinition[] {
     return [...this.#metrics.values()].map(
       ({ definition }) => {
@@ -115,7 +119,6 @@ export class StatsRecorder {
     this.#flush(now);
   }
 
-  /** Pushes a finite metric value computed by the caller. */
   track(
     id: string,
     value: number
@@ -159,7 +162,6 @@ export class StatsRecorder {
     return snapshot;
   }
 
-  /** Returns a defensive copy ordered from oldest to newest. */
   history(
     id: string
   ): number[] {

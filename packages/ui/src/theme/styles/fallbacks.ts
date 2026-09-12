@@ -3,10 +3,7 @@ import { unsafeCSS } from "lit";
 
 /**
  * Usage-site fallbacks for essential theme tokens.
- *
- * These only apply when no scope host declared the tokens at all, which is
- * already a degraded state, so `controlBg` is a mode-agnostic translucent grey
- * rather than a value tuned for either scheme.
+ * These only apply when no scope host declared the tokens at all
  */
 export const kFallback = {
   /**

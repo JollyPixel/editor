@@ -24,17 +24,20 @@ import "../../controls/ButtonGroup.ts";
 
 // CONSTANTS
 const kOptions: JollyOption<ThemeMode>[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "auto", label: "Auto" }
+  {
+    value: "light",
+    label: "Light"
+  },
+  {
+    value: "dark",
+    label: "Dark"
+  },
+  {
+    value: "auto",
+    label: "Auto"
+  }
 ];
 
-/**
- * A `jolly-button-group` pre-wired to `ThemeMode`, the toggle every gallery
- * and example page rebuilds by hand otherwise. Controlled, like every other
- * element: it emits `jolly-change` and leaves applying `theme` to a scope
- * host to the consumer.
- */
 @customElement("jolly-theme-control")
 export class ThemeControl extends LitElement {
   static override styles = css`
