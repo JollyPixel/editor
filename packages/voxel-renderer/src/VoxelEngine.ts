@@ -287,6 +287,23 @@ export class VoxelEngine {
     return true;
   }
 
+  moveBlock(
+    blockId: number,
+    toIndex: number
+  ): boolean {
+    if (!this.blockRegistry.moveTo(blockId, toIndex)) {
+      return false;
+    }
+
+    this.onBlockUpdated?.({
+      action: "block-moved",
+      blockId,
+      toIndex: this.blockRegistry.indexOf(blockId)
+    });
+
+    return true;
+  }
+
   loadTileset(
     def: TilesetDefinition,
     texture: THREE.Texture<HTMLImageElement>

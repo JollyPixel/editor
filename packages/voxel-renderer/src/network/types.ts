@@ -25,6 +25,11 @@ export type VoxelBlockRemovedCommand = Extract<
   { action: "block-removed"; }
 >;
 
+export type VoxelBlockMovedCommand = Extract<
+  VoxelBlockCommand,
+  { action: "block-moved"; }
+>;
+
 export type VoxelBlockAction = VoxelBlockCommand["action"];
 
 export type VoxelNetworkCommand =

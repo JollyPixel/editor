@@ -159,3 +159,66 @@ describe("VoxelEngine — block lookup by position", () => {
     assert.equal(engine.blockPropertiesAt({ x: 0, y: 0, z: 0 }), undefined);
   });
 });
+
+describe("VoxelEngine — block order", () => {
+  function ids(
+    engine: ReturnType<typeof makeEngine>
+  ): number[] {
+    return [...engine.blockRegistry].map((block) => block.id);
+  }
+
+  it("moves a block and emits the resolved index", () => {
+    const events: VoxelBlockHookEvent[] = [];
+    const engine = makeEngine();
+    engine.defineBlock(makeBlockDef(kLeavesId, "cube", { name: "Leaves" }));
+    engine.onBlockUpdated = (event) => events.push(event);
+
+    assert.equal(engine.moveBlock(kCubeId, 99), true);
+
+    assert.deepEqual(ids(engine), [kLeavesId, kCubeId]);
+    assert.deepEqual(events, [
+      {
+        action: "block-moved",
+        blockId: kCubeId,
+        toIndex: 1
+      }
+    ]);
+  });
+
+  it("stays silent when the block already sits at the index", () => {
+    const events: VoxelBlockHookEvent[] = [];
+    const engine = makeEngine();
+    engine.onBlockUpdated = (event) => events.push(event);
+
+    assert.equal(engine.moveBlock(kCubeId, 0), false);
+    assert.deepEqual(events, []);
+  });
+
+  it("stays silent for an unknown block", () => {
+    const events: VoxelBlockHookEvent[] = [];
+    const engine = makeEngine();
+    engine.onBlockUpdated = (event) => events.push(event);
+
+    assert.equal(engine.moveBlock(404, 0), false);
+    assert.deepEqual(events, []);
+  });
+
+  it("leaves the meshes untouched", () => {
+    const engine = makeEngine();
+    engine.defineBlock(makeBlockDef(kLeavesId, "cube", { name: "Leaves" }));
+    engine.world.addLayer("Ground");
+    engine.world.setVoxelAt(
+      "Ground",
+      { x: 0, y: 0, z: 0 },
+      makeVoxelEntry(kCubeId)
+    );
+    engine.tick(0);
+
+    engine.moveBlock(kCubeId, 1);
+
+    assert.equal(
+      [...engine.world.getAllChunks()].some(({ chunk }) => chunk.dirty),
+      false
+    );
+  });
+});

@@ -89,6 +89,11 @@ and refilled from it, after the document has parsed, so a rejected document
 leaves the registry untouched. A document without one leaves the registry
 alone, which keeps a legacy document from wiping a caller's blocks.
 
+The `blocks` array is ordered, and that order is the registry's own rather than
+an ID order. A document round trips it unchanged, so an editor may reorder the
+block table and have the choice persist. See
+[`BlockRegistry` ordering](../blocks/BlockRegistry.md#ordering).
+
 See [saving and loading worlds](../../guides/saving-and-loading-worlds.md) for
 the application workflow.
 

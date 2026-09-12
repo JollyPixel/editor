@@ -366,10 +366,19 @@ Unregisters a definition, marks every chunk dirty, and emits `onBlockUpdated`.
 Returns `false` and emits nothing when the ID is unknown. `nextId` is unaffected,
 so the ID is never recycled.
 
+#### `moveBlock(blockId: number, toIndex: number): boolean`
+
+Relocates a block within the registry's order and emits `onBlockUpdated` with
+the position it landed on, clamped into range. Returns `false` and emits
+nothing for an unknown ID or a move that changes nothing. The order is a
+document concern only, so no chunk is marked dirty. See
+[`BlockRegistry` ordering](../blocks/BlockRegistry.md#ordering).
+
 ### Hooks
 
-`onBlockUpdated` is emitted by `defineBlock()`, `defineBlocks()` and
-`removeBlock()`. Unlike `onLayerUpdated` it is not muted during `load()`, which
+`onBlockUpdated` is emitted by `defineBlock()`, `defineBlocks()`,
+`removeBlock()` and `moveBlock()`. Unlike `onLayerUpdated` it is not muted
+during `load()`, which
 replaces the registry outright rather than emitting per definition.
 
 `onLayerUpdated` and `applyRemoteCommand` proxy

@@ -191,13 +191,19 @@ export type VoxelBlockHookEvent =
   | {
     action: "block-removed";
     blockId: number;
+  }
+  | {
+    action: "block-moved";
+    blockId: number;
+    toIndex: number;
   };
 
 export type VoxelBlockHookAction = VoxelBlockHookEvent["action"];
 
 export const VOXEL_BLOCK_HOOK_ACTIONS: readonly VoxelBlockHookAction[] = [
   "block-defined",
-  "block-removed"
+  "block-removed",
+  "block-moved"
 ];
 
 export type VoxelBlockHookListener = (

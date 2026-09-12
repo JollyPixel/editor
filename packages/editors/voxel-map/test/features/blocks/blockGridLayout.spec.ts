@@ -5,6 +5,9 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   blockCellRect,
+  blockInsertIndex,
+  blockInsertMarker,
+  blockMoveTargetIndex,
   computeBlockGridLayout,
   revealCellScrollTop
 } from "../../../src/features/blocks/blockGridLayout.ts";
@@ -115,5 +118,76 @@ describe("revealCellScrollTop", () => {
       revealCellScrollTop(rect, { scrollTop: 0, height: 0 }),
       null
     );
+  });
+});
+
+describe("blockInsertIndex", () => {
+  const layout = { cols: 4, cellSize: 50 };
+
+  it("inserts before the cell the pointer sits on the left of", () => {
+    assert.equal(blockInsertIndex(60, 10, layout, 8), 1);
+  });
+
+  it("inserts after the cell the pointer sits on the right of", () => {
+    assert.equal(blockInsertIndex(90, 10, layout, 8), 2);
+  });
+
+  it("accounts for the row the pointer is on", () => {
+    assert.equal(blockInsertIndex(10, 60, layout, 8), 4);
+  });
+
+  it("clamps to the last populated row", () => {
+    assert.equal(blockInsertIndex(10, 900, layout, 6), 4);
+  });
+
+  it("never exceeds the block count", () => {
+    assert.equal(blockInsertIndex(500, 10, layout, 3), 3);
+  });
+
+  it("returns 0 for an empty grid", () => {
+    assert.equal(blockInsertIndex(120, 80, layout, 0), 0);
+  });
+});
+
+describe("blockMoveTargetIndex", () => {
+  it("shifts a forward move down by the vacated slot", () => {
+    assert.equal(blockMoveTargetIndex(0, 3, 5), 2);
+  });
+
+  it("keeps a backward move on the insertion slot", () => {
+    assert.equal(blockMoveTargetIndex(4, 1, 5), 1);
+  });
+
+  it("rejects a move that changes nothing", () => {
+    assert.equal(blockMoveTargetIndex(2, 2, 5), -1);
+    assert.equal(blockMoveTargetIndex(2, 3, 5), -1);
+  });
+
+  it("rejects an unknown source", () => {
+    assert.equal(blockMoveTargetIndex(-1, 2, 5), -1);
+  });
+
+  it("clamps an insertion past the end", () => {
+    assert.equal(blockMoveTargetIndex(0, 99, 5), 4);
+  });
+});
+
+describe("blockInsertMarker", () => {
+  const layout = { cols: 4, cellSize: 50 };
+
+  it("sits on the leading edge of the slot", () => {
+    assert.deepEqual(blockInsertMarker(1, layout), {
+      x: 50,
+      y: 0,
+      height: 50
+    });
+  });
+
+  it("wraps an end-of-row slot onto the next row", () => {
+    assert.deepEqual(blockInsertMarker(4, layout), {
+      x: 0,
+      y: 50,
+      height: 50
+    });
   });
 });

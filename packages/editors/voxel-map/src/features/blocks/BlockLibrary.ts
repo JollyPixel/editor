@@ -27,7 +27,10 @@ import {
 } from "../../collaboration/peerMarks.ts";
 
 // Registers the Three.js block grid.
-import { BlockLibraryViewport } from "./BlockLibraryViewport.ts";
+import {
+  BlockLibraryViewport,
+  type BlockMoveDetail
+} from "./BlockLibraryViewport.ts";
 
 export type BlockLibraryLayout = "compact";
 
@@ -197,6 +200,7 @@ export class BlockLibrary extends LitElement {
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
+        @block-move=${this.#onBlockMove}
       ></block-library-viewport>
 
       <div class="brush-row">
@@ -233,6 +237,12 @@ export class BlockLibrary extends LitElement {
   ): void {
     this.brush.blockId = event.detail.id;
     void this.editBlock();
+  }
+
+  #onBlockMove(
+    event: CustomEvent<BlockMoveDetail>
+  ): void {
+    this.engine?.moveBlock(event.detail.id, event.detail.toIndex);
   }
 
   #onRotationChange(
@@ -308,7 +318,7 @@ export class BlockLibrary extends LitElement {
 
     this._blocks = [
       ...this.engine.blockRegistry.getAll()
-    ].sort((a, b) => a.id - b.id);
+    ];
   }
 }
 

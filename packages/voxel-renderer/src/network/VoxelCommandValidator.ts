@@ -2,10 +2,14 @@
 import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import { VOXEL_BLOCK_HOOK_ACTIONS } from "../hooks.ts";
 import type {
   VoxelBlockCommand,
   VoxelNetworkCommand
 } from "./types.ts";
+
+// CONSTANTS
+const kBlockActions = new Set<string>(VOXEL_BLOCK_HOOK_ACTIONS);
 
 export function isVoxelNetworkCommand(
   value: unknown
@@ -17,6 +21,5 @@ export function isVoxelNetworkCommand(
 export function isVoxelBlockCommand(
   command: VoxelNetworkCommand
 ): command is VoxelBlockCommand & network.NetworkCommandHeader {
-  return command.action === "block-defined" ||
-    command.action === "block-removed";
+  return kBlockActions.has(command.action);
 }

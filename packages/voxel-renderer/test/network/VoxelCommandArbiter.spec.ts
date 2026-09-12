@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { VoxelCommandArbiter, type VoxelNetworkCommand } from "../../src/network/index.ts";
 import {
   blockDefinedCmd,
+  blockMovedCmd,
   makeAddedCommand,
   voxelSetCmd
 } from "../helpers/networkCommands.ts";
@@ -355,6 +356,45 @@ describe("VoxelCommandArbiter — object commands", () => {
         toLayerName: "Props"
       }
     };
+
+    arbiter.record(first);
+
+    assert.strictEqual(arbiter.admit(second), second);
+  });
+});
+
+describe("VoxelCommandArbiter — block reorder", () => {
+  test("keys a block move by its block id", () => {
+    assert.strictEqual(
+      VoxelCommandArbiter.key(blockMovedCmd({ blockId: 4, toIndex: 2 })),
+      "block:4"
+    );
+  });
+
+  test("rejects a move older than the last edit of the same block", () => {
+    const arbiter = new VoxelCommandArbiter();
+
+    arbiter.record(blockDefinedCmd({
+      id: 4,
+      clientId: "late",
+      timestamp: 2000
+    }));
+
+    assert.strictEqual(
+      arbiter.admit(blockMovedCmd({
+        blockId: 4,
+        toIndex: 0,
+        clientId: "early",
+        timestamp: 1000
+      })),
+      null
+    );
+  });
+
+  test("admits moves of different blocks", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const first = blockMovedCmd({ blockId: 1, toIndex: 2, timestamp: 2000 });
+    const second = blockMovedCmd({ blockId: 2, toIndex: 0, timestamp: 1000 });
 
     arbiter.record(first);
 
