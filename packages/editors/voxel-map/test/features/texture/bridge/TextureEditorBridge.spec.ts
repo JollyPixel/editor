@@ -29,7 +29,7 @@ import { editorState } from "../../../../src/app/state/index.ts";
 function makeBlock(
   id: number,
   options: {
-    transparent?: boolean;
+    alphaMode?: ResolvedBlockDefinition["alphaMode"];
     defaultTexture?: ResolvedBlockDefinition["defaultTexture"];
     faceTextures?: ResolvedBlockDefinition["faceTextures"];
   } = {}
@@ -40,7 +40,7 @@ function makeBlock(
     shapeId: "cube",
     collidable: true,
     properties: {},
-    transparent: options.transparent,
+    alphaMode: options.alphaMode,
     faceTextures: options.faceTextures ?? {},
     defaultTexture: options.defaultTexture
   };
@@ -134,16 +134,33 @@ function makeScheduler() {
 }
 
 describe("TextureEditorBridge / transparency auto-sync", () => {
+  for (const hasTransparency of [false, true]) {
+    it(`preserves explicit mask mode (texture alpha=${hasTransparency})`, () => {
+      const { engine, dirtyReasons } = makeFakeVoxelEngine();
+      engine.blockRegistry.register(makeBlock(1, {
+        alphaMode: "mask",
+        defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
+      }));
+      const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+      bridge.attach(makeFakeManager(() => hasTransparency));
+      bridge.loadTileset(engine, "atlas");
+      bridge.syncToThree();
+      assert.equal(engine.blockRegistry.get(1)!.alphaMode, "mask");
+      assert.deepEqual(dirtyReasons, []);
+      bridge.destroy();
+    });
+  }
+
   it(
-    "flips transparent false -> true once its tile gains alpha, and leaves an unaffected block alone",
+    "switches opaque to blend once its tile gains alpha, and leaves an unaffected block alone",
     () => {
       const { engine, dirtyReasons } = makeFakeVoxelEngine();
       engine.blockRegistry.register(makeBlock(1, {
-        transparent: false,
+        alphaMode: "opaque",
         defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
       }));
       engine.blockRegistry.register(makeBlock(2, {
-        transparent: false,
+        alphaMode: "opaque",
         defaultTexture: { tilesetId: "atlas", col: 1, row: 0 }
       }));
 
@@ -153,17 +170,17 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
       bridge.syncToThree();
 
-      assert.equal(engine.blockRegistry.get(1)!.transparent, true);
-      assert.equal(engine.blockRegistry.get(2)!.transparent, false);
+      assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
+      assert.equal(engine.blockRegistry.get(2)!.alphaMode, "opaque");
       assert.deepEqual(dirtyReasons, ["block-defined"]);
       bridge.destroy();
     }
   );
 
-  it("is a no-op once the flag already matches the tile's actual transparency", () => {
+  it("is a no-op once the alpha mode already matches the tile's actual transparency", () => {
     const { engine, dirtyReasons } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, {
-      transparent: false,
+      alphaMode: "opaque",
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
@@ -174,15 +191,15 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
     bridge.syncToThree();
     bridge.syncToThree();
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
 
-  it("flips transparent true -> false once its tile loses all alpha", () => {
+  it("switches blend to opaque once its tile loses all alpha", () => {
     const { engine, dirtyReasons } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, {
-      transparent: true,
+      alphaMode: "blend",
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
@@ -192,7 +209,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
     bridge.syncToThree();
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, false);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "opaque");
     assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
@@ -200,7 +217,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
   it("detects a change reached only through a faceTextures entry, not defaultTexture", () => {
     const { engine, dirtyReasons } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, {
-      transparent: false,
+      alphaMode: "opaque",
       defaultTexture: { tilesetId: "other", col: 0, row: 0 },
       faceTextures: { [Face.PosY]: { tilesetId: "atlas", col: 2, row: 0 } }
     }));
@@ -211,7 +228,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
     bridge.syncToThree();
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
@@ -402,11 +419,11 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
     const { engine } = makeFakeVoxelEngine();
     // tileSize is 16: tile (0, 0) covers texels 0..15, tile (2, 2) 32..47.
     engine.blockRegistry.register(makeBlock(1, {
-      transparent: false,
+      alphaMode: "opaque",
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
     engine.blockRegistry.register(makeBlock(2, {
-      transparent: false,
+      alphaMode: "opaque",
       defaultTexture: { tilesetId: "atlas", col: 2, row: 2 }
     }));
 
@@ -428,10 +445,10 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
     // The rescan waits for the stroke to settle.
     scheduler.frame();
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     assert.equal(
-      engine.blockRegistry.get(2)!.transparent,
-      false,
+      engine.blockRegistry.get(2)!.alphaMode,
+      "opaque",
       "a block whose tile the stroke never reached must not be rescanned"
     );
     bridge.destroy();
@@ -443,7 +460,7 @@ describe("TextureEditorBridge / transparency batching", () => {
     const scheduler = makeScheduler();
     const { engine, dirtyReasons } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, {
-      transparent: false,
+      alphaMode: "opaque",
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
@@ -473,7 +490,7 @@ describe("TextureEditorBridge / transparency batching", () => {
     scheduler.frame();
 
     assert.deepEqual(dirtyReasons, ["block-defined"]);
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     bridge.destroy();
   });
 
@@ -519,14 +536,14 @@ describe("TextureEditorBridge / placeholder block registry", () => {
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(engine, "atlas");
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, undefined);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, undefined);
     assert.deepEqual(dirtyReasons, []);
 
     // The scene flips the flag with the snapshot, then announces it.
     editorState.world.blocksReady = true;
     editorState.world.emit("blockRegistryChanged");
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     bridge.destroy();
   });
 });
@@ -542,7 +559,7 @@ describe("TextureEditorBridge / derived transparency", () => {
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(engine, "atlas");
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
@@ -550,7 +567,7 @@ describe("TextureEditorBridge / derived transparency", () => {
   it("derives it again once a block moves onto another tile", () => {
     const { engine } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, {
-      transparent: true,
+      alphaMode: "blend",
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
@@ -558,14 +575,14 @@ describe("TextureEditorBridge / derived transparency", () => {
     // Only the second column of the atlas holds alpha.
     bridge.attach(makeFakeManager((rect) => rect.x === 16));
     bridge.loadTileset(engine, "atlas");
-    assert.equal(engine.blockRegistry.get(1)!.transparent, false);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "opaque");
 
     engine.defineBlock({
       ...engine.blockRegistry.get(1)!,
       defaultTexture: { tilesetId: "atlas", col: 1, row: 0 }
     });
 
-    assert.equal(engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     bridge.destroy();
   });
 
@@ -580,7 +597,7 @@ describe("TextureEditorBridge / derived transparency", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    assert.equal(engine.blockRegistry.get(7)!.transparent, true);
+    assert.equal(engine.blockRegistry.get(7)!.alphaMode, "blend");
     bridge.destroy();
   });
 
@@ -613,7 +630,7 @@ describe("TextureEditorBridge / derived transparency", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    assert.equal(engine.blockRegistry.get(2)!.transparent, undefined);
+    assert.equal(engine.blockRegistry.get(2)!.alphaMode, undefined);
   });
 });
 

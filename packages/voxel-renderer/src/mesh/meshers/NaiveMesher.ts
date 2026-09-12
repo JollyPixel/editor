@@ -88,9 +88,13 @@ export class NaiveMesher implements Mesher {
           }
         }
 
-        bufferFor(face.slot).addFace(face, wx, wy, wz);
-        stats.faces++;
-        emitted = true;
+        for (const piece of neighbourhood.boundaryFaces(
+          face, [wx, wy, wz], variant.blockId
+        )) {
+          bufferFor(piece.slot).addFace(piece, wx, wy, wz);
+          stats.faces++;
+          emitted = true;
+        }
       }
     }
 

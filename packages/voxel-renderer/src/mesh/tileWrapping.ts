@@ -5,6 +5,7 @@ import {
   clamp,
   float,
   floor,
+  Fn,
   reference,
   step,
   texture,
@@ -12,6 +13,9 @@ import {
   vec2,
   vec4
 } from "three/tsl";
+
+// Import Internal Dependencies
+import type { BlockSurface } from "../blocks/BlockSurface.ts";
 
 export type TileWrappedMaterial =
   | THREE.MeshLambertMaterial
@@ -23,7 +27,8 @@ export type TileWrappedMaterial =
  * interpolated UV would otherwise read a neighbouring tile.
  */
 export function enableTileClamping(
-  material: TileWrappedMaterial
+  material: TileWrappedMaterial,
+  surface?: BlockSurface
 ): void {
   const { map } = material;
   if (!map) {
@@ -42,15 +47,24 @@ export function enableTileClamping(
 
   const tint = reference("color", "color", material);
 
-  (material as { colorNode?: unknown; }).colorNode = vec4(tint, float(1))
-    .mul(sampledDiffuseColor);
+  (material as { colorNode?: unknown; }).colorNode = Fn(() => {
+    if (surface?.alphaMode === "mask") {
+      sampledDiffuseColor.a.lessThan(surface.alphaCutoff).discard();
+    }
+    const alpha = surface && surface.alphaMode !== "blend" ?
+      float(1) : sampledDiffuseColor.a;
+
+    return vec4(tint, float(1)).mul(vec4(sampledDiffuseColor.rgb, alpha));
+  })();
+  configureClassicAlpha(material, surface);
 }
 
 /**
  * Repeats atlas tiles across greedy quads using WebGPU-compatible TSL nodes.
  */
 export function enableTileWrapping(
-  material: TileWrappedMaterial
+  material: TileWrappedMaterial,
+  surface?: BlockSurface
 ): void {
   const { map } = material;
   if (!map) {
@@ -87,6 +101,41 @@ export function enableTileWrapping(
    * The WebGPU build aliases the classic material names onto their node
    * variants, so `colorNode` exists at runtime but not on the classic type.
    */
-  (material as { colorNode?: unknown; }).colorNode = vec4(tint, float(1))
-    .mul(sampledDiffuseColor);
+  (material as { colorNode?: unknown; }).colorNode = Fn(() => {
+    if (surface?.alphaMode === "mask") {
+      sampledDiffuseColor.a.lessThan(surface.alphaCutoff).discard();
+    }
+    const alpha = surface && surface.alphaMode !== "blend" ?
+      float(1) : sampledDiffuseColor.a;
+
+    return vec4(tint, float(1)).mul(vec4(sampledDiffuseColor.rgb, alpha));
+  })();
+  configureClassicAlpha(material, surface);
+}
+
+function configureClassicAlpha(
+  material: TileWrappedMaterial,
+  surface?: BlockSurface
+): void {
+  if (
+    !surface ||
+    surface.alphaMode === "blend"
+  ) {
+    return;
+  }
+
+  const alpha = surface.alphaMode === "mask" ?
+    `if (diffuseColor.a < opacity * ${surface.alphaCutoff.toFixed(8)}) discard;` :
+    "";
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <map_fragment>",
+      `#include <map_fragment>\n${alpha}\ndiffuseColor.a = opacity;`
+    );
+  };
+  /**
+   * The color node holds references to this material and atlas. Classic
+   * materials converted by WebGPURenderer must keep those bindings separate.
+   */
+  material.customProgramCacheKey = () => `${material.uuid}:${JSON.stringify(surface)}`;
 }

@@ -38,6 +38,7 @@ import { PeerRoster } from "../collaboration/PeerRoster.ts";
 import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
 import type { EditorIdentity } from "../collaboration/identity.ts";
 import type { EditorState } from "./state/index.ts";
+import { installTransparency } from "../scene/installTransparency.ts";
 
 // CONSTANTS
 const kDefaultBlockLimit = 32;
@@ -144,6 +145,9 @@ export class EditorScene extends Systems.Scene {
     );
 
     const world = this.world;
+    this.#subscriptions.push(
+      installTransparency(world.renderer)
+    );
 
     const freeFlyCamera = world
       .createActor("camera")
@@ -168,14 +172,9 @@ export class EditorScene extends Systems.Scene {
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
         chunkSize: 16,
-        // Create networked layers only after the sync client attaches.
         layers: this.#voxelRoom ? [] : [this.#defaultLayerName],
         blocks: [],
         material: "lambert",
-        materialCustomizer: (material) => {
-          material.transparent = true;
-        },
-        alphaTest: 0,
         onLayerUpdated: (evt) => this.editorState.world.emit("layerUpdated", evt),
         onBlockUpdated: () => this.editorState.world.emit("blockRegistryChanged"),
         tilesets: this.#tilesets

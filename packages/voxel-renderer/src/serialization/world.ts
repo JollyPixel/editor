@@ -70,6 +70,7 @@ export function deserializeVoxelWorld(
     const layer = world.addLayer(layerJSON.name, {
       visible: layerJSON.visible,
       opacity: layerJSON.opacity,
+      compositing: layerJSON.compositing,
       properties: layerJSON.properties
     });
 

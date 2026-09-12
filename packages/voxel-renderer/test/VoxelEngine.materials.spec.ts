@@ -44,7 +44,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     assert.equal(mesh.geometry.getAttribute("color"), undefined);
     assert.equal(mesh.material.transparent, true);
     assert.equal(mesh.material.opacity, 0.5);
-    assert.equal(mesh.material.depthWrite, true);
+    assert.equal(mesh.material.depthWrite, false);
     /*
      * The mesher emits both faces of a voxel, so a second pass over the same
      * quads would only blend them twice.
@@ -56,7 +56,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     const engine = makeEngine({
       blocks: [
         makeBlockDef(kCubeId, "cube", { name: "Cube" }),
-        makeBlockDef(kLeavesId, "cube", { name: "Leaves", transparent: true })
+        makeBlockDef(kLeavesId, "cube", { name: "Leaves", alphaMode: "blend" })
       ]
     });
     engine.world.addLayer("Ground");
@@ -70,12 +70,15 @@ describe("VoxelEngine — layer opacity on the material", () => {
     assert.equal(meshes.length, 2);
     assert.ok(solid && cutout);
     /*
-     * Same texture and render queue, opposite sides: the solid pass keeps its
-     * back faces culled, the cutout one shows them through its own holes.
+     * Same texture, opposite sides: the solid pass keeps its back faces
+     * culled, the cutout one shows them through its own holes. The cutout
+     * blends so a half-transparent texel fades instead of coming out solid,
+     * and draws after the opaque pass rather than over it.
      */
     assert.equal(solid.material.map, cutout.material.map);
     assert.equal(solid.material.transparent, false);
-    assert.equal(cutout.material.transparent, false);
+    assert.equal(cutout.material.transparent, true);
+    assert.equal(cutout.material.depthWrite, false);
     assert.equal(solid.material.side, THREE.FrontSide);
     assert.equal(cutout.material.side, THREE.DoubleSide);
   });
@@ -91,7 +94,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     assert.ok(material.opacity < 1);
   });
 
-  it("shares one material between layers whose opacities land in one bucket", () => {
+  it("preserves distinct layer opacities", () => {
     const engine = makeEngine();
     engine.world.addLayer("A", { opacity: 0.5 });
     engine.world.addLayer("B", { opacity: 0.5001 });
@@ -105,6 +108,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
 
     const [first, second] = engine.root.children as ChunkMesh[];
     assert.equal(engine.root.children.length, 2);
-    assert.equal(first.material, second.material);
+    assert.notEqual(first.material, second.material);
+    assert.deepEqual([first.material.opacity, second.material.opacity].sort(), [0.5, 0.5001]);
   });
 });

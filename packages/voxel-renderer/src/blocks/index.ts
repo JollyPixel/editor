@@ -1,4 +1,5 @@
 export * from "./BlockDefinition.ts";
+export * from "./BlockSurface.ts";
 export * from "./blocksFromTileset.ts";
 export * from "./BlockId.ts";
 export * from "./BlockRegistry.ts";

@@ -10,7 +10,6 @@ import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MeshPassOptions } from "./types.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
-import { ChunkGeometryKey } from "./ChunkGeometryKey.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
 import { GreedyMesher } from "./meshers/GreedyMesher.ts";
@@ -18,6 +17,7 @@ import { NaiveMesher } from "./meshers/NaiveMesher.ts";
 import { ChunkNeighbourhood } from "./neighbourhood/ChunkNeighbourhood.ts";
 
 export interface VoxelMeshBuilderOptions {
+  alphaTest?: number;
   world: VoxelWorld;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
@@ -33,9 +33,6 @@ export interface VoxelMeshBuilderOptions {
  * Builds visible chunk geometry, split by tileset and cutout mode.
  */
 export class VoxelMeshBuilder {
-  /**
-   * Reused counters for the latest build; clone them for retention.
-   */
   readonly stats = new MeshBuildStats();
 
   #world: VoxelWorld;
@@ -44,9 +41,7 @@ export class VoxelMeshBuilder {
   #greedyMesher: GreedyMesher;
   #naiveMesher: NaiveMesher;
   #greedy: boolean;
-
   #buffers: (GeometryBuffer | undefined)[] = [];
-
   #bufferFor = (slot: number): GeometryBuffer => {
     let buffer = this.#buffers[slot];
     if (buffer === undefined) {
@@ -66,7 +61,8 @@ export class VoxelMeshBuilder {
     this.#variants = new BlockVariantCache({
       blockRegistry: options.blockRegistry,
       shapeRegistry: options.shapeRegistry,
-      tilesetManager: options.tilesetManager
+      tilesetManager: options.tilesetManager,
+      alphaTest: options.alphaTest
     });
     this.#greedyMesher = new GreedyMesher(this.#variants);
     this.#naiveMesher = new NaiveMesher(this.#variants);
@@ -76,10 +72,9 @@ export class VoxelMeshBuilder {
     return this.#greedy;
   }
 
-  /**
-   * Drops buffers because switching modes changes their attribute layout.
-   */
-  set greedy(value: boolean) {
+  set greedy(
+    value: boolean
+  ) {
     if (value === this.#greedy) {
       return;
     }
@@ -88,9 +83,6 @@ export class VoxelMeshBuilder {
     this.#buffers = [];
   }
 
-  /**
-   * Builds visible chunk geometry grouped by tileset and cutout mode.
-   */
   buildChunkGeometries(
     chunk: VoxelChunk,
     layer: VoxelLayer
@@ -98,7 +90,10 @@ export class VoxelMeshBuilder {
     const { stats } = this;
     stats.reset();
 
-    if (this.#tilesetManager.defaultTilesetId === null || chunk.voxelCount === 0) {
+    if (
+      this.#tilesetManager.defaultTilesetId === null ||
+      chunk.voxelCount === 0
+    ) {
       return null;
     }
     const startedAt = performance.now();
@@ -160,10 +155,7 @@ export class VoxelMeshBuilder {
       stats.geometries++;
       stats.bytesPerVertex = bytesPerVertex(geometry);
       result.set(
-        new ChunkGeometryKey(
-          this.#variants.tilesetIdAt(slot),
-          this.#variants.isCutoutAt(slot)
-        ).toString(),
+        this.#variants.geometryKeyAt(slot).toString(),
         geometry
       );
     }
@@ -172,9 +164,6 @@ export class VoxelMeshBuilder {
   }
 }
 
-/**
- * Returns vertex-attribute bytes per vertex, excluding indices.
- */
 function bytesPerVertex(
   geometry: THREE.BufferGeometry
 ): number {

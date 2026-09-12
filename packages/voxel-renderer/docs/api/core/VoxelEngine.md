@@ -72,7 +72,8 @@ When wrapped by [`VoxelRenderer`](./VoxelRenderer.md), reach the same API via
 ```ts
 type MaterialCustomizerFn = (
   material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
-  tilesetId: string
+  tilesetId: string,
+  surface: BlockSurface
 ) => void;
 
 interface VoxelEngineOptions {
@@ -132,9 +133,8 @@ interface VoxelEngineOptions {
    */
   shapes?: BlockShape[];
   /**
-   * Alpha value below which fragments are discarded (cutout transparency).
-   * Set to 0 to disable alpha testing entirely (useful when your tileset tiles
-   * have no transparency, or during debugging to confirm geometry is present).
+   * Default texture coverage cutoff for mask blocks without alphaCutoff.
+   * Applied before layer fading; opaque and blend modes ignore it.
    * @default 0.1
    */
   alphaTest?: number;
@@ -382,3 +382,9 @@ Applies a hook event without emitting it again through `onLayerUpdated`. Network
 adapters use this method to avoid echo loops.
 
 See [hooks](./hooks.md) for the event reference.
+
+The material customizer receives the resolved [BlockSurface](../blocks/BlockSurface.md)
+for each draw group. It can distinguish masked and blended geometry without
+inferring the policy from the material opacity. To composite overlapping
+blended chunks, install [VoxelTransparencyRenderer](./VoxelTransparencyRenderer.md)
+in the application render loop.

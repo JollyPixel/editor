@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { disposeObject3D } from "@jolly-pixel/engine";
 import {
   buildShapeGeometry,
+  BlockSurface,
   tileRefForSlot,
   type ResolvedBlockDefinition,
   type BlockShapeRegistry,
@@ -211,10 +212,13 @@ export class BlockLibraryRenderer {
     const texture = this.#tilesetManager.has(tilesetId) ?
       this.#tilesetManager.atlas(tilesetId).texture :
       null;
+    const surface = new BlockSurface(block);
     const mat = new THREE.MeshLambertMaterial({
       map: texture,
-      side: THREE.FrontSide,
-      alphaTest: 0.1
+      side: surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide,
+      alphaTest: surface.alphaCutoff,
+      transparent: surface.alphaMode === "blend",
+      depthWrite: surface.alphaMode !== "blend"
     });
 
     const { positions, normals, uvs, indices, ranges } = buildShapeGeometry(

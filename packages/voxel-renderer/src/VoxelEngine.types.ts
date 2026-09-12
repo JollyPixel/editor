@@ -3,6 +3,7 @@ import type * as THREE from "three";
 
 // Import Internal Dependencies
 import type { BlockDefinition } from "./blocks/BlockDefinition.ts";
+import type { BlockSurface } from "./blocks/BlockSurface.ts";
 import type { BlockShape } from "./blocks/shape/BlockShape.ts";
 import type { VoxelColliderFactory } from "./collision/VoxelCollider.ts";
 import type { VoxelDebuggerOptions } from "./debug/index.ts";
@@ -27,7 +28,8 @@ export type ViewDistancePolicy =
 
 export type MaterialCustomizerFn = (
   material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
-  tilesetId: string
+  tilesetId: string,
+  surface: BlockSurface
 ) => void;
 
 export interface VoxelLoadOptions {

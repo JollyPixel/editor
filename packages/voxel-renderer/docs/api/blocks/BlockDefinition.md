@@ -4,14 +4,17 @@
 and `VoxelEngineOptions.blocks`. Only `id`, `name`, and `shapeId` are required.
 
 ```ts
-interface BlockDefinition {
+interface BlockDefinition extends BlockSurfaceOptions {
   id: number;
   name: string;
   shapeId: BlockShapeID;
   faceTextures?: Record<string, TileRef>;
   defaultTexture?: TileRef;
   collidable?: boolean;
-  transparent?: boolean;
+  alphaMode?: BlockAlphaMode;
+  side?: BlockSide;
+  alphaCutoff?: number;
+  cullSelfFaces?: boolean;
   defaultTilesetId?: string;
   properties?: BlockProperties;
 }
@@ -21,12 +24,37 @@ interface BlockDefinition {
 falls back to its base slot, then to `defaultTexture`, so a `"top.1"` written by
 no one uses the tile of `"top"`. A numeric `Face` key is read as that face's
 default slot, so definitions written before slots keep loading. `collidable`
-defaults to `true`, and `transparent` defaults to `false`. A transparent block
-does not hide the face of a neighbouring block, because its alpha holes may
-reveal it. It does hide the face it shares with a neighbour holding that same
-block: both copies of that face sit on one plane, so drawing them z-fights. Two
-different transparent blocks keep their shared faces. `defaultTilesetId` fills
-tile references that omit a tileset and is removed from the resolved definition.
+defaults to `true`. `defaultTilesetId` fills tile references that omit a
+tileset and is removed from the resolved definition.
+
+[`BlockSurface`](./BlockSurface.md) defines `alphaMode`, `side`, and
+`alphaCutoff`. Opaque blocks ignore texture alpha. Masked blocks discard
+uncovered texels before applying the layer fade. Blended blocks preserve
+fractional alpha and do not write depth; use
+[`VoxelTransparencyRenderer`](../core/VoxelTransparencyRenderer.md) to
+composite overlapping surfaces without triangle sorting.
+
+`cullSelfFaces` defaults to `true`. Covered faces shared with another voxel
+of the same block are removed, including partially overlapping double-sided
+boundaries. Set it to `false` to retain the internal interface. This also
+applies to opaque blocks, though their depth-tested outer faces normally hide
+those interfaces.
+
+Retained, coincident double-sided boundaries use opposing front-sided pieces,
+so each viewing direction sees one appearance of the interface. Exposed pieces
+remain double-sided. Separated slab surfaces remain exposed; merely sharing a
+block ID does not remove them. Different block IDs retain their directional
+appearances at shared transparent boundaries.
+
+```ts
+registry.register({
+  id: 2,
+  name: "Stained glass",
+  shapeId: "cube",
+  alphaMode: "blend",
+  cullSelfFaces: false
+});
+```
 
 ```ts
 registry.register({

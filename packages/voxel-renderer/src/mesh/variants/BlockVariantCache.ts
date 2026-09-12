@@ -8,6 +8,7 @@ import type { TilesetManager } from "../../tileset/TilesetManager.ts";
 import type { TilesetUVRegion } from "../../tileset/types.ts";
 import type { FaceDefinition } from "../../blocks/face/index.ts";
 import { tileRefForSlot } from "../../blocks/BlockDefinition.ts";
+import { BlockSurface } from "../../blocks/BlockSurface.ts";
 import { shapeSlots } from "../../blocks/shape/shapeSlots.ts";
 import type {
   BlockVariant,
@@ -46,16 +47,18 @@ const kOcclusionUnknown = -1;
 const kOcclusionMaxSlots = 1 << 16;
 const kOcclusionFaceMask = 0b111111;
 const kSelfOcclusionShift = 6;
+const kKeepSelfFacesBit = 1 << 12;
 
 interface CompileFaceOptions {
   faceDef: FaceDefinition;
   uvRegion: TilesetUVRegion;
   tilesetId?: string;
-  cutout: boolean;
+  surface: BlockSurface;
   voxelTransform: VoxelTransform;
 }
 
 export interface BlockVariantCacheOptions {
+  alphaTest?: number;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
@@ -68,11 +71,13 @@ export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
   #tilesetManager: TilesetManager;
+  #alphaTest: number;
 
   #variants = new Map<number, BlockVariant | null>();
   #slots = new Map<string, number>();
   #tilesetIds: string[] = [];
   #cutouts: boolean[] = [];
+  #geometryKeys: ChunkGeometryKey[] = [];
 
   /**
    * Flat occlusion cache indexed by block and transform.
@@ -89,6 +94,7 @@ export class BlockVariantCache {
     this.#blockRegistry = options.blockRegistry;
     this.#shapeRegistry = options.shapeRegistry;
     this.#tilesetManager = options.tilesetManager;
+    this.#alphaTest = options.alphaTest ?? 0.1;
   }
 
   refresh(): void {
@@ -108,6 +114,10 @@ export class BlockVariantCache {
     this.#shapeVersion = shapeVersion;
     this.#tilesetVersion = tilesetVersion;
     this.#variants.clear();
+    this.#slots.clear();
+    this.#tilesetIds.length = 0;
+    this.#cutouts.length = 0;
+    this.#geometryKeys.length = 0;
     this.#occlusion.fill(kOcclusionUnknown);
   }
 
@@ -144,6 +154,13 @@ export class BlockVariantCache {
       kOcclusionFaceMask;
   }
 
+  keepsSelfFacesOf(
+    blockId: number,
+    transform: number
+  ): boolean {
+    return (this.#occlusionEntry(blockId, transform) & kKeepSelfFacesBit) !== 0;
+  }
+
   #occlusionEntry(
     blockId: number,
     transform: number
@@ -172,7 +189,8 @@ export class BlockVariantCache {
     const mask = variant === null ?
       0 :
       variant.occlusionMask |
-      (variant.selfOcclusionMask << kSelfOcclusionShift);
+      (variant.selfOcclusionMask << kSelfOcclusionShift) |
+      (variant.keepsSelfFaces ? kKeepSelfFacesBit : 0);
 
     if (key >= 0 && key < kOcclusionMaxSlots) {
       if (key >= this.#occlusion.length) {
@@ -200,17 +218,36 @@ export class BlockVariantCache {
     return this.#cutouts[slot];
   }
 
+  geometryKeyAt(
+    slot: number
+  ): ChunkGeometryKey {
+    return this.#geometryKeys[slot];
+  }
+
+  frontSlotOf(
+    slot: number
+  ): number {
+    const key = this.#geometryKeys[slot];
+
+    return this.#slotFor(key.tilesetId, new BlockSurface({
+      ...key.surface,
+      side: "front"
+    }));
+  }
+
   #slotFor(
     tilesetId: string,
-    cutout: boolean
+    surface: BlockSurface
   ): number {
-    const key = new ChunkGeometryKey(tilesetId, cutout).toString();
+    const geometryKey = new ChunkGeometryKey(tilesetId, surface);
+    const key = geometryKey.toString();
 
     let slot = this.#slots.get(key);
     if (slot === undefined) {
       slot = this.#tilesetIds.length;
       this.#tilesetIds.push(tilesetId);
-      this.#cutouts.push(cutout);
+      this.#cutouts.push(!surface.occludes);
+      this.#geometryKeys.push(geometryKey);
       this.#slots.set(key, slot);
     }
 
@@ -231,7 +268,10 @@ export class BlockVariantCache {
       return null;
     }
 
-    const cutout = blockDef.transparent === true;
+    const surface = new BlockSurface({
+      ...blockDef,
+      alphaCutoff: blockDef.alphaCutoff ?? this.#alphaTest
+    });
     const voxelTransform = VoxelTransform.fromPacked(transform);
     const { rotation, flipY } = voxelTransform;
 
@@ -252,7 +292,7 @@ export class BlockVariantCache {
             faceDef,
             uvRegion,
             tilesetId: tileRef.tilesetId,
-            cutout,
+            surface,
             voxelTransform
           })
         );
@@ -264,8 +304,10 @@ export class BlockVariantCache {
     return {
       blockId,
       faces,
-      occlusionMask: cutout ? 0 : selfOcclusionMask,
+      occlusionMask: surface.occludes ? selfOcclusionMask : 0,
       selfOcclusionMask,
+      keepsSelfFaces: blockDef.cullSelfFaces === false,
+      surface,
       mergeFaces: indexMergeFaces(faces),
       sweepIndex: 0,
       /*
@@ -283,7 +325,7 @@ export class BlockVariantCache {
       faceDef,
       uvRegion,
       tilesetId,
-      cutout,
+      surface,
       voxelTransform
     } = options;
     const { rotation, flipY } = voxelTransform;
@@ -337,7 +379,7 @@ export class BlockVariantCache {
       cull,
       slot: this.#slotFor(
         tilesetId ?? this.#tilesetManager.defaultTilesetId!,
-        cutout
+        surface
       ),
       vertexCount,
       indexCount: vertexCount === 4 ? 6 : 3,
@@ -350,7 +392,9 @@ export class BlockVariantCache {
         toUnorm16(Math.fround(uvRegion.scaleU)),
         toUnorm16(Math.fround(uvRegion.scaleV))
       ]),
-      merge: describeMerge(cull, positions, tileUvs),
+      // Double-sided boundaries can be split by their neighbour's footprint.
+      merge: surface.side === "double" ? null :
+        describeMerge(cull, positions, tileUvs),
       normalX: toSnorm8(normal[0]),
       normalY: toSnorm8(normal[1]),
       normalZ: toSnorm8(normal[2])

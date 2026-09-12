@@ -18,10 +18,12 @@ Voxel layers are evaluated from the highest `order` to the lowest. World reads
 return the first visible layer with `opacity > 0` and a stored voxel at the
 requested position.
 
-Mesh generation applies an additional opacity rule. A voxel in a fully opaque
-layer hides lower-priority voxels at the same world position. A voxel in a
-partially opaque layer is drawn with the voxels below it, so a decorative layer
-can cover base terrain without modifying it.
+Mesh generation also uses each layer's `compositing` policy. The default
+`"composite"` suppresses a lower voxel only when the higher layer has opacity
+`1` and its block has opaque geometry covering all six cell boundaries. Glass,
+cutout blocks, and partial shapes preserve the lower voxel. `"replace"`
+suppresses lower voxels for any occupied cell in a layer at opacity `1`.
+Both policies preserve lower voxels when the higher layer is faded.
 
 An opacity below `1` also scopes face occlusion to the layer itself during mesh
 generation. Its voxels cull only faces in that same layer and do not hide

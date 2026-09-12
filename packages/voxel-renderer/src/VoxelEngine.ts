@@ -126,6 +126,7 @@ export class VoxelEngine {
       blockRegistry: this.blockRegistry,
       shapeRegistry: this.shapeRegistry,
       tilesetManager: this.tilesetManager,
+      alphaTest,
       greedy
     });
 
@@ -137,7 +138,6 @@ export class VoxelEngine {
     this.#materials = new ChunkMaterialCache({
       tilesetManager: this.tilesetManager,
       type: material,
-      alphaTest,
       customizer: materialCustomizer,
       tileWrapping: greedy
     });

@@ -93,7 +93,7 @@ export class ChunkMeshStore {
       for (const [geometryKey, geometry] of geometries) {
         const {
           tilesetId,
-          cutout
+          surface
         } = ChunkGeometryKey.parse(geometryKey);
 
         const mesh = new THREE.Mesh(
@@ -101,10 +101,11 @@ export class ChunkMeshStore {
           this.#materials.resolve(
             tilesetId,
             layer.opacity,
-            cutout
+            surface
           )
         );
         mesh.name = `voxel_chunk_${key}:${geometryKey}`;
+        this.#materials.retain(mesh.material);
 
         this.#root.add(mesh);
         meshes.push(mesh);
@@ -198,6 +199,13 @@ export class ChunkMeshStore {
     for (const mesh of entry.meshes) {
       this.#root.remove(mesh);
       mesh.geometry.dispose();
+
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const material of materials) {
+        this.#materials.release(material);
+      }
     }
   }
 }

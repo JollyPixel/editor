@@ -20,6 +20,23 @@ const kAtlas: TilesetDefinition = {
 };
 
 describe("serializeVoxelWorld", () => {
+  it("preserves layer compositing through cloning and world round-trips", () => {
+    const world = new VoxelWorld(16);
+    const layer = world.addLayer("Glass", { compositing: "replace" });
+    assert.equal(layer.clone().compositing, "replace");
+
+    const json = serializeVoxelWorld(world);
+    assert.equal(json.layers[0].compositing, "replace");
+
+    const restored = new VoxelWorld(16);
+    deserializeVoxelWorld(json, restored);
+    assert.equal(restored.getLayer("Glass")?.compositing, "replace");
+
+    delete json.layers[0].compositing;
+    deserializeVoxelWorld(json, restored);
+    assert.equal(restored.getLayer("Glass")?.compositing, "composite");
+  });
+
   it("empty world serializes to version=1 with empty layers", () => {
     const world = new VoxelWorld(16);
     const json = serializeVoxelWorld(world);

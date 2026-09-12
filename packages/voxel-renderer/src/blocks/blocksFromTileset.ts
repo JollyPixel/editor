@@ -11,7 +11,14 @@ const kDefaultLimit = 255;
 export type BlockOverrides = Partial<
   Pick<
     ResolvedBlockDefinition,
-    "name" | "shapeId" | "collidable" | "transparent" | "properties"
+    | "name"
+    | "shapeId"
+    | "collidable"
+    | "alphaMode"
+    | "side"
+    | "alphaCutoff"
+    | "cullSelfFaces"
+    | "properties"
   >
 >;
 

@@ -14,6 +14,8 @@ import {
 import type {
   BlockDefinition,
   ResolvedBlockDefinition,
+  BlockAlphaMode,
+  BlockSide,
   BlockShapeID,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
@@ -153,6 +155,8 @@ export class BlockEditorDialog extends LitElement {
             .value=${values.tilesetId}
             @jolly-change=${this.#onTilesetChange}
           ></jolly-select>
+          ${creating ? nothing : this.#renderSurface()}
+          ${creating ? nothing : this.#renderCullSelfFaces()}
         </div>
 
         ${creating ? html`
@@ -174,6 +178,70 @@ export class BlockEditorDialog extends LitElement {
         `}
       </jolly-dialog>
     `;
+  }
+
+  #renderCullSelfFaces() {
+    const { block } = this;
+    if (!block) {
+      return nothing;
+    }
+
+    return html`
+      <jolly-checkbox
+        label="Cull faces"
+        description="Drops covered boundaries shared with the same block"
+        .value=${block.cullSelfFaces !== false}
+        @jolly-change=${this.#onCullSelfFacesChange}
+      ></jolly-checkbox>
+    `;
+  }
+
+  #renderSurface() {
+    const { block } = this;
+    if (!block) {
+      return nothing;
+    }
+    const alphaMode = block.alphaMode ?? "opaque";
+
+    return html`
+      <jolly-select
+        label="Alpha"
+        .options=${[
+          { label: "Opaque", value: "opaque" },
+          { label: "Cutout", value: "mask" },
+          { label: "Blended", value: "blend" }
+        ]}
+        .value=${alphaMode}
+        @jolly-change=${this.#onAlphaModeChange}
+      ></jolly-select>
+      <jolly-select
+        label="Sides"
+        .options=${[
+          { label: "Outside", value: "front" },
+          { label: "Outside and inside", value: "double" }
+        ]}
+        .value=${block.side ?? (alphaMode === "opaque" ? "front" : "double")}
+        @jolly-change=${this.#onSideChange}
+      ></jolly-select>
+    `;
+  }
+
+  #onAlphaModeChange(
+    event: CustomEvent<JollyChangeDetail<BlockAlphaMode>>
+  ): void {
+    this.#applyEdit({ alphaMode: event.detail.value });
+  }
+
+  #onSideChange(
+    event: CustomEvent<JollyChangeDetail<BlockSide>>
+  ): void {
+    this.#applyEdit({ side: event.detail.value });
+  }
+
+  #onCullSelfFacesChange(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    this.#applyEdit({ cullSelfFaces: event.detail.value });
   }
 
   #defaultTilesetId(): string {
