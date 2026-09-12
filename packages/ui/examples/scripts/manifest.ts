@@ -19,6 +19,7 @@ import { COLOR_PICKER_EXAMPLE } from "./examples/controls/colorPicker.ts";
 import { BUTTON_GROUP_EXAMPLE } from "./examples/controls/buttonGroup.ts";
 import { CONTROLS_EXAMPLE } from "./examples/controls/controls.ts";
 import { CHROME_EXAMPLE } from "./examples/controls/chrome.ts";
+import { TOOL_BUTTON_EXAMPLE } from "./examples/controls/toolButton.ts";
 import { PANE_EXAMPLE } from "./examples/containers/pane.ts";
 import { FOLDER_EXAMPLE } from "./examples/containers/folder.ts";
 import { FOLDER_FLUSH_EXAMPLE } from "./examples/containers/folderFlush.ts";
@@ -87,6 +88,7 @@ export const manifest: readonly GalleryExample[] = [
   BUTTON_GROUP_EXAMPLE,
   CONTROLS_EXAMPLE,
   CHROME_EXAMPLE,
+  TOOL_BUTTON_EXAMPLE,
   PANE_EXAMPLE,
   FOLDER_EXAMPLE,
   FOLDER_FLUSH_EXAMPLE,

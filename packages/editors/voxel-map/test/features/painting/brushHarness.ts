@@ -16,6 +16,7 @@ export type MouseAction = "left" | "right";
 
 export interface VoxelEntryLike {
   position: { x: number; y: number; z: number; };
+  blockId?: number;
 }
 
 export interface BrushHarnessOptions {
@@ -89,13 +90,18 @@ export function createHarness(
   );
   let ctrl = false;
   const layer = {
-    getVoxelAt(position: CellLike): { blockId: number; } | undefined {
+    getVoxelAt(
+      position: CellLike
+    ): { blockId: number; transform: number; } | undefined {
       const key = cellKey(position);
       if (!filled && !occupied.has(key)) {
         return undefined;
       }
 
-      return { blockId: blockIds.get(key) ?? 1 };
+      return {
+        blockId: blockIds.get(key) ?? 1,
+        transform: 0
+      };
     }
   };
   const root = new THREE.Group();
@@ -249,4 +255,8 @@ export function resetEditorState(): void {
   editorState.selection.clear();
   editorState.brush.size = 1;
   editorState.brush.blockId = 1;
+  editorState.brush.mode = "build";
+  editorState.brush.axis = "xz";
+  editorState.brush.pattern = "square";
+  editorState.brush.rotationMode = "auto";
 }

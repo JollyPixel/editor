@@ -8,6 +8,10 @@ import {
   brushStyleFrom,
   type BrushStyle
 } from "../../features/painting/model/BrushStyle.ts";
+import type {
+  BrushAxis,
+  BrushPattern
+} from "../../features/painting/model/brushFootprint.ts";
 import { EditorStore } from "./EditorStore.ts";
 
 // CONSTANTS
@@ -15,6 +19,7 @@ const kMinSize = 1;
 const kMaxSize = 8;
 
 export type RotationMode = typeof VoxelRotation[keyof typeof VoxelRotation] | "auto";
+export type BrushMode = "build" | "replace";
 
 export type BrushStoreEvents = {
   blockChange: (id: number) => void;
@@ -22,6 +27,9 @@ export type BrushStoreEvents = {
   styleChange: (style: BrushStyle) => void;
   rotationModeChange: (mode: RotationMode) => void;
   flipYChange: (flipY: boolean) => void;
+  modeChange: (mode: BrushMode) => void;
+  axisChange: (axis: BrushAxis) => void;
+  patternChange: (pattern: BrushPattern) => void;
 };
 
 export class BrushStore extends EditorStore<BrushStoreEvents> {
@@ -30,6 +38,9 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
   #style: BrushStyle = DEFAULT_BRUSH_STYLE;
   #rotationMode: RotationMode = "auto";
   #flipY = false;
+  #mode: BrushMode = "build";
+  #axis: BrushAxis = "xz";
+  #pattern: BrushPattern = "square";
 
   get blockId(): number {
     return this.#blockId;
@@ -100,6 +111,60 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     this.emit(
       "flipYChange",
       flipY
+    );
+  }
+
+  get mode(): BrushMode {
+    return this.#mode;
+  }
+
+  set mode(
+    mode: BrushMode
+  ) {
+    if (this.#mode === mode) {
+      return;
+    }
+
+    this.#mode = mode;
+    this.emit(
+      "modeChange",
+      mode
+    );
+  }
+
+  get axis(): BrushAxis {
+    return this.#axis;
+  }
+
+  set axis(
+    axis: BrushAxis
+  ) {
+    if (this.#axis === axis) {
+      return;
+    }
+
+    this.#axis = axis;
+    this.emit(
+      "axisChange",
+      axis
+    );
+  }
+
+  get pattern(): BrushPattern {
+    return this.#pattern;
+  }
+
+  set pattern(
+    pattern: BrushPattern
+  ) {
+    if (this.#pattern === pattern) {
+      return;
+    }
+
+    this.#pattern = pattern;
+    this.emit(
+      "patternChange",
+      pattern
     );
   }
 

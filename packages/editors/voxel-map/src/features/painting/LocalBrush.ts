@@ -17,6 +17,10 @@ import {
 } from "../../app/state/index.ts";
 import type { BrushCursor } from "./model/brushCursor.ts";
 import {
+  planeThrough,
+  type BrushShape
+} from "./model/brushFootprint.ts";
+import {
   resolveFlipY,
   resolveRotation
 } from "./model/brushOrientation.ts";
@@ -27,7 +31,7 @@ import {
 import {
   BrushAimResolver,
   type BrushAim,
-  type BrushHeightAim
+  type BrushPlaneAim
 } from "./interaction/BrushAimResolver.ts";
 import { BrushPreview } from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
@@ -87,6 +91,7 @@ export class LocalBrush extends ActorComponent {
   #frameAim: BrushAim | null | undefined;
   #frameCenter: VoxelCoord | null | undefined;
   #altClickTravel = 0;
+  #unsubscribers: Array<() => void>;
 
   constructor(
     actor: Actor,
@@ -125,6 +130,12 @@ export class LocalBrush extends ActorComponent {
       ...color === undefined ? {} : { color },
       onCursorChange: (cursor) => this.onCursorChange?.(cursor)
     });
+    const markDirty = () => this.#preview.markDirty();
+    this.#unsubscribers = [
+      brush.watch("sizeChange", markDirty),
+      brush.watch("axisChange", markDirty),
+      brush.watch("patternChange", markDirty)
+    ];
   }
 
   get maxDistance(): number {
@@ -156,6 +167,9 @@ export class LocalBrush extends ActorComponent {
   }
 
   override destroy(): void {
+    for (const unsubscribe of this.#unsubscribers.splice(0)) {
+      unsubscribe();
+    }
     this.#preview.destroy();
     super.destroy();
   }
@@ -237,7 +251,9 @@ export class LocalBrush extends ActorComponent {
     const stroke = this.#stroke;
     if (stroke === null) {
       if (input.mouse.wasJustPressed("left")) {
-        this.#beginStroke("place");
+        this.#beginStroke(
+          this.#brush.mode === "replace" ? "replace" : "place"
+        );
       }
       else if (input.mouse.wasJustPressed("right")) {
         this.#beginStroke("remove");
@@ -252,7 +268,7 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
-    const aim = this.#aimAtHeight(stroke);
+    const aim = this.#aimAtPlane(stroke);
     if (aim === null) {
       return;
     }
@@ -274,8 +290,10 @@ export class LocalBrush extends ActorComponent {
 
     const blockId = pickBlockAt(
       this.engine,
-      center,
-      this.#brush.size
+      {
+        ...this.#shape(),
+        position: center
+      }
     );
     if (blockId !== null) {
       this.#brush.blockId = blockId;
@@ -296,8 +314,9 @@ export class LocalBrush extends ActorComponent {
     }
 
     const center = mode === "place" ? aim.place : aim.remove;
+    const { axis, pattern } = this.#brush;
     // Freeze orientation so camera movement cannot rotate a stroke midway.
-    const paint = mode === "place" ? {
+    const paint = mode === "remove" ? undefined : {
       blockId: this.#brush.blockId,
       rotation: resolveRotation(
         this.#camera,
@@ -308,18 +327,20 @@ export class LocalBrush extends ActorComponent {
         this.#brush.rotationMode,
         this.#brush.flipY
       )
-    } : undefined;
+    };
     const stroke = new BrushStroke({
       mode,
       layerName,
       paint,
-      height: center.y
+      axis,
+      pattern,
+      plane: planeThrough(axis, center)
     });
 
     this.#stroke = stroke;
     const target = stroke.steer(
       center,
-      this.#aimAtHeight(stroke)?.cursor ?? center
+      this.#aimAtPlane(stroke)?.cursor ?? center
     );
     this.#frameCenter = target;
     this.#apply(stroke, stroke.advance(target));
@@ -370,16 +391,26 @@ export class LocalBrush extends ActorComponent {
     return this.#frameAim;
   }
 
-  #aimAtHeight(
+  #aimAtPlane(
     stroke: BrushStroke
-  ): BrushHeightAim | null {
+  ): BrushPlaneAim | null {
     const { input } = this.actor.world;
 
-    return this.#aimer.aimAtHeight(
+    return this.#aimer.aimAtPlane(
       input.mouse.viewportPositionTo(this.#pointer),
-      stroke.height,
+      stroke.plane,
       stroke.mode
     );
+  }
+
+  #shape(): BrushShape {
+    const source = this.#stroke ?? this.#brush;
+
+    return {
+      size: this.#brush.size,
+      axis: source.axis,
+      pattern: source.pattern
+    };
   }
 
   #updatePreview(): void {
@@ -391,7 +422,7 @@ export class LocalBrush extends ActorComponent {
 
     this.#preview.update(
       this.actor.world.input.mouse.isMoving(),
-      this.#brush.size,
+      this.#shape(),
       () => this.#previewCenter()
     );
   }
@@ -408,7 +439,7 @@ export class LocalBrush extends ActorComponent {
       return this.#frameCenter;
     }
 
-    const aim = this.#aimAtHeight(stroke);
+    const aim = this.#aimAtPlane(stroke);
     this.#frameCenter = aim === null ?
       null :
       stroke.steer(aim.cell, aim.cursor);
@@ -420,5 +451,5 @@ export class LocalBrush extends ActorComponent {
 function strokeButton(
   mode: StrokeMode
 ): "left" | "right" {
-  return mode === "place" ? "left" : "right";
+  return mode === "remove" ? "right" : "left";
 }

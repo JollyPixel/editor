@@ -76,6 +76,23 @@ $ npm run build -w @jolly-pixel/editor.voxel-map
 
 `test-only` runs the Node.js tests without producing the HTML coverage report.
 
+## Brush toolbar
+
+The toolbar at the bottom of the viewport sets how the brush paints. It is
+disabled until a voxel layer is selected.
+
+| Tool | Values | Shortcut |
+|---|---|---|
+| Mode | Build places into empty cells; Replace repaints occupied cells | `R` |
+| Axis | `xz` floor, `xy` and `yz` walls, `xyz` volume | `X` cycles |
+| Size | 1 to 8 | `[` / `]`, `Ctrl` + wheel |
+| Pattern | Square, Circle (a ball on `xyz`) | `C` |
+
+Right click removes in both modes. X and Z are centred on the aimed cell and
+walls and volumes grow upward from it. A stroke stays on the plane it started
+on and keeps the mode, axis and pattern it started with. Shortcuts are ignored
+with a modifier held, while typing, and while a dialog is open.
+
 ## Block transparency
 
 The block editor offers Opaque, Cutout, and Blended alpha modes, plus Outside

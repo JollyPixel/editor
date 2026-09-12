@@ -1,61 +1,14 @@
 // Import Third-party Dependencies
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
-export interface BrushCursor {
-  position: VoxelCoord;
-  size: number;
-}
+// Import Internal Dependencies
+import {
+  isBrushAxis,
+  isBrushPattern,
+  type BrushFootprint
+} from "./brushFootprint.ts";
 
-export interface BrushBounds {
-  /**
-   * Lowest cell coordinate.
-   */
-  min: VoxelCoord;
-  /**
-   * Cell extent; brushes are one cell tall.
-   */
-  span: VoxelCoord;
-}
-
-export function boundsOf(
-  cursor: BrushCursor
-): BrushBounds {
-  const { position, size } = cursor;
-  const half = Math.floor(size / 2);
-
-  return {
-    min: {
-      x: position.x - half,
-      y: position.y,
-      z: position.z - half
-    },
-    span: {
-      x: size,
-      y: 1,
-      z: size
-    }
-  };
-}
-
-export function cellsOf(
-  cursor: BrushCursor
-): VoxelCoord[] {
-  const { position, size } = cursor;
-  const half = Math.floor(size / 2);
-  const cells: VoxelCoord[] = [];
-
-  for (let dx = 0; dx < size; dx++) {
-    for (let dz = 0; dz < size; dz++) {
-      cells.push({
-        x: position.x - half + dx,
-        y: position.y,
-        z: position.z - half + dz
-      });
-    }
-  }
-
-  return cells;
-}
+export type BrushCursor = BrushFootprint;
 
 export function read(
   value: unknown
@@ -75,9 +28,14 @@ export function read(
     return null;
   }
 
+  const axis = Reflect.get(value, "axis");
+  const pattern = Reflect.get(value, "pattern");
+
   return {
     position,
-    size: Math.floor(size)
+    size: Math.floor(size),
+    axis: isBrushAxis(axis) ? axis : "xz",
+    pattern: isBrushPattern(pattern) ? pattern : "square"
   };
 }
 
@@ -90,6 +48,8 @@ export function equals(
   }
 
   return a.size === b.size &&
+    a.axis === b.axis &&
+    a.pattern === b.pattern &&
     a.position.x === b.position.x &&
     a.position.y === b.position.y &&
     a.position.z === b.position.z;
@@ -102,31 +62,4 @@ function isVoxelCoord(
     typeof Reflect.get(value, "x") === "number" &&
     typeof Reflect.get(value, "y") === "number" &&
     typeof Reflect.get(value, "z") === "number";
-}
-
-export function overlaps(
-  a: BrushCursor | null,
-  b: BrushCursor | null
-): boolean {
-  if (a === null || b === null) {
-    return false;
-  }
-  if (a.position.y !== b.position.y) {
-    return false;
-  }
-
-  return spansOverlap(a.position.x, a.size, b.position.x, b.size) &&
-    spansOverlap(a.position.z, a.size, b.position.z, b.size);
-}
-
-function spansOverlap(
-  aCenter: number,
-  aSize: number,
-  bCenter: number,
-  bSize: number
-): boolean {
-  const aStart = aCenter - Math.floor(aSize / 2);
-  const bStart = bCenter - Math.floor(bSize / 2);
-
-  return aStart < bStart + bSize && bStart < aStart + aSize;
 }

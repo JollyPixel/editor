@@ -60,4 +60,30 @@ describe("BrushStore", () => {
 
     assert.deepEqual(seen, ["block:4", "flipY:true"]);
   });
+
+  it("starts as a flat square build brush", () => {
+    const brush = new BrushStore();
+
+    assert.equal(brush.mode, "build");
+    assert.equal(brush.axis, "xz");
+    assert.equal(brush.pattern, "square");
+  });
+
+  it("publishes mode, axis and pattern changes only on transition", () => {
+    const brush = new BrushStore();
+    const seen: string[] = [];
+    brush.watch("modeChange", (mode) => seen.push(`mode:${mode}`));
+    brush.watch("axisChange", (axis) => seen.push(`axis:${axis}`));
+    brush.watch("patternChange", (pattern) => seen.push(`pattern:${pattern}`));
+
+    brush.mode = "build";
+    brush.mode = "replace";
+    brush.mode = "replace";
+    brush.axis = "xz";
+    brush.axis = "yz";
+    brush.pattern = "circle";
+    brush.pattern = "circle";
+
+    assert.deepEqual(seen, ["mode:replace", "axis:yz", "pattern:circle"]);
+  });
 });

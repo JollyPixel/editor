@@ -33,9 +33,6 @@ export class PointerFocusController {
     this.#set(false);
   };
 
-  /**
-   * Keyboard input restores the focus-visible ring.
-   */
   onKeyDown = (): void => {
     this.#set(false);
   };

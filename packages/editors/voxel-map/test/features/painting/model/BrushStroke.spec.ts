@@ -10,7 +10,10 @@ describe("BrushStroke", () => {
     return new BrushStroke({
       mode: "place",
       layerName: "Ground",
-      height: 0,
+      plane: {
+        axis: "y",
+        value: 0
+      },
       paint: {
         blockId: 1,
         rotation: 0,
@@ -116,6 +119,34 @@ describe("BrushStroke", () => {
       ]),
       [{ x: 2, y: 0, z: 0 }]
     );
+  });
+
+  test("pulls a cell back onto a vertical plane", () => {
+    const stroke = new BrushStroke({
+      mode: "remove",
+      layerName: "Ground",
+      axis: "xy",
+      plane: {
+        axis: "z",
+        value: 4
+      }
+    });
+
+    assert.deepStrictEqual(
+      stroke.lock({ x: 1, y: 7, z: 2 }),
+      { x: 1, y: 7, z: 4 }
+    );
+    stroke.advance({ x: 0, y: 0, z: 4 });
+    assert.ok(
+      stroke.advance({ x: 3, y: 3, z: 9 }).every((cell) => cell.z === 4)
+    );
+  });
+
+  test("defaults to a flat square footprint", () => {
+    const stroke = createStroke();
+
+    assert.strictEqual(stroke.axis, "xz");
+    assert.strictEqual(stroke.pattern, "square");
   });
 
   test("carries what a placement needs", () => {

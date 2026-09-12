@@ -18,6 +18,7 @@ below documents the properties and behavior owned by one component.
 - [`jolly-separator`](./separator.md), exported as `Separator`
 - [`jolly-slider`](./slider.md), exported as `Slider`
 - [`jolly-text`](./text.md), exported as `Text`
+- [`jolly-tool-button`](./tool-button.md), exported as `ToolButton`
 
 See [Choosing controls](../../guides/choosing-controls.md) for a value-to-control
 map.

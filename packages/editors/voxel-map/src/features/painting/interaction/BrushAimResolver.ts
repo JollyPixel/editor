@@ -10,11 +10,18 @@ import {
 import { castViewRay } from "../../../scene/viewFocus.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
 import type { StrokeMode } from "../model/BrushStroke.ts";
+import type { BrushPlane } from "../model/brushFootprint.ts";
 
 // CONSTANTS
 const kPlane = new THREE.Plane();
 const kPlanePoint = new THREE.Vector3();
+const kPlaneNormal = new THREE.Vector3();
 const kUp = new THREE.Vector3(0, 1, 0);
+const kAxisIndex = {
+  x: 0,
+  y: 1,
+  z: 2
+} as const;
 const kSphere = new THREE.Sphere();
 const kSpherePoint = new THREE.Vector3();
 
@@ -23,7 +30,7 @@ export interface BrushAim {
   remove: VoxelCoord;
 }
 
-export interface BrushHeightAim {
+export interface BrushPlaneAim {
   cell: VoxelCoord;
   cursor: VoxelCoord;
 }
@@ -170,16 +177,20 @@ export class BrushAimResolver {
     };
   }
 
-  aimAtHeight(
+  aimAtPlane(
     pointer: THREE.Vector2,
-    height: number,
+    plane: BrushPlane,
     mode: StrokeMode
-  ): BrushHeightAim | null {
+  ): BrushPlaneAim | null {
     this.#raycaster.setFromCamera(
       pointer,
       this.#camera
     );
-    kPlane.set(kUp, -(height + 0.5));
+    kPlaneNormal.set(0, 0, 0).setComponent(
+      kAxisIndex[plane.axis],
+      1
+    );
+    kPlane.set(kPlaneNormal, -(plane.value + 0.5));
 
     const point = this.#raycaster.ray.intersectPlane(
       kPlane,
@@ -204,14 +215,12 @@ export class BrushAimResolver {
 
     return {
       cell: {
-        x: cell.x,
-        y: height,
-        z: cell.z
+        ...cell,
+        [plane.axis]: plane.value
       },
       cursor: {
-        x: row.x,
-        y: height,
-        z: row.z
+        ...row,
+        [plane.axis]: plane.value
       }
     };
   }

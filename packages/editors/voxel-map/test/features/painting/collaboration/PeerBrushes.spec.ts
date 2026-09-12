@@ -124,7 +124,9 @@ function createHarness(): PeerBrushesHarness {
 
 const kCursor: BrushCursor = {
   position: { x: 1, y: 2, z: 3 },
-  size: 2
+  size: 2,
+  axis: "xz",
+  pattern: "square"
 };
 
 describe("PeerBrushes / local reporting", () => {
@@ -294,6 +296,7 @@ describe("PeerBrushes / local priority", () => {
     harness.emit("sync");
 
     harness.peers.publishLocalCursor({
+      ...kCursor,
       position: { x: 40, y: 2, z: 3 },
       size: 1
     });

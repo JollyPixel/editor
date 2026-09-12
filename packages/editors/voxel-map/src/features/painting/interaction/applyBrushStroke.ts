@@ -1,12 +1,17 @@
 // Import Third-party Dependencies
-import type {
-  VoxelCoord,
-  VoxelEngine
+import {
+  VoxelTransform,
+  type VoxelCoord,
+  type VoxelEngine,
+  type VoxelEntry
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import * as cursor from "../model/brushCursor.ts";
-import type { BrushStroke } from "../model/BrushStroke.ts";
+import { cellsOf } from "../model/brushFootprint.ts";
+import type {
+  BrushStroke,
+  VoxelPaint
+} from "../model/BrushStroke.ts";
 
 export function applyBrushStroke(
   engine: VoxelEngine,
@@ -17,9 +22,11 @@ export function applyBrushStroke(
   const cells: VoxelCoord[] = [];
   for (const position of centers) {
     cells.push(
-      ...stroke.claim(cursor.cellsOf({
+      ...stroke.claim(cellsOf({
         position,
-        size: brushSize
+        size: brushSize,
+        axis: stroke.axis,
+        pattern: stroke.pattern
       }))
     );
   }
@@ -30,19 +37,22 @@ export function applyBrushStroke(
   const { world } = engine;
   const layer = world.getLayer(stroke.layerName);
   if (stroke.paint) {
-    const {
-      blockId,
-      rotation,
-      flipY
-    } = stroke.paint;
+    const paint = stroke.paint;
+    const transform = new VoxelTransform(paint).packed;
     const entries = cells
-      .filter((position) => layer?.getVoxelAt(position) === undefined)
+      .filter((position) => {
+        const entry = layer?.getVoxelAt(position);
+
+        return stroke.mode === "replace" ?
+          entry !== undefined && !paints(entry, paint, transform) :
+          entry === undefined;
+      })
       .map((position) => {
         return {
           position,
-          blockId,
-          rotation,
-          flipY
+          blockId: paint.blockId,
+          rotation: paint.rotation,
+          flipY: paint.flipY
         };
       });
     if (entries.length === 0) {
@@ -67,4 +77,13 @@ export function applyBrushStroke(
   engine.flush();
 
   return true;
+}
+
+function paints(
+  entry: VoxelEntry,
+  paint: VoxelPaint,
+  transform: number
+): boolean {
+  return entry.blockId === paint.blockId &&
+    entry.transform === transform;
 }

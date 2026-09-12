@@ -154,11 +154,18 @@ export {
   Separator
 } from "./controls/Separator.ts";
 export {
-  Slider
+  Slider,
+  type SliderDefaults,
+  type SliderOrientation
 } from "./controls/Slider.ts";
 export {
   Text
 } from "./controls/Text.ts";
+export {
+  ToolButton,
+  type ToolButtonDefaults,
+  type ToolButtonFlyoutSide
+} from "./controls/ToolButton.ts";
 export type {
   Interval,
   JollyOption

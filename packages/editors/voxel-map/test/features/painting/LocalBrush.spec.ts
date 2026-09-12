@@ -377,6 +377,185 @@ describe("LocalBrush stroke", () => {
   });
 });
 
+describe("LocalBrush replace mode", () => {
+  afterEach(resetEditorState);
+
+  test("overwrites the occupied cells of the footprint only", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.mode = "replace";
+    editorState.brush.size = 2;
+    editorState.brush.blockId = 4;
+    const harness = createHarness({
+      blocks: [
+        { x: 0, y: 0, z: 0, blockId: 2 },
+        { x: -1, y: 0, z: -1, blockId: 2 }
+      ]
+    });
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, ["set:2", "flush"]);
+    assert.deepStrictEqual(
+      sortCells(harness.placed.map(({ position }) => position)),
+      sortCells([{ x: 0, y: 0, z: 0 }, { x: -1, y: 0, z: -1 }])
+    );
+    assert.ok(harness.placed.every(({ blockId }) => blockId === 4));
+  });
+
+  test("skips cells that already hold the painted block", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.mode = "replace";
+    editorState.brush.rotationMode = 0;
+    const harness = createHarness({
+      blocks: [{ x: 0, y: 0, z: 0, blockId: 1 }]
+    });
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, []);
+  });
+
+  test("writes nothing over empty cells", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.mode = "replace";
+    editorState.brush.size = 3;
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, []);
+  });
+
+  test("still removes on right click", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.mode = "replace";
+    const harness = createHarness({ filled: true });
+
+    harness.press("right");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, ["remove:1", "flush"]);
+  });
+});
+
+describe("LocalBrush axis and pattern", () => {
+  afterEach(resetEditorState);
+
+  function tiltCamera(
+    harness: BrushHarness,
+    x: number,
+    z: number
+  ): void {
+    harness.camera.position.set(x, 6, z);
+    harness.camera.lookAt(0.5, 0, 0.5);
+    harness.camera.updateMatrixWorld(true);
+  }
+
+  test("stamps a wall standing on the aimed cell", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.axis = "xy";
+    editorState.brush.size = 2;
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+
+    const positions = harness.placed.map(({ position }) => position);
+    assert.strictEqual(positions.length, 4);
+    assert.deepStrictEqual(
+      [...new Set(positions.map(({ y }) => y))].sort(),
+      [0, 1]
+    );
+    assert.strictEqual(new Set(positions.map(({ z }) => z)).size, 1);
+  });
+
+  test("an xy stroke stays on the plane it started on", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.axis = "xy";
+    const harness = createHarness();
+    tiltCamera(harness, 0.5, -5.5);
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    const { z } = harness.placed[0].position;
+    harness.setPointer(0.4, 0.3);
+    for (let stamp = 0; stamp < 3; stamp++) {
+      harness.brush.update();
+    }
+
+    assert.ok(harness.placed.length > 1, "the stroke moved");
+    assert.ok(harness.placed.every(({ position }) => position.z === z));
+  });
+
+  test("a yz stroke stays on its X plane", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.axis = "yz";
+    const harness = createHarness();
+    tiltCamera(harness, -5.5, 0.5);
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    const { x } = harness.placed[0].position;
+    harness.setPointer(0.4, 0.3);
+    for (let stamp = 0; stamp < 3; stamp++) {
+      harness.brush.update();
+    }
+
+    assert.ok(harness.placed.length > 1, "the stroke moved");
+    assert.ok(harness.placed.every(({ position }) => position.x === x));
+  });
+
+  test("changing the brush mid-stroke leaves the stroke alone", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    editorState.brush.size = 2;
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    editorState.brush.mode = "replace";
+    editorState.brush.axis = "xy";
+    editorState.brush.pattern = "circle";
+    harness.setPointer(0.3, 0);
+    harness.brush.update();
+
+    assert.ok(harness.placed.length > 4, "the stroke kept placing");
+    assert.ok(harness.placed.every(({ position }) => position.y === 0));
+  });
+
+  test("republishes the cursor when the axis or pattern changes", () => {
+    const harness = createHarness();
+
+    harness.brush.update();
+    harness.setMouseMoving(false);
+    editorState.brush.axis = "xyz";
+    harness.brush.update();
+    editorState.brush.pattern = "circle";
+    harness.brush.update();
+
+    assert.deepStrictEqual(
+      harness.cursors.slice(-2).map((cursor) => [cursor?.axis, cursor?.pattern]),
+      [["xyz", "square"], ["xyz", "circle"]]
+    );
+  });
+
+  test("refreshes the preview when the size changes", () => {
+    const harness = createHarness();
+
+    harness.brush.update();
+    harness.setMouseMoving(false);
+    editorState.brush.size = 3;
+    harness.brush.update();
+
+    assert.strictEqual(harness.cursors.at(-1)?.size, 3);
+  });
+});
+
 describe("LocalBrush preview refresh gating", () => {
   afterEach(resetEditorState);
 
@@ -470,7 +649,9 @@ describe("LocalBrush cursor reporting", () => {
     assert.deepStrictEqual(harness.cursors, [
       {
         position: { x: 0, y: 0, z: 0 },
-        size: 1
+        size: 1,
+        axis: "xz",
+        pattern: "square"
       }
     ]);
   });
@@ -493,7 +674,9 @@ describe("LocalBrush cursor reporting", () => {
 
     assert.deepStrictEqual(harness.cursors.at(-1), {
       position: { x: 0, y: 0, z: 0 },
-      size: 3
+      size: 3,
+      axis: "xz",
+      pattern: "square"
     });
   });
 
@@ -529,7 +712,9 @@ describe("LocalBrush reach", () => {
     assert.deepStrictEqual(harness.cursors, [
       {
         position: { x: 0, y: 0, z: 0 },
-        size: 1
+        size: 1,
+        axis: "xz",
+        pattern: "square"
       }
     ]);
   });
@@ -585,7 +770,9 @@ describe("LocalBrush reach", () => {
 
     assert.deepStrictEqual(harness.cursors.at(-1), {
       position: { x: 0, y: 0, z: 0 },
-      size: 1
+      size: 1,
+      axis: "xz",
+      pattern: "square"
     });
   });
 });

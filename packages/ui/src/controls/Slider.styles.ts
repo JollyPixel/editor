@@ -162,4 +162,77 @@ export const sliderStyles = css`
   :host([disabled]) .value input[type="range"] {
     cursor: default;
   }
+
+  :host([orientation="vertical"]) {
+    display: inline-block;
+  }
+
+  :host([orientation="vertical"]) .row,
+  :host([orientation="vertical"]) .leading,
+  :host([orientation="vertical"]) .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--jolly-space-1, 4px);
+    min-height: auto;
+  }
+
+  :host([orientation="vertical"]) .row {
+    padding: var(--jolly-space-1, 4px) 0;
+  }
+
+  :host([orientation="vertical"][unlabeled]:not([locked])) .leading {
+    display: none;
+  }
+
+  :host([orientation="vertical"]) .value {
+    flex-direction: column-reverse;
+    flex: 0 0 auto;
+  }
+
+  :host([orientation="vertical"]) .lane {
+    flex: 0 0 auto;
+    width: var(--jolly-control-height, 20px);
+    height: var(--jolly-slider-length, 120px);
+  }
+
+  :host([orientation="vertical"]) .lane::before {
+    top: var(--jolly-slider-inset);
+    bottom: var(--jolly-slider-inset);
+    left: 50%;
+    width: var(--jolly-slider-track-height);
+    height: auto;
+    background: linear-gradient(
+      to top,
+      var(--jolly-slider-fill) 0 var(--jolly-slider-stop),
+      var(--jolly-slider-groove) var(--jolly-slider-stop) 100%
+    );
+    transform: translateX(-50%);
+    transition: width var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+  }
+
+  :host([orientation="vertical"]) .value input[type="range"] {
+    inset: var(--jolly-slider-inset) 0;
+    width: 100%;
+    height: auto;
+    writing-mode: vertical-lr;
+    direction: rtl;
+  }
+
+  :host([orientation="vertical"]) .value input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 100%;
+  }
+
+  :host([orientation="vertical"]) .value input[type="range"]::-webkit-slider-thumb {
+    margin-top: 0;
+    margin-left: calc(
+      (var(--jolly-control-height, 20px) - var(--jolly-slider-knob, 10px)) / 2
+    );
+  }
+
+  :host([orientation="vertical"]) .value input.readout {
+    width: 4ch;
+    text-align: center;
+  }
 `;
