@@ -34,6 +34,7 @@ import {
   VoxelLayerGizmo
 } from "../features/layers/index.ts";
 import { BlockSelectionPresence } from "../features/blocks/collaboration/BlockSelectionPresence.ts";
+import { LayerSelectionPresence } from "../features/layers/collaboration/LayerSelectionPresence.ts";
 import { PeerRoster } from "../collaboration/PeerRoster.ts";
 import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
 import type { EditorIdentity } from "../collaboration/identity.ts";
@@ -72,6 +73,7 @@ export class EditorScene extends Systems.Scene {
   #voxelSyncClient: VoxelSyncClient | undefined;
   #peerRoster: PeerRoster | undefined;
   #blockSelections: BlockSelectionPresence | undefined;
+  #layerSelections: LayerSelectionPresence | undefined;
   #peerFrustums: PeerFrustums | undefined;
   #freeFlyCamera: FreeFlyCamera | undefined;
   #viewFocus: ViewFocus;
@@ -250,12 +252,17 @@ export class EditorScene extends Systems.Scene {
       this.#peerRoster = new PeerRoster({
         room: this.#voxelRoom,
         identity: this.#identity,
-        shell: this.editorState.shell
+        presence: this.editorState.presence
       });
       this.#blockSelections = new BlockSelectionPresence({
         room: this.#voxelRoom,
         brush: this.editorState.brush,
-        shell: this.editorState.shell
+        presence: this.editorState.presence
+      });
+      this.#layerSelections = new LayerSelectionPresence({
+        room: this.#voxelRoom,
+        selection: this.editorState.selection,
+        presence: this.editorState.presence
       });
     }
 
@@ -366,6 +373,8 @@ export class EditorScene extends Systems.Scene {
     this.#peerRoster = undefined;
     this.#blockSelections?.dispose();
     this.#blockSelections = undefined;
+    this.#layerSelections?.dispose();
+    this.#layerSelections = undefined;
     this.#peerFrustums = undefined;
     this.#freeFlyCamera = undefined;
   }

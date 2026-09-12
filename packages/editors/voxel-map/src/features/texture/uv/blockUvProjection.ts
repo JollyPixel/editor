@@ -93,6 +93,7 @@ export function blockUvRegion(
   if (shapeUv.isBox) {
     return new UVRegion({
       id: blockUvRegionId(block.id),
+      name: block.name,
       color: kRegionColor,
       state: "stacked",
       rect: rectOf(block.defaultTexture, tileSize)
@@ -128,6 +129,7 @@ export function freeBlockUvRegion(
 
   return new UVRegion({
     id: blockUvRegionId(block.id),
+    name: block.name,
     color: kRegionColor,
     state: "free",
     faces,

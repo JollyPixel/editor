@@ -13,7 +13,7 @@ import type {
 // Import Internal Dependencies
 import {
   editorState,
-  type ShellStore
+  type PresenceStore
 } from "../app/state/index.ts";
 import {
   peerColor,
@@ -27,7 +27,7 @@ export interface PeerRosterOptions {
     VoxelServerMessage
   >;
   identity: EditorIdentity;
-  shell?: ShellStore;
+  presence?: PresenceStore;
   log?: LogQueue;
 }
 
@@ -37,14 +37,14 @@ export class PeerRoster {
     VoxelServerMessage
   >;
   #identity: EditorIdentity;
-  #shell: ShellStore;
+  #presence: PresenceStore;
   #log: LogQueue;
   #known = new Map<string, PresencePeer>();
 
   #publish = (): void => {
     const peers = this.#snapshot();
     this.#known = new Map(peers.map((peer) => [peer.clientId, peer]));
-    this.#shell.peers = peers;
+    this.#presence.peers = peers;
   };
 
   #onPeerJoined = (
@@ -66,7 +66,7 @@ export class PeerRoster {
   ) {
     this.#room = options.room;
     this.#identity = options.identity;
-    this.#shell = options.shell ?? editorState.shell;
+    this.#presence = options.presence ?? editorState.presence;
     this.#log = options.log ?? editorState.log;
 
     this.#room.on("sync", this.#publish);
@@ -81,7 +81,7 @@ export class PeerRoster {
     this.#room.off("peer-joined", this.#onPeerJoined);
     this.#room.off("peer-left", this.#onPeerLeft);
 
-    this.#shell.peers = [];
+    this.#presence.peers = [];
     this.#known.clear();
   }
 

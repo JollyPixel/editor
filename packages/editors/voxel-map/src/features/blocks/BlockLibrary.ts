@@ -16,15 +16,15 @@ import { BlockEditorDialog } from "./BlockEditorDialog.ts";
 import {
   editorState,
   type BrushStore,
+  type PresenceStore,
   type RotationMode,
-  type ShellStore,
   type WorldStore
 } from "../../app/state/index.ts";
 import {
-  mergeSelfBlockMark,
-  selfBlockMark,
-  type BlockMarkMap
-} from "./blockMarks.ts";
+  mergeSelfPeerMark,
+  selfPeerMark,
+  type PeerMarkMap
+} from "../../collaboration/peerMarks.ts";
 
 // Registers the Three.js block grid.
 import { BlockLibraryViewport } from "./BlockLibraryViewport.ts";
@@ -88,7 +88,7 @@ export class BlockLibrary extends LitElement {
   declare worldStore: WorldStore;
 
   @property({ attribute: false })
-  declare shell: ShellStore;
+  declare presence: PresenceStore;
 
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
@@ -109,7 +109,7 @@ export class BlockLibrary extends LitElement {
   private declare _flipY: boolean;
 
   @state()
-  private declare _marks: BlockMarkMap;
+  private declare _marks: PeerMarkMap<number>;
 
   @query("block-editor-dialog")
   declare private _dialog: BlockEditorDialog;
@@ -125,7 +125,7 @@ export class BlockLibrary extends LitElement {
     this.engine = undefined;
     this.brush = editorState.brush;
     this.worldStore = editorState.world;
-    this.shell = editorState.shell;
+    this.presence = editorState.presence;
     this.layout = "compact";
     this._selectedId = null;
     this._selectedBlock = null;
@@ -166,8 +166,8 @@ export class BlockLibrary extends LitElement {
       this.worldStore.watch("blockRegistryChanged", this.#onBlockRegistryChanged),
       this.brush.watch("rotationModeChange", this.#onRotationModeChange),
       this.brush.watch("flipYChange", this.#onFlipYChange),
-      this.shell.watch("blockSelectionsChange", this.#onMarksChange),
-      this.shell.watch("peersChange", this.#onMarksChange)
+      this.presence.watch("blockSelectionsChange", this.#onMarksChange),
+      this.presence.watch("peersChange", this.#onMarksChange)
     );
     this.#refreshMarks();
   }
@@ -276,10 +276,10 @@ export class BlockLibrary extends LitElement {
   }
 
   #refreshMarks(): void {
-    this._marks = mergeSelfBlockMark(
-      this.shell.blockSelections,
+    this._marks = mergeSelfPeerMark(
+      this.presence.blockSelections,
       this._selectedId,
-      selfBlockMark(this.shell.peers)
+      selfPeerMark(this.presence.peers)
     );
   }
 

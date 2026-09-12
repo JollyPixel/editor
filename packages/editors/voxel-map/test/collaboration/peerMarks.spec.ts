@@ -4,17 +4,17 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  blockMarkNames,
-  mergeSelfBlockMark,
-  resolveBlockMarks,
-  selfBlockMark,
-  type BlockPeerMark
-} from "../../../src/features/blocks/blockMarks.ts";
+  mergeSelfPeerMark,
+  peerMarkNames,
+  resolvePeerMarks,
+  selfPeerMark,
+  type PeerMark
+} from "../../src/collaboration/peerMarks.ts";
 
 function mark(
   clientId: string,
   color = "#ff0000"
-): BlockPeerMark {
+): PeerMark {
   return {
     clientId,
     displayName: clientId.toUpperCase(),
@@ -22,21 +22,21 @@ function mark(
   };
 }
 
-describe("resolveBlockMarks", () => {
+describe("resolvePeerMarks", () => {
   it("returns null when a block carries no mark", () => {
-    assert.equal(resolveBlockMarks(undefined), null);
-    assert.equal(resolveBlockMarks([]), null);
+    assert.equal(resolvePeerMarks(undefined), null);
+    assert.equal(resolvePeerMarks([]), null);
   });
 
   it("keeps a lone mark as the highlight without dots", () => {
-    const view = resolveBlockMarks([mark("ada")]);
+    const view = resolvePeerMarks([mark("ada")]);
 
     assert.equal(view?.highlight.clientId, "ada");
     assert.deepEqual(view?.dots, []);
   });
 
   it("dots every mark but the highlight owner", () => {
-    const view = resolveBlockMarks([
+    const view = resolvePeerMarks([
       mark("ada"),
       mark("bob"),
       mark("cleo")
@@ -50,7 +50,7 @@ describe("resolveBlockMarks", () => {
   });
 
   it("caps the dots to three", () => {
-    const view = resolveBlockMarks([
+    const view = resolvePeerMarks([
       mark("ada"),
       mark("bob"),
       mark("cleo"),
@@ -65,9 +65,9 @@ describe("resolveBlockMarks", () => {
   });
 });
 
-describe("selfBlockMark", () => {
+describe("selfPeerMark", () => {
   it("reads the local peer out of the roster", () => {
-    const local = selfBlockMark([
+    const local = selfPeerMark([
       { clientId: "bob", displayName: "Bob", color: "#00ff00" },
       { clientId: "ada", displayName: "Ada", color: "#0000ff", self: true }
     ]);
@@ -81,7 +81,7 @@ describe("selfBlockMark", () => {
   });
 
   it("falls back to an offline identity", () => {
-    const local = selfBlockMark([]);
+    const local = selfPeerMark([]);
 
     assert.equal(local.clientId, "");
     assert.equal(local.self, true);
@@ -89,13 +89,13 @@ describe("selfBlockMark", () => {
   });
 });
 
-describe("mergeSelfBlockMark", () => {
-  const local = selfBlockMark([
+describe("mergeSelfPeerMark", () => {
+  const local = selfPeerMark([
     { clientId: "ada", displayName: "Ada", color: "#0000ff", self: true }
   ]);
 
   it("gives the local selection priority over peers", () => {
-    const merged = mergeSelfBlockMark(
+    const merged = mergeSelfPeerMark(
       new Map([[3, [mark("bob"), mark("cleo")]]]),
       3,
       local
@@ -108,14 +108,14 @@ describe("mergeSelfBlockMark", () => {
   });
 
   it("marks a block nobody else selected", () => {
-    const merged = mergeSelfBlockMark(new Map(), 7, local);
+    const merged = mergeSelfPeerMark(new Map(), 7, local);
 
     assert.deepEqual(merged.get(7), [local]);
   });
 
   it("keeps peer marks when there is no local selection", () => {
     const peers = new Map([[3, [mark("bob")]]]);
-    const merged = mergeSelfBlockMark(peers, null, local);
+    const merged = mergeSelfPeerMark(peers, null, local);
 
     assert.deepEqual(
       merged.get(3)?.map((entry) => entry.clientId),
@@ -125,7 +125,7 @@ describe("mergeSelfBlockMark", () => {
 
   it("never mutates the peer map", () => {
     const peers = new Map([[3, [mark("bob")]]]);
-    mergeSelfBlockMark(peers, 3, local);
+    mergeSelfPeerMark(peers, 3, local);
 
     assert.deepEqual(
       peers.get(3)?.map((entry) => entry.clientId),
@@ -134,9 +134,9 @@ describe("mergeSelfBlockMark", () => {
   });
 });
 
-describe("blockMarkNames", () => {
+describe("peerMarkNames", () => {
   it("lists the highlight owner first", () => {
-    const names = blockMarkNames({
+    const names = peerMarkNames({
       highlight: mark("ada"),
       dots: [mark("bob")]
     });

@@ -7,6 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
+import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -14,8 +15,10 @@ import {
   layerRowId,
   layerSelectionOf,
   layerTreeNodes,
+  withLayerBadges,
   type LayerRef
 } from "../../../src/features/layers/layerTree.ts";
+import type { PeerMark } from "../../../src/collaboration/peerMarks.ts";
 
 describe("layer tree references", () => {
   const refs: LayerRef[] = [
@@ -94,5 +97,106 @@ describe("layerTreeNodes", () => {
         objectId: "spawn"
       }
     });
+  });
+});
+
+describe("withLayerBadges", () => {
+  const nodes: TreeNode<LayerRef>[] = [
+    {
+      id: "voxel:Ground",
+      label: "Ground",
+      data: {
+        kind: "voxel-layer",
+        name: "Ground"
+      }
+    },
+    {
+      id: "object:Triggers",
+      label: "Triggers",
+      data: {
+        kind: "object-layer",
+        name: "Triggers"
+      },
+      children: [
+        {
+          id: "obj:Triggers/spawn",
+          label: "Spawn",
+          data: {
+            kind: "object",
+            layerName: "Triggers",
+            objectId: "spawn"
+          }
+        }
+      ]
+    }
+  ];
+
+  function mark(
+    clientId: string,
+    color: string
+  ): PeerMark {
+    return {
+      clientId,
+      displayName: clientId,
+      color
+    };
+  }
+
+  test("leaves every row untouched when no peer selects anything", () => {
+    const badged = withLayerBadges(nodes, new Map());
+
+    assert.strictEqual(badged[0].badges, undefined);
+    assert.strictEqual(badged[1].children?.[0].badges, undefined);
+  });
+
+  test("badges a voxel layer with the color and name of its peers", () => {
+    const badged = withLayerBadges(
+      nodes,
+      new Map([["voxel-layer:Ground", [mark("bob", "#ff0000")]]])
+    );
+
+    assert.deepStrictEqual(badged[0].badges, [
+      {
+        color: "#ff0000",
+        title: "bob"
+      }
+    ]);
+  });
+
+  test("badges a nested object row", () => {
+    const badged = withLayerBadges(
+      nodes,
+      new Map([["object:spawn", [mark("bob", "#ff0000")]]])
+    );
+
+    assert.strictEqual(badged[1].badges, undefined);
+    assert.deepStrictEqual(
+      badged[1].children?.[0].badges?.map((badge) => badge.title),
+      ["bob"]
+    );
+  });
+
+  test("caps a row at three badges", () => {
+    const badged = withLayerBadges(
+      nodes,
+      new Map([[
+        "voxel-layer:Ground",
+        ["a", "b", "c", "d"].map((clientId) => mark(clientId, "#fff"))
+      ]])
+    );
+
+    assert.deepStrictEqual(
+      badged[0].badges?.map((badge) => badge.title),
+      ["a", "b", "c"]
+    );
+  });
+
+  test("does not mutate the source nodes", () => {
+    withLayerBadges(
+      nodes,
+      new Map([["voxel-layer:Ground", [mark("bob", "#ff0000")]]])
+    );
+
+    assert.strictEqual(nodes[0].badges, undefined);
   });
 });

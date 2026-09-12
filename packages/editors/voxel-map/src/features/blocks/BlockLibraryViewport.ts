@@ -15,11 +15,11 @@ import {
   type BlockGridLayout
 } from "./blockGridLayout.ts";
 import {
-  blockMarkNames,
-  resolveBlockMarks,
-  type BlockMarkMap,
-  type BlockMarkView
-} from "./blockMarks.ts";
+  peerMarkNames,
+  resolvePeerMarks,
+  type PeerMarkMap,
+  type PeerMarkView
+} from "../../collaboration/peerMarks.ts";
 import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 
 // CONSTANTS
@@ -29,7 +29,7 @@ const kCellInset = 3;
 
 interface MarkedCell {
   rect: BlockCellRect;
-  view: BlockMarkView;
+  view: PeerMarkView;
 }
 
 @customElement("block-library-viewport")
@@ -78,8 +78,9 @@ export class BlockLibraryViewport extends LitElement {
 
     .highlight {
       position: absolute;
-      border-radius: var(--jolly-radius-sm, 3px);
+      border-radius: var(--jolly-radius-sm, 4px);
       box-sizing: border-box;
+      border: 2px dashed transparent;
     }
 
     .marker {
@@ -107,7 +108,7 @@ export class BlockLibraryViewport extends LitElement {
   declare blocks: ResolvedBlockDefinition[];
 
   @property({ attribute: false })
-  declare marks: BlockMarkMap;
+  declare marks: PeerMarkMap<number>;
 
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
@@ -202,7 +203,7 @@ export class BlockLibraryViewport extends LitElement {
         `top:${cell.rect.y}px`,
         `width:${cell.rect.size}px`,
         `height:${cell.rect.size}px`,
-        `background:${color}`
+        `border-color:${color}`
       ].join(";")}
     ></div>`;
   }
@@ -216,7 +217,7 @@ export class BlockLibraryViewport extends LitElement {
 
     return html`<div
       class="marker"
-      title=${blockMarkNames(cell.view)}
+      title=${peerMarkNames(cell.view)}
       style=${[
         `left:${cell.rect.x}px`,
         `top:${cell.rect.y}px`,
@@ -239,7 +240,7 @@ export class BlockLibraryViewport extends LitElement {
 
     const cells: MarkedCell[] = [];
     this.blocks.forEach((block, index) => {
-      const view = resolveBlockMarks(this.marks.get(block.id));
+      const view = resolvePeerMarks(this.marks.get(block.id));
       if (view === null) {
         return;
       }

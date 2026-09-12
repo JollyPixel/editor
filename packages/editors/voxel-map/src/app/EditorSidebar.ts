@@ -153,7 +153,7 @@ export class EditorSidebar extends LitElement {
     this.viewFocus = new ViewFocus();
     this._tab = "general";
     this._selection = null;
-    this._peers = this.state.shell.peers;
+    this._peers = this.state.presence.peers;
     this._canEditBlock = false;
   }
 
@@ -162,11 +162,11 @@ export class EditorSidebar extends LitElement {
     this.#subscriptions.push(
       this.state.selection.watch("change", this.#onSelectionChange),
       this.state.shell.watch("tabChange", this.#onTabStateChange),
-      this.state.shell.watch("peersChange", this.#onPeersChange)
+      this.state.presence.watch("peersChange", this.#onPeersChange)
     );
     this.#onSelectionChange(this.state.selection.current);
     this.#onTabStateChange(this.state.shell.tab);
-    this.#onPeersChange(this.state.shell.peers);
+    this.#onPeersChange(this.state.presence.peers);
   }
 
   override disconnectedCallback() {
@@ -416,6 +416,7 @@ export class EditorSidebar extends LitElement {
           .world=${this.world}
           .selection=${this.state.selection}
           .worldStore=${this.state.world}
+          .presence=${this.state.presence}
           .viewFocus=${this.viewFocus}
           style="height:200px;"
         ></layer-manager>
@@ -474,7 +475,7 @@ export class EditorSidebar extends LitElement {
             .engine=${this.engine}
             .brush=${this.state.brush}
             .worldStore=${this.state.world}
-            .shell=${this.state.shell}
+            .presence=${this.state.presence}
             @block-selection-change=${this.#onBlockSelectionChange}
           ></block-library>
         </jolly-folder>
