@@ -2,14 +2,14 @@
 import { Systems } from "@jolly-pixel/engine";
 import { VoxelTransparencyRenderer } from "@jolly-pixel/voxel.renderer";
 
-/** Install scene compositing for the editor's cameras and release it on exit. */
+/**
+ * Installs scene compositing for the editor's cameras and releases it on exit.
+ */
 export function installTransparency(
   renderer: Systems.Renderer
 ): () => void {
   if (!(renderer instanceof Systems.ThreeRenderer)) {
-    return () => {
-      // Do nothing
-    };
+    return () => void 0;
   }
 
   const previous = renderer.renderStrategy;
@@ -24,7 +24,10 @@ export function installTransparency(
         );
 
         const viewport = component.viewport ?? {
-          x: 0, y: 0, width: 1, height: 1
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1
         };
         source.setViewport(
           Math.round(viewport.x * canvasWidth),

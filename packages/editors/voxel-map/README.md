@@ -23,6 +23,48 @@ The default URL connects to the asset catalog and collaborative sync server conf
 
 Add `?offline` to skip network setup entirely. Nothing is persisted in that mode — the editor is scratch space until the page reloads.
 
+## 🧩 Bootstrap
+
+`src/index.ts` only reads the browser entry point and hands it to
+`VoxelMapEditor.open()`, which owns the boot sequence:
+
+```ts
+import { VoxelMapEditor } from "./boot/VoxelMapEditor.ts";
+
+const editor = await VoxelMapEditor.open({
+  canvas: "#game-container > canvas",
+  offline: false
+});
+```
+
+| Option | Description |
+|---|---|
+| `canvas` | Runtime canvas target, a selector or an `HTMLCanvasElement`. |
+| `offline` | Skips identity, catalog, and network setup. Defaults to `false`. |
+| `world` | `AssetId` of the voxelmap to open. Defaults to the first one in the catalog. |
+
+`open()` creates the runtime, opens an `EditorSession`, preloads the tilesets
+declared by the world document, builds the `EditorScene`, mounts the
+`EditorShell`, then loads the scene. `dispose()` unwinds the shell, the session,
+and the runtime.
+
+The pieces live under `src/boot/`:
+
+| Export | Responsibility |
+|---|---|
+| `assets/resolveEditorAssets` | Turns a request into the `voxelmap` and `pixelart` records. The only place aware of asset kinds. |
+| `assets/preloadTilesets` | Loads the tilesets of a world record, falling back to `textures/tileset.png`. |
+| `EditorSession` | Prompts for the local identity, resolves the assets, and opens the world and texture rooms. `dispose()` destroys the client. |
+| `EditorShell` | Wires `jolly-log` and `editor-sidebar` to the state, the scene, and the runtime input. |
+
+### Known limitation
+
+A voxelmap document does not reference its texture asset: `TilesetDefinition`
+carries a `src` URL, not an `AssetId`. `resolveEditorAssets` therefore pairs the
+requested world with the first `pixelart` record of the catalog. Opening a
+specific world still cannot reach its own texture until the serialization
+format of `@jolly-pixel/voxel.renderer` carries the reference.
+
 ## 🧪 Tests and checks
 
 ```bash
