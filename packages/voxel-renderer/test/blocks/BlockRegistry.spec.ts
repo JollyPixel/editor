@@ -11,7 +11,6 @@ import {
 import { FACE } from "../../src/utils/math.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 
-/** A definition whose only distinguishing feature is its id and name. */
 function makeDef(
   id: number,
   name = `Block${id}`
@@ -99,6 +98,20 @@ describe("BlockRegistry — registration resolves the authored definition", () =
     registry.register({ id: 1, name: "A", shapeId: "cube", collidable: false });
 
     assert.equal(registry.get(1)!.collidable, false);
+  });
+
+  it("keeps an explicit cullSelfFaces of false", () => {
+    const registry = new BlockRegistry();
+
+    registry.register({
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      alphaMode: "blend",
+      cullSelfFaces: false
+    });
+
+    assert.equal(registry.get(1)!.cullSelfFaces, false);
   });
 
   it("expands every tile ref tuple against defaultTilesetId", () => {

@@ -8,12 +8,8 @@ import {
 } from "../mesh/index.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MaterialCustomizerFn } from "../VoxelEngine.types.ts";
-
-// CONSTANTS
-/**
- * Thirty-two translucent buckets plus one fully opaque material per tileset.
- */
-const kOpacitySteps = 32;
+import { BlockSurface } from "../blocks/BlockSurface.ts";
+import { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
 
 export type ChunkMaterial =
   | THREE.MeshLambertMaterial
@@ -25,10 +21,6 @@ export interface ChunkMaterialCacheOptions {
    * @default "lambert"
    */
   type?: "lambert" | "standard";
-  /**
-   * @default 0.1
-   */
-  alphaTest?: number;
   customizer?: MaterialCustomizerFn;
   /**
    * Greedy quads need tile-local UV repetition.
@@ -38,16 +30,17 @@ export interface ChunkMaterialCacheOptions {
 }
 
 /**
- * Caches shared chunk materials by tileset, opacity bucket, and cutout mode.
+ * Caches shared chunk materials by atlas, exact opacity, and surface policy.
  * Layer opacity is applied through materials instead of vertex colors.
  */
 export class ChunkMaterialCache {
   tileWrapping: boolean;
 
   #materials = new Map<string, ChunkMaterial>();
+  #keys = new Map<THREE.Material, string>();
+  #references = new Map<THREE.Material, number>();
   #tilesetManager: TilesetManager;
   #type: "lambert" | "standard";
-  #alphaTest: number;
   #customizer?: MaterialCustomizerFn;
 
   constructor(
@@ -56,14 +49,12 @@ export class ChunkMaterialCache {
     const {
       tilesetManager,
       type = "lambert",
-      alphaTest = 0.1,
       customizer,
       tileWrapping = false
     } = options;
 
     this.#tilesetManager = tilesetManager;
     this.#type = type;
-    this.#alphaTest = alphaTest;
     this.#customizer = customizer;
     this.tileWrapping = tileWrapping;
   }
@@ -71,10 +62,15 @@ export class ChunkMaterialCache {
   resolve(
     tilesetId: string,
     opacity: number,
-    cutout = false
+    surface: BlockSurface | boolean = false
   ): ChunkMaterial {
-    const bucket = opacityBucket(opacity);
-    const key = `${tilesetId}:${bucket}${cutout ? ":cutout" : ""}`;
+    const resolved = typeof surface === "boolean"
+      ? new BlockSurface({ alphaMode: surface ? "blend" : "opaque" })
+      : surface;
+    const key = new ChunkGeometryKey(
+      tilesetId,
+      resolved
+    ).toString() + `:opacity=${opacity}`;
 
     const cached = this.#materials.get(key);
     if (cached) {
@@ -83,31 +79,60 @@ export class ChunkMaterialCache {
 
     const material = this.#create(
       tilesetId,
-      bucket,
-      cutout
+      opacity,
+      resolved
     );
     this.#materials.set(key, material);
+    this.#keys.set(material, key);
 
     return material;
   }
 
+  retain(
+    material: THREE.Material
+  ): void {
+    this.#references.set(
+      material,
+      (this.#references.get(material) ?? 0) + 1
+    );
+  }
+
+  release(
+    material: THREE.Material
+  ): void {
+    const remaining = (this.#references.get(material) ?? 1) - 1;
+    if (remaining > 0) {
+      this.#references.set(material, remaining);
+
+      return;
+    }
+    const key = this.#keys.get(material);
+    if (key !== undefined) {
+      this.#materials.delete(key);
+      this.#keys.delete(material);
+      material.dispose();
+    }
+    this.#references.delete(material);
+  }
+
   #create(
     tilesetId: string,
-    bucket: number,
-    cutout: boolean
+    opacity: number,
+    surface: BlockSurface
   ): ChunkMaterial {
     const { texture } = this.#tilesetManager.atlas(
       tilesetId
     );
-    const transparent = bucket < kOpacitySteps;
+    const transparent = opacity < 1 || surface.alphaMode === "blend";
 
     const options = {
       map: texture,
-      side: cutout ? THREE.DoubleSide : THREE.FrontSide,
-      alphaTest: this.#alphaTest,
-      opacity: bucket / kOpacitySteps,
+      side: surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide,
+      alphaTest: 0,
+      opacity,
       transparent,
-      depthWrite: true
+      depthWrite: !transparent,
+      forceSinglePass: true
     };
 
     const material = this.#type === "standard" ?
@@ -115,12 +140,16 @@ export class ChunkMaterialCache {
       new THREE.MeshLambertMaterial(options);
 
     if (this.tileWrapping) {
-      enableTileWrapping(material);
+      enableTileWrapping(material, surface);
     }
     else {
-      enableTileClamping(material);
+      enableTileClamping(material, surface);
     }
-    this.#customizer?.(material, tilesetId);
+    this.#customizer?.(
+      material,
+      tilesetId,
+      surface
+    );
 
     return material;
   }
@@ -138,6 +167,8 @@ export class ChunkMaterialCache {
     for (const [key, material] of this.#materials) {
       if (key.startsWith(prefix)) {
         material.dispose();
+        this.#keys.delete(material);
+        this.#references.delete(material);
         this.#materials.delete(key);
       }
     }
@@ -147,19 +178,9 @@ export class ChunkMaterialCache {
     for (const material of this.#materials.values()) {
       material.dispose();
     }
+
     this.#materials.clear();
+    this.#keys.clear();
+    this.#references.clear();
   }
-}
-
-function opacityBucket(
-  opacity: number
-): number {
-  if (opacity >= 1) {
-    return kOpacitySteps;
-  }
-
-  return Math.min(
-    kOpacitySteps - 1,
-    Math.max(0, Math.round(opacity * kOpacitySteps))
-  );
 }

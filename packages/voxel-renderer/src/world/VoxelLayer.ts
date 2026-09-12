@@ -69,6 +69,7 @@ export interface VoxelEntryJSON {
 }
 
 export interface VoxelLayerJSON {
+  compositing?: "replace" | "composite";
   id: string;
   name: string;
   visible: boolean;
@@ -88,6 +89,8 @@ export interface VoxelLayerJSON {
 }
 
 export interface VoxelLayerConfigurableOptions {
+  /** Cell replacement or optical compositing. Defaults to "composite". */
+  compositing?: "replace" | "composite";
   /**
    * Whether the layer is visible by default.
    * @default true
@@ -139,6 +142,7 @@ export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
  * Higher `order` values take visual priority over lower when compositing.
  */
 export class VoxelLayer {
+  compositing: "replace" | "composite";
   id: string;
   name: string;
   order: number;
@@ -176,6 +180,7 @@ export class VoxelLayer {
       chunkSize,
       visible = true,
       opacity = 1,
+      compositing = "composite",
       offset = { x: 0, y: 0, z: 0 },
       properties = {}
     } = options;
@@ -190,6 +195,7 @@ export class VoxelLayer {
     this.#chunkMask = chunkSize - 1;
     this.#visible = visible;
     this.#opacity = clamp(0, 1, opacity);
+    this.compositing = compositing;
     this.offset = structuredClone(offset);
     this.properties = structuredClone(properties);
   }
@@ -530,6 +536,7 @@ export class VoxelLayer {
       name: this.name,
       visible: this.#visible,
       opacity: this.#opacity,
+      compositing: this.compositing,
       order: this.order,
       offset: { ...this.offset },
       properties: { ...this.properties },
@@ -546,6 +553,7 @@ export class VoxelLayer {
       order: this.order,
       visible: this.#visible,
       opacity: this.#opacity,
+      compositing: this.compositing,
       offset: this.offset,
       properties: this.properties,
       ...opts,

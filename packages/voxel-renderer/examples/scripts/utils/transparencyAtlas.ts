@@ -39,9 +39,8 @@ export const TransparencyBlock = {
   PlankSlab: 15,
   StonePole: 16,
   /**
-   * The same cutout tiles without `transparent: true`, kept as the A side of
-   * the comparison: they occlude like solid blocks and you look through the
-   * holes into faces that were never emitted.
+   * The same textures in opaque mode: texture alpha is ignored and
+   * neighbouring faces are culled as for solid blocks.
    */
   LeavesSolid: 17,
   GrateSolid: 18
@@ -59,9 +58,9 @@ interface BlockSpec {
    */
   collidable?: boolean;
   /**
-   * @default false
+   * @default "opaque"
    */
-  transparent?: boolean;
+  alphaMode?: "opaque" | "mask" | "blend";
 }
 
 /**
@@ -213,17 +212,17 @@ const kBlockSpecs: BlockSpec[] = [
     name: "Leaves",
     shapeId: "cube",
     paint: paintLeaves,
-    transparent: true,
+    alphaMode: "mask",
     collidable: false
   },
-  { id: TransparencyBlock.Grate, name: "Grate", shapeId: "cube", paint: paintGrate, transparent: true },
-  { id: TransparencyBlock.Window, name: "Window", shapeId: "cube", paint: paintWindow, transparent: true },
+  { id: TransparencyBlock.Grate, name: "Grate", shapeId: "cube", paint: paintGrate, alphaMode: "mask" },
+  { id: TransparencyBlock.Window, name: "Window", shapeId: "cube", paint: paintWindow, alphaMode: "mask" },
   {
     id: TransparencyBlock.AlphaRamp,
     name: "AlphaRamp",
     shapeId: "cube",
     paint: paintAlphaRamp,
-    transparent: true
+    alphaMode: "blend"
   },
   // Reuse the stone and plank tiles; only the shape changes.
   {
@@ -296,7 +295,7 @@ function toBlockDefinition(
     name: spec.name,
     shapeId: spec.shapeId,
     collidable: spec.collidable ?? true,
-    transparent: spec.transparent ?? false,
+    alphaMode: spec.alphaMode ?? "opaque",
     faceTextures: {},
     defaultTexture: {
       col: index % kCols,

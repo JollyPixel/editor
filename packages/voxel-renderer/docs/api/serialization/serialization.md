@@ -16,6 +16,7 @@ interface VoxelEntryJSON {
 }
 
 interface VoxelLayerJSON {
+  compositing?: "replace" | "composite";
   id: string;
   name: string;
   visible: boolean;
@@ -38,6 +39,10 @@ interface VoxelWorldJSON {
 
 Voxel keys contain world-space coordinates, including the layer offset. Older
 documents without `opacity` or `offset` load with opacity `1` and a zero offset.
+A missing `compositing` loads as `"composite"`; use `"replace"` explicitly for
+cell replacement. Block surface settings are stored in the block definitions.
+Migrate legacy `transparent: true` to `alphaMode: "blend"` before loading old
+content; the renderer no longer reads the legacy property.
 
 `blocks` contains definitions embedded by `VoxelEngine.save()` or a converter.
 `objectLayers` stores placed objects such as spawn points and trigger zones.

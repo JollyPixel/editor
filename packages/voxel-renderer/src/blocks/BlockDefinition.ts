@@ -13,13 +13,17 @@ import {
   slotNameOf
 } from "./shape/shapeSlots.ts";
 import type { BlockShapeID } from "./shape/BlockShape.ts";
+import {
+  BlockSurface,
+  type BlockSurfaceOptions
+} from "./BlockSurface.ts";
 
 export type BlockProperties = Record<
   string,
   string | number | boolean
 >;
 
-export interface BlockDefinition {
+export interface BlockDefinition extends BlockSurfaceOptions {
   id: number;
   name: string;
   shapeId: BlockShapeID;
@@ -37,10 +41,10 @@ export interface BlockDefinition {
    */
   collidable?: boolean;
   /**
-   * A transparent block never hides a neighbouring face.
-   * @default false
+   * Whether covered faces shared with the same block are removed.
+   * @default true
    */
-  transparent?: boolean;
+  cullSelfFaces?: boolean;
   /**
    * Tileset used by tile references that omit one; dropped once resolved.
    */
@@ -64,9 +68,6 @@ export type ResolvedBlockDefinition =
     properties: BlockProperties;
   };
 
-/**
- * Reads a legacy numeric `FACE` key as that face's default slot.
- */
 export function slotKeyOf(
   key: string
 ): string {
@@ -77,10 +78,6 @@ export function slotKeyOf(
     key;
 }
 
-/**
- * Tile a slot samples, falling back to its base slot then to the block's
- * default. Returns undefined when the block has no usable tile at all.
- */
 export function tileRefForSlot(
   block: ResolvedBlockDefinition,
   slot: string
@@ -116,6 +113,8 @@ export function resolveBlockProperties(
 export function resolveBlockDefinition(
   def: BlockDefinition
 ): ResolvedBlockDefinition {
+  // Validate policy at the registry boundary, including imported documents.
+  new BlockSurface(def);
   const {
     faceTextures = {},
     defaultTexture,

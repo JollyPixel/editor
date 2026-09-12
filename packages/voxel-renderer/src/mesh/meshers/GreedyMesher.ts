@@ -169,9 +169,6 @@ export class GreedyMesher implements Mesher {
     ];
   }
 
-  /**
-   * Fills the grid and emits faces that no directional sweep can merge.
-   */
   #fillGrid(): boolean {
     const { size, shift, mask } = this.#chunk;
     const shiftZ = shift * 2;
@@ -289,15 +286,16 @@ export class GreedyMesher implements Mesher {
         }
       }
 
-      this.#bufferFor(face.slot).addFace(face, wx, wy, wz);
-      stats.faces++;
-      this.#emitted = true;
+      for (const piece of this.#neighbourhood.boundaryFaces(
+        face, [wx, wy, wz], variant.blockId
+      )) {
+        this.#bufferFor(piece.slot).addFace(piece, wx, wy, wz);
+        stats.faces++;
+        this.#emitted = true;
+      }
     }
   }
 
-  /**
-   * Returns an epoch-stamped local index, or `kNotMergeable`.
-   */
   #localIndexOf(
     variant: BlockVariant
   ): number {
@@ -363,9 +361,6 @@ export class GreedyMesher implements Mesher {
     }
   }
 
-  /**
-   * Builds one directional slice mask and reports whether it contains a face.
-   */
   #buildMask(
     direction: number,
     slice: number
@@ -437,9 +432,6 @@ export class GreedyMesher implements Mesher {
     return found;
   }
 
-  /**
-   * Emits one quad per maximal equal-cell rectangle in the mask.
-   */
   #mergeMask(
     direction: number,
     slice: number
@@ -526,9 +518,6 @@ export class GreedyMesher implements Mesher {
     return true;
   }
 
-  /**
-   * Clears only populated grid cells.
-   */
   #clearGrid(): void {
     const grid = this.#grid;
     const { keys, capacity } = this.#chunk.store;

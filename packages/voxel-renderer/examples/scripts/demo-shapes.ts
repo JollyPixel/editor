@@ -175,7 +175,7 @@ const wireMat = new THREE.MeshBasicMaterial({
   color: "#ffffff",
   wireframe: true,
   opacity: 0.12,
-  transparent: true
+  alphaMode: "blend"
 });
 
 for (let i = 0; i < kShapes.length; i++) {

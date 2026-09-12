@@ -9,22 +9,42 @@ and configuration.
 
 ## Chunk geometry layout
 
-Each chunk has one `THREE.Mesh` per tileset and cutout mode, parented to
-`VoxelEngine.root`. A draw group is identified by its tileset id, with a
-`:cutout` suffix for the transparent half, so a mesh is named
-`voxel_chunk_<chunk>:<tileset>[:cutout]`. A tileset id may therefore not end in
-`:cutout`. The standard layout uses 19 bytes per vertex:
+Each chunk has one `THREE.Mesh` per tileset and resolved surface policy,
+parented to `VoxelEngine.root`. A geometry key includes the alpha mode, sides,
+and mask cutoff. Plain opaque/front geometry uses the tileset ID; blend/double
+geometry keeps the historical `:cutout` suffix. Other policies use a
+`:surface=` suffix. Tileset IDs must not end in `:cutout` or contain
+`:surface=`.
+
+The non-greedy layout uses 27 bytes per vertex:
 
 | Attribute | Type | Items | Bytes | Notes |
 |---|---|---:|---:|---|
 | `position` | `float32` | 3 | 12 | Absolute world space |
 | `normal` | normalized `int8` | 3 | 3 | Supports non-axis-aligned faces |
 | `uv` | normalized `uint16` | 2 | 4 | Atlas coordinates |
+| `tileRegion` | normalized `uint16` | 4 | 8 | Atlas offset and scale |
 
 Vertices are not shared between faces, so a cube has 24 vertices. `position`
 remains `float32` because raycasting and `mergeChunkGeometries()` read it
-directly. Layer opacity is stored on materials. Materials are cached in 32
-opacity buckets.
+directly. Layer opacity is stored on materials. The material cache distinguishes exact
+opacity values and resolved surface policies.
+
+Opaque and masked geometry write depth at layer opacity `1`. Blended blocks
+and faded layers use blending without depth writes. Mask coverage is tested
+before layer opacity; low-alpha blend texels and faint layers are preserved.
+See [BlockSurface](../api/blocks/BlockSurface.md) for defaults and
+[VoxelTransparencyRenderer](../api/core/VoxelTransparencyRenderer.md) for scene
+integration and the limits of weighted color compositing.
+
+## Face culling between identical blocks
+
+A face is dropped when a neighbour covers it. Masked and blended blocks do
+not hide faces of different blocks, but `cullSelfFaces: true` removes covered
+interfaces between voxels of the same block. Retained double-sided interfaces
+are split into opposing front-sided shared pieces and double-sided exposed
+pieces. This preserves each direction's texture without blending two copies
+of the same boundary from one direction. Gaps between slabs stay visible.
 
 ## Rebuild scheduling
 
@@ -58,8 +78,8 @@ distance is about how much is meshed and drawn at all.
 
 With `greedy: true`, adjacent identical faces are merged into the largest
 available rectangle. Merging stays inside one chunk and applies to full, flat
-faces such as cubes and slabs. Slopes, poles, and transformed voxels remain
-separate.
+faces such as cubes and slabs. Slopes, poles, transformed voxels, and double-sided surfaces remain
+separate. Double-sided boundaries may need polygon splitting.
 
 Greedy mode uses 35 bytes per vertex:
 
@@ -99,7 +119,8 @@ type TileWrappedMaterial =
   | THREE.MeshStandardMaterial;
 
 function enableTileWrapping(
-  material: TileWrappedMaterial
+  material: TileWrappedMaterial,
+  surface?: BlockSurface
 ): void;
 ```
 
@@ -118,7 +139,8 @@ The export is available for compatible custom material setup.
 
 ```ts
 function enableTileClamping(
-  material: TileWrappedMaterial
+  material: TileWrappedMaterial,
+  surface?: BlockSurface
 ): void;
 ```
 
@@ -128,3 +150,6 @@ sample taken outside the triangle cannot read a neighbouring tile. This is what
 lets atlases ship without a gutter, and therefore what lets a face reference a
 rect at a fractional tile offset. See
 [atlas padding](./atlas-padding.md).
+
+The optional `surface` applies alpha-mode and mask-cutoff behavior to the
+shader. The engine supplies it when creating chunk materials.

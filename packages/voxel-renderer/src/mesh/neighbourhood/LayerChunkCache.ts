@@ -34,7 +34,9 @@ export class LayerChunkCache {
   #baseCx: number;
   #baseCy: number;
   #baseCz: number;
-  /** Pre-filled with `null` rather than left holey, so reads stay monomorphic. */
+  /**
+   * Pre-filled with `null` rather than left holey, so reads stay monomorphic.
+   */
   #chunks: (VoxelChunk | null)[] = new Array(kSpan ** 3).fill(null);
 
   #centreWx: number;
@@ -87,7 +89,6 @@ export class LayerChunkCache {
     this.#centreChunk = this.#chunks[(kSpan * kSpan) + kSpan + 1];
   }
 
-  /** `VOXEL_ABSENT` (-1) when the position holds no voxel in this layer. */
   packedAt(
     wx: number,
     wy: number,
@@ -109,9 +110,6 @@ export class LayerChunkCache {
     return this.#packedOutsideCentre(wx, wy, wz);
   }
 
-  /**
-   * Reads outer chunks or falls back beyond the cached border.
-   */
   #packedOutsideCentre(
     wx: number,
     wy: number,

@@ -48,20 +48,16 @@ describe("ChunkMaterialCache — resolve", () => {
     const material = makeCache().resolve("atlas", 1);
 
     assert.equal(material.transparent, false);
-    assert.equal(material.depthWrite, true);
+    assert.equal(material.depthWrite, !material.transparent);
     assert.equal(material.side, THREE.FrontSide);
     assert.equal(material.opacity, 1);
   });
 
-  it("blends a translucent layer front-side only, still writing depth", () => {
+  it("blends a translucent layer front-side only, without writing depth", () => {
     const material = makeCache().resolve("atlas", 0.5);
 
     assert.equal(material.transparent, true);
-    /*
-     * Chunk quads are drawn in buffer order, so without depth a far face
-     * paints over a near one.
-     */
-    assert.equal(material.depthWrite, true);
+    assert.equal(material.depthWrite, !material.transparent);
     assert.equal(material.side, THREE.FrontSide);
     assert.equal(material.opacity, 0.5);
   });
@@ -70,9 +66,17 @@ describe("ChunkMaterialCache — resolve", () => {
     assert.equal(makeCache().resolve("atlas", 1, true).side, THREE.DoubleSide);
   });
 
-  it("quantizes nearby opacities into one shared bucket", () => {
+  it("blends cutout geometry on an opaque layer, without writing depth", () => {
+    const material = makeCache().resolve("atlas", 1, true);
+
+    assert.equal(material.transparent, true);
+    assert.equal(material.depthWrite, !material.transparent);
+    assert.equal(material.opacity, 1);
+  });
+
+  it("preserves nearby opacities independently", () => {
     const cache = makeCache();
-    assert.equal(cache.resolve("atlas", 0.5), cache.resolve("atlas", 0.51));
+    assert.notEqual(cache.resolve("atlas", 0.5), cache.resolve("atlas", 0.51));
   });
 
   it("reserves a bucket of its own for exactly opaque layers", () => {
@@ -80,8 +84,8 @@ describe("ChunkMaterialCache — resolve", () => {
     assert.notEqual(cache.resolve("atlas", 1), cache.resolve("atlas", 0.99));
   });
 
-  it("applies the alpha-test cutoff", () => {
-    assert.equal(makeCache({ alphaTest: 0.4 }).resolve("atlas", 1).alphaTest, 0.4);
+  it("does not apply a global cutoff to opaque geometry", () => {
+    assert.equal(makeCache().resolve("atlas", 1).alphaTest, 0);
   });
 
   it("hands each new material to the customizer with its tileset id", () => {

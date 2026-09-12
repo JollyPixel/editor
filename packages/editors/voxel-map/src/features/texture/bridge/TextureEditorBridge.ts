@@ -268,11 +268,13 @@ export class TextureEditorBridge {
       const transparent = geometries.some(
         (geometry) => manager.hasTransparency(geometry)
       );
-      if (transparent === (block.transparent === true)) {
+      const alphaMode = transparent ? "blend" : "opaque";
+      if (block.alphaMode === "mask" ||
+        alphaMode === (block.alphaMode ?? "opaque")) {
         continue;
       }
 
-      updates.push({ ...block, transparent });
+      updates.push({ ...block, alphaMode });
     }
 
     this.#syncing = true;

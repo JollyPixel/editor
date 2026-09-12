@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import type { BlockSurface } from "../../blocks/BlockSurface.ts";
+
 /**
  * World-axis mapping for a full quad that greedy meshing can stretch.
  */
@@ -43,6 +46,7 @@ export interface BlockVariantFace {
 }
 
 export interface BlockVariant {
+  surface: BlockSurface;
   /** Block this variant was compiled from, for same-block face culling. */
   blockId: number;
   faces: readonly BlockVariantFace[];
@@ -58,6 +62,7 @@ export interface BlockVariant {
    * their shared face; leaves still hide nothing of the stone beside them.
    */
   selfOcclusionMask: number;
+  keepsSelfFaces: boolean;
   /**
    * Mergeable full-quad face for each world-space direction.
    */

@@ -60,7 +60,7 @@ describe("BlockVariantCache — selfOcclusionMaskOf", () => {
     const { cache, blockRegistry } = makeCache();
 
     blockRegistry.register(
-      makeBlockDef(kLeavesId, "cube", { name: "Leaves", transparent: true })
+      makeBlockDef(kLeavesId, "cube", { name: "Leaves", alphaMode: "blend" })
     );
     cache.refresh();
 
@@ -72,7 +72,7 @@ describe("BlockVariantCache — selfOcclusionMaskOf", () => {
     const { cache, blockRegistry } = makeCache();
 
     blockRegistry.register(
-      makeBlockDef(kLeavesId, "slab", { name: "Hedge", transparent: true })
+      makeBlockDef(kLeavesId, "slab", { name: "Hedge", alphaMode: "blend" })
     );
     cache.refresh();
 
@@ -158,7 +158,7 @@ describe("BlockVariantCache — occlusionMaskOf", () => {
     assert.equal(cache.occlusionMaskOf(kCubeId, 0), 0b111111);
 
     blockRegistry.register(
-      makeBlockDef(kLeavesId, "cube", { name: "Leaves", transparent: true })
+      makeBlockDef(kLeavesId, "cube", { name: "Leaves", alphaMode: "blend" })
     );
     cache.refresh();
 
@@ -169,5 +169,88 @@ describe("BlockVariantCache — occlusionMaskOf", () => {
         `transform ${transform}`
       );
     }
+  });
+});
+
+describe("BlockVariantCache — keepsSelfFacesOf", () => {
+  it("is false while a transparent block culls its own faces", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", { name: "Leaves", alphaMode: "blend" })
+    );
+    cache.refresh();
+
+    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), false);
+  });
+
+  it("is true once a transparent block opts out", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", {
+        name: "Glass",
+        alphaMode: "blend",
+        cullSelfFaces: false
+      })
+    );
+    cache.refresh();
+
+    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
+  });
+
+  it("honours an opaque block that opts out", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", { name: "Stone", cullSelfFaces: false })
+    );
+    cache.refresh();
+
+    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
+  });
+
+  it("leaves the occlusion masks of the same entry readable", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", {
+        name: "Glass",
+        alphaMode: "blend",
+        cullSelfFaces: false
+      })
+    );
+    cache.refresh();
+
+    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
+    assert.equal(cache.occlusionMaskOf(kLeavesId, 0), 0);
+    assert.equal(cache.selfOcclusionMaskOf(kLeavesId, 0), 0b111111);
+  });
+
+  it("follows a registry change", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", {
+        name: "Glass",
+        alphaMode: "blend",
+        cullSelfFaces: false
+      })
+    );
+    cache.refresh();
+    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", { name: "Glass", alphaMode: "blend" })
+    );
+    cache.refresh();
+
+    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), false);
+  });
+
+  it("is false for an unknown block", () => {
+    const { cache } = makeCache();
+
+    assert.equal(cache.keepsSelfFacesOf(999, 0), false);
   });
 });

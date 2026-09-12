@@ -34,7 +34,7 @@ export const TransparencyLayer = {
   Water: "Water",
   Glass: "Glass",
   /**
-   * Fully opaque: the cutout blocks on it carry `transparent: true`
+   * Fully opaque: the cutout blocks on it carry `alphaMode: "mask"`
    * themselves, which is the per-block half of the story.
    */
   Foliage: "Foliage"
@@ -59,8 +59,8 @@ export const LAYER_SPECS: readonly LayerSpec[] = [
 export const SCENE_LABELS: readonly SceneLabel[] = [
   { text: "water · layer opacity", x: 5.5, y: 5.2, z: 18.5 },
   { text: "glass · layer opacity", x: 15, y: 7.2, z: 18 },
-  { text: "cutout WITHOUT transparent: true", x: 6, y: 9.6, z: 5 },
-  { text: "same cutout, transparent: true", x: 15, y: 9.6, z: 5 },
+  { text: "texture alpha ignored (opaque)", x: 6, y: 9.6, z: 5 },
+  { text: "texture alpha tested (mask)", x: 15, y: 9.6, z: 5 },
   { text: "shapes · sun angle", x: 4, y: 4, z: 11 },
   { text: "cutout in a solid wall", x: 20.5, y: 5.6, z: 21 }
 ];
@@ -227,8 +227,8 @@ function buildGreenhouse(
 
 /**
  * One tree and one grate wall per variant, 9 voxels apart on the same layer.
- * Everything is identical but the `transparent` flag on the leaf and grate
- * definitions, so any difference between the two is that flag alone.
+ * Everything is identical but the `alphaMode` setting on the leaf and grate
+ * definitions, so any difference between the two is that setting alone.
  */
 function buildFoliagePair(
   engine: VoxelEngine

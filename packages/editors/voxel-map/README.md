@@ -34,6 +34,28 @@ $ npm run build -w @jolly-pixel/editor.voxel-map
 
 `test-only` runs the Node.js tests without producing the HTML coverage report.
 
+## Block transparency
+
+The block editor offers Opaque, Cutout, and Blended alpha modes, plus Outside
+or Outside and inside face visibility. Cull faces removes covered boundaries
+between voxels using the same block; disabling it keeps their directional
+appearances.
+
+Texture edits rescan affected block tiles and switch opaque/blend modes to
+match their alpha. An explicitly selected Cutout mode is preserved. This
+automatic scan can override an Opaque or Blended selection when its texture
+does not match; use the renderer API directly when that policy must be fixed.
+
+The scene uses weighted blended transparency through
+[VoxelTransparencyRenderer](../../voxel-renderer/docs/api/core/VoxelTransparencyRenderer.md).
+Overlapping colors are approximate, and each retained surface adds coverage.
+Thumbnail previews use ordinary Three.js blending.
+
+Block definitions now use `alphaMode`, `side`, and `alphaCutoff`.
+Migrate saved `transparent: true` fields to `alphaMode: "blend"` before
+loading older content. Layer `compositing` defaults to `"composite"`;
+`"replace"` restores full-opacity cell replacement.
+
 ## Contributors Guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.

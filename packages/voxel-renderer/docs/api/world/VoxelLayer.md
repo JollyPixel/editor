@@ -6,6 +6,8 @@ A named, ordered collection of `VoxelChunk`s. Returned by `VoxelWorld.addLayer()
 
 ```ts
 interface VoxelLayerConfigurableOptions {
+  /** Defaults to "composite". */
+  compositing?: "replace" | "composite";
   /**
    * Whether the layer is visible by default.
    * @default true
@@ -48,6 +50,7 @@ interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
 
 ```ts
 class VoxelLayer {
+  compositing: "replace" | "composite";
   id: string;
   name: string;
   order: number;
@@ -70,9 +73,18 @@ world management update them. Application code should use the corresponding
 
 > **`offset`** - shifts where voxels render in world space; does not move chunk storage. Always use `VoxelWorld.setLayerOffset` or `translateLayer` so chunks are marked dirty.
 
-> **`opacity`** - `1` = fully opaque (default), `0` = hidden (same as `visible = false`). Values below `0` or above `1` are clamped. Semi-transparent layers (`0 < opacity < 1`) skip face occlusion but are still solid for collision. Always use `VoxelWorld.setLayerOpacity` or `updateLayer` to apply changes.
+> **`opacity`** - `1` = fully opaque (default), `0` = hidden (same as `visible = false`). Values below `0` or above `1` are clamped. Faded layers (`0 < opacity < 1`) cull faces only within their own layer and remain solid for collision. Always use `VoxelWorld.setLayerOpacity` or `updateLayer` to apply changes.
 
-> **`opacity` + `alphaTest`** - if `opacity` drops to or below `alphaTest` (default `0.1`) the layer disappears entirely instead of fading.
+`compositing` defaults to `"composite"`: at opacity `1`, only a block whose
+opaque shape covers all six cell boundaries suppresses lower voxels in the
+same cell. `"replace"` suppresses them for any occupying block at opacity `1`,
+including masked and blended blocks. Faded layers preserve lower voxels in
+both modes. Change this through `world.updateLayer(name, { compositing })` to
+mark all layers dirty and emit the update. The setting survives cloning and
+serialization.
+
+Mask coverage is tested against texture alpha before the layer fade. Layers
+continue fading below `alphaTest`; blend mode has no alpha cutoff.
 
 ## Methods
 

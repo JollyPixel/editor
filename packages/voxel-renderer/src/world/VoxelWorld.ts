@@ -113,6 +113,11 @@ export class VoxelWorld {
     if (options.opacity !== undefined) {
       this.#updateLayerOpacity(layer, options.opacity);
     }
+    if (options.compositing !== undefined &&
+      options.compositing !== layer.compositing) {
+      layer.compositing = options.compositing;
+      this.#markAllLayersDirty();
+    }
     this.#emit({
       action: "updated",
       layerName: name,
