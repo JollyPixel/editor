@@ -6,23 +6,23 @@ const kMaxDots = 3;
 const kSelfFallbackColor = "#5b7fb8";
 const kSelfFallbackName = "You";
 
-export interface BlockPeerMark {
+export interface PeerMark {
   clientId: string;
   displayName: string;
   color: string;
   self?: boolean;
 }
 
-export type BlockMarkMap = ReadonlyMap<number, readonly BlockPeerMark[]>;
+export type PeerMarkMap<TKey> = ReadonlyMap<TKey, readonly PeerMark[]>;
 
-export interface BlockMarkView {
-  highlight: BlockPeerMark;
-  dots: readonly BlockPeerMark[];
+export interface PeerMarkView {
+  highlight: PeerMark;
+  dots: readonly PeerMark[];
 }
 
-export function resolveBlockMarks(
-  marks: readonly BlockPeerMark[] | undefined
-): BlockMarkView | null {
+export function resolvePeerMarks(
+  marks: readonly PeerMark[] | undefined
+): PeerMarkView | null {
   if (marks === undefined || marks.length === 0) {
     return null;
   }
@@ -35,9 +35,9 @@ export function resolveBlockMarks(
   };
 }
 
-export function selfBlockMark(
+export function selfPeerMark(
   peers: Iterable<PresencePeer>
-): BlockPeerMark {
+): PeerMark {
   for (const peer of peers) {
     if (peer.self) {
       return {
@@ -57,30 +57,30 @@ export function selfBlockMark(
   };
 }
 
-export function mergeSelfBlockMark(
-  peerMarks: BlockMarkMap,
-  blockId: number | null,
-  local: BlockPeerMark
-): BlockMarkMap {
-  const merged = new Map<number, BlockPeerMark[]>();
+export function mergeSelfPeerMark<TKey>(
+  peerMarks: PeerMarkMap<TKey>,
+  key: TKey | null,
+  local: PeerMark
+): PeerMarkMap<TKey> {
+  const merged = new Map<TKey, PeerMark[]>();
   for (const [id, marks] of peerMarks) {
     merged.set(id, [...marks]);
   }
 
-  if (blockId === null) {
+  if (key === null) {
     return merged;
   }
 
   merged.set(
-    blockId,
-    [local, ...merged.get(blockId) ?? []]
+    key,
+    [local, ...merged.get(key) ?? []]
   );
 
   return merged;
 }
 
-export function blockMarkNames(
-  view: BlockMarkView
+export function peerMarkNames(
+  view: PeerMarkView
 ): string {
   return [view.highlight, ...view.dots]
     .map((mark) => mark.displayName)

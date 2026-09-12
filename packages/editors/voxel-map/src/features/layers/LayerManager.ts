@@ -19,6 +19,7 @@ import {
 // Import Internal Dependencies
 import {
   editorState,
+  type PresenceStore,
   type SelectionStore,
   type WorldStore
 } from "../../app/state/index.ts";
@@ -44,6 +45,7 @@ import {
   layerRowId,
   layerSelectionOf,
   layerTreeNodes,
+  withLayerBadges,
   type LayerRef
 } from "./layerTree.ts";
 
@@ -59,6 +61,9 @@ export class LayerManager extends LitElement {
 
   @property({ attribute: false })
   declare worldStore: WorldStore;
+
+  @property({ attribute: false })
+  declare presence: PresenceStore;
 
   @property({ attribute: false })
   declare viewFocus: ViewFocus;
@@ -85,6 +90,7 @@ export class LayerManager extends LitElement {
     this.world = undefined;
     this.selection = editorState.selection;
     this.worldStore = editorState.world;
+    this.presence = editorState.presence;
     this.viewFocus = new ViewFocus();
     this._nodes = [];
     this._selected = [];
@@ -114,7 +120,8 @@ export class LayerManager extends LitElement {
     this.#subscriptions.push(
       this.worldStore.watch("layerUpdated", this.#onLayerUpdated),
       this.worldStore.watch("reset", this.#onLayerUpdated),
-      this.selection.watch("change", this.#onSelectionChange)
+      this.selection.watch("change", this.#onSelectionChange),
+      this.presence.watch("layerSelectionsChange", this.#onLayerUpdated)
     );
 
     this._selected = this.#selectionFromState();
@@ -185,7 +192,10 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    this._nodes = layerTreeNodes(this.world);
+    this._nodes = withLayerBadges(
+      layerTreeNodes(this.world),
+      this.presence.layerSelections
+    );
   }
 
   #onHostClick(

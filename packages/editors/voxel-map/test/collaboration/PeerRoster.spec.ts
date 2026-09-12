@@ -17,7 +17,7 @@ import {
 // Import Internal Dependencies
 import {
   editorState,
-  ShellStore
+  PresenceStore
 } from "../../src/app/state/index.ts";
 import { PeerRoster } from "../../src/collaboration/PeerRoster.ts";
 import {
@@ -43,7 +43,7 @@ interface RosterHarness {
 }
 
 function createHarness(
-  shell: ShellStore = editorState.shell,
+  presence: PresenceStore = editorState.presence,
   log: LogQueue = new LogQueue()
 ): RosterHarness {
   const peerMap = new Map<string, network.Peer>();
@@ -82,7 +82,7 @@ function createHarness(
     roster: new PeerRoster({
       room,
       identity: kLocalIdentity,
-      shell,
+      presence,
       log
     }),
     addPeer(clientId, profile = {}) {
@@ -108,7 +108,7 @@ function createHarness(
 }
 
 function currentPeers(): readonly PresencePeer[] {
-  return editorState.shell.peers;
+  return editorState.presence.peers;
 }
 
 function messagesOf(
@@ -124,7 +124,7 @@ function messagesOf(
 
 describe("PeerRoster", () => {
   afterEach(() => {
-    editorState.shell.peers = [];
+    editorState.presence.peers = [];
   });
 
   test("publishes the local peer alone before anyone joins", () => {
@@ -140,13 +140,13 @@ describe("PeerRoster", () => {
     ]);
   });
 
-  test("publishes through the injected shell store", () => {
-    const shell = new ShellStore();
+  test("publishes through the injected presence store", () => {
+    const presence = new PresenceStore();
 
-    createHarness(shell);
+    createHarness(presence);
 
-    assert.strictEqual(shell.peers[0].displayName, "Ada");
-    assert.deepStrictEqual(editorState.shell.peers, []);
+    assert.strictEqual(presence.peers[0].displayName, "Ada");
+    assert.deepStrictEqual(editorState.presence.peers, []);
   });
 
   test("lists the members carried by the join sync", () => {

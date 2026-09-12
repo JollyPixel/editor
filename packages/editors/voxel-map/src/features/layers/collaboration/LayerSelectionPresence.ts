@@ -8,66 +8,62 @@ import type {
 // Import Internal Dependencies
 import {
   editorState,
-  type BrushStore,
-  type PresenceStore
+  type PresenceStore,
+  type SelectionStore
 } from "../../../app/state/index.ts";
 import { PeerMarkTracker } from "../../../collaboration/PeerMarkTracker.ts";
 import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
+import {
+  layerPresenceKey,
+  readLayerPresenceKey
+} from "./layerPresenceKey.ts";
 
-export interface BlockSelectionPresenceOptions {
+export interface LayerSelectionPresenceOptions {
   room: network.Room<
     VoxelNetworkCommand,
     VoxelServerMessage
   >;
-  brush?: BrushStore;
+  selection?: SelectionStore;
   presence?: PresenceStore;
 }
 
-export class BlockSelectionPresence {
-  #brush: BrushStore;
+export class LayerSelectionPresence {
+  #selection: SelectionStore;
   #presence: PresenceStore;
   #tracker: PeerMarkTracker<
-    number,
+    string,
     VoxelNetworkCommand,
     VoxelServerMessage
   >;
-  #unsubscribeBlock: () => void;
+  #unsubscribeSelection: () => void;
 
-  #onBlockChange = (): void => {
+  #onSelectionChange = (): void => {
     this.#tracker.publishLocal();
   };
 
   constructor(
-    options: BlockSelectionPresenceOptions
+    options: LayerSelectionPresenceOptions
   ) {
-    this.#brush = options.brush ?? editorState.brush;
+    this.#selection = options.selection ?? editorState.selection;
     this.#presence = options.presence ?? editorState.presence;
 
     this.#tracker = new PeerMarkTracker({
       room: options.room,
-      presenceKey: PRESENCE_KEYS.block,
-      localKey: () => this.#brush.blockId,
-      readKey: readBlockId,
+      presenceKey: PRESENCE_KEYS.layer,
+      localKey: () => layerPresenceKey(this.#selection.current),
+      readKey: readLayerPresenceKey,
       publish: (marks) => {
-        this.#presence.blockSelections = marks;
+        this.#presence.layerSelections = marks;
       }
     });
-    this.#unsubscribeBlock = this.#brush.watch(
-      "blockChange",
-      this.#onBlockChange
+    this.#unsubscribeSelection = this.#selection.watch(
+      "change",
+      this.#onSelectionChange
     );
   }
 
   dispose(): void {
-    this.#unsubscribeBlock();
+    this.#unsubscribeSelection();
     this.#tracker.dispose();
   }
-}
-
-function readBlockId(
-  value: unknown
-): number | null {
-  return typeof value === "number" && Number.isInteger(value)
-    ? value
-    : null;
 }

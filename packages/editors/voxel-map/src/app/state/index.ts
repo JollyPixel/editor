@@ -9,6 +9,10 @@ export {
   type RotationMode
 } from "./BrushStore.ts";
 export {
+  PresenceStore,
+  type PresenceStoreEvents
+} from "./PresenceStore.ts";
+export {
   SelectionStore,
   type SelectionStoreEvents,
   type LayerSelection

@@ -1,14 +1,20 @@
 // Import Third-party Dependencies
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import type { TreeNode } from "@jolly-pixel/ui";
+import type {
+  TreeBadge,
+  TreeNode
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { LayerSelection } from "../../app/state/index.ts";
+import type { PeerMarkMap } from "../../collaboration/peerMarks.ts";
+import { layerRefPresenceKey } from "./collaboration/layerPresenceKey.ts";
 
 // CONSTANTS
 const kVoxelPrefix = "voxel:";
 const kObjectLayerPrefix = "object:";
 const kObjectPrefix = "obj:";
+const kMaxBadges = 3;
 
 export type LayerRef =
   | { kind: "voxel-layer"; name: string; }
@@ -118,4 +124,40 @@ export function layerTreeNodes(
       };
     })
   ];
+}
+
+export function withLayerBadges(
+  nodes: readonly TreeNode<LayerRef>[],
+  marks: PeerMarkMap<string>
+): TreeNode<LayerRef>[] {
+  return nodes.map((node) => {
+    const badges = badgesOf(node, marks);
+    const children = node.children === undefined
+      ? undefined
+      : withLayerBadges(node.children, marks);
+
+    return {
+      ...node,
+      ...badges.length > 0 ? { badges } : {},
+      ...children === undefined ? {} : { children }
+    };
+  });
+}
+
+function badgesOf(
+  node: TreeNode<LayerRef>,
+  marks: PeerMarkMap<string>
+): TreeBadge[] {
+  if (node.data === undefined) {
+    return [];
+  }
+
+  const peers = marks.get(layerRefPresenceKey(node.data)) ?? [];
+
+  return peers.slice(0, kMaxBadges).map((peer) => {
+    return {
+      color: peer.color,
+      title: peer.displayName
+    };
+  });
 }
