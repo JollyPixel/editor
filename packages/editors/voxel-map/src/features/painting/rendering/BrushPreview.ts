@@ -9,6 +9,7 @@ import { BrushMesh } from "./BrushMesh.ts";
 import type { BrushStyle } from "../model/BrushStyle.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
+import type { BrushShape } from "../model/brushFootprint.ts";
 
 export interface BrushPreviewOptions {
   actor: Actor;
@@ -62,7 +63,7 @@ export class BrushPreview {
 
   update(
     mouseMoving: boolean,
-    size: number,
+    shape: BrushShape,
     resolveCenter: () => VoxelCoord | null
   ): void {
     if (!this.#consumeRefresh(mouseMoving)) {
@@ -77,7 +78,10 @@ export class BrushPreview {
       return;
     }
 
-    const next = { position: center, size };
+    const next = {
+      ...shape,
+      position: center
+    };
     this.#mesh.show();
     this.#mesh.draw(next);
     this.#setCursor(next);

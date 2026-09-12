@@ -92,3 +92,11 @@ jolly-pane::part(content) {
   inset-block-start: 12px;
   inset-inline-start: 16px;
 }
+
+#game-container voxel-brush-toolbar {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline-start: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+}

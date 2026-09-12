@@ -26,6 +26,7 @@ import {
 } from "../scene/index.ts";
 import { PerformanceMonitor } from "../features/performance/index.ts";
 import {
+  BrushShortcuts,
   LocalBrush,
   PeerBrushes
 } from "../features/painting/index.ts";
@@ -282,6 +283,13 @@ export class EditorScene extends Systems.Scene {
     };
 
     this.localBrush = brush;
+
+    const shortcuts = new BrushShortcuts({
+      keyboard,
+      brush: this.editorState.brush,
+      selection: this.editorState.selection
+    });
+    this.#subscriptions.push(() => shortcuts.dispose());
 
     if (this.#voxelRoom) {
       const peerBrushes = world.createActor("peer-brushes")

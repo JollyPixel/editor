@@ -5,16 +5,18 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import * as cursor from "../model/brushCursor.ts";
+import {
+  cellsOf,
+  type BrushFootprint
+} from "../model/brushFootprint.ts";
 
 export function pickBlockAt(
   engine: VoxelEngine,
-  center: VoxelCoord,
-  brushSize: number
+  footprint: BrushFootprint
 ): number | null {
   const { world } = engine;
 
-  for (const cell of footprintOf(center, brushSize)) {
+  for (const cell of footprintOf(footprint)) {
     const entry = world.getVoxelAt(cell);
     if (entry !== undefined) {
       return entry.blockId;
@@ -25,21 +27,19 @@ export function pickBlockAt(
 }
 
 function* footprintOf(
-  center: VoxelCoord,
-  brushSize: number
+  footprint: BrushFootprint
 ): IterableIterator<VoxelCoord> {
+  const center = footprint.position;
   yield center;
 
-  if (brushSize <= 1) {
+  if (footprint.size <= 1) {
     return;
   }
 
-  for (const cell of cursor.cellsOf({
-    position: center,
-    size: brushSize
-  })) {
+  for (const cell of cellsOf(footprint)) {
     if (
       cell.x !== center.x ||
+      cell.y !== center.y ||
       cell.z !== center.z
     ) {
       yield cell;

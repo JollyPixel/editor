@@ -3,13 +3,18 @@ import * as THREE from "three";
 import { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { Line2NodeMaterial } from "three/webgpu";
-import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import type { BrushCursor } from "../model/brushCursor.ts";
 import {
   boundsOf,
-  type BrushCursor
-} from "../model/brushCursor.ts";
+  cellsOf,
+  type BrushShape
+} from "../model/brushFootprint.ts";
+import {
+  voxelShell,
+  type VoxelShell
+} from "../model/voxelShell.ts";
 import {
   DEFAULT_BRUSH_STYLE,
   brushStyleFrom,
@@ -19,6 +24,12 @@ import {
 // CONSTANTS
 const kInflate = 0.01;
 const kDefaultHighlight = 0x9df6ff;
+const kOrigin = {
+  x: 0,
+  y: 0,
+  z: 0
+};
+const kShells = new Map<string, VoxelShell>();
 
 export interface BrushMeshOptions {
   /**
@@ -48,11 +59,7 @@ export class BrushMesh extends THREE.Group {
   #style: BrushStyle;
   #hidden = false;
   #drawn = false;
-  #span = {
-    x: 0,
-    y: 0,
-    z: 0
-  };
+  #shapeKey = "";
 
   constructor(
     options: BrushMeshOptions = {}
@@ -73,7 +80,7 @@ export class BrushMesh extends THREE.Group {
       depthWrite: false
     });
     this.#fill = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.BufferGeometry(),
       this.#fillMaterial
     );
     this.#fill.renderOrder = 1;
@@ -134,37 +141,32 @@ export class BrushMesh extends THREE.Group {
       min.y + (span.y / 2),
       min.z + (span.z / 2)
     );
-    this.#resize(span);
+    this.#reshape(cursor);
 
     this.#drawn = true;
     this.#applyVisibility();
   }
 
-  #resize(
-    span: VoxelCoord
+  #reshape(
+    shape: BrushShape
   ): void {
-    if (
-      span.x === this.#span.x &&
-      span.y === this.#span.y &&
-      span.z === this.#span.z
-    ) {
+    const key = shapeKeyOf(shape);
+    if (key === this.#shapeKey) {
       return;
     }
-    this.#span = {
-      x: span.x,
-      y: span.y,
-      z: span.z
-    };
+    this.#shapeKey = key;
 
-    const width = span.x + (kInflate * 2);
-    const height = span.y + (kInflate * 2);
-    const depth = span.z + (kInflate * 2);
-
-    this.#fill.scale.set(width, height, depth);
-    // Rebuild to keep dash lengths constant in world units.
-    this.#border.geometry.setPositions(
-      boxEdgePositions(width / 2, height / 2, depth / 2)
+    const shell = shellOf(key, shape);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(shell.triangles, 3)
     );
+    this.#fill.geometry.dispose();
+    this.#fill.geometry = geometry;
+
+    // Rebuild to keep dash lengths constant in world units.
+    this.#border.geometry.setPositions(shell.edges);
     this.#border.computeLineDistances();
   }
 
@@ -196,31 +198,49 @@ export class BrushMesh extends THREE.Group {
   }
 }
 
-function boxEdgePositions(
-  hx: number,
-  hy: number,
-  hz: number
-): number[] {
-  const corners: number[][] = [
-    [-hx, -hy, -hz],
-    [hx, -hy, -hz],
-    [hx, -hy, hz],
-    [-hx, -hy, hz],
-    [-hx, hy, -hz],
-    [hx, hy, -hz],
-    [hx, hy, hz],
-    [-hx, hy, hz]
-  ];
-  const edges: number[][] = [
-    [0, 1], [1, 2], [2, 3], [3, 0],
-    [4, 5], [5, 6], [6, 7], [7, 4],
-    [0, 4], [1, 5], [2, 6], [3, 7]
-  ];
-  const result: number[] = [];
+function shapeKeyOf(
+  shape: BrushShape
+): string {
+  return `${shape.size}:${shape.axis}:${shape.pattern}`;
+}
 
-  for (const [from, to] of edges) {
-    result.push(...corners[from], ...corners[to]);
+function shellOf(
+  key: string,
+  shape: BrushShape
+): VoxelShell {
+  const cached = kShells.get(key);
+  if (cached !== undefined) {
+    return cached;
   }
 
-  return result;
+  const footprint = {
+    ...shape,
+    position: kOrigin
+  };
+  const { min, span } = boundsOf(footprint);
+  const shell = voxelShell(cellsOf(footprint));
+  const center = [
+    min.x + (span.x / 2),
+    min.y + (span.y / 2),
+    min.z + (span.z / 2)
+  ];
+  const scale = [
+    (span.x + (kInflate * 2)) / span.x,
+    (span.y + (kInflate * 2)) / span.y,
+    (span.z + (kInflate * 2)) / span.z
+  ];
+  function toLocal(
+    values: number[]
+  ): number[] {
+    return values.map(
+      (value, index) => (value - center[index % 3]) * scale[index % 3]
+    );
+  }
+  const local = {
+    triangles: toLocal(shell.triangles),
+    edges: toLocal(shell.edges)
+  };
+  kShells.set(key, local);
+
+  return local;
 }

@@ -5,6 +5,7 @@ export {
 } from "./EditorState.ts";
 export {
   BrushStore,
+  type BrushMode,
   type BrushStoreEvents,
   type RotationMode
 } from "./BrushStore.ts";

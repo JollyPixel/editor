@@ -3,8 +3,13 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelRotationValue } from "./brushOrientation.ts";
+import type {
+  BrushAxis,
+  BrushPattern,
+  BrushPlane
+} from "./brushFootprint.ts";
 
-export type StrokeMode = "place" | "remove";
+export type StrokeMode = "place" | "replace" | "remove";
 
 export interface VoxelPaint {
   blockId: number;
@@ -14,10 +19,9 @@ export interface VoxelPaint {
 
 export interface BrushStrokeOptions {
   mode: StrokeMode;
-  /**
-   * Stroke height, in cells.
-   */
-  height: number;
+  plane: BrushPlane;
+  axis?: BrushAxis;
+  pattern?: BrushPattern;
   layerName: string;
   /**
    * Undefined in remove mode.
@@ -26,11 +30,13 @@ export interface BrushStrokeOptions {
 }
 
 /**
- * Fixed-height stroke that interpolates centers and stamps each cell once.
+ * Plane-locked stroke that interpolates centers and stamps each cell once.
  */
 export class BrushStroke {
   readonly mode: StrokeMode;
-  readonly height: number;
+  readonly plane: BrushPlane;
+  readonly axis: BrushAxis;
+  readonly pattern: BrushPattern;
   readonly layerName: string;
   readonly paint: VoxelPaint | undefined;
 
@@ -43,7 +49,9 @@ export class BrushStroke {
     options: BrushStrokeOptions
   ) {
     this.mode = options.mode;
-    this.height = options.height;
+    this.plane = { ...options.plane };
+    this.axis = options.axis ?? "xz";
+    this.pattern = options.pattern ?? "square";
     this.layerName = options.layerName;
     this.paint = options.paint;
   }
@@ -52,9 +60,8 @@ export class BrushStroke {
     cell: VoxelCoord
   ): VoxelCoord {
     return {
-      x: cell.x,
-      y: this.height,
-      z: cell.z
+      ...cell,
+      [this.plane.axis]: this.plane.value
     };
   }
 

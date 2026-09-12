@@ -8,6 +8,25 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { BrushMesh } from "../../../../src/features/painting/rendering/BrushMesh.ts";
 import { DEFAULT_BRUSH_STYLE } from "../../../../src/features/painting/model/BrushStyle.ts";
+import type { BrushCursor } from "../../../../src/features/painting/model/brushCursor.ts";
+
+function cursorOf(
+  patch: Partial<BrushCursor> = {}
+): BrushCursor {
+  return {
+    position: { x: 0, y: 0, z: 0 },
+    size: 1,
+    axis: "xz",
+    pattern: "square",
+    ...patch
+  };
+}
+
+function vertexCountOf(
+  mesh: BrushMesh
+): number {
+  return fillOf(mesh).geometry.getAttribute("position").count;
+}
 
 function fillOf(
   mesh: BrushMesh
@@ -40,35 +59,62 @@ describe("BrushMesh", () => {
   test("draws one volume and one outline, whatever the size", () => {
     const mesh = new BrushMesh();
 
-    mesh.draw({
-      position: { x: 0, y: 0, z: 0 },
-      size: 1
-    });
-    mesh.draw({
-      position: { x: 0, y: 0, z: 0 },
-      size: 8
-    });
+    mesh.draw(cursorOf({ size: 1 }));
+    mesh.draw(cursorOf({ size: 8 }));
 
     assert.strictEqual(mesh.children.length, 2);
   });
 
-  test("scales one box up instead of repeating it", () => {
+  test("outlines the outer faces of the footprint only", () => {
     const mesh = new BrushMesh();
 
-    mesh.draw({
+    mesh.draw(cursorOf({
       position: { x: 4, y: 2, z: 6 },
       size: 3
-    });
+    }));
 
-    const fill = fillOf(mesh);
+    const box = fillOf(mesh).geometry;
+    box.computeBoundingBox();
+    assert.strictEqual(vertexCountOf(mesh), (9 + 9 + (4 * 3)) * 6);
     assert.deepStrictEqual(
-      [fill.scale.x, fill.scale.y, fill.scale.z],
-      [3.02, 1.02, 3.02]
+      box.boundingBox!.max.toArray().map((value) => Number(value.toFixed(3))),
+      [1.51, 0.51, 1.51]
     );
     // The 3x3 footprint spans x 3..6 and z 5..8, centered on its middle cell.
     assert.deepStrictEqual(
       [mesh.position.x, mesh.position.y, mesh.position.z],
       [4.5, 2.5, 6.5]
+    );
+  });
+
+  test("follows the cells of a circle", () => {
+    const mesh = new BrushMesh();
+
+    mesh.draw(cursorOf({ size: 4 }));
+    const square = vertexCountOf(mesh);
+    mesh.draw(cursorOf({
+      size: 4,
+      pattern: "circle"
+    }));
+
+    assert.ok(vertexCountOf(mesh) !== square);
+  });
+
+  test("keeps its geometry while only the position moves", () => {
+    const mesh = new BrushMesh();
+
+    mesh.draw(cursorOf({ size: 2, axis: "xy" }));
+    const geometry = fillOf(mesh).geometry;
+    mesh.draw(cursorOf({
+      size: 2,
+      axis: "xy",
+      position: { x: 9, y: 1, z: 3 }
+    }));
+
+    assert.strictEqual(fillOf(mesh).geometry, geometry);
+    assert.deepStrictEqual(
+      [mesh.position.x, mesh.position.y, mesh.position.z],
+      [9, 2, 3.5]
     );
   });
 
@@ -78,10 +124,7 @@ describe("BrushMesh", () => {
     assert.strictEqual(fillOf(mesh).visible, false);
     assert.strictEqual(borderOf(mesh).visible, false);
 
-    mesh.draw({
-      position: { x: 0, y: 0, z: 0 },
-      size: 1
-    });
+    mesh.draw(cursorOf({ size: 1 }));
 
     assert.strictEqual(fillOf(mesh).visible, true);
     assert.strictEqual(borderOf(mesh).visible, true);
@@ -90,10 +133,7 @@ describe("BrushMesh", () => {
   test("hides everything once the footprint is cleared", () => {
     const mesh = new BrushMesh();
 
-    mesh.draw({
-      position: { x: 0, y: 0, z: 0 },
-      size: 1
-    });
+    mesh.draw(cursorOf({ size: 1 }));
     mesh.clearFootprint();
 
     assert.ok(
@@ -104,10 +144,7 @@ describe("BrushMesh", () => {
   test("hide wins over a drawn footprint", () => {
     const mesh = new BrushMesh();
 
-    mesh.draw({
-      position: { x: 0, y: 0, z: 0 },
-      size: 1
-    });
+    mesh.draw(cursorOf({ size: 1 }));
     mesh.hide();
 
     assert.ok(
@@ -138,10 +175,7 @@ describe("BrushMesh / style", () => {
   test("a fully transparent volume leaves the outline alone", () => {
     const mesh = new BrushMesh();
 
-    mesh.draw({
-      position: { x: 0, y: 0, z: 0 },
-      size: 1
-    });
+    mesh.draw(cursorOf({ size: 1 }));
     mesh.style = {
       ...DEFAULT_BRUSH_STYLE,
       opacity: 0
@@ -154,10 +188,7 @@ describe("BrushMesh / style", () => {
   test("an edgeless brush hides its outline", () => {
     const mesh = new BrushMesh();
 
-    mesh.draw({
-      position: { x: 0, y: 0, z: 0 },
-      size: 1
-    });
+    mesh.draw(cursorOf({ size: 1 }));
     mesh.style = {
       ...DEFAULT_BRUSH_STYLE,
       edgeWidth: 0

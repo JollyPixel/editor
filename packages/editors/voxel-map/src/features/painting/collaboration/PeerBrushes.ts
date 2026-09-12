@@ -17,6 +17,7 @@ import {
 import { peerColor } from "../../../collaboration/identity.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
+import { overlaps } from "../model/brushFootprint.ts";
 import { BrushMesh } from "../rendering/BrushMesh.ts";
 import type { BrushStyle } from "../model/BrushStyle.ts";
 
@@ -161,7 +162,7 @@ export class PeerBrushes extends ActorComponent {
 
     if (
       peerCursor === null ||
-      cursor.overlaps(peerCursor, this.#localCursor)
+      overlaps(peerCursor, this.#localCursor)
     ) {
       mesh.hide();
 

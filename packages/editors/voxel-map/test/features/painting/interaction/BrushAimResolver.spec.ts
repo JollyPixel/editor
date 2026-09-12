@@ -10,6 +10,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { BrushAimResolver } from "../../../../src/features/painting/interaction/BrushAimResolver.ts";
+import type { BrushPlane } from "../../../../src/features/painting/model/brushFootprint.ts";
 
 // CONSTANTS
 const kPointer = new THREE.Vector2(0, 0);
@@ -102,7 +103,16 @@ function aimingDownAtFace(
   camera.lookAt(0.5, 0.85, 0);
 }
 
-describe("BrushAimResolver.aimAtHeight", () => {
+function heightOf(
+  value: number
+): BrushPlane {
+  return {
+    axis: "y",
+    value
+  };
+}
+
+describe("BrushAimResolver.aimAtPlane", () => {
   test("falls back to the height row when nothing is in the way", () => {
     const resolver = createResolver([], (camera) => {
       camera.position.set(0.5, 10, 0.5);
@@ -110,7 +120,7 @@ describe("BrushAimResolver.aimAtHeight", () => {
     });
 
     assert.deepStrictEqual(
-      resolver.aimAtHeight(kPointer, 3, "place"),
+      resolver.aimAtPlane(kPointer, heightOf(3), "place"),
       {
         cell: { x: 0, y: 3, z: 0 },
         cursor: { x: 0, y: 3, z: 0 }
@@ -125,7 +135,7 @@ describe("BrushAimResolver.aimAtHeight", () => {
     });
 
     assert.deepStrictEqual(
-      resolver.aimAtHeight(kPointer, 4, "place"),
+      resolver.aimAtPlane(kPointer, heightOf(4), "place"),
       {
         cell: { x: 0, y: 4, z: 0 },
         cursor: { x: 0, y: 4, z: 0 }
@@ -140,7 +150,7 @@ describe("BrushAimResolver.aimAtHeight", () => {
     );
 
     assert.deepStrictEqual(
-      resolver.aimAtHeight(kPointer, 0, "place"),
+      resolver.aimAtPlane(kPointer, heightOf(0), "place"),
       {
         cell: { x: 0, y: 0, z: -1 },
         cursor: { x: 0, y: 0, z: 0 }
@@ -155,7 +165,7 @@ describe("BrushAimResolver.aimAtHeight", () => {
     );
 
     assert.deepStrictEqual(
-      resolver.aimAtHeight(kPointer, 0, "remove"),
+      resolver.aimAtPlane(kPointer, heightOf(0), "remove"),
       {
         cell: { x: 0, y: 0, z: 0 },
         cursor: { x: 0, y: 0, z: 0 }
@@ -171,8 +181,8 @@ describe("BrushAimResolver.aimAtHeight", () => {
     const bare = createResolver([], aimingDownAtFace);
 
     assert.deepStrictEqual(
-      resolver.aimAtHeight(kPointer, 0, "place")?.cursor,
-      bare.aimAtHeight(kPointer, 0, "place")?.cursor
+      resolver.aimAtPlane(kPointer, heightOf(0), "place")?.cursor,
+      bare.aimAtPlane(kPointer, heightOf(0), "place")?.cursor
     );
   });
 
@@ -182,7 +192,7 @@ describe("BrushAimResolver.aimAtHeight", () => {
       camera.lookAt(0.5, 0, 0.5);
     });
 
-    assert.strictEqual(resolver.aimAtHeight(kPointer, 0, "place"), null);
+    assert.strictEqual(resolver.aimAtPlane(kPointer, heightOf(0), "place"), null);
   });
 
   test("reports nothing when the ray never meets the height row", () => {
@@ -191,7 +201,34 @@ describe("BrushAimResolver.aimAtHeight", () => {
       camera.lookAt(20, 10, 0.5);
     });
 
-    assert.strictEqual(resolver.aimAtHeight(kPointer, 0, "place"), null);
+    assert.strictEqual(resolver.aimAtPlane(kPointer, heightOf(0), "place"), null);
+  });
+
+  test("locks a vertical plane and keeps its value on the locked axis", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(0.5, 1.5, 8);
+      camera.lookAt(0.5, 1.5, 0);
+    });
+
+    assert.deepStrictEqual(
+      resolver.aimAtPlane(kPointer, { axis: "z", value: 2 }, "place"),
+      {
+        cell: { x: 0, y: 1, z: 2 },
+        cursor: { x: 0, y: 1, z: 2 }
+      }
+    );
+  });
+
+  test("reports nothing when the ray runs parallel to a vertical plane", () => {
+    const resolver = createResolver([], (camera) => {
+      camera.position.set(0.5, 1.5, 8);
+      camera.lookAt(0.5, 1.5, 0);
+    });
+
+    assert.strictEqual(
+      resolver.aimAtPlane(kPointer, { axis: "x", value: 3 }, "place"),
+      null
+    );
   });
 });
 

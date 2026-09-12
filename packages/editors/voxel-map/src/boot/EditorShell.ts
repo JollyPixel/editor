@@ -47,6 +47,12 @@ export class EditorShell {
       );
     }
 
+    const toolbar = document.querySelector("voxel-brush-toolbar");
+    if (toolbar) {
+      toolbar.brush = state.brush;
+      toolbar.selection = state.selection;
+    }
+
     const sidebar = document.querySelector("#sidebar");
     if (sidebar instanceof EditorSidebar) {
       this.#sidebar = sidebar;

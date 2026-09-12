@@ -21,11 +21,14 @@ import { sliderStyles } from "./Slider.styles.ts";
 import { isInputElement } from "../dom.ts";
 import { PointerFocusController } from "../field/PointerFocusController.ts";
 
+export type SliderOrientation = "horizontal" | "vertical";
+
 export interface SliderDefaults {
   step: number;
   min: number;
   max: number;
   value: number;
+  orientation: SliderOrientation;
 }
 
 /**
@@ -37,7 +40,8 @@ export class Slider extends JollyField<number> {
     step: 1,
     min: 0,
     max: 100,
-    value: 0
+    value: 0,
+    orientation: "horizontal"
   };
 
   static override styles = [
@@ -54,6 +58,9 @@ export class Slider extends JollyField<number> {
   @property({ type: Number })
   declare max: number;
 
+  @property({ type: String, reflect: true })
+  declare orientation: SliderOrientation;
+
   #pointerFocus = new PointerFocusController(this);
 
   constructor() {
@@ -63,6 +70,7 @@ export class Slider extends JollyField<number> {
     this.min = Slider.Defaults.min;
     this.max = Slider.Defaults.max;
     this.value = Slider.Defaults.value;
+    this.orientation = Slider.Defaults.orientation;
   }
 
   protected renderValue(): TemplateResult {
@@ -107,10 +115,6 @@ export class Slider extends JollyField<number> {
     `;
   }
 
-  /**
-   * Fill ratio between 0 and 1. A mixed value has no thumb position, so it
-   * reads as empty rather than as the minimum.
-   */
   get #progress(): number {
     const value = this.concreteValue;
     const span = this.max - this.min;
@@ -124,9 +128,6 @@ export class Slider extends JollyField<number> {
     );
   }
 
-  /**
-   * Uses the mixed-value placeholder when no thumb position exists.
-   */
   get #displayed(): string {
     const value = this.concreteValue;
 
@@ -192,9 +193,6 @@ export class Slider extends JollyField<number> {
     });
   }
 
-  /**
-   * Restore readonly range values without removing the control from tab order.
-   */
   #read(
     event: Event
   ): number | null {
