@@ -66,3 +66,61 @@ export function revealCellScrollTop(
 
   return null;
 }
+
+export function blockInsertIndex(
+  px: number,
+  py: number,
+  layout: BlockGridLayout,
+  count: number
+): number {
+  const { cols, cellSize } = layout;
+  if (count <= 0) {
+    return 0;
+  }
+
+  const lastRow = Math.floor((count - 1) / cols);
+  const row = Math.min(
+    Math.max(Math.floor(py / cellSize), 0),
+    lastRow
+  );
+  const slot = Math.min(
+    Math.max(Math.round(px / cellSize), 0),
+    cols
+  );
+
+  return Math.min((row * cols) + slot, count);
+}
+
+export function blockMoveTargetIndex(
+  fromIndex: number,
+  insertAt: number,
+  count: number
+): number {
+  if (fromIndex < 0 || count <= 0) {
+    return -1;
+  }
+
+  const target = fromIndex < insertAt ? insertAt - 1 : insertAt;
+  const clamped = Math.min(Math.max(target, 0), count - 1);
+
+  return clamped === fromIndex ? -1 : clamped;
+}
+
+export interface BlockInsertMarker {
+  x: number;
+  y: number;
+  height: number;
+}
+
+export function blockInsertMarker(
+  insertAt: number,
+  layout: BlockGridLayout
+): BlockInsertMarker {
+  const { cols, cellSize } = layout;
+
+  return {
+    x: (insertAt % cols) * cellSize,
+    y: Math.floor(insertAt / cols) * cellSize,
+    height: cellSize
+  };
+}

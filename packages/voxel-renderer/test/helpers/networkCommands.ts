@@ -63,7 +63,7 @@ export interface BlockDefinedCmdOptions {
 /** A "block-defined" command for a minimal cube, keyed by block id. */
 export function blockDefinedCmd(
   opts: BlockDefinedCmdOptions = {}
-): VoxelNetworkCommand {
+): Extract<VoxelNetworkCommand, { action: "block-defined"; }> {
   return {
     action: "block-defined",
     block: resolveBlockDefinition(
@@ -94,6 +94,28 @@ export function worldReplaceCmd(
       tilesets: [],
       layers: []
     },
+    clientId: opts.clientId ?? "client-A",
+    seq: opts.seq ?? 1,
+    timestamp: opts.timestamp ?? 1000
+  };
+}
+
+export interface BlockMovedCmdOptions {
+  blockId?: number;
+  toIndex?: number;
+  clientId?: string;
+  seq?: number;
+  timestamp?: number;
+}
+
+/** A "block-moved" command, keyed by block id. */
+export function blockMovedCmd(
+  opts: BlockMovedCmdOptions = {}
+): Extract<VoxelNetworkCommand, { action: "block-moved"; }> {
+  return {
+    action: "block-moved",
+    blockId: opts.blockId ?? 1,
+    toIndex: opts.toIndex ?? 0,
     clientId: opts.clientId ?? "client-A",
     seq: opts.seq ?? 1,
     timestamp: opts.timestamp ?? 1000

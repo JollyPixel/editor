@@ -13,6 +13,7 @@ interface BlockRegisterManyOptions {
 class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   readonly nextId: number;
   readonly version: number;
+  readonly size: number;
 
   constructor(definitions?: BlockDefinition[]);
   register(definition: BlockDefinition): this;
@@ -22,6 +23,8 @@ class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   ): this;
   unregister(id: number): boolean;
   clear(): void;
+  moveTo(id: number, toIndex: number): boolean;
+  indexOf(id: number): number;
   get(id: number): ResolvedBlockDefinition | undefined;
   propertiesOf(id: number): BlockProperties | undefined;
   has(id: number): boolean;
@@ -41,6 +44,46 @@ saved document or converter output embeds block definitions.
 `clear()` drops every definition. Neither lowers `nextId`: an ID is never
 recycled, so a removed ID cannot later name a different block while a peer
 still references it.
+
+## Ordering
+
+The registry keeps definitions in registration order, not ID order, and every
+traversal (, iteration, serialization) follows it. That order is what
+[](../serialization/serialization.md) writes to the
+document's  array and what  restores when a document is
+loaded, so a chosen order survives a save.
+
+ on an ID already present keeps that block's position, so editing a
+definition never moves it.
+
+ relocates a block to , clamping out-of-range values to the
+first or last position. It returns  for an unknown ID and for a move that
+would leave the order unchanged, and only bumps  when it returns
+. The order carries no rendering meaning: moving a block never
+invalidates compiled geometry.
+
+ returns a block's current position, or  when it is unknown.
+ is the number of registered definitions.
+
+## Ordering
+
+The registry keeps definitions in registration order, not ID order, and every
+traversal (`getAll()`, iteration, serialization) follows it. That order is what
+[`serializeVoxelWorld()`](../serialization/serialization.md) writes to the
+document's `blocks` array and what `registerMany()` restores when a document is
+loaded, so a chosen order survives a save.
+
+`register()` on an ID already present keeps that block's position, so editing a
+definition never moves it.
+
+`moveTo()` relocates a block to `toIndex`, clamping an out-of-range value to
+the first or last position. It returns `false` for an unknown ID and for a move
+that would leave the order unchanged, and only bumps `version` when it returns
+`true`. The order carries no rendering meaning: moving a block never
+invalidates compiled geometry.
+
+`indexOf()` returns a block's current position, or `-1` when it is unknown.
+`size` is the number of registered definitions.
 
 `nextId` is one above the highest ID ever registered. It never returns `0` and
 does not reuse gaps. It is not clamped to `MAX_BLOCK_ID`; packing a larger ID

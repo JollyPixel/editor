@@ -59,6 +59,10 @@ export const voxelCommandProtocol: MessageProtocol = defineMessageProtocol({
       })),
       commandVariant("block-defined", { block: { type: "object" } }),
       commandVariant("block-removed", { blockId: { type: "number" } }),
+      commandVariant("block-moved", {
+        blockId: { type: "number" },
+        toIndex: { type: "number" }
+      }),
       commandVariant("world-replace", { data: voxelWorldSchema })
     ]
   }

@@ -36,6 +36,7 @@ interface MockEngine {
   defineBlock(def: BlockDefinition): void;
   defineBlocks(defs: Iterable<BlockDefinition>): void;
   removeBlock(blockId: number): boolean;
+  moveBlock(blockId: number, toIndex: number): boolean;
   // Test helper: simulate a local mutation firing the hook
   triggerLocal(event: VoxelLayerHookEvent): void;
   appliedCommands: VoxelLayerHookEvent[];
@@ -97,6 +98,19 @@ function createMockEngine(): MockEngine {
 
       dirtyReasons.push("block-removed");
       blockListener?.({ action: "block-removed", blockId });
+
+      return true;
+    },
+    moveBlock(blockId, toIndex) {
+      if (!engine.blockRegistry.moveTo(blockId, toIndex)) {
+        return false;
+      }
+
+      blockListener?.({
+        action: "block-moved",
+        blockId,
+        toIndex: engine.blockRegistry.indexOf(blockId)
+      });
 
       return true;
     },
@@ -668,5 +682,80 @@ describe("VoxelSyncClient — block commands", () => {
     });
 
     assert.equal(engine.blockRegistry.has(4), false);
+  });
+});
+
+describe("VoxelSyncClient — block reorder", () => {
+  function ids(
+    registry: BlockRegistry
+  ): number[] {
+    return [...registry].map((block) => block.id);
+  }
+
+  it("publishes a local move", () => {
+    const engine = createMockEngine();
+    engine.blockRegistry.register(makeBlockDef(1, "cube"));
+    engine.blockRegistry.register(makeBlockDef(2, "cube"));
+    engine.blockRegistry.register(makeBlockDef(3, "cube"));
+
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    engine.moveBlock(3, 0);
+
+    assert.equal(room.sentCommands.length, 1);
+    const [command] = room.sentCommands;
+    assert.equal(command.action, "block-moved");
+    assert.deepEqual(
+      command.action === "block-moved" ?
+        [command.blockId, command.toIndex] :
+        null,
+      [3, 0]
+    );
+  });
+
+  it("applies a peer move without re-publishing it", () => {
+    const engine = createMockEngine();
+    engine.blockRegistry.register(makeBlockDef(1, "cube"));
+    engine.blockRegistry.register(makeBlockDef(2, "cube"));
+    engine.blockRegistry.register(makeBlockDef(3, "cube"));
+
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "block-moved",
+      blockId: 1,
+      toIndex: 2,
+      clientId: "client-B",
+      seq: 1,
+      timestamp: 1000
+    });
+
+    assert.deepEqual(ids(engine.blockRegistry), [2, 3, 1]);
+    assert.equal(room.sentCommands.length, 0);
+  });
+
+  it("leaves the meshes alone", () => {
+    const engine = createMockEngine();
+    engine.blockRegistry.register(makeBlockDef(1, "cube"));
+    engine.blockRegistry.register(makeBlockDef(2, "cube"));
+
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "block-moved",
+      blockId: 1,
+      toIndex: 1,
+      clientId: "client-B",
+      seq: 1,
+      timestamp: 1000
+    });
+
+    assert.deepEqual(engine.dirtyReasons, []);
   });
 });

@@ -1,7 +1,7 @@
 # Network protocol
 
 Voxel synchronization uses engine hook events, one administrative command, and
-two block-table commands.
+three block-table commands.
 
 ```ts
 interface VoxelWorldReplaceCommand {
@@ -19,9 +19,16 @@ interface VoxelBlockRemovedCommand {
   blockId: number;
 }
 
+interface VoxelBlockMovedCommand {
+  action: "block-moved";
+  blockId: number;
+  toIndex: number;
+}
+
 type VoxelBlockCommand =
   | VoxelBlockDefinedCommand
-  | VoxelBlockRemovedCommand;
+  | VoxelBlockRemovedCommand
+  | VoxelBlockMovedCommand;
 
 type VoxelNetworkCommand =
   (VoxelLayerHookEvent | VoxelWorldReplaceCommand | VoxelBlockCommand)
@@ -42,7 +49,13 @@ A block definition belongs to the document, not to a layer, so it carries no
 `layerName` and travels on its own hook. `VoxelBlockCommand` is the
 `VoxelBlockHookEvent` the engine emits, stamped with a command header, so
 [`VoxelSyncClient`](./VoxelSyncClient.md#block-definitions) publishes one for
-every `engine.defineBlock()` and `engine.removeBlock()`.
+every `engine.defineBlock()`, `engine.removeBlock()` and `engine.moveBlock()`.
+
+`block-moved` replicates the block table's order, which the document preserves
+through its `blocks` array. `toIndex` is absolute, so peers applying the same
+sequence of moves in the room's order converge. Two peers moving different
+blocks at the same instant do not contend, and their orders can differ until
+the next snapshot, matching how `layer-moved` behaves.
 
 `isVoxelBlockCommand()` narrows one, beside `isVoxelNetworkCommand()` in
 `VoxelCommandValidator`:
@@ -53,7 +66,7 @@ function isVoxelBlockCommand(
 ): command is VoxelBlockCommand & network.NetworkCommandHeader;
 ```
 
-`VOXEL_BLOCK_HOOK_ACTIONS` lists both action names for a rights table.
+`VOXEL_BLOCK_HOOK_ACTIONS` lists every block action name for a rights table.
 
 Block commands are keyed `block:<id>` for conflict resolution, so concurrent
 edits contend per block and last write wins.

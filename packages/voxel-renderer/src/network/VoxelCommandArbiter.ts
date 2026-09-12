@@ -61,32 +61,25 @@ export class VoxelCommandArbiter {
   static key(
     command: VoxelLayerHookEvent | VoxelNetworkCommand
   ): string | null {
-    if (
-      command.action === "voxel-set" ||
-      command.action === "voxel-removed"
-    ) {
-      return voxelKey(command.layerName, command.metadata.position);
+    switch (command.action) {
+      case "voxel-set":
+      case "voxel-removed":
+        return voxelKey(command.layerName, command.metadata.position);
+      case "object-added":
+        return `object:${command.metadata.object.id}`;
+      case "object-removed":
+      case "object-updated":
+      case "object-moved":
+        return `object:${command.metadata.objectId}`;
+      case "block-defined":
+        return `block:${command.block.id}`;
+      case "block-removed":
+        return `block:${command.blockId}`;
+      case "block-moved":
+        return `block:${command.blockId}`;
+      default:
+        return null;
     }
-
-    if (command.action === "object-added") {
-      return `object:${command.metadata.object.id}`;
-    }
-    if (
-      command.action === "object-removed" ||
-      command.action === "object-updated" ||
-      command.action === "object-moved"
-    ) {
-      return `object:${command.metadata.objectId}`;
-    }
-
-    if (command.action === "block-defined") {
-      return `block:${command.block.id}`;
-    }
-    if (command.action === "block-removed") {
-      return `block:${command.blockId}`;
-    }
-
-    return null;
   }
 
   #admit(

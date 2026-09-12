@@ -2,6 +2,7 @@ export type {
   VoxelBlockAction,
   VoxelBlockCommand,
   VoxelBlockDefinedCommand,
+  VoxelBlockMovedCommand,
   VoxelBlockRemovedCommand,
   VoxelNetworkCommand,
   VoxelServerMessage,
@@ -24,4 +25,4 @@ export type {
 export {
   isVoxelBlockCommand,
   isVoxelNetworkCommand
-} from "./VoxelCommandValidator.ts";
+} from "./VoxelCommandValidator.ts";

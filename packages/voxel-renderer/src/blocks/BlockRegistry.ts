@@ -89,6 +89,55 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     this.#version++;
   }
 
+  moveTo(
+    id: number,
+    toIndex: number
+  ): boolean {
+    const moved = this.#blocks.get(id);
+    if (moved === undefined) {
+      return false;
+    }
+
+    const ordered = [...this.#blocks.values()];
+    const fromIndex = ordered.indexOf(moved);
+    const clamped = Math.min(
+      Math.max(Math.trunc(toIndex), 0),
+      ordered.length - 1
+    );
+    if (clamped === fromIndex) {
+      return false;
+    }
+
+    ordered.splice(fromIndex, 1);
+    ordered.splice(clamped, 0, moved);
+
+    this.#blocks.clear();
+    for (const block of ordered) {
+      this.#blocks.set(block.id, block);
+    }
+    this.#version++;
+
+    return true;
+  }
+
+  indexOf(
+    id: number
+  ): number {
+    let index = 0;
+    for (const key of this.#blocks.keys()) {
+      if (key === id) {
+        return index;
+      }
+      index++;
+    }
+
+    return -1;
+  }
+
+  get size(): number {
+    return this.#blocks.size;
+  }
+
   get nextId(): number {
     return this.#highestId + 1;
   }

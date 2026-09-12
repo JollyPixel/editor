@@ -98,6 +98,9 @@ export class VoxelSyncClient extends network.SyncAdapter<
         if (cmd.action === "block-removed") {
           engine.removeBlock(cmd.blockId);
         }
+        else if (cmd.action === "block-moved") {
+          engine.moveBlock(cmd.blockId, cmd.toIndex);
+        }
         else {
           engine.defineBlock(cmd.block);
         }

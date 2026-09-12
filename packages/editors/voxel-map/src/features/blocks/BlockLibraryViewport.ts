@@ -10,6 +10,9 @@ import type {
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 import {
   blockCellRect,
+  blockInsertIndex,
+  blockInsertMarker,
+  blockMoveTargetIndex,
   revealCellScrollTop,
   type BlockCellRect,
   type BlockGridLayout
@@ -25,11 +28,29 @@ import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 // CONSTANTS
 const kBlockSelectEvent = "block-select";
 const kBlockEditEvent = "block-edit";
+const kBlockMoveEvent = "block-move";
 const kCellInset = 3;
+const kDragThreshold = 4;
+const kAutoScrollMargin = 24;
+const kAutoScrollStep = 10;
 
 interface MarkedCell {
   rect: BlockCellRect;
   view: PeerMarkView;
+}
+
+export interface BlockMoveDetail {
+  id: number;
+  toIndex: number;
+}
+
+interface DragSession {
+  pointerId: number;
+  blockId: number;
+  fromIndex: number;
+  originX: number;
+  originY: number;
+  dragging: boolean;
 }
 
 @customElement("block-library-viewport")
@@ -76,6 +97,27 @@ export class BlockLibraryViewport extends LitElement {
       z-index: 2;
     }
 
+    .layer.drop {
+      z-index: 3;
+    }
+
+    .insertion {
+      position: absolute;
+      width: 2px;
+      margin-inline-start: -1px;
+      border-radius: 1px;
+      background: var(--jolly-accent, #4c9aff);
+      box-shadow: 0 0 0 1px var(--jolly-well-bg, #0e1316);
+    }
+
+    .scroller.dragging {
+      cursor: grabbing;
+    }
+
+    .scroller.dragging > canvas {
+      opacity: 0.75;
+    }
+
     .highlight {
       position: absolute;
       border-radius: var(--jolly-radius-sm, 4px);
@@ -116,10 +158,15 @@ export class BlockLibraryViewport extends LitElement {
   @state()
   private declare _grid: BlockGridLayout | null;
 
+  @state()
+  private declare _insertAt: number | null;
+
   @query(".scroller")
   declare private _scroller: HTMLDivElement;
 
   #renderer: BlockLibraryRenderer | null = null;
+  #drag: DragSession | null = null;
+  #suppressClick = false;
 
   constructor() {
     super();
@@ -128,10 +175,12 @@ export class BlockLibraryViewport extends LitElement {
     this.marks = new Map();
     this.layout = "compact";
     this._grid = null;
+    this._insertAt = null;
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
+    this.#endDrag();
     this.#renderer?.dispose();
     this.#renderer = null;
   }
@@ -178,9 +227,13 @@ export class BlockLibraryViewport extends LitElement {
     const cells = this.#markedCells();
 
     return html`<div
-      class="scroller"
+      class=${this.#dragging ? "scroller dragging" : "scroller"}
       @click=${this.#onClick}
       @dblclick=${this.#onDoubleClick}
+      @pointerdown=${this.#onPointerDown}
+      @pointermove=${this.#onPointerMove}
+      @pointerup=${this.#onPointerUp}
+      @pointercancel=${this.#onPointerCancel}
     >
       <div class="layer highlights">
         ${cells.map((cell) => this.#renderHighlight(cell))}
@@ -188,7 +241,28 @@ export class BlockLibraryViewport extends LitElement {
       <div class="layer marks">
         ${cells.map((cell) => this.#renderMarker(cell))}
       </div>
+      <div class="layer drop">
+        ${this.#renderInsertion()}
+      </div>
     </div>`;
+  }
+
+  #renderInsertion() {
+    const grid = this._grid;
+    if (grid === null || this._insertAt === null) {
+      return nothing;
+    }
+
+    const marker = blockInsertMarker(this._insertAt, grid);
+
+    return html`<div
+      class="insertion"
+      style=${[
+        `left:${marker.x}px`,
+        `top:${marker.y}px`,
+        `height:${marker.height}px`
+      ].join(";")}
+    ></div>`;
   }
 
   #renderHighlight(
@@ -285,9 +359,189 @@ export class BlockLibraryViewport extends LitElement {
     this._grid = grid;
   }
 
+  get #dragging(): boolean {
+    return this.#drag?.dragging === true;
+  }
+
+  #onPointerDown(
+    event: PointerEvent
+  ): void {
+    if (event.button !== 0 || this.#drag !== null) {
+      return;
+    }
+
+    const blockId = this.#blockIdAt(event);
+    if (blockId === null) {
+      return;
+    }
+
+    this.#drag = {
+      pointerId: event.pointerId,
+      blockId,
+      fromIndex: this.blocks.findIndex((block) => block.id === blockId),
+      originX: event.clientX,
+      originY: event.clientY,
+      dragging: false
+    };
+    this._scroller.setPointerCapture(event.pointerId);
+  }
+
+  #onPointerMove(
+    event: PointerEvent
+  ): void {
+    const drag = this.#drag;
+    if (drag === null || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (!drag.dragging) {
+      const travelled = Math.hypot(
+        event.clientX - drag.originX,
+        event.clientY - drag.originY
+      );
+      if (travelled < kDragThreshold) {
+        return;
+      }
+
+      this.#startDrag(drag);
+    }
+
+    event.preventDefault();
+    this.#autoScroll(event);
+    this._insertAt = this.#insertIndexAt(event);
+  }
+
+  #onPointerUp(
+    event: PointerEvent
+  ): void {
+    const drag = this.#drag;
+    if (drag === null || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const insertAt = drag.dragging ? this._insertAt : null;
+    this.#suppressClick = drag.dragging;
+    this.#endDrag();
+
+    if (insertAt === null) {
+      return;
+    }
+
+    const toIndex = blockMoveTargetIndex(
+      drag.fromIndex,
+      insertAt,
+      this.blocks.length
+    );
+    if (toIndex === -1) {
+      return;
+    }
+
+    this.dispatchEvent(new CustomEvent<BlockMoveDetail>(kBlockMoveEvent, {
+      detail: {
+        id: drag.blockId,
+        toIndex
+      },
+      bubbles: false,
+      composed: false
+    }));
+  }
+
+  #onPointerCancel(
+    event: PointerEvent
+  ): void {
+    if (this.#drag?.pointerId === event.pointerId) {
+      this.#endDrag();
+    }
+  }
+
+  readonly #onKeyDown = (
+    event: KeyboardEvent
+  ): void => {
+    if (event.key === "Escape") {
+      this.#endDrag();
+    }
+  };
+
+  #startDrag(
+    drag: DragSession
+  ): void {
+    drag.dragging = true;
+    window.addEventListener("keydown", this.#onKeyDown);
+    this.requestUpdate();
+  }
+
+  #endDrag(): void {
+    const drag = this.#drag;
+    this.#drag = null;
+    this._insertAt = null;
+    if (drag === null) {
+      return;
+    }
+
+    window.removeEventListener("keydown", this.#onKeyDown);
+    if (this._scroller?.hasPointerCapture(drag.pointerId)) {
+      this._scroller.releasePointerCapture(drag.pointerId);
+    }
+    this.requestUpdate();
+  }
+
+  #autoScroll(
+    event: PointerEvent
+  ): void {
+    const scroller = this._scroller;
+    const bounds = scroller.getBoundingClientRect();
+    if (event.clientY < bounds.top + kAutoScrollMargin) {
+      scroller.scrollTop -= kAutoScrollStep;
+    }
+    else if (event.clientY > bounds.bottom - kAutoScrollMargin) {
+      scroller.scrollTop += kAutoScrollStep;
+    }
+  }
+
+  #insertIndexAt(
+    event: PointerEvent
+  ): number | null {
+    const grid = this._grid;
+    const canvas = this.#renderer?.canvas;
+    if (grid === null || canvas === undefined) {
+      return null;
+    }
+
+    const bounds = canvas.getBoundingClientRect();
+
+    return blockInsertIndex(
+      event.clientX - bounds.left,
+      event.clientY - bounds.top,
+      grid,
+      this.blocks.length
+    );
+  }
+
+  #blockIdAt(
+    event: MouseEvent
+  ): number | null {
+    const renderer = this.#renderer;
+    if (!renderer) {
+      return null;
+    }
+
+    const bounds = renderer.canvas.getBoundingClientRect();
+
+    return renderer.getBlockAtPointer(
+      event.clientX - bounds.left,
+      event.clientY - bounds.top
+    );
+  }
+
   #onClick(
     event: MouseEvent
   ): void {
+    if (this.#suppressClick) {
+      this.#suppressClick = false;
+
+      return;
+    }
+
     this.#emitForPointer(
       kBlockSelectEvent,
       event
@@ -307,15 +561,7 @@ export class BlockLibraryViewport extends LitElement {
     name: string,
     event: MouseEvent
   ): void {
-    if (!this.#renderer) {
-      return;
-    }
-
-    const rect = this.#renderer.canvas.getBoundingClientRect();
-    const blockId = this.#renderer.getBlockAtPointer(
-      event.clientX - rect.left,
-      event.clientY - rect.top
-    );
+    const blockId = this.#blockIdAt(event);
     if (blockId === null) {
       return;
     }

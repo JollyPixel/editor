@@ -68,20 +68,23 @@ reported on a second hook with its own union:
 ```ts
 type VoxelBlockHookEvent =
   | { action: "block-defined"; block: ResolvedBlockDefinition; }
-  | { action: "block-removed"; blockId: number; };
+  | { action: "block-removed"; blockId: number; }
+  | { action: "block-moved"; blockId: number; toIndex: number; };
 ```
 
 | Action | Payload | Notes |
 |---|---|---|
 | `"block-defined"` | `{ block: ResolvedBlockDefinition }` | Resolved, not the raw input |
 | `"block-removed"` | `{ blockId: number }` | Only for an ID that was registered |
+| `"block-moved"` | `{ blockId: number; toIndex: number }` | `toIndex` is the position the block actually landed on, already clamped |
 
 ```ts
 engine.onBlockUpdated = (event) => { /* ... */ };
 ```
 
-Only `engine.defineBlock()`, `engine.defineBlocks()` and `engine.removeBlock()`
-emit it; a direct `engine.blockRegistry.register()` does not. Use the registry
+Only `engine.defineBlock()`, `engine.defineBlocks()`, `engine.removeBlock()`
+and `engine.moveBlock()` emit it; a direct `engine.blockRegistry.register()`
+or `engine.blockRegistry.moveTo()` does not. Use the registry
 directly for definitions each peer derives on its own, and the engine methods
 for edits that must reach other systems.
 

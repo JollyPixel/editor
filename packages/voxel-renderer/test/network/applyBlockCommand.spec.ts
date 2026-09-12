@@ -5,7 +5,10 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { applyBlockCommand } from "../../src/network/applyBlockCommand.ts";
 import { BlockRegistry } from "../../src/blocks/index.ts";
-import { blockDefinedCmd } from "../helpers/networkCommands.ts";
+import {
+  blockDefinedCmd,
+  blockMovedCmd
+} from "../helpers/networkCommands.ts";
 
 describe("applyBlockCommand — custom properties", () => {
   it("registers the properties carried by the command", () => {
@@ -45,5 +48,51 @@ describe("applyBlockCommand — custom properties", () => {
     command.block.properties.hardness = 99;
 
     assert.deepEqual(registry.propertiesOf(7), { hardness: 3 });
+  });
+});
+
+describe("applyBlockCommand — reorder", () => {
+  function seeded(): BlockRegistry {
+    const registry = new BlockRegistry();
+    for (const id of [1, 2, 3]) {
+      applyBlockCommand(registry, blockDefinedCmd({ id }));
+    }
+
+    return registry;
+  }
+
+  it("moves the block named by the command", () => {
+    const registry = seeded();
+
+    assert.equal(
+      applyBlockCommand(registry, blockMovedCmd({ blockId: 3, toIndex: 0 })),
+      true
+    );
+    assert.deepEqual(
+      [...registry].map((block) => block.id),
+      [3, 1, 2]
+    );
+  });
+
+  it("reports no change when the block already sits at the index", () => {
+    const registry = seeded();
+
+    assert.equal(
+      applyBlockCommand(registry, blockMovedCmd({ blockId: 1, toIndex: 0 })),
+      false
+    );
+  });
+
+  it("ignores a move naming an unknown block", () => {
+    const registry = seeded();
+
+    assert.equal(
+      applyBlockCommand(registry, blockMovedCmd({ blockId: 404, toIndex: 0 })),
+      false
+    );
+    assert.deepEqual(
+      [...registry].map((block) => block.id),
+      [1, 2, 3]
+    );
   });
 });

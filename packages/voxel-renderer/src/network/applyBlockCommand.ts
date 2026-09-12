@@ -8,11 +8,19 @@ export function applyBlockCommand(
 ): boolean {
   const version = registry.version;
 
-  if (command.action === "block-removed") {
-    registry.unregister(command.blockId);
-  }
-  else {
-    registry.register(command.block);
+  switch (command.action) {
+    case "block-removed":
+      registry.unregister(command.blockId);
+      break;
+    case "block-moved":
+      registry.moveTo(
+        command.blockId,
+        command.toIndex
+      );
+      break;
+    default:
+      registry.register(command.block);
+      break;
   }
 
   return registry.version !== version;

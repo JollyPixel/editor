@@ -369,3 +369,91 @@ describe("resolveBlockDefinition — properties are idempotent", () => {
     assert.notEqual(twice.properties, once.properties);
   });
 });
+
+describe("BlockRegistry — ordering", () => {
+  function ids(
+    registry: BlockRegistry
+  ): number[] {
+    return [...registry].map((block) => block.id);
+  }
+
+  it("iterates in registration order, not id order", () => {
+    const registry = new BlockRegistry([
+      makeDef(3),
+      makeDef(1),
+      makeDef(2)
+    ]);
+
+    assert.deepEqual(ids(registry), [3, 1, 2]);
+  });
+
+  it("keeps the slot of a re-registered definition", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
+
+    registry.register(makeDef(1, "edited"));
+
+    assert.deepEqual(ids(registry), [1, 2, 3]);
+    assert.equal(registry.get(1)?.name, "edited");
+  });
+
+  it("moves a block forward", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
+
+    assert.equal(registry.moveTo(1, 2), true);
+
+    assert.deepEqual(ids(registry), [2, 3, 1]);
+  });
+
+  it("moves a block backward", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
+
+    assert.equal(registry.moveTo(3, 0), true);
+
+    assert.deepEqual(ids(registry), [3, 1, 2]);
+  });
+
+  it("clamps an out-of-range index", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
+
+    assert.equal(registry.moveTo(1, 99), true);
+    assert.deepEqual(ids(registry), [2, 3, 1]);
+
+    assert.equal(registry.moveTo(1, -5), true);
+    assert.deepEqual(ids(registry), [1, 2, 3]);
+  });
+
+  it("bumps the version only when the order changes", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(2)]);
+    const version = registry.version;
+
+    assert.equal(registry.moveTo(1, 0), false);
+    assert.equal(registry.version, version);
+
+    assert.equal(registry.moveTo(1, 1), true);
+    assert.equal(registry.version, version + 1);
+  });
+
+  it("ignores an unknown id", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(2)]);
+
+    assert.equal(registry.moveTo(404, 0), false);
+    assert.deepEqual(ids(registry), [1, 2]);
+  });
+
+  it("reports the index of a block", () => {
+    const registry = new BlockRegistry([makeDef(5), makeDef(7)]);
+
+    assert.equal(registry.indexOf(5), 0);
+    assert.equal(registry.indexOf(7), 1);
+    assert.equal(registry.indexOf(404), -1);
+    assert.equal(registry.size, 2);
+  });
+
+  it("leaves nextId untouched by a move", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(9)]);
+
+    registry.moveTo(9, 0);
+
+    assert.equal(registry.nextId, 10);
+  });
+});

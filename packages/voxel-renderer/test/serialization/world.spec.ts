@@ -487,3 +487,43 @@ describe("block properties round-trip", () => {
     assert.equal(({} as Record<string, unknown>).polluted, undefined);
   });
 });
+
+describe("serializeVoxelWorld — block order", () => {
+  function ids(
+    registry: BlockRegistry
+  ): number[] {
+    return [...registry].map((block) => block.id);
+  }
+
+  it("writes the registry order, not the id order", () => {
+    const registry = new BlockRegistry([
+      makeBlockDef(1, "cube"),
+      makeBlockDef(2, "cube"),
+      makeBlockDef(3, "cube")
+    ]);
+    registry.moveTo(3, 0);
+
+    const json = serializeVoxelWorld(new VoxelWorld(16), { blocks: registry });
+
+    assert.deepEqual(
+      json.blocks?.map((block) => block.id),
+      [3, 1, 2]
+    );
+  });
+
+  it("restores a non-id order through a round trip", () => {
+    const source = new BlockRegistry([
+      makeBlockDef(1, "cube"),
+      makeBlockDef(2, "cube"),
+      makeBlockDef(3, "cube")
+    ]);
+    source.moveTo(1, 2);
+
+    const json = serializeVoxelWorld(new VoxelWorld(16), { blocks: source });
+    const restored = new BlockRegistry();
+    deserializeVoxelWorld(json, new VoxelWorld(16), { blocks: restored });
+
+    assert.deepEqual(ids(restored), [2, 3, 1]);
+    assert.deepEqual(ids(restored), ids(source));
+  });
+});

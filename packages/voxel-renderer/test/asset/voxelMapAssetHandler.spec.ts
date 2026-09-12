@@ -29,6 +29,7 @@ import { resolveBlockDefinition } from "../../src/blocks/index.ts";
 import type { VoxelNetworkCommand } from "../../src/network/index.ts";
 import {
   blockDefinedCmd,
+  blockMovedCmd,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
@@ -529,5 +530,75 @@ describe("voxelMapAssetHandler — block definitions", () => {
     }));
 
     assert.deepEqual([...state.blocks.getAll()], []);
+  });
+});
+
+describe("voxelMapAssetHandler — block order", () => {
+  function seed(
+    handler: ReturnType<typeof voxelMapAssetHandler>,
+    state: VoxelMapState
+  ): void {
+    for (const id of [1, 2, 3]) {
+      handler.apply(state, event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id })));
+    }
+  }
+
+  test("a block-moved command reorders the block table", () => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    seed(handler, state);
+
+    handler.apply(
+      state,
+      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 3, toIndex: 0 }))
+    );
+
+    assert.deepEqual(
+      [...state.blocks].map((block) => block.id),
+      [3, 1, 2]
+    );
+  });
+
+  test("the order survives serialization and a replay of the document", async() => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const source = handler.create("asset-1");
+    seed(handler, source);
+    handler.apply(
+      source,
+      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 1, toIndex: 2 }))
+    );
+
+    const document = decodeVoxelDocument(await handler.serialize(source));
+    assert.deepEqual(document.blocks?.map((block) => block.id), [2, 3, 1]);
+
+    const restored = handler.create("asset-1");
+    handler.apply(restored, documentEvent(source));
+
+    assert.deepEqual(
+      [...restored.blocks].map((block) => block.id),
+      [2, 3, 1]
+    );
+  });
+
+  test("a move replayed after a checkpoint keeps its effect", () => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    seed(handler, state);
+    handler.apply(
+      state,
+      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 3, toIndex: 0 }))
+    );
+
+    const replayed = handler.create("asset-1");
+    handler.apply(replayed, documentEvent(state));
+    handler.apply(
+      replayed,
+      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 1, toIndex: 0 }))
+    );
+
+    assert.deepEqual(
+      [...replayed.blocks].map((block) => block.id),
+      [1, 3, 2]
+    );
   });
 });
