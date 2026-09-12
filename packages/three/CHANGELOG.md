@@ -1,5 +1,25 @@
 # @jolly-pixel/three
 
+## 3.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+### Minor Changes
+
+- [#634](https://github.com/JollyPixel/editor/pull/634) [`c2d5b26`](https://github.com/JollyPixel/editor/commit/c2d5b264696b45707615292a12451f4a1408a846) Thanks [@fraxken](https://github.com/fraxken)! - Add a live `section.show` grid option for hiding section lines.
+  Keep fine grid lines visible when hidden sections would otherwise suppress them.
+
+### Patch Changes
+
+- Updated dependencies [[`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9)]:
+  - @jolly-pixel/network@3.0.0
+
 ## 2.0.0
 
 ### Major Changes

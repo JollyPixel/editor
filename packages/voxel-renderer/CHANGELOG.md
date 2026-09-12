@@ -1,5 +1,39 @@
 # @jolly-pixel/voxel.renderer
 
+## 5.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+### Minor Changes
+
+- [#643](https://github.com/JollyPixel/editor/pull/643) [`c22f8a9`](https://github.com/JollyPixel/editor/commit/c22f8a9407ac534117ce8f74e61d454d721c0044) Thanks [@fraxken](https://github.com/fraxken)! - Make the block table's order editable and durable. `BlockRegistry.moveTo()`
+  relocates a definition, `VoxelEngine.moveBlock()` emits it as a new
+  `block-moved` hook and network command, and the document's `blocks` array
+  round trips that order.
+
+- [#641](https://github.com/JollyPixel/editor/pull/641) [`4029a4d`](https://github.com/JollyPixel/editor/commit/4029a4d9da915a4b191a00cad2a92e0d2fe8f544) Thanks [@fraxken](https://github.com/fraxken)! - Blend the cutout draw group of `transparent` blocks instead of only alpha-testing
+  it, so a texel of partial alpha fades rather than coming out solid; the group
+  still writes depth. Add `BlockDefinition.cullSelfFaces`, which keeps the boundary
+  two voxels of the same transparent block share, emitted once from its positive
+  side so the coplanar pair no longer z-fights.
+
+- [#638](https://github.com/JollyPixel/editor/pull/638) [`5596bfb`](https://github.com/JollyPixel/editor/commit/5596bfb3d6151ff7b320f2bde32befc2f497d857) Thanks [@fraxken](https://github.com/fraxken)! - Add `properties` to `BlockDefinition`, a scalar map carried for game code and
+  scrubbed of non-scalar values when resolved. Read a copy with
+  `BlockRegistry.propertiesOf()` or, by world position, with the new
+  `VoxelEngine.blockAt()` and `VoxelEngine.blockPropertiesAt()`.
+
+### Patch Changes
+
+- Updated dependencies [[`f0363be`](https://github.com/JollyPixel/editor/commit/f0363bea0dafae6f2e899b491c6f4c6d4f777acb), [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9)]:
+  - @jolly-pixel/asset-server@3.0.0
+  - @jolly-pixel/network@3.0.0
+
 ## 4.0.0
 
 ### Major Changes

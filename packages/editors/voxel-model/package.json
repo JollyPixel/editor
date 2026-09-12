@@ -17,9 +17,9 @@
   "dependencies": {
     "@jolly-pixel/editor.pixel-art": "1.1.0",
     "@jolly-pixel/engine": "5.0.0",
-    "@jolly-pixel/pixel-draw.renderer": "4.0.0",
+    "@jolly-pixel/pixel-draw.renderer": "5.0.0",
     "@jolly-pixel/runtime": "5.0.0",
-    "@jolly-pixel/ui": "2.0.0",
+    "@jolly-pixel/ui": "2.0.1",
     "lit": "3.3.3",
     "three": "0.185.1"
   }

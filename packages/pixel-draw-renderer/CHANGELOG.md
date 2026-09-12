@@ -1,5 +1,21 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 5.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+### Patch Changes
+
+- Updated dependencies [[`f0363be`](https://github.com/JollyPixel/editor/commit/f0363bea0dafae6f2e899b491c6f4c6d4f777acb), [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9)]:
+  - @jolly-pixel/asset-server@3.0.0
+  - @jolly-pixel/network@3.0.0
+
 ## 4.0.0
 
 ### Major Changes

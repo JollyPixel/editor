@@ -1,5 +1,12 @@
 # @jolly-pixel/ui
 
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9)]:
+  - @jolly-pixel/network@3.0.0
+
 ## 2.0.0
 
 ### Major Changes
