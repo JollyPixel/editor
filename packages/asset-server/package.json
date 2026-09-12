@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/asset-server",
   "description": "Back-end asset orchestration: event-sourced projection, reconciliation and catalog delivery",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "imports": {
     "#src/*": "./src/*"
@@ -65,9 +65,9 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset": "1.1.0",
-    "@jolly-pixel/asset-source": "1.0.0",
+    "@jolly-pixel/asset-source": "2.0.0",
     "@jolly-pixel/event-store": "3.0.0",
-    "@jolly-pixel/network": "2.0.0",
+    "@jolly-pixel/network": "3.0.0",
     "@openally/emitt": "1.0.1",
     "@openally/result": "3.1.0",
     "ata-validator": "1.13.2",

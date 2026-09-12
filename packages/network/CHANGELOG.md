@@ -1,5 +1,15 @@
 # @jolly-pixel/network
 
+## 3.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
 ## 2.0.0
 
 ### Major Changes

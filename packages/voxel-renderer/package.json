@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/voxel.renderer",
   "description": "Jolly Pixel 3D Voxel Engine and Renderer",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "exports": {
     ".": {
@@ -49,20 +49,20 @@
   "dependencies": {
     "@jolly-pixel/asset": "1.1.0",
     "@jolly-pixel/engine": "5.0.0",
-    "@jolly-pixel/network": "2.0.0",
+    "@jolly-pixel/network": "3.0.0",
     "three": "0.185.1"
   },
   "devDependencies": {
     "@dimforge/rapier3d": "0.20.0",
-    "@jolly-pixel/asset-source": "1.0.0",
+    "@jolly-pixel/asset-source": "2.0.0",
     "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/loop": "1.0.0",
     "@jolly-pixel/runtime": "5.0.0",
-    "@jolly-pixel/ui": "2.0.0",
+    "@jolly-pixel/ui": "2.0.1",
     "simplex-noise": "4.0.3"
   },
   "peerDependencies": {
-    "@jolly-pixel/asset-server": "2.0.0",
+    "@jolly-pixel/asset-server": "3.0.0",
     "@jolly-pixel/event-store": "3.0.0"
   },
   "peerDependenciesMeta": {

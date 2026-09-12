@@ -40,6 +40,6 @@
   },
   "devDependencies": {
     "@jolly-pixel/bench": "*",
-    "@jolly-pixel/ui": "2.0.0"
+    "@jolly-pixel/ui": "2.0.1"
   }
 }
