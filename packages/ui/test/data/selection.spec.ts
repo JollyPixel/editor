@@ -3,9 +3,11 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { resolveSelection } from "../../src/data/selection.ts";
-import { flattenVisible } from "../../src/data/treeNodes.ts";
-import type { TreeNode } from "../../src/data/Tree.types.ts";
+import {
+  flattenVisible,
+  resolveSelection
+} from "../../src/data/tree/model.ts";
+import type { TreeNode } from "../../src/data/tree/contract.ts";
 
 // CONSTANTS
 const kTree: TreeNode[] = [

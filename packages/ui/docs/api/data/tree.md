@@ -42,6 +42,12 @@ event details back to the relevant property.
 
 Arrow keys navigate visible rows. Enter activates a row. When reordering is
 enabled, Space enters keyboard move mode, Enter commits, and Escape cancels.
+Rename, pointer move, and keyboard move are mutually exclusive interaction
+modes. Starting or settling one always returns the component to an idle mode.
+
+Pointer gestures capture immediately, even when whole-row dragging is waiting
+for its movement threshold. Escape, pointer cancellation, lost capture, and
+component disconnection cancel without emitting `jolly-reparent`.
 
 ## Rejecting a drop the domain does not allow
 

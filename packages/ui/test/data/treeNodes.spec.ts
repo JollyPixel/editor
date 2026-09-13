@@ -9,9 +9,10 @@ import {
   findParentId,
   flattenVisible,
   hasChildren,
-  isSelfOrDescendant
-} from "../../src/data/treeNodes.ts";
-import type { TreeNode } from "../../src/data/Tree.types.ts";
+  isSelfOrDescendant,
+  TreeSnapshot
+} from "../../src/data/tree/model.ts";
+import type { TreeNode } from "../../src/data/tree/contract.ts";
 
 // CONSTANTS
 const kTree: TreeNode[] = [
@@ -122,8 +123,8 @@ describe("Data.hasChildren", () => {
     assert.equal(hasChildren({ id: "b", label: "B" }), false);
   });
 
-  test("is false for a branch emptied down to no children", () => {
-    assert.equal(hasChildren({ id: "a", label: "A", children: [] }), false);
+  test("is true when an empty children array marks a branch", () => {
+    assert.equal(hasChildren({ id: "a", label: "A", children: [] }), true);
   });
 
   test("is true for a branch with at least one child", () => {
@@ -154,5 +155,21 @@ describe("Data.isSelfOrDescendant", () => {
 
   test("is false when the ancestor id does not exist", () => {
     assert.equal(isSelfOrDescendant(kTree, "missing", "a"), false);
+  });
+});
+
+describe("Data.TreeSnapshot", () => {
+  test("indexes structure, ancestry, visibility, and stable order together", () => {
+    const snapshot = new TreeSnapshot(kTree, new Set(["a", "a2"]));
+
+    assert.equal(snapshot.node("a2a")?.label, "A2A");
+    assert.equal(snapshot.parentId("a2a"), "a2");
+    assert.deepEqual(snapshot.ancestorChain("a2a"), ["a", "a2", "a2a"]);
+    assert.equal(snapshot.isSelfOrDescendant("a", "a2a"), true);
+    assert.equal(snapshot.order("a2a"), 3);
+    assert.deepEqual(
+      snapshot.visibleRows.map((row) => row.node.id),
+      ["a", "a1", "a2", "a2a", "b"]
+    );
   });
 });

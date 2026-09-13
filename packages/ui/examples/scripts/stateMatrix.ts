@@ -23,19 +23,21 @@ export interface StateMatrixOptions<
   TField extends HTMLElement & FieldLike
 > {
   /**
-   * A fresh, fully configured element in its default state.
-   * Called once per row.
+   * A fresh, fully configured element in its default state. Called once per row.
    */
   create(): TField;
   /**
    * Override when a control needs more than assigning the sentinel.
    */
-  applyMixed?(field: TField): void;
+  applyMixed?(
+    field: TField
+  ): void;
   /**
-   * A value differing from `default`,
-   * so the revert gutter appears.
+   * A value differing from `default`, so the revert gutter appears.
    */
-  modified?(field: TField): void;
+  modified?(
+    field: TField
+  ): void;
   /**
    * Adds accent and accent plus modified rows for controls with colored paint.
    */
@@ -62,9 +64,6 @@ const kHolder: CollaboratorPresence = {
 /**
  * Nine rows, fixed, no opt out: the point of a shared matrix is that every control renders the
  * same states, and a per control row list is how they drift apart.
- *
- * Focus is not a row. Only one element can hold it, so the locked plus focused case is produced by
- * the end to end test focusing the `locked` row.
  */
 const kRows = [
   "default",
@@ -83,7 +82,6 @@ const kColoredRows = [
   "colored+modified"
 ] as const;
 
-/** None of them is editing, so this row shows presence alone and stays distinct from `locked`. */
 const kCrowd: CollaboratorPresence[] = [
   {
     clientId: "peer-linus",
@@ -150,7 +148,6 @@ function buildRow<
   caption.className = "state-name";
   caption.textContent = state;
 
-  // A fresh element per row, so one row's draft cannot leak into another.
   const field = options.create();
   applyState(
     field,
@@ -158,7 +155,6 @@ function buildRow<
     options
   );
 
-  // The write back every consumer owes a controlled element, per docs/fields.md.
   function writeBack(
     event: Event
   ): void {
@@ -169,10 +165,7 @@ function buildRow<
       field.value = detail.value;
     }
   }
-  /*
-   * A scrub only ever fires jolly-input until release, so jolly-change alone would leave the
-   * number or slider static on screen for the whole drag.
-   */
+
   if (options.liveInput) {
     field.addEventListener(
       "jolly-input",
@@ -202,7 +195,6 @@ function applyState<
   const setModified = options.modified;
 
   switch (state) {
-    // No default, so this row is mixed alone and the gutter stays empty.
     case "mixed":
       setMixed(field);
       field.default = undefined;
@@ -233,7 +225,6 @@ function applyState<
       field.colored = true;
       setModified?.(field);
       break;
-    // Mixed is modified whenever a default exists, so this needs no second step.
     case "mixed+modified":
       setMixed(field);
       break;

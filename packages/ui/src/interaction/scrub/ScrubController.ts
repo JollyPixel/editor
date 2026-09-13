@@ -11,6 +11,10 @@ import { createDragGuide, type DragGuide } from "./dragGuide.ts";
 import { multiplierFor } from "../../numeric/modifierMultiplier.ts";
 import { kFallback } from "../../theme/styles/fallbacks.ts";
 import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
+import {
+  startPointerDragSession,
+  type PointerDragSessionHandle
+} from "../pointer/PointerDragSession.ts";
 
 // CONSTANTS
 const kDraggingClass = "jolly-scrub-dragging";
@@ -41,10 +45,10 @@ export interface ScrubOptions {
 export class ScrubController implements ReactiveController {
   #host: ReactiveControllerHost & HTMLElement;
   #options: ScrubOptions;
-  #element: HTMLElement | null = null;
-  #pointerId: number | null = null;
+  #session: PointerDragSessionHandle | null = null;
   #startValue = 0;
   #startX = 0;
+  #currentValue = 0;
   #guide: DragGuide | null = null;
 
   constructor(
@@ -57,7 +61,7 @@ export class ScrubController implements ReactiveController {
   }
 
   get dragging(): boolean {
-    return this.#pointerId !== null;
+    return this.#session !== null;
   }
 
   hostConnected(): void {
@@ -72,7 +76,7 @@ export class ScrubController implements ReactiveController {
       "pointerdown",
       this.#onPointerDown
     );
-    this.#end();
+    this.#session?.cancel();
   }
 
   #onPointerDown = (event: PointerEvent): void => {
@@ -94,24 +98,9 @@ export class ScrubController implements ReactiveController {
       return;
     }
 
-    this.#element = target;
-    this.#pointerId = event.pointerId;
     this.#startValue = start;
     this.#startX = event.clientX;
-
-    target.setPointerCapture(event.pointerId);
-    target.addEventListener(
-      "pointermove",
-      this.#onPointerMove
-    );
-    target.addEventListener(
-      "pointerup",
-      this.#onPointerUp
-    );
-    target.addEventListener(
-      "pointercancel",
-      this.#onPointerUp
-    );
+    this.#currentValue = start;
     ensureDocumentStyles("jolly-drag-styles", `
       html.jolly-scrub-dragging,
       html.jolly-scrub-dragging * {
@@ -119,10 +108,6 @@ export class ScrubController implements ReactiveController {
         user-select: none !important;
       }
     `);
-    document.documentElement.classList.add(
-      kDraggingClass
-    );
-
     const { top, height } = target.getBoundingClientRect();
     this.#guide = createDragGuide(
       top + (height / 2),
@@ -134,29 +119,44 @@ export class ScrubController implements ReactiveController {
       )
     );
 
+    this.#session = startPointerDragSession({
+      element: target,
+      event,
+      documentClass: kDraggingClass,
+      onMove: this.#onPointerMove,
+      onFinish: this.#onPointerFinish
+    });
+
     // Prevent native text selection while dragging.
     event.preventDefault();
   };
 
-  #onPointerMove = (event: PointerEvent): void => {
-    if (event.pointerId !== this.#pointerId) {
-      return;
-    }
-
-    this.#guide?.update(event.clientX);
-    this.#options.onInput(
-      this.#valueAt(event)
-    );
+  #onPointerMove = (
+    clientX: number,
+    _clientY: number,
+    event: PointerEvent
+  ): void => {
+    this.#guide?.update(clientX);
+    this.#currentValue = this.#valueAt(event);
+    this.#options.onInput(this.#currentValue);
   };
 
-  #onPointerUp = (event: PointerEvent): void => {
-    if (event.pointerId !== this.#pointerId) {
-      return;
+  #onPointerFinish = (
+    result: "commit" | "cancel",
+    _started: boolean,
+    event: PointerEvent | null
+  ): void => {
+    if (result === "commit" && event !== null) {
+      this.#currentValue = this.#valueAt(event);
     }
 
-    const value = this.#valueAt(event);
     this.#end();
-    this.#options.onCommit(value);
+    if (result === "commit") {
+      this.#options.onCommit(this.#currentValue);
+    }
+    else {
+      this.#options.onInput(this.#startValue);
+    }
   };
 
   #valueAt(
@@ -173,37 +173,7 @@ export class ScrubController implements ReactiveController {
   }
 
   #end(): void {
-    const element = this.#element;
-    if (
-      element !== null &&
-      this.#pointerId !== null
-    ) {
-      element.removeEventListener(
-        "pointermove",
-        this.#onPointerMove
-      );
-      element.removeEventListener(
-        "pointerup",
-        this.#onPointerUp
-      );
-      element.removeEventListener(
-        "pointercancel",
-        this.#onPointerUp
-      );
-
-      if (element.hasPointerCapture(this.#pointerId)) {
-        element.releasePointerCapture(
-          this.#pointerId
-        );
-      }
-    }
-
-    this.#element = null;
-    this.#pointerId = null;
-    document.documentElement.classList.remove(
-      kDraggingClass
-    );
-
+    this.#session = null;
     this.#guide?.destroy();
     this.#guide = null;
   }

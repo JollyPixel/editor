@@ -120,6 +120,12 @@ export * from "./field/PopoverController.ts";
 export * from "./interaction/drag/DragSession.ts";
 export * from "./interaction/drag/dropIndex.ts";
 export * from "./interaction/drag/dragGhost.ts";
+export {
+  startPointerDragSession,
+  type PointerDragResult,
+  type PointerDragSessionHandle,
+  type PointerDragSessionOptions
+} from "./interaction/pointer/PointerDragSession.ts";
 
 // Containers
 export * from "./containers/Dialog.ts";
@@ -157,29 +163,28 @@ export type {
 } from "./containers/events.ts";
 
 // Data views
-export * from "./data/Tree.ts";
+export * from "./data/tree/Tree.ts";
 export {
   canDrop,
+  resolveDepthDropTarget,
+  resolveDropDepth,
   resolveReparent,
-  type ResolveReparentOptions
-} from "./data/resolveReparent.ts";
-export {
-  resolveRowDropZone
-} from "./data/dropZone.ts";
-export {
-  resolveSelection
-} from "./data/selection.ts";
-export {
+  resolveRowDropZone,
+  resolveSelection,
+  TreeSnapshot,
+  ancestorChain,
   findNode,
   findParentId,
   flattenVisible,
+  hasChildren,
   isSelfOrDescendant,
-  type FlatTreeRow
-} from "./data/treeNodes.ts";
-export * from "./data/Tree.types.ts";
-export type {
-  DataEventMap
-} from "./data/events.ts";
+  type DepthDropTarget,
+  type FlatTreeRow,
+  type ResolvedSelection,
+  type ResolveDepthDropOptions,
+  type ResolveReparentOptions
+} from "./data/tree/model.ts";
+export * from "./data/tree/contract.ts";
 
 // Monitors
 export * from "./monitors/Monitor.ts";

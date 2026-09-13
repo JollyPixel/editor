@@ -69,10 +69,6 @@ export function text(
   return element;
 }
 
-/**
- * A dock for placement scenarios. Its layout owns persistence, so the dock
- * deliberately has no storage key of its own.
- */
 export function placementDock(
   side: "left" | "right"
 ): HTMLElementTagNameMap["jolly-dock"] {

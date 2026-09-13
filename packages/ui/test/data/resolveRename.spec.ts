@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { resolveRename } from "../../src/data/resolveRename.ts";
+import { resolveRename } from "../../src/data/tree/model.ts";
 
 describe("resolveRename", () => {
   test("commits a trimmed name", () => {

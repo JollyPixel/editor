@@ -37,6 +37,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 | [0029](./0029-presence-selection-is-an-intent.md) | A presence row raises a selection intent, and stays read-only |
 | [0030](./0030-tree-badges-are-opaque-dots.md) | `jolly-tree` badges are opaque dots |
 | [0031](./0031-a-log-is-not-a-toast.md) | `jolly-log` is an ambient feed, and `jolly-toast` stays deferred |
+| [0032](./0032-tree-snapshot-and-pointer-session.md) | Tree structure is indexed once and pointer mechanics have one owner |
 
 ## Scope boundary
 

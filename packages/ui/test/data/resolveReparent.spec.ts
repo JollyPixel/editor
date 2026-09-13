@@ -5,14 +5,14 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   canDrop,
+  findNode,
   resolveDepthDropTarget,
   resolveReparent
-} from "../../src/data/resolveReparent.ts";
-import { findNode } from "../../src/data/treeNodes.ts";
+} from "../../src/data/tree/model.ts";
 import type {
   JollyReparentDetail,
   TreeNode
-} from "../../src/data/Tree.types.ts";
+} from "../../src/data/tree/contract.ts";
 
 // CONSTANTS
 function tree(): TreeNode[] {

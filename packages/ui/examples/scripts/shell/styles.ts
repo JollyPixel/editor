@@ -1,4 +1,3 @@
-/** Styles owned by the gallery chrome, not by its examples. */
 export const shellStyles = `
   :host {
     display: block;
