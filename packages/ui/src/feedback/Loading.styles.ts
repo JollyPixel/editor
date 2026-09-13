@@ -11,9 +11,11 @@ export const loadingStyles = css`
     inset: 0;
     transition: opacity 0.5s ease-out;
   }
+
   :host([completed]) {
     opacity: 0;
   }
+
   #loading {
     position: absolute;
     top: 0;
@@ -92,10 +94,9 @@ export const loadingStyles = css`
     padding: 0 2em;
     max-width: 100%;
     ${truncate}
-    /* Transition douce lors du changement d'asset */
     transition: opacity 0.2s ease-out;
   }
-  /* Effet subtil de "pulse" pendant le chargement */
+
   @keyframes fade-slide-in {
     0% {
       opacity: 0;

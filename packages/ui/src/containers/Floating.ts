@@ -106,17 +106,10 @@ export class Floating extends LitElement {
     }
   });
 
-  /**
-   * True inside a `jolly-dock-layout`, which then owns movement and
-   * persistence so a drag can also end in a dock.
-   */
   get managed(): boolean {
     return this.#managed;
   }
 
-  /**
-   * Identity used by the layout snapshot, taken from the pane it holds.
-   */
   get layoutKey(): string {
     return this.pane()?.layoutKey ?? deriveKey("jolly-floating", "");
   }
@@ -169,7 +162,6 @@ export class Floating extends LitElement {
   }
 
   protected override willUpdate(): void {
-    // Restoring persisted geometry and clamping it to the viewport only touches reactive properties
     if (!this.hasUpdated) {
       if (!this.#managed) {
         this.#restore();
@@ -188,16 +180,8 @@ export class Floating extends LitElement {
       this.clampToView
     );
     installResizeCursorStyles(this.ownerDocument);
-    /*
-     * A window nobody has touched yet still has to sit above static content:
-     * without a baseline stack value it keeps z-index "auto" and paints
-     * beneath any later, non-positioned sibling in the same stacking context.
-     */
+
     this.#raise();
-    /*
-     * Picks up a pane authored (or restored) already collapsed, since that
-     * never fires the `jolly-toggle` a click does.
-     */
     this.#syncCollapsed();
   }
 
@@ -220,11 +204,6 @@ export class Floating extends LitElement {
       this.#connectResizeHandles();
     }
 
-    /*
-     * Visibility never goes through a drag commit, so it saves itself. The
-     * first pass carries no previous value, and writing there would save a
-     * default over what was just restored.
-     */
     if (changed.get("hidden") !== undefined) {
       this.#state.write("hidden", String(this.hidden));
     }
@@ -241,9 +220,6 @@ export class Floating extends LitElement {
     super.disconnectedCallback();
   }
 
-  /**
-   * The pane this window holds, if any.
-   */
   pane(): PaneElement | null {
     const children = this.hasUpdated ?
       this._slot.assignedElements({ flatten: true }) :
@@ -252,9 +228,6 @@ export class Floating extends LitElement {
     return children.find(isPane) ?? null;
   }
 
-  /**
-   * Places the window at a viewport position, clamped to stay reachable.
-   */
   moveTo(
     x: number,
     y: number
@@ -264,9 +237,6 @@ export class Floating extends LitElement {
     this.clampToView();
   }
 
-  /**
-   * Brings the window above its siblings in the same root.
-   */
   raise(): void {
     this.#raise();
   }
@@ -291,12 +261,6 @@ export class Floating extends LitElement {
     this.y = position.y;
   };
 
-  /**
-   * Moves the window from its pane header when no layout owns the gesture.
-   *
-   * A managed window ignores this: the layout runs the session instead, so
-   * the same drag can end in a dock rather than only somewhere else on screen.
-   */
   #onPaneDrag = (
     event: CustomEvent<PaneDragDetail>
   ) => {
@@ -346,11 +310,6 @@ export class Floating extends LitElement {
     this.#syncCollapsed();
   };
 
-  /**
-   * A collapsed pane still fills whatever height `::slotted` gives it, so the
-   * window has to shrink to its header itself rather than trust the pane to
-   * do it, the way a pane folding inside a dock's own flex column can.
-   */
   #onPaneToggle = () => {
     this.#syncCollapsed();
   };
@@ -359,10 +318,6 @@ export class Floating extends LitElement {
     const collapsed = this.pane()?.collapsed ?? false;
     this.#collapsed = collapsed;
     this.#applyGeometry();
-    /*
-     * Dragging the height handles while collapsed would fight the header-only
-     * height every frame and, worse, persist that as the remembered size.
-     */
     this._bottomHandle?.classList.toggle("disabled", collapsed);
     this._cornerHandle?.classList.toggle("disabled", collapsed);
   }
@@ -456,11 +411,6 @@ export class Floating extends LitElement {
   #readSize(): void {
     const rect = this.getBoundingClientRect();
     this.width = rect.width;
-    /*
-     * Collapsed, the box is its own header's height, not the height worth
-     * remembering: that stays whatever it was before folding, the same way a
-     * collapsed dock leaves `#readSize` without touching its own `size`.
-     */
     if (this.#collapsed) {
       return;
     }

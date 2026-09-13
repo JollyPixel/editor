@@ -7,6 +7,8 @@ import { focusRing } from "../theme/styles/mixins.ts";
 export const colorStyles = css`
   /* Fill the control so the colour sample has no surrounding frame. */
   .value .swatch {
+    --jolly-swatch-checker: color-mix(in oklab, var(--jolly-ink) 18%, transparent);
+
     position: relative;
     flex: 0 0 auto;
     width: var(--jolly-control-height, 20px);
@@ -50,10 +52,6 @@ export const colorStyles = css`
       );
     background-size: auto, 6px 6px;
     pointer-events: none;
-  }
-
-  .value .swatch {
-    --jolly-swatch-checker: color-mix(in oklab, var(--jolly-ink) 18%, transparent);
   }
 
   /* Preserve the swatch slot while hiding mixed values. */

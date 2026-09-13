@@ -16,6 +16,12 @@ const popup = new PopoverController(this, {
 
 ## Drag sessions
 
+`startPointerDragSession(options)` owns the shared gesture lifecycle: immediate
+capture, pointer filtering, movement threshold, Escape and lost-capture
+cancellation, and exactly-once teardown. It returns a
+`PointerDragSessionHandle`, and reports an explicit `"commit"` or `"cancel"`
+result. Domain-specific drag code supplies preview and settlement callbacks.
+
 `startDragSession(options)` starts a pointer drag and returns a
 `DragSessionHandle`. A session reports previews, a commit or cancellation, and
 the selected `DragZone`. The public types include `DragResult`,

@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { StorageAdapter } from "./StorageAdapter.ts";
 
-/**
- * In-memory storage and `LocalStorageAdapter` fallback.
- */
 export class MemoryStorageAdapter implements StorageAdapter {
   #values = new Map<string, string>();
 

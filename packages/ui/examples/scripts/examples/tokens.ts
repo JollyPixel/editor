@@ -22,7 +22,6 @@ const kSemanticTokens = [
   "--jolly-success"
 ];
 
-/** Renders the semantic tier against the current theme, so a token override shows up here first. */
 export const TOKENS_EXAMPLE: GalleryExample = {
   id: "foundation/tokens",
   title: "Semantic tokens",

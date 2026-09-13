@@ -6,9 +6,24 @@ import assert from "node:assert/strict";
 import {
   resolveDropDepth,
   resolveRowDropZone
-} from "../../src/data/dropZone.ts";
+} from "../../src/data/tree/model.ts";
 
 describe("Data.resolveRowDropZone", () => {
+  test("accepts a row rectangle and client position", () => {
+    assert.equal(
+      resolveRowDropZone({ top: 100, height: 40 }, 105),
+      "above"
+    );
+    assert.equal(
+      resolveRowDropZone({ top: 100, height: 40 }, 120),
+      "inside"
+    );
+    assert.equal(
+      resolveRowDropZone({ top: 100, height: 40 }, 135),
+      "below"
+    );
+  });
+
   test("the top quarter is above", () => {
     assert.equal(resolveRowDropZone(0, 20), "above");
     assert.equal(resolveRowDropZone(4, 20), "above");

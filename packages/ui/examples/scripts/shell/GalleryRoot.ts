@@ -7,13 +7,6 @@ import { exampleStyles } from "../examples/shared/exampleStyles.ts";
 import { shellStyles } from "./styles.ts";
 
 // CONSTANTS
-/**
- * The gallery's scope host. Tokens declare against `:host`, which only resolves in a shadow root,
- * so the gallery needs one even before any component exists.
- *
- * P2 swaps the nav and main for `jolly-dock` and `jolly-list`. Routing lives in `main.ts` and does
- * not move, so that swap rewrites no test.
- */
 export class GalleryRoot extends HTMLElement {
   #exampleHost = document.createElement("main");
   #links = new Map<string, HTMLAnchorElement>();

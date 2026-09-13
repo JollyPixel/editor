@@ -24,10 +24,6 @@ import "./builtins.ts";
 // CONSTANTS
 const kWarned = new Set<string>();
 
-/**
- * Renders a registered glyph;
- * unlabeled icons are decorative.
- */
 @customElement("jolly-icon")
 export class Icon extends LitElement {
   static override styles = css`
@@ -82,9 +78,6 @@ export class Icon extends LitElement {
     `;
   }
 
-  /**
-   * Warns about unregistered runtime icon names.
-   */
   #warnUnknown(): void {
     if (
       this.name === "" ||

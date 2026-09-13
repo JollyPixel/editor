@@ -36,16 +36,7 @@ import "../icon/Icon.ts";
 const kMaxChips = 3;
 const kWarned = new Set<string>();
 
-/**
- * Which edge a field's value sits against. Logical, so it follows writing
- * direction rather than naming a physical side.
- */
 export type FieldAlign = "start" | "end";
-
-/**
- * `"top"` puts the label on its own line above the value, trading label/value
- * column alignment for more breathing room between rows.
- */
 export type FieldLabelPosition = "inline" | "top";
 
 export type { DraftResult } from "./DraftController.ts";
@@ -77,9 +68,6 @@ export abstract class JollyField<TValue> extends LitElement {
   @property({ attribute: false })
   declare peers: CollaboratorPresence[];
 
-  /**
-   * Stable lock identity shared by clients; null disables field locking.
-   */
   @property({ type: String, reflect: true })
   declare path: string | null;
 
@@ -92,14 +80,9 @@ export abstract class JollyField<TValue> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare readonly: boolean;
 
-  /** Uses the theme accent for supported controls and the modified indicator. */
   @property({ type: Boolean, reflect: true })
   declare colored: boolean;
 
-  /**
-   * Numeric and monitor-style rows often read better against the trailing edge,
-   * where the digits line up down the pane.
-   */
   @property({ type: String, reflect: true })
   declare align: FieldAlign;
 
@@ -130,21 +113,12 @@ export abstract class JollyField<TValue> extends LitElement {
     this.labelPosition = "inline";
   }
 
-  /**
-   * Renders the control's value area.
-   */
   protected abstract renderValue(): TemplateResult;
 
-  /**
-   * Numeric controls opt in to label scrubbing.
-   */
   protected get scrubbable(): boolean {
     return false;
   }
 
-  /**
-   * Compares values for the revert state.
-   */
   protected valuesEqual(
     a: TValue,
     b: TValue
@@ -168,9 +142,6 @@ export abstract class JollyField<TValue> extends LitElement {
     return isMixed(this.value);
   }
 
-  /**
-   * `undefined` for a mixed value.
-   */
   protected get concreteValue(): TValue | undefined {
     return isMixed(
       this.value
@@ -181,9 +152,6 @@ export abstract class JollyField<TValue> extends LitElement {
     return this.#draft.draft;
   }
 
-  /**
-   * Keeps a focused draft ahead of incoming values.
-   */
   protected setDraft(
     text: string | null
   ): void {
@@ -196,21 +164,16 @@ export abstract class JollyField<TValue> extends LitElement {
     this.#draft.setError(message);
   }
 
-  /**
-   * Clears the draft and parse error.
-   */
   protected clearDraft(): void {
     this.#draft.clear();
   }
 
-  /** Updates a text input draft and clears an earlier local parse error. */
   protected onDraftInput(
     event: Event
   ): void {
     this.#draft.onInput(event);
   }
 
-  /** Handles the standard Enter and Escape draft lifecycle. */
   protected onDraftKeyDown(
     event: KeyboardEvent,
     commit: () => void
@@ -218,7 +181,6 @@ export abstract class JollyField<TValue> extends LitElement {
     this.#draft.onKeyDown(event, commit);
   }
 
-  /** Commits a draft through a control-specific parser. */
   protected commitDraft(
     parse: (text: string) => DraftResult<TValue> | null
   ): void {
@@ -239,9 +201,6 @@ export abstract class JollyField<TValue> extends LitElement {
     );
   }
 
-  /**
-   * Emits a committed value after clearing the draft.
-   */
   protected emitChange(
     value: TValue
   ): void {
@@ -257,9 +216,6 @@ export abstract class JollyField<TValue> extends LitElement {
     return this.readonly || this.lockedBy !== null;
   }
 
-  /**
-   * Avoids the ARIAMixin `ariaReadOnly` member.
-   */
   protected get readonlyAria(): "true" | typeof nothing {
     return this.readonly ? "true" : nothing;
   }
@@ -274,9 +230,6 @@ export abstract class JollyField<TValue> extends LitElement {
       : `Held by ${this.lockedBy.displayName}`;
   }
 
-  /**
-   * Current lock holder.
-   */
   protected get holder(): CollaboratorPresence | null {
     return resolveHolder(
       this.peers,
@@ -330,7 +283,6 @@ export abstract class JollyField<TValue> extends LitElement {
       this.scrubbable
     );
 
-    /* Exposes the lock color to host and subclass styles. */
     if (holder === null) {
       this.style.removeProperty(
         "--jolly-locked-ring"
@@ -368,10 +320,6 @@ export abstract class JollyField<TValue> extends LitElement {
     `;
   }
 
-  /**
-   * Renders the lock affordance. The gutter collapses to nothing unless a
-   * container opted its subtree in, so a single user pane pays no leading inset.
-   */
   #renderGutter(): TemplateResult {
     const holder = this.holder;
     if (holder !== null) {
@@ -381,10 +329,6 @@ export abstract class JollyField<TValue> extends LitElement {
     return html`<span class="gutter"></span>`;
   }
 
-  /**
-   * Renders a muted revert action at the trailing edge while the value differs
-   * from its default.
-   */
   #renderRevert(): TemplateResult | typeof nothing {
     if (!this.modified || !this.editable) {
       return nothing;
@@ -409,9 +353,6 @@ export abstract class JollyField<TValue> extends LitElement {
     this.emitChange(this.default);
   }
 
-  /**
-   * Renders the lock indicator with its holder tooltip.
-   */
   #renderLock(
     holder: CollaboratorPresence
   ): TemplateResult {
@@ -450,9 +391,6 @@ export abstract class JollyField<TValue> extends LitElement {
     `;
   }
 
-  /**
-   * Renders a semantic icon beside help or error text.
-   */
   #renderDescription(): TemplateResult | typeof nothing {
     return this.description === ""
       ? nothing
@@ -477,9 +415,6 @@ export abstract class JollyField<TValue> extends LitElement {
       `;
   }
 
-  /**
-   * Warns when a field is rendered outside a theme scope.
-   */
   #warnWhenUnscoped(): void {
     if (!this.isConnected) {
       return;

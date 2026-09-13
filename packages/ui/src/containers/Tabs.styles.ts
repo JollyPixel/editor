@@ -63,9 +63,6 @@ export const tabsStyles = css`
 
   button[aria-selected="true"] {
     background: var(--jolly-control-bg, ${kFallback.controlBg});
-  }
-
-  button[aria-selected="true"] {
     color: var(--jolly-accent-text);
   }
 

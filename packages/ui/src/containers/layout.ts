@@ -10,10 +10,6 @@ export interface DockState {
   panes: string[];
 }
 
-/**
- * Floating geometry. An empty object means the pane floats at whatever
- * geometry its element declares.
- */
 export interface FloatingState {
   x?: number;
   y?: number;
@@ -33,15 +29,6 @@ export interface LayoutSnapshot {
   v: number;
   docks: Record<string, DockState>;
   floating: Record<string, FloatingState>;
-  /**
-   * Geometry every pane last floated at, whether or not it floats now.
-   *
-   * `floating` says where a pane is; this says what size it comes back at. A
-   * pane docked out of a window loses the window, and with it the only record
-   * of how big it was, so a pane dragged back out returned at whatever size
-   * its dock had stretched it to. Keeping the two apart is what lets a pane be
-   * docked and still remember.
-   */
   geometry: Record<string, FloatingState>;
   panes: Record<string, PaneState>;
   folders: Record<string, Record<string, FolderState>>;
@@ -49,28 +36,18 @@ export interface LayoutSnapshot {
 
 export interface DeclaredDock {
   key: string;
-  /** Authored size, restored when no stored one applies. */
   size?: number;
   panes: string[];
 }
 
 export interface DeclaredFloating {
   key: string;
-  /** Authored geometry, restored when no stored one applies. */
   geometry: FloatingState;
 }
 
-/**
- * What the author's markup asks for, in document order.
- */
 export interface DeclaredLayout {
   docks: DeclaredDock[];
   floating: DeclaredFloating[];
-  /**
-   * Panes pinned by their author. Stored placement never moves these, so a
-   * snapshot written before one was pinned cannot strand it somewhere it has
-   * no way back from.
-   */
   locked: string[];
 }
 
@@ -91,10 +68,6 @@ export function serializeLayout(
   return JSON.stringify(snapshot);
 }
 
-/**
- * Reads a stored snapshot, returning `null` for absent, malformed, or
- * foreign-version payloads so the caller falls back to the markup.
- */
 export function parseLayout(
   raw: string | null
 ): LayoutSnapshot | null {
@@ -124,21 +97,6 @@ export function parseLayout(
   };
 }
 
-/**
- * Merges the stored arrangement onto the declared one.
- *
- * Stored placement wins for every pane the markup still declares, bar the
- * locked ones, which stay where they were authored. Panes the store does not
- * know about land where they were declared, anchored to their declared
- * neighbours. Docks and panes that vanished from the markup are dropped, so
- * the snapshot never grows stale entries.
- *
- * Geometry follows the same rule, and is carried for every declared pane
- * rather than only the floating ones, so a pane sitting in a dock still knows
- * the size it would come back out at. Passing no stored snapshot therefore
- * yields the authored arrangement whole, sizes and window positions included,
- * and forgets any size a pane was given since, which is what a reset asks for.
- */
 export function reconcileLayout(
   stored: LayoutSnapshot | null,
   declared: DeclaredLayout
@@ -216,10 +174,6 @@ export function reconcileLayout(
     };
   }
 
-  /*
-   * A pane only appears under "floating" while it is in a window, and a
-   * window on screen outranks a memory of one, so that record is read first.
-   */
   const geometry: Record<string, FloatingState> = {};
   for (const pane of declaredOrder) {
     const remembered = stored?.floating[pane] ??

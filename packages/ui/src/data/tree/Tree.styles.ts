@@ -2,8 +2,8 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { kFallback } from "../theme/styles/fallbacks.ts";
-import { truncate } from "../theme/styles/mixins.ts";
+import { kFallback } from "../../theme/styles/fallbacks.ts";
+import { truncate } from "../../theme/styles/mixins.ts";
 
 export const treeStyles = css`
   :host {

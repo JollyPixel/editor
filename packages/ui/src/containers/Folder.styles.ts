@@ -165,6 +165,7 @@ export const folderStyles = css`
   }
 
   .grip {
+    touch-action: none;
     position: relative;
     z-index: 1;
     display: none;
@@ -185,10 +186,6 @@ export const folderStyles = css`
   :host([reorderable]) .grip {
     display: inline-grid;
     place-items: center;
-  }
-
-  .grip {
-    touch-action: none;
   }
 
   :host([dragging]) {

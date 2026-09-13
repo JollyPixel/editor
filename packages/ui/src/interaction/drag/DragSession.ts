@@ -11,6 +11,9 @@ import {
 import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
 import { kFallback } from "../../theme/styles/fallbacks.ts";
 import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
+import {
+  startPointerDragSession
+} from "../pointer/PointerDragSession.ts";
 
 // CONSTANTS
 const kThreshold = 4;
@@ -155,12 +158,9 @@ export function startDragSession(
     onEnd
   } = options;
 
-  const pointerId = event.pointerId;
   const originX = event.clientX;
   const originY = event.clientY;
 
-  let started = false;
-  let settled = false;
   let overlay: DragOverlay | null = null;
   let armed: DragZone[] = [];
   let current: number | null = null;
@@ -174,7 +174,6 @@ export function startDragSession(
   };
 
   function begin(): void {
-    started = true;
     armed = zones();
     if (visuals) {
       const rect = source.getBoundingClientRect();
@@ -204,9 +203,6 @@ export function startDragSession(
       overlay.showZones(armed.map((zone) => zone.rect));
     }
     ensureSessionStyles();
-    document.documentElement.classList.add(
-      kDraggingClass
-    );
     onStart?.();
   }
 
@@ -257,136 +253,34 @@ export function startDragSession(
   }
 
   function teardown(): void {
-    handle.removeEventListener(
-      "pointermove",
-      onPointerMove
-    );
-    handle.removeEventListener(
-      "pointerup",
-      onPointerUp
-    );
-    handle.removeEventListener(
-      "pointercancel",
-      onPointerCancel
-    );
-    document.removeEventListener(
-      "keydown",
-      onKeyDown,
-      true
-    );
-
-    if (handle.hasPointerCapture(pointerId)) {
-      handle.releasePointerCapture(pointerId);
-    }
-
     overlay?.destroy();
     overlay = null;
-    document.documentElement.classList.remove(kDraggingClass);
   }
 
-  /**
-   * Ends the session exactly once, whatever released it.
-   *
-   * A drag that never passed the threshold reports no placement, but still
-   * settles: `onEnd` is the caller's only guarantee that the session is over.
-   */
-  function settle(
-    commit: boolean
-  ): void {
-    if (settled) {
-      return;
-    }
-
-    settled = true;
-    const notify = started;
-    teardown();
-    if (notify) {
-      if (commit) {
-        onCommit(result);
+  const pointerSession = startPointerDragSession({
+    element: handle,
+    event,
+    threshold,
+    documentClass: kDraggingClass,
+    onStart: begin,
+    onMove: update,
+    onFinish: (settlement, started) => {
+      teardown();
+      if (started) {
+        if (settlement === "commit") {
+          onCommit(result);
+        }
+        else {
+          onCancel?.();
+        }
       }
-      else {
-        onCancel?.();
-      }
+      onEnd?.();
     }
-    onEnd?.();
-  }
-
-  function onPointerMove(
-    moveEvent: PointerEvent
-  ): void {
-    if (moveEvent.pointerId !== pointerId) {
-      return;
-    }
-
-    if (!started) {
-      const travelled = Math.hypot(
-        moveEvent.clientX - originX,
-        moveEvent.clientY - originY
-      );
-      if (travelled < threshold) {
-        return;
-      }
-
-      begin();
-    }
-
-    update(moveEvent.clientX, moveEvent.clientY);
-  }
-
-  function onPointerUp(
-    upEvent: PointerEvent
-  ): void {
-    if (upEvent.pointerId !== pointerId) {
-      return;
-    }
-
-    settle(true);
-  }
-
-  function onPointerCancel(
-    cancelEvent: PointerEvent
-  ): void {
-    if (cancelEvent.pointerId !== pointerId) {
-      return;
-    }
-
-    settle(false);
-  }
-
-  function onKeyDown(
-    keyEvent: KeyboardEvent
-  ): void {
-    if (keyEvent.key !== "Escape") {
-      return;
-    }
-
-    keyEvent.preventDefault();
-    keyEvent.stopPropagation();
-    settle(false);
-  }
-
-  handle.setPointerCapture(pointerId);
-  handle.addEventListener(
-    "pointermove",
-    onPointerMove
-  );
-  handle.addEventListener(
-    "pointerup",
-    onPointerUp
-  );
-  handle.addEventListener(
-    "pointercancel",
-    onPointerCancel
-  );
-  document.addEventListener(
-    "keydown",
-    onKeyDown,
-    true
-  );
+  });
 
   return {
     cancel(): void {
-      settle(false);
+      pointerSession.cancel();
     }
   };
 }

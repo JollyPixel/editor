@@ -18,6 +18,7 @@ ensureFontFace();
 /**
  * Theme, density, and scale styles for scope hosts.
  */
+// postcss-lit-disable-next-line
 export const themeStyles = css`
   ${themeTokens}
   ${densityTokens}

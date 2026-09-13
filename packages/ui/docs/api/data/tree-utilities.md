@@ -7,6 +7,10 @@ marks a branch, including an empty array.
 `FlatTreeRow` is the flattened row shape. `TreeDropWhere` is `"above"`,
 `"inside"`, or `"below"`.
 
+`TreeSnapshot` builds node, parent, depth, ancestor, stable order, and visible
+row indexes in one traversal. Create one snapshot when several operations need
+to inspect the same tree structure.
+
 The root entry point exports these pure helpers:
 
 - `flattenVisible(nodes, expanded)` returns visible rows with depth data.
@@ -16,6 +20,7 @@ The root entry point exports these pure helpers:
 - `isSelfOrDescendant(nodes, sourceId, targetId)` checks ancestry.
 - `resolveSelection(options)` computes the next selected IDs.
 - `resolveRowDropZone(rect, clientY)` resolves `above`, `inside`, or `below`.
+  The former `(offsetY, height)` call shape remains supported for compatibility.
 - `canDrop(options)` checks structural reparenting constraints, then the
   optional `options.accept` domain veto.
 - `resolveReparent(options)` returns a reparented tree.

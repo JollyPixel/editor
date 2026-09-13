@@ -6,10 +6,6 @@ import type { GalleryExample } from "../types.ts";
 const kPeerCount = 16;
 const kCycleMs = 900;
 
-/**
- * Owns a real interval, so a shell that skipped disposal would leave a timer mutating a detached
- * tree. That is the half of `GalleryExample` one example cannot cover.
- */
 export const PEER_COLORS_EXAMPLE: GalleryExample = {
   id: "foundation/peer-colors",
   title: "Peer colours",

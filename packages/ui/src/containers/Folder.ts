@@ -116,7 +116,6 @@ export class Folder extends LitElement {
     );
   }
 
-  // A folder that cannot collapse has no way back open, so it stays open.
   protected override willUpdate(): void {
     if (!this.collapsible) {
       this.open = true;

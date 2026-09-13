@@ -7,13 +7,19 @@ export interface MetricDefinition {
   id: string;
   label: string;
   format?: (value: number) => string;
-  /** Omit for automatic scaling from the recorded history. */
+  /**
+   * Omit for automatic scaling from the recorded history.
+   */
   min?: number;
   max?: number;
-  /** Drives the graph colour ramp. */
+  /**
+   * Drives the graph colour ramp.
+   */
   better?: MetricDirection;
   aggregate?: MetricAggregation;
-  /** Pulled once per refresh window from a live source. */
+  /**
+   * Pulled once per refresh window from a live source.
+   */
   sample?: () => number;
 }
 
@@ -22,7 +28,9 @@ export interface MetricRange {
   max: number;
 }
 
-/** Resolves fixed or automatic graph bounds for a metric history. */
+/**
+ * Resolves fixed or automatic graph bounds for a metric history.
+ */
 export function resolveMetricRange(
   definition: MetricDefinition,
   history: readonly number[]

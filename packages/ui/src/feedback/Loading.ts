@@ -25,9 +25,6 @@ function isError(
   return value instanceof Error;
 }
 
-/**
- * Presents branded startup progress and fatal initialization errors.
- */
 @customElement("jolly-loading")
 export class Loading extends LitElement {
   static override styles = loadingStyles;
@@ -110,11 +107,6 @@ export class Loading extends LitElement {
     this.completed = false;
   }
 
-  /**
-   * Fades out and detaches the element. Callers use this to close the error
-   * view once the user has acknowledged it (`complete()` covers the success
-   * path and already detaches on its own).
-   */
   async dismiss(): Promise<void> {
     this.completed = true;
     await waitForAnimation(kFadeOutDurationMs);

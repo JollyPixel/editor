@@ -24,10 +24,6 @@ const kScopedHostStyles = `
   }
 `;
 
-/**
- * A plain shadow host for token demonstrations. It is not a custom element,
- * because Node imports the manifest where HTMLElement is unavailable.
- */
 export function createScopedHost(
   attributes: Record<string, string>
 ): { host: HTMLElement; content: ShadowRoot; } {

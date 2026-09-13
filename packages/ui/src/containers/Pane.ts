@@ -73,34 +73,18 @@ export class PaneElement extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare reorderable: boolean;
 
-  /**
-   * Opts the pane into folding to its header, like a folder one level up.
-   */
   @property({ type: Boolean, reflect: true })
   declare collapsible: boolean;
 
   @property({ type: Boolean, reflect: true })
   declare collapsed: boolean;
 
-  /**
-   * Fills the leftover space of an aligned dock. Ignored elsewhere.
-   */
   @property({ type: Boolean, reflect: true })
   declare grow: boolean;
 
-  /**
-   * Dims the pane in place while a drag previews where it would land.
-   */
   @property({ type: Boolean, reflect: true })
   declare dragging: boolean;
 
-  /**
-   * Pins the pane where it is: no grip, no header drag, no keyboard move.
-   *
-   * A layout normally makes every pane it owns movable. Locking is how an
-   * author keeps the fixed furniture of an editor in place while still letting
-   * other panes be dragged in and out around it.
-   */
   @property({ type: Boolean, reflect: true })
   declare locked: boolean;
 
@@ -122,14 +106,6 @@ export class PaneElement extends LitElement {
   @state()
   declare _announcement: string;
 
-  /**
-   * True inside a layout or a floating window, unless the pane is `locked`.
-   *
-   * Derived, not authored, and reflected so the header can show a move cursor.
-   * Only a pane with a container above it derives anything: one standing on its
-   * own keeps whatever it was given, which is what lets a detached clone carry
-   * the grip its source was dragged by.
-   */
   @property({ type: Boolean, reflect: true })
   declare movable: boolean;
 
@@ -154,7 +130,6 @@ export class PaneElement extends LitElement {
       emitContainerEvent(this, "jolly-layout-dirty", undefined);
     }
   });
-  /** True inside a container that can move the pane, lock or no lock. */
   #hosted = false;
   #presenceProvider: PresenceProvider | null = null;
   #folders = new FolderListController(this, {
@@ -166,9 +141,6 @@ export class PaneElement extends LitElement {
     announce: (message) => this.announce(message)
   });
 
-  /**
-   * Identity used by the layout snapshot, falling back to tag and title.
-   */
   get layoutKey(): string {
     return this.key === "" ?
       deriveKey("jolly-pane", this.heading) :
@@ -294,9 +266,6 @@ export class PaneElement extends LitElement {
     `;
   }
 
-  /**
-   * Speaks a message through the pane's live region.
-   */
   announce(
     message: string
   ): void {
@@ -313,34 +282,12 @@ export class PaneElement extends LitElement {
     this.#folders.applyStates(states);
   }
 
-  /**
-   * Header rect, used by a drag session for the ghost size.
-   */
   headerRect(): DOMRect {
     return (
       this._header ?? this
     ).getBoundingClientRect();
   }
 
-  /**
-   * Extent the pane's own content asks for along an axis, capped by its box.
-   *
-   * A dock without `align` stretches its panes, so a pane holding two rows can
-   * own six hundred pixels of dock, all but forty of them empty. A drop
-   * resolved against that box has to clear a midpoint hundreds of pixels below
-   * anything the pane draws, and the line marking the end of the dock lands at
-   * the bottom of the container rather than under the last thing in it. Read
-   * this instead and the empty tail belongs to the dock, which is where it
-   * looks like it belongs.
-   *
-   * Only the block axis packs content, so it is the only one with an extent to
-   * measure: across it a pane is simply as wide as it is given.
-   *
-   * The slotted children are what gets measured, not `scrollHeight`, which
-   * never reports below the box it is asked about and so reads a stretched
-   * pane as full whatever is in it. A pane slotted nothing at all keeps its
-   * box, since there is then nothing to say it occupies any less.
-   */
   occupiedSize(
     axis: "x" | "y"
   ): number {
@@ -424,13 +371,6 @@ export class PaneElement extends LitElement {
     );
   };
 
-  /**
-   * Asks whichever container owns movement to run the session.
-   *
-   * A layout answers with dock targets; a standalone floating window answers
-   * with a move-only session. Nothing answers for a plain docked pane, which
-   * is then simply not draggable.
-   */
   #requestDrag(
     event: PointerEvent,
     handle: HTMLElement
@@ -506,24 +446,12 @@ export class PaneElement extends LitElement {
   }
 }
 
-/**
- * Keeps a header drag from starting on a control the header also carries.
- */
 export function isPane(
   element: Element
 ): element is PaneElement {
   return element.tagName === "JOLLY-PANE";
 }
 
-/**
- * Bottom edge of an element's rendered content, in client pixels.
- *
- * `display: contents` (`jolly-theme-preferences` among them) generates no
- * box of its own, so `getBoundingClientRect()` on it is degenerate — always
- * `{0, 0, 0, 0}`. Its rendered content still lives somewhere below that,
- * either as light-DOM children or, for a custom element, inside its shadow
- * root, so a contents host is walked instead of measured directly.
- */
 function contentBottom(
   element: Element
 ): number {

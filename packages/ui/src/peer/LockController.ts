@@ -38,7 +38,6 @@ export class LockController implements ReactiveController {
     host.addController(this);
   }
 
-  /** Identity of the local peer, empty when no source answered. */
   get selfId(): string {
     return this.#source?.clientId ?? "";
   }
@@ -54,9 +53,6 @@ export class LockController implements ReactiveController {
     );
 
     const { source, subscribe } = requestPresenceSource(this.#host);
-    /**
-     * Fields may connect before their pane receives a source.
-     */
     this.#unsubscribe = subscribe?.((next) => this.#attach(next)) ?? null;
     this.#attach(source);
   }
@@ -70,18 +66,12 @@ export class LockController implements ReactiveController {
       "focusout",
       this.#onFocusOut
     );
-    /**
-     * A focused field must release its claim when disconnected.
-     */
     this.#release();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
     this.#attach(null);
   }
 
-  /**
-   * Moves the claim when a consumer re-points a focused field.
-   */
   pathChanged(): void {
     if (this.#claimed !== null && this.#claimed !== this.#host.path) {
       this.#release();
@@ -126,9 +116,6 @@ export class LockController implements ReactiveController {
   }
 
   #scheduleRelease(): void {
-    /**
-     * Wait for focus to settle because `focusout` also fires within the field.
-     */
     queueMicrotask(() => {
       if (
         this.#host.isConnected &&
