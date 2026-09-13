@@ -17,4 +17,6 @@ field.value = { from: 10, to: 30 };
 
 Endpoints cannot cross. A committed value is quantized to `step`, clamped to
 the component bounds, then clamped against the other endpoint. Enter, blur,
-and arrow-key stepping emit `jolly-change`.
+and arrow-key stepping emit `jolly-change`. Escape discards the focused
+endpoint's draft. A parse error on either endpoint is shown as the field
+error.

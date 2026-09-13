@@ -93,7 +93,6 @@ export class Transform extends LitElement {
   })
   declare scaleLabel: string;
 
-  /** Forwarded to the position, rotation and scale sub-fields. */
   @property({
     type: String,
     attribute: "label-position",
@@ -130,11 +129,6 @@ export class Transform extends LitElement {
     this.labelPosition = "inline";
   }
 
-  /**
-   * Aligns the three label columns when their labels change. A top label
-   * position puts each label above its own value, so the shared column is
-   * moot.
-   */
   protected override willUpdate(
     changed: PropertyValues
   ): void {
@@ -207,7 +201,6 @@ export class Transform extends LitElement {
     `;
   }
 
-  /** Merges a sub-field commit into the complete TransformValue. */
   #relay(
     key: TransformSubKey,
     event: Event,

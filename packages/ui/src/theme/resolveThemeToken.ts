@@ -1,6 +1,3 @@
-/**
- * Resolves a computed theme token from a host, with an optional fallback.
- */
 export function resolveThemeToken(
   host: HTMLElement,
   name: string,
@@ -13,32 +10,67 @@ export function resolveThemeToken(
   return value === "" ? fallback : value;
 }
 
-/** Resolves a theme color to a canvas-compatible computed value. */
 export function resolveThemeColor(
   host: HTMLElement,
   name: string,
   fallback = ""
 ): string {
-  const value = resolveThemeToken(host, name, fallback);
+  const value = resolveThemeToken(
+    host,
+    name,
+    fallback
+  );
   if (value === fallback || !needsColorResolution(value)) {
     return value;
   }
 
-  /*
-   * A light-DOM child appended straight to `host` is unrendered (empty
-   * computed style) when the host's shadow root has no default `<slot>` to
-   * assign it to — most components here render a fixed template with none.
-   * The shadow root itself is always part of the flat tree and inherits
-   * `:host` custom properties the same way, so the probe goes there instead.
-   */
+  return probeColor(
+    host,
+    `var(${name})`,
+    fallback
+  );
+}
+
+export function resolveCssColor(
+  host: HTMLElement,
+  value: string,
+  fallback = ""
+): string {
+  const color = value.trim();
+  if (color === "") {
+    return fallback;
+  }
+  if (!needsColorResolution(color)) {
+    return color;
+  }
+
+  return probeColor(
+    host,
+    color,
+    fallback
+  );
+}
+
+function probeColor(
+  host: HTMLElement,
+  color: string,
+  fallback: string
+): string {
   const probe = host.ownerDocument.createElement("span");
   probe.style.position = "absolute";
   probe.style.visibility = "hidden";
   probe.style.pointerEvents = "none";
-  probe.style.color = `var(${name})`;
+  probe.style.color = color;
+
+  if (probe.style.color === "") {
+    return fallback;
+  }
+
   const probeParent = host.shadowRoot ?? host;
   probeParent.append(probe);
-  const resolved = getComputedStyle(probe).color.trim();
+  const resolved = getComputedStyle(
+    probe
+  ).color.trim();
   probe.remove();
 
   return resolved === "" ? fallback : resolved;

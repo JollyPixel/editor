@@ -32,10 +32,13 @@ import {
 } from "../dom.ts";
 import { startDragSession } from "../interaction/drag/DragSession.ts";
 import { clampToViewport } from "../geometry/clampToViewport.ts";
-import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
-import { PersistedState } from "../storage/PersistedState.ts";
+import { defaultStorageAdapter } from "../storage/defaultStorage.ts";
+import { NamespacedStore } from "../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
-import { deriveKey } from "../storage/keys.ts";
+import {
+  deriveKey,
+  pageNamespace
+} from "../storage/keys.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
@@ -97,12 +100,25 @@ export class Floating extends LitElement {
   #ownsZIndex = false;
   #managed = false;
   #collapsed = false;
-  #state = new PersistedState(this, {
+  #state = new NamespacedStore({
     isManaged: () => this.#managed,
-    namespace: () => this.#namespace(),
+    namespace: () => pageNamespace(
+      this.storageKey,
+      "jolly-floating",
+      this.layoutKey
+    ),
     storage: () => this.storage,
     onManagedWrite: () => {
-      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+      emitContainerEvent(this, "jolly-layout-dirty", {
+        type: "floating",
+        pane: this.layoutKey,
+        geometry: {
+          x: this.x,
+          y: this.y,
+          width: this.width,
+          height: this.height
+        }
+      });
     }
   });
 
@@ -126,7 +142,7 @@ export class Floating extends LitElement {
     this.dragging = false;
     this.hidden = false;
     this.storageKey = "";
-    this.storage = new LocalStorageAdapter();
+    this.storage = defaultStorageAdapter();
   }
 
   override connectedCallback(): void {
@@ -205,7 +221,7 @@ export class Floating extends LitElement {
     }
 
     if (changed.get("hidden") !== undefined) {
-      this.#state.write("hidden", String(this.hidden));
+      this.#state.writeBoolean("hidden", this.hidden);
     }
   }
 
@@ -428,26 +444,21 @@ export class Floating extends LitElement {
 
   #restore(): void {
     for (const key of kGeometryKeys) {
-      const stored = this.#state.read(key);
-      if (stored === null) {
-        continue;
-      }
-
-      const value = Number(stored);
-      if (Number.isFinite(value)) {
+      const value = this.#state.readNumber(key);
+      if (value !== null) {
         this[key] = value;
       }
     }
 
-    const hidden = this.#state.read("hidden");
+    const hidden = this.#state.readBoolean("hidden");
     if (hidden !== null) {
-      this.hidden = hidden === "true";
+      this.hidden = hidden;
     }
   }
 
   #persist(): void {
     for (const key of kGeometryKeys) {
-      this.#state.write(key, String(this[key]));
+      this.#state.writeNumber(key, this[key]);
     }
   }
 
@@ -459,16 +470,6 @@ export class Floating extends LitElement {
       height: rect.height,
       collapsed: false
     };
-  }
-
-  #namespace(): string {
-    if (this.storageKey !== "") {
-      return this.storageKey;
-    }
-
-    const path = globalThis.location?.pathname ?? "";
-
-    return `${path}:jolly-floating:${this.layoutKey}`;
   }
 }
 

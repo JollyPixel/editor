@@ -69,9 +69,6 @@ export abstract class VectorField<
   @property({ type: Number })
   declare max: number;
 
-  /**
-   * Overrides an axis's accessible name for domain terms, e.g. `{ x: "pitch" }`.
-   */
   @property({ attribute: false })
   declare axisLabels: Partial<Record<TAxis, string>>;
 
@@ -108,6 +105,16 @@ export abstract class VectorField<
     b: TValue
   ): boolean {
     return vectorValueEquals(a, b);
+  }
+
+  protected override get displayError(): string | null {
+    for (const axis of this.#axes.values()) {
+      if (axis.error !== null) {
+        return axis.error;
+      }
+    }
+
+    return super.displayError;
   }
 
   protected renderValue(): TemplateResult {

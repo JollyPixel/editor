@@ -32,7 +32,9 @@ import { AxisController } from "./AxisController.ts";
 export type QuaternionAxis = "x" | "y" | "z";
 
 export interface QuaternionDefaults {
-  /** Degrees per scrub step or arrow key press. */
+  /**
+   * Degrees per scrub step or arrow key press.
+   */
   step: number;
 }
 
@@ -78,7 +80,6 @@ export class Quaternion extends JollyField<QuatLike> {
   @property({ type: Number })
   declare step: number;
 
-  /** Overrides an axis's accessible name, e.g. `{ x: "pitch" }`. */
   @property({ attribute: false })
   declare axisLabels: Partial<Record<QuaternionAxis, string>>;
 
@@ -102,6 +103,16 @@ export class Quaternion extends JollyField<QuatLike> {
     b: QuatLike
   ): boolean {
     return quatEquals(a, b);
+  }
+
+  protected override get displayError(): string | null {
+    for (const axis of this.#axes.values()) {
+      if (axis.error !== null) {
+        return axis.error;
+      }
+    }
+
+    return super.displayError;
   }
 
   protected renderValue(): TemplateResult {
@@ -171,7 +182,6 @@ export class Quaternion extends JollyField<QuatLike> {
     }
   }
 
-  /** Reuses the Euler draft while it still represents target. */
   #resolvedDraft(
     target: QuatLike
   ): EulerAngles {

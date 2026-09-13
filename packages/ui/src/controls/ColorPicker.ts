@@ -26,9 +26,8 @@ import { emitFieldEvent } from "../field/events.ts";
 import { DraftController } from "../field/DraftController.ts";
 import {
   formatNumber,
-  parseNumeric,
-  quantize
-} from "../numeric/format.ts";
+  parseNumericEntry
+} from "../numeric/entry.ts";
 import { isInputElement } from "../dom.ts";
 
 // CONSTANTS
@@ -309,20 +308,13 @@ export class ColorPicker extends LitElement {
   #commitAlpha(): void {
     this.#alphaDraft.commit(
       (draft) => {
-        const result = parseNumeric(draft);
-        if (result === null || !result.ok) {
-          return null;
-        }
+        const result = parseNumericEntry(draft, {
+          step: kAlphaStep,
+          min: 0,
+          max: 1
+        });
 
-        return {
-          ok: true,
-          value: quantize(
-            result.value,
-            kAlphaStep,
-            0,
-            1
-          )
-        };
+        return result?.ok ? result : null;
       },
       this.editable,
       (alpha) => {

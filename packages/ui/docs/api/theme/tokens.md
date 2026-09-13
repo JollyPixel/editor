@@ -10,6 +10,8 @@ The root entry point exports these theme styles and helpers:
 - `fontFaceCss` contains its CSS declaration.
 - `resolveThemeToken(element, name)` reads a resolved custom property.
 - `resolveThemeColor(element, name, fallback)` resolves a color for canvas use.
+- `resolveCssColor(element, value, fallback)` resolves a CSS color value, such
+  as `light-dark()` or `var()`, for canvas use.
 - `peerColor(index)` returns a collaborator color.
 - `ambientThemeMode(element)` resolves the theme an element that declares
   tokens of its own should adopt: the surrounding scope, then the page's own

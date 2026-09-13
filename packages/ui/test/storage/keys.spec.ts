@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   deriveKey,
+  pageNamespace,
   resolveOrder,
   slugify
 } from "../../src/storage/keys.ts";
@@ -174,6 +175,21 @@ describe("Storage.resolveOrder", () => {
     assert.deepEqual(
       [...resolved].sort(),
       [...present].sort()
+    );
+  });
+});
+
+describe("Storage.pageNamespace", () => {
+  test("an explicit key wins", () => {
+    assert.equal(pageNamespace("editor", "jolly-dock", "left"), "editor");
+  });
+
+  test("joins the page path with the parts", () => {
+    const path = globalThis.location?.pathname ?? "";
+
+    assert.equal(
+      pageNamespace("", "jolly-dock", "left"),
+      `${path}:jolly-dock:left`
     );
   });
 });

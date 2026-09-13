@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import "../controls/Button.ts";
+import { FacadeItem } from "./FacadeItem.ts";
 
 export interface ButtonOptions {
   title?: string;
@@ -8,7 +9,7 @@ export interface ButtonOptions {
 /**
  * A `jolly-button` with no bound value, matching `folder.addButton`.
  */
-export class Button {
+export class Button extends FacadeItem {
   readonly element: HTMLElement;
 
   #button: HTMLElementTagNameMap["jolly-button"];
@@ -16,29 +17,10 @@ export class Button {
   constructor(
     options: ButtonOptions = {}
   ) {
+    super();
     this.#button = document.createElement("jolly-button");
     this.#button.textContent = options.title ?? "";
     this.element = this.#button;
-  }
-
-  get hidden(): boolean {
-    return Boolean(this.element.hidden);
-  }
-
-  set hidden(
-    value: boolean
-  ) {
-    this.element.hidden = value;
-  }
-
-  get disabled(): boolean {
-    return this.#button.disabled;
-  }
-
-  set disabled(
-    value: boolean
-  ) {
-    this.#button.disabled = value;
   }
 
   on(
@@ -50,7 +32,13 @@ export class Button {
     return this;
   }
 
-  dispose(): void {
-    this.element.remove();
+  protected override readDisabled(): boolean {
+    return this.#button.disabled;
+  }
+
+  protected override writeDisabled(
+    value: boolean
+  ): void {
+    this.#button.disabled = value;
   }
 }

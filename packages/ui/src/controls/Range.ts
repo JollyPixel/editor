@@ -9,18 +9,11 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
+import { DraftController } from "../field/DraftController.ts";
 import { JollyField } from "../field/JollyField.ts";
 import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
-import {
-  formatNumber,
-  parseNumeric,
-  quantize
-} from "../numeric/format.ts";
+import { NumericInputController } from "../field/NumericInputController.ts";
 import { rangeStyles } from "./Range.styles.ts";
-import { multiplierFor } from "../numeric/modifierMultiplier.ts";
-import { valueFromDelta } from "../numeric/valueFromDelta.ts";
-import { isInputElement } from "../dom.ts";
-import { PointerFocusController } from "../field/PointerFocusController.ts";
 import type { Interval } from "./types.ts";
 
 export interface RangeDefaults {
@@ -58,10 +51,9 @@ export class Range extends JollyField<Interval> {
   @property({ type: Number })
   declare max: number;
 
-  #pointerFocus = new PointerFocusController(this);
-  #drafts: Record<keyof Interval, string | null> = {
-    from: null,
-    to: null
+  #ends: Record<keyof Interval, NumericInputController> = {
+    from: this.#endController("from"),
+    to: this.#endController("to")
   };
 
   constructor() {
@@ -83,194 +75,98 @@ export class Range extends JollyField<Interval> {
     return a.from === b.from && a.to === b.to;
   }
 
-  protected renderValue(): TemplateResult {
-    const interval = this.concreteValue;
+  protected override get displayError(): string | null {
+    return this.#ends.from.error ??
+      this.#ends.to.error ??
+      super.displayError;
+  }
 
+  protected renderValue(): TemplateResult {
     return html`
-      ${this.#renderEnd("from", interval?.from)}
+      ${this.#renderEnd("from")}
       <span class="separator" aria-hidden="true"></span>
-      ${this.#renderEnd("to", interval?.to)}
+      ${this.#renderEnd("to")}
     `;
   }
 
   #renderEnd(
-    end: keyof Interval,
-    value: number | undefined
+    end: keyof Interval
   ): TemplateResult {
+    const input = this.#ends[end];
+
     return html`
       <input
         type="text"
         inputmode="decimal"
         class="end"
         data-end=${end}
-        .value=${this.#drafts[end] ??
-        (value === undefined ? "" : formatNumber(value, this.step))}
+        .value=${input.displayed}
         placeholder=${this.mixed ? MIXED_PLACEHOLDER : ""}
         aria-label=${end === "from" ? "Range start" : "Range end"}
         ?disabled=${this.disabled}
         ?readonly=${this.inputReadonly}
-        ?data-pointer-focus=${this.#pointerFocus.active}
+        ?data-pointer-focus=${input.pointerFocused}
         aria-readonly=${this.readonlyAria}
         aria-disabled=${this.lockedAria}
         aria-description=${this.lockDescription}
-        @input=${(event: Event) => this.#onType(end, event)}
-        @focus=${this.#pointerFocus.onFocus}
-        @blur=${() => this.#onBlur(end)}
-        @keydown=${(event: KeyboardEvent) => this.#onKeyDown(end, event)}
+        @input=${input.onInput}
+        @focus=${input.onFocus}
+        @blur=${input.onBlur}
+        @keydown=${input.onKeyDown}
       >
     `;
   }
 
-  /**
-   * Commits one modifier-scaled step from the current endpoint.
-   */
-  #onKeyDown(
+  #endController(
+    end: keyof Interval
+  ): NumericInputController {
+    return new NumericInputController(this, {
+      draft: new DraftController<number>(this),
+      step: () => this.step,
+      min: () => this.min,
+      max: () => this.max,
+      value: () => this.concreteValue?.[end],
+      editable: () => this.editable && this.concreteValue !== undefined,
+      coerce: (value) => this.#clampToOther(end, value),
+      onInput: (value) => this.#emitEnd(end, value, true),
+      onChange: (value) => this.#emitEnd(end, value, false)
+    });
+  }
+
+  #clampToOther(
     end: keyof Interval,
-    event: KeyboardEvent
+    value: number
+  ): number {
+    const interval = this.concreteValue;
+    if (interval === undefined) {
+      return value;
+    }
+
+    return end === "from" ?
+      Math.min(value, interval.to) :
+      Math.max(value, interval.from);
+  }
+
+  #emitEnd(
+    end: keyof Interval,
+    value: number,
+    live: boolean
   ): void {
-    this.#pointerFocus.onKeyDown();
-
-    if (event.key === "Enter") {
-      this.#commit(end);
-
-      return;
-    }
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      this.#clearDraft(end);
-
-      return;
-    }
-    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
-      return;
-    }
-
-    const interval = this.editable ? this.concreteValue : undefined;
+    const interval = this.concreteValue;
     if (interval === undefined) {
       return;
     }
 
-    // Prevent the input caret from moving.
-    event.preventDefault();
-
-    const direction = event.key === "ArrowUp" ? 1 : -1;
-    // Scale the step, not the count, so Alt can produce fractional steps.
-    const effectiveStep = this.step * multiplierFor(event);
-
-    const stepped = valueFromDelta({
-      start: interval[end],
-      deltaPx: direction,
-      step: effectiveStep,
-      pixelsPerStep: 1,
-      min: this.min,
-      max: this.max
-    });
-
-    this.emitChange(
-      this.#clampToOther(interval, end, stepped)
-    );
-  }
-
-  #onType(
-    end: keyof Interval,
-    event: Event
-  ): void {
-    if (!isInputElement(event.target)) {
-      return;
-    }
-
-    this.#drafts[end] = event.target.value;
-    this.setParseError(null);
-  }
-
-  #onBlur(
-    end: keyof Interval
-  ): void {
-    this.#pointerFocus.onBlur();
-    this.#commit(end);
-  }
-
-  #clearDraft(
-    end: keyof Interval
-  ): void {
-    this.#drafts[end] = null;
-    this.setParseError(null);
-    this.requestUpdate();
-  }
-
-  #commit(
-    end: keyof Interval
-  ): void {
-    const draft = this.#drafts[end];
-    const interval = this.concreteValue;
-    if (
-      draft === null ||
-      interval === undefined ||
-      !this.editable
-    ) {
-      return;
-    }
-
-    const result = parseNumeric(draft);
-    if (result === null) {
-      this.#clearDraft(end);
-
-      return;
-    }
-    if (!result.ok) {
-      this.setParseError(result.error);
-
-      return;
-    }
-
-    this.#drafts[end] = null;
-    this.requestUpdate();
-    this.emitChange(
-      this.#withEnd(interval, end, result.value)
-    );
-  }
-
-  #withEnd(
-    interval: Interval,
-    end: keyof Interval,
-    raw: number
-  ): Interval {
-    const value = quantize(
-      raw,
-      this.step,
-      this.min,
-      this.max
-    );
-
-    return this.#clampToOther(
-      interval,
-      end,
-      value
-    );
-  }
-
-  #clampToOther(
-    interval: Interval,
-    end: keyof Interval,
-    value: number
-  ): Interval {
-    if (end === "from") {
-      return {
-        from: Math.min(
-          value,
-          interval.to
-        ),
-        to: interval.to
-      };
-    }
-
-    return {
-      from: interval.from,
-      to: Math.max(
-        value,
-        interval.from
-      )
+    const next = {
+      ...interval,
+      [end]: value
     };
+    if (live) {
+      this.emitInput(next);
+    }
+    else {
+      this.emitChange(next);
+    }
   }
 }
 

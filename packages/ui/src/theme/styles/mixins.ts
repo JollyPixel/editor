@@ -43,3 +43,22 @@ export const visuallyHidden = css`
   clip-path: inset(50%);
   white-space: nowrap;
 `;
+
+export const contentScrollbar = css`
+  .content {
+    scrollbar-color: var(--jolly-groove) transparent;
+    scrollbar-width: thin;
+  }
+
+  .content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .content::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 4px;
+    background: var(--jolly-groove);
+    background-clip: padding-box;
+  }
+`;

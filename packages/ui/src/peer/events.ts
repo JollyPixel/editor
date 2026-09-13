@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { emitComposedEvent } from "../events.ts";
+
 export interface JollyPeerSelectDetail {
   clientId: string;
 }
@@ -11,12 +14,7 @@ export function emitPeerEvent<KName extends keyof PeerEventMap>(
   name: KName,
   detail: PeerEventMap[KName]
 ): void {
-  const event = new CustomEvent<PeerEventMap[KName]>(name, {
-    detail,
-    bubbles: true,
-    composed: true
-  });
-  target.dispatchEvent(event);
+  emitComposedEvent(target, name, detail);
 }
 
 declare global {

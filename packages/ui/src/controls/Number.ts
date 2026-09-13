@@ -12,16 +12,8 @@ import {
 // Import Internal Dependencies
 import { JollyField } from "../field/JollyField.ts";
 import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
-import {
-  formatNumber,
-  parseNumeric,
-  quantize
-} from "../numeric/format.ts";
-import { ScrubController } from "../interaction/scrub/ScrubController.ts";
-import { multiplierFor } from "../numeric/modifierMultiplier.ts";
-import { valueFromDelta } from "../numeric/valueFromDelta.ts";
+import { NumericInputController } from "../field/NumericInputController.ts";
 import { numberStyles } from "./Number.styles.ts";
-import { PointerFocusController } from "../field/PointerFocusController.ts";
 
 export interface NumberFieldDefaults {
   step: number;
@@ -30,9 +22,6 @@ export interface NumberFieldDefaults {
   value: number;
 }
 
-/**
- * Supports expression entry and pointer scrubbing through a text input.
- */
 @customElement("jolly-number")
 export class NumberField extends JollyField<number> {
   static readonly Defaults: NumberFieldDefaults = {
@@ -59,17 +48,17 @@ export class NumberField extends JollyField<number> {
   @property({ type: Number })
   declare max: number;
 
-  #scrub = new ScrubController(this, {
-    target: () => this.renderRoot.querySelector(".scrub-handle"),
+  #input = new NumericInputController(this, {
+    draft: this.draftController,
     step: () => this.step,
-    start: () => (this.editable ? this.concreteValue : undefined),
     min: () => this.min,
     max: () => this.max,
+    value: () => this.concreteValue,
+    editable: () => this.editable,
     onInput: (value) => this.emitInput(value),
-    onCommit: (value) => this.emitChange(value)
+    onChange: (value) => this.emitChange(value),
+    scrubTarget: () => this.renderRoot.querySelector(".scrub-handle")
   });
-
-  #pointerFocus = new PointerFocusController(this);
 
   constructor() {
     super();
@@ -80,9 +69,6 @@ export class NumberField extends JollyField<number> {
     this.value = NumberField.Defaults.value;
   }
 
-  /**
-   * Mixed values cannot be scrubbed.
-   */
   protected override get scrubbable(): boolean {
     return this.editable && !this.mixed;
   }
@@ -94,105 +80,22 @@ export class NumberField extends JollyField<number> {
         <input
           type="text"
           inputmode="decimal"
-          .value=${this.draft ?? this.#displayed}
+          .value=${this.#input.displayed}
           placeholder=${this.mixed ? MIXED_PLACEHOLDER : ""}
           ?disabled=${this.disabled}
           ?readonly=${this.inputReadonly}
-          ?data-pointer-focus=${this.#pointerFocus.active}
+          ?data-pointer-focus=${this.#input.pointerFocused}
           aria-readonly=${this.readonlyAria}
           aria-disabled=${this.lockedAria}
           aria-description=${this.lockDescription}
           aria-invalid=${this.displayError === null ? nothing : "true"}
-          @input=${this.onDraftInput}
-          @focus=${this.#pointerFocus.onFocus}
-          @keydown=${this.#onKeyDown}
-          @blur=${this.#onBlur}
+          @input=${this.#input.onInput}
+          @focus=${this.#input.onFocus}
+          @keydown=${this.#input.onKeyDown}
+          @blur=${this.#input.onBlur}
         >
       </div>
     `;
-  }
-
-  get #displayed(): string {
-    const value = this.concreteValue;
-
-    return value === undefined ? "" : formatNumber(value, this.step);
-  }
-
-  #onKeyDown(
-    event: KeyboardEvent
-  ): void {
-    this.#pointerFocus.onKeyDown();
-
-    if (
-      event.key === "ArrowUp" ||
-      event.key === "ArrowDown"
-    ) {
-      this.#step(event);
-    }
-    else {
-      this.onDraftKeyDown(
-        event,
-        () => this.#commit()
-      );
-    }
-  }
-
-  #onBlur(): void {
-    this.#pointerFocus.onBlur();
-    this.#commit();
-  }
-
-  /**
-   * Commits one modifier-scaled step from the current value.
-   */
-  #step(
-    event: KeyboardEvent
-  ): void {
-    const start = this.editable ? this.concreteValue : undefined;
-    if (start === undefined) {
-      return;
-    }
-
-    // Prevent the input caret from moving.
-    event.preventDefault();
-
-    const direction = event.key === "ArrowUp" ? 1 : -1;
-    // Scale the step, not the count, so Alt can produce fractional steps.
-    const effectiveStep = this.step * multiplierFor(event);
-
-    this.emitChange(
-      valueFromDelta({
-        start,
-        deltaPx: direction,
-        step: effectiveStep,
-        pixelsPerStep: 1,
-        min: this.min,
-        max: this.max
-      })
-    );
-  }
-
-  #commit(): void {
-    if (this.#scrub.dragging) {
-      return;
-    }
-
-    this.commitDraft((draft) => {
-      const result = parseNumeric(draft);
-      if (result === null || !result.ok) {
-        return result;
-      }
-
-      return {
-        ok: true,
-        value: quantize(
-          result.value,
-          this.step,
-          this.min,
-          this.max
-        )
-      };
-    });
   }
 }
 

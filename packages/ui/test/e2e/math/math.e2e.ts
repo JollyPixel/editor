@@ -56,6 +56,29 @@ test.describe("vector: axis drag scrub", () => {
   });
 });
 
+test.describe("vector: axis expression input", () => {
+  test("an axis parse error uses the field error presentation", async({ page }) => {
+    await gotoGallery(page, {
+      example: "math/vector3",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const field = row(page, "jolly-vector3", "default");
+    const input = field.locator('.axis-box[data-axis="x"] input');
+    await input.fill("alert(1)");
+    await input.press("Enter");
+
+    await expect(field).toHaveAttribute("invalid", "");
+    await expect(field.locator(".error")).toBeVisible();
+    await expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(await changes(page)).toEqual([]);
+
+    await input.press("Escape");
+    await expect(field).not.toHaveAttribute("invalid");
+  });
+});
+
 test.describe("vector: whole-row revert", () => {
   test("resets every axis together", async({ page }) => {
     await gotoGallery(page, {

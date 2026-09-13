@@ -36,7 +36,12 @@ export const DOCK_LAYOUT_EXAMPLE: GalleryExample = {
     right.align = "end";
     right.key = "right";
     right.size = 220;
-    right.append(pane("hud", "HUD", "Overlay panels float over the viewport."));
+    const hud = pane("hud", "HUD", "Overlay panels float over the viewport.");
+    const display = document.createElement("jolly-folder");
+    display.label = "Display";
+    display.append("Frame counters.");
+    hud.append(display);
+    right.append(hud);
 
     const viewport = document.createElement("p");
     viewport.className = "dock-layout-viewport";

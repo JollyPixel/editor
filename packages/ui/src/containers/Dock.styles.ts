@@ -3,7 +3,10 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
-import { focusRing } from "../theme/styles/mixins.ts";
+import {
+  contentScrollbar,
+  focusRing
+} from "../theme/styles/mixins.ts";
 
 export const dockStyles = css`
   :host {
@@ -93,21 +96,9 @@ export const dockStyles = css`
     width: 100%;
     height: 100%;
     overflow: hidden;
-    scrollbar-color: var(--jolly-groove) transparent;
-    scrollbar-width: thin;
   }
 
-  .content::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  .content::-webkit-scrollbar-thumb {
-    border: 2px solid transparent;
-    border-radius: 4px;
-    background: var(--jolly-groove);
-    background-clip: padding-box;
-  }
+  ${contentScrollbar}
 
   /*
    * An aligned dock sizes its panes to their content and lets none of them

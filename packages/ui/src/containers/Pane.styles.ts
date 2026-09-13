@@ -4,6 +4,7 @@ import { css } from "lit";
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
 import {
+  contentScrollbar,
   focusRing,
   truncate,
   visuallyHidden
@@ -170,21 +171,9 @@ export const paneStyles = css`
     gap: var(--jolly-row-gap, 4px);
     min-height: 0;
     padding: var(--jolly-space-1, 4px);
-    scrollbar-color: var(--jolly-groove) transparent;
-    scrollbar-width: thin;
   }
 
-  .content::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  .content::-webkit-scrollbar-thumb {
-    border: 2px solid transparent;
-    border-radius: 4px;
-    background: var(--jolly-groove);
-    background-clip: padding-box;
-  }
+  ${contentScrollbar}
 
   .live-region {
     ${visuallyHidden}

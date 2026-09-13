@@ -18,7 +18,8 @@ import type { VectorValue } from "./types.ts";
 import { vectorValueEquals, vectorValueHasChanged } from "./equals.ts";
 import { point2dStyles } from "./Point2d.styles.ts";
 import { ratioFromPointer } from "../color/area.ts";
-import { formatNumber, quantize } from "../numeric/format.ts";
+import { unitRatio } from "../numeric/bounds.ts";
+import { formatNumber, quantize } from "../numeric/entry.ts";
 import { multiplierFor } from "../numeric/modifierMultiplier.ts";
 
 export type Point2dAxis = "x" | "y";
@@ -46,10 +47,16 @@ export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
     point2dStyles
   ];
 
-  @property({ attribute: false, hasChanged: vectorValueHasChanged })
+  @property({
+    attribute: false,
+    hasChanged: vectorValueHasChanged
+  })
   declare value: FieldValue<VectorValue<Point2dAxis>>;
 
-  @property({ attribute: false, hasChanged: vectorValueHasChanged })
+  @property({
+    attribute: false,
+    hasChanged: vectorValueHasChanged
+  })
   declare default: VectorValue<Point2dAxis> | undefined;
 
   @property({ type: Number })
@@ -118,9 +125,7 @@ export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
   #ratio(
     value: number
   ): number {
-    const span = this.max - this.min;
-
-    return span <= 0 ? 0.5 : Math.min(1, Math.max(0, (value - this.min) / span));
+    return unitRatio(value, this.min, this.max, 0.5);
   }
 
   #onPointerDown = (
@@ -156,12 +161,26 @@ export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
     commit: boolean
   ): void {
     const ratio = ratioFromPointer(
-      { x: event.clientX, y: event.clientY },
+      {
+        x: event.clientX,
+        y: event.clientY
+      },
       pad.getBoundingClientRect()
     );
+
     const value = {
-      x: quantize(this.min + (ratio.x * (this.max - this.min)), this.step, this.min, this.max),
-      y: quantize(this.min + (ratio.y * (this.max - this.min)), this.step, this.min, this.max)
+      x: quantize(
+        this.min + (ratio.x * (this.max - this.min)),
+        this.step,
+        this.min,
+        this.max
+      ),
+      y: quantize(
+        this.min + (ratio.y * (this.max - this.min)),
+        this.step,
+        this.min,
+        this.max
+      )
     };
 
     if (commit) {
@@ -190,7 +209,6 @@ export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
       case "ArrowRight":
         x += step;
         break;
-      // Screen-space mapping: up is toward min y, matching the pointer drag.
       case "ArrowUp":
         y -= step;
         break;

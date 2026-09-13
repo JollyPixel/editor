@@ -27,6 +27,7 @@ Set `locked` on panes whose authored placement must remain fixed. Call
 current `LayoutSnapshot`.
 
 Pane, Folder, Dock, Floating, DockLayout, ThemePreferences, and Stats accept a
-`StorageAdapter` where they persist state. `LocalStorageAdapter` is the default.
+`StorageAdapter` where they persist state. A `LocalStorageAdapter` shared by
+the page is the default.
 Inside a dock layout, the layout owns dock and floating geometry. Folder state
 remains attached to its pane.

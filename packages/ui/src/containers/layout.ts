@@ -51,6 +51,44 @@ export interface DeclaredLayout {
   locked: string[];
 }
 
+export interface DockChange {
+  type: "dock";
+  dock: string;
+  size?: number;
+  collapsed?: boolean;
+}
+
+export interface FloatingChange {
+  type: "floating";
+  pane: string;
+  geometry: FloatingState;
+}
+
+export interface PaneChange {
+  type: "pane";
+  pane: string;
+  collapsed: boolean;
+}
+
+export interface FolderChange {
+  type: "folder";
+  pane: string;
+  folder: string;
+  open: boolean;
+}
+
+export type LayoutChange =
+  | DockChange
+  | FloatingChange
+  | FolderChange
+  | PaneChange;
+
+export interface PanePlacement {
+  dock: string;
+  index: number;
+  count: number;
+}
+
 export function emptyLayout(): LayoutSnapshot {
   return {
     v: kVersion,
@@ -209,6 +247,184 @@ export function reconcileLayout(
     panes,
     folders: stored?.folders ?? {}
   };
+}
+
+export function cloneLayout(
+  snapshot: LayoutSnapshot
+): LayoutSnapshot {
+  return {
+    v: snapshot.v,
+    docks: mapRecord(snapshot.docks, (state) => {
+      return {
+        ...state,
+        panes: [...state.panes]
+      };
+    }),
+    floating: mapRecord(snapshot.floating, (state) => {
+      return { ...state };
+    }),
+    geometry: mapRecord(snapshot.geometry, (state) => {
+      return { ...state };
+    }),
+    panes: mapRecord(snapshot.panes, (state) => {
+      return { ...state };
+    }),
+    folders: mapRecord(snapshot.folders, (states) => mapRecord(
+      states,
+      (state) => {
+        return { ...state };
+      }
+    ))
+  };
+}
+
+export function panePlacement(
+  snapshot: LayoutSnapshot,
+  pane: string
+): PanePlacement | null {
+  for (const [dock, state] of Object.entries(snapshot.docks)) {
+    const index = state.panes.indexOf(pane);
+    if (index !== -1) {
+      return {
+        dock,
+        index,
+        count: state.panes.length
+      };
+    }
+  }
+
+  return null;
+}
+
+export function movePane(
+  snapshot: LayoutSnapshot,
+  pane: string,
+  dock: string,
+  index: number
+): LayoutSnapshot {
+  const target = snapshot.docks[dock];
+  if (target === undefined) {
+    return snapshot;
+  }
+
+  const from = target.panes.indexOf(pane);
+  const position = from !== -1 && index > from ? index - 1 : index;
+  const next = detachPane(cloneLayout(snapshot), pane);
+  const panes = next.docks[dock].panes;
+  panes.splice(
+    Math.min(Math.max(position, 0), panes.length),
+    0,
+    pane
+  );
+
+  return next;
+}
+
+export function floatPane(
+  snapshot: LayoutSnapshot,
+  pane: string,
+  geometry: FloatingState
+): LayoutSnapshot {
+  const next = detachPane(cloneLayout(snapshot), pane);
+  next.floating[pane] = { ...geometry };
+  next.geometry[pane] = { ...geometry };
+
+  return next;
+}
+
+export function applyLayoutChange(
+  snapshot: LayoutSnapshot,
+  change: LayoutChange
+): LayoutSnapshot {
+  switch (change.type) {
+    case "dock": {
+      if (snapshot.docks[change.dock] === undefined) {
+        return snapshot;
+      }
+
+      const next = cloneLayout(snapshot);
+      const state = next.docks[change.dock];
+      if (change.size !== undefined) {
+        state.size = change.size;
+      }
+      if (change.collapsed !== undefined) {
+        state.collapsed = change.collapsed;
+      }
+
+      return next;
+    }
+    case "floating": {
+      if (snapshot.floating[change.pane] === undefined) {
+        return snapshot;
+      }
+
+      const next = cloneLayout(snapshot);
+      const geometry = {
+        ...next.floating[change.pane],
+        ...definedGeometry(change.geometry)
+      };
+      next.floating[change.pane] = geometry;
+      next.geometry[change.pane] = { ...geometry };
+
+      return next;
+    }
+    case "pane": {
+      const next = cloneLayout(snapshot);
+      next.panes[change.pane] = {
+        collapsed: change.collapsed
+      };
+
+      return next;
+    }
+    case "folder": {
+      const next = cloneLayout(snapshot);
+      next.folders[change.pane] = {
+        ...next.folders[change.pane],
+        [change.folder]: {
+          open: change.open
+        }
+      };
+
+      return next;
+    }
+    default:
+      return snapshot;
+  }
+}
+
+function detachPane(
+  snapshot: LayoutSnapshot,
+  pane: string
+): LayoutSnapshot {
+  for (const state of Object.values(snapshot.docks)) {
+    state.panes = state.panes.filter((key) => key !== pane);
+  }
+  delete snapshot.floating[pane];
+
+  return snapshot;
+}
+
+function definedGeometry(
+  geometry: FloatingState
+): FloatingState {
+  const defined: FloatingState = {};
+  for (const axis of ["x", "y", "width", "height"] as const) {
+    const value = geometry[axis];
+    if (value !== undefined) {
+      defined[axis] = value;
+    }
+  }
+
+  return defined;
+}
+
+function mapRecord<TValue, TResult>(
+  record: Readonly<Record<string, TValue>>,
+  map: (value: TValue) => TResult
+): Record<string, TResult> {
+  return Object.fromEntries(
+    Object.entries(record).map(([key, value]) => [key, map(value)])
+  );
 }
 
 function readDocks(

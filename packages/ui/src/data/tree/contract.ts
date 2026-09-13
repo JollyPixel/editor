@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { emitComposedEvent } from "../../events.ts";
 import type { IconName } from "../../icon/registry.ts";
 
 export type TreeDropWhere =
@@ -78,13 +79,7 @@ export function emitDataEvent<KName extends keyof DataEventMap>(
   name: KName,
   detail: DataEventMap[KName]
 ): void {
-  const event = new CustomEvent<DataEventMap[KName]>(name, {
-    detail,
-    bubbles: true,
-    composed: true
-  });
-
-  target.dispatchEvent(event);
+  emitComposedEvent(target, name, detail);
 }
 
 declare global {

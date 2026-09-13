@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { unitRatio } from "../numeric/bounds.ts";
+
 export interface PointerPosition {
   x: number;
   y: number;
@@ -24,12 +27,14 @@ export function ratioFromPointer(
   rect: AreaRect
 ): PointerPosition {
   return {
-    x: ratio(
+    x: unitRatio(
       pointer.x - rect.left,
+      0,
       rect.width
     ),
-    y: ratio(
+    y: unitRatio(
       pointer.y - rect.top,
+      0,
       rect.height
     )
   };
@@ -53,16 +58,3 @@ export function saturationValueFromPointer(
   };
 }
 
-function ratio(
-  offset: number,
-  size: number
-): number {
-  if (size <= 0) {
-    return 0;
-  }
-
-  return Math.min(
-    1,
-    Math.max(0, offset / size)
-  );
-}

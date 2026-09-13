@@ -6,8 +6,8 @@ import {
 } from "../controls/Button.ts";
 import { Text } from "../controls/Text.ts";
 import { detailOf } from "../dom.ts";
+import { defaultStorageAdapter } from "../storage/defaultStorage.ts";
 import type { JollyChangeDetail } from "../field/events.ts";
-import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 
 export interface PromptOptions {
@@ -120,7 +120,7 @@ export function showConfirm({
 }
 
 export async function resolveStoredPrompt({
-  storage = new LocalStorageAdapter(),
+  storage = defaultStorageAdapter(),
   storageKey,
   fallbackValue,
   ...promptOptions

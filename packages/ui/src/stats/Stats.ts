@@ -21,34 +21,23 @@ import type {
   StatsRecorder,
   StatsSnapshot
 } from "./StatsRecorder.ts";
-import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import { formatInteger } from "../monitors/format.ts";
+import { defaultStorageAdapter } from "../storage/defaultStorage.ts";
+import { NamespacedStore } from "../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
-import { resolveThemeColor } from "../theme/resolveThemeToken.ts";
+import {
+  resolveCssColor,
+  resolveThemeColor
+} from "../theme/resolveThemeToken.ts";
+import {
+  resolveMetricPalette,
+  type ResolvedMetricPalette,
+  type StatsThemeColors
+} from "./metricPalette.ts";
 
 // CONSTANTS
-const kSelectionSuffix = ":metric";
 const kGraphTop = 18;
 const kGraphPadding = 2;
-
-interface StatsColors {
-  accent: string;
-  accentBed: string;
-  fps: string;
-  fpsBed: string;
-  mb: string;
-  mbBed: string;
-  ms: string;
-  msBed: string;
-  success: string;
-  warning: string;
-  worst: string;
-  worstBed: string;
-}
-
-interface MetricPalette {
-  bed: string;
-  ink: string;
-}
 
 @customElement("jolly-stats")
 export class StatsElement extends LitElement {
@@ -69,20 +58,17 @@ export class StatsElement extends LitElement {
   @query("canvas")
   declare _canvas: HTMLCanvasElement;
 
-  #colors: StatsColors = {
+  #colors: StatsThemeColors = {
     accent: "#4488ff",
-    accentBed: "#111827",
-    fps: "#00ffff",
-    fpsBed: "#001122",
-    mb: "#ff0088",
-    mbBed: "#220011",
-    ms: "#00ff66",
-    msBed: "#00220d",
+    bed: "#111827",
     success: "#2f8f5b",
-    warning: "#ff9d00",
-    worst: "#ff9d00",
-    worstBed: "#221100"
+    warning: "#ff9d00"
   };
+  #palettes = new Map<string, ResolvedMetricPalette>();
+  #store = new NamespacedStore({
+    namespace: () => this.storageKey,
+    storage: () => this.storage
+  });
   #selectedId: string | null = null;
   #snapshot: StatsSnapshot = {};
   #unsubscribe: (() => void) | null = null;
@@ -95,7 +81,7 @@ export class StatsElement extends LitElement {
 
     this.recorder = null;
     this.storageKey = "jolly-stats";
-    this.storage = new LocalStorageAdapter();
+    this.storage = defaultStorageAdapter();
   }
 
   override connectedCallback(): void {
@@ -172,6 +158,7 @@ export class StatsElement extends LitElement {
   #connectRecorder(): void {
     this.#unsubscribe?.();
     this.#unsubscribe = null;
+    this.#palettes.clear();
     this.#snapshot = this.recorder?.snapshot() ?? {};
     this.#restoreSelection();
     if (this.recorder !== null) {
@@ -184,9 +171,7 @@ export class StatsElement extends LitElement {
   }
 
   #restoreSelection(): void {
-    const stored = this.storage.get(
-      `${this.storageKey}${kSelectionSuffix}`
-    );
+    const stored = this.#store.read("metric");
     const definitions = this.recorder?.definitions ?? [];
     this.#selectedId = definitions.some(
       ({ id }) => id === stored
@@ -231,10 +216,7 @@ export class StatsElement extends LitElement {
       index + delta + definitions.length
     ) % definitions.length;
     this.#selectedId = definitions[next].id;
-    this.storage.set(
-      `${this.storageKey}${kSelectionSuffix}`,
-      this.#selectedId
-    );
+    this.#store.write("metric", this.#selectedId);
     this.requestUpdate();
   }
 
@@ -317,40 +299,10 @@ export class StatsElement extends LitElement {
         "--jolly-accent-text",
         "#4488ff"
       ),
-      accentBed: resolveThemeColor(
+      bed: resolveThemeColor(
         this,
         "--jolly-surface-sunken",
         "#111827"
-      ),
-      fps: resolveThemeColor(
-        this,
-        "--jolly-stats-fps",
-        "#00ffff"
-      ),
-      fpsBed: resolveThemeColor(
-        this,
-        "--jolly-stats-fps-bed",
-        "#001122"
-      ),
-      mb: resolveThemeColor(
-        this,
-        "--jolly-stats-mb",
-        "#ff0088"
-      ),
-      mbBed: resolveThemeColor(
-        this,
-        "--jolly-stats-mb-bed",
-        "#220011"
-      ),
-      ms: resolveThemeColor(
-        this,
-        "--jolly-stats-ms",
-        "#00ff66"
-      ),
-      msBed: resolveThemeColor(
-        this,
-        "--jolly-stats-ms-bed",
-        "#00220d"
       ),
       success: resolveThemeColor(
         this,
@@ -361,18 +313,9 @@ export class StatsElement extends LitElement {
         this,
         "--jolly-warning",
         "#ff9d00"
-      ),
-      worst: resolveThemeColor(
-        this,
-        "--jolly-stats-worst",
-        "#ff9d00"
-      ),
-      worstBed: resolveThemeColor(
-        this,
-        "--jolly-stats-worst-bed",
-        "#221100"
       )
     };
+    this.#palettes.clear();
     this.#draw();
   };
 
@@ -415,6 +358,7 @@ export class StatsElement extends LitElement {
     this.#drawReadout(
       context,
       definition,
+      palette,
       rect.width
     );
     this.#drawGraph(
@@ -430,13 +374,14 @@ export class StatsElement extends LitElement {
   #drawReadout(
     context: CanvasRenderingContext2D,
     definition: MetricDefinition,
+    palette: ResolvedMetricPalette,
     width: number
   ): void {
     const value = this.#snapshot[definition.id] ?? 0;
     const valueText = this.#format(definition, value);
     context.font = "bold 11px Helvetica, Arial, sans-serif";
     context.textBaseline = "top";
-    context.fillStyle = this.#palette(definition).ink;
+    context.fillStyle = palette.ink;
     context.textAlign = "right";
     context.fillText(
       valueText,
@@ -458,7 +403,7 @@ export class StatsElement extends LitElement {
   #drawGraph(
     context: CanvasRenderingContext2D,
     definition: MetricDefinition,
-    palette: MetricPalette,
+    palette: ResolvedMetricPalette,
     width: number,
     height: number
   ): void {
@@ -511,51 +456,25 @@ export class StatsElement extends LitElement {
 
   #palette(
     definition: MetricDefinition
-  ): MetricPalette {
-    if (definition.id === "fps") {
-      return {
-        ink: this.#colors.fps,
-        bed: this.#colors.fpsBed
-      };
-    }
-    if (definition.id === "ms") {
-      return {
-        ink: this.#colors.ms,
-        bed: this.#colors.msBed
-      };
-    }
-    if (definition.id === "worstMs") {
-      return {
-        ink: this.#colors.worst,
-        bed: this.#colors.worstBed
-      };
-    }
-    if (definition.id === "mb") {
-      return {
-        ink: this.#colors.mb,
-        bed: this.#colors.mbBed
-      };
+  ): ResolvedMetricPalette {
+    let palette = this.#palettes.get(definition.id);
+    if (palette === undefined) {
+      palette = resolveMetricPalette(
+        definition,
+        this.#colors,
+        (value, fallback) => resolveCssColor(this, value, fallback)
+      );
+      this.#palettes.set(definition.id, palette);
     }
 
-    let ink = this.#colors.accent;
-    if (definition.better === "higher") {
-      ink = this.#colors.success;
-    }
-    else if (definition.better === "lower") {
-      ink = this.#colors.warning;
-    }
-
-    return {
-      ink,
-      bed: this.#colors.accentBed
-    };
+    return palette;
   }
 
   #format(
     definition: MetricDefinition,
     value: number
   ): string {
-    return definition.format?.(value) ?? String(Math.round(value));
+    return definition.format?.(value) ?? formatInteger(value);
   }
 }
 

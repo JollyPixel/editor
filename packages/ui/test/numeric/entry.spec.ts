@@ -6,8 +6,68 @@ import assert from "node:assert/strict";
 import {
   formatNumber,
   parseNumeric,
-  quantize
-} from "../../src/numeric/format.ts";
+  parseNumericEntry,
+  quantize,
+  stepNumericEntry,
+  type NumericBounds
+} from "../../src/numeric/entry.ts";
+
+// CONSTANTS
+const kBounds: NumericBounds = {
+  step: 0.5,
+  min: 0,
+  max: 10
+};
+const kNoModifiers = {
+  shiftKey: false,
+  altKey: false
+};
+
+describe("Numeric.parseNumericEntry", () => {
+  test("returns null for blank input", () => {
+    assert.equal(parseNumericEntry("  ", kBounds), null);
+  });
+
+  test("passes a parse failure through", () => {
+    const result = parseNumericEntry("alert(1)", kBounds);
+
+    assert.equal(result?.ok, false);
+  });
+
+  test("quantizes and clamps an evaluated expression", () => {
+    assert.deepEqual(parseNumericEntry("2.3", kBounds), {
+      ok: true,
+      value: 2.5
+    });
+    assert.deepEqual(parseNumericEntry("4*4", kBounds), {
+      ok: true,
+      value: 10
+    });
+  });
+});
+
+describe("Numeric.stepNumericEntry", () => {
+  test("moves one step in either direction", () => {
+    assert.equal(stepNumericEntry(2, 1, kNoModifiers, kBounds), 2.5);
+    assert.equal(stepNumericEntry(2, -1, kNoModifiers, kBounds), 1.5);
+  });
+
+  test("scales the step with Shift and Alt", () => {
+    assert.equal(
+      stepNumericEntry(2, 1, { shiftKey: true, altKey: false }, kBounds),
+      7
+    );
+    assert.equal(
+      stepNumericEntry(2, 1, { shiftKey: false, altKey: true }, kBounds),
+      2.05
+    );
+  });
+
+  test("clamps to the bounds", () => {
+    assert.equal(stepNumericEntry(10, 1, kNoModifiers, kBounds), 10);
+    assert.equal(stepNumericEntry(0, -1, kNoModifiers, kBounds), 0);
+  });
+});
 
 describe("Numeric.formatNumber", () => {
   test("follows the step's precision, so a 0.01 field does not jitter mid scrub", () => {

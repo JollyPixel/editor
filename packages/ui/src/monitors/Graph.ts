@@ -13,6 +13,7 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
+import { formatInteger } from "./format.ts";
 import { graphStyles } from "./Graph.styles.ts";
 import { resolveThemeColor } from "../theme/resolveThemeToken.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
@@ -143,7 +144,7 @@ export class GraphElement extends LitElement {
 
   get #displayed(): string {
     return this.format === undefined ?
-      String(Math.round(this.value)) :
+      formatInteger(this.value) :
       this.format(this.value);
   }
 

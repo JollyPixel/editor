@@ -84,6 +84,25 @@ test.describe("DockLayout persistence", () => {
     await expect.poll(async() => (await boxOf(frame)).y).toBe(origin.y);
   });
 
+  test("folds, folders and a collapsed dock survive a reload", async({ page }) => {
+    await open(page);
+
+    const inspector = page.locator("jolly-pane[key='inspector']");
+    const folder = page.locator("jolly-pane[key='hud'] jolly-folder");
+    const dock = page.locator("jolly-dock[key='left']");
+    await inspector.locator(".fold").click();
+    await folder.locator(".toggle").click();
+    await dock.locator(".resize-handle").dblclick();
+    await expect(folder).not.toHaveAttribute("open");
+    await expect(dock).toHaveAttribute("collapsed");
+
+    await reloadGallery(page);
+
+    await expect(inspector).toHaveAttribute("collapsed");
+    await expect(folder).not.toHaveAttribute("open");
+    await expect(dock).toHaveAttribute("collapsed");
+  });
+
   test("emptying a solid dock gives its space back", async({ page }) => {
     await open(page);
 

@@ -2,7 +2,11 @@ export type MetricAggregation = "last" | "average" | "max";
 
 export type MetricDirection = "higher" | "lower";
 
-/** Describes one value recorded and displayed by the stats system. */
+export interface MetricPalette {
+  ink?: string;
+  bed?: string;
+}
+
 export interface MetricDefinition {
   id: string;
   label: string;
@@ -17,6 +21,7 @@ export interface MetricDefinition {
    */
   better?: MetricDirection;
   aggregate?: MetricAggregation;
+  palette?: MetricPalette;
   /**
    * Pulled once per refresh window from a live source.
    */
@@ -28,9 +33,6 @@ export interface MetricRange {
   max: number;
 }
 
-/**
- * Resolves fixed or automatic graph bounds for a metric history.
- */
 export function resolveMetricRange(
   definition: MetricDefinition,
   history: readonly number[]

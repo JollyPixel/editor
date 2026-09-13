@@ -4,6 +4,7 @@ import {
   type PresencePeer
 } from "../peer/Presence.ts";
 import type { JollyPeerSelectDetail } from "../peer/events.ts";
+import { FacadeItem } from "./FacadeItem.ts";
 
 export interface PresenceOptions {
   /**
@@ -18,12 +19,14 @@ export interface PresenceOptions {
   selectable?: boolean;
 }
 
-export class Presence {
+export class Presence
+  extends FacadeItem<HTMLElementTagNameMap["jolly-presence"]> {
   readonly element: HTMLElementTagNameMap["jolly-presence"];
 
   constructor(
     options: PresenceOptions = {}
   ) {
+    super();
     this.element = new PresenceElement();
     this.element.max = options.max ?? Infinity;
     this.element.selectable = options.selectable ?? false;
@@ -73,29 +76,5 @@ export class Presence {
     peers: Iterable<PresencePeer>
   ): void {
     this.element.peers = peers;
-  }
-
-  get hidden(): boolean {
-    return Boolean(this.element.hidden);
-  }
-
-  set hidden(
-    value: boolean
-  ) {
-    this.element.hidden = value;
-  }
-
-  get disabled(): boolean {
-    return this.element.hasAttribute("disabled");
-  }
-
-  set disabled(
-    value: boolean
-  ) {
-    this.element.toggleAttribute("disabled", value);
-  }
-
-  dispose(): void {
-    this.element.remove();
   }
 }

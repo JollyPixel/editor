@@ -15,9 +15,10 @@ implements the [shared field API](../field/shared-field-api.md).
 | `value` | `number \| typeof Mixed` | `0` |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` |
 
-Range movement emits `jolly-input`; release emits `jolly-change`. Enter or
-blur commits typed numeric input. The readout accepts the same expression
-grammar as `jolly-number`.
+Range movement emits `jolly-input`; release emits `jolly-change`. The readout
+follows the same entry rules as `jolly-number`: expressions, Enter or blur to
+commit, Escape to discard, and arrow keys to commit one step with Shift and
+Alt scaling.
 
 A vertical slider stands the lane upright, with the maximum at the top and the
 readout above it. An empty `label` hides the label line. Set

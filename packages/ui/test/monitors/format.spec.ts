@@ -6,10 +6,20 @@ import assert from "node:assert/strict";
 import {
   formatCount,
   formatDecimal,
+  formatInteger,
   formatMilliseconds,
   formatPercent,
   formatVector
 } from "../../src/monitors/format.ts";
+
+describe("monitors.formatInteger", () => {
+  test("rounds without grouping thousands", () => {
+    assert.equal(
+      formatInteger(1234.6),
+      "1235"
+    );
+  });
+});
 
 describe("monitors.formatCount", () => {
   test("rounds and groups thousands", () => {

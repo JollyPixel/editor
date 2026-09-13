@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import "../monitors/Monitor.ts";
 import "../monitors/Graph.ts";
+import { FacadeItem } from "./FacadeItem.ts";
 import {
   displayMonitorValue,
   type MonitorValue
@@ -39,7 +40,7 @@ export type MonitorKey<TObject> = {
 export class Monitor<
   TObject extends object,
   TKey extends MonitorKey<TObject>
-> {
+> extends FacadeItem {
   readonly element: HTMLElement;
 
   #object: TObject;
@@ -53,6 +54,7 @@ export class Monitor<
     key: TKey,
     options: MonitorOptions<TObject[TKey]> = {}
   ) {
+    super();
     this.#object = object;
     this.#key = key;
     this.#options = options;
@@ -63,35 +65,11 @@ export class Monitor<
     this.refresh();
   }
 
-  get hidden(): boolean {
-    return Boolean(this.element.hidden);
-  }
-
-  set hidden(
-    value: boolean
-  ) {
-    this.element.hidden = value;
-  }
-
-  get disabled(): boolean {
-    return this.element.hasAttribute("disabled");
-  }
-
-  set disabled(
-    value: boolean
-  ) {
-    this.element.toggleAttribute("disabled", value);
-  }
-
   refresh(): void {
     const value = this.#object[this.#key];
     this.#bindable.value = this.#graph
       ? value
       : displayMonitorValue(value, this.#options);
-  }
-
-  dispose(): void {
-    this.element.remove();
   }
 }
 
