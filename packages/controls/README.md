@@ -52,10 +52,10 @@ For advanced input combinations:
 import { InputCombination } from "@jolly-pixel/controls";
 
 const dashCombo = InputCombination.all(
-  InputCombination.key("ShiftLeft"),
+  InputCombination.key("ShiftLeft", "down"),
   InputCombination.key("ArrowRight")
-);
-if (dashCombo.evaluate(input)) {
+).bind(input);
+if (dashCombo()) {
   console.log("dash!");
 }
 ```

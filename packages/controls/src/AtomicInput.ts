@@ -15,6 +15,23 @@ export interface InputCondition {
   reset(): void;
 }
 
+export interface BoundInputCondition {
+  (): boolean;
+  reset(): void;
+}
+
+export function bindInputCondition(
+  condition: InputCondition,
+  input: Input
+): BoundInputCondition {
+  return Object.assign(
+    () => condition.evaluate(input),
+    {
+      reset: () => condition.reset()
+    }
+  );
+}
+
 export type CombinedInputType =
   | "key"
   | "mouse"
@@ -110,6 +127,12 @@ export class AtomicInput implements InputCondition {
 
   reset(): void {
     // No state to reset for atomic inputs
+  }
+
+  bind(
+    input: Input
+  ): BoundInputCondition {
+    return bindInputCondition(this, input);
   }
 
   #evaluateKey(

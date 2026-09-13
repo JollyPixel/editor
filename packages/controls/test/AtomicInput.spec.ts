@@ -90,4 +90,21 @@ describe("Controls.AtomicInput", () => {
       assert.doesNotThrow(() => atomic.reset());
     });
   });
+
+  describe("bind", () => {
+    test("returns a function that evaluates against the bound Input", () => {
+      const down = new AtomicInput("key", "KeyA", "down").bind(input);
+
+      assert.strictEqual(down(), false);
+
+      input.keyboard.buttonsDown.add("KeyA");
+      assert.strictEqual(down(), true);
+    });
+
+    test("exposes reset() on the bound function", () => {
+      const bound = new AtomicInput("key", "KeyA", "down").bind(input);
+
+      assert.doesNotThrow(() => bound.reset());
+    });
+  });
 });

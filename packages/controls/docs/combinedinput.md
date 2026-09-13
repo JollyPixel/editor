@@ -67,6 +67,10 @@ interface InputCondition {
 condition-owned progress. Atomic conditions have no progress to clear;
 composite conditions forward the reset to their children.
 
+Every concrete condition class also has `bind(input)`, described in
+[Binding to an Input](#binding-to-an-input). It is not part of the
+`InputCondition` interface.
+
 `InputCondition`, `AtomicInput`, and the action aliases described below are
 exported from the package root.
 
@@ -290,6 +294,54 @@ const konami = InputCombination.sequenceWithTimeout(
   "ArrowDown.pressed"
 );
 ```
+
+## Binding to an Input
+
+```ts
+interface BoundInputCondition {
+  (): boolean;
+  reset(): void;
+}
+
+condition.bind(
+  input: Input
+): BoundInputCondition
+
+bindInputCondition(
+  condition: InputCondition,
+  input: Input
+): BoundInputCondition
+```
+
+`bind()` returns a function that calls `condition.evaluate(input)`. The
+bound `reset()` calls `condition.reset()`. `bindInputCondition()` does the
+same for any object that implements `InputCondition`, including custom
+conditions without a `bind()` method.
+
+```ts
+const dash = InputCombination.all(
+  InputCombination.key("ShiftLeft", "down"),
+  InputCombination.key("ArrowRight", "pressed")
+).bind(input);
+
+function gameLoop() {
+  input.update();
+
+  if (dash()) {
+    console.log("Dash");
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+```
+
+A bound function does not copy the condition. Every function bound from the
+same condition shares its state, so a `SequenceInputs` bound to two inputs
+advances from both. Call a bound sequence once per frame, as with
+`evaluate()`.
+
+`BoundInputCondition` and `bindInputCondition()` are exported from the
+package root.
 
 ## Concrete condition classes
 
