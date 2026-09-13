@@ -295,6 +295,54 @@ const konami = InputCombination.sequenceWithTimeout(
 );
 ```
 
+### Held steps
+
+```ts
+InputCombination.hold(
+  key: ExtendedKeyCode
+): HoldInput
+
+InputCombination.hold(
+  entry: InputCondition,
+  sustain: InputCondition
+): HoldInput
+```
+
+A held step is matched by its `entry` condition and must keep its `sustain`
+condition true until the sequence completes. `hold(key)` uses the key's
+`"pressed"` state as entry and its `"down"` state as sustain. Mouse, gamepad,
+and composite held steps pass both conditions. Calling `hold()` with a
+condition but no sustain condition throws a `TypeError`.
+
+```ts
+const command = InputCombination.sequenceWithTimeout(
+  500,
+  InputCombination.hold("ControlLeft"),
+  InputCombination.hold("AltLeft"),
+  "KeyX.pressed"
+);
+```
+
+This matches Ctrl, then Alt, then X, with Ctrl and Alt still held when X is
+pressed. Pressing Alt before Ctrl does not match.
+
+Held steps change sequence progress as follows:
+
+- Before each evaluation, progress returns to the first matched held step
+  whose `sustain` condition is false. That step must be entered again.
+- The timeout does not apply while the last matched step is held. It still
+  applies after a step that is not held.
+- When a held step matches, the next step is evaluated during the same call,
+  so held keys pressed in the same frame still match in order. Steps that are
+  not held advance once per call.
+- On timeout or completion, progress returns to the step after the last held
+  step instead of the first step. While Ctrl and Alt stay held, each new X
+  press completes the example above again.
+
+Outside a sequence, `HoldInput#evaluate()` returns its `sustain` result.
+`reset()` resets both conditions. `HoldInput` is exported from the package
+root.
+
 ## Binding to an Input
 
 ```ts
@@ -375,6 +423,7 @@ The low-level `CombinedInputType` and `AtomicInputAction` unions used by
 new AllInputs(conditions: InputCondition[])
 new AtLeastOneInput(conditions: InputCondition[])
 new NoneInputs(conditions: InputCondition[])
+new HoldInput(entry: InputCondition, sustain: InputCondition)
 
 new SequenceInputs(
   conditions: InputCondition[],

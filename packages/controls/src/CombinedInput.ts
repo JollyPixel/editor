@@ -131,6 +131,36 @@ export class NoneInputs implements InputCondition {
   }
 }
 
+export class HoldInput implements InputCondition {
+  readonly entry: InputCondition;
+  readonly sustain: InputCondition;
+
+  constructor(
+    entry: InputCondition,
+    sustain: InputCondition
+  ) {
+    this.entry = entry;
+    this.sustain = sustain;
+  }
+
+  evaluate(
+    input: Input
+  ): boolean {
+    return this.sustain.evaluate(input);
+  }
+
+  reset(): void {
+    this.entry.reset();
+    this.sustain.reset();
+  }
+
+  bind(
+    input: Input
+  ): BoundInputCondition {
+    return bindInputCondition(this, input);
+  }
+}
+
 /**
  * Sequence condition: inputs must be pressed in specific order within timeout.
  */
@@ -158,18 +188,36 @@ export class SequenceInputs implements InputCondition {
   ): boolean {
     const now = this.#now();
 
-    if (now - this.#lastActivationTime > this.#timeoutMs) {
-      this.#currentIndex = 0;
+    this.#rollbackReleasedStep(input);
+    if (
+      !(this.#conditions[this.#currentIndex - 1] instanceof HoldInput) &&
+      now - this.#lastActivationTime > this.#timeoutMs
+    ) {
+      this.#currentIndex = this.#resumeIndex(this.#currentIndex);
     }
 
-    if (this.#conditions[this.#currentIndex]?.evaluate(input)) {
+    while (this.#currentIndex < this.#conditions.length) {
+      const condition = this.#conditions[this.#currentIndex];
+      const isHeld = condition instanceof HoldInput;
+      const matched = isHeld ?
+        condition.entry.evaluate(input) :
+        condition.evaluate(input);
+      if (!matched) {
+        return false;
+      }
+
       this.#currentIndex++;
       this.#lastActivationTime = now;
 
       if (this.#currentIndex >= this.#conditions.length) {
-        this.#currentIndex = 0;
+        this.#currentIndex = this.#resumeIndex(
+          this.#conditions.length - 1
+        );
 
         return true;
+      }
+      if (!isHeld) {
+        return false;
       }
     }
 
@@ -188,6 +236,34 @@ export class SequenceInputs implements InputCondition {
     input: Input
   ): BoundInputCondition {
     return bindInputCondition(this, input);
+  }
+
+  #rollbackReleasedStep(
+    input: Input
+  ): void {
+    for (let index = 0; index < this.#currentIndex; index++) {
+      const condition = this.#conditions[index];
+      if (
+        condition instanceof HoldInput &&
+        !condition.sustain.evaluate(input)
+      ) {
+        this.#currentIndex = index;
+
+        return;
+      }
+    }
+  }
+
+  #resumeIndex(
+    limit: number
+  ): number {
+    for (let index = limit - 1; index >= 0; index--) {
+      if (this.#conditions[index] instanceof HoldInput) {
+        return index + 1;
+      }
+    }
+
+    return 0;
   }
 }
 
@@ -264,6 +340,28 @@ export class InputCombination {
       [gamepad, button],
       state
     );
+  }
+
+  static hold(key: ExtendedKeyCode): HoldInput;
+  static hold(
+    entry: InputCondition,
+    sustain: InputCondition
+  ): HoldInput;
+  static hold(
+    entry: ExtendedKeyCode | InputCondition,
+    sustain?: InputCondition
+  ): HoldInput {
+    if (typeof entry === "string") {
+      return new HoldInput(
+        new AtomicInput("key", entry, "pressed"),
+        new AtomicInput("key", entry, "down")
+      );
+    }
+    if (sustain === undefined) {
+      throw new TypeError("hold() requires a sustain condition");
+    }
+
+    return new HoldInput(entry, sustain);
   }
 
   static all(
