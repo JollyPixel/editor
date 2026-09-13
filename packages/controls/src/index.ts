@@ -1,6 +1,5 @@
 export * from "./Input.class.ts";
-export * from "./AtomicInput.ts";
-export * from "./CombinedInput.ts";
+export * from "./combination/index.ts";
 export * from "./InputActionQuery.ts";
 export * from "./axis/index.ts";
 export * from "./devices/index.ts";

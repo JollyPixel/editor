@@ -1,10 +1,10 @@
 // Import Internal Dependencies
 import type { Input } from "../Input.class.ts";
-import { InputCombination } from "../CombinedInput.ts";
-import type {
-  InputCondition,
-  CombinedKeyboardInputAction
-} from "../AtomicInput.ts";
+import {
+  InputCombination,
+  type InputCondition,
+  type CombinedKeyboardInputAction
+} from "../combination/index.ts";
 import type {
   GamepadAxis,
   GamepadIndex,
@@ -121,13 +121,10 @@ export class Axis {
     input: Input
   ): number {
     const sources = this.#sources;
-
-    /**
-     * One source cannot tie with itself, so the resolution loop below would
-     * only ever reproduce its clamped value.
-     */
     if (sources.length === 1) {
-      return clamp(sources[0].sample(input)) * this.#factor;
+      return clamp(
+        sources[0].sample(input)
+      ) * this.#factor;
     }
 
     let tiedValue = 0;

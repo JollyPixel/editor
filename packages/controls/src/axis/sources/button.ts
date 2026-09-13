@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { Input } from "../../Input.class.ts";
-import type { InputCondition } from "../../AtomicInput.ts";
+import type { InputCondition } from "../../combination/index.ts";
 import type { AxisSource } from "./AxisSource.ts";
 
 export class ButtonAxisSource implements AxisSource {

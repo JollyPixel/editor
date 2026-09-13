@@ -41,7 +41,11 @@ export type KeyCode =
   | "MediaPlayPause" | "MediaStop" | "MediaTrackNext" | "MediaTrackPrevious"
   | "Power" | "Sleep" | "WakeUp";
 
-export type ExtendedKeyCode = KeyCode | Alphabet | Numeric;
+export type ExtendedKeyCode =
+  | KeyCode
+  | Alphabet
+  | Lowercase<Alphabet>
+  | Numeric;
 
 /**
  * Every shorthand (`"A"`, `"a"`, `"7"`) pre-resolved to its `KeyCode`.

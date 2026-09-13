@@ -27,6 +27,18 @@ test("mouse strings cannot reach keyboard conditions", () => {
   expect(InputCombination.atLeastOne).type.not.toBeCallableWith("left.down");
 });
 
+test("Axis accepts bare keys and sentinels as halves", () => {
+  expect(Axis.buttons).type.toBeCallableWith("d", "a");
+  expect(Axis.buttons).type.toBeCallableWith("ANY");
+  expect(Axis.buttons).type.not.toBeCallableWith("KeyW.held");
+});
+
+test("gamepadStick() takes a pad index and a stick axis", () => {
+  expect(Axis.gamepadStick(3, 1)).type.toBe<Axis>();
+  expect(Axis.gamepadStick).type.not.toBeCallableWith(4, "LeftStickX");
+  expect(Axis.gamepadStick).type.not.toBeCallableWith(0, "A");
+});
+
 test("resolved axes cannot nest as raw sources", () => {
   const buttons = Axis.buttons("KeyW", "KeyS");
   const stick = Axis.gamepadStick(0, "LeftStickY");

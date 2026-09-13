@@ -11,9 +11,9 @@ import {
   Input,
   MouseEventButton,
   GamepadButton
-} from "../src/index.ts";
-import { AtomicInput } from "../src/AtomicInput.ts";
-import * as mocks from "./mocks/index.ts";
+} from "../../../src/index.ts";
+import { AtomicInput } from "../../../src/combination/conditions/index.ts";
+import * as mocks from "../../mocks/index.ts";
 
 describe("Controls.AtomicInput", () => {
   let canvas: mocks.CanvasAdapter;

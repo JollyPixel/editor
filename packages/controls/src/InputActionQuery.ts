@@ -1,24 +1,33 @@
 // Import Internal Dependencies
 import type { InputCustomAction } from "./types.ts";
 
-export class InputActionQuery<TAction> {
+export type InputActionQueryValue<TAction> = Exclude<
+  TAction,
+  InputCustomAction
+>;
+
+export class InputActionQuery<
+  TAction
+> {
   readonly isAny: boolean;
   readonly isNone: boolean;
-  readonly value: TAction | null;
+  readonly value: InputActionQueryValue<TAction> | null;
 
   constructor(
     action: TAction | InputCustomAction
   ) {
     this.isAny = action === "ANY";
     this.isNone = action === "NONE";
-    this.value = this.isAny || this.isNone ? null : action as TAction;
+    this.value = this.isAny || this.isNone ?
+      null :
+      action as InputActionQueryValue<TAction>;
   }
 
   match(
     handlers: {
       any: () => boolean;
       none: () => boolean;
-      value: (action: TAction) => boolean;
+      value: (action: InputActionQueryValue<TAction>) => boolean;
     }
   ): boolean {
     if (this.isAny) {
@@ -28,6 +37,8 @@ export class InputActionQuery<TAction> {
       return handlers.none();
     }
 
-    return handlers.value(this.value as TAction);
+    return handlers.value(
+      this.value as InputActionQueryValue<TAction>
+    );
   }
 }

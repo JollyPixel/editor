@@ -36,7 +36,7 @@ export const ALPHABET_TO_KEY = {
 
 export function isAlphabet(
   char: string
-): char is Alphabet {
+): char is Alphabet | Lowercase<Alphabet> {
   return kAlphabet.has(
     char.toUpperCase()
   );

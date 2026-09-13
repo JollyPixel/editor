@@ -58,11 +58,11 @@ directly, so they can be constructed and tested without a real browser.
 A single evaluable condition binding one device action (a key, mouse button,
 or gamepad button) to a state (`down` / `pressed` / `released`).
 
-### CombinedInput
+### Combination
 
-The composite condition layer built on `AtomicInput`: `AllInputs`,
-`AtLeastOneInput`, `NoneInputs`, `SequenceInputs`, and `HoldInput`, plus the
-`InputCombination` factory that builds them.
+The condition module (`src/combination`) built on `AtomicInput`: the
+`AllInputs`, `AtLeastOneInput`, `NoneInputs`, `SequenceInputs`, and `HoldInput`
+composites, plus the `InputCombination` factory that builds them.
 
 ### Held step
 

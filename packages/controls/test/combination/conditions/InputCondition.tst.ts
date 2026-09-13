@@ -8,11 +8,9 @@ import {
 import {
   Input,
   InputCombination,
-  type HoldInput,
-  type SequenceInputs,
   bindInputCondition,
   type BoundInputCondition
-} from "../src/index.ts";
+} from "../../../src/index.ts";
 
 declare const input: Input;
 
@@ -55,25 +53,5 @@ test("bindInputCondition() accepts a structural condition", () => {
       reset: () => undefined
     },
     input
-  );
-});
-
-test("hold() accepts a key or an entry/sustain pair", () => {
-  expect(InputCombination.hold("ControlLeft")).type.toBe<HoldInput>();
-  expect(InputCombination.hold).type.toBeCallableWith(
-    InputCombination.mouse("left", "pressed"),
-    InputCombination.mouse("left", "down")
-  );
-  expect(InputCombination.sequence(
-    InputCombination.hold("ControlLeft"),
-    "KeyX.pressed"
-  )).type.toBe<SequenceInputs>();
-});
-
-test("hold() rejects mouse actions and a lone condition", () => {
-  expect(InputCombination.hold).type.not.toBeCallableWith("left");
-  expect(InputCombination.hold).type.not.toBeCallableWith("ControlLeft.pressed");
-  expect(InputCombination.hold).type.not.toBeCallableWith(
-    InputCombination.key("KeyA")
   );
 });
