@@ -16,7 +16,10 @@ import {
   SequenceInputs,
   InputCombination
 } from "../src/CombinedInput.ts";
-import type { InputCondition } from "../src/AtomicInput.ts";
+import {
+  bindInputCondition,
+  type InputCondition
+} from "../src/AtomicInput.ts";
 import * as mocks from "./mocks/index.ts";
 
 function stubCondition(
@@ -141,6 +144,88 @@ describe("Controls.CombinedInput", () => {
         [1, 1]
       );
       assert.strictEqual(sequence.evaluate(input), false);
+    });
+  });
+
+  describe("bind", () => {
+    test("AllInputs / AtLeastOneInput / NoneInputs bind to the same result as evaluate()", () => {
+      assert.strictEqual(
+        new AllInputs([stubCondition(true), stubCondition(false)]).bind(input)(),
+        false
+      );
+      assert.strictEqual(
+        new AtLeastOneInput([stubCondition(false), stubCondition(true)]).bind(input)(),
+        true
+      );
+      assert.strictEqual(
+        new NoneInputs([stubCondition(false)]).bind(input)(),
+        true
+      );
+    });
+
+    test("passes the bound Input to every evaluation", () => {
+      const evaluate = mock.fn((_input: Input) => true);
+      const bound = new AllInputs([
+        {
+          evaluate,
+          reset: () => void 0
+        }
+      ]).bind(input);
+
+      bound();
+      bound();
+
+      assert.deepStrictEqual(
+        evaluate.mock.calls.map((call) => call.arguments[0]),
+        [input, input]
+      );
+    });
+
+    test("reset() on the bound function resets the underlying condition", () => {
+      const conditions = [stubCondition(true), stubCondition(true)];
+      const bound = new AtLeastOneInput(conditions).bind(input);
+
+      bound.reset();
+
+      assert.deepStrictEqual(
+        conditions.map((condition) => condition.resetCalls),
+        [1, 1]
+      );
+    });
+
+    test("a bound SequenceInputs shares progress with its condition", () => {
+      const sequence = new SequenceInputs(
+        [stubCondition(true), stubCondition(true)],
+        100,
+        () => 0
+      );
+      const bound = sequence.bind(input);
+
+      assert.strictEqual(bound(), false);
+      assert.strictEqual(sequence.evaluate(input), true);
+
+      bound();
+      bound.reset();
+      assert.strictEqual(bound(), false);
+      assert.strictEqual(bound(), true);
+    });
+
+    test("bindInputCondition() binds a plain InputCondition object", () => {
+      const bound = bindInputCondition(stubCondition(true), input);
+
+      assert.strictEqual(bound(), true);
+    });
+
+    test("chains off an InputCombination factory", () => {
+      input.keyboard.buttonsDown.add("ShiftLeft");
+      input.keyboard.buttonsDown.add("ArrowRight");
+
+      const dash = InputCombination.all(
+        InputCombination.key("ShiftLeft", "down"),
+        InputCombination.key("ArrowRight", "down")
+      ).bind(input);
+
+      assert.strictEqual(dash(), true);
     });
   });
 

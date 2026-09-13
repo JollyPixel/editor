@@ -11,7 +11,9 @@ import {
 
 import {
   AtomicInput,
+  bindInputCondition,
   type InputCondition,
+  type BoundInputCondition,
   type CombinedInputAction,
   type CombinedKeyboardInputAction,
   type CombinedMouseInputAction,
@@ -47,6 +49,12 @@ export class AllInputs implements InputCondition {
       condition.reset();
     }
   }
+
+  bind(
+    input: Input
+  ): BoundInputCondition {
+    return bindInputCondition(this, input);
+  }
 }
 
 /**
@@ -78,6 +86,12 @@ export class AtLeastOneInput implements InputCondition {
       condition.reset();
     }
   }
+
+  bind(
+    input: Input
+  ): BoundInputCondition {
+    return bindInputCondition(this, input);
+  }
 }
 
 /**
@@ -108,6 +122,12 @@ export class NoneInputs implements InputCondition {
     for (const condition of this.#conditions) {
       condition.reset();
     }
+  }
+
+  bind(
+    input: Input
+  ): BoundInputCondition {
+    return bindInputCondition(this, input);
   }
 }
 
@@ -162,6 +182,12 @@ export class SequenceInputs implements InputCondition {
     for (const condition of this.#conditions) {
       condition.reset();
     }
+  }
+
+  bind(
+    input: Input
+  ): BoundInputCondition {
+    return bindInputCondition(this, input);
   }
 }
 
