@@ -57,14 +57,14 @@ export class LayerChunkCache {
     this.#shift = shift;
     this.#mask = chunkSize - 1;
 
-    const { offset } = layer;
-    this.#offsetX = offset.x;
-    this.#offsetY = offset.y;
-    this.#offsetZ = offset.z;
+    const { position } = layer;
+    this.#offsetX = position.x;
+    this.#offsetY = position.y;
+    this.#offsetZ = position.z;
 
-    const baseCx = (minWx - offset.x) >> shift;
-    const baseCy = (minWy - offset.y) >> shift;
-    const baseCz = (minWz - offset.z) >> shift;
+    const baseCx = (minWx - position.x) >> shift;
+    const baseCy = (minWy - position.y) >> shift;
+    const baseCz = (minWz - position.z) >> shift;
     this.#baseCx = baseCx;
     this.#baseCy = baseCy;
     this.#baseCz = baseCz;
@@ -83,9 +83,9 @@ export class LayerChunkCache {
       }
     }
 
-    this.#centreWx = ((baseCx + 1) * chunkSize) + offset.x;
-    this.#centreWy = ((baseCy + 1) * chunkSize) + offset.y;
-    this.#centreWz = ((baseCz + 1) * chunkSize) + offset.z;
+    this.#centreWx = ((baseCx + 1) * chunkSize) + position.x;
+    this.#centreWy = ((baseCy + 1) * chunkSize) + position.y;
+    this.#centreWz = ((baseCz + 1) * chunkSize) + position.z;
     this.#centreChunk = this.#chunks[(kSpan * kSpan) + kSpan + 1];
   }
 

@@ -15,17 +15,21 @@ const kChunkSize = 4;
 
 function makeChunk(
   cx: number,
-  offset = { x: 0, y: 0, z: 0 }
+  position = { x: 0, y: 0, z: 0 }
 ): { layer: VoxelLayer; chunk: VoxelChunk; } {
   const layer = new VoxelLayer({
     id: "layer_0",
     name: "Ground",
     order: 0,
     chunkSize: kChunkSize,
-    offset
+    position
   });
   layer.setVoxelAt(
-    { x: (cx * kChunkSize) + offset.x, y: offset.y, z: offset.z },
+    {
+      x: (cx * kChunkSize) + position.x,
+      y: position.y,
+      z: position.z
+    },
     { blockId: 1, transform: 0 }
   );
 
@@ -94,7 +98,7 @@ describe("ChunkViewport — contains", () => {
     assert.equal(viewport.contains(layer, chunk, true), true);
   });
 
-  it("measures from the chunk center shifted by the layer offset", () => {
+  it("measures from the chunk center shifted by the layer position", () => {
     const near = makeChunk(0, { x: 0, y: 0, z: 0 });
     const far = makeChunk(0, { x: 40, y: 0, z: 0 });
     const viewport = makeViewport(

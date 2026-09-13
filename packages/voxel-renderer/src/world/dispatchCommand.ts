@@ -66,11 +66,11 @@ export function dispatchCommand(
       );
       break;
 
-    case "offset-updated":
-      if ("offset" in cmd.metadata) {
-        world.setLayerOffset(
+    case "position-updated":
+      if ("position" in cmd.metadata) {
+        world.setLayerPosition(
           cmd.layerName,
-          cmd.metadata.offset
+          cmd.metadata.position
         );
       }
       else {
@@ -79,6 +79,13 @@ export function dispatchCommand(
           cmd.metadata.delta
         );
       }
+      break;
+
+    case "position-rebased":
+      world.rebaseLayer(
+        cmd.layerName,
+        cmd.metadata.position
+      );
       break;
 
     case "voxel-set":

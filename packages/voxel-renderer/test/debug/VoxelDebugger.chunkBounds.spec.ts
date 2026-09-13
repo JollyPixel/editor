@@ -141,9 +141,9 @@ describe("VoxelDebugger - chunk bounds", () => {
     }
   });
 
-  it("shifts the box by the layer offset", () => {
+  it("shifts the box by the layer position", () => {
     const engine = makeBaseEngine({ debug: { chunkBounds: true } });
-    engine.world.addLayer("Shifted").offset = { x: 10, y: 20, z: 30 };
+    engine.world.addLayer("Shifted").position = { x: 10, y: 20, z: 30 };
     engine.world.setVoxel("Shifted", {
       position: { x: 10, y: 20, z: 30 },
       blockId: kCubeId

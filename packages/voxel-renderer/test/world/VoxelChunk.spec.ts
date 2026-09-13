@@ -347,3 +347,29 @@ describe("VoxelChunk clone()", () => {
     assert.equal(copy.voxelCount, 0);
   });
 });
+
+describe("VoxelChunk copyFrom()", () => {
+  it("replaces storage and bounds while keeping the target identity", () => {
+    const target = new VoxelChunk([1, 2, 3], 8);
+    const source = new VoxelChunk([4, 5, 6], 8);
+    target.set([0, 0, 0], makeVoxelEntry(1, 0));
+    source.set([5, 6, 7], makeVoxelEntry(2, 1));
+
+    target.copyFrom(source);
+
+    assert.equal(target.cx, 1);
+    assert.equal(target.cy, 2);
+    assert.equal(target.cz, 3);
+    assert.equal(target.get([0, 0, 0]), undefined);
+    assert.deepEqual(target.get([5, 6, 7]), makeVoxelEntry(2, 1));
+    assert.equal(target.mayContain(5, 6, 7), true);
+    assert.equal(target.dirty, true);
+  });
+
+  it("rejects a source with a different chunk size", () => {
+    const target = new VoxelChunk([0, 0, 0], 8);
+    const source = new VoxelChunk([0, 0, 0], 16);
+
+    assert.throws(() => target.copyFrom(source), RangeError);
+  });
+});

@@ -177,7 +177,7 @@ describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () =
     assert.deepEqual([...geometries.keys()], ["atlas"]);
   });
 });
-describe("VoxelMeshBuilder — neighbour lookups across chunks and layer offsets", () => {
+describe("VoxelMeshBuilder — neighbour lookups across chunks and layer positions", () => {
   it("culls against an opaque layer whose offset shifts it onto a different chunk grid", () => {
     const fixture = makeFixture();
     /*
@@ -185,7 +185,7 @@ describe("VoxelMeshBuilder — neighbour lookups across chunks and layer offsets
      * the meshed layer's — the neighbour lookup cannot assume a shared grid.
      */
     const shifted = fixture.world.addLayer("shifted");
-    shifted.offset = { x: 2, y: 0, z: 0 };
+    shifted.position = { x: 2, y: 0, z: 0 };
     fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     shifted.setVoxelAt({ x: 5, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 

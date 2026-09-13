@@ -59,7 +59,7 @@ const entry = engine.world.getVoxelAt({
 
 // Move an entire layer in world space
 // e.g. snap a prefab layer to a new grid position
-engine.world.setLayerOffset("Ground", {
+engine.world.setLayerPosition("Ground", {
   x: 8, y: 0, z: 0
 });
 ```

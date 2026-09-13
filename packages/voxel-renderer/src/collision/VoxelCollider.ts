@@ -13,7 +13,7 @@ export interface VoxelChunkCollision {
    * Per-tileset geometry that collision adapters may merge or ignore.
    */
   geometries: ReadonlyMap<string, THREE.BufferGeometry>;
-  layerOffset: VoxelCoord;
+  layerPosition: VoxelCoord;
 }
 
 /**

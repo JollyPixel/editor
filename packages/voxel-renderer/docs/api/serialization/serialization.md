@@ -22,7 +22,7 @@ interface VoxelLayerJSON {
   visible: boolean;
   opacity?: number;
   order: number;
-  offset?: VoxelCoord;
+  position?: VoxelCoord;
   properties?: Record<string, any>;
   voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
 }
@@ -37,8 +37,9 @@ interface VoxelWorldJSON {
 }
 ```
 
-Voxel keys contain world-space coordinates, including the layer offset. Older
-documents without `opacity` or `offset` load with opacity `1` and a zero offset.
+Voxel keys contain layer-local coordinates. The layer position locates that
+coordinate space in the world, so changing only `position` moves the layer.
+Documents without `opacity` or `position` load with opacity `1` and a zero position.
 A missing `compositing` loads as `"composite"`; use `"replace"` explicitly for
 cell replacement. Block surface settings are stored in the block definitions.
 Migrate legacy `transparent: true` to `alphaMode: "blend"` before loading old

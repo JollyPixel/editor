@@ -96,26 +96,26 @@ describe("serializeVoxelWorld", () => {
     assert.equal(json.layers[0].opacity, 0.4);
   });
 
-  it("offset is included in layer JSON", () => {
+  it("position is included in layer JSON", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
-    layer.offset = { x: 16, y: 0, z: -8 };
+    layer.position = { x: 16, y: 0, z: -8 };
 
     const json = serializeVoxelWorld(world);
 
-    assert.deepEqual(json.layers[0].offset, { x: 16, y: 0, z: -8 });
+    assert.deepEqual(json.layers[0].position, { x: 16, y: 0, z: -8 });
   });
 
-  it("world-space key includes offset", () => {
-    // A voxel at layer-local position (0,0,0) with offset {x:16} should appear at key "16,0,0"
+  it("stores voxel keys in layer-local space", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
-    layer.offset = { x: 16, y: 0, z: 0 };
+    layer.position = { x: 16, y: 0, z: 0 };
     layer.setVoxelAt({ x: 16, y: 0, z: 0 }, makeVoxelEntry(1));
 
     const json = serializeVoxelWorld(world);
 
-    assert.ok("16,0,0" in json.layers[0].voxels, "expected key 16,0,0");
+    assert.ok("0,0,0" in json.layers[0].voxels);
+    assert.equal(json.layers[0].voxels["16,0,0"], undefined);
   });
 });
 
@@ -408,10 +408,10 @@ describe("voxel world round-trip", () => {
     assert.equal(restored.getLayer("Ground")?.opacity, 0.7);
   });
 
-  it("layer offset is preserved", () => {
+  it("layer position is preserved", () => {
     const original = new VoxelWorld(16);
     const layer = original.addLayer("Ground");
-    layer.offset = { x: 32, y: 0, z: -16 };
+    layer.position = { x: 32, y: 0, z: -16 };
     layer.setVoxelAt({ x: 32, y: 0, z: 0 }, makeVoxelEntry(1));
 
     const json = serializeVoxelWorld(original);
@@ -419,8 +419,30 @@ describe("voxel world round-trip", () => {
     const restored = new VoxelWorld(16);
     deserializeVoxelWorld(json, restored);
 
-    assert.deepEqual(restored.getLayer("Ground")?.offset, { x: 32, y: 0, z: -16 });
+    assert.deepEqual(restored.getLayer("Ground")?.position, { x: 32, y: 0, z: -16 });
     assert.ok(restored.getVoxelAt({ x: 32, y: 0, z: 0 }) !== undefined);
+  });
+
+  it("applies the serialized layer position to local voxel keys", () => {
+    const world = new VoxelWorld(16);
+    deserializeVoxelWorld({
+      version: 1,
+      chunkSize: 16,
+      tilesets: [],
+      layers: [{
+        id: "ground",
+        name: "Ground",
+        visible: true,
+        order: 0,
+        position: { x: 20, y: 3, z: -4 },
+        voxels: {
+          "2,1,5": { block: 1, transform: 0 }
+        }
+      }]
+    }, world);
+
+    assert.ok(world.getVoxelAt({ x: 22, y: 4, z: 1 }) !== undefined);
+    assert.equal(world.getVoxelAt({ x: 2, y: 1, z: 5 }), undefined);
   });
 
   it("serialized layer id is restored verbatim", () => {

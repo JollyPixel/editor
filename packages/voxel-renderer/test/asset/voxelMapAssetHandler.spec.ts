@@ -88,12 +88,12 @@ function documentEvent(
   });
 }
 
-function offsetDelta(
+function positionDelta(
   layerName: string,
   delta: { x: number; y: number; z: number; }
 ): VoxelNetworkCommand {
   return {
-    action: "offset-updated",
+    action: "position-updated",
     layerName,
     metadata: { delta },
     clientId: "client-A",
@@ -199,14 +199,14 @@ describe("voxelMapAssetHandler", () => {
     );
   });
 
-  test("a delta offset applies exactly once per event", () => {
+  test("a delta position applies exactly once per event", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const state = handler.create("asset-1");
     const layer = state.world.addLayer("Ground");
 
     handler.apply(
       state,
-      event(VOXEL_MAP_COMMAND, offsetDelta("Ground", {
+      event(VOXEL_MAP_COMMAND, positionDelta("Ground", {
         x: 2,
         y: 0,
         z: 0
@@ -217,7 +217,7 @@ describe("voxelMapAssetHandler", () => {
      * Applying the command twice would move x to 4.
      * The expected value verifies single application.
      */
-    assert.deepEqual(layer.offset, {
+    assert.deepEqual(layer.position, {
       x: 2,
       y: 0,
       z: 0

@@ -50,7 +50,16 @@ export class VoxelLayerPanel extends LitElement {
   private declare _layer: VoxelLayer | null;
 
   @state()
-  private declare _offset: Vec3Like;
+  private declare _position: Vec3Like;
+
+  @state()
+  private declare _worldCenter: Vec3Like;
+
+  @state()
+  private declare _worldMin: Vec3Like;
+
+  @state()
+  private declare _worldMax: Vec3Like;
 
   @state()
   private declare _gizmo: boolean;
@@ -66,7 +75,10 @@ export class VoxelLayerPanel extends LitElement {
     this.worldStore = editorState.world;
     this.layerName = null;
     this._layer = null;
-    this._offset = { x: 0, y: 0, z: 0 };
+    this._position = { x: 0, y: 0, z: 0 };
+    this._worldCenter = { x: 0, y: 0, z: 0 };
+    this._worldMin = { x: 0, y: 0, z: 0 };
+    this._worldMax = { x: 0, y: 0, z: 0 };
     this._gizmo = false;
     this._props = [];
   }
@@ -74,7 +86,12 @@ export class VoxelLayerPanel extends LitElement {
   #onLayerUpdated = (event: VoxelLayerHookEvent) => {
     if (
       event.layerName !== this.layerName ||
-      event.action !== "offset-updated"
+      event.action !== "position-updated" &&
+      event.action !== "position-rebased" &&
+      event.action !== "voxel-set" &&
+      event.action !== "voxel-removed" &&
+      event.action !== "voxels-set" &&
+      event.action !== "voxels-removed"
     ) {
       return;
     }
@@ -122,11 +139,16 @@ export class VoxelLayerPanel extends LitElement {
     this._layer = layer;
 
     if (layer) {
-      this._offset = {
-        x: layer.offset.x,
-        y: layer.offset.y,
-        z: layer.offset.z
+      this._position = {
+        x: layer.position.x,
+        y: layer.position.y,
+        z: layer.position.z
       };
+      const center = layer.worldCenter();
+      const bounds = layer.worldBounds();
+      this._worldCenter = { ...center };
+      this._worldMin = { ...(bounds?.min ?? layer.position) };
+      this._worldMax = { ...(bounds?.max ?? layer.position) };
       this._gizmo = this.selection.gizmoLayer === this.layerName;
       this._props = propertyRowsOf(layer.properties);
     }
@@ -148,12 +170,34 @@ export class VoxelLayerPanel extends LitElement {
       ></jolly-checkbox>
 
       <jolly-vector3
-        label="Offset"
+        label="Position"
         step="1"
-        .value=${this._offset}
-        @jolly-input=${this.#onOffsetChange}
-        @jolly-change=${this.#onOffsetChange}
+        .value=${this._position}
+        @jolly-input=${this.#onPositionChange}
+        @jolly-change=${this.#onPositionChange}
       ></jolly-vector3>
+
+      <jolly-vector3
+        label="Content center"
+        disabled
+        .value=${this._worldCenter}
+      ></jolly-vector3>
+
+      <jolly-vector3
+        label="Bounds minimum"
+        disabled
+        .value=${this._worldMin}
+      ></jolly-vector3>
+
+      <jolly-vector3
+        label="Bounds maximum"
+        disabled
+        .value=${this._worldMax}
+      ></jolly-vector3>
+
+      <jolly-button
+        @click=${this.#onRebase}
+      >Rebase origin to minimum</jolly-button>
 
       <custom-properties-editor
         .rows=${this._props}
@@ -174,7 +218,7 @@ export class VoxelLayerPanel extends LitElement {
     this.selection.gizmoLayer = this._gizmo ? this.layerName : null;
   }
 
-  #onOffsetChange(
+  #onPositionChange(
     event: CustomEvent<JollyChangeDetail<Vec3Like>>
   ): void {
     const { world, layerName } = this;
@@ -183,20 +227,33 @@ export class VoxelLayerPanel extends LitElement {
     }
 
     const { x, y, z } = event.detail.value;
-    const offset = {
+    const position = {
       x: Math.round(x),
       y: Math.round(y),
       z: Math.round(z)
     };
-    if (sameOffset(offset, this._offset)) {
+    if (samePosition(position, this._position)) {
       return;
     }
 
-    this._offset = offset;
-    world.setLayerOffset(
+    this._position = position;
+    world.setLayerPosition(
       layerName,
-      offset
+      position
     );
+  }
+
+  #onRebase(): void {
+    const { world, layerName } = this;
+    if (!world || !layerName) {
+      return;
+    }
+
+    world.rebaseLayer(layerName, {
+      x: Math.round(this._worldMin.x),
+      y: Math.round(this._worldMin.y),
+      z: Math.round(this._worldMin.z)
+    });
   }
 
   #onPropertyRowsChange(
@@ -218,7 +275,7 @@ export class VoxelLayerPanel extends LitElement {
   }
 }
 
-function sameOffset(
+function samePosition(
   left: Vec3Like,
   right: Vec3Like
 ): boolean {

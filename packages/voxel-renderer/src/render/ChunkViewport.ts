@@ -122,9 +122,9 @@ export class ChunkViewport {
     const half = chunkSize / 2;
     const offset = this.#offset;
 
-    offset.x = (chunk.cx * chunkSize) + half + layer.offset.x - focus!.x;
-    offset.y = (chunk.cy * chunkSize) + half + layer.offset.y - focus!.y;
-    offset.z = (chunk.cz * chunkSize) + half + layer.offset.z - focus!.z;
+    offset.x = (chunk.cx * chunkSize) + half + layer.position.x - focus!.x;
+    offset.y = (chunk.cy * chunkSize) + half + layer.position.y - focus!.y;
+    offset.z = (chunk.cz * chunkSize) + half + layer.position.z - focus!.z;
 
     return offset;
   }

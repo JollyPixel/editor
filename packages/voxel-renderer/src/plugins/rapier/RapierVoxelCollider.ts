@@ -85,7 +85,7 @@ export class RapierVoxelCollider implements VoxelCollider {
   #buildChunkBody(
     collision: VoxelChunkCollision
   ): RapierRigidBody | null {
-    const { chunk, geometries, layerOffset } = collision;
+    const { chunk, geometries, layerPosition } = collision;
     if (chunk.isEmpty()) {
       return null;
     }
@@ -98,7 +98,7 @@ export class RapierVoxelCollider implements VoxelCollider {
     const body = this.#world.createRigidBody(
       this.#rapier.RigidBodyDesc
         .fixed()
-        .setTranslation(...chunkOrigin(chunk, layerOffset))
+        .setTranslation(...chunkOrigin(chunk, layerPosition))
     );
 
     if (hasTrimesh && this.#buildTrimesh(body, geometries)) {
@@ -187,11 +187,11 @@ export class RapierVoxelCollider implements VoxelCollider {
 
 function chunkOrigin(
   chunk: VoxelChunk,
-  layerOffset: VoxelCoord
+  layerPosition: VoxelCoord
 ): [x: number, y: number, z: number] {
   return [
-    (chunk.cx * chunk.size) + layerOffset.x,
-    (chunk.cy * chunk.size) + layerOffset.y,
-    (chunk.cz * chunk.size) + layerOffset.z
+    (chunk.cx * chunk.size) + layerPosition.x,
+    (chunk.cy * chunk.size) + layerPosition.y,
+    (chunk.cz * chunk.size) + layerPosition.z
   ];
 }

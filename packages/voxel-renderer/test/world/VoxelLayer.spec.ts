@@ -36,13 +36,13 @@ describe("VoxelLayer constructor", () => {
     assert.equal(makeLayer({ visible: false }).visible, false);
   });
 
-  it("defaults offset to {x:0,y:0,z:0}", () => {
-    assert.deepEqual(makeLayer().offset, { x: 0, y: 0, z: 0 });
+  it("defaults position to {x:0,y:0,z:0}", () => {
+    assert.deepEqual(makeLayer().position, { x: 0, y: 0, z: 0 });
   });
 
-  it("respects explicit offset", () => {
-    const layer = makeLayer({ offset: { x: 16, y: 0, z: -8 } });
-    assert.deepEqual(layer.offset, { x: 16, y: 0, z: -8 });
+  it("respects explicit position", () => {
+    const layer = makeLayer({ position: { x: 16, y: 0, z: -8 } });
+    assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
   });
 
   it("starts with chunkCount 0", () => {
@@ -191,9 +191,9 @@ describe("VoxelLayer negative coordinates", () => {
   });
 });
 
-describe("VoxelLayer offset arithmetic", () => {
-  it("with offset {x:8}, world pos {x:8,y:0,z:0} lands in chunk 0 of the layer", () => {
-    const layer = makeLayer({ chunkSize: 4, offset: { x: 8, y: 0, z: 0 } });
+describe("VoxelLayer position arithmetic", () => {
+  it("with position {x:8}, world pos {x:8,y:0,z:0} lands in chunk 0 of the layer", () => {
+    const layer = makeLayer({ chunkSize: 4, position: { x: 8, y: 0, z: 0 } });
     const entry = makeVoxelEntry();
     layer.setVoxelAt({ x: 8, y: 0, z: 0 }, entry);
     // local x = 8-8 = 0 → cx=0
@@ -202,12 +202,90 @@ describe("VoxelLayer offset arithmetic", () => {
     assert.deepEqual(layer.getVoxelAt({ x: 8, y: 0, z: 0 }), entry);
   });
 
-  it("offset shifts all accesses by the same amount", () => {
-    const layer = makeLayer({ chunkSize: 16, offset: { x: 100, y: 0, z: 0 } });
+  it("position shifts all accesses by the same amount", () => {
+    const layer = makeLayer({ chunkSize: 16, position: { x: 100, y: 0, z: 0 } });
     const entry = makeVoxelEntry(42);
     layer.setVoxelAt({ x: 100, y: 0, z: 0 }, entry);
     assert.deepEqual(layer.getVoxelAt({ x: 100, y: 0, z: 0 }), entry);
     assert.equal(layer.getVoxelAt({ x: 99, y: 0, z: 0 }), undefined);
+  });
+});
+
+describe("VoxelLayer coordinates and bounds", () => {
+  it("converts between local and world coordinates", () => {
+    const layer = makeLayer({ position: { x: 10, y: 2, z: -3 } });
+
+    assert.deepEqual(
+      layer.localToWorld({ x: 4, y: -1, z: 8 }).toArray(),
+      [14, 1, 5]
+    );
+    assert.deepEqual(
+      layer.worldToLocal({ x: 14, y: 1, z: 5 }).toArray(),
+      [4, -1, 8]
+    );
+  });
+
+  it("reports local and world voxel bounds", () => {
+    const layer = makeLayer({ position: { x: 10, y: 2, z: -3 } });
+    layer.setVoxelAt({ x: 8, y: 2, z: -4 }, makeVoxelEntry());
+    layer.setVoxelAt({ x: 12, y: 3, z: -3 }, makeVoxelEntry());
+
+    const local = layer.localBounds();
+    const world = layer.worldBounds();
+    assert.ok(local !== null);
+    assert.ok(world !== null);
+    assert.deepEqual(local.min.toArray(), [-2, 0, -1]);
+    assert.deepEqual(local.max.toArray(), [3, 2, 1]);
+    assert.deepEqual(world.min.toArray(), [8, 2, -4]);
+    assert.deepEqual(world.max.toArray(), [13, 4, -2]);
+    assert.deepEqual(layer.worldCenter().toArray(), [10.5, 3, -3]);
+  });
+
+  it("uses the layer position as the center of an empty layer", () => {
+    const layer = makeLayer({ position: { x: 10, y: 2, z: -3 } });
+
+    assert.equal(layer.localBounds(), null);
+    assert.equal(layer.worldBounds(), null);
+    assert.deepEqual(layer.worldCenter().toArray(), [10, 2, -3]);
+  });
+
+  it("rebases local storage without moving voxels in world space", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 10, y: 2, z: -3 }, makeVoxelEntry(1));
+    layer.setVoxelAt({ x: 12, y: 2, z: -3 }, makeVoxelEntry(2));
+
+    layer.rebase({ x: 10, y: 2, z: -3 });
+
+    assert.deepEqual(layer.position, { x: 10, y: 2, z: -3 });
+    assert.equal(layer.getVoxelAt({ x: 10, y: 2, z: -3 })?.blockId, 1);
+    assert.equal(layer.getVoxelAt({ x: 12, y: 2, z: -3 })?.blockId, 2);
+    assert.deepEqual(Object.keys(layer.toJSON().voxels).sort(), [
+      "0,0,0",
+      "2,0,0"
+    ]);
+  });
+
+  it("keeps a chunk instance when rebasing leaves its coordinates unchanged", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 2, y: 0, z: 0 }, makeVoxelEntry());
+    const chunk = layer.getChunk(0, 0, 0);
+
+    layer.rebase({ x: 1, y: 0, z: 0 });
+
+    assert.equal(layer.getChunk(0, 0, 0), chunk);
+  });
+
+  it("retires a chunk when rebasing moves its contents to another chunk", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    const previous = layer.getChunk(0, 0, 0);
+
+    layer.rebase({ x: 4, y: 0, z: 0 });
+
+    assert.equal(layer.getChunk(0, 0, 0), undefined);
+    assert.notEqual(layer.getChunk(-1, 0, 0), previous);
+    assert.deepEqual([...layer.drainPendingRemovals()], [previous]);
+    assert.deepEqual(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), makeVoxelEntry());
   });
 });
 
@@ -359,18 +437,18 @@ describe("VoxelLayer clone", () => {
     );
   });
 
-  it("copies offset and properties rather than sharing them", () => {
+  it("copies position and properties rather than sharing them", () => {
     const layer = makeLayer({
       chunkSize: 4,
-      offset: { x: 1, y: 2, z: 3 },
+      position: { x: 1, y: 2, z: 3 },
       properties: { biome: "forest" }
     });
 
     const clone = layer.clone();
-    clone.offset.x = 99;
+    clone.position.x = 99;
     clone.properties.biome = "desert";
 
-    assert.deepEqual(layer.offset, { x: 1, y: 2, z: 3 });
+    assert.deepEqual(layer.position, { x: 1, y: 2, z: 3 });
     assert.deepEqual(layer.properties, { biome: "forest" });
   });
 });
@@ -411,7 +489,7 @@ describe("VoxelLayer mergeFrom overwrite", () => {
 });
 
 describe("VoxelLayer mergeFrom", () => {
-  it("copies voxels at correct world positions (both layers at offset {0,0,0})", () => {
+  it("copies voxels at correct world positions (both layers at position {0,0,0})", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
     const entry = makeVoxelEntry(5, 2);
@@ -423,9 +501,9 @@ describe("VoxelLayer mergeFrom", () => {
   });
 
   it(
-    "applies source offset: voxel at local (1,0,0) with source offset {5,0,0} lands at world (6,0,0)",
+    "applies source position: voxel at local (1,0,0) with source position {5,0,0} lands at world (6,0,0)",
     () => {
-      const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
+      const source = makeLayer({ id: "src", name: "Source", position: { x: 5, y: 0, z: 0 } });
       const target = makeLayer({ id: "tgt", name: "Target" });
       const entry = makeVoxelEntry(3, 0);
       // Local (1,0,0) → world (6,0,0)
@@ -438,9 +516,9 @@ describe("VoxelLayer mergeFrom", () => {
     }
   );
 
-  it("applies target offset: target with offset {3,0,0} stores world (6,0,0) at local (3,0,0)", () => {
-    const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
-    const target = makeLayer({ id: "tgt", name: "Target", offset: { x: 3, y: 0, z: 0 } });
+  it("applies target position: target with position {3,0,0} stores world (6,0,0) at local (3,0,0)", () => {
+    const source = makeLayer({ id: "src", name: "Source", position: { x: 5, y: 0, z: 0 } });
+    const target = makeLayer({ id: "tgt", name: "Target", position: { x: 3, y: 0, z: 0 } });
     const entry = makeVoxelEntry(7, 1);
     source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
 

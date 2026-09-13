@@ -33,14 +33,20 @@ checkerboard through the volume. An opacity of `0` behaves like
 `visible = false`. Collision is unchanged for partially transparent layers and
 removed only when the layer is hidden.
 
-## Coordinates and offsets
+## Coordinates and positions
 
-Chunk coordinates identify a chunk. Local coordinates identify a cell inside
-that chunk. Public world and layer methods accept world-space positions.
+Chunk coordinates identify a chunk. Layer-local coordinates identify cells in
+a layer. Public world and layer voxel methods accept world-space positions and
+convert them through the layer position.
 
-A layer offset translates every voxel without changing its chunk storage. Use
-`VoxelWorld.setLayerOffset()` or `translateLayer()` so the world marks affected
-chunks dirty and recalculates cross-layer face culling.
+A layer position is the world-space location of its local origin. It translates
+every voxel without changing chunk storage. Use `VoxelWorld.setLayerPosition()`
+or `translateLayer()` so the world recalculates cross-layer face culling.
+
+`VoxelLayer.localToWorld()` and `worldToLocal()` convert coordinates explicitly.
+`localBounds()`, `worldBounds()`, and `worldCenter()` describe the content rather
+than the origin. `VoxelWorld.rebaseLayer()` moves the origin and rewrites local
+storage so content remains at the same world positions.
 
 ## Ownership
 

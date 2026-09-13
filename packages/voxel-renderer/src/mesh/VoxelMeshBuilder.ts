@@ -100,9 +100,9 @@ export class VoxelMeshBuilder {
     this.#variants.refresh();
 
     const chunkSize = this.#world.chunkSize;
-    const worldOriginX = (chunk.cx * chunkSize) + layer.offset.x;
-    const worldOriginY = (chunk.cy * chunkSize) + layer.offset.y;
-    const worldOriginZ = (chunk.cz * chunkSize) + layer.offset.z;
+    const worldOriginX = (chunk.cx * chunkSize) + layer.position.x;
+    const worldOriginY = (chunk.cy * chunkSize) + layer.position.y;
+    const worldOriginZ = (chunk.cz * chunkSize) + layer.position.z;
 
     const neighbourhood = new ChunkNeighbourhood({
       world: this.#world,

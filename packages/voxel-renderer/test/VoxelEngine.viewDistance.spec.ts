@@ -301,14 +301,14 @@ describe("VoxelEngine — view distance", () => {
     assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
   });
 
-  it("accounts for the layer offset", () => {
+  it("accounts for the layer position", () => {
     const engine = makeEngine(4, {
       viewDistance: {
         chunks: 1,
         hysteresis: 0
       }
     });
-    engine.world.setLayerOffset(kLayer, { x: 100, y: 0, z: 0 });
+    engine.world.setLayerPosition(kLayer, { x: 100, y: 0, z: 0 });
     engine.focus = { x: 102, y: 2, z: 2 };
 
     engine.tick(0);

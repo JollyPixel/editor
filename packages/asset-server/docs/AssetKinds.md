@@ -192,7 +192,7 @@ action is checked under `${kind}.invalid`.
 
 A room that also mutated the state would apply every command twice: once
 itself and once through the fold. Absolute writes survive that, but a command
-carrying a delta does not. `voxel-map`'s `offset-updated` is exactly such a
+carrying a delta does not. `voxel-map`'s `position-updated` is exactly such a
 command, which is why both shipped kinds keep the halves separate.
 
 `createExtension` remains as an escape hatch for a room protocol `live`

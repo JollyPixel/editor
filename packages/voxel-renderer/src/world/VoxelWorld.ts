@@ -278,21 +278,21 @@ export class VoxelWorld {
     }
   }
 
-  setLayerOffset(
+  setLayerPosition(
     name: string,
-    offset: VoxelCoord
+    position: VoxelCoord
   ): void {
     const layer = this.getLayer(name);
     if (!layer) {
       return;
     }
 
-    layer.offset = offset;
+    layer.position = { ...position };
     this.#markAllLayersDirty();
     this.#emit({
-      action: "offset-updated",
+      action: "position-updated",
       layerName: name,
-      metadata: { offset }
+      metadata: { position }
     });
   }
 
@@ -305,16 +305,34 @@ export class VoxelWorld {
       return;
     }
 
-    layer.offset = {
-      x: layer.offset.x + delta.x,
-      y: layer.offset.y + delta.y,
-      z: layer.offset.z + delta.z
+    layer.position = {
+      x: layer.position.x + delta.x,
+      y: layer.position.y + delta.y,
+      z: layer.position.z + delta.z
     };
     this.#markAllLayersDirty();
     this.#emit({
-      action: "offset-updated",
+      action: "position-updated",
       layerName: name,
       metadata: { delta }
+    });
+  }
+
+  rebaseLayer(
+    name: string,
+    position: VoxelCoord
+  ): void {
+    const layer = this.getLayer(name);
+    if (!layer) {
+      return;
+    }
+
+    layer.rebase(position);
+    this.#markAllLayersDirty();
+    this.#emit({
+      action: "position-rebased",
+      layerName: name,
+      metadata: { position }
     });
   }
 
@@ -877,9 +895,9 @@ export class VoxelWorld {
     const shift = this.#chunkShift;
     const mask = this.#chunkMask;
 
-    const x = position.x - layer.offset.x;
-    const y = position.y - layer.offset.y;
-    const z = position.z - layer.offset.z;
+    const x = position.x - layer.position.x;
+    const y = position.y - layer.position.y;
+    const z = position.z - layer.position.z;
 
     const cx = x >> shift;
     const cy = y >> shift;

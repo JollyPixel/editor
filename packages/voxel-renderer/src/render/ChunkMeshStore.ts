@@ -124,25 +124,25 @@ export class ChunkMeshStore {
       this.#meshBuilder.stats,
       {
         origin: {
-          x: (chunk.cx * chunk.size) + layer.offset.x,
-          y: (chunk.cy * chunk.size) + layer.offset.y,
-          z: (chunk.cz * chunk.size) + layer.offset.z
+          x: (chunk.cx * chunk.size) + layer.position.x,
+          y: (chunk.cy * chunk.size) + layer.position.y,
+          z: (chunk.cz * chunk.size) + layer.position.z
         },
         size: chunk.size
       }
     );
 
     if (this.#collider && geometries) {
-      const layerOffset = layer.offset;
+      const layerPosition = layer.position;
       this.#logger.debug(
         `Rebuilding collision for chunk '${key}' with layer name '${layer.name}'`,
-        { offset: layerOffset }
+        { position: layerPosition }
       );
 
       this.#collider.rebuildChunk(key, {
         chunk,
         geometries,
-        layerOffset
+        layerPosition
       });
     }
   }
