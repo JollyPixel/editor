@@ -18,10 +18,6 @@ export const tabsStyles = css`
     flex-direction: row;
   }
 
-  /*
-   * Tabs sit inside a plane, so the strip paints no surface. The selected tab's
-   * accent edge is what marks the boundary the divider used to draw.
-   */
   .list {
     display: flex;
     flex: 0 0 auto;

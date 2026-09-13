@@ -204,4 +204,6 @@ world.createActor("sphere")
 
 const pane = createExamplePane();
 pane.hidden = true;
-runtime.load().catch(console.error);
+runtime.load({
+  skipLoadingScreen: true
+}).catch(console.error);

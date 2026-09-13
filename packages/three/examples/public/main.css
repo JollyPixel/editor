@@ -32,15 +32,6 @@ jolly-scope {
 
 jolly-dock {
   --jolly-label-width: 17ch;
-  pointer-events: auto;
-}
-
-jolly-controls {
-  pointer-events: auto;
-}
-
-jolly-floating {
-  pointer-events: auto;
 }
 
 #tools > jolly-pane:last-of-type {

@@ -125,7 +125,7 @@ const username = await resolveStoredPrompt({
 });
 
 const networkClient = new network.Client({
-  identity: {
+  profile: {
     username
   }
 });
@@ -227,8 +227,8 @@ function refreshPeersLegend(): void {
   ];
 
   for (const [clientId, peer] of room.peers) {
-    const peerUsername = typeof peer.identity.username === "string" ?
-      peer.identity.username :
+    const peerUsername = typeof peer.profile.username === "string" ?
+      peer.profile.username :
       "Guest";
     rows.push({
       name: peerUsername,

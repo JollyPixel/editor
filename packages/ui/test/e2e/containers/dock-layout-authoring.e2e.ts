@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   test,
-  expect
+  expect,
+  type Page
 } from "@playwright/test";
 
 // Import Internal Dependencies
@@ -13,7 +14,8 @@ import {
   boxOf,
   centerOf,
   heightOf,
-  widthOf
+  widthOf,
+  type Point
 } from "../support/pointer.ts";
 import {
   open,
@@ -74,6 +76,76 @@ test.describe("DockLayout", () => {
     await page.mouse.move(center.x - 40, center.y, { steps: 8 });
     await page.mouse.up();
     await expect.poll(() => widthOf(overlay)).not.toBe(resizedWidth);
+  });
+
+  test("an overlay dock lets clicks through despite page CSS re-enabling it", async({ page }) => {
+    await open(page);
+    await adoptExampleCss(
+      page,
+      "jolly-dock, jolly-dock-layout { pointer-events: auto; }"
+    );
+
+    const overlay = page.locator("jolly-dock[key='right']");
+    const pane = page.locator("jolly-pane[key='hud']");
+    const dock = await boxOf(overlay);
+    const hud = await boxOf(pane);
+    expect(hud.y - dock.y).toBeGreaterThan(20);
+
+    const voidPoint = {
+      x: dock.x + (dock.width / 2),
+      y: dock.y + 10
+    };
+    await expect.poll(() => hitsInside(page, voidPoint, "jolly-dock")).toBe(false);
+    await expect.poll(
+      async() => hitsInside(page, await centerOf(pane), "jolly-pane")
+    ).toBe(true);
+
+    const pressed = await page.evaluateHandle(() => {
+      const paths: string[][] = [];
+      document.addEventListener("mousedown", (event) => {
+        paths.push(
+          event.composedPath()
+            .filter((node) => node instanceof Element)
+            .map((node) => node.localName)
+        );
+      });
+
+      return paths;
+    });
+    await page.mouse.click(voidPoint.x, voidPoint.y);
+    const paths = await pressed.evaluate((received) => received);
+    expect(paths).toHaveLength(1);
+    expect(paths[0]).not.toContain("jolly-dock");
+  });
+
+  test("a solid dock and a floating window stay clickable in a pass-through layer", async({ page }) => {
+    await open(page);
+    await adoptExampleCss(
+      page,
+      ".dock-layout-stage { pointer-events: none; }"
+    );
+
+    const solid = page.locator("jolly-dock[key='left']");
+    const frame = page.locator("jolly-floating");
+    await expect.poll(
+      async() => hitsInside(page, await centerOf(solid), "jolly-dock")
+    ).toBe(true);
+    await expect.poll(
+      async() => hitsInside(page, await centerOf(frame), "jolly-floating")
+    ).toBe(true);
+  });
+
+  test("an empty overlay dock does not keep a resize strip over the viewport", async({ page }) => {
+    await open(page);
+
+    const overlay = page.locator("jolly-dock[key='right']");
+    await page.locator("jolly-pane[key='hud']").evaluate(
+      (element) => element.remove()
+    );
+    await expect(overlay).toHaveAttribute("empty");
+
+    const handle = await centerOf(overlay.locator(".resize-handle"));
+    await expect.poll(() => hitsInside(page, handle, "jolly-dock")).toBe(false);
   });
 
   test("an overlay dock keeps its panes inside its own box", async({ page }) => {
@@ -189,3 +261,31 @@ test.describe("DockLayout", () => {
     }
   );
 });
+
+function adoptExampleCss(
+  page: Page,
+  cssText: string
+): Promise<void> {
+  return page.evaluate((text) => {
+    const root = document.querySelector("gallery-root")!.shadowRoot!;
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(text);
+    root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
+  }, cssText);
+}
+
+function hitsInside(
+  page: Page,
+  point: Point,
+  tagName: string
+): Promise<boolean> {
+  return page.evaluate(({ x, y, tag }) => {
+    const root = document.querySelector("gallery-root")!.shadowRoot!;
+    const hit = root.elementFromPoint(x, y);
+
+    return hit !== null && hit.closest(tag) !== null;
+  }, {
+    ...point,
+    tag: tagName
+  });
+}

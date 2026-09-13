@@ -20,6 +20,7 @@ export const controlsStyles = css`
     border-radius: 4px;
     box-shadow: var(--jolly-shadow-overlay);
     backdrop-filter: blur(12px);
+    pointer-events: auto;
   }
 
   :host([position="top-left"]) {
