@@ -5,3 +5,4 @@ export * from "./AtLeastOneInput.ts";
 export * from "./NoneInputs.ts";
 export * from "./HoldInput.ts";
 export * from "./SequenceInputs.ts";
+export * from "./AliasedKeyInput.ts";

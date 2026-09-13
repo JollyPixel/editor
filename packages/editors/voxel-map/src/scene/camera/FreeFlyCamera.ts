@@ -101,36 +101,22 @@ export class FreeFlyCamera extends CameraComponent {
   #orientation = new THREE.Quaternion();
 
   #descend: InputCondition = {
-    evaluate: (input) => !this.#descendBlocked && (
-      input.keyboard.isDown("ShiftLeft") ||
-      input.keyboard.isDown("ShiftRight")
-    ),
+    evaluate: (input) => !this.#descendBlocked &&
+      InputCombination.Shift.evaluate(input),
     reset: () => void 0
   };
 
   #axes = new AxisMap({
     moveRight: Axis.buttons(
-      InputCombination.atLeastOne("KeyD.down", "ArrowRight.down"),
-      InputCombination.atLeastOne("KeyA.down", "ArrowLeft.down")
+      InputCombination.MoveRight,
+      InputCombination.MoveLeft
     ),
     moveUp: Axis.buttons("Space", this.#descend),
     moveForward: Axis.buttons(
-      InputCombination.atLeastOne("KeyW.down", "ArrowUp.down"),
-      InputCombination.atLeastOne("KeyS.down", "ArrowDown.down")
+      InputCombination.MoveUp,
+      InputCombination.MoveDown
     )
   });
-  #controls = InputCombination.atLeastOne(
-    "ControlLeft.down",
-    "ControlRight.down"
-  );
-  #shift = InputCombination.atLeastOne(
-    "ShiftLeft.down",
-    "ShiftRight.down"
-  );
-  #alt = InputCombination.atLeastOne(
-    "AltLeft.down",
-    "AltRight.down"
-  );
 
   constructor(
     actor: Actor,
@@ -308,7 +294,7 @@ export class FreeFlyCamera extends CameraComponent {
     deltaTime: number
   ) {
     const { input } = this.actor.world;
-    const isDescending = this.#shift.evaluate(input);
+    const isDescending = InputCombination.Shift.evaluate(input);
 
     if (!this.enabled) {
       this.#descendBlocked = isDescending;
@@ -322,7 +308,7 @@ export class FreeFlyCamera extends CameraComponent {
 
     const { transform } = this.actor;
     const isLooking = input.mouse.isDown("middle") ||
-      (this.#alt.evaluate(input) && input.mouse.isDown("left"));
+      (InputCombination.Alt.evaluate(input) && input.mouse.isDown("left"));
 
     if (isLooking && input.mouse.isMoving()) {
       const delta = input.mouse.viewportDelta(false);
@@ -365,7 +351,7 @@ export class FreeFlyCamera extends CameraComponent {
     }
 
     // Ctrl reserves scrolling for brush size.
-    const isCtrl = this.#controls.evaluate(input);
+    const isCtrl = InputCombination.Control.evaluate(input);
     const scroll = input.mouse.scrollTo(this.#scroll);
     if (!isCtrl && scroll.y !== 0) {
       if (this.#elasticFocus) {

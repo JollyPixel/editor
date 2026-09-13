@@ -72,6 +72,10 @@ if (dashCombo()) {
   buttons, and gamepad sticks.
 - [InputCombination](./docs/combinedinput.md): composable input conditions for
   chords, alternatives, exclusions, and sequences.
+  - [AliasedKeyInput and predefined
+    combinations](./docs/combination/aliased-key-input.md)
+  - [Input conditions](./docs/combination/input-conditions.md)
+  - [Sequences and held steps](./docs/combination/sequences.md)
 - [InputActionQuery](./docs/inputactionquery.md): dispatch helper for
   `"ANY"`, `"NONE"`, and concrete actions.
 
