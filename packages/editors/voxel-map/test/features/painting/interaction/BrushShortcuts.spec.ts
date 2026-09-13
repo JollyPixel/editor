@@ -26,7 +26,6 @@ interface KeyPress {
   shiftKey?: boolean;
   metaKey?: boolean;
   repeat?: boolean;
-  path?: EventTarget[];
 }
 
 function createKeyboard() {
@@ -56,7 +55,6 @@ function createKeyboard() {
         metaKey: false,
         repeat: false,
         ...press,
-        composedPath: () => press.path ?? [],
         preventDefault: () => {
           prevented = true;
         }
@@ -172,16 +170,6 @@ describe("BrushShortcuts", () => {
 
     assert.equal(brush.mode, "build");
     assert.equal(brush.axis, "xz");
-  });
-
-  test("does nothing while a dialog is open", () => {
-    const { brush, press } = setup();
-    const dialog = document.createElement("dialog");
-    dialog.setAttribute("open", "");
-
-    press({ code: "KeyR", path: [document.createElement("input"), dialog] });
-
-    assert.equal(brush.mode, "build");
   });
 
   test("nextAxis follows the toolbar order", () => {

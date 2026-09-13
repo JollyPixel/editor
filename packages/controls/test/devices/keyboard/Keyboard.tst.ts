@@ -48,3 +48,12 @@ test("key events are named after physical codes only", () => {
   expect(keyboard.on).type.not.toBeCallableWith("A", () => void 0);
   expect(keyboard.on).type.not.toBeCallableWith("a", () => void 0);
 });
+
+test("addGuard() accepts a structural guard and returns a disposer", () => {
+  expect(keyboard.addGuard({ blocks: () => true })).type.toBe<() => void>();
+  expect(keyboard.addGuard).type.toBeCallableWith({
+    blocks: (_event: KeyboardEvent) => false,
+    onEngage: (_listener: () => void) => () => undefined
+  });
+  expect(keyboard.addGuard).type.not.toBeCallableWith({});
+});

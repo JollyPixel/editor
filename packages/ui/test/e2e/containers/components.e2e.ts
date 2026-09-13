@@ -415,6 +415,48 @@ test.describe("Dialog", () => {
     await expect(dialog).not.toHaveAttribute("open");
   });
 
+  test("an open dialog claims keys from document listeners", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/dialog-escape",
+      chrome: "off"
+    });
+
+    const example = page.locator("main > .chrome-row");
+    const dialog = example.locator("jolly-dialog dialog");
+    await page.getByRole("button", { name: "Open dismissible dialog" }).click();
+    await expect(dialog).toHaveAttribute("open");
+
+    await page.keyboard.press("KeyW");
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toHaveAttribute("open");
+    await expect(example).toHaveAttribute("data-viewport-keys", "");
+
+    await page.keyboard.press("Escape");
+    await expect(example).toHaveAttribute("data-viewport-keys", "Escape");
+  });
+
+  test("an open popover claims the Escape that closes it", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/dialog-escape",
+      chrome: "off"
+    });
+
+    const example = page.locator("main > .chrome-row");
+    const field = example.locator("jolly-color");
+    await field.locator("button.swatch").click();
+    const popover = field.locator(".popover");
+    await expect(popover).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(popover).toBeHidden();
+    await expect(example).toHaveAttribute("data-viewport-keys", "");
+
+    await page.keyboard.press("Escape");
+    await expect(example).toHaveAttribute("data-viewport-keys", "Escape");
+  });
+
   test("helpers settle, trim prompts, and remove themselves", async({ page }) => {
     await gotoGallery(page, {
       example: "containers/dialog",

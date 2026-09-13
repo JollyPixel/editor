@@ -105,7 +105,7 @@ export class BrushShortcuts {
       return false;
     }
 
-    return !event.composedPath().some(isOpenDialog);
+    return true;
   }
 }
 
@@ -115,11 +115,4 @@ export function nextAxis(
   const index = BRUSH_AXES.indexOf(axis);
 
   return BRUSH_AXES[(index + 1) % BRUSH_AXES.length];
-}
-
-function isOpenDialog(
-  target: EventTarget
-): boolean {
-  return Reflect.get(target, "tagName") === "DIALOG" &&
-    Reflect.get(target, "open") === true;
 }

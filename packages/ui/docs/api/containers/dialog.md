@@ -21,6 +21,10 @@ default slot supplies body content; the `actions` slot supplies footer actions.
 Escape and backdrop activation emit `jolly-cancel` when `dismissible` is true.
 Closing emits `jolly-close` with `{ returnValue }`.
 
+While open, the dialog holds a layer on `inputLayers`, so a viewport keyboard
+guarded by it ignores the keys pressed inside the dialog. See
+[Interaction helpers](../interaction/README.md#input-layers).
+
 ## Default action
 
 Enter activates the dialog's default action: the `actions` element carrying
