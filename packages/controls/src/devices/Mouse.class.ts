@@ -17,24 +17,12 @@ import {
   type TouchPosition
 } from "./Touchpad.class.ts";
 import { MouseMask } from "./MouseMask.ts";
+import { isApplePlatform } from "../platform.ts";
 
 // CONSTANTS
-const kApplePlatform = /^Mac|iPhone|iPod|iPad/i;
 /** Every index in `MouseEventButton`, hence every bit the state masks use. */
 const kButtonCount = 7;
 const kScrollMask = (1 << 5) | (1 << 6);
-
-/** Cached lazily to avoid browser globals during module import. */
-let applePlatform: boolean | null = null;
-
-function isApplePlatform(): boolean {
-  if (applePlatform === null) {
-    applePlatform = typeof navigator !== "undefined" &&
-      kApplePlatform.test(navigator.platform);
-  }
-
-  return applePlatform;
-}
 
 export interface MouseButtonState {
   isDown: boolean;

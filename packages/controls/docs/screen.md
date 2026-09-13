@@ -123,7 +123,7 @@ The property getters return new objects. `sizeTo()` and `boundsTo()` write
 into a caller-owned object and return it.
 
 `Vector2Like` is the structural `{ x: number; y: number }` shape used by the
-size methods. It is not exported from the package root.
+size methods. It is exported from the package root.
 
 ## Events
 

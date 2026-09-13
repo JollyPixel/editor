@@ -13,6 +13,7 @@ import {
   SequenceInputs,
   InputCombination
 } from "../../src/combination/index.ts";
+import { isApplePlatform } from "../../src/platform.ts";
 import * as mocks from "../mocks/index.ts";
 import {
   createCombinationFixture,
@@ -143,6 +144,68 @@ describe("Controls.InputCombination", () => {
       () => Reflect.apply(InputCombination.hold, InputCombination, [stubCondition(true)]),
       TypeError
     );
+  });
+
+  test("modifier, enter and movement presets alias both physical keys", () => {
+    assert.deepStrictEqual(
+      {
+        Control: InputCombination.Control.keys,
+        Shift: InputCombination.Shift.keys,
+        Alt: InputCombination.Alt.keys,
+        Meta: InputCombination.Meta.keys,
+        Enter: InputCombination.Enter.keys,
+        MoveUp: InputCombination.MoveUp.keys,
+        MoveDown: InputCombination.MoveDown.keys,
+        MoveLeft: InputCombination.MoveLeft.keys,
+        MoveRight: InputCombination.MoveRight.keys
+      },
+      {
+        Control: ["ControlLeft", "ControlRight"],
+        Shift: ["ShiftLeft", "ShiftRight"],
+        Alt: ["AltLeft", "AltRight"],
+        Meta: ["MetaLeft", "MetaRight"],
+        Enter: ["Enter", "NumpadEnter"],
+        MoveUp: ["KeyW", "ArrowUp"],
+        MoveDown: ["KeyS", "ArrowDown"],
+        MoveLeft: ["KeyA", "ArrowLeft"],
+        MoveRight: ["KeyD", "ArrowRight"]
+      }
+    );
+  });
+
+  test("Mod aliases Meta on Apple platforms and Control elsewhere", () => {
+    const expected = isApplePlatform() ?
+      InputCombination.Meta.keys :
+      InputCombination.Control.keys;
+
+    assert.deepStrictEqual(InputCombination.Mod.keys, expected);
+  });
+
+  test("presets are shared instances in the down state", () => {
+    assert.strictEqual(InputCombination.Shift, InputCombination.Shift);
+    assert.strictEqual(InputCombination.Shift.state, "down");
+    assert.strictEqual(
+      InputCombination.Shift.pressed,
+      InputCombination.Shift.pressed
+    );
+  });
+
+  test("a preset composes into a chord", () => {
+    input.keyboard.buttonsDown.add("ControlRight");
+    input.keyboard.buttons.set("KeyS", {
+      code: "KeyS",
+      isDown: true,
+      wasJustPressed: true,
+      wasJustAutoRepeated: false,
+      wasJustReleased: false
+    });
+
+    const save = InputCombination.all(
+      InputCombination.Control,
+      "KeyS.pressed"
+    ).bind(input);
+
+    assert.strictEqual(save(), true);
   });
 
   test("chains off an InputCombination factory", () => {

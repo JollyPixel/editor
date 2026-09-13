@@ -7,11 +7,13 @@ import {
 // Import Internal Dependencies
 import {
   InputCombination,
+  type AliasedKeyInput,
   type AllInputs,
   type AtLeastOneInput,
   type AtomicInput,
   type CombinedInputAction,
   type HoldInput,
+  type KeyCode,
   type NoneInputs,
   type SequenceInputs
 } from "../../src/index.ts";
@@ -102,4 +104,23 @@ test("hold() rejects mouse actions and a lone condition", () => {
   expect(InputCombination.hold).type.not.toBeCallableWith(
     InputCombination.key("KeyA")
   );
+});
+
+test("presets are aliased key conditions usable anywhere a condition is", () => {
+  expect(InputCombination.Control).type.toBe<AliasedKeyInput>();
+  expect(InputCombination.Mod.pressed).type.toBe<AliasedKeyInput>();
+  expect(InputCombination.MoveUp.keys).type.toBe<KeyCode[]>();
+  expect(InputCombination.all(
+    InputCombination.Mod,
+    "KeyS.pressed"
+  )).type.toBe<AllInputs>();
+  expect(InputCombination.hold).type.toBeCallableWith(
+    InputCombination.Shift.pressed,
+    InputCombination.Shift
+  );
+});
+
+test("presets are read-only", () => {
+  // @ts-expect-error Cannot assign to 'Control' because it is a read-only property
+  InputCombination.Control = InputCombination.Shift;
 });

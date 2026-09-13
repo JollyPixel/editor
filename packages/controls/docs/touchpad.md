@@ -148,7 +148,7 @@ axes and flips Y. It returns a new object. `viewportPositionTo()` writes into
 a caller-owned object and returns it.
 
 `Vector2Like` is the structural `{ x: number; y: number }` shape used by the
-output method. It is not exported from the package root.
+output method. It is exported from the package root.
 
 ## Events
 

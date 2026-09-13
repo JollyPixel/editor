@@ -181,7 +181,7 @@ new objects. The `*To()` methods write into a caller-owned object such as a
 `THREE.Vector2` and return the same object.
 
 `Vector2Like` is the structural `{ x: number; y: number }` shape used by these
-methods. It is not exported from the package root.
+methods. It is exported from the package root.
 
 `newPosition` and `newDelta` are public in the current declaration but are
 staging objects written by DOM handlers before `update()`. Polling consumers
