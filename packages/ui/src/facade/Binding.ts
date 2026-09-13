@@ -6,6 +6,7 @@ import {
   type DispatchOptions,
   type DispatchTag
 } from "./dispatch.ts";
+import { FacadeItem } from "./FacadeItem.ts";
 import { detailOf } from "../dom.ts";
 import type {
   JollyChangeDetail
@@ -49,7 +50,7 @@ export type BindingChangeHandler<TValue> = (
 export class Binding<
   TObject extends object,
   TKey extends keyof TObject
-> {
+> extends FacadeItem {
   readonly element: HTMLElement;
 
   #object: TObject;
@@ -63,6 +64,7 @@ export class Binding<
     key: TKey,
     options: BindingOptions<TObject[TKey]> = {}
   ) {
+    super();
     this.#object = object;
     this.#key = key;
 
@@ -86,26 +88,6 @@ export class Binding<
     );
   }
 
-  get hidden(): boolean {
-    return Boolean(this.element.hidden);
-  }
-
-  set hidden(
-    value: boolean
-  ) {
-    this.element.hidden = value;
-  }
-
-  get disabled(): boolean {
-    return this.#bindable.disabled;
-  }
-
-  set disabled(
-    value: boolean
-  ) {
-    this.#bindable.disabled = value;
-  }
-
   on(
     _name: "change",
     handler: BindingChangeHandler<TObject[TKey]>
@@ -122,8 +104,14 @@ export class Binding<
       : value;
   }
 
-  dispose(): void {
-    this.element.remove();
+  protected override readDisabled(): boolean {
+    return this.#bindable.disabled;
+  }
+
+  protected override writeDisabled(
+    value: boolean
+  ): void {
+    this.#bindable.disabled = value;
   }
 
   #onFieldEvent(

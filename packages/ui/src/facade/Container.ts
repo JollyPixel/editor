@@ -25,6 +25,7 @@ import {
   Presence,
   type PresenceOptions
 } from "./Presence.ts";
+import { FacadeItem } from "./FacadeItem.ts";
 import { Separator } from "./Separator.ts";
 
 export type { MonitorFields } from "./monitorFields.ts";
@@ -37,8 +38,8 @@ export interface Disposable {
   dispose(): void;
 }
 
-export abstract class FacadeContainer {
-  abstract readonly element: HTMLElement;
+export abstract class FacadeContainer extends FacadeItem {
+  abstract override readonly element: HTMLElement;
 
   #children: Disposable[] = [];
   #refreshable: Refreshable[] = [];
@@ -135,29 +136,5 @@ export abstract class FacadeContainer {
     for (const child of this.#refreshable) {
       child.refresh();
     }
-  }
-
-  get hidden(): boolean {
-    return Boolean(this.element.hidden);
-  }
-
-  set hidden(
-    value: boolean
-  ) {
-    this.element.hidden = value;
-  }
-
-  get disabled(): boolean {
-    return this.element.hasAttribute("disabled");
-  }
-
-  set disabled(
-    value: boolean
-  ) {
-    this.element.toggleAttribute("disabled", value);
-  }
-
-  dispose(): void {
-    this.element.remove();
   }
 }

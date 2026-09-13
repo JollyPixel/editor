@@ -12,14 +12,11 @@ import {
 // Import Internal Dependencies
 import { JollyField } from "../field/JollyField.ts";
 import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
-import {
-  formatNumber,
-  parseNumeric,
-  quantize
-} from "../numeric/format.ts";
+import { NumericInputController } from "../field/NumericInputController.ts";
+import { quantize } from "../numeric/entry.ts";
+import { unitRatio } from "../numeric/bounds.ts";
 import { sliderStyles } from "./Slider.styles.ts";
 import { isInputElement } from "../dom.ts";
-import { PointerFocusController } from "../field/PointerFocusController.ts";
 
 export type SliderOrientation = "horizontal" | "vertical";
 
@@ -61,7 +58,16 @@ export class Slider extends JollyField<number> {
   @property({ type: String, reflect: true })
   declare orientation: SliderOrientation;
 
-  #pointerFocus = new PointerFocusController(this);
+  #readout = new NumericInputController(this, {
+    draft: this.draftController,
+    step: () => this.step,
+    min: () => this.min,
+    max: () => this.max,
+    value: () => this.concreteValue,
+    editable: () => this.editable,
+    onInput: (value) => this.emitInput(value),
+    onChange: (value) => this.emitChange(value)
+  });
 
   constructor() {
     super();
@@ -98,42 +104,29 @@ export class Slider extends JollyField<number> {
         class="readout"
         type="text"
         inputmode="decimal"
-        .value=${this.draft ?? this.#displayed}
+        .value=${this.#readout.displayed}
         placeholder=${this.mixed ? MIXED_PLACEHOLDER : ""}
         ?disabled=${this.disabled}
         ?readonly=${this.inputReadonly}
-        ?data-pointer-focus=${this.#pointerFocus.active}
+        ?data-pointer-focus=${this.#readout.pointerFocused}
         aria-label=${this.label === "" ? "Value" : `${this.label} value`}
         aria-readonly=${this.readonlyAria}
         aria-disabled=${this.lockedAria}
         aria-invalid=${this.displayError === null ? nothing : "true"}
-        @input=${this.onDraftInput}
-        @focus=${this.#pointerFocus.onFocus}
-        @keydown=${this.#onKeyDown}
-        @blur=${this.#onBlur}
+        @input=${this.#readout.onInput}
+        @focus=${this.#readout.onFocus}
+        @keydown=${this.#readout.onKeyDown}
+        @blur=${this.#readout.onBlur}
       >
     `;
   }
 
   get #progress(): number {
     const value = this.concreteValue;
-    const span = this.max - this.min;
-    if (value === undefined || span <= 0) {
-      return 0;
-    }
 
-    return Math.min(
-      1,
-      Math.max(0, (value - this.min) / span)
-    );
-  }
-
-  get #displayed(): string {
-    const value = this.concreteValue;
-
-    return value === undefined
-      ? ""
-      : formatNumber(value, this.step);
+    return value === undefined ?
+      0 :
+      unitRatio(value, this.min, this.max);
   }
 
   #onInput(
@@ -156,41 +149,6 @@ export class Slider extends JollyField<number> {
     }
 
     this.emitChange(next);
-  }
-
-  #onKeyDown(
-    event: KeyboardEvent
-  ): void {
-    this.#pointerFocus.onKeyDown();
-
-    this.onDraftKeyDown(
-      event,
-      () => this.#commit()
-    );
-  }
-
-  #onBlur(): void {
-    this.#pointerFocus.onBlur();
-    this.#commit();
-  }
-
-  #commit(): void {
-    this.commitDraft((draft) => {
-      const result = parseNumeric(draft);
-      if (result === null || !result.ok) {
-        return result;
-      }
-
-      return {
-        ok: true,
-        value: quantize(
-          result.value,
-          this.step,
-          this.min,
-          this.max
-        )
-      };
-    });
   }
 
   #read(

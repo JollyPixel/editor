@@ -148,9 +148,14 @@ export {
   serializeLayout,
   type DeclaredDock,
   type DeclaredLayout,
+  type DockChange,
   type DockState,
+  type FloatingChange,
   type FloatingState,
+  type FolderChange,
+  type LayoutChange,
   type LayoutSnapshot,
+  type PaneChange,
   type PaneState
 } from "./containers/layout.ts";
 export type {

@@ -405,6 +405,36 @@ test.describe("arrow-key stepping", () => {
   });
 });
 
+test.describe("numeric entry policy", () => {
+  test("a slider readout steps with the arrow keys", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/slider",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const readout = row(page, "jolly-slider", "default").locator(".readout");
+    await readout.focus();
+    await readout.press("ArrowUp");
+
+    expect(await changes(page)).toEqual([0.45]);
+  });
+
+  test("a typed range endpoint cannot cross the other one", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/range",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const to = row(page, "jolly-range", "default").locator('input[data-end="to"]');
+    await to.fill("1");
+    await to.press("Enter");
+
+    expect(await changes(page)).toEqual([{ from: 5, to: 5 }]);
+  });
+});
+
 /**
  * Dispatched rather than clicked. Reverting makes the field equal its
  * default, so the gutter button removes itself in the same tick; Playwright's

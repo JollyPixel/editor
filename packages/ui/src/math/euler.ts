@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { clamp } from "../numeric/bounds.ts";
 import type { QuatLike } from "./types.ts";
 
 // CONSTANTS
@@ -91,10 +92,3 @@ export function eulerRoundTrips(
   return Math.abs(Math.abs(dot) - 1) < epsilon;
 }
 
-function clamp(
-  value: number,
-  min: number,
-  max: number
-): number {
-  return Math.min(Math.max(value, min), max);
-}

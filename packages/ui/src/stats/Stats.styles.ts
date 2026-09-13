@@ -12,15 +12,6 @@ export const statsStyles = css`
     border-radius: var(--jolly-radius-sm, 2px);
     cursor: pointer;
     user-select: none;
-
-    --jolly-stats-fps: light-dark(#007c91, #00ffff);
-    --jolly-stats-fps-bed: light-dark(#d8f7fb, #001122);
-    --jolly-stats-ms: light-dark(#16733a, #00ff66);
-    --jolly-stats-ms-bed: light-dark(#def6e6, #00220d);
-    --jolly-stats-worst: light-dark(#a65300, #ff9d00);
-    --jolly-stats-worst-bed: light-dark(#fff0d6, #221100);
-    --jolly-stats-mb: light-dark(#a6005a, #ff0088);
-    --jolly-stats-mb-bed: light-dark(#ffe0ef, #220011);
   }
 
   :host([hidden]) {

@@ -14,6 +14,7 @@ import {
   verticalInsertionLine,
   type DragSessionHandle
 } from "../interaction/drag/DragSession.ts";
+import { NamespacedStore } from "../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import {
   deriveKey,
@@ -45,6 +46,8 @@ export interface FolderListOptions {
   reorderable(): boolean;
   storage(): StorageAdapter;
   announce(message: string): void;
+  toggled(folder: string, open: boolean): void;
+  discovered(): void;
 }
 
 /**
@@ -52,6 +55,7 @@ export interface FolderListOptions {
  */
 export class FolderListController implements ReactiveController {
   readonly #options: FolderListOptions;
+  readonly #store: NamespacedStore;
   #entries: FolderEntry[] = [];
   #startOrder: string[] | null = null;
   #session: DragSessionHandle | null = null;
@@ -62,6 +66,10 @@ export class FolderListController implements ReactiveController {
   ) {
     host.addController(this);
     this.#options = options;
+    this.#store = new NamespacedStore({
+      namespace: () => options.namespace(),
+      storage: () => options.storage()
+    });
   }
 
   hostDisconnected(): void {
@@ -108,11 +116,21 @@ export class FolderListController implements ReactiveController {
     }
 
     this.#applyOrder(resolveOrder(
-      parseOrder(
-        this.#options.storage().get(`${this.#options.namespace()}:order`)
-      ),
+      parseOrder(this.#store.readJson("order")),
       this.#keys()
     ));
+    this.#options.discovered();
+  };
+
+  onFolderToggle = (
+    event: Event
+  ) => {
+    const entry = this.#entries.find(
+      ({ folder }) => folder === event.target
+    );
+    if (entry !== undefined) {
+      this.#options.toggled(entry.key, entry.folder.open);
+    }
   };
 
   onFolderDrag = (
@@ -283,10 +301,7 @@ export class FolderListController implements ReactiveController {
 
   #commitOrder(): void {
     const keys = this.#keys();
-    this.#options.storage().set(
-      `${this.#options.namespace()}:order`,
-      JSON.stringify(keys)
-    );
+    this.#store.writeJson("order", keys);
     emitContainerEvent(
       this.#options.content(),
       "jolly-reorder",
@@ -334,20 +349,9 @@ function rectOf(
 }
 
 function parseOrder(
-  value: string | null
+  value: unknown
 ): string[] {
-  if (value === null) {
-    return [];
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(value);
-
-    return Array.isArray(parsed) && parsed.every((key) => typeof key === "string") ?
-      parsed :
-      [];
-  }
-  catch {
-    return [];
-  }
+  return Array.isArray(value) && value.every((key) => typeof key === "string") ?
+    value :
+    [];
 }

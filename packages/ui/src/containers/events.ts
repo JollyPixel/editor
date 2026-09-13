@@ -26,6 +26,10 @@ export interface PaneMoveDetail {
   command: PaneMoveCommand;
 }
 
+export interface PaneFoldersDetail {
+  pane: PaneElement;
+}
+
 export interface ContainerEventMap {
   "jolly-cancel": undefined;
   "jolly-close": { returnValue: string; };
@@ -35,10 +39,11 @@ export interface ContainerEventMap {
     command: "cancel" | "down" | "finish" | "start" | "up";
   };
   "jolly-layout-change": { snapshot: LayoutSnapshot; };
-  "jolly-layout-dirty": undefined;
+  "jolly-layout-dirty": LayoutChange;
   "jolly-move": JollyMoveDetail;
   "jolly-move-end": JollyMoveDetail;
   "jolly-pane-drag": PaneDragDetail;
+  "jolly-pane-folders": PaneFoldersDetail;
   "jolly-pane-move": PaneMoveDetail;
   "jolly-reorder": JollyReorderDetail;
   "jolly-resize": JollyResizeDetail;
@@ -52,12 +57,7 @@ export function emitContainerEvent<KName extends keyof ContainerEventMap>(
   name: KName,
   detail: ContainerEventMap[KName]
 ): void {
-  const event = new CustomEvent<ContainerEventMap[KName]>(name, {
-    detail,
-    bubbles: true,
-    composed: true
-  });
-  target.dispatchEvent(event);
+  emitComposedEvent(target, name, detail);
 }
 
 declare global {
@@ -67,10 +67,11 @@ declare global {
     "jolly-folder-drag": CustomEvent<ContainerEventMap["jolly-folder-drag"]>;
     "jolly-folder-reorder": CustomEvent<ContainerEventMap["jolly-folder-reorder"]>;
     "jolly-layout-change": CustomEvent<ContainerEventMap["jolly-layout-change"]>;
-    "jolly-layout-dirty": CustomEvent<undefined>;
+    "jolly-layout-dirty": CustomEvent<LayoutChange>;
     "jolly-move": CustomEvent<JollyMoveDetail>;
     "jolly-move-end": CustomEvent<JollyMoveDetail>;
     "jolly-pane-drag": CustomEvent<PaneDragDetail>;
+    "jolly-pane-folders": CustomEvent<PaneFoldersDetail>;
     "jolly-pane-move": CustomEvent<PaneMoveDetail>;
     "jolly-reorder": CustomEvent<JollyReorderDetail>;
     "jolly-resize": CustomEvent<JollyResizeDetail>;
@@ -80,8 +81,12 @@ declare global {
   }
 }
 // Import Internal Dependencies
+import { emitComposedEvent } from "../events.ts";
 import type { Folder } from "./Folder.ts";
-import type { LayoutSnapshot } from "./layout.ts";
+import type {
+  LayoutChange,
+  LayoutSnapshot
+} from "./layout.ts";
 import type {
   PaneDragDetail,
   PaneElement,

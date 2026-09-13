@@ -63,4 +63,21 @@ test.describe("stats cycle", () => {
 
     expect(failures).toEqual([]);
   });
+
+  test("paints a built-in metric from its definition palette", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/stats-cycle",
+      chrome: "off",
+      theme: "dark"
+    });
+    const stats = page.locator("jolly-stats");
+    await expect(stats).toHaveAttribute("aria-label", /^FPS:/);
+
+    await expect.poll(() => stats.evaluate((element) => {
+      const canvas = element.shadowRoot?.querySelector("canvas");
+      const pixel = canvas?.getContext("2d")?.getImageData(0, 0, 1, 1).data;
+
+      return pixel === undefined ? null : [...pixel];
+    })).toEqual([0, 17, 34, 255]);
+  });
 });

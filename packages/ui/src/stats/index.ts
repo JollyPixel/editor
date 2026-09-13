@@ -9,5 +9,6 @@ export {
   type MetricAggregation,
   type MetricDefinition,
   type MetricDirection,
+  type MetricPalette,
   type MetricRange
 } from "./MetricDefinition.ts";

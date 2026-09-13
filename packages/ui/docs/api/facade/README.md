@@ -29,8 +29,10 @@ interface Disposable {
 ```
 
 Builders also expose their underlying `element` and mutable `hidden` and
-`disabled` properties. `Pane` and folder builders add `refresh()` and
-`disposeAll()` because they own child builders.
+`disabled` properties, shared through one `FacadeItem` base. `disabled` writes
+the native property on buttons and bound fields, and toggles the `disabled`
+attribute on every other builder. `Pane` and folder builders add `refresh()`
+and `disposeAll()` because they own child builders.
 
 The root entry point exports the option and callback types `PaneOptions`,
 `FolderOptions`, `BindingOptions`, `BindingChangeEvent`,

@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { emitComposedEvent } from "../events.ts";
+
 /**
  * `jolly-input` streams edits; `jolly-change` fires on commit.
  */
@@ -34,13 +37,7 @@ export function emitFieldEvent<TValue>(
   name: JollyFieldEventName,
   value: TValue
 ): void {
-  const event = new CustomEvent<JollyChangeDetail<TValue>>(name, {
-    detail: {
-      value
-    },
-    bubbles: true,
-    composed: true
+  emitComposedEvent<JollyChangeDetail<TValue>>(target, name, {
+    value
   });
-
-  target.dispatchEvent(event);
 }

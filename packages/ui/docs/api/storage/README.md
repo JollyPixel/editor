@@ -24,3 +24,11 @@ const storage = new LocalStorageAdapter({
 
 `MemoryStorageAdapter` stores string values in memory for the lifetime of the
 instance. It is useful for tests and non-persistent component state.
+
+Components that default their `storage` property share one
+`LocalStorageAdapter` for the page. When `localStorage` fails, its memory
+fallback outlives any single element, so an element recreated with the same
+key still reads what the previous one wrote.
+
+Keys are `<storage-key>:<name>`. An empty `storageKey` on `jolly-stats` or
+`jolly-theme-preferences` disables persistence.

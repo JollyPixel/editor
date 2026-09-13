@@ -10,10 +10,6 @@ export const dialogStyles = css`
     font-size: var(--jolly-font-size, 11px);
   }
 
-  /*
-   * A dialog is a plane and a detached one, so it keeps its shadow. The border
-   * is gone: elevation and the surface step already separate it from the page.
-   */
   dialog {
     min-width: min(320px, calc(100vw - 32px));
     max-width: min(560px, calc(100vw - 32px));
@@ -32,9 +28,6 @@ export const dialogStyles = css`
     backdrop-filter: blur(2px);
   }
 
-  /*
-   * Group level structure keeps a divider, unlike the rows inside it.
-   */
   header {
     padding: var(--jolly-space-3, 12px) var(--jolly-space-4, 16px);
     border-bottom: 1px solid var(--jolly-divider);

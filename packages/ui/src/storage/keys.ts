@@ -3,9 +3,6 @@ const kCombiningMarks = /[̀-ͯ]/g;
 const kNonAlphanumeric = /[^a-z0-9]+/g;
 const kEdgeSeparators = /^-+|-+$/g;
 
-/**
- * Folds diacritics before stripping non-alphanumeric characters.
- */
 export function slugify(
   label: string
 ): string {
@@ -17,9 +14,6 @@ export function slugify(
     .replace(kEdgeSeparators, "");
 }
 
-/**
- * Derives a stable control key from its tag, label, and occurrence.
- */
 export function deriveKey(
   tagName: string,
   label: string,
@@ -33,9 +27,6 @@ export function deriveKey(
   return occurrence > 1 ? `${base}#${occurrence}` : base;
 }
 
-/**
- * Reconciles stored order with the keys declared by the current render.
- */
 export function resolveOrder(
   stored: readonly string[],
   present: readonly string[]
@@ -81,4 +72,17 @@ function anchorIndexFor(
   }
 
   return -1;
+}
+
+export function pageNamespace(
+  explicit: string,
+  ...parts: string[]
+): string {
+  if (explicit !== "") {
+    return explicit;
+  }
+
+  const path = globalThis.location?.pathname ?? "";
+
+  return [path, ...parts].join(":");
 }

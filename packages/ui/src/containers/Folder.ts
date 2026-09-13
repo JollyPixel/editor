@@ -17,8 +17,8 @@ import { folderStyles } from "./Folder.styles.ts";
 // Registers the chevron and grip glyphs.
 import "../icon/Icon.ts";
 import { isButtonElement } from "../dom.ts";
-import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
-import { PersistedState } from "../storage/PersistedState.ts";
+import { defaultStorageAdapter } from "../storage/defaultStorage.ts";
+import { NamespacedStore } from "../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
@@ -70,13 +70,10 @@ export class Folder extends LitElement {
   declare _reordering: boolean;
 
   #persistenceKey = "";
-  #state = new PersistedState(this, {
+  #state = new NamespacedStore({
     isManaged: () => this.closest("jolly-dock-layout") !== null,
     namespace: () => this.#namespace(),
-    storage: () => this.storage,
-    onManagedWrite: () => {
-      emitContainerEvent(this, "jolly-layout-dirty", undefined);
-    }
+    storage: () => this.storage
   });
 
   get persistenceKey(): string {
@@ -105,7 +102,7 @@ export class Folder extends LitElement {
     this.dragging = false;
     this.flush = false;
     this.storageKey = "";
-    this.storage = new LocalStorageAdapter();
+    this.storage = defaultStorageAdapter();
     this._reordering = false;
   }
 
@@ -170,7 +167,7 @@ export class Folder extends LitElement {
 
   #toggle = () => {
     this.open = !this.open;
-    this.#state.write("open", String(this.open));
+    this.#state.writeBoolean("open", this.open);
     emitContainerEvent(
       this,
       "jolly-toggle",
@@ -183,9 +180,9 @@ export class Folder extends LitElement {
       return;
     }
 
-    const stored = this.#state.read("open");
-    if (stored === "true" || stored === "false") {
-      this.open = stored === "true";
+    const stored = this.#state.readBoolean("open");
+    if (stored !== null) {
+      this.open = stored;
     }
   }
 

@@ -23,7 +23,9 @@ export interface PopoverControllerOptions {
    * Distance between the anchor edge and popover, in pixels.
    */
   gap?: number;
-  /** Preferred side of the anchor. */
+  /**
+   * Preferred side of the anchor.
+   */
   side?: "above" | "below" | "left" | "right";
   /**
    * Alignment on the axis perpendicular to `side`: horizontal for
@@ -40,15 +42,6 @@ export interface PopoverControllerOptions {
 
 /**
  * Positions a native popover beside an anchor and restores focus on close.
- * The host renders the popover and trigger. The controller positions it as the
- * viewport changes and reports Escape cancellation.
- *
- * ```ts
- * #popup = new PopoverController(this, {
- *   anchor: () => this._button,
- *   popover: () => this._panel
- * });
- * ```
  */
 export class PopoverController implements ReactiveController {
   #host: ReactiveControllerHost;
@@ -69,9 +62,6 @@ export class PopoverController implements ReactiveController {
     return this.#open;
   }
 
-  /**
-   * Handles the popover `beforetoggle` event.
-   */
   onBeforeToggle = (
     event: ToggleEvent
   ): void => {
@@ -84,9 +74,6 @@ export class PopoverController implements ReactiveController {
       popover.matches(":focus-within");
   };
 
-  /**
-   * Handles the popover `toggle` event.
-   */
   onToggle = (
     event: ToggleEvent
   ): void => {
@@ -113,9 +100,6 @@ export class PopoverController implements ReactiveController {
     this.#options.popover()?.hidePopover();
   }
 
-  /**
-   * Repositions the open popover.
-   */
   reposition(): void {
     const anchor = this.#options.anchor();
     const popover = this.#options.popover();
@@ -167,9 +151,6 @@ export class PopoverController implements ReactiveController {
     }
   };
 
-  /**
-   * Captures ancestor scrolling so the popover follows its anchor.
-   */
   #listen(): void {
     window.addEventListener(
       "scroll",

@@ -1,5 +1,9 @@
 // Import Internal Dependencies
 import type { MetricDefinition } from "./MetricDefinition.ts";
+import {
+  formatDecimal,
+  formatInteger
+} from "../monitors/format.ts";
 
 // CONSTANTS
 const kBytesPerMebibyte = 1024 * 1024;
@@ -21,6 +25,10 @@ export const FPS_METRIC: MetricDefinition = {
   max: 100,
   better: "higher",
   aggregate: "last",
+  palette: {
+    ink: "var(--jolly-stats-fps, light-dark(#007c91, #00ffff))",
+    bed: "var(--jolly-stats-fps-bed, light-dark(#d8f7fb, #001122))"
+  },
   format: formatInteger
 };
 
@@ -31,6 +39,10 @@ export const MS_METRIC: MetricDefinition = {
   max: 200,
   better: "lower",
   aggregate: "average",
+  palette: {
+    ink: "var(--jolly-stats-ms, light-dark(#16733a, #00ff66))",
+    bed: "var(--jolly-stats-ms-bed, light-dark(#def6e6, #00220d))"
+  },
   format: formatDecimal
 };
 
@@ -41,6 +53,10 @@ export const WORST_MS_METRIC: MetricDefinition = {
   max: 200,
   better: "lower",
   aggregate: "max",
+  palette: {
+    ink: "var(--jolly-stats-worst, light-dark(#a65300, #ff9d00))",
+    bed: "var(--jolly-stats-worst-bed, light-dark(#fff0d6, #221100))"
+  },
   format: formatDecimal
 };
 
@@ -65,6 +81,10 @@ export function memoryMetric(
     max,
     better: "lower",
     aggregate: "last",
+    palette: {
+      ink: "var(--jolly-stats-mb, light-dark(#a6005a, #ff0088))",
+      bed: "var(--jolly-stats-mb-bed, light-dark(#ffe0ef, #220011))"
+    },
     format: formatInteger,
     sample: () => memory.usedJSHeapSize / kBytesPerMebibyte
   };
@@ -76,16 +96,4 @@ function hasPerformanceMemory(
   return typeof value.memory === "object" &&
     value.memory !== null &&
     typeof value.memory.usedJSHeapSize === "number";
-}
-
-function formatInteger(
-  value: number
-): string {
-  return String(Math.round(value));
-}
-
-function formatDecimal(
-  value: number
-): string {
-  return value.toFixed(1);
 }

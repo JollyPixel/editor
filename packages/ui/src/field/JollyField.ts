@@ -148,6 +148,10 @@ export abstract class JollyField<TValue> extends LitElement {
     ) ? undefined : this.value;
   }
 
+  protected get draftController(): DraftController<TValue> {
+    return this.#draft;
+  }
+
   protected get draft(): string | null {
     return this.#draft.draft;
   }

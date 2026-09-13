@@ -9,7 +9,9 @@
 - [Math value types](./types.md)
 
 Vector and quaternion components implement the
-[shared field API](../field/shared-field-api.md).
+[shared field API](../field/shared-field-api.md). Every axis input follows the
+[`jolly-number`](../controls/number.md) entry rules, and an axis parse error is
+shown as the field error.
 
 Every one of them except `jolly-transform` is reachable from the facade:
 `addBinding` picks one from the bound value's own axes. See

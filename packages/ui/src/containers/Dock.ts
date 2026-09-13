@@ -28,10 +28,13 @@ import {
 } from "../interaction/drag/DragSession.ts";
 import type { Rect } from "../geometry/Rect.ts";
 import type { DropCandidate } from "../interaction/drag/dropIndex.ts";
-import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
-import { PersistedState } from "../storage/PersistedState.ts";
+import { defaultStorageAdapter } from "../storage/defaultStorage.ts";
+import { NamespacedStore } from "../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
-import { deriveKey } from "../storage/keys.ts";
+import {
+  deriveKey,
+  pageNamespace
+} from "../storage/keys.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
@@ -50,19 +53,9 @@ export class Dock extends LitElement {
   @property({ type: String, reflect: true })
   declare side: DockSide;
 
-  /**
-   * Packs panes toward one edge instead of stretching them.
-   *
-   * Unset keeps the historical behaviour, where panes share the main axis and
-   * a lone pane fills the dock. Setting it switches to content-sized panes,
-   * which is what makes folding visible and what `grow` opts back out of.
-   */
   @property({ type: String, reflect: true })
   declare align: DockAlign | null;
 
-  /**
-   * Detaches the dock from the flow so its panes float over the content.
-   */
   @property({ type: Boolean, reflect: true })
   declare overlay: boolean;
 
@@ -78,9 +71,6 @@ export class Dock extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare collapsed: boolean;
 
-  /**
-   * Reflected so an emptied dock can drop its surface and its width.
-   */
   @property({ type: Boolean, reflect: true })
   declare empty: boolean;
 
@@ -108,35 +98,34 @@ export class Dock extends LitElement {
   #resizeHandle: ResizeHandle | null = null;
   #removeResizeListeners: (() => void) | null = null;
   #managed = false;
-  #state = new PersistedState(this, {
+  #state = new NamespacedStore({
     isManaged: () => this.#managed,
-    namespace: () => this.#namespace(),
+    namespace: () => pageNamespace(
+      this.storageKey,
+      "jolly-dock",
+      this.layoutKey
+    ),
     storage: () => this.storage,
     onManagedWrite: () => {
-      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+      emitContainerEvent(this, "jolly-layout-dirty", {
+        type: "dock",
+        dock: this.layoutKey,
+        size: this.size,
+        collapsed: this.collapsed
+      });
     }
   });
 
-  /**
-   * True while the dock is inside a `jolly-dock-layout`, which then owns its
-   * persistence. Resolved at connect so it beats the first render.
-   */
   get managed(): boolean {
     return this.#managed;
   }
 
-  /**
-   * Identity used by the layout snapshot, falling back to tag and side.
-   */
   get layoutKey(): string {
     return this.key === "" ?
       deriveKey("jolly-dock", this.side) :
       this.key;
   }
 
-  /**
-   * Axis panes stack along, which is the opposite of the resized one.
-   */
   get axis(): "x" | "y" {
     return this.side === "left" || this.side === "right" ? "y" : "x";
   }
@@ -155,7 +144,7 @@ export class Dock extends LitElement {
     this.minSize = 120;
     this.maxSize = Number.POSITIVE_INFINITY;
     this.storageKey = "";
-    this.storage = new LocalStorageAdapter();
+    this.storage = defaultStorageAdapter();
   }
 
   override connectedCallback(): void {
@@ -231,9 +220,6 @@ export class Dock extends LitElement {
     super.disconnectedCallback();
   }
 
-  /**
-   * Panes slotted into the dock, in DOM order.
-   */
   panes(): PaneElement[] {
     if (!this.hasUpdated) {
       return [...this.children].filter(isPane);
@@ -243,20 +229,6 @@ export class Dock extends LitElement {
       .filter(isPane);
   }
 
-  /**
-   * Region that arms the dock while a drag runs.
-   *
-   * A dock with a box of its own takes the drop across the whole of it,
-   * wherever the dragged pane comes from. Aiming at a dock means aiming at the
-   * dock, not at a strip of it, and a pane that has to be parked in a window
-   * first before it can be moved one dock over is a gesture in two halves.
-   *
-   * A dock with no thickness left is the exception, since there is no surface
-   * to aim at: an emptied or collapsed one gave its thickness back but is
-   * still laid out where it belongs, so a band grows inward from the line it
-   * collapsed to and the dock stays a target wherever on the page its layout
-   * sits. Only a dock with no box at all falls back to the viewport edge.
-   */
   dropZone(): Rect {
     const rect = this.getBoundingClientRect();
     const vertical = this.side === "left" || this.side === "right";
@@ -291,14 +263,6 @@ export class Dock extends LitElement {
       };
   }
 
-  /**
-   * Main-axis extents of the slotted panes, ordered along `axis`.
-   *
-   * A pane is measured by what it occupies rather than by the box it was
-   * given, so the space a stretched pane holds but does not fill counts as
-   * dock rather than as pane. Both the drop index and the insertion line read
-   * these, so where the drop resolves and where it is drawn cannot disagree.
-   */
   dropCandidates(): DropCandidate[] {
     return this.panes().map((pane) => {
       const rect = pane.getBoundingClientRect();
@@ -316,9 +280,6 @@ export class Dock extends LitElement {
     });
   }
 
-  /**
-   * Client rect of the insertion line for a drop index.
-   */
   insertionLine(
     index: number
   ): Rect {
@@ -330,12 +291,6 @@ export class Dock extends LitElement {
       horizontalInsertionLine(bounds, candidates, index);
   }
 
-  /**
-   * Box the insertion line is drawn across.
-   *
-   * An emptied dock has no content box left to draw over, so the line spans
-   * the band that armed it instead of collapsing to nothing.
-   */
   #insertionBounds(): Rect {
     const rect = this._content?.getBoundingClientRect() ??
       this.getBoundingClientRect();
@@ -449,12 +404,6 @@ export class Dock extends LitElement {
   }
 
   #readSize(): void {
-    /*
-     * A collapsed dock has no size worth remembering: its own handle stays
-     * interactive at 0px, and a click that jitters by even a couple of
-     * pixels reads as a resize drag there, which would otherwise overwrite
-     * the size the dock is meant to reopen at.
-     */
     if (this.collapsed) {
       return;
     }
@@ -471,10 +420,6 @@ export class Dock extends LitElement {
   #applySize(): void {
     const dimension = this.#dimension();
     const inert = this.collapsed || (this.empty && !this.overlay);
-    /*
-     * Disabling the handle is the primary fix: with no box to grab, dragging
-     * it should not be possible in the first place, jitter or not.
-     */
     this._handle?.classList.toggle("disabled", inert);
 
     if (inert) {
@@ -490,26 +435,17 @@ export class Dock extends LitElement {
   }
 
   #restore(): void {
-    const size = Number(this.#state.read("size"));
-    if (
-      Number.isFinite(size) &&
-      size > 0
-    ) {
+    const size = this.#state.readNumber("size");
+    if (size !== null && size > 0) {
       this.size = size;
     }
 
-    this.collapsed = this.#state.read("collapsed") === "true";
+    this.collapsed = this.#state.readBoolean("collapsed") === true;
   }
 
   #persist(): void {
-    this.#state.write(
-      "size",
-      String(this.size)
-    );
-    this.#state.write(
-      "collapsed",
-      String(this.collapsed)
-    );
+    this.#state.writeNumber("size", this.size);
+    this.#state.writeBoolean("collapsed", this.collapsed);
   }
 
   #resizeDetail() {
@@ -526,16 +462,6 @@ export class Dock extends LitElement {
     return this.side === "left" || this.side === "right" ?
       "width" :
       "height";
-  }
-
-  #namespace(): string {
-    if (this.storageKey !== "") {
-      return this.storageKey;
-    }
-
-    const path = globalThis.location?.pathname ?? "";
-
-    return `${path}:jolly-dock:${this.layoutKey}`;
   }
 }
 

@@ -22,10 +22,13 @@ import {
 
 // Registers the chevron and grip glyphs.
 import "../icon/Icon.ts";
-import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
-import { PersistedState } from "../storage/PersistedState.ts";
+import { defaultStorageAdapter } from "../storage/defaultStorage.ts";
+import { NamespacedStore } from "../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
-import { deriveKey } from "../storage/keys.ts";
+import {
+  deriveKey,
+  pageNamespace
+} from "../storage/keys.ts";
 import {
   providePresenceSource,
   type PresenceProvider
@@ -122,12 +125,16 @@ export class PaneElement extends LitElement {
   declare _content: HTMLElement;
 
   #managed = false;
-  #state = new PersistedState(this, {
+  #state = new NamespacedStore({
     isManaged: () => this.#managed,
     namespace: () => this.#namespace(),
     storage: () => this.storage,
     onManagedWrite: () => {
-      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+      emitContainerEvent(this, "jolly-layout-dirty", {
+        type: "pane",
+        pane: this.layoutKey,
+        collapsed: this.collapsed
+      });
     }
   });
   #hosted = false;
@@ -138,7 +145,24 @@ export class PaneElement extends LitElement {
     namespace: () => this.#namespace(),
     reorderable: () => this.reorderable,
     storage: () => this.storage,
-    announce: (message) => this.announce(message)
+    announce: (message) => this.announce(message),
+    toggled: (folder, open) => {
+      if (this.#managed) {
+        emitContainerEvent(this, "jolly-layout-dirty", {
+          type: "folder",
+          pane: this.layoutKey,
+          folder,
+          open
+        });
+      }
+    },
+    discovered: () => {
+      if (this.#managed) {
+        emitContainerEvent(this, "jolly-pane-folders", {
+          pane: this
+        });
+      }
+    }
   });
 
   get layoutKey(): string {
@@ -159,7 +183,7 @@ export class PaneElement extends LitElement {
     this.dragging = false;
     this.locked = false;
     this.storageKey = "";
-    this.storage = new LocalStorageAdapter();
+    this.storage = defaultStorageAdapter();
     this.presence = null;
     this._hasActions = false;
     this._announcement = "";
@@ -260,6 +284,7 @@ export class PaneElement extends LitElement {
           @slotchange=${this.#folders.onContentChange}
           @jolly-folder-reorder=${this.#folders.onReorderCommand}
           @jolly-folder-drag=${this.#folders.onFolderDrag}
+          @jolly-toggle=${this.#folders.onFolderToggle}
         ></slot>
       </div>
       <span class="live-region" aria-live="polite">${this._announcement}</span>
@@ -315,10 +340,7 @@ export class PaneElement extends LitElement {
 
   #toggleCollapsed = () => {
     this.collapsed = !this.collapsed;
-    this.#state.write(
-      "collapsed",
-      String(this.collapsed)
-    );
+    this.#state.writeBoolean("collapsed", this.collapsed);
 
     emitContainerEvent(
       this,
@@ -328,13 +350,9 @@ export class PaneElement extends LitElement {
   };
 
   #restoreCollapsed(): void {
-    const stored = this.#state.read("collapsed");
-
-    if (
-      stored === "true" ||
-      stored === "false"
-    ) {
-      this.collapsed = stored === "true";
+    const stored = this.#state.readBoolean("collapsed");
+    if (stored !== null) {
+      this.collapsed = stored;
     }
   }
 
@@ -436,13 +454,11 @@ export class PaneElement extends LitElement {
   };
 
   #namespace(): string {
-    if (this.storageKey !== "") {
-      return this.storageKey;
-    }
-
-    const path = globalThis.location?.pathname ?? "";
-
-    return `${path}:jolly-pane:${this.heading || "untitled"}`;
+    return pageNamespace(
+      this.storageKey,
+      "jolly-pane",
+      this.heading || "untitled"
+    );
   }
 }
 

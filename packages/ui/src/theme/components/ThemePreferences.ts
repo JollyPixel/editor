@@ -12,9 +12,8 @@ import {
 
 // Import Internal Dependencies
 import { detailOf } from "../../dom.ts";
-import {
-  LocalStorageAdapter
-} from "../../storage/LocalStorageAdapter.ts";
+import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
+import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 import type { JollyChangeDetail } from "../../field/events.ts";
 import type {
@@ -30,10 +29,6 @@ import {
 // Registers the composed controls.
 import "./DensityControl.ts";
 import "./ThemeControl.ts";
-
-// CONSTANTS
-const kThemeSuffix = ":theme";
-const kDensitySuffix = ":density";
 
 export type ThemePreferencesLayout = "inline" | "stack";
 
@@ -74,13 +69,18 @@ export class ThemePreferences extends LitElement {
   @property({ attribute: false })
   declare defaultDensity: Density;
 
+  #store = new NamespacedStore({
+    namespace: () => this.storageKey,
+    storage: () => this.storage
+  });
+
   constructor() {
     super();
 
     this.layout = "inline";
     this.target = null;
     this.storageKey = "";
-    this.storage = new LocalStorageAdapter();
+    this.storage = defaultStorageAdapter();
     this.defaultTheme = "auto";
     this.defaultDensity = "default";
   }
@@ -129,7 +129,7 @@ export class ThemePreferences extends LitElement {
   }
 
   #theme(): ThemeMode {
-    const value = this.#stored(kThemeSuffix);
+    const value = this.#store.read("theme");
 
     return resolveThemePreference(
       value,
@@ -138,19 +138,12 @@ export class ThemePreferences extends LitElement {
   }
 
   #density(): Density {
-    const value = this.#stored(kDensitySuffix);
+    const value = this.#store.read("density");
 
     return resolveDensityPreference(
       value,
       this.defaultDensity
     );
-  }
-
-  #stored(
-    suffix: string
-  ): string | null {
-    return this.storageKey === "" ? null :
-      this.storage.get(`${this.storageKey}${suffix}`);
   }
 
   #onThemeChange = (
@@ -161,10 +154,7 @@ export class ThemePreferences extends LitElement {
       return;
     }
 
-    this.#store(
-      kThemeSuffix,
-      detail.value
-    );
+    this.#store.write("theme", detail.value);
     this.#applyPreferences();
   };
 
@@ -176,24 +166,9 @@ export class ThemePreferences extends LitElement {
       return;
     }
 
-    this.#store(
-      kDensitySuffix,
-      detail.value
-    );
+    this.#store.write("density", detail.value);
     this.#applyPreferences();
   };
-
-  #store(
-    suffix: string,
-    value: string
-  ): void {
-    if (this.storageKey !== "") {
-      this.storage.set(
-        `${this.storageKey}${suffix}`,
-        value
-      );
-    }
-  }
 }
 
 declare global {

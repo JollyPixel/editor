@@ -1,36 +1,14 @@
 // Import Internal Dependencies
 import "../controls/Separator.ts";
+import { FacadeItem } from "./FacadeItem.ts";
 
-export class Separator {
+export class Separator extends FacadeItem {
   readonly element: HTMLElement;
 
   constructor() {
+    super();
     this.element = document.createElement(
       "jolly-separator"
     );
-  }
-
-  get hidden(): boolean {
-    return Boolean(this.element.hidden);
-  }
-
-  set hidden(
-    value: boolean
-  ) {
-    this.element.hidden = value;
-  }
-
-  get disabled(): boolean {
-    return this.element.hasAttribute("disabled");
-  }
-
-  set disabled(
-    value: boolean
-  ) {
-    this.element.toggleAttribute("disabled", value);
-  }
-
-  dispose(): void {
-    this.element.remove();
   }
 }

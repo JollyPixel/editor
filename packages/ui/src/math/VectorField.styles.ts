@@ -2,11 +2,9 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
+import { scrubHandleStyles } from "../interaction/scrub/scrubHandle.styles.ts";
 import { fillTransition } from "../theme/styles/mixins.ts";
 
-/**
- * Axis-box styles shared by vectors and Quaternion's Euler inputs.
- */
 export const vectorFieldStyles = css`
   .axes {
     display: flex;
@@ -36,7 +34,6 @@ export const vectorFieldStyles = css`
     ${fillTransition}
   }
 
-  /* Match the shared input rule's specificity to preserve the scrub inset. */
   .value .axis-box input:not([type="color"]) {
     padding: 0 var(--jolly-space-1, 4px) 0 10px;
   }
@@ -58,7 +55,6 @@ export const vectorFieldStyles = css`
     background: var(--jolly-control-bg-muted);
   }
 
-  /* Axis color is decorative; aria-label carries the accessible identity. */
   .axis-tag {
     position: absolute;
     top: 0;
@@ -79,34 +75,9 @@ export const vectorFieldStyles = css`
     pointer-events: none;
   }
 
+  ${scrubHandleStyles}
+
   .scrub-handle {
-    position: absolute;
-    inset-block: 1px;
-    left: 1px;
     z-index: 1;
-    width: 8px;
-    border-radius: var(--jolly-radius-sm, 2px) 0 0 var(--jolly-radius-sm, 2px);
-  }
-
-  :host([scrubbable]) .scrub-handle {
-    cursor: ew-resize;
-    touch-action: none;
-  }
-
-  .scrub-handle::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 3px;
-    width: 2px;
-    height: 55%;
-    border-radius: 1px;
-    background: var(--jolly-groove);
-    transform: translateY(-50%);
-    ${fillTransition}
-  }
-
-  :host([scrubbable]) .scrub-handle:hover::before {
-    background: var(--jolly-accent-fill);
   }
 `;

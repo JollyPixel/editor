@@ -11,9 +11,6 @@ import type { CollaboratorPresence } from "../peer/types.ts";
 // CONSTANTS
 const kPresenceKey = "jolly";
 
-/**
- * Host identity stamped into presence; `room.clientId` is not shared.
- */
 export interface LocalPeerIdentity {
   clientId: string;
   displayName: string;
@@ -53,9 +50,6 @@ export class RoomPresenceSource implements PresenceSource {
       this.#detach.push(() => room.off(event, emit));
     }
 
-    /**
-     * Republish after sync or peer-joined because early patches can be dropped.
-     */
     const republish = () => {
       this.#publish();
       this.#emit();
@@ -68,9 +62,6 @@ export class RoomPresenceSource implements PresenceSource {
     this.#publish();
   }
 
-  /**
-   * Includes a synthesized local peer because `room.peers` tracks remotes.
-   */
   get peers(): ReadonlyMap<string, CollaboratorPresence> {
     const peers = new Map<string, CollaboratorPresence>([
       [this.clientId, {
@@ -99,9 +90,6 @@ export class RoomPresenceSource implements PresenceSource {
     this.#publish();
     this.#emit();
 
-    /**
-     * Contended claims remain advisory and are still published.
-     */
     return contended ? "contended" : "held";
   }
 
@@ -143,9 +131,6 @@ export class RoomPresenceSource implements PresenceSource {
     this.#room.updatePresence({
       [kPresenceKey]: {
         ...this.#identity,
-        /**
-         * Publish null because JSON drops undefined, leaving stale presence.
-         */
         editing: this.#editing
       }
     });
@@ -174,7 +159,8 @@ function readStamp(
     clientId: stamp.clientId,
     displayName: stamp.displayName,
     color: stamp.color,
-    // Omit non-string editing values from the public optional field.
-    ...typeof stamp.editing === "string" ? { editing: stamp.editing } : {}
+    ...typeof stamp.editing === "string"
+      ? { editing: stamp.editing }
+      : {}
   };
 }

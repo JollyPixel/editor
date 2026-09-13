@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { emitComposedEvent } from "../events.ts";
 import type { PresenceSource } from "./PresenceSource.ts";
 
 export const kPresenceRequestEvent = "jolly-presence-request";
@@ -32,13 +33,7 @@ export function requestPresenceSource(
     source: null,
     subscribe: null
   };
-  element.dispatchEvent(
-    new CustomEvent<PresenceRequestDetail>(kPresenceRequestEvent, {
-      detail,
-      bubbles: true,
-      composed: true
-    })
-  );
+  emitComposedEvent(element, kPresenceRequestEvent, detail);
 
   return detail;
 }

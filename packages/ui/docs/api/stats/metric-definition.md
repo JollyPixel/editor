@@ -12,7 +12,13 @@ interface MetricDefinition {
   max?: number;
   better?: "higher" | "lower";
   aggregate?: "last" | "average" | "max";
+  palette?: MetricPalette;
   sample?: () => number;
+}
+
+interface MetricPalette {
+  ink?: string;
+  bed?: string;
 }
 ```
 
@@ -22,9 +28,25 @@ interface MetricDefinition {
 | `label` | Display | Text shown beside the current value. |
 | `format` | Display | Formats the numeric readout. The default rounds with `Math.round`. |
 | `min`, `max` | Display | Fixed graph bounds. An omitted bound follows recorded history. |
-| `better` | Display | Uses the success color for `"higher"` and warning color for `"lower"` on custom metrics. |
+| `better` | Display | Default ink: the success color for `"higher"`, the warning color for `"lower"`, the accent otherwise. |
+| `palette` | Display | Graph and readout colors. Each omitted color falls back to the default. |
 | `aggregate` | Recorder | Reduces values pending in one refresh window. Defaults to `"last"`. |
 | `sample` | Recorder | Reads one value immediately before a refresh window is aggregated. |
+
+`ink` colors the readout and the bars, `bed` the background. Each is a CSS
+color and may use `var()`, `light-dark()`, or `color-mix()`, resolved on the
+`jolly-stats` element. An invalid color uses the default.
+
+```ts
+recorder.addMetric({
+  id: "triangles",
+  label: "TRIS",
+  palette: {
+    ink: "var(--app-tris, light-dark(#5b3cc4, #b69cff))",
+    bed: "light-dark(#ece6ff, #1a1033)"
+  }
+});
+```
 
 The recorder stores a shallow copy of the definition. Display properties do not
 clamp, transform, or reject recorded values.
@@ -58,6 +80,6 @@ resolveMetricRange(
 // { min: 0, max: 20 }
 ```
 
-`MetricDefinition`, `MetricAggregation`, `MetricDirection`, `MetricRange`,
-and `resolveMetricRange()` are exported from `@jolly-pixel/ui/stats`.
+`MetricDefinition`, `MetricAggregation`, `MetricDirection`, `MetricPalette`,
+`MetricRange`, and `resolveMetricRange()` are exported from `@jolly-pixel/ui/stats`.
 

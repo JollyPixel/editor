@@ -4,6 +4,7 @@ import type {
   Vec3Like,
   Vec4Like
 } from "../math/types.ts";
+import { roundToPrecision } from "../numeric/precision.ts";
 
 // CONSTANTS
 const kAxes: readonly string[] = ["x", "y", "z", "w"];
@@ -16,6 +17,12 @@ export function formatCount(
   return Math.round(
     value
   ).toLocaleString("en-US");
+}
+
+export function formatInteger(
+  value: number
+): string {
+  return String(Math.round(value));
 }
 
 export function formatDecimal(
@@ -47,7 +54,7 @@ export function formatVector(
     const component = record[axis];
     if (typeof component === "number") {
       parts.push(
-        String(Number(component.toFixed(precision)))
+        String(roundToPrecision(component, precision))
       );
     }
   }
