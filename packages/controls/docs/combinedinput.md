@@ -140,18 +140,20 @@ InputCombination.mouse(
 ): AtomicInput
 
 InputCombination.mouse(
-  button: MouseAction,
+  button: InputMouseAction,
   state?: CombinedInputState
 ): AtomicInput
 ```
 
 Creates a mouse button or virtual wheel-button condition. The state defaults
-to `"pressed"`.
+to `"pressed"`. `InputMouseAction` also accepts a button index and the `"ANY"`
+and `"NONE"` sentinels, which use the separate `state` argument.
 
 ```ts
 InputCombination.mouse("left");
 InputCombination.mouse("right", "down");
 InputCombination.mouse("scrollUp.pressed");
+InputCombination.mouse("ANY", "down");
 ```
 
 ### `InputCombination.gamepad()`
@@ -182,8 +184,8 @@ InputCombination.isCombinedAction(
 ): action is CombinedInputAction
 ```
 
-Returns true when `action` is a string containing a period. It does not
-validate the key, mouse action, or state segments.
+Returns true when `action` is a string whose segment after the first period is
+a `CombinedInputState`. It does not validate the key or mouse action segment.
 
 ## Composite conditions
 

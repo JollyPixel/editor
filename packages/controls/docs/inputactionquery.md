@@ -20,10 +20,12 @@ const matches = query.match({
 ## Constructor and state
 
 ```ts
+type InputActionQueryValue<TAction> = Exclude<TAction, "ANY" | "NONE">;
+
 class InputActionQuery<TAction> {
   readonly isAny: boolean;
   readonly isNone: boolean;
-  readonly value: TAction | null;
+  readonly value: InputActionQueryValue<TAction> | null;
 
   constructor(
     action: TAction | "ANY" | "NONE"
@@ -33,7 +35,8 @@ class InputActionQuery<TAction> {
 
 `isAny` is true only for `"ANY"`; `isNone` is true only for `"NONE"`.
 `value` is `null` for either sentinel and contains the original action for
-every other value.
+every other value. Its type excludes both sentinels, so
+`new InputActionQuery("ANY").value` is typed `null`.
 
 The constructor does not validate ordinary action values.
 
@@ -44,7 +47,7 @@ match(
   handlers: {
     any: () => boolean;
     none: () => boolean;
-    value: (action: TAction) => boolean;
+    value: (action: InputActionQueryValue<TAction>) => boolean;
   }
 ): boolean
 ```

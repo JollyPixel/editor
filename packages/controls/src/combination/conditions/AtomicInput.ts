@@ -1,77 +1,34 @@
 // Import Internal Dependencies
-import type { Input } from "./Input.class.ts";
+import type { Input } from "../../Input.class.ts";
+import type {
+  InputMouseAction,
+  GamepadIndex,
+  GamepadButton,
+  InputKeyboardAction
+} from "../../devices/index.ts";
 import {
-  type MouseAction,
-  type GamepadIndex,
-  type GamepadButton,
-  type ExtendedKeyCode,
-  type InputKeyboardAction
-} from "./devices/index.ts";
-
-export interface InputCondition {
-  evaluate(
-    input: Input
-  ): boolean;
-  reset(): void;
-}
-
-export interface BoundInputCondition {
-  (): boolean;
-  reset(): void;
-}
-
-export function bindInputCondition(
-  condition: InputCondition,
-  input: Input
-): BoundInputCondition {
-  return Object.assign(
-    () => condition.evaluate(input),
-    {
-      reset: () => condition.reset()
-    }
-  );
-}
+  bindInputCondition,
+  type InputCondition,
+  type BoundInputCondition
+} from "./InputCondition.ts";
+import type { CombinedInputState } from "../types.ts";
 
 export type CombinedInputType =
   | "key"
   | "mouse"
   | "gamepad";
-export type CombinedInputState =
-  | "down"
-  | "pressed"
-  | "released";
-export type CombinedKeyboardInputAction =
-  `${ExtendedKeyCode}.${CombinedInputState}`;
-export type CombinedMouseInputAction =
-  `${MouseAction}.${CombinedInputState}`;
-export type CombinedInputAction =
-  | CombinedKeyboardInputAction
-  | CombinedMouseInputAction;
 
 export type AtomicInputAction =
   | InputKeyboardAction
-  | MouseAction
-  | [GamepadIndex, number | keyof typeof GamepadButton];
+  | InputMouseAction
+  | AtomicGamepadAction;
 
-type AtomicKeyboardInput = {
-  type: "key";
-  action: InputKeyboardAction;
-};
-
-type AtomicMouseInput = {
-  type: "mouse";
-  action: MouseAction;
-};
-
-type AtomicGamepadInput = {
-  type: "gamepad";
-  action: [GamepadIndex, number | keyof typeof GamepadButton];
-};
+type AtomicGamepadAction = [GamepadIndex, number | keyof typeof GamepadButton];
 
 type AtomicInputSpec =
-  | AtomicKeyboardInput
-  | AtomicMouseInput
-  | AtomicGamepadInput;
+  | [type: "key", action: InputKeyboardAction, state?: CombinedInputState]
+  | [type: "mouse", action: InputMouseAction, state?: CombinedInputState]
+  | [type: "gamepad", action: AtomicGamepadAction, state?: CombinedInputState];
 
 export class AtomicInput implements InputCondition {
   #spec: AtomicInputSpec;
@@ -84,41 +41,41 @@ export class AtomicInput implements InputCondition {
   );
   constructor(
     type: "mouse",
-    action: MouseAction,
+    action: InputMouseAction,
     state?: CombinedInputState
   );
   constructor(
     type: "gamepad",
-    action: [GamepadIndex, number | keyof typeof GamepadButton],
+    action: AtomicGamepadAction,
     state?: CombinedInputState
   );
   constructor(
-    type: CombinedInputType,
-    action: AtomicInputAction,
-    state: CombinedInputState = "pressed"
+    ...spec: AtomicInputSpec
   ) {
-    this.#spec = { type, action } as AtomicInputSpec;
-    this.#state = state;
+    this.#spec = spec;
+    this.#state = spec[2] ?? "pressed";
   }
 
   evaluate(
     input: Input
   ): boolean {
-    switch (this.#spec.type) {
+    const [type, action] = this.#spec;
+
+    switch (type) {
       case "key":
         return this.#evaluateKey(
           input,
-          this.#spec.action
+          action
         );
       case "mouse":
         return this.#evaluateMouse(
           input,
-          this.#spec.action
+          action
         );
       case "gamepad":
         return this.#evaluateGamepad(
           input,
-          this.#spec.action
+          action
         );
       default:
         return false;
@@ -126,7 +83,7 @@ export class AtomicInput implements InputCondition {
   }
 
   reset(): void {
-    // No state to reset for atomic inputs
+    return;
   }
 
   bind(
@@ -153,7 +110,7 @@ export class AtomicInput implements InputCondition {
 
   #evaluateMouse(
     input: Input,
-    button: MouseAction
+    button: InputMouseAction
   ): boolean {
     switch (this.#state) {
       case "down":
@@ -169,7 +126,7 @@ export class AtomicInput implements InputCondition {
 
   #evaluateGamepad(
     input: Input,
-    [gamepad, button]: [GamepadIndex, number | keyof typeof GamepadButton]
+    [gamepad, button]: AtomicGamepadAction
   ): boolean {
     switch (this.#state) {
       case "down":
