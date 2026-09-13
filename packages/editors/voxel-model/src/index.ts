@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { Runtime } from "@jolly-pixel/runtime";
-import "@jolly-pixel/ui";
+import { inputLayers } from "@jolly-pixel/ui";
 import {
   DEFAULT_UV_SLOTS,
   type UVMapListener,
@@ -74,6 +74,8 @@ const rightDock = document.querySelector("jolly-dock[side='right']") as HTMLElem
 const runtime = await Runtime.create("#threeRenderer canvas", {
   focusCanvas: false
 });
+
+runtime.world.input.keyboard.addGuard(inputLayers);
 
 const modelScene = new ModelEditorScene();
 await runtime.load({

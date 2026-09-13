@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { Input } from "@jolly-pixel/engine";
+import { inputLayers } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { EditorState } from "../app/state/index.ts";
@@ -36,6 +37,10 @@ export class EditorShell {
       scene,
       textureRoom
     } = options;
+
+    this.#disposables.push(
+      input.keyboard.addGuard(inputLayers)
+    );
 
     const activityLog = document.querySelector("jolly-log");
     if (activityLog) {

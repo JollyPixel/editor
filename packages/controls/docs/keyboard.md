@@ -146,6 +146,35 @@ function isEditableTarget(
 events retargeted through shadow DOM. It falls back to `target` for synthetic
 events without a composed path.
 
+## Guards
+
+```ts
+interface KeyboardGuard {
+  blocks(event: KeyboardEvent): boolean;
+  onEngage?(listener: () => void): () => void;
+}
+
+addGuard(guard: KeyboardGuard): () => void
+```
+
+A guard lets another input owner, such as an open UI dialog, take keys away
+from the keyboard. A keydown or keypress that any guard `blocks()` is ignored
+the same way as an editable target: no event, no state change. Keyup is never
+guarded.
+
+`onEngage` is optional. When the guard calls its listener, held keys are
+released, so the next `update()` publishes `wasJustReleased` for them.
+Tracked states in `buttons` are kept.
+
+`addGuard()` returns a disposer that removes the guard and its engage
+subscription. Adding the same guard twice registers it once.
+
+```ts
+import { inputLayers } from "@jolly-pixel/ui";
+
+const dispose = input.keyboard.addGuard(inputLayers);
+```
+
 ## Events
 
 ```ts

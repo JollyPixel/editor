@@ -19,6 +19,7 @@ import {
   ambientThemeMode,
   type ResolvedThemeMode
 } from "../theme/ambientTheme.ts";
+import { inputLayers } from "../interaction/input/InputLayers.ts";
 
 // CONSTANTS
 const kDefaultVariants = new Set(["accent", "danger"]);
@@ -43,12 +44,19 @@ export class Dialog extends LitElement {
   declare _actions: HTMLSlotElement;
 
   #inheritedTheme: ResolvedThemeMode | null = null;
+  #releaseInputLayer: (() => void) | null = null;
 
   constructor() {
     super();
 
     this.heading = "";
     this.dismissible = true;
+  }
+
+  override disconnectedCallback(): void {
+    this.#releaseLayer();
+
+    super.disconnectedCallback();
   }
 
   get open(): boolean {
@@ -75,7 +83,13 @@ export class Dialog extends LitElement {
     await this.updateComplete;
     if (!this._dialog.open) {
       this._dialog.showModal();
+      this.#releaseInputLayer ??= inputLayers.push();
     }
+  }
+
+  #releaseLayer(): void {
+    this.#releaseInputLayer?.();
+    this.#releaseInputLayer = null;
   }
 
   close(
@@ -185,6 +199,7 @@ export class Dialog extends LitElement {
   };
 
   #onClose = () => {
+    this.#releaseLayer();
     emitContainerEvent(this, "jolly-close", {
       returnValue: this._dialog.returnValue
     });

@@ -115,6 +115,11 @@ export interface KeyState {
 
 export type InputKeyboardAction = ExtendedKeyCode | InputCustomAction;
 
+export interface KeyboardGuard {
+  blocks(event: KeyboardEvent): boolean;
+  onEngage?(listener: () => void): () => void;
+}
+
 export interface KeyboardOptions {
   documentAdapter?: DocumentAdapter;
 }
@@ -127,6 +132,7 @@ export class Keyboard extends Emitter<
   #wasActive = false;
   #settled = true;
   #enabled = true;
+  #guards = new Map<KeyboardGuard, (() => void) | null>();
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
   autoRepeatedCode: string | null = null;
@@ -164,6 +170,52 @@ export class Keyboard extends Emitter<
     if (!enabled) {
       this.reset();
     }
+  }
+
+  addGuard(
+    guard: KeyboardGuard
+  ): () => void {
+    if (!this.#guards.has(guard)) {
+      this.#guards.set(
+        guard,
+        guard.onEngage?.(this.#releaseHeldKeys) ?? null
+      );
+    }
+
+    return () => this.#removeGuard(guard);
+  }
+
+  #removeGuard(
+    guard: KeyboardGuard
+  ): void {
+    if (!this.#guards.has(guard)) {
+      return;
+    }
+
+    this.#guards.get(guard)?.();
+    this.#guards.delete(guard);
+  }
+
+  #releaseHeldKeys = () => {
+    this.buttonsDown.clear();
+    this.autoRepeatedCode = null;
+    this.#settled = false;
+  };
+
+  #isBlocked(
+    event: KeyboardEvent
+  ): boolean {
+    if (isEditableTarget(event)) {
+      return true;
+    }
+
+    for (const guard of this.#guards.keys()) {
+      if (guard.blocks(event)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   connect() {
@@ -272,7 +324,7 @@ export class Keyboard extends Emitter<
   #onKeyDown = (event: KeyboardEvent) => {
     if (
       !this.#enabled ||
-      isEditableTarget(event)
+      this.#isBlocked(event)
     ) {
       return;
     }
@@ -306,7 +358,7 @@ export class Keyboard extends Emitter<
   #onKeyPress = (event: KeyboardEvent) => {
     if (
       !this.#enabled ||
-      isEditableTarget(event)
+      this.#isBlocked(event)
     ) {
       return;
     }

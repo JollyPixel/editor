@@ -6,6 +6,7 @@ import type {
 
 // Import Internal Dependencies
 import { anchoredPosition } from "../geometry/anchoredPosition.ts";
+import { inputLayers } from "../interaction/input/InputLayers.ts";
 
 // CONSTANTS
 const kDefaultGap = 4;
@@ -48,6 +49,7 @@ export class PopoverController implements ReactiveController {
   #options: PopoverControllerOptions;
   #open = false;
   #restoreFocus = false;
+  #releaseInputLayer: (() => void) | null = null;
 
   constructor(
     host: ReactiveControllerHost,
@@ -65,13 +67,21 @@ export class PopoverController implements ReactiveController {
   onBeforeToggle = (
     event: ToggleEvent
   ): void => {
-    if (event.newState !== "closed") {
+    if (event.newState === "open") {
+      this.#claimInput();
+      setTimeout(() => {
+        if (!this.#options.popover()?.matches(":popover-open")) {
+          this.#releaseInput();
+        }
+      });
+
       return;
     }
 
     const popover = this.#options.popover();
     this.#restoreFocus = popover !== null &&
       popover.matches(":focus-within");
+    this.#releaseInput();
   };
 
   onToggle = (
@@ -151,6 +161,15 @@ export class PopoverController implements ReactiveController {
     }
   };
 
+  #claimInput(): void {
+    this.#releaseInputLayer ??= inputLayers.push();
+  }
+
+  #releaseInput(): void {
+    this.#releaseInputLayer?.();
+    this.#releaseInputLayer = null;
+  }
+
   #listen(): void {
     window.addEventListener(
       "scroll",
@@ -169,6 +188,7 @@ export class PopoverController implements ReactiveController {
   }
 
   #unlisten(): void {
+    this.#releaseInput();
     window.removeEventListener(
       "scroll",
       this.#onReposition,

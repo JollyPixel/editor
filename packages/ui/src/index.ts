@@ -120,6 +120,7 @@ export * from "./field/PopoverController.ts";
 export * from "./interaction/drag/DragSession.ts";
 export * from "./interaction/drag/dropIndex.ts";
 export * from "./interaction/drag/dragGhost.ts";
+export * from "./interaction/input/InputLayers.ts";
 export {
   startPointerDragSession,
   type PointerDragResult,
