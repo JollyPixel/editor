@@ -27,3 +27,19 @@ The default slot accepts `jolly-pane` children. Resizing emits `jolly-resize`
 and then `jolly-resize-end` with `{ width, height, collapsed }`. Double-click
 or Enter toggles a collapsible dock. Public geometry methods support
 `jolly-dock-layout`; `panes()` returns the slotted panes.
+
+An overlay dock is `pointer-events: none !important`, so the area around its
+panes reaches whatever it covers even when page CSS sets `pointer-events` on
+`jolly-dock`. Its panes and resize handle still take pointer events, except
+the handle of an empty overlay dock. `jolly-pane`, `jolly-floating`,
+`jolly-controls` and a non-overlay `jolly-dock` declare `pointer-events: auto`,
+so a page can put them inside a `pointer-events: none` layer without
+re-enabling each one:
+
+```css
+jolly-scope {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+```

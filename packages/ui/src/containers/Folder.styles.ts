@@ -125,11 +125,6 @@ export const folderStyles = css`
     --jolly-control-bg-active: var(--jolly-folder-action-bg-active);
   }
 
-  /*
-   * The danger variant paints itself from its own tokens, so it has to be
-   * inverted on its own: a filled red ground, the glyph in the action
-   * foreground.
-   */
   ::slotted(jolly-button[slot="actions"][variant="danger"]) {
     --jolly-danger: var(
       --jolly-folder-action-danger-fg,
@@ -143,10 +138,6 @@ export const folderStyles = css`
     --jolly-invalid-bg-focus: var(--jolly-folder-action-danger-bg-focus);
   }
 
-  /*
-   * The gutter holds the chevron's place in a folder that has none, so a
-   * header that cannot collapse still lines its label up with its neighbours.
-   */
   .toggle .chevron,
   .title .gutter {
     flex: 0 0 auto;
@@ -211,10 +202,6 @@ export const folderStyles = css`
     padding-inline-start: 0;
   }
 
-  /*
-   * The content takes any height the host is given, so a folder stretched by
-   * its owner hands that height down to a filling child.
-   */
   :host([open]) .content {
     display: flex;
     flex: 1 1 auto;

@@ -11,11 +11,6 @@ import {
 } from "../theme/styles/mixins.ts";
 
 export const paneStyles = css`
-  /*
-   * A pane paints a plane only when it is not already inside one. A dock or a
-   * floating window nulls this out through "slotted", so a docked pane adds no
-   * second surface and, unlike before, no shadow: only detached things cast one.
-   */
   :host {
     display: flex;
     box-sizing: border-box;
@@ -29,6 +24,7 @@ export const paneStyles = css`
     color: var(--jolly-text, ${kFallback.text});
     font-family: var(--jolly-font-family, ui-monospace, monospace);
     font-size: var(--jolly-font-size, 11px);
+    pointer-events: auto;
   }
 
   .header {
@@ -49,7 +45,6 @@ export const paneStyles = css`
     user-select: none;
   }
 
-  /* A larger left-origin checker distinguishes pane chrome from folders. */
   .header::before {
     position: absolute;
     z-index: 0;
@@ -72,7 +67,6 @@ export const paneStyles = css`
     mask-image: linear-gradient(to right, black, transparent);
   }
 
-  /* Weight and tracking keep the title legible over the pixel pattern. */
   .title {
     position: relative;
     z-index: 1;
@@ -87,7 +81,6 @@ export const paneStyles = css`
     touch-action: none;
   }
 
-  /* The source keeps its slot while a drag previews where it would land. */
   :host([dragging]) {
     opacity: 0.4;
   }
@@ -149,10 +142,6 @@ export const paneStyles = css`
       var(--jolly-easing, ease);
   }
 
-  /*
-   * Down when open and right when shut, which is how a folder turns. The two
-   * fold the same way, so their chevrons have to point the same way too.
-   */
   :host(:not([collapsed])) .chevron {
     transform: rotate(90deg);
   }

@@ -6,10 +6,6 @@ import { kFallback } from "../theme/styles/fallbacks.ts";
 import { focusRing } from "../theme/styles/mixins.ts";
 
 export const floatingStyles = css`
-  /*
-   * A floating window is a plane and genuinely detached, so it owns both the
-   * raised surface and the shadow. The pane it holds paints nothing.
-   */
   :host {
     position: fixed;
     display: block;
@@ -21,13 +17,9 @@ export const floatingStyles = css`
     border-radius: var(--jolly-radius-md, 6px);
     background: var(--jolly-surface-raised, ${kFallback.controlBg});
     box-shadow: var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 0.3));
+    pointer-events: auto;
   }
 
-  /*
-   * A dragged window ghosts as a whole, surface and shadow included, so the
-   * dock it is aiming at stays readable underneath it. The pane inside does
-   * not dim on its own here: the window is the source being moved.
-   */
   :host([dragging]) {
     opacity: 0.4;
   }
@@ -65,12 +57,6 @@ export const floatingStyles = css`
     opacity: 1;
   }
 
-  /*
-   * Inset by the host's own border-radius so the strip (and its hover line)
-   * stops before the rounded corner instead of running past the visible
-   * surface into the void the radius cuts away. The corner handle below
-   * fills the gap this leaves.
-   */
   .resize-handle.right {
     top: var(--jolly-radius-md, 6px);
     right: -4px;

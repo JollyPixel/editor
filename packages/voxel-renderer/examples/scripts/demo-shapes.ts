@@ -162,20 +162,14 @@ const backLight = new THREE.DirectionalLight("#8090ff", 0.3);
 backLight.position.set(-4, 4, -6);
 scene.add(backLight);
 
-// ── Grid ───────────────────────────────────────────────────────────────────────
-
-const gridHelper = new THREE.GridHelper(30, 30, "#334", "#223");
-scene.add(gridHelper);
-
 // ── Build shape meshes & HTML labels ──────────────────────────────────────────
 
 const labelEntries: LabelEntry[] = [];
 
 const wireMat = new THREE.MeshBasicMaterial({
-  color: "#ffffff",
+  color: "#000000",
   wireframe: true,
-  opacity: 0.12,
-  alphaMode: "blend"
+  opacity: 1
 });
 
 for (let i = 0; i < kShapes.length; i++) {

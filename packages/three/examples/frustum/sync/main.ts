@@ -72,7 +72,7 @@ const username = await resolveStoredPrompt({
 });
 
 const networkClient = new network.Client({
-  identity: {
+  profile: {
     username,
     peerId: kLocalPeerId
   }
@@ -149,8 +149,8 @@ function presencePeers(): PresencePeer[] {
     .map((peer) => {
       return {
         clientId: peer.clientId,
-        displayName: readUsername(peer.identity),
-        color: colorPalette.forKey(readPeerId(peer.identity) ?? peer.clientId)
+        displayName: readUsername(peer.profile),
+        color: colorPalette.forKey(readPeerId(peer.profile) ?? peer.clientId)
       };
     })
     .sort((a, b) => a.clientId.localeCompare(b.clientId));

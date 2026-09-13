@@ -99,7 +99,7 @@ function initializeWebsocketTransport(): network.Room<
   VoxelServerMessage
 > {
   const client = new network.Client({
-    identity: { username }
+    profile: { username }
   });
   const room = client.room<VoxelNetworkCommand, VoxelServerMessage>(
     FLAT_WORLD_ROOM
