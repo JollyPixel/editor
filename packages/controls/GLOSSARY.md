@@ -61,8 +61,14 @@ or gamepad button) to a state (`down` / `pressed` / `released`).
 ### CombinedInput
 
 The composite condition layer built on `AtomicInput`: `AllInputs`,
-`AtLeastOneInput`, `NoneInputs`, and `SequenceInputs`, plus the
+`AtLeastOneInput`, `NoneInputs`, `SequenceInputs`, and `HoldInput`, plus the
 `InputCombination` factory that builds them.
+
+### Held step
+
+A `SequenceInputs` step built with `hold()`: matched by an entry condition
+(usually a key press), then required to stay true (usually the key held down)
+until the sequence completes. Releasing it rolls progress back to that step.
 
 ### InputCondition
 

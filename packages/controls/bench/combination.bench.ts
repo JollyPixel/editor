@@ -38,6 +38,11 @@ const suite = defineSuite("controls / combinations", (bench) => {
     "KeyA.pressed",
     "Space.pressed"
   );
+  const heldSequence = InputCombination.sequence(
+    InputCombination.hold("ControlLeft"),
+    InputCombination.hold("ShiftLeft"),
+    "Space.pressed"
+  );
   const mixed = InputCombination.all(
     InputCombination.key("KeyW", "down"),
     InputCombination.mouse("left", "down"),
@@ -60,6 +65,9 @@ const suite = defineSuite("controls / combinations", (bench) => {
     }))
     .add("SequenceInputs#evaluate — 3 keys", batched(() => {
       sequence.evaluate(input);
+    }))
+    .add("SequenceInputs#evaluate — 2 held keys + 1 key", batched(() => {
+      heldSequence.evaluate(input);
     }))
     .add("AllInputs#evaluate — key + mouse + gamepad", batched(() => {
       mixed.evaluate(input);
