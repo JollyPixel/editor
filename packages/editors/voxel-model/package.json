@@ -8,12 +8,18 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src/**/*.ts"
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
+    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "lint": "eslint src test"
   },
   "keywords": [],
   "files": [
     "dist"
   ],
+  "imports": {
+    "#src/*": "./src/*"
+  },
   "dependencies": {
     "@jolly-pixel/editor.pixel-art": "1.1.0",
     "@jolly-pixel/engine": "5.0.0",
