@@ -413,7 +413,7 @@ describe("VoxelSyncServer — rights", () => {
     assert.ok(events.includes("block-removed"));
     assert.ok(events.includes("block-moved"));
     assert.ok(events.includes("world-replace"));
-    assert.equal(events.length, 23);
+    assert.equal(events.length, 24);
   });
 
   it("parses a command to its action through the inbound protocol", () => {

@@ -39,10 +39,10 @@ interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
   /** Size of one voxel chunk (required). */
   chunkSize: number;
   /**
-   * World-space offset applied to voxels.
+   * World-space position of the layer origin.
    * @default { x: 0, y: 0, z: 0 }
    **/
-  offset?: VoxelCoord;
+  position?: VoxelCoord;
 }
 ```
 
@@ -61,8 +61,8 @@ class VoxelLayer {
   // number of currently allocated chunks
   readonly chunkCount: number;
 
-  // world-space translation applied to every voxel in the layer
-  offset: VoxelCoord;
+  // world-space position of the layer origin
+  position: VoxelCoord;
   properties: Record<string, any>;
 }
 ```
@@ -71,7 +71,8 @@ These properties are mutable in the TypeScript API because deserialization and
 world management update them. Application code should use the corresponding
 `VoxelWorld` or `VoxelEngine` methods so mesh invalidation and hooks still run.
 
-> **`offset`** - shifts where voxels render in world space; does not move chunk storage. Always use `VoxelWorld.setLayerOffset` or `translateLayer` so chunks are marked dirty.
+> **`position`** - locates the layer-local origin in world space. Always use
+> `VoxelWorld.setLayerPosition` or `translateLayer` so chunks are marked dirty.
 
 > **`opacity`** - `1` = fully opaque (default), `0` = hidden (same as `visible = false`). Values below `0` or above `1` are clamped. Faded layers (`0 < opacity < 1`) cull faces only within their own layer and remain solid for collision. Always use `VoxelWorld.setLayerOpacity` or `updateLayer` to apply changes.
 
@@ -99,7 +100,7 @@ interface VoxelLayerJSON {
   visible: boolean;
   opacity?: number;
   order: number;
-  offset?: { x: number; y: number; z: number; };
+  position?: { x: number; y: number; z: number; };
   properties?: Record<string, any>;
   voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
 }
@@ -128,7 +129,7 @@ if (!chunk) {}
 
 ### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
 
-Read a voxel at world-space `position` (offset is applied).
+Read a voxel at world-space `position`.
 Returns a freshly built `VoxelEntry`, or `undefined` if empty. See the
 [storage note](./VoxelChunk.md#storage) on why the result is never `===` what was written.
 
@@ -160,12 +161,33 @@ Remove the voxel at the given world-space `position`. If the containing chunk be
 layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
 ```
 
-### `centerToWorld(): Vector3 | null`
+### `localToWorld(position: Vector3Like): Vector3`
 
-Returns the world-space center of all voxels in the given layer, accounting for the layer offset.
-When the layer has no voxels the layer offset itself is returned as a `Vector3`.
-Every current implementation path returns a `Vector3`; the public declaration
-remains nullable.
+Converts a layer-local coordinate to world space.
+
+### `worldToLocal(position: Vector3Like): Vector3`
+
+Converts a world-space coordinate to layer-local space.
+
+### `localBounds(): Box3 | null`
+
+Returns the voxel content bounds in layer-local space, or `null` when empty.
+The maximum corner includes the full extent of the outermost unit voxels.
+
+### `worldBounds(): Box3 | null`
+
+Returns the voxel content bounds in world space, or `null` when empty.
+
+### `worldCenter(): Vector3`
+
+Returns the center of the world-space content bounds. An empty layer returns
+its position.
+
+### `rebase(position: Vector3Like): void`
+
+Moves the layer origin to `position` and rewrites local storage so every voxel
+remains at the same world-space coordinate. Prefer `VoxelWorld.rebaseLayer()`
+when the layer belongs to a world.
 
 ### `markChunkDirty(cx: number, cy: number, cz: number): void`
 
@@ -191,14 +213,14 @@ Creates a detached copy of the layer, including its voxels and properties. Use
 `VoxelWorld.cloneLayer()` or `VoxelEngine.cloneLayer()` when the clone should be
 added to a world.
 
-The copy owns its own chunks, offset and properties; editing it never reaches
+The copy owns its own chunks, position and properties; editing it never reaches
 the source. `options.chunkSize` is ignored, since the copied chunks are built
 for the source's chunk size.
 
 ### `mergeFrom(source: VoxelLayer, options?: VoxelLayerMergeOptions): void`
 
 Copies every voxel from `source` into this layer, resolved in world space so
-layer offsets are honoured. Prefer the world or engine merge method when the
+layer positions are honoured. Prefer the world or engine merge method when the
 operation must update world state or emit hooks.
 
 `options.overwrite` defaults to `true`, letting source voxels replace target

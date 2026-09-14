@@ -83,34 +83,52 @@ describe("VoxelWorld.applyRemoteCommand — updated", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — offset-updated (absolute)", () => {
-  it("sets the layer offset", () => {
+describe("VoxelWorld.applyRemoteCommand — position-updated (absolute)", () => {
+  it("sets the layer position", () => {
     const world = makeWorld();
     world.addLayer("Ground");
     world.applyRemoteCommand({
-      action: "offset-updated",
+      action: "position-updated",
       layerName: "Ground",
-      metadata: { offset: { x: 5, y: 0, z: 3 } }
+      metadata: { position: { x: 5, y: 0, z: 3 } }
     });
     const layer = world.getLayer("Ground");
     assert.ok(layer !== undefined);
-    assert.deepEqual(layer.offset, { x: 5, y: 0, z: 3 });
+    assert.deepEqual(layer.position, { x: 5, y: 0, z: 3 });
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — offset-updated (delta)", () => {
-  it("translates the layer offset", () => {
+describe("VoxelWorld.applyRemoteCommand — position-updated (delta)", () => {
+  it("translates the layer position", () => {
     const world = makeWorld();
     const layer = world.addLayer("Ground");
-    layer.offset = { x: 2, y: 0, z: 0 };
+    layer.position = { x: 2, y: 0, z: 0 };
     world.applyRemoteCommand({
-      action: "offset-updated",
+      action: "position-updated",
       layerName: "Ground",
       metadata: { delta: { x: 3, y: 1, z: 0 } }
     });
     const updatedLayer = world.getLayer("Ground");
     assert.ok(updatedLayer !== undefined);
-    assert.deepEqual(updatedLayer.offset, { x: 5, y: 1, z: 0 });
+    assert.deepEqual(updatedLayer.position, { x: 5, y: 1, z: 0 });
+  });
+});
+
+describe("VoxelWorld.applyRemoteCommand — position-rebased", () => {
+  it("changes the origin without moving the layer contents", () => {
+    const world = makeWorld();
+    const layer = world.addLayer("Ground");
+    layer.setVoxelAt({ x: 8, y: 1, z: 2 }, makeVoxelEntry(7));
+
+    world.applyRemoteCommand({
+      action: "position-rebased",
+      layerName: "Ground",
+      metadata: { position: { x: 8, y: 1, z: 2 } }
+    });
+
+    assert.deepEqual(layer.position, { x: 8, y: 1, z: 2 });
+    assert.equal(layer.getVoxelAt({ x: 8, y: 1, z: 2 })?.blockId, 7);
+    assert.ok("0,0,0" in layer.toJSON().voxels);
   });
 });
 
@@ -407,7 +425,7 @@ describe("VoxelWorld.applyRemoteCommand — exhaustiveness", () => {
      * Ties this check to the real source of truth instead of a hand-rolled
      * list, so a new/renamed action can't silently drop out of coverage.
      */
-    assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 19);
+    assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 20);
 
     for (const action of VOXEL_LAYER_HOOK_ACTIONS) {
       const world = makeWorld();
@@ -436,8 +454,9 @@ function commandFor(
       return { action, layerName, metadata: { options: { name: "Copy" } } };
     case "merged":
       return { action, layerName, metadata: { targetLayerName: "Ground" } };
-    case "offset-updated":
-      return { action, layerName, metadata: { offset: position } };
+    case "position-updated":
+    case "position-rebased":
+      return { action, layerName, metadata: { position } };
     case "voxel-set":
       return {
         action,

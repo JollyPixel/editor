@@ -133,6 +133,12 @@ A detached copy holding the same coordinates, size, voxels and conservative
 bounds. The copy owns its storage, so writing to it never reaches the source.
 It is always returned `dirty`, so a renderer meshes it on the next tick.
 
+### `copyFrom(source: VoxelChunk): void`
+
+Replaces the voxel storage and conservative bounds with those from `source`.
+The chunk keeps its identity and becomes dirty. The source remains independent.
+Both chunks must have the same size.
+
 ### `entries(): IterableIterator<[number, VoxelEntry]>`
 
 Iterates all stored entries as `[linearIndex, VoxelEntry]` pairs. Allocates a tuple and

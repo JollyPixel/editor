@@ -191,16 +191,28 @@ export class VoxelChunk {
       this.size
     );
 
-    copy.store.copyFrom(this.store);
-    copy.#minX = this.#minX;
-    copy.#minY = this.#minY;
-    copy.#minZ = this.#minZ;
-    copy.#maxX = this.#maxX;
-    copy.#maxY = this.#maxY;
-    copy.#maxZ = this.#maxZ;
-    copy.dirty = true;
+    copy.copyFrom(this);
 
     return copy;
+  }
+
+  copyFrom(
+    source: VoxelChunk
+  ): void {
+    if (source.size !== this.size) {
+      throw new RangeError(
+        `VoxelChunk: cannot copy size ${source.size} into size ${this.size}.`
+      );
+    }
+
+    this.store.copyFrom(source.store);
+    this.#minX = source.#minX;
+    this.#minY = source.#minY;
+    this.#minZ = source.#minZ;
+    this.#maxX = source.#maxX;
+    this.#maxY = source.#maxY;
+    this.#maxZ = source.#maxZ;
+    this.dirty = true;
   }
 
   * entries(): IterableIterator<[number, VoxelEntry]> {

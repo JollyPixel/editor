@@ -45,7 +45,8 @@ gives you a precise `metadata` type with no casting required.
 | `"updated"` | `{ options: Partial<VoxelLayerConfigurableOptions> }` | |
 | `"cloned"` | `{ options: PartialExcept<VoxelLayerOptions, "name"> }` | `layerName` is the source layer; `options.name` is the resolved clone name. |
 | `"merged"` | `{ targetLayerName: string }` | `layerName` is the source layer, which the merge removes. |
-| `"offset-updated"` | `{ offset: VoxelCoord }` or `{ delta: VoxelCoord }` | |
+| `"position-updated"` | `{ position: VoxelCoord }` or `{ delta: VoxelCoord }` | |
+| `"position-rebased"` | `{ position: VoxelCoord }` | |
 | `"voxel-set"` | `{ position, blockId, rotation, flipX, flipZ, flipY }` | |
 | `"voxel-removed"` | `{ position: Vector3Like }` | |
 | `"voxels-set"` | `{ entries: VoxelSetOptions[] }` | Bulk placement |

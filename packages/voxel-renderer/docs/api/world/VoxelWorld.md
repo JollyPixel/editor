@@ -140,17 +140,23 @@ is treated exactly like `visible = false`. Marks only the layer's own chunks dir
 same-bucket change (e.g. `0.4 → 0.6`), or every layer's chunks when the change crosses the
 `opacity === 1` occlusion boundary. No-op if the layer is not found.
 
-#### `setLayerOffset(name: string, offset: VoxelCoord): void`
+#### `setLayerPosition(name: string, position: VoxelCoord): void`
 
 Sets the world-space translation of a layer. All voxels in that layer are shifted by
-`offset`: a voxel stored at local `{0,0,0}` will appear at `{offset.x, offset.y, offset.z}`
+`position`: a voxel stored at local `{0,0,0}` will appear at `{position.x, position.y, position.z}`
 in world space. Marks all chunks in every layer dirty so cross-layer face culling is
 re-evaluated on the next frame. No-op if the layer is not found.
 
 #### `translateLayer(name: string, delta: VoxelCoord): void`
 
-Adds `delta` to the layer's current offset. Equivalent to calling `setLayerOffset` with
-`layer.offset + delta`. Marks all chunks dirty. No-op if the layer is not found.
+Adds `delta` to the layer's current position. Equivalent to calling `setLayerPosition` with
+`layer.position + delta`. Marks all chunks dirty. No-op if the layer is not found.
+
+#### `rebaseLayer(name: string, position: VoxelCoord): void`
+
+Moves the layer origin to `position` while preserving every voxel's world-space
+location. Local chunk storage is rewritten and all layers are marked dirty.
+No-op if the layer is not found.
 
 #### `getLayer(name: string): VoxelLayer | undefined`
 
@@ -186,7 +192,7 @@ Overlapping voxels are resolved by stack position: the layer with the higher
 changes what an opaque stack looks like, in either direction. Opacity is not
 modelled, so a translucent layer that visually blends is treated as opaque here.
 
-The target keeps its own `opacity`, `visible` and offset. The source's
+The target keeps its own `opacity`, `visible` and position. The source's
 `properties` are folded in behind the target's, so keys already present on the
 target win and the rest carry over.
 

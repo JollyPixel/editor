@@ -34,14 +34,14 @@ function createHarness(): GizmoHarness {
   const selection = new SelectionStore();
   const worldStore = new WorldStore();
   const layer = {
-    offset: new THREE.Vector3(1, 2, 3),
-    centerToWorld: () => new THREE.Vector3(4, 5, 6)
+    position: new THREE.Vector3(1, 2, 3),
+    worldCenter: () => new THREE.Vector3(4, 5, 6)
   };
   const voxelWorld = {
     getLayer: (name: string) => (
       name === "Ground" ? layer : undefined
     ),
-    setLayerOffset: () => void 0
+    setLayerPosition: () => void 0
   } as unknown as VoxelWorld;
 
   const actorValue = {

@@ -77,11 +77,11 @@ describe("VoxelEngine — collider wiring", () => {
     assert.equal(contexts[0].shapeRegistry, engine.shapeRegistry);
   });
 
-  it("rebuilds collision for a dirty chunk with the layer offset", () => {
+  it("rebuilds collision for a dirty chunk with the layer position", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
 
-    engine.world.setLayerOffset("Ground", {
+    engine.world.setLayerPosition("Ground", {
       x: 8,
       y: 0,
       z: 4
@@ -97,7 +97,7 @@ describe("VoxelEngine — collider wiring", () => {
 
     const [{ key, collision }] = fake.rebuilt;
     assert.match(key, /:0,0,0$/, "key should identify layer + chunk coords");
-    assert.deepEqual(collision.layerOffset, { x: 8, y: 0, z: 4 });
+    assert.deepEqual(collision.layerPosition, { x: 8, y: 0, z: 4 });
     assert.ok(
       collision.geometries.size > 0,
       "expected at least one geometry"

@@ -183,11 +183,11 @@ describe("VoxelWorld — mergeLayer", () => {
     );
   });
 
-  it("resolves overlaps in world space when the layers are offset", () => {
+  it("resolves overlaps in world space when the layers are positioned", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Target");
     world.addLayer("Source");
-    world.setLayerOffset("Source", { x: 2, y: 0, z: 0 });
+    world.setLayerPosition("Source", { x: 2, y: 0, z: 0 });
     const entry = makeVoxelEntry(4, 0);
     world.setVoxelAt("Source", { x: 3, y: 0, z: 0 }, entry);
 

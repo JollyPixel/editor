@@ -55,9 +55,14 @@ export type VoxelLayerHookEvent =
     };
   }
   | {
-    action: "offset-updated";
+    action: "position-updated";
     layerName: string;
-    metadata: { offset: VoxelCoord; } | { delta: VoxelCoord; };
+    metadata: { position: VoxelCoord; } | { delta: VoxelCoord; };
+  }
+  | {
+    action: "position-rebased";
+    layerName: string;
+    metadata: { position: VoxelCoord; };
   }
   | {
     action: "voxel-set";
@@ -163,7 +168,8 @@ export const VOXEL_LAYER_HOOK_ACTIONS: readonly VoxelLayerHookAction[] = [
   "updated",
   "cloned",
   "merged",
-  "offset-updated",
+  "position-updated",
+  "position-rebased",
   "voxel-set",
   "voxel-removed",
   "voxels-set",

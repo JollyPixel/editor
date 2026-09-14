@@ -24,27 +24,27 @@ describe("VoxelWorld — layer properties", () => {
     assert.equal(layer.opacity, 0.5);
   });
 
-  it("carries visibility, opacity and offset through the dedicated setters", () => {
+  it("carries visibility, opacity and position through the dedicated setters", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Ground");
 
     world.setLayerVisible("Ground", false);
     world.setLayerOpacity("Ground", 0.5);
-    world.setLayerOffset("Ground", { x: 16, y: 0, z: -8 });
+    world.setLayerPosition("Ground", { x: 16, y: 0, z: -8 });
 
     assert.equal(layer.visible, false);
     assert.equal(layer.opacity, 0.5);
-    assert.deepEqual(layer.offset, { x: 16, y: 0, z: -8 });
+    assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
   });
 
-  it("accumulates an offset through translateLayer", () => {
+  it("accumulates a position through translateLayer", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Ground");
 
-    world.setLayerOffset("Ground", { x: 4, y: 0, z: 0 });
+    world.setLayerPosition("Ground", { x: 4, y: 0, z: 0 });
     world.translateLayer("Ground", { x: 4, y: 0, z: 2 });
 
-    assert.deepEqual(layer.offset, { x: 8, y: 0, z: 2 });
+    assert.deepEqual(layer.position, { x: 8, y: 0, z: 2 });
   });
 
   it("shrugs off an unknown layer name", () => {
@@ -132,7 +132,7 @@ describe("VoxelWorld — dirty propagation", () => {
     const fixture = makeTwoLayerWorld();
     clearAllDirty(fixture.world);
 
-    fixture.world.setLayerOffset("A", { x: 4, y: 0, z: 0 });
+    fixture.world.setLayerPosition("A", { x: 4, y: 0, z: 0 });
 
     assert.equal(dirtyFlags(fixture).a, true);
   });

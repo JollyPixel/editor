@@ -159,19 +159,12 @@ export class VoxelLayerGizmo extends ActorComponent {
       return;
     }
 
-    const center = layer.centerToWorld();
-    if (center === null) {
-      // An empty layer has no voxel bounds, so anchor the pivot on its offset.
-      this.#pivotOffset.set(0, 0, 0);
-      this.#pivot.position.copy(layer.offset);
-
-      return;
-    }
+    const center = layer.worldCenter();
 
     this.#pivotOffset.set(
-      center.x - layer.offset.x,
-      center.y - layer.offset.y,
-      center.z - layer.offset.z
+      center.x - layer.position.x,
+      center.y - layer.position.y,
+      center.z - layer.position.z
     );
     this.#pivot.position.copy(center);
   }
@@ -189,7 +182,7 @@ export class VoxelLayerGizmo extends ActorComponent {
       return;
     }
     const position = this.#pivot.position;
-    this.#world.setLayerOffset(this.#activeLayer, {
+    this.#world.setLayerPosition(this.#activeLayer, {
       x: Math.round(position.x - this.#pivotOffset.x),
       y: Math.round(position.y - this.#pivotOffset.y),
       z: Math.round(position.z - this.#pivotOffset.z)
@@ -203,7 +196,10 @@ export class VoxelLayerGizmo extends ActorComponent {
     if (
       event.action === "voxel-set" ||
       event.action === "voxel-removed" ||
-      event.action === "offset-updated"
+      event.action === "voxels-set" ||
+      event.action === "voxels-removed" ||
+      event.action === "position-updated" ||
+      event.action === "position-rebased"
     ) {
       this.#repositionPivot();
     }

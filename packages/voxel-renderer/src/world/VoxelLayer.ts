@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  Box3,
   Vector3,
   type Vector3Like
 } from "three";
@@ -59,7 +60,7 @@ function inChunkRange(
 }
 
 /**
- * Sparse serialized voxel key containing its world position.
+ * Sparse serialized voxel key containing its layer-local position.
  */
 export type VoxelEntryKey = `${number},${number},${number}`;
 
@@ -79,7 +80,7 @@ export interface VoxelLayerJSON {
    */
   opacity?: number;
   order: number;
-  offset?: {
+  position?: {
     x: number;
     y: number;
     z: number;
@@ -129,11 +130,11 @@ export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
   /** Size of one voxel chunk (required). */
   chunkSize: number;
   /**
-   * World-space offset applied to voxels.
+   * World-space position of the layer origin.
    * @default { x: 0, y: 0, z: 0 }
    *
    */
-  offset?: VoxelCoord;
+  position?: VoxelCoord;
 }
 
 /**
@@ -146,7 +147,7 @@ export class VoxelLayer {
   id: string;
   name: string;
   order: number;
-  offset: VoxelCoord;
+  position: VoxelCoord;
   properties: Record<string, any> = {};
   /**
    * Set to true the frame a layer stops being effectively visible
@@ -181,7 +182,7 @@ export class VoxelLayer {
       visible = true,
       opacity = 1,
       compositing = "composite",
-      offset = { x: 0, y: 0, z: 0 },
+      position = { x: 0, y: 0, z: 0 },
       properties = {}
     } = options;
 
@@ -196,7 +197,7 @@ export class VoxelLayer {
     this.#visible = visible;
     this.#opacity = clamp(0, 1, opacity);
     this.compositing = compositing;
-    this.offset = structuredClone(offset);
+    this.position = structuredClone(position);
     this.properties = structuredClone(properties);
   }
 
@@ -259,10 +260,28 @@ export class VoxelLayer {
     position: Vector3Like
   ): { x: number; y: number; z: number; } {
     return {
-      x: position.x - this.offset.x,
-      y: position.y - this.offset.y,
-      z: position.z - this.offset.z
+      x: position.x - this.position.x,
+      y: position.y - this.position.y,
+      z: position.z - this.position.z
     };
+  }
+
+  localToWorld(
+    position: Vector3Like
+  ): Vector3 {
+    return new Vector3(
+      position.x + this.position.x,
+      position.y + this.position.y,
+      position.z + this.position.z
+    );
+  }
+
+  worldToLocal(
+    position: Vector3Like
+  ): Vector3 {
+    const local = this.#toLocal(position);
+
+    return new Vector3(local.x, local.y, local.z);
   }
 
   getOrCreateChunk(
@@ -365,7 +384,14 @@ export class VoxelLayer {
     position: Vector3Like,
     packed: PackedVoxel
   ): void {
-    const { x, y, z } = this.#toLocal(position);
+    this.#setPackedLocal(this.#toLocal(position), packed);
+  }
+
+  #setPackedLocal(
+    position: Vector3Like,
+    packed: PackedVoxel
+  ): void {
+    const { x, y, z } = position;
 
     const cx = this.#worldToChunk(x);
     const cy = this.#worldToChunk(y);
@@ -408,14 +434,7 @@ export class VoxelLayer {
     }
   }
 
-  /**
-   * Returns the world-space center of all voxels in the given layer,
-   * accounting for the layer offset. When the layer has no voxels the layer
-   * offset itself is returned as a Vector3.
-   */
-  centerToWorld(): Vector3 | null {
-    const { offset } = this;
-
+  localBounds(): Box3 | null {
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -461,22 +480,86 @@ export class VoxelLayer {
     }
 
     if (minX === Infinity) {
-      // No voxels — local center is the layer origin.
-      return new Vector3(offset.x, offset.y, offset.z);
+      return null;
     }
 
-    // +1 so the center accounts for the full unit-cube extent of each voxel.
-    const localCenter = new Vector3(
-      (minX + maxX + 1) / 2,
-      (minY + maxY + 1) / 2,
-      (minZ + maxZ + 1) / 2
+    return new Box3(
+      new Vector3(minX, minY, minZ),
+      new Vector3(maxX + 1, maxY + 1, maxZ + 1)
     );
+  }
 
-    return new Vector3(
-      localCenter.x + offset.x,
-      localCenter.y + offset.y,
-      localCenter.z + offset.z
-    );
+  worldBounds(): Box3 | null {
+    const bounds = this.localBounds();
+    if (bounds === null) {
+      return null;
+    }
+
+    return bounds.translate(this.localToWorld({ x: 0, y: 0, z: 0 }));
+  }
+
+  worldCenter(): Vector3 {
+    const bounds = this.worldBounds();
+
+    return bounds?.getCenter(new Vector3()) ??
+      this.localToWorld({ x: 0, y: 0, z: 0 });
+  }
+
+  rebase(
+    position: Vector3Like
+  ): void {
+    if (
+      position.x === this.position.x &&
+      position.y === this.position.y &&
+      position.z === this.position.z
+    ) {
+      return;
+    }
+
+    const dx = this.position.x - position.x;
+    const dy = this.position.y - position.y;
+    const dz = this.position.z - position.z;
+    const chunks = new Map(this.#chunks);
+    const entries: Array<[VoxelCoord, PackedVoxel]> = [];
+
+    for (const chunk of chunks.values()) {
+      const x0 = chunk.cx * this.#chunkSize;
+      const y0 = chunk.cy * this.#chunkSize;
+      const z0 = chunk.cz * this.#chunkSize;
+
+      for (const [idx, packed] of chunk.packedEntries()) {
+        const { lx, ly, lz } = chunk.fromLinearIndex(idx);
+        entries.push([{
+          x: x0 + lx + dx,
+          y: y0 + ly + dy,
+          z: z0 + lz + dz
+        }, packed]);
+      }
+    }
+
+    this.#chunks.clear();
+    this.#lastChunk = null;
+    this.position = {
+      x: position.x,
+      y: position.y,
+      z: position.z
+    };
+    for (const [local, packed] of entries) {
+      this.#setPackedLocal(local, packed);
+    }
+
+    for (const [key, chunk] of this.#chunks) {
+      const previous = chunks.get(key);
+      if (previous === undefined) {
+        continue;
+      }
+
+      previous.copyFrom(chunk);
+      this.#chunks.set(key, previous);
+      chunks.delete(key);
+    }
+    this.#lastChunk = null;
+    this.#pendingRemoval.push(...chunks.values());
   }
 
   markChunkDirty(
@@ -512,13 +595,13 @@ export class VoxelLayer {
     > = {};
 
     for (const chunk of this.getChunks()) {
-      const wx0 = chunk.cx * this.#chunkSize + this.offset.x;
-      const wy0 = chunk.cy * this.#chunkSize + this.offset.y;
-      const wz0 = chunk.cz * this.#chunkSize + this.offset.z;
+      const x0 = chunk.cx * this.#chunkSize;
+      const y0 = chunk.cy * this.#chunkSize;
+      const z0 = chunk.cz * this.#chunkSize;
 
       for (const [idx, packed] of chunk.packedEntries()) {
         const { lx, ly, lz } = chunk.fromLinearIndex(idx);
-        const key: VoxelEntryKey = `${wx0 + lx},${wy0 + ly},${wz0 + lz}`;
+        const key: VoxelEntryKey = `${x0 + lx},${y0 + ly},${z0 + lz}`;
 
         voxels[key] = {
           block: voxelBlockId(packed),
@@ -538,7 +621,7 @@ export class VoxelLayer {
       opacity: this.#opacity,
       compositing: this.compositing,
       order: this.order,
-      offset: { ...this.offset },
+      position: { ...this.position },
       properties: { ...this.properties },
       voxels: this.#exportVoxels()
     };
@@ -554,7 +637,7 @@ export class VoxelLayer {
       visible: this.#visible,
       opacity: this.#opacity,
       compositing: this.compositing,
-      offset: this.offset,
+      position: this.position,
       properties: this.properties,
       ...opts,
       chunkSize: this.#chunkSize
@@ -574,9 +657,9 @@ export class VoxelLayer {
     const { overwrite = true } = options;
 
     for (const chunk of source.getChunks()) {
-      const wx0 = chunk.cx * chunk.size + source.offset.x;
-      const wy0 = chunk.cy * chunk.size + source.offset.y;
-      const wz0 = chunk.cz * chunk.size + source.offset.z;
+      const wx0 = chunk.cx * chunk.size + source.position.x;
+      const wy0 = chunk.cy * chunk.size + source.position.y;
+      const wz0 = chunk.cz * chunk.size + source.position.z;
 
       for (const [idx, packed] of chunk.packedEntries()) {
         const { lx, ly, lz } = chunk.fromLinearIndex(idx);

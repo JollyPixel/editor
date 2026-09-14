@@ -9,7 +9,7 @@ Collision is disabled unless `VoxelEngineOptions.collider` supplies a factory.
 interface VoxelChunkCollision {
   chunk: VoxelChunk;
   geometries: ReadonlyMap<string, THREE.BufferGeometry>;
-  layerOffset: VoxelCoord;
+  layerPosition: VoxelCoord;
 }
 
 interface VoxelCollider {

@@ -77,8 +77,8 @@ export function deserializeVoxelWorld(
     // Override the auto-assigned id/order with the serialised values.
     layer.id = layerJSON.id;
     layer.order = layerJSON.order;
-    if (layerJSON.offset) {
-      layer.offset = { ...layerJSON.offset };
+    if (layerJSON.position) {
+      layer.position = { ...layerJSON.position };
     }
 
     for (const [key, entryJSON] of Object.entries(layerJSON.voxels)) {
@@ -99,7 +99,10 @@ export function deserializeVoxelWorld(
         blockId: entryJSON.block,
         transform: entryJSON.transform
       };
-      layer.setVoxelAt({ x, y, z }, entry);
+      layer.setVoxelAt(
+        layer.localToWorld({ x, y, z }),
+        entry
+      );
     }
   }
 

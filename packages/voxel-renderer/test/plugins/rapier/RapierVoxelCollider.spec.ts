@@ -158,9 +158,9 @@ function makeCollider(
 function collisionOf(
   chunk: VoxelChunk,
   geometries: VoxelChunkCollision["geometries"] = kNoGeometries,
-  layerOffset = { x: 0, y: 0, z: 0 }
+  layerPosition = { x: 0, y: 0, z: 0 }
 ): VoxelChunkCollision {
-  return { chunk, geometries, layerOffset };
+  return { chunk, geometries, layerPosition };
 }
 
 /** Stand-in for a built chunk geometry (one triangle). */
@@ -245,7 +245,7 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
     );
   });
 
-  it("places the body at the chunk origin plus the layer offset", () => {
+  it("places the body at the chunk origin plus the layer position", () => {
     // cx=2, cy=0, cz=1 at size 4, offset x=8 → (2*4+8, 0, 1*4)
     const chunk = new VoxelChunk([2, 0, 1], 4);
     chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
