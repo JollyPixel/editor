@@ -58,10 +58,10 @@ async function realPath(
   try {
     return await fs.realpath(absolute);
   }
-  catch (error) {
+  catch (error: any) {
     const parent = path.dirname(absolute);
     if (
-      !isNotFound(error) ||
+      error.code !== "ENOENT" ||
       parent === absolute
     ) {
       throw error;
@@ -72,13 +72,4 @@ async function realPath(
       path.basename(absolute)
     );
   }
-}
-
-function isNotFound(
-  error: unknown
-): boolean {
-  return typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "ENOENT";
 }

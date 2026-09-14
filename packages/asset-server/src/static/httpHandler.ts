@@ -143,17 +143,19 @@ async function serve(
   try {
     bytes = await source.read(assetPath);
   }
-  catch (error) {
+  catch (error: any) {
     if (error instanceof AssetPathEscapeError) {
       end(response, 403);
-
-      return;
     }
-
-    end(
-      response,
-      isMissing(error) ? 404 : 500
-    );
+    else {
+      const isMissing = error?.code === "ENOENT" ||
+        error?.code === "EISDIR" ||
+        error?.code === "ENOTDIR";
+      end(
+        response,
+        isMissing ? 404 : 500
+      );
+    }
 
     return;
   }
@@ -192,19 +194,6 @@ function isHidden(
 ): boolean {
   return isStatePath(assetPath) ||
     (source.isIgnored?.(assetPath) ?? false);
-}
-
-function isMissing(
-  error: unknown
-): boolean {
-  return typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (
-      error.code === "ENOENT" ||
-      error.code === "EISDIR" ||
-      error.code === "ENOTDIR"
-    );
 }
 
 function end(
