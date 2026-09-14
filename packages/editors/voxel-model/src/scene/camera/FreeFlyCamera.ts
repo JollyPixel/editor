@@ -8,6 +8,7 @@ import {
   InputCombination,
   type InputCondition
 } from "@jolly-pixel/engine";
+import type { PeerFrustumPose } from "@jolly-pixel/three/network";
 
 // Import Internal Dependencies
 import { ElasticFocus } from "./ElasticFocus.ts";
@@ -184,6 +185,24 @@ export class FreeFlyCamera extends CameraComponent {
     speed: number
   ) {
     this.#moveSpeed = this.#clampMoveSpeed(speed);
+  }
+
+  teleport(
+    pose: PeerFrustumPose
+  ): void {
+    const { x, y, z, w } = pose.quaternion;
+    this.#euler.setFromQuaternion(
+      this.#orientation.set(x, y, z, w)
+    );
+    this.#yaw = this.#euler.y;
+    this.#pitch = Math.max(
+      -this.#maxPitch,
+      Math.min(this.#maxPitch, this.#euler.x)
+    );
+    this.#vel.set(0, 0, 0);
+
+    this.#applyOrientation();
+    this.actor.transform.setLocalPosition(pose.position);
   }
 
   override destroy(): void {

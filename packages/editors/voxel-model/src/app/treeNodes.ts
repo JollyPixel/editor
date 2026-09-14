@@ -1,5 +1,14 @@
 // Import Third-party Dependencies
-import type { TreeNode } from "@jolly-pixel/ui";
+import type {
+  TreeBadge,
+  TreeNode
+} from "@jolly-pixel/ui";
+
+// Import Internal Dependencies
+import type { PeerMarkMap } from "../collaboration/peerMarks.ts";
+
+// CONSTANTS
+const kMaxBadges = 3;
 
 export function insertChildTreeNode(
   nodes: readonly TreeNode[],
@@ -78,6 +87,40 @@ export function relabelTreeNode(
   });
 }
 
+export interface FlatModelNode {
+  uuid: string;
+  name: string;
+  parentUuid: string | null;
+}
+
+export function buildTreeFromFlatNodes(
+  flatNodes: readonly FlatModelNode[]
+): TreeNode[] {
+  const byParent = new Map<string | null, FlatModelNode[]>();
+  for (const node of flatNodes) {
+    const bucket = byParent.get(node.parentUuid) ?? [];
+    bucket.push(node);
+    byParent.set(node.parentUuid, bucket);
+  }
+
+  function build(
+    parentUuid: string | null
+  ): TreeNode[] {
+    return (byParent.get(parentUuid) ?? []).map((node) => {
+      const children = build(node.uuid);
+
+      return {
+        id: node.uuid,
+        label: node.name || "Block",
+        renamable: true,
+        ...children.length > 0 ? { children } : {}
+      };
+    });
+  }
+
+  return build(null);
+}
+
 export function collectTreeNodeIds(
   node: TreeNode
 ): string[] {
@@ -88,4 +131,36 @@ export function collectTreeNodeIds(
   }
 
   return ids;
+}
+
+export function withBlockBadges(
+  nodes: readonly TreeNode[],
+  marks: PeerMarkMap<string>
+): TreeNode[] {
+  return nodes.map((node) => {
+    const badges = badgesOf(node, marks);
+    const children = node.children === undefined
+      ? undefined
+      : withBlockBadges(node.children, marks);
+
+    return {
+      ...node,
+      ...badges.length > 0 ? { badges } : {},
+      ...children === undefined ? {} : { children }
+    };
+  });
+}
+
+function badgesOf(
+  node: TreeNode,
+  marks: PeerMarkMap<string>
+): TreeBadge[] {
+  const peers = marks.get(node.id) ?? [];
+
+  return peers.slice(0, kMaxBadges).map((peer) => {
+    return {
+      color: peer.color,
+      title: peer.displayName
+    };
+  });
 }

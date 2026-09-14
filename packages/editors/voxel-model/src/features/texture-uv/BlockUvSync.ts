@@ -46,12 +46,14 @@ export default class BlockUvSync {
   #modelSceneComponent: ModelSceneComponent;
   #getCanvasManager: () => PixelArtCanvas | null;
   #uvSelectionSyncWired = false;
+  #mappedUuids = new Set<string>();
 
   constructor(options: BlockUvSyncOptions) {
     this.#modelSceneComponent = options.modelSceneComponent;
     this.#getCanvasManager = options.getCanvasManager;
 
     document.addEventListener("groupSelected", this.#onGroupSelected);
+    document.addEventListener("groupRemoved", this.#onGroupRemoved);
   }
 
   public update(): void {
@@ -62,6 +64,7 @@ export default class BlockUvSync {
 
     this.#modelSceneComponent.setCanvasTexture(canvasManager);
     this.#wireUvSelectionSyncOnce(canvasManager);
+    this.#reconcileBlockUvMappings(canvasManager);
   }
 
   public createBlock(
@@ -72,14 +75,13 @@ export default class BlockUvSync {
 
     const canvasManager = this.#getCanvasManager();
     if (canvasManager) {
-      const region = canvasManager.uv.create({
+      canvasManager.uv.create({
         id: blockRegionId(group.getGroupUUID()),
         name,
         color: kBlockUvColor,
         ...kBlockUvSize,
         state: "unfolded"
       });
-      this.#applyUvRegionToBlock(group, region, canvasManager.textureSize);
     }
 
     return group;
@@ -87,9 +89,6 @@ export default class BlockUvSync {
 
   public removeBlock(uuid: string): void {
     this.#modelSceneComponent.removeBlock(uuid);
-
-    const canvasManager = this.#getCanvasManager();
-    canvasManager?.uv.delete(blockRegionId(uuid));
   }
 
   #wireUvSelectionSyncOnce(
@@ -102,6 +101,33 @@ export default class BlockUvSync {
 
     canvasManager.uv.on("selection-changed", this.#onUvSelectionChanged);
   }
+
+  #reconcileBlockUvMappings(
+    canvasManager: PixelArtCanvas
+  ): void {
+    for (const group of this.#modelSceneComponent.getModelManager().getGroups()) {
+      const uuid = group.getGroupUUID();
+      if (this.#mappedUuids.has(uuid)) {
+        continue;
+      }
+
+      const region = canvasManager.uv.get(blockRegionId(uuid));
+      if (region) {
+        this.#applyUvRegionToBlock(group, region, canvasManager.textureSize);
+        this.#mappedUuids.add(uuid);
+      }
+    }
+  }
+
+  readonly #onGroupRemoved = (
+    event: Event
+  ): void => {
+    const { uuid } = (event as CustomEvent<{ uuid: string; }>).detail;
+    this.#mappedUuids.delete(uuid);
+
+    const canvasManager = this.#getCanvasManager();
+    canvasManager?.uv.delete(blockRegionId(uuid));
+  };
 
   readonly #onUvSelectionChanged = (
     { selectedRegionId }: Parameters<UVMapListener<"selection-changed">>[0]

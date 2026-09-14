@@ -21,9 +21,12 @@ export interface GroupManagerOptions {
   pivotPos?: THREE.Vector3;
   size?: THREE.Vector3;
   scale?: THREE.Vector3;
+  rotation?: THREE.Euler;
   color?: THREE.Color;
   name?: string;
   texture?: THREE.Texture | null;
+  /** Overrides the group's auto-generated uuid. */
+  uuid?: string;
 }
 
 export default class GroupManager {
@@ -40,16 +43,24 @@ export default class GroupManager {
       pivotPos = new THREE.Vector3(0, 0, 0),
       size = new THREE.Vector3(1, 1, 1),
       scale = new THREE.Vector3(1, 1, 1),
+      rotation,
       color = new THREE.Color(0xffffff),
       name,
-      texture = null
+      texture = null,
+      uuid
     } = options;
 
     this.group = new THREE.Group();
     this.group.position.copy(pos);
+    if (uuid !== undefined) {
+      this.group.uuid = uuid;
+    }
 
     this.pivot = new THREE.Group();
     this.pivot.position.copy(pivotPos);
+    if (rotation !== undefined) {
+      this.pivot.rotation.copy(rotation);
+    }
     this.group.add(this.pivot);
 
     const geometry = new THREE.BoxGeometry(...size);

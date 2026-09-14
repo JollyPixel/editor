@@ -10,14 +10,18 @@ import { state, query } from "lit/decorators.js";
 import {
   type Mode,
   type PixelArtCanvas,
-  type PixelArtCanvasOptions
+  type PixelArtCanvasOptions,
+  type PixelNetworkCommand,
+  type PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
 import { type PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
+import type * as network from "@jolly-pixel/network";
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { type Build } from "./tabs/Build.ts";
 import type { ModelSceneComponent } from "./ModelSceneComponent.ts";
+import { PixelCollaborationSession } from "../features/texture-uv/PixelCollaborationSession.ts";
 
 // CONSTANTS
 const kTextureSize = { x: 64, y: 64 };
@@ -42,6 +46,8 @@ export class LeftPanel extends LitElement {
 
   #canvasManager: PixelArtCanvas | null = null;
   #resizeObserver: ResizeObserver | null = null;
+  #textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
+  #collaboration = new PixelCollaborationSession();
 
   static override styles = css`
     :host {
@@ -89,6 +95,13 @@ export class LeftPanel extends LitElement {
     this.buildElement.setSceneManager(sceneManager);
   }
 
+  public setTextureRoom(
+    room: network.Room<PixelNetworkCommand, PixelServerMessage>
+  ): void {
+    this.#textureRoom = room;
+    this.#tryAttachCollaboration();
+  }
+
   override async firstUpdated(): Promise<void> {
     const options: PixelArtCanvasOptions = {
       texture: { size: kTextureSize },
@@ -100,9 +113,16 @@ export class LeftPanel extends LitElement {
     this.#canvasManager = await this.panelElement.initialize(options);
     this.#canvasManager.uv.showAll = true;
     this.#canvasManager.mode = this.#canvasModeForTab(this.mode);
+    this.#tryAttachCollaboration();
 
     this.#resizeObserver = new ResizeObserver(() => this.panelElement.onResize());
     this.#resizeObserver.observe(this.panelElement);
+  }
+
+  #tryAttachCollaboration(): void {
+    if (this.#canvasManager && this.#textureRoom) {
+      this.#collaboration.attach(this.#canvasManager, this.#textureRoom);
+    }
   }
 
   override updated(
@@ -117,6 +137,7 @@ export class LeftPanel extends LitElement {
     super.disconnectedCallback();
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = null;
+    this.#collaboration.destroy();
   }
 
   #canvasModeForTab(

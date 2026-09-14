@@ -8,6 +8,7 @@ import type { TransformControls } from "three/examples/jsm/controls/TransformCon
 
 // Import Internal Dependencies
 import ModelManager from "#src/features/groups/ModelManager.ts";
+import type { ModelHookEvent } from "#src/features/groups/hooks.ts";
 
 function createModelManager(): ModelManager {
   const scene = new THREE.Scene();
@@ -18,6 +19,15 @@ function createModelManager(): ModelManager {
   } as unknown as TransformControls;
 
   return new ModelManager({ scene, transformControl });
+}
+
+function watch(
+  manager: ModelManager
+): ModelHookEvent[] {
+  const events: ModelHookEvent[] = [];
+  manager.onModelUpdated = (event) => events.push(event);
+
+  return events;
 }
 
 describe("ModelManager.duplicateGroup", () => {
@@ -82,5 +92,278 @@ describe("ModelManager.reparentLocal", () => {
     manager.reparentLocal(child.getGroupUUID(), null);
 
     assert.deepStrictEqual(child.getPosition(), new THREE.Vector3(1, 1, 1));
+  });
+});
+
+describe("ModelManager.onModelUpdated", () => {
+  test("fires group-added with the group's uuid, name and transform", () => {
+    const manager = createModelManager();
+    const events = watch(manager);
+
+    const group = manager.addGroup({ name: "Torso", pos: new THREE.Vector3(1, 2, 3) });
+
+    assert.equal(events.length, 1);
+    assert.deepEqual(events[0], {
+      action: "group-added",
+      uuid: group.getGroupUUID(),
+      name: "Torso",
+      transform: {
+        position: { x: 1, y: 2, z: 3 },
+        pivotOffset: { x: 0, y: 0, z: 0 },
+        size: { x: 1, y: 1, z: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
+    });
+  });
+
+  test("carries the source's rotation on a duplicate's group-added event", () => {
+    const manager = createModelManager();
+    const source = manager.addGroup({ name: "Torso" });
+    source.setRotation(new THREE.Euler(0, Math.PI / 4, 0));
+    const events = watch(manager);
+
+    manager.duplicateGroup(source.getGroupUUID());
+
+    assert.equal(events.length, 1);
+    assert.equal(events[0].action, "group-added");
+    assert.equal(
+      (events[0] as Extract<ModelHookEvent, { action: "group-added"; }>).transform.rotation.y,
+      Math.PI / 4
+    );
+  });
+
+  test("fires group-removed with the removed uuid", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup();
+    const events = watch(manager);
+
+    manager.removeGroup(group);
+
+    assert.deepEqual(events, [{ action: "group-removed", uuid: group.getGroupUUID() }]);
+  });
+
+  test("fires group-renamed and applies the name", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup({ name: "Block" });
+    const events = watch(manager);
+
+    manager.renameGroup(group.getGroupUUID(), "Torso");
+
+    assert.equal(group.name, "Torso");
+    assert.deepEqual(events, [{
+      action: "group-renamed",
+      uuid: group.getGroupUUID(),
+      name: "Torso"
+    }]);
+  });
+
+  test("fires group-reparented with the resulting local transform", () => {
+    const manager = createModelManager();
+    const parent = manager.addGroup({ pos: new THREE.Vector3(10, 0, 0) });
+    const child = manager.addGroup({ pos: new THREE.Vector3(1, 1, 1) });
+    const events = watch(manager);
+
+    manager.reparent(child.getGroupUUID(), parent.getGroupUUID());
+
+    assert.equal(events.length, 1);
+    const event = events[0] as Extract<ModelHookEvent, { action: "group-reparented"; }>;
+    assert.equal(event.action, "group-reparented");
+    assert.equal(event.parentUuid, parent.getGroupUUID());
+    assert.deepEqual(event.transform.position, { x: -9, y: 1, z: 1 });
+  });
+
+  test("fires group-reparented-local without a transform", () => {
+    const manager = createModelManager();
+    const parent = manager.addGroup({ pos: new THREE.Vector3(10, 0, 0) });
+    const child = manager.addGroup({ pos: new THREE.Vector3(1, 1, 1) });
+    const events = watch(manager);
+
+    manager.reparentLocal(child.getGroupUUID(), parent.getGroupUUID());
+
+    assert.deepEqual(events, [{
+      action: "group-reparented-local",
+      uuid: child.getGroupUUID(),
+      parentUuid: parent.getGroupUUID()
+    }]);
+  });
+
+  test("commitGroupTransform fires group-transformed with the current transform", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup();
+    group.setPosition(new THREE.Vector3(5, 6, 7));
+    const events = watch(manager);
+
+    manager.commitGroupTransform(group.getGroupUUID());
+
+    assert.equal(events.length, 1);
+    const event = events[0] as Extract<ModelHookEvent, { action: "group-transformed"; }>;
+    assert.deepEqual(event.transform.position, { x: 5, y: 6, z: 7 });
+  });
+
+  test("commitGroupTransform does nothing for an unknown uuid", () => {
+    const manager = createModelManager();
+    const events = watch(manager);
+
+    manager.commitGroupTransform("missing");
+
+    assert.deepEqual(events, []);
+  });
+});
+
+describe("ModelManager.silently", () => {
+  test("suppresses onModelUpdated for the duration of the callback", () => {
+    const manager = createModelManager();
+    const events = watch(manager);
+
+    manager.silently(() => {
+      manager.addGroup({ name: "Block" });
+    });
+
+    assert.deepEqual(events, []);
+  });
+
+  test("restores emission afterwards, even if the callback throws", () => {
+    const manager = createModelManager();
+    const events = watch(manager);
+
+    assert.throws(() => {
+      manager.silently(() => {
+        throw new Error("boom");
+      });
+    });
+
+    manager.addGroup({ name: "Block" });
+    assert.equal(events.length, 1);
+  });
+});
+
+describe("ModelManager.applyRemoteCommand", () => {
+  test("group-added creates a group under the given uuid without re-emitting", () => {
+    const manager = createModelManager();
+    const events = watch(manager);
+
+    manager.applyRemoteCommand({
+      action: "group-added",
+      uuid: "remote-uuid",
+      name: "Torso",
+      transform: {
+        position: { x: 1, y: 2, z: 3 },
+        pivotOffset: { x: 0, y: 0, z: 0 },
+        size: { x: 1, y: 1, z: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
+    });
+
+    const group = manager.getGroupByUUID("remote-uuid");
+    assert.ok(group);
+    assert.equal(group.name, "Torso");
+    assert.deepStrictEqual(group.getPosition(), new THREE.Vector3(1, 2, 3));
+    assert.deepEqual(events, []);
+  });
+
+  test("group-added is a no-op when the uuid already exists", () => {
+    const manager = createModelManager();
+    manager.applyRemoteCommand({
+      action: "group-added",
+      uuid: "remote-uuid",
+      name: "Torso",
+      transform: {
+        position: { x: 0, y: 0, z: 0 },
+        pivotOffset: { x: 0, y: 0, z: 0 },
+        size: { x: 1, y: 1, z: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
+    });
+
+    manager.applyRemoteCommand({
+      action: "group-added",
+      uuid: "remote-uuid",
+      name: "Duplicate",
+      transform: {
+        position: { x: 9, y: 9, z: 9 },
+        pivotOffset: { x: 0, y: 0, z: 0 },
+        size: { x: 1, y: 1, z: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
+    });
+
+    assert.equal(manager.getGroups().length, 1);
+    assert.equal(manager.getGroupByUUID("remote-uuid")?.name, "Torso");
+  });
+
+  test("group-removed removes the matching group", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup();
+    const uuid = group.getGroupUUID();
+    const events = watch(manager);
+
+    manager.applyRemoteCommand({ action: "group-removed", uuid });
+
+    assert.equal(manager.getGroupByUUID(uuid), undefined);
+    assert.deepEqual(events, []);
+  });
+
+  test("group-renamed renames the matching group", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup({ name: "Block" });
+    const events = watch(manager);
+
+    manager.applyRemoteCommand({
+      action: "group-renamed",
+      uuid: group.getGroupUUID(),
+      name: "Torso"
+    });
+
+    assert.equal(group.name, "Torso");
+    assert.deepEqual(events, []);
+  });
+
+  test("group-reparented moves the group and applies the given transform", () => {
+    const manager = createModelManager();
+    const parent = manager.addGroup();
+    const child = manager.addGroup({ pos: new THREE.Vector3(1, 1, 1) });
+    const events = watch(manager);
+
+    manager.applyRemoteCommand({
+      action: "group-reparented",
+      uuid: child.getGroupUUID(),
+      parentUuid: parent.getGroupUUID(),
+      transform: {
+        position: { x: -9, y: 1, z: 1 },
+        pivotOffset: { x: 0, y: 0, z: 0 },
+        size: { x: 1, y: 1, z: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
+    });
+
+    assert.deepStrictEqual(child.getPosition(), new THREE.Vector3(-9, 1, 1));
+    assert.deepEqual(events, []);
+  });
+
+  test("group-transformed applies the given transform", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup();
+    const events = watch(manager);
+
+    manager.applyRemoteCommand({
+      action: "group-transformed",
+      uuid: group.getGroupUUID(),
+      transform: {
+        position: { x: 4, y: 5, z: 6 },
+        pivotOffset: { x: 0, y: 0, z: 0 },
+        size: { x: 2, y: 2, z: 2 },
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
+    });
+
+    assert.deepStrictEqual(group.getPosition(), new THREE.Vector3(4, 5, 6));
+    assert.deepStrictEqual(group.getSize(), new THREE.Vector3(2, 2, 2));
+    assert.deepEqual(events, []);
   });
 });

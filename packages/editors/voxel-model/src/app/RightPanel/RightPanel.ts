@@ -1,14 +1,25 @@
 // Import Third-party Dependencies
-import { LitElement, css, html, type TemplateResult } from "lit";
+import { LitElement, css, html, nothing, type TemplateResult } from "lit";
+import { state } from "lit/decorators.js";
+import type {
+  JollyPeerSelectDetail,
+  PresencePeer
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type ModelManager from "../../features/groups/ModelManager.ts";
 import type { ModelSceneComponent } from "../ModelSceneComponent.ts";
+import type { PresenceStore } from "../state/index.ts";
 import { BlockTreeController } from "./BlockTreeController.ts";
 import "./blockIcons.ts";
 
 export class RightPanel extends LitElement {
   #tree = new BlockTreeController(this);
+  #sceneManager: ModelSceneComponent | null = null;
+  #unsubscribePresence: (() => void) | null = null;
+
+  @state()
+  private declare _peers: readonly PresencePeer[];
 
   static override styles = css`
     :host {
@@ -30,6 +41,11 @@ export class RightPanel extends LitElement {
     }
   `;
 
+  constructor() {
+    super();
+    this._peers = [];
+  }
+
   public setModelManager(
     modelManager: ModelManager
   ): void {
@@ -39,11 +55,59 @@ export class RightPanel extends LitElement {
   public setSceneManager(
     sceneManager: ModelSceneComponent
   ): void {
+    this.#sceneManager = sceneManager;
     this.#tree.setSceneManager(sceneManager);
+  }
+
+  public setPresence(
+    presence: PresenceStore
+  ): void {
+    this.#unsubscribePresence?.();
+    this.#tree.setPresence(presence);
+    this._peers = presence.peers;
+    this.#unsubscribePresence = presence.watch(
+      "peersChange",
+      (peers) => {
+        this._peers = peers;
+      }
+    );
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#unsubscribePresence?.();
+    this.#unsubscribePresence = null;
+  }
+
+  readonly #onPeerSelect = (
+    event: CustomEvent<JollyPeerSelectDetail>
+  ): void => {
+    this.#sceneManager?.teleportToPeer(event.detail.clientId);
+  };
+
+  #renderCollaborators(): TemplateResult | typeof nothing {
+    if (this._peers.length === 0) {
+      return nothing;
+    }
+
+    return html`
+      <jolly-folder
+        key="collaborators"
+        label="Collaborators"
+        storage-key="voxel-model:folder:collaborators"
+      >
+        <jolly-presence
+          selectable
+          .peers=${this._peers}
+          @jolly-peer-select=${this.#onPeerSelect}
+        ></jolly-presence>
+      </jolly-folder>
+    `;
   }
 
   override render(): TemplateResult {
     return html`
+      ${this.#renderCollaborators()}
       <jolly-toolbar label="Actions">
         <jolly-tool-button
           icon="plus"

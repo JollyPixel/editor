@@ -182,6 +182,7 @@ export class TransformPanelController implements ReactiveController {
     }
 
     const { x, y, z } = this.#axisValues;
+    const uuid = this.#selectedGroup.getGroupUUID();
 
     switch (this.#mode) {
       case "pos":
@@ -224,5 +225,7 @@ export class TransformPanelController implements ReactiveController {
       default:
         break;
     }
+
+    this.#sceneManager?.getModelManager().commitGroupTransform(uuid);
   }
 }

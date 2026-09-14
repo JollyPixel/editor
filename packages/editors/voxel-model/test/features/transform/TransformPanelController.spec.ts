@@ -60,6 +60,7 @@ function makeFakeGroup(): FakeGroup {
   }
 
   const fakeGroup = {
+    getGroupUUID: () => "fake-uuid",
     getPosition: () => state.position.clone(),
     setPosition: () => track("setPosition"),
     getPositionWorld: () => state.positionWorld.clone(),

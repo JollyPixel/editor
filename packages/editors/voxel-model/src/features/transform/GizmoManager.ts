@@ -4,6 +4,8 @@ import { TransformControls } from "three/examples/jsm/controls/TransformControls
 
 // Import Internal Dependencies
 import type GroupManager from "../groups/GroupManager.ts";
+import type { GroupTransformSnapshot } from "../groups/hooks.ts";
+import { snapshotTransform } from "../groups/transformCodec.ts";
 import type { FreeFlyCamera } from "../../scene/camera/FreeFlyCamera.ts";
 
 export type GizmoMode = "translate" | "rotate" | "scale";
@@ -20,11 +22,19 @@ export interface GizmoManagerOptions {
   camera: FreeFlyCamera;
   canvas: HTMLCanvasElement;
   getSelectedGroup(): GroupManager | null;
+  commitTransform(uuid: string): void;
+  /** Fires on every frame a drag is in progress, for an optional live preview. */
+  onDragProgress?(
+    uuid: string,
+    transform: GroupTransformSnapshot
+  ): void;
 }
 
 export default class GizmoManager {
   #camera: FreeFlyCamera;
   #getSelectedGroup: () => GroupManager | null;
+  #commitTransform: (uuid: string) => void;
+  #onDragProgress: ((uuid: string, transform: GroupTransformSnapshot) => void) | undefined;
   #transformControl: TransformControls;
   #gizmoTarget: GizmoTarget | null = null;
   #dragging = false;
@@ -32,6 +42,8 @@ export default class GizmoManager {
   constructor(options: GizmoManagerOptions) {
     this.#camera = options.camera;
     this.#getSelectedGroup = options.getSelectedGroup;
+    this.#commitTransform = options.commitTransform;
+    this.#onDragProgress = options.onDragProgress;
 
     this.#transformControl = new TransformControls(this.#camera.threeCamera, options.canvas);
     this.#transformControl.addEventListener("dragging-changed", (event: any) => {
@@ -42,7 +54,7 @@ export default class GizmoManager {
         const group = this.#getSelectedGroup();
         if (group) {
           group.roundTransform();
-          document.dispatchEvent(new CustomEvent("groupTransformChanged", { detail: { group } }));
+          this.#commitTransform(group.getGroupUUID());
         }
       }
     });
@@ -57,6 +69,10 @@ export default class GizmoManager {
       }
 
       document.dispatchEvent(new CustomEvent("groupTransformChanged", { detail: { group } }));
+
+      if (this.#dragging) {
+        this.#onDragProgress?.(group.getGroupUUID(), snapshotTransform(group));
+      }
     });
   }
 

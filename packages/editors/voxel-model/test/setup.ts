@@ -4,20 +4,25 @@ import { Window } from "happy-dom";
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
 
+const kElementConstructors = Object.fromEntries(
+  Object.keys(kEmulatedBrowserWindow)
+    .filter((key) => key.startsWith("HTML") && key.endsWith("Element"))
+    .map((key) => [
+      key,
+      kEmulatedBrowserWindow[key as keyof Window]
+    ])
+);
+
 /*
  * happy-dom has no browser to run in, so DOM-touching src/ code (instanceof
  * checks, document.createElement) needs these globals, wired through
  * `node --import ./test/setup.ts`.
  */
 Object.assign(globalThis, {
+  ...kElementConstructors,
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,
   Element: kEmulatedBrowserWindow.Element,
-  HTMLElement: kEmulatedBrowserWindow.HTMLElement,
-  HTMLCanvasElement: kEmulatedBrowserWindow.HTMLCanvasElement,
-  HTMLInputElement: kEmulatedBrowserWindow.HTMLInputElement,
-  HTMLDivElement: kEmulatedBrowserWindow.HTMLDivElement,
-  HTMLButtonElement: kEmulatedBrowserWindow.HTMLButtonElement,
   Event: kEmulatedBrowserWindow.Event,
   CustomEvent: kEmulatedBrowserWindow.CustomEvent,
   EventTarget: kEmulatedBrowserWindow.EventTarget,

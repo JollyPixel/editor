@@ -4,6 +4,16 @@ import { TransformControls } from "three/examples/jsm/controls/TransformControls
 
 // Import Internal Dependencies
 import GroupManager, { type GroupManagerOptions } from "./GroupManager.ts";
+import {
+  type GroupTransformSnapshot,
+  type ModelHookEvent,
+  type ModelHookListener
+} from "./hooks.ts";
+import {
+  snapshotTransform,
+  toEuler,
+  toVector3
+} from "./transformCodec.ts";
 
 export interface ModelManagerOptions {
   scene: THREE.Scene;
@@ -17,9 +27,34 @@ export default class ModelManager {
   private selectedGroup: GroupManager | null = null;
   private meshToGroupMap: Map<THREE.Mesh, GroupManager> = new Map();
 
+  #muted = false;
+
+  public onModelUpdated: ModelHookListener | undefined;
+
   constructor(options: ModelManagerOptions) {
     this.scene = options.scene;
     this.transformControl = options.transformControl;
+  }
+
+  public silently<T>(
+    fn: () => T
+  ): T {
+    const previous = this.#muted;
+    this.#muted = true;
+    try {
+      return fn();
+    }
+    finally {
+      this.#muted = previous;
+    }
+  }
+
+  #emit(
+    event: ModelHookEvent
+  ): void {
+    if (!this.#muted) {
+      this.onModelUpdated?.(event);
+    }
   }
 
   public addGroup(options?: GroupManagerOptions): GroupManager {
@@ -31,6 +66,13 @@ export default class ModelManager {
 
     // Add group to scene
     this.scene.add(group.getGroup());
+
+    this.#emit({
+      action: "group-added",
+      uuid: group.getGroupUUID(),
+      name: group.name,
+      transform: snapshotTransform(group)
+    });
 
     return group;
   }
@@ -46,6 +88,8 @@ export default class ModelManager {
       this.selectGroup(null);
     }
 
+    const uuid = group.getGroupUUID();
+
     // Remove from map
     this.meshToGroupMap.delete(group.getMesh());
 
@@ -54,6 +98,107 @@ export default class ModelManager {
 
     // Remove from array
     this.groups.splice(index, 1);
+
+    this.#emit({ action: "group-removed", uuid });
+  }
+
+  public renameGroup(
+    uuid: string,
+    name: string
+  ): void {
+    const group = this.getGroupByUUID(uuid);
+    if (!group) {
+      return;
+    }
+
+    group.name = name;
+    this.#emit({ action: "group-renamed", uuid, name });
+  }
+
+  public commitGroupTransform(
+    uuid: string
+  ): void {
+    const group = this.getGroupByUUID(uuid);
+    if (!group) {
+      return;
+    }
+
+    this.#emit({
+      action: "group-transformed",
+      uuid,
+      transform: snapshotTransform(group)
+    });
+  }
+
+  public applyRemoteCommand(
+    cmd: ModelHookEvent
+  ): void {
+    this.silently(() => {
+      switch (cmd.action) {
+        case "group-added":
+          if (this.getGroupByUUID(cmd.uuid) !== undefined) {
+            break;
+          }
+          this.addGroup({
+            uuid: cmd.uuid,
+            name: cmd.name,
+            pos: toVector3(cmd.transform.position),
+            pivotPos: toVector3(cmd.transform.pivotOffset),
+            size: toVector3(cmd.transform.size),
+            scale: toVector3(cmd.transform.scale),
+            rotation: toEuler(cmd.transform.rotation)
+          });
+          break;
+
+        case "group-removed": {
+          const group = this.getGroupByUUID(cmd.uuid);
+          if (group) {
+            this.removeGroup(group);
+          }
+          break;
+        }
+
+        case "group-renamed":
+          this.renameGroup(cmd.uuid, cmd.name);
+          break;
+
+        case "group-reparented":
+          this.reparent(cmd.uuid, cmd.parentUuid);
+          this.#applyTransform(cmd.uuid, cmd.transform);
+          break;
+
+        case "group-reparented-local":
+          this.reparentLocal(cmd.uuid, cmd.parentUuid);
+          break;
+
+        case "group-transformed":
+          this.#applyTransform(cmd.uuid, cmd.transform);
+          break;
+
+        default: {
+          const unhandled: never = cmd;
+          throw new Error(
+            `applyRemoteCommand: unhandled action '${(unhandled as ModelHookEvent).action}'.`
+          );
+        }
+      }
+    });
+  }
+
+  #applyTransform(
+    uuid: string,
+    transform: GroupTransformSnapshot
+  ): void {
+    const group = this.getGroupByUUID(uuid);
+    if (!group) {
+      return;
+    }
+
+    group.setPosition(toVector3(transform.position));
+    group.setPivotOffset(toVector3(transform.pivotOffset));
+    group.setRotation(toEuler(transform.rotation));
+    group.setScale(toVector3(transform.scale));
+    group.resize(toVector3(transform.size));
   }
 
   public selectGroup(group: GroupManager | null): void {
@@ -91,6 +236,23 @@ export default class ModelManager {
     return this.groups.find((group) => group.getGroupUUID() === uuid);
   }
 
+  public getParentUUID(uuid: string): string | null {
+    const group = this.getGroupByUUID(uuid);
+    if (!group) {
+      return null;
+    }
+
+    const parentObject = group.getGroup().parent;
+
+    for (const candidate of this.groups) {
+      if (candidate.getPivot() === parentObject) {
+        return candidate.getGroupUUID();
+      }
+    }
+
+    return null;
+  }
+
   public duplicateGroup(
     sourceUuid: string,
     name?: string
@@ -100,16 +262,14 @@ export default class ModelManager {
       return null;
     }
 
-    const duplicate = this.addGroup({
+    return this.addGroup({
       pos: source.getPosition(),
       pivotPos: source.getPivotOffset(),
       size: source.getSize(),
       scale: source.getScale(),
+      rotation: source.getRotation(),
       name: name ?? source.name
     });
-    duplicate.setRotation(source.getRotation());
-
-    return duplicate;
   }
 
   /**
@@ -134,16 +294,22 @@ export default class ModelManager {
 
     if (parentUuid === null) {
       this.scene.attach(child.getGroup());
+    }
+    else {
+      const parent = this.getGroupByUUID(parentUuid);
+      if (!parent) {
+        return;
+      }
 
-      return;
+      parent.getPivot().attach(child.getGroup());
     }
 
-    const parent = this.getGroupByUUID(parentUuid);
-    if (!parent) {
-      return;
-    }
-
-    parent.getPivot().attach(child.getGroup());
+    this.#emit({
+      action: "group-reparented",
+      uuid: childUuid,
+      parentUuid,
+      transform: snapshotTransform(child)
+    });
   }
 
   public reparentLocal(
@@ -157,16 +323,21 @@ export default class ModelManager {
 
     if (parentUuid === null) {
       this.scene.add(child.getGroup());
+    }
+    else {
+      const parent = this.getGroupByUUID(parentUuid);
+      if (!parent) {
+        return;
+      }
 
-      return;
+      parent.getPivot().add(child.getGroup());
     }
 
-    const parent = this.getGroupByUUID(parentUuid);
-    if (!parent) {
-      return;
-    }
-
-    parent.getPivot().add(child.getGroup());
+    this.#emit({
+      action: "group-reparented-local",
+      uuid: childUuid,
+      parentUuid
+    });
   }
 
   public setTextureForAll(texture: THREE.Texture | null): void {

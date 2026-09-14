@@ -11,8 +11,10 @@ import {
   insertAfterTreeNode,
   insertChildTreeNode,
   relabelTreeNode,
-  removeTreeNode
+  removeTreeNode,
+  withBlockBadges
 } from "#src/app/treeNodes.ts";
+import type { PeerMarkMap } from "#src/collaboration/peerMarks.ts";
 
 describe("insertChildTreeNode", () => {
   test("appends at the root when parentId is null", () => {
@@ -259,5 +261,67 @@ describe("collectTreeNodeIds", () => {
       collectTreeNodeIds(node),
       ["root", "arm", "hand", "leg"]
     );
+  });
+});
+
+describe("withBlockBadges", () => {
+  test("leaves a node without a mark untouched", () => {
+    const nodes: TreeNode[] = [{ id: "a", label: "Block" }];
+
+    const result = withBlockBadges(nodes, new Map());
+
+    assert.deepStrictEqual(result, nodes);
+  });
+
+  test("stamps a badge per peer mark on the matching node", () => {
+    const nodes: TreeNode[] = [{ id: "a", label: "Block" }];
+    const marks: PeerMarkMap<string> = new Map([
+      ["a", [
+        { clientId: "bob", displayName: "Bob", color: "#00ff00" },
+        { clientId: "cleo", displayName: "Cleo", color: "#0000ff" }
+      ]]
+    ]);
+
+    const result = withBlockBadges(nodes, marks);
+
+    assert.deepStrictEqual(result, [
+      {
+        id: "a",
+        label: "Block",
+        badges: [
+          { color: "#00ff00", title: "Bob" },
+          { color: "#0000ff", title: "Cleo" }
+        ]
+      }
+    ]);
+  });
+
+  test("stamps a nested node by its own id", () => {
+    const nodes: TreeNode[] = [
+      {
+        id: "root",
+        label: "Root",
+        children: [{ id: "arm", label: "Arm" }]
+      }
+    ];
+    const marks: PeerMarkMap<string> = new Map([
+      ["arm", [{ clientId: "bob", displayName: "Bob", color: "#00ff00" }]]
+    ]);
+
+    const result = withBlockBadges(nodes, marks);
+
+    assert.deepStrictEqual(result, [
+      {
+        id: "root",
+        label: "Root",
+        children: [
+          {
+            id: "arm",
+            label: "Arm",
+            badges: [{ color: "#00ff00", title: "Bob" }]
+          }
+        ]
+      }
+    ]);
   });
 });
