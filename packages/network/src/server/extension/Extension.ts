@@ -45,6 +45,7 @@ export interface RoomEventStoreHandle {
 export interface RoomContext {
   readonly room: RoomBroadcast;
   readonly eventStore: RoomEventStoreHandle;
+  readonly actor: EventStore.Actor;
 }
 
 export abstract class Extension<

@@ -50,12 +50,22 @@ await backend.writer.rename({ assetId, to: "textures/ground.png", actor });
 await backend.writer.remove({ assetId, actor });
 ```
 
-These operations return an error result when the asset ID is unknown. Paths
-are
-[root-relative POSIX paths](../../asset-source/docs/AssetSource.md#paths); one
-that escapes the
-source root, or that names the `.jollypixel/` state directory, throws
-`AssetPathEscapeError`.
+## Errors
+
+Every method returns failures as an error result and appends nothing:
+
+- an unknown asset ID;
+- a path that escapes the source root, or that names the `.jollypixel/` state
+  directory: `AssetPathEscapeError`. Paths are
+  [root-relative POSIX paths](../../asset-source/docs/AssetSource.md#paths);
+- a `kind` passed to `create` that no handler registers:
+  `UnknownAssetKindError`;
+- a `create` or `rename` target already used by another asset:
+  `AssetPathConflictError`, carrying `path` and the occupying `assetId`.
+
+The conflict check reads the desired state, so a path claimed by an event that
+is not written to the source yet is already taken. Two assets can therefore
+never share a file. A deleted asset frees its path.
 
 Call `backend.flush(assetId)` when the caller must wait for the resulting
 source write. The `alreadyProjected` input option is reserved for source-backed

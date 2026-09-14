@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type {
-  Extension,
   RoomResolution,
   Server
 } from "@jolly-pixel/network";
@@ -14,11 +13,11 @@ import {
 // Import Internal Dependencies
 import { AssetRoomExtension } from "./AssetRoomExtension.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
+import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
 import type {
-  AssetKindHandler,
-  AssetRoomBinding
-} from "../kinds/AssetKindHandler.ts";
-import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
+  CatalogChange,
+  CatalogProjection
+} from "../catalog/CatalogProjection.ts";
 import type { AssetStateStore } from "../sync/AssetStateStore.ts";
 import type { AssetProjector } from "../sync/AssetProjector.ts";
 import type { SnapshotScheduler } from "../sync/SnapshotScheduler.ts";
@@ -27,11 +26,6 @@ import {
   type Logger
 } from "../logger.ts";
 
-/*
- * Re-exported so a host wiring rooms needs one import, not two. The
- * definitions live in `@jolly-pixel/asset` because the browser needs them
- * to build the same room name.
- */
 export {
   assetRoomName,
   parseAssetRoomName,
@@ -49,24 +43,6 @@ export interface AssetRoomsOptions {
   logger?: Logger;
 }
 
-type AssetExtensionFactory = (
-  binding: AssetRoomBinding
-) => Extension;
-
-function extensionFactory(
-  handler: AssetKindHandler
-): AssetExtensionFactory | null {
-  const { createExtension, live } = handler;
-  if (createExtension !== undefined) {
-    return createExtension;
-  }
-  if (live === undefined) {
-    return null;
-  }
-
-  return (binding) => new AssetRoomExtension(binding, live(binding));
-}
-
 export function registerAssetRooms(
   options: AssetRoomsOptions
 ): () => void {
@@ -81,15 +57,24 @@ export function registerAssetRooms(
     logger = silentLogger()
   } = options;
 
+  const liveRooms = new Map<string, AssetRoomExtension>();
+  function onCatalogChanged(
+    change: CatalogChange
+  ): void {
+    if (change.record === null) {
+      liveRooms.get(change.assetId)?.markDeleted();
+    }
+  }
+  catalog.on("changed", onCatalogChanged);
+
   server.setRoomResolver(async(roomName): Promise<RoomResolution | null> => {
     function refuse(
-      reason: string,
-      metadata: Record<string, unknown> = {}
+      reason: string
     ): null {
       logger
         .withMetadata({
           room: roomName,
-          reason, ...metadata
+          reason
         })
         .warn("asset room refused");
 
@@ -106,9 +91,9 @@ export function registerAssetRooms(
       return refuse("unknown kind");
     }
 
-    const createRoomExtension = extensionFactory(kinds.get(kind));
-    if (createRoomExtension === null) {
-      return refuse("kind has no extension");
+    const { live } = kinds.get(kind);
+    if (live === undefined) {
+      return refuse("kind has no live protocol");
     }
 
     const id = new AssetId(assetId);
@@ -126,20 +111,16 @@ export function registerAssetRooms(
       roomId: roomName,
       state: entry.state
     };
-    const extension = createRoomExtension(binding);
-    if (extension.id !== roomName) {
-      states.release(assetId);
-
-      return refuse(
-        "extension id must match the room name",
-        { extensionId: extension.id }
-      );
-    }
+    const extension = new AssetRoomExtension(binding, live(binding));
+    liveRooms.set(assetId, extension);
 
     return {
       extension,
       graceMs,
       onEvict: async() => {
+        if (liveRooms.get(assetId) === extension) {
+          liveRooms.delete(assetId);
+        }
         await scheduler.flush(assetId);
         await projector.flush(assetId);
         states.release(assetId);
@@ -147,5 +128,9 @@ export function registerAssetRooms(
     };
   });
 
-  return () => server.setRoomResolver(null);
+  return () => {
+    catalog.off("changed", onCatalogChanged);
+    liveRooms.clear();
+    server.setRoomResolver(null);
+  };
 }

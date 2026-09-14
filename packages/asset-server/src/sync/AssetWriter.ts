@@ -11,12 +11,14 @@ import {
 import {
   AssetPathEscapeError,
   isStatePath,
-  normalizeAssetPath,
+  safeAssetPath,
   type AssetSource
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
+import { UnknownAssetKindError } from "../kinds/errors/UnknownAssetKindError.ts";
+import { AssetPathConflictError } from "./errors/AssetPathConflictError.ts";
 import { CatalogIdentitySidecar } from "../catalog/CatalogIdentitySidecar.ts";
 import { contentHash } from "../utils/contentHash.ts";
 import {
@@ -101,10 +103,23 @@ export class AssetWriter {
   async create(
     input: CreateAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
-    const path = writableAssetPath(input.path);
-    const kind = input.kind ?? this.#kinds.resolve(path).kind;
+    const writable = writableAssetPath(input.path);
+    if (!writable.ok) {
+      return Err(writable.val);
+    }
+
+    const path = writable.val;
+    if (input.kind !== undefined && !this.#kinds.has(input.kind)) {
+      return Err(new UnknownAssetKindError(input.kind));
+    }
 
     const assetId = input.assetId ?? randomUUID();
+    const vacant = this.#vacant(path, assetId);
+    if (!vacant.ok) {
+      return Err(vacant.val);
+    }
+
+    const kind = input.kind ?? this.#kinds.resolve(path).kind;
     const assetData = {
       path,
       kind,
@@ -169,9 +184,18 @@ export class AssetWriter {
       return found;
     }
 
-    const current = found.val;
-    const to = writableAssetPath(input.to);
+    const writable = writableAssetPath(input.to);
+    if (!writable.ok) {
+      return Err(writable.val);
+    }
 
+    const to = writable.val;
+    const vacant = this.#vacant(to, input.assetId);
+    if (!vacant.ok) {
+      return Err(vacant.val);
+    }
+
+    const current = found.val;
     const renamedAssetData = {
       from: current.path,
       to,
@@ -239,6 +263,17 @@ export class AssetWriter {
       Ok(current);
   }
 
+  #vacant(
+    path: string,
+    assetId: string
+  ): Result<void, AssetPathConflictError> {
+    const occupant = this.#projector.assetAt(path);
+
+    return occupant === null || occupant === assetId ?
+      Ok(undefined) :
+      Err(new AssetPathConflictError(path, occupant));
+  }
+
   async #saveIdentity(): Promise<void> {
     try {
       await this.#identity.save(this.#source);
@@ -279,11 +314,14 @@ export class AssetWriter {
 
 function writableAssetPath(
   input: string
-): string {
-  const path = normalizeAssetPath(input);
-  if (isStatePath(path)) {
-    throw new AssetPathEscapeError(input, "reserved");
+): Result<string, AssetPathEscapeError> {
+  const result = safeAssetPath(input);
+  if (!result.ok) {
+    return Err(new AssetPathEscapeError(input, result.val));
+  }
+  if (isStatePath(result.val)) {
+    return Err(new AssetPathEscapeError(input, "reserved"));
   }
 
-  return path;
+  return Ok(result.val);
 }

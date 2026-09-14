@@ -8,28 +8,22 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import {
-  Extension,
   Server,
-  type ClientHandle,
-  type RoomContext
+  type ClientHandle
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import {
-  counterCommandProtocols,
-  counterProtocols
-} from "../helpers/protocols.ts";
 import {
   assetRoomName,
   CatalogProjection,
   parseAssetRoomName,
   registerAssetRooms,
-  type AssetKindHandler,
-  type AssetRoomBinding
+  type AssetKindHandler
 } from "#src/index.ts";
 import { syncHarness, type SyncHarness } from "../helpers/backend.ts";
 import {
   counterHandler,
+  liveCounterHandler,
   COUNTER_INCREMENTED,
   type CounterState
 } from "../helpers/kinds.ts";
@@ -41,90 +35,12 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-class CounterExtension extends Extension {
-  readonly id: string;
-  readonly name: string;
-  readonly protocols = counterProtocols;
-  readonly state: CounterState;
-  disposed = 0;
-
-  constructor(
-    binding: AssetRoomBinding<CounterState>
-  ) {
-    super();
-    this.id = binding.roomId;
-    this.name = binding.kind;
-    this.state = binding.state;
-  }
-
-  override async onMessage(
-    _clientId: string,
-    _payload: unknown,
-    context: RoomContext
-  ): Promise<void> {
-    await context.eventStore.append({
-      assetType: this.name,
-      assetId: this.id.slice(this.name.length + 1),
-      eventType: COUNTER_INCREMENTED,
-      eventData: {}
-    });
-  }
-
-  override dispose(): void {
-    this.disposed += 1;
-  }
-}
-
-function editableCounter(): AssetKindHandler<CounterState> {
-  const handler = counterHandler({ delay: 0, maxDelay: 0 });
-
-  return {
-    ...handler,
-    createExtension: (binding) => new CounterExtension(binding)
-  };
-}
-
-function liveCounter(): AssetKindHandler<CounterState, CounterCommand> {
-  const handler = counterHandler({ delay: 0, maxDelay: 0 });
-
-  return {
-    ...handler,
-    live: (binding) => {
-      return {
-        commandEventType: COUNTER_INCREMENTED,
-        protocols: counterCommandProtocols,
-        parse: (payload) => (isCounterCommand(payload) ? payload : null),
-        snapshot: () => {
-          return { value: binding.state.value };
-        },
-        arbitrate: (command) => {
-          return { command };
-        }
-      };
-    }
-  };
-}
-
-type CounterKind = "extension" | "live" | "plain";
+type CounterKind = "live" | "plain";
 
 const counterKinds: Record<CounterKind, () => AssetKindHandler<CounterState>> = {
-  extension: editableCounter,
-  live: liveCounter,
+  live: () => liveCounterHandler({ delay: 0, maxDelay: 0 }),
   plain: () => counterHandler()
 };
-
-interface CounterCommand {
-  action: "increment";
-}
-
-function isCounterCommand(
-  payload: unknown
-): payload is CounterCommand {
-  return typeof payload === "object" &&
-    payload !== null &&
-    "action" in payload &&
-    payload.action === "increment";
-}
 
 function client(
   id: string
@@ -151,7 +67,7 @@ interface RoomHarness extends AsyncDisposable {
 async function roomHarness(
   options: { graceMs?: number; kind?: CounterKind; } = {}
 ): Promise<RoomHarness> {
-  const { graceMs = 1_000, kind = "extension" } = options;
+  const { graceMs = 1_000, kind = "live" } = options;
   const sync = await syncHarness({
     handlers: [counterKinds[kind]()],
     snapshot: { delay: 0, maxDelay: 0 }
@@ -340,7 +256,7 @@ describe("registerAssetRooms — eviction", () => {
     await harness.server.handleMessage("A", {
       room,
       kind: "message",
-      payload: { increment: true }
+      payload: { action: "increment" }
     });
     await harness.server.handleMessage("A", { room, kind: "leave" });
 
@@ -392,5 +308,40 @@ describe("registerAssetRooms — eviction", () => {
     });
 
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
+  });
+});
+
+describe("registerAssetRooms — deletion", () => {
+  test("deleting an asset notifies the members of its open room", async() => {
+    await using harness = await roomHarness();
+    const room = assetRoomName("counter", harness.assetId);
+    await harness.join("A");
+
+    (await harness.sync.writer.remove({
+      assetId: harness.assetId,
+      actor: kActor
+    })).unwrap();
+
+    assert.deepEqual(harness.clients.get("A")!.received.at(-1), {
+      room,
+      kind: "message",
+      payload: { type: "deleted" }
+    });
+  });
+
+  test("a room whose asset was deleted appends no further commands", async() => {
+    await using harness = await roomHarness();
+    await harness.join("A");
+    (await harness.sync.writer.remove({
+      assetId: harness.assetId,
+      actor: kActor
+    })).unwrap();
+
+    await harness.send("A", { action: "increment" });
+
+    const appended = harness.sync.eventStore.reader
+      .list(harness.assetId)
+      .filter((event) => event.eventType === COUNTER_INCREMENTED);
+    assert.strictEqual(appended.length, 0);
   });
 });

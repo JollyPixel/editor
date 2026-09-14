@@ -37,6 +37,10 @@ function createContext(
   overrides: Partial<RoomContext["eventStore"]> = {}
 ): RoomContext {
   return {
+    actor: {
+      type: "user",
+      id: "client-1"
+    },
     room: {
       broadcast: () => void 0,
       sendTo: () => void 0
@@ -295,5 +299,47 @@ describe("WorkerExtensionProxy — close", () => {
 
     await proxy.close();
     assert.equal(transports[0].terminated, true);
+  });
+});
+
+describe("WorkerExtensionProxy — dispose", () => {
+  test("terminates the transport and drops later dispatches", async() => {
+    const { factory, transports } = createFakeTransportFactory();
+    const proxy = new WorkerExtensionProxy(
+      createDescriptor(),
+      { logger: createLogger(), transportFactory: factory }
+    );
+
+    await proxy.dispose();
+    await proxy.onMessage("A", {}, createContext());
+
+    assert.equal(transports[0].terminated, true);
+    assert.deepEqual(transports[0].sent, []);
+  });
+});
+
+describe("WorkerExtensionProxy — actor", () => {
+  test("forwards the context actor with each dispatch", async() => {
+    const { factory, transports } = createFakeTransportFactory();
+    const proxy = new WorkerExtensionProxy(
+      createDescriptor(),
+      { logger: createLogger(), transportFactory: factory }
+    );
+    transports[0].simulateMessage(readyMessage());
+
+    const pending = proxy.onMessage("A", {}, createContext());
+    await flushMacrotask();
+    const sent = transports[0].sent[0] as { id: string; actor: unknown; };
+    transports[0].simulateMessage({
+      type: "dispatch-result",
+      id: sent.id,
+      ok: true
+    });
+    await pending;
+
+    assert.deepEqual(sent.actor, {
+      type: "user",
+      id: "client-1"
+    });
   });
 });

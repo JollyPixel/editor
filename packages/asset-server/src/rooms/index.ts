@@ -1,17 +1,3 @@
-export {
-  AssetRoomExtension
-} from "./AssetRoomExtension.ts";
-export type {
-  AssetArbitration,
-  AssetLiveProtocol,
-  AssetRoomMessage
-} from "./AssetRoomExtension.ts";
-export {
-  assetRoomName,
-  parseAssetRoomName,
-  registerAssetRooms
-} from "./registerAssetRooms.ts";
-export type {
-  AssetRoomName,
-  AssetRoomsOptions
-} from "./registerAssetRooms.ts";
+export * from "./AssetRoomExtension.ts";
+export { ASSET_ROOM_DELETED } from "./AssetRoomExtension.schema.ts";
+export * from "./registerAssetRooms.ts";

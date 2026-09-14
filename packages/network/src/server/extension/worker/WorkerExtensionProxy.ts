@@ -133,6 +133,10 @@ export class WorkerExtensionProxy extends Extension {
     await this.#transport?.terminate();
   }
 
+  override dispose(): Promise<void> {
+    return this.close();
+  }
+
   #spawn(): void {
     const hostData: HostWorkerData = {
       id: this.#descriptor.id,
@@ -212,7 +216,8 @@ export class WorkerExtensionProxy extends Extension {
       type: "dispatch",
       id: dispatchId,
       method,
-      args
+      args,
+      actor: context.actor
     });
 
     try {

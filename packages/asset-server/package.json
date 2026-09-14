@@ -11,27 +11,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./sync": {
-      "types": "./dist/sync/index.d.ts",
-      "default": "./dist/sync/index.js"
+    "./kinds": {
+      "types": "./dist/kinds/contract.d.ts",
+      "default": "./dist/kinds/contract.js"
     },
-    "./catalog": {
-      "types": "./dist/catalog/index.d.ts",
-      "default": "./dist/catalog/index.js"
-    },
-    "./rooms": {
-      "types": "./dist/rooms/index.d.ts",
-      "default": "./dist/rooms/index.js"
-    },
-    "./plugins/*.ts": "./dist/plugins/*.js",
-    "./static": {
-      "types": "./dist/static/index.d.ts",
-      "default": "./dist/static/index.js"
-    },
-    "./workspace": {
-      "types": "./dist/workspace/index.d.ts",
-      "default": "./dist/workspace/index.js"
-    }
+    "./plugins/*.ts": "./dist/plugins/*.js"
   },
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",

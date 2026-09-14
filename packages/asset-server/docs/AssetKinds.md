@@ -13,7 +13,6 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   apply(state: TState, event: Event): void;
   serialize(state: TState): Promise<Uint8Array>;
   live?(binding: AssetRoomBinding<TState>): AssetLiveProtocol<TCommand>;
-  createExtension?(binding: AssetRoomBinding<TState>): Extension;
 }
 ```
 
@@ -25,6 +24,18 @@ path that no registered handler claims.
 `serialize` returns the bytes stored by the asset source. A handler that
 supports live editing provides `live`; other kinds have no dynamic editing
 room.
+
+Import the handler contract from `@jolly-pixel/asset-server/kinds`. It exposes
+the handler and live protocol types, the built-in handlers and the asset event
+helpers, without the back-end, catalog or HTTP modules the root entry loads:
+
+```ts
+import {
+  ASSET_UPDATED,
+  decodeContent,
+  type AssetKindHandler
+} from "@jolly-pixel/asset-server/kinds";
+```
 
 `apply` must reset the existing `TState` in place for `asset.created`,
 `asset.updated` and `asset.deleted`. Each event is a complete checkpoint.
@@ -194,10 +205,6 @@ A room that also mutated the state would apply every command twice: once
 itself and once through the fold. Absolute writes survive that, but a command
 carrying a delta does not. `voxel-map`'s `position-updated` is exactly such a
 command, which is why both shipped kinds keep the halves separate.
-
-`createExtension` remains as an escape hatch for a room protocol `live`
-cannot express, and takes precedence over it. It returns a `network.Extension`
-whose `id` must equal the room name.
 
 `apply` must never throw. Its event is already persisted, so a fold that
 aborts would break every later replay. Both shipped handlers catch, log and

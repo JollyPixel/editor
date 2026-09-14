@@ -531,6 +531,10 @@ function makeServerBackedRoom(
    * PixelSyncServer.spec.ts.
    */
   const serverRoom: RoomContext = {
+    actor: {
+      type: "user",
+      id: "client-1"
+    },
     room: {
       broadcast: handleFromServer,
       sendTo: (_clientId, payload) => handleFromServer(payload)

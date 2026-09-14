@@ -82,7 +82,7 @@ The catalog hands the browser workspace-relative `source` paths, which have to
 resolve to something.
 
 ```ts
-import { createAssetStaticHandler } from "@jolly-pixel/asset-server/static";
+import { createAssetStaticHandler } from "@jolly-pixel/asset-server";
 
 const handler = createAssetStaticHandler({
   source: workspace.source,

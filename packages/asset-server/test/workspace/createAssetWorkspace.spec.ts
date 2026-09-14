@@ -22,14 +22,12 @@ import {
   assetRoomName,
   createAssetWorkspace,
   STATE_GITIGNORE_PATH,
-  type AssetKindHandler,
-  type AssetRoomBinding,
   type AssetWorkspace
 } from "#src/index.ts";
 import { tempWorkspace } from "../helpers/tempWorkspace.ts";
 import {
   counterHandler,
-  type CounterState
+  liveCounterHandler
 } from "../helpers/kinds.ts";
 import { counterProtocols } from "../helpers/protocols.ts";
 import { bytes } from "../helpers/bytes.ts";
@@ -40,16 +38,16 @@ const kCompactionActor: EventStore.Actor = {
   id: "tester"
 };
 
-class CounterExtension extends Extension {
+class StaticExtension extends Extension {
   readonly id: string;
-  readonly name = "counter";
+  readonly name = "static";
   readonly protocols = counterProtocols;
 
   constructor(
-    binding: AssetRoomBinding<CounterState>
+    id: string
   ) {
     super();
-    this.id = binding.roomId;
+    this.id = id;
   }
 
   override onMessage(
@@ -59,13 +57,6 @@ class CounterExtension extends Extension {
   ): void {
     return void 0;
   }
-}
-
-function editableCounter(): AssetKindHandler<CounterState> {
-  return {
-    ...counterHandler(),
-    createExtension: (binding) => new CounterExtension(binding)
-  };
 }
 
 function client(
@@ -82,7 +73,7 @@ describe("createAssetWorkspace", () => {
     await using workspace = await createAssetWorkspace({
       root: temporary.root,
       eventStore,
-      handlers: [editableCounter()],
+      handlers: [liveCounterHandler()],
       seed: {
         "counter.counter": () => bytes("0")
       },
@@ -119,7 +110,7 @@ describe("createAssetWorkspace", () => {
     await using workspace = await createAssetWorkspace({
       root,
       eventStore,
-      handlers: [editableCounter()],
+      handlers: [liveCounterHandler()],
       seed: {
         "counter.counter": () => bytes("0")
       },
@@ -193,12 +184,7 @@ describe("createAssetWorkspace", () => {
 
   test("registers the extensions it is given on the server it built", async() => {
     using eventStore = EventStore.persistence.memory();
-    const extension = new CounterExtension({
-      assetId: "a1",
-      kind: "counter",
-      roomId: "static-room",
-      state: { value: 0 }
-    });
+    const extension = new StaticExtension("static-room");
 
     await using workspace = await createAssetWorkspace({
       root: "unused",

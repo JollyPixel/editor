@@ -3,10 +3,18 @@ import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
+import {
+  assetRoomDeletedSchema,
+  ASSET_ROOM_DELETED
+} from "./AssetRoomExtension.schema.ts";
 
 export interface AssetRoomMessage {
   readonly type: string;
   readonly data: unknown;
+}
+
+export interface AssetRoomDeletedMessage {
+  readonly type: typeof ASSET_ROOM_DELETED;
 }
 
 export interface AssetArbitration<TCommand = unknown> {
@@ -43,6 +51,8 @@ export class AssetRoomExtension<
 
   #assetId: string;
   #protocol: AssetLiveProtocol<TCommand>;
+  #room: network.RoomBroadcast | null = null;
+  #deleted = false;
 
   constructor(
     binding: AssetRoomBinding,
@@ -52,14 +62,40 @@ export class AssetRoomExtension<
 
     this.id = binding.roomId;
     this.name = binding.kind;
-    this.protocols = protocol.protocols;
+    this.protocols = withDeletedNotice(protocol.protocols);
     this.#assetId = binding.assetId;
     this.#protocol = protocol;
   }
 
+  get deleted(): boolean {
+    return this.#deleted;
+  }
+
+  markDeleted(): void {
+    if (this.#deleted) {
+      return;
+    }
+
+    this.#deleted = true;
+    this.#room?.broadcast({
+      type: ASSET_ROOM_DELETED
+    } satisfies AssetRoomDeletedMessage);
+  }
+
   override onClientConnect(
-    client: network.ClientHandle
+    client: network.ClientHandle,
+    _peer: network.RoomPeer,
+    context: network.RoomContext
   ): void {
+    this.#room = context.room;
+    if (this.#deleted) {
+      client.send({
+        type: ASSET_ROOM_DELETED
+      } satisfies AssetRoomDeletedMessage);
+
+      return;
+    }
+
     client.send({
       type: "snapshot",
       data: this.#protocol.snapshot()
@@ -71,6 +107,10 @@ export class AssetRoomExtension<
     payload: unknown,
     context: network.RoomContext
   ): Promise<void> {
+    if (this.#deleted) {
+      return;
+    }
+
     const command = this.#protocol.parse(payload);
     if (command === null) {
       return;
@@ -99,4 +139,26 @@ export class AssetRoomExtension<
       }
     );
   }
+}
+
+function withDeletedNotice(
+  protocols: network.MessageProtocols
+): network.MessageProtocols {
+  const { outbound } = protocols;
+  if (outbound === null) {
+    return protocols;
+  }
+
+  return {
+    inbound: protocols.inbound,
+    outbound: {
+      ...outbound,
+      schema: {
+        oneOf: [
+          ...network.variantsOf(outbound.schema),
+          assetRoomDeletedSchema
+        ]
+      }
+    }
+  };
 }

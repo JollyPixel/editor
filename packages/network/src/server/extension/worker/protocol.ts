@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { Validator } from "ata-validator";
+import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import {
@@ -47,6 +48,7 @@ export type WorkerDispatch = {
     id: string;
     method: TMethod;
     args: DispatchArgsMap[TMethod];
+    actor: EventStore.Actor;
   };
 }[DispatchMethod];
 

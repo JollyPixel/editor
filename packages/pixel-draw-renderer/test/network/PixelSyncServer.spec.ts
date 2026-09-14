@@ -57,6 +57,10 @@ const unusedEventStore: RoomEventStoreHandle = {
  * about broadcast delivery can pass this no-op.
  */
 const noopRoom: RoomContext = {
+  actor: {
+    type: "user",
+    id: "client-1"
+  },
   room: {
     broadcast: () => {
       // no observers
@@ -80,6 +84,10 @@ function observe(
   server.onClientConnect(client);
 
   return {
+    actor: {
+      type: "user",
+      id: "client-1"
+    },
     room: {
       broadcast: (payload) => client.send(payload),
       sendTo: (_clientId, payload) => client.send(payload)
