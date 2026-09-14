@@ -1,17 +1,18 @@
 // Import Third-party Dependencies
 import { LitElement, css, html } from "lit";
 import { state } from "lit/decorators.js";
-import * as THREE from "three";
 import { type JollyChangeDetail, type JollyOption } from "@jolly-pixel/ui";
 import { type PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type GroupManager from "../../three/GroupManager.ts";
+import type { GizmoSpace, ModelSceneComponent } from "../ModelSceneComponent.ts";
+import {
+  TransformPanelController,
+  type TransformMode,
+  type Vector3Value
+} from "../../features/transform/TransformPanelController.ts";
 
 // CONSTANTS
-type TransformMode = "pos" | "angle" | "size" | "pivot" | "scale";
-type Vector3Value = { x: number; y: number; z: number; };
-
 const kTransformModes: JollyOption<TransformMode>[] = [
   { value: "pos", label: "Pos" },
   { value: "angle", label: "Angle" },
@@ -20,6 +21,13 @@ const kTransformModes: JollyOption<TransformMode>[] = [
   { value: "scale", label: "Scale" }
 ];
 
+const kSpaceOptions: JollyOption<GizmoSpace>[] = [
+  { value: "local", label: "Local" },
+  { value: "world", label: "Global" }
+];
+
+const kSpaceModes: readonly TransformMode[] = ["pos", "angle", "pivot"];
+
 const kTextureSizeValues = [16, 32, 64, 128, 256, 512, 1024, 2048];
 const kTextureSizeOptions: JollyOption<number>[] = kTextureSizeValues.map((value) => {
   return { value, label: String(value) };
@@ -27,15 +35,9 @@ const kTextureSizeOptions: JollyOption<number>[] = kTextureSizeValues.map((value
 
 export class Build extends LitElement {
   @state()
-  private declare mode: TransformMode;
-
-  @state()
-  private declare axisValues: Vector3Value;
-
-  @state()
   private declare textureSize: { x: number; y: number; };
 
-  #selectedGroup: GroupManager | null = null;
+  #transform = new TransformPanelController(this);
   #hasSyncedTextureSize = false;
 
   static override styles = css`
@@ -70,19 +72,7 @@ export class Build extends LitElement {
 
   constructor() {
     super();
-    this.mode = "pos";
-    this.axisValues = { x: 0, y: 0, z: 0 };
     this.textureSize = { x: 64, y: 64 };
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    document.addEventListener("groupSelected", this.#onGroupSelected);
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    document.removeEventListener("groupSelected", this.#onGroupSelected);
   }
 
   override updated(): void {
@@ -111,93 +101,8 @@ export class Build extends LitElement {
     return leftPanel?.canvasManager ?? null;
   }
 
-  readonly #onGroupSelected = (
-    event: Event
-  ): void => {
-    const { group } = (event as CustomEvent<{ group: GroupManager | null; }>).detail;
-    this.#selectedGroup = group;
-    this.#syncAxisValues();
-  };
-
-  #syncAxisValues(): void {
-    if (!this.#selectedGroup) {
-      return;
-    }
-
-    this.axisValues = this.#readAxisValues(this.#selectedGroup, this.mode);
-  }
-
-  #readAxisValues(
-    group: GroupManager,
-    mode: TransformMode
-  ): Vector3Value {
-    switch (mode) {
-      case "pos":
-        return group.getPosition();
-      case "angle": {
-        const rotation = group.getRotation();
-
-        return {
-          x: THREE.MathUtils.radToDeg(rotation.x),
-          y: THREE.MathUtils.radToDeg(rotation.y),
-          z: THREE.MathUtils.radToDeg(rotation.z)
-        };
-      }
-      case "size":
-        return group.getSize();
-      case "pivot":
-        return group.getPivotOffset();
-      case "scale":
-        return group.getScale();
-      default:
-        return { x: 0, y: 0, z: 0 };
-    }
-  }
-
-  #handleModeChange(
-    event: CustomEvent<JollyChangeDetail<TransformMode>>
-  ): void {
-    this.mode = event.detail.value;
-    this.#syncAxisValues();
-  }
-
-  #handleVectorChange(
-    event: CustomEvent<JollyChangeDetail<Vector3Value>>
-  ): void {
-    this.axisValues = event.detail.value;
-    this.#applyAxisValues();
-  }
-
-  #applyAxisValues(): void {
-    if (!this.#selectedGroup) {
-      return;
-    }
-
-    const { x, y, z } = this.axisValues;
-
-    switch (this.mode) {
-      case "pos":
-        this.#selectedGroup.setPosition(new THREE.Vector3(x, y, z));
-        break;
-      case "angle":
-        this.#selectedGroup.setRotation(new THREE.Euler(
-          THREE.MathUtils.degToRad(x),
-          THREE.MathUtils.degToRad(y),
-          THREE.MathUtils.degToRad(z)
-        ));
-        break;
-      case "size":
-        this.#selectedGroup.resize(new THREE.Vector3(x, y, z));
-        break;
-      case "pivot":
-        this.#selectedGroup.setPivotOffset(new THREE.Vector3(x, y, z));
-        break;
-      case "scale":
-        this.#selectedGroup.setScale(new THREE.Vector3(x, y, z));
-        break;
-      default:
-        break;
-    }
+  public setSceneManager(sceneManager: ModelSceneComponent): void {
+    this.#transform.attach(sceneManager);
   }
 
   #handleTextureSizeChange(
@@ -217,24 +122,31 @@ export class Build extends LitElement {
   }
 
   override render() {
-    const disabled = this.#selectedGroup === null;
-
     return html`
       <section id="transform">
         <jolly-button-group
           .options=${kTransformModes}
-          .value=${this.mode}
+          .value=${this.#transform.mode}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<TransformMode>>) => {
-            this.#handleModeChange(event);
+            this.#transform.setMode(event.detail.value);
+          }}
+        ></jolly-button-group>
+
+        <jolly-button-group
+          .options=${kSpaceOptions}
+          .value=${this.#transform.space}
+          ?disabled=${this.#transform.disabled || !kSpaceModes.includes(this.#transform.mode)}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<GizmoSpace>>) => {
+            this.#transform.setSpace(event.detail.value);
           }}
         ></jolly-button-group>
 
         <jolly-vector3
-          step="0.1"
-          ?disabled=${disabled}
-          .value=${this.axisValues}
+          step="0.01"
+          ?disabled=${this.#transform.disabled}
+          .value=${this.#transform.axisValues}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vector3Value>>) => {
-            this.#handleVectorChange(event);
+            this.#transform.setAxisValues(event.detail.value);
           }}
         ></jolly-vector3>
       </section>

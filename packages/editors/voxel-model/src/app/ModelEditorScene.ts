@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { FreeFlyCamera } from "./camera/FreeFlyCamera.ts";
+import { FreeFlyCamera } from "../scene/camera/FreeFlyCamera.ts";
 import { ModelSceneComponent } from "./ModelSceneComponent.ts";
 
 export interface ModelEditorSceneHandles {

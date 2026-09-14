@@ -1,12 +1,20 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
+// Import Internal Dependencies
+import PivotMarker from "./PivotMarker.ts";
+
 // CONSTANTS
-const kPointTextureSize = 256;
-const kPointSize = 15;
-const kPivotColor = 0xff00ff;
 const kEdgeDefaultColor = 0x000000;
 const kEdgeSelectedColor = 0xff00ff;
+const kTransformRoundDecimals = 2;
+
+function roundTo(
+  value: number,
+  decimals: number
+): number {
+  return Number(value.toFixed(decimals));
+}
 
 export interface GroupManagerOptions {
   pos?: THREE.Vector3;
@@ -20,8 +28,9 @@ export interface GroupManagerOptions {
 
 export default class GroupManager {
   private group: THREE.Group;
+  private pivot: THREE.Group;
   private mesh: THREE.Mesh;
-  private pivotPoint: THREE.Points;
+  private pivotMarker: PivotMarker;
   private edges: THREE.LineSegments;
   private isSelected: boolean = false;
 
@@ -36,11 +45,13 @@ export default class GroupManager {
       texture = null
     } = options;
 
-    // Create the pivot group
     this.group = new THREE.Group();
     this.group.position.copy(pos);
 
-    // Create the mesh
+    this.pivot = new THREE.Group();
+    this.pivot.position.copy(pivotPos);
+    this.group.add(this.pivot);
+
     const geometry = new THREE.BoxGeometry(...size);
     const material = new THREE.MeshBasicMaterial({
       color,
@@ -52,65 +63,32 @@ export default class GroupManager {
     material.needsUpdate = true;
 
     this.mesh = new THREE.Mesh(geometry, material);
-    this.mesh.position.copy(pivotPos);
+    this.mesh.position.copy(pivotPos).negate();
     this.mesh.scale.x = scale.x;
     this.mesh.scale.y = scale.y;
     this.mesh.scale.z = scale.z;
     const meshName = name || `mesh_${this.group.uuid}`;
     this.mesh.name = meshName;
+    this.group.name = name ?? "";
 
-    // Create edges
     const edgesGeo = new THREE.EdgesGeometry(geometry);
     const edgesMat = new THREE.LineBasicMaterial({ color: kEdgeDefaultColor });
     this.edges = new THREE.LineSegments(edgesGeo, edgesMat);
     this.edges.name = "edges";
     this.mesh.add(this.edges);
 
-    // Add mesh to group
-    this.group.add(this.mesh);
+    this.pivot.add(this.mesh);
 
-    // Create pivot point
-    this.pivotPoint = this.createPivotPoint(pos);
-    this.group.add(this.pivotPoint);
-  }
-
-  private createPivotPoint(pos: THREE.Vector3): THREE.Points {
-    const pivotPointGeo = new THREE.BufferGeometry();
-    pivotPointGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0]), 3));
-
-    const pivotPointMat = new THREE.PointsMaterial({
-      color: kPivotColor,
-      size: kPointSize,
-      sizeAttenuation: false,
-      map: this.pointTexture(kPointTextureSize)
-    });
-    pivotPointMat.depthTest = false;
-    pivotPointMat.transparent = true;
-
-    const pivotPoint = new THREE.Points(pivotPointGeo, pivotPointMat);
-    pivotPoint.name = "pivot_visual";
-    pivotPoint.visible = false;
-    pivotPoint.renderOrder = 1;
-    pivotPoint.position.copy(pos);
-
-    return pivotPoint;
-  }
-
-  private pointTexture(size: number = 64): THREE.Texture {
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-    ctx.fillStyle = "white";
-    ctx.fill();
-
-    return new THREE.CanvasTexture(canvas);
+    this.pivotMarker = new PivotMarker();
+    this.pivot.add(this.pivotMarker.object);
   }
 
   public getGroup(): THREE.Group {
     return this.group;
+  }
+
+  public getPivot(): THREE.Group {
+    return this.pivot;
   }
 
   public getMesh(): THREE.Mesh {
@@ -127,8 +105,6 @@ export default class GroupManager {
     if (this.edges.material instanceof THREE.LineBasicMaterial) {
       this.edges.material.color.set(kEdgeSelectedColor);
     }
-
-    this.pivotPoint.visible = true;
   }
 
   public deselect(): void {
@@ -141,12 +117,14 @@ export default class GroupManager {
     if (this.edges.material instanceof THREE.LineBasicMaterial) {
       this.edges.material.color.set(kEdgeDefaultColor);
     }
-
-    this.pivotPoint.visible = false;
   }
 
   public isSelectedState(): boolean {
     return this.isSelected;
+  }
+
+  public setPivotMarkerVisible(visible: boolean): void {
+    this.pivotMarker.setVisible(visible);
   }
 
   public setTexture(texture: THREE.Texture | null): void {
@@ -164,12 +142,47 @@ export default class GroupManager {
     this.group.position.copy(position);
   }
 
+  public getPositionWorld(): THREE.Vector3 {
+    return this.group.getWorldPosition(new THREE.Vector3());
+  }
+
+  public setPositionWorld(position: THREE.Vector3): void {
+    const local = this.group.parent
+      ? this.group.parent.worldToLocal(position.clone())
+      : position.clone();
+    this.group.position.copy(local);
+  }
+
+  public get name(): string {
+    return this.group.name;
+  }
+
+  public set name(value: string) {
+    this.group.name = value;
+  }
+
   public getRotation(): THREE.Euler {
-    return this.group.rotation.clone();
+    return this.pivot.rotation.clone();
   }
 
   public setRotation(rotation: THREE.Euler): void {
-    this.group.rotation.copy(rotation);
+    this.pivot.rotation.copy(rotation);
+  }
+
+  public getRotationWorld(): THREE.Euler {
+    const quaternion = this.pivot.getWorldQuaternion(new THREE.Quaternion());
+
+    return new THREE.Euler().setFromQuaternion(quaternion, this.pivot.rotation.order);
+  }
+
+  public setRotationWorld(rotation: THREE.Euler): void {
+    const quaternion = new THREE.Quaternion().setFromEuler(rotation);
+    if (this.pivot.parent) {
+      const parentWorldQuaternion = this.pivot.parent.getWorldQuaternion(new THREE.Quaternion());
+      quaternion.premultiply(parentWorldQuaternion.invert());
+    }
+
+    this.pivot.quaternion.copy(quaternion);
   }
 
   public getScale(): THREE.Vector3 {
@@ -181,11 +194,56 @@ export default class GroupManager {
   }
 
   public getPivotOffset(): THREE.Vector3 {
-    return this.mesh.position.clone();
+    return this.pivot.position.clone();
   }
 
   public setPivotOffset(offset: THREE.Vector3): void {
-    this.mesh.position.copy(offset);
+    this.pivot.position.copy(offset);
+    this.mesh.position.copy(offset).negate();
+  }
+
+  public getPivotOffsetWorld(): THREE.Vector3 {
+    return this.pivot.getWorldPosition(new THREE.Vector3());
+  }
+
+  public setPivotOffsetWorld(offset: THREE.Vector3): void {
+    const local = this.pivot.parent
+      ? this.pivot.parent.worldToLocal(offset.clone())
+      : offset.clone();
+    this.setPivotOffset(local);
+  }
+
+  public syncMeshToPivot(): void {
+    this.mesh.position.copy(this.pivot.position).negate();
+  }
+
+  /** Rotation is rounded in degrees, not radians, to match the panel. */
+  public roundTransform(decimals: number = kTransformRoundDecimals): void {
+    this.group.position.set(
+      roundTo(this.group.position.x, decimals),
+      roundTo(this.group.position.y, decimals),
+      roundTo(this.group.position.z, decimals)
+    );
+
+    this.pivot.position.set(
+      roundTo(this.pivot.position.x, decimals),
+      roundTo(this.pivot.position.y, decimals),
+      roundTo(this.pivot.position.z, decimals)
+    );
+
+    this.pivot.rotation.set(
+      THREE.MathUtils.degToRad(roundTo(THREE.MathUtils.radToDeg(this.pivot.rotation.x), decimals)),
+      THREE.MathUtils.degToRad(roundTo(THREE.MathUtils.radToDeg(this.pivot.rotation.y), decimals)),
+      THREE.MathUtils.degToRad(roundTo(THREE.MathUtils.radToDeg(this.pivot.rotation.z), decimals))
+    );
+
+    this.mesh.scale.set(
+      roundTo(this.mesh.scale.x, decimals),
+      roundTo(this.mesh.scale.y, decimals),
+      roundTo(this.mesh.scale.z, decimals)
+    );
+
+    this.syncMeshToPivot();
   }
 
   public getSize(): THREE.Vector3 {
@@ -224,12 +282,7 @@ export default class GroupManager {
       this.edges.material.dispose();
     }
 
-    if (this.pivotPoint.material instanceof THREE.PointsMaterial) {
-      this.pivotPoint.material.dispose();
-      if (this.pivotPoint.material.map) {
-        this.pivotPoint.material.map.dispose();
-      }
-    }
+    this.pivotMarker.dispose();
 
     // Remove from parent if attached
     if (this.group.parent) {

@@ -122,7 +122,7 @@ export default class ModelManager {
       return;
     }
 
-    parent.getGroup().attach(child.getGroup());
+    parent.getPivot().attach(child.getGroup());
   }
 
   public setTextureForAll(texture: THREE.Texture | null): void {

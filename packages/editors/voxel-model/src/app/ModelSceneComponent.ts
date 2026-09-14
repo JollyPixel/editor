@@ -1,13 +1,15 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { TransformControls } from "three/examples/jsm/Addons.js";
 import { ActorComponent, type Actor } from "@jolly-pixel/engine";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import ModelManager from "./ModelManager.ts";
-import type GroupManager from "./GroupManager.ts";
-import type { FreeFlyCamera } from "./camera/FreeFlyCamera.ts";
+import ModelManager from "../features/groups/ModelManager.ts";
+import type GroupManager from "../features/groups/GroupManager.ts";
+import type { FreeFlyCamera } from "../scene/camera/FreeFlyCamera.ts";
+import GizmoManager, { type GizmoConfig } from "../features/transform/GizmoManager.ts";
+
+export type { GizmoMode, GizmoTarget, GizmoSpace, GizmoConfig } from "../features/transform/GizmoManager.ts";
 
 export interface ModelSceneComponentOptions {
   camera: FreeFlyCamera;
@@ -21,10 +23,9 @@ export interface ModelSceneComponentOptions {
 export class ModelSceneComponent extends ActorComponent {
   #camera: FreeFlyCamera;
   #cameraRaycaster = new THREE.Raycaster();
-  #transformControl!: TransformControls;
+  #gizmo!: GizmoManager;
   #modelManager!: ModelManager;
 
-  #isTransformControlsDragging = false;
   #texture: THREE.CanvasTexture | null = null;
 
   constructor(
@@ -39,15 +40,15 @@ export class ModelSceneComponent extends ActorComponent {
     const scene = this.actor.world.sceneManager.getSource();
     const { renderer } = this.actor.world;
 
-    this.#transformControl = new TransformControls(this.#camera.threeCamera, renderer.canvas);
-    this.#transformControl.addEventListener("dragging-changed", (event: any) => {
-      this.#isTransformControlsDragging = event.value;
-      this.#camera.enabled = !event.value;
+    this.#gizmo = new GizmoManager({
+      camera: this.#camera,
+      canvas: renderer.canvas,
+      getSelectedGroup: () => this.#modelManager.getSelectedGroup()
     });
 
     this.#modelManager = new ModelManager({
       scene,
-      transformControl: this.#transformControl
+      transformControl: this.#gizmo.transformControl
     });
   }
 
@@ -60,7 +61,7 @@ export class ModelSceneComponent extends ActorComponent {
     if (!input.mouse.wasJustPressed("left")) {
       return;
     }
-    if (this.#isTransformControlsDragging) {
+    if (this.#gizmo.dragging) {
       return;
     }
 
@@ -92,7 +93,8 @@ export class ModelSceneComponent extends ActorComponent {
 
   public createCube(name: string = "Cube"): GroupManager {
     const group = this.#modelManager.addGroup({
-      texture: this.#texture
+      texture: this.#texture,
+      name
     });
 
     this.#dispatchGroupCreated(group, name);
@@ -121,9 +123,13 @@ export class ModelSceneComponent extends ActorComponent {
     return this.#modelManager;
   }
 
+  public setGizmoMode(config: GizmoConfig | null): void {
+    this.#gizmo.setMode(config);
+  }
+
   public setControlsEnabled(enabled: boolean): void {
     this.#camera.enabled = enabled;
-    this.#transformControl.enabled = enabled;
+    this.#gizmo.setEnabled(enabled);
 
     const { input } = this.actor.world;
     if (enabled) {

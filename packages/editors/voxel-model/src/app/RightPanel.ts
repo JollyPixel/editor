@@ -5,6 +5,7 @@ import {
   findParentId,
   resolveReparent,
   showPrompt,
+  type JollyRenameDetail,
   type JollyReparentDetail,
   type JollySelectDetail,
   type JollyToggleExpandDetail,
@@ -12,9 +13,10 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type ModelManager from "../three/ModelManager.ts";
-import type GroupManager from "../three/GroupManager.ts";
-import type { ModelSceneComponent } from "../three/ModelSceneComponent.ts";
+import type ModelManager from "../features/groups/ModelManager.ts";
+import type GroupManager from "../features/groups/GroupManager.ts";
+import type { ModelSceneComponent } from "./ModelSceneComponent.ts";
+import { relabelTreeNode } from "./relabelTreeNode.ts";
 
 export class RightPanel extends LitElement {
   private modelManager: ModelManager | null = null;
@@ -116,6 +118,18 @@ export class RightPanel extends LitElement {
       this.expanded.filter((expandedId) => expandedId !== id);
   };
 
+  private handleRename = (
+    event: CustomEvent<JollyRenameDetail>
+  ): void => {
+    const { id, name } = event.detail;
+    this.nodes = relabelTreeNode(this.nodes, id, name);
+
+    const group = this.modelManager?.getGroupByUUID(id);
+    if (group) {
+      group.name = name;
+    }
+  };
+
   private handleReparent = (
     event: CustomEvent<JollyReparentDetail>
   ): void => {
@@ -147,7 +161,7 @@ export class RightPanel extends LitElement {
   public addGroupItemToUI(group: GroupManager, label: string = "Cube"): void {
     this.nodes = [
       ...this.nodes,
-      { id: group.getGroupUUID(), label }
+      { id: group.getGroupUUID(), label, renamable: true }
     ];
   }
 
@@ -195,8 +209,10 @@ export class RightPanel extends LitElement {
         multiple
         reorderable
         row-drag
+        renamable
         @jolly-select=${this.handleSelect}
         @jolly-toggle-expand=${this.handleToggleExpand}
+        @jolly-rename=${this.handleRename}
         @jolly-reparent=${this.handleReparent}
       ></jolly-tree>
     `;
