@@ -12,7 +12,8 @@
 
 ## 📌 About
 
-Browser-based library for editing pixel-art textures: brush, fill, select, and UV region tools, undo/redo, zoom/pan, and optional real-time multiplayer sync, all behind a single `PixelArtCanvas` API.
+Browser-based library for editing pixel-art textures: brush, fill, select, and
+UV region tools, undo/redo, and zoom/pan behind one `PixelArtCanvas` API.
 
 ## 💡 Features
 
@@ -23,7 +24,6 @@ Browser-based library for editing pixel-art textures: brush, fill, select, and U
 - **Undo/redo**: optional bounded history over strokes, resizes, texture replaces, and UV region changes;
 - **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag and `Space`+left-drag panning;
 - **Transparency support**: checkerboard background renders beneath transparent pixels
-- **Network sync**: transport-agnostic, server-authoritative multiplayer. Multiple clients can paint the same texture in real time
 
 ## 💃 Getting Started
 
@@ -166,9 +166,8 @@ manager.redo();
   - [`SelectTool`](./docs/tools/SelectTool.md)
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
 - [`Keybindings`](./docs/input/Keybindings.md)
-- [`Network`](./docs/network/index.md)
-- [`Asset kind`](./docs/asset/index.md)
 - [`Serialization`](./docs/serialization/index.md)
+- [Integration primitives](./docs/IntegrationPrimitives.md)
 
 ### Internal
 
@@ -207,8 +206,8 @@ export interface RGBA {
 
 ## 🧪 Benchmarks
 
-The default command measures `PixelBuffer`, editing tools, history, networking,
-and color conversion without a DOM. The browser command starts Vite and
+The default command measures `PixelBuffer`, editing tools, history, and color
+conversion without a DOM. The browser command starts Vite and
 Chromium to measure canvas synchronization and frame rendering.
 
 ```bash

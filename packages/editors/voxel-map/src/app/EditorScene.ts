@@ -3,8 +3,10 @@ import {
   Systems
 } from "@jolly-pixel/engine";
 import {
+  VoxelRenderer
+} from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
+import {
   type VoxelEngine,
-  VoxelRenderer,
   blocksFromTileset,
   type TilesetSource,
   type VoxelWorldJSON
@@ -13,7 +15,7 @@ import {
   VoxelSyncClient,
   type VoxelNetworkCommand,
   type VoxelServerMessage
-} from "@jolly-pixel/voxel.renderer/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/network/client.ts";
 import type * as network from "@jolly-pixel/network";
 import * as THREE from "three";
 

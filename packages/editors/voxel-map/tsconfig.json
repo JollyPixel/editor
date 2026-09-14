@@ -13,6 +13,12 @@
   ],
   "references": [
     {
+      "path": "../../assets/pixel-art"
+    },
+    {
+      "path": "../../assets/voxel-map"
+    },
+    {
       "path": "../../engine"
     },
     {

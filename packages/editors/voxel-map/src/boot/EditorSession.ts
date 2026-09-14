@@ -8,11 +8,11 @@ import {
 import type {
   PixelNetworkCommand,
   PixelServerMessage
-} from "@jolly-pixel/pixel-draw.renderer";
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
-} from "@jolly-pixel/voxel.renderer/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/network/client.ts";
 
 // Import Internal Dependencies
 import {

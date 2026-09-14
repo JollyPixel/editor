@@ -6,10 +6,12 @@ import type {
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
+import type {
+  PixelNetworkCommand,
+  PixelServerMessage
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import {
   type PixelArtCanvas,
-  type PixelNetworkCommand,
-  type PixelServerMessage,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 import {

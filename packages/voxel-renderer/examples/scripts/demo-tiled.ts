@@ -3,15 +3,15 @@ import {
   Camera3DControls,
   Systems
 } from "@jolly-pixel/engine";
+import {
+  TiledMapAssetLoader,
+  TiledMapAssetType
+} from "@jolly-pixel/asset.voxel-map/tiled.ts";
 import { Runtime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelBehavior } from "./components/VoxelMap.ts";
-import {
-  TiledMapAssetLoader,
-  TiledMapAssetType
-} from "../../src/plugins/tiled/index.ts";
 import {
   createExamplePane
 } from "./utils/example-switcher.ts";

@@ -7,16 +7,13 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-
-// Import Internal Dependencies
+import {
+  TiledMapAssetType
+} from "@jolly-pixel/asset.voxel-map/tiled.ts";
 import {
   VoxelRenderer
-} from "../../../src/index.ts";
-import { TiledMapAssetType } from "../../../src/plugins/tiled/index.ts";
+} from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
 
-/**
- * Builds a voxel renderer from a prepared tiled-map asset.
- */
 export class VoxelBehavior extends ActorComponent {
   static readonly assets = {
     tiledMap: new AssetReference(

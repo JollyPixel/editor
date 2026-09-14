@@ -32,6 +32,8 @@ export const packageGroups: PackageGroup[] = [
     text: "Assets",
     packages: [
       { dir: "asset", text: "Asset" },
+      { dir: "assets/pixel-art", text: "Pixel Art Assets" },
+      { dir: "assets/voxel-map", text: "Voxel Map Assets" },
       { dir: "asset-source", text: "Asset Source" },
       { dir: "asset-server", text: "Asset Server" },
       { dir: "event-store", text: "Event Store" }

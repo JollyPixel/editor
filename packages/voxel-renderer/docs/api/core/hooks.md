@@ -31,7 +31,7 @@ engine.onLayerUpdated = (event) => { /* ... */ };
 engine.onLayerUpdated = undefined;
 ```
 
-When wrapped by `VoxelRenderer`, the same hook lives at `vr.engine.onLayerUpdated`.
+The hook is available as `engine.onLayerUpdated`.
 
 ## Event reference
 

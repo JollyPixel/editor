@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { Runtime } from "@jolly-pixel/runtime";
 import {
+  VoxelRenderer
+} from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
+import {
   Control,
   Controls,
   formatCount,
@@ -17,7 +20,6 @@ import * as THREE from "three/webgpu";
 import {
   loadTilesets,
   ViewDistance,
-  VoxelRenderer,
   type VoxelDebugMode,
   type VoxelEngine
 } from "../../src/index.ts";

@@ -4,10 +4,10 @@ import { customElement, property, query } from "lit/decorators.js";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
 import type {
-  PixelArtCanvas,
   PixelNetworkCommand,
   PixelServerMessage
-} from "@jolly-pixel/pixel-draw.renderer";
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 import type { JollyChangeDetail, JollyOption } from "@jolly-pixel/ui";
 

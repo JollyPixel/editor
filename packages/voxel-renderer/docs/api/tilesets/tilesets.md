@@ -71,7 +71,7 @@ type TilesetTexture = THREE.Texture<TilesetImage>;
 
 ## Loading textures
 
-Use `loadTilesets()` before constructing a `VoxelEngine` or `VoxelRenderer`.
+Use `loadTilesets()` before constructing a `VoxelEngine`.
 
 ```ts
 interface TilesetSource {

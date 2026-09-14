@@ -7,7 +7,9 @@ import {
 import checker from "vite-plugin-checker";
 
 import { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
-import { PixelSyncServer } from "@jolly-pixel/pixel-draw.renderer/network/index.ts";
+import {
+  PixelSyncServer
+} from "@jolly-pixel/asset.pixel-art/network/server.ts";
 
 // Import Internal Dependencies
 import {

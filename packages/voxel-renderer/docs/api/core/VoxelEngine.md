@@ -1,8 +1,8 @@
 # VoxelEngine
 
 Builds and maintains the chunked Three.js meshes of a [`VoxelWorld`](../world/VoxelWorld.md),
-along with its blocks, tilesets and materials. Use it directly, or through
-[`VoxelRenderer`](./VoxelRenderer.md), which exposes it as `vr.engine`.
+along with its blocks, tilesets and materials. Applications own the engine
+directly and attach `engine.root` to their Three.js scene.
 
 Editing the world itself (layers, voxels, objects) goes through `engine.world`,
 which owns those methods and emits the [hook events](./hooks.md).
@@ -64,10 +64,7 @@ engine.world.setLayerPosition("Ground", {
 });
 ```
 
-When wrapped by [`VoxelRenderer`](./VoxelRenderer.md), reach the same API via
-`vr.engine.world.<method>(...)`.
-
-## VoxelEngineOptions (a.k.a. VoxelRendererOptions)
+## VoxelEngineOptions
 
 ```ts
 type MaterialCustomizerFn = (
@@ -231,8 +228,8 @@ flush(): void;                  // rebuilds every pending chunk now, ignoring th
 dispose(): void;                // disposes chunk meshes, materials, and tileset textures
 ```
 
-When wrapped by `VoxelRenderer`, these are called automatically from its
-`awake()`/`update()`/`destroy()`. Call them yourself when using `VoxelEngine` standalone.
+Call these methods from the application's initialization, frame, and teardown
+lifecycle.
 
 ### Rebuild budget
 
@@ -250,8 +247,8 @@ engine.pendingRebuilds;     // 0 once the world is up to date
 `focus` is a point in `root` local space, reread on every tick, so a live
 vector can be assigned once. Without it the queue is drained in the order
 chunks were created, which for a world generated from its origin means the
-chunks nearest the camera are built last. [`VoxelRenderer`](./VoxelRenderer.md)
-samples it from an `Object3D` for you.
+chunks nearest the camera are built last. An application can sample an
+`Object3D` world position into this property each frame.
 
 The queue is reordered when it grows and when the focus has drifted by half a
 chunk, so a moving camera keeps pulling the nearest chunks forward.

@@ -119,8 +119,8 @@ Two handlers live with the domain they serialize rather than here, because
 asset-server does not depend on the renderers:
 
 ```ts
-import { pixelArtAssetHandler } from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
-import { voxelMapAssetHandler } from "@jolly-pixel/voxel.renderer/asset/index.ts";
+import { pixelArtAssetHandler } from "@jolly-pixel/asset.pixel-art";
+import { voxelMapAssetHandler } from "@jolly-pixel/asset.voxel-map";
 
 await createAssetBackend({
   source,

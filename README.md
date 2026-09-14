@@ -35,6 +35,8 @@ We provide agnostic renderers and engines (often used by our editors below):
 - [@jolly-pixel/network](./packages/network) - Shared wire for multiplayer editors
 - [@jolly-pixel/asset-server](./packages/asset-server) - Back-end asset orchestration: event-sourced projection, reconciliation and catalog delivery
 - [@jolly-pixel/asset-source](./packages/asset-source) - Physical asset storage
+- [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art) - Pixel-art persistence and collaboration
+- [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map) - Voxel-map persistence, collaboration, and Tiled catalog loading
 
 ### UI
 

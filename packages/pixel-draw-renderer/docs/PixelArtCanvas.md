@@ -252,4 +252,4 @@ Removes input listeners and unmounts the canvas and overlays.
 
 ## Network integration
 
-`PixelArtCanvas` also exposes mutation hooks, presence callbacks and peer overlays used by the multiplayer helpers. See [network integration](./network/api/CanvasIntegration.md) for those members and [network synchronization](./network/index.md) for setup.
+`PixelArtCanvas` also exposes mutation hooks, presence callbacks and peer overlays used by the multiplayer helpers. See [network integration](../../assets/pixel-art/docs/network/api/CanvasIntegration.md) for those members and [network synchronization](../../assets/pixel-art/docs/network/index.md) for setup.

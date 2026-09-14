@@ -10,11 +10,13 @@ import {
   type VoxelEngine,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
+import type {
+  PixelNetworkCommand,
+  PixelServerMessage
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import {
   type CanvasBufferEvent,
   type PixelArtCanvas,
-  type PixelNetworkCommand,
-  type PixelServerMessage,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 import type * as network from "@jolly-pixel/network";

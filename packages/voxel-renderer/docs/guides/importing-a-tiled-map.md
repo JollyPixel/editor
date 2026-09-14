@@ -42,7 +42,7 @@ import { Runtime } from "@jolly-pixel/runtime";
 import {
   TiledMapAssetLoader,
   TiledMapAssetType
-} from "@jolly-pixel/voxel.renderer/plugins/tiled/index.js";
+} from "@jolly-pixel/asset.voxel-map/tiled.ts";
 
 const mapId = new AssetId("map.intro");
 const catalog = new AssetCatalog([
@@ -72,13 +72,11 @@ Read the prepared asset during the component lifecycle:
 
 ```ts
 const { world, tilesets } = this.getAsset(VoxelMap.assets.map);
-const renderer = this.actor.addComponentAndGet(VoxelRenderer, {
-  tilesets
-});
+const engine = new VoxelEngine({ tilesets });
 
-renderer.engine.load(world);
+this.actor.object3D.add(engine.root);
+engine.load(world);
 ```
 
-See [`TiledConverter`](../api/tiled/TiledConverter.md) and
-[`TiledMapAssetLoader`](../api/tiled/TiledMapAssetLoader.md) for option defaults
-and output types.
+See [`TiledConverter`](../api/tiled/TiledConverter.md) for conversion options.
+The asset package documents `TiledMapAssetLoader` defaults and output types.

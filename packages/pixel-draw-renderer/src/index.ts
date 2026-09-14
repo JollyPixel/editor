@@ -131,34 +131,32 @@ export {
   type UVNormalizedRect
 } from "./uv/UVRegion.ts";
 export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
-/*
- * PixelSyncServer pulls worker_threads through the network server barrel.
- * Use the network subpath to keep browser bundles clean.
- */
+export {
+  applyColorGroups,
+  groupPositionsByColor,
+  type ColorGroup
+} from "./buffer/colorGroups.ts";
+export { Fill } from "./tools/Fill.ts";
+export {
+  isVec2,
+  vec2Equal
+} from "./utils/math.ts";
+export {
+  isUVGeometry,
+  isUVRegionData,
+  isUVSlot,
+  isUVTextureRect
+} from "./uv/validation.ts";
+export {
+  uvTargetKey,
+  type UVTarget
+} from "./uv/UVTarget.ts";
 export type {
-  PixelNetworkCommand,
-  PixelServerMessage,
-  SelectionGhostPayload,
-  UVGhostPayload
-} from "./network/types.ts";
-export { applyCommandToBuffer } from "./network/PixelCommandApplier.ts";
+  PeerSelectionOutlineState
+} from "./rendering/presence/PeerSelectionOutlines.ts";
 export type {
-  PixelSyncClientOptions
-} from "./network/PixelSyncClient.ts";
-export { PixelSyncClient } from "./network/PixelSyncClient.ts";
+  PeerFloatingSelectionState
+} from "./rendering/presence/PeerFloatingSelections.ts";
 export type {
-  PixelCursorSyncOptions
-} from "./network/PixelCursorSync.ts";
-export { PixelCursorSync } from "./network/PixelCursorSync.ts";
-export type {
-  PixelStrokeGhostSyncOptions
-} from "./network/ghosts/PixelStrokeGhostSync.ts";
-export { PixelStrokeGhostSync } from "./network/ghosts/PixelStrokeGhostSync.ts";
-export type {
-  UVGhostSyncOptions
-} from "./network/ghosts/UVGhostSync.ts";
-export { UVGhostSync } from "./network/ghosts/UVGhostSync.ts";
-export type {
-  SelectionGhostSyncOptions
-} from "./network/ghosts/SelectionGhostSync.ts";
-export { SelectionGhostSync } from "./network/ghosts/SelectionGhostSync.ts";
+  PeerUVPreviewState
+} from "./rendering/presence/PeerUVPreview.ts";
