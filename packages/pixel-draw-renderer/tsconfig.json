@@ -16,15 +16,6 @@
   "references": [
     {
       "path": "../image"
-    },
-    {
-      "path": "../engine"
-    },
-    {
-      "path": "../runtime"
-    },
-    {
-      "path": "../network"
     }
   ]
 }

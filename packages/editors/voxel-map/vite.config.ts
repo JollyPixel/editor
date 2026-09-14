@@ -13,7 +13,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   pixelArtAssetHandler
-} from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
+} from "@jolly-pixel/asset.pixel-art";
 import {
   blocksFromTileset,
   encodeVoxelDocument,

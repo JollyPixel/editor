@@ -1,0 +1,65 @@
+{
+  "name": "@jolly-pixel/asset.pixel-art",
+  "description": "Jolly Pixel pixel-art persistence and collaboration",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./network/client.ts": {
+      "types": "./dist/network/client.d.ts",
+      "default": "./dist/network/client.js"
+    },
+    "./network/server.ts": {
+      "types": "./dist/network/server.d.ts",
+      "default": "./dist/network/server.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "bench": "jolly-bench bench/network.bench.ts",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
+    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/assets/pixel-art"
+  },
+  "keywords": [],
+  "files": [
+    "dist",
+    "docs"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/asset-server": "2.0.0",
+    "@jolly-pixel/color": "1.0.0",
+    "@jolly-pixel/event-store": "3.0.0",
+    "@jolly-pixel/network": "2.0.0",
+    "@jolly-pixel/pixel-draw.renderer": "4.0.0",
+    "js-base64": "3.9.3"
+  },
+  "devDependencies": {
+    "@jolly-pixel/asset-source": "1.0.0",
+    "@jolly-pixel/bench": "*"
+  }
+}

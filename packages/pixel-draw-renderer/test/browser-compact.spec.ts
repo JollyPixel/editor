@@ -9,11 +9,10 @@ import * as esbuild from "esbuild";
 // CONSTANTS
 const kSrcDir = path.join(import.meta.dirname, "..", "src");
 const kEntryPoints = [
-  path.join(kSrcDir, "PixelArtCanvas.ts"),
-  path.join(kSrcDir, "network", "client.ts")
+  path.join(kSrcDir, "PixelArtCanvas.ts")
 ];
 
-describe("Network client browser compatibility", () => {
+describe("Pixel renderer browser compatibility", () => {
   for (const entryPoint of kEntryPoints) {
     const entryName = path.relative(kSrcDir, entryPoint);
 

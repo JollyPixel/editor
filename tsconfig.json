@@ -44,6 +44,9 @@
       "path": "./packages/asset-server"
     },
     {
+      "path": "./packages/assets/pixel-art"
+    },
+    {
       "path": "./packages/voxel-renderer"
     },
     {

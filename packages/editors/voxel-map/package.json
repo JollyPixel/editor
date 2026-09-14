@@ -36,6 +36,7 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset": "1.1.0",
+    "@jolly-pixel/asset.pixel-art": "1.0.0",
     "@jolly-pixel/asset-server": "2.0.0",
     "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/controls": "2.0.0",

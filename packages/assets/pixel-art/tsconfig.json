@@ -1,0 +1,33 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"],
+    "noImplicitOverride": false
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "references": [
+    {
+      "path": "../../asset-server"
+    },
+    {
+      "path": "../../color"
+    },
+    {
+      "path": "../../event-store"
+    },
+    {
+      "path": "../../network"
+    },
+    {
+      "path": "../../pixel-draw-renderer"
+    }
+  ]
+}

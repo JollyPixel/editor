@@ -6,10 +6,10 @@ import {
   PixelSyncClient,
   SelectionGhostSync,
   UVGhostSync,
-  type PixelArtCanvas,
   type PixelNetworkCommand,
   type PixelServerMessage
-} from "@jolly-pixel/pixel-draw.renderer";
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
