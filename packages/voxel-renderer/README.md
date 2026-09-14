@@ -194,7 +194,6 @@ Then open one of these URLs in your browser:
 | `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
 | `http://localhost:5173/tiled.html` | `demo-tiled.ts` | A multi-layer Tiled `.tmj` map imported via `TiledConverter` in `"stacked"` mode with WASD camera navigation |
 | `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with live renderer and mesh counters - the benchmark example |
-| `http://localhost:5173/flat-world.html` | `demo-flat-world.ts` | A server-authoritative flat world edited by several browsers at once, with peer brushes over the room's presence channel |
 | `http://localhost:5173/transparency.html` | `demo-transparency.ts` | A diorama for checking transparency and lighting: blended water and glass, cutout leaves/grates/windows with explicit alpha modes, an alpha-gradient probe for `alphaTest`, and live light, material and layer controls |
 
 ## 🧪 Benchmarks
