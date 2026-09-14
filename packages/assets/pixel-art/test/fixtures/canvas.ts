@@ -4,14 +4,6 @@ import {
   toRGBA8
 } from "@jolly-pixel/color";
 
-/*
- * Canvas 2D fixture. happy-dom provides real <canvas> elements (events,
- * sizing, DOM tree, style) but no 2D rendering context, so installCanvasMock
- * patches getContext("2d") to return a pixel-backed MockCanvas2DContext. Only
- * the context is emulated; the element itself is happy-dom's own.
- */
-
-// Helpers
 function parseCSSColor(
   color: string
 ): [number, number, number, number] {
@@ -38,7 +30,6 @@ function isCanvasSource(
   ).getContext === "function";
 }
 
-// Mock ImageData
 class MockImageData {
   data: Uint8ClampedArray;
   width: number;
@@ -56,7 +47,6 @@ class MockImageData {
   }
 }
 
-// Mock 2D Context, backed by an RGBA8 buffer sized to the live canvas.
 export class MockCanvas2DContext {
   fillStyle = "#000000";
   globalCompositeOperation: GlobalCompositeOperation = "source-over";
@@ -81,22 +71,16 @@ export class MockCanvas2DContext {
     );
   }
 
-  // The RGBA8 buffer backing this context, resynced to the canvas size.
   get pixels(): Uint8ClampedArray {
     this.#syncSize();
 
     return this.#pixels;
   }
 
-  // Passes this fixture where the source code expects a real 2D context.
   asRenderingContext(): CanvasRenderingContext2D {
     return this as unknown as CanvasRenderingContext2D;
   }
 
-  /*
-   * Setting canvas.width/height clears the canvas in a browser; mirror that by
-   * reallocating a zeroed buffer whenever the live dimensions change.
-   */
   #syncSize(): void {
     if (
       this.canvas.width === this.#width &&
@@ -114,30 +98,30 @@ export class MockCanvas2DContext {
   setTransform(..._args: unknown[]): void {
     // No-op for testing
   }
+
   beginPath(): void {
     // No-op for testing
   }
+
   save(): void {
     this.#compositeStack.push(this.globalCompositeOperation);
   }
+
   restore(): void {
     const compositeOperation = this.#compositeStack.pop();
     if (compositeOperation !== undefined) {
       this.globalCompositeOperation = compositeOperation;
     }
   }
+
   clip(): void {
     // No-op for testing
   }
+
   rect(..._args: unknown[]): void {
     // No-op for testing
   }
 
-  /**
-   * Nearest-neighbor blit supporting the 3/5/9-argument drawImage overloads
-   * and the compositing modes used by the renderer. Non-canvas sources are
-   * silently ignored, matching CanvasBuffer.loadTexture()'s image-source path.
-   */
   drawImage(
     image: unknown,
     ...args: number[]
@@ -355,11 +339,6 @@ export class MockCanvas2DContext {
   }
 }
 
-/**
- * Patches doc.createElement so a "canvas" gets a working mock 2D context
- * (happy-dom's own getContext returns null). The element stays happy-dom's,
- * keeping real events, sizing, and DOM-tree behavior.
- */
 export function installCanvasMock(
   doc: Document
 ): void {
@@ -389,10 +368,6 @@ export function installCanvasMock(
   });
 }
 
-/**
- * Returns the mock 2D context patched onto a canvas by installCanvasMock,
- * exposing `.pixels` and `.putImageDataCallCount` for assertions.
- */
 export function mockContextOf(
   canvas: HTMLCanvasElement
 ): MockCanvas2DContext {
@@ -415,7 +390,6 @@ export function canvasPixels(
   return mockContextOf(canvas).pixels;
 }
 
-/** Reads the RGBA8 tuple at (pos.x, pos.y) from a row-major pixel buffer. */
 export function readPixel(
   pixels: Uint8ClampedArray,
   pos: { x: number; y: number; },

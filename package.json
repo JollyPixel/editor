@@ -33,9 +33,10 @@
     "packages/runtime",
     "packages/arbor",
     "packages/asset-server",
-    "packages/assets/pixel-art",
     "packages/voxel-renderer",
     "packages/pixel-draw-renderer",
+    "packages/assets/pixel-art",
+    "packages/assets/voxel-map",
     "packages/editors/pixel-art",
     "packages/editors/voxel-map",
     "packages/editors/voxel-model"

@@ -14,15 +14,18 @@ export interface CreatedPixelArtCanvas {
   children: HTMLCanvasElement[];
 }
 
+// CONSTANTS
 const kDefaultTexture = {
   maxSize: 32,
   size: { x: 8, y: 8 }
 };
 
-/**
- * Builds a container + PixelArtCanvas with sensible defaults (an 8x8
- * texture), so specs only pass the options that actually vary per test.
- */
+export function asCanvas(
+  host: object
+): PixelArtCanvas {
+  return host as unknown as PixelArtCanvas;
+}
+
 export function createPixelArtCanvas(
   overrides: PixelArtCanvasOptions = {},
   containerSize?: number

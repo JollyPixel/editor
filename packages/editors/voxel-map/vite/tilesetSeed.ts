@@ -10,7 +10,7 @@ import {
   resolveTilesetDefinition,
   type ResolvedTilesetDefinition,
   type TilesetDefinition
-} from "@jolly-pixel/voxel.renderer/asset/index.ts";
+} from "@jolly-pixel/voxel.renderer";
 
 export interface TilesetSeedOptions {
   file: string;

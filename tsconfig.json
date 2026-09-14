@@ -44,13 +44,16 @@
       "path": "./packages/asset-server"
     },
     {
-      "path": "./packages/assets/pixel-art"
-    },
-    {
       "path": "./packages/voxel-renderer"
     },
     {
       "path": "./packages/pixel-draw-renderer"
+    },
+    {
+      "path": "./packages/assets/pixel-art"
+    },
+    {
+      "path": "./packages/assets/voxel-map"
     },
     {
       "path": "./packages/editors/pixel-art"

@@ -6,726 +6,195 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { toUint8Array } from "js-base64";
-import {
-  MessageParser,
-  type RoomContext,
-  type RoomEventStoreHandle
-} from "@jolly-pixel/network";
+import { MessageParser } from "@jolly-pixel/network";
 import { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { PixelSyncServer } from "#src/network/PixelSyncServer.ts";
 import {
-  PixelSyncServer,
-  type ClientHandle
-} from "#src/network/PixelSyncServer.ts";
-import type { PixelNetworkCommand } from "#src/network/types.ts";
+  command,
+  freeRegion,
+  gray,
+  stackedRegion
+} from "../fixtures/commands.ts";
+import { createRoomContext } from "../helpers/roomContext.ts";
 
-interface MockClient extends ClientHandle {
-  received: unknown[];
-}
-
-function createClient(id: string): MockClient {
-  const received: unknown[] = [];
-
-  return {
-    id,
-    received,
-    send(data) {
-      received.push(data);
-    }
-  };
-}
-
-function makeServer(
-  size = { x: 4, y: 4 }
-): PixelSyncServer {
+function makeServer(): PixelSyncServer {
   return new PixelSyncServer({
-    buffer: new PixelBuffer({ size })
+    buffer: new PixelBuffer({ size: { x: 4, y: 4 } })
   });
 }
 
-// receive() never touches eventStore, so every RoomContext in this file shares one unused stub.
-const unusedEventStore: RoomEventStoreHandle = {
-  append: async() => true,
-  list: async() => []
-};
-
-/**
- * `receive()` no longer stashes a broadcast callback — the caller (normally
- * `ServerRoom`, via `onMessage`) hands one in per call. Tests that don't care
- * about broadcast delivery can pass this no-op.
- */
-const noopRoom: RoomContext = {
-  actor: {
-    type: "user",
-    id: "client-1"
-  },
-  room: {
-    broadcast: () => {
-      // no observers
-    },
-    sendTo: () => {
-      // no observers
-    }
-  },
-  eventStore: unusedEventStore
-};
-
-/**
- * Connects a client and returns a RoomContext that forwards broadcasts
- * straight to it — the single-client fake a unit test needs to observe
- * `receive()`'s broadcasts.
- */
-function observe(
-  server: PixelSyncServer,
-  client: MockClient
-): RoomContext {
-  server.onClientConnect(client);
-
-  return {
-    actor: {
-      type: "user",
-      id: "client-1"
-    },
-    room: {
-      broadcast: (payload) => client.send(payload),
-      sendTo: (_clientId, payload) => client.send(payload)
-    },
-    eventStore: unusedEventStore
-  };
-}
-
-function strokeCmd(
-  opts: {
-    clientId?: string;
-    seq?: number;
-    timestamp?: number;
-    positions?: { x: number; y: number; }[];
-    color?: { r: number; g: number; b: number; a: number; };
-  } = {}
-): PixelNetworkCommand {
-  return {
-    action: "stroke",
-    metadata: {
-      color: opts.color ?? { r: 1, g: 2, b: 3, a: 255 },
-      positions: opts.positions ?? [{ x: 0, y: 0 }]
-    },
-    clientId: opts.clientId ?? "client-A",
-    seq: opts.seq ?? 1,
-    timestamp: opts.timestamp ?? 1000
-  };
-}
-
-function selectEditCmd(
-  opts: {
-    clientId?: string;
-    seq?: number;
-    timestamp?: number;
-    positions?: { x: number; y: number; }[];
-    colors?: { r: number; g: number; b: number; a: number; }[];
-  } = {}
-): PixelNetworkCommand {
-  const positions = opts.positions ?? [{ x: 0, y: 0 }];
-
-  return {
-    action: "select-edit",
-    metadata: {
-      positions,
-      colors: opts.colors ?? positions.map(() => {
-        return { r: 1, g: 2, b: 3, a: 255 };
-      })
-    },
-    clientId: opts.clientId ?? "client-A",
-    seq: opts.seq ?? 1,
-    timestamp: opts.timestamp ?? 1000
-  };
-}
-
-function uvCreatedCmd(
-  opts: {
-    region: {
-      state: "stacked";
-      id: string;
-      rect: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      };
-      color: string;
-    };
-    clientId?: string;
-    seq?: number;
-    timestamp?: number;
-  }
-): PixelNetworkCommand {
-  return {
-    action: "uv-region-created",
-    metadata: { region: opts.region },
-    clientId: opts.clientId ?? "client-A",
-    seq: opts.seq ?? 1,
-    timestamp: opts.timestamp ?? 1000
-  };
-}
-
-/*
- * ---------------------------------------------------------------------------
- * connect / disconnect
- *
- * Peer-joined/peer-left notifications are now a Server concern (see
- * @jolly-pixel/network's Server.spec.ts) — PixelSyncServer no longer
- * broadcasts them itself.
- * ---------------------------------------------------------------------------
- */
-
-describe("PixelSyncServer — connect", () => {
-  test("sends the buffer's current snapshot immediately on connect", () => {
+describe("PixelSyncServer", () => {
+  test("sends the current snapshot to a connecting client", () => {
     const server = makeServer();
-    const client = createClient("A");
-    server.onClientConnect(client);
+    const received: unknown[] = [];
 
-    assert.strictEqual(client.received.length, 1);
-    const msg = client.received[0] as {
-      type: string;
-      data: { size: unknown; };
-    };
-    assert.strictEqual(msg.type, "snapshot");
-    assert.deepStrictEqual(msg.data.size, { x: 4, y: 4 });
-  });
-});
+    server.onClientConnect({
+      id: "A",
+      send: (data) => received.push(data)
+    });
 
-/*
- * Broadcast delivery to disconnected/left clients is now entirely a
- * Server concern (see @jolly-pixel/network's Server.spec.ts,
- * "broadcast stops reaching a client that left or disconnected") —
- * PixelSyncServer no longer tracks its own client list.
- */
-
-/*
- * ---------------------------------------------------------------------------
- * receive: stroke — per-pixel LWW conflict resolution
- * ---------------------------------------------------------------------------
- */
-
-describe("PixelSyncServer — receive: stroke conflict resolution", () => {
-  test("applies the command to the buffer", () => {
-    const server = makeServer();
-
-    server.receive(strokeCmd({
-      positions: [
-        { x: 2, y: 0 }
-      ],
-      color: { r: 7, g: 7, b: 7, a: 255 }
-    }), noopRoom);
-
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(2, 0),
-      [7, 7, 7, 255]
-    );
+    assert.deepStrictEqual(received, [{ type: "snapshot", data: server.snapshot() }]);
   });
 
-  test("accepts a later timestamp at the same pixel", () => {
+  test("applies and broadcasts an accepted command", () => {
     const server = makeServer();
+    const { context, broadcasts } = createRoomContext();
+    const stroke = command("stroke", {
+      color: gray(7),
+      positions: [{ x: 2, y: 0 }]
+    });
 
-    server.receive(strokeCmd({
-      timestamp: 500,
-      positions: [
-        { x: 0, y: 0 }
-      ],
-      color: { r: 1, g: 1, b: 1, a: 255 },
-      clientId: "A"
-    }), noopRoom);
-    server.receive(strokeCmd({
-      timestamp: 900,
-      positions: [
-        { x: 0, y: 0 }
-      ],
-      color: { r: 2, g: 2, b: 2, a: 255 },
-      clientId: "B"
-    }), noopRoom);
+    server.receive(stroke, context);
 
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(0, 0),
-      [2, 2, 2, 255]
-    );
+    assert.deepStrictEqual(server.buffer.samplePixel(2, 0), [7, 7, 7, 255]);
+    assert.deepStrictEqual(broadcasts, [{ type: "command", data: stroke }]);
   });
 
-  test("rejects a stale command at a pixel already written by a newer one", () => {
+  test("applies and broadcasts only the positions the arbiter accepted", () => {
     const server = makeServer();
+    const { context, broadcasts } = createRoomContext();
+    server.receive(command("stroke", {
+      color: gray(9),
+      positions: [{ x: 0, y: 0 }]
+    }, { clientId: "A", timestamp: 900 }), context);
+    broadcasts.length = 0;
 
-    server.receive(strokeCmd({
-      timestamp: 900,
-      positions: [
-        { x: 0, y: 0 }
-      ],
-      color: { r: 2, g: 2, b: 2, a: 255 },
-      clientId: "A"
-    }), noopRoom);
-    server.receive(strokeCmd({
-      timestamp: 500,
-      positions: [
-        { x: 0, y: 0 }
-      ],
-      color: { r: 1, g: 1, b: 1, a: 255 },
-      clientId: "B"
-    }), noopRoom);
+    server.receive(command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }]
+    }, { clientId: "B", timestamp: 500 }), context);
 
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(0, 0),
-      [2, 2, 2, 255]
-    );
+    assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [9, 9, 9, 255]);
+    assert.deepStrictEqual(server.buffer.samplePixel(1, 1), [1, 1, 1, 255]);
+    assert.deepStrictEqual(broadcasts, [{
+      type: "command",
+      data: command("stroke", {
+        color: gray(1),
+        positions: [{ x: 1, y: 1 }]
+      }, { clientId: "B", timestamp: 500 })
+    }]);
   });
 
-  test("splits a stroke: accepts pixels that don't conflict, rejects the one that does", () => {
+  test("neither applies nor broadcasts a rejected command", () => {
     const server = makeServer();
-
-    // (0,0) is claimed by a later command first.
-    server.receive(strokeCmd({
-      timestamp: 900,
-      positions: [
-        { x: 0, y: 0 }
-      ],
-      color: { r: 9, g: 9, b: 9, a: 255 },
-      clientId: "A"
-    }), noopRoom);
-
-    const client = createClient("A");
-    const room = observe(server, client);
-    client.received.length = 0;
-
-    // A stale stroke touching both (0,0) [conflict] and (1,1) [no conflict].
-    server.receive(strokeCmd({
-      timestamp: 500,
-      positions: [
-        { x: 0, y: 0 },
-        { x: 1, y: 1 }
-      ],
-      color: { r: 1, g: 1, b: 1, a: 255 },
-      clientId: "B"
-    }), room);
-
-    // (0,0) keeps the winning color, (1,1) got the new stroke's color.
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(0, 0),
-      [9, 9, 9, 255]
-    );
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(1, 1),
-      [1, 1, 1, 255]
-    );
-
-    // Broadcast carries only the accepted pixel.
-    assert.strictEqual(client.received.length, 1);
-    const msg = client.received[0] as {
-      type: string;
-      data: PixelNetworkCommand;
-    };
-    assert.strictEqual(msg.type, "command");
-    assert.strictEqual(msg.data.action, "stroke");
-    if (msg.data.action === "stroke") {
-      assert.deepStrictEqual(
-        msg.data.metadata.positions,
-        [{ x: 1, y: 1 }]
-      );
-    }
-  });
-
-  test("drops a stroke entirely (no broadcast) when every pixel is rejected", () => {
-    const server = makeServer();
-    server.receive(strokeCmd({
-      timestamp: 900,
-      positions: [{ x: 0, y: 0 }],
-      clientId: "A"
-    }), noopRoom);
-
-    const client = createClient("A");
-    const room = observe(server, client);
-    client.received.length = 0;
-
-    /*
-     * Different client than the one that claimed (0,0): a same-client stale
-     * timestamp would be trusted (see ConflictResolver's same-client
-     * short-circuit), so this must come from someone else to be rejected.
-     */
-    server.receive(strokeCmd({
-      timestamp: 500,
-      positions: [{ x: 0, y: 0 }],
-      clientId: "B"
-    }), room);
-
-    assert.strictEqual(client.received.length, 0);
-  });
-
-  test(
-    "regression: undoing two overlapping same-client strokes newest-first fully reverts the shared pixel",
-    () => {
-      /*
-       * Reproduces a chained-line undo: segment 1 (t=100) then segment 2
-       * (t=200) both touch (0,0) — the joint pixel. Undo replays newest-first
-       * (LIFO) and preserves each entry's *original* timestamp as
-       * originTimestamp (see buffer/hooks.ts), so the replay of segment 2
-       * (t=200) arrives before the replay of segment 1 (t=100) — an older
-       * timestamp arriving after a newer one at the same pixel, from the same
-       * client. Both must be accepted for the pixel to fully unwind.
-       */
-      const server = makeServer();
-
-      // Segment 1: (0,0) painted from background to color A.
-      server.receive(strokeCmd({
-        timestamp: 100,
-        positions: [{ x: 0, y: 0 }],
-        color: { r: 1, g: 1, b: 1, a: 255 },
-        clientId: "A"
-      }), noopRoom);
-      /*
-       * Segment 2: (0,0) repainted from color A to color B (the chained
-       * line's joint pixel).
-       */
-      server.receive(strokeCmd({
-        timestamp: 200,
-        positions: [{ x: 0, y: 0 }],
-        color: { r: 2, g: 2, b: 2, a: 255 },
-        clientId: "A"
-      }), noopRoom);
-
-      assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [2, 2, 2, 255]);
-
-      /*
-       * Undo segment 2 first (LIFO): replay restores color A, stamped with
-       * segment 2's own original timestamp (200).
-       */
-      server.receive(strokeCmd({
-        timestamp: 200,
-        positions: [{ x: 0, y: 0 }],
-        color: { r: 1, g: 1, b: 1, a: 255 },
-        clientId: "A"
-      }), noopRoom);
-      assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [1, 1, 1, 255]);
-
-      /*
-       * Undo segment 1 second: replay restores the background, stamped with
-       * segment 1's own (older) original timestamp (100). Without the
-       * same-client short-circuit this would be rejected as "stale" against
-       * the (200)-stamped state the previous undo just wrote.
-       */
-      server.receive(strokeCmd({
-        timestamp: 100,
-        positions: [{ x: 0, y: 0 }],
-        color: { r: 0, g: 0, b: 0, a: 0 },
-        clientId: "A"
-      }), noopRoom);
-      assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [0, 0, 0, 0]);
-    }
-  );
-});
-
-/*
- * ---------------------------------------------------------------------------
- * receive: select-edit — per-pixel LWW conflict resolution
- * ---------------------------------------------------------------------------
- */
-
-describe("PixelSyncServer — receive: select-edit conflict resolution", () => {
-  test("applies each position's own color to the buffer", () => {
-    const server = makeServer();
-
-    server.receive(selectEditCmd({
-      positions: [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 }
-      ],
-      colors: [
-        { r: 7, g: 7, b: 7, a: 255 },
-        { r: 8, g: 8, b: 8, a: 255 }
-      ]
-    }), noopRoom);
-
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(0, 0),
-      [7, 7, 7, 255]
-    );
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(1, 0),
-      [8, 8, 8, 255]
-    );
-  });
-
-  test(
-    "splits a select-edit: accepts non-conflicting positions, rejects and filters colors for the rest",
-    () => {
-      const server = makeServer();
-
-      // (0,0) is claimed by a later command first.
-      server.receive(strokeCmd({
-        timestamp: 900,
-        positions: [{ x: 0, y: 0 }],
-        color: { r: 9, g: 9, b: 9, a: 255 },
-        clientId: "A"
-      }), noopRoom);
-
-      const client = createClient("A");
-      const room = observe(server, client);
-      client.received.length = 0;
-
-      // A stale select-edit touching both (0,0) [conflict] and (1,1) [no conflict].
-      server.receive(selectEditCmd({
-        timestamp: 500,
-        positions: [
-          { x: 0, y: 0 },
-          { x: 1, y: 1 }
-        ],
-        colors: [
-          { r: 1, g: 1, b: 1, a: 255 },
-          { r: 2, g: 2, b: 2, a: 255 }
-        ],
-        clientId: "B"
-      }), room);
-
-      // (0,0) keeps the stroke's winning color, (1,1) got the select-edit's color.
-      assert.deepStrictEqual(
-        server.buffer.samplePixel(0, 0),
-        [9, 9, 9, 255]
-      );
-      assert.deepStrictEqual(
-        server.buffer.samplePixel(1, 1),
-        [2, 2, 2, 255]
-      );
-
-      // Broadcast carries only the accepted position/color pair, in lockstep.
-      assert.strictEqual(client.received.length, 1);
-      const msg = client.received[0] as {
-        type: string;
-        data: PixelNetworkCommand;
-      };
-      assert.strictEqual(msg.data.action, "select-edit");
-      if (msg.data.action === "select-edit") {
-        assert.deepStrictEqual(
-          msg.data.metadata.positions,
-          [{ x: 1, y: 1 }]
-        );
-        assert.deepStrictEqual(
-          msg.data.metadata.colors,
-          [{ r: 2, g: 2, b: 2, a: 255 }]
-        );
-      }
-    }
-  );
-
-  test("drops a select-edit entirely (no broadcast) when every position is rejected", () => {
-    const server = makeServer();
-    server.receive(strokeCmd({
-      timestamp: 900,
-      positions: [{ x: 0, y: 0 }],
-      clientId: "A"
-    }), noopRoom);
-
-    const client = createClient("A");
-    const room = observe(server, client);
-    client.received.length = 0;
-
-    /*
-     * Different client than the one that claimed (0,0): a same-client stale
-     * timestamp would be trusted (see ConflictResolver's same-client
-     * short-circuit), so this must come from someone else to be rejected.
-     */
-    server.receive(selectEditCmd({
-      timestamp: 500,
-      positions: [{ x: 0, y: 0 }],
-      clientId: "B"
-    }), room);
-
-    assert.strictEqual(client.received.length, 0);
-  });
-});
-
-/*
- * ---------------------------------------------------------------------------
- * receive: structural ops always accepted
- * ---------------------------------------------------------------------------
- */
-
-describe("PixelSyncServer — receive: resized / texture-replaced", () => {
-  test("resized is always accepted and broadcast", () => {
-    const server = makeServer();
-
-    server.receive({
-      action: "resized",
-      metadata: {
-        size: { x: 8, y: 2 }
-      },
+    const { context, broadcasts } = createRoomContext();
+    const positions = [{ x: 0, y: 0 }];
+    server.receive(command("stroke", { color: gray(9), positions }, {
       clientId: "A",
-      seq: 2,
-      timestamp: 1
-    }, noopRoom);
+      timestamp: 900
+    }), context);
+    broadcasts.length = 0;
 
-    assert.deepStrictEqual(
-      server.buffer.size(),
-      { x: 8, y: 2 }
-    );
-  });
-
-  test("texture-replaced is always accepted and broadcast", () => {
-    const server = makeServer();
-
-    const client = createClient("A");
-    const room = observe(server, client);
-    client.received.length = 0;
-
-    server.receive({
-      action: "texture-replaced",
-      metadata: {
-        size: { x: 2, y: 2 },
-        pixels: ""
-      },
+    server.receive(command("select-edit", { positions, colors: [gray(1)] }, {
       clientId: "B",
-      seq: 2,
-      timestamp: 1
-    }, room);
+      timestamp: 500
+    }), context);
 
-    assert.strictEqual(client.received.length, 1);
-  });
-});
-
-/*
- * ---------------------------------------------------------------------------
- * snapshot()
- * ---------------------------------------------------------------------------
- */
-
-describe("PixelSyncServer — snapshot", () => {
-  test("returns decodable pixel data reflecting the buffer's current state", () => {
-    const server = makeServer({ x: 2, y: 2 });
-    server.receive(strokeCmd({
-      positions: [{ x: 0, y: 0 }],
-      color: { r: 5, g: 6, b: 7, a: 255 }
-    }), noopRoom);
-
-    const snap = server.snapshot();
-    assert.deepStrictEqual(
-      snap.size,
-      { x: 2, y: 2 }
-    );
-    const pixels = toUint8Array(snap.pixels);
-    assert.deepStrictEqual([
-      pixels[0],
-      pixels[1],
-      pixels[2],
-      pixels[3]
-    ], [5, 6, 7, 255]);
+    assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [9, 9, 9, 255]);
+    assert.deepStrictEqual(broadcasts, []);
   });
 
-  test("includes the buffer's current UV regions, for late-joining clients", () => {
+  test("applies and broadcasts structural commands", () => {
     const server = makeServer();
-    server.receive(uvCreatedCmd({
-      region: {
-        state: "stacked",
-        id: "r1",
-        rect: {
-          x: 0,
-          y: 0,
-          width: 2,
-          height: 2
-        },
-        color: "#f00"
-      }
-    }), noopRoom);
+    const { context, broadcasts } = createRoomContext();
 
-    const snap = server.snapshot();
-    assert.deepStrictEqual(
-      snap.uvRegions,
-      [
-        {
-          id: "r1",
-          state: "stacked",
-          rect: { x: 0, y: 0, width: 2, height: 2 },
-          color: "#f00"
-        }
-      ]
-    );
+    server.receive(command("resized", { size: { x: 8, y: 2 } }), context);
+    server.receive(command("texture-replaced", { size: { x: 2, y: 2 }, pixels: "" }), context);
+    server.receive(command("uv-region-state-changed", { region: freeRegion("r1") }), context);
+
+    assert.deepStrictEqual(server.buffer.size(), { x: 2, y: 2 });
+    assert.strictEqual(server.buffer.uvRegions.get("r1")?.state, "free");
+    assert.strictEqual(broadcasts.length, 3);
   });
-});
 
-describe("PixelSyncServer — custom buffer / id", () => {
-  test("accepts an existing PixelBuffer in options", () => {
+  test("snapshots the buffer pixels and UV regions", () => {
+    const server = new PixelSyncServer({
+      buffer: new PixelBuffer({ size: { x: 2, y: 2 } })
+    });
+    const { context } = createRoomContext();
+    const region = {
+      ...stackedRegion("r1"),
+      name: "Grass block"
+    };
+    server.receive(command("stroke", {
+      color: { r: 5, g: 6, b: 7, a: 255 },
+      positions: [{ x: 0, y: 0 }]
+    }), context);
+    server.receive(command("uv-region-created", { region }), context);
+
+    const snapshot = server.snapshot();
+
+    assert.deepStrictEqual(snapshot.size, { x: 2, y: 2 });
+    assert.deepStrictEqual([...Buffer.from(snapshot.pixels, "base64").subarray(0, 4)], [5, 6, 7, 255]);
+    assert.deepStrictEqual(snapshot.uvRegions, [region]);
+  });
+
+  test("keeps a buffer passed through options", () => {
     const buffer = new PixelBuffer({ size: { x: 4, y: 4 } });
 
-    const server = new PixelSyncServer({ buffer });
-    assert.strictEqual(server.buffer, buffer);
+    assert.strictEqual(new PixelSyncServer({ buffer }).buffer, buffer);
   });
 
   test("defaults to the \"pixel-draw\" id, overridable per instance", () => {
     assert.strictEqual(new PixelSyncServer().id, "pixel-draw");
-    assert.strictEqual(
-      new PixelSyncServer({ id: "pixel-draw:tex1" }).id,
-      "pixel-draw:tex1"
-    );
+    assert.strictEqual(new PixelSyncServer({ id: "pixel-draw:tex1" }).id, "pixel-draw:tex1");
   });
 });
 
-describe("PixelSyncServer — incoming message validation", () => {
-  test("uses the connection id instead of a command's claimed client id", () => {
+describe("PixelSyncServer — incoming messages", () => {
+  test("stamps commands with the connection id instead of the claimed client id", () => {
     const server = makeServer();
-    const client = createClient("observer");
-    const room = observe(server, client);
-    client.received.length = 0;
+    const { context, broadcasts } = createRoomContext();
+    const stroke = command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }]
+    }, { clientId: "spoofed" });
 
-    server.onMessage(
-      "connection-A",
-      strokeCmd({ clientId: "spoofed" }),
-      room
-    );
+    server.onMessage("connection-A", stroke, context);
 
-    assert.strictEqual(client.received.length, 1);
-    const message = client.received[0] as {
-      type: string;
-      data: PixelNetworkCommand;
-    };
-    assert.strictEqual(message.data.clientId, "connection-A");
+    assert.deepStrictEqual(broadcasts, [{
+      type: "command",
+      data: { ...stroke, clientId: "connection-A" }
+    }]);
   });
 
   test("drops malformed command metadata", () => {
     const server = makeServer();
-    const client = createClient("observer");
-    const room = observe(server, client);
-    client.received.length = 0;
+    const { context, broadcasts } = createRoomContext();
 
-    server.onMessage("connection-A", {
-      action: "select-edit",
-      metadata: {
-        positions: [{ x: 0, y: 0 }],
-        colors: []
-      },
-      clientId: "connection-A",
-      seq: 1,
-      timestamp: 1
-    }, room);
+    server.onMessage("connection-A", command("select-edit", {
+      positions: [{ x: 0, y: 0 }],
+      colors: []
+    }), context);
 
-    assert.strictEqual(client.received.length, 0);
-    assert.deepStrictEqual(
-      server.buffer.samplePixel(0, 0),
-      [255, 255, 255, 255]
-    );
+    assert.deepStrictEqual(broadcasts, []);
+    assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [255, 255, 255, 255]);
   });
 
-  test("rejects a command with an invalid header through the inbound protocol", () => {
-    const server = makeServer();
-    const parser = new MessageParser(server.protocols.inbound!);
+  test("the inbound protocol rejects an invalid header", () => {
+    const parser = new MessageParser(makeServer().protocols.inbound!);
+    const stroke = command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }]
+    });
 
-    assert.strictEqual(parser.parse({ ...strokeCmd(), timestamp: Number.NaN }).ok, false);
-    assert.strictEqual(parser.parse({ ...strokeCmd(), seq: -1 }).ok, false);
-    assert.strictEqual(parser.parse({ ...strokeCmd(), clientId: 42 }).ok, false);
+    assert.strictEqual(parser.parse({ ...stroke, timestamp: Number.NaN }).ok, false);
+    assert.strictEqual(parser.parse({ ...stroke, seq: -1 }).ok, false);
+    assert.strictEqual(parser.parse({ ...stroke, clientId: 42 }).ok, false);
+    assert.strictEqual(parser.parse({ unexpected: true }).ok, false);
   });
 
-  test("exposes command actions for rights lookup", () => {
-    const server = makeServer();
-    const parser = new MessageParser(server.protocols.inbound!);
+  test("the inbound protocol exposes command actions for rights lookup", () => {
+    const parser = new MessageParser(makeServer().protocols.inbound!);
+    const parsed = parser.parse(command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }]
+    }));
 
     assert.ok(parser.events.includes("stroke"));
-
-    const parsed = parser.parse(strokeCmd());
     assert.strictEqual(parsed.ok, true);
     assert.strictEqual(parsed.val.event, "stroke");
-    assert.strictEqual(parser.parse({ unexpected: true }).ok, false);
   });
 });

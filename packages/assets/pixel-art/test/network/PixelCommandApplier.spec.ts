@@ -14,282 +14,116 @@ import {
 
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "#src/network/PixelCommandApplier.ts";
-import type { PixelNetworkCommand } from "#src/network/types.ts";
-
-// CONSTANTS
-const kHeader = {
-  clientId: "client-A",
-  seq: 1,
-  timestamp: 1000
-};
+import {
+  command,
+  freeRegion,
+  gray,
+  stackedRegion
+} from "../fixtures/commands.ts";
 
 function makeBuffer(
-  size = { x: 4, y: 4 }
+  size = { x: 8, y: 8 }
 ): PixelBuffer {
   return new PixelBuffer({ size });
 }
 
-describe("applyCommandToBuffer — stroke", () => {
-  test("draws the given pixels on the buffer", () => {
+describe("applyCommandToBuffer", () => {
+  test("stroke draws its color at every position", () => {
     const buffer = makeBuffer();
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "stroke",
-      metadata: {
-        color: { r: 1, g: 2, b: 3, a: 255 },
-        positions: [
-          { x: 0, y: 0 },
-          { x: 1, y: 1 }
-        ]
-      }
-    });
-    assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
-      [1, 2, 3, 255]
-    );
-    assert.deepStrictEqual(
-      buffer.samplePixel(1, 1),
-      [1, 2, 3, 255]
-    );
-  });
-});
 
-describe("applyCommandToBuffer — resized", () => {
-  test("resizes the buffer", () => {
+    applyCommandToBuffer(buffer, command("stroke", {
+      color: { r: 1, g: 2, b: 3, a: 255 },
+      positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }]
+    }));
+
+    assert.deepStrictEqual(buffer.samplePixel(0, 0), [1, 2, 3, 255]);
+    assert.deepStrictEqual(buffer.samplePixel(1, 1), [1, 2, 3, 255]);
+  });
+
+  test("select-edit writes each position's own color", () => {
     const buffer = makeBuffer();
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "resized",
-      metadata: { size: { x: 8, y: 2 } }
-    });
-    assert.deepStrictEqual(
-      buffer.size(),
-      { x: 8, y: 2 }
-    );
-  });
-});
 
-describe("applyCommandToBuffer — texture-replaced", () => {
-  test("replaces the buffer's pixel data", () => {
+    applyCommandToBuffer(buffer, command("select-edit", {
+      positions: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+      colors: [gray(1), gray(9)]
+    }));
+
+    assert.deepStrictEqual(buffer.samplePixel(0, 0), [1, 1, 1, 255]);
+    assert.deepStrictEqual(buffer.samplePixel(1, 0), [9, 9, 9, 255]);
+  });
+
+  test("resized resizes the buffer", () => {
     const buffer = makeBuffer();
-    const pixels = new Uint8ClampedArray(
-      2 * 2 * 4
-    ).fill(9);
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "texture-replaced",
-      metadata: {
-        size: { x: 2, y: 2 },
-        pixels: fromUint8Array(new Uint8Array(pixels))
-      }
-    });
-    assert.deepStrictEqual(
-      buffer.size(),
-      { x: 2, y: 2 }
-    );
-    assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
-      [9, 9, 9, 9]
-    );
-  });
-});
 
-describe("applyCommandToBuffer — global-fill", () => {
-  test("recomputes matching pixels from fromColor and repaints them toColor", () => {
+    applyCommandToBuffer(buffer, command("resized", { size: { x: 8, y: 2 } }));
+
+    assert.deepStrictEqual(buffer.size(), { x: 8, y: 2 });
+  });
+
+  test("texture-replaced replaces the buffer size and pixels", () => {
+    const buffer = makeBuffer();
+    const pixels = new Uint8Array(2 * 2 * 4).fill(9);
+
+    applyCommandToBuffer(buffer, command("texture-replaced", {
+      size: { x: 2, y: 2 },
+      pixels: fromUint8Array(pixels)
+    }));
+
+    assert.deepStrictEqual(buffer.size(), { x: 2, y: 2 });
+    assert.deepStrictEqual(buffer.samplePixel(0, 0), [9, 9, 9, 9]);
+  });
+
+  test("global-fill repaints only the pixels matching fromColor", () => {
     const buffer = makeBuffer({ x: 3, y: 1 });
-    buffer.drawPixels([
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 2, y: 0 }
-    ], { r: 1, g: 2, b: 3, a: 255 });
+    buffer.drawPixels([{ x: 0, y: 0 }, { x: 1, y: 0 }], gray(1));
+    buffer.drawPixels([{ x: 2, y: 0 }], gray(5));
 
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "global-fill",
-      metadata: {
-        fromColor: { r: 1, g: 2, b: 3, a: 255 },
-        toColor: { r: 9, g: 8, b: 7, a: 255 }
-      }
-    });
+    applyCommandToBuffer(buffer, command("global-fill", {
+      fromColor: gray(1),
+      toColor: gray(9)
+    }));
 
-    assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
-      [9, 8, 7, 255]
-    );
-    assert.deepStrictEqual(
-      buffer.samplePixel(1, 0),
-      [9, 8, 7, 255]
-    );
-    assert.deepStrictEqual(
-      buffer.samplePixel(2, 0),
-      [9, 8, 7, 255]
-    );
+    assert.deepStrictEqual(buffer.samplePixel(0, 0), [9, 9, 9, 255]);
+    assert.deepStrictEqual(buffer.samplePixel(1, 0), [9, 9, 9, 255]);
+    assert.deepStrictEqual(buffer.samplePixel(2, 0), [5, 5, 5, 255]);
   });
 
-  test("only touches pixels currently matching fromColor, leaving others untouched", () => {
-    const buffer = makeBuffer({ x: 2, y: 1 });
-    buffer.drawPixels([
-      { x: 0, y: 0 }
-    ], { r: 1, g: 2, b: 3, a: 255 });
-    buffer.drawPixels([
-      { x: 1, y: 0 }
-    ], { r: 9, g: 9, b: 9, a: 255 });
-
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "global-fill",
-      metadata: {
-        fromColor: { r: 1, g: 2, b: 3, a: 255 },
-        toColor: { r: 0, g: 0, b: 0, a: 255 }
-      }
-    });
-
-    assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
-      [0, 0, 0, 255]
-    );
-    assert.deepStrictEqual(
-      buffer.samplePixel(1, 0),
-      [9, 9, 9, 255]
-    );
-  });
-});
-
-describe("applyCommandToBuffer — select-edit", () => {
-  test("writes each position's own color, not a uniform one", () => {
+  test("uv-region-created stores the region", () => {
     const buffer = makeBuffer();
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "select-edit",
-      metadata: {
-        positions: [
-          { x: 0, y: 0 },
-          { x: 1, y: 0 }
-        ],
-        colors: [
-          { r: 1, g: 2, b: 3, a: 255 },
-          { r: 9, g: 8, b: 7, a: 255 }
-        ]
-      }
-    });
-    assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
-      [1, 2, 3, 255]
-    );
-    assert.deepStrictEqual(
-      buffer.samplePixel(1, 0),
-      [9, 8, 7, 255]
-    );
-  });
-});
 
-describe("applyCommandToBuffer — uv-region-created", () => {
-  test("stores the region on the buffer", () => {
+    applyCommandToBuffer(buffer, command("uv-region-created", { region: stackedRegion("r1") }));
+
+    assert.deepStrictEqual(buffer.uvRegions.get("r1")?.toJSON(), stackedRegion("r1"));
+  });
+
+  test("uv-region-deleted removes the region", () => {
     const buffer = makeBuffer();
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "uv-region-created",
-      metadata: {
-        region: {
-          state: "stacked",
-          id: "r1",
-          rect: { x: 0, y: 0, width: 2, height: 2 },
-          color: "#f00"
-        }
-      }
-    });
+    buffer.uvRegions.set(stackedRegion("r1"));
 
-    assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), {
-      id: "r1",
-      state: "stacked",
-      rect: { x: 0, y: 0, width: 2, height: 2 },
-      color: "#f00"
-    });
+    applyCommandToBuffer(buffer, command("uv-region-deleted", { id: "r1" }));
+
+    assert.strictEqual(buffer.uvRegions.get("r1"), undefined);
   });
-});
 
-describe("applyCommandToBuffer — uv-region-deleted", () => {
-  test("removes the region from the buffer", () => {
+  test("uv-region-moved updates the region rect and keeps its color", () => {
     const buffer = makeBuffer();
-    buffer.uvRegions.set({
-      state: "stacked",
-      id: "r1",
-      rect: { x: 0, y: 0, width: 2, height: 2 },
-      color: "#f00"
-    });
+    const rect = { x: 4, y: 4, width: 2, height: 2 };
+    buffer.uvRegions.set(stackedRegion("r1"));
 
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "uv-region-deleted",
-      metadata: { id: "r1" }
-    });
+    applyCommandToBuffer(buffer, command("uv-region-moved", { id: "r1", face: null, rect }));
 
-    assert.strictEqual(
-      buffer.uvRegions.get("r1"),
-      undefined
-    );
+    assert.deepStrictEqual(buffer.uvRegions.get("r1")?.toJSON(), stackedRegion("r1", rect));
   });
 
-  test("is a no-op for an unknown region", () => {
+  test("uv-region-moved moves a single face of a free region", () => {
     const buffer = makeBuffer();
-    assert.doesNotThrow(() => {
-      applyCommandToBuffer(buffer, {
-        ...kHeader,
-        action: "uv-region-deleted",
-        metadata: { id: "no-such-region" }
-      });
-    });
-  });
-});
+    buffer.uvRegions.set(new UVRegion(stackedRegion("r1")).free());
 
-describe("applyCommandToBuffer — uv-region-moved", () => {
-  test("updates the region's rect, preserving its color", () => {
-    const buffer = makeBuffer({ x: 8, y: 8 });
-    buffer.uvRegions.set({
-      state: "stacked",
+    applyCommandToBuffer(buffer, command("uv-region-moved", {
       id: "r1",
-      rect: { x: 0, y: 0, width: 2, height: 2 },
-      color: "#f00"
-    });
-
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "uv-region-moved",
-      metadata: {
-        id: "r1",
-        face: null,
-        rect: { x: 4, y: 4, width: 2, height: 2 }
-      }
-    });
-
-    assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), {
-      id: "r1",
-      state: "stacked",
-      rect: { x: 4, y: 4, width: 2, height: 2 },
-      color: "#f00"
-    });
-  });
-
-  test("moves a single face of an free region", () => {
-    const buffer = makeBuffer({ x: 8, y: 8 });
-    buffer.uvRegions.set(
-      new UVRegion({
-        state: "stacked",
-        id: "r1",
-        color: "#f00",
-        rect: { x: 0, y: 0, width: 2, height: 2 }
-      }).free()
-    );
-
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "uv-region-moved",
-      metadata: {
-        id: "r1",
-        face: "top",
-        rect: { x: 4, y: 4, width: 2, height: 2 }
-      }
-    });
+      face: "top",
+      rect: { x: 4, y: 4, width: 2, height: 2 }
+    }));
 
     const region = buffer.uvRegions.get("r1")!;
     assert.deepStrictEqual(region.rectFor("top"), { x: 4, y: 4, width: 2, height: 2 });
@@ -297,58 +131,24 @@ describe("applyCommandToBuffer — uv-region-moved", () => {
   });
 
   test("uv-region-state-changed replaces the stored region", () => {
-    const buffer = makeBuffer({ x: 8, y: 8 });
-    buffer.uvRegions.set({
-      state: "stacked",
-      id: "r1",
-      rect: { x: 0, y: 0, width: 2, height: 2 },
-      color: "#f00"
-    });
+    const buffer = makeBuffer();
+    buffer.uvRegions.set(stackedRegion("r1"));
 
-    applyCommandToBuffer(buffer, {
-      ...kHeader,
-      action: "uv-region-state-changed",
-      metadata: {
-        region: new UVRegion({
-          state: "stacked",
-          id: "r1",
-          color: "#f00",
-          rect: { x: 0, y: 0, width: 2, height: 2 }
-        }).free().toJSON()
-      }
-    });
+    applyCommandToBuffer(buffer, command("uv-region-state-changed", { region: freeRegion("r1") }));
 
-    assert.strictEqual(buffer.uvRegions.get("r1")!.state, "free");
+    assert.strictEqual(buffer.uvRegions.get("r1")?.state, "free");
   });
 
-  test("is a no-op for an unknown region", () => {
-    const buffer = makeBuffer({ x: 8, y: 8 });
+  test("region commands for an unknown region are no-ops", () => {
+    const buffer = makeBuffer();
+
     assert.doesNotThrow(() => {
-      applyCommandToBuffer(buffer, {
-        ...kHeader,
-        action: "uv-region-moved",
-        metadata: {
-          id: "no-such-region",
-          face: null,
-          rect: { x: 0, y: 0, width: 1, height: 1 }
-        }
-      });
+      applyCommandToBuffer(buffer, command("uv-region-deleted", { id: "missing" }));
+      applyCommandToBuffer(buffer, command("uv-region-moved", {
+        id: "missing",
+        face: null,
+        rect: { x: 0, y: 0, width: 1, height: 1 }
+      }));
     });
-  });
-});
-
-describe("applyCommandToBuffer — all actions compile", () => {
-  test("exhaustive switch: no TypeScript error for any action", () => {
-    const actions: PixelNetworkCommand["action"][] = [
-      "stroke",
-      "select-edit",
-      "resized",
-      "texture-replaced",
-      "global-fill",
-      "uv-region-created",
-      "uv-region-deleted",
-      "uv-region-moved"
-    ];
-    assert.strictEqual(actions.length, 8);
   });
 });

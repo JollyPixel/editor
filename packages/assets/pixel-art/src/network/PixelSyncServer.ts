@@ -21,12 +21,6 @@ import type {
   PixelNetworkCommand
 } from "./types.ts";
 
-export type {
-  PixelSelectEditCommand,
-  PixelStrokeCommand,
-  PixelUvRegionCommand
-} from "./PixelCommandArbiter.ts";
-
 export type ClientHandle = network.ClientHandle;
 
 export interface PixelSyncServerOptions {

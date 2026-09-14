@@ -5,7 +5,7 @@ work outside ECS lifecycle methods.
 
 ```ts
 import {
-  VoxelRenderer,
+  VoxelEngine,
   loadTilesets
 } from "@jolly-pixel/voxel.renderer";
 
@@ -17,7 +17,7 @@ const tilesets = await loadTilesets([
   }
 ]);
 
-const renderer = actor.addComponentAndGet(VoxelRenderer, {
+const engine = new VoxelEngine({
   tilesets
 });
 ```

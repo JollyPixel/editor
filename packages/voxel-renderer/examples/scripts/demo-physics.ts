@@ -3,12 +3,14 @@ import RAPIER from "@dimforge/rapier3d";
 import {
   Camera3DControls
 } from "@jolly-pixel/engine";
+import {
+  VoxelRenderer
+} from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
 import { Runtime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  VoxelRenderer,
   loadTilesets,
   Face,
   type BlockDefinition

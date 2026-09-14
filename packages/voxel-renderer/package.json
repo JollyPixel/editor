@@ -8,12 +8,14 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./network/*.ts": "./dist/network/*.js",
-    "./asset/*.ts": "./dist/asset/*.js",
+    "./plugins/tiled/index.ts": {
+      "types": "./dist/plugins/tiled/index.d.ts",
+      "default": "./dist/plugins/tiled/index.js"
+    },
     "./plugins/*": "./dist/plugins/*"
   },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
+    "prepublish": "rimraf ./dist ./tsconfig.tsbuildinfo && tsc -b",
     "build": "tsc",
     "dev": "vite",
     "test-only": "node --test \"test/**/*.spec.ts\"",
@@ -47,29 +49,17 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset": "1.1.0",
-    "@jolly-pixel/engine": "5.0.0",
-    "@jolly-pixel/network": "2.0.0",
     "three": "0.185.1"
   },
   "devDependencies": {
     "@dimforge/rapier3d": "0.20.0",
+    "@jolly-pixel/asset": "1.1.0",
+    "@jolly-pixel/asset.voxel-map": "1.0.0",
     "@jolly-pixel/asset-source": "1.0.0",
+    "@jolly-pixel/engine": "5.0.0",
     "@jolly-pixel/loop": "1.0.0",
     "@jolly-pixel/runtime": "5.0.0",
     "@jolly-pixel/ui": "2.0.0",
     "simplex-noise": "4.0.3"
-  },
-  "peerDependencies": {
-    "@jolly-pixel/asset-server": "2.0.0",
-    "@jolly-pixel/event-store": "3.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@jolly-pixel/asset-server": {
-      "optional": true
-    },
-    "@jolly-pixel/event-store": {
-      "optional": true
-    }
   }
 }

@@ -1,12 +1,12 @@
 # Adding physics
 
-Pass a collider factory when constructing `VoxelEngine` or `VoxelRenderer`.
+Pass a collider factory when constructing `VoxelEngine`.
 The bundled Rapier implementation accepts an initialized Rapier namespace and
 world.
 
 ```ts
 import Rapier from "@dimforge/rapier3d-compat";
-import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import {
   RapierVoxelCollider
 } from "@jolly-pixel/voxel.renderer/plugins/rapier/index.js";
@@ -19,7 +19,7 @@ const rapierWorld = new Rapier.World({
   z: 0
 });
 
-const renderer = actor.addComponentAndGet(VoxelRenderer, {
+const engine = new VoxelEngine({
   collider: (context) => new RapierVoxelCollider({
     api: Rapier,
     world: rapierWorld,

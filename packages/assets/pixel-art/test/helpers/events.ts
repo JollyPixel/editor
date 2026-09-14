@@ -1,8 +1,3 @@
-/*
- * DOM event factories/dispatchers shared across the input and canvas specs.
- * The global event constructors are happy-dom's, registered in test/setup.ts.
- */
-
 export function shiftKeyDown(
   repeat = false
 ): KeyboardEvent {
@@ -90,7 +85,6 @@ export function hoverCanvas(
   );
 }
 
-/** A left-button mouse event (button 0 / buttons 1) at the given client point. */
 export function mouseEvent(
   type: string,
   clientX: number,
@@ -114,7 +108,6 @@ export function deleteKey(): KeyboardEvent {
   });
 }
 
-/** A Ctrl+<letter> keydown, with the physical code derived from the letter. */
 export function ctrlKey(
   key: string
 ): KeyboardEvent {

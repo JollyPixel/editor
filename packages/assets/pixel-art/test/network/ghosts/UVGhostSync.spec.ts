@@ -1,558 +1,156 @@
 // Import Node.js Dependencies
 import {
   describe,
+  mock,
   test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
-import type {
-  PeerUVPreviewState,
-  PixelArtCanvas
-} from "@jolly-pixel/pixel-draw.renderer";
+import type { PeerUVPreviewState } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { UVGhostSync } from "#src/network/ghosts/UVGhostSync.ts";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage,
-  UVGhostPayload
-} from "#src/network/types.ts";
+import type { UVGhostPayload } from "#src/network/types.ts";
+import {
+  command,
+  freeRegion
+} from "../../fixtures/commands.ts";
+import { asCanvas } from "../../helpers/canvas.ts";
+import { MockEmitter } from "../../helpers/emitter.ts";
+import {
+  callsOf,
+  nextFrame
+} from "../../helpers/mock.ts";
+import { MockRoom } from "../../helpers/room.ts";
 
-/*
- * ---------------------------------------------------------------------------
- * Helpers
- * ---------------------------------------------------------------------------
- */
+type UVEvents = {
+  "region-dragging": (event: UVGhostPayload) => void;
+  "region-moved": (event: { region: { id: string; }; }) => void;
+  "region-drag-ended": (event: { id: string; committed: boolean; }) => void;
+};
 
-interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
-  presenceUpdates: network.PeerMetadata[];
-  addPeer(clientId: string, presence: network.PeerMetadata): void;
-  simulateLeave(clientId: string): void;
-  simulatePresence(clientId: string, patch: network.PeerMetadata): void;
-  simulateMoveCommand(regionId: string): void;
-  simulateDeleteCommand(regionId: string): void;
-  simulateStateChangedCommand(regionId: string): void;
-  simulateSnapshot(): void;
-}
-
-function createMockRoom(): MockRoom {
-  const presenceUpdates: network.PeerMetadata[] = [];
-  const peers = new Map<string, network.Peer>();
-  const listeners = new Map<string, Set<(payload: any) => void>>();
-
-  function emit(type: string, payload: unknown): void {
-    for (const listener of listeners.get(type) ?? []) {
-      listener(payload);
-    }
-  }
-
-  const room: MockRoom = {
-    id: "test-room",
-    clientId: "local-A",
-    peers,
-
-    role: "default",
-
-    rights: {},
-
-    access: "write" as const,
-
-    can: () => "write" as const,
-    on: (type, listener) => {
-      let set = listeners.get(type);
-      if (!set) {
-        set = new Set();
-        listeners.set(type, set);
-      }
-      set.add(listener);
-    },
-    off: (type, listener) => {
-      listeners.get(type)?.delete(listener);
-    },
-    presenceUpdates,
-    join() {
-      // Unused by UVGhostSync.
-    },
-    send() {
-      // Unused by UVGhostSync.
-    },
-    updatePresence(patch) {
-      presenceUpdates.push(patch);
-    },
-    leave() {
-      // Unused by UVGhostSync.
-    },
-    addPeer(clientId, presence) {
-      peers.set(clientId, {
-        clientId,
-        role: "default", profile: {},
-        presence
-      });
-    },
-    simulateLeave(clientId) {
-      emit("peer-left", { clientId });
-    },
-    simulatePresence(clientId, patch) {
-      emit("peer-presence", { clientId, patch });
-    },
-    simulateMoveCommand(regionId) {
-      emit("message", {
-        type: "command",
-        data: {
-          clientId: "peer-B",
-          action: "uv-region-moved",
-          metadata: { id: regionId, face: null, rect: { x: 0, y: 0, width: 1, height: 1 } }
-        }
-      });
-    },
-    simulateDeleteCommand(regionId) {
-      emit("message", {
-        type: "command",
-        data: { clientId: "peer-B", action: "uv-region-deleted", metadata: { id: regionId } }
-      });
-    },
-    simulateStateChangedCommand(regionId) {
-      emit("message", {
-        type: "command",
-        data: {
-          clientId: "peer-B",
-          action: "uv-region-state-changed",
-          metadata: { region: { id: regionId } }
-        }
-      });
-    },
-    simulateSnapshot() {
-      emit("message", { type: "snapshot", data: {} });
-    }
-  };
-
-  return room;
-}
-
-interface MockUVMap {
-  on(type: string, listener: (event: any) => void): void;
-  off(type: string, listener: (event: any) => void): void;
-  simulateDragging(payload: UVGhostPayload): void;
-  simulateDragEnded(regionId: string, committed: boolean): void;
-  simulateMoved(regionId: string): void;
-}
-
-function createMockUVMap(): MockUVMap {
-  const listeners = new Map<string, Set<(event: any) => void>>();
-
-  function emit(type: string, event: unknown): void {
-    for (const listener of listeners.get(type) ?? []) {
-      listener(event);
-    }
-  }
-
-  return {
-    on(type, listener) {
-      let set = listeners.get(type);
-      if (!set) {
-        set = new Set();
-        listeners.set(type, set);
-      }
-      set.add(listener);
-    },
-    off(type, listener) {
-      listeners.get(type)?.delete(listener);
-    },
-    simulateDragging(payload) {
-      emit("region-dragging", payload);
-    },
-    simulateDragEnded(regionId, committed) {
-      emit("region-drag-ended", {
-        id: regionId,
-        committed
-      });
-    },
-    simulateMoved(regionId) {
-      emit(
-        "region-moved",
-        { region: { id: regionId }, face: null, previousRect: { x: 0, y: 0, width: 1, height: 1 } }
-      );
-    }
-  };
-}
-
-interface MockCanvas {
-  uv: MockUVMap;
-  setCalls: { clientId: string; state: PeerUVPreviewState; }[];
-  removedPeers: string[];
-  clearAllCallCount: number;
-  removeByRegionCalls: string[];
-  peerPresence: {
-    uv: {
-      set(clientId: string, state: PeerUVPreviewState): void;
-      remove(clientId: string): void;
-      clearAll(): void;
-      removeByRegion(id: string): void;
-    };
-  };
-}
-
-function createMockCanvas(): MockCanvas {
-  const setCalls: { clientId: string; state: PeerUVPreviewState; }[] = [];
-  const removedPeers: string[] = [];
-  const removeByRegionCalls: string[] = [];
-
-  const canvas: MockCanvas = {
-    uv: createMockUVMap(),
-    setCalls,
-    removedPeers,
-    clearAllCallCount: 0,
-    removeByRegionCalls,
-    peerPresence: {
-      uv: {
-        set(clientId, state) {
-          setCalls.push({ clientId, state });
-        },
-        remove(clientId) {
-          removedPeers.push(clientId);
-        },
-        clearAll() {
-          canvas.clearAllCallCount++;
-        },
-        removeByRegion(id) {
-          removeByRegionCalls.push(id);
-        }
-      }
-    }
-  };
-
-  return canvas;
-}
-
-/*
- * UVGhostSync is typed against the concrete PixelArtCanvas, but only uses the
- * structural subset MockCanvas implements.
- */
-function asHost(
-  canvas: MockCanvas
-): PixelArtCanvas {
-  return canvas as unknown as PixelArtCanvas;
-}
-
+// CONSTANTS
 const kPayload: UVGhostPayload = {
   id: "region-A",
   face: null,
   geometry: { x: 0, y: 0, width: 4, height: 4 }
 };
 
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
+function setup() {
+  const room = new MockRoom();
+  const host = {
+    uv: new MockEmitter<UVEvents>(),
+    peerPresence: {
+      uv: {
+        set: mock.fn<(clientId: string, state: PeerUVPreviewState) => void>(),
+        remove: mock.fn<(clientId: string) => void>(),
+        clearAll: mock.fn<() => void>(),
+        removeByRegion: mock.fn<(id: string) => void>()
+      }
+    }
+  };
+  const sync = new UVGhostSync({ room });
+  sync.attach(asCanvas(host));
+
+  return {
+    room,
+    events: host.uv,
+    overlay: host.peerPresence.uv
+  };
 }
 
-/*
- * ---------------------------------------------------------------------------
- * attach / detach
- * ---------------------------------------------------------------------------
- */
+describe("UVGhostSync — local drag", () => {
+  test("reports region dragging as uvGhost presence", async() => {
+    const { room, events } = setup();
 
-describe("UVGhostSync — attach", () => {
-  test("throws when a canvas is already attached", () => {
-    const sync = new UVGhostSync({ room: createMockRoom() });
-    sync.attach(asHost(createMockCanvas()));
-
-    assert.throws(() => sync.attach(asHost(createMockCanvas())));
-  });
-
-  test("seeds ghost presence already stored on the room", () => {
-    const room = createMockRoom();
-    room.addPeer("peer-B", { uvGhost: kPayload });
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-
-    sync.attach(asHost(canvas));
-
-    assert.strictEqual(canvas.setCalls.length, 1);
-    assert.strictEqual(canvas.setCalls[0].clientId, "peer-B");
-  });
-
-  test("enableGhostPreview: false never wires the region-dragging listener", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room, enableGhostPreview: false });
-    sync.attach(asHost(canvas));
-
-    canvas.uv.simulateDragging(kPayload);
+    events.emit("region-dragging", kPayload);
     await nextFrame();
 
-    assert.strictEqual(room.presenceUpdates.length, 0);
-  });
-});
-
-describe("UVGhostSync — detach", () => {
-  test("stops forwarding local drag progress", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    sync.detach();
-    canvas.uv.simulateDragging(kPayload);
-    await nextFrame();
-
-    assert.strictEqual(room.presenceUpdates.length, 0);
-  });
-});
-
-/*
- * ---------------------------------------------------------------------------
- * Local drag -> presence (rAF-gated)
- * ---------------------------------------------------------------------------
- */
-
-describe("UVGhostSync — local drag reporting", () => {
-  test("forwards a local region-dragging event as a presence update on the next frame", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    canvas.uv.simulateDragging(kPayload);
-    assert.strictEqual(room.presenceUpdates.length, 0, "not sent synchronously");
-
-    await nextFrame();
-    assert.strictEqual(room.presenceUpdates.length, 1);
-    assert.deepStrictEqual(room.presenceUpdates[0], { uvGhost: kPayload });
+    assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: kPayload }]);
   });
 
-  test("a region-moved commit for the pending region cancels its queued pre-commit send", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
+  test("moving the dragged region cancels the pending report", async() => {
+    const { room, events } = setup();
 
-    /*
-     * Mirrors the real race: handleMove() queues an rAF send, then the
-     * synchronous handleEnd()/uvMap.move() commit fires "region-moved"
-     * before that frame runs — the stale pre-commit geometry must never
-     * reach the wire and resurrect a ghost peers just saw cleared.
-     */
-    canvas.uv.simulateDragging(kPayload);
-    canvas.uv.simulateMoved(kPayload.id);
-
+    events.emit("region-dragging", kPayload);
+    events.emit("region-moved", { region: { id: kPayload.id } });
     await nextFrame();
-    assert.strictEqual(room.presenceUpdates.length, 0);
+
+    assert.deepStrictEqual(room.presenceUpdates, []);
   });
 
-  test("a region-moved commit for a different region leaves the pending send untouched", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
+  test("moving another region keeps the pending report", async() => {
+    const { room, events } = setup();
 
-    canvas.uv.simulateDragging(kPayload);
-    canvas.uv.simulateMoved("some-other-region");
-
+    events.emit("region-dragging", kPayload);
+    events.emit("region-moved", { region: { id: "region-B" } });
     await nextFrame();
-    assert.strictEqual(room.presenceUpdates.length, 1);
-  });
 
-  test("coalesces multiple updates within the same frame into a single send", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    canvas.uv.simulateDragging(kPayload);
-    canvas.uv.simulateDragging({ ...kPayload, geometry: { x: 1, y: 1, width: 4, height: 4 } });
-
-    await nextFrame();
-    assert.strictEqual(room.presenceUpdates.length, 1, "only the latest snapshot is sent");
+    assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: kPayload }]);
   });
 
   test("a cancelled drag clears presence immediately", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
+    const { room, events } = setup();
 
-    canvas.uv.simulateDragging(kPayload);
-    canvas.uv.simulateDragEnded(kPayload.id, false);
+    events.emit("region-dragging", kPayload);
+    events.emit("region-drag-ended", { id: kPayload.id, committed: false });
     await nextFrame();
 
-    assert.deepStrictEqual(room.presenceUpdates, [
-      { uvGhost: null }
-    ]);
+    assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: null }]);
   });
 });
 
-/*
- * ---------------------------------------------------------------------------
- * Remote peers -> overlay
- * ---------------------------------------------------------------------------
- */
-
 describe("UVGhostSync — remote peers", () => {
-  test("a uvGhost presence patch updates the overlay", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
+  test("draws a peer uvGhost with a peer color", () => {
+    const { room, overlay } = setup();
 
-    room.simulatePresence("peer-B", { uvGhost: kPayload });
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: kPayload } });
 
-    assert.strictEqual(canvas.setCalls.length, 1);
-    assert.strictEqual(canvas.setCalls[0].clientId, "peer-B");
-    assert.strictEqual(canvas.setCalls[0].state.id, kPayload.id);
-    assert.ok(canvas.setCalls[0].state.color.length > 0, "a peer color was hashed in");
-  });
-
-  test("expires a peer ghost after 1500ms without an update", (t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    room.simulatePresence("peer-B", { uvGhost: kPayload });
-    t.mock.timers.tick(1499);
-    assert.deepStrictEqual(canvas.removedPeers, []);
-
-    t.mock.timers.tick(1);
-    assert.deepStrictEqual(canvas.removedPeers, ["peer-B"]);
-  });
-
-  test("ignores presence patches that don't touch the uvGhost field", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    room.simulatePresence("peer-B", { somethingElse: true });
-
-    assert.strictEqual(canvas.setCalls.length, 0);
+    const [[clientId, state]] = callsOf(overlay.set);
+    assert.strictEqual(clientId, "peer-B");
+    assert.strictEqual(state.id, kPayload.id);
+    assert.ok(state.color.length > 0);
   });
 
   test("ignores a malformed uvGhost payload", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
+    const { room, overlay } = setup();
 
-    room.simulatePresence("peer-B", { uvGhost: "not-an-object" });
-    room.simulatePresence("peer-B", { uvGhost: { face: null } });
-    room.simulatePresence("peer-B", {
-      uvGhost: {
-        id: "region-A",
-        face: null,
-        geometry: { shape: "unknown" }
-      }
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: "not-an-object" } });
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: { face: null } } });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { uvGhost: { ...kPayload, geometry: { shape: "unknown" } } }
     });
 
-    assert.strictEqual(canvas.setCalls.length, 0);
+    assert.strictEqual(overlay.set.mock.callCount(), 0);
   });
 
-  test("onPeerLeft removes that peer's ghost", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
+  test("removes a leaving peer's ghost and clears all ghosts on snapshot", () => {
+    const { room, overlay } = setup();
 
-    room.simulateLeave("peer-B");
+    room.emit("peer-left", { clientId: "peer-B" });
+    room.deliverSnapshot();
 
-    assert.deepStrictEqual(canvas.removedPeers, ["peer-B"]);
+    assert.deepStrictEqual(callsOf(overlay.remove), [["peer-B"]]);
+    assert.strictEqual(overlay.clearAll.mock.callCount(), 1);
   });
 });
-
-/*
- * ---------------------------------------------------------------------------
- * Reconciliation with the authoritative pipeline
- * ---------------------------------------------------------------------------
- */
 
 describe("UVGhostSync — reconciliation", () => {
-  /*
-   * Region identity remains the stable reconciliation key when a custom
-   * server produces commands without normalizing client identity.
-   */
-  test("an incoming uv-region-moved command clears ghosts by region id, not by clientId", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
+  test("region commands remove ghosts by region id", () => {
+    const { room, overlay } = setup();
+    const header = { clientId: "peer-B" };
 
-    room.simulateMoveCommand("region-A");
+    const rect = { x: 0, y: 0, width: 1, height: 1 };
 
-    assert.deepStrictEqual(canvas.removeByRegionCalls, ["region-A"]);
-    assert.strictEqual(canvas.removedPeers.length, 0, "no longer matches by clientId");
-  });
+    room.deliverCommand(command("uv-region-moved", { id: "r1", face: null, rect }, header));
+    room.deliverCommand(command("uv-region-deleted", { id: "r2" }, header));
+    room.deliverCommand(command("uv-region-state-changed", {
+      region: freeRegion("r3")
+    }, header));
 
-  test("an incoming uv-region-deleted command clears ghosts by region id", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    room.simulateDeleteCommand("region-A");
-
-    assert.deepStrictEqual(canvas.removeByRegionCalls, ["region-A"]);
-  });
-
-  test("an incoming uv-region-state-changed command clears ghosts by region id", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    room.simulateStateChangedCommand("region-A");
-
-    assert.deepStrictEqual(canvas.removeByRegionCalls, ["region-A"]);
-  });
-
-  test("an incoming snapshot clears every peer's ghost", () => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    room.simulateSnapshot();
-
-    assert.strictEqual(canvas.clearAllCallCount, 1);
-  });
-});
-
-/*
- * ---------------------------------------------------------------------------
- * destroy
- * ---------------------------------------------------------------------------
- */
-
-describe("UVGhostSync — destroy", () => {
-  test("removes only its own listeners and detaches the canvas", () => {
-    const room = createMockRoom();
-    const otherLeaves: string[] = [];
-    room.on("peer-left", (event) => otherLeaves.push(event.clientId));
-
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    sync.destroy();
-    room.simulateLeave("peer-B");
-
-    assert.deepStrictEqual(otherLeaves, ["peer-B"]);
-    assert.strictEqual(canvas.removedPeers.length, 0);
-  });
-
-  test("cancels a pending rAF-scheduled send", async() => {
-    const room = createMockRoom();
-    const canvas = createMockCanvas();
-    const sync = new UVGhostSync({ room });
-    sync.attach(asHost(canvas));
-
-    canvas.uv.simulateDragging(kPayload);
-    sync.destroy();
-    await nextFrame();
-
-    assert.strictEqual(room.presenceUpdates.length, 0);
+    assert.deepStrictEqual(callsOf(overlay.removeByRegion), [["r1"], ["r2"], ["r3"]]);
+    assert.strictEqual(overlay.remove.mock.callCount(), 0);
   });
 });

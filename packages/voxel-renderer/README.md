@@ -3,16 +3,12 @@
 </h1>
 
 <p align="center">
-  JollyPixel Voxel Engine and Renderer
+  Three.js Voxel Engine
 </p>
 
 <p align="center">
   <img src="./docs/images/noise-world.png">
 </p>
-
-## 📌 About
-
-Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene.
 
 ## 💡 Features
 
@@ -45,13 +41,12 @@ $ yarn add @jolly-pixel/voxel.renderer
 
 ## 👀 Usage example
 
-Load atlas textures before creating the renderer. The following example runs
-inside a JollyPixel actor lifecycle where `actor` is available:
+Load atlas textures before creating the engine:
 
 ```ts
 import {
   Face,
-  VoxelRenderer,
+  VoxelEngine,
   loadTilesets,
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -85,19 +80,22 @@ const blocks: BlockDefinition[] = [
   }
 ];
 
-const renderer = actor.addComponentAndGet(VoxelRenderer, {
+const engine = new VoxelEngine({
   tilesets,
   layers: ["Ground"],
   blocks
 });
+
+scene.add(engine.root);
+engine.init();
 ```
 
-Place voxels through the engine exposed by the component:
+Place voxels through the engine:
 
 ```ts
 for (let x = 0; x < 8; x++) {
   for (let z = 0; z < 8; z++) {
-    renderer.engine.world.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: {
         x,
         y: 0,
@@ -109,10 +107,10 @@ for (let x = 0; x < 8; x++) {
 }
 ```
 
-`VoxelRenderer` attaches `engine.root` to the actor and drives the engine
-lifecycle. Use `VoxelEngine` directly for a standalone Three.js or headless
-integration; then the application owns `init()`, `tick()`, `flush()`, and
-`dispose()`.
+Call `engine.tick(deltaTime)` from the application's frame loop. Remove
+`engine.root` and call `engine.dispose()` during teardown. ECS applications can
+wrap these calls in a component local to the application; the renderer package
+does not depend on an ECS runtime.
 
 ## 📚 Documentation
 
@@ -130,14 +128,11 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
   [creating custom shapes](docs/guides/creating-custom-shapes.md), and
   [saving worlds](docs/guides/saving-and-loading-worlds.md).
 - [Adding physics](docs/guides/adding-physics.md),
-  [network synchronization](docs/guides/synchronizing-a-world.md),
-  [Tiled import](docs/guides/importing-a-tiled-map.md), and
-  [persistent voxel maps](docs/guides/persisting-a-voxel-map.md).
+  [Tiled import](docs/guides/importing-a-tiled-map.md)
 
 ### Core and world API
 
-- [`VoxelEngine`](docs/api/core/VoxelEngine.md) and
-  [`VoxelRenderer`](docs/api/core/VoxelRenderer.md).
+- [`VoxelEngine`](docs/api/core/VoxelEngine.md).
 - [`VoxelDebugger` and mesh statistics](docs/api/core/VoxelDebugger.md), and
   [hook events](docs/api/core/hooks.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
@@ -168,14 +163,7 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
 ### Serialization and integration API
 
 - [Serialization, document codec, and voxel objects](docs/api/serialization/serialization.md).
-- [`VoxelSyncClient`](docs/api/network/VoxelSyncClient.md),
-  [`VoxelSyncServer`](docs/api/network/VoxelSyncServer.md),
-  [`VoxelCommandArbiter`](docs/api/network/VoxelCommandArbiter.md), and the
-  [network protocol](docs/api/network/protocol.md).
-- [`TiledConverter`](docs/api/tiled/TiledConverter.md),
-  including its JSON types, and
-  [`TiledMapAssetLoader`](docs/api/tiled/TiledMapAssetLoader.md).
-- [Voxel-map asset-server APIs](docs/api/asset-server/voxel-map-assets.md).
+- [`TiledConverter`](docs/api/tiled/TiledConverter.md), including its JSON types.
 
 ## 🚀 Running the examples
 
@@ -237,13 +225,13 @@ world.logger.setLevel("debug");
 world.logger.enableNamespace("*");
 ```
 
-Alternatively, pass a custom `Logger` instance to `VoxelRenderer`:
+Pass a custom logger to `VoxelEngine` when it is not hosted by a runtime:
 
 ```ts
 import { Systems } from "@jolly-pixel/engine";
-import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
-const renderer = actor.addComponentAndGet(VoxelRenderer, {
+const engine = new VoxelEngine({
   logger: new Systems.Logger({
     level: "trace",
     namespaces: ["*"]
@@ -274,4 +262,3 @@ MIT
 [npm]: https://docs.npmjs.com/getting-started/what-is-npm
 [yarn]: https://yarnpkg.com
 [contributing]: ../../CONTRIBUTING.md
-[engine]: https://github.com/JollyPixel/editor/tree/main/packages/engine

@@ -15,11 +15,13 @@ import {
   pixelArtAssetHandler
 } from "@jolly-pixel/asset.pixel-art";
 import {
-  blocksFromTileset,
-  encodeVoxelDocument,
   voxelMapAssetHandler,
   VoxelMapState
-} from "@jolly-pixel/voxel.renderer/asset/index.ts";
+} from "@jolly-pixel/asset.voxel-map";
+import {
+  blocksFromTileset,
+  encodeVoxelDocument
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { readTilesetSeed } from "./vite/tilesetSeed.ts";

@@ -13,15 +13,5 @@
     "node_modules",
     "dist"
   ],
-  "references": [
-    {
-      "path": "../engine"
-    },
-    {
-      "path": "../runtime"
-    },
-    {
-      "path": "../network"
-    }
-  ]
+  "references": []
 }

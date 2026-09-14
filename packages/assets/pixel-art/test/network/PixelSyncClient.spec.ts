@@ -1,466 +1,244 @@
 // Import Node.js Dependencies
 import {
   describe,
+  mock,
   test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
 import type {
-  PixelArtCanvas,
   PixelBufferHookEvent,
   PixelBufferHookListener
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
-import type {
-  PixelNetworkCommand,
-  PixelBufferSnapshot,
-  PixelServerMessage
-} from "#src/network/types.ts";
+import {
+  command,
+  gray
+} from "../fixtures/commands.ts";
+import {
+  asCanvas,
+  createPixelArtCanvas
+} from "../helpers/canvas.ts";
+import { callsOf } from "../helpers/mock.ts";
+import { MockRoom } from "../helpers/room.ts";
 
-/*
- * ---------------------------------------------------------------------------
- * Helpers
- * ---------------------------------------------------------------------------
- */
+// CONSTANTS
+const kResized: PixelBufferHookEvent = {
+  action: "resized",
+  metadata: { size: { x: 1, y: 1 } }
+};
 
-interface MockManager {
-  onBufferUpdated: PixelBufferHookListener | undefined;
-  applyRemoteCommand(event: PixelBufferHookEvent): void;
-  loadSnapshot(size: { x: number; y: number; }, pixels: Uint8ClampedArray): void;
-  triggerLocal(event: PixelBufferHookEvent): void;
-  appliedCommands: PixelBufferHookEvent[];
-  loadedSnapshots: {
-    size: { x: number; y: number; };
-    pixels: Uint8ClampedArray;
-  }[];
-}
-
-function createMockManager(): MockManager {
-  const appliedCommands: PixelBufferHookEvent[] = [];
-  const loadedSnapshots: {
-    size: { x: number; y: number; };
-    pixels: Uint8ClampedArray;
-  }[] = [];
-  let listener: PixelBufferHookListener | undefined;
-
-  const manager: MockManager = {
-    get onBufferUpdated() {
-      return listener;
-    },
-    set onBufferUpdated(fn: PixelBufferHookListener | undefined) {
-      listener = fn;
-    },
-    applyRemoteCommand(event) {
-      appliedCommands.push(event);
-    },
-    loadSnapshot(size, pixels) {
-      loadedSnapshots.push({ size, pixels });
-    },
-    triggerLocal(event) {
-      listener?.(event);
-    },
-    appliedCommands,
-    loadedSnapshots
+function createHost() {
+  return {
+    onBufferUpdated: undefined as PixelBufferHookListener | undefined,
+    applyRemoteCommand: mock.fn(),
+    loadSnapshot: mock.fn()
   };
-
-  return manager;
 }
 
-/*
- * PixelSyncClient is typed against the concrete PixelArtCanvas, but only uses
- * the structural subset MockManager implements (onBufferUpdated,
- * applyRemoteCommand, loadSnapshot). This single helper documents that seam so
- * the individual call sites stay cast-free.
- */
-function asHost(
-  manager: MockManager
-): PixelArtCanvas {
-  return manager as unknown as PixelArtCanvas;
-}
+function setup() {
+  const room = new MockRoom({ clientId: "client-A" });
+  const host = createHost();
+  const client = new PixelSyncClient({ room });
+  client.attach(asCanvas(host));
 
-interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
-  sentCommands: PixelNetworkCommand[];
-  simulateCommand(cmd: PixelNetworkCommand): void;
-  simulateSnapshot(snapshot: PixelBufferSnapshot): void;
-}
-
-function createMockRoom(
-  clientId = "client-A"
-): MockRoom {
-  const sentCommands: PixelNetworkCommand[] = [];
-  const listeners = new Map<string, Set<(payload: any) => void>>();
-
-  function emit(type: string, payload: unknown): void {
-    for (const listener of listeners.get(type) ?? []) {
-      listener(payload);
-    }
-  }
-
-  const room: MockRoom = {
-    id: "test-room",
-    clientId,
-    peers: new Map(),
-
-    role: "default",
-
-    rights: {},
-
-    access: "write" as const,
-
-    can: () => "write" as const,
-    sentCommands,
-    on: (type, listener) => {
-      let set = listeners.get(type);
-      if (!set) {
-        set = new Set();
-        listeners.set(type, set);
-      }
-      set.add(listener);
-    },
-    off: (type, listener) => {
-      listeners.get(type)?.delete(listener);
-    },
-    join() {
-      // Unused by PixelSyncClient.
-    },
-    send(cmd) {
-      sentCommands.push(cmd);
-    },
-    updatePresence() {
-      // Unused by PixelSyncClient.
-    },
-    leave() {
-      // Unused by PixelSyncClient.
-    },
-    simulateCommand(cmd) {
-      emit("message", { type: "command", data: cmd });
-    },
-    simulateSnapshot(snapshot) {
-      emit("message", { type: "snapshot", data: snapshot });
-    }
+  return {
+    room,
+    host,
+    client
   };
-
-  return room;
 }
-
-/*
- * ---------------------------------------------------------------------------
- * attach / detach
- * ---------------------------------------------------------------------------
- */
 
 describe("PixelSyncClient — attach", () => {
-  test("sets manager.onBufferUpdated", () => {
-    const manager = createMockManager();
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
-
-    assert.strictEqual(manager.onBufferUpdated, undefined);
-    client.attach(asHost(manager));
-    assert.ok(manager.onBufferUpdated !== undefined);
-  });
-
   test("throws when a canvas is already attached", () => {
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(createMockManager()));
+    const { client } = setup();
 
-    assert.throws(() => client.attach(asHost(createMockManager())));
-  });
-});
-
-describe("PixelSyncClient — chaining onBufferUpdated", () => {
-  test("attach preserves an existing local handler instead of replacing it", () => {
-    const manager = createMockManager();
-    const received: PixelBufferHookEvent[] = [];
-    manager.onBufferUpdated = (event) => received.push(event);
-
-    const room = createMockRoom("client-A");
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
-
-    manager.triggerLocal({
-      action: "resized",
-      metadata: { size: { x: 1, y: 1 } }
-    });
-
-    assert.strictEqual(received.length, 1);
-    assert.strictEqual(room.sentCommands.length, 1);
+    assert.throws(() => client.attach(asCanvas(createHost())));
   });
 
-  test("detach restores the handler that was present before attach", () => {
-    const manager = createMockManager();
-    const received: PixelBufferHookEvent[] = [];
-    function original(event: PixelBufferHookEvent): void {
-      received.push(event);
-    }
-    manager.onBufferUpdated = original;
+  test("chains the existing onBufferUpdated handler", () => {
+    const room = new MockRoom();
+    const host = createHost();
+    const previous = mock.fn<PixelBufferHookListener>();
+    host.onBufferUpdated = previous;
+    new PixelSyncClient({ room }).attach(asCanvas(host));
 
-    const room = createMockRoom();
+    host.onBufferUpdated?.(kResized);
+
+    assert.deepStrictEqual(callsOf(previous), [[kResized]]);
+    assert.strictEqual(room.sent.length, 1);
+  });
+
+  test("detach restores the previous handler and stops sending", () => {
+    const room = new MockRoom();
+    const host = createHost();
+    const previous = mock.fn<PixelBufferHookListener>();
+    host.onBufferUpdated = previous;
     const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
+    client.attach(asCanvas(host));
+
     client.detach();
+    host.onBufferUpdated?.(kResized);
 
-    assert.strictEqual(manager.onBufferUpdated, original);
-
-    manager.triggerLocal({
-      action: "resized",
-      metadata: { size: { x: 1, y: 1 } }
-    });
-    assert.strictEqual(received.length, 1);
-    assert.strictEqual(room.sentCommands.length, 0);
+    assert.strictEqual(host.onBufferUpdated, previous);
+    assert.strictEqual(room.sent.length, 0);
   });
 
-  test("detach without an attached manager is a no-op", () => {
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
+  test("detach without an attached canvas is a no-op", () => {
+    const client = new PixelSyncClient({ room: new MockRoom() });
+
     assert.doesNotThrow(() => client.detach());
   });
 });
 
-/*
- * ---------------------------------------------------------------------------
- * Local mutations forwarded to the room
- * ---------------------------------------------------------------------------
- */
+describe("PixelSyncClient — local mutations", () => {
+  test("stamps each command with the client id, an incrementing seq and the current time", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+    const { room, host } = setup();
 
-describe("PixelSyncClient — local mutations forwarded to the room", () => {
-  test("sends a command when an attached manager fires a stroke", () => {
-    const manager = createMockManager();
-    const room = createMockRoom("client-A");
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
+    host.onBufferUpdated?.(kResized);
+    host.onBufferUpdated?.(kResized);
 
-    manager.triggerLocal({
-      action: "stroke",
-      metadata: {
-        color: { r: 0, g: 0, b: 0, a: 255 },
-        positions: [
-          { x: 0, y: 0 }
-        ]
-      }
-    });
-
-    assert.strictEqual(room.sentCommands.length, 1);
-    const cmd = room.sentCommands[0];
-    assert.strictEqual(cmd.action, "stroke");
-    assert.strictEqual(cmd.clientId, "client-A");
-  });
-
-  test("stamps each command with an incrementing seq and a timestamp", () => {
-    const manager = createMockManager();
-    const room = createMockRoom("client-B");
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
-
-    const before = Date.now();
-    manager.triggerLocal({
-      action: "resized",
-      metadata: {
-        size: { x: 1, y: 1 }
-      }
-    });
-    manager.triggerLocal({
-      action: "resized",
-      metadata: {
-        size: { x: 2, y: 2 }
-      }
-    });
-
-    assert.strictEqual(room.sentCommands[0].seq, 1);
-    assert.strictEqual(room.sentCommands[1].seq, 2);
-    assert.ok(room.sentCommands[0].timestamp >= before);
+    assert.deepStrictEqual(room.sent, [
+      command("resized", kResized.metadata, { clientId: "client-A", seq: 1, timestamp: 1000 }),
+      command("resized", kResized.metadata, { clientId: "client-A", seq: 2, timestamp: 1000 })
+    ]);
   });
 });
 
-/*
- * ---------------------------------------------------------------------------
- * Remote commands
- * ---------------------------------------------------------------------------
- */
+describe("PixelSyncClient — remote messages", () => {
+  test("applies a command from another client", () => {
+    const { room, host } = setup();
+    const stroke = command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }]
+    }, { clientId: "client-B" });
 
-describe("PixelSyncClient — remote commands", () => {
-  test("routes a mutation command to the attached manager", () => {
-    const manager = createMockManager();
-    const room = createMockRoom("client-A");
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
+    room.deliverCommand(stroke);
 
-    room.simulateCommand({
-      action: "stroke",
-      metadata: {
-        color: { r: 1, g: 1, b: 1, a: 255 },
-        positions: [{ x: 0, y: 0 }]
-      },
-      clientId: "client-B",
-      seq: 1,
-      timestamp: Date.now()
-    });
-
-    assert.strictEqual(manager.appliedCommands.length, 1);
+    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke]]);
   });
 
-  test("ignores commands echoed back from the local client", () => {
-    const manager = createMockManager();
-    const room = createMockRoom("client-A");
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
+  test("ignores its own echoed commands", () => {
+    const { room, host } = setup();
 
-    room.simulateCommand({
-      action: "stroke",
-      metadata: {
-        color: { r: 1, g: 1, b: 1, a: 255 },
-        positions: [{ x: 0, y: 0 }]
-      },
-      clientId: "client-A",
-      seq: 1,
-      timestamp: Date.now()
-    });
+    room.deliverCommand(command("resized", kResized.metadata, { clientId: "client-A" }));
 
-    assert.strictEqual(manager.appliedCommands.length, 0);
+    assert.strictEqual(host.applyRemoteCommand.mock.callCount(), 0);
   });
 
-  test("ignores commands when no manager is attached", () => {
-    const room = createMockRoom("client-A");
-    new PixelSyncClient({ room });
+  test("loads a snapshot with decoded pixels", () => {
+    const { room, host } = setup();
 
-    assert.doesNotThrow(() => {
-      room.simulateCommand({
-        action: "stroke",
-        metadata: {
-          color: { r: 1, g: 1, b: 1, a: 255 },
-          positions: [{ x: 0, y: 0 }]
-        },
-        clientId: "client-B",
-        seq: 1,
-        timestamp: Date.now()
-      });
-    });
-  });
-});
-
-/*
- * ---------------------------------------------------------------------------
- * Snapshot loading
- * ---------------------------------------------------------------------------
- */
-
-describe("PixelSyncClient — snapshot loading", () => {
-  test("calls manager.loadSnapshot with decoded pixels when a snapshot arrives", () => {
-    const manager = createMockManager();
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
-
-    const pixels = new Uint8ClampedArray([1, 2, 3, 255]);
-    const base64 = Buffer.from(pixels).toString("base64");
-    room.simulateSnapshot({
+    room.deliverSnapshot({
       size: { x: 1, y: 1 },
-      pixels: base64,
+      pixels: Buffer.from([1, 2, 3, 255]).toString("base64"),
       uvRegions: []
     });
 
-    assert.strictEqual(manager.loadedSnapshots.length, 1);
-    assert.deepStrictEqual(
-      manager.loadedSnapshots[0].size,
-      { x: 1, y: 1 }
-    );
-    assert.deepStrictEqual(
-      Array.from(manager.loadedSnapshots[0].pixels),
-      [1, 2, 3, 255]
-    );
+    assert.deepStrictEqual(callsOf(host.loadSnapshot), [
+      [{ x: 1, y: 1 }, new Uint8ClampedArray([1, 2, 3, 255]), []]
+    ]);
   });
 
-  test("ignores a snapshot when no manager is attached", () => {
-    const room = createMockRoom();
+  test("ignores messages while no canvas is attached", () => {
+    const room = new MockRoom();
     new PixelSyncClient({ room });
 
     assert.doesNotThrow(() => {
-      room.simulateSnapshot(
-        { size: { x: 1, y: 1 }, pixels: "", uvRegions: [] }
-      );
+      room.deliverCommand(command("resized", kResized.metadata));
+      room.deliverSnapshot();
     });
   });
-});
 
-/*
- * ---------------------------------------------------------------------------
- * ready
- * ---------------------------------------------------------------------------
- */
-
-describe("PixelSyncClient — ready", () => {
-  test("ready is false until the first snapshot, then dispatches a \"ready\" event", () => {
-    const manager = createMockManager();
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
+  test("becomes ready and emits \"ready\" once, on the first snapshot", () => {
+    const { room, client } = setup();
+    const ready = mock.fn();
+    client.on("ready", ready);
 
     assert.strictEqual(client.ready, false);
-
-    let fired = 0;
-    client.on("ready", () => {
-      fired++;
-    });
-    room.simulateSnapshot({ size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
+    room.deliverSnapshot();
+    room.deliverSnapshot();
 
     assert.strictEqual(client.ready, true);
-    assert.strictEqual(fired, 1);
-  });
-
-  test("fires \"ready\" only once across multiple snapshots", () => {
-    const manager = createMockManager();
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
-
-    let fired = 0;
-    client.on("ready", () => {
-      fired++;
-    });
-    room.simulateSnapshot({ size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
-    room.simulateSnapshot({ size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
-
-    assert.strictEqual(fired, 1);
+    assert.strictEqual(ready.mock.callCount(), 1);
   });
 });
 
-/*
- * ---------------------------------------------------------------------------
- * destroy
- * ---------------------------------------------------------------------------
- */
-
 describe("PixelSyncClient — destroy", () => {
-  test("detaches the canvas and stops listening for room messages", () => {
-    const manager = createMockManager();
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
+  test("detaches the canvas and stops handling room messages", () => {
+    const { room, host, client } = setup();
 
     client.destroy();
+    room.deliverSnapshot();
+    host.onBufferUpdated?.(kResized);
 
-    assert.strictEqual(manager.onBufferUpdated, undefined);
-    room.simulateSnapshot({ size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
-    assert.strictEqual(manager.loadedSnapshots.length, 0);
+    assert.strictEqual(host.onBufferUpdated, undefined);
+    assert.strictEqual(host.loadSnapshot.mock.callCount(), 0);
+    assert.strictEqual(room.sent.length, 0);
+  });
+});
+
+describe("PixelSyncClient — UV region echoes", () => {
+  function setupEcho() {
+    const room: MockRoom = new MockRoom({
+      onSend: (sent) => room.deliverCommand(sent)
+    });
+    const { manager: canvas } = createPixelArtCanvas({
+      texture: { size: { x: 64, y: 64 }, maxSize: 64 },
+      zoom: { default: 4 }
+    });
+    new PixelSyncClient({ room }).attach(canvas);
+    const created: string[] = [];
+    canvas.uv.on("region-created", ({ region }) => created.push(region.id));
+
+    return {
+      room,
+      canvas,
+      created
+    };
+  }
+
+  test("creating a region broadcasts once and ignores the echo", () => {
+    const { room, canvas, created } = setupEcho();
+
+    canvas.uv.create({ id: "cube-a", width: 8, height: 8 });
+
+    assert.deepStrictEqual(room.sent.map((sent) => sent.action), ["uv-region-created"]);
+    assert.deepStrictEqual(created, ["cube-a"]);
+    assert.strictEqual([...canvas.uv.regions].length, 1);
+    canvas.destroy();
   });
 
-  test("stops forwarding local mutations after destroy", () => {
-    const manager = createMockManager();
-    const room = createMockRoom();
-    const client = new PixelSyncClient({ room });
-    client.attach(asHost(manager));
+  test("a duplicate remote create updates the known region instead of recreating it", () => {
+    const { room, canvas, created } = setupEcho();
+    canvas.uv.create({ id: "cube-a", width: 8, height: 8 });
+    const stateChanges: string[] = [];
+    canvas.uv.on("region-state-changed", ({ region }) => stateChanges.push(region.id));
 
-    client.destroy();
-    manager.triggerLocal({
-      action: "resized",
-      metadata: { size: { x: 1, y: 1 } }
-    });
+    room.deliverCommand({ ...room.sent[0], clientId: "other-client" });
 
-    assert.strictEqual(room.sentCommands.length, 0);
+    assert.deepStrictEqual(created, ["cube-a"]);
+    assert.deepStrictEqual(stateChanges, ["cube-a"]);
+    assert.strictEqual([...canvas.uv.regions].length, 1);
+    canvas.destroy();
+  });
+
+  test("a new remote region is created", () => {
+    const { room, canvas, created } = setupEcho();
+    canvas.uv.create({ id: "cube-a", width: 8, height: 8 });
+    const [sent] = room.sent;
+    assert.strictEqual(sent.action, "uv-region-created");
+
+    room.deliverCommand(command("uv-region-created", {
+      region: { ...sent.metadata.region, id: "cube-b" }
+    }, { clientId: "other-client" }));
+
+    assert.deepStrictEqual(created, ["cube-a", "cube-b"]);
+    assert.strictEqual([...canvas.uv.regions].length, 2);
+    canvas.destroy();
   });
 });
