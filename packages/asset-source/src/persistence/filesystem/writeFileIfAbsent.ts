@@ -33,10 +33,11 @@ export async function writeFileIfAbsent(
 
       return true;
     }
-    catch (error) {
-      if (isAlreadyExists(error)) {
+    catch (error: any) {
+      if (error.code === "EEXIST") {
         return false;
       }
+
       throw error;
     }
   }
@@ -48,13 +49,4 @@ export async function writeFileIfAbsent(
       );
     }
   }
-}
-
-function isAlreadyExists(
-  error: unknown
-): boolean {
-  return typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "EEXIST";
 }

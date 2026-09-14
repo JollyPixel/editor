@@ -9,7 +9,7 @@ import {
   createIgnoredPathMatcher,
   type AssetPathMatcher
 } from "./ignoredPaths.ts";
-import { listFiles } from "./listFiles.ts";
+import { walk } from "./walk.ts";
 import { writeFileAtomically } from "./writeFileAtomically.ts";
 import { writeFileIfAbsent } from "./writeFileIfAbsent.ts";
 
@@ -76,10 +76,14 @@ export class FilesystemAssetSource implements AssetSource {
 
       return true;
     }
-    catch (error) {
-      if (isNotFound(error)) {
+    catch (error: any) {
+      if (
+        error.code === "ENOENT" ||
+        error.code === "ENOTDIR"
+      ) {
         return false;
       }
+
       throw error;
     }
   }
@@ -113,11 +117,17 @@ export class FilesystemAssetSource implements AssetSource {
     );
   }
 
-  list(): Promise<string[]> {
-    return listFiles(
+  async list(): Promise<string[]> {
+    const files: string[] = [];
+    const asyncIterable = walk(
       this.root,
-      this.#isIgnored
+      { isIgnored: this.#isIgnored }
     );
+    for await (const file of asyncIterable) {
+      files.push(file);
+    }
+
+    return files.sort();
   }
 
   watch(
@@ -133,16 +143,4 @@ export class FilesystemAssetSource implements AssetSource {
 
     return () => watcher.close();
   }
-}
-
-function isNotFound(
-  error: unknown
-): boolean {
-  return typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (
-      error.code === "ENOENT" ||
-      error.code === "ENOTDIR"
-    );
 }
