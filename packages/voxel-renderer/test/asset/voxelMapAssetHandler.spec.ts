@@ -10,7 +10,7 @@ import {
   encodeContent,
   type AssetEventData,
   type AssetLiveProtocol
-} from "@jolly-pixel/asset-server";
+} from "@jolly-pixel/asset-server/kinds";
 import { protocolEvents } from "@jolly-pixel/network";
 
 // Import Internal Dependencies

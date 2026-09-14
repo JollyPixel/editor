@@ -43,7 +43,7 @@ server.register(new CatalogExtension({ projection }));
 ## HTTP handler
 
 ```ts
-import { createCatalogHandler } from "@jolly-pixel/asset-server/catalog";
+import { createCatalogHandler } from "@jolly-pixel/asset-server";
 
 const handler = createCatalogHandler({
   projection,

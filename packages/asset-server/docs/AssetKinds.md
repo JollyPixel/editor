@@ -26,6 +26,18 @@ path that no registered handler claims.
 supports live editing provides `live`; other kinds have no dynamic editing
 room.
 
+Import the handler contract from `@jolly-pixel/asset-server/kinds`. It exposes
+the handler and live protocol types, the built-in handlers and the asset event
+helpers, without the back-end, catalog or HTTP modules the root entry loads:
+
+```ts
+import {
+  ASSET_UPDATED,
+  decodeContent,
+  type AssetKindHandler
+} from "@jolly-pixel/asset-server/kinds";
+```
+
 `apply` must reset the existing `TState` in place for `asset.created`,
 `asset.updated` and `asset.deleted`. Each event is a complete checkpoint.
 Replay creates a fresh state, resumes at the newest checkpoint and folds later

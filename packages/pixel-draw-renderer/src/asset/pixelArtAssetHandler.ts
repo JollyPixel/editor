@@ -11,7 +11,7 @@ import {
   type AssetLiveProtocol,
   type AssetRoomBinding,
   type SnapshotPolicy
-} from "@jolly-pixel/asset-server";
+} from "@jolly-pixel/asset-server/kinds";
 
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";

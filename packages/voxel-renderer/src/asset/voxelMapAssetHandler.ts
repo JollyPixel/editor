@@ -12,7 +12,7 @@ import {
   type AssetRoomBinding,
   type AssetRoomMessage,
   type SnapshotPolicy
-} from "@jolly-pixel/asset-server";
+} from "@jolly-pixel/asset-server/kinds";
 
 // Import Internal Dependencies
 import { voxelProtocols } from "../network/VoxelCommand.schema.ts";

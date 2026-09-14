@@ -14,7 +14,7 @@ import {
   type AssetEventData,
   type AssetLiveProtocol,
   type AssetRoomBinding
-} from "@jolly-pixel/asset-server";
+} from "@jolly-pixel/asset-server/kinds";
 import { protocolEvents } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
