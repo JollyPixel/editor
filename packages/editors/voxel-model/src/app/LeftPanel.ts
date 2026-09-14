@@ -25,7 +25,7 @@ const kDefaultZoom = {
   default: 4,
   min: 1,
   max: 32,
-  sensitivity: 0.1
+  sensitivity: 0.6
 };
 
 type LeftPanelMode = "paint" | "build" | "animate";

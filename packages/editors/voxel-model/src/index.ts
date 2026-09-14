@@ -5,8 +5,8 @@ import { inputLayers } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import { ModelEditorScene } from "./app/ModelEditorScene.ts";
 import "./app/LeftPanel.ts";
-import "./app/RightPanel.ts";
-import CubeUvSync from "./features/texture-uv/CubeUvSync.ts";
+import "./app/RightPanel/RightPanel.ts";
+import BlockUvSync from "./features/texture-uv/BlockUvSync.ts";
 
 const leftPanel = document.querySelector("jolly-model-editor-left-panel") as HTMLElement;
 const rightPanel = document.querySelector("jolly-model-editor-right-panel") as HTMLElement;
@@ -32,13 +32,13 @@ const { modelSceneComponent } = await modelScene.ready;
 (rightPanel as any).setSceneManager(modelSceneComponent);
 (leftPanel as any).setSceneManager(modelSceneComponent);
 
-const cubeUvSync = new CubeUvSync({
+const blockUvSync = new BlockUvSync({
   modelSceneComponent,
   getCanvasManager: () => (leftPanel as any).canvasManager ?? null
 });
 
 requestAnimationFrame(function updateLoop() {
-  cubeUvSync.update();
+  blockUvSync.update();
   requestAnimationFrame(updateLoop);
 });
 
@@ -49,6 +49,12 @@ function triggerLeftPanelResize() {
 leftDock.addEventListener("jolly-resize", triggerLeftPanelResize);
 rightDock.addEventListener("jolly-resize", triggerLeftPanelResize);
 
-rightPanel.addEventListener("addcube", (e: any) => {
-  cubeUvSync.createCube(e.detail.name);
+rightPanel.addEventListener("addblock", (e: any) => {
+  blockUvSync.createBlock(e.detail.name, e.detail.parentId ?? null);
+});
+
+rightPanel.addEventListener("deleteblock", (e: any) => {
+  for (const uuid of e.detail.uuids as string[]) {
+    blockUvSync.removeBlock(uuid);
+  }
 });

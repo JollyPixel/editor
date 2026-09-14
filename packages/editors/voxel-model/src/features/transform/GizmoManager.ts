@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { TransformControls } from "three/examples/jsm/Addons.js";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 // Import Internal Dependencies
 import type GroupManager from "../groups/GroupManager.ts";

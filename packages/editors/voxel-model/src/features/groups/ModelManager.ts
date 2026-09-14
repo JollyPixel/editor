@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { TransformControls } from "three/examples/jsm/Addons.js";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 // Import Internal Dependencies
 import GroupManager, { type GroupManagerOptions } from "./GroupManager.ts";
@@ -91,6 +91,27 @@ export default class ModelManager {
     return this.groups.find((group) => group.getGroupUUID() === uuid);
   }
 
+  public duplicateGroup(
+    sourceUuid: string,
+    name?: string
+  ): GroupManager | null {
+    const source = this.getGroupByUUID(sourceUuid);
+    if (!source) {
+      return null;
+    }
+
+    const duplicate = this.addGroup({
+      pos: source.getPosition(),
+      pivotPos: source.getPivotOffset(),
+      size: source.getSize(),
+      scale: source.getScale(),
+      name: name ?? source.name
+    });
+    duplicate.setRotation(source.getRotation());
+
+    return duplicate;
+  }
+
   /**
    * Moves `childUuid` under `parentUuid`, or back to the scene root when
    * `parentUuid` is `null`. Uses `THREE.Object3D#attach`, which recomputes
@@ -123,6 +144,29 @@ export default class ModelManager {
     }
 
     parent.getPivot().attach(child.getGroup());
+  }
+
+  public reparentLocal(
+    childUuid: string,
+    parentUuid: string | null
+  ): void {
+    const child = this.getGroupByUUID(childUuid);
+    if (!child) {
+      return;
+    }
+
+    if (parentUuid === null) {
+      this.scene.add(child.getGroup());
+
+      return;
+    }
+
+    const parent = this.getGroupByUUID(parentUuid);
+    if (!parent) {
+      return;
+    }
+
+    parent.getPivot().add(child.getGroup());
   }
 
   public setTextureForAll(texture: THREE.Texture | null): void {

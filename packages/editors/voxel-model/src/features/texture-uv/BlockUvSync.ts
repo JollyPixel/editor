@@ -12,9 +12,9 @@ import type GroupManager from "../groups/GroupManager.ts";
 import type { ModelSceneComponent } from "../../app/ModelSceneComponent.ts";
 
 // CONSTANTS
-const kCubeUvSize = { width: 16, height: 16 };
-const kCubeUvColor = "#4488ff";
-const kCubeRegionPrefix = "cube-";
+const kBlockUvSize = { width: 16, height: 16 };
+const kBlockUvColor = "#4488ff";
+const kBlockRegionPrefix = "block-";
 
 const kBoxFaceVertexRanges: Record<UVSlot, readonly [number, number]> = {
   right: [0, 4],
@@ -25,29 +25,29 @@ const kBoxFaceVertexRanges: Record<UVSlot, readonly [number, number]> = {
   back: [20, 24]
 };
 
-function cubeRegionId(
+function blockRegionId(
   uuid: string
 ): string {
-  return `${kCubeRegionPrefix}${uuid}`;
+  return `${kBlockRegionPrefix}${uuid}`;
 }
 
-function cubeUuidFromRegion(
+function blockUuidFromRegion(
   id: string
 ): string | null {
-  return id.startsWith(kCubeRegionPrefix) ? id.slice(kCubeRegionPrefix.length) : null;
+  return id.startsWith(kBlockRegionPrefix) ? id.slice(kBlockRegionPrefix.length) : null;
 }
 
-export interface CubeUvSyncOptions {
+export interface BlockUvSyncOptions {
   modelSceneComponent: ModelSceneComponent;
   getCanvasManager(): PixelArtCanvas | null;
 }
 
-export default class CubeUvSync {
+export default class BlockUvSync {
   #modelSceneComponent: ModelSceneComponent;
   #getCanvasManager: () => PixelArtCanvas | null;
   #uvSelectionSyncWired = false;
 
-  constructor(options: CubeUvSyncOptions) {
+  constructor(options: BlockUvSyncOptions) {
     this.#modelSceneComponent = options.modelSceneComponent;
     this.#getCanvasManager = options.getCanvasManager;
 
@@ -64,22 +64,32 @@ export default class CubeUvSync {
     this.#wireUvSelectionSyncOnce(canvasManager);
   }
 
-  public createCube(name: string): GroupManager {
-    const group = this.#modelSceneComponent.createCube(name);
+  public createBlock(
+    name: string,
+    parentId: string | null = null
+  ): GroupManager {
+    const group = this.#modelSceneComponent.createBlock(name, parentId);
 
     const canvasManager = this.#getCanvasManager();
     if (canvasManager) {
       const region = canvasManager.uv.create({
-        id: cubeRegionId(group.getGroupUUID()),
+        id: blockRegionId(group.getGroupUUID()),
         name,
-        color: kCubeUvColor,
-        ...kCubeUvSize,
+        color: kBlockUvColor,
+        ...kBlockUvSize,
         state: "unfolded"
       });
-      this.#applyUvRegionToCube(group, region, canvasManager.textureSize);
+      this.#applyUvRegionToBlock(group, region, canvasManager.textureSize);
     }
 
     return group;
+  }
+
+  public removeBlock(uuid: string): void {
+    this.#modelSceneComponent.removeBlock(uuid);
+
+    const canvasManager = this.#getCanvasManager();
+    canvasManager?.uv.delete(blockRegionId(uuid));
   }
 
   #wireUvSelectionSyncOnce(
@@ -97,7 +107,7 @@ export default class CubeUvSync {
     { selectedRegionId }: Parameters<UVMapListener<"selection-changed">>[0]
   ): void => {
     const modelManager = this.#modelSceneComponent.getModelManager();
-    const uuid = selectedRegionId === null ? null : cubeUuidFromRegion(selectedRegionId);
+    const uuid = selectedRegionId === null ? null : blockUuidFromRegion(selectedRegionId);
     const group = uuid === null ? null : (modelManager.getGroupByUUID(uuid) ?? null);
 
     if (modelManager.getSelectedGroup() === group) {
@@ -117,7 +127,7 @@ export default class CubeUvSync {
     }
 
     const { group } = (event as CustomEvent<{ group: GroupManager | null; }>).detail;
-    const targetId = group ? cubeRegionId(group.getGroupUUID()) : null;
+    const targetId = group ? blockRegionId(group.getGroupUUID()) : null;
     if (canvasManager.uv.selectedRegionId === targetId) {
       return;
     }
@@ -125,7 +135,7 @@ export default class CubeUvSync {
     canvasManager.uv.select(targetId);
   };
 
-  #applyUvRegionToCube(
+  #applyUvRegionToBlock(
     group: GroupManager,
     region: UVRegion,
     textureSize: { x: number; y: number; }

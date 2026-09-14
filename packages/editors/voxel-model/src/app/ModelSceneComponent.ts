@@ -16,7 +16,7 @@ export interface ModelSceneComponentOptions {
 }
 
 /**
- * Cube creation/selection/texture-push, relocated verbatim from the former
+ * Block creation/selection/texture-push, relocated verbatim from the former
  * `ThreeSceneManager` into the engine's `ActorComponent` lifecycle.
  * `ModelManager`/`GroupManager` themselves are untouched by this move.
  */
@@ -72,10 +72,10 @@ export class ModelSceneComponent extends ActorComponent {
     );
 
     const meshes = this.#modelManager.getGroups().map((group) => group.getMesh());
-    const cubeIntersects = this.#cameraRaycaster.intersectObjects(meshes, false);
+    const blockIntersects = this.#cameraRaycaster.intersectObjects(meshes, false);
 
-    if (cubeIntersects.length > 0) {
-      const intersect = cubeIntersects[0];
+    if (blockIntersects.length > 0) {
+      const intersect = blockIntersects[0];
       const mesh = intersect.object as THREE.Mesh;
       const group = this.#modelManager.getGroupByMesh(mesh);
 
@@ -91,23 +91,43 @@ export class ModelSceneComponent extends ActorComponent {
     this.#dispatchGroupSelected(null);
   }
 
-  public createCube(name: string = "Cube"): GroupManager {
+  public createBlock(
+    name: string = "Block",
+    parentId: string | null = null
+  ): GroupManager {
     const group = this.#modelManager.addGroup({
       texture: this.#texture,
       name
     });
 
-    this.#dispatchGroupCreated(group, name);
+    if (parentId !== null) {
+      this.#modelManager.reparent(group.getGroupUUID(), parentId);
+    }
+
+    this.#dispatchGroupCreated(group, name, parentId);
+
+    this.#modelManager.selectGroup(group);
+    this.#dispatchGroupSelected(group);
 
     return group;
   }
 
+  public removeBlock(uuid: string): void {
+    const group = this.#modelManager.getGroupByUUID(uuid);
+    if (!group) {
+      return;
+    }
+
+    this.#modelManager.removeGroup(group);
+  }
+
   #dispatchGroupCreated(
     group: GroupManager,
-    name: string = "Cube"
+    name: string = "Block",
+    parentId: string | null = null
   ): void {
     document.dispatchEvent(new CustomEvent("groupCreated", {
-      detail: { group, name }
+      detail: { group, name, parentId }
     }));
   }
 
