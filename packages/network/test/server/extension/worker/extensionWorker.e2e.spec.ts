@@ -38,6 +38,10 @@ function createContext(
   overrides: Partial<RoomContext["eventStore"]> = {}
 ): RoomContext {
   return {
+    actor: {
+      type: "user",
+      id: "client-1"
+    },
     room,
     eventStore: {
       append: overrides.append ?? (() => Promise.resolve(true)),

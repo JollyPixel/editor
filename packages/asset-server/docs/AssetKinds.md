@@ -13,7 +13,6 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   apply(state: TState, event: Event): void;
   serialize(state: TState): Promise<Uint8Array>;
   live?(binding: AssetRoomBinding<TState>): AssetLiveProtocol<TCommand>;
-  createExtension?(binding: AssetRoomBinding<TState>): Extension;
 }
 ```
 
@@ -206,10 +205,6 @@ A room that also mutated the state would apply every command twice: once
 itself and once through the fold. Absolute writes survive that, but a command
 carrying a delta does not. `voxel-map`'s `position-updated` is exactly such a
 command, which is why both shipped kinds keep the halves separate.
-
-`createExtension` remains as an escape hatch for a room protocol `live`
-cannot express, and takes precedence over it. It returns a `network.Extension`
-whose `id` must equal the room name.
 
 `apply` must never throw. Its event is already persisted, so a fold that
 aborts would break every later replay. Both shipped handlers catch, log and

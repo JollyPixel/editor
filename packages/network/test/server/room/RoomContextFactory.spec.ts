@@ -121,6 +121,16 @@ describe("RoomContextFactory — actor resolution", () => {
       id: "ghost"
     });
   });
+
+  test("exposes the resolved actor on the context", () => {
+    const members = new RoomMembers();
+    addMember(members, "client-1", { subject: "user-42", role: "default" });
+
+    assert.deepEqual(createFactory(members).create("client-1").actor, {
+      type: "user",
+      id: "user-42"
+    });
+  });
 });
 
 describe("RoomContextFactory — event store handle", () => {

@@ -72,6 +72,6 @@ describe("textureAssetHandler", () => {
   });
 
   test("has no editing room", () => {
-    assert.strictEqual(textureAssetHandler().createExtension, undefined);
+    assert.strictEqual(textureAssetHandler().live, undefined);
   });
 });

@@ -2,6 +2,15 @@
 import { defineSchema } from "../../../protocol/schema.ts";
 
 const kIdentifier = { type: "string" } as const;
+const kActor = {
+  type: "object",
+  properties: {
+    type: { enum: ["user", "system"] },
+    id: { type: "string" },
+    source: { type: "string" }
+  },
+  required: ["type"]
+} as const;
 const kAnyObject = { type: "object" } as const;
 
 export const hostWorkerDataSchema = defineSchema({
@@ -25,6 +34,7 @@ export const mainToWorkerSchema = defineSchema({
       properties: {
         type: { const: "dispatch" },
         id: kIdentifier,
+        actor: kActor,
         method: { const: "onClientConnect" },
         args: {
           type: "array",
@@ -39,7 +49,8 @@ export const mainToWorkerSchema = defineSchema({
         "type",
         "id",
         "method",
-        "args"
+        "args",
+        "actor"
       ]
     },
     {
@@ -47,6 +58,7 @@ export const mainToWorkerSchema = defineSchema({
       properties: {
         type: { const: "dispatch" },
         id: kIdentifier,
+        actor: kActor,
         method: { const: "onClientDisconnect" },
         args: {
           type: "array",
@@ -58,7 +70,8 @@ export const mainToWorkerSchema = defineSchema({
         "type",
         "id",
         "method",
-        "args"
+        "args",
+        "actor"
       ]
     },
     {
@@ -66,6 +79,7 @@ export const mainToWorkerSchema = defineSchema({
       properties: {
         type: { const: "dispatch" },
         id: kIdentifier,
+        actor: kActor,
         method: { const: "onMessage" },
         args: {
           type: "array",
@@ -77,7 +91,8 @@ export const mainToWorkerSchema = defineSchema({
         "type",
         "id",
         "method",
-        "args"
+        "args",
+        "actor"
       ]
     },
     {

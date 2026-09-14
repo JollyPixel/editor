@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import type { Extension } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { AssetLiveProtocol } from "../rooms/AssetRoomExtension.ts";
@@ -55,8 +54,4 @@ export interface AssetKindHandler<
   live?(
     binding: AssetRoomBinding<TState>
   ): AssetLiveProtocol<TCommand>;
-
-  createExtension?(
-    binding: AssetRoomBinding<TState>
-  ): Extension;
 }

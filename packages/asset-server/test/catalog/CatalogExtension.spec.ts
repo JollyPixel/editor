@@ -10,6 +10,7 @@ import http from "node:http";
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
   protocolEvents,
+  Server,
   type ClientHandle,
   type RoomPeer,
   type RoomContext
@@ -20,12 +21,26 @@ import {
   CatalogExtension,
   CatalogProjection,
   createCatalogHandler,
+  encodeContent,
+  CATALOG_APPLIED,
   CATALOG_CHANGED,
+  CATALOG_CREATE,
+  CATALOG_DELETE,
+  CATALOG_REJECTED,
+  CATALOG_RENAME,
+  CATALOG_ROOM,
   CATALOG_SNAPSHOT,
-  DEFAULT_CATALOG_PATH
+  DEFAULT_CATALOG_PATH,
+  type CatalogCommand
 } from "#src/index.ts";
-import { syncHarness } from "../helpers/backend.ts";
-import { bytes } from "../helpers/bytes.ts";
+import {
+  syncHarness,
+  type SyncHarness
+} from "../helpers/backend.ts";
+import {
+  bytes,
+  text
+} from "../helpers/bytes.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -47,6 +62,10 @@ function fakeRoom(): FakeRoom {
     broadcasts,
     direct,
     context: {
+      actor: {
+        type: "user",
+        id: "client-1"
+      },
       room: {
         broadcast: (payload) => broadcasts.push(payload),
         sendTo: (clientId, payload) => direct.push({ clientId, payload })
@@ -89,7 +108,7 @@ describe("CatalogExtension — join", () => {
     });
     projection.load();
 
-    const extension = new CatalogExtension({ projection });
+    const extension = new CatalogExtension({ projection, writer: harness.writer });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
 
@@ -111,7 +130,7 @@ describe("CatalogExtension — join", () => {
     });
     projection.load();
 
-    const extension = new CatalogExtension({ projection });
+    const extension = new CatalogExtension({ projection, writer: harness.writer });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.onClientConnect(client("B"), peer("B"), room.context);
@@ -133,7 +152,7 @@ describe("CatalogExtension — broadcast", () => {
     projection.load();
     projection.start();
 
-    const extension = new CatalogExtension({ projection });
+    const extension = new CatalogExtension({ projection, writer: harness.writer });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
 
@@ -159,7 +178,7 @@ describe("CatalogExtension — broadcast", () => {
     });
     projection.start();
 
-    const extension = new CatalogExtension({ projection });
+    const extension = new CatalogExtension({ projection, writer: harness.writer });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
 
@@ -183,7 +202,7 @@ describe("CatalogExtension — broadcast", () => {
     });
     projection.start();
 
-    const extension = new CatalogExtension({ projection });
+    const extension = new CatalogExtension({ projection, writer: harness.writer });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.onClientDisconnect("A");
@@ -206,7 +225,7 @@ describe("CatalogExtension — broadcast", () => {
     });
     projection.start();
 
-    const extension = new CatalogExtension({ projection });
+    const extension = new CatalogExtension({ projection, writer: harness.writer });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.dispose();
@@ -221,18 +240,330 @@ describe("CatalogExtension — broadcast", () => {
     projection.close();
   });
 
-  test("names its wire events for the rights table", () => {
+  test("names its wire events for the rights table", async() => {
+    await using harness = await syncHarness();
     const extension = new CatalogExtension({
       projection: new CatalogProjection({
-        eventStore: null as never
-      })
+        eventStore: harness.eventStore
+      }),
+      writer: harness.writer
     });
 
     assert.deepEqual(
+      protocolEvents(extension.protocols.inbound!),
+      [CATALOG_CREATE, CATALOG_RENAME, CATALOG_DELETE]
+    );
+    assert.deepEqual(
       protocolEvents(extension.protocols.outbound!),
-      [CATALOG_SNAPSHOT, CATALOG_CHANGED]
+      [CATALOG_SNAPSHOT, CATALOG_CHANGED, CATALOG_APPLIED, CATALOG_REJECTED]
     );
     extension.dispose();
+  });
+});
+
+interface CommandHarness extends AsyncDisposable {
+  readonly sync: SyncHarness;
+  readonly room: FakeRoom;
+  send(command: CatalogCommand): Promise<void>;
+  lastDirect(): { clientId: string; payload: unknown; } | undefined;
+}
+
+async function commandHarness(
+  maxContentBytes?: number
+): Promise<CommandHarness> {
+  const sync = await syncHarness();
+  const projection = new CatalogProjection({
+    eventStore: sync.eventStore
+  });
+  projection.load();
+  projection.start();
+
+  const extension = new CatalogExtension({
+    projection,
+    writer: sync.writer,
+    maxContentBytes
+  });
+  const room = fakeRoom();
+  extension.onClientConnect(client("A"), peer("A"), room.context);
+
+  return {
+    sync,
+    room,
+    send: (command) => extension.onMessage("A", command, room.context),
+    lastDirect: () => room.direct.at(-1),
+    async [Symbol.asyncDispose]() {
+      extension.dispose();
+      projection.close();
+      await sync[Symbol.asyncDispose]();
+    }
+  };
+}
+
+function lastPayloadType(
+  commands: CommandHarness
+): string | undefined {
+  const payload = commands.lastDirect()?.payload as { type?: string; } | undefined;
+
+  return payload?.type;
+}
+
+function recorder(
+  id: string
+): ClientHandle & { received: unknown[]; } {
+  const received: unknown[] = [];
+
+  return {
+    id,
+    received,
+    send: (payload) => received.push(payload)
+  };
+}
+
+describe("CatalogExtension — commands", () => {
+  test("create writes the asset, broadcasts the change and acknowledges the author", async() => {
+    await using commands = await commandHarness();
+
+    await commands.send({
+      type: CATALOG_CREATE,
+      requestId: "r1",
+      path: "textures/grass.png",
+      content: encodeContent(bytes("grass"))
+    });
+    await commands.sync.projector.flush();
+
+    const record = commands.sync.identity.byPath("textures/grass.png");
+    assert.notStrictEqual(record, undefined);
+    assert.strictEqual(
+      text(await commands.sync.source.read("textures/grass.png")),
+      "grass"
+    );
+    assert.strictEqual(
+      (commands.room.broadcasts[0] as { type: string; }).type,
+      CATALOG_CHANGED
+    );
+    assert.deepEqual(commands.lastDirect(), {
+      clientId: "A",
+      payload: {
+        type: CATALOG_APPLIED,
+        requestId: "r1",
+        command: CATALOG_CREATE,
+        assetId: record!.id
+      }
+    });
+  });
+
+  test("stamps lifecycle events with the context actor", async() => {
+    await using commands = await commandHarness();
+
+    await commands.send({
+      type: CATALOG_CREATE,
+      path: "a.png",
+      content: encodeContent(bytes("one"))
+    });
+
+    const [event] = commands.sync.eventStore.reader.listAll({
+      eventTypePrefix: "asset."
+    });
+    assert.deepEqual(event.actor, commands.room.context.actor);
+  });
+
+  test("rename and delete act on the asset id", async() => {
+    await using commands = await commandHarness();
+    const created = (await commands.sync.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+
+    await commands.send({
+      type: CATALOG_RENAME,
+      assetId: created.assetId,
+      to: "b.png"
+    });
+    assert.strictEqual(
+      commands.sync.identity.byId(created.assetId)?.path,
+      "b.png"
+    );
+
+    await commands.send({
+      type: CATALOG_DELETE,
+      requestId: "r2",
+      assetId: created.assetId
+    });
+    assert.strictEqual(commands.sync.identity.byId(created.assetId), undefined);
+    assert.deepEqual(commands.lastDirect(), {
+      clientId: "A",
+      payload: {
+        type: CATALOG_APPLIED,
+        requestId: "r2",
+        command: CATALOG_DELETE,
+        assetId: created.assetId
+      }
+    });
+  });
+
+  test("rejects a path used by another asset to the author only", async() => {
+    await using commands = await commandHarness();
+    await commands.sync.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    });
+    const broadcasts = commands.room.broadcasts.length;
+
+    await commands.send({
+      type: CATALOG_CREATE,
+      requestId: "r3",
+      path: "a.png",
+      content: encodeContent(bytes("two"))
+    });
+
+    assert.strictEqual(commands.room.broadcasts.length, broadcasts);
+    const payload = commands.lastDirect()?.payload as {
+      type: string;
+      requestId: string;
+      command: string;
+      reason: string;
+    };
+    assert.strictEqual(payload.type, CATALOG_REJECTED);
+    assert.strictEqual(payload.requestId, "r3");
+    assert.strictEqual(payload.command, CATALOG_CREATE);
+    assert.match(payload.reason, /already used/);
+  });
+
+  test("rejects an unsafe path without broadcasting", async() => {
+    await using commands = await commandHarness();
+
+    await commands.send({
+      type: CATALOG_CREATE,
+      path: "../escape.png",
+      content: encodeContent(bytes("x"))
+    });
+
+    assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);
+    assert.deepEqual(commands.room.broadcasts, []);
+  });
+
+  test("rejects content over the size limit without writing", async() => {
+    await using commands = await commandHarness(4);
+
+    await commands.send({
+      type: CATALOG_CREATE,
+      path: "a.png",
+      content: encodeContent(bytes("12345"))
+    });
+
+    assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);
+    assert.strictEqual(commands.sync.identity.byPath("a.png"), undefined);
+  });
+
+  test("rejects an unknown asset id", async() => {
+    await using commands = await commandHarness();
+
+    await commands.send({
+      type: CATALOG_RENAME,
+      assetId: "ghost",
+      to: "b.png"
+    });
+
+    assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);
+  });
+});
+
+describe("CatalogExtension — server", () => {
+  test("a role granted create but not delete is denied the delete", async() => {
+    await using sync = await syncHarness();
+    const projection = new CatalogProjection({
+      eventStore: sync.eventStore
+    });
+    projection.load();
+    projection.start();
+    const created = (await sync.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+
+    const server = new Server({
+      eventStore: sync.eventStore,
+      rights: {
+        author: {
+          [`${CATALOG_ROOM}.${CATALOG_DELETE}`]: "read"
+        }
+      }
+    });
+    server.register(new CatalogExtension({
+      projection,
+      writer: sync.writer
+    }));
+    const author = recorder("A");
+    server.handleConnect(author, { subject: "A", role: "author" });
+    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_DELETE,
+        assetId: created.assetId
+      }
+    });
+    const denied = author.received.at(-1);
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_CREATE,
+        path: "b.png",
+        content: encodeContent(bytes("two"))
+      }
+    });
+
+    assert.deepEqual(denied, {
+      room: CATALOG_ROOM,
+      kind: "denied",
+      event: CATALOG_DELETE,
+      reason: `role "author" cannot write "${CATALOG_DELETE}"`
+    });
+    assert.notStrictEqual(sync.identity.byId(created.assetId), undefined);
+    assert.notStrictEqual(sync.identity.byPath("b.png"), undefined);
+
+    await server.close();
+    projection.close();
+  });
+
+  test("a malformed command gets an error envelope", async() => {
+    await using sync = await syncHarness();
+    const projection = new CatalogProjection({
+      eventStore: sync.eventStore
+    });
+    projection.load();
+
+    const server = new Server({ eventStore: sync.eventStore });
+    server.register(new CatalogExtension({
+      projection,
+      writer: sync.writer
+    }));
+    const author = recorder("A");
+    server.handleConnect(author, { subject: "A", role: "default" });
+    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_RENAME,
+        assetId: "a1"
+      }
+    });
+
+    assert.strictEqual(
+      (author.received.at(-1) as { kind: string; }).kind,
+      "error"
+    );
+
+    await server.close();
+    projection.close();
   });
 });
 

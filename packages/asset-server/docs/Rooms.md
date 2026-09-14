@@ -34,13 +34,12 @@ and names without a colon are rejected.
 A room is created when:
 
 - the room name parses as `${kind}:${assetId}`;
-- the kind is registered and provides `live` or `createExtension`;
-- the catalog contains the asset under that kind;
-- the created extension uses the requested room name as its `id`.
+- the kind is registered and provides `live`;
+- the catalog contains the asset under that kind.
 
-A kind that provides `live` is hosted by `AssetRoomExtension`, which owns
-the snapshot-on-connect, arbitrate-append-broadcast and rights-event-name
-plumbing. `createExtension` bypasses it and takes precedence.
+Every asset room is hosted by `AssetRoomExtension`, which owns the
+snapshot-on-connect and arbitrate-append-broadcast plumbing. Kinds cannot
+supply their own extension, so resolving a room never spawns a worker thread.
 
 The handler receives the live state through `AssetRoomBinding`:
 
@@ -63,6 +62,22 @@ before the extension is disposed.
 `graceMs` overrides the server default for asset rooms. Use
 `server.settled(roomName)` to wait for asynchronous eviction. Closing the
 server evicts all resolved rooms through the same path.
+
+## Deleted assets
+
+When the catalog removes an asset whose room is still open, the room
+broadcasts a final notice to its members:
+
+```ts
+{ type: "deleted" }
+```
+
+`ASSET_ROOM_DELETED` holds the `"deleted"` type, and
+`AssetRoomExtension` adds it to the kind's outbound protocol, so a rights
+table can filter it under `${kind}.deleted`. After the notice the room drops
+every command, and a client joining during the grace period receives the
+notice instead of a snapshot. The room itself is evicted as usual once its
+members leave.
 
 Rights use the extension's `name`, which asset handlers normally set to the
 asset kind. This gives every room of one kind the same rights scope.

@@ -1,8 +1,4 @@
-export type {
-  AssetKindHandler,
-  AssetRoomBinding,
-  SnapshotPolicy
-} from "./AssetKindHandler.ts";
-export { AssetKindRegistry } from "./AssetKindRegistry.ts";
-export { UnknownAssetKindError } from "./errors/index.ts";
+export type * from "./AssetKindHandler.ts";
+export * from "./AssetKindRegistry.ts";
+export * from "./errors/UnknownAssetKindError.ts";
 export * from "./handlers/index.ts";

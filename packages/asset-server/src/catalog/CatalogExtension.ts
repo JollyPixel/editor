@@ -1,83 +1,110 @@
+// Import Node.js Dependencies
+import { Buffer } from "node:buffer";
+
 // Import Third-party Dependencies
 import {
-  defineMessageProtocol,
   Extension,
-  NO_MESSAGES,
   type ClientHandle,
   type MessageProtocols,
   type RoomPeer,
   type RoomBroadcast,
   type RoomContext
 } from "@jolly-pixel/network";
+import type * as EventStore from "@jolly-pixel/event-store";
 import type { AssetManifestData } from "@jolly-pixel/asset";
+import {
+  Err,
+  type Result
+} from "@openally/result";
 
 // Import Internal Dependencies
 import type {
   CatalogChange,
   CatalogProjection
 } from "./CatalogProjection.ts";
+import {
+  catalogProtocols,
+  CATALOG_APPLIED,
+  CATALOG_CHANGED,
+  CATALOG_CREATE,
+  CATALOG_DELETE,
+  CATALOG_REJECTED,
+  CATALOG_RENAME,
+  CATALOG_SNAPSHOT
+} from "./CatalogExtension.schema.ts";
+import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
+import type { AssetWriter } from "../sync/AssetWriter.ts";
+import {
+  decodeContent,
+  type AssetInlineContent
+} from "../events/AssetEvents.ts";
 
 // CONSTANTS
 export const CATALOG_ROOM = "asset-catalog";
+export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 
-export const CATALOG_SNAPSHOT = "catalog:snapshot";
-export const CATALOG_CHANGED = "catalog:changed";
+export type CatalogCommandType =
+  | typeof CATALOG_CREATE
+  | typeof CATALOG_RENAME
+  | typeof CATALOG_DELETE;
+
+export interface CatalogCreateCommand {
+  type: typeof CATALOG_CREATE;
+  requestId?: string;
+  path: string;
+  kind?: string;
+  content: AssetInlineContent;
+}
+
+export interface CatalogRenameCommand {
+  type: typeof CATALOG_RENAME;
+  requestId?: string;
+  assetId: string;
+  to: string;
+}
+
+export interface CatalogDeleteCommand {
+  type: typeof CATALOG_DELETE;
+  requestId?: string;
+  assetId: string;
+}
+
+export type CatalogCommand =
+  | CatalogCreateCommand
+  | CatalogRenameCommand
+  | CatalogDeleteCommand;
 
 export type CatalogMessage =
   | { type: typeof CATALOG_SNAPSHOT; manifest: AssetManifestData; }
-  | { type: typeof CATALOG_CHANGED; change: CatalogChange; };
-
-export const catalogProtocols: MessageProtocols = {
-  inbound: NO_MESSAGES,
-  outbound: defineMessageProtocol({
-    discriminator: "type",
-    schema: {
-      oneOf: [
-        {
-          type: "object",
-          properties: {
-            type: { const: CATALOG_SNAPSHOT },
-            manifest: { type: "object" }
-          },
-          required: [
-            "type",
-            "manifest"
-          ]
-        },
-        {
-          type: "object",
-          properties: {
-            type: { const: CATALOG_CHANGED },
-            change: { type: "object" }
-          },
-          required: [
-            "type",
-            "change"
-          ]
-        }
-      ]
-    }
-  })
-};
+  | { type: typeof CATALOG_CHANGED; change: CatalogChange; }
+  | {
+    type: typeof CATALOG_APPLIED;
+    requestId?: string;
+    command: CatalogCommandType;
+    assetId: string;
+  }
+  | {
+    type: typeof CATALOG_REJECTED;
+    requestId?: string;
+    command: CatalogCommandType;
+    reason: string;
+  };
 
 export interface CatalogExtensionOptions {
   projection: CatalogProjection;
-  /**
-   * Room name clients join to follow the catalog.
-   * @default CATALOG_ROOM
-   */
+  writer: AssetWriter;
   id?: string;
+  maxContentBytes?: number;
 }
 
-/**
- * Broadcasts the projected catalog without owning domain state.
- */
-export class CatalogExtension extends Extension {
+export class CatalogExtension extends Extension<CatalogCommand> {
   readonly id: string;
   readonly name = CATALOG_ROOM;
   readonly protocols: MessageProtocols = catalogProtocols;
 
   #projection: CatalogProjection;
+  #writer: AssetWriter;
+  #maxContentBytes: number;
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
   #onChanged: (change: CatalogChange) => void;
@@ -88,6 +115,9 @@ export class CatalogExtension extends Extension {
     super();
     this.id = options.id ?? CATALOG_ROOM;
     this.#projection = options.projection;
+    this.#writer = options.writer;
+    this.#maxContentBytes = options.maxContentBytes ??
+      DEFAULT_CATALOG_MAX_CONTENT_BYTES;
     this.#onChanged = (change) => this.#broadcast?.broadcast({
       type: CATALOG_CHANGED,
       change
@@ -121,6 +151,32 @@ export class CatalogExtension extends Extension {
     }
   }
 
+  override async onMessage(
+    clientId: string,
+    command: CatalogCommand,
+    context: RoomContext
+  ): Promise<void> {
+    const result = await this.#execute(command, context.actor)
+      .catch((error: unknown) => Err(
+        error instanceof Error ? error : new Error(String(error))
+      ));
+
+    context.room.sendTo(clientId, result.ok ?
+      {
+        type: CATALOG_APPLIED,
+        requestId: command.requestId,
+        command: command.type,
+        assetId: result.val.assetId
+      } satisfies CatalogMessage :
+      {
+        type: CATALOG_REJECTED,
+        requestId: command.requestId,
+        command: command.type,
+        reason: result.val.message
+      } satisfies CatalogMessage
+    );
+  }
+
   override dispose(): void {
     this.#projection.off(
       "changed",
@@ -128,5 +184,39 @@ export class CatalogExtension extends Extension {
     );
     this.#members.clear();
     this.#broadcast = null;
+  }
+
+  #execute(
+    command: CatalogCommand,
+    actor: EventStore.Actor
+  ): Promise<Result<EventStore.Event, Error>> {
+    switch (command.type) {
+      case CATALOG_CREATE: {
+        const size = Buffer.byteLength(command.content.data, "base64");
+        if (size > this.#maxContentBytes) {
+          return Promise.resolve(
+            Err(new CatalogContentTooLargeError(size, this.#maxContentBytes))
+          );
+        }
+
+        return this.#writer.create({
+          path: command.path,
+          kind: command.kind,
+          data: decodeContent(command.content),
+          actor
+        });
+      }
+      case CATALOG_RENAME:
+        return this.#writer.rename({
+          assetId: command.assetId,
+          to: command.to,
+          actor
+        });
+      default:
+        return this.#writer.remove({
+          assetId: command.assetId,
+          actor
+        });
+    }
   }
 }

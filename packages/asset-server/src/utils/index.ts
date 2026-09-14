@@ -1,2 +1,2 @@
-export { contentHash } from "./contentHash.ts";
-export { TaskChain } from "./TaskChain.ts";
+export * from "./contentHash.ts";
+export * from "./TaskChain.ts";

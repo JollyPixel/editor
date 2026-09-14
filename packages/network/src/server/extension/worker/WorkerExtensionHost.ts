@@ -86,12 +86,15 @@ async function requestList(
   });
 }
 
-function createContext(): RoomContext {
+function createContext(
+  actor: EventStore.Actor
+): RoomContext {
   return {
     room: {
       broadcast: (payload) => postContextCall("room.broadcast", [payload]),
       sendTo: (clientId, payload) => postContextCall("client.send", [clientId, payload])
     },
+    actor,
     eventStore: {
       append: requestAppend,
       list: requestList
@@ -119,7 +122,7 @@ async function dispatch(
       return extension.onClientConnect?.(
         createClientHandle(clientId),
         peer,
-        createContext()
+        createContext(message.actor)
       );
     })
     .with({ method: "onClientDisconnect" }, (message) => {
@@ -127,7 +130,7 @@ async function dispatch(
 
       return extension.onClientDisconnect?.(
         clientId,
-        createContext()
+        createContext(message.actor)
       );
     })
     .with({ method: "onMessage" }, (message) => {
@@ -136,7 +139,7 @@ async function dispatch(
       return extension.onMessage?.(
         clientId,
         payload,
-        createContext()
+        createContext(message.actor)
       );
     })
     .exhaustive();

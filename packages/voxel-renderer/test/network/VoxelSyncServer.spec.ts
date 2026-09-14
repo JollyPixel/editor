@@ -52,6 +52,10 @@ function roomContext(
   deliver: (payload: unknown) => void = () => void 0
 ): RoomContext {
   return {
+    actor: {
+      type: "user",
+      id: "client-1"
+    },
     room: {
       broadcast: deliver,
       sendTo: (_clientId, payload) => deliver(payload)

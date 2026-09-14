@@ -11,10 +11,8 @@ import path from "node:path";
 import * as EventStore from "@jolly-pixel/event-store";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import {
-  Extension,
   Server,
-  type ClientHandle,
-  type RoomContext
+  type ClientHandle
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -22,61 +20,36 @@ import {
   assetRoomName,
   createAssetBackend,
   createCatalogHandler,
+  encodeContent,
+  CATALOG_APPLIED,
+  CATALOG_CHANGED,
+  CATALOG_CREATE,
+  CATALOG_DELETE,
+  CATALOG_ROOM,
   IDENTITY_SIDECAR_PATH,
   PROJECTION_STATE_PATH,
-  STATE_GITIGNORE_PATH,
-  type AssetKindHandler,
-  type AssetRoomBinding
+  STATE_GITIGNORE_PATH
 } from "#src/index.ts";
 import { tempWorkspace } from "./helpers/tempWorkspace.ts";
-import {
-  counterHandler,
-  COUNTER_INCREMENTED,
-  type CounterState
-} from "./helpers/kinds.ts";
+import { liveCounterHandler } from "./helpers/kinds.ts";
 import { bytes } from "./helpers/bytes.ts";
-import { counterProtocols } from "./helpers/protocols.ts";
-
-class CounterExtension extends Extension {
-  readonly id: string;
-  readonly name: string;
-  readonly protocols = counterProtocols;
-  readonly assetId: string;
-
-  constructor(
-    binding: AssetRoomBinding<CounterState>
-  ) {
-    super();
-    this.id = binding.roomId;
-    this.name = binding.kind;
-    this.assetId = binding.assetId;
-  }
-
-  override async onMessage(
-    _clientId: string,
-    _payload: unknown,
-    context: RoomContext
-  ): Promise<void> {
-    await context.eventStore.append({
-      assetType: this.name,
-      assetId: this.assetId,
-      eventType: COUNTER_INCREMENTED,
-      eventData: {}
-    });
-  }
-}
-
-function editableCounter(): AssetKindHandler<CounterState> {
-  return {
-    ...counterHandler(),
-    createExtension: (binding) => new CounterExtension(binding)
-  };
-}
 
 function client(
   id: string
 ): ClientHandle {
   return { id, send: () => void 0 };
+}
+
+function recorder(
+  id: string
+): ClientHandle & { received: unknown[]; } {
+  const received: unknown[] = [];
+
+  return {
+    id,
+    received,
+    send: (payload) => received.push(payload)
+  };
 }
 
 async function catalogOverHttp(
@@ -128,7 +101,7 @@ describe("asset-server — end to end", () => {
     await using backend = await createAssetBackend({
       source,
       eventStore,
-      handlers: [editableCounter()],
+      handlers: [liveCounterHandler()],
       snapshot: { delay: 1_000, maxDelay: 5_000 },
       watch: false
     });
@@ -179,7 +152,7 @@ describe("asset-server — end to end", () => {
       await server.handleMessage("A", {
         room,
         kind: "message",
-        payload: { increment: true }
+        payload: { action: "increment" }
       });
     }
 
@@ -271,5 +244,77 @@ describe("asset-server — end to end", () => {
       before
     );
     assert.strictEqual(restarted.catalog.size, 1);
+  });
+
+  test("catalog commands from a client reach disk, peers and open rooms", async() => {
+    await using workspace = await tempWorkspace();
+    using eventStore = EventStore.persistence.memory();
+
+    await fs.writeFile(path.join(workspace.root, "a.counter"), bytes("0"));
+    await using backend = await createAssetBackend({
+      source: new FilesystemAssetSource(workspace.root),
+      eventStore,
+      handlers: [liveCounterHandler()],
+      watch: false
+    });
+    const server = new Server({ eventStore });
+    backend.attach(server);
+
+    const author = recorder("A");
+    const peer = recorder("B");
+    for (const handle of [author, peer]) {
+      server.handleConnect(handle, { subject: handle.id, role: "default" });
+      await server.handleMessage(handle.id, { room: CATALOG_ROOM, kind: "join" });
+    }
+
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_CREATE,
+        requestId: "r1",
+        path: "textures/grass.png",
+        content: encodeContent(bytes("grass"))
+      }
+    });
+    await backend.flush();
+
+    assert.strictEqual(
+      await fs.readFile(path.join(workspace.root, "textures", "grass.png"), "utf8"),
+      "grass"
+    );
+    const changed = peer.received.at(-1) as {
+      payload: { type: string; change: { record: { source: string; }; }; };
+    };
+    assert.strictEqual(changed.payload.type, CATALOG_CHANGED);
+    assert.strictEqual(changed.payload.change.record.source, "textures/grass.png");
+    assert.strictEqual(
+      (author.received.at(-1) as { payload: { type: string; }; }).payload.type,
+      CATALOG_APPLIED
+    );
+
+    const counter = backend.catalog.snapshot().assets
+      .find((record) => record.source === "a.counter")!;
+    const room = assetRoomName("counter", counter.id);
+    await server.handleMessage("B", { room, kind: "join" });
+
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_DELETE,
+        assetId: counter.id
+      }
+    });
+    await backend.flush();
+
+    assert.deepEqual(peer.received.at(-1), {
+      room,
+      kind: "message",
+      payload: { type: "deleted" }
+    });
+    await assert.rejects(fs.access(path.join(workspace.root, "a.counter")));
+
+    await server.close();
   });
 });

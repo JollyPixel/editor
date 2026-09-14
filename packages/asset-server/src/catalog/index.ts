@@ -1,29 +1,18 @@
-export { CatalogIdentitySidecar } from "./CatalogIdentitySidecar.ts";
-export type {
-  CatalogIdentitySidecarData,
-  IdentityEntry
+export {
+  CatalogIdentitySidecar,
+  type CatalogIdentitySidecarData,
+  type IdentityEntry
 } from "./CatalogIdentitySidecar.ts";
-export { CatalogProjection } from "./CatalogProjection.ts";
-export type {
-  CatalogChange,
-  CatalogProjectionEventMap,
-  CatalogProjectionOptions
-} from "./CatalogProjection.ts";
+export * from "./CatalogProjection.ts";
+export * from "./CatalogExtension.ts";
 export {
-  CatalogExtension,
+  CATALOG_APPLIED,
   CATALOG_CHANGED,
-  CATALOG_ROOM,
+  CATALOG_CREATE,
+  CATALOG_DELETE,
+  CATALOG_REJECTED,
+  CATALOG_RENAME,
   CATALOG_SNAPSHOT
-} from "./CatalogExtension.ts";
-export type {
-  CatalogExtensionOptions,
-  CatalogMessage
-} from "./CatalogExtension.ts";
-export {
-  createCatalogHandler,
-  DEFAULT_CATALOG_PATH
-} from "./httpHandler.ts";
-export type {
-  CatalogHandler,
-  CatalogHandlerOptions
-} from "./httpHandler.ts";
+} from "./CatalogExtension.schema.ts";
+export * from "./errors/CatalogContentTooLargeError.ts";
+export * from "./httpHandler.ts";

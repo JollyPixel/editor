@@ -6,16 +6,8 @@ export * from "./catalog/index.ts";
 export * from "./rooms/index.ts";
 export * from "./static/index.ts";
 export * from "./workspace/index.ts";
-export { createAssetBackend } from "./createAssetBackend.ts";
-export type {
-  AssetBackend,
-  AssetBackendInternals,
-  AssetBackendOptions
-} from "./createAssetBackend.ts";
-export {
-  silentLogger,
-  type Logger
-} from "./logger.ts";
+export * from "./createAssetBackend.ts";
+export * from "./logger.ts";
 export {
   ASSET_EVENT_PREFIX,
   EVENTS_DB_PATH,

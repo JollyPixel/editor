@@ -20,6 +20,7 @@ abstract class Extension<TMessage = unknown> {
 interface RoomContext {
   readonly room: RoomBroadcast;
   readonly eventStore: RoomEventStoreHandle;
+  readonly actor: EventStore.Actor;
 }
 
 interface RoomPeer {
@@ -191,6 +192,10 @@ Each registration owns one worker and processes its calls sequentially. A slow h
 
 Call `server.close()` before the process exits if any worker-mode extension was registered.
 
+`WorkerExtensionProxy.dispose()` awaits `close()`, so a proxy returned by a
+[room resolver](./Server.md#dynamic-rooms) terminates its worker when the room
+is evicted.
+
 ## Presence-only rooms
 
 Use `PresenceOnlyExtension` when a room needs only join and presence events:
@@ -230,3 +235,7 @@ The server fills in `actor` from the member's authenticated identity: its
 `subject`, decided at the handshake by an
 [authentication provider](./Authentication.md). Extensions cannot set or omit
 the actor, and no client payload can influence it.
+
+`context.actor` exposes the same actor, for work that writes to the event
+store through its own collaborators instead of `context.eventStore.append`.
+Worker extensions receive it with each dispatch.

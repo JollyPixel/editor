@@ -116,6 +116,18 @@ export class AssetProjector {
     return this.#folds.get(assetId)?.desired ?? null;
   }
 
+  assetAt(
+    path: string
+  ): string | null {
+    for (const [assetId, fold] of this.#folds) {
+      if (fold.desired?.path === path) {
+        return assetId;
+      }
+    }
+
+    return null;
+  }
+
   get pending(): number {
     return this.#dirty.size;
   }

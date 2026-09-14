@@ -50,6 +50,7 @@ export class RoomContextFactory {
   ): RoomContext {
     return {
       room: this.#broadcast,
+      actor,
       eventStore: {
         append: (input) => this.#append(clientId, input, actor),
         list: (assetId, fromVersion) => Promise.resolve(

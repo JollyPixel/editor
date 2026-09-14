@@ -14,6 +14,7 @@ import {
   bytes,
   text
 } from "./bytes.ts";
+import { counterCommandProtocols } from "./protocols.ts";
 
 export const COUNTER_INCREMENTED = "counter.incremented";
 
@@ -62,6 +63,40 @@ export function counterHandler(
       state: CounterState
     ): Promise<Uint8Array> {
       return Promise.resolve(bytes(String(state.value)));
+    }
+  };
+}
+
+export interface CounterCommand {
+  action: "increment";
+}
+
+export function isCounterCommand(
+  payload: unknown
+): payload is CounterCommand {
+  return typeof payload === "object" &&
+    payload !== null &&
+    "action" in payload &&
+    payload.action === "increment";
+}
+
+export function liveCounterHandler(
+  snapshot?: SnapshotPolicy
+): AssetKindHandler<CounterState, CounterCommand> {
+  return {
+    ...counterHandler(snapshot),
+    live: (binding) => {
+      return {
+        commandEventType: COUNTER_INCREMENTED,
+        protocols: counterCommandProtocols,
+        parse: (payload) => (isCounterCommand(payload) ? payload : null),
+        snapshot: () => {
+          return { value: binding.state.value };
+        },
+        arbitrate: (command) => {
+          return { command };
+        }
+      };
     }
   };
 }

@@ -1,11 +1,8 @@
-export type {
-  AssetKindHandler,
-  AssetRoomBinding,
-  SnapshotPolicy
-} from "./AssetKindHandler.ts";
+export type * from "./AssetKindHandler.ts";
 export type {
   AssetArbitration,
   AssetLiveProtocol,
+  AssetRoomDeletedMessage,
   AssetRoomMessage
 } from "../rooms/AssetRoomExtension.ts";
 export * from "./handlers/index.ts";

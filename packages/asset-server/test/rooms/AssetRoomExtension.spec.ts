@@ -10,13 +10,15 @@ import {
   MessageParser,
   protocolEvents,
   type ClientHandle,
-  type RoomContext
+  type RoomContext,
+  type RoomPeer
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { counterCommandProtocols } from "../helpers/protocols.ts";
 import {
   AssetRoomExtension,
+  ASSET_ROOM_DELETED,
   type AssetLiveProtocol,
   type AssetRoomBinding
 } from "#src/index.ts";
@@ -97,6 +99,10 @@ function harness(
   });
 
   const context: RoomContext = {
+    actor: {
+      type: "user",
+      id: "client-1"
+    },
     room: {
       broadcast: (payload) => broadcast.push(payload),
       sendTo: () => void 0
@@ -120,6 +126,20 @@ function harness(
   };
 }
 
+function roomPeer(
+  clientId: string
+): RoomPeer {
+  return {
+    clientId,
+    identity: {
+      subject: clientId,
+      role: "default"
+    },
+    profile: {},
+    presence: {}
+  };
+}
+
 function client(): ClientHandle & { received: unknown[]; } {
   const received: unknown[] = [];
 
@@ -140,10 +160,10 @@ describe("AssetRoomExtension", () => {
   });
 
   test("sends the protocol snapshot to a connecting client", () => {
-    const { extension } = harness();
+    const { extension, context } = harness();
     const peer = client();
 
-    extension.onClientConnect(peer);
+    extension.onClientConnect(peer, roomPeer(peer.id), context);
 
     assert.deepEqual(peer.received, [
       {
@@ -281,5 +301,49 @@ describe("AssetRoomExtension", () => {
         data: { action: "increment" }
       }
     ]);
+  });
+});
+
+describe("AssetRoomExtension — deletion", () => {
+  test("adds the deleted notice to the outbound protocol", () => {
+    const { extension } = harness();
+
+    assert.ok(
+      protocolEvents(extension.protocols.outbound!).includes(ASSET_ROOM_DELETED)
+    );
+    const parser = new MessageParser(extension.protocols.outbound!);
+    assert.strictEqual(parser.parse({ type: ASSET_ROOM_DELETED }).ok, true);
+  });
+
+  test("broadcasts the deleted notice once to connected clients", () => {
+    const { extension, context, broadcast } = harness();
+    const peer = client();
+    extension.onClientConnect(peer, roomPeer(peer.id), context);
+
+    extension.markDeleted();
+    extension.markDeleted();
+
+    assert.strictEqual(extension.deleted, true);
+    assert.deepEqual(broadcast, [{ type: ASSET_ROOM_DELETED }]);
+  });
+
+  test("sends the deleted notice instead of a snapshot to a late joiner", () => {
+    const { extension, context } = harness();
+    extension.markDeleted();
+    const peer = client();
+
+    extension.onClientConnect(peer, roomPeer(peer.id), context);
+
+    assert.deepEqual(peer.received, [{ type: ASSET_ROOM_DELETED }]);
+  });
+
+  test("ignores commands once the asset is deleted", async() => {
+    const { extension, context, appended, broadcast } = harness();
+    extension.markDeleted();
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.deepEqual(appended, []);
+    assert.deepEqual(broadcast, []);
   });
 });

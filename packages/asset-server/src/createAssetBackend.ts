@@ -180,7 +180,8 @@ export async function createAssetBackend(
   catalog.load();
   catalog.start();
   const catalogExtension = new CatalogExtension({
-    projection: catalog
+    projection: catalog,
+    writer
   });
 
   if (watch) {
