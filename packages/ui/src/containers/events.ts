@@ -82,13 +82,13 @@ declare global {
 }
 // Import Internal Dependencies
 import { emitComposedEvent } from "../events.ts";
-import type { Folder } from "./Folder.ts";
+import type { Folder } from "./folder/Folder.ts";
 import type {
   LayoutChange,
   LayoutSnapshot
-} from "./layout.ts";
+} from "./dock/layout.ts";
 import type {
   PaneDragDetail,
   PaneElement,
   PaneMoveCommand
-} from "./Pane.ts";
+} from "./pane/Pane.ts";

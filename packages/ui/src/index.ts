@@ -129,19 +129,19 @@ export {
 } from "./interaction/pointer/PointerDragSession.ts";
 
 // Containers
-export * from "./containers/Dialog.ts";
-export * from "./containers/dialogHelpers.ts";
-export * from "./containers/Dock.ts";
-export * from "./containers/DockLayout.ts";
-export * from "./containers/Floating.ts";
-export * from "./containers/Folder.ts";
+export * from "./containers/dialog/Dialog.ts";
+export * from "./containers/dialog/dialogHelpers.ts";
+export * from "./containers/dock/Dock.ts";
+export * from "./containers/dock/DockLayout.ts";
+export * from "./containers/floating/Floating.ts";
+export * from "./containers/folder/Folder.ts";
 export {
   PaneElement
-} from "./containers/Pane.ts";
-export * from "./containers/Rail.ts";
-export * from "./containers/Tab.ts";
-export * from "./containers/Tabs.ts";
-export * from "./containers/Toolbar.ts";
+} from "./containers/pane/Pane.ts";
+export * from "./containers/rail/Rail.ts";
+export * from "./containers/tabs/Tab.ts";
+export * from "./containers/tabs/Tabs.ts";
+export * from "./containers/toolbar/Toolbar.ts";
 export {
   emptyLayout,
   parseLayout,
@@ -158,7 +158,7 @@ export {
   type LayoutSnapshot,
   type PaneChange,
   type PaneState
-} from "./containers/layout.ts";
+} from "./containers/dock/layout.ts";
 export type {
   ContainerEventMap,
   JollyMoveDetail,
