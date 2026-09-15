@@ -19,26 +19,17 @@ await createAssetBackend({
 `@jolly-pixel/asset-server` and `@jolly-pixel/event-store` are package
 dependencies. Import this entry point only from server code.
 
-## How it differs from PixelSyncServer
+## Live rooms
 
-| | `PixelSyncServer` | `pixelArtAssetHandler` |
-|---|---|---|
-| Buffer lifetime | process memory | replayed from the event log |
-| Persistence | none | snapshotted to the asset source |
-| Room id | fixed, passed as `id` | `pixelart:${assetId}`, resolved on join |
-| Who writes the buffer | the extension | `apply`, folding appended events |
+Each asset gets a `pixelart:${assetId}` room, resolved on join. The room
+appends accepted commands to the event log; `apply` is the only writer of the
+buffer. An ephemeral canvas uses the same handler on a `MemoryAssetSource` and
+a `persistence.memory()` event store.
 
-The wire protocol is identical, so `PixelSyncClient` and every presence sync
-work unchanged against either. Use `PixelSyncServer` for a single ephemeral
-canvas; use the asset kind when the document is a file people expect to still
-be there tomorrow.
-
-Both share `PixelCommandArbiter`, which resolves conflicts without touching a
-buffer. That separation is what lets the asset room append rather than mutate.
-`PixelSyncServer` calls `accept()`, which resolves and records in one step
-because it applies the command immediately. The asset room calls `admit()`
-and commits the returned arbitration only once the append lands, so a refused
-append leaves no trace in the conflict trackers.
+`live()` arbitrates through `PixelCommandArbiter.admit()`, which resolves
+conflicts without touching the buffer. The room commits the returned
+arbitration only once the append lands, so a refused append leaves no trace in
+the conflict trackers.
 
 ## The `.pixelart` document
 

@@ -115,19 +115,6 @@ export class PixelCommandArbiter {
     }
   }
 
-  accept(
-    buffer: PixelBuffer,
-    command: PixelNetworkCommand
-  ): PixelNetworkCommand | null {
-    const arbitration = this.admit(buffer, command);
-    if (arbitration === null) {
-      return null;
-    }
-    arbitration.commit();
-
-    return arbitration.command;
-  }
-
   #admitStroke(
     command: PixelStrokeCommand
   ): PixelArbitration | null {

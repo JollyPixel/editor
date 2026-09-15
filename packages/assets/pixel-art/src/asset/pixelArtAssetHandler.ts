@@ -23,7 +23,8 @@ import {
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
 import { pixelProtocols } from "../network/PixelCommand.schema.ts";
 import {
-  isPixelNetworkCommand
+  isPixelNetworkCommand,
+  satisfiesPixelDomainRules
 } from "../network/PixelCommandValidator.ts";
 import { PixelArtState } from "./PixelArtState.ts";
 import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
@@ -115,7 +116,8 @@ export function pixelArtAssetHandler(
         protocols: pixelProtocols,
 
         parse(payload) {
-          return isPixelNetworkCommand(payload) ? payload : null;
+          return isPixelNetworkCommand(payload) &&
+            satisfiesPixelDomainRules(payload) ? payload : null;
         },
 
         snapshot() {

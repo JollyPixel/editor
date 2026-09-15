@@ -13,6 +13,7 @@ import {
 
 // Import Internal Dependencies
 import { PixelCommandArbiter } from "#src/network/PixelCommandArbiter.ts";
+import type { PixelNetworkCommand } from "#src/network/types.ts";
 import {
   command,
   freeRegion,
@@ -40,6 +41,17 @@ function setup(): {
   };
 }
 
+function accept(
+  arbiter: PixelCommandArbiter,
+  buffer: PixelBuffer,
+  pixelCommand: PixelNetworkCommand
+): PixelNetworkCommand | null {
+  const arbitration = arbiter.admit(buffer, pixelCommand);
+  arbitration?.commit();
+
+  return arbitration?.command ?? null;
+}
+
 describe("PixelCommandArbiter — pixels", () => {
   test("accepts an uncontested stroke unchanged", () => {
     const { arbiter, buffer } = setup();
@@ -48,13 +60,13 @@ describe("PixelCommandArbiter — pixels", () => {
       positions: [{ x: 1, y: 1 }]
     });
 
-    assert.deepStrictEqual(arbiter.accept(buffer, stroke), stroke);
+    assert.deepStrictEqual(accept(arbiter, buffer, stroke), stroke);
   });
 
   test("accepts a newer stroke from another client at the same pixel", () => {
     const { arbiter, buffer } = setup();
     const positions = [{ x: 0, y: 0 }];
-    arbiter.accept(buffer, command("stroke", { color: gray(1), positions }, {
+    accept(arbiter, buffer, command("stroke", { color: gray(1), positions }, {
       clientId: "A",
       timestamp: 500
     }));
@@ -63,17 +75,17 @@ describe("PixelCommandArbiter — pixels", () => {
       timestamp: 900
     });
 
-    assert.deepStrictEqual(arbiter.accept(buffer, newer), newer);
+    assert.deepStrictEqual(accept(arbiter, buffer, newer), newer);
   });
 
   test("narrows a stroke to the positions that won", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("stroke", {
+    accept(arbiter, buffer, command("stroke", {
       color: gray(9),
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "late", timestamp: 2000 }));
 
-    const accepted = arbiter.accept(buffer, command("stroke", {
+    const accepted = accept(arbiter, buffer, command("stroke", {
       color: gray(1),
       positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }]
     }, { clientId: "early", timestamp: 1000 }));
@@ -87,7 +99,7 @@ describe("PixelCommandArbiter — pixels", () => {
   test("rejects a stroke when every position lost", () => {
     const { arbiter, buffer } = setup();
     const positions = [{ x: 0, y: 0 }];
-    arbiter.accept(buffer, command("stroke", { color: gray(1), positions }, {
+    accept(arbiter, buffer, command("stroke", { color: gray(1), positions }, {
       clientId: "late",
       timestamp: 2000
     }));
@@ -97,14 +109,14 @@ describe("PixelCommandArbiter — pixels", () => {
       timestamp: 1000
     });
 
-    assert.strictEqual(arbiter.accept(buffer, stale), null);
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 
   test("accepts an older undo replay from the client that wrote the pixel", () => {
     const { arbiter, buffer } = setup();
     const positions = [{ x: 0, y: 0 }];
     for (const timestamp of [100, 200, 200]) {
-      arbiter.accept(buffer, command("stroke", { color: gray(1), positions }, {
+      accept(arbiter, buffer, command("stroke", { color: gray(1), positions }, {
         clientId: "A",
         timestamp
       }));
@@ -115,17 +127,17 @@ describe("PixelCommandArbiter — pixels", () => {
       timestamp: 100
     });
 
-    assert.deepStrictEqual(arbiter.accept(buffer, replay), replay);
+    assert.deepStrictEqual(accept(arbiter, buffer, replay), replay);
   });
 
   test("narrows a select-edit's positions and colors together", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("stroke", {
+    accept(arbiter, buffer, command("stroke", {
       color: gray(9),
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "A", timestamp: 900 }));
 
-    const accepted = arbiter.accept(buffer, command("select-edit", {
+    const accepted = accept(arbiter, buffer, command("select-edit", {
       positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
       colors: [gray(1), gray(2)]
     }, { clientId: "B", timestamp: 500 }));
@@ -138,7 +150,7 @@ describe("PixelCommandArbiter — pixels", () => {
 
   test("rejects a select-edit when every position lost", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("stroke", {
+    accept(arbiter, buffer, command("stroke", {
       color: gray(9),
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "A", timestamp: 900 }));
@@ -148,14 +160,14 @@ describe("PixelCommandArbiter — pixels", () => {
       colors: [gray(1)]
     }, { clientId: "B", timestamp: 500 });
 
-    assert.strictEqual(arbiter.accept(buffer, stale), null);
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 
   test("leaves the buffer untouched", () => {
     const { arbiter, buffer } = setup();
     const before = Uint8ClampedArray.from(buffer.pixels());
 
-    arbiter.accept(buffer, command("stroke", {
+    accept(arbiter, buffer, command("stroke", {
       color: gray(1),
       positions: [{ x: 0, y: 0 }]
     }));
@@ -166,16 +178,16 @@ describe("PixelCommandArbiter — pixels", () => {
   test("rejects a size the buffer would refuse", () => {
     const { arbiter, buffer } = setup();
 
-    assert.strictEqual(arbiter.accept(buffer, command("resized", { size: { x: 99, y: 4 } })), null);
-    assert.strictEqual(arbiter.accept(buffer, command("resized", { size: { x: 0, y: 4 } })), null);
-    assert.notStrictEqual(arbiter.accept(buffer, command("resized", { size: { x: 8, y: 8 } })), null);
+    assert.strictEqual(accept(arbiter, buffer, command("resized", { size: { x: 99, y: 4 } })), null);
+    assert.strictEqual(accept(arbiter, buffer, command("resized", { size: { x: 0, y: 4 } })), null);
+    assert.notStrictEqual(accept(arbiter, buffer, command("resized", { size: { x: 8, y: 8 } })), null);
   });
 });
 
 describe("PixelCommandArbiter — uv regions", () => {
   test("rejects a stale move of a region moved by a newer command", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
+    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -185,12 +197,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(arbiter.accept(buffer, stale), null);
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 
   test("rejects a stale delete of a region moved by a newer command", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
+    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -200,12 +212,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(arbiter.accept(buffer, stale), null);
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 
   test("rejects a stale move of a region deleted by a newer command", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("uv-region-deleted", { id: "r1" }, {
+    accept(arbiter, buffer, command("uv-region-deleted", { id: "r1" }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -215,7 +227,7 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(arbiter.accept(buffer, stale), null);
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 
   test("rejects a delete older than a move of a derived slot", () => {
@@ -229,7 +241,7 @@ describe("PixelCommandArbiter — uv regions", () => {
         "top.1": kRect
       }
     });
-    arbiter.accept(buffer, command("uv-region-moved", { id: "block-1", face: "top.1", rect: kRect }, {
+    accept(arbiter, buffer, command("uv-region-moved", { id: "block-1", face: "top.1", rect: kRect }, {
       clientId: "late",
       timestamp: 2000
     }));
@@ -239,12 +251,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 1000
     });
 
-    assert.strictEqual(arbiter.accept(buffer, stale), null);
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 
   test("commands on different regions never conflict", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
+    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -254,12 +266,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 100
     });
 
-    assert.deepStrictEqual(arbiter.accept(buffer, older), older);
+    assert.deepStrictEqual(accept(arbiter, buffer, older), older);
   });
 
   test("moves of different faces of one region never conflict", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("uv-region-moved", { id: "r1", face: "top", rect: kRect }, {
+    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: "top", rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -269,12 +281,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.deepStrictEqual(arbiter.accept(buffer, older), older);
+    assert.deepStrictEqual(accept(arbiter, buffer, older), older);
   });
 
   test("a state change claims every face, rejecting an older face move", () => {
     const { arbiter, buffer } = setup();
-    arbiter.accept(buffer, command("uv-region-state-changed", { region: freeRegion("r1") }, {
+    accept(arbiter, buffer, command("uv-region-state-changed", { region: freeRegion("r1") }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -284,6 +296,6 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(arbiter.accept(buffer, stale), null);
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 });

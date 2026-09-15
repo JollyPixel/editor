@@ -1,6 +1,11 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network/client";
 import {
+  AssetCatalog,
+  assetRoomName,
+  type AssetRecord
+} from "@jolly-pixel/asset";
+import {
   PixelCursorSync,
   PixelStrokeGhostSync,
   PixelSyncClient,
@@ -16,7 +21,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // CONSTANTS
-const kDemoRoom = "pixel-draw:demo-canvas";
+const kDemoAssetPath = "demo-canvas.pixelart";
 const kUsernameStorageKey = "pixel-draw-demo:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
@@ -37,15 +42,12 @@ export async function initializeDemoSync(
       username: await resolveUsername()
     }
   });
-  /*
-   * E2E tests override this via ?room=... so each Playwright worker gets
-   * its own isolated sync room instead of racing on the shared demo one.
-   */
-  const roomId = new URLSearchParams(
+  const assetPath = new URLSearchParams(
     window.location.search
-  ).get("room") ?? kDemoRoom;
+  ).get("asset") ?? kDemoAssetPath;
+  const record = await resolveCanvasAsset(assetPath);
   const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
-    roomId
+    assetRoomName(record.kind, record.id.value)
   );
   room.join();
   room.on("peer-joined", (event) => {
@@ -79,6 +81,20 @@ export async function initializeDemoSync(
   selectionGhostSync.attach(canvasManager);
 
   return syncReady;
+}
+
+async function resolveCanvasAsset(
+  assetPath: string
+): Promise<AssetRecord> {
+  const catalog = await AssetCatalog.fetch();
+  const record = Array.from(catalog.byKind("pixelart")).find(
+    (entry) => entry.source === assetPath
+  );
+  if (record === undefined) {
+    throw new Error(`No pixel-art asset at "${assetPath}".`);
+  }
+
+  return record;
 }
 
 function resolveUsername(): Promise<string> {

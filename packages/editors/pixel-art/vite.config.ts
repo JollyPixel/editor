@@ -1,37 +1,45 @@
 // Import Third-party Dependencies
 import { defineConfig } from "vite";
-import {
-  createWebSocketNetworkPlugin
-} from "@jolly-pixel/network/plugins/vite.ts";
-
 import checker from "vite-plugin-checker";
-
-import { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+import * as EventStore from "@jolly-pixel/event-store";
 import {
-  PixelSyncServer
-} from "@jolly-pixel/asset.pixel-art/network/server.ts";
+  createAssetWorkspacePlugin
+} from "@jolly-pixel/asset-server/plugins/vite.ts";
+import {
+  encodePixelArtDocument,
+  PixelBuffer,
+  serializePixelBuffer
+} from "@jolly-pixel/pixel-draw.renderer";
+import {
+  pixelArtAssetHandler
+} from "@jolly-pixel/asset.pixel-art";
 
 // Import Internal Dependencies
 import {
+  DEMO_ASSET_PATH,
+  TEXTURE_SIZE,
   WORKER_COUNT,
-  testRoomId
+  testAssetPath
 } from "./test/e2e/constants.ts";
 
 // CONSTANTS
-const kTextureSize = {
-  x: 80,
-  y: 80
-};
+const kCanvasPaths = [
+  DEMO_ASSET_PATH,
+  ...Array.from(
+    { length: WORKER_COUNT },
+    (_, index) => testAssetPath(index)
+  )
+];
 
-function pixelSyncServer(
-  id: string
-): PixelSyncServer {
-  return new PixelSyncServer({
-    id,
-    buffer: new PixelBuffer({
-      size: kTextureSize
-    })
-  });
+function blankCanvas(): Uint8Array {
+  return encodePixelArtDocument(
+    serializePixelBuffer(
+      new PixelBuffer({
+        size: TEXTURE_SIZE
+      })
+    )
+  );
 }
 
 // https://vitejs.dev/config/
@@ -46,19 +54,18 @@ export default defineConfig({
     checker({
       typescript: true
     }),
-    createWebSocketNetworkPlugin({
-      extensions: [
-        // Must match examples/scripts/demo/DemoSync.ts's default room.
-        pixelSyncServer("pixel-draw:demo-canvas"),
-        /*
-         * One isolated room per Playwright worker (see test/e2e/constants.ts)
-         * so e2e tests can run in parallel instead of sharing one buffer.
-         */
-        ...Array.from(
-          { length: WORKER_COUNT },
-          (_, index) => pixelSyncServer(testRoomId(index))
-        )
-      ]
+    createAssetWorkspacePlugin({
+      root: import.meta.dirname,
+      source: new MemoryAssetSource(),
+      eventStore: EventStore.persistence.memory(),
+      handlers: [
+        pixelArtAssetHandler({
+          defaultSize: TEXTURE_SIZE
+        })
+      ],
+      seed: Object.fromEntries(
+        kCanvasPaths.map((assetPath) => [assetPath, blankCanvas])
+      )
     })
   ]
 });

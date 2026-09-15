@@ -1,13 +1,16 @@
 # Network synchronization
 
 The network integration sends `VoxelEngine` hook events through a room and
-applies accepted commands to an authoritative `VoxelWorld`.
+folds accepted commands into an authoritative `VoxelMapState`.
 
 ```text
 VoxelEngine -> VoxelSyncClient -> network.Room
                                       |
                                       v
-network clients <- network.Server <- VoxelSyncServer
+network clients <- network.Server <- AssetRoomExtension
+                                      |
+                                      v
+                        event log -> voxelMapAssetHandler.apply
 ```
 
 ## Command flow
@@ -15,8 +18,8 @@ network clients <- network.Server <- VoxelSyncServer
 1. A local engine mutation emits a `VoxelLayerHookEvent`.
 2. `VoxelSyncClient` stamps it with a client ID, sequence, and timestamp, then
    sends it through the room.
-3. `VoxelSyncServer` validates the marker fields, resolves conflicts, applies
-   the command to its world, and broadcasts the accepted command.
+3. The asset room validates the command, resolves conflicts, appends it to the
+   event log, and broadcasts it. The handler's `apply` folds it into the world.
 4. Each client applies the remote command through `engine.applyRemoteCommand()`.
 
 The engine suppresses its hook while applying a remote command, which prevents

@@ -262,6 +262,21 @@ describe("pixelArtAssetHandler", () => {
     assert.strictEqual(protocol.parse(null), null);
   });
 
+  test("live() rejects a command breaking a domain rule", () => {
+    const protocol = liveProtocol();
+
+    assert.strictEqual(protocol.parse({
+      action: "select-edit",
+      metadata: {
+        positions: [{ x: 0, y: 0 }],
+        colors: []
+      },
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    }), null);
+  });
+
   test("live() stamps the server-side client id onto the command", () => {
     const protocol = liveProtocol();
     const arbitration = protocol.arbitrate(

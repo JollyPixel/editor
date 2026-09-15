@@ -6,7 +6,7 @@ import {
   BASE_URL,
   TEXTURE_SIZE,
   WORKER_COUNT,
-  testRoomId
+  testAssetPath
 } from "./constants.ts";
 import { gotoDemo } from "./utils.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
@@ -25,7 +25,7 @@ export default async function globalSetup(): Promise<void> {
 
   try {
     for (let workerIndex = 0; workerIndex < WORKER_COUNT; workerIndex++) {
-      await gotoDemo(page, testRoomId(workerIndex));
+      await gotoDemo(page, testAssetPath(workerIndex));
 
       await page.evaluate((size) => {
         const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");

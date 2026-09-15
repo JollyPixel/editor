@@ -1,12 +1,13 @@
 # Synchronizing a world
 
 `VoxelSyncClient` connects a `VoxelEngine` to a network room.
-`VoxelSyncServer` owns the authoritative headless world for that room.
+`voxelMapAssetHandler` owns the authoritative headless world for that room.
 
 ## Connect a client
 
 ```ts
 import * as network from "@jolly-pixel/network";
+import { assetRoomName } from "@jolly-pixel/asset";
 import {
   VoxelSyncClient,
   type VoxelNetworkCommand,
@@ -20,7 +21,7 @@ const client = new network.Client({
 const room = client.room<
   VoxelNetworkCommand,
   VoxelServerMessage
->("voxel-map:world");
+>(assetRoomName("voxelmap", assetId));
 
 const sync = new VoxelSyncClient({ room });
 sync.attach(engine);
@@ -33,43 +34,43 @@ and leaves the room.
 
 ## Register the server
 
-Register one server extension per world through the network Vite plugin:
+Serve the asset kind through the asset workspace Vite plugin. Every
+`.voxelmap.json` document gets its own room, opened on first join:
 
 ```ts
 import { defineConfig } from "vite";
 import {
-  createWebSocketNetworkPlugin
-} from "@jolly-pixel/network/plugins/vite.ts";
+  createAssetWorkspacePlugin
+} from "@jolly-pixel/asset-server/plugins/vite.ts";
 import {
-  VoxelSyncServer
-} from "@jolly-pixel/asset.voxel-map/network/server.ts";
+  voxelMapAssetHandler,
+  VoxelMapState
+} from "@jolly-pixel/asset.voxel-map";
+import { encodeVoxelDocument } from "@jolly-pixel/voxel.renderer";
 
 export default defineConfig({
   plugins: [
-    createWebSocketNetworkPlugin({
-      extensions: [
-        new VoxelSyncServer({
-          id: "voxel-map:world"
-        })
-      ]
+    createAssetWorkspacePlugin({
+      root: "./assets",
+      handlers: [
+        voxelMapAssetHandler({ chunkSize: 16 })
+      ],
+      seed: {
+        "maps/world.voxelmap.json": () => {
+          const state = new VoxelMapState(16);
+          state.world.addLayer("Ground");
+
+          return encodeVoxelDocument(state.toJSON());
+        }
+      }
     })
   ]
 });
 ```
 
-The server's initial layers must match the client bootstrap state. A layer
-created before synchronization is not sent as a command. Seed the authoritative
-world when the client expects an initial layer:
-
-```ts
-const world = new VoxelWorld(16);
-world.addLayer("Ground");
-
-const server = new VoxelSyncServer({
-  id: "voxel-map:world",
-  world
-});
-```
+A layer created before synchronization is not sent as a command, so seed the
+document with the layers the client expects. Clients resolve the room name
+from the catalog with `assetRoomName(record.kind, record.id.value)`.
 
 ## Replace the world
 
@@ -78,8 +79,7 @@ sync.replaceWorld(engine.save());
 ```
 
 The server replaces its voxel and object layers, adopts the document's block
-table when it carries one, then broadcasts a fresh snapshot. Server snapshots
-use an empty tileset list, so every client must already have matching textures.
+table when it carries one, then broadcasts a fresh snapshot.
 
 ## Publish a block definition
 
@@ -95,16 +95,16 @@ published.
 
 ## Access control
 
-Rights use the extension name `"voxel.renderer"` and action names such as
-`"voxel-set"` or `"block-defined"`. Configure them on `network.Server` beside
-the Vite plugin. The network package allows actions that do not have a matching policy entry, so list
-every mutation that a restricted role must not perform or use a trailing
-`"voxel.renderer.*"` rule.
+Rights use the asset kind `"voxelmap"` as extension name and action names such
+as `"voxel-set"` or `"block-defined"`. Pass them as `rights` to the workspace
+plugin. The network package allows actions that do not have a matching policy
+entry, so list every mutation that a restricted role must not perform or use a
+trailing `"voxelmap.*"` rule.
 
 Client-supplied role values are not authentication. Resolve roles from a trusted
 session before constructing the room identity when access control matters.
 
 See [network synchronization](./network-synchronization.md) for the
 message flow and conflict rules. API details are available for
-[`VoxelSyncClient`](../api/network/VoxelSyncClient.md) and
-[`VoxelSyncServer`](../api/network/VoxelSyncServer.md).
+[`VoxelSyncClient`](../api/network/VoxelSyncClient.md) and the
+[voxel-map asset APIs](../api/voxel-map-assets.md).

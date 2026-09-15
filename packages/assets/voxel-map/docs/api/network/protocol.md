@@ -81,7 +81,7 @@ function isVoxelNetworkCommand(
 
 The check is deliberately shallow. It verifies only that the value is a
 non-null object with `action` and `clientId` properties. Validate untrusted
-payloads before they reach `VoxelSyncServer` when the room crosses a trust
+payloads before they reach the asset room when it crosses a trust
 boundary.
 
 ## Headless application

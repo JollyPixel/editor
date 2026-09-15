@@ -27,15 +27,11 @@ only from server code.
 The handler claims `**/*.voxelmap.json` by default. Documents use the same
 `VoxelWorldJSON` shape as `VoxelEngine.save()`.
 
-## Choose persistent or in-memory synchronization
+## In-memory worlds
 
-`VoxelSyncServer` holds one world in process memory. It is suitable for an
-ephemeral shared world. The asset handler rebuilds state from an event log and
-writes snapshots to an asset source.
-
-Both integrations use the same network command protocol, so `VoxelSyncClient`
-can connect to either one. Asset rooms derive their room ID from the asset ID;
-an in-memory server receives a fixed ID through its constructor.
+An ephemeral world uses the same handler on a `MemoryAssetSource` and a
+`persistence.memory()` event store. Nothing outlives the process. The room ID
+is derived from the asset ID in both cases.
 
 ## Snapshot cadence
 

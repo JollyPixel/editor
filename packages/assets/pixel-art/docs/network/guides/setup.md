@@ -1,40 +1,45 @@
 # Set up network synchronization
 
-One room represents one shared pixel buffer. The room name passed to `Client.room()` must match the `id` of its `PixelSyncServer`.
+One room represents one `.pixelart` asset. Its name is `assetRoomName("pixelart", assetId)`.
 
 ## Server
 
-This example registers a room named `pixel-draw:main` on the default `/ws-sync` WebSocket path:
+Serve the asset kind through the asset workspace Vite plugin, on the default `/ws-sync` WebSocket path. This example keeps everything in memory:
 
 ```ts
 import { defineConfig } from "vite";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+import * as EventStore from "@jolly-pixel/event-store";
 import {
-  createWebSocketNetworkPlugin
-} from "@jolly-pixel/network/plugins/vite.ts";
+  createAssetWorkspacePlugin
+} from "@jolly-pixel/asset-server/plugins/vite.ts";
 import {
-  PixelBuffer
+  encodePixelArtDocument,
+  PixelBuffer,
+  serializePixelBuffer
 } from "@jolly-pixel/pixel-draw.renderer";
-import {
-  PixelSyncServer
-} from "@jolly-pixel/asset.pixel-art/network/server.ts";
+import { pixelArtAssetHandler } from "@jolly-pixel/asset.pixel-art";
 
 export default defineConfig({
   plugins: [
-    createWebSocketNetworkPlugin({
-      extensions: [
-        new PixelSyncServer({
-          id: "pixel-draw:main",
-          buffer: new PixelBuffer({
-            size: { x: 80, y: 80 }
-          })
-        })
-      ]
+    createAssetWorkspacePlugin({
+      root: import.meta.dirname,
+      source: new MemoryAssetSource(),
+      eventStore: EventStore.persistence.memory(),
+      handlers: [
+        pixelArtAssetHandler({ defaultSize: { x: 80, y: 80 } })
+      ],
+      seed: {
+        "main.pixelart": () => encodePixelArtDocument(
+          serializePixelBuffer(new PixelBuffer({ size: { x: 80, y: 80 } }))
+        )
+      }
     })
   ]
 });
 ```
 
-Register a separate `PixelSyncServer` and room name for each collaborative canvas. The initial buffer becomes the snapshot sent to the first client and every late joiner.
+Drop `source` and `eventStore` to persist documents under `root`. Each seeded or discovered document gets its own room, opened on first join. Its buffer becomes the snapshot sent to the first client and every late joiner.
 
 ## Browser client
 
@@ -43,10 +48,19 @@ Create the room and sync controller before joining. Attach the canvas before `ro
 ```ts
 import { Client } from "@jolly-pixel/network/client";
 import {
+  AssetCatalog,
+  assetRoomName
+} from "@jolly-pixel/asset";
+import {
   PixelSyncClient,
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+
+const catalog = await AssetCatalog.fetch();
+const record = [...catalog].find(
+  (entry) => entry.source === "main.pixelart"
+)!;
 
 const networkClient = new Client({
   identity: { username: "alice" }
@@ -54,7 +68,7 @@ const networkClient = new Client({
 const room = networkClient.room<
   PixelNetworkCommand,
   PixelServerMessage
->("pixel-draw:main");
+>(assetRoomName(record.kind, record.id.value));
 
 const sync = new PixelSyncClient({ room });
 sync.on("ready", () => {
@@ -84,7 +98,7 @@ Snapshots replace texture pixels and UV regions, then clear local history. Remot
 
 ## Committed edits
 
-Local canvas mutations flow through `canvas.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The server validates the command, replaces its claimed `clientId` with the connection ID, resolves conflicts, applies accepted data and broadcasts the accepted command.
+Local canvas mutations flow through `canvas.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The asset room validates the command, replaces its claimed `clientId` with the connection ID, resolves conflicts, appends the accepted command to the event log and broadcasts it. `pixelArtAssetHandler` folds the appended event into the buffer.
 
 Commands echoed to their sender are ignored. Remote commands use `canvas.applyRemoteCommand()`, which does not emit `onBufferUpdated`, so they are not sent again.
 
@@ -92,19 +106,20 @@ Undo and redo keep the original edit timestamp. The default conflict resolver al
 
 ## Rights
 
-`PixelSyncServer` exposes each command action through `getEventName()`, so it can use an `@jolly-pixel/network` rights table:
+Asset rooms are named after their kind, `"pixelart"`, and expose each command action through the inbound protocol, so they can use an `@jolly-pixel/network` rights table:
 
 ```ts
-createWebSocketNetworkPlugin({
-  extensions: [pixelServer],
+createAssetWorkspacePlugin({
+  root: import.meta.dirname,
+  handlers: [pixelArtAssetHandler()],
   rights: {
     viewer: {
-      "pixel-draw.renderer.$join": "write",
-      "pixel-draw.renderer.$presence": "write",
-      "pixel-draw.renderer.*": "read"
+      "pixelart.$join": "write",
+      "pixelart.$presence": "write",
+      "pixelart.*": "read"
     },
     editor: {
-      "pixel-draw.renderer.*": "write"
+      "pixelart.*": "write"
     }
   }
 });

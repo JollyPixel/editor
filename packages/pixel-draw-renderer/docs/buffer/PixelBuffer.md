@@ -110,7 +110,7 @@ readonly uvRegions: UVRegionCollection
 uvRegions.size: number
 ```
 
-Id-keyed [`UVRegion`](../uv/UVRegion.md) storage included in [`PixelSyncServer.snapshot()`](../../../assets/pixel-art/docs/network/api/PixelSyncServer.md#snapshot). `set()` accepts a `UVRegion` or raw `UVRegionData`, and the collection is iterable.
+Id-keyed [`UVRegion`](../uv/UVRegion.md) storage included in [`pixelArtSnapshot()`](../serialization/index.md). `set()` accepts a `UVRegion` or raw `UVRegionData`, and the collection is iterable.
 
 ```ts
 uvRegions.get(id: string): UVRegion | undefined

@@ -6,7 +6,7 @@ import {
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { testRoomId, TEXTURE_SIZE } from "./constants.ts";
+import { testAssetPath, TEXTURE_SIZE } from "./constants.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 export interface PixelRGBA {
@@ -32,7 +32,7 @@ export interface GotoDemoOptions {
  */
 export async function gotoDemo(
   page: Page,
-  room: string = testRoomId(test.info().parallelIndex),
+  asset: string = testAssetPath(test.info().parallelIndex),
   options: GotoDemoOptions = {}
 ): Promise<void> {
   const { runtime = false } = options;
@@ -48,7 +48,7 @@ export async function gotoDemo(
   });
 
   const runtimeParam = runtime ? "" : "&runtime=off";
-  await page.goto(`/?empty=true&room=${encodeURIComponent(room)}${runtimeParam}`);
+  await page.goto(`/?empty=true&asset=${encodeURIComponent(asset)}${runtimeParam}`);
 
   await page.waitForFunction(
     () => (window as unknown as { __pixelSyncReady?: boolean; }).__pixelSyncReady === true
@@ -56,7 +56,7 @@ export async function gotoDemo(
 
   /*
    * Each worker reuses one sync room across every test file (see
-   * testRoomId()), with no per-test reset: a previous test's fire-and-forget
+   * testAssetPath()), with no per-test reset: a previous test's fire-and-forget
    * network op (e.g. a texture replace) can still be in flight when this
    * page joins the same room and lands after this test starts painting,
    * silently overwriting it. Blanking here mirrors global-setup.ts's
