@@ -18,6 +18,7 @@ createAssetBackend(options: AssetBackendOptions): Promise<AssetBackend>
 | `reconcileOnStart` | `true` | Scan the source when the backend starts. |
 | `watch` | `true` | Watch sources that implement `watch()`. |
 | `reconcileDebounce` | `200` ms | Quiet period before external changes are scanned. |
+| `catalogMaxContentBytes` | 16 MiB | Decoded size cap of a `catalog:create` payload. See [Catalog](./Catalog.md#network-room). |
 | `logger` | silent | A `loglayer` logger. |
 
 A handler may override either default snapshot delay. See

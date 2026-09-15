@@ -3,6 +3,7 @@ import type * as THREE from "three";
 import type {
   UVMap,
   UVMapListener,
+  UVRegion,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -39,6 +40,12 @@ export class RegionPreviewGallery {
   #disposed = false;
 
   readonly #onRegionCreated: UVMapListener<"region-created"> = ({ region }) => {
+    this.#addPreview(region);
+  };
+
+  #addPreview(
+    region: UVRegion
+  ): void {
     // Destroy a stale actor before replacing its preview.
     const stale = this.#previews.get(region.id);
     if (stale) {
@@ -62,7 +69,7 @@ export class RegionPreviewGallery {
     this.#relayout();
     preview.setBorderColor(this.#appearance.borderColor);
     preview.setRotating(this.#rotating);
-  };
+  }
 
   readonly #onRegionDeleted: UVMapListener<"region-deleted"> = ({ region }) => {
     const preview = this.#previews.get(region.id);
@@ -91,6 +98,13 @@ export class RegionPreviewGallery {
     uv.on("region-created", this.#onRegionCreated);
     uv.on("region-deleted", this.#onRegionDeleted);
     uv.on("selection-changed", this.#onSelectionChanged);
+
+    for (const region of uv.regions) {
+      this.#addPreview(region);
+    }
+    for (const [regionId, preview] of this.#previews) {
+      preview.setSelected(regionId === uv.selectedRegionId);
+    }
   }
 
   get meshes(): THREE.Object3D[] {

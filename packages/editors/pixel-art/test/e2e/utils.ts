@@ -25,6 +25,17 @@ export interface GotoDemoOptions {
    * @default false
    */
   runtime?: boolean;
+  /**
+   * Value of the panel texture-import-policy for this page.
+   * @default "replace"
+   */
+  importPolicy?: "replace" | "add" | "ask";
+  /**
+   * Milliseconds the demo host holds a `texture-add-request` before it
+   * creates the asset, so a test can observe the panel's busy indicator.
+   * @default 0
+   */
+  addDelay?: number;
 }
 
 /**
@@ -35,7 +46,11 @@ export async function gotoDemo(
   asset: string = testAssetPath(test.info().parallelIndex),
   options: GotoDemoOptions = {}
 ): Promise<void> {
-  const { runtime = false } = options;
+  const {
+    runtime = false,
+    importPolicy = "replace",
+    addDelay = 0
+  } = options;
 
   /*
    * The demo prompts for a username via a jolly-pixel/ui <jolly-dialog>,
@@ -48,7 +63,11 @@ export async function gotoDemo(
   });
 
   const runtimeParam = runtime ? "" : "&runtime=off";
-  await page.goto(`/?empty=true&asset=${encodeURIComponent(asset)}${runtimeParam}`);
+  const addDelayParam = addDelay > 0 ? `&add-delay=${addDelay}` : "";
+  const query = `empty=true&asset=${encodeURIComponent(asset)}${runtimeParam}`;
+  await page.goto(
+    `/?${query}&import-policy=${importPolicy}${addDelayParam}`
+  );
 
   await page.waitForFunction(
     () => (window as unknown as { __pixelSyncReady?: boolean; }).__pixelSyncReady === true

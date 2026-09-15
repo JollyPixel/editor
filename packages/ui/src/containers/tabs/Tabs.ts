@@ -2,6 +2,7 @@
 import {
   LitElement,
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -17,6 +18,7 @@ import type { Tab } from "./Tab.ts";
 import { tabsStyles } from "./Tabs.styles.ts";
 import { nextEnabledIndex } from "../../controls/roving.ts";
 import { isButtonElement } from "../../dom.ts";
+import "../../icon/Icon.ts";
 
 // CONSTANTS
 let kTabsId = 0;
@@ -61,18 +63,41 @@ export class Tabs extends LitElement {
         @keydown=${this.#onKeyDown}
       >
         ${this._tabs.map((tab, index) => html`
-          <button
-            id=${this.#buttonId(index)}
+          <div
+            class="item"
             part=${tab.value === this.value ? "tab tab-selected" : "tab"}
-            type="button"
-            role="tab"
-            aria-controls=${this.#panelId(index)}
-            aria-selected=${String(tab.value === this.value)}
-            tabindex=${tab.value === this.value ? "0" : "-1"}
-            ?disabled=${tab.disabled}
-            data-index=${index}
-            @click=${this.#onSelect}
-          >${tab.label}</button>
+            ?data-closable=${tab.closable}
+            ?data-disabled=${tab.disabled}
+            ?data-selected=${tab.value === this.value}
+          >
+            <button
+              id=${this.#buttonId(index)}
+              class="label"
+              type="button"
+              role="tab"
+              aria-controls=${this.#panelId(index)}
+              aria-selected=${String(tab.value === this.value)}
+              tabindex=${tab.value === this.value ? "0" : "-1"}
+              ?disabled=${tab.disabled}
+              title=${tab.tooltip || nothing}
+              data-index=${index}
+              @click=${this.#onSelect}
+              @mousedown=${this.#onMouseDown}
+              @auxclick=${this.#onAuxClick}
+            >${tab.label}</button>
+            ${tab.closable ? html`
+              <button
+                class="close"
+                part=${tab.value === this.value ? "close close-selected" : "close"}
+                type="button"
+                tabindex="-1"
+                aria-label=${`Close ${tab.label}`}
+                ?disabled=${tab.disabled}
+                data-index=${index}
+                @click=${this.#onCloseClick}
+              ><jolly-icon name="close" aria-hidden="true"></jolly-icon></button>
+            ` : nothing}
+          </div>
         `)}
       </div>
       <div class="panels">
@@ -84,6 +109,7 @@ export class Tabs extends LitElement {
   protected override willUpdate(
     changed: Map<PropertyKey, unknown>
   ): void {
+    this.#refreshTabs();
     if (changed.has("value") || changed.has("_tabs")) {
       this.value = this.#resolveValue();
     }
@@ -94,9 +120,25 @@ export class Tabs extends LitElement {
   }
 
   #onSlotChange = () => {
-    this._tabs = this._slot.assignedElements({ flatten: true })
-      .filter((element): element is Tab => element.tagName === "JOLLY-TAB");
+    this.#refreshTabs();
   };
+
+  #refreshTabs(): void {
+    const slot = this._slot;
+    if (!slot) {
+      return;
+    }
+
+    const tabs = slot.assignedElements({ flatten: true })
+      .filter((element): element is Tab => element.tagName === "JOLLY-TAB");
+    const unchanged = tabs.length === this._tabs.length &&
+      tabs.every((tab, index) => tab === this._tabs[index]);
+    if (unchanged) {
+      return;
+    }
+
+    this._tabs = tabs;
+  }
 
   #resolveValue(): string {
     if (this._tabs.length === 0) {
@@ -137,6 +179,61 @@ export class Tabs extends LitElement {
     );
     this.#selectIndex(index, true);
   };
+
+  #onMouseDown = (
+    event: MouseEvent
+  ) => {
+    if (event.button === 1 && this.#closableIndex(event) !== -1) {
+      event.preventDefault();
+    }
+  };
+
+  #onAuxClick = (
+    event: MouseEvent
+  ) => {
+    if (event.button !== 1) {
+      return;
+    }
+
+    const index = this.#closableIndex(event);
+    if (index !== -1) {
+      event.preventDefault();
+      this.#requestClose(index);
+    }
+  };
+
+  #onCloseClick = (
+    event: MouseEvent
+  ) => {
+    event.stopPropagation();
+    const index = this.#closableIndex(event);
+    if (index !== -1) {
+      this.#requestClose(index);
+    }
+  };
+
+  #closableIndex(
+    event: MouseEvent
+  ): number {
+    if (!isButtonElement(event.currentTarget)) {
+      return -1;
+    }
+
+    const index = Number(event.currentTarget.dataset.index);
+    const tab = this._tabs[index];
+
+    return tab !== undefined && tab.closable && !tab.disabled ? index : -1;
+  }
+
+  #requestClose(
+    index: number
+  ): void {
+    emitContainerEvent(
+      this,
+      "jolly-tab-close",
+      { value: this._tabs[index].value }
+    );
+  }
 
   #onKeyDown = (
     event: KeyboardEvent

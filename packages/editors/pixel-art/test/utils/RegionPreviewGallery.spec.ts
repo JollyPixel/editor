@@ -121,6 +121,25 @@ describe("RegionPreviewGallery", () => {
     assert.strictEqual(gallery.meshes.length, 1);
   });
 
+  test("previews regions that exist before construction", () => {
+    const uv = createUv();
+    uv.create({ id: "first", width: 16, height: 16 });
+    uv.create({ id: "second", width: 16, height: 16 });
+    uv.select("second");
+    const factory = new FakePreviewFactory();
+    const gallery = new RegionPreviewGallery({
+      previewFactory: factory,
+      canvasManager: {
+        uv,
+        textureSize: { x: 64, y: 64 }
+      }
+    });
+
+    assert.strictEqual(gallery.meshes.length, 2);
+    assert.strictEqual(factory.previews[0].selected, false);
+    assert.strictEqual(factory.previews[1].selected, true);
+  });
+
   test("hands region tracking to each preview", () => {
     const uv = createUv();
     const factory = new FakePreviewFactory();

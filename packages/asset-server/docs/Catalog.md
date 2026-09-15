@@ -46,7 +46,8 @@ server.register(new CatalogExtension({
 - `id` overrides the room name. Defaults to `CATALOG_ROOM`.
 
 `createAssetBackend().attach(server)` registers this room with the backend
-writer for the usual setup.
+writer for the usual setup, capped by the `catalogMaxContentBytes` backend
+option.
 
 ### Commands
 

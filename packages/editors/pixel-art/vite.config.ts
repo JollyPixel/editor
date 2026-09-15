@@ -24,6 +24,7 @@ import {
 } from "./test/e2e/constants.ts";
 
 // CONSTANTS
+const kCatalogMaxContentBytes = 32 * 1024 * 1024;
 const kCanvasPaths = [
   DEMO_ASSET_PATH,
   ...Array.from(
@@ -65,7 +66,10 @@ export default defineConfig({
       ],
       seed: Object.fromEntries(
         kCanvasPaths.map((assetPath) => [assetPath, blankCanvas])
-      )
+      ),
+      backend: {
+        catalogMaxContentBytes: kCatalogMaxContentBytes
+      }
     })
   ]
 });

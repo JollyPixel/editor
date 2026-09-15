@@ -3,6 +3,10 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../../theme/styles/fallbacks.ts";
+import {
+  focusRing,
+  truncate
+} from "../../theme/styles/mixins.ts";
 
 export const tabsStyles = css`
   :host {
@@ -28,61 +32,129 @@ export const tabsStyles = css`
     flex-direction: column;
   }
 
-  button {
+  .item {
     position: relative;
     min-height: var(--jolly-control-height, 20px);
-    padding: 0 var(--jolly-space-2, 8px);
-    border: 0;
-    border-bottom: 0;
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    align-items: stretch;
+    border-radius: var(--jolly-radius-sm, 2px) var(--jolly-radius-sm, 2px) 0 0;
     background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
+    color: var(--jolly-text-muted, ${kFallback.text});
+    text-align: center;
     transition:
       background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease),
       color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
 
-  button::after {
+  .item::after {
     position: absolute;
-    right: var(--jolly-space-2, 8px);
+    right: 0;
     bottom: 0;
-    left: var(--jolly-space-2, 8px);
+    left: 0;
     height: 2px;
     background: transparent;
     content: "";
   }
 
-  button:hover:not(:disabled) {
-    background: var(--jolly-control-bg-hover, ${kFallback.controlBg});
+  .item:hover:not([data-disabled]) {
+    background: var(--jolly-tab-bg-hover, ${kFallback.controlBg});
+    color: var(--jolly-text, ${kFallback.text});
   }
 
-  button[aria-selected="true"] {
-    background: var(--jolly-control-bg, ${kFallback.controlBg});
+  .item:has(button:focus-visible) {
+    ${focusRing}
+
+    outline-offset: -2px;
+  }
+
+  .item[data-selected] {
+    background: var(--jolly-tab-selected-bg, ${kFallback.folderHeaderBg});
     color: var(--jolly-accent-text);
   }
 
-  button[aria-selected="true"]::after {
+  .item[data-selected]:hover {
+    background: var(--jolly-tab-selected-bg-hover, ${kFallback.folderHeaderBgHover});
+    color: var(--jolly-accent-text);
+  }
+
+  .item[data-selected]::after {
     background: var(--jolly-accent-fill);
   }
 
-  :host([orientation="vertical"]) button::after {
-    top: var(--jolly-space-1, 4px);
+  .item[data-disabled] {
+    opacity: 0.5;
+  }
+
+  :host([orientation="vertical"]) .item {
+    border-radius: var(--jolly-radius-sm, 2px) 0 0 var(--jolly-radius-sm, 2px);
+  }
+
+  :host([orientation="vertical"]) .item::after {
+    top: 0;
     right: 0;
-    bottom: var(--jolly-space-1, 4px);
+    bottom: 0;
     left: auto;
     width: 2px;
     height: auto;
   }
 
-  button:disabled {
-    opacity: 0.5;
-    cursor: default;
+  button {
+    padding: 0 var(--jolly-space-2, 8px);
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
   }
 
   button:focus-visible {
-    background: var(--jolly-control-bg-focus, ${kFallback.controlBg});
     outline: none;
+  }
+
+  button:disabled {
+    cursor: default;
+  }
+
+  .label {
+    ${truncate}
+
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  :host(:not([orientation="vertical"])) .item[data-closable] .label {
+    padding-inline-end: var(--jolly-space-1, 4px);
+  }
+
+  .close {
+    display: inline-grid;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    padding: 0;
+    border-radius: 50%;
+    margin: auto var(--jolly-space-1, 4px) auto 0;
+    place-items: center;
+    color: inherit;
+    opacity: 0.6;
+    transition:
+      background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease),
+      color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease),
+      opacity var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+  }
+
+  .close jolly-icon {
+    width: 8px;
+    height: 8px;
+  }
+
+  .close:hover:not(:disabled) {
+    background: var(--jolly-tab-close-bg-hover, ${kFallback.tabCloseBgHover});
+    color: var(--jolly-tab-close-fg-hover, ${kFallback.inkDanger});
+    opacity: 1;
   }
 
   .panels {

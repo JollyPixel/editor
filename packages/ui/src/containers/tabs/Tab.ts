@@ -3,12 +3,21 @@ import {
   LitElement,
   css,
   html,
+  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
   customElement,
   property
 } from "lit/decorators.js";
+
+// CONSTANTS
+const kStripProperties = [
+  "label",
+  "disabled",
+  "closable",
+  "tooltip"
+] as const;
 
 @customElement("jolly-tab")
 export class Tab extends LitElement {
@@ -36,6 +45,12 @@ export class Tab extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare active: boolean;
 
+  @property({ type: Boolean, reflect: true })
+  declare closable: boolean;
+
+  @property({ type: String })
+  declare tooltip: string;
+
   constructor() {
     super();
 
@@ -43,11 +58,26 @@ export class Tab extends LitElement {
     this.value = "";
     this.disabled = false;
     this.active = false;
+    this.closable = false;
+    this.tooltip = "";
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.setAttribute("role", "tabpanel");
+  }
+
+  protected override updated(
+    changed: PropertyValues<this>
+  ): void {
+    const parent = this.parentElement;
+    if (
+      parent instanceof LitElement &&
+      parent.tagName === "JOLLY-TABS" &&
+      kStripProperties.some((key) => changed.has(key))
+    ) {
+      parent.requestUpdate();
+    }
   }
 
   override render(): TemplateResult {

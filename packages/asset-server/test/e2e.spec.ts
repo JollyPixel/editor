@@ -25,6 +25,7 @@ import {
   CATALOG_CHANGED,
   CATALOG_CREATE,
   CATALOG_DELETE,
+  CATALOG_REJECTED,
   CATALOG_ROOM,
   IDENTITY_SIDECAR_PATH,
   PROJECTION_STATE_PATH,
@@ -314,6 +315,51 @@ describe("asset-server — end to end", () => {
       payload: { type: "deleted" }
     });
     await assert.rejects(fs.access(path.join(workspace.root, "a.counter")));
+
+    await server.close();
+  });
+
+  test("catalogMaxContentBytes caps catalog:create payloads", async() => {
+    await using workspace = await tempWorkspace();
+    using eventStore = EventStore.persistence.memory();
+
+    await using backend = await createAssetBackend({
+      source: new FilesystemAssetSource(workspace.root),
+      eventStore,
+      watch: false,
+      catalogMaxContentBytes: 4
+    });
+    const server = new Server();
+    backend.attach(server);
+
+    const author = recorder("A");
+    server.handleConnect(author, { subject: author.id, role: "default" });
+    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+
+    for (const [path, content] of [["small.bin", "1234"], ["large.bin", "12345"]]) {
+      await server.handleMessage("A", {
+        room: CATALOG_ROOM,
+        kind: "message",
+        payload: {
+          type: CATALOG_CREATE,
+          requestId: path,
+          path,
+          content: encodeContent(bytes(content))
+        }
+      });
+    }
+    await backend.flush();
+
+    const replies = author.received
+      .map((message) => (message as { payload?: { type: string; requestId?: string; }; }).payload)
+      .filter((payload) => payload?.requestId !== undefined);
+    assert.deepEqual(
+      replies.map((payload) => [payload?.requestId, payload?.type]),
+      [
+        ["small.bin", CATALOG_APPLIED],
+        ["large.bin", CATALOG_REJECTED]
+      ]
+    );
 
     await server.close();
   });

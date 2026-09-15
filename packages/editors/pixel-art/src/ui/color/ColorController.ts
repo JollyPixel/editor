@@ -84,9 +84,16 @@ export class ColorController implements ReactiveController {
       return;
     }
 
+    const seeded = this.#canvas !== null;
     this.#canvas = canvas;
-    this.#readBrush();
+    if (seeded) {
+      canvas.brush.primary.set(this.#foreground.hex, this.#foreground.opacity);
+      canvas.brush.secondary.set(this.#background.hex, this.#background.opacity);
 
+      return;
+    }
+
+    this.#readBrush();
     if (this.#docked) {
       this.#undockedBackground = this.#background;
       this.#applyActive(this.#foreground);

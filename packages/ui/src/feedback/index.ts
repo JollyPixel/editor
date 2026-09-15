@@ -18,3 +18,6 @@ export type {
 export {
   Progress
 } from "./Progress.ts";
+export {
+  Spinner
+} from "./Spinner.ts";

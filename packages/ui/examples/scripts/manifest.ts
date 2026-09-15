@@ -26,6 +26,8 @@ import { FOLDER_FLUSH_EXAMPLE } from "./examples/containers/folderFlush.ts";
 import { FOLDER_COLLAPSIBLE_EXAMPLE } from "./examples/containers/folderCollapsible.ts";
 import { TABS_EXAMPLE } from "./examples/containers/tabs.ts";
 import { TAB_EXAMPLE } from "./examples/containers/tab.ts";
+import { TABS_CLOSABLE_EXAMPLE } from "./examples/containers/tabsClosable.ts";
+import { TABS_DYNAMIC_EXAMPLE } from "./examples/containers/tabsDynamic.ts";
 import { DOCK_EXAMPLE } from "./examples/containers/dock.ts";
 import { FLOATING_EXAMPLE } from "./examples/containers/floating.ts";
 import { DIALOG_EXAMPLE } from "./examples/containers/dialog.ts";
@@ -52,6 +54,7 @@ import { GRAPH_EXAMPLE } from "./examples/monitors/graph.ts";
 import { FACADE_PARITY_EXAMPLE } from "./examples/scenarios/facadeParity.ts";
 import { STATS_CYCLE_EXAMPLE } from "./examples/scenarios/statsCycle.ts";
 import { PROGRESS_EXAMPLE } from "./examples/feedback/progress.ts";
+import { SPINNER_EXAMPLE } from "./examples/feedback/spinner.ts";
 import { LOG_EXAMPLE } from "./examples/feedback/log.ts";
 import {
   VECTOR2_EXAMPLE,
@@ -96,6 +99,8 @@ export const manifest: readonly GalleryExample[] = [
   FOLDER_COLLAPSIBLE_EXAMPLE,
   TABS_EXAMPLE,
   TAB_EXAMPLE,
+  TABS_CLOSABLE_EXAMPLE,
+  TABS_DYNAMIC_EXAMPLE,
   DOCK_EXAMPLE,
   FLOATING_EXAMPLE,
   DIALOG_EXAMPLE,
@@ -123,6 +128,7 @@ export const manifest: readonly GalleryExample[] = [
   MONITOR_EXAMPLE,
   GRAPH_EXAMPLE,
   PROGRESS_EXAMPLE,
+  SPINNER_EXAMPLE,
   LOG_EXAMPLE,
   VECTOR2_EXAMPLE,
   VECTOR2_XZ_EXAMPLE,
