@@ -59,7 +59,8 @@ room.send({ hello: "world" });
 - [Extension](./docs/Extension.md): room-side base class, including worker-mode extensions
 - [Rights](./docs/Rights.md): role-based access control
 - [Transports](./docs/Transports.md): Vite plugin and websocket wiring
-- [SyncAdapter](./docs/sync/SyncAdapter.md): client-side sync sessions
+- [CommandSync](./docs/sync/CommandSync.md): client-side command sync
+- [PresenceChannel](./docs/PresenceChannel.md): typed per-peer presence
 - [Conflicts](./docs/sync/Conflicts.md): server-side conflict resolution
 
 [ARCHITECTURE.md](./ARCHITECTURE.md) covers the wire format and connection lifecycle.

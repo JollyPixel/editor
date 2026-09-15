@@ -23,14 +23,14 @@ const room = client.room<
   VoxelServerMessage
 >(assetRoomName("voxelmap", assetId));
 
-const sync = new VoxelSyncClient({ room });
-sync.attach(engine);
+const sync = new VoxelSyncClient({ room, engine });
+room.join();
 ```
 
-`attach()` preserves the engine's existing `onLayerUpdated` listener and chains
-network sending after it. `detach()` restores that listener. Call `destroy()`
-when the client is no longer needed; it detaches, removes the message listener,
-and leaves the room.
+The constructor preserves the engine's existing `onLayerUpdated` listener and
+chains network sending after it. Call `destroy()` when the client is no longer
+needed; it restores that listener, removes the message listener, and leaves the
+room.
 
 ## Register the server
 
@@ -88,7 +88,7 @@ engine.defineBlock(definition);
 ```
 
 `defineBlock()`, `defineBlocks()`, and `removeBlock()` emit `onBlockUpdated`,
-which `attach()` chains, so the edit publishes itself and a peer's arrives on
+which the client chains, so the edit publishes itself and a peer's arrives on
 the same hook. Write straight to `engine.blockRegistry` only for definitions
 each client derives on its own, such as tileset defaults, which must not be
 published.

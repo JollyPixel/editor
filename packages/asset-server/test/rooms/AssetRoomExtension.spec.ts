@@ -43,7 +43,7 @@ const kBinding: AssetRoomBinding = {
 
 interface Command {
   action: string;
-  by?: string;
+  clientId?: string;
 }
 
 interface Harness {
@@ -103,19 +103,14 @@ function harness(
       return { value: 7 };
     },
 
-    arbitrate(command, clientId) {
+    arbitrate(command) {
       if (!accepts) {
         return null;
       }
 
-      const stamped: Command = {
-        ...command,
-        by: clientId
-      };
-
       return {
-        command: stamped,
-        commit: () => committed.push(stamped)
+        command,
+        commit: () => committed.push(command)
       };
     },
 
@@ -240,7 +235,7 @@ describe("AssetRoomExtension", () => {
         eventType: "counter.command",
         eventData: {
           action: "increment",
-          by: "alice"
+          clientId: "alice"
         },
         actor: {
           type: "user",
@@ -260,7 +255,7 @@ describe("AssetRoomExtension", () => {
         type: "command",
         data: {
           action: "increment",
-          by: "alice"
+          clientId: "alice"
         }
       }
     ]);
@@ -343,9 +338,26 @@ describe("AssetRoomExtension", () => {
     assert.deepEqual(broadcast, [
       {
         type: "command",
-        data: { action: "increment" }
+        data: {
+          action: "increment",
+          clientId: "alice"
+        }
       }
     ]);
+  });
+
+  test("overwrites a client-supplied clientId with the sender id", async() => {
+    const { extension, context, appended } = harness();
+
+    await extension.onMessage("alice", {
+      action: "increment",
+      clientId: "bob"
+    }, context);
+
+    assert.deepEqual(appended[0].eventData, {
+      action: "increment",
+      clientId: "alice"
+    });
   });
 });
 

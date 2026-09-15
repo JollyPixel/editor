@@ -6,11 +6,7 @@ import {
   type AssetRecord
 } from "@jolly-pixel/asset";
 import {
-  PixelCursorSync,
-  PixelStrokeGhostSync,
-  PixelSyncClient,
-  SelectionGhostSync,
-  UVGhostSync,
+  PixelCollaboration,
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
@@ -29,7 +25,6 @@ const kUsernameStorage = new LocalStorageAdapter({
 
 declare global {
   interface Window {
-    /** Set after the initial collaboration snapshot is applied. */
     __pixelSyncReady?: boolean;
   }
 }
@@ -57,28 +52,18 @@ export async function initializeDemoSync(
     console.log(`[pixel-sync] peer left: ${event.clientId}`);
   });
 
-  const syncClient = new PixelSyncClient({ room });
-  syncClient.attach(canvasManager);
+  const { sync } = new PixelCollaboration({
+    room,
+    canvas: canvasManager
+  });
   const {
     promise: syncReady,
     resolve: resolveSyncReady
   } = Promise.withResolvers<void>();
-  syncClient.on("ready", () => {
+  sync.on("ready", () => {
     window.__pixelSyncReady = true;
     resolveSyncReady();
   });
-
-  const cursorSync = new PixelCursorSync({ room });
-  cursorSync.attach(canvasManager);
-
-  const strokeGhostSync = new PixelStrokeGhostSync({ room });
-  strokeGhostSync.attach(canvasManager);
-
-  const uvGhostSync = new UVGhostSync({ room });
-  uvGhostSync.attach(canvasManager);
-
-  const selectionGhostSync = new SelectionGhostSync({ room });
-  selectionGhostSync.attach(canvasManager);
 
   return syncReady;
 }

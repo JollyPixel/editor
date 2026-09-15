@@ -8,9 +8,6 @@ import type {
   RoomRights
 } from "@jolly-pixel/network/client";
 
-/**
- * Room test double that serializes presence patches like the wire.
- */
 export class FakeRoom<
   ClientMessage = unknown,
   ServerMessage = unknown
@@ -44,7 +41,7 @@ export class FakeRoom<
   }
 
   join(): void {
-    // No transport to join.
+    return void 0;
   }
 
   send(
@@ -113,6 +110,7 @@ export class FakeRoom<
   emitLeft(
     clientId: string
   ): void {
+    this.peers.delete(clientId);
     this.emit("peer-left", { clientId });
   }
 

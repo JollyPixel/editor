@@ -1,6 +1,6 @@
 # PixelSyncClient
 
-Connects one `PixelArtCanvas` to one `@jolly-pixel/network` room. It extends the network package's [`SyncAdapter`](../../../../../network/docs/sync/SyncAdapter.md).
+Connects one `PixelArtCanvas` to one `@jolly-pixel/network` room. It extends the network package's [`CommandSync`](../../../../../network/docs/sync/CommandSync.md).
 
 ## Constructor
 
@@ -9,10 +9,11 @@ new PixelSyncClient(options: PixelSyncClientOptions)
 
 interface PixelSyncClientOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
+  canvas: PixelArtCanvas;
 }
 ```
 
-The constructor starts listening for room messages. It does not join or leave the room.
+The constructor chains `canvas.onBufferUpdated` and starts listening for room messages. It does not join or leave the room, so construct it before `room.join()`.
 
 ## Types
 
@@ -26,72 +27,54 @@ interface PixelBufferSnapshot {
   uvRegions: UVRegionData[];
 }
 
+type PixelAssetNotice =
+  | AssetRoomDeletedMessage
+  | AssetRoomRejectedMessage;
+
 type PixelServerMessage = NetworkServerMessage<
   PixelNetworkCommand,
-  PixelBufferSnapshot
+  PixelBufferSnapshot,
+  PixelAssetNotice
 >;
 ```
 
 `pixels` contains base64-encoded RGBA bytes. `PixelNetworkCommand` accepts the actions listed in [canvas integration](./CanvasIntegration.md#mutation-commands).
 
-## Properties
-
-### `ready`
-
-```ts
-get ready(): boolean
-```
-
-Returns whether the first snapshot message has been received. Attach the canvas before `room.join()` to ensure that snapshot is applied.
-
 ## Events
 
-### `"ready"`
+| Event | Payload | When |
+|---|---|---|
+| `"snapshot"` | `PixelBufferSnapshot` | every snapshot, after `canvas.loadSnapshot()` |
+| `"ready"` | none | once, after the first snapshot |
+| `"command"` | `PixelNetworkCommand` | a command from another client, after `canvas.applyRemoteCommand()` |
+| `"notice"` | `PixelAssetNotice` | the room refused an edit (`rejected`) or the asset was deleted (`deleted`) |
 
-Fires once when the first snapshot message arrives.
+`ready` is `true` once the first snapshot has been applied.
 
-```ts
-sync.on("ready", listener);
-sync.off("ready", listener);
-```
+## Local edits
 
-### `"snapshot"`
+Local commands receive an incrementing `seq`, the room's `clientId`, and a timestamp. Undo and redo use the original edit timestamp. Commands echoed from the local `clientId` are ignored.
 
-Fires after every snapshot message. When a canvas is attached, its texture and UV regions have been replaced before the event fires.
+## `destroy()`
 
-```ts
-sync.on("snapshot", listener);
-sync.off("snapshot", listener);
-```
+Restores the previous `canvas.onBufferUpdated` listener and removes the room listener. It does not call `room.leave()`.
 
-## Methods
+## PixelCollaboration
 
-### `attach(canvas)`
-
-```ts
-attach(canvas: PixelArtCanvas): void
-```
-
-Attaches one canvas and chains the current `canvas.onBufferUpdated` listener. Throws when another canvas is already attached.
-
-Local commands receive an incrementing `seq`, the room's `clientId`, and a timestamp. Undo and redo use the original edit timestamp.
-
-### `detach()`
+Builds a `PixelSyncClient` and every presence helper for one canvas:
 
 ```ts
-detach(): void
+new PixelCollaboration(options: {
+  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  canvas: PixelArtCanvas;
+  label?: PeerLabel;
+  color?: PeerColor;
+})
+
+type PeerLabel = (clientId: string, profile: PeerMetadata) => string | undefined;
+type PeerColor = (clientId: string, profile: PeerMetadata) => string;
 ```
 
-Stops synchronization and restores the listener captured by `attach()`. Calling it without an attached canvas has no effect.
-
-### `destroy()`
-
-```ts
-destroy(): void
-```
-
-Calls `detach()` and removes the controller's `"message"` listener. It does not call `room.leave()`.
-
-## Remote data
-
-Snapshots call `canvas.loadSnapshot()`. Commands from another `clientId` call `canvas.applyRemoteCommand()`; commands echoed from the local `clientId` are ignored.
+- `sync` is the `PixelSyncClient`, and `ready` mirrors `sync.ready`.
+- `label` and `color` apply to cursors, and `color` to selection and UV ghosts. They default to `profile.username` and a color keyed on `clientId`.
+- `destroy()` destroys every helper. It does not leave the room.

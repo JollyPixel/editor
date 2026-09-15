@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { Room } from "@jolly-pixel/network/client";
 import {
   isVec2,
   type PeerStrokePixel,
@@ -6,15 +7,16 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import {
-  PeerPresenceGhostSync,
-  type PeerPresenceGhostSyncOptions
-} from "./PeerPresenceGhostSync.ts";
+import { PeerGhostStream } from "./PeerGhostStream.ts";
 import type {
-  PixelNetworkCommand
+  PixelNetworkCommand,
+  PixelServerMessage
 } from "../types.ts";
 
-export type PixelStrokeGhostSyncOptions = PeerPresenceGhostSyncOptions;
+export interface PixelStrokeGhostSyncOptions {
+  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  canvas: PixelArtCanvas;
+}
 
 function isPeerStrokePixel(
   value: unknown
@@ -22,89 +24,66 @@ function isPeerStrokePixel(
   return isVec2(value) && "color" in value;
 }
 
-function isPeerStrokePixels(
+function decodeStrokeGhost(
   value: unknown
-): value is PeerStrokePixel[] {
-  return Array.isArray(value) && value.every(isPeerStrokePixel);
+): PeerStrokePixel[] | undefined {
+  return Array.isArray(value) && value.every(isPeerStrokePixel) ?
+    value :
+    undefined;
 }
 
-/**
- * Streams non-authoritative stroke ghosts through presence only.
- */
-export class PixelStrokeGhostSync extends PeerPresenceGhostSync<PeerStrokePixel[]> {
-  protected readonly presenceKey = "strokeGhost";
-
+export class PixelStrokeGhostSync {
+  #canvas: PixelArtCanvas;
+  #stream: PeerGhostStream<PeerStrokePixel[]>;
   #previousHandler: ((pixels: PeerStrokePixel[]) => void) | undefined;
 
   #handleStrokeProgress = (
     pixels: PeerStrokePixel[]
   ): void => {
     this.#previousHandler?.(pixels);
-    this.reportLocal(pixels);
+    if (pixels.length === 0) {
+      this.#stream.cancelPending();
+    }
+    else {
+      this.#stream.report(pixels);
+    }
   };
 
-  protected isEmptyPayload(
-    pixels: PeerStrokePixel[]
-  ): boolean {
-    return pixels.length === 0;
-  }
+  constructor(
+    options: PixelStrokeGhostSyncOptions
+  ) {
+    const { canvas } = options;
 
-  protected subscribeLocal(
-    canvas: PixelArtCanvas
-  ): void {
+    this.#canvas = canvas;
+    this.#stream = new PeerGhostStream({
+      room: options.room,
+      key: "strokeGhost",
+      decode: decodeStrokeGhost,
+      layer: canvas.peerPresence.strokes,
+      reconcile: (command) => this.#reconcile(command)
+    });
     this.#previousHandler = canvas.onStrokeProgress;
     canvas.onStrokeProgress = this.#handleStrokeProgress;
   }
 
-  protected unsubscribeLocal(
-    canvas: PixelArtCanvas
-  ): void {
-    canvas.onStrokeProgress = this.#previousHandler;
-    this.#previousHandler = undefined;
+  destroy(): void {
+    this.#canvas.onStrokeProgress = this.#previousHandler;
+    this.#stream.destroy();
   }
 
-  protected decodePayload(
-    value: unknown
-  ): PeerStrokePixel[] | undefined {
-    return isPeerStrokePixels(value) ? value : undefined;
-  }
-
-  protected applyGhost(
-    clientId: string,
-    pixels: PeerStrokePixel[],
-    canvas: PixelArtCanvas
-  ): void {
-    canvas.peerPresence.strokes.set(clientId, pixels);
-  }
-
-  protected clearGhost(
-    clientId: string
-  ): void {
-    this.canvas?.peerPresence.strokes.remove(clientId);
-  }
-
-  protected clearAllGhosts(): void {
-    this.canvas?.peerPresence.strokes.clearAll();
-  }
-
-  protected reconcileCommand(
+  #reconcile(
     command: PixelNetworkCommand
   ): void {
-    if (!this.canvas) {
-      return;
-    }
-
     switch (command.action) {
       case "stroke":
-        this.canvas.peerPresence.strokes.removeOverlapping(
+        this.#canvas.peerPresence.strokes.removeOverlapping(
           command.metadata.positions
         );
         break;
       case "global-fill":
       case "resized":
       case "texture-replaced":
-        this.clearLeases();
-        this.clearAllGhosts();
+        this.#stream.clearRemote();
         break;
       default:
         break;

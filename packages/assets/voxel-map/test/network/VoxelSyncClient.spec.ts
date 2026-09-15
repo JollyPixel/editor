@@ -35,7 +35,6 @@ interface MockEngine {
   defineBlocks(defs: Iterable<BlockDefinition>): void;
   removeBlock(blockId: number): boolean;
   moveBlock(blockId: number, toIndex: number): boolean;
-  // Test helper: simulate a local mutation firing the hook
   triggerLocal(event: VoxelLayerHookEvent): void;
   appliedCommands: VoxelLayerHookEvent[];
   loadedSnapshots: VoxelWorldJSON[];
@@ -172,13 +171,13 @@ function createMockRoom(clientId = "client-A"): MockRoom {
       listeners.get(type)?.delete(listener as (payload: unknown) => void);
     },
     join() {
-      // Unused by VoxelSyncClient.
+      return void 0;
     },
     send(cmd) {
       sentCommands.push(cmd);
     },
     updatePresence() {
-      // Unused by VoxelSyncClient.
+      return void 0;
     },
     leave() {
       room.left = true;
@@ -198,35 +197,25 @@ function makeEmptySnapshot(): VoxelWorldJSON {
   return { version: 1, chunkSize: 16, tilesets: [], layers: [] };
 }
 
-describe("VoxelSyncClient — attach", () => {
+describe("VoxelSyncClient — construction", () => {
   it("sets engine.onLayerUpdated", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
 
     assert.equal(engine.onLayerUpdated, undefined);
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
     assert.ok(engine.onLayerUpdated !== undefined);
-  });
-
-  it("throws when an engine is already attached", () => {
-    const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(createMockEngine()));
-
-    assert.throws(() => client.attach(asEngine(createMockEngine())));
   });
 });
 
 describe("VoxelSyncClient — chaining onLayerUpdated", () => {
-  it("attach preserves an existing local handler instead of replacing it", () => {
+  it("construction preserves an existing local handler instead of replacing it", () => {
     const engine = createMockEngine();
     const received: VoxelLayerHookEvent[] = [];
     engine.onLayerUpdated = (event) => received.push(event);
 
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.triggerLocal(makeAddedCommand("L1"));
 
@@ -234,7 +223,7 @@ describe("VoxelSyncClient — chaining onLayerUpdated", () => {
     assert.equal(room.sentCommands.length, 1);
   });
 
-  it("detach restores the handler that was present before attach", () => {
+  it("destroy restores the handler that was present before construction", () => {
     const engine = createMockEngine();
     const received: VoxelLayerHookEvent[] = [];
     function original(event: VoxelLayerHookEvent): void {
@@ -243,9 +232,8 @@ describe("VoxelSyncClient — chaining onLayerUpdated", () => {
     engine.onLayerUpdated = original;
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
-    client.detach();
+    const client = new VoxelSyncClient({ room, engine: asEngine(engine) });
+    client.destroy();
 
     assert.equal(engine.onLayerUpdated, original);
 
@@ -253,20 +241,13 @@ describe("VoxelSyncClient — chaining onLayerUpdated", () => {
     assert.equal(received.length, 1);
     assert.equal(room.sentCommands.length, 0);
   });
-
-  it("detach without an attached engine is a no-op", () => {
-    const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    assert.doesNotThrow(() => client.detach());
-  });
 });
 
 describe("VoxelSyncClient — local mutations forwarded to the room", () => {
-  it("sends a command when an attached engine fires a voxel-set", () => {
+  it("sends a command when the engine fires a voxel-set", () => {
     const engine = createMockEngine();
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.triggerLocal({
       action: "voxel-set",
@@ -290,8 +271,7 @@ describe("VoxelSyncClient — local mutations forwarded to the room", () => {
     const engine = createMockEngine();
     const room = createMockRoom("client-B");
     const before = Date.now();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.triggerLocal(makeAddedCommand("Layer1"));
 
@@ -304,8 +284,7 @@ describe("VoxelSyncClient — local mutations forwarded to the room", () => {
   it("increments seq per outbound command", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.triggerLocal(makeAddedCommand("L1"));
     engine.triggerLocal(makeAddedCommand("L2"));
@@ -321,8 +300,7 @@ describe("VoxelSyncClient — remote commands", () => {
   it("applies commands from a different client to the engine", () => {
     const engine = createMockEngine();
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     const remoteCmd: VoxelNetworkCommand = voxelSetCmd({
       x: 5,
@@ -343,8 +321,7 @@ describe("VoxelSyncClient — remote commands", () => {
   it("does NOT apply commands from the local client (echo prevention)", () => {
     const engine = createMockEngine();
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     const echoCmd: VoxelNetworkCommand = voxelSetCmd({
       clientId: "client-A",
@@ -360,8 +337,7 @@ describe("VoxelSyncClient — remote commands", () => {
   it("ignores a world-replace command (arrives as a snapshot instead, not a command)", () => {
     const engine = createMockEngine();
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "world-replace",
@@ -380,8 +356,7 @@ describe("VoxelSyncClient — remote commands", () => {
     engine.onLayerUpdated = (event) => received.push(event);
 
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand(
       voxelSetCmd({ clientId: "client-B" })
@@ -398,8 +373,7 @@ describe("VoxelSyncClient — remote commands", () => {
     engine.onLayerUpdated = (event) => received.push(event);
 
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand(
       voxelSetCmd({ clientId: "client-A" })
@@ -407,28 +381,13 @@ describe("VoxelSyncClient — remote commands", () => {
 
     assert.equal(received.length, 0);
   });
-
-  it("ignores commands when no engine is attached", () => {
-    const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room });
-
-    assert.doesNotThrow(() => {
-      room.simulateCommand({
-        ...makeAddedCommand("Ground"),
-        clientId: "client-B",
-        seq: 1,
-        timestamp: Date.now()
-      });
-    });
-  });
 });
 
 describe("VoxelSyncClient — snapshot loading", () => {
   it("calls engine.load when a snapshot arrives", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     const snapshot = makeEmptySnapshot();
     room.simulateSnapshot(snapshot);
@@ -436,21 +395,12 @@ describe("VoxelSyncClient — snapshot loading", () => {
     assert.equal(engine.loadedSnapshots.length, 1);
     assert.equal(engine.loadedSnapshots[0], snapshot);
   });
-
-  it("ignores a snapshot when no engine is attached", () => {
-    const room = createMockRoom();
-    new VoxelSyncClient({ room });
-
-    assert.doesNotThrow(() => {
-      room.simulateSnapshot(makeEmptySnapshot());
-    });
-  });
 });
 
 describe("VoxelSyncClient — replaceWorld", () => {
   it("sends a stamped world-replace command carrying the data", () => {
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
+    const client = new VoxelSyncClient({ room, engine: asEngine(createMockEngine()) });
 
     const data = makeEmptySnapshot();
     client.replaceWorld(data);
@@ -462,21 +412,13 @@ describe("VoxelSyncClient — replaceWorld", () => {
     assert.ok(cmd.seq >= 1);
     assert.ok("data" in cmd && cmd.data === data);
   });
-
-  it("does not require an attached engine", () => {
-    const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-
-    assert.doesNotThrow(() => client.replaceWorld(makeEmptySnapshot()));
-  });
 });
 
 describe("VoxelSyncClient — destroy", () => {
-  it("detaches the engine, stops listening for room messages and leaves the room", () => {
+  it("restores the engine hooks, stops listening for room messages and leaves the room", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    const client = new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     client.destroy();
 
@@ -489,8 +431,7 @@ describe("VoxelSyncClient — destroy", () => {
   it("stops forwarding local mutations after destroy", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    const client = new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     client.destroy();
     engine.triggerLocal(makeAddedCommand("L"));
@@ -503,8 +444,7 @@ describe("VoxelSyncClient — block commands", () => {
   it("publishes a local definition without an explicit send call", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.defineBlock(makeBlockDef(4, "slope"));
 
@@ -522,8 +462,7 @@ describe("VoxelSyncClient — block commands", () => {
     const engine = createMockEngine();
     engine.blockRegistry.register(makeBlockDef(4, "cube"));
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.removeBlock(99);
     assert.equal(room.sentCommands.length, 0);
@@ -540,8 +479,7 @@ describe("VoxelSyncClient — block commands", () => {
   it("publishes one command per block of a batch", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.defineBlocks([
       makeBlockDef(4, "slope"),
@@ -560,8 +498,7 @@ describe("VoxelSyncClient — block commands", () => {
     engine.onBlockUpdated = (event) => seen.push(event.action);
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.defineBlock(makeBlockDef(4, "slope"));
 
@@ -569,7 +506,7 @@ describe("VoxelSyncClient — block commands", () => {
     assert.equal(room.sentCommands.length, 1);
   });
 
-  it("restores the previous handler on detach", () => {
+  it("restores the previous handler on destroy", () => {
     const engine = createMockEngine();
     function previous(): void {
       return void 0;
@@ -578,9 +515,8 @@ describe("VoxelSyncClient — block commands", () => {
     engine.onBlockUpdated = previous;
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
-    client.detach();
+    const client = new VoxelSyncClient({ room, engine: asEngine(engine) });
+    client.destroy();
 
     assert.equal(engine.onBlockUpdated, previous);
   });
@@ -591,8 +527,7 @@ describe("VoxelSyncClient — block commands", () => {
     engine.onBlockUpdated = (event) => seen.push(event.action);
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "block-defined",
@@ -611,8 +546,7 @@ describe("VoxelSyncClient — block commands", () => {
   it("never re-publishes a peer block command", () => {
     const engine = createMockEngine();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "block-defined",
@@ -629,8 +563,7 @@ describe("VoxelSyncClient — block commands", () => {
     const engine = createMockEngine();
     engine.blockRegistry.register(makeBlockDef(4, "cube"));
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "block-removed",
@@ -650,8 +583,7 @@ describe("VoxelSyncClient — block commands", () => {
     engine.onBlockUpdated = () => notified++;
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "block-removed",
@@ -668,8 +600,7 @@ describe("VoxelSyncClient — block commands", () => {
   it("ignores the echo of its own block command", () => {
     const engine = createMockEngine();
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "block-defined",
@@ -697,8 +628,7 @@ describe("VoxelSyncClient — block reorder", () => {
     engine.blockRegistry.register(makeBlockDef(3, "cube"));
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     engine.moveBlock(3, 0);
 
@@ -720,8 +650,7 @@ describe("VoxelSyncClient — block reorder", () => {
     engine.blockRegistry.register(makeBlockDef(3, "cube"));
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "block-moved",
@@ -742,8 +671,7 @@ describe("VoxelSyncClient — block reorder", () => {
     engine.blockRegistry.register(makeBlockDef(2, "cube"));
 
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room });
-    client.attach(asEngine(engine));
+    new VoxelSyncClient({ room, engine: asEngine(engine) });
 
     room.simulateCommand({
       action: "block-moved",

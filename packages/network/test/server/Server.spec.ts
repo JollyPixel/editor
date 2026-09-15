@@ -236,7 +236,8 @@ describe("Server — peer presence", () => {
       kind: "peer-joined",
       clientId: "B",
       role: "default",
-      profile: Object.create(null)
+      profile: Object.create(null),
+      presence: {}
     }]);
     assert.deepEqual(b.sent, [{
       room: "pixel-draw",
@@ -340,7 +341,8 @@ describe("Server — peer metadata", () => {
       kind: "peer-joined",
       clientId: "B",
       role: "default",
-      profile: { username: "bob" }
+      profile: { username: "bob" },
+      presence: {}
     }]);
   });
 

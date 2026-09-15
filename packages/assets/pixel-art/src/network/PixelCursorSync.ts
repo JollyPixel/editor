@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
-import { ColorPalette } from "@jolly-pixel/color";
-import type * as network from "@jolly-pixel/network/client";
+import {
+  PresenceChannel,
+  type PresenceChange,
+  type Room
+} from "@jolly-pixel/network/client";
 import {
   isVec2,
   vec2Equal,
@@ -9,225 +12,93 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import {
+  defaultPeerColor,
+  defaultPeerLabel,
+  peerProfile,
+  type PeerColor,
+  type PeerLabel
+} from "./peerAppearance.ts";
 import type {
   PixelNetworkCommand,
   PixelServerMessage
 } from "./types.ts";
 
-// CONSTANTS
-const kPresenceCursorKey = "cursor";
-
 export interface PixelCursorSyncOptions {
-  room: network.Room<PixelNetworkCommand, PixelServerMessage>;
-  /**
-   * Extracts a display label from a peer's profile.
-   * @default reads `profile.username` when it's a string
-   */
-  label?: (profile: network.PeerMetadata) => string | undefined;
-  /**
-   * Chooses the color of a remote peer's cursor.
-   *
-   * @default a deterministic color from the built-in palette
-   */
-  color?: (
-    clientId: string,
-    profile: network.PeerMetadata
-  ) => string;
+  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  canvas: PixelArtCanvas;
+  label?: PeerLabel;
+  color?: PeerColor;
 }
 
-function defaultLabel(
-  profile: network.PeerMetadata
-): string | undefined {
-  return typeof profile.username === "string" ? profile.username : undefined;
+function decodeCursor(
+  value: unknown
+): Vec2 | null | undefined {
+  return value === null || isVec2(value) ? value : undefined;
 }
 
-/**
- * Mirrors local and remote cursor state through room presence.
- */
 export class PixelCursorSync {
-  #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
-  #label: (profile: network.PeerMetadata) => string | undefined;
-  #color: (
-    clientId: string,
-    profile: network.PeerMetadata
-  ) => string;
-  #palette = new ColorPalette();
-  #canvas: PixelArtCanvas | undefined;
+  #room: Room<PixelNetworkCommand, PixelServerMessage>;
+  #canvas: PixelArtCanvas;
+  #channel: PresenceChannel<Vec2 | null>;
+  #label: PeerLabel;
+  #color: PeerColor;
   #previousHandler: ((pos: Vec2 | null) => void) | undefined;
-  #lastSent: Vec2 | null | undefined;
-  #renderedPeers = new Set<string>();
 
   #handleCursorMove = (
     pos: Vec2 | null
   ): void => {
     this.#previousHandler?.(pos);
-    this.#reportLocal(pos);
+    this.#channel.publish(pos);
   };
 
-  #onPeerJoined = (
-    event: network.RoomPeerEvent
+  #onPeerChange = (
+    change: PresenceChange<Vec2 | null>
   ): void => {
-    this.#syncPeer(event.clientId);
-  };
-
-  #onPeerLeft = (
-    event: network.RoomPeerEvent
-  ): void => {
-    this.#removePeer(event.clientId);
-  };
-
-  #onPeerPresence = (
-    event: network.RoomPeerPresenceEvent
-  ): void => {
-    this.#applyPresencePatch(
-      event.clientId,
-      event.patch
-    );
+    if (change.value === undefined) {
+      this.#canvas.peerPresence.cursors.remove(change.clientId);
+    }
+    else {
+      this.#render(change.clientId, change.value);
+    }
   };
 
   constructor(
     options: PixelCursorSyncOptions
   ) {
     this.#room = options.room;
-    this.#label = options.label ?? defaultLabel;
-    this.#color = options.color ?? (
-      (clientId) => this.#palette.forKey(clientId)
-    );
+    this.#canvas = options.canvas;
+    this.#label = options.label ?? defaultPeerLabel;
+    this.#color = options.color ?? defaultPeerColor;
+    this.#channel = new PresenceChannel(options.room, {
+      key: "cursor",
+      decode: decodeCursor,
+      equals: vec2Equal
+    });
 
-    this.#room.on(
-      "peer-joined",
-      this.#onPeerJoined
-    );
-    this.#room.on(
-      "peer-left",
-      this.#onPeerLeft
-    );
-    this.#room.on(
-      "peer-presence",
-      this.#onPeerPresence
-    );
-  }
-
-  attach(
-    canvas: PixelArtCanvas
-  ): void {
-    if (this.#canvas) {
-      throw new Error("A canvas is already attached to this session");
+    for (const [clientId, pos] of this.#channel.values) {
+      this.#render(clientId, pos);
     }
-
-    this.#canvas = canvas;
-    this.#previousHandler = canvas.onCursorMove;
-    canvas.onCursorMove = this.#handleCursorMove;
-    for (const clientId of this.#room.peers.keys()) {
-      this.#syncPeer(clientId);
-    }
-  }
-
-  detach(): void {
-    if (!this.#canvas) {
-      return;
-    }
-
-    this.#canvas.onCursorMove = this.#previousHandler;
-    this.#clearPeers();
-    this.#canvas = undefined;
-    this.#previousHandler = undefined;
-    this.#lastSent = undefined;
+    this.#channel.on("change", this.#onPeerChange);
+    this.#previousHandler = this.#canvas.onCursorMove;
+    this.#canvas.onCursorMove = this.#handleCursorMove;
   }
 
   destroy(): void {
-    this.detach();
-
-    this.#room.off(
-      "peer-joined",
-      this.#onPeerJoined
-    );
-    this.#room.off(
-      "peer-left",
-      this.#onPeerLeft
-    );
-    this.#room.off(
-      "peer-presence",
-      this.#onPeerPresence
-    );
+    this.#canvas.onCursorMove = this.#previousHandler;
+    this.#channel.destroy();
   }
 
-  #reportLocal(
+  #render(
+    clientId: string,
     pos: Vec2 | null
   ): void {
-    if (
-      this.#lastSent !== undefined &&
-      vec2Equal(pos, this.#lastSent)
-    ) {
-      return;
-    }
+    const profile = peerProfile(this.#room, clientId);
 
-    this.#lastSent = pos;
-    this.#room.updatePresence({
-      [kPresenceCursorKey]: pos
-    });
-  }
-
-  #syncPeer(
-    clientId: string
-  ): void {
-    const peer = this.#room.peers.get(clientId);
-    if (!peer) {
-      return;
-    }
-
-    this.#applyPeer(
-      clientId,
-      peer.profile,
-      peer.presence
-    );
-  }
-
-  #applyPresencePatch(
-    clientId: string,
-    patch: network.PeerMetadata
-  ): void {
-    if (!(kPresenceCursorKey in patch)) {
-      return;
-    }
-
-    const profile = this.#room.peers.get(clientId)?.profile ?? {};
-    this.#applyPeer(
-      clientId,
-      profile,
-      patch
-    );
-  }
-
-  #applyPeer(
-    clientId: string,
-    profile: network.PeerMetadata,
-    presence: network.PeerMetadata
-  ): void {
-    if (!this.#canvas) {
-      return;
-    }
-
-    const rawPos = presence[kPresenceCursorKey];
     this.#canvas.peerPresence.cursors.set(clientId, {
-      pos: isVec2(rawPos) ? rawPos : null,
+      pos,
       color: this.#color(clientId, profile),
-      label: this.#label(profile)
+      label: this.#label(clientId, profile)
     });
-    this.#renderedPeers.add(clientId);
-  }
-
-  #removePeer(
-    clientId: string
-  ): void {
-    this.#canvas?.peerPresence.cursors.remove(clientId);
-    this.#renderedPeers.delete(clientId);
-  }
-
-  #clearPeers(): void {
-    for (const clientId of this.#renderedPeers) {
-      this.#canvas?.peerPresence.cursors.remove(clientId);
-    }
-    this.#renderedPeers.clear();
   }
 }

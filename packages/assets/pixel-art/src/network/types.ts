@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
 import type {
+  AssetRoomDeletedMessage,
+  AssetRoomRejectedMessage
+} from "@jolly-pixel/asset-server/kinds";
+import type {
   PixelBufferHookEvent,
   PixelBufferSnapshot,
   SelectionRect,
@@ -12,9 +16,14 @@ export type { PixelBufferSnapshot };
 
 export type PixelNetworkCommand = PixelBufferHookEvent & network.NetworkCommandHeader;
 
+export type PixelAssetNotice =
+  | AssetRoomDeletedMessage
+  | AssetRoomRejectedMessage;
+
 export type PixelServerMessage = network.NetworkServerMessage<
   PixelNetworkCommand,
-  PixelBufferSnapshot
+  PixelBufferSnapshot,
+  PixelAssetNotice
 >;
 
 export interface UVGhostPayload {
@@ -23,9 +32,6 @@ export interface UVGhostPayload {
   geometry: UVGeometry;
 }
 
-/**
- * Carries geometry only; peers sample colors from shared pre-commit state.
- */
 export type SelectionGhostPayload =
   | {
     phase: "creating";
@@ -36,8 +42,5 @@ export type SelectionGhostPayload =
     sourceRect: SelectionRect;
     liveRect: SelectionRect;
     mask: boolean[];
-    /**
-     * Mirrors local blanking state, which geometry alone cannot determine.
-     */
     blankSource: boolean;
   };

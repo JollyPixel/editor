@@ -38,18 +38,9 @@ import {
 } from "./logger.ts";
 
 export interface ClientOptions {
-  /**
-   * @default `${wss|ws}://${location.host}${DEFAULT_WEBSOCKET_PATH}`
-   */
   url?: string;
-  /**
-   * Untrusted, presentational metadata sent with each join request.
-   */
   profile?: PeerMetadata;
   credential?: string;
-  /**
-   * @default a `console`-backed logger
-   */
   logger?: Logger;
 }
 
@@ -58,7 +49,6 @@ export type ClientEventMap = {
   unauthorized: () => void;
 };
 
-// Client mutates this emitter. Consumers receive only the `Room` surface.
 type InternalRoom<ClientMessage = any, ServerMessage = any> =
   Room<ClientMessage, ServerMessage>
   & Emitter<RoomEventMap<ServerMessage>>
@@ -214,6 +204,7 @@ export class Client extends Emitter<ClientEventMap> {
     }
 
     const peers = new Map<string, Peer>();
+    const localPresence: PeerMetadata = {};
     let joined = false;
     let rights: RoomRights = kNoRights;
     let selfId = this.id;
@@ -233,7 +224,8 @@ export class Client extends Emitter<ClientEventMap> {
           this.#send({
             room: name,
             kind: "join",
-            profile: this.#profile
+            profile: this.#profile,
+            presence: { ...localPresence }
           });
         },
         send: (payload: ClientMessage) => this.#send({
@@ -241,11 +233,16 @@ export class Client extends Emitter<ClientEventMap> {
           kind: "message",
           payload
         }),
-        updatePresence: (patch: PeerMetadata) => this.#send({
-          room: name,
-          kind: "presence",
-          patch
-        }),
+        updatePresence: (patch: PeerMetadata) => {
+          Object.assign(localPresence, patch);
+          if (joined) {
+            this.#send({
+              room: name,
+              kind: "presence",
+              patch
+            });
+          }
+        },
         leave: () => {
           this.#send({
             room: name,
@@ -337,7 +334,6 @@ export class Client extends Emitter<ClientEventMap> {
     room: InternalRoom,
     envelope: ServerEnvelope
   ): void {
-    // Client owns the writable map behind the public readonly view.
     const peers = room.peers as Map<string, Peer>;
 
     match(envelope)
@@ -401,7 +397,7 @@ export class Client extends Emitter<ClientEventMap> {
       clientId: envelope.clientId,
       role: envelope.role,
       profile: envelope.profile,
-      presence: {}
+      presence: { ...envelope.presence }
     });
 
     room.emit("peer-joined", {

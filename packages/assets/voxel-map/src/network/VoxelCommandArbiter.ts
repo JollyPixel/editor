@@ -12,16 +12,7 @@ type BulkCommand = Extract<
 >;
 
 export interface VoxelCommandArbiterOptions {
-  /**
-   * Custom conflict resolver.
-   * @default network.LastWriteWinsResolver
-   */
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
-}
-
-export interface VoxelArbitration {
-  readonly command: VoxelNetworkCommand;
-  commit(): void;
 }
 
 export class VoxelCommandArbiter {
@@ -37,22 +28,16 @@ export class VoxelCommandArbiter {
 
   admit(
     command: VoxelNetworkCommand
-  ): VoxelArbitration | null {
-    const admitted = isBulkCommand(command) ?
-      this.#admitEntries(command) :
-      this.#admitWhole(command);
-    if (admitted === null) {
-      return null;
+  ): network.Admission<VoxelNetworkCommand> | null {
+    if (isBulkCommand(command)) {
+      return this.#admitEntries(command);
     }
 
-    return {
-      command: admitted,
-      commit: () => {
-        for (const key of VoxelCommandArbiter.keys(admitted)) {
-          this.#tracker.record(key, admitted);
-        }
-      }
-    };
+    const keys = command.action === "world-replace" ?
+      [] :
+      VoxelCommandArbiter.keys(command);
+
+    return this.#tracker.admit(command, keys);
   }
 
   static keys(
@@ -92,39 +77,31 @@ export class VoxelCommandArbiter {
     }
   }
 
-  #admitWhole(
-    command: VoxelNetworkCommand
-  ): VoxelNetworkCommand | null {
-    const admitted = command.action === "world-replace" ||
-      this.#wins(VoxelCommandArbiter.key(command), command);
-
-    return admitted ? command : null;
-  }
-
   #admitEntries<TCommand extends BulkCommand>(
     command: TCommand
-  ): TCommand | null {
+  ): network.Admission<TCommand> | null {
     const { entries } = command.metadata;
-    const kept = entries.filter(
-      (entry) => this.#wins(voxelKey(command.layerName, entry.position), command)
+    const { indices, commit } = this.#tracker.admitEach(
+      command,
+      VoxelCommandArbiter.keys(command)
     );
-    if (kept.length === entries.length) {
-      return command;
+    if (indices.length === 0) {
+      return null;
     }
 
-    return kept.length === 0 ? null : {
-      ...command,
-      metadata: {
-        entries: kept
-      }
-    };
-  }
+    const admitted = indices.length === entries.length ?
+      command :
+      {
+        ...command,
+        metadata: {
+          entries: indices.map((index) => entries[index])
+        }
+      };
 
-  #wins(
-    key: string | null,
-    command: VoxelNetworkCommand
-  ): boolean {
-    return this.#tracker.resolve(key, command) !== "reject";
+    return {
+      command: admitted,
+      commit
+    };
   }
 }
 

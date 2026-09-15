@@ -35,15 +35,7 @@ const kDefaultSize: Vec2 = {
 };
 
 export interface PixelArtAssetHandlerOptions {
-  /**
-   * Globs claiming pixel-art documents.
-   * @default ["**\/*.pixelart"]
-   */
   match?: readonly string[];
-  /**
-   * Size of a buffer with no content yet, before its first document lands.
-   * @default 32x32
-   */
   defaultSize?: Vec2;
   snapshot?: SnapshotPolicy;
   conflictResolver?: network.ConflictResolver;
@@ -104,13 +96,7 @@ export function pixelArtAssetHandler(
         return {
           snapshotSchema: pixelSnapshotSchema,
           snapshot: () => pixelArtSnapshot(state.buffer),
-          arbitrate: (command, clientId) => arbiter.admit(
-            state.buffer,
-            {
-              ...command,
-              clientId
-            }
-          )
+          arbitrate: (command) => arbiter.admit(state.buffer, command)
         };
       }
     }

@@ -39,12 +39,15 @@ function createHost() {
 }
 
 function setup(
-  options: Omit<PixelCursorSyncOptions, "room"> = {},
+  options: Omit<PixelCursorSyncOptions, "room" | "canvas"> = {},
   room = new MockRoom()
 ) {
   const host = createHost();
-  const sync = new PixelCursorSync({ room, ...options });
-  sync.attach(asCanvas(host));
+  const sync = new PixelCursorSync({
+    room,
+    canvas: asCanvas(host),
+    ...options
+  });
 
   return {
     room,
@@ -54,13 +57,7 @@ function setup(
   };
 }
 
-describe("PixelCursorSync — attach", () => {
-  test("throws when a canvas is already attached", () => {
-    const { sync } = setup();
-
-    assert.throws(() => sync.attach(asCanvas(createHost())));
-  });
-
+describe("PixelCursorSync — construction", () => {
   test("renders cursors of peers already in the room", () => {
     const room = new MockRoom();
     room.addPeer("peer-B", {
@@ -77,27 +74,29 @@ describe("PixelCursorSync — attach", () => {
     assert.strictEqual(state.label, "Bob");
   });
 
-  test("chains the existing cursor listener and restores it on detach", () => {
+  test("chains the existing cursor listener and restores it on destroy", () => {
     const room = new MockRoom();
     const host = createHost();
     const previous = mock.fn<CursorListener>();
     host.onCursorMove = previous;
-    const sync = new PixelCursorSync({ room });
-    sync.attach(asCanvas(host));
+    const sync = new PixelCursorSync({
+      room,
+      canvas: asCanvas(host)
+    });
 
     host.onCursorMove?.({ x: 2, y: 3 });
-    sync.detach();
+    sync.destroy();
 
     assert.deepStrictEqual(callsOf(previous), [[{ x: 2, y: 3 }]]);
     assert.strictEqual(host.onCursorMove, previous);
   });
 
-  test("detach removes rendered cursors and stops reporting", () => {
+  test("destroy removes rendered cursors and stops reporting", () => {
     const room = new MockRoom();
     room.addPeer("peer-B", { presence: { cursor: { x: 1, y: 1 } } });
     const { host, cursors, sync } = setup({}, room);
 
-    sync.detach();
+    sync.destroy();
     host.onCursorMove?.({ x: 1, y: 1 });
 
     assert.deepStrictEqual(callsOf(cursors.remove), [["peer-B"]]);
@@ -157,6 +156,8 @@ describe("PixelCursorSync — remote peers", () => {
 
   test("removes a leaving peer's cursor", () => {
     const { room, cursors } = setup();
+    room.addPeer("peer-B", { presence: { cursor: { x: 1, y: 1 } } });
+    room.emit("peer-joined", { clientId: "peer-B" });
 
     room.emit("peer-left", { clientId: "peer-B" });
 
@@ -165,7 +166,7 @@ describe("PixelCursorSync — remote peers", () => {
 
   test("uses the label option instead of profile.username", () => {
     const { room, cursors } = setup({
-      label: (profile) => String(profile.displayName)
+      label: (_clientId, profile) => String(profile.displayName)
     });
     room.addPeer("peer-B", { profile: { displayName: "Bobby" } });
 
@@ -187,7 +188,7 @@ describe("PixelCursorSync — remote peers", () => {
 });
 
 describe("PixelCursorSync — destroy", () => {
-  test("removes only its own room listeners and detaches the canvas", () => {
+  test("removes only its own room listeners and restores the canvas", () => {
     const room = new MockRoom();
     const joined = mock.fn();
     room.on("peer-joined", joined);

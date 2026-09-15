@@ -11,7 +11,7 @@ import { SelectionManager, PeerHoverRegistry } from "#src/index.ts";
 import { PeerHoverSync } from "#src/network/index.ts";
 
 function setup(
-  options: { presenceKey?: string; throttleMs?: number; resyncIntervalMs?: number; } = {}
+  options: { presenceKey?: string; throttleMs?: number; } = {}
 ) {
   const room = new FakeRoom("three:peer-hover-test");
   const registry = new PeerHoverRegistry();
@@ -21,11 +21,6 @@ function setup(
     registry,
     selection,
     throttleMs: options.throttleMs ?? 0,
-    /*
-     * Off by default - a test only opts in explicitly (see "resync" below),
-     * so an unrelated test never has a live interval running under it.
-     */
-    resyncIntervalMs: options.resyncIntervalMs ?? 0,
     presenceKey: options.presenceKey
   });
 
@@ -44,8 +39,7 @@ describe("remote peers", () => {
       room,
       registry,
       selection: new SelectionManager(),
-      throttleMs: 0,
-      resyncIntervalMs: 0
+      throttleMs: 0
     });
 
     assert.equal(registry.hoverOf("alice"), "box-1");
@@ -98,14 +92,14 @@ describe("remote peers", () => {
     assert.deepEqual(registry.hoveredObjectIds(), []);
   });
 
-  test("ignores a malformed hover value, leaving prior state alone", () => {
+  test("removes a peer hover when the value is malformed", () => {
     const { room, registry } = setup();
     room.addPeer("alice", { presence: { hover: "box-1" } });
     room.emitSync("alice");
 
     room.emitPresence("alice", { hover: 42 });
 
-    assert.equal(registry.hoverOf("alice"), "box-1");
+    assert.equal(registry.hoverOf("alice"), null);
   });
 
   test("removes a peer's hover on \"peer-left\"", () => {
@@ -275,44 +269,3 @@ describe("lifecycle", () => {
   });
 });
 
-describe("resync", () => {
-  test("periodically re-applies room.peers, catching a presence change no event ever announced", (t) => {
-    t.mock.timers.enable({ apis: ["setInterval"] });
-    const { room, registry } = setup({ resyncIntervalMs: 1000 });
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-    room.emitSync("alice");
-    assert.equal(registry.hoverOf("alice"), "box-1");
-
-    room.addPeer("alice", { presence: { hover: "box-2" } });
-    assert.equal(registry.hoverOf("alice"), "box-1", "not caught yet - no event fired");
-
-    t.mock.timers.tick(1000);
-
-    assert.equal(registry.hoverOf("alice"), "box-2");
-  });
-
-  test("resyncIntervalMs: 0 disables the periodic resync", (t) => {
-    t.mock.timers.enable({ apis: ["setInterval"] });
-    const { room, registry } = setup({ resyncIntervalMs: 0 });
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-    room.emitSync("alice");
-
-    room.addPeer("alice", { presence: { hover: "box-2" } });
-    t.mock.timers.tick(10_000);
-
-    assert.equal(registry.hoverOf("alice"), "box-1", "no resync ever runs");
-  });
-
-  test("destroy() stops the periodic resync", (t) => {
-    t.mock.timers.enable({ apis: ["setInterval"] });
-    const { room, registry, sync } = setup({ resyncIntervalMs: 1000 });
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-    room.emitSync("alice");
-
-    sync.destroy();
-    room.addPeer("alice", { presence: { hover: "box-2" } });
-    t.mock.timers.tick(1000);
-
-    assert.equal(registry.hoverOf("alice"), null);
-  });
-});

@@ -78,8 +78,8 @@ snapshot. `commands.apply` forwards to `applyCommandToBuffer()`.
 
 The arbiter enforces the rules a schema cannot express: a `select-edit` needs
 as many colors as positions, and a created or changed UV region must pass
-`isUVRegionData()`. Arbitration stamps the sender's server-side `clientId`
-onto the command, so a spoofed id never reaches the log.
+`isUVRegionData()`. The room has already replaced `clientId` with the sender's
+server-side id, so a spoofed id never reaches the log.
 
 ## Why the room never writes
 

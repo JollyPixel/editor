@@ -119,7 +119,7 @@ A rule on `voxel.renderer.voxel-set` then covers both directions of that command
 
 ### Command headers
 
-Commands stamped by [SyncAdapter](./sync/SyncAdapter.md) carry `clientId`, `seq` and `timestamp`. Spread the shipped fragments into a variant rather than restating them:
+Commands stamped by [CommandSync](./sync/CommandSync.md) carry `clientId`, `seq` and `timestamp`. Spread the shipped fragments into a variant rather than restating them:
 
 ```ts
 const variant = defineSchema({

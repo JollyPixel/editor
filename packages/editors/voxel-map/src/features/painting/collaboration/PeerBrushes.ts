@@ -3,7 +3,11 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import type * as network from "@jolly-pixel/network";
+import {
+  PresenceChannel,
+  type PresenceChange,
+  type Room
+} from "@jolly-pixel/network/client";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
@@ -25,17 +29,16 @@ import type { BrushStyle } from "../model/BrushStyle.ts";
 const kPresenceCursorKey = "brush";
 
 export interface PeerBrushesOptions {
-  room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+  room: Room<VoxelNetworkCommand, VoxelServerMessage>;
   brush?: BrushStore;
 }
 
 export class PeerBrushes extends ActorComponent {
-  #room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+  #room: Room<VoxelNetworkCommand, VoxelServerMessage>;
+  #channel: PresenceChannel<BrushCursor | null>;
   #brush: BrushStore;
   #meshes = new Map<string, BrushMesh>();
-  #cursors = new Map<string, BrushCursor | null>();
   #localCursor: BrushCursor | null = null;
-  #lastSent: BrushCursor | null | undefined;
   #unsubscribeStyle: () => void;
 
   #onStyleChange = (style: BrushStyle): void => {
@@ -44,23 +47,15 @@ export class PeerBrushes extends ActorComponent {
     }
   };
 
-  #onSync = (): void => {
-    this.#resync();
-  };
-
-  #onPeerLeft = (event: network.RoomPeerEvent): void => {
-    this.#removeMesh(event.clientId);
-  };
-
-  #onPeerPresence = (event: network.RoomPeerPresenceEvent): void => {
-    if (!(kPresenceCursorKey in event.patch)) {
-      return;
+  #onPeerChange = (
+    change: PresenceChange<BrushCursor | null>
+  ): void => {
+    if (change.value === undefined) {
+      this.#removeMesh(change.clientId);
     }
-
-    this.#draw(
-      event.clientId,
-      cursor.read(event.patch[kPresenceCursorKey])
-    );
+    else {
+      this.#render(change.clientId);
+    }
   };
 
   constructor(
@@ -74,76 +69,45 @@ export class PeerBrushes extends ActorComponent {
 
     this.#room = options.room;
     this.#brush = options.brush ?? editorState.brush;
-    this.#room.on("sync", this.#onSync);
-    this.#room.on("peer-left", this.#onPeerLeft);
-    this.#room.on("peer-presence", this.#onPeerPresence);
+    this.#channel = new PresenceChannel(options.room, {
+      key: kPresenceCursorKey,
+      decode: cursor.read,
+      equals: cursor.equals
+    });
     this.#unsubscribeStyle = this.#brush.watch(
       "styleChange",
       this.#onStyleChange
     );
 
-    this.#resync();
+    for (const clientId of this.#channel.values.keys()) {
+      this.#render(clientId);
+    }
+    this.#channel.on("change", this.#onPeerChange);
   }
 
   publishLocalCursor(
     next: BrushCursor | null
   ): void {
-    if (
-      this.#lastSent !== undefined &&
-      cursor.equals(next, this.#lastSent)
-    ) {
+    if (!this.#channel.publish(next)) {
       return;
     }
 
-    this.#lastSent = next;
     this.#localCursor = next;
-    this.#room.updatePresence({
-      [kPresenceCursorKey]: next
-    });
-
-    for (const clientId of this.#cursors.keys()) {
+    for (const clientId of this.#channel.values.keys()) {
       this.#render(clientId);
     }
   }
 
   override destroy(): void {
     this.#unsubscribeStyle();
-    this.#room.off("sync", this.#onSync);
-    this.#room.off("peer-left", this.#onPeerLeft);
-    this.#room.off("peer-presence", this.#onPeerPresence);
+    this.#channel.off("change", this.#onPeerChange);
+    this.#channel.destroy();
 
     for (const clientId of [...this.#meshes.keys()]) {
       this.#removeMesh(clientId);
     }
 
     super.destroy();
-  }
-
-  #resync(): void {
-    for (const [clientId, peer] of this.#room.peers) {
-      this.#draw(
-        clientId,
-        cursor.read(peer.presence[kPresenceCursorKey])
-      );
-    }
-
-    for (const clientId of [...this.#meshes.keys()]) {
-      if (!this.#room.peers.has(clientId)) {
-        this.#removeMesh(clientId);
-      }
-    }
-  }
-
-  #draw(
-    clientId: string,
-    peerCursor: BrushCursor | null
-  ): void {
-    if (!this.#room.peers.has(clientId)) {
-      return;
-    }
-
-    this.#cursors.set(clientId, peerCursor);
-    this.#render(clientId);
   }
 
   #render(
@@ -158,7 +122,7 @@ export class PeerBrushes extends ActorComponent {
       clientId,
       peerColor(clientId, peer.profile)
     );
-    const peerCursor = this.#cursors.get(clientId) ?? null;
+    const peerCursor = this.#channel.values.get(clientId) ?? null;
 
     if (
       peerCursor === null ||
@@ -196,8 +160,6 @@ export class PeerBrushes extends ActorComponent {
   #removeMesh(
     clientId: string
   ): void {
-    this.#cursors.delete(clientId);
-
     const mesh = this.#meshes.get(clientId);
     if (!mesh) {
       return;

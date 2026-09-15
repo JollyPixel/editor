@@ -43,7 +43,7 @@ Drop `source` and `eventStore` to persist documents under `root`. Each seeded or
 
 ## Browser client
 
-Create the room and sync controller before joining. Attach the canvas before `room.join()` so the first snapshot has a target:
+Create the room and the collaboration before joining, so the first snapshot has a target:
 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
@@ -52,7 +52,7 @@ import {
   assetRoomName
 } from "@jolly-pixel/asset";
 import {
-  PixelSyncClient,
+  PixelCollaboration,
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
@@ -70,11 +70,13 @@ const room = networkClient.room<
   PixelServerMessage
 >(assetRoomName(record.kind, record.id.value));
 
-const sync = new PixelSyncClient({ room });
-sync.on("ready", () => {
+const collaboration = new PixelCollaboration({ room, canvas });
+collaboration.sync.on("ready", () => {
   console.log("Initial snapshot received");
 });
-sync.attach(canvas);
+collaboration.sync.on("notice", (notice) => {
+  console.warn(`asset room: ${notice.type}`);
+});
 
 room.join();
 ```
@@ -83,22 +85,15 @@ room.join();
 
 ## Startup and snapshots
 
-The server sends a snapshot as soon as the room admits the client. `PixelSyncClient` applies it only when a canvas is attached. Follow this order:
+The server sends a snapshot as soon as the room admits the client. Construct `PixelCollaboration` (or a bare `PixelSyncClient`) and register listeners before `room.join()`.
 
-1. Create the room.
-2. Construct `PixelSyncClient` and register any `"ready"` or `"snapshot"` listeners.
-3. Attach the canvas.
-4. Call `room.join()`.
-
-Optional presence helpers can attach after `"ready"`, when `room.peers` contains the initial peer snapshot. See [presence previews](./presence.md).
-
-`sync.ready` becomes `true` when the first snapshot message arrives. With the ordering above, that snapshot has also been applied to the canvas. The `"ready"` event fires once; `"snapshot"` fires for every snapshot.
+`collaboration.ready` becomes `true` once the first snapshot has been applied to the canvas. The `"ready"` event fires once; `"snapshot"` fires for every snapshot.
 
 Snapshots replace texture pixels and UV regions, then clear local history. Remote resize and texture-replacement commands also clear local history.
 
 ## Committed edits
 
-Local canvas mutations flow through `canvas.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The asset room validates the command, replaces its claimed `clientId` with the connection ID, resolves conflicts, appends the accepted command to the event log and broadcasts it. `pixelArtAssetHandler` folds the appended event into the buffer.
+Local canvas mutations flow through `canvas.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The asset room replaces the claimed `clientId` with the connection ID, validates the command, resolves conflicts, appends the accepted command to the event log and broadcasts it. When the append fails, the author receives a `"rejected"` notice. `pixelArtAssetHandler` folds the appended event into the buffer.
 
 Commands echoed to their sender are ignored. Remote commands use `canvas.applyRemoteCommand()`, which does not emit `onBufferUpdated`, so they are not sent again.
 
@@ -129,13 +124,13 @@ The network package reads the role from `identity.role`. Client-supplied identit
 
 ## Teardown
 
-Destroy sync helpers before destroying the canvas. Room and socket lifetime remain under application control:
+Destroy the collaboration before destroying the canvas. Room and socket lifetime remain under application control:
 
 ```ts
-sync.destroy();
+collaboration.destroy();
 room.leave();
 networkClient.destroy();
 canvas.destroy();
 ```
 
-`sync.destroy()` detaches the canvas and removes the controller's room listener. It does not leave the room or close the shared socket.
+`collaboration.destroy()` restores the canvas hooks and removes its room listeners. It does not leave the room or close the shared socket.

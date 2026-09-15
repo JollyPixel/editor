@@ -16,11 +16,6 @@ import { actionCommandProtocol } from "../helpers/protocols.ts";
 
 type Listener = (event: any) => void;
 
-/**
- * Minimal WebSocket test double: no real networking, just enough of the
- * addEventListener/send/close surface Client relies on, plus
- * `open()`/`receive()` helpers to drive it from tests.
- */
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
 
@@ -141,8 +136,8 @@ describe("Client — join profile", () => {
 
     const joins = socket.sent.map((raw) => JSON.parse(raw));
     assert.deepEqual(joins, [
-      { room: "pixel-draw", kind: "join", profile: { username: "alice" } },
-      { room: "voxel-map", kind: "join", profile: { username: "alice" } }
+      { room: "pixel-draw", kind: "join", profile: { username: "alice" }, presence: {} },
+      { room: "voxel-map", kind: "join", profile: { username: "alice" }, presence: {} }
     ]);
   });
 
@@ -153,7 +148,7 @@ describe("Client — join profile", () => {
 
     assert.deepEqual(
       JSON.parse(socket.sent[0]!),
-      { room: "pixel-draw", kind: "join", profile: {} }
+      { room: "pixel-draw", kind: "join", profile: {}, presence: {} }
     );
   });
 });
@@ -251,7 +246,8 @@ describe("Client — peers mirror", () => {
       kind: "peer-joined",
       clientId: "B",
       role: "editor",
-      profile: { username: "bob" }
+      profile: { username: "bob" },
+      presence: {}
     });
 
     assert.deepEqual(joined, ["B"]);
@@ -274,7 +270,8 @@ describe("Client — peers mirror", () => {
       kind: "peer-joined",
       clientId: "B",
       role: "default",
-      profile: {}
+      profile: {},
+      presence: {}
     });
     socket.receive({
       room: "pixel-draw",
@@ -300,7 +297,8 @@ describe("Client — peers mirror", () => {
       kind: "peer-joined",
       clientId: "B",
       role: "default",
-      profile: { username: "bob" }
+      profile: { username: "bob" },
+      presence: {}
     });
     socket.receive({
       room: "pixel-draw",
@@ -388,9 +386,10 @@ describe("Client — error", () => {
 });
 
 describe("Client — updatePresence", () => {
-  test("sends a presence envelope carrying the patch", () => {
+  test("sends a presence envelope carrying the patch once joined", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
+    room.join();
     socket.sent.length = 0;
 
     room.updatePresence({ cursor: { x: 9, y: 9 } });
@@ -399,6 +398,43 @@ describe("Client — updatePresence", () => {
       socket.sent.map((raw) => JSON.parse(raw)),
       [{ room: "pixel-draw", kind: "presence", patch: { cursor: { x: 9, y: 9 } } }]
     );
+  });
+
+  test("merges presence set before join into the join envelope", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+
+    room.updatePresence({ cursor: { x: 1, y: 1 } });
+    room.updatePresence({ cursor: null, tool: "brush" });
+    assert.deepEqual(socket.sent, []);
+
+    room.join();
+
+    assert.deepEqual(
+      socket.sent.map((raw) => JSON.parse(raw)),
+      [{
+        room: "pixel-draw",
+        kind: "join",
+        profile: {},
+        presence: { cursor: null, tool: "brush" }
+      }]
+    );
+  });
+
+  test("peer-joined seeds the peer presence", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "peer-joined",
+      clientId: "B",
+      role: "default",
+      profile: {},
+      presence: { cursor: { x: 4, y: 5 } }
+    });
+
+    assert.deepEqual(room.peers.get("B")?.presence, { cursor: { x: 4, y: 5 } });
   });
 });
 

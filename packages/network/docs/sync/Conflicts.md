@@ -15,10 +15,20 @@ interface ConflictResolver<Header extends NetworkCommandHeader> {
 class LastWriteWinsResolver<Header extends NetworkCommandHeader>
   implements ConflictResolver<Header> {}
 
-class ConflictTracker<Header extends NetworkCommandHeader> {
-  constructor(resolver: ConflictResolver<Header>);
-  resolve(key: string | null, incoming: Header): "accept" | "reject";
-  record(key: string | null, incoming: Header): void;
+interface Admission<TCommand> {
+  readonly command: TCommand;
+  commit(): void;
+}
+
+interface PartialAdmission {
+  readonly indices: number[];
+  commit(): void;
+}
+
+class ConflictTracker<THeader extends NetworkCommandHeader> {
+  constructor(resolver: ConflictResolver<THeader>);
+  admit<TCommand extends THeader>(command: TCommand, keys: readonly string[]): Admission<TCommand> | null;
+  admitEach(command: THeader, keys: readonly string[]): PartialAdmission;
 }
 ```
 
@@ -34,7 +44,19 @@ Both are generic over `Header` for stronger typing (`LastWriteWinsResolver<Pixel
 
 ## ConflictTracker
 
-- `resolve(key, incoming)` — resolves against the last recorded command at `key` without mutating tracker state.
-- `record(key, incoming)` — stores `incoming` as the last accepted command. Call it only once the command has actually been applied.
+Neither method mutates the tracker. `commit()` records the command at the admitted keys; call it only once the command has actually been applied or persisted.
 
-`key: null` skips history entirely: `resolve` treats `existing` as `undefined`, `record` is a no-op.
+- `admit(command, keys)` admits the whole command, or returns `null` when any key rejects it. A command with no keys is always admitted.
+- `admitEach(command, keys)` resolves every key on its own and returns the `indices` that accept, for commands that can be narrowed to their winning entries (a stroke, a bulk voxel edit). `commit()` records only those keys.
+
+```ts
+const { indices, commit } = tracker.admitEach(stroke, stroke.positions.map(pixelKey));
+if (indices.length === 0) {
+  return null;
+}
+
+return {
+  command: { ...stroke, positions: indices.map((index) => stroke.positions[index]) },
+  commit
+};
+```

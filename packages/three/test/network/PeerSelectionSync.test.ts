@@ -11,7 +11,7 @@ import { SelectionManager, PeerSelectionRegistry } from "#src/index.ts";
 import { PeerSelectionSync } from "#src/network/index.ts";
 
 function setup(
-  options: { presenceKey?: string; resyncIntervalMs?: number; } = {}
+  options: { presenceKey?: string; } = {}
 ) {
   const room = new FakeRoom("three:peer-selection-test");
   const registry = new PeerSelectionRegistry();
@@ -20,7 +20,6 @@ function setup(
     room,
     registry,
     selection,
-    resyncIntervalMs: options.resyncIntervalMs ?? 0,
     presenceKey: options.presenceKey
   });
 
@@ -38,8 +37,7 @@ describe("remote peers", () => {
     new PeerSelectionSync({
       room,
       registry,
-      selection: new SelectionManager(),
-      resyncIntervalMs: 0
+      selection: new SelectionManager()
     });
 
     assert.equal(registry.selectionOf("alice"), "box-1");
@@ -92,14 +90,14 @@ describe("remote peers", () => {
     assert.deepEqual(registry.selectedObjectIds(), []);
   });
 
-  test("ignores a malformed selection value, leaving prior state alone", () => {
+  test("removes a peer selection when the value is malformed", () => {
     const { room, registry } = setup();
     room.addPeer("alice", { presence: { selection: "box-1" } });
     room.emitSync("alice");
 
     room.emitPresence("alice", { selection: 42 });
 
-    assert.equal(registry.selectionOf("alice"), "box-1");
+    assert.equal(registry.selectionOf("alice"), null);
   });
 
   test("removes a peer's selection on \"peer-left\"", () => {
@@ -201,43 +199,3 @@ describe("lifecycle", () => {
   });
 });
 
-describe("resync", () => {
-  test("periodically re-applies room.peers, catching a presence change no event ever announced", (t) => {
-    t.mock.timers.enable({ apis: ["setInterval"] });
-    const { room, registry } = setup({ resyncIntervalMs: 1000 });
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-    room.emitSync("alice");
-    assert.equal(registry.selectionOf("alice"), "box-1");
-
-    room.addPeer("alice", { presence: { selection: "box-2" } });
-    assert.equal(registry.selectionOf("alice"), "box-1", "not caught yet - no event fired");
-
-    t.mock.timers.tick(1000);
-
-    assert.equal(registry.selectionOf("alice"), "box-2");
-  });
-
-  test("resyncIntervalMs: 0 disables the periodic resync", (t) => {
-    t.mock.timers.enable({ apis: ["setInterval"] });
-    const { room, registry } = setup({ resyncIntervalMs: 0 });
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-    room.emitSync("alice");
-
-    room.addPeer("alice", { presence: { selection: "box-2" } });
-    t.mock.timers.tick(10_000);
-
-    assert.equal(registry.selectionOf("alice"), "box-1", "no resync ever runs");
-  });
-
-  test("destroy() stops the periodic resync", (t) => {
-    t.mock.timers.enable({ apis: ["setInterval"] });
-    const { room, registry, sync } = setup({ resyncIntervalMs: 1000 });
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-    room.emitSync("alice");
-
-    sync.destroy();
-    room.addPeer("alice", { presence: { selection: "box-2" } });
-    t.mock.timers.tick(1000);
-    assert.equal(registry.selectionOf("alice"), null);
-  });
-});

@@ -10,14 +10,9 @@ interface VoxelCommandArbiterOptions {
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
-interface VoxelArbitration {
-  readonly command: VoxelNetworkCommand;
-  commit(): void;
-}
-
 class VoxelCommandArbiter {
   constructor(options?: VoxelCommandArbiterOptions);
-  admit(command: VoxelNetworkCommand): VoxelArbitration | null;
+  admit(command: VoxelNetworkCommand): network.Admission<VoxelNetworkCommand> | null;
 
   static key(
     command: VoxelLayerHookEvent | VoxelNetworkCommand
@@ -29,7 +24,7 @@ class VoxelCommandArbiter {
 ```
 
 The default resolver is `network.LastWriteWinsResolver`. `admit()` returns an
-arbitration carrying the part of the command that wins, `null` when none of it
+admission carrying the part of the command that wins, `null` when none of it
 does; it does not record the result. Call `commit()` once the command has been
 persisted, which records every key the admitted command touches.
 `world-replace` is always admitted and records nothing.

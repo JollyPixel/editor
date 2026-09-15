@@ -39,7 +39,8 @@ export const joinEnvelopeSchema = defineSchema({
   properties: {
     room: { type: "string" },
     kind: { const: "join" },
-    profile: peerMetadataSchema
+    profile: peerMetadataSchema,
+    presence: peerMetadataSchema
   },
   required: [
     "room",
@@ -115,14 +116,16 @@ export const peerJoinedEnvelopeSchema = defineSchema({
     kind: { const: "peer-joined" },
     clientId: { type: "string" },
     role: { type: "string" },
-    profile: peerMetadataSchema
+    profile: peerMetadataSchema,
+    presence: peerMetadataSchema
   },
   required: [
     "room",
     "kind",
     "clientId",
     "role",
-    "profile"
+    "profile",
+    "presence"
   ]
 });
 

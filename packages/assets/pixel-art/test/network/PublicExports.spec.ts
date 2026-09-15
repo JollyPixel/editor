@@ -19,6 +19,7 @@ describe("network entry points", () => {
 
   test("client entry exports every browser sync helper", () => {
     assert.strictEqual(typeof client.PixelSyncClient, "function");
+    assert.strictEqual(typeof client.PixelCollaboration, "function");
     assert.strictEqual(typeof client.PixelCursorSync, "function");
     assert.strictEqual(typeof client.PixelStrokeGhostSync, "function");
     assert.strictEqual(typeof client.UVGhostSync, "function");

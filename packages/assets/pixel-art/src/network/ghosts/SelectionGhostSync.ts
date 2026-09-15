@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { ColorPalette } from "@jolly-pixel/color";
+import type { Room } from "@jolly-pixel/network/client";
 import type {
   PixelArtCanvas,
   SelectionProgressEvent
@@ -7,15 +7,25 @@ import type {
 
 // Import Internal Dependencies
 import {
-  PeerPresenceGhostSync,
-  type PeerPresenceGhostSyncOptions
-} from "./PeerPresenceGhostSync.ts";
+  PeerGhostStream,
+  type PeerGhostLayer
+} from "./PeerGhostStream.ts";
+import {
+  defaultPeerColor,
+  peerProfile,
+  type PeerColor
+} from "../peerAppearance.ts";
 import type {
   PixelNetworkCommand,
+  PixelServerMessage,
   SelectionGhostPayload
 } from "../types.ts";
 
-export type SelectionGhostSyncOptions = PeerPresenceGhostSyncOptions;
+export interface SelectionGhostSyncOptions {
+  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  canvas: PixelArtCanvas;
+  color?: PeerColor;
+}
 
 function isSelectionGhostPayload(
   value: unknown
@@ -39,139 +49,127 @@ function isSelectionGhostPayload(
   return false;
 }
 
-/**
- * Streams non-authoritative selection ghosts through presence only.
- */
-export class SelectionGhostSync extends PeerPresenceGhostSync<SelectionGhostPayload> {
-  protected readonly presenceKey = "selectionGhost";
+function decodeSelectionGhost(
+  value: unknown
+): SelectionGhostPayload | undefined {
+  return isSelectionGhostPayload(value) ? value : undefined;
+}
 
-  #palette = new ColorPalette();
+export class SelectionGhostSync {
+  #room: Room<PixelNetworkCommand, PixelServerMessage>;
+  #canvas: PixelArtCanvas;
+  #color: PeerColor;
+  #stream: PeerGhostStream<SelectionGhostPayload>;
 
   #onSelectionProgress = (
     event: SelectionProgressEvent
   ): void => {
-    this.reportLocal(event);
+    this.#stream.report(event);
   };
 
   #onSelectionCommitted = (): void => {
-    this.cancelPending();
+    this.#stream.cancelPending();
   };
 
   #onSelectionIdle = (): void => {
-    this.cancelPending();
-    this.clearPresence();
+    this.#stream.clearLocal();
   };
 
-  protected isExplicitClear(
-    value: unknown
-  ): boolean {
-    return value === null;
-  }
+  constructor(
+    options: SelectionGhostSyncOptions
+  ) {
+    const { canvas } = options;
 
-  protected subscribeLocal(
-    canvas: PixelArtCanvas
-  ): void {
-    canvas.selectionEvents.on(
-      "selection-progress",
-      this.#onSelectionProgress
-    );
-    canvas.selectionEvents.on(
-      "selection-committed",
-      this.#onSelectionCommitted
-    );
-    canvas.selectionEvents.on(
-      "selection-idle",
-      this.#onSelectionIdle
-    );
-  }
-
-  protected unsubscribeLocal(
-    canvas: PixelArtCanvas
-  ): void {
-    canvas.selectionEvents.off(
-      "selection-progress",
-      this.#onSelectionProgress
-    );
-    canvas.selectionEvents.off(
-      "selection-committed",
-      this.#onSelectionCommitted
-    );
-    canvas.selectionEvents.off(
-      "selection-idle",
-      this.#onSelectionIdle
-    );
-  }
-
-  protected decodePayload(
-    value: unknown
-  ): SelectionGhostPayload | undefined {
-    return isSelectionGhostPayload(value) ? value : undefined;
-  }
-
-  protected applyGhost(
-    clientId: string,
-    payload: SelectionGhostPayload,
-    canvas: PixelArtCanvas
-  ): void {
-    const color = this.#palette.forKey(clientId);
-
-    if (payload.phase === "creating") {
-      canvas.peerPresence.selectionOutlines.set(clientId, {
-        rect: payload.rect,
-        mask: null,
-        color
-      });
-      canvas.peerPresence.floatingSelections.remove(clientId);
-
-      return;
-    }
-
-    canvas.peerPresence.selectionOutlines.set(clientId, {
-      rect: payload.liveRect,
-      mask: payload.mask,
-      color
+    this.#room = options.room;
+    this.#canvas = canvas;
+    this.#color = options.color ?? defaultPeerColor;
+    this.#stream = new PeerGhostStream({
+      room: options.room,
+      key: "selectionGhost",
+      decode: decodeSelectionGhost,
+      layer: this.#layer(),
+      reconcile: (command) => this.#reconcile(command)
     });
-    canvas.peerPresence.floatingSelections.set(clientId, {
-      sourceRect: payload.sourceRect,
-      liveRect: payload.liveRect,
-      mask: payload.mask,
-      blankSource: payload.blankSource
-    });
+    canvas.selectionEvents.on("selection-progress", this.#onSelectionProgress);
+    canvas.selectionEvents.on("selection-committed", this.#onSelectionCommitted);
+    canvas.selectionEvents.on("selection-idle", this.#onSelectionIdle);
   }
 
-  protected clearGhost(
+  destroy(): void {
+    const { selectionEvents } = this.#canvas;
+
+    selectionEvents.off("selection-progress", this.#onSelectionProgress);
+    selectionEvents.off("selection-committed", this.#onSelectionCommitted);
+    selectionEvents.off("selection-idle", this.#onSelectionIdle);
+    this.#stream.destroy();
+  }
+
+  #layer(): PeerGhostLayer<SelectionGhostPayload> {
+    const {
+      selectionOutlines,
+      floatingSelections
+    } = this.#canvas.peerPresence;
+
+    return {
+      set: (clientId, payload) => {
+        const color = this.#colorOf(clientId);
+        if (payload.phase === "creating") {
+          selectionOutlines.set(clientId, {
+            rect: payload.rect,
+            mask: null,
+            color
+          });
+          floatingSelections.remove(clientId);
+
+          return;
+        }
+
+        selectionOutlines.set(clientId, {
+          rect: payload.liveRect,
+          mask: payload.mask,
+          color
+        });
+        floatingSelections.set(clientId, {
+          sourceRect: payload.sourceRect,
+          liveRect: payload.liveRect,
+          mask: payload.mask,
+          blankSource: payload.blankSource
+        });
+      },
+      remove: (clientId) => {
+        selectionOutlines.remove(clientId);
+        floatingSelections.remove(clientId);
+      },
+      clearAll: () => {
+        selectionOutlines.clearAll();
+        floatingSelections.clearAll();
+      }
+    };
+  }
+
+  #colorOf(
     clientId: string
-  ): void {
-    this.canvas?.peerPresence.selectionOutlines.remove(clientId);
-    this.canvas?.peerPresence.floatingSelections.remove(clientId);
+  ): string {
+    return this.#color(clientId, peerProfile(this.#room, clientId));
   }
 
-  protected clearAllGhosts(): void {
-    this.canvas?.peerPresence.selectionOutlines.clearAll();
-    this.canvas?.peerPresence.floatingSelections.clearAll();
-  }
-
-  protected reconcileCommand(
+  #reconcile(
     command: PixelNetworkCommand
   ): void {
-    if (!this.canvas) {
-      return;
-    }
+    const {
+      selectionOutlines,
+      floatingSelections
+    } = this.#canvas.peerPresence;
 
     switch (command.action) {
       case "select-edit":
-        this.canvas.peerPresence.selectionOutlines.removeOverlapping(
-          command.metadata.positions
-        );
-        this.canvas.peerPresence.floatingSelections.removeOverlapping(
-          command.metadata.positions
-        );
+        selectionOutlines.removeOverlapping(command.metadata.positions);
+        floatingSelections.removeOverlapping(command.metadata.positions);
         break;
       case "global-fill":
       case "resized":
       case "texture-replaced":
-        this.clearLeases();
-        this.clearAllGhosts();
+        this.#stream.clearRemote();
         break;
       default:
         break;

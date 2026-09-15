@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
 import type {
+  AssetRoomDeletedMessage,
+  AssetRoomRejectedMessage
+} from "@jolly-pixel/asset-server/kinds";
+import type {
   VoxelBlockHookEvent,
   VoxelLayerHookEvent,
   VoxelWorldJSON
@@ -38,7 +42,12 @@ export type VoxelNetworkCommand =
   )
   & network.NetworkCommandHeader;
 
+export type VoxelAssetNotice =
+  | AssetRoomDeletedMessage
+  | AssetRoomRejectedMessage;
+
 export type VoxelServerMessage = network.NetworkServerMessage<
   VoxelNetworkCommand,
-  VoxelWorldJSON
+  VoxelWorldJSON,
+  VoxelAssetNotice
 >;

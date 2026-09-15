@@ -2,47 +2,77 @@
 import type { NetworkCommandHeader } from "../sync/types.ts";
 import type { ConflictResolver } from "./ConflictResolver.ts";
 
+export interface Admission<TCommand> {
+  readonly command: TCommand;
+  commit(): void;
+}
+
+export interface PartialAdmission {
+  readonly indices: number[];
+  commit(): void;
+}
+
 export class ConflictTracker<
-  Header extends NetworkCommandHeader = NetworkCommandHeader
+  THeader extends NetworkCommandHeader = NetworkCommandHeader
 > {
-  #resolver: ConflictResolver<Header>;
-  #lastByKey = new Map<string, Header>();
+  #resolver: ConflictResolver<THeader>;
+  #lastByKey = new Map<string, THeader>();
 
   constructor(
-    resolver: ConflictResolver<Header>
+    resolver: ConflictResolver<THeader>
   ) {
     this.#resolver = resolver;
   }
 
-  /**
-   * A null key resolves without history.
-   */
-  resolve(
-    key: string | null,
-    incoming: Header
-  ): "accept" | "reject" {
-    const existing = key === null
-      ? undefined
-      : this.#lastByKey.get(key);
+  admit<TCommand extends THeader>(
+    command: TCommand,
+    keys: readonly string[]
+  ): Admission<TCommand> | null {
+    if (keys.some((key) => !this.#accepts(key, command))) {
+      return null;
+    }
 
-    return this.#resolver.resolve({
-      incoming,
-      existing
-    });
+    return {
+      command,
+      commit: () => this.#record(keys, command)
+    };
   }
 
-  /**
-   * A null key is not recorded.
-   */
-  record(
-    key: string | null,
-    incoming: Header
+  admitEach(
+    command: THeader,
+    keys: readonly string[]
+  ): PartialAdmission {
+    const indices: number[] = [];
+    const accepted: string[] = [];
+    keys.forEach((key, index) => {
+      if (this.#accepts(key, command)) {
+        indices.push(index);
+        accepted.push(key);
+      }
+    });
+
+    return {
+      indices,
+      commit: () => this.#record(accepted, command)
+    };
+  }
+
+  #accepts(
+    key: string,
+    incoming: THeader
+  ): boolean {
+    return this.#resolver.resolve({
+      incoming,
+      existing: this.#lastByKey.get(key)
+    }) === "accept";
+  }
+
+  #record(
+    keys: readonly string[],
+    command: THeader
   ): void {
-    if (key !== null) {
-      this.#lastByKey.set(
-        key,
-        incoming
-      );
+    for (const key of keys) {
+      this.#lastByKey.set(key, command);
     }
   }
 }

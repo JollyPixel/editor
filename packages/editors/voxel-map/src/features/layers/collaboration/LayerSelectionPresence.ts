@@ -30,11 +30,7 @@ export interface LayerSelectionPresenceOptions {
 export class LayerSelectionPresence {
   #selection: SelectionStore;
   #presence: PresenceStore;
-  #tracker: PeerMarkTracker<
-    string,
-    VoxelNetworkCommand,
-    VoxelServerMessage
-  >;
+  #tracker: PeerMarkTracker<string>;
   #unsubscribeSelection: () => void;
 
   #onSelectionChange = (): void => {

@@ -10,9 +10,6 @@ import type {
 } from "./ClientSessions.ts";
 import type { ClientEnvelope } from "../protocol/Envelope.ts";
 
-/**
- * Result logged once for each dispatched envelope.
- */
 export interface DispatchOutcome {
   outcome: "joined" | "left" | "handled" | "ignored" | "dropped";
   reason?: string;
@@ -23,9 +20,6 @@ export interface EnvelopeDispatcherOptions {
   sessions: ClientSessions;
 }
 
-/**
- * Routes a parsed envelope to its room and enforces membership per kind.
- */
 export class EnvelopeDispatcher {
   #rooms: RoomRegistry;
   #sessions: ClientSessions;
@@ -84,7 +78,8 @@ export class EnvelopeDispatcher {
         session.handle.id,
         session.handle,
         session.identity,
-        envelope.profile ?? Object.create(null)
+        envelope.profile ?? Object.create(null),
+        envelope.presence ?? Object.create(null)
       );
       if (!admitted) {
         return {

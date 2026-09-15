@@ -33,7 +33,7 @@ resources, so its snapshot has no tileset definitions. Clients prepare those
 resources before joining.
 
 A block definition is not a layer mutation, so it travels on its own engine
-hook as a `"block-defined"` or `"block-removed"` command. `attach()` chains
+hook as a `"block-defined"` or `"block-removed"` command. The client chains
 that hook exactly as it chains `onLayerUpdated`, so a client publishes block
 edits without asking; the definitions the server accumulates ride along in
 every later snapshot.

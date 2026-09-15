@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { ColorPalette } from "@jolly-pixel/color";
+import type { Room } from "@jolly-pixel/network/client";
 import {
   isUVGeometry,
   isUVSlot,
@@ -8,16 +8,23 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { PeerGhostStream } from "./PeerGhostStream.ts";
 import {
-  PeerPresenceGhostSync,
-  type PeerPresenceGhostSyncOptions
-} from "./PeerPresenceGhostSync.ts";
+  defaultPeerColor,
+  peerProfile,
+  type PeerColor
+} from "../peerAppearance.ts";
 import type {
   PixelNetworkCommand,
+  PixelServerMessage,
   UVGhostPayload
 } from "../types.ts";
 
-export type UVGhostSyncOptions = PeerPresenceGhostSyncOptions;
+export interface UVGhostSyncOptions {
+  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  canvas: PixelArtCanvas;
+  color?: PeerColor;
+}
 
 function isUVGhostPayload(
   value: unknown
@@ -37,18 +44,22 @@ function isUVGhostPayload(
     isUVGeometry(value.geometry);
 }
 
-/**
- * Streams non-authoritative UV drag ghosts through presence only.
- */
-export class UVGhostSync extends PeerPresenceGhostSync<UVGhostPayload> {
-  protected readonly presenceKey = "uvGhost";
+function decodeUVGhost(
+  value: unknown
+): UVGhostPayload | undefined {
+  return isUVGhostPayload(value) ? value : undefined;
+}
 
-  #palette = new ColorPalette();
+export class UVGhostSync {
+  #room: Room<PixelNetworkCommand, PixelServerMessage>;
+  #canvas: PixelArtCanvas;
+  #color: PeerColor;
+  #stream: PeerGhostStream<UVGhostPayload>;
 
   #onRegionDragging = (
     event: UVGhostPayload
   ): void => {
-    this.reportLocal({
+    this.#stream.report({
       id: event.id,
       face: event.face,
       geometry: event.geometry
@@ -58,107 +69,75 @@ export class UVGhostSync extends PeerPresenceGhostSync<UVGhostPayload> {
   #onRegionMoved = (
     event: { region: UVRegion; }
   ): void => {
-    if (this.pendingPayload?.id === event.region.id) {
-      this.cancelPending();
+    if (this.#stream.pending?.id === event.region.id) {
+      this.#stream.cancelPending();
     }
   };
 
   #onRegionDragEnded = (
     event: { id: string; committed: boolean; }
   ): void => {
-    if (this.pendingPayload?.id === event.id) {
-      this.cancelPending();
+    if (this.#stream.pending?.id === event.id) {
+      this.#stream.cancelPending();
     }
     if (!event.committed) {
-      this.clearPresence();
+      this.#stream.clearLocal();
     }
   };
 
-  protected isExplicitClear(
-    value: unknown
-  ): boolean {
-    return value === null;
-  }
+  constructor(
+    options: UVGhostSyncOptions
+  ) {
+    const { canvas } = options;
+    const { uv } = canvas.peerPresence;
 
-  protected subscribeLocal(
-    canvas: PixelArtCanvas
-  ): void {
-    canvas.uv.on(
-      "region-dragging",
-      this.#onRegionDragging
-    );
-    canvas.uv.on(
-      "region-moved",
-      this.#onRegionMoved
-    );
-    canvas.uv.on(
-      "region-drag-ended",
-      this.#onRegionDragEnded
-    );
-  }
-
-  protected unsubscribeLocal(
-    canvas: PixelArtCanvas
-  ): void {
-    canvas.uv.off(
-      "region-dragging",
-      this.#onRegionDragging
-    );
-    canvas.uv.off(
-      "region-moved",
-      this.#onRegionMoved
-    );
-    canvas.uv.off(
-      "region-drag-ended",
-      this.#onRegionDragEnded
-    );
-  }
-
-  protected decodePayload(
-    value: unknown
-  ): UVGhostPayload | undefined {
-    return isUVGhostPayload(value) ? value : undefined;
-  }
-
-  protected applyGhost(
-    clientId: string,
-    payload: UVGhostPayload,
-    canvas: PixelArtCanvas
-  ): void {
-    canvas.peerPresence.uv.set(clientId, {
-      ...payload,
-      color: this.#palette.forKey(clientId)
+    this.#room = options.room;
+    this.#canvas = canvas;
+    this.#color = options.color ?? defaultPeerColor;
+    this.#stream = new PeerGhostStream({
+      room: options.room,
+      key: "uvGhost",
+      decode: decodeUVGhost,
+      layer: {
+        set: (clientId, payload) => uv.set(clientId, {
+          ...payload,
+          color: this.#colorOf(clientId)
+        }),
+        remove: (clientId) => uv.remove(clientId),
+        clearAll: () => uv.clearAll()
+      },
+      reconcile: (command) => this.#reconcile(command)
     });
+    canvas.uv.on("region-dragging", this.#onRegionDragging);
+    canvas.uv.on("region-moved", this.#onRegionMoved);
+    canvas.uv.on("region-drag-ended", this.#onRegionDragEnded);
   }
 
-  protected clearGhost(
+  destroy(): void {
+    this.#canvas.uv.off("region-dragging", this.#onRegionDragging);
+    this.#canvas.uv.off("region-moved", this.#onRegionMoved);
+    this.#canvas.uv.off("region-drag-ended", this.#onRegionDragEnded);
+    this.#stream.destroy();
+  }
+
+  #colorOf(
     clientId: string
-  ): void {
-    this.canvas?.peerPresence.uv.remove(clientId);
+  ): string {
+    return this.#color(clientId, peerProfile(this.#room, clientId));
   }
 
-  protected clearAllGhosts(): void {
-    this.canvas?.peerPresence.uv.clearAll();
-  }
-
-  protected reconcileCommand(
+  #reconcile(
     command: PixelNetworkCommand
   ): void {
-    if (!this.canvas) {
-      return;
-    }
+    const { uv } = this.#canvas.peerPresence;
 
     switch (command.action) {
       case "uv-region-moved":
       case "uv-region-deleted":
-        this.canvas.peerPresence.uv.removeByRegion(
-          command.metadata.id
-        );
+        uv.removeByRegion(command.metadata.id);
         break;
       case "uv-region-state-changed":
-        this.canvas.peerPresence.uv.removeByRegion(
-          command.metadata.region.id
-        );
+        uv.removeByRegion(command.metadata.region.id);
         break;
       default:
         break;
