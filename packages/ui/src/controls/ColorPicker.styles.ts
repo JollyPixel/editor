@@ -4,19 +4,15 @@ import { css } from "lit";
 // Import Internal Dependencies
 import { focusRing } from "../theme/styles/mixins.ts";
 
-/**
- * Renders picker surfaces with gradients driven by custom properties.
- */
 export const colorPickerStyles = css`
   :host {
     --jolly-picker-width: 180px;
     --jolly-picker-area-height: 110px;
+    --jolly-picker-area-max-width: 280px;
     --jolly-picker-track-height: 12px;
-    /* Centers a narrow ramp within the pointer hit area. */
     --jolly-picker-ramp-height: 4px;
     --jolly-picker-knob: 10px;
     --jolly-picker-checker: color-mix(in oklab, var(--jolly-ink) 18%, transparent);
-    /* Hosts can set this to 0 when clipping the panel to their radius. */
     --jolly-picker-radius: var(--jolly-radius-md, 6px);
 
     display: block;
@@ -24,6 +20,12 @@ export const colorPickerStyles = css`
     color: var(--jolly-text, CanvasText);
     font-family: inherit;
     font-size: inherit;
+  }
+
+  :host([layout="wide"]) {
+    width: auto;
+    height: 100%;
+    min-height: 0;
   }
 
   :host([disabled]) {
@@ -37,7 +39,13 @@ export const colorPickerStyles = css`
     gap: var(--jolly-space-1, 4px);
   }
 
-  /* Checkerboard reveals alpha independently of the surface colour. */
+  :host([layout="wide"]) .panel {
+    flex-direction: row;
+    align-items: stretch;
+    gap: var(--jolly-space-2, 8px);
+    height: 100%;
+  }
+
   .checker {
     background-color: var(--jolly-surface-raised, Canvas);
     background-image: conic-gradient(
@@ -49,10 +57,6 @@ export const colorPickerStyles = css`
     background-size: 8px 8px;
   }
 
-  /*
-   * Saturation runs left to right and value bottom to top. Resolve the hue here;
-   * resolving it on :host before assignment paints every hue red.
-   */
   .area {
     position: relative;
     height: var(--jolly-picker-area-height);
@@ -66,6 +70,13 @@ export const colorPickerStyles = css`
       );
     cursor: crosshair;
     touch-action: none;
+  }
+
+  :host([layout="wide"]) .area {
+    flex: 1 1 auto;
+    min-width: 64px;
+    max-width: var(--jolly-picker-area-max-width);
+    height: auto;
   }
 
   .area-cursor {
@@ -82,10 +93,6 @@ export const colorPickerStyles = css`
     pointer-events: none;
   }
 
-  /*
-   * Hidden native ranges provide keyboard and screen-reader control for both
-   * axes. Keep them focusable; display and visibility cannot hide them.
-   */
   .axis {
     position: absolute;
     width: 1px;
@@ -97,11 +104,16 @@ export const colorPickerStyles = css`
     pointer-events: none;
   }
 
-  /* Provides a large hit area around the narrow ramp. */
   .track {
     position: relative;
     height: var(--jolly-picker-track-height);
     touch-action: none;
+  }
+
+  :host([layout="wide"]) .track {
+    flex: 0 0 auto;
+    width: var(--jolly-picker-track-height);
+    height: auto;
   }
 
   .track::before {
@@ -114,6 +126,17 @@ export const colorPickerStyles = css`
     transform: translateY(-50%);
     pointer-events: none;
     transition: height var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+  }
+
+  :host([layout="wide"]) .track::before {
+    inset-inline: auto;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: var(--jolly-picker-ramp-height);
+    height: auto;
+    transform: translateX(-50%);
+    transition: width var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
 
   .track.hue::before {
@@ -129,7 +152,19 @@ export const colorPickerStyles = css`
     );
   }
 
-  /* Composites the alpha ramp over the checkerboard on one element. */
+  :host([layout="wide"]) .track.hue::before {
+    background-image: linear-gradient(
+      to top,
+      hsl(0 100% 50%),
+      hsl(60 100% 50%),
+      hsl(120 100% 50%),
+      hsl(180 100% 50%),
+      hsl(240 100% 50%),
+      hsl(300 100% 50%),
+      hsl(360 100% 50%)
+    );
+  }
+
   .track.alpha::before {
     background-color: var(--jolly-surface-raised, Canvas);
     background-image:
@@ -145,6 +180,21 @@ export const colorPickerStyles = css`
         transparent 0
       );
     background-size: auto, 6px 6px;
+  }
+
+  :host([layout="wide"]) .track.alpha::before {
+    background-image:
+      linear-gradient(
+        to top,
+        transparent,
+        var(--jolly-picker-opaque, #000)
+      ),
+      conic-gradient(
+        var(--jolly-picker-checker) 25%,
+        transparent 0 50%,
+        var(--jolly-picker-checker) 0 75%,
+        transparent 0
+      );
   }
 
   .track:has(input:focus-visible) {
@@ -165,9 +215,18 @@ export const colorPickerStyles = css`
     cursor: pointer;
   }
 
+  :host([layout="wide"]) .track input[type="range"] {
+    writing-mode: vertical-lr;
+    direction: rtl;
+  }
+
   .track input[type="range"]::-webkit-slider-runnable-track {
     height: 100%;
     background: none;
+  }
+
+  :host([layout="wide"]) .track input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
   }
 
   .track input[type="range"]::-moz-range-track {
@@ -175,7 +234,6 @@ export const colorPickerStyles = css`
     background: none;
   }
 
-  /* Matches slider sizing; white remains visible across all hues. */
   .track input[type="range"]::-webkit-slider-thumb {
     appearance: none;
     width: var(--jolly-picker-knob);
@@ -193,6 +251,13 @@ export const colorPickerStyles = css`
       height var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
 
+  :host([layout="wide"]) .track input[type="range"]::-webkit-slider-thumb {
+    margin-top: 0;
+    margin-left: calc(
+      (var(--jolly-picker-track-height) - var(--jolly-picker-knob)) / 2
+    );
+  }
+
   .track input[type="range"]::-moz-range-thumb {
     width: var(--jolly-picker-knob);
     height: var(--jolly-picker-knob);
@@ -206,7 +271,6 @@ export const colorPickerStyles = css`
       height var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
 
-  /* Aligns the alpha readout with the slider value column. */
   .lane {
     display: flex;
     align-items: center;
@@ -218,7 +282,6 @@ export const colorPickerStyles = css`
     min-width: 0;
   }
 
-  /* Outline focus without altering the represented colour. */
   .area:has(input:focus-visible),
   .track:has(input:focus-visible) {
     ${focusRing}
@@ -229,6 +292,36 @@ export const colorPickerStyles = css`
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
+  }
+
+  .channels {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, auto);
+    align-content: space-between;
+    gap: var(--jolly-space-1, 4px) var(--jolly-space-3, 12px);
+    margin-inline-start: var(--jolly-space-2, 8px);
+  }
+
+  .channels .footer {
+    grid-column: 1 / -1;
+  }
+
+  .channels .hex {
+    width: 10ch;
+  }
+
+  .channel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--jolly-space-1, 4px);
+  }
+
+  .channel-name {
+    width: 1ch;
+    color: var(--jolly-text-muted, inherit);
+    font-variant-numeric: tabular-nums;
   }
 
   .preview {
@@ -263,7 +356,6 @@ export const colorPickerStyles = css`
     min-width: 0;
   }
 
-  /* Prevents ramp movement as the readout width changes. */
   .readout {
     flex: 0 0 auto;
     width: 4ch;
@@ -281,7 +373,8 @@ export const colorPickerStyles = css`
     outline: none;
   }
 
-  .hex[aria-invalid="true"] {
+  .hex[aria-invalid="true"],
+  .readout[aria-invalid="true"] {
     background: var(--jolly-invalid-bg);
     color: var(--jolly-danger, inherit);
   }
@@ -297,7 +390,6 @@ export const colorPickerStyles = css`
       forced-color-adjust: none;
     }
 
-    /* The surfaces opt out of substitution, so the ring names the system colour. */
     .area:has(input:focus-visible),
     .track:has(input:focus-visible) {
       outline-color: Highlight;

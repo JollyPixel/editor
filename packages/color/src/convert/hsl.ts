@@ -10,12 +10,10 @@ import {
 } from "../utils.ts";
 import type {
   HSLA,
+  HSVA,
   RGBA
 } from "../types.ts";
 
-/**
- * Clamps unit sRGB and reports zero hue and saturation for grays.
- */
 export function rgbToHsl(
   color: RGBA
 ): HSLA {
@@ -36,9 +34,6 @@ export function rgbToHsl(
   };
 }
 
-/**
- * Wraps hue and clamps all other HSLA channels.
- */
 export function hslToRgb(
   color: HSLA
 ): RGBA {
@@ -69,6 +64,36 @@ export function hslToRgb(
   };
 }
 
+export function hsvToHsl(
+  color: HSVA
+): HSLA {
+  const s = clampUnit(color.s);
+  const v = clampUnit(color.v);
+  const l = v * (1 - (s / 2));
+
+  return {
+    h: wrapHue(color.h),
+    s: clampUnit(hslSaturationOf(s, v, l)),
+    l,
+    a: clampUnit(color.a)
+  };
+}
+
+export function hslToHsv(
+  color: HSLA
+): HSVA {
+  const s = clampUnit(color.s);
+  const l = clampUnit(color.l);
+  const v = l + (s * Math.min(l, 1 - l));
+
+  return {
+    h: wrapHue(color.h),
+    s: clampUnit(l === 0 ? (2 * s) / (1 + s) : 2 * (1 - (l / v))),
+    v,
+    a: clampUnit(color.a)
+  };
+}
+
 function saturationOf(
   chroma: number,
   lightness: number
@@ -78,4 +103,19 @@ function saturationOf(
   }
 
   return chroma / (1 - Math.abs((2 * lightness) - 1));
+}
+
+function hslSaturationOf(
+  s: number,
+  v: number,
+  l: number
+): number {
+  if (l === 0) {
+    return s / (2 - s);
+  }
+  if (l === 1) {
+    return 0;
+  }
+
+  return (v - l) / Math.min(l, 1 - l);
 }

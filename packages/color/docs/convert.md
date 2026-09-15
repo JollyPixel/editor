@@ -118,6 +118,33 @@ hslToRgb({ h: -360, s: 2, l: 0.5, a: 2 });
 When `w + b >= 1`, `hwbToRgb` returns the gray described by the whiteness and
 blackness channels.
 
+### HSV and HSL
+
+```ts
+function hsvToHsl(color: HSVA): HSLA
+function hslToHsv(color: HSLA): HSVA
+```
+
+These convert between the two cylindrical models directly, without an RGB
+round trip, so hue passes through (wrapped) on grays instead of becoming 0.
+Saturation and value or lightness are clamped, and so is alpha.
+
+At the black point, where HSL saturation is undefined, both functions return
+the limit as lightness approaches 0 at the same HSV saturation:
+`hsvToHsl` gives `s / (2 - s)` and `hslToHsv` gives `2s / (1 + s)`. A color
+converted to black and back keeps its saturation. At white, HSL saturation is
+0.
+
+```ts
+import { hslToHsv, hsvToHsl } from "@jolly-pixel/color";
+
+hsvToHsl({ h: 24, s: 1, v: 1, a: 1 });
+// { h: 24, s: 1, l: 0.5, a: 1 }
+
+hslToHsv(hsvToHsl({ h: 24, s: 1, v: 0, a: 1 }));
+// { h: 24, s: 1, v: 0, a: 1 }
+```
+
 ## sRGB transfer functions
 
 ```ts

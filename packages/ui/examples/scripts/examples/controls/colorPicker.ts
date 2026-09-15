@@ -5,6 +5,7 @@ import { parseColor } from "@jolly-pixel/color";
 import type { GalleryExample } from "../../types.ts";
 import {
   detailOf,
+  type ColorPickerLayout,
   type JollyChangeDetail
 } from "../../../../src/index.ts";
 
@@ -14,9 +15,11 @@ interface PanelOptions {
   alpha?: boolean;
   hexInput?: boolean;
   readonly?: boolean;
+  layout?: ColorPickerLayout;
 }
 
 // CONSTANTS
+const kWideHeight = "120px";
 const kPanels: PanelOptions[] = [
   {
     name: "default",
@@ -36,12 +39,20 @@ const kPanels: PanelOptions[] = [
     name: "readonly",
     value: "#aa2255",
     readonly: true
+  },
+  {
+    name: "wide",
+    value: "#c39d7f",
+    layout: "wide"
+  },
+  {
+    name: "wide alpha",
+    value: "#ff660080",
+    alpha: true,
+    layout: "wide"
   }
 ];
 
-/**
- * Shows the picker states that apply outside a field row.
- */
 export const COLOR_PICKER_EXAMPLE: GalleryExample = {
   id: "controls/color-picker",
   title: "Color picker",
@@ -69,10 +80,6 @@ export const COLOR_PICKER_EXAMPLE: GalleryExample = {
   }
 };
 
-/**
- * Appends panels to the gallery scope. A nested scope would reset
- * `color-scheme` to the system preference.
- */
 function buildPanel(
   options: PanelOptions
 ): HTMLElement {
@@ -88,13 +95,16 @@ function buildPanel(
   picker.alpha = options.alpha ?? false;
   picker.hexInput = options.hexInput ?? true;
   picker.readonly = options.readonly ?? false;
+  picker.layout = options.layout ?? "stack";
+  if (picker.layout === "wide") {
+    picker.style.height = kWideHeight;
+  }
 
   const readout = document.createElement("code");
   readout.className = "state-name";
   readout.dataset.readout = options.name;
   readout.textContent = options.value;
 
-  // Controlled pickers require write-back during drag input.
   function writeBack(
     event: Event
   ): void {
@@ -126,9 +136,6 @@ function buildPanel(
   return cell;
 }
 
-/**
- * Tints the readout to verify that emitted values are valid CSS.
- */
 function swatchInk(
   value: string
 ): string {

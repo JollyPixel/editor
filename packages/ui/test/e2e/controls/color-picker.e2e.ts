@@ -39,9 +39,6 @@ async function openPicker(
   return popover;
 }
 
-/**
- * Uses few drag steps to avoid test timeouts caused by high step counts.
- */
 async function dragArea(
   page: Page,
   area: Locator,
@@ -90,7 +87,6 @@ test.describe("color: popup", () => {
 
     const popover = await openPicker(row(page, "default"));
 
-    // Bottom-left is zero saturation and zero value, whatever the hue.
     await dragArea(page, popover.locator(".area"), {
       x: 0,
       y: 1
@@ -197,7 +193,6 @@ test.describe("color: alpha", () => {
     const popover = await openPicker(row(page, "default"));
     const readout = popover.locator("input.readout");
 
-    // The row opens on #4488ffcc, and 0xcc is 0.8.
     await expect(readout).toHaveValue("0.80");
 
     await readout.fill("0.5");
@@ -297,7 +292,6 @@ test.describe("color picker: standalone panel", () => {
       .first()
       .locator('input[aria-label="Value"]');
 
-    // Hex loses hue at zero value. The held tuple must restore blue.
     await value.focus();
     await page.keyboard.press("Home");
     await expect(panel).toHaveText("#000000");
@@ -359,5 +353,111 @@ test.describe("color picker: standalone panel", () => {
     await page.keyboard.press("ArrowRight");
 
     await expect(panel).toHaveText("#aa2255");
+  });
+});
+
+test.describe("color picker: wide layout", () => {
+  function widePicker(
+    page: Page,
+    name: string
+  ): Locator {
+    return page.locator("jolly-color-picker[layout=\"wide\"]")
+      .nth(name === "wide" ? 0 : 1);
+  }
+
+  test("commits a typed RGB channel", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/color-picker",
+      chrome: "off"
+    });
+
+    const readout = page.locator("[data-readout=\"wide\"]");
+    const red = widePicker(page, "wide").locator("input[data-channel=\"r\"]");
+
+    await expect(red).toHaveValue("195");
+    await red.fill("255");
+    await red.press("Enter");
+
+    await expect(readout).toHaveText("#ff9d7f");
+  });
+
+  test("keeps the hue channel when HSL saturation reaches gray", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/color-picker",
+      chrome: "off"
+    });
+
+    const picker = widePicker(page, "wide");
+    const hue = picker.locator("input[data-channel=\"h\"]");
+    const saturation = picker.locator("input[data-channel=\"s\"]");
+    const before = await hue.inputValue();
+
+    await saturation.fill("0");
+    await saturation.press("Enter");
+
+    await expect(picker.locator("input[data-channel=\"r\"]")).toHaveValue(
+      await picker.locator("input[data-channel=\"g\"]").inputValue()
+    );
+    await expect(hue).toHaveValue(before);
+  });
+
+  test("marks an unparsable channel entry without committing it", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/color-picker",
+      chrome: "off"
+    });
+
+    const readout = page.locator("[data-readout=\"wide\"]");
+    const green = widePicker(page, "wide").locator("input[data-channel=\"g\"]");
+
+    await green.fill("1 +");
+    await green.press("Enter");
+
+    await expect(green).toHaveAttribute("aria-invalid", "true");
+    await expect(readout).toHaveText("#c39d7f");
+  });
+
+  test("lays the hue track out vertically with its maximum on top", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/color-picker",
+      chrome: "off"
+    });
+
+    const picker = widePicker(page, "wide");
+    const track = picker.locator(".track.hue");
+    await track.scrollIntoViewIfNeeded();
+    const box = await track.boundingBox();
+    if (box === null) {
+      throw new Error("the hue track has no layout box");
+    }
+
+    expect(box.height).toBeGreaterThan(box.width);
+
+    await page.mouse.click(
+      box.x + (box.width / 2),
+      box.y + (box.height * 0.1)
+    );
+
+    const hue = Number(
+      await picker.locator("input[data-channel=\"h\"]").inputValue()
+    );
+    expect(hue).toBeGreaterThan(300);
+  });
+
+  test("commits a typed alpha percentage", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/color-picker",
+      chrome: "off"
+    });
+
+    const readout = page.locator("[data-readout=\"wide alpha\"]");
+    const picker = widePicker(page, "wide alpha");
+    const alpha = picker.locator("input[data-channel=\"a\"]");
+
+    await expect(picker.locator(".track.alpha")).toBeVisible();
+    await alpha.fill("25");
+    await alpha.press("Enter");
+
+    await expect(readout).toHaveText("#ff660040");
   });
 });

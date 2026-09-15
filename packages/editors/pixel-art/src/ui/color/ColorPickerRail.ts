@@ -18,14 +18,6 @@ import { renderIcon } from "../common/icons.ts";
 import { iconStyles } from "../common/icon.styles.ts";
 import { colorPickerRailStyles } from "./ColorPickerRail.styles.ts";
 
-/**
- * Foreground/background swatches plus swap button.
- * Controlled by props; emits intent events only.
- *
- * @fires {CustomEvent<ColorChangeDetail>} foreground-change
- * @fires {CustomEvent<ColorChangeDetail>} background-change
- * @fires {CustomEvent<void>} swap
- */
 @customElement("color-picker-rail")
 export class ColorPickerRail extends LitElement {
   static override styles = [
@@ -38,6 +30,9 @@ export class ColorPickerRail extends LitElement {
 
   @property({ attribute: false })
   declare background: ColorChangeDetail;
+
+  @property({ type: Boolean, reflect: true })
+  declare docked: boolean;
 
   #foregroundSwatchElement: ColorSwatch | null = null;
   #backgroundSwatchElement: ColorSwatch | null = null;
@@ -52,6 +47,7 @@ export class ColorPickerRail extends LitElement {
       hex: "#ffffff",
       opacity: 1
     };
+    this.docked = false;
   }
 
   override firstUpdated(): void {
@@ -114,6 +110,15 @@ export class ColorPickerRail extends LitElement {
     this.dispatchEvent(customEvent);
   }
 
+  #onDockClick(): void {
+    const customEvent = new CustomEvent("dock-toggle", {
+      bubbles: true,
+      composed: true
+    });
+
+    this.dispatchEvent(customEvent);
+  }
+
   #onSwatchOpened(
     event: Event
   ): void {
@@ -129,28 +134,41 @@ export class ColorPickerRail extends LitElement {
 
   override render() {
     return html`
-      <color-swatch
-        class="swatch fg"
-        part="fg-swatch"
-        .color=${this.foreground.hex}
-        .opacity=${this.foreground.opacity}
-        @color-change=${this.#onForegroundChange}
-        @opened=${this.#onSwatchOpened}
-      ></color-swatch>
-      <color-swatch
-        class="swatch bg"
-        part="bg-swatch"
-        .color=${this.background.hex}
-        .opacity=${this.background.opacity}
-        @color-change=${this.#onBackgroundChange}
-        @opened=${this.#onSwatchOpened}
-      ></color-swatch>
+      <div class="swatches">
+        <color-swatch
+          class="swatch fg"
+          part="fg-swatch"
+          .color=${this.foreground.hex}
+          .opacity=${this.foreground.opacity}
+          ?disabled=${this.docked}
+          @color-change=${this.#onForegroundChange}
+          @opened=${this.#onSwatchOpened}
+        ></color-swatch>
+        <color-swatch
+          class="swatch bg"
+          part="bg-swatch"
+          .color=${this.background.hex}
+          .opacity=${this.background.opacity}
+          ?disabled=${this.docked}
+          @color-change=${this.#onBackgroundChange}
+          @opened=${this.#onSwatchOpened}
+        ></color-swatch>
+        <button
+          class="swap-btn"
+          part="swap-button"
+          aria-label="Swap foreground and background colors"
+          ?disabled=${this.docked}
+          @click=${this.#onSwapClick}
+        >${renderIcon("swap")}</button>
+      </div>
       <button
-        class="swap-btn"
-        part="swap-button"
-        aria-label="Swap foreground and background colors"
-        @click=${this.#onSwapClick}
-      >${renderIcon("swap")}</button>
+        class="dock-btn"
+        part="dock-button"
+        title="Docked color picker"
+        aria-label="Docked color picker"
+        aria-pressed=${this.docked ? "true" : "false"}
+        @click=${this.#onDockClick}
+      >${renderIcon("dockPicker")}</button>
     `;
   }
 }

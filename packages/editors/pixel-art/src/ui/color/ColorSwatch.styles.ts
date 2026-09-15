@@ -22,6 +22,11 @@ export const colorSwatchStyles = css`
       0 1px 2px rgba(0, 0, 0, 0.25);
   }
 
+  button:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
   button:focus-visible {
     outline: 2px solid var(--color-swatch-focus-color, var(--color-accent, #4488ff));
     outline-offset: 2px;

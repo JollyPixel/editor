@@ -20,6 +20,13 @@ import {
 
 // Import Internal Dependencies
 import { saturationValueFromPointer } from "../color/area.ts";
+import {
+  applyChannel,
+  channelValues,
+  CHANNEL_BOUNDS,
+  type ChannelValues,
+  type ColorChannel
+} from "../color/channels.ts";
 import { parseFieldColor } from "../color/draft.ts";
 import { colorPickerStyles } from "./ColorPicker.styles.ts";
 import { emitFieldEvent } from "../field/events.ts";
@@ -41,22 +48,33 @@ const kBlack: HSVA = {
   v: 0,
   a: 1
 };
+const kChannelLabels: Readonly<Record<ColorChannel, [string, string]>> = {
+  r: ["R", "Red value"],
+  g: ["G", "Green value"],
+  b: ["B", "Blue value"],
+  h: ["H", "Hue value"],
+  s: ["S", "HSL saturation value"],
+  l: ["L", "HSL lightness value"],
+  a: ["A", "Alpha value"]
+};
+const kChannelRows: ReadonlyArray<[ColorChannel, ColorChannel]> = [
+  ["r", "h"],
+  ["g", "s"],
+  ["b", "l"]
+];
+
+export type ColorPickerLayout = "stack" | "wide";
 
 export interface ColorPickerDefaults {
   value: string;
+  layout: ColorPickerLayout;
 }
 
-/**
- * Controlled saturation and value picker with hue, alpha, and hex controls.
- * Emits `jolly-input` during edits and `jolly-change` on commit.
- *
- * @fires {CustomEvent<JollyChangeDetail<string>>} jolly-input
- * @fires {CustomEvent<JollyChangeDetail<string>>} jolly-change
- */
 @customElement("jolly-color-picker")
 export class ColorPicker extends LitElement {
   static readonly Defaults: ColorPickerDefaults = {
-    value: "#000000"
+    value: "#000000",
+    layout: "stack"
   };
 
   static override styles = [
@@ -69,15 +87,15 @@ export class ColorPicker extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare alpha: boolean;
 
-  /**
-   * Shows the preview and hex field. Disable when the host supplies one.
-   */
   @property({
     type: Boolean,
     reflect: true,
     attribute: "hex-input"
   })
   declare hexInput: boolean;
+
+  @property({ type: String, reflect: true })
+  declare layout: ColorPickerLayout;
 
   @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
@@ -91,12 +109,10 @@ export class ColorPicker extends LitElement {
   @query(".axis-saturation")
   declare _saturation: HTMLInputElement;
 
-  /**
-   * Preserves hue and saturation when hex cannot represent them.
-   */
   #hsva: HSVA = kBlack;
   #draft: string | null = null;
   #alphaDraft = new DraftController<number>(this);
+  #channelDrafts = new Map<ColorChannel, DraftController<number>>();
   #invalid = false;
 
   constructor() {
@@ -105,13 +121,11 @@ export class ColorPicker extends LitElement {
     this.value = ColorPicker.Defaults.value;
     this.alpha = false;
     this.hexInput = true;
+    this.layout = ColorPicker.Defaults.layout;
     this.disabled = false;
     this.readonly = false;
   }
 
-  /**
-   * Focuses the saturation control.
-   */
   override focus(
     options?: FocusOptions
   ): void {
@@ -129,9 +143,6 @@ export class ColorPicker extends LitElement {
     }
   }
 
-  /**
-   * Preserves held HSVA during write-back. External values replace it.
-   */
   #adoptValue(): void {
     const incoming = parseFieldColor(this.value ?? "");
     if (incoming === null) {
@@ -155,9 +166,6 @@ export class ColorPicker extends LitElement {
     );
   }
 
-  /**
-   * Opaque current colour for the alpha ramp.
-   */
   get #opaqueHex(): string {
     return formatHex(hsvToRgb(this.#hsva));
   }
@@ -180,6 +188,17 @@ export class ColorPicker extends LitElement {
       `--jolly-picker-color:${this.#hex}`,
       `--jolly-picker-opaque:${this.#opaqueHex}`
     ].join(";");
+
+    if (this.layout === "wide") {
+      return html`
+        <div class="panel" style=${style}>
+          ${this.#renderArea()}
+          ${this.#renderHue()}
+          ${this.alpha ? this.#renderAlphaTrack() : nothing}
+          ${this.#renderChannels()}
+        </div>
+      `;
+    }
 
     return html`
       <div class="panel" style=${style}>
@@ -244,6 +263,7 @@ export class ColorPicker extends LitElement {
           .value=${String(Math.round(this.#hsva.h))}
           ?disabled=${this.disabled}
           aria-label="Hue"
+          aria-orientation=${this.layout === "wide" ? "vertical" : nothing}
           aria-readonly=${this.readonly ? "true" : nothing}
           @input=${this.#onHue}
           @change=${this.#onHue}
@@ -252,23 +272,30 @@ export class ColorPicker extends LitElement {
     `;
   }
 
+  #renderAlphaTrack(): TemplateResult {
+    return html`
+      <div class="track alpha">
+        <input
+          type="range"
+          min="0"
+          max=${kAlphaSteps}
+          step="1"
+          .value=${String(Math.round(this.#hsva.a * kAlphaSteps))}
+          ?disabled=${this.disabled}
+          aria-label="Alpha"
+          aria-orientation=${this.layout === "wide" ? "vertical" : nothing}
+          aria-readonly=${this.readonly ? "true" : nothing}
+          @input=${this.#onAlpha}
+          @change=${this.#onAlpha}
+        >
+      </div>
+    `;
+  }
+
   #renderAlpha(): TemplateResult {
     return html`
       <div class="lane">
-        <div class="track alpha">
-          <input
-            type="range"
-            min="0"
-            max=${kAlphaSteps}
-            step="1"
-            .value=${String(Math.round(this.#hsva.a * kAlphaSteps))}
-            ?disabled=${this.disabled}
-            aria-label="Alpha"
-            aria-readonly=${this.readonly ? "true" : nothing}
-            @input=${this.#onAlpha}
-            @change=${this.#onAlpha}
-          >
-        </div>
+        ${this.#renderAlphaTrack()}
         <input
           class="readout"
           type="text"
@@ -284,6 +311,83 @@ export class ColorPicker extends LitElement {
         >
       </div>
     `;
+  }
+
+  #renderChannels(): TemplateResult {
+    const values = channelValues(this.#hsva);
+    const hasFooter = this.hexInput || this.alpha;
+
+    return html`
+      <div class="channels">
+        ${kChannelRows.map(([left, right]) => html`
+          ${this.#renderChannel(left, values)}
+          ${this.#renderChannel(right, values)}
+        `)}
+        ${hasFooter ? html`
+          <div class="footer">
+            ${this.hexInput ? this.#renderHexControls() : nothing}
+            ${this.alpha ? this.#renderChannel("a", values) : nothing}
+          </div>
+        ` : nothing}
+      </div>
+    `;
+  }
+
+  #renderChannel(
+    channel: ColorChannel,
+    values: ChannelValues
+  ): TemplateResult {
+    const [name, label] = kChannelLabels[channel];
+    const draft = this.#channelDraft(channel);
+
+    return html`
+      <label class="channel">
+        <span class="channel-name" aria-hidden="true">${name}</span>
+        <input
+          class="readout"
+          type="text"
+          inputmode="decimal"
+          spellcheck="false"
+          data-channel=${channel}
+          aria-label=${label}
+          aria-invalid=${draft.error === null ? nothing : "true"}
+          .value=${draft.draft ?? String(values[channel])}
+          ?disabled=${this.disabled}
+          ?readonly=${this.readonly}
+          @input=${(event: Event) => draft.onInput(event)}
+          @keydown=${(event: KeyboardEvent) => {
+            draft.onKeyDown(event, () => this.#commitChannel(channel));
+          }}
+          @blur=${() => this.#commitChannel(channel)}
+        >
+      </label>
+    `;
+  }
+
+  #channelDraft(
+    channel: ColorChannel
+  ): DraftController<number> {
+    let draft = this.#channelDrafts.get(channel);
+    if (draft === undefined) {
+      draft = new DraftController<number>(this);
+      this.#channelDrafts.set(channel, draft);
+    }
+
+    return draft;
+  }
+
+  #commitChannel(
+    channel: ColorChannel
+  ): void {
+    this.#channelDraft(channel).commit(
+      (draft) => parseNumericEntry(draft, CHANNEL_BOUNDS[channel]),
+      this.editable,
+      (value) => {
+        this.#hsva = applyChannel(this.#hsva, channel, value);
+        this.#patch({});
+        this.#commit();
+      }
+    );
   }
 
   #onAlphaType(
@@ -327,23 +431,29 @@ export class ColorPicker extends LitElement {
   #renderFooter(): TemplateResult {
     return html`
       <div class="footer">
-        <span class="preview checker">
-          <span class="preview-face"></span>
-        </span>
-        <input
-          class="hex"
-          type="text"
-          spellcheck="false"
-          aria-label="Hex value"
-          aria-invalid=${this.#invalid ? "true" : nothing}
-          .value=${this.#draft ?? this.#hex}
-          ?disabled=${this.disabled}
-          ?readonly=${this.readonly}
-          @input=${this.#onHexType}
-          @keydown=${this.#onHexKeyDown}
-          @blur=${this.#onHexBlur}
-        >
+        ${this.#renderHexControls()}
       </div>
+    `;
+  }
+
+  #renderHexControls(): TemplateResult {
+    return html`
+      <span class="preview checker">
+        <span class="preview-face"></span>
+      </span>
+      <input
+        class="hex"
+        type="text"
+        spellcheck="false"
+        aria-label="Hex value"
+        aria-invalid=${this.#invalid ? "true" : nothing}
+        .value=${this.#draft ?? this.#hex}
+        ?disabled=${this.disabled}
+        ?readonly=${this.readonly}
+        @input=${this.#onHexType}
+        @keydown=${this.#onHexKeyDown}
+        @blur=${this.#onHexBlur}
+      >
     `;
   }
 
@@ -356,7 +466,6 @@ export class ColorPicker extends LitElement {
 
     event.preventDefault();
     this._area.setPointerCapture(event.pointerId);
-    // Continue the active pointer gesture from the keyboard.
     this._saturation.focus({ preventScroll: true });
     this.#applyPointer(event);
 
@@ -456,9 +565,6 @@ export class ColorPicker extends LitElement {
     );
   }
 
-  /**
-   * Restores rejected range input because native ranges lack `readonly`.
-   */
   #applyAxis(
     event: Event,
     toPatch: (raw: number) => Partial<HSVA>
@@ -492,6 +598,9 @@ export class ColorPicker extends LitElement {
     };
     this.#draft = null;
     this.#alphaDraft.clear();
+    for (const draft of this.#channelDrafts.values()) {
+      draft.clear();
+    }
     this.#invalid = false;
     this.requestUpdate();
   }
@@ -531,7 +640,6 @@ export class ColorPicker extends LitElement {
       this.#commitHex();
     }
     else if (event.key === "Escape") {
-      // Keep the parent popover open while discarding the draft.
       event.stopPropagation();
       this.#draft = null;
       this.#invalid = false;
