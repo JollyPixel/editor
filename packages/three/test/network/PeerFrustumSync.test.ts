@@ -50,6 +50,8 @@ describe("remote peers", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(3) } });
 
+    room.emitSync();
+
     sync.attach(new THREE.Object3D());
 
     const [frustum] = frustumsOf(parent);
@@ -60,6 +62,7 @@ describe("remote peers", () => {
 
   test("picks up peers landed by the join snapshot on \"sync\"", () => {
     const { room, parent, sync } = setup();
+    room.emitSync();
     sync.attach(new THREE.Object3D());
     assert.equal(frustumsOf(parent).length, 0);
 
@@ -73,6 +76,8 @@ describe("remote peers", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(1) } });
 
+    room.emitSync();
+
     sync.attach(new THREE.Object3D());
     room.emitSync("alice");
     room.emitJoin("alice");
@@ -83,6 +88,7 @@ describe("remote peers", () => {
   test("applies pose patches from \"peer-presence\"", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(0) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     room.emitPresence("alice", {
@@ -109,6 +115,7 @@ describe("remote peers", () => {
   test("hides a tracked peer whose pose becomes invalid", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     room.emitPresence("alice", { frustum: null });
@@ -120,6 +127,7 @@ describe("remote peers", () => {
   test("removes and disposes a peer on \"peer-left\"", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
     const [frustum] = frustumsOf(parent);
 
@@ -132,6 +140,7 @@ describe("remote peers", () => {
   test("reads back the last pose applied to a peer", () => {
     const { room, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     room.emitPresence("alice", {
@@ -150,6 +159,7 @@ describe("remote peers", () => {
   test("copies the pose it reads back", () => {
     const { room, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     const first = sync.poseOf("alice");
@@ -169,6 +179,7 @@ describe("remote peers", () => {
     const { room, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(1) } });
     room.addPeer("bob", { presence: { frustum: pose(2) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     room.emitPresence("alice", { frustum: null });
@@ -185,6 +196,8 @@ describe("remote peers", () => {
       presence: { frustum: pose(1) }
     });
 
+    room.emitSync();
+
     sync.attach(new THREE.Object3D());
 
     assert.equal(frustumsOf(parent)[0].displayName, "Alice");
@@ -195,6 +208,8 @@ describe("presence key", () => {
   test("publishes and reads poses under a custom key", () => {
     const { room, parent, sync } = setup({ presenceKey: "camera" });
     room.addPeer("alice", { presence: { camera: pose(4) } });
+
+    room.emitSync();
 
     sync.attach(new THREE.Object3D());
     sync.update();
@@ -217,6 +232,7 @@ describe("colors", () => {
       color: () => colors[Math.min(calls++, colors.length - 1)]
     });
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     const [frustum] = frustumsOf(parent);
@@ -247,6 +263,8 @@ describe("colors", () => {
       presence: { frustum: pose(1) }
     });
 
+    room.emitSync();
+
     sync.attach(new THREE.Object3D());
 
     assert.deepEqual(seen, [{ username: "Alice" }]);
@@ -257,6 +275,7 @@ describe("colors", () => {
     const parent = new THREE.Object3D();
     const sync = new PeerFrustumSync({ room, parent });
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     const [frustum] = frustumsOf(parent);
@@ -276,6 +295,7 @@ describe("colors", () => {
     });
     room.addPeer("alice", { presence: { frustum: pose(1) } });
     room.addPeer("bob", { presence: { frustum: pose(2) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     const frustums = frustumsOf(parent);
@@ -301,6 +321,7 @@ describe("colors", () => {
       color: () => "#123456"
     });
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     const [frustum] = frustumsOf(parent);
@@ -357,28 +378,6 @@ describe("local reporting", () => {
     assert.equal(room.patches.length, 1);
   });
 
-  test("republishes after \"sync\" even when the source did not move", () => {
-    const { room, sync } = setup();
-    sync.attach(new THREE.Object3D());
-    sync.update();
-
-    room.emitSync();
-    sync.update();
-
-    assert.equal(room.patches.length, 2);
-  });
-
-  test("republishes after \"peer-joined\" even when the source did not move", () => {
-    const { room, sync } = setup();
-    sync.attach(new THREE.Object3D());
-    sync.update();
-
-    room.emitJoin("alice");
-    sync.update();
-
-    assert.equal(room.patches.length, 2);
-  });
-
   test("throttles moves to one report per window", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
     const { room, sync } = setup({ throttleMs: 50 });
@@ -393,20 +392,6 @@ describe("local reporting", () => {
     t.mock.timers.tick(50);
     sync.update();
     assert.deepEqual(room.patches[1], { frustum: pose(1) });
-  });
-
-  test("reports immediately after a republish, ignoring the window", (t) => {
-    t.mock.timers.enable({ apis: ["Date"] });
-    const { room, sync } = setup({ throttleMs: 50 });
-    const source = new THREE.Object3D();
-    sync.attach(source);
-    sync.update();
-
-    source.position.x = 1;
-    room.emitJoin("alice");
-    sync.update();
-
-    assert.equal(room.patches.length, 2);
   });
 });
 
@@ -451,6 +436,7 @@ describe("lifecycle", () => {
   test("destroy() drops every peer and unsubscribes from the room", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     sync.destroy();
@@ -481,6 +467,7 @@ describe("proximity fade", () => {
   test("leaves a distant peer opaque", () => {
     const { room, parent, sync, source } = fadingSetup();
     room.addPeer("alice", { presence: { frustum: pose(10) } });
+    room.emitSync();
     sync.attach(source);
 
     sync.update();
@@ -493,6 +480,7 @@ describe("proximity fade", () => {
   test("hides a peer closer than hideWithin", () => {
     const { room, parent, sync, source } = fadingSetup();
     room.addPeer("alice", { presence: { frustum: pose(0.5) } });
+    room.emitSync();
     sync.attach(source);
 
     sync.update();
@@ -505,6 +493,7 @@ describe("proximity fade", () => {
   test("ramps the opacity between the two distances", () => {
     const { room, parent, sync, source } = fadingSetup();
     room.addPeer("alice", { presence: { frustum: pose(2) } });
+    room.emitSync();
     sync.attach(source);
 
     sync.update();
@@ -529,6 +518,7 @@ describe("proximity fade", () => {
       profile: { username: "Alice" },
       presence: { frustum: pose(2) }
     });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     sync.update();
@@ -539,6 +529,7 @@ describe("proximity fade", () => {
   test("follows the source as it moves away", () => {
     const { room, parent, sync, source } = fadingSetup();
     room.addPeer("alice", { presence: { frustum: pose(0.5) } });
+    room.emitSync();
     sync.attach(source);
     sync.update();
 
@@ -553,6 +544,7 @@ describe("proximity fade", () => {
   test("fades a pose patch landing on top of the source", () => {
     const { room, parent, sync, source } = fadingSetup();
     room.addPeer("alice", { presence: { frustum: pose(10) } });
+    room.emitSync();
     sync.attach(source);
 
     room.emitPresence("alice", { frustum: pose(0.5) });
@@ -564,6 +556,7 @@ describe("proximity fade", () => {
   test("restores full opacity on detach()", () => {
     const { room, parent, sync, source } = fadingSetup();
     room.addPeer("alice", { presence: { frustum: pose(0.5) } });
+    room.emitSync();
     sync.attach(source);
     sync.update();
 
@@ -577,6 +570,7 @@ describe("proximity fade", () => {
   test("keeps a poseless peer hidden through detach()", () => {
     const { room, parent, sync, source } = fadingSetup();
     room.addPeer("alice", { presence: { frustum: pose(2) } });
+    room.emitSync();
     sync.attach(source);
     room.emitPresence("alice", { frustum: null });
 
@@ -589,6 +583,7 @@ describe("proximity fade", () => {
   test("never fades without the distances", () => {
     const { room, parent, sync } = setup();
     room.addPeer("alice", { presence: { frustum: pose(0.1) } });
+    room.emitSync();
     sync.attach(new THREE.Object3D());
 
     sync.update();

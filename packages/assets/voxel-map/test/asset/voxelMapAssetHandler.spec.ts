@@ -216,10 +216,6 @@ describe("voxelMapAssetHandler", () => {
       }))
     );
 
-    /*
-     * Applying the command twice would move x to 4.
-     * The expected value verifies single application.
-     */
     assert.deepEqual(layer.position, {
       x: 2,
       y: 0,
@@ -374,14 +370,12 @@ describe("voxelMapAssetHandler", () => {
     const { protocol } = live();
 
     protocol.arbitrate(
-      voxelSetCmd({ timestamp: 2_000, clientId: "alice" }),
-      "alice"
+      voxelSetCmd({ timestamp: 2_000, clientId: "alice" })
     );
 
     assert.notStrictEqual(
       protocol.arbitrate(
-        voxelSetCmd({ timestamp: 1_000, clientId: "bob" }),
-        "bob"
+        voxelSetCmd({ timestamp: 1_000, clientId: "bob" })
       ),
       null
     );
@@ -391,14 +385,12 @@ describe("voxelMapAssetHandler", () => {
     const { protocol } = live();
 
     protocol.arbitrate(
-      voxelSetCmd({ timestamp: 2_000, clientId: "alice" }),
-      "alice"
+      voxelSetCmd({ timestamp: 2_000, clientId: "alice" })
     )!.commit!();
 
     assert.strictEqual(
       protocol.arbitrate(
-        voxelSetCmd({ timestamp: 1_000, clientId: "bob" }),
-        "bob"
+        voxelSetCmd({ timestamp: 1_000, clientId: "bob" })
       ),
       null
     );
@@ -408,7 +400,7 @@ describe("voxelMapAssetHandler", () => {
     const { protocol, state } = live();
     const command = worldReplaceCmd();
 
-    const arbitration = protocol.arbitrate(command, "alice");
+    const arbitration = protocol.arbitrate(command);
     assert.notStrictEqual(arbitration, null);
 
     assert.deepEqual(
@@ -438,14 +430,12 @@ describe("voxelMapAssetHandler", () => {
     const second = live().protocol;
 
     first.arbitrate(
-      voxelSetCmd({ timestamp: 2_000, clientId: "alice" }),
-      "alice"
+      voxelSetCmd({ timestamp: 2_000, clientId: "alice" })
     )!.commit!();
 
     assert.notStrictEqual(
       second.arbitrate(
-        voxelSetCmd({ timestamp: 1_000, clientId: "bob" }),
-        "bob"
+        voxelSetCmd({ timestamp: 1_000, clientId: "bob" })
       ),
       null
     );

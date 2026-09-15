@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network/client";
+import {
+  PresenceChannel,
+  type PeerMetadata,
+  type PresenceChange,
+  type Room
+} from "@jolly-pixel/network/client";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
@@ -19,131 +24,80 @@ const kDefaultThrottleMs = 50;
 const kDefaultHideWithin = 0;
 const kDefaultFadeWithin = 0;
 
-export interface PeerFrustumSyncOptions<
-  ClientMessage = unknown,
-  ServerMessage = unknown
-> {
-  room: network.Room<ClientMessage, ServerMessage>;
-  /**
-   * Parent for remote peer frustums.
-   */
+export interface PeerFrustumSyncOptions {
+  room: Room;
   parent: THREE.Object3D;
-  /**
-   * Presence field for frustum poses.
-   * @default "frustum"
-   */
   presenceKey?: string;
-  /**
-   * Minimum milliseconds between pose updates. `0` sends every moved pose.
-   * @default 50
-   */
   throttleMs?: number;
-  /**
-   * Distance from the attached source below which a peer frustum is hidden,
-   * in world units. Both distances default to `0`, which never fades.
-   * @default 0
-   */
   hideWithin?: number;
-  /**
-   * Distance from the attached source below which a peer frustum fades toward
-   * hidden, in world units. Values at or under `hideWithin` cut without fading.
-   * @default 0
-   */
   fadeWithin?: number;
-  /**
-   * Returns a peer's display label.
-   * @default reads `profile.username` when it's a string
-   */
   label?: (
     clientId: string,
-    profile: network.PeerMetadata
+    profile: PeerMetadata
   ) => string | undefined;
-  /**
-   * Returns a remote peer's frustum color, overriding `frustum.color`.
-   * Omit to give every peer the same color.
-   * @default `frustum.color`, else the `PeerFrustum` default
-   */
   color?: (
     clientId: string,
-    profile: network.PeerMetadata
+    profile: PeerMetadata
   ) => THREE.ColorRepresentation;
-  /**
-   * Shared frustum options excluding `displayName`. `color` here applies to
-   * every peer; the `color` callback overrides it per peer.
-   */
   frustum?: Omit<PeerFrustumOptions, "displayName">;
 }
 
 function defaultLabel(
   _clientId: string,
-  profile: network.PeerMetadata
+  profile: PeerMetadata
 ): string | undefined {
   return typeof profile.username === "string" ? profile.username : undefined;
 }
 
-export class PeerFrustumSync<
-  ClientMessage = unknown,
-  ServerMessage = unknown
-> {
-  #room: network.Room<ClientMessage, ServerMessage>;
+export class PeerFrustumSync {
+  #room: Room;
+  #channel: PresenceChannel<PeerFrustumPose>;
   #parent: THREE.Object3D;
-  #presenceKey: string;
   #throttleMs: number;
   #hideWithin: number;
   #fadeWithin: number;
-  #label: (
-    clientId: string,
-    profile: network.PeerMetadata
-  ) => string | undefined;
-  #color: ((
-    clientId: string,
-    profile: network.PeerMetadata
-  ) => THREE.ColorRepresentation) | undefined;
+  #label: NonNullable<PeerFrustumSyncOptions["label"]>;
+  #color: PeerFrustumSyncOptions["color"];
   #frustumOptions: Omit<PeerFrustumOptions, "displayName">;
   #peers = new Map<string, PeerFrustum>();
-  #poses = new Map<string, PeerFrustumPose>();
   #source: THREE.Object3D | undefined;
-  #lastSent: PeerFrustumPose | undefined;
-  #lastSentAt = 0;
+  #lastSentAt: number | undefined;
 
-  #onSync = (): void => {
-    this.#reconcilePeers();
-    this.#invalidateLastSent();
-  };
-  #onPeerJoined = (
-    event: network.RoomPeerEvent
+  #onPeerChange = (
+    change: PresenceChange<PeerFrustumPose>
   ): void => {
-    this.#syncPeer(event.clientId);
-    this.#invalidateLastSent();
-  };
-  #onPeerLeft = (
-    event: network.RoomPeerEvent
-  ): void => {
-    this.#removePeer(event.clientId);
-  };
-  #onPeerPresence = (
-    event: network.RoomPeerPresenceEvent
-  ): void => {
-    this.#applyPresencePatch(event.clientId, event.patch);
+    if (change.value !== undefined) {
+      this.#showPeer(change.clientId, change.value);
+    }
+    else if (this.#room.peers.has(change.clientId)) {
+      this.#hidePeer(change.clientId);
+    }
+    else {
+      this.#removePeer(change.clientId);
+    }
   };
 
   constructor(
-    options: PeerFrustumSyncOptions<ClientMessage, ServerMessage>
+    options: PeerFrustumSyncOptions
   ) {
     this.#room = options.room;
     this.#parent = options.parent;
-    this.#presenceKey = options.presenceKey ?? kDefaultPresenceKey;
     this.#throttleMs = options.throttleMs ?? kDefaultThrottleMs;
     this.#hideWithin = options.hideWithin ?? kDefaultHideWithin;
     this.#fadeWithin = options.fadeWithin ?? kDefaultFadeWithin;
     this.#label = options.label ?? defaultLabel;
     this.#color = options.color;
     this.#frustumOptions = options.frustum ?? {};
+    this.#channel = new PresenceChannel(options.room, {
+      key: options.presenceKey ?? kDefaultPresenceKey,
+      decode: decodePeerFrustumPose,
+      equals: peerFrustumPoseEqual
+    });
 
-    this.#room.on("sync", this.#onSync);
-    this.#room.on("peer-joined", this.#onPeerJoined);
-    this.#room.on("peer-left", this.#onPeerLeft);
-    this.#room.on("peer-presence", this.#onPeerPresence);
+    for (const [clientId, pose] of this.#channel.values) {
+      this.#showPeer(clientId, pose);
+    }
+    this.#channel.on("change", this.#onPeerChange);
   }
 
   attach(
@@ -154,25 +108,21 @@ export class PeerFrustumSync<
     }
 
     this.#source = source;
-    this.#reconcilePeers();
   }
 
   detach(): void {
     this.#source = undefined;
-    this.#invalidateLastSent();
 
     for (const [clientId, frustum] of this.#peers) {
       frustum.opacity = 1;
-      frustum.visible = this.#poses.has(clientId);
+      frustum.visible = this.#channel.values.has(clientId);
     }
   }
 
   destroy(): void {
     this.detach();
-    this.#room.off("sync", this.#onSync);
-    this.#room.off("peer-joined", this.#onPeerJoined);
-    this.#room.off("peer-left", this.#onPeerLeft);
-    this.#room.off("peer-presence", this.#onPeerPresence);
+    this.#channel.off("change", this.#onPeerChange);
+    this.#channel.destroy();
 
     for (const clientId of [...this.#peers.keys()]) {
       this.#removePeer(clientId);
@@ -192,7 +142,7 @@ export class PeerFrustumSync<
     });
 
     for (const [clientId, frustum] of this.#peers) {
-      if (this.#poses.has(clientId)) {
+      if (this.#channel.values.has(clientId)) {
         this.#fade(frustum, x, y, z);
       }
     }
@@ -201,7 +151,7 @@ export class PeerFrustumSync<
   poseOf(
     clientId: string
   ): PeerFrustumPose | undefined {
-    const pose = this.#poses.get(clientId);
+    const pose = this.#channel.values.get(clientId);
     if (pose === undefined) {
       return undefined;
     }
@@ -219,95 +169,31 @@ export class PeerFrustumSync<
     }
 
     for (const [clientId, frustum] of this.#peers) {
-      const profile = this.#room.peers.get(clientId)?.profile ?? {};
-      frustum.color = color(clientId, profile);
+      frustum.color = color(clientId, this.#profileOf(clientId));
     }
   }
 
   #reportLocal(
     pose: PeerFrustumPose
   ): void {
-    if (this.#lastSent !== undefined) {
-      if (peerFrustumPoseEqual(pose, this.#lastSent)) {
-        return;
-      }
-
-      if (Date.now() - this.#lastSentAt < this.#throttleMs) {
-        return;
-      }
-    }
-
-    this.#lastSent = pose;
-    this.#lastSentAt = Date.now();
-    this.#room.updatePresence({
-      [this.#presenceKey]: pose
-    });
-  }
-
-  #invalidateLastSent(): void {
-    this.#lastSent = undefined;
-  }
-
-  #reconcilePeers(): void {
-    for (const [clientId, peer] of this.#room.peers) {
-      if (!this.#peers.has(clientId)) {
-        this.#applyPeer(clientId, peer.profile, peer.presence);
-      }
-    }
-  }
-
-  #syncPeer(
-    clientId: string
-  ): void {
-    const peer = this.#room.peers.get(clientId);
-    if (!peer) {
+    const now = Date.now();
+    if (
+      this.#lastSentAt !== undefined &&
+      now - this.#lastSentAt < this.#throttleMs
+    ) {
       return;
     }
 
-    this.#applyPeer(
-      clientId,
-      peer.profile,
-      peer.presence
-    );
+    if (this.#channel.publish(pose)) {
+      this.#lastSentAt = now;
+    }
   }
 
-  #applyPresencePatch(
+  #showPeer(
     clientId: string,
-    patch: network.PeerMetadata
+    pose: PeerFrustumPose
   ): void {
-    if (!(this.#presenceKey in patch)) {
-      return;
-    }
-
-    const profile = this.#room.peers.get(clientId)?.profile ?? {};
-    this.#applyPeer(
-      clientId,
-      profile,
-      patch
-    );
-  }
-
-  #applyPeer(
-    clientId: string,
-    profile: network.PeerMetadata,
-    presence: network.PeerMetadata
-  ): void {
-    const pose = decodePeerFrustumPose(presence[this.#presenceKey]);
-
-    if (pose === undefined) {
-      this.#poses.delete(clientId);
-
-      const frustum = this.#peers.get(clientId);
-      if (frustum) {
-        frustum.visible = false;
-      }
-
-      return;
-    }
-
-    this.#poses.set(clientId, pose);
-
-    const frustum = this.#peers.get(clientId) ?? this.#createPeer(clientId, profile);
+    const frustum = this.#peers.get(clientId) ?? this.#createPeer(clientId);
     frustum.visible = true;
     frustum.position.copy(pose.position);
     frustum.quaternion.copy(pose.quaternion);
@@ -315,6 +201,15 @@ export class PeerFrustumSync<
     if (this.#source !== undefined) {
       const { x, y, z } = this.#source.position;
       this.#fade(frustum, x, y, z);
+    }
+  }
+
+  #hidePeer(
+    clientId: string
+  ): void {
+    const frustum = this.#peers.get(clientId);
+    if (frustum) {
+      frustum.visible = false;
     }
   }
 
@@ -349,10 +244,16 @@ export class PeerFrustumSync<
       (this.#fadeWithin - this.#hideWithin);
   }
 
+  #profileOf(
+    clientId: string
+  ): PeerMetadata {
+    return this.#room.peers.get(clientId)?.profile ?? {};
+  }
+
   #createPeer(
-    clientId: string,
-    profile: network.PeerMetadata
+    clientId: string
   ): PeerFrustum {
+    const profile = this.#profileOf(clientId);
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
       ...this.#color && {
@@ -369,8 +270,6 @@ export class PeerFrustumSync<
   #removePeer(
     clientId: string
   ): void {
-    this.#poses.delete(clientId);
-
     const frustum = this.#peers.get(clientId);
     if (!frustum) {
       return;

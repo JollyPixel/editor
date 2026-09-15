@@ -15,7 +15,7 @@ set onBufferUpdated(listener: PixelBufferHookListener | undefined)
 
 Receives committed local pixel and UV commands. Undo and redo emit replay commands with the original edit time in `originTimestamp`.
 
-The canvas has one callback slot. Read the current callback before replacing it when multiple consumers need the hook. `PixelSyncClient` follows this rule and restores the previous callback when detached.
+The canvas has one callback slot. Read the current callback before replacing it when multiple consumers need the hook. `PixelSyncClient` follows this rule and restores the previous callback when destroyed.
 
 The callback can also be supplied as [`PixelArtCanvasOptions.onBufferUpdated`](../../../../../pixel-draw-renderer/docs/PixelArtCanvasOptions.md#onbufferupdated).
 
@@ -90,7 +90,7 @@ set onStrokeProgress(
 
 Reports the current brush or line pixels before commit. Fill operations do not report progress pixels.
 
-Cursor and stroke helpers chain callbacks already assigned to these slots and restore them on detach.
+Cursor and stroke helpers chain callbacks already assigned to these slots and restore them on destroy.
 
 ### `selectionEvents`
 

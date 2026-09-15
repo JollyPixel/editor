@@ -10,6 +10,12 @@ import type { CollaboratorPresence } from "../peer/types.ts";
 
 // CONSTANTS
 const kPresenceKey = "jolly";
+const kPeerEvents = [
+  "sync",
+  "peer-joined",
+  "peer-left",
+  "peer-presence"
+] as const;
 
 export interface LocalPeerIdentity {
   clientId: string;
@@ -24,9 +30,6 @@ interface StampedPresence {
   editing?: unknown;
 }
 
-/**
- * Adapts a client `Room` without pulling server dependencies into the browser.
- */
 export class RoomPresenceSource implements PresenceSource {
   readonly clientId: string;
 
@@ -45,18 +48,9 @@ export class RoomPresenceSource implements PresenceSource {
     this.clientId = identity.clientId;
 
     const emit = () => this.#emit();
-    for (const event of ["peer-left", "peer-presence"] as const) {
+    for (const event of kPeerEvents) {
       room.on(event, emit);
       this.#detach.push(() => room.off(event, emit));
-    }
-
-    const republish = () => {
-      this.#publish();
-      this.#emit();
-    };
-    for (const event of ["sync", "peer-joined"] as const) {
-      room.on(event, republish);
-      this.#detach.push(() => room.off(event, republish));
     }
 
     this.#publish();

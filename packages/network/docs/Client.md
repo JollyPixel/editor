@@ -83,9 +83,9 @@ interface RoomOptions<ServerMessage = unknown> {
 }
 ```
 
-- `join()` — joins on the server, carrying the client's profile. No-op once joined.
+- `join()` — joins on the server, carrying the client's profile and the presence set so far. No-op once joined.
 - `send(payload)` — sends a room-scoped message; the payload passes through untouched.
-- `updatePresence(patch)` — per-room dynamic metadata (cursor position, ...), shallow-merged server-side and relayed to peers as `"peer-presence"`.
+- `updatePresence(patch)` — per-room dynamic metadata (cursor position, ...), shallow-merged server-side and relayed to peers as `"peer-presence"`. Before `join()` it is only merged locally and sent with the join, so it never needs re-publishing on `"sync"`. Clear a field with `null`: `undefined` is dropped by JSON.
 - `leave()` — leaves, clears the local peer cache, drops the room from the client.
 - `peers` — remote peers only, never the local client. Seeded on join, then kept current by the peer events.
 - `clientId` — the id peers see, learned from the server on join. Before that it is a local placeholder.
@@ -99,7 +99,7 @@ Any number of listeners per event; `off` removes only the listener passed in. Li
 |---|---|---|
 | `message` | `ServerMessage` | the room's extension sends to this client |
 | `sync` | `{ self, clientIds }` | your join was admitted — `clientId`, `role`, `rights` and `peers` are now current. `clientIds` lists remote peers only |
-| `peer-joined` | `{ clientId }` | a remote peer joins after you |
+| `peer-joined` | `{ clientId }` | a remote peer joins after you; `peers` already holds its profile and join presence |
 | `peer-left` | `{ clientId }` | a remote peer leaves or disconnects |
 | `peer-presence` | `{ clientId, patch }` | a remote presence patch arrives — `peers` is already updated |
 | `denied` | `{ event, reason }` | the server refused one of your own actions on rights grounds |

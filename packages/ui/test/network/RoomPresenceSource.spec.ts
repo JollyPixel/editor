@@ -19,9 +19,6 @@ const kIdentity = {
   color: "#f94144"
 };
 
-/**
- * Room test double that serializes presence patches like the wire.
- */
 class FakeRoom implements Room {
   readonly id = "gallery";
   readonly clientId = "local-uuid-nobody-sees";
@@ -39,17 +36,16 @@ class FakeRoom implements Room {
   }
 
   join(): void {
-    // No transport to join.
+    return void 0;
   }
 
   send(): void {
-    // No transport to send through.
+    return void 0;
   }
 
   updatePresence(
     patch: PeerMetadata
   ): void {
-    // Match the wire by dropping undefined during JSON serialization.
     this.patches.push(JSON.parse(JSON.stringify(patch)));
   }
 
@@ -224,22 +220,14 @@ describe("RoomPresenceSource — change notification", () => {
     assert.equal(changes, 1);
   });
 
-  test("re-publishes on sync, since a pre-join patch is dropped as not a member", () => {
+  test("never re-publishes on sync or peer-joined, the join carries its presence", () => {
     const { room } = createSource();
     room.patches.length = 0;
 
     room.emit("sync");
-
-    assert.equal(room.patches.length, 1);
-  });
-
-  test("re-publishes on peer-joined, so a later joiner learns this identity", () => {
-    const { room } = createSource();
-    room.patches.length = 0;
-
     room.emit("peer-joined");
 
-    assert.equal(room.patches.length, 1);
+    assert.equal(room.patches.length, 0);
   });
 
   test("peer events fire change", () => {

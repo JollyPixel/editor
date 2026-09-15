@@ -33,10 +33,7 @@ export interface PeerFrustumsOptions {
 }
 
 export class PeerFrustums extends ActorComponent {
-  #sync: PeerFrustumSync<
-    VoxelNetworkCommand,
-    VoxelServerMessage
-  >;
+  #sync: PeerFrustumSync;
   #camera: THREE.PerspectiveCamera;
 
   constructor(

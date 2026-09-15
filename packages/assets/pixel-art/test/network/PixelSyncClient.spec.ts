@@ -42,8 +42,10 @@ function createHost() {
 function setup() {
   const room = new MockRoom({ clientId: "client-A" });
   const host = createHost();
-  const client = new PixelSyncClient({ room });
-  client.attach(asCanvas(host));
+  const client = new PixelSyncClient({
+    room,
+    canvas: asCanvas(host)
+  });
 
   return {
     room,
@@ -52,19 +54,13 @@ function setup() {
   };
 }
 
-describe("PixelSyncClient — attach", () => {
-  test("throws when a canvas is already attached", () => {
-    const { client } = setup();
-
-    assert.throws(() => client.attach(asCanvas(createHost())));
-  });
-
+describe("PixelSyncClient — canvas hook", () => {
   test("chains the existing onBufferUpdated handler", () => {
     const room = new MockRoom();
     const host = createHost();
     const previous = mock.fn<PixelBufferHookListener>();
     host.onBufferUpdated = previous;
-    new PixelSyncClient({ room }).attach(asCanvas(host));
+    new PixelSyncClient({ room, canvas: asCanvas(host) });
 
     host.onBufferUpdated?.(kResized);
 
@@ -72,25 +68,18 @@ describe("PixelSyncClient — attach", () => {
     assert.strictEqual(room.sent.length, 1);
   });
 
-  test("detach restores the previous handler and stops sending", () => {
+  test("destroy restores the previous handler and stops sending", () => {
     const room = new MockRoom();
     const host = createHost();
     const previous = mock.fn<PixelBufferHookListener>();
     host.onBufferUpdated = previous;
-    const client = new PixelSyncClient({ room });
-    client.attach(asCanvas(host));
+    const client = new PixelSyncClient({ room, canvas: asCanvas(host) });
 
-    client.detach();
+    client.destroy();
     host.onBufferUpdated?.(kResized);
 
     assert.strictEqual(host.onBufferUpdated, previous);
     assert.strictEqual(room.sent.length, 0);
-  });
-
-  test("detach without an attached canvas is a no-op", () => {
-    const client = new PixelSyncClient({ room: new MockRoom() });
-
-    assert.doesNotThrow(() => client.detach());
   });
 });
 
@@ -144,14 +133,14 @@ describe("PixelSyncClient — remote messages", () => {
     ]);
   });
 
-  test("ignores messages while no canvas is attached", () => {
-    const room = new MockRoom();
-    new PixelSyncClient({ room });
+  test("emits the asset room rejected notice", () => {
+    const { room, client } = setup();
+    const notices: unknown[] = [];
+    client.on("notice", (notice) => notices.push(notice));
 
-    assert.doesNotThrow(() => {
-      room.deliverCommand(command("resized", kResized.metadata));
-      room.deliverSnapshot();
-    });
+    room.emit("message", { type: "rejected", reason: "disk full" });
+
+    assert.deepStrictEqual(notices, [{ type: "rejected", reason: "disk full" }]);
   });
 
   test("becomes ready and emits \"ready\" once, on the first snapshot", () => {
@@ -169,7 +158,7 @@ describe("PixelSyncClient — remote messages", () => {
 });
 
 describe("PixelSyncClient — destroy", () => {
-  test("detaches the canvas and stops handling room messages", () => {
+  test("restores the canvas hook and stops handling room messages", () => {
     const { room, host, client } = setup();
 
     client.destroy();
@@ -191,7 +180,7 @@ describe("PixelSyncClient — UV region echoes", () => {
       texture: { size: { x: 64, y: 64 }, maxSize: 64 },
       zoom: { default: 4 }
     });
-    new PixelSyncClient({ room }).attach(canvas);
+    new PixelSyncClient({ room, canvas });
     const created: string[] = [];
     canvas.uv.on("region-created", ({ region }) => created.push(region.id));
 

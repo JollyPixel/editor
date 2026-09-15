@@ -49,15 +49,9 @@ const kDefaultBlockLimit = 32;
 const kExitOrbitFocusKey = "Escape";
 
 export interface EditorSceneOptions {
-  /**
-   * @default "Ground"
-   */
   defaultLayerName?: string;
   tilesets: TilesetSource[];
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
-  /**
-   * Local identity; absent offline, leaving the default brush tint.
-   */
   identity?: EditorIdentity;
   viewFocus?: ViewFocus;
 }
@@ -134,7 +128,6 @@ export class EditorScene extends Systems.Scene {
     this.#identity = identity;
     this.#viewFocus = viewFocus;
     this.editorState = editorState;
-    // A networked registry stays a placeholder until its snapshot lands.
     this.editorState.world.blocksReady = voxelRoom === undefined;
   }
 
@@ -188,20 +181,19 @@ export class EditorScene extends Systems.Scene {
     const { world: voxelWorld } = engine;
     this.engine = engine;
 
-    // Provide an in-view spawn point for new objects.
     this.#viewFocus.provider = () => viewFocusPoint(
       freeFlyCamera.camera,
       engine.root
     );
 
     if (this.#voxelRoom) {
-      this.#voxelSyncClient = new VoxelSyncClient({ room: this.#voxelRoom });
-      this.#voxelSyncClient.attach(engine);
-      // Snapshots bypass hooks that normally update mirrored UI state.
+      this.#voxelSyncClient = new VoxelSyncClient({
+        room: this.#voxelRoom,
+        engine
+      });
       this.#voxelSyncClient.on("snapshot", () => {
         let layers = voxelWorld.getLayers();
         if (layers.length === 0) {
-          // The attached client broadcasts this default layer.
           voxelWorld.addLayer(this.#defaultLayerName);
           layers = voxelWorld.getLayers();
         }
@@ -245,7 +237,6 @@ export class EditorScene extends Systems.Scene {
         }
       });
 
-    // Online snapshots supply block definitions.
     if (!this.#voxelRoom) {
       this.#registerDefaultBlocks();
       this.editorState.world.emit("blockRegistryChanged");

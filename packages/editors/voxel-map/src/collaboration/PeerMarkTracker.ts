@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
+import {
+  PresenceChannel,
+  type Room
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import {
@@ -12,12 +15,8 @@ import type {
 } from "./peerMarks.ts";
 import type { PresenceKey } from "./presenceKeys.ts";
 
-export interface PeerMarkTrackerOptions<
-  TKey,
-  ClientMessage = unknown,
-  ServerMessage = unknown
-> {
-  room: network.Room<ClientMessage, ServerMessage>;
+export interface PeerMarkTrackerOptions<TKey> {
+  room: Room;
   presenceKey: PresenceKey;
   localKey: () => TKey | null;
   readKey: (
@@ -28,114 +27,22 @@ export interface PeerMarkTrackerOptions<
   ) => void;
 }
 
-export class PeerMarkTracker<
-  TKey,
-  ClientMessage = unknown,
-  ServerMessage = unknown
-> {
-  #room: network.Room<ClientMessage, ServerMessage>;
-  #presenceKey: PresenceKey;
+export class PeerMarkTracker<TKey> {
+  #room: Room;
+  #channel: PresenceChannel<TKey | null>;
   #localKey: () => TKey | null;
-  #readKey: (
-    value: unknown
-  ) => TKey | null;
   #publishMarks: (
     marks: PeerMarkMap<TKey>
   ) => void;
-  #keys = new Map<string, TKey>();
 
-  #onSync = (): void => {
-    this.publishLocal();
-    this.#resync();
-  };
-
-  #onPeerLeft = (
-    event: network.RoomPeerEvent
-  ): void => {
-    if (this.#keys.delete(event.clientId)) {
-      this.#publish();
-    }
-  };
-
-  #onPeerPresence = (
-    event: network.RoomPeerPresenceEvent
-  ): void => {
-    if (!(this.#presenceKey in event.patch)) {
-      return;
-    }
-
-    this.#track(
-      event.clientId,
-      this.#readKey(event.patch[this.#presenceKey])
-    );
-    this.#publish();
-  };
-
-  constructor(
-    options: PeerMarkTrackerOptions<TKey, ClientMessage, ServerMessage>
-  ) {
-    this.#room = options.room;
-    this.#presenceKey = options.presenceKey;
-    this.#localKey = options.localKey;
-    this.#readKey = options.readKey;
-    this.#publishMarks = options.publish;
-
-    this.#room.on("sync", this.#onSync);
-    this.#room.on("peer-left", this.#onPeerLeft);
-    this.#room.on("peer-presence", this.#onPeerPresence);
-
-    this.publishLocal();
-    this.#resync();
-  }
-
-  publishLocal(): void {
-    this.#room.updatePresence({
-      [this.#presenceKey]: this.#localKey()
-    });
-  }
-
-  dispose(): void {
-    this.#room.off("sync", this.#onSync);
-    this.#room.off("peer-left", this.#onPeerLeft);
-    this.#room.off("peer-presence", this.#onPeerPresence);
-
-    this.#keys.clear();
-    this.#publishMarks(new Map());
-  }
-
-  #resync(): void {
-    this.#keys.clear();
-    for (const [clientId, peer] of this.#room.peers) {
-      this.#track(
-        clientId,
-        this.#readKey(peer.presence[this.#presenceKey])
-      );
-    }
-
-    this.#publish();
-  }
-
-  #track(
-    clientId: string,
-    key: TKey | null
-  ): void {
-    if (key === null) {
-      this.#keys.delete(clientId);
-
-      return;
-    }
-
-    this.#keys.set(clientId, key);
-  }
-
-  #publish(): void {
+  #publish = (): void => {
     const marks = new Map<TKey, PeerMark[]>();
-    const entries = [...this.#keys]
+    const entries = [...this.#channel.values]
       .sort(([left], [right]) => left.localeCompare(right));
 
     for (const [clientId, key] of entries) {
       const peer = this.#room.peers.get(clientId);
-      if (!peer) {
+      if (!peer || key === null) {
         continue;
       }
 
@@ -149,5 +56,33 @@ export class PeerMarkTracker<
     }
 
     this.#publishMarks(marks);
+  };
+
+  constructor(
+    options: PeerMarkTrackerOptions<TKey>
+  ) {
+    const { readKey } = options;
+
+    this.#room = options.room;
+    this.#localKey = options.localKey;
+    this.#publishMarks = options.publish;
+    this.#channel = new PresenceChannel<TKey | null>(options.room, {
+      key: options.presenceKey,
+      decode: (value) => readKey(value) ?? undefined
+    });
+
+    this.#channel.on("change", this.#publish);
+    this.publishLocal();
+    this.#publish();
+  }
+
+  publishLocal(): void {
+    this.#channel.publish(this.#localKey());
+  }
+
+  dispose(): void {
+    this.#channel.off("change", this.#publish);
+    this.#channel.destroy();
+    this.#publishMarks(new Map());
   }
 }

@@ -26,11 +26,7 @@ export interface BlockSelectionPresenceOptions {
 export class BlockSelectionPresence {
   #brush: BrushStore;
   #presence: PresenceStore;
-  #tracker: PeerMarkTracker<
-    number,
-    VoxelNetworkCommand,
-    VoxelServerMessage
-  >;
+  #tracker: PeerMarkTracker<number>;
   #unsubscribeBlock: () => void;
 
   #onBlockChange = (): void => {

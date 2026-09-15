@@ -1,8 +1,9 @@
 // Import Third-party Dependencies
+import { toUint8Array } from "js-base64";
 import {
-  toUint8Array
-} from "js-base64";
-import * as network from "@jolly-pixel/network/client";
+  CommandSync,
+  type Room
+} from "@jolly-pixel/network/client";
 import type {
   PixelArtCanvas,
   PixelBufferHookEvent,
@@ -11,65 +12,53 @@ import type {
 
 // Import Internal Dependencies
 import type {
+  PixelAssetNotice,
   PixelBufferSnapshot,
   PixelNetworkCommand,
   PixelServerMessage
 } from "./types.ts";
 
 export interface PixelSyncClientOptions {
-  room: network.Room<PixelNetworkCommand, PixelServerMessage>;
+  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  canvas: PixelArtCanvas;
 }
 
-export class PixelSyncClient extends network.SyncAdapter<
-  PixelArtCanvas,
-  PixelBufferHookEvent,
+export class PixelSyncClient extends CommandSync<
   PixelNetworkCommand,
-  PixelBufferSnapshot
+  PixelBufferSnapshot,
+  PixelAssetNotice
 > {
+  #canvas: PixelArtCanvas;
+  #previousHandler: PixelBufferHookListener | undefined;
+
+  #handleBufferUpdated = (
+    event: PixelBufferHookEvent
+  ): void => {
+    this.#previousHandler?.(event);
+
+    const { originTimestamp, ...body } = event;
+    this.send(body, originTimestamp);
+  };
+
   constructor(
     options: PixelSyncClientOptions
   ) {
     super(options.room);
-  }
+    const { canvas } = options;
 
-  protected getHandler(
-    canvas: PixelArtCanvas
-  ): PixelBufferHookListener | undefined {
-    return canvas.onBufferUpdated;
-  }
-
-  protected setHandler(
-    canvas: PixelArtCanvas,
-    fn: PixelBufferHookListener | undefined
-  ): void {
-    canvas.onBufferUpdated = fn;
-  }
-
-  protected override stampCommand(
-    event: PixelBufferHookEvent
-  ): PixelNetworkCommand {
-    const { originTimestamp, ...rest } = event;
-
-    return super.stampCommand(rest, originTimestamp ?? Date.now());
-  }
-
-  protected applySnapshot(
-    canvas: PixelArtCanvas,
-    snapshot: PixelBufferSnapshot
-  ): void {
-    canvas.loadSnapshot(
+    this.#canvas = canvas;
+    this.#previousHandler = canvas.onBufferUpdated;
+    canvas.onBufferUpdated = this.#handleBufferUpdated;
+    this.on("snapshot", (snapshot) => canvas.loadSnapshot(
       snapshot.size,
-      new Uint8ClampedArray(
-        toUint8Array(snapshot.pixels)
-      ),
+      new Uint8ClampedArray(toUint8Array(snapshot.pixels)),
       snapshot.uvRegions
-    );
+    ));
+    this.on("command", (command) => canvas.applyRemoteCommand(command));
   }
 
-  protected applyRemoteCommand(
-    canvas: PixelArtCanvas,
-    command: PixelNetworkCommand
-  ): void {
-    canvas.applyRemoteCommand(command);
+  override destroy(): void {
+    this.#canvas.onBufferUpdated = this.#previousHandler;
+    super.destroy();
   }
 }

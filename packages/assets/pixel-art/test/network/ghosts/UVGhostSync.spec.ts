@@ -10,7 +10,10 @@ import assert from "node:assert/strict";
 import type { PeerUVPreviewState } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { UVGhostSync } from "#src/network/ghosts/UVGhostSync.ts";
+import {
+  UVGhostSync,
+  type UVGhostSyncOptions
+} from "#src/network/ghosts/UVGhostSync.ts";
 import type { UVGhostPayload } from "#src/network/types.ts";
 import {
   command,
@@ -37,7 +40,9 @@ const kPayload: UVGhostPayload = {
   geometry: { x: 0, y: 0, width: 4, height: 4 }
 };
 
-function setup() {
+function setup(
+  options: Pick<UVGhostSyncOptions, "color"> = {}
+) {
   const room = new MockRoom();
   const host = {
     uv: new MockEmitter<UVEvents>(),
@@ -50,8 +55,11 @@ function setup() {
       }
     }
   };
-  const sync = new UVGhostSync({ room });
-  sync.attach(asCanvas(host));
+  new UVGhostSync({
+    room,
+    canvas: asCanvas(host),
+    ...options
+  });
 
   return {
     room,
@@ -113,6 +121,17 @@ describe("UVGhostSync — remote peers", () => {
     assert.ok(state.color.length > 0);
   });
 
+  test("colors a peer uvGhost with the color option and the peer profile", () => {
+    const { room, overlay } = setup({
+      color: (clientId, profile) => `${clientId}:${String(profile.tint)}`
+    });
+    room.addPeer("peer-B", { profile: { tint: "red" } });
+
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: kPayload } });
+
+    assert.strictEqual(callsOf(overlay.set)[0][1].color, "peer-B:red");
+  });
+
   test("ignores a malformed uvGhost payload", () => {
     const { room, overlay } = setup();
 
@@ -128,6 +147,7 @@ describe("UVGhostSync — remote peers", () => {
 
   test("removes a leaving peer's ghost and clears all ghosts on snapshot", () => {
     const { room, overlay } = setup();
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: kPayload } });
 
     room.emit("peer-left", { clientId: "peer-B" });
     room.deliverSnapshot();

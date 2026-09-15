@@ -42,11 +42,11 @@ classes transport ids and do not reconcile scene graphs.
 
 | Class | Presence key | Other defaults |
 |---|---|---|
-| `PeerSelectionSync` | `"selection"` | `resyncIntervalMs: 5000` |
-| `PeerHoverSync` | `"hover"` | `throttleMs: 80`, `resyncIntervalMs: 1000` |
+| `PeerSelectionSync` | `"selection"` | none |
+| `PeerHoverSync` | `"hover"` | `throttleMs: 80` |
 
-Set either resync interval to `0` to disable reconciliation. Hover throttling
-keeps the latest state and sends it after the throttle window.
+Both read presence through `network.PresenceChannel`. Hover throttling keeps
+the latest state and sends it after the throttle window.
 
 Call `destroy()` on both sync objects during room teardown. This removes their
 listeners and clears the remote peers they added without calling
@@ -55,5 +55,5 @@ listeners and clears the remote peers they added without calling
 The entry point also exports `PeerSelectionId`, `PeerHoverId`,
 `PeerSelectionSyncOptions`, `PeerHoverSyncOptions`,
 `decodePeerSelectionId()`, and `decodePeerHoverId()`. Each decoder accepts a
-string or `null`; malformed values return `undefined` and leave the previous
-remote state unchanged.
+string or `null`; malformed values return `undefined`, which removes that peer
+from the registry.

@@ -19,19 +19,11 @@ export type PixelSelectEditCommand = Extract<
   PixelNetworkCommand,
   { action: "select-edit"; }
 >;
-export interface PixelArbitration {
-  readonly command: PixelNetworkCommand;
-  commit(): void;
-}
-
 export type PixelUvRegionCommand = Extract<
   PixelNetworkCommand,
   { action: "uv-region-moved" | "uv-region-deleted" | "uv-region-state-changed"; }
 >;
 
-/**
- * Moves conflict per face; other UV commands conflict across all faces.
- */
 function uvConflictKeys(
   command: PixelUvRegionCommand,
   buffer: PixelBuffer
@@ -70,16 +62,9 @@ function uvConflictKeys(
 }
 
 export interface PixelCommandArbiterOptions {
-  /**
-   * Conflict resolver shared by the pixel and region trackers.
-   * @default network.LastWriteWinsResolver
-   */
   conflictResolver?: network.ConflictResolver;
 }
 
-/**
- * Resolves command conflicts without mutating the buffer.
- */
 export class PixelCommandArbiter {
   #pixelTracker: network.ConflictTracker;
   #regionTracker: network.ConflictTracker;
@@ -96,7 +81,7 @@ export class PixelCommandArbiter {
   admit(
     buffer: PixelBuffer,
     command: PixelNetworkCommand
-  ): PixelArbitration | null {
+  ): network.Admission<PixelNetworkCommand> | null {
     switch (command.action) {
       case "stroke":
         return this.#admitStroke(command);
@@ -104,7 +89,7 @@ export class PixelCommandArbiter {
         return this.#admitSelectEdit(command);
       case "uv-region-created":
         return isUVRegionData(command.metadata.region) ?
-          settled(command) :
+          this.#regionTracker.admit(command, []) :
           null;
       case "uv-region-state-changed":
         return isUVRegionData(command.metadata.region) ?
@@ -116,108 +101,75 @@ export class PixelCommandArbiter {
       case "resized":
       case "texture-replaced":
         return buffer.acceptsSize(command.metadata.size) ?
-          settled(command) :
+          this.#regionTracker.admit(command, []) :
           null;
       default:
-        return settled(command);
+        return this.#regionTracker.admit(command, []);
     }
   }
 
   #admitStroke(
     command: PixelStrokeCommand
-  ): PixelArbitration | null {
-    const accepted = this.#acceptedIndices(command);
-    if (accepted.length === 0) {
+  ): network.Admission<PixelNetworkCommand> | null {
+    const { indices, commit } = this.#admitPositions(command);
+    if (indices.length === 0) {
       return null;
     }
 
-    const positions = accepted.map(
-      (index) => command.metadata.positions[index]
-    );
-
-    return this.#pixelArbitration({
-      ...command,
-      metadata: {
-        ...command.metadata,
-        positions
-      }
-    }, positions);
+    return {
+      command: {
+        ...command,
+        metadata: {
+          ...command.metadata,
+          positions: indices.map((index) => command.metadata.positions[index])
+        }
+      },
+      commit
+    };
   }
 
   #admitSelectEdit(
     command: PixelSelectEditCommand
-  ): PixelArbitration | null {
+  ): network.Admission<PixelNetworkCommand> | null {
     const { metadata } = command;
     if (metadata.positions.length !== metadata.colors.length) {
       return null;
     }
 
-    const accepted = this.#acceptedIndices(command);
-    if (accepted.length === 0) {
+    const { indices, commit } = this.#admitPositions(command);
+    if (indices.length === 0) {
       return null;
     }
 
-    const positions = accepted.map(
-      (index) => command.metadata.positions[index]
-    );
-
-    return this.#pixelArbitration({
-      ...command,
-      metadata: {
-        positions,
-        colors: accepted.map((index) => command.metadata.colors[index])
-      }
-    }, positions);
+    return {
+      command: {
+        ...command,
+        metadata: {
+          positions: indices.map((index) => metadata.positions[index]),
+          colors: indices.map((index) => metadata.colors[index])
+        }
+      },
+      commit
+    };
   }
 
-  #acceptedIndices(
+  #admitPositions(
     command: PixelStrokeCommand | PixelSelectEditCommand
-  ): number[] {
-    const accepted: number[] = [];
-
-    command.metadata.positions.forEach((position, index) => {
-      if (this.#pixelTracker.resolve(pixelKey(position), command) === "accept") {
-        accepted.push(index);
-      }
-    });
-
-    return accepted;
+  ): network.PartialAdmission {
+    return this.#pixelTracker.admitEach(
+      command,
+      command.metadata.positions.map(pixelKey)
+    );
   }
 
   #admitUvRegion(
     buffer: PixelBuffer,
     command: PixelUvRegionCommand
-  ): PixelArbitration | null {
-    const keys = uvConflictKeys(command, buffer);
-    const rejected = keys.some(
-      (key) => this.#regionTracker.resolve(key, command) === "reject"
+  ): network.Admission<PixelNetworkCommand> | null {
+    return this.#regionTracker.admit(
+      command,
+      uvConflictKeys(command, buffer)
     );
-    if (rejected) {
-      return null;
-    }
-
-    return {
-      command,
-      commit: () => {
-        for (const key of keys) {
-          this.#regionTracker.record(key, command);
-        }
-      }
-    };
-  }
-
-  #pixelArbitration(
-    command: PixelNetworkCommand,
-    positions: readonly Vec2[]
-  ): PixelArbitration {
-    return {
-      command,
-      commit: () => {
-        for (const position of positions) {
-          this.#pixelTracker.record(pixelKey(position), command);
-        }
-      }
-    };
   }
 }
 
@@ -225,13 +177,4 @@ function pixelKey(
   position: Vec2
 ): string {
   return `${position.x},${position.y}`;
-}
-
-function settled(
-  command: PixelNetworkCommand
-): PixelArbitration {
-  return {
-    command,
-    commit: () => void 0
-  };
 }

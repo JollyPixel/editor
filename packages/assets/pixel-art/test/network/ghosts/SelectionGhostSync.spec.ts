@@ -15,7 +15,10 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { SelectionGhostSync } from "#src/network/ghosts/SelectionGhostSync.ts";
+import {
+  SelectionGhostSync,
+  type SelectionGhostSyncOptions
+} from "#src/network/ghosts/SelectionGhostSync.ts";
 import type { SelectionGhostPayload } from "#src/network/types.ts";
 import {
   command,
@@ -58,7 +61,9 @@ function createOverlay<TState>() {
   };
 }
 
-function setup() {
+function setup(
+  options: Pick<SelectionGhostSyncOptions, "color"> = {}
+) {
   const room = new MockRoom();
   const host = {
     selectionEvents: new MockEmitter<SelectionEvents>(),
@@ -67,8 +72,11 @@ function setup() {
       floatingSelections: createOverlay<PeerFloatingSelectionState>()
     }
   };
-  const sync = new SelectionGhostSync({ room });
-  sync.attach(asCanvas(host));
+  new SelectionGhostSync({
+    room,
+    canvas: asCanvas(host),
+    ...options
+  });
 
   return {
     room,
@@ -144,11 +152,23 @@ describe("SelectionGhostSync — remote peers", () => {
   test("a null selectionGhost and a leaving peer clear both overlays", () => {
     const { room, outlines, floating } = setup();
 
+    room.emit("peer-presence", { clientId: "peer-B", patch: { selectionGhost: kCreating } });
+    room.emit("peer-presence", { clientId: "peer-C", patch: { selectionGhost: kCreating } });
+    outlines.remove.mock.resetCalls();
+    floating.remove.mock.resetCalls();
     room.emit("peer-presence", { clientId: "peer-B", patch: { selectionGhost: null } });
     room.emit("peer-left", { clientId: "peer-C" });
 
     assert.deepStrictEqual(callsOf(outlines.remove), [["peer-B"], ["peer-C"]]);
     assert.deepStrictEqual(callsOf(floating.remove), [["peer-B"], ["peer-C"]]);
+  });
+
+  test("colors a peer outline with the color option", () => {
+    const { room, outlines } = setup({ color: () => "#123456" });
+
+    room.emit("peer-presence", { clientId: "peer-B", patch: { selectionGhost: kCreating } });
+
+    assert.strictEqual(callsOf(outlines.set)[0][1].color, "#123456");
   });
 
   test("ignores a malformed selectionGhost payload", () => {

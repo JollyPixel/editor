@@ -136,7 +136,8 @@ export class ServerRoom {
     clientId: string,
     client: ClientHandle,
     identity: PeerIdentity,
-    profile: PeerMetadata
+    profile: PeerMetadata,
+    presence: PeerMetadata = {}
   ): Promise<boolean> {
     const { role } = identity;
     if (!this.#authorize({
@@ -150,20 +151,25 @@ export class ServerRoom {
       return false;
     }
 
+    const initialPresence = this.#initialPresence(
+      clientId,
+      client,
+      role,
+      presence
+    );
     this.#members.add(clientId, {
       handle: client,
       identity,
       profile,
-      presence: {}
+      presence: initialPresence
     });
     this.#sendSyncSnapshot(clientId, client, role);
-    this.#members.send({
-      room: this.id,
-      kind: "peer-joined",
+    this.#announceJoin(
       clientId,
       role,
-      profile
-    }, { excludeClientId: clientId });
+      profile,
+      initialPresence
+    );
 
     await this.#extension.onClientConnect?.(
       {
@@ -174,7 +180,7 @@ export class ServerRoom {
         clientId,
         identity,
         profile,
-        presence: {}
+        presence: { ...initialPresence }
       },
       this.#contextFor(identity)
     );
@@ -187,6 +193,60 @@ export class ServerRoom {
       .debug("join");
 
     return true;
+  }
+
+  #initialPresence(
+    clientId: string,
+    client: ClientHandle,
+    role: string,
+    presence: PeerMetadata
+  ): PeerMetadata {
+    if (Object.keys(presence).length === 0) {
+      return {};
+    }
+
+    const authorized = this.#authorize({
+      clientId,
+      role,
+      event: PRESENCE_EVENT,
+      target: client,
+      reason: `role "${role}" cannot update presence`,
+      label: "join presence"
+    });
+
+    return authorized ? { ...presence } : {};
+  }
+
+  #announceJoin(
+    clientId: string,
+    role: string,
+    profile: PeerMetadata,
+    presence: PeerMetadata
+  ): void {
+    const canReadPresence = (peerRole: string) => this.#rights
+      .check(peerRole, PRESENCE_EVENT) !== "void";
+    const envelope = {
+      room: this.id,
+      kind: "peer-joined",
+      clientId,
+      role,
+      profile
+    } as const;
+
+    this.#members.send({
+      ...envelope,
+      presence
+    }, {
+      excludeClientId: clientId,
+      predicate: canReadPresence
+    });
+    this.#members.send({
+      ...envelope,
+      presence: {}
+    }, {
+      excludeClientId: clientId,
+      predicate: (peerRole) => !canReadPresence(peerRole)
+    });
   }
 
   #sendSyncSnapshot(

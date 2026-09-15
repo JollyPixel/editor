@@ -41,8 +41,7 @@ export interface AssetLiveProtocol<TCommand = unknown> {
   snapshot(): unknown;
 
   arbitrate(
-    command: TCommand,
-    clientId: string
+    command: TCommand
   ): AssetArbitration<TCommand> | null;
 
   broadcast?(
@@ -128,12 +127,15 @@ export class AssetRoomExtension<
       return;
     }
 
-    const command = parseAssetCommand(this.#commands, payload);
+    const command = parseAssetCommand(
+      this.#commands,
+      withAuthor(payload, clientId)
+    );
     if (command === null) {
       return;
     }
 
-    const arbitration = this.#protocol.arbitrate(command, clientId);
+    const arbitration = this.#protocol.arbitrate(command);
     if (arbitration === null) {
       return;
     }
@@ -162,6 +164,24 @@ export class AssetRoomExtension<
       }
     );
   }
+}
+
+function withAuthor(
+  payload: unknown,
+  clientId: string
+): unknown {
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    Array.isArray(payload)
+  ) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    clientId
+  };
 }
 
 function assetRoomProtocols(

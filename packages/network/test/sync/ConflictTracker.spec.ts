@@ -23,94 +23,87 @@ function header(
   };
 }
 
-describe("ConflictTracker — no prior command at a key", () => {
-  test("accepts", () => {
-    const tracker = new ConflictTracker(new LastWriteWinsResolver());
-    assert.strictEqual(tracker.resolve("k", header()), "accept");
+function tracker() {
+  return new ConflictTracker(new LastWriteWinsResolver());
+}
+
+describe("ConflictTracker.admit", () => {
+  test("admits a command with no history at its keys", () => {
+    const command = header();
+
+    assert.strictEqual(tracker().admit(command, ["k"])?.command, command);
   });
-});
 
-describe("ConflictTracker — resolve reads recorded commands per key", () => {
-  test("a later timestamp at the same key is accepted", () => {
-    const tracker = new ConflictTracker(new LastWriteWinsResolver());
+  test("admits a command with no keys", () => {
+    const conflicts = tracker();
+    conflicts.admit(header({ timestamp: 900 }), ["k"])!.commit();
 
-    const first = header({ clientId: "A", timestamp: 500 });
-    tracker.resolve("k", first);
-    tracker.record("k", first);
-
-    assert.strictEqual(
-      tracker.resolve("k", header({ clientId: "B", timestamp: 900 })),
-      "accept"
+    assert.notStrictEqual(
+      conflicts.admit(header({ clientId: "B", timestamp: 100 }), []),
+      null
     );
   });
 
-  test("a stale timestamp at the same key is rejected", () => {
-    const tracker = new ConflictTracker(new LastWriteWinsResolver());
-
-    const first = header({ clientId: "A", timestamp: 900 });
-    tracker.resolve("k", first);
-    tracker.record("k", first);
+  test("rejects when any key holds a newer command", () => {
+    const conflicts = tracker();
+    conflicts.admit(header({ timestamp: 900 }), ["k2"])!.commit();
 
     assert.strictEqual(
-      tracker.resolve("k", header({ clientId: "B", timestamp: 500 })),
-      "reject"
+      conflicts.admit(header({ clientId: "B", timestamp: 500 }), ["k1", "k2"]),
+      null
     );
   });
 
-  test("different keys are tracked independently", () => {
-    const tracker = new ConflictTracker(new LastWriteWinsResolver());
+  test("keys are tracked independently", () => {
+    const conflicts = tracker();
+    conflicts.admit(header({ timestamp: 900 }), ["k1"])!.commit();
 
-    const first = header({ clientId: "A", timestamp: 900 });
-    tracker.resolve("k1", first);
-    tracker.record("k1", first);
-
-    assert.strictEqual(
-      tracker.resolve("k2", header({ clientId: "B", timestamp: 100 })),
-      "accept"
-    );
-  });
-});
-
-describe("ConflictTracker — record", () => {
-  test("a command not recorded is not remembered by resolve()", () => {
-    const tracker = new ConflictTracker(new LastWriteWinsResolver());
-
-    /*
-     * Resolved (and would be accepted) but deliberately never recorded —
-     * mirrors a command that was accepted by the resolver but failed to
-     * apply downstream, so it must not poison later resolutions at the key.
-     */
-    tracker.resolve("k", header({ clientId: "A", timestamp: 900 }));
-
-    assert.strictEqual(
-      tracker.resolve("k", header({ clientId: "B", timestamp: 100 })),
-      "accept"
+    assert.notStrictEqual(
+      conflicts.admit(header({ clientId: "B", timestamp: 100 }), ["k2"]),
+      null
     );
   });
 
-  test("is a no-op for a null key", () => {
-    const tracker = new ConflictTracker(new LastWriteWinsResolver());
+  test("an uncommitted admission leaves no history", () => {
+    const conflicts = tracker();
+    conflicts.admit(header({ timestamp: 900 }), ["k"]);
 
-    tracker.record(null, header({ clientId: "A", timestamp: 900 }));
-
-    assert.strictEqual(
-      tracker.resolve(null, header({ clientId: "B", timestamp: 100 })),
-      "accept"
+    assert.notStrictEqual(
+      conflicts.admit(header({ clientId: "B", timestamp: 100 }), ["k"]),
+      null
     );
   });
 });
 
-describe("ConflictTracker — null key", () => {
-  test("always resolves against no history", () => {
-    const tracker = new ConflictTracker(new LastWriteWinsResolver());
+describe("ConflictTracker.admitEach", () => {
+  test("returns the indices of the keys that accept", () => {
+    const conflicts = tracker();
+    conflicts.admit(header({ timestamp: 900 }), ["b"])!.commit();
 
-    const first = header({ clientId: "A", timestamp: 900 });
-    tracker.resolve(null, first);
-    tracker.record(null, first);
+    const { indices } = conflicts.admitEach(
+      header({ clientId: "B", timestamp: 500 }),
+      ["a", "b", "c"]
+    );
+
+    assert.deepStrictEqual(indices, [0, 2]);
+  });
+
+  test("commit records only the accepted keys", () => {
+    const conflicts = tracker();
+    conflicts.admit(header({ timestamp: 900 }), ["b"])!.commit();
+
+    conflicts.admitEach(
+      header({ clientId: "B", timestamp: 500 }),
+      ["a", "b"]
+    ).commit();
 
     assert.strictEqual(
-      tracker.resolve(null, header({ clientId: "B", timestamp: 100 })),
-      "accept"
+      conflicts.admit(header({ clientId: "C", timestamp: 700 }), ["b"]),
+      null
+    );
+    assert.strictEqual(
+      conflicts.admit(header({ clientId: "C", timestamp: 400 }), ["a"]),
+      null
     );
   });
 });

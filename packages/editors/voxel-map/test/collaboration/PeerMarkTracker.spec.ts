@@ -75,13 +75,13 @@ describe("PeerMarkTracker", () => {
     harness.tracker.dispose();
   });
 
-  it("republishes on sync because a pre-join patch is dropped", () => {
+  it("does not republish on sync, the join carries the local key", () => {
     const harness = createTracker();
     harness.published.length = 0;
 
     harness.emit("sync");
 
-    assert.deepEqual(harness.published, [{ layer: "local-key" }]);
+    assert.deepEqual(harness.published, []);
     harness.tracker.dispose();
   });
 

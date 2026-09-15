@@ -4,6 +4,15 @@ import type { Infer } from "../protocol/schema.ts";
 
 export type NetworkCommandHeader = Infer<typeof networkCommandHeaderSchema>;
 
-export type NetworkServerMessage<Command, Snapshot> =
-  | { type: "snapshot"; data: Snapshot; }
-  | { type: "command"; data: Command; };
+export interface NetworkServerNotice {
+  type: string;
+}
+
+export type NetworkServerMessage<
+  TCommand,
+  TSnapshot,
+  TNotice extends NetworkServerNotice = never
+> =
+  | { type: "snapshot"; data: TSnapshot; }
+  | { type: "command"; data: TCommand; }
+  | TNotice;

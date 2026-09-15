@@ -281,25 +281,14 @@ describe("pixelArtAssetHandler", () => {
     assert.deepEqual(state.buffer.pixels(), before);
   });
 
-  test("live() stamps the server-side client id onto the command", () => {
-    const protocol = liveProtocol();
-    const arbitration = protocol.arbitrate(
-      stroke([{ x: 1, y: 1 }], 1_000, "spoofed"),
-      "alice"
-    );
-
-    assert.notStrictEqual(arbitration, null);
-    assert.strictEqual(arbitration!.command.clientId, "alice");
-  });
-
   test("live() gives each room its own conflict tracker", () => {
     const first = liveProtocol();
     const second = liveProtocol();
 
-    first.arbitrate(stroke([{ x: 0, y: 0 }], 2_000), "alice")!.commit!();
+    first.arbitrate(stroke([{ x: 0, y: 0 }], 2_000, "alice"))!.commit!();
 
     assert.notStrictEqual(
-      second.arbitrate(stroke([{ x: 0, y: 0 }], 1_000), "bob"),
+      second.arbitrate(stroke([{ x: 0, y: 0 }], 1_000, "bob")),
       null
     );
   });
@@ -307,10 +296,10 @@ describe("pixelArtAssetHandler", () => {
   test("an uncommitted arbitration leaves the tracker untouched", () => {
     const protocol = liveProtocol();
 
-    protocol.arbitrate(stroke([{ x: 0, y: 0 }], 2_000), "alice");
+    protocol.arbitrate(stroke([{ x: 0, y: 0 }], 2_000, "alice"));
 
     assert.notStrictEqual(
-      protocol.arbitrate(stroke([{ x: 0, y: 0 }], 1_000), "bob"),
+      protocol.arbitrate(stroke([{ x: 0, y: 0 }], 1_000, "bob")),
       null
     );
   });
@@ -318,10 +307,10 @@ describe("pixelArtAssetHandler", () => {
   test("a committed arbitration rejects the older write", () => {
     const protocol = liveProtocol();
 
-    protocol.arbitrate(stroke([{ x: 0, y: 0 }], 2_000), "alice")!.commit!();
+    protocol.arbitrate(stroke([{ x: 0, y: 0 }], 2_000, "alice"))!.commit!();
 
     assert.strictEqual(
-      protocol.arbitrate(stroke([{ x: 0, y: 0 }], 1_000), "bob"),
+      protocol.arbitrate(stroke([{ x: 0, y: 0 }], 1_000, "bob")),
       null
     );
   });

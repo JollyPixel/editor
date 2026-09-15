@@ -166,8 +166,7 @@ interface AssetLiveProtocol<TCommand = unknown> {
 
   snapshot(): unknown;
   arbitrate(
-    command: TCommand,
-    clientId: string
+    command: TCommand
   ): AssetArbitration<TCommand> | null;
   broadcast?(command: TCommand): AssetRoomMessage;
 }
@@ -198,7 +197,8 @@ commands: {
 }
 ```
 
-The room validates the payload against `commands.protocol`, arbitrates it,
+The room sets `clientId` on the payload to the sender's server-side id,
+validates it against `commands.protocol`, arbitrates it,
 appends `arbitration.command` under `commands.eventType`, then calls
 `arbitration.commit` and broadcasts. `commit` runs only after the append
 lands, so a conflict tracker never records a command the store refused. The

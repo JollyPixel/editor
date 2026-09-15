@@ -8,6 +8,7 @@ pieces fit together; the pages below are the contract for each one.
 ## Core
 
 - [Client](./Client.md) — connecting, and obtaining a `Room`.
+- [PresenceChannel](./PresenceChannel.md): one typed presence field per peer.
 - [Server](./Server.md) — hosting rooms and dispatching envelopes.
 - [Extension](./Extension.md) — declaring the inbound/outbound protocols of a feature.
 - [Authentication](./Authentication.md) — deciding who a connection is.
@@ -16,5 +17,5 @@ pieces fit together; the pages below are the contract for each one.
 
 ## Synchronisation
 
-- [SyncAdapter](./sync/SyncAdapter.md) — the shared command header and replication contract.
+- [CommandSync](./sync/CommandSync.md): stamped commands, snapshots and server notices over a room.
 - [Conflicts](./sync/Conflicts.md) — the conflict resolver and its last-write-wins default.

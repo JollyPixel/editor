@@ -6,9 +6,10 @@ import type {
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage
+import {
+  PixelCollaboration,
+  type PixelNetworkCommand,
+  type PixelServerMessage
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import {
   type PixelArtCanvas,
@@ -20,7 +21,10 @@ import {
 
 // Import Internal Dependencies
 import { findBlocksReferencingTileset } from "../uv/blockTextureTiles.ts";
-import { PixelCollaborationSession } from "../PixelCollaborationSession.ts";
+import {
+  peerColor,
+  readUsername
+} from "../../../collaboration/identity.ts";
 import {
   editorState,
   type WorldStore
@@ -52,16 +56,13 @@ function rectsIntersect(
 }
 
 export interface TextureEditorBridgeOptions {
-  /**
-   * Test scheduler override.
-   */
   scheduler?: (callback: () => void) => void;
   worldStore?: WorldStore;
 }
 
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
-  #collaboration = new PixelCollaborationSession();
+  #collaboration: PixelCollaboration | null = null;
   #atlas: TilesetAtlas | null = null;
   #tilesetId: string | null = null;
   #engine: VoxelEngine | null = null;
@@ -90,26 +91,30 @@ export class TextureEditorBridge {
     canvas: PixelArtCanvas,
     room?: network.Room<PixelNetworkCommand, PixelServerMessage>
   ): void {
-    this.#collaboration.destroy();
+    this.#destroyCollaboration();
     this.#manager = canvas;
     this.#unsubscribe ??= this.#worldStore.watch(
       "blockRegistryChanged",
       this.#onBlockRegistryChanged
     );
 
-    // Batch local and remote writes once per frame.
     this.#changes?.dispose();
     this.#changes = new PixelCanvasChangeTracker(canvas, { flush: "manual" });
     this.#changes.on("resized", this.#onSurfaceChanged);
     this.#changes.on("replaced", this.#onSurfaceChanged);
     this.#startFrameLoop();
     if (room) {
-      this.#collaboration.attach(canvas, room);
+      this.#collaboration = new PixelCollaboration({
+        room,
+        canvas,
+        label: (_clientId, profile) => readUsername(profile),
+        color: peerColor
+      });
+      room.join();
     }
   }
 
   readonly #onSurfaceChanged = (): void => {
-    // Resizes and snapshots invalidate regional padding.
     this.#needsFullSync = true;
   };
 
@@ -150,7 +155,6 @@ export class TextureEditorBridge {
     }
 
     this.#atlas.updateSource(this.#manager.textureCanvas(), dirty);
-    // Defer transparency scans until the stroke's dirty region settles.
     this.#pendingTransparency = this.#pendingTransparency === null
       ? dirty
       : rectsUnion(this.#pendingTransparency, dirty);
@@ -186,7 +190,7 @@ export class TextureEditorBridge {
     this.#atlas = atlas;
     this.#engine = engine;
 
-    if (this.#collaboration.ready) {
+    if (this.#collaboration?.ready) {
       this.syncTransparency();
 
       return;
@@ -303,10 +307,15 @@ export class TextureEditorBridge {
     this.#changes = null;
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    this.#collaboration.destroy();
+    this.#destroyCollaboration();
     this.#manager = null;
     this.#atlas = null;
     this.#tilesetId = null;
     this.#engine = null;
+  }
+
+  #destroyCollaboration(): void {
+    this.#collaboration?.destroy();
+    this.#collaboration = null;
   }
 }

@@ -127,7 +127,8 @@ describe("ServerRoom", () => {
       kind: "peer-joined",
       clientId: "B",
       role: "default",
-      profile: { username: "bob" }
+      profile: { username: "bob" },
+      presence: {}
     }]);
     assert.deepEqual(extension.connected, ["A", "B"]);
   });
@@ -383,6 +384,97 @@ describe("ServerRoom — rights: $presence", () => {
 
     assert.deepEqual(b.sent, []);
   });
+
+  test("join presence seeds the member for sync, peer-joined and the extension", async() => {
+    const extension = new RecordingExtension();
+    const a = createClient("A");
+    const b = createClient("B");
+    const c = createClient("C");
+    const room = createRoom(extension);
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join(
+      "B",
+      b.client,
+      identityOf("B"),
+      {},
+      { cursor: { x: 2, y: 3 } }
+    );
+    await room.join("C", c.client, identityOf("C"), {});
+
+    assert.deepEqual(withoutSync(a.sent)[0], {
+      room: "pixel-draw",
+      kind: "peer-joined",
+      clientId: "B",
+      role: "default",
+      profile: {},
+      presence: { cursor: { x: 2, y: 3 } }
+    });
+    const sync = c.sent[0] as { members: { clientId: string; presence: unknown; }[]; };
+    assert.deepEqual(
+      sync.members.find((member) => member.clientId === "B")?.presence,
+      { cursor: { x: 2, y: 3 } }
+    );
+  });
+
+  test("a role with \"void\" on $presence joins without its presence and is denied", async() => {
+    const extension = new RightsAwareExtension();
+    const a = createClient("A");
+    const b = createClient("B");
+    const room = createRoom(extension, new RightsTable({
+      default: {},
+      viewer: { "pixel-draw.$presence": "void" }
+    }));
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join(
+      "B",
+      b.client,
+      identityOf("B", "viewer"),
+      {},
+      { cursor: { x: 1, y: 1 } }
+    );
+
+    assert.deepEqual(withoutSync(b.sent), [{
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$presence",
+      reason: "role \"viewer\" cannot update presence"
+    }]);
+    assert.deepEqual(withoutSync(a.sent), [{
+      room: "pixel-draw",
+      kind: "peer-joined",
+      clientId: "B",
+      role: "viewer",
+      profile: {},
+      presence: {}
+    }]);
+  });
+
+  test("a role with \"void\" on $presence receives peer-joined without presence", async() => {
+    const extension = new RightsAwareExtension();
+    const a = createClient("A");
+    const b = createClient("B");
+    const room = createRoom(extension, new RightsTable({
+      default: {},
+      viewer: { "pixel-draw.$presence": "void" }
+    }));
+    await room.join("A", a.client, identityOf("A", "viewer"), {});
+    await room.join(
+      "B",
+      b.client,
+      identityOf("B"),
+      {},
+      { cursor: { x: 1, y: 1 } }
+    );
+
+    assert.deepEqual(withoutSync(a.sent), [{
+      room: "pixel-draw",
+      kind: "peer-joined",
+      clientId: "B",
+      role: "default",
+      profile: {},
+      presence: {}
+    }]);
+  });
 });
 
 describe("ServerRoom — rights: message write gate", () => {
@@ -418,10 +510,6 @@ describe("ServerRoom — rights: message write gate", () => {
   test("a glob pattern (\"pixel-draw.*\") covers every event without listing each one", async() => {
     const extension = new RightsAwareExtension();
     const a = createClient("A");
-    /*
-     * "pixel-draw.*" also matches "pixel-draw.$join" — list the more specific
-     * rule first so join stays admitted (first match wins, see RightsTable).
-     */
     const room = createRoom(extension, new RightsTable({
       viewer: {
         "pixel-draw.$join": "write",
@@ -668,7 +756,8 @@ describe("ServerRoom — extension without lifecycle hooks", () => {
       kind: "peer-joined",
       clientId: "B",
       role: "default",
-      profile: { username: "bob" }
+      profile: { username: "bob" },
+      presence: {}
     }]);
   });
 

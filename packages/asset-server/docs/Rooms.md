@@ -56,8 +56,10 @@ interface AssetRoomBinding<TState> {
 
 ## Commands
 
-A room validates each message against the kind's `commands.protocol` and
-arbitrates it through its live protocol.
+A room overwrites `clientId` on each object message with the sender's
+server-side id, validates it against the kind's `commands.protocol` and
+arbitrates it through its live protocol. A client-supplied `clientId` is never
+trusted.
 An accepted command is appended to `events`, then committed and broadcast.
 The `network` server never touches the event store.
 

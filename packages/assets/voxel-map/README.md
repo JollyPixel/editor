@@ -51,9 +51,11 @@ const room = new Client().room<
   VoxelNetworkCommand,
   VoxelServerMessage
 >(assetRoomName("voxelmap", assetId));
-const sync = new VoxelSyncClient({ room });
+const sync = new VoxelSyncClient({
+  room,
+  engine: renderer.engine
+});
 
-sync.attach(renderer.engine);
 room.join();
 ```
 

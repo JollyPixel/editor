@@ -52,8 +52,10 @@ function createHost() {
 function setup() {
   const room = new MockRoom();
   const host = createHost();
-  const sync = new PixelStrokeGhostSync({ room });
-  sync.attach(asCanvas(host));
+  const sync = new PixelStrokeGhostSync({
+    room,
+    canvas: asCanvas(host)
+  });
 
   return {
     room,
@@ -64,15 +66,17 @@ function setup() {
 }
 
 describe("PixelStrokeGhostSync — local strokes", () => {
-  test("chains the existing onStrokeProgress listener and restores it on detach", () => {
+  test("chains the existing onStrokeProgress listener and restores it on destroy", () => {
     const host = createHost();
     const previous = mock.fn<StrokeListener>();
     host.onStrokeProgress = previous;
-    const sync = new PixelStrokeGhostSync({ room: new MockRoom() });
-    sync.attach(asCanvas(host));
+    const sync = new PixelStrokeGhostSync({
+      room: new MockRoom(),
+      canvas: asCanvas(host)
+    });
 
     host.onStrokeProgress?.([kPixel]);
-    sync.detach();
+    sync.destroy();
 
     assert.deepStrictEqual(callsOf(previous), [[[kPixel]]]);
     assert.strictEqual(host.onStrokeProgress, previous);
@@ -118,6 +122,7 @@ describe("PixelStrokeGhostSync — remote peers", () => {
 
   test("removes a leaving peer's ghost and clears all ghosts on snapshot", () => {
     const { room, strokes } = setup();
+    room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost: [kPixel] } });
 
     room.emit("peer-left", { clientId: "peer-B" });
     room.deliverSnapshot();
