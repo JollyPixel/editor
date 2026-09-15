@@ -34,6 +34,25 @@ const kFillColor: RGBA8 = {
   a: 255
 };
 
+function filledBuffer(
+  size: Vec2,
+  color: RGBA8
+): PixelBuffer {
+  const buf = new PixelBuffer({
+    size,
+    maxSize: kTestMaxSize
+  });
+  const all: Vec2[] = [];
+  for (let y = 0; y < size.y; y++) {
+    for (let x = 0; x < size.x; x++) {
+      all.push({ x, y });
+    }
+  }
+  buf.drawPixels(all, color);
+
+  return buf;
+}
+
 function sortPositions(
   positions: Vec2[]
 ): Vec2[] {
@@ -49,7 +68,6 @@ describe("Fill", () => {
         size: { x: 6, y: 6 },
         maxSize: kTestMaxSize
       });
-      // Overwrite the whole buffer with colorA, then a colorB rectangle.
       const all: Vec2[] = [];
       for (let y = 0; y < 6; y++) {
         for (let x = 0; x < 6; x++) {
@@ -79,10 +97,6 @@ describe("Fill", () => {
     });
 
     test("does not leak diagonally through a colorB wall (4-directional connectivity only)", () => {
-      /*
-       * 3x3 grid: corners are colorA, everything else (edges + center) is
-       * colorB. The corners are only diagonally adjacent to each other.
-       */
       const buf = new PixelBuffer({
         size: { x: 3, y: 3 },
         maxSize: kTestMaxSize
@@ -111,7 +125,6 @@ describe("Fill", () => {
     });
 
     test("does not include a same-colored but disconnected region", () => {
-      // Two 2x2 colorA blobs separated by a full-height colorB column.
       const buf = new PixelBuffer({
         size: { x: 5, y: 2 },
         maxSize: kTestMaxSize
@@ -223,6 +236,28 @@ describe("Fill", () => {
     });
   });
 
+  describe("floodFill with a mask", () => {
+    test("treats zero mask entries as walls", () => {
+      const buf = filledBuffer({ x: 4, y: 1 }, kColorA);
+      const mask = Uint8Array.from([1, 1, 0, 1]);
+
+      assert.deepStrictEqual(
+        sortPositions(Fill.floodFill(buf, { x: 0, y: 0 }, kFillColor, mask)),
+        [{ x: 0, y: 0 }, { x: 1, y: 0 }]
+      );
+    });
+
+    test("returns nothing when the seed is masked out", () => {
+      const buf = filledBuffer({ x: 2, y: 1 }, kColorA);
+      const mask = Uint8Array.from([0, 1]);
+
+      assert.deepStrictEqual(
+        Fill.floodFill(buf, { x: 0, y: 0 }, kFillColor, mask),
+        []
+      );
+    });
+  });
+
   describe("connectedRegion", () => {
     test("matches floodFill's region exactly for a matching fillColor bail-out case bypassed", () => {
       const buf = new PixelBuffer({
@@ -277,10 +312,6 @@ describe("Fill", () => {
 
   describe("matchAll", () => {
     test("matches every pixel of the given color, including disconnected regions", () => {
-      /*
-       * Two 2x2 colorA blobs separated by a full-height colorB column —
-       * matchAll (unlike floodFill) should return both, connectivity aside.
-       */
       const buf = new PixelBuffer({
         size: { x: 5, y: 2 },
         maxSize: kTestMaxSize
@@ -366,6 +397,17 @@ describe("Fill", () => {
       assert.deepStrictEqual(
         positions,
         [{ x: 0, y: 0 }]
+      );
+    });
+  });
+  describe("matchAll with a mask", () => {
+    test("skips matching pixels whose mask entry is zero", () => {
+      const buf = filledBuffer({ x: 3, y: 2 }, kColorB);
+      const mask = Uint8Array.from([0, 1, 0, 1, 0, 1]);
+
+      assert.deepStrictEqual(
+        Fill.matchAll(buf, kColorB, mask),
+        [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: 2, y: 1 }]
       );
     });
   });

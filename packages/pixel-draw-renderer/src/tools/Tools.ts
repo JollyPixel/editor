@@ -37,22 +37,11 @@ export interface ToolsOptions {
   eraseColor: RGBA8 | null;
   uvMap: UVMap;
   uvOverlay: UVRegionLayer;
-  /**
-   * Clears the UV selection when a click lands outside every visible region.
-   * @default true
-   */
   uvDeselectOnEmptyClick?: boolean;
   pipeline: EditPipeline;
-  /**
-   * Streams brush and line pixels; selection geometry uses its own emitter.
-   */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
-/**
- * Public view of the drawing tools (`PixelArtCanvas.tools`). `line`/`uv` are
- * internal; the UV model is on `PixelArtCanvas.uv`.
- */
 export interface Toolset {
   brush: BrushTool;
   fill: FillTool;
@@ -80,7 +69,8 @@ export class Tools {
     this.fill = new FillEngine({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
-      pipeline: options.pipeline
+      pipeline: options.pipeline,
+      uvMap: options.uvMap
     });
 
     this.line = new LineEngine({

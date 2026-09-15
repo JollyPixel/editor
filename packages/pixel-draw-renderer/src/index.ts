@@ -17,6 +17,7 @@ export {
   PixelArtCanvas,
   type HistoryState,
   type PixelArtCanvasOptions,
+  type ClearTextureOptions,
   type Mode
 } from "./PixelArtCanvas.ts";
 export {

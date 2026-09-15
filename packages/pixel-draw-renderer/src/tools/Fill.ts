@@ -18,7 +18,8 @@ function isInBounds(
 function connectedRegion(
   pixels: Uint8ClampedArray,
   size: Vec2,
-  seed: Vec2
+  seed: Vec2,
+  mask?: Uint8Array
 ): Vec2[] {
   const { x: width, y: height } = size;
   const seedIndex = (seed.y * width) + seed.x;
@@ -38,6 +39,7 @@ function connectedRegion(
     const pointIndex = stack[--stackSize];
     const byteIndex = pointIndex * 4;
     if (
+      mask?.[pointIndex] === 0 ||
       pixels[byteIndex] !== tr ||
       pixels[byteIndex + 1] !== tg ||
       pixels[byteIndex + 2] !== tb ||
@@ -88,7 +90,8 @@ export class Fill {
   static floodFill(
     buffer: DefaultPixelBuffer,
     seed: Vec2,
-    fillColor: RGBA8
+    fillColor: RGBA8,
+    mask?: Uint8Array
   ): Vec2[] {
     const size = buffer.size();
     if (!isInBounds(seed, size)) {
@@ -106,12 +109,14 @@ export class Fill {
       return [];
     }
 
-    return connectedRegion(pixels, size, seed);
+    return connectedRegion(
+      pixels,
+      size,
+      seed,
+      mask
+    );
   }
 
-  /**
-   * Uses four-connectivity from the seed pixel.
-   */
   static connectedRegion(
     buffer: DefaultPixelBuffer,
     seed: Vec2
@@ -126,7 +131,8 @@ export class Fill {
 
   static matchAll(
     buffer: DefaultPixelBuffer,
-    color: RGBA8
+    color: RGBA8,
+    mask?: Uint8Array
   ): Vec2[] {
     const size = buffer.size();
     const pixels = buffer.pixels();
@@ -136,6 +142,7 @@ export class Fill {
     for (let y = 0; y < size.y; y++) {
       for (let x = 0; x < size.x; x++) {
         if (
+          mask?.[byteIndex / 4] !== 0 &&
           pixels[byteIndex] === color.r &&
           pixels[byteIndex + 1] === color.g &&
           pixels[byteIndex + 2] === color.b &&

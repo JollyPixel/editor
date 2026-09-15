@@ -48,9 +48,6 @@ export interface EditPipelineOptions {
   onDrawEnd?: () => void;
 }
 
-/**
- * Centralizes buffer mutation, history, hooks, and draw-end ordering.
- */
 export class EditPipeline {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
@@ -209,12 +206,44 @@ export class EditPipeline {
   replaceTexture(
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
+    this.#commitTextureReplaced(
+      () => this.#canvasBuffer.loadTexture(source)
+    );
+  }
+
+  clearTexture(
+    keepMask?: Uint8Array
+  ): void {
+    const pixels = this.#canvasBuffer.pixels();
+    if (keepMask) {
+      for (let index = 0; index < keepMask.length; index++) {
+        if (keepMask[index] === 0) {
+          const byteIndex = index * 4;
+          pixels[byteIndex] = 0;
+          pixels[byteIndex + 1] = 0;
+          pixels[byteIndex + 2] = 0;
+          pixels[byteIndex + 3] = 0;
+        }
+      }
+    }
+    else {
+      pixels.fill(0);
+    }
+
+    this.#commitTextureReplaced(
+      () => this.#canvasBuffer.writePixels(pixels)
+    );
+  }
+
+  #commitTextureReplaced(
+    apply: () => void
+  ): void {
     const beforeSize = this.#canvasBuffer.size();
     const beforePixels = this.#history.enabled ?
       this.#canvasBuffer.pixels() :
       null;
 
-    this.#canvasBuffer.loadTexture(source);
+    apply();
     const size = this.#canvasBuffer.size();
     this.#viewport.texture.resize(size);
     this.#renderer.drawFrame();
@@ -404,9 +433,6 @@ export class EditPipeline {
     }
   }
 
-  /**
-   * Suppresses history recording, but not network broadcast, during replay.
-   */
   runHistoryReplay<T>(
     fn: () => T
   ): T {

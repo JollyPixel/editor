@@ -72,6 +72,10 @@ The collection of UV regions and its current region and slot selection.
 
 The part of a UV map addressed by an interaction or change. A target identifies a region and may identify one slot within it.
 
+### UV Clip
+
+The pixel area a fill may touch when `FillTool.uvClip` is on. Seeded inside one or more UV slots, it is the union of those slots; seeded outside, it is every pixel outside all slots. Membership uses pixel centers, active slots, and every region regardless of view visibility. `clearTexture()` keeps the same slot pixels by default.
+
 ### UV Movement Scope
 
 Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions have region scope; free regions have slot scope.
