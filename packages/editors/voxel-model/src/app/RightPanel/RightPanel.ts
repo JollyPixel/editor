@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
-import { state } from "lit/decorators.js";
+import { query, state } from "lit/decorators.js";
 import type {
   JollyPeerSelectDetail,
   PresencePeer
@@ -11,12 +11,16 @@ import type ModelManager from "../../features/groups/ModelManager.ts";
 import type { ModelSceneComponent } from "../ModelSceneComponent.ts";
 import type { PresenceStore } from "../state/index.ts";
 import { BlockTreeController } from "./BlockTreeController.ts";
+import { type TransformPanel } from "./TransformPanel.ts";
 import "./blockIcons.ts";
 
 export class RightPanel extends LitElement {
   #tree = new BlockTreeController(this);
   #sceneManager: ModelSceneComponent | null = null;
   #unsubscribePresence: (() => void) | null = null;
+
+  @query("jolly-model-editor-transform")
+  declare private transformElement: TransformPanel;
 
   @state()
   private declare _peers: readonly PresencePeer[];
@@ -30,8 +34,15 @@ export class RightPanel extends LitElement {
       font: inherit;
     }
 
-    jolly-toolbar {
-      padding: var(--jolly-space-2, 8px);
+    jolly-folder[key="hierarchy"] {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    jolly-folder[key="transform"]::part(header),
+    jolly-folder[key="hierarchy"]::part(header),
+    jolly-folder[key="collaborators"]::part(header) {
+      font-size: calc(var(--jolly-font-size, 11px) + 2px);
     }
 
     jolly-tree {
@@ -52,11 +63,14 @@ export class RightPanel extends LitElement {
     this.#tree.setModelManager(modelManager);
   }
 
-  public setSceneManager(
+  public async setSceneManager(
     sceneManager: ModelSceneComponent
-  ): void {
+  ): Promise<void> {
     this.#sceneManager = sceneManager;
     this.#tree.setSceneManager(sceneManager);
+
+    await this.updateComplete;
+    this.transformElement.attach(sceneManager);
   }
 
   public setPresence(
@@ -94,7 +108,7 @@ export class RightPanel extends LitElement {
       <jolly-folder
         key="collaborators"
         label="Collaborators"
-        storage-key="voxel-model:folder:collaborators"
+        .collapsible=${false}
       >
         <jolly-presence
           selectable
@@ -107,38 +121,59 @@ export class RightPanel extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      ${this.#renderCollaborators()}
-      <jolly-toolbar label="Actions">
-        <jolly-tool-button
+      <jolly-folder
+        key="transform"
+        label="Transform"
+        .collapsible=${false}
+      >
+        <jolly-model-editor-transform></jolly-model-editor-transform>
+      </jolly-folder>
+      <jolly-folder
+        key="hierarchy"
+        label="Hierarchy"
+        .collapsible=${false}
+        flush
+      >
+        <jolly-button
+          slot="actions"
           icon="plus"
+          icon-only
           label="Add Block"
+          title="Add Block"
           @click=${this.#tree.addBlock}
-        ></jolly-tool-button>
-        <jolly-tool-button
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
           icon="block-duplicate"
+          icon-only
           label="Duplicate"
+          title="Duplicate"
           ?disabled=${!this.#tree.hasSelection}
           @click=${this.#tree.duplicateSelected}
-        ></jolly-tool-button>
-        <jolly-tool-button
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
           icon="block-delete"
+          icon-only
           label="Delete"
+          title="Delete"
           ?disabled=${!this.#tree.hasSelection}
           @click=${this.#tree.deleteSelected}
-        ></jolly-tool-button>
-      </jolly-toolbar>
-      <jolly-tree
-        .nodes=${this.#tree.nodes}
-        .selected=${this.#tree.selected}
-        .expanded=${this.#tree.expanded}
-        reorderable
-        row-drag
-        renamable
-        @jolly-select=${this.#tree.handleSelect}
-        @jolly-toggle-expand=${this.#tree.handleToggleExpand}
-        @jolly-rename=${this.#tree.handleRename}
-        @jolly-reparent=${this.#tree.handleReparent}
-      ></jolly-tree>
+        ></jolly-button>
+        <jolly-tree
+          .nodes=${this.#tree.nodes}
+          .selected=${this.#tree.selected}
+          .expanded=${this.#tree.expanded}
+          reorderable
+          row-drag
+          renamable
+          @jolly-select=${this.#tree.handleSelect}
+          @jolly-toggle-expand=${this.#tree.handleToggleExpand}
+          @jolly-rename=${this.#tree.handleRename}
+          @jolly-reparent=${this.#tree.handleReparent}
+        ></jolly-tree>
+      </jolly-folder>
+      ${this.#renderCollaborators()}
     `;
   }
 }

@@ -54,6 +54,10 @@ export class ElasticFocus {
     this.#pivotPosition = new THREE.Vector3().copy(options.initialPosition);
     this.#trailDistance = options.initialTrailDistance ?? 0;
     this.#targetTrailDistance = this.#trailDistance;
+
+    if (this.#targetTrailDistance > 0) {
+      this.#ensureMarker().visible = true;
+    }
   }
 
   get trailDistance(): number {

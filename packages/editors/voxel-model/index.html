@@ -24,6 +24,15 @@
     min-width: 200px;
   }
 
+  /*
+   * Docks default to flex-shrink: 1, so widening one could steal space from
+   * the other under a narrow viewport. Only #threeRenderer's flex-grow above
+   * should absorb space pressure; a dock's width comes from its own handle.
+   */
+  jolly-dock {
+    flex-shrink: 0;
+  }
+
   #threeRenderer canvas {
     display: block;
     width: 100%;
@@ -37,13 +46,13 @@
 </style>
 
 <jolly-scope>
-  <jolly-dock key="left" side="left" collapsible min-size="200" max-size="500" storage-key="voxel-model:left">
+  <jolly-dock key="left" side="left" collapsible min-size="200" max-size="900" storage-key="voxel-model:left">
     <jolly-pane locked>
       <jolly-model-editor-left-panel></jolly-model-editor-left-panel>
     </jolly-pane>
   </jolly-dock>
   <section id="threeRenderer"><canvas tabindex="-1"></canvas></section>
-  <jolly-dock key="right" side="right" collapsible min-size="200" max-size="500" storage-key="voxel-model:right">
+  <jolly-dock key="right" side="right" collapsible min-size="250" max-size="500" storage-key="voxel-model:right">
     <jolly-pane locked>
       <jolly-model-editor-right-panel></jolly-model-editor-right-panel>
     </jolly-pane>

@@ -19,9 +19,8 @@ import type * as network from "@jolly-pixel/network";
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { type Build } from "./tabs/Build.ts";
-import type { ModelSceneComponent } from "./ModelSceneComponent.ts";
 import { PixelCollaborationSession } from "../features/texture-uv/PixelCollaborationSession.ts";
+import "./tabs/Build.ts";
 
 // CONSTANTS
 const kTextureSize = { x: 64, y: 64 };
@@ -40,9 +39,6 @@ export class LeftPanel extends LitElement {
 
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
-
-  @query("jolly-model-editor-build")
-  declare private buildElement: Build;
 
   #canvasManager: PixelArtCanvas | null = null;
   #resizeObserver: ResizeObserver | null = null;
@@ -88,11 +84,6 @@ export class LeftPanel extends LitElement {
 
   public onResize(): void {
     this.panelElement?.onResize();
-  }
-
-  public async setSceneManager(sceneManager: ModelSceneComponent): Promise<void> {
-    await this.updateComplete;
-    this.buildElement.setSceneManager(sceneManager);
   }
 
   public setTextureRoom(

@@ -13,7 +13,6 @@ import BlockUvSync from "./features/texture-uv/BlockUvSync.ts";
 const leftPanel = document.querySelector("jolly-model-editor-left-panel") as HTMLElement;
 const rightPanel = document.querySelector("jolly-model-editor-right-panel") as HTMLElement;
 const leftDock = document.querySelector("jolly-dock[side='left']") as HTMLElement;
-const rightDock = document.querySelector("jolly-dock[side='right']") as HTMLElement;
 
 const session = await EditorSession.open();
 (leftPanel as any).setTextureRoom(session.textureRoom);
@@ -39,7 +38,6 @@ const { modelSceneComponent } = await modelScene.ready;
 (rightPanel as any).setModelManager(modelSceneComponent.getModelManager());
 (rightPanel as any).setSceneManager(modelSceneComponent);
 (rightPanel as any).setPresence(editorState.presence);
-(leftPanel as any).setSceneManager(modelSceneComponent);
 
 const blockUvSync = new BlockUvSync({
   modelSceneComponent,
@@ -51,12 +49,28 @@ requestAnimationFrame(function updateLoop() {
   requestAnimationFrame(updateLoop);
 });
 
-function triggerLeftPanelResize() {
-  (leftPanel as any).onResize?.();
+/*
+ * The left dock's own drag fires "jolly-resize" on every pointermove tick,
+ * unthrottled; each tick otherwise forces a synchronous layout read and a
+ * full canvas repaint in the pixel-draw panel, which is what produced the
+ * lag and wave artifact while dragging. Coalescing to one call per animation
+ * frame matches how ThreeRenderer already throttles its own resize.
+ */
+let leftPanelResizeFrame: number | null = null;
+
+function scheduleLeftPanelResize(): void {
+  if (leftPanelResizeFrame !== null) {
+    return;
+  }
+
+  leftPanelResizeFrame = requestAnimationFrame(() => {
+    leftPanelResizeFrame = null;
+    (leftPanel as any).onResize?.();
+  });
 }
 
-leftDock.addEventListener("jolly-resize", triggerLeftPanelResize);
-rightDock.addEventListener("jolly-resize", triggerLeftPanelResize);
+leftDock.addEventListener("jolly-resize", scheduleLeftPanelResize);
+leftDock.addEventListener("jolly-resize-end", scheduleLeftPanelResize);
 
 rightPanel.addEventListener("addblock", (e: any) => {
   blockUvSync.createBlock(e.detail.name, e.detail.parentId ?? null);
