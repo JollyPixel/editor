@@ -23,6 +23,7 @@ import { LayersPanel } from "./LayersPanel.ts";
 import { PaintPanel } from "./PaintPanel.ts";
 import {
   resolveTextureHost,
+  textureUvAccess,
   type TextureHost
 } from "./textureHost.ts";
 
@@ -148,6 +149,7 @@ export class EditorPanels {
       panel.append(this.#textureEditor);
     }
     this.#blocks.hostsTextureEditor = this.#host === "blocks";
+    this.#textureEditor.uvAccess = textureUvAccess(this.#host);
     this.#textureEditor.active = this.#layout.paneVisible(this.#host);
   };
 

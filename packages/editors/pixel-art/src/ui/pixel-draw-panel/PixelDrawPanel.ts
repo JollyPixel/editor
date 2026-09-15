@@ -36,6 +36,11 @@ import {
 } from "../color/ColorController.ts";
 import { assertElement } from "../../utils/dom.ts";
 import { type ModeVariantDetail } from "../mode-rail/ModeRail.ts";
+import {
+  isUvAccess,
+  modeAllowedBy,
+  type UvAccess
+} from "./uvAccess.ts";
 import "../color/ColorPickerRail.ts";
 import "../color/ColorDock.ts";
 
@@ -58,6 +63,18 @@ export class PixelDrawPanel extends LitElement {
 
   @property({ type: Boolean, attribute: "allow-uv-create-delete" })
   declare allowUvCreateDelete: boolean;
+
+  @property({
+    type: String,
+    reflect: true,
+    attribute: "uv-access",
+    converter: {
+      fromAttribute(value) {
+        return (value !== null && isUvAccess(value)) ? value : "edit";
+      }
+    }
+  })
+  declare uvAccess: UvAccess;
 
   @property({
     type: String,
@@ -86,6 +103,7 @@ export class PixelDrawPanel extends LitElement {
   constructor() {
     super();
     this.allowUvCreateDelete = false;
+    this.uvAccess = "edit";
     this.theme = "auto";
     this.colorDocked = false;
   }
@@ -103,6 +121,12 @@ export class PixelDrawPanel extends LitElement {
     this.#prefersDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
     this.#prefersDarkQuery.addEventListener("change", this.#onPrefersColorSchemeChange);
     this.#syncAmbientTheme();
+
+    const stageEl = this.renderRoot.querySelector<HTMLDivElement>(".stage");
+    if (this.#canvasManager && stageEl) {
+      this.#attachControllers(this.#canvasManager, stageEl);
+      this.requestUpdate();
+    }
   }
 
   override disconnectedCallback() {
@@ -128,6 +152,9 @@ export class PixelDrawPanel extends LitElement {
   ): void {
     if (changedProperties.has("colorDocked")) {
       this.#colors.docked = this.colorDocked;
+    }
+    if (changedProperties.has("uvAccess")) {
+      this.#applyUvAccess();
     }
   }
 
@@ -162,6 +189,7 @@ export class PixelDrawPanel extends LitElement {
     const backgroundColor = this.#canvasBackground();
     this.#canvasManager = new PixelArtCanvas(canvasHostEl, {
       ...options,
+      defaultMode: modeAllowedBy(options.defaultMode ?? "paint", this.uvAccess),
       backgroundColor: backgroundColor || options.backgroundColor,
       onHistoryChange: (state) => {
         this.#historyFile.onHistoryChange(state);
@@ -178,12 +206,8 @@ export class PixelDrawPanel extends LitElement {
       }
     });
 
-    this.#toolOptions.attach(this.#canvasManager);
-    this.#colors.attach(this.#canvasManager);
-    this.#historyFile.attach(this.#canvasManager);
-    this.#uvToolbar.attach(this.#canvasManager);
-    this.#selectToolbar.attach(this.#canvasManager);
-    this.#textureDrop.attach(this.#canvasManager, stageEl);
+    this.#attachControllers(this.#canvasManager, stageEl);
+    this.#applyUvAccess();
     this.#syncCanvasBackground();
     this.requestUpdate();
     await this.updateComplete;
@@ -219,6 +243,28 @@ export class PixelDrawPanel extends LitElement {
       detail: this.colorDocked
     });
     this.dispatchEvent(customEvent);
+  }
+
+  #attachControllers(
+    canvas: PixelArtCanvas,
+    stageEl: HTMLDivElement
+  ): void {
+    this.#toolOptions.attach(canvas);
+    this.#colors.attach(canvas);
+    this.#historyFile.attach(canvas);
+    this.#uvToolbar.attach(canvas);
+    this.#selectToolbar.attach(canvas);
+    this.#textureDrop.attach(canvas, stageEl);
+  }
+
+  #applyUvAccess(): void {
+    const mode = modeAllowedBy(this.#toolOptions.mode, this.uvAccess);
+    if (mode !== this.#toolOptions.mode) {
+      this.#toolOptions.setMode(mode);
+    }
+    if (this.uvAccess === "none" && this.#toolOptions.fillUvClip) {
+      this.#toolOptions.setFillUvClip(false);
+    }
   }
 
   #syncAmbientTheme(): void {
@@ -267,6 +313,7 @@ export class PixelDrawPanel extends LitElement {
           .fillGlobal=${this.#toolOptions.fillGlobal}
           .fillUvClip=${this.#toolOptions.fillUvClip}
           .selectShape=${this.#toolOptions.selectShape}
+          .uvAccess=${this.uvAccess}
           @mode-change=${(event: CustomEvent<Mode>) => this.#toolOptions.setMode(event.detail)}
           @pick-color-toggle=${() => this.#toolOptions.togglePickColor()}
           @fill-uv-clip-change=${(event: CustomEvent<boolean>) => {
@@ -302,8 +349,13 @@ export class PixelDrawPanel extends LitElement {
           ${this.#textureDrop.render()}
           ${this.#toolOptions.render()}
           ${this.#selectToolbar.render(this.#toolOptions.mode === "select")}
-          ${this.#uvToolbar.render(this.#toolOptions.mode === "uv", this.allowUvCreateDelete)}
-          ${this.#historyFile.render()}
+          ${this.#uvToolbar.render(
+            this.#toolOptions.mode === "uv" && this.uvAccess === "edit",
+            this.allowUvCreateDelete
+          )}
+          ${this.#historyFile.render(
+            this.uvAccess === "view" ? this.#uvToolbar.renderVisibilityToggles() : nothing
+          )}
         </div>
         ${this.colorDocked ? html`
           <color-dock
