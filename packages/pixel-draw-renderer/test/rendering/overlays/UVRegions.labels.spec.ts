@@ -140,6 +140,7 @@ describe("UVRegionLayer — face labels", () => {
     });
     map.setState(b.id, "free");
     map.showAll = true;
+    map.showRegionLabels = true;
 
     assert.deepStrictEqual(
       labels(svg).sort(),
@@ -250,7 +251,7 @@ describe("UVRegionLayer — face labels", () => {
     assert.strictEqual(region.name, "abcdefghijklmnopqrstuv");
   });
 
-  test("showAll forces labels without changing the stored preference", () => {
+  test("showAll shows every region without labelling it", () => {
     const { svg, map } = setup();
     map.create({
       width: kLabelSize,
@@ -265,14 +266,32 @@ describe("UVRegionLayer — face labels", () => {
 
     map.showAll = true;
 
-    assert.deepStrictEqual(labels(svg).sort(), ["(r1)", "(r2)"]);
     assert.strictEqual(
-      map.showRegionLabels,
-      false
+      svg.querySelectorAll("g > rect:last-child").length,
+      2
     );
+    assert.deepStrictEqual(labels(svg), []);
+
+    map.showRegionLabels = true;
+    assert.deepStrictEqual(labels(svg).sort(), ["(r1)", "(r2)"]);
 
     map.showAll = false;
     assert.deepStrictEqual(labels(svg), []);
+    assert.strictEqual(map.showRegionLabels, true);
+  });
+
+  test("showAll keeps face labels on free regions", () => {
+    const { svg, map } = setup();
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
+    map.setState(region.id, "free");
+
+    map.showAll = true;
+
+    assert.deepStrictEqual(labels(svg), ["front +5"]);
   });
 
   test("drops the label when the rect is too small on screen to hold it", () => {

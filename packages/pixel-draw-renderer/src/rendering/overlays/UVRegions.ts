@@ -184,7 +184,7 @@ export class UVRegionLayer {
     zoom: number,
     camera: Vec2
   ): void {
-    const showRegionLabels = this.#uvMap.showAll || this.#uvMap.showRegionLabels;
+    const showRegionLabels = this.#uvMap.showRegionLabels;
     const groups = new Map<string, UVOverlayEntry[]>();
     for (const entry of entries) {
       if (entry.slot === null) {

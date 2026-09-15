@@ -175,7 +175,7 @@ export class UvToolbarController implements ReactiveController {
   }
 
   toggleShowRegionLabels(): void {
-    if (this.#canvas && !this.#canvas.uv.showAll) {
+    if (this.#canvas) {
       this.#canvas.uv.showRegionLabels = !this.#canvas.uv.showRegionLabels;
     }
   }
@@ -298,18 +298,15 @@ export class UvToolbarController implements ReactiveController {
       return nothing;
     }
 
-    const showRegionLabels = this.#showAll || this.#showRegionLabels;
-
     return html`
       <div class="overlay-toolbar top" part="uv-toolbar">
         ${allowCreateDelete ? this.#renderCreateDelete() : nothing}
         ${this.#renderStateDropdown()}
         <button
-          class=${classMap({ "rail-btn": true, active: showRegionLabels })}
+          class=${classMap({ "rail-btn": true, active: this.#showRegionLabels })}
           part="uv-show-region-labels-button"
           aria-label="Show region labels"
-          aria-pressed=${showRegionLabels}
-          ?disabled=${this.#showAll}
+          aria-pressed=${this.#showRegionLabels}
           @click=${() => this.toggleShowRegionLabels()}
         >
           ${renderIcon("label")}
