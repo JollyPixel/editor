@@ -35,6 +35,7 @@ import {
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import type { AssetWriter } from "../sync/AssetWriter.ts";
 import {
+  actorOf,
   decodeContent,
   type AssetInlineContent
 } from "../events/AssetEvents.ts";
@@ -156,7 +157,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogCommand,
     context: RoomContext
   ): Promise<void> {
-    const result = await this.#execute(command, context.actor)
+    const result = await this.#execute(command, actorOf(context.identity))
       .catch((error: unknown) => Err(
         error instanceof Error ? error : new Error(String(error))
       ));

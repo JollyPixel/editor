@@ -6,11 +6,23 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
+import * as EventStore from "@jolly-pixel/event-store";
+import {
+  AssetRoomExtension,
+  assetRoomName,
+  foldAssetEvent,
+  type AssetRoomBinding
+} from "@jolly-pixel/asset-server";
+import { pixelArtSnapshot } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import {
+  pixelArtAssetHandler,
+  PIXEL_ART_KIND
+} from "#src/asset/pixelArtAssetHandler.ts";
+import type { PixelArtState } from "#src/asset/PixelArtState.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
-import { PixelSyncServer } from "#src/network/PixelSyncServer.ts";
+import type { PixelNetworkCommand } from "#src/network/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
@@ -25,15 +37,41 @@ import { createRoomContext } from "../helpers/roomContext.ts";
 const kWhite = [255, 255, 255, 255];
 const kBlack = [0, 0, 0, 255];
 const kBlue = [0, 0, 255, 255];
+const kAssetId = "asset-1";
 
 function setup() {
-  const server = new PixelSyncServer({
-    buffer: new PixelBuffer({ size: { x: 8, y: 8 } })
+  const handler = pixelArtAssetHandler({
+    defaultSize: { x: 8, y: 8 }
   });
+  const state = handler.create(kAssetId);
+  const eventStore = EventStore.persistence.memory();
+  eventStore.subscribe((event) => foldAssetEvent(handler, state, event));
+  const binding: AssetRoomBinding<PixelArtState> = {
+    assetId: kAssetId,
+    kind: PIXEL_ART_KIND,
+    roomId: assetRoomName(PIXEL_ART_KIND, kAssetId),
+    state
+  };
+  const commands = handler.commands!;
+  const extension = new AssetRoomExtension(
+    binding,
+    commands,
+    commands.live!(binding),
+    eventStore.writer
+  );
   const { context } = createRoomContext();
+  const { buffer } = state;
+
+  function receive(
+    clientId: string,
+    sent: PixelNetworkCommand
+  ): void {
+    extension.onMessage(clientId, sent, context);
+  }
+
   const room = new MockRoom({
     clientId: "A",
-    onSend: (sent) => server.receive(sent, context)
+    onSend: (sent) => receive("A", sent)
   });
   const { manager, canvas } = createPixelArtCanvas({
     zoom: { default: 4 },
@@ -41,7 +79,7 @@ function setup() {
     history: { enabled: true }
   });
   new PixelSyncClient({ room }).attach(manager);
-  room.deliverSnapshot(server.snapshot());
+  room.deliverSnapshot(pixelArtSnapshot(buffer));
 
   function paintPixelOneOne(): void {
     canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));
@@ -49,8 +87,8 @@ function setup() {
   }
 
   return {
-    server,
-    context,
+    buffer,
+    receive,
     room,
     manager,
     canvas,
@@ -58,7 +96,7 @@ function setup() {
   };
 }
 
-describe("PixelSyncClient and PixelSyncServer — undo", () => {
+describe("PixelSyncClient and the pixel-art asset room, undo", () => {
   test("an undo replays with the original stroke's timestamp", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
     const { room, manager, paintPixelOneOne } = setup();
@@ -75,43 +113,43 @@ describe("PixelSyncClient and PixelSyncServer — undo", () => {
 
   test("a peer's newer edit survives an undo of an older stroke", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { server, context, manager, paintPixelOneOne } = setup();
+    const { buffer, receive, manager, paintPixelOneOne } = setup();
 
     t.mock.timers.tick(1000);
     paintPixelOneOne();
-    assert.deepStrictEqual(server.buffer.samplePixel(1, 1), kBlack);
-    server.receive(command("stroke", {
+    assert.deepStrictEqual(buffer.samplePixel(1, 1), kBlack);
+    receive("B", command("stroke", {
       color: { r: 0, g: 0, b: 255, a: 255 },
       positions: [{ x: 1, y: 1 }]
-    }, { clientId: "B", timestamp: 2000 }), context);
+    }, { clientId: "B", timestamp: 2000 }));
     t.mock.timers.tick(2000);
     manager.undo();
 
-    assert.deepStrictEqual(server.buffer.samplePixel(1, 1), kBlue);
+    assert.deepStrictEqual(buffer.samplePixel(1, 1), kBlue);
     manager.destroy();
   });
 
   test("undoing two overlapping strokes reverts the shared pixel on the server", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { server, manager, paintPixelOneOne } = setup();
+    const { buffer, manager, paintPixelOneOne } = setup();
 
     t.mock.timers.tick(1000);
     paintPixelOneOne();
     t.mock.timers.tick(1000);
     paintPixelOneOne();
-    assert.deepStrictEqual(server.buffer.samplePixel(1, 1), kBlack);
+    assert.deepStrictEqual(buffer.samplePixel(1, 1), kBlack);
 
     t.mock.timers.tick(1000);
     manager.undo();
     manager.undo();
 
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kWhite);
-    assert.deepStrictEqual(server.buffer.samplePixel(1, 1), kWhite);
+    assert.deepStrictEqual(buffer.samplePixel(1, 1), kWhite);
     manager.destroy();
   });
 
   test("a select-edit and its undo both reach the server", () => {
-    const { server, manager, canvas } = setup();
+    const { buffer, manager, canvas } = setup();
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
 
@@ -119,12 +157,12 @@ describe("PixelSyncClient and PixelSyncServer — undo", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     window.dispatchEvent(deleteKey());
-    assert.deepStrictEqual(server.buffer.samplePixel(2, 2), kWhite);
+    assert.deepStrictEqual(buffer.samplePixel(2, 2), kWhite);
 
     manager.undo();
 
     assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), kBlack);
-    assert.deepStrictEqual(server.buffer.samplePixel(2, 2), kBlack);
+    assert.deepStrictEqual(buffer.samplePixel(2, 2), kBlack);
     manager.destroy();
   });
 });

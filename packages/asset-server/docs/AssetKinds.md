@@ -8,10 +8,20 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   readonly kind: string;
   readonly match: readonly string[];
   readonly snapshot?: SnapshotPolicy;
+  readonly contentTypes?: Readonly<Record<string, string>>;
+  readonly commands?: AssetCommands<TState, TCommand>;
 
   create(assetId: string): TState;
-  apply(state: TState, event: Event): void;
+  load(state: TState, content: Uint8Array): void;
+  clear(state: TState): void;
   serialize(state: TState): Promise<Uint8Array>;
+}
+
+interface AssetCommands<TState = unknown, TCommand = unknown> {
+  readonly eventType: string;
+
+  parse(payload: unknown): TCommand | null;
+  apply(state: TState, command: TCommand): void;
   live?(binding: AssetRoomBinding<TState>): AssetLiveProtocol<TCommand>;
 }
 ```
@@ -20,52 +30,58 @@ Handlers are checked in registration order. `match` contains globs matched
 against root-relative POSIX paths. The built-in `binary` handler receives any
 path that no registered handler claims.
 
-`apply` receives lifecycle events and domain events from the asset stream.
-`serialize` returns the bytes stored by the asset source. A handler that
-supports live editing provides `live`; other kinds have no dynamic editing
+`serialize` returns the bytes stored by the asset source. A kind that supports
+live editing provides `commands.live`; other kinds have no dynamic editing
 room.
 
 Import the handler contract from `@jolly-pixel/asset-server/kinds`. It exposes
-the handler and live protocol types, the built-in handlers and the asset event
-helpers, without the back-end, catalog or HTTP modules the root entry loads:
+the handler and live protocol types, `foldAssetEvent`, the built-in handlers
+and the asset event helpers, without the back-end, catalog or HTTP modules the
+root entry loads:
 
 ```ts
 import {
-  ASSET_UPDATED,
-  decodeContent,
+  foldAssetEvent,
   type AssetKindHandler
 } from "@jolly-pixel/asset-server/kinds";
 ```
 
-`apply` must reset the existing `TState` in place for `asset.created`,
-`asset.updated` and `asset.deleted`. Each event is a complete checkpoint.
-Replay creates a fresh state, resumes at the newest checkpoint and folds later
-events. Reassigning the `state` parameter has no effect because `apply` returns
-`void` and the store retains the value returned by `create`.
+## Folding
 
-`TState` defaults to `unknown`, so a handler declared without it must narrow
-its own state before use. Pass the state type to keep `create`, `apply` and
-`serialize` checked against each other.
-
-## Reading lifecycle payloads
-
-`event.eventData` is typed `unknown` by the event store, because the store
-holds any domain. Parse it with `parseAssetEvent` rather than asserting a
-shape: it validates the payload against a JSON Schema for its event type and
-returns a `Result` carrying the parsed event, or the reason it was refused.
+Handlers never read raw events. `foldAssetEvent` parses each event and calls
+the matching hook:
 
 ```ts
-apply(state: MyState, event: Event): void {
-  const parsed = parseAssetEvent(event);
-  if (parsed.ok && parsed.val.eventType === ASSET_UPDATED) {
-    // eventData is AssetWriteData here
-    state.bytes = decodeContent(parsed.val.eventData.content);
-  }
-}
+function foldAssetEvent<TState, TCommand>(
+  handler: AssetKindHandler<TState, TCommand>,
+  state: TState,
+  event: Event
+): void;
 ```
 
-Payloads read straight from persistence are parsed JSON, so a corrupt row
-would otherwise reach the fold unchecked.
+| Event | Hook |
+|---|---|
+| `asset.created`, `asset.updated` | `load(state, content)` with the decoded bytes |
+| `asset.deleted` | `clear(state)` |
+| `commands.eventType` | `commands.apply(state, command)` once `commands.parse` accepts the payload |
+| anything else | none |
+
+A lifecycle event that fails `parseAssetEvent` is ignored, since the projector
+already reports it. A command payload refused by `commands.parse` is ignored.
+
+`load` and `clear` reset the existing `TState` in place, because each lifecycle
+event is a complete checkpoint. Replay creates a fresh state, resumes at the
+newest checkpoint and folds later events. Reassigning the `state` parameter has
+no effect: the store retains the value returned by `create`.
+
+`foldAssetEvent` propagates whatever a hook throws. `AssetStateStore` catches
+it, logs `asset event not folded` at error level and moves on, so a corrupt row
+neither aborts a replay nor escapes the append of a live command. Handlers need
+no `try`/`catch` of their own.
+
+`TState` defaults to `unknown`, so a handler declared without it must narrow
+its own state before use. Pass the state type to keep every hook checked
+against the others.
 
 ## Snapshot policy
 
@@ -107,8 +123,8 @@ import { textureAssetHandler } from "@jolly-pixel/asset-server";
 const kinds = new AssetKindRegistry([textureAssetHandler()]);
 ```
 
-Its state is the file's bytes, exactly like `binary`, and it has no `live`
-protocol, so texture assets get no editing room. The kind exists to
+Its state is the file's bytes, exactly like `binary`, and it has no
+`commands`, so texture assets get no editing room. The kind exists to
 name the record: `AssetCatalog.resolve()` rejects a record whose kind does not
 match its reference, and nothing on the browser side loads `binary`. Pass
 `match` to narrow the globs from the default image extensions.
@@ -138,17 +154,15 @@ browser-only consumer of either renderer never installs it.
 
 ## Writing an editable kind
 
-A kind with live editing has two halves that must not overlap: `apply` is the
-only writer of state, and `live` describes a room that appends without
-writing. `AssetRoomExtension` hosts the protocol, so a kind supplies only
-what is specific to it:
+A kind with live editing has two halves that must not overlap:
+`commands.apply` is the only writer of state, and `commands.live` describes a
+room that appends without writing. `AssetRoomExtension` hosts the room, so a
+kind supplies only what is specific to it:
 
 ```ts
 interface AssetLiveProtocol<TCommand = unknown> {
-  readonly commandEventType: string;
-  readonly actions: readonly string[];
+  readonly protocols: MessageProtocols;
 
-  parse(payload: unknown): TCommand | null;
   snapshot(): unknown;
   arbitrate(
     command: TCommand,
@@ -158,54 +172,46 @@ interface AssetLiveProtocol<TCommand = unknown> {
 }
 ```
 
+`commands.parse` serves the room and replay alike, so a command is accepted by
+the same rule on its way into the log and on its way back out.
+
 `live` runs once per room, so per-room state such as a conflict tracker
 belongs in the returned protocol rather than in the handler:
 
 ```ts
-live(binding) {
-  const arbiter = new MyArbiter({ conflictResolver });
-  const { state } = binding;
+commands: {
+  eventType: MY_COMMAND,
+  parse: (payload) => isMyCommand(payload) ? payload : null,
+  apply: (state, command) => state.applyCommand(command),
 
-  return {
-    commandEventType: MY_COMMAND,
-    actions: MY_ACTIONS,
-    parse: (payload) => isMyCommand(payload) ? payload : null,
-    snapshot: () => state.toJSON(),
-    arbitrate(command, clientId) {
-      const admitted = arbiter.admit(command);
-      if (admitted === null) {
-        return null;
-      }
+  live({ state }) {
+    const arbiter = new MyArbiter({ conflictResolver });
 
-      return {
-        command: admitted,
-        commit: () => arbiter.record(admitted)
-      };
-    }
-  };
+    return {
+      protocols: myProtocols,
+      snapshot: () => state.toJSON(),
+      arbitrate: (command) => arbiter.admit(command)
+    };
+  }
 }
 ```
 
-The room parses the payload, arbitrates it, appends
-`arbitration.command` under `commandEventType`, then calls
+The room parses the payload with `commands.parse`, arbitrates it, appends
+`arbitration.command` under `commands.eventType`, then calls
 `arbitration.commit` and broadcasts. `commit` runs only after the append
 lands, so a conflict tracker never records a command the store refused. The
-append folds through `apply` before it resolves, so state is current by the
-time peers hear about the change.
+append folds through `commands.apply` before it resolves, so state is current
+by the time peers hear about the change.
 
 `broadcast` overrides the default `{ type: "command", data: command }`
 envelope. `voxel-map` uses it to answer a `world-replace` with a full
 snapshot.
 
-`actions` names the commands the kind accepts. A configured rights table
-checks each message under `${kind}.${action}`; a payload naming no declared
-action is checked under `${kind}.invalid`.
+`protocols.inbound` names the commands the kind accepts. A configured rights
+table checks each message under `${kind}.${action}`; a payload naming no
+declared action is checked under `${kind}.invalid`.
 
 A room that also mutated the state would apply every command twice: once
 itself and once through the fold. Absolute writes survive that, but a command
 carrying a delta does not. `voxel-map`'s `position-updated` is exactly such a
 command, which is why both shipped kinds keep the halves separate.
-
-`apply` must never throw. Its event is already persisted, so a fold that
-aborts would break every later replay. Both shipped handlers catch, log and
-keep the last good state.

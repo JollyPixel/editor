@@ -5,14 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import {
-  Err,
-  type Result
-} from "@openally/result";
-import { Emitter } from "@openally/emitt";
-import * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import { identityOf } from "../../helpers/identity.ts";
 import {
@@ -114,43 +106,9 @@ function withoutSync(
 
 function createRoom(
   extension: Extension,
-  rights?: RightsTable,
-  eventStore?: EventStore.EventStore
+  rights?: RightsTable
 ): ServerRoom {
-  return new ServerRoom(extension.id, extension, rights, { eventStore });
-}
-
-class FailingEventWriter extends Emitter<
-  EventStore.EventStoreEventMap
-> implements EventStore.EventWriter {
-  append(
-    _input: EventStore.AppendInput
-  ): Result<EventStore.Event, Error> {
-    return Err(new Error("disk full"));
-  }
-}
-
-function createFailingEventStore(): EventStore.EventStore {
-  return {
-    writer: new FailingEventWriter(),
-    reader: {
-      list: () => [],
-      listFromCheckpoint: () => [],
-      listAll: () => [],
-      listFromCheckpoints: () => []
-    },
-    subscribe: () => () => void 0,
-    compact: () => {
-      return {
-        removed: 0,
-        assets: 0
-      };
-    },
-    close: () => void 0,
-    [Symbol.dispose]() {
-      this.close();
-    }
-  };
+  return new ServerRoom(extension.id, extension, rights);
 }
 
 describe("ServerRoom", () => {
@@ -505,137 +463,57 @@ describe("ServerRoom — rights: broadcast read gate", () => {
   });
 });
 
-describe("ServerRoom — event store: append", () => {
-  test("defaults to an in-memory store and returns true on success", async() => {
+describe("ServerRoom — RoomContext identity", () => {
+  test("hands the member's authenticated identity to onClientConnect and onMessage", async() => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-
+    const identity = { subject: "alice", role: "editor" };
+    await room.join("A", a.client, identity, {});
     await room.message("A", {});
-    const { eventStore } = extension.contexts.at(-1)!;
-    const appended = await eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
-
-    assert.strictEqual(appended, true);
-    assert.deepEqual((await eventStore.list("asset-1")).map((event) => event.eventData), [{ x: 1 }]);
-  });
-
-  test("on failure, notifies the client with an error envelope and returns false", async() => {
-    const extension = new RecordingExtension();
-    const a = createClient("A");
-    const room = createRoom(extension, undefined, createFailingEventStore());
-    await room.join("A", a.client, identityOf("A"), {});
-    a.sent.length = 0;
-
-    const { eventStore } = extension.contexts.at(-1)!;
-    const appended = await eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
-
-    assert.strictEqual(appended, false);
-    assert.deepEqual(a.sent, [{
-      room: "pixel-draw",
-      kind: "error",
-      event: "pixel-set",
-      reason: "disk full"
-    }]);
-  });
-
-  test("two rooms sharing the same EventStore append to the same asset log", async() => {
-    const eventStore = EventStore.persistence.memory();
-    const extensionA = new RecordingExtension();
-    const extensionB = new RecordingExtension();
-    const roomA = createRoom(extensionA, undefined, eventStore);
-    const roomB = createRoom(extensionB, undefined, eventStore);
-    await roomA.join("A", createClient("A").client, identityOf("A"), {});
-    await roomB.join("B", createClient("B").client, identityOf("B"), {});
-
-    await roomA.message("A", {});
-    await extensionA.contexts.at(-1)!.eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
-    await roomB.message("B", {});
-    await extensionB.contexts.at(-1)!.eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 2 }
-    });
 
     assert.deepEqual(
-      eventStore.reader.list("asset-1").map((event) => event.eventData),
-      [{ x: 1 }, { x: 2 }]
+      extension.contexts.map((context) => context.identity),
+      [identity, identity]
     );
   });
-});
 
-describe("ServerRoom — event store: RoomContext passed to extensions exposes the eventStore facade", () => {
-  test("the extension can append and read events through context.eventStore", async() => {
+  test("keeps the departing member's identity for onClientDisconnect", async() => {
     const extension = new RecordingExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-
-    await room.message("A", { hello: "world" });
-    const { eventStore } = extension.contexts.at(-1)!;
-    await eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
-
-    assert.deepEqual((await eventStore.list("asset-1")).map((event) => event.eventData), [{ x: 1 }]);
-  });
-});
-
-describe("ServerRoom — event store: actor injection", () => {
-  test("attributes an append to the member's clientId by default", async() => {
-    const eventStore = EventStore.persistence.memory();
-    const extension = new RecordingExtension();
-    const a = createClient("A");
-    const room = createRoom(extension, undefined, eventStore);
-    await room.join("A", a.client, identityOf("A"), {});
-
-    await extension.contexts.at(-1)!.eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
-
-    assert.deepEqual(eventStore.reader.list("asset-1")[0].actor, {
-      type: "user",
-      id: "A"
-    });
-  });
-
-  test("uses the authenticated subject as the actor id", async() => {
-    const eventStore = EventStore.persistence.memory();
-    const extension = new RecordingExtension();
-    const a = createClient("A");
-    const room = createRoom(extension, undefined, eventStore);
-    await room.join("A", a.client, { subject: "alice", role: "default" }, {});
-
-    await extension.contexts.at(-1)!.eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
-
-    assert.deepEqual(eventStore.reader.list("asset-1")[0].actor, {
-      type: "user",
-      id: "alice"
-    });
-  });
-
-  test("keeps the subject actor for appends made during onClientDisconnect", async() => {
-    const eventStore = EventStore.persistence.memory();
-    const extension = new RecordingExtension();
-    const a = createClient("A");
-    const room = createRoom(extension, undefined, eventStore);
     await room.join("A", a.client, { subject: "alice", role: "default" }, {});
 
     await room.leave("A");
-    await extension.contexts.at(-1)!.eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
 
-    assert.deepEqual(eventStore.reader.list("asset-1")[0].actor, {
-      type: "user",
-      id: "alice"
+    assert.deepEqual(extension.contexts.at(-1)!.identity, {
+      subject: "alice",
+      role: "default"
     });
+  });
+
+  test("scopes each context to the member that triggered it", async() => {
+    const extension = new RecordingExtension();
+    const room = createRoom(extension);
+    await room.join("A", createClient("A").client, identityOf("A"), {});
+    await room.join("B", createClient("B").client, identityOf("B"), {});
+
+    await room.message("B", {});
+
+    assert.deepEqual(extension.contexts.at(-1)!.identity, identityOf("B"));
+  });
+
+  test("ignores a leave from a client that is not a member", async() => {
+    const extension = new RecordingExtension();
+    const a = createClient("A");
+    const room = createRoom(extension);
+    await room.join("A", a.client, identityOf("A"), {});
+    a.sent.length = 0;
+
+    await room.leave("ghost");
+
+    assert.deepEqual(extension.disconnected, []);
+    assert.deepEqual(a.sent, []);
   });
 });
 

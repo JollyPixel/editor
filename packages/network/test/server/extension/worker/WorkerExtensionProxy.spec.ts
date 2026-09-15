@@ -33,21 +33,15 @@ function readyMessage(
   };
 }
 
-function createContext(
-  overrides: Partial<RoomContext["eventStore"]> = {}
-): RoomContext {
+function createContext(): RoomContext {
   return {
-    actor: {
-      type: "user",
-      id: "client-1"
-    },
     room: {
       broadcast: () => void 0,
       sendTo: () => void 0
     },
-    eventStore: {
-      append: overrides.append ?? (() => Promise.resolve(true)),
-      list: overrides.list ?? (() => Promise.resolve([]))
+    identity: {
+      subject: "client-1",
+      role: "default"
     }
   };
 }
@@ -148,53 +142,6 @@ describe("WorkerExtensionProxy — protocols", () => {
 });
 
 describe("WorkerExtensionProxy — context-call routing", () => {
-  test(
-    "routes an eventStore.append context-call to the real RoomContext for the in-flight dispatch",
-    async() => {
-      const { factory, transports } = createFakeTransportFactory();
-      const proxy = new WorkerExtensionProxy(
-        createDescriptor(),
-        { logger: createLogger(), transportFactory: factory }
-      );
-
-      const appended: unknown[] = [];
-      const context = createContext({
-        append: (input) => {
-          appended.push(input);
-
-          return Promise.resolve(true);
-        }
-      });
-
-      const pending = proxy.onMessage("A", {}, context);
-      transports[0].simulateMessage(readyMessage());
-      await flushMacrotask();
-      const dispatchMsg = transports[0].sent[0] as { id: string; };
-
-      transports[0].simulateMessage({
-        type: "context-call",
-        id: "call-1",
-        method: "eventStore.append",
-        args: [{ assetType: "texture", assetId: "a1", eventType: "e", eventData: {} }]
-      });
-      await flushMacrotask();
-
-      assert.equal(appended.length, 1);
-      const response = transports[0].sent.at(-1) as {
-        type: string;
-        id: string;
-        ok: boolean;
-        value: boolean;
-      };
-      assert.equal(response.type, "context-response");
-      assert.equal(response.ok, true);
-      assert.equal(response.value, true);
-
-      transports[0].simulateMessage({ type: "dispatch-result", id: dispatchMsg.id, ok: true });
-      await pending;
-    }
-  );
-
   test(
     "room.broadcast and client.send context-calls use the stable broadcaster, not the in-flight dispatch",
     async() => {
@@ -318,8 +265,8 @@ describe("WorkerExtensionProxy — dispose", () => {
   });
 });
 
-describe("WorkerExtensionProxy — actor", () => {
-  test("forwards the context actor with each dispatch", async() => {
+describe("WorkerExtensionProxy — identity", () => {
+  test("forwards the context identity with each dispatch", async() => {
     const { factory, transports } = createFakeTransportFactory();
     const proxy = new WorkerExtensionProxy(
       createDescriptor(),
@@ -329,7 +276,7 @@ describe("WorkerExtensionProxy — actor", () => {
 
     const pending = proxy.onMessage("A", {}, createContext());
     await flushMacrotask();
-    const sent = transports[0].sent[0] as { id: string; actor: unknown; };
+    const sent = transports[0].sent[0] as { id: string; identity: unknown; };
     transports[0].simulateMessage({
       type: "dispatch-result",
       id: sent.id,
@@ -337,9 +284,9 @@ describe("WorkerExtensionProxy — actor", () => {
     });
     await pending;
 
-    assert.deepEqual(sent.actor, {
-      type: "user",
-      id: "client-1"
+    assert.deepEqual(sent.identity, {
+      subject: "client-1",
+      role: "default"
     });
   });
 });

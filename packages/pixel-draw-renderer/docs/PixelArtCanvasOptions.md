@@ -189,4 +189,4 @@ Called after a stroke, global fill or selection edit is applied. It also runs af
 
 ### `onBufferUpdated`
 
-Receives local pixel and UV mutation commands, including undo and redo replay. Commands applied through the remote API do not fire it again. See [`PixelArtCanvas` network integration](../../assets/pixel-art/docs/network/api/CanvasIntegration.md#onbufferupdated).
+Receives local pixel and UV mutation commands, including undo and redo replay. Commands applied through the remote API do not fire it again.

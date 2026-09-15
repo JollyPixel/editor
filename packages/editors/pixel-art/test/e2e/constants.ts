@@ -7,20 +7,11 @@ export const TEXTURE_SIZE = {
   y: 80
 };
 
-/**
- * Playwright worker count. Each worker gets its own sync room (see
- * `testRoomId`) so tests run truly in parallel instead of racing on the
- * single shared demo room — must match the count of test rooms registered
- * in vite.config.ts.
- */
+export const DEMO_ASSET_PATH = "demo-canvas.pixelart";
 export const WORKER_COUNT = 4;
 
-/**
- * Per-worker sync room id, isolated from the interactive demo room
- * ("pixel-draw:demo-canvas") and from every other worker.
- */
-export function testRoomId(
+export function testAssetPath(
   workerIndex: number
 ): string {
-  return `pixel-draw:demo-canvas-test-${workerIndex}`;
+  return `e2e/canvas-${workerIndex}.pixelart`;
 }

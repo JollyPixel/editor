@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import { Validator } from "ata-validator";
-import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import {
@@ -8,10 +7,8 @@ import {
   mainToWorkerSchema,
   workerToMainSchema
 } from "./protocol.schema.ts";
-import type {
-  RoomAppendInput,
-  RoomPeer
-} from "../Extension.ts";
+import type { RoomPeer } from "../Extension.ts";
+import type { PeerIdentity } from "../../auth/AuthenticationProvider.ts";
 
 // CONSTANTS
 const kValidatorOptions = { useDefaults: false };
@@ -48,19 +45,11 @@ export type WorkerDispatch = {
     id: string;
     method: TMethod;
     args: DispatchArgsMap[TMethod];
-    actor: EventStore.Actor;
+    identity: PeerIdentity;
   };
 }[DispatchMethod];
 
-export interface WorkerContextResponse {
-  type: "context-response";
-  id: string;
-  ok: boolean;
-  value?: unknown;
-  error?: string;
-}
-
-export type MainToWorkerMessage = WorkerDispatch | WorkerContextResponse;
+export type MainToWorkerMessage = WorkerDispatch;
 
 export interface WorkerReady {
   type: "ready";
@@ -76,22 +65,17 @@ export interface WorkerDispatchResult {
 
 export interface ContextCallArgsMap {
   "room.broadcast": [payload: unknown];
-  "eventStore.append": [input: RoomAppendInput];
-  "eventStore.list": [assetId: string, fromVersion: number | undefined];
   "client.send": [clientId: string, data: unknown];
 }
 
 export type ContextCallMethod = keyof ContextCallArgsMap;
-
-// Only calls with replies need correlation ids.
-type ContextCallsAwaitingReply = "eventStore.append" | "eventStore.list";
 
 export type WorkerContextCall = {
   [TMethod in ContextCallMethod]: {
     type: "context-call";
     method: TMethod;
     args: ContextCallArgsMap[TMethod];
-  } & (TMethod extends ContextCallsAwaitingReply ? { id: string; } : { id?: string; });
+  };
 }[ContextCallMethod];
 
 export type WorkerToMainMessage =

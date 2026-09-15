@@ -6,12 +6,22 @@ import type { Vector3Like } from "three";
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "./types.ts";
 
+type BulkCommand = Extract<
+  VoxelNetworkCommand,
+  { action: "voxels-set" | "voxels-removed"; }
+>;
+
 export interface VoxelCommandArbiterOptions {
   /**
    * Custom conflict resolver.
    * @default network.LastWriteWinsResolver
    */
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
+}
+
+export interface VoxelArbitration {
+  readonly command: VoxelNetworkCommand;
+  commit(): void;
 }
 
 export class VoxelCommandArbiter {
@@ -25,31 +35,32 @@ export class VoxelCommandArbiter {
     );
   }
 
-  admit<TCommand extends VoxelNetworkCommand>(
-    command: TCommand
-  ): TCommand | null {
-    /*
-     * Narrowing only ever drops entries, never changing the action the
-     * caller resolved the command to.
-     */
-    return this.#admit(command) as TCommand | null;
-  }
-
-  record(
+  admit(
     command: VoxelNetworkCommand
-  ): void {
-    for (const key of VoxelCommandArbiter.keys(command)) {
-      this.#tracker.record(key, command);
+  ): VoxelArbitration | null {
+    const admitted = isBulkCommand(command) ?
+      this.#admitEntries(command) :
+      this.#admitWhole(command);
+    if (admitted === null) {
+      return null;
     }
+
+    return {
+      command: admitted,
+      commit: () => {
+        for (const key of VoxelCommandArbiter.keys(admitted)) {
+          this.#tracker.record(key, admitted);
+        }
+      }
+    };
   }
 
   static keys(
     command: VoxelLayerHookEvent | VoxelNetworkCommand
   ): string[] {
     if (isBulkCommand(command)) {
-      return entryKeys(
-        command.layerName,
-        command.metadata.entries
+      return command.metadata.entries.map(
+        (entry) => voxelKey(command.layerName, entry.position)
       );
     }
 
@@ -74,7 +85,6 @@ export class VoxelCommandArbiter {
       case "block-defined":
         return `block:${command.block.id}`;
       case "block-removed":
-        return `block:${command.blockId}`;
       case "block-moved":
         return `block:${command.blockId}`;
       default:
@@ -82,42 +92,31 @@ export class VoxelCommandArbiter {
     }
   }
 
-  #admit(
+  #admitWhole(
     command: VoxelNetworkCommand
   ): VoxelNetworkCommand | null {
-    if (!isBulkCommand(command)) {
-      return this.#wins(VoxelCommandArbiter.key(command), command) ?
-        command :
-        null;
-    }
+    const admitted = command.action === "world-replace" ||
+      this.#wins(VoxelCommandArbiter.key(command), command);
 
-    const keep = (
-      entry: { position: Vector3Like; }
-    ): boolean => this.#wins(
-      voxelKey(command.layerName, entry.position),
-      command
+    return admitted ? command : null;
+  }
+
+  #admitEntries<TCommand extends BulkCommand>(
+    command: TCommand
+  ): TCommand | null {
+    const { entries } = command.metadata;
+    const kept = entries.filter(
+      (entry) => this.#wins(voxelKey(command.layerName, entry.position), command)
     );
-
-    if (command.action === "voxels-set") {
-      const entries = command.metadata.entries.filter(keep);
-      if (entries.length === command.metadata.entries.length) {
-        return command;
-      }
-
-      return entries.length === 0 ? null : {
-        ...command,
-        metadata: { entries }
-      };
-    }
-
-    const entries = command.metadata.entries.filter(keep);
-    if (entries.length === command.metadata.entries.length) {
+    if (kept.length === entries.length) {
       return command;
     }
 
-    return entries.length === 0 ? null : {
+    return kept.length === 0 ? null : {
       ...command,
-      metadata: { entries }
+      metadata: {
+        entries: kept
+      }
     };
   }
 
@@ -139,15 +138,6 @@ function isBulkCommand<
 > {
   return command.action === "voxels-set" ||
     command.action === "voxels-removed";
-}
-
-function entryKeys(
-  layerName: string,
-  entries: readonly { position: Vector3Like; }[]
-): string[] {
-  return entries.map(
-    (entry) => voxelKey(layerName, entry.position)
-  );
 }
 
 function voxelKey(

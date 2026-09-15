@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import {
   createLogger,
@@ -8,12 +5,12 @@ import {
 } from "../logger.ts";
 import type {
   AnyExtension,
-  RoomBroadcast
+  RoomBroadcast,
+  RoomContext
 } from "../extension/Extension.ts";
 import { RightsTable } from "../rights/RightsTable.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
 import { RoomMembers } from "./RoomMembers.ts";
-import { RoomContextFactory } from "./RoomContextFactory.ts";
 import { MessageParser } from "../../protocol/MessageParser.ts";
 import {
   JOIN_EVENT,
@@ -39,7 +36,6 @@ interface AuthorizeOptions {
 
 export interface ServerRoomOptions {
   logger?: Logger;
-  eventStore?: EventStore.EventStore;
 }
 
 export class ServerRoom {
@@ -53,7 +49,6 @@ export class ServerRoom {
   #rights: RightsGate;
   #members = new RoomMembers();
   #logger: Logger;
-  #context: RoomContextFactory;
   #roomBroadcast: RoomBroadcast;
   #inbound: MessageParser | null;
   #outbound: MessageParser | null;
@@ -81,12 +76,15 @@ export class ServerRoom {
       broadcast: (payload) => this.#broadcast(payload),
       sendTo: (clientId, payload) => this.#sendTo(clientId, payload)
     };
-    this.#context = new RoomContextFactory({
-      roomId: this.id,
-      members: this.#members,
-      broadcast: this.#roomBroadcast,
-      eventStore: options.eventStore
-    });
+  }
+
+  #contextFor(
+    identity: PeerIdentity
+  ): RoomContext {
+    return {
+      room: this.#roomBroadcast,
+      identity
+    };
   }
 
   #authorize(
@@ -178,7 +176,7 @@ export class ServerRoom {
         profile,
         presence: {}
       },
-      this.#context.create(clientId)
+      this.#contextFor(identity)
     );
     this.#logger
       .withMetadata({
@@ -208,7 +206,19 @@ export class ServerRoom {
   async leave(
     clientId: string
   ): Promise<void> {
-    const actor = this.#context.resolveActor(clientId);
+    const record = this.#members.get(clientId);
+    if (record === undefined) {
+      this.#logger
+        .withMetadata({
+          clientId,
+          outcome: "ignored",
+          reason: "not a member"
+        })
+        .debug("leave");
+
+      return;
+    }
+
     this.#members.remove(clientId);
     this.#members.send({
       room: this.id,
@@ -218,7 +228,7 @@ export class ServerRoom {
 
     await this.#extension.onClientDisconnect?.(
       clientId,
-      this.#context.create(clientId, actor)
+      this.#contextFor(record.identity)
     );
     this.#logger
       .withMetadata({ clientId })
@@ -292,9 +302,10 @@ export class ServerRoom {
       return;
     }
 
-    const { role } = record.identity;
+    const { identity } = record;
+    const { role } = identity;
     if (this.#inbound === null) {
-      await this.#deliverMessage(clientId, payload);
+      await this.#deliverMessage(clientId, identity, payload);
 
       return;
     }
@@ -331,11 +342,12 @@ export class ServerRoom {
       return;
     }
 
-    await this.#deliverMessage(clientId, message);
+    await this.#deliverMessage(clientId, identity, message);
   }
 
   async #deliverMessage(
     clientId: string,
+    identity: PeerIdentity,
     message: unknown
   ): Promise<void> {
     if (typeof this.#extension.onMessage !== "function") {
@@ -353,7 +365,7 @@ export class ServerRoom {
     await this.#extension.onMessage(
       clientId,
       message,
-      this.#context.create(clientId)
+      this.#contextFor(identity)
     );
   }
 

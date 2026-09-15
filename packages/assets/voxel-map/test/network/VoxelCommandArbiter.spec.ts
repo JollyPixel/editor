@@ -11,6 +11,20 @@ import {
   voxelSetCmd
 } from "../helpers/networkCommands.ts";
 
+function admitted(
+  arbiter: VoxelCommandArbiter,
+  command: VoxelNetworkCommand
+): VoxelNetworkCommand | null {
+  return arbiter.admit(command)?.command ?? null;
+}
+
+function commit(
+  arbiter: VoxelCommandArbiter,
+  command: VoxelNetworkCommand
+): void {
+  arbiter.admit(command)!.commit();
+}
+
 describe("VoxelCommandArbiter", () => {
   test("keys a voxel command by layer and position", () => {
     assert.strictEqual(
@@ -33,7 +47,7 @@ describe("VoxelCommandArbiter", () => {
     };
 
     assert.strictEqual(VoxelCommandArbiter.key(added), null);
-    assert.strictEqual(arbiter.admit(added), added);
+    assert.strictEqual(admitted(arbiter, added), added);
   });
 
   test("accepts an uncontested command", () => {
@@ -41,7 +55,7 @@ describe("VoxelCommandArbiter", () => {
 
     const uncontested = voxelSetCmd();
 
-    assert.strictEqual(arbiter.admit(uncontested), uncontested);
+    assert.strictEqual(admitted(arbiter, uncontested), uncontested);
   });
 
   test("rejects a command losing to a recorded later write", () => {
@@ -51,11 +65,11 @@ describe("VoxelCommandArbiter", () => {
       timestamp: 2000
     });
 
-    assert.strictEqual(arbiter.admit(late), late);
-    arbiter.record(late);
+    assert.strictEqual(admitted(arbiter, late), late);
+    commit(arbiter, late);
 
     assert.strictEqual(
-      arbiter.admit(voxelSetCmd({
+      admitted(arbiter, voxelSetCmd({
         clientId: "early",
         timestamp: 1000
       })),
@@ -67,7 +81,7 @@ describe("VoxelCommandArbiter", () => {
     const arbiter = new VoxelCommandArbiter();
 
     // admitted but deliberately not recorded, as a failed apply would leave it
-    arbiter.admit(voxelSetCmd({
+    admitted(arbiter, voxelSetCmd({
       clientId: "late",
       timestamp: 2000
     }));
@@ -76,13 +90,13 @@ describe("VoxelCommandArbiter", () => {
       timestamp: 1000
     });
 
-    assert.strictEqual(arbiter.admit(early), early);
+    assert.strictEqual(admitted(arbiter, early), early);
   });
 
   test("different positions do not contend", () => {
     const arbiter = new VoxelCommandArbiter();
 
-    arbiter.record(voxelSetCmd({
+    commit(arbiter, voxelSetCmd({
       timestamp: 2000,
       x: 0
     }));
@@ -91,7 +105,7 @@ describe("VoxelCommandArbiter", () => {
       x: 1
     });
 
-    assert.strictEqual(arbiter.admit(other), other);
+    assert.strictEqual(admitted(arbiter, other), other);
   });
 });
 
@@ -116,14 +130,14 @@ describe("VoxelCommandArbiter — block commands", () => {
   test("rejects an older edit of the same block", () => {
     const arbiter = new VoxelCommandArbiter();
 
-    arbiter.record(blockDefinedCmd({
+    commit(arbiter, blockDefinedCmd({
       id: 4,
       clientId: "late",
       timestamp: 2000
     }));
 
     assert.strictEqual(
-      arbiter.admit(blockDefinedCmd({
+      admitted(arbiter, blockDefinedCmd({
         id: 4,
         clientId: "early",
         timestamp: 1000
@@ -135,7 +149,7 @@ describe("VoxelCommandArbiter — block commands", () => {
   test("different blocks do not contend", () => {
     const arbiter = new VoxelCommandArbiter();
 
-    arbiter.record(blockDefinedCmd({
+    commit(arbiter, blockDefinedCmd({
       id: 4,
       clientId: "late",
       timestamp: 2000
@@ -147,7 +161,7 @@ describe("VoxelCommandArbiter — block commands", () => {
       timestamp: 1000
     });
 
-    assert.strictEqual(arbiter.admit(other), other);
+    assert.strictEqual(admitted(arbiter, other), other);
   });
 });
 
@@ -183,10 +197,10 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   test("records every cell of a bulk command", () => {
     const arbiter = new VoxelCommandArbiter();
 
-    arbiter.record(voxelsSetCmd([0, 1], { timestamp: 2000 }));
+    commit(arbiter, voxelsSetCmd([0, 1], { timestamp: 2000 }));
 
     assert.strictEqual(
-      arbiter.admit(voxelSetCmd({
+      admitted(arbiter, voxelSetCmd({
         clientId: "early",
         timestamp: 1000,
         x: 1
@@ -198,22 +212,23 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   test("a single write loses to a cell a bulk command already won", () => {
     const arbiter = new VoxelCommandArbiter();
 
-    arbiter.record(voxelSetCmd({
+    commit(arbiter, voxelSetCmd({
       clientId: "late",
       timestamp: 2000,
       x: 1
     }));
 
-    const admitted = arbiter.admit(
+    const narrowed = admitted(
+      arbiter,
       voxelsSetCmd([0, 1, 2], {
         clientId: "early",
         timestamp: 1000
       })
     );
 
-    assert.notStrictEqual(admitted, null);
+    assert.notStrictEqual(narrowed, null);
     assert.deepStrictEqual(
-      VoxelCommandArbiter.keys(admitted!),
+      VoxelCommandArbiter.keys(narrowed!),
       ["Ground:0,0,0", "Ground:2,0,0"]
     );
   });
@@ -221,13 +236,13 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   test("drops a bulk command losing every one of its cells", () => {
     const arbiter = new VoxelCommandArbiter();
 
-    arbiter.record(voxelsSetCmd([0, 1], {
+    commit(arbiter, voxelsSetCmd([0, 1], {
       clientId: "late",
       timestamp: 2000
     }));
 
     assert.strictEqual(
-      arbiter.admit(voxelsSetCmd([0, 1], {
+      admitted(arbiter, voxelsSetCmd([0, 1], {
         clientId: "early",
         timestamp: 1000
       })),
@@ -239,7 +254,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
     const arbiter = new VoxelCommandArbiter();
     const command = voxelsSetCmd([0, 1, 2]);
 
-    assert.strictEqual(arbiter.admit(command), command);
+    assert.strictEqual(admitted(arbiter, command), command);
   });
 });
 
@@ -328,10 +343,10 @@ describe("VoxelCommandArbiter — object commands", () => {
       }
     };
 
-    assert.strictEqual(arbiter.admit(moveToProps), moveToProps);
-    arbiter.record(moveToProps);
+    assert.strictEqual(admitted(arbiter, moveToProps), moveToProps);
+    commit(arbiter, moveToProps);
 
-    assert.strictEqual(arbiter.admit(moveToDeco), null);
+    assert.strictEqual(admitted(arbiter, moveToDeco), null);
   });
 
   test("leaves a different object unaffected", () => {
@@ -357,9 +372,9 @@ describe("VoxelCommandArbiter — object commands", () => {
       }
     };
 
-    arbiter.record(first);
+    commit(arbiter, first);
 
-    assert.strictEqual(arbiter.admit(second), second);
+    assert.strictEqual(admitted(arbiter, second), second);
   });
 });
 
@@ -374,14 +389,14 @@ describe("VoxelCommandArbiter — block reorder", () => {
   test("rejects a move older than the last edit of the same block", () => {
     const arbiter = new VoxelCommandArbiter();
 
-    arbiter.record(blockDefinedCmd({
+    commit(arbiter, blockDefinedCmd({
       id: 4,
       clientId: "late",
       timestamp: 2000
     }));
 
     assert.strictEqual(
-      arbiter.admit(blockMovedCmd({
+      admitted(arbiter, blockMovedCmd({
         blockId: 4,
         toIndex: 0,
         clientId: "early",
@@ -396,8 +411,8 @@ describe("VoxelCommandArbiter — block reorder", () => {
     const first = blockMovedCmd({ blockId: 1, toIndex: 2, timestamp: 2000 });
     const second = blockMovedCmd({ blockId: 2, toIndex: 0, timestamp: 1000 });
 
-    arbiter.record(first);
+    commit(arbiter, first);
 
-    assert.strictEqual(arbiter.admit(second), second);
+    assert.strictEqual(admitted(arbiter, second), second);
   });
 });

@@ -17,7 +17,8 @@ import {
 } from "@jolly-pixel/network";
 import {
   assetRoomName,
-  createAssetBackend
+  createAssetBackend,
+  foldAssetEvent
 } from "@jolly-pixel/asset-server";
 import {
   decodePixelArtDocument,
@@ -102,7 +103,7 @@ function replay(
   const handler = pixelArtAssetHandler({ defaultSize: kSize });
   const state = handler.create(assetId);
   for (const event of eventStore.reader.list(assetId)) {
-    handler.apply(state, event);
+    foldAssetEvent(handler, state, event);
   }
 
   return state.buffer;
@@ -147,7 +148,7 @@ describe("pixel-art asset kind over a real back-end", () => {
         .find((entry) => entry.source === kDocumentPath)!;
       assert.strictEqual(record.kind, PIXEL_ART_KIND);
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(PIXEL_ART_KIND, record.id);
 
@@ -220,7 +221,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       });
       const record = backend.catalog.snapshot().assets[0];
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(PIXEL_ART_KIND, record.id);
 

@@ -11,6 +11,7 @@ import {
   ASSET_CREATED,
   ASSET_DELETED,
   encodeContent,
+  foldAssetEvent,
   type AssetEventData,
   type AssetLiveProtocol,
   type AssetRoomBinding
@@ -104,7 +105,7 @@ function binding(
 function liveProtocol(): AssetLiveProtocol<PixelNetworkCommand> {
   const handler = pixelArtAssetHandler();
 
-  return handler.live!(binding(handler.create("asset-1")));
+  return handler.commands!.live!(binding(handler.create("asset-1")));
 }
 
 function stroke(
@@ -152,7 +153,7 @@ describe("pixelArtAssetHandler", () => {
     const source = new PixelBuffer({ size: { x: 4, y: 4 } });
     source.drawPixels([{ x: 2, y: 2 }], kRed);
 
-    handler.apply(state, documentEvent(source));
+    foldAssetEvent(handler, state, documentEvent(source));
 
     assert.deepEqual(state.buffer.size(), { x: 4, y: 4 });
     assert.deepEqual(state.buffer.samplePixel(2, 2), kRedTuple);
@@ -164,7 +165,8 @@ describe("pixelArtAssetHandler", () => {
     });
     const state = handler.create("asset-1");
 
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(PIXEL_ART_COMMAND, strokeCommand([{ x: 1, y: 1 }]))
     );
@@ -178,9 +180,9 @@ describe("pixelArtAssetHandler", () => {
     });
     const state = handler.create("asset-1");
     const source = new PixelBuffer({ size: { x: 8, y: 8 } });
-    handler.apply(state, documentEvent(source));
+    foldAssetEvent(handler, state, documentEvent(source));
 
-    handler.apply(state, event(ASSET_DELETED, {
+    foldAssetEvent(handler, state, event(ASSET_DELETED, {
       path: "a.pixelart",
       kind: PIXEL_ART_KIND
     }));
@@ -195,23 +197,24 @@ describe("pixelArtAssetHandler", () => {
     const state = handler.create("asset-1");
     const before = Uint8ClampedArray.from(state.buffer.pixels());
 
-    handler.apply(state, event("something.else", { nope: true }));
+    foldAssetEvent(handler, state, event("something.else", { nope: true }));
 
     assert.deepEqual(state.buffer.pixels(), before);
   });
 
-  test("a malformed event never throws and keeps the last good state", () => {
+  test("a malformed document throws before touching the buffer", () => {
     const handler = pixelArtAssetHandler({
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(PIXEL_ART_COMMAND, strokeCommand([{ x: 1, y: 1 }]))
     );
 
-    assert.doesNotThrow(() => {
-      handler.apply(state, event(ASSET_CREATED, {
+    assert.throws(() => {
+      foldAssetEvent(handler, state, event(ASSET_CREATED, {
         path: "a.pixelart",
         kind: PIXEL_ART_KIND,
         hash: "h1",
@@ -227,14 +230,15 @@ describe("pixelArtAssetHandler", () => {
       defaultSize: { x: 4, y: 4 }
     });
     const first = handler.create("asset-1");
-    handler.apply(
+    foldAssetEvent(
+      handler,
       first,
       event(PIXEL_ART_COMMAND, strokeCommand([{ x: 3, y: 3 }]))
     );
 
     const data = await handler.serialize(first);
     const second = handler.create("asset-1");
-    handler.apply(second, event(ASSET_CREATED, {
+    foldAssetEvent(handler, second, event(ASSET_CREATED, {
       path: "a.pixelart",
       kind: PIXEL_ART_KIND,
       hash: "h1",
@@ -245,21 +249,39 @@ describe("pixelArtAssetHandler", () => {
     assert.deepEqual(second.buffer.pixels(), first.buffer.pixels());
   });
 
-  test("live() declares the pixel command stream", () => {
+  test("declares the pixel command stream", () => {
     const protocol = liveProtocol();
 
-    assert.strictEqual(protocol.commandEventType, PIXEL_ART_COMMAND);
+    assert.strictEqual(
+      pixelArtAssetHandler().commands!.eventType,
+      PIXEL_ART_COMMAND
+    );
     assert.deepEqual(
       protocolEvents(protocol.protocols.inbound!),
       [...PIXEL_NETWORK_ACTIONS]
     );
   });
 
-  test("live() rejects a payload that is not a pixel command", () => {
-    const protocol = liveProtocol();
+  test("rejects a payload that is not a pixel command", () => {
+    const { parse } = pixelArtAssetHandler().commands!;
 
-    assert.strictEqual(protocol.parse({ action: "stroke" }), null);
-    assert.strictEqual(protocol.parse(null), null);
+    assert.strictEqual(parse({ action: "stroke" }), null);
+    assert.strictEqual(parse(null), null);
+  });
+
+  test("rejects a command breaking a domain rule", () => {
+    const { parse } = pixelArtAssetHandler().commands!;
+
+    assert.strictEqual(parse({
+      action: "select-edit",
+      metadata: {
+        positions: [{ x: 0, y: 0 }],
+        colors: []
+      },
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    }), null);
   });
 
   test("live() stamps the server-side client id onto the command", () => {
@@ -310,7 +332,7 @@ describe("pixelArtAssetHandler", () => {
   test("live() snapshots the current buffer", () => {
     const handler = pixelArtAssetHandler({ defaultSize: { x: 2, y: 2 } });
     const state = handler.create("asset-1");
-    const protocol = handler.live!(binding(state));
+    const protocol = handler.commands!.live!(binding(state));
 
     assert.deepEqual(
       protocol.snapshot(),

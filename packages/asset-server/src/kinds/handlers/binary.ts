@@ -1,15 +1,5 @@
-// Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import type { AssetKindHandler } from "../AssetKindHandler.ts";
-import {
-  ASSET_CREATED,
-  ASSET_DELETED,
-  ASSET_UPDATED,
-  decodeContent,
-  parseAssetEvent
-} from "../../events/AssetEvents.ts";
 
 export const BINARY_KIND = "binary";
 
@@ -30,27 +20,17 @@ export const binaryAssetHandler: AssetKindHandler<BinaryAssetState> = {
     };
   },
 
-  apply(
+  load(
     state: BinaryAssetState,
-    event: EventStore.Event
+    content: Uint8Array
   ): void {
-    const parsed = parseAssetEvent(event);
-    if (!parsed.ok) {
-      return;
-    }
+    state.bytes = content;
+  },
 
-    const assetEvent = parsed.val;
-    if (
-      assetEvent.eventType === ASSET_CREATED ||
-      assetEvent.eventType === ASSET_UPDATED
-    ) {
-      state.bytes = decodeContent(
-        assetEvent.eventData.content
-      );
-    }
-    else if (assetEvent.eventType === ASSET_DELETED) {
-      state.bytes = new Uint8Array();
-    }
+  clear(
+    state: BinaryAssetState
+  ): void {
+    state.bytes = new Uint8Array();
   },
 
   serialize(

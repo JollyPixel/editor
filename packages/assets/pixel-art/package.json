@@ -54,13 +54,13 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "2.0.0",
     "@jolly-pixel/color": "1.0.0",
-    "@jolly-pixel/event-store": "3.0.0",
     "@jolly-pixel/network": "2.0.0",
     "@jolly-pixel/pixel-draw.renderer": "4.0.0",
     "js-base64": "3.9.3"
   },
   "devDependencies": {
     "@jolly-pixel/asset-source": "1.0.0",
-    "@jolly-pixel/bench": "*"
+    "@jolly-pixel/bench": "*",
+    "@jolly-pixel/event-store": "3.0.0"
   }
 }

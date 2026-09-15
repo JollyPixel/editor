@@ -23,7 +23,8 @@ function handler(
     create: () => {
       return { value: "" };
     },
-    apply: () => void 0,
+    load: () => void 0,
+    clear: () => void 0,
     serialize: () => Promise.resolve(new Uint8Array())
   };
 }

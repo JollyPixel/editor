@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import { identityOf } from "../helpers/identity.ts";
 import { EnvelopeDispatcher } from "#src/server/EnvelopeDispatcher.ts";
@@ -44,8 +41,7 @@ function createHarness(
   const sessions = new ClientSessions();
   const rooms = new RoomRegistry({
     logger: createLogger(),
-    rights: rights ?? new RightsTable(),
-    eventStore: EventStore.persistence.memory()
+    rights: rights ?? new RightsTable()
   });
   rooms.register(new PresenceOnlyExtension("lobby", "lobby", {
     broadcast: true,

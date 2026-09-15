@@ -13,12 +13,19 @@ import {
   type RoomContext,
   type RoomPeer
 } from "@jolly-pixel/network";
+import type * as EventStore from "@jolly-pixel/event-store";
+import {
+  Err,
+  Ok
+} from "@openally/result";
 
 // Import Internal Dependencies
 import { counterCommandProtocols } from "../helpers/protocols.ts";
 import {
   AssetRoomExtension,
   ASSET_ROOM_DELETED,
+  ASSET_ROOM_REJECTED,
+  type AssetCommands,
   type AssetLiveProtocol,
   type AssetRoomBinding
 } from "#src/index.ts";
@@ -39,8 +46,9 @@ interface Command {
 interface Harness {
   extension: AssetRoomExtension<Command>;
   context: RoomContext;
-  appended: unknown[];
+  appended: EventStore.AppendInput[];
   broadcast: unknown[];
+  direct: { clientId: string; payload: unknown; }[];
   committed: Command[];
 }
 
@@ -58,13 +66,27 @@ function harness(
     appends = true,
     protocol = {}
   } = options;
-  const appended: unknown[] = [];
+  const appended: EventStore.AppendInput[] = [];
   const broadcast: unknown[] = [];
+  const direct: { clientId: string; payload: unknown; }[] = [];
   const committed: Command[] = [];
+  const events: EventStore.EventWriter = {
+    append: (input) => {
+      appended.push(input);
 
-  const extension = new AssetRoomExtension<Command>(kBinding, {
-    commandEventType: "counter.command",
-    protocols: counterCommandProtocols,
+      return appends ?
+        Ok({
+          ...input,
+          eventId: appended.length,
+          eventVersion: appended.length,
+          createdAt: ""
+        }) :
+        Err(new Error("disk full"));
+    }
+  };
+
+  const commands: AssetCommands<unknown, Command> = {
+    eventType: "counter.command",
 
     parse(payload) {
       return typeof payload === "object" &&
@@ -74,6 +96,12 @@ function harness(
         payload as Command :
         null;
     },
+
+    apply: () => void 0
+  };
+
+  const extension = new AssetRoomExtension<Command>(kBinding, commands, {
+    protocols: counterCommandProtocols,
 
     snapshot() {
       return { value: 7 };
@@ -96,24 +124,16 @@ function harness(
     },
 
     ...protocol
-  });
+  }, events);
 
   const context: RoomContext = {
-    actor: {
-      type: "user",
-      id: "client-1"
-    },
     room: {
       broadcast: (payload) => broadcast.push(payload),
-      sendTo: () => void 0
+      sendTo: (clientId, payload) => direct.push({ clientId, payload })
     },
-    eventStore: {
-      append: (input) => {
-        appended.push(input);
-
-        return Promise.resolve(appends);
-      },
-      list: () => Promise.resolve([])
+    identity: {
+      subject: "alice-subject",
+      role: "default"
     }
   };
 
@@ -122,6 +142,7 @@ function harness(
     context,
     appended,
     broadcast,
+    direct,
     committed
   };
 }
@@ -224,6 +245,10 @@ describe("AssetRoomExtension", () => {
         eventData: {
           action: "increment",
           by: "alice"
+        },
+        actor: {
+          type: "user",
+          id: "alice-subject"
         }
       }
     ]);
@@ -260,6 +285,30 @@ describe("AssetRoomExtension", () => {
     assert.strictEqual(appended.length, 1);
     assert.deepEqual(broadcast, []);
     assert.deepEqual(committed, []);
+  });
+
+  test("a rejected append sends the rejected notice to the author only", async() => {
+    const { extension, context, direct } = harness({ appends: false });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.deepEqual(direct, [
+      {
+        clientId: "alice",
+        payload: {
+          type: ASSET_ROOM_REJECTED,
+          reason: "disk full"
+        }
+      }
+    ]);
+  });
+
+  test("a successful append sends no rejected notice", async() => {
+    const { extension, context, direct } = harness();
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.deepEqual(direct, []);
   });
 
   test("uses the protocol broadcast when it defines one", async() => {
@@ -301,6 +350,22 @@ describe("AssetRoomExtension", () => {
         data: { action: "increment" }
       }
     ]);
+  });
+});
+
+describe("AssetRoomExtension — rejection", () => {
+  test("adds the rejected notice to the outbound protocol", () => {
+    const { extension } = harness();
+
+    assert.ok(
+      protocolEvents(extension.protocols.outbound!).includes(ASSET_ROOM_REJECTED)
+    );
+    const parser = new MessageParser(extension.protocols.outbound!);
+    assert.strictEqual(
+      parser.parse({ type: ASSET_ROOM_REJECTED, reason: "disk full" }).ok,
+      true
+    );
+    assert.strictEqual(parser.parse({ type: ASSET_ROOM_REJECTED }).ok, false);
   });
 });
 

@@ -40,6 +40,7 @@ Synchronize the engine with a room:
 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
+import { assetRoomName } from "@jolly-pixel/asset";
 import {
   VoxelSyncClient,
   type VoxelNetworkCommand,
@@ -49,7 +50,7 @@ import {
 const room = new Client().room<
   VoxelNetworkCommand,
   VoxelServerMessage
->("voxel-map:main");
+>(assetRoomName("voxelmap", assetId));
 const sync = new VoxelSyncClient({ room });
 
 sync.attach(renderer.engine);
@@ -70,8 +71,8 @@ await createAssetBackend({
 });
 ```
 
-For an in-memory world, use `VoxelSyncServer` from the server entry point. Both
-servers speak the same protocol, so `VoxelSyncClient` connects to either.
+For an in-memory world, pass a `MemoryAssetSource` and a `persistence.memory()`
+event store instead.
 
 ## 📚 API
 
@@ -80,7 +81,6 @@ servers speak the same protocol, so `VoxelSyncClient` connects to either.
 - [`TiledMapAssetLoader`](./docs/api/TiledMapAssetLoader.md)
 - Network
   - [`VoxelSyncClient`](./docs/api/network/VoxelSyncClient.md)
-  - [`VoxelSyncServer`](./docs/api/network/VoxelSyncServer.md)
   - [`VoxelCommandArbiter`](./docs/api/network/VoxelCommandArbiter.md)
   - [Network protocol](./docs/api/network/protocol.md)
 

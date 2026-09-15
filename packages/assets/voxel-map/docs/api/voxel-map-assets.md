@@ -33,12 +33,14 @@ function voxelMapAssetHandler(
 The default snapshot policy waits for 5 seconds of quiet and has a 60-second
 maximum delay.
 
-The handler serializes state with `encodeVoxelDocument()` and returns an
-`AssetLiveProtocol` from `live()` for each room binding.
+The handler loads documents with `decodeVoxelDocument()`, serializes state
+with `encodeVoxelDocument()`, and declares `commands` under
+`VOXEL_MAP_COMMAND`: `commands.apply` forwards to
+`VoxelMapState.applyCommand()`, and `commands.live()` returns an
+`AssetLiveProtocol` for each room binding.
 
-Applied events never escape as exceptions. Malformed asset or command events
-are logged and skipped so later events can continue replaying from the last
-valid state.
+A malformed document or a command the world rejects throws out of the fold.
+`AssetStateStore` logs and skips it, keeping the last valid state.
 
 ## `VoxelMapState`
 
@@ -54,6 +56,7 @@ class VoxelMapState {
   constructor(chunkSize: number);
   toJSON(): VoxelWorldJSON;
   load(document: VoxelWorldJSON): void;
+  applyCommand(command: VoxelNetworkCommand): void;
   clear(): void;
 }
 ```
@@ -61,7 +64,9 @@ class VoxelMapState {
 `VoxelWorld` owns neither the tileset list nor the block definitions a document
 carries, so the state stores all three. `load()` replaces the world, copies
 the document's tilesets, and replaces the block table when the document carries
-one. `clear()` empties all three.
+one. `clear()` empties all three. `applyCommand()` loads a `world-replace`
+document, routes block commands to `blocks`, and hands every other command to
+`VoxelWorld.applyRemoteCommand()`.
 
 `toJSON()` serializes the world with the stored tileset and block definitions,
 so a block edit survives a restart. Loading a document with a different chunk
@@ -69,7 +74,7 @@ size throws `InvalidVoxelDocumentError` and leaves the state unchanged.
 
 ## Live protocol
 
-`live()` returns the voxel-map half of an asset room; asset-server's
+`commands.live()` returns the voxel-map half of an asset room; asset-server's
 `AssetRoomExtension` owns the room lifecycle around it.
 
 ```ts
@@ -80,13 +85,12 @@ function live(
 
 It builds one `VoxelCommandArbiter` per room, snapshots with
 `VoxelMapState.toJSON()`, and appends accepted commands under
-`VOXEL_MAP_COMMAND`. The handler's `apply()` function is the only code that
-mutates state. Applying a command in the room as well would replay it twice;
+`VOXEL_MAP_COMMAND`. `commands.apply` is the only code that mutates state. Applying a command in the room as well would replay it twice;
 an offset delta would then move a layer twice as far.
 
-Full-world replacement bypasses arbitration and broadcasts a fresh snapshot
-instead of the command. Other accepted commands are recorded by
-`VoxelCommandArbiter` after the event-store append succeeds.
+`arbitrate` is `VoxelCommandArbiter.admit()`; the room commits the returned
+arbitration once the event-store append succeeds. Full-world replacement is
+always admitted and broadcasts a fresh snapshot instead of the command.
 
 `VOXEL_MAP_ACTIONS` covers the layer hook actions, `VOXEL_BLOCK_HOOK_ACTIONS`
 and `world-replace`. Block commands are appended, folded into

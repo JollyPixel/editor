@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import type { AssetLiveProtocol } from "../rooms/AssetRoomExtension.ts";
 
@@ -26,6 +23,26 @@ export interface AssetRoomBinding<TState = unknown> {
   readonly state: TState;
 }
 
+export interface AssetCommands<
+  TState = unknown,
+  TCommand = unknown
+> {
+  readonly eventType: string;
+
+  parse(
+    payload: unknown
+  ): TCommand | null;
+
+  apply(
+    state: TState,
+    command: TCommand
+  ): void;
+
+  live?(
+    binding: AssetRoomBinding<TState>
+  ): AssetLiveProtocol<TCommand>;
+}
+
 /**
  * Folds an asset event stream and serializes its projected state.
  */
@@ -37,21 +54,22 @@ export interface AssetKindHandler<
   readonly match: readonly string[];
   readonly snapshot?: SnapshotPolicy;
   readonly contentTypes?: Readonly<Record<string, string>>;
+  readonly commands?: AssetCommands<TState, TCommand>;
 
   create(
     assetId: string
   ): TState;
 
-  apply(
+  load(
     state: TState,
-    event: EventStore.Event
+    content: Uint8Array
+  ): void;
+
+  clear(
+    state: TState
   ): void;
 
   serialize(
     state: TState
   ): Promise<Uint8Array>;
-
-  live?(
-    binding: AssetRoomBinding<TState>
-  ): AssetLiveProtocol<TCommand>;
 }

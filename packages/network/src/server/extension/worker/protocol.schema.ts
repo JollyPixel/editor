@@ -2,14 +2,16 @@
 import { defineSchema } from "../../../protocol/schema.ts";
 
 const kIdentifier = { type: "string" } as const;
-const kActor = {
+const kIdentity = {
   type: "object",
   properties: {
-    type: { enum: ["user", "system"] },
-    id: { type: "string" },
-    source: { type: "string" }
+    subject: kIdentifier,
+    role: kIdentifier
   },
-  required: ["type"]
+  required: [
+    "subject",
+    "role"
+  ]
 } as const;
 const kAnyObject = { type: "object" } as const;
 
@@ -34,7 +36,7 @@ export const mainToWorkerSchema = defineSchema({
       properties: {
         type: { const: "dispatch" },
         id: kIdentifier,
-        actor: kActor,
+        identity: kIdentity,
         method: { const: "onClientConnect" },
         args: {
           type: "array",
@@ -50,7 +52,7 @@ export const mainToWorkerSchema = defineSchema({
         "id",
         "method",
         "args",
-        "actor"
+        "identity"
       ]
     },
     {
@@ -58,7 +60,7 @@ export const mainToWorkerSchema = defineSchema({
       properties: {
         type: { const: "dispatch" },
         id: kIdentifier,
-        actor: kActor,
+        identity: kIdentity,
         method: { const: "onClientDisconnect" },
         args: {
           type: "array",
@@ -71,7 +73,7 @@ export const mainToWorkerSchema = defineSchema({
         "id",
         "method",
         "args",
-        "actor"
+        "identity"
       ]
     },
     {
@@ -79,7 +81,7 @@ export const mainToWorkerSchema = defineSchema({
       properties: {
         type: { const: "dispatch" },
         id: kIdentifier,
-        actor: kActor,
+        identity: kIdentity,
         method: { const: "onMessage" },
         args: {
           type: "array",
@@ -92,22 +94,7 @@ export const mainToWorkerSchema = defineSchema({
         "id",
         "method",
         "args",
-        "actor"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "context-response" },
-        id: kIdentifier,
-        ok: { type: "boolean" },
-        value: {},
-        error: kIdentifier
-      },
-      required: [
-        "type",
-        "id",
-        "ok"
+        "identity"
       ]
     }
   ]
@@ -154,7 +141,6 @@ export const workerToMainSchema = defineSchema({
       properties: {
         type: { const: "context-call" },
         method: { const: "room.broadcast" },
-        id: kIdentifier,
         args: {
           type: "array",
           prefixItems: [{}],
@@ -172,7 +158,6 @@ export const workerToMainSchema = defineSchema({
       properties: {
         type: { const: "context-call" },
         method: { const: "client.send" },
-        id: kIdentifier,
         args: {
           type: "array",
           prefixItems: [kIdentifier, {}],
@@ -182,44 +167,6 @@ export const workerToMainSchema = defineSchema({
       required: [
         "type",
         "method",
-        "args"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "context-call" },
-        method: { const: "eventStore.append" },
-        id: kIdentifier,
-        args: {
-          type: "array",
-          prefixItems: [kAnyObject],
-          minItems: 1
-        }
-      },
-      required: [
-        "type",
-        "method",
-        "id",
-        "args"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "context-call" },
-        method: { const: "eventStore.list" },
-        id: kIdentifier,
-        args: {
-          type: "array",
-          prefixItems: [kIdentifier, {}],
-          minItems: 1
-        }
-      },
-      required: [
-        "type",
-        "method",
-        "id",
         "args"
       ]
     }

@@ -15,7 +15,6 @@ describe("network entry points", () => {
     assert.strictEqual(typeof root.pixelArtAssetHandler, "function");
     assert.strictEqual(typeof root.PixelArtState, "function");
     assert.strictEqual("PixelSyncClient" in root, false);
-    assert.strictEqual("PixelSyncServer" in root, false);
   });
 
   test("client entry exports every browser sync helper", () => {
@@ -27,7 +26,6 @@ describe("network entry points", () => {
   });
 
   test("server entry exports the authoritative server API", () => {
-    assert.strictEqual(typeof server.PixelSyncServer, "function");
     assert.strictEqual(typeof server.applyCommandToBuffer, "function");
   });
 });

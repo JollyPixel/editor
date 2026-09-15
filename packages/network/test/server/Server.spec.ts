@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import { identityOf } from "../helpers/identity.ts";
 import {
@@ -646,50 +643,20 @@ describe("Server — rights: denied join", () => {
   );
 });
 
-describe("Server — event store", () => {
-  test("defaults to an in-memory store shared by every registered room", async() => {
+describe("Server — RoomContext identity", () => {
+  test("hands extensions the identity the connection was admitted with", async() => {
     const server = new Server();
-    const pixel = new RecordingExtension("pixel-draw");
-    const voxel = new RecordingExtension("voxel");
-    server.register(pixel);
-    server.register(voxel);
-
-    const a = createClient("A");
-    const b = createClient("B");
-    server.handleConnect(a.client, identityOf(a.client));
-    server.handleConnect(b.client, identityOf(b.client));
-    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    await server.handleMessage("B", { room: "voxel", kind: "join" });
-
-    await pixel.context?.eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
-    });
-
-    // Read back through the *other* room's context: same Server, one shared EventStore.
-    assert.deepEqual(
-      (await voxel.context?.eventStore.list("asset-1"))?.map((event) => event.eventData),
-      [{ x: 1 }]
-    );
-  });
-
-  test("uses the EventStore passed via ServerOptions instead of the default", async() => {
-    const eventStore = EventStore.persistence.memory();
-    const server = new Server({ eventStore });
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
 
     const { client } = createClient("A");
-    server.handleConnect(client, identityOf(client));
+    server.handleConnect(client, { subject: "alice", role: "default" });
     await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
 
-    await extension.context?.eventStore.append({
-      assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
+    assert.deepEqual(extension.context?.identity, {
+      subject: "alice",
+      role: "default"
     });
-
-    assert.deepEqual(
-      eventStore.reader.list("asset-1").map((event) => event.eventData),
-      [{ x: 1 }]
-    );
   });
 });
 

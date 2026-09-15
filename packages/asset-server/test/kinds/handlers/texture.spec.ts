@@ -10,6 +10,7 @@ import {
   ASSET_CREATED,
   AssetKindRegistry,
   encodeContent,
+  foldAssetEvent,
   textureAssetHandler,
   TEXTURE_KIND
 } from "#src/index.ts";
@@ -60,7 +61,7 @@ describe("textureAssetHandler", () => {
     const handler = textureAssetHandler();
     const state = handler.create("a1");
 
-    handler.apply(state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(handler, state, assetEvent(ASSET_CREATED, {
       path: "a.png",
       kind: TEXTURE_KIND,
       hash: "h1",
@@ -72,6 +73,6 @@ describe("textureAssetHandler", () => {
   });
 
   test("has no editing room", () => {
-    assert.strictEqual(textureAssetHandler().live, undefined);
+    assert.strictEqual(textureAssetHandler().commands, undefined);
   });
 });

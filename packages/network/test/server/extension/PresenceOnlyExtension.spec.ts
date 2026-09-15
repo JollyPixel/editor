@@ -17,17 +17,13 @@ const kClient: ClientHandle = {
   send: () => void 0
 };
 const kContext: RoomContext = {
-  actor: {
-    type: "user",
-    id: "client-1"
-  },
   room: {
     broadcast: () => void 0,
     sendTo: () => void 0
   },
-  eventStore: {
-    append: () => Promise.resolve(true),
-    list: () => Promise.resolve([])
+  identity: {
+    subject: "client-1",
+    role: "default"
   }
 };
 

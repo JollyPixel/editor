@@ -6,10 +6,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
+import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import type { AssetKindHandler } from "#src/index.ts";
+import {
+  AssetKindRegistry,
+  AssetStateStore,
+  type AssetKindHandler
+} from "#src/index.ts";
 import {
   syncHarness,
   type SyncHarness
@@ -17,9 +21,11 @@ import {
 import {
   counterHandler,
   COUNTER_INCREMENTED,
+  type CounterCommand,
   type CounterState
 } from "../helpers/kinds.ts";
 import { bytes, text } from "../helpers/bytes.ts";
+import { recordingLogger } from "../helpers/logger.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -27,24 +33,28 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-/** Records the event types each replay folds. */
 function recordingCounterHandler(): {
-  handler: AssetKindHandler<CounterState>;
+  handler: AssetKindHandler<CounterState, CounterCommand>;
   folded: string[];
 } {
   const inner = counterHandler();
+  const commands = inner.commands!;
   const folded: string[] = [];
 
   return {
     folded,
     handler: {
       ...inner,
-      apply(
-        state: CounterState,
-        event: EventStore.Event
-      ): void {
-        folded.push(event.eventType);
-        inner.apply(state, event);
+      load(state, content) {
+        folded.push("load");
+        inner.load(state, content);
+      },
+      commands: {
+        ...commands,
+        apply(state, command) {
+          folded.push(COUNTER_INCREMENTED);
+          commands.apply(state, command);
+        }
       }
     }
   };
@@ -71,7 +81,7 @@ function increment(
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
-    eventData: {},
+    eventData: { action: "increment" },
     actor: kActor
   }).unwrap();
 }
@@ -96,7 +106,7 @@ describe("AssetStateStore — checkpointed replay", () => {
     folded.length = 0;
     const entry = await harness.states.acquire(assetId, "counter");
 
-    assert.deepEqual(folded, ["asset.updated", COUNTER_INCREMENTED]);
+    assert.deepEqual(folded, ["load", COUNTER_INCREMENTED]);
     assert.strictEqual((entry.state as CounterState).value, 4);
   });
 
@@ -124,7 +134,7 @@ describe("AssetStateStore — checkpointed replay", () => {
     folded.length = 0;
     const entry = await harness.states.acquire(assetId, "counter");
 
-    assert.deepEqual(folded, ["asset.created", COUNTER_INCREMENTED]);
+    assert.deepEqual(folded, ["load", COUNTER_INCREMENTED]);
     assert.strictEqual((entry.state as CounterState).value, 1);
   });
 
@@ -144,7 +154,7 @@ describe("AssetStateStore — checkpointed replay", () => {
     folded.length = 0;
     const data = await harness.states.serialize(assetId, "counter");
 
-    assert.deepEqual(folded, ["asset.updated"]);
+    assert.deepEqual(folded, ["load"]);
     assert.strictEqual(text(data), "1");
   });
 });
@@ -202,5 +212,72 @@ describe("AssetStateStore — replay concurrency", () => {
     const entry = await acquired;
 
     assert.strictEqual((entry.state as CounterState).value, 301);
+  });
+});
+
+describe("AssetStateStore — fault isolation", () => {
+  function throwingCounterHandler(): AssetKindHandler<CounterState, CounterCommand> {
+    const inner = counterHandler();
+
+    return {
+      ...inner,
+      commands: {
+        ...inner.commands!,
+        apply() {
+          throw new Error("corrupt command");
+        }
+      }
+    };
+  }
+
+  test("a throwing replay fold is logged and keeps the last good state", async() => {
+    using eventStore = EventStore.persistence.memory();
+    const { logger, records } = recordingLogger();
+    const states = new AssetStateStore({
+      eventStore,
+      kinds: new AssetKindRegistry([throwingCounterHandler()]),
+      logger
+    });
+
+    eventStore.writer.append({
+      assetType: "counter",
+      assetId: "a1",
+      eventType: COUNTER_INCREMENTED,
+      eventData: { action: "increment" },
+      actor: kActor
+    }).unwrap();
+
+    const entry = await states.acquire("a1", "counter");
+
+    assert.strictEqual((entry.state as CounterState).value, 0);
+    assert.deepEqual(
+      records.map((record) => [record.level, record.message]),
+      [["error", "asset event not folded"]]
+    );
+    assert.strictEqual(records[0].metadata.reason, "corrupt command");
+  });
+
+  test("a throwing live fold does not escape the append", async() => {
+    using eventStore = EventStore.persistence.memory();
+    const { logger, records } = recordingLogger();
+    const states = new AssetStateStore({
+      eventStore,
+      kinds: new AssetKindRegistry([throwingCounterHandler()]),
+      logger
+    });
+    states.start();
+    await states.acquire("a1", "counter");
+
+    const appended = eventStore.writer.append({
+      assetType: "counter",
+      assetId: "a1",
+      eventType: COUNTER_INCREMENTED,
+      eventData: { action: "increment" },
+      actor: kActor
+    });
+    states.close();
+
+    assert.strictEqual(appended.ok, true);
+    assert.strictEqual(records.length, 1);
   });
 });

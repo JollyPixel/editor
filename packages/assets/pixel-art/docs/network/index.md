@@ -1,6 +1,6 @@
 # Network synchronization
 
-The network API synchronizes one `PixelArtCanvas` through one `@jolly-pixel/network` room. `PixelSyncServer` owns the authoritative `PixelBuffer`; each browser uses a `PixelSyncClient` to apply snapshots and exchange committed edits.
+The network API synchronizes one `PixelArtCanvas` through one `@jolly-pixel/network` room. The [pixel-art asset kind](../asset/index.md) owns the authoritative `PixelBuffer`; each browser uses a `PixelSyncClient` to apply snapshots and exchange committed edits.
 
 Cursor and in-progress edit previews are optional. They use the room's presence channel and never change the authoritative buffer.
 
@@ -16,7 +16,6 @@ Start with the setup guide. The API reference is useful when wrapping these clas
 | Page | API |
 |---|---|
 | [`PixelSyncClient`](./api/PixelSyncClient.md) | Client attachment, readiness and snapshot events |
-| [`PixelSyncServer`](./api/PixelSyncServer.md) | Authoritative state, validation and conflict resolution |
 | [Presence sync](./api/PresenceSync.md) | `PixelCursorSync`, `PixelStrokeGhostSync`, `UVGhostSync` and `SelectionGhostSync` |
 | [Canvas integration](./api/CanvasIntegration.md) | Hooks and remote-application methods used by custom adapters |
 
@@ -41,9 +40,8 @@ Server code uses the server-only entry point:
 
 ```ts
 import {
-  PixelSyncServer,
   applyCommandToBuffer,
-  type PixelSyncServerOptions
+  PixelCommandArbiter
 } from "@jolly-pixel/asset.pixel-art/network/server.ts";
 ```
 

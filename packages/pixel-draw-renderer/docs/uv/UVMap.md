@@ -201,4 +201,4 @@ off<T extends UVMapEventType>(type: T, listener: UVMapListener<T>): void
 
 Adds or removes a typed event listener.
 
-Undo, redo and network sync consume the same mutation events. See [`HistoryStack`](../history/HistoryStack.md), [`PixelBuffer`](../buffer/PixelBuffer.md) and [`PixelSyncServer`](../../../assets/pixel-art/docs/network/api/PixelSyncServer.md).
+Undo, redo and network sync consume the same mutation events. See [`HistoryStack`](../history/HistoryStack.md) and [`PixelBuffer`](../buffer/PixelBuffer.md).

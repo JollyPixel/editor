@@ -17,7 +17,6 @@ describe("public entry points", () => {
     assert.strictEqual(typeof root.voxelMapAssetHandler, "function");
     assert.strictEqual(typeof root.VoxelMapState, "function");
     assert.strictEqual("VoxelSyncClient" in root, false);
-    assert.strictEqual("VoxelSyncServer" in root, false);
   });
 
   test("renderers exports the engine component", () => {
@@ -30,7 +29,6 @@ describe("public entry points", () => {
   });
 
   test("server exports authoritative synchronization", () => {
-    assert.strictEqual(typeof server.VoxelSyncServer, "function");
     assert.strictEqual(typeof server.VoxelCommandArbiter, "function");
     assert.strictEqual(typeof server.applyBlockCommand, "function");
   });

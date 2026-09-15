@@ -11,7 +11,8 @@ import {
   ASSET_DELETED,
   ASSET_UPDATED,
   binaryAssetHandler,
-  encodeContent
+  encodeContent,
+  foldAssetEvent
 } from "#src/index.ts";
 import {
   bytes,
@@ -29,7 +30,7 @@ describe("binaryAssetHandler", () => {
   test("applies created content", async() => {
     const state = binaryAssetHandler.create("a1");
 
-    binaryAssetHandler.apply(state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
       path: "a.png",
       kind: "binary",
       hash: "h1",
@@ -46,11 +47,11 @@ describe("binaryAssetHandler", () => {
   test("the last update wins", async() => {
     const state = binaryAssetHandler.create("a1");
 
-    binaryAssetHandler.apply(state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
       content: encodeContent(bytes("one"))
     }));
-    binaryAssetHandler.apply(state, assetEvent(ASSET_UPDATED, {
+    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_UPDATED, {
       path: "a.png", kind: "binary", hash: "h2", size: 3,
       content: encodeContent(bytes("two"))
     }));
@@ -64,11 +65,11 @@ describe("binaryAssetHandler", () => {
   test("a delete empties the state", async() => {
     const state = binaryAssetHandler.create("a1");
 
-    binaryAssetHandler.apply(state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
       content: encodeContent(bytes("one"))
     }));
-    binaryAssetHandler.apply(state, assetEvent(ASSET_DELETED, {
+    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_DELETED, {
       path: "a.png",
       kind: "binary"
     }));
@@ -82,11 +83,12 @@ describe("binaryAssetHandler", () => {
   test("ignores domain events", async() => {
     const state = binaryAssetHandler.create("a1");
 
-    binaryAssetHandler.apply(state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
       content: encodeContent(bytes("one"))
     }));
-    binaryAssetHandler.apply(
+    foldAssetEvent(
+      binaryAssetHandler,
       state,
       assetEvent("pixelart.stroke.applied", { x: 1 })
     );
@@ -103,7 +105,7 @@ describe("content encoding", () => {
     const source = new Uint8Array([0, 255, 128, 7, 42]);
     const state = binaryAssetHandler.create("a1");
 
-    binaryAssetHandler.apply(state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
       path: "a.bin", kind: "binary", hash: "h1", size: source.length,
       content: encodeContent(source)
     }));

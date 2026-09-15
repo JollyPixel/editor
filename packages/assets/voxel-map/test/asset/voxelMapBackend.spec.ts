@@ -11,7 +11,8 @@ import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { Server, type ClientHandle } from "@jolly-pixel/network";
 import {
   assetRoomName,
-  createAssetBackend
+  createAssetBackend,
+  foldAssetEvent
 } from "@jolly-pixel/asset-server";
 import {
   decodeVoxelDocument,
@@ -66,7 +67,7 @@ function replay(
   const handler = voxelMapAssetHandler({ chunkSize: kChunkSize });
   const state = handler.create(assetId);
   for (const event of eventStore.reader.list(assetId)) {
-    handler.apply(state, event);
+    foldAssetEvent(handler, state, event);
   }
 
   return state;
@@ -106,7 +107,7 @@ describe("voxel-map asset kind over a real back-end", () => {
         .find((entry) => entry.source === kDocumentPath)!;
       assert.strictEqual(record.kind, VOXEL_MAP_KIND);
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(VOXEL_MAP_KIND, record.id);
 
@@ -189,7 +190,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       });
       const record = backend.catalog.snapshot().assets[0];
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(VOXEL_MAP_KIND, record.id);
 

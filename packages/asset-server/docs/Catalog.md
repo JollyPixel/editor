@@ -60,8 +60,9 @@ writer for the usual setup.
 `encodeContent`. There is no update command: content changes go through the
 asset's own room.
 
-The room runs each command through `AssetWriter`, attributed to the member's
-`context.actor`. Paths follow the writer rules, see
+The room runs each command through `AssetWriter`, attributed to
+`actorOf(context.identity)` (see [Actors](./Rooms.md#actors)). Paths follow
+the writer rules, see
 [Errors](./AssetWriter.md#errors). A folder is not an entity: renaming one
 means renaming each asset under it, one command at a time.
 

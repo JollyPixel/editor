@@ -9,16 +9,13 @@ import { defineConfig } from "vite";
 import {
   createWebSocketNetworkPlugin
 } from "@jolly-pixel/network/plugins/vite.ts";
-import { VoxelSyncServer, VoxelWorld } from "@jolly-pixel/voxel.renderer";
-
-const world = new VoxelWorld(16);
-world.addLayer("Ground");
+import { PresenceOnlyExtension } from "@jolly-pixel/network";
 
 export default defineConfig({
   plugins: [
     createWebSocketNetworkPlugin({
       extensions: [
-        new VoxelSyncServer({ id: "voxel-map:world", world })
+        new PresenceOnlyExtension("lobby")
       ]
     })
   ]
