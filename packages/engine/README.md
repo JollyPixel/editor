@@ -116,6 +116,7 @@ Components are pure data and logic units attached to an Actor. They come in thre
   - [Signals](./docs/components/signal.md) — lightweight pub/sub event emitter for actor-level communication (Godot-inspired signals).
 - [Renderers](./docs/components/renderers.md) — visual components (sprites, models, text, tiled maps) that know how to draw themselves.
   - [Camera Controls](./docs/components/camera-3d-controls.md)
+  - [Orbit Fly Camera](./docs/components/orbit-fly-camera.md)
 - [Behavior](./docs/components/behavior.md) — script components with a property system and decorator-driven initialization.
 
 <details>

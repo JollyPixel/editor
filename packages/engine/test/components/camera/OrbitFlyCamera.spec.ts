@@ -6,14 +6,14 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
-import type { Actor } from "@jolly-pixel/engine";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {
-  FreeFlyCamera,
-  type FreeFlyCameraFocusMode
-} from "../../../src/scene/camera/FreeFlyCamera.ts";
+  OrbitFlyCamera,
+  type OrbitFlyCameraFocusMode
+} from "../../../src/components/camera/orbit-fly/OrbitFlyCamera.ts";
+import type { Actor } from "../../../src/actor/Actor.ts";
 
 // CONSTANTS
 const kFrame = 1 / 60;
@@ -26,7 +26,7 @@ function pivotArray(
 }
 
 interface CameraHarness {
-  camera: FreeFlyCamera;
+  camera: OrbitFlyCamera;
   offset: THREE.Vector3;
   position: THREE.Vector3;
   orientation: THREE.Quaternion;
@@ -40,10 +40,12 @@ interface CameraHarness {
 }
 
 interface CameraHarnessOptions {
-  focusMode?: FreeFlyCameraFocusMode;
+  focusMode?: OrbitFlyCameraFocusMode;
   minPivotDistance?: number;
   maxPivotDistance?: number;
   position?: THREE.Vector3Like;
+  pivotPosition?: THREE.Vector3Like;
+  initialTrailDistance?: number;
 }
 
 function createHarness(
@@ -122,7 +124,7 @@ function createHarness(
     }
   };
   const actor = actorValue as unknown as Actor;
-  const camera = new FreeFlyCamera(actor, options);
+  const camera = new OrbitFlyCamera(actor, options);
 
   return {
     camera,
@@ -167,7 +169,7 @@ function createHarness(
   };
 }
 
-describe("FreeFlyCamera vertical movement", () => {
+describe("OrbitFlyCamera vertical movement", () => {
   test("descends while shift is held", () => {
     const harness = createHarness();
 
@@ -218,7 +220,7 @@ describe("FreeFlyCamera vertical movement", () => {
   });
 });
 
-describe("FreeFlyCamera teleport", () => {
+describe("OrbitFlyCamera teleport", () => {
   test("adopts the pose position and orientation", () => {
     const harness = createHarness();
     const quaternion = new THREE.Quaternion().setFromEuler(
@@ -290,7 +292,7 @@ describe("FreeFlyCamera teleport", () => {
   });
 });
 
-describe("FreeFlyCamera Alt+LeftClick look", () => {
+describe("OrbitFlyCamera Alt+LeftClick look", () => {
   test("rotates in free-fly, like middle-drag", () => {
     const harness = createHarness();
     const startOrientation = harness.orientation.clone();
@@ -341,7 +343,7 @@ describe("FreeFlyCamera Alt+LeftClick look", () => {
   });
 });
 
-describe("FreeFlyCamera focus mode \"none\"", () => {
+describe("OrbitFlyCamera focus mode \"none\"", () => {
   test("scroll adjusts moveSpeed instead of dollying", () => {
     const harness = createHarness({ focusMode: "none" });
     const startPosition = harness.position.clone();
@@ -363,7 +365,7 @@ describe("FreeFlyCamera focus mode \"none\"", () => {
   });
 });
 
-describe("FreeFlyCamera orbit focus (lock)", () => {
+describe("OrbitFlyCamera orbit focus (lock)", () => {
   test("enterOrbitFocus immediately faces the given point", () => {
     const harness = createHarness({ focusMode: "lock", position: { x: 0, y: 0, z: 0 } });
     const pivot = new THREE.Vector3(5, 0, 0);
@@ -487,7 +489,7 @@ describe("FreeFlyCamera orbit focus (lock)", () => {
   });
 });
 
-describe("FreeFlyCamera orbit focus (elastic)", () => {
+describe("OrbitFlyCamera orbit focus (elastic)", () => {
   test("starts fully zoomed in, with the camera matching the pivot exactly", () => {
     const harness = createHarness({
       focusMode: "elastic",
@@ -615,9 +617,41 @@ describe("FreeFlyCamera orbit focus (elastic)", () => {
     harness.scroll(0);
     assert.equal(harness.sceneChildren[0].visible, false);
   });
+
+  test("pivotPosition seeds the pivot independently of the camera's own position", () => {
+    const harness = createHarness({
+      focusMode: "elastic",
+      position: { x: 0, y: 1, z: 5 },
+      pivotPosition: { x: 0, y: 2, z: 0 }
+    });
+
+    assert.deepEqual(pivotArray(harness.camera.orbitPivot), [0, 2, 0]);
+    assert.deepEqual(harness.position.toArray(), [0, 1, 5]);
+  });
+
+  test("initialTrailDistance starts the camera already trailing, marker shown", () => {
+    const harness = createHarness({
+      focusMode: "elastic",
+      maxPivotDistance: 20,
+      position: { x: 0, y: 0, z: 0 },
+      initialTrailDistance: 12
+    });
+
+    assert.equal(harness.camera.isOrbiting, true);
+    assert.equal(harness.sceneChildren.length, 1);
+    assert.equal(harness.sceneChildren[0].visible, true);
+
+    harness.advance();
+
+    const pivot = harness.camera.orbitPivot as THREE.Vector3Like;
+    const distance = harness.position.distanceTo(
+      new THREE.Vector3(pivot.x, pivot.y, pivot.z)
+    );
+    assert.ok(Math.abs(distance - 12) < 1e-6, `unexpected trail distance ${distance}`);
+  });
 });
 
-describe("FreeFlyCamera orbit focus rig movement", () => {
+describe("OrbitFlyCamera orbit focus rig movement", () => {
   test("WASD does not move the camera while orbiting", () => {
     const harness = createHarness({ focusMode: "lock", position: { x: 0, y: 0, z: 0 } });
     const pivot = new THREE.Vector3(0, 0, -10);
@@ -649,7 +683,7 @@ describe("FreeFlyCamera orbit focus rig movement", () => {
   });
 });
 
-describe("FreeFlyCamera orbit focus reselection", () => {
+describe("OrbitFlyCamera orbit focus reselection", () => {
   test("enterOrbitFocus is a no-op while already orbiting", () => {
     const harness = createHarness({ focusMode: "lock", position: { x: 0, y: 0, z: 0 } });
     const firstPivot = { x: 0, y: 0, z: -10 };
@@ -671,7 +705,7 @@ describe("FreeFlyCamera orbit focus reselection", () => {
   });
 });
 
-describe("FreeFlyCamera orbit focus nudge", () => {
+describe("OrbitFlyCamera orbit focus nudge", () => {
   test("a single key press steps the pivot and camera by one unit, keeping distance", () => {
     const harness = createHarness({ focusMode: "lock", position: { x: 0, y: 0, z: 0 } });
     const pivot = new THREE.Vector3(0, 0, -10);
@@ -737,7 +771,7 @@ describe("FreeFlyCamera orbit focus nudge", () => {
   });
 });
 
-describe("FreeFlyCamera orbit focus marker", () => {
+describe("OrbitFlyCamera orbit focus marker", () => {
   test("is created lazily, reused, and its visibility follows isOrbiting", () => {
     const harness = createHarness({ focusMode: "lock" });
 

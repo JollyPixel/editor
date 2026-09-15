@@ -90,4 +90,5 @@ interface Camera3DControls {
 ## See also
 
 - [Camera](camera.md)
+- [OrbitFlyCamera](orbit-fly-camera.md) — alternative with an optional orbit/elastic pivot
 - [ActorComponent](../actor/actor-component.md)

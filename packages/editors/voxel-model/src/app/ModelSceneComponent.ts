@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { ActorComponent, type Actor } from "@jolly-pixel/engine";
+import {
+  ActorComponent,
+  type Actor,
+  type OrbitFlyCamera
+} from "@jolly-pixel/engine";
 import type * as network from "@jolly-pixel/network";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -8,7 +12,6 @@ import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import ModelManager from "../features/groups/ModelManager.ts";
 import type GroupManager from "../features/groups/GroupManager.ts";
 import type { ModelHookEvent } from "../features/groups/hooks.ts";
-import type { FreeFlyCamera } from "../scene/camera/FreeFlyCamera.ts";
 import GizmoManager, { type GizmoConfig } from "../features/transform/GizmoManager.ts";
 import { GroupSelectionPresence } from "../collaboration/GroupSelectionPresence.ts";
 import { GroupTransformGhostSync } from "../collaboration/GroupTransformGhostSync.ts";
@@ -24,7 +27,7 @@ import type {
 export type { GizmoMode, GizmoTarget, GizmoSpace, GizmoConfig } from "../features/transform/GizmoManager.ts";
 
 export interface ModelSceneComponentOptions {
-  camera: FreeFlyCamera;
+  camera: OrbitFlyCamera;
   room?: network.Room<ModelNetworkCommand, ModelServerMessage>;
   /** Absent offline, no collaboration is wired up. */
   identity?: EditorIdentity;
@@ -36,7 +39,7 @@ export interface ModelSceneComponentOptions {
  * `ModelManager`/`GroupManager` themselves are untouched by this move.
  */
 export class ModelSceneComponent extends ActorComponent {
-  #camera: FreeFlyCamera;
+  #camera: OrbitFlyCamera;
   #cameraRaycaster = new THREE.Raycaster();
   #gizmo!: GizmoManager;
   #modelManager!: ModelManager;

@@ -1,26 +1,36 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import {
-  Actor,
-  CameraComponent,
-  createViewHelper,
   Axis,
   AxisMap,
   InputCombination,
   type InputCondition
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
+import type { Actor } from "../../../actor/Actor.ts";
+import { CameraComponent } from "../Camera.ts";
+import { createViewHelper } from "../../../utils/createViewHelper.ts";
 import { OrbitFocus } from "./OrbitFocus.ts";
 import { ElasticFocus } from "./ElasticFocus.ts";
 
 // CONSTANTS
 const kRestingVelocitySq = 1e-6;
 
-export type FreeFlyCameraFocusMode = "none" | "lock" | "elastic";
+export type OrbitFlyCameraFocusMode = "none" | "lock" | "elastic";
 
-export interface FreeFlyCameraOptions {
+export interface OrbitFlyCameraOptions {
   position?: THREE.Vector3Like;
+  /**
+   * "elastic" mode's pivot the camera starts trailing behind.
+   * @default position
+   */
+  pivotPosition?: THREE.Vector3Like;
+  /**
+   * "elastic" mode's starting trail distance, in world units.
+   * @default 0
+   */
+  initialTrailDistance?: number;
   yaw?: number;
   pitch?: number;
   /**
@@ -53,10 +63,10 @@ export interface FreeFlyCameraOptions {
    * behind it, reaching 0 (free-fly) at full zoom-in.
    * @default "none"
    */
-  focusMode?: FreeFlyCameraFocusMode;
+  focusMode?: OrbitFlyCameraFocusMode;
   /**
-   * Bounds for the scroll-adjusted pivot distance in "lock" mode; only
-   * `maxPivotDistance` applies to "elastic", as its max trail distance.
+   * Bounds for the scroll-adjusted pivot distance in "lock" mode; also
+   * doubles as "elastic" mode's max trail distance.
    */
   minPivotDistance?: number;
   maxPivotDistance?: number;
@@ -72,7 +82,7 @@ export interface CameraPose {
   quaternion: THREE.QuaternionLike;
 }
 
-export class FreeFlyCamera extends CameraComponent {
+export class OrbitFlyCamera extends CameraComponent {
   enabled = true;
 
   #descendBlocked = false;
@@ -120,7 +130,7 @@ export class FreeFlyCamera extends CameraComponent {
 
   constructor(
     actor: Actor,
-    options: FreeFlyCameraOptions = {}
+    options: OrbitFlyCameraOptions = {}
   ) {
     super(actor, {
       fov: 60,
@@ -142,7 +152,8 @@ export class FreeFlyCamera extends CameraComponent {
       focusMode = "none",
       minPivotDistance = 1,
       maxPivotDistance = 200,
-      pivotNudgeStep = 1
+      pivotNudgeStep = 1,
+      initialTrailDistance = 0
     } = options;
 
     this.#yaw = yaw;
@@ -157,6 +168,7 @@ export class FreeFlyCamera extends CameraComponent {
     this.#speedAdjustStep = speedAdjustStep;
 
     const initialPosition = options.position ?? { x: 16, y: 20, z: 40 };
+    const pivotPosition = options.pivotPosition ?? initialPosition;
     this.#orbitFocus = focusMode === "lock" ? new OrbitFocus({
       minPivotDistance,
       maxPivotDistance,
@@ -164,8 +176,9 @@ export class FreeFlyCamera extends CameraComponent {
       sceneProvider: () => this.actor.world.sceneManager.getSource()
     }) : null;
     this.#elasticFocus = focusMode === "elastic" ? new ElasticFocus({
-      initialPosition,
+      initialPosition: pivotPosition,
       maxTrailDistance: maxPivotDistance,
+      initialTrailDistance,
       sceneProvider: () => this.actor.world.sceneManager.getSource()
     }) : null;
 
@@ -350,7 +363,7 @@ export class FreeFlyCamera extends CameraComponent {
       }
     }
 
-    // Ctrl reserves scrolling for brush size.
+    // Ctrl is reserved for other scroll-driven interactions (e.g. brush size).
     const isCtrl = InputCombination.Control.evaluate(input);
     const scroll = input.mouse.scrollTo(this.#scroll);
     if (!isCtrl && scroll.y !== 0) {

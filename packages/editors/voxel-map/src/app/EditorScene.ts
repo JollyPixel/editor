@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
-  Systems
+  Systems,
+  OrbitFlyCamera
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer
@@ -21,7 +22,6 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  FreeFlyCamera,
   GridRenderer,
   viewFocusPoint,
   ViewFocus
@@ -72,7 +72,7 @@ export class EditorScene extends Systems.Scene {
   #blockSelections: BlockSelectionPresence | undefined;
   #layerSelections: LayerSelectionPresence | undefined;
   #peerFrustums: PeerFrustums | undefined;
-  #freeFlyCamera: FreeFlyCamera | undefined;
+  #orbitFlyCamera: OrbitFlyCamera | undefined;
   #viewFocus: ViewFocus;
   #handles = Promise.withResolvers<EditorSceneHandles>();
   #subscriptions: Array<() => void> = [];
@@ -80,12 +80,12 @@ export class EditorScene extends Systems.Scene {
   #orbiting = false;
 
   #onExitOrbitFocusKey = (): void => {
-    this.#freeFlyCamera?.exitOrbitFocus();
+    this.#orbitFlyCamera?.exitOrbitFocus();
     this.#announceCameraMode();
   };
 
   #announceCameraMode(): void {
-    const orbiting = this.#freeFlyCamera?.isOrbiting ?? false;
+    const orbiting = this.#orbitFlyCamera?.isOrbiting ?? false;
     if (orbiting === this.#orbiting) {
       return;
     }
@@ -147,16 +147,16 @@ export class EditorScene extends Systems.Scene {
       installTransparency(world.renderer)
     );
 
-    const freeFlyCamera = world
+    const orbitFlyCamera = world
       .createActor("camera")
-      .addComponentAndGet(FreeFlyCamera, {
+      .addComponentAndGet(OrbitFlyCamera, {
         position: { x: 8, y: 12, z: 32 },
         focusMode: "lock"
       });
-    this.#freeFlyCamera = freeFlyCamera;
+    this.#orbitFlyCamera = orbitFlyCamera;
     this.#subscriptions.push(
       this.editorState.selection.watch("gizmoDraggingChange", (dragging) => {
-        freeFlyCamera.enabled = !dragging;
+        orbitFlyCamera.enabled = !dragging;
       })
     );
 
@@ -182,7 +182,7 @@ export class EditorScene extends Systems.Scene {
     this.engine = engine;
 
     this.#viewFocus.provider = () => viewFocusPoint(
-      freeFlyCamera.camera,
+      orbitFlyCamera.camera,
       engine.root
     );
 
@@ -265,13 +265,13 @@ export class EditorScene extends Systems.Scene {
     const brush = world.createActor("brush")
       .addComponentAndGet(LocalBrush, {
         engine,
-        camera: freeFlyCamera.camera,
+        camera: orbitFlyCamera.camera,
         brush: this.editorState.brush,
         selection: this.editorState.selection,
         color: this.#identity?.color
       });
     brush.onFocusRequest = (point) => {
-      freeFlyCamera.enterOrbitFocus(point);
+      orbitFlyCamera.enterOrbitFocus(point);
       this.#announceCameraMode();
     };
 
@@ -297,14 +297,14 @@ export class EditorScene extends Systems.Scene {
       this.#peerFrustums = world.createActor("peer-frustums")
         .addComponentAndGet(PeerFrustums, {
           room: this.#voxelRoom,
-          camera: freeFlyCamera.camera
+          camera: orbitFlyCamera.camera
         });
     }
 
     world.createActor("gizmo")
       .addComponent(VoxelLayerGizmo, {
         world: voxelWorld,
-        camera: freeFlyCamera.camera,
+        camera: orbitFlyCamera.camera,
         selection: this.editorState.selection,
         worldStore: this.editorState.world
       });
@@ -312,7 +312,7 @@ export class EditorScene extends Systems.Scene {
     world.createActor("object-layer-renderer")
       .addComponent(ObjectLayerRenderer, {
         world: voxelWorld,
-        camera: freeFlyCamera.camera,
+        camera: orbitFlyCamera.camera,
         selection: this.editorState.selection,
         worldStore: this.editorState.world
       });
@@ -331,11 +331,11 @@ export class EditorScene extends Systems.Scene {
     clientId: string
   ): boolean {
     const pose = this.#peerFrustums?.poseOf(clientId);
-    if (pose === undefined || this.#freeFlyCamera === undefined) {
+    if (pose === undefined || this.#orbitFlyCamera === undefined) {
       return false;
     }
 
-    this.#freeFlyCamera.teleport(pose);
+    this.#orbitFlyCamera.teleport(pose);
 
     return true;
   }
@@ -377,7 +377,7 @@ export class EditorScene extends Systems.Scene {
     this.#layerSelections?.dispose();
     this.#layerSelections = undefined;
     this.#peerFrustums = undefined;
-    this.#freeFlyCamera = undefined;
+    this.#orbitFlyCamera = undefined;
   }
 
   #registerDefaultBlocks(): void {
