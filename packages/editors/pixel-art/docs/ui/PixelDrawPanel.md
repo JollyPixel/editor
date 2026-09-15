@@ -2,9 +2,9 @@
 
 Drop-in web component with a mode rail, color controls, canvas and floating toolbars wired to a `PixelArtCanvas`. Undo, redo, import, export and transparent-texture reset remain visible at the bottom. Resetting the texture requires confirmation. UV and Select actions appear at the top in their respective modes.
 
-The mode rail carries Move, Paint, Erase, Fill, Select and UV. Erase runs the brush against transparency, so the brush size slider stays available there and both mouse buttons erase.
+The mode rail carries Move, Paint, Erase, Fill, Select and UV (hidden unless [`uv-access`](#uv-access) is `edit`). Erase runs the brush against transparency, so the brush size slider stays available there and both mouse buttons erase.
 
-The UV toolbar includes independent toggles for region labels and showing every region. Labels display `(name)` or `(id)` inside a stacked UV, with the face on a second line once the region has per-face cells. Show All forces labels while active and restores the prior label preference when disabled.
+The UV toolbar includes independent toggles for region labels and showing every region. Labels display `(name)` or `(id)` inside a stacked UV, with the face on a second line once the region has per-face cells. Show All does not change the label preference.
 
 With a region selected, the toolbar also shows a state dropdown. Its trigger carries the current state; opening it lists the two states the region is not in, and picking one calls `UVMap.setState()`. The parts are `uv-state-button` and `uv-state-menu`, plus `uv-stacked-button`, `uv-unfolded-button` and `uv-free-button` for the options.
 
@@ -28,6 +28,22 @@ const canvas = await panel.initialize({
 ```
 
 `initialize(options?)` takes the same `PixelArtCanvasOptions` as `new PixelArtCanvas(...)` (see [PixelArtCanvas.md](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md)) and resolves with the created instance. Must `await` it — the canvas host div only exists after Lit's first render.
+
+## UV access
+
+`uv-access` sets how much of the UV map the panel exposes. Region rendering does not depend on it: a region is drawn when [`UVMap.isVisible()`](../../../../pixel-draw-renderer/docs/uv/UVMap.md) is true, in every mode.
+
+| Value | UV mode and toolbar | Labels and Show all | Fill "Clip to UV" |
+|---|---|---|---|
+| `edit` (default) | Shown | In the UV toolbar | Shown |
+| `view` | Hidden | At the end of the bottom toolbar | Shown |
+| `none` | Hidden | Hidden | Hidden and turned off |
+
+Use `view` when the host drives region selection and users should only paint, and `none` for textures without UV regions. Leaving `edit` while in UV mode switches the panel to Paint, and `initialize()` does the same for `defaultMode: "uv"`. Setting `canvasManager.mode = "uv"` directly is not blocked, but no UV toolbar is shown outside `edit`.
+
+```html
+<pixel-draw-panel uv-access="view"></pixel-draw-panel>
+```
 
 ## Docked color picker
 
@@ -55,6 +71,7 @@ Drag one local PNG, JPEG, WebP or GIF over the rendered texture rectangle to sho
 | `canvasManager` | The live `PixelArtCanvas`, or `null` before `initialize()`. |
 | `onResize()` | Call on container resize (ResizeObserver, split-pane drag, etc). |
 | `allow-uv-create-delete` attribute / `allowUvCreateDelete` property | Shows the Create/Delete buttons in the UV toolbar. Off by default: creating/deleting regions only makes sense when the panel owns the UV layout (the package's own example); embeddings over a fixed mesh (e.g. voxel-map) leave it off. |
+| `uv-access` attribute / `uvAccess` property (`"edit" \| "view" \| "none"`, default `"edit"`) | Exposes UV editing, visibility toggles only, or nothing. See [UV access](#uv-access). Reflects to the attribute; unknown values fall back to `"edit"`. |
 | `color-docked` attribute / `colorDocked` property | Opens the docked color picker. Off by default. Reflects to the attribute. |
 | `color-docked-change` event | Fires when the user toggles the docked picker; `detail` is the new `boolean`. |
 | `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows the theme scope the panel is embedded in (`jolly-scope`, or any themed ancestor), falling back to `prefers-color-scheme` when there is none; `"light"`/`"dark"` force one regardless. Reflects to the attribute. |
@@ -66,7 +83,7 @@ Destruction is automatic: `disconnectedCallback()` calls `canvasManager.destroy(
 
 ## Sub-elements
 
-Also exported from `@jolly-pixel/editor.pixel-art`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`), `ColorPickerRail` (`<color-picker-rail>`, with a `docked` property and a `dock-toggle` event), `ColorSwatch` (`<color-swatch>`, wraps `jolly-color-picker` in a popover, with a `disabled` property) and `ColorDock` (`<color-dock>`, a wide `jolly-color-picker` that emits `color-change`). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
+Also exported from `@jolly-pixel/editor.pixel-art`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`, with a `uvAccess` property), `ColorPickerRail` (`<color-picker-rail>`, with a `docked` property and a `dock-toggle` event), `ColorSwatch` (`<color-swatch>`, wraps `jolly-color-picker` in a popover, with a `disabled` property) and `ColorDock` (`<color-dock>`, a wide `jolly-color-picker` that emits `color-change`). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
 
 > [!IMPORTANT]
 > `lit` and `@jolly-pixel/ui` are real `dependencies` of this package (not dev-only) — they ship at runtime for anyone importing it.

@@ -101,7 +101,7 @@ get showRegionLabels(): boolean
 set showRegionLabels(value: boolean)
 ```
 
-Shows each visible region's name, falling back to its id. The default is `false`. Enabling `showAll` also displays labels without changing this preference.
+Shows each visible region's name, falling back to its id. The default is `false`. It is independent of `showAll`, which shows every region without labelling it.
 
 ## Visibility
 

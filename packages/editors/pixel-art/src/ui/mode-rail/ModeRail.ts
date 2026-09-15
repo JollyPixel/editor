@@ -20,6 +20,7 @@ import {
 } from "../common/icons.ts";
 import { iconStyles } from "../common/icon.styles.ts";
 import { railButtonStyles } from "./rail-button.styles.ts";
+import type { UvAccess } from "../pixel-draw-panel/uvAccess.ts";
 
 interface ModeItem {
   mode: Mode;
@@ -95,6 +96,9 @@ export class ModeRail extends LitElement {
   @property({ type: Boolean })
   declare selectShape: boolean;
 
+  @property({ type: String })
+  declare uvAccess: UvAccess;
+
   #hoveredMode: Mode | null = null;
 
   constructor() {
@@ -104,6 +108,7 @@ export class ModeRail extends LitElement {
     this.fillGlobal = false;
     this.fillUvClip = false;
     this.selectShape = false;
+    this.uvAccess = "edit";
   }
 
   #onModeClick(
@@ -207,8 +212,8 @@ export class ModeRail extends LitElement {
             onClick: () => this.#onPickColorClick()
           }
         ];
-      case "fill":
-        return [
+      case "fill": {
+        const buttons: FlyoutButton[] = [
           this.fillGlobal ?
             {
               icon: "fill",
@@ -219,14 +224,19 @@ export class ModeRail extends LitElement {
               icon: "fillGlobal",
               label: "Global",
               onClick: () => this.#onVariantClick("fill", true)
-            },
-          {
+            }
+        ];
+        if (this.uvAccess !== "none") {
+          buttons.push({
             icon: "uv",
             label: "Clip to UV",
             pressed: this.fillUvClip,
             onClick: () => this.#onFillUvClipClick()
-          }
-        ];
+          });
+        }
+
+        return buttons;
+      }
       case "select":
         return this.selectShape ? [
           {
@@ -244,6 +254,12 @@ export class ModeRail extends LitElement {
       default:
         return [];
     }
+  }
+
+  #modeItems(): ModeItem[] {
+    return this.uvAccess === "edit" ?
+      kModeItems :
+      kModeItems.filter((item) => item.mode !== "uv");
   }
 
   #renderFlyout(
@@ -277,7 +293,7 @@ export class ModeRail extends LitElement {
   override render() {
     return html`
       <jolly-rail role="group" aria-label="Drawing mode">
-        ${kModeItems.map(({ mode, icon, label }) => {
+        ${this.#modeItems().map(({ mode, icon, label }) => {
           const flyoutButtons = this.#flyoutButtons(mode);
 
           return html`
@@ -298,7 +314,7 @@ export class ModeRail extends LitElement {
                 @click=${(event: MouseEvent) => this.#onModeClick(mode, event)}
               >
                 ${renderIcon(this.#displayIcon(mode, icon))}
-                ${mode === "fill" && this.fillUvClip ?
+                ${mode === "fill" && this.fillUvClip && this.uvAccess !== "none" ?
                   html`<span class="rail-badge" part="uv-clip-badge">UV</span>` :
                   nothing}
                 ${flyoutButtons.length === 0 ? html`<span class="tooltip">${label}</span>` : nothing}

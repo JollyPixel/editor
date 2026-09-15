@@ -210,26 +210,28 @@ test("freeing an unfolded region leaves the faces where the net put them", async
   expect(freed.faces).toEqual(unfolded.faces);
 });
 
-test("Show all forces region labels without overwriting their preference", async({ page }) => {
+test("Show all and region labels toggle independently", async({ page }) => {
   const labels = page.getByRole("button", { name: "Show region labels" });
   const showAll = page.getByRole("button", { name: "Show all" });
 
-  await expect(labels).toBeDisabled();
-  await expect(labels).toHaveAttribute("aria-pressed", "true");
-  await expect(labels).toHaveClass(/active/);
-
-  await showAll.click();
+  await expect(showAll).toHaveAttribute("aria-pressed", "true");
   await expect(labels).toBeEnabled();
   await expect(labels).toHaveAttribute("aria-pressed", "false");
+  await expect(labels).not.toHaveClass(/active/);
 
   await labels.click();
   await expect(labels).toHaveAttribute("aria-pressed", "true");
+  await expect(showAll).toHaveAttribute("aria-pressed", "true");
 
   await showAll.click();
-  await expect(labels).toBeDisabled();
-  await showAll.click();
+  await expect(showAll).toHaveAttribute("aria-pressed", "false");
   await expect(labels).toBeEnabled();
   await expect(labels).toHaveAttribute("aria-pressed", "true");
+
+  await showAll.click();
+  await labels.click();
+  await expect(labels).toHaveAttribute("aria-pressed", "false");
+  await expect(showAll).toHaveAttribute("aria-pressed", "true");
 });
 
 test("freeing stacks six faces on the spot the region already occupied", async({ page }) => {

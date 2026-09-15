@@ -38,7 +38,7 @@ export class ColorController implements ReactiveController {
   }
 
   hostDisconnected(): void {
-    this.#canvas = null;
+    // Do nothing
   }
 
   get foreground(): ColorChangeDetail {
@@ -80,6 +80,10 @@ export class ColorController implements ReactiveController {
   attach(
     canvas: PixelArtCanvas
   ): void {
+    if (this.#canvas === canvas) {
+      return;
+    }
+
     this.#canvas = canvas;
     this.#readBrush();
 

@@ -157,6 +157,20 @@ describe("UI.ColorController", () => {
     assert.equal(brush.secondary.hex, "#eeeeee");
   });
 
+  test("re-attaching the same canvas while docked keeps the held background", () => {
+    const host = new TestHost();
+    const controller = new ColorController(host);
+    const { canvas, brush } = makeCanvas();
+    controller.attach(canvas);
+    controller.docked = true;
+
+    controller.attach(canvas);
+    controller.docked = false;
+
+    assert.equal(brush.secondary.hex, "#eeeeee");
+    assert.equal(brush.secondary.opacity, 0.5);
+  });
+
   test("swap and background changes are ignored while docked", () => {
     const { controller, brush } = setup();
     controller.docked = true;

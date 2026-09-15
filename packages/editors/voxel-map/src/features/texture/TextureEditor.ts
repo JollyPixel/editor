@@ -8,7 +8,10 @@ import type {
   PixelServerMessage
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
-import { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
+import {
+  PixelDrawPanel,
+  type UvAccess
+} from "@jolly-pixel/editor.pixel-art";
 import type { JollyChangeDetail, JollyOption } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -49,14 +52,22 @@ export class TextureEditor extends LitElement {
 
   @property({ attribute: false })
   declare engine: VoxelEngine | undefined;
+
   @property({ attribute: false })
   declare room: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
+
   @property({ type: String })
   declare tilesetId: string;
+
   @property({ type: Boolean })
   declare active: boolean;
+
+  @property({ type: String })
+  declare uvAccess: UvAccess;
+
   @property({ attribute: false })
   declare brush: BrushStore;
+
   @property({ attribute: false })
   declare worldStore: WorldStore;
 
@@ -75,6 +86,7 @@ export class TextureEditor extends LitElement {
     this.engine = undefined;
     this.tilesetId = "";
     this.active = false;
+    this.uvAccess = "edit";
     this.brush = editorState.brush;
     this.worldStore = editorState.world;
   }
@@ -268,7 +280,7 @@ export class TextureEditor extends LitElement {
         </jolly-toolbar>
       ` : null}
 
-      <pixel-draw-panel></pixel-draw-panel>
+      <pixel-draw-panel .uvAccess=${this.uvAccess}></pixel-draw-panel>
     `;
   }
 }

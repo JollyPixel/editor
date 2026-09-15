@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import {
   html,
+  nothing,
   type ReactiveController,
-  type ReactiveControllerHost
+  type ReactiveControllerHost,
+  type TemplateResult
 } from "lit";
 import { ref, createRef, type Ref } from "lit/directives/ref.js";
 import type {
@@ -149,7 +151,9 @@ export class HistoryFileToolbarController implements ReactiveController {
     canvas.centerTexture();
   }
 
-  render() {
+  render(
+    trailing: TemplateResult | typeof nothing = nothing
+  ) {
     return html`
       <div class="overlay-toolbar bottom" part="history-file-toolbar">
         <button
@@ -196,6 +200,10 @@ export class HistoryFileToolbarController implements ReactiveController {
           ${renderIcon("clearTexture")}
           <span class="tooltip">Clear texture</span>
         </button>
+        ${trailing === nothing ? nothing : html`
+          <div class="overlay-toolbar-divider"></div>
+          ${trailing}
+        `}
         <input
           class="file-input" part="file-input"
           type="file" accept="image/png,image/*"

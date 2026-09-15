@@ -6,7 +6,10 @@ import { describe, it } from "node:test";
 import type { PanePlacement } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { resolveTextureHost } from "../../../src/app/panels/textureHost.ts";
+import {
+  resolveTextureHost,
+  textureUvAccess
+} from "../../../src/app/panels/textureHost.ts";
 
 function placed(
   dock: string,
@@ -59,5 +62,12 @@ describe("resolveTextureHost", () => {
   it("gives the editor to Paint when either pane floats", () => {
     assert.equal(resolveTextureHost(null, placed("left", 0, true), "blocks"), "paint");
     assert.equal(resolveTextureHost(placed("left", 0, true), null, "blocks"), "paint");
+  });
+});
+
+describe("textureUvAccess", () => {
+  it("lets Blocks edit UV regions and Paint only view them", () => {
+    assert.equal(textureUvAccess("blocks"), "edit");
+    assert.equal(textureUvAccess("paint"), "view");
   });
 });

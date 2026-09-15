@@ -175,7 +175,7 @@ export class UvToolbarController implements ReactiveController {
   }
 
   toggleShowRegionLabels(): void {
-    if (this.#canvas && !this.#canvas.uv.showAll) {
+    if (this.#canvas) {
       this.#canvas.uv.showRegionLabels = !this.#canvas.uv.showRegionLabels;
     }
   }
@@ -290,6 +290,31 @@ export class UvToolbarController implements ReactiveController {
     `;
   }
 
+  renderVisibilityToggles() {
+    return html`
+      <button
+        class=${classMap({ "rail-btn": true, active: this.#showRegionLabels })}
+        part="uv-show-region-labels-button"
+        aria-label="Show region labels"
+        aria-pressed=${this.#showRegionLabels}
+        @click=${() => this.toggleShowRegionLabels()}
+      >
+        ${renderIcon("label")}
+        <span class="tooltip">Show region labels</span>
+      </button>
+      <button
+        class=${classMap({ "rail-btn": true, active: this.#showAll })}
+        part="uv-show-all-button"
+        aria-label="Show all"
+        aria-pressed=${this.#showAll}
+        @click=${() => this.toggleShowAll()}
+      >
+        ${renderIcon("eye")}
+        <span class="tooltip">Show all regions</span>
+      </button>
+    `;
+  }
+
   render(
     active: boolean,
     allowCreateDelete: boolean
@@ -298,33 +323,11 @@ export class UvToolbarController implements ReactiveController {
       return nothing;
     }
 
-    const showRegionLabels = this.#showAll || this.#showRegionLabels;
-
     return html`
       <div class="overlay-toolbar top" part="uv-toolbar">
         ${allowCreateDelete ? this.#renderCreateDelete() : nothing}
         ${this.#renderStateDropdown()}
-        <button
-          class=${classMap({ "rail-btn": true, active: showRegionLabels })}
-          part="uv-show-region-labels-button"
-          aria-label="Show region labels"
-          aria-pressed=${showRegionLabels}
-          ?disabled=${this.#showAll}
-          @click=${() => this.toggleShowRegionLabels()}
-        >
-          ${renderIcon("label")}
-          <span class="tooltip">Show region labels</span>
-        </button>
-        <button
-          class=${classMap({ "rail-btn": true, active: this.#showAll })}
-          part="uv-show-all-button"
-          aria-label="Show all"
-          aria-pressed=${this.#showAll}
-          @click=${() => this.toggleShowAll()}
-        >
-          ${renderIcon("eye")}
-          <span class="tooltip">Show all regions</span>
-        </button>
+        ${this.renderVisibilityToggles()}
       </div>
     `;
   }

@@ -2,6 +2,7 @@ export {
   PixelDrawPanel,
   type ThemeMode
 } from "./ui/pixel-draw-panel/PixelDrawPanel.ts";
+export type { UvAccess } from "./ui/pixel-draw-panel/uvAccess.ts";
 export { ModeRail } from "./ui/mode-rail/ModeRail.ts";
 export { ColorPickerRail } from "./ui/color/ColorPickerRail.ts";
 export { ColorDock } from "./ui/color/ColorDock.ts";

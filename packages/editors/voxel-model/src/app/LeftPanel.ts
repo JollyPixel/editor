@@ -109,6 +109,7 @@ export class LeftPanel extends LitElement {
 
     this.#canvasManager = await this.panelElement.initialize(options);
     this.#canvasManager.uv.showAll = true;
+    this.#canvasManager.uv.showRegionLabels = true;
     this.#canvasManager.mode = this.#canvasModeForTab(this.mode);
     this.#tryAttachCollaboration();
 
