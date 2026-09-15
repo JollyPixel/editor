@@ -23,10 +23,15 @@
 | `storageKey` | `storage-key` | `string` | `""` |
 | `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
 
-The default slot accepts `jolly-pane` children. Resizing emits `jolly-resize`
+The default slot accepts `jolly-pane` and `jolly-pane-group` children. A dock
+without either is `empty` from its first render: a dock that is not an overlay
+then takes no space and paints nothing, but still accepts a dragged pane and
+grows back to `size`. Leave `align` and `overlay` unset on a dock meant to
+start empty, so what lands there fills it. Resizing emits `jolly-resize`
 and then `jolly-resize-end` with `{ width, height, collapsed }`. Double-click
 or Enter toggles a collapsible dock. Public geometry methods support
-`jolly-dock-layout`; `panes()` returns the slotted panes.
+`jolly-dock-layout`; `slots()` returns the slotted panes and groups, and
+`panes()` every pane, grouped ones included.
 
 An overlay dock is `pointer-events: none !important`, so the area around its
 panes reaches whatever it covers even when page CSS sets `pointer-events` on

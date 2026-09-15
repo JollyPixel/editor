@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import "../containers/Pane.ts";
-import "../containers/Floating.ts";
+import "../containers/pane/Pane.ts";
+import "../containers/floating/Floating.ts";
 import "../theme/components/ScopeHost.ts";
 import { FacadeContainer } from "./Container.ts";
 import { documentThemeMode } from "../theme/ambientTheme.ts";

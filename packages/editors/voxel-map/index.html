@@ -10,24 +10,44 @@
 
 <body>
   <jolly-scope theme="dark" density="comfortable">
-    <jolly-dock
-      key="left"
-      side="left"
-      collapsible
-      size="380"
-      min-size="200"
-      max-size="600"
-      storage-key="voxel-map:left"
-    >
-      <jolly-pane storage-key="voxel-map:pane" locked>
-        <editor-sidebar id="sidebar"></editor-sidebar>
-      </jolly-pane>
-    </jolly-dock>
-    <div id="game-container">
-      <canvas tabindex="-1"></canvas>
-      <jolly-log></jolly-log>
-      <voxel-brush-toolbar></voxel-brush-toolbar>
-    </div>
+    <jolly-dock-layout storage-key="voxel-map:layout">
+      <jolly-dock
+        key="left"
+        side="left"
+        collapsible
+        size="380"
+        min-size="200"
+        max-size="600"
+      >
+        <jolly-pane-group active="general">
+          <jolly-pane key="general" heading="General" icon="sliders">
+            <general-panel></general-panel>
+          </jolly-pane>
+          <jolly-pane key="blocks" heading="Blocks" icon="blocks">
+            <blocks-panel></blocks-panel>
+          </jolly-pane>
+          <jolly-pane key="paint" heading="Paint" icon="pencil">
+            <paint-panel></paint-panel>
+          </jolly-pane>
+          <jolly-pane key="layers" heading="Layers" icon="layers">
+            <layers-panel></layers-panel>
+          </jolly-pane>
+        </jolly-pane-group>
+      </jolly-dock>
+      <div id="game-container">
+        <canvas tabindex="-1"></canvas>
+        <jolly-log></jolly-log>
+        <voxel-brush-toolbar></voxel-brush-toolbar>
+      </div>
+      <jolly-dock
+        key="right"
+        side="right"
+        collapsible
+        size="380"
+        min-size="200"
+        max-size="600"
+      ></jolly-dock>
+    </jolly-dock-layout>
   </jolly-scope>
   <script type="module" src="./src/index.ts"></script>
 </body>

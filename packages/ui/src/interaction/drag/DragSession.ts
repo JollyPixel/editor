@@ -45,6 +45,23 @@ export interface DragZone {
   line(
     index: number
   ): Rect;
+  stacks?: DragStack[];
+  preview?: Rect;
+}
+
+export interface DragStack {
+  slot: number;
+  rect: Rect;
+  candidates: DropCandidate[];
+  source?: number | null;
+  line(
+    index: number
+  ): Rect;
+}
+
+export interface DragStackResult {
+  slot: number;
+  index: number;
 }
 
 export interface DragResult {
@@ -56,6 +73,7 @@ export interface DragResult {
    * zone must account for its removal.
    */
   index: number;
+  stack: DragStackResult | null;
   x: number;
   y: number;
 }
@@ -70,14 +88,6 @@ export interface DragSessionOptions {
   zones(): DragZone[];
   /**
    * Box the gesture will occupy for a pointer position, asked on every move.
-   *
-   * A zone the pointer misses still arms once this box has entered it deeply
-   * enough. That is what makes a floating window dockable: the window is what
-   * the eye follows, and its leading edge reaches a dock on the far side of
-   * the screen long before the cursor does. It is the box the move is about to
-   * produce, not the one on screen, because the element has yet to be moved
-   * when the zone is resolved. Omit it when nothing but the cursor moves,
-   * which keeps the drop strictly under the pointer.
    */
   probe?(
     clientX: number,
@@ -96,13 +106,6 @@ export interface DragSessionOptions {
   ghost?: boolean;
   /**
    * Builds what the cursor carries, in place of the label chip.
-   *
-   * Normally a header-only clone of the dragged container, which reads as the
-   * thing being moved rather than as a chip standing for it. Called once, when
-   * the drag passes the threshold, so a click that never became one builds
-   * nothing. A replica is carried at the offset it was grabbed at, so it sits
-   * where the source sat under the cursor; the chip has no such origin and
-   * trails the pointer instead.
    */
   ghostElement?(): HTMLElement | null;
   threshold?: number;
@@ -114,13 +117,7 @@ export interface DragSessionOptions {
   onCommit(
     result: DragResult
   ): void;
-  /** Undoes whatever `onPreview` moved. Omit when the preview moved nothing. */
   onCancel?(): void;
-  /**
-   * Runs once on every release, including one below the movement threshold
-   * that fires neither `onCommit` nor `onCancel`. Callers clear their session
-   * handle here, so a click that never became a drag cannot block the next one.
-   */
   onEnd?(): void;
 }
 
@@ -128,14 +125,6 @@ export interface DragSessionHandle {
   cancel(): void;
 }
 
-/**
- * Runs one pointer drag of a pane or folder.
- *
- * Nothing is mutated while the pointer moves: the session resolves an armed
- * zone and an insertion index, paints them, and reports the final position
- * once through `onCommit`. A release below the movement threshold is a click,
- * so it reports no placement; `onEnd` still runs, and runs exactly once.
- */
 export function startDragSession(
   options: DragSessionOptions
 ): DragSessionHandle {
@@ -169,6 +158,7 @@ export function startDragSession(
   let result: DragResult = {
     zone: null,
     index: 0,
+    stack: null,
     x: originX,
     y: originY
   };
@@ -178,10 +168,6 @@ export function startDragSession(
     if (visuals) {
       const rect = source.getBoundingClientRect();
       const element = ghost ? ghostElement?.() ?? null : null;
-      /*
-       * Nothing has moved yet, so the source still sits where it was grabbed
-       * and the offset taken at pointerdown still holds.
-       */
       if (element !== null) {
         ghostX = originX - rect.x;
         ghostY = originY - rect.y;
@@ -215,13 +201,18 @@ export function startDragSession(
     ) ?? entered(armed, probe?.(clientX, clientY) ?? null);
 
     overlay?.armZone(
-      zone === null ? null : armed.indexOf(zone)
+      zone === null ? null : armed.indexOf(zone),
+      zone?.preview
     );
+    const stack = zone?.stacks?.find(
+      (candidate) => contains(candidate.rect, clientX, clientY)
+    ) ?? null;
+    let stacked: DragStackResult | null = null;
     if (zone === null) {
       current = null;
       overlay?.hideInsertion();
     }
-    else {
+    else if (stack === null) {
       const sameZone = result.zone !== null && result.zone.id === zone.id;
       current = resolveDropIndex({
         position: zone.axis === "y" ? clientY : clientX,
@@ -229,13 +220,34 @@ export function startDragSession(
         current: sameZone ? current : null,
         deadBand
       });
-      if (movesNothing(zone, current)) {
+      if (movesNothing(zone.source, current)) {
         overlay?.hideInsertion();
       }
       else {
         overlay?.showInsertion(
           zone.line(current)
         );
+      }
+    }
+    else {
+      const sameStack = result.stack !== null &&
+        result.zone?.id === zone.id &&
+        result.stack.slot === stack.slot;
+      const index = resolveDropIndex({
+        position: clientX,
+        candidates: stack.candidates,
+        current: sameStack ? result.stack?.index ?? null : null,
+        deadBand
+      });
+      stacked = {
+        slot: stack.slot,
+        index
+      };
+      if (movesNothing(stack.source, index)) {
+        overlay?.hideInsertion();
+      }
+      else {
+        overlay?.showInsertion(stack.line(index));
       }
     }
 
@@ -246,6 +258,7 @@ export function startDragSession(
     result = {
       zone,
       index: current ?? 0,
+      stack: stacked,
       x: clientX,
       y: clientY
     };
@@ -285,9 +298,6 @@ export function startDragSession(
   };
 }
 
-/**
- * Builds the insertion line for a vertical stack of children.
- */
 export function verticalInsertionLine(
   bounds: Rect,
   candidates: readonly DropCandidate[],
@@ -305,9 +315,6 @@ export function verticalInsertionLine(
   };
 }
 
-/**
- * Builds the insertion line for a horizontal stack of children.
- */
 export function horizontalInsertionLine(
   bounds: Rect,
   candidates: readonly DropCandidate[],
@@ -345,14 +352,6 @@ function contains(
     y <= rect.y + rect.height;
 }
 
-/**
- * Zone the dragged box has sunk furthest into, or `null` for none.
- *
- * Depth is measured across the zone, on the axis its children do not stack
- * along, so a window docks by moving toward the dock rather than by covering
- * its whole length. A zone thinner than the required depth arms on full
- * coverage instead, which is the case of an emptied dock reduced to a band.
- */
 function entered(
   zones: readonly DragZone[],
   box: Rect | null
@@ -383,9 +382,6 @@ function entered(
   return best;
 }
 
-/**
- * Overlap of two extents on one axis, in pixels.
- */
 function overlap(
   start: number,
   size: number,
@@ -398,23 +394,15 @@ function overlap(
   );
 }
 
-/**
- * True when inserting at `index` would leave the dragged element exactly where
- * it already sits, which is every index a lone child can resolve to.
- */
 function movesNothing(
-  zone: DragZone,
+  source: number | null | undefined,
   index: number
 ): boolean {
-  const source = zone.source ?? null;
-
-  return source !== null &&
+  return source !== undefined &&
+    source !== null &&
     (index === source || index === source + 1);
 }
 
-/**
- * Lazily installs the document-level cursor lock used during a drag.
- */
 function ensureSessionStyles(): void {
   ensureDocumentStyles("jolly-drag-session-styles", `
     html.${kDraggingClass},

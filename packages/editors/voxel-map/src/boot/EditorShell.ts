@@ -8,11 +8,8 @@ import type {
   EditorScene,
   EditorSceneHandles
 } from "../app/EditorScene.ts";
-import {
-  EditorSidebar
-} from "../app/EditorSidebar.ts";
+import { EditorPanels } from "../app/panels/index.ts";
 import type { ViewFocus } from "../scene/index.ts";
-import type { EventCanvasHoverChange } from "../shared/domEvents.ts";
 import type { EditorTextureRoom } from "./EditorSession.ts";
 
 export interface EditorShellOptions {
@@ -24,7 +21,7 @@ export interface EditorShellOptions {
 }
 
 export class EditorShell {
-  #sidebar: EditorSidebar | null = null;
+  #panels: EditorPanels | null = null;
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -58,41 +55,26 @@ export class EditorShell {
       toolbar.selection = state.selection;
     }
 
-    const sidebar = document.querySelector("#sidebar");
-    if (sidebar instanceof EditorSidebar) {
-      this.#sidebar = sidebar;
-
-      function onCanvasHoverChange(event: EventCanvasHoverChange) {
-        input.keyboard.enabled = !event.detail.hovering;
+    const panels = EditorPanels.mount(document, {
+      state,
+      viewFocus,
+      textureRoom,
+      onLoadWorld: (data) => scene.loadWorld(data),
+      onTeleportToPeer: (clientId) => scene.teleportToPeer(clientId),
+      onCanvasHoverChange: (hovering) => {
+        input.keyboard.enabled = !hovering;
       }
-
-      sidebar.state = state;
-      sidebar.viewFocus = viewFocus;
-      sidebar.textureRoom = textureRoom;
-      sidebar.onLoadWorld = (data) => scene.loadWorld(data);
-      sidebar.onTeleportToPeer = (clientId) => {
-        scene.teleportToPeer(clientId);
-      };
-      sidebar.addEventListener("canvas-hover-change", onCanvasHoverChange);
-      this.#disposables.push(
-        () => sidebar.removeEventListener(
-          "canvas-hover-change",
-          onCanvasHoverChange
-        )
-      );
+    });
+    if (panels !== null) {
+      this.#panels = panels;
+      this.#disposables.push(() => panels.dispose());
     }
   }
 
   adoptHandles(
     handles: EditorSceneHandles
   ): void {
-    if (this.#sidebar === null) {
-      return;
-    }
-
-    this.#sidebar.engine = handles.engine;
-    this.#sidebar.gridRenderer = handles.gridRenderer;
-    this.#sidebar.localBrush = handles.localBrush;
+    this.#panels?.adoptHandles(handles);
   }
 
   dispose(): void {

@@ -75,6 +75,18 @@ export class BlockLibraryViewport extends LitElement {
       cursor: pointer;
     }
 
+    :host([layout="fill"]) {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    :host([layout="fill"]) .scroller {
+      flex: 1 1 auto;
+      max-height: none;
+    }
+
     .scroller > canvas {
       position: relative;
       z-index: 1;

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { DockLayout } from "../containers/DockLayout.ts";
+import { DockLayout } from "../containers/dock/DockLayout.ts";
 
 export class DockFacade {
   readonly element: HTMLElementTagNameMap["jolly-dock"];

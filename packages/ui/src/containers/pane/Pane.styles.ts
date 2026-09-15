@@ -1,0 +1,186 @@
+// Import Third-party Dependencies
+import { css } from "lit";
+
+// Import Internal Dependencies
+import { kFallback } from "../../theme/styles/fallbacks.ts";
+import {
+  contentScrollbar,
+  focusRing,
+  truncate,
+  visuallyHidden
+} from "../../theme/styles/mixins.ts";
+
+export const paneStyles = css`
+  :host {
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--jolly-radius-md, 6px);
+    background: var(--jolly-surface, ${kFallback.controlBg});
+    color: var(--jolly-text, ${kFallback.text});
+    font-family: var(--jolly-font-family, ui-monospace, monospace);
+    font-size: var(--jolly-font-size, 11px);
+    pointer-events: auto;
+  }
+
+  .header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: var(--jolly-space-2, 8px);
+    min-height: var(--jolly-row-height, 20px);
+    overflow: hidden;
+    padding: var(--jolly-space-1, 4px) var(--jolly-space-2, 8px);
+    border: 0;
+    background: var(
+      --jolly-pane-header-bg,
+      ${kFallback.paneHeaderBg}
+    );
+    color: var(--jolly-text-on-fill, white);
+    user-select: none;
+  }
+
+  .header::before {
+    position: absolute;
+    z-index: 0;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 52%;
+    background: conic-gradient(
+        from 90deg,
+        transparent 25%,
+        currentColor 0 50%,
+        transparent 0 75%,
+        currentColor 0
+      )
+      0 / 12px 12px;
+    color: var(--jolly-text-on-fill, white);
+    content: "";
+    opacity: 0.07;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to right, black, transparent);
+    mask-image: linear-gradient(to right, black, transparent);
+  }
+
+  .icon {
+    position: relative;
+    z-index: 1;
+    --jolly-icon-size: 14px;
+  }
+
+  .title {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    ${truncate}
+  }
+
+  :host([movable]) .header {
+    cursor: move;
+    touch-action: none;
+  }
+
+  :host([dragging]) {
+    opacity: 0.4;
+  }
+
+  :host([inactive]) {
+    display: none;
+  }
+
+  :host([collapsed]:not([grouped])) .content {
+    display: none;
+  }
+
+  .actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--jolly-space-1, 4px);
+  }
+
+  .fold,
+  .grip {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--jolly-radius-sm, 3px);
+    background: none;
+    color: inherit;
+    opacity: 0.75;
+  }
+
+  .fold:hover,
+  .grip:hover {
+    background: rgb(255 255 255 / 0.15);
+    opacity: 1;
+  }
+
+  .fold:focus-visible,
+  .grip:focus-visible {
+    ${focusRing}
+    outline-offset: 1px;
+  }
+
+  .grip {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .grip[aria-pressed="true"] {
+    background: rgb(255 255 255 / 0.25);
+    opacity: 1;
+  }
+
+  .chevron {
+    transition: transform var(--jolly-duration-base, 160ms)
+      var(--jolly-easing, ease);
+  }
+
+  :host(:not([collapsed])) .chevron {
+    transform: rotate(90deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chevron {
+      transition: none;
+    }
+  }
+
+  .content {
+    display: flex;
+    overflow: auto;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--jolly-row-gap, 4px);
+    min-height: 0;
+    padding: var(--jolly-space-1, 4px);
+  }
+
+  ${contentScrollbar}
+
+  .live-region {
+    ${visuallyHidden}
+  }
+
+  @media (forced-colors: active) {
+    .header::before {
+      display: none;
+    }
+  }
+`;

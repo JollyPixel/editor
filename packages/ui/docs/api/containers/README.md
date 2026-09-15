@@ -6,6 +6,7 @@
 - [`jolly-floating`](./floating.md), exported as `Floating`
 - [`jolly-folder`](./folder.md), exported as `Folder`
 - [`jolly-pane`](./pane.md), exported as `PaneElement`
+- [`jolly-pane-group`](./pane-group.md), exported as `PaneGroup`
 - [`jolly-rail`](./rail.md), exported as `Rail`
 - [`jolly-tab`](./tab.md), exported as `Tab`
 - [`jolly-tabs`](./tabs.md), exported as `Tabs`
@@ -17,5 +18,5 @@ See [Composing containers](../../guides/composing-containers.md) and
 [Docking and persistence](../../guides/docking-and-persistence.md) for
 cross-component usage.
 
-The root entry point also exports `DockAlign`, `DockSide`, `RailOrientation`,
+The root entry point also exports `DockAlign`, `DockSide`, `DockSlot`, `RailOrientation`,
 `TabsOrientation`, and `ToolbarOrientation`.

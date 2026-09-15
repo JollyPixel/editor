@@ -12,6 +12,7 @@
 | Property | Attribute | Type | Default |
 |---|---|---|---|
 | `heading` | `heading` | `string` | `""` |
+| `icon` | `icon` | `IconName` | `""` |
 | `key` | `key` | `string` | `""` |
 | `reorderable` | `reorderable` | `boolean` | `false` |
 | `collapsible` | `collapsible` | `boolean` | `false` |
@@ -19,6 +20,8 @@
 | `grow` | `grow` | `boolean` | `false` |
 | `dragging` | `dragging` | `boolean` | `false` |
 | `locked` | `locked` | `boolean` | `false` |
+| `grouped` | `grouped` | `boolean` | Derived from its parent |
+| `inactive` | `inactive` | `boolean` | Set by its group |
 | `movable` | `movable` | `boolean` | Derived from its container |
 | `storageKey` | `storage-key` | `string` | `""` |
 | `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
@@ -26,6 +29,12 @@
 
 `actions` is the named header slot. The default slot contains pane content.
 Collapsing emits `jolly-toggle` with `{ open }`. Committed folder ordering
-emits `jolly-reorder` with `{ keys }`. The component exposes `header`, `title`,
+emits `jolly-reorder` with `{ keys }`. A non-empty `icon` renders a registered
+glyph before the title. The component exposes `header`, `icon`, `title`,
 `actions`, and `content` CSS parts. Dock layouts and floating windows set
-`movable`; a dock layout sets `dragging` during a move preview.
+`movable`; a dock layout sets `dragging` during a move preview. A pane inside a
+`jolly-pane-group` is `grouped`, and `inactive` while another tab is shown.
+
+While its grip is grabbed, Up and Down move the pane within its dock, Left and
+Right send it to the adjacent dock, and Shift with Up or Down joins it to the
+group above or below. Space commits and Escape cancels.

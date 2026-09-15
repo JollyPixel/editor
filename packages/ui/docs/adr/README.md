@@ -40,6 +40,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 | [0032](./0032-tree-snapshot-and-pointer-session.md) | Tree structure is indexed once and pointer mechanics have one owner |
 | [0033](./0033-layout-snapshot-is-the-only-layout-state.md) | The layout snapshot is the only layout state |
 | [0034](./0034-open-layers-claim-the-keyboard.md) | An open dialog or popover claims the keyboard, through a guard `controls` consumes |
+| [0035](./0035-pane-groups-live-in-the-snapshot.md) | Pane groups are slots of the layout snapshot, projected as elements |
 
 ## Scope boundary
 

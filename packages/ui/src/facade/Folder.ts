@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import "../containers/Folder.ts";
+import "../containers/folder/Folder.ts";
 import { FacadeContainer } from "./Container.ts";
 
 export interface FolderOptions {

@@ -32,7 +32,7 @@ import {
   type BlockMoveDetail
 } from "./BlockLibraryViewport.ts";
 
-export type BlockLibraryLayout = "compact";
+export type BlockLibraryLayout = "compact" | "fill";
 
 export interface BlockSelectionChangeDetail {
   block: ResolvedBlockDefinition | null;
@@ -59,6 +59,11 @@ export class BlockLibrary extends LitElement {
 
     :host([layout="compact"]) {
       min-height: 200px;
+    }
+
+    :host([layout="fill"]) {
+      flex: 1 1 auto;
+      min-height: 0;
     }
 
     .brush-row {

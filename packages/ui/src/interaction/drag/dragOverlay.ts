@@ -11,17 +11,6 @@ const kArmedClass = "jolly-drag-zone-armed";
 const kTopLayer = "2147483646";
 const kZoneFade = 120;
 
-/*
- * A zone is a wash and nothing else: no border, no radius. It covers a whole
- * dock, and an outline around something that large reads as a box drawn over
- * the layout rather than as the layout offering to take something.
- *
- * The wash is the accent, which is the colour a dock already tints itself with
- * when it is being resized, but at a fainter stop: a zone covers a whole dock
- * rather than a handle. The armed zone is the same wash one step up, which is
- * the whole of the difference between a dock on offer and the one about to
- * take the drop.
- */
 const kIdleZone = {
   background: "var(--jolly-dock-zone-bg, rgb(47 111 216 / 0.06))"
 };
@@ -30,13 +19,6 @@ const kArmedZone = {
   background: "var(--jolly-dock-zone-bg-armed, rgb(47 111 216 / 0.1))"
 };
 
-/*
- * The insertion line is neutral for the same reason the zones are: it lands as
- * often on an accent-filled pane header as on a plain row, and an accent line
- * on accent chrome is no line at all. Muted ink rather than full ink keeps it
- * from reading as a hard rule ruled through the layout, and the ring in the
- * surface behind it is what carries it over any fill it happens to cross.
- */
 const kInsertion = {
   background: "var(--jolly-text-muted, rgb(90 98 112))",
   borderRadius: "999px",
@@ -69,16 +51,12 @@ export interface DragOverlayOptions {
 }
 
 export interface DragOverlay {
-  /** Paints the bands that arm a container while a drag is running. */
   showZones(
     zones: readonly Rect[]
   ): void;
-  /**
-   * Raises the zone the pointer has armed, by index into the last `showZones`,
-   * or lowers them all for `null`.
-   */
   armZone(
-    index: number | null
+    index: number | null,
+    preview?: Rect
   ): void;
   showInsertion(
     rect: Rect
@@ -91,12 +69,6 @@ export interface DragOverlay {
   destroy(): void;
 }
 
-/**
- * Builds the fallback ghost, for a caller that supplies no element of its own.
- *
- * A flat accent block with the label on it: enough to show that something is
- * being carried, and no imitation of any particular container.
- */
 function labelChip(
   options: DragOverlayOptions
 ): HTMLElement {
@@ -120,13 +92,6 @@ function labelChip(
   return chip;
 }
 
-/**
- * Creates the document-level visuals for a pane or folder drag.
- *
- * Lives in `document.body` and therefore outside any theme scope host. The
- * bands and the insertion line take colours already resolved by the caller;
- * `scope` is what lets a cloned `element` resolve the rest for itself.
- */
 export function createDragOverlay(
   options: DragOverlayOptions
 ): DragOverlay {
@@ -166,10 +131,6 @@ export function createDragOverlay(
     options.element !== undefined &&
     options.element !== null
   ) {
-    /*
-     * Only a replica needs lifting off the page: the chip is already a solid
-     * block of accent, and reads as carried without one.
-     */
     ghost.style.boxShadow = "var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 0.3))";
   }
 
@@ -177,6 +138,7 @@ export function createDragOverlay(
   document.body.append(root);
 
   const bands: HTMLElement[] = [];
+  const rects: Rect[] = [];
 
   return {
     showZones(
@@ -186,6 +148,7 @@ export function createDragOverlay(
         band.remove();
       }
       bands.length = 0;
+      rects.length = 0;
 
       for (const zone of zones) {
         const band = document.createElement("div");
@@ -200,27 +163,33 @@ export function createDragOverlay(
             `background-color ${kZoneFade}ms var(--jolly-easing, ease)`,
           ...kIdleZone
         });
-        /*
-         * Zones appear the instant a drag begins, all of them at once. Fading
-         * them in is what keeps that from reading as the layout flinching.
-         */
         band.animate(
           [{ opacity: 0 }, { opacity: 1 }],
           { duration: kZoneFade, easing: "ease-out" }
         );
         bands.push(band);
+        rects.push(zone);
         root.prepend(band);
       }
     },
 
     armZone(
-      index: number | null
+      index: number | null,
+      preview?: Rect
     ): void {
       for (let position = 0; position < bands.length; position++) {
         const band = bands[position];
         const armed = position === index;
+        const rect = armed && preview !== undefined ?
+          preview :
+          rects[position];
         band.classList.toggle(kArmedClass, armed);
-        Object.assign(band.style, armed ? kArmedZone : kIdleZone);
+        Object.assign(band.style, armed ? kArmedZone : kIdleZone, {
+          left: `${rect.x}px`,
+          top: `${rect.y}px`,
+          width: `${rect.width}px`,
+          height: `${rect.height}px`
+        });
       }
     },
 

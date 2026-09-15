@@ -179,6 +179,14 @@ export class TextureEditor extends LitElement {
 
   override disconnectedCallback() {
     super.disconnectedCallback();
+    queueMicrotask(() => {
+      if (!this.isConnected) {
+        this.#teardown();
+      }
+    });
+  }
+
+  #teardown(): void {
     this.#canvasHostEl?.removeEventListener(
       "mouseenter",
       this.#onCanvasHoverEnter
