@@ -125,6 +125,8 @@ set textureSize(value: Vec2)
 get texture(): Uint8ClampedArray
 set texture(source: HTMLCanvasElement | HTMLImageElement)
 
+clearTexture(options?: ClearTextureOptions): void
+
 commitPixels(
   pixels: Vec2[],
   slot?: "primary" | "secondary"
@@ -142,6 +144,20 @@ Gets or resizes the texture. Shrinking hides committed pixels outside the new bo
 ### `texture`
 
 The getter returns a copy of the current RGBA pixel data. The setter replaces the texture and resizes it to the source image or canvas.
+
+### `clearTexture()`
+
+```ts
+interface ClearTextureOptions {
+  includeUV?: boolean;
+}
+```
+
+Makes pixels transparent. By default, pixels inside a [UV slot](../GLOSSARY.md#uv-slot) are kept; `includeUV: true` clears every pixel. UV regions are never deleted.
+
+Slot membership uses every region, whatever [`UVMap.isVisible()`](./uv/UVMap.md) returns, and only the active slots of each region. A pixel belongs to a slot when its center lies inside the slot geometry, the same rule as `hasTransparency()`.
+
+The clear is one `texture-replaced` history entry and one `texture-replaced` hook event. The document emits `changed` for the whole texture, and the current selection is discarded, as with the `texture` setter.
 
 ### `commitPixels()`
 

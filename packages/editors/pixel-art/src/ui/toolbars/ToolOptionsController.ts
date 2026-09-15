@@ -25,10 +25,6 @@ function isBrushMode(
   return mode === "paint" || mode === "erase";
 }
 
-/**
- * Tool option state (mode, brush size, fill/select toggles, eyedropper).
- * Syncs with PixelArtCanvas directly; state re-read after each canvas call.
- */
 export class ToolOptionsController implements ReactiveController {
   #host: ReactiveControllerHost;
   #canvas: PixelArtCanvas | null = null;
@@ -37,6 +33,7 @@ export class ToolOptionsController implements ReactiveController {
   #mode: Mode = "paint";
   #brushSize = 1;
   #fillGlobal = false;
+  #fillUvClip = false;
   #selectShape = false;
   #pickColorArmed = false;
 
@@ -65,6 +62,10 @@ export class ToolOptionsController implements ReactiveController {
     return this.#fillGlobal;
   }
 
+  get fillUvClip(): boolean {
+    return this.#fillUvClip;
+  }
+
   get selectShape(): boolean {
     return this.#selectShape;
   }
@@ -79,6 +80,7 @@ export class ToolOptionsController implements ReactiveController {
     this.#mode = canvas.mode;
     this.#brushSize = canvas.brush.size;
     this.#fillGlobal = canvas.tools.fill.global;
+    this.#fillUvClip = canvas.tools.fill.uvClip;
     this.#selectShape = canvas.tools.select.shape;
     this.#pickColorArmed = canvas.tools.brush.pickArmed;
   }
@@ -100,7 +102,6 @@ export class ToolOptionsController implements ReactiveController {
     this.#mode = mode;
     if (this.#canvas) {
       this.#canvas.mode = mode;
-      // Non-paint mode auto-disarms picker.
       this.#pickColorArmed = this.#canvas.tools.brush.pickArmed;
     }
     this.#host.requestUpdate();
@@ -114,9 +115,6 @@ export class ToolOptionsController implements ReactiveController {
     this.#host.requestUpdate();
   }
 
-  /**
-   * Force paint mode before toggling picker.
-   */
   togglePickColor(): void {
     if (!this.#canvas) {
       return;
@@ -156,6 +154,16 @@ export class ToolOptionsController implements ReactiveController {
     this.#fillGlobal = value;
     if (this.#canvas) {
       this.#canvas.tools.fill.global = value;
+    }
+    this.#host.requestUpdate();
+  }
+
+  setFillUvClip(
+    value: boolean
+  ): void {
+    this.#fillUvClip = value;
+    if (this.#canvas) {
+      this.#canvas.tools.fill.uvClip = value;
     }
     this.#host.requestUpdate();
   }

@@ -181,6 +181,29 @@ export class CanvasBuffer extends Emitter<
     return this.#buffer.pixels().slice();
   }
 
+  writePixels(
+    pixels: Uint8ClampedArray
+  ): void {
+    const size = this.#buffer.size();
+    this.#buffer.replacePixels(
+      pixels,
+      size
+    );
+    this.#syncCanvasFromBuffer();
+
+    this.emit(
+      "changed",
+      {
+        bounds: {
+          x: 0,
+          y: 0,
+          width: size.x,
+          height: size.y
+        }
+      }
+    );
+  }
+
   drawPixels(
     pixels: Iterable<Vec2>,
     color: RGBA8
@@ -318,9 +341,6 @@ export class CanvasBuffer extends Emitter<
     return this.#buffer.samplePixel(x, y);
   }
 
-  /**
-   * Returns transparent pixels for out-of-bounds positions.
-   */
   samplePixels(
     positions: Vec2[]
   ): RGBA8[] {

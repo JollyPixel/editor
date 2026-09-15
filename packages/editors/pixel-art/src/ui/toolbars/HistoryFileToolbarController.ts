@@ -11,17 +11,12 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import { encodePng } from "@jolly-pixel/image";
 import { decodeRasterCanvas } from "@jolly-pixel/image/raster";
-import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { renderIcon } from "../common/icons.ts";
+import { showClearTextureDialog } from "./clearTextureDialog.ts";
 import { isInputElement } from "../../utils/dom.ts";
 
-/**
- * Undo/redo + import/export texture. Visible across every mode (unlike the
- * mode-scoped tool-option and UV overlays), so it renders unconditionally
- * at the bottom of the stage.
- */
 export class HistoryFileToolbarController implements ReactiveController {
   #host: ReactiveControllerHost;
   #canvas: PixelArtCanvas | null = null;
@@ -72,21 +67,14 @@ export class HistoryFileToolbarController implements ReactiveController {
       return;
     }
 
-    const confirmed = await showConfirm({
-      title: "Clear texture",
-      message: "Clear the entire texture and make every pixel transparent?",
-      confirmLabel: "Clear",
-      danger: true
+    const result = await showClearTextureDialog({
+      hasUVRegions: !canvas.uv.regions.next().done
     });
-    if (!confirmed || this.#canvas !== canvas) {
+    if (result === null || this.#canvas !== canvas) {
       return;
     }
 
-    const size = canvas.textureSize;
-    const blank = document.createElement("canvas");
-    blank.width = size.x;
-    blank.height = size.y;
-    canvas.texture = blank;
+    canvas.clearTexture(result);
   }
 
   async #onExportPng(): Promise<void> {
@@ -120,10 +108,6 @@ export class HistoryFileToolbarController implements ReactiveController {
     anchor.download = "texture.png";
     anchor.click();
 
-    /*
-     * Revoking synchronously cancels the download on some browsers, which
-     * have not read the URL by the time click() returns.
-     */
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 

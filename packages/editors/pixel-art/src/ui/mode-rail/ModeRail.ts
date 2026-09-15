@@ -30,6 +30,7 @@ interface ModeItem {
 interface FlyoutButton {
   icon: IconName;
   label: string;
+  pressed?: boolean;
   onClick: () => void;
 }
 
@@ -48,16 +49,6 @@ const kModeItems: ModeItem[] = [
   { mode: "uv", icon: "uv", label: "UV" }
 ];
 
-/**
- * Mode buttons. Fill/select/paint hide a related alternate tool behind a
- * hover flyout (e.g. Fill -> Global, only shown while Neighbor is active)
- * instead of a permanent second button, keeping the rail's default
- * footprint small. Controlled by props; emits intent events only.
- *
- * @fires {CustomEvent<Mode>} mode-change
- * @fires {CustomEvent<void>} pick-color-toggle
- * @fires {CustomEvent<ModeVariantDetail>} mode-variant-change
- */
 @customElement("mode-rail")
 export class ModeRail extends LitElement {
   static override styles = [
@@ -66,6 +57,25 @@ export class ModeRail extends LitElement {
     css`
       jolly-rail {
         background: transparent;
+      }
+
+      .rail-item.open .rail-flyout,
+      .rail-item:focus-within .rail-flyout {
+        max-width: 84px;
+      }
+
+      .rail-badge {
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        padding: 0 2px;
+        border-radius: 3px;
+        background: var(--color-bg-surface);
+        color: var(--color-text-emphasis);
+        font-size: 8px;
+        font-weight: 700;
+        line-height: 11px;
+        pointer-events: none;
       }
     `
   ];
@@ -80,6 +90,9 @@ export class ModeRail extends LitElement {
   declare fillGlobal: boolean;
 
   @property({ type: Boolean })
+  declare fillUvClip: boolean;
+
+  @property({ type: Boolean })
   declare selectShape: boolean;
 
   #hoveredMode: Mode | null = null;
@@ -89,6 +102,7 @@ export class ModeRail extends LitElement {
     this.mode = "paint";
     this.pickColorArmed = false;
     this.fillGlobal = false;
+    this.fillUvClip = false;
     this.selectShape = false;
   }
 
@@ -104,10 +118,6 @@ export class ModeRail extends LitElement {
 
     this.dispatchEvent(customEvent);
     this.#closeFlyout();
-    /*
-     * Clicking focuses the button, which would keep the flyout open via
-     * the :focus-within keyboard-accessibility fallback.
-     */
     (event.currentTarget as HTMLElement).blur();
   }
 
@@ -129,6 +139,17 @@ export class ModeRail extends LitElement {
       bubbles: true,
       composed: true,
       detail: { mode, value }
+    });
+
+    this.dispatchEvent(customEvent);
+    this.#closeFlyout();
+  }
+
+  #onFillUvClipClick(): void {
+    const customEvent = new CustomEvent<boolean>("fill-uv-clip-change", {
+      bubbles: true,
+      composed: true,
+      detail: !this.fillUvClip
     });
 
     this.dispatchEvent(customEvent);
@@ -187,17 +208,23 @@ export class ModeRail extends LitElement {
           }
         ];
       case "fill":
-        return this.fillGlobal ? [
+        return [
+          this.fillGlobal ?
+            {
+              icon: "fill",
+              label: "Neighbor",
+              onClick: () => this.#onVariantClick("fill", false)
+            } :
+            {
+              icon: "fillGlobal",
+              label: "Global",
+              onClick: () => this.#onVariantClick("fill", true)
+            },
           {
-            icon: "fill",
-            label: "Neighbor",
-            onClick: () => this.#onVariantClick("fill", false)
-          }
-        ] : [
-          {
-            icon: "fillGlobal",
-            label: "Global",
-            onClick: () => this.#onVariantClick("fill", true)
+            icon: "uv",
+            label: "Clip to UV",
+            pressed: this.fillUvClip,
+            onClick: () => this.#onFillUvClipClick()
           }
         ];
       case "select":
@@ -228,18 +255,15 @@ export class ModeRail extends LitElement {
 
     return html`
       <div class="rail-flyout" part="rail-flyout">
-        ${buttons.map(({ icon, label, onClick }) => html`
+        ${buttons.map(({ icon, label, pressed, onClick }) => html`
           <button
-            class="rail-btn"
+            class=${classMap({ "rail-btn": true, active: pressed === true })}
             part="rail-flyout-button"
             title=${label}
             aria-label=${label}
+            aria-pressed=${pressed ?? nothing}
             @click=${(event: MouseEvent) => {
               onClick();
-              /*
-               * Clicking focuses the button, which would keep the flyout
-               * open via the :focus-within keyboard-accessibility fallback.
-               */
               (event.currentTarget as HTMLElement).blur();
             }}
           >
@@ -274,6 +298,9 @@ export class ModeRail extends LitElement {
                 @click=${(event: MouseEvent) => this.#onModeClick(mode, event)}
               >
                 ${renderIcon(this.#displayIcon(mode, icon))}
+                ${mode === "fill" && this.fillUvClip ?
+                  html`<span class="rail-badge" part="uv-clip-badge">UV</span>` :
+                  nothing}
                 ${flyoutButtons.length === 0 ? html`<span class="tooltip">${label}</span>` : nothing}
               </button>
               ${this.#renderFlyout(flyoutButtons)}

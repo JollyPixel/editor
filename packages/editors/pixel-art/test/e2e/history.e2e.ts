@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page
+} from "@playwright/test";
 
 // Import Internal Dependencies
 import {
@@ -8,8 +12,22 @@ import {
   clickTexturePixel,
   readPixel
 } from "./utils.ts";
+import type { PixelDrawPanel } from "../../src/index.ts";
 
-// Uses texture slice x:60-79, y:0-15; undo/redo is page-local.
+async function addUvRegion(
+  page: Page,
+  rect: { x: number; y: number; width: number; height: number; }
+): Promise<void> {
+  await page.evaluate((regionRect) => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    panel!.canvasManager!.uv.restore({
+      id: "clear-slot",
+      color: "#00ffff",
+      state: "stacked",
+      rect: regionRect
+    });
+  }, rect);
+}
 
 test.beforeEach(async({ page }) => {
   await gotoDemo(page);
@@ -47,7 +65,6 @@ test("mod+z / mod+y keyboard shortcuts undo and redo", async({ page }) => {
     () => readPixel(page, 67, 2)
   ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
 
-  // Canvas is already hovered, so shortcuts work.
   await page.keyboard.press("Control+z");
   await expect.poll(
     () => readPixel(page, 67, 2)
@@ -93,5 +110,46 @@ test("Clear texture replaces the texture after confirmation", async({ page }) =>
   await page.getByRole("button", { name: "Clear", exact: true }).click();
   await expect.poll(
     () => readPixel(page, 71, 2)
+  ).toMatchObject({ a: 0 });
+});
+
+test("Clear texture hides the UV option when the texture has no regions", async({ page }) => {
+  await page.getByRole("button", { name: "Clear texture" }).click();
+  const dialog = page.locator("jolly-dialog");
+  await expect(dialog).toContainText(
+    "Clear the entire texture and make every pixel transparent?"
+  );
+  await expect(dialog.locator("jolly-checkbox")).toHaveCount(0);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+});
+
+test("Clear texture keeps UV slot pixels unless the option is checked", async({ page }) => {
+  await addUvRegion(page, { x: 72, y: 4, width: 4, height: 4 });
+  await clickTexturePixel(page, 73, 5);
+  await clickTexturePixel(page, 69, 5);
+  await expect.poll(
+    () => readPixel(page, 69, 5)
+  ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+
+  await page.getByRole("button", { name: "Clear texture" }).click();
+  const dialog = page.locator("jolly-dialog");
+  await expect(dialog).toContainText(
+    "Pixels inside UV slots are kept unless the option below is checked."
+  );
+  await expect(dialog.locator("jolly-checkbox input[type=checkbox]")).not.toBeChecked();
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(
+    () => readPixel(page, 69, 5)
+  ).toMatchObject({ a: 0 });
+  await expect.poll(
+    () => readPixel(page, 73, 5)
+  ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+
+  await page.getByRole("button", { name: "Clear texture" }).click();
+  await dialog.locator("jolly-checkbox input[type=checkbox]").check();
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect.poll(
+    () => readPixel(page, 73, 5)
   ).toMatchObject({ a: 0 });
 });

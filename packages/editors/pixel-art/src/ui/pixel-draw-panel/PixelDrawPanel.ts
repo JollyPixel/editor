@@ -265,9 +265,14 @@ export class PixelDrawPanel extends LitElement {
           .mode=${this.#toolOptions.mode}
           .pickColorArmed=${this.#toolOptions.pickColorArmed}
           .fillGlobal=${this.#toolOptions.fillGlobal}
+          .fillUvClip=${this.#toolOptions.fillUvClip}
           .selectShape=${this.#toolOptions.selectShape}
           @mode-change=${(event: CustomEvent<Mode>) => this.#toolOptions.setMode(event.detail)}
           @pick-color-toggle=${() => this.#toolOptions.togglePickColor()}
+          @fill-uv-clip-change=${(event: CustomEvent<boolean>) => {
+            this.#toolOptions.setMode("fill");
+            this.#toolOptions.setFillUvClip(event.detail);
+          }}
           @mode-variant-change=${(event: CustomEvent<ModeVariantDetail>) => {
             this.#onModeVariantChange(event.detail);
           }}

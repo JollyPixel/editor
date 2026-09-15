@@ -57,6 +57,10 @@ import {
   pointInGeometry,
   rectOf
 } from "./uv/geometry.ts";
+import {
+  uvSlotGeometries,
+  uvSlotMask
+} from "./uv/uvSlotMask.ts";
 import type { UVGeometry } from "./uv/types.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { resolveColor } from "./utils/colors.ts";
@@ -82,16 +86,12 @@ import type {
 export type { Mode };
 export type { HistoryState };
 
+export interface ClearTextureOptions {
+  includeUV?: boolean;
+}
+
 export interface PixelArtCanvasOptions {
-  /**
-   * Initial interaction mode.
-   * @default "paint"
-   */
   defaultMode?: Mode;
-  /**
-   * Target for drag continuation, keyboard, and blur events.
-   * @default window
-   */
   window?: WindowLike;
   texture?: {
     defaultColor?: ByteColorInput;
@@ -102,9 +102,6 @@ export interface PixelArtCanvasOptions {
     maxSize?: number;
     init?: HTMLCanvasElement;
   };
-  /**
-   * Fits the texture when `zoom.default` is omitted.
-   */
   zoom?: ZoomOptions;
   backgroundTransparency?: {
     colors: { odd: string; even: string; };
@@ -113,48 +110,19 @@ export interface PixelArtCanvasOptions {
   backgroundColor?: ByteColorInput;
   brush?: BrushOptions;
   select?: {
-    /**
-     * Fill for deleted pixels and vacated selections.
-     * @default dominant neighbor color, then transparent
-     */
     eraseColor?: ByteColorInput;
-    /**
-     * Whether the selection shows its size next to the outline.
-     * @default true
-     */
     sizeLabel?: boolean;
   };
   uv?: {
-    /**
-     * Whether a UV-mode click outside every visible region clears the
-     * selection. Embeddings that own the selection themselves (a block
-     * library driving the regions) turn this off.
-     * @default true
-     */
     deselectOnEmptyClick?: boolean;
   };
-  /**
-   * Called after a local edit commits to the master buffer.
-   */
   onDrawEnd?: () => void;
-  /**
-   * Called for local strokes, resizes, and texture replacements.
-   */
   onBufferUpdated?: PixelBufferHookListener;
-  /**
-   * Omit to disable history.
-   */
   history?: {
     enabled?: boolean;
-    /**
-     * @default 10
-     */
     limit?: number;
   };
   onHistoryChange?: (state: HistoryState) => void;
-  /**
-   * Clipboard override; null forces internal-only behavior.
-   */
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
@@ -186,9 +154,6 @@ export class PixelArtCanvas {
   readonly uv: UVMap;
   readonly tools: Toolset;
   readonly peerPresence: PeerPresence;
-  /**
-   * Read-only select progress events for SelectionGhostSync.
-   */
   readonly selectionEvents: Pick<Emitter<SelectEngineEvent>, "on" | "off">;
 
   constructor(
@@ -279,7 +244,6 @@ export class PixelArtCanvas {
       adapter: resolveClipboardAdapter(options.clipboard)
     });
 
-    // Camera changes repaint and re-place all camera-dependent overlays.
     this.#view.viewport.on("changed", this.#onViewportChanged);
 
     this.#router = new InteractionRouter({
@@ -430,7 +394,6 @@ export class PixelArtCanvas {
       return;
     }
 
-    // Viewport resize runs last and emits the repaint.
     this.#view.resize(bounds.width, bounds.height);
   }
 
@@ -484,6 +447,20 @@ export class PixelArtCanvas {
 
   get texture(): Uint8ClampedArray {
     return this.document.buffer.pixels();
+  }
+
+  clearTexture(
+    options: ClearTextureOptions = {}
+  ): void {
+    const keepMask = options.includeUV ?
+      undefined :
+      uvSlotMask(
+        uvSlotGeometries(this.uv.regions),
+        this.textureSize
+      );
+
+    this.#edits.clearTexture(keepMask);
+    this.#tools.select.discard();
   }
 
   commitPixels(
@@ -611,10 +588,6 @@ export class PixelArtCanvas {
     this.#tools.select.discard();
   }
 
-  /**
-   * Runs a synchronous state rebuild without history or network broadcast.
-   * The suppression scope ends when `fn` returns.
-   */
   runLocalRestore<T>(
     fn: () => T
   ): T {
@@ -674,9 +647,6 @@ export class PixelArtCanvas {
     }
   }
 
-  /**
-   * Placement needs the canvas cursor, camera, and texture bounds.
-   */
   #floatPastedSelection(
     selection: DecodedSelection,
     result: ClipboardOperationResult
@@ -705,7 +675,6 @@ export class PixelArtCanvas {
       return result;
     }
 
-    // Restore state after a partial selection import.
     this.#tools.select.discard();
     this.mode = previousMode;
 

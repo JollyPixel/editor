@@ -8,6 +8,12 @@ import type {
   CanvasBuffer
 } from "../buffer/CanvasBuffer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
+import type { UVMap } from "../uv/UVMap.ts";
+import { pointInGeometry } from "../uv/geometry.ts";
+import {
+  uvSlotGeometries,
+  uvSlotMask
+} from "../uv/uvSlotMask.ts";
 import type {
   RGBA8,
   Vec2
@@ -24,20 +30,21 @@ export interface FillEngineOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   pipeline: EditPipeline;
+  uvMap: UVMap;
 }
 
 export interface FillTool {
-  /**
-   * Recolors every matching pixel instead of only the contiguous region.
-   */
   global: boolean;
+  uvClip: boolean;
 }
 
 export class FillEngine implements FillTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #pipeline: EditPipeline;
+  #uvMap: UVMap;
   #global = false;
+  #uvClip = false;
 
   constructor(
     options: FillEngineOptions
@@ -45,6 +52,7 @@ export class FillEngine implements FillTool {
     this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
     this.#pipeline = options.pipeline;
+    this.#uvMap = options.uvMap;
   }
 
   get global(): boolean {
@@ -57,15 +65,25 @@ export class FillEngine implements FillTool {
     this.#global = global;
   }
 
+  get uvClip(): boolean {
+    return this.#uvClip;
+  }
+
+  set uvClip(
+    uvClip: boolean
+  ) {
+    this.#uvClip = uvClip;
+  }
+
   run(
     tx: number,
     ty: number,
     slot: BrushColorSlot = "primary"
   ): void {
+    const seed = { x: tx, y: ty };
     if (this.#global) {
       this.#runGlobal(
-        tx,
-        ty,
+        seed,
         slot
       );
 
@@ -80,8 +98,9 @@ export class FillEngine implements FillTool {
     const fillColor = this.#brush[slot].asRGBA();
     const positions = Fill.floodFill(
       this.#canvasBuffer,
-      { x: tx, y: ty },
-      fillColor
+      seed,
+      fillColor,
+      this.#clipMask(seed)
     );
     this.#pipeline.commitPixels(
       positions,
@@ -91,13 +110,12 @@ export class FillEngine implements FillTool {
   }
 
   #runGlobal(
-    tx: number,
-    ty: number,
+    seed: Vec2,
     slot: BrushColorSlot
   ): void {
     const [sr, sg, sb, sa] = this.#canvasBuffer.samplePixel(
-      tx,
-      ty
+      seed.x,
+      seed.y
     );
     const fromColor: RGBA8 = {
       r: sr,
@@ -116,11 +134,23 @@ export class FillEngine implements FillTool {
       return;
     }
 
+    const mask = this.#clipMask(seed);
     const positions = Fill.matchAll(
       this.#canvasBuffer,
-      fromColor
+      fromColor,
+      mask
     );
     if (positions.length === 0) {
+      return;
+    }
+
+    if (mask) {
+      this.#pipeline.commitPixels(
+        positions,
+        slot,
+        fromColor
+      );
+
       return;
     }
 
@@ -133,5 +163,37 @@ export class FillEngine implements FillTool {
       fromColor,
       toColor
     });
+  }
+
+  #clipMask(
+    seed: Vec2
+  ): Uint8Array | undefined {
+    if (!this.#uvClip) {
+      return undefined;
+    }
+
+    const slots = uvSlotGeometries(this.#uvMap.regions);
+    if (slots.length === 0) {
+      return undefined;
+    }
+
+    const size = this.#canvasBuffer.size();
+    const center = {
+      x: seed.x + 0.5,
+      y: seed.y + 0.5
+    };
+    const seedSlots = slots.filter(
+      (geometry) => pointInGeometry(center, geometry)
+    );
+    if (seedSlots.length > 0) {
+      return uvSlotMask(seedSlots, size);
+    }
+
+    const mask = uvSlotMask(slots, size);
+    for (let index = 0; index < mask.length; index++) {
+      mask[index] ^= 1;
+    }
+
+    return mask;
   }
 }
