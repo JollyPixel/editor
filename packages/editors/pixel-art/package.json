@@ -42,19 +42,19 @@
   "license": "MIT",
   "devDependencies": {
     "@jolly-pixel/asset": "1.1.0",
-    "@jolly-pixel/asset-server": "2.0.0",
-    "@jolly-pixel/asset-source": "1.0.0",
-    "@jolly-pixel/engine": "5.0.0",
+    "@jolly-pixel/asset-server": "3.0.0",
+    "@jolly-pixel/asset-source": "2.0.0",
+    "@jolly-pixel/engine": "5.1.0",
     "@jolly-pixel/event-store": "3.0.0",
-    "@jolly-pixel/runtime": "5.0.0"
+    "@jolly-pixel/runtime": "5.0.1"
   },
   "dependencies": {
     "@jolly-pixel/asset.pixel-art": "1.0.0",
-    "@jolly-pixel/color": "1.0.0",
+    "@jolly-pixel/color": "1.1.0",
     "@jolly-pixel/image": "1.1.0",
-    "@jolly-pixel/network": "2.0.0",
-    "@jolly-pixel/pixel-draw.renderer": "4.0.0",
-    "@jolly-pixel/ui": "2.0.0",
+    "@jolly-pixel/network": "3.0.0",
+    "@jolly-pixel/pixel-draw.renderer": "5.0.0",
+    "@jolly-pixel/ui": "3.0.0",
     "@openally/emitt": "1.0.1",
     "lit": "3.3.3",
     "three": "0.185.1"
