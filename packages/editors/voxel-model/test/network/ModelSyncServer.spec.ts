@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { RoomContext, RoomEventStoreHandle } from "@jolly-pixel/network";
+import type { RoomContext, RoomPeer } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { ModelSyncServer } from "#src/network/ModelSyncServer.ts";
@@ -29,10 +29,16 @@ function createClient(
   };
 }
 
-const unusedEventStore: RoomEventStoreHandle = {
-  append: () => Promise.resolve(true),
-  list: () => Promise.resolve([])
-};
+function roomPeer(
+  clientId: string
+): RoomPeer {
+  return {
+    clientId,
+    identity: { subject: clientId, role: "default" },
+    profile: {},
+    presence: {}
+  };
+}
 
 function roomContext(
   deliver: (payload: unknown) => void = () => void 0
@@ -42,7 +48,7 @@ function roomContext(
       broadcast: deliver,
       sendTo: (_clientId, payload) => deliver(payload)
     },
-    eventStore: unusedEventStore
+    identity: { subject: "client-A", role: "default" }
   };
 }
 
@@ -52,7 +58,7 @@ function observe(
   server: ModelSyncServer,
   client: MockClient
 ): RoomContext {
-  server.onClientConnect(client);
+  server.onClientConnect(client, roomPeer(client.id), noopRoom);
 
   return roomContext((payload) => client.send(payload));
 }
@@ -104,7 +110,7 @@ describe("ModelSyncServer — onClientConnect", () => {
   it("sends a snapshot to the newly connected client", () => {
     const server = new ModelSyncServer();
     const client = createClient("A");
-    server.onClientConnect(client);
+    server.onClientConnect(client, roomPeer(client.id), noopRoom);
 
     assert.equal(client.received.length, 1);
     assert.equal(client.received[0].type, "snapshot");

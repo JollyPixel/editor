@@ -4,7 +4,7 @@ import type * as networkTypes from "@jolly-pixel/network";
 import type {
   PixelNetworkCommand,
   PixelServerMessage
-} from "@jolly-pixel/pixel-draw.renderer";
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
 // Import Internal Dependencies
 import {

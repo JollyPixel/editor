@@ -14,6 +14,20 @@ const kTransform = {
   rotation: { x: 0, y: 0, z: 0 }
 };
 
+function admitted(
+  arbiter: ModelCommandArbiter,
+  command: ModelNetworkCommand
+): ModelNetworkCommand | null {
+  return arbiter.admit(command)?.command ?? null;
+}
+
+function commit(
+  arbiter: ModelCommandArbiter,
+  command: ModelNetworkCommand
+): void {
+  arbiter.admit(command)!.commit();
+}
+
 type TransformedCommand = Extract<ModelNetworkCommand, { action: "group-transformed"; }>;
 
 function transformedCmd(
@@ -98,12 +112,12 @@ describe("ModelCommandArbiter.key", () => {
   });
 });
 
-describe("ModelCommandArbiter.admit / record", () => {
+describe("ModelCommandArbiter.admit / commit", () => {
   it("accepts the first command for a key", () => {
     const arbiter = new ModelCommandArbiter();
     const cmd = transformedCmd();
 
-    assert.equal(arbiter.admit(cmd), cmd);
+    assert.equal(admitted(arbiter, cmd), cmd);
   });
 
   it("accepts a later timestamp and rejects an earlier one, per uuid", () => {
@@ -112,24 +126,23 @@ describe("ModelCommandArbiter.admit / record", () => {
     const later = transformedCmd({ clientId: "B", timestamp: 1500 });
     const stale = transformedCmd({ clientId: "C", timestamp: 500 });
 
-    assert.notEqual(arbiter.admit(first), null);
-    arbiter.record(first);
+    assert.notEqual(admitted(arbiter, first), null);
+    commit(arbiter, first);
 
-    assert.notEqual(arbiter.admit(later), null);
-    arbiter.record(later);
+    assert.notEqual(admitted(arbiter, later), null);
+    commit(arbiter, later);
 
-    assert.equal(arbiter.admit(stale), null);
+    assert.equal(admitted(arbiter, stale), null);
   });
 
   it("never conflicts across different uuids", () => {
     const arbiter = new ModelCommandArbiter();
     const groupA = transformedCmd({ uuid: "a", clientId: "A", timestamp: 900 });
-    arbiter.admit(groupA);
-    arbiter.record(groupA);
+    commit(arbiter, groupA);
 
     const groupB = transformedCmd({ uuid: "b", clientId: "B", timestamp: 100 });
 
-    assert.notEqual(arbiter.admit(groupB), null);
+    assert.notEqual(admitted(arbiter, groupB), null);
   });
 
   it("always admits unarbitrated actions regardless of prior state", () => {
@@ -142,8 +155,8 @@ describe("ModelCommandArbiter.admit / record", () => {
       timestamp: 1
     };
 
-    assert.notEqual(arbiter.admit(removed), null);
-    arbiter.record(removed);
-    assert.notEqual(arbiter.admit(removed), null);
+    assert.notEqual(admitted(arbiter, removed), null);
+    commit(arbiter, removed);
+    assert.notEqual(admitted(arbiter, removed), null);
   });
 });

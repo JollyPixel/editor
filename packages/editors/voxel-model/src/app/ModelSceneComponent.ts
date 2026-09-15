@@ -96,8 +96,10 @@ export class ModelSceneComponent extends ActorComponent {
           camera: this.#camera.threeCamera as THREE.PerspectiveCamera
         });
 
-      this.#modelSync = new ModelSyncClient({ room: this.#room });
-      this.#modelSync.attach(this.#modelManager);
+      this.#modelSync = new ModelSyncClient({
+        room: this.#room,
+        modelManager: this.#modelManager
+      });
       this.#modelSync.on("snapshot", this.#onModelSnapshotApplied);
 
       this.#transformGhosts = this.actor.world

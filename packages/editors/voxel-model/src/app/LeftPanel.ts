@@ -10,16 +10,22 @@ import { state, query } from "lit/decorators.js";
 import {
   type Mode,
   type PixelArtCanvas,
-  type PixelArtCanvasOptions,
-  type PixelNetworkCommand,
-  type PixelServerMessage
+  type PixelArtCanvasOptions
 } from "@jolly-pixel/pixel-draw.renderer";
 import { type PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 import type * as network from "@jolly-pixel/network";
+import {
+  PixelCollaboration,
+  type PixelNetworkCommand,
+  type PixelServerMessage
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PixelCollaborationSession } from "../features/texture-uv/PixelCollaborationSession.ts";
+import {
+  peerColor,
+  readUsername
+} from "../collaboration/identity.ts";
 import "./tabs/Build.ts";
 
 // CONSTANTS
@@ -43,7 +49,7 @@ export class LeftPanel extends LitElement {
   #canvasManager: PixelArtCanvas | null = null;
   #resizeObserver: ResizeObserver | null = null;
   #textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
-  #collaboration = new PixelCollaborationSession();
+  #collaboration: PixelCollaboration | null = null;
 
   static override styles = css`
     :host {
@@ -112,8 +118,20 @@ export class LeftPanel extends LitElement {
 
   #tryAttachCollaboration(): void {
     if (this.#canvasManager && this.#textureRoom) {
-      this.#collaboration.attach(this.#canvasManager, this.#textureRoom);
+      this.#destroyCollaboration();
+      this.#collaboration = new PixelCollaboration({
+        room: this.#textureRoom,
+        canvas: this.#canvasManager,
+        label: (_clientId, profile) => readUsername(profile),
+        color: peerColor
+      });
+      this.#textureRoom.join();
     }
+  }
+
+  #destroyCollaboration(): void {
+    this.#collaboration?.destroy();
+    this.#collaboration = null;
   }
 
   override updated(
@@ -128,7 +146,7 @@ export class LeftPanel extends LitElement {
     super.disconnectedCallback();
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = null;
-    this.#collaboration.destroy();
+    this.#destroyCollaboration();
   }
 
   #canvasModeForTab(

@@ -30,7 +30,7 @@ export interface PeerFrustumsOptions {
 }
 
 export class PeerFrustums extends ActorComponent {
-  #sync: PeerFrustumSync<ModelNetworkCommand, ModelServerMessage>;
+  #sync: PeerFrustumSync;
   #camera: THREE.PerspectiveCamera;
 
   constructor(

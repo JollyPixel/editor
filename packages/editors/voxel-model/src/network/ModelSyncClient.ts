@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import * as network from "@jolly-pixel/network/client";
+import {
+  CommandSync,
+  type Room
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type ModelManager from "../features/groups/ModelManager.ts";
@@ -18,38 +21,48 @@ import type {
 } from "./types.ts";
 
 export interface ModelSyncClientOptions {
-  room: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  room: Room<ModelNetworkCommand, ModelServerMessage>;
+  modelManager: ModelManager;
 }
 
-export class ModelSyncClient extends network.SyncAdapter<
-  ModelManager,
-  ModelHookEvent,
+export class ModelSyncClient extends CommandSync<
   ModelNetworkCommand,
   ModelNodeJSON[]
 > {
+  #modelManager: ModelManager;
+  #previousHandler: ModelHookListener | undefined;
+
+  #handleModelUpdated = (
+    event: ModelHookEvent
+  ): void => {
+    this.#previousHandler?.(event);
+    this.send(event);
+  };
+
   constructor(
     options: ModelSyncClientOptions
   ) {
     super(options.room);
+    const { modelManager } = options;
+
+    this.#modelManager = modelManager;
+    this.#previousHandler = modelManager.onModelUpdated;
+    modelManager.onModelUpdated = this.#handleModelUpdated;
+    this.on("snapshot", (snapshot) => this.#applySnapshot(snapshot));
+    this.on("command", (command) => this.#applyRemote(command));
   }
 
-  protected getHandler(
-    target: ModelManager
-  ): ModelHookListener | undefined {
-    return target.onModelUpdated;
+  override destroy(): void {
+    this.#modelManager.onModelUpdated = this.#previousHandler;
+    super.destroy();
+    this.room.leave();
   }
 
-  protected setHandler(
-    target: ModelManager,
-    fn: ModelHookListener | undefined
-  ): void {
-    target.onModelUpdated = fn;
-  }
-
-  protected applySnapshot(
-    target: ModelManager,
+  #applySnapshot(
     snapshot: ModelNodeJSON[]
   ): void {
+    const target = this.#modelManager;
+
     target.silently(() => {
       target.disposeAll();
 
@@ -73,11 +86,10 @@ export class ModelSyncClient extends network.SyncAdapter<
     });
   }
 
-  protected applyRemoteCommand(
-    target: ModelManager,
-    cmd: ModelNetworkCommand
+  #applyRemote(
+    command: ModelNetworkCommand
   ): void {
-    target.applyRemoteCommand(cmd);
-    this.notifyLocal(cmd);
+    this.#modelManager.applyRemoteCommand(command);
+    this.#previousHandler?.(command);
   }
 }

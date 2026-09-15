@@ -39,7 +39,9 @@ export class ModelSyncServer extends network.Extension<ModelNetworkCommand> {
   }
 
   override onClientConnect(
-    client: network.ClientHandle
+    client: network.ClientHandle,
+    _peer: network.RoomPeer,
+    _context: network.RoomContext
   ): void {
     client.send({
       type: "snapshot",
@@ -64,16 +66,17 @@ export class ModelSyncServer extends network.Extension<ModelNetworkCommand> {
       return;
     }
 
-    if (admitted.action !== "group-added" && !this.#nodes.has(admitted.uuid)) {
+    const { command } = admitted;
+    if (command.action !== "group-added" && !this.#nodes.has(command.uuid)) {
       return;
     }
 
-    applyModelCommand(this.#nodes, admitted);
-    this.#arbiter.record(admitted);
+    applyModelCommand(this.#nodes, command);
+    admitted.commit();
 
     context.room.broadcast({
       type: "command",
-      data: cmd
+      data: command
     });
   }
 

@@ -21,6 +21,7 @@
     "#src/*": "./src/*"
   },
   "dependencies": {
+    "@jolly-pixel/asset.pixel-art": "1.0.0",
     "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/editor.pixel-art": "1.1.0",
     "@jolly-pixel/engine": "5.0.0",

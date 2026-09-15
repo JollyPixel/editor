@@ -23,19 +23,10 @@ export class ModelCommandArbiter {
 
   admit<TCommand extends ModelNetworkCommand>(
     command: TCommand
-  ): TCommand | null {
+  ): network.Admission<TCommand> | null {
     const key = ModelCommandArbiter.key(command);
 
-    return this.#tracker.resolve(key, command) === "reject" ? null : command;
-  }
-
-  record(
-    command: ModelNetworkCommand
-  ): void {
-    this.#tracker.record(
-      ModelCommandArbiter.key(command),
-      command
-    );
+    return this.#tracker.admit(command, key === null ? [] : [key]);
   }
 
   static key(

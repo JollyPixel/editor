@@ -21,3 +21,7 @@ export {
   ModelSyncClient,
   type ModelSyncClientOptions
 } from "./ModelSyncClient.ts";
+export {
+  PixelSyncServer,
+  type PixelSyncServerOptions
+} from "./PixelSyncServer.ts";

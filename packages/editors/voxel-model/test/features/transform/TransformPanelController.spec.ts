@@ -7,7 +7,10 @@ import * as THREE from "three";
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 // Import Internal Dependencies
-import { TransformPanelController, type TransformMode } from "#src/features/transform/TransformPanelController.ts";
+import {
+  TransformPanelController,
+  type TransformMode
+} from "#src/features/transform/TransformPanelController.ts";
 import type GroupManager from "#src/features/groups/GroupManager.ts";
 
 class TestHost implements ReactiveControllerHost {

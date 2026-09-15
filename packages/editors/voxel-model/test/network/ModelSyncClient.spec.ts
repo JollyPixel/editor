@@ -89,13 +89,11 @@ const kTransform = {
   rotation: { x: 0, y: 0, z: 0 }
 };
 
-describe("ModelSyncClient — attach", () => {
+describe("ModelSyncClient — construction", () => {
   it("sets modelManager.onModelUpdated", () => {
     const manager = createModelManager();
     const room = createMockRoom();
-    const client = new ModelSyncClient({ room });
-
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
 
     assert.notEqual(manager.onModelUpdated, undefined);
   });
@@ -103,8 +101,7 @@ describe("ModelSyncClient — attach", () => {
   it("sends a stamped command when a local mutation fires the hook", () => {
     const manager = createModelManager();
     const room = createMockRoom("client-A");
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
 
     manager.addGroup({ name: "Torso" });
 
@@ -121,8 +118,7 @@ describe("ModelSyncClient — snapshot", () => {
   it("rebuilds groups at the right parent from a flat snapshot, in any order", () => {
     const manager = createModelManager();
     const room = createMockRoom();
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
 
     const snapshot: ModelNodeJSON[] = [
       { uuid: "child", name: "Arm", parentUuid: "parent", ...kTransform },
@@ -140,8 +136,7 @@ describe("ModelSyncClient — snapshot", () => {
   it("does not send commands while rebuilding from a snapshot", () => {
     const manager = createModelManager();
     const room = createMockRoom();
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
 
     room.simulateSnapshot([
       { uuid: "a", name: "A", parentUuid: null, ...kTransform }
@@ -153,8 +148,7 @@ describe("ModelSyncClient — snapshot", () => {
   it("replaces whatever groups already existed locally", () => {
     const manager = createModelManager();
     const room = createMockRoom();
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
     manager.addGroup({ name: "Stale" });
 
     room.simulateSnapshot([
@@ -168,8 +162,7 @@ describe("ModelSyncClient — snapshot", () => {
   it("flips ready and emits it once a snapshot is applied", () => {
     const manager = createModelManager();
     const room = createMockRoom();
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    const client = new ModelSyncClient({ room, modelManager: manager });
 
     let readyCount = 0;
     client.on("ready", () => readyCount++);
@@ -186,8 +179,7 @@ describe("ModelSyncClient — remote commands", () => {
   it("applies a remote command without re-sending it", () => {
     const manager = createModelManager();
     const room = createMockRoom("client-A");
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
 
     room.simulateCommand({
       action: "group-added",
@@ -206,8 +198,7 @@ describe("ModelSyncClient — remote commands", () => {
   it("ignores a command that echoes back the local client's own id", () => {
     const manager = createModelManager();
     const room = createMockRoom("client-A");
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
 
     room.simulateCommand({
       action: "group-added",
@@ -222,14 +213,13 @@ describe("ModelSyncClient — remote commands", () => {
     assert.equal(manager.getGroupByUUID("echo-uuid"), undefined);
   });
 
-  it("notifies the local (pre-attach) handler so UI observers still see the change", () => {
+  it("notifies the local (pre-construction) handler so UI observers still see the change", () => {
     const manager = createModelManager();
     const room = createMockRoom("client-A");
     const seen: string[] = [];
     manager.onModelUpdated = (event) => seen.push(event.action);
 
-    const client = new ModelSyncClient({ room });
-    client.attach(manager);
+    new ModelSyncClient({ room, modelManager: manager });
 
     room.simulateCommand({
       action: "group-added",
