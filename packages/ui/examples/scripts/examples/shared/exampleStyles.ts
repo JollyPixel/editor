@@ -284,6 +284,11 @@ export const exampleStyles = `
   .tree-demo jolly-tree {
     flex: 1 1 auto;
     min-width: 0;
+    min-height: 260px;
+    padding: var(--jolly-space-2);
+    border: 1px solid var(--jolly-border);
+    border-radius: var(--jolly-radius-md);
+    background: var(--jolly-surface-sunken);
   }
 
   .tree-demo-options {

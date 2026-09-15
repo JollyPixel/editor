@@ -17,6 +17,7 @@ export const treeStyles = css`
 
   .rows {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
   }
 
@@ -29,14 +30,6 @@ export const treeStyles = css`
     padding-inline-end: var(--jolly-space-1, 4px);
     border-radius: var(--jolly-radius-sm, 2px);
     cursor: default;
-  }
-
-  .row:hover {
-    background: var(--jolly-control-bg-hover, ${kFallback.controlBg});
-  }
-
-  .row[aria-selected="true"] {
-    background: var(--jolly-control-bg-focus, ${kFallback.controlBg});
   }
 
   .row:focus-visible {
@@ -77,6 +70,23 @@ export const treeStyles = css`
 
   .row[aria-expanded="true"] .toggle jolly-icon {
     transform: rotate(90deg);
+  }
+
+  .content {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: var(--jolly-space-1, 4px);
+    border-radius: inherit;
+  }
+
+  .row:hover .content {
+    background: var(--jolly-control-bg-hover, ${kFallback.controlBg});
+  }
+
+  .row[aria-selected="true"] .content {
+    background: var(--jolly-control-bg-focus, ${kFallback.controlBg});
   }
 
   .node-icon {
@@ -182,7 +192,7 @@ export const treeStyles = css`
 
   .row[data-drop="above"]::after,
   .row[data-drop="below"]::after {
-    inset-inline: var(--jolly-tree-row-indent, 0px) 0;
+    inset-inline: var(--jolly-tree-drop-indent, 0px) 0;
     height: 1px;
     background: var(--jolly-accent-fill, ${kFallback.focusRing});
     opacity: 1;
@@ -198,7 +208,7 @@ export const treeStyles = css`
 
   .row[data-drop="inside"]::after {
     inset-block: 0;
-    inset-inline: var(--jolly-tree-row-indent, 0px) 0;
+    inset-inline: var(--jolly-tree-drop-indent, 0px) 0;
     border: 1px solid var(--jolly-accent-fill, ${kFallback.focusRing});
     border-radius: inherit;
     opacity: 1;

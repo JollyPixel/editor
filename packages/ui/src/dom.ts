@@ -19,6 +19,12 @@ export function isButtonElement(
   return target instanceof HTMLButtonElement;
 }
 
+export function originatesInButton(
+  target: EventTarget | null
+): boolean {
+  return target instanceof Element && target.closest("button") !== null;
+}
+
 export function isSlotElement(
   target: EventTarget | null
 ): target is HTMLSlotElement {

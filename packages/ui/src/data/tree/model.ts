@@ -175,6 +175,12 @@ export function hasChildren<TData>(
   return node.children !== undefined;
 }
 
+export function isExpandable<TData>(
+  node: TreeNode<TData>
+): boolean {
+  return node.children !== undefined && node.children.length > 0;
+}
+
 export function flattenVisible<TData>(
   nodes: readonly TreeNode<TData>[],
   expanded: ReadonlySet<string>
@@ -348,6 +354,110 @@ export function resolveDropDepth(
   return Math.min(Math.max(depth, 0), chainLength - 1);
 }
 
+export function resolveEdgeDropRows<TData>(
+  rows: readonly FlatTreeRow<TData>[],
+  movedIds: readonly string[],
+  snapshot: TreeSnapshot<TData>
+): {
+  firstRow: FlatTreeRow<TData> | undefined;
+  lastRow: FlatTreeRow<TData> | undefined;
+} {
+  const availableRows = rows.filter(
+    (row) => !movedIds.some(
+      (movedId) => snapshot.isSelfOrDescendant(movedId, row.node.id)
+    )
+  );
+
+  return {
+    firstRow: availableRows[0],
+    lastRow: availableRows[availableRows.length - 1]
+  };
+}
+
+export interface ResolveRootDropOptions<TData> {
+  nodes: TreeNode<TData>[];
+  movedIds: string[];
+  rowId: string;
+  where: "above" | "below";
+  accept?: TreeDropAccept | null;
+}
+
+export function resolveRootDropTarget<TData>(
+  options: ResolveRootDropOptions<TData>,
+  snapshot = new TreeSnapshot(options.nodes)
+): DepthDropTarget | null {
+  const {
+    movedIds,
+    rowId,
+    where,
+    accept = null
+  } = options;
+  const targetId = snapshot.ancestorChain(rowId)[0];
+
+  return canDrop({
+    nodes: options.nodes,
+    movedIds,
+    targetId,
+    where,
+    accept
+  }, snapshot) ? {
+      targetId,
+      where
+    } :
+    null;
+}
+
+export interface ResolveEdgeDropOptions<TData> {
+  nodes: TreeNode<TData>[];
+  movedIds: string[];
+  rows: readonly FlatTreeRow<TData>[];
+  where: "above" | "below";
+  accept?: TreeDropAccept | null;
+}
+
+export function resolveEdgeDropTarget<TData>(
+  options: ResolveEdgeDropOptions<TData>,
+  snapshot = new TreeSnapshot(options.nodes)
+): DropIndicatorTarget | null {
+  const {
+    nodes,
+    movedIds,
+    rows,
+    where,
+    accept = null
+  } = options;
+  const edgeRow = where === "above" ? rows[0] : rows[rows.length - 1];
+  if (edgeRow === undefined) {
+    return null;
+  }
+
+  const direct = resolveRootDropTarget({ nodes, movedIds, rowId: edgeRow.node.id, where, accept }, snapshot);
+  if (direct !== null) {
+    return { ...direct, anchorId: edgeRow.node.id };
+  }
+
+  const { firstRow, lastRow } = resolveEdgeDropRows(rows, movedIds, snapshot);
+  const fallbackRow = where === "above" ? firstRow : lastRow;
+  if (fallbackRow === undefined) {
+    return null;
+  }
+
+  const fallback = resolveRootDropTarget({
+    nodes,
+    movedIds,
+    rowId: fallbackRow.node.id,
+    where,
+    accept
+  }, snapshot);
+  if (fallback === null) {
+    return null;
+  }
+
+  const anchorId = movedIds.includes(edgeRow.node.id) ? edgeRow.node.id : fallbackRow.node.id;
+
+  return { ...fallback, anchorId };
+}
+
 export function canDrop<TData>(
   options: ResolveReparentOptions<TData>,
   snapshot = new TreeSnapshot(options.nodes)
@@ -373,6 +483,49 @@ export function canDrop<TData>(
     targetId,
     where
   });
+}
+
+export interface DropIndicatorRow {
+  rowId: string;
+  where: TreeDropWhere;
+  depth: number;
+}
+
+export interface DropIndicatorTarget {
+  targetId: string;
+  anchorId: string;
+  where: TreeDropWhere;
+}
+
+export function resolveDropIndicatorRow<TData>(
+  snapshot: TreeSnapshot<TData>,
+  target: DropIndicatorTarget
+): DropIndicatorRow | null {
+  const depth = snapshot.row(target.targetId)?.depth;
+
+  return depth === undefined ?
+    null :
+    { rowId: target.anchorId, where: target.where, depth };
+}
+
+export interface RowDropStyle {
+  drop: TreeDropWhere | null;
+  dropIndent: string;
+}
+
+export function resolveRowDropStyle(
+  nodeId: string,
+  rowIndent: string,
+  dropIndicator: DropIndicatorRow | null
+): RowDropStyle {
+  if (dropIndicator === null || dropIndicator.rowId !== nodeId) {
+    return { drop: null, dropIndent: rowIndent };
+  }
+
+  return {
+    drop: dropIndicator.where,
+    dropIndent: `calc(${dropIndicator.depth} * var(--jolly-tree-indent, 16px))`
+  };
 }
 
 export function resolveDepthDropTarget<TData>(

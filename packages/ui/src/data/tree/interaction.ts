@@ -7,6 +7,10 @@ export interface TreeDropTarget {
   where: TreeDropWhere;
 }
 
+export interface TreePointerDropPreview extends TreeDropTarget {
+  anchorId: string;
+}
+
 export type TreeInteraction =
   | {
     kind: "idle";
@@ -19,7 +23,7 @@ export type TreeInteraction =
   | {
     kind: "pointer-move";
     movedIds: string[];
-    preview: TreeDropTarget | null;
+    preview: TreePointerDropPreview | null;
   }
   | {
     kind: "keyboard-move";
