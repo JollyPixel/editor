@@ -13,8 +13,10 @@ import {
 
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
-import { pixelProtocols } from "../network/PixelCommand.schema.ts";
-import { isPixelNetworkCommand } from "../network/PixelCommandValidator.ts";
+import {
+  pixelCommandProtocol,
+  pixelSnapshotSchema
+} from "../network/PixelCommand.schema.ts";
 import { PixelArtState } from "./PixelArtState.ts";
 import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
 import type { PixelNetworkCommand } from "../network/types.ts";
@@ -90,10 +92,7 @@ export function pixelArtAssetHandler(
 
     commands: {
       eventType: PIXEL_ART_COMMAND,
-
-      parse(payload) {
-        return isPixelNetworkCommand(payload) ? payload : null;
-      },
+      protocol: pixelCommandProtocol,
 
       apply(state, command) {
         applyCommandToBuffer(state.buffer, command);
@@ -103,7 +102,7 @@ export function pixelArtAssetHandler(
         const arbiter = new PixelCommandArbiter({ conflictResolver });
 
         return {
-          protocols: pixelProtocols,
+          snapshotSchema: pixelSnapshotSchema,
           snapshot: () => pixelArtSnapshot(state.buffer),
           arbitrate: (command, clientId) => arbiter.admit(
             state.buffer,

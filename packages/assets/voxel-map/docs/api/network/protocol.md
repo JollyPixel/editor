@@ -57,15 +57,6 @@ sequence of moves in the room's order converge. Two peers moving different
 blocks at the same instant do not contend, and their orders can differ until
 the next snapshot, matching how `layer-moved` behaves.
 
-`isVoxelBlockCommand()` narrows one, beside `isVoxelNetworkCommand()` in
-`VoxelCommandValidator`:
-
-```ts
-function isVoxelBlockCommand(
-  command: VoxelNetworkCommand
-): command is VoxelBlockCommand & network.NetworkCommandHeader;
-```
-
 `VOXEL_BLOCK_HOOK_ACTIONS` lists every block action name for a rights table.
 
 Block commands are keyed `block:<id>` for conflict resolution, so concurrent
@@ -74,15 +65,15 @@ edits contend per block and last write wins.
 ## Validation
 
 ```ts
-function isVoxelNetworkCommand(
-  value: unknown
-): value is VoxelNetworkCommand;
+const voxelCommandProtocol: MessageProtocol;
+const voxelWorldSchema: JSONSchema;
 ```
 
-The check is deliberately shallow. It verifies only that the value is a
-non-null object with `action` and `clientId` properties. Validate untrusted
-payloads before they reach the asset room when it crosses a trust
-boundary.
+`voxelCommandProtocol` is the JSON Schema of every `VoxelNetworkCommand`, one
+variant per action. The asset room validates live messages and replayed events
+against it, and a rights table reads its action names. `voxelWorldSchema`
+checks the `VoxelWorldJSON` header only; `parseVoxelDocument()` owns the
+document itself.
 
 ## Headless application
 

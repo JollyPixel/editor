@@ -7,6 +7,7 @@ import type {
   AssetCommands,
   AssetRoomBinding
 } from "../kinds/AssetKindHandler.ts";
+import { parseAssetCommand } from "../kinds/parseAssetCommand.ts";
 import { actorOf } from "../events/AssetEvents.ts";
 import {
   assetRoomDeletedSchema,
@@ -35,7 +36,7 @@ export interface AssetArbitration<TCommand = unknown> {
 }
 
 export interface AssetLiveProtocol<TCommand = unknown> {
-  readonly protocols: network.MessageProtocols;
+  readonly snapshotSchema: network.JSONSchema;
 
   snapshot(): unknown;
 
@@ -73,7 +74,10 @@ export class AssetRoomExtension<
 
     this.id = binding.roomId;
     this.name = binding.kind;
-    this.protocols = withRoomNotices(protocol.protocols);
+    this.protocols = assetRoomProtocols(
+      commands.protocol,
+      protocol.snapshotSchema
+    );
     this.#assetId = binding.assetId;
     this.#commands = commands;
     this.#protocol = protocol;
@@ -124,7 +128,7 @@ export class AssetRoomExtension<
       return;
     }
 
-    const command = this.#commands.parse(payload);
+    const command = parseAssetCommand(this.#commands, payload);
     if (command === null) {
       return;
     }
@@ -160,16 +164,17 @@ export class AssetRoomExtension<
   }
 }
 
-function withRoomNotices(
-  protocols: network.MessageProtocols
+function assetRoomProtocols(
+  command: network.MessageProtocol,
+  snapshot: network.JSONSchema
 ): network.MessageProtocols {
-  const { outbound } = protocols;
-  if (outbound === null) {
-    return protocols;
-  }
+  const outbound = network.serverMessageProtocol({
+    command,
+    snapshot
+  });
 
   return {
-    inbound: protocols.inbound,
+    inbound: command,
     outbound: {
       ...outbound,
       schema: {

@@ -15,7 +15,6 @@ import type {
   VoxelServerMessage,
   VoxelWorldReplaceCommand
 } from "./types.ts";
-import { isVoxelBlockCommand } from "./VoxelCommandValidator.ts";
 
 export interface VoxelSyncClientOptions {
   room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
@@ -88,30 +87,35 @@ export class VoxelSyncClient extends network.SyncAdapter<
     engine: VoxelEngine,
     cmd: VoxelNetworkCommand
   ): void {
-    if (cmd.action === "world-replace") {
-      return;
+    switch (cmd.action) {
+      case "world-replace":
+        return;
+      case "block-defined":
+        this.#applyBlockRemotely(() => engine.defineBlock(cmd.block));
+        break;
+      case "block-removed":
+        this.#applyBlockRemotely(() => engine.removeBlock(cmd.blockId));
+        break;
+      case "block-moved":
+        this.#applyBlockRemotely(
+          () => engine.moveBlock(cmd.blockId, cmd.toIndex)
+        );
+        break;
+      default:
+        engine.applyRemoteCommand(cmd);
+        this.notifyLocal(cmd);
     }
+  }
 
-    if (isVoxelBlockCommand(cmd)) {
-      this.#applyingRemote = true;
-      try {
-        if (cmd.action === "block-removed") {
-          engine.removeBlock(cmd.blockId);
-        }
-        else if (cmd.action === "block-moved") {
-          engine.moveBlock(cmd.blockId, cmd.toIndex);
-        }
-        else {
-          engine.defineBlock(cmd.block);
-        }
-      }
-      finally {
-        this.#applyingRemote = false;
-      }
+  #applyBlockRemotely(
+    apply: () => void
+  ): void {
+    this.#applyingRemote = true;
+    try {
+      apply();
     }
-    else {
-      engine.applyRemoteCommand(cmd);
-      this.notifyLocal(cmd);
+    finally {
+      this.#applyingRemote = false;
     }
   }
 

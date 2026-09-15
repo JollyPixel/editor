@@ -163,6 +163,15 @@ describe("PixelCommandArbiter — pixels", () => {
     assert.strictEqual(accept(arbiter, buffer, stale), null);
   });
 
+  test("rejects a select-edit whose colors do not match its positions", () => {
+    const { arbiter, buffer } = setup();
+
+    assert.strictEqual(accept(arbiter, buffer, command("select-edit", {
+      positions: [{ x: 0, y: 0 }],
+      colors: []
+    })), null);
+  });
+
   test("leaves the buffer untouched", () => {
     const { arbiter, buffer } = setup();
     const before = Uint8ClampedArray.from(buffer.pixels());
@@ -297,5 +306,41 @@ describe("PixelCommandArbiter — uv regions", () => {
     });
 
     assert.strictEqual(accept(arbiter, buffer, stale), null);
+  });
+
+  test("rejects a region whose active face has no geometry", () => {
+    const { arbiter, buffer } = setup();
+    const region = {
+      ...freeRegion("r1"),
+      activeFaces: ["top", "top.1"]
+    };
+
+    assert.strictEqual(accept(arbiter, buffer, command("uv-region-created", { region })), null);
+    assert.strictEqual(accept(arbiter, buffer, command("uv-region-state-changed", { region })), null);
+  });
+
+  test("rejects a compound part outside normalized space", () => {
+    const { arbiter, buffer } = setup();
+    const region = {
+      id: "r1",
+      color: "#f00",
+      state: "free" as const,
+      faces: {
+        right: {
+          shape: "compound" as const,
+          rect: kRect,
+          parts: [{ x: 0.75, y: 0, width: 0.5, height: 1 }]
+        }
+      }
+    };
+
+    assert.strictEqual(accept(arbiter, buffer, command("uv-region-created", { region })), null);
+  });
+
+  test("accepts a consistent region", () => {
+    const { arbiter, buffer } = setup();
+    const created = command("uv-region-created", { region: freeRegion("r1") });
+
+    assert.deepStrictEqual(accept(arbiter, buffer, created), created);
   });
 });

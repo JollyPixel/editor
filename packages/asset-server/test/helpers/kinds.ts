@@ -8,7 +8,10 @@ import {
   bytes,
   text
 } from "./bytes.ts";
-import { counterCommandProtocols } from "./protocols.ts";
+import {
+  counterCommandProtocol,
+  counterSnapshotSchema
+} from "./protocols.ts";
 
 export const COUNTER_INCREMENTED = "counter.incremented";
 
@@ -20,18 +23,9 @@ export interface CounterCommand {
   action: "increment";
 }
 
-export function isCounterCommand(
-  payload: unknown
-): payload is CounterCommand {
-  return typeof payload === "object" &&
-    payload !== null &&
-    "action" in payload &&
-    payload.action === "increment";
-}
-
 const kCounterCommands: AssetCommands<CounterState, CounterCommand> = {
   eventType: COUNTER_INCREMENTED,
-  parse: (payload) => (isCounterCommand(payload) ? payload : null),
+  protocol: counterCommandProtocol,
   apply: (state) => {
     state.value += 1;
   }
@@ -76,7 +70,7 @@ export function liveCounterHandler(
       ...kCounterCommands,
       live: (binding) => {
         return {
-          protocols: counterCommandProtocols,
+          snapshotSchema: counterSnapshotSchema,
           snapshot: () => {
             return { value: binding.state.value };
           },

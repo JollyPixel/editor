@@ -54,12 +54,10 @@ export class SelectionGhostSync extends PeerPresenceGhostSync<SelectionGhostPayl
   };
 
   #onSelectionCommitted = (): void => {
-    // Drop queued ticks after commit so cleared ghosts cannot reappear.
     this.cancelPending();
   };
 
   #onSelectionIdle = (): void => {
-    // No command follows, so clear presence without waiting for timeout.
     this.cancelPending();
     this.clearPresence();
   };
@@ -123,7 +121,6 @@ export class SelectionGhostSync extends PeerPresenceGhostSync<SelectionGhostPayl
         mask: null,
         color
       });
-      // A new marquee has no source footprint to blank.
       canvas.peerPresence.floatingSelections.remove(clientId);
 
       return;
@@ -173,7 +170,6 @@ export class SelectionGhostSync extends PeerPresenceGhostSync<SelectionGhostPayl
       case "global-fill":
       case "resized":
       case "texture-replaced":
-        // Whole-canvas ops have no positions; clear all ghosts.
         this.clearLeases();
         this.clearAllGhosts();
         break;

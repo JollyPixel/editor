@@ -6,25 +6,20 @@ import type {
 } from "@jolly-pixel/asset-server/kinds";
 import {
   decodeVoxelDocument,
-  encodeVoxelDocument,
-  VOXEL_BLOCK_HOOK_ACTIONS,
-  VOXEL_LAYER_HOOK_ACTIONS
+  encodeVoxelDocument
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { voxelProtocols } from "../network/VoxelCommand.schema.ts";
-import { isVoxelNetworkCommand } from "../network/VoxelCommandValidator.ts";
+import {
+  voxelCommandProtocol,
+  voxelWorldSchema
+} from "../network/VoxelCommand.schema.ts";
 import { VoxelMapState } from "./VoxelMapState.ts";
 import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
 export const VOXEL_MAP_KIND = "voxelmap";
 export const VOXEL_MAP_COMMAND = "voxelmap.command";
-export const VOXEL_MAP_ACTIONS: readonly string[] = [
-  ...VOXEL_LAYER_HOOK_ACTIONS,
-  ...VOXEL_BLOCK_HOOK_ACTIONS,
-  "world-replace"
-];
 
 // CONSTANTS
 const kDefaultMatch = ["**/*.voxelmap.json"] as const;
@@ -101,10 +96,7 @@ export function voxelMapAssetHandler(
 
     commands: {
       eventType: VOXEL_MAP_COMMAND,
-
-      parse(payload) {
-        return isVoxelNetworkCommand(payload) ? payload : null;
-      },
+      protocol: voxelCommandProtocol,
 
       apply(state, command) {
         state.applyCommand(command);
@@ -114,7 +106,7 @@ export function voxelMapAssetHandler(
         const arbiter = new VoxelCommandArbiter({ conflictResolver });
 
         return {
-          protocols: voxelProtocols,
+          snapshotSchema: voxelWorldSchema,
           snapshot: () => state.toJSON(),
           arbitrate: (command) => arbiter.admit(command),
           broadcast(command) {

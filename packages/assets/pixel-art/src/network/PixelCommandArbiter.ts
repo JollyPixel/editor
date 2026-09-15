@@ -2,6 +2,7 @@
 import * as network from "@jolly-pixel/network";
 import {
   DEFAULT_UV_SLOTS,
+  isUVRegionData,
   uvTargetKey,
   type PixelBuffer,
   type Vec2
@@ -101,9 +102,16 @@ export class PixelCommandArbiter {
         return this.#admitStroke(command);
       case "select-edit":
         return this.#admitSelectEdit(command);
+      case "uv-region-created":
+        return isUVRegionData(command.metadata.region) ?
+          settled(command) :
+          null;
+      case "uv-region-state-changed":
+        return isUVRegionData(command.metadata.region) ?
+          this.#admitUvRegion(buffer, command) :
+          null;
       case "uv-region-moved":
       case "uv-region-deleted":
-      case "uv-region-state-changed":
         return this.#admitUvRegion(buffer, command);
       case "resized":
       case "texture-replaced":
@@ -139,6 +147,11 @@ export class PixelCommandArbiter {
   #admitSelectEdit(
     command: PixelSelectEditCommand
   ): PixelArbitration | null {
+    const { metadata } = command;
+    if (metadata.positions.length !== metadata.colors.length) {
+      return null;
+    }
+
     const accepted = this.#acceptedIndices(command);
     if (accepted.length === 0) {
       return null;

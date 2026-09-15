@@ -173,10 +173,6 @@ export abstract class PeerPresenceGhostSync<TPayload> {
     this.#pendingPayload = undefined;
   }
 
-  /**
-   * Clears presence for this ghost stream without waiting for the leaser
-   * timeout, for a local gesture that ended without a command to reconcile.
-   */
   protected clearPresence(): void {
     this.#room.updatePresence({
       [this.presenceKey]: null

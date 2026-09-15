@@ -4,10 +4,8 @@ import {
   commandHeaderProperties,
   defineMessageProtocol,
   defineSchema,
-  serverMessageProtocol,
   type JSONSchema,
-  type MessageProtocol,
-  type MessageProtocols
+  type MessageProtocol
 } from "@jolly-pixel/network";
 
 // CONSTANTS
@@ -51,6 +49,11 @@ const kRgba8Schema = defineSchema({
   ]
 });
 
+const kUVSlotSchema = defineSchema({
+  type: "string",
+  minLength: 1
+});
+
 const kTextureRectSchema = defineSchema({
   type: "object",
   properties: {
@@ -67,24 +70,134 @@ const kTextureRectSchema = defineSchema({
   ]
 });
 
-const kUVRegionSchema = defineSchema({
+const kNormalizedRectSchema = defineSchema({
   type: "object",
   properties: {
-    id: { type: "string", minLength: 1 },
-    color: { type: "string" },
-    name: { type: "string" },
-    state: { enum: ["stacked", "unfolded", "free"] }
+    x: { type: "number", minimum: 0 },
+    y: { type: "number", minimum: 0 },
+    width: { type: "number", exclusiveMinimum: 0, maximum: 1 },
+    height: { type: "number", exclusiveMinimum: 0, maximum: 1 }
   },
   required: [
-    "id",
-    "color",
-    "state"
+    "x",
+    "y",
+    "width",
+    "height"
   ]
 });
 
+const kTriangleCornerSchema = defineSchema({
+  enum: [
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right"
+  ]
+});
+
+function triangleSchema(
+  rect: JSONSchema
+): JSONSchema {
+  return {
+    type: "object",
+    properties: {
+      shape: { const: "triangle" },
+      corner: kTriangleCornerSchema,
+      rect
+    },
+    required: [
+      "shape",
+      "corner",
+      "rect"
+    ]
+  };
+}
+
+const kUVGeometrySchema: JSONSchema = {
+  oneOf: [
+    kTextureRectSchema,
+    triangleSchema(kTextureRectSchema),
+    {
+      type: "object",
+      properties: {
+        shape: { const: "compound" },
+        rect: kTextureRectSchema,
+        parts: {
+          type: "array",
+          minItems: 1,
+          items: {
+            oneOf: [
+              kNormalizedRectSchema,
+              triangleSchema(kNormalizedRectSchema)
+            ]
+          }
+        }
+      },
+      required: [
+        "shape",
+        "rect",
+        "parts"
+      ]
+    }
+  ]
+};
+
+const kUVFacesSchema: JSONSchema = {
+  type: "object",
+  minProperties: 1,
+  propertyNames: kUVSlotSchema,
+  additionalProperties: kUVGeometrySchema
+};
+
+const kUVRegionIdentityProperties = {
+  id: { type: "string", minLength: 1 },
+  color: { type: "string" },
+  name: { type: "string" },
+  activeFaces: {
+    type: "array",
+    minItems: 1,
+    items: kUVSlotSchema
+  }
+} as const;
+
+const kUVRegionSchema: JSONSchema = {
+  oneOf: [
+    {
+      type: "object",
+      properties: {
+        ...kUVRegionIdentityProperties,
+        state: { const: "stacked" },
+        rect: kTextureRectSchema,
+        faces: kUVFacesSchema,
+        stackedFace: kUVSlotSchema
+      },
+      required: [
+        "id",
+        "color",
+        "state",
+        "rect"
+      ]
+    },
+    {
+      type: "object",
+      properties: {
+        ...kUVRegionIdentityProperties,
+        state: { enum: ["unfolded", "free"] },
+        faces: kUVFacesSchema
+      },
+      required: [
+        "id",
+        "color",
+        "state",
+        "faces"
+      ]
+    }
+  ]
+};
+
 function pixelCommand(
   action: string,
-  metadata: JSONSchema
+  properties: Record<string, JSONSchema>
 ): JSONSchema {
   return {
     type: "object",
@@ -92,7 +205,11 @@ function pixelCommand(
       ...commandHeaderProperties,
       seq: { type: "integer", minimum: 0 },
       action: { const: action },
-      metadata,
+      metadata: {
+        type: "object",
+        properties,
+        required: Object.keys(properties)
+      },
       originTimestamp: { type: "number" }
     },
     required: [
@@ -103,52 +220,42 @@ function pixelCommand(
   };
 }
 
-function metadataSchema(
-  properties: Record<string, JSONSchema>
-): JSONSchema {
-  return {
-    type: "object",
-    properties,
-    required: Object.keys(properties)
-  };
-}
-
 export const pixelCommandProtocol: MessageProtocol = defineMessageProtocol({
   schema: {
     oneOf: [
-      pixelCommand("stroke", metadataSchema({
+      pixelCommand("stroke", {
         color: kRgba8Schema,
         positions: { type: "array", items: kVec2Schema }
-      })),
-      pixelCommand("resized", metadataSchema({
+      }),
+      pixelCommand("resized", {
         size: kSizeSchema
-      })),
-      pixelCommand("texture-replaced", metadataSchema({
+      }),
+      pixelCommand("texture-replaced", {
         size: kSizeSchema,
         pixels: { type: "string" }
-      })),
-      pixelCommand("global-fill", metadataSchema({
+      }),
+      pixelCommand("global-fill", {
         fromColor: kRgba8Schema,
         toColor: kRgba8Schema
-      })),
-      pixelCommand("select-edit", metadataSchema({
+      }),
+      pixelCommand("select-edit", {
         positions: { type: "array", items: kVec2Schema },
         colors: { type: "array", items: kRgba8Schema }
-      })),
-      pixelCommand("uv-region-created", metadataSchema({
+      }),
+      pixelCommand("uv-region-created", {
         region: kUVRegionSchema
-      })),
-      pixelCommand("uv-region-deleted", metadataSchema({
+      }),
+      pixelCommand("uv-region-deleted", {
         id: { type: "string" }
-      })),
-      pixelCommand("uv-region-moved", metadataSchema({
+      }),
+      pixelCommand("uv-region-moved", {
         id: { type: "string" },
         face: { type: ["string", "null"], minLength: 1 },
         rect: kTextureRectSchema
-      })),
-      pixelCommand("uv-region-state-changed", metadataSchema({
+      }),
+      pixelCommand("uv-region-state-changed", {
         region: kUVRegionSchema
-      }))
+      })
     ]
   }
 });
@@ -158,18 +265,13 @@ export const pixelSnapshotSchema: JSONSchema = {
   properties: {
     size: kSizeSchema,
     pixels: { type: "string" },
-    uvRegions: { type: "array" }
+    uvRegions: {
+      type: "array",
+      items: kUVRegionSchema
+    }
   },
   required: [
     "size",
     "pixels"
   ]
-};
-
-export const pixelProtocols: MessageProtocols = {
-  inbound: pixelCommandProtocol,
-  outbound: serverMessageProtocol({
-    command: pixelCommandProtocol,
-    snapshot: pixelSnapshotSchema
-  })
 };

@@ -10,6 +10,7 @@ import {
   decodeContent,
   parseAssetEvent
 } from "../events/AssetEvents.ts";
+import { parseAssetCommand } from "./parseAssetCommand.ts";
 
 export function foldAssetEvent<TState, TCommand>(
   handler: AssetKindHandler<TState, TCommand>,
@@ -38,11 +39,14 @@ export function foldAssetEvent<TState, TCommand>(
   }
 
   const { commands } = handler;
-  if (commands === undefined || event.eventType !== commands.eventType) {
+  if (
+    commands === undefined ||
+    event.eventType !== commands.eventType
+  ) {
     return;
   }
 
-  const command = commands.parse(event.eventData);
+  const command = parseAssetCommand(commands, event.eventData);
   if (command !== null) {
     commands.apply(state, command);
   }

@@ -56,8 +56,8 @@ interface AssetRoomBinding<TState> {
 
 ## Commands
 
-A room parses each message with the kind's `commands.parse` and arbitrates it
-through its live protocol.
+A room validates each message against the kind's `commands.protocol` and
+arbitrates it through its live protocol.
 An accepted command is appended to `events`, then committed and broadcast.
 The `network` server never touches the event store.
 
