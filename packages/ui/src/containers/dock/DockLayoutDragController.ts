@@ -6,6 +6,7 @@ import type {
   PaneDragDetail,
   PaneElement
 } from "../pane/Pane.ts";
+import { isPaneGroup } from "../pane-group/PaneGroup.ts";
 import { headerGhost } from "../../interaction/drag/dragGhost.ts";
 import {
   startDragSession,
@@ -22,6 +23,7 @@ export interface ExtractGrab {
 export interface DockLayoutDragOptions {
   docks(): Dock[];
   dock(pane: PaneElement, dock: Dock, index: number): void;
+  stack(pane: PaneElement, dock: Dock, slot: number, index: number): void;
   extract(pane: PaneElement, grab: ExtractGrab): void;
   place(pane: PaneElement, frame: Floating): void;
 }
@@ -50,6 +52,9 @@ export class DockLayoutDragController {
   ): void {
     const { pane } = detail;
     const home = pane.closest("jolly-dock");
+    const group = pane.parentElement !== null && isPaneGroup(pane.parentElement) ?
+      pane.parentElement :
+      null;
     const frame = floatingOf(pane);
     const originX = detail.event.clientX;
     const originY = detail.event.clientY;
@@ -66,8 +71,13 @@ export class DockLayoutDragController {
       ghostLabel: pane.heading || pane.layoutKey,
       ghost: frame === null,
       ghostElement: () => {
+        if (group !== null) {
+          return null;
+        }
+
         const ghost = headerGhost(pane);
         ghost.heading = pane.heading;
+        ghost.icon = pane.icon;
 
         return ghost;
       },
@@ -77,8 +87,10 @@ export class DockLayoutDragController {
           rect: dock.dropZone(),
           candidates: dock.dropCandidates(),
           axis: dock.axis,
-          source: dock === home ? dock.panes().indexOf(pane) : null,
-          line: (index: number) => dock.insertionLine(index)
+          source: dock === home ? dock.slots().indexOf(pane) : null,
+          line: (index: number) => dock.insertionLine(index),
+          stacks: dock.dropStacks(pane),
+          preview: dock.previewZone()
         };
       }),
       probe: frame === null ?
@@ -94,7 +106,10 @@ export class DockLayoutDragController {
           };
         },
       onStart: () => {
-        if (frame === null) {
+        if (group !== null) {
+          group.markDragging(pane.layoutKey);
+        }
+        else if (frame === null) {
           pane.dragging = true;
         }
         else {
@@ -115,7 +130,15 @@ export class DockLayoutDragController {
             (candidate) => candidate.layoutKey === zoneId
           ) ?? null;
 
-        if (dock !== null) {
+        if (dock !== null && result.stack !== null) {
+          this.#options.stack(
+            pane,
+            dock,
+            result.stack.slot,
+            result.stack.index
+          );
+        }
+        else if (dock !== null) {
           this.#options.dock(pane, dock, result.index);
         }
         else if (frame === null) {
@@ -136,6 +159,7 @@ export class DockLayoutDragController {
       onEnd: () => {
         this.#session = null;
         pane.dragging = false;
+        group?.markDragging("");
         if (frame !== null) {
           frame.dragging = false;
         }

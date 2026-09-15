@@ -67,6 +67,12 @@ export const paneStyles = css`
     mask-image: linear-gradient(to right, black, transparent);
   }
 
+  .icon {
+    position: relative;
+    z-index: 1;
+    --jolly-icon-size: 14px;
+  }
+
   .title {
     position: relative;
     z-index: 1;
@@ -85,7 +91,11 @@ export const paneStyles = css`
     opacity: 0.4;
   }
 
-  :host([collapsed]) .content {
+  :host([inactive]) {
+    display: none;
+  }
+
+  :host([collapsed]:not([grouped])) .content {
     display: none;
   }
 

@@ -138,34 +138,45 @@ export * from "./containers/folder/Folder.ts";
 export {
   PaneElement
 } from "./containers/pane/Pane.ts";
+export * from "./containers/pane-group/PaneGroup.ts";
 export * from "./containers/rail/Rail.ts";
 export * from "./containers/tabs/Tab.ts";
 export * from "./containers/tabs/Tabs.ts";
 export * from "./containers/toolbar/Toolbar.ts";
 export {
+  dockPanes,
   emptyLayout,
-  parseLayout,
+  panePlacement,
+  paneVisible,
   reconcileLayout,
-  serializeLayout,
   type DeclaredDock,
+  type DeclaredGroup,
   type DeclaredLayout,
   type DockChange,
   type DockState,
   type FloatingChange,
   type FloatingState,
   type FolderChange,
+  type GroupChange,
   type LayoutChange,
   type LayoutSnapshot,
   type PaneChange,
+  type PaneGroupState,
+  type PanePlacement,
   type PaneState
 } from "./containers/dock/layout.ts";
+export {
+  parseLayout,
+  serializeLayout
+} from "./containers/dock/layoutParser.ts";
 export type {
   ContainerEventMap,
   JollyMoveDetail,
   JollyReorderDetail,
   JollyResizeDetail,
   JollyTabChangeDetail,
-  JollyToggleDetail
+  JollyToggleDetail,
+  PaneVisibilityDetail
 } from "./containers/events.ts";
 
 // Data views

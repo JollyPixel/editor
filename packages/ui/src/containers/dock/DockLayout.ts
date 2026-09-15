@@ -29,18 +29,24 @@ import {
   floatPane,
   movePane,
   panePlacement,
-  parseLayout,
+  paneVisible,
   reconcileLayout,
-  serializeLayout,
+  stackPane,
   type DeclaredLayout,
   type LayoutChange,
-  type LayoutSnapshot
+  type LayoutSnapshot,
+  type PanePlacement
 } from "./layout.ts";
+import {
+  parseLayout,
+  serializeLayout
+} from "./layoutParser.ts";
 import { LayoutProjection } from "./LayoutProjection.ts";
 import type {
   PaneDragDetail,
   PaneElement
 } from "../pane/Pane.ts";
+import { isPaneGroup } from "../pane-group/PaneGroup.ts";
 import { clampToViewport } from "../../geometry/clampToViewport.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { pageNamespace } from "../../storage/keys.ts";
@@ -82,12 +88,22 @@ export class DockLayout extends LitElement {
         index
       ));
     },
+    stack: (pane, dock, slot, index) => {
+      this.#commit(stackPane(
+        this.#snapshot,
+        pane.layoutKey,
+        dock.layoutKey,
+        slot,
+        index
+      ));
+    },
     extract: (pane, grab) => this.#extract(pane, grab),
     place: (pane, frame) => this.#place(pane, frame)
   });
   #applying = false;
   #saveQueued = false;
   #keyboardOrigin: LayoutSnapshot | null = null;
+  #visibility = new Map<string, boolean>();
 
   constructor() {
     super();
@@ -166,6 +182,30 @@ export class DockLayout extends LitElement {
     return cloneLayout(this.#snapshot);
   }
 
+  placement(
+    pane: string
+  ): PanePlacement | null {
+    return panePlacement(this.#snapshot, pane);
+  }
+
+  paneVisible(
+    pane: string
+  ): boolean {
+    return paneVisible(this.#snapshot, pane);
+  }
+
+  showPane(
+    pane: string
+  ): void {
+    const next = applyLayoutChange(this.#snapshot, {
+      type: "group",
+      pane
+    });
+    if (next !== this.#snapshot) {
+      this.#commit(next);
+    }
+  }
+
   #onSlotChange = () => {
     if (this.#applying || !this.hasUpdated) {
       return;
@@ -182,6 +222,7 @@ export class DockLayout extends LitElement {
     }
 
     this.#snapshot = applyLayoutChange(this.#snapshot, event.detail);
+    this.#emitVisibility();
     if (this.#saveQueued) {
       return;
     }
@@ -227,6 +268,7 @@ export class DockLayout extends LitElement {
     if (command === "cancel") {
       if (this.#keyboardOrigin !== null) {
         this.#transition(this.#keyboardOrigin);
+        this.#refocus(pane, false);
       }
       this.#keyboardOrigin = null;
       pane.announce(`${label} movement cancelled`);
@@ -244,10 +286,14 @@ export class DockLayout extends LitElement {
     if (command === "up" || command === "down") {
       this.#nudge(pane, command === "up" ? -1 : 1);
     }
+    else if (command === "join-previous" || command === "join-next") {
+      this.#join(pane, command === "join-previous" ? -1 : 1);
+    }
     else {
       this.#shift(pane, command === "previous" ? -1 : 1);
     }
 
+    this.#refocus(pane, true);
     pane.announce(this.#positionOf(pane, label));
   };
 
@@ -257,6 +303,17 @@ export class DockLayout extends LitElement {
   ): void {
     const placement = panePlacement(this.#snapshot, pane.layoutKey);
     if (placement === null) {
+      return;
+    }
+
+    if (placement.group.length > 1) {
+      this.#transition(movePane(
+        this.#snapshot,
+        pane.layoutKey,
+        placement.dock,
+        offset > 0 ? placement.index + 1 : placement.index
+      ));
+
       return;
     }
 
@@ -274,6 +331,50 @@ export class DockLayout extends LitElement {
       placement.dock,
       offset > 0 ? to + 1 : to
     ));
+  }
+
+  #join(
+    pane: PaneElement,
+    offset: number
+  ): void {
+    const placement = panePlacement(this.#snapshot, pane.layoutKey);
+    if (placement === null) {
+      return;
+    }
+
+    const slot = placement.index + offset;
+    const target = this.#snapshot.docks[placement.dock].groups[slot];
+    if (target === undefined) {
+      return;
+    }
+
+    this.#transition(stackPane(
+      this.#snapshot,
+      pane.layoutKey,
+      placement.dock,
+      slot,
+      target.panes.length
+    ));
+  }
+
+  #refocus(
+    pane: PaneElement,
+    grabbed: boolean
+  ): void {
+    const parent = pane.parentElement;
+    const group = parent !== null && isPaneGroup(parent) ? parent : null;
+    for (const candidate of this.querySelectorAll("jolly-pane-group")) {
+      if (candidate !== group) {
+        candidate.releaseMoveHandle();
+      }
+    }
+    if (group === null) {
+      void pane.focusMoveHandle(grabbed);
+    }
+    else {
+      pane.releaseMoveHandle();
+      void group.focusMoveHandle(pane.layoutKey, grabbed);
+    }
   }
 
   #shift(
@@ -303,7 +404,7 @@ export class DockLayout extends LitElement {
       this.#snapshot,
       pane.layoutKey,
       docks[next],
-      this.#snapshot.docks[docks[next]].panes.length
+      this.#snapshot.docks[docks[next]].groups.length
     ));
   }
 
@@ -381,8 +482,14 @@ export class DockLayout extends LitElement {
       return `${label}, floating`;
     }
 
-    return `${label}, ${dock.side} dock, position ` +
+    const position = `${label}, ${dock.side} dock, position ` +
       `${placement.index + 1} of ${placement.count}`;
+    if (placement.group.length === 1) {
+      return position;
+    }
+
+    return `${position}, tab ` +
+      `${placement.group.indexOf(pane.layoutKey) + 1} of ${placement.group.length}`;
   }
 
   #commit(
@@ -406,6 +513,23 @@ export class DockLayout extends LitElement {
     }
     finally {
       this.#applying = false;
+    }
+    this.#emitVisibility();
+  }
+
+  #emitVisibility(): void {
+    for (const pane of this.panes()) {
+      const key = pane.layoutKey;
+      const visible = paneVisible(this.#snapshot, key);
+      if (this.#visibility.get(key) === visible) {
+        continue;
+      }
+
+      this.#visibility.set(key, visible);
+      emitContainerEvent(pane, "jolly-pane-visibility", {
+        pane: key,
+        visible
+      });
     }
   }
 

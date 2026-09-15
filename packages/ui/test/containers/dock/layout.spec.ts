@@ -4,10 +4,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  dockPanes,
   emptyLayout,
-  parseLayout,
   reconcileLayout,
-  serializeLayout,
   type DeclaredLayout,
   type LayoutSnapshot
 } from "../../../src/containers/dock/layout.ts";
@@ -17,121 +16,38 @@ const kDeclared: DeclaredLayout = {
   docks: [
     {
       key: "left",
-      panes: ["hierarchy"]
+      groups: [
+        {
+          panes: ["hierarchy"]
+        }
+      ]
     },
     {
       key: "right",
-      panes: ["inspector", "layers"]
+      groups: [
+        {
+          panes: ["inspector"]
+        },
+        {
+          panes: ["layers"]
+        }
+      ]
     }
   ],
   floating: [],
   locked: []
 };
 
-describe("Containers.parseLayout", () => {
-  test("returns null for absent or empty input", () => {
-    assert.equal(parseLayout(null), null);
-    assert.equal(parseLayout(""), null);
-  });
-
-  test("returns null for malformed JSON", () => {
-    assert.equal(parseLayout("{ not json"), null);
-  });
-
-  test("returns null for a foreign version", () => {
-    assert.equal(
-      parseLayout(JSON.stringify({ v: 99, docks: {} })),
-      null
-    );
-  });
-
-  test("survives a payload missing every section", () => {
-    assert.deepEqual(
-      parseLayout(JSON.stringify({ v: 1 })),
-      emptyLayout()
-    );
-  });
-
-  test("drops non-finite geometry instead of storing NaN", () => {
-    const parsed = parseLayout(JSON.stringify({
-      v: 1,
-      docks: {
-        left: {
-          size: "wide",
-          panes: ["a"]
-        }
-      },
-      floating: {
-        b: {
-          x: 10,
-          y: null
-        }
-      },
-      panes: {}
-    }));
-
-    assert.deepEqual(parsed?.docks.left, {
-      collapsed: false,
-      panes: ["a"]
-    });
-    assert.deepEqual(parsed?.floating.b, { x: 10 });
-  });
-
-  test("keeps only string entries in a pane list", () => {
-    const parsed = parseLayout(JSON.stringify({
-      v: 1,
-      docks: {
-        left: {
-          panes: ["a", 7, null, "b"]
-        }
-      }
-    }));
-
-    assert.deepEqual(parsed?.docks.left.panes, ["a", "b"]);
-  });
-
-  test("round-trips a serialized snapshot", () => {
-    const snapshot: LayoutSnapshot = {
-      ...emptyLayout(),
-      docks: {
-        left: {
-          size: 240,
-          collapsed: false,
-          panes: ["hierarchy"]
-        }
-      },
-      floating: {
-        assets: {
-          x: 20,
-          y: 30,
-          width: 320,
-          height: 400
-        }
-      },
-      panes: {
-        hierarchy: {
-          collapsed: true
-        }
-      }
-    };
-
-    assert.deepEqual(
-      parseLayout(serializeLayout(snapshot)),
-      snapshot
-    );
-  });
-});
-
 describe("Containers.reconcileLayout", () => {
   test("falls back to the markup when nothing is stored", () => {
     const snapshot = reconcileLayout(null, kDeclared);
 
     assert.deepEqual(
-      snapshot.docks.left.panes,
+      dockPanes(snapshot.docks.left),
       ["hierarchy"]
     );
     assert.deepEqual(
-      snapshot.docks.right.panes,
+      dockPanes(snapshot.docks.right),
       ["inspector", "layers"]
     );
     assert.deepEqual(snapshot.floating, {});
@@ -142,10 +58,24 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         left: {
-          panes: ["hierarchy", "layers"]
+          groups: [
+            {
+              panes: ["hierarchy"],
+              active: "hierarchy"
+            },
+            {
+              panes: ["layers"],
+              active: "layers"
+            }
+          ]
         },
         right: {
-          panes: ["inspector"]
+          groups: [
+            {
+              panes: ["inspector"],
+              active: "inspector"
+            }
+          ]
         }
       }
     };
@@ -155,11 +85,11 @@ describe("Containers.reconcileLayout", () => {
     );
 
     assert.deepEqual(
-      snapshot.docks.left.panes,
+      dockPanes(snapshot.docks.left),
       ["hierarchy", "layers"]
     );
     assert.deepEqual(
-      snapshot.docks.right.panes,
+      dockPanes(snapshot.docks.right),
       ["inspector"]
     );
   });
@@ -169,7 +99,16 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         right: {
-          panes: ["layers", "inspector"]
+          groups: [
+            {
+              panes: ["layers"],
+              active: "layers"
+            },
+            {
+              panes: ["inspector"],
+              active: "inspector"
+            }
+          ]
         }
       }
     };
@@ -179,7 +118,7 @@ describe("Containers.reconcileLayout", () => {
     );
 
     assert.deepEqual(
-      snapshot.docks.right.panes,
+      dockPanes(snapshot.docks.right),
       ["layers", "inspector"]
     );
   });
@@ -189,7 +128,12 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         right: {
-          panes: ["inspector"]
+          groups: [
+            {
+              panes: ["inspector"],
+              active: "inspector"
+            }
+          ]
         }
       },
       floating: {
@@ -206,7 +150,7 @@ describe("Containers.reconcileLayout", () => {
       kDeclared
     );
 
-    assert.deepEqual(snapshot.docks.right.panes, ["inspector"]);
+    assert.deepEqual(dockPanes(snapshot.docks.right), ["inspector"]);
     assert.deepEqual(snapshot.floating.layers, {
       x: 40,
       y: 60,
@@ -220,7 +164,12 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         right: {
-          panes: ["layers"]
+          groups: [
+            {
+              panes: ["layers"],
+              active: "layers"
+            }
+          ]
         }
       }
     };
@@ -231,7 +180,7 @@ describe("Containers.reconcileLayout", () => {
 
     // "inspector" is new to the store and is declared before "layers".
     assert.deepEqual(
-      snapshot.docks.right.panes,
+      dockPanes(snapshot.docks.right),
       ["inspector", "layers"]
     );
   });
@@ -241,7 +190,16 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         left: {
-          panes: ["hierarchy", "removed"]
+          groups: [
+            {
+              panes: ["hierarchy"],
+              active: "hierarchy"
+            },
+            {
+              panes: ["removed"],
+              active: "removed"
+            }
+          ]
         }
       },
       floating: {
@@ -261,7 +219,7 @@ describe("Containers.reconcileLayout", () => {
       kDeclared
     );
 
-    assert.deepEqual(snapshot.docks.left.panes, ["hierarchy"]);
+    assert.deepEqual(dockPanes(snapshot.docks.left), ["hierarchy"]);
     assert.deepEqual(snapshot.floating, {});
     assert.deepEqual(snapshot.panes, {});
   });
@@ -272,7 +230,12 @@ describe("Containers.reconcileLayout", () => {
       docks: {
         bottom: {
           size: 180,
-          panes: ["hierarchy"]
+          groups: [
+            {
+              panes: ["hierarchy"],
+              active: "hierarchy"
+            }
+          ]
         }
       }
     };
@@ -287,7 +250,7 @@ describe("Containers.reconcileLayout", () => {
     );
     // The pane returns to where the markup put it.
     assert.deepEqual(
-      snapshot.docks.left.panes,
+      dockPanes(snapshot.docks.left),
       ["hierarchy"]
     );
   });
@@ -299,7 +262,12 @@ describe("Containers.reconcileLayout", () => {
         left: {
           size: 320,
           collapsed: true,
-          panes: ["hierarchy"]
+          groups: [
+            {
+              panes: ["hierarchy"],
+              active: "hierarchy"
+            }
+          ]
         }
       }
     };
@@ -340,10 +308,20 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         left: {
-          panes: ["inspector"]
+          groups: [
+            {
+              panes: ["inspector"],
+              active: "inspector"
+            }
+          ]
         },
         right: {
-          panes: ["inspector"]
+          groups: [
+            {
+              panes: ["inspector"],
+              active: "inspector"
+            }
+          ]
         }
       },
       floating: {
@@ -358,26 +336,30 @@ describe("Containers.reconcileLayout", () => {
       kDeclared
     );
     const placements = [
-      ...snapshot.docks.left.panes,
-      ...snapshot.docks.right.panes,
+      ...dockPanes(snapshot.docks.left),
+      ...dockPanes(snapshot.docks.right),
       ...Object.keys(snapshot.floating)
     ].filter((key) => key === "inspector");
 
     assert.deepEqual(placements, ["inspector"]);
     // First writer wins; the duplicate dock entry and the floating one go.
     assert.deepEqual(
-      snapshot.docks.left.panes,
+      dockPanes(snapshot.docks.left),
       ["hierarchy", "inspector"]
     );
     // "layers" was never stored, so it stays where it was declared.
-    assert.deepEqual(snapshot.docks.right.panes, ["layers"]);
+    assert.deepEqual(dockPanes(snapshot.docks.right), ["layers"]);
     assert.deepEqual(snapshot.floating, {});
   });
 
   test("keeps a declared floating pane floating", () => {
     const declared: DeclaredLayout = {
       docks: [
-        { key: "left", panes: ["hierarchy"] }
+        { key: "left", groups: [
+          {
+            panes: ["hierarchy"]
+          }
+        ] }
       ],
       floating: [
         { key: "assets", geometry: {} }
@@ -387,13 +369,17 @@ describe("Containers.reconcileLayout", () => {
     const snapshot = reconcileLayout(null, declared);
 
     assert.deepEqual(snapshot.floating, { assets: {} });
-    assert.deepEqual(snapshot.docks.left.panes, ["hierarchy"]);
+    assert.deepEqual(dockPanes(snapshot.docks.left), ["hierarchy"]);
   });
 
   test("restores the declared geometry when nothing is stored", () => {
     const declared: DeclaredLayout = {
       docks: [
-        { key: "left", size: 240, panes: ["hierarchy"] }
+        { key: "left", size: 240, groups: [
+          {
+            panes: ["hierarchy"]
+          }
+        ] }
       ],
       floating: [
         { key: "assets", geometry: { x: 360, y: 140 } }
@@ -409,7 +395,11 @@ describe("Containers.reconcileLayout", () => {
   test("stored geometry wins over the declared one", () => {
     const declared: DeclaredLayout = {
       docks: [
-        { key: "left", size: 240, panes: ["hierarchy"] }
+        { key: "left", size: 240, groups: [
+          {
+            panes: ["hierarchy"]
+          }
+        ] }
       ],
       floating: [
         { key: "assets", geometry: { x: 360, y: 140 } }
@@ -434,10 +424,19 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         left: {
-          panes: []
+          groups: []
         },
         right: {
-          panes: ["inspector", "layers"]
+          groups: [
+            {
+              panes: ["inspector"],
+              active: "inspector"
+            },
+            {
+              panes: ["layers"],
+              active: "layers"
+            }
+          ]
         }
       },
       floating: {
@@ -449,7 +448,7 @@ describe("Containers.reconcileLayout", () => {
     };
     const snapshot = reconcileLayout(stored, declared);
 
-    assert.deepEqual(snapshot.docks.left.panes, ["hierarchy"]);
+    assert.deepEqual(dockPanes(snapshot.docks.left), ["hierarchy"]);
     assert.deepEqual(snapshot.floating, {});
   });
 
@@ -461,15 +460,28 @@ describe("Containers.reconcileLayout", () => {
     const stored: LayoutSnapshot = {
       ...emptyLayout(),
       docks: {
-        left: { panes: [] },
-        right: { panes: ["hierarchy", "inspector", "layers"] }
+        left: { groups: [] },
+        right: { groups: [
+          {
+            panes: ["hierarchy"],
+            active: "hierarchy"
+          },
+          {
+            panes: ["inspector"],
+            active: "inspector"
+          },
+          {
+            panes: ["layers"],
+            active: "layers"
+          }
+        ] }
       }
     };
     const snapshot = reconcileLayout(stored, declared);
 
-    assert.deepEqual(snapshot.docks.left.panes, ["hierarchy"]);
+    assert.deepEqual(dockPanes(snapshot.docks.left), ["hierarchy"]);
     assert.deepEqual(
-      snapshot.docks.right.panes,
+      dockPanes(snapshot.docks.right),
       ["inspector", "layers"]
     );
   });
@@ -477,7 +489,11 @@ describe("Containers.reconcileLayout", () => {
   test("a locked pane keeps floating when that is what was authored", () => {
     const declared: DeclaredLayout = {
       docks: [
-        { key: "left", panes: ["hierarchy"] }
+        { key: "left", groups: [
+          {
+            panes: ["hierarchy"]
+          }
+        ] }
       ],
       floating: [
         { key: "assets", geometry: { x: 12, y: 12 } }
@@ -487,19 +503,32 @@ describe("Containers.reconcileLayout", () => {
     const stored: LayoutSnapshot = {
       ...emptyLayout(),
       docks: {
-        left: { panes: ["hierarchy", "assets"] }
+        left: { groups: [
+          {
+            panes: ["hierarchy"],
+            active: "hierarchy"
+          },
+          {
+            panes: ["assets"],
+            active: "assets"
+          }
+        ] }
       }
     };
     const snapshot = reconcileLayout(stored, declared);
 
-    assert.deepEqual(snapshot.docks.left.panes, ["hierarchy"]);
+    assert.deepEqual(dockPanes(snapshot.docks.left), ["hierarchy"]);
     assert.deepEqual(snapshot.floating.assets, { x: 12, y: 12 });
   });
 
   test("remembers the geometry of a pane the store left docked", () => {
     const declared: DeclaredLayout = {
       docks: [
-        { key: "left", panes: ["hierarchy"] }
+        { key: "left", groups: [
+          {
+            panes: ["hierarchy"]
+          }
+        ] }
       ],
       floating: [
         { key: "assets", geometry: { width: 180, height: 120 } }
@@ -510,7 +539,16 @@ describe("Containers.reconcileLayout", () => {
       ...emptyLayout(),
       docks: {
         left: {
-          panes: ["hierarchy", "assets"]
+          groups: [
+            {
+              panes: ["hierarchy"],
+              active: "hierarchy"
+            },
+            {
+              panes: ["assets"],
+              active: "assets"
+            }
+          ]
         }
       },
       geometry: {
@@ -524,7 +562,7 @@ describe("Containers.reconcileLayout", () => {
 
     // Docked, so nothing floats, and still known so it comes back at 180x120.
     assert.deepEqual(snapshot.floating, {});
-    assert.deepEqual(snapshot.docks.left.panes, ["hierarchy", "assets"]);
+    assert.deepEqual(dockPanes(snapshot.docks.left), ["hierarchy", "assets"]);
     assert.deepEqual(snapshot.geometry.assets, {
       width: 180,
       height: 120
@@ -534,7 +572,11 @@ describe("Containers.reconcileLayout", () => {
   test("takes the geometry of a floating pane that has none remembered", () => {
     const declared: DeclaredLayout = {
       docks: [
-        { key: "left", panes: ["hierarchy"] }
+        { key: "left", groups: [
+          {
+            panes: ["hierarchy"]
+          }
+        ] }
       ],
       floating: [
         { key: "assets", geometry: {} }
@@ -544,7 +586,12 @@ describe("Containers.reconcileLayout", () => {
     const stored: LayoutSnapshot = {
       ...emptyLayout(),
       docks: {
-        left: { panes: ["hierarchy"] }
+        left: { groups: [
+          {
+            panes: ["hierarchy"],
+            active: "hierarchy"
+          }
+        ] }
       },
       floating: {
         assets: {
@@ -567,14 +614,30 @@ describe("Containers.reconcileLayout", () => {
 
   test("a reset forgets a geometry the markup never declared", () => {
     const declared: DeclaredLayout = {
-      docks: [{ key: "left", panes: ["hierarchy", "assets"] }],
+      docks: [{ key: "left", groups: [
+        {
+          panes: ["hierarchy"]
+        },
+        {
+          panes: ["assets"]
+        }
+      ] }],
       floating: [],
       locked: []
     };
     const stored: LayoutSnapshot = {
       ...emptyLayout(),
       docks: {
-        left: { panes: ["hierarchy", "assets"] }
+        left: { groups: [
+          {
+            panes: ["hierarchy"],
+            active: "hierarchy"
+          },
+          {
+            panes: ["assets"],
+            active: "assets"
+          }
+        ] }
       },
       geometry: {
         assets: { width: 180 }
@@ -592,7 +655,12 @@ describe("Containers.reconcileLayout", () => {
     const stored: LayoutSnapshot = {
       ...emptyLayout(),
       docks: {
-        left: { panes: ["hierarchy"] }
+        left: { groups: [
+          {
+            panes: ["hierarchy"],
+            active: "hierarchy"
+          }
+        ] }
       },
       geometry: {
         gone: { width: 180 }

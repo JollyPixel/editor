@@ -19,9 +19,8 @@ import { paneStyles } from "./Pane.styles.ts";
 import {
   isSlotElement
 } from "../../dom.ts";
-
-// Registers the chevron and grip glyphs.
 import "../../icon/Icon.ts";
+import type { IconName } from "../../icon/registry.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
@@ -38,11 +37,24 @@ import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
 const kInteractive = "button, input, select, textarea, a";
+const kGrabbedCommands: Partial<Record<string, PaneMoveCommand>> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "previous",
+  ArrowRight: "next",
+  Escape: "cancel"
+};
+const kJoinCommands: Partial<Record<string, PaneMoveCommand>> = {
+  ArrowUp: "join-previous",
+  ArrowDown: "join-next"
+};
 
 export type PaneMoveCommand =
   | "cancel"
   | "down"
   | "finish"
+  | "join-next"
+  | "join-previous"
   | "next"
   | "previous"
   | "start"
@@ -54,12 +66,6 @@ export interface PaneDragDetail {
   handle: HTMLElement;
 }
 
-/*
- * A pane consumes tokens and never declares them. Declaring them would put
- * "color-scheme: light dark" on every pane, which resets the scheme inherited
- * from the scope host and drops a nested pane back to the system preference
- * while everything around it stays on the chosen theme.
- */
 @customElement("jolly-pane")
 export class PaneElement extends LitElement {
   static override styles = [
@@ -69,6 +75,9 @@ export class PaneElement extends LitElement {
 
   @property({ type: String })
   declare heading: string;
+
+  @property({ type: String })
+  declare icon: IconName;
 
   @property({ type: String, reflect: true })
   declare key: string;
@@ -90,6 +99,12 @@ export class PaneElement extends LitElement {
 
   @property({ type: Boolean, reflect: true })
   declare locked: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare grouped: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare inactive: boolean;
 
   @property({
     type: String,
@@ -175,6 +190,7 @@ export class PaneElement extends LitElement {
     super();
 
     this.heading = "";
+    this.icon = "";
     this.key = "";
     this.reorderable = false;
     this.collapsible = false;
@@ -182,6 +198,8 @@ export class PaneElement extends LitElement {
     this.grow = false;
     this.dragging = false;
     this.locked = false;
+    this.grouped = false;
+    this.inactive = false;
     this.storageKey = "";
     this.storage = defaultStorageAdapter();
     this.presence = null;
@@ -201,6 +219,10 @@ export class PaneElement extends LitElement {
     super.connectedCallback();
     this.#presenceProvider = providePresenceSource(this, () => this.presence);
     this.#managed = this.closest("jolly-dock-layout") !== null;
+    this.grouped = this.parentElement?.tagName === "JOLLY-PANE-GROUP";
+    if (!this.grouped) {
+      this.inactive = false;
+    }
     this.#hosted = this.#managed ||
       this.closest("jolly-floating") !== null;
     if (this.#hosted) {
@@ -226,10 +248,13 @@ export class PaneElement extends LitElement {
   }
 
   override render(): TemplateResult {
-    const showHeader = this.heading !== "" ||
+    const chrome = !this.grouped;
+    const showHeader = chrome ?
+      this.heading !== "" ||
       this._hasActions ||
       this.collapsible ||
-      this.movable;
+      this.movable :
+      this._hasActions;
 
     return html`
       ${showHeader
@@ -239,7 +264,7 @@ export class PaneElement extends LitElement {
             part="header"
             @pointerdown=${this.#onHeaderPointerDown}
           >
-            ${this.collapsible
+            ${chrome && this.collapsible
               ? html`
                 <button
                   class="fold"
@@ -254,11 +279,23 @@ export class PaneElement extends LitElement {
                 ></jolly-icon></button>
               `
               : nothing}
-            <span class="title" part="title">${this.heading}</span>
+            ${chrome && this.icon !== ""
+              ? html`
+                <jolly-icon
+                  class="icon"
+                  part="icon"
+                  name=${this.icon}
+                  aria-hidden="true"
+                ></jolly-icon>
+              `
+              : nothing}
+            ${chrome
+              ? html`<span class="title" part="title">${this.heading}</span>`
+              : nothing}
             <span class="actions" part="actions">
               <slot name="actions" @slotchange=${this.#onActionsChange}></slot>
             </span>
-            ${this.movable
+            ${chrome && this.movable
               ? html`
                 <button
                   class="grip"
@@ -307,6 +344,18 @@ export class PaneElement extends LitElement {
     this.#folders.applyStates(states);
   }
 
+  releaseMoveHandle(): void {
+    this._grabbed = false;
+  }
+
+  async focusMoveHandle(
+    grabbed: boolean
+  ): Promise<void> {
+    this._grabbed = grabbed;
+    await this.updateComplete;
+    this.renderRoot.querySelector<HTMLButtonElement>(".grip")?.focus();
+  }
+
   headerRect(): DOMRect {
     return (
       this._header ?? this
@@ -326,10 +375,6 @@ export class PaneElement extends LitElement {
       return rect.height;
     }
 
-    /*
-     * Folded content measures nothing, and reordered children are not in
-     * document order, so the header is the floor and every child is asked.
-     */
     let bottom = this._header?.getBoundingClientRect().bottom ?? rect.top;
     for (const child of children) {
       bottom = Math.max(bottom, contentBottom(child));
@@ -362,6 +407,7 @@ export class PaneElement extends LitElement {
     if (
       event.button !== 0 ||
       !this.movable ||
+      this.grouped ||
       isInteractiveTarget(event)
     ) {
       return;
@@ -417,14 +463,7 @@ export class PaneElement extends LitElement {
       return;
     }
 
-    const commands: Partial<Record<string, PaneMoveCommand>> = {
-      ArrowUp: "up",
-      ArrowDown: "down",
-      ArrowLeft: "previous",
-      ArrowRight: "next",
-      Escape: "cancel"
-    };
-    const command = commands[event.key];
+    const command = grabbedMoveCommand(event);
     if (command === undefined) {
       return;
     }
@@ -460,6 +499,14 @@ export class PaneElement extends LitElement {
       this.heading || "untitled"
     );
   }
+}
+
+export function grabbedMoveCommand(
+  event: KeyboardEvent
+): PaneMoveCommand | undefined {
+  return event.shiftKey ?
+    kJoinCommands[event.key] :
+    kGrabbedCommands[event.key];
 }
 
 export function isPane(

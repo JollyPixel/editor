@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   applyLayoutChange,
+  dockPanes,
   cloneLayout,
   floatPane,
   movePane,
@@ -18,11 +19,22 @@ const kDeclared: DeclaredLayout = {
   docks: [
     {
       key: "left",
-      panes: ["hierarchy"]
+      groups: [
+        {
+          panes: ["hierarchy"]
+        }
+      ]
     },
     {
       key: "right",
-      panes: ["inspector", "layers"]
+      groups: [
+        {
+          panes: ["inspector"]
+        },
+        {
+          panes: ["layers"]
+        }
+      ]
     }
   ],
   floating: [],
@@ -35,15 +47,15 @@ describe("Containers.movePane", () => {
   test("reorders within a dock using an insertion index that counts the pane", () => {
     const moved = movePane(base, "inspector", "right", 2);
 
-    assert.deepEqual(moved.docks.right.panes, ["layers", "inspector"]);
-    assert.deepEqual(base.docks.right.panes, ["inspector", "layers"]);
+    assert.deepEqual(dockPanes(moved.docks.right), ["layers", "inspector"]);
+    assert.deepEqual(dockPanes(base.docks.right), ["inspector", "layers"]);
   });
 
   test("moves a pane across docks", () => {
     const moved = movePane(base, "hierarchy", "right", 1);
 
-    assert.deepEqual(moved.docks.left.panes, []);
-    assert.deepEqual(moved.docks.right.panes, [
+    assert.deepEqual(dockPanes(moved.docks.left), []);
+    assert.deepEqual(dockPanes(moved.docks.right), [
       "inspector",
       "hierarchy",
       "layers"
@@ -66,12 +78,12 @@ describe("Containers.movePane", () => {
       width: 200,
       height: 100
     });
-    assert.deepEqual(docked.docks.left.panes, ["layers", "hierarchy"]);
+    assert.deepEqual(dockPanes(docked.docks.left), ["layers", "hierarchy"]);
   });
 
   test("clamps an out-of-range index and ignores an unknown dock", () => {
     assert.deepEqual(
-      movePane(base, "hierarchy", "right", 99).docks.right.panes,
+      dockPanes(movePane(base, "hierarchy", "right", 99).docks.right),
       ["inspector", "layers", "hierarchy"]
     );
     assert.equal(movePane(base, "hierarchy", "missing", 0), base);
@@ -86,7 +98,7 @@ describe("Containers.floatPane", () => {
       width: 160
     });
 
-    assert.deepEqual(floating.docks.right.panes, ["layers"]);
+    assert.deepEqual(dockPanes(floating.docks.right), ["layers"]);
     assert.deepEqual(floating.floating.inspector, {
       x: 4,
       width: 160
@@ -106,7 +118,9 @@ describe("Containers.panePlacement", () => {
       {
         dock: "right",
         index: 1,
-        count: 2
+        count: 2,
+        group: ["layers"],
+        active: true
       }
     );
   });
@@ -188,7 +202,7 @@ describe("Containers.cloneLayout", () => {
   test("returns a copy that shares no nested state", () => {
     const base = floatPane(reconcileLayout(null, kDeclared), "layers", { x: 1 });
     const copy = cloneLayout(base);
-    copy.docks.left.panes.push("extra");
+    copy.docks.left.groups[0].panes.push("extra");
     copy.floating.layers.x = 99;
 
     assert.deepEqual(copy, {
@@ -197,14 +211,19 @@ describe("Containers.cloneLayout", () => {
         ...base.docks,
         left: {
           ...base.docks.left,
-          panes: ["hierarchy", "extra"]
+          groups: [
+            {
+              panes: ["hierarchy", "extra"],
+              active: "hierarchy"
+            }
+          ]
         }
       },
       floating: {
         layers: { x: 99 }
       }
     });
-    assert.deepEqual(base.docks.left.panes, ["hierarchy"]);
+    assert.deepEqual(dockPanes(base.docks.left), ["hierarchy"]);
     assert.equal(base.floating.layers.x, 1);
   });
 });

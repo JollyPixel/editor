@@ -110,8 +110,8 @@ export const dockStyles = css`
     pointer-events: auto;
   }
 
-  :host([overlay][empty]) .resize-handle {
-    pointer-events: none;
+  :host([empty]) .resize-handle {
+    display: none;
   }
 
   :host([overlay]) .resize-handle::after {
@@ -137,7 +137,8 @@ export const dockStyles = css`
     justify-content: flex-end;
   }
 
-  ::slotted(jolly-pane) {
+  ::slotted(jolly-pane),
+  ::slotted(jolly-pane-group) {
     width: 100%;
     height: 100%;
     border: 0;
@@ -146,18 +147,22 @@ export const dockStyles = css`
     box-shadow: none;
   }
 
-  :host(:not([align])) ::slotted(jolly-pane) {
+  :host(:not([align])) ::slotted(jolly-pane),
+  :host(:not([align])) ::slotted(jolly-pane-group) {
     flex: 1 1 auto;
     min-height: 0;
   }
 
-  :host([align]) ::slotted(jolly-pane) {
+  :host([align]) ::slotted(jolly-pane),
+  :host([align]) ::slotted(jolly-pane-group) {
     flex: 0 0 auto;
     height: auto;
   }
 
   :host([align][side="top"]) ::slotted(jolly-pane),
-  :host([align][side="bottom"]) ::slotted(jolly-pane) {
+  :host([align][side="top"]) ::slotted(jolly-pane-group),
+  :host([align][side="bottom"]) ::slotted(jolly-pane),
+  :host([align][side="bottom"]) ::slotted(jolly-pane-group) {
     width: auto;
     height: 100%;
   }
@@ -167,7 +172,8 @@ export const dockStyles = css`
     min-height: 0;
   }
 
-  :host([overlay]) ::slotted(jolly-pane) {
+  :host([overlay]) ::slotted(jolly-pane),
+  :host([overlay]) ::slotted(jolly-pane-group) {
     height: auto;
     border-radius: var(--jolly-radius-md, 6px);
     background: var(--jolly-surface-raised, ${kFallback.controlBg});

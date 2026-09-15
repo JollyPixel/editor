@@ -39,6 +39,7 @@ import { COLOR_POPOVER_EXAMPLE } from "./examples/scenarios/colorPopover.ts";
 import { REORDER_PERSIST_EXAMPLE } from "./examples/scenarios/reorderPersistence.ts";
 import { DOCK_RESIZE_EXAMPLE } from "./examples/scenarios/dockResize.ts";
 import { DOCK_LAYOUT_EXAMPLE } from "./examples/scenarios/dockLayout.ts";
+import { DOCK_LAYOUT_GROUPS_EXAMPLE } from "./examples/scenarios/dockLayoutGroups.ts";
 import { DOCK_LAYOUT_TRANSPARENT_EXAMPLE } from "./examples/scenarios/dockLayoutTransparent.ts";
 import { DIALOG_ESCAPE_EXAMPLE } from "./examples/scenarios/dialogEscape.ts";
 import { LOCKING_EXAMPLE } from "./examples/scenarios/locking.ts";
@@ -109,6 +110,7 @@ export const manifest: readonly GalleryExample[] = [
   REORDER_PERSIST_EXAMPLE,
   DOCK_RESIZE_EXAMPLE,
   DOCK_LAYOUT_EXAMPLE,
+  DOCK_LAYOUT_GROUPS_EXAMPLE,
   DOCK_LAYOUT_TRANSPARENT_EXAMPLE,
   DIALOG_ESCAPE_EXAMPLE,
   LOCKING_EXAMPLE,

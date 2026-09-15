@@ -55,7 +55,18 @@ The pieces live under `src/boot/`:
 | `assets/resolveEditorAssets` | Turns a request into the `voxelmap` and `pixelart` records. The only place aware of asset kinds. |
 | `assets/preloadTilesets` | Loads the tilesets of a world record, falling back to `textures/tileset.png`. |
 | `EditorSession` | Prompts for the local identity, resolves the assets, and opens the world and texture rooms. `dispose()` destroys the client. |
-| `EditorShell` | Wires `jolly-log` and `editor-sidebar` to the state, the scene, and the runtime input. |
+| `EditorShell` | Wires `jolly-log` and the editor panels to the state, the scene, and the runtime input. |
+
+### Panels
+
+`index.html` authors a `jolly-dock-layout` with a left dock holding one
+`jolly-pane-group` (General, Blocks, Paint, Layers) and an empty right dock.
+Users drag any tab into the right dock or out into a window, and the layout
+remembers it under `voxel-map:layout`.
+
+`EditorPanels` owns the single `texture-editor`. It lives in the Paint pane
+unless Paint and Blocks share a group, in which case it follows whichever of
+the two is the shown tab. Without it, the block library fills the Blocks pane.
 
 ### Known limitation
 

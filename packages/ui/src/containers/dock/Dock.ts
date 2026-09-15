@@ -19,12 +19,17 @@ import {
   type PaneElement
 } from "../pane/Pane.ts";
 import {
+  isPaneGroup,
+  type PaneGroup
+} from "../pane-group/PaneGroup.ts";
+import {
   forwardResizeEvents,
   installResizeCursorStyles
 } from "../resize.ts";
 import {
   horizontalInsertionLine,
-  verticalInsertionLine
+  verticalInsertionLine,
+  type DragStack
 } from "../../interaction/drag/DragSession.ts";
 import type { Rect } from "../../geometry/Rect.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
@@ -42,6 +47,7 @@ const kZoneBand = 48;
 
 export type DockSide = "bottom" | "left" | "right" | "top";
 export type DockAlign = "end" | "start";
+export type DockSlot = PaneElement | PaneGroup;
 
 @customElement("jolly-dock")
 export class Dock extends LitElement {
@@ -178,11 +184,11 @@ export class Dock extends LitElement {
       this.align = "start";
     }
 
-    if (
-      !this.hasUpdated &&
-      !this.#managed
-    ) {
-      this.#restore();
+    if (!this.hasUpdated) {
+      this.empty = this.slots().length === 0;
+      if (!this.#managed) {
+        this.#restore();
+      }
     }
   }
 
@@ -220,13 +226,20 @@ export class Dock extends LitElement {
     super.disconnectedCallback();
   }
 
-  panes(): PaneElement[] {
-    if (!this.hasUpdated) {
-      return [...this.children].filter(isPane);
-    }
+  slots(): DockSlot[] {
+    const elements = this.hasUpdated ?
+      this._slot.assignedElements({ flatten: true }) :
+      [...this.children];
 
-    return this._slot.assignedElements({ flatten: true })
-      .filter(isPane);
+    return elements.filter(
+      (element): element is DockSlot => isPane(element) || isPaneGroup(element)
+    );
+  }
+
+  panes(): PaneElement[] {
+    return this.slots().flatMap(
+      (slot) => (isPaneGroup(slot) ? slot.panes() : [slot])
+    );
   }
 
   dropZone(): Rect {
@@ -263,10 +276,82 @@ export class Dock extends LitElement {
       };
   }
 
+  previewZone(): Rect | undefined {
+    const rect = this.getBoundingClientRect();
+    const vertical = this.axis === "y";
+    if ((vertical ? rect.width : rect.height) > 0) {
+      return undefined;
+    }
+
+    const zone = this.dropZone();
+    const size = Math.min(Math.max(this.size, this.minSize), this.maxSize);
+    if (vertical) {
+      return {
+        x: this.side === "left" ? zone.x : zone.x + zone.width - size,
+        y: zone.y,
+        width: size,
+        height: zone.height
+      };
+    }
+
+    return {
+      x: zone.x,
+      y: this.side === "top" ? zone.y : zone.y + zone.height - size,
+      width: zone.width,
+      height: size
+    };
+  }
+
+  dropStacks(
+    dragged: PaneElement
+  ): DragStack[] {
+    const stacks: DragStack[] = [];
+    const slots = this.slots();
+    for (let slot = 0; slot < slots.length; slot++) {
+      const element = slots[slot];
+      if (isPaneGroup(element)) {
+        const source = element.panes().indexOf(dragged);
+        stacks.push({
+          slot,
+          rect: element.tabsRect(),
+          candidates: element.tabCandidates(),
+          source: source === -1 ? null : source,
+          line: (index) => element.tabLine(index)
+        });
+        continue;
+      }
+      if (element === dragged) {
+        continue;
+      }
+
+      const header = element.headerRect();
+      const candidates = [
+        {
+          start: header.x,
+          size: header.width
+        }
+      ];
+      stacks.push({
+        slot,
+        rect: {
+          x: header.x,
+          y: header.y,
+          width: header.width,
+          height: header.height
+        },
+        candidates,
+        source: null,
+        line: (index) => horizontalInsertionLine(header, candidates, index)
+      });
+    }
+
+    return stacks;
+  }
+
   dropCandidates(): DropCandidate[] {
-    return this.panes().map((pane) => {
-      const rect = pane.getBoundingClientRect();
-      const size = pane.occupiedSize(this.axis);
+    return this.slots().map((slot) => {
+      const rect = slot.getBoundingClientRect();
+      const size = slot.occupiedSize(this.axis);
 
       return this.axis === "y" ?
         {
@@ -296,7 +381,7 @@ export class Dock extends LitElement {
       this.getBoundingClientRect();
     const thickness = this.axis === "y" ? rect.width : rect.height;
     if (thickness === 0) {
-      return this.dropZone();
+      return this.previewZone() ?? this.dropZone();
     }
 
     return {
@@ -330,7 +415,7 @@ export class Dock extends LitElement {
   }
 
   #onSlotChange = () => {
-    this.empty = this.panes().length === 0;
+    this.empty = this.slots().length === 0;
   };
 
   #connectResizeHandle(): void {
@@ -367,7 +452,7 @@ export class Dock extends LitElement {
   #onDoubleClick = (
     event: MouseEvent
   ) => {
-    if (event.button === 0 && this.collapsible) {
+    if (event.button === 0 && this.collapsible && !this.empty) {
       this.#toggleCollapsed();
     }
   };
@@ -375,7 +460,7 @@ export class Dock extends LitElement {
   #onHandleKeyDown = (
     event: KeyboardEvent
   ) => {
-    if (event.key !== "Enter" || !this.collapsible) {
+    if (event.key !== "Enter" || !this.collapsible || this.empty) {
       return;
     }
 

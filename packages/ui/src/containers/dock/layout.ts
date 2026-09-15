@@ -2,12 +2,17 @@
 import { resolveOrder } from "../../storage/keys.ts";
 
 // CONSTANTS
-const kVersion = 1;
+export const LAYOUT_VERSION = 1;
+
+export interface PaneGroupState {
+  panes: string[];
+  active: string;
+}
 
 export interface DockState {
   size?: number;
   collapsed?: boolean;
-  panes: string[];
+  groups: PaneGroupState[];
 }
 
 export interface FloatingState {
@@ -34,10 +39,15 @@ export interface LayoutSnapshot {
   folders: Record<string, Record<string, FolderState>>;
 }
 
+export interface DeclaredGroup {
+  panes: string[];
+  active?: string;
+}
+
 export interface DeclaredDock {
   key: string;
   size?: number;
-  panes: string[];
+  groups: DeclaredGroup[];
 }
 
 export interface DeclaredFloating {
@@ -77,21 +87,35 @@ export interface FolderChange {
   open: boolean;
 }
 
+export interface GroupChange {
+  type: "group";
+  pane: string;
+}
+
 export type LayoutChange =
   | DockChange
   | FloatingChange
   | FolderChange
+  | GroupChange
   | PaneChange;
 
 export interface PanePlacement {
   dock: string;
   index: number;
   count: number;
+  group: string[];
+  active: boolean;
+}
+
+interface PaneLocation {
+  dock: string;
+  slot: number;
+  tab: number;
 }
 
 export function emptyLayout(): LayoutSnapshot {
   return {
-    v: kVersion,
+    v: LAYOUT_VERSION,
     docks: {},
     floating: {},
     geometry: {},
@@ -100,39 +124,10 @@ export function emptyLayout(): LayoutSnapshot {
   };
 }
 
-export function serializeLayout(
-  snapshot: LayoutSnapshot
-): string {
-  return JSON.stringify(snapshot);
-}
-
-export function parseLayout(
-  raw: string | null
-): LayoutSnapshot | null {
-  if (raw === null || raw === "") {
-    return null;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  }
-  catch {
-    return null;
-  }
-
-  if (!isRecord(parsed) || parsed.v !== kVersion) {
-    return null;
-  }
-
-  return {
-    v: kVersion,
-    docks: readDocks(parsed.docks),
-    floating: readFloating(parsed.floating),
-    geometry: readFloating(parsed.geometry),
-    panes: readPanes(parsed.panes),
-    folders: readFolders(parsed.folders)
-  };
+export function dockPanes(
+  state: DockState
+): string[] {
+  return state.groups.flatMap((group) => group.panes);
 }
 
 export function reconcileLayout(
@@ -141,11 +136,15 @@ export function reconcileLayout(
 ): LayoutSnapshot {
   const declaredPlacement = new Map<string, string | null>();
   const declaredOrder: string[] = [];
+  const declaredGroups = new Map<string, DeclaredGroup>();
   for (const dock of declared.docks) {
-    for (const pane of dock.panes) {
-      if (!declaredPlacement.has(pane)) {
-        declaredPlacement.set(pane, dock.key);
-        declaredOrder.push(pane);
+    for (const group of dock.groups) {
+      for (const pane of group.panes) {
+        if (!declaredPlacement.has(pane)) {
+          declaredPlacement.set(pane, dock.key);
+          declaredOrder.push(pane);
+          declaredGroups.set(pane, group);
+        }
       }
     }
   }
@@ -169,7 +168,7 @@ export function reconcileLayout(
         continue;
       }
 
-      for (const pane of state.panes) {
+      for (const pane of dockPanes(state)) {
         if (
           declaredPlacement.has(pane) &&
           !placement.has(pane) &&
@@ -205,9 +204,10 @@ export function reconcileLayout(
     docks[dock.key] = {
       ...size === undefined ? {} : { size },
       collapsed: storedDock?.collapsed === true,
-      panes: resolveOrder(
-        storedDock?.panes ?? [],
-        present
+      groups: arrangeGroups(
+        storedDock?.groups ?? [],
+        present,
+        declaredGroups
       )
     };
   }
@@ -240,7 +240,7 @@ export function reconcileLayout(
   }
 
   return {
-    v: kVersion,
+    v: LAYOUT_VERSION,
     docks,
     floating,
     geometry,
@@ -257,7 +257,12 @@ export function cloneLayout(
     docks: mapRecord(snapshot.docks, (state) => {
       return {
         ...state,
-        panes: [...state.panes]
+        groups: state.groups.map((group) => {
+          return {
+            panes: [...group.panes],
+            active: group.active
+          };
+        })
       };
     }),
     floating: mapRecord(snapshot.floating, (state) => {
@@ -282,18 +287,40 @@ export function panePlacement(
   snapshot: LayoutSnapshot,
   pane: string
 ): PanePlacement | null {
-  for (const [dock, state] of Object.entries(snapshot.docks)) {
-    const index = state.panes.indexOf(pane);
-    if (index !== -1) {
-      return {
-        dock,
-        index,
-        count: state.panes.length
-      };
-    }
+  const location = locatePane(snapshot, pane);
+  if (location === null) {
+    return null;
   }
 
-  return null;
+  const { groups } = snapshot.docks[location.dock];
+  const group = groups[location.slot];
+
+  return {
+    dock: location.dock,
+    index: location.slot,
+    count: groups.length,
+    group: [...group.panes],
+    active: group.active === pane
+  };
+}
+
+export function paneVisible(
+  snapshot: LayoutSnapshot,
+  pane: string
+): boolean {
+  const folded = snapshot.panes[pane]?.collapsed === true;
+  if (snapshot.floating[pane] !== undefined) {
+    return !folded;
+  }
+
+  const placement = panePlacement(snapshot, pane);
+  if (placement === null) {
+    return false;
+  }
+
+  return snapshot.docks[placement.dock].collapsed !== true &&
+    placement.active &&
+    (placement.group.length > 1 || !folded);
 }
 
 export function movePane(
@@ -307,15 +334,60 @@ export function movePane(
     return snapshot;
   }
 
-  const from = target.panes.indexOf(pane);
-  const position = from !== -1 && index > from ? index - 1 : index;
+  const from = locatePane(snapshot, pane);
+  const lone = from !== null &&
+    from.dock === dock &&
+    target.groups[from.slot].panes.length === 1;
+  const position = lone && index > from.slot ? index - 1 : index;
   const next = detachPane(cloneLayout(snapshot), pane);
-  const panes = next.docks[dock].panes;
-  panes.splice(
-    Math.min(Math.max(position, 0), panes.length),
+  next.docks[dock].collapsed = false;
+  const { groups } = next.docks[dock];
+  groups.splice(
+    clamp(position, groups.length),
+    0,
+    {
+      panes: [pane],
+      active: pane
+    }
+  );
+
+  return next;
+}
+
+export function stackPane(
+  snapshot: LayoutSnapshot,
+  pane: string,
+  dock: string,
+  slot: number,
+  index: number
+): LayoutSnapshot {
+  const groups = snapshot.docks[dock]?.groups;
+  const target = groups?.[slot];
+  if (groups === undefined || target === undefined) {
+    return snapshot;
+  }
+
+  const from = locatePane(snapshot, pane);
+  const sameDock = from !== null && from.dock === dock;
+  const sameGroup = sameDock && from.slot === slot;
+  if (sameGroup && target.panes.length === 1) {
+    return snapshot;
+  }
+
+  const position = sameGroup && index > from.tab ? index - 1 : index;
+  const removesSlot = sameDock &&
+    !sameGroup &&
+    from.slot < slot &&
+    groups[from.slot].panes.length === 1;
+  const next = detachPane(cloneLayout(snapshot), pane);
+  next.docks[dock].collapsed = false;
+  const group = next.docks[dock].groups[removesSlot ? slot - 1 : slot];
+  group.panes.splice(
+    clamp(position, group.panes.length),
     0,
     pane
   );
+  group.active = pane;
 
   return next;
 }
@@ -368,6 +440,21 @@ export function applyLayoutChange(
 
       return next;
     }
+    case "group": {
+      const location = locatePane(snapshot, change.pane);
+      if (
+        location === null ||
+        snapshot.docks[location.dock].groups[location.slot].active ===
+        change.pane
+      ) {
+        return snapshot;
+      }
+
+      const next = cloneLayout(snapshot);
+      next.docks[location.dock].groups[location.slot].active = change.pane;
+
+      return next;
+    }
     case "pane": {
       const next = cloneLayout(snapshot);
       next.panes[change.pane] = {
@@ -392,16 +479,137 @@ export function applyLayoutChange(
   }
 }
 
+function arrangeGroups(
+  stored: readonly PaneGroupState[],
+  present: readonly string[],
+  declared: ReadonlyMap<string, DeclaredGroup>
+): PaneGroupState[] {
+  const presentKeys = new Set(present);
+  const order = resolveOrder(
+    stored.flatMap((group) => group.panes),
+    present
+  );
+  const groupOf = new Map<string, number>();
+  const actives: (string | undefined)[] = [];
+  for (const group of stored) {
+    const id = actives.length;
+    actives.push(group.active);
+    for (const pane of group.panes) {
+      if (presentKeys.has(pane) && !groupOf.has(pane)) {
+        groupOf.set(pane, id);
+      }
+    }
+  }
+
+  const declaredIds = new Map<DeclaredGroup, number>();
+  for (const pane of order) {
+    if (groupOf.has(pane)) {
+      continue;
+    }
+
+    const group = declared.get(pane);
+    const sibling = group?.panes.find(
+      (other) => other !== pane && groupOf.has(other)
+    );
+    let id: number;
+    if (group !== undefined && declaredIds.has(group)) {
+      id = declaredIds.get(group)!;
+    }
+    else if (sibling === undefined) {
+      id = actives.length;
+      actives.push(group?.active);
+    }
+    else {
+      id = groupOf.get(sibling)!;
+    }
+    if (group !== undefined) {
+      declaredIds.set(group, id);
+    }
+    groupOf.set(pane, id);
+  }
+
+  const built = new Map<number, PaneGroupState>();
+  const groups: PaneGroupState[] = [];
+  for (const pane of order) {
+    const id = groupOf.get(pane)!;
+    let group = built.get(id);
+    if (group === undefined) {
+      group = {
+        panes: [],
+        active: ""
+      };
+      built.set(id, group);
+      groups.push(group);
+    }
+    group.panes.push(pane);
+  }
+  for (const [id, group] of built) {
+    const wanted = actives[id];
+    group.active = wanted !== undefined && group.panes.includes(wanted) ?
+      wanted :
+      group.panes[0];
+  }
+
+  return groups;
+}
+
+function locatePane(
+  snapshot: LayoutSnapshot,
+  pane: string
+): PaneLocation | null {
+  for (const [dock, state] of Object.entries(snapshot.docks)) {
+    for (let slot = 0; slot < state.groups.length; slot++) {
+      const tab = state.groups[slot].panes.indexOf(pane);
+      if (tab !== -1) {
+        return {
+          dock,
+          slot,
+          tab
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 function detachPane(
   snapshot: LayoutSnapshot,
   pane: string
 ): LayoutSnapshot {
   for (const state of Object.values(snapshot.docks)) {
-    state.panes = state.panes.filter((key) => key !== pane);
+    const groups: PaneGroupState[] = [];
+    for (const group of state.groups) {
+      const tab = group.panes.indexOf(pane);
+      if (tab === -1) {
+        groups.push(group);
+        continue;
+      }
+
+      const panes = group.panes.filter((key) => key !== pane);
+      if (panes.length === 0) {
+        continue;
+      }
+
+      groups.push({
+        panes,
+        active: group.active === pane ?
+          panes[Math.min(tab, panes.length - 1)] :
+          group.active
+      });
+    }
+    state.groups = groups;
   }
   delete snapshot.floating[pane];
 
   return snapshot;
+}
+
+function clamp(
+  index: number,
+  length: number
+): number {
+  return Math.min(Math.max(index, 0), length);
 }
 
 function definedGeometry(
@@ -425,126 +633,4 @@ function mapRecord<TValue, TResult>(
   return Object.fromEntries(
     Object.entries(record).map(([key, value]) => [key, map(value)])
   );
-}
-
-function readDocks(
-  value: unknown
-): Record<string, DockState> {
-  const docks: Record<string, DockState> = {};
-  if (!isRecord(value)) {
-    return docks;
-  }
-
-  for (const [key, state] of Object.entries(value)) {
-    if (!isRecord(state)) {
-      continue;
-    }
-
-    docks[key] = {
-      ...typeof state.size === "number" && Number.isFinite(state.size) ?
-        { size: state.size } :
-        {},
-      collapsed: state.collapsed === true,
-      panes: readStringArray(state.panes)
-    };
-  }
-
-  return docks;
-}
-
-function readFloating(
-  value: unknown
-): Record<string, FloatingState> {
-  const floating: Record<string, FloatingState> = {};
-  if (!isRecord(value)) {
-    return floating;
-  }
-
-  for (const [key, state] of Object.entries(value)) {
-    if (!isRecord(state)) {
-      continue;
-    }
-
-    const geometry: FloatingState = {};
-    for (const axis of ["x", "y", "width", "height"] as const) {
-      const candidate = state[axis];
-      if (
-        typeof candidate === "number" &&
-        Number.isFinite(candidate)
-      ) {
-        geometry[axis] = candidate;
-      }
-    }
-    floating[key] = geometry;
-  }
-
-  return floating;
-}
-
-function readPanes(
-  value: unknown
-): Record<string, PaneState> {
-  const panes: Record<string, PaneState> = {};
-  if (!isRecord(value)) {
-    return panes;
-  }
-
-  for (const [key, state] of Object.entries(value)) {
-    if (
-      isRecord(state) &&
-      typeof state.collapsed === "boolean"
-    ) {
-      panes[key] = {
-        collapsed: state.collapsed
-      };
-    }
-  }
-
-  return panes;
-}
-
-function readFolders(
-  value: unknown
-): Record<string, Record<string, FolderState>> {
-  const folders: Record<string, Record<string, FolderState>> = {};
-  if (!isRecord(value)) {
-    return folders;
-  }
-
-  for (const [paneKey, states] of Object.entries(value)) {
-    if (!isRecord(states)) {
-      continue;
-    }
-
-    const paneFolders: Record<string, FolderState> = {};
-    for (const [folderKey, state] of Object.entries(states)) {
-      if (
-        isRecord(state) &&
-        typeof state.open === "boolean"
-      ) {
-        paneFolders[folderKey] = {
-          open: state.open
-        };
-      }
-    }
-    folders[paneKey] = paneFolders;
-  }
-
-  return folders;
-}
-
-function readStringArray(
-  value: unknown
-): string[] {
-  return Array.isArray(value) ?
-    value.filter((entry): entry is string => typeof entry === "string") :
-    [];
-}
-
-function isRecord(
-  value: unknown
-): value is Record<string, unknown> {
-  return typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value);
 }

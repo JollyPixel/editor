@@ -144,8 +144,7 @@ test.describe("DockLayout", () => {
     );
     await expect(overlay).toHaveAttribute("empty");
 
-    const handle = await centerOf(overlay.locator(".resize-handle"));
-    await expect.poll(() => hitsInside(page, handle, "jolly-dock")).toBe(false);
+    await expect(overlay.locator(".resize-handle")).toBeHidden();
   });
 
   test("an overlay dock keeps its panes inside its own box", async({ page }) => {

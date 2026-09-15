@@ -192,10 +192,18 @@ async function dragBrushInto(
   const outerEdge = dock === "outliner" ?
     target.x + 12 :
     target.x + target.width - 12;
+  const firstHeader = (await page
+    .locator(`jolly-dock[key='${dock}'] > jolly-pane .header`)
+    .first()
+    .boundingBox())!;
 
   await page.mouse.move(header.x + 60, header.y + (header.height / 2));
   await page.mouse.down();
-  await page.mouse.move(outerEdge, y ?? target.y + 12, { steps: 20 });
+  await page.mouse.move(
+    outerEdge,
+    y ?? firstHeader.y + firstHeader.height + 12,
+    { steps: 20 }
+  );
   await page.mouse.up();
 }
 

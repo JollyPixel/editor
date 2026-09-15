@@ -26,6 +26,11 @@ export interface PaneMoveDetail {
   command: PaneMoveCommand;
 }
 
+export interface PaneVisibilityDetail {
+  pane: string;
+  visible: boolean;
+}
+
 export interface PaneFoldersDetail {
   pane: PaneElement;
 }
@@ -45,6 +50,7 @@ export interface ContainerEventMap {
   "jolly-pane-drag": PaneDragDetail;
   "jolly-pane-folders": PaneFoldersDetail;
   "jolly-pane-move": PaneMoveDetail;
+  "jolly-pane-visibility": PaneVisibilityDetail;
   "jolly-reorder": JollyReorderDetail;
   "jolly-resize": JollyResizeDetail;
   "jolly-resize-end": JollyResizeDetail;
@@ -73,6 +79,7 @@ declare global {
     "jolly-pane-drag": CustomEvent<PaneDragDetail>;
     "jolly-pane-folders": CustomEvent<PaneFoldersDetail>;
     "jolly-pane-move": CustomEvent<PaneMoveDetail>;
+    "jolly-pane-visibility": CustomEvent<PaneVisibilityDetail>;
     "jolly-reorder": CustomEvent<JollyReorderDetail>;
     "jolly-resize": CustomEvent<JollyResizeDetail>;
     "jolly-resize-end": CustomEvent<JollyResizeDetail>;

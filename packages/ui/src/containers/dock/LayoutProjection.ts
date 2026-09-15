@@ -1,13 +1,21 @@
 // Import Internal Dependencies
-import type { Dock } from "./Dock.ts";
+import type {
+  Dock,
+  DockSlot
+} from "./Dock.ts";
 import { Floating } from "../floating/Floating.ts";
 import type {
   DeclaredFloating,
   DeclaredLayout,
   FloatingState,
-  LayoutSnapshot
+  LayoutSnapshot,
+  PaneGroupState
 } from "./layout.ts";
 import type { PaneElement } from "../pane/Pane.ts";
+import {
+  isPaneGroup,
+  PaneGroup
+} from "../pane-group/PaneGroup.ts";
 
 export interface LayoutProjectionHost extends HTMLElement {
   docks(): Dock[];
@@ -44,7 +52,18 @@ export class LayoutProjection {
         return {
           key: dock.layoutKey,
           size: dock.size,
-          panes: dock.panes().map((pane) => pane.layoutKey)
+          groups: dock.slots().map((slot) => {
+            if (!isPaneGroup(slot)) {
+              return {
+                panes: [slot.layoutKey]
+              };
+            }
+
+            return {
+              panes: slot.panes().map((pane) => pane.layoutKey),
+              ...slot.active === "" ? {} : { active: slot.active }
+            };
+          })
         };
       }),
       floating,
@@ -59,6 +78,7 @@ export class LayoutProjection {
       this.#host.panes().map((pane) => [pane.layoutKey, pane])
     );
     const released = new Set<Floating>();
+    const claimed = new Set<PaneGroup>();
 
     for (const dock of this.#host.docks()) {
       const state = snapshot.docks[dock.layoutKey];
@@ -70,7 +90,10 @@ export class LayoutProjection {
         dock.size = state.size;
       }
       dock.collapsed = state.collapsed === true;
-      this.#orderPanes(dock, state.panes, index, released);
+      const slots = state.groups
+        .map((group) => this.#slotFor(group, index, released, claimed))
+        .filter((slot) => slot !== null);
+      orderChildren(dock, dock.slots(), slots);
     }
 
     for (const [key, geometry] of Object.entries(snapshot.floating)) {
@@ -95,6 +118,7 @@ export class LayoutProjection {
         frame.remove();
       }
     }
+    this.#discardGroups();
   }
 
   applyFolders(
@@ -106,33 +130,57 @@ export class LayoutProjection {
     );
   }
 
-  #orderPanes(
-    dock: Dock,
-    keys: readonly string[],
+  #slotFor(
+    state: PaneGroupState,
     index: ReadonlyMap<string, PaneElement>,
-    released: Set<Floating>
-  ): void {
-    const current = dock.panes();
-    let position = 0;
-    for (const key of keys) {
-      const pane = index.get(key);
-      if (pane === undefined) {
+    released: Set<Floating>,
+    claimed: Set<PaneGroup>
+  ): DockSlot | null {
+    const panes = state.panes
+      .map((key) => index.get(key))
+      .filter((pane) => pane !== undefined);
+    for (const pane of panes) {
+      const frame = floatingOf(pane);
+      if (frame !== null) {
+        released.add(frame);
+      }
+    }
+    if (panes.length === 0) {
+      return null;
+    }
+    if (panes.length === 1) {
+      return panes[0];
+    }
+
+    let group = panes
+      .map((pane) => pane.parentElement)
+      .find((parent): parent is PaneGroup => parent instanceof PaneGroup &&
+        !claimed.has(parent)) ?? null;
+    if (group === null) {
+      group = document.createElement("jolly-pane-group");
+    }
+    claimed.add(group);
+    group.active = state.active;
+    orderChildren(group, group.panes(), panes);
+
+    return group;
+  }
+
+  #discardGroups(): void {
+    for (const group of this.#host.querySelectorAll("jolly-pane-group")) {
+      if (group.closest("jolly-dock-layout") !== this.#host) {
         continue;
       }
 
-      if (current[position] !== pane) {
-        const frame = floatingOf(pane);
-        if (frame !== null) {
-          released.add(frame);
-        }
-        dock.insertBefore(pane, current[position] ?? null);
-        const from = current.indexOf(pane);
-        if (from !== -1) {
-          current.splice(from, 1);
-        }
-        current.splice(position, 0, pane);
+      const panes = [...group.children].filter(
+        (child) => child.tagName === "JOLLY-PANE"
+      );
+      if (panes.length === 1) {
+        group.before(panes[0]);
       }
-      position++;
+      if (panes.length <= 1) {
+        group.remove();
+      }
     }
   }
 
@@ -162,6 +210,25 @@ export function floatingOf(
   const parent = pane.parentElement;
 
   return parent instanceof Floating ? parent : null;
+}
+
+function orderChildren(
+  parent: HTMLElement,
+  current: Element[],
+  wanted: readonly Element[]
+): void {
+  let position = 0;
+  for (const element of wanted) {
+    if (current[position] !== element) {
+      parent.insertBefore(element, current[position] ?? null);
+      const from = current.indexOf(element);
+      if (from !== -1) {
+        current.splice(from, 1);
+      }
+      current.splice(position, 0, element);
+    }
+    position++;
+  }
 }
 
 function geometryOf(

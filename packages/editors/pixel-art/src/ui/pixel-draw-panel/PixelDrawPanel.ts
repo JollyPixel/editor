@@ -53,22 +53,9 @@ export class PixelDrawPanel extends LitElement {
     panelStyles
   ];
 
-  /**
-   * Off by default: create/delete only suit authoring contexts (the
-   * package's own example), not embeddings over a fixed mesh (voxel-map).
-   */
   @property({ type: Boolean, attribute: "allow-uv-create-delete" })
   declare allowUvCreateDelete: boolean;
 
-  /**
-   * "auto" follows the theme scope the panel is embedded in, and
-   * prefers-color-scheme when it is embedded in none; "light"/"dark" force a
-   * palette regardless. Reflects to the `theme` attribute, which is
-   * what the CSS override selectors key off. `jolly-theme-preferences`
-   * removes the attribute entirely for "auto" rather than writing it out, so
-   * the converter maps a missing/null attribute back to "auto" instead of
-   * leaving the property `null`.
-   */
   @property({
     type: String,
     reflect: true,
@@ -119,8 +106,14 @@ export class PixelDrawPanel extends LitElement {
     );
     this.#prefersDarkQuery?.removeEventListener("change", this.#onPrefersColorSchemeChange);
     this.#prefersDarkQuery = null;
-    this.#canvasManager?.destroy();
-    this.#canvasManager = null;
+    queueMicrotask(() => {
+      if (this.isConnected) {
+        return;
+      }
+
+      this.#canvasManager?.destroy();
+      this.#canvasManager = null;
+    });
   }
 
   override updated(
@@ -215,12 +208,6 @@ export class PixelDrawPanel extends LitElement {
     }
   }
 
-  /**
-   * PixelArtCanvas paints its own void color on a <canvas> (not CSS), so it
-   * can't pick up --color-canvas-bg from the cascade on its own — read the
-   * resolved value and push it in, keeping the canvas one source of truth
-   * (PixelDrawPanel.styles.ts) instead of duplicating the palette in JS.
-   */
   #syncCanvasBackground(): void {
     if (!this.#canvasManager) {
       return;
@@ -236,11 +223,6 @@ export class PixelDrawPanel extends LitElement {
     return resolveThemeColor(this, "--color-canvas-bg");
   }
 
-  /**
-   * Picking a variant from the rail flyout (e.g. Fill > Global) implies
-   * switching to that mode too — the flyout works even when hovering a
-   * mode that isn't active yet.
-   */
   #onModeVariantChange(
     { mode, value }: ModeVariantDetail
   ): void {
