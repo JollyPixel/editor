@@ -94,8 +94,8 @@ export function registerAssetRooms(
       return refuse("unknown kind");
     }
 
-    const { live } = kinds.get(kind);
-    if (live === undefined) {
+    const { commands } = kinds.get(kind);
+    if (commands?.live === undefined) {
       return refuse("kind has no live protocol");
     }
 
@@ -116,7 +116,8 @@ export function registerAssetRooms(
     };
     const extension = new AssetRoomExtension(
       binding,
-      live(binding),
+      commands,
+      commands.live(binding),
       events
     );
     liveRooms.set(assetId, extension);

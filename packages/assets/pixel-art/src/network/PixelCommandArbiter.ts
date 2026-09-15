@@ -118,53 +118,57 @@ export class PixelCommandArbiter {
   #admitStroke(
     command: PixelStrokeCommand
   ): PixelArbitration | null {
-    const accepted: PixelStrokeCommand["metadata"]["positions"] = [];
-
-    for (const position of command.metadata.positions) {
-      if (this.#pixelTracker.resolve(pixelKey(position), command) === "accept") {
-        accepted.push(position);
-      }
-    }
-
+    const accepted = this.#acceptedIndices(command);
     if (accepted.length === 0) {
       return null;
     }
+
+    const positions = accepted.map(
+      (index) => command.metadata.positions[index]
+    );
 
     return this.#pixelArbitration({
       ...command,
       metadata: {
         ...command.metadata,
-        positions: accepted
+        positions
       }
-    }, accepted);
+    }, positions);
   }
 
   #admitSelectEdit(
     command: PixelSelectEditCommand
   ): PixelArbitration | null {
-    const acceptedPositions: PixelSelectEditCommand["metadata"]["positions"] = [];
-    const acceptedColors: PixelSelectEditCommand["metadata"]["colors"] = [];
-
-    command.metadata.positions.forEach((position, index) => {
-      if (this.#pixelTracker.resolve(pixelKey(position), command) === "accept") {
-        acceptedPositions.push(position);
-        acceptedColors.push(
-          command.metadata.colors[index]
-        );
-      }
-    });
-
-    if (acceptedPositions.length === 0) {
+    const accepted = this.#acceptedIndices(command);
+    if (accepted.length === 0) {
       return null;
     }
+
+    const positions = accepted.map(
+      (index) => command.metadata.positions[index]
+    );
 
     return this.#pixelArbitration({
       ...command,
       metadata: {
-        positions: acceptedPositions,
-        colors: acceptedColors
+        positions,
+        colors: accepted.map((index) => command.metadata.colors[index])
       }
-    }, acceptedPositions);
+    }, positions);
+  }
+
+  #acceptedIndices(
+    command: PixelStrokeCommand | PixelSelectEditCommand
+  ): number[] {
+    const accepted: number[] = [];
+
+    command.metadata.positions.forEach((position, index) => {
+      if (this.#pixelTracker.resolve(pixelKey(position), command) === "accept") {
+        accepted.push(index);
+      }
+    });
+
+    return accepted;
   }
 
   #admitUvRegion(

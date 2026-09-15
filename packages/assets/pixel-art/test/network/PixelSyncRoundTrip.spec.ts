@@ -10,6 +10,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 import {
   AssetRoomExtension,
   assetRoomName,
+  foldAssetEvent,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
 import { pixelArtSnapshot } from "@jolly-pixel/pixel-draw.renderer";
@@ -44,16 +45,18 @@ function setup() {
   });
   const state = handler.create(kAssetId);
   const eventStore = EventStore.persistence.memory();
-  eventStore.subscribe((event) => handler.apply(state, event));
+  eventStore.subscribe((event) => foldAssetEvent(handler, state, event));
   const binding: AssetRoomBinding<PixelArtState> = {
     assetId: kAssetId,
     kind: PIXEL_ART_KIND,
     roomId: assetRoomName(PIXEL_ART_KIND, kAssetId),
     state
   };
+  const commands = handler.commands!;
   const extension = new AssetRoomExtension(
     binding,
-    handler.live!(binding),
+    commands,
+    commands.live!(binding),
     eventStore.writer
   );
   const { context } = createRoomContext();

@@ -160,7 +160,8 @@ export async function createAssetBackend(
 
   const states = new AssetStateStore({
     eventStore,
-    kinds
+    kinds,
+    logger
   });
   states.start();
 

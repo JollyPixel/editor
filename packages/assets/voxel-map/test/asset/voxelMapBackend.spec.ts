@@ -11,7 +11,8 @@ import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { Server, type ClientHandle } from "@jolly-pixel/network";
 import {
   assetRoomName,
-  createAssetBackend
+  createAssetBackend,
+  foldAssetEvent
 } from "@jolly-pixel/asset-server";
 import {
   decodeVoxelDocument,
@@ -66,7 +67,7 @@ function replay(
   const handler = voxelMapAssetHandler({ chunkSize: kChunkSize });
   const state = handler.create(assetId);
   for (const event of eventStore.reader.list(assetId)) {
-    handler.apply(state, event);
+    foldAssetEvent(handler, state, event);
   }
 
   return state;

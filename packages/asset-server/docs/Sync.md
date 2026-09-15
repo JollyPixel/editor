@@ -89,6 +89,10 @@ resolve, and concurrent callers share one replay. It re-reads the tail until
 the stream stops growing, because events appended while it yielded land before
 the entry starts following the log.
 
+Each event goes through `foldAssetEvent`. A hook that throws is logged as
+`asset event not folded` and skipped, both during replay and while following
+the log, so the state keeps its last good value.
+
 Those three types are exported as `ASSET_CHECKPOINT_EVENT_TYPES`. Loading a
 projection uses the same bound: `AssetProjector.load()` and
 `CatalogProjection.load()` read from each asset's newest checkpoint rather

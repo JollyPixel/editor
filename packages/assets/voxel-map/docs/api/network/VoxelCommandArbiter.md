@@ -10,12 +10,14 @@ interface VoxelCommandArbiterOptions {
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
+interface VoxelArbitration {
+  readonly command: VoxelNetworkCommand;
+  commit(): void;
+}
+
 class VoxelCommandArbiter {
   constructor(options?: VoxelCommandArbiterOptions);
-  admit<TCommand extends VoxelNetworkCommand>(
-    command: TCommand
-  ): TCommand | null;
-  record(command: VoxelNetworkCommand): void;
+  admit(command: VoxelNetworkCommand): VoxelArbitration | null;
 
   static key(
     command: VoxelLayerHookEvent | VoxelNetworkCommand
@@ -26,10 +28,11 @@ class VoxelCommandArbiter {
 }
 ```
 
-The default resolver is `network.LastWriteWinsResolver`. `admit()` returns the
-part of the command that wins, `null` when none of it does; it does not record
-the result. Call `record()` with the admitted command once it has been applied
-successfully.
+The default resolver is `network.LastWriteWinsResolver`. `admit()` returns an
+arbitration carrying the part of the command that wins, `null` when none of it
+does; it does not record the result. Call `commit()` once the command has been
+persisted, which records every key the admitted command touches.
+`world-replace` is always admitted and records nothing.
 
 A bulk command (`voxels-set`, `voxels-removed`) contends for each of its cells
 on its own: `admit()` returns a copy narrowed to the entries that win, so one

@@ -36,7 +36,7 @@ and names without a colon are rejected.
 A room is created when:
 
 - the room name parses as `${kind}:${assetId}`;
-- the kind is registered and provides `live`;
+- the kind is registered and provides `commands.live`;
 - the catalog contains the asset under that kind.
 
 Every asset room is hosted by `AssetRoomExtension`, which owns the
@@ -56,7 +56,8 @@ interface AssetRoomBinding<TState> {
 
 ## Commands
 
-A room parses each message with the kind's live protocol and arbitrates it.
+A room parses each message with the kind's `commands.parse` and arbitrates it
+through its live protocol.
 An accepted command is appended to `events`, then committed and broadcast.
 The `network` server never touches the event store.
 

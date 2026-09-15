@@ -25,6 +25,7 @@ import {
   AssetRoomExtension,
   ASSET_ROOM_DELETED,
   ASSET_ROOM_REJECTED,
+  type AssetCommands,
   type AssetLiveProtocol,
   type AssetRoomBinding
 } from "#src/index.ts";
@@ -84,9 +85,8 @@ function harness(
     }
   };
 
-  const extension = new AssetRoomExtension<Command>(kBinding, {
-    commandEventType: "counter.command",
-    protocols: counterCommandProtocols,
+  const commands: AssetCommands<unknown, Command> = {
+    eventType: "counter.command",
 
     parse(payload) {
       return typeof payload === "object" &&
@@ -96,6 +96,12 @@ function harness(
         payload as Command :
         null;
     },
+
+    apply: () => void 0
+  };
+
+  const extension = new AssetRoomExtension<Command>(kBinding, commands, {
+    protocols: counterCommandProtocols,
 
     snapshot() {
       return { value: 7 };

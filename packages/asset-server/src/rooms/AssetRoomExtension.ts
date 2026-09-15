@@ -3,7 +3,10 @@ import * as network from "@jolly-pixel/network";
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
+import type {
+  AssetCommands,
+  AssetRoomBinding
+} from "../kinds/AssetKindHandler.ts";
 import { actorOf } from "../events/AssetEvents.ts";
 import {
   assetRoomDeletedSchema,
@@ -32,12 +35,7 @@ export interface AssetArbitration<TCommand = unknown> {
 }
 
 export interface AssetLiveProtocol<TCommand = unknown> {
-  readonly commandEventType: string;
   readonly protocols: network.MessageProtocols;
-
-  parse(
-    payload: unknown
-  ): TCommand | null;
 
   snapshot(): unknown;
 
@@ -59,6 +57,7 @@ export class AssetRoomExtension<
   readonly protocols: network.MessageProtocols;
 
   #assetId: string;
+  #commands: AssetCommands<unknown, TCommand>;
   #protocol: AssetLiveProtocol<TCommand>;
   #events: EventStore.EventWriter;
   #room: network.RoomBroadcast | null = null;
@@ -66,6 +65,7 @@ export class AssetRoomExtension<
 
   constructor(
     binding: AssetRoomBinding,
+    commands: AssetCommands<unknown, TCommand>,
     protocol: AssetLiveProtocol<TCommand>,
     events: EventStore.EventWriter
   ) {
@@ -75,6 +75,7 @@ export class AssetRoomExtension<
     this.name = binding.kind;
     this.protocols = withRoomNotices(protocol.protocols);
     this.#assetId = binding.assetId;
+    this.#commands = commands;
     this.#protocol = protocol;
     this.#events = events;
   }
@@ -123,7 +124,7 @@ export class AssetRoomExtension<
       return;
     }
 
-    const command = this.#protocol.parse(payload);
+    const command = this.#commands.parse(payload);
     if (command === null) {
       return;
     }
@@ -136,7 +137,7 @@ export class AssetRoomExtension<
     const appended = this.#events.append({
       assetType: this.name,
       assetId: this.#assetId,
-      eventType: this.#protocol.commandEventType,
+      eventType: this.#commands.eventType,
       eventData: arbitration.command,
       actor: actorOf(context.identity)
     });

@@ -17,7 +17,8 @@ import {
 } from "@jolly-pixel/network";
 import {
   assetRoomName,
-  createAssetBackend
+  createAssetBackend,
+  foldAssetEvent
 } from "@jolly-pixel/asset-server";
 import {
   decodePixelArtDocument,
@@ -102,7 +103,7 @@ function replay(
   const handler = pixelArtAssetHandler({ defaultSize: kSize });
   const state = handler.create(assetId);
   for (const event of eventStore.reader.list(assetId)) {
-    handler.apply(state, event);
+    foldAssetEvent(handler, state, event);
   }
 
   return state.buffer;

@@ -2,11 +2,17 @@
 import {
   BlockRegistry,
   deserializeVoxelWorld,
+  parseVoxelDocument,
   serializeVoxelWorld,
   type TilesetDefinition,
   VoxelWorld,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
+
+// Import Internal Dependencies
+import { applyBlockCommand } from "../network/applyBlockCommand.ts";
+import { isVoxelBlockCommand } from "../network/VoxelCommandValidator.ts";
+import type { VoxelNetworkCommand } from "../network/types.ts";
 
 export class VoxelMapState {
   readonly world: VoxelWorld;
@@ -33,6 +39,20 @@ export class VoxelMapState {
       blocks: this.blocks
     });
     this.tilesets = [...document.tilesets];
+  }
+
+  applyCommand(
+    command: VoxelNetworkCommand
+  ): void {
+    if (command.action === "world-replace") {
+      this.load(parseVoxelDocument(command.data));
+    }
+    else if (isVoxelBlockCommand(command)) {
+      applyBlockCommand(this.blocks, command);
+    }
+    else {
+      this.world.applyRemoteCommand(command);
+    }
   }
 
   clear(): void {

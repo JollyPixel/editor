@@ -8,6 +8,7 @@ import {
   ASSET_CREATED,
   ASSET_DELETED,
   encodeContent,
+  foldAssetEvent,
   type AssetEventData,
   type AssetLiveProtocol
 } from "@jolly-pixel/asset-server/kinds";
@@ -46,7 +47,7 @@ function live(): LiveHarness {
 
   return {
     state,
-    protocol: handler.live!({
+    protocol: handler.commands!.live!({
       assetId: "asset-1",
       kind: VOXEL_MAP_KIND,
       roomId: `${VOXEL_MAP_KIND}:asset-1`,
@@ -152,7 +153,7 @@ describe("voxelMapAssetHandler", () => {
     ];
 
     const state = handler.create("asset-1");
-    handler.apply(state, documentEvent(source));
+    foldAssetEvent(handler, state, documentEvent(source));
 
     assert.deepEqual(
       state.world.getLayers().map((layer) => layer.name),
@@ -176,7 +177,7 @@ describe("voxelMapAssetHandler", () => {
     ];
 
     const state = handler.create("asset-1");
-    handler.apply(state, documentEvent(source));
+    foldAssetEvent(handler, state, documentEvent(source));
 
     assert.deepEqual(state.toJSON().tilesets, source.tilesets);
   });
@@ -186,7 +187,7 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
-    handler.apply(state, event(VOXEL_MAP_COMMAND, voxelSetCmd({
+    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, voxelSetCmd({
       x: 1,
       y: 0,
       z: 1,
@@ -204,7 +205,8 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
     const layer = state.world.addLayer("Ground");
 
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(VOXEL_MAP_COMMAND, positionDelta("Ground", {
         x: 2,
@@ -232,7 +234,7 @@ describe("voxelMapAssetHandler", () => {
     const replacement = new VoxelMapState(16);
     replacement.world.addLayer("Fresh");
 
-    handler.apply(state, event(VOXEL_MAP_COMMAND, {
+    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
       action: "world-replace",
       data: replacement.toJSON(),
       clientId: "client-A",
@@ -251,7 +253,7 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
-    handler.apply(state, event(ASSET_DELETED, {
+    foldAssetEvent(handler, state, event(ASSET_DELETED, {
       path: "world.voxelmap.json",
       kind: VOXEL_MAP_KIND
     }));
@@ -260,13 +262,13 @@ describe("voxelMapAssetHandler", () => {
     assert.deepEqual(state.tilesets, []);
   });
 
-  test("a malformed event never throws and keeps the last good world", () => {
+  test("a malformed document throws before touching the world", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
-    assert.doesNotThrow(() => {
-      handler.apply(state, event(ASSET_CREATED, {
+    assert.throws(() => {
+      foldAssetEvent(handler, state, event(ASSET_CREATED, {
         path: "world.voxelmap.json",
         kind: VOXEL_MAP_KIND,
         hash: "h1",
@@ -285,7 +287,7 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
 
     assert.doesNotThrow(() => {
-      handler.apply(state, event(VOXEL_MAP_COMMAND, voxelSetCmd({
+      foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, voxelSetCmd({
         layerName: "Missing"
       })));
     });
@@ -296,8 +298,10 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
-    handler.apply(state, documentEvent(new VoxelMapState(8)));
-
+    assert.throws(
+      () => foldAssetEvent(handler, state, documentEvent(new VoxelMapState(8))),
+      /chunkSize 8 does not match/
+    );
     assert.deepEqual(
       state.world.getLayers().map((layer) => layer.name),
       ["Ground"]
@@ -308,7 +312,7 @@ describe("voxelMapAssetHandler", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const first = handler.create("asset-1");
     first.world.addLayer("Ground");
-    handler.apply(first, event(VOXEL_MAP_COMMAND, voxelSetCmd({
+    foldAssetEvent(handler, first, event(VOXEL_MAP_COMMAND, voxelSetCmd({
       x: 4,
       y: 1,
       z: 4,
@@ -317,7 +321,7 @@ describe("voxelMapAssetHandler", () => {
 
     const data = await handler.serialize(first);
     const second = handler.create("asset-1");
-    handler.apply(second, event(ASSET_CREATED, {
+    foldAssetEvent(handler, second, event(ASSET_CREATED, {
       path: "world.voxelmap.json",
       kind: VOXEL_MAP_KIND,
       hash: "h1",
@@ -331,21 +335,24 @@ describe("voxelMapAssetHandler", () => {
     );
   });
 
-  test("live() declares the voxel command stream", () => {
+  test("declares the voxel command stream", () => {
     const { protocol } = live();
 
-    assert.strictEqual(protocol.commandEventType, VOXEL_MAP_COMMAND);
+    assert.strictEqual(
+      voxelMapAssetHandler().commands!.eventType,
+      VOXEL_MAP_COMMAND
+    );
     const events = protocolEvents(protocol.protocols.inbound!);
 
     assert.deepEqual(events.toSorted(), [...VOXEL_MAP_ACTIONS].toSorted());
     assert.ok(events.includes("world-replace"));
   });
 
-  test("live() rejects a payload that is not a voxel command", () => {
-    const { protocol } = live();
+  test("rejects a payload that is not a voxel command", () => {
+    const { parse } = voxelMapAssetHandler().commands!;
 
-    assert.strictEqual(protocol.parse({ action: "voxel-set" }), null);
-    assert.strictEqual(protocol.parse(null), null);
+    assert.strictEqual(parse({ action: "voxel-set" }), null);
+    assert.strictEqual(parse(null), null);
   });
 
   test("an uncommitted arbitration leaves the tracker untouched", () => {
@@ -435,8 +442,9 @@ describe("voxelMapAssetHandler — block definitions", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
-    handler.apply(state, documentEvent(new VoxelMapState(16)));
-    handler.apply(
+    foldAssetEvent(handler, state, documentEvent(new VoxelMapState(16)));
+    foldAssetEvent(
+      handler,
       state,
       event(
         VOXEL_MAP_COMMAND,
@@ -461,7 +469,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
     source.blocks.register(makeBlockDef(3, "slope"));
 
     const restored = handler.create("asset-1");
-    handler.apply(restored, documentEvent(source));
+    foldAssetEvent(handler, restored, documentEvent(source));
 
     assert.strictEqual(restored.blocks.get(3)?.shapeId, "slope");
   });
@@ -470,11 +478,13 @@ describe("voxelMapAssetHandler — block definitions", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3, shapeId: "cube" }))
     );
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3, shapeId: "slope" }))
     );
@@ -486,11 +496,13 @@ describe("voxelMapAssetHandler — block definitions", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3 }))
     );
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(VOXEL_MAP_COMMAND, {
         action: "block-removed",
@@ -513,7 +525,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
     source.blocks.register(
       resolveBlockDefinition(makeBlockDef(3, "slope"))
     );
-    handler.apply(state, documentEvent(source));
+    foldAssetEvent(handler, state, documentEvent(source));
 
     assert.strictEqual(state.blocks.has(9), false);
     assert.strictEqual(state.blocks.get(3)?.shapeId, "slope");
@@ -524,7 +536,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
     const state = handler.create("asset-1");
     state.blocks.register(makeBlockDef(3, "slope"));
 
-    handler.apply(state, event(ASSET_DELETED, {
+    foldAssetEvent(handler, state, event(ASSET_DELETED, {
       path: "world.voxelmap.json",
       kind: VOXEL_MAP_KIND
     }));
@@ -539,7 +551,7 @@ describe("voxelMapAssetHandler — block order", () => {
     state: VoxelMapState
   ): void {
     for (const id of [1, 2, 3]) {
-      handler.apply(state, event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id })));
+      foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id })));
     }
   }
 
@@ -548,7 +560,8 @@ describe("voxelMapAssetHandler — block order", () => {
     const state = handler.create("asset-1");
     seed(handler, state);
 
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 3, toIndex: 0 }))
     );
@@ -563,7 +576,8 @@ describe("voxelMapAssetHandler — block order", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const source = handler.create("asset-1");
     seed(handler, source);
-    handler.apply(
+    foldAssetEvent(
+      handler,
       source,
       event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 1, toIndex: 2 }))
     );
@@ -572,7 +586,7 @@ describe("voxelMapAssetHandler — block order", () => {
     assert.deepEqual(document.blocks?.map((block) => block.id), [2, 3, 1]);
 
     const restored = handler.create("asset-1");
-    handler.apply(restored, documentEvent(source));
+    foldAssetEvent(handler, restored, documentEvent(source));
 
     assert.deepEqual(
       [...restored.blocks].map((block) => block.id),
@@ -584,14 +598,16 @@ describe("voxelMapAssetHandler — block order", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const state = handler.create("asset-1");
     seed(handler, state);
-    handler.apply(
+    foldAssetEvent(
+      handler,
       state,
       event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 3, toIndex: 0 }))
     );
 
     const replayed = handler.create("asset-1");
-    handler.apply(replayed, documentEvent(state));
-    handler.apply(
+    foldAssetEvent(handler, replayed, documentEvent(state));
+    foldAssetEvent(
+      handler,
       replayed,
       event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 1, toIndex: 0 }))
     );

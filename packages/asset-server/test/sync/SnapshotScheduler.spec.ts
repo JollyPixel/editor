@@ -47,7 +47,7 @@ function increment(
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
-    eventData: {},
+    eventData: { action: "increment" },
     actor: kActor
   }).unwrap();
 }
