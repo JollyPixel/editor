@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import type { OrbitFlyCamera } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import type GroupManager from "../groups/GroupManager.ts";
 import type { GroupTransformSnapshot } from "../groups/hooks.ts";
 import { snapshotTransform } from "../groups/transformCodec.ts";
-import type { FreeFlyCamera } from "../../scene/camera/FreeFlyCamera.ts";
 
 export type GizmoMode = "translate" | "rotate" | "scale";
 export type GizmoTarget = "group" | "pivot" | "mesh";
@@ -19,7 +19,7 @@ export interface GizmoConfig {
 }
 
 export interface GizmoManagerOptions {
-  camera: FreeFlyCamera;
+  camera: OrbitFlyCamera;
   canvas: HTMLCanvasElement;
   getSelectedGroup(): GroupManager | null;
   commitTransform(uuid: string): void;
@@ -31,7 +31,7 @@ export interface GizmoManagerOptions {
 }
 
 export default class GizmoManager {
-  #camera: FreeFlyCamera;
+  #camera: OrbitFlyCamera;
   #getSelectedGroup: () => GroupManager | null;
   #commitTransform: (uuid: string) => void;
   #onDragProgress: ((uuid: string, transform: GroupTransformSnapshot) => void) | undefined;

@@ -1,11 +1,9 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
-import {
-  type Actor,
-  disposeObject3D
-} from "@jolly-pixel/engine";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
+import type { Actor } from "../../../actor/Actor.ts";
+import { disposeObject3D } from "../../../utils/disposeObject3D.ts";
 import { createPivotMarker } from "./pivotMarker.ts";
 
 // CONSTANTS
@@ -30,9 +28,7 @@ export interface ElasticFocusOptions {
 
 /**
  * WASD/look pilot a free-floating pivot; the camera trails behind it at a
- * scroll-adjusted distance, reaching 0 (free-fly) at full zoom-in. Ported
- * from voxel-map's `src/scene/camera/ElasticFocus.ts`, with an added
- * `initialTrailDistance` option (voxel-map's original always starts at 0).
+ * scroll-adjusted distance, reaching 0 (free-fly) at full zoom-in.
  */
 export class ElasticFocus {
   #maxTrailDistance: number;

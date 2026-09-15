@@ -1,10 +1,9 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { FreeFlyCamera } from "../scene/camera/FreeFlyCamera.ts";
 import { ModelSceneComponent } from "./ModelSceneComponent.ts";
 import type { EditorIdentity } from "../collaboration/identity.ts";
 import type {
@@ -45,9 +44,16 @@ export class ModelEditorScene extends Systems.Scene {
 
     const camera = this.world
       .createActor("camera")
-      .addComponentAndGet(FreeFlyCamera, {
+      .addComponentAndGet(OrbitFlyCamera, {
+        focusMode: "elastic",
+        position: { x: 0, y: 1, z: 5 },
         pivotPosition: { x: 0, y: 2, z: 0 },
         pitch: -0.3,
+        moveSpeed: 6,
+        minMoveSpeed: 1,
+        maxMoveSpeed: 60,
+        scrollSpeed: 1,
+        maxPivotDistance: 20,
         initialTrailDistance: 12
       });
 

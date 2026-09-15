@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // CONSTANTS
 const kPivotMarkerColor = 0x999999;

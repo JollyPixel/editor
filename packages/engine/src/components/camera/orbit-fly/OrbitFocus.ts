@@ -1,11 +1,9 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
-import {
-  Actor,
-  disposeObject3D
-} from "@jolly-pixel/engine";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
+import type { Actor } from "../../../actor/Actor.ts";
+import { disposeObject3D } from "../../../utils/disposeObject3D.ts";
 import { createPivotMarker } from "./pivotMarker.ts";
 
 // CONSTANTS

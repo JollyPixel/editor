@@ -1,4 +1,3 @@
-export { FreeFlyCamera } from "./camera/FreeFlyCamera.ts";
 export { GridRenderer } from "./GridRenderer.ts";
 export {
   castViewRay,

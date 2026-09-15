@@ -125,4 +125,5 @@ camera.setProjectionMode("orthographic");
 ## See also
 
 - [Camera3DControls](camera-3d-controls.md) — first-person controller
+- [OrbitFlyCamera](orbit-fly-camera.md) — fly camera with an optional orbit/elastic pivot
 - [Renderer](../systems/renderer.md) — how cameras are drawn
