@@ -11,7 +11,6 @@ import {
 
 // Import Internal Dependencies
 import { applyBlockCommand } from "../network/applyBlockCommand.ts";
-import { isVoxelBlockCommand } from "../network/VoxelCommandValidator.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
 export class VoxelMapState {
@@ -44,14 +43,17 @@ export class VoxelMapState {
   applyCommand(
     command: VoxelNetworkCommand
   ): void {
-    if (command.action === "world-replace") {
-      this.load(parseVoxelDocument(command.data));
-    }
-    else if (isVoxelBlockCommand(command)) {
-      applyBlockCommand(this.blocks, command);
-    }
-    else {
-      this.world.applyRemoteCommand(command);
+    switch (command.action) {
+      case "world-replace":
+        this.load(parseVoxelDocument(command.data));
+        break;
+      case "block-defined":
+      case "block-removed":
+      case "block-moved":
+        applyBlockCommand(this.blocks, command);
+        break;
+      default:
+        this.world.applyRemoteCommand(command);
     }
   }
 

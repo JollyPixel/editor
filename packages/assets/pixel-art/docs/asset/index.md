@@ -71,12 +71,15 @@ function live(
 ```
 
 It builds one `PixelCommandArbiter` per room, snapshots with
-`pixelArtSnapshot()`, accepts `PIXEL_NETWORK_ACTIONS`, and appends admitted
-commands under `PIXEL_ART_COMMAND`. `commands.parse` accepts a payload only
-when `isPixelNetworkCommand()` does, for live messages and replay alike, and
-`commands.apply` forwards to `applyCommandToBuffer()`. Arbitration stamps the sender's
-server-side `clientId` onto the command, so a spoofed id never reaches the
-log.
+`pixelArtSnapshot()` and appends admitted commands under `PIXEL_ART_COMMAND`.
+`commands.protocol` is `pixelCommandProtocol`, the JSON Schema that validates
+live messages and replay alike, and `pixelSnapshotSchema` describes the
+snapshot. `commands.apply` forwards to `applyCommandToBuffer()`.
+
+The arbiter enforces the rules a schema cannot express: a `select-edit` needs
+as many colors as positions, and a created or changed UV region must pass
+`isUVRegionData()`. Arbitration stamps the sender's server-side `clientId`
+onto the command, so a spoofed id never reaches the log.
 
 ## Why the room never writes
 

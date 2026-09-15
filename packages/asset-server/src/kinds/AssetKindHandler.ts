@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { MessageProtocol } from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import type { AssetLiveProtocol } from "../rooms/AssetRoomExtension.ts";
 
@@ -28,10 +31,7 @@ export interface AssetCommands<
   TCommand = unknown
 > {
   readonly eventType: string;
-
-  parse(
-    payload: unknown
-  ): TCommand | null;
+  readonly protocol: MessageProtocol;
 
   apply(
     state: TState,

@@ -19,8 +19,8 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
 
 interface AssetCommands<TState = unknown, TCommand = unknown> {
   readonly eventType: string;
+  readonly protocol: MessageProtocol;
 
-  parse(payload: unknown): TCommand | null;
   apply(state: TState, command: TCommand): void;
   live?(binding: AssetRoomBinding<TState>): AssetLiveProtocol<TCommand>;
 }
@@ -63,11 +63,12 @@ function foldAssetEvent<TState, TCommand>(
 |---|---|
 | `asset.created`, `asset.updated` | `load(state, content)` with the decoded bytes |
 | `asset.deleted` | `clear(state)` |
-| `commands.eventType` | `commands.apply(state, command)` once `commands.parse` accepts the payload |
+| `commands.eventType` | `commands.apply(state, command)` once the payload matches `commands.protocol` |
 | anything else | none |
 
 A lifecycle event that fails `parseAssetEvent` is ignored, since the projector
-already reports it. A command payload refused by `commands.parse` is ignored.
+already reports it. A command payload that does not match `commands.protocol`
+is ignored.
 
 `load` and `clear` reset the existing `TState` in place, because each lifecycle
 event is a complete checkpoint. Replay creates a fresh state, resumes at the
@@ -161,7 +162,7 @@ kind supplies only what is specific to it:
 
 ```ts
 interface AssetLiveProtocol<TCommand = unknown> {
-  readonly protocols: MessageProtocols;
+  readonly snapshotSchema: JSONSchema;
 
   snapshot(): unknown;
   arbitrate(
@@ -172,8 +173,9 @@ interface AssetLiveProtocol<TCommand = unknown> {
 }
 ```
 
-`commands.parse` serves the room and replay alike, so a command is accepted by
-the same rule on its way into the log and on its way back out.
+`commands.protocol` is a JSON Schema `MessageProtocol` that serves the room
+and replay alike, so a command is accepted by the same rule on its way into
+the log and on its way back out. The schema is compiled once per protocol.
 
 `live` runs once per room, so per-room state such as a conflict tracker
 belongs in the returned protocol rather than in the handler:
@@ -181,14 +183,14 @@ belongs in the returned protocol rather than in the handler:
 ```ts
 commands: {
   eventType: MY_COMMAND,
-  parse: (payload) => isMyCommand(payload) ? payload : null,
+  protocol: myCommandProtocol,
   apply: (state, command) => state.applyCommand(command),
 
   live({ state }) {
     const arbiter = new MyArbiter({ conflictResolver });
 
     return {
-      protocols: myProtocols,
+      snapshotSchema: mySnapshotSchema,
       snapshot: () => state.toJSON(),
       arbitrate: (command) => arbiter.admit(command)
     };
@@ -196,8 +198,8 @@ commands: {
 }
 ```
 
-The room parses the payload with `commands.parse`, arbitrates it, appends
-`arbitration.command` under `commands.eventType`, then calls
+The room validates the payload against `commands.protocol`, arbitrates it,
+appends `arbitration.command` under `commands.eventType`, then calls
 `arbitration.commit` and broadcasts. `commit` runs only after the append
 lands, so a conflict tracker never records a command the store refused. The
 append folds through `commands.apply` before it resolves, so state is current
@@ -207,9 +209,11 @@ by the time peers hear about the change.
 envelope. `voxel-map` uses it to answer a `world-replace` with a full
 snapshot.
 
-`protocols.inbound` names the commands the kind accepts. A configured rights
-table checks each message under `${kind}.${action}`; a payload naming no
-declared action is checked under `${kind}.invalid`.
+The room derives its `protocols` from both schemas: `commands.protocol` is
+inbound, and outbound is `serverMessageProtocol({ command, snapshot })` plus
+the `deleted` and `rejected` notices. A configured rights table checks each
+message under `${kind}.${action}`; a payload naming no declared action is
+checked under `${kind}.invalid`.
 
 A room that also mutated the state would apply every command twice: once
 itself and once through the fold. Absolute writes survive that, but a command

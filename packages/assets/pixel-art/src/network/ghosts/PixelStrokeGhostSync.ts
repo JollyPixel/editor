@@ -103,7 +103,6 @@ export class PixelStrokeGhostSync extends PeerPresenceGhostSync<PeerStrokePixel[
       case "global-fill":
       case "resized":
       case "texture-replaced":
-        // Whole-canvas ops have no positions; clear all ghosts.
         this.clearLeases();
         this.clearAllGhosts();
         break;

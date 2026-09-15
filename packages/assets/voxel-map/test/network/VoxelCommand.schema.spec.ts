@@ -9,22 +9,107 @@ import assert from "node:assert/strict";
 import { MessageParser } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { voxelProtocols } from "#src/network/VoxelCommand.schema.ts";
-import { voxelSetCmd } from "../helpers/networkCommands.ts";
+import { voxelCommandProtocol } from "#src/network/VoxelCommand.schema.ts";
+import {
+  blockDefinedCmd,
+  blockMovedCmd,
+  voxelSetCmd,
+  worldReplaceCmd
+} from "../helpers/networkCommands.ts";
 
-describe("voxelProtocols", () => {
+// CONSTANTS
+const kHeader = {
+  clientId: "client-A",
+  seq: 1,
+  timestamp: 1000
+};
+
+function accepts(
+  payload: unknown
+): boolean {
+  return new MessageParser(voxelCommandProtocol).parse(payload).ok;
+}
+
+function layerCommand(
+  action: string,
+  metadata: unknown
+): unknown {
+  return {
+    ...kHeader,
+    action,
+    layerName: "Ground",
+    metadata
+  };
+}
+
+describe("voxelCommandProtocol", () => {
   test("parses a command to its action", () => {
-    const parser = new MessageParser(voxelProtocols.inbound!);
-
-    const parsed = parser.parse(voxelSetCmd());
+    const parsed = new MessageParser(voxelCommandProtocol).parse(voxelSetCmd());
 
     assert.strictEqual(parsed.ok, true);
     assert.strictEqual(parsed.val.event, "voxel-set");
   });
 
   test("rejects a payload that is not a voxel command", () => {
-    const parser = new MessageParser(voxelProtocols.inbound!);
+    assert.strictEqual(accepts({ not: "a command" }), false);
+    assert.strictEqual(accepts({ ...voxelSetCmd(), clientId: 42 }), false);
+  });
 
-    assert.strictEqual(parser.parse({ not: "a command" }).ok, false);
+  test("accepts block and world commands", () => {
+    assert.strictEqual(accepts(blockDefinedCmd()), true);
+    assert.strictEqual(accepts(blockMovedCmd()), true);
+    assert.strictEqual(accepts(worldReplaceCmd()), true);
+  });
+
+  test("rejects a voxel-set missing its transform", () => {
+    assert.strictEqual(accepts(layerCommand("voxel-set", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: 1
+    })), false);
+  });
+
+  test("accepts bulk entries whose transform is optional", () => {
+    assert.strictEqual(accepts(layerCommand("voxels-set", {
+      entries: [
+        { position: { x: 0, y: 0, z: 0 }, blockId: 1 },
+        { position: { x: 1, y: 0, z: 0 }, blockId: 1, rotation: 1 }
+      ]
+    })), true);
+    assert.strictEqual(accepts(layerCommand("voxels-removed", {
+      entries: [{ position: { x: 0, y: 0 } }]
+    })), false);
+  });
+
+  test("accepts a position update carrying a position or a delta", () => {
+    const delta = { x: 1, y: 0, z: 0 };
+
+    assert.strictEqual(accepts(layerCommand("position-updated", { delta })), true);
+    assert.strictEqual(accepts(layerCommand("position-updated", { position: delta })), true);
+    assert.strictEqual(accepts(layerCommand("position-updated", {})), false);
+  });
+
+  test("rejects an object missing required fields", () => {
+    assert.strictEqual(accepts(layerCommand("object-added", {
+      object: { id: "o1", name: "spawn", x: 0, y: 0, z: 0, visible: true }
+    })), true);
+    assert.strictEqual(accepts(layerCommand("object-added", {
+      object: { id: "o1" }
+    })), false);
+  });
+
+  test("rejects an unknown reorder direction", () => {
+    assert.strictEqual(accepts(layerCommand("reordered", { direction: "left" })), false);
+  });
+
+  test("rejects a world-replace with the wrong version", () => {
+    const command = worldReplaceCmd();
+
+    assert.strictEqual(accepts({
+      ...command,
+      data: {
+        ...(command as { data: object; }).data,
+        version: 2
+      }
+    }), false);
   });
 });

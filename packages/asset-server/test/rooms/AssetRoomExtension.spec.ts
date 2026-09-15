@@ -20,7 +20,10 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import { counterCommandProtocols } from "../helpers/protocols.ts";
+import {
+  counterCommandProtocol,
+  counterSnapshotSchema
+} from "../helpers/protocols.ts";
 import {
   AssetRoomExtension,
   ASSET_ROOM_DELETED,
@@ -88,20 +91,13 @@ function harness(
   const commands: AssetCommands<unknown, Command> = {
     eventType: "counter.command",
 
-    parse(payload) {
-      return typeof payload === "object" &&
-        payload !== null &&
-        "action" in payload &&
-        payload.action === "increment" ?
-        payload as Command :
-        null;
-    },
+    protocol: counterCommandProtocol,
 
     apply: () => void 0
   };
 
   const extension = new AssetRoomExtension<Command>(kBinding, commands, {
-    protocols: counterCommandProtocols,
+    snapshotSchema: counterSnapshotSchema,
 
     snapshot() {
       return { value: 7 };

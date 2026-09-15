@@ -16,12 +16,13 @@ import { protocolEvents } from "@jolly-pixel/network";
 import {
   decodeVoxelDocument,
   encodeVoxelDocument,
-  resolveBlockDefinition
+  resolveBlockDefinition,
+  VOXEL_BLOCK_HOOK_ACTIONS,
+  VOXEL_LAYER_HOOK_ACTIONS
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  VOXEL_MAP_ACTIONS,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND,
   voxelMapAssetHandler,
@@ -336,23 +337,37 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("declares the voxel command stream", () => {
-    const { protocol } = live();
+    const { commands } = voxelMapAssetHandler();
 
-    assert.strictEqual(
-      voxelMapAssetHandler().commands!.eventType,
-      VOXEL_MAP_COMMAND
-    );
-    const events = protocolEvents(protocol.protocols.inbound!);
-
-    assert.deepEqual(events.toSorted(), [...VOXEL_MAP_ACTIONS].toSorted());
-    assert.ok(events.includes("world-replace"));
+    assert.strictEqual(commands!.eventType, VOXEL_MAP_COMMAND);
+    assert.deepEqual(protocolEvents(commands!.protocol).toSorted(), [
+      ...VOXEL_LAYER_HOOK_ACTIONS,
+      ...VOXEL_BLOCK_HOOK_ACTIONS,
+      "world-replace"
+    ].toSorted());
   });
 
-  test("rejects a payload that is not a voxel command", () => {
-    const { parse } = voxelMapAssetHandler().commands!;
+  test("ignores a command payload the protocol rejects", () => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    state.world.addLayer("Ground");
 
-    assert.strictEqual(parse({ action: "voxel-set" }), null);
-    assert.strictEqual(parse(null), null);
+    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
+      ...voxelSetCmd({ blockId: 9 }),
+      metadata: {
+        position: { x: 0, y: 0, z: 0 },
+        blockId: "9"
+      }
+    }));
+    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, null));
+    assert.strictEqual(state.world.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
+
+    foldAssetEvent(
+      handler,
+      state,
+      event(VOXEL_MAP_COMMAND, voxelSetCmd({ blockId: 9 }))
+    );
+    assert.strictEqual(state.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 9);
   });
 
   test("an uncommitted arbitration leaves the tracker untouched", () => {

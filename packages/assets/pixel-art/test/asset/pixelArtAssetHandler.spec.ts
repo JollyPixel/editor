@@ -30,7 +30,6 @@ import {
   PIXEL_ART_COMMAND,
   PIXEL_ART_KIND
 } from "#src/asset/pixelArtAssetHandler.ts";
-import { PIXEL_NETWORK_ACTIONS } from "#src/network/PixelCommandValidator.ts";
 import type { PixelArtState } from "#src/asset/PixelArtState.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
@@ -250,38 +249,36 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("declares the pixel command stream", () => {
-    const protocol = liveProtocol();
+    const { commands } = pixelArtAssetHandler();
 
-    assert.strictEqual(
-      pixelArtAssetHandler().commands!.eventType,
-      PIXEL_ART_COMMAND
-    );
-    assert.deepEqual(
-      protocolEvents(protocol.protocols.inbound!),
-      [...PIXEL_NETWORK_ACTIONS]
-    );
+    assert.strictEqual(commands!.eventType, PIXEL_ART_COMMAND);
+    assert.deepEqual(protocolEvents(commands!.protocol), [
+      "stroke",
+      "resized",
+      "texture-replaced",
+      "global-fill",
+      "select-edit",
+      "uv-region-created",
+      "uv-region-deleted",
+      "uv-region-moved",
+      "uv-region-state-changed"
+    ]);
   });
 
-  test("rejects a payload that is not a pixel command", () => {
-    const { parse } = pixelArtAssetHandler().commands!;
+  test("ignores a command payload the protocol rejects", () => {
+    const handler = pixelArtAssetHandler({
+      defaultSize: { x: 4, y: 4 }
+    });
+    const state = handler.create("asset-1");
+    const before = Uint8ClampedArray.from(state.buffer.pixels());
 
-    assert.strictEqual(parse({ action: "stroke" }), null);
-    assert.strictEqual(parse(null), null);
-  });
+    foldAssetEvent(handler, state, event(PIXEL_ART_COMMAND, {
+      ...strokeCommand([{ x: 1, y: 1 }]),
+      seq: -1
+    }));
+    foldAssetEvent(handler, state, event(PIXEL_ART_COMMAND, null));
 
-  test("rejects a command breaking a domain rule", () => {
-    const { parse } = pixelArtAssetHandler().commands!;
-
-    assert.strictEqual(parse({
-      action: "select-edit",
-      metadata: {
-        positions: [{ x: 0, y: 0 }],
-        colors: []
-      },
-      clientId: "client-A",
-      seq: 1,
-      timestamp: 1000
-    }), null);
+    assert.deepEqual(state.buffer.pixels(), before);
   });
 
   test("live() stamps the server-side client id onto the command", () => {

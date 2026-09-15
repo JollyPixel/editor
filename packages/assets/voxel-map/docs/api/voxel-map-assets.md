@@ -85,13 +85,15 @@ function live(
 
 It builds one `VoxelCommandArbiter` per room, snapshots with
 `VoxelMapState.toJSON()`, and appends accepted commands under
-`VOXEL_MAP_COMMAND`. `commands.apply` is the only code that mutates state. Applying a command in the room as well would replay it twice;
+`VOXEL_MAP_COMMAND`. `commands.protocol` is `voxelCommandProtocol` and the
+snapshot schema is `voxelWorldSchema`. `commands.apply` is the only code that
+mutates state. Applying a command in the room as well would replay it twice;
 an offset delta would then move a layer twice as far.
 
 `arbitrate` is `VoxelCommandArbiter.admit()`; the room commits the returned
 arbitration once the event-store append succeeds. Full-world replacement is
 always admitted and broadcasts a fresh snapshot instead of the command.
 
-`VOXEL_MAP_ACTIONS` covers the layer hook actions, `VOXEL_BLOCK_HOOK_ACTIONS`
-and `world-replace`. Block commands are appended, folded into
+The protocol declares the layer hook actions, `VOXEL_BLOCK_HOOK_ACTIONS` and
+`world-replace`. Block commands are appended, folded into
 `VoxelMapState.blocks`, and broadcast like any other command.

@@ -3,17 +3,187 @@ import {
   COMMAND_HEADER_REQUIRED,
   commandHeaderProperties,
   defineMessageProtocol,
-  serverMessageProtocol,
   type JSONSchema,
-  type MessageProtocol,
-  type MessageProtocols
+  type MessageProtocol
 } from "@jolly-pixel/network";
-
-// Import Internal Dependencies
-import {
-  VOXEL_BLOCK_HOOK_ACTIONS,
-  VOXEL_LAYER_HOOK_ACTIONS
+import type {
+  VoxelBlockHookAction,
+  VoxelLayerHookAction
 } from "@jolly-pixel/voxel.renderer";
+
+// CONSTANTS
+const kVector3Schema: JSONSchema = {
+  type: "object",
+  properties: {
+    x: { type: "number" },
+    y: { type: "number" },
+    z: { type: "number" }
+  },
+  required: [
+    "x",
+    "y",
+    "z"
+  ]
+};
+
+const kVoxelTransformProperties = {
+  rotation: { type: "number" },
+  flipX: { type: "boolean" },
+  flipY: { type: "boolean" },
+  flipZ: { type: "boolean" }
+} as const;
+
+const kVoxelObjectProperties: Record<string, JSONSchema> = {
+  id: { type: "string" },
+  name: { type: "string" },
+  type: { type: "string" },
+  x: { type: "number" },
+  y: { type: "number" },
+  z: { type: "number" },
+  width: { type: "number" },
+  height: { type: "number" },
+  rotation: { type: "number" },
+  visible: { type: "boolean" },
+  color: { type: "string" },
+  locked: { type: "boolean" },
+  properties: {
+    type: "object",
+    additionalProperties: {
+      type: ["string", "number", "boolean"]
+    }
+  }
+};
+
+const kEmptySchema: JSONSchema = {
+  type: "object"
+};
+
+function objectSchema(
+  properties: Record<string, JSONSchema>,
+  required: readonly string[] = Object.keys(properties)
+): JSONSchema {
+  return {
+    type: "object",
+    properties,
+    required: [...required]
+  };
+}
+
+const kLayerMetadataSchemas: Record<VoxelLayerHookAction, JSONSchema> = {
+  added: objectSchema({
+    options: { type: "object" }
+  }),
+  removed: kEmptySchema,
+  updated: objectSchema({
+    options: { type: "object" }
+  }),
+  cloned: objectSchema({
+    options: objectSchema({ name: { type: "string" } })
+  }),
+  merged: objectSchema({
+    targetLayerName: { type: "string" }
+  }),
+  "position-updated": {
+    oneOf: [
+      objectSchema({ position: kVector3Schema }),
+      objectSchema({ delta: kVector3Schema })
+    ]
+  },
+  "position-rebased": objectSchema({
+    position: kVector3Schema
+  }),
+  "voxel-set": objectSchema({
+    position: kVector3Schema,
+    blockId: { type: "number" },
+    ...kVoxelTransformProperties
+  }),
+  "voxel-removed": objectSchema({
+    position: kVector3Schema
+  }),
+  "voxels-set": objectSchema({
+    entries: {
+      type: "array",
+      items: objectSchema({
+        position: kVector3Schema,
+        blockId: { type: "number" },
+        ...kVoxelTransformProperties
+      }, ["position", "blockId"])
+    }
+  }),
+  "voxels-removed": objectSchema({
+    entries: {
+      type: "array",
+      items: objectSchema({ position: kVector3Schema })
+    }
+  }),
+  reordered: objectSchema({
+    direction: { enum: ["up", "down"] }
+  }),
+  "layer-moved": objectSchema({
+    toIndex: { type: "integer" }
+  }),
+  "object-layer-added": kEmptySchema,
+  "object-layer-removed": kEmptySchema,
+  "object-layer-updated": objectSchema({
+    patch: objectSchema({ visible: { type: "boolean" } }, [])
+  }),
+  "object-added": objectSchema({
+    object: objectSchema(kVoxelObjectProperties, [
+      "id",
+      "name",
+      "x",
+      "y",
+      "z",
+      "visible"
+    ])
+  }),
+  "object-removed": objectSchema({
+    objectId: { type: "string" }
+  }),
+  "object-moved": objectSchema({
+    objectId: { type: "string" },
+    fromLayerName: { type: "string" },
+    toLayerName: { type: "string" }
+  }),
+  "object-updated": objectSchema({
+    objectId: { type: "string" },
+    patch: objectSchema(kVoxelObjectProperties, [])
+  })
+};
+
+const kBlockCommandProperties: Record<
+  VoxelBlockHookAction,
+  Record<string, JSONSchema>
+> = {
+  "block-defined": {
+    block: objectSchema({ id: { type: "integer" } })
+  },
+  "block-removed": {
+    blockId: { type: "integer" }
+  },
+  "block-moved": {
+    blockId: { type: "integer" },
+    toIndex: { type: "integer" }
+  }
+};
+
+export const voxelWorldSchema: JSONSchema = {
+  type: "object",
+  properties: {
+    version: { const: 1 },
+    chunkSize: { type: "number" },
+    tilesets: { type: "array" },
+    blocks: { type: "array" },
+    layers: { type: "array" },
+    objectLayers: { type: "array" }
+  },
+  required: [
+    "version",
+    "chunkSize",
+    "tilesets",
+    "layers"
+  ]
+};
 
 function commandVariant(
   action: string,
@@ -34,50 +204,21 @@ function commandVariant(
   };
 }
 
-export const voxelWorldSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    version: { const: 1 },
-    chunkSize: { type: "number" },
-    tilesets: { type: "array" },
-    layers: { type: "array" }
-  },
-  required: [
-    "version",
-    "chunkSize",
-    "tilesets",
-    "layers"
-  ]
-};
-
 export const voxelCommandProtocol: MessageProtocol = defineMessageProtocol({
   schema: {
     oneOf: [
-      ...VOXEL_LAYER_HOOK_ACTIONS.map((action) => commandVariant(action, {
-        layerName: { type: "string" },
-        metadata: { type: "object" }
-      })),
-      commandVariant("block-defined", { block: { type: "object" } }),
-      commandVariant("block-removed", { blockId: { type: "number" } }),
-      commandVariant("block-moved", {
-        blockId: { type: "number" },
-        toIndex: { type: "number" }
-      }),
-      commandVariant("world-replace", { data: voxelWorldSchema })
+      ...Object.entries(kLayerMetadataSchemas).map(
+        ([action, metadata]) => commandVariant(action, {
+          layerName: { type: "string" },
+          metadata
+        })
+      ),
+      ...Object.entries(kBlockCommandProperties).map(
+        ([action, properties]) => commandVariant(action, properties)
+      ),
+      commandVariant("world-replace", {
+        data: voxelWorldSchema
+      })
     ]
   }
 });
-
-export const VOXEL_COMMAND_ACTIONS: readonly string[] = [
-  ...VOXEL_LAYER_HOOK_ACTIONS,
-  ...VOXEL_BLOCK_HOOK_ACTIONS,
-  "world-replace"
-];
-
-export const voxelProtocols: MessageProtocols = {
-  inbound: voxelCommandProtocol,
-  outbound: serverMessageProtocol({
-    command: voxelCommandProtocol,
-    snapshot: voxelWorldSchema
-  })
-};

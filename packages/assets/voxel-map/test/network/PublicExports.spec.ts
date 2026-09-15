@@ -25,7 +25,6 @@ describe("public entry points", () => {
 
   test("client exports browser synchronization", () => {
     assert.strictEqual(typeof client.VoxelSyncClient, "function");
-    assert.strictEqual(typeof client.isVoxelBlockCommand, "function");
   });
 
   test("server exports authoritative synchronization", () => {

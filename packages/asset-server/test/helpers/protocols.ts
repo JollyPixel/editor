@@ -2,7 +2,7 @@
 import {
   defineMessageProtocol,
   OPAQUE_PROTOCOLS,
-  serverMessageProtocol,
+  type JSONSchema,
   type MessageProtocol,
   type MessageProtocols
 } from "@jolly-pixel/network";
@@ -43,10 +43,6 @@ export const counterCommandProtocol: MessageProtocol = defineMessageProtocol({
   }
 });
 
-export const counterCommandProtocols: MessageProtocols = {
-  inbound: counterCommandProtocol,
-  outbound: serverMessageProtocol({
-    command: counterCommandProtocol,
-    snapshot: { type: "object" }
-  })
+export const counterSnapshotSchema: JSONSchema = {
+  type: "object"
 };
