@@ -202,6 +202,92 @@ test.describe("Tree interactions", () => {
 
     expect(await rootIds(page)).toEqual(["scene", "lighting", "crate"]);
   });
+
+  test("dragging the last row past the bottom edge keeps the drop line there", async({ page }) => {
+    await openTree(page);
+    await page.locator("jolly-tree").evaluate((element) => {
+      const tree = element as HTMLElement & { nodes: Array<{ id: string; }>; };
+      tree.nodes = [...tree.nodes].reverse();
+    });
+
+    const grip = page.locator('jolly-tree .row[data-id="barrel"] .grip');
+    const barrel = page.locator('jolly-tree .row[data-id="barrel"]');
+    const crate = page.locator('jolly-tree .row[data-id="crate"]');
+    const rows = page.locator("jolly-tree .rows");
+    const source = await grip.boundingBox();
+    const target = await barrel.boundingBox();
+    const container = await rows.boundingBox();
+    expect(source).not.toBeNull();
+    expect(target).not.toBeNull();
+    expect(container).not.toBeNull();
+
+    await page.mouse.move(
+      source!.x + source!.width / 2,
+      source!.y + source!.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(container!.x + 1, target!.y + target!.height + 8);
+
+    await expect(barrel).toHaveAttribute("data-drop", "below");
+    await expect(crate).not.toHaveAttribute("data-drop", /.+/);
+
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+  });
+
+  test("dragging the last root row past the bottom edge keeps the drop line there", async({ page }) => {
+    await openTree(page);
+    const grip = page.locator('jolly-tree .row[data-id="lighting"] .grip');
+    const lighting = page.locator('jolly-tree .row[data-id="lighting"]');
+    const barrel = page.locator('jolly-tree .row[data-id="barrel"]');
+    const rows = page.locator("jolly-tree .rows");
+    const source = await grip.boundingBox();
+    const target = await lighting.boundingBox();
+    const container = await rows.boundingBox();
+    expect(source).not.toBeNull();
+    expect(target).not.toBeNull();
+    expect(container).not.toBeNull();
+
+    await page.mouse.move(
+      source!.x + source!.width / 2,
+      source!.y + source!.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(container!.x + 1, target!.y + target!.height + 8);
+
+    await expect(lighting).toHaveAttribute("data-drop", "below");
+    await expect(barrel).not.toHaveAttribute("data-drop", /.+/);
+
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+  });
+
+  test("hovering a branch's own row keeps the drop line there, not at its last child", async({ page }) => {
+    await openTree(page);
+    const grip = page.locator('jolly-tree .row[data-id="lighting"] .grip');
+    const scene = page.locator('jolly-tree .row[data-id="scene"]');
+    const barrel = page.locator('jolly-tree .row[data-id="barrel"]');
+    const source = await grip.boundingBox();
+    const target = await scene.boundingBox();
+    expect(source).not.toBeNull();
+    expect(target).not.toBeNull();
+
+    await page.mouse.move(
+      source!.x + source!.width / 2,
+      source!.y + source!.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      target!.x + target!.width / 2,
+      target!.y + target!.height - 2
+    );
+
+    await expect(scene).toHaveAttribute("data-drop", "below");
+    await expect(barrel).not.toHaveAttribute("data-drop", /.+/);
+
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+  });
 });
 
 test.describe("Tree indent guides", () => {

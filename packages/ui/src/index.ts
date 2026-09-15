@@ -184,6 +184,7 @@ export {
   findParentId,
   flattenVisible,
   hasChildren,
+  isExpandable,
   isSelfOrDescendant,
   type DepthDropTarget,
   type FlatTreeRow,

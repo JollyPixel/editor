@@ -22,6 +22,7 @@ Object.assign(globalThis, {
   Element: kEmulatedBrowserWindow.Element,
   HTMLElement: kEmulatedBrowserWindow.HTMLElement,
   HTMLInputElement: kEmulatedBrowserWindow.HTMLInputElement,
+  HTMLButtonElement: kEmulatedBrowserWindow.HTMLButtonElement,
   Event: kEmulatedBrowserWindow.Event,
   CustomEvent: kEmulatedBrowserWindow.CustomEvent,
   EventTarget: kEmulatedBrowserWindow.EventTarget,

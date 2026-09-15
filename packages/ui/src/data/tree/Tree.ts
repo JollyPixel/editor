@@ -14,39 +14,27 @@ import {
 // Import Internal Dependencies
 import {
   TreeSnapshot,
-  canDrop,
-  hasChildren,
-  resolveDepthDropTarget,
+  isExpandable,
   resolveRename,
-  resolveRowDropZone,
-  resolveSelection,
   type FlatTreeRow
 } from "./model.ts";
 import {
   idleTreeInteraction,
   resolveTreeKey,
-  type TreeDropTarget,
   type TreeInteraction
 } from "./interaction.ts";
 import { treeStyles } from "./Tree.styles.ts";
+import { TreeDragController } from "./TreeDragController.ts";
+import { TreeSelectionController } from "./TreeSelectionController.ts";
 import {
   emitDataEvent,
   type TreeDropAccept,
   type TreeNode
 } from "./contract.ts";
-import {
-  startPointerDragSession,
-  type PointerDragSessionHandle
-} from "../../interaction/pointer/PointerDragSession.ts";
 
 // Registers the chevron, eye, lock and drag glyphs.
 import "../../icon/Icon.ts";
-import { isButtonElement } from "../../dom.ts";
-
-// CONSTANTS
-const kRowDragThreshold = 4;
-const kDefaultIndent = 16;
-const kDraggingClass = "jolly-tree-dragging";
+import { originatesInButton } from "../../dom.ts";
 
 @customElement("jolly-tree")
 export class Tree<TData = unknown> extends LitElement {
@@ -90,11 +78,9 @@ export class Tree<TData = unknown> extends LitElement {
   @state()
   private declare _interaction: TreeInteraction;
 
-  @state()
-  private declare _anchorId: string | null;
-
   #snapshot: TreeSnapshot<TData>;
-  #dragSession: PointerDragSessionHandle | null = null;
+  #drag: TreeDragController<TData>;
+  #selection: TreeSelectionController<TData>;
 
   constructor() {
     super();
@@ -109,13 +95,34 @@ export class Tree<TData = unknown> extends LitElement {
     this.indentGuides = false;
     this.acceptDrop = null;
     this._interaction = idleTreeInteraction();
-    this._anchorId = null;
     this.#snapshot = new TreeSnapshot(this.nodes);
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.#dragSession?.cancel();
+    this.#drag = new TreeDragController(this, {
+      nodes: () => this.nodes,
+      snapshot: () => this.#snapshot,
+      visibleRows: () => this.#visibleRows(),
+      selected: () => this.selected,
+      reorderable: () => this.reorderable,
+      rowDrag: () => this.rowDrag,
+      acceptDrop: () => this.acceptDrop,
+      interaction: () => this._interaction,
+      setInteraction: (next) => {
+        this._interaction = next;
+      },
+      rowsRect: () => this.renderRoot.querySelector(".rows")?.getBoundingClientRect(),
+      elementAtPoint: (clientX, clientY) => this.shadowRoot?.elementFromPoint(clientX, clientY) ?? null,
+      indentUnit: () => parseFloat(
+        getComputedStyle(this).getPropertyValue("--jolly-tree-indent")
+      )
+    });
+    this.#selection = new TreeSelectionController(this, {
+      visibleRows: () => this.#visibleRows(),
+      selected: () => this.selected,
+      multiple: () => this.multiple,
+      interaction: () => this._interaction,
+      setInteraction: (next) => {
+        this._interaction = next;
+      }
+    });
   }
 
   protected override willUpdate(
@@ -139,6 +146,7 @@ export class Tree<TData = unknown> extends LitElement {
         role="tree"
         aria-multiselectable=${this.multiple ? "true" : "false"}
         @keydown=${this.#onKeyDown}
+        @click=${(event: MouseEvent) => this.#selection.onRowsClick(event)}
       >${rows.map((row) => this.#renderRow(row, row.node.id === activeId))}</div>
     `;
   }
@@ -148,21 +156,18 @@ export class Tree<TData = unknown> extends LitElement {
     active: boolean
   ): TemplateResult {
     const { node, depth } = row;
-    const isBranch = hasChildren(node);
+    const isBranch = isExpandable(node);
     const isExpanded = this.expanded.includes(node.id);
     const isSelected = this.selected.includes(node.id);
-    const interaction = this._interaction;
-    const isDragSource = interaction.kind === "pointer-move" &&
-      interaction.movedIds.includes(node.id);
-    const preview = interaction.kind === "pointer-move" ?
-      interaction.preview :
-      null;
-    const drop = preview?.targetId === node.id ? preview.where : null;
-    const isMoveCursor = interaction.kind === "keyboard-move" &&
-      interaction.cursorId === node.id;
+    const isDragSource = this.#drag.isDragSource(node.id);
+    const isMoveCursor = this.#drag.isMoveCursor(node.id);
     const expandedState = isBranch ? String(isExpanded) : nothing;
     const isHidden = node.visible === false;
     const rowIndent = `calc(${depth} * var(--jolly-tree-indent, 16px))`;
+    const { drop, dropIndent } = this.#drag.dropStyleFor(node.id, rowIndent);
+    const rowStyle = `--jolly-tree-row-indent: ${rowIndent}; ` +
+      `--jolly-tree-drop-indent: ${dropIndent}; ` +
+      "padding-inline-start: var(--jolly-tree-row-indent)";
 
     return html`
       <div
@@ -176,10 +181,10 @@ export class Tree<TData = unknown> extends LitElement {
         data-drop=${drop ?? nothing}
         data-move-cursor=${isMoveCursor ? "true" : nothing}
         data-hidden=${isHidden ? "true" : nothing}
-        style="--jolly-tree-row-indent: ${rowIndent}; padding-inline-start: var(--jolly-tree-row-indent)"
-        @click=${(event: MouseEvent) => this.#onRowClick(event, node.id)}
+        style=${rowStyle}
+        @click=${(event: MouseEvent) => this.#selection.onRowClick(event, node.id)}
         @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, node.id)}
-        @pointerdown=${(event: PointerEvent) => this.#onRowPointerDown(event, node.id)}
+        @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, node.id)}
       >
         ${isBranch ? html`
           <button
@@ -190,42 +195,44 @@ export class Tree<TData = unknown> extends LitElement {
             @click=${(event: Event) => this.#onToggleExpand(event, node.id)}
           ><jolly-icon name="chevron" aria-hidden="true"></jolly-icon></button>
         ` : html`<span class="toggle-spacer"></span>`}
-        ${node.icon === undefined ? nothing : html`
-          <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
-        `}
-        ${this.#renderLabel(node)}
-        ${this.#renderBadges(node)}
-        ${node.visible === undefined ? nothing : html`
-          <button
-            class="visible-toggle"
-            type="button"
-            tabindex="-1"
-            data-active=${node.visible ? "true" : "false"}
-            aria-label=${node.visible ? "Hide" : "Show"}
-            aria-pressed=${node.visible ? "true" : "false"}
-            @click=${(event: Event) => this.#onToggleVisible(event, node.id)}
-          ><jolly-icon name="eye" aria-hidden="true"></jolly-icon></button>
-        `}
-        ${node.locked === undefined ? nothing : html`
-          <button
-            class="lock-toggle"
-            type="button"
-            tabindex="-1"
-            data-active=${node.locked ? "true" : "false"}
-            aria-label=${node.locked ? "Unlock" : "Lock"}
-            aria-pressed=${node.locked ? "true" : "false"}
-            @click=${(event: Event) => this.#onToggleLock(event, node.id)}
-          ><jolly-icon name="lock" aria-hidden="true"></jolly-icon></button>
-        `}
-        ${this.reorderable ? html`
-          <button
-            class="grip"
-            type="button"
-            tabindex="-1"
-            aria-hidden="true"
-            @pointerdown=${(event: PointerEvent) => this.#onGripPointerDown(event, node.id)}
-          ><jolly-icon name="drag" aria-hidden="true"></jolly-icon></button>
-        ` : nothing}
+        <span class="content">
+          ${node.icon === undefined ? nothing : html`
+            <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
+          `}
+          ${this.#renderLabel(node)}
+          ${this.#renderBadges(node)}
+          ${node.visible === undefined ? nothing : html`
+            <button
+              class="visible-toggle"
+              type="button"
+              tabindex="-1"
+              data-active=${node.visible ? "true" : "false"}
+              aria-label=${node.visible ? "Hide" : "Show"}
+              aria-pressed=${node.visible ? "true" : "false"}
+              @click=${(event: Event) => this.#onToggleVisible(event, node.id)}
+            ><jolly-icon name="eye" aria-hidden="true"></jolly-icon></button>
+          `}
+          ${node.locked === undefined ? nothing : html`
+            <button
+              class="lock-toggle"
+              type="button"
+              tabindex="-1"
+              data-active=${node.locked ? "true" : "false"}
+              aria-label=${node.locked ? "Unlock" : "Lock"}
+              aria-pressed=${node.locked ? "true" : "false"}
+              @click=${(event: Event) => this.#onToggleLock(event, node.id)}
+            ><jolly-icon name="lock" aria-hidden="true"></jolly-icon></button>
+          `}
+          ${this.reorderable ? html`
+            <button
+              class="grip"
+              type="button"
+              tabindex="-1"
+              aria-hidden="true"
+              @pointerdown=${(event: PointerEvent) => this.#drag.onGripPointerDown(event, node.id)}
+            ><jolly-icon name="drag" aria-hidden="true"></jolly-icon></button>
+          ` : nothing}
+        </span>
       </div>
     `;
   }
@@ -247,36 +254,6 @@ export class Tree<TData = unknown> extends LitElement {
     }
 
     return rows[0].node.id;
-  }
-
-  #onRowClick(
-    event: MouseEvent,
-    id: string
-  ): void {
-    if (
-      this._interaction.kind === "idle" &&
-      this._interaction.suppressClick
-    ) {
-      this._interaction = idleTreeInteraction();
-
-      return;
-    }
-
-    if (isButtonElement(event.target)) {
-      return;
-    }
-
-    const result = resolveSelection({
-      rows: this.#visibleRows(),
-      clickedId: id,
-      current: this.selected,
-      anchorId: this._anchorId,
-      shiftKey: event.shiftKey,
-      ctrlKey: event.ctrlKey || event.metaKey,
-      multiple: this.multiple
-    });
-    this._anchorId = result.anchorId;
-    emitDataEvent(this, "jolly-select", { selected: result.selected });
   }
 
   protected override updated(
@@ -425,7 +402,7 @@ export class Tree<TData = unknown> extends LitElement {
     event: MouseEvent,
     id: string
   ): void {
-    if (isButtonElement(event.target)) {
+    if (originatesInButton(event.target)) {
       return;
     }
 
@@ -476,13 +453,6 @@ export class Tree<TData = unknown> extends LitElement {
     emitDataEvent(this, "jolly-toggle-lock", { id, locked: !node.locked });
   }
 
-  #selectSingle(
-    id: string
-  ): void {
-    this._anchorId = id;
-    emitDataEvent(this, "jolly-select", { selected: [id] });
-  }
-
   #onKeyDown = (
     event: KeyboardEvent
   ): void => {
@@ -516,7 +486,7 @@ export class Tree<TData = unknown> extends LitElement {
     event.preventDefault();
     switch (action.kind) {
       case "select":
-        this.#selectSingle(action.id);
+        this.#selection.selectSingle(action.id);
         break;
       case "toggle-expand":
         emitDataEvent(this, "jolly-toggle-expand", action);
@@ -531,228 +501,10 @@ export class Tree<TData = unknown> extends LitElement {
         this._interaction = action.interaction;
         break;
       case "commit-move":
-        this.#commitMove();
+        this.#drag.commitKeyboardMove();
         break;
     }
   };
-
-  #commitMove(): void {
-    const moveState = this._interaction;
-    this._interaction = idleTreeInteraction();
-    if (moveState.kind !== "keyboard-move") {
-      return;
-    }
-
-    const { movedIds, cursorId, where } = moveState;
-    if (canDrop({
-      nodes: this.nodes,
-      movedIds,
-      targetId: cursorId,
-      where,
-      accept: this.acceptDrop
-    }, this.#snapshot)) {
-      emitDataEvent(this, "jolly-reparent", { movedIds, targetId: cursorId, where });
-    }
-  }
-
-  #onGripPointerDown(
-    event: PointerEvent,
-    id: string
-  ): void {
-    if (
-      !isButtonElement(event.currentTarget) ||
-      event.button !== 0 ||
-      !this.reorderable
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-    const movedIds = this.selected.includes(id) ? this.selected : [id];
-    this.#beginPointerDrag(event, movedIds, {
-      element: event.currentTarget,
-      threshold: 0
-    });
-  }
-
-  #onRowPointerDown(
-    event: PointerEvent,
-    id: string
-  ): void {
-    if (
-      !this.reorderable ||
-      !this.rowDrag ||
-      event.button !== 0 ||
-      isButtonElement(event.target)
-    ) {
-      return;
-    }
-
-    const movedIds = this.selected.includes(id) ? this.selected : [id];
-    this.#beginPointerDrag(event, movedIds, {
-      element: event.currentTarget as HTMLElement,
-      threshold: kRowDragThreshold
-    });
-  }
-
-  #beginPointerDrag(
-    event: PointerEvent,
-    movedIds: string[],
-    options: { element: HTMLElement; threshold: number; }
-  ): void {
-    this.#dragSession?.cancel();
-    this.#dragSession = startPointerDragSession({
-      element: options.element,
-      event,
-      threshold: options.threshold,
-      documentClass: kDraggingClass,
-      onStart: () => {
-        this._interaction = {
-          kind: "pointer-move",
-          movedIds,
-          preview: null
-        };
-      },
-      onMove: (clientX, clientY) => {
-        this.#previewDrop(clientX, clientY, movedIds);
-      },
-      onFinish: (result, started) => {
-        const interaction = this._interaction;
-        const preview = interaction.kind === "pointer-move" ?
-          interaction.preview :
-          null;
-        this.#dragSession = null;
-        this._interaction = idleTreeInteraction(
-          started && result === "commit"
-        );
-        if (result === "commit" && preview !== null) {
-          emitDataEvent(this, "jolly-reparent", {
-            movedIds,
-            targetId: preview.targetId,
-            where: preview.where
-          });
-        }
-      }
-    });
-  }
-
-  #previewDrop(
-    clientX: number,
-    clientY: number,
-    movedIds: string[]
-  ): void {
-    const rows = this.#visibleRows();
-    const firstRow = rows[0];
-    const lastRow = rows[rows.length - 1];
-
-    const target = this.shadowRoot?.elementFromPoint(clientX, clientY) ?? null;
-    const rowElement = target instanceof Element ? target.closest<HTMLElement>(".row") : null;
-    if (rowElement === null) {
-      this.#setPointerPreview(
-        this.#resolveEdgeDrop(
-          firstRow,
-          lastRow,
-          clientX,
-          clientY,
-          movedIds
-        )
-      );
-
-      return;
-    }
-
-    const targetId = rowElement.dataset.id;
-    if (targetId === undefined) {
-      this.#setPointerPreview(null);
-
-      return;
-    }
-
-    const rect = rowElement.getBoundingClientRect();
-    const where = resolveRowDropZone(rect, clientY);
-
-    if (lastRow !== undefined && targetId === lastRow.node.id && where === "below") {
-      this.#setPointerPreview(
-        this.#resolveDepthDrop(lastRow, clientX, movedIds, "below")
-      );
-
-      return;
-    }
-    if (firstRow !== undefined && targetId === firstRow.node.id && where === "above") {
-      this.#setPointerPreview(
-        this.#resolveDepthDrop(firstRow, clientX, movedIds, "above")
-      );
-
-      return;
-    }
-
-    this.#setPointerPreview(canDrop({
-      nodes: this.nodes,
-      movedIds,
-      targetId,
-      where,
-      accept: this.acceptDrop
-    }, this.#snapshot) ?
-      { targetId, where } :
-      null);
-  }
-
-  #setPointerPreview(
-    preview: TreeDropTarget | null
-  ): void {
-    if (this._interaction.kind !== "pointer-move") {
-      return;
-    }
-
-    this._interaction = {
-      ...this._interaction,
-      preview
-    };
-  }
-
-  #resolveEdgeDrop(
-    firstRow: FlatTreeRow<TData> | undefined,
-    lastRow: FlatTreeRow<TData> | undefined,
-    clientX: number,
-    clientY: number,
-    movedIds: string[]
-  ): TreeDropTarget | null {
-    if (firstRow === undefined || lastRow === undefined) {
-      return null;
-    }
-
-    const containerTop = this.renderRoot.querySelector(".rows")?.getBoundingClientRect().top;
-    const isAboveEverything = containerTop !== undefined && clientY < containerTop;
-
-    return isAboveEverything ?
-      this.#resolveDepthDrop(firstRow, clientX, movedIds, "above") :
-      this.#resolveDepthDrop(lastRow, clientX, movedIds, "below");
-  }
-
-  #resolveDepthDrop(
-    row: FlatTreeRow<TData>,
-    clientX: number,
-    movedIds: string[],
-    where: "above" | "below"
-  ): TreeDropTarget | null {
-    const containerLeft = this.renderRoot.querySelector(".rows")?.getBoundingClientRect().left;
-    if (containerLeft === undefined) {
-      return null;
-    }
-
-    return resolveDepthDropTarget({
-      nodes: this.nodes,
-      movedIds,
-      rowId: row.node.id,
-      clientX,
-      containerLeft,
-      indentUnit: parseFloat(
-        getComputedStyle(this).getPropertyValue("--jolly-tree-indent")
-      ) || kDefaultIndent,
-      where,
-      accept: this.acceptDrop
-    }, this.#snapshot);
-  }
 }
 
 declare global {
