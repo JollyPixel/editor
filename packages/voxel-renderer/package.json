@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/voxel.renderer",
   "description": "Jolly Pixel 3D Voxel Engine and Renderer",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "exports": {
     ".": {
@@ -55,11 +55,11 @@
     "@dimforge/rapier3d": "0.20.0",
     "@jolly-pixel/asset": "1.1.0",
     "@jolly-pixel/asset.voxel-map": "1.0.0",
-    "@jolly-pixel/asset-source": "1.0.0",
-    "@jolly-pixel/engine": "5.0.0",
+    "@jolly-pixel/asset-source": "2.0.0",
+    "@jolly-pixel/engine": "5.1.0",
     "@jolly-pixel/loop": "1.0.0",
-    "@jolly-pixel/runtime": "5.0.0",
-    "@jolly-pixel/ui": "2.0.0",
+    "@jolly-pixel/runtime": "5.0.1",
+    "@jolly-pixel/ui": "3.0.0",
     "simplex-noise": "4.0.3"
   }
 }

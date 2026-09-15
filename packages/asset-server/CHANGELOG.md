@@ -1,5 +1,41 @@
 # @jolly-pixel/asset-server
 
+## 3.0.0
+
+### Major Changes
+
+- [#662](https://github.com/JollyPixel/editor/pull/662) [`c0a3c5d`](https://github.com/JollyPixel/editor/commit/c0a3c5d646741d8997a78724603f90cff92a886e) Thanks [@fraxken](https://github.com/fraxken)! - `AssetKindHandler.apply(state, event)` and `live()` are replaced by `load`, `clear` and a `commands` object (`eventType`, `protocol`, `apply`, `live`); commands are validated against the `protocol` JSON Schema on append and replay.
+  `AssetLiveProtocol` declares a `snapshotSchema` instead of `protocols`, which the room now derives, and no longer carries `commandEventType` or `parse`.
+  Add `foldAssetEvent()`; `AssetStateStore` folds through it and logs a throwing hook instead of letting it escape.
+
+- [#659](https://github.com/JollyPixel/editor/pull/659) [`853c83b`](https://github.com/JollyPixel/editor/commit/853c83b9070a249087dab57247bc8dad0605b781) Thanks [@fraxken](https://github.com/fraxken)! - Remove the unused `sync`, `catalog`, `rooms`, `static` and `workspace` subpath exports; import from the package root instead.
+  Add a `kinds` entry exposing the asset kind handler contract, used by the renderer asset handlers.
+
+- [#636](https://github.com/JollyPixel/editor/pull/636) [`f0363be`](https://github.com/JollyPixel/editor/commit/f0363bea0dafae6f2e899b491c6f4c6d4f777acb) Thanks [@fraxken](https://github.com/fraxken)! - Add native existence checks and atomic conditional writes to `AssetSource`.
+  Use conditional writes when initializing workspace assets and state files.
+
+- [#659](https://github.com/JollyPixel/editor/pull/659) [`d61e341`](https://github.com/JollyPixel/editor/commit/d61e341ffbe1f555237cf0b586d628bf5c94c82f) Thanks [@fraxken](https://github.com/fraxken)! - The `asset-catalog` room now accepts `catalog:create`, `catalog:rename` and `catalog:delete` commands, attributed through the new `RoomContext.actor`, and rooms of deleted assets broadcast a final `deleted` notice.
+  `AssetWriter` returns path, kind and path-conflict failures as error results instead of throwing, and refuses a path used by another asset.
+  Remove `AssetKindHandler.createExtension`; `WorkerExtensionProxy` now implements `dispose()`.
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+- [#662](https://github.com/JollyPixel/editor/pull/662) [`ae6293b`](https://github.com/JollyPixel/editor/commit/ae6293bf83ef24d0e91569994594a87221577ea2) Thanks [@fraxken](https://github.com/fraxken)! - Remove the event store from `@jolly-pixel/network`: `RoomContext` now carries the member `identity` instead of `eventStore`/`actor`, and `ServerOptions.eventStore` is gone.
+  Asset rooms append through an injected event writer (`registerAssetRooms({ events })`) and send a `rejected` notice to the author when the append fails.
+
+- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync`, add `PresenceChannel`, and slim `ConflictTracker` to `admit`/`admitEach`; presence set before `join()` now travels with the join.
+  Asset rooms stamp the sender's `clientId` server-side, and three's peer syncs drop `resyncIntervalMs` and their message type parameters.
+
+### Patch Changes
+
+- Updated dependencies [[`f0363be`](https://github.com/JollyPixel/editor/commit/f0363bea0dafae6f2e899b491c6f4c6d4f777acb), [`d61e341`](https://github.com/JollyPixel/editor/commit/d61e341ffbe1f555237cf0b586d628bf5c94c82f), [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9), [`ae6293b`](https://github.com/JollyPixel/editor/commit/ae6293bf83ef24d0e91569994594a87221577ea2), [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788)]:
+  - @jolly-pixel/asset-source@2.0.0
+  - @jolly-pixel/network@3.0.0
+
 ## 2.0.0
 
 ### Major Changes

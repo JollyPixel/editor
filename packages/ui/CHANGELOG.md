@@ -1,5 +1,39 @@
 # @jolly-pixel/ui
 
+## 3.0.0
+
+### Major Changes
+
+- [#665](https://github.com/JollyPixel/editor/pull/665) [`25fd361`](https://github.com/JollyPixel/editor/commit/25fd361714e6bb55f8fa61f0404d85a055e245f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-pane-group`: dock layouts store panes as tab groups, a dragged pane joins a group when dropped on a header or tab strip, and `jolly-pane-visibility` reports shown panes.
+  An empty dock is now a placeholder from its first render and previews its size while a drag arms it.
+  `jolly-pane` gains an `icon`, shown in its header and its group tab.
+
+### Minor Changes
+
+- [#668](https://github.com/JollyPixel/editor/pull/668) [`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69) Thanks [@fraxken](https://github.com/fraxken)! - Add `layout="wide"` to `jolly-color-picker`: a height-filling row with vertical hue and alpha tracks and editable R/G/B, H/S/L, A and hex fields.
+  Add `hsvToHsl()` and `hslToHsv()` to `@jolly-pixel/color`, keeping hue on grays and saturation through black.
+
+- [#656](https://github.com/JollyPixel/editor/pull/656) [`be5e8bf`](https://github.com/JollyPixel/editor/commit/be5e8bfa64d4a0b17dfac90ab37ec6e9208330d1) Thanks [@fraxken](https://github.com/fraxken)! - Add `InputLayers` and the shared `inputLayers`: an open `jolly-dialog` or `PopoverController` popover claims keydown and keypress events.
+  Pass `inputLayers` to `Keyboard.addGuard()` so viewport controls ignore keys pressed inside dialogs and popovers.
+
+- [#646](https://github.com/JollyPixel/editor/pull/646) [`2371afa`](https://github.com/JollyPixel/editor/commit/2371afaaff5dd986b36c3ea20a101146ec12b795) Thanks [@fraxken](https://github.com/fraxken)! - `MetricDefinition.palette` colors any metric, and `jolly-dock-layout` now keeps one snapshot, with children reporting typed `LayoutChange` details.
+  Numeric inputs share one entry policy (slider readouts step with arrow keys, axis parse errors show on the field), and components share one default storage adapter.
+
+- [#644](https://github.com/JollyPixel/editor/pull/644) [`c1d08b8`](https://github.com/JollyPixel/editor/commit/c1d08b8ee5c6d196172c623b0906b10d1061ab40) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-tool-button`, a square rail button with an optional hover flyout, and a `vertical` orientation for `jolly-slider`.
+
+### Patch Changes
+
+- [#655](https://github.com/JollyPixel/editor/pull/655) [`bb3e894`](https://github.com/JollyPixel/editor/commit/bb3e89489f37e83b2435b3d41fa208e2e53aa3ad) Thanks [@fraxken](https://github.com/fraxken)! - Keep overlay docks click-through when page CSS sets `pointer-events` on `jolly-dock`, and disable the resize strip of an empty overlay dock.
+  Panes, floating windows, controls and solid docks now declare `pointer-events: auto`, so they work inside a `pointer-events: none` layer.
+
+- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync`, add `PresenceChannel`, and slim `ConflictTracker` to `admit`/`admitEach`; presence set before `join()` now travels with the join.
+  Asset rooms stamp the sender's `clientId` server-side, and three's peer syncs drop `resyncIntervalMs` and their message type parameters.
+
+- [#677](https://github.com/JollyPixel/editor/pull/677) [`1e16c34`](https://github.com/JollyPixel/editor/commit/1e16c343d63da08745ad1fdeb12c3dd83364e573) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Fix `jolly-tree` selection and drag-and-drop: clicking empty space below the rows now deselects, dropping below the last row can land as its last child, and row hover/selection highlighting no longer bleeds into the toggle and grip buttons.
+- Updated dependencies [[`d61e341`](https://github.com/JollyPixel/editor/commit/d61e341ffbe1f555237cf0b586d628bf5c94c82f), [`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69), [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9), [`ae6293b`](https://github.com/JollyPixel/editor/commit/ae6293bf83ef24d0e91569994594a87221577ea2), [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788)]:
+  - @jolly-pixel/network@3.0.0
+  - @jolly-pixel/color@1.1.0
+
 ## 2.0.0
 
 ### Major Changes

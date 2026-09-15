@@ -1,5 +1,44 @@
 # @jolly-pixel/voxel.renderer
 
+## 5.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+- [#657](https://github.com/JollyPixel/editor/pull/657) [`725fbf7`](https://github.com/JollyPixel/editor/commit/725fbf7c0f8f803eb667ff1b7cef17275a0a52fe) Thanks [@fraxken](https://github.com/fraxken)! - Replace voxel-layer offsets with world-space positions and serialize voxel keys in layer-local space.
+  Add coordinate conversion, bounds, center, and origin-rebasing APIs.
+
+- [#661](https://github.com/JollyPixel/editor/pull/661) [`6bd582e`](https://github.com/JollyPixel/editor/commit/6bd582e59fff4dc04c8f987fbbf9da51376be6a2) Thanks [@fraxken](https://github.com/fraxken)! - Move voxel-map persistence, collaboration, and Tiled asset loading into `@jolly-pixel/asset.voxel-map`.
+  Move `VoxelRenderer` there too, and remove the renderer's `/asset` and `/network` exports.
+
+### Minor Changes
+
+- [#643](https://github.com/JollyPixel/editor/pull/643) [`c22f8a9`](https://github.com/JollyPixel/editor/commit/c22f8a9407ac534117ce8f74e61d454d721c0044) Thanks [@fraxken](https://github.com/fraxken)! - Make the block table's order editable and durable. `BlockRegistry.moveTo()`
+  relocates a definition, `VoxelEngine.moveBlock()` emits it as a new
+  `block-moved` hook and network command, and the document's `blocks` array
+  round trips that order.
+
+- [#641](https://github.com/JollyPixel/editor/pull/641) [`4029a4d`](https://github.com/JollyPixel/editor/commit/4029a4d9da915a4b191a00cad2a92e0d2fe8f544) Thanks [@fraxken](https://github.com/fraxken)! - Blend the cutout draw group of `transparent` blocks instead of only alpha-testing
+  it, so a texel of partial alpha fades rather than coming out solid; the group
+  still writes depth. Add `BlockDefinition.cullSelfFaces`, which keeps the boundary
+  two voxels of the same transparent block share, emitted once from its positive
+  side so the coplanar pair no longer z-fights.
+
+- [#638](https://github.com/JollyPixel/editor/pull/638) [`5596bfb`](https://github.com/JollyPixel/editor/commit/5596bfb3d6151ff7b320f2bde32befc2f497d857) Thanks [@fraxken](https://github.com/fraxken)! - Add `properties` to `BlockDefinition`, a scalar map carried for game code and
+  scrubbed of non-scalar values when resolved. Read a copy with
+  `BlockRegistry.propertiesOf()` or, by world position, with the new
+  `VoxelEngine.blockAt()` and `VoxelEngine.blockPropertiesAt()`.
+
+### Patch Changes
+
+- [#659](https://github.com/JollyPixel/editor/pull/659) [`853c83b`](https://github.com/JollyPixel/editor/commit/853c83b9070a249087dab57247bc8dad0605b781) Thanks [@fraxken](https://github.com/fraxken)! - Remove the unused `sync`, `catalog`, `rooms`, `static` and `workspace` subpath exports; import from the package root instead.
+  Add a `kinds` entry exposing the asset kind handler contract, used by the renderer asset handlers.
+
 ## 4.0.0
 
 ### Major Changes

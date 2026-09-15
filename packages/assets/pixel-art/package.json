@@ -52,14 +52,14 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset-server": "2.0.0",
-    "@jolly-pixel/color": "1.0.0",
-    "@jolly-pixel/network": "2.0.0",
-    "@jolly-pixel/pixel-draw.renderer": "4.0.0",
+    "@jolly-pixel/asset-server": "3.0.0",
+    "@jolly-pixel/color": "1.1.0",
+    "@jolly-pixel/network": "3.0.0",
+    "@jolly-pixel/pixel-draw.renderer": "5.0.0",
     "js-base64": "3.9.3"
   },
   "devDependencies": {
-    "@jolly-pixel/asset-source": "1.0.0",
+    "@jolly-pixel/asset-source": "2.0.0",
     "@jolly-pixel/bench": "*",
     "@jolly-pixel/event-store": "3.0.0"
   }

@@ -60,14 +60,14 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset": "1.1.0",
-    "@jolly-pixel/asset-server": "2.0.0",
-    "@jolly-pixel/engine": "5.0.0",
-    "@jolly-pixel/network": "2.0.0",
-    "@jolly-pixel/voxel.renderer": "4.0.0",
+    "@jolly-pixel/asset-server": "3.0.0",
+    "@jolly-pixel/engine": "5.1.0",
+    "@jolly-pixel/network": "3.0.0",
+    "@jolly-pixel/voxel.renderer": "5.0.0",
     "three": "0.185.1"
   },
   "devDependencies": {
-    "@jolly-pixel/asset-source": "1.0.0",
+    "@jolly-pixel/asset-source": "2.0.0",
     "@jolly-pixel/event-store": "3.0.0"
   }
 }

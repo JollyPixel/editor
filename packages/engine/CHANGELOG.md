@@ -1,5 +1,16 @@
 # @jolly-pixel/engine
 
+## 5.1.0
+
+### Minor Changes
+
+- [#669](https://github.com/JollyPixel/editor/pull/669) [`b91d177`](https://github.com/JollyPixel/editor/commit/b91d1777197a160daafd69ed4857ff9ea3c999c4) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `OrbitFlyCamera`, a WASD + mouse-look camera with an optional `"lock"` (fixed-pivot orbit) or `"elastic"` (trailing pivot) focus mode, consolidated from voxel-map and voxel-model's near-identical copies.
+
+### Patch Changes
+
+- Updated dependencies [[`0f3d193`](https://github.com/JollyPixel/editor/commit/0f3d1934381596fb60430044f898d60679713945), [`b18fbfa`](https://github.com/JollyPixel/editor/commit/b18fbfa2df86f72d4e035408867fdb1015fcdc30), [`b443728`](https://github.com/JollyPixel/editor/commit/b443728ce75d4f1447d8234247d0578d58407e7d), [`be5e8bf`](https://github.com/JollyPixel/editor/commit/be5e8bfa64d4a0b17dfac90ab37ec6e9208330d1), [`ba79012`](https://github.com/JollyPixel/editor/commit/ba79012690fb47e9c035a028e9b876fb3f92769a)]:
+  - @jolly-pixel/controls@2.1.0
+
 ## 5.0.0
 
 ### Major Changes

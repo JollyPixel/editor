@@ -1,5 +1,32 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 5.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+- [#661](https://github.com/JollyPixel/editor/pull/661) [`c0195cb`](https://github.com/JollyPixel/editor/commit/c0195cb7a44ae85c1131e406d1a97a79c1247a4f) Thanks [@fraxken](https://github.com/fraxken)! - Move pixel-art persistence and collaboration into `@jolly-pixel/asset.pixel-art`.
+  Remove the renderer's `/asset` and `/network` exports.
+
+### Minor Changes
+
+- [#670](https://github.com/JollyPixel/editor/pull/670) [`4d1b598`](https://github.com/JollyPixel/editor/commit/4d1b5985751cf7ac88539a6ee91a58f3affc218c) Thanks [@fraxken](https://github.com/fraxken)! - Add `FillTool.uvClip` to keep a fill inside the seed's UV slots, or outside every slot; a clipped global fill syncs as a `stroke`.
+  Add `PixelArtCanvas.clearTexture({ includeUV })`, which keeps UV slot pixels by default, and optional masks on `Fill.floodFill()`/`Fill.matchAll()`.
+
+- [#672](https://github.com/JollyPixel/editor/pull/672) [`a6c9c55`](https://github.com/JollyPixel/editor/commit/a6c9c5571dae0bf02bdd56c57ef1cd4f6acf7eee) Thanks [@fraxken](https://github.com/fraxken)! - `UVMap.showAll` no longer forces region labels; `showRegionLabels` alone controls them.
+
+### Patch Changes
+
+- [#659](https://github.com/JollyPixel/editor/pull/659) [`853c83b`](https://github.com/JollyPixel/editor/commit/853c83b9070a249087dab57247bc8dad0605b781) Thanks [@fraxken](https://github.com/fraxken)! - Remove the unused `sync`, `catalog`, `rooms`, `static` and `workspace` subpath exports; import from the package root instead.
+  Add a `kinds` entry exposing the asset kind handler contract, used by the renderer asset handlers.
+- Updated dependencies [[`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69)]:
+  - @jolly-pixel/color@1.1.0
+
 ## 4.0.0
 
 ### Major Changes
