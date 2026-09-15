@@ -29,6 +29,14 @@ const canvas = await panel.initialize({
 
 `initialize(options?)` takes the same `PixelArtCanvasOptions` as `new PixelArtCanvas(...)` (see [PixelArtCanvas.md](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md)) and resolves with the created instance. Must `await` it — the canvas host div only exists after Lit's first render.
 
+## Docked color picker
+
+The small button under the swatches toggles a docked picker: a 140px strip under the stage with a saturation and value area, vertical hue and alpha tracks, R/G/B, H/S/L and A fields, and a hex field. The stage shrinks to make room and the canvas resizes itself.
+
+While docked there is one active color. Every change, including an eyedropper pick with either mouse button, writes it to both `brush.primary` and `brush.secondary`, so both mouse buttons paint it. The swatches show it but are disabled, and swap does nothing. Undocking restores the background color held before docking.
+
+Docking reads the current brush colors first, so colors set through `canvasManager.brush` are picked up. Direct brush writes made while docked are not reflected in the picker. The panel does not persist the docked state; hosts store `colorDocked` themselves.
+
 ## Select toolbar and clipboard
 
 Select mode shows Copy, Paste, Rotate Clockwise, Flip Horizontal, Flip Vertical and Delete. Paste stays enabled without a selection. Other actions enable after a completed rectangle, shape or paste. Clipboard failures appear beside the toolbar in a polite live region and clear automatically or when Select mode exits.
@@ -47,6 +55,8 @@ Drag one local PNG, JPEG, WebP or GIF over the rendered texture rectangle to sho
 | `canvasManager` | The live `PixelArtCanvas`, or `null` before `initialize()`. |
 | `onResize()` | Call on container resize (ResizeObserver, split-pane drag, etc). |
 | `allow-uv-create-delete` attribute / `allowUvCreateDelete` property | Shows the Create/Delete buttons in the UV toolbar. Off by default: creating/deleting regions only makes sense when the panel owns the UV layout (the package's own example); embeddings over a fixed mesh (e.g. voxel-map) leave it off. |
+| `color-docked` attribute / `colorDocked` property | Opens the docked color picker. Off by default. Reflects to the attribute. |
+| `color-docked-change` event | Fires when the user toggles the docked picker; `detail` is the new `boolean`. |
 | `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows the theme scope the panel is embedded in (`jolly-scope`, or any themed ancestor), falling back to `prefers-color-scheme` when there is none; `"light"`/`"dark"` force one regardless. Reflects to the attribute. |
 
 Destruction is automatic: `disconnectedCallback()` calls `canvasManager.destroy()` when the element leaves the DOM.
@@ -56,7 +66,7 @@ Destruction is automatic: `disconnectedCallback()` calls `canvasManager.destroy(
 
 ## Sub-elements
 
-Also exported from `@jolly-pixel/editor.pixel-art`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`), `ColorPickerRail` (`<color-picker-rail>`), `ColorSwatch` (`<color-swatch>`, wraps `vanilla-picker`). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
+Also exported from `@jolly-pixel/editor.pixel-art`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`), `ColorPickerRail` (`<color-picker-rail>`, with a `docked` property and a `dock-toggle` event), `ColorSwatch` (`<color-swatch>`, wraps `jolly-color-picker` in a popover, with a `disabled` property) and `ColorDock` (`<color-dock>`, a wide `jolly-color-picker` that emits `color-change`). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
 
 > [!IMPORTANT]
-> `lit` and `vanilla-picker` are real `dependencies` of this package (not dev-only) — they ship at runtime for anyone importing it.
+> `lit` and `@jolly-pixel/ui` are real `dependencies` of this package (not dev-only) — they ship at runtime for anyone importing it.

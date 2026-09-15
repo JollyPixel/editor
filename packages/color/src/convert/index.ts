@@ -3,7 +3,9 @@ export {
   toRGBA8
 } from "./bytes.ts";
 export {
+  hslToHsv,
   hslToRgb,
+  hsvToHsl,
   rgbToHsl
 } from "./hsl.ts";
 export {

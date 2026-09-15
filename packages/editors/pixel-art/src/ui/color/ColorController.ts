@@ -3,15 +3,18 @@ import type {
   ReactiveController,
   ReactiveControllerHost
 } from "lit";
-import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import type {
+  BrushColorSlot,
+  PixelArtCanvas
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
 
-/**
- * Foreground/background color state synced with PixelArtCanvas.brush.
- * Eyedropper picks are handled via `onColorPicked()`.
- */
+export interface ColorPickedDetail extends ColorChangeDetail {
+  slot?: BrushColorSlot;
+}
+
 export class ColorController implements ReactiveController {
   #host: ReactiveControllerHost;
   #canvas: PixelArtCanvas | null = null;
@@ -24,6 +27,8 @@ export class ColorController implements ReactiveController {
     hex: "#ffffff",
     opacity: 1
   };
+  #docked = false;
+  #undockedBackground: ColorChangeDetail | null = null;
 
   constructor(
     host: ReactiveControllerHost
@@ -44,23 +49,55 @@ export class ColorController implements ReactiveController {
     return this.#background;
   }
 
+  get docked(): boolean {
+    return this.#docked;
+  }
+
+  set docked(
+    value: boolean
+  ) {
+    if (value === this.#docked) {
+      return;
+    }
+
+    this.#docked = value;
+    if (value) {
+      this.#readBrush();
+      this.#undockedBackground = this.#background;
+      this.#applyActive(this.#foreground);
+    }
+    else {
+      this.#background = this.#undockedBackground ?? this.#foreground;
+      this.#undockedBackground = null;
+      this.#canvas?.brush.secondary.set(
+        this.#background.hex,
+        this.#background.opacity
+      );
+    }
+    this.#host.requestUpdate();
+  }
+
   attach(
     canvas: PixelArtCanvas
   ): void {
     this.#canvas = canvas;
-    this.#foreground = {
-      hex: canvas.brush.primary.asString("hex"),
-      opacity: canvas.brush.primary.opacity
-    };
-    this.#background = {
-      hex: canvas.brush.secondary.asString("hex"),
-      opacity: canvas.brush.secondary.opacity
-    };
+    this.#readBrush();
+
+    if (this.#docked) {
+      this.#undockedBackground = this.#background;
+      this.#applyActive(this.#foreground);
+    }
   }
 
   onForegroundChange(
     event: CustomEvent<ColorChangeDetail>
   ): void {
+    if (this.#docked) {
+      this.onActiveChange(event);
+
+      return;
+    }
+
     this.#foreground = event.detail;
     this.#canvas?.brush.primary.set(
       event.detail.hex,
@@ -72,6 +109,10 @@ export class ColorController implements ReactiveController {
   onBackgroundChange(
     event: CustomEvent<ColorChangeDetail>
   ): void {
+    if (this.#docked) {
+      return;
+    }
+
     this.#background = event.detail;
     this.#canvas?.brush.secondary.set(
       event.detail.hex,
@@ -80,7 +121,18 @@ export class ColorController implements ReactiveController {
     this.#host.requestUpdate();
   }
 
+  onActiveChange(
+    event: CustomEvent<ColorChangeDetail>
+  ): void {
+    this.#applyActive(event.detail);
+    this.#host.requestUpdate();
+  }
+
   swap(): void {
+    if (this.#docked) {
+      return;
+    }
+
     [this.#foreground, this.#background] = [
       this.#background,
       this.#foreground
@@ -90,9 +142,47 @@ export class ColorController implements ReactiveController {
   }
 
   onColorPicked(
-    detail: ColorChangeDetail
+    detail: ColorPickedDetail
   ): void {
-    this.#foreground = detail;
+    const color = {
+      hex: detail.hex,
+      opacity: detail.opacity
+    };
+
+    if (this.#docked) {
+      this.#applyActive(color);
+    }
+    else if (detail.slot === "secondary") {
+      this.#background = color;
+    }
+    else {
+      this.#foreground = color;
+    }
     this.#host.requestUpdate();
+  }
+
+  #readBrush(): void {
+    if (this.#canvas === null) {
+      return;
+    }
+
+    const { primary, secondary } = this.#canvas.brush;
+    this.#foreground = {
+      hex: primary.asString("hex"),
+      opacity: primary.opacity
+    };
+    this.#background = {
+      hex: secondary.asString("hex"),
+      opacity: secondary.opacity
+    };
+  }
+
+  #applyActive(
+    color: ColorChangeDetail
+  ): void {
+    this.#foreground = color;
+    this.#background = color;
+    this.#canvas?.brush.primary.set(color.hex, color.opacity);
+    this.#canvas?.brush.secondary.set(color.hex, color.opacity);
   }
 }

@@ -37,13 +37,9 @@ export type IconName =
   | "unfold"
   | "chevronDown"
   | "label"
-  | "eye";
+  | "eye"
+  | "dockPicker";
 
-/*
- * Registers pixel-art-specific glyphs into @jolly-pixel/ui's shared icon
- * registry ("eye" reuses the ui builtin as-is).
- * Pan hand.
- */
 registerIcon("move", svg`
     <path
       d="M6 9v5"
@@ -79,7 +75,6 @@ registerIcon("move", svg`
     />
   `);
 
-// Pencil.
 registerIcon("paint", svg`
     <path
       d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
@@ -117,7 +112,6 @@ registerIcon("eraser", svg`
     />
   `);
 
-// Paint bucket.
 registerIcon("fill", svg`
     <g transform="rotate(-20 12 11)">
       <path
@@ -145,10 +139,6 @@ registerIcon("fill", svg`
     <circle cx="18.5" cy="19.5" r="1.9" fill="currentColor" />
   `);
 
-/*
- * Bucket's neighbor fill, generalized: every matching cell, not just the
- * connected region.
- */
 registerIcon("fillGlobal", svg`
     <rect x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
     <rect x="13" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
@@ -156,7 +146,6 @@ registerIcon("fillGlobal", svg`
     <rect x="13" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
   `);
 
-// Marquee selection.
 registerIcon("select", svg`
     <rect
       x="4.5"
@@ -175,7 +164,6 @@ registerIcon("select", svg`
     <circle cx="19.5" cy="19.5" r="1.7" fill="currentColor" />
   `);
 
-// Magic wand: shape select follows same-color pixels, not a rectangle.
 registerIcon("wand", svg`
     <path
       d="M5 19 15.5 8.5"
@@ -191,7 +179,6 @@ registerIcon("wand", svg`
     <circle cx="20" cy="12.5" r="1" fill="currentColor" />
   `);
 
-// UV grid.
 registerIcon("uv", svg`
     <rect
       x="4"
@@ -410,7 +397,6 @@ registerIcon("swap", svg`
     />
   `);
 
-// Eyedropper.
 registerIcon("eyedropper", svg`
     <path
       d="M11 7l6 6"
@@ -428,7 +414,6 @@ registerIcon("eyedropper", svg`
     />
   `);
 
-// Import.
 registerIcon("import", svg`
     <path
       d="M12 15V4"
@@ -455,7 +440,6 @@ registerIcon("import", svg`
     />
   `);
 
-// Export.
 registerIcon("export", svg`
     <path
       d="M12 4v11"
@@ -497,7 +481,6 @@ registerIcon("add", svg`
     />
   `);
 
-// Isometric cube.
 registerIcon("cube", svg`
     <path
       d="m12 3 7 4v8l-7 4-7-4V7l7-4Z"
@@ -515,7 +498,6 @@ registerIcon("cube", svg`
     />
   `);
 
-// Triangular ramp profile.
 registerIcon("triangle", svg`
     <path
       d="M5 19 12 5l7 14H5Z"
@@ -526,7 +508,6 @@ registerIcon("triangle", svg`
     />
   `);
 
-// Trash can.
 registerIcon("trash", svg`
     <path
       d="M4 7h16"
@@ -563,7 +544,6 @@ registerIcon("trash", svg`
     />
   `);
 
-// Corners pointing inward: merge into one.
 registerIcon("collapse", svg`
     <path
       d="M9 4v3.5A1.5 1.5 0 0 1 7.5 9H4"
@@ -599,7 +579,6 @@ registerIcon("collapse", svg`
     />
   `);
 
-// Corners pointing outward: split into faces.
 registerIcon("expand", svg`
     <path
       d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9"
@@ -635,7 +614,6 @@ registerIcon("expand", svg`
     />
   `);
 
-// Text label inside a region frame.
 registerIcon("label", svg`
     <rect
       x="3.5"
@@ -656,7 +634,6 @@ registerIcon("label", svg`
     />
   `);
 
-// A 3x2 grid of cells: the unfolded net.
 registerIcon("unfold", svg`
     <path
       d="M3 5h18v14H3zM9 5v14M15 5v14M3 12h18"
@@ -675,6 +652,23 @@ registerIcon("chevronDown", svg`
       stroke-width="2.2"
       stroke-linecap="round"
       stroke-linejoin="round"
+    />
+  `);
+
+registerIcon("dockPicker", svg`
+    <rect
+      x="3"
+      y="4"
+      width="18"
+      height="16"
+      rx="2"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+    />
+    <path
+      d="M3 14h18v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      fill="currentColor"
     />
   `);
 

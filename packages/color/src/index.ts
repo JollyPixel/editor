@@ -9,7 +9,9 @@ export type {
 
 export {
   fromRGBA8,
+  hslToHsv,
   hslToRgb,
+  hsvToHsl,
   hsvToRgb,
   hwbToRgb,
   linearToSrgb,

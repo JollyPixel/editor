@@ -2,6 +2,7 @@
 import {
   LitElement,
   html,
+  nothing,
   type PropertyValues
 } from "lit";
 import {
@@ -29,12 +30,14 @@ import { SelectToolbarController } from "../toolbars/SelectToolbarController.ts"
 import { TextureDropController } from "../toolbars/TextureDropController.ts";
 import { HistoryFileToolbarController } from "../toolbars/HistoryFileToolbarController.ts";
 import { ToolOptionsController } from "../toolbars/ToolOptionsController.ts";
-import { ColorController } from "../color/ColorController.ts";
+import {
+  ColorController,
+  type ColorPickedDetail
+} from "../color/ColorController.ts";
 import { assertElement } from "../../utils/dom.ts";
-
-// Side-effect imports: register custom elements (also carries ModeVariantDetail's type).
 import { type ModeVariantDetail } from "../mode-rail/ModeRail.ts";
 import "../color/ColorPickerRail.ts";
+import "../color/ColorDock.ts";
 
 export type ThemeMode = "light" | "dark" | "auto";
 
@@ -67,6 +70,9 @@ export class PixelDrawPanel extends LitElement {
   })
   declare theme: ThemeMode;
 
+  @property({ type: Boolean, reflect: true, attribute: "color-docked" })
+  declare colorDocked: boolean;
+
   readonly #uvToolbar = new UvToolbarController(this);
   readonly #selectToolbar = new SelectToolbarController(this);
   readonly #textureDrop = new TextureDropController(this);
@@ -81,6 +87,7 @@ export class PixelDrawPanel extends LitElement {
     super();
     this.allowUvCreateDelete = false;
     this.theme = "auto";
+    this.colorDocked = false;
   }
 
   get canvasManager(): PixelArtCanvas | null {
@@ -116,12 +123,26 @@ export class PixelDrawPanel extends LitElement {
     });
   }
 
+  override willUpdate(
+    changedProperties: PropertyValues<this>
+  ): void {
+    if (changedProperties.has("colorDocked")) {
+      this.#colors.docked = this.colorDocked;
+    }
+  }
+
   override updated(
     changedProperties: PropertyValues<this>
   ): void {
     super.updated(changedProperties);
     if (changedProperties.has("theme")) {
       this.#syncCanvasBackground();
+    }
+    if (
+      changedProperties.has("colorDocked") &&
+      changedProperties.get("colorDocked") !== undefined
+    ) {
+      this.onResize();
     }
   }
 
@@ -175,11 +196,8 @@ export class PixelDrawPanel extends LitElement {
     this.#canvasManager?.onResize();
   }
 
-  /**
-   * A pick spans two controllers: color state and picker-armed state.
-   */
   readonly #onColorPicked = (
-    event: CustomEvent<ColorChangeDetail>
+    event: CustomEvent<ColorPickedDetail>
   ): void => {
     this.#colors.onColorPicked(event.detail);
     this.#toolOptions.disarmPickColor();
@@ -192,12 +210,17 @@ export class PixelDrawPanel extends LitElement {
     }
   };
 
-  /**
-   * Embedded in an editor, the panel is one surface among many and has to
-   * match them; the OS preference only decides when the surrounding page has
-   * stated none. `theme` stays the author's setting either way — this records
-   * what "auto" resolved to, which the styles read to pick a palette.
-   */
+  #onDockToggle(): void {
+    this.colorDocked = !this.colorDocked;
+
+    const customEvent = new CustomEvent<boolean>("color-docked-change", {
+      bubbles: true,
+      composed: true,
+      detail: this.colorDocked
+    });
+    this.dispatchEvent(customEvent);
+  }
+
   #syncAmbientTheme(): void {
     const ambient = ambientThemeMode(this);
     if (ambient === null) {
@@ -255,24 +278,39 @@ export class PixelDrawPanel extends LitElement {
         <color-picker-rail
           part="color-picker"
           .foreground=${this.#colors.foreground}
+          .background=${this.#colors.background}
+          .docked=${this.colorDocked}
           @foreground-change=${(event: CustomEvent<ColorChangeDetail>) => {
             this.#colors.onForegroundChange(event);
           }}
           @background-change=${(event: CustomEvent<ColorChangeDetail>) => {
             this.#colors.onBackgroundChange(event);
           }}
-            this.#colors.onBackgroundChange(event)}
           @swap=${() => this.#colors.swap()}
+          @dock-toggle=${() => this.#onDockToggle()}
         ></color-picker-rail>
       </div>
 
-      <div class="stage" part="stage">
-        <div class="canvas-host" part="canvas-host"></div>
-        ${this.#textureDrop.render()}
-        ${this.#toolOptions.render()}
-        ${this.#selectToolbar.render(this.#toolOptions.mode === "select")}
-        ${this.#uvToolbar.render(this.#toolOptions.mode === "uv", this.allowUvCreateDelete)}
-        ${this.#historyFile.render()}
+      <div class="workspace" part="workspace">
+        <div class="stage" part="stage">
+          <div class="canvas-host" part="canvas-host"></div>
+          ${this.#textureDrop.render()}
+          ${this.#toolOptions.render()}
+          ${this.#selectToolbar.render(this.#toolOptions.mode === "select")}
+          ${this.#uvToolbar.render(this.#toolOptions.mode === "uv", this.allowUvCreateDelete)}
+          ${this.#historyFile.render()}
+        </div>
+        ${this.colorDocked ? html`
+          <color-dock
+            class="color-dock"
+            part="color-dock"
+            .color=${this.#colors.foreground.hex}
+            .opacity=${this.#colors.foreground.opacity}
+            @color-change=${(event: CustomEvent<ColorChangeDetail>) => {
+              this.#colors.onActiveChange(event);
+            }}
+          ></color-dock>
+        ` : nothing}
       </div>
     `;
   }
@@ -284,6 +322,7 @@ declare global {
   }
 
   interface HTMLElementEventMap {
-    colorpicked: CustomEvent<ColorChangeDetail>;
+    colorpicked: CustomEvent<ColorPickedDetail>;
+    "color-docked-change": CustomEvent<boolean>;
   }
 }

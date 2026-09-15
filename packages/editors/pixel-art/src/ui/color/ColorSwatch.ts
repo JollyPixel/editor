@@ -7,7 +7,8 @@ import {
 } from "@jolly-pixel/color";
 import {
   LitElement,
-  html
+  html,
+  type PropertyValues
 } from "lit";
 import {
   customElement,
@@ -15,13 +16,12 @@ import {
 } from "lit/decorators.js";
 import {
   ensureFontFace,
-  detailOf,
-  PopoverController,
-  type JollyChangeDetail
+  PopoverController
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { assertElement } from "../../utils/dom.ts";
+import { colorChangeFromPicker } from "./pickerChange.ts";
 import { colorSwatchStyles } from "./ColorSwatch.styles.ts";
 
 // CONSTANTS
@@ -37,19 +37,8 @@ export interface ColorChangeDetail {
   opacity: number;
 }
 
-/*
- * Registers the bundled Roboto Mono face on `document`: the popover renders
- * in the top layer (native Popover API), still inside this shadow tree, but
- * "@font-face" declared inside a shadow root is ignored by the browser.
- */
 ensureFontFace();
 
-/**
- * Swatch button that opens a jolly-color-picker popover and emits "color-change".
- *
- * @fires {CustomEvent<ColorChangeDetail>} color-change
- * @fires {CustomEvent<void>} opened
- */
 @customElement("color-swatch")
 export class ColorSwatch extends LitElement {
   static override styles = colorSwatchStyles;
@@ -59,6 +48,9 @@ export class ColorSwatch extends LitElement {
 
   @property({ type: Number })
   declare opacity: number;
+
+  @property({ type: Boolean, reflect: true })
+  declare disabled: boolean;
 
   #swatchElement: HTMLButtonElement | null = null;
   #popoverElement: HTMLElement | null = null;
@@ -81,6 +73,7 @@ export class ColorSwatch extends LitElement {
 
     this.color = "#000000";
     this.opacity = 1;
+    this.disabled = false;
   }
 
   override firstUpdated(): void {
@@ -92,6 +85,14 @@ export class ColorSwatch extends LitElement {
       this.renderRoot.querySelector<HTMLElement>(".popover"),
       "ColorSwatch: popover element not found"
     );
+  }
+
+  override updated(
+    changedProperties: PropertyValues<this>
+  ): void {
+    if (changedProperties.has("disabled") && this.disabled) {
+      this.close();
+    }
   }
 
   setColor(
@@ -109,34 +110,22 @@ export class ColorSwatch extends LitElement {
   readonly #onPickerChange = (
     event: Event
   ): void => {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = colorChangeFromPicker(event);
     if (detail === null) {
       return;
     }
 
-    const parsed = parseColor(detail.value);
-    if (parsed === null) {
-      return;
-    }
-
-    const hex = formatHex(parsed);
-    const opacity = parsed.a;
-
-    this.color = hex;
-    this.opacity = opacity;
+    this.color = detail.hex;
+    this.opacity = detail.opacity;
 
     const customEvent = new CustomEvent<ColorChangeDetail>("color-change", {
       bubbles: true,
       composed: true,
-      detail: { hex, opacity }
+      detail
     });
     this.dispatchEvent(customEvent);
   };
 
-  /**
-   * The swatch colour with `opacity` applied, which owns alpha instead of
-   * the `color` property.
-   */
   get #currentColor(): RGBA {
     const parsed = parseColor(this.color) ?? kBlack;
 
@@ -154,6 +143,7 @@ export class ColorSwatch extends LitElement {
         title="Color"
         aria-haspopup="dialog"
         aria-expanded=${this.#popup.open}
+        ?disabled=${this.disabled}
         style="background:${formatRgba(this.#currentColor)}"
       ></button>
       <div

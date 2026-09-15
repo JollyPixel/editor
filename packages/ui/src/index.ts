@@ -1,4 +1,3 @@
-// Theme
 export * from "./theme/styles/themeStyles.ts";
 export * from "./theme/tokens/semantic.ts";
 export * from "./theme/tokens/density.ts";
@@ -18,15 +17,12 @@ export type {
 export * from "./theme/resolveThemeToken.ts";
 export * from "./theme/ambientTheme.ts";
 
-// Geometry
 export * from "./geometry/Rect.ts";
 
-// Storage
 export * from "./storage/StorageAdapter.ts";
 export * from "./storage/LocalStorageAdapter.ts";
 export * from "./storage/MemoryStorageAdapter.ts";
 
-// Field infrastructure
 export {
   Mixed,
   isMixed,
@@ -43,7 +39,6 @@ export {
 } from "./field/events.ts";
 export * from "./peer/types.ts";
 
-// Peer presence
 export * from "./peer/Presence.ts";
 export * from "./peer/PresenceSource.ts";
 export * from "./peer/toPresencePeers.ts";
@@ -52,10 +47,8 @@ export type {
   PeerEventMap
 } from "./peer/events.ts";
 
-// Icons
 export * from "./icon/index.ts";
 
-// Controls
 export {
   Button,
   type ButtonVariant
@@ -68,7 +61,8 @@ export {
   Color
 } from "./controls/Color.ts";
 export {
-  ColorPicker
+  ColorPicker,
+  type ColorPickerLayout
 } from "./controls/ColorPicker.ts";
 export * from "./controls/Control.ts";
 export {
@@ -92,7 +86,6 @@ export * from "./controls/Text.ts";
 export * from "./controls/ToolButton.ts";
 export * from "./controls/types.ts";
 
-// Math
 export {
   Vector2
 } from "./math/Vector2.ts";
@@ -115,7 +108,6 @@ export * from "./math/types.ts";
 export * from "./math/guards.ts";
 export * from "./math/components.ts";
 
-// Interaction
 export * from "./field/PopoverController.ts";
 export * from "./interaction/drag/DragSession.ts";
 export * from "./interaction/drag/dropIndex.ts";
@@ -128,7 +120,6 @@ export {
   type PointerDragSessionOptions
 } from "./interaction/pointer/PointerDragSession.ts";
 
-// Containers
 export * from "./containers/dialog/Dialog.ts";
 export * from "./containers/dialog/dialogHelpers.ts";
 export * from "./containers/dock/Dock.ts";
@@ -179,7 +170,6 @@ export type {
   PaneVisibilityDetail
 } from "./containers/events.ts";
 
-// Data views
 export * from "./data/tree/Tree.ts";
 export {
   canDrop,
@@ -203,20 +193,17 @@ export {
 } from "./data/tree/model.ts";
 export * from "./data/tree/contract.ts";
 
-// Monitors
 export * from "./monitors/Monitor.ts";
 export * from "./monitors/Graph.ts";
 export * from "./monitors/format.ts";
 export * from "./stats/Stats.ts";
 
-// Feedback
 export * from "./feedback/Progress.ts";
 export * from "./feedback/Loading.ts";
 export * from "./feedback/Log.ts";
 export * from "./feedback/LogQueue.ts";
 export * from "./feedback/LogQueue.types.ts";
 
-// Facade
 export * from "./facade/Pane.ts";
 export * from "./facade/Dock.ts";
 export type {
@@ -244,5 +231,4 @@ export type {
 } from "./facade/Button.ts";
 export * from "./facade/Presence.ts";
 
-// DOM
 export * from "./dom.ts";

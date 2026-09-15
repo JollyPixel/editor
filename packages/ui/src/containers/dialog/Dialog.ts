@@ -66,6 +66,7 @@ export class Dialog extends LitElement {
   override render(): TemplateResult {
     return html`
       <dialog
+        @beforetoggle=${this.#onBeforeToggle}
         @cancel=${this.#onCancel}
         @click=${this.#onBackdropClick}
         @close=${this.#onClose}
@@ -195,6 +196,14 @@ export class Dialog extends LitElement {
         undefined
       );
       this.close();
+    }
+  };
+
+  #onBeforeToggle = (
+    event: ToggleEvent
+  ) => {
+    if (event.newState === "closed") {
+      this.#releaseLayer();
     }
   };
 

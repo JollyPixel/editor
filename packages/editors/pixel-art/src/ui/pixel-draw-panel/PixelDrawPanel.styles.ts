@@ -66,12 +66,25 @@ export const panelStyles = css`
     background: var(--color-divider);
   }
 
+  .workspace {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
   .stage {
     position: relative;
     flex: 1;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
+  }
+
+  .color-dock {
+    flex: 0 0 140px;
+    height: 140px;
   }
 
   .canvas-host {
