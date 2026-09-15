@@ -13,7 +13,7 @@ Two distinct things travel with a peer:
 | `PeerIdentity` | the server's authentication provider | yes | `subject`, `role` |
 | `profile` | the client | no | anything (`username`, `peerId`, ...) |
 
-`subject` is the event-store actor id for everything that connection writes. `role` is the key the rights table is indexed by. Neither is readable from a client payload — a `join` envelope claiming `profile: { role: "admin" }` changes nothing.
+`subject` reaches extensions through `context.identity`; hosts that persist events use it as the actor id. `role` is the key the rights table is indexed by. Neither is readable from a client payload — a `join` envelope claiming `profile: { role: "admin" }` changes nothing.
 
 Peers see each other's `role` and `profile`. `subject` never leaves the server.
 

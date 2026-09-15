@@ -19,8 +19,7 @@ abstract class Extension<TMessage = unknown> {
 
 interface RoomContext {
   readonly room: RoomBroadcast;
-  readonly eventStore: RoomEventStoreHandle;
-  readonly actor: EventStore.Actor;
+  readonly identity: PeerIdentity;
 }
 
 interface RoomPeer {
@@ -36,7 +35,7 @@ interface RoomBroadcast {
 }
 ```
 
-`RoomEventStoreHandle.append()` and `.list()` return Promises. Return a Promise from a lifecycle method when its work is asynchronous.
+Return a Promise from a lifecycle method when its work is asynchronous.
 
 `RoomBroadcast` is stable for the room's lifetime, so an extension can keep it for later use. `sendTo` addresses one member by `clientId`.
 
@@ -181,7 +180,7 @@ server.register({
 - `id` / `name` / `protocols` — same meaning as the matching `Extension` members. Parsing happens on the main thread, so the worker receives an already-parsed message.
 - `modulePath` / `exportName` — dynamically `import()`ed, then constructed as `module[exportName ?? "default"](workerData)`.
 - `workerData` — the constructor's argument; must be structured-cloneable (no functions or live objects).
-- `rpcTimeoutMs` (default `10_000`) — timeout for calls to the worker and calls from the worker into `RoomContext`.
+- `rpcTimeoutMs` (default `10_000`) — timeout for calls to the worker.
 - `maxRestarts` / `restartWindowMs` (default `5` / `60_000`) — restart limit after crashes or RPC timeouts. Once reached, further messages are logged and dropped.
 
 The worker reports which hooks its extension implements as part of its ready
@@ -223,19 +222,13 @@ dynamically resolved room's grace period expires (see
 [Dynamic rooms](./Server.md#dynamic-rooms)). Release timers, subscriptions
 and cached handles here.
 
-## Actors
+## Identity
 
-`RoomEventStoreHandle.append` takes an `AppendInput` **without** `actor`:
-
-```ts
-type RoomAppendInput = Omit<EventStore.AppendInput, "actor">;
-```
-
-The server fills in `actor` from the member's authenticated identity: its
-`subject`, decided at the handshake by an
-[authentication provider](./Authentication.md). Extensions cannot set or omit
-the actor, and no client payload can influence it.
-
-`context.actor` exposes the same actor, for work that writes to the event
-store through its own collaborators instead of `context.eventStore.append`.
+`context.identity` is the `PeerIdentity` of the member that triggered the
+hook, decided at the handshake by an
+[authentication provider](./Authentication.md). No client payload can
+influence it. `onClientDisconnect` receives the departing member's identity.
 Worker extensions receive it with each dispatch.
+
+The server has no event store. An extension that persists events gets its
+writer from the host and derives the actor from `context.identity`.

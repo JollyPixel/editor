@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import {
   describeEnvelopeParseError,
@@ -48,7 +45,6 @@ export interface ServerOptions {
   rights?: RightsMap;
   defaultRole?: string;
   auth?: AuthenticationProvider;
-  eventStore?: EventStore.EventStore;
   /**
    * Empty resolved-room grace period in milliseconds.
    * @default 30_000
@@ -74,31 +70,11 @@ export class Server {
   ) {
     this.logger = options.logger ?? createLogger();
 
-    const eventStore = options.eventStore ?? EventStore.persistence.memory();
-    eventStore.writer.on("append", (event) => this.logger
-      .withMetadata({
-        assetType: event.assetType,
-        assetId: event.assetId,
-        eventType: event.eventType,
-        eventVersion: event.eventVersion
-      })
-      .debug("append event"));
-    eventStore.writer.on("error", (error, input) => this.logger
-      .withMetadata({
-        assetType: input.assetType,
-        assetId: input.assetId,
-        eventType: input.eventType,
-        reason: error.message,
-        outcome: "failed"
-      })
-      .error("append event"));
-
     this.#rights = new RightsTable(options.rights, options.defaultRole);
     this.#auth = options.auth ?? new BypassAuthentication();
     this.#rooms = new RoomRegistry({
       logger: this.logger,
       rights: this.#rights,
-      eventStore,
       graceMs: options.roomGraceMs
     });
     this.#dispatcher = new EnvelopeDispatcher({

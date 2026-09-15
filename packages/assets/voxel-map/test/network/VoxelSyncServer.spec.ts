@@ -6,8 +6,7 @@ import assert from "node:assert/strict";
 import {
   MessageParser,
   protocolEvents,
-  type RoomContext,
-  type RoomEventStoreHandle
+  type RoomContext
 } from "@jolly-pixel/network";
 import {
   AIR_BLOCK_ID,
@@ -45,24 +44,18 @@ function createClient(id: string): MockClient {
   };
 }
 
-const unusedEventStore: RoomEventStoreHandle = {
-  append: () => Promise.resolve(true),
-  list: () => Promise.resolve([])
-};
-
 function roomContext(
   deliver: (payload: unknown) => void = () => void 0
 ): RoomContext {
   return {
-    actor: {
-      type: "user",
-      id: "client-1"
-    },
     room: {
       broadcast: deliver,
       sendTo: (_clientId, payload) => deliver(payload)
     },
-    eventStore: unusedEventStore
+    identity: {
+      subject: "client-1",
+      role: "default"
+    }
   };
 }
 

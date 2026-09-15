@@ -151,7 +151,6 @@ export async function createAssetWorkspace(
   });
 
   const server = options.server ?? new Server({
-    eventStore,
     rights,
     defaultRole,
     auth,

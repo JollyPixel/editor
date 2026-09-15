@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import type { PeerIdentity } from "@jolly-pixel/network";
 import {
   Err,
   Ok,
@@ -111,6 +112,15 @@ export function isAssetEventType(
   eventType: string
 ): boolean {
   return eventType.startsWith(ASSET_EVENT_PREFIX);
+}
+
+export function actorOf(
+  identity: PeerIdentity
+): EventStore.Actor {
+  return {
+    type: "user",
+    id: identity.subject
+  };
 }
 
 export function parseAssetEvent(

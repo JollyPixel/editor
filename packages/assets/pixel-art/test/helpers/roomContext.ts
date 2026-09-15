@@ -9,17 +9,13 @@ export interface ObservedRoomContext {
 export function createRoomContext(): ObservedRoomContext {
   const broadcasts: unknown[] = [];
   const context: RoomContext = {
-    actor: {
-      type: "user",
-      id: "client-1"
-    },
     room: {
       broadcast: (payload) => broadcasts.push(payload),
       sendTo: (_clientId, payload) => broadcasts.push(payload)
     },
-    eventStore: {
-      append: async() => true,
-      list: async() => []
+    identity: {
+      subject: "client-1",
+      role: "default"
     }
   };
 

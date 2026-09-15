@@ -40,7 +40,7 @@ await using backend = await createAssetBackend({
   handlers: [textureAssetHandler()]
 });
 
-await using server = new Server({ eventStore });
+await using server = new Server();
 backend.attach(server);
 ```
 

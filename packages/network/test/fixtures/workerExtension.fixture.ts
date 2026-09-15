@@ -30,17 +30,16 @@ export default class FixtureExtension extends Extension {
     this.#greeting = workerData?.greeting ?? "hello";
   }
 
-  override async onClientConnect(
+  override onClientConnect(
     client: ClientHandle,
     peer: RoomPeer,
     context: RoomContext
-  ): Promise<void> {
-    client.send({ type: "welcome", greeting: this.#greeting });
-    await context.eventStore.append({
-      assetType: "fixture",
-      assetId: client.id,
-      eventType: "connected",
-      eventData: peer.profile
+  ): void {
+    client.send({
+      type: "welcome",
+      greeting: this.#greeting,
+      username: peer.profile.username,
+      subject: context.identity.subject
     });
   }
 
@@ -51,11 +50,11 @@ export default class FixtureExtension extends Extension {
     context.room.sendTo(clientId, { type: "bye" });
   }
 
-  override async onMessage(
+  override onMessage(
     clientId: string,
     payload: unknown,
     context: RoomContext
-  ): Promise<void> {
+  ): void {
     if (payload && typeof payload === "object" && "compute" in payload) {
       let total = 0;
       for (let i = 0; i < 1_000_000; i++) {
@@ -66,7 +65,9 @@ export default class FixtureExtension extends Extension {
       return;
     }
 
-    const events = await context.eventStore.list(clientId);
-    context.room.sendTo(clientId, { type: "history", count: events.length });
+    context.room.sendTo(clientId, {
+      type: "echo",
+      role: context.identity.role
+    });
   }
 }

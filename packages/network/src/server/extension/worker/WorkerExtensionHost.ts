@@ -6,25 +6,22 @@ import {
 
 // Import Third-party Dependencies
 import { match } from "ts-pattern";
-import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import type {
   Extension,
-  RoomAppendInput,
   RoomContext
 } from "../Extension.ts";
 import type {
   ClientHandle
 } from "../../../protocol/types.ts";
+import type { PeerIdentity } from "../../auth/AuthenticationProvider.ts";
 import { createLogger } from "../../logger.ts";
-import { PendingCallRegistry } from "./PendingCallRegistry.ts";
 import {
   DISPATCH_METHODS,
   isHostWorkerData,
   isMainToWorkerMessage,
   type ContextCallMethod,
-  type WorkerContextResponse,
   type WorkerDispatch,
   type WorkerDispatchResult,
   type WorkerReady
@@ -45,60 +42,22 @@ const logger = createLogger(id).withContext({
   room: id
 });
 
-const contextCalls = new PendingCallRegistry();
-
 function postContextCall(
   method: ContextCallMethod,
-  args: unknown[],
-  id?: string
+  args: unknown[]
 ): void {
-  port.postMessage({ type: "context-call", id, method, args });
-}
-
-async function requestAppend(
-  input: RoomAppendInput
-): Promise<boolean> {
-  const { id: callId, promise } = contextCalls.create();
-  postContextCall("eventStore.append", [input], callId);
-
-  return promise.then((value) => {
-    if (typeof value !== "boolean") {
-      throw new Error("context call failed");
-    }
-
-    return value;
-  });
-}
-
-async function requestList(
-  assetId: string,
-  fromVersion: number | undefined
-): Promise<EventStore.Event[]> {
-  const { id: callId, promise } = contextCalls.create();
-  postContextCall("eventStore.list", [assetId, fromVersion], callId);
-
-  return promise.then((value) => {
-    if (!Array.isArray(value)) {
-      throw new Error("context call failed");
-    }
-
-    return value;
-  });
+  port.postMessage({ type: "context-call", method, args });
 }
 
 function createContext(
-  actor: EventStore.Actor
+  identity: PeerIdentity
 ): RoomContext {
   return {
     room: {
       broadcast: (payload) => postContextCall("room.broadcast", [payload]),
       sendTo: (clientId, payload) => postContextCall("client.send", [clientId, payload])
     },
-    actor,
-    eventStore: {
-      append: requestAppend,
-      list: requestList
-    }
+    identity
   };
 }
 
@@ -122,7 +81,7 @@ async function dispatch(
       return extension.onClientConnect?.(
         createClientHandle(clientId),
         peer,
-        createContext(message.actor)
+        createContext(message.identity)
       );
     })
     .with({ method: "onClientDisconnect" }, (message) => {
@@ -130,7 +89,7 @@ async function dispatch(
 
       return extension.onClientDisconnect?.(
         clientId,
-        createContext(message.actor)
+        createContext(message.identity)
       );
     })
     .with({ method: "onMessage" }, (message) => {
@@ -139,27 +98,10 @@ async function dispatch(
       return extension.onMessage?.(
         clientId,
         payload,
-        createContext(message.actor)
+        createContext(message.identity)
       );
     })
     .exhaustive();
-}
-
-function handleContextResponse(
-  message: WorkerContextResponse
-): void {
-  if (message.ok) {
-    contextCalls.resolve(
-      message.id,
-      message.value
-    );
-  }
-  else {
-    contextCalls.reject(
-      message.id,
-      new Error(message.error ?? "context call failed")
-    );
-  }
 }
 
 // Preserve Worker startup errors.
@@ -167,37 +109,30 @@ const mod = await import(modulePath);
 const Ctor = mod[exportName ?? "default"];
 const extension: Extension = new Ctor(extensionWorkerData);
 
-port.on("message", (raw: unknown) => {
-  if (!isMainToWorkerMessage(raw)) {
+port.on("message", (message: unknown) => {
+  if (!isMainToWorkerMessage(message)) {
     return;
   }
 
-  match(raw)
-    .with({ type: "context-response" }, (message) => {
-      handleContextResponse(message);
+  dispatch(extension, message)
+    .then(() => {
+      const result: WorkerDispatchResult = {
+        type: "dispatch-result",
+        id: message.id,
+        ok: true
+      };
+      port.postMessage(result);
     })
-    .with({ type: "dispatch" }, (message) => {
-      dispatch(extension, message)
-        .then(() => {
-          const result: WorkerDispatchResult = {
-            type: "dispatch-result",
-            id: message.id,
-            ok: true
-          };
-          port.postMessage(result);
-        })
-        .catch((error: Error) => {
-          logger.withError(error).error("dispatch failed");
-          const result: WorkerDispatchResult = {
-            type: "dispatch-result",
-            id: message.id,
-            ok: false,
-            error: error.message
-          };
-          port.postMessage(result);
-        });
-    })
-    .exhaustive();
+    .catch((error: Error) => {
+      logger.withError(error).error("dispatch failed");
+      const result: WorkerDispatchResult = {
+        type: "dispatch-result",
+        id: message.id,
+        ok: false,
+        error: error.message
+      };
+      port.postMessage(result);
+    });
 });
 
 const ready: WorkerReady = {

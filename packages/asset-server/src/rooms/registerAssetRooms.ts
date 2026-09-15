@@ -3,6 +3,7 @@ import type {
   RoomResolution,
   Server
 } from "@jolly-pixel/network";
+import type * as EventStore from "@jolly-pixel/event-store";
 import {
   AssetId,
   assetRoomName,
@@ -34,6 +35,7 @@ export {
 
 export interface AssetRoomsOptions {
   server: Server;
+  events: EventStore.EventWriter;
   kinds: AssetKindRegistry;
   catalog: CatalogProjection;
   states: AssetStateStore;
@@ -48,6 +50,7 @@ export function registerAssetRooms(
 ): () => void {
   const {
     server,
+    events,
     kinds,
     catalog,
     states,
@@ -111,7 +114,11 @@ export function registerAssetRooms(
       roomId: roomName,
       state: entry.state
     };
-    const extension = new AssetRoomExtension(binding, live(binding));
+    const extension = new AssetRoomExtension(
+      binding,
+      live(binding),
+      events
+    );
     liveRooms.set(assetId, extension);
 
     return {

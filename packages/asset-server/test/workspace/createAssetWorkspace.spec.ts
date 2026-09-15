@@ -205,7 +205,7 @@ describe("createAssetWorkspace", () => {
 
   test("attaches to the server it is given", async() => {
     using eventStore = EventStore.persistence.memory();
-    const server = new Server({ eventStore });
+    const server = new Server();
 
     await using workspace = await createAssetWorkspace({
       root: "unused",

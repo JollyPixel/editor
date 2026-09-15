@@ -62,17 +62,13 @@ function fakeRoom(): FakeRoom {
     broadcasts,
     direct,
     context: {
-      actor: {
-        type: "user",
-        id: "client-1"
-      },
       room: {
         broadcast: (payload) => broadcasts.push(payload),
         sendTo: (clientId, payload) => direct.push({ clientId, payload })
       },
-      eventStore: {
-        append: () => Promise.resolve(true),
-        list: () => Promise.resolve([])
+      identity: {
+        subject: "alice-subject",
+        role: "default"
       }
     }
   };
@@ -352,7 +348,7 @@ describe("CatalogExtension — commands", () => {
     });
   });
 
-  test("stamps lifecycle events with the context actor", async() => {
+  test("stamps lifecycle events with the context identity as actor", async() => {
     await using commands = await commandHarness();
 
     await commands.send({
@@ -364,7 +360,10 @@ describe("CatalogExtension — commands", () => {
     const [event] = commands.sync.eventStore.reader.listAll({
       eventTypePrefix: "asset."
     });
-    assert.deepEqual(event.actor, commands.room.context.actor);
+    assert.deepEqual(event.actor, {
+      type: "user",
+      id: "alice-subject"
+    });
   });
 
   test("rename and delete act on the asset id", async() => {
@@ -485,7 +484,6 @@ describe("CatalogExtension — server", () => {
     })).unwrap();
 
     const server = new Server({
-      eventStore: sync.eventStore,
       rights: {
         author: {
           [`${CATALOG_ROOM}.${CATALOG_DELETE}`]: "read"
@@ -539,7 +537,7 @@ describe("CatalogExtension — server", () => {
     });
     projection.load();
 
-    const server = new Server({ eventStore: sync.eventStore });
+    const server = new Server();
     server.register(new CatalogExtension({
       projection,
       writer: sync.writer

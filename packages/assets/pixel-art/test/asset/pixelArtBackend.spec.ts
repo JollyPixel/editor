@@ -147,7 +147,7 @@ describe("pixel-art asset kind over a real back-end", () => {
         .find((entry) => entry.source === kDocumentPath)!;
       assert.strictEqual(record.kind, PIXEL_ART_KIND);
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(PIXEL_ART_KIND, record.id);
 
@@ -220,7 +220,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       });
       const record = backend.catalog.snapshot().assets[0];
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(PIXEL_ART_KIND, record.id);
 

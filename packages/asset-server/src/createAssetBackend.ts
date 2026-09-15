@@ -113,6 +113,35 @@ export async function createAssetBackend(
     logger = silentLogger()
   } = options;
 
+  function onAppend(
+    event: EventStore.Event
+  ): void {
+    logger
+      .withMetadata({
+        assetType: event.assetType,
+        assetId: event.assetId,
+        eventType: event.eventType,
+        eventVersion: event.eventVersion
+      })
+      .debug("append event");
+  }
+  function onAppendError(
+    error: Error,
+    input: EventStore.AppendInput
+  ): void {
+    logger
+      .withMetadata({
+        assetType: input.assetType,
+        assetId: input.assetId,
+        eventType: input.eventType,
+        reason: error.message,
+        outcome: "failed"
+      })
+      .error("append event");
+  }
+  eventStore.writer.on("append", onAppend);
+  eventStore.writer.on("error", onAppendError);
+
   const kinds = new AssetKindRegistry(handlers);
   await source.writeIfAbsent(
     STATE_GITIGNORE_PATH,
@@ -215,6 +244,7 @@ export async function createAssetBackend(
 
       return registerAssetRooms({
         server,
+        events: eventStore.writer,
         kinds,
         catalog,
         states,
@@ -232,6 +262,8 @@ export async function createAssetBackend(
       states.close();
       catalogExtension.dispose();
       catalog.close();
+      eventStore.writer.off("append", onAppend);
+      eventStore.writer.off("error", onAppendError);
     },
 
     async [Symbol.asyncDispose]() {

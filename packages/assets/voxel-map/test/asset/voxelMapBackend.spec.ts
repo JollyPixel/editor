@@ -106,7 +106,7 @@ describe("voxel-map asset kind over a real back-end", () => {
         .find((entry) => entry.source === kDocumentPath)!;
       assert.strictEqual(record.kind, VOXEL_MAP_KIND);
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(VOXEL_MAP_KIND, record.id);
 
@@ -189,7 +189,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       });
       const record = backend.catalog.snapshot().assets[0];
 
-      const server = new Server({ eventStore });
+      const server = new Server();
       backend.attach(server);
       const room = assetRoomName(VOXEL_MAP_KIND, record.id);
 

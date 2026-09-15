@@ -85,11 +85,11 @@ async function roomHarness(
   catalog.start();
 
   const server = new Server({
-    eventStore: sync.eventStore,
     roomGraceMs: graceMs
   });
   registerAssetRooms({
     server,
+    events: sync.eventStore.writer,
     kinds: sync.kinds,
     catalog,
     states: sync.states,

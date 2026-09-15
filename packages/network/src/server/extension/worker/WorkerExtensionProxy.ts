@@ -6,12 +6,10 @@ import {
   Extension,
   type RoomBroadcast,
   type RoomContext,
-  type RoomEventStoreHandle,
   type WorkerExtensionDescriptor,
   type RoomPeer
 } from "../Extension.ts";
 import type { Logger } from "../../logger.ts";
-import { errorMessage } from "../../errors.ts";
 import {
   PendingCallRegistry,
   PendingCallTimeoutError
@@ -27,7 +25,6 @@ import {
   type DispatchMethod,
   type HostWorkerData,
   type WorkerContextCall,
-  type WorkerContextResponse,
   type WorkerToMainMessage
 } from "./protocol.ts";
 import type { MessageProtocols } from "../../../protocol/MessageProtocol.ts";
@@ -73,7 +70,6 @@ export class WorkerExtensionProxy extends Extension {
   #dispatchChain: Promise<void> = Promise.resolve();
   #restartTimestamps: number[] = [];
   #roomBroadcast: RoomBroadcast | undefined;
-  #currentEventStore: RoomEventStoreHandle | undefined;
 
   constructor(
     descriptor: WorkerExtensionDescriptor,
@@ -204,7 +200,6 @@ export class WorkerExtensionProxy extends Extension {
     }
 
     this.#roomBroadcast ??= context.room;
-    this.#currentEventStore = context.eventStore;
 
     const timeoutMs = this.#descriptor.rpcTimeoutMs ?? kDefaultRpcTimeoutMs;
     const { id: dispatchId, promise } = this.#dispatchCalls.create({
@@ -217,7 +212,7 @@ export class WorkerExtensionProxy extends Extension {
       id: dispatchId,
       method,
       args,
-      actor: context.actor
+      identity: context.identity
     });
 
     try {
@@ -268,51 +263,7 @@ export class WorkerExtensionProxy extends Extension {
         const [clientId, data] = call.args;
         this.#roomBroadcast?.sendTo(clientId, data);
       })
-      .with({ method: "eventStore.append" }, (call) => {
-        const [input] = call.args;
-        void this.#replyToContextCall(
-          call.id,
-          this.#currentEventStore?.append(input) ?? Promise.resolve(false)
-        );
-      })
-      .with({ method: "eventStore.list" }, (call) => {
-        const [assetId, fromVersion] = call.args;
-        void this.#replyToContextCall(
-          call.id,
-          this.#currentEventStore?.list(assetId, fromVersion) ?? Promise.resolve([])
-        );
-      })
       .exhaustive();
-  }
-
-  async #replyToContextCall(
-    id: string | undefined,
-    valuePromise: Promise<unknown>
-  ): Promise<void> {
-    if (id === undefined) {
-      return;
-    }
-
-    let response: WorkerContextResponse;
-    try {
-      const value = await valuePromise;
-      response = {
-        type: "context-response",
-        id,
-        ok: true,
-        value
-      };
-    }
-    catch (error) {
-      response = {
-        type: "context-response",
-        id,
-        ok: false,
-        error: errorMessage(error)
-      };
-    }
-
-    this.#transport?.postMessage(response);
   }
 
   #handleFailure(

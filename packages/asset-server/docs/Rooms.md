@@ -6,6 +6,7 @@ for each open asset.
 ```ts
 const clearResolver = registerAssetRooms({
   server,
+  events: eventStore.writer,
   kinds,
   catalog,
   states,
@@ -16,7 +17,8 @@ const clearResolver = registerAssetRooms({
 ```
 
 Most hosts call `backend.attach(server)`, which also registers the catalog
-room. The returned callback clears the resolver. It does not evict rooms that
+room and passes the backend's event store writer as `events`. The returned
+callback clears the resolver. It does not evict rooms that
 the server already resolved; `server.close()` disposes those rooms.
 
 ## Room names
@@ -51,6 +53,32 @@ interface AssetRoomBinding<TState> {
   readonly state: TState;
 }
 ```
+
+## Commands
+
+A room parses each message with the kind's live protocol and arbitrates it.
+An accepted command is appended to `events`, then committed and broadcast.
+The `network` server never touches the event store.
+
+When the append fails, the room commits and broadcasts nothing and sends the
+author alone:
+
+```ts
+{ type: "rejected", reason: string }
+```
+
+`ASSET_ROOM_REJECTED` holds the `"rejected"` type. Like the deleted notice, it
+is added to the kind's outbound protocol and filtered under
+`${kind}.rejected`.
+
+## Actors
+
+```ts
+actorOf(identity: PeerIdentity): EventStore.Actor;
+```
+
+Returns `{ type: "user", id: identity.subject }`. Asset and catalog rooms stamp
+every event with the actor of `context.identity`.
 
 ## Eviction
 

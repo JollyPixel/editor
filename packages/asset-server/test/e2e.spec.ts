@@ -142,7 +142,7 @@ describe("asset-server — end to end", () => {
     );
 
     // An editor session over a dynamic room.
-    const server = new Server({ eventStore });
+    const server = new Server();
     backend.attach(server);
     const room = assetRoomName("counter", counterRecord.id);
 
@@ -257,7 +257,7 @@ describe("asset-server — end to end", () => {
       handlers: [liveCounterHandler()],
       watch: false
     });
-    const server = new Server({ eventStore });
+    const server = new Server();
     backend.attach(server);
 
     const author = recorder("A");

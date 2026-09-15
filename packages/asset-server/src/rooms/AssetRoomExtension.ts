@@ -1,11 +1,15 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
+import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
+import { actorOf } from "../events/AssetEvents.ts";
 import {
   assetRoomDeletedSchema,
-  ASSET_ROOM_DELETED
+  assetRoomRejectedSchema,
+  ASSET_ROOM_DELETED,
+  ASSET_ROOM_REJECTED
 } from "./AssetRoomExtension.schema.ts";
 
 export interface AssetRoomMessage {
@@ -15,6 +19,11 @@ export interface AssetRoomMessage {
 
 export interface AssetRoomDeletedMessage {
   readonly type: typeof ASSET_ROOM_DELETED;
+}
+
+export interface AssetRoomRejectedMessage {
+  readonly type: typeof ASSET_ROOM_REJECTED;
+  readonly reason: string;
 }
 
 export interface AssetArbitration<TCommand = unknown> {
@@ -51,20 +60,23 @@ export class AssetRoomExtension<
 
   #assetId: string;
   #protocol: AssetLiveProtocol<TCommand>;
+  #events: EventStore.EventWriter;
   #room: network.RoomBroadcast | null = null;
   #deleted = false;
 
   constructor(
     binding: AssetRoomBinding,
-    protocol: AssetLiveProtocol<TCommand>
+    protocol: AssetLiveProtocol<TCommand>,
+    events: EventStore.EventWriter
   ) {
     super();
 
     this.id = binding.roomId;
     this.name = binding.kind;
-    this.protocols = withDeletedNotice(protocol.protocols);
+    this.protocols = withRoomNotices(protocol.protocols);
     this.#assetId = binding.assetId;
     this.#protocol = protocol;
+    this.#events = events;
   }
 
   get deleted(): boolean {
@@ -102,11 +114,11 @@ export class AssetRoomExtension<
     });
   }
 
-  override async onMessage(
+  override onMessage(
     clientId: string,
     payload: unknown,
     context: network.RoomContext
-  ): Promise<void> {
+  ): void {
     if (this.#deleted) {
       return;
     }
@@ -121,13 +133,19 @@ export class AssetRoomExtension<
       return;
     }
 
-    const appended = await context.eventStore.append({
+    const appended = this.#events.append({
       assetType: this.name,
       assetId: this.#assetId,
       eventType: this.#protocol.commandEventType,
-      eventData: arbitration.command
+      eventData: arbitration.command,
+      actor: actorOf(context.identity)
     });
-    if (!appended) {
+    if (!appended.ok) {
+      context.room.sendTo(clientId, {
+        type: ASSET_ROOM_REJECTED,
+        reason: appended.val.message
+      } satisfies AssetRoomRejectedMessage);
+
       return;
     }
 
@@ -141,7 +159,7 @@ export class AssetRoomExtension<
   }
 }
 
-function withDeletedNotice(
+function withRoomNotices(
   protocols: network.MessageProtocols
 ): network.MessageProtocols {
   const { outbound } = protocols;
@@ -156,7 +174,8 @@ function withDeletedNotice(
       schema: {
         oneOf: [
           ...network.variantsOf(outbound.schema),
-          assetRoomDeletedSchema
+          assetRoomDeletedSchema,
+          assetRoomRejectedSchema
         ]
       }
     }

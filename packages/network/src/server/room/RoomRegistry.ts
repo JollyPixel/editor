@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import { ServerRoom } from "./ServerRoom.ts";
 import {
@@ -28,7 +25,6 @@ interface RoomEntry {
 export interface RoomRegistryOptions {
   logger: Logger;
   rights: RightsTable;
-  eventStore: EventStore.EventStore;
   resolver?: RoomResolver | null;
   /**
    * Empty resolved-room grace period in milliseconds.
@@ -43,7 +39,6 @@ export interface RoomRegistryOptions {
 export class RoomRegistry {
   #logger: Logger;
   #rights: RightsTable;
-  #eventStore: EventStore.EventStore;
   #resolver: RoomResolver | null;
   #graceMs: number;
   #entries = new Map<string, RoomEntry>();
@@ -54,7 +49,6 @@ export class RoomRegistry {
   ) {
     this.#logger = options.logger;
     this.#rights = options.rights;
-    this.#eventStore = options.eventStore;
     this.#resolver = options.resolver ?? null;
     this.#graceMs = options.graceMs ?? kDefaultRoomGraceMs;
   }
@@ -201,8 +195,7 @@ export class RoomRegistry {
         extension,
         this.#rights,
         {
-          logger: this.#logger,
-          eventStore: this.#eventStore
+          logger: this.#logger
         }
       ),
       resolution,
