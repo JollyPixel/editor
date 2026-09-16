@@ -12,7 +12,6 @@ import {
   state
 } from "lit/decorators.js";
 import type {
-  BlockDefinition,
   ResolvedBlockDefinition,
   BlockAlphaMode,
   BlockSide,
@@ -30,21 +29,38 @@ import {
   editorState,
   type BrushStore
 } from "../../app/state/index.ts";
-
-// CONSTANTS
-const kDefaultBlockName = "New Block";
+import {
+  blockDefinitionFromDraft,
+  previewBlockFromDraft,
+  DEFAULT_BLOCK_NAME,
+  type BlockDraft
+} from "./blockDraft.ts";
+import "./BlockShapePreview.ts";
 
 type BlockEditorMode = "edit" | "create";
-
-interface BlockDraft {
-  name: string;
-  shapeId: BlockShapeID;
-  tilesetId: string;
-}
 
 @customElement("block-editor-dialog")
 export class BlockEditorDialog extends LitElement {
   static override styles = css`
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 160px;
+      align-items: start;
+      gap: var(--jolly-space-4, 16px);
+    }
+
+    @media (width <= 420px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      block-shape-preview {
+        order: -1;
+        width: 160px;
+        justify-self: center;
+      }
+    }
+
     .fields {
       display: flex;
       flex-direction: column;
@@ -68,8 +84,14 @@ export class BlockEditorDialog extends LitElement {
   @state()
   private declare _draft: BlockDraft;
 
+  @state()
+  private declare _open: boolean;
+
   @query("jolly-dialog")
   declare private _dialog: Dialog;
+
+  #previewDraft: BlockDraft | null = null;
+  #previewDraftBlock: ResolvedBlockDefinition | null = null;
 
   constructor() {
     super();
@@ -78,8 +100,9 @@ export class BlockEditorDialog extends LitElement {
     this.brush = editorState.brush;
     this.block = null;
     this._mode = "edit";
+    this._open = false;
     this._draft = {
-      name: kDefaultBlockName,
+      name: DEFAULT_BLOCK_NAME,
       shapeId: "cube",
       tilesetId: ""
     };
@@ -91,6 +114,7 @@ export class BlockEditorDialog extends LitElement {
     }
 
     this._mode = "edit";
+    this._open = true;
     await this.updateComplete;
     await this._dialog.showModal();
   }
@@ -98,10 +122,11 @@ export class BlockEditorDialog extends LitElement {
   async openForCreate(): Promise<void> {
     this._mode = "create";
     this._draft = {
-      name: kDefaultBlockName,
+      name: DEFAULT_BLOCK_NAME,
       shapeId: "cube",
       tilesetId: this.#defaultTilesetId()
     };
+    this._open = true;
     await this.updateComplete;
     await this._dialog.showModal();
   }
@@ -137,27 +162,33 @@ export class BlockEditorDialog extends LitElement {
     creating: boolean
   ) {
     return html`
-      <jolly-dialog heading=${heading}>
-        <div class="fields">
-          <jolly-text
-            label="Name"
-            .value=${values.name}
-            @jolly-change=${this.#onNameChange}
-          ></jolly-text>
-          <jolly-select
-            label="Shape"
-            .options=${this.#shapeOptions()}
-            .value=${values.shapeId}
-            @jolly-change=${this.#onShapeChange}
-          ></jolly-select>
-          <jolly-select
-            label="Tileset"
-            .options=${this.#tilesetOptions()}
-            .value=${values.tilesetId}
-            @jolly-change=${this.#onTilesetChange}
-          ></jolly-select>
-          ${creating ? nothing : this.#renderSurface()}
-          ${creating ? nothing : this.#renderCullSelfFaces()}
+      <jolly-dialog
+        heading=${heading}
+        @jolly-close=${this.#onDialogClose}
+      >
+        <div class="layout">
+          <div class="fields">
+            <jolly-text
+              label="Name"
+              .value=${values.name}
+              @jolly-change=${this.#onNameChange}
+            ></jolly-text>
+            <jolly-select
+              label="Shape"
+              .options=${this.#shapeOptions()}
+              .value=${values.shapeId}
+              @jolly-change=${this.#onShapeChange}
+            ></jolly-select>
+            <jolly-select
+              label="Tileset"
+              .options=${this.#tilesetOptions()}
+              .value=${values.tilesetId}
+              @jolly-change=${this.#onTilesetChange}
+            ></jolly-select>
+            ${creating ? nothing : this.#renderSurface()}
+            ${creating ? nothing : this.#renderCullSelfFaces()}
+          </div>
+          ${this.#renderPreview(creating)}
         </div>
 
         ${creating ? html`
@@ -179,6 +210,37 @@ export class BlockEditorDialog extends LitElement {
         `}
       </jolly-dialog>
     `;
+  }
+
+  #renderPreview(
+    creating: boolean
+  ) {
+    if (!this._open) {
+      return nothing;
+    }
+
+    return html`
+      <block-shape-preview
+        .engine=${this.engine}
+        .block=${creating ? this.#draftPreviewBlock() : this.block}
+      ></block-shape-preview>
+    `;
+  }
+
+  #draftPreviewBlock(): ResolvedBlockDefinition {
+    if (
+      this.#previewDraftBlock === null ||
+      this.#previewDraft !== this._draft
+    ) {
+      this.#previewDraft = this._draft;
+      this.#previewDraftBlock = previewBlockFromDraft(this._draft);
+    }
+
+    return this.#previewDraftBlock;
+  }
+
+  #onDialogClose(): void {
+    this._open = false;
   }
 
   #renderCullSelfFaces() {
@@ -342,16 +404,10 @@ export class BlockEditorDialog extends LitElement {
     }
 
     const { blockRegistry } = this.engine;
-    const definition: BlockDefinition = {
-      id: blockRegistry.nextId,
-      name: this._draft.name.trim() || kDefaultBlockName,
-      shapeId: this._draft.shapeId,
-      defaultTexture: {
-        tilesetId: this._draft.tilesetId || undefined,
-        col: 0,
-        row: 0
-      }
-    };
+    const definition = blockDefinitionFromDraft(
+      this._draft,
+      blockRegistry.nextId
+    );
 
     this.engine.defineBlock(definition);
     this.brush.blockId = definition.id;
