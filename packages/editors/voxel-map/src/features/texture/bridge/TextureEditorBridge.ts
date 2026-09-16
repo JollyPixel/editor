@@ -17,7 +17,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   PixelCanvasChangeTracker
-} from "@jolly-pixel/editor.pixel-art/texture/PixelCanvasChangeTracker.ts";
+} from "@jolly-pixel/editor.pixel-art/change-tracking/PixelCanvasChangeTracker.ts";
 
 // Import Internal Dependencies
 import { findBlocksReferencingTileset } from "../uv/blockTextureTiles.ts";

@@ -1,133 +1,90 @@
-// Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
-
 // Import Internal Dependencies
+import { test, expect } from "./fixtures.ts";
 import {
-  gotoDemo,
-  setMode,
-  dragStroke,
+  BLACK,
+  CLEAR,
   clickTexturePixel,
-  textureToScreenPoint,
-  readPixel,
-  setBrushColor
+  dragStroke,
+  hoverTexturePixel,
+  readPixels,
+  setBrushColor,
+  setBrushSize,
+  setMode
 } from "./utils.ts";
+import type { PixelDrawPanel } from "../../src/index.ts";
 
-/*
- * This file uses texture slice x:0-15, y:0-15 on the shared 80x80 canvas.
- * Tests also keep mini-zones separate so order never matters.
- */
-
-test.beforeEach(async({ page }) => {
-  await gotoDemo(page);
-  await setMode(page, "paint");
+test.beforeEach(async({ panel }) => {
+  await setMode(panel, "paint");
 });
 
-test("draws a freehand stroke in the primary color", async({ page }) => {
-  // Default brush: size 1, black.
-  await dragStroke(page, [
+test("draws a freehand stroke in the primary color", async({ panel }) => {
+  await dragStroke(panel, [
     { x: 2, y: 2 },
-    { x: 2, y: 3 },
     { x: 2, y: 4 }
   ]);
 
-  for (let y = 2; y <= 4; y++) {
-    await expect.poll(
-      () => readPixel(page, 2, y)
-    ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
-  }
-  // Neighbor column should stay empty.
-  await expect.poll(
-    () => readPixel(page, 3, 2)
-  ).toMatchObject({ a: 0 });
+  await expect.poll(() => readPixels(panel, [
+    { x: 2, y: 2 },
+    { x: 2, y: 3 },
+    { x: 2, y: 4 },
+    { x: 3, y: 2 }
+  ])).toEqual([BLACK, BLACK, BLACK, CLEAR]);
 });
 
-test("brush size widens the painted footprint", async({ page }) => {
-  const sizeSlider = page.locator(".tool-option-overlay input[type=\"range\"]");
-  await sizeSlider.evaluate((el, value) => {
-    const input = el as HTMLInputElement;
-    input.value = String(value);
-    input.dispatchEvent(
-      new Event("input", { bubbles: true })
-    );
-  }, 4);
+test("right-click drags a stroke in the secondary color", async({ panel }) => {
+  await setBrushColor(panel, "secondary", "#0000ff");
 
-  // Even-size brush shifts toward origin: size 4 at (6,6) covers 4..7.
-  await clickTexturePixel(page, 6, 6);
-
-  await expect.poll(
-    () => readPixel(page, 4, 4)
-  ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
-  await expect.poll(
-    () => readPixel(page, 7, 7)
-  ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
-  await expect.poll(
-    () => readPixel(page, 3, 3)
-  ).toMatchObject({ a: 0 });
-  await expect.poll(
-    () => readPixel(page, 8, 8)
-  ).toMatchObject({ a: 0 });
-});
-
-test("Shift arms a straight line between two points", async({ page }) => {
-  const start = { x: 2, y: 10 };
-  const end = { x: 8, y: 10 };
-
-  const startPoint = await textureToScreenPoint(page, start.x, start.y);
-  const endPoint = await textureToScreenPoint(page, end.x, end.y);
-
-  await page.mouse.move(startPoint.x, startPoint.y);
-  await page.keyboard.down("Shift");
-  await page.mouse.move(endPoint.x, endPoint.y);
-  await page.mouse.down();
-  await page.mouse.up();
-  await page.keyboard.up("Shift");
-
-  for (let x = start.x; x <= end.x; x++) {
-    await expect.poll(
-      () => readPixel(page, x, 10)
-    ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
-  }
-});
-
-test("right-click drags a stroke in the secondary color", async({ page }) => {
-  await setBrushColor(page, "secondary", "#0000ff");
-
-  await dragStroke(page, [
+  await dragStroke(panel, [
     { x: 11, y: 2 },
-    { x: 11, y: 3 },
     { x: 11, y: 4 }
-  ], "right");
+  ], { button: "right" });
 
-  for (let y = 2; y <= 4; y++) {
-    await expect.poll(
-      () => readPixel(page, 11, y)
-    ).toEqual({ r: 0, g: 0, b: 255, a: 255 });
-  }
-  // Neighbor column should stay empty.
-  await expect.poll(
-    () => readPixel(page, 12, 2)
-  ).toMatchObject({ a: 0 });
+  await expect.poll(() => readPixels(panel, [
+    { x: 11, y: 2 },
+    { x: 11, y: 4 },
+    { x: 12, y: 2 }
+  ])).toEqual(["#0000ffff", "#0000ffff", CLEAR]);
 });
 
-test("Shift + right-click commits a straight line in the secondary color", async({ page }) => {
-  await setBrushColor(page, "secondary", "#00ff00");
-
-  const start = { x: 11, y: 13 };
-  const end = { x: 13, y: 13 };
-
-  const startPoint = await textureToScreenPoint(page, start.x, start.y);
-  const endPoint = await textureToScreenPoint(page, end.x, end.y);
-
-  await page.mouse.move(startPoint.x, startPoint.y);
+test("Shift-click draws a straight line from the hovered point", async({ panel, page }) => {
+  await hoverTexturePixel(panel, { x: 2, y: 10 });
   await page.keyboard.down("Shift");
-  await page.mouse.move(endPoint.x, endPoint.y);
-  await page.mouse.down({ button: "right" });
-  await page.mouse.up({ button: "right" });
+  await clickTexturePixel(panel, { x: 8, y: 10 });
   await page.keyboard.up("Shift");
 
-  for (let x = start.x; x <= end.x; x++) {
-    await expect.poll(
-      () => readPixel(page, x, 13)
-    ).toEqual({ r: 0, g: 255, b: 0, a: 255 });
+  const line = Array.from({ length: 7 }, (_, index) => {
+    return { x: 2 + index, y: 10 };
+  });
+  await expect.poll(() => readPixels(panel, line))
+    .toEqual(line.map(() => BLACK));
+});
+
+test("the size slider widens the brush footprint", async({ panel }) => {
+  await setBrushSize(panel, 4);
+
+  await clickTexturePixel(panel, { x: 6, y: 6 });
+
+  await expect.poll(() => readPixels(panel, [
+    { x: 4, y: 4 },
+    { x: 7, y: 7 },
+    { x: 3, y: 3 },
+    { x: 8, y: 8 }
+  ])).toEqual([BLACK, BLACK, CLEAR, CLEAR]);
+});
+
+test("Ctrl+wheel adjusts the brush size and its overlay label", async({ panel, page }) => {
+  function brushSize() {
+    return panel.evaluate(
+      (element: PixelDrawPanel) => element.canvasManager!.brush.size
+    );
   }
+  const before = await brushSize();
+
+  await hoverTexturePixel(panel, { x: 40, y: 40 });
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -100);
+  await page.keyboard.up("Control");
+
+  await expect.poll(brushSize).toBe(before + 1);
+  await expect(panel.getByText(`${before + 1}px`)).toBeVisible();
 });

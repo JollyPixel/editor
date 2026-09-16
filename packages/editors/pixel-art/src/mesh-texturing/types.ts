@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { UVSlot } from "@jolly-pixel/pixel-draw.renderer";
-export type { PixelTextureSource } from "../texture/types.ts";
+export type { PixelTextureSource } from "../change-tracking/types.ts";
 
 export interface FaceVertexRange {
   start: number;

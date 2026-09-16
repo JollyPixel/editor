@@ -69,7 +69,7 @@ Open `http://localhost:3000` to see the interactive demo.
 
 ## 📚 API
 
-- [`PixelDrawPanel`](./docs/ui/PixelDrawPanel.md): drop-in UI (`<pixel-draw-panel>`)
+- [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): drop-in UI (`<pixel-draw-panel>`)
 
 ## 🧪 Running the E2E tests
 

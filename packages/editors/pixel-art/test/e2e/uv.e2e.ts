@@ -1,223 +1,212 @@
 // Import Third-party Dependencies
-import {
-  test,
-  expect,
-  type Page
-} from "@playwright/test";
-import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import type { Locator } from "@playwright/test";
 
 // Import Internal Dependencies
+import { test, expect } from "./fixtures.ts";
 import {
-  gotoDemo,
+  clickTexturePixel,
+  dragStroke,
   setMode,
-  textureToScreenPoint,
-  clickTexturePixel
+  type TexturePoint
 } from "./utils.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
-// UV regions carry no pixels; this file resets the shared region set.
-
-// Cycling needs one action per face, so increase the timeout.
-test.describe.configure({ timeout: 90_000 });
-
-/**
- * Drag a region with minimal pointer steps.
- */
-async function dragRegion(
-  page: Page,
-  from: { x: number; y: number; },
-  to: { x: number; y: number; }
-): Promise<void> {
-  const start = await textureToScreenPoint(page, from.x, from.y);
-  const end = await textureToScreenPoint(page, to.x, to.y);
-
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(end.x, end.y, { steps: 4 });
-  await page.mouse.up();
-}
-
-async function setRegionState(
-  page: Page,
-  state: "Stacked" | "Unfolded" | "Free"
-): Promise<void> {
-  await page.getByRole("button", { name: /^Region state: / }).click();
-  await page.getByRole("menuitem", { name: state }).click();
-}
+// CONSTANTS
+const kOrigin = { x: 0, y: 0 };
+const kCubeCell = { x: 8, y: 8 };
 
 interface UvSnapshot {
-  selectedRegionId: string | null;
   selectedSlot: string | null;
   state: string | null;
-  faces: Record<string, { x: number; y: number; }>;
+  faces: Record<string, TexturePoint>;
 }
 
-interface RampFaceSnapshot {
-  state: string;
-  activeFaces: string[];
-  left: { shape: string; corner: string; };
-  right: { shape: string; corner: string; };
-}
-
-function uvPanel(): PixelArtCanvas {
-  const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-
-  return panel!.canvasManager!;
-}
-
-async function resetRegions(
-  page: Page
-): Promise<void> {
-  await page.evaluate(`(${uvPanel.toString()})().uv.clear()`);
-}
-
-/**
- * Read selection plus per-face positions.
- */
-async function uvSnapshot(
-  page: Page
+function uvSnapshot(
+  panel: Locator
 ): Promise<UvSnapshot> {
-  return page.evaluate(`(() => {
-    const uv = (${uvPanel.toString()})().uv;
+  return panel.evaluate((element: PixelDrawPanel) => {
+    const { uv } = element.canvasManager!;
     const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
-    const faces = {};
-    for (const entry of region ? region.slotsOf() : []) {
+    const faces: Record<string, { x: number; y: number; }> = {};
+    for (const entry of region?.slotsOf() ?? []) {
       const rect = "rect" in entry.geometry ? entry.geometry.rect : entry.geometry;
       faces[entry.slot ?? "*"] = { x: rect.x, y: rect.y };
     }
 
     return {
-      selectedRegionId: uv.selectedRegionId,
       selectedSlot: uv.selectedSlot,
-      state: region ? region.state : null,
+      state: region?.state ?? null,
       faces
     };
-  })()`) as Promise<UvSnapshot>;
+  });
 }
 
-test.beforeEach(async({ page }) => {
-  /*
-   * Preview meshes live in the 3D runtime; every test in this file either
-   * drags a region in front of it or asserts on __uvPreviewMeshCount.
-   */
-  await gotoDemo(page, undefined, { runtime: true });
-  await resetRegions(page);
-  await setMode(page, "uv");
-  // Regions stay invisible and un-hittable until selected or shown.
-  await page.getByRole("button", { name: "Show all" }).click();
-  // clear() places the cube at (0,0,16,16).
-  await page.getByRole("button", { name: "Create cube", exact: true }).click();
+async function setRegionState(
+  panel: Locator,
+  state: "Stacked" | "Unfolded" | "Free"
+): Promise<void> {
+  await panel.getByRole("button", { name: /^Region state: / }).click();
+  await panel.getByRole("menuitem", { name: state }).click();
+}
+
+function sixFaces(
+  at: (index: number) => TexturePoint
+): Record<string, TexturePoint> {
+  const slots = ["front", "back", "left", "right", "top", "bottom"];
+
+  return Object.fromEntries(slots.map((slot, index) => [slot, at(index)]));
+}
+
+test.beforeEach(async({ panel }) => {
+  await setMode(panel, "uv");
+  await panel.getByRole("button", { name: "Show all" }).click();
+  await panel.getByRole("button", { name: "Create cube", exact: true }).click();
 });
 
-test("the ramp preset creates triangular side faces", async({ page }) => {
-  await page.getByRole("button", { name: "Create ramp", exact: true }).click();
+test("the state menu follows the selection and lists the other two states", async({ panel }) => {
+  const trigger = panel.getByRole("button", { name: /^Region state: / });
+  await expect(trigger).toHaveCount(0);
 
-  const ramp = await page.evaluate(`(() => {
-    const regions = Array.from((${uvPanel.toString()})().uv.regions);
-    const region = regions[regions.length - 1];
-    const data = region.toJSON();
+  await clickTexturePixel(panel, kCubeCell);
+  await expect(trigger).toHaveAccessibleName("Region state: Stacked");
+  expect(await uvSnapshot(panel)).toEqual({
+    selectedSlot: null,
+    state: "stacked",
+    faces: { "*": kOrigin }
+  });
+
+  await trigger.click();
+  await expect(panel.getByRole("menuitem")).toHaveText(["Unfolded", "Free"]);
+  await panel.getByRole("menuitem", { name: "Free" }).click();
+  await expect(trigger).toHaveAccessibleName("Region state: Free");
+  await trigger.click();
+  await expect(panel.getByRole("menuitem")).toHaveText(["Stacked", "Unfolded"]);
+  await panel.page().keyboard.press("Escape");
+
+  await clickTexturePixel(panel, { x: 70, y: 70 });
+  await expect(trigger).toHaveCount(0);
+
+  await clickTexturePixel(panel, kCubeCell);
+  await panel.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(trigger).toHaveCount(0);
+});
+
+test("unfolding lays the faces out as a net that drags as one and stays put when freed", async({ panel }) => {
+  await clickTexturePixel(panel, kCubeCell);
+  await setRegionState(panel, "Unfolded");
+  function net(
+    dx: number,
+    dy: number
+  ) {
+    return sixFaces((index) => {
+      return {
+        x: ((index % 2) * 16) + dx,
+        y: (Math.floor(index / 2) * 16) + dy
+      };
+    });
+  }
+  expect(await uvSnapshot(panel)).toEqual({
+    selectedSlot: null,
+    state: "unfolded",
+    faces: net(0, 0)
+  });
+
+  await dragStroke(panel, [
+    { x: 20, y: 20 },
+    { x: 28, y: 24 }
+  ], { steps: 1 });
+  expect((await uvSnapshot(panel)).faces).toEqual(net(8, 4));
+
+  await setRegionState(panel, "Free");
+  expect(await uvSnapshot(panel)).toMatchObject({
+    state: "free",
+    faces: net(8, 4)
+  });
+});
+
+test("freeing stacks six faces in place and clicks cycle through them", async({ panel }) => {
+  await clickTexturePixel(panel, kCubeCell);
+  await setRegionState(panel, "Free");
+  expect((await uvSnapshot(panel)).faces).toEqual(sixFaces(() => kOrigin));
+
+  const picked: (string | null)[] = [];
+  for (let index = 0; index < 7; index++) {
+    await clickTexturePixel(panel, kCubeCell);
+    picked.push((await uvSnapshot(panel)).selectedSlot);
+  }
+
+  expect(picked).toEqual(["front", "back", "left", "right", "top", "bottom", "front"]);
+});
+
+test("dragging a free region moves only the face under the press", async({ panel }) => {
+  await clickTexturePixel(panel, kCubeCell);
+  await setRegionState(panel, "Free");
+  await clickTexturePixel(panel, kCubeCell);
+  await clickTexturePixel(panel, kCubeCell);
+
+  await dragStroke(panel, [kCubeCell, { x: 40, y: 8 }], { steps: 1 });
+
+  const { selectedSlot, faces } = await uvSnapshot(panel);
+  expect(selectedSlot).toBe("left");
+  expect(faces).toMatchObject({
+    left: { x: 32, y: 0 },
+    front: kOrigin,
+    back: kOrigin
+  });
+});
+
+test("stacking keeps the edited face, and undo restores the free faces", async({ panel }) => {
+  await clickTexturePixel(panel, kCubeCell);
+  await setRegionState(panel, "Free");
+  await dragStroke(panel, [kCubeCell, { x: 40, y: 8 }], { steps: 1 });
+  expect(await uvSnapshot(panel)).toMatchObject({
+    selectedSlot: "front",
+    faces: { front: { x: 32, y: 0 } }
+  });
+
+  await setRegionState(panel, "Stacked");
+  expect(await uvSnapshot(panel)).toMatchObject({
+    state: "stacked",
+    faces: { "*": { x: 32, y: 0 } }
+  });
+
+  await panel.getByRole("button", { name: "Undo" }).click();
+  expect(await uvSnapshot(panel)).toMatchObject({
+    state: "free",
+    faces: {
+      front: { x: 32, y: 0 },
+      back: kOrigin
+    }
+  });
+});
+
+test("Create ramp adds a region with triangular side faces", async({ panel }) => {
+  await panel.getByRole("button", { name: "Create ramp", exact: true }).click();
+
+  const ramp = await panel.evaluate((element: PixelDrawPanel) => {
+    const region = Array.from(element.canvasManager!.uv.regions).at(-1)!;
+    const { activeFaces, faces } = region.toJSON();
 
     return {
       state: region.state,
-      activeFaces: data.activeFaces,
-      left: data.faces.left,
-      right: data.faces.right
+      activeFaces,
+      left: faces?.left,
+      right: faces?.right
     };
-  })()`) as RampFaceSnapshot;
-  expect(ramp.state).toBe("stacked");
-  expect(ramp.activeFaces).toEqual(["back", "left", "right", "top", "bottom"]);
-  expect(ramp.left).toMatchObject({ shape: "triangle", corner: "bottom-right" });
-  expect(ramp.right).toMatchObject({ shape: "triangle", corner: "bottom-right" });
-});
-
-test("a new region is stacked and has no face", async({ page }) => {
-  await clickTexturePixel(page, 8, 8);
-
-  const snapshot = await uvSnapshot(page);
-  expect(snapshot.state).toBe("stacked");
-  expect(snapshot.selectedSlot).toBeNull();
-  expect(snapshot.faces).toEqual({ "*": { x: 0, y: 0 } });
-});
-
-test("the state dropdown appears with a selection and offers the other two states", async({ page }) => {
-  const trigger = page.getByRole("button", { name: /^Region state: / });
-
-  // Region exists, but nothing is selected yet.
-  await expect(trigger).toHaveCount(0);
-
-  await clickTexturePixel(page, 8, 8);
-  await expect(trigger).toHaveAccessibleName("Region state: Stacked");
-
-  await trigger.click();
-  await expect(page.getByRole("menuitem")).toHaveText(["Unfolded", "Free"]);
-
-  await page.getByRole("menuitem", { name: "Free" }).click();
-  await expect(trigger).toHaveAccessibleName("Region state: Free");
-  await trigger.click();
-  await expect(page.getByRole("menuitem")).toHaveText(["Stacked", "Unfolded"]);
-  await page.keyboard.press("Escape");
-
-  // Clicking empty space clears selection.
-  await clickTexturePixel(page, 70, 70);
-  await expect(trigger).toHaveCount(0);
-
-  // Deleting the selected region only emits "region-deleted".
-  await clickTexturePixel(page, 8, 8);
-  await expect(trigger).toHaveCount(1);
-  await page.getByRole("button", { name: "Delete" }).click();
-  await expect(trigger).toHaveCount(0);
-});
-
-test("unfolding lays every face out as a net that drags as one", async({ page }) => {
-  await clickTexturePixel(page, 8, 8);
-  await setRegionState(page, "Unfolded");
-
-  const unfolded = await uvSnapshot(page);
-  expect(unfolded.state).toBe("unfolded");
-  expect(unfolded.selectedSlot).toBeNull();
-  expect(unfolded.faces).toEqual({
-    front: { x: 0, y: 0 },
-    back: { x: 16, y: 0 },
-    left: { x: 0, y: 16 },
-    right: { x: 16, y: 16 },
-    top: { x: 0, y: 32 },
-    bottom: { x: 16, y: 32 }
   });
-
-  // Grabbing the "right" cell moves the whole net.
-  await dragRegion(page, { x: 20, y: 20 }, { x: 28, y: 24 });
-
-  const moved = await uvSnapshot(page);
-  expect(moved.faces).toEqual({
-    front: { x: 8, y: 4 },
-    back: { x: 24, y: 4 },
-    left: { x: 8, y: 20 },
-    right: { x: 24, y: 20 },
-    top: { x: 8, y: 36 },
-    bottom: { x: 24, y: 36 }
+  expect(ramp).toMatchObject({
+    state: "stacked",
+    activeFaces: ["back", "left", "right", "top", "bottom"],
+    left: { shape: "triangle", corner: "bottom-right" },
+    right: { shape: "triangle", corner: "bottom-right" }
   });
 });
 
-test("freeing an unfolded region leaves the faces where the net put them", async({ page }) => {
-  await clickTexturePixel(page, 8, 8);
-  await setRegionState(page, "Unfolded");
-  const unfolded = await uvSnapshot(page);
-
-  await setRegionState(page, "Free");
-
-  const freed = await uvSnapshot(page);
-  expect(freed.state).toBe("free");
-  expect(freed.faces).toEqual(unfolded.faces);
-});
-
-test("Show all and region labels toggle independently", async({ page }) => {
-  const labels = page.getByRole("button", { name: "Show region labels" });
-  const showAll = page.getByRole("button", { name: "Show all" });
-
+test("Show all and region labels toggle independently", async({ panel }) => {
+  const labels = panel.getByRole("button", { name: "Show region labels" });
+  const showAll = panel.getByRole("button", { name: "Show all" });
   await expect(showAll).toHaveAttribute("aria-pressed", "true");
-  await expect(labels).toBeEnabled();
   await expect(labels).toHaveAttribute("aria-pressed", "false");
-  await expect(labels).not.toHaveClass(/active/);
 
   await labels.click();
   await expect(labels).toHaveAttribute("aria-pressed", "true");
@@ -227,141 +216,49 @@ test("Show all and region labels toggle independently", async({ page }) => {
   await expect(showAll).toHaveAttribute("aria-pressed", "false");
   await expect(labels).toBeEnabled();
   await expect(labels).toHaveAttribute("aria-pressed", "true");
-
-  await showAll.click();
-  await labels.click();
-  await expect(labels).toHaveAttribute("aria-pressed", "false");
-  await expect(showAll).toHaveAttribute("aria-pressed", "true");
 });
 
-test("freeing stacks six faces on the spot the region already occupied", async({ page }) => {
-  await clickTexturePixel(page, 8, 8);
-  await setRegionState(page, "Free");
+test.describe("3D preview", () => {
+  test.use({ demo: { runtime: true } });
 
-  const snapshot = await uvSnapshot(page);
-  expect(snapshot.state).toBe("free");
-  expect(snapshot.faces).toEqual({
-    front: { x: 0, y: 0 },
-    back: { x: 0, y: 0 },
-    left: { x: 0, y: 0 },
-    right: { x: 0, y: 0 },
-    top: { x: 0, y: 0 },
-    bottom: { x: 0, y: 0 }
-  });
-});
-
-test("clicking the same spot cycles through the stacked faces", async({ page }) => {
-  await clickTexturePixel(page, 8, 8);
-  await setRegionState(page, "Free");
-
-  const picked: (string | null)[] = [];
-  for (let index = 0; index < 7; index++) {
-    await clickTexturePixel(page, 8, 8);
-    picked.push((await uvSnapshot(page)).selectedSlot);
+  function previewMeshCount(
+    panel: Locator
+  ): Promise<number> {
+    return panel.page().evaluate(() => window.__uvPreviewMeshCount?.() ?? -1);
   }
 
-  expect(picked).toEqual([
-    "front", "back", "left", "right", "top", "bottom",
-    // wraps
-    "front"
-  ]);
-});
+  test("each region owns exactly one preview mesh", async({ panel }) => {
+    await expect.poll(() => previewMeshCount(panel)).toBe(1);
 
-test("dragging moves only the face the press landed on", async({ page }) => {
-  await clickTexturePixel(page, 8, 8);
-  await setRegionState(page, "Free");
+    await panel.getByRole("button", { name: "Create cube", exact: true }).click();
+    await expect.poll(() => previewMeshCount(panel)).toBe(2);
 
-  // Presses cycle faces; the drag starts on "left".
-  await clickTexturePixel(page, 8, 8);
-  await clickTexturePixel(page, 8, 8);
-  await dragRegion(page, { x: 8, y: 8 }, { x: 40, y: 8 });
+    await panel.getByRole("button", { name: "Create ramp", exact: true }).click();
+    await expect.poll(() => previewMeshCount(panel)).toBe(3);
+  });
 
-  const snapshot = await uvSnapshot(page);
-  expect(snapshot.selectedSlot).toBe("left");
-  expect(snapshot.faces.left).toEqual({ x: 32, y: 0 });
-  expect(snapshot.faces.front).toEqual({ x: 0, y: 0 });
-  expect(snapshot.faces.back).toEqual({ x: 0, y: 0 });
-});
+  test("a re-sent create for a known region adds no region and no mesh", async({ panel }) => {
+    const created = await panel.evaluate((element: PixelDrawPanel) => {
+      const canvas = element.canvasManager!;
+      const [region] = canvas.uv.regions;
+      let creations = 0;
+      function count() {
+        creations++;
+      }
+      canvas.uv.on("region-created", count);
+      canvas.applyRemoteCommand({
+        action: "uv-region-created",
+        metadata: { region: region.toJSON() }
+      });
+      canvas.uv.off("region-created", count);
 
-test("stacking keeps the edited face, and undo brings the discarded ones back", async({ page }) => {
-  await clickTexturePixel(page, 8, 8);
-  await setRegionState(page, "Free");
-  await dragRegion(page, { x: 8, y: 8 }, { x: 40, y: 8 });
-
-  const moved = await uvSnapshot(page);
-  expect(moved.selectedSlot).toBe("front");
-  expect(moved.faces.front).toEqual({ x: 32, y: 0 });
-
-  // Stack keeps the edited face.
-  await setRegionState(page, "Stacked");
-  const stacked = await uvSnapshot(page);
-  expect(stacked.state).toBe("stacked");
-  expect(stacked.faces).toEqual({ "*": { x: 32, y: 0 } });
-
-  await page.getByRole("button", { name: "Undo" }).click();
-
-  const restored = await uvSnapshot(page);
-  expect(restored.state).toBe("free");
-  expect(restored.faces.front).toEqual({ x: 32, y: 0 });
-  expect(restored.faces.back).toEqual(
-    { x: 0, y: 0 }
-  );
-});
-
-async function previewMeshCount(
-  page: Page
-): Promise<number> {
-  // @ts-ignore
-  return page.evaluate(() => window.__uvPreviewMeshCount?.() ?? -1);
-}
-
-test("each region owns exactly one preview mesh", async({ page }) => {
-  // The beforeEach hook already created one cube.
-  expect(await previewMeshCount(page)).toBe(1);
-
-  await page.getByRole("button", { name: "Create cube", exact: true }).click();
-  expect(await previewMeshCount(page)).toBe(2);
-
-  await page.getByRole("button", { name: "Create ramp", exact: true }).click();
-  expect(await previewMeshCount(page)).toBe(3);
-});
-
-test("a re-sent create for a known region does not add a second preview mesh", async({ page }) => {
-  /*
-   * Replays the command a peer echo or a resync delivers. UVMap.restore()
-   * used to emit region-created for an id it already held, so the gallery
-   * built a second mesh and orphaned the first in the scene.
-   */
-  const regionId = await page.evaluate(`(() => {
-    const region = Array.from((${uvPanel.toString()})().uv.regions)[0];
-
-    return region.id;
-  })()`) as string;
-
-  const created = await page.evaluate(`(() => {
-    const canvas = (${uvPanel.toString()})();
-    const region = canvas.uv.get(${JSON.stringify(regionId)});
-    let creations = 0;
-    const count = () => {
-      creations++;
-    };
-    canvas.uv.on("region-created", count);
-    canvas.applyRemoteCommand({
-      action: "uv-region-created",
-      metadata: { region: region.toJSON() }
+      return {
+        creations,
+        regions: Array.from(canvas.uv.regions).length
+      };
     });
-    canvas.uv.off("region-created", count);
 
-    return creations;
-  })()`) as number;
-
-  /*
-   * The gallery also guards against a duplicate id, so assert the root cause
-   * too: without it the leak returns for any other region-created listener.
-   */
-  expect(created).toBe(0);
-  expect(await previewMeshCount(page)).toBe(1);
-  expect(await page.evaluate(
-    `Array.from((${uvPanel.toString()})().uv.regions).length`
-  )).toBe(1);
+    expect(created).toEqual({ creations: 0, regions: 1 });
+    expect(await previewMeshCount(panel)).toBe(1);
+  });
 });

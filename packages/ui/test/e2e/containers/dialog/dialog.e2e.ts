@@ -16,7 +16,7 @@ test.describe("Dialog", () => {
     });
 
     await expect(page.locator("main > .chrome-row > jolly-button"))
-      .toHaveCount(4);
+      .toHaveCount(5);
     await page.getByRole("button", { name: "Open dialog" }).click();
     const host = page.locator("#delete-dialog");
     const dialog = host.locator("dialog");
@@ -108,6 +108,34 @@ test.describe("Dialog", () => {
     await page.keyboard.press("Enter");
     await expect(example).toHaveAttribute("data-result", "true");
     await expect(confirm).toHaveCount(0);
+  });
+
+  test("the choice helper resolves the picked action, or null on cancel", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/dialog",
+      chrome: "off",
+      theme: "dark"
+    });
+
+    const example = page.locator("main > div");
+    const dialog = page.locator("body > jolly-dialog");
+    const open = page.locator("[data-action=choice-helper]");
+
+    await open.click();
+    await expect(dialog.locator("jolly-button")).toHaveText(["Cancel", "Replace", "Add"]);
+    await dialog.locator("jolly-button", { hasText: "Replace" }).click();
+    await expect(example).toHaveAttribute("data-result", "replace");
+    await expect(dialog).toHaveCount(0);
+
+    await open.click();
+    await page.keyboard.press("Enter");
+    await expect(example).toHaveAttribute("data-result", "add");
+    await expect(dialog).toHaveCount(0);
+
+    await open.click();
+    await dialog.locator("jolly-button", { hasText: "Cancel" }).click();
+    await expect(example).toHaveAttribute("data-result", "null");
+    await expect(dialog).toHaveCount(0);
   });
 
   test("Enter runs the default action from a field", async({ page }) => {

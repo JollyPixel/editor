@@ -21,7 +21,7 @@ import type {
   PixelDrawPanel,
   TextureAddRequestDetail
 } from "../../../src/index.ts";
-import { suggestTextureName } from "../../../src/ui/pixel-draw-panel/textures.ts";
+import { suggestTextureName } from "../../../src/textures/textures.ts";
 import { DemoCatalog } from "./DemoCatalog.ts";
 
 // CONSTANTS

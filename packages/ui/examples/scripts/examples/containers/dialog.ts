@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import {
   detailOf,
+  showChoice,
   showConfirm,
   showPrompt,
   type JollyChangeDetail
@@ -43,6 +44,26 @@ export const DIALOG_EXAMPLE: GalleryExample = {
         label: "Name"
       }));
     });
+    const choice = button("Show choice helper");
+    choice.dataset.action = "choice-helper";
+    choice.addEventListener("click", async() => {
+      root.dataset.result = String(await showChoice({
+        title: "Choice helper",
+        message: "Replace the texture or add a new one?",
+        actions: [
+          {
+            value: "replace",
+            label: "Replace"
+          },
+          {
+            value: "add",
+            label: "Add",
+            variant: "accent"
+          }
+        ],
+        focus: "add"
+      }));
+    });
     const defaultAction = document.createElement("jolly-dialog");
     defaultAction.id = "rename-dialog";
     defaultAction.heading = "Rename layer";
@@ -69,7 +90,7 @@ export const DIALOG_EXAMPLE: GalleryExample = {
     openDefault.dataset.action = "default-action";
     openDefault.addEventListener("click", () => void defaultAction.showModal());
 
-    root.append(open, confirm, prompt, openDefault, dialog, defaultAction);
+    root.append(open, confirm, prompt, choice, openDefault, dialog, defaultAction);
     host.append(root);
   }
 };
