@@ -107,6 +107,18 @@ export class PaneElement extends LitElement {
   declare inactive: boolean;
 
   @property({
+    type: Number,
+    attribute: "float-width"
+  })
+  declare floatWidth: number | undefined;
+
+  @property({
+    type: Number,
+    attribute: "float-height"
+  })
+  declare floatHeight: number | undefined;
+
+  @property({
     type: String,
     attribute: "storage-key"
   })

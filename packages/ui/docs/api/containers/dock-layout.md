@@ -41,6 +41,11 @@ A dragged pane dropped on a pane header or a group tab strip joins that group
 as the active tab; dropped anywhere else in a dock it takes its own slot. The
 layout wraps panes that share a slot in a `jolly-pane-group`.
 
+A pane dropped outside every dock floats. Each axis of the new window takes the
+size the pane last floated at, then its `floatWidth` or `floatHeight`, then its
+docked size. A pane hidden behind another tab uses its group size instead. The
+window is never smaller than 160 by 80 pixels.
+
 After every projection and reported change, each pane whose visibility changed
 emits `jolly-pane-visibility` with `{ pane, visible }`. The first projection
 reports every pane. A pane is visible when it floats, or when it is the active

@@ -13,6 +13,9 @@ interface PaneOptions {
   locked?: boolean;
   storageKey?: string;
   labelWidth?: string;
+  hidden?: boolean;
+  floatWidth?: number;
+  floatHeight?: number;
 }
 ```
 
@@ -25,6 +28,9 @@ interface PaneOptions {
 | `locked` | `false` | Keeps the pane at its authored position inside a `jolly-dock-layout`. |
 | `storageKey` | derived | Namespace the pane and its floating window persist under. Derived from the page path and the title when unset, so renaming the pane drops what it remembered. |
 | `labelWidth` | `16ch` floating, none mounted | Width of the label column, as `--jolly-label-width`. |
+| `hidden` | `false` | Starts the pane hidden. A floating pane persists its visibility, so a stored value wins over this default. |
+| `floatWidth` | none | Sets `floatWidth` on the `jolly-pane`. |
+| `floatHeight` | none | Sets `floatHeight` on the `jolly-pane`. |
 
 ## Floating and mounted panes
 

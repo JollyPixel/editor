@@ -20,12 +20,16 @@ export const DOCK_LAYOUT_GROUPS_EXAMPLE: GalleryExample = {
     left.key = "left";
     left.size = 260;
 
+    const paint = pane("paint", "Paint", "The texture editor lives here.");
+    paint.floatWidth = 300;
+    paint.floatHeight = 420;
+
     const group = document.createElement("jolly-pane-group");
     group.active = "blocks";
     group.append(
       pane("general", "General", "World settings live here.", "info"),
       pane("blocks", "Blocks", "The block library lives here."),
-      pane("paint", "Paint", "The texture editor lives here.")
+      paint
     );
     left.append(
       group,

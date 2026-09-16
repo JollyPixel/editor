@@ -51,6 +51,9 @@ export interface PaneOptions {
    * label.
    */
   labelWidth?: string;
+  hidden?: boolean;
+  floatWidth?: number;
+  floatHeight?: number;
 }
 
 export class Pane extends FacadeContainer {
@@ -67,6 +70,8 @@ export class Pane extends FacadeContainer {
     this.#pane.collapsible = options.collapsible ?? false;
     this.#pane.locked = options.locked ?? false;
     this.#pane.storageKey = options.storageKey ?? "";
+    this.#pane.floatWidth = options.floatWidth;
+    this.#pane.floatHeight = options.floatHeight;
 
     this.element = options.container === undefined
       ? this.#mountFloating(
@@ -78,6 +83,7 @@ export class Pane extends FacadeContainer {
         options.grow ?? true,
         options.labelWidth
       );
+    this.element.hidden = options.hidden ?? false;
   }
 
   get presence(): PresenceSource | null {
