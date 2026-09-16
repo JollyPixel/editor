@@ -9,10 +9,6 @@ import {
 } from "../theme/styles/mixins.ts";
 
 export const buttonGroupStyles = css`
-  /*
-   * Segments used to be joined by shared borders. Without them a hairline gap
-   * does the same job: the fills read as one strip, still visibly divided.
-   */
   .group {
     display: flex;
     flex: 1 1 auto;
@@ -26,6 +22,7 @@ export const buttonGroupStyles = css`
   }
 
   .segment {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -43,9 +40,6 @@ export const buttonGroupStyles = css`
     ${fillTransition}
   }
 
-  /*
-   * Round only the outer edges of joined segments.
-   */
   :host(:not([layout="grid"])) .segment:first-child {
     border-radius: var(--jolly-radius-sm, 2px) 0 0 var(--jolly-radius-sm, 2px);
   }
@@ -84,10 +78,6 @@ export const buttonGroupStyles = css`
     background: var(--jolly-accent-fill-hover);
   }
 
-  /*
-   * A checked segment is already filled, so its focus step lightens the accent
-   * rather than tinting over it.
-   */
   .segment[aria-checked="true"]:focus-visible {
     background: var(--jolly-accent-fill-focus);
   }
@@ -101,10 +91,7 @@ export const buttonGroupStyles = css`
     ${truncate}
   }
 
-  /*
-   * Hide visible labels while keeping their accessible names.
-   */
-  :host([icons-only]) .segment-label {
+  :host([icon-only]) .segment-label {
     ${visuallyHidden}
   }
 `;

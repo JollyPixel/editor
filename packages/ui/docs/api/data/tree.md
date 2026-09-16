@@ -109,8 +109,19 @@ a redundant write. Double-click on an opted-in row renames instead of emitting
 
 ## Showing parent/child indent guides
 
-`indentGuides` draws one vertical line per ancestor level, centered in that
-level's indent unit, purely from CSS. Each row only paints guides across its
+`indentGuides` draws one vertical line per ancestor level, centered under that
+ancestor's expand toggle, purely from CSS. Each row only paints guides across its
 own indent width, so the lines never reach into the toggle or label. Override
 `--jolly-tree-guide-color` to change their color and `--jolly-tree-indent` to
 change the spacing between them (defaults to 16px).
+
+## Row layout
+
+A row with children starts with its expand toggle, outside the hover and
+selection highlight. A row without children reserves the same width inside the
+highlight, so icons stay aligned across a level and the highlight reaches the
+row's start. When no node has children, that space is dropped.
+
+The highlight has an inner inline padding on both sides, set by
+`--jolly-tree-row-padding-inline` (defaults to `--jolly-space-1`). The row adds
+no padding of its own on its end side.

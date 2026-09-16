@@ -13,7 +13,7 @@ import {
 
 The package registers these names on a shared 24 by 24 SVG grid:
 
-`chevron`, `close`, `revert`, `drag`, `lock`, `eye`, `search`,
+`chevron`, `close`, `plus`, `revert`, `drag`, `lock`, `eye`, `search`,
 `check`, `info`, and `warning`.
 
 ## Register a Lit SVG glyph
@@ -95,7 +95,8 @@ its accessible label.
 
 ## Types
 
-`BuiltinIconName` is the union of the ten package names. `IconName` preserves
-completion for those names while accepting application-defined strings.
+`BuiltinIconName` is the union of the eleven package names. `IconName`
+preserves completion for those names while accepting application-defined
+strings.
 `IconGlyph` is `string | SVGTemplateResult`.
 

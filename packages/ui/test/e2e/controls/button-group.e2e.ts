@@ -66,6 +66,30 @@ test.describe("controls: button group", () => {
       .toHaveAttribute("aria-label", "Rotation");
   });
 
+  test("hides segment labels but keeps their names when icon-only", async({ page }) => {
+    await recordFieldChanges(page);
+
+    const group = row(page, "jolly-button-group", "default");
+    const paint = group.getByRole("radio", { name: "Paint" });
+    const label = paint.locator(".segment-label");
+    await expect(label).toHaveCSS("position", "static");
+
+    await group.evaluate((node: HTMLElementTagNameMap["jolly-button-group"]) => {
+      node.iconOnly = true;
+    });
+
+    await expect(group).toHaveAttribute("icon-only", "");
+    await expect(label).toHaveCSS("position", "absolute");
+    expect(await label.evaluate((node) => node.getBoundingClientRect().width))
+      .toBeLessThanOrEqual(1);
+    await expect(paint.locator("jolly-icon")).toBeVisible();
+    await expect(paint).toHaveAttribute("title", "Paint");
+
+    await paint.click();
+
+    expect(await fieldChanges(page)).toEqual(["paint"]);
+  });
+
   test("lifts the label cap for a field packed beside another", async({ page }) => {
     const group = row(page, "jolly-button-group", "default");
 

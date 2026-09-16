@@ -12,7 +12,8 @@ expand toggle.
 
 `TreeSnapshot` builds node, parent, depth, ancestor, stable order, and visible
 row indexes in one traversal. Create one snapshot when several operations need
-to inspect the same tree structure.
+to inspect the same tree structure. `hasBranches` is `true` when at least one
+node, collapsed or not, has children.
 
 The root entry point exports these pure helpers:
 

@@ -66,12 +66,14 @@ export class TreeSnapshot<
 > {
   readonly #nodes = new Map<string, IndexedNode<TData>>();
   readonly #visibleRows: FlatTreeRow<TData>[] = [];
+  readonly hasBranches: boolean;
 
   constructor(
     nodes: readonly TreeNode<TData>[],
     expanded: ReadonlySet<string> = new Set()
   ) {
     let order = 0;
+    let hasBranches = false;
 
     const visit = (
       list: readonly TreeNode<TData>[],
@@ -99,6 +101,7 @@ export class TreeSnapshot<
           });
         }
         order += 1;
+        hasBranches ||= isExpandable(node);
 
         if (node.children !== undefined) {
           visit(
@@ -113,6 +116,7 @@ export class TreeSnapshot<
     };
 
     visit(nodes, null, 0, [], true);
+    this.hasBranches = hasBranches;
   }
 
   get visibleRows(): readonly FlatTreeRow<TData>[] {

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
+import { Grid } from "@jolly-pixel/three";
 import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -40,7 +40,23 @@ export class ModelEditorScene extends Systems.Scene {
 
   override awake(): void {
     const scene = this.world.sceneManager.getSource();
-    scene.add(new THREE.GridHelper(10, 10));
+    scene.add(new Grid({
+      extent: 10,
+      cell: {
+        color: "#3a3a3a",
+        thickness: 1.5
+      },
+      section: {
+        show: false
+      },
+      fade: {
+        from: "origin",
+        distance: 100
+      },
+      axes: {
+        show: true
+      }
+    }));
 
     const camera = this.world
       .createActor("camera")

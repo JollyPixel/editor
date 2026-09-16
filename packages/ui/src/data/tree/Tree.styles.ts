@@ -27,7 +27,6 @@ export const treeStyles = css`
     align-items: center;
     gap: var(--jolly-space-1, 4px);
     min-height: var(--jolly-row-height, 20px);
-    padding-inline-end: var(--jolly-space-1, 4px);
     border-radius: var(--jolly-radius-sm, 2px);
     cursor: default;
   }
@@ -75,9 +74,11 @@ export const treeStyles = css`
   .content {
     display: flex;
     align-items: center;
+    align-self: stretch;
     flex: 1 1 auto;
     min-width: 0;
     gap: var(--jolly-space-1, 4px);
+    padding-inline: var(--jolly-tree-row-padding-inline, var(--jolly-space-1, 4px));
     border-radius: inherit;
   }
 
@@ -233,7 +234,7 @@ export const treeStyles = css`
       transparent 1px,
       transparent var(--jolly-tree-indent, 16px)
     );
-    background-position: calc(var(--jolly-tree-indent, 16px) / 2) 0;
+    background-position: 5px 0;
     pointer-events: none;
   }
 `;

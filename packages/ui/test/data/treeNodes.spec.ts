@@ -464,4 +464,17 @@ describe("Data.TreeSnapshot", () => {
       ["a", "a1", "a2", "a2a", "b"]
     );
   });
+
+  test("reports branches even when they are collapsed", () => {
+    assert.equal(new TreeSnapshot(kTree).hasBranches, true);
+  });
+
+  test("reports no branches for a flat list or empty children", () => {
+    const flat: TreeNode[] = [
+      { id: "x", label: "X" },
+      { id: "y", label: "Y", children: [] }
+    ];
+
+    assert.equal(new TreeSnapshot(flat).hasBranches, false);
+  });
 });

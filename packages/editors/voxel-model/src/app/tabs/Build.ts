@@ -21,9 +21,7 @@ export class Build extends LitElement {
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
-      gap: var(--jolly-space-3, 12px);
-      box-sizing: border-box;
-      padding: var(--jolly-space-2, 8px);
+      gap: var(--jolly-row-gap, 4px);
     }
 
     :host([hidden]) {
@@ -33,12 +31,18 @@ export class Build extends LitElement {
     section {
       display: flex;
       flex-direction: column;
-      gap: var(--jolly-space-2, 8px);
+      gap: var(--jolly-row-gap, 4px);
     }
 
     jolly-property-row jolly-select {
       flex: 1 1 0;
       min-width: 0;
+
+      --jolly-field-inset-end: 0;
+    }
+
+    .separator {
+      color: var(--jolly-text-muted);
     }
   `;
 
@@ -94,15 +98,16 @@ export class Build extends LitElement {
       <section id="texture">
         <jolly-property-row label="Texture">
           <jolly-select
-            label="W"
+            title="Width"
             .options=${kTextureSizeOptions}
             .value=${this.textureSize.x}
             @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
               this.#handleTextureSizeChange("x", event);
             }}
           ></jolly-select>
+          <span class="separator">×</span>
           <jolly-select
-            label="H"
+            title="Height"
             .options=${kTextureSizeOptions}
             .value=${this.textureSize.y}
             @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
