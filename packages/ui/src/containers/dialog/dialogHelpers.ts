@@ -242,7 +242,6 @@ function settleHelper<TResult>(
     resolve(resolveValue(returnValue));
   }
 
-  dialog.addEventListener("jolly-cancel", () => settle(""));
   dialog.addEventListener("jolly-close", (event) => {
     const detail = detailOf<{ returnValue: string; }>(event);
     if (detail !== null) {

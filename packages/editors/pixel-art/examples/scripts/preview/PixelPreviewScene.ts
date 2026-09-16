@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import * as THREE from "three";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelCanvasTexture } from "../../../src/mesh-texturing/PixelCanvasTexture.ts";
-import { CameraBehavior } from "../components/Camera.ts";
-import { OrbitControlsBehavior } from "../components/OrbitControlsBehavior.ts";
 import { RegionPreviewFactory } from "./RegionPreviewFactory.ts";
 import { RegionPreviewGallery } from "./RegionPreviewGallery.ts";
 import { RegionPreviewPicker } from "./RegionPreviewPicker.ts";
@@ -72,19 +70,20 @@ export class PixelPreviewScene extends Systems.Scene {
       new THREE.HemisphereLight(0xffffff, 0x76848c, 2.8)
     );
 
-    const cameraBehavior = this.world.createActor("camera")
-      .addComponentAndGet(CameraBehavior);
+    const orbitCamera = this.world.createActor("camera")
+      .addComponentAndGet(OrbitFlyCamera, {
+        focusMode: "lock",
+        position: { x: 0, y: 0, z: 8 },
+        pitch: 0,
+        fov: 45,
+        showPivotMarker: false,
+        minPivotDistance: 3,
+        maxPivotDistance: 30
+      });
+    orbitCamera.enterOrbitFocus({ x: 0, y: 0, z: 0 });
 
-    this.world.createActor("orbit-controls").addComponentAndGet(OrbitControlsBehavior, {
-      camera: cameraBehavior.camera,
-      cameraActor: cameraBehavior.actor,
-      target: new THREE.Vector3(0, 0, 0),
-      minDistance: 3,
-      maxDistance: 30
-    });
-
-    this.#camera = cameraBehavior.camera;
-    this.#bindCanvas(cameraBehavior.camera);
+    this.#camera = orbitCamera.camera;
+    this.#bindCanvas(orbitCamera.camera);
     window.__uvPreviewMeshCount = () => this.#previewGallery.meshes.length;
 
     /*

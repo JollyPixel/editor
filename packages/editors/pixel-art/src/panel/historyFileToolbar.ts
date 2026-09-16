@@ -23,8 +23,10 @@ export interface HistoryFileToolbarOptions {
 }
 
 async function clearTexture(
+  event: MouseEvent,
   activeCanvas: () => PixelArtCanvas | null
 ): Promise<void> {
+  const trigger = event.currentTarget;
   const canvas = activeCanvas();
   if (!canvas) {
     return;
@@ -33,6 +35,9 @@ async function clearTexture(
   const result = await showClearTextureDialog({
     hasUVRegions: !canvas.uv.regions.next().done
   });
+  if (trigger instanceof HTMLElement) {
+    trigger.blur();
+  }
   if (result !== null && activeCanvas() === canvas) {
     canvas.clearTexture(result);
   }
@@ -139,7 +144,7 @@ export function renderHistoryFileToolbar(
         part: "clear-texture-button",
         label: "Clear texture",
         icon: "clearTexture",
-        onClick: () => void clearTexture(options.canvas)
+        onClick: (event) => void clearTexture(event, options.canvas)
       })}
       ${trailing === nothing ? nothing : html`${RAIL_DIVIDER}${trailing}`}
       <input

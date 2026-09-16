@@ -20,6 +20,7 @@ export interface ElasticFocusOptions {
    * @default 0
    */
   initialTrailDistance?: number;
+  showPivotMarker: boolean;
   /**
    * Resolves the scene root lazily, on first use.
    */
@@ -32,6 +33,7 @@ export interface ElasticFocusOptions {
  */
 export class ElasticFocus {
   #maxTrailDistance: number;
+  #showPivotMarker: boolean;
   #sceneProvider: () => THREE.Object3D;
 
   #pivotPosition: THREE.Vector3;
@@ -46,13 +48,14 @@ export class ElasticFocus {
     options: ElasticFocusOptions
   ) {
     this.#maxTrailDistance = options.maxTrailDistance;
+    this.#showPivotMarker = options.showPivotMarker;
     this.#sceneProvider = options.sceneProvider;
     this.#pivotPosition = new THREE.Vector3().copy(options.initialPosition);
     this.#trailDistance = options.initialTrailDistance ?? 0;
     this.#targetTrailDistance = this.#trailDistance;
 
     if (this.#targetTrailDistance > 0) {
-      this.#ensureMarker().visible = true;
+      this.#showMarker();
     }
   }
 
@@ -79,7 +82,7 @@ export class ElasticFocus {
     );
 
     if (this.#targetTrailDistance > 0) {
-      this.#ensureMarker().visible = true;
+      this.#showMarker();
     }
     else {
       this.#hideMarker();
@@ -110,13 +113,16 @@ export class ElasticFocus {
     }
   }
 
-  #ensureMarker(): THREE.Object3D {
+  #showMarker(): void {
+    if (!this.#showPivotMarker) {
+      return;
+    }
+
     if (this.#pivotMarker === null) {
       this.#pivotMarker = createPivotMarker();
       this.#sceneProvider().add(this.#pivotMarker);
     }
-
-    return this.#pivotMarker;
+    this.#pivotMarker.visible = true;
   }
 
   #hideMarker(): void {

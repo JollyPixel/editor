@@ -46,3 +46,6 @@ Both helpers confirm on Enter and cancel on Escape, through the
 [`jolly-dialog` default action](./dialog.md#default-action). `showConfirm()`
 opens with its confirm action focused; `showPrompt()` opens with the text field
 focused.
+
+Every helper resolves once the native dialog has closed, after the browser has
+returned focus to the element that opened it.

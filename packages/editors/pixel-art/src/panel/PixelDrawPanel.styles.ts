@@ -155,6 +155,11 @@ export const panelStyles = css`
     transition: width 0.08s ease, height 0.08s ease;
   }
 
+  .tool-option-label,
+  .tool-option-value {
+    text-box: trim-both cap alphabetic;
+  }
+
   .tool-option-label {
     color: var(--color-text-muted);
   }

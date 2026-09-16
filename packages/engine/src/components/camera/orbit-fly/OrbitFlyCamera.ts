@@ -75,6 +75,15 @@ export interface OrbitFlyCameraOptions {
    * @default 1
    */
   pivotNudgeStep?: number;
+  /**
+   * @default true
+   */
+  showPivotMarker?: boolean;
+  /**
+   * Vertical field of view, in degrees.
+   * @default 60
+   */
+  fov?: number;
 }
 
 export interface CameraPose {
@@ -133,7 +142,7 @@ export class OrbitFlyCamera extends CameraComponent {
     options: OrbitFlyCameraOptions = {}
   ) {
     super(actor, {
-      fov: 60,
+      fov: options.fov ?? 60,
       near: 0.1,
       far: 2000
     });
@@ -153,7 +162,8 @@ export class OrbitFlyCamera extends CameraComponent {
       minPivotDistance = 1,
       maxPivotDistance = 200,
       pivotNudgeStep = 1,
-      initialTrailDistance = 0
+      initialTrailDistance = 0,
+      showPivotMarker = true
     } = options;
 
     this.#yaw = yaw;
@@ -173,12 +183,14 @@ export class OrbitFlyCamera extends CameraComponent {
       minPivotDistance,
       maxPivotDistance,
       pivotNudgeStep,
+      showPivotMarker,
       sceneProvider: () => this.actor.world.sceneManager.getSource()
     }) : null;
     this.#elasticFocus = focusMode === "elastic" ? new ElasticFocus({
       initialPosition: pivotPosition,
       maxTrailDistance: maxPivotDistance,
       initialTrailDistance,
+      showPivotMarker,
       sceneProvider: () => this.actor.world.sceneManager.getSource()
     }) : null;
 

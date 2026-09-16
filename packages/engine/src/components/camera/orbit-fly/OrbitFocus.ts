@@ -19,6 +19,7 @@ export interface OrbitFocusOptions {
    * Distance nudged per key press while orbiting.
    */
   pivotNudgeStep: number;
+  showPivotMarker: boolean;
   /**
    * Resolves the scene root lazily, on first use.
    */
@@ -31,6 +32,7 @@ export class OrbitFocus {
   #minPivotDistance: number;
   #maxPivotDistance: number;
   #pivotNudgeStep: number;
+  #showPivotMarker: boolean;
   #sceneProvider: () => THREE.Object3D;
 
   #hasPivot = false;
@@ -53,6 +55,7 @@ export class OrbitFocus {
     this.#minPivotDistance = options.minPivotDistance;
     this.#maxPivotDistance = options.maxPivotDistance;
     this.#pivotNudgeStep = options.pivotNudgeStep;
+    this.#showPivotMarker = options.showPivotMarker;
     this.#sceneProvider = options.sceneProvider;
   }
 
@@ -94,8 +97,10 @@ export class OrbitFocus {
     this.#isOrbiting = true;
 
     const marker = this.#ensureMarker();
-    marker.position.copy(this.#pivotPoint);
-    this.#showMarker();
+    if (marker) {
+      marker.position.copy(this.#pivotPoint);
+      marker.visible = true;
+    }
 
     if (point === undefined) {
       return { yaw: currentYaw, pitch: currentPitch };
@@ -208,19 +213,13 @@ export class OrbitFocus {
     this.#targetPivotPoint.add(step);
   }
 
-  #ensureMarker(): THREE.Object3D {
-    if (this.#pivotMarker === null) {
+  #ensureMarker(): THREE.Object3D | null {
+    if (this.#pivotMarker === null && this.#showPivotMarker) {
       this.#pivotMarker = createPivotMarker();
       this.#sceneProvider().add(this.#pivotMarker);
     }
 
     return this.#pivotMarker;
-  }
-
-  #showMarker(): void {
-    if (this.#pivotMarker) {
-      this.#pivotMarker.visible = true;
-    }
   }
 
   #hideMarker(): void {
