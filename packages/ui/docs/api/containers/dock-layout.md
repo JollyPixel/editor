@@ -41,6 +41,13 @@ A dragged pane dropped on a pane header or a group tab strip joins that group
 as the active tab; dropped anywhere else in a dock it takes its own slot. The
 layout wraps panes that share a slot in a `jolly-pane-group`.
 
+In a `double` dock, a pane dropped on the band just past the inner edge opens
+the second column. The column closes when its last pane leaves. When the
+primary column loses its last pane, the second column's panes move into it.
+The dock collapses both columns together. The keyboard treats the second
+column as one more stop between docks, placed on the viewport side of the
+primary column.
+
 A pane dropped outside every dock floats. Each axis of the new window takes the
 size the pane last floated at, then its `floatWidth` or `floatHeight`, then its
 docked size. A pane hidden behind another tab uses its group size instead. The

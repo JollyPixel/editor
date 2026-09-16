@@ -1,38 +1,34 @@
 // Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
+import {
+  test,
+  expect
+} from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "../support/gallery.ts";
+import { openExample } from "../support/gallery.ts";
 
 test.describe("Spinner", () => {
-  test("names each labelled indicator", async({ page }) => {
-    await gotoGallery(page, {
-      example: "feedback/spinner",
-      chrome: "off"
-    });
+  test("names each labelled indicator as a status", async({ page }) => {
+    await openExample(page, "feedback/spinner");
 
-    await expect(page.getByRole("status", { name: "Inline" }))
-      .toBeVisible();
-    await expect(page.getByRole("status", { name: "Overlay" }))
-      .toBeVisible();
+    await expect(page.getByRole("status", { name: "Inline" })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Overlay" })).toBeVisible();
   });
 
-  test("shows a busy indicator for the duration of the work", async({ page }) => {
-    await gotoGallery(page, {
-      example: "feedback/spinner",
-      chrome: "off"
-    });
+  test("the hidden attribute hides a busy indicator", async({ page }) => {
+    await page.clock.install();
+    await openExample(page, "feedback/spinner");
 
     const busy = page.locator("[data-role=scenario-spinner]");
-    const trigger = page.locator("[data-action=start-busy]");
-
+    const hint = page.locator(".spinner-scenario .scenario-hint");
     await expect(busy).toBeHidden();
-    await trigger.click();
+
+    await page.locator("[data-action=start-busy]").click();
     await expect(busy).toBeVisible();
-    await expect(page.locator(".spinner-scenario .scenario-hint"))
-      .toHaveText("Loading something...");
-    await expect(busy).toBeHidden({ timeout: 5_000 });
-    await expect(page.locator(".spinner-scenario .scenario-hint"))
-      .toHaveText("Done.");
+    await expect(hint).toHaveText("Loading something...");
+
+    await page.clock.runFor(2_000);
+    await expect(busy).toBeHidden();
+    await expect(hint).toHaveText("Done.");
   });
 });

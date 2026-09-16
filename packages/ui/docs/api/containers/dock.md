@@ -18,6 +18,8 @@
 | `collapsible` | `collapsible` | `boolean` | `false` |
 | `collapsed` | `collapsed` | `boolean` | `false` |
 | `empty` | `empty` | `boolean` | Derived from slotted panes |
+| `double` | `double` | `boolean` | `false` |
+| `split` | `split` | `boolean` | Derived from the `secondary` slot |
 | `minSize` | `min-size` | `number` | `120` |
 | `maxSize` | `max-size` | `number` | `Infinity` |
 | `storageKey` | `storage-key` | `string` | `""` |
@@ -32,6 +34,22 @@ and then `jolly-resize-end` with `{ width, height, collapsed }`. Double-click
 or Enter toggles a collapsible dock. Public geometry methods support
 `jolly-dock-layout`; `slots()` returns the slotted panes and groups, and
 `panes()` every pane, grouped ones included.
+
+A `double` left or right dock that is not an overlay can open a second
+column. Children with `slot="secondary"` fill it, and `split` is set while
+it holds any. A split dock is twice `size` wide and its two columns share
+that width equally: the resize handle stays on the inner edge and moves with
+it, and `minSize` and `maxSize` apply to each column. The primary column
+stays against the edge. `double` is ignored on top and bottom docks.
+
+`slots(column?)`, `dropZone(column?)`, `previewZone(column?)`,
+`dropCandidates(column?)`, `dropStacks(pane, column?)` and
+`insertionLine(index, column?)` take `"primary"` (the default) or
+`"secondary"`; `slots()` without a column returns both, primary first.
+`acceptsSecondary(pane)` tells whether a dragged pane can open or join the
+second column: the dock must be `double`, expanded, and hold another slot.
+Until the column is open, its drop zone is a 48px band just past the inner
+edge.
 
 An overlay dock is `pointer-events: none !important`, so the area around its
 panes reaches whatever it covers even when page CSS sets `pointer-events` on

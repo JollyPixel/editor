@@ -33,10 +33,12 @@ import {
   reconcileLayout,
   stackPane,
   type DeclaredLayout,
+  type DockAddress,
   type LayoutChange,
   type LayoutSnapshot,
   type PanePlacement
 } from "./layout.ts";
+import { columnGroups } from "./dockColumns.ts";
 import {
   parseLayout,
   serializeLayout
@@ -79,19 +81,25 @@ export class DockLayout extends LitElement {
   #projection = new LayoutProjection(this);
   #drag = new DockLayoutDragController({
     docks: () => this.docks(),
-    dock: (pane, dock, index) => {
+    dock: (pane, target, index) => {
       this.#commit(movePane(
         this.#snapshot,
         pane.layoutKey,
-        dock.layoutKey,
+        {
+          dock: target.dock.layoutKey,
+          column: target.column
+        },
         index
       ));
     },
-    stack: (pane, dock, slot, index) => {
+    stack: (pane, target, slot, index) => {
       this.#commit(stackPane(
         this.#snapshot,
         pane.layoutKey,
-        dock.layoutKey,
+        {
+          dock: target.dock.layoutKey,
+          column: target.column
+        },
         slot,
         index
       ));
@@ -309,7 +317,7 @@ export class DockLayout extends LitElement {
       this.#transition(movePane(
         this.#snapshot,
         pane.layoutKey,
-        placement.dock,
+        placement,
         offset > 0 ? placement.index + 1 : placement.index
       ));
 
@@ -327,7 +335,7 @@ export class DockLayout extends LitElement {
     this.#transition(movePane(
       this.#snapshot,
       pane.layoutKey,
-      placement.dock,
+      placement,
       offset > 0 ? to + 1 : to
     ));
   }
@@ -342,7 +350,10 @@ export class DockLayout extends LitElement {
     }
 
     const slot = placement.index + offset;
-    const target = this.#snapshot.docks[placement.dock].groups[slot];
+    const target = columnGroups(
+      this.#snapshot.docks[placement.dock],
+      placement.column
+    )?.[slot];
     if (target === undefined) {
       return;
     }
@@ -350,7 +361,7 @@ export class DockLayout extends LitElement {
     this.#transition(stackPane(
       this.#snapshot,
       pane.layoutKey,
-      placement.dock,
+      placement,
       slot,
       target.panes.length
     ));
@@ -380,31 +391,69 @@ export class DockLayout extends LitElement {
     pane: PaneElement,
     offset: number
   ): void {
-    const docks = this.docks()
-      .map((dock) => dock.layoutKey)
-      .filter((key) => this.#snapshot.docks[key] !== undefined);
-    if (docks.length === 0) {
+    const stops = this.#stops(pane);
+    if (stops.length === 0) {
       return;
     }
 
     const placement = panePlacement(this.#snapshot, pane.layoutKey);
     const index = placement === null ?
       -1 :
-      docks.indexOf(placement.dock);
+      stops.findIndex((stop) => stop.dock === placement.dock &&
+        stop.column === placement.column);
     const next = Math.min(
-      Math.max(index === -1 ? offset * docks.length : index + offset, 0),
-      docks.length - 1
+      Math.max(index === -1 ? offset * stops.length : index + offset, 0),
+      stops.length - 1
     );
     if (index === next) {
       return;
     }
 
+    const stop = stops[next];
     this.#transition(movePane(
       this.#snapshot,
       pane.layoutKey,
-      docks[next],
-      this.#snapshot.docks[docks[next]].groups.length
+      stop,
+      columnGroups(this.#snapshot.docks[stop.dock], stop.column)?.length ?? 0
     ));
+  }
+
+  #stops(
+    pane: PaneElement
+  ): DockAddress[] {
+    const placement = panePlacement(this.#snapshot, pane.layoutKey);
+
+    return this.docks().flatMap((dock) => {
+      const key = dock.layoutKey;
+      const state = this.#snapshot.docks[key];
+      if (state === undefined) {
+        return [];
+      }
+
+      const primary: DockAddress = {
+        dock: key,
+        column: "primary"
+      };
+      const secondary: DockAddress = {
+        dock: key,
+        column: "secondary"
+      };
+      const alone = placement?.dock === key &&
+        placement.column === "primary" &&
+        state.groups.length === 1 &&
+        placement.group.length === 1;
+      if (
+        state.secondary === undefined ||
+        state.groups.length === 0 ||
+        (state.secondary.length === 0 && alone)
+      ) {
+        return [primary];
+      }
+
+      return dock.side === "right" ?
+        [secondary, primary] :
+        [primary, secondary];
+    });
   }
 
   #extract(
@@ -486,7 +535,8 @@ export class DockLayout extends LitElement {
       return `${label}, floating`;
     }
 
-    const position = `${label}, ${dock.side} dock, position ` +
+    const column = placement.column === "secondary" ? ", second column" : "";
+    const position = `${label}, ${dock.side} dock${column}, position ` +
       `${placement.index + 1} of ${placement.count}`;
     if (placement.group.length === 1) {
       return position;

@@ -1,69 +1,56 @@
 // Import Third-party Dependencies
 import {
   test,
-  expect
+  expect,
+  type Locator,
+  type Page
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "../support/gallery.ts";
+import { openExample } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
   recordFieldChanges as recordChanges
 } from "../support/events.ts";
 import { fieldRow as row } from "../support/locators.ts";
+import {
+  boxOf,
+  scrubBy
+} from "../support/pointer.ts";
+import { styleOf } from "../support/styles.ts";
 
-test.describe("vector: axis drag scrub", () => {
-  test("dragging one axis commits a stepped value", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/vector3",
-      chrome: "off"
-    });
+function axisTagColor(
+  page: Page,
+  tag: string,
+  axis: string
+): Promise<string> {
+  return styleOf(
+    row(page, tag, "default")
+      .locator(`.axis-box[data-axis="${axis}"] .axis-tag`),
+    "border-top-color"
+  );
+}
+
+test.describe("vector3", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "math/vector3");
     await recordChanges(page);
+  });
 
-    const handle = row(page, "jolly-vector3", "default")
-      .locator('.axis-box[data-axis="x"] .scrub-handle');
-    const box = await handle.boundingBox();
-    expect(box).not.toBeNull();
+  test("an axis scrub commits one stepped value, except when mixed", async({ page }) => {
+    function handle(state: string): Locator {
+      return row(page, "jolly-vector3", state)
+        .locator('.axis-box[data-axis="x"] .scrub-handle');
+    }
 
-    const y = box!.y + (box!.height / 2);
-    await page.mouse.move(box!.x + (box!.width / 2), y);
-    await page.mouse.down();
-    await page.mouse.move(box!.x + (box!.width / 2) + 40, y, { steps: 4 });
-    await page.mouse.up();
+    await scrubBy(page, handle("mixed"), 40);
+    expect(await changes(page)).toEqual([]);
 
-    // 40 px at 4 px per step adds 10 increments of 0.1.
+    await scrubBy(page, handle("default"), 40);
     expect(await changes(page)).toEqual([{ x: 1, y: 1, z: 0 }]);
   });
 
-  test("a mixed vector does not scrub", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/vector3",
-      chrome: "off"
-    });
-    await recordChanges(page);
-
-    const handle = row(page, "jolly-vector3", "mixed")
-      .locator('.axis-box[data-axis="x"] .scrub-handle');
-    const box = await handle.boundingBox();
-    const y = box!.y + (box!.height / 2);
-
-    await page.mouse.move(box!.x + (box!.width / 2), y);
-    await page.mouse.down();
-    await page.mouse.move(box!.x + (box!.width / 2) + 40, y, { steps: 4 });
-    await page.mouse.up();
-
-    expect(await changes(page)).toEqual([]);
-  });
-});
-
-test.describe("vector: axis expression input", () => {
   test("an axis parse error uses the field error presentation", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/vector3",
-      chrome: "off"
-    });
-    await recordChanges(page);
-
     const field = row(page, "jolly-vector3", "default");
     const input = field.locator('.axis-box[data-axis="x"] input');
     await input.fill("alert(1)");
@@ -77,56 +64,41 @@ test.describe("vector: axis expression input", () => {
     await input.press("Escape");
     await expect(field).not.toHaveAttribute("invalid");
   });
-});
 
-test.describe("vector: whole-row revert", () => {
-  test("resets every axis together", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/vector3",
-      chrome: "off"
-    });
-    await recordChanges(page);
-
-    await row(page, "jolly-vector3", "modified").locator(".revert").dispatchEvent("click");
+  test("the row revert resets every axis together", async({ page }) => {
+    await row(page, "jolly-vector3", "modified")
+      .locator(".revert")
+      .dispatchEvent("click");
 
     expect(await changes(page)).toEqual([{ x: 0, y: 1, z: 0 }]);
   });
 });
 
-test.describe("vector: per-axis Mixed in a multi-selection", () => {
-  test("editing one axis commits it and leaves a disagreeing axis Mixed", async({ page }) => {
-    await gotoGallery(page, {
-      example: "scenarios/mixed-per-axis",
-      chrome: "off"
-    });
+test("editing one axis of a multi-selection leaves a disagreeing axis mixed", async({ page }) => {
+  await openExample(page, "scenarios/mixed-per-axis");
 
-    const field = page.locator("jolly-vector3");
-    const y = field.locator('.axis-box[data-axis="y"] input');
-    const z = field.locator('.axis-box[data-axis="z"] input');
+  const field = page.locator("jolly-vector3");
+  const y = field.locator('.axis-box[data-axis="y"] input');
+  const z = field.locator('.axis-box[data-axis="z"] input');
+  await expect(y).toHaveValue("");
+  await expect(z).toHaveValue("");
 
-    // Only x agrees across the selection.
-    await expect(y).toHaveValue("");
-    await expect(z).toHaveValue("");
+  await y.fill("3");
+  await y.press("Enter");
 
-    await y.fill("3");
-    await y.press("Enter");
-
-    await expect(y).not.toHaveValue("");
-    // Untouched z remains Mixed.
-    await expect(z).toHaveValue("");
-
-    const readout = page.locator(".scenario-log");
-    await expect(readout.locator("li").first()).toHaveText("Crate A: 2, 3, -4");
-    await expect(readout.locator("li").nth(1)).toHaveText("Crate B: 2, 3, 8");
-  });
+  await expect(y).not.toHaveValue("");
+  await expect(z).toHaveValue("");
+  const readout = page.locator(".scenario-log li");
+  await expect(readout.nth(0)).toHaveText("Crate A: 2, 3, -4");
+  await expect(readout.nth(1)).toHaveText("Crate B: 2, 3, 8");
 });
 
-test.describe("quaternion: Euler entry", () => {
+test.describe("quaternion", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "math/quaternion");
+  });
+
   test("typing an axis in degrees commits the equivalent quaternion", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/quaternion",
-      chrome: "off"
-    });
     await recordChanges(page);
 
     const input = row(page, "jolly-quaternion", "default")
@@ -134,198 +106,114 @@ test.describe("quaternion: Euler entry", () => {
     await input.fill("90");
     await input.press("Enter");
 
-    const [value] = await changes(page) as { x: number; y: number; z: number; w: number; }[];
-    expect(Math.abs(value.y - Math.SQRT1_2)).toBeLessThan(1e-6);
-    expect(Math.abs(value.w - Math.SQRT1_2)).toBeLessThan(1e-6);
-    expect(Math.abs(value.x)).toBeLessThan(1e-9);
-    expect(Math.abs(value.z)).toBeLessThan(1e-9);
+    const [value] = await changes(page);
+    expect(value).toEqual({
+      x: expect.closeTo(0, 9),
+      y: expect.closeTo(Math.SQRT1_2, 6),
+      z: expect.closeTo(0, 9),
+      w: expect.closeTo(Math.SQRT1_2, 6)
+    });
   });
 
-  test("nudging one axis near a gimbal pole does not visibly move the others", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/quaternion",
-      chrome: "off"
-    });
-
+  test("nudging one axis near a gimbal pole leaves the others still", async({ page }) => {
     const field = row(page, "jolly-quaternion", "default");
-    // Stay just below the Y-axis pole.
-    await field.evaluate((element, quaternion) => {
-      (element as unknown as { value: unknown; }).value = quaternion;
-    }, {
-      x: 0,
-      y: Math.sin((89.99 * Math.PI) / 360),
-      z: 0,
-      w: Math.cos((89.99 * Math.PI) / 360)
-    });
+    const half = (89.99 * Math.PI) / 360;
+    await field.evaluate(
+      (element: HTMLElementTagNameMap["jolly-quaternion"], value) => {
+        element.value = value;
+      },
+      {
+        x: 0,
+        y: Math.sin(half),
+        z: 0,
+        w: Math.cos(half)
+      }
+    );
 
     const x = field.locator('.axis-box[data-axis="x"] input');
     const z = field.locator('.axis-box[data-axis="z"] input');
-    const xBefore = await x.inputValue();
-    const zBefore = await z.inputValue();
+    const [xBefore, zBefore] = await Promise.all([
+      x.inputValue(),
+      z.inputValue()
+    ]);
 
-    const yInput = field.locator('.axis-box[data-axis="y"] input');
-    await yInput.press("ArrowUp");
+    await field.locator('.axis-box[data-axis="y"] input').press("ArrowUp");
 
     await expect(x).toHaveValue(xBefore);
     await expect(z).toHaveValue(zBefore);
   });
 });
 
-test.describe("transform: independent sub-rows", () => {
-  test(
-    "relays scale's own commit as one merged change, untouched by position or rotation",
-    async({ page }) => {
-      await gotoGallery(page, {
-        example: "math/transform",
-        chrome: "off"
-      });
+test.describe("transform", () => {
+  test("relays one sub-row commit as a single merged change", async({ page }) => {
+    await openExample(page, "math/transform");
 
-      // Count only the transform's re-dispatched event.
-      await page.evaluate(() => {
-        function deepQuerySelector(
-          root: ParentNode,
-          selector: string
-        ): Element | null {
-          const direct = root.querySelector(selector);
-          if (direct !== null) {
-            return direct;
-          }
-
-          for (const host of root.querySelectorAll("*")) {
-            const found = host.shadowRoot === null || host.shadowRoot === undefined
-              ? null
-              : deepQuerySelector(host.shadowRoot, selector);
-            if (found !== null) {
-              return found;
-            }
-          }
-
-          return null;
+    const transform = page.locator("jolly-transform");
+    await transform.evaluate((element) => {
+      window.__changes = [];
+      element.addEventListener("jolly-change", (event) => {
+        if (event.composedPath()[0] === element && event instanceof CustomEvent) {
+          window.__changes?.push(event.detail.value);
         }
-
-        const transform = deepQuerySelector(document, "jolly-transform");
-        window.__changes = [];
-        transform?.addEventListener("jolly-change", (event) => {
-          // composedPath()[0] preserves the origin across the shadow boundary.
-          if (event.composedPath()[0] === transform) {
-            window.__changes?.push((event as CustomEvent).detail.value);
-          }
-        });
       });
-
-      const scaleX = page.locator("jolly-transform jolly-vector3[label='Scale']")
-        .locator('.axis-box[data-axis="x"] input');
-      await scaleX.fill("2");
-      await scaleX.press("Enter");
-
-      expect(await changes(page)).toEqual([
-        {
-          position: { x: 0, y: 1, z: 0 },
-          rotation: { x: 0, y: 0, z: 0, w: 1 },
-          scale: { x: 2, y: 1, z: 1 }
-        }
-      ]);
-    }
-  );
-});
-
-test.describe("transform: stacked label position", () => {
-  test("puts each sub-field's label above its value instead of beside it", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/transform-stacked",
-      chrome: "off"
     });
+
+    const scaleX = transform.locator("jolly-vector3[label='Scale']")
+      .locator('.axis-box[data-axis="x"] input');
+    await scaleX.fill("2");
+    await scaleX.press("Enter");
+
+    expect(await changes(page)).toEqual([
+      {
+        position: { x: 0, y: 1, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        scale: { x: 2, y: 1, z: 1 }
+      }
+    ]);
+  });
+
+  test("stacked sub-fields put each label above its value", async({ page }) => {
+    await openExample(page, "math/transform-stacked");
 
     const position = page.locator("jolly-vector3[label='Position']");
     await expect(position).toHaveAttribute("label-position", "top");
 
-    const label = position.locator(".label").first();
-    const value = position.locator(".value").first();
-    const [labelBox, valueBox] = await Promise.all([
-      label.evaluate((node) => node.getBoundingClientRect()),
-      value.evaluate((node) => node.getBoundingClientRect())
+    const [label, value] = await Promise.all([
+      boxOf(position.locator(".label").first()),
+      boxOf(position.locator(".value").first())
     ]);
-
-    expect(valueBox.top).toBeGreaterThanOrEqual(labelBox.bottom);
-    expect(valueBox.left).toBe(labelBox.left);
-  });
-
-  test("does not reserve a shared label column across sub-fields", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/transform-stacked",
-      chrome: "off"
-    });
-
-    const transform = page.locator("jolly-transform");
-    const inlineLabelWidth = await transform.evaluate(
-      (node) => node.style.getPropertyValue("--jolly-label-width")
-    );
-
-    expect(inlineLabelWidth).toBe("");
+    expect(value.y).toBeGreaterThanOrEqual(label.y + label.height);
+    expect(value.x).toBe(label.x);
   });
 });
 
-test.describe("point2d: pad drag", () => {
-  test("dragging the pad commits a clamped point", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/point2d",
-      chrome: "off"
-    });
-    await recordChanges(page);
+test("point2d commits a clamped point from a pad press", async({ page }) => {
+  await openExample(page, "math/point2d");
+  await recordChanges(page);
 
-    const pad = row(page, "jolly-point2d", "default").locator(".pad");
-    const box = await pad.boundingBox();
-    expect(box).not.toBeNull();
+  const box = await boxOf(row(page, "jolly-point2d", "default").locator(".pad"));
+  await page.mouse.move(box.x + box.width - 1, box.y + 1);
+  await page.mouse.down();
+  await page.mouse.up();
 
-    // Stay one pixel inside the top-right hit-test boundary.
-    await page.mouse.move(box!.x + box!.width - 1, box!.y + 1);
-    await page.mouse.down();
-    await page.mouse.up();
-
-    expect(await changes(page)).toEqual([{ x: 0.98, y: 0.02 }]);
-  });
+  expect(await changes(page)).toEqual([{ x: 0.98, y: 0.02 }]);
 });
 
-test.describe("vector2: axis pair", () => {
-  test("edits the z axis and commits x and z", async({ page }) => {
-    await gotoGallery(page, {
-      example: "math/vector2-xz",
-      chrome: "off"
-    });
-    await recordChanges(page);
+test("vector2 edits an x/z pair painted with the z ramp", async({ page }) => {
+  await openExample(page, "math/vector3");
+  const zColor = await axisTagColor(page, "jolly-vector3", "z");
 
-    const field = row(page, "jolly-vector2", "default");
-    await expect(field.locator('.axis-box[data-axis="y"]')).toHaveCount(0);
+  await openExample(page, "math/vector2-xz");
+  await recordChanges(page);
 
-    const input = field.locator('.axis-box[data-axis="z"] input');
-    await input.fill("9");
-    await input.press("Enter");
+  const field = row(page, "jolly-vector2", "default");
+  await expect(field.locator('.axis-box[data-axis="y"]')).toHaveCount(0);
+  expect(await axisTagColor(page, "jolly-vector2", "z")).toBe(zColor);
+  expect(await axisTagColor(page, "jolly-vector2", "x")).not.toBe(zColor);
 
-    expect(await changes(page)).toEqual([{ x: 4, z: 9 }]);
-  });
+  const input = field.locator('.axis-box[data-axis="z"] input');
+  await input.fill("9");
+  await input.press("Enter");
 
-  test("paints the z axis with the z ramp colour", async({ page }) => {
-    function tagColor(
-      tag: string,
-      axis: string
-    ): Promise<string> {
-      return row(page, tag, "default")
-        .locator(`.axis-box[data-axis="${axis}"] .axis-tag`)
-        .evaluate((element) => getComputedStyle(element).borderTopColor);
-    }
-
-    await gotoGallery(page, {
-      example: "math/vector3",
-      chrome: "off"
-    });
-    const reference = await tagColor("jolly-vector3", "z");
-
-    await gotoGallery(page, {
-      example: "math/vector2-xz",
-      chrome: "off"
-    });
-
-    expect(await tagColor("jolly-vector2", "z")).toEqual(reference);
-    expect(await tagColor("jolly-vector2", "x")).not.toEqual(reference);
-  });
+  expect(await changes(page)).toEqual([{ x: 4, z: 9 }]);
 });

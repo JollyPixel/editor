@@ -23,6 +23,7 @@ import { LayersPanel } from "./LayersPanel.ts";
 import { PaintPanel } from "./PaintPanel.ts";
 import {
   resolveTextureHost,
+  texturePanesGrouped,
   textureUvAccess,
   type TextureHost
 } from "./textureHost.ts";
@@ -139,17 +140,18 @@ export class EditorPanels {
   }
 
   readonly #place = (): void => {
-    this.#host = resolveTextureHost(
-      this.#layout.placement("blocks"),
-      this.#layout.placement("paint"),
-      this.#host
-    );
+    const blocks = this.#layout.placement("blocks");
+    const paint = this.#layout.placement("paint");
+    this.#host = resolveTextureHost(blocks, paint, this.#host);
     const panel = this.#host === "blocks" ? this.#blocks : this.#paint;
     if (this.#textureEditor.parentElement !== panel) {
       panel.append(this.#textureEditor);
     }
     this.#blocks.hostsTextureEditor = this.#host === "blocks";
-    this.#textureEditor.uvAccess = textureUvAccess(this.#host);
+    this.#textureEditor.uvAccess = textureUvAccess(
+      this.#host,
+      texturePanesGrouped(blocks, paint)
+    );
     this.#textureEditor.active = this.#layout.paneVisible(this.#host);
   };
 

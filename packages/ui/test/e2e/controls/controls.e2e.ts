@@ -1,80 +1,65 @@
 // Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Locator
+} from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "../support/gallery.ts";
+import { openExample } from "../support/gallery.ts";
+import { boxOf } from "../support/pointer.ts";
+
+function isOpen(
+  details: Locator
+): Promise<boolean> {
+  return details.evaluate((element) => element.matches(":popover-open"));
+}
 
 test.describe("scene controls", () => {
-  test("renders a positioned controls card with declarative entries", async({ page }) => {
-    await gotoGallery(page, {
-      example: "controls/scene-controls",
-      chrome: "off"
-    });
-
-    const controls = page.locator("jolly-controls");
-    await expect(controls).toBeVisible();
-    await expect(controls).toHaveAttribute("position", "bottom-left");
-    await expect(controls.locator("jolly-control")).toHaveCount(5);
-    await expect(controls.locator("kbd").first()).toHaveText("W");
-
-    const bounds = await controls.locator("jolly-control").evaluateAll(
-      (entries) => entries.map((entry) => {
-        const box = entry.getBoundingClientRect();
-
-        return {
-          top: box.top,
-          bottom: box.bottom
-        };
-      })
-    );
-
-    expect(bounds[0]?.top).toBe(bounds[1]?.top);
-    expect(bounds[1]?.top).toBe(bounds[2]?.top);
-    expect(bounds[3]?.top).toBeGreaterThan(bounds[0]?.bottom ?? 0);
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "controls/scene-controls");
   });
 
-  test("reveals an entry description from the information icon", async({ page }) => {
-    await gotoGallery(page, {
-      example: "controls/scene-controls",
-      chrome: "off"
-    });
+  test("renders a positioned card of declarative entries", async({ page }) => {
+    const controls = page.locator("jolly-controls");
+    const entries = controls.locator("jolly-control");
 
+    await expect(controls).toBeVisible();
+    await expect(controls).toHaveAttribute("position", "bottom-left");
+    await expect(entries).toHaveCount(5);
+    await expect(controls.locator("kbd").first()).toHaveText("W");
+
+    const boxes = await Promise.all(
+      [0, 1, 2, 3].map((index) => boxOf(entries.nth(index)))
+    );
+    expect(boxes[1].y).toBe(boxes[0].y);
+    expect(boxes[2].y).toBe(boxes[0].y);
+    expect(boxes[3].y).toBeGreaterThan(boxes[0].y + boxes[0].height);
+  });
+
+  test("hovering the information icon reveals the description above it", async({ page }) => {
     const control = page.locator("jolly-control").first();
-    await control.locator(".details-button").hover();
+    const button = control.locator(".details-button");
+    const details = control.locator(".details");
 
-    await expect.poll(
-      () => control.locator(".details").evaluate(
-        (element) => element.matches(":popover-open")
-      )
-    ).toBe(true);
+    await button.hover();
+    await expect.poll(() => isOpen(details)).toBe(true);
 
-    const [button, details] = await Promise.all([
-      control.locator(".details-button").boundingBox(),
-      control.locator(".details").boundingBox()
+    const [buttonBox, detailsBox] = await Promise.all([
+      boxOf(button),
+      boxOf(details)
     ]);
-    if (button === null || details === null) {
-      throw new Error("Information button and tooltip must have layout boxes");
-    }
-
-    expect(details.y + details.height).toBeLessThanOrEqual(button.y);
+    expect(detailsBox.y + detailsBox.height).toBeLessThanOrEqual(buttonBox.y);
     expect(Math.abs(
-      (details.x + (details.width / 2)) - (button.x + (button.width / 2))
+      (detailsBox.x + (detailsBox.width / 2)) -
+      (buttonBox.x + (buttonBox.width / 2))
     )).toBeLessThanOrEqual(1);
   });
 
-  test("opens an entry description on click", async({ page }) => {
-    await gotoGallery(page, {
-      example: "controls/scene-controls",
-      chrome: "off"
-    });
-
+  test("clicking the information icon opens the description", async({ page }) => {
     const control = page.locator("jolly-control").first();
-    await control.locator(".details-button").click();
 
-    await expect.poll(
-      () => control.locator(".details").evaluate(
-        (element) => element.matches(":popover-open")
-      )
-    ).toBe(true);
+    await control.locator(".details-button").click();
+    await expect.poll(() => isOpen(control.locator(".details"))).toBe(true);
   });
 });

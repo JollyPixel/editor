@@ -71,7 +71,7 @@ export const dockStyles = css`
     inset-block-end: 0;
   }
 
-  .content {
+  .column {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -80,26 +80,54 @@ export const dockStyles = css`
     overflow: hidden;
   }
 
+  .secondary {
+    display: none;
+  }
+
+  :host([split]) {
+    display: flex;
+  }
+
+  :host([split][side="right"]) {
+    flex-direction: row-reverse;
+  }
+
+  :host([split]) .column {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  :host([split]) .secondary {
+    display: flex;
+    box-shadow: inset 1px 0 0
+      var(--jolly-border, ${kFallback.borderStrong});
+  }
+
+  :host([split][side="right"]) .secondary {
+    box-shadow: inset -1px 0 0
+      var(--jolly-border, ${kFallback.borderStrong});
+  }
+
   ${contentScrollbar}
 
-  :host([align][side="left"]:not([overlay])) .content,
-  :host([align][side="right"]:not([overlay])) .content {
+  :host([align][side="left"]:not([overlay])) .column,
+  :host([align][side="right"]:not([overlay])) .column {
     overflow-y: auto;
     padding-block-end: var(--jolly-dock-scroll-gutter, 8px);
   }
 
-  :host([align][side="top"]:not([overlay])) .content,
-  :host([align][side="bottom"]:not([overlay])) .content {
+  :host([align][side="top"]:not([overlay])) .column,
+  :host([align][side="bottom"]:not([overlay])) .column {
     overflow-x: auto;
     padding-inline-end: var(--jolly-dock-scroll-gutter, 8px);
   }
 
-  :host([side="top"]) .content,
-  :host([side="bottom"]) .content {
+  :host([side="top"]) .column,
+  :host([side="bottom"]) .column {
     flex-direction: row;
   }
 
-  :host([overlay]) .content {
+  :host([overlay]) .column {
     overflow: visible;
     gap: var(--jolly-dock-gap, 8px);
     padding: var(--jolly-dock-gap, 8px);
@@ -124,16 +152,16 @@ export const dockStyles = css`
     background: transparent;
   }
 
-  :host([overlay][align][side="left"]) .content,
-  :host([overlay][align][side="right"]) .content {
+  :host([overlay][align][side="left"]) .column,
+  :host([overlay][align][side="right"]) .column {
     overflow-y: auto;
   }
 
-  :host([align="start"]) .content {
+  :host([align="start"]) .column {
     justify-content: flex-start;
   }
 
-  :host([align="end"]) .content {
+  :host([align="end"]) .column {
     justify-content: flex-end;
   }
 
@@ -180,7 +208,7 @@ export const dockStyles = css`
     box-shadow: var(--jolly-shadow-overlay, 0 2px 8px rgb(0 0 0 / 30%));
   }
 
-  :host([collapsed]) .content {
+  :host([collapsed]) .column {
     visibility: hidden;
   }
 

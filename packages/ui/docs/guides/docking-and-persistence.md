@@ -40,6 +40,18 @@ is dropped into it, and gives the space back when its last pane leaves.
 </jolly-dock-layout>
 ```
 
+Set `double` on a left or right dock to let users open a second column on
+wide screens. Dragging a pane just past the dock's inner edge opens it; the
+dock doubles its width, and resizing splits the new width between the two
+columns. Author `slot="secondary"` on a child to start with the column open.
+
+```html
+<jolly-dock key="left" side="left" size="320" double>
+  <jolly-pane key="blocks" heading="Blocks"></jolly-pane>
+  <jolly-pane key="paint" heading="Paint" slot="secondary"></jolly-pane>
+</jolly-dock>
+```
+
 Listen to `jolly-pane-visibility` to pause work in a pane nobody can see.
 
 Set `locked` on panes whose authored placement must remain fixed. Call

@@ -117,6 +117,7 @@ describe("Containers.panePlacement", () => {
       panePlacement(reconcileLayout(null, kDeclared), "layers"),
       {
         dock: "right",
+        column: "primary",
         index: 1,
         count: 2,
         group: ["layers"],

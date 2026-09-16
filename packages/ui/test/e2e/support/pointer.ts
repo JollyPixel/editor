@@ -13,9 +13,6 @@ export type Box = NonNullable<
   Awaited<ReturnType<Locator["boundingBox"]>>
 >;
 
-/**
- * Bounding box of a locator, refusing the null a hidden element reports.
- */
 export async function boxOf(
   locator: Locator
 ): Promise<Box> {
@@ -38,20 +35,12 @@ export async function centerOf(
   };
 }
 
-/**
- * Presses on a handle and releases over a point, in enough steps for a
- * session that resolves on movement to see the travel.
- */
-export async function dragTo(
-  page: Page,
-  handle: Locator,
-  target: Point
-): Promise<void> {
-  const from = await centerOf(handle);
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(target.x, target.y, { steps: 16 });
-  await page.mouse.up();
+export function widthOf(
+  locator: Locator
+): Promise<number> {
+  return locator.evaluate(
+    (element) => element.getBoundingClientRect().width
+  );
 }
 
 export function heightOf(
@@ -62,10 +51,35 @@ export function heightOf(
   );
 }
 
-export function widthOf(
-  locator: Locator
-): Promise<number> {
-  return locator.evaluate(
-    (element) => element.getBoundingClientRect().width
-  );
+export async function hold(
+  page: Page,
+  from: Point,
+  to: Point,
+  steps = 12
+): Promise<void> {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps });
+}
+
+export async function dragTo(
+  page: Page,
+  handle: Locator,
+  target: Point
+): Promise<void> {
+  await hold(page, await centerOf(handle), target, 16);
+  await page.mouse.up();
+}
+
+export async function scrubBy(
+  page: Page,
+  handle: Locator,
+  distance: number
+): Promise<void> {
+  const from = await centerOf(handle);
+  await hold(page, from, {
+    x: from.x + distance,
+    y: from.y
+  }, 4);
+  await page.mouse.up();
 }

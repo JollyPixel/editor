@@ -5,9 +5,21 @@ import type { UvAccess } from "@jolly-pixel/editor.pixel-art";
 export type TextureHost = "blocks" | "paint";
 
 export function textureUvAccess(
-  host: TextureHost
+  host: TextureHost,
+  grouped: boolean
 ): UvAccess {
-  return host === "blocks" ? "edit" : "view";
+  return host === "paint" && grouped ? "view" : "edit";
+}
+
+export function texturePanesGrouped(
+  blocks: PanePlacement | null,
+  paint: PanePlacement | null
+): boolean {
+  return blocks !== null &&
+    paint !== null &&
+    blocks.dock === paint.dock &&
+    blocks.column === paint.column &&
+    blocks.index === paint.index;
 }
 
 export function resolveTextureHost(
@@ -18,8 +30,7 @@ export function resolveTextureHost(
   if (
     blocks === null ||
     paint === null ||
-    blocks.dock !== paint.dock ||
-    blocks.index !== paint.index
+    !texturePanesGrouped(blocks, paint)
   ) {
     return "paint";
   }

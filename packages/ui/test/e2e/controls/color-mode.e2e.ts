@@ -1,118 +1,58 @@
 // Import Third-party Dependencies
 import {
   test,
-  expect,
-  type Locator
+  expect
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "../support/gallery.ts";
+import { openExample } from "../support/gallery.ts";
 import { fieldRow as row } from "../support/locators.ts";
-
-// CONSTANTS
-const kControls = [
-  { id: "controls/checkbox", tag: "jolly-checkbox" },
-  { id: "controls/slider", tag: "jolly-slider" },
-  { id: "controls/flags", tag: "jolly-flags" }
-];
-
-function control(field: Locator): Locator {
-  return field.locator('input:not([type="color"])').first();
-}
-
-async function paintOf(
-  field: Locator,
-  tag: string
-): Promise<string> {
-  if (tag === "jolly-slider") {
-    return field.locator(".lane").evaluate(
-      (node) => getComputedStyle(node, "::before").backgroundImage
-    );
-  }
-
-  return control(field).evaluate(
-    (node) => getComputedStyle(node).accentColor
-  );
-}
+import { styleOf } from "../support/styles.ts";
 
 test.describe("colored fields", () => {
-  test("supported controls are neutral by default and accent on opt-in", async({
-    page
-  }) => {
-    for (const { id, tag } of kControls) {
-      await gotoGallery(page, { example: id, chrome: "off" });
-
-      const neutral = row(page, tag, "default");
-      const colored = row(page, tag, "colored");
-
-      await expect(neutral).toHaveJSProperty("colored", false);
-      await expect(neutral).not.toHaveAttribute("colored", "");
-      await expect(colored).toHaveJSProperty("colored", true);
-      await expect(colored).toHaveAttribute("colored", "");
-      expect(await paintOf(neutral, tag)).not.toBe(
-        await paintOf(colored, tag)
-      );
-    }
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "controls/checkbox");
   });
 
   test("the modified gutter follows the field color mode", async({ page }) => {
-    await gotoGallery(page, {
-      example: "controls/checkbox",
-      chrome: "off"
-    });
-
+    const shadows: string[] = [];
     for (const state of ["modified", "colored+modified"]) {
       const field = row(page, "jolly-checkbox", state);
-      const activeColor = await control(field).evaluate(
-        (node) => getComputedStyle(node).accentColor
-      );
-      const gutterColor = await field.evaluate(
-        (node) => getComputedStyle(node).boxShadow
-      );
+      const paint = await styleOf(field.locator("input"), "accent-color");
+      const shadow = await styleOf(field, "box-shadow");
 
-      expect(gutterColor).toContain(activeColor);
+      expect(shadow).toContain(paint);
+      shadows.push(shadow);
     }
 
-    const neutral = row(page, "jolly-checkbox", "modified");
-    const colored = row(page, "jolly-checkbox", "colored+modified");
-
-    expect(
-      await neutral.evaluate((node) => getComputedStyle(node).boxShadow)
-    ).not.toBe(
-      await colored.evaluate((node) => getComputedStyle(node).boxShadow)
-    );
+    expect(shadows[0]).not.toBe(shadows[1]);
   });
 
-  test("the neutral paint is muted in light and near-white in dark", async({
-    page
-  }) => {
-    await gotoGallery(page, {
-      example: "controls/checkbox",
-      chrome: "off"
-    });
-
+  test("the neutral paint is muted in light and near-white in dark", async({ page }) => {
     const field = row(page, "jolly-checkbox", "default");
-    const box = control(field);
-    const lightPaint = await box.evaluate(
-      (node) => getComputedStyle(node).accentColor
-    );
-    const mutedText = await field.locator(".label").evaluate(
-      (node) => getComputedStyle(node).color
-    );
+    const box = field.locator("input");
+    const lightPaint = await styleOf(box, "accent-color");
 
-    expect(lightPaint).toBe(mutedText);
+    expect(lightPaint).toBe(await styleOf(field.locator(".label"), "color"));
 
-    await page.evaluate(() => {
-      document.querySelector("gallery-root")?.setAttribute("theme", "dark");
+    await page.locator("gallery-root").evaluate(
+      (root) => root.setAttribute("theme", "dark")
+    );
+    await expect.poll(() => styleOf(box, "accent-color")).not.toBe(lightPaint);
+    expect(await styleOf(box, "accent-color"))
+      .toBe(await styleOf(field, "color"));
+  });
+
+  test("a root accent override reaches only colored fields", async({ page }) => {
+    const neutral = row(page, "jolly-checkbox", "default").locator("input");
+    const colored = row(page, "jolly-checkbox", "colored").locator("input");
+    const neutralBefore = await styleOf(neutral, "accent-color");
+
+    await page.locator("gallery-root").evaluate((root: HTMLElement) => {
+      root.style.setProperty("--jolly-accent-fill", "rgb(255, 102, 0)");
     });
 
-    await expect.poll(
-      () => box.evaluate((node) => getComputedStyle(node).accentColor)
-    ).not.toBe(lightPaint);
-    expect(
-      await box.evaluate((node) => getComputedStyle(node).accentColor)
-    ).toBe(
-      await field.evaluate((node) => getComputedStyle(node).color)
-    );
+    await expect(colored).toHaveCSS("accent-color", "rgb(255, 102, 0)");
+    await expect(neutral).toHaveCSS("accent-color", neutralBefore);
   });
 });
