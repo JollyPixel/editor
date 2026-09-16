@@ -1,14 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { disposeObject3D } from "@jolly-pixel/engine";
-import {
-  buildShapeGeometry,
-  BlockSurface,
-  tileRefForSlot,
-  type ResolvedBlockDefinition,
-  type BlockShapeRegistry,
-  type TilesetManager,
-  type TilesetUVRegion
+import type {
+  ResolvedBlockDefinition,
+  BlockShapeRegistry,
+  TilesetManager
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -16,17 +12,16 @@ import {
   computeBlockGridLayout,
   type BlockGridLayout
 } from "./blockGridLayout.ts";
+import {
+  buildBlockPreviewMesh,
+  createBlockPreviewStage,
+  PREVIEW_ROTATION_STEP,
+  PREVIEW_TILT
+} from "./blockPreviewMesh.ts";
 
 // CONSTANTS
 const kSuperSampling = 2;
 const kMaxPixelRatio = 3;
-const kCameraFov = 45;
-const kCameraZ = 2.2;
-const kAmbientIntensity = 1.5;
-const kDirIntensity = 1.2;
-const kFitFactor = 0.78;
-const kFitRadius = Math.tan((kCameraFov * Math.PI) / 360) *
-  kCameraZ * kFitFactor;
 
 export interface CellEntry {
   blockId: number;
@@ -40,24 +35,6 @@ export interface BlockLibraryRendererOptions {
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
   blocks?: ResolvedBlockDefinition[];
-}
-
-function fitGeometry(
-  geometry: THREE.BufferGeometry
-): void {
-  geometry.computeBoundingSphere();
-  const sphere = geometry.boundingSphere;
-  if (sphere === null || sphere.radius <= 0) {
-    return;
-  }
-
-  const { center, radius } = sphere;
-  geometry.translate(-center.x, -center.y, -center.z);
-  geometry.scale(
-    kFitRadius / radius,
-    kFitRadius / radius,
-    kFitRadius / radius
-  );
 }
 
 export class BlockLibraryRenderer {
@@ -102,14 +79,9 @@ export class BlockLibraryRenderer {
     this.canvas.style.display = "block";
     container.appendChild(this.canvas);
 
-    this.#scene = new THREE.Scene();
-    this.#scene.add(new THREE.AmbientLight(0xffffff, kAmbientIntensity));
-    const dir = new THREE.DirectionalLight(0xffffff, kDirIntensity);
-    dir.position.set(3, 5, 3);
-    this.#scene.add(dir);
-
-    this.#camera = new THREE.PerspectiveCamera(kCameraFov, 1, 0.1, 20);
-    this.#camera.position.set(0, 0, kCameraZ);
+    const stage = createBlockPreviewStage();
+    this.#scene = stage.scene;
+    this.#camera = stage.camera;
 
     this.#resizeObserver = new ResizeObserver(() => {
       this.#layoutDirty = true;
@@ -145,7 +117,10 @@ export class BlockLibraryRenderer {
         previous.delete(block.id);
       }
 
-      const mesh = this.#buildBlockMesh(block);
+      const mesh = buildBlockPreviewMesh(block, {
+        shapeRegistry: this.#shapeRegistry,
+        tilesetManager: this.#tilesetManager
+      });
       mesh.visible = false;
       this.#scene.add(mesh);
       next.push({ blockId: block.id, block, mesh, x: 0, y: 0 });
@@ -189,79 +164,6 @@ export class BlockLibraryRenderer {
     this.#cells = [];
     this.#renderer.dispose();
     this.canvas.remove();
-  }
-
-  #buildBlockMesh(
-    block: ResolvedBlockDefinition
-  ): THREE.Mesh | THREE.Group {
-    const shape = this.#shapeRegistry.get(block.shapeId);
-    if (!shape) {
-      const fallback = new THREE.BoxGeometry(1, 1, 1);
-      fitGeometry(fallback);
-
-      return new THREE.Mesh(
-        fallback,
-        new THREE.MeshLambertMaterial({ color: 0xaaaaaa })
-      );
-    }
-
-    const tilesetId =
-      block.defaultTexture?.tilesetId ??
-      this.#tilesetManager.defaultTilesetId ??
-      undefined;
-    const texture = this.#tilesetManager.has(tilesetId) ?
-      this.#tilesetManager.atlas(tilesetId).texture :
-      null;
-    const surface = new BlockSurface(block);
-    const mat = new THREE.MeshLambertMaterial({
-      map: texture,
-      side: surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide,
-      alphaTest: surface.alphaCutoff,
-      transparent: surface.alphaMode === "blend",
-      depthWrite: surface.alphaMode !== "blend"
-    });
-
-    const { positions, normals, uvs, indices, ranges } = buildShapeGeometry(
-      shape
-    );
-
-    const vertices = Float32Array.from(positions);
-    const atlasUvs = Float32Array.from(uvs);
-
-    for (const range of ranges) {
-      const tileRef = tileRefForSlot(block, range.slot);
-      if (!tileRef || !texture) {
-        continue;
-      }
-
-      let region: TilesetUVRegion;
-      try {
-        region = this.#tilesetManager
-          .atlas(tileRef.tilesetId)
-          .uvFor(tileRef.col, tileRef.row);
-      }
-      catch {
-        // A missing tile region falls back to the full texture.
-        continue;
-      }
-
-      const end = range.start + range.count;
-      for (let index = range.start; index < end; index++) {
-        atlasUvs[index * 2] = region.offsetU +
-          (atlasUvs[index * 2] * region.scaleU);
-        atlasUvs[(index * 2) + 1] = region.offsetV +
-          (atlasUvs[(index * 2) + 1] * region.scaleV);
-      }
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-    geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
-    geo.setAttribute("uv", new THREE.BufferAttribute(atlasUvs, 2));
-    geo.setIndex(new THREE.BufferAttribute(indices, 1));
-    fitGeometry(geo);
-
-    return new THREE.Mesh(geo, mat);
   }
 
   #relayout(): void {
@@ -326,7 +228,7 @@ export class BlockLibraryRenderer {
       return;
     }
 
-    this.#rot += 0.005;
+    this.#rot += PREVIEW_ROTATION_STEP;
 
     this.#renderer.clear();
 
@@ -345,7 +247,7 @@ export class BlockLibraryRenderer {
 
       cell.mesh.visible = true;
       cell.mesh.position.set(0, 0, 0);
-      cell.mesh.rotation.set(0.4, this.#rot, 0);
+      cell.mesh.rotation.set(PREVIEW_TILT, this.#rot, 0);
 
       const x = cell.x * cellSize;
       const y = (totalRows - 1 - cell.y) * cellSize;
