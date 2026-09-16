@@ -88,7 +88,7 @@ export const colorPickerStyles = css`
     box-sizing: border-box;
     border: 2px solid #fff;
     border-radius: 50%;
-    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5);
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 50%);
     transform: translate(-50%, -50%);
     pointer-events: none;
   }
@@ -142,26 +142,26 @@ export const colorPickerStyles = css`
   .track.hue::before {
     background-image: linear-gradient(
       to right,
-      hsl(0 100% 50%),
-      hsl(60 100% 50%),
-      hsl(120 100% 50%),
-      hsl(180 100% 50%),
-      hsl(240 100% 50%),
-      hsl(300 100% 50%),
-      hsl(360 100% 50%)
+      hsl(0deg 100% 50%),
+      hsl(60deg 100% 50%),
+      hsl(120deg 100% 50%),
+      hsl(180deg 100% 50%),
+      hsl(240deg 100% 50%),
+      hsl(300deg 100% 50%),
+      hsl(360deg 100% 50%)
     );
   }
 
   :host([layout="wide"]) .track.hue::before {
     background-image: linear-gradient(
       to top,
-      hsl(0 100% 50%),
-      hsl(60 100% 50%),
-      hsl(120 100% 50%),
-      hsl(180 100% 50%),
-      hsl(240 100% 50%),
-      hsl(300 100% 50%),
-      hsl(360 100% 50%)
+      hsl(0deg 100% 50%),
+      hsl(60deg 100% 50%),
+      hsl(120deg 100% 50%),
+      hsl(180deg 100% 50%),
+      hsl(240deg 100% 50%),
+      hsl(300deg 100% 50%),
+      hsl(360deg 100% 50%)
     );
   }
 
@@ -245,7 +245,7 @@ export const colorPickerStyles = css`
     border: none;
     border-radius: var(--jolly-radius-sm, 2px);
     background: #fff;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
     transition:
       width var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease),
       height var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
@@ -265,7 +265,7 @@ export const colorPickerStyles = css`
     border: none;
     border-radius: var(--jolly-radius-sm, 2px);
     background: #fff;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
     transition:
       width var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease),
       height var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);

@@ -36,6 +36,7 @@ export const folderStyles = css`
     );
     color: inherit;
     font: inherit;
+
     ${fillTransition}
   }
 
@@ -47,9 +48,9 @@ export const folderStyles = css`
     width: 46%;
     background: conic-gradient(
         from 90deg,
-        currentColor 25%,
+        currentcolor 25%,
         transparent 0 50%,
-        currentColor 0 75%,
+        currentcolor 0 75%,
         transparent 0
       )
       0 / 8px 8px;
@@ -57,7 +58,6 @@ export const folderStyles = css`
     content: "";
     opacity: 0.08;
     pointer-events: none;
-    -webkit-mask-image: linear-gradient(to right, transparent, black 55%);
     mask-image: linear-gradient(to right, transparent, black 55%);
     transition: opacity var(--jolly-duration-fast, 100ms)
       var(--jolly-easing, ease);
@@ -101,6 +101,7 @@ export const folderStyles = css`
   .toggle .label,
   .title .label {
     min-width: 0;
+
     ${truncate}
   }
 

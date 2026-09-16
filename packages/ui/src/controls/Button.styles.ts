@@ -27,6 +27,7 @@ export const buttonStyles = css`
     font: inherit;
     white-space: nowrap;
     cursor: pointer;
+
     ${fillTransition}
   }
 

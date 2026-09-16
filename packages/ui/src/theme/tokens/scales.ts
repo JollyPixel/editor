@@ -44,11 +44,9 @@ export const scaleTokens = css`
      * beside folder headers, where the bar paints past the value otherwise.
      */
     --jolly-field-inset-end: var(--jolly-space-1);
-
     --jolly-duration-fast: 100ms;
     --jolly-duration-base: 160ms;
     --jolly-easing: cubic-bezier(0.2, 0, 0.2, 1);
-
     --jolly-font-family: "Roboto Mono", ui-monospace, sfmono-regular, "Cascadia Code",
       consolas, monospace;
     --jolly-font-numeric: "tabular-nums";

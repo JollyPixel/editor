@@ -82,13 +82,13 @@ export const controlsStyles = css`
     gap: calc(var(--jolly-controls-inset) / 2);
   }
 
-  @media (max-width: 32rem) {
+  @media (width <= 32rem) {
     .entries {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 20rem) {
+  @media (width <= 20rem) {
     .entries {
       grid-template-columns: minmax(0, 1fr);
     }

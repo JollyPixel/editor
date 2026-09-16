@@ -67,16 +67,17 @@ export const paneGroupStyles = css`
 
   .label {
     min-width: 0;
+
     ${truncate}
   }
 
   .tab:hover {
-    background: rgb(255 255 255 / 0.1);
+    background: rgb(255 255 255 / 10%);
     opacity: 1;
   }
 
   .tab[aria-selected="true"] {
-    background: rgb(255 255 255 / 0.18);
+    background: rgb(255 255 255 / 18%);
     opacity: 1;
   }
 
@@ -85,12 +86,12 @@ export const paneGroupStyles = css`
     inset-inline: 0;
     inset-block-end: 0;
     height: 2px;
-    background: currentColor;
+    background: currentcolor;
     content: "";
   }
 
   .tab[data-grabbed] {
-    background: rgb(255 255 255 / 0.3);
+    background: rgb(255 255 255 / 30%);
   }
 
   .tab[data-dragging] {

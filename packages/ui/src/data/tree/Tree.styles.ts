@@ -98,6 +98,7 @@ export const treeStyles = css`
 
   .label {
     flex: 1 1 auto;
+
     ${truncate}
   }
 
@@ -192,7 +193,7 @@ export const treeStyles = css`
 
   .row[data-drop="above"]::after,
   .row[data-drop="below"]::after {
-    inset-inline: var(--jolly-tree-drop-indent, 0px) 0;
+    inset-inline: var(--jolly-tree-drop-indent, 0) 0;
     height: 1px;
     background: var(--jolly-accent-fill, ${kFallback.focusRing});
     opacity: 1;
@@ -208,7 +209,7 @@ export const treeStyles = css`
 
   .row[data-drop="inside"]::after {
     inset-block: 0;
-    inset-inline: var(--jolly-tree-drop-indent, 0px) 0;
+    inset-inline: var(--jolly-tree-drop-indent, 0) 0;
     border: 1px solid var(--jolly-accent-fill, ${kFallback.focusRing});
     border-radius: inherit;
     opacity: 1;
@@ -224,7 +225,7 @@ export const treeStyles = css`
     position: absolute;
     inset-block: 0;
     inset-inline-start: 0;
-    width: var(--jolly-tree-row-indent, 0px);
+    width: var(--jolly-tree-row-indent, 0);
     background-image: repeating-linear-gradient(
       to right,
       var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong})) 0,

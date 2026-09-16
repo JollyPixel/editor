@@ -31,6 +31,7 @@ export const vectorFieldStyles = css`
     color: inherit;
     font: inherit;
     font-variant-numeric: inherit;
+
     ${fillTransition}
   }
 

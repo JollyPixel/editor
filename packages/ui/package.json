@@ -73,9 +73,6 @@
   },
   "devDependencies": {
     "@jolly-pixel/network": "2.0.0",
-    "lit": "3.3.3",
-    "postcss-lit": "1.4.1",
-    "stylelint": "17.15.0",
-    "stylelint-config-recommended": "18.0.0"
+    "lit": "3.3.3"
   }
 }

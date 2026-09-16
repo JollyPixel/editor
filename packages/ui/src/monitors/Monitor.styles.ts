@@ -29,6 +29,7 @@ export const monitorStyles = css`
     flex: 1 1 auto;
     min-width: 0;
     color: var(--jolly-text-muted);
+
     ${truncate}
   }
 

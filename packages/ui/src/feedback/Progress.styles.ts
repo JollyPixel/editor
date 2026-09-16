@@ -4,8 +4,8 @@ import { css } from "lit";
 export const progressStyles = css`
   :host {
     --jolly-progress-height: 4px;
-    --jolly-progress-track: var(--jolly-groove, rgb(0 0 0 / 0.2));
-    --jolly-progress-fill: var(--jolly-accent-fill, #4488ff);
+    --jolly-progress-track: var(--jolly-groove, rgb(0 0 0 / 20%));
+    --jolly-progress-fill: var(--jolly-accent-fill, #48f);
     --jolly-progress-duration: var(--jolly-duration-base, 160ms);
     --jolly-progress-easing: var(--jolly-easing, ease);
     --jolly-progress-track-shadow: none;
@@ -53,9 +53,9 @@ export const progressStyles = css`
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgb(255 255 255 / 0.15) 30%,
-      rgb(255 255 255 / 0.4) 50%,
-      rgb(255 255 255 / 0.15) 70%,
+      rgb(255 255 255 / 15%) 30%,
+      rgb(255 255 255 / 40%) 50%,
+      rgb(255 255 255 / 15%) 70%,
       transparent 100%
     );
     animation: progress-shimmer 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -67,9 +67,9 @@ export const progressStyles = css`
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgb(255 255 255 / 0.2) 0%,
+      rgb(255 255 255 / 20%) 0%,
       transparent 50%,
-      rgb(0 0 0 / 0.1) 100%
+      rgb(0 0 0 / 10%) 100%
     );
   }
 
@@ -87,6 +87,7 @@ export const progressStyles = css`
     0%, 100% {
       box-shadow: var(--jolly-progress-shadow);
     }
+
     50% {
       box-shadow: var(--jolly-progress-shadow-active);
     }
@@ -96,6 +97,7 @@ export const progressStyles = css`
     from {
       transform: translateX(-100%);
     }
+
     to {
       transform: translateX(100%);
     }
@@ -105,6 +107,7 @@ export const progressStyles = css`
     0%, 100% {
       filter: blur(0);
     }
+
     50% {
       filter: blur(1px);
     }
@@ -114,9 +117,11 @@ export const progressStyles = css`
     0% {
       transform: translateX(-120%);
     }
+
     50% {
       transform: translateX(120%);
     }
+
     100% {
       transform: translateX(280%);
     }

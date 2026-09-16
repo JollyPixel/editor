@@ -63,9 +63,7 @@ export const checkboxStyles = css`
     border-end-end-radius: var(--jolly-radius-sm, 2px);
   }
 
-  :host(
-    [clickable-background]:not([disabled]):not([readonly]):not([locked])
-  ) .checkbox:hover::before {
+  :host([clickable-background]:not([disabled], [readonly], [locked])) .checkbox:hover::before {
     background-image: linear-gradient(
       var(--jolly-checkbox-gradient-direction),
       var(--jolly-control-bg-hover),
@@ -73,9 +71,8 @@ export const checkboxStyles = css`
     );
   }
 
-  :host(
-    [clickable-background]:not([disabled]):not([readonly]):not([locked])
-  ) .checkbox:has(input:focus-visible)::before {
+  :host([clickable-background]:not([disabled], [readonly], [locked]))
+    .checkbox:has(input:focus-visible)::before {
     background-image: linear-gradient(
       var(--jolly-checkbox-gradient-direction),
       var(--jolly-control-bg-focus),

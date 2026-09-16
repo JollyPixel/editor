@@ -22,7 +22,6 @@ const surfaceTokens = css`
 const inkTokens = css`
   --jolly-ink: light-dark(var(--jolly-neutral-900), var(--jolly-neutral-50));
   --jolly-ink-danger: var(--jolly-danger-500);
-
   --jolly-control-bg: color-mix(in oklab, var(--jolly-ink) 8%, transparent);
   --jolly-control-bg-hover: color-mix(in oklab, var(--jolly-ink) 12%, transparent);
   --jolly-control-bg-focus: color-mix(in oklab, var(--jolly-ink) 20%, transparent);
@@ -39,6 +38,7 @@ const inkTokens = css`
     var(--jolly-accent-fill) 18%,
     transparent
   );
+
   /* Inverted, so an action stays legible over the header pattern. */
   --jolly-folder-action-fg: var(--jolly-surface);
   --jolly-folder-action-bg: color-mix(
@@ -53,6 +53,7 @@ const inkTokens = css`
   );
   --jolly-folder-action-bg-focus: var(--jolly-ink);
   --jolly-folder-action-bg-active: var(--jolly-ink);
+
   /*
    * Filled with danger ink, so a destructive action keeps that same weight.
    * Its glyph is white in both themes, since the ground stays red in both.
@@ -92,7 +93,6 @@ const inkTokens = css`
     transparent
   );
   --jolly-tab-close-fg-hover: var(--jolly-ink-danger);
-
   --jolly-pane-header-bg: var(--jolly-accent-fill);
   --jolly-dock-resize-bg: color-mix(
     in oklab,
@@ -153,11 +153,9 @@ const inkTokens = css`
 const semanticTokens = css`
   --jolly-border: light-dark(var(--jolly-neutral-300), var(--jolly-neutral-700));
   --jolly-border-strong: light-dark(var(--jolly-neutral-500), var(--jolly-neutral-500));
-
   --jolly-text: light-dark(var(--jolly-neutral-900), var(--jolly-neutral-50));
   --jolly-text-muted: light-dark(var(--jolly-neutral-600), var(--jolly-neutral-400));
   --jolly-text-on-fill: var(--jolly-neutral-0);
-
   --jolly-accent-fill: var(--jolly-accent-600);
   --jolly-accent-text: light-dark(var(--jolly-accent-700), var(--jolly-accent-300));
   --jolly-separator-label: var(--jolly-accent-text);
@@ -166,19 +164,16 @@ const semanticTokens = css`
     var(--jolly-accent-text) 28%,
     transparent
   );
-
   --jolly-focus-ring: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
   --jolly-danger: light-dark(var(--jolly-danger-700), var(--jolly-danger-300));
   --jolly-danger-border: light-dark(var(--jolly-danger-500), var(--jolly-danger-300));
   --jolly-warning: light-dark(var(--jolly-warning-700), var(--jolly-warning-300));
   --jolly-success: light-dark(var(--jolly-success-700), var(--jolly-success-300));
-
   --jolly-modified: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
   --jolly-locked: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
-
-  --jolly-shadow-overlay: 0 2px 8px light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.44));
-  --jolly-shadow-floating: 0 4px 16px light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.5));
-  --jolly-shadow-modal: 0 12px 40px light-dark(rgb(0 0 0 / 0.24), rgb(0 0 0 / 0.6));
+  --jolly-shadow-overlay: 0 2px 8px light-dark(rgb(0 0 0 / 16%), rgb(0 0 0 / 44%));
+  --jolly-shadow-floating: 0 4px 16px light-dark(rgb(0 0 0 / 18%), rgb(0 0 0 / 50%));
+  --jolly-shadow-modal: 0 12px 40px light-dark(rgb(0 0 0 / 24%), rgb(0 0 0 / 60%));
 `;
 
 /**
@@ -187,9 +182,13 @@ const semanticTokens = css`
 export const themeTokens = css`
   :host {
     color-scheme: light dark;
+
     ${rampTokens}
+
     ${surfaceTokens}
+
     ${inkTokens}
+
     ${semanticTokens}
   }
 

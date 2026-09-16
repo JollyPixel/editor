@@ -16,6 +16,7 @@ const kScopedHostStyles = css`
     color: var(--jolly-text);
     font-family: var(--jolly-font-family);
     font-size: var(--jolly-font-size);
+
     --jolly-label-width: 8ch;
   }
 

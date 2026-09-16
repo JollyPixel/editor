@@ -9,7 +9,7 @@ export const logStyles = css`
     --jolly-log-exit-duration: var(--jolly-duration-base, 160ms);
     --jolly-log-easing: var(--jolly-easing, ease);
     --jolly-log-color: var(--jolly-text, #e6edf3);
-    --jolly-log-shadow: 0 1px 2px rgb(0 0 0 / 0.65);
+    --jolly-log-shadow: 0 1px 2px rgb(0 0 0 / 65%);
     --jolly-log-rise: 4px;
 
     display: flex;

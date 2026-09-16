@@ -16,7 +16,7 @@ export const floatingStyles = css`
     min-height: 0;
     border-radius: var(--jolly-radius-md, 6px);
     background: var(--jolly-surface-raised, ${kFallback.controlBg});
-    box-shadow: var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 0.3));
+    box-shadow: var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 30%));
     pointer-events: auto;
   }
 

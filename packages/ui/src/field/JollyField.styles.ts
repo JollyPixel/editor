@@ -43,6 +43,7 @@ export const fieldStyles = css`
     padding-inline: var(--jolly-space-1, 4px)
       var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     border-radius: var(--jolly-radius-sm, 2px);
+
     ${fillTransition}
   }
 
@@ -90,7 +91,7 @@ export const fieldStyles = css`
     justify-content: center;
     box-sizing: border-box;
     flex: 0 0 auto;
-    width: var(--jolly-gutter-width, 0px);
+    width: var(--jolly-gutter-width, 0);
     height: 14px;
     overflow: hidden;
   }
@@ -121,6 +122,7 @@ export const fieldStyles = css`
     max-width: var(--jolly-label-max-width, 45%);
     color: var(--jolly-text-muted);
     text-align: start;
+
     ${truncate}
     user-select: none;
   }
@@ -138,6 +140,7 @@ export const fieldStyles = css`
     min-width: 0;
     font-variant-numeric: var(--jolly-font-numeric, tabular-nums);
   }
+
   .value input:not([type="color"]),
   .value select {
     flex: 1 1 auto;
@@ -150,6 +153,7 @@ export const fieldStyles = css`
     color: inherit;
     font: inherit;
     font-variant-numeric: inherit;
+
     ${fillTransition}
   }
 
@@ -238,6 +242,7 @@ export const fieldStyles = css`
     background: none;
     color: var(--jolly-text-muted);
     cursor: pointer;
+
     ${fillTransition}
   }
 

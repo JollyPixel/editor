@@ -7,7 +7,7 @@ export const transformStyles = css`
 
     display: flex;
     flex-direction: column;
-    gap: var(--jolly-row-gap, 0px);
+    gap: var(--jolly-row-gap, 0);
   }
 
   :host([label-position="top"]) {

@@ -28,6 +28,7 @@ export const scrubHandleStyles = css`
     border-radius: 1px;
     background: var(--jolly-groove);
     transform: translateY(-50%);
+
     ${fillTransition}
   }
 
