@@ -6,7 +6,6 @@ import { Quaternion } from "../../../../src/index.ts";
 export const QUATERNION_EXAMPLE: GalleryExample = {
   id: "math/quaternion",
   title: "Quaternion",
-  group: "Math",
   render(host) {
     return renderStateMatrix<Quaternion>(host, {
       liveInput: true,

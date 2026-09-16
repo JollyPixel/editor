@@ -10,7 +10,6 @@ import {
 export const TRANSFORM_EXAMPLE: GalleryExample = {
   id: "math/transform",
   title: "Transform",
-  group: "Math",
   render(host) {
     const transform = document.createElement("jolly-transform") as Transform;
     transform.value = {
@@ -18,10 +17,6 @@ export const TRANSFORM_EXAMPLE: GalleryExample = {
       rotation: { x: 0, y: 0, z: 0, w: 1 },
       scale: { x: 1, y: 1, z: 1 }
     };
-    /*
-     * Locking is per sub-row: rotation is held by a peer, position and
-     * scale stay editable.
-     */
     transform.state = {
       rotation: {
         lockedBy: {
@@ -40,15 +35,12 @@ export const TRANSFORM_EXAMPLE: GalleryExample = {
     });
 
     host.append(transform);
-
-    return () => transform.remove();
   }
 };
 
 export const TRANSFORM_STACKED_EXAMPLE: GalleryExample = {
   id: "math/transform-stacked",
   title: "Transform (stacked labels)",
-  group: "Math",
   render(host) {
     const transform = document.createElement("jolly-transform") as Transform;
     transform.labelPosition = "top";
@@ -66,7 +58,5 @@ export const TRANSFORM_STACKED_EXAMPLE: GalleryExample = {
     });
 
     host.append(transform);
-
-    return () => transform.remove();
   }
 };

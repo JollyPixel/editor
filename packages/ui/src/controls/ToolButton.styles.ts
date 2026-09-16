@@ -75,7 +75,7 @@ export const toolButtonStyles = css`
     left: 50%;
     border-width: 0 3px 4px;
     transform: translateX(-50%);
-    border-bottom-color: currentColor;
+    border-bottom-color: currentcolor;
   }
 
   :host([flyout-side="below"]) .notch {
@@ -83,7 +83,7 @@ export const toolButtonStyles = css`
     left: 50%;
     border-width: 4px 3px 0;
     transform: translateX(-50%);
-    border-top-color: currentColor;
+    border-top-color: currentcolor;
   }
 
   :host([flyout-side="right"]) .notch {
@@ -91,7 +91,7 @@ export const toolButtonStyles = css`
     right: 3px;
     border-width: 3px 0 3px 4px;
     transform: translateY(-50%);
-    border-left-color: currentColor;
+    border-left-color: currentcolor;
   }
 
   :host([flyout-side="left"]) .notch {
@@ -99,7 +99,7 @@ export const toolButtonStyles = css`
     left: 3px;
     border-width: 3px 4px 3px 0;
     transform: translateY(-50%);
-    border-right-color: currentColor;
+    border-right-color: currentcolor;
   }
 
   .tooltip,

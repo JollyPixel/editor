@@ -12,7 +12,7 @@
   color-scheme: light dark;
 
   --demo-page-bg: light-dark(#d7e3ee, #0d151d);
-  --demo-control-bg: light-dark(#ffffff, #1a2228);
+  --demo-control-bg: light-dark(#fff, #1a2228);
   --demo-border: light-dark(#6f8caa, #4a5c68);
   --demo-text: light-dark(#16232f, #eee);
   --demo-accent: light-dark(#2f6fd8, #3a6fc2);
@@ -90,6 +90,7 @@ body {
  */
 #demo-controls jolly-scope {
   min-width: 190px;
+
   --jolly-accent-fill: var(--demo-accent);
   --jolly-accent-fill-hover: color-mix(in oklab, var(--demo-accent) 88%, white);
   --jolly-accent-fill-focus: color-mix(in oklab, var(--demo-accent) 76%, white);

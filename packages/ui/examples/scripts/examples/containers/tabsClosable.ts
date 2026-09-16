@@ -4,7 +4,6 @@ import { createSimpleExample } from "../shared/example.ts";
 export const TABS_CLOSABLE_EXAMPLE = createSimpleExample(
   "containers/tabs-closable",
   "Tabs (closable)",
-  "Containers",
   () => {
     const element = document.createElement("jolly-tabs");
     element.append(

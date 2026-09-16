@@ -6,7 +6,6 @@ import { NumberField } from "../../../../src/index.ts";
 export const NUMBER_EXAMPLE: GalleryExample = {
   id: "controls/number",
   title: "Number",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<NumberField>(host, {
       liveInput: true,

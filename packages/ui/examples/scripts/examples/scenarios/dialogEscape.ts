@@ -12,7 +12,6 @@ import {
 export const DIALOG_ESCAPE_EXAMPLE = createSimpleExample(
   "scenarios/dialog-escape",
   "Dialog Escape",
-  "Scenarios",
   () => {
     const root = document.createElement("div");
     root.className = "chrome-row";

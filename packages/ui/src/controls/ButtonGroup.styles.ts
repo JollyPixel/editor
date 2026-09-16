@@ -39,6 +39,7 @@ export const buttonGroupStyles = css`
     color: inherit;
     font: inherit;
     cursor: pointer;
+
     ${fillTransition}
   }
 

@@ -2,16 +2,9 @@
 import type { GalleryExample } from "../../types.ts";
 import { Pane } from "../../../../src/index.ts";
 
-/**
- * Built entirely through the builder facade rather than markup, proving the
- * Tweakpane-shaped ergonomics the facade exists to provide. It floats near the
- * top left rather than mounting inside this card, since that is what `Pane`
- * does on its own.
- */
 export const FACADE_PARITY_EXAMPLE: GalleryExample = {
   id: "scenarios/facade-parity",
   title: "Facade parity",
-  group: "Scenarios",
   render(host) {
     const hint = document.createElement("p");
     hint.className = "scenario-hint";

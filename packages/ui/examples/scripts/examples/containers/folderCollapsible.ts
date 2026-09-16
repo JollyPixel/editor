@@ -4,7 +4,6 @@ import { createSimpleExample } from "../shared/example.ts";
 export const FOLDER_COLLAPSIBLE_EXAMPLE = createSimpleExample(
   "containers/folder-collapsible",
   "Folder (collapsible)",
-  "Containers",
   () => {
     const host = document.createElement("div");
     host.append(

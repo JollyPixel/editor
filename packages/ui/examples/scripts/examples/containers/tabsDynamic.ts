@@ -10,7 +10,6 @@ const kInitialTabs = [
 export const TABS_DYNAMIC_EXAMPLE = createSimpleExample(
   "containers/tabs-dynamic",
   "Tabs (dynamic)",
-  "Containers",
   () => {
     const container = document.createElement("div");
     const element = document.createElement("jolly-tabs");

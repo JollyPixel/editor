@@ -17,13 +17,9 @@ import {
 // CONSTANTS
 const kTag = "gallery-brush-swatch";
 
-/**
- * Demonstrates a standalone picker popover without a field row.
- */
 export const COLOR_POPOVER_EXAMPLE: GalleryExample = {
   id: "scenarios/color-popover",
   title: "Picker in a popup",
-  group: "Scenarios",
   render(host) {
     define();
 
@@ -42,14 +38,9 @@ export const COLOR_POPOVER_EXAMPLE: GalleryExample = {
       document.createElement(kTag)
     );
     host.append(root);
-
-    return () => root.remove();
   }
 };
 
-/**
- * Declared lazily because Node imports `manifest.ts` without `HTMLElement`.
- */
 function define(): void {
   if (customElements.get(kTag) !== undefined) {
     return;
@@ -79,7 +70,6 @@ function define(): void {
         box-shadow: var(--jolly-shadow-overlay);
       }
 
-      /* Reapply readout styles across the shadow boundary. */
       code {
         display: block;
         margin-top: var(--jolly-space-1, 4px);

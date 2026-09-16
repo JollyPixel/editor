@@ -31,7 +31,7 @@ export const selectStyles = css`
    */
   .value select:-moz-focusring {
     color: transparent;
-    text-shadow: 0 0 0 currentColor;
+    text-shadow: 0 0 0 currentcolor;
   }
 
   .value .chevron {

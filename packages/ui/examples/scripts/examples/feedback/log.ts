@@ -26,7 +26,6 @@ const kMessages = [
 export const LOG_EXAMPLE: GalleryExample = {
   id: "feedback/log",
   title: "Log",
-  group: "Feedback",
   render(host) {
     const queue = new LogQueue({
       max: 5,
@@ -82,7 +81,6 @@ export const LOG_EXAMPLE: GalleryExample = {
     return () => {
       unsubscribe();
       queue.dispose();
-      root.remove();
     };
   }
 };

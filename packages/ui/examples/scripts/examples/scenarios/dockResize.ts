@@ -6,14 +6,9 @@ import {
   text
 } from "../shared/containerBuilders.ts";
 
-/**
- * A layout owns the three containers, so the floating pane can be dragged into
- * either dock and back out again, not merely moved around the stage.
- */
 export const DOCK_RESIZE_EXAMPLE: GalleryExample = {
   id: "scenarios/dock-resize",
   title: "Dock and floating placement",
-  group: "Scenarios",
   render(host) {
     const stage = document.createElement("div");
     stage.className = "placement-stage";
@@ -41,7 +36,5 @@ export const DOCK_RESIZE_EXAMPLE: GalleryExample = {
     );
     stage.append(layout);
     host.append(stage);
-
-    return () => stage.remove();
   }
 };

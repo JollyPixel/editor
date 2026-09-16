@@ -18,11 +18,9 @@ interface SceneObject {
 // CONSTANTS
 const kAxes: readonly Axis3[] = ["x", "y", "z"];
 
-/** Demonstrates per-axis Mixed state across two selected objects. */
 export const MIXED_PER_AXIS_EXAMPLE: GalleryExample = {
   id: "scenarios/mixed-per-axis",
   title: "Mixed per axis",
-  group: "Scenarios",
   render(host) {
     const selection: SceneObject[] = [
       { name: "Crate A", position: { x: 2, y: 1, z: -4 } },
@@ -96,7 +94,5 @@ export const MIXED_PER_AXIS_EXAMPLE: GalleryExample = {
 
     root.append(hint, field, readout);
     host.append(root);
-
-    return () => root.remove();
   }
 };

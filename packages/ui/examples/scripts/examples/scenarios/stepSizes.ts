@@ -14,16 +14,9 @@ const kNumberSteps = [1, 0.1, 0.01];
 const kSliderSteps = [1, 0.1, 0.01];
 const kRangeSteps = [1, 0.5];
 
-/**
- * The same three controls, several `step` values apart. `step` alone governs three things at
- * once: display precision, how far one scrub pixel moves the value, and, for a track control, how
- * many stops it has to land on. Seeing that side by side is the point; a single example per
- * control only ever shows one step at a time.
- */
 export const STEP_SIZES_EXAMPLE: GalleryExample = {
   id: "scenarios/step-sizes",
   title: "Step sizes",
-  group: "Scenarios",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
@@ -41,8 +34,6 @@ export const STEP_SIZES_EXAMPLE: GalleryExample = {
     );
 
     host.append(root);
-
-    return () => root.remove();
   }
 };
 
@@ -104,10 +95,6 @@ function buildRange(
   return bind(field);
 }
 
-/**
- * The write back every consumer owes a controlled element, on both events
- * since a drag only ever fires `jolly-input` until release.
- */
 function bind<
   TValue,
   TField extends HTMLElement & { value: TValue; }

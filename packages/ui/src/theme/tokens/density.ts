@@ -2,10 +2,7 @@
 import { css } from "lit";
 
 /**
- * Inherited density tokens with fixed 32px icon targets.
- *
- * Row heights lost the 1px control border they used to include, so each preset
- * is 2px shorter than it was. With the container gap the default pitch is 24px.
+ * Icon targets stay 32px; the default row pitch is 24px with the container gap.
  */
 export const densityTokens = css`
   :host {

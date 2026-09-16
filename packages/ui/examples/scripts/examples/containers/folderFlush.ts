@@ -4,7 +4,6 @@ import { createSimpleExample } from "../shared/example.ts";
 export const FOLDER_FLUSH_EXAMPLE = createSimpleExample(
   "containers/folder-flush",
   "Folder (flush)",
-  "Containers",
   () => {
     const host = document.createElement("div");
     host.append(

@@ -13,17 +13,9 @@ const kDensities: Density[] = [
   "comfortable"
 ];
 
-/**
- * Density is verified once per preset here rather than on every component example, which is what
- * caps the verification cost of three presets across a growing catalog.
- *
- * Each preset needs its own scope host, since the tokens declare against `:host`, and a nested
- * pane overriding its parent is exactly the case this has to support.
- */
 export const DENSITY_EXAMPLE: GalleryExample = {
   id: "scenarios/density",
   title: "Density",
-  group: "Scenarios",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
@@ -40,8 +32,6 @@ export const DENSITY_EXAMPLE: GalleryExample = {
     }
 
     host.append(root);
-
-    return () => root.remove();
   }
 };
 

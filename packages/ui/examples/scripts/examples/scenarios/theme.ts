@@ -12,15 +12,9 @@ const kThemes: ThemeMode[] = [
   "dark"
 ];
 
-/**
- * Two panes on one page carrying different themes, which is the property a document level
- * stylesheet could not provide. The `theme` attribute only flips `color-scheme`; every token below
- * resolves through `light-dark()` from there, including the native colour picker's own chrome.
- */
 export const THEME_EXAMPLE: GalleryExample = {
   id: "scenarios/theme",
   title: "Theme",
-  group: "Scenarios",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
@@ -37,8 +31,6 @@ export const THEME_EXAMPLE: GalleryExample = {
     }
 
     host.append(root);
-
-    return () => root.remove();
   }
 };
 

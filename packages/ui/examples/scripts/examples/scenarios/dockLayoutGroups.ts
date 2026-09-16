@@ -8,7 +8,6 @@ const kStorageKey = "gallery-example:dock-layout-groups";
 export const DOCK_LAYOUT_GROUPS_EXAMPLE: GalleryExample = {
   id: "scenarios/dock-layout-groups",
   title: "Dock layout groups",
-  group: "Scenarios",
   render(host) {
     const stage = document.createElement("div");
     stage.className = "dock-layout-stage";
@@ -64,12 +63,6 @@ export const DOCK_LAYOUT_GROUPS_EXAMPLE: GalleryExample = {
 
     stage.append(layout);
     host.append(reset, visible, stage);
-
-    return () => {
-      reset.remove();
-      visible.remove();
-      stage.remove();
-    };
   }
 };
 

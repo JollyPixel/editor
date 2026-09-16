@@ -177,7 +177,7 @@ export const dockStyles = css`
     height: auto;
     border-radius: var(--jolly-radius-md, 6px);
     background: var(--jolly-surface-raised, ${kFallback.controlBg});
-    box-shadow: var(--jolly-shadow-overlay, 0 2px 8px rgb(0 0 0 / 0.3));
+    box-shadow: var(--jolly-shadow-overlay, 0 2px 8px rgb(0 0 0 / 30%));
   }
 
   :host([collapsed]) .content {

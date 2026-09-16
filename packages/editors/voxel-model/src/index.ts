@@ -17,7 +17,7 @@ const leftDock = document.querySelector("jolly-dock[side='left']") as HTMLElemen
 const session = await EditorSession.open();
 (leftPanel as any).setTextureRoom(session.textureRoom);
 
-const runtime = await Runtime.create("#threeRenderer canvas", {
+const runtime = await Runtime.create("#three-renderer canvas", {
   focusCanvas: false
 });
 

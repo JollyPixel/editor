@@ -5,7 +5,6 @@ import { StatsRecorder } from "../../../../src/stats/StatsRecorder.ts";
 export const STATS_CYCLE_EXAMPLE: GalleryExample = {
   id: "scenarios/stats-cycle",
   title: "Stats cycle",
-  group: "Scenarios",
   render(host) {
     const recorder = new StatsRecorder();
     const started = performance.now();
@@ -32,9 +31,6 @@ export const STATS_CYCLE_EXAMPLE: GalleryExample = {
     }
     frame = requestAnimationFrame(update);
 
-    return () => {
-      cancelAnimationFrame(frame);
-      stats.remove();
-    };
+    return () => cancelAnimationFrame(frame);
   }
 };

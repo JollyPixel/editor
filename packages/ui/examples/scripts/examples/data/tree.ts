@@ -51,8 +51,22 @@ function sampleNodes(): TreeNode[] {
           locked: false,
           renamable: true,
           children: [
-            { id: "crate", label: "Crate", icon: "check", visible: true, locked: false, renamable: true },
-            { id: "barrel", label: "Barrel", icon: "check", visible: false, locked: false, renamable: true }
+            {
+              id: "crate",
+              label: "Crate",
+              icon: "check",
+              visible: true,
+              locked: false,
+              renamable: true
+            },
+            {
+              id: "barrel",
+              label: "Barrel",
+              icon: "check",
+              visible: false,
+              locked: false,
+              renamable: true
+            }
           ]
         }
       ]
@@ -112,17 +126,30 @@ function buildTree(): Tree {
       tree.expanded.filter((expandedId) => expandedId !== id);
   });
   tree.addEventListener("jolly-toggle-visible", (event) => {
-    tree.nodes = setNodeField(tree.nodes, event.detail.id, "visible", event.detail.visible);
+    tree.nodes = setNodeField(
+      tree.nodes,
+      event.detail.id,
+      "visible",
+      event.detail.visible
+    );
   });
   tree.addEventListener("jolly-toggle-lock", (event) => {
-    tree.nodes = setNodeField(tree.nodes, event.detail.id, "locked", event.detail.locked);
+    tree.nodes = setNodeField(
+      tree.nodes,
+      event.detail.id,
+      "locked",
+      event.detail.locked
+    );
   });
   tree.addEventListener("jolly-rename", (event) => {
     const { id, name } = event.detail;
     tree.nodes = renameNode(tree.nodes, id, name);
   });
   tree.addEventListener("jolly-reparent", (event) => {
-    tree.nodes = resolveReparent({ nodes: tree.nodes, ...event.detail });
+    tree.nodes = resolveReparent({
+      nodes: tree.nodes,
+      ...event.detail
+    });
   });
 
   return tree;
@@ -147,7 +174,6 @@ function renameNode(
   });
 }
 
-/** One checkbox per boolean property, writing straight back onto `tree` on change. */
 function buildOptionsPanel(
   tree: Tree
 ): HTMLElement {
@@ -178,7 +204,6 @@ function buildOptionsPanel(
 export const TREE_EXAMPLE: GalleryExample = {
   id: "data/tree",
   title: "Tree",
-  group: "Data views",
   render(host) {
     const root = document.createElement("div");
     root.className = "tree-demo";
@@ -186,7 +211,5 @@ export const TREE_EXAMPLE: GalleryExample = {
     const tree = buildTree();
     root.append(tree, buildOptionsPanel(tree));
     host.append(root);
-
-    return () => root.remove();
   }
 };

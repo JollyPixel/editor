@@ -14,7 +14,7 @@ export const rangeStyles = css`
     flex: 0 0 auto;
     width: 12px;
     height: 7px;
-    border-inline: 1px solid currentColor;
+    border-inline: 1px solid currentcolor;
     color: var(--jolly-text-muted);
   }
 
@@ -24,6 +24,6 @@ export const rangeStyles = css`
     inset-inline: 0;
     top: 3px;
     height: 1px;
-    background: currentColor;
+    background: currentcolor;
   }
 `;

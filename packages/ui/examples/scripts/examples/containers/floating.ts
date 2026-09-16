@@ -5,7 +5,6 @@ import { pane } from "../shared/containerBuilders.ts";
 export const FLOATING_EXAMPLE = createSimpleExample(
   "containers/floating",
   "Floating",
-  "Containers",
   () => {
     const floating = document.createElement("jolly-floating");
     floating.x = 280;

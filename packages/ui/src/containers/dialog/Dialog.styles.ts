@@ -18,13 +18,13 @@ export const dialogStyles = css`
     border: 0;
     border-radius: var(--jolly-radius-md, 6px);
     background: var(--jolly-surface-raised, ${kFallback.controlBg});
-    box-shadow: var(--jolly-shadow-modal, 0 12px 40px rgb(0 0 0 / 0.4));
+    box-shadow: var(--jolly-shadow-modal, 0 12px 40px rgb(0 0 0 / 40%));
     color: var(--jolly-text, ${kFallback.text});
     font: inherit;
   }
 
   dialog::backdrop {
-    background: rgb(5 10 18 / 0.55);
+    background: rgb(5 10 18 / 55%);
     backdrop-filter: blur(2px);
   }
 

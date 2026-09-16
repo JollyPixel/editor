@@ -21,6 +21,7 @@ export const propertyRowStyles = css`
     align-items: center;
     gap: var(--jolly-space-1, 4px);
     min-height: var(--jolly-row-height, 20px);
+
     /*
      * Match the field's leading inset and collapsible gutter.
      */
@@ -53,6 +54,7 @@ export const propertyRowStyles = css`
     max-width: var(--jolly-label-max-width, 45%);
     color: var(--jolly-text-muted);
     text-align: start;
+
     ${truncate}
     user-select: none;
   }

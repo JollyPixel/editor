@@ -143,6 +143,19 @@ shell:
 /?example=controls/number&chrome=off
 ```
 
+Adding an example:
+
+- Put the module in `examples/scripts/examples/<group>/`, and give it the id `<group>/<name>`. The
+  folder, the id prefix, and the navigation group are the same word, and `groups.ts` maps it to a
+  label. An id outside that list fails to compile.
+- Register it in that folder's `index.ts`, which is the only order the navigation and the manifest
+  sweep read. `manifest.ts` itself never changes.
+- Return a teardown from `render` only for state living outside `host`: timers, subscriptions,
+  listeners on `window` or `document`, and panes mounting themselves on `document.body`. The
+  gallery clears `host` on its own.
+- Keep DOM access inside `render`. The manifest sweep imports every example in Node, where
+  `HTMLElement` does not exist at module scope.
+
 ## Contributors Guide
 
 Read the [contributing guide][contributing] before making changes.

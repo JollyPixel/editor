@@ -5,7 +5,6 @@ import { formatCount } from "../../../../src/index.ts";
 export const MONITOR_EXAMPLE: GalleryExample = {
   id: "monitors/monitor",
   title: "Monitor",
-  group: "Monitors",
   render(host) {
     const state = {
       fps: 60,
@@ -30,10 +29,6 @@ export const MONITOR_EXAMPLE: GalleryExample = {
       draws.value = state.draws;
     }, 500);
 
-    return () => {
-      window.clearInterval(timer);
-      fps.remove();
-      draws.remove();
-    };
+    return () => window.clearInterval(timer);
   }
 };

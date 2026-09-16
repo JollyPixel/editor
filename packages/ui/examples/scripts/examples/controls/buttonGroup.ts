@@ -30,7 +30,6 @@ const kModes = [
 export const BUTTON_GROUP_EXAMPLE: GalleryExample = {
   id: "controls/button-group",
   title: "Button group",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<ButtonGroup<unknown>>(host, {
       create() {

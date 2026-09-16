@@ -6,7 +6,6 @@ import { Checkbox } from "../../../../src/index.ts";
 export const CHECKBOX_EXAMPLE: GalleryExample = {
   id: "controls/checkbox",
   title: "Checkbox",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Checkbox>(host, {
       colored: true,

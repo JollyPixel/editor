@@ -7,13 +7,9 @@ import {
   type Text
 } from "../../../../src/index.ts";
 
-/**
- * A field with an empty label gives its whole row to the value.
- */
 export const UNLABELED_FIELDS_EXAMPLE: GalleryExample = {
   id: "scenarios/unlabeled-fields",
   title: "Unlabeled fields",
-  group: "Scenarios",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
@@ -51,8 +47,6 @@ export const UNLABELED_FIELDS_EXAMPLE: GalleryExample = {
       buildPair()
     );
     host.append(root);
-
-    return () => root.remove();
   }
 };
 
@@ -66,7 +60,6 @@ function buildRow(
   return row;
 }
 
-/** The custom-property shape: two label-less fields sharing one line. */
 function buildPair(): HTMLElement {
   const row = createRow("pair");
   const grid = document.createElement("div");

@@ -12,7 +12,8 @@
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "npm run typecheck && c8 -r html npm run test-only",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
-    "lint": "eslint src test vite vite.config.ts"
+    "lint": "eslint src test vite vite.config.ts && npm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
   },
   "repository": {
     "type": "git",

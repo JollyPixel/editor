@@ -5,7 +5,7 @@ export const spinnerStyles = css`
   :host {
     --jolly-spinner-size: 1em;
     --jolly-spinner-thickness: 2px;
-    --jolly-spinner-color: currentColor;
+    --jolly-spinner-color: currentcolor;
     --jolly-spinner-track: color-mix(
       in srgb,
       var(--jolly-spinner-color) 24%,
@@ -37,6 +37,7 @@ export const spinnerStyles = css`
     0%, 100% {
       opacity: 0.35;
     }
+
     50% {
       opacity: 1;
     }

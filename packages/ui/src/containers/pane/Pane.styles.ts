@@ -54,22 +54,22 @@ export const paneStyles = css`
     background: conic-gradient(
         from 90deg,
         transparent 25%,
-        currentColor 0 50%,
+        currentcolor 0 50%,
         transparent 0 75%,
-        currentColor 0
+        currentcolor 0
       )
       0 / 12px 12px;
     color: var(--jolly-text-on-fill, white);
     content: "";
     opacity: 0.07;
     pointer-events: none;
-    -webkit-mask-image: linear-gradient(to right, black, transparent);
     mask-image: linear-gradient(to right, black, transparent);
   }
 
   .icon {
     position: relative;
     z-index: 1;
+
     --jolly-icon-size: 14px;
   }
 
@@ -79,6 +79,7 @@ export const paneStyles = css`
     flex: 1 1 auto;
     font-weight: 600;
     letter-spacing: 0.08em;
+
     ${truncate}
   }
 
@@ -127,7 +128,7 @@ export const paneStyles = css`
 
   .fold:hover,
   .grip:hover {
-    background: rgb(255 255 255 / 0.15);
+    background: rgb(255 255 255 / 15%);
     opacity: 1;
   }
 
@@ -143,7 +144,7 @@ export const paneStyles = css`
   }
 
   .grip[aria-pressed="true"] {
-    background: rgb(255 255 255 / 0.25);
+    background: rgb(255 255 255 / 25%);
     opacity: 1;
   }
 

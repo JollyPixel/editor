@@ -28,6 +28,7 @@ export const flagsStyles = css`
     background: var(--jolly-control-bg);
     cursor: pointer;
     user-select: none;
+
     ${fillTransition}
   }
 

@@ -17,13 +17,9 @@ const kFields = [
   { path: "map.name", label: "Name", value: "overworld" }
 ];
 
-/**
- * Gallery scenario parameterized for isolated parallel browser tests.
- */
 export const LOCKING_EXAMPLE: GalleryExample = {
   id: "scenarios/locking",
   title: "Locking",
-  group: "Scenarios",
   render(host) {
     const params = new URLSearchParams(location.search);
     const roomName = params.get("room");
@@ -46,9 +42,6 @@ export const LOCKING_EXAMPLE: GalleryExample = {
       binding.element.id = `field-${field.path.replace(".", "-")}`;
     }
 
-    /**
-     * A missing room keeps the manifest sweep independent of the network server.
-     */
     if (roomName === null) {
       presence.update([]);
 

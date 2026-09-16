@@ -92,10 +92,7 @@ export const tabsStyles = css`
   }
 
   :host([orientation="vertical"]) .item::after {
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: auto;
+    inset: 0 0 0 auto;
     width: 2px;
     height: auto;
   }

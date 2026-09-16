@@ -10,14 +10,8 @@ import { customElement } from "lit/decorators.js";
 import { themeStyles } from "../styles/themeStyles.ts";
 
 /**
- * A declarative theme scope host for content with no scope host of its own
- * (`jolly-dialog` is the one container that self-scopes; see
- * docs/guides/theming-and-density.md).
- * Set `theme` or `density` on it directly, the same as any scope host.
- *
- * Declares no `display`: a `:host` rule here would beat a consumer's own
- * `jolly-scope { display: ... }` on specificity regardless of source order,
- * and the right layout role (`contents`, `fixed`, ...) is theirs to pick.
+ * Declarative theme scope host; set `theme` or `density` on it.
+ * No `:host { display }` rule, so the consumer's own rule wins.
  */
 @customElement("jolly-scope")
 export class ScopeHost extends LitElement {

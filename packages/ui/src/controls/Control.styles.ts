@@ -45,6 +45,7 @@ export const controlStyles = css`
   .description {
     min-inline-size: 0;
     color: var(--jolly-text);
+
     ${truncate}
   }
 

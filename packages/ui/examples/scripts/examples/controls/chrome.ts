@@ -9,14 +9,9 @@ const kVariants = [
   "danger"
 ] as const;
 
-/**
- * The three elements that are not fields. They have no value, so the state matrix does not apply:
- * there is nothing to be mixed, modified or reverted.
- */
 export const CHROME_EXAMPLE: GalleryExample = {
   id: "controls/chrome",
   title: "Button, separator, row",
-  group: "Controls",
   render(host) {
     const root = document.createElement("div");
     root.className = "chrome-demo";
@@ -29,8 +24,6 @@ export const CHROME_EXAMPLE: GalleryExample = {
     );
 
     host.append(root);
-
-    return () => root.remove();
   }
 };
 

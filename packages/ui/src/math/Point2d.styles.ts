@@ -13,6 +13,7 @@ export const point2dStyles = css`
     background: var(--jolly-control-bg, transparent);
     cursor: crosshair;
     touch-action: none;
+
     ${fillTransition}
   }
 

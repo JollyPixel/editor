@@ -5,6 +5,5 @@ import { tabs } from "../shared/containerBuilders.ts";
 export const TAB_EXAMPLE = createSimpleExample(
   "containers/tab",
   "Tab",
-  "Containers",
   () => tabs("paint")
 );

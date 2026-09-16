@@ -23,7 +23,6 @@ const kBusyDurationMs = 2_000;
 export const SPINNER_EXAMPLE: GalleryExample = {
   id: "feedback/spinner",
   title: "Spinner",
-  group: "Feedback",
   render(host) {
     const root = document.createElement("div");
     root.className = "spinner-example";
@@ -75,10 +74,7 @@ export const SPINNER_EXAMPLE: GalleryExample = {
     root.append(states, scenario);
     host.append(root);
 
-    return () => {
-      stop();
-      root.remove();
-    };
+    return () => stop();
   }
 };
 

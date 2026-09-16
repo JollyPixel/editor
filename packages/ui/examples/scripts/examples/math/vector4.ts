@@ -6,7 +6,6 @@ import { Vector4 } from "../../../../src/index.ts";
 export const VECTOR4_EXAMPLE: GalleryExample = {
   id: "math/vector4",
   title: "Vector4",
-  group: "Math",
   render(host) {
     return renderStateMatrix<Vector4>(host, {
       liveInput: true,

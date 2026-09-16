@@ -5,10 +5,9 @@ import {
   Controls
 } from "../../../../src/index.ts";
 
-export const CONTROLS_EXAMPLE: GalleryExample = {
+export const SCENE_CONTROLS_EXAMPLE: GalleryExample = {
   id: "controls/scene-controls",
   title: "Scene controls",
-  group: "Controls",
   render(host) {
     const scene = document.createElement("div");
     const controls = new Controls();

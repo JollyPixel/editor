@@ -3,10 +3,10 @@ import {
   themeStyles
 } from "../../../src/index.ts";
 import { manifest } from "../manifest.ts";
+import { groupLabelOf } from "../groups.ts";
 import { exampleStyles } from "../examples/shared/exampleStyles.ts";
 import { shellStyles } from "./styles.ts";
 
-// CONSTANTS
 export class GalleryRoot extends HTMLElement {
   #exampleHost = document.createElement("main");
   #links = new Map<string, HTMLAnchorElement>();
@@ -25,7 +25,7 @@ export class GalleryRoot extends HTMLElement {
     });
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(
-      `${themeStyles.cssText}\n${shellStyles}\n${exampleStyles}`
+      `${themeStyles.cssText}\n${shellStyles.cssText}\n${exampleStyles.cssText}`
     );
     root.adoptedStyleSheets = [sheet];
 
@@ -74,14 +74,15 @@ export class GalleryRoot extends HTMLElement {
   #buildGroups(): HTMLElement[] {
     const groups = new Map<string, HTMLElementTagNameMap["jolly-folder"]>();
     for (const example of manifest) {
-      let folder = groups.get(example.group);
+      const label = groupLabelOf(example.id);
+      let folder = groups.get(label);
       if (folder === undefined) {
         folder = document.createElement("jolly-folder");
-        folder.label = example.group;
+        folder.label = label;
         const nav = document.createElement("nav");
-        nav.setAttribute("aria-label", `${example.group} examples`);
+        nav.setAttribute("aria-label", `${label} examples`);
         folder.append(nav);
-        groups.set(example.group, folder);
+        groups.set(label, folder);
       }
 
       folder.querySelector("nav")?.append(

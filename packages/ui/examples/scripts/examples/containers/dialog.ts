@@ -14,7 +14,6 @@ import {
 export const DIALOG_EXAMPLE: GalleryExample = {
   id: "containers/dialog",
   title: "Dialog",
-  group: "Containers",
   render(host) {
     const root = document.createElement("div");
     root.className = "chrome-row";
@@ -72,7 +71,5 @@ export const DIALOG_EXAMPLE: GalleryExample = {
 
     root.append(open, confirm, prompt, openDefault, dialog, defaultAction);
     host.append(root);
-
-    return () => root.remove();
   }
 };

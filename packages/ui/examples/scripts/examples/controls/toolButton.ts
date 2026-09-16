@@ -5,7 +5,6 @@ import { onFieldChange } from "../../../../src/index.ts";
 export const TOOL_BUTTON_EXAMPLE = createSimpleExample(
   "controls/tool-button",
   "Tool button",
-  "Controls",
   () => {
     const root = document.createElement("div");
     root.className = "chrome-demo";

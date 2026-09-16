@@ -1,149 +1,42 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "./types.ts";
+import type { GalleryGroup } from "./groups.ts";
 
-import { TOKENS_EXAMPLE } from "./examples/tokens.ts";
-import { PEER_COLORS_EXAMPLE } from "./examples/peerColors.ts";
-import { PRESENCE_EXAMPLE } from "./examples/presence.ts";
-import { TEXT_EXAMPLE } from "./examples/controls/text.ts";
-import { NUMBER_EXAMPLE } from "./examples/controls/number.ts";
-import { CHECKBOX_EXAMPLE } from "./examples/controls/checkbox.ts";
-import { SLIDER_EXAMPLE } from "./examples/controls/slider.ts";
-import { RANGE_EXAMPLE } from "./examples/controls/range.ts";
-import { FLAGS_EXAMPLE } from "./examples/controls/flags.ts";
-import { SELECT_EXAMPLE } from "./examples/controls/select.ts";
-import {
-  COLOR_EXAMPLE,
-  COLOR_ALPHA_EXAMPLE
-} from "./examples/controls/color.ts";
-import { COLOR_PICKER_EXAMPLE } from "./examples/controls/colorPicker.ts";
-import { BUTTON_GROUP_EXAMPLE } from "./examples/controls/buttonGroup.ts";
-import { CONTROLS_EXAMPLE } from "./examples/controls/controls.ts";
-import { CHROME_EXAMPLE } from "./examples/controls/chrome.ts";
-import { TOOL_BUTTON_EXAMPLE } from "./examples/controls/toolButton.ts";
-import { PANE_EXAMPLE } from "./examples/containers/pane.ts";
-import { FOLDER_EXAMPLE } from "./examples/containers/folder.ts";
-import { FOLDER_FLUSH_EXAMPLE } from "./examples/containers/folderFlush.ts";
-import { FOLDER_COLLAPSIBLE_EXAMPLE } from "./examples/containers/folderCollapsible.ts";
-import { TABS_EXAMPLE } from "./examples/containers/tabs.ts";
-import { TAB_EXAMPLE } from "./examples/containers/tab.ts";
-import { TABS_CLOSABLE_EXAMPLE } from "./examples/containers/tabsClosable.ts";
-import { TABS_DYNAMIC_EXAMPLE } from "./examples/containers/tabsDynamic.ts";
-import { DOCK_EXAMPLE } from "./examples/containers/dock.ts";
-import { FLOATING_EXAMPLE } from "./examples/containers/floating.ts";
-import { DIALOG_EXAMPLE } from "./examples/containers/dialog.ts";
-import { TOOLBAR_EXAMPLE } from "./examples/containers/toolbar.ts";
-import { RAIL_EXAMPLE } from "./examples/containers/rail.ts";
-import { DENSITY_EXAMPLE } from "./examples/scenarios/density.ts";
-import { THEME_EXAMPLE } from "./examples/scenarios/theme.ts";
-import { NUMERIC_ENTRY_EXAMPLE } from "./examples/scenarios/numericEntry.ts";
-import { STEP_SIZES_EXAMPLE } from "./examples/scenarios/stepSizes.ts";
-import { COLOR_POPOVER_EXAMPLE } from "./examples/scenarios/colorPopover.ts";
-import { REORDER_PERSIST_EXAMPLE } from "./examples/scenarios/reorderPersistence.ts";
-import { DOCK_RESIZE_EXAMPLE } from "./examples/scenarios/dockResize.ts";
-import { DOCK_LAYOUT_EXAMPLE } from "./examples/scenarios/dockLayout.ts";
-import { DOCK_LAYOUT_GROUPS_EXAMPLE } from "./examples/scenarios/dockLayoutGroups.ts";
-import { DOCK_LAYOUT_TRANSPARENT_EXAMPLE } from "./examples/scenarios/dockLayoutTransparent.ts";
-import { DIALOG_ESCAPE_EXAMPLE } from "./examples/scenarios/dialogEscape.ts";
-import { LOCKING_EXAMPLE } from "./examples/scenarios/locking.ts";
-import {
-  EDITOR_EXAMPLE,
-  EDITOR_STATES_EXAMPLE
-} from "./examples/scenarios/editor.ts";
-import { MONITOR_EXAMPLE } from "./examples/monitors/monitor.ts";
-import { GRAPH_EXAMPLE } from "./examples/monitors/graph.ts";
-import { FACADE_PARITY_EXAMPLE } from "./examples/scenarios/facadeParity.ts";
-import { STATS_CYCLE_EXAMPLE } from "./examples/scenarios/statsCycle.ts";
-import { PROGRESS_EXAMPLE } from "./examples/feedback/progress.ts";
-import { SPINNER_EXAMPLE } from "./examples/feedback/spinner.ts";
-import { LOG_EXAMPLE } from "./examples/feedback/log.ts";
-import {
-  VECTOR2_EXAMPLE,
-  VECTOR2_XZ_EXAMPLE
-} from "./examples/math/vector2.ts";
-import { VECTOR3_EXAMPLE } from "./examples/math/vector3.ts";
-import { VECTOR4_EXAMPLE } from "./examples/math/vector4.ts";
-import { QUATERNION_EXAMPLE } from "./examples/math/quaternion.ts";
-import {
-  TRANSFORM_EXAMPLE,
-  TRANSFORM_STACKED_EXAMPLE
-} from "./examples/math/transform.ts";
-import { POINT2D_EXAMPLE } from "./examples/math/point2d.ts";
-import { MIXED_PER_AXIS_EXAMPLE } from "./examples/scenarios/mixedPerAxis.ts";
-import { UNLABELED_FIELDS_EXAMPLE } from "./examples/scenarios/unlabeledFields.ts";
-import { TREE_EXAMPLE } from "./examples/data/tree.ts";
+import { TOKENS_EXAMPLE } from "./examples/foundation/tokens.ts";
+import { FOUNDATION_EXAMPLES } from "./examples/foundation/index.ts";
+import { PEER_EXAMPLES } from "./examples/peer/index.ts";
+import { CONTROLS_EXAMPLES } from "./examples/controls/index.ts";
+import { CONTAINERS_EXAMPLES } from "./examples/containers/index.ts";
+import { DATA_EXAMPLES } from "./examples/data/index.ts";
+import { SCENARIOS_EXAMPLES } from "./examples/scenarios/index.ts";
+import { MONITORS_EXAMPLES } from "./examples/monitors/index.ts";
+import { FEEDBACK_EXAMPLES } from "./examples/feedback/index.ts";
+import { MATH_EXAMPLES } from "./examples/math/index.ts";
+
+// CONSTANTS
+const kExamplesByGroup: Record<GalleryGroup, readonly GalleryExample[]> = {
+  foundation: FOUNDATION_EXAMPLES,
+  peer: PEER_EXAMPLES,
+  controls: CONTROLS_EXAMPLES,
+  containers: CONTAINERS_EXAMPLES,
+  data: DATA_EXAMPLES,
+  scenarios: SCENARIOS_EXAMPLES,
+  monitors: MONITORS_EXAMPLES,
+  feedback: FEEDBACK_EXAMPLES,
+  math: MATH_EXAMPLES
+};
 
 /**
- * The navigation and E2E sweep derive from this list.
+ * The navigation and E2E sweep derive from this list, in group declaration order.
  */
-export const manifest: readonly GalleryExample[] = [
-  TOKENS_EXAMPLE,
-  PEER_COLORS_EXAMPLE,
-  PRESENCE_EXAMPLE,
-  TEXT_EXAMPLE,
-  NUMBER_EXAMPLE,
-  CHECKBOX_EXAMPLE,
-  SLIDER_EXAMPLE,
-  RANGE_EXAMPLE,
-  FLAGS_EXAMPLE,
-  SELECT_EXAMPLE,
-  COLOR_EXAMPLE,
-  COLOR_ALPHA_EXAMPLE,
-  COLOR_PICKER_EXAMPLE,
-  BUTTON_GROUP_EXAMPLE,
-  CONTROLS_EXAMPLE,
-  CHROME_EXAMPLE,
-  TOOL_BUTTON_EXAMPLE,
-  PANE_EXAMPLE,
-  FOLDER_EXAMPLE,
-  FOLDER_FLUSH_EXAMPLE,
-  FOLDER_COLLAPSIBLE_EXAMPLE,
-  TABS_EXAMPLE,
-  TAB_EXAMPLE,
-  TABS_CLOSABLE_EXAMPLE,
-  TABS_DYNAMIC_EXAMPLE,
-  DOCK_EXAMPLE,
-  FLOATING_EXAMPLE,
-  DIALOG_EXAMPLE,
-  TOOLBAR_EXAMPLE,
-  RAIL_EXAMPLE,
-  TREE_EXAMPLE,
-  DENSITY_EXAMPLE,
-  THEME_EXAMPLE,
-  NUMERIC_ENTRY_EXAMPLE,
-  STEP_SIZES_EXAMPLE,
-  COLOR_POPOVER_EXAMPLE,
-  REORDER_PERSIST_EXAMPLE,
-  DOCK_RESIZE_EXAMPLE,
-  DOCK_LAYOUT_EXAMPLE,
-  DOCK_LAYOUT_GROUPS_EXAMPLE,
-  DOCK_LAYOUT_TRANSPARENT_EXAMPLE,
-  DIALOG_ESCAPE_EXAMPLE,
-  LOCKING_EXAMPLE,
-  EDITOR_EXAMPLE,
-  EDITOR_STATES_EXAMPLE,
-  FACADE_PARITY_EXAMPLE,
-  STATS_CYCLE_EXAMPLE,
-  MIXED_PER_AXIS_EXAMPLE,
-  UNLABELED_FIELDS_EXAMPLE,
-  MONITOR_EXAMPLE,
-  GRAPH_EXAMPLE,
-  PROGRESS_EXAMPLE,
-  SPINNER_EXAMPLE,
-  LOG_EXAMPLE,
-  VECTOR2_EXAMPLE,
-  VECTOR2_XZ_EXAMPLE,
-  VECTOR3_EXAMPLE,
-  VECTOR4_EXAMPLE,
-  QUATERNION_EXAMPLE,
-  TRANSFORM_EXAMPLE,
-  TRANSFORM_STACKED_EXAMPLE,
-  POINT2D_EXAMPLE
-];
+export const manifest: readonly GalleryExample[] = Object
+  .values(kExamplesByGroup)
+  .flat();
 
 export function findExample(
   id: string | null
 ): GalleryExample {
   return manifest.find(
     (example) => example.id === id
-  ) ?? manifest[0];
+  ) ?? TOKENS_EXAMPLE;
 }
