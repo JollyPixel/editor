@@ -1,68 +1,82 @@
 // Import Third-party Dependencies
 import {
   test,
-  expect
+  expect,
+  type Locator,
+  type Page
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "../support/gallery.ts";
+import { openExample } from "../support/gallery.ts";
+import {
+  boxOf,
+  centerOf,
+  hold
+} from "../support/pointer.ts";
+import { styleOf } from "../support/styles.ts";
 
-async function openTree(
-  page: Parameters<typeof gotoGallery>[0]
-): Promise<void> {
-  await gotoGallery(page, {
-    example: "data/tree",
-    chrome: "off"
-  });
+// CONSTANTS
+const kTree = "jolly-tree";
+
+function rowOf(
+  page: Page,
+  id: string
+): Locator {
+  return page.locator(`${kTree} .row[data-id="${id}"]`);
 }
 
-async function rootIds(
-  page: Parameters<typeof gotoGallery>[0]
+function rootIds(
+  page: Page
 ): Promise<string[]> {
-  return page.locator("jolly-tree").evaluate((element) => {
-    const tree = element as HTMLElement & {
-      nodes: Array<{ id: string; }>;
-    };
-
-    return tree.nodes.map((node) => node.id);
-  });
+  return page.locator(kTree).evaluate(
+    (tree: HTMLElementTagNameMap["jolly-tree"]) => tree.nodes.map((node) => node.id)
+  );
 }
 
-test.describe("Tree badges", () => {
-  test("renders one labelled dot per badge, in order", async({ page }) => {
-    await gotoGallery(page, {
-      example: "data/tree",
-      chrome: "off"
-    });
+async function holdBelowLastRow(
+  page: Page,
+  source: string,
+  target: string
+): Promise<void> {
+  const [rows, below] = await Promise.all([
+    boxOf(page.locator(`${kTree} .rows`)),
+    boxOf(rowOf(page, target))
+  ]);
 
-    const badges = page.locator('jolly-tree .row[data-id="camera"] .badge');
+  await hold(page, await centerOf(rowOf(page, source).locator(".grip")), {
+    x: rows.x + 1,
+    y: below.y + below.height + 8
+  }, 1);
+}
+
+async function cancelDrag(
+  page: Page
+): Promise<void> {
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+}
+
+test.describe("Tree", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "data/tree");
+  });
+
+  test("renders ordered badges and one indent unit per ancestor", async({ page }) => {
+    const badges = rowOf(page, "camera").locator(".badge");
 
     await expect(badges).toHaveCount(2);
     await expect(badges.nth(0)).toHaveAttribute("aria-label", "Ada");
     await expect(badges.nth(1)).toHaveAttribute("aria-label", "Lin");
-    expect(
-      await badges.nth(0).evaluate((element) => getComputedStyle(element)
-        .backgroundColor)
-    ).toBe("rgb(224, 86, 122)");
+    await expect(badges.nth(0)).toHaveCSS("background-color", "rgb(224, 86, 122)");
+    await expect(rowOf(page, "scene").locator(".badges")).toHaveCount(0);
+
+    expect(await styleOf(rowOf(page, "scene"), "width", "::before")).toBe("0px");
+    expect(await styleOf(rowOf(page, "camera"), "width", "::before")).toBe("16px");
   });
 
-  test("renders no badge container on a row without badges", async({ page }) => {
-    await gotoGallery(page, {
-      example: "data/tree",
-      chrome: "off"
-    });
-
-    await expect(
-      page.locator('jolly-tree .row[data-id="scene"] .badges')
-    ).toHaveCount(0);
-  });
-});
-
-test.describe("Tree interactions", () => {
   test("selects with modifiers and keeps one roving focus row", async({ page }) => {
-    await openTree(page);
-    const camera = page.locator('jolly-tree .row[data-id="camera"]');
-    const props = page.locator('jolly-tree .row[data-id="props"]');
+    const camera = rowOf(page, "camera");
+    const props = rowOf(page, "props");
 
     await camera.click();
     await props.click({ modifiers: ["Control"] });
@@ -70,30 +84,27 @@ test.describe("Tree interactions", () => {
     await expect(camera).toHaveAttribute("aria-selected", "true");
     await expect(props).toHaveAttribute("aria-selected", "true");
     await expect(camera).toHaveAttribute("tabindex", "0");
-    await expect(page.locator('jolly-tree .row[tabindex="0"]')).toHaveCount(1);
+    await expect(page.locator(`${kTree} .row[tabindex="0"]`)).toHaveCount(1);
   });
 
   test("navigates expansion and activation from the keyboard", async({ page }) => {
-    await openTree(page);
-    const scene = page.locator('jolly-tree .row[data-id="scene"]');
+    const tree = page.locator(kTree);
+    const scene = rowOf(page, "scene");
+    const camera = rowOf(page, "camera");
+
     await scene.click();
     await scene.press("ArrowRight");
-
-    const camera = page.locator('jolly-tree .row[data-id="camera"]');
     await expect(camera).toHaveAttribute("tabindex", "0");
-    await page.locator("jolly-tree").evaluate((element) => {
+
+    await tree.evaluate((element) => {
       element.addEventListener("jolly-activate", (event) => {
-        element.setAttribute(
-          "data-activated",
-          (event as CustomEvent<{ id: string; }>).detail.id
-        );
+        if (event instanceof CustomEvent) {
+          element.setAttribute("data-activated", event.detail.id);
+        }
       }, { once: true });
     });
     await camera.press("Enter");
-    await expect(page.locator("jolly-tree")).toHaveAttribute(
-      "data-activated",
-      "camera"
-    );
+    await expect(tree).toHaveAttribute("data-activated", "camera");
 
     await scene.click();
     await scene.press("ArrowLeft");
@@ -101,28 +112,23 @@ test.describe("Tree interactions", () => {
   });
 
   test("commits and cancels rename while restoring row focus", async({ page }) => {
-    await openTree(page);
-    const camera = page.locator('jolly-tree .row[data-id="camera"]');
+    const camera = rowOf(page, "camera");
     await camera.dblclick();
-    const cameraInput = camera.locator(".rename");
-    await cameraInput.fill("Lens");
-    await cameraInput.press("Enter");
-
+    await camera.locator(".rename").fill("Lens");
+    await camera.locator(".rename").press("Enter");
     await expect(camera.locator(".label")).toHaveText("Lens");
     await expect(camera).toBeFocused();
 
-    const crate = page.locator('jolly-tree .row[data-id="crate"]');
+    const crate = rowOf(page, "crate");
     await crate.dblclick();
-    const crateInput = crate.locator(".rename");
-    await crateInput.fill("Discarded");
-    await crateInput.press("Escape");
+    await crate.locator(".rename").fill("Discarded");
+    await crate.locator(".rename").press("Escape");
     await expect(crate.locator(".label")).toHaveText("Crate");
     await expect(crate).toBeFocused();
   });
 
   test("reparents with the keyboard move state", async({ page }) => {
-    await openTree(page);
-    const lighting = page.locator('jolly-tree .row[data-id="lighting"]');
+    const lighting = rowOf(page, "lighting");
     await lighting.click();
     await lighting.press(" ");
     await lighting.press("ArrowRight");
@@ -132,177 +138,82 @@ test.describe("Tree interactions", () => {
   });
 
   test("grip dragging commits an inside drop", async({ page }) => {
-    await openTree(page);
-    const grip = page.locator('jolly-tree .row[data-id="camera"] .grip');
-    const lighting = page.locator('jolly-tree .row[data-id="lighting"]');
-    const source = await grip.boundingBox();
-    const target = await lighting.boundingBox();
-    expect(source).not.toBeNull();
-    expect(target).not.toBeNull();
-
-    await page.mouse.move(
-      source!.x + source!.width / 2,
-      source!.y + source!.height / 2
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      target!.x + target!.width / 2,
-      target!.y + target!.height / 2
+    await hold(
+      page,
+      await centerOf(rowOf(page, "camera").locator(".grip")),
+      await centerOf(rowOf(page, "lighting")),
+      1
     );
     await page.mouse.up();
 
-    await expect(page.locator('jolly-tree .row[data-id="camera"]')).toHaveCount(0);
-  });
-
-  test("whole-row cancellation and disconnection clean up the gesture", async({ page }) => {
-    await openTree(page);
-    const camera = page.locator('jolly-tree .row[data-id="camera"]');
-    const box = await camera.boundingBox();
-    expect(box).not.toBeNull();
-    await page.mouse.move(box!.x + 40, box!.y + box!.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box!.x + 50, box!.y + box!.height / 2);
-    await expect(camera).toHaveAttribute("data-dragging", "true");
-    await camera.dispatchEvent("pointercancel", {
-      pointerId: 1,
-      clientX: box!.x + 50,
-      clientY: box!.y + box!.height / 2
-    });
-    await expect(camera).not.toHaveAttribute("data-dragging", "true");
-    expect(await rootIds(page)).toEqual(["scene", "lighting"]);
-
-    await page.mouse.up();
-    await page.mouse.move(box!.x + 40, box!.y + box!.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box!.x + 50, box!.y + box!.height / 2);
-    await page.locator("jolly-tree").evaluate((element) => element.remove());
-    await expect(page.locator("html")).not.toHaveClass(/jolly-tree-dragging/);
-    await page.mouse.up();
+    await expect(rowOf(page, "camera")).toHaveCount(0);
   });
 
   test("edge dragging uses indentation to promote a nested row", async({ page }) => {
-    await openTree(page);
-    const grip = page.locator('jolly-tree .row[data-id="crate"] .grip');
-    const rows = page.locator("jolly-tree .rows");
-    const lighting = page.locator('jolly-tree .row[data-id="lighting"]');
-    const source = await grip.boundingBox();
-    const container = await rows.boundingBox();
-    const target = await lighting.boundingBox();
-    expect(source).not.toBeNull();
-    expect(container).not.toBeNull();
-    expect(target).not.toBeNull();
-
-    await page.mouse.move(
-      source!.x + source!.width / 2,
-      source!.y + source!.height / 2
-    );
-    await page.mouse.down();
-    await page.mouse.move(container!.x + 1, target!.y + target!.height + 8);
+    await holdBelowLastRow(page, "crate", "lighting");
     await page.mouse.up();
 
     expect(await rootIds(page)).toEqual(["scene", "lighting", "crate"]);
   });
 
-  test("dragging the last row past the bottom edge keeps the drop line there", async({ page }) => {
-    await openTree(page);
-    await page.locator("jolly-tree").evaluate((element) => {
-      const tree = element as HTMLElement & { nodes: Array<{ id: string; }>; };
-      tree.nodes = [...tree.nodes].reverse();
+  test("the drop line stays on the hovered row, never on a descendant", async({ page }) => {
+    await test.step("below the last root row", async() => {
+      await holdBelowLastRow(page, "lighting", "lighting");
+      await expect(rowOf(page, "lighting")).toHaveAttribute("data-drop", "below");
+      await expect(rowOf(page, "barrel")).not.toHaveAttribute("data-drop", /.+/);
+      await cancelDrag(page);
     });
 
-    const grip = page.locator('jolly-tree .row[data-id="barrel"] .grip');
-    const barrel = page.locator('jolly-tree .row[data-id="barrel"]');
-    const crate = page.locator('jolly-tree .row[data-id="crate"]');
-    const rows = page.locator("jolly-tree .rows");
-    const source = await grip.boundingBox();
-    const target = await barrel.boundingBox();
-    const container = await rows.boundingBox();
-    expect(source).not.toBeNull();
-    expect(target).not.toBeNull();
-    expect(container).not.toBeNull();
-
-    await page.mouse.move(
-      source!.x + source!.width / 2,
-      source!.y + source!.height / 2
-    );
-    await page.mouse.down();
-    await page.mouse.move(container!.x + 1, target!.y + target!.height + 8);
-
-    await expect(barrel).toHaveAttribute("data-drop", "below");
-    await expect(crate).not.toHaveAttribute("data-drop", /.+/);
-
-    await page.keyboard.press("Escape");
-    await page.mouse.up();
-  });
-
-  test("dragging the last root row past the bottom edge keeps the drop line there", async({ page }) => {
-    await openTree(page);
-    const grip = page.locator('jolly-tree .row[data-id="lighting"] .grip');
-    const lighting = page.locator('jolly-tree .row[data-id="lighting"]');
-    const barrel = page.locator('jolly-tree .row[data-id="barrel"]');
-    const rows = page.locator("jolly-tree .rows");
-    const source = await grip.boundingBox();
-    const target = await lighting.boundingBox();
-    const container = await rows.boundingBox();
-    expect(source).not.toBeNull();
-    expect(target).not.toBeNull();
-    expect(container).not.toBeNull();
-
-    await page.mouse.move(
-      source!.x + source!.width / 2,
-      source!.y + source!.height / 2
-    );
-    await page.mouse.down();
-    await page.mouse.move(container!.x + 1, target!.y + target!.height + 8);
-
-    await expect(lighting).toHaveAttribute("data-drop", "below");
-    await expect(barrel).not.toHaveAttribute("data-drop", /.+/);
-
-    await page.keyboard.press("Escape");
-    await page.mouse.up();
-  });
-
-  test("hovering a branch's own row keeps the drop line there, not at its last child", async({ page }) => {
-    await openTree(page);
-    const grip = page.locator('jolly-tree .row[data-id="lighting"] .grip');
-    const scene = page.locator('jolly-tree .row[data-id="scene"]');
-    const barrel = page.locator('jolly-tree .row[data-id="barrel"]');
-    const source = await grip.boundingBox();
-    const target = await scene.boundingBox();
-    expect(source).not.toBeNull();
-    expect(target).not.toBeNull();
-
-    await page.mouse.move(
-      source!.x + source!.width / 2,
-      source!.y + source!.height / 2
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      target!.x + target!.width / 2,
-      target!.y + target!.height - 2
-    );
-
-    await expect(scene).toHaveAttribute("data-drop", "below");
-    await expect(barrel).not.toHaveAttribute("data-drop", /.+/);
-
-    await page.keyboard.press("Escape");
-    await page.mouse.up();
-  });
-});
-
-test.describe("Tree indent guides", () => {
-  test("widens the guide band by one indent unit per ancestor", async({ page }) => {
-    await gotoGallery(page, {
-      example: "data/tree",
-      chrome: "off"
+    await test.step("on a branch's own row", async() => {
+      const scene = await boxOf(rowOf(page, "scene"));
+      await hold(page, await centerOf(rowOf(page, "lighting").locator(".grip")), {
+        x: scene.x + (scene.width / 2),
+        y: scene.y + scene.height - 2
+      }, 1);
+      await expect(rowOf(page, "scene")).toHaveAttribute("data-drop", "below");
+      await expect(rowOf(page, "barrel")).not.toHaveAttribute("data-drop", /.+/);
+      await cancelDrag(page);
     });
 
-    const rootWidth = await page.locator('jolly-tree .row[data-id="scene"]')
-      .evaluate((element) => getComputedStyle(element, "::before").width);
-    const nestedWidth = await page.locator('jolly-tree .row[data-id="camera"]')
-      .evaluate((element) => getComputedStyle(element, "::before").width);
+    await test.step("below the last nested row", async() => {
+      await page.locator(kTree).evaluate(
+        (tree: HTMLElementTagNameMap["jolly-tree"]) => {
+          tree.nodes = [...tree.nodes].reverse();
+        }
+      );
+      await holdBelowLastRow(page, "barrel", "barrel");
+      await expect(rowOf(page, "barrel")).toHaveAttribute("data-drop", "below");
+      await expect(rowOf(page, "crate")).not.toHaveAttribute("data-drop", /.+/);
+      await cancelDrag(page);
+    });
+  });
 
-    expect(rootWidth).toBe("0px");
-    expect(nestedWidth).toBe("16px");
+  test("whole-row cancellation and disconnection clean up the gesture", async({ page }) => {
+    const camera = rowOf(page, "camera");
+    const box = await boxOf(camera);
+    const from = {
+      x: box.x + 40,
+      y: box.y + (box.height / 2)
+    };
+    const to = {
+      x: from.x + 10,
+      y: from.y
+    };
+
+    await hold(page, from, to, 1);
+    await expect(camera).toHaveAttribute("data-dragging", "true");
+    await camera.dispatchEvent("pointercancel", {
+      pointerId: 1,
+      clientX: to.x,
+      clientY: to.y
+    });
+    await expect(camera).not.toHaveAttribute("data-dragging", "true");
+    expect(await rootIds(page)).toEqual(["scene", "lighting"]);
+    await page.mouse.up();
+
+    await hold(page, from, to, 1);
+    await page.locator(kTree).evaluate((element) => element.remove());
+    await expect(page.locator("html")).not.toHaveClass(/jolly-tree-dragging/);
+    await page.mouse.up();
   });
 });

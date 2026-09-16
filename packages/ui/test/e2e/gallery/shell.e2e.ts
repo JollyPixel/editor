@@ -2,7 +2,8 @@
 import {
   test,
   expect,
-  type Locator
+  type Locator,
+  type Page
 } from "@playwright/test";
 
 // Import Internal Dependencies
@@ -12,13 +13,97 @@ import {
   gotoGallery,
   reloadGallery
 } from "../support/gallery.ts";
+import {
+  boxOf,
+  widthOf
+} from "../support/pointer.ts";
+import {
+  resolvedColorOf,
+  styleOf
+} from "../support/styles.ts";
 
-/**
- * Every later test opts out of the shell with `chrome=off`, so it keeps a
- * suite of its own: a nav or router regression fails here by name instead of
- * reddening every component report.
- */
+// CONSTANTS
+const [kFirst, kSecond] = manifest;
+const kGroups = Map.groupBy(manifest, (example) => example.id.split("/")[0]);
+
+function navLink(
+  page: Page,
+  id: string
+): Locator {
+  return page.locator(`gallery-root nav a[data-example-id="${id}"]`);
+}
+
+async function selectInPage(
+  page: Page,
+  id: string,
+  title: string
+): Promise<void> {
+  await navLink(page, id).evaluate((link: HTMLAnchorElement) => link.click());
+  await expect(page).toHaveTitle(`${title} | jolly-pixel/ui`);
+}
+
+async function headerLayout(
+  pane: Locator
+) {
+  const [title, actions, theme, density] = await Promise.all([
+    boxOf(pane.locator(".title")),
+    boxOf(pane.locator(".actions")),
+    boxOf(pane.locator("jolly-button-group")),
+    boxOf(pane.locator("jolly-select"))
+  ]);
+
+  return {
+    titleBottom: title.y + title.height,
+    actionsTop: actions.y,
+    themeTop: theme.y,
+    themeWidth: theme.width,
+    densityTop: density.y,
+    densityWidth: density.width
+  };
+}
+
 test.describe("gallery shell", () => {
+  test("renders one nav entry per example and falls back to the first", async({ page }) => {
+    const current = page.locator("gallery-root nav a[aria-current='page']");
+
+    await gotoGallery(page);
+    await expect(page.locator("gallery-root nav a"))
+      .toHaveText(manifest.map((example) => example.title));
+    await expect(current).toHaveText(kFirst.title);
+
+    await gotoGallery(page, { example: "does/not-exist" });
+    await expect(current).toHaveText(kFirst.title);
+
+    await gotoGallery(page, { example: kSecond.id });
+    await expect(current).toHaveText(kSecond.title);
+    await expect(page.locator("gallery-root .peer-row")).toBeVisible();
+  });
+
+  test("selecting an entry tears down, swaps content, and history restores it", async({ page }) => {
+    await gotoGallery(page);
+    await expect(page.locator("gallery-root .token-grid")).toBeVisible();
+    expect(await disposedIds(page)).toEqual([]);
+
+    await navLink(page, kSecond.id).click();
+    await expect(page.locator("gallery-root .peer-row")).toBeVisible();
+    await expect(page.locator("gallery-root .token-grid")).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.get("example")).toBe(kSecond.id);
+    expect(await disposedIds(page)).toEqual([kFirst.id]);
+
+    await page.goBack();
+    await expect(page.locator("gallery-root .token-grid")).toBeVisible();
+  });
+
+  test("chrome=off renders the example with no nav", async({ page }) => {
+    await gotoGallery(page, {
+      example: kFirst.id,
+      chrome: "off"
+    });
+
+    await expect(page.locator("gallery-root nav")).toHaveCount(0);
+    await expect(page.locator("gallery-root .token-grid")).toBeVisible();
+  });
+
   test("scopes full-size pane CSS to its navigation pane", async({ page }) => {
     await gotoGallery(page, { example: "containers/pane" });
 
@@ -27,275 +112,111 @@ test.describe("gallery shell", () => {
       .toHaveCount(0);
   });
 
-  test("uses on-fill text in navigation pane actions", async({ page }) => {
+  test("the navigation header uses on-fill text and wraps its actions", async({ page }) => {
     await gotoGallery(page);
 
     const pane = page.locator("gallery-root .gallery-pane");
-    const headerColor = await pane.locator(":scope > .header")
-      .evaluate((element) => getComputedStyle(element).color);
-    const actionText = [
-      pane.locator("jolly-button-group .segment").first(),
-      pane.locator("jolly-select select")
-    ];
+    const headerColor = await styleOf(pane.locator(":scope > .header"), "color");
+    await expect(pane.locator("jolly-button-group .segment").first())
+      .toHaveCSS("color", headerColor);
+    await expect(pane.locator("jolly-select select")).toHaveCSS("color", headerColor);
 
-    for (const target of actionText) {
-      await expect(target).toHaveCSS("color", headerColor);
+    const wide = await headerLayout(pane);
+    expect(wide.titleBottom).toBeLessThanOrEqual(wide.actionsTop);
+    expect(wide.themeTop).toBe(wide.densityTop);
+
+    await page.locator("gallery-root jolly-dock").evaluate((element: HTMLElement) => {
+      element.style.width = "160px";
+    });
+    await expect.poll(() => widthOf(page.locator("gallery-root jolly-dock"))).toBe(160);
+    const narrow = await headerLayout(pane);
+    expect(narrow.titleBottom).toBeLessThanOrEqual(narrow.actionsTop);
+    expect(narrow.densityTop).toBeGreaterThan(narrow.themeTop);
+
+    for (const layout of [wide, narrow]) {
+      expect(layout.themeWidth).toBeGreaterThanOrEqual(96);
+      expect(layout.densityWidth).toBeGreaterThanOrEqual(96);
     }
   });
 
-  test("places the navigation title above responsive actions", async({ page }) => {
-    await gotoGallery(page);
-
-    const pane = page.locator("gallery-root .gallery-pane");
-    const initial = await galleryHeaderLayout(pane);
-
-    expect(initial.titleBottom).toBeLessThanOrEqual(initial.actionsTop);
-    expect(initial.themeTop).toBe(initial.densityTop);
-    expect(initial.themeWidth).toBeGreaterThanOrEqual(96);
-    expect(initial.densityWidth).toBeGreaterThanOrEqual(96);
-
-    await page.locator("gallery-root jolly-dock").evaluate((element) => {
-      element.style.width = "160px";
-    });
-    const narrow = await galleryHeaderLayout(pane);
-
-    expect(narrow.titleBottom).toBeLessThanOrEqual(narrow.actionsTop);
-    expect(narrow.densityTop).toBeGreaterThan(narrow.themeTop);
-    expect(narrow.themeWidth).toBeGreaterThanOrEqual(96);
-    expect(narrow.densityWidth).toBeGreaterThanOrEqual(96);
-  });
-
-  test("renders one nav entry per manifest example", async({ page }) => {
-    await gotoGallery(page);
-
-    const links = page.locator("gallery-root nav a");
-    await expect(links).toHaveCount(manifest.length);
-    await expect(links).toHaveText(
-      manifest.map((example) => example.title)
-    );
-  });
-
-  test("selects the first example by default", async({ page }) => {
-    await gotoGallery(page);
-
-    await expect(page.locator("gallery-root nav a[aria-current='page']"))
-      .toHaveText(manifest[0].title);
-  });
-
-  test("a deep link selects the requested entry", async({ page }) => {
-    const target = manifest[1];
-    await gotoGallery(page, { example: target.id });
-
-    await expect(page.locator("gallery-root nav a[aria-current='page']"))
-      .toHaveText(target.title);
-    await expect(page.locator("gallery-root .peer-row")).toBeVisible();
-  });
-
-  test("an unknown example id falls back to the first entry", async({ page }) => {
-    await gotoGallery(page, { example: "does/not-exist" });
-
-    await expect(page.locator("gallery-root nav a[aria-current='page']"))
-      .toHaveText(manifest[0].title);
-  });
-
-  test("selecting an entry swaps the content and updates the url", async({ page }) => {
-    await gotoGallery(page);
-    await expect(page.locator("gallery-root .token-grid")).toBeVisible();
-
-    await page.locator(
-      `gallery-root nav a[data-example-id="${manifest[1].id}"]`
-    ).click();
-
-    await expect(page.locator("gallery-root .peer-row")).toBeVisible();
-    await expect(page.locator("gallery-root .token-grid")).toHaveCount(0);
-    expect(new URL(page.url()).searchParams.get("example")).toBe(manifest[1].id);
-  });
-
-  test("swapping runs the previous teardown first", async({ page }) => {
-    await gotoGallery(page);
-    expect(await disposedIds(page)).toEqual([]);
-
-    await page.locator(
-      `gallery-root nav a[data-example-id="${manifest[1].id}"]`
-    ).click();
-    await expect(page.locator("gallery-root .peer-row")).toBeVisible();
-
-    expect(await disposedIds(page)).toEqual([manifest[0].id]);
-  });
-
-  test("going back restores the previous example", async({ page }) => {
-    await gotoGallery(page);
-    await page.locator(
-      `gallery-root nav a[data-example-id="${manifest[1].id}"]`
-    ).click();
-    await expect(page.locator("gallery-root .peer-row")).toBeVisible();
-
-    await page.goBack();
-
-    await expect(page.locator("gallery-root .token-grid")).toBeVisible();
-  });
-
-  test("chrome=off renders the example with no nav", async({ page }) => {
-    await gotoGallery(page, {
-      example: manifest[0].id,
-      chrome: "off"
-    });
-
-    await expect(page.locator("gallery-root nav")).toHaveCount(0);
-    await expect(page.locator("gallery-root .token-grid")).toBeVisible();
-  });
-
   test("the theme attribute flips the resolved colour scheme", async({ page }) => {
+    const swatch = page.locator("gallery-root .token-swatch").first();
+
     await gotoGallery(page, { theme: "dark" });
-    const dark = await page.locator("gallery-root .token-swatch").first()
-      .evaluate((node) => getComputedStyle(node).backgroundColor);
-
+    const dark = await styleOf(swatch, "background-color");
     await gotoGallery(page, { theme: "light" });
-    const light = await page.locator("gallery-root .token-swatch").first()
-      .evaluate((node) => getComputedStyle(node).backgroundColor);
 
-    expect(dark).not.toBe(light);
+    expect(await styleOf(swatch, "background-color")).not.toBe(dark);
   });
 
-  test("density preference stays selected across visuals and reloads", async({ page }) => {
+  test("the density preference survives navigation and reloads", async({ page }) => {
     await gotoGallery(page);
     await page.evaluate(() => {
-      localStorage.setItem(
-        "jolly-ui-gallery:density",
-        "comfortable"
-      );
+      localStorage.setItem("jolly-ui-gallery:density", "comfortable");
     });
     await reloadGallery(page);
 
     const control = page.locator("gallery-root jolly-pane jolly-select");
     const select = control.locator("select");
-
     await expect(control).toHaveJSProperty("value", "comfortable");
     await expect(select).toHaveValue("2");
     await expect(select.locator("option:checked")).toHaveText("Comfortable");
 
     await select.selectOption({ label: "Default" });
-    await page.locator(
-      `gallery-root nav a[data-example-id="${manifest[1].id}"]`
-    ).click();
-
+    await navLink(page, kSecond.id).click();
     await expect(control).toHaveJSProperty("value", "default");
     await expect(select).toHaveValue("1");
 
     await reloadGallery(page);
-    await expect(
-      page.locator("gallery-root jolly-pane jolly-select select")
-    ).toHaveValue("1");
+    await expect(select).toHaveValue("1");
   });
 
-  test("dark density Select uses themed closed and dropdown surfaces", async({ page }) => {
+  test("the dark density select themes its closed and dropdown surfaces", async({ page }) => {
     await gotoGallery(page, { theme: "dark" });
 
-    const select = page.locator(
-      "gallery-root jolly-pane jolly-select select"
-    );
+    const select = page.locator("gallery-root jolly-pane jolly-select select");
     const segment = page.locator(
       "gallery-root jolly-pane jolly-button-group .segment[aria-checked='false']"
     ).first();
-    const selectStyle = await select.evaluate((node) => {
-      const style = getComputedStyle(node);
 
-      return {
-        backgroundColor: style.backgroundColor,
-        colorScheme: style.colorScheme
-      };
-    });
-    const segmentBackground = await segment.evaluate(
-      (node) => getComputedStyle(node).backgroundColor
+    await expect(select).toHaveCSS("color-scheme", "dark");
+    await expect(select).toHaveCSS(
+      "background-color",
+      await styleOf(segment, "background-color")
     );
-    const dropdownStyle = await select.evaluate((node) => {
-      const option = node.querySelector("option");
-      const probe = document.createElement("span");
-      probe.style.background = "var(--jolly-surface-raised)";
-      node.parentElement?.append(probe);
-      const surfaceBackground = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-
-      return {
-        optionBackground: option === null
-          ? ""
-          : getComputedStyle(option).backgroundColor,
-        surfaceBackground
-      };
-    });
-
-    expect(selectStyle.colorScheme).toBe("dark");
-    expect(selectStyle.backgroundColor).toBe(segmentBackground);
-    expect(dropdownStyle.optionBackground).toBe(
-      dropdownStyle.surfaceBackground
+    await expect(select.locator("option").first()).toHaveCSS(
+      "background-color",
+      await resolvedColorOf(select, "var(--jolly-surface-raised)")
     );
   });
 });
 
-async function galleryHeaderLayout(
-  pane: Locator
-) {
-  const [
-    titleRect,
-    actionsRect,
-    themeRect,
-    densityRect
-  ] = await Promise.all([
-    pane.locator(".title").boundingBox(),
-    pane.locator(".actions").boundingBox(),
-    pane.locator("jolly-button-group").boundingBox(),
-    pane.locator("jolly-select").boundingBox()
-  ]);
-  if (
-    titleRect === null ||
-    actionsRect === null ||
-    themeRect === null ||
-    densityRect === null
-  ) {
-    throw new Error("Gallery pane header is incomplete");
-  }
-
-  return {
-    titleBottom: titleRect.y + titleRect.height,
-    actionsTop: actionsRect.y,
-    themeTop: themeRect.y,
-    themeWidth: themeRect.width,
-    densityTop: densityRect.y,
-    densityWidth: densityRect.width
-  };
-}
-
-/**
- * Catches "throws on mount" across the library, and grows as later phases add
- * entries.
- */
 test.describe("manifest sweep", () => {
-  for (const example of manifest) {
-    test(`${example.id} mounts and disposes without throwing`, async({ page }) => {
+  for (const [group, examples] of kGroups) {
+    test(`${group} examples mount and tear down without errors`, async({ page }) => {
       const failures: string[] = [];
-      page.on("pageerror", (error) => failures.push(error.message));
+      let phase = `mount ${examples[0].id}`;
+      page.on("pageerror", (error) => failures.push(`${phase}: ${error.message}`));
       page.on("console", (message) => {
         if (message.type() === "error") {
-          failures.push(message.text());
+          failures.push(`${phase}: ${message.text()}`);
         }
       });
 
-      await gotoGallery(page, { example: example.id });
-      await expect(page.locator("gallery-root main > *").first())
-        .toBeAttached();
+      await gotoGallery(page, { example: examples[0].id });
+      const exit = manifest.find((entry) => !entry.id.startsWith(`${group}/`)) ?? kFirst;
+      const route = [...examples, exit];
+      for (let index = 1; index < route.length; index++) {
+        const previous = route[index - 1].id;
+        const next = route[index];
+        phase = `${previous} -> ${next.id}`;
+        await test.step(phase, async() => {
+          await selectInPage(page, next.id, next.title);
+          await expect(page.locator("gallery-root main > *").first()).toBeAttached();
+          expect(await disposedIds(page)).toContain(previous);
+        });
+      }
 
-      /*
-       * Selecting in-page, not a second goto: a reload discards the tree without ever
-       * calling the teardown this is meant to exercise.
-       */
-      const next = manifest.find((entry) => entry.id !== example.id) ?? example;
-      await page.locator(
-        `gallery-root nav a[data-example-id="${next.id}"]`
-      ).evaluate((link: HTMLAnchorElement) => link.click());
-      await expect(page.locator("gallery-root main > *").first())
-        .toBeAttached();
-
-      expect(await disposedIds(page)).toContain(example.id);
       expect(failures).toEqual([]);
     });
   }

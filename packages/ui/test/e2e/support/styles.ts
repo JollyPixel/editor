@@ -1,22 +1,19 @@
 // Import Third-party Dependencies
 import type { Locator } from "@playwright/test";
 
-/**
- * One computed property of an element, resolved in the page.
- */
 export function styleOf(
   locator: Locator,
-  property: string
+  property: string,
+  pseudo: string | null = null
 ): Promise<string> {
   return locator.evaluate(
-    (element, name) => getComputedStyle(element).getPropertyValue(name),
-    property
+    (element, [name, pseudoElement]) => getComputedStyle(element, pseudoElement)
+      .getPropertyValue(name)
+      .trim(),
+    [property, pseudo] as const
   );
 }
 
-/**
- * One computed property of a part inside an element's shadow root.
- */
 export function partStyleOf(
   locator: Locator,
   selector: string,
@@ -28,15 +25,30 @@ export function partStyleOf(
 
       return part === null ?
         "" :
-        getComputedStyle(part).getPropertyValue(name);
+        getComputedStyle(part).getPropertyValue(name).trim();
     },
     [selector, property] as const
   );
 }
 
-/**
- * Blur radius of a computed box-shadow, which is its third length.
- */
+export function resolvedColorOf(
+  locator: Locator,
+  value: string
+): Promise<string> {
+  return locator.evaluate(
+    (element, color) => {
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = color;
+      element.append(probe);
+      const resolved = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+
+      return resolved;
+    },
+    value
+  );
+}
+
 export async function shadowBlurOf(
   locator: Locator
 ): Promise<number> {

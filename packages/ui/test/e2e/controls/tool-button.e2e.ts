@@ -5,81 +5,64 @@ import {
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "../support/gallery.ts";
+import { openExample } from "../support/gallery.ts";
+import {
+  boxOf,
+  centerOf,
+  hold,
+  widthOf
+} from "../support/pointer.ts";
 
 test.describe("Tool button", () => {
   test.beforeEach(async({ page }) => {
-    await gotoGallery(page, {
-      example: "controls/tool-button",
-      chrome: "off"
-    });
+    await openExample(page, "controls/tool-button");
   });
 
-  test("a plain button reports its pressed state", async({ page }) => {
-    const button = page.getByTestId("plain").locator(".button").first();
+  test("renders pressed state, icon and a notch towards the flyout", async({ page }) => {
+    const plain = page.getByTestId("plain").locator(".button").first();
+    await expect(plain).toHaveAttribute("aria-pressed", "true");
+    await expect(plain).not.toHaveAttribute("aria-haspopup");
 
-    await expect(button).toHaveAttribute("aria-pressed", "true");
-    await expect(button).not.toHaveAttribute("aria-haspopup");
-  });
-
-  test("the icon stays visible next to whitespace children", async({ page }) => {
-    const icon = page.getByTestId("mode").locator(".button jolly-icon").first();
-
+    const mode = page.getByTestId("mode");
+    const icon = mode.locator(".button jolly-icon").first();
     await expect(icon).toBeVisible();
-    await expect.poll(
-      () => icon.evaluate((element) => element.getBoundingClientRect().width)
-    ).toBeGreaterThan(0);
-  });
+    await expect.poll(() => widthOf(icon)).toBeGreaterThan(0);
 
-  test("the notch points towards the flyout side", async({ page }) => {
-    const notch = page.getByTestId("mode").locator(".notch").first();
-    const button = page.getByTestId("mode").locator(".button").first();
+    const notch = mode.locator(".notch").first();
     const [notchBox, buttonBox] = await Promise.all([
-      notch.boundingBox(),
-      button.boundingBox()
+      boxOf(notch),
+      boxOf(mode.locator(".button").first())
     ]);
-    if (notchBox === null || buttonBox === null) {
-      throw new Error("The notch and its button must have layout boxes");
-    }
-
     expect(notchBox.y - buttonBox.y).toBeLessThan(buttonBox.height / 2);
-    expect(
-      Math.abs((notchBox.x + (notchBox.width / 2)) - (buttonBox.x + (buttonBox.width / 2)))
-    ).toBeLessThan(1);
+    expect(Math.abs(
+      (notchBox.x + (notchBox.width / 2)) -
+      (buttonBox.x + (buttonBox.width / 2))
+    )).toBeLessThan(1);
     await expect(notch).toHaveCSS("border-bottom-width", "4px");
   });
 
-  test("hover opens the flyout and leaving closes it", async({ page }) => {
+  test("hover opens the flyout, and it survives the trip into it", async({ page }) => {
     const mode = page.getByTestId("mode");
 
     await mode.locator(".button").first().hover();
     await expect(mode).toHaveAttribute("open");
     await expect(mode.locator(".flyout").first()).toBeVisible();
 
+    await mode.locator("jolly-tool-button").first().hover();
+    await expect(mode).toHaveAttribute("open");
+
     await page.mouse.move(5, 5);
     await expect(mode).not.toHaveAttribute("open");
   });
 
-  test("the pointer can travel from the button into the flyout", async({ page }) => {
-    const mode = page.getByTestId("mode");
-    const option = mode.locator("jolly-tool-button").first();
-
-    await mode.locator(".button").first().hover();
-    await option.hover();
-
-    await expect(mode).toHaveAttribute("open");
-  });
-
-  test("clicking an option closes the flyout", async({ page }) => {
+  test("clicking an option picks it and closes the flyout", async({ page }) => {
     const mode = page.getByTestId("mode");
 
     await mode.locator(".button").first().hover();
     await mode.locator("jolly-tool-button").first().click();
 
     await expect(mode).not.toHaveAttribute("open");
-    await expect.poll(
-      () => mode.evaluate((element: HTMLElement & { icon?: string; }) => element.icon)
-    ).toBe("lock");
+    await expect(mode).toHaveJSProperty("icon", "lock");
   });
 
   test("Escape closes the flyout and returns focus", async({ page }) => {
@@ -103,22 +86,19 @@ test.describe("Tool button", () => {
     await expect(disabled).not.toHaveAttribute("open");
   });
 
-  test("a slider drag keeps the flyout open past its edge", async({ page }) => {
+  test("a vertical slider drag keeps the flyout open past its edge", async({ page }) => {
     const size = page.getByTestId("size");
 
     await size.locator(".button").first().hover();
     const lane = size.locator("jolly-slider .lane");
     await expect(lane).toBeVisible();
-    const box = await lane.boundingBox();
-    if (box === null) {
-      throw new Error("The vertical slider lane must have a layout box");
-    }
-
+    const box = await boxOf(lane);
     expect(box.height).toBeGreaterThan(box.width);
-    await page.mouse.move(box.x + (box.width / 2), box.y + (box.height / 2));
-    await page.mouse.down();
-    await page.mouse.move(box.x + 200, box.y - 20, { steps: 5 });
 
+    await hold(page, await centerOf(lane), {
+      x: box.x + 200,
+      y: box.y - 20
+    }, 5);
     await expect(size).toHaveAttribute("open");
     await expect(page.getByTestId("size-value")).toHaveText("8");
 
@@ -130,14 +110,11 @@ test.describe("Tool button", () => {
     const size = page.getByTestId("size");
 
     await size.locator(".button").first().hover();
-    const range = size.locator("jolly-slider input[type=range]");
-    await range.focus();
+    await expect(size.locator("jolly-slider"))
+      .toHaveAttribute("orientation", "vertical");
+    await size.locator("jolly-slider input[type=range]").focus();
     await page.keyboard.press("ArrowUp");
 
     await expect(page.getByTestId("size-value")).toHaveText("4");
-    await expect(size.locator("jolly-slider")).toHaveAttribute(
-      "orientation",
-      "vertical"
-    );
   });
 });

@@ -5,16 +5,12 @@ export interface GotoOptions {
   example?: string;
   chrome?: "off";
   theme?: "light" | "dark";
-  /** Collaboration room, unique per test so parallel workers stay isolated. */
   room?: string;
-  /** Display name of the local peer in that room. */
   as?: string;
 }
 
-/**
- * Waits for the first example to mount, so a selector cannot resolve against
- * an empty document.
- */
+export type ExampleOptions = Omit<GotoOptions, "example" | "chrome">;
+
 export async function gotoGallery(
   page: Page,
   options: GotoOptions = {}
@@ -26,21 +22,26 @@ export async function gotoGallery(
 
   const query = params.toString();
   await page.goto(query === "" ? "/" : `/?${query}`);
-  await page.waitForFunction(
-    () => window.__galleryReady === true
-  );
+  await waitForGallery(page);
 }
 
-/**
- * Reloads the current gallery example and waits for its next mount.
- */
+export function openExample(
+  page: Page,
+  example: string,
+  options: ExampleOptions = {}
+): Promise<void> {
+  return gotoGallery(page, {
+    ...options,
+    example,
+    chrome: "off"
+  });
+}
+
 export async function reloadGallery(
   page: Page
 ): Promise<void> {
   await page.reload();
-  await page.waitForFunction(
-    () => window.__galleryReady === true
-  );
+  await waitForGallery(page);
 }
 
 export function disposedIds(
@@ -48,5 +49,13 @@ export function disposedIds(
 ): Promise<string[]> {
   return page.evaluate(
     () => window.__galleryDisposed ?? []
+  );
+}
+
+async function waitForGallery(
+  page: Page
+): Promise<void> {
+  await page.waitForFunction(
+    () => window.__galleryReady === true
   );
 }

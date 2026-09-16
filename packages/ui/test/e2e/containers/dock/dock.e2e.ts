@@ -5,28 +5,30 @@ import {
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "../../support/gallery.ts";
+import { openExample } from "../../support/gallery.ts";
 import {
   boxOf,
-  dragTo
+  dragTo,
+  widthOf
 } from "../../support/pointer.ts";
+import {
+  resolvedColorOf,
+  styleOf
+} from "../../support/styles.ts";
 
 test.describe("Dock", () => {
-  test("keyboard resizing and both collapse inputs share the host", async({ page }) => {
-    await gotoGallery(page, {
-      example: "containers/dock",
-      chrome: "off"
-    });
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "containers/dock");
+  });
 
+  test("keyboard resizing and both collapse inputs share the handle", async({ page }) => {
     const dock = page.locator("jolly-dock");
     const handle = dock.locator(".resize-handle");
-    const initial = await dock.evaluate((element) => element.getBoundingClientRect().width);
+    const initial = await widthOf(dock);
 
     await handle.focus();
     await handle.press("ArrowLeft");
-    await expect.poll(
-      () => dock.evaluate((element) => element.getBoundingClientRect().width)
-    ).toBe(initial + 8);
+    await expect.poll(() => widthOf(dock)).toBe(initial + 8);
 
     await handle.dblclick();
     await expect(dock).toHaveAttribute("collapsed");
@@ -35,99 +37,45 @@ test.describe("Dock", () => {
   });
 
   test("uses flush panes and the pixel editor resize grip", async({ page }) => {
-    await gotoGallery(page, {
-      example: "containers/dock",
-      chrome: "off"
-    });
-
     const dock = page.locator("jolly-dock");
-    const pane = dock.locator("jolly-pane");
     const handle = dock.locator(".resize-handle");
 
     await expect(dock).toHaveAttribute("side", "right");
-    expect(
-      await dock.evaluate((element) => element.style.marginInlineStart)
-    ).toBe("auto");
-    await expect.poll(
-      () => pane.evaluate((element) => getComputedStyle(element).borderRadius)
-    ).toBe("0px");
-    expect(
-      await handle.evaluate((element) => getComputedStyle(element, "::after")
-        .backgroundImage)
-    ).toContain("radial-gradient");
+    expect(await dock.evaluate(
+      (element: HTMLElement) => element.style.marginInlineStart
+    )).toBe("auto");
+    await expect(dock.locator("jolly-pane")).toHaveCSS("border-radius", "0px");
+    expect(await styleOf(handle, "background-image", "::after"))
+      .toContain("radial-gradient");
     await expect(handle).toHaveCSS("width", "4px");
 
-    const colors = await handle.evaluate((element) => {
-      const probe = document.createElement("span");
-      probe.style.backgroundColor = "var(--jolly-dock-resize-bg)";
-      element.append(probe);
-      const values = {
-        handle: getComputedStyle(element).backgroundColor,
-        token: getComputedStyle(probe).backgroundColor
-      };
-      probe.remove();
-
-      return values;
-    });
-    expect(colors.handle).toBe(colors.token);
+    const rest = await resolvedColorOf(handle, "var(--jolly-dock-resize-bg)");
+    await expect(handle).toHaveCSS("background-color", rest);
     await handle.hover();
-    await expect.poll(
-      () => handle.evaluate((element) => getComputedStyle(element).backgroundColor)
-    ).not.toBe(colors.handle);
+    await expect(handle).not.toHaveCSS("background-color", rest);
   });
 });
 
 test.describe("Placement", () => {
-  test("the floating pane docks into either side and comes back out", async({ page }) => {
-    await gotoGallery(page, {
-      example: "scenarios/dock-resize",
-      chrome: "off"
-    });
+  test("docks fill the stage and hold locked panes over a stacked window", async({ page }) => {
+    await openExample(page, "scenarios/dock-resize");
 
-    const stage = page.locator(".placement-stage");
-    await expect(stage.locator("jolly-dock-layout")).toHaveCount(1);
-    const header = page.locator("jolly-pane[key='floating'] .header");
-    const viewport = await boxOf(page.locator(".placement-viewport"));
+    expect(await styleOf(page.locator("jolly-floating"), "z-index"))
+      .not.toBe("auto");
 
-    for (const side of ["left", "right"] as const) {
-      const box = await boxOf(page.locator(`jolly-dock[side='${side}']`));
-      await dragTo(page, header, {
-        x: box.x + (box.width / 2),
-        y: box.y + box.height - 60
-      });
-      await expect(
-        page.locator(`jolly-dock[side='${side}'] jolly-pane[key='floating']`)
-      ).toHaveCount(1);
-      await expect(page.locator("jolly-floating")).toHaveCount(0);
+    const stage = await boxOf(page.locator(".placement-stage"));
+    for (const side of ["left", "right"]) {
+      const pane = page.locator(`jolly-pane[key='${side}']`);
+      const dock = await boxOf(page.locator(`jolly-dock[side='${side}']`));
 
-      // Re-enter each dock from a floating window.
-      await dragTo(page, header, {
-        x: viewport.x + (viewport.width / 2),
-        y: viewport.y + 160
-      });
-      await expect(
-        page.locator("jolly-floating jolly-pane[key='floating']")
-      ).toHaveCount(1);
-    }
-  });
-
-  test("the docked panes are locked in place", async({ page }) => {
-    await gotoGallery(page, {
-      example: "scenarios/dock-resize",
-      chrome: "off"
-    });
-
-    for (const key of ["left", "right"]) {
-      const pane = page.locator(`jolly-pane[key='${key}']`);
+      expect(dock.height).toBe(stage.height - 2);
       await expect(pane).toHaveAttribute("locked");
       await expect(pane).not.toHaveAttribute("movable");
       await expect(pane.locator(".grip")).toHaveCount(0);
     }
-    await expect(page.locator("jolly-pane[key='floating']")).toHaveAttribute(
-      "movable"
-    );
+    await expect(page.locator("jolly-pane[key='floating']"))
+      .toHaveAttribute("movable");
 
-    // An inert header prevents dragging the only pane out.
     const viewport = await boxOf(page.locator(".placement-viewport"));
     await dragTo(page, page.locator("jolly-pane[key='left'] .header"), {
       x: viewport.x + (viewport.width / 2),
@@ -139,8 +87,35 @@ test.describe("Placement", () => {
     ).toHaveCount(1);
   });
 
+  test("the floating pane docks into either side and comes back out", async({ page }) => {
+    await openExample(page, "scenarios/dock-resize");
+
+    await expect(page.locator(".placement-stage jolly-dock-layout")).toHaveCount(1);
+    const header = page.locator("jolly-pane[key='floating'] .header");
+    const viewport = await boxOf(page.locator(".placement-viewport"));
+
+    for (const side of ["left", "right"]) {
+      const box = await boxOf(page.locator(`jolly-dock[side='${side}']`));
+      await dragTo(page, header, {
+        x: box.x + (box.width / 2),
+        y: box.y + box.height - 60
+      });
+      await expect(
+        page.locator(`jolly-dock[side='${side}'] jolly-pane[key='floating']`)
+      ).toHaveCount(1);
+      await expect(page.locator("jolly-floating")).toHaveCount(0);
+
+      await dragTo(page, header, {
+        x: viewport.x + (viewport.width / 2),
+        y: viewport.y + 160
+      });
+      await expect(
+        page.locator("jolly-floating jolly-pane[key='floating']")
+      ).toHaveCount(1);
+    }
+  });
+
   test("a stored snapshot cannot strand a locked pane in a window", async({ page }) => {
-    // Simulate a stale snapshot that floated a now-locked pane.
     await page.goto("/");
     await page.evaluate(() => {
       localStorage.setItem("gallery-example:placement", JSON.stringify({
@@ -155,28 +130,11 @@ test.describe("Placement", () => {
         panes: {}
       }));
     });
-    await gotoGallery(page, {
-      example: "scenarios/dock-resize",
-      chrome: "off"
-    });
+    await openExample(page, "scenarios/dock-resize");
 
     await expect(
       page.locator("jolly-dock[side='left'] jolly-pane[key='left']")
     ).toHaveCount(1);
     await expect(page.locator("jolly-floating")).toHaveCount(1);
-  });
-
-  test("both docks fill the stage height", async({ page }) => {
-    await gotoGallery(page, {
-      example: "scenarios/dock-resize",
-      chrome: "off"
-    });
-
-    const stage = await boxOf(page.locator(".placement-stage"));
-    for (const side of ["left", "right"]) {
-      const dock = await boxOf(page.locator(`jolly-dock[side='${side}']`));
-      // The stage adds a one pixel border on each edge.
-      expect(dock.height).toBe(stage.height - 2);
-    }
   });
 });
