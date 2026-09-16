@@ -2,7 +2,7 @@ export {
   PixelDrawPanel,
   type PixelDrawTexture,
   type ThemeMode
-} from "./ui/pixel-draw-panel/PixelDrawPanel.ts";
+} from "./panel/PixelDrawPanel.ts";
 export type {
   PixelDrawInitializeOptions,
   PixelDrawTextureOptions,
@@ -11,14 +11,19 @@ export type {
   TextureCloseRequestDetail,
   TextureImportOrigin,
   TextureImportPolicy
-} from "./ui/pixel-draw-panel/textures.ts";
-export type { UvAccess } from "./ui/pixel-draw-panel/uvAccess.ts";
-export { ModeRail } from "./ui/mode-rail/ModeRail.ts";
-export { ColorPickerRail } from "./ui/color/ColorPickerRail.ts";
-export { ColorDock } from "./ui/color/ColorDock.ts";
-export type { ColorPickedDetail } from "./ui/color/ColorController.ts";
+} from "./textures/textures.ts";
+export type { UvAccess } from "./uv/UvAccessPolicy.ts";
+export type {
+  ToolOption,
+  ToolOptionName,
+  ToolOptions
+} from "./tools/toolOptions.ts";
+export { ModeRail } from "./tools/ModeRail.ts";
+export { ColorPickerRail } from "./color/ColorPickerRail.ts";
+export { ColorDock } from "./color/ColorDock.ts";
+export type { ColorPickedDetail } from "./color/ColorController.ts";
 export {
   ColorSwatch,
   type ColorChangeDetail
-} from "./ui/color/ColorSwatch.ts";
-export type { IconName } from "./ui/common/icons.ts";
+} from "./color/ColorSwatch.ts";
+export type { IconName } from "./shared/icons.ts";

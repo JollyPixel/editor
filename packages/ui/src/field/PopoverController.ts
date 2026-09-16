@@ -118,7 +118,6 @@ export class PopoverController implements ReactiveController {
     }
 
     const anchorRect = anchor.getBoundingClientRect();
-    const panelRect = popover.getBoundingClientRect();
 
     const placed = anchoredPosition({
       anchor: {
@@ -128,8 +127,8 @@ export class PopoverController implements ReactiveController {
         right: anchorRect.right
       },
       panel: {
-        width: panelRect.width,
-        height: panelRect.height
+        width: popover.offsetWidth,
+        height: popover.offsetHeight
       },
       viewport: {
         width: window.innerWidth,

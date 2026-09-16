@@ -66,6 +66,7 @@ export class Dialog extends LitElement {
   override render(): TemplateResult {
     return html`
       <dialog
+        class="overlay-motion"
         @beforetoggle=${this.#onBeforeToggle}
         @cancel=${this.#onCancel}
         @click=${this.#onBackdropClick}

@@ -2,7 +2,10 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { focusRing } from "../theme/styles/mixins.ts";
+import {
+  focusRing,
+  overlayMotion
+} from "../theme/styles/mixins.ts";
 
 export const colorStyles = css`
   /* Fill the control so the colour sample has no surrounding frame. */
@@ -85,4 +88,6 @@ export const colorStyles = css`
     box-shadow: var(--jolly-shadow-overlay);
     color: var(--jolly-text, CanvasText);
   }
+
+  ${overlayMotion}
 `;

@@ -25,6 +25,21 @@ While open, the dialog holds a layer on `inputLayers`, so a viewport keyboard
 guarded by it ignores the keys pressed inside the dialog. See
 [Interaction helpers](../interaction/README.md#input-layers).
 
+## Motion
+
+The dialog and its backdrop fade and scale in on open and out on close. Dialog
+helpers stay in the DOM until the exit transition ends. The same motion applies
+to field popovers such as the `jolly-color` picker and control details.
+
+| Token | Default |
+|---|---|
+| `--jolly-duration-enter` | `250ms` |
+| `--jolly-duration-exit` | `150ms` |
+| `--jolly-easing-overlay` | `cubic-bezier(0.22, 1, 0.36, 1)` |
+| `--jolly-overlay-scale` | `0.96` |
+
+Under `prefers-reduced-motion: reduce` the transitions are disabled.
+
 ## Default action
 
 Enter activates the dialog's default action: the `actions` element carrying

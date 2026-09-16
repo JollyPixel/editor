@@ -51,6 +51,8 @@ interface OrbitFlyCameraOptions {
   minPivotDistance?: number;
   maxPivotDistance?: number;
   pivotNudgeStep?: number;
+  showPivotMarker?: boolean;
+  fov?: number;
 }
 ```
 
@@ -70,6 +72,8 @@ interface OrbitFlyCameraOptions {
 | `focusMode` | `"none"` | `"none"`: no pivot. `"lock"`: `enterOrbitFocus` engages a fixed pivot; scroll adjusts distance, only `exitOrbitFocus` releases it. `"elastic"`: WASD/look pilot a free-floating pivot; scroll trails the camera behind it, reaching 0 (free-fly) at full zoom-in |
 | `minPivotDistance` / `maxPivotDistance` | `1` / `200` | Bounds for the scroll-adjusted pivot distance in "lock" mode; `maxPivotDistance` also doubles as "elastic" mode's max trail distance |
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |
+| `showPivotMarker` | `true` | Draws a marker at the pivot in "lock" and "elastic" modes |
+| `fov` | `60` | Vertical field of view, in degrees |
 
 Movement is WASD (forward/right) + Space/Shift (up/down); look-around is
 middle-mouse-drag or Alt+left-drag. Ctrl is reserved for other

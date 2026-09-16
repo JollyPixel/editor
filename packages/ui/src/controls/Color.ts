@@ -163,7 +163,7 @@ export class Color extends JollyField<string> {
   #renderPopover(): TemplateResult {
     return html`
       <div
-        class="popover"
+        class="popover overlay-motion"
         id="picker"
         popover
         @beforetoggle=${this.#popup.onBeforeToggle}

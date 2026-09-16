@@ -1,13 +1,11 @@
 // Import Third-party Dependencies
-import {
-  test,
-  expect,
-  type Page
-} from "@playwright/test";
+import type { Locator } from "@playwright/test";
 
 // Import Internal Dependencies
+import { test, expect } from "./fixtures.ts";
 import {
-  gotoDemo,
+  activeMode,
+  clickToolOption,
   setMode
 } from "./utils.ts";
 import type {
@@ -16,92 +14,68 @@ import type {
 } from "../../src/index.ts";
 
 async function setUvAccess(
-  page: Page,
+  panel: Locator,
   access: UvAccess
 ): Promise<void> {
-  await page.evaluate((value) => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
-    panel.uvAccess = value;
+  await panel.evaluate((element: PixelDrawPanel, value) => {
+    element.uvAccess = value;
 
-    return panel.updateComplete;
+    return element.updateComplete;
   }, access);
 }
 
-async function readUv(
-  page: Page
-): Promise<{ mode: string; showAll: boolean; showRegionLabels: boolean; uvClip: boolean; }> {
-  return page.evaluate(() => {
-    const canvas = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!.canvasManager!;
+test("view hides UV mode but moves the visibility toggles to the bottom toolbar", async({ panel }) => {
+  await setUvAccess(panel, "view");
 
-    return {
-      mode: canvas.mode,
-      showAll: canvas.uv.showAll,
-      showRegionLabels: canvas.uv.showRegionLabels,
-      uvClip: canvas.tools.fill.uvClip
-    };
-  });
-}
+  await expect(panel.getByRole("button", { name: "UV", exact: true })).toHaveCount(0);
+  await expect(panel.locator("[part=uv-toolbar]")).toHaveCount(0);
 
-test.beforeEach(async({ page }) => {
-  await gotoDemo(page);
+  const bottom = panel.locator("[part=history-file-toolbar]");
+  for (const name of ["Show all", "Show region labels"]) {
+    const toggle = bottom.getByRole("button", { name });
+    const pressed = await toggle.getAttribute("aria-pressed");
+    await toggle.click();
+    await expect(toggle).not.toHaveAttribute("aria-pressed", pressed!);
+  }
 });
 
-test("view hides UV mode but keeps the visibility toggles in the bottom toolbar", async({ page }) => {
-  const initial = await readUv(page);
-  await setUvAccess(page, "view");
+test("leaving edit while in UV mode falls back to Paint", async({ panel }) => {
+  await setMode(panel, "uv");
+  await expect(panel.locator("[part=uv-toolbar]")).toBeVisible();
 
-  await expect(page.getByRole("button", { name: "UV", exact: true })).toHaveCount(0);
-  await expect(page.locator("pixel-draw-panel [part=uv-toolbar]")).toHaveCount(0);
+  await setUvAccess(panel, "view");
 
-  const bottom = page.locator("pixel-draw-panel [part=history-file-toolbar]");
-  const showAll = bottom.getByRole("button", { name: "Show all" });
-  const labels = bottom.getByRole("button", { name: "Show region labels" });
-
-  await showAll.click();
-  await expect(showAll).toHaveAttribute("aria-pressed", String(!initial.showAll));
-  await labels.click();
-  await expect(labels).toHaveAttribute("aria-pressed", String(!initial.showRegionLabels));
-
-  const toggled = await readUv(page);
-  expect(toggled.showAll).toBe(!initial.showAll);
-  expect(toggled.showRegionLabels).toBe(!initial.showRegionLabels);
+  expect(await activeMode(panel)).toBe("paint");
+  await expect(panel.getByRole("button", { name: "Paint", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(panel.locator("[part=uv-toolbar]")).toHaveCount(0);
 });
 
-test("leaving edit while in UV mode falls back to paint", async({ page }) => {
-  await setMode(page, "uv");
-  await expect(page.locator("pixel-draw-panel [part=uv-toolbar]")).toBeVisible();
+test("none removes every UV control and turns the fill clip off", async({ panel }) => {
+  await setMode(panel, "fill");
+  await clickToolOption(panel, "fill", "Clip to UV");
+  function uvClip() {
+    return panel.evaluate(
+      (element: PixelDrawPanel) => element.canvasManager!.tools.fill.uvClip
+    );
+  }
+  expect(await uvClip()).toBe(true);
 
-  await setUvAccess(page, "view");
+  await setUvAccess(panel, "none");
 
-  expect((await readUv(page)).mode).toBe("paint");
-  await expect(
-    page.getByRole("button", { name: "Paint", exact: true })
-  ).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("pixel-draw-panel [part=uv-toolbar]")).toHaveCount(0);
+  expect(await uvClip()).toBe(false);
+  for (const name of ["UV", "Clip to UV", "Show all", "Show region labels"]) {
+    await expect(panel.getByRole("button", { name, exact: true })).toHaveCount(0);
+  }
+  await expect(panel.locator("mode-rail [part=uv-clip-badge]")).toHaveCount(0);
 });
 
-test("none removes every UV control and turns off the fill clip", async({ page }) => {
-  await setMode(page, "fill");
-  await page.mouse.move(0, 0);
-  await page.getByRole("button", { name: "Fill", exact: true }).hover();
-  await page.getByRole("button", { name: "Clip to UV", exact: true }).click();
-  expect((await readUv(page)).uvClip).toBe(true);
+test("removing the uv-access attribute restores edit", async({ panel }) => {
+  const uvMode = panel.getByRole("button", { name: "UV", exact: true });
 
-  await setUvAccess(page, "none");
-
-  expect((await readUv(page)).uvClip).toBe(false);
-  await expect(page.getByRole("button", { name: "UV", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Clip to UV", exact: true })).toHaveCount(0);
-  await expect(page.locator("mode-rail [part=uv-clip-badge]")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Show all" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Show region labels" })).toHaveCount(0);
-});
-
-test("the uv-access attribute restores edit when removed", async({ page }) => {
-  const panel = page.locator("pixel-draw-panel");
   await panel.evaluate((element) => element.setAttribute("uv-access", "view"));
-  await expect(page.getByRole("button", { name: "UV", exact: true })).toHaveCount(0);
+  await expect(uvMode).toHaveCount(0);
 
   await panel.evaluate((element) => element.removeAttribute("uv-access"));
-  await expect(page.getByRole("button", { name: "UV", exact: true })).toBeVisible();
+  await expect(uvMode).toBeVisible();
 });

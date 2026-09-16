@@ -1,174 +1,133 @@
 // Import Third-party Dependencies
-import {
-  test,
-  expect,
-  type Page
-} from "@playwright/test";
+import type { Locator } from "@playwright/test";
 
 // Import Internal Dependencies
+import { test, expect } from "./fixtures.ts";
 import {
-  gotoDemo,
-  setMode,
   clickTexturePixel,
-  readPixel,
-  setBrushColor
+  clickToolOption,
+  readBrush,
+  readPixels,
+  seedTexture,
+  setBrushColor,
+  setMode
 } from "./utils.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
-test.beforeEach(async({ page }) => {
-  await gotoDemo(page);
-});
-
-async function readBrush(
-  page: Page
-) {
-  return page.evaluate(() => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-    const { brush } = panel!.canvasManager!;
-
-    return {
-      primary: brush.primary.asString("hex").toLowerCase(),
-      secondary: brush.secondary.asString("hex").toLowerCase()
-    };
+async function toggleDock(
+  panel: Locator
+): Promise<void> {
+  await panel.getByRole("button", { name: "Docked color picker" }).click();
+  await panel.locator("color-dock").evaluate(async(element) => {
+    await Promise.all(element.getAnimations().map((animation) => animation.finished));
   });
 }
 
-test("picking a foreground color via the swatch updates the brush and the paint", async({ page }) => {
-  await setMode(page, "paint");
+test("picking a foreground color in the swatch paints with it", async({ panel }) => {
+  await setMode(panel, "paint");
+  await panel.locator("color-swatch.fg button").click();
+  const hex = panel.locator("jolly-color-picker input.hex").visible();
+  await hex.fill("#ff00ff");
+  await hex.press("Enter");
+  await expect.poll(() => readBrush(panel)).toMatchObject({ primary: "#ff00ff" });
 
-  await page.locator("color-swatch.fg").locator("button").click();
-  await page.locator("jolly-color-picker input.hex:visible").fill("#ff00ff");
-  await page.locator("jolly-color-picker input.hex:visible").press("Enter");
+  await clickTexturePixel(panel, { x: 10, y: 25 });
 
-  await expect.poll(
-    () => readBrush(page).then((b) => b.primary)
-  ).toBe("#ff00ff");
-
-  await clickTexturePixel(page, 10, 25);
-  await expect.poll(
-    () => readPixel(page, 10, 25)
-  ).toEqual({ r: 255, g: 0, b: 255, a: 255 });
+  await expect.poll(() => readPixels(panel, [{ x: 10, y: 25 }]))
+    .toEqual(["#ff00ffff"]);
 });
 
-test("the eyedropper picks a canvas pixel into the primary color", async({ page }) => {
-  await setMode(page, "paint");
-  await setBrushColor(page, "primary", "#3355ff");
-  await clickTexturePixel(page, 5, 30);
-  await setBrushColor(page, "primary", "#000000");
+test("the eyedropper picks a canvas pixel into the primary color", async({ panel }) => {
+  await seedTexture(panel, [{ x: 5, y: 30, color: "#3355ff" }]);
+  await setMode(panel, "paint");
+  await clickToolOption(panel, "paint", "Pick color");
 
-  await page.mouse.move(0, 0);
-  await page.getByRole("button", { name: "Paint", exact: true }).hover();
-  await page.getByRole("button", { name: "Pick color" }).click();
+  await clickTexturePixel(panel, { x: 5, y: 30 });
+  await expect.poll(() => readBrush(panel)).toMatchObject({ primary: "#3355ff" });
 
-  await clickTexturePixel(page, 5, 30);
-  await expect.poll(
-    () => readBrush(page).then((b) => b.primary)
-  ).toBe("#3355ff");
-  await expect.poll(
-    () => readPixel(page, 5, 30)
-  ).toEqual({ r: 0x33, g: 0x55, b: 0xff, a: 255 });
-
-  await clickTexturePixel(page, 15, 32);
-  await expect.poll(
-    () => readPixel(page, 15, 32)
-  ).toEqual({ r: 0x33, g: 0x55, b: 0xff, a: 255 });
+  await clickTexturePixel(panel, { x: 15, y: 32 });
+  await expect.poll(() => readPixels(panel, [
+    { x: 5, y: 30 },
+    { x: 15, y: 32 }
+  ])).toEqual(["#3355ffff", "#3355ffff"]);
 });
 
-test("the swap button exchanges foreground and background colors", async({ page }) => {
-  await page.evaluate(() => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-    const { brush } = panel!.canvasManager!;
-    brush.primary.set("#111111", 1);
-    brush.secondary.set("#222222", 1);
-  });
+test("the swap button exchanges foreground and background colors", async({ panel }) => {
+  await setBrushColor(panel, "primary", "#111111");
+  await setBrushColor(panel, "secondary", "#222222");
 
-  await page.getByRole("button", {
+  await panel.getByRole("button", {
     name: "Swap foreground and background colors"
   }).click();
 
-  const brush = await readBrush(page);
-  expect(brush.primary).toBe("#222222");
-  expect(brush.secondary).toBe("#111111");
+  await expect.poll(() => readBrush(panel)).toEqual({
+    primary: "#222222",
+    secondary: "#111111"
+  });
 });
 
-async function dockPicker(
-  page: Page
-): Promise<void> {
-  await page.getByRole("button", { name: "Docked color picker" }).click();
-  await expect(page.locator("color-dock")).toBeVisible();
-}
+test("docking shrinks the stage, folds the swatches and shares one color", async({ panel }) => {
+  await setBrushColor(panel, "primary", "#123456");
+  await setBrushColor(panel, "secondary", "#abcdef");
+  const stage = panel.locator(".stage");
+  const undocked = await stage.boundingBox();
 
-test("docking the picker disables the swatches and shares one color", async({ page }) => {
-  await setBrushColor(page, "primary", "#123456");
-  await setBrushColor(page, "secondary", "#abcdef");
-  const stage = page.locator(".stage");
-  const undockedHeight = await stage.evaluate((element) => element.clientHeight);
+  await toggleDock(panel);
 
-  await dockPicker(page);
-
+  await expect(panel.locator("color-dock")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Docked color picker" })
+    panel.getByRole("button", { name: "Docked color picker" })
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("color-swatch.fg button")).toBeDisabled();
-  await expect(page.locator("color-swatch.bg button")).toBeDisabled();
-  await expect(page.getByRole("button", {
-    name: "Swap foreground and background colors"
-  })).toBeDisabled();
-  await expect.poll(() => readBrush(page)).toEqual({
+  const foreground = panel.locator("color-swatch.fg button");
+  await expect(foreground).toBeDisabled();
+  await expect(foreground).toBeVisible();
+  await expect(foreground).toHaveCSS("opacity", "1");
+  await expect(panel.locator("color-swatch.bg button")).toBeDisabled();
+  await expect(panel.locator("color-swatch.bg")).toBeHidden();
+  const swap = panel.locator("color-picker-rail .swap-btn");
+  await expect(swap).toBeDisabled();
+  await expect(swap).toBeHidden();
+  await expect.poll(() => readBrush(panel)).toEqual({
     primary: "#123456",
     secondary: "#123456"
   });
-  expect(
-    await stage.evaluate((element) => element.clientHeight)
-  ).toBeLessThan(undockedHeight);
+  await expect.poll(async() => (await stage.boundingBox())!.height)
+    .toBeLessThanOrEqual(undocked!.height - 140);
 });
 
-test("the docked picker paints its color with both mouse buttons", async({ page }) => {
-  await setMode(page, "paint");
-  await dockPicker(page);
-
-  const hex = page.locator("color-dock jolly-color-picker input.hex");
+test("the docked picker color paints with the right mouse button", async({ panel }) => {
+  await setMode(panel, "paint");
+  await toggleDock(panel);
+  const hex = panel.locator("color-dock jolly-color-picker input.hex");
   await hex.fill("#ff00ff");
   await hex.press("Enter");
 
-  await expect.poll(() => readBrush(page)).toEqual({
-    primary: "#ff00ff",
-    secondary: "#ff00ff"
-  });
+  await clickTexturePixel(panel, { x: 12, y: 28 }, "right");
 
-  await clickTexturePixel(page, 12, 28, "right");
-  await expect.poll(
-    () => readPixel(page, 12, 28)
-  ).toEqual({ r: 255, g: 0, b: 255, a: 255 });
+  await expect.poll(() => readPixels(panel, [{ x: 12, y: 28 }]))
+    .toEqual(["#ff00ffff"]);
 });
 
-test("undocking restores the background color", async({ page }) => {
-  await setBrushColor(page, "secondary", "#222222");
-  await page.evaluate(() => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+test("undocking restores the background color and reports each toggle", async({ panel }) => {
+  await setBrushColor(panel, "secondary", "#222222");
+  const events = await panel.evaluateHandle((element: PixelDrawPanel) => {
     const collected: boolean[] = [];
-    Object.assign(window, { dockEvents: collected });
-    panel.addEventListener("color-docked-change", (event) => {
+    element.addEventListener("color-docked-change", (event) => {
       collected.push(event.detail);
     });
+
+    return collected;
   });
+  const undocked = await panel.locator(".stage").boundingBox();
 
-  await dockPicker(page);
-  await page.getByRole("button", { name: "Docked color picker" }).click();
+  await toggleDock(panel);
+  await toggleDock(panel);
 
-  await expect(page.locator("color-dock")).toHaveCount(0);
-  await expect(page.locator("color-swatch.bg button")).toBeEnabled();
-  expect(
-    await page.evaluate(() => Reflect.get(window, "dockEvents"))
-  ).toEqual([true, false]);
-  expect((await readBrush(page)).secondary).toBe("#222222");
-});
-
-test("the color-docked property opens the docked picker", async({ page }) => {
-  await page.evaluate(() => {
-    document.querySelector<PixelDrawPanel>("pixel-draw-panel")!.colorDocked = true;
-  });
-
-  await expect(page.locator("color-dock")).toBeVisible();
-  await expect(page.locator("pixel-draw-panel")).toHaveAttribute("color-docked", "");
+  await expect(panel.locator("color-dock")).toBeHidden();
+  await expect(panel.locator("color-dock")).toHaveJSProperty("inert", true);
+  await expect.poll(async() => (await panel.locator(".stage").boundingBox())!.height)
+    .toBe(undocked!.height);
+  await expect(panel.locator("color-swatch.bg button")).toBeEnabled();
+  expect(await events.jsonValue()).toEqual([true, false]);
+  expect((await readBrush(panel)).secondary).toBe("#222222");
 });

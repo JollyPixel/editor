@@ -1,94 +1,52 @@
-// Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
-
 // Import Internal Dependencies
+import { test, expect } from "./fixtures.ts";
 import {
-  gotoDemo,
-  setMode,
-  dragStroke,
+  BLACK,
+  CLEAR,
   clickTexturePixel,
-  readPixel
+  dragStroke,
+  readPixels,
+  seedTexture,
+  setBrushSize,
+  setMode
 } from "./utils.ts";
 
-// This file uses texture slice x:0-15, y:40-55 on the shared 80x80 canvas.
-
-const kBlack = {
-  r: 0,
-  g: 0,
-  b: 0,
-  a: 255
-};
-
-test.beforeEach(async({ page }) => {
-  await gotoDemo(page);
-});
-
-test("erases a painted stroke back to transparency", async({ page }) => {
-  await setMode(page, "paint");
-  await dragStroke(page, [
-    { x: 2, y: 42 },
-    { x: 2, y: 43 },
-    { x: 2, y: 44 }
+test.beforeEach(async({ panel }) => {
+  await seedTexture(panel, [
+    {
+      x: 0,
+      y: 0,
+      width: 20,
+      height: 20,
+      color: "#000000"
+    }
   ]);
-  await expect.poll(
-    () => readPixel(page, 2, 43)
-  ).toEqual(kBlack);
+  await setMode(panel, "erase");
+});
 
-  await setMode(page, "erase");
-  await dragStroke(page, [
-    { x: 2, y: 42 },
-    { x: 2, y: 43 },
-    { x: 2, y: 44 }
+test("both mouse buttons erase to transparency", async({ panel }) => {
+  await dragStroke(panel, [
+    { x: 2, y: 2 },
+    { x: 2, y: 4 }
   ]);
+  await clickTexturePixel(panel, { x: 6, y: 6 }, "right");
 
-  for (let y = 42; y <= 44; y++) {
-    await expect.poll(
-      () => readPixel(page, 2, y)
-    ).toMatchObject({ a: 0 });
-  }
+  await expect.poll(() => readPixels(panel, [
+    { x: 2, y: 2 },
+    { x: 2, y: 4 },
+    { x: 6, y: 6 },
+    { x: 3, y: 2 }
+  ])).toEqual([CLEAR, CLEAR, CLEAR, BLACK]);
 });
 
-test("right-click erases instead of painting the secondary color", async({ page }) => {
-  await setMode(page, "paint");
-  await clickTexturePixel(page, 6, 47);
-  await expect.poll(
-    () => readPixel(page, 6, 47)
-  ).toEqual(kBlack);
+test("the eraser uses the brush size slider", async({ panel }) => {
+  await setBrushSize(panel, 4);
+  await clickTexturePixel(panel, { x: 12, y: 12 });
 
-  await setMode(page, "erase");
-  await clickTexturePixel(page, 6, 47, "right");
-
-  await expect.poll(
-    () => readPixel(page, 6, 47)
-  ).toMatchObject({ a: 0 });
-});
-
-test("keeps the brush size option available in erase mode", async({ page }) => {
-  await setMode(page, "erase");
-  const sizeSlider = page.locator(".tool-option-overlay input[type=\"range\"]");
-  await expect(sizeSlider).toBeVisible();
-
-  await sizeSlider.evaluate((el, value) => {
-    const input = el as HTMLInputElement;
-    input.value = String(value);
-    input.dispatchEvent(
-      new Event("input", { bubbles: true })
-    );
-  }, 4);
-
-  await setMode(page, "paint");
-  await clickTexturePixel(page, 12, 52);
-  await expect.poll(
-    () => readPixel(page, 10, 50)
-  ).toEqual(kBlack);
-
-  await setMode(page, "erase");
-  await clickTexturePixel(page, 12, 52);
-
-  await expect.poll(
-    () => readPixel(page, 10, 50)
-  ).toMatchObject({ a: 0 });
-  await expect.poll(
-    () => readPixel(page, 13, 53)
-  ).toMatchObject({ a: 0 });
+  await expect.poll(() => readPixels(panel, [
+    { x: 10, y: 10 },
+    { x: 13, y: 13 },
+    { x: 9, y: 9 },
+    { x: 14, y: 14 }
+  ])).toEqual([CLEAR, CLEAR, BLACK, BLACK]);
 });

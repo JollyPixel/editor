@@ -10,7 +10,7 @@
       "default": "./dist/index.js"
     },
     "./mesh-texturing/*.ts": "./dist/mesh-texturing/*.js",
-    "./texture/*.ts": "./dist/texture/*.js"
+    "./change-tracking/*.ts": "./dist/change-tracking/*.js"
   },
   "imports": {
     "#src/*": "./src/*"

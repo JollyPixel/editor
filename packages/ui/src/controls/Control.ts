@@ -92,7 +92,7 @@ export class Control extends LitElement {
         <jolly-icon name="info"></jolly-icon>
       </button>
       <div
-        class="details"
+        class="details overlay-motion"
         id=${this.#detailsId}
         popover="auto"
         role="tooltip"

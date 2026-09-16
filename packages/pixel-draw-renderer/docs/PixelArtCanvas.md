@@ -239,7 +239,7 @@ Convenience accessors for `viewport.camera` and `viewport.zoom`. `camera` return
 
 ### `centerTexture()`
 
-Centers the texture in the current viewport.
+Frames the texture in the current viewport, one axis at a time. An axis where the texture fits with 8px of padding on each side is centered; otherwise the texture is anchored 8px from the top or left edge.
 
 ### `canvas()` / `textureCanvas()`
 
@@ -260,7 +260,7 @@ Reads or changes the element containing the visible canvas and overlays. Reparen
 
 ### `onResize()`
 
-Resizes the canvas and overlays to the current parent bounds. It does nothing when either parent dimension is zero. Call it when the containing layout changes.
+Resizes the canvas and overlays to the current parent bounds. It does nothing when either parent dimension is zero. Call it when the containing layout changes. On each axis, the camera moves by half the size change when the texture fits and stays put when it overflows, so a texture framed by `centerTexture()` stays framed.
 
 ### `destroy()`
 

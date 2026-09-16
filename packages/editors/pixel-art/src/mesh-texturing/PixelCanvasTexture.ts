@@ -10,19 +10,30 @@ import type {
 import {
   PixelCanvasChangeTracker,
   type PixelCanvasChangeFlush
-} from "../texture/PixelCanvasChangeTracker.ts";
-import type { PixelTextureSource } from "../texture/types.ts";
+} from "../change-tracking/PixelCanvasChangeTracker.ts";
+import type { PixelTextureSource } from "../change-tracking/types.ts";
 
 export type PixelCanvasTextureFlush = PixelCanvasChangeFlush;
 
 export interface PixelCanvasTextureOptions {
-  /** @default "nearest" */
+  /**
+   * The filter mode to use for the texture.
+   * @default "nearest"
+   */
   filter?: "nearest" | "linear";
-  /** @default THREE.SRGBColorSpace */
+  /**
+   * The color space to use for the texture.
+   * @default THREE.SRGBColorSpace
+   */
   colorSpace?: THREE.ColorSpace;
-  /** @default "frame" */
+  /**
+   * The flush mode to use for the texture.
+   * @default "frame"
+   */
   flush?: PixelCanvasTextureFlush;
-  /** Test scheduler override. */
+  /**
+   * Test scheduler override.
+   */
   scheduler?: (callback: () => void) => void;
 }
 
@@ -63,7 +74,6 @@ export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
     this.#changes.on("replaced", this.#onReplaced);
   }
 
-  /** Applies pending changes; returns their bounds or null when unchanged. */
   consume(): SelectionRect | null {
     return this.#changes.consume();
   }

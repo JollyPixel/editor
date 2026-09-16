@@ -13,7 +13,7 @@ import {
   PixelDrawPanel,
   type ThemeMode
 } from "../../src/index.ts";
-import { isTextureImportPolicy } from "../../src/ui/pixel-draw-panel/textures.ts";
+import { isTextureImportPolicy } from "../../src/textures/textures.ts";
 import { initializeDemoSync } from "./demo/DemoSync.ts";
 import { PixelPreviewScene } from "./preview/PixelPreviewScene.ts";
 

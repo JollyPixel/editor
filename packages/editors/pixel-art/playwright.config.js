@@ -16,7 +16,6 @@ export default defineConfig({
   // Node's own "test" script globs "test/**/*.spec.ts" for node:test
   // these files use ".e2e.ts" instead so the two runners never pick up each other's files.
   testMatch: "**/*.e2e.ts",
-  globalSetup: "./test/e2e/global-setup.ts",
   // Each worker gets its own sync room (test/e2e/constants.ts, vite.config.ts)
   // so tests can run fully in parallel instead of racing on shared canvas state.
   fullyParallel: true,

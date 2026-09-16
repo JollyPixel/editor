@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../../theme/styles/fallbacks.ts";
+import { overlayMotion } from "../../theme/styles/mixins.ts";
 
 export const dialogStyles = css`
   :host {
@@ -27,6 +28,8 @@ export const dialogStyles = css`
     background: rgb(5 10 18 / 55%);
     backdrop-filter: blur(2px);
   }
+
+  ${overlayMotion}
 
   header {
     padding: var(--jolly-space-3, 12px) var(--jolly-space-4, 16px);

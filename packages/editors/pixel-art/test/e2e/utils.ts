@@ -1,101 +1,18 @@
+// Import Node.js Dependencies
+import { Buffer } from "node:buffer";
+
 // Import Third-party Dependencies
-import {
-  test,
-  type Page
-} from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
+import { encodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
-import { testAssetPath, TEXTURE_SIZE } from "./constants.ts";
+import { TEXTURE_SIZE } from "./constants.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
-export interface PixelRGBA {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
-
-export interface GotoDemoOptions {
-  /**
-   * Boots the Three.js/WebGPU 3D preview runtime (camera, orbit controls,
-   * UV region meshes). Its render loop runs continuously and competes with
-   * every dispatched pointer event for the main thread, so it stays off
-   * unless a test actually asserts on the 3D preview (see uv.e2e.ts).
-   * @default false
-   */
-  runtime?: boolean;
-  /**
-   * Value of the panel texture-import-policy for this page.
-   * @default "replace"
-   */
-  importPolicy?: "replace" | "add" | "ask";
-  /**
-   * Milliseconds the demo host holds a `texture-add-request` before it
-   * creates the asset, so a test can observe the panel's busy indicator.
-   * @default 0
-   */
-  addDelay?: number;
-}
-
-/**
- * Open the demo and wait for interactivity.
- */
-export async function gotoDemo(
-  page: Page,
-  asset: string = testAssetPath(test.info().parallelIndex),
-  options: GotoDemoOptions = {}
-): Promise<void> {
-  const {
-    runtime = false,
-    importPolicy = "replace",
-    addDelay = 0
-  } = options;
-
-  /*
-   * The demo prompts for a username via a jolly-pixel/ui <jolly-dialog>,
-   * which (unlike window.prompt) never auto-dismisses in a headless
-   * browser, so it would hang __pixelSyncReady forever. Seed the session
-   * storage key it checks before any script on the page runs.
-   */
-  await page.addInitScript(() => {
-    sessionStorage.setItem("pixel-draw-demo:username", "E2E");
-  });
-
-  const runtimeParam = runtime ? "" : "&runtime=off";
-  const addDelayParam = addDelay > 0 ? `&add-delay=${addDelay}` : "";
-  const query = `empty=true&asset=${encodeURIComponent(asset)}${runtimeParam}`;
-  await page.goto(
-    `/?${query}&import-policy=${importPolicy}${addDelayParam}`
-  );
-
-  await page.waitForFunction(
-    () => (window as unknown as { __pixelSyncReady?: boolean; }).__pixelSyncReady === true
-  );
-
-  /*
-   * Each worker reuses one sync room across every test file (see
-   * testAssetPath()), with no per-test reset: a previous test's fire-and-forget
-   * network op (e.g. a texture replace) can still be in flight when this
-   * page joins the same room and lands after this test starts painting,
-   * silently overwriting it. Blanking here mirrors global-setup.ts's
-   * once-per-run reset, giving every test its own settled starting state.
-   */
-  await page.evaluate((size) => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-    const canvasManager = panel!.canvasManager!;
-    const blank = document.createElement("canvas");
-    blank.width = size.x;
-    blank.height = size.y;
-    canvasManager.texture = blank;
-    canvasManager.uv.clear();
-    /*
-     * The blank replace is a local edit, so it lands on the undo stack;
-     * drop it so each test starts with an empty page-local history.
-     */
-    canvasManager.document.history.clear();
-  }, TEXTURE_SIZE);
-}
+// CONSTANTS
+export const BLACK = "#000000ff";
+export const CLEAR = "#00000000";
 
 const kModeLabel: Record<Mode, string> = {
   move: "Move",
@@ -106,198 +23,299 @@ const kModeLabel: Record<Mode, string> = {
   uv: "UV"
 };
 
-/**
- * Switch mode via the toolbar UI.
- */
+export interface TexturePoint {
+  x: number;
+  y: number;
+}
+
+export interface PixelRect extends TexturePoint {
+  width?: number;
+  height?: number;
+  color: string;
+}
+
+export interface PngFile {
+  name: string;
+  mimeType: string;
+  buffer: Buffer;
+}
+
+type MouseButton = "left" | "right" | "middle";
+
 export async function setMode(
-  page: Page,
+  panel: Locator,
   mode: Mode
 ): Promise<void> {
-  await page.getByRole("button", {
+  await panel.getByRole("button", {
     name: kModeLabel[mode],
     exact: true
   }).click();
 }
 
-/**
- * Convert texture pixels to screen coordinates.
- */
-export async function textureToScreenPoint(
-  page: Page,
-  tx: number,
-  ty: number
-): Promise<{ x: number; y: number; }> {
-  return page.evaluate(({ tx, ty }) => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-    const canvasManager = panel!.canvasManager!;
-    const bounds = canvasManager.canvas().getBoundingClientRect();
-
-    const { camera, zoom } = canvasManager.viewport;
-
-    return {
-      x: bounds.left + camera.x + ((tx + 0.5) * zoom.value),
-      y: bounds.top + camera.y + ((ty + 0.5) * zoom.value)
-    };
-  }, { tx, ty });
+export async function clickToolOption(
+  panel: Locator,
+  mode: Mode,
+  option: string
+): Promise<void> {
+  await panel.page().mouse.move(0, 0);
+  await panel.getByRole("button", {
+    name: kModeLabel[mode],
+    exact: true
+  }).hover();
+  await panel.getByRole("button", {
+    name: option,
+    exact: true
+  }).click();
 }
 
-/**
- * Read one pixel from the source texture canvas.
- */
-export async function readPixel(
-  page: Page,
-  x: number,
-  y: number
-): Promise<PixelRGBA> {
-  return page.evaluate(({ x, y }) => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-    const canvas = panel!.canvasManager!.textureCanvas();
-    const ctx = canvas.getContext("2d")!;
-    const [r, g, b, a] = ctx.getImageData(
-      x,
-      y,
-      1,
-      1
-    ).data;
-
-    return {
-      r, g, b, a
-    };
-  }, { x, y });
+export async function setBrushSize(
+  panel: Locator,
+  size: number
+): Promise<void> {
+  await panel.locator(".tool-option-overlay input[type=range]")
+    .fill(String(size));
 }
 
-/**
- * Read one visible pixel from the composited renderer canvas.
- */
-export async function readRenderedPixel(
-  page: Page,
-  x: number,
-  y: number
-): Promise<PixelRGBA> {
-  return page.evaluate(({ x, y }) => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-    const canvasManager = panel!.canvasManager!;
+export async function setBrushColor(
+  panel: Locator,
+  slot: "primary" | "secondary",
+  hex: string
+): Promise<void> {
+  await panel.evaluate((element: PixelDrawPanel, args) => {
+    element.canvasManager!.brush[args.slot].set(args.hex, 1);
+  }, { slot, hex });
+}
+
+export function readBrush(
+  panel: Locator
+): Promise<{ primary: string; secondary: string; }> {
+  return panel.evaluate((element: PixelDrawPanel) => {
+    const { brush } = element.canvasManager!;
+
+    return {
+      primary: brush.primary.asString("hex").toLowerCase(),
+      secondary: brush.secondary.asString("hex").toLowerCase()
+    };
+  });
+}
+
+export function activeMode(
+  panel: Locator
+): Promise<Mode> {
+  return panel.evaluate(
+    (element: PixelDrawPanel) => element.canvasManager!.mode
+  );
+}
+
+export async function seedTexture(
+  panel: Locator,
+  rects: PixelRect[]
+): Promise<void> {
+  await panel.evaluate((element: PixelDrawPanel, args) => {
+    const canvas = element.canvasManager!;
+    const source = document.createElement("canvas");
+    source.width = args.size.x;
+    source.height = args.size.y;
+    const context = source.getContext("2d")!;
+    for (const rect of args.rects) {
+      context.fillStyle = rect.color;
+      context.fillRect(
+        rect.x,
+        rect.y,
+        rect.width ?? 1,
+        rect.height ?? 1
+      );
+    }
+    canvas.texture = source;
+    canvas.document.history.clear();
+  }, {
+    rects,
+    size: TEXTURE_SIZE
+  });
+}
+
+export function addUvRegion(
+  panel: Locator,
+  rect: { x: number; y: number; width: number; height: number; }
+): Promise<void> {
+  return panel.evaluate((element: PixelDrawPanel, regionRect) => {
+    element.canvasManager!.uv.restore({
+      id: "e2e-region",
+      color: "#00ffff",
+      state: "stacked",
+      rect: regionRect
+    });
+  }, rect);
+}
+
+export function readPixels(
+  panel: Locator,
+  points: TexturePoint[]
+): Promise<string[]> {
+  return panel.evaluate((element: PixelDrawPanel, targets) => {
+    const texture = element.canvasManager!.textureCanvas();
+    const context = texture.getContext("2d")!;
+
+    return targets.map(({ x, y }) => {
+      const rgba = context.getImageData(x, y, 1, 1).data;
+
+      return `#${Array.from(rgba, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    });
+  }, points);
+}
+
+export function readRenderedPixels(
+  panel: Locator,
+  points: TexturePoint[]
+): Promise<string[]> {
+  return panel.evaluate((element: PixelDrawPanel, targets) => {
+    const canvasManager = element.canvasManager!;
     const canvas = canvasManager.canvas();
     const bounds = canvas.getBoundingClientRect();
-
     const { camera, zoom } = canvasManager.viewport;
-    const scaleX = canvas.width / bounds.width;
-    const scaleY = canvas.height / bounds.height;
-    const canvasX = Math.floor(
-      (camera.x + ((x + 0.5) * zoom.value)) * scaleX
-    );
-    const canvasY = Math.floor(
-      (camera.y + ((y + 0.5) * zoom.value)) * scaleY
-    );
     const context = canvas.getContext("2d")!;
-    const [r, g, b, a] = context.getImageData(
-      canvasX,
-      canvasY,
-      1,
-      1
-    ).data;
 
-    return {
-      r,
-      g,
-      b,
-      a
-    };
-  }, { x, y });
+    return targets.map(({ x, y }) => {
+      const rgba = context.getImageData(
+        Math.floor((camera.x + ((x + 0.5) * zoom.value)) * canvas.width / bounds.width),
+        Math.floor((camera.y + ((y + 0.5) * zoom.value)) * canvas.height / bounds.height),
+        1,
+        1
+      ).data;
+
+      return `#${Array.from(rgba, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    });
+  }, points);
 }
 
-type MouseButton =
-  | "left"
-  | "right"
-  | "middle";
+export function textureToScreenPoint(
+  panel: Locator,
+  point: TexturePoint
+): Promise<TexturePoint> {
+  return panel.evaluate((element: PixelDrawPanel, { x, y }) => {
+    const canvasManager = element.canvasManager!;
+    const bounds = canvasManager.canvas().getBoundingClientRect();
+    const { camera, zoom } = canvasManager.viewport;
 
-/**
- * Draw a stroke across texture points.
- */
+    return {
+      x: bounds.left + camera.x + ((x + 0.5) * zoom.value),
+      y: bounds.top + camera.y + ((y + 0.5) * zoom.value)
+    };
+  }, point);
+}
+
 export async function dragStroke(
-  page: Page,
-  points: { x: number; y: number; }[],
-  button: MouseButton = "left"
+  panel: Locator,
+  points: TexturePoint[],
+  options: { button?: MouseButton; steps?: number; } = {}
 ): Promise<void> {
+  const {
+    button = "left",
+    steps = 4
+  } = options;
+  const { mouse } = panel.page();
   const screenPoints = await Promise.all(
-    points.map((p) => textureToScreenPoint(page, p.x, p.y))
+    points.map((point) => textureToScreenPoint(panel, point))
   );
 
-  await page.mouse.move(
-    screenPoints[0].x,
-    screenPoints[0].y
-  );
-  await page.mouse.down({
-    button
-  });
+  await mouse.move(screenPoints[0].x, screenPoints[0].y);
+  await mouse.down({ button });
   for (let i = 1; i < points.length; i++) {
     const distance = Math.max(
       Math.abs(points[i].x - points[i - 1].x),
       Math.abs(points[i].y - points[i - 1].y)
     );
-    await page.mouse.move(
-      screenPoints[i].x,
-      screenPoints[i].y,
-      {
-        steps: Math.max(1, distance * 4)
-      }
-    );
+    await mouse.move(screenPoints[i].x, screenPoints[i].y, {
+      steps: Math.max(1, distance * steps)
+    });
   }
-  await page.mouse.up({
-    button
-  });
+  await mouse.up({ button });
 }
 
-/**
- * Click one texture pixel without dragging.
- */
 export async function clickTexturePixel(
-  page: Page,
-  x: number,
-  y: number,
+  panel: Locator,
+  point: TexturePoint,
   button: MouseButton = "left"
 ): Promise<void> {
-  const point = await textureToScreenPoint(
-    page,
-    x,
-    y
-  );
-
-  await page.mouse.move(
-    point.x,
-    point.y
-  );
-  await page.mouse.down({
-    button
-  });
-  await page.mouse.up({
-    button
-  });
+  await dragStroke(panel, [point], { button });
 }
 
-/**
- * Set the brush's primary or secondary color directly, bypassing the
- * swatch UI (for tests that only need a known color as a starting point).
- */
-export async function setBrushColor(
-  page: Page,
-  slot: "primary" | "secondary",
-  hex: string,
-  opacity = 1
+export async function hoverTexturePixel(
+  panel: Locator,
+  point: TexturePoint
 ): Promise<void> {
-  await page.evaluate((options) => {
-    const {
-      slot: colorSlot,
-      hex: color,
-      opacity: alpha
-    } = options;
+  const screen = await textureToScreenPoint(panel, point);
+  await panel.page().mouse.move(screen.x, screen.y);
+}
 
-    const panel = document.querySelector<PixelDrawPanel>(
-      "pixel-draw-panel"
+export async function pngFile(
+  name: string,
+  size: { x: number; y: number; },
+  rects: PixelRect[] = []
+): Promise<PngFile> {
+  const data = new Uint8ClampedArray(size.x * size.y * 4);
+  for (const rect of rects) {
+    const rgba = Buffer.from(rect.color.slice(1).padEnd(8, "f"), "hex");
+    for (let y = rect.y; y < rect.y + (rect.height ?? 1); y++) {
+      for (let x = rect.x; x < rect.x + (rect.width ?? 1); x++) {
+        data.set(rgba, ((y * size.x) + x) * 4);
+      }
+    }
+  }
+  const png = await encodePng({
+    width: size.x,
+    height: size.y,
+    data
+  });
+
+  return {
+    name,
+    mimeType: "image/png",
+    buffer: Buffer.from(png)
+  };
+}
+
+export async function importFile(
+  panel: Locator,
+  file: PngFile
+): Promise<void> {
+  await panel.locator(".file-input").setInputFiles(file);
+}
+
+export async function dragFileOver(
+  panel: Locator,
+  point: TexturePoint
+): Promise<void> {
+  const screen = await textureToScreenPoint(panel, point);
+  await panel.evaluate((element: PixelDrawPanel, { x, y }) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([], "over.png", { type: "image/png" }));
+    element.shadowRoot!.querySelector(".stage")!.dispatchEvent(
+      new DragEvent("dragover", {
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+        dataTransfer: transfer
+      })
     );
-    panel!.canvasManager!.brush[colorSlot].set(
-      color,
-      alpha
-    );
-  }, { slot, hex, opacity });
+  }, screen);
+}
+
+export async function dropFile(
+  panel: Locator,
+  point: TexturePoint,
+  file: PngFile
+): Promise<void> {
+  const stage = panel.locator(".stage");
+  const [screen, box] = await Promise.all([
+    textureToScreenPoint(panel, point),
+    stage.boundingBox()
+  ]);
+  await stage.drop({ files: file }, {
+    position: {
+      x: screen.x - box!.x,
+      y: screen.y - box!.y
+    }
+  });
 }

@@ -26,6 +26,21 @@ export interface ConfirmOptions {
   danger?: boolean;
 }
 
+export interface ChoiceAction<TValue extends string = string> {
+  value: TValue;
+  label: string;
+  variant?: ButtonVariant;
+}
+
+export interface ChoiceOptions<TValue extends string = string> {
+  title?: string;
+  message: string;
+  content?: readonly Node[];
+  actions: readonly ChoiceAction<TValue>[];
+  cancelLabel?: string;
+  focus?: TValue;
+}
+
 export interface StoredPromptOptions extends PromptOptions {
   storage?: StorageAdapter;
   storageKey: string;
@@ -83,39 +98,72 @@ export function showPrompt({
   }
 }
 
-export function showConfirm({
+export async function showConfirm({
   title = "",
   message,
   confirmLabel = "OK",
   cancelLabel = "Cancel",
   danger = false
 }: ConfirmOptions): Promise<boolean> {
+  const choice = await showChoice({
+    title,
+    message,
+    cancelLabel,
+    actions: [
+      {
+        value: "confirm",
+        label: confirmLabel,
+        variant: danger ? "danger" : "accent"
+      }
+    ],
+    focus: "confirm"
+  });
+
+  return choice !== null;
+}
+
+export function showChoice<TValue extends string>({
+  title = "",
+  message,
+  content = [],
+  actions,
+  cancelLabel = "Cancel",
+  focus
+}: ChoiceOptions<TValue>): Promise<TValue | null> {
   const dialog = new Dialog();
   dialog.heading = title;
 
-  const content = document.createElement("p");
-  content.textContent = message;
-  dialog.append(content);
+  const text = document.createElement("p");
+  text.textContent = message;
+  dialog.append(text, ...content);
 
-  const confirm = actionButton(
-    confirmLabel,
-    "confirm",
-    danger ? "danger" : "accent"
-  );
   const cancel = actionButton(
     cancelLabel,
     "cancel",
     "default"
   );
-  confirm.addEventListener("click", () => dialog.close("confirm"));
   cancel.addEventListener("click", () => dialog.close("cancel"));
-  dialog.append(cancel, confirm);
+  dialog.append(cancel);
+
+  let focused: HTMLElement | undefined;
+  for (const action of actions) {
+    const button = actionButton(
+      action.label,
+      action.value,
+      action.variant ?? "default"
+    );
+    button.addEventListener("click", () => dialog.close(action.value));
+    dialog.append(button);
+    if (action.value === focus) {
+      focused = button;
+    }
+  }
   document.body.append(dialog);
 
   return settleHelper(
     dialog,
-    (returnValue) => returnValue === "confirm",
-    confirm
+    (returnValue) => actions.find((action) => action.value === returnValue)?.value ?? null,
+    focused
   );
 }
 
@@ -153,6 +201,24 @@ function actionButton(
   return button;
 }
 
+function removeAfterExit(
+  dialog: Dialog
+): void {
+  if (dialog.open) {
+    dialog.addEventListener(
+      "jolly-close",
+      () => removeAfterExit(dialog),
+      { once: true }
+    );
+
+    return;
+  }
+
+  const exits = dialog._dialog?.getAnimations?.({ subtree: true }) ?? [];
+  void Promise.allSettled(exits.map((animation) => animation.finished))
+    .then(() => dialog.remove());
+}
+
 function settleHelper<TResult>(
   dialog: Dialog,
   resolveValue: (returnValue: string) => TResult,
@@ -172,11 +238,10 @@ function settleHelper<TResult>(
     }
 
     settled = true;
-    dialog.remove();
+    removeAfterExit(dialog);
     resolve(resolveValue(returnValue));
   }
 
-  dialog.addEventListener("jolly-cancel", () => settle(""));
   dialog.addEventListener("jolly-close", (event) => {
     const detail = detailOf<{ returnValue: string; }>(event);
     if (detail !== null) {

@@ -35,6 +35,11 @@ async function openPicker(
 
   const popover = field.locator(".popover");
   await expect(popover).toBeVisible();
+  await popover.evaluate(async(element) => {
+    await Promise.all(
+      element.getAnimations().map((animation) => animation.finished)
+    );
+  });
 
   return popover;
 }

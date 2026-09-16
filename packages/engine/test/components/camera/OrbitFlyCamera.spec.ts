@@ -46,6 +46,8 @@ interface CameraHarnessOptions {
   position?: THREE.Vector3Like;
   pivotPosition?: THREE.Vector3Like;
   initialTrailDistance?: number;
+  showPivotMarker?: boolean;
+  fov?: number;
 }
 
 function createHarness(
@@ -801,5 +803,43 @@ describe("OrbitFlyCamera orbit focus marker", () => {
     harness.camera.destroy();
 
     assert.equal(harness.sceneChildren.length, 0);
+  });
+
+  test("is never created when showPivotMarker is false", () => {
+    const harness = createHarness({ focusMode: "lock", showPivotMarker: false });
+
+    harness.camera.enterOrbitFocus({ x: 0, y: 0, z: -5 });
+    assert.equal(harness.camera.isOrbiting, true);
+    assert.equal(harness.sceneChildren.length, 0);
+
+    harness.advance();
+    harness.camera.exitOrbitFocus();
+    harness.camera.destroy();
+    assert.equal(harness.sceneChildren.length, 0);
+  });
+});
+
+describe("OrbitFlyCamera options", () => {
+  test("elastic focus creates no marker when showPivotMarker is false", () => {
+    const harness = createHarness({
+      focusMode: "elastic",
+      maxPivotDistance: 20,
+      position: { x: 0, y: 0, z: 0 },
+      initialTrailDistance: 12,
+      showPivotMarker: false
+    });
+
+    assert.equal(harness.camera.isOrbiting, true);
+    assert.equal(harness.sceneChildren.length, 0);
+
+    harness.scroll(-10);
+    harness.advance();
+    harness.scroll(0);
+    assert.equal(harness.sceneChildren.length, 0);
+  });
+
+  test("fov defaults to 60 and is configurable", () => {
+    assert.equal(createHarness().camera.fov, 60);
+    assert.equal(createHarness({ fov: 45 }).camera.fov, 45);
   });
 });

@@ -9,6 +9,9 @@ import type {
   Vec2
 } from "../types.ts";
 
+// CONSTANTS
+const kFramePadding = 8;
+
 export interface DefaultViewport {
   readonly zoom: Zoom;
   readonly camera: Readonly<Vec2>;
@@ -130,8 +133,8 @@ export class Viewport extends Emitter<
     const texPx = this.#texture.pixelSize(
       this.zoom.value
     );
-    this.#camera.x = this.#canvasWidth / 2 - texPx.x / 2;
-    this.#camera.y = this.#canvasHeight / 2 - texPx.y / 2;
+    this.#camera.x = frameAxis(this.#canvasWidth, texPx.x);
+    this.#camera.y = frameAxis(this.#canvasHeight, texPx.y);
 
     this.clampCamera();
     this.emit("changed");
@@ -152,24 +155,18 @@ export class Viewport extends Emitter<
     this.#camera.y = clamp(this.#camera.y, minY, maxY);
   }
 
-  /**
-   * Preserves the viewport center while resizing.
-   */
   resizeCanvas(
     width: number,
     height: number
   ): void {
-    const dx = (
-      width - this.#canvasWidth
-    ) / 2;
-    const dy = (
-      height - this.#canvasHeight
-    ) / 2;
+    const texPx = this.#texture.pixelSize(
+      this.zoom.value
+    );
 
+    this.#camera.x += resizeShift(this.#canvasWidth, width, texPx.x);
+    this.#camera.y += resizeShift(this.#canvasHeight, height, texPx.y);
     this.#canvasWidth = width;
     this.#canvasHeight = height;
-    this.#camera.x += dx;
-    this.#camera.y += dy;
 
     this.clampCamera();
     this.emit("changed");
@@ -203,11 +200,6 @@ export class Viewport extends Emitter<
     this.emit("changed");
   }
 
-  /**
-   * Centre of the visible canvas in texture space, clamped to the texture.
-   * The anchor for actions with no cursor of their own, such as a paste
-   * triggered from a toolbar.
-   */
   visibleCenter(): Vec2 {
     const size = this.#texture.size;
     const zoom = this.zoom.value;
@@ -260,4 +252,30 @@ export class Viewport extends Emitter<
 
     return { x, y };
   }
+}
+
+function fitsAxis(
+  canvasSize: number,
+  textureSize: number
+): boolean {
+  return textureSize + kFramePadding * 2 <= canvasSize;
+}
+
+function frameAxis(
+  canvasSize: number,
+  textureSize: number
+): number {
+  return fitsAxis(canvasSize, textureSize) ?
+    (canvasSize - textureSize) / 2 :
+    kFramePadding;
+}
+
+function resizeShift(
+  previousSize: number,
+  nextSize: number,
+  textureSize: number
+): number {
+  return fitsAxis(nextSize, textureSize) ?
+    (nextSize - previousSize) / 2 :
+    0;
 }
