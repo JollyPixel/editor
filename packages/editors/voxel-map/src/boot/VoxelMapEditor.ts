@@ -44,7 +44,10 @@ export class VoxelMapEditor {
         position: "top-right"
       },
       focusCanvas: false,
-      focusHint: true
+      focusHint: true,
+      overlay: {
+        container: "#game-container"
+      }
     });
     const session = offline
       ? undefined

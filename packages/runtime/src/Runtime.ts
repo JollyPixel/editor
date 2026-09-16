@@ -34,69 +34,40 @@ import {
   type RuntimeCanvasTarget
 } from "./resolveRuntimeCanvas.ts";
 import type {
-  MountedPerformanceStats
-} from "./stats/mountPerformanceStats.ts";
-import type {
+  MountedPerformanceStats,
   PerformanceStatsPosition
-} from "./stats/resolveStatsOverlayX.ts";
+} from "./stats/mountPerformanceStats.ts";
 import {
   mountFocusHint,
   type FocusHintOptions,
   type MountedFocusHint
 } from "./ui/focus/mountFocusHint.ts";
-import type {
-  FocusHintPosition
-} from "./ui/focus/resolveFocusHintPlacement.ts";
+import {
+  OverlayLayer,
+  type OverlayLayerOptions
+} from "./ui/overlay/OverlayLayer.ts";
 
-export type {
-  FocusHintOptions,
-  FocusHintPosition,
-  PerformanceStatsPosition,
-  RuntimeCanvasTarget,
-  RuntimeLoadOptions
-};
+// CONSTANTS
+const kDefaultStatsPosition = "top-left";
+const kDefaultStatsInset = 8;
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
 > {
-  /**
-   * @default false
-   * Whether to include performance statistics (eg: FPS, memory usage).
-   */
   includePerformanceStats?: boolean | {
-    /** Mounts the default HUD. @default true */
     mount?: boolean;
-    /** Viewport corner used by the mounted HUD. @default "top-left" */
     position?: PerformanceStatsPosition;
+    inset?: number;
   };
-  /**
-   * Keeps keyboard focus on the canvas while the runtime is running.
-   * @default true
-   */
   focusCanvas?: boolean;
   focusHint?: boolean | FocusHintOptions;
-  /**
-   * Optional context object passed to the World.
-   */
+  overlay?: OverlayLayerOptions;
   context?: TContext;
-  /**
-   * Optional global audio object passed to the World.
-   * If not provided, a default audio context will be created.
-   */
   audio?: GlobalAudio;
-  /**
-   * Configures the catalog and platform loaders used by runtime asset operations.
-   */
   assets?: RuntimeAssetOptions;
-  /**
-   * Scheduling options
-   */
   loop?: FrameSchedulerOptions;
 }
 
-/**
- * Owns browser initialization, runtime services, and the engine loop.
- */
 export class Runtime<
   TContext = Systems.WorldDefaultContext
 > {
@@ -104,6 +75,7 @@ export class Runtime<
   readonly loop: GameLoop;
 
   readonly canvas: HTMLCanvasElement;
+  readonly overlay: OverlayLayer;
   stats?: StatsRecorder;
   readonly manager = new THREE.LoadingManager();
 
@@ -131,6 +103,7 @@ export class Runtime<
     assets: ResolvedRuntimeAssetOptions
   ) {
     this.canvas = canvas;
+    this.overlay = new OverlayLayer(canvas, options.overlay);
     this.#focusCanvas = options.focusCanvas ?? true;
     this.#focusHint = resolveFocusHintOptions(options.focusHint);
     const assetCoordinator = createRuntimeAssetCoordinator(
@@ -217,6 +190,7 @@ export class Runtime<
     if (this.#focusHint !== null) {
       this.#focusHintOverlay = mountFocusHint(
         this.canvas,
+        this.overlay,
         this.#focusHint
       );
     }
@@ -265,6 +239,7 @@ export class Runtime<
     this.stop();
     this.#statsOverlay?.dispose();
     this.#statsOverlay = null;
+    this.overlay.dispose();
     this.world.dispose();
   }
 
@@ -289,7 +264,11 @@ export class Runtime<
     );
     this.#statsOverlay = await mountPerformanceStats(
       this.stats,
-      settings.position ?? "top-left"
+      this.overlay,
+      {
+        position: settings.position ?? kDefaultStatsPosition,
+        inset: settings.inset ?? kDefaultStatsInset
+      }
     );
   }
 }
