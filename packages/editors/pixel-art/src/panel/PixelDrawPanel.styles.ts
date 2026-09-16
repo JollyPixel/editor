@@ -6,6 +6,7 @@ export const panelStyles = css`
     display: flex;
     flex-direction: row;
     height: 100%;
+    font-family: var(--jolly-font-family, ui-monospace, monospace);
 
     --color-bg-surface: light-dark(#eef3f8, #131b24);
     --color-bg-overlay: light-dark(rgb(255 255 255 / 92%), rgb(24 34 48 / 92%));
@@ -54,7 +55,6 @@ export const panelStyles = css`
     gap: 10px;
     background: var(--color-bg-surface);
     color: var(--color-text);
-    font-family: sans-serif;
     user-select: none;
   }
 
@@ -104,7 +104,6 @@ export const panelStyles = css`
     flex: 0 0 auto;
     min-width: 0;
     background: var(--color-bg-surface);
-    font-family: sans-serif;
     font-size: 12px;
     user-select: none;
   }
@@ -127,7 +126,6 @@ export const panelStyles = css`
     background: var(--color-bg-overlay);
     color: var(--color-text);
     font-size: 11px;
-    font-family: sans-serif;
     user-select: none;
     transform: translateX(-50%);
   }
@@ -218,7 +216,6 @@ export const panelStyles = css`
     background: var(--color-bg-overlay);
     color: var(--color-text);
     font-size: 11px;
-    font-family: sans-serif;
     user-select: none;
     transform: translateX(-50%);
   }
@@ -363,7 +360,7 @@ export const panelStyles = css`
     border-radius: 5px;
     background: var(--color-bg-overlay);
     color: var(--color-text);
-    font: 11px sans-serif;
+    font-size: 11px;
     white-space: nowrap;
     pointer-events: none;
   }
@@ -383,7 +380,7 @@ export const panelStyles = css`
     gap: 10px;
     background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
     color: var(--color-text);
-    font: 12px sans-serif;
+    font-size: 12px;
   }
 
   .stage-busy jolly-spinner {
@@ -407,7 +404,7 @@ export const panelStyles = css`
     border: 2px dashed var(--color-accent);
     background: color-mix(in srgb, var(--color-accent) 18%, transparent);
     color: var(--color-text);
-    font: 12px sans-serif;
+    font-size: 12px;
     text-align: center;
     pointer-events: none;
   }

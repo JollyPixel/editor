@@ -16,6 +16,7 @@ export const railButtonStyles = css`
     background: transparent;
     color: var(--color-text-muted);
     cursor: pointer;
+    font: inherit;
   }
 
   .rail-btn:hover:not(:disabled) {

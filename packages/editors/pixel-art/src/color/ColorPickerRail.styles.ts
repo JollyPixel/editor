@@ -33,6 +33,7 @@ export const colorPickerRailStyles = css`
     border-radius: 50%;
     background: var(--color-bg-control);
     color: var(--color-text-on-accent);
+    font: inherit;
     font-size: 8px;
     line-height: 1;
     cursor: pointer;
@@ -69,6 +70,7 @@ export const colorPickerRailStyles = css`
     background: transparent;
     color: var(--color-text-muted);
     cursor: pointer;
+    font: inherit;
   }
 
   .dock-btn:hover {
