@@ -17,32 +17,30 @@ export const railButtonStyles = css`
     color: var(--color-text-muted);
     cursor: pointer;
   }
+
   .rail-btn:hover:not(:disabled) {
     color: var(--color-text-emphasis);
   }
+
   .rail-btn.active {
     background: var(--color-accent);
     border-color: var(--color-accent);
     color: var(--color-text-on-accent);
   }
-  /*
-   * :hover:not(:disabled) alone outranks .active by specificity, so without
-   * this an active button's icon would flip to the dark hover color while
-   * still sitting on the accent-blue background.
-   */
+
   .rail-btn.active:hover:not(:disabled) {
     color: var(--color-text-on-accent);
   }
+
   .rail-btn:disabled {
     color: var(--color-border);
     cursor: default;
   }
+
   .rail-btn.active:disabled {
     color: var(--color-text-on-accent);
   }
 
-  /* Small corner notch: hints a hover flyout is available without
-     permanently spending rail space on a second button. */
   .rail-btn.has-flyout::after {
     content: "";
     position: absolute;
@@ -52,7 +50,7 @@ export const railButtonStyles = css`
     height: 0;
     border-style: solid;
     border-width: 3px 0 3px 3.5px;
-    border-color: transparent transparent transparent currentColor;
+    border-color: transparent transparent transparent currentcolor;
     opacity: 0.8;
   }
 
@@ -62,11 +60,6 @@ export const railButtonStyles = css`
     flex-shrink: 0;
   }
 
-  /*
-   * Anchored to the button's right edge and merged into it visually (flush
-   * radius, matching background): hovering reads as the rail itself
-   * growing a horizontal extension rather than a floating popup opening.
-   */
   .rail-flyout {
     position: absolute;
     left: 100%;
@@ -122,6 +115,7 @@ export const railButtonStyles = css`
     transform: translateY(-50%);
     transition: opacity 0.1s ease;
   }
+
   .rail-btn:hover .tooltip {
     opacity: 1;
     visibility: visible;

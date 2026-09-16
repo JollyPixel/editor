@@ -1,7 +1,3 @@
-/**
- * Narrows a possibly-null element, throwing instead of letting callers
- * fall back to a non-null assertion.
- */
 export function assertElement<T extends Element>(
   element: T | null | undefined,
   message: string

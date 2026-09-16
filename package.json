@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run build --ws --if-present",
     "test": "npm run test --ws --if-present",
-    "lint": "eslint packages && npm run lint:css -w @jolly-pixel/ui",
+    "lint": "eslint packages && npm run lint:css --ws --if-present",
     "ci:publish": "changeset publish",
     "ci:version": "changeset version",
     "clear": "clear-ts-build",

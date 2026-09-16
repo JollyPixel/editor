@@ -13,13 +13,13 @@ export const colorSwatchStyles = css`
     border-radius: var(--color-swatch-radius, 4px);
     cursor: pointer;
     padding: 0;
-    background: #000000;
+    background: #000;
     box-sizing: border-box;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.25),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgb(255 255 255 / 25%),
+      inset 0 -1px 0 rgb(0 0 0 / 20%),
       0 0 3px 0 var(--color-swatch-edge, transparent),
-      0 1px 2px rgba(0, 0, 0, 0.25);
+      0 1px 2px rgb(0 0 0 / 25%);
   }
 
   button:disabled {
@@ -28,7 +28,7 @@ export const colorSwatchStyles = css`
   }
 
   button:focus-visible {
-    outline: 2px solid var(--color-swatch-focus-color, var(--color-accent, #4488ff));
+    outline: 2px solid var(--color-swatch-focus-color, var(--color-accent, #48f));
     outline-offset: 2px;
   }
 

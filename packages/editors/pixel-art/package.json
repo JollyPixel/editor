@@ -22,7 +22,8 @@
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "npm run typecheck && c8 -r html npm run test-only",
     "test:e2e": "playwright test",
-    "lint": "eslint src test",
+    "lint": "eslint src test && npm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" \"examples/scripts/**/*.ts\" \"examples/public/**/*.css\" --cache",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "repository": {

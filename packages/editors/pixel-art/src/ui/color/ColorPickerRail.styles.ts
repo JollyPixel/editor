@@ -40,15 +40,18 @@ export const colorPickerRailStyles = css`
     box-shadow:
       0 0 0 2px var(--color-bg-surface),
       0 0 3px 2px var(--color-swatch-edge, transparent),
-      0 1px 3px rgba(0, 0, 0, 0.35);
+      0 1px 3px rgb(0 0 0 / 35%);
   }
+
   .swap-btn:hover:not(:disabled) {
     background: var(--color-accent);
   }
+
   .swap-btn:disabled {
     cursor: default;
     opacity: 0.45;
   }
+
   .swap-btn .icon {
     width: 10px;
     height: 10px;
@@ -67,17 +70,21 @@ export const colorPickerRailStyles = css`
     color: var(--color-text-muted);
     cursor: pointer;
   }
+
   .dock-btn:hover {
     color: var(--color-text-emphasis);
   }
+
   .dock-btn[aria-pressed="true"] {
     background: var(--color-accent);
     color: var(--color-text-on-accent);
   }
+
   .dock-btn:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 1px;
   }
+
   .dock-btn .icon {
     width: 12px;
     height: 12px;

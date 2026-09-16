@@ -2,6 +2,8 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a4a #0a0f12;
 }
 
 html,
@@ -21,7 +23,7 @@ body {
 jolly-scope {
   display: contents;
 
-  --jolly-accent-fill: #4488ff;
+  --jolly-accent-fill: #48f;
   --jolly-label-width: 15ch;
 }
 
@@ -71,11 +73,6 @@ jolly-pane[key="paint"]::part(content) {
   background: #3a5060;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #2a3a4a #0a0f12;
-}
-
 #game-container::before {
   content: "";
   position: absolute;
@@ -85,7 +82,7 @@ jolly-pane[key="paint"]::part(content) {
   height: 220px;
   background: linear-gradient(
     to bottom right,
-    rgb(0 0 0 / 0.8),
+    rgb(0 0 0 / 80%),
     transparent 70%
   );
   transition: opacity 200ms ease;
