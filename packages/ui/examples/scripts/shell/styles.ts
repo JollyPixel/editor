@@ -1,4 +1,7 @@
-export const shellStyles = `
+// Import Third-party Dependencies
+import { css } from "lit";
+
+export const shellStyles = css`
   :host {
     display: block;
     height: 100%;

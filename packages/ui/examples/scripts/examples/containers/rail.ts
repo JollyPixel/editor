@@ -8,7 +8,6 @@ import {
 export const RAIL_EXAMPLE = createSimpleExample(
   "containers/rail",
   "Rail",
-  "Containers",
   () => {
     const root = document.createElement("div");
     root.className = "chrome-demo";

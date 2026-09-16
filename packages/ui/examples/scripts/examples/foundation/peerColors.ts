@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import { peerColor } from "../../../src/index.ts";
-import type { GalleryExample } from "../types.ts";
+import { peerColor } from "../../../../src/index.ts";
+import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
 const kPeerCount = 16;
@@ -9,7 +9,6 @@ const kCycleMs = 900;
 export const PEER_COLORS_EXAMPLE: GalleryExample = {
   id: "foundation/peer-colors",
   title: "Peer colours",
-  group: "Foundation",
   render(host) {
     const row = document.createElement("div");
     row.className = "peer-row";

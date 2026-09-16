@@ -1,21 +1,17 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
+import type { GalleryExampleId } from "../../groups.ts";
 
 export function createSimpleExample(
-  id: string,
+  id: GalleryExampleId,
   title: string,
-  group: string,
   build: () => HTMLElement
 ): GalleryExample {
   return {
     id,
     title,
-    group,
     render(host) {
-      const element = build();
-      host.append(element);
-
-      return () => element.remove();
+      host.append(build());
     }
   };
 }

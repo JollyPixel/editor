@@ -4,15 +4,9 @@ import type { GalleryExample } from "../../types.ts";
 // CONSTANTS
 const kStorageKey = "gallery-example:dock-layout";
 
-/**
- * Exercises the whole arrangement surface in one page: a solid dock packing
- * two panes to the top, an overlay dock packing one to the bottom, a floating
- * pane, and the drag that moves any of them between the three.
- */
 export const DOCK_LAYOUT_EXAMPLE: GalleryExample = {
   id: "scenarios/dock-layout",
   title: "Dock layout",
-  group: "Scenarios",
   render(host) {
     const stage = document.createElement("div");
     stage.className = "dock-layout-stage";
@@ -63,11 +57,6 @@ export const DOCK_LAYOUT_EXAMPLE: GalleryExample = {
 
     stage.append(layout);
     host.append(reset, stage);
-
-    return () => {
-      reset.remove();
-      stage.remove();
-    };
   }
 };
 

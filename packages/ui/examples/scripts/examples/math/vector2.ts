@@ -6,7 +6,6 @@ import { Vector2 } from "../../../../src/index.ts";
 export const VECTOR2_EXAMPLE: GalleryExample = {
   id: "math/vector2",
   title: "Vector2",
-  group: "Math",
   render(host) {
     return renderStateMatrix<Vector2>(host, {
       liveInput: true,
@@ -29,7 +28,6 @@ export const VECTOR2_EXAMPLE: GalleryExample = {
 export const VECTOR2_XZ_EXAMPLE: GalleryExample = {
   id: "math/vector2-xz",
   title: "Vector2 (xz plane)",
-  group: "Math",
   render(host) {
     return renderStateMatrix<Vector2>(host, {
       liveInput: true,

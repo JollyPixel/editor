@@ -56,7 +56,6 @@ const kPanels: PanelOptions[] = [
 export const COLOR_PICKER_EXAMPLE: GalleryExample = {
   id: "controls/color-picker",
   title: "Color picker",
-  group: "Controls",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
@@ -75,8 +74,6 @@ export const COLOR_PICKER_EXAMPLE: GalleryExample = {
     }
 
     host.append(root);
-
-    return () => root.remove();
   }
 };
 

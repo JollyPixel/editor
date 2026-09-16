@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { GalleryExample } from "../types.ts";
+import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
 const kSemanticTokens = [
@@ -25,7 +25,6 @@ const kSemanticTokens = [
 export const TOKENS_EXAMPLE: GalleryExample = {
   id: "foundation/tokens",
   title: "Semantic tokens",
-  group: "Foundation",
   render(host) {
     const grid = document.createElement("div");
     grid.className = "token-grid";

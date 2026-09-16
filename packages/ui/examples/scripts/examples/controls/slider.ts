@@ -6,7 +6,6 @@ import { Slider } from "../../../../src/index.ts";
 export const SLIDER_EXAMPLE: GalleryExample = {
   id: "controls/slider",
   title: "Slider",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Slider>(host, {
       liveInput: true,

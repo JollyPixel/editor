@@ -6,7 +6,6 @@ import { Color } from "../../../../src/index.ts";
 export const COLOR_EXAMPLE: GalleryExample = {
   id: "controls/color",
   title: "Color",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Color>(host, {
       create() {
@@ -30,7 +29,6 @@ export const COLOR_EXAMPLE: GalleryExample = {
 export const COLOR_ALPHA_EXAMPLE: GalleryExample = {
   id: "controls/color-alpha",
   title: "Color (alpha)",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Color>(host, {
       create() {

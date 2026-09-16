@@ -1,5 +1,8 @@
+// Import Third-party Dependencies
+import { css } from "lit";
+
 /** Styles for content rendered inside the gallery, distinct from its navigation shell. */
-export const exampleStyles = `
+export const exampleStyles = css`
   main:has(.editor-shell) {
     overflow: hidden;
     padding: 0;
@@ -88,12 +91,8 @@ export const exampleStyles = `
     transform: scale(1.25);
   }
 
-  .state-matrix,
-  .chrome-demo {
-    --jolly-label-width: 14ch;
-  }
-
   .state-matrix {
+    --jolly-label-width: 14ch;
     --jolly-field-trailing-width: 48px;
     --jolly-gutter-width: 14px;
 
@@ -108,6 +107,8 @@ export const exampleStyles = `
   }
 
   .chrome-demo {
+    --jolly-label-width: 14ch;
+
     display: grid;
     gap: var(--jolly-space-4);
     max-width: 520px;
@@ -136,16 +137,13 @@ export const exampleStyles = `
   .dock-layout-stage {
     position: relative;
     display: flex;
+    height: 520px;
     overflow: hidden;
     border: 1px solid var(--jolly-border);
   }
 
   .placement-stage {
     height: 480px;
-  }
-
-  .dock-layout-stage {
-    height: 520px;
   }
 
   .placement-viewport {

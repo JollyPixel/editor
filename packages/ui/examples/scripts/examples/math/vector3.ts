@@ -6,7 +6,6 @@ import { Vector3 } from "../../../../src/index.ts";
 export const VECTOR3_EXAMPLE: GalleryExample = {
   id: "math/vector3",
   title: "Vector3",
-  group: "Math",
   render(host) {
     return renderStateMatrix<Vector3>(host, {
       liveInput: true,

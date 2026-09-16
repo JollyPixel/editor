@@ -6,7 +6,6 @@ import { Range } from "../../../../src/index.ts";
 export const RANGE_EXAMPLE: GalleryExample = {
   id: "controls/range",
   title: "Range",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Range>(host, {
       create() {
@@ -16,7 +15,6 @@ export const RANGE_EXAMPLE: GalleryExample = {
         field.min = 0;
         field.max = 60;
         field.step = 0.5;
-        // Distinct objects are fine: jolly-range compares component wise, not by identity.
         field.value = {
           from: 5,
           to: 20

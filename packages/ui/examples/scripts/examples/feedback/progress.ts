@@ -20,7 +20,6 @@ const kAssetNames = [
 export const PROGRESS_EXAMPLE: GalleryExample = {
   id: "feedback/progress",
   title: "Progress and loading",
-  group: "Feedback",
   render(host) {
     const root = document.createElement("div");
     root.className = "progress-example";
@@ -128,10 +127,7 @@ export const PROGRESS_EXAMPLE: GalleryExample = {
     root.append(states, simulator);
     host.append(root);
 
-    return () => {
-      stop();
-      root.remove();
-    };
+    return () => stop();
   }
 };
 

@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import type { GalleryExampleId } from "./groups.ts";
+
 declare global {
   interface Window {
     /**
@@ -26,12 +29,12 @@ export interface GalleryExample {
   /**
    * Also the deep link: `/?example=<id>`.
    */
-  id: string;
+  id: GalleryExampleId;
   title: string;
-  group: string;
   /**
-   * Returns its teardown.
-   * The gallery only clears the host, so release timers and listeners here.
+   * Returns a teardown only for state living outside `host`: timers, subscriptions, listeners on
+   * `window` or `document`, and panes mounting themselves on `document.body`. The gallery clears
+   * `host` on its own, so appended elements need no teardown.
    */
   render(
     host: HTMLElement

@@ -1,11 +1,10 @@
 // Import Internal Dependencies
-import { Pane } from "../../../src/index.ts";
-import type { GalleryExample } from "../types.ts";
+import { Pane } from "../../../../src/index.ts";
+import type { GalleryExample } from "../../types.ts";
 
 export const PRESENCE_EXAMPLE: GalleryExample = {
   id: "peer/presence",
   title: "Presence",
-  group: "Peer",
   render(host) {
     const pane = new Pane({
       title: "Session",

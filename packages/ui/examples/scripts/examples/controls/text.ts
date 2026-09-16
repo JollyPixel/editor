@@ -6,7 +6,6 @@ import { Text } from "../../../../src/index.ts";
 export const TEXT_EXAMPLE: GalleryExample = {
   id: "controls/text",
   title: "Text",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Text>(host, {
       create() {

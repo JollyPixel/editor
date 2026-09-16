@@ -6,7 +6,6 @@ import { Point2d } from "../../../../src/index.ts";
 export const POINT2D_EXAMPLE: GalleryExample = {
   id: "math/point2d",
   title: "Point2d",
-  group: "Math",
   render(host) {
     return renderStateMatrix<Point2d>(host, {
       liveInput: true,

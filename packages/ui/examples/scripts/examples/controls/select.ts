@@ -27,7 +27,6 @@ const kFilters = [
 export const SELECT_EXAMPLE: GalleryExample = {
   id: "controls/select",
   title: "Select",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Select<unknown>>(host, {
       create() {

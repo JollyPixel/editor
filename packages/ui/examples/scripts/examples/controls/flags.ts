@@ -26,7 +26,6 @@ const kCollisionLayers = [
 export const FLAGS_EXAMPLE: GalleryExample = {
   id: "controls/flags",
   title: "Flags",
-  group: "Controls",
   render(host) {
     return renderStateMatrix<Flags>(host, {
       colored: true,

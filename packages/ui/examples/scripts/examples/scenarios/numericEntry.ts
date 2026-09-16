@@ -16,15 +16,9 @@ const kSuggestions = [
   "1/0"
 ];
 
-/**
- * The two numeric affordances together, with a live log of what each one commits. Expressions and
- * drag scrub share a field here on purpose: the log is what shows that typing stays silent until
- * commit while a scrub streams.
- */
 export const NUMERIC_ENTRY_EXAMPLE: GalleryExample = {
   id: "scenarios/numeric-entry",
   title: "Expressions and scrub",
-  group: "Scenarios",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
@@ -54,8 +48,6 @@ export const NUMERIC_ENTRY_EXAMPLE: GalleryExample = {
 
     root.append(hint, field, log);
     host.append(root);
-
-    return () => root.remove();
   }
 };
 

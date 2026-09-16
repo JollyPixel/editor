@@ -1,8 +1,11 @@
+// Import Third-party Dependencies
+import { css } from "lit";
+
 // Import Internal Dependencies
 import { themeStyles } from "../../../../src/index.ts";
 
 // CONSTANTS
-const kScopedHostStyles = `
+const kScopedHostStyles = css`
   :host {
     display: grid;
     gap: var(--jolly-space-1);
@@ -37,7 +40,7 @@ export function createScopedHost(
     mode: "open"
   });
   const sheet = new CSSStyleSheet();
-  sheet.replaceSync(`${themeStyles.cssText}\n${kScopedHostStyles}`);
+  sheet.replaceSync(`${themeStyles.cssText}\n${kScopedHostStyles.cssText}`);
   content.adoptedStyleSheets = [sheet];
 
   return {

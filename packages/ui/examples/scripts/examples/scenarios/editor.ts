@@ -62,37 +62,33 @@ const kLayers = [
   }
 ];
 
-/** Fits the widest inspector label and aligns every field row. */
 const kLabelWidth = "10ch";
 const kFieldTrailingWidth = "48px";
 
 export interface EditorScenarioOptions {
-  /** Displays every field state together for visual testing. */
   salted: boolean;
 }
 
 export const EDITOR_EXAMPLE: GalleryExample = {
   id: "scenarios/editor",
   title: "Editor",
-  group: "Scenarios",
   render(host) {
-    return mountEditor(host, { salted: false });
+    mountEditor(host, { salted: false });
   }
 };
 
 export const EDITOR_STATES_EXAMPLE: GalleryExample = {
   id: "scenarios/editor-states",
   title: "Editor (salted states)",
-  group: "Scenarios",
   render(host) {
-    return mountEditor(host, { salted: true });
+    mountEditor(host, { salted: true });
   }
 };
 
 function mountEditor(
   host: HTMLElement,
   options: EditorScenarioOptions
-): () => void {
+): void {
   const shell = document.createElement("div");
   shell.className = "editor-shell";
   shell.append(
@@ -102,21 +98,12 @@ function mountEditor(
     buildInspector(options)
   );
 
-  /*
-   * DockLayout owns docking and persistence for both docks and the palette.
-   * It uses display: contents, so it does not alter the editor grid.
-   */
   const layout = document.createElement("jolly-dock-layout");
   layout.storageKey = storageKey(options, "layout");
   layout.append(shell, buildPalette());
   host.append(layout);
-
-  return () => {
-    layout.remove();
-  };
 }
 
-/** Writes live and committed values back to the controlled fields. */
 function bind<
   TValue,
   TField extends HTMLElement & { value: FieldValue<TValue>; }
@@ -290,7 +277,6 @@ function buildInspector(
     kFieldTrailingWidth
   );
 
-  // Reserve lock space so peer edits do not shift inspector rows.
   if (options.salted) {
     dock.style.setProperty("--jolly-gutter-width", "14px");
   }
