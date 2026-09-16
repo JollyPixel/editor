@@ -7,11 +7,12 @@ the standard startup sequence.
 ## API
 
 ```ts
-type PerformanceStatsPosition = "top-left" | "top-right";
-type FocusHintPosition =
+type OverlayPosition =
   | "top-left"   | "top-center"    | "top-right"
   | "middle-left"| "center"        | "middle-right"
   | "bottom-left"| "bottom-center" | "bottom-right";
+type PerformanceStatsPosition = OverlayPosition;
+type FocusHintPosition = OverlayPosition;
 
 interface FocusHintOptions {
   position?: FocusHintPosition;
@@ -21,13 +22,36 @@ interface FocusHintOptions {
 
 type RuntimeCanvasTarget = HTMLCanvasElement | string;
 
+interface OverlayLayerOptions {
+  container?: HTMLElement | string;
+}
+
+interface OverlayMountOptions {
+  position?: OverlayPosition;
+  inset?: number;
+  interactive?: boolean;
+}
+
+interface MountedOverlay {
+  dispose(): void;
+}
+
+class OverlayLayer {
+  readonly element: HTMLDivElement;
+
+  mount(content: HTMLElement, options?: OverlayMountOptions): MountedOverlay;
+  dispose(): void;
+}
+
 interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
   includePerformanceStats?: boolean | {
     mount?: boolean;
     position?: PerformanceStatsPosition;
+    inset?: number;
   };
   focusCanvas?: boolean;
   focusHint?: boolean | FocusHintOptions;
+  overlay?: OverlayLayerOptions;
   context?: TContext;
   audio?: GlobalAudio;
   assets?: RuntimeAssetOptions;
@@ -49,6 +73,7 @@ class Runtime<TContext = Systems.WorldDefaultContext> {
   readonly world: Systems.World<THREE.WebGPURenderer, TContext>;
   readonly loop: GameLoop;
   readonly canvas: HTMLCanvasElement;
+  readonly overlay: OverlayLayer;
   readonly manager: THREE.LoadingManager;
   readonly running: boolean;
   stats?: StatsRecorder;
@@ -94,14 +119,16 @@ It also rejects when the selector matches no element or a non-canvas element.
 | `includePerformanceStats` | `false` | Creates a `StatsRecorder`. `true` also mounts the default HUD. |
 | `focusCanvas` | `true` | Restores canvas focus after page clicks while the runtime is running. |
 | `focusHint` | `false` | Shows a hint over the canvas while it does not hold keyboard focus. |
+| `overlay` | Tracks the canvas | Chooses where runtime overlays are mounted. See [overlays](#overlays). |
 | `context` | `undefined` | Supplies the world's typed application context. |
 | `audio` | Engine default | Supplies the world's global audio service. |
 | `assets` | Empty catalog and default loaders | Configures the runtime asset coordinator. |
 | `loop` | `GameLoop` defaults | Configures the loop's `FrameScheduler`. |
 
 Pass `{ mount: false }` to create `runtime.stats` without mounting the default
-HUD. The mounted HUD supports `"top-left"` and `"top-right"`; its default is
-`"top-left"`.
+HUD. The mounted HUD accepts any `OverlayPosition` (default `"top-left"`) and
+an `inset` in pixels (default `8`). It is anchored to the canvas through
+`runtime.overlay`.
 
 ```ts
 const runtime = await Runtime.create("canvas", {
@@ -142,16 +169,63 @@ const runtime = await Runtime.create("canvas", {
 | `inset` | `12` | Distance in pixels between the hint and the canvas edges. |
 | `text` | `"Click to focus"` | Label displayed inside the hint. |
 
-Passing `true` uses every default. The hint is mounted on `document.body` with
-`position: fixed` and tracks the canvas bounding box, so it follows a canvas
-docked in an editor pane. It never captures pointer events: a click over the
-hint reaches the canvas underneath and focuses it.
-
-An anchor is clamped to `inset` when the hint is larger than the canvas along
-that axis.
+Passing `true` uses every default. The hint is mounted through
+`runtime.overlay`, so it follows the canvas. It never captures pointer events:
+a click over the hint reaches the canvas underneath and focuses it. Text wider
+than the canvas is truncated with an ellipsis.
 
 Combine it with `focusCanvas: false`. The default `focusCanvas: true` restores
 canvas focus after every document click, so the hint would only ever flash.
+
+### Overlays
+
+`runtime.overlay` is the layer that holds the performance HUD, the focus hint,
+and any element the application mounts over the canvas. It exists as soon as
+`Runtime.create()` resolves and is removed by `runtime.dispose()`.
+
+By default the layer is a `position: fixed` element on `document.body` that
+copies the canvas bounding box. It updates on window resize, on scroll, and when
+the canvas is resized, so it follows a canvas that shrinks when a dock opens.
+The layer sets no `z-index`; style `runtime.overlay.element` when the page
+stacks positioned elements above the canvas.
+
+Pass `overlay.container` (an element or a CSS selector) to mount the layer
+inside that element instead. The layer then fills the container with
+`position: absolute` and does no tracking, so the container must be a
+positioned element that wraps the canvas. Overlays then stack with the
+container's other children.
+
+```ts
+const runtime = await Runtime.create("#viewport > canvas", {
+  overlay: {
+    container: "#viewport"
+  },
+  includePerformanceStats: {
+    position: "top-right"
+  }
+});
+```
+
+`mount()` wraps an element in an anchored slot and returns a handle whose
+`dispose()` removes it.
+
+```ts
+const badge = document.createElement("span");
+badge.textContent = "Offline";
+
+const mounted = runtime.overlay.mount(badge, {
+  position: "bottom-right",
+  inset: 12
+});
+
+mounted.dispose();
+```
+
+| Option | Default | Behavior |
+|---|---|---|
+| `position` | `"top-left"` | Anchor within the layer, among the nine `OverlayPosition` values. |
+| `inset` | `8` | Distance in pixels from the anchored edges. The slot is also capped to the layer size minus twice this value. |
+| `interactive` | `false` | Lets the element receive pointer events. The layer itself never does. |
 
 ## Services
 

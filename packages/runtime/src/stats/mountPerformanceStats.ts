@@ -2,15 +2,19 @@
 import type { StatsRecorder } from "@jolly-pixel/ui/stats";
 
 // Import Internal Dependencies
-import {
-  resolveStatsOverlayX,
-  type PerformanceStatsPosition
-} from "./resolveStatsOverlayX.ts";
+import type { OverlayLayer } from "../ui/overlay/OverlayLayer.ts";
+import type { OverlayPosition } from "../ui/overlay/resolveOverlayAnchor.ts";
 
 // CONSTANTS
-const kStatsInset = 8;
 const kStatsWidth = 112;
 const kStatsHeight = 56;
+
+export type PerformanceStatsPosition = OverlayPosition;
+
+export interface PerformanceStatsPlacement {
+  position: PerformanceStatsPosition;
+  inset: number;
+}
 
 export interface MountedPerformanceStats {
   dispose(): void;
@@ -18,34 +22,28 @@ export interface MountedPerformanceStats {
 
 export async function mountPerformanceStats(
   recorder: StatsRecorder,
-  position: PerformanceStatsPosition
+  layer: OverlayLayer,
+  placement: PerformanceStatsPlacement
 ): Promise<MountedPerformanceStats> {
   const { documentThemeMode } = await import("@jolly-pixel/ui");
-
-  const floating = document.createElement("jolly-floating");
-  const view = document.defaultView;
-  function positionOverlay(): void {
-    floating.x = resolveStatsOverlayX(
-      position,
-      view?.innerWidth ?? document.documentElement.clientWidth,
-      floating.width,
-      kStatsInset
-    );
-    floating.y = kStatsInset;
-  }
-
-  floating.width = kStatsWidth;
-  floating.height = kStatsHeight;
-  positionOverlay();
-  if (position === "top-right" && view !== null) {
-    view.addEventListener("resize", positionOverlay);
-  }
+  const document = layer.element.ownerDocument;
 
   const stats = document.createElement("jolly-stats");
   stats.recorder = recorder;
   stats.style.width = "100%";
   stats.style.height = "100%";
-  floating.append(stats);
+
+  const frame = document.createElement("div");
+  Object.assign(frame.style, {
+    boxSizing: "border-box",
+    width: `${kStatsWidth}px`,
+    height: `${kStatsHeight}px`,
+    overflow: "hidden",
+    borderRadius: "var(--jolly-radius-md, 6px)",
+    background: "var(--jolly-surface-raised, rgb(128 128 128 / 0.15))",
+    boxShadow: "var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 30%))"
+  });
+  frame.append(stats);
 
   const scope = document.createElement("jolly-scope");
   scope.style.display = "contents";
@@ -53,15 +51,10 @@ export async function mountPerformanceStats(
   if (theme !== null) {
     scope.setAttribute("theme", theme);
   }
-  scope.append(floating);
-  document.body.append(scope);
+  scope.append(frame);
 
-  return {
-    dispose() {
-      if (position === "top-right" && view !== null) {
-        view.removeEventListener("resize", positionOverlay);
-      }
-      scope.remove();
-    }
-  };
+  return layer.mount(scope, {
+    ...placement,
+    interactive: true
+  });
 }

@@ -16,6 +16,7 @@ import {
   EDITOR_STATES_EXAMPLE
 } from "./editor.ts";
 import { FACADE_PARITY_EXAMPLE } from "./facadeParity.ts";
+import { FACADE_HIDDEN_EXAMPLE } from "./facadeHidden.ts";
 import { STATS_CYCLE_EXAMPLE } from "./statsCycle.ts";
 import { MIXED_PER_AXIS_EXAMPLE } from "./mixedPerAxis.ts";
 import { UNLABELED_FIELDS_EXAMPLE } from "./unlabeledFields.ts";
@@ -36,6 +37,7 @@ export const SCENARIOS_EXAMPLES = [
   EDITOR_EXAMPLE,
   EDITOR_STATES_EXAMPLE,
   FACADE_PARITY_EXAMPLE,
+  FACADE_HIDDEN_EXAMPLE,
   STATS_CYCLE_EXAMPLE,
   MIXED_PER_AXIS_EXAMPLE,
   UNLABELED_FIELDS_EXAMPLE

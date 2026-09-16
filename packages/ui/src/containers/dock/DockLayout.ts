@@ -42,6 +42,7 @@ import {
   serializeLayout
 } from "./layoutParser.ts";
 import { LayoutProjection } from "./LayoutProjection.ts";
+import { extractSize } from "./extractSize.ts";
 import type {
   PaneDragDetail,
   PaneElement
@@ -53,8 +54,6 @@ import { pageNamespace } from "../../storage/keys.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 
 // CONSTANTS
-const kExtractMinWidth = 160;
-const kExtractMinHeight = 80;
 const kGrabInset = 24;
 
 /**
@@ -412,16 +411,21 @@ export class DockLayout extends LitElement {
     pane: PaneElement,
     grab: ExtractGrab
   ): void {
-    const rect = pane.getBoundingClientRect();
-    const remembered = this.#snapshot.geometry[pane.layoutKey];
-    const width = Math.max(
-      remembered?.width ?? rect.width,
-      kExtractMinWidth
-    );
-    const height = Math.max(
-      remembered?.height ?? rect.height,
-      kExtractMinHeight
-    );
+    const group = pane.parentElement;
+    const { width, height } = extractSize({
+      remembered: this.#snapshot.geometry[pane.layoutKey],
+      preferred: {
+        width: pane.floatWidth,
+        height: pane.floatHeight
+      },
+      measured: pane.getBoundingClientRect(),
+      fallback: group !== null && isPaneGroup(group) ?
+        group.getBoundingClientRect() :
+        {
+          width: 0,
+          height: 0
+        }
+    });
     let x = grab.x - Math.min(grab.offsetX, Math.max(width - kGrabInset, 0));
     let y = grab.y - Math.min(grab.offsetY, Math.max(height - kGrabInset, 0));
 

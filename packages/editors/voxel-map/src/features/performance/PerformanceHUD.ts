@@ -99,7 +99,8 @@ export class PerformanceHUD {
     const pane = new Pane({
       title: "Voxel Stats [F3]",
       storageKey: kStorageKey,
-      collapsible: true
+      collapsible: true,
+      hidden: true
     });
     this.#pane = pane;
 

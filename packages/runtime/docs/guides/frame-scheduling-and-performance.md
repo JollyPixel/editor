@@ -48,7 +48,7 @@ Use `Infinity` to remove the detected render cap. This option overrides
 ## Show performance statistics
 
 Set `includePerformanceStats` to `true` to mount the default HUD in the
-top-left corner:
+top-left corner of the canvas:
 
 ```ts
 const runtime = await Runtime.create("canvas", {
@@ -56,18 +56,20 @@ const runtime = await Runtime.create("canvas", {
 });
 ```
 
-Choose the other supported corner with `position`:
+Choose another anchor with `position` and the edge distance with `inset`:
 
 ```ts
 const runtime = await Runtime.create("canvas", {
   includePerformanceStats: {
-    position: "top-right"
+    position: "top-right",
+    inset: 12
   }
 });
 ```
 
-The top-right HUD follows viewport resizes. The HUD is removed by
-`runtime.dispose()`.
+The HUD is mounted through `runtime.overlay`, so it follows the canvas when the
+canvas moves or resizes. See [overlays](../api/Runtime.md#overlays) to mount it
+inside a container element instead. The HUD is removed by `runtime.dispose()`.
 
 Pass `mount: false` when application code will display or consume the recorder:
 

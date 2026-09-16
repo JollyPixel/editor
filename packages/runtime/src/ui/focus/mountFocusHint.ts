@@ -1,13 +1,13 @@
 // Import Internal Dependencies
-import {
-  resolveFocusHintPlacement,
-  type FocusHintPosition
-} from "./resolveFocusHintPlacement.ts";
+import type { OverlayLayer } from "../overlay/OverlayLayer.ts";
+import type { OverlayPosition } from "../overlay/resolveOverlayAnchor.ts";
 
 // CONSTANTS
 const kDefaultPosition = "top-center";
 const kDefaultInset = 12;
 const kDefaultText = "Click to focus";
+
+export type FocusHintPosition = OverlayPosition;
 
 export interface FocusHintOptions {
   position?: FocusHintPosition;
@@ -21,6 +21,7 @@ export interface MountedFocusHint {
 
 export function mountFocusHint(
   canvas: HTMLCanvasElement,
+  layer: OverlayLayer,
   options: FocusHintOptions = {}
 ): MountedFocusHint {
   const {
@@ -29,12 +30,14 @@ export function mountFocusHint(
     text = kDefaultText
   } = options;
 
-  const element = document.createElement("div");
+  const element = canvas.ownerDocument.createElement("div");
   element.setAttribute("aria-hidden", "true");
   element.textContent = text;
   Object.assign(element.style, {
-    position: "fixed",
-    zIndex: "2147483000",
+    boxSizing: "border-box",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
     pointerEvents: "none",
     padding: "6px 12px",
     borderRadius: "6px",
@@ -45,55 +48,27 @@ export function mountFocusHint(
     opacity: "0",
     transition: "opacity 0.2s ease-in-out"
   });
-  document.body.append(element);
-
-  function updatePlacement(): void {
-    const rect = canvas.getBoundingClientRect();
-    const placement = resolveFocusHintPlacement(
-      position,
-      rect,
-      {
-        width: element.offsetWidth,
-        height: element.offsetHeight
-      },
-      inset
-    );
-
-    element.style.left = `${placement.x}px`;
-    element.style.top = `${placement.y}px`;
-  }
+  const mounted = layer.mount(element, {
+    position,
+    inset
+  });
 
   function updateVisibility(): void {
-    const focused = document.activeElement === canvas;
+    const focused = canvas.ownerDocument.activeElement === canvas;
 
     element.hidden = focused;
     element.style.opacity = focused ? "0" : "1";
-    if (!focused) {
-      updatePlacement();
-    }
   }
 
-  const view = document.defaultView;
   canvas.addEventListener("focus", updateVisibility);
   canvas.addEventListener("blur", updateVisibility);
-  view?.addEventListener("resize", updatePlacement);
-  view?.addEventListener("scroll", updatePlacement, true);
-
-  const observer = typeof ResizeObserver === "undefined"
-    ? null
-    : new ResizeObserver(() => updatePlacement());
-  observer?.observe(canvas);
-
   updateVisibility();
 
   return {
     dispose() {
       canvas.removeEventListener("focus", updateVisibility);
       canvas.removeEventListener("blur", updateVisibility);
-      view?.removeEventListener("resize", updatePlacement);
-      view?.removeEventListener("scroll", updatePlacement, true);
-      observer?.disconnect();
-      element.remove();
+      mounted.dispose();
     }
   };
 }

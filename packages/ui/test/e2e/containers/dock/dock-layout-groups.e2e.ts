@@ -257,6 +257,39 @@ test.describe("DockLayout groups", () => {
     await expect(page.locator(".dock-layout-visible")).toHaveText("blocks layers paint");
   });
 
+  test("a hidden tab floats at its declared float size", async({ page }) => {
+    await open(page);
+
+    await dragTo(
+      page,
+      page.locator("jolly-pane-group .tab", { hasText: "Paint" }),
+      await centerOf(page.locator(".dock-layout-viewport"))
+    );
+
+    const frame = page.locator("jolly-floating:has(jolly-pane[key='paint'])");
+    await expect(frame).toHaveCount(1);
+    const box = await boxOf(frame);
+    expect(box.width).toBeCloseTo(300, 0);
+    expect(box.height).toBeCloseTo(420, 0);
+  });
+
+  test("a hidden tab without a float size floats at its group size", async({ page }) => {
+    await open(page);
+
+    const group = await boxOf(page.locator("jolly-pane-group"));
+    await dragTo(
+      page,
+      page.locator("jolly-pane-group .tab", { hasText: "General" }),
+      await centerOf(page.locator(".dock-layout-viewport"))
+    );
+
+    const frame = page.locator("jolly-floating:has(jolly-pane[key='general'])");
+    await expect(frame).toHaveCount(1);
+    const box = await boxOf(frame);
+    expect(box.width).toBeCloseTo(group.width, 0);
+    expect(box.height).toBeCloseTo(group.height, 0);
+  });
+
   test("a pane dropped on a tab strip joins the group as the shown tab", async({ page }) => {
     await open(page);
 
