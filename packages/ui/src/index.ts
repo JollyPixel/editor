@@ -143,7 +143,9 @@ export {
   type DeclaredDock,
   type DeclaredGroup,
   type DeclaredLayout,
+  type DockAddress,
   type DockChange,
+  type DockColumn,
   type DockState,
   type FloatingChange,
   type FloatingState,
@@ -156,6 +158,10 @@ export {
   type PanePlacement,
   type PaneState
 } from "./containers/dock/layout.ts";
+export {
+  columnGroups,
+  dockAddress
+} from "./containers/dock/dockColumns.ts";
 export {
   parseLayout,
   serializeLayout

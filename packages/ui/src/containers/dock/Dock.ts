@@ -13,6 +13,7 @@ import {
 
 // Import Internal Dependencies
 import { dockStyles } from "./Dock.styles.ts";
+import type { DockColumn } from "./layout.ts";
 import { emitContainerEvent } from "../events.ts";
 import {
   isPane,
@@ -80,6 +81,12 @@ export class Dock extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare empty: boolean;
 
+  @property({ type: Boolean, reflect: true })
+  declare double: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare split: boolean;
+
   @property({ type: Number, attribute: "min-size" })
   declare minSize: number;
 
@@ -95,11 +102,17 @@ export class Dock extends LitElement {
   @query(".resize-handle")
   declare _handle: HTMLDivElement;
 
-  @query(".content")
+  @query(".primary")
   declare _content: HTMLDivElement;
 
-  @query("slot")
+  @query(".secondary")
+  declare _secondary: HTMLDivElement;
+
+  @query("slot:not([name])")
   declare _slot: HTMLSlotElement;
+
+  @query("slot[name=\"secondary\"]")
+  declare _secondarySlot: HTMLSlotElement;
 
   #resizeHandle: ResizeHandle | null = null;
   #removeResizeListeners: (() => void) | null = null;
@@ -136,6 +149,10 @@ export class Dock extends LitElement {
     return this.side === "left" || this.side === "right" ? "y" : "x";
   }
 
+  get splittable(): boolean {
+    return this.double && !this.overlay && this.axis === "y";
+  }
+
   constructor() {
     super();
 
@@ -147,6 +164,8 @@ export class Dock extends LitElement {
     this.collapsible = false;
     this.collapsed = false;
     this.empty = false;
+    this.double = false;
+    this.split = false;
     this.minSize = 120;
     this.maxSize = Number.POSITIVE_INFINITY;
     this.storageKey = "";
@@ -160,8 +179,11 @@ export class Dock extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      <div class="content" part="content">
+      <div class="content column primary" part="content">
         <slot @slotchange=${this.#onSlotChange}></slot>
+      </div>
+      <div class="content column secondary" part="secondary">
+        <slot name="secondary" @slotchange=${this.#onSlotChange}></slot>
       </div>
       <div
         class="resize-handle"
@@ -185,10 +207,17 @@ export class Dock extends LitElement {
     }
 
     if (!this.hasUpdated) {
-      this.empty = this.slots().length === 0;
+      this.#readOccupancy();
       if (!this.#managed) {
         this.#restore();
       }
+    }
+    else if (
+      changed.has("double") ||
+      changed.has("overlay") ||
+      changed.has("side")
+    ) {
+      this.#readOccupancy();
     }
   }
 
@@ -205,7 +234,8 @@ export class Dock extends LitElement {
       changed.has("side") ||
       changed.has("minSize") ||
       changed.has("maxSize") ||
-      changed.has("overlay")
+      changed.has("overlay") ||
+      changed.has("split")
     ) {
       this.#connectResizeHandle();
     }
@@ -215,7 +245,8 @@ export class Dock extends LitElement {
       changed.has("collapsed") ||
       changed.has("empty") ||
       changed.has("side") ||
-      changed.has("overlay")
+      changed.has("overlay") ||
+      changed.has("split")
     ) {
       this.#applySize();
     }
@@ -226,10 +257,23 @@ export class Dock extends LitElement {
     super.disconnectedCallback();
   }
 
-  slots(): DockSlot[] {
+  slots(
+    column?: DockColumn
+  ): DockSlot[] {
+    if (column === undefined) {
+      return [
+        ...this.slots("primary"),
+        ...this.slots("secondary")
+      ];
+    }
+
+    const secondary = column === "secondary";
+    const slot = secondary ? this._secondarySlot : this._slot;
     const elements = this.hasUpdated ?
-      this._slot.assignedElements({ flatten: true }) :
-      [...this.children];
+      slot.assignedElements({ flatten: true }) :
+      [...this.children].filter(
+        (element) => (element.getAttribute("slot") === "secondary") === secondary
+      );
 
     return elements.filter(
       (element): element is DockSlot => isPane(element) || isPaneGroup(element)
@@ -242,8 +286,27 @@ export class Dock extends LitElement {
     );
   }
 
-  dropZone(): Rect {
-    const rect = this.getBoundingClientRect();
+  acceptsSecondary(
+    dragged: PaneElement
+  ): boolean {
+    if (!this.splittable || this.collapsed) {
+      return false;
+    }
+
+    return this.split ||
+      this.slots("primary").some((slot) => slot !== dragged);
+  }
+
+  dropZone(
+    column: DockColumn = "primary"
+  ): Rect {
+    if (column === "secondary") {
+      return this.#secondaryZone();
+    }
+
+    const rect = this.split ?
+      this._content.getBoundingClientRect() :
+      this.getBoundingClientRect();
     const vertical = this.side === "left" || this.side === "right";
     const thickness = vertical ? rect.width : rect.height;
     const span = vertical ? rect.height : rect.width;
@@ -276,7 +339,25 @@ export class Dock extends LitElement {
       };
   }
 
-  previewZone(): Rect | undefined {
+  previewZone(
+    column: DockColumn = "primary"
+  ): Rect | undefined {
+    const size = Math.min(Math.max(this.size, this.minSize), this.maxSize);
+    if (column === "secondary") {
+      if (this.split) {
+        return undefined;
+      }
+
+      const zone = this.#secondaryZone();
+
+      return {
+        x: this.side === "left" ? zone.x : zone.x + zone.width - size,
+        y: zone.y,
+        width: size,
+        height: zone.height
+      };
+    }
+
     const rect = this.getBoundingClientRect();
     const vertical = this.axis === "y";
     if ((vertical ? rect.width : rect.height) > 0) {
@@ -284,7 +365,6 @@ export class Dock extends LitElement {
     }
 
     const zone = this.dropZone();
-    const size = Math.min(Math.max(this.size, this.minSize), this.maxSize);
     if (vertical) {
       return {
         x: this.side === "left" ? zone.x : zone.x + zone.width - size,
@@ -303,10 +383,11 @@ export class Dock extends LitElement {
   }
 
   dropStacks(
-    dragged: PaneElement
+    dragged: PaneElement,
+    column: DockColumn = "primary"
   ): DragStack[] {
     const stacks: DragStack[] = [];
-    const slots = this.slots();
+    const slots = this.slots(column);
     for (let slot = 0; slot < slots.length; slot++) {
       const element = slots[slot];
       if (isPaneGroup(element)) {
@@ -348,8 +429,10 @@ export class Dock extends LitElement {
     return stacks;
   }
 
-  dropCandidates(): DropCandidate[] {
-    return this.slots().map((slot) => {
+  dropCandidates(
+    column: DockColumn = "primary"
+  ): DropCandidate[] {
+    return this.slots(column).map((slot) => {
       const rect = slot.getBoundingClientRect();
       const size = slot.occupiedSize(this.axis);
 
@@ -366,22 +449,26 @@ export class Dock extends LitElement {
   }
 
   insertionLine(
-    index: number
+    index: number,
+    column: DockColumn = "primary"
   ): Rect {
-    const bounds = this.#insertionBounds();
-    const candidates = this.dropCandidates();
+    const bounds = this.#insertionBounds(column);
+    const candidates = this.dropCandidates(column);
 
     return this.axis === "y" ?
       verticalInsertionLine(bounds, candidates, index) :
       horizontalInsertionLine(bounds, candidates, index);
   }
 
-  #insertionBounds(): Rect {
-    const rect = this._content?.getBoundingClientRect() ??
+  #insertionBounds(
+    column: DockColumn
+  ): Rect {
+    const element = column === "primary" ? this._content : this._secondary;
+    const rect = element?.getBoundingClientRect() ??
       this.getBoundingClientRect();
     const thickness = this.axis === "y" ? rect.width : rect.height;
     if (thickness === 0) {
-      return this.previewZone() ?? this.dropZone();
+      return this.previewZone(column) ?? this.dropZone(column);
     }
 
     return {
@@ -390,6 +477,33 @@ export class Dock extends LitElement {
       width: rect.width,
       height: rect.height
     };
+  }
+
+  #secondaryZone(): Rect {
+    if (this.split) {
+      const rect = this._secondary.getBoundingClientRect();
+
+      return {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height
+      };
+    }
+
+    const rect = this.getBoundingClientRect();
+
+    return {
+      x: this.side === "left" ? rect.right : rect.x - kZoneBand,
+      y: rect.y,
+      width: kZoneBand,
+      height: rect.height
+    };
+  }
+
+  #readOccupancy(): void {
+    this.empty = this.slots().length === 0;
+    this.split = this.splittable && this.slots("secondary").length > 0;
   }
 
   #viewportBand(
@@ -415,7 +529,7 @@ export class Dock extends LitElement {
   }
 
   #onSlotChange = () => {
-    this.empty = this.slots().length === 0;
+    this.#readOccupancy();
   };
 
   #connectResizeHandle(): void {
@@ -428,8 +542,8 @@ export class Dock extends LitElement {
     this.#resizeHandle = new ResizeHandle(this, {
       direction: this.side,
       handle: this._handle,
-      minSize: this.minSize,
-      maxSize: this.maxSize
+      minSize: this.minSize * this.#columns(),
+      maxSize: this.maxSize * this.#columns()
     });
     this.#removeResizeListeners = forwardResizeEvents(
       this,
@@ -493,7 +607,8 @@ export class Dock extends LitElement {
       return;
     }
 
-    const measured = this.getBoundingClientRect()[this.#dimension()];
+    const measured = this.getBoundingClientRect()[this.#dimension()] /
+      this.#columns();
     if (measured > 0) {
       this.size = Math.min(
         Math.max(measured, this.minSize),
@@ -516,7 +631,11 @@ export class Dock extends LitElement {
     this.style[dimension] = `${Math.min(
       Math.max(this.size, this.minSize),
       this.maxSize
-    )}px`;
+    ) * this.#columns()}px`;
+  }
+
+  #columns(): number {
+    return this.split ? 2 : 1;
   }
 
   #restore(): void {

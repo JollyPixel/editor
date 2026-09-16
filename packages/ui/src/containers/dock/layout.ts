@@ -1,4 +1,12 @@
 // Import Internal Dependencies
+import {
+  cloneGroups,
+  columnGroups,
+  dockAddress,
+  settleColumns,
+  settleDocks,
+  withoutPane
+} from "./dockColumns.ts";
 import { resolveOrder } from "../../storage/keys.ts";
 
 // CONSTANTS
@@ -9,10 +17,13 @@ export interface PaneGroupState {
   active: string;
 }
 
+export type DockColumn = "primary" | "secondary";
+
 export interface DockState {
   size?: number;
   collapsed?: boolean;
   groups: PaneGroupState[];
+  secondary?: PaneGroupState[];
 }
 
 export interface FloatingState {
@@ -48,6 +59,8 @@ export interface DeclaredDock {
   key: string;
   size?: number;
   groups: DeclaredGroup[];
+  double?: boolean;
+  secondary?: DeclaredGroup[];
 }
 
 export interface DeclaredFloating {
@@ -101,14 +114,25 @@ export type LayoutChange =
 
 export interface PanePlacement {
   dock: string;
+  column: DockColumn;
   index: number;
   count: number;
   group: string[];
   active: boolean;
 }
 
+export interface DockAddress {
+  dock: string;
+  column: DockColumn;
+}
+
+interface DeclaredSlot extends DockAddress {
+  group: DeclaredGroup;
+}
+
 interface PaneLocation {
   dock: string;
+  column: DockColumn;
   slot: number;
   tab: number;
 }
@@ -127,24 +151,28 @@ export function emptyLayout(): LayoutSnapshot {
 export function dockPanes(
   state: DockState
 ): string[] {
-  return state.groups.flatMap((group) => group.panes);
+  return [
+    ...state.groups,
+    ...state.secondary ?? []
+  ].flatMap((group) => group.panes);
 }
 
 export function reconcileLayout(
   stored: LayoutSnapshot | null,
   declared: DeclaredLayout
 ): LayoutSnapshot {
-  const declaredPlacement = new Map<string, string | null>();
+  const declaredPlacement = new Map<string, DockAddress | null>();
   const declaredOrder: string[] = [];
   const declaredGroups = new Map<string, DeclaredGroup>();
-  for (const dock of declared.docks) {
-    for (const group of dock.groups) {
-      for (const pane of group.panes) {
-        if (!declaredPlacement.has(pane)) {
-          declaredPlacement.set(pane, dock.key);
-          declaredOrder.push(pane);
-          declaredGroups.set(pane, group);
-        }
+  for (const { dock, column, group } of declaredSlots(declared)) {
+    for (const pane of group.panes) {
+      if (!declaredPlacement.has(pane)) {
+        declaredPlacement.set(pane, {
+          dock,
+          column
+        });
+        declaredOrder.push(pane);
+        declaredGroups.set(pane, group);
       }
     }
   }
@@ -157,35 +185,49 @@ export function reconcileLayout(
     }
   }
 
-  const dockKeys = new Set(
-    declared.docks.map((dock) => dock.key)
+  const doubles = new Map(
+    declared.docks.map((dock) => [dock.key, dock.double === true])
   );
   const locked = new Set(declared.locked);
-  const placement = new Map<string, string | null>();
+  const placement = new Map<string, DockAddress | null>();
+  function claim(
+    pane: string,
+    site: DockAddress | null
+  ): void {
+    if (
+      declaredPlacement.has(pane) &&
+      !placement.has(pane) &&
+      !locked.has(pane)
+    ) {
+      placement.set(pane, site);
+    }
+  }
   if (stored !== null) {
     for (const [dockKey, state] of Object.entries(stored.docks)) {
-      if (!dockKeys.has(dockKey)) {
+      const double = doubles.get(dockKey);
+      if (double === undefined) {
         continue;
       }
 
-      for (const pane of dockPanes(state)) {
-        if (
-          declaredPlacement.has(pane) &&
-          !placement.has(pane) &&
-          !locked.has(pane)
-        ) {
-          placement.set(pane, dockKey);
+      for (const group of state.groups) {
+        for (const pane of group.panes) {
+          claim(pane, {
+            dock: dockKey,
+            column: "primary"
+          });
+        }
+      }
+      for (const group of state.secondary ?? []) {
+        for (const pane of group.panes) {
+          claim(pane, {
+            dock: dockKey,
+            column: double ? "secondary" : "primary"
+          });
         }
       }
     }
     for (const pane of Object.keys(stored.floating)) {
-      if (
-        declaredPlacement.has(pane) &&
-        !placement.has(pane) &&
-        !locked.has(pane)
-      ) {
-        placement.set(pane, null);
-      }
+      claim(pane, null);
     }
   }
   for (const [pane, where] of declaredPlacement) {
@@ -194,22 +236,43 @@ export function reconcileLayout(
     }
   }
 
+  function present(
+    dock: string,
+    column: DockColumn
+  ): string[] {
+    return declaredOrder.filter((pane) => {
+      const site = placement.get(pane);
+
+      return site?.dock === dock && site.column === column;
+    });
+  }
+
   const docks: Record<string, DockState> = {};
   for (const dock of declared.docks) {
-    const present = declaredOrder.filter(
-      (pane) => placement.get(pane) === dock.key
-    );
+    const double = dock.double === true;
     const storedDock = stored?.docks[dock.key];
     const size = storedDock?.size ?? dock.size;
-    docks[dock.key] = {
+    const state: DockState = {
       ...size === undefined ? {} : { size },
       collapsed: storedDock?.collapsed === true,
       groups: arrangeGroups(
-        storedDock?.groups ?? [],
-        present,
+        [
+          ...storedDock?.groups ?? [],
+          ...double ? [] : storedDock?.secondary ?? []
+        ],
+        present(dock.key, "primary"),
         declaredGroups
       )
     };
+    if (double) {
+      state.secondary = arrangeGroups(
+        storedDock?.secondary ?? [],
+        present(dock.key, "secondary"),
+        declaredGroups
+      );
+      settleColumns(state);
+    }
+    docks[dock.key] = state;
   }
 
   const geometry: Record<string, FloatingState> = {};
@@ -255,15 +318,15 @@ export function cloneLayout(
   return {
     v: snapshot.v,
     docks: mapRecord(snapshot.docks, (state) => {
-      return {
+      const copy: DockState = {
         ...state,
-        groups: state.groups.map((group) => {
-          return {
-            panes: [...group.panes],
-            active: group.active
-          };
-        })
+        groups: cloneGroups(state.groups)
       };
+      if (state.secondary !== undefined) {
+        copy.secondary = cloneGroups(state.secondary);
+      }
+
+      return copy;
     }),
     floating: mapRecord(snapshot.floating, (state) => {
       return { ...state };
@@ -292,11 +355,12 @@ export function panePlacement(
     return null;
   }
 
-  const { groups } = snapshot.docks[location.dock];
+  const groups = locationGroups(snapshot, location);
   const group = groups[location.slot];
 
   return {
     dock: location.dock,
+    column: location.column,
     index: location.slot,
     count: groups.length,
     group: [...group.panes],
@@ -326,22 +390,28 @@ export function paneVisible(
 export function movePane(
   snapshot: LayoutSnapshot,
   pane: string,
-  dock: string,
+  to: DockAddress | string,
   index: number
 ): LayoutSnapshot {
+  const { dock, column } = dockAddress(to);
   const target = snapshot.docks[dock];
-  if (target === undefined) {
+  const targetGroups = target === undefined ?
+    undefined :
+    columnGroups(target, column);
+  if (targetGroups === undefined) {
     return snapshot;
   }
 
   const from = locatePane(snapshot, pane);
   const lone = from !== null &&
     from.dock === dock &&
-    target.groups[from.slot].panes.length === 1;
+    from.column === column &&
+    targetGroups[from.slot].panes.length === 1;
   const position = lone && index > from.slot ? index - 1 : index;
   const next = detachPane(cloneLayout(snapshot), pane);
-  next.docks[dock].collapsed = false;
-  const { groups } = next.docks[dock];
+  const state = next.docks[dock];
+  state.collapsed = false;
+  const groups = columnGroups(state, column)!;
   groups.splice(
     clamp(position, groups.length),
     0,
@@ -350,6 +420,7 @@ export function movePane(
       active: pane
     }
   );
+  settleDocks(next);
 
   return next;
 }
@@ -357,37 +428,47 @@ export function movePane(
 export function stackPane(
   snapshot: LayoutSnapshot,
   pane: string,
-  dock: string,
+  to: DockAddress | string,
   slot: number,
   index: number
 ): LayoutSnapshot {
-  const groups = snapshot.docks[dock]?.groups;
+  const { dock, column } = dockAddress(to);
+  const state = snapshot.docks[dock];
+  const groups = state === undefined ?
+    undefined :
+    columnGroups(state, column);
   const target = groups?.[slot];
   if (groups === undefined || target === undefined) {
     return snapshot;
   }
 
   const from = locatePane(snapshot, pane);
-  const sameDock = from !== null && from.dock === dock;
-  const sameGroup = sameDock && from.slot === slot;
+  const sameColumn = from !== null &&
+    from.dock === dock &&
+    from.column === column;
+  const sameGroup = sameColumn && from.slot === slot;
   if (sameGroup && target.panes.length === 1) {
     return snapshot;
   }
 
   const position = sameGroup && index > from.tab ? index - 1 : index;
-  const removesSlot = sameDock &&
+  const removesSlot = sameColumn &&
     !sameGroup &&
     from.slot < slot &&
     groups[from.slot].panes.length === 1;
   const next = detachPane(cloneLayout(snapshot), pane);
-  next.docks[dock].collapsed = false;
-  const group = next.docks[dock].groups[removesSlot ? slot - 1 : slot];
+  const nextState = next.docks[dock];
+  nextState.collapsed = false;
+  const group = columnGroups(nextState, column)![
+    removesSlot ? slot - 1 : slot
+  ];
   group.panes.splice(
     clamp(position, group.panes.length),
     0,
     pane
   );
   group.active = pane;
+  settleDocks(next);
 
   return next;
 }
@@ -398,6 +479,7 @@ export function floatPane(
   geometry: FloatingState
 ): LayoutSnapshot {
   const next = detachPane(cloneLayout(snapshot), pane);
+  settleDocks(next);
   next.floating[pane] = { ...geometry };
   next.geometry[pane] = { ...geometry };
 
@@ -444,14 +526,14 @@ export function applyLayoutChange(
       const location = locatePane(snapshot, change.pane);
       if (
         location === null ||
-        snapshot.docks[location.dock].groups[location.slot].active ===
+        locationGroups(snapshot, location)[location.slot].active ===
         change.pane
       ) {
         return snapshot;
       }
 
       const next = cloneLayout(snapshot);
-      next.docks[location.dock].groups[location.slot].active = change.pane;
+      locationGroups(next, location)[location.slot].active = change.pane;
 
       return next;
     }
@@ -476,6 +558,31 @@ export function applyLayoutChange(
     }
     default:
       return snapshot;
+  }
+}
+
+function* declaredSlots(
+  declared: DeclaredLayout
+): IterableIterator<DeclaredSlot> {
+  for (const dock of declared.docks) {
+    for (const group of dock.groups) {
+      yield {
+        dock: dock.key,
+        column: "primary",
+        group
+      };
+    }
+    if (dock.double !== true) {
+      continue;
+    }
+
+    for (const group of dock.secondary ?? []) {
+      yield {
+        dock: dock.key,
+        column: "secondary",
+        group
+      };
+    }
   }
 }
 
@@ -558,14 +665,18 @@ function locatePane(
   pane: string
 ): PaneLocation | null {
   for (const [dock, state] of Object.entries(snapshot.docks)) {
-    for (let slot = 0; slot < state.groups.length; slot++) {
-      const tab = state.groups[slot].panes.indexOf(pane);
-      if (tab !== -1) {
-        return {
-          dock,
-          slot,
-          tab
-        };
+    for (const column of ["primary", "secondary"] as const) {
+      const groups = columnGroups(state, column) ?? [];
+      for (let slot = 0; slot < groups.length; slot++) {
+        const tab = groups[slot].panes.indexOf(pane);
+        if (tab !== -1) {
+          return {
+            dock,
+            column,
+            slot,
+            tab
+          };
+        }
       }
     }
   }
@@ -573,32 +684,22 @@ function locatePane(
   return null;
 }
 
+function locationGroups(
+  snapshot: LayoutSnapshot,
+  location: PaneLocation
+): PaneGroupState[] {
+  return columnGroups(snapshot.docks[location.dock], location.column)!;
+}
+
 function detachPane(
   snapshot: LayoutSnapshot,
   pane: string
 ): LayoutSnapshot {
   for (const state of Object.values(snapshot.docks)) {
-    const groups: PaneGroupState[] = [];
-    for (const group of state.groups) {
-      const tab = group.panes.indexOf(pane);
-      if (tab === -1) {
-        groups.push(group);
-        continue;
-      }
-
-      const panes = group.panes.filter((key) => key !== pane);
-      if (panes.length === 0) {
-        continue;
-      }
-
-      groups.push({
-        panes,
-        active: group.active === pane ?
-          panes[Math.min(tab, panes.length - 1)] :
-          group.active
-      });
+    state.groups = withoutPane(state.groups, pane);
+    if (state.secondary !== undefined) {
+      state.secondary = withoutPane(state.secondary, pane);
     }
-    state.groups = groups;
   }
   delete snapshot.floating[pane];
 

@@ -6,12 +6,16 @@ import type {
 import { Floating } from "../floating/Floating.ts";
 import type {
   DeclaredFloating,
+  DeclaredGroup,
   DeclaredLayout,
   FloatingState,
   LayoutSnapshot,
   PaneGroupState
 } from "./layout.ts";
-import type { PaneElement } from "../pane/Pane.ts";
+import {
+  isPane,
+  type PaneElement
+} from "../pane/Pane.ts";
 import {
   isPaneGroup,
   PaneGroup
@@ -49,21 +53,20 @@ export class LayoutProjection {
 
     return {
       docks: this.#host.docks().map((dock) => {
+        if (!dock.splittable) {
+          return {
+            key: dock.layoutKey,
+            size: dock.size,
+            groups: declaredGroups(dock.slots())
+          };
+        }
+
         return {
           key: dock.layoutKey,
           size: dock.size,
-          groups: dock.slots().map((slot) => {
-            if (!isPaneGroup(slot)) {
-              return {
-                panes: [slot.layoutKey]
-              };
-            }
-
-            return {
-              panes: slot.panes().map((pane) => pane.layoutKey),
-              ...slot.active === "" ? {} : { active: slot.active }
-            };
-          })
+          groups: declaredGroups(dock.slots("primary")),
+          double: true,
+          secondary: declaredGroups(dock.slots("secondary"))
         };
       }),
       floating,
@@ -90,10 +93,19 @@ export class LayoutProjection {
         dock.size = state.size;
       }
       dock.collapsed = state.collapsed === true;
-      const slots = state.groups
+      const primary = state.groups
         .map((group) => this.#slotFor(group, index, released, claimed))
         .filter((slot) => slot !== null);
-      orderChildren(dock, dock.slots(), slots);
+      const secondary = (state.secondary ?? [])
+        .map((group) => this.#slotFor(group, index, released, claimed))
+        .filter((slot) => slot !== null);
+      for (const slot of primary) {
+        slot.removeAttribute("slot");
+      }
+      for (const slot of secondary) {
+        slot.setAttribute("slot", "secondary");
+      }
+      orderChildren(dock, dockChildren(dock), [...primary, ...secondary]);
     }
 
     for (const [key, geometry] of Object.entries(snapshot.floating)) {
@@ -159,6 +171,9 @@ export class LayoutProjection {
     if (group === null) {
       group = document.createElement("jolly-pane-group");
     }
+    for (const pane of panes) {
+      pane.removeAttribute("slot");
+    }
     claimed.add(group);
     group.active = state.active;
     orderChildren(group, group.panes(), panes);
@@ -176,6 +191,13 @@ export class LayoutProjection {
         (child) => child.tagName === "JOLLY-PANE"
       );
       if (panes.length === 1) {
+        const slot = group.getAttribute("slot");
+        if (slot === null) {
+          panes[0].removeAttribute("slot");
+        }
+        else {
+          panes[0].setAttribute("slot", slot);
+        }
         group.before(panes[0]);
       }
       if (panes.length <= 1) {
@@ -189,6 +211,7 @@ export class LayoutProjection {
     geometry: FloatingState
   ): void {
     let frame = floatingOf(pane);
+    pane.removeAttribute("slot");
     if (frame === null) {
       frame = document.createElement("jolly-floating");
       this.#host.append(frame);
@@ -210,6 +233,31 @@ export function floatingOf(
   const parent = pane.parentElement;
 
   return parent instanceof Floating ? parent : null;
+}
+
+function declaredGroups(
+  slots: readonly DockSlot[]
+): DeclaredGroup[] {
+  return slots.map((slot) => {
+    if (!isPaneGroup(slot)) {
+      return {
+        panes: [slot.layoutKey]
+      };
+    }
+
+    return {
+      panes: slot.panes().map((pane) => pane.layoutKey),
+      ...slot.active === "" ? {} : { active: slot.active }
+    };
+  });
+}
+
+function dockChildren(
+  dock: Dock
+): DockSlot[] {
+  return [...dock.children].filter(
+    (element): element is DockSlot => isPane(element) || isPaneGroup(element)
+  );
 }
 
 function orderChildren(

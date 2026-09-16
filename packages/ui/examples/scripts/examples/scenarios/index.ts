@@ -8,6 +8,7 @@ import { REORDER_PERSIST_EXAMPLE } from "./reorderPersistence.ts";
 import { DOCK_RESIZE_EXAMPLE } from "./dockResize.ts";
 import { DOCK_LAYOUT_EXAMPLE } from "./dockLayout.ts";
 import { DOCK_LAYOUT_GROUPS_EXAMPLE } from "./dockLayoutGroups.ts";
+import { DOCK_LAYOUT_DOUBLE_EXAMPLE } from "./dockLayoutDouble.ts";
 import { DOCK_LAYOUT_TRANSPARENT_EXAMPLE } from "./dockLayoutTransparent.ts";
 import { DIALOG_ESCAPE_EXAMPLE } from "./dialogEscape.ts";
 import { LOCKING_EXAMPLE } from "./locking.ts";
@@ -31,6 +32,7 @@ export const SCENARIOS_EXAMPLES = [
   DOCK_RESIZE_EXAMPLE,
   DOCK_LAYOUT_EXAMPLE,
   DOCK_LAYOUT_GROUPS_EXAMPLE,
+  DOCK_LAYOUT_DOUBLE_EXAMPLE,
   DOCK_LAYOUT_TRANSPARENT_EXAMPLE,
   DIALOG_ESCAPE_EXAMPLE,
   LOCKING_EXAMPLE,

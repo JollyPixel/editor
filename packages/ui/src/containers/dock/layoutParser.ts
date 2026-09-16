@@ -62,7 +62,10 @@ function readDocks(
         { size: state.size } :
         {},
       collapsed: state.collapsed === true,
-      groups: readGroups(state.groups)
+      groups: readGroups(state.groups),
+      ...Array.isArray(state.secondary) ?
+        { secondary: readGroups(state.secondary) } :
+        {}
     };
   }
 

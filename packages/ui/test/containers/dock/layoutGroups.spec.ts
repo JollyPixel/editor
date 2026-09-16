@@ -287,6 +287,7 @@ describe("Containers.paneVisible", () => {
     assert.equal(paneVisible(base, "paint"), false);
     assert.deepEqual(panePlacement(base, "paint"), {
       dock: "left",
+      column: "primary",
       index: 0,
       count: 2,
       group: ["general", "blocks", "paint"],

@@ -1,7 +1,8 @@
 // Import Internal Dependencies
 import type { Dock } from "./Dock.ts";
-import type { Floating } from "../floating/Floating.ts";
+import type { DockColumn } from "./layout.ts";
 import { floatingOf } from "./LayoutProjection.ts";
+import type { Floating } from "../floating/Floating.ts";
 import type {
   PaneDragDetail,
   PaneElement
@@ -10,7 +11,8 @@ import { isPaneGroup } from "../pane-group/PaneGroup.ts";
 import { headerGhost } from "../../interaction/drag/dragGhost.ts";
 import {
   startDragSession,
-  type DragSessionHandle
+  type DragSessionHandle,
+  type DragZone
 } from "../../interaction/drag/DragSession.ts";
 
 export interface ExtractGrab {
@@ -20,10 +22,20 @@ export interface ExtractGrab {
   offsetY: number;
 }
 
+export interface DockTarget {
+  dock: Dock;
+  column: DockColumn;
+}
+
 export interface DockLayoutDragOptions {
   docks(): Dock[];
-  dock(pane: PaneElement, dock: Dock, index: number): void;
-  stack(pane: PaneElement, dock: Dock, slot: number, index: number): void;
+  dock(pane: PaneElement, target: DockTarget, index: number): void;
+  stack(
+    pane: PaneElement,
+    target: DockTarget,
+    slot: number,
+    index: number
+  ): void;
   extract(pane: PaneElement, grab: ExtractGrab): void;
   place(pane: PaneElement, frame: Floating): void;
 }
@@ -63,6 +75,7 @@ export class DockLayoutDragController {
     const grabY = originY - rect.y;
     const startX = frame?.x ?? 0;
     const startY = frame?.y ?? 0;
+    const targets = new Map<string, DockTarget>();
 
     this.#session = startDragSession({
       source: pane,
@@ -81,18 +94,34 @@ export class DockLayoutDragController {
 
         return ghost;
       },
-      zones: () => this.#options.docks().map((dock) => {
-        return {
-          id: dock.layoutKey,
-          rect: dock.dropZone(),
-          candidates: dock.dropCandidates(),
-          axis: dock.axis,
-          source: dock === home ? dock.slots().indexOf(pane) : null,
-          line: (index: number) => dock.insertionLine(index),
-          stacks: dock.dropStacks(pane),
-          preview: dock.previewZone()
-        };
-      }),
+      zones: () => {
+        targets.clear();
+
+        return this.#options.docks().flatMap((dock) => {
+          const columns: DockColumn[] = dock.acceptsSecondary(pane) ?
+            ["secondary", "primary"] :
+            ["primary"];
+
+          return columns.map((column): DragZone => {
+            const id = `${dock.layoutKey}:${column}`;
+            targets.set(id, {
+              dock,
+              column
+            });
+
+            return {
+              id,
+              rect: dock.dropZone(column),
+              candidates: dock.dropCandidates(column),
+              axis: dock.axis,
+              source: dock === home ? dock.slots(column).indexOf(pane) : null,
+              line: (index: number) => dock.insertionLine(index, column),
+              stacks: dock.dropStacks(pane, column),
+              preview: dock.previewZone(column)
+            };
+          });
+        });
+      },
       probe: frame === null ?
         undefined :
         (clientX: number, clientY: number) => {
@@ -123,23 +152,20 @@ export class DockLayoutDragController {
         );
       },
       onCommit: (result) => {
-        const zoneId = result.zone?.id ?? null;
-        const dock = zoneId === null ?
-          null :
-          this.#options.docks().find(
-            (candidate) => candidate.layoutKey === zoneId
-          ) ?? null;
+        const target = result.zone === null ?
+          undefined :
+          targets.get(result.zone.id);
 
-        if (dock !== null && result.stack !== null) {
+        if (target !== undefined && result.stack !== null) {
           this.#options.stack(
             pane,
-            dock,
+            target,
             result.stack.slot,
             result.stack.index
           );
         }
-        else if (dock !== null) {
-          this.#options.dock(pane, dock, result.index);
+        else if (target !== undefined) {
+          this.#options.dock(pane, target, result.index);
         }
         else if (frame === null) {
           this.#options.extract(pane, {
