@@ -5,8 +5,7 @@ import { css } from "lit";
 import { rampTokens } from "./ramps.ts";
 
 /**
- * Planes are opaque and painted only by window level containers.
- * Leaves tint instead, so a control composites over whichever plane it lands on.
+ * Opaque planes, painted only by window-level containers; leaves tint instead.
  */
 const surfaceTokens = css`
   --jolly-surface: light-dark(var(--jolly-neutral-100), var(--jolly-neutral-900));
@@ -15,9 +14,7 @@ const surfaceTokens = css`
 `;
 
 /**
- * The single interactive colour. Every control background is this ink at an
- * alpha stop, which is what keeps nested containers coherent without each
- * depth picking its own opaque ramp index.
+ * Control backgrounds are the ink at alpha stops, so nesting stays coherent.
  */
 const inkTokens = css`
   --jolly-ink: light-dark(var(--jolly-neutral-900), var(--jolly-neutral-50));
@@ -27,7 +24,7 @@ const inkTokens = css`
   --jolly-control-bg-focus: color-mix(in oklab, var(--jolly-ink) 20%, transparent);
   --jolly-control-bg-active: color-mix(in oklab, var(--jolly-ink) 26%, transparent);
 
-  /* Blue chrome separates container hierarchy from neutral leaf controls. */
+  /* Blue chrome sets containers apart from neutral leaf controls. */
   --jolly-folder-header-bg: color-mix(
     in oklab,
     var(--jolly-accent-fill) 12%,
@@ -39,7 +36,7 @@ const inkTokens = css`
     transparent
   );
 
-  /* Inverted, so an action stays legible over the header pattern. */
+  /* Inverted to stay legible over the header. */
   --jolly-folder-action-fg: var(--jolly-surface);
   --jolly-folder-action-bg: color-mix(
     in oklab,
@@ -54,10 +51,7 @@ const inkTokens = css`
   --jolly-folder-action-bg-focus: var(--jolly-ink);
   --jolly-folder-action-bg-active: var(--jolly-ink);
 
-  /*
-   * Filled with danger ink, so a destructive action keeps that same weight.
-   * Its glyph is white in both themes, since the ground stays red in both.
-   */
+  /* Red ground in both themes, so the glyph stays white. */
   --jolly-folder-action-danger-fg: var(--jolly-neutral-0);
   --jolly-folder-action-danger-bg: var(--jolly-ink-danger);
   --jolly-folder-action-danger-bg-hover: color-mix(
@@ -71,11 +65,7 @@ const inkTokens = css`
     var(--jolly-ink)
   );
 
-  /*
-   * A tab strip has no resting fill, so hover stays below the neutral control
-   * stop and selection switches to the accent tint: the two never read as the
-   * same state at different strengths.
-   */
+  /* Tab hover stays below the control stop; selection uses the accent tint. */
   --jolly-tab-bg-hover: color-mix(in oklab, var(--jolly-ink) 6%, transparent);
   --jolly-tab-selected-bg: color-mix(
     in oklab,
@@ -105,11 +95,7 @@ const inkTokens = css`
     transparent
   );
 
-  /*
-   * A drop zone covers a whole dock rather than a handle, so it sits well below
-   * the resize wash: the same tint over that much area would read as a filled
-   * panel instead of as a place something can land.
-   */
+  /* Below the resize wash: a dock-sized tint would read as a filled panel. */
   --jolly-dock-zone-bg: color-mix(
     in oklab,
     var(--jolly-accent-fill) 6%,
@@ -121,35 +107,22 @@ const inkTokens = css`
     transparent
   );
 
-  /* Below the rest stop, so a readonly control reads as inert rather than idle. */
+  /* Below the rest stop, so readonly reads as inert. */
   --jolly-control-bg-muted: color-mix(in oklab, var(--jolly-ink) 4%, transparent);
-
-  /* Faint enough to locate the active row without competing with the control. */
   --jolly-row-bg-focus: color-mix(in oklab, var(--jolly-ink) 5%, transparent);
 
-  /* Error re-tints the same mechanism, and starts above the hover stop so it
-     never reads as "the pointer is here". */
+  /* Starts above the hover stop so an error never reads as hover. */
   --jolly-invalid-bg: color-mix(in oklab, var(--jolly-ink-danger) 15%, transparent);
   --jolly-invalid-bg-hover: color-mix(in oklab, var(--jolly-ink-danger) 20%, transparent);
   --jolly-invalid-bg-focus: color-mix(in oklab, var(--jolly-ink-danger) 28%, transparent);
-
-  /* Slider and scrub tracks read as a recess rather than a filled control. */
   --jolly-groove: color-mix(in oklab, var(--jolly-ink) 20%, transparent);
-
-  /* Dividers sit below the control fill, so they separate without ruling. */
   --jolly-divider: color-mix(in oklab, var(--jolly-ink) 10%, transparent);
 
-  /*
-   * A control already filled with the accent has no room left to tint, so its
-   * hover and focus steps lighten the fill instead.
-   */
+  /* Accent-filled controls lighten on hover and focus instead of tinting. */
   --jolly-accent-fill-hover: color-mix(in oklab, var(--jolly-accent-fill) 88%, white);
   --jolly-accent-fill-focus: color-mix(in oklab, var(--jolly-accent-fill) 76%, white);
 `;
 
-/**
- * Public semantic tokens built from the internal ramps.
- */
 const semanticTokens = css`
   --jolly-border: light-dark(var(--jolly-neutral-300), var(--jolly-neutral-700));
   --jolly-border-strong: light-dark(var(--jolly-neutral-500), var(--jolly-neutral-500));
@@ -176,9 +149,6 @@ const semanticTokens = css`
   --jolly-shadow-modal: 0 12px 40px light-dark(rgb(0 0 0 / 24%), rgb(0 0 0 / 60%));
 `;
 
-/**
- * Scope-host theme tokens with light and dark variants.
- */
 export const themeTokens = css`
   :host {
     color-scheme: light dark;
@@ -200,11 +170,7 @@ export const themeTokens = css`
     color-scheme: dark;
   }
 
-  /*
-   * The design carries control boundaries with fill rather than an outline, which
-   * the forced-colors palette flattens away. Restoring a system border here keeps
-   * the controls operable without affecting the default design.
-   */
+  /* Forced colors flatten fill-based control boundaries; use system colors. */
   @media (forced-colors: active) {
     :host {
       --jolly-control-bg: ButtonFace;

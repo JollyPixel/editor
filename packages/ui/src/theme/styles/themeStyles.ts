@@ -8,16 +8,10 @@ import { scaleTokens } from "../tokens/scales.ts";
 import { ensureFontFace } from "../font.ts";
 
 /*
- * A scope host is the thing that declares the theme, and the bundled face is
- * part of that theme, so importing this module registers it. The face has to
- * live on the document because a shadow root ignores "at font-face", and when
- * registration is skipped the family token falls back to the system mono stack.
+ * The bundled face is part of the theme, so importing this module registers it.
  */
 ensureFontFace();
 
-/**
- * Theme, density, and scale styles for scope hosts.
- */
 // postcss-lit-disable-next-line
 export const themeStyles = css`
   ${themeTokens}

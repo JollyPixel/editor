@@ -2,9 +2,7 @@
 import { goldenAngleColor } from "@jolly-pixel/color";
 
 /**
- * Rotates hues by the golden angle and returns a cross-renderer CSS color.
- *
- * Hex output is also accepted by Three's Color parser.
+ * Golden-angle hue rotation; the hex output also parses in Three's Color.
  */
 export function peerColor(
   index: number

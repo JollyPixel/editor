@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
-/**
- * Internal OKLCH color ramps.
- */
 export const rampTokens = css`
   --jolly-neutral-0: oklch(100% 0 250deg);
   --jolly-neutral-50: oklch(98% 0.006 250deg);
