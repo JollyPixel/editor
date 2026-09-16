@@ -3,6 +3,7 @@ import { LitElement, css, html, type TemplateResult } from "lit";
 import { type JollyChangeDetail, type JollyOption } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import "../icons.ts";
 import type { GizmoSpace, ModelSceneComponent } from "../ModelSceneComponent.ts";
 import {
   TransformPanelController,
@@ -12,16 +13,44 @@ import {
 
 // CONSTANTS
 const kTransformModes: JollyOption<TransformMode>[] = [
-  { value: "pos", label: "Pos" },
-  { value: "angle", label: "Angle" },
-  { value: "size", label: "Size" },
-  { value: "pivot", label: "Pivot" },
-  { value: "scale", label: "Scale" }
+  {
+    value: "pos",
+    label: "Pos",
+    icon: "transform-position"
+  },
+  {
+    value: "angle",
+    label: "Angle",
+    icon: "transform-angle"
+  },
+  {
+    value: "size",
+    label: "Size",
+    icon: "transform-size"
+  },
+  {
+    value: "pivot",
+    label: "Pivot",
+    icon: "transform-pivot"
+  },
+  {
+    value: "scale",
+    label: "Scale",
+    icon: "transform-scale"
+  }
 ];
 
 const kSpaceOptions: JollyOption<GizmoSpace>[] = [
-  { value: "local", label: "Local" },
-  { value: "world", label: "Global" }
+  {
+    value: "local",
+    label: "Local",
+    icon: "transform-local"
+  },
+  {
+    value: "world",
+    label: "Global",
+    icon: "transform-global"
+  }
 ];
 
 const kSpaceModes: readonly TransformMode[] = ["pos", "angle", "pivot"];
@@ -33,9 +62,7 @@ export class TransformPanel extends LitElement {
     :host {
       display: flex;
       flex-direction: column;
-      gap: var(--jolly-space-2, 8px);
-      box-sizing: border-box;
-      padding: var(--jolly-space-2, 8px);
+      gap: var(--jolly-row-gap, 4px);
     }
 
     jolly-vector3 {
@@ -52,6 +79,8 @@ export class TransformPanel extends LitElement {
   override render(): TemplateResult {
     return html`
       <jolly-button-group
+        icon-only
+        aria-label="Transform mode"
         .options=${kTransformModes}
         .value=${this.#transform.mode}
         @jolly-change=${(event: CustomEvent<JollyChangeDetail<TransformMode>>) => {
@@ -60,6 +89,7 @@ export class TransformPanel extends LitElement {
       ></jolly-button-group>
 
       <jolly-button-group
+        aria-label="Transform space"
         .options=${kSpaceOptions}
         .value=${this.#transform.space}
         ?disabled=${this.#transform.disabled || !kSpaceModes.includes(this.#transform.mode)}

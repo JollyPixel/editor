@@ -74,6 +74,24 @@ test.describe("Tree", () => {
     expect(await styleOf(rowOf(page, "camera"), "width", "::before")).toBe("16px");
   });
 
+  test("highlights a leaf from the row start and aligns its icon with branches", async({ page }) => {
+    const [lighting, lightingContent, lightingIcon, sceneIcon] = await Promise.all([
+      boxOf(rowOf(page, "lighting")),
+      boxOf(rowOf(page, "lighting").locator(".content")),
+      boxOf(rowOf(page, "lighting").locator(".node-icon")),
+      boxOf(rowOf(page, "scene").locator(".node-icon"))
+    ]);
+
+    expect(lightingContent.x).toBe(lighting.x);
+    expect(lightingContent.x + lightingContent.width).toBe(lighting.x + lighting.width);
+    expect(lightingIcon.x).toBe(sceneIcon.x);
+
+    await page.locator(kTree).evaluate((tree: HTMLElementTagNameMap["jolly-tree"]) => {
+      tree.nodes = [{ id: "flat", label: "Flat" }];
+    });
+    await expect(page.locator(`${kTree} .toggle-spacer`)).toHaveCount(0);
+  });
+
   test("selects with modifiers and keeps one roving focus row", async({ page }) => {
     const camera = rowOf(page, "camera");
     const props = rowOf(page, "props");

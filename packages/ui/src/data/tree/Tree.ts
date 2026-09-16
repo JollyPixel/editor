@@ -194,8 +194,11 @@ export class Tree<TData = unknown> extends LitElement {
             aria-label=${isExpanded ? "Collapse" : "Expand"}
             @click=${(event: Event) => this.#onToggleExpand(event, node.id)}
           ><jolly-icon name="chevron" aria-hidden="true"></jolly-icon></button>
-        ` : html`<span class="toggle-spacer"></span>`}
+        ` : nothing}
         <span class="content">
+          ${!isBranch && this.#snapshot.hasBranches ? html`
+            <span class="toggle-spacer"></span>
+          ` : nothing}
           ${node.icon === undefined ? nothing : html`
             <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
           `}

@@ -188,6 +188,7 @@ function buildOptionsPanel(
     const checkbox = document.createElement("jolly-checkbox");
     checkbox.label = option.label;
     checkbox.clickableBackground = true;
+    checkbox.align = "end";
     checkbox.value = tree[option.key];
     checkbox.addEventListener("jolly-change", (event) => {
       const detail = detailOf<{ value: boolean; }>(event);

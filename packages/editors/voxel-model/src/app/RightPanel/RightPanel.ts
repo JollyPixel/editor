@@ -32,6 +32,8 @@ export class RightPanel extends LitElement {
       height: 100%;
       box-sizing: border-box;
       font: inherit;
+
+      --jolly-folder-gap: var(--jolly-space-2, 8px);
     }
 
     jolly-folder[key="hierarchy"] {
@@ -125,6 +127,7 @@ export class RightPanel extends LitElement {
         key="transform"
         label="Transform"
         .collapsible=${false}
+        flush
       >
         <jolly-model-editor-transform></jolly-model-editor-transform>
       </jolly-folder>

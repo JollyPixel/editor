@@ -7,20 +7,22 @@
   <title>Voxel Model Editor</title>
   <link rel="stylesheet" href="./main.css">
 </head>
-<jolly-scope>
-  <jolly-dock key="left" side="left" collapsible min-size="200" max-size="900" storage-key="voxel-model:left">
-    <jolly-pane locked>
-      <jolly-model-editor-left-panel></jolly-model-editor-left-panel>
-    </jolly-pane>
-  </jolly-dock>
-  <section id="three-renderer"><canvas tabindex="-1"></canvas></section>
-  <jolly-dock key="right" side="right" collapsible min-size="250" max-size="500" storage-key="voxel-model:right">
-    <jolly-pane locked>
-      <jolly-model-editor-right-panel></jolly-model-editor-right-panel>
-    </jolly-pane>
-  </jolly-dock>
-</jolly-scope>
 
-<script type="module" src="./src/index.ts"></script>
+<body>
+  <jolly-scope theme="dark" density="comfortable">
+    <jolly-dock key="left" side="left" collapsible min-size="200" max-size="900" storage-key="voxel-model:left">
+      <jolly-pane locked>
+        <jolly-model-editor-left-panel></jolly-model-editor-left-panel>
+      </jolly-pane>
+    </jolly-dock>
+    <section id="three-renderer"><canvas tabindex="-1"></canvas></section>
+    <jolly-dock key="right" side="right" collapsible min-size="250" max-size="500" storage-key="voxel-model:right">
+      <jolly-pane locked>
+        <jolly-model-editor-right-panel></jolly-model-editor-right-panel>
+      </jolly-pane>
+    </jolly-dock>
+  </jolly-scope>
+  <script type="module" src="./src/index.ts"></script>
+</body>
 
 </html>

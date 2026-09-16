@@ -28,21 +28,12 @@ const kArrowSteps: Record<string, number> = {
   ArrowUp: -1
 };
 
-/**
- * Sentinel for keys outside arrow-key navigation.
- */
 const kNoStep = 0;
 
-/**
- * Segmented or grid selector with roving tab navigation.
- */
 @customElement("jolly-button-group")
 export class ButtonGroup<TValue> extends JollyField<TValue> {
   static readonly Defaults: ButtonGroupDefaults = {
     layout: "segmented",
-    /**
-     * Zero columns uses the intrinsic grid layout.
-     */
     columns: 0
   };
 
@@ -60,12 +51,20 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
   @property({ type: Number })
   declare columns: number;
 
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "icon-only"
+  })
+  declare iconOnly: boolean;
+
   constructor() {
     super();
 
     this.options = [];
     this.layout = ButtonGroup.Defaults.layout;
     this.columns = ButtonGroup.Defaults.columns;
+    this.iconOnly = false;
   }
 
   protected renderValue(): TemplateResult {
@@ -170,7 +169,6 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
   #focusSegment(
     index: number
   ): void {
-    // Wait for the target's roving tabindex to render.
     void this.updateComplete.then(() => {
       const segment = this.renderRoot.querySelector(
         `.segment[data-index="${index}"]`

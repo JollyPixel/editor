@@ -309,6 +309,8 @@ export const exampleStyles = css`
   }
 
   .tree-demo-options {
+    --jolly-label-max-width: none;
+
     display: grid;
     flex: 0 0 200px;
     gap: var(--jolly-space-2);
