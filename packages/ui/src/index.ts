@@ -200,6 +200,7 @@ export * from "./monitors/format.ts";
 export * from "./stats/Stats.ts";
 
 export * from "./feedback/Progress.ts";
+export * from "./feedback/Spinner.ts";
 export * from "./feedback/Loading.ts";
 export * from "./feedback/Log.ts";
 export * from "./feedback/LogQueue.ts";

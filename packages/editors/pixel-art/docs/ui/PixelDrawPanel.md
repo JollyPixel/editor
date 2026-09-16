@@ -27,7 +27,7 @@ const canvas = await panel.initialize({
 });
 ```
 
-`initialize(options?)` takes the same `PixelArtCanvasOptions` as `new PixelArtCanvas(...)` (see [PixelArtCanvas.md](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md)) and resolves with the created instance. Must `await` it — the canvas host div only exists after Lit's first render.
+`initialize(options?)` takes the same `PixelArtCanvasOptions` as `new PixelArtCanvas(...)` (see [PixelArtCanvas.md](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md)), plus optional `id` (default `"default"`), `name` (default `"Texture"`) and `tooltip` for the first texture, and resolves with the created instance. Must `await` it: the canvas host div only exists after Lit's first render. Calling it again destroys every open texture first.
 
 ## UV access
 
@@ -61,22 +61,95 @@ Copy uses PNG plus optional JollyPixel selection metadata, which carries raw RGB
 
 ## Texture drop
 
-Drag one local PNG, JPEG, WebP or GIF over the rendered texture rectangle to show the dashed replacement overlay. The surrounding stage, mode rail and toolbars are not drop targets. A successful drop replaces the texture through normal history and synchronization, centers it and preserves the current drawing mode. Multiple files, directories, URLs, SVG and invalid or oversized images leave the texture unchanged.
+Drag one local PNG, JPEG, WebP or GIF over the rendered texture rectangle to show the dashed drop overlay. The surrounding stage, mode rail and toolbars are not drop targets. What a valid drop does follows [`texture-import-policy`](#texture-import-policy); a replacement goes through normal history and synchronization, centers the texture and preserves the current drawing mode. Multiple files, directories, URLs, SVG and invalid or oversized images leave the texture unchanged.
+
+## Multiple textures
+
+The panel holds one or more textures, each backed by its own `PixelArtCanvas` with its own pixels, undo history, UV regions, selection and camera. The mode rail, colors and toolbars are shared: mode, brush size, colors and fill and select variants carry over when switching textures.
+
+With one texture the panel looks as it always has. With two or more, a tab strip (`part="texture-tabs"`, built on `jolly-tabs`) appears above the stage, showing each texture name; the canvas resizes itself when the strip appears or disappears. Clicking a tab or using the arrow keys switches texture; the close button and a middle click raise `texture-close-request`.
+
+The host owns the texture list. The panel never creates or removes a texture on its own; it raises requests and the host answers with `addTexture()` and `removeTexture()`.
+
+```ts
+panel.textureImportPolicy = "ask";
+
+panel.addEventListener("texture-add-request", (event) => {
+  const { name, source } = event.detail;
+
+  event.detail.respondWith(addTexture());
+
+  async function addTexture() {
+    const id = await createAsset(name, source);
+    panel.addTexture({
+      id,
+      name,
+      texture: {
+        size: { x: source.width, y: source.height },
+        init: source
+      }
+    });
+  }
+});
+
+panel.addEventListener("texture-close-request", (event) => {
+  panel.removeTexture(event.detail.id);
+});
+```
+
+`addTexture(options)` merges `options` over the options given to `initialize()`, one top-level key at a time, so pass `texture` to avoid inheriting the first texture's size and `init`. Callbacks such as `onHistoryChange` stay bound to the canvas they were passed for. The panel's own toolbars only follow the active canvas.
+
+### texture-import-policy
+
+| Value | Import button and drop |
+|---|---|
+| `replace` (default) | Replace the active texture. No dialog. |
+| `add` | Emit `texture-add-request`. |
+| `ask` | Open a dialog: Replace current, Add as new, or Cancel. |
+
+Paste is not affected: it always floats a selection into the active texture. The drop overlay reads "Drop image to replace texture", "Drop image to add texture" or "Drop image" according to the policy.
+
+## Import progress
+
+Importing an image is not instant: the file has to be decoded, and when the
+policy adds a texture the host usually has to reach a server before
+`addTexture()` can be called. The panel reports both.
+
+While either is in flight, a scrim (`part="stage-busy"`) covers the stage with a
+`jolly-spinner` and a label, blocking drawing on a canvas that is about to
+change; an import started from the toolbar also turns its Import button into a
+spinner and disables it. The scrim waits 150ms before painting, so a small image
+never flashes it.
+
+The panel knows when the decode ends. It cannot know when the host is done, so
+`texture-add-request` carries `respondWith(work: Promise<unknown>)`: pass the
+promise covering the whole add and the indicator stays up until it settles,
+resolved or rejected. A host that never calls `respondWith` clears the indicator
+as soon as the event has been dispatched.
 
 ## API
 
 | Member | What it does |
 |---|---|
-| `initialize(options?)` | Creates the `PixelArtCanvas`, returns it. Call once. |
-| `canvasManager` | The live `PixelArtCanvas`, or `null` before `initialize()`. |
-| `onResize()` | Call on container resize (ResizeObserver, split-pane drag, etc). |
+| `initialize(options?)` | Creates the first texture and returns its `PixelArtCanvas`. Call once. |
+| `canvasManager` | The active texture's `PixelArtCanvas`, or `null` before `initialize()`. |
+| `addTexture(options)` | Creates a texture from `{ id, name, tooltip?, ...PixelArtCanvasOptions }`, makes it active and returns its canvas. Throws before `initialize()` or for a duplicate `id`. |
+| `removeTexture(id)` | Destroys a texture. Removing the active one activates its right neighbour, or its left one when it was last. Throws for an unknown id or the last texture. |
+| `renameTexture(id, name)` | Updates a tab label. Names need not be unique. |
+| `textures` | `{ id, name, tooltip, canvas }[]` in tab order. |
+| `activeTextureId` | The active texture id, or `null` before `initialize()`. Setting it switches texture; unknown ids throw. |
+| `texture-import-policy` attribute / `textureImportPolicy` property (`"replace" | "add" | "ask"`, default `"replace"`) | See [texture-import-policy](#texture-import-policy). Reflects to the attribute; unknown values fall back to `"replace"`. |
+| `texture-change` event | `detail: { id }`. Fires whenever the active texture changes after `initialize()`: a tab click, `activeTextureId`, `addTexture()` or removing the active texture. |
+| `texture-add-request` event | `detail: { name, source, origin, respondWith }`. `name` is the file name without its extension, `source` the decoded `HTMLCanvasElement`, `origin` is `"import"` or `"drop"`. See [Import progress](#import-progress) for `respondWith`. |
+| `texture-close-request` event | `detail: { id }`. Fires from a tab close button or middle click. |
+| `onResize()` | Resizes the active canvas to its host box. The panel already observes that box itself (its own layout changes, such as the texture tabs appearing, are covered); call it for outer resizes an observer misses, such as a split-pane drag that only repaints on drag end. |
 | `allow-uv-create-delete` attribute / `allowUvCreateDelete` property | Shows the Create/Delete buttons in the UV toolbar. Off by default: creating/deleting regions only makes sense when the panel owns the UV layout (the package's own example); embeddings over a fixed mesh (e.g. voxel-map) leave it off. |
 | `uv-access` attribute / `uvAccess` property (`"edit" \| "view" \| "none"`, default `"edit"`) | Exposes UV editing, visibility toggles only, or nothing. See [UV access](#uv-access). Reflects to the attribute; unknown values fall back to `"edit"`. |
 | `color-docked` attribute / `colorDocked` property | Opens the docked color picker. Off by default. Reflects to the attribute. |
 | `color-docked-change` event | Fires when the user toggles the docked picker; `detail` is the new `boolean`. |
 | `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows the theme scope the panel is embedded in (`jolly-scope`, or any themed ancestor), falling back to `prefers-color-scheme` when there is none; `"light"`/`"dark"` force one regardless. Reflects to the attribute. |
 
-Destruction is automatic: `disconnectedCallback()` calls `canvasManager.destroy()` when the element leaves the DOM.
+Destruction is automatic: `disconnectedCallback()` destroys every texture canvas when the element leaves the DOM.
 
 > [!NOTE]
 > Everything is shadow-DOM scoped — no global CSS required. Both palettes are `:host`-scoped CSS custom properties keyed off the `theme` attribute (see `theme.ts`); override the custom properties on `pixel-draw-panel` from outside if you need a different palette than the two built in.

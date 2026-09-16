@@ -43,6 +43,14 @@ export const kFallback = {
    */
   paneHeaderBg: unsafeCSS("#2f6fd8"),
   /**
+   * --jolly-tab-close-bg-hover
+   */
+  tabCloseBgHover: unsafeCSS("rgb(221 68 51 / 0.22)"),
+  /**
+   * --jolly-danger-500
+   */
+  inkDanger: unsafeCSS("oklch(58% 0.190 26.4)"),
+  /**
    * --jolly-neutral-500
    */
   borderStrong: unsafeCSS("#7b828c"),

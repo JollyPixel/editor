@@ -18,10 +18,22 @@ import { decodeRasterCanvas } from "@jolly-pixel/image/raster";
 import { renderIcon } from "../common/icons.ts";
 import { showClearTextureDialog } from "./clearTextureDialog.ts";
 import { isInputElement } from "../../utils/dom.ts";
+import type { TextureImportHandler } from "../pixel-draw-panel/textures.ts";
+import type { TextureBusy } from "../pixel-draw-panel/TextureBusy.ts";
+
+// CONSTANTS
+const kDecodingLabel = "Decoding image";
+
+export interface HistoryFileToolbarOptions {
+  importTexture: TextureImportHandler;
+  busy: TextureBusy;
+}
 
 export class HistoryFileToolbarController implements ReactiveController {
   #host: ReactiveControllerHost;
   #canvas: PixelArtCanvas | null = null;
+  readonly #importTexture: TextureImportHandler;
+  readonly #busy: TextureBusy;
 
   #canUndo = false;
   #canRedo = false;
@@ -29,9 +41,12 @@ export class HistoryFileToolbarController implements ReactiveController {
   readonly #fileInputRef: Ref<HTMLInputElement> = createRef();
 
   constructor(
-    host: ReactiveControllerHost
+    host: ReactiveControllerHost,
+    options: HistoryFileToolbarOptions
   ) {
     this.#host = host;
+    this.#importTexture = options.importTexture;
+    this.#busy = options.busy;
     host.addController(this);
   }
 
@@ -136,6 +151,7 @@ export class HistoryFileToolbarController implements ReactiveController {
     }
 
     const canvas = this.#canvas;
+    const release = this.#busy.begin("import", kDecodingLabel);
     let source: HTMLCanvasElement;
     try {
       source = await decodeRasterCanvas(file);
@@ -143,17 +159,26 @@ export class HistoryFileToolbarController implements ReactiveController {
     catch {
       return;
     }
+    finally {
+      release();
+    }
     if (this.#canvas !== canvas) {
       return;
     }
 
-    canvas.texture = source;
-    canvas.centerTexture();
+    await this.#importTexture({
+      canvas,
+      source,
+      fileName: file.name,
+      origin: "import"
+    });
   }
 
   render(
     trailing: TemplateResult | typeof nothing = nothing
   ) {
+    const importing = this.#busy.state?.origin === "import";
+
     return html`
       <div class="overlay-toolbar bottom" part="history-file-toolbar">
         <button
@@ -178,9 +203,10 @@ export class HistoryFileToolbarController implements ReactiveController {
         <button
           class="rail-btn" part="import-button"
           aria-label="Import texture"
+          ?disabled=${importing}
           @click=${() => this.#onImportClick()}
         >
-          ${renderIcon("import")}
+          ${importing ? html`<jolly-spinner></jolly-spinner>` : renderIcon("import")}
           <span class="tooltip">Import</span>
         </button>
         <button

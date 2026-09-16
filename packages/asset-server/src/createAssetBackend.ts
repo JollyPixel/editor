@@ -57,6 +57,11 @@ export interface AssetBackendOptions {
    * one reconciliation pass.
    */
   reconcileDebounce?: number;
+  /**
+   * Decoded size cap of a `catalog:create` payload.
+   * @default DEFAULT_CATALOG_MAX_CONTENT_BYTES
+   */
+  catalogMaxContentBytes?: number;
   logger?: Logger;
 }
 
@@ -110,6 +115,7 @@ export async function createAssetBackend(
     reconcileOnStart = true,
     watch = true,
     reconcileDebounce,
+    catalogMaxContentBytes,
     logger = silentLogger()
   } = options;
 
@@ -211,7 +217,8 @@ export async function createAssetBackend(
   catalog.start();
   const catalogExtension = new CatalogExtension({
     projection: catalog,
-    writer
+    writer,
+    maxContentBytes: catalogMaxContentBytes
   });
 
   if (watch) {

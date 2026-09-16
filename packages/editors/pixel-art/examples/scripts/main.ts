@@ -13,6 +13,7 @@ import {
   PixelDrawPanel,
   type ThemeMode
 } from "../../src/index.ts";
+import { isTextureImportPolicy } from "../../src/ui/pixel-draw-panel/textures.ts";
 import { initializeDemoSync } from "./demo/DemoSync.ts";
 import { PixelPreviewScene } from "./preview/PixelPreviewScene.ts";
 
@@ -30,6 +31,10 @@ await initRuntime();
 async function initRuntime(): Promise<void> {
   const rotationToggle = restoreDemoPreferences();
   const drawPanel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+  const importPolicy = new URLSearchParams(window.location.search).get("import-policy");
+  if (importPolicy !== null && isTextureImportPolicy(importPolicy)) {
+    drawPanel.textureImportPolicy = importPolicy;
+  }
   const canvasManager = await drawPanel.initialize({
     texture: {
       size: {
@@ -100,8 +105,7 @@ async function initRuntime(): Promise<void> {
    * assert on preview meshes skip it with `?runtime=off` (see gotoDemo()).
    */
   if (new URLSearchParams(window.location.search).get("runtime") === "off") {
-    const syncReady = initializeDemoSync(canvasManager);
-    await syncReady;
+    await initializeDemoSync(drawPanel);
 
     return;
   }
@@ -141,9 +145,14 @@ async function initRuntime(): Promise<void> {
 
   const { world } = runtime;
 
+  drawPanel.addEventListener("texture-change", () => {
+    if (drawPanel.canvasManager !== null) {
+      previewScene.setCanvas(drawPanel.canvasManager);
+    }
+  });
+
   // The gallery is listening before sync restores the initial UV regions.
-  const syncReady = initializeDemoSync(canvasManager);
-  await syncReady;
+  await initializeDemoSync(drawPanel);
   initializeStarterRegion(canvasManager);
 
   world.renderer.on("resize", () => drawPanel.onResize());

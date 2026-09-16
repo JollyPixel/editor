@@ -70,6 +70,29 @@ const inkTokens = css`
     var(--jolly-ink)
   );
 
+  /*
+   * A tab strip has no resting fill, so hover stays below the neutral control
+   * stop and selection switches to the accent tint: the two never read as the
+   * same state at different strengths.
+   */
+  --jolly-tab-bg-hover: color-mix(in oklab, var(--jolly-ink) 6%, transparent);
+  --jolly-tab-selected-bg: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 14%,
+    transparent
+  );
+  --jolly-tab-selected-bg-hover: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 20%,
+    transparent
+  );
+  --jolly-tab-close-bg-hover: color-mix(
+    in oklab,
+    var(--jolly-ink-danger) 22%,
+    transparent
+  );
+  --jolly-tab-close-fg-hover: var(--jolly-ink-danger);
+
   --jolly-pane-header-bg: var(--jolly-accent-fill);
   --jolly-dock-resize-bg: color-mix(
     in oklab,
@@ -200,6 +223,11 @@ export const themeTokens = css`
       --jolly-folder-action-danger-bg: ButtonFace;
       --jolly-folder-action-danger-bg-hover: ButtonFace;
       --jolly-folder-action-danger-bg-focus: ButtonFace;
+      --jolly-tab-bg-hover: ButtonFace;
+      --jolly-tab-selected-bg: ButtonFace;
+      --jolly-tab-selected-bg-hover: ButtonFace;
+      --jolly-tab-close-bg-hover: ButtonFace;
+      --jolly-tab-close-fg-hover: ButtonText;
       --jolly-pane-header-bg: ButtonFace;
       --jolly-dock-resize-bg: ButtonFace;
       --jolly-dock-resize-bg-hover: Highlight;

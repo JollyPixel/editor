@@ -92,6 +92,29 @@ export const panelStyles = css`
     height: 100%;
   }
 
+  .texture-host {
+    width: 100%;
+    height: 100%;
+  }
+
+  .texture-host[hidden] {
+    display: none;
+  }
+
+  .texture-tabs {
+    flex: 0 0 auto;
+    min-width: 0;
+    background: var(--color-bg-surface);
+    font-family: sans-serif;
+    font-size: 12px;
+    user-select: none;
+  }
+
+  .texture-tabs::part(list) {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
   .tool-option-overlay {
     position: absolute;
     top: 8px;
@@ -350,6 +373,28 @@ export const panelStyles = css`
   .clipboard-status:empty,
   .drop-status:empty {
     display: none;
+  }
+
+  .stage-busy {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
+    color: var(--color-text);
+    font: 12px sans-serif;
+  }
+
+  .stage-busy jolly-spinner {
+    --jolly-spinner-size: 22px;
+    --jolly-spinner-color: var(--color-accent);
+  }
+
+  .rail-btn jolly-spinner {
+    --jolly-spinner-size: 18px;
   }
 
   .texture-drop-overlay {

@@ -11,6 +11,11 @@ import { decodeRasterCanvas } from "@jolly-pixel/image/raster";
 // Import Internal Dependencies
 import { renderIcon } from "../common/icons.ts";
 import { TransientStatus } from "./TransientStatus.ts";
+import type {
+  TextureImportHandler,
+  TextureImportPolicy
+} from "../pixel-draw-panel/textures.ts";
+import type { TextureBusy } from "../pixel-draw-panel/TextureBusy.ts";
 import {
   hasSupportedImageDrag,
   isDirectoryItem,
@@ -20,18 +25,39 @@ import {
   type TextureDropBounds
 } from "./textureDropGeometry.ts";
 
+// CONSTANTS
+const kDecodingLabel = "Decoding image";
+const kDropLabels: Record<TextureImportPolicy, string> = {
+  replace: "Drop image to replace texture",
+  add: "Drop image to add texture",
+  ask: "Drop image"
+};
+
+export interface TextureDropControllerOptions {
+  importTexture: TextureImportHandler;
+  policy: () => TextureImportPolicy;
+  busy: TextureBusy;
+}
+
 export class TextureDropController implements ReactiveController {
   #host: ReactiveControllerHost;
   #canvas: PixelArtCanvas | null = null;
   #stage: HTMLElement | null = null;
   #bounds: TextureDropBounds | null = null;
   readonly #status: TransientStatus;
+  readonly #importTexture: TextureImportHandler;
+  readonly #policy: () => TextureImportPolicy;
+  readonly #busy: TextureBusy;
   #dropGeneration = 0;
 
   constructor(
-    host: ReactiveControllerHost
+    host: ReactiveControllerHost,
+    options: TextureDropControllerOptions
   ) {
     this.#host = host;
+    this.#importTexture = options.importTexture;
+    this.#policy = options.policy;
+    this.#busy = options.busy;
     this.#status = new TransientStatus(host);
     host.addController(this);
   }
@@ -196,6 +222,7 @@ export class TextureDropController implements ReactiveController {
       return;
     }
 
+    const release = this.#busy.begin("drop", kDecodingLabel);
     let source: HTMLCanvasElement;
     try {
       source = await decodeRasterCanvas(file);
@@ -207,6 +234,9 @@ export class TextureDropController implements ReactiveController {
       this.#status.set("Could not decode the image");
 
       return;
+    }
+    finally {
+      release();
     }
     if (
       generation !== this.#dropGeneration ||
@@ -230,9 +260,15 @@ export class TextureDropController implements ReactiveController {
       return;
     }
 
-    canvas.texture = source;
-    canvas.centerTexture();
-    this.#status.set("Texture replaced");
+    const outcome = await this.#importTexture({
+      canvas,
+      source,
+      fileName: file.name,
+      origin: "drop"
+    });
+    if (outcome === "replaced" && generation === this.#dropGeneration) {
+      this.#status.set("Texture replaced");
+    }
   }
 
   #clearOverlay(): void {
@@ -257,7 +293,7 @@ export class TextureDropController implements ReactiveController {
         `}
       >
         ${renderIcon("import")}
-        <span>Drop image to replace texture</span>
+        <span>${kDropLabels[this.#policy()]}</span>
       </div>
     ` : nothing;
 

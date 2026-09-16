@@ -242,6 +242,25 @@ export const exampleStyles = `
     align-items: center;
   }
 
+  .spinner-example {
+    display: grid;
+    gap: var(--jolly-space-5);
+    max-width: 720px;
+  }
+
+  .spinner-states,
+  .spinner-scenario {
+    display: grid;
+    gap: var(--jolly-space-3);
+  }
+
+  .spinner-state {
+    display: grid;
+    grid-template-columns: 12ch minmax(180px, 1fr);
+    gap: var(--jolly-space-3);
+    align-items: center;
+  }
+
   .loading-preview {
     position: relative;
     min-height: 360px;

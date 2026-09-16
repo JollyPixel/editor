@@ -36,6 +36,7 @@ export class ToolOptionsController implements ReactiveController {
   #fillUvClip = false;
   #selectShape = false;
   #pickColorArmed = false;
+  #seeded = false;
 
   constructor(
     host: ReactiveControllerHost
@@ -77,12 +78,27 @@ export class ToolOptionsController implements ReactiveController {
     this.#canvas = canvas;
     this.#canvasElement = canvas.canvas();
     this.#canvasElement.addEventListener("wheel", this.#onCanvasWheel);
+    if (this.#seeded) {
+      this.#writeTo(canvas);
+    }
+    this.#seeded = true;
     this.#mode = canvas.mode;
     this.#brushSize = canvas.brush.size;
     this.#fillGlobal = canvas.tools.fill.global;
     this.#fillUvClip = canvas.tools.fill.uvClip;
     this.#selectShape = canvas.tools.select.shape;
     this.#pickColorArmed = canvas.tools.brush.pickArmed;
+  }
+
+  #writeTo(
+    canvas: PixelArtCanvas
+  ): void {
+    canvas.mode = this.#mode;
+    canvas.brush.size = this.#brushSize;
+    canvas.tools.fill.global = this.#fillGlobal;
+    canvas.tools.fill.uvClip = this.#fillUvClip;
+    canvas.tools.select.shape = this.#selectShape;
+    canvas.tools.brush.pickArmed = this.#mode === "paint" && this.#pickColorArmed;
   }
 
   readonly #onCanvasWheel = (
