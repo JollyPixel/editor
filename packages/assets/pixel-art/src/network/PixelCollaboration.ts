@@ -14,7 +14,8 @@ import type {
 } from "./peerAppearance.ts";
 import type {
   PixelNetworkCommand,
-  PixelServerMessage
+  PixelServerMessage,
+  UVGhostPayload
 } from "./types.ts";
 
 export interface PixelCollaborationOptions {
@@ -22,6 +23,10 @@ export interface PixelCollaborationOptions {
   canvas: PixelArtCanvas;
   label?: PeerLabel;
   color?: PeerColor;
+  /**
+   * See `UVGhostSyncOptions.onRemoteRegionDragging`.
+   */
+  onRemoteUvDragging?: (payload: UVGhostPayload) => void;
 }
 
 export class PixelCollaboration {
@@ -36,7 +41,8 @@ export class PixelCollaboration {
       room,
       canvas,
       label,
-      color
+      color,
+      onRemoteUvDragging
     } = options;
 
     this.sync = new PixelSyncClient({ room, canvas });
@@ -44,7 +50,12 @@ export class PixelCollaboration {
       new PixelCursorSync({ room, canvas, label, color }),
       new PixelStrokeGhostSync({ room, canvas }),
       new SelectionGhostSync({ room, canvas, color }),
-      new UVGhostSync({ room, canvas, color })
+      new UVGhostSync({
+        room,
+        canvas,
+        color,
+        onRemoteRegionDragging: onRemoteUvDragging
+      })
     ];
   }
 

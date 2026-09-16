@@ -41,7 +41,7 @@ const kPayload: UVGhostPayload = {
 };
 
 function setup(
-  options: Pick<UVGhostSyncOptions, "color"> = {}
+  options: Pick<UVGhostSyncOptions, "color" | "onRemoteRegionDragging"> = {}
 ) {
   const room = new MockRoom();
   const host = {
@@ -154,6 +154,24 @@ describe("UVGhostSync — remote peers", () => {
 
     assert.deepStrictEqual(callsOf(overlay.remove), [["peer-B"]]);
     assert.strictEqual(overlay.clearAll.mock.callCount(), 1);
+  });
+
+  test("reports a peer's in-progress drag through onRemoteRegionDragging", () => {
+    const onRemoteRegionDragging = mock.fn<(payload: UVGhostPayload) => void>();
+    const { room } = setup({ onRemoteRegionDragging });
+
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: kPayload } });
+
+    assert.deepStrictEqual(callsOf(onRemoteRegionDragging), [[kPayload]]);
+  });
+
+  test("does not call onRemoteRegionDragging for a malformed payload", () => {
+    const onRemoteRegionDragging = mock.fn<(payload: UVGhostPayload) => void>();
+    const { room } = setup({ onRemoteRegionDragging });
+
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: "not-an-object" } });
+
+    assert.strictEqual(onRemoteRegionDragging.mock.callCount(), 0);
   });
 });
 

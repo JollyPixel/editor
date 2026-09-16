@@ -78,6 +78,38 @@ describe("GroupManager rotation space", () => {
   });
 });
 
+describe("GroupManager resize", () => {
+  test("keeps the current geometry when the requested size is unchanged", () => {
+    const group = new GroupManager({ size: new THREE.Vector3(1, 1, 1) });
+    const geometry = group.getMesh().geometry;
+
+    group.resize(new THREE.Vector3(1, 1, 1));
+
+    assert.equal(group.getMesh().geometry, geometry);
+  });
+
+  test("preserves a custom UV mapping when the size is unchanged", () => {
+    const group = new GroupManager({ size: new THREE.Vector3(1, 1, 1) });
+    const uv = group.getMesh().geometry.attributes.uv;
+    uv.setXY(0, 0.25, 0.25);
+
+    group.resize(new THREE.Vector3(1, 1, 1));
+
+    assert.equal(group.getMesh().geometry.attributes.uv.getX(0), 0.25);
+    assert.equal(group.getMesh().geometry.attributes.uv.getY(0), 0.25);
+  });
+
+  test("rebuilds the geometry when the size actually changes", () => {
+    const group = new GroupManager({ size: new THREE.Vector3(1, 1, 1) });
+    const geometry = group.getMesh().geometry;
+
+    group.resize(new THREE.Vector3(2, 1, 1));
+
+    assert.notEqual(group.getMesh().geometry, geometry);
+    assert.equal(group.getSize().x, 2);
+  });
+});
+
 describe("GroupManager name", () => {
   test("defaults to an empty name and can be renamed", () => {
     const group = new GroupManager();
@@ -93,5 +125,138 @@ describe("GroupManager name", () => {
     const group = new GroupManager({ name: "Head" });
 
     assert.equal(group.name, "Head");
+  });
+});
+
+function findEmphasisShell(
+  group: GroupManager
+): THREE.Mesh | undefined {
+  return group.getMesh().children
+    .find((child) => child.name === "emphasis-shell") as THREE.Mesh | undefined;
+}
+
+function findSelectionShell(
+  group: GroupManager
+): THREE.Mesh | undefined {
+  return group.getMesh().children
+    .find((child) => child.name === "selection-shell") as THREE.Mesh | undefined;
+}
+
+describe("GroupManager selection", () => {
+  test("adds a glow shell on select", () => {
+    const group = new GroupManager();
+
+    group.select();
+
+    const shell = findSelectionShell(group);
+    assert.ok(shell);
+    assert.equal((shell.material as THREE.MeshBasicMaterial).color.getHex(), 0xff00ff);
+  });
+
+  test("is a no-op when already selected", () => {
+    const group = new GroupManager();
+
+    group.select();
+    const first = findSelectionShell(group);
+    group.select();
+
+    assert.equal(findSelectionShell(group), first);
+  });
+
+  test("removes the shell on deselect", () => {
+    const group = new GroupManager();
+    group.select();
+    const shell = findSelectionShell(group);
+
+    group.deselect();
+
+    assert.equal(findSelectionShell(group), undefined);
+    assert.equal(shell?.parent, null);
+  });
+
+  test("deselect is a no-op when not selected", () => {
+    const group = new GroupManager();
+
+    assert.doesNotThrow(() => group.deselect());
+  });
+});
+
+describe("GroupManager emphasis outline", () => {
+  test("adds a peer-colored glow shell independent of the selection outline", () => {
+    const group = new GroupManager();
+
+    group.emphasize(0x00ff00);
+
+    const emphasis = findEmphasisShell(group);
+    assert.ok(emphasis);
+    assert.equal((emphasis.material as THREE.MeshBasicMaterial).color.getHex(), 0x00ff00);
+  });
+
+  test("renders the shell as a back-face-only additive glow around the mesh", () => {
+    const group = new GroupManager();
+
+    group.emphasize(0x00ff00);
+
+    const material = findEmphasisShell(group)?.material as THREE.MeshBasicMaterial;
+    assert.equal(material.side, THREE.BackSide);
+    assert.equal(material.blending, THREE.AdditiveBlending);
+    assert.equal(material.depthWrite, false);
+  });
+
+  test("shares geometry with the mesh instead of cloning it", () => {
+    const group = new GroupManager();
+
+    group.emphasize(0x00ff00);
+
+    assert.equal(findEmphasisShell(group)?.geometry, group.getMesh().geometry);
+  });
+
+  test("updates the color of an existing shell instead of duplicating it", () => {
+    const group = new GroupManager();
+
+    group.emphasize(0x00ff00);
+    group.emphasize(0x0000ff);
+
+    const shells = group.getMesh().children.filter((child) => child.name === "emphasis-shell");
+    assert.equal(shells.length, 1);
+    const material = (shells[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    assert.equal(material.color.getHex(), 0x0000ff);
+  });
+
+  test("removes the shell from the mesh on clearEmphasis", () => {
+    const group = new GroupManager();
+    group.emphasize(0x00ff00);
+    const emphasis = findEmphasisShell(group);
+
+    group.clearEmphasis();
+
+    assert.equal(findEmphasisShell(group), undefined);
+    assert.equal(emphasis?.parent, null);
+  });
+
+  test("clearEmphasis is a no-op when nothing was emphasized", () => {
+    const group = new GroupManager();
+
+    assert.doesNotThrow(() => group.clearEmphasis());
+  });
+
+  test("coexists with the local selection glow as an independent shell", () => {
+    const group = new GroupManager();
+
+    group.select();
+    group.emphasize(0x00ff00);
+
+    const selection = findSelectionShell(group);
+    const emphasis = findEmphasisShell(group);
+    assert.ok(selection);
+    assert.ok(emphasis);
+    assert.notEqual(selection, emphasis);
+    assert.equal((selection.material as THREE.MeshBasicMaterial).color.getHex(), 0xff00ff);
+    assert.equal((emphasis.material as THREE.MeshBasicMaterial).color.getHex(), 0x00ff00);
+
+    group.deselect();
+
+    assert.equal(findSelectionShell(group), undefined);
+    assert.ok(findEmphasisShell(group), "clearing selection must not affect the emphasis shell");
   });
 });

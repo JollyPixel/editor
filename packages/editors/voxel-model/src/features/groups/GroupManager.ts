@@ -5,9 +5,12 @@ import * as THREE from "three";
 import PivotMarker from "./PivotMarker.ts";
 
 // CONSTANTS
-const kEdgeDefaultColor = 0x000000;
-const kEdgeSelectedColor = 0xff00ff;
+const kSelectionColor = 0xff00ff;
+const kSelectionScale = 1.06;
+const kSelectionOpacity = 0.6;
 const kTransformRoundDecimals = 2;
+const kEmphasisScale = 1.12;
+const kEmphasisOpacity = 0.85;
 
 function roundTo(
   value: number,
@@ -34,8 +37,9 @@ export default class GroupManager {
   private pivot: THREE.Group;
   private mesh: THREE.Mesh;
   private pivotMarker: PivotMarker;
-  private edges: THREE.LineSegments;
   private isSelected: boolean = false;
+  #selectionShell: THREE.Mesh | null = null;
+  #emphasisShell: THREE.Mesh | null = null;
 
   constructor(options: GroupManagerOptions = {}) {
     const {
@@ -82,12 +86,6 @@ export default class GroupManager {
     this.mesh.name = meshName;
     this.group.name = name ?? "";
 
-    const edgesGeo = new THREE.EdgesGeometry(geometry);
-    const edgesMat = new THREE.LineBasicMaterial({ color: kEdgeDefaultColor });
-    this.edges = new THREE.LineSegments(edgesGeo, edgesMat);
-    this.edges.name = "edges";
-    this.mesh.add(this.edges);
-
     this.pivot.add(this.mesh);
 
     this.pivotMarker = new PivotMarker();
@@ -112,10 +110,12 @@ export default class GroupManager {
     }
 
     this.isSelected = true;
-
-    if (this.edges.material instanceof THREE.LineBasicMaterial) {
-      this.edges.material.color.set(kEdgeSelectedColor);
-    }
+    this.#selectionShell = this.#createGlowShell(
+      kSelectionColor,
+      kSelectionOpacity,
+      kSelectionScale,
+      "selection-shell"
+    );
   }
 
   public deselect(): void {
@@ -124,14 +124,73 @@ export default class GroupManager {
     }
 
     this.isSelected = false;
-
-    if (this.edges.material instanceof THREE.LineBasicMaterial) {
-      this.edges.material.color.set(kEdgeDefaultColor);
-    }
+    this.#disposeShell(this.#selectionShell);
+    this.#selectionShell = null;
   }
 
   public isSelectedState(): boolean {
     return this.isSelected;
+  }
+
+  public emphasize(
+    color: THREE.ColorRepresentation
+  ): void {
+    if (this.#emphasisShell === null) {
+      this.#emphasisShell = this.#createGlowShell(
+        color,
+        kEmphasisOpacity,
+        kEmphasisScale,
+        "emphasis-shell"
+      );
+
+      return;
+    }
+
+    if (this.#emphasisShell.material instanceof THREE.MeshBasicMaterial) {
+      this.#emphasisShell.material.color.set(color);
+    }
+  }
+
+  public clearEmphasis(): void {
+    this.#disposeShell(this.#emphasisShell);
+    this.#emphasisShell = null;
+  }
+
+  #createGlowShell(
+    color: THREE.ColorRepresentation,
+    opacity: number,
+    scale: number,
+    name: string
+  ): THREE.Mesh {
+    const shell = new THREE.Mesh(
+      this.mesh.geometry,
+      new THREE.MeshBasicMaterial({
+        color,
+        side: THREE.BackSide,
+        transparent: true,
+        opacity,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    shell.name = name;
+    shell.scale.setScalar(scale);
+    this.mesh.add(shell);
+
+    return shell;
+  }
+
+  #disposeShell(
+    shell: THREE.Mesh | null
+  ): void {
+    if (shell === null) {
+      return;
+    }
+
+    this.mesh.remove(shell);
+    if (shell.material instanceof THREE.MeshBasicMaterial) {
+      shell.material.dispose();
+    }
   }
 
   public setPivotMarkerVisible(visible: boolean): void {
@@ -263,19 +322,27 @@ export default class GroupManager {
     return new THREE.Vector3(width, height, depth);
   }
 
-  /**
-   * Rebuilds the box and edge geometries at the new size. The pivot-point
-   * marker and selection outline color are untouched.
-   */
   public resize(size: THREE.Vector3): void {
+    const current = this.getSize();
+    if (
+      roundTo(current.x, kTransformRoundDecimals) === roundTo(size.x, kTransformRoundDecimals) &&
+      roundTo(current.y, kTransformRoundDecimals) === roundTo(size.y, kTransformRoundDecimals) &&
+      roundTo(current.z, kTransformRoundDecimals) === roundTo(size.z, kTransformRoundDecimals)
+    ) {
+      return;
+    }
+
     const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
 
     this.mesh.geometry.dispose();
     this.mesh.geometry = geometry;
 
-    const edgesGeometry = new THREE.EdgesGeometry(geometry);
-    this.edges.geometry.dispose();
-    this.edges.geometry = edgesGeometry;
+    if (this.#selectionShell !== null) {
+      this.#selectionShell.geometry = geometry;
+    }
+    if (this.#emphasisShell !== null) {
+      this.#emphasisShell.geometry = geometry;
+    }
   }
 
   public dispose(): void {
@@ -289,10 +356,8 @@ export default class GroupManager {
       this.mesh.material.dispose();
     }
 
-    if (this.edges.material instanceof THREE.LineBasicMaterial) {
-      this.edges.material.dispose();
-    }
-
+    this.#disposeShell(this.#selectionShell);
+    this.#disposeShell(this.#emphasisShell);
     this.pivotMarker.dispose();
 
     // Remove from parent if attached

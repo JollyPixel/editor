@@ -24,6 +24,12 @@ export interface UVGhostSyncOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
   color?: PeerColor;
+  /**
+   * Called with a remote peer's in-progress drag, on top of the built-in
+   * SVG ghost overlay. Lets a host mirror the drag onto something else
+   * (a 3D preview, for example) without waiting for the drag to commit.
+   */
+  onRemoteRegionDragging?: (payload: UVGhostPayload) => void;
 }
 
 function isUVGhostPayload(
@@ -55,6 +61,7 @@ export class UVGhostSync {
   #canvas: PixelArtCanvas;
   #color: PeerColor;
   #stream: PeerGhostStream<UVGhostPayload>;
+  #onRemoteRegionDragging: ((payload: UVGhostPayload) => void) | undefined;
 
   #onRegionDragging = (
     event: UVGhostPayload
@@ -94,15 +101,19 @@ export class UVGhostSync {
     this.#room = options.room;
     this.#canvas = canvas;
     this.#color = options.color ?? defaultPeerColor;
+    this.#onRemoteRegionDragging = options.onRemoteRegionDragging;
     this.#stream = new PeerGhostStream({
       room: options.room,
       key: "uvGhost",
       decode: decodeUVGhost,
       layer: {
-        set: (clientId, payload) => uv.set(clientId, {
-          ...payload,
-          color: this.#colorOf(clientId)
-        }),
+        set: (clientId, payload) => {
+          uv.set(clientId, {
+            ...payload,
+            color: this.#colorOf(clientId)
+          });
+          this.#onRemoteRegionDragging?.(payload);
+        },
         remove: (clientId) => uv.remove(clientId),
         clearAll: () => uv.clearAll()
       },

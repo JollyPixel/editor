@@ -17,7 +17,8 @@ import type * as network from "@jolly-pixel/network";
 import {
   PixelCollaboration,
   type PixelNetworkCommand,
-  type PixelServerMessage
+  type PixelServerMessage,
+  type UVGhostPayload
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import "@jolly-pixel/ui";
 
@@ -50,6 +51,7 @@ export class LeftPanel extends LitElement {
   #resizeObserver: ResizeObserver | null = null;
   #textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
   #collaboration: PixelCollaboration | null = null;
+  #onRemoteUvDragging: ((payload: UVGhostPayload) => void) | undefined;
 
   static override styles = css`
     :host {
@@ -99,6 +101,12 @@ export class LeftPanel extends LitElement {
     this.#tryAttachCollaboration();
   }
 
+  public setPeerUvDraggingHandler(
+    handler: (payload: UVGhostPayload) => void
+  ): void {
+    this.#onRemoteUvDragging = handler;
+  }
+
   override async firstUpdated(): Promise<void> {
     const options: PixelArtCanvasOptions = {
       texture: { size: kTextureSize },
@@ -124,7 +132,8 @@ export class LeftPanel extends LitElement {
         room: this.#textureRoom,
         canvas: this.#canvasManager,
         label: (_clientId, profile) => readUsername(profile),
-        color: peerColor
+        color: peerColor,
+        onRemoteUvDragging: (payload) => this.#onRemoteUvDragging?.(payload)
       });
       this.#textureRoom.join();
     }
