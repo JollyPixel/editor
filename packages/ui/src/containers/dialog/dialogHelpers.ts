@@ -201,6 +201,24 @@ function actionButton(
   return button;
 }
 
+function removeAfterExit(
+  dialog: Dialog
+): void {
+  if (dialog.open) {
+    dialog.addEventListener(
+      "jolly-close",
+      () => removeAfterExit(dialog),
+      { once: true }
+    );
+
+    return;
+  }
+
+  const exits = dialog._dialog?.getAnimations?.({ subtree: true }) ?? [];
+  void Promise.allSettled(exits.map((animation) => animation.finished))
+    .then(() => dialog.remove());
+}
+
 function settleHelper<TResult>(
   dialog: Dialog,
   resolveValue: (returnValue: string) => TResult,
@@ -220,7 +238,7 @@ function settleHelper<TResult>(
     }
 
     settled = true;
-    dialog.remove();
+    removeAfterExit(dialog);
     resolve(resolveValue(returnValue));
   }
 

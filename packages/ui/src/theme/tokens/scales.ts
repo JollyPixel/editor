@@ -31,6 +31,10 @@ export const scaleTokens = css`
     --jolly-duration-fast: 100ms;
     --jolly-duration-base: 160ms;
     --jolly-easing: cubic-bezier(0.2, 0, 0.2, 1);
+    --jolly-duration-enter: 250ms;
+    --jolly-duration-exit: 150ms;
+    --jolly-easing-overlay: cubic-bezier(0.22, 1, 0.36, 1);
+    --jolly-overlay-scale: 0.96;
     --jolly-font-family: "Roboto Mono", ui-monospace, sfmono-regular, "Cascadia Code",
       consolas, monospace;
     --jolly-font-numeric: "tabular-nums";
@@ -40,6 +44,8 @@ export const scaleTokens = css`
     :host {
       --jolly-duration-fast: 0ms;
       --jolly-duration-base: 0ms;
+      --jolly-duration-enter: 0ms;
+      --jolly-duration-exit: 0ms;
     }
   }
 `;

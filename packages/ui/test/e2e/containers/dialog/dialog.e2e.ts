@@ -95,6 +95,50 @@ test.describe("Dialog", () => {
     await expect(confirm).toHaveCount(0);
   });
 
+  test("a helper dialog stays mounted until its exit transition ends", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/dialog",
+      chrome: "off",
+      theme: "dark"
+    });
+
+    const example = page.locator("main > div");
+    await page.locator("[data-action=confirm-helper]").click();
+    const confirm = page.locator("body > jolly-dialog");
+    await expect(confirm.locator("dialog")).toHaveAttribute("open");
+    await confirm.evaluate((host) => host.style.setProperty("--jolly-duration-exit", "60s"));
+
+    await page.keyboard.press("Escape");
+    await expect(example).toHaveAttribute("data-result", "false");
+    await expect(confirm.locator("dialog")).not.toHaveAttribute("open");
+    await expect(confirm).toHaveCount(1);
+
+    await confirm.locator("dialog").evaluate((dialog) => {
+      for (const animation of dialog.getAnimations({ subtree: true })) {
+        animation.finish();
+      }
+    });
+    await expect(confirm).toHaveCount(0);
+  });
+
+  test("reduced motion opens a dialog without transitions", async({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await gotoGallery(page, {
+      example: "containers/dialog",
+      chrome: "off",
+      theme: "dark"
+    });
+
+    await page.getByRole("button", { name: "Open dialog" }).click();
+    const dialog = page.locator("#delete-dialog dialog");
+    await expect(dialog).toHaveAttribute("open");
+    const running = await dialog.evaluate(
+      (element) => element.getAnimations({ subtree: true }).length
+    );
+    expect(running).toBe(0);
+    await expect(dialog).toHaveCSS("opacity", "1");
+  });
+
   test("Enter confirms the helper dialogs", async({ page }) => {
     await gotoGallery(page, {
       example: "containers/dialog",

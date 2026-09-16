@@ -2,7 +2,11 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { focusRing, truncate } from "../theme/styles/mixins.ts";
+import {
+  focusRing,
+  overlayMotion,
+  truncate
+} from "../theme/styles/mixins.ts";
 
 export const controlStyles = css`
   :host {
@@ -99,6 +103,8 @@ export const controlStyles = css`
   .details::backdrop {
     background: transparent;
   }
+
+  ${overlayMotion}
 
   @media (forced-colors: active) {
     ::slotted(kbd),

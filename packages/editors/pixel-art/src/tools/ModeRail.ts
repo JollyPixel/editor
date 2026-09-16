@@ -144,11 +144,8 @@ export class ModeRail extends LitElement {
       .rail-badge {
         position: absolute;
         top: 1px;
-        right: 1px;
-        padding: 0 2px;
-        border-radius: 3px;
-        background: var(--color-bg-surface);
-        color: var(--color-text-emphasis);
+        right: 2px;
+        color: currentcolor;
         font-size: 8px;
         font-weight: 700;
         line-height: 11px;

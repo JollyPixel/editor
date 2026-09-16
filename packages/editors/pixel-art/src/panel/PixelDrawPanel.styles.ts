@@ -71,6 +71,7 @@ export const panelStyles = css`
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    overflow: clip;
   }
 
   .stage {
@@ -84,6 +85,22 @@ export const panelStyles = css`
   .color-dock {
     flex: 0 0 140px;
     height: 140px;
+    margin-bottom: -140px;
+    visibility: hidden;
+    transition:
+      margin-bottom 0.2s cubic-bezier(0.2, 0, 0, 1),
+      visibility 0.2s;
+  }
+
+  .color-dock[open] {
+    margin-bottom: 0;
+    visibility: visible;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .color-dock {
+      transition: none;
+    }
   }
 
   .canvas-host {

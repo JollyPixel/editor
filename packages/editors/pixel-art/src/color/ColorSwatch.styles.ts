@@ -24,7 +24,6 @@ export const colorSwatchStyles = css`
 
   button:disabled {
     cursor: default;
-    opacity: 0.45;
   }
 
   button:focus-visible {

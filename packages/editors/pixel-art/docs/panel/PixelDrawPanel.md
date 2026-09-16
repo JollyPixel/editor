@@ -47,9 +47,9 @@ Use `view` when the host drives region selection and users should only paint, an
 
 ## Docked color picker
 
-The small button under the swatches toggles a docked picker: a 140px strip under the stage with a saturation and value area, vertical hue and alpha tracks, R/G/B, H/S/L and A fields, and a hex field. The stage shrinks to make room and the canvas resizes itself.
+The small button under the swatches toggles a docked picker: a 140px strip under the stage with a saturation and value area, vertical hue and alpha tracks, R/G/B, H/S/L and A fields, and a hex field. The strip slides up from the bottom while the stage shrinks to make room, and the canvas resizes itself. The `color-dock` part stays in the DOM when closed; it is hidden and `inert`.
 
-While docked there is one active color. Every change, including an eyedropper pick with either mouse button, writes it to both `brush.primary` and `brush.secondary`, so both mouse buttons paint it. The swatches show it but are disabled, and swap does nothing. Undocking restores the background color held before docking.
+While docked there is one active color. Every change, including an eyedropper pick with either mouse button, writes it to both `brush.primary` and `brush.secondary`, so both mouse buttons paint it. The rail folds down to one swatch that shows it and is disabled, and the swap button is hidden. Undocking restores the background color held before docking.
 
 Docking reads the current brush colors first, so colors set through `canvasManager.brush` are picked up. The swatches and the docked picker read the brush whenever the panel renders, so a direct brush write shows up on the next panel update. The panel does not persist the docked state; hosts store `colorDocked` themselves.
 

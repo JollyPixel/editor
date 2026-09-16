@@ -38,6 +38,7 @@ export const colorPickerRailStyles = css`
     line-height: 1;
     cursor: pointer;
     transform: translate(-50%, -50%);
+    transition: opacity 0.12s ease, visibility 0.12s;
     box-shadow:
       0 0 0 2px var(--color-bg-surface),
       0 0 3px 2px var(--color-swatch-edge, transparent),
@@ -50,7 +51,26 @@ export const colorPickerRailStyles = css`
 
   .swap-btn:disabled {
     cursor: default;
-    opacity: 0.45;
+  }
+
+  .swatch.fg {
+    z-index: 2;
+  }
+
+  .swatch.bg {
+    z-index: 1;
+    transition: margin-top 0.16s ease, opacity 0.16s ease, visibility 0.16s;
+  }
+
+  :host([docked]) .swatch.bg {
+    margin-top: -30px;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  :host([docked]) .swap-btn {
+    opacity: 0;
+    visibility: hidden;
   }
 
   .swap-btn .icon {

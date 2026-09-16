@@ -18,6 +18,9 @@ async function toggleDock(
   panel: Locator
 ): Promise<void> {
   await panel.getByRole("button", { name: "Docked color picker" }).click();
+  await panel.locator("color-dock").evaluate(async(element) => {
+    await Promise.all(element.getAnimations().map((animation) => animation.finished));
+  });
 }
 
 test("picking a foreground color in the swatch paints with it", async({ panel }) => {
@@ -63,7 +66,7 @@ test("the swap button exchanges foreground and background colors", async({ panel
   });
 });
 
-test("docking shrinks the stage, disables the swatches and shares one color", async({ panel }) => {
+test("docking shrinks the stage, folds the swatches and shares one color", async({ panel }) => {
   await setBrushColor(panel, "primary", "#123456");
   await setBrushColor(panel, "secondary", "#abcdef");
   const stage = panel.locator(".stage");
@@ -75,16 +78,21 @@ test("docking shrinks the stage, disables the swatches and shares one color", as
   await expect(
     panel.getByRole("button", { name: "Docked color picker" })
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.locator("color-swatch.fg button")).toBeDisabled();
+  const foreground = panel.locator("color-swatch.fg button");
+  await expect(foreground).toBeDisabled();
+  await expect(foreground).toBeVisible();
+  await expect(foreground).toHaveCSS("opacity", "1");
   await expect(panel.locator("color-swatch.bg button")).toBeDisabled();
-  await expect(panel.getByRole("button", {
-    name: "Swap foreground and background colors"
-  })).toBeDisabled();
+  await expect(panel.locator("color-swatch.bg")).toBeHidden();
+  const swap = panel.locator("color-picker-rail .swap-btn");
+  await expect(swap).toBeDisabled();
+  await expect(swap).toBeHidden();
   await expect.poll(() => readBrush(panel)).toEqual({
     primary: "#123456",
     secondary: "#123456"
   });
-  expect((await stage.boundingBox())!.height).toBeLessThan(undocked!.height);
+  await expect.poll(async() => (await stage.boundingBox())!.height)
+    .toBeLessThanOrEqual(undocked!.height - 140);
 });
 
 test("the docked picker color paints with the right mouse button", async({ panel }) => {
@@ -110,11 +118,15 @@ test("undocking restores the background color and reports each toggle", async({ 
 
     return collected;
   });
+  const undocked = await panel.locator(".stage").boundingBox();
 
   await toggleDock(panel);
   await toggleDock(panel);
 
-  await expect(panel.locator("color-dock")).toHaveCount(0);
+  await expect(panel.locator("color-dock")).toBeHidden();
+  await expect(panel.locator("color-dock")).toHaveJSProperty("inert", true);
+  await expect.poll(async() => (await panel.locator(".stage").boundingBox())!.height)
+    .toBe(undocked!.height);
   await expect(panel.locator("color-swatch.bg button")).toBeEnabled();
   expect(await events.jsonValue()).toEqual([true, false]);
   expect((await readBrush(panel)).secondary).toBe("#222222");

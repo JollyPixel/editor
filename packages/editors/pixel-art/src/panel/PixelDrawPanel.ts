@@ -579,17 +579,17 @@ export class PixelDrawPanel extends LitElement {
               nothing
           })}
         </div>
-        ${this.colorDocked ? html`
-          <color-dock
-            class="color-dock"
-            part="color-dock"
-            .color=${this.#colors.foreground.hex}
-            .opacity=${this.#colors.foreground.opacity}
-            @color-change=${(event: CustomEvent<ColorChangeDetail>) => {
-              this.#colors.changeActive(event.detail);
-            }}
-          ></color-dock>
-        ` : nothing}
+        <color-dock
+          class="color-dock"
+          part="color-dock"
+          ?open=${this.colorDocked}
+          ?inert=${!this.colorDocked}
+          .color=${this.#colors.foreground.hex}
+          .opacity=${this.#colors.foreground.opacity}
+          @color-change=${(event: CustomEvent<ColorChangeDetail>) => {
+            this.#colors.changeActive(event.detail);
+          }}
+        ></color-dock>
       </div>
     `;
   }
