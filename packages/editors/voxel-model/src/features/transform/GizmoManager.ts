@@ -28,6 +28,9 @@ export interface GizmoManagerOptions {
     uuid: string,
     transform: GroupTransformSnapshot
   ): void;
+  /** True when a remote peer currently holds the transform lock on `uuid`. */
+  isRemotelyLocked?(uuid: string): boolean;
+  claimTransformLock?(uuid: string): void;
 }
 
 export default class GizmoManager {
@@ -35,6 +38,8 @@ export default class GizmoManager {
   #getSelectedGroup: () => GroupManager | null;
   #commitTransform: (uuid: string) => void;
   #onDragProgress: ((uuid: string, transform: GroupTransformSnapshot) => void) | undefined;
+  #isRemotelyLocked: ((uuid: string) => boolean) | undefined;
+  #claimTransformLock: ((uuid: string) => void) | undefined;
   #transformControl: TransformControls;
   #gizmoTarget: GizmoTarget | null = null;
   #dragging = false;
@@ -44,18 +49,26 @@ export default class GizmoManager {
     this.#getSelectedGroup = options.getSelectedGroup;
     this.#commitTransform = options.commitTransform;
     this.#onDragProgress = options.onDragProgress;
+    this.#isRemotelyLocked = options.isRemotelyLocked;
+    this.#claimTransformLock = options.claimTransformLock;
 
     this.#transformControl = new TransformControls(this.#camera.threeCamera, options.canvas);
     this.#transformControl.addEventListener("dragging-changed", (event: any) => {
       this.#dragging = event.value;
       this.#camera.enabled = !event.value;
 
-      if (!event.value) {
-        const group = this.#getSelectedGroup();
+      const group = this.#getSelectedGroup();
+      if (event.value) {
         if (group) {
-          group.roundTransform();
-          this.#commitTransform(group.getGroupUUID());
+          this.#claimTransformLock?.(group.getGroupUUID());
         }
+
+        return;
+      }
+
+      if (group) {
+        group.roundTransform();
+        this.#commitTransform(group.getGroupUUID());
       }
     });
     this.#transformControl.addEventListener("objectChange", () => {
@@ -88,7 +101,8 @@ export default class GizmoManager {
     const group = this.#getSelectedGroup();
     this.#gizmoTarget = config?.target ?? null;
 
-    if (config === null || group === null) {
+    const locked = group !== null && (this.#isRemotelyLocked?.(group.getGroupUUID()) ?? false);
+    if (config === null || group === null || locked) {
       this.#transformControl.enabled = false;
       this.#transformControl.getHelper().visible = false;
 

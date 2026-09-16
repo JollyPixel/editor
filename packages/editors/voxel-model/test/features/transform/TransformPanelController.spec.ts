@@ -12,6 +12,8 @@ import {
   type TransformMode
 } from "#src/features/transform/TransformPanelController.ts";
 import type GroupManager from "#src/features/groups/GroupManager.ts";
+import type { ModelSceneComponent } from "#src/app/ModelSceneComponent.ts";
+import type { PeerMark } from "#src/collaboration/peerMarks.ts";
 
 class TestHost implements ReactiveControllerHost {
   readonly updateComplete = Promise.resolve(true);
@@ -170,5 +172,142 @@ describe("TransformPanelController pivot marker visibility", () => {
     controller.setMode("scale");
 
     assert.equal(fake.pivotMarkerVisible, false);
+  });
+});
+
+interface FakeLock {
+  lockedByResult: PeerMark | null;
+  claims: string[];
+  releaseCount: number;
+  onChangeListeners: Set<() => void>;
+  fireChange(): void;
+}
+
+function makeFakeLock(): FakeLock {
+  const fake: FakeLock = {
+    lockedByResult: null,
+    claims: [],
+    releaseCount: 0,
+    onChangeListeners: new Set(),
+    fireChange() {
+      for (const listener of fake.onChangeListeners) {
+        listener();
+      }
+    }
+  };
+
+  return fake;
+}
+
+interface FakeSceneManagerStats {
+  gizmoModeCalls: number;
+  commitCalls: string[];
+}
+
+function makeFakeSceneManager(
+  fakeLock: FakeLock
+): { sceneManager: ModelSceneComponent; stats: FakeSceneManagerStats; } {
+  const stats: FakeSceneManagerStats = { gizmoModeCalls: 0, commitCalls: [] };
+
+  const sceneManager = {
+    setGizmoMode: () => {
+      stats.gizmoModeCalls++;
+    },
+    getModelManager: () => {
+      return {
+        commitGroupTransform: (uuid: string) => stats.commitCalls.push(uuid)
+      };
+    },
+    getTransformLock: () => {
+      return {
+        lockedBy: () => fakeLock.lockedByResult,
+        claim: (uuid: string) => fakeLock.claims.push(uuid),
+        release: () => {
+          fakeLock.releaseCount++;
+        },
+        onChange: (listener: () => void) => {
+          fakeLock.onChangeListeners.add(listener);
+
+          return () => fakeLock.onChangeListeners.delete(listener);
+        }
+      };
+    }
+  } as unknown as ModelSceneComponent;
+
+  return { sceneManager, stats };
+}
+
+describe("TransformPanelController transform lock", () => {
+  test("is disabled once a remote peer holds the lock on the selected block", () => {
+    const controller = new TransformPanelController(new TestHost());
+    const fake = makeFakeGroup();
+    select(controller, fake.group);
+    const fakeLock = makeFakeLock();
+    const { sceneManager } = makeFakeSceneManager(fakeLock);
+    controller.attach(sceneManager);
+
+    fakeLock.lockedByResult = { clientId: "bob", displayName: "Bob", color: "#000000" };
+
+    assert.equal(controller.disabled, true);
+  });
+
+  test("is enabled when the lock resolves to no remote holder", () => {
+    const controller = new TransformPanelController(new TestHost());
+    const fake = makeFakeGroup();
+    select(controller, fake.group);
+    const fakeLock = makeFakeLock();
+    const { sceneManager } = makeFakeSceneManager(fakeLock);
+    controller.attach(sceneManager);
+
+    assert.equal(controller.disabled, false);
+  });
+
+  test("does not mutate the group when locked, even if asked to", () => {
+    const controller = new TransformPanelController(new TestHost());
+    const fake = makeFakeGroup();
+    select(controller, fake.group);
+    const fakeLock = makeFakeLock();
+    fakeLock.lockedByResult = { clientId: "bob", displayName: "Bob", color: "#000000" };
+    const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
+    controller.attach(sceneManager);
+
+    controller.setMode("pos");
+    controller.setAxisValues({ x: 9, y: 9, z: 9 });
+
+    assert.equal(fake.calls.setPosition, undefined);
+    assert.deepEqual(stats.commitCalls, []);
+  });
+
+  test("claims the lock before mutating and releases it after commit", () => {
+    const controller = new TransformPanelController(new TestHost());
+    const fake = makeFakeGroup();
+    select(controller, fake.group);
+    const fakeLock = makeFakeLock();
+    const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
+    controller.attach(sceneManager);
+
+    controller.setMode("pos");
+    controller.setAxisValues({ x: 9, y: 9, z: 9 });
+
+    assert.deepEqual(fakeLock.claims, ["fake-uuid"]);
+    assert.deepEqual(stats.commitCalls, ["fake-uuid"]);
+    assert.equal(fakeLock.releaseCount, 1);
+  });
+
+  test("re-syncs the gizmo mode and requests an update when the lock changes", () => {
+    const host = new TestHost();
+    const controller = new TransformPanelController(host);
+    const fake = makeFakeGroup();
+    select(controller, fake.group);
+    const fakeLock = makeFakeLock();
+    const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
+    controller.attach(sceneManager);
+    const gizmoModeCallsBeforeChange = stats.gizmoModeCalls;
+    const updateCountBeforeChange = host.updateCount;
+
+    fakeLock.fireChange();
+
+    assert.ok(stats.gizmoModeCalls > gizmoModeCallsBeforeChange);
+    assert.ok(host.updateCount > updateCountBeforeChange);
   });
 });

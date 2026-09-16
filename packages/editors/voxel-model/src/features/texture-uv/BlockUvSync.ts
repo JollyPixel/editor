@@ -2,6 +2,7 @@
 import {
   DEFAULT_UV_SLOTS,
   type PixelArtCanvas,
+  type UVGeometry,
   type UVMapListener,
   type UVRegion,
   type UVSlot
@@ -25,6 +26,20 @@ const kBoxFaceVertexRanges: Record<UVSlot, readonly [number, number]> = {
   back: [20, 24]
 };
 
+/**
+ * A box face's default UV corners, identical across all six faces and
+ * independent of box size. Used as the fixed basis for remapping a face
+ * into a region's texture rect, so the transform can be re-applied any
+ * number of times as the region moves without drifting from repeated
+ * reads of an already-transformed attribute.
+ */
+const kDefaultFaceUV: ReadonlyArray<readonly [number, number]> = [
+  [0, 1],
+  [1, 1],
+  [0, 0],
+  [1, 0]
+];
+
 function blockRegionId(
   uuid: string
 ): string {
@@ -45,7 +60,7 @@ export interface BlockUvSyncOptions {
 export default class BlockUvSync {
   #modelSceneComponent: ModelSceneComponent;
   #getCanvasManager: () => PixelArtCanvas | null;
-  #uvSelectionSyncWired = false;
+  #uvSyncWired = false;
   #mappedUuids = new Set<string>();
 
   constructor(options: BlockUvSyncOptions) {
@@ -63,7 +78,7 @@ export default class BlockUvSync {
     }
 
     this.#modelSceneComponent.setCanvasTexture(canvasManager);
-    this.#wireUvSelectionSyncOnce(canvasManager);
+    this.#wireUvSyncOnce(canvasManager);
     this.#reconcileBlockUvMappings(canvasManager);
   }
 
@@ -91,15 +106,36 @@ export default class BlockUvSync {
     this.#modelSceneComponent.removeBlock(uuid);
   }
 
-  #wireUvSelectionSyncOnce(
-    canvasManager: PixelArtCanvas
+  /**
+   * Mirrors a remote peer's in-progress region drag onto the corresponding
+   * block, before it commits. The peer's own drag reaches this client as
+   * presence data rather than a `region-moved` event, so it is applied
+   * directly instead of going through the local `UVMap`.
+   */
+  public applyPeerDragPreview(
+    payload: { id: string; face: UVSlot | null; geometry: UVGeometry; }
   ): void {
-    if (this.#uvSelectionSyncWired) {
+    const region = this.#getCanvasManager()?.uv.get(payload.id);
+    if (!region) {
       return;
     }
-    this.#uvSelectionSyncWired = true;
+
+    const rect = "shape" in payload.geometry ? payload.geometry.rect : payload.geometry;
+    this.#reapplyRegion(region.withRect(rect, payload.face ?? undefined));
+  }
+
+  #wireUvSyncOnce(
+    canvasManager: PixelArtCanvas
+  ): void {
+    if (this.#uvSyncWired) {
+      return;
+    }
+    this.#uvSyncWired = true;
 
     canvasManager.uv.on("selection-changed", this.#onUvSelectionChanged);
+    canvasManager.uv.on("region-moved", this.#onUvRegionChanged);
+    canvasManager.uv.on("region-state-changed", this.#onUvRegionStateChanged);
+    canvasManager.uv.on("region-dragging", this.#onUvRegionDragging);
   }
 
   #reconcileBlockUvMappings(
@@ -144,6 +180,47 @@ export default class BlockUvSync {
     document.dispatchEvent(new CustomEvent("groupSelected", { detail: { group } }));
   };
 
+  readonly #onUvRegionChanged: UVMapListener<"region-moved"> = (
+    { region }
+  ): void => {
+    this.#reapplyRegion(region);
+  };
+
+  readonly #onUvRegionStateChanged: UVMapListener<"region-state-changed"> = (
+    { region }
+  ): void => {
+    this.#reapplyRegion(region);
+  };
+
+  readonly #onUvRegionDragging: UVMapListener<"region-dragging"> = (
+    { id, face, rect }
+  ): void => {
+    const region = this.#getCanvasManager()?.uv.get(id);
+    if (!region) {
+      return;
+    }
+
+    this.#reapplyRegion(region.withRect(rect, face ?? undefined));
+  };
+
+  #reapplyRegion(
+    region: UVRegion
+  ): void {
+    const uuid = blockUuidFromRegion(region.id);
+    if (uuid === null) {
+      return;
+    }
+
+    const group = this.#modelSceneComponent.getModelManager().getGroupByUUID(uuid);
+    const canvasManager = this.#getCanvasManager();
+    if (!group || !canvasManager) {
+      return;
+    }
+
+    this.#applyUvRegionToBlock(group, region, canvasManager.textureSize);
+    this.#mappedUuids.add(uuid);
+  }
+
   readonly #onGroupSelected = (
     event: Event
   ): void => {
@@ -181,7 +258,8 @@ export default class BlockUvSync {
       const [start, end] = kBoxFaceVertexRanges[slot];
 
       for (let i = start; i < end; i++) {
-        uv.setXY(i, u0 + (uv.getX(i) * (u1 - u0)), vBottom + (uv.getY(i) * (vTop - vBottom)));
+        const [baseU, baseV] = kDefaultFaceUV[i - start];
+        uv.setXY(i, u0 + (baseU * (u1 - u0)), vBottom + (baseV * (vTop - vBottom)));
       }
     }
     uv.needsUpdate = true;

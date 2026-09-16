@@ -14,7 +14,8 @@ import type GroupManager from "../features/groups/GroupManager.ts";
 import type { ModelHookEvent } from "../features/groups/hooks.ts";
 import GizmoManager, { type GizmoConfig } from "../features/transform/GizmoManager.ts";
 import { GroupSelectionPresence } from "../collaboration/GroupSelectionPresence.ts";
-import { GroupTransformGhostSync } from "../collaboration/GroupTransformGhostSync.ts";
+import { GroupTransformLiveSync } from "../collaboration/GroupTransformLiveSync.ts";
+import { GroupTransformLock } from "../collaboration/GroupTransformLock.ts";
 import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
 import { PeerRoster } from "../collaboration/PeerRoster.ts";
 import type { EditorIdentity } from "../collaboration/identity.ts";
@@ -49,7 +50,8 @@ export class ModelSceneComponent extends ActorComponent {
   #groupSelections: GroupSelectionPresence | undefined;
   #peerFrustums: PeerFrustums | undefined;
   #modelSync: ModelSyncClient | undefined;
-  #transformGhosts: GroupTransformGhostSync | undefined;
+  #transformLive: GroupTransformLiveSync | undefined;
+  #transformLock: GroupTransformLock | undefined;
 
   #texture: THREE.CanvasTexture | null = null;
 
@@ -73,9 +75,12 @@ export class ModelSceneComponent extends ActorComponent {
       getSelectedGroup: () => this.#modelManager.getSelectedGroup(),
       commitTransform: (uuid) => {
         this.#modelManager.commitGroupTransform(uuid);
-        this.#transformGhosts?.clear();
+        this.#transformLive?.clear();
+        this.#transformLock?.release();
       },
-      onDragProgress: (uuid, transform) => this.#transformGhosts?.publish(uuid, transform)
+      onDragProgress: (uuid, transform) => this.#transformLive?.publish(uuid, transform),
+      isRemotelyLocked: (uuid) => (this.#transformLock?.lockedBy(uuid) ?? null) !== null,
+      claimTransformLock: (uuid) => this.#transformLock?.claim(uuid)
     });
 
     this.#modelManager = new ModelManager({
@@ -105,12 +110,13 @@ export class ModelSceneComponent extends ActorComponent {
       });
       this.#modelSync.on("snapshot", this.#onModelSnapshotApplied);
 
-      this.#transformGhosts = this.actor.world
-        .createActor("transform-ghosts")
-        .addComponentAndGet(GroupTransformGhostSync, {
+      this.#transformLive = this.actor.world
+        .createActor("transform-live")
+        .addComponentAndGet(GroupTransformLiveSync, {
           room: this.#room,
           modelManager: this.#modelManager
         });
+      this.#transformLock = new GroupTransformLock({ room: this.#room });
     }
 
     this.#room?.join();
@@ -194,7 +200,9 @@ export class ModelSceneComponent extends ActorComponent {
     this.#groupSelections?.dispose();
     this.#groupSelections = undefined;
     this.#peerFrustums = undefined;
-    this.#transformGhosts = undefined;
+    this.#transformLive = undefined;
+    this.#transformLock?.dispose();
+    this.#transformLock = undefined;
     super.destroy();
   }
 
@@ -275,6 +283,10 @@ export class ModelSceneComponent extends ActorComponent {
 
   public getModelManager(): ModelManager {
     return this.#modelManager;
+  }
+
+  public getTransformLock(): GroupTransformLock | undefined {
+    return this.#transformLock;
   }
 
   public setGizmoMode(config: GizmoConfig | null): void {

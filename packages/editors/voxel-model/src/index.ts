@@ -44,6 +44,10 @@ const blockUvSync = new BlockUvSync({
   getCanvasManager: () => (leftPanel as any).canvasManager ?? null
 });
 
+(leftPanel as any).setPeerUvDraggingHandler(
+  (payload: any) => blockUvSync.applyPeerDragPreview(payload)
+);
+
 requestAnimationFrame(function updateLoop() {
   blockUvSync.update();
   requestAnimationFrame(updateLoop);

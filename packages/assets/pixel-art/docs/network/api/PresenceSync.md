@@ -52,10 +52,14 @@ Publishes in-progress UV region geometry and renders it as a peer-colored border
 new UVGhostSync(options: {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
+  color?: PeerColor;
+  onRemoteRegionDragging?: (payload: UVGhostPayload) => void;
 })
 ```
 
 The helper listens to `"region-dragging"`, cancels a queued update when the same region emits `"region-moved"`, and publishes `null` when a drag ends uncommitted.
+
+`onRemoteRegionDragging` fires whenever a remote peer's drag presence updates, alongside the built-in SVG ghost border. Use it to mirror an in-progress drag onto something other than the 2D overlay (a 3D preview, for example) without waiting for the drag to commit as a `"region-moved"` command.
 
 Accepted move, delete and state-change commands remove ghosts for the affected region. Snapshots clear all UV ghosts.
 

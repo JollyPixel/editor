@@ -75,6 +75,24 @@ describe("PixelCollaboration", () => {
     canvas.destroy();
   });
 
+  test("forwards a peer's in-progress UV drag to onRemoteUvDragging", () => {
+    const room = new MockRoom({ clientId: "client-A" });
+    const { manager: canvas } = createPixelArtCanvas();
+    const dragged: unknown[] = [];
+    const collaboration = new PixelCollaboration({
+      room,
+      canvas,
+      onRemoteUvDragging: (payload) => dragged.push(payload)
+    });
+    const payload = { id: "region-A", face: null, geometry: { x: 0, y: 0, width: 4, height: 4 } };
+
+    room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: payload } });
+
+    assert.deepStrictEqual(dragged, [payload]);
+    collaboration.destroy();
+    canvas.destroy();
+  });
+
   test("destroy releases every canvas hook and room listener", () => {
     const { room, canvas, collaboration } = setup();
 

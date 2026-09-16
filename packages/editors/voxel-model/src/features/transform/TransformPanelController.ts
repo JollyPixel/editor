@@ -5,6 +5,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type GroupManager from "../groups/GroupManager.ts";
 import type { GizmoConfig, GizmoSpace, ModelSceneComponent } from "../../app/ModelSceneComponent.ts";
+import type { PeerMark } from "../../collaboration/peerMarks.ts";
 
 export type TransformMode = "pos" | "angle" | "size" | "pivot" | "scale";
 export type Vector3Value = { x: number; y: number; z: number; };
@@ -47,6 +48,7 @@ export class TransformPanelController implements ReactiveController {
   #mode: TransformMode = "pos";
   #space: GizmoSpace = "local";
   #axisValues: Vector3Value = { x: 0, y: 0, z: 0 };
+  #unsubscribeLock: (() => void) | null = null;
 
   constructor(host: ReactiveControllerHost) {
     this.#host = host;
@@ -61,6 +63,8 @@ export class TransformPanelController implements ReactiveController {
   hostDisconnected(): void {
     document.removeEventListener("groupSelected", this.#onGroupSelected);
     document.removeEventListener("groupTransformChanged", this.#onGroupTransformChanged);
+    this.#unsubscribeLock?.();
+    this.#unsubscribeLock = null;
   }
 
   public get mode(): TransformMode {
@@ -72,7 +76,7 @@ export class TransformPanelController implements ReactiveController {
   }
 
   public get disabled(): boolean {
-    return this.#selectedGroup === null;
+    return this.#selectedGroup === null || this.#lockedBy() !== null;
   }
 
   public get space(): GizmoSpace {
@@ -81,7 +85,20 @@ export class TransformPanelController implements ReactiveController {
 
   public attach(sceneManager: ModelSceneComponent): void {
     this.#sceneManager = sceneManager;
+    this.#unsubscribeLock?.();
+    this.#unsubscribeLock = sceneManager.getTransformLock()?.onChange(() => {
+      this.#syncGizmoMode();
+      this.#host.requestUpdate();
+    }) ?? null;
     this.#syncGizmoMode();
+  }
+
+  #lockedBy(): PeerMark | null {
+    if (this.#selectedGroup === null) {
+      return null;
+    }
+
+    return this.#sceneManager?.getTransformLock()?.lockedBy(this.#selectedGroup.getGroupUUID()) ?? null;
   }
 
   public setMode(mode: TransformMode): void {
@@ -183,6 +200,11 @@ export class TransformPanelController implements ReactiveController {
 
     const { x, y, z } = this.#axisValues;
     const uuid = this.#selectedGroup.getGroupUUID();
+    const lock = this.#sceneManager?.getTransformLock();
+    if (lock?.lockedBy(uuid)) {
+      return;
+    }
+    lock?.claim(uuid);
 
     switch (this.#mode) {
       case "pos":
@@ -227,5 +249,6 @@ export class TransformPanelController implements ReactiveController {
     }
 
     this.#sceneManager?.getModelManager().commitGroupTransform(uuid);
+    lock?.release();
   }
 }
