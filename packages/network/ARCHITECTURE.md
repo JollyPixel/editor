@@ -46,7 +46,7 @@ type ServerEnvelope =
 
 `Envelope.parseClient` and `Envelope.parseServer` return a `Result<T, EnvelopeParseError>` and narrow to the union for that direction, so a `sync` envelope that reaches a listener really does carry a `Peer[]` in `members`. A client that sends `peer-left` fails to parse instead of being routed and ignored. Both schemas leave unknown properties alone, so a newer peer can add a field without breaking an older one.
 
-The TypeScript types are inferred from the schemas in `src/protocol/Envelope.schema.ts`; nothing declares them twice. The client side runs a validator compiled from those schemas ahead of time (`src/protocol/generated/`, rebuilt by `npm run build:schemas`), so it pulls no validator runtime into a browser bundle. A test fails if a compiled module drifts from its schema.
+The TypeScript types are inferred from the schemas in `src/protocol/Envelope.schema.ts`; nothing declares them twice. The client side runs a validator compiled from those schemas ahead of time (`src/protocol/generated/`, rebuilt by `pnpm run build:schemas`), so it pulls no validator runtime into a browser bundle. A test fails if a compiled module drifts from its schema.
 
 `message` travels in both directions. `join`/`leave`/`presence` are client to server, `sync`/`peer-*`/`denied`/`error` server to client (`sync`, `denied` and `error` are unicast to a single client, the others broadcast).
 

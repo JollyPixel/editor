@@ -30,6 +30,8 @@ jobs:
               - 'packages/resize-handle/**'
               - 'package.json'
               - '.npmrc'
+              - 'pnpm-workspace.yaml'
+              - 'pnpm-lock.yaml'
               - 'tsconfig.json'
               - 'tsconfig.base.json'
               - '.github/workflows/node.js.yml'
@@ -43,6 +45,8 @@ jobs:
               - 'packages/resize-handle/**'
               - 'package.json'
               - '.npmrc'
+              - 'pnpm-workspace.yaml'
+              - 'pnpm-lock.yaml'
               - 'tsconfig.json'
               - 'tsconfig.base.json'
               - '.github/workflows/node.js.yml'
@@ -64,6 +68,8 @@ jobs:
               - 'packages/resize-handle/**'
               - 'package.json'
               - '.npmrc'
+              - 'pnpm-workspace.yaml'
+              - 'pnpm-lock.yaml'
               - 'tsconfig.json'
               - 'tsconfig.base.json'
               - '.github/workflows/node.js.yml'
@@ -81,20 +87,23 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: pnpm install --frozen-lockfile
       - name: build dependencies
-        run: npm run build
+        run: pnpm run build
       - name: Run lint
-        run: npm run lint
+        run: pnpm run lint
       - name: Run typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
       - name: Run tests
-        run: npm run test
+        run: pnpm run test
 
   ui-e2e:
     needs: changes
@@ -107,18 +116,21 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - name: Use Node.js 24.x
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.x
+          cache: 'pnpm'
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: pnpm install --frozen-lockfile
       - name: Build dependencies
-        run: npm run build
+        run: pnpm run build
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run UI E2E tests
-        run: npm run test:e2e -w @jolly-pixel/ui
+        run: pnpm --filter @jolly-pixel/ui test:e2e
       - name: Upload UI E2E artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -139,18 +151,21 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - name: Use Node.js 24.x
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.x
+          cache: 'pnpm'
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: pnpm install --frozen-lockfile
       - name: Build dependencies
-        run: npm run build
+        run: pnpm run build
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run Pixel Art E2E tests
-        run: npm run test:e2e -w @jolly-pixel/editor.pixel-art
+        run: pnpm --filter @jolly-pixel/editor.pixel-art test:e2e
       - name: Upload Pixel Art E2E artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -172,18 +187,21 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - name: Use Node.js 24.x
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.x
+          cache: 'pnpm'
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: pnpm install --frozen-lockfile
       - name: Build dependencies
-        run: npm run build
+        run: pnpm run build
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run Voxel Map E2E tests
-        run: npm run test:e2e -w @jolly-pixel/editor.voxel-map
+        run: pnpm --filter @jolly-pixel/editor.voxel-map test:e2e
       - name: Upload Voxel Map E2E artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

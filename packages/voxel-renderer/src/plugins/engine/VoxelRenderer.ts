@@ -3,11 +3,11 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import {
-  VoxelEngine,
-  type VoxelEngineOptions
-} from "@jolly-pixel/voxel.renderer";
 import * as THREE from "three";
+
+// Import Internal Dependencies
+import { VoxelEngine } from "../../VoxelEngine.ts";
+import type { VoxelEngineOptions } from "../../VoxelEngine.types.ts";
 
 export interface VoxelRendererOptions extends VoxelEngineOptions {
   /**

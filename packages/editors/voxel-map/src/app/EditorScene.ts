@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer
-} from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
+} from "@jolly-pixel/voxel.renderer/plugins/engine/index.ts";
 import {
   type VoxelEngine,
   blocksFromTileset,

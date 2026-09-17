@@ -163,13 +163,17 @@ does not depend on an ECS runtime.
 
 - [Serialization, document codec, and voxel objects](docs/api/serialization/serialization.md).
 - [`TiledConverter`](docs/api/tiled/TiledConverter.md), including its JSON types.
+- [`TiledMapAssetLoader`](docs/api/tiled/TiledMapAssetLoader.md), which packages a
+  converted map as one `@jolly-pixel/asset` value.
+- [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md), the `@jolly-pixel/engine`
+  actor component wrapping a `VoxelEngine`.
 
 ## 🚀 Running the examples
 
 Seven interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
 
 ```bash
-npm run dev -w @jolly-pixel/voxel.renderer
+pnpm --filter @jolly-pixel/voxel.renderer dev
 ```
 
 Then open one of these URLs in your browser:
@@ -206,9 +210,9 @@ It is configurable from the query string:
 The browser HUD is only a sanity check; Vite's checker inflates timings. Run headless instead:
 
 ```bash
-npm run bench
-npm run bench -- --greedy
-npm run bench:compare
+pnpm run bench
+pnpm run bench --greedy
+pnpm run bench:compare
 ```
 
 Use the minimum of three runs when comparing numbers, since single runs can drift a lot on a throttled machine.
@@ -245,8 +249,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 
 ```bash
-$ npm run test
-$ npm run lint
+$ pnpm run test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

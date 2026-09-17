@@ -51,8 +51,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Run these commands from the monorepo root:
 
 ```bash
-$ npm run test -w @jolly-pixel/asset-source
-$ npm run lint
+$ pnpm --filter @jolly-pixel/asset-source test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

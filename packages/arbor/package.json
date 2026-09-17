@@ -6,10 +6,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
     "test-only": "node --test test/**/*.test.ts",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
-    "build": "tsc",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "build": "tsc -b",
     "preview": "vite",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"

@@ -13,12 +13,12 @@
     "#src/*": "./src/*"
   },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "bench": "jolly-bench --ignore browser.bench.ts",
     "bench:browser": "node bench/browser.bench.ts",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
@@ -43,12 +43,12 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@jolly-pixel/asset-source": "1.0.0",
-    "@jolly-pixel/bench": "*"
+    "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/bench": "workspace:*"
   },
   "dependencies": {
-    "@jolly-pixel/color": "1.0.0",
-    "@jolly-pixel/image": "1.1.0",
+    "@jolly-pixel/color": "workspace:*",
+    "@jolly-pixel/image": "workspace:*",
     "@openally/emitt": "1.0.1",
     "js-base64": "3.9.3"
   }

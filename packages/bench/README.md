@@ -96,16 +96,16 @@ report({
 ## 🖥️ CLI
 
 ```bash
-npm run bench -w @jolly-pixel/loop     # every suite, in path order
-npm run bench -w @jolly-pixel/loop -- scheduler     # matching file paths
-npm run bench -w @jolly-pixel/loop -- --task steady # matching task names
-npm run bench -w @jolly-pixel/loop -- --json        # JSON per suite
-npm run bench -w @jolly-pixel/loop -- --list        # print what would run
-npx jolly-bench --help
+pnpm --filter @jolly-pixel/loop bench              # every suite, in path order
+pnpm --filter @jolly-pixel/loop bench scheduler    # matching file paths
+pnpm --filter @jolly-pixel/loop bench --task steady # matching task names
+pnpm --filter @jolly-pixel/loop bench --json       # JSON per suite
+pnpm --filter @jolly-pixel/loop bench --list       # print what would run
+pnpm exec jolly-bench --help
 ```
 
 The workspace commands run from the monorepo root. From a package directory,
-the equivalent commands can call `npx jolly-bench` directly.
+the equivalent commands can call `pnpm exec jolly-bench` directly.
 
 | Flag | Environment | Default |
 | --- | --- | --- |
@@ -192,8 +192,8 @@ Read the [CONTRIBUTING][contributing] guide before contributing.
 After making changes, run the tests and linter:
 
 ```bash
-$ npm run test
-$ npm run lint
+$ pnpm run test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

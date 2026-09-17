@@ -85,8 +85,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 
 ```bash
-$ npm run test
-$ npm run lint
+$ pnpm run test
+$ pnpm run lint
 ```
 
 > [!CAUTION]
@@ -97,7 +97,7 @@ $ npm run lint
 One interactive example live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
 
 ```bash
-npm run preview -w @jolly-pixel/arbor
+pnpm --filter @jolly-pixel/arbor preview
 ```
 
 ## 📃 License

@@ -6,11 +6,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "test-only": "node --test test/**/*.spec.ts",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
-    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "dev": "vite",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
@@ -37,10 +37,10 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset": "^1.1.0",
-    "@jolly-pixel/engine": "^5.0.0",
-    "@jolly-pixel/loop": "^1.0.0",
-    "@jolly-pixel/ui": "^2.0.0",
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/loop": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
     "@pmndrs/detect-gpu": "6.0.20"
   },
   "peerDependencies": {

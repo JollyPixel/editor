@@ -6,10 +6,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "test-only": "node --test test/**/*.spec.ts",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
@@ -34,9 +34,9 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset": "^1.1.0",
-    "@jolly-pixel/controls": "2.0.0",
-    "@jolly-pixel/loop": "1.0.0",
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/controls": "workspace:*",
+    "@jolly-pixel/loop": "workspace:*",
     "@openally/emitt": "1.0.1",
     "picomatch": "4.0.7",
     "reflect-metadata": "^0.2.2"

@@ -3,10 +3,11 @@
 `VoxelRenderer` adapts `VoxelEngine` to the JollyPixel actor-component
 lifecycle. It attaches the engine root and initializes it during `awake()`,
 ticks the engine during `update()`, and removes and disposes it during
-`destroy()`.
+`destroy()`. This entry point requires the optional peer
+`@jolly-pixel/engine`.
 
 ```ts
-import { VoxelRenderer } from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
+import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/plugins/engine/index.ts";
 
 const renderer = actor.addComponentAndGet(VoxelRenderer, {
   focus: cameraActor.object3D,

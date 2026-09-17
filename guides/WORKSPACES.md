@@ -1,7 +1,7 @@
 # Workspaces guide
 
-This guide covers creating and maintaining npm workspaces in the JollyPixel
-Editor monorepo. It assumes basic familiarity with npm, Node.js, and TypeScript
+This guide covers creating and maintaining pnpm workspaces in the JollyPixel
+Editor monorepo. It assumes basic familiarity with pnpm, Node.js, and TypeScript
 project references.
 
 ## Create a workspace
@@ -10,9 +10,10 @@ Create the package directory under `packages/`. Packages can be nested when it
 makes the repository easier to navigate; the editor packages live in
 `packages/editors/`, for example.
 
-Add the package's relative directory path to the root `package.json` `workspaces`
-array. This field contains paths, such as `packages/my-package`, rather than
-package names. Add the same path to the root `tsconfig.json` `references` array.
+`pnpm-workspace.yaml` matches `packages/*`, `packages/assets/*` and
+`packages/editors/*`, so a package placed in one of those directories is picked
+up with no registration. Anywhere else, add its glob to the `packages` list.
+Add the package's path to the root `tsconfig.json` `references` array either way.
 
 Also update:
 
@@ -23,9 +24,9 @@ TypeScript builds. Dependencies between packages belong in the new package's
 own `tsconfig.json` `references` array. TypeScript follows that dependency graph;
 the order of root references is not a dependency declaration.
 
-The root build command runs each workspace's `build` script. Keep dependent
-packages before their consumers in the root `workspaces` array unless the
-consumer builds its project references itself with `tsc -b`.
+The root build command runs each workspace's `build` script through `pnpm -r`,
+which orders them by the workspace dependency graph. Declaring the dependency in
+`package.json` is what sets the build order.
 
 ## Package contents
 
@@ -78,10 +79,10 @@ the fields it needs:
     }
   },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
     "build": "tsc -b",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only"
+    "test": "c8 -r html pnpm run test-only"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -105,15 +106,22 @@ the fields it needs:
 }
 ```
 
-For runtime dependencies on another workspace, add its package name and the
-repository's current exact version to `dependencies`. The package name need not
-match its directory name. Use `peerDependencies` for libraries that require the
-consumer to provide a shared dependency, and add that dependency to
-`devDependencies` too when the package needs it for local development or tests.
+For runtime dependencies on another workspace, add its package name with the
+`workspace:` protocol: `"@jolly-pixel/asset": "workspace:*"` in `dependencies`
+and `devDependencies`, `"workspace:^"` in `peerDependencies`. pnpm refuses to
+resolve those from the registry, and replaces the range with a concrete version
+when the package is packed or published. The package name need not match its
+directory name. Use `peerDependencies` for libraries that require the consumer to
+provide a shared dependency, and add that dependency to `devDependencies` too
+when the package needs it for local development or tests.
 
-Install dependencies from the repository root. The root `.npmrc` pins exact
-versions, disables lockfile generation, and skips lifecycle scripts during
-installation.
+Declare every package a workspace imports, including dev tooling. pnpm's
+`node_modules` is isolated, so a dependency that is only reachable transitively
+will not resolve.
+
+Install dependencies from the repository root. `pnpm-workspace.yaml` pins exact
+versions, denies dependency build scripts, blocks exotic transitive sources and
+enforces a three-day release cooldown.
 
 ## tsconfig.json
 
@@ -160,12 +168,12 @@ the dependency in `package.json` serve different purposes, so add both.
 From the repository root, run:
 
 ```sh
-npm install
-npm run build
-npm run test
-npm run lint
+pnpm install
+pnpm run build
+pnpm run test
+pnpm run lint
 ```
 
-For a publishable package, run `npm pack --dry-run -w @jolly-pixel/<package-name>`
-as well. Confirm that the tarball contains the intended `dist/` output and no
+For a publishable package, run
+`pnpm pack --filter @jolly-pixel/<package-name> --dry-run` as well. Confirm that the tarball contains the intended `dist/` output and no
 unwanted source or test artifacts.

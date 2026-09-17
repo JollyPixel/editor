@@ -17,13 +17,13 @@
     }
   },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
-    "test-only": "npm run test-only:node && npm run test-only:dom",
+    "test-only": "pnpm run test-only:node && pnpm run test-only:dom",
     "test-only:node": "node --test \"test/png/**/*.spec.ts\" \"test/*.spec.ts\"",
     "test-only:dom": "node --import ./test/setup.ts --test \"test/raster/**/*.spec.ts\"",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "eslint src test",
     "bench": "jolly-bench"
   },
@@ -38,7 +38,7 @@
     "directory": "packages/image"
   },
   "devDependencies": {
-    "@jolly-pixel/bench": "*"
+    "@jolly-pixel/bench": "workspace:*"
   },
   "keywords": [],
   "files": [

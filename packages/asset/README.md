@@ -143,8 +143,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 
 ```bash
-npm run test -w @jolly-pixel/asset
-npm run lint
+pnpm --filter @jolly-pixel/asset test
+pnpm run lint
 ```
 
 > [!CAUTION]

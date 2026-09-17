@@ -6,7 +6,7 @@ import {
 import {
   TiledMapAssetLoader,
   TiledMapAssetType
-} from "@jolly-pixel/asset.voxel-map/tiled.ts";
+} from "@jolly-pixel/voxel.renderer/plugins/tiled/asset.ts";
 import { Runtime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 

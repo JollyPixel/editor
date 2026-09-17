@@ -12,7 +12,7 @@
 
 ## Requirements
 - [Node.js](https://nodejs.org/en/) version 24 or higher
-- npm v7+ for [workspaces](https://docs.npmjs.com/cli/v7/using-npm/workspaces)
+- [pnpm](https://pnpm.io/) v12+ for workspaces (the repository pins it through the `packageManager` field)
 
 ## Available packages
 
@@ -71,30 +71,30 @@ $ yarn add @jolly-pixel/engine
 To install and compile all workspaces, just run the following command at the root
 
 ```bash
-$ npm install
-$ npm run build
+$ pnpm install
+$ pnpm run build
 ```
 
 ## Test
 Run tests for one workspace, then run the repository type checks:
 
 ```bash
-$ npm run test -w <workspace>
-$ npm run typecheck
+$ pnpm --filter <workspace> test
+$ pnpm run typecheck
 ```
 
 ## Linter
 Running ESLint for all workspaces
 
 ```bash
-$ npm run lint
+$ pnpm run lint
 ```
 
 ## Publishing package
 Each packages has his own `prepublishOnly` to build TypeScript source before publishing.
 
 ```bash
-$ npm publish -w <workspace>
+$ pnpm publish --filter <workspace>
 ```
 
 ## Contributors ✨

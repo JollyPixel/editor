@@ -69,7 +69,7 @@ goldenAngleColor(index);      // unbounded, hues a golden angle apart
 The suite measures parsing per notation and hex formatting.
 
 ```bash
-npm run bench -w @jolly-pixel/color
+pnpm --filter @jolly-pixel/color bench
 ```
 
 ## ✨ Contributors guide
@@ -79,8 +79,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 
 ```bash
-$ npm run test
-$ npm run lint
+$ pnpm run test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

@@ -4,15 +4,13 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetId, AssetRecord } from "@jolly-pixel/asset";
-import type {
-  TiledMap
-} from "@jolly-pixel/voxel.renderer/plugins/tiled/index.ts";
 
 // Import Internal Dependencies
 import {
   TiledMapAssetLoader,
   TiledMapAssetType
-} from "../src/tiled.ts";
+} from "../../../src/plugins/tiled/asset.ts";
+import type { TiledMap } from "../../../src/plugins/tiled/types.ts";
 
 test("TiledMapAssetLoader prepares a catalog record", async(context) => {
   const map: TiledMap = {

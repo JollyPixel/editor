@@ -76,7 +76,7 @@ To temporarily disable a handle without destroying it, add the `disabled` CSS cl
 
 ## 🧪 Demo
 
-Run `npm run dev -w @jolly-pixel/resize-handle` from the repository root. 
+Run `pnpm --filter @jolly-pixel/resize-handle` dev from the repository root. 
 
 ## 📚 API
 
@@ -99,8 +99,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 
 ```bash
-$ npm run test
-$ npm run lint
+$ pnpm run test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

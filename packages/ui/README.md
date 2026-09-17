@@ -132,7 +132,7 @@ styling surface where applicable.
 Every component has a gallery entry, which is also its only end to end fixture.
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 The gallery exercises the shared field states. Deep-link a control with or without the surrounding
@@ -163,9 +163,9 @@ Read the [contributing guide][contributing] before making changes.
 Run the package checks with:
 
 ```bash
-npm run test
-npm run test:e2e
-npm run lint
+pnpm run test
+pnpm run test:e2e
+pnpm run lint
 ```
 
 Unit tests use `node:test`; end-to-end tests use Playwright against the gallery.

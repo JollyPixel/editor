@@ -13,5 +13,12 @@
     "node_modules",
     "dist"
   ],
-  "references": []
+  "references": [
+    {
+      "path": "../asset"
+    },
+    {
+      "path": "../engine"
+    }
+  ]
 }

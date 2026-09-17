@@ -27,7 +27,7 @@ export default defineConfig({
     trace: "retain-on-failure"
   },
   webServer: {
-    command: "npm run dev:e2e",
+    command: "pnpm run dev:e2e",
     port: E2E_PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000

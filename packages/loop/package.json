@@ -6,10 +6,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "eslint src test",
     "bench": "jolly-bench",
     "dev": "vite",
@@ -39,7 +39,7 @@
     "@openally/emitt": "1.0.1"
   },
   "devDependencies": {
-    "@jolly-pixel/bench": "*",
-    "@jolly-pixel/ui": "2.0.0"
+    "@jolly-pixel/bench": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*"
   }
 }
