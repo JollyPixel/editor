@@ -4,17 +4,10 @@ import type {
   BrushAxis,
   BrushPattern
 } from "../model/brushFootprint.ts";
-
-export interface BrushToolOption<TValue extends string> {
-  value: TValue;
-  icon: string;
-  label: string;
-}
-
-export interface BrushToolChoice<TValue extends string> {
-  active: BrushToolOption<TValue>;
-  alternatives: BrushToolOption<TValue>[];
-}
+import type {
+  ToolChoice,
+  ToolOption
+} from "../../../shared/toolChoice.ts";
 
 // CONSTANTS
 export const BRUSH_DISABLED_LABEL = "Select a voxel layer to paint";
@@ -36,18 +29,10 @@ export const BRUSH_PATTERN_OPTIONS: readonly BrushToolOption<BrushPattern>[] = [
   { value: "circle", icon: "pattern-circle", label: "Circle" }
 ];
 
-export function choiceOf<TValue extends string>(
-  options: readonly BrushToolOption<TValue>[],
-  current: TValue
-): BrushToolChoice<TValue> {
-  const active = options.find((option) => option.value === current) ??
-    options[0];
+export { choiceOf } from "../../../shared/toolChoice.ts";
 
-  return {
-    active,
-    alternatives: options.filter((option) => option !== active)
-  };
-}
+export type BrushToolOption<TValue extends string> = ToolOption<TValue>;
+export type BrushToolChoice<TValue extends string> = ToolChoice<TValue>;
 
 export function toolLabel(
   label: string,

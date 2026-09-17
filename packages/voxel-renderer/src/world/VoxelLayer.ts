@@ -588,6 +588,37 @@ export class VoxelLayer {
     return this.#chunks.size;
   }
 
+  get voxelCount(): number {
+    let total = 0;
+    for (const chunk of this.#chunks.values()) {
+      total += chunk.voxelCount;
+    }
+
+    return total;
+  }
+
+  countBlocks(): Map<number, number> {
+    const counts = new Map<number, number>();
+    for (const chunk of this.#chunks.values()) {
+      for (const [blockId, count] of chunk.countBlocks()) {
+        counts.set(blockId, (counts.get(blockId) ?? 0) + count);
+      }
+    }
+
+    return counts;
+  }
+
+  countBlock(
+    blockId: number
+  ): number {
+    let total = 0;
+    for (const chunk of this.#chunks.values()) {
+      total += chunk.countBlocks().get(blockId) ?? 0;
+    }
+
+    return total;
+  }
+
   #exportVoxels(): Record<VoxelEntryKey, VoxelEntryJSON> {
     const voxels: Record<
       VoxelEntryKey,

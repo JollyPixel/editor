@@ -341,6 +341,37 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     return this.#layers;
   }
 
+  get voxelCount(): number {
+    let total = 0;
+    for (const layer of this.#layers) {
+      total += layer.voxelCount;
+    }
+
+    return total;
+  }
+
+  countBlocks(): Map<number, number> {
+    const counts = new Map<number, number>();
+    for (const layer of this.#layers) {
+      for (const [blockId, count] of layer.countBlocks()) {
+        counts.set(blockId, (counts.get(blockId) ?? 0) + count);
+      }
+    }
+
+    return counts;
+  }
+
+  countBlock(
+    blockId: number
+  ): number {
+    let total = 0;
+    for (const layer of this.#layers) {
+      total += layer.countBlock(blockId);
+    }
+
+    return total;
+  }
+
   getLayer(
     name: string
   ): VoxelLayer | undefined {

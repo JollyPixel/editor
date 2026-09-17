@@ -20,6 +20,13 @@ export function computeBlockGridLayout(
   };
 }
 
+export function blockGridRows(
+  count: number,
+  cols: number
+): number {
+  return Math.ceil((Math.max(0, count) + 1) / Math.max(1, cols));
+}
+
 export interface BlockCellRect {
   x: number;
   y: number;
@@ -39,6 +46,17 @@ export function blockCellRect(
     y: (Math.floor(index / cols) * cellSize) + margin,
     size: cellSize - (margin * 2)
   };
+}
+
+export function blockCellStyle(
+  rect: BlockCellRect
+): string {
+  return [
+    `left:${rect.x}px`,
+    `top:${rect.y}px`,
+    `width:${rect.size}px`,
+    `height:${rect.size}px`
+  ].join(";");
 }
 
 export interface BlockScrollWindow {
@@ -78,7 +96,7 @@ export function blockInsertIndex(
     return 0;
   }
 
-  const lastRow = Math.floor((count - 1) / cols);
+  const lastRow = Math.floor(count / cols);
   const row = Math.min(
     Math.max(Math.floor(py / cellSize), 0),
     lastRow

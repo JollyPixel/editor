@@ -9,6 +9,7 @@ import type {
 import type { LayerSelection } from "../../app/state/index.ts";
 import type { PeerMarkMap } from "../../collaboration/peerMarks.ts";
 import { layerRefPresenceKey } from "./collaboration/layerPresenceKey.ts";
+import { formatCount } from "../blocks/blockUsage.ts";
 
 // CONSTANTS
 const kVoxelPrefix = "voxel:";
@@ -88,6 +89,7 @@ export function layerTreeNodes(
         id: layerRowId(ref),
         label: layer.name,
         icon: "voxel-layer",
+        detail: formatCount(layer.voxelCount, "voxel"),
         visible: layer.visible,
         data: ref
       };

@@ -152,7 +152,7 @@ describe("VoxelEngine — view distance", () => {
     // Hidden, not disposed: the geometry is still attached to the root.
     assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
     assert.deepEqual(visibleChunks(engine), ["2,0,0", "3,0,0"]);
-    assert.equal(engine.debug.stats.culledChunks, 2);
+    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
   });
 
   it("shows a hidden chunk again when the focus comes back", () => {
@@ -171,7 +171,7 @@ describe("VoxelEngine — view distance", () => {
     engine.tick(0);
 
     assert.deepEqual(visibleChunks(engine), ["0,0,0", "1,0,0"]);
-    assert.equal(engine.debug.stats.culledChunks, 2);
+    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
   });
 
   it("keeps a chunk inside the hysteresis slack visible", () => {
@@ -272,13 +272,13 @@ describe("VoxelEngine — view distance", () => {
     engine.tick(0);
     engine.focus = { x: 14, y: 2, z: 2 };
     engine.tick(0);
-    assert.equal(engine.debug.stats.culledChunks, 2);
+    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
 
     engine.viewDistance = ViewDistance.Unlimited;
     engine.tick(0);
 
     assert.deepEqual(visibleChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
-    assert.equal(engine.debug.stats.culledChunks, 0);
+    assert.equal(engine.inspector.mesh.stats.culledChunks, 0);
   });
 
   it("applies a widened view distance without waiting for the focus to move", () => {
@@ -322,13 +322,13 @@ describe("VoxelEngine — view distance", () => {
         chunks: 1,
         hysteresis: 0
       },
-      debug: { mode: "overlay" }
+      inspector: { mode: "overlay" }
     });
     engine.focus = { x: 2, y: 2, z: 2 };
     engine.tick(0);
     function overlays(): number {
       return engine.root
-        .getObjectByName("VoxelDebugger")!
+        .getObjectByName("VoxelInspector")!
         .children.length;
     }
     assert.equal(overlays(), 2);
@@ -338,7 +338,7 @@ describe("VoxelEngine — view distance", () => {
 
     assert.equal(overlays(), 2);
     assert.deepEqual(
-      (engine.root.getObjectByName("VoxelDebugger")!.children as THREE.Object3D[])
+      (engine.root.getObjectByName("VoxelInspector")!.children as THREE.Object3D[])
         .map((overlay) => overlay.name.split(":")[1])
         .sort(),
       ["2,0,0", "3,0,0"]

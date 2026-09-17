@@ -2,30 +2,43 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
+import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { MeshBuildStats } from "../mesh/index.ts";
+import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import { ChunkBoundsView } from "./ChunkBoundsView.ts";
+import { VoxelBlockInspector } from "./VoxelBlockInspector.ts";
 import {
   ChunkWireframeView,
-  type VoxelDebugMode
+  type VoxelInspectorMode
 } from "./ChunkWireframeView.ts";
 import {
-  DebugChunkRegistry,
-  type VoxelDebugStats
-} from "./DebugChunkRegistry.ts";
+  InspectedChunkRegistry,
+  type VoxelMeshStats
+} from "./InspectedChunkRegistry.ts";
 import type {
-  ChunkDebugView,
-  DebugChunkBounds
+  ChunkInspectorView,
+  InspectedChunkBounds
 } from "./types.ts";
 
-export type { VoxelDebugMode } from "./ChunkWireframeView.ts";
-export type { VoxelDebugStats } from "./DebugChunkRegistry.ts";
-export type { DebugChunkBounds } from "./types.ts";
+export type { VoxelInspectorMode } from "./ChunkWireframeView.ts";
+export type { VoxelMeshStats } from "./InspectedChunkRegistry.ts";
+export type { InspectedChunkBounds } from "./types.ts";
 
-export interface VoxelDebuggerOptions {
+export interface VoxelInspectorContext {
+  parent: THREE.Object3D;
+  world: VoxelWorld;
+  blockRegistry: BlockRegistry;
+}
+
+export interface VoxelMeshInspector {
+  readonly stats: VoxelMeshStats;
+}
+
+export interface VoxelInspectorOptions {
   /**
    * @default "off"
    */
-  mode?: VoxelDebugMode;
+  mode?: VoxelInspectorMode;
   /**
    * Wireframe color.
    * @default 0x66FF99
@@ -49,19 +62,23 @@ export interface VoxelDebuggerOptions {
 }
 
 /**
- * Entry point for the debug views. Owns the registry of built chunks and
+ * Entry point for the inspector views. Owns the registry of built chunks and
  * forwards every build to the views drawn from it.
  */
-export class VoxelDebugger {
-  #chunks = new DebugChunkRegistry();
+export class VoxelInspector {
+  readonly mesh: VoxelMeshInspector;
+  readonly blocks: VoxelBlockInspector;
+
+  #chunks = new InspectedChunkRegistry();
   #wireframe: ChunkWireframeView;
   #bounds: ChunkBoundsView;
-  #views: readonly ChunkDebugView[];
+  #views: readonly ChunkInspectorView[];
 
   constructor(
-    parent: THREE.Object3D,
-    options: VoxelDebuggerOptions = {}
+    context: VoxelInspectorContext,
+    options: VoxelInspectorOptions = {}
   ) {
+    const { parent, world, blockRegistry } = context;
     const {
       mode,
       color,
@@ -70,6 +87,11 @@ export class VoxelDebugger {
       chunkBoundsColor
     } = options;
 
+    this.mesh = this.#chunks;
+    this.blocks = new VoxelBlockInspector({
+      world,
+      blockRegistry
+    });
     this.#wireframe = new ChunkWireframeView({
       parent,
       chunks: this.#chunks,
@@ -89,11 +111,11 @@ export class VoxelDebugger {
     ];
   }
 
-  get mode(): VoxelDebugMode {
+  get mode(): VoxelInspectorMode {
     return this.#wireframe.mode;
   }
 
-  set mode(value: VoxelDebugMode) {
+  set mode(value: VoxelInspectorMode) {
     this.#wireframe.mode = value;
   }
 
@@ -113,19 +135,15 @@ export class VoxelDebugger {
     this.#bounds.enabled = value;
   }
 
-  nextMode(): VoxelDebugMode {
+  nextMode(): VoxelInspectorMode {
     return this.#wireframe.nextMode();
-  }
-
-  get stats(): VoxelDebugStats {
-    return this.#chunks.stats;
   }
 
   registerChunk(
     key: string,
     meshes: readonly THREE.Mesh[],
     stats: MeshBuildStats,
-    bounds: DebugChunkBounds | null = null
+    bounds: InspectedChunkBounds | null = null
   ): void {
     this.unregisterChunk(key);
 

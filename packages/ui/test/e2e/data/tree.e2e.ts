@@ -69,6 +69,14 @@ test.describe("Tree", () => {
     await expect(badges.nth(1)).toHaveAttribute("aria-label", "Lin");
     await expect(badges.nth(0)).toHaveCSS("background-color", "rgb(224, 86, 122)");
     await expect(rowOf(page, "scene").locator(".badges")).toHaveCount(0);
+    await expect(rowOf(page, "camera").locator(".detail")).toHaveText("2 lights");
+    await expect(rowOf(page, "scene").locator(".detail")).toHaveCount(0);
+
+    const [detail, badge] = await Promise.all([
+      boxOf(rowOf(page, "camera").locator(".detail")),
+      boxOf(badges.nth(0))
+    ]);
+    expect(detail.x).toBeLessThan(badge.x);
 
     expect(await styleOf(rowOf(page, "scene"), "width", "::before")).toBe("0px");
     expect(await styleOf(rowOf(page, "camera"), "width", "::before")).toBe("16px");

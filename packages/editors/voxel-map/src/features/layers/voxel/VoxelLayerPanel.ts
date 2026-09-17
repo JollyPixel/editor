@@ -20,6 +20,7 @@ import {
   type PropertyRow,
   type PropertyRowsChangeDetail
 } from "../properties/propertyDraft.ts";
+import { formatCount } from "../../blocks/blockUsage.ts";
 import "../properties/CustomPropertiesEditor.ts";
 
 @customElement("layer-panel")
@@ -56,6 +57,12 @@ export class VoxelLayerPanel extends LitElement {
   private declare _worldCenter: Vec3Like;
 
   @state()
+  private declare _voxels: number;
+
+  @state()
+  private declare _chunks: number;
+
+  @state()
   private declare _worldMin: Vec3Like;
 
   @state()
@@ -77,6 +84,8 @@ export class VoxelLayerPanel extends LitElement {
     this._layer = null;
     this._position = { x: 0, y: 0, z: 0 };
     this._worldCenter = { x: 0, y: 0, z: 0 };
+    this._voxels = 0;
+    this._chunks = 0;
     this._worldMin = { x: 0, y: 0, z: 0 };
     this._worldMax = { x: 0, y: 0, z: 0 };
     this._gizmo = false;
@@ -151,6 +160,8 @@ export class VoxelLayerPanel extends LitElement {
       this._worldMax = { ...(bounds?.max ?? layer.position) };
       this._gizmo = this.selection.gizmoLayer === this.layerName;
       this._props = propertyRowsOf(layer.properties);
+      this._voxels = layer.voxelCount;
+      this._chunks = layer.chunkCount;
     }
   }
 
@@ -176,6 +187,18 @@ export class VoxelLayerPanel extends LitElement {
         @jolly-input=${this.#onPositionChange}
         @jolly-change=${this.#onPositionChange}
       ></jolly-vector3>
+
+      <jolly-text
+        label="Voxels"
+        readonly
+        .value=${formatCount(this._voxels, "voxel")}
+      ></jolly-text>
+
+      <jolly-text
+        label="Chunks"
+        readonly
+        .value=${formatCount(this._chunks, "chunk")}
+      ></jolly-text>
 
       <jolly-vector3
         label="Content center"

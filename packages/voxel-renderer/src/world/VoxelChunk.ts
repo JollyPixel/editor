@@ -5,6 +5,7 @@ import { assertPowerOfTwoChunkSize } from "../utils/math.ts";
 import {
   packVoxel,
   unpackVoxel,
+  voxelBlockId,
   VOXEL_ABSENT,
   type PackedVoxel
 } from "./packedVoxel.ts";
@@ -41,6 +42,10 @@ export class VoxelChunk {
   #maxX = -1;
   #maxY = -1;
   #maxZ = -1;
+
+  #revision = 0;
+  #blockCounts: ReadonlyMap<number, number> = new Map();
+  #blockCountsRevision = 0;
 
   constructor(
     [cx, cy, cz]: [number, number, number],
@@ -133,6 +138,7 @@ export class VoxelChunk {
       packed
     );
     this.dirty = true;
+    this.#revision++;
 
     if (lx < this.#minX) {
       this.#minX = lx;
@@ -176,6 +182,7 @@ export class VoxelChunk {
     );
     if (deleted) {
       this.dirty = true;
+      this.#revision++;
     }
 
     return deleted;
@@ -213,6 +220,7 @@ export class VoxelChunk {
     this.#maxY = source.#maxY;
     this.#maxZ = source.#maxZ;
     this.dirty = true;
+    this.#revision++;
   }
 
   * entries(): IterableIterator<[number, VoxelEntry]> {
@@ -239,6 +247,29 @@ export class VoxelChunk {
 
   get voxelCount(): number {
     return this.store.size;
+  }
+
+  get revision(): number {
+    return this.#revision;
+  }
+
+  countBlocks(): ReadonlyMap<number, number> {
+    if (this.#blockCountsRevision === this.#revision) {
+      return this.#blockCounts;
+    }
+
+    const counts = new Map<number, number>();
+    const { keys, values, capacity } = this.store;
+    for (let slot = 0; slot < capacity; slot++) {
+      if (keys[slot] >= 0) {
+        const blockId = voxelBlockId(values[slot]);
+        counts.set(blockId, (counts.get(blockId) ?? 0) + 1);
+      }
+    }
+    this.#blockCounts = counts;
+    this.#blockCountsRevision = this.#revision;
+
+    return counts;
   }
 
   toString(): string {

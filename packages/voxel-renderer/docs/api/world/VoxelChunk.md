@@ -87,6 +87,9 @@ class VoxelChunk {
 
   readonly voxelCount: number;
 
+  // incremented on every write that reaches the store; never reset
+  readonly revision: number;
+
   // low-level backing storage; prefer the chunk accessors
   readonly store: VoxelStore;
 }
@@ -138,6 +141,12 @@ It is always returned `dirty`, so a renderer meshes it on the next tick.
 Replaces the voxel storage and conservative bounds with those from `source`.
 The chunk keeps its identity and becomes dirty. The source remains independent.
 Both chunks must have the same size.
+
+### `countBlocks(): ReadonlyMap<number, number>`
+
+Voxel count per block id; the transform is ignored. The histogram is cached
+against `revision` and rebuilt by the first call after a write, so repeated
+calls on an unchanged chunk return the same map. Do not mutate it.
 
 ### `entries(): IterableIterator<[number, VoxelEntry]>`
 

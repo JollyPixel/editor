@@ -4,16 +4,16 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../../src/VoxelEngine.ts";
-import { makeDebugEngine } from "./VoxelDebugger.helpers.ts";
+import { makeInspectorEngine } from "./VoxelInspector.helpers.ts";
 
-describe("VoxelDebugger - statistics", () => {
+describe("VoxelInspector - statistics", () => {
   it("reports nothing before any chunk is meshed", () => {
     const engine = new VoxelEngine({
       chunkSize: 4,
       layers: ["Ground"]
     });
 
-    assert.deepEqual(engine.debug.stats, {
+    assert.deepEqual(engine.inspector.mesh.stats, {
       chunks: 0,
       culledChunks: 0,
       meshes: 0,
@@ -31,8 +31,8 @@ describe("VoxelDebugger - statistics", () => {
   });
 
   it("aggregates the geometry of a single meshed cube", () => {
-    const engine = makeDebugEngine();
-    const stats = engine.debug.stats;
+    const engine = makeInspectorEngine();
+    const stats = engine.inspector.mesh.stats;
 
     assert.equal(stats.chunks, 1);
     assert.equal(stats.meshes, 1);
@@ -44,8 +44,8 @@ describe("VoxelDebugger - statistics", () => {
   });
 
   it("counts the faces culled between two adjacent cubes", () => {
-    const engine = makeDebugEngine({ voxels: 2 });
-    const stats = engine.debug.stats;
+    const engine = makeInspectorEngine({ voxels: 2 });
+    const stats = engine.inspector.mesh.stats;
 
     assert.equal(stats.voxels, 2);
     assert.equal(stats.faces, 10);
@@ -53,20 +53,20 @@ describe("VoxelDebugger - statistics", () => {
   });
 
   it("drops the statistics of a chunk once its layer is removed", () => {
-    const engine = makeDebugEngine();
+    const engine = makeInspectorEngine();
     engine.world.removeLayer("Ground");
     engine.tick(0);
 
-    assert.equal(engine.debug.stats.chunks, 0);
-    assert.equal(engine.debug.stats.faces, 0);
+    assert.equal(engine.inspector.mesh.stats.chunks, 0);
+    assert.equal(engine.inspector.mesh.stats.faces, 0);
   });
 
   it("does not double-count a chunk rebuilt several times", () => {
-    const engine = makeDebugEngine();
+    const engine = makeInspectorEngine();
     engine.markAllChunksDirty("test");
     engine.tick(0);
 
-    assert.equal(engine.debug.stats.chunks, 1);
-    assert.equal(engine.debug.stats.faces, 6);
+    assert.equal(engine.inspector.mesh.stats.chunks, 1);
+    assert.equal(engine.inspector.mesh.stats.faces, 6);
   });
 });

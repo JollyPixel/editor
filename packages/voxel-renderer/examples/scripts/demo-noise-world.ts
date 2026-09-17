@@ -20,7 +20,7 @@ import * as THREE from "three/webgpu";
 import {
   loadTilesets,
   ViewDistance,
-  type VoxelDebugMode,
+  type VoxelInspectorMode,
   type VoxelEngine
 } from "../../src/index.ts";
 import { RendererStats } from "./components/RendererStats.ts";
@@ -161,8 +161,8 @@ const view = {
 const controls = {
   seed: settings.seed,
   greedy: engine.greedy,
-  debug: engine.debug.mode,
-  chunkBounds: engine.debug.chunkBounds
+  debug: engine.inspector.mode,
+  chunkBounds: engine.inspector.chunkBounds
 };
 
 const worldFolder = pane.addFolder({ title: "World" });
@@ -236,7 +236,7 @@ controlsFolder
 controlsFolder
   .addBinding(controls, "chunkBounds", { label: "chunk bounds" })
   .on("change", ({ value }) => {
-    engine.debug.chunkBounds = value;
+    engine.inspector.chunkBounds = value;
   });
 
 /*
@@ -265,7 +265,7 @@ document.addEventListener("keydown", (event) => {
 
   // off → wireframe over the textures → wireframe only.
   if (event.code === "KeyG") {
-    setDebugMode(engine.debug.nextMode());
+    setDebugMode(engine.inspector.nextMode());
 
     return;
   }
@@ -320,9 +320,9 @@ function setGreedy(
  * the assignment (a no-op for an unchanged mode) before the pane is synced.
  */
 function setDebugMode(
-  value: VoxelDebugMode
+  value: VoxelInspectorMode
 ): void {
-  engine.debug.mode = value;
+  engine.inspector.mode = value;
   if (controls.debug === value) {
     return;
   }
@@ -382,7 +382,7 @@ function syncStats(): void {
   const {
     faces, culledFaces, mergedFaces, triangles, vertices, meshes, chunks,
     culledChunks
-  } = engine.debug.stats;
+  } = engine.inspector.mesh.stats;
   const candidates = faces + culledFaces;
   const emitted = faces + mergedFaces;
 

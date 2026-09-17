@@ -60,6 +60,8 @@ class VoxelLayer {
 
   // number of currently allocated chunks
   readonly chunkCount: number;
+  // stored voxels across all chunks
+  readonly voxelCount: number;
 
   // world-space position of the layer origin
   position: VoxelCoord;
@@ -109,6 +111,15 @@ interface VoxelLayerJSON {
 > [!NOTE]
 > Used by `serializeVoxelWorld()`. See
 > [serialization](../serialization/serialization.md).
+
+### `countBlocks(): Map<number, number>`
+
+Voxel count per block id, summed from each chunk's cached histogram. Returns a
+new map.
+
+### `countBlock(blockId: number): number`
+
+Voxels of `blockId` in the layer; `0` when none.
 
 ### `getOrCreateChunk(cx: number, cy: number, cz: number): VoxelChunk`
 

@@ -7,7 +7,7 @@ import { BlockRegistry } from "./blocks/BlockRegistry.ts";
 import { applyBlockCommand } from "./blocks/applyBlockCommand.ts";
 import { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelCollider } from "./collision/VoxelCollider.ts";
-import { VoxelDebugger } from "./debug/index.ts";
+import { VoxelInspector } from "./inspector/index.ts";
 import { VoxelMeshBuilder } from "./mesh/index.ts";
 import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
 import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";
@@ -66,7 +66,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
 
-  readonly debug: VoxelDebugger;
+  readonly inspector: VoxelInspector;
 
   focus: THREE.Vector3Like | null = null;
   viewDistance: ViewDistance;
@@ -95,7 +95,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       alphaTest = 0.1,
       logger = NOOP_LOGGER,
       onCommand,
-      debug,
+      inspector,
       tilesets,
       greedy = false,
       rebuildBudgetMs = 8,
@@ -109,7 +109,6 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     }
 
     this.root.name = "VoxelEngine";
-    this.debug = new VoxelDebugger(this.root, debug);
 
     this.#rebuildBudgetMs = rebuildBudgetMs;
     this.viewDistance = viewDistance === undefined ?
@@ -128,6 +127,14 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     layers.forEach((name) => this.world.addLayer(name));
 
     this.blockRegistry = new BlockRegistry(blocks);
+    this.inspector = new VoxelInspector(
+      {
+        parent: this.root,
+        world: this.world,
+        blockRegistry: this.blockRegistry
+      },
+      inspector
+    );
     this.shapeRegistry = BlockShapeRegistry
       .createDefault();
     shapes.forEach(
@@ -161,7 +168,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       root: this.root,
       meshBuilder: this.#meshBuilder,
       materials: this.#materials,
-      debug: this.debug,
+      inspector: this.inspector,
       collider: this.#collider,
       logger: this.#logger
     });
@@ -447,7 +454,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.#logger.debug("Disposing VoxelEngine.");
     this.#queue.clear();
     this.#clearChunkMeshes();
-    this.debug.dispose();
+    this.inspector.dispose();
     this.#collider?.dispose();
     this.#materials.dispose();
     this.tilesetManager.dispose();

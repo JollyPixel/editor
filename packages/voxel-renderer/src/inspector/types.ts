@@ -4,21 +4,21 @@ import type * as THREE from "three";
 // Import Internal Dependencies
 import type { MeshBuildStats } from "../mesh/index.ts";
 
-export interface DebugChunkBounds {
+export interface InspectedChunkBounds {
   readonly origin: Readonly<THREE.Vector3Like>;
   readonly size: number;
 }
 
-export interface DebugChunkEntry {
+export interface InspectedChunkEntry {
   readonly key: string;
   readonly meshes: readonly THREE.Mesh[];
   readonly stats: MeshBuildStats;
-  readonly bounds: DebugChunkBounds | null;
+  readonly bounds: InspectedChunkBounds | null;
   culled: boolean;
 }
 
-export interface ChunkDebugView {
-  refresh(entry: DebugChunkEntry): void;
+export interface ChunkInspectorView {
+  refresh(entry: InspectedChunkEntry): void;
   release(key: string): void;
   clear(): void;
   dispose(): void;

@@ -6,14 +6,14 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { VoxelEngine } from "../../src/VoxelEngine.ts";
-import type { VoxelDebuggerOptions } from "../../src/debug/index.ts";
+import type { VoxelInspectorOptions } from "../../src/inspector/index.ts";
 import {
   makeEngine as makeBaseEngine,
   CUBE_ID as kCubeId
 } from "../helpers/engine.ts";
 
-export interface DebugEngineOptions {
-  debug?: VoxelDebuggerOptions;
+export interface InspectorEngineOptions {
+  inspector?: VoxelInspectorOptions;
   voxels?: number;
 }
 
@@ -21,14 +21,14 @@ export interface DebugEngineOptions {
  * Engine with one tileset registered and, unless voxels is empty, a meshed
  * "Ground" layer.
  */
-export function makeDebugEngine(
-  options: DebugEngineOptions = {}
+export function makeInspectorEngine(
+  options: InspectorEngineOptions = {}
 ): VoxelEngine {
-  const { debug, voxels = 1 } = options;
+  const { inspector, voxels = 1 } = options;
 
   const engine = makeBaseEngine({
     layers: ["Ground"],
-    debug,
+    inspector,
     // Drain the whole queue so a single tick() meshes every chunk.
     rebuildBudgetMs: 0
   });
@@ -43,19 +43,19 @@ export function makeDebugEngine(
   return engine;
 }
 
-export function findDebugGroup(
+export function findInspectorGroup(
   engine: VoxelEngine
 ): THREE.Object3D | undefined {
   return engine.root.children.find(
-    (child) => child.name === "VoxelDebugger"
+    (child) => child.name === "VoxelInspector"
   );
 }
 
-export function debugGroup(
+export function inspectorGroup(
   engine: VoxelEngine
 ): THREE.Object3D {
-  const group = findDebugGroup(engine);
-  assert.ok(group, "the debug group must be attached to the engine root");
+  const group = findInspectorGroup(engine);
+  assert.ok(group, "the inspector group must be attached to the engine root");
 
   return group;
 }
@@ -71,7 +71,7 @@ export function chunkMeshes(
 export function overlayMeshes(
   engine: VoxelEngine
 ): THREE.Mesh[] {
-  return debugGroup(engine).children.filter(
+  return inspectorGroup(engine).children.filter(
     (child): child is THREE.Mesh => child instanceof THREE.Mesh
   );
 }

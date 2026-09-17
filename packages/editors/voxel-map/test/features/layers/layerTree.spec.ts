@@ -58,7 +58,8 @@ describe("layerTreeNodes", () => {
       getLayers: () => [
         {
           name: "Ground",
-          visible: true
+          visible: true,
+          voxelCount: 1234
         }
       ],
       getObjectLayers: () => [
@@ -83,6 +84,8 @@ describe("layerTreeNodes", () => {
       kind: "voxel-layer",
       name: "Ground"
     });
+    assert.strictEqual(nodes[0].detail, "1,234 voxels");
+    assert.strictEqual(nodes[1].detail, undefined);
     assert.strictEqual(nodes[1].visible, false);
     assert.deepStrictEqual(nodes[1].children?.[0], {
       id: "obj:Triggers/spawn",

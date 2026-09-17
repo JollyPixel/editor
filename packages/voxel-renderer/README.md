@@ -27,7 +27,7 @@
 - `TiledConverter` to import Tiled `.tmj` maps in `"stacked"` or `"flat"` layer modes
 - Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
-- Debug mode (`engine.debug`) exposing live face/triangle counts and a wireframe view of the meshed chunks
+- Inspector (`engine.inspector`) exposing live face/triangle counts and a wireframe view of the meshed chunks
 
 ## 💃 Getting Started
 
@@ -132,7 +132,7 @@ does not depend on an ECS runtime.
 ### Core and world API
 
 - [`VoxelEngine`](docs/api/core/VoxelEngine.md).
-- [`VoxelDebugger` and mesh statistics](docs/api/core/VoxelDebugger.md), and
+- [`VoxelInspector`, mesh and block statistics](docs/api/core/VoxelInspector.md), and
   [commands](docs/api/core/commands.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),

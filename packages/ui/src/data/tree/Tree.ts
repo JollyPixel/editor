@@ -203,6 +203,7 @@ export class Tree<TData = unknown> extends LitElement {
             <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
           `}
           ${this.#renderLabel(node)}
+          ${node.detail ? html`<span class="detail">${node.detail}</span>` : nothing}
           ${this.#renderBadges(node)}
           ${node.visible === undefined ? nothing : html`
             <button

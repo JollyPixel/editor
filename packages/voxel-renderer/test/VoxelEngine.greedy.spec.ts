@@ -90,11 +90,11 @@ describe("VoxelEngine — greedy meshing", () => {
     }
   });
 
-  it("reports the folded faces through the debugger", () => {
+  it("reports the folded faces through the inspector", () => {
     const engine = makeEngine(true);
 
-    assert.equal(engine.debug.stats.faces, 6);
-    assert.equal(engine.debug.stats.mergedFaces, 42);
+    assert.equal(engine.inspector.mesh.stats.faces, 6);
+    assert.equal(engine.inspector.mesh.stats.mergedFaces, 42);
   });
 
   it("rebuilds the world when toggled at runtime", () => {

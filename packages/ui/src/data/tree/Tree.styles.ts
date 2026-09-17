@@ -103,6 +103,13 @@ export const treeStyles = css`
     ${truncate}
   }
 
+  .detail {
+    flex: 0 0 auto;
+    color: var(--jolly-text-muted, ${kFallback.text});
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
   .badges {
     flex: 0 0 auto;
     display: flex;
