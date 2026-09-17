@@ -188,8 +188,8 @@ importers:
         specifier: 26.5.1
         version: 26.5.1
       '@types/three':
-        specifier: ^0.185.0
-        version: 0.185.4
+        specifier: ^0.186.0
+        version: 0.186.0
       c8:
         specifier: ^12.0.0
         version: 12.0.0
@@ -265,8 +265,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       ata-validator:
-        specifier: 1.13.2
-        version: 1.13.2(yaml@2.9.0)
+        specifier: 1.16.2
+        version: 1.16.2(yaml@2.9.0)
       js-base64:
         specifier: 3.9.3
         version: 3.9.3
@@ -344,8 +344,8 @@ importers:
         specifier: workspace:*
         version: link:../../voxel-renderer
       three:
-        specifier: 0.185.1
-        version: 0.185.1
+        specifier: 0.186.0
+        version: 0.186.0
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -403,8 +403,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       three:
-        specifier: 0.185.1
-        version: 0.185.1
+        specifier: 0.186.0
+        version: 0.186.0
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -482,8 +482,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       three:
-        specifier: 0.185.1
-        version: 0.185.1
+        specifier: 0.186.0
+        version: 0.186.0
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -525,8 +525,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       three:
-        specifier: 0.185.1
-        version: 0.185.1
+        specifier: 0.186.0
+        version: 0.186.0
 
   packages/engine:
     dependencies:
@@ -600,8 +600,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       ata-validator:
-        specifier: 1.13.2
-        version: 1.13.2(yaml@2.9.0)
+        specifier: 1.16.2
+        version: 1.16.2(yaml@2.9.0)
       hyperid:
         specifier: 4.0.0
         version: 4.0.0
@@ -663,8 +663,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       '@pmndrs/detect-gpu':
-        specifier: 6.0.20
-        version: 6.0.20
+        specifier: 6.0.21
+        version: 6.0.21
       three:
         specifier: ^0.185.1
         version: 0.185.1
@@ -676,8 +676,8 @@ importers:
   packages/three:
     dependencies:
       three:
-        specifier: 0.185.1
-        version: 0.185.1
+        specifier: 0.186.0
+        version: 0.186.0
     devDependencies:
       '@jolly-pixel/color':
         specifier: workspace:*
@@ -711,8 +711,8 @@ importers:
         specifier: 1.0.1
         version: 1.0.1
       three:
-        specifier: 0.185.1
-        version: 0.185.1
+        specifier: 0.186.0
+        version: 0.186.0
     devDependencies:
       '@dimforge/rapier3d':
         specifier: 0.20.0
@@ -820,42 +820,42 @@ packages:
   '@antfu/install-pkg@2.0.1':
     resolution: {integrity: sha512-iCKVQcIC0e3oDxEfs3SHQGW+ovhBMZmS1TE+bTk50rVyMCBmCfClv7Qi3HQKlumYwvjb/iIMeWCW2i67q6kFfQ==}
 
-  '@ata-validator/native-darwin-arm64@1.13.2':
-    resolution: {integrity: sha512-eVkS9rhK+K6tY5Ou5BRvKWYcEnGVe/thqNucnRI3/MmW54rklkEZx7rN2mY/EA53+xPzbG0eGMsCL0pnnjOUFw==}
+  '@ata-validator/native-darwin-arm64@1.16.2':
+    resolution: {integrity: sha512-dk5Z2Br/ES8QVy7fznnpAl1I8P9fgBXmnHed+N0pF66XPVhLhIXDdYorRxtCiZLu3GqB3pOW+CU0cpug4i8YKA==}
     cpu: [arm64]
     os: [darwin]
 
-  '@ata-validator/native-darwin-x64@1.13.2':
-    resolution: {integrity: sha512-mLl5CWHFQFqpkN/cAKYzV7PDh1QtcXpgLPq8KYMMDHGYwiCDt4YBQK+eOAHE708NTdqxWphaRYTToInqKiHWIA==}
+  '@ata-validator/native-darwin-x64@1.16.2':
+    resolution: {integrity: sha512-ZU1+0GbdAX2U84Rq4pCS/tHPbKup73bpLzOSpZamknqJbJQgphfrTJJLejr3pRprGR9YolZSI/r7nDITfawOjw==}
     cpu: [x64]
     os: [darwin]
 
-  '@ata-validator/native-linux-arm64-gnu@1.13.2':
-    resolution: {integrity: sha512-+cV7k9eAtjoyYGjbJDOSuAZ8x4+hg2vWNPUkw/AU6pOt+yHFRrRwuWH9mtGubTAzhIl+ceOKJgRcTt75ytvFBQ==}
+  '@ata-validator/native-linux-arm64-gnu@1.16.2':
+    resolution: {integrity: sha512-/jQ9aq4a+gCQU8Y6ZTvwhn/E2PZ1k8CQL2xyIne68A1saTPD9SkoaDoYc8rIyKXCmJ3lMTza9rFJy11/u0kLBQ==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@ata-validator/native-linux-arm64-musl@1.13.2':
-    resolution: {integrity: sha512-8+Cndi/wqKCmExWX6U0teVaBbgltrThPZP+avdcDMpqnZxLCo3J3kdiQN4iEGjVu3LI627HMvOX839sI0nlVTQ==}
+  '@ata-validator/native-linux-arm64-musl@1.16.2':
+    resolution: {integrity: sha512-IHNYP7Ybdwd41KuVzUiW56prlxtZrtDn9TT97JjUhrknktGSetDjeQhm6eswPR7clewm//PI+XRDIQ89zKbfAg==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@ata-validator/native-linux-x64-gnu@1.13.2':
-    resolution: {integrity: sha512-S3dbc4UVrCKo/573XA8/kl+Dr1NzIUrfLJcuyv+07hsHxtR+ZWDYhTLMvkzn3WTu7SApav2TXRtGQNC6rJg2Rw==}
+  '@ata-validator/native-linux-x64-gnu@1.16.2':
+    resolution: {integrity: sha512-fk/PCIqk6A1LfMgM/wepOLxZeQ0beZ/7IKO8/JxDtUA1IZWHcZeeSZz/xThG91FM0DT0YwIsPqhko7ftN2DsCQ==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@ata-validator/native-linux-x64-musl@1.13.2':
-    resolution: {integrity: sha512-bVL5JBGnio0Je874M2JlgmWDP0JBupjlg/vdob8gRJwnPTMobAqZrDWv1C7nHWqEP6VOjapo0aiPVSWhjbrueA==}
+  '@ata-validator/native-linux-x64-musl@1.16.2':
+    resolution: {integrity: sha512-bGmSFiVE9JD3jIRWq/KmSF97LIix6DnJUYGW0XFJ4DEVoZTKCXADGg/TQ3/7G28vzxq5+2pfilSvUBgdgQmI+g==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@ata-validator/native-win32-x64@1.13.2':
-    resolution: {integrity: sha512-7mmQj9dsV70V+l+/SrjfcZzcMExqKGv/2xhLmnQkdXJmwyfvev7ao3lKQjaBxQWLVru/he2gd2obbQ+dItNj6Q==}
+  '@ata-validator/native-win32-x64@1.16.2':
+    resolution: {integrity: sha512-U5v/0BbsBeVOHyz9xJ8AOuS+KFCvMD4aLgwUudwaweGsoU5hy+7vJ+vCcEaB9GRfgwgq3lJrFpe/HHpXPI8VqQ==}
     cpu: [x64]
     os: [win32]
 
@@ -1552,8 +1552,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@pmndrs/detect-gpu@6.0.20':
-    resolution: {integrity: sha512-XavJbHaxPOMwSjxVUt0zpEzxxDQ2nPu1pqnyrHKqV3CZHFhkUSz9h86NcoyX7ImemqgayyKWyttU8/rMzxJ7Ig==}
+  '@pmndrs/detect-gpu@6.0.21':
+    resolution: {integrity: sha512-QF4dI69ydwYLh1PsCpdRNxXfs4IJqGiPg0ZE34OGGCHueMCvFM6aU8wMOzXhpxmzBZKcjiXtDmJ7LAqH8uH+DA==}
 
   '@pnpm/deps.graph-sequencer@1100.0.1':
     resolution: {integrity: sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A==}
@@ -1973,8 +1973,8 @@ packages:
   '@types/stats.js@0.17.4':
     resolution: {integrity: sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==}
 
-  '@types/three@0.185.4':
-    resolution: {integrity: sha512-gAsBIC07NIFrxjbf7tH2t71c38uulFfk/RFoC7FNBSjMRAQ8J1x/RBvusX0N5PJouaYFJawXQqfCQ0RKUx/1nA==}
+  '@types/three@0.186.0':
+    resolution: {integrity: sha512-mxYSBpDC+D0pLfSP6sW4WZTcT+nrtmZcimMqnVmy36Hte3XpeYSrvgg4TRdaM1GemGog1AWzI5qL2VoIfMXbJQ==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -2204,8 +2204,8 @@ packages:
     resolution: {integrity: sha512-Z7tMw1ytTXt5jqMcOP+OQteU1VuNK9Y02uuJtKQ1Sv69jXQKKg5cibLwGJow8yzZP+eAc18EmLGPal0bp36rvQ==}
     engines: {node: '>=8'}
 
-  ata-validator@1.13.2:
-    resolution: {integrity: sha512-Yl8O8x0eM4A3szFxBfQzSWbo6Q9cTaFceRQR8D2Ci5fOEhHUbY+77AGEZfwYmlRuXHURzTcngOICBHTyoK3YvQ==}
+  ata-validator@1.16.2:
+    resolution: {integrity: sha512-VFX0pTcHOLDNIxGe0wJa3HsO8KzJOyIKFTbR9NFJ0Jk1IoaJ/JafKqYhohExGBQpKBRB/LOg8vGzgrYwQzcmsA==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -3573,6 +3573,9 @@ packages:
   three@0.185.1:
     resolution: {integrity: sha512-5aojFCXKwnjBRZvUnt3WFfEcvUJgkN5LlijRFN95hMy8WVkG4I0QNcJE+OuWvuJ0bOdStrbfXn0pkd6/QyiAlg==}
 
+  three@0.186.0:
+    resolution: {integrity: sha512-cr/fIM2ddMSVbYVgkfD4jLJv7Fh/8ZTjvo+7gQeSVGUZHxpx9FDwoL5iC7hUz/LiRA8wMbqfnb90xKfm1/HHkQ==}
+
   tiny-invariant@1.3.3:
     resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
 
@@ -4024,25 +4027,25 @@ snapshots:
       package-manager-detector: 1.8.0
       tinyexec: 1.3.1
 
-  '@ata-validator/native-darwin-arm64@1.13.2':
+  '@ata-validator/native-darwin-arm64@1.16.2':
     optional: true
 
-  '@ata-validator/native-darwin-x64@1.13.2':
+  '@ata-validator/native-darwin-x64@1.16.2':
     optional: true
 
-  '@ata-validator/native-linux-arm64-gnu@1.13.2':
+  '@ata-validator/native-linux-arm64-gnu@1.16.2':
     optional: true
 
-  '@ata-validator/native-linux-arm64-musl@1.13.2':
+  '@ata-validator/native-linux-arm64-musl@1.16.2':
     optional: true
 
-  '@ata-validator/native-linux-x64-gnu@1.13.2':
+  '@ata-validator/native-linux-x64-gnu@1.16.2':
     optional: true
 
-  '@ata-validator/native-linux-x64-musl@1.13.2':
+  '@ata-validator/native-linux-x64-musl@1.16.2':
     optional: true
 
-  '@ata-validator/native-win32-x64@1.13.2':
+  '@ata-validator/native-win32-x64@1.16.2':
     optional: true
 
   '@babel/code-frame@7.29.7':
@@ -4657,7 +4660,7 @@ snapshots:
     dependencies:
       playwright: 1.63.0
 
-  '@pmndrs/detect-gpu@6.0.20': {}
+  '@pmndrs/detect-gpu@6.0.21': {}
 
   '@pnpm/deps.graph-sequencer@1100.0.1': {}
 
@@ -5004,7 +5007,7 @@ snapshots:
 
   '@types/stats.js@0.17.4': {}
 
-  '@types/three@0.185.4':
+  '@types/three@0.186.0':
     dependencies:
       '@dimforge/rapier3d-compat': 0.12.0
       '@tweenjs/tween.js': 23.1.3
@@ -5294,15 +5297,15 @@ snapshots:
 
   astral-regex@2.0.0: {}
 
-  ata-validator@1.13.2(yaml@2.9.0):
+  ata-validator@1.16.2(yaml@2.9.0):
     optionalDependencies:
-      '@ata-validator/native-darwin-arm64': 1.13.2
-      '@ata-validator/native-darwin-x64': 1.13.2
-      '@ata-validator/native-linux-arm64-gnu': 1.13.2
-      '@ata-validator/native-linux-arm64-musl': 1.13.2
-      '@ata-validator/native-linux-x64-gnu': 1.13.2
-      '@ata-validator/native-linux-x64-musl': 1.13.2
-      '@ata-validator/native-win32-x64': 1.13.2
+      '@ata-validator/native-darwin-arm64': 1.16.2
+      '@ata-validator/native-darwin-x64': 1.16.2
+      '@ata-validator/native-linux-arm64-gnu': 1.16.2
+      '@ata-validator/native-linux-arm64-musl': 1.16.2
+      '@ata-validator/native-linux-x64-gnu': 1.16.2
+      '@ata-validator/native-linux-x64-musl': 1.16.2
+      '@ata-validator/native-win32-x64': 1.16.2
       yaml: 2.9.0
 
   atomic-sleep@1.0.0: {}
@@ -6743,6 +6746,8 @@ snapshots:
       real-require: 1.0.0
 
   three@0.185.1: {}
+
+  three@0.186.0: {}
 
   tiny-invariant@1.3.3: {}
 

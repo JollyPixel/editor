@@ -58,7 +58,7 @@
   "license": "MIT",
   "dependencies": {
     "@openally/emitt": "1.0.1",
-    "three": "0.185.1"
+    "three": "0.186.0"
   },
   "peerDependencies": {
     "@jolly-pixel/asset": "workspace:*",

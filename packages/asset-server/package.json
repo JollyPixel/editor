@@ -58,7 +58,7 @@
     "@jolly-pixel/network": "workspace:*",
     "@openally/emitt": "1.0.1",
     "@openally/result": "3.1.0",
-    "ata-validator": "1.13.2",
+    "ata-validator": "1.16.2",
     "js-base64": "3.9.3",
     "loglayer": "9.4.0",
     "picomatch": "4.0.7"
