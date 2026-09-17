@@ -14,6 +14,12 @@ import {
   toEuler,
   toVector3
 } from "./transformCodec.ts";
+import {
+  mirrorRotation,
+  mirrorSignFromAxes,
+  mirrorVector,
+  type MirrorAxes
+} from "./mirrorTransform.ts";
 
 export interface ModelManagerOptions {
   scene: THREE.Scene;
@@ -270,6 +276,45 @@ export default class ModelManager {
       rotation: source.getRotation(),
       name: name ?? source.name
     });
+  }
+
+  /**
+   * Reflects each given group across the world origin along the requested
+   * axes, in place. Every group's own pre-mirror world transform is captured
+   * before any of them are mutated, so mirroring a parent alongside its
+   * descendants does not corrupt the world transform a not-yet-processed
+   * descendant is read from.
+   */
+  public mirrorGroups(
+    uuids: Iterable<string>,
+    axes: MirrorAxes
+  ): void {
+    const sign = mirrorSignFromAxes(axes);
+    const snapshots = [...uuids]
+      .map((uuid) => this.getGroupByUUID(uuid))
+      .filter((group): group is GroupManager => group !== undefined)
+      .map((group) => {
+        return {
+          group,
+          position: group.getPositionWorld(),
+          rotation: group.getRotationWorld(),
+          pivotOffset: group.getPivotOffsetWorld()
+        };
+      });
+
+    for (const { group, position, rotation, pivotOffset } of snapshots) {
+      group.setPositionWorld(mirrorVector(position, sign));
+      this.scene.updateMatrixWorld(true);
+      group.setRotationWorld(mirrorRotation(rotation, sign));
+      group.setPivotOffsetWorld(mirrorVector(pivotOffset, sign));
+      this.scene.updateMatrixWorld(true);
+
+      this.#emit({
+        action: "group-transformed",
+        uuid: group.getGroupUUID(),
+        transform: snapshotTransform(group)
+      });
+    }
   }
 
   /**

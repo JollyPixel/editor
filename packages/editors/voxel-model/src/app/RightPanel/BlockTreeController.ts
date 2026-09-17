@@ -33,6 +33,7 @@ import { promptNewBlock } from "./prompts/promptNewBlock.ts";
 import { promptNewFolder } from "./prompts/promptNewFolder.ts";
 import { promptDuplicate } from "./prompts/promptDuplicate.ts";
 import { promptDelete } from "./prompts/promptDelete.ts";
+import { anyMirrorAxis } from "../../features/groups/mirrorTransform.ts";
 
 type Host = ReactiveControllerHost & HTMLElement;
 
@@ -328,12 +329,17 @@ export class BlockTreeController implements ReactiveController {
     }
 
     const parentId = findParentId(this.#nodes, sourceId) ?? null;
+    const duplicatedBlockIds: string[] = [];
     const uuid = this.#duplicateNode(sourceNode, parentId, {
       label: `${sourceNode.label} Copy`,
       includeChildren: result.includeChildren
-    });
+    }, duplicatedBlockIds);
     if (uuid === null) {
       return;
+    }
+
+    if (anyMirrorAxis(result.mirrorAxes)) {
+      this.#modelManager?.mirrorGroups(duplicatedBlockIds, result.mirrorAxes);
     }
 
     if (result.includeChildren && hasChildren && !this.#expanded.includes(uuid)) {
@@ -356,16 +362,22 @@ export class BlockTreeController implements ReactiveController {
   #duplicateNode(
     node: TreeNode,
     uiParentId: string | null,
-    options: { label?: string; includeChildren: boolean; }
+    options: { label?: string; includeChildren: boolean; },
+    duplicatedBlockIds: string[]
   ): string | null {
     const label = options.label ?? node.label;
-    const resultId = isFolderNode(node) ?
+    const isFolder = isFolderNode(node);
+    const resultId = isFolder ?
       this.#duplicateFolder(label, uiParentId) :
       this.#duplicateBlock(node.id, label, uiParentId);
 
+    if (resultId !== null && !isFolder) {
+      duplicatedBlockIds.push(resultId);
+    }
+
     if (resultId !== null && options.includeChildren) {
       for (const child of node.children ?? []) {
-        this.#duplicateNode(child, resultId, { includeChildren: true });
+        this.#duplicateNode(child, resultId, { includeChildren: true }, duplicatedBlockIds);
       }
     }
 
