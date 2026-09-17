@@ -89,4 +89,13 @@ export class AssetKindRegistry {
   kinds(): IterableIterator<string> {
     return this.#kinds.keys();
   }
+
+  contentTypes(): Record<string, string> {
+    const table: Record<string, string> = {};
+    for (const { handler } of this.#kinds.values()) {
+      Object.assign(table, handler.contentTypes);
+    }
+
+    return table;
+  }
 }

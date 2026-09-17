@@ -7,18 +7,16 @@ import type {
 
 // Import Third-party Dependencies
 import { ASSET_URL_PREFIX } from "@jolly-pixel/asset";
-import {
-  AssetPathEscapeError,
-  isStatePath,
-  safeAssetPath,
-  type AssetPathRejection,
-  type AssetSource
-} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
+import type { AssetSource } from "../AssetSource.ts";
+import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
 import {
-  contentTypesFromKinds,
+  isStatePath,
+  safeAssetPath,
+  type AssetPathRejection
+} from "../paths.ts";
+import {
   DEFAULT_CONTENT_TYPES,
   resolveContentType
 } from "./contentTypes.ts";
@@ -33,8 +31,6 @@ const kRejectionStatus: Readonly<Record<AssetPathRejection, number>> = {
   reserved: 403
 };
 
-export const DEFAULT_ASSET_PREFIX = ASSET_URL_PREFIX;
-
 export type AssetStaticHandler = (
   request: IncomingMessage,
   response: ServerResponse,
@@ -46,15 +42,11 @@ export interface AssetStaticHandlerOptions {
   /**
    * URL prefix the workspace is mounted under. A missing trailing slash is
    * added, so `/assets` and `/assets/` behave the same.
-   * @default DEFAULT_ASSET_PREFIX
+   * @default ASSET_URL_PREFIX
    */
   prefix?: string;
   /**
-   * Kinds contributing content types for the extensions they claim.
-   */
-  kinds?: AssetKindRegistry;
-  /**
-   * Extension-to-content-type entries taking precedence over the kinds.
+   * Extension-to-content-type entries merged over `DEFAULT_CONTENT_TYPES`.
    */
   contentTypes?: Readonly<Record<string, string>>;
 }
@@ -64,15 +56,14 @@ export function createAssetStaticHandler(
 ): AssetStaticHandler {
   const {
     source,
-    kinds,
     contentTypes
   } = options;
 
   const prefix = withTrailingSlash(
-    options.prefix ?? DEFAULT_ASSET_PREFIX
+    options.prefix ?? ASSET_URL_PREFIX
   );
   const table = {
-    ...kinds ? contentTypesFromKinds(kinds) : DEFAULT_CONTENT_TYPES,
+    ...DEFAULT_CONTENT_TYPES,
     ...contentTypes
   };
 
