@@ -576,7 +576,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
     });
   }
 
-  dispose(): void {
+  override dispose(): void {
     this.geometry.dispose();
 
     const materials = Array.isArray(

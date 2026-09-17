@@ -16,7 +16,9 @@ export function snapValue(
     return value;
   }
 
-  return Math.round(value / step) * step;
+  const snapped = Math.round(value / step) * step;
+
+  return snapped === 0 ? 0 : snapped;
 }
 
 function clamp(

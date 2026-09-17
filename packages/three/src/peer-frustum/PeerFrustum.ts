@@ -208,7 +208,7 @@ export class PeerFrustum extends THREE.LineSegments<
     }
   }
 
-  dispose(): void {
+  override dispose(): void {
     this.geometry.dispose();
     this.material.dispose();
     this.label?.dispose();

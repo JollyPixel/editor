@@ -4,17 +4,16 @@ import {
   vec2,
   vec4,
   uv,
-  texture,
   max,
   saturate
 } from "three/tsl";
 
 // Import Internal Dependencies
 import { maskWeight } from "./maskWeight.ts";
-import type { TslNode } from "./tslNode.ts";
+import type { TslNode, TslTextureNode } from "./tslNode.ts";
 
 export function buildEdgeDetection(
-  maskDownSampleTexture: ReturnType<typeof texture>,
+  maskDownSampleTexture: TslTextureNode,
   invSizeNode: TslNode<"vec2">
 ) {
   return Fn(() => {

@@ -109,7 +109,7 @@ export class AreaBoxFill extends THREE.Mesh<
     this.#applyEmphasis();
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

@@ -210,7 +210,7 @@ describe("disposeObject3D", () => {
 
   test("leaves a self-disposing node's resources to its own dispose", () => {
     class SelfDisposingMesh extends THREE.Mesh {
-      dispose(): void {
+      override dispose(): void {
         this.geometry.dispose();
         (this.material as THREE.Material).dispose();
       }

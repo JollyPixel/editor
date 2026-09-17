@@ -206,7 +206,7 @@ export class AreaBox extends THREE.Object3D {
     };
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

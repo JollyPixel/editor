@@ -267,7 +267,7 @@ export class TranslationGizmo extends THREE.Object3D {
     super.updateMatrixWorld(force);
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

@@ -136,7 +136,7 @@ export class TranslationHandle extends THREE.Object3D {
     this.#visual.material.color.copy(color);
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

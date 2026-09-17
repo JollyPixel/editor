@@ -129,7 +129,7 @@ export class PeerFrustumLabel extends THREE.Sprite {
     this.#draw();
   }
 
-  dispose(): void {
+  override dispose(): void {
     this.#texture.dispose();
     this.material.dispose();
   }

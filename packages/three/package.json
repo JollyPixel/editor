@@ -55,7 +55,7 @@
     }
   },
   "dependencies": {
-    "three": "0.185.1"
+    "three": "0.186.0"
   },
   "devDependencies": {
     "@jolly-pixel/color": "workspace:*",

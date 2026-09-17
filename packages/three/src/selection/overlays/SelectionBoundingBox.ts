@@ -158,7 +158,7 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
     }
   }
 
-  dispose(): void {
+  override dispose(): void {
     this.removeFromParent();
     this.geometry.dispose();
     this.material.dispose();

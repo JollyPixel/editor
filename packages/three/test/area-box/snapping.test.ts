@@ -22,6 +22,11 @@ describe("snapValue", () => {
     assert.equal(snapValue(1.3, 1), 1);
   });
 
+  test("normalizes a negative zero result to positive zero", () => {
+    assert.deepEqual(snapValue(-0.3, 1), 0);
+    assert.deepEqual(snapValue(-0, 1), 0);
+  });
+
   test("returns the value untouched for a disabled step", () => {
     assert.equal(snapValue(3.4, 0), 3.4);
     assert.equal(snapValue(3.4, -1), 3.4);

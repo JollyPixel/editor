@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
-import { mrt, select, float, vec4, uv, texture, greaterThan } from "three/tsl";
+import { mrt, select, float, vec4, uv, greaterThan } from "three/tsl";
 
 // Import Internal Dependencies
 import { maskGate } from "../maskWeight.ts";
-import type { TslNode } from "../tslNode.ts";
+import type { TslNode, TslTextureNode } from "../tslNode.ts";
 
 export function buildJfaSeedInit(
-  maskTextureNode: ReturnType<typeof texture>,
+  maskTextureNode: TslTextureNode,
   resolutionNode: TslNode<"vec2">
 ) {
   const uvNode = uv();
