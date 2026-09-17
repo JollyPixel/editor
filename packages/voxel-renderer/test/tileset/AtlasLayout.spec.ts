@@ -302,3 +302,38 @@ describe("AtlasLayout#tileRangeWithin", () => {
     );
   });
 });
+
+describe("AtlasLayout#uvFor with a size", () => {
+  const layout = new AtlasLayout({
+    cols: 4,
+    rows: 4,
+    tileSize: 16
+  });
+
+  it("matches the tile rect when the size is the tile size", () => {
+    assert.deepEqual(layout.uvFor(1, 2, 16), layout.uvFor(1, 2));
+  });
+
+  it("grows the rect downward from the tile's top-left corner", () => {
+    const uv = layout.uvFor(0, 0, 32);
+
+    assert.equal(uv.offsetU, 0.5 / 64);
+    assert.equal(uv.offsetV, 32.5 / 64);
+    assert.equal(uv.scaleU, 31 / 64);
+    assert.equal(uv.scaleV, 31 / 64);
+  });
+
+  it("shrinks the rect to a sub-tile region", () => {
+    const uv = layout.uvFor(0, 3, 8);
+
+    assert.equal(uv.offsetV, 8.5 / 64);
+    assert.equal(uv.scaleU, 7 / 64);
+  });
+
+  it("addresses fractional tile coordinates", () => {
+    const uv = layout.uvFor(0.5, 0.5, 8);
+
+    assert.equal(uv.offsetU, 8.5 / 64);
+    assert.equal(uv.offsetV, 48.5 / 64);
+  });
+});

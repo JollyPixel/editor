@@ -5,7 +5,7 @@ along with its blocks, tilesets and materials. Applications own the engine
 directly and attach `engine.root` to their Three.js scene.
 
 Editing the world itself (layers, voxels, objects) goes through `engine.world`,
-which owns those methods and emits the [hook events](./hooks.md).
+which owns those methods and emits the [commands](./commands.md).
 
 ```ts
 import {
@@ -144,16 +144,10 @@ interface VoxelEngineOptions {
   logger?: VoxelLogger;
 
   /**
-   * Called for each supported voxel, layer, and object-layer mutation.
-   * See Hooks.md for the event union.
+   * Subscribed to the `"command"` event before the constructor creates any
+   * layer. See [commands](./commands.md).
    */
-  onLayerUpdated?: VoxelLayerHookListener;
-
-  /**
-   * Called for each block definition added or removed through the engine.
-   * See Hooks.md for the event union.
-   */
-  onBlockUpdated?: VoxelBlockHookListener;
+  onCommand?: VoxelCommandListener;
 
   /**
    * Initial state of the debug inspector (`engine.debug`). Mesh counters are
@@ -198,10 +192,19 @@ interface VoxelLoadOptions {
 }
 ```
 
+`apply()` accepts:
+
+```ts
+interface VoxelApplyOptions {
+  /** @default "local" */
+  origin?: "local" | "remote";
+}
+```
+
 ## Properties
 
 ```ts
-class VoxelEngine {
+class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly root: THREE.Group; // container for all chunk meshes
   readonly world: VoxelWorld;
   readonly blockRegistry: BlockRegistry;
@@ -214,8 +217,8 @@ class VoxelEngine {
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";
   readonly pendingRebuilds: number;
-  onLayerUpdated: VoxelLayerHookListener | undefined; // proxies world.onLayerUpdated
-  onBlockUpdated: VoxelBlockHookListener | undefined;
+  readonly tilesets: TilesetList;
+  defaultTileSize: number | undefined;
 }
 ```
 
@@ -225,7 +228,7 @@ class VoxelEngine {
 init(): void;                   // builds meshes for any voxels already present (e.g. after deserialize)
 tick(deltaTime: number): void;  // rebuilds dirty chunks within a time budget; call once per frame
 flush(): void;                  // rebuilds every pending chunk now, ignoring the budget
-dispose(): void;                // disposes chunk meshes, materials, and tileset textures
+dispose(): void;                // disposes meshes, materials, tileset textures and listeners
 ```
 
 Call these methods from the application's initialization, frame, and teardown
@@ -301,24 +304,45 @@ explains the chunk geometry layout, rebuild queue, and greedy meshing tradeoffs.
 Layers, voxels and object layers live on [`engine.world`](../world/VoxelWorld.md).
 The engine keeps only what concerns rendering, tilesets and persistence.
 
-#### `loadTileset(def: TilesetDefinition, texture: THREE.Texture<HTMLImageElement>): void`
+#### `tilesets: TilesetList`
 
-Registers an already-loaded texture for a tileset definition. The first registered tileset
-becomes the default for tile references with no explicit `tilesetId`.
-Prefer passing `VoxelEngineOptions.tilesets` for pre-loading; use this method only when
-adding a tileset after construction.
+The declared tilesets of the world, shared with `tilesetManager`. The first one is the
+default for tile references with no explicit `tilesetId`. See
+[TilesetList](../tilesets/tilesets.md#tilesetlist).
+
+#### `defaultTileSize: number | undefined`
+
+The document's preferred tile size for new tilesets. Assigning it applies a
+`default-tile-size-updated` command.
+
+#### `loadTileset(def: TilesetDefinition, texture: TilesetTexture): void`
+
+Registers an already-loaded texture for a tileset, declaring it first when its ID is
+unknown. Prefer passing `VoxelEngineOptions.tilesets` for pre-loading; use this method
+for a texture that arrives after construction. Loading an ID that already has an atlas
+replaces it, which is how a resized source image takes effect. Emits no command.
+
+#### `addTileset(tileset)`, `removeTileset(tilesetId)`, `resizeTileset(tilesetId, tileSize)`
+
+Shorthands for `apply()` with `tileset-added`, `tileset-removed` and
+`tileset-resized`. Each returns whether the list changed.
+
+Faces whose tileset has no atlas are skipped by the mesher, so blocks using a
+removed tileset disappear while their voxels stay.
 
 #### `save(): VoxelWorldJSON`
 
-Serialises voxel layers, object layers, voxels, tileset metadata, and registered block
-definitions to a plain JSON object.
+Serialises voxel layers, object layers, voxels, the declared tilesets, `defaultTileSize`
+and registered block definitions to a plain JSON object.
 
 #### `load(data: VoxelWorldJSON, options?: VoxelLoadOptions): void`
 
-Clears the current world and restores state from a JSON snapshot. Every tileset the
-snapshot references must be registered by the time the world is read, either at
-construction or through `VoxelLoadOptions.tilesets`. A missing tileset throws.
-Already-registered tilesets are skipped.
+Clears the current world and restores state from a JSON snapshot. The snapshot's
+tilesets and `defaultTileSize` replace the declared ones, atlases of tilesets it no
+longer declares are disposed, then `VoxelLoadOptions.tilesets` are registered. A
+declared tileset without atlas logs a warning and its faces stay hidden until
+`loadTileset()` registers it. Tile references without `tilesetId` are assigned the
+first declared tileset.
 
 A snapshot carrying block definitions replaces the registry with them; one carrying
 none leaves the registry alone.
@@ -326,7 +350,7 @@ Set `mergeLayers: true` to collapse voxel layers after deserialization.
 `data.chunkSize` is metadata; `load()` keeps the engine's configured chunk size.
 Construct the engine with the snapshot's chunk size when the values must match.
 
-Deserialization is muted, so restoring a snapshot emits no hook event.
+Deserialization is muted, so restoring a snapshot emits no command.
 
 #### `markAllChunksDirty(source?: string): void`
 
@@ -334,8 +358,9 @@ Marks every chunk dirty for a later rebuild.
 
 #### `defineBlock(def: BlockDefinition): void`
 
-Registers a block definition, marks every chunk dirty, and emits `onBlockUpdated`.
-An existing ID is overwritten. This is the mutation path a synchronized editor
+Registers a block definition, marks every chunk dirty, and emits a `block-defined` command.
+An existing ID is overwritten. Tile references without `tilesetId` are assigned the
+first declared tileset. This is the mutation path a synchronized editor
 should use; writing straight to `blockRegistry` emits nothing.
 
 #### `defineBlocks(defs: Iterable<BlockDefinition>): void`
@@ -359,35 +384,42 @@ empty object for a block carrying no properties.
 
 #### `removeBlock(blockId: number): boolean`
 
-Unregisters a definition, marks every chunk dirty, and emits `onBlockUpdated`.
+Shorthand for `apply()` with `block-removed`: unregisters a definition and
+marks every chunk dirty.
 Returns `false` and emits nothing when the ID is unknown. `nextId` is unaffected,
 so the ID is never recycled.
 
 #### `moveBlock(blockId: number, toIndex: number): boolean`
 
-Relocates a block within the registry's order and emits `onBlockUpdated` with
-the position it landed on, clamped into range. Returns `false` and emits
+Shorthand for `apply()` with `block-moved`: relocates a block within the
+registry's order and emits the position it landed on, clamped into range. Returns `false` and emits
 nothing for an unknown ID or a move that changes nothing. The order is a
 document concern only, so no chunk is marked dirty. See
 [`BlockRegistry` ordering](../blocks/BlockRegistry.md#ordering).
 
-### Hooks
+### Commands
 
-`onBlockUpdated` is emitted by `defineBlock()`, `defineBlocks()`,
-`removeBlock()` and `moveBlock()`. Unlike `onLayerUpdated` it is not muted
-during `load()`, which
-replaces the registry outright rather than emitting per definition.
+#### `apply(command: VoxelCommand, options?: VoxelApplyOptions): boolean`
 
-`onLayerUpdated` and `applyRemoteCommand` proxy
-[`VoxelWorld`](../world/VoxelWorld.md#hooks), which is where the events are
-emitted from and where a headless peer applies them.
+Applies any [command](./commands.md) with
+[`applyVoxelCommand()`](./commands.md#applying-commands), then runs its side
+effects and emits it once on `"command"` with `options.origin`. A
+`block-defined` block is resolved and given the default tileset first. Block
+definitions and removals mark every chunk dirty; tileset commands dispose the
+atlas of a removed tileset, rebuild the atlas of a resized one and mark every
+chunk dirty. Returns `false` and emits nothing when the command changes
+nothing; layer commands always return `true`.
 
-#### `applyRemoteCommand(command: VoxelLayerHookEvent): void`
+A network adapter applies peer commands with `{ origin: "remote" }` and sends
+only the `"local"` ones, so nothing is echoed back.
 
-Applies a hook event without emitting it again through `onLayerUpdated`. Network
-adapters use this method to avoid echo loops.
+#### `on("command", listener)` / `off("command", listener)`
 
-See [hooks](./hooks.md) for the event reference.
+`VoxelEngine` extends `Emitter` from `@openally/emitt`. The `"command"`
+event receives every command applied through the engine, and every local layer
+command forwarded from [`engine.world`](../world/VoxelWorld.md#commands). A
+direct `blockRegistry` or `tilesets` mutation emits nothing, and `load()`
+emits nothing.
 
 The material customizer receives the resolved [BlockSurface](../blocks/BlockSurface.md)
 for each draw group. It can distinguish masked and blended geometry without

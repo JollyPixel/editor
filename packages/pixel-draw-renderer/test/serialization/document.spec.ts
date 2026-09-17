@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  createPixelArtDocument,
   decodePixelArtDocument,
   encodePixelArtDocument,
   InvalidPixelArtDocumentError,
@@ -190,6 +191,38 @@ describe("PixelArtDocument", () => {
         pixels: "AAAA",
         uvRegions: []
       }, buffer),
+      InvalidPixelArtDocumentError
+    );
+  });
+});
+
+describe("createPixelArtDocument", () => {
+  test("creates a transparent document of the given size", () => {
+    const document = createPixelArtDocument({ x: 2, y: 3 });
+    const target = new PixelBuffer({ size: { x: 1, y: 1 } });
+    deserializePixelBuffer(document, target);
+
+    assert.deepEqual(document.size, { x: 2, y: 3 });
+    assert.deepEqual(document.uvRegions, []);
+    assert.deepEqual(target.size(), { x: 2, y: 3 });
+    assert.ok(target.pixels().every((value) => value === 0));
+  });
+
+  test("encodes the given pixels", () => {
+    const pixels = new Uint8ClampedArray([1, 2, 3, 4]);
+    const target = new PixelBuffer({ size: { x: 1, y: 1 } });
+    deserializePixelBuffer(createPixelArtDocument({ x: 1, y: 1 }, pixels), target);
+
+    assert.deepEqual([...target.pixels()], [1, 2, 3, 4]);
+  });
+
+  test("rejects an empty size or a pixel length mismatch", () => {
+    assert.throws(
+      () => createPixelArtDocument({ x: 0, y: 1 }),
+      InvalidPixelArtDocumentError
+    );
+    assert.throws(
+      () => createPixelArtDocument({ x: 1, y: 1 }, new Uint8Array(3)),
       InvalidPixelArtDocumentError
     );
   });

@@ -4,21 +4,14 @@ import type {
   Server
 } from "@jolly-pixel/network";
 import type * as EventStore from "@jolly-pixel/event-store";
-import {
-  AssetId,
-  assetRoomName,
-  parseAssetRoomName,
-  type AssetRoomName
-} from "@jolly-pixel/asset";
+import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { AssetRoomExtension } from "./AssetRoomExtension.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
-import type {
-  CatalogChange,
-  CatalogProjection
-} from "../catalog/CatalogProjection.ts";
+import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
+import type { CatalogChange } from "../catalog/protocol.ts";
 import type { AssetStateStore } from "../sync/AssetStateStore.ts";
 import type { AssetProjector } from "../sync/AssetProjector.ts";
 import type { SnapshotScheduler } from "../sync/SnapshotScheduler.ts";
@@ -27,11 +20,7 @@ import {
   type Logger
 } from "../logger.ts";
 
-export {
-  assetRoomName,
-  parseAssetRoomName,
-  type AssetRoomName
-};
+export { AssetRoom };
 
 export interface AssetRoomsOptions {
   server: Server;
@@ -84,12 +73,12 @@ export function registerAssetRooms(
       return null;
     }
 
-    const parsed = parseAssetRoomName(roomName);
-    if (parsed === null) {
+    const room = AssetRoom.parse(roomName);
+    if (room === null) {
       return null;
     }
 
-    const { kind, assetId } = parsed;
+    const { kind, assetId: id } = room;
     if (!kinds.has(kind)) {
       return refuse("unknown kind");
     }
@@ -99,7 +88,7 @@ export function registerAssetRooms(
       return refuse("kind has no live protocol");
     }
 
-    const id = new AssetId(assetId);
+    const assetId = id.value;
     if (
       !catalog.catalog.has(id) ||
       catalog.catalog.get(id).kind !== kind

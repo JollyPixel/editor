@@ -19,7 +19,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  assetRoomName,
+  AssetRoom,
   createAssetWorkspace,
   STATE_GITIGNORE_PATH,
   type AssetWorkspace
@@ -96,7 +96,7 @@ describe("createAssetWorkspace", () => {
     // The asset room resolves through the server the workspace built.
     workspace.server.handleConnect(client("A"), { subject: "A", role: "default" });
     const joined = await workspace.server.handleMessage("A", {
-      room: assetRoomName(record.kind, record.id),
+      room: new AssetRoom(record.kind, record.id).toString(),
       kind: "join"
     });
     assert.notStrictEqual(joined, null);

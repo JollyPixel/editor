@@ -3,37 +3,7 @@
 These helpers define URL and room-name conventions shared by JollyPixel
 browser, server, and collaboration packages. Game code rarely calls them.
 
-## Asset room names
-
-```ts
-interface AssetRoomName {
-  readonly kind: string;
-  readonly assetId: string;
-}
-
-function assetRoomName(
-  kind: string,
-  assetId: string
-): string;
-
-function parseAssetRoomName(
-  roomName: string
-): AssetRoomName | null;
-```
-
-`assetRoomName()` returns `${kind}:${assetId}` without validating either part.
-
-`parseAssetRoomName()` splits at the first colon. It returns `null` when the
-separator, kind, or asset ID is missing. Colons after the first one remain part
-of `assetId`.
-
-```ts
-const roomName = assetRoomName("model", "hero-model");
-// "model:hero-model"
-
-parseAssetRoomName(roomName);
-// { kind: "model", assetId: "hero-model" }
-```
+Asset room names are modelled by [`AssetRoom`](./domain/AssetRoom.md).
 
 ## Asset URLs
 

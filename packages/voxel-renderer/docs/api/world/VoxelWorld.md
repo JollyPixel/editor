@@ -83,12 +83,19 @@ Other sizes throw a `RangeError`.
 
 ```ts
 readonly chunkSize: number;
-onLayerUpdated?: VoxelLayerHookListener;
 ```
 
-Every mutating method below emits a [hook event](../core/hooks.md) on
-`onLayerUpdated`, so an editor or a network adapter can mirror local edits
-without wrapping the world. The exceptions are the `*At` write primitives
+`VoxelWorld` extends `Emitter<VoxelWorldEvents>` from `@openally/emitt`:
+
+```ts
+type VoxelWorldEvents = {
+  command: (command: VoxelLayerCommand) => void;
+};
+```
+
+Every mutating method below emits a [layer command](../core/commands.md#layer-commands)
+on `"command"`, so an editor or a network adapter can mirror local edits
+without wrapping the world. `VoxelEngine` forwards these as local commands. The exceptions are the `*At` write primitives
 (`setVoxelAt`, `setPackedVoxelAt`, `removeVoxelAt`), `setLayerVisible`,
 `setLayerOpacity`, `mergeAllLayers` and `clear`, which stay silent.
 
@@ -173,7 +180,7 @@ Returns `undefined` when the source layer does not exist.
 `options.name` is optional; when omitted the world derives an unused name from
 the source (`"layer"` becomes `"layer (1)"`, then `"layer (2)"`). A name that is
 already taken is de-duplicated the same way, so layer names stay unique. The
-emitted `"cloned"` hook carries the resolved name, so a peer replaying the
+emitted `"cloned"` command carries the resolved name, so a peer replaying the
 command produces the same layer rather than deriving a name of its own.
 
 #### `uniqueLayerName(base: string): string`
@@ -306,13 +313,14 @@ the chunk became empty. This is renderer-facing lifecycle plumbing.
 
 Removes all voxel layers and object layers.
 
-### Hooks
+### Commands
 
-#### `applyRemoteCommand(cmd: VoxelLayerHookEvent, logger?: VoxelLogger): void`
+#### `apply(command: VoxelLayerCommand, logger?: VoxelLogger): void`
 
-Replays a peer's hook event onto this world without emitting it again through
-`onLayerUpdated`, so a network adapter cannot echo it back. Every action of the
-event union is handled; an unknown one throws.
+Replays a layer command onto this world without emitting it, so a network
+adapter cannot echo it back. Every action of the union is handled; an unknown
+one throws. On an engine, prefer `engine.apply()`, which emits it once with its
+origin.
 
 A voxel command naming a layer this world no longer has is dropped rather than
 thrown, since a peer can still be painting a layer that was just merged or
@@ -323,9 +331,9 @@ error.
 
 #### `silently<T>(fn: () => T): T`
 
-Runs `fn` with `onLayerUpdated` muted and returns its result. Use it for
+Runs `fn` with the `"command"` event muted and returns its result. Use it for
 mutations peers already know about, such as deserializing a document.
-`applyRemoteCommand` is built on it, and nesting is safe.
+`apply()` is built on it, and nesting is safe.
 
 ```ts
 world.silently(() => deserializeVoxelWorld(snapshot, world));
@@ -370,7 +378,7 @@ object is not found.
 #### `moveObjectToLayer(fromLayerName: string, objectId: string, toLayerName: string): boolean`
 
 Moves an object from one object layer to another, keeping the same object
-instance, and emits a single `"object-moved"` hook. Returns `false` when either
+instance, and emits a single `"object-moved"` command. Returns `false` when either
 layer or the object is not found, or when both names resolve to the same layer.
 
 Prefer this over `removeObjectFromLayer` followed by `addObjectToLayer`: the

@@ -3,7 +3,7 @@ import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type {
   VoxelLayer,
-  VoxelLayerHookEvent,
+  VoxelLayerCommand,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 import type { JollyChangeDetail, Vec3Like } from "@jolly-pixel/ui";
@@ -83,7 +83,7 @@ export class VoxelLayerPanel extends LitElement {
     this._props = [];
   }
 
-  #onLayerUpdated = (event: VoxelLayerHookEvent) => {
+  #onLayerUpdated = (event: VoxelLayerCommand) => {
     if (
       event.layerName !== this.layerName ||
       event.action !== "position-updated" &&

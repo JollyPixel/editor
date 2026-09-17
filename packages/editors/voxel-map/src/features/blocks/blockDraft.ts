@@ -3,7 +3,8 @@ import {
   resolveBlockDefinition,
   type BlockDefinition,
   type BlockShapeID,
-  type ResolvedBlockDefinition
+  type ResolvedBlockDefinition,
+  type ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -14,21 +15,27 @@ export interface BlockDraft {
   name: string;
   shapeId: BlockShapeID;
   tilesetId: string;
+  size?: number;
 }
 
 export function blockDefinitionFromDraft(
   draft: BlockDraft,
   id: number
 ): BlockDefinition {
+  const defaultTexture: ResolvedTileRef = {
+    tilesetId: draft.tilesetId || undefined,
+    col: 0,
+    row: 0
+  };
+  if (draft.size !== undefined) {
+    defaultTexture.size = draft.size;
+  }
+
   return {
     id,
     name: draft.name.trim() || DEFAULT_BLOCK_NAME,
     shapeId: draft.shapeId,
-    defaultTexture: {
-      tilesetId: draft.tilesetId || undefined,
-      col: 0,
-      row: 0
-    }
+    defaultTexture
   };
 }
 

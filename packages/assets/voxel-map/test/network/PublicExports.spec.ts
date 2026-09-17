@@ -29,7 +29,6 @@ describe("public entry points", () => {
 
   test("server exports authoritative synchronization", () => {
     assert.strictEqual(typeof server.VoxelCommandArbiter, "function");
-    assert.strictEqual(typeof server.applyBlockCommand, "function");
   });
 
   test("tiled exports the catalog loader", () => {

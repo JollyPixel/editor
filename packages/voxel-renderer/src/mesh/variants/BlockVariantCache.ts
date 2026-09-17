@@ -278,13 +278,13 @@ export class BlockVariantCache {
     const faces: BlockVariantFace[] = [];
     for (const textureSlot of shapeSlots(shape)) {
       const tileRef = tileRefForSlot(blockDef, textureSlot.id);
-      if (!tileRef) {
+      if (!tileRef || !this.#tilesetManager.has(tileRef.tilesetId)) {
         continue;
       }
 
       const uvRegion = this.#tilesetManager
         .atlas(tileRef.tilesetId)
-        .uvFor(tileRef.col, tileRef.row);
+        .uvFor(tileRef.col, tileRef.row, tileRef.size);
 
       for (const faceDef of textureSlot.definitions) {
         faces.push(

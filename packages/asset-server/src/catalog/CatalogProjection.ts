@@ -4,13 +4,13 @@ import {
   AssetCatalog,
   AssetId,
   AssetRecord,
-  type AssetManifestData,
-  type AssetRecordData
+  type AssetManifestData
 } from "@jolly-pixel/asset";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { ASSET_EVENT_PREFIX } from "../constants.ts";
+import type { CatalogChange } from "./protocol.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_CREATED,
@@ -20,15 +20,6 @@ import {
   parseAssetEvent,
   type AssetEvent
 } from "../events/AssetEvents.ts";
-
-export interface CatalogChange {
-  readonly eventType: string;
-  readonly assetId: string;
-  /**
-   * The record after the change, or `null` when the asset was removed.
-   */
-  readonly record: AssetRecordData | null;
-}
 
 export type CatalogProjectionEventMap = {
   changed: (
@@ -40,9 +31,6 @@ export interface CatalogProjectionOptions {
   eventStore: EventStore.EventStore;
 }
 
-/**
- * Projects lifecycle events into catalog records keyed by asset id.
- */
 export class CatalogProjection extends Emitter<
   CatalogProjectionEventMap
 > {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
-import type { VoxelLayerHookEvent } from "@jolly-pixel/voxel.renderer";
+import type { VoxelLayerCommand } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { WorldStore } from "../../../src/app/state/index.ts";
@@ -21,7 +21,7 @@ describe("WorldStore", () => {
   it("forwards every signal to its watchers until they unsubscribe", () => {
     const world = new WorldStore();
     const seen: string[] = [];
-    const layerEvent: VoxelLayerHookEvent = {
+    const layerEvent: VoxelLayerCommand = {
       action: "removed",
       layerName: "Ground",
       metadata: {}

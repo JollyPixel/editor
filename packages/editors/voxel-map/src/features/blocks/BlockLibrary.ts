@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import {
+  LitElement,
+  html,
+  css,
+  nothing
+} from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
   type VoxelEngine,
@@ -18,8 +23,10 @@ import {
   type BrushStore,
   type PresenceStore,
   type RotationMode,
+  type TilesetStore,
   type WorldStore
 } from "../../app/state/index.ts";
+import { blocksWithoutTileset } from "../tilesets/blockTilesets.ts";
 import {
   mergeSelfPeerMark,
   selfPeerMark,
@@ -39,6 +46,7 @@ export interface BlockSelectionChangeDetail {
 }
 
 // CONSTANTS
+const kMissingTileset = "Missing tileset";
 const kRotationOptions: JollyOption<RotationMode>[] = [
   { label: "Auto", value: "auto" },
   { label: "0°", value: VoxelRotation.None },
@@ -64,6 +72,27 @@ export class BlockLibrary extends LitElement {
     :host([layout="fill"]) {
       flex: 1 1 auto;
       min-height: 0;
+    }
+
+    .problems {
+      display: flex;
+      flex: 0 0 auto;
+      justify-content: center;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+      margin-block-end: calc(-1 * var(--jolly-row-gap, 4px));
+      padding: 1px var(--jolly-space-1, 4px);
+      border: 0;
+      border-radius: 0;
+      background: color-mix(in srgb, var(--jolly-danger) 14%, transparent);
+      color: var(--jolly-danger);
+      font: inherit;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .problems:hover {
+      background: color-mix(in srgb, var(--jolly-danger) 22%, transparent);
     }
 
     .brush-row {
@@ -98,6 +127,9 @@ export class BlockLibrary extends LitElement {
   @property({ attribute: false })
   declare presence: PresenceStore;
 
+  @property({ attribute: false })
+  declare tilesets: TilesetStore;
+
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
 
@@ -119,6 +151,9 @@ export class BlockLibrary extends LitElement {
   @state()
   private declare _marks: PeerMarkMap<number>;
 
+  @state()
+  private declare _problems: ReadonlyMap<number, string>;
+
   @query("block-editor-dialog")
   declare private _dialog: BlockEditorDialog;
 
@@ -134,6 +169,7 @@ export class BlockLibrary extends LitElement {
     this.brush = editorState.brush;
     this.worldStore = editorState.world;
     this.presence = editorState.presence;
+    this.tilesets = editorState.tilesets;
     this.layout = "compact";
     this._selectedId = null;
     this._selectedBlock = null;
@@ -141,6 +177,7 @@ export class BlockLibrary extends LitElement {
     this._rotationMode = this.brush.rotationMode;
     this._flipY = this.brush.flipY;
     this._marks = new Map();
+    this._problems = new Map();
   }
 
   readonly #onSelectedBlockChange = () => {
@@ -167,6 +204,10 @@ export class BlockLibrary extends LitElement {
     this.#refreshMarks();
   };
 
+  readonly #onTilesetsChange = () => {
+    this.#refreshProblems();
+  };
+
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
@@ -175,7 +216,8 @@ export class BlockLibrary extends LitElement {
       this.brush.watch("rotationModeChange", this.#onRotationModeChange),
       this.brush.watch("flipYChange", this.#onFlipYChange),
       this.presence.watch("blockSelectionsChange", this.#onMarksChange),
-      this.presence.watch("peersChange", this.#onMarksChange)
+      this.presence.watch("peersChange", this.#onMarksChange),
+      this.tilesets.watch("change", this.#onTilesetsChange)
     );
     this.#refreshMarks();
   }
@@ -198,10 +240,12 @@ export class BlockLibrary extends LitElement {
 
   override render() {
     return html`
+      ${this.#renderProblems()}
       <block-library-viewport
         .engine=${this.engine}
         .blocks=${this._blocks}
         .marks=${this._marks}
+        .problems=${this._problems}
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
@@ -226,8 +270,32 @@ export class BlockLibrary extends LitElement {
       <block-editor-dialog
         .engine=${this.engine}
         .brush=${this.brush}
+        .tilesets=${this.tilesets}
         .block=${this._selectedBlock}
       ></block-editor-dialog>
+    `;
+  }
+
+  #renderProblems() {
+    const count = this._problems.size;
+    if (count === 0) {
+      return nothing;
+    }
+
+    const [firstId] = this._problems.keys();
+
+    return html`
+      <button
+        type="button"
+        class="problems"
+        title="Select the first block without tileset"
+        @click=${() => {
+          this.brush.blockId = firstId;
+        }}
+      >
+        <jolly-icon name="warning"></jolly-icon>
+        <span>${count} block${count === 1 ? "" : "s"} without tileset</span>
+      </button>
     `;
   }
 
@@ -324,6 +392,15 @@ export class BlockLibrary extends LitElement {
     this._blocks = [
       ...this.engine.blockRegistry.getAll()
     ];
+    this.#refreshProblems();
+  }
+
+  #refreshProblems(): void {
+    const missing = blocksWithoutTileset(this._blocks, this.tilesets.ids());
+
+    this._problems = new Map(
+      missing.map((block) => [block.id, kMissingTileset])
+    );
   }
 }
 

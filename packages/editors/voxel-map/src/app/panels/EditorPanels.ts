@@ -4,17 +4,16 @@ import type {
   VoxelEngine,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
-import type * as network from "@jolly-pixel/network";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
 import type { GridRenderer } from "../../scene/GridRenderer.ts";
 import type { LocalBrush } from "../../features/painting/index.ts";
-import type { TextureEditor } from "../../features/texture/TextureEditor.ts";
+import type {
+  TextureEditor,
+  TextureRoomFactory
+} from "../../features/texture/TextureEditor.ts";
+import type { TilesetActions } from "../../features/tilesets/TilesetActions.ts";
 import type { ViewFocus } from "../../scene/viewFocus.ts";
 import type { EventCanvasHoverChange } from "../../shared/domEvents.ts";
 import { BlocksPanel } from "./BlocksPanel.ts";
@@ -31,7 +30,7 @@ import {
 export interface EditorPanelsOptions {
   state: EditorState;
   viewFocus: ViewFocus;
-  textureRoom?: network.Room<PixelNetworkCommand, PixelServerMessage>;
+  textureRooms?: TextureRoomFactory;
   onLoadWorld(data: VoxelWorldJSON): void;
   onTeleportToPeer(clientId: string): void;
   onCanvasHoverChange(hovering: boolean): void;
@@ -41,6 +40,7 @@ export interface EditorPanelsHandles {
   engine: VoxelEngine;
   gridRenderer: GridRenderer;
   localBrush: LocalBrush;
+  tilesetActions: TilesetActions | null;
 }
 
 export class EditorPanels {
@@ -111,7 +111,8 @@ export class EditorPanels {
     this.#textureEditor = document.createElement("texture-editor");
     this.#textureEditor.brush = options.state.brush;
     this.#textureEditor.worldStore = options.state.world;
-    this.#textureEditor.room = options.textureRoom;
+    this.#textureEditor.tilesets = options.state.tilesets;
+    this.#textureEditor.rooms = options.textureRooms;
 
     this.#layout.addEventListener("jolly-layout-change", this.#place);
     this.#layout.addEventListener("jolly-pane-visibility", this.#place);
@@ -127,6 +128,7 @@ export class EditorPanels {
     this.#general.gridRenderer = handles.gridRenderer;
     this.#general.localBrush = handles.localBrush;
     this.#blocks.engine = handles.engine;
+    this.#blocks.tilesetActions = handles.tilesetActions;
     this.#layers.engine = handles.engine;
     this.#textureEditor.engine = handles.engine;
   }

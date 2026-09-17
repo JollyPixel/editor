@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
+import * as THREE from "three";
 import type {
   ResolvedBlockDefinition,
   TilesetAtlas,
+  TilesetDefinition,
   TilesetImage,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
@@ -64,7 +66,7 @@ export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
   #collaboration: PixelCollaboration | null = null;
   #atlas: TilesetAtlas | null = null;
-  #tilesetId: string | null = null;
+  #definition: TilesetDefinition | null = null;
   #engine: VoxelEngine | null = null;
   #unsubscribe: (() => void) | null = null;
   #syncing = false;
@@ -110,12 +112,20 @@ export class TextureEditorBridge {
         label: (_clientId, profile) => readUsername(profile),
         color: peerColor
       });
+      this.#collaboration.sync.on("snapshot", this.#onSurfaceChanged);
+      this.#collaboration.sync.on("command", this.#onRemoteCommand);
       room.join();
     }
   }
 
   readonly #onSurfaceChanged = (): void => {
     this.#needsFullSync = true;
+  };
+
+  readonly #onRemoteCommand = (command: PixelNetworkCommand): void => {
+    if (command.action === "texture-replaced" || command.action === "resized") {
+      this.#needsFullSync = true;
+    }
   };
 
   #startFrameLoop(): void {
@@ -136,16 +146,15 @@ export class TextureEditorBridge {
 
   #flush(): void {
     const dirty = this.#changes?.consume();
-    if (!dirty) {
-      this.#flushTransparency();
-
-      return;
-    }
-
     if (this.#needsFullSync) {
       this.#needsFullSync = false;
       this.#pendingTransparency = null;
       this.syncToThree();
+
+      return;
+    }
+    if (!dirty) {
+      this.#flushTransparency();
 
       return;
     }
@@ -172,39 +181,79 @@ export class TextureEditorBridge {
 
   loadTileset(
     engine: VoxelEngine,
-    tilesetId: string | null | undefined
+    definition: TilesetDefinition
   ): void {
-    if (!this.#manager) {
+    const manager = this.#manager;
+    if (!manager) {
       return;
     }
 
     const { tilesetManager } = engine;
-    const id = tilesetId ?? tilesetManager.defaultTilesetId;
-    if (id === null || !tilesetManager.has(id)) {
-      return;
-    }
+    const atlas = tilesetManager.has(definition.id) ?
+      tilesetManager.atlas(definition.id) :
+      null;
 
-    const atlas = tilesetManager.atlas(id);
-
-    this.#tilesetId = id;
+    this.#definition = definition;
     this.#atlas = atlas;
     this.#engine = engine;
 
-    if (this.#collaboration?.ready) {
-      this.syncTransparency();
+    const placeholder = atlas !== null && !this.#collaboration?.ready;
+    if (placeholder) {
+      const applied = manager.runLocalRestore(
+        () => this.#applyTexture(
+          atlas.sourceTexture.image,
+          "tileset source image"
+        )
+      );
+      if (!applied) {
+        return;
+      }
+    }
+    if (this.#canRegisterAtlas) {
+      this.#registerAtlas();
+    }
+    this.syncTransparency();
+  }
 
+  get #canRegisterAtlas(): boolean {
+    return this.#collaboration === null || this.#collaboration.ready;
+  }
+
+  #registerAtlas(): void {
+    const manager = this.#manager;
+    const engine = this.#engine;
+    const definition = this.#definition;
+    if (!manager || !engine || !definition) {
       return;
     }
 
-    const applied = this.#manager.runLocalRestore(
-      () => this.#applyTexture(
-        atlas.sourceTexture.image,
-        "tileset source image"
-      )
-    );
-    if (applied) {
-      this.syncTransparency();
+    const { tileSize } = definition;
+    const cols = Math.floor(manager.textureSize.x / tileSize);
+    const rows = Math.floor(manager.textureSize.y / tileSize);
+    const current = this.#atlas?.def;
+    if (
+      current !== undefined &&
+      current.tileSize === tileSize &&
+      current.cols === cols &&
+      current.rows === rows
+    ) {
+      return;
     }
+    if (cols === 0 || rows === 0) {
+      return;
+    }
+
+    const texture = new THREE.Texture<TilesetImage>(manager.textureCanvas());
+    texture.needsUpdate = true;
+    engine.loadTileset(
+      {
+        id: definition.id,
+        src: definition.src,
+        tileSize
+      },
+      texture
+    );
+    this.#atlas = engine.tilesetManager.atlas(definition.id);
   }
 
   #applyTexture(
@@ -223,7 +272,7 @@ export class TextureEditorBridge {
 
     if (width > maxTextureSize || height > maxTextureSize) {
       console.error(
-        `TextureEditorBridge: ${origin} for tileset "${this.#tilesetId}" is ` +
+        `TextureEditorBridge: ${origin} for tileset "${this.#definition?.id}" is ` +
         `${width}x${height}, above the editor limit of ${maxTextureSize}px per side. ` +
         "Raise `texture.maxSize` on the pixel-draw panel or use a smaller atlas."
       );
@@ -237,7 +286,13 @@ export class TextureEditorBridge {
   }
 
   syncToThree(): void {
-    if (!this.#manager || !this.#atlas) {
+    if (!this.#manager) {
+      return;
+    }
+    if (this.#canRegisterAtlas) {
+      this.#registerAtlas();
+    }
+    if (!this.#atlas) {
       return;
     }
 
@@ -251,7 +306,8 @@ export class TextureEditorBridge {
   ): void {
     const manager = this.#manager;
     const engine = this.#engine;
-    if (!manager || !engine || !this.#atlas || !this.#tilesetId) {
+    const definition = this.#definition;
+    if (!manager || !engine || !definition) {
       return;
     }
     if (!this.#worldStore.blocksReady) {
@@ -261,8 +317,8 @@ export class TextureEditorBridge {
     const affected = findBlocksReferencingTileset(
       engine.blockRegistry.getAll(),
       (shapeId) => engine.shapeRegistry.get(shapeId),
-      this.#tilesetId,
-      this.#atlas.def.tileSize
+      definition.id,
+      definition.tileSize
     );
 
     const updates: ResolvedBlockDefinition[] = [];
@@ -310,11 +366,13 @@ export class TextureEditorBridge {
     this.#destroyCollaboration();
     this.#manager = null;
     this.#atlas = null;
-    this.#tilesetId = null;
+    this.#definition = null;
     this.#engine = null;
   }
 
   #destroyCollaboration(): void {
+    this.#collaboration?.sync.off("snapshot", this.#onSurfaceChanged);
+    this.#collaboration?.sync.off("command", this.#onRemoteCommand);
     this.#collaboration?.destroy();
     this.#collaboration = null;
   }

@@ -5,6 +5,11 @@ import type {
   VoxelEngine,
   ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
+import { ResizeHandle } from "@jolly-pixel/resize-handle";
+import {
+  LocalStorageAdapter,
+  type StorageAdapter
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
@@ -33,6 +38,9 @@ const kCellInset = 3;
 const kDragThreshold = 4;
 const kAutoScrollMargin = 24;
 const kAutoScrollStep = 10;
+const kMinHeight = 60;
+const kMaxHeight = 1200;
+const kHeightStorageKey = "voxel-map:block-library:height";
 
 interface MarkedCell {
   rect: BlockCellRect;
@@ -64,6 +72,7 @@ export class BlockLibraryViewport extends LitElement {
 
     .scroller {
       position: relative;
+      box-sizing: border-box;
       overflow: hidden auto;
       scrollbar-gutter: stable;
       min-height: 100px;
@@ -86,6 +95,21 @@ export class BlockLibraryViewport extends LitElement {
       max-height: none;
     }
 
+    :host([sized]) .scroller {
+      min-height: 0;
+      max-height: none;
+    }
+
+    .grip {
+      position: relative;
+      z-index: 4;
+      height: 6px;
+      margin-block: -3px;
+      cursor: ns-resize;
+      touch-action: none;
+      outline: none;
+    }
+
     .scroller > canvas {
       position: relative;
       z-index: 1;
@@ -106,6 +130,14 @@ export class BlockLibraryViewport extends LitElement {
 
     .layer.marks {
       z-index: 2;
+    }
+
+    .problem {
+      position: absolute;
+      box-sizing: border-box;
+      border: 2px solid var(--jolly-danger);
+      border-radius: var(--jolly-radius-sm, 4px);
+      background: color-mix(in srgb, var(--jolly-danger) 18%, transparent);
     }
 
     .layer.drop {
@@ -163,8 +195,17 @@ export class BlockLibraryViewport extends LitElement {
   @property({ attribute: false })
   declare marks: PeerMarkMap<number>;
 
+  @property({ attribute: false })
+  declare problems: ReadonlyMap<number, string>;
+
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
+
+  @property({ attribute: false })
+  declare storage: StorageAdapter;
+
+  @property({ type: Boolean, reflect: true })
+  declare sized: boolean;
 
   @state()
   private declare _grid: BlockGridLayout | null;
@@ -175,16 +216,23 @@ export class BlockLibraryViewport extends LitElement {
   @query(".scroller")
   declare private _scroller: HTMLDivElement;
 
+  @query(".grip")
+  declare private _grip: HTMLDivElement | null;
+
   #renderer: BlockLibraryRenderer | null = null;
   #drag: DragSession | null = null;
   #suppressClick = false;
+  #resizeHandle: ResizeHandle | null = null;
 
   constructor() {
     super();
     this.engine = undefined;
     this.blocks = [];
     this.marks = new Map();
+    this.problems = new Map();
     this.layout = "compact";
+    this.storage = new LocalStorageAdapter();
+    this.sized = false;
     this._grid = null;
     this._insertAt = null;
   }
@@ -194,11 +242,16 @@ export class BlockLibraryViewport extends LitElement {
     this.#endDrag();
     this.#renderer?.dispose();
     this.#renderer = null;
+    this.#disconnectResizeHandle();
   }
 
   override updated(
     changed: Map<string, unknown>
   ): void {
+    if (changed.has("layout") || this.#resizeHandle?.handleElt !== this._grip) {
+      this.#connectResizeHandle();
+    }
+
     if (changed.has("engine")) {
       this.#build();
     }
@@ -250,12 +303,91 @@ export class BlockLibraryViewport extends LitElement {
         ${cells.map((cell) => this.#renderHighlight(cell))}
       </div>
       <div class="layer marks">
+        ${this.#renderProblems()}
         ${cells.map((cell) => this.#renderMarker(cell))}
       </div>
       <div class="layer drop">
         ${this.#renderInsertion()}
       </div>
-    </div>`;
+    </div>
+    ${this.layout === "compact" ?
+      html`<div class="grip" aria-label="Block library height"></div>` :
+      nothing}`;
+  }
+
+  #connectResizeHandle(): void {
+    this.#disconnectResizeHandle();
+    const grip = this._grip;
+    if (grip === null) {
+      this._scroller?.style.removeProperty("height");
+      this.sized = false;
+
+      return;
+    }
+
+    const handle = new ResizeHandle(this._scroller, {
+      direction: "top",
+      handle: grip,
+      minSize: kMinHeight,
+      maxSize: kMaxHeight
+    });
+    handle.addEventListener("dragStart", this.#onResizeStart);
+    handle.addEventListener("dragEnd", this.#onResizeEnd);
+    this.#resizeHandle = handle;
+
+    const stored = Number(this.storage.get(kHeightStorageKey));
+    if (Number.isFinite(stored) && stored >= kMinHeight) {
+      this._scroller.style.height = `${Math.min(stored, kMaxHeight)}px`;
+      this.sized = true;
+    }
+  }
+
+  #disconnectResizeHandle(): void {
+    const handle = this.#resizeHandle;
+    if (handle === null) {
+      return;
+    }
+
+    handle.removeEventListener("dragStart", this.#onResizeStart);
+    handle.removeEventListener("dragEnd", this.#onResizeEnd);
+    handle.dispose();
+    this.#resizeHandle = null;
+  }
+
+  readonly #onResizeStart = (): void => {
+    this.sized = true;
+  };
+
+  readonly #onResizeEnd = (): void => {
+    const height = Math.round(this._scroller.getBoundingClientRect().height);
+    this.storage.set(kHeightStorageKey, String(height));
+  };
+
+  #renderProblems() {
+    const grid = this._grid;
+    if (grid === null || this.problems.size === 0) {
+      return nothing;
+    }
+
+    return this.blocks.map((block, index) => {
+      const problem = this.problems.get(block.id);
+      if (problem === undefined) {
+        return nothing;
+      }
+
+      const rect = blockCellRect(index, grid, kCellInset);
+
+      return html`<div
+        class="problem"
+        title=${problem}
+        style=${[
+          `left:${rect.x}px`,
+          `top:${rect.y}px`,
+          `width:${rect.size}px`,
+          `height:${rect.size}px`
+        ].join(";")}
+      ></div>`;
+    });
   }
 
   #renderInsertion() {

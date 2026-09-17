@@ -37,6 +37,26 @@ describe("parseVoxelDocument", () => {
     assert.deepEqual(document.tilesets, []);
   });
 
+  it("keeps a positive integer defaultTileSize", () => {
+    const document = parseVoxelDocument({
+      ...kEmptyDocument,
+      defaultTileSize: 64
+    });
+
+    assert.equal(document.defaultTileSize, 64);
+  });
+
+  it("drops a defaultTileSize that is not a positive integer", () => {
+    for (const defaultTileSize of [0, -16, 12.5, "32"]) {
+      const document = parseVoxelDocument({
+        ...kEmptyDocument,
+        defaultTileSize
+      });
+
+      assert.equal("defaultTileSize" in document, false);
+    }
+  });
+
   it("rejects a chunkSize that is not a number", () => {
     assert.throws(
       () => parseVoxelDocument({

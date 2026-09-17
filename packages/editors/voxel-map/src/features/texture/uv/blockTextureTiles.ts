@@ -1,10 +1,9 @@
 // Import Third-party Dependencies
 import {
   resolvedBlockTextureSlots,
+  tileRectOf,
   type BlockShape,
-  type ResolvedBlockDefinition,
-  type ResolvedTileRef,
-  type ShapeTextureBounds
+  type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import type {
   SelectionRect,
@@ -21,19 +20,6 @@ export interface BlockTextureRects {
   block: ResolvedBlockDefinition;
   rects: SelectionRect[];
   geometries: UVGeometry[];
-}
-
-function textureRectOf(
-  ref: ResolvedTileRef,
-  bounds: ShapeTextureBounds,
-  tileSize: number
-): SelectionRect {
-  return {
-    x: (ref.col + bounds.u0) * tileSize,
-    y: (ref.row + (1 - bounds.v1)) * tileSize,
-    width: (bounds.u1 - bounds.u0) * tileSize,
-    height: (bounds.v1 - bounds.v0) * tileSize
-  };
 }
 
 export function findBlocksReferencingTileset(
@@ -56,7 +42,7 @@ export function findBlocksReferencingTileset(
       if (tile.tilesetId !== tilesetId) {
         continue;
       }
-      const rect = textureRectOf(tile, bounds, tileSize);
+      const rect = tileRectOf(tile, tileSize, bounds);
       const key = `${rect.x}:${rect.y}:${rect.width}:${rect.height}`;
       if (!unique.has(key)) {
         unique.set(key, rect);

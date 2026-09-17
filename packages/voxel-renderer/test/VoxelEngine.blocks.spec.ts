@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { VoxelBlockHookEvent } from "../src/hooks.ts";
+import type {
+  VoxelCommand,
+  VoxelCommandOrigin
+} from "../src/commands.ts";
 import { makeBlockDef } from "./helpers/blocks.ts";
 import { makeVoxelEntry } from "./helpers/voxelEntry.ts";
 import {
@@ -14,12 +17,12 @@ import {
 
 describe("VoxelEngine — block definitions", () => {
   it("registers a definition, marks the chunks dirty and emits", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
     engine.world.addLayer("Ground");
     engine.world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry(kCubeId));
     engine.tick(0);
+    engine.on("command", (command) => events.push(command));
 
     engine.defineBlock(makeBlockDef(kLeavesId, "cube", { name: "Leaves" }));
 
@@ -34,9 +37,9 @@ describe("VoxelEngine — block definitions", () => {
   });
 
   it("emits the resolved definition, not the raw one", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     engine.defineBlock(makeBlockDef(kLeavesId, "cube"));
 
@@ -49,9 +52,9 @@ describe("VoxelEngine — block definitions", () => {
   });
 
   it("emits once per block of a batch", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     engine.defineBlocks([
       makeBlockDef(kLeavesId, "cube"),
@@ -62,9 +65,9 @@ describe("VoxelEngine — block definitions", () => {
   });
 
   it("emits nothing for an empty batch", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     engine.defineBlocks([]);
 
@@ -72,9 +75,9 @@ describe("VoxelEngine — block definitions", () => {
   });
 
   it("removes a definition and reports the removal", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     assert.equal(engine.removeBlock(kCubeId), true);
 
@@ -86,13 +89,39 @@ describe("VoxelEngine — block definitions", () => {
   });
 
   it("stays silent when the removed id is unknown", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     assert.equal(engine.removeBlock(99), false);
 
     assert.deepEqual(events, []);
+  });
+
+  it("applies a remote definition and tags it as remote", () => {
+    const origins: VoxelCommandOrigin[] = [];
+    const engine = makeEngine();
+    engine.on("command", (_command, { origin }) => origins.push(origin));
+    engine.world.addLayer("Ground");
+    engine.world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry(kCubeId));
+    engine.tick(0);
+    origins.length = 0;
+
+    const applied = engine.apply({
+      action: "block-defined",
+      block: {
+        ...engine.blockRegistry.get(kCubeId)!,
+        id: kLeavesId,
+        name: "Leaves"
+      }
+    }, { origin: "remote" });
+
+    assert.equal(applied, true);
+    assert.equal(engine.blockRegistry.get(kLeavesId)?.name, "Leaves");
+    assert.deepEqual(origins, ["remote"]);
+    assert.ok(
+      [...engine.world.getAllChunks()].every(({ chunk }) => chunk.dirty)
+    );
   });
 });
 
@@ -168,10 +197,10 @@ describe("VoxelEngine — block order", () => {
   }
 
   it("moves a block and emits the resolved index", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
     engine.defineBlock(makeBlockDef(kLeavesId, "cube", { name: "Leaves" }));
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     assert.equal(engine.moveBlock(kCubeId, 99), true);
 
@@ -186,18 +215,18 @@ describe("VoxelEngine — block order", () => {
   });
 
   it("stays silent when the block already sits at the index", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     assert.equal(engine.moveBlock(kCubeId, 0), false);
     assert.deepEqual(events, []);
   });
 
   it("stays silent for an unknown block", () => {
-    const events: VoxelBlockHookEvent[] = [];
+    const events: VoxelCommand[] = [];
     const engine = makeEngine();
-    engine.onBlockUpdated = (event) => events.push(event);
+    engine.on("command", (command) => events.push(command));
 
     assert.equal(engine.moveBlock(404, 0), false);
     assert.deepEqual(events, []);

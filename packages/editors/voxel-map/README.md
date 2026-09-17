@@ -19,7 +19,7 @@ $ npm install
 $ npm run dev -w @jolly-pixel/editor.voxel-map
 ```
 
-The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png`. Both live under `assets/`; delete that directory to seed it again.
+The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png` under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded before tilesets referenced asset ids shows its `default` tileset as unlinked.
 
 Add `?offline` to skip network setup entirely. Nothing is persisted in that mode — the editor is scratch space until the page reloads.
 
@@ -43,18 +43,18 @@ const editor = await VoxelMapEditor.open({
 | `offline` | Skips identity, catalog, and network setup. Defaults to `false`. |
 | `world` | `AssetId` of the voxelmap to open. Defaults to the first one in the catalog. |
 
-`open()` creates the runtime, opens an `EditorSession`, preloads the tilesets
-declared by the world document, builds the `EditorScene`, mounts the
-`EditorShell`, then loads the scene. `dispose()` unwinds the shell, the session,
+`open()` creates the runtime, opens an `EditorSession` and waits for its
+catalog, builds the `EditorScene`, mounts the `EditorShell`, then loads the
+scene. Offline, it preloads `textures/tileset.png` as the only tileset. `dispose()` unwinds the shell, the session,
 and the runtime.
 
 The pieces live under `src/boot/`:
 
 | Export | Responsibility |
 |---|---|
-| `assets/resolveEditorAssets` | Turns a request into the `voxelmap` and `pixelart` records. The only place aware of asset kinds. |
-| `assets/preloadTilesets` | Loads the tilesets of a world record, falling back to `textures/tileset.png`. |
-| `EditorSession` | Prompts for the local identity, resolves the assets, and opens the world and texture rooms. `dispose()` destroys the client. |
+| `assets/resolveEditorAssets` | Turns a request into the `voxelmap` record. |
+| `assets/preloadOfflineTilesets` | Loads `textures/tileset.png` for the offline session. |
+| `EditorSession` | Prompts for the local identity, resolves the world, joins the catalog through `@jolly-pixel/asset-server/catalog/client`, and opens the world room. `textureRoom(assetId)` opens a pixel-art room. `dispose()` destroys the client. |
 | `EditorShell` | Wires `jolly-log` and the editor panels to the state, the scene, and the runtime input. |
 
 ### Panels
@@ -68,13 +68,35 @@ remembers it under `voxel-map:layout`.
 unless Paint and Blocks share a group, in which case it follows whichever of
 the two is the shown tab. Without it, the block library fills the Blocks pane.
 
-### Known limitation
+## Tilesets
 
-A voxelmap document does not reference its texture asset: `TilesetDefinition`
-carries a `src` URL, not an `AssetId`. `resolveEditorAssets` therefore pairs the
-requested world with the first `pixelart` record of the catalog. Opening a
-specific world still cannot reach its own texture until the serialization
-format of `@jolly-pixel/voxel.renderer` carries the reference.
+The map's tileset list is `engine.tilesets` from `@jolly-pixel/voxel.renderer`;
+`TilesetDirectory` mirrors it, with catalog labels, into the `TilesetStore`
+whenever the engine applies a tileset event, a snapshot arrives or the catalog
+changes. `TilesetActions` edits it through the engine, which publishes the
+change to the world room.
+
+A tileset is a `pixelart` asset. Its definition's `src` holds the asset id;
+an older `src` matching a pixel-art record's source path also resolves. A
+definition that resolves to no asset is unlinked: it is listed but has no
+texture tab and cannot be edited. The definition `id` is an internal key that
+blocks reference, and the label shown everywhere is the asset's file name.
+
+The Tilesets folder of the Blocks pane lists each tileset with its tile size
+and block count; clicking one opens its texture tab. `+` creates a blank
+pixel-art asset (the server suffixes a taken path) or links an existing one. The manage dialog sets the map's
+default tile size, renames a tileset (a catalog rename), changes its tile size
+and removes it. Removing a tileset keeps its asset and leaves its blocks
+without texture; the Block Library outlines those blocks in red and lists them
+above the grid.
+
+The texture editor shows one tab per linked tileset and keeps every tab's room
+joined. Selecting a block activates its tileset's tab. The block editor assigns
+a block to one tileset, keeping its texel position, and sets its UV size, the
+texel side of its region (`TileRef.size`).
+
+The Block Library grid height can be dragged from its bottom edge; the height
+is stored under `voxel-map:block-library:height`.
 
 ## 🧪 Tests and checks
 

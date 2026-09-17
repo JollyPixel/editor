@@ -36,6 +36,7 @@ export interface VoxelWorldJSON {
   version: 1;
   chunkSize: number;
   tilesets: TilesetDefinition[];
+  defaultTileSize?: number;
   blocks?: ResolvedBlockDefinition[];
   layers: VoxelLayerJSON[];
   objectLayers?: VoxelObjectLayerJSON[];

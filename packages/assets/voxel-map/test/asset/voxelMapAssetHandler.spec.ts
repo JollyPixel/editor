@@ -17,8 +17,9 @@ import {
   decodeVoxelDocument,
   encodeVoxelDocument,
   resolveBlockDefinition,
-  VOXEL_BLOCK_HOOK_ACTIONS,
-  VOXEL_LAYER_HOOK_ACTIONS
+  VOXEL_BLOCK_COMMAND_ACTIONS,
+  VOXEL_TILESET_COMMAND_ACTIONS,
+  VOXEL_LAYER_COMMAND_ACTIONS
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -145,13 +146,11 @@ describe("voxelMapAssetHandler", () => {
         transform: 0
       }
     );
-    source.tilesets = [
-      {
-        id: "default",
-        src: "textures/tileset.png",
-        tileSize: 32
-      }
-    ];
+    source.tilesets.add({
+      id: "default",
+      src: "textures/tileset.png",
+      tileSize: 32
+    });
 
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, documentEvent(source));
@@ -169,18 +168,16 @@ describe("voxelMapAssetHandler", () => {
   test("keeps the tileset list a document arrived with", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
     const source = new VoxelMapState(16);
-    source.tilesets = [
-      {
-        id: "default",
-        src: "textures/tileset.png",
-        tileSize: 32
-      }
-    ];
+    source.tilesets.add({
+      id: "default",
+      src: "textures/tileset.png",
+      tileSize: 32
+    });
 
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, documentEvent(source));
 
-    assert.deepEqual(state.toJSON().tilesets, source.tilesets);
+    assert.deepEqual(state.toJSON().tilesets, source.tilesets.definitions());
   });
 
   test("a domain command mutates the folded world", () => {
@@ -256,7 +253,7 @@ describe("voxelMapAssetHandler", () => {
     }));
 
     assert.deepEqual(state.world.getLayers(), []);
-    assert.deepEqual(state.tilesets, []);
+    assert.strictEqual(state.tilesets.size, 0);
   });
 
   test("a malformed document throws before touching the world", () => {
@@ -337,8 +334,9 @@ describe("voxelMapAssetHandler", () => {
 
     assert.strictEqual(commands!.eventType, VOXEL_MAP_COMMAND);
     assert.deepEqual(protocolEvents(commands!.protocol).toSorted(), [
-      ...VOXEL_LAYER_HOOK_ACTIONS,
-      ...VOXEL_BLOCK_HOOK_ACTIONS,
+      ...VOXEL_LAYER_COMMAND_ACTIONS,
+      ...VOXEL_BLOCK_COMMAND_ACTIONS,
+      ...VOXEL_TILESET_COMMAND_ACTIONS,
       "world-replace"
     ].toSorted());
   });
@@ -621,5 +619,64 @@ describe("voxelMapAssetHandler — block order", () => {
       [...replayed.blocks].map((block) => block.id),
       [1, 3, 2]
     );
+  });
+});
+
+describe("voxelMapAssetHandler — tilesets", () => {
+  const kHeader = {
+    clientId: "client-A",
+    seq: 1,
+    timestamp: 1000
+  };
+
+  test("tileset commands survive serialization", async() => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    state.blocks.register(makeBlockDef(1, "cube", {
+      defaultTexture: { col: 1, row: 0, tilesetId: "stone" }
+    }));
+
+    for (const command of [
+      {
+        ...kHeader,
+        action: "tileset-added",
+        tileset: { id: "stone", src: "asset-stone", tileSize: 32 }
+      },
+      {
+        ...kHeader,
+        action: "tileset-resized",
+        tilesetId: "stone",
+        tileSize: 16
+      },
+      {
+        ...kHeader,
+        action: "default-tile-size-updated",
+        defaultTileSize: 64
+      }
+    ]) {
+      foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, command));
+    }
+
+    const document = decodeVoxelDocument(await handler.serialize(state));
+
+    assert.deepEqual(document.tilesets, [
+      { id: "stone", src: "asset-stone", tileSize: 16 }
+    ]);
+    assert.strictEqual(document.defaultTileSize, 64);
+    assert.deepEqual(document.blocks?.[0].defaultTexture, {
+      col: 2,
+      row: 0,
+      tilesetId: "stone",
+      size: 32
+    });
+  });
+
+  test("clear forgets the default tile size", () => {
+    const state = new VoxelMapState(16);
+    state.tilesets.updateDefaultTileSize(32);
+
+    state.clear();
+
+    assert.strictEqual(state.tilesets.defaultTileSize, undefined);
   });
 });

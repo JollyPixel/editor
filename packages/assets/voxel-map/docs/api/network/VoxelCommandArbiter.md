@@ -15,10 +15,10 @@ class VoxelCommandArbiter {
   admit(command: VoxelNetworkCommand): network.Admission<VoxelNetworkCommand> | null;
 
   static key(
-    command: VoxelLayerHookEvent | VoxelNetworkCommand
+    command: VoxelLayerCommand | VoxelNetworkCommand
   ): string | null;
   static keys(
-    command: VoxelLayerHookEvent | VoxelNetworkCommand
+    command: VoxelLayerCommand | VoxelNetworkCommand
   ): string[];
 }
 ```

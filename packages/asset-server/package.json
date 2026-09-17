@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./catalog/client": {
+      "types": "./dist/catalog/client.d.ts",
+      "default": "./dist/catalog/client.js"
+    },
     "./kinds": {
       "types": "./dist/kinds/contract.d.ts",
       "default": "./dist/kinds/contract.js"
@@ -55,6 +59,7 @@
     "@openally/emitt": "1.0.1",
     "@openally/result": "3.1.0",
     "ata-validator": "1.13.2",
+    "js-base64": "3.9.3",
     "loglayer": "9.4.0"
   },
   "peerDependencies": {

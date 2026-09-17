@@ -9,7 +9,10 @@ import {
 import {
   type VoxelEngine,
   blocksFromTileset,
+  isVoxelBlockCommand,
+  isVoxelLayerCommand,
   type TilesetSource,
+  type VoxelCommand,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import {
@@ -43,6 +46,14 @@ import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
 import type { EditorIdentity } from "../collaboration/identity.ts";
 import type { EditorState } from "./state/index.ts";
 import { installTransparency } from "../scene/installTransparency.ts";
+import {
+  TilesetDirectory,
+  type TilesetCatalog
+} from "../features/tilesets/TilesetDirectory.ts";
+import {
+  TilesetActions,
+  type TilesetCatalogWriter
+} from "../features/tilesets/TilesetActions.ts";
 
 // CONSTANTS
 const kDefaultBlockLimit = 32;
@@ -52,6 +63,7 @@ export interface EditorSceneOptions {
   defaultLayerName?: string;
   tilesets: TilesetSource[];
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+  catalog?: TilesetCatalog & TilesetCatalogWriter;
   identity?: EditorIdentity;
   viewFocus?: ViewFocus;
 }
@@ -60,6 +72,7 @@ export interface EditorSceneHandles {
   engine: VoxelEngine;
   gridRenderer: GridRenderer;
   localBrush: LocalBrush;
+  tilesetActions: TilesetActions | null;
 }
 
 export class EditorScene extends Systems.Scene {
@@ -68,6 +81,9 @@ export class EditorScene extends Systems.Scene {
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
   #identity: EditorIdentity | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
+  #catalog: (TilesetCatalog & TilesetCatalogWriter) | undefined;
+  #tilesetDirectory: TilesetDirectory | undefined;
+  #tilesetActions: TilesetActions | null = null;
   #peerRoster: PeerRoster | undefined;
   #blockSelections: BlockSelectionPresence | undefined;
   #layerSelections: LayerSelectionPresence | undefined;
@@ -82,6 +98,18 @@ export class EditorScene extends Systems.Scene {
   #onExitOrbitFocusKey = (): void => {
     this.#orbitFlyCamera?.exitOrbitFocus();
     this.#announceCameraMode();
+  };
+
+  #onVoxelCommand = (command: VoxelCommand): void => {
+    if (isVoxelLayerCommand(command)) {
+      this.editorState.world.emit("layerUpdated", command);
+    }
+    else if (isVoxelBlockCommand(command)) {
+      this.editorState.world.emit("blockRegistryChanged");
+    }
+    else {
+      this.#tilesetDirectory?.refresh();
+    }
   };
 
   #announceCameraMode(): void {
@@ -118,11 +146,13 @@ export class EditorScene extends Systems.Scene {
       defaultLayerName = "Ground",
       tilesets,
       voxelRoom,
+      catalog,
       identity,
       viewFocus = new ViewFocus()
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
+    this.#catalog = catalog;
     this.#tilesets = tilesets;
     this.#voxelRoom = voxelRoom;
     this.#identity = identity;
@@ -173,8 +203,7 @@ export class EditorScene extends Systems.Scene {
         layers: this.#voxelRoom ? [] : [this.#defaultLayerName],
         blocks: [],
         material: "lambert",
-        onLayerUpdated: (evt) => this.editorState.world.emit("layerUpdated", evt),
-        onBlockUpdated: () => this.editorState.world.emit("blockRegistryChanged"),
+        onCommand: this.#onVoxelCommand,
         tilesets: this.#tilesets
       });
     const { engine } = vr;
@@ -191,7 +220,24 @@ export class EditorScene extends Systems.Scene {
         room: this.#voxelRoom,
         engine
       });
+    }
+
+    this.#tilesetDirectory = new TilesetDirectory({
+      store: this.editorState.tilesets,
+      tilesets: engine.tilesets,
+      catalog: this.#catalog
+    });
+    if (this.#voxelSyncClient && this.#catalog) {
+      this.#tilesetActions = new TilesetActions({
+        engine,
+        catalog: this.#catalog,
+        store: this.editorState.tilesets
+      });
+    }
+
+    if (this.#voxelSyncClient) {
       this.#voxelSyncClient.on("snapshot", () => {
+        this.#tilesetDirectory?.refresh();
         let layers = voxelWorld.getLayers();
         if (layers.length === 0) {
           voxelWorld.addLayer(this.#defaultLayerName);
@@ -323,7 +369,8 @@ export class EditorScene extends Systems.Scene {
     this.#handles.resolve({
       engine,
       gridRenderer: this.gridRenderer,
-      localBrush: this.localBrush
+      localBrush: this.localBrush,
+      tilesetActions: this.#tilesetActions
     });
   }
 
@@ -347,7 +394,8 @@ export class EditorScene extends Systems.Scene {
       this.#voxelSyncClient.replaceWorld(data);
     }
     else {
-      this.engine.load(data);
+      this.engine.load(data, { tilesets: this.#tilesets });
+      this.#tilesetDirectory?.refresh();
       this.#registerDefaultBlocks();
 
       const layers = this.engine.world.getLayers();
@@ -368,6 +416,9 @@ export class EditorScene extends Systems.Scene {
     }
 
     this.#viewFocus.provider = null;
+    this.#tilesetDirectory?.dispose();
+    this.#tilesetDirectory = undefined;
+    this.#tilesetActions = null;
     this.#voxelSyncClient?.destroy();
     this.#voxelSyncClient = undefined;
     this.#peerRoster?.dispose();
@@ -385,6 +436,9 @@ export class EditorScene extends Systems.Scene {
       blockRegistry,
       tilesetManager
     } = this.engine;
+    if (!tilesetManager.has()) {
+      return;
+    }
 
     const blocks = blocksFromTileset(tilesetManager.atlas().def, {
       limit: kDefaultBlockLimit

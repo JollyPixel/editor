@@ -19,9 +19,10 @@ import {
 } from "../network/PixelCommand.schema.ts";
 import { PixelArtState } from "./PixelArtState.ts";
 import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
+import { PIXEL_ART_KIND } from "./kind.ts";
 import type { PixelNetworkCommand } from "../network/types.ts";
 
-export const PIXEL_ART_KIND = "pixelart";
+export { PIXEL_ART_KIND };
 export const PIXEL_ART_COMMAND = "pixelart.command";
 
 // CONSTANTS

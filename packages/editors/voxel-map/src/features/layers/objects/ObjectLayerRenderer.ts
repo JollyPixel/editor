@@ -10,7 +10,7 @@ import {
   type AreaBoxDragEvent
 } from "@jolly-pixel/three";
 import type {
-  VoxelLayerHookEvent,
+  VoxelLayerCommand,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
@@ -333,7 +333,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   readonly #onWorldReset = (): void => this.#syncAll();
 
   readonly #onLayerUpdated = (
-    event: VoxelLayerHookEvent
+    event: VoxelLayerCommand
   ): void => {
     switch (event.action) {
       case "object-layer-added":

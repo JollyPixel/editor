@@ -12,6 +12,7 @@ import {
   serializePixelBuffer
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
+  PIXEL_ART_KIND,
   pixelArtAssetHandler
 } from "@jolly-pixel/asset.pixel-art";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@jolly-pixel/asset.voxel-map";
 import {
   blocksFromTileset,
+  DEFAULT_TILE_SIZE,
   encodeVoxelDocument
 } from "@jolly-pixel/voxel.renderer";
 
@@ -30,6 +32,7 @@ import { readTilesetSeed } from "./vite/tilesetSeed.ts";
 const kChunkSize = 16;
 const kDefaultLayerName = "Ground";
 const kDefaultBlockLimit = 32;
+const kTilesetAssetId = "tileset-default";
 
 const tileset = await readTilesetSeed({
   file: path.join(
@@ -40,12 +43,11 @@ const tileset = await readTilesetSeed({
   ),
   definition: {
     id: "default",
-    src: "textures/tileset.png",
-    tileSize: 32
+    src: kTilesetAssetId,
+    tileSize: DEFAULT_TILE_SIZE
   }
 });
 
-// https://vitejs.dev/config/
 export default defineConfig({
   server: {
     allowedHosts: true
@@ -59,12 +61,20 @@ export default defineConfig({
         textureAssetHandler()
       ],
       seed: {
-        "textures/block.pixelart": () => encodePixelArtDocument(
-          serializePixelBuffer(tileset.buffer)
-        ),
+        "textures/block.pixelart": {
+          id: kTilesetAssetId,
+          kind: PIXEL_ART_KIND,
+          content: () => encodePixelArtDocument(
+            serializePixelBuffer(tileset.buffer)
+          )
+        },
         "maps/overworld.voxelmap.json": () => {
           const state = new VoxelMapState(kChunkSize);
-          state.tilesets = [tileset.definition];
+          state.tilesets.add({
+            id: tileset.definition.id,
+            src: tileset.definition.src,
+            tileSize: tileset.definition.tileSize
+          });
           state.blocks.registerMany(
             blocksFromTileset(tileset.definition, {
               limit: kDefaultBlockLimit

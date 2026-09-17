@@ -1,7 +1,7 @@
 # Network protocol
 
-Voxel synchronization uses engine hook events, one administrative command, and
-three block-table commands.
+Voxel synchronization sends the renderer's [`VoxelCommand`](../../../../../voxel-renderer/docs/api/core/commands.md)
+union plus one administrative command.
 
 ```ts
 interface VoxelWorldReplaceCommand {
@@ -9,29 +9,11 @@ interface VoxelWorldReplaceCommand {
   data: VoxelWorldJSON;
 }
 
-interface VoxelBlockDefinedCommand {
-  action: "block-defined";
-  block: ResolvedBlockDefinition;
-}
-
-interface VoxelBlockRemovedCommand {
-  action: "block-removed";
-  blockId: number;
-}
-
-interface VoxelBlockMovedCommand {
-  action: "block-moved";
-  blockId: number;
-  toIndex: number;
-}
-
-type VoxelBlockCommand =
-  | VoxelBlockDefinedCommand
-  | VoxelBlockRemovedCommand
-  | VoxelBlockMovedCommand;
-
 type VoxelNetworkCommand =
-  (VoxelLayerHookEvent | VoxelWorldReplaceCommand | VoxelBlockCommand)
+  (
+    | VoxelCommand
+    | VoxelWorldReplaceCommand
+  )
   & network.NetworkCommandHeader;
 
 type VoxelServerMessage = network.NetworkServerMessage<
@@ -45,9 +27,8 @@ messages contain either a command or a world snapshot.
 
 ## Block commands
 
-A block definition belongs to the document, not to a layer, so it carries no
-`layerName` and travels on its own hook. `VoxelBlockCommand` is the
-`VoxelBlockHookEvent` the engine emits, stamped with a command header, so
+A block definition belongs to the document, not to a layer, so a
+[`VoxelBlockCommand`](../../../../../voxel-renderer/docs/api/core/commands.md#block-commands) carries no `layerName`.
 [`VoxelSyncClient`](./VoxelSyncClient.md#block-definitions) publishes one for
 every `engine.defineBlock()`, `engine.removeBlock()` and `engine.moveBlock()`.
 
@@ -57,10 +38,28 @@ sequence of moves in the room's order converge. Two peers moving different
 blocks at the same instant do not contend, and their orders can differ until
 the next snapshot, matching how `layer-moved` behaves.
 
-`VOXEL_BLOCK_HOOK_ACTIONS` lists every block action name for a rights table.
+`VOXEL_BLOCK_COMMAND_ACTIONS` lists every block action name for a rights table.
 
 Block commands are keyed `block:<id>` for conflict resolution, so concurrent
 edits contend per block and last write wins.
+
+## Tileset commands
+
+A [`VoxelTilesetCommand`](../../../../../voxel-renderer/docs/api/core/commands.md#tileset-commands) is stamped with a command
+header like any other, so [`VoxelSyncClient`](./VoxelSyncClient.md#tilesets)
+publishes one for every `engine.addTileset()`, `engine.removeTileset()`,
+`engine.resizeTileset()` and `engine.defaultTileSize` assignment.
+`VoxelMapState` and the engine both fold them with the renderer's
+[`applyTilesetCommand()`](../../../../../voxel-renderer/docs/api/tilesets/tilesets.md#tileset-commands),
+so every peer applies the same result from one command, including the block
+rescale of `tileset-resized`.
+
+`VOXEL_TILESET_COMMAND_ACTIONS` lists every tileset action name for a rights
+table.
+
+Tile sizes are integers from 1 to `MAX_TILE_SIZE` (4096); the protocol
+rejects anything else. Tileset commands are keyed `tileset:<id>`, and
+`default-tile-size-updated` is keyed `default-tile-size`.
 
 ## Validation
 
@@ -77,11 +76,8 @@ document itself.
 
 ## Headless application
 
-```ts
-world.applyRemoteCommand(command: VoxelLayerHookEvent): void;
-```
-
-`VoxelWorld.applyRemoteCommand()` replays one
-mutation against a bare `VoxelWorld` without echoing it back through
-`onLayerUpdated`. It is used by the server and is also available to tests,
-offline tools, and other headless integrations.
+`VoxelMapState.applyCommand()` loads a `world-replace` snapshot and passes
+every other command to the renderer's
+[`applyVoxelCommand()`](../../../../../voxel-renderer/docs/api/core/commands.md#applying-commands), which mutates a bare world,
+block registry and tileset list without emitting anything. Tests, offline tools
+and other headless integrations can call it the same way.

@@ -14,9 +14,8 @@ import {
 
 // Import Internal Dependencies
 import {
-  assetRoomName,
+  AssetRoom,
   CatalogProjection,
-  parseAssetRoomName,
   registerAssetRooms,
   type AssetKindHandler
 } from "#src/index.ts";
@@ -105,7 +104,10 @@ async function roomHarness(
     catalog,
     clients,
     assetId: created.assetId,
-    async join(clientId, room = assetRoomName("counter", created.assetId)) {
+    async join(
+      clientId,
+      room = new AssetRoom("counter", created.assetId).toString()
+    ) {
       const handle = client(clientId);
       clients.set(clientId, handle);
       server.handleConnect(handle, { subject: handle.id, role: "default" });
@@ -113,7 +115,7 @@ async function roomHarness(
     },
     send(clientId, payload) {
       return server.handleMessage(clientId, {
-        room: assetRoomName("counter", created.assetId),
+        room: new AssetRoom("counter", created.assetId).toString(),
         kind: "message",
         payload
       });
@@ -125,35 +127,6 @@ async function roomHarness(
     }
   };
 }
-
-describe("parseAssetRoomName", () => {
-  test("splits kind from asset id", () => {
-    assert.deepEqual(parseAssetRoomName("pixelart:a1"), {
-      kind: "pixelart",
-      assetId: "a1"
-    });
-  });
-
-  test("only the first colon separates", () => {
-    assert.deepEqual(parseAssetRoomName("pixelart:a:1"), {
-      kind: "pixelart",
-      assetId: "a:1"
-    });
-  });
-
-  test("rejects a name with no separator or an empty half", () => {
-    assert.strictEqual(parseAssetRoomName("pixelart"), null);
-    assert.strictEqual(parseAssetRoomName(":a1"), null);
-    assert.strictEqual(parseAssetRoomName("pixelart:"), null);
-  });
-
-  test("assetRoomName is its inverse", () => {
-    assert.deepEqual(
-      parseAssetRoomName(assetRoomName("pixelart", "a1")),
-      { kind: "pixelart", assetId: "a1" }
-    );
-  });
-});
 
 describe("registerAssetRooms — admission", () => {
   test("joining an asset room creates one room reused by a second joiner", async() => {
@@ -176,7 +149,7 @@ describe("registerAssetRooms — admission", () => {
   test("an unknown asset id is refused", async() => {
     await using harness = await roomHarness();
 
-    await harness.join("A", assetRoomName("counter", "ghost"));
+    await harness.join("A", new AssetRoom("counter", "ghost").toString());
 
     assert.strictEqual(harness.sync.states.has("ghost"), false);
   });
@@ -198,7 +171,7 @@ describe("registerAssetRooms — admission", () => {
     assert.deepEqual(
       harness.clients.get("A")!.received.at(-1),
       {
-        room: assetRoomName("counter", harness.assetId),
+        room: new AssetRoom("counter", harness.assetId).toString(),
         kind: "message",
         payload: {
           type: "snapshot",
@@ -225,7 +198,7 @@ describe("registerAssetRooms — admission", () => {
   test("an asset id belonging to another kind is refused", async() => {
     await using harness = await roomHarness();
 
-    await harness.join("A", assetRoomName("binary", harness.assetId));
+    await harness.join("A", new AssetRoom("binary", harness.assetId).toString());
 
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
@@ -237,7 +210,7 @@ describe("registerAssetRooms — eviction", () => {
     await using harness = await roomHarness({ graceMs: 1_000 });
 
     await harness.join("A");
-    const room = assetRoomName("counter", harness.assetId);
+    const room = new AssetRoom("counter", harness.assetId).toString();
     await harness.server.handleMessage("A", { room, kind: "leave" });
 
     t.mock.timers.tick(500);
@@ -250,7 +223,7 @@ describe("registerAssetRooms — eviction", () => {
   test("expiry flushes the asset before releasing its state", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await roomHarness({ graceMs: 100 });
-    const room = assetRoomName("counter", harness.assetId);
+    const room = new AssetRoom("counter", harness.assetId).toString();
 
     await harness.join("A");
     await harness.server.handleMessage("A", {
@@ -275,7 +248,7 @@ describe("registerAssetRooms — eviction", () => {
   test("opening and closing the same asset room repeatedly leaks nothing", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await roomHarness({ graceMs: 100 });
-    const room = assetRoomName("counter", harness.assetId);
+    const room = new AssetRoom("counter", harness.assetId).toString();
 
     for (let index = 0; index < 3; index++) {
       await harness.join(`client-${index}`);
@@ -298,7 +271,7 @@ describe("registerAssetRooms — eviction", () => {
 
   test("a message from a client that never joined is dropped", async() => {
     await using harness = await roomHarness();
-    const room = assetRoomName("counter", harness.assetId);
+    const room = new AssetRoom("counter", harness.assetId).toString();
 
     harness.server.handleConnect(client("A"), { subject: "A", role: "default" });
     await harness.server.handleMessage("A", {
@@ -314,7 +287,7 @@ describe("registerAssetRooms — eviction", () => {
 describe("registerAssetRooms — deletion", () => {
   test("deleting an asset notifies the members of its open room", async() => {
     await using harness = await roomHarness();
-    const room = assetRoomName("counter", harness.assetId);
+    const room = new AssetRoom("counter", harness.assetId).toString();
     await harness.join("A");
 
     (await harness.sync.writer.remove({

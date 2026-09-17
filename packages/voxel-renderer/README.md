@@ -134,7 +134,7 @@ does not depend on an ECS runtime.
 
 - [`VoxelEngine`](docs/api/core/VoxelEngine.md).
 - [`VoxelDebugger` and mesh statistics](docs/api/core/VoxelDebugger.md), and
-  [hook events](docs/api/core/hooks.md).
+  [commands](docs/api/core/commands.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),
   [`VoxelChunk`](docs/api/world/VoxelChunk.md),

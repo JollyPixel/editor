@@ -18,17 +18,27 @@ import type {
   BlockShapeID,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  Dialog,
-  JollyChangeDetail,
-  JollyOption
+import {
+  Mixed,
+  type Dialog,
+  type JollyChangeDetail,
+  type JollyOption
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   editorState,
-  type BrushStore
+  type BrushStore,
+  type TilesetStore
 } from "../../app/state/index.ts";
+import {
+  assignBlockTileset,
+  blockTilesetStatus,
+  blockTileSize,
+  resizeBlockTiles,
+  type TilesetGrid
+} from "../tilesets/blockTilesets.ts";
+import { tileSizeOptions } from "../tilesets/tileSizes.ts";
 import {
   blockDefinitionFromDraft,
   previewBlockFromDraft,
@@ -37,7 +47,16 @@ import {
 } from "./blockDraft.ts";
 import "./BlockShapePreview.ts";
 
+// CONSTANTS
+const kMissingTileset = "Missing tileset";
+
 type BlockEditorMode = "edit" | "create";
+
+interface TextureFieldValues {
+  tilesetId: string | typeof Mixed;
+  size: number | undefined;
+  missing: boolean;
+}
 
 @customElement("block-editor-dialog")
 export class BlockEditorDialog extends LitElement {
@@ -78,6 +97,9 @@ export class BlockEditorDialog extends LitElement {
   @property({ attribute: false })
   declare brush: BrushStore;
 
+  @property({ attribute: false })
+  declare tilesets: TilesetStore;
+
   @state()
   private declare _mode: BlockEditorMode;
 
@@ -98,6 +120,7 @@ export class BlockEditorDialog extends LitElement {
 
     this.engine = undefined;
     this.brush = editorState.brush;
+    this.tilesets = editorState.tilesets;
     this.block = null;
     this._mode = "edit";
     this._open = false;
@@ -137,7 +160,13 @@ export class BlockEditorDialog extends LitElement {
 
   override render() {
     if (this._mode === "create") {
-      return this.#renderDialog("New block", this._draft, true);
+      const { tilesetId, size } = this._draft;
+
+      return this.#renderDialog("New block", this._draft, {
+        tilesetId,
+        size: size ?? this.#tileSizeOf(tilesetId),
+        missing: false
+      }, true);
     }
 
     const { block } = this;
@@ -150,15 +179,30 @@ export class BlockEditorDialog extends LitElement {
       {
         name: block.name,
         shapeId: block.shapeId,
-        tilesetId: block.defaultTexture?.tilesetId ?? this.#defaultTilesetId()
+        tilesetId: ""
       },
+      this.#textureValuesOf(block),
       false
     );
+  }
+
+  #textureValuesOf(
+    block: ResolvedBlockDefinition
+  ): TextureFieldValues {
+    const status = blockTilesetStatus(block, this.tilesets.ids());
+    const tilesetId = status.kind === "assigned" ? status.tilesetId : "";
+
+    return {
+      tilesetId: status.kind === "mixed" ? Mixed : tilesetId,
+      size: blockTileSize(block) ?? this.#tileSizeOf(tilesetId),
+      missing: status.kind === "missing"
+    };
   }
 
   #renderDialog(
     heading: string,
     values: BlockDraft,
+    texture: TextureFieldValues,
     creating: boolean
   ) {
     return html`
@@ -181,9 +225,17 @@ export class BlockEditorDialog extends LitElement {
             ></jolly-select>
             <jolly-select
               label="Tileset"
-              .options=${this.#tilesetOptions()}
-              .value=${values.tilesetId}
+              .options=${this.#tilesetOptions(texture.missing)}
+              .value=${texture.tilesetId}
+              .error=${texture.missing ? kMissingTileset : null}
               @jolly-change=${this.#onTilesetChange}
+            ></jolly-select>
+            <jolly-select
+              label="UV size"
+              .options=${tileSizeOptions(texture.size)}
+              .value=${texture.size}
+              ?disabled=${texture.size === undefined}
+              @jolly-change=${this.#onSizeChange}
             ></jolly-select>
             ${creating ? nothing : this.#renderSurface()}
             ${creating ? nothing : this.#renderCullSelfFaces()}
@@ -308,7 +360,37 @@ export class BlockEditorDialog extends LitElement {
   }
 
   #defaultTilesetId(): string {
-    return this.engine?.tilesetManager.defaultTilesetId ?? "";
+    return this.tilesets.activeTilesetId ??
+      this.tilesets.firstTilesetId ??
+      "";
+  }
+
+  #tileSizeOf(
+    tilesetId: string
+  ): number | undefined {
+    return this.tilesets.entry(tilesetId)?.definition.tileSize;
+  }
+
+  #gridOf(
+    tilesetId: string | undefined
+  ): TilesetGrid | undefined {
+    const tileSize = tilesetId === undefined ?
+      undefined :
+      this.#tileSizeOf(tilesetId);
+    if (tilesetId === undefined || tileSize === undefined) {
+      return undefined;
+    }
+
+    const manager = this.engine?.tilesetManager;
+    const atlas = manager?.has(tilesetId) ?
+      manager.atlas(tilesetId).def :
+      undefined;
+
+    return {
+      tileSize,
+      width: atlas && atlas.cols * atlas.tileSize,
+      height: atlas && atlas.rows * atlas.tileSize
+    };
   }
 
   #shapeOptions(): JollyOption<BlockShapeID>[] {
@@ -321,12 +403,24 @@ export class BlockEditorDialog extends LitElement {
     });
   }
 
-  #tilesetOptions(): JollyOption<string>[] {
-    const definitions = this.engine?.tilesetManager.definitions() ?? [];
-
-    return definitions.map((def) => {
-      return { label: def.id, value: def.id };
+  #tilesetOptions(
+    missing: boolean
+  ): JollyOption<string>[] {
+    const options: JollyOption<string>[] = this.tilesets.entries.map((entry) => {
+      return {
+        label: entry.label,
+        value: entry.definition.id
+      };
     });
+    if (missing) {
+      options.unshift({
+        label: kMissingTileset,
+        value: "",
+        disabled: true
+      });
+    }
+
+    return options;
   }
 
   #onNameChange(
@@ -369,31 +463,51 @@ export class BlockEditorDialog extends LitElement {
       return;
     }
 
-    if (!this.block) {
+    const target = this.#gridOf(tilesetId);
+    if (!this.block || target === undefined) {
       return;
     }
 
-    this.#applyEdit({
-      defaultTexture: {
-        ...this.block.defaultTexture,
-        tilesetId,
-        col: 0,
-        row: 0
-      }
-    });
+    this.#applyBlock(assignBlockTileset(this.block, {
+      tilesetId,
+      target,
+      sourceOf: (id) => this.#gridOf(id)
+    }));
+  }
+
+  #onSizeChange(
+    event: CustomEvent<JollyChangeDetail<number>>
+  ): void {
+    const size = event.detail.value;
+    if (this._mode === "create") {
+      this._draft = { ...this._draft, size };
+
+      return;
+    }
+
+    if (this.block) {
+      this.#applyBlock(resizeBlockTiles(this.block, size));
+    }
   }
 
   #applyEdit(
     patch: Partial<ResolvedBlockDefinition>
   ): void {
-    if (!this.block || !this.engine) {
+    if (this.block) {
+      this.#applyBlock({
+        ...this.block,
+        ...patch
+      });
+    }
+  }
+
+  #applyBlock(
+    updated: ResolvedBlockDefinition
+  ): void {
+    if (!this.engine) {
       return;
     }
 
-    const updated: ResolvedBlockDefinition = {
-      ...this.block,
-      ...patch
-    };
     this.engine.defineBlock(updated);
     this.block = updated;
   }

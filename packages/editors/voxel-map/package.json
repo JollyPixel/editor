@@ -47,6 +47,7 @@
     "@jolly-pixel/event-store": "3.0.0",
     "@jolly-pixel/network": "2.0.0",
     "@jolly-pixel/pixel-draw.renderer": "4.0.0",
+    "@jolly-pixel/resize-handle": "1.2.0",
     "@jolly-pixel/runtime": "5.0.0",
     "@jolly-pixel/three": "2.0.0",
     "@jolly-pixel/ui": "2.0.0",

@@ -2,8 +2,12 @@ export * from "./types.ts";
 export * from "./loadTilesets.ts";
 export * from "./TilesetAtlas.ts";
 export * from "./TilesetManager.ts";
+export * from "./TilesetList.ts";
+export * from "./tileSize.ts";
+export * from "./tileRect.ts";
+export * from "./tileRescale.ts";
+export * from "./applyTilesetCommand.ts";
 
-// `padAtlas.ts` is an internal helper module; only the layout is public.
 export {
   AtlasLayout,
   type AtlasLayoutOptions,

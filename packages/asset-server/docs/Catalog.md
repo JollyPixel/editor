@@ -52,13 +52,14 @@ option.
 ### Commands
 
 ```ts
-{ type: "catalog:create", requestId?, path, kind?, content: AssetInlineContent }
+{ type: "catalog:create", requestId?, path, kind?, onConflict?, content: CatalogInlineContent }
 { type: "catalog:rename", requestId?, assetId, to }
 { type: "catalog:delete", requestId?, assetId }
 ```
 
 `content` is the `{ type: "inline", encoding: "base64", data }` shape built by
-`encodeContent`. There is no update command: content changes go through the
+`encodeContent`. `onConflict` is `"reject"` (default) or `"suffix"`, passed to
+`AssetWriter.create` as `onPathConflict`. There is no update command: content changes go through the
 asset's own room.
 
 The room runs each command through `AssetWriter`, attributed to
@@ -100,6 +101,44 @@ Without a rights table every member can run every command.
 
 Deleting an asset that is open in its own room sends that room a final notice.
 See [Deleted assets](./Rooms.md#deleted-assets).
+
+## Browser client
+
+`@jolly-pixel/asset-server/catalog/client` exports the room protocol types and
+constants and `CatalogClient`, with no Node.js dependency.
+
+```ts
+import {
+  CatalogClient,
+  catalogRoom
+} from "@jolly-pixel/asset-server/catalog/client";
+
+const catalog = new CatalogClient(catalogRoom(networkClient));
+await catalog.ready;
+
+const assetId = await catalog.create("textures/new.pixelart", bytes, {
+  kind: "pixelart",
+  onConflict: "suffix"
+});
+await catalog.rename(assetId, "textures/stone.pixelart");
+await catalog.remove(assetId);
+```
+
+| Member | Description |
+|---|---|
+| `ready` | Resolves on the first `catalog:snapshot`. |
+| `records()` / `record(assetId)` | Current `AssetRecordData`, kept in sync with `catalog:changed`. |
+| `create(path, content, options?)` | Resolves the created asset ID. `options` takes `kind` and `onConflict`. |
+| `rename(assetId, to)` / `remove(assetId)` | Resolve once applied. |
+| `dispose()` | Leaves the room and rejects pending requests. |
+| `"change"` event | Emitted after the snapshot and each change. |
+
+The client joins the room on construction and sends requests only after
+`ready`. A `catalog:rejected` reply rejects the request with
+`CatalogRejectedError` (`message` is the server reason, `command` the command
+type). `catalogRoom(client)` opens the `CATALOG_ROOM` room on a
+`@jolly-pixel/network/client` `Client`; any object matching `CatalogRoom`
+works.
 
 ## HTTP handler
 

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/index.ts";
-import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
+import type { VoxelLayerCommand } from "../../src/commands.ts";
 import type { VoxelObjectJSON } from "../../src/serialization/index.ts";
 
 function makeObject(
@@ -54,8 +54,8 @@ describe("VoxelWorld — moveObjectToLayer", () => {
 
   it("emits one event naming both sides", () => {
     const world = makeWorld();
-    const events: VoxelLayerHookEvent[] = [];
-    world.onLayerUpdated = (event) => events.push(event);
+    const events: VoxelLayerCommand[] = [];
+    world.on("command", (event) => events.push(event));
 
     world.moveObjectToLayer("From", "obj1", "To");
 
@@ -73,8 +73,8 @@ describe("VoxelWorld — moveObjectToLayer", () => {
 
   it("moves nothing when a layer or the object is unknown", () => {
     const world = makeWorld();
-    const events: VoxelLayerHookEvent[] = [];
-    world.onLayerUpdated = (event) => events.push(event);
+    const events: VoxelLayerCommand[] = [];
+    world.on("command", (event) => events.push(event));
 
     assert.equal(world.moveObjectToLayer("NoSuch", "obj1", "To"), false);
     assert.equal(world.moveObjectToLayer("From", "obj1", "NoSuch"), false);

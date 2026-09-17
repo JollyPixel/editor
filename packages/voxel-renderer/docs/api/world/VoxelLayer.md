@@ -69,7 +69,7 @@ class VoxelLayer {
 
 These properties are mutable in the TypeScript API because deserialization and
 world management update them. Application code should use the corresponding
-`VoxelWorld` or `VoxelEngine` methods so mesh invalidation and hooks still run.
+`VoxelWorld` or `VoxelEngine` methods so mesh invalidation and commands still run.
 
 > **`position`** - locates the layer-local origin in world space. Always use
 > `VoxelWorld.setLayerPosition` or `translateLayer` so chunks are marked dirty.
@@ -221,7 +221,7 @@ for the source's chunk size.
 
 Copies every voxel from `source` into this layer, resolved in world space so
 layer positions are honoured. Prefer the world or engine merge method when the
-operation must update world state or emit hooks.
+operation must update world state or emit commands.
 
 `options.overwrite` defaults to `true`, letting source voxels replace target
 voxels at the same world position. Pass `false` to fill only the positions this

@@ -2,12 +2,17 @@
 import * as network from "@jolly-pixel/network/client";
 import type * as networkTypes from "@jolly-pixel/network";
 import {
-  assetRoomName,
+  AssetRoom,
   type AssetId
 } from "@jolly-pixel/asset";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage
+import {
+  CatalogClient,
+  catalogRoom
+} from "@jolly-pixel/asset-server/catalog/client";
+import {
+  PIXEL_ART_KIND,
+  type PixelNetworkCommand,
+  type PixelServerMessage
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type {
   VoxelNetworkCommand,
@@ -53,7 +58,7 @@ export class EditorSession {
   readonly identity: EditorIdentity;
   readonly assets: EditorAssets;
   readonly worldRoom: EditorWorldRoom;
-  readonly textureRoom: EditorTextureRoom;
+  readonly catalog: CatalogClient;
 
   constructor(
     identity: EditorIdentity,
@@ -65,24 +70,26 @@ export class EditorSession {
       profile: toPeerMetadata(identity)
     });
 
-    const worldRoomName = assetRoomName(
+    const worldRoomName = new AssetRoom(
       assets.world.kind,
-      assets.world.id.value
-    );
+      assets.world.id
+    ).toString();
     this.worldRoom = this.#client.room<VoxelNetworkCommand, VoxelServerMessage>(
       worldRoomName
     );
+    this.catalog = new CatalogClient(catalogRoom(this.#client));
+  }
 
-    const textureRoomName = assetRoomName(
-      assets.texture.kind,
-      assets.texture.id.value
-    );
-    this.textureRoom = this.#client.room<PixelNetworkCommand, PixelServerMessage>(
-      textureRoomName
+  textureRoom(
+    assetId: string
+  ): EditorTextureRoom {
+    return this.#client.room<PixelNetworkCommand, PixelServerMessage>(
+      new AssetRoom(PIXEL_ART_KIND, assetId).toString()
     );
   }
 
   dispose(): void {
+    this.catalog.dispose();
     this.#client.destroy();
   }
 }

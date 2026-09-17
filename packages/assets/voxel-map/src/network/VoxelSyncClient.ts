@@ -4,11 +4,8 @@ import {
   type Room
 } from "@jolly-pixel/network/client";
 import type {
+  VoxelCommandListener,
   VoxelEngine,
-  VoxelBlockHookEvent,
-  VoxelBlockHookListener,
-  VoxelLayerHookEvent,
-  VoxelLayerHookListener,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
@@ -30,23 +27,10 @@ export class VoxelSyncClient extends CommandSync<
   VoxelAssetNotice
 > {
   #engine: VoxelEngine;
-  #previousLayerHandler: VoxelLayerHookListener | undefined;
-  #previousBlockHandler: VoxelBlockHookListener | undefined;
-  #applyingRemote = false;
 
-  #handleLayerUpdated = (
-    event: VoxelLayerHookEvent
-  ): void => {
-    this.#previousLayerHandler?.(event);
-    this.send(event);
-  };
-
-  #handleBlockUpdated = (
-    event: VoxelBlockHookEvent
-  ): void => {
-    this.#previousBlockHandler?.(event);
-    if (!this.#applyingRemote) {
-      this.send(event);
+  #sendLocalCommand: VoxelCommandListener = (command, { origin }) => {
+    if (origin === "local") {
+      this.send(command);
     }
   };
 
@@ -57,10 +41,7 @@ export class VoxelSyncClient extends CommandSync<
     const { engine } = options;
 
     this.#engine = engine;
-    this.#previousLayerHandler = engine.onLayerUpdated;
-    this.#previousBlockHandler = engine.onBlockUpdated;
-    engine.onLayerUpdated = this.#handleLayerUpdated;
-    engine.onBlockUpdated = this.#handleBlockUpdated;
+    engine.on("command", this.#sendLocalCommand);
     this.on("snapshot", (snapshot) => engine.load(snapshot));
     this.on("command", (command) => this.#applyRemote(command));
   }
@@ -75,8 +56,7 @@ export class VoxelSyncClient extends CommandSync<
   }
 
   override destroy(): void {
-    this.#engine.onLayerUpdated = this.#previousLayerHandler;
-    this.#engine.onBlockUpdated = this.#previousBlockHandler;
+    this.#engine.off("command", this.#sendLocalCommand);
     super.destroy();
     this.room.leave();
   }
@@ -84,37 +64,10 @@ export class VoxelSyncClient extends CommandSync<
   #applyRemote(
     command: VoxelNetworkCommand
   ): void {
-    const engine = this.#engine;
+    if (command.action === "world-replace") {
+      return;
+    }
 
-    switch (command.action) {
-      case "world-replace":
-        return;
-      case "block-defined":
-        this.#applyBlock(() => engine.defineBlock(command.block));
-        break;
-      case "block-removed":
-        this.#applyBlock(() => engine.removeBlock(command.blockId));
-        break;
-      case "block-moved":
-        this.#applyBlock(
-          () => engine.moveBlock(command.blockId, command.toIndex)
-        );
-        break;
-      default:
-        engine.applyRemoteCommand(command);
-        this.#previousLayerHandler?.(command);
-    }
-  }
-
-  #applyBlock(
-    apply: () => void
-  ): void {
-    this.#applyingRemote = true;
-    try {
-      apply();
-    }
-    finally {
-      this.#applyingRemote = false;
-    }
+    this.#engine.apply(command, { origin: "remote" });
   }
 }

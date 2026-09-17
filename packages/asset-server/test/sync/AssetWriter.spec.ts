@@ -130,6 +130,31 @@ describe("AssetWriter — create", () => {
     assert.strictEqual(text(await harness.source.read("a.png")), "one");
   });
 
+  test("suffixes a taken path before the full extension on request", async() => {
+    await using harness = await syncHarness();
+    for (const path of ["maps/world.voxelmap.json", "maps/world-2.voxelmap.json"]) {
+      await harness.writer.create({
+        path,
+        data: bytes("taken"),
+        actor: kActor
+      });
+    }
+
+    const created = (await harness.writer.create({
+      path: "maps/world.voxelmap.json",
+      data: bytes("new"),
+      actor: kActor,
+      onPathConflict: "suffix"
+    })).unwrap();
+    await harness.projector.flush();
+
+    assert.strictEqual(
+      harness.identity.byId(created.assetId)?.path,
+      "maps/world-3.voxelmap.json"
+    );
+    assert.strictEqual(text(await harness.source.read("maps/world-3.voxelmap.json")), "new");
+  });
+
   test("refuses a path taken by an asset not projected yet", async() => {
     await using harness = await syncHarness();
 

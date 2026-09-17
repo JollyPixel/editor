@@ -255,3 +255,39 @@ test.describe("import progress", () => {
     await expect(panel.getByRole("tab")).toHaveCount(2);
   });
 });
+
+test.describe("texture API", () => {
+  test("addTexture can leave the active texture and texture-change reports its source", async({ panel }) => {
+    const result = await panel.evaluate((element: PixelDrawPanel) => {
+      const sources: string[] = [];
+      element.addEventListener("texture-change", (event) => {
+        sources.push(event.detail.source);
+      });
+      const firstId = element.activeTextureId;
+      element.addTexture(
+        { id: "background", name: "Background" },
+        { activate: false }
+      );
+      const afterAdd = element.activeTextureId;
+      element.activeTextureId = "background";
+
+      return {
+        firstId,
+        afterAdd,
+        sources,
+        ids: element.textures.map((texture) => texture.id)
+      };
+    });
+
+    expect(result.afterAdd).toBe(result.firstId);
+    expect(result.ids).toContain("background");
+    expect(result.sources).toEqual(["api"]);
+
+    const userSource = panel.evaluate((element: PixelDrawPanel) => new Promise<string>((resolve) => {
+      element.addEventListener("texture-change", (event) => resolve(event.detail.source), { once: true });
+    }));
+    await panel.getByRole("tab").first().click();
+
+    expect(await userSource).toBe("user");
+  });
+});

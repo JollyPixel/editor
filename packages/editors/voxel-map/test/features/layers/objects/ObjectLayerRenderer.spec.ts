@@ -14,7 +14,7 @@ import type {
   VoxelWorld,
   VoxelObjectJSON,
   VoxelObjectLayerJSON,
-  VoxelLayerHookEvent
+  VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -34,7 +34,7 @@ interface RendererHarness {
   areaOf(objectId: string): AreaBox;
   press(clientX: number, clientY: number): void;
   drag(clientX: number, clientY: number): void;
-  publish(event: VoxelLayerHookEvent): void;
+  publish(event: VoxelLayerCommand): void;
 }
 
 function createObject(
@@ -177,7 +177,7 @@ function createHarness(
         }));
       }
     },
-    publish(event: VoxelLayerHookEvent): void {
+    publish(event: VoxelLayerCommand): void {
       editorState.world.emit("layerUpdated", event);
     }
   };

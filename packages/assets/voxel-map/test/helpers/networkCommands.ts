@@ -2,14 +2,14 @@
 import {
   type BlockShapeID,
   resolveBlockDefinition,
-  type VoxelLayerHookEvent
+  type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "../../src/network/server.ts";
 import { makeBlockDef } from "./blocks.ts";
 
-type AddedCommand = Extract<VoxelLayerHookEvent, { action: "added"; }>;
+type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;
 
 export function makeAddedCommand(
   layerName: string

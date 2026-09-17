@@ -29,6 +29,18 @@ const canvas = await panel.initialize({
 
 `initialize(options?)` takes the same `PixelArtCanvasOptions` as `new PixelArtCanvas(...)` (see [PixelArtCanvas.md](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md)), plus optional `id` (default `"default"`), `name` (default `"Texture"`) and `tooltip` for the first texture, and resolves with the created instance. Must `await` it: the canvas host div only exists after Lit's first render. Calling it again destroys every open texture first.
 
+A host that manages several textures from the start calls `configure(options?)` instead, then `addTexture()` for each one:
+
+```ts
+await panel.configure({ zoom: { max: 32 } });
+for (const texture of textures) {
+  panel.addTexture(texture, { activate: false });
+}
+panel.activeTextureId = textures[0].id;
+```
+
+The first texture added is always activated.
+
 ## UV access
 
 `uv-access` sets how much of the UV map the panel exposes. Region rendering does not depend on it: a region is drawn when [`UVMap.isVisible()`](../../../../pixel-draw-renderer/docs/uv/UVMap.md) is true, in every mode.
@@ -99,7 +111,7 @@ panel.addEventListener("texture-close-request", (event) => {
 });
 ```
 
-`addTexture(options)` merges `options` over the options given to `initialize()`, one top-level key at a time, so pass `texture` to avoid inheriting the first texture's size and `init`. Callbacks such as `onHistoryChange` stay bound to the canvas they were passed for. The panel's own toolbars only follow the active canvas.
+`addTexture(options)` merges `options` over the options given to `configure()` or `initialize()`, one top-level key at a time, so pass `texture` to avoid inheriting the first texture's size and `init`. Callbacks such as `onHistoryChange` stay bound to the canvas they were passed for. The panel's own toolbars only follow the active canvas.
 
 ### texture-import-policy
 
@@ -133,17 +145,19 @@ as soon as the event has been dispatched.
 
 | Member | What it does |
 |---|---|
-| `initialize(options?)` | Creates the first texture and returns its `PixelArtCanvas`. Call once. |
-| `canvasManager` | The active texture's `PixelArtCanvas`, or `null` before `initialize()`. |
-| `addTexture(options)` | Creates a texture from `{ id, name, tooltip?, ...PixelArtCanvasOptions }`, makes it active and returns its canvas. Throws before `initialize()` or for a duplicate `id`. |
+| `initialize(options?)` | `configure(options)`, then creates the first texture and returns its `PixelArtCanvas`. Call once. |
+| `configure(options?)` | Sets the `PixelArtCanvasOptions` every `addTexture()` starts from, without creating a texture. |
+| `canvasManager` | The active texture's `PixelArtCanvas`, or `null` before the first texture. |
+| `addTexture(options, { activate? })` | Creates a texture from `{ id, name, tooltip?, ...PixelArtCanvasOptions }` and returns its canvas. It becomes active unless `activate` is `false` and another texture is active. Throws before `configure()` or for a duplicate `id`. |
 | `removeTexture(id)` | Destroys a texture. Removing the active one activates its right neighbour, or its left one when it was last. Throws for an unknown id or the last texture. |
 | `renameTexture(id, name)` | Updates a tab label. Names need not be unique. |
 | `textures` | `{ id, name, tooltip, canvas }[]` in tab order. |
-| `activeTextureId` | The active texture id, or `null` before `initialize()`. Setting it switches texture; unknown ids throw. |
+| `activeTextureId` | The active texture id, or `null` before the first texture. Setting it switches texture; unknown ids throw. |
 | `texture-import-policy` attribute / `textureImportPolicy` property (`"replace" | "add" | "ask"`, default `"replace"`) | See [texture-import-policy](#texture-import-policy). Reflects to the attribute; unknown values fall back to `"replace"`. |
-| `texture-change` event | `detail: { id }`. Fires whenever the active texture changes after `initialize()`: a tab click, `activeTextureId`, `addTexture()` or removing the active texture. |
+| `texture-change` event | `detail: { id, source }`. Fires whenever the active texture changes from one texture to another, so not for the first texture. `source` is `"user"` for a tab click and `"api"` for `activeTextureId`, `addTexture()` or removing the active texture. |
 | `texture-add-request` event | `detail: { name, source, origin, respondWith }`. `name` is the file name without its extension, `source` the decoded `HTMLCanvasElement`, `origin` is `"import"` or `"drop"`. See [Import progress](#import-progress) for `respondWith`. |
 | `texture-close-request` event | `detail: { id }`. Fires from a tab close button or middle click. |
+| `textures-closable` attribute / `texturesClosable` property | Shows the tab close buttons. On by default; turn it off when the host does not let the user close textures. |
 | `onResize()` | Resizes the active canvas to its host box. The panel already observes that box itself (its own layout changes, such as the texture tabs appearing, are covered); call it for outer resizes an observer misses, such as a split-pane drag that only repaints on drag end. |
 | `allow-uv-create-delete` attribute / `allowUvCreateDelete` property | Shows the Create/Delete buttons in the UV toolbar. Off by default: creating/deleting regions only makes sense when the panel owns the UV layout (the package's own example); embeddings over a fixed mesh (e.g. voxel-map) leave it off. |
 | `uv-access` attribute / `uvAccess` property (`"edit" \| "view" \| "none"`, default `"edit"`) | Exposes UV editing, visibility toggles only, or nothing. See [UV access](#uv-access). Reflects to the attribute; unknown values fall back to `"edit"`. |

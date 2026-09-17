@@ -2,7 +2,7 @@
 import * as network from "@jolly-pixel/network/client";
 import {
   AssetCatalog,
-  assetRoomName,
+  AssetRoom,
   type AssetRecord
 } from "@jolly-pixel/asset";
 import {
@@ -101,7 +101,7 @@ class DemoTextures {
     canvas: PixelArtCanvas
   ): Promise<void> {
     const room = this.#client.room<PixelNetworkCommand, PixelServerMessage>(
-      assetRoomName(kPixelArtKind, assetId)
+      new AssetRoom(kPixelArtKind, assetId).toString()
     );
     room.join();
     room.on("peer-joined", (event) => {

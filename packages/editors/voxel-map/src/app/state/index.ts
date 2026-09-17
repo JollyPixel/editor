@@ -19,6 +19,10 @@ export {
   type LayerSelection
 } from "./SelectionStore.ts";
 export {
+  TilesetStore,
+  type TilesetStoreEvents
+} from "./TilesetStore.ts";
+export {
   WorldStore,
   type WorldStoreEvents
 } from "./WorldStore.ts";

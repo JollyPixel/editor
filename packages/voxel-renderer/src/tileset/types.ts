@@ -5,6 +5,12 @@ export interface ResolvedTileRef {
   col: number;
   row: number;
   tilesetId?: string;
+  /**
+   * Square texture region size in source texels, anchored at the tile's
+   * top-left corner.
+   * @default the tileset tileSize
+   */
+  size?: number;
 }
 
 export type Coords = [col: number, row: number];
@@ -46,7 +52,9 @@ export interface TilesetUVRegion {
 export interface TilesetDefinition {
   id: string;
   src: string;
-  /** Tile width/height in pixels (tiles are square) */
+  /**
+   * Tile width/height in pixels (tiles are square).
+   */
   tileSize: number;
   /**
    * Number of tile columns in the atlas.

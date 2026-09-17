@@ -114,22 +114,23 @@ export class AtlasLayout {
 
   uvFor(
     col: number,
-    row: number
+    row: number,
+    size: number = this.tileSize
   ): TilesetUVRegion {
     const {
       cellSize,
       padding,
-      tileSize,
       rows,
       paddedWidth,
       paddedHeight
     } = this;
+    const bottom = ((rows - row) * cellSize) - padding - size;
 
     return {
       offsetU: ((col * cellSize) + padding + 0.5) / paddedWidth,
-      offsetV: ((rows - row - 1) * cellSize + padding + 0.5) / paddedHeight,
-      scaleU: (tileSize - 1) / paddedWidth,
-      scaleV: (tileSize - 1) / paddedHeight
+      offsetV: (bottom + 0.5) / paddedHeight,
+      scaleU: (size - 1) / paddedWidth,
+      scaleV: (size - 1) / paddedHeight
     };
   }
 

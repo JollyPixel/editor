@@ -2,11 +2,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { BlockRegistry } from "@jolly-pixel/voxel.renderer";
-
 // Import Internal Dependencies
-import { applyBlockCommand } from "../../src/network/applyBlockCommand.ts";
+import {
+  applyBlockCommand,
+  BlockRegistry
+} from "../../src/blocks/index.ts";
 import {
   blockDefinedCmd,
   blockMovedCmd

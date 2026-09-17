@@ -1,9 +1,14 @@
 // Import Internal Dependencies
-import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
+import type {
+  VoxelBlockCommand,
+  VoxelLayerCommand
+} from "../../src/commands.ts";
+import { resolveBlockDefinition } from "../../src/blocks/index.ts";
+import { makeBlockDef } from "./blocks.ts";
 
-type AddedCommand = Extract<VoxelLayerHookEvent, { action: "added"; }>;
+type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;
 
-/** An added-layer hook event with empty options, keyed by layer name. */
+/** An added-layer command with empty options, keyed by layer name. */
 export function makeAddedCommand(
   layerName: string
 ): AddedCommand {
@@ -11,5 +16,24 @@ export function makeAddedCommand(
     action: "added",
     layerName,
     metadata: { options: {} }
+  };
+}
+
+export function blockDefinedCmd(
+  options: { id?: number; } = {}
+): Extract<VoxelBlockCommand, { action: "block-defined"; }> {
+  return {
+    action: "block-defined",
+    block: resolveBlockDefinition(makeBlockDef(options.id ?? 1, "cube"))
+  };
+}
+
+export function blockMovedCmd(
+  options: { blockId?: number; toIndex?: number; } = {}
+): Extract<VoxelBlockCommand, { action: "block-moved"; }> {
+  return {
+    action: "block-moved",
+    blockId: options.blockId ?? 1,
+    toIndex: options.toIndex ?? 0
   };
 }

@@ -94,7 +94,8 @@ export class TextureSet {
   }
 
   create(
-    options: PixelDrawTextureOptions
+    options: PixelDrawTextureOptions,
+    activate = true
   ): TextureEntry {
     const { id, name, tooltip = "", ...canvasOptions } = options;
     if (this.#entries.has(id)) {
@@ -128,7 +129,13 @@ export class TextureSet {
       canvas
     };
     this.#entries.set(id, entry);
-    this.activate(entry);
+    if (activate || this.#active === null) {
+      this.activate(entry);
+    }
+    else {
+      this.#show(this.#active.host);
+      this.#host.requestUpdate();
+    }
 
     return entry;
   }

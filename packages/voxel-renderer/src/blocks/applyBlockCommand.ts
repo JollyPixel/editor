@@ -1,8 +1,6 @@
-// Import Third-party Dependencies
-import type { BlockRegistry } from "@jolly-pixel/voxel.renderer";
-
 // Import Internal Dependencies
-import type { VoxelBlockCommand } from "./types.ts";
+import type { BlockRegistry } from "./BlockRegistry.ts";
+import type { VoxelBlockCommand } from "../commands.ts";
 
 export function applyBlockCommand(
   registry: BlockRegistry,

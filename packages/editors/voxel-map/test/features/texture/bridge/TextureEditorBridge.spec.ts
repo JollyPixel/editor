@@ -28,6 +28,12 @@ import { TextureEditorBridge } from "../../../../src/features/texture/bridge/Tex
 import { makeFakeManager } from "./textureBridgeFixtures.ts";
 import { editorState } from "../../../../src/app/state/index.ts";
 
+const kAtlas = {
+  id: "atlas",
+  src: "",
+  tileSize: 16
+};
+
 function makeBlock(
   id: number,
   options: {
@@ -145,7 +151,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
       }));
       const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
       bridge.attach(makeFakeManager(() => hasTransparency));
-      bridge.loadTileset(engine, "atlas");
+      bridge.loadTileset(engine, kAtlas);
       bridge.syncToThree();
       assert.equal(engine.blockRegistry.get(1)!.alphaMode, "mask");
       assert.deepEqual(dirtyReasons, []);
@@ -168,7 +174,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
       const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
       bridge.attach(makeFakeManager((rect) => rect.x === 0));
-      bridge.loadTileset(engine, "atlas");
+      bridge.loadTileset(engine, kAtlas);
 
       bridge.syncToThree();
 
@@ -188,7 +194,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     bridge.syncToThree();
     bridge.syncToThree();
@@ -207,7 +213,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => false));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     bridge.syncToThree();
 
@@ -226,7 +232,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager((rect) => rect.x === 32));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     bridge.syncToThree();
 
@@ -298,7 +304,7 @@ describe("TextureEditorBridge / oversized textures", () => {
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(manager);
 
-    const logged = captureErrors(() => bridge.loadTileset(engine, "atlas"));
+    const logged = captureErrors(() => bridge.loadTileset(engine, kAtlas));
 
     assert.deepEqual(logged, []);
     assert.equal(manager.assigned!.naturalWidth, 1024);
@@ -312,7 +318,7 @@ describe("TextureEditorBridge / oversized textures", () => {
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(manager);
 
-    const logged = captureErrors(() => bridge.loadTileset(engine, "atlas"));
+    const logged = captureErrors(() => bridge.loadTileset(engine, kAtlas));
 
     assert.equal(manager.assigned, null);
     assert.equal(logged.length, 1);
@@ -329,7 +335,7 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(manager);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
     updatedTilesets.length = 0;
 
     manager.document.emit("changed", {
@@ -359,7 +365,7 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(makeFakeManager(() => false));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     scheduler.frame();
     scheduler.frame();
@@ -375,7 +381,7 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(manager);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
     updatedTilesets.length = 0;
 
     /*
@@ -405,7 +411,7 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(manager);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
     bridge.destroy();
 
     manager.document.emit("changed", {
@@ -433,7 +439,7 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
     const manager = makeFakeManager(() => transparent);
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(manager);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     /*
      * Both blocks now read as opaque. Make every tile read transparent, but
@@ -471,7 +477,7 @@ describe("TextureEditorBridge / transparency batching", () => {
     const manager = makeFakeManager(() => transparent);
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(manager);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
     dirtyReasons.length = 0;
 
     for (let frame = 0; frame < 4; frame++) {
@@ -503,7 +509,7 @@ describe("TextureEditorBridge / transparency batching", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(manager);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
     updatedTilesets.length = 0;
 
     manager.document.emit("changed", {
@@ -536,7 +542,7 @@ describe("TextureEditorBridge / placeholder block registry", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     assert.equal(engine.blockRegistry.get(1)!.alphaMode, undefined);
     assert.deepEqual(dirtyReasons, []);
@@ -559,7 +565,7 @@ describe("TextureEditorBridge / derived transparency", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     assert.equal(engine.blockRegistry.get(1)!.alphaMode, "blend");
     assert.deepEqual(dirtyReasons, ["block-defined"]);
@@ -576,7 +582,7 @@ describe("TextureEditorBridge / derived transparency", () => {
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     // Only the second column of the atlas holds alpha.
     bridge.attach(makeFakeManager((rect) => rect.x === 16));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
     assert.equal(engine.blockRegistry.get(1)!.alphaMode, "opaque");
 
     engine.defineBlock({
@@ -593,7 +599,7 @@ describe("TextureEditorBridge / derived transparency", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     engine.defineBlock(makeBlock(7, {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
@@ -611,7 +617,7 @@ describe("TextureEditorBridge / derived transparency", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
@@ -625,7 +631,7 @@ describe("TextureEditorBridge / derived transparency", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
     bridge.destroy();
 
     engine.defineBlock(makeBlock(2, {
@@ -698,9 +704,28 @@ describe("TextureEditorBridge / placeholder atlas", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(manager);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     assert.deepEqual(manager.textureSetDepths, [1]);
+    bridge.destroy();
+  });
+
+  it("registers the atlas once the room snapshot has landed", () => {
+    const scheduler = makeScheduler();
+    const { engine, loaded } = makeRegisteringEngine();
+    const manager = makeFakeManager(() => false);
+    const { room, deliverSnapshot } = makeSnapshotRoom();
+
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(manager, room);
+    bridge.loadTileset(engine, kAtlas);
+    scheduler.frame();
+    assert.deepEqual(loaded, []);
+
+    deliverSnapshot({ x: 64, y: 64 });
+    scheduler.frame();
+
+    assert.deepEqual(loaded.map(({ id }) => id), ["atlas"]);
     bridge.destroy();
   });
 
@@ -712,7 +737,7 @@ describe("TextureEditorBridge / placeholder atlas", () => {
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(manager, room);
     deliverSnapshot({ x: 64, y: 64 });
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     assert.deepEqual(manager.textureSetDepths, []);
     bridge.destroy();
@@ -725,9 +750,94 @@ describe("TextureEditorBridge / placeholder atlas", () => {
 
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(manager, room);
-    bridge.loadTileset(engine, "atlas");
+    bridge.loadTileset(engine, kAtlas);
 
     assert.deepEqual(manager.textureSetDepths, [1]);
+    bridge.destroy();
+  });
+});
+
+function makeRegisteringEngine() {
+  const loaded: { id: string; tileSize: number; image: unknown; }[] = [];
+  const atlases = new Map<string, object>();
+  const fake = {
+    blockRegistry: new BlockRegistry(),
+    shapeRegistry: BlockShapeRegistry.createDefault(),
+    defineBlocks: () => void 0,
+    tilesetManager: {
+      has: (id: string) => atlases.has(id),
+      atlas: (id: string) => atlases.get(id)
+    },
+    loadTileset(
+      def: { id: string; src: string; tileSize: number; },
+      texture: { image: unknown; }
+    ) {
+      loaded.push({
+        id: def.id,
+        tileSize: def.tileSize,
+        image: texture.image
+      });
+      atlases.set(def.id, {
+        def: {
+          ...def,
+          cols: Math.floor(64 / def.tileSize),
+          rows: Math.floor(64 / def.tileSize)
+        },
+        sourceTexture: texture,
+        updateSource: () => void 0
+      });
+    }
+  };
+
+  return {
+    engine: fake as unknown as VoxelEngine,
+    loaded
+  };
+}
+
+describe("TextureEditorBridge / atlas registration", () => {
+  it("registers a missing tileset from the canvas pixels", () => {
+    const { engine, loaded } = makeRegisteringEngine();
+    const manager = makeFakeManager(() => false);
+
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+    bridge.attach(manager);
+    bridge.loadTileset(engine, { ...kAtlas, cols: 99 });
+
+    assert.deepEqual(loaded, [
+      {
+        id: "atlas",
+        tileSize: 16,
+        image: manager.textureCanvas()
+      }
+    ]);
+    assert.deepEqual(manager.textureSetDepths, []);
+    bridge.destroy();
+  });
+
+  it("registers again only when the tile grid changes", () => {
+    const { engine, loaded } = makeRegisteringEngine();
+    const manager = makeFakeManager(() => false);
+
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+    bridge.attach(manager);
+    bridge.loadTileset(engine, kAtlas);
+    bridge.loadTileset(engine, kAtlas);
+    bridge.loadTileset(engine, { ...kAtlas, tileSize: 32 });
+
+    assert.deepEqual(loaded.map(({ tileSize }) => tileSize), [16, 32]);
+    bridge.destroy();
+  });
+
+  it("registers nothing for a texture smaller than one tile", () => {
+    const { engine, loaded } = makeRegisteringEngine();
+    const manager = makeFakeManager(() => false);
+
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+    bridge.attach(manager);
+    bridge.loadTileset(engine, { ...kAtlas, tileSize: 128 });
+
+    assert.deepEqual(loaded, []);
     bridge.destroy();
   });
 });

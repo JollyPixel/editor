@@ -4,8 +4,6 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
-import { makeAtlasDef } from "../helpers/atlas.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
 import {
   buildGeometries,
   countChunkVertices,
@@ -20,7 +18,6 @@ describe("VoxelMeshBuilder — isolated cube", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    // 6 quad faces × 4 vertices = 24
     assert.equal(countChunkVertices(f), 24);
   });
 
@@ -75,7 +72,6 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     assert.equal(uvs.normalized, true);
     assert.equal(uvs.itemSize, 2);
 
-    // Layer opacity rides on the material, so there is no color attribute.
     assert.equal(geometry.getAttribute("color"), undefined);
   });
 
@@ -85,10 +81,6 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     const geometry = firstGeometry(f);
     const normals = geometry.getAttribute("normal");
 
-    /*
-     * A cube's six faces only ever point down an axis, so every component
-     * decodes back to exactly -1, 0 or 1.
-     */
     for (let i = 0; i < normals.count; i++) {
       for (const component of [normals.getX(i), normals.getY(i), normals.getZ(i)]) {
         assert.ok(
@@ -105,7 +97,6 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     const geometry = firstGeometry(f);
     const uvs = geometry.getAttribute("uv");
 
-    // Every vertex of a cube sits on a corner of its tile's atlas rect.
     const region = f.tilesetManager.atlas().uvFor(DEFAULT_TEXTURE.col, DEFAULT_TEXTURE.row);
     const step = 1 / 65535;
 
@@ -131,7 +122,6 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     const index = geometry.getIndex();
     assert.ok(index);
 
-    // 6 quads → 12 triangles.
     assert.ok(index.array instanceof Uint16Array);
     assert.equal(index.count, 36);
   });
@@ -162,7 +152,6 @@ describe("VoxelMeshBuilder — greedy toggle", () => {
 describe("VoxelMeshBuilder — buffers are reused between chunks", () => {
   it("a second chunk's geometry contains only its own faces", () => {
     const f = makeFixture();
-    // chunkSize is 4, so these land in chunk (0,0,0) and chunk (1,0,0).
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 4, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
@@ -178,7 +167,6 @@ describe("VoxelMeshBuilder — buffers are reused between chunks", () => {
       assert.equal(index.count, 36);
     }
 
-    // The isolated cubes must not have been merged into a shared buffer.
     const positions = [...second.values()][0].getAttribute("position");
     assert.equal(positions.getX(0), 5);
   });
@@ -198,13 +186,14 @@ describe("VoxelMeshBuilder — precompiled geometry follows registry changes", (
     assert.equal(countChunkVertices(f), 24);
   });
 
-  it("recomputes UVs when a tileset is re-registered with a new tile size", () => {
+  it("recomputes UVs when a tileset is resized", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
     const before = firstGeometry(f).getAttribute("uv").getX(1);
 
-    f.tilesetManager.registerTexture(makeAtlasDef({ tileSize: 8 }), mockTexture());
+    f.tilesetManager.tilesets.resize("atlas", 8);
+    f.tilesetManager.syncAtlases();
 
     const after = firstGeometry(f).getAttribute("uv").getX(1);
 
@@ -239,7 +228,6 @@ describe("VoxelMeshBuilder — build statistics", () => {
     const { stats } = f.builder;
 
     assert.equal(stats.voxels, 2);
-    // The two touching faces are culled, 10 of the 12 candidates remain.
     assert.equal(stats.faces, 10);
     assert.equal(stats.culledFaces, 2);
   });
@@ -278,7 +266,6 @@ describe("VoxelMeshBuilder — derived stats", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     buildGeometries(f);
 
-    // One isolated cube: six visible faces, one solid voxel.
     assert.equal(f.builder.stats.voxels, 1);
     assert.equal(f.builder.stats.hiddenVoxels, 0);
     assert.equal(f.builder.stats.facesPerSolidVoxel, 6);
@@ -295,7 +282,6 @@ describe("VoxelMeshBuilder — derived stats", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     buildGeometries(f);
 
-    // position 3×f32 + normal 3×i8 + uv 2×u16 + tileRegion 4×u16.
     assert.equal(f.builder.stats.bytesPerVertex, 12 + 3 + 4 + 8);
   });
 });

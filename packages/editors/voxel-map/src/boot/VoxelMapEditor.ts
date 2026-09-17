@@ -11,7 +11,7 @@ import { EditorScene } from "../app/EditorScene.ts";
 import { ViewFocus } from "../scene/index.ts";
 import { EditorSession } from "./EditorSession.ts";
 import { EditorShell } from "./EditorShell.ts";
-import { preloadTilesets } from "./assets/preloadTilesets.ts";
+import { preloadOfflineTilesets } from "./assets/preloadOfflineTilesets.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
@@ -52,16 +52,17 @@ export class VoxelMapEditor {
     const session = offline
       ? undefined
       : await EditorSession.open({ world });
-    const tilesets = await preloadTilesets(
-      session?.assets.world,
-      runtime.manager
-    );
+    await session?.catalog.ready;
+    const tilesets = session === undefined ?
+      await preloadOfflineTilesets(runtime.manager) :
+      [];
 
     const viewFocus = new ViewFocus();
     const scene = new EditorScene(editorState, {
       defaultLayerName: kDefaultLayerName,
       tilesets,
       voxelRoom: session?.worldRoom,
+      catalog: session?.catalog,
       identity: session?.identity,
       viewFocus
     });
@@ -70,7 +71,9 @@ export class VoxelMapEditor {
       viewFocus,
       input: runtime.world.input,
       scene,
-      textureRoom: session?.textureRoom
+      textureRooms: session === undefined ?
+        undefined :
+        (assetId) => session.textureRoom(assetId)
     });
 
     await runtime.load({

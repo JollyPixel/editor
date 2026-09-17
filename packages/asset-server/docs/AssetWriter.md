@@ -42,6 +42,11 @@ interface CreateAssetInput {
 The backend generates an asset ID when `assetId` is omitted. It resolves the
 kind from the registered path globs when `kind` is omitted.
 
+With `onPathConflict: "suffix"`, a taken path gets `-2`, `-3`, ... inserted
+before its first extension (`maps/world.voxelmap.json` becomes
+`maps/world-2.voxelmap.json`) until the path is free. The default, `"reject"`,
+returns `AssetPathConflictError`.
+
 ## Update, rename and remove
 
 ```ts
@@ -60,7 +65,8 @@ Every method returns failures as an error result and appends nothing:
   [root-relative POSIX paths](../../asset-source/docs/AssetSource.md#paths);
 - a `kind` passed to `create` that no handler registers:
   `UnknownAssetKindError`;
-- a `create` or `rename` target already used by another asset:
+- a `create` (without `onPathConflict: "suffix"`) or `rename` target already
+  used by another asset:
   `AssetPathConflictError`, carrying `path` and the occupying `assetId`.
 
 The conflict check reads the desired state, so a path claimed by an event that

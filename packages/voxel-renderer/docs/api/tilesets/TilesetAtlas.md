@@ -13,15 +13,15 @@ class TilesetAtlas {
 
   constructor(
     definition: TilesetDefinition,
-    texture: THREE.Texture<HTMLImageElement>,
+    texture: TilesetTexture,
     padding?: number | null
   );
-  uvFor(col: number, row: number): TilesetUVRegion;
+  uvFor(col: number, row: number, size?: number): TilesetUVRegion;
   updateSource(
     image: TilesetImage,
     bounds?: AtlasRegion
   ): void;
-  dispose(): void;
+  dispose(options?: { keepSource?: boolean; }): void;
 }
 ```
 
@@ -57,4 +57,5 @@ if (dirty !== null) {
 }
 ```
 
-`dispose()` disposes both textures.
+`dispose()` disposes both textures. With `keepSource: true` it leaves
+`sourceTexture` alone, so another atlas can be built on it.

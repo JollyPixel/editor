@@ -10,14 +10,14 @@ import type {
 } from "../app/EditorScene.ts";
 import { EditorPanels } from "../app/panels/index.ts";
 import type { ViewFocus } from "../scene/index.ts";
-import type { EditorTextureRoom } from "./EditorSession.ts";
+import type { TextureRoomFactory } from "../features/texture/TextureEditor.ts";
 
 export interface EditorShellOptions {
   state: EditorState;
   viewFocus: ViewFocus;
   input: Input;
   scene: EditorScene;
-  textureRoom?: EditorTextureRoom;
+  textureRooms?: TextureRoomFactory;
 }
 
 export class EditorShell {
@@ -32,7 +32,7 @@ export class EditorShell {
       viewFocus,
       input,
       scene,
-      textureRoom
+      textureRooms
     } = options;
 
     this.#disposables.push(
@@ -58,7 +58,7 @@ export class EditorShell {
     const panels = EditorPanels.mount(document, {
       state,
       viewFocus,
-      textureRoom,
+      textureRooms,
       onLoadWorld: (data) => scene.loadWorld(data),
       onTeleportToPeer: (clientId) => scene.teleportToPeer(clientId),
       onCanvasHoverChange: (hovering) => {
