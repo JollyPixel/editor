@@ -1,21 +1,28 @@
 // Import Third-party Dependencies
-import { defineSchema } from "ata-validator";
+import {
+  defineSchema,
+  type Infer
+} from "ata-validator";
+
+export const assetInlineContentSchema = defineSchema({
+  type: "object",
+  properties: {
+    type: { const: "inline" },
+    encoding: { const: "base64" },
+    data: { type: "string" }
+  },
+  required: [
+    "type",
+    "encoding",
+    "data"
+  ]
+});
+
+export type AssetInlineContent = Infer<typeof assetInlineContentSchema>;
 
 export const assetContentSchema = defineSchema({
   oneOf: [
-    {
-      type: "object",
-      properties: {
-        type: { const: "inline" },
-        encoding: { const: "base64" },
-        data: { type: "string" }
-      },
-      required: [
-        "type",
-        "encoding",
-        "data"
-      ]
-    },
+    assetInlineContentSchema,
     {
       type: "object",
       properties: {

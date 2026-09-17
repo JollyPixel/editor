@@ -29,7 +29,7 @@ AssetRoom.parse("pixelart:a:1"); // kind "pixelart", assetId "a:1"
 ```
 
 The first colon separates the kind from the asset ID. Empty kinds, empty IDs
-and names without a colon are rejected. `AssetRoom` is re-exported from
+and names without a colon are rejected. Import `AssetRoom` from
 [`@jolly-pixel/asset`](../../asset/docs/api/domain/AssetRoom.md).
 
 ## Admission

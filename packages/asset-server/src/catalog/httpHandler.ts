@@ -11,8 +11,6 @@ import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import type { CatalogProjection } from "./CatalogProjection.ts";
 
-export const DEFAULT_CATALOG_PATH = CATALOG_URL_PATH;
-
 export type CatalogHandler = (
   request: IncomingMessage,
   response: ServerResponse,
@@ -22,7 +20,7 @@ export type CatalogHandler = (
 export interface CatalogHandlerOptions {
   projection: CatalogProjection;
   /**
-   * @default DEFAULT_CATALOG_PATH
+   * @default CATALOG_URL_PATH
    */
   path?: string;
 }
@@ -32,7 +30,7 @@ export function createCatalogHandler(
 ): CatalogHandler {
   const {
     projection,
-    path = DEFAULT_CATALOG_PATH
+    path = CATALOG_URL_PATH
   } = options;
 
   return function catalogHandler(

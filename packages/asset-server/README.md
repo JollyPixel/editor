@@ -51,6 +51,8 @@ system events.
 
 ## 📚 API
 
+- [`Architecture`](./ARCHITECTURE.md): visual map of event flow, projections,
+  live state and reconciliation
 - [`AssetBackend`](./docs/AssetBackend.md): setup, options and lifecycle
 - [`AssetWriter`](./docs/AssetWriter.md): create, update, rename and remove assets
 - [`AssetSource`](../asset-source/docs/AssetSource.md): in-memory and

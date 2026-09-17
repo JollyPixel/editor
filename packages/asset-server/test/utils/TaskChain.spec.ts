@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TaskChain } from "#src/index.ts";
+import { TaskChain } from "#src/utils/index.ts";
 
 describe("TaskChain", () => {
   test("runs queued tasks one after another", async() => {

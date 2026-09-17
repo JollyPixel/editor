@@ -131,7 +131,9 @@ Its state is the file's bytes, exactly like `binary`, and it has no
 `commands`, so texture assets get no editing room. The kind exists to
 name the record: `AssetCatalog.resolve()` rejects a record whose kind does not
 match its reference, and nothing on the browser side loads `binary`. Pass
-`match` to narrow the globs from the default image extensions.
+`match` to narrow the globs from the default image extensions. It declares no
+`contentTypes`: the static handler of `@jolly-pixel/asset-source` already
+serves those image extensions.
 
 ## Kinds shipped by other packages
 

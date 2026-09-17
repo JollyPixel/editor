@@ -9,12 +9,12 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { ASSET_EVENT_PREFIX } from "../constants.ts";
-import type { CatalogChange } from "./protocol.ts";
+import type { CatalogChange } from "./client/protocol.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_CREATED,
   ASSET_DELETED,
+  ASSET_EVENT_PREFIX,
   ASSET_RENAMED,
   ASSET_UPDATED,
   parseAssetEvent,
@@ -108,13 +108,14 @@ export class CatalogProjection extends Emitter<
       case ASSET_CREATED:
       case ASSET_UPDATED: {
         const data = event.eventData;
-
-        return this.#upsert(new AssetRecord({
+        const record = new AssetRecord({
           id,
           kind: data.kind,
           source: data.path,
           revision: data.hash
-        }), event.eventType);
+        });
+
+        return this.#upsert(record, event.eventType);
       }
       case ASSET_RENAMED: {
         const data = event.eventData;
@@ -122,12 +123,14 @@ export class CatalogProjection extends Emitter<
           this.#catalog.get(id) :
           null;
 
-        return this.#upsert(new AssetRecord({
+        const record = new AssetRecord({
           id,
           kind: previous?.kind ?? data.kind,
           source: data.to,
           revision: previous?.revision ?? data.hash
-        }), event.eventType);
+        });
+
+        return this.#upsert(record, event.eventType);
       }
       case ASSET_DELETED: {
         if (!this.#catalog.has(id)) {

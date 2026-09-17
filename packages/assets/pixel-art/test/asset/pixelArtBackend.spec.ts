@@ -15,8 +15,8 @@ import {
   Server,
   type ClientHandle
 } from "@jolly-pixel/network";
+import { AssetRoom } from "@jolly-pixel/asset";
 import {
-  AssetRoom,
   createAssetBackend,
   foldAssetEvent
 } from "@jolly-pixel/asset-server";

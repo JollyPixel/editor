@@ -2,7 +2,7 @@
 import type { MessageProtocol } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AssetLiveProtocol } from "../rooms/AssetRoomExtension.ts";
+import type { AssetLiveProtocol } from "./AssetLiveProtocol.ts";
 
 export interface SnapshotPolicy {
   /**

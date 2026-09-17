@@ -9,10 +9,8 @@ import assert from "node:assert/strict";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import {
-  CatalogIdentitySidecar,
-  seedAssetSource
-} from "#src/index.ts";
+import { seedAssetSource } from "#src/index.ts";
+import { IdentitySidecar } from "#src/identity/index.ts";
 import {
   bytes,
   text
@@ -110,7 +108,7 @@ describe("seedAssetSource", () => {
       },
       "maps/overworld.voxelmap.json": () => bytes("{}")
     });
-    const sidecar = await CatalogIdentitySidecar.load(source);
+    const sidecar = await IdentitySidecar.load(source);
 
     assert.deepStrictEqual(written, [
       "textures/block.pixelart",
@@ -137,7 +135,7 @@ describe("seedAssetSource", () => {
         content: () => bytes("pixels")
       }
     });
-    const sidecar = await CatalogIdentitySidecar.load(source);
+    const sidecar = await IdentitySidecar.load(source);
 
     assert.strictEqual(sidecar.size, 0);
   });

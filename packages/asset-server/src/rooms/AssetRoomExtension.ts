@@ -7,47 +7,19 @@ import type {
   AssetCommands,
   AssetRoomBinding
 } from "../kinds/AssetKindHandler.ts";
+import {
+  ASSET_ROOM_DELETED,
+  ASSET_ROOM_REJECTED,
+  type AssetLiveProtocol,
+  type AssetRoomDeletedMessage,
+  type AssetRoomRejectedMessage
+} from "../kinds/AssetLiveProtocol.ts";
 import { parseAssetCommand } from "../kinds/parseAssetCommand.ts";
 import { actorOf } from "../events/AssetEvents.ts";
 import {
   assetRoomDeletedSchema,
-  assetRoomRejectedSchema,
-  ASSET_ROOM_DELETED,
-  ASSET_ROOM_REJECTED
+  assetRoomRejectedSchema
 } from "./AssetRoomExtension.schema.ts";
-
-export interface AssetRoomMessage {
-  readonly type: string;
-  readonly data: unknown;
-}
-
-export interface AssetRoomDeletedMessage {
-  readonly type: typeof ASSET_ROOM_DELETED;
-}
-
-export interface AssetRoomRejectedMessage {
-  readonly type: typeof ASSET_ROOM_REJECTED;
-  readonly reason: string;
-}
-
-export interface AssetArbitration<TCommand = unknown> {
-  readonly command: TCommand;
-  commit?(): void;
-}
-
-export interface AssetLiveProtocol<TCommand = unknown> {
-  readonly snapshotSchema: network.JSONSchema;
-
-  snapshot(): unknown;
-
-  arbitrate(
-    command: TCommand
-  ): AssetArbitration<TCommand> | null;
-
-  broadcast?(
-    command: TCommand
-  ): AssetRoomMessage;
-}
 
 export class AssetRoomExtension<
   TCommand = unknown

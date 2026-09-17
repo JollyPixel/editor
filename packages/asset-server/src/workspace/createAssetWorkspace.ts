@@ -15,7 +15,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { EVENTS_DB_PATH } from "../constants.ts";
+import { EVENTS_DB_PATH } from "../stateDirectory.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,

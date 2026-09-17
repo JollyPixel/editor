@@ -3,9 +3,9 @@ import type { AssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
-  CatalogIdentitySidecar,
+  IdentitySidecar,
   type IdentityEntry
-} from "../catalog/CatalogIdentitySidecar.ts";
+} from "../identity/IdentitySidecar.ts";
 
 export type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
 
@@ -48,11 +48,11 @@ export async function seedAssetSource(
   }
 
   if (identities.length > 0) {
-    const sidecar = await CatalogIdentitySidecar.load(source);
+    const sidecar = await IdentitySidecar.load(source);
     for (const identity of identities) {
       sidecar.set(identity);
     }
-    await sidecar.save(source);
+    await sidecar.save();
   }
 
   return written;

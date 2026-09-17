@@ -4,14 +4,12 @@ import {
   createAssetStaticHandler,
   type AssetStaticHandlerOptions
 } from "@jolly-pixel/asset-source";
+import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
 import { WebsocketTransport } from "@jolly-pixel/network/transport/websocket.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network/transport/constants.ts";
 
 // Import Internal Dependencies
-import {
-  createCatalogHandler,
-  DEFAULT_CATALOG_PATH
-} from "../catalog/httpHandler.ts";
+import { createCatalogHandler } from "../catalog/httpHandler.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import {
   createAssetWorkspace,
@@ -22,7 +20,7 @@ import {
 export interface AssetCatalogPluginOptions {
   projection: CatalogProjection;
   /**
-   * @default DEFAULT_CATALOG_PATH
+   * @default CATALOG_URL_PATH
    */
   path?: string;
 }
@@ -32,7 +30,7 @@ export function createAssetCatalogPlugin(
 ): Plugin {
   const {
     projection,
-    path = DEFAULT_CATALOG_PATH
+    path = CATALOG_URL_PATH
   } = options;
 
   return {
@@ -65,7 +63,7 @@ export function createAssetStaticPlugin(
 
 export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
   /**
-   * @default DEFAULT_CATALOG_PATH
+   * @default CATALOG_URL_PATH
    */
   catalogPath?: string;
   /**
@@ -90,7 +88,7 @@ export function createAssetWorkspacePlugin(
   options: AssetWorkspacePluginOptions
 ): Plugin {
   const {
-    catalogPath = DEFAULT_CATALOG_PATH,
+    catalogPath = CATALOG_URL_PATH,
     prefix,
     socketPath = DEFAULT_WEBSOCKET_PATH,
     onReady,

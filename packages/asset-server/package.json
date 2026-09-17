@@ -12,8 +12,8 @@
       "default": "./dist/index.js"
     },
     "./catalog/client": {
-      "types": "./dist/catalog/client.d.ts",
-      "default": "./dist/catalog/client.js"
+      "types": "./dist/catalog/client/index.d.ts",
+      "default": "./dist/catalog/client/index.js"
     },
     "./kinds": {
       "types": "./dist/kinds/contract.d.ts",
@@ -60,7 +60,8 @@
     "@openally/result": "3.1.0",
     "ata-validator": "1.13.2",
     "js-base64": "3.9.3",
-    "loglayer": "9.4.0"
+    "loglayer": "9.4.0",
+    "picomatch": "4.0.7"
   },
   "peerDependencies": {
     "vite": "^8.0.0"

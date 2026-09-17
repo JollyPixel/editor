@@ -54,8 +54,9 @@ releases backend subscriptions. It does not close the injected server or event
 store. `[Symbol.asyncDispose]` calls `close()`.
 
 The returned object also exposes `internals` for tests and hosts that need to
-drive an individual stage. Normal application code should use `writer`,
-`catalog`, `flush()` and `attach()`.
+drive an individual stage. The stage classes are not exported from the package
+root. Normal application code should use `writer`, `catalog`, `flush()` and
+`attach()`.
 
 ## Workspace files
 

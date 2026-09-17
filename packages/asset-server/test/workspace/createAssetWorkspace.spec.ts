@@ -16,10 +16,10 @@ import {
   type ClientHandle,
   type RoomContext
 } from "@jolly-pixel/network";
+import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
-  AssetRoom,
   createAssetWorkspace,
   STATE_GITIGNORE_PATH,
   type AssetWorkspace

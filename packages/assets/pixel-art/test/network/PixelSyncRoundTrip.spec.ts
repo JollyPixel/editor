@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
+import { AssetRoom } from "@jolly-pixel/asset";
 import {
-  AssetRoom,
   AssetRoomExtension,
   foldAssetEvent,
   type AssetRoomBinding

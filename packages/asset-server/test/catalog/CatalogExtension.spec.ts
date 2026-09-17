@@ -15,6 +15,7 @@ import {
   type RoomPeer,
   type RoomContext
 } from "@jolly-pixel/network";
+import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
@@ -30,7 +31,6 @@ import {
   CATALOG_RENAME,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
-  DEFAULT_CATALOG_PATH,
   type CatalogCommand
 } from "#src/index.ts";
 import {
@@ -618,7 +618,7 @@ describe("catalog HTTP handler", () => {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:${port}${DEFAULT_CATALOG_PATH}`
+        `http://127.0.0.1:${port}${CATALOG_URL_PATH}`
       );
 
       assert.strictEqual(response.status, 200);
@@ -670,7 +670,7 @@ describe("catalog HTTP handler", () => {
     };
 
     createCatalogHandler({ projection })(
-      { url: `${DEFAULT_CATALOG_PATH}?since=12`, method: "GET" } as never,
+      { url: `${CATALOG_URL_PATH}?since=12`, method: "GET" } as never,
       response as never,
       () => void 0
     );
@@ -697,7 +697,7 @@ describe("catalog HTTP handler", () => {
     };
 
     createCatalogHandler({ projection })(
-      { url: DEFAULT_CATALOG_PATH, method: "POST" } as never,
+      { url: CATALOG_URL_PATH, method: "POST" } as never,
       response as never,
       () => void 0
     );

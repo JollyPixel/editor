@@ -68,9 +68,11 @@ starting.
 ## Snapshots
 
 Domain events update the live state held by an asset kind handler. The
-`SnapshotScheduler` serializes that state and appends `asset.updated` after the
-configured quiet period, capped by the maximum delay. A snapshot is skipped
-when the serialized bytes have the current content hash.
+`SnapshotScheduler` serializes that state and calls `writer.update()` after the
+configured quiet period, capped by the maximum delay. The resulting
+`asset.updated` is attributed to the `{ type: "system", source: "snapshot" }`
+actor. A snapshot is skipped when the serialized bytes have the current content
+hash.
 
 `backend.flush(assetId?)`, room eviction and backend shutdown flush pending
 snapshots. See [Asset kinds](./AssetKinds.md#snapshot-policy) for cadence.
@@ -104,6 +106,8 @@ log. See [Workspace compaction](./Workspace.md#compaction) for removing what
 this skips.
 
 ## Reconciliation
+
+The reconciler and its watcher are reached through `backend.internals`.
 
 ```ts
 reconciler.reconcile(): Promise<Result<ReconcileReport, Error>>
