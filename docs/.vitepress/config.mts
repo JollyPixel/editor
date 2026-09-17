@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { defineConfig } from "vitepress";
+import { withMermaid } from "vitepress-plugin-mermaid";
 
 // Import Internal Dependencies
 import {
@@ -9,7 +10,7 @@ import {
 import { sidebarForPackages } from "./sidebar.mts";
 import { ignoredDeadLinks } from "./deadlinks.mts";
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: "JollyPixel",
   description: "The collaborative 3D HTML5 game maker",
   srcDir: "../packages",
@@ -48,7 +49,8 @@ export default defineConfig({
   ignoreDeadLinks: ignoredDeadLinks,
   vite: {
     optimizeDeps: {
-      entries: []
+      entries: [],
+      include: ["mermaid", "fastdom"]
     }
   }
-});
+}));
