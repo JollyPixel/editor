@@ -136,6 +136,10 @@ export class EditorScene extends Systems.Scene {
     return this.#handles.promise;
   }
 
+  get camera(): OrbitFlyCamera | undefined {
+    return this.#orbitFlyCamera;
+  }
+
   constructor(
     editorState: EditorState,
     options: EditorSceneOptions

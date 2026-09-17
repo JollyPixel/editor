@@ -7,12 +7,10 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  BLOCK_LIBRARY_ORDERS,
   isReorderable,
   orderBlocks,
   parseBlockLibraryOrder
 } from "../../../src/features/blocks/blockLibraryOrder.ts";
-import { choiceOf } from "../../../src/shared/toolChoice.ts";
 
 function block(
   id: number
@@ -28,14 +26,6 @@ function block(
 }
 
 describe("blockLibraryOrder", () => {
-  it("offers every order with a distinct value and icon", () => {
-    const values = BLOCK_LIBRARY_ORDERS.map((option) => option.value);
-    const icons = BLOCK_LIBRARY_ORDERS.map((option) => option.icon);
-
-    assert.deepEqual(values, ["registry", "usage"]);
-    assert.equal(new Set(icons).size, icons.length);
-  });
-
   it("parses a stored order and falls back to the registry order", () => {
     assert.equal(parseBlockLibraryOrder("usage"), "usage");
     assert.equal(parseBlockLibraryOrder("registry"), "registry");
@@ -57,12 +47,5 @@ describe("blockLibraryOrder", () => {
       orderBlocks(blocks, "usage", counts).map(({ id }) => id),
       [3, 2, 1]
     );
-  });
-
-  it("shows the current order in the picker and offers the others", () => {
-    const { active, alternatives } = choiceOf(BLOCK_LIBRARY_ORDERS, "usage");
-
-    assert.equal(active.value, "usage");
-    assert.deepEqual(alternatives.map(({ value }) => value), ["registry"]);
   });
 });

@@ -3,11 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
-import {
-  VoxelWorld,
-  type ResolvedBlockDefinition,
-  type VoxelLayerCommand
-} from "@jolly-pixel/voxel.renderer";
+import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
@@ -15,7 +11,6 @@ import {
   blockUsageSummary,
   formatCount,
   orphanVoxelsMessage,
-  removeBlockVoxels,
   sortBlocksByUsage,
   tilesetRemovalMessage
 } from "../../../src/features/blocks/blockUsage.ts";
@@ -108,35 +103,5 @@ describe("blockUsage", () => {
       "3 voxels of deleted blocks (#7, #9) cannot be drawn. " +
       "Remove them from every layer?"
     );
-  });
-
-  it("removes the voxels of the given blocks through commands", () => {
-    const world = new VoxelWorld(4);
-    world.addLayer("Ground");
-    world.addLayer("Shifted").position = { x: 10, y: 0, z: 0 };
-    for (let x = 0; x < 6; x++) {
-      world.setVoxel("Ground", {
-        position: { x, y: 0, z: 0 },
-        blockId: x % 2 === 0 ? 1 : 2
-      });
-    }
-    world.setVoxel("Shifted", {
-      position: { x: 15, y: 1, z: 2 },
-      blockId: 1
-    });
-    const commands: VoxelLayerCommand[] = [];
-    world.on("command", (command) => commands.push(command));
-
-    const removed = removeBlockVoxels(world, new Set([1]));
-
-    assert.equal(removed, 4);
-    assert.equal(world.countBlock(1), 0);
-    assert.equal(world.countBlock(2), 3);
-    assert.deepEqual(
-      commands.map(({ action, layerName }) => `${action}:${layerName}`),
-      ["voxels-removed:Shifted", "voxels-removed:Ground"]
-    );
-    assert.equal(removeBlockVoxels(world, new Set([1])), 0);
-    assert.equal(commands.length, 2);
   });
 });

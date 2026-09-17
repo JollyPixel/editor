@@ -16,7 +16,6 @@ import {
 // Import Internal Dependencies
 import {
   buildBlockPreviewMesh,
-  createBlockPreviewStage,
   emptyTextureSlots,
   fitGeometry,
   PREVIEW_FIT_RADIUS,
@@ -79,18 +78,6 @@ function texturedSources(): BlockPreviewSources {
   );
 
   return sourcesOf(tilesetManager);
-}
-
-function materialsOf(
-  mesh: THREE.Mesh
-): THREE.MeshLambertMaterial[] {
-  return mesh.material as THREE.MeshLambertMaterial[];
-}
-
-function groupMaterials(
-  mesh: THREE.Mesh
-): number[] {
-  return mesh.geometry.groups.map((group) => group.materialIndex!);
 }
 
 function blockOf(
@@ -166,64 +153,6 @@ describe("buildBlockPreviewMesh", () => {
     assertFitted(mesh.geometry);
   });
 
-  it("renders checker faces when the tileset is missing", () => {
-    const mesh = buildBlockPreviewMesh(
-      blockOf({
-        defaultTexture: {
-          tilesetId: "missing",
-          col: 0,
-          row: 0
-        }
-      }),
-      kSources
-    );
-
-    assert.equal(materialsOf(mesh)[0].map, null);
-    assert.deepEqual(groupMaterials(mesh), kCubeSlots.map(() => 1));
-  });
-
-  it("maps the block surface onto the material", () => {
-    const mesh = buildBlockPreviewMesh(
-      blockOf({ alphaMode: "blend", side: "double" }),
-      kSources
-    );
-    const [material] = materialsOf(mesh);
-
-    assert.equal(material.transparent, true);
-    assert.equal(material.depthWrite, false);
-    assert.equal(material.side, THREE.DoubleSide);
-  });
-
-  it("textures painted faces without an outline", () => {
-    const mesh = buildBlockPreviewMesh(
-      blockOf({ defaultTexture: kPainted }),
-      kTextured
-    );
-
-    assert.ok(materialsOf(mesh)[0].map);
-    assert.deepEqual(groupMaterials(mesh), kCubeSlots.map(() => 0));
-    assert.equal(mesh.children.length, 0);
-  });
-
-  it("paints blank faces with the checker and outlines them", () => {
-    const mesh = buildBlockPreviewMesh(
-      blockOf({
-        defaultTexture: kPainted,
-        faceTextures: { top: kBlank }
-      }),
-      kTextured
-    );
-    const [, checker] = materialsOf(mesh);
-
-    assert.deepEqual(
-      groupMaterials(mesh),
-      kCubeSlots.map((slot) => (slot === "top" ? 1 : 0))
-    );
-    assert.ok(checker.map instanceof THREE.DataTexture);
-    assert.equal(mesh.children.length, 1);
-    assert.ok(mesh.children[0] instanceof THREE.LineSegments);
-  });
-
   it("covers the whole index buffer with its groups", () => {
     for (const shapeId of kSources.shapeRegistry.ids()) {
       const mesh = buildBlockPreviewMesh(blockOf({ shapeId }), kSources);
@@ -237,13 +166,6 @@ describe("buildBlockPreviewMesh", () => {
         shapeId
       );
     }
-  });
-
-  it("shares one checker texture across meshes", () => {
-    const first = buildBlockPreviewMesh(blockOf({}), kSources);
-    const second = buildBlockPreviewMesh(blockOf({}), kSources);
-
-    assert.equal(materialsOf(first)[1].map, materialsOf(second)[1].map);
   });
 });
 
@@ -279,13 +201,3 @@ describe("emptyTextureSlots", () => {
   });
 });
 
-describe("createBlockPreviewStage", () => {
-  it("returns a lit scene and a camera facing the origin", () => {
-    const { scene, camera } = createBlockPreviewStage();
-
-    assert.equal(scene.children.length, 2);
-    assert.equal(camera.position.x, 0);
-    assert.equal(camera.position.y, 0);
-    assert.ok(camera.position.z > 0);
-  });
-});

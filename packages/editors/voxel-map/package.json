@@ -8,11 +8,13 @@
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "npm run typecheck && vite build",
     "dev": "vite",
+    "dev:e2e": "vite --mode e2e",
     "preview": "vite preview",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
-    "lint": "eslint src test vite vite.config.ts && npm run lint:css",
+    "lint": "eslint src test vite vite.config.ts playwright.config.ts && npm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
   },
   "repository": {
@@ -35,6 +37,9 @@
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
+  "devDependencies": {
+    "@jolly-pixel/asset-source": "1.0.0"
+  },
   "dependencies": {
     "@jolly-pixel/asset": "1.1.0",
     "@jolly-pixel/asset.pixel-art": "1.0.0",

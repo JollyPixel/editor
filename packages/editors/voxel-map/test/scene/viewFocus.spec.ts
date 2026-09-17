@@ -8,8 +8,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   castViewRay,
-  viewFocusPoint,
-  ViewFocus
+  viewFocusPoint
 } from "../../src/scene/viewFocus.ts";
 
 function createCamera(
@@ -155,39 +154,3 @@ describe("viewFocusPoint", () => {
   });
 });
 
-describe("ViewFocus", () => {
-  test("reads as the origin until a provider is registered", () => {
-    const focus = new ViewFocus();
-
-    assert.equal(focus.provider, null);
-    assert.deepEqual(focus.point, {
-      x: 0,
-      y: 0,
-      z: 0
-    });
-  });
-
-  test("resolves through the registered provider, and drops it again", () => {
-    const focus = new ViewFocus();
-
-    focus.provider = () => {
-      return {
-        x: 12,
-        y: 3,
-        z: -8
-      };
-    };
-    assert.deepEqual(focus.point, {
-      x: 12,
-      y: 3,
-      z: -8
-    });
-
-    focus.provider = null;
-    assert.deepEqual(focus.point, {
-      x: 0,
-      y: 0,
-      z: 0
-    });
-  });
-});

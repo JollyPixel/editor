@@ -20,6 +20,7 @@ export interface VoxelMapEditorOptions {
   canvas: RuntimeCanvasTarget;
   offline?: boolean;
   world?: AssetId;
+  maxFps?: number;
 }
 
 export interface VoxelMapEditorParts {
@@ -36,7 +37,8 @@ export class VoxelMapEditor {
     const {
       canvas,
       offline = false,
-      world
+      world,
+      maxFps = Infinity
     } = options;
 
     const runtime = await Runtime.create(canvas, {
@@ -79,7 +81,7 @@ export class VoxelMapEditor {
     await runtime.load({
       scene,
       skipLoadingScreen: true,
-      maxFps: Infinity
+      maxFps
     });
     shell.adoptHandles(await scene.ready);
 

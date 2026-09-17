@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LitElement, html, css, nothing } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type {
   VoxelEngine,
@@ -12,6 +12,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { blockLibraryViewportStyles } from "./BlockLibraryViewport.styles.ts";
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 import {
   blockCellRect,
@@ -65,164 +66,7 @@ interface DragSession {
 
 @customElement("block-library-viewport")
 export class BlockLibraryViewport extends LitElement {
-  static override styles = css`
-    :host {
-      display: block;
-
-      --block-grid-inset: 5px;
-    }
-
-    .scroller {
-      position: relative;
-      box-sizing: border-box;
-      overflow: hidden auto;
-      scrollbar-gutter: stable;
-      min-height: 100px;
-      max-height: 240px;
-      padding: var(--block-grid-inset);
-      background: var(--jolly-well-bg, #0e1316);
-      border-radius: var(--jolly-radius-sm, 3px);
-      cursor: pointer;
-    }
-
-    :host([layout="fill"]) {
-      display: flex;
-      flex: 1 1 auto;
-      flex-direction: column;
-      min-height: 0;
-    }
-
-    :host([layout="fill"]) .scroller {
-      flex: 1 1 auto;
-      max-height: none;
-    }
-
-    :host([sized]) .scroller {
-      min-height: 0;
-      max-height: none;
-    }
-
-    .grip {
-      position: relative;
-      z-index: 4;
-      height: 6px;
-      margin-block: -3px;
-      cursor: ns-resize;
-      touch-action: none;
-      outline: none;
-    }
-
-    .scroller > canvas {
-      position: relative;
-      z-index: 1;
-    }
-
-    .layer {
-      position: absolute;
-      inset-block-start: var(--block-grid-inset);
-      inset-inline-start: var(--block-grid-inset);
-      width: 0;
-      height: 0;
-      pointer-events: none;
-    }
-
-    .layer.highlights {
-      z-index: 0;
-    }
-
-    .layer.marks {
-      z-index: 2;
-    }
-
-    .problem {
-      position: absolute;
-      box-sizing: border-box;
-      border: 2px solid var(--jolly-danger);
-      border-radius: var(--jolly-radius-sm, 4px);
-      background: color-mix(in srgb, var(--jolly-danger) 18%, transparent);
-    }
-
-    .unused {
-      position: absolute;
-      box-sizing: border-box;
-      border-radius: var(--jolly-radius-sm, 4px);
-      background: color-mix(in srgb, var(--jolly-well-bg, #0e1316) 60%, transparent);
-    }
-
-    .layer.drop {
-      z-index: 3;
-    }
-
-    .insertion {
-      position: absolute;
-      width: 2px;
-      margin-inline-start: -1px;
-      border-radius: 1px;
-      background: var(--jolly-accent, #4c9aff);
-      box-shadow: 0 0 0 1px var(--jolly-well-bg, #0e1316);
-    }
-
-    .layer.actions {
-      z-index: 4;
-    }
-
-    .add-cell {
-      position: absolute;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      border: 2px dashed var(--jolly-border, #2a3238);
-      border-radius: var(--jolly-radius-sm, 4px);
-      background: transparent;
-      color: var(--jolly-text-muted, #8a96a0);
-      font: inherit;
-      cursor: pointer;
-      pointer-events: auto;
-    }
-
-    .add-cell:hover,
-    .add-cell:focus-visible {
-      border-color: var(--jolly-accent-fill, #4c9aff);
-      background: color-mix(in srgb, var(--jolly-accent-fill, #4c9aff) 12%, transparent);
-      color: var(--jolly-accent-fill, #4c9aff);
-      outline: none;
-    }
-
-    .scroller.dragging {
-      cursor: grabbing;
-    }
-
-    .scroller.dragging > canvas {
-      opacity: 0.75;
-    }
-
-    .highlight {
-      position: absolute;
-      border-radius: var(--jolly-radius-sm, 4px);
-      box-sizing: border-box;
-      border: 2px dashed transparent;
-    }
-
-    .marker {
-      position: absolute;
-      display: flex;
-      justify-content: flex-end;
-      align-items: flex-start;
-      gap: 2px;
-      padding: 4px;
-      box-sizing: border-box;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      box-shadow: 0 0 0 1px var(--jolly-well-bg, #0e1316);
-    }
-  `;
+  static override styles = blockLibraryViewportStyles;
 
   @property({ attribute: false })
   declare engine: VoxelEngine | undefined;
@@ -232,6 +76,9 @@ export class BlockLibraryViewport extends LitElement {
 
   @property({ attribute: false })
   declare marks: PeerMarkMap<number>;
+
+  @property({ attribute: false })
+  declare selectedId: number | null;
 
   @property({ attribute: false })
   declare problems: ReadonlyMap<number, string>;
@@ -273,6 +120,7 @@ export class BlockLibraryViewport extends LitElement {
     this.engine = undefined;
     this.blocks = [];
     this.marks = new Map();
+    this.selectedId = null;
     this.problems = new Map();
     this.unused = new Set();
     this.reorderable = true;
@@ -338,6 +186,8 @@ export class BlockLibraryViewport extends LitElement {
 
     return html`<div
       class=${this.#dragging ? "scroller dragging" : "scroller"}
+      role="listbox"
+      aria-label="Blocks"
       @click=${this.#onClick}
       @dblclick=${this.#onDoubleClick}
       @pointerdown=${this.#onPointerDown}
@@ -347,6 +197,9 @@ export class BlockLibraryViewport extends LitElement {
     >
       <div class="layer highlights">
         ${cells.map((cell) => this.#renderHighlight(cell))}
+      </div>
+      <div class="layer options">
+        ${this.#renderOptions()}
       </div>
       <div class="layer marks">
         ${this.#renderUnused()}
@@ -510,6 +363,22 @@ export class BlockLibraryViewport extends LitElement {
         `height:${marker.height}px`
       ].join(";")}
     ></div>`;
+  }
+
+  #renderOptions() {
+    const grid = this._grid;
+    if (grid === null) {
+      return nothing;
+    }
+
+    return this.blocks.map((block, index) => html`<div
+      class="option"
+      role="option"
+      aria-label=${block.name}
+      aria-selected=${String(block.id === this.selectedId)}
+      data-block-id=${block.id}
+      style=${blockCellStyle(blockCellRect(index, grid, kCellInset))}
+    ></div>`);
   }
 
   #renderHighlight(
