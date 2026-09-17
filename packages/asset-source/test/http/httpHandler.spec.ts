@@ -5,18 +5,12 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import {
-  AssetPathEscapeError,
-  MemoryAssetSource,
-  STATE_DIRECTORY
-} from "@jolly-pixel/asset-source";
-
 // Import Internal Dependencies
 import {
-  AssetKindRegistry,
+  AssetPathEscapeError,
   createAssetStaticHandler,
-  textureAssetHandler
+  MemoryAssetSource,
+  STATE_DIRECTORY
 } from "#src/index.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { send } from "../helpers/http.ts";
@@ -65,32 +59,28 @@ describe("createAssetStaticHandler", () => {
     );
   });
 
-  test("takes content types from the registered kinds", async() => {
+  test("lets the given table override a default entry", async() => {
     const handler = createAssetStaticHandler({
       source: workspace(),
-      kinds: new AssetKindRegistry([
-        {
-          ...textureAssetHandler({ match: ["**/*.png"] }),
-          contentTypes: { ".png": "image/png-custom" }
-        }
-      ])
-    });
-
-    const result = await send(handler, { url: "/assets/textures/block.png" });
-
-    assert.strictEqual(result.headers["content-type"], "image/png-custom");
-  });
-
-  test("lets an explicit table override the kinds", async() => {
-    const handler = createAssetStaticHandler({
-      source: workspace(),
-      kinds: new AssetKindRegistry([textureAssetHandler()]),
       contentTypes: { ".png": "image/override" }
     });
 
     const result = await send(handler, { url: "/assets/textures/block.png" });
 
     assert.strictEqual(result.headers["content-type"], "image/override");
+  });
+
+  test("keeps the defaults next to the given table", async() => {
+    const handler = createAssetStaticHandler({
+      source: workspace(),
+      contentTypes: { ".unknown": "text/x-unknown" }
+    });
+
+    const png = await send(handler, { url: "/assets/textures/block.png" });
+    const unknown = await send(handler, { url: "/assets/notes.unknown" });
+
+    assert.strictEqual(png.headers["content-type"], "image/png");
+    assert.strictEqual(unknown.headers["content-type"], "text/x-unknown");
   });
 
   test("ignores the query string", async() => {

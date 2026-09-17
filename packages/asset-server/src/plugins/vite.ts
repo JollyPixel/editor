@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
 import type { Plugin } from "vite";
+import {
+  createAssetStaticHandler,
+  type AssetStaticHandlerOptions
+} from "@jolly-pixel/asset-source";
 import { WebsocketTransport } from "@jolly-pixel/network/transport/websocket.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network/transport/constants.ts";
 
@@ -9,10 +13,6 @@ import {
   DEFAULT_CATALOG_PATH
 } from "../catalog/httpHandler.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
-import {
-  createAssetStaticHandler,
-  type AssetStaticHandlerOptions
-} from "../static/httpHandler.ts";
 import {
   createAssetWorkspace,
   type AssetWorkspace,
@@ -49,10 +49,8 @@ export function createAssetCatalogPlugin(
   };
 }
 
-export type AssetStaticPluginOptions = AssetStaticHandlerOptions;
-
 export function createAssetStaticPlugin(
-  options: AssetStaticPluginOptions
+  options: AssetStaticHandlerOptions
 ): Plugin {
   return {
     name: "asset-server-static",
@@ -72,7 +70,7 @@ export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
   catalogPath?: string;
   /**
    * URL prefix the workspace is served under.
-   * @default DEFAULT_ASSET_PREFIX
+   * @default ASSET_URL_PREFIX
    */
   prefix?: string;
   /**
@@ -116,7 +114,7 @@ export function createAssetWorkspacePlugin(
       devServer.middlewares.use(
         createAssetStaticHandler({
           source: workspace.source,
-          kinds: workspace.backend.kinds,
+          contentTypes: workspace.backend.kinds.contentTypes(),
           prefix
         })
       );

@@ -113,6 +113,9 @@ kinds.get("pixelart");
 Registering the same kind twice throws. The reserved `binary` fallback cannot
 be replaced.
 
+`kinds.contentTypes()` collects the `contentTypes` every registered kind
+declares, later registrations winning on a shared extension.
+
 ## Built-in kinds
 
 `binary` is the reserved fallback. `texture` is a shipped handler that claims

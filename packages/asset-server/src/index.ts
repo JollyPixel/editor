@@ -4,7 +4,6 @@ export * from "./events/index.ts";
 export * from "./sync/index.ts";
 export * from "./catalog/index.ts";
 export * from "./rooms/index.ts";
-export * from "./static/index.ts";
 export * from "./workspace/index.ts";
 export * from "./createAssetBackend.ts";
 export * from "./logger.ts";

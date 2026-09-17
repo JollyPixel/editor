@@ -98,6 +98,43 @@ describe("AssetKindRegistry — lookup", () => {
   });
 });
 
+describe("AssetKindRegistry — content types", () => {
+  test("collects only what the registered kinds declare", () => {
+    const registry = new AssetKindRegistry([
+      {
+        ...handler("texture", ["**/*.png"]),
+        contentTypes: { ".png": "image/png-custom" }
+      },
+      handler("pixelart", ["**/*.pixelart"])
+    ]);
+
+    assert.deepEqual(registry.contentTypes(), { ".png": "image/png-custom" });
+  });
+
+  test("a later registration wins on a shared extension", () => {
+    const registry = new AssetKindRegistry([
+      {
+        ...handler("first", ["**/*.png"]),
+        contentTypes: { ".png": "image/first" }
+      }
+    ]);
+    registry.register({
+      ...handler("second", ["**/*.png"]),
+      contentTypes: { ".png": "image/second" }
+    });
+
+    assert.deepEqual(registry.contentTypes(), { ".png": "image/second" });
+  });
+
+  test("is empty when no kind declares any", () => {
+    const registry = new AssetKindRegistry([
+      handler("pixelart", ["**/*.pixelart"])
+    ]);
+
+    assert.deepEqual(registry.contentTypes(), {});
+  });
+});
+
 describe("AssetKindRegistry — registration guards", () => {
   test("rejects a duplicate kind", () => {
     const registry = new AssetKindRegistry([

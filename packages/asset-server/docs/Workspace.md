@@ -93,48 +93,21 @@ known `AssetId`.
 ## Serving the workspace
 
 The catalog hands the browser workspace-relative `source` paths, which have to
-resolve to something.
+resolve to something. Serve them with
+[`createAssetStaticHandler`](../../asset-source/docs/Http.md), passing the
+content types the registered kinds declare:
 
 ```ts
-import { createAssetStaticHandler } from "@jolly-pixel/asset-server";
+import { createAssetStaticHandler } from "@jolly-pixel/asset-source";
 
 const handler = createAssetStaticHandler({
   source: workspace.source,
-  kinds: workspace.backend.kinds
+  contentTypes: workspace.backend.kinds.contentTypes()
 });
 ```
 
-Requests outside the prefix are passed to `next()`. `GET` and `HEAD` answer
-`200` from the source, other methods `405`. Reads go through the
-`AssetSource`, so an in-memory workspace is servable too.
-
-The request target is stripped of its query and fragment, decoded once, then
-validated by
-[`safeAssetPath`](../../asset-source/docs/AssetSource.md#paths), so the source
-only ever sees a root-relative POSIX path. The rejection decides the status:
-
-| Case | Status |
-|---|---|
-| Absolute, drive-qualified or `..` path, source refusing the path | `403` |
-| Malformed escape sequence, control character in the path | `400` |
-| Missing file, directory target, state directory, path the source ignores | `404` |
-
-The state directory is matched case-insensitively, because a
-case-insensitive filesystem answers `.JOLLYPIXEL/state.json` from
-`.jollypixel/`. Paths a source hides through `isIgnored` (`.git/`,
-`node_modules/`, `dist/` by default) answer `404` as well, so the handler
-never serves what listing and reconciliation deliberately skip.
-
-| Option | Default | Description |
-|---|---|---|
-| `source` | required | Workspace the bytes are read from. |
-| `prefix` | `/assets/` | URL prefix, with a trailing slash added when missing. |
-| `kinds` | none | Registry contributing content types per claimed extension. |
-| `contentTypes` | none | Extension-to-content-type entries, winning over the kinds. |
-
-Content types come from [what each kind declares](./AssetKinds.md#content-types)
-merged over a small default table; anything unmatched is served as
-`application/octet-stream`.
+[`kinds.contentTypes()`](./AssetKinds.md#registry) collects what each kind
+declares. The handler merges it over its `DEFAULT_CONTENT_TYPES`.
 
 `@jolly-pixel/asset` exports `ASSET_URL_PREFIX`, `CATALOG_URL_PATH` and
 `assetSourceUrl(source)` so the browser builds the same URLs without repeating
