@@ -73,7 +73,7 @@ export class TranslationCenter extends THREE.Object3D {
     this.add(this.#visual);
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

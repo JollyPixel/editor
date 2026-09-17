@@ -76,7 +76,7 @@ export class PeerSelectionChip extends THREE.Sprite {
     this.#draw();
   }
 
-  dispose(): void {
+  override dispose(): void {
     this.#texture.dispose();
     this.material.dispose();
   }

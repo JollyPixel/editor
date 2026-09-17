@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
-import { mrt, select, and, float, vec2, vec4, uv, texture, greaterThan, lessThan } from "three/tsl";
+import { mrt, select, and, float, vec2, vec4, uv, greaterThan, lessThan } from "three/tsl";
 
 // Import Internal Dependencies
-import type { TslNode } from "../tslNode.ts";
+import type { TslNode, TslTextureNode } from "../tslNode.ts";
 
 // CONSTANTS
 export const JFA_OFFSETS: ReadonlyArray<readonly [number, number]> = [
@@ -12,8 +12,8 @@ export const JFA_OFFSETS: ReadonlyArray<readonly [number, number]> = [
 ];
 
 export function buildJfaPropagateStep(
-  positionSourceTexture: ReturnType<typeof texture>,
-  colorSourceTexture: ReturnType<typeof texture>,
+  positionSourceTexture: TslTextureNode,
+  colorSourceTexture: TslTextureNode,
   stepNode: TslNode<"float">,
   invSizeNode: TslNode<"vec2">,
   resolutionNode: TslNode<"vec2">

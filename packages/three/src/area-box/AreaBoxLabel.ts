@@ -88,7 +88,7 @@ export class AreaBoxLabel extends THREE.Sprite {
     this.#draw();
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

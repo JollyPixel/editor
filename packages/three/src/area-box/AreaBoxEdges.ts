@@ -103,7 +103,7 @@ export class AreaBoxEdges extends LineSegments2 {
     this.#applyEmphasis();
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

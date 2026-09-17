@@ -44,7 +44,7 @@
     "@pmndrs/detect-gpu": "6.0.20"
   },
   "peerDependencies": {
-    "three": "^0.185.1"
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "electron": "44.3.0"

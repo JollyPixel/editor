@@ -138,7 +138,7 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
     this.renderOrder = xray ? kXrayRenderOrder : 1;
   }
 
-  dispose(): void {
+  override dispose(): void {
     this.removeFromParent();
     this.geometry.dispose();
     this.material.dispose();

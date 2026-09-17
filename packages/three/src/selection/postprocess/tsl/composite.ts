@@ -1,14 +1,14 @@
 // Import Third-party Dependencies
-import { Fn, max, oneMinus, texture } from "three/tsl";
+import { Fn, max, oneMinus } from "three/tsl";
 
 // Import Internal Dependencies
 import { maskGate } from "./maskWeight.ts";
-import type { TslNode } from "./tslNode.ts";
+import type { TslNode, TslTextureNode } from "./tslNode.ts";
 
 export interface HighlightCompositeChannel {
-  edge1: ReturnType<typeof texture>;
-  edge2: ReturnType<typeof texture>;
-  mask: ReturnType<typeof texture>;
+  edge1: TslTextureNode;
+  edge2: TslTextureNode;
+  mask: TslTextureNode;
 }
 
 export function buildHighlightComposite(

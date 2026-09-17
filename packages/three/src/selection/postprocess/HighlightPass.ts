@@ -13,6 +13,7 @@ import type { SelectableObject } from "../SelectionManager.ts";
 import { MAX_BLUR_RADIUS, buildSeparableBlur } from "./tsl/gaussianBlur.ts";
 import { buildEdgeDetection } from "./tsl/edgeDetection.ts";
 import { buildHighlightComposite } from "./tsl/composite.ts";
+import type { TslTextureNode } from "./tsl/tslNode.ts";
 import { InstancedHighlightMask } from "./InstancedHighlightMask.ts";
 
 interface HighlightEntryBase {
@@ -117,22 +118,22 @@ export class HighlightPass {
   #renderTargetIsolatedBlur1: THREE.RenderTarget;
   #renderTargetIsolatedBlur2: THREE.RenderTarget;
 
-  #maskTexture: ReturnType<typeof texture>;
-  #maskDownSampleTexture: ReturnType<typeof texture>;
-  #blurSourceTexture: ReturnType<typeof texture>;
-  #edge1Texture: ReturnType<typeof texture>;
-  #edge2Texture: ReturnType<typeof texture>;
-  #compositeTexture: ReturnType<typeof texture>;
+  #maskTexture: TslTextureNode;
+  #maskDownSampleTexture: TslTextureNode;
+  #blurSourceTexture: TslTextureNode;
+  #edge1Texture: TslTextureNode;
+  #edge2Texture: TslTextureNode;
+  #compositeTexture: TslTextureNode;
 
-  #priorityMaskTexture: ReturnType<typeof texture>;
-  #priorityMaskDownSampleTexture: ReturnType<typeof texture>;
-  #priorityEdge1Texture: ReturnType<typeof texture>;
-  #priorityEdge2Texture: ReturnType<typeof texture>;
+  #priorityMaskTexture: TslTextureNode;
+  #priorityMaskDownSampleTexture: TslTextureNode;
+  #priorityEdge1Texture: TslTextureNode;
+  #priorityEdge2Texture: TslTextureNode;
 
-  #isolatedMaskTexture: ReturnType<typeof texture>;
-  #isolatedMaskDownSampleTexture: ReturnType<typeof texture>;
-  #isolatedEdge1Texture: ReturnType<typeof texture>;
-  #isolatedEdge2Texture: ReturnType<typeof texture>;
+  #isolatedMaskTexture: TslTextureNode;
+  #isolatedMaskDownSampleTexture: TslTextureNode;
+  #isolatedEdge1Texture: TslTextureNode;
+  #isolatedEdge2Texture: TslTextureNode;
 
   #maskMaterial: THREE.NodeMaterial;
   #priorityMaskMaterial: THREE.NodeMaterial;
@@ -292,7 +293,7 @@ export class HighlightPass {
       edgeGlowNode
     );
 
-    this.#quad = new THREE.QuadMesh();
+    this.#quad = new THREE.QuadMesh(this.#copyMaterial);
 
     this.pipeline = new THREE.RenderPipeline(renderer);
     this.pipeline.outputNode = this.#compositeTexture.add(scenePassNode);

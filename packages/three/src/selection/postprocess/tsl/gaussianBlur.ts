@@ -5,12 +5,11 @@ import {
   int,
   float,
   uv,
-  texture,
   exp
 } from "three/tsl";
 
 // Import Internal Dependencies
-import type { TslNode } from "./tslNode.ts";
+import type { TslNode, TslTextureNode } from "./tslNode.ts";
 
 // CONSTANTS
 export const MAX_BLUR_RADIUS = 4;
@@ -26,7 +25,7 @@ function gaussianPdf(
 }
 
 export function buildSeparableBlur(
-  blurSourceTexture: ReturnType<typeof texture>,
+  blurSourceTexture: TslTextureNode,
   blurDirectionNode: TslNode<"vec2">,
   invSizeNode: TslNode<"vec2">,
   kernelRadius: TslNode<"float">

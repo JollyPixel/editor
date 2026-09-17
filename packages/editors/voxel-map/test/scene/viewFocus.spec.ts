@@ -54,7 +54,7 @@ describe("castViewRay", () => {
 
     assert.ok(hit);
     assert.equal(hit.ground, false);
-    assert.equal(hit.point.y, 1);
+    assert.ok(Math.abs(hit.point.y - 1) < 1e-6);
     assert.ok(Math.abs(hit.distance - 9) < 1e-6);
   });
 

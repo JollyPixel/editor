@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as THREE from "three/webgpu";
+import * as THREE from "three/webgpu";
 
 export interface DisposeObject3DOptions {
   /**
@@ -115,7 +115,7 @@ function collectNode(
   if (isDisposable(candidate.renderTarget)) {
     disposables.add(candidate.renderTarget);
   }
-  if (isDisposable(candidate)) {
+  if (definesItsOwnDispose(candidate)) {
     disposables.add(candidate);
   }
 }
@@ -123,7 +123,7 @@ function collectNode(
 function ownsItsResources(
   candidate: Partial<Disposable>
 ): boolean {
-  return isDisposable(candidate) &&
+  return definesItsOwnDispose(candidate) &&
     !hasFlag(candidate, "isInstancedMesh") &&
     !hasFlag(candidate, "isBatchedMesh");
 }
@@ -166,6 +166,13 @@ function disposeTexture(
   ) {
     image.close();
   }
+}
+
+function definesItsOwnDispose(
+  value: unknown
+): value is Disposable {
+  return isDisposable(value) &&
+    value.dispose !== THREE.Object3D.prototype.dispose;
 }
 
 function isBufferGeometry(

@@ -1,14 +1,14 @@
 // Import Third-party Dependencies
-import { Fn, float, max, mix, oneMinus, smoothstep, uv, vec3, vec4, texture } from "three/tsl";
+import { Fn, float, max, mix, oneMinus, smoothstep, uv, vec3, vec4 } from "three/tsl";
 
 // Import Internal Dependencies
 import { maskGate } from "../maskWeight.ts";
-import type { TslNode } from "../tslNode.ts";
+import type { TslNode, TslTextureNode } from "../tslNode.ts";
 
 export interface JfaRingChannel {
-  positionTexture: ReturnType<typeof texture>;
-  colorTexture: ReturnType<typeof texture>;
-  maskTexture: ReturnType<typeof texture>;
+  positionTexture: TslTextureNode;
+  colorTexture: TslTextureNode;
+  maskTexture: TslTextureNode;
 }
 
 interface JfaRingShape {

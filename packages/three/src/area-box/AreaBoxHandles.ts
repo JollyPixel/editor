@@ -243,7 +243,7 @@ export class AreaBoxHandles extends THREE.Object3D {
     super.updateMatrixWorld(force);
   }
 
-  dispose(): void {
+  override dispose(): void {
     if (this.#disposed) {
       return;
     }

@@ -13,6 +13,7 @@ import { InstancedHighlightMask } from "./InstancedHighlightMask.ts";
 import { buildJfaSeedInit } from "./tsl/jfa/seed.ts";
 import { buildJfaPropagateStep } from "./tsl/jfa/propagate.ts";
 import { buildJfaRingComposite, type JfaRingChannel } from "./tsl/jfa/resolve.ts";
+import type { TslTextureNode } from "./tsl/tslNode.ts";
 
 // CONSTANTS
 const kIsolatedRefreshIntervalBase = 6;
@@ -89,24 +90,24 @@ export class HighlightPassJfa {
   #renderTargetIsolatedSeedA: THREE.RenderTarget;
   #renderTargetIsolatedSeedB: THREE.RenderTarget;
 
-  #maskTexture: ReturnType<typeof texture>;
-  #compositeTexture: ReturnType<typeof texture>;
-  #jfaPositionSourceTexture: ReturnType<typeof texture>;
-  #jfaColorSourceTexture: ReturnType<typeof texture>;
-  #finalPositionTexture: ReturnType<typeof texture>;
-  #finalColorTexture: ReturnType<typeof texture>;
+  #maskTexture: TslTextureNode;
+  #compositeTexture: TslTextureNode;
+  #jfaPositionSourceTexture: TslTextureNode;
+  #jfaColorSourceTexture: TslTextureNode;
+  #finalPositionTexture: TslTextureNode;
+  #finalColorTexture: TslTextureNode;
 
-  #priorityMaskTexture: ReturnType<typeof texture>;
-  #jfaPriorityPositionSourceTexture: ReturnType<typeof texture>;
-  #jfaPriorityColorSourceTexture: ReturnType<typeof texture>;
-  #finalPriorityPositionTexture: ReturnType<typeof texture>;
-  #finalPriorityColorTexture: ReturnType<typeof texture>;
+  #priorityMaskTexture: TslTextureNode;
+  #jfaPriorityPositionSourceTexture: TslTextureNode;
+  #jfaPriorityColorSourceTexture: TslTextureNode;
+  #finalPriorityPositionTexture: TslTextureNode;
+  #finalPriorityColorTexture: TslTextureNode;
 
-  #isolatedMaskTexture: ReturnType<typeof texture>;
-  #jfaIsolatedPositionSourceTexture: ReturnType<typeof texture>;
-  #jfaIsolatedColorSourceTexture: ReturnType<typeof texture>;
-  #finalIsolatedPositionTexture: ReturnType<typeof texture>;
-  #finalIsolatedColorTexture: ReturnType<typeof texture>;
+  #isolatedMaskTexture: TslTextureNode;
+  #jfaIsolatedPositionSourceTexture: TslTextureNode;
+  #jfaIsolatedColorSourceTexture: TslTextureNode;
+  #finalIsolatedPositionTexture: TslTextureNode;
+  #finalIsolatedColorTexture: TslTextureNode;
 
   #maskMaterial: THREE.NodeMaterial;
   #seedInitMaterial: THREE.NodeMaterial;
@@ -277,7 +278,7 @@ export class HighlightPassJfa {
       isolatedChannel
     );
 
-    this.#quad = new THREE.QuadMesh();
+    this.#quad = new THREE.QuadMesh(this.#seedInitMaterial);
 
     this.pipeline = new THREE.RenderPipeline(renderer);
     this.pipeline.outputNode = this.#compositeTexture.add(scenePassNode);
