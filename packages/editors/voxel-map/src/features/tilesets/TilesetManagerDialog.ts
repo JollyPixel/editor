@@ -12,10 +12,7 @@ import {
   state
 } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import {
-  rescaleLeavesBlocksOffGrid,
-  type VoxelEngine
-} from "@jolly-pixel/voxel.renderer";
+import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import {
   showConfirm,
   type Dialog,
@@ -31,7 +28,10 @@ import {
 } from "../../app/state/index.ts";
 import type { TilesetActions } from "./TilesetActions.ts";
 import type { TilesetEntry } from "./tilesetEntries.ts";
-import { countBlocksPerTileset } from "./blockTilesets.ts";
+import {
+  countBlocksPerTileset,
+  rescaleLeavesBlocksOffGrid
+} from "./blockTilesets.ts";
 import { tileSizeOptions } from "./tileSizes.ts";
 
 @customElement("tileset-manager-dialog")

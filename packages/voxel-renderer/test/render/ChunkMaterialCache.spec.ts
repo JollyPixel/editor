@@ -8,14 +8,16 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { ChunkMaterialCache } from "../../src/render/index.ts";
 import { TilesetManager } from "../../src/tileset/index.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
-import { makeAtlasDef } from "../helpers/atlas.ts";
+import {
+  makeAtlasDef,
+  registerAtlas
+} from "../helpers/atlas.ts";
 
 function makeCache(
   options: Partial<ConstructorParameters<typeof ChunkMaterialCache>[0]> = {}
 ): ChunkMaterialCache {
   const tilesetManager = new TilesetManager();
-  tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
+  registerAtlas(tilesetManager);
 
   return new ChunkMaterialCache({
     tilesetManager,
@@ -113,11 +115,8 @@ describe("ChunkMaterialCache — invalidate", () => {
 
   it("keeps the materials of other tilesets", () => {
     const tilesetManager = new TilesetManager();
-    tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
-    tilesetManager.registerTexture(
-      makeAtlasDef({ id: "other", src: "/other.png" }),
-      mockTexture()
-    );
+    registerAtlas(tilesetManager);
+    registerAtlas(tilesetManager, makeAtlasDef({ id: "other", src: "/other.png" }));
     const cache = new ChunkMaterialCache({ tilesetManager });
     const kept = cache.resolve("other", 1);
 

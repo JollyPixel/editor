@@ -2,7 +2,7 @@
 import {
   shapeTextureLayout,
   type BlockShape,
-  type ShapeTextureBounds,
+  type TileBounds,
   type ShapeTexturePart
 } from "@jolly-pixel/voxel.renderer";
 import type {
@@ -14,7 +14,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/mesh-texturing/types.ts";
 
-export type UVSlotBounds = ShapeTextureBounds;
+export type UVSlotBounds = TileBounds;
 
 export interface BlockShapeUv {
   activeFaces: UVSlot[];
@@ -69,7 +69,7 @@ export function uvGeometryForSlot(
 
 function normalizedPart(
   part: ShapeTexturePart,
-  slot: ShapeTextureBounds
+  slot: TileBounds
 ): UVCompoundPart {
   const width = slot.u1 - slot.u0 || 1;
   const height = slot.v1 - slot.v0 || 1;

@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TilesetAtlas } from "../../src/tileset/index.ts";
+import {
+  resolveTilesetDefinition,
+  TilesetAtlas
+} from "../../src/tileset/index.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { approxEqual } from "../helpers/math.ts";
 
@@ -14,7 +17,16 @@ const kDefinition = {
   tileSize: 32
 };
 
-describe("TilesetAtlas — resolved definition", () => {
+describe("resolveTilesetDefinition", () => {
+  it("floors partial tiles out of the grid", () => {
+    const def = resolveTilesetDefinition(kDefinition, { width: 100, height: 33 });
+
+    assert.equal(def.cols, 3);
+    assert.equal(def.rows, 1);
+  });
+});
+
+describe("TilesetAtlas", () => {
   it("derives the tile grid from the atlas dimensions", () => {
     const atlas = new TilesetAtlas(kDefinition, mockTexture(128, 64));
 
@@ -23,13 +35,6 @@ describe("TilesetAtlas — resolved definition", () => {
       cols: 4,
       rows: 2
     });
-  });
-
-  it("floors partial tiles out of the grid", () => {
-    const atlas = new TilesetAtlas(kDefinition, mockTexture(100, 33));
-
-    assert.equal(atlas.def.cols, 3);
-    assert.equal(atlas.def.rows, 1);
   });
 
   it("keeps explicit dimensions over the derived ones", () => {
@@ -45,64 +50,57 @@ describe("TilesetAtlas — resolved definition", () => {
     assert.equal(atlas.def.cols, 1);
     assert.equal(atlas.def.rows, 9);
   });
-});
 
-describe("TilesetAtlas — padding", () => {
-  /*
-   * node:test has no DOM, so padAtlas() cannot rasterize: this is the
-   * unpadded fallback contract.
-   */
-  it("falls back to the source texture when the environment cannot rasterize", () => {
+  it("applies the pixel-art texture settings", () => {
     const texture = mockTexture(64, 64);
-    const atlas = new TilesetAtlas(
-      { id: "terrain", src: "t.png", tileSize: 16 },
-      texture,
-      4
-    );
+    const atlas = new TilesetAtlas(kDefinition, texture);
 
     assert.equal(atlas.texture, texture);
-    assert.equal(atlas.sourceTexture, texture);
-    assert.equal(atlas.layout.padding, 0);
-  });
-
-  it("applies the pixel-art texture settings to the render texture", () => {
-    const texture = mockTexture(64, 64);
-    const atlas = new TilesetAtlas(
-      { id: "terrain", src: "t.png", tileSize: 16 },
-      texture
-    );
-
-    assert.equal(atlas.texture.generateMipmaps, false);
-    assert.equal(atlas.texture.colorSpace, "srgb");
+    assert.equal(texture.generateMipmaps, false);
+    assert.equal(texture.colorSpace, "srgb");
   });
 });
 
 describe("TilesetAtlas.uvFor", () => {
-  it("collapses to the raw atlas layout when padding is not applied", () => {
-    const atlas = new TilesetAtlas(
-      { id: "terrain", src: "t.png", tileSize: 16, cols: 4, rows: 4 },
-      mockTexture(64, 64),
-      4
-    );
+  const atlas = new TilesetAtlas(
+    { id: "terrain", src: "t.png", tileSize: 16, cols: 4, rows: 4 },
+    mockTexture(64, 64)
+  );
 
+  it("insets the top-left tile by half a texel", () => {
     const uv = atlas.uvFor(0, 0);
+
     assert.ok(approxEqual(uv.offsetU, 0.0078125));
+    assert.ok(approxEqual(uv.offsetV, 0.7578125));
     assert.ok(approxEqual(uv.scaleU, 15 / 64));
+    assert.ok(approxEqual(uv.scaleV, 15 / 64));
+  });
+
+  it("anchors a smaller region at the tile's top-left corner", () => {
+    const uv = atlas.uvFor(1, 0, 8);
+
+    assert.ok(approxEqual(uv.offsetU, 16.5 / 64));
+    assert.ok(approxEqual(uv.offsetV, 56.5 / 64));
+    assert.ok(approxEqual(uv.scaleU, 7 / 64));
+  });
+
+  it("maps fractional coordinates onto the texel grid", () => {
+    const uv = atlas.uvFor(1.5, 0.5, 16);
+
+    assert.ok(approxEqual(uv.offsetU, 24.5 / 64));
+    assert.ok(approxEqual(uv.offsetV, 40.5 / 64));
   });
 });
 
-describe("TilesetAtlas.updateSource", () => {
-  it("replaces the source image and flags it for re-upload", () => {
+describe("TilesetAtlas.updateImage", () => {
+  it("replaces the image and flags it for re-upload", () => {
     const texture = mockTexture(64, 64);
-    const atlas = new TilesetAtlas(
-      { id: "terrain", src: "t.png", tileSize: 16, cols: 4, rows: 4 },
-      texture
-    );
+    const atlas = new TilesetAtlas(kDefinition, texture);
 
     const next = { width: 64, height: 64 } as unknown as HTMLCanvasElement;
-    atlas.updateSource(next);
+    atlas.updateImage(next);
 
-    assert.equal(atlas.sourceTexture.image, next);
+    assert.equal(texture.image, next);
     assert.equal(texture.needsUpdate, true);
   });
 });

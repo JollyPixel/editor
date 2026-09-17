@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import {
-  blockTileRefs,
-  blockTilesetIds,
-  mapBlockTileRefs,
+  BlockTextures,
+  rescaleTileRef,
   type ResolvedBlockDefinition,
-  type ResolvedTileRef
+  type ResolvedTileRef,
+  type TileRescale
 } from "@jolly-pixel/voxel.renderer";
 
 export type BlockTilesetStatus =
@@ -29,12 +29,13 @@ export function blockTilesetStatus(
   block: ResolvedBlockDefinition,
   knownTilesetIds: ReadonlySet<string>
 ): BlockTilesetStatus {
-  const refs = blockTileRefs(block);
+  const textures = BlockTextures.of(block);
+  const refs = [...textures];
   if (refs.length === 0) {
     return { kind: "none" };
   }
 
-  const tilesetIds = blockTilesetIds(block);
+  const tilesetIds = textures.tilesetIds();
   if (
     refs.some((ref) => ref.tilesetId === undefined) ||
     tilesetIds.some((id) => !knownTilesetIds.has(id))
@@ -53,7 +54,7 @@ export function countBlocksPerTileset(
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const block of blocks) {
-    for (const id of blockTilesetIds(block)) {
+    for (const id of BlockTextures.of(block).tilesetIds()) {
       counts.set(id, (counts.get(id) ?? 0) + 1);
     }
   }
@@ -74,26 +75,48 @@ export function assignBlockTileset(
   block: ResolvedBlockDefinition,
   assignment: TilesetAssignment
 ): ResolvedBlockDefinition {
-  return mapBlockTileRefs(block, (ref) => (
-    ref.tilesetId === assignment.tilesetId ?
-      ref :
-      moveTileRef(ref, assignment)
-  ));
+  return BlockTextures.of(block)
+    .map((ref) => (
+      ref.tilesetId === assignment.tilesetId ?
+        ref :
+        moveTileRef(ref, assignment)
+    ))
+    .applyTo(block);
 }
 
 export function resizeBlockTiles(
   block: ResolvedBlockDefinition,
   size: number
 ): ResolvedBlockDefinition {
-  return mapBlockTileRefs(block, (ref) => {
-    return { ...ref, size };
-  });
+  return BlockTextures.of(block)
+    .map((ref) => {
+      return { ...ref, size };
+    })
+    .applyTo(block);
 }
 
 export function blockTileSize(
   block: ResolvedBlockDefinition
 ): number | undefined {
-  return (block.defaultTexture ?? blockTileRefs(block)[0])?.size;
+  const textures = BlockTextures.of(block);
+
+  return (textures.defaultTexture ?? [...textures][0])?.size;
+}
+
+export function rescaleLeavesBlocksOffGrid(
+  blocks: Iterable<ResolvedBlockDefinition>,
+  rescale: TileRescale
+): boolean {
+  for (const block of blocks) {
+    for (const ref of BlockTextures.of(block)) {
+      const moved = rescaleTileRef(ref, rescale);
+      if (!Number.isInteger(moved.col) || !Number.isInteger(moved.row)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 function moveTileRef(

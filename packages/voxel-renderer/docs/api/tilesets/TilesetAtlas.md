@@ -1,61 +1,50 @@
 # TilesetAtlas
 
-One registered atlas: its resolved grid, its [layout](./AtlasLayout.md), and its
-source and render textures. Obtain it from
-[`TilesetManager.atlas()`](./TilesetManager.md).
+One registered atlas: its resolved grid and the texture chunk materials sample.
+Obtain it from [`TilesetManager.get()` or `atlas()`](./TilesetManager.md).
 
 ```ts
 class TilesetAtlas {
   readonly def: ResolvedTilesetDefinition;
-  readonly layout: AtlasLayout;
-  readonly sourceTexture: TilesetTexture;
   readonly texture: TilesetTexture;
 
-  constructor(
-    definition: TilesetDefinition,
-    texture: TilesetTexture,
-    padding?: number | null
-  );
+  constructor(definition: TilesetDefinition, texture: TilesetTexture);
   uvFor(col: number, row: number, size?: number): TilesetUVRegion;
-  updateSource(
-    image: TilesetImage,
-    bounds?: AtlasRegion
-  ): void;
-  dispose(options?: { keepSource?: boolean; }): void;
+  updateImage(image: TilesetImage): void;
 }
+
+function resolveTilesetDefinition(
+  definition: TilesetDefinition,
+  size: AtlasSize
+): ResolvedTilesetDefinition;
 ```
 
-An omitted or `null` padding value uses the default for the tile size. The
-constructor applies nearest-neighbour filtering, sRGB color space, and disables
-mipmap generation on the render texture.
+The constructor resolves `cols` and `rows` from the image with
+`resolveTilesetDefinition()`, then sets nearest-neighbour filtering, sRGB color
+space and no mipmaps on `texture`. The atlas does not own the texture:
+[`TilesetManager`](./TilesetManager.md) disposes it.
 
-## Textures
+`resolveTilesetDefinition()` keeps explicit `cols` and `rows` and floors the
+partial tiles at the image edge out of the derived ones.
 
-`sourceTexture` preserves the original atlas grid used by editing tools.
-`texture` is bound to materials and may contain padded cells. `uvFor()` returns
-coordinates for the render texture.
+## UV regions
 
-An atlas that cannot be repacked, such as in an environment without a canvas,
-reports `layout.padding` of `0` and aliases `texture` to `sourceTexture`.
+`uvFor()` returns the texture rect of a `size` by `size` texel square (default
+`def.tileSize`) anchored at the top-left of tile `(col, row)`. `col` and `row`
+may be fractional. The rect is inset by half a texel on each side.
 
-## Updating the source
+Chunk materials clamp every face to its own rect in the shader, so an MSAA
+sample taken outside the triangle cannot read a neighbouring tile. See
+[rendering and meshing](../../concepts/rendering-and-meshing.md).
 
-`updateSource()` replaces the source image and rebuilds the padded texture. The
-new image must keep the dimensions used at registration. Both texture objects
-are updated in place, so existing materials stay valid.
+## Updating the image
 
-Pass `bounds` for an editor update that changed only part of the source atlas.
-The rectangle uses source texels and redraws only intersecting tiles. Omit it
-for a complete replacement, resize, or tileset switch.
+`updateImage()` swaps `texture.image` and flags it for upload. Existing
+materials keep the same texture object. The new image must keep the
+dimensions the atlas was built with.
 
 ```ts
 const atlas = engine.tilesetManager.atlas();
-const dirty = bridge.consume();
 
-if (dirty !== null) {
-  atlas.updateSource(editor.textureCanvas(), dirty);
-}
+atlas.updateImage(editor.textureCanvas());
 ```
-
-`dispose()` disposes both textures. With `keepSource: true` it leaves
-`sourceTexture` alone, so another atlas can be built on it.

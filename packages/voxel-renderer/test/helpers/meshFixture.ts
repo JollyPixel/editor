@@ -15,8 +15,7 @@ import { BlockShapeRegistry } from "../../src/blocks/shape/index.ts";
 import { TilesetManager } from "../../src/tileset/index.ts";
 import { VoxelMeshBuilder } from "../../src/mesh/index.ts";
 import { makeBlockDef } from "./blocks.ts";
-import { makeAtlasDef } from "./atlas.ts";
-import { mockTexture } from "./mockTexture.ts";
+import { registerAtlas } from "./atlas.ts";
 
 // CONSTANTS
 export const CUBE_ID = 1;
@@ -59,7 +58,7 @@ export function makeMeshFixture(
   ]);
 
   const tilesetManager = new TilesetManager();
-  tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
+  registerAtlas(tilesetManager);
 
   const builder = new VoxelMeshBuilder({
     world,

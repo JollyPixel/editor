@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { TilesetDefinition } from "./types.ts";
-import {
-  DEFAULT_TILE_SIZE,
-  isTileSize
-} from "./tileSize.ts";
+import { isTileSize } from "./tileSize.ts";
 
 export class TilesetList implements Iterable<TilesetDefinition> {
   #definitions = new Map<string, TilesetDefinition>();
@@ -31,10 +28,6 @@ export class TilesetList implements Iterable<TilesetDefinition> {
 
   get defaultTileSize(): number | undefined {
     return this.#defaultTileSize;
-  }
-
-  get preferredTileSize(): number {
-    return this.#defaultTileSize ?? DEFAULT_TILE_SIZE;
   }
 
   [Symbol.iterator](): IterableIterator<TilesetDefinition> {
@@ -67,9 +60,8 @@ export class TilesetList implements Iterable<TilesetDefinition> {
     definition: TilesetDefinition
   ): boolean {
     if (
-      definition.id.length === 0 ||
-      this.#definitions.has(definition.id) ||
-      !isTileSize(definition.tileSize)
+      !isDeclarable(definition) ||
+      this.#definitions.has(definition.id)
     ) {
       return false;
     }
@@ -133,7 +125,10 @@ export class TilesetList implements Iterable<TilesetDefinition> {
   ): void {
     this.#definitions.clear();
     for (const definition of definitions) {
-      if (!this.#definitions.has(definition.id)) {
+      if (
+        isDeclarable(definition) &&
+        !this.#definitions.has(definition.id)
+      ) {
         this.#definitions.set(definition.id, copyDefinition(definition));
       }
     }
@@ -146,6 +141,12 @@ export class TilesetList implements Iterable<TilesetDefinition> {
   clear(): void {
     this.replace([]);
   }
+}
+
+function isDeclarable(
+  definition: TilesetDefinition
+): boolean {
+  return definition.id.length > 0 && isTileSize(definition.tileSize);
 }
 
 function copyDefinition(

@@ -15,6 +15,7 @@ import {
   blockTilesetStatus,
   blockTileSize,
   countBlocksPerTileset,
+  rescaleLeavesBlocksOffGrid,
   resizeBlockTiles,
   type TilesetGrid
 } from "../../../src/features/tilesets/blockTilesets.ts";
@@ -201,5 +202,24 @@ describe("resizeBlockTiles", () => {
   it("reads no size from a block that has none", () => {
     assert.equal(blockTileSize(makeBlock(1, { col: 0, row: 0 })), undefined);
     assert.equal(blockTileSize(makeBlock(1)), undefined);
+  });
+});
+
+describe("rescaleLeavesBlocksOffGrid", () => {
+  const rescale = {
+    tilesetId: "stone",
+    from: 16,
+    to: 32
+  };
+
+  it("reports references that leave the tile grid", () => {
+    const onGrid = makeBlock(1, { tilesetId: "stone", col: 2, row: 4 });
+    const offGrid = makeBlock(2, undefined, {
+      top: { tilesetId: "stone", col: 1, row: 0 }
+    });
+    const otherTileset = makeBlock(3, { tilesetId: "wood", col: 1, row: 1 });
+
+    assert.equal(rescaleLeavesBlocksOffGrid([onGrid, otherTileset], rescale), false);
+    assert.equal(rescaleLeavesBlocksOffGrid([onGrid, offGrid], rescale), true);
   });
 });

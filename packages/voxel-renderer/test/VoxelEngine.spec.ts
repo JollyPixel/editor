@@ -276,8 +276,8 @@ describe("VoxelEngine — tilesets", () => {
 
     assert.deepEqual(engine.tilesets.definitions().map((def) => def.id), ["atlas", "later"]);
     assert.equal(engine.defaultTileSize, 64);
-    assert.equal(engine.tilesetManager.has("atlas"), true);
-    assert.equal(engine.tilesetManager.has("later"), false);
+    assert.ok(engine.tilesetManager.get("atlas"));
+    assert.equal(engine.tilesetManager.get("later"), undefined);
   });
 
   it("saves declared tilesets and the default tile size", () => {
@@ -298,7 +298,7 @@ describe("VoxelEngine — tilesets", () => {
 
     engine.load(data);
 
-    assert.equal(engine.tilesetManager.has("atlas"), false);
+    assert.equal(engine.tilesetManager.get("atlas"), undefined);
   });
 
   it("fills the missing tileset of loaded and defined blocks", () => {
@@ -377,7 +377,7 @@ describe("VoxelEngine — tilesets", () => {
     assert.equal(engine.removeTileset("atlas"), true);
     engine.flush();
 
-    assert.equal(engine.tilesetManager.has("atlas"), false);
+    assert.equal(engine.tilesetManager.get("atlas"), undefined);
     assert.equal(engine.root.children.length, 0);
   });
 });

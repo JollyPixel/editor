@@ -123,7 +123,6 @@ does not depend on an ECS runtime.
 - [Transparency](docs/api/core/VoxelTransparencyRenderer.md): scene compositing, setup, and limitations.
 - [Rendering and meshing](docs/concepts/rendering-and-meshing.md): dirty chunk
   rebuilds, geometry layout, and greedy meshing.
-- [Atlas padding](docs/concepts/atlas-padding.md): source and render textures.
 - [Loading tilesets](docs/guides/loading-and-restoring-tilesets.md),
   [creating custom shapes](docs/guides/creating-custom-shapes.md), and
   [saving worlds](docs/guides/saving-and-loading-worlds.md).
@@ -147,15 +146,15 @@ does not depend on an ECS runtime.
 - [`BlockDefinition`](docs/api/blocks/BlockDefinition.md),
   [`BlockRegistry` and tileset block generation](docs/api/blocks/BlockRegistry.md),
   [`BlockShape`](docs/api/blocks/BlockShape.md),
+  [`BlockTextures`](docs/api/blocks/BlockTextures.md),
   [`BlockShapeBase`](docs/api/blocks/BlockShapeBase.md), and
   [`BlockShapeRegistry`](docs/api/blocks/BlockShapeRegistry.md).
 - [Built-in shapes](docs/api/blocks/built-in-shapes.md),
   [`buildShapeGeometry`](docs/api/blocks/buildShapeGeometry.md),
   [shape slots](docs/api/blocks/shapeSlots.md),
   [tilesets](docs/api/tilesets/tilesets.md),
-  [`TilesetManager`](docs/api/tilesets/TilesetManager.md),
-  [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md), and
-  [`AtlasLayout`](docs/api/tilesets/AtlasLayout.md).
+  [`TilesetManager`](docs/api/tilesets/TilesetManager.md), and
+  [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md).
 - [Rendering, meshing, and tile wrapping](docs/concepts/rendering-and-meshing.md),
   [`VoxelCollider`](docs/api/collision/VoxelCollider.md), and
   [`RapierVoxelCollider`](docs/api/collision/RapierVoxelCollider.md).

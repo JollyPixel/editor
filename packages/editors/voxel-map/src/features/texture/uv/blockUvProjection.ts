@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import {
+  BlockTextures,
   resolvedBlockTextureSlots,
   tileRectOf,
-  tileRefForSlot,
   tileRefFromRect,
   WHOLE_TILE_BOUNDS,
   type BlockShape,
@@ -139,6 +139,7 @@ export function blockFromUvRegion(
   tileSize: number
 ): ResolvedBlockDefinition {
   const shapeUv = shape === undefined ? kBoxShapeUv : blockShapeUv(shape);
+  const textures = BlockTextures.of(block);
   const stackedSlot = region.stackedFace ??
     shapeUv.activeFaces[0] ??
     "front";
@@ -148,7 +149,7 @@ export function blockFromUvRegion(
       ...block,
       faceTextures: Object.fromEntries(
         region.slots.map((face) => {
-          const template = tileRefForSlot(block, face);
+          const template = textures.forSlot(face);
           if (!template) {
             throw new RangeError(`No texture template for UV slot "${face}"`);
           }
@@ -169,7 +170,7 @@ export function blockFromUvRegion(
     };
   }
 
-  const template = tileRefForSlot(block, stackedSlot);
+  const template = textures.forSlot(stackedSlot);
   if (!template) {
     throw new RangeError(
       `No texture template for UV slot "${stackedSlot}"`

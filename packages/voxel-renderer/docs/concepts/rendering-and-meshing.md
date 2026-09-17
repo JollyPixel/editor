@@ -146,10 +146,8 @@ function enableTileClamping(
 
 Chunk materials outside greedy mode get `enableTileClamping()` instead. It
 confines each face's samples to the `tileRegion` attribute's rect, so an MSAA
-sample taken outside the triangle cannot read a neighbouring tile. This is what
-lets atlases ship without a gutter, and therefore what lets a face reference a
-rect at a fractional tile offset. See
-[atlas padding](./atlas-padding.md).
+sample taken outside the triangle cannot read a neighbouring tile. It also lets a face
+reference a rect at a fractional tile offset.
 
 The optional `surface` applies alpha-mode and mask-cutoff behavior to the
 shader. The engine supplies it when creating chunk materials.

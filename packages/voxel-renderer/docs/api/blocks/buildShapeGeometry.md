@@ -48,11 +48,14 @@ entry for `NegZ`, while a `stair` returns eight. Each range also carries the
 does not have to filter `shape.faces` again.
 
 Ranges are the hook for per-face texturing: walk them, resolve the block's
-`tileRefForSlot(block, range.slot)`, and rewrite that slice of `uvs`.
+tile with [`BlockTextures.forSlot()`](./BlockTextures.md), and rewrite that
+slice of `uvs`.
 
 ```ts
+const textures = BlockTextures.of(block);
+
 for (const range of ranges) {
-  const tile = tileRefForSlot(block, range.slot);
+  const tile = textures.forSlot(range.slot);
   const end = range.start + range.count;
 
   for (let index = range.start; index < end; index++) {

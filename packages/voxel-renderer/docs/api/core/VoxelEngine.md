@@ -157,15 +157,6 @@ interface VoxelEngineOptions {
   debug?: VoxelDebuggerOptions;
 
   /**
-   * Texels of edge-replicated gutter added around every tile of an atlas before
-   * it is bound to a material. Chunk materials already clamp each face to its
-   * own atlas rect, so a gutter is optional and costs texture memory. See
-   * [atlas padding](../../concepts/atlas-padding.md).
-   * @default 0
-   */
-  tilesetPadding?: number;
-
-  /**
    * Merge coplanar identical block faces into the largest quads possible
    * instead of one quad per voxel face.
    * See [rendering and meshing](../../concepts/rendering-and-meshing.md#greedy-meshing).

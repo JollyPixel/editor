@@ -3,7 +3,7 @@ import * as THREE from "three";
 import {
   buildShapeGeometry,
   BlockSurface,
-  tileRefForSlot,
+  BlockTextures,
   type ResolvedBlockDefinition,
   type BlockShapeRegistry,
   type TilesetManager
@@ -79,13 +79,9 @@ export function buildBlockPreviewMesh(
     );
   }
 
-  const tilesetId =
-    block.defaultTexture?.tilesetId ??
-    tilesetManager.defaultTilesetId ??
-    undefined;
-  const texture = tilesetManager.has(tilesetId) ?
-    tilesetManager.atlas(tilesetId).texture :
-    null;
+  const texture = tilesetManager
+    .get(block.defaultTexture?.tilesetId)
+    ?.texture ?? null;
   const surface = new BlockSurface(block);
   const mat = new THREE.MeshLambertMaterial({
     map: texture,
@@ -102,18 +98,19 @@ export function buildBlockPreviewMesh(
   const vertices = Float32Array.from(positions);
   const atlasUvs = Float32Array.from(uvs);
 
+  const textures = BlockTextures.of(block);
   for (const range of ranges) {
-    const tileRef = tileRefForSlot(block, range.slot);
+    const tileRef = textures.forSlot(range.slot);
     if (!tileRef || !texture) {
       continue;
     }
 
-    if (!tilesetManager.has(tileRef.tilesetId)) {
+    const region = tilesetManager
+      .get(tileRef.tilesetId)
+      ?.uvFor(tileRef.col, tileRef.row, tileRef.size);
+    if (!region) {
       continue;
     }
-    const region = tilesetManager
-      .atlas(tileRef.tilesetId)
-      .uvFor(tileRef.col, tileRef.row, tileRef.size);
 
     const end = range.start + range.count;
     for (let index = range.start; index < end; index++) {

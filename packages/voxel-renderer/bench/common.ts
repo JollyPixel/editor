@@ -31,7 +31,7 @@ export function createBenchEngine(
     alphaTest: 0.5,
     greedy
   });
-  engine.tilesetManager.registerTexture(
+  engine.loadTileset(
     {
       id: "terrain",
       src: "memory://terrain",

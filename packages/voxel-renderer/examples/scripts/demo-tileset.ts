@@ -34,11 +34,11 @@ for (const { def, texture } of await loadTilesets([
     tileSize: 32
   }
 ])) {
-  tilesetManager.registerTexture(def, texture);
+  tilesetManager.tilesets.add(def);
+  tilesetManager.registerTexture(def.id, texture);
 }
 
 console.log("[tileset-demo] Tileset loaded. defaultTilesetId:", tilesetManager.defaultTilesetId);
-// console.log("[tileset-demo] Definitions:", tilesetManager.definitions());
 
 /*
  * // Log all UV regions for verification

@@ -16,8 +16,7 @@ import type {
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import {
   type CanvasBufferEvent,
-  type PixelArtCanvas,
-  type SelectionRect
+  type PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
 import type * as network from "@jolly-pixel/network";
 import { Emitter } from "@openally/emitt";
@@ -63,31 +62,23 @@ function makeFakeVoxelEngine(
   engine: VoxelEngine;
   dirtyReasons: string[];
   updatedTilesets: string[];
-  updatedRegions: SelectionRect[];
 } {
   const dirtyReasons: string[] = [];
   const updatedTilesets: string[] = [];
-  const updatedRegions: SelectionRect[] = [];
   const atlases = new Map(definitions.map((def) => [
     def.id,
     {
       def,
-      sourceTexture: { image },
-      updateSource(_image: object, bounds?: SelectionRect) {
-        if (bounds) {
-          updatedRegions.push(bounds);
-        }
-        else {
-          updatedTilesets.push(def.id);
-        }
+      texture: { image },
+      updateImage() {
+        updatedTilesets.push(def.id);
       }
     }
   ] as const));
   const tilesetManager = {
     defaultTilesetId: definitions[0]?.id ?? null,
-    has: (id: string) => atlases.has(id),
-    atlas: (id: string) => atlases.get(id),
-    definitions: () => definitions
+    get: (id: string) => atlases.get(id),
+    atlas: (id: string) => atlases.get(id)
   };
   const registry = new BlockRegistry();
   const fake = {
@@ -117,8 +108,7 @@ function makeFakeVoxelEngine(
   return {
     engine: fake as unknown as VoxelEngine,
     dirtyReasons,
-    updatedTilesets,
-    updatedRegions
+    updatedTilesets
   };
 }
 
@@ -328,9 +318,9 @@ describe("TextureEditorBridge / oversized textures", () => {
 });
 
 describe("TextureEditorBridge / streaming to the tileset", () => {
-  it("repads only the tiles a stroke touched, once per frame", () => {
+  it("uploads the atlas once per frame for a stroke", () => {
     const scheduler = makeScheduler();
-    const { engine, updatedRegions, updatedTilesets } = makeFakeVoxelEngine();
+    const { engine, updatedTilesets } = makeFakeVoxelEngine();
     const manager = makeFakeManager(() => false);
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
@@ -346,37 +336,29 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
     });
     scheduler.frame();
 
-    assert.deepEqual(
-      updatedRegions,
-      [{ x: 2, y: 2, width: 8, height: 8 }],
-      "one union of the frame's dirty bounds, not one call per pixel"
-    );
-    assert.deepEqual(
-      updatedTilesets,
-      [],
-      "the whole atlas must not be repadded for a stroke"
-    );
+    assert.deepEqual(updatedTilesets, ["atlas"]);
     bridge.destroy();
   });
 
   it("does nothing on a frame with no edits", () => {
     const scheduler = makeScheduler();
-    const { engine, updatedRegions } = makeFakeVoxelEngine();
+    const { engine, updatedTilesets } = makeFakeVoxelEngine();
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(makeFakeManager(() => false));
     bridge.loadTileset(engine, kAtlas);
+    updatedTilesets.length = 0;
 
     scheduler.frame();
     scheduler.frame();
 
-    assert.deepEqual(updatedRegions, []);
+    assert.deepEqual(updatedTilesets, []);
     bridge.destroy();
   });
 
-  it("falls back to a full repad after the texture is replaced", () => {
+  it("resyncs the whole atlas after the texture is replaced", () => {
     const scheduler = makeScheduler();
-    const { engine, updatedRegions, updatedTilesets } = makeFakeVoxelEngine();
+    const { engine, updatedTilesets } = makeFakeVoxelEngine();
     const manager = makeFakeManager(() => false);
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
@@ -384,42 +366,37 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
     bridge.loadTileset(engine, kAtlas);
     updatedTilesets.length = 0;
 
-    /*
-     * What a room snapshot lands as: CanvasBuffer.loadTexture swaps the
-     * element, so the padded atlas has to be rebuilt whole.
-     */
     manager.document.emit("replaced", { size: { x: 64, y: 64 } });
     scheduler.frame();
 
     assert.deepEqual(updatedTilesets, ["atlas"]);
-    assert.deepEqual(updatedRegions, []);
 
-    // The incremental path resumes on the next stroke.
     manager.document.emit("changed", {
       bounds: { x: 0, y: 0, width: 2, height: 2 }
     });
     scheduler.frame();
 
-    assert.deepEqual(updatedRegions, [{ x: 0, y: 0, width: 2, height: 2 }]);
+    assert.deepEqual(updatedTilesets, ["atlas", "atlas"]);
     bridge.destroy();
   });
 
   it("stops flushing once destroyed", () => {
     const scheduler = makeScheduler();
-    const { engine, updatedRegions } = makeFakeVoxelEngine();
+    const { engine, updatedTilesets } = makeFakeVoxelEngine();
     const manager = makeFakeManager(() => false);
 
     const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
     bridge.attach(manager);
     bridge.loadTileset(engine, kAtlas);
     bridge.destroy();
+    updatedTilesets.length = 0;
 
     manager.document.emit("changed", {
       bounds: { x: 0, y: 0, width: 2, height: 2 }
     });
     scheduler.frame();
 
-    assert.deepEqual(updatedRegions, []);
+    assert.deepEqual(updatedTilesets, []);
   });
 
   it("rescans only the blocks whose tiles the edit touched", () => {
@@ -520,11 +497,7 @@ describe("TextureEditorBridge / transparency batching", () => {
     scheduler.frame();
     scheduler.frame();
 
-    assert.deepEqual(
-      updatedTilesets,
-      ["atlas"],
-      "the full resync supersedes the region the stroke queued"
-    );
+    assert.deepEqual(updatedTilesets, ["atlas", "atlas"]);
     bridge.destroy();
   });
 });
@@ -765,7 +738,7 @@ function makeRegisteringEngine() {
     shapeRegistry: BlockShapeRegistry.createDefault(),
     defineBlocks: () => void 0,
     tilesetManager: {
-      has: (id: string) => atlases.has(id),
+      get: (id: string) => atlases.get(id),
       atlas: (id: string) => atlases.get(id)
     },
     loadTileset(
@@ -783,8 +756,8 @@ function makeRegisteringEngine() {
           cols: Math.floor(64 / def.tileSize),
           rows: Math.floor(64 / def.tileSize)
         },
-        sourceTexture: texture,
-        updateSource: () => void 0
+        texture,
+        updateImage: () => void 0
       });
     }
   };
