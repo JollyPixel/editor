@@ -154,7 +154,7 @@ export class GroupTransformLiveSync extends ActorComponent {
         timer: setTimeout(() => this.#endStream(clientId, { revert: true }), kExpiryMs)
       };
       this.#streams.set(clientId, stream);
-      localGroup.emphasize(peerColor(clientId, this.#room.peers.get(clientId)?.profile));
+      localGroup.emphasize(peerColor(clientId, this.#room.peers.get(clientId)?.profile), clientId);
     }
 
     this.#modelManager.applyRemoteCommand({
@@ -179,7 +179,7 @@ export class GroupTransformLiveSync extends ActorComponent {
     this.#streams.delete(clientId);
 
     const localGroup = this.#modelManager.getGroupByUUID(stream.uuid);
-    localGroup?.clearEmphasis();
+    localGroup?.clearEmphasis(clientId);
 
     if (options.revert && localGroup) {
       this.#modelManager.applyRemoteCommand({

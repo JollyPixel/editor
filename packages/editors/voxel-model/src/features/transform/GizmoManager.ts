@@ -7,6 +7,7 @@ import type { OrbitFlyCamera } from "@jolly-pixel/engine";
 import type GroupManager from "../groups/GroupManager.ts";
 import type { GroupTransformSnapshot } from "../groups/hooks.ts";
 import { snapshotTransform } from "../groups/transformCodec.ts";
+import { editorState } from "../../app/state/index.ts";
 
 export type GizmoMode = "translate" | "rotate" | "scale";
 export type GizmoTarget = "group" | "pivot" | "mesh";
@@ -81,7 +82,7 @@ export default class GizmoManager {
         group.syncMeshToPivot();
       }
 
-      document.dispatchEvent(new CustomEvent("groupTransformChanged", { detail: { group } }));
+      editorState.modelEvents.emit("groupTransformChanged", { group });
 
       if (this.#dragging) {
         this.#onDragProgress?.(group.getGroupUUID(), snapshotTransform(group));

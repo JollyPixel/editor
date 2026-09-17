@@ -6,6 +6,7 @@ import * as THREE from "three";
 import type GroupManager from "../groups/GroupManager.ts";
 import type { GizmoConfig, GizmoSpace, ModelSceneComponent } from "../../app/ModelSceneComponent.ts";
 import type { PeerMark } from "../../collaboration/peerMarks.ts";
+import { editorState, type ModelEventMap } from "../../app/state/index.ts";
 
 export type TransformMode = "pos" | "angle" | "size" | "pivot" | "scale";
 export type Vector3Value = { x: number; y: number; z: number; };
@@ -49,6 +50,7 @@ export class TransformPanelController implements ReactiveController {
   #space: GizmoSpace = "local";
   #axisValues: Vector3Value = { x: 0, y: 0, z: 0 };
   #unsubscribeLock: (() => void) | null = null;
+  #unsubscribeModelEvents: Array<() => void> = [];
 
   constructor(host: ReactiveControllerHost) {
     this.#host = host;
@@ -56,13 +58,18 @@ export class TransformPanelController implements ReactiveController {
   }
 
   hostConnected(): void {
-    document.addEventListener("groupSelected", this.#onGroupSelected);
-    document.addEventListener("groupTransformChanged", this.#onGroupTransformChanged);
+    const { modelEvents } = editorState;
+    this.#unsubscribeModelEvents = [
+      modelEvents.watch("groupSelected", this.#onGroupSelected),
+      modelEvents.watch("groupTransformChanged", this.#onGroupTransformChanged)
+    ];
   }
 
   hostDisconnected(): void {
-    document.removeEventListener("groupSelected", this.#onGroupSelected);
-    document.removeEventListener("groupTransformChanged", this.#onGroupTransformChanged);
+    for (const unsubscribe of this.#unsubscribeModelEvents) {
+      unsubscribe();
+    }
+    this.#unsubscribeModelEvents = [];
     this.#unsubscribeLock?.();
     this.#unsubscribeLock = null;
   }
@@ -86,7 +93,7 @@ export class TransformPanelController implements ReactiveController {
   public attach(sceneManager: ModelSceneComponent): void {
     this.#sceneManager = sceneManager;
     this.#unsubscribeLock?.();
-    this.#unsubscribeLock = sceneManager.getTransformLock()?.onChange(() => {
+    this.#unsubscribeLock = sceneManager.getTransformLock()?.watch("change", () => {
       this.#syncGizmoMode();
       this.#host.requestUpdate();
     }) ?? null;
@@ -130,10 +137,9 @@ export class TransformPanelController implements ReactiveController {
     this.#selectedGroup?.setPivotMarkerVisible(kPivotVisibleModes.includes(this.#mode));
   }
 
-  readonly #onGroupSelected = (
-    event: Event
-  ): void => {
-    const { group } = (event as CustomEvent<{ group: GroupManager | null; }>).detail;
+  readonly #onGroupSelected: ModelEventMap["groupSelected"] = (
+    { group }
+  ) => {
     this.#selectedGroup?.setPivotMarkerVisible(false);
     this.#selectedGroup = group;
     this.#syncAxisValues();
@@ -142,10 +148,9 @@ export class TransformPanelController implements ReactiveController {
     this.#host.requestUpdate();
   };
 
-  readonly #onGroupTransformChanged = (
-    event: Event
-  ): void => {
-    const { group } = (event as CustomEvent<{ group: GroupManager; }>).detail;
+  readonly #onGroupTransformChanged: ModelEventMap["groupTransformChanged"] = (
+    { group }
+  ) => {
     if (group !== this.#selectedGroup) {
       return;
     }

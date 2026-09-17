@@ -147,7 +147,7 @@ describe("GroupTransformLock", () => {
   it("notifies listeners on sync, presence patches and peer-left", () => {
     const harness = createLock();
     let notifications = 0;
-    const unsubscribe = harness.lock.onChange(() => {
+    const unsubscribe = harness.lock.watch("change", () => {
       notifications++;
     });
 
@@ -163,7 +163,7 @@ describe("GroupTransformLock", () => {
   it("stops notifying once unsubscribed", () => {
     const harness = createLock();
     let notifications = 0;
-    const unsubscribe = harness.lock.onChange(() => {
+    const unsubscribe = harness.lock.watch("change", () => {
       notifications++;
     });
     unsubscribe();

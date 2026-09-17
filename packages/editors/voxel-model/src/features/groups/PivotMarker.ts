@@ -4,11 +4,12 @@ import * as THREE from "three";
 // CONSTANTS
 const kPivotMarkerSize = 0.025;
 const kPivotMarkerTextureSize = 64;
-const kPivotColor = 0xffcc00;
 const kPivotRenderOrder = Infinity;
+export const NEUTRAL_HIGHLIGHT_COLOR = 0xcccccc;
 
 export default class PivotMarker {
   #sprite: THREE.Sprite;
+  #owners = new Map<string, THREE.ColorRepresentation>();
 
   constructor() {
     this.#sprite = this.#create();
@@ -18,8 +19,19 @@ export default class PivotMarker {
     return this.#sprite;
   }
 
-  public setVisible(visible: boolean): void {
-    this.#sprite.visible = visible;
+  public show(
+    owner: string,
+    color: THREE.ColorRepresentation = NEUTRAL_HIGHLIGHT_COLOR
+  ): void {
+    this.#owners.set(owner, color);
+    this.#sync();
+  }
+
+  public hide(
+    owner: string
+  ): void {
+    this.#owners.delete(owner);
+    this.#sync();
   }
 
   public dispose(): void {
@@ -29,10 +41,20 @@ export default class PivotMarker {
     }
   }
 
+  #sync(): void {
+    this.#sprite.visible = this.#owners.size > 0;
+
+    if (this.#sprite.material instanceof THREE.SpriteMaterial) {
+      this.#sprite.material.color.set(
+        [...this.#owners.values()].at(-1) ?? NEUTRAL_HIGHLIGHT_COLOR
+      );
+    }
+  }
+
   #create(): THREE.Sprite {
     const material = new THREE.SpriteMaterial({
       map: this.#circleTexture(kPivotMarkerTextureSize),
-      color: kPivotColor,
+      color: NEUTRAL_HIGHLIGHT_COLOR,
       depthTest: false,
       depthWrite: false,
       transparent: true,

@@ -12,16 +12,20 @@ import type {
   ModelNetworkCommand,
   ModelServerMessage
 } from "../network/types.ts";
+import { EditorStore } from "../app/state/index.ts";
 
 export interface GroupTransformLockOptions {
   room: network.Room<ModelNetworkCommand, ModelServerMessage>;
 }
 
-export class GroupTransformLock {
+export type GroupTransformLockEvents = {
+  change: () => void;
+};
+
+export class GroupTransformLock extends EditorStore<GroupTransformLockEvents> {
   #room: network.Room<ModelNetworkCommand, ModelServerMessage>;
   #heldUuid: string | null = null;
   #locks = new Map<string, string>();
-  #listeners = new Set<() => void>();
 
   #onSync = (): void => {
     this.#locks.clear();
@@ -31,7 +35,7 @@ export class GroupTransformLock {
         this.#locks.set(clientId, uuid);
       }
     }
-    this.#notify();
+    this.emit("change");
   };
 
   #onPeerPresence = (
@@ -48,20 +52,21 @@ export class GroupTransformLock {
     else {
       this.#locks.set(event.clientId, uuid);
     }
-    this.#notify();
+    this.emit("change");
   };
 
   #onPeerLeft = (
     event: network.RoomPeerEvent
   ): void => {
     if (this.#locks.delete(event.clientId)) {
-      this.#notify();
+      this.emit("change");
     }
   };
 
   constructor(
     options: GroupTransformLockOptions
   ) {
+    super();
     this.#room = options.room;
 
     this.#room.on("sync", this.#onSync);
@@ -118,16 +123,6 @@ export class GroupTransformLock {
     };
   }
 
-  onChange(
-    listener: () => void
-  ): () => void {
-    this.#listeners.add(listener);
-
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  }
-
   dispose(): void {
     this.#room.off("sync", this.#onSync);
     this.#room.off("peer-presence", this.#onPeerPresence);
@@ -135,13 +130,7 @@ export class GroupTransformLock {
 
     this.release();
     this.#locks.clear();
-    this.#listeners.clear();
-  }
-
-  #notify(): void {
-    for (const listener of this.#listeners) {
-      listener();
-    }
+    this.removeAllListeners();
   }
 }
 

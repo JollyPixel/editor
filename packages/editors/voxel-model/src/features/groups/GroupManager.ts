@@ -2,15 +2,17 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import PivotMarker from "./PivotMarker.ts";
+import PivotMarker, { NEUTRAL_HIGHLIGHT_COLOR } from "./PivotMarker.ts";
 
 // CONSTANTS
-const kSelectionColor = 0xff00ff;
+const kSelectionColor = NEUTRAL_HIGHLIGHT_COLOR;
 const kSelectionScale = 1.06;
 const kSelectionOpacity = 0.6;
 const kTransformRoundDecimals = 2;
 const kEmphasisScale = 1.12;
 const kEmphasisOpacity = 0.85;
+const kDefaultEmphasisOwner = "default";
+const kLocalPivotOwner = "local";
 
 function roundTo(
   value: number,
@@ -40,6 +42,7 @@ export default class GroupManager {
   private isSelected: boolean = false;
   #selectionShell: THREE.Mesh | null = null;
   #emphasisShell: THREE.Mesh | null = null;
+  #emphasisOwners = new Map<string, THREE.ColorRepresentation>();
 
   constructor(options: GroupManagerOptions = {}) {
     const {
@@ -133,6 +136,32 @@ export default class GroupManager {
   }
 
   public emphasize(
+    color: THREE.ColorRepresentation,
+    owner: string = kDefaultEmphasisOwner
+  ): void {
+    this.#emphasisOwners.set(owner, color);
+    this.pivotMarker.show(owner, color);
+    this.#applyShellColor(color);
+  }
+
+  public clearEmphasis(
+    owner: string = kDefaultEmphasisOwner
+  ): void {
+    this.#emphasisOwners.delete(owner);
+    this.pivotMarker.hide(owner);
+
+    const remaining = [...this.#emphasisOwners.values()].at(-1);
+    if (remaining !== undefined) {
+      this.#applyShellColor(remaining);
+
+      return;
+    }
+
+    this.#disposeShell(this.#emphasisShell);
+    this.#emphasisShell = null;
+  }
+
+  #applyShellColor(
     color: THREE.ColorRepresentation
   ): void {
     if (this.#emphasisShell === null) {
@@ -149,11 +178,6 @@ export default class GroupManager {
     if (this.#emphasisShell.material instanceof THREE.MeshBasicMaterial) {
       this.#emphasisShell.material.color.set(color);
     }
-  }
-
-  public clearEmphasis(): void {
-    this.#disposeShell(this.#emphasisShell);
-    this.#emphasisShell = null;
   }
 
   #createGlowShell(
@@ -194,7 +218,12 @@ export default class GroupManager {
   }
 
   public setPivotMarkerVisible(visible: boolean): void {
-    this.pivotMarker.setVisible(visible);
+    if (visible) {
+      this.pivotMarker.show(kLocalPivotOwner);
+    }
+    else {
+      this.pivotMarker.hide(kLocalPivotOwner);
+    }
   }
 
   public setTexture(texture: THREE.Texture | null): void {
@@ -332,7 +361,9 @@ export default class GroupManager {
       return;
     }
 
+    const uv = this.mesh.geometry.attributes.uv.clone();
     const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
+    geometry.setAttribute("uv", uv);
 
     this.mesh.geometry.dispose();
     this.mesh.geometry = geometry;

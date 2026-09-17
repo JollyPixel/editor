@@ -1,5 +1,5 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import { describe, test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -14,6 +14,7 @@ import {
 import type GroupManager from "#src/features/groups/GroupManager.ts";
 import type { ModelSceneComponent } from "#src/app/ModelSceneComponent.ts";
 import type { PeerMark } from "#src/collaboration/peerMarks.ts";
+import { editorState } from "#src/app/state/index.ts";
 
 class TestHost implements ReactiveControllerHost {
   readonly updateComplete = Promise.resolve(true);
@@ -93,18 +94,20 @@ function makeFakeGroup(): FakeGroup {
 }
 
 function select(
+  t: TestContext,
   controller: TransformPanelController,
   group: GroupManager
 ): void {
   controller.hostConnected();
-  document.dispatchEvent(new CustomEvent("groupSelected", { detail: { group } }));
+  t.after(() => controller.hostDisconnected());
+  editorState.modelEvents.emit("groupSelected", { group });
 }
 
 describe("TransformPanelController space handling", () => {
-  test("reads the world rotation when space is world", () => {
+  test("reads the world rotation when space is world", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
 
     controller.setMode("angle");
     controller.setSpace("world");
@@ -112,10 +115,10 @@ describe("TransformPanelController space handling", () => {
     assert.deepStrictEqual(controller.axisValues, { x: 45, y: 90, z: 0 });
   });
 
-  test("reads the local rotation when space is local", () => {
+  test("reads the local rotation when space is local", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
 
     controller.setMode("angle");
     controller.setSpace("local");
@@ -123,10 +126,10 @@ describe("TransformPanelController space handling", () => {
     assert.deepStrictEqual(controller.axisValues, { x: 0, y: 0, z: 0 });
   });
 
-  test("applies angle edits through the world setter when space is world", () => {
+  test("applies angle edits through the world setter when space is world", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
 
     controller.setMode("angle");
     controller.setSpace("world");
@@ -136,10 +139,10 @@ describe("TransformPanelController space handling", () => {
     assert.equal(fake.calls.setRotation, undefined);
   });
 
-  test("applies angle edits through the local setter when space is local", () => {
+  test("applies angle edits through the local setter when space is local", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
 
     controller.setMode("angle");
     controller.setAxisValues({ x: 10, y: 20, z: 30 });
@@ -153,10 +156,10 @@ describe("TransformPanelController pivot marker visibility", () => {
   const kVisibleModes: TransformMode[] = ["pos", "angle", "size", "pivot"];
 
   for (const mode of kVisibleModes) {
-    test(`shows the pivot marker in ${mode} mode`, () => {
+    test(`shows the pivot marker in ${mode} mode`, (t) => {
       const controller = new TransformPanelController(new TestHost());
       const fake = makeFakeGroup();
-      select(controller, fake.group);
+      select(t, controller, fake.group);
 
       controller.setMode(mode);
 
@@ -164,10 +167,10 @@ describe("TransformPanelController pivot marker visibility", () => {
     });
   }
 
-  test("hides the pivot marker in scale mode", () => {
+  test("hides the pivot marker in scale mode", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
 
     controller.setMode("scale");
 
@@ -225,7 +228,8 @@ function makeFakeSceneManager(
         release: () => {
           fakeLock.releaseCount++;
         },
-        onChange: (listener: () => void) => {
+        watch: (_event: "change", listener: () => void) => {
+          void _event;
           fakeLock.onChangeListeners.add(listener);
 
           return () => fakeLock.onChangeListeners.delete(listener);
@@ -238,10 +242,10 @@ function makeFakeSceneManager(
 }
 
 describe("TransformPanelController transform lock", () => {
-  test("is disabled once a remote peer holds the lock on the selected block", () => {
+  test("is disabled once a remote peer holds the lock on the selected block", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
     const fakeLock = makeFakeLock();
     const { sceneManager } = makeFakeSceneManager(fakeLock);
     controller.attach(sceneManager);
@@ -251,10 +255,10 @@ describe("TransformPanelController transform lock", () => {
     assert.equal(controller.disabled, true);
   });
 
-  test("is enabled when the lock resolves to no remote holder", () => {
+  test("is enabled when the lock resolves to no remote holder", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
     const fakeLock = makeFakeLock();
     const { sceneManager } = makeFakeSceneManager(fakeLock);
     controller.attach(sceneManager);
@@ -262,10 +266,10 @@ describe("TransformPanelController transform lock", () => {
     assert.equal(controller.disabled, false);
   });
 
-  test("does not mutate the group when locked, even if asked to", () => {
+  test("does not mutate the group when locked, even if asked to", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
     const fakeLock = makeFakeLock();
     fakeLock.lockedByResult = { clientId: "bob", displayName: "Bob", color: "#000000" };
     const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
@@ -278,10 +282,10 @@ describe("TransformPanelController transform lock", () => {
     assert.deepEqual(stats.commitCalls, []);
   });
 
-  test("claims the lock before mutating and releases it after commit", () => {
+  test("claims the lock before mutating and releases it after commit", (t) => {
     const controller = new TransformPanelController(new TestHost());
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
     const fakeLock = makeFakeLock();
     const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
     controller.attach(sceneManager);
@@ -294,11 +298,11 @@ describe("TransformPanelController transform lock", () => {
     assert.equal(fakeLock.releaseCount, 1);
   });
 
-  test("re-syncs the gizmo mode and requests an update when the lock changes", () => {
+  test("re-syncs the gizmo mode and requests an update when the lock changes", (t) => {
     const host = new TestHost();
     const controller = new TransformPanelController(host);
     const fake = makeFakeGroup();
-    select(controller, fake.group);
+    select(t, controller, fake.group);
     const fakeLock = makeFakeLock();
     const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
     controller.attach(sceneManager);

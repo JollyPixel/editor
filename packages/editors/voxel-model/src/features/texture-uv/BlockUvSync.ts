@@ -11,6 +11,7 @@ import {
 // Import Internal Dependencies
 import type GroupManager from "../groups/GroupManager.ts";
 import type { ModelSceneComponent } from "../../app/ModelSceneComponent.ts";
+import { editorState, type ModelEventMap } from "../../app/state/index.ts";
 
 // CONSTANTS
 const kBlockUvSize = { width: 16, height: 16 };
@@ -67,8 +68,8 @@ export default class BlockUvSync {
     this.#modelSceneComponent = options.modelSceneComponent;
     this.#getCanvasManager = options.getCanvasManager;
 
-    document.addEventListener("groupSelected", this.#onGroupSelected);
-    document.addEventListener("groupRemoved", this.#onGroupRemoved);
+    editorState.modelEvents.on("groupSelected", this.#onGroupSelected);
+    editorState.modelEvents.on("groupRemoved", this.#onGroupRemoved);
   }
 
   public update(): void {
@@ -155,10 +156,9 @@ export default class BlockUvSync {
     }
   }
 
-  readonly #onGroupRemoved = (
-    event: Event
-  ): void => {
-    const { uuid } = (event as CustomEvent<{ uuid: string; }>).detail;
+  readonly #onGroupRemoved: ModelEventMap["groupRemoved"] = (
+    { uuid }
+  ) => {
     this.#mappedUuids.delete(uuid);
 
     const canvasManager = this.#getCanvasManager();
@@ -177,7 +177,7 @@ export default class BlockUvSync {
     }
 
     modelManager.selectGroup(group);
-    document.dispatchEvent(new CustomEvent("groupSelected", { detail: { group } }));
+    editorState.modelEvents.emit("groupSelected", { group });
   };
 
   readonly #onUvRegionChanged: UVMapListener<"region-moved"> = (
@@ -221,15 +221,14 @@ export default class BlockUvSync {
     this.#mappedUuids.add(uuid);
   }
 
-  readonly #onGroupSelected = (
-    event: Event
-  ): void => {
+  readonly #onGroupSelected: ModelEventMap["groupSelected"] = (
+    { group }
+  ) => {
     const canvasManager = this.#getCanvasManager();
     if (!canvasManager) {
       return;
     }
 
-    const { group } = (event as CustomEvent<{ group: GroupManager | null; }>).detail;
     const targetId = group ? blockRegionId(group.getGroupUUID()) : null;
     if (canvasManager.uv.selectedRegionId === targetId) {
       return;

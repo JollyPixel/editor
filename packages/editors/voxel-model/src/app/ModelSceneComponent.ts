@@ -17,6 +17,7 @@ import { GroupSelectionPresence } from "../collaboration/GroupSelectionPresence.
 import { GroupTransformLiveSync } from "../collaboration/GroupTransformLiveSync.ts";
 import { GroupTransformLock } from "../collaboration/GroupTransformLock.ts";
 import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
+import { PeerSelectionHighlight } from "../collaboration/PeerSelectionHighlight.ts";
 import { PeerRoster } from "../collaboration/PeerRoster.ts";
 import type { EditorIdentity } from "../collaboration/identity.ts";
 import { ModelSyncClient } from "../network/ModelSyncClient.ts";
@@ -24,6 +25,7 @@ import type {
   ModelNetworkCommand,
   ModelServerMessage
 } from "../network/types.ts";
+import { editorState } from "./state/index.ts";
 
 export type { GizmoMode, GizmoTarget, GizmoSpace, GizmoConfig } from "../features/transform/GizmoManager.ts";
 
@@ -97,6 +99,11 @@ export class ModelSceneComponent extends ActorComponent {
       this.#groupSelections = new GroupSelectionPresence({
         room: this.#room
       });
+      this.actor.world
+        .createActor("peer-selection-highlight")
+        .addComponentAndGet(PeerSelectionHighlight, {
+          modelManager: this.#modelManager
+        });
       this.#peerFrustums = this.actor.world
         .createActor("peer-frustums")
         .addComponentAndGet(PeerFrustums, {
@@ -129,36 +136,28 @@ export class ModelSceneComponent extends ActorComponent {
       case "group-added": {
         const group = this.#modelManager.getGroupByUUID(event.uuid);
         if (group) {
-          document.dispatchEvent(new CustomEvent("groupCreated", {
-            detail: { group, name: event.name, parentId: null }
-          }));
+          editorState.modelEvents.emit("groupCreated", { group, name: event.name, parentId: null });
         }
         break;
       }
 
       case "group-removed":
-        document.dispatchEvent(new CustomEvent("groupRemoved", {
-          detail: { uuid: event.uuid }
-        }));
+        editorState.modelEvents.emit("groupRemoved", { uuid: event.uuid });
         break;
 
       case "group-renamed":
-        document.dispatchEvent(new CustomEvent("groupRenamed", {
-          detail: { uuid: event.uuid, name: event.name }
-        }));
+        editorState.modelEvents.emit("groupRenamed", { uuid: event.uuid, name: event.name });
         break;
 
       case "group-reparented":
       case "group-reparented-local":
-        document.dispatchEvent(new CustomEvent("groupReparented", {
-          detail: { uuid: event.uuid, parentUuid: event.parentUuid }
-        }));
+        editorState.modelEvents.emit("groupReparented", { uuid: event.uuid, parentUuid: event.parentUuid });
         break;
 
       case "group-transformed": {
         const group = this.#modelManager.getGroupByUUID(event.uuid);
         if (group) {
-          document.dispatchEvent(new CustomEvent("groupTransformChanged", { detail: { group } }));
+          editorState.modelEvents.emit("groupTransformChanged", { group });
         }
         break;
       }
@@ -176,7 +175,7 @@ export class ModelSceneComponent extends ActorComponent {
       };
     });
 
-    document.dispatchEvent(new CustomEvent("modelSnapshotApplied", { detail: { nodes } }));
+    editorState.modelEvents.emit("modelSnapshotApplied", { nodes });
   };
 
   teleportToPeer(
@@ -235,14 +234,14 @@ export class ModelSceneComponent extends ActorComponent {
 
       if (group) {
         this.#modelManager.selectGroup(group);
-        this.#dispatchGroupSelected(group);
+        editorState.modelEvents.emit("groupSelected", { group });
       }
 
       return;
     }
 
     this.#modelManager.selectGroup(null);
-    this.#dispatchGroupSelected(null);
+    editorState.modelEvents.emit("groupSelected", { group: null });
   }
 
   public createBlock(
@@ -259,7 +258,7 @@ export class ModelSceneComponent extends ActorComponent {
     }
 
     this.#modelManager.selectGroup(group);
-    this.#dispatchGroupSelected(group);
+    editorState.modelEvents.emit("groupSelected", { group });
 
     return group;
   }
@@ -271,14 +270,6 @@ export class ModelSceneComponent extends ActorComponent {
     }
 
     this.#modelManager.removeGroup(group);
-  }
-
-  #dispatchGroupSelected(
-    group: GroupManager | null
-  ): void {
-    document.dispatchEvent(new CustomEvent("groupSelected", {
-      detail: { group }
-    }));
   }
 
   public getModelManager(): ModelManager {

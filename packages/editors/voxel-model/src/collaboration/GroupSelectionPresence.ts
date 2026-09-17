@@ -4,6 +4,7 @@ import type * as network from "@jolly-pixel/network";
 // Import Internal Dependencies
 import {
   editorState,
+  type ModelEventMap,
   type PresenceStore
 } from "../app/state/index.ts";
 import type {
@@ -24,10 +25,9 @@ export class GroupSelectionPresence {
   #selectedUuid: string | null = null;
   #tracker: PeerMarkTracker<string>;
 
-  #onGroupSelected = (
-    event: Event
-  ): void => {
-    const { group } = (event as CustomEvent).detail;
+  #onGroupSelected: ModelEventMap["groupSelected"] = (
+    { group }
+  ) => {
     this.#selectedUuid = group ? group.getGroupUUID() : null;
     this.#tracker.publishLocal();
   };
@@ -46,11 +46,11 @@ export class GroupSelectionPresence {
         this.#presence.blockSelections = marks;
       }
     });
-    document.addEventListener("groupSelected", this.#onGroupSelected);
+    editorState.modelEvents.on("groupSelected", this.#onGroupSelected);
   }
 
   dispose(): void {
-    document.removeEventListener("groupSelected", this.#onGroupSelected);
+    editorState.modelEvents.off("groupSelected", this.#onGroupSelected);
     this.#tracker.dispose();
   }
 }

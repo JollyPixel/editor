@@ -15,15 +15,18 @@ import {
 import type ModelManager from "../../features/groups/ModelManager.ts";
 import type GroupManager from "../../features/groups/GroupManager.ts";
 import type { ModelSceneComponent } from "../ModelSceneComponent.ts";
-import type { PresenceStore } from "../state/index.ts";
+import {
+  editorState,
+  type ModelEventMap,
+  type PresenceStore
+} from "../state/index.ts";
 import {
   buildTreeFromFlatNodes,
   collectTreeNodeIds,
   insertChildTreeNode,
   relabelTreeNode,
   removeTreeNode,
-  withBlockBadges,
-  type FlatModelNode
+  withBlockBadges
 } from "../treeNodes.ts";
 import { promptNewBlock } from "./prompts/promptNewBlock.ts";
 import { promptDuplicate } from "./prompts/promptDuplicate.ts";
@@ -31,26 +34,13 @@ import { promptDelete } from "./prompts/promptDelete.ts";
 
 type Host = ReactiveControllerHost & HTMLElement;
 
-interface GroupRemovedDetail {
-  uuid: string;
-}
-
-interface GroupReparentedDetail {
-  uuid: string;
-  parentUuid: string | null;
-}
-
-interface GroupRenamedDetail {
-  uuid: string;
-  name: string;
-}
-
 export class BlockTreeController implements ReactiveController {
   #host: Host;
   #modelManager: ModelManager | null = null;
   #sceneManager: ModelSceneComponent | null = null;
   #presence: PresenceStore | null = null;
   #unsubscribePresence: (() => void) | null = null;
+  #unsubscribeModelEvents: Array<() => void> = [];
   #nodes: TreeNode[] = [];
   #selected: string[] = [];
   #expanded: string[] = [];
@@ -63,21 +53,22 @@ export class BlockTreeController implements ReactiveController {
   }
 
   hostConnected(): void {
-    document.addEventListener("groupCreated", this.#onGroupCreated);
-    document.addEventListener("groupRemoved", this.#onGroupRemoved);
-    document.addEventListener("groupReparented", this.#onGroupReparented);
-    document.addEventListener("groupRenamed", this.#onGroupRenamed);
-    document.addEventListener("groupSelected", this.#onGroupSelected);
-    document.addEventListener("modelSnapshotApplied", this.#onModelSnapshotApplied);
+    const { modelEvents } = editorState;
+    this.#unsubscribeModelEvents = [
+      modelEvents.watch("groupCreated", this.#onGroupCreated),
+      modelEvents.watch("groupRemoved", this.#onGroupRemoved),
+      modelEvents.watch("groupReparented", this.#onGroupReparented),
+      modelEvents.watch("groupRenamed", this.#onGroupRenamed),
+      modelEvents.watch("groupSelected", this.#onGroupSelected),
+      modelEvents.watch("modelSnapshotApplied", this.#onModelSnapshotApplied)
+    ];
   }
 
   hostDisconnected(): void {
-    document.removeEventListener("groupCreated", this.#onGroupCreated);
-    document.removeEventListener("groupRemoved", this.#onGroupRemoved);
-    document.removeEventListener("groupReparented", this.#onGroupReparented);
-    document.removeEventListener("groupRenamed", this.#onGroupRenamed);
-    document.removeEventListener("groupSelected", this.#onGroupSelected);
-    document.removeEventListener("modelSnapshotApplied", this.#onModelSnapshotApplied);
+    for (const unsubscribe of this.#unsubscribeModelEvents) {
+      unsubscribe();
+    }
+    this.#unsubscribeModelEvents = [];
     this.#unsubscribePresence?.();
     this.#unsubscribePresence = null;
   }
@@ -131,7 +122,7 @@ export class BlockTreeController implements ReactiveController {
 
     if (this.#selected.length === 0) {
       this.#modelManager?.selectGroup(null);
-      this.#dispatchGroupSelected(null);
+      editorState.modelEvents.emit("groupSelected", { group: null });
 
       return;
     }
@@ -143,7 +134,7 @@ export class BlockTreeController implements ReactiveController {
     const group = this.#modelManager.getGroupByUUID(this.#selected[0]);
     if (group) {
       this.#modelManager.selectGroup(group);
-      this.#dispatchGroupSelected(group);
+      editorState.modelEvents.emit("groupSelected", { group });
     }
   };
 
@@ -216,12 +207,7 @@ export class BlockTreeController implements ReactiveController {
     name: string,
     parentId: string | null
   ): void {
-    const event = new CustomEvent("addblock", {
-      detail: { name, parentId },
-      bubbles: true,
-      composed: true
-    });
-    this.#host.dispatchEvent(event);
+    editorState.modelEvents.emit("addblock", { name, parentId });
   }
 
   async #promptAndDuplicate(): Promise<void> {
@@ -264,7 +250,7 @@ export class BlockTreeController implements ReactiveController {
 
     const newGroup = this.#modelManager.getGroupByUUID(uuid) ?? null;
     this.#modelManager.selectGroup(newGroup);
-    this.#dispatchGroupSelected(newGroup);
+    editorState.modelEvents.emit("groupSelected", { group: newGroup });
   }
 
   #duplicateSubtree(
@@ -322,14 +308,8 @@ export class BlockTreeController implements ReactiveController {
     this.#selected = [];
     this.#host.requestUpdate();
     this.#modelManager.selectGroup(null);
-    this.#dispatchGroupSelected(null);
-
-    const event = new CustomEvent("deleteblock", {
-      detail: { uuids: removedUuids },
-      bubbles: true,
-      composed: true
-    });
-    this.#host.dispatchEvent(event);
+    editorState.modelEvents.emit("groupSelected", { group: null });
+    editorState.modelEvents.emit("deleteblock", { uuids: removedUuids });
   }
 
   #promoteChildren(
@@ -347,33 +327,22 @@ export class BlockTreeController implements ReactiveController {
     return [node.id];
   }
 
-  #dispatchGroupSelected(
-    group: GroupManager | null
-  ): void {
-    document.dispatchEvent(new CustomEvent("groupSelected", {
-      detail: { group }
-    }));
-  }
-
-  readonly #onGroupCreated = (
-    event: Event
-  ): void => {
-    const { group, name, parentId } = (event as CustomEvent).detail;
+  readonly #onGroupCreated: ModelEventMap["groupCreated"] = (
+    { group, name, parentId }
+  ) => {
     this.#addGroupItemToUI(group, name || "Block", parentId ?? null);
   };
 
-  readonly #onGroupRemoved = (
-    event: Event
-  ): void => {
-    const { uuid } = (event as CustomEvent<GroupRemovedDetail>).detail;
+  readonly #onGroupRemoved: ModelEventMap["groupRemoved"] = (
+    { uuid }
+  ) => {
     this.#nodes = removeTreeNode(this.#nodes, uuid);
     this.#host.requestUpdate();
   };
 
-  readonly #onGroupReparented = (
-    event: Event
-  ): void => {
-    const { uuid, parentUuid } = (event as CustomEvent<GroupReparentedDetail>).detail;
+  readonly #onGroupReparented: ModelEventMap["groupReparented"] = (
+    { uuid, parentUuid }
+  ) => {
     const node = findNode(this.#nodes, uuid);
     if (node === null) {
       return;
@@ -391,27 +360,24 @@ export class BlockTreeController implements ReactiveController {
     this.#host.requestUpdate();
   };
 
-  readonly #onGroupRenamed = (
-    event: Event
-  ): void => {
-    const { uuid, name } = (event as CustomEvent<GroupRenamedDetail>).detail;
+  readonly #onGroupRenamed: ModelEventMap["groupRenamed"] = (
+    { uuid, name }
+  ) => {
     this.#nodes = relabelTreeNode(this.#nodes, uuid, name);
     this.#host.requestUpdate();
   };
 
-  readonly #onGroupSelected = (
-    event: Event
-  ): void => {
-    const { group } = (event as CustomEvent).detail;
+  readonly #onGroupSelected: ModelEventMap["groupSelected"] = (
+    { group }
+  ) => {
     const uuid = group ? group.getGroupUUID() : null;
     this.#selected = uuid ? [uuid] : [];
     this.#host.requestUpdate();
   };
 
-  readonly #onModelSnapshotApplied = (
-    event: Event
-  ): void => {
-    const { nodes } = (event as CustomEvent<{ nodes: FlatModelNode[]; }>).detail;
+  readonly #onModelSnapshotApplied: ModelEventMap["modelSnapshotApplied"] = (
+    { nodes }
+  ) => {
     this.#nodes = buildTreeFromFlatNodes(nodes);
     this.#selected = [];
     this.#host.requestUpdate();

@@ -6,16 +6,19 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { PresenceStore } from "../../src/app/state/index.ts";
+import { editorState, PresenceStore } from "../../src/app/state/index.ts";
 import { GroupSelectionPresence } from "../../src/collaboration/GroupSelectionPresence.ts";
+import type GroupManager from "../../src/features/groups/GroupManager.ts";
 import { createRoomHarness } from "./roomHarness.ts";
 
 function dispatchGroupSelected(
   uuid: string | null
 ): void {
-  document.dispatchEvent(new CustomEvent("groupSelected", {
-    detail: { group: uuid === null ? null : { getGroupUUID: () => uuid } }
-  }));
+  const group = uuid === null ?
+    null :
+    { getGroupUUID: () => uuid } as unknown as GroupManager;
+
+  editorState.modelEvents.emit("groupSelected", { group });
 }
 
 function createHarness() {
