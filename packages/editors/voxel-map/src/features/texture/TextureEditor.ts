@@ -160,7 +160,7 @@ export class TextureEditor extends LitElement {
 
     return this.tilesets.entries.filter((entry) => (
       entry.assetId !== null ||
-      engine.tilesetManager.has(entry.definition.id)
+      engine.tilesetManager.get(entry.definition.id) !== undefined
     ));
   }
 

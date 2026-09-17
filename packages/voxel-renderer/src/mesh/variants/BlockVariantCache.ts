@@ -7,7 +7,7 @@ import type {
 import type { TilesetManager } from "../../tileset/TilesetManager.ts";
 import type { TilesetUVRegion } from "../../tileset/types.ts";
 import type { FaceDefinition } from "../../blocks/face/index.ts";
-import { tileRefForSlot } from "../../blocks/BlockDefinition.ts";
+import { BlockTextures } from "../../blocks/BlockTextures.ts";
 import { BlockSurface } from "../../blocks/BlockSurface.ts";
 import { shapeSlots } from "../../blocks/shape/shapeSlots.ts";
 import type {
@@ -275,16 +275,16 @@ export class BlockVariantCache {
     const voxelTransform = VoxelTransform.fromPacked(transform);
     const { rotation, flipY } = voxelTransform;
 
+    const textures = BlockTextures.of(blockDef);
     const faces: BlockVariantFace[] = [];
     for (const textureSlot of shapeSlots(shape)) {
-      const tileRef = tileRefForSlot(blockDef, textureSlot.id);
-      if (!tileRef || !this.#tilesetManager.has(tileRef.tilesetId)) {
+      const tileRef = textures.forSlot(textureSlot.id);
+      const atlas = tileRef && this.#tilesetManager.get(tileRef.tilesetId);
+      if (!tileRef || !atlas) {
         continue;
       }
 
-      const uvRegion = this.#tilesetManager
-        .atlas(tileRef.tilesetId)
-        .uvFor(tileRef.col, tileRef.row, tileRef.size);
+      const uvRegion = atlas.uvFor(tileRef.col, tileRef.row, tileRef.size);
 
       for (const faceDef of textureSlot.definitions) {
         faces.push(

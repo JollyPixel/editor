@@ -3,13 +3,13 @@ import { parseVoxelDocument } from "./document.ts";
 import {
   InvalidVoxelDocumentError
 } from "./errors/InvalidVoxelDocumentError.ts";
+import { BlockTextures } from "../blocks/BlockTextures.ts";
 import type { VoxelWorldJSON } from "./types.ts";
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { TilesetDefinition } from "../tileset/types.ts";
 import type { VoxelEntry } from "../world/types.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
-import { assignMissingTileset } from "../blocks/blockTileRefs.ts";
 import type { TilesetList } from "../tileset/TilesetList.ts";
 
 export interface VoxelSerializeOptions {
@@ -70,7 +70,9 @@ export function deserializeVoxelWorld(
   if (blocks && tilesets) {
     const fallback = tilesets.defaultTilesetId;
     blocks.registerMany(
-      [...blocks].map((block) => assignMissingTileset(block, fallback))
+      [...blocks].map(
+        (block) => BlockTextures.of(block).withTileset(fallback).applyTo(block)
+      )
     );
   }
 

@@ -3,10 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  DEFAULT_TILE_SIZE,
-  TilesetList
-} from "../../src/tileset/index.ts";
+import { TilesetList } from "../../src/tileset/index.ts";
 
 describe("TilesetList", () => {
   it("keeps declaration order and the first id as default", () => {
@@ -47,14 +44,23 @@ describe("TilesetList", () => {
     assert.deepEqual(list.get("a"), { id: "a", src: "a", tileSize: 32 });
   });
 
-  it("falls back to DEFAULT_TILE_SIZE for the preferred tile size", () => {
+  it("updates the default tile size once", () => {
     const list = new TilesetList();
     assert.equal(list.defaultTileSize, undefined);
-    assert.equal(list.preferredTileSize, DEFAULT_TILE_SIZE);
 
     assert.equal(list.updateDefaultTileSize(64), true);
     assert.equal(list.updateDefaultTileSize(64), false);
-    assert.equal(list.preferredTileSize, 64);
+    assert.equal(list.defaultTileSize, 64);
+  });
+
+  it("skips undeclarable definitions on replace", () => {
+    const list = new TilesetList([
+      { id: "", src: "empty", tileSize: 16 },
+      { id: "zero", src: "zero", tileSize: 0 },
+      { id: "a", src: "a", tileSize: 16 }
+    ]);
+
+    assert.deepEqual([...list].map(({ id }) => id), ["a"]);
   });
 
   it("bumps its version on every change", () => {

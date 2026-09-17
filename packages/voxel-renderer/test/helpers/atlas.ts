@@ -1,5 +1,10 @@
 // Import Internal Dependencies
-import type { TilesetDefinition } from "../../src/tileset/index.ts";
+import type {
+  TilesetAtlas,
+  TilesetDefinition,
+  TilesetManager
+} from "../../src/tileset/index.ts";
+import { mockTexture } from "./mockTexture.ts";
 
 export function makeAtlasDef(
   overrides: Partial<TilesetDefinition> = {}
@@ -12,4 +17,14 @@ export function makeAtlasDef(
     rows: 4,
     ...overrides
   };
+}
+
+export function registerAtlas(
+  manager: TilesetManager,
+  def: TilesetDefinition = makeAtlasDef(),
+  texture = mockTexture()
+): TilesetAtlas {
+  manager.tilesets.add(def);
+
+  return manager.registerTexture(def.id, texture);
 }

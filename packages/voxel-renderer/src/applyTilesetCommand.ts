@@ -1,9 +1,10 @@
 // Import Internal Dependencies
-import type { TilesetList } from "./TilesetList.ts";
-import { rescaleBlockTiles } from "./tileRescale.ts";
-import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
-import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
-import type { VoxelTilesetCommand } from "../commands.ts";
+import { rescaleTileRef } from "./tileset/tileRef.ts";
+import { BlockTextures } from "./blocks/BlockTextures.ts";
+import type { TilesetList } from "./tileset/TilesetList.ts";
+import type { BlockRegistry } from "./blocks/BlockRegistry.ts";
+import type { ResolvedBlockDefinition } from "./blocks/BlockDefinition.ts";
+import type { VoxelTilesetCommand } from "./commands.ts";
 
 export interface TilesetDocument {
   readonly tilesets: TilesetList;
@@ -45,7 +46,9 @@ function resizeTileset(
   };
   const rescaled: ResolvedBlockDefinition[] = [];
   for (const block of document.blocks) {
-    const next = rescaleBlockTiles(block, rescale);
+    const next = BlockTextures.of(block)
+      .map((ref) => rescaleTileRef(ref, rescale))
+      .applyTo(block);
     if (next !== block) {
       rescaled.push(next);
     }

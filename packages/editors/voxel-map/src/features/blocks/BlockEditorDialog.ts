@@ -381,10 +381,7 @@ export class BlockEditorDialog extends LitElement {
       return undefined;
     }
 
-    const manager = this.engine?.tilesetManager;
-    const atlas = manager?.has(tilesetId) ?
-      manager.atlas(tilesetId).def :
-      undefined;
+    const atlas = this.engine?.tilesetManager.get(tilesetId)?.def;
 
     return {
       tileSize,

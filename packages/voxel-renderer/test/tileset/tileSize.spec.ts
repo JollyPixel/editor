@@ -5,8 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   isTileSize,
-  MAX_TILE_SIZE,
-  powerOfTwoTileSizes
+  MAX_TILE_SIZE
 } from "../../src/tileset/index.ts";
 
 describe("isTileSize", () => {
@@ -20,12 +19,5 @@ describe("isTileSize", () => {
     for (const value of [0, -16, 1.5, MAX_TILE_SIZE + 1, "16", Number.NaN, undefined]) {
       assert.equal(isTileSize(value), false);
     }
-  });
-});
-
-describe("powerOfTwoTileSizes", () => {
-  it("lists the powers of two within bounds", () => {
-    assert.deepEqual(powerOfTwoTileSizes(8, 256), [8, 16, 32, 64, 128, 256]);
-    assert.equal(powerOfTwoTileSizes().at(-1), MAX_TILE_SIZE);
   });
 });

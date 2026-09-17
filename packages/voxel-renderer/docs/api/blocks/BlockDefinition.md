@@ -132,27 +132,8 @@ registration.
 
 ## Tile references of a block
 
-```ts
-type TileRefMapper = (ref: ResolvedTileRef) => ResolvedTileRef;
-
-function blockTileRefs(block: ResolvedBlockDefinition): ResolvedTileRef[];
-function blockTilesetIds(block: ResolvedBlockDefinition): string[];
-function mapBlockTileRefs(
-  block: ResolvedBlockDefinition,
-  map: TileRefMapper
-): ResolvedBlockDefinition;
-function assignMissingTileset(
-  block: ResolvedBlockDefinition,
-  tilesetId: string | null
-): ResolvedBlockDefinition;
-```
-
-`blockTileRefs()` lists the face references, then `defaultTexture`.
-`blockTilesetIds()` returns the distinct explicit tileset IDs in that order.
-`mapBlockTileRefs()` applies `map` to every reference and returns the same
-block when `map` returned each reference unchanged. `assignMissingTileset()`
-fills `tilesetId` on references that lack one, and does nothing for a `null`
-ID.
+[`BlockTextures`](./BlockTextures.md) reads and transforms the `faceTextures`
+and `defaultTexture` of a resolved block.
 
 ## Air
 

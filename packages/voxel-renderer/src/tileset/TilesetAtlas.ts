@@ -2,110 +2,68 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  resolveTilesetDefinition,
-  type ResolvedTilesetDefinition,
-  type TilesetDefinition,
-  type TilesetImage,
-  type TilesetTexture,
-  type TilesetUVRegion
+import type {
+  AtlasSize,
+  ResolvedTilesetDefinition,
+  TilesetDefinition,
+  TilesetImage,
+  TilesetTexture,
+  TilesetUVRegion
 } from "./types.ts";
-import {
-  AtlasLayout,
-  type AtlasRegion
-} from "./AtlasLayout.ts";
-import {
-  padAtlas,
-  padAtlasRegion
-} from "./padAtlas.ts";
 
-export interface TilesetAtlasDisposeOptions {
-  keepSource?: boolean;
+/**
+ * Fills in a missing tile grid, flooring partial tiles out of it.
+ */
+export function resolveTilesetDefinition(
+  def: TilesetDefinition,
+  size: AtlasSize
+): ResolvedTilesetDefinition {
+  return {
+    ...def,
+    cols: def.cols ?? Math.floor(size.width / def.tileSize),
+    rows: def.rows ?? Math.floor(size.height / def.tileSize)
+  };
 }
 
 export class TilesetAtlas {
   readonly def: ResolvedTilesetDefinition;
-  readonly layout: AtlasLayout;
-  readonly sourceTexture: TilesetTexture;
   readonly texture: TilesetTexture;
-
-  #padded: HTMLCanvasElement | null;
 
   constructor(
     def: TilesetDefinition,
-    texture: TilesetTexture,
-    padding: number | null = null
+    texture: TilesetTexture
   ) {
-    const resolved = resolveTilesetDefinition(
-      def,
-      texture.image
-    );
-    const requested = new AtlasLayout({
-      cols: resolved.cols,
-      rows: resolved.rows,
-      tileSize: resolved.tileSize,
-      padding: padding ?? undefined
-    });
+    this.def = resolveTilesetDefinition(def, texture.image);
+    this.texture = texture;
 
-    this.#padded = padAtlas(texture.image, requested);
-
-    this.def = resolved;
-    this.layout = this.#padded === null ?
-      requested.withoutPadding() :
-      requested;
-
-    this.sourceTexture = texture;
-    this.texture = this.#padded === null ?
-      texture :
-      new THREE.CanvasTexture(this.#padded);
-
-    this.texture.magFilter = THREE.NearestFilter;
-    this.texture.minFilter = THREE.NearestFilter;
-    this.texture.colorSpace = THREE.SRGBColorSpace;
-    this.texture.generateMipmaps = false;
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.generateMipmaps = false;
   }
 
   uvFor(
     col: number,
     row: number,
-    size?: number
+    size: number = this.def.tileSize
   ): TilesetUVRegion {
-    return this.layout.uvFor(col, row, size);
+    const { cols, rows, tileSize } = this.def;
+    const width = cols * tileSize;
+    const height = rows * tileSize;
+    const bottom = ((rows - row) * tileSize) - size;
+
+    return {
+      offsetU: ((col * tileSize) + 0.5) / width,
+      offsetV: (bottom + 0.5) / height,
+      scaleU: (size - 1) / width,
+      scaleV: (size - 1) / height
+    };
   }
 
-  updateSource(
-    image: TilesetImage,
-    bounds?: AtlasRegion
+  updateImage(
+    image: TilesetImage
   ): void {
-    this.sourceTexture.image = image;
-    this.sourceTexture.needsUpdate = true;
-
-    if (this.#padded === null) {
-      return;
-    }
-
-    const region: AtlasRegion = bounds ?? this.layout.sourceBounds();
-
-    padAtlasRegion(
-      this.#padded,
-      image,
-      this.layout,
-      region
-    );
+    this.texture.image = image;
     this.texture.needsUpdate = true;
-  }
-
-  dispose(
-    options: TilesetAtlasDisposeOptions = {}
-  ): void {
-    const { keepSource = false } = options;
-
-    if (!keepSource || this.texture !== this.sourceTexture) {
-      this.texture.dispose();
-    }
-    if (!keepSource && this.sourceTexture !== this.texture) {
-      this.sourceTexture.dispose();
-    }
-    this.#padded = null;
   }
 }

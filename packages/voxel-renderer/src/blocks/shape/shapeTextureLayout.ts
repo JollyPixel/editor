@@ -1,10 +1,11 @@
 // Import Internal Dependencies
 import type { BlockShape } from "./BlockShape.ts";
-import {
-  tileRefForSlot,
-  type ResolvedBlockDefinition
-} from "../BlockDefinition.ts";
-import type { ResolvedTileRef } from "../../tileset/types.ts";
+import type { ResolvedBlockDefinition } from "../BlockDefinition.ts";
+import { BlockTextures } from "../BlockTextures.ts";
+import type {
+  ResolvedTileRef,
+  TileBounds
+} from "../../tileset/types.ts";
 import {
   buildShapeGeometry,
   type ShapeGeometry
@@ -27,21 +28,14 @@ export type ShapeTextureCorner =
   | "bottom-left"
   | "bottom-right";
 
-export interface ShapeTextureBounds {
-  u0: number;
-  v0: number;
-  u1: number;
-  v1: number;
-}
-
 export interface ShapeTexturePart {
-  bounds: ShapeTextureBounds;
+  bounds: TileBounds;
   corner: ShapeTextureCorner | null;
 }
 
 export interface ShapeTextureSlotLayout {
   slot: string;
-  bounds: ShapeTextureBounds;
+  bounds: TileBounds;
   parts: readonly ShapeTexturePart[];
   start: number;
   count: number;
@@ -61,8 +55,10 @@ export function resolvedBlockTextureSlots(
   block: ResolvedBlockDefinition,
   shape: BlockShape
 ): readonly ResolvedBlockTextureSlot[] {
+  const textures = BlockTextures.of(block);
+
   return shapeTextureLayout(shape).slots.flatMap((entry) => {
-    const tile = tileRefForSlot(block, entry.slot);
+    const tile = textures.forSlot(entry.slot);
 
     return tile ? [{ ...entry, tile }] : [];
   });
@@ -139,7 +135,7 @@ function boundsOf(
   geometry: ShapeGeometry,
   start: number,
   count: number
-): ShapeTextureBounds {
+): TileBounds {
   let u0 = Infinity;
   let v0 = Infinity;
   let u1 = -Infinity;
@@ -156,7 +152,7 @@ function boundsOf(
   return { u0, v0, u1, v1 };
 }
 
-function coversTile(bounds: ShapeTextureBounds): boolean {
+function coversTile(bounds: TileBounds): boolean {
   return near(bounds.u0, 0) && near(bounds.v0, 0) &&
     near(bounds.u1, 1) && near(bounds.v1, 1);
 }
@@ -164,7 +160,7 @@ function coversTile(bounds: ShapeTextureBounds): boolean {
 function rightAngleCorner(
   geometry: ShapeGeometry,
   start: number,
-  bounds: ShapeTextureBounds
+  bounds: TileBounds
 ): ShapeTextureCorner | null {
   const uvs: [number, number][] = [];
   for (let index = start; index < start + 3; index++) {

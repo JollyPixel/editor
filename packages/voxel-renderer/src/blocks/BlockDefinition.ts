@@ -1,17 +1,14 @@
 // Import Internal Dependencies
-import {
-  resolveTileRef,
-  type ResolvedTileRef,
-  type TileRef
+import { resolveTileRef } from "../tileset/tileRef.ts";
+import type {
+  ResolvedTileRef,
+  TileRef
 } from "../tileset/types.ts";
 import {
   FACES,
   type FACE
 } from "../utils/math.ts";
-import {
-  baseSlotOf,
-  slotNameOf
-} from "./shape/shapeSlots.ts";
+import { slotNameOf } from "./shape/shapeSlots.ts";
 import type { BlockShapeID } from "./shape/BlockShape.ts";
 import {
   BlockSurface,
@@ -76,15 +73,6 @@ export function slotKeyOf(
   return Number.isInteger(face) && face >= 0 && face < FACES.length ?
     slotNameOf(face as FACE) :
     key;
-}
-
-export function tileRefForSlot(
-  block: ResolvedBlockDefinition,
-  slot: string
-): ResolvedTileRef | undefined {
-  return block.faceTextures[slot] ??
-    block.faceTextures[baseSlotOf(slot)] ??
-    block.defaultTexture;
 }
 
 export function resolveBlockProperties(

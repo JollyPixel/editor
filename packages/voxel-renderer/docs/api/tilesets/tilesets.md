@@ -4,9 +4,9 @@ Tileset definitions describe atlas images. A [`TilesetList`](#tilesetlist)
 holds the ones a world declares, `loadTilesets()` fetches their images,
 [`TilesetManager`](./TilesetManager.md) registers them, and
 [`TilesetAtlas`](./TilesetAtlas.md) provides the texture and UV data used by
-materials, through an [`AtlasLayout`](./AtlasLayout.md).
+materials.
 
-## Definitions and tile references
+## Definitions
 
 ```ts
 interface TilesetDefinition {
@@ -21,16 +21,13 @@ type ResolvedTilesetDefinition = TilesetDefinition & {
   cols: number;
   rows: number;
 };
-
-function resolveTilesetDefinition(
-  definition: TilesetDefinition,
-  size: AtlasSize
-): ResolvedTilesetDefinition;
 ```
 
 Tiles are square and `tileSize` is measured in pixels. Missing row and column
-counts are derived from the image dimensions. Partial tiles at an image edge
-are excluded by flooring the result. Explicit counts are preserved.
+counts are derived from the image by
+[`resolveTilesetDefinition()`](./TilesetAtlas.md).
+
+## Tile references
 
 ```ts
 interface ResolvedTileRef {
@@ -81,13 +78,10 @@ const MAX_TILE_SIZE = 4096;
 const DEFAULT_TILE_SIZE = 32;
 
 function isTileSize(value: unknown): value is number;
-function powerOfTwoTileSizes(min?: number, max?: number): number[];
 ```
 
 A tile size is an integer from 1 to `MAX_TILE_SIZE`. `DEFAULT_TILE_SIZE` is
-used when a document sets no `defaultTileSize`. `powerOfTwoTileSizes()` lists
-the powers of two within `min` and `max` (defaults `1` and `MAX_TILE_SIZE`),
-for size pickers.
+used when a document sets no `defaultTileSize`.
 
 ## TilesetList
 
@@ -97,7 +91,6 @@ class TilesetList implements Iterable<TilesetDefinition> {
   readonly size: number;
   readonly defaultTilesetId: string | null;
   readonly defaultTileSize: number | undefined;
-  readonly preferredTileSize: number;
 
   constructor(
     definitions?: Iterable<TilesetDefinition>,
@@ -121,13 +114,13 @@ class TilesetList implements Iterable<TilesetDefinition> {
 
 The ordered tilesets a world declares, whether or not their texture is loaded.
 Definitions are copied in and out. `defaultTilesetId` is the first ID.
-`preferredTileSize` is `defaultTileSize` or `DEFAULT_TILE_SIZE`.
 
 `add()` refuses an empty ID, a known ID or an invalid tile size. `resize()`
 refuses an unknown ID, an invalid or unchanged size, and drops the stored
 `cols` and `rows`. Each mutator returns whether the list changed, and
-`version` increases on every change. `replace()` keeps the first definition of
-a duplicated ID and ignores an invalid `defaultTileSize`.
+`version` increases on every change. `replace()` skips the definitions `add()`
+would refuse, keeps the first definition of a duplicated ID and ignores an
+invalid `defaultTileSize`.
 
 ## Tileset commands
 
@@ -159,25 +152,22 @@ interface TileRescale {
 }
 
 function rescaleTileRef(ref: ResolvedTileRef, rescale: TileRescale): ResolvedTileRef;
-function rescaleBlockTiles(
-  block: ResolvedBlockDefinition,
-  rescale: TileRescale
-): ResolvedBlockDefinition;
-function rescaleLeavesBlocksOffGrid(
-  blocks: Iterable<ResolvedBlockDefinition>,
-  rescale: TileRescale
-): boolean;
 ```
 
 `rescaleTileRef()` keeps a reference on the same texels when its tileset grid
 changes from `from` to `to` pixels: `col` and `row` are multiplied by
 `from / to` and may become fractional, and a missing `size` becomes `from`.
-References to another tileset are returned unchanged, and so is a block that
-uses none. `rescaleLeavesBlocksOffGrid()` reports whether any reference would
-land between tiles.
+References to another tileset are returned unchanged.
 
 ```ts
-const WHOLE_TILE_BOUNDS: Readonly<ShapeTextureBounds>;
+interface TileBounds {
+  u0: number;
+  v0: number;
+  u1: number;
+  v1: number;
+}
+
+const WHOLE_TILE_BOUNDS: Readonly<TileBounds>;
 
 interface TileRect {
   x: number;
@@ -189,17 +179,18 @@ interface TileRect {
 function tileRectOf(
   ref: ResolvedTileRef,
   tileSize: number,
-  bounds?: ShapeTextureBounds
+  bounds?: TileBounds
 ): TileRect;
 function tileRefFromRect(
   rect: Pick<TileRect, "x" | "y">,
   template: ResolvedTileRef,
   tileSize: number,
-  bounds?: ShapeTextureBounds
+  bounds?: TileBounds
 ): ResolvedTileRef;
 ```
 
-`tileRectOf()` returns the texel rectangle, origin at the top-left of the
+`TileBounds` is a normalized rect inside a tile with `v` pointing up; shape
+texture layouts use it for their slots. `tileRectOf()` returns the texel rectangle, origin at the top-left of the
 image, that `bounds` (default `WHOLE_TILE_BOUNDS`) covers inside a reference.
 `tileRefFromRect()` is its inverse: it moves `template` so its `bounds` start
 at `rect`.
@@ -242,5 +233,4 @@ shows initial loading and saved-world restoration.
 ## Classes
 
 - [`TilesetManager`](./TilesetManager.md) registers loaded atlas textures.
-- [`TilesetAtlas`](./TilesetAtlas.md) owns one atlas and its two textures.
-- [`AtlasLayout`](./AtlasLayout.md) is the tile grid, padded and unpadded.
+- [`TilesetAtlas`](./TilesetAtlas.md) is one atlas: its grid, texture and UVs.

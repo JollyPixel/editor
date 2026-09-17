@@ -8,9 +8,11 @@ import { BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
 import { TilesetManager } from "../../../src/tileset/index.ts";
 import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
 import { VoxelTransform } from "../../../src/world/index.ts";
-import { mockTexture } from "../../helpers/mockTexture.ts";
 import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
-import { makeAtlasDef } from "../../helpers/atlas.ts";
+import {
+  makeAtlasDef,
+  registerAtlas
+} from "../../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;
@@ -26,10 +28,7 @@ function makeCache() {
   ]);
   const shapeRegistry = BlockShapeRegistry.createDefault();
   const tilesetManager = new TilesetManager();
-  tilesetManager.registerTexture(
-    makeAtlasDef(),
-    mockTexture()
-  );
+  registerAtlas(tilesetManager);
 
   const cache = new BlockVariantCache({
     blockRegistry,
@@ -276,7 +275,7 @@ describe("BlockVariantCache — missing tileset", () => {
       })
     ]);
     const tilesetManager = new TilesetManager();
-    tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
+    registerAtlas(tilesetManager);
     const cache = new BlockVariantCache({
       blockRegistry,
       shapeRegistry: BlockShapeRegistry.createDefault(),
@@ -285,10 +284,7 @@ describe("BlockVariantCache — missing tileset", () => {
     cache.refresh();
     assert.equal(cache.get(kCubeId, 0)?.faces.length, 0);
 
-    tilesetManager.registerTexture(
-      makeAtlasDef({ id: "late" }),
-      mockTexture()
-    );
+    registerAtlas(tilesetManager, makeAtlasDef({ id: "late" }));
     cache.refresh();
 
     assert.equal(cache.get(kCubeId, 0)?.faces.length, 6);

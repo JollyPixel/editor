@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
-import type { TilesetList } from "@jolly-pixel/voxel.renderer";
+import {
+  DEFAULT_TILE_SIZE,
+  type TilesetList
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { TilesetStore } from "../../app/state/index.ts";
@@ -37,7 +40,7 @@ export class TilesetDirectory {
   readonly refresh = (): void => {
     this.#store.replace(
       resolveTilesetEntries(this.#tilesets, this.#catalog?.records() ?? []),
-      this.#tilesets.preferredTileSize
+      this.#tilesets.defaultTileSize ?? DEFAULT_TILE_SIZE
     );
   };
 

@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
-import { powerOfTwoTileSizes } from "@jolly-pixel/voxel.renderer";
 import type { JollyOption } from "@jolly-pixel/ui";
 
 // CONSTANTS
-export const TILE_SIZES: readonly number[] = powerOfTwoTileSizes(8, 256);
+export const TILE_SIZES: readonly number[] = [8, 16, 32, 64, 128, 256];
 
 export function tileSizeOptions(
   current?: number

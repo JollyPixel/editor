@@ -47,7 +47,7 @@ with the load operation:
 
 ```ts
 const missing = snapshot.tilesets.filter(
-  (definition) => !engine.tilesetManager.has(definition.id)
+  (definition) => !engine.tilesetManager.get(definition.id)
 );
 
 engine.load(snapshot, {

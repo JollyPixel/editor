@@ -43,7 +43,7 @@ import {
   type BlockProperties,
   type ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
-import { assignMissingTileset } from "./blocks/blockTileRefs.ts";
+import { BlockTextures } from "./blocks/BlockTextures.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
 import type {
   VoxelApplyOptions,
@@ -96,7 +96,6 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       logger = NOOP_LOGGER,
       onCommand,
       debug,
-      tilesetPadding,
       tilesets,
       greedy = false,
       rebuildBudgetMs = 8,
@@ -135,7 +134,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       (shape) => this.shapeRegistry.register(shape)
     );
 
-    this.tilesetManager = new TilesetManager({ padding: tilesetPadding });
+    this.tilesetManager = new TilesetManager();
     this.#registerTilesets(tilesets);
 
     this.#meshBuilder = new VoxelMeshBuilder({
@@ -354,7 +353,8 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     def: TilesetDefinition,
     texture: TilesetTexture
   ): void {
-    this.tilesetManager.registerTexture(def, texture);
+    this.tilesets.add(def);
+    this.tilesetManager.registerTexture(def.id, texture);
     this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
 
     this.#materials.invalidate(def.id);
@@ -417,7 +417,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.tilesetManager.syncAtlases();
     this.#registerTilesets(options.tilesets);
     for (const tilesetDef of this.tilesets) {
-      if (!this.tilesetManager.has(tilesetDef.id)) {
+      if (!this.tilesetManager.get(tilesetDef.id)) {
         this.#logger.warn(
           `Tileset '${tilesetDef.id}' is not loaded; its faces are skipped until it is.`
         );
@@ -458,12 +458,13 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
   #blockDefined(
     block: BlockDefinition
   ): BlockDefinedCommand {
+    const resolved = resolveBlockDefinition(block);
+
     return {
       action: "block-defined",
-      block: assignMissingTileset(
-        resolveBlockDefinition(block),
-        this.tilesets.defaultTilesetId
-      )
+      block: BlockTextures.of(resolved)
+        .withTileset(this.tilesets.defaultTilesetId)
+        .applyTo(resolved)
     };
   }
 
@@ -551,8 +552,9 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     sources: Iterable<TilesetSource> = []
   ): void {
     for (const { def, texture } of sources) {
-      if (!this.tilesetManager.has(def.id)) {
-        this.tilesetManager.registerTexture(def, texture);
+      if (!this.tilesetManager.get(def.id)) {
+        this.tilesets.add(def);
+        this.tilesetManager.registerTexture(def.id, texture);
       }
     }
   }

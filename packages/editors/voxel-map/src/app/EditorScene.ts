@@ -436,11 +436,12 @@ export class EditorScene extends Systems.Scene {
       blockRegistry,
       tilesetManager
     } = this.engine;
-    if (!tilesetManager.has()) {
+    const atlas = tilesetManager.get();
+    if (!atlas) {
       return;
     }
 
-    const blocks = blocksFromTileset(tilesetManager.atlas().def, {
+    const blocks = blocksFromTileset(atlas.def, {
       limit: kDefaultBlockLimit
     });
 

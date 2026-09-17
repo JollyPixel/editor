@@ -163,7 +163,7 @@ export class TextureEditorBridge {
       return;
     }
 
-    this.#atlas.updateSource(this.#manager.textureCanvas(), dirty);
+    this.#atlas.updateImage(this.#manager.textureCanvas());
     this.#pendingTransparency = this.#pendingTransparency === null
       ? dirty
       : rectsUnion(this.#pendingTransparency, dirty);
@@ -188,10 +188,7 @@ export class TextureEditorBridge {
       return;
     }
 
-    const { tilesetManager } = engine;
-    const atlas = tilesetManager.has(definition.id) ?
-      tilesetManager.atlas(definition.id) :
-      null;
+    const atlas = engine.tilesetManager.get(definition.id) ?? null;
 
     this.#definition = definition;
     this.#atlas = atlas;
@@ -201,7 +198,7 @@ export class TextureEditorBridge {
     if (placeholder) {
       const applied = manager.runLocalRestore(
         () => this.#applyTexture(
-          atlas.sourceTexture.image,
+          atlas.texture.image,
           "tileset source image"
         )
       );
@@ -296,7 +293,7 @@ export class TextureEditorBridge {
       return;
     }
 
-    this.#atlas.updateSource(this.#manager.textureCanvas());
+    this.#atlas.updateImage(this.#manager.textureCanvas());
 
     this.syncTransparency();
   }
