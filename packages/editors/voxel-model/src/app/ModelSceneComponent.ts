@@ -45,11 +45,6 @@ export interface ModelSceneComponentOptions {
   identity?: EditorIdentity;
 }
 
-/**
- * Block creation/selection/texture-push, relocated verbatim from the former
- * `ThreeSceneManager` into the engine's `ActorComponent` lifecycle.
- * `ModelManager`/`GroupManager` themselves are untouched by this move.
- */
 export class ModelSceneComponent extends ActorComponent {
   #camera: OrbitFlyCamera;
   #cameraRaycaster = new THREE.Raycaster();
@@ -183,6 +178,9 @@ export class ModelSceneComponent extends ActorComponent {
         const group = this.#modelManager.getGroupByUUID(event.uuid);
         if (group) {
           editorState.modelEvents.emit("groupTransformChanged", { group });
+        }
+        if (event.flipAxes) {
+          editorState.modelEvents.emit("groupMirrored", { uuid: event.uuid, axes: event.flipAxes });
         }
         break;
       }
@@ -326,10 +324,15 @@ export class ModelSceneComponent extends ActorComponent {
     });
 
     if (parentId !== null) {
-      this.#modelManager.reparent(
-        group.getGroupUUID(),
-        this.#folderManager.resolveNearestNonFolderAncestor(parentId)
-      );
+      const physicalParentId = this.#folderManager.resolveNearestNonFolderAncestor(parentId);
+
+      if (physicalParentId === null) {
+        this.#modelManager.reparent(group.getGroupUUID(), null);
+      }
+      else {
+        this.#modelManager.reparentAtParentPosition(group.getGroupUUID(), physicalParentId);
+      }
+
       if (this.#folderManager.hasFolder(parentId)) {
         this.#folderManager.placeBlock(group.getGroupUUID(), parentId);
       }

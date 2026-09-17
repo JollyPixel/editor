@@ -14,14 +14,16 @@ import { MODEL_HOOK_ACTIONS } from "../features/groups/hooks.ts";
 
 function commandVariant(
   action: string,
-  properties: Record<string, JSONSchema>
+  properties: Record<string, JSONSchema>,
+  optionalProperties: Record<string, JSONSchema> = {}
 ): JSONSchema {
   return {
     type: "object",
     properties: {
       ...commandHeaderProperties,
       action: { const: action },
-      ...properties
+      ...properties,
+      ...optionalProperties
     },
     required: [
       ...COMMAND_HEADER_REQUIRED,
@@ -63,6 +65,16 @@ const parentUuidSchema: JSONSchema = {
   type: ["string", "null"]
 };
 
+const mirrorAxesSchema: JSONSchema = {
+  type: "object",
+  properties: {
+    x: { type: "boolean" },
+    y: { type: "boolean" },
+    z: { type: "boolean" }
+  },
+  required: ["x", "y", "z"]
+};
+
 export const modelNodeSchema: JSONSchema = {
   type: "object",
   properties: {
@@ -73,7 +85,8 @@ export const modelNodeSchema: JSONSchema = {
     pivotOffset: vector3Schema,
     size: vector3Schema,
     scale: vector3Schema,
-    rotation: vector3Schema
+    rotation: vector3Schema,
+    flipAxes: mirrorAxesSchema
   },
   required: [
     "uuid",
@@ -119,6 +132,8 @@ export const modelCommandProtocol: MessageProtocol = defineMessageProtocol({
       commandVariant("group-transformed", {
         uuid: { type: "string" },
         transform: transformSchema
+      }, {
+        flipAxes: mirrorAxesSchema
       })
     ]
   }

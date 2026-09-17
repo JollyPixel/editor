@@ -316,7 +316,6 @@ export default class GroupManager {
     this.mesh.position.copy(this.pivot.position).negate();
   }
 
-  /** Rotation is rounded in degrees, not radians, to match the panel. */
   public roundTransform(decimals: number = kTransformRoundDecimals): void {
     this.group.position.set(
       roundTo(this.group.position.x, decimals),
@@ -377,12 +376,10 @@ export default class GroupManager {
   }
 
   public dispose(): void {
-    // Dispose geometries
     if (this.mesh.geometry) {
       this.mesh.geometry.dispose();
     }
 
-    // Dispose materials
     if (this.mesh.material instanceof THREE.MeshBasicMaterial) {
       this.mesh.material.dispose();
     }
@@ -391,7 +388,6 @@ export default class GroupManager {
     this.#disposeShell(this.#emphasisShell);
     this.pivotMarker.dispose();
 
-    // Remove from parent if attached
     if (this.group.parent) {
       this.group.parent.remove(this.group);
     }

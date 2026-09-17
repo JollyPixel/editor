@@ -23,7 +23,6 @@ export function mirrorSignFromAxes(
   );
 }
 
-/** Reflects a world-space point across the world origin along `sign`'s negated axes. */
 export function mirrorVector(
   vector: THREE.Vector3,
   sign: THREE.Vector3
@@ -35,13 +34,6 @@ export function mirrorVector(
   );
 }
 
-/**
- * Reflects a world-space orientation across the world origin along `sign`'s
- * negated axes, by conjugating the rotation matrix with the mirror matrix.
- * A box is symmetric across its own principal planes, so this always yields
- * another proper rotation rather than requiring a chirality (negative scale)
- * flip.
- */
 export function mirrorRotation(
   rotation: THREE.Euler,
   sign: THREE.Vector3

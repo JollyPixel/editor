@@ -124,7 +124,6 @@ export default class FolderManager {
     return this.#folders.has(uuid);
   }
 
-  /** Iterative with a visited set: a folder chain may cycle back on itself. */
   public resolveNearestNonFolderAncestor(
     id: string | null
   ): string | null {

@@ -8,6 +8,7 @@ import type { TreeNode } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   buildTreeFromFlatNodes,
+  collectExpandableIds,
   collectTreeNodeIds,
   insertAfterTreeNode,
   insertChildTreeNode,
@@ -264,6 +265,36 @@ describe("collectTreeNodeIds", () => {
       collectTreeNodeIds(node),
       ["root", "arm", "hand", "leg"]
     );
+  });
+});
+
+describe("collectExpandableIds", () => {
+  test("returns an empty list when no node has children", () => {
+    const nodes: TreeNode[] = [
+      { id: "a", label: "Block" },
+      { id: "b", label: "Sphere" }
+    ];
+
+    assert.deepStrictEqual(collectExpandableIds(nodes), []);
+  });
+
+  test("returns every ancestor id, root to leaf, skipping childless nodes", () => {
+    const nodes: TreeNode[] = [
+      {
+        id: "root",
+        label: "Root",
+        children: [
+          {
+            id: "arm",
+            label: "Arm",
+            children: [{ id: "hand", label: "Hand" }]
+          },
+          { id: "leg", label: "Leg" }
+        ]
+      }
+    ];
+
+    assert.deepStrictEqual(collectExpandableIds(nodes), ["root", "arm"]);
   });
 });
 

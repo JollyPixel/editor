@@ -19,7 +19,6 @@ export interface GroupSelectionPresenceOptions {
   presence?: PresenceStore;
 }
 
-/** Publishes the locally selected group's uuid as presence, for tree badges. */
 export class GroupSelectionPresence {
   #presence: PresenceStore;
   #selectedUuid: string | null = null;

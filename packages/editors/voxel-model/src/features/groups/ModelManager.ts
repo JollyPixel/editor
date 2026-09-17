@@ -34,6 +34,7 @@ export default class ModelManager {
   private meshToGroupMap: Map<THREE.Mesh, GroupManager> = new Map();
 
   #muted = false;
+  #flipAxesByUuid = new Map<string, MirrorAxes>();
 
   public onModelUpdated: ModelHookListener | undefined;
 
@@ -67,10 +68,8 @@ export default class ModelManager {
     const group = new GroupManager(options);
     this.groups.push(group);
 
-    // Map mesh to group for quick lookup
     this.meshToGroupMap.set(group.getMesh(), group);
 
-    // Add group to scene
     this.scene.add(group.getGroup());
 
     this.#emit({
@@ -89,20 +88,17 @@ export default class ModelManager {
       return;
     }
 
-    // If this is the selected group, deselect it
     if (this.selectedGroup === group) {
       this.selectGroup(null);
     }
 
     const uuid = group.getGroupUUID();
 
-    // Remove from map
     this.meshToGroupMap.delete(group.getMesh());
+    this.#flipAxesByUuid.delete(uuid);
 
-    // Dispose resources
     group.dispose();
 
-    // Remove from array
     this.groups.splice(index, 1);
 
     this.#emit({ action: "group-removed", uuid });
@@ -179,6 +175,9 @@ export default class ModelManager {
 
         case "group-transformed":
           this.#applyTransform(cmd.uuid, cmd.transform);
+          if (cmd.flipAxes) {
+            this.setFlipAxes(cmd.uuid, cmd.flipAxes);
+          }
           break;
 
         default: {
@@ -208,7 +207,6 @@ export default class ModelManager {
   }
 
   public selectGroup(group: GroupManager | null): void {
-    // Deselect previous group
     if (this.selectedGroup && this.selectedGroup !== group) {
       this.selectedGroup.deselect();
     }
@@ -278,13 +276,6 @@ export default class ModelManager {
     });
   }
 
-  /**
-   * Reflects each given group across the world origin along the requested
-   * axes, in place. Every group's own pre-mirror world transform is captured
-   * before any of them are mutated, so mirroring a parent alongside its
-   * descendants does not corrupt the world transform a not-yet-processed
-   * descendant is read from.
-   */
   public mirrorGroups(
     uuids: Iterable<string>,
     axes: MirrorAxes
@@ -309,25 +300,28 @@ export default class ModelManager {
       group.setPivotOffsetWorld(mirrorVector(pivotOffset, sign));
       this.scene.updateMatrixWorld(true);
 
+      const uuid = group.getGroupUUID();
+      this.setFlipAxes(uuid, axes);
       this.#emit({
         action: "group-transformed",
-        uuid: group.getGroupUUID(),
-        transform: snapshotTransform(group)
+        uuid,
+        transform: snapshotTransform(group),
+        flipAxes: axes
       });
     }
   }
 
-  /**
-   * Moves `childUuid` under `parentUuid`, or back to the scene root when
-   * `parentUuid` is `null`. Uses `THREE.Object3D#attach`, which recomputes
-   * the local transform from the current world transform, so the object
-   * does not visually jump at the moment it changes parent.
-   *
-   * The caller (the tree UI) is the sole trigger for this method and has
-   * already run the same move through `resolveReparent`'s structural guard,
-   * so a cycle can't reach here — this trusts that invariant rather than
-   * re-deriving it from the scene graph.
-   */
+  public setFlipAxes(
+    uuid: string,
+    axes: MirrorAxes
+  ): void {
+    this.#flipAxesByUuid.set(uuid, axes);
+  }
+
+  public getFlipAxes(uuid: string): MirrorAxes | undefined {
+    return this.#flipAxesByUuid.get(uuid);
+  }
+
   public reparent(
     childUuid: string,
     parentUuid: string | null
@@ -355,6 +349,20 @@ export default class ModelManager {
       parentUuid,
       transform: snapshotTransform(child)
     });
+  }
+
+  public reparentAtParentPosition(
+    childUuid: string,
+    parentUuid: string
+  ): void {
+    const child = this.getGroupByUUID(childUuid);
+    const parent = this.getGroupByUUID(parentUuid);
+    if (!child || !parent) {
+      return;
+    }
+
+    child.setPositionWorld(parent.getPositionWorld());
+    this.reparent(childUuid, parentUuid);
   }
 
   public reparentLocal(
@@ -392,7 +400,6 @@ export default class ModelManager {
   }
 
   public disposeAll(): void {
-    // Create a copy of the array since removeGroup modifies it
     const groupsCopy = [...this.groups];
     groupsCopy.forEach((group) => {
       this.removeGroup(group);

@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type GroupManager from "../../features/groups/GroupManager.ts";
+import type { MirrorAxes } from "../../features/groups/mirrorTransform.ts";
 import type {
   FlatBlockPlacement,
   FlatFolderNode,
@@ -31,6 +32,12 @@ export type ModelEventMap = {
   ) => void;
   addblock: (
     payload: { name: string; parentId: string | null; }
+  ) => void;
+  duplicateblock: (
+    payload: { sourceUuid: string; uuid: string; name: string; }
+  ) => void;
+  groupMirrored: (
+    payload: { uuid: string; axes: MirrorAxes; }
   ) => void;
   deleteblock: (
     payload: { uuids: string[]; }

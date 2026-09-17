@@ -1,13 +1,8 @@
 // Import Third-party Dependencies
-import {
-  Checkbox,
-  Dialog,
-  detailOf,
-  type JollyChangeDetail
-} from "@jolly-pixel/ui";
+import { Dialog } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { actionButton, settlePrompt } from "./dialogPromptHelpers.ts";
+import { actionButton, checkboxField, settlePrompt } from "./dialogPromptHelpers.ts";
 import type { MirrorAxes } from "../../../features/groups/mirrorTransform.ts";
 
 export interface DuplicateResult {
@@ -27,11 +22,9 @@ export function promptDuplicate(
 
   let includeChildren = true;
   if (hasChildren) {
-    const includeChildrenField = new Checkbox();
-    includeChildrenField.label = "Duplicate children too";
-    includeChildrenField.value = true;
-    includeChildrenField.addEventListener("jolly-change", captureIncludeChildren);
-    dialog.append(includeChildrenField);
+    dialog.append(checkboxField("Duplicate children too", true, (value) => {
+      includeChildren = value;
+    }));
   }
 
   const mirrorAxes: MirrorAxes = { x: false, y: false, z: false };
@@ -47,9 +40,15 @@ export function promptDuplicate(
   dialog.append(mirrorRow);
 
   mirrorRow.append(
-    createMirrorAxisField("X", "x", mirrorAxes),
-    createMirrorAxisField("Y", "y", mirrorAxes),
-    createMirrorAxisField("Z", "z", mirrorAxes)
+    checkboxField("X", false, (value) => {
+      mirrorAxes.x = value;
+    }),
+    checkboxField("Y", false, (value) => {
+      mirrorAxes.y = value;
+    }),
+    checkboxField("Z", false, (value) => {
+      mirrorAxes.z = value;
+    })
   );
 
   const confirm = actionButton("Duplicate", "confirm", "accent");
@@ -60,15 +59,6 @@ export function promptDuplicate(
   document.body.append(dialog);
 
   return settlePrompt(dialog, resolveResult, confirm);
-
-  function captureIncludeChildren(
-    event: Event
-  ): void {
-    const detail = detailOf<JollyChangeDetail<boolean>>(event);
-    if (detail !== null) {
-      includeChildren = detail.value;
-    }
-  }
 
   function resolveResult(
     returnValue: string
@@ -82,22 +72,4 @@ export function promptDuplicate(
       mirrorAxes
     };
   }
-}
-
-function createMirrorAxisField(
-  label: string,
-  axis: keyof MirrorAxes,
-  mirrorAxes: MirrorAxes
-): Checkbox {
-  const field = new Checkbox();
-  field.label = label;
-  field.value = false;
-  field.addEventListener("jolly-change", (event: Event) => {
-    const detail = detailOf<JollyChangeDetail<boolean>>(event);
-    if (detail !== null) {
-      mirrorAxes[axis] = detail.value;
-    }
-  });
-
-  return field;
 }

@@ -55,13 +55,6 @@ requestAnimationFrame(function updateLoop() {
   requestAnimationFrame(updateLoop);
 });
 
-/*
- * The left dock's own drag fires "jolly-resize" on every pointermove tick,
- * unthrottled; each tick otherwise forces a synchronous layout read and a
- * full canvas repaint in the pixel-draw panel, which is what produced the
- * lag and wave artifact while dragging. Coalescing to one call per animation
- * frame matches how ThreeRenderer already throttles its own resize.
- */
 let leftPanelResizeFrame: number | null = null;
 
 function scheduleLeftPanelResize(): void {
@@ -80,6 +73,14 @@ leftDock.addEventListener("jolly-resize-end", scheduleLeftPanelResize);
 
 editorState.modelEvents.on("addblock", ({ name, parentId }) => {
   blockUvSync.createBlock(name, parentId ?? null);
+});
+
+editorState.modelEvents.on("duplicateblock", ({ sourceUuid, uuid, name }) => {
+  blockUvSync.duplicateBlock(sourceUuid, uuid, name);
+});
+
+editorState.modelEvents.on("groupMirrored", ({ uuid }) => {
+  blockUvSync.refreshFlipAxes(uuid);
 });
 
 const unwatchDefaultBlockSeed = editorState.modelEvents.watch(

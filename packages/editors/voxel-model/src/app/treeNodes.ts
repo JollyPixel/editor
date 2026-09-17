@@ -106,7 +106,6 @@ export interface FlatBlockPlacement {
   folderId: string;
 }
 
-/** Set on a folder's `TreeNode.data`; `icon` is a rendering detail, not the source of truth. */
 const kFolderNodeData = "folder";
 
 export function isFolderNode(
@@ -182,6 +181,20 @@ export function collectTreeNodeIds(
 
   for (const child of node.children ?? []) {
     ids.push(...collectTreeNodeIds(child));
+  }
+
+  return ids;
+}
+
+export function collectExpandableIds(
+  nodes: readonly TreeNode[]
+): string[] {
+  const ids: string[] = [];
+
+  for (const node of nodes) {
+    if (node.children !== undefined && node.children.length > 0) {
+      ids.push(node.id, ...collectExpandableIds(node.children));
+    }
   }
 
   return ids;

@@ -22,7 +22,6 @@ export interface PromptNewNamedEntityOptions {
   offerAddAsChild: boolean;
 }
 
-/** Shared by `promptNewBlock` and `promptNewFolder`, which only differ in wording. */
 export function promptNewNamedEntity(
   options: PromptNewNamedEntityOptions
 ): Promise<NewNamedEntityResult | null> {
@@ -40,11 +39,9 @@ export function promptNewNamedEntity(
 
   let addAsChild = true;
   if (offerAddAsChild) {
-    const addAsChildField = new Checkbox();
-    addAsChildField.label = "Add as child of selection";
-    addAsChildField.value = true;
-    addAsChildField.addEventListener("jolly-change", captureAddAsChild);
-    dialog.append(addAsChildField);
+    dialog.append(checkboxField("Add as child of selection", true, (value) => {
+      addAsChild = value;
+    }));
   }
 
   const confirm = actionButton("OK", "confirm", "accent");
@@ -62,15 +59,6 @@ export function promptNewNamedEntity(
     const detail = detailOf<JollyChangeDetail<string>>(event);
     if (detail !== null) {
       name = detail.value;
-    }
-  }
-
-  function captureAddAsChild(
-    event: Event
-  ): void {
-    const detail = detailOf<JollyChangeDetail<boolean>>(event);
-    if (detail !== null) {
-      addAsChild = detail.value;
     }
   }
 
@@ -100,6 +88,24 @@ export function actionButton(
   button.textContent = label;
 
   return button;
+}
+
+export function checkboxField(
+  label: string,
+  initialValue: boolean,
+  onChange: (value: boolean) => void
+): Checkbox {
+  const field = new Checkbox();
+  field.label = label;
+  field.value = initialValue;
+  field.addEventListener("jolly-change", (event: Event) => {
+    const detail = detailOf<JollyChangeDetail<boolean>>(event);
+    if (detail !== null) {
+      onChange(detail.value);
+    }
+  });
+
+  return field;
 }
 
 export function settlePrompt<TResult>(

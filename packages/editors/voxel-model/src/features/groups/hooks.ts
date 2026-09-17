@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { Vector3Like } from "three";
 
+// Import Internal Dependencies
+import type { MirrorAxes } from "./mirrorTransform.ts";
+
 export interface GroupTransformSnapshot {
   position: Vector3Like;
   pivotOffset: Vector3Like;
@@ -41,9 +44,11 @@ export type ModelHookEvent =
     parentUuid: string | null;
   }
   | {
+    /** `flipAxes` is only set when the transform came from a mirror operation. */
     action: "group-transformed";
     uuid: string;
     transform: GroupTransformSnapshot;
+    flipAxes?: MirrorAxes;
   };
 
 export type ModelHookAction = ModelHookEvent["action"];

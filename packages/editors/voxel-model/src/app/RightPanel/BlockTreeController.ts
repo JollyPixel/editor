@@ -21,6 +21,7 @@ import {
   type PresenceStore
 } from "../state/index.ts";
 import {
+  collectExpandableIds,
   collectTreeNodeIds,
   isFolderNode,
   mergeFolderTree,
@@ -406,6 +407,8 @@ export class BlockTreeController implements ReactiveController {
     }
 
     const uuid = duplicateGroup.getGroupUUID();
+    editorState.modelEvents.emit("duplicateblock", { sourceUuid: sourceId, uuid, name: label });
+
     const parentIsFolder = uiParentId !== null && this.#isFolder(uiParentId);
     const physicalParentId = this.#folderManager?.resolveNearestNonFolderAncestor(uiParentId) ??
       uiParentId;
@@ -498,13 +501,6 @@ export class BlockTreeController implements ReactiveController {
     editorState.modelEvents.emit("deleteblock", { uuids: [node.id] });
   }
 
-  /**
-   * `#blockFlatNodes` / `#folderFlatNodes` / `#placements` are the single
-   * source of truth for the tree; every handler below edits one of them and
-   * re-derives `#nodes` through `#rebuildTree`, rather than hand-splicing
-   * the rendered tree directly. That keeps a later snapshot rebuild from
-   * ever reverting an edit no one remembered to mirror into a parallel cache.
-   */
   readonly #onGroupCreated: ModelEventMap["groupCreated"] = (
     { group, name, parentId }
   ) => {
@@ -559,7 +555,7 @@ export class BlockTreeController implements ReactiveController {
   ) => {
     this.#blockFlatNodes = nodes;
     this.#selected = [];
-    this.#rebuildTree();
+    this.#rebuildTree({ expandAll: true });
   };
 
   readonly #onFolderCreated: ModelEventMap["folderCreated"] = (
@@ -620,7 +616,7 @@ export class BlockTreeController implements ReactiveController {
     this.#folderFlatNodes = folders;
     this.#placements = placements;
     this.#selected = [];
-    this.#rebuildTree();
+    this.#rebuildTree({ expandAll: true });
   };
 
   #expandParent(
@@ -631,8 +627,13 @@ export class BlockTreeController implements ReactiveController {
     }
   }
 
-  #rebuildTree(): void {
+  #rebuildTree(
+    options: { expandAll?: boolean; } = {}
+  ): void {
     this.#nodes = mergeFolderTree(this.#blockFlatNodes, this.#folderFlatNodes, this.#placements);
+    if (options.expandAll) {
+      this.#expanded = collectExpandableIds(this.#nodes);
+    }
     this.#host.requestUpdate();
   }
 }

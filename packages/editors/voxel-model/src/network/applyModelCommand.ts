@@ -4,7 +4,6 @@ import type {
   ModelNodeJSON
 } from "./types.ts";
 
-/** Caller must check the target uuid exists first, except for `group-added`. */
 export function applyModelCommand(
   nodes: Map<string, ModelNodeJSON>,
   cmd: ModelNetworkCommand
@@ -54,7 +53,11 @@ export function applyModelCommand(
     case "group-transformed": {
       const node = nodes.get(cmd.uuid);
       if (node) {
-        nodes.set(cmd.uuid, { ...node, ...cmd.transform });
+        nodes.set(cmd.uuid, {
+          ...node,
+          ...cmd.transform,
+          ...(cmd.flipAxes ? { flipAxes: cmd.flipAxes } : {})
+        });
       }
       break;
     }

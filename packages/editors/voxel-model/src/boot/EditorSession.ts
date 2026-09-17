@@ -41,7 +41,6 @@ export type EditorFolderRoom = networkTypes.Room<
   FolderServerMessage
 >;
 
-/** No per-document asset id yet, so every open editor joins one fixed room. */
 export class EditorSession {
   static async open(): Promise<EditorSession> {
     const identity = await resolveEditorIdentity();
