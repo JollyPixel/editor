@@ -79,6 +79,8 @@ pnpm --filter @jolly-pixel/editor.pixel-art test:e2e
 
 Playwright drives the `examples/` demo (started automatically via `webServer`) and exercises paint, fill, select, move, colors, history, and import/export through the actual UI, not internal APIs.
 
+Only the `3D preview` tests boot the runtime; they pass `?max-fps=` (`RUNTIME_MAX_FPS` in `test/e2e/constants.ts`) to the demo. Headless Chromium renders that scene in software at roughly 300ms a frame, so any cap above ~2 fps renders back to back, starves the main thread and stalls every dispatched input event.
+
 ## Contributors Guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.

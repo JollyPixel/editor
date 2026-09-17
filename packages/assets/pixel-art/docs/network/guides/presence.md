@@ -17,10 +17,10 @@ import {
 
 const sync = new PixelSyncClient({ room, canvas });
 const presence = [
-  new PixelCursorSync({ room, canvas }),
+  new PixelCursorSync({ room, canvas, label, color }),
   new PixelStrokeGhostSync({ room, canvas }),
-  new SelectionGhostSync({ room, canvas }),
-  new UVGhostSync({ room, canvas })
+  new SelectionGhostSync({ room, canvas, color }),
+  new UVGhostSync({ room, canvas, color })
 ];
 
 room.join();
@@ -39,7 +39,7 @@ Each helper replays the presence already stored in `room.peers` when it is const
 
 Stroke, UV and selection updates are coalesced to one full presence payload per animation frame. They send the current preview, not a delta.
 
-Cursor positions are deduplicated. Pass `label` and `color` (both `(clientId, profile)`) to `PixelCursorSync`, and `color` to `SelectionGhostSync` and `UVGhostSync`, so a peer keeps one color everywhere.
+Cursor positions are deduplicated. `label` and `color` (both `(clientId, profile)`) are required on `PixelCursorSync`, and `color` on `SelectionGhostSync` and `UVGhostSync`. Pass the same pair everywhere so a peer keeps one name and color across previews.
 
 ## Reconciliation and expiry
 

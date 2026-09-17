@@ -6,8 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { fromUint8Array } from "js-base64";
 import {
+  encodePixelBytes,
   PixelBuffer,
   UVRegion
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -66,7 +66,7 @@ describe("applyCommandToBuffer", () => {
 
     applyCommandToBuffer(buffer, command("texture-replaced", {
       size: { x: 2, y: 2 },
-      pixels: fromUint8Array(pixels)
+      pixels: encodePixelBytes(pixels)
     }));
 
     assert.deepStrictEqual(buffer.size(), { x: 2, y: 2 });

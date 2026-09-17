@@ -67,16 +67,16 @@ Builds a `PixelSyncClient` and every presence helper for one canvas:
 new PixelCollaboration(options: {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
-  label?: PeerLabel;
-  color?: PeerColor;
+  label: PeerLabel;
+  color: PeerColor;
   onRemoteUvDragging?: (payload: UVGhostPayload) => void;
 })
 
-type PeerLabel = (clientId: string, profile: PeerMetadata) => string | undefined;
+type PeerLabel = (clientId: string, profile: PeerMetadata) => string;
 type PeerColor = (clientId: string, profile: PeerMetadata) => string;
 ```
 
 - `sync` is the `PixelSyncClient`, and `ready` mirrors `sync.ready`.
-- `label` and `color` apply to cursors, and `color` to selection and UV ghosts. They default to `profile.username` and a color keyed on `clientId`.
+- `label` and `color` are required and apply to cursors, and `color` to selection and UV ghosts. The host owns peer identity.
 - `onRemoteUvDragging` forwards to `UVGhostSync`'s option of the same name (see [PresenceSync](./PresenceSync.md#uvghostsync)).
 - `destroy()` destroys every helper. It does not leave the room.

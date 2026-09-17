@@ -21,8 +21,8 @@ import type {
 export interface PixelCollaborationOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
-  label?: PeerLabel;
-  color?: PeerColor;
+  label: PeerLabel;
+  color: PeerColor;
   /**
    * See `UVGhostSyncOptions.onRemoteRegionDragging`.
    */

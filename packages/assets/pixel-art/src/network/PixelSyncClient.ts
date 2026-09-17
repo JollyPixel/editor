@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
-import { toUint8Array } from "js-base64";
 import {
   CommandSync,
   type Room
 } from "@jolly-pixel/network/client";
-import type {
-  PixelArtCanvas,
-  PixelBufferHookEvent,
-  PixelBufferHookListener
+import {
+  decodePixelBytes,
+  type PixelArtCanvas,
+  type PixelBufferHookEvent,
+  type PixelBufferHookListener
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -51,7 +51,7 @@ export class PixelSyncClient extends CommandSync<
     canvas.onBufferUpdated = this.#handleBufferUpdated;
     this.on("snapshot", (snapshot) => canvas.loadSnapshot(
       snapshot.size,
-      new Uint8ClampedArray(toUint8Array(snapshot.pixels)),
+      decodePixelBytes(snapshot.pixels),
       snapshot.uvRegions
     ));
     this.on("command", (command) => canvas.applyRemoteCommand(command));

@@ -44,6 +44,8 @@ export {
   pixelArtSnapshot,
   serializePixelBuffer,
   deserializePixelBuffer,
+  encodePixelBytes,
+  decodePixelBytes,
   PIXEL_ART_DOCUMENT_VERSION,
   type PixelArtDocumentData,
   type PixelBufferSnapshot

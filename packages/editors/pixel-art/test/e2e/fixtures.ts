@@ -6,7 +6,11 @@ import {
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { testAssetPath, TEXTURE_SIZE } from "./constants.ts";
+import {
+  testAssetPath,
+  RUNTIME_MAX_FPS,
+  TEXTURE_SIZE
+} from "./constants.ts";
 import type {
   PixelDrawPanel,
   TextureImportPolicy
@@ -16,6 +20,7 @@ export { expect } from "@playwright/test";
 
 export interface DemoOptions {
   runtime?: boolean;
+  maxFps?: number;
   importPolicy?: TextureImportPolicy;
   addDelay?: number;
 }
@@ -26,6 +31,7 @@ export async function openDemo(
 ): Promise<Locator> {
   const {
     runtime = false,
+    maxFps = RUNTIME_MAX_FPS,
     importPolicy = "replace",
     addDelay = 0
   } = options;
@@ -39,7 +45,10 @@ export async function openDemo(
     asset: testAssetPath(base.info().parallelIndex),
     "import-policy": importPolicy
   });
-  if (!runtime) {
+  if (runtime) {
+    query.set("max-fps", String(maxFps));
+  }
+  else {
     query.set("runtime", "off");
   }
   if (addDelay > 0) {

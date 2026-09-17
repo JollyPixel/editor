@@ -10,7 +10,6 @@ import {
 // Import Internal Dependencies
 import { PeerGhostStream } from "./PeerGhostStream.ts";
 import {
-  defaultPeerColor,
   peerProfile,
   type PeerColor
 } from "../peerAppearance.ts";
@@ -23,7 +22,7 @@ import type {
 export interface UVGhostSyncOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
-  color?: PeerColor;
+  color: PeerColor;
   /**
    * Called with a remote peer's in-progress drag, on top of the built-in
    * SVG ghost overlay. Lets a host mirror the drag onto something else
@@ -100,7 +99,7 @@ export class UVGhostSync {
 
     this.#room = options.room;
     this.#canvas = canvas;
-    this.#color = options.color ?? defaultPeerColor;
+    this.#color = options.color;
     this.#onRemoteRegionDragging = options.onRemoteRegionDragging;
     this.#stream = new PeerGhostStream({
       room: options.room,

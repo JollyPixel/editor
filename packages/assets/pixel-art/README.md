@@ -25,6 +25,7 @@ Attach a canvas to a room in the browser:
 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
+import { colorFromKey } from "@jolly-pixel/color";
 import { assetRoomName } from "@jolly-pixel/asset";
 import {
   PixelCollaboration,
@@ -36,7 +37,12 @@ const room = new Client().room<
   PixelNetworkCommand,
   PixelServerMessage
 >(assetRoomName("pixelart", assetId));
-const collaboration = new PixelCollaboration({ room, canvas });
+const collaboration = new PixelCollaboration({
+  room,
+  canvas,
+  label: (_clientId, profile) => String(profile.username),
+  color: (clientId) => colorFromKey(clientId)
+});
 
 room.join();
 ```

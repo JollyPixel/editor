@@ -77,6 +77,7 @@ async function addThroughDialog(
   const count = Math.max(await tabs.count(), 1);
   await importPng(panel, name);
   await panel.page().getByRole("button", { name: "Add as new" }).click();
+  await expect(panel.page().locator("jolly-dialog")).toHaveCount(0);
 
   await expect(tabs).toHaveCount(count + 1);
   await expect(tabs.last()).toHaveText(name);

@@ -20,12 +20,12 @@ new PixelCursorSync(options: PixelCursorSyncOptions)
 interface PixelCursorSyncOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
-  label?: (profile: PeerMetadata) => string | undefined;
-  color?: (clientId: string, profile: PeerMetadata) => string;
+  label: (clientId: string, profile: PeerMetadata) => string;
+  color: (clientId: string, profile: PeerMetadata) => string;
 }
 ```
 
-`label` reads `profile.username` when omitted. `color` falls back to a deterministic color keyed on the peer's `clientId`.
+`label` and `color` are required: the host owns peer identity and decides how a peer is named and colored.
 
 The helper chains `canvas.onCursorMove` and publishes changed coordinates. A `null` coordinate hides the local cursor on remote clients.
 
@@ -52,7 +52,7 @@ Publishes in-progress UV region geometry and renders it as a peer-colored border
 new UVGhostSync(options: {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
-  color?: PeerColor;
+  color: PeerColor;
   onRemoteRegionDragging?: (payload: UVGhostPayload) => void;
 })
 ```
@@ -71,6 +71,7 @@ Publishes selection geometry during creation and movement. Remote clients render
 new SelectionGhostSync(options: {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
+  color: PeerColor;
 })
 
 type SelectionGhostPayload =

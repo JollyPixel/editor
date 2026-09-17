@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import { fromUint8Array } from "js-base64";
-
 // Import Internal Dependencies
 import {
   InvalidPixelArtDocumentError
@@ -9,6 +6,7 @@ import {
   PIXEL_ART_DOCUMENT_VERSION,
   type PixelArtDocumentData
 } from "./types.ts";
+import { encodePixelBytes } from "./pixelBytes.ts";
 import { isUVRegionData } from "../uv/validation.ts";
 import type { Vec2 } from "../types.ts";
 
@@ -37,13 +35,7 @@ export function createPixelArtDocument(
       x: size.x,
       y: size.y
     },
-    pixels: fromUint8Array(
-      new Uint8Array(
-        pixels.buffer,
-        pixels.byteOffset,
-        pixels.byteLength
-      )
-    ),
+    pixels: encodePixelBytes(pixels),
     uvRegions: []
   };
 }
