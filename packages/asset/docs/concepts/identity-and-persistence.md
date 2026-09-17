@@ -3,10 +3,17 @@
 An asset has a stable identity, a consumer-facing reference, and a catalog
 record that can change over time.
 
-```text
-AssetReference              AssetCatalog                 AssetRecord
-id + expected kind  ----->  record lookup       ----->  source + revision
-                        resolve and validate
+```mermaid
+flowchart TB
+    Reference["AssetReference<br/>id + expected kind"]
+    Catalog["AssetCatalog"]
+    Record["AssetRecord<br/>source + revision"]
+    Manifest[("Asset manifest<br/>versioned JSON")]
+
+    Reference -->|"resolve and validate"| Catalog
+    Catalog -->|"record lookup"| Record
+    Catalog -->|"toJSON()"| Manifest
+    Manifest -->|"parse()"| Catalog
 ```
 
 ## Stable identity

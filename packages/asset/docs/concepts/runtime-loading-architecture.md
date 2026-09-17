@@ -3,17 +3,35 @@
 `AssetCoordinator` connects the persistent catalog to the objects that own
 runtime loading state.
 
-```text
-AssetReference
-      |
-      v
-AssetCoordinator -----> AssetCatalog -----> AssetRecord
-      |
-      +-----> AssetLoaderRegistry -----> AssetLoader
-      |
-      +-----> AssetStore -----> AssetHandle
-      |
-      +-----> AssetLoadBatch
+```mermaid
+flowchart TB
+    Reference["AssetReference"]
+    Coordinator["AssetCoordinator"]
+
+    subgraph Persistent["Persistent catalog"]
+        direction TB
+        Catalog["AssetCatalog"]
+        Record["AssetRecord"]
+        Catalog --> Record
+    end
+
+    subgraph RuntimeState["Runtime state"]
+        direction TB
+        Registry["AssetLoaderRegistry"]
+        Loader["AssetLoader"]
+        Store["AssetStore"]
+        Handle["AssetHandle"]
+        Batch["AssetLoadBatch"]
+        Registry -->|"lookup by AssetType"| Loader
+        Loader --> Store
+        Store --> Handle
+        Batch -->|"shares in-flight work"| Store
+    end
+
+    Reference --> Coordinator
+    Coordinator -->|"resolve"| Persistent
+    Record -->|"source"| RuntimeState
+    Coordinator -->|"load() and loadBatch()"| RuntimeState
 ```
 
 ## Request and load
@@ -34,11 +52,15 @@ or `AssetCoordinator.get()` for synchronous access.
 An `AssetStore` owns values and in-flight promises for one runtime scope. Each
 entry has one of four states:
 
-```text
-unloaded -> loading -> ready
-               |
-               v
-             failed -> loading (retry)
+```mermaid
+stateDiagram-v2
+    direction TB
+    [*] --> unloaded: request()
+    unloaded --> loading: load() or batch
+    loading --> ready: loader resolves
+    loading --> failed: loader rejects
+    failed --> loading: later load() starts a fresh attempt
+    ready --> [*]: evict() or clear()
 ```
 
 Concurrent requests for the same asset ID and type receive the same loading
@@ -53,6 +75,25 @@ runtime that owns the resource must handle disposal.
 An `AssetLoadBatch` represents one operation, such as startup, a scene
 transition, or dynamic content. The coordinator snapshots the input and
 deduplicates repeated IDs within that batch.
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Coordinator as AssetCoordinator
+    participant Batch as AssetLoadBatch
+    participant Store as AssetStore
+
+    Caller->>Coordinator: loadBatch(references)
+    Note over Coordinator: snapshot input, deduplicate IDs,<br/>resolve every record
+    Coordinator->>Batch: start tasks
+    Coordinator-->>Caller: AssetLoadBatch
+    Note over Batch: ready entries count as completed,<br/>with no progress callback
+    Batch->>Store: load pending entry
+    Store-->>Batch: settled
+    Batch->>Caller: onProgress(completed, total)
+    Note over Batch: waits for every task to settle
+    Batch-->>Caller: done resolves, or rejects<br/>with AssetBatchLoadError
+```
 
 Overlapping batches keep separate totals, progress, status, and failures. They
 still share in-flight work through the store. Ready assets count toward the

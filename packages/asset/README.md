@@ -23,6 +23,27 @@ Scenes and components store an `AssetReference`. An `AssetCatalog` resolves
 that reference to an `AssetRecord`, which describes the current source and
 revision.
 
+```mermaid
+flowchart TB
+    Scene["Scene / component"]
+    Reference["AssetReference<br/>id + expected kind"]
+    Coordinator["AssetCoordinator"]
+    Catalog["AssetCatalog"]
+    Record["AssetRecord<br/>source + revision"]
+    Loader["AssetLoader"]
+    Store["AssetStore"]
+    Handle["AssetHandle<br/>asset value"]
+
+    Scene --> Reference
+    Reference --> Coordinator
+    Coordinator -->|"resolve"| Catalog
+    Catalog --> Record
+    Record -->|"source"| Loader
+    Loader -->|"runtime value"| Store
+    Store --> Handle
+    Handle -->|"synchronous access"| Scene
+```
+
 Choose the path that matches your work:
 
 - Game developers using `@jolly-pixel/runtime` should start with
