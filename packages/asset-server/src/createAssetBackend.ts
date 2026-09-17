@@ -7,21 +7,21 @@ import type { AssetSource } from "@jolly-pixel/asset-source";
 import {
   STATE_GITIGNORE_CONTENT,
   STATE_GITIGNORE_PATH
-} from "./constants.ts";
+} from "./stateDirectory.ts";
 import type { AssetEventDataMap } from "./events/AssetEvents.ts";
-import { CatalogIdentitySidecar } from "./catalog/CatalogIdentitySidecar.ts";
+import { IdentitySidecar } from "./identity/IdentitySidecar.ts";
 import { AssetKindRegistry } from "./kinds/AssetKindRegistry.ts";
 import type {
   AssetKindHandler,
   SnapshotPolicy
 } from "./kinds/AssetKindHandler.ts";
-import { ProjectionState } from "./sync/ProjectionState.ts";
-import { AssetProjector } from "./sync/AssetProjector.ts";
-import { AssetStateStore } from "./sync/AssetStateStore.ts";
-import { AssetWriter } from "./sync/AssetWriter.ts";
-import { SnapshotScheduler } from "./sync/SnapshotScheduler.ts";
-import { Reconciler } from "./sync/Reconciler.ts";
-import { ReconciliationWatcher } from "./sync/ReconciliationWatcher.ts";
+import { ProjectionState } from "./projection/ProjectionState.ts";
+import { AssetProjector } from "./projection/AssetProjector.ts";
+import { AssetStateStore } from "./state/AssetStateStore.ts";
+import { AssetWriter } from "./writer/AssetWriter.ts";
+import { SnapshotScheduler } from "./state/SnapshotScheduler.ts";
+import { Reconciler } from "./reconcile/Reconciler.ts";
+import { ReconciliationWatcher } from "./reconcile/ReconciliationWatcher.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogExtension } from "./catalog/CatalogExtension.ts";
 import { registerAssetRooms } from "./rooms/registerAssetRooms.ts";
@@ -71,7 +71,7 @@ export interface AssetBackendOptions {
  * They stay outside `AssetBackend` because their shapes are not public API.
  */
 export interface AssetBackendInternals {
-  readonly identity: CatalogIdentitySidecar;
+  readonly identity: IdentitySidecar;
   readonly state: ProjectionState;
   readonly projector: AssetProjector;
   readonly states: AssetStateStore;
@@ -171,30 +171,29 @@ export async function createAssetBackend(
   });
   states.start();
 
-  const scheduler = new SnapshotScheduler({
-    eventStore,
-    states,
-    projector,
-    snapshot,
-    logger
-  });
-  scheduler.start();
-
-  const identity = await CatalogIdentitySidecar.load(source, logger);
+  const identity = await IdentitySidecar.load(source, logger);
   const writer = new AssetWriter({
     eventStore,
     kinds,
     projector,
     identity,
-    source,
     logger
   });
+
+  const scheduler = new SnapshotScheduler({
+    eventStore,
+    states,
+    projector,
+    writer,
+    snapshot,
+    logger
+  });
+  scheduler.start();
 
   const reconciler = new Reconciler({
     source,
     projector,
     writer,
-    kinds,
     logger
   });
   const watcher = new ReconciliationWatcher({

@@ -17,15 +17,6 @@ const kDefaultMatch = [
   "**/*.bmp"
 ] as const;
 
-const kDefaultContentTypes: Readonly<Record<string, string>> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".gif": "image/gif",
-  ".bmp": "image/bmp"
-};
-
 export interface TextureAssetHandlerOptions {
   /**
    * Globs claiming texture paths.
@@ -40,7 +31,6 @@ export function textureAssetHandler(
   return {
     ...binaryAssetHandler,
     kind: TEXTURE_KIND,
-    match: options.match ?? kDefaultMatch,
-    contentTypes: kDefaultContentTypes
+    match: options.match ?? kDefaultMatch
   };
 }

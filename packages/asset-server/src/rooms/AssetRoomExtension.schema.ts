@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import type { JSONSchema } from "@jolly-pixel/network";
 
-// CONSTANTS
-export const ASSET_ROOM_DELETED = "deleted";
-export const ASSET_ROOM_REJECTED = "rejected";
+// Import Internal Dependencies
+import {
+  ASSET_ROOM_DELETED,
+  ASSET_ROOM_REJECTED
+} from "../kinds/AssetLiveProtocol.ts";
 
 export const assetRoomDeletedSchema: JSONSchema = {
   title: ASSET_ROOM_DELETED,

@@ -14,10 +14,10 @@ import {
   Server,
   type ClientHandle
 } from "@jolly-pixel/network";
+import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
-  AssetRoom,
   createAssetBackend,
   createCatalogHandler,
   encodeContent,

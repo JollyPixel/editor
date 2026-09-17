@@ -39,8 +39,10 @@ interface CreateAssetInput {
 }
 ```
 
-The backend generates an asset ID when `assetId` is omitted. It resolves the
-kind from the registered path globs when `kind` is omitted.
+When `assetId` is omitted, the writer reuses the ID that
+`.jollypixel/assets.json` records for the final path, unless a live asset
+already holds that ID. Otherwise it generates a new one. It resolves the kind
+from the registered path globs when `kind` is omitted.
 
 With `onPathConflict: "suffix"`, a taken path gets `-2`, `-3`, ... inserted
 before its first extension (`maps/world.voxelmap.json` becomes

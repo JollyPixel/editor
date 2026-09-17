@@ -5,17 +5,23 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 // Import Internal Dependencies
 import {
   AssetKindRegistry,
-  AssetProjector,
-  AssetStateStore,
   AssetWriter,
-  CatalogIdentitySidecar,
-  Reconciler,
-  ReconciliationWatcher,
-  ProjectionState,
-  SnapshotScheduler,
   type AssetKindHandler,
   type SnapshotPolicy
 } from "#src/index.ts";
+import { IdentitySidecar } from "#src/identity/index.ts";
+import {
+  AssetProjector,
+  ProjectionState
+} from "#src/projection/index.ts";
+import {
+  AssetStateStore,
+  SnapshotScheduler
+} from "#src/state/index.ts";
+import {
+  Reconciler,
+  ReconciliationWatcher
+} from "#src/reconcile/index.ts";
 
 export interface SyncHarness extends AsyncDisposable {
   readonly source: MemoryAssetSource;
@@ -27,7 +33,7 @@ export interface SyncHarness extends AsyncDisposable {
   readonly writer: AssetWriter;
   readonly reconciler: Reconciler;
   readonly watcher: ReconciliationWatcher;
-  readonly identity: CatalogIdentitySidecar;
+  readonly identity: IdentitySidecar;
   readonly kinds: AssetKindRegistry;
 }
 
@@ -113,28 +119,27 @@ export async function syncHarness(
   const states = new AssetStateStore({ eventStore, kinds });
   states.start();
 
-  const scheduler = new SnapshotScheduler({
-    eventStore,
-    states,
-    projector,
-    snapshot: options.snapshot
-  });
-  scheduler.start();
-
-  const identity = await CatalogIdentitySidecar.load(source);
+  const identity = await IdentitySidecar.load(source);
   const writer = new AssetWriter({
     eventStore,
     kinds,
     projector,
-    identity,
-    source
+    identity
   });
+
+  const scheduler = new SnapshotScheduler({
+    eventStore,
+    states,
+    projector,
+    writer,
+    snapshot: options.snapshot
+  });
+  scheduler.start();
 
   const reconciler = new Reconciler({
     source,
     projector,
-    writer,
-    kinds
+    writer
   });
   const watcher = new ReconciliationWatcher({
     source,

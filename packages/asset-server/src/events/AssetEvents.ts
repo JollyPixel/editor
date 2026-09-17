@@ -20,11 +20,14 @@ import {
   assetContentSchema,
   assetDeletedDataSchema,
   assetRenamedDataSchema,
-  assetWriteDataSchema
+  assetWriteDataSchema,
+  type AssetInlineContent
 } from "./AssetEvents.schema.ts";
-import { ASSET_EVENT_PREFIX } from "../constants.ts";
+import { contentHash } from "../utils/contentHash.ts";
 
 // CONSTANTS
+export const ASSET_EVENT_PREFIX = "asset.";
+
 const kValidatorOptions = { useDefaults: false };
 const kWriteDataValidator = new Validator(
   assetWriteDataSchema,
@@ -56,12 +59,9 @@ export const ASSET_CHECKPOINT_EVENT_TYPES: readonly AssetEventType[] = [
   ASSET_DELETED
 ];
 
-export type AssetContent = Infer<typeof assetContentSchema>;
+export type { AssetInlineContent };
 
-export type AssetInlineContent = Extract<
-  AssetContent,
-  { type: "inline"; }
->;
+export type AssetContent = Infer<typeof assetContentSchema>;
 
 /**
  * Shared payload for create and update events.
@@ -205,6 +205,20 @@ function malformed(
   return {
     reason: "malformed",
     errors
+  };
+}
+
+export function writeData(
+  path: string,
+  kind: string,
+  data: Uint8Array
+): AssetWriteData {
+  return {
+    path,
+    kind,
+    hash: contentHash(data),
+    size: data.byteLength,
+    content: encodeContent(data)
   };
 }
 

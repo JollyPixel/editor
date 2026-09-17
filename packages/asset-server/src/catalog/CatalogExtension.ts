@@ -18,7 +18,7 @@ import {
 
 // Import Internal Dependencies
 import type { CatalogProjection } from "./CatalogProjection.ts";
-import { catalogProtocols } from "./CatalogExtension.schema.ts";
+import { catalogProtocols } from "./protocol.schema.ts";
 import {
   CATALOG_APPLIED,
   CATALOG_CHANGED,
@@ -30,13 +30,14 @@ import {
   type CatalogChange,
   type CatalogCommand,
   type CatalogMessage
-} from "./protocol.ts";
+} from "./client/protocol.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
-import type { AssetWriter } from "../sync/AssetWriter.ts";
+import type { AssetWriter } from "../writer/AssetWriter.ts";
 import {
   actorOf,
   decodeContent
 } from "../events/AssetEvents.ts";
+import { asError } from "../utils/asError.ts";
 
 // CONSTANTS
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
@@ -108,9 +109,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     context: RoomContext
   ): Promise<void> {
     const result = await this.#execute(command, actorOf(context.identity))
-      .catch((error: unknown) => Err(
-        error instanceof Error ? error : new Error(String(error))
-      ));
+      .catch((error: unknown) => Err(asError(error)));
 
     context.room.sendTo(clientId, result.ok ?
       {

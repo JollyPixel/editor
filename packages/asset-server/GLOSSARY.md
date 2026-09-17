@@ -9,60 +9,65 @@ the [event-store glossary](../event-store/GLOSSARY.md).
 
 ### Asset Backend
 
-The service that connects event history with physical asset storage, the
+The service that coordinates event history, physical asset storage, the asset
 catalog, and live editing rooms.
 
 ### Lifecycle Event
 
-An event describing the creation, update, rename, or deletion of an asset.
-Lifecycle events drive the catalog and the physical form of an asset.
+An event that creates, updates, renames, or deletes an asset. Lifecycle events
+drive the asset catalog and the asset's path and content in physical storage.
 
 ### Domain Event
 
-An event describing a change inside an asset, such as an editing operation.
-Its meaning belongs to the asset kind that applies it.
+An asset-kind-specific event describing a change inside an asset, such as an
+editing operation. The asset kind defines how the event changes live state.
 
 ### Asset Kind Handler
 
-The domain policy for one asset kind. It creates live state, applies events to
-that state, and turns the state back into asset content.
+The behavior registered for one asset kind. It creates, loads, and clears live
+state, applies the kind's domain events, and serializes that state as asset
+content.
 
 ### Live State
 
-The current in-memory state of an asset being used by the server. It is rebuilt
-from event history and released when the asset no longer needs to stay open.
+The current in-memory state of an open asset. It is rebuilt from event history
+when an asset room opens and released after the room is evicted.
 
 ### Replay
 
-Reading an asset's events in order to rebuild its live state or another
-projection. Replay begins at the newest usable
+Reading an asset's events in order to rebuild live state or a projection.
+Replay begins at the newest usable
 [checkpoint](../event-store/GLOSSARY.md#checkpoint).
 
 ### Fold
 
-The domain operation that applies lifecycle and domain events in order to
-build state. Each asset kind owns its fold.
+Applying an asset's events in order to build live state or a projection. The
+backend handles lifecycle events, while each asset kind defines how its domain
+events change live state.
 
 ### Projection
 
-A current representation derived from event history. Asset-server maintains
-projections for physical asset storage and the asset catalog.
+A current representation derived from event history. Asset-server derives the
+asset catalog and the intended paths and content in physical storage as
+projections.
 
 ### Snapshot
 
-A complete representation of an asset's live state, recorded as an update.
-A later replay can use the snapshot as its checkpoint. Projecting the snapshot
-brings physical storage up to date.
+A complete representation of an asset's live state. Asset rooms send a
+snapshot to each joining client. After domain events, the backend can also
+record the serialized state as an update so later replay can use that event as
+a checkpoint and physical storage can be brought up to date.
 
 ### Reconciliation
 
-The comparison between physical asset storage and the latest projection.
-External changes found during reconciliation become lifecycle events.
+The comparison between physical asset storage and the state last projected
+there. Differences made outside the backend become lifecycle events.
 
 ### Asset Room
 
-The collaboration space for one open, editable asset. An asset room uses the
-asset's live state and releases it after the room is evicted.
+The collaboration space for one open, editable asset. Accepted editing
+commands become domain events. The room uses the asset's live state, which is
+released after the room is evicted.
 
 ## Naming boundaries
 
@@ -74,5 +79,6 @@ asset's live state and releases it after the room is evicted.
   for changes inside its kind-specific state.
 - Use **replay** for reading history, **fold** for applying it, and
   **projection** for the resulting representation.
-- Use **snapshot** for a complete state recorded into history and
-  **reconciliation** for changes discovered in physical storage.
+- Use **snapshot** for a complete state representation and **checkpoint** for
+  a recorded event that lets replay skip earlier history.
+- Use **reconciliation** for changes discovered in physical storage.

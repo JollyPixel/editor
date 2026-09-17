@@ -59,6 +59,7 @@
     "js-base64": "3.9.3"
   },
   "devDependencies": {
+    "@jolly-pixel/asset": "1.1.0",
     "@jolly-pixel/asset-source": "1.0.0",
     "@jolly-pixel/bench": "*",
     "@jolly-pixel/event-store": "3.0.0"

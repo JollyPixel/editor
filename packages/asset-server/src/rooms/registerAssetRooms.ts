@@ -11,16 +11,14 @@ import { AssetRoomExtension } from "./AssetRoomExtension.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
-import type { CatalogChange } from "../catalog/protocol.ts";
-import type { AssetStateStore } from "../sync/AssetStateStore.ts";
-import type { AssetProjector } from "../sync/AssetProjector.ts";
-import type { SnapshotScheduler } from "../sync/SnapshotScheduler.ts";
+import type { CatalogChange } from "../catalog/client/protocol.ts";
+import type { AssetStateStore } from "../state/AssetStateStore.ts";
+import type { AssetProjector } from "../projection/AssetProjector.ts";
+import type { SnapshotScheduler } from "../state/SnapshotScheduler.ts";
 import {
   silentLogger,
   type Logger
 } from "../logger.ts";
-
-export { AssetRoom };
 
 export interface AssetRoomsOptions {
   server: Server;
