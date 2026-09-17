@@ -26,3 +26,9 @@ export {
   WorldStore,
   type WorldStoreEvents
 } from "./WorldStore.ts";
+export {
+  BlockUsageStore,
+  emptyBlockStats,
+  type BlockUsageSource,
+  type BlockUsageStoreEvents
+} from "./BlockUsageStore.ts";

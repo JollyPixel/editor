@@ -12,7 +12,10 @@ import {
   state
 } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import type {
+  VoxelEngine,
+  VoxelTilesetUsage
+} from "@jolly-pixel/voxel.renderer";
 import {
   showConfirm,
   type Dialog,
@@ -23,16 +26,18 @@ import {
 // Import Internal Dependencies
 import {
   editorState,
+  type BlockUsageStore,
   type TilesetStore,
   type WorldStore
 } from "../../app/state/index.ts";
 import type { TilesetActions } from "./TilesetActions.ts";
 import type { TilesetEntry } from "./tilesetEntries.ts";
-import {
-  countBlocksPerTileset,
-  rescaleLeavesBlocksOffGrid
-} from "./blockTilesets.ts";
+import { rescaleLeavesBlocksOffGrid } from "./blockTilesets.ts";
 import { tileSizeOptions } from "./tileSizes.ts";
+import {
+  formatCount,
+  tilesetRemovalMessage
+} from "../blocks/blockUsage.ts";
 
 @customElement("tileset-manager-dialog")
 export class TilesetManagerDialog extends LitElement {
@@ -96,6 +101,9 @@ export class TilesetManagerDialog extends LitElement {
   declare worldStore: WorldStore;
 
   @property({ attribute: false })
+  declare usage: BlockUsageStore;
+
+  @property({ attribute: false })
   declare log: LogQueue;
 
   @property({ attribute: false })
@@ -115,6 +123,7 @@ export class TilesetManagerDialog extends LitElement {
     this.actions = null;
     this.tilesets = editorState.tilesets;
     this.worldStore = editorState.world;
+    this.usage = editorState.usage;
     this.log = editorState.log;
     this.onAdd = null;
     this._open = false;
@@ -124,7 +133,8 @@ export class TilesetManagerDialog extends LitElement {
     super.connectedCallback();
     this.#subscriptions.push(
       this.tilesets.watch("change", this.#refresh),
-      this.worldStore.watch("blockRegistryChanged", this.#refresh)
+      this.worldStore.watch("blockRegistryChanged", this.#refresh),
+      this.usage.watch("change", this.#refresh)
     );
   }
 
@@ -166,9 +176,6 @@ export class TilesetManagerDialog extends LitElement {
 
   #renderContent() {
     const { entries } = this.tilesets;
-    const counts = this.engine === undefined ?
-      new Map<string, number>() :
-      countBlocksPerTileset(this.engine.blockRegistry);
 
     return html`
       <div class="settings">
@@ -191,6 +198,7 @@ export class TilesetManagerDialog extends LitElement {
                 <th>Name</th>
                 <th>Tile size</th>
                 <th>Blocks</th>
+                <th>Voxels</th>
                 <th></th>
               </tr>
             </thead>
@@ -198,7 +206,10 @@ export class TilesetManagerDialog extends LitElement {
               ${repeat(
                 entries,
                 (entry) => entry.definition.id,
-                (entry) => this.#renderRow(entry, counts.get(entry.definition.id) ?? 0)
+                (entry) => this.#renderRow(
+                  entry,
+                  this.usage.tilesetUsageOf(entry.definition.id)
+                )
               )}
             </tbody>
           </table>
@@ -208,7 +219,7 @@ export class TilesetManagerDialog extends LitElement {
 
   #renderRow(
     entry: TilesetEntry,
-    count: number
+    usage: VoxelTilesetUsage
   ) {
     const { definition } = entry;
     const editable = this.actions !== null && entry.assetId !== null;
@@ -237,7 +248,8 @@ export class TilesetManagerDialog extends LitElement {
             }}
           ></jolly-select>
         </td>
-        <td class="count">${count}</td>
+        <td class="count blocks">${formatCount(usage.blocks.length, "block")}</td>
+        <td class="count voxels">${formatCount(usage.voxels, "voxel")}</td>
         <td>
           <jolly-button
             icon="trash"
@@ -245,7 +257,7 @@ export class TilesetManagerDialog extends LitElement {
             label="Remove tileset"
             title="Remove tileset"
             ?disabled=${this.actions === null}
-            @click=${() => void this.#remove(entry, count)}
+            @click=${() => void this.#remove(entry, usage)}
           ></jolly-button>
         </td>
       </tr>
@@ -308,7 +320,7 @@ export class TilesetManagerDialog extends LitElement {
 
   async #remove(
     entry: TilesetEntry,
-    count: number
+    usage: VoxelTilesetUsage
   ): Promise<void> {
     if (this.actions === null) {
       return;
@@ -316,7 +328,7 @@ export class TilesetManagerDialog extends LitElement {
 
     const confirmed = await showConfirm({
       title: `Remove "${entry.label}"?`,
-      message: `${usageOf(count)} The texture asset is kept.`,
+      message: `${tilesetRemovalMessage(usage)} The texture asset is kept.`,
       confirmLabel: "Remove",
       danger: true
     });
@@ -336,19 +348,6 @@ export class TilesetManagerDialog extends LitElement {
   #onClose(): void {
     this._open = false;
   }
-}
-
-function usageOf(
-  count: number
-): string {
-  if (count === 0) {
-    return "No block uses this tileset.";
-  }
-  if (count === 1) {
-    return "1 block uses this tileset and will lose its texture.";
-  }
-
-  return `${count} blocks use this tileset and will lose their texture.`;
 }
 
 function messageOf(

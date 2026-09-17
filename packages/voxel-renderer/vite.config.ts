@@ -1,3 +1,6 @@
+// Import Node.js Dependencies
+import { fileURLToPath } from "node:url";
+
 // Import Third-party Dependencies
 import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
@@ -7,6 +10,18 @@ import wasm from "vite-plugin-wasm";
 // https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
+  resolve: {
+    alias: [
+      {
+        find: /^@jolly-pixel\/voxel\.renderer$/,
+        replacement: fileURLToPath(new URL("src/index.ts", import.meta.url))
+      },
+      {
+        find: /^@jolly-pixel\/voxel\.renderer\/plugins\/(.*)$/,
+        replacement: fileURLToPath(new URL("src/plugins/$1", import.meta.url))
+      }
+    ]
+  },
   server: {
     allowedHosts: true
   },

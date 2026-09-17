@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   blockCellRect,
+  blockCellStyle,
+  blockGridRows,
   blockInsertIndex,
   blockInsertMarker,
   blockMoveTargetIndex,
@@ -89,6 +91,15 @@ describe("blockCellRect", () => {
   });
 });
 
+describe("blockCellStyle", () => {
+  it("positions and sizes an overlay on the cell rect", () => {
+    assert.equal(
+      blockCellStyle({ x: 67, y: 3, size: 58 }),
+      "left:67px;top:3px;width:58px;height:58px"
+    );
+  });
+});
+
 describe("revealCellScrollTop", () => {
   const rect = { x: 0, y: 128, size: 64 };
 
@@ -146,6 +157,31 @@ describe("blockInsertIndex", () => {
 
   it("returns 0 for an empty grid", () => {
     assert.equal(blockInsertIndex(120, 80, layout, 0), 0);
+  });
+
+  it("appends when the pointer is over the add cell of a new row", () => {
+    assert.equal(blockInsertIndex(10, 60, layout, 4), 4);
+    assert.equal(blockInsertIndex(40, 60, layout, 4), 4);
+  });
+});
+
+describe("blockGridRows", () => {
+  it("reserves a row for the add cell of an empty library", () => {
+    assert.equal(blockGridRows(0, 4), 1);
+  });
+
+  it("keeps the add cell on a partially filled last row", () => {
+    assert.equal(blockGridRows(3, 4), 1);
+    assert.equal(blockGridRows(6, 4), 2);
+  });
+
+  it("opens a new row when the last row is full", () => {
+    assert.equal(blockGridRows(4, 4), 2);
+    assert.equal(blockGridRows(8, 4), 3);
+  });
+
+  it("treats a non-positive column count as one column", () => {
+    assert.equal(blockGridRows(2, 0), 3);
   });
 });
 

@@ -12,7 +12,7 @@ export * from "./serialization/index.ts";
 export * from "./tileset/index.ts";
 export * from "./world/index.ts";
 
-export * from "./debug/index.ts";
+export * from "./inspector/index.ts";
 export type { VoxelLogger } from "./utils/logger.ts";
 export { MeshBuildStats } from "./mesh/index.ts";
 export {

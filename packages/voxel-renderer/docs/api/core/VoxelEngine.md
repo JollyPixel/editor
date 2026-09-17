@@ -150,11 +150,11 @@ interface VoxelEngineOptions {
   onCommand?: VoxelCommandListener;
 
   /**
-   * Initial state of the debug inspector (`engine.debug`). Mesh counters are
+   * Initial state of the inspector (`engine.inspector`). Mesh counters are
    * always collected; this only decides whether the wireframe is drawn from
-   * the start. See [`VoxelDebugger`](./VoxelDebugger.md).
+   * the start. See [`VoxelInspector`](./VoxelInspector.md).
    */
-  debug?: VoxelDebuggerOptions;
+  inspector?: VoxelInspectorOptions;
 
   /**
    * Merge coplanar identical block faces into the largest quads possible
@@ -201,7 +201,7 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly blockRegistry: BlockRegistry;
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
-  readonly debug: VoxelDebugger;
+  readonly inspector: VoxelInspector;
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
   focus: THREE.Vector3Like | null;

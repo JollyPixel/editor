@@ -11,15 +11,17 @@ import {
   type ResolvedBlockDefinition,
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  JollyChangeDetail,
-  JollyOption
+import {
+  showConfirm,
+  type JollyChangeDetail,
+  type JollyOption
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { BlockEditorDialog } from "./BlockEditorDialog.ts";
 import {
   editorState,
+  type BlockUsageStore,
   type BrushStore,
   type PresenceStore,
   type RotationMode,
@@ -27,6 +29,17 @@ import {
   type WorldStore
 } from "../../app/state/index.ts";
 import { blocksWithoutTileset } from "../tilesets/blockTilesets.ts";
+import {
+  formatCount,
+  orphanVoxelsMessage,
+  removeBlockVoxels
+} from "./blockUsage.ts";
+import {
+  DEFAULT_BLOCK_LIBRARY_ORDER,
+  isReorderable,
+  orderBlocks,
+  type BlockLibraryOrder
+} from "./blockLibraryOrder.ts";
 import {
   mergeSelfPeerMark,
   selfPeerMark,
@@ -130,6 +143,12 @@ export class BlockLibrary extends LitElement {
   @property({ attribute: false })
   declare tilesets: TilesetStore;
 
+  @property({ attribute: false })
+  declare usage: BlockUsageStore;
+
+  @property({ type: String })
+  declare order: BlockLibraryOrder;
+
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
 
@@ -143,6 +162,9 @@ export class BlockLibrary extends LitElement {
   private declare _blocks: ResolvedBlockDefinition[];
 
   @state()
+  private declare _shownBlocks: ResolvedBlockDefinition[];
+
+  @state()
   private declare _rotationMode: RotationMode;
 
   @state()
@@ -153,6 +175,9 @@ export class BlockLibrary extends LitElement {
 
   @state()
   private declare _problems: ReadonlyMap<number, string>;
+
+  @state()
+  private declare _unused: ReadonlySet<number>;
 
   @query("block-editor-dialog")
   declare private _dialog: BlockEditorDialog;
@@ -170,14 +195,18 @@ export class BlockLibrary extends LitElement {
     this.worldStore = editorState.world;
     this.presence = editorState.presence;
     this.tilesets = editorState.tilesets;
+    this.usage = editorState.usage;
+    this.order = DEFAULT_BLOCK_LIBRARY_ORDER;
     this.layout = "compact";
     this._selectedId = null;
     this._selectedBlock = null;
     this._blocks = [];
+    this._shownBlocks = [];
     this._rotationMode = this.brush.rotationMode;
     this._flipY = this.brush.flipY;
     this._marks = new Map();
     this._problems = new Map();
+    this._unused = new Set();
   }
 
   readonly #onSelectedBlockChange = () => {
@@ -208,6 +237,10 @@ export class BlockLibrary extends LitElement {
     this.#refreshProblems();
   };
 
+  readonly #onUsageChange = () => {
+    this.#refreshUsage();
+  };
+
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
@@ -217,9 +250,11 @@ export class BlockLibrary extends LitElement {
       this.brush.watch("flipYChange", this.#onFlipYChange),
       this.presence.watch("blockSelectionsChange", this.#onMarksChange),
       this.presence.watch("peersChange", this.#onMarksChange),
-      this.tilesets.watch("change", this.#onTilesetsChange)
+      this.tilesets.watch("change", this.#onTilesetsChange),
+      this.usage.watch("change", this.#onUsageChange)
     );
     this.#refreshMarks();
+    this.#refreshUsage();
   }
 
   override disconnectedCallback() {
@@ -236,20 +271,28 @@ export class BlockLibrary extends LitElement {
       this.#resolveSelection();
       this.#refreshBlocks();
     }
+    else if (changed.has("order")) {
+      this.#refreshShownBlocks();
+      void this.#revealSelection();
+    }
   }
 
   override render() {
     return html`
       ${this.#renderProblems()}
+      ${this.#renderOrphans()}
       <block-library-viewport
         .engine=${this.engine}
-        .blocks=${this._blocks}
+        .blocks=${this._shownBlocks}
         .marks=${this._marks}
         .problems=${this._problems}
+        .unused=${this._unused}
+        .reorderable=${isReorderable(this.order)}
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
         @block-move=${this.#onBlockMove}
+        @block-create=${this.#onBlockCreate}
       ></block-library-viewport>
 
       <div class="brush-row">
@@ -271,6 +314,7 @@ export class BlockLibrary extends LitElement {
         .engine=${this.engine}
         .brush=${this.brush}
         .tilesets=${this.tilesets}
+        .usage=${this.usage}
         .block=${this._selectedBlock}
       ></block-editor-dialog>
     `;
@@ -299,6 +343,42 @@ export class BlockLibrary extends LitElement {
     `;
   }
 
+  #renderOrphans() {
+    const { orphanVoxels } = this.usage.stats;
+    if (orphanVoxels === 0) {
+      return nothing;
+    }
+
+    return html`
+      <button
+        type="button"
+        class="problems orphans"
+        title="Remove the voxels of deleted blocks"
+        @click=${this.#confirmRemoveOrphans}
+      >
+        <jolly-icon name="warning"></jolly-icon>
+        <span>${formatCount(orphanVoxels, "voxel")} of deleted blocks</span>
+      </button>
+    `;
+  }
+
+  async #confirmRemoveOrphans(): Promise<void> {
+    const { orphanVoxels, orphanBlocks } = this.usage.stats;
+    if (!this.engine || orphanVoxels === 0) {
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: "Remove orphan voxels",
+      message: orphanVoxelsMessage(orphanVoxels, orphanBlocks),
+      confirmLabel: "Remove",
+      danger: true
+    });
+    if (confirmed) {
+      removeBlockVoxels(this.engine.world, new Set(orphanBlocks));
+    }
+  }
+
   #onBlockSelect(
     event: CustomEvent<{ id: number; }>
   ): void {
@@ -318,6 +398,10 @@ export class BlockLibrary extends LitElement {
     this.engine?.moveBlock(event.detail.id, event.detail.toIndex);
   }
 
+  #onBlockCreate(): void {
+    void this.#addBlock();
+  }
+
   #onRotationChange(
     event: CustomEvent<JollyChangeDetail<RotationMode>>
   ): void {
@@ -330,7 +414,7 @@ export class BlockLibrary extends LitElement {
     this.brush.flipY = event.detail.value;
   }
 
-  async addBlock(): Promise<void> {
+  async #addBlock(): Promise<void> {
     if (!this.engine) {
       return;
     }
@@ -392,7 +476,37 @@ export class BlockLibrary extends LitElement {
     this._blocks = [
       ...this.engine.blockRegistry.getAll()
     ];
+    this.#refreshShownBlocks();
     this.#refreshProblems();
+  }
+
+  #refreshUsage(): void {
+    const { unusedBlocks } = this.usage.stats;
+    if (
+      unusedBlocks.length !== this._unused.size ||
+      unusedBlocks.some((id) => !this._unused.has(id))
+    ) {
+      this._unused = new Set(unusedBlocks);
+    }
+    this.#refreshShownBlocks();
+    this.requestUpdate();
+  }
+
+  #refreshShownBlocks(): void {
+    const next = orderBlocks(
+      this._blocks,
+      this.order,
+      this.usage.stats.blocks
+    );
+    const shown = this._shownBlocks;
+    if (
+      next.length === shown.length &&
+      next.every((block, index) => block === shown[index])
+    ) {
+      return;
+    }
+
+    this._shownBlocks = next;
   }
 
   #refreshProblems(): void {

@@ -6,7 +6,7 @@ import type { BlockDefinition } from "./blocks/BlockDefinition.ts";
 import type { BlockSurface } from "./blocks/BlockSurface.ts";
 import type { BlockShape } from "./blocks/shape/BlockShape.ts";
 import type { VoxelColliderFactory } from "./collision/VoxelCollider.ts";
-import type { VoxelDebuggerOptions } from "./debug/index.ts";
+import type { VoxelInspectorOptions } from "./inspector/index.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type { ViewDistanceOptions } from "./world/ViewDistance.ts";
 import type {
@@ -98,9 +98,9 @@ export interface VoxelEngineOptions {
   onCommand?: VoxelCommandListener;
 
   /**
-   * Initial debug view; counters are collected in every mode.
+   * Initial inspector view; mesh counters are collected in every mode.
    */
-  debug?: VoxelDebuggerOptions;
+  inspector?: VoxelInspectorOptions;
 
   /**
    * Enables greedy merging; incompatible with custom UV shader compilation.

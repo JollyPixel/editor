@@ -209,6 +209,7 @@ export class EditorScene extends Systems.Scene {
     const { engine } = vr;
     const { world: voxelWorld } = engine;
     this.engine = engine;
+    this.editorState.usage.attach(engine.inspector.blocks);
 
     this.#viewFocus.provider = () => viewFocusPoint(
       orbitFlyCamera.camera,
@@ -416,6 +417,7 @@ export class EditorScene extends Systems.Scene {
     }
 
     this.#viewFocus.provider = null;
+    this.editorState.usage.attach(null);
     this.#tilesetDirectory?.dispose();
     this.#tilesetDirectory = undefined;
     this.#tilesetActions = null;

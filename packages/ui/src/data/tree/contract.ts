@@ -22,6 +22,7 @@ export interface TreeNode<
   visible?: boolean;
   locked?: boolean;
   renamable?: boolean;
+  detail?: string;
   badges?: TreeBadge[];
   data?: TData;
 }

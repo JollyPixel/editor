@@ -313,6 +313,26 @@ the chunk became empty. This is renderer-facing lifecycle plumbing.
 
 Removes all voxel layers and object layers.
 
+### Block counts
+
+Counts cover the stored voxels of every layer, whatever their visibility,
+opacity or compositing. They are computed from per-chunk histograms cached
+against `VoxelChunk.revision`, so only chunks written since the last query are
+rescanned. [`VoxelInspector.blocks`](../core/VoxelInspector.md#block-statistics)
+builds its registry-aware statistics on top of them.
+
+#### `voxelCount: number`
+
+Read-only total of stored voxels.
+
+#### `countBlocks(): Map<number, number>`
+
+Voxel count per block id across all layers. Returns a new map.
+
+#### `countBlock(blockId: number): number`
+
+Voxels of `blockId` across all layers; `0` when none.
+
 ### Commands
 
 #### `apply(command: VoxelLayerCommand, logger?: VoxelLogger): void`

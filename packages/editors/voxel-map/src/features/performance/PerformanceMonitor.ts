@@ -48,10 +48,10 @@ export class PerformanceMonitor extends ActorComponent {
     this.#hud = new PerformanceHUD({
       keyboard: this.actor.world.input.keyboard,
       onDebugModeChange: (mode) => {
-        this.#engine.debug.mode = mode;
+        this.#engine.inspector.mode = mode;
       },
       onChunkBoundsChange: (enabled) => {
-        this.#engine.debug.chunkBounds = enabled;
+        this.#engine.inspector.chunkBounds = enabled;
       }
     });
     this.#unsubscribe = this.#recorder.subscribe(
@@ -115,32 +115,32 @@ export class PerformanceMonitor extends ActorComponent {
   };
 
   #registerVoxelMetrics(): void {
-    const debug = () => this.#engine.debug.stats;
+    const meshStats = () => this.#engine.inspector.mesh.stats;
     this.#recorder.addMetric({
       id: "chunks",
       label: "chunks",
-      sample: () => debug().chunks
+      sample: () => meshStats().chunks
     });
     this.#recorder.addMetric({
       id: "meshes",
       label: "meshes",
-      sample: () => debug().meshes
+      sample: () => meshStats().meshes
     });
     this.#recorder.addMetric({
       id: "voxels",
       label: "voxels",
-      sample: () => debug().voxels
+      sample: () => meshStats().voxels
     });
     this.#recorder.addMetric({
       id: "faces",
       label: "faces",
-      sample: () => debug().faces
+      sample: () => meshStats().faces
     });
     this.#recorder.addMetric({
       id: "culled",
       label: "culled",
       sample: () => {
-        const { faces, culledFaces } = debug();
+        const { faces, culledFaces } = meshStats();
         const candidates = faces + culledFaces;
 
         return candidates === 0 ? 0 : (culledFaces / candidates) * 100;
@@ -150,7 +150,7 @@ export class PerformanceMonitor extends ActorComponent {
       id: "merged",
       label: "merged",
       sample: () => {
-        const { faces, mergedFaces } = debug();
+        const { faces, mergedFaces } = meshStats();
         const emitted = faces + mergedFaces;
 
         return emitted === 0 ? 0 : (mergedFaces / emitted) * 100;
@@ -159,18 +159,18 @@ export class PerformanceMonitor extends ActorComponent {
     this.#recorder.addMetric({
       id: "voxelTriangles",
       label: "mesh tris",
-      sample: () => debug().triangles
+      sample: () => meshStats().triangles
     });
     this.#recorder.addMetric({
       id: "facesPerVoxel",
       label: "faces/voxel",
-      sample: () => debug().facesPerSolidVoxel
+      sample: () => meshStats().facesPerSolidVoxel
     });
     this.#recorder.addMetric({
       id: "buildMs",
       label: "build time",
       better: "lower",
-      sample: () => debug().buildTimeMs
+      sample: () => meshStats().buildTimeMs
     });
   }
 
@@ -185,8 +185,8 @@ export class PerformanceMonitor extends ActorComponent {
         textures: stats.textures ?? 0
       },
       voxel: {
-        mode: this.#engine.debug.mode,
-        chunkBounds: this.#engine.debug.chunkBounds,
+        mode: this.#engine.inspector.mode,
+        chunkBounds: this.#engine.inspector.chunkBounds,
         chunks: stats.chunks ?? 0,
         meshes: stats.meshes ?? 0,
         voxels: stats.voxels ?? 0,

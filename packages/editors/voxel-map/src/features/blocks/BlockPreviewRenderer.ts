@@ -1,20 +1,32 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { disposeObject3D } from "@jolly-pixel/engine";
-import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
+import type {
+  BlockShapeRegistry,
+  ResolvedBlockDefinition,
+  TilesetManager
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
   buildBlockPreviewMesh,
   createBlockPreviewStage,
+  emptyTextureSlots,
   PREVIEW_ROTATION_STEP,
   PREVIEW_TILT,
   type BlockPreviewSources
 } from "./blockPreviewMesh.ts";
+import { TileOpacityProbe } from "./tileOpacity.ts";
 
 // CONSTANTS
 const kSuperSampling = 2;
 const kMaxPixelRatio = 3;
+const kOpacityCheckIntervalMs = 250;
+
+export interface BlockPreviewRendererOptions {
+  shapeRegistry: BlockShapeRegistry;
+  tilesetManager: TilesetManager;
+}
 
 export class BlockPreviewRenderer {
   readonly canvas: HTMLCanvasElement;
@@ -27,6 +39,8 @@ export class BlockPreviewRenderer {
   #resizeObserver: ResizeObserver;
   #block: ResolvedBlockDefinition | null = null;
   #mesh: THREE.Mesh | null = null;
+  #emptySlots = "";
+  #opacityCheckAt = 0;
   #raf = -1;
   #rot = 0;
   #size = 0;
@@ -34,10 +48,14 @@ export class BlockPreviewRenderer {
 
   constructor(
     container: HTMLElement,
-    sources: BlockPreviewSources
+    options: BlockPreviewRendererOptions
   ) {
     this.#container = container;
-    this.#sources = sources;
+    this.#sources = {
+      shapeRegistry: options.shapeRegistry,
+      tilesetManager: options.tilesetManager,
+      tileOpacity: new TileOpacityProbe(options.tilesetManager)
+    };
 
     this.#renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -72,13 +90,7 @@ export class BlockPreviewRenderer {
     }
 
     this.#block = block;
-    this.#removeMesh();
-    if (block === null) {
-      return;
-    }
-
-    this.#mesh = buildBlockPreviewMesh(block, this.#sources);
-    this.#scene.add(this.#mesh);
+    this.#buildMesh();
   }
 
   get block(): ResolvedBlockDefinition | null {
@@ -92,6 +104,28 @@ export class BlockPreviewRenderer {
     this.#block = null;
     this.#renderer.dispose();
     this.canvas.remove();
+  }
+
+  #buildMesh(): void {
+    this.#removeMesh();
+    const block = this.#block;
+    if (block === null) {
+      return;
+    }
+
+    this.#emptySlots = emptyTextureSlots(block, this.#sources).join(",");
+    this.#mesh = buildBlockPreviewMesh(block, this.#sources);
+    this.#scene.add(this.#mesh);
+  }
+
+  #refreshEmptySlots(): void {
+    const block = this.#block;
+    if (
+      block !== null &&
+      emptyTextureSlots(block, this.#sources).join(",") !== this.#emptySlots
+    ) {
+      this.#buildMesh();
+    }
   }
 
   #removeMesh(): void {
@@ -121,16 +155,22 @@ export class BlockPreviewRenderer {
   }
 
   #startLoop(): void {
-    const loop = () => {
+    const loop = (time: number) => {
       this.#raf = requestAnimationFrame(loop);
-      this.#render();
+      this.#render(time);
     };
     this.#raf = requestAnimationFrame(loop);
   }
 
-  #render(): void {
+  #render(
+    time: number
+  ): void {
     if (this.#sizeDirty) {
       this.#syncSize();
+    }
+    if (time - this.#opacityCheckAt >= kOpacityCheckIntervalMs) {
+      this.#opacityCheckAt = time;
+      this.#refreshEmptySlots();
     }
     if (this.#size === 0 || this.#mesh === null) {
       return;

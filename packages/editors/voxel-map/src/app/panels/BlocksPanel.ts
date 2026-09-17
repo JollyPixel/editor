@@ -2,12 +2,21 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import {
+  LocalStorageAdapter,
+  type StorageAdapter
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   editorState,
   type EditorState
 } from "../state/index.ts";
+import {
+  parseBlockLibraryOrder,
+  type BlockLibraryOrder
+} from "../../features/blocks/blockLibraryOrder.ts";
+import type { BlockOrderChangeDetail } from "../../features/blocks/BlockOrderMenu.ts";
 import type {
   BlockLibrary,
   BlockSelectionChangeDetail
@@ -16,6 +25,9 @@ import type { TilesetActions } from "../../features/tilesets/TilesetActions.ts";
 import type { TilesetFolder } from "../../features/tilesets/TilesetFolder.ts";
 
 import "../../features/registerElements.ts";
+
+// CONSTANTS
+const kOrderStorageKey = "voxel-map:block-library:order";
 
 @customElement("blocks-panel")
 export class BlocksPanel extends LitElement {
@@ -53,8 +65,14 @@ export class BlocksPanel extends LitElement {
   })
   declare hostsTextureEditor: boolean;
 
+  @property({ attribute: false })
+  declare storage: StorageAdapter;
+
   @state()
   declare _canEditBlock: boolean;
+
+  @state()
+  declare _order: BlockLibraryOrder;
 
   @query("jolly-folder.library")
   declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
@@ -75,17 +93,21 @@ export class BlocksPanel extends LitElement {
     this.tilesetActions = null;
     this.hostsTextureEditor = false;
     this._canEditBlock = false;
+    this.storage = new LocalStorageAdapter();
+    this._order = parseBlockLibraryOrder(this.storage.get(kOrderStorageKey));
   }
+
+  readonly #onOrderChange = (
+    event: CustomEvent<BlockOrderChangeDetail>
+  ): void => {
+    this._order = event.detail.order;
+    this.storage.set(kOrderStorageKey, this._order);
+  };
 
   readonly #onBlockSelectionChange = (
     event: CustomEvent<BlockSelectionChangeDetail>
   ): void => {
     this._canEditBlock = event.detail.block !== null;
-  };
-
-  readonly #addBlock = async(): Promise<void> => {
-    this.#openFolder();
-    await this._blockLibrary?.addBlock();
   };
 
   readonly #editBlock = async(): Promise<void> => {
@@ -158,14 +180,11 @@ export class BlocksPanel extends LitElement {
         label="Block Library"
         storage-key="voxel-map:folder:block-library"
       >
-        <jolly-button
+        <block-order-menu
           slot="actions"
-          icon="plus"
-          icon-only
-          label="Add block"
-          title="Add block"
-          @click=${this.#addBlock}
-        ></jolly-button>
+          .value=${this._order}
+          @block-order-change=${this.#onOrderChange}
+        ></block-order-menu>
         <jolly-button
           slot="actions"
           icon="pencil"
@@ -181,6 +200,8 @@ export class BlocksPanel extends LitElement {
           .worldStore=${this.state.world}
           .presence=${this.state.presence}
           .tilesets=${this.state.tilesets}
+          .usage=${this.state.usage}
+          .order=${this._order}
           .layout=${this.hostsTextureEditor ? "compact" : "fill"}
           @block-selection-change=${this.#onBlockSelectionChange}
         ></block-library>

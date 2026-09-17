@@ -3,14 +3,14 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type {
-  ChunkDebugView,
-  DebugChunkEntry
+  ChunkInspectorView,
+  InspectedChunkEntry
 } from "./types.ts";
 
 // CONSTANTS
 const kDefaultColor = 0x66FF99;
 const kDefaultOpacity = 0.5;
-const kModeCycle: Record<VoxelDebugMode, VoxelDebugMode> = {
+const kModeCycle: Record<VoxelInspectorMode, VoxelInspectorMode> = {
   off: "overlay",
   overlay: "wireframe",
   wireframe: "off"
@@ -19,18 +19,18 @@ const kModeCycle: Record<VoxelDebugMode, VoxelDebugMode> = {
 /**
  * Selects counters only, a wireframe overlay, or wireframe-only rendering.
  */
-export type VoxelDebugMode =
+export type VoxelInspectorMode =
   | "off"
   | "overlay"
   | "wireframe";
 
 export interface ChunkWireframeViewOptions {
   parent: THREE.Object3D;
-  chunks: Iterable<DebugChunkEntry>;
+  chunks: Iterable<InspectedChunkEntry>;
   /**
    * @default "off"
    */
-  mode?: VoxelDebugMode;
+  mode?: VoxelInspectorMode;
   /**
    * @default 0x66FF99
    */
@@ -47,14 +47,14 @@ export interface ChunkWireframeViewOptions {
  * the textured meshes: `"wireframe"` hides them, and a culled chunk is hidden
  * in every mode.
  */
-export class ChunkWireframeView implements ChunkDebugView {
+export class ChunkWireframeView implements ChunkInspectorView {
   #parent: THREE.Object3D;
-  #chunks: Iterable<DebugChunkEntry>;
+  #chunks: Iterable<InspectedChunkEntry>;
   #group = new THREE.Group();
   #overlays = new Map<string, THREE.Mesh[]>();
   #material: THREE.MeshBasicMaterial | null = null;
 
-  #mode: VoxelDebugMode;
+  #mode: VoxelInspectorMode;
   #color: THREE.ColorRepresentation;
   #opacity: number;
 
@@ -75,17 +75,17 @@ export class ChunkWireframeView implements ChunkDebugView {
     this.#color = color;
     this.#opacity = opacity;
 
-    this.#group.name = "VoxelDebugger";
+    this.#group.name = "VoxelInspector";
     if (this.enabled) {
       parent.add(this.#group);
     }
   }
 
-  get mode(): VoxelDebugMode {
+  get mode(): VoxelInspectorMode {
     return this.#mode;
   }
 
-  set mode(value: VoxelDebugMode) {
+  set mode(value: VoxelInspectorMode) {
     if (value === this.#mode) {
       return;
     }
@@ -111,14 +111,14 @@ export class ChunkWireframeView implements ChunkDebugView {
     this.mode = value ? "overlay" : "off";
   }
 
-  nextMode(): VoxelDebugMode {
+  nextMode(): VoxelInspectorMode {
     this.mode = kModeCycle[this.#mode];
 
     return this.#mode;
   }
 
   refresh(
-    entry: DebugChunkEntry
+    entry: InspectedChunkEntry
   ): void {
     const visible = !entry.culled && this.#mode !== "wireframe";
     for (const mesh of entry.meshes) {

@@ -126,3 +126,23 @@ registerIcon("layers", svg`
     stroke-linejoin="round"
   />
 `);
+
+registerIcon("order-usage", svg`
+  <path
+    d="M4 6h16M4 12h11M4 18h6"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linecap="round"
+  />
+`);
+
+registerIcon("order-registry", svg`
+  <path
+    d="M4 6h16M4 12h16M4 18h16"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linecap="round"
+  />
+`);

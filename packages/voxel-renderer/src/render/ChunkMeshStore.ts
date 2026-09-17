@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
-import type { VoxelDebugger } from "../debug/index.ts";
+import type { VoxelInspector } from "../inspector/index.ts";
 import {
   VoxelMeshBuilder,
   ChunkGeometryKey
@@ -24,7 +24,7 @@ export interface ChunkMeshStoreOptions {
   root: THREE.Group;
   meshBuilder: VoxelMeshBuilder;
   materials: ChunkMaterialCache;
-  debug: VoxelDebugger;
+  inspector: VoxelInspector;
   collider?: VoxelCollider | null;
   logger?: VoxelLogger;
 }
@@ -37,7 +37,7 @@ export interface ChunkMeshRemoveOptions {
 }
 
 /**
- * Owns built chunk entries, debug registrations, and collider registrations.
+ * Owns built chunk entries, inspector registrations, and collider registrations.
  * Materials belong to `ChunkMaterialCache` and are not disposed here.
  */
 export class ChunkMeshStore {
@@ -45,7 +45,7 @@ export class ChunkMeshStore {
   #root: THREE.Group;
   #meshBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
-  #debug: VoxelDebugger;
+  #inspector: VoxelInspector;
   #collider: VoxelCollider | null;
   #logger: VoxelLogger;
 
@@ -56,7 +56,7 @@ export class ChunkMeshStore {
       root,
       meshBuilder,
       materials,
-      debug,
+      inspector,
       collider = null,
       logger = NOOP_LOGGER
     } = options;
@@ -64,7 +64,7 @@ export class ChunkMeshStore {
     this.#root = root;
     this.#meshBuilder = meshBuilder;
     this.#materials = materials;
-    this.#debug = debug;
+    this.#inspector = inspector;
     this.#collider = collider;
     this.#logger = logger;
   }
@@ -118,7 +118,7 @@ export class ChunkMeshStore {
       meshes,
       visible: true
     });
-    this.#debug.registerChunk(
+    this.#inspector.registerChunk(
       key,
       meshes,
       this.#meshBuilder.stats,
@@ -158,7 +158,7 @@ export class ChunkMeshStore {
       `Removing chunk '${key}' with layer name '${layer.name}'`
     );
 
-    this.#debug.unregisterChunk(key);
+    this.#inspector.unregisterChunk(key);
 
     const entry = this.#entries.get(key);
     if (entry) {
@@ -181,11 +181,11 @@ export class ChunkMeshStore {
     }
 
     entry.visible = !culled;
-    this.#debug.cullChunk(key, culled);
+    this.#inspector.cullChunk(key, culled);
   }
 
   clear(): void {
-    this.#debug.clear();
+    this.#inspector.clear();
 
     for (const entry of this.#entries.values()) {
       this.#disposeMeshes(entry);

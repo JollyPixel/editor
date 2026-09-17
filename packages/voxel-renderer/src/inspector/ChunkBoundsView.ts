@@ -3,8 +3,8 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type {
-  ChunkDebugView,
-  DebugChunkEntry
+  ChunkInspectorView,
+  InspectedChunkEntry
 } from "./types.ts";
 
 // CONSTANTS
@@ -32,7 +32,7 @@ const kBoxEdgePositions = new Float32Array([
 
 export interface ChunkBoundsViewOptions {
   parent: THREE.Object3D;
-  chunks: Iterable<DebugChunkEntry>;
+  chunks: Iterable<InspectedChunkEntry>;
   /**
    * @default false
    */
@@ -46,9 +46,9 @@ export interface ChunkBoundsViewOptions {
 /**
  * Outlines the boundary of every registered chunk.
  */
-export class ChunkBoundsView implements ChunkDebugView {
+export class ChunkBoundsView implements ChunkInspectorView {
   #parent: THREE.Object3D;
-  #chunks: Iterable<DebugChunkEntry>;
+  #chunks: Iterable<InspectedChunkEntry>;
   #group = new THREE.Group();
   #boxes = new Map<string, THREE.LineSegments>();
   #geometry: THREE.BufferGeometry | null = null;
@@ -72,7 +72,7 @@ export class ChunkBoundsView implements ChunkDebugView {
     this.#enabled = enabled;
     this.#color = color;
 
-    this.#group.name = "VoxelDebugger:chunkBounds";
+    this.#group.name = "VoxelInspector:chunkBounds";
     if (enabled) {
       parent.add(this.#group);
     }
@@ -102,7 +102,7 @@ export class ChunkBoundsView implements ChunkDebugView {
   }
 
   refresh(
-    entry: DebugChunkEntry
+    entry: InspectedChunkEntry
   ): void {
     if (!this.#enabled || !entry.bounds || entry.culled) {
       this.release(entry.key);

@@ -93,6 +93,16 @@ node.badges = peersOn(node.id).map((peer) => ({
 `title` fills both the tooltip and the dot's accessible label. Rows with an
 empty or absent list render no badge container at all.
 
+## Showing a row detail
+
+`TreeNode.detail` is a short muted text drawn after the label, before the
+badges, and never truncated. Use it for a count or a status. An empty or
+absent value renders nothing.
+
+```ts
+node.detail = `${layer.voxelCount} voxels`;
+```
+
 ## Renaming a row in place
 
 `renamable` turns on inline label editing, and every row opts in for itself

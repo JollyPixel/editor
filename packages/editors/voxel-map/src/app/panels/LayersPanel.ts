@@ -13,6 +13,7 @@ import {
   type LayerSelection
 } from "../state/index.ts";
 import type { LayerManager } from "../../features/layers/LayerManager.ts";
+import { formatCount } from "../../features/blocks/blockUsage.ts";
 import { ViewFocus } from "../../scene/viewFocus.ts";
 
 import "../../features/registerElements.ts";
@@ -25,6 +26,14 @@ export class LayersPanel extends LitElement {
 
       --jolly-folder-indent: 0;
       --jolly-field-inset-end: 0;
+    }
+
+    .total {
+      align-self: center;
+      margin-inline-end: var(--jolly-space-1, 4px);
+      color: var(--jolly-text-muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
 
     .hint {
@@ -52,7 +61,7 @@ export class LayersPanel extends LitElement {
   @query("layer-manager")
   declare _layerManager: LayerManager | null;
 
-  #unsubscribe: (() => void) | null = null;
+  #subscriptions: Array<() => void> = [];
 
   get world(): VoxelWorld | undefined {
     return this.engine?.world;
@@ -68,18 +77,23 @@ export class LayersPanel extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
-    this.#unsubscribe = this.state.selection.watch(
-      "change",
-      this.#onSelectionChange
+    this.#subscriptions.push(
+      this.state.selection.watch("change", this.#onSelectionChange),
+      this.state.usage.watch("change", this.#onUsageChange)
     );
     this.#onSelectionChange(this.state.selection.current);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
   }
+
+  readonly #onUsageChange = (): void => {
+    this.requestUpdate();
+  };
 
   readonly #onSelectionChange = (selection: LayerSelection): void => {
     this._selection = selection;
@@ -120,6 +134,11 @@ export class LayersPanel extends LitElement {
         label="Layers"
         storage-key="voxel-map:folder:layers"
       >
+        <span
+          slot="actions"
+          class="total"
+          title="Voxels placed in the map"
+        >${formatCount(this.state.usage.stats.voxels, "voxel")}</span>
         <jolly-button
           slot="actions"
           icon="plus"

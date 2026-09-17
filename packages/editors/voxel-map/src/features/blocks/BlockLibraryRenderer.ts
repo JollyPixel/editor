@@ -9,24 +9,30 @@ import type {
 
 // Import Internal Dependencies
 import {
+  blockGridRows,
   computeBlockGridLayout,
   type BlockGridLayout
 } from "./blockGridLayout.ts";
 import {
   buildBlockPreviewMesh,
   createBlockPreviewStage,
+  emptyTextureSlots,
   PREVIEW_ROTATION_STEP,
-  PREVIEW_TILT
+  PREVIEW_TILT,
+  type BlockPreviewSources
 } from "./blockPreviewMesh.ts";
+import { TileOpacityProbe } from "./tileOpacity.ts";
 
 // CONSTANTS
 const kSuperSampling = 2;
 const kMaxPixelRatio = 3;
+const kOpacityCheckIntervalMs = 250;
 
 export interface CellEntry {
   blockId: number;
   block: ResolvedBlockDefinition;
   mesh: THREE.Mesh | THREE.Group;
+  emptySlots: string;
   x: number;
   y: number;
 }
@@ -45,8 +51,9 @@ export class BlockLibraryRenderer {
   #scene: THREE.Scene;
   #camera: THREE.PerspectiveCamera;
   #cells: CellEntry[] = [];
-  #shapeRegistry: BlockShapeRegistry;
+  #sources: BlockPreviewSources;
   #tilesetManager: TilesetManager;
+  #opacityCheckAt = 0;
   #raf = -1;
   #rot = 0;
   #cols = 1;
@@ -62,7 +69,11 @@ export class BlockLibraryRenderer {
     container: HTMLElement,
     options: BlockLibraryRendererOptions
   ) {
-    this.#shapeRegistry = options.shapeRegistry;
+    this.#sources = {
+      shapeRegistry: options.shapeRegistry,
+      tilesetManager: options.tilesetManager,
+      tileOpacity: new TileOpacityProbe(options.tilesetManager)
+    };
     this.#tilesetManager = options.tilesetManager;
     this.#tilesetVersion = options.tilesetManager.version;
     this.#container = container;
@@ -119,13 +130,7 @@ export class BlockLibraryRenderer {
         previous.delete(block.id);
       }
 
-      const mesh = buildBlockPreviewMesh(block, {
-        shapeRegistry: this.#shapeRegistry,
-        tilesetManager: this.#tilesetManager
-      });
-      mesh.visible = false;
-      this.#scene.add(mesh);
-      next.push({ blockId: block.id, block, mesh, x: 0, y: 0 });
+      next.push(this.#createCell(block));
     }
 
     for (const cell of previous.values()) {
@@ -193,7 +198,7 @@ export class BlockLibraryRenderer {
   }
 
   #syncCanvasSize(): void {
-    const rows = Math.ceil(this.#cells.length / this.#cols) || 1;
+    const rows = blockGridRows(this.#cells.length, this.#cols);
     const width = this.#cols * this.#cellSize;
     const height = rows * this.#cellSize;
     if (
@@ -211,16 +216,22 @@ export class BlockLibraryRenderer {
   }
 
   #startLoop(): void {
-    const loop = () => {
+    const loop = (time: number) => {
       this.#raf = requestAnimationFrame(loop);
-      this.#render();
+      this.#render(time);
     };
     this.#raf = requestAnimationFrame(loop);
   }
 
-  #render(): void {
+  #render(
+    time: number
+  ): void {
     if (this.#tilesetVersion !== this.#tilesetManager.version) {
       this.#rebuildCells();
+    }
+    else if (time - this.#opacityCheckAt >= kOpacityCheckIntervalMs) {
+      this.#opacityCheckAt = time;
+      this.#refreshEmptyCells();
     }
     if (this.#layoutDirty) {
       this.#relayout();
@@ -237,7 +248,7 @@ export class BlockLibraryRenderer {
 
     this.#renderer.clear();
 
-    const totalRows = Math.ceil(this.#cells.length / this.#cols) || 1;
+    const totalRows = blockGridRows(this.#cells.length, this.#cols);
     const cellSize = this.#cellSize;
 
     const scrollTop = this.#container.scrollTop;
@@ -278,6 +289,40 @@ export class BlockLibraryRenderer {
     }
     this.#cells = [];
     this.setBlocks(blocks);
+  }
+
+  #createCell(
+    block: ResolvedBlockDefinition
+  ): CellEntry {
+    const mesh = buildBlockPreviewMesh(block, this.#sources);
+    mesh.visible = false;
+    this.#scene.add(mesh);
+
+    return {
+      blockId: block.id,
+      block,
+      mesh,
+      emptySlots: emptyTextureSlots(block, this.#sources).join(","),
+      x: 0,
+      y: 0
+    };
+  }
+
+  #refreshEmptyCells(): void {
+    for (let index = 0; index < this.#cells.length; index++) {
+      const cell = this.#cells[index];
+      const emptySlots = emptyTextureSlots(cell.block, this.#sources).join(",");
+      if (emptySlots === cell.emptySlots) {
+        continue;
+      }
+
+      this.#removeCell(cell);
+      this.#cells[index] = {
+        ...this.#createCell(cell.block),
+        x: cell.x,
+        y: cell.y
+      };
+    }
   }
 
   #removeCell(cell: CellEntry): void {

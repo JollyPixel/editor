@@ -20,6 +20,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 import {
   Mixed,
+  showConfirm,
   type Dialog,
   type JollyChangeDetail,
   type JollyOption
@@ -28,9 +29,15 @@ import {
 // Import Internal Dependencies
 import {
   editorState,
+  type BlockUsageStore,
   type BrushStore,
   type TilesetStore
 } from "../../app/state/index.ts";
+import {
+  blockRemovalMessage,
+  blockUsageSummary,
+  formatCount
+} from "./blockUsage.ts";
 import {
   assignBlockTileset,
   blockTilesetStatus,
@@ -100,6 +107,9 @@ export class BlockEditorDialog extends LitElement {
   @property({ attribute: false })
   declare tilesets: TilesetStore;
 
+  @property({ attribute: false })
+  declare usage: BlockUsageStore;
+
   @state()
   private declare _mode: BlockEditorMode;
 
@@ -114,6 +124,7 @@ export class BlockEditorDialog extends LitElement {
 
   #previewDraft: BlockDraft | null = null;
   #previewDraftBlock: ResolvedBlockDefinition | null = null;
+  #unwatchUsage: (() => void) | null = null;
 
   constructor() {
     super();
@@ -121,6 +132,7 @@ export class BlockEditorDialog extends LitElement {
     this.engine = undefined;
     this.brush = editorState.brush;
     this.tilesets = editorState.tilesets;
+    this.usage = editorState.usage;
     this.block = null;
     this._mode = "edit";
     this._open = false;
@@ -157,6 +169,29 @@ export class BlockEditorDialog extends LitElement {
   close(): void {
     this._dialog?.close();
   }
+
+  override updated(
+    changed: Map<string, unknown>
+  ): void {
+    if (!changed.has("_open") && !changed.has("usage")) {
+      return;
+    }
+
+    this.#unwatchUsage?.();
+    this.#unwatchUsage = this._open ?
+      this.usage.watch("change", this.#onUsageChange) :
+      null;
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#unwatchUsage?.();
+    this.#unwatchUsage = null;
+  }
+
+  readonly #onUsageChange = (): void => {
+    this.requestUpdate();
+  };
 
   override render() {
     if (this._mode === "create") {
@@ -239,6 +274,7 @@ export class BlockEditorDialog extends LitElement {
             ></jolly-select>
             ${creating ? nothing : this.#renderSurface()}
             ${creating ? nothing : this.#renderCullSelfFaces()}
+            ${creating ? nothing : this.#renderUsage()}
           </div>
           ${this.#renderPreview(creating)}
         </div>
@@ -254,6 +290,11 @@ export class BlockEditorDialog extends LitElement {
             @click=${this.#confirmCreate}
           >Create</jolly-button>
         ` : html`
+          <jolly-button
+            slot="actions"
+            icon="trash"
+            @click=${this.#confirmDelete}
+          >Delete</jolly-button>
           <jolly-button
             slot="actions"
             variant="accent"
@@ -293,6 +334,56 @@ export class BlockEditorDialog extends LitElement {
 
   #onDialogClose(): void {
     this._open = false;
+  }
+
+  #renderUsage() {
+    const { block } = this;
+    if (!block || !this._open) {
+      return nothing;
+    }
+
+    const usage = this.usage.usageOf(block.id);
+
+    return html`
+      <jolly-separator label="Usage"></jolly-separator>
+      <jolly-text
+        class="usage-total"
+        label="Placed"
+        readonly
+        .value=${blockUsageSummary(usage)}
+      ></jolly-text>
+      ${usage.layers.map((layer) => html`
+        <jolly-text
+          class="usage-layer"
+          label=${layer.layerName}
+          readonly
+          .value=${formatCount(layer.voxels, "voxel")}
+        ></jolly-text>
+      `)}
+    `;
+  }
+
+  async #confirmDelete(): Promise<void> {
+    const { block, engine } = this;
+    if (!block || !engine) {
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: `Delete "${block.name}"?`,
+      message: blockRemovalMessage(this.usage.usageOf(block.id)),
+      confirmLabel: "Delete",
+      danger: true
+    });
+    if (!confirmed || !engine.removeBlock(block.id)) {
+      return;
+    }
+
+    this.close();
+    const [next] = engine.blockRegistry.getAll();
+    if (next !== undefined) {
+      this.brush.blockId = next.id;
+    }
   }
 
   #renderCullSelfFaces() {

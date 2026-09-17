@@ -4,11 +4,11 @@ import type * as THREE from "three";
 // Import Internal Dependencies
 import type { MeshBuildStats } from "../mesh/index.ts";
 import type {
-  DebugChunkBounds,
-  DebugChunkEntry
+  InspectedChunkBounds,
+  InspectedChunkEntry
 } from "./types.ts";
 
-export interface VoxelDebugStats {
+export interface VoxelMeshStats {
   chunks: number;
   culledChunks: number;
   meshes: number;
@@ -28,10 +28,10 @@ export interface VoxelDebugStats {
  * The live set of built chunks and the counters aggregated from it. Holds no
  * scene-graph object of its own.
  */
-export class DebugChunkRegistry {
-  #entries = new Map<string, DebugChunkEntry>();
+export class InspectedChunkRegistry {
+  #entries = new Map<string, InspectedChunkEntry>();
 
-  * [Symbol.iterator](): IterableIterator<DebugChunkEntry> {
+  * [Symbol.iterator](): IterableIterator<InspectedChunkEntry> {
     yield* this.#entries.values();
   }
 
@@ -43,9 +43,9 @@ export class DebugChunkRegistry {
     key: string,
     meshes: readonly THREE.Mesh[],
     stats: MeshBuildStats,
-    bounds: DebugChunkBounds | null
-  ): DebugChunkEntry {
-    const entry: DebugChunkEntry = {
+    bounds: InspectedChunkBounds | null
+  ): InspectedChunkEntry {
+    const entry: InspectedChunkEntry = {
       key,
       meshes,
       stats: stats.clone(),
@@ -67,7 +67,7 @@ export class DebugChunkRegistry {
   cull(
     key: string,
     culled: boolean
-  ): DebugChunkEntry | null {
+  ): InspectedChunkEntry | null {
     const entry = this.#entries.get(key);
     if (!entry || entry.culled === culled) {
       return null;
@@ -88,8 +88,8 @@ export class DebugChunkRegistry {
     this.#entries.clear();
   }
 
-  get stats(): VoxelDebugStats {
-    const total: VoxelDebugStats = {
+  get stats(): VoxelMeshStats {
+    const total: VoxelMeshStats = {
       chunks: 0,
       culledChunks: 0,
       meshes: 0,

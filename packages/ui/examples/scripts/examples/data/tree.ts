@@ -38,6 +38,7 @@ function sampleNodes(): TreeNode[] {
           visible: true,
           locked: false,
           renamable: true,
+          detail: "2 lights",
           badges: [
             { color: "#e0567a", title: "Ada" },
             { color: "#4ad991", title: "Lin" }

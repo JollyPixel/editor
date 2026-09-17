@@ -15,6 +15,7 @@ import {
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 import {
   blockCellRect,
+  blockCellStyle,
   blockInsertIndex,
   blockInsertMarker,
   blockMoveTargetIndex,
@@ -34,6 +35,7 @@ import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 const kBlockSelectEvent = "block-select";
 const kBlockEditEvent = "block-edit";
 const kBlockMoveEvent = "block-move";
+const kBlockCreateEvent = "block-create";
 const kCellInset = 3;
 const kDragThreshold = 4;
 const kAutoScrollMargin = 24;
@@ -140,6 +142,13 @@ export class BlockLibraryViewport extends LitElement {
       background: color-mix(in srgb, var(--jolly-danger) 18%, transparent);
     }
 
+    .unused {
+      position: absolute;
+      box-sizing: border-box;
+      border-radius: var(--jolly-radius-sm, 4px);
+      background: color-mix(in srgb, var(--jolly-well-bg, #0e1316) 60%, transparent);
+    }
+
     .layer.drop {
       z-index: 3;
     }
@@ -151,6 +160,35 @@ export class BlockLibraryViewport extends LitElement {
       border-radius: 1px;
       background: var(--jolly-accent, #4c9aff);
       box-shadow: 0 0 0 1px var(--jolly-well-bg, #0e1316);
+    }
+
+    .layer.actions {
+      z-index: 4;
+    }
+
+    .add-cell {
+      position: absolute;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border: 2px dashed var(--jolly-border, #2a3238);
+      border-radius: var(--jolly-radius-sm, 4px);
+      background: transparent;
+      color: var(--jolly-text-muted, #8a96a0);
+      font: inherit;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .add-cell:hover,
+    .add-cell:focus-visible {
+      border-color: var(--jolly-accent-fill, #4c9aff);
+      background: color-mix(in srgb, var(--jolly-accent-fill, #4c9aff) 12%, transparent);
+      color: var(--jolly-accent-fill, #4c9aff);
+      outline: none;
     }
 
     .scroller.dragging {
@@ -198,6 +236,12 @@ export class BlockLibraryViewport extends LitElement {
   @property({ attribute: false })
   declare problems: ReadonlyMap<number, string>;
 
+  @property({ attribute: false })
+  declare unused: ReadonlySet<number>;
+
+  @property({ type: Boolean })
+  declare reorderable: boolean;
+
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
 
@@ -230,6 +274,8 @@ export class BlockLibraryViewport extends LitElement {
     this.blocks = [];
     this.marks = new Map();
     this.problems = new Map();
+    this.unused = new Set();
+    this.reorderable = true;
     this.layout = "compact";
     this.storage = new LocalStorageAdapter();
     this.sized = false;
@@ -303,11 +349,15 @@ export class BlockLibraryViewport extends LitElement {
         ${cells.map((cell) => this.#renderHighlight(cell))}
       </div>
       <div class="layer marks">
+        ${this.#renderUnused()}
         ${this.#renderProblems()}
         ${cells.map((cell) => this.#renderMarker(cell))}
       </div>
       <div class="layer drop">
         ${this.#renderInsertion()}
+      </div>
+      <div class="layer actions">
+        ${this.#renderAddCell()}
       </div>
     </div>
     ${this.layout === "compact" ?
@@ -363,6 +413,65 @@ export class BlockLibraryViewport extends LitElement {
     this.storage.set(kHeightStorageKey, String(height));
   };
 
+  #renderAddCell() {
+    const grid = this._grid;
+    if (grid === null || this.#dragging) {
+      return nothing;
+    }
+
+    const rect = blockCellRect(this.blocks.length, grid, kCellInset);
+
+    return html`<button
+      type="button"
+      class="add-cell"
+      aria-label="Add block"
+      title="Add block"
+      style=${blockCellStyle(rect)}
+      @pointerdown=${this.#stopPropagation}
+      @click=${this.#onAddClick}
+      @dblclick=${this.#stopPropagation}
+    >
+      <jolly-icon name="plus"></jolly-icon>
+    </button>`;
+  }
+
+  #stopPropagation(
+    event: Event
+  ): void {
+    event.stopPropagation();
+  }
+
+  #onAddClick(
+    event: MouseEvent
+  ): void {
+    event.stopPropagation();
+    this.dispatchEvent(new CustomEvent(kBlockCreateEvent, {
+      bubbles: false,
+      composed: false
+    }));
+  }
+
+  #renderUnused() {
+    const grid = this._grid;
+    if (grid === null || this.unused.size === 0) {
+      return nothing;
+    }
+
+    return this.blocks.map((block, index) => {
+      if (!this.unused.has(block.id)) {
+        return nothing;
+      }
+
+      const rect = blockCellRect(index, grid, kCellInset);
+
+      return html`<div
+        class="unused"
+        data-block-id=${block.id}
+        style=${blockCellStyle(rect)}
+      ></div>`;
+    });
+  }
+
   #renderProblems() {
     const grid = this._grid;
     if (grid === null || this.problems.size === 0) {
@@ -380,12 +489,7 @@ export class BlockLibraryViewport extends LitElement {
       return html`<div
         class="problem"
         title=${problem}
-        style=${[
-          `left:${rect.x}px`,
-          `top:${rect.y}px`,
-          `width:${rect.size}px`,
-          `height:${rect.size}px`
-        ].join(";")}
+        style=${blockCellStyle(rect)}
       ></div>`;
     });
   }
@@ -415,13 +519,7 @@ export class BlockLibraryViewport extends LitElement {
 
     return html`<div
       class="highlight"
-      style=${[
-        `left:${cell.rect.x}px`,
-        `top:${cell.rect.y}px`,
-        `width:${cell.rect.size}px`,
-        `height:${cell.rect.size}px`,
-        `border-color:${color}`
-      ].join(";")}
+      style=${`${blockCellStyle(cell.rect)};border-color:${color}`}
     ></div>`;
   }
 
@@ -435,12 +533,7 @@ export class BlockLibraryViewport extends LitElement {
     return html`<div
       class="marker"
       title=${peerMarkNames(cell.view)}
-      style=${[
-        `left:${cell.rect.x}px`,
-        `top:${cell.rect.y}px`,
-        `width:${cell.rect.size}px`,
-        `height:${cell.rect.size}px`
-      ].join(";")}
+      style=${blockCellStyle(cell.rect)}
     >
       ${cell.view.dots.map((dot) => html`<span
         class="dot"
@@ -509,7 +602,7 @@ export class BlockLibraryViewport extends LitElement {
   #onPointerDown(
     event: PointerEvent
   ): void {
-    if (event.button !== 0 || this.#drag !== null) {
+    if (!this.reorderable || event.button !== 0 || this.#drag !== null) {
       return;
     }
 

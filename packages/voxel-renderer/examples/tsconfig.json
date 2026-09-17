@@ -1,0 +1,16 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": "..",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@jolly-pixel/voxel.renderer": ["../src/index.ts"],
+      "@jolly-pixel/voxel.renderer/plugins/*": ["../src/plugins/*"]
+    }
+  },
+  "include": [
+    "scripts"
+  ]
+}

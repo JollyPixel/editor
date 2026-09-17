@@ -41,7 +41,7 @@ for (let run = 0; run < runs; run++) {
   engine.flush();
   const meshMs = performance.now() - meshStart;
 
-  const { triangles, vertices } = engine.debug.stats;
+  const { triangles, vertices } = engine.inspector.mesh.stats;
   // Geometry memory is mostly `arrayBuffers`; `heapUsed` alone under-reports cost.
   const {
     heapUsed, arrayBuffers, rss

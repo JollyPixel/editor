@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   loadTilesets,
   VoxelEngine,
-  type VoxelDebugMode
+  type VoxelInspectorMode
 } from "../../src/index.ts";
 import {
   type LabelEntry,
@@ -145,7 +145,7 @@ const alphaState = {
 
 const debugState = {
   greedy: engine.greedy,
-  mode: engine.debug.mode
+  mode: engine.inspector.mode
 };
 
 const layersFolder = pane.addFolder({ title: "Layers" });
@@ -185,7 +185,7 @@ meshFolder
 
 document.addEventListener("keydown", (event) => {
   if (event.code === "KeyG") {
-    setDebugMode(engine.debug.nextMode());
+    setDebugMode(engine.inspector.nextMode());
   }
   else if (event.code === "KeyM") {
     setGreedy(!engine.greedy);
@@ -277,9 +277,9 @@ function setGreedy(
 }
 
 function setDebugMode(
-  value: VoxelDebugMode
+  value: VoxelInspectorMode
 ): void {
-  engine.debug.mode = value;
+  engine.inspector.mode = value;
   if (debugState.mode === value) {
     return;
   }
@@ -304,7 +304,7 @@ function opacityBucket(
 }
 
 function syncStats(): void {
-  const { faces, culledFaces, triangles } = engine.debug.stats;
+  const { faces, culledFaces, triangles } = engine.inspector.mesh.stats;
   const candidates = faces + culledFaces;
 
   meshState.faces = faces;

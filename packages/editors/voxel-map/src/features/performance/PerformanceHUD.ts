@@ -7,12 +7,12 @@ import {
   formatPercent
 } from "@jolly-pixel/ui";
 import type { Keyboard } from "@jolly-pixel/controls";
-import type { VoxelDebugMode } from "@jolly-pixel/voxel.renderer";
+import type { VoxelInspectorMode } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 const kToggleKey = "F3";
 const kStorageKey = "voxel-map:performance-hud";
-const kDebugModeOptions: Record<VoxelDebugMode, VoxelDebugMode> = {
+const kDebugModeOptions: Record<VoxelInspectorMode, VoxelInspectorMode> = {
   off: "off",
   overlay: "overlay",
   wireframe: "wireframe"
@@ -26,7 +26,7 @@ export interface RendererPerformanceStats {
 }
 
 export interface VoxelPerformanceStats {
-  mode: VoxelDebugMode;
+  mode: VoxelInspectorMode;
   chunkBounds: boolean;
   chunks: number;
   meshes: number;
@@ -46,7 +46,7 @@ export interface PerformanceSnapshot {
 
 export interface PerformanceHUDOptions {
   keyboard: Keyboard;
-  onDebugModeChange: (mode: VoxelDebugMode) => void;
+  onDebugModeChange: (mode: VoxelInspectorMode) => void;
   onChunkBoundsChange: (enabled: boolean) => void;
 }
 
@@ -55,7 +55,7 @@ export class PerformanceHUD {
   #keyboard: Keyboard;
   #worldFolder: ReturnType<Pane["addFolder"]>;
   #meshFolder: ReturnType<Pane["addFolder"]>;
-  #onDebugModeChange: (mode: VoxelDebugMode) => void;
+  #onDebugModeChange: (mode: VoxelInspectorMode) => void;
   #onChunkBoundsChange: (enabled: boolean) => void;
 
   #rendererStats: RendererPerformanceStats = {
