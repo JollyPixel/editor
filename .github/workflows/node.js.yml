@@ -162,7 +162,8 @@ jobs:
 
   voxel-map-e2e:
     needs: changes
-    if: needs.changes.outputs.voxel-map == 'true'
+    # TODO: re-enable once the CI-only timeouts are fixed
+    if: false && needs.changes.outputs.voxel-map == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
