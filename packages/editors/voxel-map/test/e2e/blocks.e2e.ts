@@ -7,11 +7,18 @@ import {
   expect
 } from "./fixtures.ts";
 import {
+  buttonGroup,
   dialog,
+  dialogTitle,
   openPane,
-  textField
+  titledDialog
 } from "./support/panels.ts";
 import { seedVoxels } from "./support/scene.ts";
+import {
+  clickTexel,
+  setTextureMode,
+  texturePanel
+} from "./support/texture.ts";
 
 function brushBlock(
   page: Page
@@ -27,6 +34,53 @@ function blockNames(
   return page.evaluate(() => [
     ...window.voxelMapEditor!.scene.engine.blockRegistry.getAll()
   ].map((block) => block.name));
+}
+
+function blockSurface(
+  page: Page,
+  blockId: number
+): Promise<{ alphaMode?: string; side?: string; }> {
+  return page.evaluate((id) => {
+    const block = window.voxelMapEditor!.scene.engine.blockRegistry.get(id);
+
+    return {
+      alphaMode: block?.alphaMode,
+      side: block?.side
+    };
+  }, blockId);
+}
+
+async function eraseBlockTile(
+  page: Page,
+  blockId: number
+): Promise<void> {
+  await openPane(page, "Paint");
+  const panel = texturePanel(page);
+  const texel = await page.evaluate((id) => {
+    const { engine } = window.voxelMapEditor!.scene;
+    const texture = engine.blockRegistry.get(id)!.defaultTexture!;
+    const tileSize = engine.tilesets.definitions()[0].tileSize;
+
+    return {
+      x: (texture.col * tileSize) + Math.floor(tileSize / 2),
+      y: (texture.row * tileSize) + Math.floor(tileSize / 2)
+    };
+  }, blockId);
+
+  await setTextureMode(panel, "Erase");
+  await clickTexel(panel, texel);
+}
+
+function blockTileSize(
+  page: Page,
+  blockId: number
+): Promise<number | undefined> {
+  return page.evaluate((id) => {
+    const block = window.voxelMapEditor!.scene.engine.blockRegistry.get(id);
+    const refs = Object.values(block?.faceTextures ?? {});
+
+    return (block?.defaultTexture ?? refs[0])?.size;
+  }, blockId);
 }
 
 test.beforeEach(async({ page }) => {
@@ -47,9 +101,14 @@ test("clicking a block selects it for the brush", async({ page }) => {
 
 test("the add cell creates a block and selects it", async({ page }) => {
   await page.getByRole("button", { name: "Add block" }).click();
-  const editor = dialog(page, "New block");
-  await textField(editor, "Name").fill("Lantern");
-  await editor.getByRole("button", { name: "Create" }).click();
+  const editor = titledDialog(page, "New Block");
+  const title = dialogTitle(editor);
+  await expect(title).not.toBeFocused();
+  await title.fill("Lantern");
+  await title.press("Enter");
+  await titledDialog(page, "Lantern")
+    .getByRole("button", { name: "Create" })
+    .click();
   await expect(editor).toBeHidden();
 
   const library = page.getByRole("listbox", { name: "Blocks" });
@@ -63,14 +122,82 @@ test("double-clicking a block edits it in place", async({ page }) => {
   const library = page.getByRole("listbox", { name: "Blocks" });
 
   await library.getByRole("option", { name: first, exact: true }).dblclick();
-  const editor = dialog(page, "Block #1");
-  const name = textField(editor, "Name");
-  await name.fill("Bedrock");
-  await name.press("Tab");
-  await editor.getByRole("button", { name: "Close" }).click();
+  const editor = titledDialog(page, first);
+  const title = dialogTitle(editor);
+  await title.fill("Bedrock");
+  await title.press("Tab");
+  const renamed = titledDialog(page, "Bedrock");
+  await renamed.getByRole("button", { name: "Close" }).click();
 
   await expect(library.getByRole("option", { name: "Bedrock" })).toBeVisible();
   expect((await blockNames(page))[0]).toBe("Bedrock");
+});
+
+test("an opaque block hides the transparency section", async({ page }) => {
+  const [first] = await blockNames(page);
+  const library = page.getByRole("listbox", { name: "Blocks" });
+
+  await library.getByRole("option", { name: first, exact: true }).dblclick();
+  const editor = titledDialog(page, first);
+
+  await expect(editor.getByText("Transparency")).toBeHidden();
+  await expect(buttonGroup(editor, "Alpha")).toBeHidden();
+});
+
+test("a transparent block edits its alpha mode and its sides", async({ page }) => {
+  await eraseBlockTile(page, 1);
+  await expect.poll(() => blockSurface(page, 1))
+    .toEqual({ alphaMode: "blend", side: undefined });
+
+  await openPane(page, "Blocks");
+  const [first] = await blockNames(page);
+  const library = page.getByRole("listbox", { name: "Blocks" });
+  await library.getByRole("option", { name: first, exact: true }).dblclick();
+  const editor = titledDialog(page, first);
+  const alpha = buttonGroup(editor, "Alpha");
+
+  await expect(editor.getByText("Transparency")).toBeVisible();
+  await expect(alpha.getByRole("radio", { name: "Blended" }))
+    .toHaveAttribute("aria-checked", "true");
+  await expect(alpha.getByRole("radio", { name: "Opaque" })).toHaveCount(0);
+
+  await alpha.getByRole("radio", { name: "Cutout" }).click();
+  await expect.poll(() => blockSurface(page, 1))
+    .toEqual({ alphaMode: "mask", side: undefined });
+
+  await buttonGroup(editor, "Sides")
+    .getByRole("radio", { name: "Both" })
+    .click();
+  await expect.poll(() => blockSurface(page, 1))
+    .toEqual({ alphaMode: "mask", side: "double" });
+});
+
+test("a lone tileset leaves the tileset field disabled", async({ page }) => {
+  const [first] = await blockNames(page);
+  const library = page.getByRole("listbox", { name: "Blocks" });
+
+  await library.getByRole("option", { name: first, exact: true }).dblclick();
+
+  await expect(titledDialog(page, first).locator("jolly-select[disabled]"))
+    .toHaveCount(1);
+});
+
+test("the UV size group resizes the block tiles", async({ page }) => {
+  const [first] = await blockNames(page);
+  const library = page.getByRole("listbox", { name: "Blocks" });
+
+  await library.getByRole("option", { name: first, exact: true }).dblclick();
+  const editor = titledDialog(page, first);
+  const sizes = buttonGroup(editor, "UV size");
+
+  await expect(sizes.getByRole("radio", { name: "32", exact: true }))
+    .toHaveAttribute("aria-checked", "true");
+
+  await sizes.getByRole("radio", { name: "64", exact: true }).click();
+
+  await expect.poll(() => blockTileSize(page, 1)).toBe(64);
+  await expect(sizes.getByRole("radio", { name: "64", exact: true }))
+    .toHaveAttribute("aria-checked", "true");
 });
 
 test("deleting a placed block asks first and removes its voxels", async({ page }) => {
@@ -83,7 +210,9 @@ test("deleting a placed block asks first and removes its voxels", async({ page }
   await page.getByRole("listbox", { name: "Blocks" })
     .getByRole("option", { name: first, exact: true })
     .dblclick();
-  await dialog(page, "Block #1").getByRole("button", { name: "Delete" }).click();
+  await titledDialog(page, first)
+    .getByRole("button", { name: "Delete" })
+    .click();
 
   const confirm = dialog(page, `Delete "${first}"?`);
   await expect(confirm).toContainText("2 voxels");

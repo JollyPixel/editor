@@ -4,16 +4,37 @@ import type { JollyOption } from "@jolly-pixel/ui";
 // CONSTANTS
 export const TILE_SIZES: readonly number[] = [8, 16, 32, 64, 128, 256];
 
+/**
+ * Power-of-two sizes, plus `current` when a tileset uses an off-list size.
+ */
+export function tileSizes(
+  current?: number
+): readonly number[] {
+  return current === undefined || TILE_SIZES.includes(current) ?
+    TILE_SIZES :
+    [...TILE_SIZES, current].sort((left, right) => left - right);
+}
+
 export function tileSizeOptions(
   current?: number
 ): JollyOption<number>[] {
-  const sizes = current === undefined || TILE_SIZES.includes(current) ?
-    TILE_SIZES :
-    [...TILE_SIZES, current].sort((left, right) => left - right);
-
-  return sizes.map((size) => {
+  return tileSizes(current).map((size) => {
     return {
       label: `${size}px`,
+      value: size
+    };
+  });
+}
+
+/**
+ * Same sizes without the unit, for a button group too narrow to carry it.
+ */
+export function tileSizeSegments(
+  current?: number
+): JollyOption<number>[] {
+  return tileSizes(current).map((size) => {
+    return {
+      label: `${size}`,
       value: size
     };
   });

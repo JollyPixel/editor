@@ -168,6 +168,7 @@ export {
 } from "./containers/dock/layoutParser.ts";
 export type {
   ContainerEventMap,
+  JollyHeadingChangeDetail,
   JollyMoveDetail,
   JollyReorderDetail,
   JollyResizeDetail,

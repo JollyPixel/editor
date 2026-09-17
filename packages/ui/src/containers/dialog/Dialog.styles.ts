@@ -3,10 +3,21 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../../theme/styles/fallbacks.ts";
-import { overlayMotion } from "../../theme/styles/mixins.ts";
+import {
+  fillTransition,
+  overlayMotion,
+  truncate
+} from "../../theme/styles/mixins.ts";
 
 export const dialogStyles = css`
   :host {
+    --jolly-dialog-chrome-bg: color-mix(
+      in oklab,
+      var(--jolly-ink) 4%,
+      var(--jolly-surface-raised, ${kFallback.controlBg})
+    );
+    --jolly-dialog-chrome-padding: calc(var(--jolly-row-height, 20px) * 0.4);
+
     font-family: var(--jolly-font-family, ui-monospace, monospace);
     font-size: var(--jolly-font-size, 11px);
   }
@@ -24,6 +35,11 @@ export const dialogStyles = css`
     font: inherit;
   }
 
+  dialog:focus,
+  dialog:focus-visible {
+    outline: none;
+  }
+
   dialog::backdrop {
     background: rgb(5 10 18 / 55%);
     backdrop-filter: blur(2px);
@@ -32,20 +48,54 @@ export const dialogStyles = css`
   ${overlayMotion}
 
   header {
-    padding: var(--jolly-space-3, 12px) var(--jolly-space-4, 16px);
+    display: flex;
+    align-items: center;
+    min-height: var(--jolly-row-height, 20px);
+    padding: var(--jolly-dialog-chrome-padding);
     border-bottom: 1px solid var(--jolly-divider);
+    background: var(--jolly-dialog-chrome-bg);
     letter-spacing: 0.05em;
+  }
+
+  .heading {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    min-width: 6ch;
+    height: var(--jolly-row-height, 20px);
+    field-sizing: content;
+    padding: 0 var(--jolly-space-1, 4px);
+    border: 0;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-control-bg);
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+
+    ${truncate}
+
+    ${fillTransition}
+  }
+
+  .heading:hover {
+    background: var(--jolly-control-bg-hover);
+  }
+
+  .heading:focus {
+    background: var(--jolly-control-bg-focus);
+    outline: none;
   }
 
   .body {
     padding: var(--jolly-space-4, 16px);
+    background: var(--jolly-surface-raised, ${kFallback.controlBg});
   }
 
   footer {
     display: flex;
     justify-content: flex-end;
     gap: var(--jolly-space-2, 8px);
-    padding: var(--jolly-space-3, 12px) var(--jolly-space-4, 16px);
+    padding: var(--jolly-dialog-chrome-padding);
     border-top: 1px solid var(--jolly-divider);
   }
 `;

@@ -21,6 +21,10 @@ export interface JollyTabChangeDetail {
   value: string;
 }
 
+export interface JollyHeadingChangeDetail {
+  heading: string;
+}
+
 export interface PaneMoveDetail {
   pane: PaneElement;
   command: PaneMoveCommand;
@@ -43,6 +47,7 @@ export interface ContainerEventMap {
     folder: Folder;
     command: "cancel" | "down" | "finish" | "start" | "up";
   };
+  "jolly-heading-change": JollyHeadingChangeDetail;
   "jolly-layout-change": { snapshot: LayoutSnapshot; };
   "jolly-layout-dirty": LayoutChange;
   "jolly-move": JollyMoveDetail;
@@ -73,6 +78,7 @@ declare global {
     "jolly-close": CustomEvent<{ returnValue: string; }>;
     "jolly-folder-drag": CustomEvent<ContainerEventMap["jolly-folder-drag"]>;
     "jolly-folder-reorder": CustomEvent<ContainerEventMap["jolly-folder-reorder"]>;
+    "jolly-heading-change": CustomEvent<JollyHeadingChangeDetail>;
     "jolly-layout-change": CustomEvent<ContainerEventMap["jolly-layout-change"]>;
     "jolly-layout-dirty": CustomEvent<LayoutChange>;
     "jolly-move": CustomEvent<JollyMoveDetail>;
