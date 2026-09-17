@@ -23,6 +23,7 @@ import {
   showConfirm,
   type Dialog,
   type JollyChangeDetail,
+  type JollyHeadingChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
 
@@ -45,7 +46,7 @@ import {
   resizeBlockTiles,
   type TilesetGrid
 } from "../tilesets/blockTilesets.ts";
-import { tileSizeOptions } from "../tilesets/tileSizes.ts";
+import { tileSizeSegments } from "../tilesets/tileSizes.ts";
 import {
   blockDefinitionFromDraft,
   previewBlockFromDraft,
@@ -56,6 +57,15 @@ import "./BlockShapePreview.ts";
 
 // CONSTANTS
 const kMissingTileset = "Missing tileset";
+const kUvSizeColumns = 3;
+const kAlphaModeOptions: JollyOption<BlockAlphaMode>[] = [
+  { label: "Blended", value: "blend" },
+  { label: "Cutout", value: "mask" }
+];
+const kSideOptions: JollyOption<BlockSide>[] = [
+  { label: "Outside", value: "front" },
+  { label: "Both", value: "double" }
+];
 
 type BlockEditorMode = "edit" | "create";
 
@@ -70,29 +80,32 @@ export class BlockEditorDialog extends LitElement {
   static override styles = css`
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 160px;
+      grid-template-columns: minmax(0, 1fr) 200px;
       align-items: start;
       gap: var(--jolly-space-4, 16px);
     }
 
-    @media (width <= 420px) {
+    @media (width <= 460px) {
       .layout {
         grid-template-columns: minmax(0, 1fr);
       }
 
-      block-shape-preview {
+      .shape {
         order: -1;
-        width: 160px;
+        width: 200px;
         justify-self: center;
       }
     }
 
-    .fields {
+    .fields,
+    .shape {
       display: flex;
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
 
-      --jolly-label-width: 70px;
+      --jolly-label-width: 80px;
+      --jolly-field-inset-start: 0;
+      --jolly-field-inset-end: 0;
     }
   `;
 
@@ -197,7 +210,7 @@ export class BlockEditorDialog extends LitElement {
     if (this._mode === "create") {
       const { tilesetId, size } = this._draft;
 
-      return this.#renderDialog("New block", this._draft, {
+      return this.#renderDialog(this._draft, {
         tilesetId,
         size: size ?? this.#tileSizeOf(tilesetId),
         missing: false
@@ -210,7 +223,6 @@ export class BlockEditorDialog extends LitElement {
     }
 
     return this.#renderDialog(
-      `Block #${block.id}`,
       {
         name: block.name,
         shapeId: block.shapeId,
@@ -235,48 +247,49 @@ export class BlockEditorDialog extends LitElement {
   }
 
   #renderDialog(
-    heading: string,
     values: BlockDraft,
     texture: TextureFieldValues,
     creating: boolean
   ) {
     return html`
       <jolly-dialog
-        heading=${heading}
+        heading=${values.name}
+        heading-editable
+        @jolly-heading-change=${this.#onNameChange}
         @jolly-close=${this.#onDialogClose}
       >
         <div class="layout">
           <div class="fields">
-            <jolly-text
-              label="Name"
-              .value=${values.name}
-              @jolly-change=${this.#onNameChange}
-            ></jolly-text>
+            <jolly-select
+              label="Tileset"
+              .options=${this.#tilesetOptions(texture.missing)}
+              .value=${texture.tilesetId}
+              .error=${texture.missing ? kMissingTileset : null}
+              ?disabled=${this.#tilesetLocked(texture.missing)}
+              @jolly-change=${this.#onTilesetChange}
+            ></jolly-select>
             <jolly-select
               label="Shape"
               .options=${this.#shapeOptions()}
               .value=${values.shapeId}
               @jolly-change=${this.#onShapeChange}
             ></jolly-select>
-            <jolly-select
-              label="Tileset"
-              .options=${this.#tilesetOptions(texture.missing)}
-              .value=${texture.tilesetId}
-              .error=${texture.missing ? kMissingTileset : null}
-              @jolly-change=${this.#onTilesetChange}
-            ></jolly-select>
-            <jolly-select
+            ${creating ? nothing : this.#renderTransparency()}
+            ${creating ? nothing : this.#renderUsage()}
+          </div>
+          <div class="shape">
+            ${this.#renderPreview(creating)}
+            <jolly-button-group
               label="UV size"
-              .options=${tileSizeOptions(texture.size)}
+              label-position="top"
+              layout="grid"
+              .columns=${kUvSizeColumns}
+              .options=${tileSizeSegments(texture.size)}
               .value=${texture.size}
               ?disabled=${texture.size === undefined}
               @jolly-change=${this.#onSizeChange}
-            ></jolly-select>
-            ${creating ? nothing : this.#renderSurface()}
-            ${creating ? nothing : this.#renderCullSelfFaces()}
-            ${creating ? nothing : this.#renderUsage()}
+            ></jolly-button-group>
           </div>
-          ${this.#renderPreview(creating)}
         </div>
 
         ${creating ? html`
@@ -292,6 +305,7 @@ export class BlockEditorDialog extends LitElement {
         ` : html`
           <jolly-button
             slot="actions"
+            variant="danger"
             icon="trash"
             @click=${this.#confirmDelete}
           >Delete</jolly-button>
@@ -386,49 +400,39 @@ export class BlockEditorDialog extends LitElement {
     }
   }
 
-  #renderCullSelfFaces() {
-    const { block } = this;
-    if (!block) {
-      return nothing;
-    }
-
-    return html`
-      <jolly-checkbox
-        label="Cull faces"
-        description="Drops covered boundaries shared with the same block"
-        .value=${block.cullSelfFaces !== false}
-        @jolly-change=${this.#onCullSelfFacesChange}
-      ></jolly-checkbox>
-    `;
-  }
-
-  #renderSurface() {
+  #renderTransparency() {
     const { block } = this;
     if (!block) {
       return nothing;
     }
     const alphaMode = block.alphaMode ?? "opaque";
+    if (alphaMode === "opaque") {
+      return nothing;
+    }
 
     return html`
-      <jolly-select
+      <jolly-separator label="Transparency"></jolly-separator>
+      <jolly-button-group
         label="Alpha"
-        .options=${[
-          { label: "Opaque", value: "opaque" },
-          { label: "Cutout", value: "mask" },
-          { label: "Blended", value: "blend" }
-        ]}
+        description="Blended follows the tile pixels; Cutout keeps hard edges"
+        .options=${kAlphaModeOptions}
         .value=${alphaMode}
         @jolly-change=${this.#onAlphaModeChange}
-      ></jolly-select>
-      <jolly-select
+      ></jolly-button-group>
+      <jolly-button-group
         label="Sides"
-        .options=${[
-          { label: "Outside", value: "front" },
-          { label: "Outside and inside", value: "double" }
-        ]}
-        .value=${block.side ?? (alphaMode === "opaque" ? "front" : "double")}
+        description="Both also draws the faces seen from inside the block"
+        .options=${kSideOptions}
+        .value=${block.side ?? "double"}
         @jolly-change=${this.#onSideChange}
-      ></jolly-select>
+      ></jolly-button-group>
+      <jolly-checkbox
+        align="end"
+        label="Cull faces"
+        description="Drops covered boundaries shared with the same block"
+        .value=${block.cullSelfFaces !== false}
+        @jolly-change=${this.#onCullSelfFacesChange}
+      ></jolly-checkbox>
     `;
   }
 
@@ -491,6 +495,12 @@ export class BlockEditorDialog extends LitElement {
     });
   }
 
+  #tilesetLocked(
+    missing: boolean
+  ): boolean {
+    return !missing && this.tilesets.entries.length <= 1;
+  }
+
   #tilesetOptions(
     missing: boolean
   ): JollyOption<string>[] {
@@ -512,13 +522,9 @@ export class BlockEditorDialog extends LitElement {
   }
 
   #onNameChange(
-    event: CustomEvent<JollyChangeDetail<string>>
+    event: CustomEvent<JollyHeadingChangeDetail>
   ): void {
-    const name = event.detail.value.trim();
-    if (!name) {
-      return;
-    }
-
+    const { heading: name } = event.detail;
     if (this._mode === "create") {
       this._draft = { ...this._draft, name };
 

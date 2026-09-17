@@ -4,7 +4,8 @@ import {
   showChoice,
   showConfirm,
   showPrompt,
-  type JollyChangeDetail
+  type JollyChangeDetail,
+  type JollyHeadingChangeDetail
 } from "../../../../src/index.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
@@ -90,7 +91,40 @@ export const DIALOG_EXAMPLE: GalleryExample = {
     openDefault.dataset.action = "default-action";
     openDefault.addEventListener("click", () => void defaultAction.showModal());
 
-    root.append(open, confirm, prompt, choice, openDefault, dialog, defaultAction);
+    const editableHeading = document.createElement("jolly-dialog");
+    editableHeading.id = "title-dialog";
+    editableHeading.heading = "Lantern";
+    editableHeading.headingEditable = true;
+    editableHeading.append(text("The heading itself carries the name."));
+    editableHeading.addEventListener("jolly-heading-change", (event) => {
+      const detail = detailOf<JollyHeadingChangeDetail>(event);
+      if (detail !== null) {
+        editableHeading.heading = detail.heading;
+        root.dataset.result = `heading:${detail.heading}`;
+      }
+    });
+    const closeHeading = button("Close", "accent");
+    closeHeading.slot = "actions";
+    closeHeading.addEventListener("click", () => editableHeading.close());
+    editableHeading.append(closeHeading);
+    const openHeading = button("Open titled dialog");
+    openHeading.dataset.action = "editable-heading";
+    openHeading.addEventListener(
+      "click",
+      () => void editableHeading.showModal()
+    );
+
+    root.append(
+      open,
+      confirm,
+      prompt,
+      choice,
+      openDefault,
+      openHeading,
+      dialog,
+      defaultAction,
+      editableHeading
+    );
     host.append(root);
   }
 };

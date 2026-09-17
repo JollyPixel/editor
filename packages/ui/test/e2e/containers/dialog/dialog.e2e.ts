@@ -39,6 +39,43 @@ test.describe("Dialog", () => {
     await expect(dialog.locator("dialog")).not.toHaveAttribute("open");
   });
 
+  test("an editable heading commits on Enter and on blur", async({ page }) => {
+    const result = page.locator("main > div");
+    const dialog = page.locator("#title-dialog");
+    const title = dialog.getByRole("textbox", { name: "Title" });
+
+    await page.locator("[data-action=editable-heading]").click();
+    await expect(title).not.toBeFocused();
+    await expect(title).toHaveValue("Lantern");
+
+    await title.fill("  Torch  ");
+    await title.press("Enter");
+    await expect(result).toHaveAttribute("data-result", "heading:Torch");
+    await expect(dialog.locator("dialog")).toHaveAttribute("open");
+
+    await title.fill("Sconce");
+    await title.blur();
+    await expect(result).toHaveAttribute("data-result", "heading:Sconce");
+  });
+
+  test("Escape reverts an editable heading and keeps the dialog open", async({ page }) => {
+    const result = page.locator("main > div");
+    const dialog = page.locator("#title-dialog");
+    const title = dialog.getByRole("textbox", { name: "Title" });
+
+    await page.locator("[data-action=editable-heading]").click();
+    await title.fill("Draft");
+    await title.press("Escape");
+
+    await expect(title).toHaveValue("Lantern");
+    await expect(dialog.locator("dialog")).toHaveAttribute("open");
+    await expect(result).not.toHaveAttribute("data-result", /heading:/);
+
+    await title.fill("   ");
+    await title.press("Enter");
+    await expect(result).not.toHaveAttribute("data-result", /heading:/);
+  });
+
   test("prompt and confirm helpers settle, trim and remove themselves", async({ page }) => {
     const result = page.locator("main > div");
     const helper = page.locator("body > jolly-dialog");

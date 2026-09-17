@@ -37,6 +37,13 @@ export class Dialog extends LitElement {
   @property({ type: Boolean })
   declare dismissible: boolean;
 
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "heading-editable"
+  })
+  declare headingEditable: boolean;
+
   @query("dialog")
   declare _dialog: HTMLDialogElement;
 
@@ -51,6 +58,7 @@ export class Dialog extends LitElement {
 
     this.heading = "";
     this.dismissible = true;
+    this.headingEditable = false;
   }
 
   override disconnectedCallback(): void {
@@ -67,16 +75,40 @@ export class Dialog extends LitElement {
     return html`
       <dialog
         class="overlay-motion"
+        tabindex=${this.headingEditable ? "-1" : nothing}
         @beforetoggle=${this.#onBeforeToggle}
         @cancel=${this.#onCancel}
         @click=${this.#onBackdropClick}
         @close=${this.#onClose}
         @keydown=${this.#onKeyDown}
       >
-        ${this.heading === "" ? nothing : html`<header>${this.heading}</header>`}
+        ${this.#renderHeader()}
         <div class="body"><slot></slot></div>
         <footer><slot name="actions"></slot></footer>
       </dialog>
+    `;
+  }
+
+  #renderHeader(): TemplateResult | typeof nothing {
+    if (this.heading === "" && !this.headingEditable) {
+      return nothing;
+    }
+
+    if (!this.headingEditable) {
+      return html`<header>${this.heading}</header>`;
+    }
+
+    return html`
+      <header>
+        <input
+          class="heading"
+          type="text"
+          aria-label="Title"
+          .value=${this.heading}
+          @blur=${this.#onHeadingBlur}
+          @keydown=${this.#onHeadingKeyDown}
+        >
+      </header>
     `;
   }
 
@@ -85,6 +117,9 @@ export class Dialog extends LitElement {
     await this.updateComplete;
     if (!this._dialog.open) {
       this._dialog.showModal();
+      if (this.headingEditable) {
+        this._dialog.focus();
+      }
       this.#releaseInputLayer ??= inputLayers.push();
     }
   }
@@ -158,6 +193,45 @@ export class Dialog extends LitElement {
     event.preventDefault();
     action.click();
   };
+
+  #onHeadingKeyDown = (
+    event: KeyboardEvent
+  ) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      input.value = this.heading;
+    }
+    else if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.#commitHeading(input.value);
+    }
+  };
+
+  #onHeadingBlur = (
+    event: FocusEvent
+  ) => {
+    if (event.target instanceof HTMLInputElement) {
+      this.#commitHeading(event.target.value);
+    }
+  };
+
+  #commitHeading(
+    draft: string
+  ): void {
+    const heading = draft.trim();
+    if (heading === "" || heading === this.heading) {
+      return;
+    }
+
+    emitContainerEvent(this, "jolly-heading-change", { heading });
+  }
 
   #onCancel = (
     event: Event

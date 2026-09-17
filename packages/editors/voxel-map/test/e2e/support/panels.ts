@@ -22,6 +22,20 @@ export function dialog(
     .filter({ has: page.getByRole("banner").filter({ hasText: heading }) });
 }
 
+export function titledDialog(
+  page: Page,
+  title: string
+): Locator {
+  return page.locator(`jolly-dialog[heading-editable][heading="${title}"]`)
+    .filter({ has: page.locator("dialog[open]") });
+}
+
+export function dialogTitle(
+  scope: Locator
+): Locator {
+  return scope.getByRole("textbox", { name: "Title" });
+}
+
 export function textField(
   scope: Locator,
   label: string
@@ -38,4 +52,13 @@ export function selectField(
   return scope.locator("jolly-select")
     .filter({ hasText: label })
     .getByRole("combobox");
+}
+
+export function buttonGroup(
+  scope: Locator,
+  label: string
+): Locator {
+  return scope.locator("jolly-button-group")
+    .filter({ hasText: label })
+    .getByRole("radiogroup");
 }

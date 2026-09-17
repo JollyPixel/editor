@@ -40,7 +40,7 @@ export const fieldStyles = css`
     align-items: center;
     gap: var(--jolly-space-1, 4px);
     min-height: var(--jolly-row-height, 20px);
-    padding-inline: var(--jolly-space-1, 4px)
+    padding-inline: var(--jolly-field-inset-start, var(--jolly-space-1, 4px))
       var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     border-radius: var(--jolly-radius-sm, 2px);
 
@@ -68,7 +68,8 @@ export const fieldStyles = css`
 
   :host([label-position="top"]) .content {
     padding-inline-start: calc(
-      var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px)
+      var(--jolly-gutter-width, 0px) +
+        var(--jolly-field-inset-start, var(--jolly-space-1, 4px))
     );
   }
 
@@ -335,10 +336,14 @@ export const fieldStyles = css`
     gap: var(--jolly-space-1, 4px);
     margin-block: calc(var(--jolly-space-1, 4px) / 2);
     margin-inline: calc(
-        var(--jolly-gutter-width, 0px) + (var(--jolly-space-1, 4px) * 2)
+        var(--jolly-gutter-width, 0px) +
+          (var(--jolly-field-inset-start, var(--jolly-space-1, 4px)) * 2)
       )
-      var(--jolly-space-1, 4px);
+      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     font-size: 0.9em;
+
+    /* The reflected align attribute is a presentational hint on the host. */
+    text-align: start;
   }
 
   :host([unlabeled]:not([locked])) .description,
