@@ -17,10 +17,10 @@
     "#src/*": "./src/*"
   },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.test.ts\"",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "dev": "vite",
     "lint": "eslint src test examples",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
@@ -47,7 +47,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "peerDependencies": {
-    "@jolly-pixel/network": "^2.0.0"
+    "@jolly-pixel/network": "workspace:^"
   },
   "peerDependenciesMeta": {
     "@jolly-pixel/network": {
@@ -58,8 +58,8 @@
     "three": "0.185.1"
   },
   "devDependencies": {
-    "@jolly-pixel/color": "1.0.0",
-    "@jolly-pixel/network": "2.0.0",
-    "@jolly-pixel/ui": "2.0.0"
+    "@jolly-pixel/color": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*"
   }
 }

@@ -109,7 +109,7 @@ The suites measure `FrameScheduler#advance()`, `GameLoop` callback dispatch,
 `Interpolated`, and `FrameBudget`.
 
 ```bash
-npm run bench -w @jolly-pixel/loop
+pnpm --filter @jolly-pixel/loop bench
 ```
 
 Use `-- --list` to inspect the suites. Filtering and measurement rules are
@@ -122,8 +122,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 
 ```bash
-$ npm run test
-$ npm run lint
+$ pnpm run test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

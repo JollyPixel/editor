@@ -6,11 +6,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
-    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "lint": "eslint src test",
     "bench": "jolly-bench",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
@@ -39,6 +39,6 @@
     "@openally/emitt": "1.0.1"
   },
   "devDependencies": {
-    "@jolly-pixel/bench": "*"
+    "@jolly-pixel/bench": "workspace:*"
   }
 }

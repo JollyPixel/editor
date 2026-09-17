@@ -12,7 +12,7 @@
   },
   "scripts": {
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

@@ -15,8 +15,8 @@ This private workspace combines [`@jolly-pixel/voxel.renderer`][voxel-renderer] 
 Install dependencies from the monorepo root, then start the Vite server:
 
 ```bash
-$ npm install
-$ npm run dev -w @jolly-pixel/editor.voxel-map
+$ pnpm install
+$ pnpm --filter @jolly-pixel/editor.voxel-map dev
 ```
 
 The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png` under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded before tilesets referenced asset ids shows its `default` tileset as unlinked.
@@ -102,23 +102,23 @@ is stored under `voxel-map:block-library:height`.
 ## 🧪 Tests and checks
 
 ```bash
-$ npm run test -w @jolly-pixel/editor.voxel-map
-$ npm run typecheck -w @jolly-pixel/editor.voxel-map
-$ npm run lint -w @jolly-pixel/editor.voxel-map
-$ npm run build -w @jolly-pixel/editor.voxel-map
+$ pnpm --filter @jolly-pixel/editor.voxel-map test
+$ pnpm --filter @jolly-pixel/editor.voxel-map typecheck
+$ pnpm --filter @jolly-pixel/editor.voxel-map lint
+$ pnpm --filter @jolly-pixel/editor.voxel-map build
 ```
 
 `test-only` runs the Node.js tests without producing the HTML coverage report.
 
-`test:e2e` runs the Playwright suite in `test/e2e`. It starts `npm run dev:e2e`,
+`test:e2e` runs the Playwright suite in `test/e2e`. It starts `pnpm run dev:e2e`,
 a Vite server on port 3002 whose asset workspace lives in memory. Each test
 creates its own tileset and world through the catalog, then opens
 `/?world=<assetId>&max-fps=<n>`. In dev builds the opened editor is exposed as
 `window.voxelMapEditor`.
 
 ```bash
-$ npx playwright install chromium
-$ npm run test:e2e -w @jolly-pixel/editor.voxel-map
+$ pnpm exec playwright install chromium
+$ pnpm --filter @jolly-pixel/editor.voxel-map test:e2e
 ```
 
 Node.js tests cover pure logic (brush footprints, UV projection, grid layout,

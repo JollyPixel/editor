@@ -86,7 +86,7 @@ Point the application entry at the Electron main process:
   "main": "electron/main.js",
   "scripts": {
     "build": "vite build",
-    "start": "npm run build && electron ."
+    "start": "pnpm run build && electron ."
   }
 }
 ```

@@ -69,8 +69,8 @@ Read the [contributing guide][contributing] before submitting a change.
 Run these commands from the monorepo root:
 
 ```bash
-$ npm run test -w @jolly-pixel/asset-server
-$ npm run lint
+$ pnpm --filter @jolly-pixel/asset-server test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

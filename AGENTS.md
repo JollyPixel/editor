@@ -2,7 +2,7 @@
 
 ## Workflow
 
-- Use npm exclusively.
+- Use pnpm exclusively. Never run npm or yarn.
 - Use Git commands as needed, but do not create commits unless explicitly
   requested.
 - When explicitly requested to commit, use `--no-gpg-sign` and do not add
@@ -18,7 +18,7 @@
 - Put tests under the package's `test/` directory.
 - Use `happy-dom` when DOM mocking is needed.
 - Use `tstyche` for testing types.
-- Run the relevant package tests, `npm run typecheck`, and `npm run lint`.
+- Run the relevant package tests, `pnpm run typecheck`, and `pnpm run lint`.
 
 ## Package routing
 

@@ -1,6 +1,6 @@
 # Examples
 
-Run them with `npm run dev -w @jolly-pixel/three`, then open the listed root
+Run them with `pnpm --filter @jolly-pixel/three`, dev then open the listed root
 page.
 
 ## Layout

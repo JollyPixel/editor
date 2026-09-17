@@ -46,8 +46,8 @@ Use the usual Vite scripts to run and build the application:
 ```
 
 ```bash
-$ npm run dev
-$ npm run build
+$ pnpm run dev
+$ pnpm run build
 ```
 
 ## Optional source plugins

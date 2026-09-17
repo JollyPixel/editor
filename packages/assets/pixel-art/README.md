@@ -77,7 +77,7 @@ The suite measures `applyCommandToBuffer` for strokes and global fills, and
 last-write-wins conflict resolution.
 
 ```bash
-$ npm run bench -w @jolly-pixel/asset.pixel-art
+$ pnpm --filter @jolly-pixel/asset.pixel-art bench
 ```
 
 ## ✨ Contributors guide
@@ -87,8 +87,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Run these commands from the monorepo root:
 
 ```bash
-$ npm run test -w @jolly-pixel/asset.pixel-art
-$ npm run lint
+$ pnpm --filter @jolly-pixel/asset.pixel-art test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

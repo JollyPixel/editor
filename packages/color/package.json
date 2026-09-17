@@ -6,11 +6,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "eslint src test",
     "bench": "jolly-bench"
   },
@@ -25,7 +25,7 @@
     "directory": "packages/color"
   },
   "devDependencies": {
-    "@jolly-pixel/bench": "*"
+    "@jolly-pixel/bench": "workspace:*"
   },
   "keywords": [],
   "files": [

@@ -4,11 +4,11 @@ import { test } from "node:test";
 
 // Import Third-party Dependencies
 import type { Actor } from "@jolly-pixel/engine";
-import type { VoxelLogger } from "@jolly-pixel/voxel.renderer";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelRenderer } from "#src/renderers/VoxelRenderer.ts";
+import { VoxelRenderer } from "../../../src/plugins/engine/VoxelRenderer.ts";
+import type { VoxelLogger } from "../../../src/utils/logger.ts";
 
 test("VoxelRenderer owns the voxel engine lifecycle", (context) => {
   let childCallCount = 0;

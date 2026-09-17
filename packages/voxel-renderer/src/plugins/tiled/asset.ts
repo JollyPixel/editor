@@ -10,16 +10,18 @@ import {
   pathUtils
 } from "@jolly-pixel/engine";
 import type * as THREE from "three";
+
+// Import Internal Dependencies
 import {
   TiledConverter,
-  type TiledConverterOptions,
-  type TiledMap
-} from "@jolly-pixel/voxel.renderer/plugins/tiled/index.ts";
+  type TiledConverterOptions
+} from "./TiledConverter.ts";
+import type { TiledMap } from "./types.ts";
 import {
   loadTilesets,
-  type TilesetSource,
-  type VoxelWorldJSON
-} from "@jolly-pixel/voxel.renderer";
+  type TilesetSource
+} from "../../tileset/index.ts";
+import type { VoxelWorldJSON } from "../../serialization/types.ts";
 
 export type TiledMapAssetLoaderOptions = Omit<
   TiledConverterOptions,

@@ -332,5 +332,5 @@ shows faces, culling ratio, triangles, vertices and chunk meshes, refreshed
 four times per second.
 
 ```bash
-npm run dev -w @jolly-pixel/voxel.renderer
+pnpm --filter @jolly-pixel/voxel.renderer dev
 ```

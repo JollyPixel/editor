@@ -13,12 +13,12 @@
     }
   },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
-    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "lint": "eslint src test"
   },
   "publishConfig": {
@@ -43,7 +43,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset": "1.1.0",
+    "@jolly-pixel/asset": "workspace:*",
     "@openally/result": "3.1.0",
     "chokidar": "^5.0.0",
     "picomatch": "4.0.7"

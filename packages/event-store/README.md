@@ -68,8 +68,8 @@ await EventStore.persistence.sqlite();
 ## 📈 Benchmarks
 
 ```bash
-$ npm run bench -w @jolly-pixel/event-store
-$ npm run bench -w @jolly-pixel/event-store -- read
+$ pnpm --filter @jolly-pixel/event-store bench
+$ pnpm --filter @jolly-pixel/event-store bench read
 ```
 
 Suites live in [`bench/`](./bench) and run on the shared `@jolly-pixel/bench`
@@ -84,8 +84,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Run these commands from the monorepo root:
 
 ```bash
-$ npm run test -w @jolly-pixel/event-store
-$ npm run lint
+$ pnpm --filter @jolly-pixel/event-store test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

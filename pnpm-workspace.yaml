@@ -1,0 +1,25 @@
+packages:
+  - packages/*
+  - packages/assets/*
+  - packages/editors/*
+
+minimumReleaseAge: 4320
+minimumReleaseAgeExclude:
+  - '@openally/*'
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  # Transitive through vitepress 1.6.4 only; the vite 5.x maintenance line
+  - vite@5.4.21
+trustPolicyExcludePrune: true
+trustLockfile: false
+
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
+allowBuilds:
+  esbuild: false
+
+# Resolution
+linkWorkspacePackages: false
+saveExact: true
+savePrefix: ""

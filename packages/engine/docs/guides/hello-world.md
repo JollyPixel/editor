@@ -110,7 +110,7 @@ runtime.load().catch(console.error);
 Start the dev server:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in your browser. You should see a blank canvas—your engine is running!

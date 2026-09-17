@@ -21,22 +21,7 @@ another workspace:
 
 ## 👀 Usage example
 
-`VoxelRenderer` wraps `VoxelEngine` in an actor component and drives its
-lifecycle:
-
-```ts
-import {
-  VoxelRenderer
-} from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
-
-const renderer = actor.addComponentAndGet(VoxelRenderer, {
-  focus: cameraActor.object3D,
-  tilesets,
-  blocks
-});
-```
-
-Synchronize the engine with a room:
+Synchronize a `VoxelEngine` with a room:
 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
@@ -53,7 +38,7 @@ const room = new Client().room<
 >(assetRoomName("voxelmap", assetId));
 const sync = new VoxelSyncClient({
   room,
-  engine: renderer.engine
+  engine
 });
 
 room.join();
@@ -79,8 +64,6 @@ event store instead.
 ## 📚 API
 
 - [Voxel-map asset APIs](./docs/api/voxel-map-assets.md)
-- [`VoxelRenderer`](./docs/api/renderers/VoxelRenderer.md)
-- [`TiledMapAssetLoader`](./docs/api/TiledMapAssetLoader.md)
 - Network
   - [`VoxelSyncClient`](./docs/api/network/VoxelSyncClient.md)
   - [`VoxelCommandArbiter`](./docs/api/network/VoxelCommandArbiter.md)
@@ -99,8 +82,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Run these commands from the monorepo root:
 
 ```bash
-$ npm run test -w @jolly-pixel/asset.voxel-map
-$ npm run lint
+$ pnpm --filter @jolly-pixel/asset.voxel-map test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

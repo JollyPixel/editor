@@ -62,7 +62,7 @@ rendering in `examples/scripts/preview/`. Shape-specific geometry lives under
 shape-neutral.
 
 ```bash
-npm run dev -w @jolly-pixel/editor.pixel-art
+pnpm --filter @jolly-pixel/editor.pixel-art dev
 ```
 
 Open `http://localhost:3000` to see the interactive demo.
@@ -74,7 +74,7 @@ Open `http://localhost:3000` to see the interactive demo.
 ## 🧪 Running the E2E tests
 
 ```bash
-npm run test:e2e -w @jolly-pixel/editor.pixel-art
+pnpm --filter @jolly-pixel/editor.pixel-art test:e2e
 ```
 
 Playwright drives the `examples/` demo (started automatically via `webServer`) and exercises paint, fill, select, move, colors, history, and import/export through the actual UI, not internal APIs.
@@ -86,8 +86,8 @@ If you are a developer **looking to contribute** to the project, you must first 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 
 ```bash
-$ npm run test
-$ npm run lint
+$ pnpm run test
+$ pnpm run lint
 ```
 
 > [!CAUTION]

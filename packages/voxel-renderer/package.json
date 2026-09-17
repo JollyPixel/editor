@@ -8,6 +8,14 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./plugins/engine/index.ts": {
+      "types": "./dist/plugins/engine/index.d.ts",
+      "default": "./dist/plugins/engine/index.js"
+    },
+    "./plugins/tiled/asset.ts": {
+      "types": "./dist/plugins/tiled/asset.d.ts",
+      "default": "./dist/plugins/tiled/asset.js"
+    },
     "./plugins/tiled/index.ts": {
       "types": "./dist/plugins/tiled/index.d.ts",
       "default": "./dist/plugins/tiled/index.js"
@@ -15,14 +23,14 @@
     "./plugins/*": "./dist/plugins/*"
   },
   "scripts": {
-    "prepublish": "rimraf ./dist ./tsconfig.tsbuildinfo && tsc -b",
-    "build": "tsc",
+    "prepublishOnly": "rimraf ./dist ./tsconfig.tsbuildinfo && tsc -b",
+    "build": "tsc -b",
     "dev": "vite",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-gpu": "node --test test/render/transparency.gpu.spec.ts",
     "bench": "node --max-old-space-size=8192 bench/mesh-build.bench.ts",
     "bench:compare": "node --max-old-space-size=8192 bench/mesh-compare.bench.ts",
-    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "clean": "rm -f cpu-profile-*.* heap-profile-*.*",
     "lint": "eslint src test",
     "test-types": "tsc -p test/tsconfig.json && tstyche",
@@ -52,15 +60,26 @@
     "@openally/emitt": "1.0.1",
     "three": "0.185.1"
   },
+  "peerDependencies": {
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/asset": {
+      "optional": true
+    },
+    "@jolly-pixel/engine": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@dimforge/rapier3d": "0.20.0",
-    "@jolly-pixel/asset": "1.1.0",
-    "@jolly-pixel/asset.voxel-map": "1.0.0",
-    "@jolly-pixel/asset-source": "1.0.0",
-    "@jolly-pixel/engine": "5.0.0",
-    "@jolly-pixel/loop": "1.0.0",
-    "@jolly-pixel/runtime": "5.0.0",
-    "@jolly-pixel/ui": "2.0.0",
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/loop": "workspace:*",
+    "@jolly-pixel/runtime": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
     "simplex-noise": "4.0.3"
   }
 }

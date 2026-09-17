@@ -9,10 +9,10 @@ import {
 } from "@jolly-pixel/engine";
 import {
   TiledMapAssetType
-} from "@jolly-pixel/asset.voxel-map/tiled.ts";
+} from "@jolly-pixel/voxel.renderer/plugins/tiled/asset.ts";
 import {
   VoxelRenderer
-} from "@jolly-pixel/asset.voxel-map/renderers/index.ts";
+} from "@jolly-pixel/voxel.renderer/plugins/engine/index.ts";
 
 export class VoxelBehavior extends ActorComponent {
   static readonly assets = {
