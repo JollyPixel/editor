@@ -173,6 +173,26 @@ describe("ModelSyncClient — snapshot", () => {
     assert.equal(client.ready, true);
     assert.equal(readyCount, 1);
   });
+
+  it("restores flipAxes for a late-joining peer, for a block mirrored before it joined", () => {
+    const manager = createModelManager();
+    const room = createMockRoom();
+    new ModelSyncClient({ room, modelManager: manager });
+
+    room.simulateSnapshot([
+      {
+        uuid: "mirrored",
+        name: "Mirrored",
+        parentUuid: null,
+        flipAxes: { x: true, y: false, z: false },
+        ...kTransform
+      },
+      { uuid: "plain", name: "Plain", parentUuid: null, ...kTransform }
+    ]);
+
+    assert.deepEqual(manager.getFlipAxes("mirrored"), { x: true, y: false, z: false });
+    assert.equal(manager.getFlipAxes("plain"), undefined);
+  });
 });
 
 describe("ModelSyncClient — remote commands", () => {

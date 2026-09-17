@@ -13,11 +13,6 @@ const kElementConstructors = Object.fromEntries(
     ])
 );
 
-/*
- * happy-dom has no browser to run in, so DOM-touching src/ code (instanceof
- * checks, document.createElement) needs these globals, wired through
- * `node --import ./test/setup.ts`.
- */
 Object.assign(globalThis, {
   ...kElementConstructors,
   window: kEmulatedBrowserWindow,
@@ -31,19 +26,10 @@ Object.assign(globalThis, {
   getComputedStyle: kEmulatedBrowserWindow.getComputedStyle.bind(kEmulatedBrowserWindow)
 });
 
-/*
- * happy-dom's canvas has no real 2D backend (getContext("2d") returns
- * null), but PivotMarker draws a circle texture on one at construction
- * time, so any test that builds a GroupManager needs a stub context.
- */
-function noop(): void {
-  // Intentionally does nothing, the drawing itself is untested.
-}
-
 const kStub2dContext = {
-  beginPath: noop,
-  arc: noop,
-  fill: noop,
+  beginPath: () => undefined,
+  arc: () => undefined,
+  fill: () => undefined,
   fillStyle: ""
 };
 

@@ -12,6 +12,8 @@ import type { TransformControls } from "three/examples/jsm/controls/TransformCon
 
 // Import Internal Dependencies
 import { GroupTransformLiveSync } from "../../src/collaboration/GroupTransformLiveSync.ts";
+import { PeerSelectionHighlight } from "../../src/collaboration/PeerSelectionHighlight.ts";
+import { PresenceStore } from "../../src/app/state/index.ts";
 import ModelManager from "../../src/features/groups/ModelManager.ts";
 import { createRoomHarness } from "./roomHarness.ts";
 
@@ -129,6 +131,29 @@ describe("GroupTransformLiveSync", () => {
 
     harness.emit("peer-presence", { clientId: "bob", patch: { transformLive: null } });
     assert.ok(!group.getMesh().children.some((child) => child.name === "emphasis-shell"));
+    harness.sync.destroy();
+  });
+
+  test("does not clear a peer's selection glow once their drag stream ends", () => {
+    const harness = createHarness();
+    const group = harness.modelManager.addGroup();
+    const presence = new PresenceStore();
+    const highlight = new PeerSelectionHighlight(createFakeActor(), {
+      modelManager: harness.modelManager,
+      presence
+    });
+
+    presence.blockSelections = new Map([
+      [group.getGroupUUID(), [{ clientId: "bob", displayName: "bob", color: "#112233" }]]
+    ]);
+    publishLive(harness, "bob", group.getGroupUUID(), 5);
+    harness.emit("peer-presence", { clientId: "bob", patch: { transformLive: null } });
+
+    assert.ok(
+      group.getMesh().children.some((child) => child.name === "emphasis-shell"),
+      "bob's selection glow must survive the end of their drag stream"
+    );
+    highlight.destroy();
     harness.sync.destroy();
   });
 

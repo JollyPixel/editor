@@ -1,16 +1,13 @@
 // Import Third-party Dependencies
-import {
-  Checkbox,
-  Dialog,
-  detailOf,
-  type JollyChangeDetail
-} from "@jolly-pixel/ui";
+import { Dialog } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { actionButton, settlePrompt } from "./dialogPromptHelpers.ts";
+import { actionButton, checkboxField, settlePrompt } from "./dialogPromptHelpers.ts";
+import type { MirrorAxes } from "../../../features/groups/mirrorTransform.ts";
 
 export interface DuplicateResult {
   includeChildren: boolean;
+  mirrorAxes: MirrorAxes;
 }
 
 export interface PromptDuplicateOptions {
@@ -25,12 +22,34 @@ export function promptDuplicate(
 
   let includeChildren = true;
   if (hasChildren) {
-    const includeChildrenField = new Checkbox();
-    includeChildrenField.label = "Duplicate children too";
-    includeChildrenField.value = true;
-    includeChildrenField.addEventListener("jolly-change", captureIncludeChildren);
-    dialog.append(includeChildrenField);
+    dialog.append(checkboxField("Duplicate children too", true, (value) => {
+      includeChildren = value;
+    }));
   }
+
+  const mirrorAxes: MirrorAxes = { x: false, y: false, z: false };
+  const mirrorTitle = document.createElement("div");
+  mirrorTitle.textContent = "Mirror axis";
+  mirrorTitle.style.fontSize = "0.85em";
+  mirrorTitle.style.color = "var(--jolly-text-muted)";
+  dialog.append(mirrorTitle);
+
+  const mirrorRow = document.createElement("div");
+  mirrorRow.style.display = "flex";
+  mirrorRow.style.gap = "var(--jolly-space-4, 16px)";
+  dialog.append(mirrorRow);
+
+  mirrorRow.append(
+    checkboxField("X", false, (value) => {
+      mirrorAxes.x = value;
+    }),
+    checkboxField("Y", false, (value) => {
+      mirrorAxes.y = value;
+    }),
+    checkboxField("Z", false, (value) => {
+      mirrorAxes.z = value;
+    })
+  );
 
   const confirm = actionButton("Duplicate", "confirm", "accent");
   const cancel = actionButton("Cancel", "cancel", "default");
@@ -41,15 +60,6 @@ export function promptDuplicate(
 
   return settlePrompt(dialog, resolveResult, confirm);
 
-  function captureIncludeChildren(
-    event: Event
-  ): void {
-    const detail = detailOf<JollyChangeDetail<boolean>>(event);
-    if (detail !== null) {
-      includeChildren = detail.value;
-    }
-  }
-
   function resolveResult(
     returnValue: string
   ): DuplicateResult | null {
@@ -57,6 +67,9 @@ export function promptDuplicate(
       return null;
     }
 
-    return { includeChildren: hasChildren && includeChildren };
+    return {
+      includeChildren: hasChildren && includeChildren,
+      mirrorAxes
+    };
   }
 }

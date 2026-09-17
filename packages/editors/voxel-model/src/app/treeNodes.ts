@@ -91,6 +91,27 @@ export interface FlatModelNode {
   uuid: string;
   name: string;
   parentUuid: string | null;
+  /** Absent for blocks; folders are a UI-only grouping, never in the scene graph. */
+  kind?: "folder";
+}
+
+export interface FlatFolderNode {
+  uuid: string;
+  name: string;
+  parentId: string | null;
+}
+
+export interface FlatBlockPlacement {
+  blockUuid: string;
+  folderId: string;
+}
+
+const kFolderNodeData = "folder";
+
+export function isFolderNode(
+  node: TreeNode
+): boolean {
+  return node.data === kFolderNodeData;
 }
 
 export function buildTreeFromFlatNodes(
@@ -108,17 +129,49 @@ export function buildTreeFromFlatNodes(
   ): TreeNode[] {
     return (byParent.get(parentUuid) ?? []).map((node) => {
       const children = build(node.uuid);
+      const isFolder = node.kind === "folder";
 
       return {
         id: node.uuid,
-        label: node.name || "Block",
+        label: node.name || (isFolder ? "Folder" : "Block"),
         renamable: true,
+        ...isFolder ? { icon: "folder" as const, data: kFolderNodeData } : {},
         ...children.length > 0 ? { children } : {}
       };
     });
   }
 
   return build(null);
+}
+
+export function mergeFolderTree(
+  blocks: readonly FlatModelNode[],
+  folders: readonly FlatFolderNode[],
+  placements: readonly FlatBlockPlacement[]
+): TreeNode[] {
+  const folderOf = new Map(
+    placements.map((placement) => [placement.blockUuid, placement.folderId])
+  );
+
+  const flatNodes: FlatModelNode[] = [
+    ...folders.map((folder) => {
+      return {
+        uuid: folder.uuid,
+        name: folder.name,
+        parentUuid: folder.parentId,
+        kind: "folder" as const
+      };
+    }),
+    ...blocks.map((block) => {
+      return {
+        uuid: block.uuid,
+        name: block.name,
+        parentUuid: folderOf.get(block.uuid) ?? block.parentUuid
+      };
+    })
+  ];
+
+  return buildTreeFromFlatNodes(flatNodes);
 }
 
 export function collectTreeNodeIds(
@@ -128,6 +181,20 @@ export function collectTreeNodeIds(
 
   for (const child of node.children ?? []) {
     ids.push(...collectTreeNodeIds(child));
+  }
+
+  return ids;
+}
+
+export function collectExpandableIds(
+  nodes: readonly TreeNode[]
+): string[] {
+  const ids: string[] = [];
+
+  for (const node of nodes) {
+    if (node.children !== undefined && node.children.length > 0) {
+      ids.push(node.id, ...collectExpandableIds(node.children));
+    }
   }
 
   return ids;

@@ -16,10 +16,15 @@ import type {
   ModelNetworkCommand,
   ModelServerMessage
 } from "../network/types.ts";
+import type {
+  FolderNetworkCommand,
+  FolderServerMessage
+} from "../network/folderTypes.ts";
 
 // CONSTANTS
 const kModelRoomName = "voxel-model";
 const kTextureRoomName = "voxel-model:texture";
+const kFolderRoomName = "voxel-model:folders";
 
 export type EditorModelRoom = networkTypes.Room<
   ModelNetworkCommand,
@@ -31,7 +36,11 @@ export type EditorTextureRoom = networkTypes.Room<
   PixelServerMessage
 >;
 
-/** No per-document asset id yet, so every open editor joins one fixed room. */
+export type EditorFolderRoom = networkTypes.Room<
+  FolderNetworkCommand,
+  FolderServerMessage
+>;
+
 export class EditorSession {
   static async open(): Promise<EditorSession> {
     const identity = await resolveEditorIdentity();
@@ -44,6 +53,7 @@ export class EditorSession {
   readonly identity: EditorIdentity;
   readonly modelRoom: EditorModelRoom;
   readonly textureRoom: EditorTextureRoom;
+  readonly folderRoom: EditorFolderRoom;
 
   constructor(
     identity: EditorIdentity
@@ -58,6 +68,9 @@ export class EditorSession {
     );
     this.textureRoom = this.#client.room<PixelNetworkCommand, PixelServerMessage>(
       kTextureRoomName
+    );
+    this.folderRoom = this.#client.room<FolderNetworkCommand, FolderServerMessage>(
+      kFolderRoomName
     );
   }
 

@@ -11,6 +11,8 @@ import {
 // Import Internal Dependencies
 import type GroupManager from "../groups/GroupManager.ts";
 import type { ModelSceneComponent } from "../../app/ModelSceneComponent.ts";
+import { editorState, type ModelEventMap } from "../../app/state/index.ts";
+import type { MirrorAxes } from "../groups/mirrorTransform.ts";
 
 // CONSTANTS
 const kBlockUvSize = { width: 16, height: 16 };
@@ -26,13 +28,24 @@ const kBoxFaceVertexRanges: Record<UVSlot, readonly [number, number]> = {
   back: [20, 24]
 };
 
-/**
- * A box face's default UV corners, identical across all six faces and
- * independent of box size. Used as the fixed basis for remapping a face
- * into a region's texture rect, so the transform can be re-applied any
- * number of times as the region moves without drifting from repeated
- * reads of an already-transformed attribute.
- */
+const kSlotAxis: Record<UVSlot, keyof MirrorAxes> = {
+  right: "x",
+  left: "x",
+  top: "y",
+  bottom: "y",
+  front: "z",
+  back: "z"
+};
+
+const kSlotOpposite: Record<UVSlot, UVSlot> = {
+  right: "left",
+  left: "right",
+  top: "bottom",
+  bottom: "top",
+  front: "back",
+  back: "front"
+};
+
 const kDefaultFaceUV: ReadonlyArray<readonly [number, number]> = [
   [0, 1],
   [1, 1],
@@ -52,6 +65,30 @@ function blockUuidFromRegion(
   return id.startsWith(kBlockRegionPrefix) ? id.slice(kBlockRegionPrefix.length) : null;
 }
 
+function flipConfigForAxes(
+  axes: MirrorAxes | undefined
+): { swap: Set<UVSlot>; flipU: Set<UVSlot>; } {
+  const swap = new Set<UVSlot>();
+  const flipU = new Set<UVSlot>();
+  if (!axes) {
+    return { swap, flipU };
+  }
+
+  for (const slot of DEFAULT_UV_SLOTS) {
+    const ownAxis = kSlotAxis[slot];
+    if (axes[ownAxis]) {
+      swap.add(slot);
+    }
+
+    const otherAxes = (["x", "y", "z"] as const).filter((axis) => axis !== ownAxis);
+    if (otherAxes.reduce((flipped, axis) => flipped !== axes[axis], false)) {
+      flipU.add(slot);
+    }
+  }
+
+  return { swap, flipU };
+}
+
 export interface BlockUvSyncOptions {
   modelSceneComponent: ModelSceneComponent;
   getCanvasManager(): PixelArtCanvas | null;
@@ -67,8 +104,8 @@ export default class BlockUvSync {
     this.#modelSceneComponent = options.modelSceneComponent;
     this.#getCanvasManager = options.getCanvasManager;
 
-    document.addEventListener("groupSelected", this.#onGroupSelected);
-    document.addEventListener("groupRemoved", this.#onGroupRemoved);
+    editorState.modelEvents.on("groupSelected", this.#onGroupSelected);
+    editorState.modelEvents.on("groupRemoved", this.#onGroupRemoved);
   }
 
   public update(): void {
@@ -106,12 +143,47 @@ export default class BlockUvSync {
     this.#modelSceneComponent.removeBlock(uuid);
   }
 
-  /**
-   * Mirrors a remote peer's in-progress region drag onto the corresponding
-   * block, before it commits. The peer's own drag reaches this client as
-   * presence data rather than a `region-moved` event, so it is applied
-   * directly instead of going through the local `UVMap`.
-   */
+  public duplicateBlock(
+    sourceUuid: string,
+    uuid: string,
+    name: string
+  ): void {
+    const canvasManager = this.#getCanvasManager();
+    if (!canvasManager) {
+      return;
+    }
+
+    const sourceRegion = canvasManager.uv.get(blockRegionId(sourceUuid));
+    if (sourceRegion) {
+      canvasManager.uv.restore({
+        ...sourceRegion.toJSON(),
+        id: blockRegionId(uuid),
+        name
+      });
+
+      return;
+    }
+
+    canvasManager.uv.create({
+      id: blockRegionId(uuid),
+      name,
+      color: kBlockUvColor,
+      ...kBlockUvSize,
+      state: "unfolded"
+    });
+  }
+
+  public refreshFlipAxes(
+    uuid: string
+  ): void {
+    const canvasManager = this.#getCanvasManager();
+    const group = this.#modelSceneComponent.getModelManager().getGroupByUUID(uuid);
+    const region = canvasManager?.uv.get(blockRegionId(uuid));
+    if (canvasManager && group && region) {
+      this.#applyUvRegionToBlock(group, region, canvasManager.textureSize);
+    }
+  }
+
   public applyPeerDragPreview(
     payload: { id: string; face: UVSlot | null; geometry: UVGeometry; }
   ): void {
@@ -155,10 +227,9 @@ export default class BlockUvSync {
     }
   }
 
-  readonly #onGroupRemoved = (
-    event: Event
-  ): void => {
-    const { uuid } = (event as CustomEvent<{ uuid: string; }>).detail;
+  readonly #onGroupRemoved: ModelEventMap["groupRemoved"] = (
+    { uuid }
+  ) => {
     this.#mappedUuids.delete(uuid);
 
     const canvasManager = this.#getCanvasManager();
@@ -177,7 +248,7 @@ export default class BlockUvSync {
     }
 
     modelManager.selectGroup(group);
-    document.dispatchEvent(new CustomEvent("groupSelected", { detail: { group } }));
+    editorState.modelEvents.emit("groupSelected", { group });
   };
 
   readonly #onUvRegionChanged: UVMapListener<"region-moved"> = (
@@ -221,15 +292,14 @@ export default class BlockUvSync {
     this.#mappedUuids.add(uuid);
   }
 
-  readonly #onGroupSelected = (
-    event: Event
-  ): void => {
+  readonly #onGroupSelected: ModelEventMap["groupSelected"] = (
+    { group }
+  ) => {
     const canvasManager = this.#getCanvasManager();
     if (!canvasManager) {
       return;
     }
 
-    const { group } = (event as CustomEvent<{ group: GroupManager | null; }>).detail;
     const targetId = group ? blockRegionId(group.getGroupUUID()) : null;
     if (canvasManager.uv.selectedRegionId === targetId) {
       return;
@@ -244,9 +314,12 @@ export default class BlockUvSync {
     textureSize: { x: number; y: number; }
   ): void {
     const uv = group.getMesh().geometry.attributes.uv;
+    const { swap, flipU } = flipConfigForAxes(
+      this.#modelSceneComponent.getModelManager().getFlipAxes(group.getGroupUUID())
+    );
 
     for (const slot of DEFAULT_UV_SLOTS) {
-      const geometry = region.geometryFor(slot);
+      const geometry = region.geometryFor(swap.has(slot) ? kSlotOpposite[slot] : slot);
       if ("shape" in geometry) {
         continue;
       }
@@ -256,9 +329,11 @@ export default class BlockUvSync {
       const vTop = 1 - (geometry.y / textureSize.y);
       const vBottom = 1 - ((geometry.y + geometry.height) / textureSize.y);
       const [start, end] = kBoxFaceVertexRanges[slot];
+      const mirrorU = flipU.has(slot);
 
       for (let i = start; i < end; i++) {
-        const [baseU, baseV] = kDefaultFaceUV[i - start];
+        const [rawU, baseV] = kDefaultFaceUV[i - start];
+        const baseU = mirrorU ? 1 - rawU : rawU;
         uv.setXY(i, u0 + (baseU * (u1 - u0)), vBottom + (baseV * (vTop - vBottom)));
       }
     }

@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import GroupManager from "#src/features/groups/GroupManager.ts";
+import { NEUTRAL_HIGHLIGHT_COLOR } from "#src/features/groups/PivotMarker.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;
@@ -108,6 +109,17 @@ describe("GroupManager resize", () => {
     assert.notEqual(group.getMesh().geometry, geometry);
     assert.equal(group.getSize().x, 2);
   });
+
+  test("preserves a custom UV mapping when the size actually changes", () => {
+    const group = new GroupManager({ size: new THREE.Vector3(1, 1, 1) });
+    const uv = group.getMesh().geometry.attributes.uv;
+    uv.setXY(0, 0.25, 0.25);
+
+    group.resize(new THREE.Vector3(2, 1, 1));
+
+    assert.equal(group.getMesh().geometry.attributes.uv.getX(0), 0.25);
+    assert.equal(group.getMesh().geometry.attributes.uv.getY(0), 0.25);
+  });
 });
 
 describe("GroupManager name", () => {
@@ -142,6 +154,13 @@ function findSelectionShell(
     .find((child) => child.name === "selection-shell") as THREE.Mesh | undefined;
 }
 
+function findPivotMarker(
+  group: GroupManager
+): THREE.Sprite | undefined {
+  return group.getPivot().children
+    .find((child) => child.name === "pivot_visual") as THREE.Sprite | undefined;
+}
+
 describe("GroupManager selection", () => {
   test("adds a glow shell on select", () => {
     const group = new GroupManager();
@@ -150,7 +169,7 @@ describe("GroupManager selection", () => {
 
     const shell = findSelectionShell(group);
     assert.ok(shell);
-    assert.equal((shell.material as THREE.MeshBasicMaterial).color.getHex(), 0xff00ff);
+    assert.equal((shell.material as THREE.MeshBasicMaterial).color.getHex(), NEUTRAL_HIGHLIGHT_COLOR);
   });
 
   test("is a no-op when already selected", () => {
@@ -251,12 +270,69 @@ describe("GroupManager emphasis outline", () => {
     assert.ok(selection);
     assert.ok(emphasis);
     assert.notEqual(selection, emphasis);
-    assert.equal((selection.material as THREE.MeshBasicMaterial).color.getHex(), 0xff00ff);
+    assert.equal((selection.material as THREE.MeshBasicMaterial).color.getHex(), NEUTRAL_HIGHLIGHT_COLOR);
     assert.equal((emphasis.material as THREE.MeshBasicMaterial).color.getHex(), 0x00ff00);
 
     group.deselect();
 
     assert.equal(findSelectionShell(group), undefined);
     assert.ok(findEmphasisShell(group), "clearing selection must not affect the emphasis shell");
+  });
+
+  test("shows and tints the pivot marker on emphasize, hides it again on clearEmphasis", () => {
+    const group = new GroupManager();
+
+    assert.equal(findPivotMarker(group)?.visible, false);
+
+    group.emphasize(0x00ff00);
+    assert.equal(findPivotMarker(group)?.visible, true);
+    assert.equal(
+      (findPivotMarker(group)?.material as THREE.SpriteMaterial).color.getHex(),
+      0x00ff00
+    );
+
+    group.clearEmphasis();
+    assert.equal(findPivotMarker(group)?.visible, false);
+  });
+
+  test("keeps the pivot marker visible for the local panel after a peer's emphasis clears", () => {
+    const group = new GroupManager();
+
+    group.setPivotMarkerVisible(true);
+    group.emphasize(0x00ff00, "bob");
+    group.clearEmphasis("bob");
+
+    assert.equal(findPivotMarker(group)?.visible, true);
+    assert.equal(
+      (findPivotMarker(group)?.material as THREE.SpriteMaterial).color.getHex(),
+      NEUTRAL_HIGHLIGHT_COLOR
+    );
+  });
+
+  test("keeps the glow when a second peer emphasizes the same group", () => {
+    const group = new GroupManager();
+
+    group.emphasize(0xff0000, "bob");
+    group.emphasize(0x0000ff, "cleo");
+
+    const shells = group.getMesh().children.filter((child) => child.name === "emphasis-shell");
+    assert.equal(shells.length, 1);
+    const material = (shells[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    assert.equal(material.color.getHex(), 0x0000ff);
+  });
+
+  test("falls back to the remaining peer's color when one of two peers clears", () => {
+    const group = new GroupManager();
+
+    group.emphasize(0xff0000, "bob");
+    group.emphasize(0x0000ff, "cleo");
+    group.clearEmphasis("cleo");
+
+    const emphasis = findEmphasisShell(group);
+    assert.ok(emphasis, "the shell must stay while bob still emphasizes the group");
+    assert.equal((emphasis.material as THREE.MeshBasicMaterial).color.getHex(), 0xff0000);
+
+    group.clearEmphasis("bob");
+    assert.equal(findEmphasisShell(group), undefined);
   });
 });

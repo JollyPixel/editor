@@ -82,6 +82,9 @@ export class ModelSyncClient extends CommandSync<
         if (node.parentUuid !== null) {
           target.reparentLocal(node.uuid, node.parentUuid);
         }
+        if (node.flipAxes) {
+          target.setFlipAxes(node.uuid, node.flipAxes);
+        }
       }
     });
   }

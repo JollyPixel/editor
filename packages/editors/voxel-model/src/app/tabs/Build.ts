@@ -4,6 +4,9 @@ import { state } from "lit/decorators.js";
 import { type JollyChangeDetail, type JollyOption } from "@jolly-pixel/ui";
 import { type PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
+// Import Internal Dependencies
+import type { LeftPanel } from "../LeftPanel.ts";
+
 // CONSTANTS
 const kTextureSizeValues = [16, 32, 64, 128, 256, 512, 1024, 2048];
 const kTextureSizeOptions: JollyOption<number>[] = kTextureSizeValues.map((value) => {
@@ -65,10 +68,10 @@ export class Build extends LitElement {
     this.#hasSyncedTextureSize = true;
   }
 
-  #getLeftPanel(): any {
+  #getLeftPanel(): LeftPanel | null {
     const rootNode = this.getRootNode() as ShadowRoot;
 
-    return rootNode?.host;
+    return (rootNode?.host as LeftPanel | undefined) ?? null;
   }
 
   #getPixelArtCanvas(): PixelArtCanvas | null {

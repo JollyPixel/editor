@@ -25,3 +25,28 @@ export {
   PixelSyncServer,
   type PixelSyncServerOptions
 } from "./PixelSyncServer.ts";
+export type {
+  FolderNetworkCommand,
+  FolderNodeJSON,
+  FolderPlacementJSON,
+  FolderServerMessage,
+  FolderSnapshotJSON
+} from "./folderTypes.ts";
+export {
+  folderCommandProtocol,
+  folderNodeSchema,
+  folderPlacementSchema,
+  folderProtocols,
+  folderSnapshotSchema,
+  FOLDER_COMMAND_ACTIONS
+} from "./FolderCommand.schema.ts";
+export { FolderCommandArbiter } from "./FolderCommandArbiter.ts";
+export { applyFolderCommand } from "./applyFolderCommand.ts";
+export {
+  FolderSyncServer,
+  type FolderSyncServerOptions
+} from "./FolderSyncServer.ts";
+export {
+  FolderSyncClient,
+  type FolderSyncClientOptions
+} from "./FolderSyncClient.ts";

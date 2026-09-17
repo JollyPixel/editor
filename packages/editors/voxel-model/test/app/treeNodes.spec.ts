@@ -7,9 +7,13 @@ import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
+  buildTreeFromFlatNodes,
+  collectExpandableIds,
   collectTreeNodeIds,
   insertAfterTreeNode,
   insertChildTreeNode,
+  isFolderNode,
+  mergeFolderTree,
   relabelTreeNode,
   removeTreeNode,
   withBlockBadges
@@ -264,6 +268,36 @@ describe("collectTreeNodeIds", () => {
   });
 });
 
+describe("collectExpandableIds", () => {
+  test("returns an empty list when no node has children", () => {
+    const nodes: TreeNode[] = [
+      { id: "a", label: "Block" },
+      { id: "b", label: "Sphere" }
+    ];
+
+    assert.deepStrictEqual(collectExpandableIds(nodes), []);
+  });
+
+  test("returns every ancestor id, root to leaf, skipping childless nodes", () => {
+    const nodes: TreeNode[] = [
+      {
+        id: "root",
+        label: "Root",
+        children: [
+          {
+            id: "arm",
+            label: "Arm",
+            children: [{ id: "hand", label: "Hand" }]
+          },
+          { id: "leg", label: "Leg" }
+        ]
+      }
+    ];
+
+    assert.deepStrictEqual(collectExpandableIds(nodes), ["root", "arm"]);
+  });
+});
+
 describe("withBlockBadges", () => {
   test("leaves a node without a mark untouched", () => {
     const nodes: TreeNode[] = [{ id: "a", label: "Block" }];
@@ -320,6 +354,148 @@ describe("withBlockBadges", () => {
             label: "Arm",
             badges: [{ color: "#00ff00", title: "Bob" }]
           }
+        ]
+      }
+    ]);
+  });
+});
+
+describe("isFolderNode", () => {
+  test("is false for a plain block node", () => {
+    assert.equal(isFolderNode({ id: "a", label: "Block" }), false);
+  });
+
+  test("is false for a node that merely carries the folder icon", () => {
+    assert.equal(isFolderNode({ id: "a", label: "Buildings", icon: "folder" }), false);
+  });
+
+  test("is true for a node carrying folder data", () => {
+    assert.equal(isFolderNode({ id: "a", label: "Buildings", data: "folder" }), true);
+  });
+});
+
+describe("buildTreeFromFlatNodes", () => {
+  test("nests blocks by parentUuid", () => {
+    const result = buildTreeFromFlatNodes([
+      { uuid: "child", name: "Arm", parentUuid: "root" },
+      { uuid: "root", name: "Torso", parentUuid: null }
+    ]);
+
+    assert.deepStrictEqual(result, [
+      {
+        id: "root",
+        label: "Torso",
+        renamable: true,
+        children: [{ id: "child", label: "Arm", renamable: true }]
+      }
+    ]);
+  });
+
+  test("marks a folder-kind node with the folder icon and default label", () => {
+    const result = buildTreeFromFlatNodes([
+      { uuid: "f1", name: "", parentUuid: null, kind: "folder" }
+    ]);
+
+    assert.deepStrictEqual(result, [
+      { id: "f1", label: "Folder", renamable: true, icon: "folder", data: "folder" }
+    ]);
+  });
+});
+
+describe("mergeFolderTree", () => {
+  test("nests a placed root block under its folder, leaving unplaced blocks at root", () => {
+    const result = mergeFolderTree(
+      [
+        { uuid: "house", name: "House", parentUuid: null },
+        { uuid: "rock", name: "Rock", parentUuid: null }
+      ],
+      [{ uuid: "buildings", name: "Buildings", parentId: null }],
+      [{ blockUuid: "house", folderId: "buildings" }]
+    );
+
+    assert.deepStrictEqual(result, [
+      {
+        id: "buildings",
+        label: "Buildings",
+        renamable: true,
+        icon: "folder",
+        data: "folder",
+        children: [{ id: "house", label: "House", renamable: true }]
+      },
+      { id: "rock", label: "Rock", renamable: true }
+    ]);
+  });
+
+  test("keeps a block's physical nesting when it has no placement", () => {
+    const result = mergeFolderTree(
+      [
+        { uuid: "house", name: "House", parentUuid: null },
+        { uuid: "window", name: "Window", parentUuid: "house" }
+      ],
+      [],
+      []
+    );
+
+    assert.deepStrictEqual(result, [
+      {
+        id: "house",
+        label: "House",
+        renamable: true,
+        children: [{ id: "window", label: "Window", renamable: true }]
+      }
+    ]);
+  });
+
+  test("nests folders under folders", () => {
+    const result = mergeFolderTree(
+      [],
+      [
+        { uuid: "outer", name: "Outer", parentId: null },
+        { uuid: "inner", name: "Inner", parentId: "outer" }
+      ],
+      []
+    );
+
+    assert.deepStrictEqual(result, [
+      {
+        id: "outer",
+        label: "Outer",
+        renamable: true,
+        icon: "folder",
+        data: "folder",
+        children: [
+          { id: "inner", label: "Inner", renamable: true, icon: "folder", data: "folder" }
+        ]
+      }
+    ]);
+  });
+
+  test("nests a folder under a block, alongside the block's own physical children", () => {
+    const result = mergeFolderTree(
+      [
+        { uuid: "house", name: "House", parentUuid: null },
+        { uuid: "door", name: "Door", parentUuid: "house" },
+        { uuid: "window", name: "Window", parentUuid: null }
+      ],
+      [{ uuid: "windows", name: "Windows", parentId: "house" }],
+      [{ blockUuid: "window", folderId: "windows" }]
+    );
+
+    assert.deepStrictEqual(result, [
+      {
+        id: "house",
+        label: "House",
+        renamable: true,
+        children: [
+          {
+            id: "windows",
+            label: "Windows",
+            renamable: true,
+            icon: "folder",
+            data: "folder",
+            children: [{ id: "window", label: "Window", renamable: true }]
+          },
+          { id: "door", label: "Door", renamable: true }
         ]
       }
     ]);

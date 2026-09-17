@@ -9,6 +9,7 @@ import type { TransformControls } from "three/examples/jsm/controls/TransformCon
 // Import Internal Dependencies
 import ModelManager from "#src/features/groups/ModelManager.ts";
 import type { ModelHookEvent } from "#src/features/groups/hooks.ts";
+import { snapshotTransform } from "#src/features/groups/transformCodec.ts";
 
 function createModelManager(): ModelManager {
   const scene = new THREE.Scene();
@@ -71,6 +72,112 @@ describe("ModelManager.duplicateGroup", () => {
   });
 });
 
+describe("ModelManager.mirrorGroups", () => {
+  test("does nothing for uuids that don't exist", () => {
+    const manager = createModelManager();
+
+    assert.doesNotThrow(() => {
+      manager.mirrorGroups(["missing"], { x: true, y: false, z: false });
+    });
+  });
+
+  test("mirrors a group's world position along the selected axis", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup({ pos: new THREE.Vector3(2, 3, 4) });
+
+    manager.mirrorGroups([group.getGroupUUID()], { x: true, y: false, z: false });
+
+    assert.deepStrictEqual(group.getPositionWorld(), new THREE.Vector3(-2, 3, 4));
+  });
+
+  test("mirrors every requested axis at once", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup({ pos: new THREE.Vector3(2, 3, 4) });
+
+    manager.mirrorGroups([group.getGroupUUID()], { x: true, y: true, z: true });
+
+    assert.deepStrictEqual(group.getPositionWorld(), new THREE.Vector3(-2, -3, -4));
+  });
+
+  test("mirrors each group from its own world transform, not a mirrored parent's", () => {
+    const manager = createModelManager();
+    const parent = manager.addGroup({ pos: new THREE.Vector3(2, 0, 0) });
+    const child = manager.addGroup({ pos: new THREE.Vector3(1, 0, 0) });
+    manager.reparentLocal(child.getGroupUUID(), parent.getGroupUUID());
+    assert.deepStrictEqual(child.getPositionWorld(), new THREE.Vector3(3, 0, 0));
+
+    manager.mirrorGroups(
+      [parent.getGroupUUID(), child.getGroupUUID()],
+      { x: true, y: false, z: false }
+    );
+
+    assert.deepStrictEqual(parent.getPositionWorld(), new THREE.Vector3(-2, 0, 0));
+    assert.deepStrictEqual(child.getPositionWorld(), new THREE.Vector3(-3, 0, 0));
+  });
+
+  test("emits a single group-transformed event carrying flipAxes per mirrored group", () => {
+    const manager = createModelManager();
+    const a = manager.addGroup({ pos: new THREE.Vector3(1, 0, 0) });
+    const b = manager.addGroup({ pos: new THREE.Vector3(0, 1, 0) });
+    const events = watch(manager);
+
+    manager.mirrorGroups([a.getGroupUUID(), b.getGroupUUID()], { x: true, y: false, z: false });
+
+    assert.deepEqual(events.map((event) => event.action), [
+      "group-transformed",
+      "group-transformed"
+    ]);
+    assert.deepEqual(
+      events.map((event) => (event.action === "group-transformed" ? event.flipAxes : undefined)),
+      [
+        { x: true, y: false, z: false },
+        { x: true, y: false, z: false }
+      ]
+    );
+  });
+
+  test("records the mirror axes so they can be read back through getFlipAxes", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup({ pos: new THREE.Vector3(1, 0, 0) });
+
+    manager.mirrorGroups([group.getGroupUUID()], { x: true, y: false, z: true });
+
+    assert.deepEqual(manager.getFlipAxes(group.getGroupUUID()), { x: true, y: false, z: true });
+  });
+});
+
+describe("ModelManager.applyRemoteCommand", () => {
+  test("applies flipAxes from a group-transformed command without re-emitting a network event", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup({ name: "Block" });
+    const events = watch(manager);
+
+    manager.applyRemoteCommand({
+      action: "group-transformed",
+      uuid: group.getGroupUUID(),
+      transform: snapshotTransform(group),
+      flipAxes: { x: true, y: false, z: false }
+    });
+
+    assert.deepEqual(manager.getFlipAxes(group.getGroupUUID()), { x: true, y: false, z: false });
+    assert.deepEqual(events, []);
+  });
+
+  test("leaves flipAxes untouched when a group-transformed command omits it", () => {
+    const manager = createModelManager();
+    const group = manager.addGroup({ name: "Block" });
+    manager.mirrorGroups([group.getGroupUUID()], { x: true, y: false, z: false });
+
+    manager.applyRemoteCommand({
+      action: "group-transformed",
+      uuid: group.getGroupUUID(),
+      transform: snapshotTransform(group)
+    });
+
+    assert.deepEqual(manager.getFlipAxes(group.getGroupUUID()), { x: true, y: false, z: false });
+  });
+});
+
 describe("ModelManager.reparentLocal", () => {
   test("keeps the child's local position unchanged, unlike reparent", () => {
     const manager = createModelManager();
@@ -92,6 +199,29 @@ describe("ModelManager.reparentLocal", () => {
     manager.reparentLocal(child.getGroupUUID(), null);
 
     assert.deepStrictEqual(child.getPosition(), new THREE.Vector3(1, 1, 1));
+  });
+});
+
+describe("ModelManager.reparentAtParentPosition", () => {
+  test("moves the child to the parent's world position before reparenting", () => {
+    const manager = createModelManager();
+    const parent = manager.addGroup({ pos: new THREE.Vector3(10, 5, -2) });
+    const child = manager.addGroup({ pos: new THREE.Vector3(0, 0, 0) });
+
+    manager.reparentAtParentPosition(child.getGroupUUID(), parent.getGroupUUID());
+
+    assert.deepStrictEqual(child.getPositionWorld(), new THREE.Vector3(10, 5, -2));
+    assert.deepStrictEqual(child.getPosition(), new THREE.Vector3(0, 0, 0));
+  });
+
+  test("does nothing when the child or parent uuid does not exist", () => {
+    const manager = createModelManager();
+    const child = manager.addGroup({ pos: new THREE.Vector3(1, 1, 1) });
+
+    assert.doesNotThrow(
+      () => manager.reparentAtParentPosition(child.getGroupUUID(), "missing")
+    );
+    assert.deepStrictEqual(child.getPositionWorld(), new THREE.Vector3(1, 1, 1));
   });
 });
 
