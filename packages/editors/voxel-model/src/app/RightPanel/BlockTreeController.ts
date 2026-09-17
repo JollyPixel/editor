@@ -13,7 +13,7 @@ import {
 
 // Import Internal Dependencies
 import type ModelManager from "../../features/groups/ModelManager.ts";
-import type GroupManager from "../../features/groups/GroupManager.ts";
+import type FolderManager from "../../features/folders/FolderManager.ts";
 import type { ModelSceneComponent } from "../ModelSceneComponent.ts";
 import {
   editorState,
@@ -21,14 +21,16 @@ import {
   type PresenceStore
 } from "../state/index.ts";
 import {
-  buildTreeFromFlatNodes,
   collectTreeNodeIds,
-  insertChildTreeNode,
-  relabelTreeNode,
-  removeTreeNode,
-  withBlockBadges
+  isFolderNode,
+  mergeFolderTree,
+  withBlockBadges,
+  type FlatBlockPlacement,
+  type FlatFolderNode,
+  type FlatModelNode
 } from "../treeNodes.ts";
 import { promptNewBlock } from "./prompts/promptNewBlock.ts";
+import { promptNewFolder } from "./prompts/promptNewFolder.ts";
 import { promptDuplicate } from "./prompts/promptDuplicate.ts";
 import { promptDelete } from "./prompts/promptDelete.ts";
 
@@ -37,6 +39,7 @@ type Host = ReactiveControllerHost & HTMLElement;
 export class BlockTreeController implements ReactiveController {
   #host: Host;
   #modelManager: ModelManager | null = null;
+  #folderManager: FolderManager | null = null;
   #sceneManager: ModelSceneComponent | null = null;
   #presence: PresenceStore | null = null;
   #unsubscribePresence: (() => void) | null = null;
@@ -44,6 +47,10 @@ export class BlockTreeController implements ReactiveController {
   #nodes: TreeNode[] = [];
   #selected: string[] = [];
   #expanded: string[] = [];
+  #blockFlatNodes: FlatModelNode[] = [];
+  #folderFlatNodes: FlatFolderNode[] = [];
+  #placements: FlatBlockPlacement[] = [];
+  #syncingFromTreeClick = false;
 
   constructor(
     host: Host
@@ -60,7 +67,14 @@ export class BlockTreeController implements ReactiveController {
       modelEvents.watch("groupReparented", this.#onGroupReparented),
       modelEvents.watch("groupRenamed", this.#onGroupRenamed),
       modelEvents.watch("groupSelected", this.#onGroupSelected),
-      modelEvents.watch("modelSnapshotApplied", this.#onModelSnapshotApplied)
+      modelEvents.watch("modelSnapshotApplied", this.#onModelSnapshotApplied),
+      modelEvents.watch("folderCreated", this.#onFolderCreated),
+      modelEvents.watch("folderRemoved", this.#onFolderRemoved),
+      modelEvents.watch("folderRenamed", this.#onFolderRenamed),
+      modelEvents.watch("folderReparented", this.#onFolderReparented),
+      modelEvents.watch("blockPlaced", this.#onBlockPlaced),
+      modelEvents.watch("blockUnplaced", this.#onBlockUnplaced),
+      modelEvents.watch("folderSnapshotApplied", this.#onFolderSnapshotApplied)
     ];
   }
 
@@ -102,10 +116,20 @@ export class BlockTreeController implements ReactiveController {
     return this.#selected.length > 0;
   }
 
+  public get canDuplicate(): boolean {
+    return this.#selected.length > 0;
+  }
+
   public setModelManager(
     modelManager: ModelManager
   ): void {
     this.#modelManager = modelManager;
+  }
+
+  public setFolderManager(
+    folderManager: FolderManager
+  ): void {
+    this.#folderManager = folderManager;
   }
 
   public setSceneManager(
@@ -120,21 +144,16 @@ export class BlockTreeController implements ReactiveController {
     this.#selected = event.detail.selected;
     this.#host.requestUpdate();
 
-    if (this.#selected.length === 0) {
-      this.#modelManager?.selectGroup(null);
-      editorState.modelEvents.emit("groupSelected", { group: null });
+    const uuid = this.#selected[0];
+    const group = uuid === undefined ? null : this.#modelManager?.getGroupByUUID(uuid) ?? null;
 
-      return;
-    }
-
-    if (!this.#modelManager) {
-      return;
-    }
-
-    const group = this.#modelManager.getGroupByUUID(this.#selected[0]);
-    if (group) {
-      this.#modelManager.selectGroup(group);
+    this.#syncingFromTreeClick = true;
+    try {
+      this.#modelManager?.selectGroup(group);
       editorState.modelEvents.emit("groupSelected", { group });
+    }
+    finally {
+      this.#syncingFromTreeClick = false;
     }
   };
 
@@ -152,6 +171,11 @@ export class BlockTreeController implements ReactiveController {
     event: CustomEvent<JollyRenameDetail>
   ): void => {
     const { id, name } = event.detail;
+    if (this.#isFolder(id)) {
+      this.#folderManager?.renameFolder(id, name);
+
+      return;
+    }
     this.#modelManager?.renameGroup(id, name);
   };
 
@@ -159,13 +183,18 @@ export class BlockTreeController implements ReactiveController {
     event: CustomEvent<JollyReparentDetail>
   ): void => {
     const { movedIds, targetId, where } = event.detail;
-    const nextNodes = resolveReparent({ nodes: this.#nodes, movedIds, targetId, where });
+    const nextNodes = resolveReparent({
+      nodes: this.#nodes,
+      movedIds,
+      targetId,
+      where
+    });
     if (nextNodes === this.#nodes) {
       return;
     }
 
     for (const movedId of movedIds) {
-      this.#modelManager?.reparent(movedId, findParentId(nextNodes, movedId) ?? null);
+      this.#applyUiParent(movedId, findParentId(nextNodes, movedId) ?? null);
     }
 
     if (where === "inside" && !this.#expanded.includes(targetId)) {
@@ -178,6 +207,10 @@ export class BlockTreeController implements ReactiveController {
     void this.#promptAddBlock();
   };
 
+  public readonly addFolder = (): void => {
+    void this.#promptAddFolder();
+  };
+
   public readonly duplicateSelected = (): void => {
     void this.#promptAndDuplicate();
   };
@@ -185,6 +218,52 @@ export class BlockTreeController implements ReactiveController {
   public readonly deleteSelected = (): void => {
     void this.#promptAndDelete();
   };
+
+  #isFolder(
+    id: string
+  ): boolean {
+    const node = findNode(this.#nodes, id);
+
+    return node !== null && isFolderNode(node);
+  }
+
+  #applyUiParent(
+    id: string,
+    uiParentId: string | null
+  ): void {
+    if (this.#isFolder(id)) {
+      this.#folderManager?.reparentFolder(id, uiParentId);
+      this.#resyncPlacedBlocksUnder(id);
+
+      return;
+    }
+
+    const parentIsFolder = uiParentId !== null && this.#isFolder(uiParentId);
+    const physicalParentId = this.#folderManager?.resolveNearestNonFolderAncestor(uiParentId) ??
+      uiParentId;
+
+    this.#modelManager?.reparent(id, physicalParentId);
+    this.#folderManager?.placeBlock(id, parentIsFolder ? uiParentId : null);
+  }
+
+  #resyncPlacedBlocksUnder(
+    folderId: string
+  ): void {
+    const folderManager = this.#folderManager;
+    if (!folderManager) {
+      return;
+    }
+
+    const subtreeFolderIds = folderManager.collectFolderSubtreeIds(folderId);
+    for (const [blockUuid, placedFolderId] of folderManager.getPlacements()) {
+      if (subtreeFolderIds.has(placedFolderId)) {
+        this.#modelManager?.reparent(
+          blockUuid,
+          folderManager.resolveNearestNonFolderAncestor(placedFolderId)
+        );
+      }
+    }
+  }
 
   async #promptAddBlock(): Promise<void> {
     const parentId = this.#selected[0] ?? null;
@@ -210,9 +289,26 @@ export class BlockTreeController implements ReactiveController {
     editorState.modelEvents.emit("addblock", { name, parentId });
   }
 
+  async #promptAddFolder(): Promise<void> {
+    const parentId = this.#selected[0] ?? null;
+
+    this.#sceneManager?.setControlsEnabled(false);
+    const result = await promptNewFolder({ offerAddAsChild: parentId !== null });
+    this.#sceneManager?.setControlsEnabled(true);
+
+    if (result === null) {
+      return;
+    }
+
+    this.#sceneManager?.createFolder(
+      result.name || "Folder",
+      result.addAsChild ? parentId : null
+    );
+  }
+
   async #promptAndDuplicate(): Promise<void> {
     const sourceId = this.#selected[0];
-    if (sourceId === undefined || !this.#modelManager) {
+    if (sourceId === undefined) {
       return;
     }
 
@@ -232,12 +328,10 @@ export class BlockTreeController implements ReactiveController {
     }
 
     const parentId = findParentId(this.#nodes, sourceId) ?? null;
-    const uuid = this.#duplicateSubtree(
-      sourceNode,
-      result.includeChildren,
-      `${sourceNode.label} Copy`,
-      parentId
-    );
+    const uuid = this.#duplicateNode(sourceNode, parentId, {
+      label: `${sourceNode.label} Copy`,
+      includeChildren: result.includeChildren
+    });
     if (uuid === null) {
       return;
     }
@@ -248,33 +342,65 @@ export class BlockTreeController implements ReactiveController {
     this.#selected = [uuid];
     this.#host.requestUpdate();
 
-    const newGroup = this.#modelManager.getGroupByUUID(uuid) ?? null;
-    this.#modelManager.selectGroup(newGroup);
-    editorState.modelEvents.emit("groupSelected", { group: newGroup });
+    const newGroup = this.#modelManager?.getGroupByUUID(uuid) ?? null;
+    this.#syncingFromTreeClick = true;
+    try {
+      this.#modelManager?.selectGroup(newGroup);
+      editorState.modelEvents.emit("groupSelected", { group: newGroup });
+    }
+    finally {
+      this.#syncingFromTreeClick = false;
+    }
   }
 
-  #duplicateSubtree(
+  #duplicateNode(
     node: TreeNode,
-    includeChildren: boolean,
+    uiParentId: string | null,
+    options: { label?: string; includeChildren: boolean; }
+  ): string | null {
+    const label = options.label ?? node.label;
+    const resultId = isFolderNode(node) ?
+      this.#duplicateFolder(label, uiParentId) :
+      this.#duplicateBlock(node.id, label, uiParentId);
+
+    if (resultId !== null && options.includeChildren) {
+      for (const child of node.children ?? []) {
+        this.#duplicateNode(child, resultId, { includeChildren: true });
+      }
+    }
+
+    return resultId;
+  }
+
+  #duplicateFolder(
     label: string,
-    parentId: string | null
+    uiParentId: string | null
+  ): string | null {
+    return this.#folderManager?.addFolder({ name: label, parentId: uiParentId }) ?? null;
+  }
+
+  #duplicateBlock(
+    sourceId: string,
+    label: string,
+    uiParentId: string | null
   ): string | null {
     if (!this.#modelManager) {
       return null;
     }
 
-    const duplicateGroup = this.#modelManager.duplicateGroup(node.id, label);
+    const duplicateGroup = this.#modelManager.duplicateGroup(sourceId, label);
     if (!duplicateGroup) {
       return null;
     }
 
     const uuid = duplicateGroup.getGroupUUID();
-    this.#modelManager.reparentLocal(uuid, parentId);
+    const parentIsFolder = uiParentId !== null && this.#isFolder(uiParentId);
+    const physicalParentId = this.#folderManager?.resolveNearestNonFolderAncestor(uiParentId) ??
+      uiParentId;
 
-    if (includeChildren) {
-      for (const child of node.children ?? []) {
-        this.#duplicateSubtree(child, true, child.label, uuid);
-      }
+    this.#modelManager.reparentLocal(uuid, physicalParentId);
+    if (parentIsFolder) {
+      this.#folderManager?.placeBlock(uuid, uiParentId);
     }
 
     return uuid;
@@ -282,7 +408,7 @@ export class BlockTreeController implements ReactiveController {
 
   async #promptAndDelete(): Promise<void> {
     const sourceId = this.#selected[0];
-    if (sourceId === undefined || !this.#modelManager) {
+    if (sourceId === undefined) {
       return;
     }
 
@@ -291,85 +417,126 @@ export class BlockTreeController implements ReactiveController {
       return;
     }
 
+    const isFolder = isFolderNode(sourceNode);
     const hasChildren = (sourceNode.children?.length ?? 0) > 0;
 
     this.#sceneManager?.setControlsEnabled(false);
-    const result = await promptDelete({ hasChildren });
+    const result = await promptDelete({
+      hasChildren,
+      heading: isFolder ? "Delete Folder" : "Delete Block"
+    });
     this.#sceneManager?.setControlsEnabled(true);
 
     if (result === null) {
       return;
     }
 
-    const removedUuids = result.deleteChildren ?
-      collectTreeNodeIds(sourceNode) :
-      this.#promoteChildren(sourceNode);
+    if (result.deleteChildren) {
+      this.#removeSubtree(sourceNode);
+    }
+    else {
+      this.#promoteChildrenThenRemove(sourceNode);
+    }
 
     this.#selected = [];
     this.#host.requestUpdate();
-    this.#modelManager.selectGroup(null);
+    this.#modelManager?.selectGroup(null);
     editorState.modelEvents.emit("groupSelected", { group: null });
-    editorState.modelEvents.emit("deleteblock", { uuids: removedUuids });
   }
 
-  #promoteChildren(
+  #removeSubtree(
     node: TreeNode
-  ): string[] {
-    if (!this.#modelManager) {
-      return [];
-    }
+  ): void {
+    const ids = collectTreeNodeIds(node);
+    const blockIds = ids.filter((id) => !this.#isFolder(id));
+    const folderIds = ids.filter((id) => this.#isFolder(id));
 
+    if (blockIds.length > 0) {
+      editorState.modelEvents.emit("deleteblock", { uuids: blockIds });
+    }
+    for (const folderId of folderIds) {
+      this.#sceneManager?.removeFolder(folderId);
+    }
+  }
+
+  #promoteChildrenThenRemove(
+    node: TreeNode
+  ): void {
     const parentId = findParentId(this.#nodes, node.id) ?? null;
     for (const child of node.children ?? []) {
-      this.#modelManager.reparent(child.id, parentId);
+      this.#applyUiParent(child.id, parentId);
     }
 
-    return [node.id];
+    if (isFolderNode(node)) {
+      this.#sceneManager?.removeFolder(node.id);
+
+      return;
+    }
+
+    for (const descendantId of collectTreeNodeIds(node)) {
+      if (
+        descendantId !== node.id &&
+        !this.#isFolder(descendantId) &&
+        this.#modelManager?.getParentUUID(descendantId) === node.id
+      ) {
+        this.#modelManager.reparent(descendantId, parentId);
+      }
+    }
+
+    editorState.modelEvents.emit("deleteblock", { uuids: [node.id] });
   }
 
+  /**
+   * `#blockFlatNodes` / `#folderFlatNodes` / `#placements` are the single
+   * source of truth for the tree; every handler below edits one of them and
+   * re-derives `#nodes` through `#rebuildTree`, rather than hand-splicing
+   * the rendered tree directly. That keeps a later snapshot rebuild from
+   * ever reverting an edit no one remembered to mirror into a parallel cache.
+   */
   readonly #onGroupCreated: ModelEventMap["groupCreated"] = (
     { group, name, parentId }
   ) => {
-    this.#addGroupItemToUI(group, name || "Block", parentId ?? null);
+    this.#blockFlatNodes = [
+      ...this.#blockFlatNodes,
+      { uuid: group.getGroupUUID(), name: name || "Block", parentUuid: parentId ?? null }
+    ];
+    this.#expandParent(parentId ?? null);
+    this.#rebuildTree();
   };
 
   readonly #onGroupRemoved: ModelEventMap["groupRemoved"] = (
     { uuid }
   ) => {
-    this.#nodes = removeTreeNode(this.#nodes, uuid);
-    this.#host.requestUpdate();
+    this.#blockFlatNodes = this.#blockFlatNodes.filter((node) => node.uuid !== uuid);
+    this.#rebuildTree();
   };
 
   readonly #onGroupReparented: ModelEventMap["groupReparented"] = (
     { uuid, parentUuid }
   ) => {
-    const node = findNode(this.#nodes, uuid);
-    if (node === null) {
-      return;
-    }
-
-    this.#nodes = insertChildTreeNode(
-      removeTreeNode(this.#nodes, uuid),
-      parentUuid,
-      node
-    );
-
-    if (parentUuid !== null && !this.#expanded.includes(parentUuid)) {
-      this.#expanded = [...this.#expanded, parentUuid];
-    }
-    this.#host.requestUpdate();
+    this.#blockFlatNodes = this.#blockFlatNodes.map((node) => (
+      node.uuid === uuid ? { ...node, parentUuid } : node
+    ));
+    this.#expandParent(parentUuid);
+    this.#rebuildTree();
   };
 
   readonly #onGroupRenamed: ModelEventMap["groupRenamed"] = (
     { uuid, name }
   ) => {
-    this.#nodes = relabelTreeNode(this.#nodes, uuid, name);
-    this.#host.requestUpdate();
+    this.#blockFlatNodes = this.#blockFlatNodes.map((node) => (
+      node.uuid === uuid ? { ...node, name } : node
+    ));
+    this.#rebuildTree();
   };
 
   readonly #onGroupSelected: ModelEventMap["groupSelected"] = (
     { group }
   ) => {
+    if (this.#syncingFromTreeClick) {
+      return;
+    }
+
     const uuid = group ? group.getGroupUUID() : null;
     this.#selected = uuid ? [uuid] : [];
     this.#host.requestUpdate();
@@ -378,22 +545,82 @@ export class BlockTreeController implements ReactiveController {
   readonly #onModelSnapshotApplied: ModelEventMap["modelSnapshotApplied"] = (
     { nodes }
   ) => {
-    this.#nodes = buildTreeFromFlatNodes(nodes);
+    this.#blockFlatNodes = nodes;
     this.#selected = [];
-    this.#host.requestUpdate();
+    this.#rebuildTree();
   };
 
-  #addGroupItemToUI(
-    group: GroupManager,
-    label: string,
+  readonly #onFolderCreated: ModelEventMap["folderCreated"] = (
+    { uuid, name, parentId }
+  ) => {
+    this.#folderFlatNodes = [...this.#folderFlatNodes, { uuid, name, parentId }];
+    this.#expandParent(parentId);
+    this.#rebuildTree();
+  };
+
+  readonly #onFolderRemoved: ModelEventMap["folderRemoved"] = (
+    { uuid }
+  ) => {
+    this.#folderFlatNodes = this.#folderFlatNodes.filter((folder) => folder.uuid !== uuid);
+    this.#rebuildTree();
+  };
+
+  readonly #onFolderRenamed: ModelEventMap["folderRenamed"] = (
+    { uuid, name }
+  ) => {
+    this.#folderFlatNodes = this.#folderFlatNodes.map((folder) => (
+      folder.uuid === uuid ? { ...folder, name } : folder
+    ));
+    this.#rebuildTree();
+  };
+
+  readonly #onFolderReparented: ModelEventMap["folderReparented"] = (
+    { uuid, parentId }
+  ) => {
+    this.#folderFlatNodes = this.#folderFlatNodes.map((folder) => (
+      folder.uuid === uuid ? { ...folder, parentId } : folder
+    ));
+    this.#expandParent(parentId);
+    this.#rebuildTree();
+  };
+
+  readonly #onBlockPlaced: ModelEventMap["blockPlaced"] = (
+    { blockUuid, folderId }
+  ) => {
+    this.#placements = [
+      ...this.#placements.filter((placement) => placement.blockUuid !== blockUuid),
+      { blockUuid, folderId }
+    ];
+    this.#expandParent(folderId);
+    this.#rebuildTree();
+  };
+
+  readonly #onBlockUnplaced: ModelEventMap["blockUnplaced"] = (
+    { blockUuid }
+  ) => {
+    this.#placements = this.#placements.filter((placement) => placement.blockUuid !== blockUuid);
+    this.#rebuildTree();
+  };
+
+  readonly #onFolderSnapshotApplied: ModelEventMap["folderSnapshotApplied"] = (
+    { folders, placements }
+  ) => {
+    this.#folderFlatNodes = folders;
+    this.#placements = placements;
+    this.#selected = [];
+    this.#rebuildTree();
+  };
+
+  #expandParent(
     parentId: string | null
   ): void {
-    const node: TreeNode = { id: group.getGroupUUID(), label, renamable: true };
-    this.#nodes = insertChildTreeNode(this.#nodes, parentId, node);
-
     if (parentId !== null && !this.#expanded.includes(parentId)) {
       this.#expanded = [...this.#expanded, parentId];
     }
+  }
+
+  #rebuildTree(): void {
+    this.#nodes = mergeFolderTree(this.#blockFlatNodes, this.#folderFlatNodes, this.#placements);
     this.#host.requestUpdate();
   }
 }

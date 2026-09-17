@@ -8,11 +8,13 @@ import type {
 
 // Import Internal Dependencies
 import type ModelManager from "../../features/groups/ModelManager.ts";
+import type FolderManager from "../../features/folders/FolderManager.ts";
 import type { ModelSceneComponent } from "../ModelSceneComponent.ts";
 import type { PresenceStore } from "../state/index.ts";
 import { BlockTreeController } from "./BlockTreeController.ts";
 import { type TransformPanel } from "./TransformPanel.ts";
 import "./blockIcons.ts";
+import "./folderIcons.ts";
 
 export class RightPanel extends LitElement {
   #tree = new BlockTreeController(this);
@@ -63,6 +65,12 @@ export class RightPanel extends LitElement {
     modelManager: ModelManager
   ): void {
     this.#tree.setModelManager(modelManager);
+  }
+
+  public setFolderManager(
+    folderManager: FolderManager
+  ): void {
+    this.#tree.setFolderManager(folderManager);
   }
 
   public async setSceneManager(
@@ -147,11 +155,19 @@ export class RightPanel extends LitElement {
         ></jolly-button>
         <jolly-button
           slot="actions"
+          icon="folder-add"
+          icon-only
+          label="Add Folder"
+          title="Add Folder"
+          @click=${this.#tree.addFolder}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
           icon="block-duplicate"
           icon-only
           label="Duplicate"
           title="Duplicate"
-          ?disabled=${!this.#tree.hasSelection}
+          ?disabled=${!this.#tree.canDuplicate}
           @click=${this.#tree.duplicateSelected}
         ></jolly-button>
         <jolly-button

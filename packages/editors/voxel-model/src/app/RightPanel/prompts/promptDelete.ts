@@ -15,13 +15,15 @@ export interface DeleteResult {
 
 export interface PromptDeleteOptions {
   hasChildren: boolean;
+  /** @default "Delete Block" */
+  heading?: string;
 }
 
 export function promptDelete(
-  { hasChildren }: PromptDeleteOptions
+  { hasChildren, heading = "Delete Block" }: PromptDeleteOptions
 ): Promise<DeleteResult | null> {
   const dialog = new Dialog();
-  dialog.heading = "Delete Block";
+  dialog.heading = heading;
 
   let deleteChildren = true;
   if (hasChildren) {

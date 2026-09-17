@@ -19,6 +19,7 @@ import { PRESENCE_KEYS } from "./presenceKeys.ts";
 // CONSTANTS
 const kThrottleMs = 50;
 const kExpiryMs = 5000;
+const kEmphasisOwnerPrefix = "transform-live:";
 
 export interface GroupTransformLivePayload {
   uuid: string;
@@ -154,7 +155,10 @@ export class GroupTransformLiveSync extends ActorComponent {
         timer: setTimeout(() => this.#endStream(clientId, { revert: true }), kExpiryMs)
       };
       this.#streams.set(clientId, stream);
-      localGroup.emphasize(peerColor(clientId, this.#room.peers.get(clientId)?.profile), clientId);
+      localGroup.emphasize(
+        peerColor(clientId, this.#room.peers.get(clientId)?.profile),
+        `${kEmphasisOwnerPrefix}${clientId}`
+      );
     }
 
     this.#modelManager.applyRemoteCommand({
@@ -179,7 +183,7 @@ export class GroupTransformLiveSync extends ActorComponent {
     this.#streams.delete(clientId);
 
     const localGroup = this.#modelManager.getGroupByUUID(stream.uuid);
-    localGroup?.clearEmphasis(clientId);
+    localGroup?.clearEmphasis(`${kEmphasisOwnerPrefix}${clientId}`);
 
     if (options.revert && localGroup) {
       this.#modelManager.applyRemoteCommand({

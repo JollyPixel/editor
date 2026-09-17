@@ -10,9 +10,15 @@ import type {
   ModelNetworkCommand,
   ModelServerMessage
 } from "../network/types.ts";
+import type {
+  FolderNetworkCommand,
+  FolderServerMessage
+} from "../network/folderTypes.ts";
 
 export interface ModelEditorSceneOptions {
   room?: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  /** Absent offline, folders stay local only. */
+  folderRoom?: network.Room<FolderNetworkCommand, FolderServerMessage>;
   /** Absent offline, no collaboration is wired up. */
   identity?: EditorIdentity;
 }
@@ -23,6 +29,7 @@ export interface ModelEditorSceneHandles {
 
 export class ModelEditorScene extends Systems.Scene {
   #room: network.Room<ModelNetworkCommand, ModelServerMessage> | undefined;
+  #folderRoom: network.Room<FolderNetworkCommand, FolderServerMessage> | undefined;
   #identity: EditorIdentity | undefined;
   #handles = Promise.withResolvers<ModelEditorSceneHandles>();
 
@@ -35,6 +42,7 @@ export class ModelEditorScene extends Systems.Scene {
   ) {
     super("model-editor");
     this.#room = options.room;
+    this.#folderRoom = options.folderRoom;
     this.#identity = options.identity;
   }
 
@@ -78,6 +86,7 @@ export class ModelEditorScene extends Systems.Scene {
       .addComponentAndGet(ModelSceneComponent, {
         camera,
         room: this.#room,
+        folderRoom: this.#folderRoom,
         identity: this.#identity
       });
 

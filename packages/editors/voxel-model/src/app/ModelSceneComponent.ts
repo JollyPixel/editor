@@ -12,6 +12,8 @@ import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import ModelManager from "../features/groups/ModelManager.ts";
 import type GroupManager from "../features/groups/GroupManager.ts";
 import type { ModelHookEvent } from "../features/groups/hooks.ts";
+import FolderManager from "../features/folders/FolderManager.ts";
+import type { FolderHookEvent } from "../features/folders/hooks.ts";
 import GizmoManager, { type GizmoConfig } from "../features/transform/GizmoManager.ts";
 import { GroupSelectionPresence } from "../collaboration/GroupSelectionPresence.ts";
 import { GroupTransformLiveSync } from "../collaboration/GroupTransformLiveSync.ts";
@@ -21,10 +23,15 @@ import { PeerSelectionHighlight } from "../collaboration/PeerSelectionHighlight.
 import { PeerRoster } from "../collaboration/PeerRoster.ts";
 import type { EditorIdentity } from "../collaboration/identity.ts";
 import { ModelSyncClient } from "../network/ModelSyncClient.ts";
+import { FolderSyncClient } from "../network/FolderSyncClient.ts";
 import type {
   ModelNetworkCommand,
   ModelServerMessage
 } from "../network/types.ts";
+import type {
+  FolderNetworkCommand,
+  FolderServerMessage
+} from "../network/folderTypes.ts";
 import { editorState } from "./state/index.ts";
 
 export type { GizmoMode, GizmoTarget, GizmoSpace, GizmoConfig } from "../features/transform/GizmoManager.ts";
@@ -32,6 +39,8 @@ export type { GizmoMode, GizmoTarget, GizmoSpace, GizmoConfig } from "../feature
 export interface ModelSceneComponentOptions {
   camera: OrbitFlyCamera;
   room?: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  /** Absent offline, folders stay local only. */
+  folderRoom?: network.Room<FolderNetworkCommand, FolderServerMessage>;
   /** Absent offline, no collaboration is wired up. */
   identity?: EditorIdentity;
 }
@@ -46,12 +55,15 @@ export class ModelSceneComponent extends ActorComponent {
   #cameraRaycaster = new THREE.Raycaster();
   #gizmo!: GizmoManager;
   #modelManager!: ModelManager;
+  #folderManager!: FolderManager;
   #room: network.Room<ModelNetworkCommand, ModelServerMessage> | undefined;
+  #folderRoom: network.Room<FolderNetworkCommand, FolderServerMessage> | undefined;
   #identity: EditorIdentity | undefined;
   #peerRoster: PeerRoster | undefined;
   #groupSelections: GroupSelectionPresence | undefined;
   #peerFrustums: PeerFrustums | undefined;
   #modelSync: ModelSyncClient | undefined;
+  #folderSync: FolderSyncClient | undefined;
   #transformLive: GroupTransformLiveSync | undefined;
   #transformLock: GroupTransformLock | undefined;
 
@@ -64,6 +76,7 @@ export class ModelSceneComponent extends ActorComponent {
     super({ actor, typeName: "ModelScene" });
     this.#camera = options.camera;
     this.#room = options.room;
+    this.#folderRoom = options.folderRoom;
     this.#identity = options.identity;
   }
 
@@ -90,6 +103,17 @@ export class ModelSceneComponent extends ActorComponent {
       transformControl: this.#gizmo.transformControl
     });
     this.#modelManager.onModelUpdated = this.#onModelHookEvent;
+
+    this.#folderManager = new FolderManager();
+    this.#folderManager.onFolderUpdated = this.#onFolderHookEvent;
+
+    if (this.#folderRoom) {
+      this.#folderSync = new FolderSyncClient({
+        room: this.#folderRoom,
+        folderManager: this.#folderManager
+      });
+      this.#folderSync.on("snapshot", this.#onFolderSnapshotApplied);
+    }
 
     if (this.#room && this.#identity) {
       this.#peerRoster = new PeerRoster({
@@ -127,6 +151,7 @@ export class ModelSceneComponent extends ActorComponent {
     }
 
     this.#room?.join();
+    this.#folderRoom?.join();
   }
 
   readonly #onModelHookEvent = (
@@ -178,6 +203,51 @@ export class ModelSceneComponent extends ActorComponent {
     editorState.modelEvents.emit("modelSnapshotApplied", { nodes });
   };
 
+  readonly #onFolderHookEvent = (
+    event: FolderHookEvent
+  ): void => {
+    switch (event.action) {
+      case "folder-added":
+        editorState.modelEvents.emit("folderCreated", {
+          uuid: event.uuid,
+          name: event.name,
+          parentId: event.parentId
+        });
+        break;
+
+      case "folder-removed":
+        editorState.modelEvents.emit("folderRemoved", { uuid: event.uuid });
+        break;
+
+      case "folder-renamed":
+        editorState.modelEvents.emit("folderRenamed", { uuid: event.uuid, name: event.name });
+        break;
+
+      case "folder-reparented":
+        editorState.modelEvents.emit("folderReparented", { uuid: event.uuid, parentId: event.parentId });
+        break;
+
+      case "block-placed":
+        editorState.modelEvents.emit("blockPlaced", { blockUuid: event.blockUuid, folderId: event.folderId });
+        break;
+
+      case "block-unplaced":
+        editorState.modelEvents.emit("blockUnplaced", { blockUuid: event.blockUuid });
+        break;
+    }
+  };
+
+  readonly #onFolderSnapshotApplied = (): void => {
+    const folders = [...this.#folderManager.getFolders()].map(([uuid, folder]) => {
+      return { uuid, name: folder.name, parentId: folder.parentId };
+    });
+    const placements = [...this.#folderManager.getPlacements()].map(([blockUuid, folderId]) => {
+      return { blockUuid, folderId };
+    });
+
+    editorState.modelEvents.emit("folderSnapshotApplied", { folders, placements });
+  };
+
   teleportToPeer(
     clientId: string
   ): boolean {
@@ -194,6 +264,8 @@ export class ModelSceneComponent extends ActorComponent {
   override destroy(): void {
     this.#modelSync?.destroy();
     this.#modelSync = undefined;
+    this.#folderSync?.destroy();
+    this.#folderSync = undefined;
     this.#peerRoster?.dispose();
     this.#peerRoster = undefined;
     this.#groupSelections?.dispose();
@@ -254,7 +326,13 @@ export class ModelSceneComponent extends ActorComponent {
     });
 
     if (parentId !== null) {
-      this.#modelManager.reparent(group.getGroupUUID(), parentId);
+      this.#modelManager.reparent(
+        group.getGroupUUID(),
+        this.#folderManager.resolveNearestNonFolderAncestor(parentId)
+      );
+      if (this.#folderManager.hasFolder(parentId)) {
+        this.#folderManager.placeBlock(group.getGroupUUID(), parentId);
+      }
     }
 
     this.#modelManager.selectGroup(group);
@@ -269,11 +347,27 @@ export class ModelSceneComponent extends ActorComponent {
       return;
     }
 
+    this.#folderManager.placeBlock(uuid, null);
     this.#modelManager.removeGroup(group);
+  }
+
+  public createFolder(
+    name: string = "Folder",
+    parentId: string | null = null
+  ): string {
+    return this.#folderManager.addFolder({ name, parentId });
+  }
+
+  public removeFolder(uuid: string): void {
+    this.#folderManager.removeFolder(uuid);
   }
 
   public getModelManager(): ModelManager {
     return this.#modelManager;
+  }
+
+  public getFolderManager(): FolderManager {
+    return this.#folderManager;
   }
 
   public getTransformLock(): GroupTransformLock | undefined {

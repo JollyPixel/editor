@@ -1,6 +1,10 @@
 // Import Internal Dependencies
 import type GroupManager from "../../features/groups/GroupManager.ts";
-import type { FlatModelNode } from "../treeNodes.ts";
+import type {
+  FlatBlockPlacement,
+  FlatFolderNode,
+  FlatModelNode
+} from "../treeNodes.ts";
 import { EditorStore } from "./EditorStore.ts";
 
 export type ModelEventMap = {
@@ -30,6 +34,27 @@ export type ModelEventMap = {
   ) => void;
   deleteblock: (
     payload: { uuids: string[]; }
+  ) => void;
+  folderCreated: (
+    payload: { uuid: string; name: string; parentId: string | null; }
+  ) => void;
+  folderRemoved: (
+    payload: { uuid: string; }
+  ) => void;
+  folderRenamed: (
+    payload: { uuid: string; name: string; }
+  ) => void;
+  folderReparented: (
+    payload: { uuid: string; parentId: string | null; }
+  ) => void;
+  blockPlaced: (
+    payload: { blockUuid: string; folderId: string; }
+  ) => void;
+  blockUnplaced: (
+    payload: { blockUuid: string; }
+  ) => void;
+  folderSnapshotApplied: (
+    payload: { folders: FlatFolderNode[]; placements: FlatBlockPlacement[]; }
   ) => void;
 };
 

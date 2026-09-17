@@ -12,6 +12,9 @@ import {
 } from "../app/state/index.ts";
 import type { PeerMarkMap } from "./peerMarks.ts";
 
+// CONSTANTS
+const kEmphasisOwnerPrefix = "selection:";
+
 export interface PeerSelectionHighlightOptions {
   modelManager: ModelManager;
   presence?: PresenceStore;
@@ -65,7 +68,7 @@ export class PeerSelectionHighlight extends ActorComponent {
       if (nextUuidByClient.get(clientId) === uuid) {
         continue;
       }
-      this.#modelManager.getGroupByUUID(uuid)?.clearEmphasis(clientId);
+      this.#modelManager.getGroupByUUID(uuid)?.clearEmphasis(`${kEmphasisOwnerPrefix}${clientId}`);
     }
 
     for (const [uuid, marks] of selections) {
@@ -73,7 +76,10 @@ export class PeerSelectionHighlight extends ActorComponent {
         if (this.#highlightedUuidByClient.get(mark.clientId) === uuid) {
           continue;
         }
-        this.#modelManager.getGroupByUUID(uuid)?.emphasize(mark.color, mark.clientId);
+        this.#modelManager.getGroupByUUID(uuid)?.emphasize(
+          mark.color,
+          `${kEmphasisOwnerPrefix}${mark.clientId}`
+        );
       }
     }
 

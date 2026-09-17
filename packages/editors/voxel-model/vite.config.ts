@@ -7,10 +7,12 @@ import { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
 // Import Internal Dependencies
 import { ModelSyncServer } from "./src/network/ModelSyncServer.ts";
 import { PixelSyncServer } from "./src/network/PixelSyncServer.ts";
+import { FolderSyncServer } from "./src/network/FolderSyncServer.ts";
 
 // CONSTANTS
 const kModelRoomName = "voxel-model";
 const kTextureRoomName = "voxel-model:texture";
+const kFolderRoomName = "voxel-model:folders";
 /**
  * Must match `kTextureSize` in src/app/LeftPanel.ts -- the join snapshot
  * replaces a client's canvas size wholesale with whatever the server has.
@@ -29,7 +31,8 @@ export default defineConfig({
         new PixelSyncServer({
           id: kTextureRoomName,
           buffer: new PixelBuffer({ size: kTextureSize })
-        })
+        }),
+        new FolderSyncServer({ id: kFolderRoomName })
       ]
     })
   ],

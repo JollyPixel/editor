@@ -25,6 +25,7 @@ runtime.world.input.keyboard.addGuard(inputLayers);
 
 const modelScene = new ModelEditorScene({
   room: session.modelRoom,
+  folderRoom: session.folderRoom,
   identity: session.identity
 });
 await runtime.load({
@@ -36,6 +37,7 @@ await runtime.load({
 const { modelSceneComponent } = await modelScene.ready;
 
 rightPanel.setModelManager(modelSceneComponent.getModelManager());
+rightPanel.setFolderManager(modelSceneComponent.getFolderManager());
 rightPanel.setSceneManager(modelSceneComponent);
 rightPanel.setPresence(editorState.presence);
 
