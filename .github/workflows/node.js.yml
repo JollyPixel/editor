@@ -17,6 +17,7 @@ jobs:
     outputs:
       ui: ${{ steps.filter.outputs.ui }}
       pixel-art: ${{ steps.filter.outputs.pixel-art }}
+      voxel-map: ${{ steps.filter.outputs.voxel-map }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -39,6 +40,27 @@ jobs:
               - 'packages/event-store/**'
               - 'packages/engine/**'
               - 'packages/runtime/**'
+              - 'packages/resize-handle/**'
+              - 'package.json'
+              - '.npmrc'
+              - 'tsconfig.json'
+              - 'tsconfig.base.json'
+              - '.github/workflows/node.js.yml'
+            voxel-map:
+              - 'packages/editors/voxel-map/**'
+              - 'packages/editors/pixel-art/**'
+              - 'packages/voxel-renderer/**'
+              - 'packages/pixel-draw-renderer/**'
+              - 'packages/assets/**'
+              - 'packages/asset/**'
+              - 'packages/asset-server/**'
+              - 'packages/asset-source/**'
+              - 'packages/network/**'
+              - 'packages/event-store/**'
+              - 'packages/engine/**'
+              - 'packages/runtime/**'
+              - 'packages/three/**'
+              - 'packages/ui/**'
               - 'packages/resize-handle/**'
               - 'package.json'
               - '.npmrc'
@@ -135,5 +157,38 @@ jobs:
         with:
           name: pixel-art-e2e-results
           path: packages/editors/pixel-art/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  voxel-map-e2e:
+    needs: changes
+    # TODO: re-enable once the CI-only timeouts are fixed
+    if: false && needs.changes.outputs.voxel-map == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Build dependencies
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run Voxel Map E2E tests
+        run: npm run test:e2e -w @jolly-pixel/editor.voxel-map
+      - name: Upload Voxel Map E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: voxel-map-e2e-results
+          path: packages/editors/voxel-map/test-results
           if-no-files-found: ignore
           retention-days: 7

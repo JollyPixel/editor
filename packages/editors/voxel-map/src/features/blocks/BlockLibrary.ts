@@ -285,6 +285,7 @@ export class BlockLibrary extends LitElement {
         .engine=${this.engine}
         .blocks=${this._shownBlocks}
         .marks=${this._marks}
+        .selectedId=${this._selectedId}
         .problems=${this._problems}
         .unused=${this._unused}
         .reorderable=${isReorderable(this.order)}

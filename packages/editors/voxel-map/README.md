@@ -21,7 +21,7 @@ $ npm run dev -w @jolly-pixel/editor.voxel-map
 
 The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png` under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded before tilesets referenced asset ids shows its `default` tileset as unlinked.
 
-Add `?offline` to skip network setup entirely. Nothing is persisted in that mode — the editor is scratch space until the page reloads.
+Add `?world=<assetId>` to open a given map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to skip network setup entirely. Nothing is persisted in that mode — the editor is scratch space until the page reloads.
 
 ## 🧩 Bootstrap
 
@@ -42,6 +42,7 @@ const editor = await VoxelMapEditor.open({
 | `canvas` | Runtime canvas target, a selector or an `HTMLCanvasElement`. |
 | `offline` | Skips identity, catalog, and network setup. Defaults to `false`. |
 | `world` | `AssetId` of the voxelmap to open. Defaults to the first one in the catalog. |
+| `maxFps` | Frame rate cap. Defaults to `Infinity`. |
 
 `open()` creates the runtime, opens an `EditorSession` and waits for its
 catalog, builds the `EditorScene`, mounts the `EditorShell`, then loads the
@@ -108,6 +109,21 @@ $ npm run build -w @jolly-pixel/editor.voxel-map
 ```
 
 `test-only` runs the Node.js tests without producing the HTML coverage report.
+
+`test:e2e` runs the Playwright suite in `test/e2e`. It starts `npm run dev:e2e`,
+a Vite server on port 3002 whose asset workspace lives in memory. Each test
+creates its own tileset and world through the catalog, then opens
+`/?world=<assetId>&max-fps=<n>`. In dev builds the opened editor is exposed as
+`window.voxelMapEditor`.
+
+```bash
+$ npx playwright install chromium
+$ npm run test:e2e -w @jolly-pixel/editor.voxel-map
+```
+
+Node.js tests cover pure logic (brush footprints, UV projection, grid layout,
+layer drop rules). Behavior that depends on the scene, the DOM or the network
+belongs to the E2E suite.
 
 ## Brush toolbar
 
