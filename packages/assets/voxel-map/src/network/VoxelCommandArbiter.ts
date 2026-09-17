@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
-import type { VoxelLayerHookEvent } from "@jolly-pixel/voxel.renderer";
+import type { VoxelLayerCommand } from "@jolly-pixel/voxel.renderer";
 import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
@@ -41,7 +41,7 @@ export class VoxelCommandArbiter {
   }
 
   static keys(
-    command: VoxelLayerHookEvent | VoxelNetworkCommand
+    command: VoxelLayerCommand | VoxelNetworkCommand
   ): string[] {
     if (isBulkCommand(command)) {
       return command.metadata.entries.map(
@@ -55,7 +55,7 @@ export class VoxelCommandArbiter {
   }
 
   static key(
-    command: VoxelLayerHookEvent | VoxelNetworkCommand
+    command: VoxelLayerCommand | VoxelNetworkCommand
   ): string | null {
     switch (command.action) {
       case "voxel-set":
@@ -72,6 +72,13 @@ export class VoxelCommandArbiter {
       case "block-removed":
       case "block-moved":
         return `block:${command.blockId}`;
+      case "tileset-added":
+        return `tileset:${command.tileset.id}`;
+      case "tileset-removed":
+      case "tileset-resized":
+        return `tileset:${command.tilesetId}`;
+      case "default-tile-size-updated":
+        return "default-tile-size";
       default:
         return null;
     }
@@ -106,7 +113,7 @@ export class VoxelCommandArbiter {
 }
 
 function isBulkCommand<
-  TCommand extends VoxelLayerHookEvent | VoxelNetworkCommand
+  TCommand extends VoxelLayerCommand | VoxelNetworkCommand
 >(
   command: TCommand
 ): command is Extract<

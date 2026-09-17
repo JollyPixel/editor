@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelWorld, type VoxelLayer } from "../../src/world/index.ts";
-import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
+import type { VoxelLayerCommand } from "../../src/commands.ts";
 import type { VoxelObjectJSON } from "../../src/serialization/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
@@ -22,15 +22,15 @@ function makePeers(
   seed(local);
   seed(remote);
 
-  const recorded: VoxelLayerHookEvent[] = [];
-  local.onLayerUpdated = (event) => recorded.push(event);
+  const recorded: VoxelLayerCommand[] = [];
+  local.on("command", (command) => recorded.push(command));
 
   return {
     local,
     remote,
     replay() {
       for (const event of recorded) {
-        remote.applyRemoteCommand(event);
+        remote.apply(event);
       }
     }
   };
@@ -133,7 +133,7 @@ describe("command round-trip — mergeLayer", () => {
       world.addLayer("Source");
     });
 
-    const late: VoxelLayerHookEvent = {
+    const late: VoxelLayerCommand = {
       action: "voxels-set",
       layerName: "Source",
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 4 }] }
@@ -142,7 +142,7 @@ describe("command round-trip — mergeLayer", () => {
     peers.local.mergeLayer("Source", "Target");
     peers.replay();
 
-    assert.doesNotThrow(() => peers.remote.applyRemoteCommand(late));
+    assert.doesNotThrow(() => peers.remote.apply(late));
     assertConverged(peers);
   });
 });

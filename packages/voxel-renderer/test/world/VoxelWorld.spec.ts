@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/index.ts";
 import { FACE } from "../../src/utils/math.ts";
-import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
+import type { VoxelLayerCommand } from "../../src/commands.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 describe("VoxelWorld — layer lifecycle", () => {
@@ -126,7 +126,7 @@ describe("VoxelWorld — layer ordering", () => {
     world.addLayer("B");
 
     const actions: string[] = [];
-    world.onLayerUpdated = (event) => actions.push(event.action);
+    world.on("command", (event) => actions.push(event.action));
 
     world.moveLayerTo("B", 0);
     world.moveLayerTo("NoSuch", 1);
@@ -139,8 +139,8 @@ describe("VoxelWorld — layer ordering", () => {
     world.addLayer("A");
     world.addLayer("B");
 
-    const events: VoxelLayerHookEvent[] = [];
-    world.onLayerUpdated = (event) => events.push(event);
+    const events: VoxelLayerCommand[] = [];
+    world.on("command", (event) => events.push(event));
 
     world.moveLayerTo("B", 99);
 

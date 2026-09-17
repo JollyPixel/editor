@@ -1,10 +1,10 @@
 // Import Internal Dependencies
-import type { VoxelLayerHookEvent, VoxelLayerHookAction } from "../hooks.ts";
+import type { VoxelLayerCommand, VoxelLayerCommandAction } from "../commands.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
 import type { VoxelWorld } from "./VoxelWorld.ts";
 
 // CONSTANTS
-const kVoxelActions: readonly VoxelLayerHookAction[] = [
+const kVoxelActions: readonly VoxelLayerCommandAction[] = [
   "voxel-set",
   "voxel-removed",
   "voxels-set",
@@ -12,11 +12,11 @@ const kVoxelActions: readonly VoxelLayerHookAction[] = [
 ];
 
 /**
- * Replays one hook event onto a world.
+ * Replays one layer command onto a world.
  */
 export function dispatchCommand(
   world: VoxelWorld,
-  cmd: VoxelLayerHookEvent,
+  cmd: VoxelLayerCommand,
   logger?: VoxelLogger
 ): void {
   if (
@@ -182,7 +182,7 @@ export function dispatchCommand(
     default: {
       const unhandled: never = cmd;
       throw new Error(
-        `dispatchCommand: unhandled action '${(unhandled as VoxelLayerHookEvent).action}'.`
+        `dispatchCommand: unhandled action '${(unhandled as VoxelLayerCommand).action}'.`
       );
     }
   }

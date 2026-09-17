@@ -7,7 +7,7 @@ import {
 import { TranslationControls } from "@jolly-pixel/three";
 import type {
   VoxelWorld,
-  VoxelLayerHookEvent
+  VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -189,7 +189,7 @@ export class VoxelLayerGizmo extends ActorComponent {
     });
   };
 
-  readonly #onLayerUpdated = (event: VoxelLayerHookEvent): void => {
+  readonly #onLayerUpdated = (event: VoxelLayerCommand): void => {
     if (event.layerName !== this.#activeLayer) {
       return;
     }

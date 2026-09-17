@@ -5,7 +5,7 @@ import {
   VoxelFootprint,
   type VoxelWorld,
   type VoxelObjectJSON,
-  type VoxelLayerHookEvent
+  type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
 import type {
   JollyChangeDetail,
@@ -69,7 +69,7 @@ export class ObjectPanel extends LitElement {
     this._props = [];
   }
 
-  readonly #onLayerUpdated = (evt: VoxelLayerHookEvent) => {
+  readonly #onLayerUpdated = (evt: VoxelLayerCommand) => {
     if (evt.action === "object-moved") {
       if (
         evt.metadata.fromLayerName === this.layerName ||

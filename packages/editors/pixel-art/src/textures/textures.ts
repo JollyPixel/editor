@@ -27,8 +27,15 @@ export interface TextureAddRequestDetail {
   respondWith(work: Promise<unknown>): void;
 }
 
+export type TextureChangeSource = "user" | "api";
+
 export interface TextureChangeDetail {
   id: string;
+  source: TextureChangeSource;
+}
+
+export interface AddTextureOptions {
+  activate?: boolean;
 }
 
 export interface TextureCloseRequestDetail {

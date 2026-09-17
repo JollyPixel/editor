@@ -22,7 +22,7 @@ class AtlasLayout {
   get isPadded(): boolean;
   withoutPadding(): AtlasLayout;
   sourceBounds(): AtlasRegion;
-  uvFor(col: number, row: number): TilesetUVRegion;
+  uvFor(col: number, row: number, size?: number): TilesetUVRegion;
   tileRangeWithin(bounds: AtlasRegion): AtlasTileRange | null;
 }
 
@@ -79,10 +79,14 @@ The same grid with its gutter dropped, or `this` when there is none.
 
 ## Tiles
 
-#### `uvFor(col: number, row: number): TilesetUVRegion`
+#### `uvFor(col: number, row: number, size?: number): TilesetUVRegion`
 
 Padded UVs with WebGL Y-flip and a half-texel inset, so a filtered sample never
 reads a neighbouring tile.
+
+`size` is the square region side in texels, anchored at the tile's top-left
+corner, and defaults to `tileSize`. Fractional `col`/`row` and a `size` other
+than `tileSize` only address source texels exactly on an unpadded layout.
 
 #### `tileRangeWithin(bounds: AtlasRegion): AtlasTileRange | null`
 

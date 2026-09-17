@@ -91,3 +91,23 @@ describe("findBlocksReferencingTileset", () => {
     assert.equal(result.length, 0);
   });
 });
+
+describe("findBlocksReferencingTileset with a sized tile", () => {
+  it("measures the rect from the reference size", () => {
+    const [result] = findBlocksReferencingTileset(
+      [makeBlock(1, { defaultTexture: { col: 1, row: 0, tilesetId: "t", size: 32 } })],
+      shapeOf,
+      "t",
+      16
+    );
+
+    assert.deepEqual(result.rects, [
+      {
+        x: 16,
+        y: 0,
+        width: 32,
+        height: 32
+      }
+    ]);
+  });
+});

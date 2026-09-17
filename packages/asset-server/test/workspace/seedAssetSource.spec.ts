@@ -9,7 +9,10 @@ import assert from "node:assert/strict";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import { seedAssetSource } from "#src/index.ts";
+import {
+  CatalogIdentitySidecar,
+  seedAssetSource
+} from "#src/index.ts";
 import {
   bytes,
   text
@@ -94,5 +97,48 @@ describe("seedAssetSource", () => {
       text(await source.read("a.bin")),
       "concurrent"
     );
+  });
+
+  test("records the identity of an entry that declares an id", async() => {
+    const source = new MemoryAssetSource();
+
+    const written = await seedAssetSource(source, {
+      "textures/block.pixelart": {
+        id: "tileset-default",
+        kind: "pixelart",
+        content: () => bytes("pixels")
+      },
+      "maps/overworld.voxelmap.json": () => bytes("{}")
+    });
+    const sidecar = await CatalogIdentitySidecar.load(source);
+
+    assert.deepStrictEqual(written, [
+      "textures/block.pixelart",
+      "maps/overworld.voxelmap.json"
+    ]);
+    assert.deepStrictEqual([...sidecar], [
+      {
+        id: "tileset-default",
+        path: "textures/block.pixelart",
+        kind: "pixelart"
+      }
+    ]);
+  });
+
+  test("leaves the identities alone when an entry was not written", async() => {
+    const source = new MemoryAssetSource([
+      ["textures/block.pixelart", bytes("edited")]
+    ]);
+
+    await seedAssetSource(source, {
+      "textures/block.pixelart": {
+        id: "tileset-default",
+        kind: "pixelart",
+        content: () => bytes("pixels")
+      }
+    });
+    const sidecar = await CatalogIdentitySidecar.load(source);
+
+    assert.strictEqual(sidecar.size, 0);
   });
 });

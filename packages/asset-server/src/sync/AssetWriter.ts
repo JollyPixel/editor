@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import { AssetSource as AssetSourcePath } from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
@@ -31,6 +32,7 @@ import {
 } from "../events/AssetEvents.ts";
 import type { AssetProjector } from "./AssetProjector.ts";
 import type { AssetProjection } from "./foldProjection.ts";
+import type { CatalogPathConflict } from "../catalog/protocol.ts";
 import {
   silentLogger,
   type Logger
@@ -47,9 +49,6 @@ export interface AssetWriterOptions {
 
 interface WriteOptions {
   actor: EventStore.Actor;
-  /**
-   * Marks source-backed mutations as projected without another write.
-   */
   alreadyProjected?: boolean;
 }
 
@@ -58,6 +57,7 @@ export interface CreateAssetInput extends WriteOptions {
   data: Uint8Array;
   kind?: string;
   assetId?: string;
+  onPathConflict?: CatalogPathConflict;
 }
 
 export interface UpdateAssetInput extends WriteOptions {
@@ -74,9 +74,6 @@ export interface DeleteAssetInput extends WriteOptions {
   assetId: string;
 }
 
-/**
- * Appends lifecycle events before updating projections and identity.
- */
 export class AssetWriter {
   #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   #kinds: AssetKindRegistry;
@@ -108,12 +105,14 @@ export class AssetWriter {
       return Err(writable.val);
     }
 
-    const path = writable.val;
     if (input.kind !== undefined && !this.#kinds.has(input.kind)) {
       return Err(new UnknownAssetKindError(input.kind));
     }
 
     const assetId = input.assetId ?? randomUUID();
+    const path = input.onPathConflict === "suffix" ?
+      this.#vacantPath(writable.val, assetId) :
+      writable.val;
     const vacant = this.#vacant(path, assetId);
     if (!vacant.ok) {
       return Err(vacant.val);
@@ -272,6 +271,20 @@ export class AssetWriter {
     return occupant === null || occupant === assetId ?
       Ok(undefined) :
       Err(new AssetPathConflictError(path, occupant));
+  }
+
+  #vacantPath(
+    path: string,
+    assetId: string
+  ): string {
+    const source = new AssetSourcePath(path);
+
+    let candidate = path;
+    for (let index = 2; !this.#vacant(candidate, assetId).ok; index++) {
+      candidate = source.withName(`${source.name}-${index}`).toString();
+    }
+
+    return candidate;
   }
 
   async #saveIdentity(): Promise<void> {

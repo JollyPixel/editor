@@ -416,3 +416,33 @@ describe("VoxelCommandArbiter — block reorder", () => {
     assert.strictEqual(admitted(arbiter, second), second);
   });
 });
+
+describe("VoxelCommandArbiter — tileset commands", () => {
+  const kHeader = {
+    clientId: "client-A",
+    seq: 1,
+    timestamp: 1000
+  };
+
+  test("keys a tileset command by its tileset id", () => {
+    assert.strictEqual(VoxelCommandArbiter.key({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", src: "asset-stone", tileSize: 16 }
+    }), "tileset:stone");
+    assert.strictEqual(VoxelCommandArbiter.key({
+      ...kHeader,
+      action: "tileset-resized",
+      tilesetId: "stone",
+      tileSize: 32
+    }), "tileset:stone");
+  });
+
+  test("keys the default tile size as one entry", () => {
+    assert.strictEqual(VoxelCommandArbiter.key({
+      ...kHeader,
+      action: "default-tile-size-updated",
+      defaultTileSize: 32
+    }), "default-tile-size");
+  });
+});

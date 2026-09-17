@@ -33,13 +33,12 @@ const kTexture = new AssetRecord({
 });
 
 describe("resolveEditorAssets", () => {
-  test("falls back to the first record of each kind", async() => {
-    const catalog = new AssetCatalog([kWorldOne, kWorldTwo, kTexture]);
+  test("falls back to the first world", async() => {
+    const catalog = new AssetCatalog([kTexture, kWorldOne, kWorldTwo]);
 
     const assets = await resolveEditorAssets({ catalog });
 
-    assert.strictEqual(assets.world, kWorldOne);
-    assert.strictEqual(assets.texture, kTexture);
+    assert.deepStrictEqual(assets, { world: kWorldOne });
   });
 
   test("resolves the requested world", async() => {
@@ -77,8 +76,8 @@ describe("resolveEditorAssets", () => {
     );
   });
 
-  test("rejects a catalog without any texture", async() => {
-    const catalog = new AssetCatalog([kWorldOne]);
+  test("rejects a catalog without any world", async() => {
+    const catalog = new AssetCatalog([kTexture]);
 
     await assert.rejects(
       () => resolveEditorAssets({ catalog }),

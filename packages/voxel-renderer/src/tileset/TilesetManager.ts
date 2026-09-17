@@ -1,30 +1,27 @@
-// Import Third-party Dependencies
-import type * as THREE from "three";
-
 // Import Internal Dependencies
 import type {
-  ResolvedTilesetDefinition,
-  TilesetDefinition
+  TilesetDefinition,
+  TilesetTexture
 } from "./types.ts";
 import { TilesetAtlas } from "./TilesetAtlas.ts";
+import { TilesetList } from "./TilesetList.ts";
 
 export interface TilesetManagerOptions {
-  /**
-   * Edge-replicated gutter in texels; 0 disables repacking.
-   * @default half the tile size, clamped to 2..8
-   */
   padding?: number;
+  tilesets?: TilesetList;
 }
 
 export class TilesetManager {
+  readonly tilesets: TilesetList;
+
   #atlases = new Map<string, TilesetAtlas>();
-  #defaultTilesetId: string | null = null;
   #version = 0;
   #padding: number | null;
 
   constructor(
     options: TilesetManagerOptions = {}
   ) {
+    this.tilesets = options.tilesets ?? new TilesetList();
     this.#padding = options.padding === undefined ?
       null :
       Math.max(0, Math.trunc(options.padding));
@@ -32,36 +29,79 @@ export class TilesetManager {
 
   registerTexture(
     def: TilesetDefinition,
-    texture: THREE.Texture<HTMLImageElement>
+    texture: TilesetTexture
   ): TilesetAtlas {
+    this.tilesets.add(def);
+    const declared = this.tilesets.get(def.id) ?? def;
     const atlas = new TilesetAtlas(
-      def,
+      {
+        ...declared,
+        cols: def.cols ?? declared.cols,
+        rows: def.rows ?? declared.rows
+      },
       texture,
       this.#padding
     );
 
+    this.#atlases.get(def.id)?.dispose();
     this.#atlases.set(def.id, atlas);
-    this.#defaultTilesetId ??= def.id;
     this.#version++;
 
     return atlas;
   }
 
+  unregisterTexture(
+    tilesetId: string
+  ): boolean {
+    const atlas = this.#atlases.get(tilesetId);
+    if (!atlas) {
+      return false;
+    }
+
+    atlas.dispose();
+    this.#atlases.delete(tilesetId);
+    this.#version++;
+
+    return true;
+  }
+
+  syncAtlases(): string[] {
+    const changed: string[] = [];
+    for (const [tilesetId, atlas] of this.#atlases) {
+      const declared = this.tilesets.get(tilesetId);
+      if (declared === undefined) {
+        atlas.dispose();
+        this.#atlases.delete(tilesetId);
+        changed.push(tilesetId);
+      }
+      else if (declared.tileSize !== atlas.def.tileSize) {
+        this.#atlases.set(
+          tilesetId,
+          new TilesetAtlas(declared, atlas.sourceTexture, this.#padding)
+        );
+        atlas.dispose({ keepSource: true });
+        changed.push(tilesetId);
+      }
+    }
+    if (changed.length > 0) {
+      this.#version++;
+    }
+
+    return changed;
+  }
+
   has(
     tilesetId?: string
   ): boolean {
-    const id = tilesetId ?? this.#defaultTilesetId;
+    const id = tilesetId ?? this.defaultTilesetId;
 
     return id !== null && this.#atlases.has(id);
   }
 
-  /**
-   * @throws when neither `tilesetId` nor a default tileset is registered.
-   */
   atlas(
     tilesetId?: string
   ): TilesetAtlas {
-    const id = tilesetId ?? this.#defaultTilesetId;
+    const id = tilesetId ?? this.defaultTilesetId;
     if (id === null) {
       throw new Error("TilesetManager: no tilesets have been loaded.");
     }
@@ -74,18 +114,16 @@ export class TilesetManager {
     return atlas;
   }
 
-  definitions(): ResolvedTilesetDefinition[] {
-    return [
-      ...this.#atlases.values()
-    ].map((atlas) => atlas.def);
+  definitions(): TilesetDefinition[] {
+    return this.tilesets.definitions();
   }
 
   get version(): number {
-    return this.#version;
+    return this.#version + this.tilesets.version;
   }
 
   get defaultTilesetId(): string | null {
-    return this.#defaultTilesetId;
+    return this.tilesets.defaultTilesetId;
   }
 
   dispose(): void {
@@ -93,7 +131,7 @@ export class TilesetManager {
       atlas.dispose();
     }
     this.#atlases.clear();
-    this.#defaultTilesetId = null;
+    this.tilesets.clear();
     this.#version++;
   }
 }

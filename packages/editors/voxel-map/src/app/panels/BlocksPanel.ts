@@ -12,6 +12,8 @@ import type {
   BlockLibrary,
   BlockSelectionChangeDetail
 } from "../../features/blocks/BlockLibrary.ts";
+import type { TilesetActions } from "../../features/tilesets/TilesetActions.ts";
+import type { TilesetFolder } from "../../features/tilesets/TilesetFolder.ts";
 
 import "../../features/registerElements.ts";
 
@@ -29,7 +31,7 @@ export class BlocksPanel extends LitElement {
       flex: 0 0 auto;
     }
 
-    :host(:not([hosts-texture-editor])) jolly-folder[open] {
+    :host(:not([hosts-texture-editor])) jolly-folder.library[open] {
       flex: 1 1 auto;
       min-height: 0;
     }
@@ -41,6 +43,9 @@ export class BlocksPanel extends LitElement {
   @property({ attribute: false })
   declare state: EditorState;
 
+  @property({ attribute: false })
+  declare tilesetActions: TilesetActions | null;
+
   @property({
     type: Boolean,
     reflect: true,
@@ -51,8 +56,14 @@ export class BlocksPanel extends LitElement {
   @state()
   declare _canEditBlock: boolean;
 
-  @query("jolly-folder")
+  @query("jolly-folder.library")
   declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
+
+  @query("jolly-folder.tilesets")
+  declare _tilesetsFolder: HTMLElementTagNameMap["jolly-folder"] | null;
+
+  @query("tileset-folder")
+  declare _tilesetFolder: TilesetFolder | null;
 
   @query("block-library")
   declare _blockLibrary: BlockLibrary | null;
@@ -61,6 +72,7 @@ export class BlocksPanel extends LitElement {
     super();
     this.engine = undefined;
     this.state = editorState;
+    this.tilesetActions = null;
     this.hostsTextureEditor = false;
     this._canEditBlock = false;
   }
@@ -81,6 +93,21 @@ export class BlocksPanel extends LitElement {
     await this._blockLibrary?.editBlock();
   };
 
+  readonly #addTileset = async(): Promise<void> => {
+    this.#openTilesetsFolder();
+    await this._tilesetFolder?.addTileset();
+  };
+
+  readonly #manageTilesets = async(): Promise<void> => {
+    await this._tilesetFolder?.manageTilesets();
+  };
+
+  #openTilesetsFolder(): void {
+    if (this._tilesetsFolder !== null && !this._tilesetsFolder.open) {
+      this._tilesetsFolder.open = true;
+    }
+  }
+
   #openFolder(): void {
     if (this._folder !== null && !this._folder.open) {
       this._folder.open = true;
@@ -88,8 +115,44 @@ export class BlocksPanel extends LitElement {
   }
 
   override render() {
+    const editable = this.tilesetActions !== null;
+
     return html`
       <jolly-folder
+        class="tilesets"
+        flush
+        key="tilesets"
+        label="Tilesets"
+        storage-key="voxel-map:folder:tilesets"
+      >
+        <jolly-button
+          slot="actions"
+          icon="plus"
+          icon-only
+          label="Add tileset"
+          title="Add tileset"
+          ?disabled=${!editable}
+          @click=${this.#addTileset}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="sliders"
+          icon-only
+          label="Manage tilesets"
+          title="Manage tilesets"
+          @click=${this.#manageTilesets}
+        ></jolly-button>
+        <tileset-folder
+          .engine=${this.engine}
+          .actions=${this.tilesetActions}
+          .tilesets=${this.state.tilesets}
+          .worldStore=${this.state.world}
+          .log=${this.state.log}
+        ></tileset-folder>
+      </jolly-folder>
+
+      <jolly-folder
+        class="library"
         flush
         key="block-library"
         label="Block Library"
@@ -117,6 +180,7 @@ export class BlocksPanel extends LitElement {
           .brush=${this.state.brush}
           .worldStore=${this.state.world}
           .presence=${this.state.presence}
+          .tilesets=${this.state.tilesets}
           .layout=${this.hostsTextureEditor ? "compact" : "fill"}
           @block-selection-change=${this.#onBlockSelectionChange}
         ></block-library>

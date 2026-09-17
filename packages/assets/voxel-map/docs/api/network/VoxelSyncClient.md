@@ -29,22 +29,32 @@ class VoxelSyncClient extends network.CommandSync<
 }
 ```
 
-The constructor chains onto the engine's current `onLayerUpdated` and `onBlockUpdated` listeners. Construct it before `room.join()` so the first snapshot is applied.
+The constructor subscribes to the engine's `"command"` event and sends every command whose origin is `"local"`. Other listeners are left alone. Construct it before `room.join()` so the first snapshot is applied.
 
-Incoming snapshots call `engine.load()`, then emit `"snapshot"`, and `"ready"` the first time. Incoming mutation commands call `engine.applyRemoteCommand()` and skip commands echoed from the same client. The engine applies them silently, so the command is then replayed to the previous `onLayerUpdated` listener: local observers see a peer's edit exactly as they see a local one, and nothing is sent back to the room.
+Incoming snapshots call `engine.load()`, then emit `"snapshot"`, and `"ready"` the first time. Incoming commands, except `world-replace`, go through `engine.apply(command, { origin: "remote" })`, and commands echoed from the same client are skipped. Local listeners therefore see a peer's edit once, tagged `"remote"`, and nothing is sent back to the room.
 
 `"notice"` fires when the room refuses an edit (`rejected`) or the asset is deleted (`deleted`).
 
-`replaceWorld()` sends a stamped administrative command. `destroy()` restores both engine listeners, removes the room message listener, and calls `room.leave()`.
+`replaceWorld()` sends a stamped administrative command. `destroy()` unsubscribes from the engine, removes the room message listener, and calls `room.leave()`.
 
 ## Block definitions
 
-`onBlockUpdated` is chained the same way as `onLayerUpdated`, so a block edit publishes itself:
+A block edit made through the engine publishes itself:
 
 ```ts
 engine.defineBlock(definition);
 ```
 
-A peer's command is applied through the same `engine.defineBlock()` and `engine.removeBlock()`, without being echoed back to the room. Local and remote edits therefore reach a UI through one hook. A removal naming an unknown ID changes nothing and emits nothing.
+A peer's block command goes through `engine.apply()` and is not echoed back to the room. Local and remote edits therefore reach a UI through the same `"command"` event. A removal naming an unknown ID changes nothing and emits nothing.
+
+## Tilesets
+
+The document's tileset list lives in `engine.tilesets`: a snapshot replaces it through `engine.load()`, and a local change publishes itself:
+
+```ts
+engine.addTileset({ id: "stone", src: assetId, tileSize: 16 });
+```
+
+A peer's [tileset command](./protocol.md#tileset-commands) goes through `engine.apply()` without being echoed back. Loading a tileset's texture stays with the caller, through `engine.loadTileset()`.
 
 See [synchronizing a world](../../guides/synchronizing-a-world.md) for setup.

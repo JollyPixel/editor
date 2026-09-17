@@ -6,9 +6,11 @@ import {
   type JSONSchema,
   type MessageProtocol
 } from "@jolly-pixel/network";
-import type {
-  VoxelBlockHookAction,
-  VoxelLayerHookAction
+import {
+  MAX_TILE_SIZE,
+  type VoxelBlockCommandAction,
+  type VoxelLayerCommandAction,
+  type VoxelTilesetCommandAction
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -69,7 +71,7 @@ function objectSchema(
   };
 }
 
-const kLayerMetadataSchemas: Record<VoxelLayerHookAction, JSONSchema> = {
+const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
   added: objectSchema({
     options: { type: "object" }
   }),
@@ -152,7 +154,7 @@ const kLayerMetadataSchemas: Record<VoxelLayerHookAction, JSONSchema> = {
 };
 
 const kBlockCommandProperties: Record<
-  VoxelBlockHookAction,
+  VoxelBlockCommandAction,
   Record<string, JSONSchema>
 > = {
   "block-defined": {
@@ -167,12 +169,42 @@ const kBlockCommandProperties: Record<
   }
 };
 
+const kTileSizeSchema: JSONSchema = {
+  type: "integer",
+  minimum: 1,
+  maximum: MAX_TILE_SIZE
+};
+
+const kTilesetCommandProperties: Record<
+  VoxelTilesetCommandAction,
+  Record<string, JSONSchema>
+> = {
+  "tileset-added": {
+    tileset: objectSchema({
+      id: { type: "string", minLength: 1 },
+      src: { type: "string", minLength: 1 },
+      tileSize: kTileSizeSchema
+    })
+  },
+  "tileset-removed": {
+    tilesetId: { type: "string" }
+  },
+  "tileset-resized": {
+    tilesetId: { type: "string" },
+    tileSize: kTileSizeSchema
+  },
+  "default-tile-size-updated": {
+    defaultTileSize: kTileSizeSchema
+  }
+};
+
 export const voxelWorldSchema: JSONSchema = {
   type: "object",
   properties: {
     version: { const: 1 },
     chunkSize: { type: "number" },
     tilesets: { type: "array" },
+    defaultTileSize: { type: "number" },
     blocks: { type: "array" },
     layers: { type: "array" },
     objectLayers: { type: "array" }
@@ -214,6 +246,9 @@ export const voxelCommandProtocol: MessageProtocol = defineMessageProtocol({
         })
       ),
       ...Object.entries(kBlockCommandProperties).map(
+        ([action, properties]) => commandVariant(action, properties)
+      ),
+      ...Object.entries(kTilesetCommandProperties).map(
         ([action, properties]) => commandVariant(action, properties)
       ),
       commandVariant("world-replace", {

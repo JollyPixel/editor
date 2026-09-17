@@ -97,11 +97,11 @@ describe("VoxelWorld — cloneLayer", () => {
     world.addLayer("layer");
 
     const events: string[] = [];
-    world.onLayerUpdated = (event) => {
+    world.on("command", (event) => {
       if (event.action === "cloned") {
         events.push(event.metadata.options.name);
       }
-    };
+    });
     world.cloneLayer("layer");
 
     assert.deepEqual(events, ["layer (1)"]);

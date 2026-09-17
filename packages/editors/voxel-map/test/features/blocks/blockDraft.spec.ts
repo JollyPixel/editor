@@ -49,6 +49,25 @@ describe("blockDefinitionFromDraft", () => {
       row: 0
     });
   });
+
+  it("keeps a chosen UV size on the texture", () => {
+    const definition = blockDefinitionFromDraft(
+      {
+        name: "Stone",
+        shapeId: "cube",
+        tilesetId: "terrain",
+        size: 64
+      },
+      1
+    );
+
+    assert.deepEqual(definition.defaultTexture, {
+      tilesetId: "terrain",
+      col: 0,
+      row: 0,
+      size: 64
+    });
+  });
 });
 
 describe("previewBlockFromDraft", () => {

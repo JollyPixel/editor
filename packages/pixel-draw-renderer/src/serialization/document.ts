@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { fromUint8Array } from "js-base64";
+
 // Import Internal Dependencies
 import {
   InvalidPixelArtDocumentError
@@ -8,6 +11,42 @@ import {
 } from "./types.ts";
 import { isUVRegionData } from "../uv/validation.ts";
 import type { Vec2 } from "../types.ts";
+
+export function createPixelArtDocument(
+  size: Vec2,
+  pixels: Uint8Array | Uint8ClampedArray = new Uint8Array(size.x * size.y * 4)
+): PixelArtDocumentData {
+  if (
+    !isSize(size) ||
+    size.x <= 0 ||
+    size.y <= 0
+  ) {
+    throw new InvalidPixelArtDocumentError("size is not a pair of positive integers");
+  }
+
+  const expected = size.x * size.y * 4;
+  if (pixels.length !== expected) {
+    throw new InvalidPixelArtDocumentError(
+      `pixels hold ${pixels.length} bytes, expected ${expected}`
+    );
+  }
+
+  return {
+    version: PIXEL_ART_DOCUMENT_VERSION,
+    size: {
+      x: size.x,
+      y: size.y
+    },
+    pixels: fromUint8Array(
+      new Uint8Array(
+        pixels.buffer,
+        pixels.byteOffset,
+        pixels.byteLength
+      )
+    ),
+    uvRegions: []
+  };
+}
 
 export function parsePixelArtDocument(
   value: unknown
@@ -51,9 +90,6 @@ export function encodePixelArtDocument(
   );
 }
 
-/**
- * Rejects malformed persisted documents.
- */
 export function decodePixelArtDocument(
   data: Uint8Array
 ): PixelArtDocumentData {

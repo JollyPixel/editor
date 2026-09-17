@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
-import type { VoxelLayerHookEvent } from "@jolly-pixel/voxel.renderer";
+import type { VoxelLayerCommand } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { EditorStore } from "./EditorStore.ts";
 
 export type WorldStoreEvents = {
   layerUpdated: (
-    event: VoxelLayerHookEvent
+    event: VoxelLayerCommand
   ) => void;
   blockRegistryChanged: () => void;
   reset: () => void;

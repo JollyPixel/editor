@@ -6,8 +6,7 @@ import {
   tileRefForSlot,
   type ResolvedBlockDefinition,
   type BlockShapeRegistry,
-  type TilesetManager,
-  type TilesetUVRegion
+  type TilesetManager
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -109,15 +108,12 @@ export function buildBlockPreviewMesh(
       continue;
     }
 
-    let region: TilesetUVRegion;
-    try {
-      region = tilesetManager
-        .atlas(tileRef.tilesetId)
-        .uvFor(tileRef.col, tileRef.row);
-    }
-    catch {
+    if (!tilesetManager.has(tileRef.tilesetId)) {
       continue;
     }
+    const region = tilesetManager
+      .atlas(tileRef.tilesetId)
+      .uvFor(tileRef.col, tileRef.row, tileRef.size);
 
     const end = range.start + range.count;
     for (let index = range.start; index < end; index++) {

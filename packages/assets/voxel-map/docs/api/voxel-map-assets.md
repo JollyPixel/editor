@@ -94,6 +94,6 @@ an offset delta would then move a layer twice as far.
 arbitration once the event-store append succeeds. Full-world replacement is
 always admitted and broadcasts a fresh snapshot instead of the command.
 
-The protocol declares the layer hook actions, `VOXEL_BLOCK_HOOK_ACTIONS` and
+The protocol declares every `VOXEL_COMMAND_ACTIONS` entry and
 `world-replace`. Block commands are appended, folded into
 `VoxelMapState.blocks`, and broadcast like any other command.

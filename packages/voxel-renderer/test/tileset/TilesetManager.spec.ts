@@ -11,11 +11,6 @@ import { type TilesetDefinition, TilesetManager } from "../../src/tileset/index.
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { approxEqual } from "../helpers/math.ts";
 
-/**
- * A tileset definition with an arbitrary grid. Unlike the shared
- * `makeAtlasDef()`, `cols`/`rows` stay optional so the tests covering
- * grid auto-derivation from the texture size can omit them.
- */
 function makeDef(
   options: Pick<TilesetDefinition, "id" | "tileSize" | "cols" | "rows">
 ): TilesetDefinition {
@@ -125,12 +120,6 @@ describe("TilesetManager UV lookup", () => {
     });
 
     it("tile (col=0, row=0): offsetU/offsetV/scale (inset by half-texel)", () => {
-      /*
-       * halfTexel = 0.5 / (cols*tileSize) = 0.5 / 64 = 0.0078125
-       * offsetU = 0 + halfTexel = 0.0078125
-       * offsetV = 1 - (0+1)/4 + halfTexel = 0.7578125
-       * scaleU = scaleV = (tileSize - 1) / imgW = 15/64 = 0.234375
-       */
       const uv = manager.atlas().uvFor(0, 0);
       assert.ok(approxEqual(uv.offsetU, 0.0078125));
       assert.ok(approxEqual(uv.offsetV, 0.7578125));
@@ -139,14 +128,12 @@ describe("TilesetManager UV lookup", () => {
     });
 
     it("tile (col=1, row=0): offsetU/offsetV (inset by half-texel)", () => {
-      // offsetU = 1*16/64 + halfTexel = 0.2578125
       const uv = manager.atlas().uvFor(1, 0);
       assert.ok(approxEqual(uv.offsetU, 0.2578125));
       assert.ok(approxEqual(uv.offsetV, 0.7578125));
     });
 
     it("tile (col=0, row=3) is the bottom row: offsetV (inset by half-texel)", () => {
-      // offsetV = 1 - (3+1)/4 + halfTexel = 0.0078125
       const uv = manager.atlas().uvFor(0, 3);
       assert.ok(approxEqual(uv.offsetV, 0.0078125));
     });
@@ -167,14 +154,12 @@ describe("TilesetManager UV lookup", () => {
     });
 
     it("scaleU = scaleV (inset by half-texel)", () => {
-      // cols=2, tileSize=16 => imgW=32, scale = (16 - 1) / 32 = 15/32
       const uv = manager.atlas().uvFor(0, 0);
       assert.ok(approxEqual(uv.scaleU, 15 / 32));
       assert.ok(approxEqual(uv.scaleV, 15 / 32));
     });
 
     it("tile (col=1, row=1): offsetU/offsetV (inset by half-texel)", () => {
-      // offsetU = 1*16/32 + halfTexel = 0.515625
       const uv = manager.atlas().uvFor(1, 1);
       assert.ok(approxEqual(uv.offsetU, 0.515625));
       assert.ok(approxEqual(uv.offsetV, 0.015625));
@@ -192,22 +177,29 @@ describe("TilesetManager UV lookup", () => {
 });
 
 describe("TilesetManager.definitions", () => {
-  it("returns one resolved definition per registered tileset", () => {
+  it("returns the declared definitions in declaration order", () => {
     const manager = new TilesetManager();
     manager.registerTexture(makeDef({ id: "a", tileSize: 16, cols: 4, rows: 4 }), mockTexture(64, 64));
     manager.registerTexture(makeDef({ id: "b", tileSize: 16, cols: 2, rows: 2 }), mockTexture(32, 32));
 
     const defs = manager.definitions();
-    assert.equal(defs.length, 2);
     assert.deepEqual(defs.map((def) => def.id), ["a", "b"]);
   });
 
-  it("resolves cols/rows from the image when not provided", () => {
-    // tileSize=16, image=64×32 → cols=4, rows=2
+  it("keeps a declared tileset without texture", () => {
+    const manager = new TilesetManager();
+    manager.tilesets.add(makeDef({ id: "later", tileSize: 16 }));
+
+    assert.deepEqual(manager.definitions().map((def) => def.id), ["later"]);
+    assert.equal(manager.defaultTilesetId, "later");
+    assert.equal(manager.has("later"), false);
+  });
+
+  it("resolves the atlas cols/rows from the image when not provided", () => {
     const manager = new TilesetManager();
     manager.registerTexture(makeDef({ id: "auto", tileSize: 16 }), mockTexture(64, 32));
 
-    const [def] = manager.definitions();
+    const { def } = manager.atlas("auto");
     assert.equal(def.cols, 4);
     assert.equal(def.rows, 2);
   });
@@ -222,5 +214,81 @@ describe("TilesetManager.dispose", () => {
     assert.equal(manager.defaultTilesetId, null);
     assert.equal(manager.definitions().length, 0);
     assert.equal(manager.has("terrain"), false);
+  });
+});
+
+describe("TilesetManager.registerTexture replacement", () => {
+  it("disposes the atlas it replaces and keeps the declared tile size", () => {
+    const manager = new TilesetManager();
+    let disposed = 0;
+    const first = mockTexture(64, 64);
+    first.dispose = () => {
+      disposed++;
+    };
+    manager.registerTexture(makeDef({ id: "terrain", tileSize: 16 }), first);
+    manager.registerTexture(makeDef({ id: "terrain", tileSize: 32 }), mockTexture(64, 64));
+
+    assert.equal(disposed, 1);
+    assert.equal(manager.atlas("terrain").def.tileSize, 16);
+    assert.equal(manager.definitions().length, 1);
+  });
+});
+
+describe("TilesetManager.unregisterTexture", () => {
+  it("returns false for an unknown tileset", () => {
+    const manager = new TilesetManager();
+
+    assert.equal(manager.unregisterTexture("terrain"), false);
+  });
+
+  it("removes the atlas, keeps the declaration and bumps the version", () => {
+    const manager = new TilesetManager();
+    manager.registerTexture(makeDef({ id: "terrain", tileSize: 16 }), mockTexture(64, 64));
+    const before = manager.version;
+
+    assert.equal(manager.unregisterTexture("terrain"), true);
+    assert.equal(manager.has("terrain"), false);
+    assert.equal(manager.defaultTilesetId, "terrain");
+    assert.ok(manager.version > before);
+  });
+});
+
+describe("TilesetManager.syncAtlases", () => {
+  it("drops the atlas of an undeclared tileset", () => {
+    const manager = new TilesetManager();
+    manager.registerTexture(makeDef({ id: "a", tileSize: 16 }), mockTexture(64, 64));
+    manager.registerTexture(makeDef({ id: "b", tileSize: 16 }), mockTexture(64, 64));
+    manager.tilesets.remove("a");
+
+    assert.deepEqual(manager.syncAtlases(), ["a"]);
+    assert.equal(manager.has("a"), false);
+    assert.equal(manager.defaultTilesetId, "b");
+  });
+
+  it("rebuilds a resized atlas on the same source texture", () => {
+    const manager = new TilesetManager({ padding: 0 });
+    let disposed = 0;
+    const texture = mockTexture(64, 64);
+    texture.dispose = () => {
+      disposed++;
+    };
+    manager.registerTexture(makeDef({ id: "a", tileSize: 16 }), texture);
+    manager.tilesets.resize("a", 32);
+
+    assert.deepEqual(manager.syncAtlases(), ["a"]);
+    const atlas = manager.atlas("a");
+    assert.equal(atlas.def.tileSize, 32);
+    assert.equal(atlas.def.cols, 2);
+    assert.equal(atlas.sourceTexture, texture);
+    assert.equal(disposed, 0);
+  });
+
+  it("returns nothing when atlases match the declarations", () => {
+    const manager = new TilesetManager();
+    manager.registerTexture(makeDef({ id: "a", tileSize: 16 }), mockTexture(64, 64));
+    const before = manager.version;
+
+    assert.deepEqual(manager.syncAtlases(), []);
+    assert.equal(manager.version, before);
   });
 });

@@ -16,7 +16,7 @@ import {
   type ClientHandle
 } from "@jolly-pixel/network";
 import {
-  assetRoomName,
+  AssetRoom,
   createAssetBackend,
   foldAssetEvent
 } from "@jolly-pixel/asset-server";
@@ -150,7 +150,7 @@ describe("pixel-art asset kind over a real back-end", () => {
 
       const server = new Server();
       backend.attach(server);
-      const room = assetRoomName(PIXEL_ART_KIND, record.id);
+      const room = new AssetRoom(PIXEL_ART_KIND, record.id).toString();
 
       const peer = client("A");
       server.handleConnect(peer, { subject: peer.id, role: "default" });
@@ -223,7 +223,7 @@ describe("pixel-art asset kind over a real back-end", () => {
 
       const server = new Server();
       backend.attach(server);
-      const room = assetRoomName(PIXEL_ART_KIND, record.id);
+      const room = new AssetRoom(PIXEL_ART_KIND, record.id).toString();
 
       server.handleConnect(client("A"), { subject: "A", role: "default" });
       server.handleConnect(client("B"), { subject: "B", role: "default" });

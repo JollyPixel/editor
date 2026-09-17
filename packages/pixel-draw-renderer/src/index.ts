@@ -36,6 +36,7 @@ export {
   type PixelBufferFromPngOptions
 } from "./buffer/fromPng.ts";
 export {
+  createPixelArtDocument,
   decodePixelArtDocument,
   encodePixelArtDocument,
   InvalidPixelArtDocumentError,

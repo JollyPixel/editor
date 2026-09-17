@@ -2,6 +2,7 @@
 import {
   InvalidVoxelDocumentError
 } from "./errors/InvalidVoxelDocumentError.ts";
+import { isTileSize } from "../tileset/tileSize.ts";
 import type { VoxelWorldJSON } from "./types.ts";
 
 export function parseVoxelDocument(
@@ -18,6 +19,7 @@ export function parseVoxelDocument(
   const blocks = fields.get("blocks");
   const objectLayers = fields.get("objectLayers");
   const tilesets = fields.get("tilesets");
+  const defaultTileSize = fields.get("defaultTileSize");
 
   if (version !== 1) {
     throw new InvalidVoxelDocumentError(
@@ -43,6 +45,9 @@ export function parseVoxelDocument(
     tilesets: Array.isArray(tilesets) ? tilesets : [],
     layers
   };
+  if (isTileSize(defaultTileSize)) {
+    document.defaultTileSize = defaultTileSize;
+  }
   if (Array.isArray(blocks)) {
     document.blocks = blocks;
   }

@@ -254,3 +254,43 @@ describe("BlockVariantCache — keepsSelfFacesOf", () => {
     assert.equal(cache.keepsSelfFacesOf(999, 0), false);
   });
 });
+
+describe("BlockVariantCache — missing tileset", () => {
+  it("compiles no faces for a block whose tileset is not registered", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", {
+        defaultTexture: { col: 0, row: 0, tilesetId: "missing" }
+      })
+    );
+    cache.refresh();
+
+    assert.deepEqual(cache.get(kLeavesId, 0)?.faces, []);
+  });
+
+  it("compiles faces again once the tileset is registered", () => {
+    const blockRegistry = new BlockRegistry([
+      makeBlockDef(kCubeId, "cube", {
+        defaultTexture: { col: 0, row: 0, tilesetId: "late" }
+      })
+    ]);
+    const tilesetManager = new TilesetManager();
+    tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
+    const cache = new BlockVariantCache({
+      blockRegistry,
+      shapeRegistry: BlockShapeRegistry.createDefault(),
+      tilesetManager
+    });
+    cache.refresh();
+    assert.equal(cache.get(kCubeId, 0)?.faces.length, 0);
+
+    tilesetManager.registerTexture(
+      makeAtlasDef({ id: "late" }),
+      mockTexture()
+    );
+    cache.refresh();
+
+    assert.equal(cache.get(kCubeId, 0)?.faces.length, 6);
+  });
+});

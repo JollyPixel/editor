@@ -5,8 +5,7 @@ import type {
   AssetRoomRejectedMessage
 } from "@jolly-pixel/asset-server/kinds";
 import type {
-  VoxelBlockHookEvent,
-  VoxelLayerHookEvent,
+  VoxelCommand,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
@@ -15,30 +14,10 @@ export interface VoxelWorldReplaceCommand {
   data: VoxelWorldJSON;
 }
 
-export type VoxelBlockCommand = VoxelBlockHookEvent;
-
-export type VoxelBlockDefinedCommand = Extract<
-  VoxelBlockCommand,
-  { action: "block-defined"; }
->;
-
-export type VoxelBlockRemovedCommand = Extract<
-  VoxelBlockCommand,
-  { action: "block-removed"; }
->;
-
-export type VoxelBlockMovedCommand = Extract<
-  VoxelBlockCommand,
-  { action: "block-moved"; }
->;
-
-export type VoxelBlockAction = VoxelBlockCommand["action"];
-
 export type VoxelNetworkCommand =
   & (
-    | VoxelLayerHookEvent
+    | VoxelCommand
     | VoxelWorldReplaceCommand
-    | VoxelBlockCommand
   )
   & network.NetworkCommandHeader;
 

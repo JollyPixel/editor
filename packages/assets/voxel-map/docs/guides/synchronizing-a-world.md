@@ -27,9 +27,9 @@ const sync = new VoxelSyncClient({ room, engine });
 room.join();
 ```
 
-The constructor preserves the engine's existing `onLayerUpdated` listener and
-chains network sending after it. Call `destroy()` when the client is no longer
-needed; it restores that listener, removes the message listener, and leaves the
+The constructor subscribes to the engine's `"command"` event and sends local
+commands; other listeners keep working. Call `destroy()` when the client is no
+longer needed; it unsubscribes, removes the message listener, and leaves the
 room.
 
 ## Register the server
@@ -87,9 +87,9 @@ table when it carries one, then broadcasts a fresh snapshot.
 engine.defineBlock(definition);
 ```
 
-`defineBlock()`, `defineBlocks()`, and `removeBlock()` emit `onBlockUpdated`,
-which the client chains, so the edit publishes itself and a peer's arrives on
-the same hook. Write straight to `engine.blockRegistry` only for definitions
+`defineBlock()`, `defineBlocks()`, `removeBlock()` and `moveBlock()` emit a
+local command, so the edit publishes itself and a peer's arrives on the same
+`"command"` event with a `"remote"` origin. Write straight to `engine.blockRegistry` only for definitions
 each client derives on its own, such as tileset defaults, which must not be
 published.
 

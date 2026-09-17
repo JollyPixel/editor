@@ -10,9 +10,9 @@ import type { VoxelDebuggerOptions } from "./debug/index.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type { ViewDistanceOptions } from "./world/ViewDistance.ts";
 import type {
-  VoxelBlockHookListener,
-  VoxelLayerHookListener
-} from "./hooks.ts";
+  VoxelCommandListener,
+  VoxelCommandOrigin
+} from "./commands.ts";
 import type { VoxelLogger } from "./utils/logger.ts";
 
 export const VoxelRotation = {
@@ -43,6 +43,17 @@ export interface VoxelLoadOptions {
    */
   tilesets?: Iterable<TilesetSource>;
 }
+
+export interface VoxelApplyOptions {
+  /**
+   * @default "local"
+   */
+  origin?: VoxelCommandOrigin;
+}
+
+export type VoxelEngineEvents = {
+  command: VoxelCommandListener;
+};
 
 export interface VoxelEngineOptions {
   /**
@@ -82,11 +93,9 @@ export interface VoxelEngineOptions {
   logger?: VoxelLogger;
 
   /**
-   * Receives local layer mutations for external synchronization.
+   * Subscribed to the `"command"` event before any command is applied.
    */
-  onLayerUpdated?: VoxelLayerHookListener;
-
-  onBlockUpdated?: VoxelBlockHookListener;
+  onCommand?: VoxelCommandListener;
 
   /**
    * Initial debug view; counters are collected in every mode.

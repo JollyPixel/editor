@@ -10,6 +10,7 @@ import type { VoxelCoord } from "./world/types.ts";
 import type {
   ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
+import type { TilesetDefinition } from "./tileset/types.ts";
 import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
@@ -20,7 +21,7 @@ import type {
   PartialExcept
 } from "./types.ts";
 
-export type VoxelLayerHookEvent =
+export type VoxelLayerCommand =
   | {
     action: "added";
     layerName: string;
@@ -160,9 +161,9 @@ export type VoxelLayerHookEvent =
     };
   };
 
-export type VoxelLayerHookAction = VoxelLayerHookEvent["action"];
+export type VoxelLayerCommandAction = VoxelLayerCommand["action"];
 
-export const VOXEL_LAYER_HOOK_ACTIONS: readonly VoxelLayerHookAction[] = [
+export const VOXEL_LAYER_COMMAND_ACTIONS: readonly VoxelLayerCommandAction[] = [
   "added",
   "removed",
   "updated",
@@ -185,11 +186,7 @@ export const VOXEL_LAYER_HOOK_ACTIONS: readonly VoxelLayerHookAction[] = [
   "object-updated"
 ];
 
-export type VoxelLayerHookListener = (
-  event: VoxelLayerHookEvent
-) => void;
-
-export type VoxelBlockHookEvent =
+export type VoxelBlockCommand =
   | {
     action: "block-defined";
     block: ResolvedBlockDefinition;
@@ -204,14 +201,90 @@ export type VoxelBlockHookEvent =
     toIndex: number;
   };
 
-export type VoxelBlockHookAction = VoxelBlockHookEvent["action"];
+export type VoxelBlockCommandAction = VoxelBlockCommand["action"];
 
-export const VOXEL_BLOCK_HOOK_ACTIONS: readonly VoxelBlockHookAction[] = [
+export const VOXEL_BLOCK_COMMAND_ACTIONS: readonly VoxelBlockCommandAction[] = [
   "block-defined",
   "block-removed",
   "block-moved"
 ];
 
-export type VoxelBlockHookListener = (
-  event: VoxelBlockHookEvent
+export type VoxelTilesetCommand =
+  | {
+    action: "tileset-added";
+    tileset: TilesetDefinition;
+  }
+  | {
+    action: "tileset-removed";
+    tilesetId: string;
+  }
+  | {
+    action: "tileset-resized";
+    tilesetId: string;
+    tileSize: number;
+  }
+  | {
+    action: "default-tile-size-updated";
+    defaultTileSize: number;
+  };
+
+export type VoxelTilesetCommandAction = VoxelTilesetCommand["action"];
+
+export const VOXEL_TILESET_COMMAND_ACTIONS: readonly VoxelTilesetCommandAction[] = [
+  "tileset-added",
+  "tileset-removed",
+  "tileset-resized",
+  "default-tile-size-updated"
+];
+
+export type VoxelCommand =
+  | VoxelLayerCommand
+  | VoxelBlockCommand
+  | VoxelTilesetCommand;
+
+export type VoxelCommandAction = VoxelCommand["action"];
+
+export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
+  ...VOXEL_LAYER_COMMAND_ACTIONS,
+  ...VOXEL_BLOCK_COMMAND_ACTIONS,
+  ...VOXEL_TILESET_COMMAND_ACTIONS
+];
+
+export type VoxelCommandOrigin = "local" | "remote";
+
+export interface VoxelCommandContext {
+  /**
+   * `"local"` for a change made on this engine, `"remote"` for a command
+   * replayed with `apply()` on behalf of another peer.
+   */
+  origin: VoxelCommandOrigin;
+}
+
+export type VoxelCommandListener = (
+  command: VoxelCommand,
+  context: VoxelCommandContext
 ) => void;
+
+export function isVoxelLayerCommand(
+  command: { action: string; }
+): command is VoxelLayerCommand {
+  return VOXEL_LAYER_COMMAND_ACTIONS.some(
+    (action) => action === command.action
+  );
+}
+
+export function isVoxelBlockCommand(
+  command: { action: string; }
+): command is VoxelBlockCommand {
+  return VOXEL_BLOCK_COMMAND_ACTIONS.some(
+    (action) => action === command.action
+  );
+}
+
+export function isVoxelTilesetCommand(
+  command: { action: string; }
+): command is VoxelTilesetCommand {
+  return VOXEL_TILESET_COMMAND_ACTIONS.some(
+    (action) => action === command.action
+  );
+}

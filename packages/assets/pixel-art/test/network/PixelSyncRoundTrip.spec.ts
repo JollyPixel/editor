@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import {
+  AssetRoom,
   AssetRoomExtension,
-  assetRoomName,
   foldAssetEvent,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
@@ -49,7 +49,7 @@ function setup() {
   const binding: AssetRoomBinding<PixelArtState> = {
     assetId: kAssetId,
     kind: PIXEL_ART_KIND,
-    roomId: assetRoomName(PIXEL_ART_KIND, kAssetId),
+    roomId: new AssetRoom(PIXEL_ART_KIND, kAssetId).toString(),
     state
   };
   const commands = handler.commands!;

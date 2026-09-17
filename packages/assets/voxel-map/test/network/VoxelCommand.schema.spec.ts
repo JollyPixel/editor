@@ -61,6 +61,55 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts(worldReplaceCmd()), true);
   });
 
+  test("accepts tileset commands", () => {
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", src: "asset-stone", tileSize: 32 }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-removed",
+      tilesetId: "stone"
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-resized",
+      tilesetId: "stone",
+      tileSize: 64
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "default-tile-size-updated",
+      defaultTileSize: 16
+    }), true);
+  });
+
+  test("rejects an invalid tile size or tileset id", () => {
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-resized",
+      tilesetId: "stone",
+      tileSize: 1.5
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-resized",
+      tilesetId: "stone",
+      tileSize: 8192
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", src: "asset-stone", tileSize: 0 }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "", src: "asset-stone", tileSize: 16 }
+    }), false);
+  });
+
   test("rejects a voxel-set missing its transform", () => {
     assert.strictEqual(accepts(layerCommand("voxel-set", {
       position: { x: 0, y: 0, z: 0 },

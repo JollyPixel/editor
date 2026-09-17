@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import {
   resolvedBlockTextureSlots,
+  tileRectOf,
   tileRefForSlot,
+  tileRefFromRect,
+  WHOLE_TILE_BOUNDS,
   type BlockShape,
-  type ResolvedBlockDefinition,
-  type ResolvedTileRef
+  type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import {
   DEFAULT_UV_SLOTS,
@@ -18,22 +20,15 @@ import {
 import {
   blockShapeUv,
   uvGeometryForSlot,
-  type BlockShapeUv,
-  type UVSlotBounds
+  type BlockShapeUv
 } from "./blockShapeUv.ts";
 
 // CONSTANTS
 const kRegionIdPrefix = "block-";
 const kRegionColor = "#4488ff";
-const kWholeTile: UVSlotBounds = {
-  u0: 0,
-  v0: 0,
-  u1: 1,
-  v1: 1
-};
 const kBoxShapeUv: BlockShapeUv = {
   activeFaces: [...DEFAULT_UV_SLOTS],
-  bounds: recordOfFaces(() => kWholeTile),
+  bounds: recordOfFaces(() => WHOLE_TILE_BOUNDS),
   triangles: {},
   parts: {},
   faceRanges: {},
@@ -96,7 +91,7 @@ export function blockUvRegion(
       name: block.name,
       color: kRegionColor,
       state: "stacked",
-      rect: rectOf(block.defaultTexture, tileSize)
+      rect: tileRectOf(block.defaultTexture, tileSize)
     });
   }
 
@@ -121,7 +116,7 @@ export function freeBlockUvRegion(
     resolvedBlockTextureSlots(block, shape);
   const faces = Object.fromEntries(
     textureSlots.map(({ slot, tile }): [UVSlot, UVGeometry] => {
-      const rect = rectOf(tile, tileSize, shapeUv.bounds[slot]);
+      const rect = tileRectOf(tile, tileSize, shapeUv.bounds[slot]);
 
       return [slot, uvGeometryForSlot(rect, shapeUv, slot)];
     })
@@ -162,7 +157,7 @@ export function blockFromUvRegion(
 
           return [
             face,
-            tileRefOf(
+            tileRefFromRect(
               "shape" in geometry ? geometry.rect : geometry,
               template,
               tileSize,
@@ -184,7 +179,7 @@ export function blockFromUvRegion(
   return {
     ...block,
     faceTextures: {},
-    defaultTexture: tileRefOf(
+    defaultTexture: tileRefFromRect(
       region.rectFor(stackedSlot),
       template,
       tileSize,
@@ -216,32 +211,6 @@ export function uvRegionsEqual(
   }
 
   return false;
-}
-
-function rectOf(
-  tileRef: ResolvedTileRef,
-  tileSize: number,
-  bounds: UVSlotBounds = kWholeTile
-): SelectionRect {
-  return {
-    x: (tileRef.col + bounds.u0) * tileSize,
-    y: (tileRef.row + (1 - bounds.v1)) * tileSize,
-    width: (bounds.u1 - bounds.u0) * tileSize,
-    height: (bounds.v1 - bounds.v0) * tileSize
-  };
-}
-
-function tileRefOf(
-  rect: SelectionRect,
-  template: ResolvedTileRef,
-  tileSize: number,
-  bounds: UVSlotBounds = kWholeTile
-): ResolvedTileRef {
-  return {
-    ...template,
-    col: (rect.x / tileSize) - bounds.u0,
-    row: (rect.y / tileSize) - (1 - bounds.v1)
-  };
 }
 
 function rectsEqual(

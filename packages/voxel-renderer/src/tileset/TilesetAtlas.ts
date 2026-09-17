@@ -19,6 +19,10 @@ import {
   padAtlasRegion
 } from "./padAtlas.ts";
 
+export interface TilesetAtlasDisposeOptions {
+  keepSource?: boolean;
+}
+
 export class TilesetAtlas {
   readonly def: ResolvedTilesetDefinition;
   readonly layout: AtlasLayout;
@@ -29,7 +33,7 @@ export class TilesetAtlas {
 
   constructor(
     def: TilesetDefinition,
-    texture: THREE.Texture<HTMLImageElement>,
+    texture: TilesetTexture,
     padding: number | null = null
   ) {
     const resolved = resolveTilesetDefinition(
@@ -63,9 +67,10 @@ export class TilesetAtlas {
 
   uvFor(
     col: number,
-    row: number
+    row: number,
+    size?: number
   ): TilesetUVRegion {
-    return this.layout.uvFor(col, row);
+    return this.layout.uvFor(col, row, size);
   }
 
   updateSource(
@@ -90,9 +95,15 @@ export class TilesetAtlas {
     this.texture.needsUpdate = true;
   }
 
-  dispose(): void {
-    this.texture.dispose();
-    if (this.sourceTexture !== this.texture) {
+  dispose(
+    options: TilesetAtlasDisposeOptions = {}
+  ): void {
+    const { keepSource = false } = options;
+
+    if (!keepSource || this.texture !== this.sourceTexture) {
+      this.texture.dispose();
+    }
+    if (!keepSource && this.sourceTexture !== this.texture) {
       this.sourceTexture.dispose();
     }
     this.#padded = null;

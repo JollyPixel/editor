@@ -10,7 +10,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { Server, type ClientHandle } from "@jolly-pixel/network";
 import {
-  assetRoomName,
+  AssetRoom,
   createAssetBackend,
   foldAssetEvent
 } from "@jolly-pixel/asset-server";
@@ -109,7 +109,7 @@ describe("voxel-map asset kind over a real back-end", () => {
 
       const server = new Server();
       backend.attach(server);
-      const room = assetRoomName(VOXEL_MAP_KIND, record.id);
+      const room = new AssetRoom(VOXEL_MAP_KIND, record.id).toString();
 
       server.handleConnect(client("A"), { subject: "A", role: "default" });
       await server.handleMessage("A", {
@@ -192,7 +192,7 @@ describe("voxel-map asset kind over a real back-end", () => {
 
       const server = new Server();
       backend.attach(server);
-      const room = assetRoomName(VOXEL_MAP_KIND, record.id);
+      const room = new AssetRoom(VOXEL_MAP_KIND, record.id).toString();
 
       server.handleConnect(client("A"), { subject: "A", role: "default" });
       server.handleConnect(client("B"), { subject: "B", role: "default" });

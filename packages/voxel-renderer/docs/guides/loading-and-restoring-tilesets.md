@@ -22,7 +22,7 @@ const engine = new VoxelEngine({
 });
 ```
 
-Tile references without a `tilesetId` use the first registered atlas.
+Tile references without a `tilesetId` use the first declared tileset.
 
 ## Restore a saved world
 
@@ -55,6 +55,6 @@ engine.load(snapshot, {
 });
 ```
 
-`load()` throws when the document references an atlas that has not been
-registered. See the [tileset reference](../api/tilesets/tilesets.md) for the
+`load()` declares every tileset of the document. One without atlas logs a
+warning and its faces stay hidden until `engine.loadTileset()` registers it. See the [tileset reference](../api/tilesets/tilesets.md) for the
 underlying loading and registration APIs.

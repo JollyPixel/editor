@@ -90,6 +90,10 @@ Start here. These types define persistent asset identity and catalog lookup.
   persistent kind to its loaded value type.
 - [`AssetRecord`](./docs/api/domain/AssetRecord.md): source and revision metadata
   held by a catalog.
+- [`AssetSource`](./docs/api/domain/AssetSource.md): a workspace-relative source
+  path split into directory, name, and extension.
+- [`AssetRoom`](./docs/api/domain/AssetRoom.md): the `${kind}:${assetId}`
+  network room name of one asset.
 
 ### Runtime orchestration
 

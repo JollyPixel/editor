@@ -430,6 +430,32 @@ describe("CatalogExtension — commands", () => {
     assert.match(payload.reason, /already used/);
   });
 
+  test("creates next to a taken path when asked to suffix", async() => {
+    await using commands = await commandHarness();
+    await commands.sync.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    });
+
+    await commands.send({
+      type: CATALOG_CREATE,
+      requestId: "r4",
+      path: "a.png",
+      onConflict: "suffix",
+      content: encodeContent(bytes("two"))
+    });
+
+    const record = commands.sync.identity.byPath("a-2.png");
+    assert.notStrictEqual(record, undefined);
+    assert.deepEqual(commands.lastDirect()?.payload, {
+      type: CATALOG_APPLIED,
+      requestId: "r4",
+      command: CATALOG_CREATE,
+      assetId: record!.id
+    });
+  });
+
   test("rejects an unsafe path without broadcasting", async() => {
     await using commands = await commandHarness();
 

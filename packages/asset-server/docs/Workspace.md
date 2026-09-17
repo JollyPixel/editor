@@ -69,12 +69,26 @@ it open.
 ## Seeding
 
 ```ts
+type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
+
+interface AssetSeedEntry {
+  id: string;
+  kind: string;
+  content: AssetSeedFactory;
+}
+
+type AssetSeedMap = Record<string, AssetSeedFactory | AssetSeedEntry>;
+
 seedAssetSource(source: AssetSource, seed: AssetSeedMap): Promise<string[]>
 ```
 
 Writes each starter document whose path the source does not hold, and returns
 the paths written. An existing file is never overwritten and its factory is
 never called: once the workspace exists it is the source of truth.
+
+An `AssetSeedEntry` also records its `id` in the identity sidecar when its
+document is written, so other seeded documents can reference the asset by a
+known `AssetId`.
 
 ## Serving the workspace
 

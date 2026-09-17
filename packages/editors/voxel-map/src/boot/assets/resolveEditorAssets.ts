@@ -8,11 +8,9 @@ import {
 
 // CONSTANTS
 const kWorldKind = "voxelmap";
-const kTextureKind = "pixelart";
 
 export interface EditorAssets {
   world: AssetRecord;
-  texture: AssetRecord;
 }
 
 export interface ResolveEditorAssetsOptions {
@@ -31,8 +29,7 @@ export async function resolveEditorAssets(
   return {
     world: world === undefined
       ? catalog.firstOfKind(kWorldKind)
-      : recordOfKind(catalog, world, kWorldKind),
-    texture: catalog.firstOfKind(kTextureKind)
+      : recordOfKind(catalog, world, kWorldKind)
   };
 }
 

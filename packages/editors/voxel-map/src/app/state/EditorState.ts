@@ -5,6 +5,7 @@ import { LogQueue } from "@jolly-pixel/ui";
 import { BrushStore } from "./BrushStore.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
+import { TilesetStore } from "./TilesetStore.ts";
 import { WorldStore } from "./WorldStore.ts";
 
 export class EditorState {
@@ -12,6 +13,7 @@ export class EditorState {
   readonly brush = new BrushStore();
   readonly presence = new PresenceStore();
   readonly world = new WorldStore();
+  readonly tilesets = new TilesetStore();
   readonly log = new LogQueue();
 }
 

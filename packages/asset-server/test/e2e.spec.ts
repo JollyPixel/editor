@@ -17,7 +17,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  assetRoomName,
+  AssetRoom,
   createAssetBackend,
   createCatalogHandler,
   encodeContent,
@@ -145,7 +145,7 @@ describe("asset-server — end to end", () => {
     // An editor session over a dynamic room.
     const server = new Server();
     backend.attach(server);
-    const room = assetRoomName("counter", counterRecord.id);
+    const room = new AssetRoom("counter", counterRecord.id).toString();
 
     server.handleConnect(client("A"), { subject: "A", role: "default" });
     await server.handleMessage("A", { room, kind: "join" });
@@ -296,7 +296,7 @@ describe("asset-server — end to end", () => {
 
     const counter = backend.catalog.snapshot().assets
       .find((record) => record.source === "a.counter")!;
-    const room = assetRoomName("counter", counter.id);
+    const room = new AssetRoom("counter", counter.id).toString();
     await server.handleMessage("B", { room, kind: "join" });
 
     await server.handleMessage("A", {

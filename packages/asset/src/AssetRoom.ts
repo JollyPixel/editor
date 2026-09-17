@@ -1,35 +1,49 @@
-export interface AssetRoomName {
-  readonly kind: string;
-  readonly assetId: string;
-}
+// Import Internal Dependencies
+import { AssetId } from "./AssetId.ts";
 
-/**
- * Shared browser and server room name, `${kind}:${assetId}`.
- */
-export function assetRoomName(
-  kind: string,
-  assetId: string
-): string {
-  return `${kind}:${assetId}`;
-}
+export class AssetRoom {
+  static parse(
+    roomName: string
+  ): AssetRoom | null {
+    const separator = roomName.indexOf(":");
+    if (separator <= 0) {
+      return null;
+    }
 
-/**
- * Parses `${kind}:${assetId}` at the first colon.
- * Returns `null` if either part or the separator is missing.
- */
-export function parseAssetRoomName(
-  roomName: string
-): AssetRoomName | null {
-  const separator = roomName.indexOf(":");
-  if (
-    separator <= 0 ||
-    separator === roomName.length - 1
-  ) {
-    return null;
+    const assetId = roomName.slice(separator + 1);
+    if (assetId.trim().length === 0) {
+      return null;
+    }
+
+    return new AssetRoom(roomName.slice(0, separator), assetId);
   }
 
-  return {
-    kind: roomName.slice(0, separator),
-    assetId: roomName.slice(separator + 1)
-  };
+  readonly kind: string;
+  readonly assetId: AssetId;
+
+  constructor(
+    kind: string,
+    assetId: string | AssetId
+  ) {
+    if (kind.length === 0 || kind.includes(":")) {
+      throw new TypeError("Asset room kind must be non-empty without a colon.");
+    }
+
+    this.kind = kind;
+    this.assetId = AssetId.from(assetId);
+  }
+
+  equals(
+    other: AssetRoom
+  ): boolean {
+    return this.kind === other.kind && this.assetId.equals(other.assetId);
+  }
+
+  toJSON(): string {
+    return this.toString();
+  }
+
+  toString(): string {
+    return `${this.kind}:${this.assetId.value}`;
+  }
 }

@@ -9,14 +9,18 @@ import type { TilesetDefinition } from "../tileset/types.ts";
 import type { VoxelEntry } from "../world/types.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
+import { assignMissingTileset } from "../blocks/blockTileRefs.ts";
+import type { TilesetList } from "../tileset/TilesetList.ts";
 
 export interface VoxelSerializeOptions {
   tilesets?: Iterable<TilesetDefinition>;
+  defaultTileSize?: number;
   blocks?: Iterable<ResolvedBlockDefinition>;
 }
 
 export interface VoxelDeserializeOptions {
   blocks?: BlockRegistry;
+  tilesets?: TilesetList;
 }
 
 export function serializeVoxelWorld(
@@ -34,6 +38,9 @@ export function serializeVoxelWorld(
       ...world.getObjectLayers()
     ]
   };
+  if (options.defaultTileSize !== undefined) {
+    document.defaultTileSize = options.defaultTileSize;
+  }
   if (options.blocks) {
     document.blocks = [...options.blocks];
   }
@@ -46,7 +53,7 @@ export function deserializeVoxelWorld(
   world: VoxelWorld,
   options: VoxelDeserializeOptions = {}
 ): void {
-  const { blocks } = options;
+  const { blocks, tilesets } = options;
 
   const document = parseVoxelDocument(data);
   if (document.chunkSize !== world.chunkSize) {
@@ -55,14 +62,20 @@ export function deserializeVoxelWorld(
     );
   }
 
+  tilesets?.replace(document.tilesets, document.defaultTileSize);
   if (blocks && document.blocks) {
     blocks.clear();
     blocks.registerMany(document.blocks);
   }
+  if (blocks && tilesets) {
+    const fallback = tilesets.defaultTilesetId;
+    blocks.registerMany(
+      [...blocks].map((block) => assignMissingTileset(block, fallback))
+    );
+  }
 
   world.clear();
 
-  // Re-create layers in order (sorted ascending so order numbers are stable).
   const sortedLayers = [...document.layers]
     .sort((a, b) => a.order - b.order);
 
@@ -74,7 +87,6 @@ export function deserializeVoxelWorld(
       properties: layerJSON.properties
     });
 
-    // Override the auto-assigned id/order with the serialised values.
     layer.id = layerJSON.id;
     layer.order = layerJSON.order;
     if (layerJSON.position) {

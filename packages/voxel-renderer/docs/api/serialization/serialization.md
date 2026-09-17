@@ -31,6 +31,7 @@ interface VoxelWorldJSON {
   version: 1;
   chunkSize: number;
   tilesets: TilesetDefinition[];
+  defaultTileSize?: number;
   layers: VoxelLayerJSON[];
   blocks?: ResolvedBlockDefinition[];
   objectLayers?: VoxelObjectLayerJSON[];
@@ -47,12 +48,15 @@ content; the renderer no longer reads the legacy property.
 
 `blocks` contains definitions embedded by `VoxelEngine.save()` or a converter.
 `objectLayers` stores placed objects such as spawn points and trigger zones.
+`defaultTileSize` is the tile size pre-selected for a new tileset. The mesher
+never reads it, and a value that fails `isTileSize()` is dropped on parse.
 
 ## Serializing a world
 
 ```ts
 interface VoxelSerializeOptions {
   tilesets?: Iterable<TilesetDefinition>;
+  defaultTileSize?: number;
   blocks?: Iterable<ResolvedBlockDefinition>;
 }
 
@@ -70,6 +74,7 @@ pass those collections explicitly. `blocks` is omitted when it is not supplied.
 ```ts
 interface VoxelDeserializeOptions {
   blocks?: BlockRegistry;
+  tilesets?: TilesetList;
 }
 
 function deserializeVoxelWorld(
@@ -83,6 +88,10 @@ The function validates `data`, then replaces the world's voxel and object
 layers. It throws `InvalidVoxelDocumentError` when the document is malformed or
 its chunk size differs from the target world. The target is left unchanged on
 those failures.
+
+`options.tilesets` is replaced with the document's tilesets and
+`defaultTileSize`. When both `blocks` and `tilesets` are supplied, tile
+references without `tilesetId` are assigned the first declared tileset.
 
 Embedded block definitions are registered when `options.blocks` is supplied. A
 document carrying a `blocks` array is authoritative: the registry is emptied

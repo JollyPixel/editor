@@ -11,85 +11,35 @@ import {
   type RoomContext
 } from "@jolly-pixel/network";
 import type * as EventStore from "@jolly-pixel/event-store";
-import type { AssetManifestData } from "@jolly-pixel/asset";
 import {
   Err,
   type Result
 } from "@openally/result";
 
 // Import Internal Dependencies
-import type {
-  CatalogChange,
-  CatalogProjection
-} from "./CatalogProjection.ts";
+import type { CatalogProjection } from "./CatalogProjection.ts";
+import { catalogProtocols } from "./CatalogExtension.schema.ts";
 import {
-  catalogProtocols,
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
-  CATALOG_DELETE,
-  CATALOG_REJECTED,
   CATALOG_RENAME,
-  CATALOG_SNAPSHOT
-} from "./CatalogExtension.schema.ts";
+  CATALOG_REJECTED,
+  CATALOG_ROOM,
+  CATALOG_SNAPSHOT,
+  type CatalogChange,
+  type CatalogCommand,
+  type CatalogMessage
+} from "./protocol.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import type { AssetWriter } from "../sync/AssetWriter.ts";
 import {
   actorOf,
-  decodeContent,
-  type AssetInlineContent
+  decodeContent
 } from "../events/AssetEvents.ts";
 
 // CONSTANTS
-export const CATALOG_ROOM = "asset-catalog";
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
-
-export type CatalogCommandType =
-  | typeof CATALOG_CREATE
-  | typeof CATALOG_RENAME
-  | typeof CATALOG_DELETE;
-
-export interface CatalogCreateCommand {
-  type: typeof CATALOG_CREATE;
-  requestId?: string;
-  path: string;
-  kind?: string;
-  content: AssetInlineContent;
-}
-
-export interface CatalogRenameCommand {
-  type: typeof CATALOG_RENAME;
-  requestId?: string;
-  assetId: string;
-  to: string;
-}
-
-export interface CatalogDeleteCommand {
-  type: typeof CATALOG_DELETE;
-  requestId?: string;
-  assetId: string;
-}
-
-export type CatalogCommand =
-  | CatalogCreateCommand
-  | CatalogRenameCommand
-  | CatalogDeleteCommand;
-
-export type CatalogMessage =
-  | { type: typeof CATALOG_SNAPSHOT; manifest: AssetManifestData; }
-  | { type: typeof CATALOG_CHANGED; change: CatalogChange; }
-  | {
-    type: typeof CATALOG_APPLIED;
-    requestId?: string;
-    command: CatalogCommandType;
-    assetId: string;
-  }
-  | {
-    type: typeof CATALOG_REJECTED;
-    requestId?: string;
-    command: CatalogCommandType;
-    reason: string;
-  };
 
 export interface CatalogExtensionOptions {
   projection: CatalogProjection;
@@ -203,6 +153,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         return this.#writer.create({
           path: command.path,
           kind: command.kind,
+          onPathConflict: command.onConflict,
           data: decodeContent(command.content),
           actor
         });

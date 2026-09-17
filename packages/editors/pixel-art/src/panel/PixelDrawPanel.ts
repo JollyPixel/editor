@@ -52,10 +52,12 @@ import { TextureImporter } from "../textures/import/TextureImporter.ts";
 import {
   isTextureImportPolicy,
   textureCanvasOptions,
+  type AddTextureOptions,
   type PixelDrawInitializeOptions,
   type PixelDrawTextureOptions,
   type TextureAddRequestDetail,
   type TextureChangeDetail,
+  type TextureChangeSource,
   type TextureCloseRequestDetail,
   type TextureImportPolicy
 } from "../textures/textures.ts";
@@ -137,6 +139,9 @@ export class PixelDrawPanel extends LitElement {
   })
   declare textureImportPolicy: TextureImportPolicy;
 
+  @property({ type: Boolean, attribute: "textures-closable" })
+  declare texturesClosable: boolean;
+
   readonly #textures = new TextureSet(this, {
     container: () => this.#element(".canvas-host"),
     onActivate: () => {
@@ -170,6 +175,7 @@ export class PixelDrawPanel extends LitElement {
     this.theme = "auto";
     this.colorDocked = false;
     this.textureImportPolicy = "replace";
+    this.texturesClosable = true;
   }
 
   get canvasManager(): PixelArtCanvas | null {
@@ -194,11 +200,7 @@ export class PixelDrawPanel extends LitElement {
   set activeTextureId(
     id: string
   ) {
-    const entry = this.#textures.get(id);
-    if (entry !== this.#textures.active) {
-      this.#textures.activate(entry);
-      this.#emitTextureChange(entry.id);
-    }
+    this.#activateTexture(id, "api");
   }
 
   override connectedCallback() {
@@ -254,42 +256,55 @@ export class PixelDrawPanel extends LitElement {
   async initialize(
     options: PixelDrawInitializeOptions = {}
   ): Promise<PixelArtCanvas> {
-    await this.updateComplete;
-
     this.#destroyTextures();
-    this.#baseOptions = textureCanvasOptions({}, options);
-    const fresh = !this.#textures.carriesSettings;
-    const canvas = this.#createTexture({
+    await this.configure(options);
+    const canvas = this.addTexture({
       ...options,
       id: options.id ?? kDefaultTextureId,
       name: options.name ?? kDefaultTextureName
     });
-    if (fresh) {
-      this.#colors.adopt();
-    }
-
-    this.#applyUvAccess();
-    this.requestUpdate();
     await this.updateComplete;
-    this.setAttribute("data-ready", "");
 
     return canvas;
   }
 
+  async configure(
+    options: PixelArtCanvasOptions = {}
+  ): Promise<void> {
+    await this.updateComplete;
+    this.#baseOptions = textureCanvasOptions({}, options);
+  }
+
   addTexture(
-    options: PixelDrawTextureOptions
+    options: PixelDrawTextureOptions,
+    addOptions: AddTextureOptions = {}
   ): PixelArtCanvas {
     if (this.#baseOptions === null) {
-      throw new Error("PixelDrawPanel: call initialize() before addTexture()");
+      throw new Error("PixelDrawPanel: call configure() before addTexture()");
     }
 
-    const canvas = this.#createTexture({
-      ...textureCanvasOptions(this.#baseOptions, options),
-      id: options.id,
-      name: options.name,
-      tooltip: options.tooltip
-    });
-    this.#emitTextureChange(options.id);
+    const first = this.#textures.size === 0;
+    const fresh = first && !this.#textures.carriesSettings;
+    const previous = this.activeTextureId;
+    const canvas = this.#createTexture(
+      {
+        ...textureCanvasOptions(this.#baseOptions, options),
+        id: options.id,
+        name: options.name,
+        tooltip: options.tooltip
+      },
+      addOptions.activate ?? true
+    );
+    if (fresh) {
+      this.#colors.adopt();
+    }
+    if (first) {
+      this.#applyUvAccess();
+      void this.updateComplete.then(() => this.setAttribute("data-ready", ""));
+    }
+    if (previous !== null && this.activeTextureId !== previous) {
+      this.#emitTextureChange(options.id, "api");
+    }
 
     return canvas;
   }
@@ -299,7 +314,7 @@ export class PixelDrawPanel extends LitElement {
   ): void {
     const next = this.#textures.remove(id);
     if (next !== null) {
-      this.#emitTextureChange(next.id);
+      this.#emitTextureChange(next.id, "api");
     }
   }
 
@@ -342,13 +357,14 @@ export class PixelDrawPanel extends LitElement {
   }
 
   #createTexture(
-    options: PixelDrawTextureOptions
+    options: PixelDrawTextureOptions,
+    activate: boolean
   ): PixelArtCanvas {
     const { canvas } = this.#textures.create({
       ...options,
       defaultMode: this.#uvPolicy.constrain(options.defaultMode ?? "paint"),
       backgroundColor: this.#canvasBackground() || options.backgroundColor
-    });
+    }, activate);
     this.#syncCanvasBackground();
 
     return canvas;
@@ -380,13 +396,28 @@ export class PixelDrawPanel extends LitElement {
     }));
   }
 
+  #activateTexture(
+    id: string,
+    source: TextureChangeSource
+  ): void {
+    const entry = this.#textures.get(id);
+    if (entry !== this.#textures.active) {
+      this.#textures.activate(entry);
+      this.#emitTextureChange(entry.id, source);
+    }
+  }
+
   #emitTextureChange(
-    id: string
+    id: string,
+    source: TextureChangeSource
   ): void {
     this.dispatchEvent(new CustomEvent<TextureChangeDetail>("texture-change", {
       bubbles: true,
       composed: true,
-      detail: { id }
+      detail: {
+        id,
+        source
+      }
     }));
   }
 
@@ -483,7 +514,7 @@ export class PixelDrawPanel extends LitElement {
         .value=${this.activeTextureId ?? ""}
         @jolly-tab-change=${(event: CustomEvent<JollyTabChangeDetail>) => {
           event.stopPropagation();
-          this.activeTextureId = event.detail.value;
+          this.#activateTexture(event.detail.value, "user");
         }}
         @jolly-tab-close=${(event: CustomEvent<JollyTabChangeDetail>) => {
           this.#onTextureTabClose(event);
@@ -497,7 +528,7 @@ export class PixelDrawPanel extends LitElement {
               .value=${entry.id}
               .label=${entry.name}
               .tooltip=${entry.tooltip}
-              closable
+              ?closable=${this.texturesClosable}
             ></jolly-tab>
           `
         )}

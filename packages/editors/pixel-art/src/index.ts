@@ -4,10 +4,12 @@ export {
   type ThemeMode
 } from "./panel/PixelDrawPanel.ts";
 export type {
+  AddTextureOptions,
   PixelDrawInitializeOptions,
   PixelDrawTextureOptions,
   TextureAddRequestDetail,
   TextureChangeDetail,
+  TextureChangeSource,
   TextureCloseRequestDetail,
   TextureImportOrigin,
   TextureImportPolicy

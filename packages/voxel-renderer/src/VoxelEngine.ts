@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import { BlockRegistry } from "./blocks/BlockRegistry.ts";
+import { applyBlockCommand } from "./blocks/applyBlockCommand.ts";
 import { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelCollider } from "./collision/VoxelCollider.ts";
 import { VoxelDebugger } from "./debug/index.ts";
@@ -18,34 +20,45 @@ import {
 } from "./serialization/world.ts";
 import type { VoxelWorldJSON } from "./serialization/types.ts";
 import { TilesetManager } from "./tileset/TilesetManager.ts";
-import type { TilesetDefinition } from "./tileset/types.ts";
+import type { TilesetList } from "./tileset/TilesetList.ts";
+import type {
+  TilesetDefinition,
+  TilesetTexture
+} from "./tileset/types.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";
 import type { VoxelLayer } from "./world/VoxelLayer.ts";
 import type { VoxelChunk } from "./world/VoxelChunk.ts";
 import { ViewDistance } from "./world/ViewDistance.ts";
-import type {
-  VoxelBlockHookListener,
-  VoxelLayerHookEvent,
-  VoxelLayerHookListener
-} from "./hooks.ts";
+import {
+  isVoxelTilesetCommand,
+  type VoxelBlockCommand,
+  type VoxelCommand,
+  type VoxelCommandOrigin
+} from "./commands.ts";
+import { applyVoxelCommand } from "./applyVoxelCommand.ts";
 import {
   resolveBlockDefinition,
   type BlockDefinition,
   type BlockProperties,
   type ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
+import { assignMissingTileset } from "./blocks/blockTileRefs.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
 import type {
+  VoxelApplyOptions,
+  VoxelEngineEvents,
   VoxelEngineOptions,
   VoxelLoadOptions,
   ViewDistancePolicy
 } from "./VoxelEngine.types.ts";
 
-/**
- * Owns a voxel world and its chunked Three.js meshes.
- */
-export class VoxelEngine {
+type BlockDefinedCommand = Extract<
+  VoxelBlockCommand,
+  { action: "block-defined"; }
+>;
+
+export class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly root = new THREE.Group();
 
   readonly world: VoxelWorld;
@@ -54,8 +67,6 @@ export class VoxelEngine {
   readonly tilesetManager: TilesetManager;
 
   readonly debug: VoxelDebugger;
-
-  onBlockUpdated: VoxelBlockHookListener | undefined;
 
   focus: THREE.Vector3Like | null = null;
   viewDistance: ViewDistance;
@@ -83,8 +94,7 @@ export class VoxelEngine {
       shapes = [],
       alphaTest = 0.1,
       logger = NOOP_LOGGER,
-      onLayerUpdated,
-      onBlockUpdated,
+      onCommand,
       debug,
       tilesetPadding,
       tilesets,
@@ -93,6 +103,11 @@ export class VoxelEngine {
       viewDistance,
       viewDistancePolicy = "hide"
     } = options;
+    super();
+
+    if (onCommand) {
+      this.on("command", onCommand);
+    }
 
     this.root.name = "VoxelEngine";
     this.debug = new VoxelDebugger(this.root, debug);
@@ -107,10 +122,12 @@ export class VoxelEngine {
     });
 
     this.world = new VoxelWorld(chunkSize);
-    this.world.onLayerUpdated = onLayerUpdated;
+    this.world.on(
+      "command",
+      (command) => this.#emitCommand(command, "local")
+    );
     layers.forEach((name) => this.world.addLayer(name));
 
-    this.onBlockUpdated = onBlockUpdated;
     this.blockRegistry = new BlockRegistry(blocks);
     this.shapeRegistry = BlockShapeRegistry
       .createDefault();
@@ -183,9 +200,6 @@ export class VoxelEngine {
     );
   }
 
-  /**
-   * Rebuilds all queued and dirty chunks without applying the tick budget.
-   */
   flush(): void {
     this.#enqueueDirtyChunks(this.#viewport());
     this.#queue.drain(
@@ -214,18 +228,49 @@ export class VoxelEngine {
     this.markAllChunksDirty("greedy");
   }
 
-  get onLayerUpdated(): VoxelLayerHookListener | undefined {
-    return this.world.onLayerUpdated;
-  }
+  apply(
+    command: VoxelCommand,
+    options: VoxelApplyOptions = {}
+  ): boolean {
+    const { origin = "local" } = options;
 
-  set onLayerUpdated(fn: VoxelLayerHookListener | undefined) {
-    this.world.onLayerUpdated = fn;
-  }
+    const resolved = command.action === "block-defined" ?
+      this.#blockDefined(command.block) :
+      command;
+    const applied = applyVoxelCommand(
+      {
+        world: this.world,
+        blocks: this.blockRegistry,
+        tilesets: this.tilesets
+      },
+      resolved,
+      this.#logger
+    );
+    if (!applied) {
+      return false;
+    }
 
-  applyRemoteCommand(
-    cmd: VoxelLayerHookEvent
-  ): void {
-    this.world.applyRemoteCommand(cmd, this.#logger);
+    if (isVoxelTilesetCommand(resolved)) {
+      this.#syncAtlases(resolved.action);
+    }
+    else if (resolved.action === "block-moved") {
+      this.#emitCommand({
+        ...resolved,
+        toIndex: this.blockRegistry.indexOf(resolved.blockId)
+      }, origin);
+
+      return true;
+    }
+    else if (
+      resolved.action === "block-defined" ||
+      resolved.action === "block-removed"
+    ) {
+      this.markAllChunksDirty(resolved.action);
+    }
+
+    this.#emitCommand(resolved, origin);
+
+    return true;
   }
 
   defineBlock(
@@ -237,21 +282,18 @@ export class VoxelEngine {
   defineBlocks(
     defs: Iterable<BlockDefinition>
   ): void {
-    const resolved = [...defs].map(resolveBlockDefinition);
-    if (resolved.length === 0) {
+    const commands = Array.from(defs, (def) => this.#blockDefined(def));
+    if (commands.length === 0) {
       return;
     }
 
-    for (const block of resolved) {
-      this.blockRegistry.register(block);
+    for (const command of commands) {
+      applyBlockCommand(this.blockRegistry, command);
     }
     this.markAllChunksDirty("block-defined");
 
-    for (const block of resolved) {
-      this.onBlockUpdated?.({
-        action: "block-defined",
-        block
-      });
+    for (const command of commands) {
+      this.#emitCommand(command, "local");
     }
   }
 
@@ -274,39 +316,43 @@ export class VoxelEngine {
   removeBlock(
     blockId: number
   ): boolean {
-    if (!this.blockRegistry.unregister(blockId)) {
-      return false;
-    }
-
-    this.markAllChunksDirty("block-removed");
-    this.onBlockUpdated?.({
+    return this.apply({
       action: "block-removed",
       blockId
     });
-
-    return true;
   }
 
   moveBlock(
     blockId: number,
     toIndex: number
   ): boolean {
-    if (!this.blockRegistry.moveTo(blockId, toIndex)) {
-      return false;
-    }
-
-    this.onBlockUpdated?.({
+    return this.apply({
       action: "block-moved",
       blockId,
-      toIndex: this.blockRegistry.indexOf(blockId)
+      toIndex
     });
+  }
 
-    return true;
+  get tilesets(): TilesetList {
+    return this.tilesetManager.tilesets;
+  }
+
+  get defaultTileSize(): number | undefined {
+    return this.tilesets.defaultTileSize;
+  }
+
+  set defaultTileSize(
+    defaultTileSize: number
+  ) {
+    this.apply({
+      action: "default-tile-size-updated",
+      defaultTileSize
+    });
   }
 
   loadTileset(
     def: TilesetDefinition,
-    texture: THREE.Texture<HTMLImageElement>
+    texture: TilesetTexture
   ): void {
     this.tilesetManager.registerTexture(def, texture);
     this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
@@ -315,11 +361,41 @@ export class VoxelEngine {
     this.markAllChunksDirty("loadTileset");
   }
 
+  addTileset(
+    tileset: TilesetDefinition
+  ): boolean {
+    return this.apply({
+      action: "tileset-added",
+      tileset
+    });
+  }
+
+  removeTileset(
+    tilesetId: string
+  ): boolean {
+    return this.apply({
+      action: "tileset-removed",
+      tilesetId
+    });
+  }
+
+  resizeTileset(
+    tilesetId: string,
+    tileSize: number
+  ): boolean {
+    return this.apply({
+      action: "tileset-resized",
+      tilesetId,
+      tileSize
+    });
+  }
+
   save(): VoxelWorldJSON {
     this.#logger.debug("Serializing world to JSON...");
 
     return serializeVoxelWorld(this.world, {
-      tilesets: this.tilesetManager.definitions(),
+      tilesets: this.tilesets,
+      defaultTileSize: this.tilesets.defaultTileSize,
       blocks: this.blockRegistry
     });
   }
@@ -333,16 +409,17 @@ export class VoxelEngine {
 
     this.world.silently(
       () => deserializeVoxelWorld(data, this.world, {
-        blocks: this.blockRegistry
+        blocks: this.blockRegistry,
+        tilesets: this.tilesets
       })
     );
 
+    this.tilesetManager.syncAtlases();
     this.#registerTilesets(options.tilesets);
-    for (const tilesetDef of data.tilesets) {
+    for (const tilesetDef of this.tilesets) {
       if (!this.tilesetManager.has(tilesetDef.id)) {
-        throw new Error(
-          `VoxelEngine.load(): tileset '${tilesetDef.id}' is not registered. ` +
-          "Pass it through loadTilesets() first."
+        this.#logger.warn(
+          `Tileset '${tilesetDef.id}' is not loaded; its faces are skipped until it is.`
         );
       }
     }
@@ -374,6 +451,27 @@ export class VoxelEngine {
     this.#collider?.dispose();
     this.#materials.dispose();
     this.tilesetManager.dispose();
+    this.world.removeAllListeners();
+    this.removeAllListeners();
+  }
+
+  #blockDefined(
+    block: BlockDefinition
+  ): BlockDefinedCommand {
+    return {
+      action: "block-defined",
+      block: assignMissingTileset(
+        resolveBlockDefinition(block),
+        this.tilesets.defaultTilesetId
+      )
+    };
+  }
+
+  #emitCommand(
+    command: VoxelCommand,
+    origin: VoxelCommandOrigin
+  ): void {
+    this.emit("command", command, { origin });
   }
 
   #viewport(): ChunkViewport {
@@ -438,6 +536,15 @@ export class VoxelEngine {
     this.#queue.clear();
     this.markAllChunksDirty(source);
     this.flush();
+  }
+
+  #syncAtlases(
+    source: string
+  ): void {
+    for (const tilesetId of this.tilesetManager.syncAtlases()) {
+      this.#materials.invalidate(tilesetId);
+    }
+    this.markAllChunksDirty(source);
   }
 
   #registerTilesets(

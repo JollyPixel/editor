@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelTransform, VoxelWorld } from "../../src/world/index.ts";
-import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../../src/hooks.ts";
+import { VOXEL_LAYER_COMMAND_ACTIONS, type VoxelLayerCommand } from "../../src/commands.ts";
 import type { VoxelObjectJSON } from "../../src/serialization/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeAddedCommand } from "../helpers/networkCommands.ts";
@@ -28,16 +28,16 @@ function makeSpawnObject(
   };
 }
 
-describe("VoxelWorld.applyRemoteCommand — added", () => {
+describe("VoxelWorld.apply — added", () => {
   it("creates a new layer in the world", () => {
     const world = makeWorld();
-    world.applyRemoteCommand(makeAddedCommand("Ground"));
+    world.apply(makeAddedCommand("Ground"));
     assert.ok(world.getLayer("Ground"));
   });
 
   it("passes options through to the layer", () => {
     const world = makeWorld();
-    world.applyRemoteCommand({
+    world.apply({
       action: "added",
       layerName: "Deco",
       metadata: { options: { visible: false } }
@@ -46,11 +46,11 @@ describe("VoxelWorld.applyRemoteCommand — added", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — removed", () => {
+describe("VoxelWorld.apply — removed", () => {
   it("removes an existing layer", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.applyRemoteCommand({
+    world.apply({
       action: "removed",
       layerName: "Ground",
       metadata: {}
@@ -61,7 +61,7 @@ describe("VoxelWorld.applyRemoteCommand — removed", () => {
   it("is a no-op for an unknown layer", () => {
     const world = makeWorld();
     assert.doesNotThrow(() => {
-      world.applyRemoteCommand({
+      world.apply({
         action: "removed",
         layerName: "NoSuch",
         metadata: {}
@@ -70,11 +70,11 @@ describe("VoxelWorld.applyRemoteCommand — removed", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — updated", () => {
+describe("VoxelWorld.apply — updated", () => {
   it("updates layer visibility", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.applyRemoteCommand({
+    world.apply({
       action: "updated",
       layerName: "Ground",
       metadata: { options: { visible: false } }
@@ -83,11 +83,11 @@ describe("VoxelWorld.applyRemoteCommand — updated", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — position-updated (absolute)", () => {
+describe("VoxelWorld.apply — position-updated (absolute)", () => {
   it("sets the layer position", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.applyRemoteCommand({
+    world.apply({
       action: "position-updated",
       layerName: "Ground",
       metadata: { position: { x: 5, y: 0, z: 3 } }
@@ -98,12 +98,12 @@ describe("VoxelWorld.applyRemoteCommand — position-updated (absolute)", () => 
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — position-updated (delta)", () => {
+describe("VoxelWorld.apply — position-updated (delta)", () => {
   it("translates the layer position", () => {
     const world = makeWorld();
     const layer = world.addLayer("Ground");
     layer.position = { x: 2, y: 0, z: 0 };
-    world.applyRemoteCommand({
+    world.apply({
       action: "position-updated",
       layerName: "Ground",
       metadata: { delta: { x: 3, y: 1, z: 0 } }
@@ -114,13 +114,13 @@ describe("VoxelWorld.applyRemoteCommand — position-updated (delta)", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — position-rebased", () => {
+describe("VoxelWorld.apply — position-rebased", () => {
   it("changes the origin without moving the layer contents", () => {
     const world = makeWorld();
     const layer = world.addLayer("Ground");
     layer.setVoxelAt({ x: 8, y: 1, z: 2 }, makeVoxelEntry(7));
 
-    world.applyRemoteCommand({
+    world.apply({
       action: "position-rebased",
       layerName: "Ground",
       metadata: { position: { x: 8, y: 1, z: 2 } }
@@ -132,7 +132,7 @@ describe("VoxelWorld.applyRemoteCommand — position-rebased", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — reordered", () => {
+describe("VoxelWorld.apply — reordered", () => {
   it("moves a layer to higher priority", () => {
     const world = makeWorld();
     world.addLayer("Base");
@@ -141,7 +141,7 @@ describe("VoxelWorld.applyRemoteCommand — reordered", () => {
      * After sort (descending): [Top(order=1), Base(order=0)]
      * Moving Base "up" raises its priority, swapping it with Top.
      */
-    world.applyRemoteCommand({
+    world.apply({
       action: "reordered",
       layerName: "Base",
       metadata: { direction: "up" }
@@ -153,14 +153,14 @@ describe("VoxelWorld.applyRemoteCommand — reordered", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — layer-moved", () => {
+describe("VoxelWorld.apply — layer-moved", () => {
   it("moves a layer across the stack in one command", () => {
     const world = makeWorld();
     world.addLayer("A");
     world.addLayer("B");
     world.addLayer("C");
     // After sort (descending): [C, B, A]
-    world.applyRemoteCommand({
+    world.apply({
       action: "layer-moved",
       layerName: "C",
       metadata: { toIndex: 2 }
@@ -173,11 +173,11 @@ describe("VoxelWorld.applyRemoteCommand — layer-moved", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — voxel-set", () => {
+describe("VoxelWorld.apply — voxel-set", () => {
   it("places a voxel at the given position", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.applyRemoteCommand({
+    world.apply({
       action: "voxel-set",
       layerName: "Ground",
       metadata: {
@@ -199,7 +199,7 @@ describe("VoxelWorld.applyRemoteCommand — voxel-set", () => {
   it("packs rotation and flip flags into the transform", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.applyRemoteCommand({
+    world.apply({
       action: "voxel-set",
       layerName: "Ground",
       metadata: {
@@ -219,12 +219,12 @@ describe("VoxelWorld.applyRemoteCommand — voxel-set", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — voxel-removed", () => {
+describe("VoxelWorld.apply — voxel-removed", () => {
   it("removes the voxel at the given position", () => {
     const world = makeWorld();
     world.addLayer("Ground");
     world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
-    world.applyRemoteCommand({
+    world.apply({
       action: "voxel-removed",
       layerName: "Ground",
       metadata: { position: { x: 0, y: 0, z: 0 } }
@@ -238,7 +238,7 @@ describe("VoxelWorld.applyRemoteCommand — voxel-removed", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — voxels-set (bulk)", () => {
+describe("VoxelWorld.apply — voxels-set (bulk)", () => {
   it("places all entries in the world", () => {
     const world = makeWorld();
     world.addLayer("Ground");
@@ -247,7 +247,7 @@ describe("VoxelWorld.applyRemoteCommand — voxels-set (bulk)", () => {
       { position: { x: 1, y: 0, z: 0 }, blockId: 2 },
       { position: { x: 2, y: 0, z: 0 }, blockId: 3 }
     ];
-    world.applyRemoteCommand({
+    world.apply({
       action: "voxels-set",
       layerName: "Ground",
       metadata: { entries }
@@ -262,7 +262,7 @@ describe("VoxelWorld.applyRemoteCommand — voxels-set (bulk)", () => {
   it("uses default transform when rotation/flip are omitted", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.applyRemoteCommand({
+    world.apply({
       action: "voxels-set",
       layerName: "Ground",
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 5 }] }
@@ -275,13 +275,13 @@ describe("VoxelWorld.applyRemoteCommand — voxels-set (bulk)", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — voxels-removed (bulk)", () => {
+describe("VoxelWorld.apply — voxels-removed (bulk)", () => {
   it("removes all specified positions", () => {
     const world = makeWorld();
     world.addLayer("Ground");
     world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
     world.setVoxelAt("Ground", { x: 1, y: 0, z: 0 }, makeVoxelEntry(2, 0));
-    world.applyRemoteCommand({
+    world.apply({
       action: "voxels-removed",
       layerName: "Ground",
       metadata: {
@@ -298,10 +298,10 @@ describe("VoxelWorld.applyRemoteCommand — voxels-removed (bulk)", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — object-layer-added", () => {
+describe("VoxelWorld.apply — object-layer-added", () => {
   it("creates an object layer", () => {
     const world = makeWorld();
-    world.applyRemoteCommand({
+    world.apply({
       action: "object-layer-added",
       layerName: "Spawns",
       metadata: {}
@@ -310,11 +310,11 @@ describe("VoxelWorld.applyRemoteCommand — object-layer-added", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — object-layer-removed", () => {
+describe("VoxelWorld.apply — object-layer-removed", () => {
   it("removes an existing object layer", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
-    world.applyRemoteCommand({
+    world.apply({
       action: "object-layer-removed",
       layerName: "Spawns",
       metadata: {}
@@ -323,11 +323,11 @@ describe("VoxelWorld.applyRemoteCommand — object-layer-removed", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — object-layer-updated", () => {
+describe("VoxelWorld.apply — object-layer-updated", () => {
   it("updates object layer visibility", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
-    world.applyRemoteCommand({
+    world.apply({
       action: "object-layer-updated",
       layerName: "Spawns",
       metadata: { patch: { visible: false } }
@@ -336,12 +336,12 @@ describe("VoxelWorld.applyRemoteCommand — object-layer-updated", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — object-added", () => {
+describe("VoxelWorld.apply — object-added", () => {
   it("adds an object to the layer", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
     const obj = makeSpawnObject({ name: "Spawn Point", x: 5, y: 0, z: 3 });
-    world.applyRemoteCommand({
+    world.apply({
       action: "object-added",
       layerName: "Spawns",
       metadata: { object: obj }
@@ -352,12 +352,12 @@ describe("VoxelWorld.applyRemoteCommand — object-added", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — object-removed", () => {
+describe("VoxelWorld.apply — object-removed", () => {
   it("removes an object from the layer", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
     world.addObjectToLayer("Spawns", makeSpawnObject());
-    world.applyRemoteCommand({
+    world.apply({
       action: "object-removed",
       layerName: "Spawns",
       metadata: { objectId: "obj1" }
@@ -366,12 +366,12 @@ describe("VoxelWorld.applyRemoteCommand — object-removed", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — object-updated", () => {
+describe("VoxelWorld.apply — object-updated", () => {
   it("patches an object in the layer", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
     world.addObjectToLayer("Spawns", makeSpawnObject());
-    world.applyRemoteCommand({
+    world.apply({
       action: "object-updated",
       layerName: "Spawns",
       metadata: { objectId: "obj1", patch: { x: 10, visible: false } }
@@ -382,12 +382,12 @@ describe("VoxelWorld.applyRemoteCommand — object-updated", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — cloned", () => {
+describe("VoxelWorld.apply — cloned", () => {
   it("clones the layer under its new name", () => {
     const world = makeWorld();
     world.addLayer("Ground", { opacity: 0.5 });
 
-    world.applyRemoteCommand({
+    world.apply({
       action: "cloned",
       layerName: "Ground",
       metadata: { options: { name: "Ground copy" } }
@@ -399,14 +399,14 @@ describe("VoxelWorld.applyRemoteCommand — cloned", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — merged", () => {
+describe("VoxelWorld.apply — merged", () => {
   it("folds the source layer into the target", () => {
     const world = makeWorld();
     world.addLayer("Ground");
     world.addLayer("Deco");
     world.setVoxelAt("Deco", { x: 2, y: 0, z: 0 }, makeVoxelEntry(9));
 
-    world.applyRemoteCommand({
+    world.apply({
       action: "merged",
       layerName: "Deco",
       metadata: { targetLayerName: "Ground" }
@@ -419,21 +419,21 @@ describe("VoxelWorld.applyRemoteCommand — merged", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — exhaustiveness", () => {
-  it("handles every action the hook union declares", () => {
+describe("VoxelWorld.apply — exhaustiveness", () => {
+  it("handles every action the layer command union declares", () => {
     /*
      * Ties this check to the real source of truth instead of a hand-rolled
      * list, so a new/renamed action can't silently drop out of coverage.
      */
-    assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 20);
+    assert.equal(VOXEL_LAYER_COMMAND_ACTIONS.length, 20);
 
-    for (const action of VOXEL_LAYER_HOOK_ACTIONS) {
+    for (const action of VOXEL_LAYER_COMMAND_ACTIONS) {
       const world = makeWorld();
       world.addLayer("Ground");
       world.addObjectLayer("Ground");
 
       assert.doesNotThrow(
-        () => world.applyRemoteCommand(commandFor(action)),
+        () => world.apply(commandFor(action)),
         `action '${action}' is not dispatched`
       );
     }
@@ -441,8 +441,8 @@ describe("VoxelWorld.applyRemoteCommand — exhaustiveness", () => {
 });
 
 function commandFor(
-  action: VoxelLayerHookEvent["action"]
-): VoxelLayerHookEvent {
+  action: VoxelLayerCommand["action"]
+): VoxelLayerCommand {
   const layerName = "Ground";
   const position = { x: 0, y: 0, z: 0 };
 
@@ -511,14 +511,14 @@ function commandFor(
   }
 }
 
-describe("VoxelWorld.applyRemoteCommand — object-moved", () => {
+describe("VoxelWorld.apply — object-moved", () => {
   it("moves the object between object layers", () => {
     const world = makeWorld();
     world.addObjectLayer("From");
     world.addObjectLayer("To");
     world.addObjectToLayer("From", makeSpawnObject());
 
-    world.applyRemoteCommand({
+    world.apply({
       action: "object-moved",
       layerName: "From",
       metadata: {
@@ -533,8 +533,8 @@ describe("VoxelWorld.applyRemoteCommand — object-moved", () => {
   });
 });
 
-describe("VoxelWorld.applyRemoteCommand — unknown layer", () => {
-  const voxelCommands: VoxelLayerHookEvent[] = [
+describe("VoxelWorld.apply — unknown layer", () => {
+  const voxelCommands: VoxelLayerCommand[] = [
     {
       action: "voxel-set",
       layerName: "Gone",
@@ -568,7 +568,7 @@ describe("VoxelWorld.applyRemoteCommand — unknown layer", () => {
     it(`drops '${command.action}' instead of throwing`, () => {
       const world = makeWorld();
 
-      assert.doesNotThrow(() => world.applyRemoteCommand(command));
+      assert.doesNotThrow(() => world.apply(command));
       assert.equal(world.getLayer("Gone"), undefined);
     });
   }
@@ -578,7 +578,7 @@ describe("VoxelWorld.applyRemoteCommand — unknown layer", () => {
     const warnings: string[] = [];
     const logger = makeLogger(warnings);
 
-    world.applyRemoteCommand(voxelCommands[0], logger);
+    world.apply(voxelCommands[0], logger);
 
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /dropped 'voxel-set' for unknown layer 'Gone'/);
@@ -589,7 +589,7 @@ describe("VoxelWorld.applyRemoteCommand — unknown layer", () => {
     world.addLayer("Gone");
     const warnings: string[] = [];
 
-    world.applyRemoteCommand(voxelCommands[0], makeLogger(warnings));
+    world.apply(voxelCommands[0], makeLogger(warnings));
 
     assert.deepEqual(warnings, []);
     assert.equal(
@@ -603,7 +603,7 @@ describe("VoxelWorld.applyRemoteCommand — unknown layer", () => {
     const warnings: string[] = [];
     const logger = makeLogger(warnings);
 
-    assert.doesNotThrow(() => world.applyRemoteCommand({
+    assert.doesNotThrow(() => world.apply({
       action: "merged",
       layerName: "Gone",
       metadata: { targetLayerName: "AlsoGone" }

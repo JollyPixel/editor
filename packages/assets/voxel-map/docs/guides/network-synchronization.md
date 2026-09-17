@@ -1,6 +1,6 @@
 # Network synchronization
 
-The network integration sends `VoxelEngine` hook events through a room and
+The network integration sends `VoxelEngine` commands through a room and
 folds accepted commands into an authoritative `VoxelMapState`.
 
 ```text
@@ -15,15 +15,16 @@ network clients <- network.Server <- AssetRoomExtension
 
 ## Command flow
 
-1. A local engine mutation emits a `VoxelLayerHookEvent`.
+1. A local engine mutation emits a `VoxelCommand` with a `"local"` origin.
 2. `VoxelSyncClient` stamps it with a client ID, sequence, and timestamp, then
    sends it through the room.
 3. The asset room validates the command, resolves conflicts, appends it to the
    event log, and broadcasts it. The handler's `apply` folds it into the world.
-4. Each client applies the remote command through `engine.applyRemoteCommand()`.
+4. Each client applies the remote command through
+   `engine.apply(command, { origin: "remote" })`.
 
-The engine suppresses its hook while applying a remote command, which prevents
-the received mutation from being sent back to the server.
+The client only sends `"local"` commands, which prevents the received mutation
+from being sent back to the server.
 
 ## Snapshots
 
@@ -32,9 +33,8 @@ owns voxel, object-layer, and block-definition state, but does not load render
 resources, so its snapshot has no tileset definitions. Clients prepare those
 resources before joining.
 
-A block definition is not a layer mutation, so it travels on its own engine
-hook as a `"block-defined"` or `"block-removed"` command. The client chains
-that hook exactly as it chains `onLayerUpdated`, so a client publishes block
+Block definitions travel as `"block-defined"`, `"block-removed"` and
+`"block-moved"` commands on the same engine event, so a client publishes block
 edits without asking; the definitions the server accumulates ride along in
 every later snapshot.
 

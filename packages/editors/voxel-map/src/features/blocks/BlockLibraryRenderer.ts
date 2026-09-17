@@ -54,6 +54,7 @@ export class BlockLibraryRenderer {
   #canvasWidth = 0;
   #canvasHeight = 0;
   #layoutDirty = true;
+  #tilesetVersion: number;
   #container: HTMLElement;
   #resizeObserver: ResizeObserver;
 
@@ -63,6 +64,7 @@ export class BlockLibraryRenderer {
   ) {
     this.#shapeRegistry = options.shapeRegistry;
     this.#tilesetManager = options.tilesetManager;
+    this.#tilesetVersion = options.tilesetManager.version;
     this.#container = container;
 
     this.#renderer = new THREE.WebGLRenderer({
@@ -217,6 +219,9 @@ export class BlockLibraryRenderer {
   }
 
   #render(): void {
+    if (this.#tilesetVersion !== this.#tilesetManager.version) {
+      this.#rebuildCells();
+    }
     if (this.#layoutDirty) {
       this.#relayout();
     }
@@ -263,6 +268,16 @@ export class BlockLibraryRenderer {
     }
 
     this.#renderer.setScissorTest(false);
+  }
+
+  #rebuildCells(): void {
+    this.#tilesetVersion = this.#tilesetManager.version;
+    const blocks = this.#cells.map((cell) => cell.block);
+    for (const cell of this.#cells) {
+      this.#removeCell(cell);
+    }
+    this.#cells = [];
+    this.setBlocks(blocks);
   }
 
   #removeCell(cell: CellEntry): void {

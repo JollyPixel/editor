@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 
 // Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
 import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
@@ -32,16 +33,17 @@ import type {
   VoxelRemoveOptions
 } from "../types.ts";
 import { VoxelTransform } from "./VoxelTransform.ts";
-import type {
-  VoxelLayerHookEvent,
-  VoxelLayerHookListener
-} from "../hooks.ts";
+import type { VoxelLayerCommand } from "../commands.ts";
 import { dispatchCommand } from "./dispatchCommand.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
 
 // CONSTANTS
 let kLayerIdCounter = 0;
 let kObjectLayerIdCounter = 0;
+
+export type VoxelWorldEvents = {
+  command: (command: VoxelLayerCommand) => void;
+};
 
 export type IterableLayerChunk = {
   layer: VoxelLayer;
@@ -51,10 +53,8 @@ export type IterableLayerChunk = {
 /**
  * Layered voxel data ordered from highest to lowest compositing priority.
  */
-export class VoxelWorld {
+export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   readonly chunkSize: number;
-
-  onLayerUpdated?: VoxelLayerHookListener;
 
   #layers: VoxelLayer[] = [];
   #layersToRemove: VoxelLayer[] = [];
@@ -66,6 +66,7 @@ export class VoxelWorld {
   constructor(
     chunkSize: number = DEFAULT_CHUNK_SIZE
   ) {
+    super();
     assertPowerOfTwoChunkSize(chunkSize, "VoxelWorld");
 
     this.chunkSize = chunkSize;
@@ -831,11 +832,11 @@ export class VoxelWorld {
     }
   }
 
-  applyRemoteCommand(
-    cmd: VoxelLayerHookEvent,
+  apply(
+    command: VoxelLayerCommand,
     logger?: VoxelLogger
   ): void {
-    this.silently(() => dispatchCommand(this, cmd, logger));
+    this.silently(() => dispatchCommand(this, command, logger));
   }
 
   silently<T>(
@@ -852,13 +853,13 @@ export class VoxelWorld {
   }
 
   #emit(
-    event: VoxelLayerHookEvent
+    event: VoxelLayerCommand
   ): void {
     if (this.#muted) {
       return;
     }
 
-    this.onLayerUpdated?.(event);
+    this.emit("command", event);
   }
 
   clear(): void {

@@ -38,6 +38,7 @@ construction instead of by convention.
 
 | Function | Purpose |
 |---|---|
+| `createPixelArtDocument(size, pixels?)` | size + RGBA8 bytes → `PixelArtDocumentData`; `pixels` defaults to transparent |
 | `serializePixelBuffer(buffer)` | `PixelBuffer` → `PixelArtDocumentData` |
 | `deserializePixelBuffer(document, buffer)` | `PixelArtDocumentData` → `PixelBuffer` |
 | `pixelArtSnapshot(buffer)` | `PixelBuffer` → `PixelBufferSnapshot`, for the wire |
@@ -49,7 +50,8 @@ construction instead of by convention.
 reaches it from persistence: an unsupported version, a non-integer size, or
 pixels shorter than the declared size all throw
 `InvalidPixelArtDocumentError`. `deserializePixelBuffer` throws the same error
-for a size the target buffer would refuse.
+for a size the target buffer would refuse. `createPixelArtDocument` throws it
+for a non-positive size or a `pixels` length other than `x * y * 4`.
 
 A loaded document is complete state, not a patch. UV regions are cleared
 before the document's are applied.

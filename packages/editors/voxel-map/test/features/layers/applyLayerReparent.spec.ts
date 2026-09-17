@@ -42,7 +42,7 @@ describe("applyLayerReparent — voxel layers", () => {
   test("emits one layer-moved command for the whole move", () => {
     const world = makeWorld();
     const actions: string[] = [];
-    world.onLayerUpdated = (event) => actions.push(event.action);
+    world.on("command", (event) => actions.push(event.action));
 
     applyLayerReparent(world, {
       movedIds: [voxelId("C")],
@@ -118,7 +118,7 @@ describe("applyLayerReparent — objects", () => {
   test("emits one object-moved command for the whole move", () => {
     const world = makeWorld();
     const actions: string[] = [];
-    world.onLayerUpdated = (event) => actions.push(event.action);
+    world.on("command", (event) => actions.push(event.action));
 
     applyLayerReparent(world, {
       movedIds: [

@@ -55,6 +55,16 @@ describe("serializeVoxelWorld", () => {
     assert.equal(json.tilesets[0].id, "atlas");
   });
 
+  it("includes the defaultTileSize only when one is passed", () => {
+    const world = new VoxelWorld(16);
+
+    assert.equal("defaultTileSize" in serializeVoxelWorld(world), false);
+    assert.equal(
+      serializeVoxelWorld(world, { defaultTileSize: 16 }).defaultTileSize,
+      16
+    );
+  });
+
   it("omits blocks when none are provided", () => {
     const world = new VoxelWorld(16);
 

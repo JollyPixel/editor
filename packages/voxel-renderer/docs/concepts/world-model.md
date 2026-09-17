@@ -55,7 +55,7 @@ and direct reads or writes for one layer. `VoxelChunk` owns the fixed-size grid,
 and `VoxelStore` owns its sparse packed values.
 
 Application edits go through `VoxelWorld`, which emits the
-[hook events](../api/core/hooks.md) and marks the chunks it touched dirty;
+[layer commands](../api/core/commands.md) and marks the chunks it touched dirty;
 [`VoxelEngine`](../api/core/VoxelEngine.md) picks those up to update rendering
 and collision. A world used on its own, with no engine around it, is what a
 headless server or an offline tool runs.

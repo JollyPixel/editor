@@ -4,16 +4,18 @@ import {
   type MessageProtocols
 } from "@jolly-pixel/network";
 
+// Import Internal Dependencies
+import {
+  CATALOG_APPLIED,
+  CATALOG_CHANGED,
+  CATALOG_CREATE,
+  CATALOG_DELETE,
+  CATALOG_REJECTED,
+  CATALOG_RENAME,
+  CATALOG_SNAPSHOT
+} from "./protocol.ts";
+
 // CONSTANTS
-export const CATALOG_SNAPSHOT = "catalog:snapshot";
-export const CATALOG_CHANGED = "catalog:changed";
-export const CATALOG_APPLIED = "catalog:applied";
-export const CATALOG_REJECTED = "catalog:rejected";
-
-export const CATALOG_CREATE = "catalog:create";
-export const CATALOG_RENAME = "catalog:rename";
-export const CATALOG_DELETE = "catalog:delete";
-
 const kString = { type: "string" } as const;
 
 export const catalogCommandProtocol = defineMessageProtocol({
@@ -27,6 +29,7 @@ export const catalogCommandProtocol = defineMessageProtocol({
           requestId: kString,
           path: kString,
           kind: kString,
+          onConflict: { enum: ["reject", "suffix"] },
           content: {
             type: "object",
             properties: {
