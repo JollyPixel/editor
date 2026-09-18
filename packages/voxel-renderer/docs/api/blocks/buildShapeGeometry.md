@@ -33,6 +33,21 @@ Positions are in normalized block space, so `0` to `1` on each axis; recenter
 them yourself if the consumer expects an origin-centred mesh. UVs are in
 normalized tile space, before any atlas mapping.
 
+## Orientation
+
+Pass a [`VoxelTransform`](../world/VoxelTransform.md) to get the geometry a
+placed voxel with that rotation and flips would render. Vertices and normals
+go through the same rotation as the chunk mesher, and `flipY` writes each
+polygon in reverse vertex order so its front side survives the mirror. Ranges
+and UVs keep following their slot. Defaults to `VoxelTransform.Identity`.
+
+```ts
+const geometry = buildShapeGeometry(shape, new VoxelTransform({
+  rotation: 1,
+  flipY: true
+}));
+```
+
 ## Face ranges
 
 Polygons are grouped by texture slot, so each slot owns one contiguous vertex

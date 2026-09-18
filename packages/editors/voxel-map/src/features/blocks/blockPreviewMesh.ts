@@ -5,6 +5,7 @@ import {
   shapeSlots,
   BlockSurface,
   BlockTextures,
+  VoxelTransform,
   type FaceDefinition,
   type ResolvedBlockDefinition,
   type BlockShapeRegistry,
@@ -26,9 +27,9 @@ const kCheckerDark = [0x45, 0x4b, 0x51];
 const kOutlineColor = 0xd0d6dc;
 const kOutlineOpacity = 0.35;
 const kOutlineThresholdAngle = 20;
-const kTexturedMaterial = 0;
-const kEmptyMaterial = 1;
 
+export const BLOCK_TEXTURED_MATERIAL = 0;
+export const BLOCK_EMPTY_MATERIAL = 1;
 export const PREVIEW_FIT_RADIUS = Math.tan((kCameraFov * Math.PI) / 360) *
   kCameraZ * kFitFactor;
 export const PREVIEW_TILT = 0.4;
@@ -99,9 +100,8 @@ export function buildBlockPreviewMesh(
   block: ResolvedBlockDefinition,
   sources: BlockPreviewSources
 ): THREE.Mesh {
-  const { shapeRegistry, tilesetManager } = sources;
-  const shape = shapeRegistry.get(block.shapeId);
-  if (!shape) {
+  const geo = buildBlockGeometry(block, sources);
+  if (geo === null) {
     const fallback = new THREE.BoxGeometry(1, 1, 1);
     fitGeometry(fallback);
 
@@ -111,9 +111,7 @@ export function buildBlockPreviewMesh(
     );
   }
 
-  const texture = tilesetManager
-    .get(block.defaultTexture?.tilesetId)
-    ?.texture ?? null;
+  const texture = textureOf(block, sources);
   const surface = new BlockSurface(block);
   const side = surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide;
   const materials = [
@@ -133,16 +131,38 @@ export function buildBlockPreviewMesh(
     })
   ];
 
+  const emptyIndices = emptyIndicesOf(geo);
+  fitGeometry(geo);
+
+  const mesh = new THREE.Mesh(geo, materials);
+  if (emptyIndices.length > 0) {
+    mesh.add(buildOutline(geo, emptyIndices));
+  }
+
+  return mesh;
+}
+
+export function buildBlockGeometry(
+  block: ResolvedBlockDefinition,
+  sources: BlockPreviewSources,
+  transform: VoxelTransform = VoxelTransform.Identity
+): THREE.BufferGeometry | null {
+  const { shapeRegistry, tilesetManager } = sources;
+  const shape = shapeRegistry.get(block.shapeId);
+  if (!shape) {
+    return null;
+  }
+
+  const texture = textureOf(block, sources);
   const { positions, normals, uvs, indices, ranges } = buildShapeGeometry(
-    shape
+    shape,
+    transform
   );
 
-  const vertices = Float32Array.from(positions);
   const atlasUvs = Float32Array.from(uvs);
   const geo = new THREE.BufferGeometry();
 
   const empty = new Set(emptyTextureSlots(block, sources));
-  const emptyIndices: number[] = [];
   const textures = BlockTextures.of(block);
   let indexStart = 0;
   for (const range of ranges) {
@@ -151,13 +171,8 @@ export function buildBlockPreviewMesh(
     geo.addGroup(
       indexStart,
       indexCount,
-      isEmpty ? kEmptyMaterial : kTexturedMaterial
+      isEmpty ? BLOCK_EMPTY_MATERIAL : BLOCK_TEXTURED_MATERIAL
     );
-    if (isEmpty) {
-      emptyIndices.push(
-        ...indices.subarray(indexStart, indexStart + indexCount)
-      );
-    }
     indexStart += indexCount;
 
     const tileRef = textures.forSlot(range.slot);
@@ -181,18 +196,39 @@ export function buildBlockPreviewMesh(
     }
   }
 
-  geo.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+  geo.setAttribute(
+    "position",
+    new THREE.BufferAttribute(Float32Array.from(positions), 3)
+  );
   geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
   geo.setAttribute("uv", new THREE.BufferAttribute(atlasUvs, 2));
   geo.setIndex(new THREE.BufferAttribute(indices, 1));
-  fitGeometry(geo);
 
-  const mesh = new THREE.Mesh(geo, materials);
-  if (emptyIndices.length > 0) {
-    mesh.add(buildOutline(geo, emptyIndices));
+  return geo;
+}
+
+export function textureOf(
+  block: ResolvedBlockDefinition,
+  sources: BlockPreviewSources
+): THREE.Texture | null {
+  return sources.tilesetManager
+    .get(block.defaultTexture?.tilesetId)
+    ?.texture ?? null;
+}
+
+function emptyIndicesOf(
+  geometry: THREE.BufferGeometry
+): number[] {
+  const index = geometry.getIndex();
+  if (index === null) {
+    return [];
   }
 
-  return mesh;
+  return geometry.groups
+    .filter((group) => group.materialIndex === BLOCK_EMPTY_MATERIAL)
+    .flatMap((group) => Array.from(
+      index.array.subarray(group.start, group.start + group.count)
+    ));
 }
 
 function triangleIndexCount(

@@ -23,8 +23,13 @@ import {
 } from "./model/brushOrientation.ts";
 import {
   BrushStroke,
-  type StrokeMode
+  type StrokeMode,
+  type VoxelPaint
 } from "./model/BrushStroke.ts";
+import {
+  ghostTargetOf,
+  type GhostTarget
+} from "./model/ghostTarget.ts";
 import {
   BrushAimResolver,
   type BrushAim
@@ -35,6 +40,7 @@ import {
 } from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
 import { pickBlockAt } from "./interaction/pickBlockAt.ts";
+import { TileOpacityProbe } from "../blocks/tileOpacity.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
@@ -128,6 +134,12 @@ export class LocalBrush extends ActorComponent {
       actor,
       camera,
       brush,
+      ghost: {
+        blockRegistry: engine.blockRegistry,
+        shapeRegistry: engine.shapeRegistry,
+        tilesetManager: engine.tilesetManager,
+        tileOpacity: new TileOpacityProbe(engine.tilesetManager)
+      },
       ...color === undefined ? {} : { color },
       onCursorChange: (cursor) => this.onCursorChange?.(cursor)
     });
@@ -140,7 +152,12 @@ export class LocalBrush extends ActorComponent {
       () => engine.off("command", markAimStale),
       brush.watch("sizeChange", markDirty),
       brush.watch("axisChange", markDirty),
-      brush.watch("patternChange", markDirty)
+      brush.watch("patternChange", markDirty),
+      brush.watch("modeChange", markDirty),
+      brush.watch("blockChange", markDirty),
+      brush.watch("rotationModeChange", markDirty),
+      brush.watch("flipYChange", markDirty),
+      brush.watch("ghostChange", markDirty)
     ];
   }
 
@@ -325,18 +342,7 @@ export class LocalBrush extends ActorComponent {
     const side = mode === "place" ? "place" : "remove";
     const { axis, pattern } = this.#brush;
     // Freeze orientation so camera movement cannot rotate a stroke midway.
-    const paint = mode === "remove" ? undefined : {
-      blockId: this.#brush.blockId,
-      rotation: resolveRotation(
-        this.#camera,
-        this.#brush.rotationMode
-      ),
-      flipY: resolveFlipY(
-        this.#camera,
-        this.#brush.rotationMode,
-        this.#brush.flipY
-      )
-    };
+    const paint = mode === "remove" ? undefined : this.#paint();
     const stroke = new BrushStroke({
       mode,
       layerName,
@@ -355,6 +361,21 @@ export class LocalBrush extends ActorComponent {
       stroke.steer(cursor);
     this.#frameCenter = target;
     this.#apply(stroke, stroke.advance(target));
+  }
+
+  #paint(): VoxelPaint {
+    return {
+      blockId: this.#brush.blockId,
+      rotation: resolveRotation(
+        this.#camera,
+        this.#brush.rotationMode
+      ),
+      flipY: resolveFlipY(
+        this.#camera,
+        this.#brush.rotationMode,
+        this.#brush.flipY
+      )
+    };
   }
 
   #endStroke(): void {
@@ -451,8 +472,32 @@ export class LocalBrush extends ActorComponent {
     this.#preview.update(
       this.actor.world.input.mouse.isMoving(),
       this.#shape(),
-      () => this.#previewTarget()
+      () => this.#previewTarget(),
+      () => this.#ghostTarget()
     );
+  }
+
+  #ghostTarget(): GhostTarget | null {
+    const layerName = this.#selection.voxelLayer;
+    if (layerName === null || !this.#brush.ghost) {
+      return null;
+    }
+
+    const stroke = this.#stroke;
+    const layer = this.engine.world.getLayer(layerName);
+
+    return ghostTargetOf({
+      enabled: this.#brush.ghost,
+      size: this.#brush.size,
+      mode: this.#brush.mode,
+      aim: stroke === null ? this.#resolveAim() : null,
+      stroke: stroke === null ? null : {
+        paint: stroke.paint,
+        center: this.#previewCenter()
+      },
+      paint: this.#paint(),
+      occupied: (position) => layer?.getVoxelAt(position) !== undefined
+    });
   }
 
   #previewTarget(): BrushTarget | null {

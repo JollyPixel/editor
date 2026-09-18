@@ -84,6 +84,7 @@ export class BrushMesh extends THREE.Group {
   #hidden = false;
   #drawn = false;
   #faced = false;
+  #shelled = true;
   #shapeKey = "";
   #shell: VoxelShell | null = null;
   #facingKey = "";
@@ -168,6 +169,19 @@ export class BrushMesh extends THREE.Group {
   set style(value: BrushStyle) {
     this.#style = brushStyleFrom(value);
     this.#applyStyle();
+  }
+
+  get shelled(): boolean {
+    return this.#shelled;
+  }
+
+  set shelled(value: boolean) {
+    if (this.#shelled === value) {
+      return;
+    }
+
+    this.#shelled = value;
+    this.#applyVisibility();
   }
 
   hide(): void {
@@ -356,9 +370,11 @@ export class BrushMesh extends THREE.Group {
   #applyVisibility(): void {
     const visible = !this.#hidden && this.#drawn;
 
-    this.#fill.visible = visible && this.#style.opacity > 0;
+    const shelled = visible && this.#shelled;
+
+    this.#fill.visible = shelled && this.#style.opacity > 0;
     this.#face.visible = visible && this.#faced;
-    const edged = visible && this.#style.edgeWidth > 0;
+    const edged = shelled && this.#style.edgeWidth > 0;
     this.#halo.visible = edged && !this.#subdued;
     this.#border.visible = edged;
   }

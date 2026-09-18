@@ -8,6 +8,7 @@ import {
   BlockShapeRegistry,
   TilesetList,
   TilesetManager,
+  VoxelTransform,
   resolveBlockDefinition,
   type BlockDefinition,
   type TilesetImage
@@ -15,6 +16,7 @@ import {
 
 // Import Internal Dependencies
 import {
+  buildBlockGeometry,
   buildBlockPreviewMesh,
   emptyTextureSlots,
   fitGeometry,
@@ -166,6 +168,40 @@ describe("buildBlockPreviewMesh", () => {
         shapeId
       );
     }
+  });
+});
+
+describe("buildBlockGeometry", () => {
+  it("keeps the geometry in block space", () => {
+    const geometry = buildBlockGeometry(blockOf({ shapeId: "ramp" }), kSources)!;
+    geometry.computeBoundingBox();
+    const { min, max } = geometry.boundingBox!;
+
+    assert.deepEqual(min.toArray(), [0, 0, 0]);
+    assert.deepEqual(max.toArray(), [1, 1, 1]);
+  });
+
+  it("orients the geometry with the given transform", () => {
+    const block = blockOf({ shapeId: "ramp" });
+    const identity = buildBlockGeometry(block, kSources)!;
+    const turned = buildBlockGeometry(
+      block,
+      kSources,
+      new VoxelTransform({ rotation: 1 })
+    )!;
+
+    assert.notDeepEqual(
+      turned.getAttribute("position").array,
+      identity.getAttribute("position").array
+    );
+    assert.deepEqual(turned.groups, identity.groups);
+  });
+
+  it("returns null for an unknown shape", () => {
+    assert.equal(
+      buildBlockGeometry(blockOf({ shapeId: "missing" }), kSources),
+      null
+    );
   });
 });
 

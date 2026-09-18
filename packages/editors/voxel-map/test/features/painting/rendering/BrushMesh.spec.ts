@@ -281,4 +281,27 @@ describe("BrushMesh", () => {
     assert.equal(halo.material.dashed, true);
     assert.equal(border.material.dashed, true);
   });
+
+  test("keeps only the face highlight once unshelled", () => {
+    const mesh = new BrushMesh();
+    mesh.draw({
+      ...kCursor,
+      size: 1,
+      face: "+y"
+    });
+    mesh.shelled = false;
+    const [fill, face] = mesh.children.filter(
+      (child) => child instanceof THREE.Mesh
+    );
+
+    assert.equal(fill.visible, false);
+    assert.equal(face.visible, true);
+    for (const lines of edgeLinesOf(mesh)) {
+      assert.equal(lines.visible, false);
+    }
+
+    mesh.shelled = true;
+    assert.equal(fill.visible, true);
+    assert.equal(edgeLinesOf(mesh)[1].visible, true);
+  });
 });

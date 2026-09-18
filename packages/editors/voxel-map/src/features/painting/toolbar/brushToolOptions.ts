@@ -54,6 +54,12 @@ export const BRUSH_PATTERN_OPTIONS: readonly BrushToolOption<BrushPattern>[] = [
   }
 ];
 
+export function ghostLabel(
+  size: number
+): string {
+  return size === 1 ? "Ghost block" : "Ghost block, size 1 only";
+}
+
 export { choiceOf } from "../../../shared/toolChoice.ts";
 
 export interface BrushToolOption<TValue extends string>

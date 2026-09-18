@@ -43,3 +43,21 @@ describe("BrushStore.size", () => {
     assert.deepStrictEqual(sizes, [BRUSH_MAX_SIZE - 1, BRUSH_MAX_SIZE]);
   });
 });
+
+describe("BrushStore.ghost", () => {
+  test("starts disabled", () => {
+    assert.strictEqual(new BrushStore().ghost, false);
+  });
+
+  test("emits once per actual change", () => {
+    const brush = new BrushStore();
+    const changes: boolean[] = [];
+    brush.watch("ghostChange", (ghost) => changes.push(ghost));
+
+    brush.ghost = true;
+    brush.ghost = true;
+    brush.ghost = false;
+
+    assert.deepStrictEqual(changes, [true, false]);
+  });
+});

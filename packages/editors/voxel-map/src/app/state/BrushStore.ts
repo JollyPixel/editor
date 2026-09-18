@@ -30,6 +30,7 @@ export type BrushStoreEvents = {
   modeChange: (mode: BrushMode) => void;
   axisChange: (axis: BrushAxis) => void;
   patternChange: (pattern: BrushPattern) => void;
+  ghostChange: (ghost: boolean) => void;
 };
 
 export class BrushStore extends EditorStore<BrushStoreEvents> {
@@ -41,6 +42,7 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
   #mode: BrushMode = "build";
   #axis: BrushAxis = "xz";
   #pattern: BrushPattern = "square";
+  #ghost = false;
 
   get blockId(): number {
     return this.#blockId;
@@ -165,6 +167,24 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     this.emit(
       "patternChange",
       pattern
+    );
+  }
+
+  get ghost(): boolean {
+    return this.#ghost;
+  }
+
+  set ghost(
+    ghost: boolean
+  ) {
+    if (this.#ghost === ghost) {
+      return;
+    }
+
+    this.#ghost = ghost;
+    this.emit(
+      "ghostChange",
+      ghost
     );
   }
 

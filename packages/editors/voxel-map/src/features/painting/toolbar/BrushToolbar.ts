@@ -37,6 +37,7 @@ import {
   BRUSH_MODE_OPTIONS,
   BRUSH_PATTERN_OPTIONS,
   choiceOf,
+  ghostLabel,
   toolLabel,
   type BrushToolOption
 } from "./brushToolOptions.ts";
@@ -78,6 +79,9 @@ export class BrushToolbar extends LitElement {
 
   @state()
   declare _size: number;
+
+  @state()
+  declare _ghost: boolean;
 
   @state()
   declare _canUndo: boolean;
@@ -205,6 +209,14 @@ export class BrushToolbar extends LitElement {
               this.brush.pattern = value;
             }
           })}
+          <jolly-tool-button
+            data-tool="ghost"
+            icon="brush-ghost"
+            label=${toolLabel(ghostLabel(this._size), "G", this.disabled)}
+            ?active=${this._ghost}
+            ?disabled=${this.disabled}
+            @click=${this.#onGhostToggle}
+          ></jolly-tool-button>
         </div>
       </jolly-rail>
     `;
@@ -255,6 +267,10 @@ export class BrushToolbar extends LitElement {
     this.history?.redo();
   }
 
+  #onGhostToggle(): void {
+    this.brush.ghost = !this.brush.ghost;
+  }
+
   #onSizeInput(
     event: CustomEvent<JollyChangeDetail<number>>
   ): void {
@@ -267,6 +283,7 @@ export class BrushToolbar extends LitElement {
     this._axis = this.brush.axis;
     this._pattern = this.brush.pattern;
     this._size = this.brush.size;
+    this._ghost = this.brush.ghost;
     this._canUndo = this.history?.canUndo ?? false;
     this._canRedo = this.history?.canRedo ?? false;
     this.disabled = this.selection.voxelLayer === null;
@@ -289,6 +306,9 @@ export class BrushToolbar extends LitElement {
       }),
       brush.watch("sizeChange", (size) => {
         this._size = size;
+      }),
+      brush.watch("ghostChange", (ghost) => {
+        this._ghost = ghost;
       }),
       selection.watch("change", () => {
         this.disabled = selection.voxelLayer === null;

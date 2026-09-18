@@ -5,10 +5,15 @@ import type { Actor } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import type { BrushStore } from "../../../app/state/index.ts";
 import { BrushMesh } from "./BrushMesh.ts";
+import {
+  GhostBlock,
+  type GhostBlockOptions
+} from "./GhostBlock.ts";
 import type { BrushStyle } from "../model/BrushStyle.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
 import type { BrushShape } from "../model/brushFootprint.ts";
+import type { GhostTarget } from "../model/ghostTarget.ts";
 
 export type BrushTarget = Pick<
   BrushCursor,
@@ -19,6 +24,7 @@ export interface BrushPreviewOptions {
   actor: Actor;
   camera: THREE.PerspectiveCamera;
   brush: BrushStore;
+  ghost: GhostBlockOptions;
   color?: THREE.ColorRepresentation;
   onCursorChange: (cursor: BrushCursor | null) => void;
 }
@@ -30,6 +36,7 @@ export class BrushPreview {
   #actor: Actor;
   #camera: THREE.PerspectiveCamera;
   #mesh: BrushMesh;
+  #ghost: GhostBlock;
   #onCursorChange: (cursor: BrushCursor | null) => void;
   #cursor: BrushCursor | null = null;
   #dirty = true;
@@ -46,7 +53,8 @@ export class BrushPreview {
       ...options.color === undefined ? {} : { color: options.color },
       style: options.brush.style
     });
-    this.#actor.addChildren(this.#mesh);
+    this.#ghost = new GhostBlock(options.ghost);
+    this.#actor.addChildren(this.#mesh, this.#ghost);
     this.#unsubscribeStyle = options.brush.watch(
       "styleChange",
       (style: BrushStyle) => {
@@ -61,6 +69,7 @@ export class BrushPreview {
 
   hide(): void {
     this.#mesh.hide();
+    this.#ghost.hide();
     this.#dirty = true;
     this.#setCursor(null);
   }
@@ -68,7 +77,8 @@ export class BrushPreview {
   update(
     mouseMoving: boolean,
     shape: BrushShape,
-    resolveTarget: () => BrushTarget | null
+    resolveTarget: () => BrushTarget | null,
+    resolveGhost: () => GhostTarget | null
   ): void {
     if (!this.#consumeRefresh(mouseMoving)) {
       return;
@@ -77,6 +87,7 @@ export class BrushPreview {
     const target = resolveTarget();
     if (target === null) {
       this.#mesh.clearFootprint();
+      this.#ghost.hide();
       this.#setCursor(null);
 
       return;
@@ -86,6 +97,12 @@ export class BrushPreview {
       ...shape,
       ...target
     };
+    const ghost = resolveGhost();
+    const ghosted = ghost !== null && this.#ghost.draw(ghost);
+    if (!ghosted) {
+      this.#ghost.hide();
+    }
+    this.#mesh.shelled = !ghosted;
     this.#mesh.show();
     this.#mesh.draw(next);
     this.#setCursor(next);
@@ -94,6 +111,8 @@ export class BrushPreview {
   destroy(): void {
     this.#unsubscribeStyle();
     this.#actor.removeChildren(this.#mesh);
+    this.#ghost.removeFromParent();
+    this.#ghost.dispose();
   }
 
   #consumeRefresh(
