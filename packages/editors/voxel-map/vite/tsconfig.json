@@ -1,11 +1,8 @@
 {
-  "extends": "../../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "..",
-    "noEmit": true,
-    "composite": false,
-    "rewriteRelativeImportExtensions": false
-  },
+  "extends": [
+    "../tsconfig.json",
+    "../../../../tsconfig/check.json"
+  ],
   "include": [
     ".",
     "../vite.config.ts"

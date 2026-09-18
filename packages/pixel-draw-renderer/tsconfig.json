@@ -1,21 +1,14 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig/lib.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "types": ["node"],
     "noImplicitOverride": false
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ],
   "references": [
     {
       "path": "../image"
+    },
+    {
+      "path": "../color"
     }
   ]
 }

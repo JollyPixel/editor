@@ -43,7 +43,7 @@ export class Tabs extends LitElement {
   @query("slot")
   declare _slot: HTMLSlotElement;
 
-  #generatedId = `jolly-tabs-${++kTabsId}`;
+  #generatedId: string;
 
   constructor() {
     super();
@@ -51,6 +51,7 @@ export class Tabs extends LitElement {
     this.value = "";
     this.orientation = "horizontal";
     this._tabs = [];
+    this.#generatedId = `jolly-tabs-${++kTabsId}`;
   }
 
   override render(): TemplateResult {

@@ -156,12 +156,12 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       }
     }
   }
+  const failure = new Error("Injected draw failure");
+  function renderObject(): never {
+    throw failure;
+  }
   try {
     if (options.failDraw) {
-      const failure = new Error("Injected draw failure");
-      function renderObject(): never {
-        throw failure;
-      }
       renderer.setRenderObjectFunction(renderObject);
       let caught: unknown;
       try {

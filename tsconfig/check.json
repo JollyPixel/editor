@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "rewriteRelativeImportExtensions": false,
+    "rootDir": "${configDir}/.."
+  },
+  "include": [
+    "${configDir}"
+  ],
+  "exclude": [
+    "${configDir}/node_modules",
+    "${configDir}/dist",
+    "${configDir}/public"
+  ]
+}

@@ -1,8 +1,8 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import type {
   RGBA8,
   Vec2
-} from "../src/types.ts";
+} from "@jolly-pixel/pixel-draw.renderer";
 
 export function randomColor(
   rng: () => number

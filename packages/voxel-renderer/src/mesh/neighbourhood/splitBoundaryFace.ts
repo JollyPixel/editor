@@ -40,12 +40,7 @@ export function splitBoundaryFace(
   for (let vertexIndex = 0; vertexIndex < clip.length && inside.length >= 3; vertexIndex++) {
     const start = clip[vertexIndex].position;
     const end = clip[(vertexIndex + 1) % clip.length].position;
-    function distance(vertex: Vertex): number {
-      return sign * (
-        (end[uAxis] - start[uAxis]) * (vertex.position[vAxis] - start[vAxis]) -
-        (end[vAxis] - start[vAxis]) * (vertex.position[uAxis] - start[uAxis])
-      );
-    }
+    const distance = edgeDistance(start, end, uAxis, vAxis, sign);
 
     const [kept, rejected] = splitPolygon(inside, distance);
     if (rejected.length >= 3) {
@@ -82,6 +77,27 @@ function verticesOf(
   });
 }
 
+function edgeDistance(
+  start: number[],
+  end: number[],
+  uAxis: number,
+  vAxis: number,
+  sign: number
+): (vertex: Vertex) => number {
+  return (vertex) => sign * (
+    (end[uAxis] - start[uAxis]) * (vertex.position[vAxis] - start[vAxis]) -
+    (end[vAxis] - start[vAxis]) * (vertex.position[uAxis] - start[uAxis])
+  );
+}
+
+function interpolate(
+  values: number[],
+  other: number[],
+  fraction: number
+): number[] {
+  return values.map((value, componentIndex) => value + (other[componentIndex] - value) * fraction);
+}
+
 function splitPolygon(
   polygon: Vertex[],
   distance: (vertex: Vertex) => number
@@ -104,13 +120,10 @@ function splitPolygon(
     if ((startDistance > kEpsilon && endDistance < -kEpsilon) ||
       (startDistance < -kEpsilon && endDistance > kEpsilon)) {
       const fraction = startDistance / (startDistance - endDistance);
-      function interpolate(values: number[], other: number[]): number[] {
-        return values.map((value, componentIndex) => value + (other[componentIndex] - value) * fraction);
-      }
       const intersection = {
-        position: interpolate(start.position, end.position),
-        uv: interpolate(start.uv, end.uv),
-        tileUv: interpolate(start.tileUv, end.tileUv)
+        position: interpolate(start.position, end.position, fraction),
+        uv: interpolate(start.uv, end.uv, fraction),
+        tileUv: interpolate(start.tileUv, end.tileUv, fraction)
       };
       inside.push(intersection);
       outside.push(intersection);

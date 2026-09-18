@@ -8,10 +8,10 @@
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
-    "lint": "eslint src test",
+    "lint": "oxlint src test",
     "bench": "jolly-bench"
   },
   "publishConfig": {

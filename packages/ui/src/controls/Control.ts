@@ -39,7 +39,7 @@ export class Control extends LitElement {
   @query(".details")
   declare _details: HTMLElement | null;
 
-  #detailsId = `jolly-control-details-${nextDetailsId++}`;
+  #detailsId: string;
   #pointerFocus = false;
 
   #popup = new PopoverController(this, {
@@ -60,6 +60,7 @@ export class Control extends LitElement {
 
     this.description = "";
     this.details = "";
+    this.#detailsId = `jolly-control-details-${nextDetailsId++}`;
     this.setAttribute("role", "listitem");
   }
 

@@ -27,8 +27,8 @@
     "bench": "jolly-bench bench/network.bench.ts",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
-    "lint": "eslint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

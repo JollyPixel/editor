@@ -28,8 +28,8 @@
     "build:schemas": "node scripts/compileSchemas.ts",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
-    "lint": "eslint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

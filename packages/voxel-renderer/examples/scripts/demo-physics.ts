@@ -64,11 +64,10 @@ scene.add(
 );
 
 world.createActor("camera")
-  .addComponent(Camera3DControls, {}, (component) => {
-    component.actor.transform
-      .setLocalPosition({ x: 16, y: 22, z: 50 })
-      .lookAt({ x: 16, y: 1, z: 16 });
-  });
+  .addComponent(Camera3DControls)
+  .transform
+  .setLocalPosition({ x: 16, y: 22, z: 50 })
+  .lookAt({ x: 16, y: 1, z: 16 });
 
 /*
  * One block type — collidable fullCube so RapierVoxelCollider creates box

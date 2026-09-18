@@ -11,6 +11,9 @@
       "path": "./packages/image"
     },
     {
+      "path": "./packages/loop"
+    },
+    {
       "path": "./packages/resize-handle"
     },
     {

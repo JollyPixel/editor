@@ -12,7 +12,7 @@ export function createPointerTarget(
   size = kViewportSize
 ): HTMLElement {
   const element = document.createElement("div");
-  element.getBoundingClientRect = () => ({
+  const rect = {
     x: 0,
     y: 0,
     left: 0,
@@ -24,7 +24,8 @@ export function createPointerTarget(
     toJSON: () => {
       return {};
     }
-  } as DOMRect);
+  } as DOMRect;
+  element.getBoundingClientRect = () => rect;
 
   return element;
 }

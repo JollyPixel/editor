@@ -1,0 +1,8 @@
+{
+  "extends": "./check.json",
+  "include": [
+    "${configDir}",
+    "${configDir}/../src",
+    "${configDir}/../*.config.ts"
+  ]
+}

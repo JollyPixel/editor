@@ -1,15 +1,10 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "composite": false,
-    "noEmit": true,
-    "types": ["node"]
-  },
+  "extends": [
+    "../../tsconfig/base.json",
+    "../../tsconfig/check.json"
+  ],
   "include": [
     "src",
     "test"
-  ],
-  "exclude": [
-    "node_modules"
   ]
 }
