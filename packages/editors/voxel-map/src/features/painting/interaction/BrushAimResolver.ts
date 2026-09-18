@@ -11,6 +11,10 @@ import { castViewRay } from "../../../scene/viewFocus.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
 import type { StrokeMode } from "../model/BrushStroke.ts";
 import type { BrushPlane } from "../model/brushFootprint.ts";
+import {
+  cellFaceOf,
+  type CellFace
+} from "../model/cellFace.ts";
 
 // CONSTANTS
 const kPlane = new THREE.Plane();
@@ -28,6 +32,7 @@ const kSpherePoint = new THREE.Vector3();
 export interface BrushAim {
   place: VoxelCoord;
   remove: VoxelCoord;
+  face: CellFace | null;
 }
 
 export interface BrushPlaneAim {
@@ -134,7 +139,8 @@ export class BrushAimResolver {
 
       return {
         place: ground,
-        remove: ground
+        remove: ground,
+        face: "-y"
       };
     }
 
@@ -150,7 +156,10 @@ export class BrushAimResolver {
         hit.point,
         hit.normal
       ),
-      remove: cell
+      remove: cell,
+      face: cellFaceOf(
+        cellFaceStep(this.#raycaster.ray, cell) ?? hit.normal
+      )
     };
   }
 
@@ -173,7 +182,8 @@ export class BrushAimResolver {
 
     return {
       place: cell,
-      remove: cell
+      remove: cell,
+      face: null
     };
   }
 

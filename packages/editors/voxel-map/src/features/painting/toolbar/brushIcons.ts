@@ -2,35 +2,6 @@
 import { svg } from "lit";
 import { registerIcon } from "@jolly-pixel/ui";
 
-// CONSTANTS
-const kTop = "M12 3 20 7.5 12 12 4 7.5Z";
-const kLeft = "M4 7.5 12 12 12 21 4 16.5Z";
-const kRight = "M12 12 20 7.5 20 16.5 12 21Z";
-const kOutline = [
-  "M12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5Z",
-  "M4 7.5 12 12 20 7.5",
-  "M12 12V21"
-].join(" ");
-
-function axisIcon(
-  opacity: [number, number, number]
-) {
-  const [top, left, right] = opacity;
-
-  return svg`
-    <path d=${kTop} fill="currentColor" fill-opacity=${top} />
-    <path d=${kLeft} fill="currentColor" fill-opacity=${left} />
-    <path d=${kRight} fill="currentColor" fill-opacity=${right} />
-    <path
-      d=${kOutline}
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linejoin="round"
-    />
-  `;
-}
-
 registerIcon("brush-build", svg`
   <path
     d="M10 3 17 7v8l-7 4-7-4V7Z M3 7l7 4 7-4 M10 11v8"
@@ -72,11 +43,6 @@ registerIcon("brush-replace", svg`
     stroke-linejoin="round"
   />
 `);
-
-registerIcon("axis-xz", axisIcon([0.9, 0, 0]));
-registerIcon("axis-xy", axisIcon([0, 0.9, 0]));
-registerIcon("axis-yz", axisIcon([0, 0, 0.9]));
-registerIcon("axis-xyz", axisIcon([0.9, 0.6, 0.35]));
 
 registerIcon("pattern-square", svg`
   <rect

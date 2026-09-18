@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import type { Actor } from "@jolly-pixel/engine";
-import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { BrushStore } from "../../../app/state/index.ts";
@@ -10,6 +9,8 @@ import type { BrushStyle } from "../model/BrushStyle.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
 import type { BrushShape } from "../model/brushFootprint.ts";
+
+export type BrushTarget = Pick<BrushCursor, "position" | "face">;
 
 export interface BrushPreviewOptions {
   actor: Actor;
@@ -64,14 +65,14 @@ export class BrushPreview {
   update(
     mouseMoving: boolean,
     shape: BrushShape,
-    resolveCenter: () => VoxelCoord | null
+    resolveTarget: () => BrushTarget | null
   ): void {
     if (!this.#consumeRefresh(mouseMoving)) {
       return;
     }
 
-    const center = resolveCenter();
-    if (center === null) {
+    const target = resolveTarget();
+    if (target === null) {
       this.#mesh.clearFootprint();
       this.#setCursor(null);
 
@@ -80,7 +81,7 @@ export class BrushPreview {
 
     const next = {
       ...shape,
-      position: center
+      ...target
     };
     this.#mesh.show();
     this.#mesh.draw(next);

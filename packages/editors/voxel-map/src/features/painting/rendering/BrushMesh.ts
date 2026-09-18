@@ -15,6 +15,7 @@ import {
   voxelShell,
   type VoxelShell
 } from "../model/voxelShell.ts";
+import { faceCornersOf } from "../model/cellFace.ts";
 import {
   DEFAULT_BRUSH_STYLE,
   brushStyleFrom,
@@ -23,6 +24,8 @@ import {
 
 // CONSTANTS
 const kInflate = 0.01;
+const kFaceMargin = kInflate + 0.005;
+const kFaceOpacityBoost = 0.35;
 const kDefaultHighlight = 0x9df6ff;
 const kOrigin = {
   x: 0,
@@ -56,9 +59,13 @@ export class BrushMesh extends THREE.Group {
   #border: LineSegments2;
   #borderMaterial: Line2NodeMaterial;
 
+  #face: THREE.Mesh;
+  #faceMaterial: THREE.MeshBasicMaterial;
+
   #style: BrushStyle;
   #hidden = false;
   #drawn = false;
+  #faced = false;
   #shapeKey = "";
 
   constructor(
@@ -100,8 +107,29 @@ export class BrushMesh extends THREE.Group {
     this.#border.frustumCulled = false;
     this.#border.visible = false;
 
+    this.#faceMaterial = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const faceGeometry = new THREE.BufferGeometry();
+    faceGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(new Float32Array(12), 3)
+    );
+    faceGeometry.setIndex([0, 1, 2, 0, 2, 3]);
+    this.#face = new THREE.Mesh(
+      faceGeometry,
+      this.#faceMaterial
+    );
+    this.#face.renderOrder = 1;
+    this.#face.frustumCulled = false;
+    this.#face.visible = false;
+
     this.add(
       this.#fill,
+      this.#face,
       this.#border
     );
     this.#applyStyle();
@@ -142,9 +170,32 @@ export class BrushMesh extends THREE.Group {
       min.z + (span.z / 2)
     );
     this.#reshape(cursor);
+    this.#placeFace(cursor);
 
     this.#drawn = true;
     this.#applyVisibility();
+  }
+
+  #placeFace(
+    cursor: BrushCursor
+  ): void {
+    const { face } = cursor;
+    this.#faced = face !== undefined;
+    if (face === undefined) {
+      return;
+    }
+
+    const corners = faceCornersOf(cursor, face, kFaceMargin);
+    const attribute = this.#face.geometry.getAttribute("position");
+    corners.forEach((corner, index) => {
+      attribute.setXYZ(
+        index,
+        corner.x - this.position.x,
+        corner.y - this.position.y,
+        corner.z - this.position.z
+      );
+    });
+    attribute.needsUpdate = true;
   }
 
   #reshape(
@@ -180,6 +231,7 @@ export class BrushMesh extends THREE.Group {
     } = this.#style;
 
     this.#fillMaterial.opacity = opacity;
+    this.#faceMaterial.opacity = Math.min(1, opacity + kFaceOpacityBoost);
 
     this.#borderMaterial.linewidth = edgeWidth;
     this.#borderMaterial.dashed = edgeStyle === "dashed";
@@ -194,6 +246,7 @@ export class BrushMesh extends THREE.Group {
     const visible = !this.#hidden && this.#drawn;
 
     this.#fill.visible = visible && this.#style.opacity > 0;
+    this.#face.visible = visible && this.#faced;
     this.#border.visible = visible && this.#style.edgeWidth > 0;
   }
 }

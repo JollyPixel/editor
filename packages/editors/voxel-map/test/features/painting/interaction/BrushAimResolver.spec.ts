@@ -212,7 +212,8 @@ describe("BrushAimResolver.resolve", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 0, z: -1 },
-      remove: { x: 0, y: 0, z: 0 }
+      remove: { x: 0, y: 0, z: 0 },
+      face: "-z"
     });
   });
 
@@ -224,7 +225,8 @@ describe("BrushAimResolver.resolve", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 0, z: -1 },
-      remove: { x: 0, y: 0, z: 0 }
+      remove: { x: 0, y: 0, z: 0 },
+      face: "-z"
     });
   });
 
@@ -236,7 +238,8 @@ describe("BrushAimResolver.resolve", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 1, z: 0 },
-      remove: { x: 0, y: 0, z: 0 }
+      remove: { x: 0, y: 0, z: 0 },
+      face: "+y"
     });
   });
 
@@ -248,7 +251,8 @@ describe("BrushAimResolver.resolve", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 2, y: 0, z: 2 },
-      remove: { x: 2, y: 0, z: 2 }
+      remove: { x: 2, y: 0, z: 2 },
+      face: "-y"
     });
   });
 });
@@ -283,7 +287,8 @@ describe("BrushAimResolver sky shell", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 14, z: 0 },
-      remove: { x: 0, y: 14, z: 0 }
+      remove: { x: 0, y: 14, z: 0 },
+      face: null
     });
   });
 
@@ -301,7 +306,8 @@ describe("BrushAimResolver sky shell", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 0, z: 0 },
-      remove: { x: 0, y: 0, z: 0 }
+      remove: { x: 0, y: 0, z: 0 },
+      face: "-y"
     });
   });
 
@@ -313,7 +319,8 @@ describe("BrushAimResolver sky shell", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 30, z: 0 },
-      remove: { x: 0, y: 30, z: 0 }
+      remove: { x: 0, y: 30, z: 0 },
+      face: null
     });
   });
 
@@ -322,7 +329,8 @@ describe("BrushAimResolver sky shell", () => {
 
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 36, z: 0 },
-      remove: { x: 0, y: 36, z: 0 }
+      remove: { x: 0, y: 36, z: 0 },
+      face: null
     });
   });
 });

@@ -15,8 +15,8 @@ import type {
 import { EditorStore } from "./EditorStore.ts";
 
 // CONSTANTS
-const kMinSize = 1;
-const kMaxSize = 8;
+export const BRUSH_MIN_SIZE = 1;
+export const BRUSH_MAX_SIZE = 16;
 
 export type RotationMode = typeof VoxelRotation[keyof typeof VoxelRotation] | "auto";
 export type BrushMode = "build" | "replace";
@@ -62,8 +62,8 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     size: number
   ) {
     const next = Math.max(
-      kMinSize,
-      Math.min(kMaxSize, size)
+      BRUSH_MIN_SIZE,
+      Math.min(BRUSH_MAX_SIZE, size)
     );
     if (this.#size === next) {
       return;

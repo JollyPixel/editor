@@ -2,6 +2,7 @@
 import {
   LitElement,
   html,
+  nothing,
   type PropertyValues,
   type TemplateResult
 } from "lit";
@@ -10,6 +11,7 @@ import {
   property,
   state
 } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 import type {
   VoxelHistory,
@@ -18,6 +20,8 @@ import type {
 
 // Import Internal Dependencies
 import {
+  BRUSH_MAX_SIZE,
+  BRUSH_MIN_SIZE,
   editorState,
   type BrushMode,
   type BrushStore,
@@ -38,9 +42,14 @@ import {
 } from "./brushToolOptions.ts";
 import "./brushIcons.ts";
 
-// CONSTANTS
-const kMinSize = 1;
-const kMaxSize = 8;
+interface ChoiceTool<TValue extends string> {
+  tool: string;
+  options: readonly BrushToolOption<TValue>[];
+  current: TValue;
+  shortcut: string;
+  select: (value: TValue) => void;
+  content?: (value: TValue) => TemplateResult | typeof nothing;
+}
 
 @customElement("voxel-brush-toolbar")
 export class BrushToolbar extends LitElement {
@@ -150,24 +159,25 @@ export class BrushToolbar extends LitElement {
           aria-label="Brush"
           aria-disabled=${String(this.disabled)}
         >
-          ${this.#renderChoice(
-            "mode",
-            BRUSH_MODE_OPTIONS,
-            this._mode,
-            "R",
-            (value) => {
+          ${this.#renderChoice({
+            tool: "mode",
+            options: BRUSH_MODE_OPTIONS,
+            current: this._mode,
+            shortcut: "R",
+            select: (value) => {
               this.brush.mode = value;
             }
-          )}
-          ${this.#renderChoice(
-            "axis",
-            BRUSH_AXIS_OPTIONS,
-            this._axis,
-            "X",
-            (value) => {
+          })}
+          ${this.#renderChoice({
+            tool: "axis",
+            options: BRUSH_AXIS_OPTIONS,
+            current: this._axis,
+            shortcut: "X",
+            select: (value) => {
               this.brush.axis = value;
-            }
-          )}
+            },
+            content: axisLetters
+          })}
           <jolly-tool-button
             data-tool="size"
             flyout-side="above"
@@ -178,35 +188,39 @@ export class BrushToolbar extends LitElement {
             <jolly-slider
               slot="flyout"
               orientation="vertical"
-              min=${kMinSize}
-              max=${kMaxSize}
+              min=${BRUSH_MIN_SIZE}
+              max=${BRUSH_MAX_SIZE}
               step="1"
               .value=${this._size}
               @jolly-input=${this.#onSizeInput}
               @jolly-change=${this.#onSizeInput}
             ></jolly-slider>
           </jolly-tool-button>
-          ${this.#renderChoice(
-            "pattern",
-            BRUSH_PATTERN_OPTIONS,
-            this._pattern,
-            "C",
-            (value) => {
+          ${this.#renderChoice({
+            tool: "pattern",
+            options: BRUSH_PATTERN_OPTIONS,
+            current: this._pattern,
+            shortcut: "C",
+            select: (value) => {
               this.brush.pattern = value;
             }
-          )}
+          })}
         </div>
       </jolly-rail>
     `;
   }
 
   #renderChoice<TValue extends string>(
-    tool: string,
-    options: readonly BrushToolOption<TValue>[],
-    current: TValue,
-    shortcut: string,
-    select: (value: TValue) => void
+    choice: ChoiceTool<TValue>
   ): TemplateResult {
+    const {
+      tool,
+      options,
+      current,
+      shortcut,
+      select,
+      content = () => nothing
+    } = choice;
     const { active, alternatives } = choiceOf(options, current);
 
     return html`
@@ -214,19 +228,20 @@ export class BrushToolbar extends LitElement {
         data-tool=${tool}
         data-value=${active.value}
         flyout-side="above"
-        icon=${active.icon}
+        icon=${ifDefined(active.icon)}
         label=${toolLabel(active.label, shortcut, this.disabled)}
         ?disabled=${this.disabled}
       >
+        ${content(active.value)}
         ${alternatives.map((option) => html`
           <jolly-tool-button
             slot="flyout"
             data-value=${option.value}
             flyout-side="left"
-            icon=${option.icon}
+            icon=${ifDefined(option.icon)}
             label=${option.label}
             @click=${() => select(option.value)}
-          ></jolly-tool-button>
+          >${content(option.value)}</jolly-tool-button>
         `)}
       </jolly-tool-button>
     `;
@@ -293,6 +308,16 @@ export class BrushToolbar extends LitElement {
       unsubscribe();
     }
   }
+}
+
+function axisLetters(
+  axis: BrushAxis
+): TemplateResult {
+  const letters = [...axis].map(
+    (letter) => html`<span class=${letter}>${letter.toUpperCase()}</span>`
+  );
+
+  return html`<span class="axis">${letters}</span>`;
 }
 
 declare global {

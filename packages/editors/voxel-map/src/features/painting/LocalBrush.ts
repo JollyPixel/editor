@@ -33,7 +33,10 @@ import {
   type BrushAim,
   type BrushPlaneAim
 } from "./interaction/BrushAimResolver.ts";
-import { BrushPreview } from "./rendering/BrushPreview.ts";
+import {
+  BrushPreview,
+  type BrushTarget
+} from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
 import { pickBlockAt } from "./interaction/pickBlockAt.ts";
 
@@ -430,8 +433,19 @@ export class LocalBrush extends ActorComponent {
     this.#preview.update(
       this.actor.world.input.mouse.isMoving(),
       this.#shape(),
-      () => this.#previewCenter()
+      () => this.#previewTarget()
     );
+  }
+
+  #previewTarget(): BrushTarget | null {
+    const position = this.#previewCenter();
+    if (position === null) {
+      return null;
+    }
+
+    const face = this.#stroke === null ? this.#resolveAim()?.face : null;
+
+    return face ? { position, face } : { position };
   }
 
   #previewCenter(): VoxelCoord | null {
