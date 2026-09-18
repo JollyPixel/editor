@@ -41,11 +41,10 @@ class RenderersScene extends Systems.Scene {
     );
 
     this.world.createActor("camera")
-      .addComponent(Camera3DControls, {}, (component) => {
-        component.actor.transform
-          .setLocalPosition({ x: 10, y: 10, z: 5 })
-          .lookAt({ x: 0, y: 0, z: 0 });
-      });
+      .addComponent(Camera3DControls)
+      .transform
+      .setLocalPosition({ x: 10, y: 10, z: 5 })
+      .lookAt({ x: 0, y: 0, z: 0 });
 
     const textActor = this.world.createActor("text")
       .addComponent(TextRenderer, {

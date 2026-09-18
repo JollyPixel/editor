@@ -33,7 +33,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'pnpm-lock.yaml'
               - 'tsconfig.json'
-              - 'tsconfig.base.json'
+              - 'tsconfig/**'
               - '.github/workflows/node.js.yml'
             pixel-art:
               - 'packages/editors/pixel-art/**'
@@ -48,7 +48,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'pnpm-lock.yaml'
               - 'tsconfig.json'
-              - 'tsconfig.base.json'
+              - 'tsconfig/**'
               - '.github/workflows/node.js.yml'
             voxel-map:
               - 'packages/editors/voxel-map/**'
@@ -71,7 +71,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'pnpm-lock.yaml'
               - 'tsconfig.json'
-              - 'tsconfig.base.json'
+              - 'tsconfig/**'
               - '.github/workflows/node.js.yml'
 
   test:

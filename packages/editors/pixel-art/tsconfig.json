@@ -1,16 +1,5 @@
 {
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src"
-  },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ],
+  "extends": "../../../tsconfig/lib.json",
   "references": [
     {
       "path": "../../assets/pixel-art"
@@ -23,6 +12,12 @@
     },
     {
       "path": "../../ui"
+    },
+    {
+      "path": "../../color"
+    },
+    {
+      "path": "../../network"
     }
   ]
 }

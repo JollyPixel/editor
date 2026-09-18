@@ -1,17 +1,16 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/examples.json"
+  ],
   "compilerOptions": {
-    "composite": false,
-    "noEmit": true,
-    "rewriteRelativeImportExtensions": false,
-    "rootDir": "..",
-    "types": ["node", "vite/client"],
     "paths": {
-      "@jolly-pixel/voxel.renderer": ["../src/index.ts"],
-      "@jolly-pixel/voxel.renderer/plugins/*": ["../src/plugins/*"]
+      "@jolly-pixel/voxel.renderer": [
+        "../src/index.ts"
+      ],
+      "@jolly-pixel/voxel.renderer/plugins/*": [
+        "../src/plugins/*"
+      ]
     }
-  },
-  "include": [
-    "scripts"
-  ]
+  }
 }

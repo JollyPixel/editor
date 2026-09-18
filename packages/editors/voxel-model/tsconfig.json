@@ -1,19 +1,32 @@
 {
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src"
-  },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ],
+  "extends": "../../../tsconfig/lib.json",
   "references": [
     {
       "path": "../../engine"
+    },
+    {
+      "path": "../../assets/pixel-art"
+    },
+    {
+      "path": "../../color"
+    },
+    {
+      "path": "../pixel-art"
+    },
+    {
+      "path": "../../network"
+    },
+    {
+      "path": "../../pixel-draw-renderer"
+    },
+    {
+      "path": "../../runtime"
+    },
+    {
+      "path": "../../three"
+    },
+    {
+      "path": "../../ui"
     }
   ]
 }

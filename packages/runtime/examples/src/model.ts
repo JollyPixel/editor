@@ -39,18 +39,16 @@ class ModelsScene extends Systems.Scene {
     );
 
     this.world.createActor("camera")
-      .addComponent(Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 }, (component) => {
-        component.actor.transform
-          .setLocalPosition({ x: 5, y: 5, z: 5 })
-          .lookAt({ x: 0, y: 0, z: 0 });
-      });
+      .addComponent(Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 })
+      .transform
+      .setLocalPosition({ x: 5, y: 5, z: 5 })
+      .lookAt({ x: 0, y: 0, z: 0 });
 
     this.world.createActor("tinyWitchModel")
       .addComponent(ModelRenderer, {
         asset: kTinyWitchModel
-      }, (component) => {
-        component.actor.object3D.position.set(-5, 0, 0);
-      });
+      })
+      .object3D.position.set(-5, 0, 0);
 
     this.world.createActor("player")
       .addComponent(ModelRenderer, {

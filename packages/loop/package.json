@@ -13,7 +13,7 @@
     "lint": "oxlint src test",
     "bench": "jolly-bench",
     "dev": "vite",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

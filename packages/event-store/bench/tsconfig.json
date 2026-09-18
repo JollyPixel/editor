@@ -1,11 +1,6 @@
 {
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "composite": false,
-    "noEmit": true,
-    "types": ["node"]
-  },
-  "include": [
-    "**/*.ts"
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/check.json"
   ]
 }

@@ -1,17 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig/lib.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
     "sourceMap": false
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ],
   "references": [
     {
       "path": "../asset"

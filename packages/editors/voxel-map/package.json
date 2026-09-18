@@ -13,7 +13,7 @@
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p vite/tsconfig.json",
     "lint": "oxlint src test vite vite.config.ts playwright.config.ts && pnpm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
   },

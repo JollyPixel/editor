@@ -1,18 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig/lib.json",
   "compilerOptions": {
-    "emitDecoratorMetadata": true,
-    "outDir": "dist",
-    "rootDir": "src",
     "noImplicitOverride": false
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ],
   "references": [
     {
       "path": "../asset"
@@ -22,6 +12,9 @@
     },
     {
       "path": "../ui"
+    },
+    {
+      "path": "../loop"
     }
   ]
 }

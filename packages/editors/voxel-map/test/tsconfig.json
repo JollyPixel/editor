@@ -1,14 +1,6 @@
 {
-  "extends": "../tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "..",
-    "noEmit": true,
-    "composite": false,
-    "rewriteRelativeImportExtensions": false
-  },
-  "include": [
-    "../src",
-    ".",
-    "../playwright.config.ts"
+  "extends": [
+    "../tsconfig.json",
+    "../../../../tsconfig/test.json"
   ]
 }

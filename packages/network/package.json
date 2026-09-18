@@ -29,7 +29,7 @@
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

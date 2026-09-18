@@ -35,7 +35,7 @@
     "test:e2e": "playwright test",
     "lint": "oxlint src test examples && pnpm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" \"examples/**/*.{ts,css}\" --cache",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

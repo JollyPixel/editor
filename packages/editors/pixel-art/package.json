@@ -24,7 +24,7 @@
     "test:e2e": "playwright test",
     "lint": "oxlint src test && pnpm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" \"examples/scripts/**/*.ts\" \"examples/public/**/*.css\" --cache",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
   "repository": {
     "type": "git",

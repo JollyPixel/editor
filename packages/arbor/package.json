@@ -12,7 +12,7 @@
     "build": "tsc -b",
     "preview": "vite",
     "lint": "oxlint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

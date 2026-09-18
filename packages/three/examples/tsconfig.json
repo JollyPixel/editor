@@ -1,14 +1,6 @@
 {
-  "extends": "../tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "..",
-    "composite": false,
-    "noEmit": true,
-    "rewriteRelativeImportExtensions": false
-  },
-  "include": [
-    ".",
-    "../src"
-  ],
-  "references": []
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/examples.json"
+  ]
 }

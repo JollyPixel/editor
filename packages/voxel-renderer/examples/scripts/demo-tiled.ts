@@ -41,18 +41,17 @@ class TiledScene extends Systems.Scene {
     );
 
     this.world.createActor("camera")
-      .addComponent(Camera3DControls, {}, (component) => {
-        component.actor.transform
-          .setLocalPosition({
-            x: 15,
-            y: 25,
-            z: 42
-          })
-          .lookAt({
-            x: 15,
-            y: 0,
-            z: 10
-          });
+      .addComponent(Camera3DControls)
+      .transform
+      .setLocalPosition({
+        x: 15,
+        y: 25,
+        z: 42
+      })
+      .lookAt({
+        x: 15,
+        y: 0,
+        z: 10
       });
 
     this.world.createActor("map")

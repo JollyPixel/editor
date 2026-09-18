@@ -23,7 +23,7 @@
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "dev": "vite",
     "lint": "oxlint src test examples",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

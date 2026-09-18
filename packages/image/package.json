@@ -19,7 +19,7 @@
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
     "test-only": "pnpm run test-only:node && pnpm run test-only:dom",
     "test-only:node": "node --test \"test/png/**/*.spec.ts\" \"test/*.spec.ts\"",
     "test-only:dom": "node --import ./test/setup.ts --test \"test/raster/**/*.spec.ts\"",

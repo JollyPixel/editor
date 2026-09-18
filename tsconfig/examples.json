@@ -1,0 +1,6 @@
+{
+  "extends": "./check.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  }
+}

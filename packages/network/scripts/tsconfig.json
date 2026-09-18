@@ -1,12 +1,6 @@
 {
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "..",
-    "noEmit": true,
-    "composite": false
-  },
-  "include": [
-    "../src",
-    "."
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/check.json"
   ]
 }
