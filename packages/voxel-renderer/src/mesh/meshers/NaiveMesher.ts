@@ -80,7 +80,7 @@ export class NaiveMesher implements Mesher {
             wy + offset[1],
             wz + offset[2],
             FACE_OPPOSITE[cull],
-            variant.blockId
+            variant
           );
           if (hidden) {
             stats.culledFaces++;
@@ -89,7 +89,7 @@ export class NaiveMesher implements Mesher {
         }
 
         for (const piece of neighbourhood.boundaryFaces(
-          face, [wx, wy, wz], variant.blockId
+          face, [wx, wy, wz], variant
         )) {
           bufferFor(piece.slot).addFace(piece, wx, wy, wz);
           stats.faces++;

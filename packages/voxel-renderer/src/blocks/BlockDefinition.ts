@@ -38,10 +38,10 @@ export interface BlockDefinition extends BlockSurfaceOptions {
    */
   collidable?: boolean;
   /**
-   * Whether covered faces shared with the same block are removed.
-   * @default true
+   * Whether faces covered by a neighbouring block are removed.
+   * @default true for opaque blocks, false otherwise
    */
-  cullSelfFaces?: boolean;
+  cullCoveredFaces?: boolean;
   /**
    * Tileset used by tile references that omit one; dropped once resolved.
    */
@@ -73,6 +73,12 @@ export function slotKeyOf(
   return Number.isInteger(face) && face >= 0 && face < FACES.length ?
     slotNameOf(face as FACE) :
     key;
+}
+
+export function cullsCoveredFaces(
+  def: Pick<BlockDefinition, "alphaMode" | "cullCoveredFaces">
+): boolean {
+  return def.cullCoveredFaces ?? (def.alphaMode ?? "opaque") === "opaque";
 }
 
 export function resolveBlockProperties(

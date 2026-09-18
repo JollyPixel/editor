@@ -39,6 +39,7 @@ export interface BlockVariantFace {
    */
   region: Uint16Array;
   merge: BlockFaceMerge | null;
+  full: boolean;
   /** Face normal, signed-normalized to the byte the attribute is emitted as. */
   normalX: number;
   normalY: number;
@@ -62,7 +63,7 @@ export interface BlockVariant {
    * their shared face; leaves still hide nothing of the stone beside them.
    */
   selfOcclusionMask: number;
-  keepsSelfFaces: boolean;
+  keepsCoveredFaces: boolean;
   /**
    * Mergeable full-quad face for each world-space direction.
    */

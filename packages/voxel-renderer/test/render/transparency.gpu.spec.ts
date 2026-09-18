@@ -58,6 +58,11 @@ function probeCases(
   sample("interior behind mask hole", {
     alpha: 1, mode: "mask", hole: true
   }, [255, 255, 255]);
+  for (const cull of [false, true]) {
+    sample(`covered face against an opaque neighbour cull=${cull}`, {
+      alpha: 1, mode: "mask", hole: true, backing: true, cull
+    }, cull ? [0, 255, 0] : [255, 255, 255]);
+  }
   const flat = { ambient: Math.PI, directional: 0 };
   const lit = { ambient: 1.3, directional: 2.25 };
   sample("flat lighting keeps the authored gray", {

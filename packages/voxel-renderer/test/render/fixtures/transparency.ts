@@ -22,6 +22,7 @@ export interface ProbeOptions {
   colored?: boolean;
   reverseDrawOrder?: boolean;
   hole?: boolean;
+  backing?: boolean;
   occluder?: boolean;
   resize?: boolean;
   failDraw?: boolean;
@@ -66,8 +67,14 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       }
 
       // A constant unlit white isolates compositing from Lambert lighting.
-      const color = tilesetId === "atlas" ? 0xff0000 : 0x0000ff;
-      material.emissive.set(options.colored ? color : 0xffffff);
+      let color = 0xffffff;
+      if (tilesetId === "stone") {
+        color = 0x00ff00;
+      }
+      else if (options.colored) {
+        color = tilesetId === "atlas" ? 0xff0000 : 0x0000ff;
+      }
+      material.emissive.set(color);
       material.color.setRGB(0, 0, 0);
     },
     blocks: [{
@@ -77,7 +84,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 },
       alphaMode: options.mode ?? "blend",
       side: options.side ?? "double",
-      cullSelfFaces: options.cull ?? true
+      cullCoveredFaces: options.cull ?? true
     }]
   });
   const image = new Image();
@@ -103,7 +110,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
         defaultTexture: { tilesetId: "other", col: 0, row: 0 },
         alphaMode: "blend",
         side: options.side ?? "double",
-        cullSelfFaces: options.cull ?? true
+        cullCoveredFaces: options.cull ?? true
       });
     }
     if (options.hole) {
@@ -118,7 +125,29 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       });
     }
   }
+  if (options.backing) {
+    context.fillStyle = "rgb(255, 255, 255)";
+    context.fillRect(0, 0, 1, 1);
+    const stoneImage = new Image();
+    stoneImage.src = canvas.toDataURL();
+    await stoneImage.decode();
+    engine.loadTileset({ id: "stone", src: "", tileSize: 1 }, new THREE.Texture(stoneImage));
+    engine.tilesetManager.atlas("stone").texture.needsUpdate = true;
+    engine.blockRegistry.register({
+      id: 3,
+      name: "Stone",
+      shapeId: "cube",
+      defaultTexture: { tilesetId: "stone", col: 0, row: 0 }
+    });
+  }
   const layer = engine.world.addLayer("test", { opacity: options.opacity ?? 1 });
+  if (options.backing) {
+    layer.setVoxelAt({
+      x: 0,
+      y: 0,
+      z: options.reverse ? 1 : -1
+    }, { blockId: 3, transform: 0 });
+  }
   for (let depthIndex = 0; depthIndex < (options.count ?? 1); depthIndex++) {
     layer.setVoxelAt({
       x: 0,

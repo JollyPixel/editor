@@ -101,7 +101,9 @@ describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () =
   ) {
     const fixture = makeFixture();
     fixture.blockRegistry.register(makeBlockDef(kLeavesId, "cube", {
-      name: "Leaves", alphaMode: transparent ? "blend" : "opaque"
+      name: "Leaves",
+      alphaMode: transparent ? "blend" : "opaque",
+      cullCoveredFaces: true
     }));
 
     return fixture;
@@ -143,7 +145,11 @@ describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () =
   it("keeps the shared face between two different transparent blocks", () => {
     const fixture = withLeaves(true);
     fixture.blockRegistry.register(
-      makeBlockDef(kGrateId, "cube", { name: "Grate", alphaMode: "blend" })
+      makeBlockDef(kGrateId, "cube", {
+        name: "Grate",
+        alphaMode: "blend",
+        cullCoveredFaces: true
+      })
     );
     fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
     fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });
@@ -225,9 +231,9 @@ describe("VoxelMeshBuilder — neighbour lookups across chunks and layer positio
   });
 });
 
-describe("VoxelMeshBuilder — cullSelfFaces", () => {
+describe("VoxelMeshBuilder — cullCoveredFaces", () => {
   function withGlass(
-    cullSelfFaces: boolean,
+    cullCoveredFaces: boolean | undefined,
     greedy = false
   ) {
     const fixture = makeFixture({ greedy });
@@ -235,7 +241,7 @@ describe("VoxelMeshBuilder — cullSelfFaces", () => {
       makeBlockDef(kLeavesId, "cube", {
         name: "Glass",
         alphaMode: "blend",
-        cullSelfFaces
+        cullCoveredFaces
       })
     );
 
@@ -284,18 +290,73 @@ describe("VoxelMeshBuilder — cullSelfFaces", () => {
     assert.equal(fixture.builder.stats.culledFaces, 0);
   });
 
-  it("still hides the faces an opaque neighbour covers", () => {
-    const fixture = withGlass(false);
+  it("keeps covered faces by default for a transparent block", () => {
+    const fixture = withGlass(undefined);
+    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    assert.equal(countChunkVertices(fixture), 48);
+  });
+
+  for (const greedy of [false, true]) {
+    it(`keeps the face an opaque neighbour covers, double-sided (greedy=${greedy})`, () => {
+      const fixture = withGlass(false, greedy);
+      fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+      fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+      const geometries = buildGeometries(fixture);
+
+      assert.deepEqual([...geometries.keys()], ["atlas", "atlas:cutout"]);
+      assert.equal(geometries.get("atlas")!.getAttribute("position").count, 24);
+      assert.equal(
+        geometries.get("atlas:cutout")!.getAttribute("position").count,
+        24
+      );
+    });
+  }
+
+  it("hides the face an opaque neighbour covers once the block culls", () => {
+    const fixture = withGlass(true);
     fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
 
     assert.equal(countChunkVertices(fixture), 44);
   });
 
+  it("hides it for a front-sided block, which could never show it", () => {
+    const fixture = makeFixture();
+    fixture.blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", {
+        name: "Glass",
+        alphaMode: "blend",
+        side: "front",
+        cullCoveredFaces: false
+      })
+    );
+    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    assert.equal(countChunkVertices(fixture), 44);
+  });
+
+  it("keeps the face covered by an opaque neighbour in another layer", () => {
+    const fixture = withGlass(false);
+    fixture.world.addLayer("stone").setVoxelAt(
+      { x: 0, y: 0, z: 0 },
+      { blockId: kCubeId, transform: 0 }
+    );
+    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    const geometries = buildGeometries(fixture);
+
+    assert.deepEqual([...geometries.keys()], ["atlas:cutout"]);
+    assert.equal(countChunkVertices(fixture), 24);
+  });
+
   it("retains opaque boundaries for layers that may be faded", () => {
     const fixture = makeFixture();
     fixture.blockRegistry.register(
-      makeBlockDef(kGrateId, "cube", { name: "Stone", cullSelfFaces: false })
+      makeBlockDef(kGrateId, "cube", { name: "Stone", cullCoveredFaces: false })
     );
     fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });
     fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });

@@ -11,12 +11,13 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type {
-  ResolvedBlockDefinition,
-  BlockAlphaMode,
-  BlockSide,
-  BlockShapeID,
-  VoxelEngine
+import {
+  cullsCoveredFaces,
+  type ResolvedBlockDefinition,
+  type BlockAlphaMode,
+  type BlockSide,
+  type BlockShapeID,
+  type VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
 import {
   Mixed,
@@ -429,9 +430,9 @@ export class BlockEditorDialog extends LitElement {
       <jolly-checkbox
         align="end"
         label="Cull faces"
-        description="Drops covered boundaries shared with the same block"
-        .value=${block.cullSelfFaces !== false}
-        @jolly-change=${this.#onCullSelfFacesChange}
+        description="Drops the faces a neighbouring block covers"
+        .value=${cullsCoveredFaces(block)}
+        @jolly-change=${this.#onCullCoveredFacesChange}
       ></jolly-checkbox>
     `;
   }
@@ -448,10 +449,10 @@ export class BlockEditorDialog extends LitElement {
     this.#applyEdit({ side: event.detail.value });
   }
 
-  #onCullSelfFacesChange(
+  #onCullCoveredFacesChange(
     event: CustomEvent<JollyChangeDetail<boolean>>
   ): void {
-    this.#applyEdit({ cullSelfFaces: event.detail.value });
+    this.#applyEdit({ cullCoveredFaces: event.detail.value });
   }
 
   #defaultTilesetId(): string {

@@ -9,6 +9,7 @@ import type { TilesetUVRegion } from "../../tileset/types.ts";
 import type { FaceDefinition } from "../../blocks/face/index.ts";
 import { BlockTextures } from "../../blocks/BlockTextures.ts";
 import { BlockSurface } from "../../blocks/BlockSurface.ts";
+import { cullsCoveredFaces } from "../../blocks/BlockDefinition.ts";
 import { shapeSlots } from "../../blocks/shape/shapeSlots.ts";
 import type {
   BlockVariant,
@@ -47,7 +48,6 @@ const kOcclusionUnknown = -1;
 const kOcclusionMaxSlots = 1 << 16;
 const kOcclusionFaceMask = 0b111111;
 const kSelfOcclusionShift = 6;
-const kKeepSelfFacesBit = 1 << 12;
 
 interface CompileFaceOptions {
   faceDef: FaceDefinition;
@@ -78,6 +78,7 @@ export class BlockVariantCache {
   #tilesetIds: string[] = [];
   #cutouts: boolean[] = [];
   #geometryKeys: ChunkGeometryKey[] = [];
+  #frontFaces = new WeakMap<BlockVariantFace, BlockVariantFace>();
 
   /**
    * Flat occlusion cache indexed by block and transform.
@@ -118,6 +119,7 @@ export class BlockVariantCache {
     this.#tilesetIds.length = 0;
     this.#cutouts.length = 0;
     this.#geometryKeys.length = 0;
+    this.#frontFaces = new WeakMap();
     this.#occlusion.fill(kOcclusionUnknown);
   }
 
@@ -154,13 +156,6 @@ export class BlockVariantCache {
       kOcclusionFaceMask;
   }
 
-  keepsSelfFacesOf(
-    blockId: number,
-    transform: number
-  ): boolean {
-    return (this.#occlusionEntry(blockId, transform) & kKeepSelfFacesBit) !== 0;
-  }
-
   #occlusionEntry(
     blockId: number,
     transform: number
@@ -189,8 +184,7 @@ export class BlockVariantCache {
     const mask = variant === null ?
       0 :
       variant.occlusionMask |
-      (variant.selfOcclusionMask << kSelfOcclusionShift) |
-      (variant.keepsSelfFaces ? kKeepSelfFacesBit : 0);
+      (variant.selfOcclusionMask << kSelfOcclusionShift);
 
     if (key >= 0 && key < kOcclusionMaxSlots) {
       if (key >= this.#occlusion.length) {
@@ -233,6 +227,21 @@ export class BlockVariantCache {
       ...key.surface,
       side: "front"
     }));
+  }
+
+  frontFaceOf(
+    face: BlockVariantFace
+  ): BlockVariantFace {
+    let front = this.#frontFaces.get(face);
+    if (front === undefined) {
+      front = {
+        ...face,
+        slot: this.frontSlotOf(face.slot)
+      };
+      this.#frontFaces.set(face, front);
+    }
+
+    return front;
   }
 
   #slotFor(
@@ -306,7 +315,7 @@ export class BlockVariantCache {
       faces,
       occlusionMask: surface.occludes ? selfOcclusionMask : 0,
       selfOcclusionMask,
-      keepsSelfFaces: blockDef.cullSelfFaces === false,
+      keepsCoveredFaces: !cullsCoveredFaces(blockDef),
       surface,
       mergeFaces: indexMergeFaces(faces),
       sweepIndex: 0,
@@ -374,6 +383,7 @@ export class BlockVariantCache {
       faceDef.normal,
       voxelTransform
     );
+    const merge = describeMerge(cull, positions, tileUvs);
 
     return {
       cull,
@@ -393,8 +403,8 @@ export class BlockVariantCache {
         toUnorm16(Math.fround(uvRegion.scaleV))
       ]),
       // Double-sided boundaries can be split by their neighbour's footprint.
-      merge: surface.side === "double" ? null :
-        describeMerge(cull, positions, tileUvs),
+      merge: surface.side === "double" ? null : merge,
+      full: merge !== null,
       normalX: toSnorm8(normal[0]),
       normalY: toSnorm8(normal[1]),
       normalZ: toSnorm8(normal[2])

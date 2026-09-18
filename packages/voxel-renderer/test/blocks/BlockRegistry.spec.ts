@@ -100,7 +100,7 @@ describe("BlockRegistry — registration resolves the authored definition", () =
     assert.equal(registry.get(1)!.collidable, false);
   });
 
-  it("keeps an explicit cullSelfFaces of false", () => {
+  it("keeps an explicit cullCoveredFaces of false", () => {
     const registry = new BlockRegistry();
 
     registry.register({
@@ -108,10 +108,10 @@ describe("BlockRegistry — registration resolves the authored definition", () =
       name: "A",
       shapeId: "cube",
       alphaMode: "blend",
-      cullSelfFaces: false
+      cullCoveredFaces: false
     });
 
-    assert.equal(registry.get(1)!.cullSelfFaces, false);
+    assert.equal(registry.get(1)!.cullCoveredFaces, false);
   });
 
   it("expands every tile ref tuple against defaultTilesetId", () => {

@@ -39,8 +39,8 @@ Registry definitions retain optional settings; construct a surface when you
 need their resolved defaults.
 
 These settings apply to the whole block. Texture slots select tiles but do
-not override the surface policy. [`cullSelfFaces`](./BlockDefinition.md)
-independently controls shared boundaries.
+not override the surface policy. [`cullCoveredFaces`](./BlockDefinition.md)
+independently controls the faces a neighbour covers.
 
 The legacy block property `transparent` has been removed. Use
 `alphaMode: "blend"` for smooth transparency, or `alphaMode: "mask"` for

@@ -176,7 +176,8 @@ function triangulate(
       tileUvs: new Float32Array(
         triangle.flatMap((vertex) => vertex.tileUv)
       ),
-      merge: null
+      merge: null,
+      full: false
     });
   }
 
