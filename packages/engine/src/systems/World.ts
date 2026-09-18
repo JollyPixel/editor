@@ -100,13 +100,9 @@ export class World<
 
     this.debug = options.debug ?? false;
     this.logger = new Logger({
-      level: this.debug ?
-        "trace" :
-        (options.logger?.level ?? "info"),
-      namespaces: this.debug ?
-        ["*"] :
-        (options.logger?.namespaces ?? []),
-      adapter: options.logger?.adapter
+      level: this.debug ? "trace" : "info",
+      namespaces: this.debug ? ["*"] : [],
+      ...options.logger
     });
     this.#worldLogger = this.logger.child({
       namespace: "Systems.World"
@@ -227,7 +223,7 @@ export class World<
         dt,
         schedule.alpha
       );
-      this.renderer.draw();
+      this.renderer.draw(this.sceneManager.getSource());
       this.emit(
         "afterUpdate",
         dt

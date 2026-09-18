@@ -38,7 +38,8 @@ test("VoxelRenderer owns the voxel engine lifecycle", (context) => {
     world: {
       logger,
       sceneManager: {
-        componentsToBeStarted: []
+        scheduleStart: () => void 0,
+        cancelStart: () => void 0
       }
     }
   } as unknown as Actor;

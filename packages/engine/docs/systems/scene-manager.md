@@ -124,5 +124,21 @@ class SceneManager<TContext> {
     scene: Scene<TContext>,
     options?: SceneLoadOptions
   ): SceneLoad<TContext>;
+
+  /** Queues `component.start()` for the next frame its actor is registered. */
+  scheduleStart(component: Component): void;
+  cancelStart(component: Component): void;
+  /** Marks the component and destroys it at the end of the frame. */
+  destroyComponent(component: Component): void;
+  /** First non-pending actor with this name, or at this root-anchored path. */
+  getActor(name: string): Actor<TContext> | null;
 }
 ```
+
+## Frame lifecycle
+
+`beginFrame()` activates ready scene loads, awakes every actor created
+since the last frame, starts pending scenes, then starts pending components.
+`endFrame()` destroys the components passed to `destroyComponent()`, then
+every actor marked for destruction. Destroying an actor destroys its
+children first, so each actor is destroyed once.

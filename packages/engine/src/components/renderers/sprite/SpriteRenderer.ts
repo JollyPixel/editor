@@ -1,15 +1,16 @@
 // Import Third-party Dependencies
+import type { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Actor, ActorComponent } from "../../../actor/index.ts";
+import { type Actor, ActorComponent } from "../../../actor/index.ts";
 import {
   SpriteAnimation,
   type SpriteAnimationOptions
-} from "./SpriteAnimation.class.ts";
+} from "./SpriteAnimation.ts";
 
 export interface SpriteRendererOptions {
-  texture: string;
+  texture: AssetReference<THREE.Texture>;
   tileHorizontal: number;
   tileVertical: number;
   animations?: SpriteAnimationOptions;
@@ -20,7 +21,7 @@ export interface SpriteRendererOptions {
 }
 
 export class SpriteRenderer extends ActorComponent<any> {
-  frameIndex: number;
+  frameIndex = 0;
   tileHorizontal: number;
   tileVertical: number;
   flip = {
@@ -28,9 +29,11 @@ export class SpriteRenderer extends ActorComponent<any> {
     vertical: false
   };
 
-  texture: THREE.Texture;
+  texture: THREE.Texture | null = null;
   animation: SpriteAnimation;
   threeObject: THREE.Sprite;
+
+  #asset: AssetReference<THREE.Texture>;
 
   constructor(
     actor: Actor<any>,
@@ -48,36 +51,35 @@ export class SpriteRenderer extends ActorComponent<any> {
       flip = {}
     } = options;
 
+    this.#asset = texture;
     this.tileHorizontal = tileHorizontal;
     this.tileVertical = tileVertical;
-
-    this.texture = new THREE.TextureLoader().load(texture);
-    this.texture.colorSpace = THREE.SRGBColorSpace;
-    this.texture.magFilter = THREE.NearestFilter;
-    this.texture.minFilter = THREE.NearestFilter;
-
-    this.setHorizontalFlip(flip.horizontal ?? false);
-    this.setVerticalFlip(flip.vertical ?? false);
+    this.flip.horizontal = flip.horizontal ?? false;
+    this.flip.vertical = flip.vertical ?? false;
 
     this.animation = new SpriteAnimation(animations);
-    const material = new THREE.SpriteMaterial({
-      map: this.texture
-    });
-    this.threeObject = new THREE.Sprite(material);
+    this.threeObject = new THREE.Sprite(new THREE.SpriteMaterial());
+  }
+
+  awake() {
+    this.texture = this.getAsset(this.#asset).clone();
+    this.threeObject.material.map = this.texture;
+    this.threeObject.material.needsUpdate = true;
+    this.#applyUVs();
   }
 
   setHorizontalFlip(
     value: boolean
   ) {
     this.flip.horizontal = value;
-    this.texture.repeat.x = (value ? -1 : 1) / this.tileHorizontal;
+    this.#applyUVs();
   }
 
   setVerticalFlip(
     value: boolean
   ) {
     this.flip.vertical = value;
-    this.texture.repeat.y = (value ? -1 : 1) / this.tileVertical;
+    this.#applyUVs();
   }
 
   setOpacity(
@@ -97,29 +99,42 @@ export class SpriteRenderer extends ActorComponent<any> {
   setFrame(
     index: number
   ) {
-    const tileX = index % this.tileHorizontal;
-    const tileY = this.tileVertical - Math.floor(index / this.tileHorizontal) - 1;
-
-    const x = (this.flip.horizontal ? tileX + 1 : tileX) / this.tileHorizontal;
-    const y = (this.flip.vertical ? tileY + 1 : tileY) / this.tileVertical;
-
     this.frameIndex = index;
-    this.texture.offset.set(x, y);
+    this.#applyUVs();
   }
 
-  update() {
-    const frame = this.animation.update();
-    if (frame) {
+  #applyUVs(): void {
+    if (this.texture === null) {
+      return;
+    }
+
+    const { horizontal, vertical } = this.flip;
+    const tileX = this.frameIndex % this.tileHorizontal;
+    const tileY = this.tileVertical - Math.floor(this.frameIndex / this.tileHorizontal) - 1;
+
+    this.texture.repeat.set(
+      (horizontal ? -1 : 1) / this.tileHorizontal,
+      (vertical ? -1 : 1) / this.tileVertical
+    );
+    this.texture.offset.set(
+      (horizontal ? tileX + 1 : tileX) / this.tileHorizontal,
+      (vertical ? tileY + 1 : tileY) / this.tileVertical
+    );
+  }
+
+  update(
+    deltaTime: number
+  ) {
+    const frame = this.animation.update(deltaTime);
+    if (frame !== null) {
       this.setFrame(frame);
     }
   }
 
-  override destroy() {
+  protected override onDestroy() {
     this.actor.object3D.remove(this.threeObject);
-    this.texture.dispose();
-    this.threeObject.clear();
-
-    super.destroy();
+    this.texture?.dispose();
+    this.threeObject.material.dispose();
   }
 }
 

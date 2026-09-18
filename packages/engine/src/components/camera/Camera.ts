@@ -10,7 +10,6 @@ import type {
 } from "../../systems/rendering/Renderer.ts";
 import type { WorldDefaultContext } from "../../systems/World.ts";
 
-// CONSTANTS
 export type CameraProjectionMode = "perspective" | "orthographic";
 
 export interface CameraOptions {
@@ -149,8 +148,13 @@ export class CameraComponent<
   }
 
   awake(): void {
-    this.actor.world.renderer.addRenderComponent(this);
+    const { renderer } = this.actor.world;
+    renderer.addRenderComponent(this);
     this.#registered = true;
+    this.addTeardown(() => {
+      renderer.removeRenderComponent(this);
+      this.#registered = false;
+    });
   }
 
   prepareRender(
@@ -283,16 +287,7 @@ export class CameraComponent<
     this.#threeCamera.layers.mask = previous.layers.mask;
 
     this.#projectionDirty = true;
-    if (this.#registered) {
-      this.actor.world.renderer.updateRenderComponent(this);
-    }
 
     return this;
-  }
-
-  override destroy(): void {
-    this.actor.world.renderer.removeRenderComponent(this);
-    this.#registered = false;
-    super.destroy();
   }
 }

@@ -236,6 +236,33 @@ describe("Audio.AudioBackground", () => {
     assert.strictEqual(mockAudioManager.loadAudio.mock.calls[1].arguments[0], "/audio/track2.mp3");
   });
 
+  test("should keep advancing after the first track change", async() => {
+    playlists[0].tracks.push({
+      name: "track3",
+      path: "/audio/track3.mp3"
+    });
+    await audioBackground.play([0, 0]);
+
+    await triggerOnEnded();
+    assert.strictEqual(audioBackground.track?.name, "track2");
+
+    await triggerOnEnded();
+    assert.strictEqual(audioBackground.track?.name, "track3");
+    assert.deepStrictEqual(
+      mockAudioManager.loadAudio.mock.calls.map((call) => call.arguments[0]),
+      ["/audio/track1.mp3", "/audio/track2.mp3", "/audio/track3.mp3"]
+    );
+  });
+
+  test("should discard a track that finishes loading after a newer request", async() => {
+    const first = audioBackground.play([0, 0]);
+    const second = audioBackground.play([0, 1]);
+    await Promise.all([first, second]);
+
+    assert.strictEqual(audioBackground.track?.name, "track2");
+    assert.strictEqual(mockAudioManager.destroyAudio.mock.calls.length, 1);
+  });
+
   test("should loop playlist when onEnd is loop", async() => {
     await audioBackground.play([0, 1]);
 
@@ -391,29 +418,6 @@ describe("Audio.AudioBackground", () => {
     assert.strictEqual(audioBackground.isPaused, true);
   });
 
-  test("should update volume when master volume changes", async() => {
-    await audioBackground.play([0, 0]);
-
-    audioBackground.onMasterVolumeChange(0.5);
-
-    assert.strictEqual(mockAudio.setVolume.mock.calls.length, 1);
-    assert.strictEqual(mockAudio.setVolume.mock.calls[0].arguments[0], 0.4);
-  });
-
-  test("should not update volume if audio is null", () => {
-    audioBackground.onMasterVolumeChange(0.5);
-
-    assert.strictEqual(mockAudio.setVolume.mock.calls.length, 0);
-  });
-
-  test("should use default volume of 1 when track volume is not specified", async() => {
-    await audioBackground.play([1, 0]);
-
-    audioBackground.onMasterVolumeChange(0.8);
-
-    assert.strictEqual(mockAudio.setVolume.mock.calls[0].arguments[0], 0.8);
-  });
-
   test("should handle errors with custom error handler", async() => {
     const errors: Error[] = [];
 
@@ -432,7 +436,6 @@ describe("Audio.AudioBackground", () => {
 
     const testError = new Error("Test error");
 
-    // Simuler une erreur lors de playNext() via onEnded
     mockAudioManager.loadAudio = mock.fn(async() => {
       throw testError;
     });

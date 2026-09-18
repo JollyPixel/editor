@@ -64,10 +64,7 @@ each frame.
 import { Systems, Actor } from "@jolly-pixel/engine";
 
 const sceneManager = new Systems.SceneManager();
-const renderer = await Systems.ThreeRenderer.create(canvas, {
-  sceneManager,
-  renderMode: "direct"
-});
+const renderer = await Systems.ThreeRenderer.create(canvas);
 const game = new Systems.World(renderer, {
   enableOnExit: true,
   sceneManager
@@ -192,7 +189,6 @@ const bg = new AudioBackground({
   }]
 });
 
-world.audio.observe(bg);
 world.audio.volume = 0.5;
 ```
 
@@ -228,11 +224,12 @@ $ pnpm run lint
 
 - [disposeObject3D](./docs/utils/dispose-object-3d.md) — releases the GPU
   resources owned by an Object3D subtree.
+- [createViewHelper](./docs/utils/create-view-helper.md) — draws an axis
+  gizmo for a camera on every frame.
 
 ### 📦 Internals
 
 - [Adapters](./docs/internals/adapters.md)
-- [Audio](./docs/internals/audio.md)
 
 ## License
 

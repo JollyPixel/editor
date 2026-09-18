@@ -1,13 +1,20 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import type { InputKeyboardAction } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type { Actor } from "../../../actor/Actor.ts";
-import { disposeObject3D } from "../../../utils/disposeObject3D.ts";
-import { createPivotMarker } from "./pivotMarker.ts";
-
-// CONSTANTS
-const kSmoothingSnapEpsilon = 1e-3;
+import { PivotMarker } from "./pivotMarker.ts";
+import {
+  type CameraFocus,
+  type CameraFocusEnterRequest,
+  type CameraFocusInput,
+  type CameraFocusOrientation,
+  type CameraFocusPose,
+  type CameraFocusTransform,
+  dampScalar,
+  dampVector,
+  smoothingFactor
+} from "./CameraFocus.ts";
 
 export interface OrbitFocusOptions {
   /**
@@ -26,20 +33,16 @@ export interface OrbitFocusOptions {
   sceneProvider: () => THREE.Object3D;
 }
 
-export type OrbitFocusScrollOutcome = "engaged" | "inactive";
-
-export class OrbitFocus {
+export class OrbitFocus implements CameraFocus {
   #minPivotDistance: number;
   #maxPivotDistance: number;
   #pivotNudgeStep: number;
-  #showPivotMarker: boolean;
-  #sceneProvider: () => THREE.Object3D;
+  #marker: PivotMarker;
 
   #hasPivot = false;
   #isOrbiting = false;
   #pivotDistance = 0;
   #targetPivotDistance = 0;
-  #pivotMarker: THREE.Object3D | null = null;
 
   #pivotPoint = new THREE.Vector3();
   #targetPivotPoint = new THREE.Vector3();
@@ -55,11 +58,17 @@ export class OrbitFocus {
     this.#minPivotDistance = options.minPivotDistance;
     this.#maxPivotDistance = options.maxPivotDistance;
     this.#pivotNudgeStep = options.pivotNudgeStep;
-    this.#showPivotMarker = options.showPivotMarker;
-    this.#sceneProvider = options.sceneProvider;
+    this.#marker = new PivotMarker({
+      enabled: options.showPivotMarker,
+      sceneProvider: options.sceneProvider
+    });
   }
 
   get isOrbiting(): boolean {
+    return this.#isOrbiting;
+  }
+
+  get isLocked(): boolean {
     return this.#isOrbiting;
   }
 
@@ -70,23 +79,21 @@ export class OrbitFocus {
   #clampPivotDistance(
     distance: number
   ): number {
-    return Math.min(
-      this.#maxPivotDistance,
-      Math.max(this.#minPivotDistance, distance)
+    return THREE.MathUtils.clamp(
+      distance,
+      this.#minPivotDistance,
+      this.#maxPivotDistance
     );
   }
 
   enter(
-    point: THREE.Vector3Like | undefined,
-    cameraPosition: THREE.Vector3,
-    currentYaw: number,
-    currentPitch: number,
-    up: THREE.Vector3
-  ): { yaw: number; pitch: number; } | false {
+    request: CameraFocusEnterRequest
+  ): CameraFocusOrientation | null {
     if (this.#isOrbiting) {
-      return false;
+      return null;
     }
 
+    const { point, cameraPosition, yaw, pitch, up } = request;
     this.#pivotPoint.copy(point ?? cameraPosition);
     this.#targetPivotPoint.copy(this.#pivotPoint);
     this.#pivotDistance = this.#clampPivotDistance(
@@ -96,14 +103,11 @@ export class OrbitFocus {
     this.#hasPivot = true;
     this.#isOrbiting = true;
 
-    const marker = this.#ensureMarker();
-    if (marker) {
-      marker.position.copy(this.#pivotPoint);
-      marker.visible = true;
-    }
+    this.#marker.show();
+    this.#marker.moveTo(this.#pivotPoint);
 
     if (point === undefined) {
-      return { yaw: currentYaw, pitch: currentPitch };
+      return { yaw, pitch };
     }
 
     this.#orientation.setFromRotationMatrix(
@@ -117,27 +121,32 @@ export class OrbitFocus {
   exit(): void {
     this.#hasPivot = false;
     this.#isOrbiting = false;
-    this.#hideMarker();
+    this.#marker.hide();
+  }
+
+  move(
+    offset: THREE.Vector3,
+    transform: CameraFocusTransform
+  ): void {
+    transform.moveGlobal(offset);
   }
 
   updatePose(
-    transform: Actor["transform"],
-    yaw: number,
-    pitch: number,
-    deltaTime: number,
-    responsiveness: number
+    pose: CameraFocusPose
   ): void {
-    const smoothing = 1 - Math.exp(-responsiveness * deltaTime);
-
-    this.#pivotDistance += (this.#targetPivotDistance - this.#pivotDistance) * smoothing;
-    if (Math.abs(this.#targetPivotDistance - this.#pivotDistance) < kSmoothingSnapEpsilon) {
-      this.#pivotDistance = this.#targetPivotDistance;
+    if (!this.#isOrbiting) {
+      return;
     }
 
-    this.#pivotPoint.lerp(this.#targetPivotPoint, smoothing);
-    if (this.#pivotPoint.distanceToSquared(this.#targetPivotPoint) < kSmoothingSnapEpsilon ** 2) {
-      this.#pivotPoint.copy(this.#targetPivotPoint);
-    }
+    const { transform, yaw, pitch, deltaTime, responsiveness } = pose;
+    const smoothing = smoothingFactor(responsiveness, deltaTime);
+
+    this.#pivotDistance = dampScalar(
+      this.#pivotDistance,
+      this.#targetPivotDistance,
+      smoothing
+    );
+    dampVector(this.#pivotPoint, this.#targetPivotPoint, smoothing);
 
     this.#euler.set(pitch, yaw, 0);
     this.#orientation.setFromEuler(this.#euler);
@@ -149,89 +158,72 @@ export class OrbitFocus {
 
     transform.setLocalPosition(this.#orbitOffset);
     transform.lookAt(this.#pivotPoint);
-
-    if (this.#pivotMarker) {
-      this.#pivotMarker.position.copy(this.#pivotPoint);
-    }
+    this.#marker.moveTo(this.#pivotPoint);
   }
 
   handleScroll(
     scrollY: number,
     scrollSpeed: number
-  ): OrbitFocusScrollOutcome {
+  ): boolean {
     if (!this.#isOrbiting) {
-      return "inactive";
+      return false;
     }
 
     this.#targetPivotDistance = this.#clampPivotDistance(
-      this.#targetPivotDistance - scrollY * scrollSpeed
+      this.#targetPivotDistance - (scrollY * scrollSpeed)
     );
 
-    return "engaged";
+    return true;
   }
 
   #snapCardinal(
     vector: THREE.Vector3,
     sign: number
   ): THREE.Vector3 {
+    const step = sign * this.#pivotNudgeStep;
+
     return Math.abs(vector.x) >= Math.abs(vector.z) ?
-      this.#nudgeStep.set(Math.sign(vector.x) * sign * this.#pivotNudgeStep, 0, 0) :
-      this.#nudgeStep.set(0, 0, Math.sign(vector.z) * sign * this.#pivotNudgeStep);
+      this.#nudgeStep.set(Math.sign(vector.x) * step, 0, 0) :
+      this.#nudgeStep.set(0, 0, Math.sign(vector.z) * step);
   }
 
   nudge(
-    input: Actor["world"]["input"],
+    input: CameraFocusInput,
     forward: THREE.Vector3,
     right: THREE.Vector3
   ): void {
-    const { keyboard } = input;
-    let step: THREE.Vector3 | null = null;
+    function pressed(
+      ...codes: InputKeyboardAction[]
+    ): boolean {
+      return codes.some((code) => input.keyboard.wasJustPressed(code));
+    }
 
-    if (keyboard.wasJustPressed("KeyW") || keyboard.wasJustPressed("ArrowUp")) {
+    let step: THREE.Vector3 | null = null;
+    if (pressed("KeyW", "ArrowUp")) {
       step = this.#snapCardinal(forward, 1);
     }
-    else if (keyboard.wasJustPressed("KeyS") || keyboard.wasJustPressed("ArrowDown")) {
+    else if (pressed("KeyS", "ArrowDown")) {
       step = this.#snapCardinal(forward, -1);
     }
-    else if (keyboard.wasJustPressed("KeyD") || keyboard.wasJustPressed("ArrowRight")) {
+    else if (pressed("KeyD", "ArrowRight")) {
       step = this.#snapCardinal(right, 1);
     }
-    else if (keyboard.wasJustPressed("KeyA") || keyboard.wasJustPressed("ArrowLeft")) {
+    else if (pressed("KeyA", "ArrowLeft")) {
       step = this.#snapCardinal(right, -1);
     }
-    else if (keyboard.wasJustPressed("Space")) {
+    else if (pressed("Space")) {
       step = this.#nudgeStep.set(0, this.#pivotNudgeStep, 0);
     }
-    else if (keyboard.wasJustPressed("ShiftLeft") || keyboard.wasJustPressed("ShiftRight")) {
+    else if (pressed("ShiftLeft", "ShiftRight")) {
       step = this.#nudgeStep.set(0, -this.#pivotNudgeStep, 0);
     }
 
-    if (step === null) {
-      return;
-    }
-
-    this.#targetPivotPoint.add(step);
-  }
-
-  #ensureMarker(): THREE.Object3D | null {
-    if (this.#pivotMarker === null && this.#showPivotMarker) {
-      this.#pivotMarker = createPivotMarker();
-      this.#sceneProvider().add(this.#pivotMarker);
-    }
-
-    return this.#pivotMarker;
-  }
-
-  #hideMarker(): void {
-    if (this.#pivotMarker) {
-      this.#pivotMarker.visible = false;
+    if (step !== null) {
+      this.#targetPivotPoint.add(step);
     }
   }
 
   dispose(): void {
-    if (this.#pivotMarker) {
-      disposeObject3D(this.#pivotMarker);
-      this.#pivotMarker = null;
-    }
+    this.#marker.dispose();
   }
 }

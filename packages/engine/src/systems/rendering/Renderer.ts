@@ -2,9 +2,6 @@
 import * as THREE from "three/webgpu";
 import type { EventMap } from "@openally/emitt";
 
-// Import Internal Dependencies
-import type { RenderMode } from "./RenderStrategy.ts";
-
 export interface RenderViewport {
   /** Normalized [0, 1]. x=0 is left */
   x: number;
@@ -27,25 +24,22 @@ export interface RenderComponent {
   ): void;
 }
 
-export type RendererEvents = {
+export type RendererEvents<T = THREE.WebGPURenderer> = {
   resize: (
     size: { width: number; height: number; }
   ) => void;
   draw: (
-    params: { source: THREE.WebGPURenderer; }
+    params: { source: T; }
   ) => void;
 };
 
 export interface Renderer<
   T = any,
-  Events extends EventMap = RendererEvents
+  Events extends EventMap = RendererEvents<T>
 > {
   readonly canvas: HTMLCanvasElement;
 
   getSource(): T;
-  setRenderMode(
-    mode: RenderMode
-  ): this;
   setRatio(
     ratio: number | null
   ): this;
@@ -54,9 +48,6 @@ export interface Renderer<
     component: RenderComponent
   ): void;
   removeRenderComponent(
-    component: RenderComponent
-  ): void;
-  updateRenderComponent(
     component: RenderComponent
   ): void;
   markRenderOrderDirty(): void;
@@ -77,9 +68,8 @@ export interface Renderer<
   observeResize(): void;
   unobserveResize(): void;
   resize(): void;
-  draw(): void;
-  onDraw(
-    callback: (event: { source: T; }) => void
+  draw(
+    scene: THREE.Scene
   ): void;
   clear(): void;
   dispose(): void;

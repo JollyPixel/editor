@@ -42,7 +42,7 @@ export class PerformanceMonitor extends ActorComponent {
   awake(): void {
     const renderer = this.actor.world.renderer
       .getSource() as THREE.WebGPURenderer;
-    this.actor.world.renderer.onDraw(this.#captureFrame);
+    this.actor.world.renderer.on("draw", this.#captureFrame);
     this.#registerMetrics(renderer);
 
     this.#hud = new PerformanceHUD({

@@ -21,7 +21,7 @@ import {
 
 const canvas = document.querySelector("canvas")!;
 const sceneManager = new SceneManager();
-const renderer = await ThreeRenderer.create(canvas, { sceneManager });
+const renderer = await ThreeRenderer.create(canvas);
 
 const game = new World(renderer, { sceneManager });
 ```
@@ -41,6 +41,10 @@ interface WorldOptions {
   enableOnExit?: boolean;
   /** Abstraction over global references (useful for testing). @default BrowserGlobalsAdapter */
   globalsAdapter?: GlobalsAdapter;
+  /** Logs everything (level "trace", namespaces ["*"]). @default false */
+  debug?: boolean;
+  /** Logger settings. Each option set here overrides the `debug` default. */
+  logger?: LoggerOptions;
 }
 ```
 
@@ -148,7 +152,7 @@ One frame, in order:
 3. Updates input once more if the frame ran no step at all.
 4. On a drawn frame, publishes transient input accumulated across the fixed
    samples, calls `sceneManager.update(deltaTime, alpha)`, then
-   `renderer.draw()`.
+   `renderer.draw(sceneManager.getSource())`.
 5. Calls `endFrame()`.
 
 #### `fixedUpdate(deltaTime, stepIndex)`
@@ -186,7 +190,7 @@ Called once at the end of each animation frame:
 
 ### `render()`
 
-Delegates to `renderer.draw()`, which resizes if needed, clears
+Delegates to `renderer.draw(scene)`, which resizes if needed, clears
 the frame buffer, and renders the scene through all active
 cameras.
 

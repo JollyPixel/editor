@@ -10,19 +10,19 @@ import { World } from "../../src/systems/World.ts";
 
 // CONSTANTS
 const kFixedDelta60 = 1000 / 60;
+const kScene = { isScene: true };
 
 function createMockSceneManager() {
   return {
     tree: { add: mock.fn(), remove: mock.fn() },
-    componentsToBeStarted: [],
-    componentsToBeDestroyed: [],
-    getSource: mock.fn(),
+    scheduleStart: mock.fn(),
+    cancelStart: mock.fn(),
+    getSource: mock.fn(() => kScene),
     awake: mock.fn(),
     beginFrame: mock.fn(),
     update: mock.fn(),
     fixedUpdate: mock.fn(),
     endFrame: mock.fn(),
-    destroyActor: mock.fn(),
     registerActor: mock.fn(),
     unregisterActor: mock.fn(),
     getActor: mock.fn(),
@@ -377,6 +377,33 @@ describe("Systems.World", () => {
       tick(20);
 
       assert.strictEqual(handler.mock.callCount(), 0);
+    });
+  });
+
+  describe("logger", () => {
+    test("should let explicit logger options override the debug defaults", () => {
+      // @ts-expect-error - using mocks
+      const debugWorld = new World(createMockRenderer(), {
+        sceneManager: createMockSceneManager(),
+        input: createMockInput(),
+        audio: createMockAudio(),
+        assetCoordinator: {},
+        globalsAdapter: createMockGlobalsAdapter(),
+        debug: true,
+        logger: { level: "warn" }
+      });
+
+      assert.strictEqual(debugWorld.logger.level, "warn");
+      assert.strictEqual(debugWorld.logger.isNamespaceEnabled(), true);
+    });
+  });
+
+  describe("draw", () => {
+    test("should draw the scene manager's scene", () => {
+      world.start();
+      tick(kFixedDelta60);
+
+      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], kScene);
     });
   });
 });

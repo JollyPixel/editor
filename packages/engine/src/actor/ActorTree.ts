@@ -5,7 +5,7 @@ import pm from "picomatch";
 import type {
   WorldDefaultContext
 } from "../systems/World.ts";
-import { Actor } from "./Actor.ts";
+import type { Actor } from "./Actor.ts";
 
 export type ActorTreeNode<
   TContext = WorldDefaultContext
@@ -20,6 +20,8 @@ export interface ActorTreeOptions<
   addCallback?: (actor: Actor<TContext>) => void;
   removeCallback?: (actor: Actor<TContext>) => void;
 }
+
+type PathMatcher = ((name: string) => boolean) | "**";
 
 export class ActorTree<
   TContext = WorldDefaultContext
@@ -55,7 +57,10 @@ export class ActorTree<
     pattern: string
   ): IterableIterator<Actor<TContext>> {
     if (pattern.includes("/")) {
-      yield* this.#getActorsByPatternPath(pattern);
+      const matchers = splitPath(pattern).map(
+        (part): PathMatcher => (part === "**" ? part : pm(part))
+      );
+      yield* matchPath(this.children, matchers, 0);
 
       return;
     }
@@ -69,89 +74,10 @@ export class ActorTree<
     }
   }
 
-  * #getActorsByPatternPath(
-    pattern: string
-  ): IterableIterator<Actor<TContext>> {
-    const parts = pattern.split("/").filter((part) => part !== "");
-
-    for (const rootActor of this.children) {
-      if (!rootActor.pendingForDestruction) {
-        yield* this.#matchActorPath(rootActor, parts, 0);
-      }
-    }
-  }
-
-  * #matchActorPath(
-    actor: Actor<TContext>,
-    patternParts: string[],
-    patternIndex: number
-  ): IterableIterator<Actor<TContext>> {
-    if (patternIndex >= patternParts.length) {
-      return;
-    }
-
-    const currentPattern = patternParts[patternIndex];
-    const isLastPattern = patternIndex === patternParts.length - 1;
-
-    const matchers = new Map<string, (name: string) => boolean>();
-    function matchSinglePattern(name: string, pattern: string) {
-      let matcher = matchers.get(pattern);
-      if (!matcher) {
-        matcher = pm(pattern);
-        matchers.set(pattern, matcher);
-      }
-
-      return matcher(name);
-    }
-
-    if (currentPattern === "**") {
-      if (isLastPattern) {
-        for (const { actor: descendant } of this.#walkDepthFirstGenerator(actor)) {
-          if (!descendant.pendingForDestruction) {
-            yield descendant;
-          }
-        }
-
-        return;
-      }
-
-      const nextPattern = patternParts[patternIndex + 1];
-      for (const { actor: descendant } of this.#walkDepthFirstGenerator(actor)) {
-        if (descendant.pendingForDestruction) {
-          continue;
-        }
-
-        if (matchSinglePattern(descendant.name, nextPattern)) {
-          if (patternIndex + 1 === patternParts.length - 1) {
-            yield descendant;
-          }
-          else {
-            yield* this.#matchActorPath(descendant, patternParts, patternIndex + 2);
-          }
-        }
-      }
-
-      return;
-    }
-
-    if (matchSinglePattern(actor.name, currentPattern)) {
-      if (isLastPattern) {
-        if (!actor.pendingForDestruction) {
-          yield actor;
-        }
-      }
-      else {
-        for (const child of actor.children) {
-          yield* this.#matchActorPath(child, patternParts, patternIndex + 1);
-        }
-      }
-    }
-  }
-
   /**
    * @example
-   * const player = actor.children.getActor("player");
-   * const playerPhysicsBox = actor.children.getActor("player/physics_box");
+   * const player = tree.getActor("player");
+   * const playerPhysicsBox = tree.getActor("player/physics_box");
    */
   getActor(
     name: string
@@ -172,24 +98,20 @@ export class ActorTree<
   #getActorByPath(
     path: string
   ): Actor<TContext> | null {
-    const parts = path.split("/").filter((part) => part !== "");
-    const parentNode = this.getActor(parts[0]);
-    if (!parentNode) {
-      return null;
-    }
+    let candidates: Actor<TContext>[] = this.children;
+    let current: Actor<TContext> | null = null;
 
-    let currentNode: Actor<TContext> | null = parentNode;
-    for (let i = 1; i < parts.length; i++) {
-      if (!currentNode) {
-        break;
-      }
-
-      currentNode = currentNode.children.find(
-        (child) => child.name === parts[i]
+    for (const part of splitPath(path)) {
+      current = candidates.find(
+        (child) => child.name === part && !child.pendingForDestruction
       ) ?? null;
+      if (current === null) {
+        return null;
+      }
+      candidates = current.children;
     }
 
-    return currentNode;
+    return current;
   }
 
   * getRootActors(): IterableIterator<Actor<TContext>> {
@@ -220,20 +142,9 @@ export class ActorTree<
     }
   }
 
-  * #walkDepthFirstGenerator(
-    node: Actor<TContext>,
-    parentNode?: Actor<TContext>
-  ): IterableIterator<ActorTreeNode<TContext>> {
-    yield { actor: node, parent: parentNode };
-
-    for (const child of node.children) {
-      yield* this.#walkDepthFirstGenerator(child, node);
-    }
-  }
-
   * walk(): IterableIterator<ActorTreeNode<TContext>> {
     for (const child of this.children) {
-      yield* this.#walkDepthFirstGenerator(child, undefined);
+      yield* walkDepthFirst(child, undefined);
     }
   }
 
@@ -241,14 +152,65 @@ export class ActorTree<
     rootNode: Actor<TContext>
   ): IterableIterator<ActorTreeNode<TContext>> {
     for (const child of rootNode.children) {
-      yield* this.#walkDepthFirstGenerator(child, rootNode);
+      yield* walkDepthFirst(child, rootNode);
     }
   }
 
   * [Symbol.iterator](): IterableIterator<Actor<TContext>> {
-    for (const actor of this.children) {
-      if (!actor.pendingForDestruction) {
-        yield actor;
+    yield* this.getRootActors();
+  }
+}
+
+function splitPath(
+  path: string
+): string[] {
+  return path.split("/").filter((part) => part !== "");
+}
+
+function* walkDepthFirst<TContext>(
+  node: Actor<TContext>,
+  parentNode?: Actor<TContext>
+): IterableIterator<ActorTreeNode<TContext>> {
+  yield { actor: node, parent: parentNode };
+
+  for (const child of node.children) {
+    yield* walkDepthFirst(child, node);
+  }
+}
+
+function* matchPath<TContext>(
+  candidates: Iterable<Actor<TContext>>,
+  matchers: PathMatcher[],
+  index: number
+): IterableIterator<Actor<TContext>> {
+  const matcher = matchers[index];
+  const isLast = index === matchers.length - 1;
+
+  for (const candidate of candidates) {
+    if (candidate.pendingForDestruction) {
+      continue;
+    }
+
+    if (matcher === "**") {
+      for (const { actor } of walkDepthFirst(candidate)) {
+        if (actor.pendingForDestruction) {
+          continue;
+        }
+
+        if (isLast) {
+          yield actor;
+        }
+        else {
+          yield* matchPath([actor], matchers, index + 1);
+        }
+      }
+    }
+    else if (matcher(candidate.name)) {
+      if (isLast) {
+        yield candidate;
+      }
+      else {
+        yield* matchPath(candidate.children, matchers, index + 1);
       }
     }
   }

@@ -15,7 +15,6 @@ function createRendererMock() {
   return {
     addRenderComponent: mock.fn(),
     removeRenderComponent: mock.fn(),
-    updateRenderComponent: mock.fn(),
     markRenderOrderDirty: mock.fn()
   };
 }
@@ -37,7 +36,10 @@ function createActorMock() {
     world: {
       renderer: createRendererMock(),
       audio: { threeAudioListener: new THREE.Object3D() },
-      sceneManager: { componentsToBeStarted: [] },
+      sceneManager: {
+        scheduleStart: () => void 0,
+        cancelStart: () => void 0
+      },
       input: {
         getMouseDelta: mock.fn(() => {
           return { x: 0, y: 0 };
@@ -170,29 +172,16 @@ describe("Components.Camera.CameraComponent", () => {
       assert.strictEqual(camera.threeCamera.matrixWorldAutoUpdate, false);
     });
 
-    test("should tell the renderer to rebind, so passes stop pointing at the old camera", () => {
+    test("should stay registered with the renderer under the new camera", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
       camera.awake();
 
       camera.setProjectionMode("orthographic");
 
-      const { updateRenderComponent } = actor.world.renderer;
-      assert.strictEqual(updateRenderComponent.mock.callCount(), 1);
-      assert.strictEqual(
-        updateRenderComponent.mock.calls[0].arguments[0],
-        camera
-      );
-    });
-
-    test("should not notify a renderer it was never registered with", () => {
-      const camera = new CameraComponent(actor as unknown as Actor);
-
-      camera.setProjectionMode("orthographic");
-
-      assert.strictEqual(
-        actor.world.renderer.updateRenderComponent.mock.callCount(),
-        0
-      );
+      const { addRenderComponent, removeRenderComponent } = actor.world.renderer;
+      assert.strictEqual(addRenderComponent.mock.callCount(), 1);
+      assert.strictEqual(removeRenderComponent.mock.callCount(), 0);
+      assert.ok(camera.threeCamera instanceof THREE.OrthographicCamera);
     });
 
     test("should be a no-op when the mode is unchanged", () => {
@@ -202,6 +191,33 @@ describe("Components.Camera.CameraComponent", () => {
       camera.setProjectionMode("perspective");
 
       assert.strictEqual(camera.threeCamera, threeCamera);
+    });
+  });
+
+  describe("destroy()", () => {
+    test("should unregister from the renderer once", () => {
+      const camera = new CameraComponent(actor as unknown as Actor);
+      camera.awake();
+
+      camera.destroy();
+      camera.destroy();
+
+      const { removeRenderComponent } = actor.world.renderer;
+      assert.strictEqual(removeRenderComponent.mock.callCount(), 1);
+      assert.strictEqual(removeRenderComponent.mock.calls[0].arguments[0], camera);
+    });
+
+    test("should stop invalidating the render order after destroy", () => {
+      const camera = new CameraComponent(actor as unknown as Actor);
+      camera.awake();
+      camera.destroy();
+
+      camera.setDepth(3);
+
+      assert.strictEqual(
+        actor.world.renderer.markRenderOrderDirty.mock.callCount(),
+        0
+      );
     });
   });
 

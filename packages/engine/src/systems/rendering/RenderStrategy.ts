@@ -4,13 +4,6 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import type { RenderComponent } from "./Renderer.ts";
 
-/**
- * "composer" is reserved for a future WebGPU-native post-processing rebuild
- * (three's classic EffectComposer is WebGLRenderer-only) — only "direct" is
- * implemented today.
- */
-export type RenderMode = "direct";
-
 export interface RenderParameters {
   /** Pre-sorted by `depth` ascending — strategies must not re-sort. */
   components: readonly RenderComponent[];

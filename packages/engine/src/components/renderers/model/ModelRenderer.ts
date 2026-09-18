@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import type { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
+import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 
 // Import Internal Dependencies
-import { Actor, ActorComponent } from "../../../actor/index.ts";
-import { type Model } from "./loader.ts";
-
+import { type Actor, ActorComponent } from "../../../actor/index.ts";
+import type { Model } from "../../../assets/model.ts";
 import {
   ModelAnimation,
   type ModelAnimationClipNameRewriter
@@ -40,6 +40,7 @@ export class ModelRenderer<
 
   #asset: AssetReference<Model>;
   #debug = false;
+  #mixer: THREE.AnimationMixer | null = null;
 
   animation = new ModelAnimation<TClipName>();
 
@@ -78,12 +79,11 @@ export class ModelRenderer<
       console.log({ object, animations });
     }
 
-    this.actor.addChildren(object);
-    this.group = object;
+    this.group = cloneSkinned(object) as THREE.Group<THREE.Object3DEventMap>;
+    this.actor.addChildren(this.group);
 
-    this.animation.setMixer(
-      new THREE.AnimationMixer(this.group)
-    );
+    this.#mixer = new THREE.AnimationMixer(this.group);
+    this.animation.setMixer(this.#mixer);
     this.animation.setClips(animations);
   }
 
@@ -95,5 +95,11 @@ export class ModelRenderer<
     deltaTime: number
   ) {
     this.animation.update(deltaTime);
+  }
+
+  protected override onDestroy(): void {
+    this.#mixer?.stopAllAction();
+    this.#mixer?.uncacheRoot(this.group);
+    this.group?.removeFromParent();
   }
 }

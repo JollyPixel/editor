@@ -3,12 +3,12 @@ import type { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Actor, ActorComponent } from "../../../actor/index.ts";
+import { type Actor, ActorComponent } from "../../../actor/index.ts";
 import {
   Text3D,
   type Text3DOptions
-} from "./Text3D.class.ts";
-import { type Font } from "./loader.ts";
+} from "./Text3D.ts";
+import type { Font } from "../../../assets/font.ts";
 
 export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
   asset: AssetReference<Font>;
@@ -56,24 +56,14 @@ export class TextRenderer extends ActorComponent<any> {
     this.updateMesh();
   }
 
-  override destroy(): void {
+  protected override onDestroy(): void {
     this.text.dispose();
   }
 
   updateMesh(): void {
-    for (const child of this.actor.object3D.children) {
-      isMeshWithGeometry(child) && this.actor.object3D.remove(child);
-    }
-
     const mesh = this.text.mesh;
-    if (mesh) {
+    if (mesh && mesh.parent !== this.actor.object3D) {
       this.actor.object3D.add(mesh);
     }
   }
-}
-
-function isMeshWithGeometry(
-  object: THREE.Object3D
-): object is THREE.Mesh {
-  return object instanceof THREE.Mesh && object.geometry instanceof THREE.BufferGeometry;
 }

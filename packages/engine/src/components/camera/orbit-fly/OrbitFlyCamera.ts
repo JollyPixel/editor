@@ -13,6 +13,10 @@ import { CameraComponent } from "../Camera.ts";
 import { createViewHelper } from "../../../utils/createViewHelper.ts";
 import { OrbitFocus } from "./OrbitFocus.ts";
 import { ElasticFocus } from "./ElasticFocus.ts";
+import {
+  type CameraFocus,
+  NoCameraFocus
+} from "./CameraFocus.ts";
 
 // CONSTANTS
 const kRestingVelocitySq = 1e-6;
@@ -84,6 +88,7 @@ export interface OrbitFlyCameraOptions {
    * @default 60
    */
   fov?: number;
+  viewHelper?: boolean;
 }
 
 export interface CameraPose {
@@ -106,8 +111,8 @@ export class OrbitFlyCamera extends CameraComponent {
   #maxPitch: number;
   #scrollSpeed: number;
   #speedAdjustStep: number;
-  #orbitFocus: OrbitFocus | null;
-  #elasticFocus: ElasticFocus | null;
+  #viewHelper: boolean;
+  #focus: CameraFocus;
 
   // Reused each frame to avoid allocations.
   #forward = new THREE.Vector3();
@@ -163,7 +168,8 @@ export class OrbitFlyCamera extends CameraComponent {
       maxPivotDistance = 200,
       pivotNudgeStep = 1,
       initialTrailDistance = 0,
-      showPivotMarker = true
+      showPivotMarker = true,
+      viewHelper = true
     } = options;
 
     this.#yaw = yaw;
@@ -176,23 +182,33 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#maxPitch = maxPitch;
     this.#scrollSpeed = scrollSpeed;
     this.#speedAdjustStep = speedAdjustStep;
+    this.#viewHelper = viewHelper;
 
     const initialPosition = options.position ?? { x: 16, y: 20, z: 40 };
-    const pivotPosition = options.pivotPosition ?? initialPosition;
-    this.#orbitFocus = focusMode === "lock" ? new OrbitFocus({
-      minPivotDistance,
-      maxPivotDistance,
-      pivotNudgeStep,
-      showPivotMarker,
-      sceneProvider: () => this.actor.world.sceneManager.getSource()
-    }) : null;
-    this.#elasticFocus = focusMode === "elastic" ? new ElasticFocus({
-      initialPosition: pivotPosition,
-      maxTrailDistance: maxPivotDistance,
-      initialTrailDistance,
-      showPivotMarker,
-      sceneProvider: () => this.actor.world.sceneManager.getSource()
-    }) : null;
+    const sceneProvider = () => this.actor.world.sceneManager.getSource();
+    switch (focusMode) {
+      case "lock":
+        this.#focus = new OrbitFocus({
+          minPivotDistance,
+          maxPivotDistance,
+          pivotNudgeStep,
+          showPivotMarker,
+          sceneProvider
+        });
+        break;
+      case "elastic":
+        this.#focus = new ElasticFocus({
+          initialPosition: options.pivotPosition ?? initialPosition,
+          maxTrailDistance: maxPivotDistance,
+          initialTrailDistance,
+          showPivotMarker,
+          sceneProvider
+        });
+        break;
+      default:
+        this.#focus = new NoCameraFocus();
+    }
+    this.addTeardown(() => this.#focus.dispose());
 
     this.#applyOrientation();
     this.actor.transform.setLocalPosition(initialPosition);
@@ -208,6 +224,12 @@ export class OrbitFlyCamera extends CameraComponent {
         )
       )
     );
+  }
+
+  #clampPitch(
+    pitch: number
+  ): number {
+    return THREE.MathUtils.clamp(pitch, -this.#maxPitch, this.#maxPitch);
   }
 
   #clampMoveSpeed(
@@ -241,10 +263,7 @@ export class OrbitFlyCamera extends CameraComponent {
       this.#orientation.set(x, y, z, w)
     );
     this.#yaw = this.#euler.y;
-    this.#pitch = Math.max(
-      -this.#maxPitch,
-      Math.min(this.#maxPitch, this.#euler.x)
-    );
+    this.#pitch = this.#clampPitch(this.#euler.x);
     this.#vel.set(0, 0, 0);
 
     this.#applyOrientation();
@@ -252,67 +271,61 @@ export class OrbitFlyCamera extends CameraComponent {
   }
 
   get isOrbiting(): boolean {
-    if (this.#orbitFocus) {
-      return this.#orbitFocus.isOrbiting;
-    }
-
-    return (this.#elasticFocus?.trailDistance ?? 0) > 0;
+    return this.#focus.isOrbiting;
   }
 
   get orbitPivot(): THREE.Vector3Like | null {
-    return this.#orbitFocus?.pivot ?? this.#elasticFocus?.pivotPosition ?? null;
+    return this.#focus.pivot;
   }
 
   enterOrbitFocus(
     point?: THREE.Vector3Like
   ): void {
-    if (!this.#orbitFocus) {
-      return;
-    }
-
     const { transform } = this.actor;
-    const cameraPosition = transform.getGlobalPosition(this.#offset);
-    const result = this.#orbitFocus.enter(
+    const orientation = this.#focus.enter({
       point,
-      cameraPosition,
-      this.#yaw,
-      this.#pitch,
-      this.#up
-    );
-    if (result === false) {
+      cameraPosition: transform.getGlobalPosition(this.#offset),
+      yaw: this.#yaw,
+      pitch: this.#pitch,
+      up: this.#up
+    });
+    if (orientation === null) {
       return;
     }
 
-    this.#yaw = result.yaw;
-    this.#pitch = Math.max(
-      -this.#maxPitch,
-      Math.min(this.#maxPitch, result.pitch)
-    );
+    this.#yaw = orientation.yaw;
+    this.#pitch = this.#clampPitch(orientation.pitch);
     this.#vel.set(0, 0, 0);
-    this.#orbitFocus.updatePose(
-      transform,
-      this.#yaw,
-      this.#pitch,
-      0,
-      this.#responsiveness
-    );
+    this.#updateFocusPose(0);
   }
 
   exitOrbitFocus(): void {
-    this.#orbitFocus?.exit();
-  }
-
-  override destroy(): void {
-    this.#orbitFocus?.dispose();
-    this.#elasticFocus?.dispose();
-    super.destroy();
+    this.#focus.exit();
   }
 
   start() {
-    createViewHelper(
+    if (!this.#viewHelper) {
+      return;
+    }
+
+    const binding = createViewHelper(
       this.threeCamera,
       this.actor.world
     );
+    this.addTeardown(() => binding.dispose());
+  }
+
+  #updateFocusPose(
+    deltaTime: number
+  ): void {
+    this.#focus.updatePose({
+      transform: this.actor.transform,
+      yaw: this.#yaw,
+      pitch: this.#pitch,
+      orientation: this.#orientation,
+      deltaTime,
+      responsiveness: this.#responsiveness
+    });
   }
 
   update(
@@ -338,13 +351,11 @@ export class OrbitFlyCamera extends CameraComponent {
     if (isLooking && input.mouse.isMoving()) {
       const delta = input.mouse.viewportDelta(false);
       this.#yaw -= delta.x * this.#mouseSensitivity;
-      this.#pitch += delta.y * this.#mouseSensitivity;
-      this.#pitch = Math.max(
-        -this.#maxPitch,
-        Math.min(this.#maxPitch, this.#pitch)
+      this.#pitch = this.#clampPitch(
+        this.#pitch + (delta.y * this.#mouseSensitivity)
       );
 
-      if (!this.#orbitFocus?.isOrbiting) {
+      if (!this.#focus.isLocked) {
         this.#applyOrientation();
       }
     }
@@ -356,8 +367,8 @@ export class OrbitFlyCamera extends CameraComponent {
 
     this.#axes.update(input);
     this.#move.set(0, 0, 0);
-    if (this.#orbitFocus?.isOrbiting) {
-      this.#orbitFocus.nudge(input, this.#forward, this.#right);
+    if (this.#focus.isLocked) {
+      this.#focus.nudge(input, this.#forward, this.#right);
     }
     else {
       this.#move.addScaledVector(
@@ -378,21 +389,13 @@ export class OrbitFlyCamera extends CameraComponent {
     // Ctrl is reserved for other scroll-driven interactions (e.g. brush size).
     const isCtrl = InputCombination.Control.evaluate(input);
     const scroll = input.mouse.scrollTo(this.#scroll);
-    if (!isCtrl && scroll.y !== 0) {
-      if (this.#elasticFocus) {
-        this.#elasticFocus.adjustTrailDistance(-scroll.y * this.#scrollSpeed);
-      }
-      else {
-        const outcome = this.#orbitFocus?.handleScroll(
-          scroll.y,
-          this.#scrollSpeed
-        ) ?? "inactive";
-
-        if (outcome === "inactive") {
-          this.moveSpeed = this.#moveSpeed *
-            Math.pow(1 + this.#speedAdjustStep, scroll.y);
-        }
-      }
+    if (
+      !isCtrl &&
+      scroll.y !== 0 &&
+      !this.#focus.handleScroll(scroll.y, this.#scrollSpeed)
+    ) {
+      this.moveSpeed = this.#moveSpeed *
+        Math.pow(1 + this.#speedAdjustStep, scroll.y);
     }
 
     this.#vel.lerp(
@@ -404,33 +407,12 @@ export class OrbitFlyCamera extends CameraComponent {
       this.#vel.set(0, 0, 0);
     }
     else {
-      this.#offset
-        .copy(this.#vel)
-        .multiplyScalar(deltaTime);
-      if (this.#elasticFocus) {
-        this.#elasticFocus.move(this.#offset);
-      }
-      else {
-        transform.moveGlobal(this.#offset);
-      }
+      this.#focus.move(
+        this.#offset.copy(this.#vel).multiplyScalar(deltaTime),
+        transform
+      );
     }
 
-    if (this.#orbitFocus?.isOrbiting) {
-      this.#orbitFocus.updatePose(
-        transform,
-        this.#yaw,
-        this.#pitch,
-        deltaTime,
-        this.#responsiveness
-      );
-    }
-    if (this.#elasticFocus) {
-      this.#elasticFocus.updatePose(
-        transform,
-        this.#orientation,
-        deltaTime,
-        this.#responsiveness
-      );
-    }
+    this.#updateFocusPose(deltaTime);
   }
 }

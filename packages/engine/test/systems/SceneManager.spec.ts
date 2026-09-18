@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { SceneManager } from "../../src/systems/scene/SceneManager.ts";
+import { Actor, ActorComponent } from "../../src/actor/index.ts";
 
 // CONSTANTS
 const kDeltaTime = 16.67;
@@ -28,10 +29,7 @@ describe("Systems.SceneManager", () => {
     const scene = new SceneManager();
 
     assert.ok(scene.tree);
-    assert.ok(Array.isArray(scene.componentsToBeStarted));
-    assert.ok(Array.isArray(scene.componentsToBeDestroyed));
-    assert.strictEqual(scene.componentsToBeStarted.length, 0);
-    assert.strictEqual(scene.componentsToBeDestroyed.length, 0);
+    assert.strictEqual(scene.currentScene, null);
   });
 
   test("should use provided THREE.Scene", () => {
@@ -91,9 +89,9 @@ describe("Systems.SceneManager", () => {
     const actor2 = createFakeActor({ name: "Enemy" });
 
     // @ts-expect-error
-    sceneManager.registerActor(actor1);
+    sceneManager.tree.add(actor1);
     // @ts-expect-error
-    sceneManager.registerActor(actor2);
+    sceneManager.tree.add(actor2);
 
     assert.strictEqual(sceneManager.getActor("Player"), actor1);
     assert.strictEqual(sceneManager.getActor("Enemy"), actor2);
@@ -107,20 +105,20 @@ describe("Systems.SceneManager", () => {
     });
 
     // @ts-expect-error
-    sceneManager.registerActor(actor);
+    sceneManager.tree.add(actor);
 
     assert.strictEqual(sceneManager.getActor("Player"), null);
   });
 
-  test("should clean up name index on unregisterActor", () => {
+  test("should stop finding an actor once it leaves the tree", () => {
     const actor = createFakeActor({ name: "Player" });
 
     // @ts-expect-error
-    sceneManager.registerActor(actor);
+    sceneManager.tree.add(actor);
     assert.strictEqual(sceneManager.getActor("Player"), actor);
 
     // @ts-expect-error
-    sceneManager.unregisterActor(actor);
+    sceneManager.tree.remove(actor);
     assert.strictEqual(sceneManager.getActor("Player"), null);
   });
 
@@ -145,25 +143,42 @@ describe("Systems.SceneManager", () => {
       // @ts-expect-error
       sceneManager.registerActor(actor);
       // @ts-expect-error
-      sceneManager.componentsToBeStarted.push(component);
+      sceneManager.scheduleStart(component);
 
+      sceneManager.beginFrame();
       sceneManager.beginFrame();
 
       assert.strictEqual(component.start.mock.calls.length, 1);
-      assert.strictEqual(sceneManager.componentsToBeStarted.length, 0);
     });
 
-    test("should skip components for inactive actors", () => {
-      const inactiveActor = createFakeActor({ name: "inactive" });
-      const component = createFakeComponent({ actor: inactiveActor });
+    test("should defer components until their actor is registered", () => {
+      const actor = createFakeActor({ name: "inactive" });
+      const component = createFakeComponent({ actor });
 
       // @ts-expect-error
-      sceneManager.componentsToBeStarted.push(component);
-
+      sceneManager.scheduleStart(component);
       sceneManager.beginFrame();
 
       assert.strictEqual(component.start.mock.calls.length, 0);
-      assert.strictEqual(sceneManager.componentsToBeStarted.length, 1);
+
+      // @ts-expect-error
+      sceneManager.registerActor(actor);
+      sceneManager.beginFrame();
+
+      assert.strictEqual(component.start.mock.calls.length, 1);
+    });
+
+    test("should awake actors registered after the scene was awoken", () => {
+      const actor = createFakeActor({ name: "late" });
+
+      // @ts-expect-error
+      sceneManager.tree.add(actor);
+      // @ts-expect-error
+      sceneManager.registerActor(actor);
+      sceneManager.beginFrame();
+      sceneManager.beginFrame();
+
+      assert.strictEqual(actor.awake.mock.calls.length, 1);
     });
   });
 
@@ -227,14 +242,16 @@ describe("Systems.SceneManager", () => {
       const component2 = createFakeComponent();
 
       // @ts-expect-error
-      sceneManager.componentsToBeDestroyed.push(component1, component2);
+      sceneManager.destroyComponent(component1);
+      // @ts-expect-error
+      sceneManager.destroyComponent(component2);
 
       sceneManager.beginFrame();
+      sceneManager.endFrame();
       sceneManager.endFrame();
 
       assert.strictEqual(component1.destroy.mock.calls.length, 1);
       assert.strictEqual(component2.destroy.mock.calls.length, 1);
-      assert.strictEqual(sceneManager.componentsToBeDestroyed.length, 0);
     });
 
     test("should destroy actors marked for destruction", () => {
@@ -252,22 +269,28 @@ describe("Systems.SceneManager", () => {
       assert.strictEqual(actor.destroy.mock.calls.length, 1);
     });
 
-    test("should handle nested actors with destruction", () => {
+    test("should destroy only the root of a pending subtree", () => {
       const grandChild = createFakeActor({
-        name: "grandChild"
+        name: "grandChild",
+        pendingForDestruction: true
       });
       const child1 = createFakeActor({
         children: [grandChild],
-        name: "child1"
+        name: "child1",
+        pendingForDestruction: true
       });
       const child2 = createFakeActor({
-        name: "child2"
+        name: "child2",
+        pendingForDestruction: true
       });
       const parent = createFakeActor({
         name: "parent",
         children: [child1, child2],
         pendingForDestruction: true
       });
+      child1.parent = parent;
+      child2.parent = parent;
+      grandChild.parent = child1;
 
       // @ts-expect-error
       sceneManager.registerActor(parent);
@@ -281,10 +304,39 @@ describe("Systems.SceneManager", () => {
       sceneManager.beginFrame();
       sceneManager.endFrame();
 
-      assert.strictEqual(grandChild.destroy.mock.calls.length, 1);
-      assert.strictEqual(child1.destroy.mock.calls.length, 1);
-      assert.strictEqual(child2.destroy.mock.calls.length, 1);
+      assert.strictEqual(grandChild.destroy.mock.calls.length, 0);
+      assert.strictEqual(child1.destroy.mock.calls.length, 0);
+      assert.strictEqual(child2.destroy.mock.calls.length, 0);
       assert.strictEqual(parent.destroy.mock.calls.length, 1);
+    });
+
+    test("should destroy each actor of a real subtree exactly once", () => {
+      const realSceneManager = new SceneManager();
+      const world = { sceneManager: realSceneManager };
+      const parent = new Actor(world as any, { name: "parent" });
+      const child = new Actor(world as any, { name: "child", parent });
+      const grandChild = new Actor(world as any, { name: "grandChild", parent: child });
+      const destroyCalls = [parent, child, grandChild].map((actor) => mock.method(actor, "destroy"));
+
+      realSceneManager.beginFrame();
+      realSceneManager.tree.destroyActor(parent);
+      realSceneManager.endFrame();
+
+      assert.deepEqual(destroyCalls.map((call) => call.mock.callCount()), [1, 1, 1]);
+      assert.strictEqual(realSceneManager.getActor("parent"), null);
+    });
+
+    test("should tear down a component marked for destruction", () => {
+      const realSceneManager = new SceneManager();
+      const world = { sceneManager: realSceneManager };
+      const actor = new Actor(world as any, { name: "owner" });
+      const component = actor.addComponentAndGet(UpdatingComponent);
+
+      realSceneManager.destroyComponent(component);
+      realSceneManager.endFrame();
+
+      assert.deepEqual(actor.components, []);
+      assert.deepEqual(actor.componentsRequiringUpdate, []);
     });
   });
 
@@ -306,18 +358,20 @@ describe("Systems.SceneManager", () => {
     });
   });
 
-  test("should mark component for destruction", () => {
-    const component = createFakeComponent();
+  test("should mark component for destruction and cancel its start", () => {
+    const actor = createFakeActor({ name: "owner" });
+    const component = createFakeComponent({ actor });
 
     // @ts-expect-error
-    sceneManager.componentsToBeStarted.push(component);
+    sceneManager.registerActor(actor);
+    // @ts-expect-error
+    sceneManager.scheduleStart(component);
     // @ts-expect-error
     sceneManager.destroyComponent(component);
+    sceneManager.beginFrame();
 
     assert.strictEqual(component.pendingForDestruction, true);
-    // @ts-expect-error
-    assert.ok(sceneManager.componentsToBeDestroyed.includes(component));
-    assert.strictEqual(sceneManager.componentsToBeStarted.length, 0);
+    assert.strictEqual(component.start.mock.calls.length, 0);
   });
 
   test("should not double-mark component for destruction", () => {
@@ -325,8 +379,9 @@ describe("Systems.SceneManager", () => {
 
     // @ts-expect-error
     sceneManager.destroyComponent(component);
+    sceneManager.endFrame();
 
-    assert.strictEqual(sceneManager.componentsToBeDestroyed.length, 0);
+    assert.strictEqual(component.destroy.mock.calls.length, 0);
   });
 
   test("should integrate with ActorTree callbacks", () => {
@@ -368,8 +423,11 @@ function createFakeActor(
     children: [...children],
     awoken,
     pendingForDestruction,
+    parent: null as any,
     object3D: { id: Math.random() },
-    awake: mock.fn(() => void 0),
+    awake: mock.fn(() => {
+      actor.awoken = true;
+    }),
     update: mock.fn(),
     fixedUpdate: mock.fn(),
     destroy: mock.fn(),
@@ -394,4 +452,16 @@ function createFakeComponent(
     start: mock.fn(),
     destroy: mock.fn()
   };
+}
+
+class UpdatingComponent extends ActorComponent {
+  constructor(
+    actor: Actor
+  ) {
+    super({ actor, typeName: "Updating" });
+  }
+
+  update() {
+    return;
+  }
 }

@@ -6,7 +6,7 @@ import type {
   WorldDefaultContext
 } from "../../systems/World.ts";
 import {
-  Actor,
+  type Actor,
   ActorComponent
 } from "../../actor/index.ts";
 import { BehaviorInitializer } from "./BehaviorInitializer.ts";
@@ -22,10 +22,6 @@ export type BehaviorPropertiesValue =
   | THREE.Vector3;
 export type BehaviorProperties = Record<string, BehaviorPropertiesValue>;
 
-export interface BehaviorOptions {
-  initializer?: (behavior: Behavior<any, any>) => void;
-}
-
 export class Behavior<
   T extends BehaviorProperties = Record<string, BehaviorPropertiesValue>,
   TContext = WorldDefaultContext
@@ -33,23 +29,28 @@ export class Behavior<
   #properties: T = Object.create(null);
 
   constructor(
-    actor: Actor<TContext>,
-    options: BehaviorOptions = {}
+    actor: Actor<TContext>
   ) {
     super({
       actor,
       typeName: "ScriptBehavior"
     });
-    const { initializer = initializeBehaviorMetadata } = options;
 
-    if (this.constructor.name in this.actor.behaviors) {
-      this.actor.behaviors[this.constructor.name].push(this);
-    }
-    else {
-      this.actor.behaviors[this.constructor.name] = [this];
-    }
+    const { behaviors } = this.actor;
+    const name = this.constructor.name;
+    (behaviors[name] ??= []).push(this);
 
-    initializer(this);
+    this.addTeardown(() => {
+      const behaviorList = behaviors[name] ?? [];
+      behaviorList.splice(behaviorList.indexOf(this), 1);
+      if (behaviorList.length === 0) {
+        delete behaviors[name];
+      }
+    });
+  }
+
+  bind(): void {
+    BehaviorInitializer.for(this)?.load();
   }
 
   setProperty<K extends keyof T = keyof T>(
@@ -71,29 +72,4 @@ export class Behavior<
   ) {
     Object.assign(this, defaultProperties, this.#properties);
   }
-
-  override destroy(): void {
-    if (this.pendingForDestruction) {
-      return;
-    }
-
-    if (this.constructor.name in this.actor.behaviors) {
-      const behaviorList = this.actor.behaviors[this.constructor.name];
-      behaviorList.splice(behaviorList.indexOf(this), 1);
-      if (behaviorList.length === 0) {
-        delete this.actor.behaviors[this.constructor.name];
-      }
-    }
-
-    super.destroy();
-  }
-}
-
-function initializeBehaviorMetadata(
-  behavior: Behavior<any, any>
-): void {
-  // Delay the loading to ensure that all properties are initialized
-  setTimeout(() => {
-    BehaviorInitializer.for(behavior)?.load();
-  });
 }

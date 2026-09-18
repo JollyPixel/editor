@@ -11,10 +11,11 @@ import type {
   SceneLoadOptions,
   SceneLoadStatus
 } from "./SceneLoad.ts";
+import type { SceneLoadDriver } from "./SceneLoader.ts";
 import type { WorldDefaultContext } from "../World.ts";
 
 type SceneLoadChangeHandler<TContext> = (
-  load: SceneLoad<TContext>
+  load: ManagedSceneLoad<TContext>
 ) => void;
 
 /**
@@ -22,7 +23,7 @@ type SceneLoadChangeHandler<TContext> = (
  */
 export class ManagedSceneLoad<
   TContext = WorldDefaultContext
-> implements SceneLoad<TContext> {
+> implements SceneLoad<TContext>, SceneLoadDriver<TContext> {
   readonly scene: Scene<TContext>;
 
   #status: SceneLoadStatus = "requested";
@@ -41,6 +42,10 @@ export class ManagedSceneLoad<
     this.scene = scene;
     this.#activationAllowed = options.activation !== "manual";
     this.#onChange = onChange;
+  }
+
+  get load(): SceneLoad<TContext> {
+    return this;
   }
 
   get status(): SceneLoadStatus {

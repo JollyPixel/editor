@@ -180,10 +180,11 @@ Converts world-space Euler angles to a local quaternion relative to
 the parent and applies it. No-op if the object has no parent.
 Returns `this`.
 
-### `getParentGlobalOrientation(): Quaternion`
+### `getParentGlobalOrientation(orientation?): Quaternion`
 
-Walks the ancestor chain and returns the accumulated world-space
-quaternion of all parents (excluding the object itself).
+Returns the world-space orientation of the parent, read from its world
+matrix (identity when the object has no parent). Writes into
+`orientation` when provided, otherwise returns a new `Quaternion`.
 
 ### `moveGlobal(offset): Transform`
 

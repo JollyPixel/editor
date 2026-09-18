@@ -13,16 +13,17 @@ import type {
   Component
 } from "../components/types.ts";
 
-function isPendingForDestruction(component: Component): boolean {
-  return "pendingForDestruction" in component && (component as any).pendingForDestruction === true;
-}
-
 type ComponentConstructor = new (actor: Actor<any>, ...args: any[]) => Component;
 
 type RequiresOptions<T extends ComponentConstructor> =
   T extends new (actor: Actor<any>, options: infer O, ...args: any[]) => any
     ? undefined extends O ? false : true
     : false;
+
+type ComponentOptionsArgs<T extends ComponentConstructor> =
+  RequiresOptions<T> extends true
+    ? [options: ConstructorParameters<T>[1]]
+    : [options?: ConstructorParameters<T>[1]];
 
 export interface ActorOptions<
   TContext = WorldDefaultContext
@@ -100,45 +101,23 @@ export class Actor<
     this.world.sceneManager.registerActor(this);
   }
 
-  #initializeComponent(
-    component: Component
-  ) {
-    if (this.awoken) {
-      component.awake?.();
-    }
-    if (
-      ("update" in component && typeof component.update === "function") ||
-      ("fixedUpdate" in component && typeof component.fixedUpdate === "function")
-    ) {
-      component.needUpdate = true;
-    }
-  }
-
   addComponent<T extends ComponentConstructor>(
     componentClass: T,
-    ...args: RequiresOptions<T> extends true
-      ? [options: ConstructorParameters<T>[1], callback?: (component: InstanceType<T>) => void]
-      : [options?: ConstructorParameters<T>[1], callback?: (component: InstanceType<T>) => void]
+    ...args: ComponentOptionsArgs<T>
   ): this {
-    const [options, callback] = args;
-
-    const component = new componentClass(this, options);
-    callback?.(component as InstanceType<T>);
-    this.#initializeComponent(component);
+    this.addComponentAndGet(componentClass, ...args);
 
     return this;
   }
 
   addComponentAndGet<T extends ComponentConstructor>(
     componentClass: T,
-    ...args: RequiresOptions<T> extends true
-      ? [options: ConstructorParameters<T>[1]]
-      : [options?: ConstructorParameters<T>[1]]
+    ...args: ComponentOptionsArgs<T>
   ): InstanceType<T> {
-    const [options] = args;
-
-    const component = new componentClass(this, options);
-    this.#initializeComponent(component);
+    const component = new componentClass(this, args[0]);
+    if (this.awoken) {
+      awakeComponent(component);
+    }
 
     return component as InstanceType<T>;
   }
@@ -146,31 +125,23 @@ export class Actor<
   getComponent<T extends Component>(typeName: string): T | null;
   getComponent<T extends Component>(componentClass: new (...args: any[]) => T): T | null;
   getComponent<T extends Component>(typeNameOrClass: string | (new (...args: any[]) => T)): T | null {
-    if (typeof typeNameOrClass === "string") {
-      for (const comp of this.components) {
-        if (comp.typeName === typeNameOrClass && !isPendingForDestruction(comp)) {
-          return comp as T;
-        }
-      }
+    const matches = typeof typeNameOrClass === "string" ?
+      (component: Component) => component.typeName === typeNameOrClass :
+      (component: Component) => component instanceof typeNameOrClass;
 
-      return null;
-    }
+    const component = this.components.find(
+      (component) => matches(component) && !component.pendingForDestruction
+    );
 
-    for (const comp of this.components) {
-      if (comp instanceof typeNameOrClass && !isPendingForDestruction(comp)) {
-        return comp as T;
-      }
-    }
-
-    return null;
+    return (component as T | undefined) ?? null;
   }
 
   * getComponents<T extends Component>(
     componentClass: new (...args: any[]) => T
   ): IterableIterator<T> {
-    for (const comp of this.components) {
-      if (comp instanceof componentClass && !isPendingForDestruction(comp)) {
-        yield comp as T;
+    for (const component of this.components) {
+      if (component instanceof componentClass && !component.pendingForDestruction) {
+        yield component;
       }
     }
   }
@@ -196,8 +167,9 @@ export class Actor<
 
   awake() {
     for (let i = 0; i < this.components.length; i++) {
-      this.components[i].awake?.();
+      awakeComponent(this.components[i]);
     }
+    this.awoken = true;
   }
 
   update(
@@ -205,9 +177,9 @@ export class Actor<
     alpha = 0
   ) {
     if (!this.pendingForDestruction) {
-      this.componentsRequiringUpdate.forEach(
-        (component) => component.update?.(deltaTime, alpha)
-      );
+      for (const component of [...this.componentsRequiringUpdate]) {
+        component.update?.(deltaTime, alpha);
+      }
     }
   }
 
@@ -216,9 +188,9 @@ export class Actor<
     stepIndex = 0
   ) {
     if (!this.pendingForDestruction) {
-      this.componentsRequiringUpdate.forEach(
-        (component) => component.fixedUpdate?.(deltaTime, stepIndex)
-      );
+      for (const component of [...this.componentsRequiringUpdate]) {
+        component.fixedUpdate?.(deltaTime, stepIndex);
+      }
     }
   }
 
@@ -231,19 +203,15 @@ export class Actor<
   }
 
   destroy() {
+    for (const child of [...this.children]) {
+      child.destroy();
+    }
+    for (const component of [...this.components].reverse()) {
+      component.destroy();
+    }
+
     this.world.sceneManager.unregisterActor(this);
-
-    for (let i = this.components.length - 1; i >= 0; i--) {
-      this.components[i].destroy?.();
-    }
-
-    if (this.parent === null) {
-      this.world.sceneManager.tree.remove(this);
-    }
-    else {
-      this.parent.object3D.remove(this.object3D);
-      this.parent.remove(this);
-    }
+    (this.parent ?? this.world.sceneManager.tree).remove(this);
 
     disposeObject3D(
       this.object3D,
@@ -257,40 +225,35 @@ export class Actor<
   }
 
   setParent(
-    newParent: Actor<TContext>,
+    newParent: Actor<TContext> | null,
     keepLocal = false
   ) {
     if (this.pendingForDestruction) {
       throw new Error("Cannot set parent of destroyed actor");
     }
-    if (newParent !== null && newParent.pendingForDestruction) {
+    if (newParent?.pendingForDestruction) {
       throw new Error("Cannot reparent actor to destroyed actor");
     }
 
-    if (!keepLocal) {
-      this.transform.getGlobalMatrix(Transform.Matrix);
-    }
-
-    const oldSiblings = (this.parent === null) ? this.world.sceneManager.tree : this.parent;
-    oldSiblings.remove(this);
-    this.object3D.parent?.remove(this.object3D);
-
-    this.parent = newParent;
-
-    const siblings = (newParent === null) ?
-      this.world.sceneManager.tree :
-      newParent;
-    siblings.add(this);
-    const threeParent = (newParent === null) ?
-      this.world.sceneManager.getSource() :
-      newParent.object3D;
-    threeParent.add(this.object3D);
-
+    const threeParent = newParent?.object3D ?? this.world.sceneManager.getSource();
     if (keepLocal) {
-      this.object3D.updateMatrixWorld(false);
+      threeParent.add(this.object3D);
     }
     else {
-      this.transform.setGlobalMatrix(Transform.Matrix);
+      threeParent.attach(this.object3D);
     }
+
+    (this.parent ?? this.world.sceneManager.tree).remove(this);
+    this.parent = newParent;
+    (newParent ?? this.world.sceneManager.tree).add(this);
+
+    this.object3D.updateMatrixWorld(false);
   }
+}
+
+function awakeComponent(
+  component: Component
+): void {
+  component.bind?.();
+  component.awake?.();
 }

@@ -26,30 +26,25 @@ canvas.addEventListener("click", async() => {
 
 ## GlobalAudio
 
-Master volume controller. Wraps a Three.js `AudioListener` and notifies observers when the volume changes.
+Master volume controller. Wraps a Three.js `AudioListener` and emits
+`volumechange` when the volume changes. Every sound created with the
+world listener goes through the listener gain, so the master volume
+applies to it without any extra wiring.
 
 ```ts
 type GlobalAudioEvents = {
   volumechange: [volume: number];
 };
-
-interface VolumeObserver {
-  onMasterVolumeChange: (volume: number) => void;
-}
 ```
 
 ```ts
 interface GlobalAudio {
-  // The underlying Three.js AudioListener
-  readonly listener: AudioListenerAdapter;
+  readonly listener: THREE.AudioListener;
+  /** Same object as `listener`. */
   readonly threeAudioListener: THREE.AudioListener;
 
-  // Master volume (0 to 1)
+  /** Master volume, clamped to [0, 1]. */
   volume: number;
-
-  // Register/unregister volume observers
-  observe(observer: VolumeObserver): this;
-  unobserve(observer: VolumeObserver): this;
 }
 ```
 
@@ -81,20 +76,33 @@ interface AudioManager {
 }
 ```
 
-### `fromWorld(world)`
-
-Creates a `GlobalAudioManager` bound to the world's `AudioListener`.
-The browser runtime registers `AudioAssetLoader` by default.
+### Construction
 
 ```ts
+interface GlobalAudioManagerOptions {
+  /** @default new THREE.AudioListener() */
+  listener?: THREE.AudioListener;
+  /** @default THREE.AudioLoader */
+  loadBuffer?: (url: string) => Promise<AudioBuffer>;
+}
+
 GlobalAudioManager.fromWorld(world: World): GlobalAudioManager;
 ```
+
+`fromWorld` binds the manager to the world's `AudioListener`, so the
+world master volume applies to every sound it creates. A manager built
+with its own listener is independent from `world.audio.volume`.
+`volume` in `AudioLoadingOptions` is the per-sound gain.
+
+The browser runtime registers `AudioAssetLoader` (exported with
+`AUDIO_ASSET`) by default.
 
 ### Async loading (`loadAudio` / `loadPositionalAudio`)
 
 Fetches and decodes a URL on demand. Useful for audio that is loaded
 dynamically at runtime (e.g. user-triggered sound effects loaded after the
-loading screen).
+loading screen). Each URL is decoded once per manager; a failed load is
+retried on the next call.
 
 ```ts
 const audio = await audioManager.loadAudio("sounds/click.mp3", { volume: 0.5 });

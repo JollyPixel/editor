@@ -3,9 +3,8 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type { WorldDefaultContext } from "../systems/World.ts";
-import type { UIRenderer } from "./UIRenderer.ts";
+import { UIRenderer } from "./UIRenderer.ts";
 import { type Actor, ActorComponent } from "../actor/index.ts";
-import { UIRendererID } from "./common.ts";
 
 export type UIAnchorX = "left" | "center" | "right";
 export type UIAnchorY = "top" | "center" | "bottom";
@@ -68,15 +67,17 @@ export class UINode<TContext = WorldDefaultContext> extends ActorComponent<TCont
     super({ actor, typeName: "UINode" });
     this.#options = options;
 
-    const uiRenderer = this.actor.world[
-      UIRendererID
-    ] as UIRenderer<TContext> | undefined;
+    const { world } = this.actor;
+    const uiRenderer = UIRenderer.for(world);
     if (uiRenderer) {
       uiRenderer.addChildren(this);
+      this.addTeardown(() => uiRenderer.removeChildren(this));
     }
     else {
+      const onResize = () => this.updateToWorldPosition();
       this.updateToWorldPosition();
-      this.actor.world.renderer.on("resize", this.updateToWorldPosition.bind(this));
+      world.renderer.on("resize", onResize);
+      this.addTeardown(() => world.renderer.off("resize", onResize));
     }
   }
 

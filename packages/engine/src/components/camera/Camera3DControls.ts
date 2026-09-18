@@ -98,11 +98,6 @@ export class Camera3DControls extends CameraComponent<any> {
     return this.threeCamera as THREE.PerspectiveCamera;
   }
 
-  override awake(): void {
-    super.awake();
-    this.needUpdate = true;
-  }
-
   set speed(
     speed: number
   ) {
@@ -165,11 +160,7 @@ export class Camera3DControls extends CameraComponent<any> {
     }
 
     if (input.mouse.isDown(this.#bindings.lookAround)) {
-      // input.mouse.lock();
       this.#rotate();
-    }
-    else if (input.mouse.wasJustReleased(this.#bindings.lookAround)) {
-      // input.mouse.unlock();
     }
   }
 }

@@ -2,53 +2,23 @@
 import * as THREE from "three/webgpu";
 import { Emitter } from "@openally/emitt";
 
-// Import Internal Dependencies
-import { type AudioListenerAdapter } from "./internals/AudioListener.ts";
-
-export type VolumeObserver = {
-  onMasterVolumeChange: (volume: number) => void;
-};
-
 export type GlobalAudioEvents = {
   volumechange: (volume: number) => void;
 };
 
 export class GlobalAudio extends Emitter<GlobalAudioEvents> {
-  #volumeObservers: VolumeObserver[] = [];
-
-  listener: AudioListenerAdapter;
+  listener: THREE.AudioListener;
 
   constructor(
-    listenerAdapter?: AudioListenerAdapter
+    listener: THREE.AudioListener = new THREE.AudioListener()
   ) {
     super();
 
-    this.listener = listenerAdapter ?? new THREE.AudioListener();
+    this.listener = listener;
   }
 
-  get threeAudioListener() {
-    return this.listener as unknown as THREE.AudioListener;
-  }
-
-  observe(
-    observer: VolumeObserver
-  ): this {
-    if (!this.#volumeObservers.includes(observer)) {
-      this.#volumeObservers.push(observer);
-    }
-
-    return this;
-  }
-
-  unobserve(
-    observer: VolumeObserver
-  ): this {
-    const index = this.#volumeObservers.indexOf(observer);
-    if (index !== -1) {
-      this.#volumeObservers.splice(index, 1);
-    }
-
-    return this;
+  get threeAudioListener(): THREE.AudioListener {
+    return this.listener;
   }
 
   get volume() {
@@ -61,11 +31,7 @@ export class GlobalAudio extends Emitter<GlobalAudioEvents> {
     this.listener.setMasterVolume(
       THREE.MathUtils.clamp(value, 0, 1)
     );
-    const newVolume = this.listener.getMasterVolume();
-    for (const observer of this.#volumeObservers) {
-      observer.onMasterVolumeChange(newVolume);
-    }
 
-    this.emit("volumechange", newVolume);
+    this.emit("volumechange", this.listener.getMasterVolume());
   }
 }

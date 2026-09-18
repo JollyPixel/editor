@@ -26,7 +26,6 @@ export function extname(
   filename: string
 ): string {
   const lastDot = filename.lastIndexOf(".");
-  // Ignore les fichiers cachés comme « .gitignore »
   const hasDot = lastDot > 0;
 
   return hasDot ? filename.slice(lastDot) : "";

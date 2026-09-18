@@ -23,15 +23,10 @@ be used (it negotiates a GPU adapter), so `ThreeRenderer` is built
 with a static async factory rather than its constructor:
 
 ```ts
-import { SceneManager, ThreeRenderer } from "@jolly-pixel/engine";
+import { ThreeRenderer } from "@jolly-pixel/engine";
 
 const canvas = document.querySelector("canvas")!;
-const sceneManager = new SceneManager();
-
-const renderer = await ThreeRenderer.create(canvas, {
-  sceneManager,
-  renderMode: "direct"
-});
+const renderer = await ThreeRenderer.create(canvas);
 ```
 
 If neither a native WebGPU backend nor the WebGL2 fallback can be
@@ -41,10 +36,6 @@ error UI, etc.).
 
 ```ts
 interface ThreeRendererOptions {
-  /** Owns the scene graph that gets rendered. */
-  sceneManager: SceneManager;
-  /** Rendering strategy (see below). @default "direct" */
-  renderMode?: "direct";
   /** Passed straight to `new THREE.WebGPURenderer()`. */
   webgpu?: THREE.WebGPURendererParameters;
   /** Mutable renderer state, applied after the GPU context exists. */
@@ -59,7 +50,6 @@ context is created:
 
 ```ts
 await ThreeRenderer.create(canvas, {
-  sceneManager,
   webgpu: {
     // MSAA shades partially covered pixels at the pixel centre, which
     // extrapolates UVs past the triangle edge — turn it off for pixel-art
@@ -82,7 +72,6 @@ await ThreeRenderer.create(canvas, {
 
 ```ts
 await ThreeRenderer.create(canvas, {
-  sceneManager,
   output: {
     maxPixelRatio: 1.5,
     shadows: { type: THREE.PCFSoftShadowMap },
@@ -113,19 +102,29 @@ const webGPU = renderer.getSource();
 webGPU.toneMappingExposure = 1.5;
 ```
 
-## Render modes
+## Render strategy
 
-> [!WARNING]
-> Only `"direct"` mode is implemented today. Three.js's classic
-> `EffectComposer` post-processing pipeline is WebGLRenderer-only and
-> does not work with `WebGPURenderer` — a composer/post-processing
-> mode built on WebGPURenderer's node-based `PostProcessing` API is a
-> planned follow-up. `setRenderMode("composer")` (and any value other
-> than `"direct"`) throws.
+`renderer.renderStrategy` performs the actual render. The default
+`DirectRenderStrategy` calls `THREE.WebGPURenderer.render()` once per
+camera and honours `depth` and per-camera `viewport`.
 
-| Mode | Description |
-| ---- | ----------- |
-| `"direct"` | Renders the scene directly with `THREE.WebGPURenderer.render()`. Honours `depth` and per-camera `viewport`. |
+Assign another `RenderStrategy` to change how the frame is composed.
+`dispose()` on the renderer disposes the active strategy.
+
+```ts
+interface RenderStrategy {
+  render(scene: THREE.Scene, parameters: RenderParameters): void;
+  resize(width: number, height: number): void;
+  dispose(): void;
+}
+
+interface RenderParameters {
+  /** Sorted by ascending depth. */
+  components: readonly RenderComponent[];
+  canvasWidth: number;
+  canvasHeight: number;
+}
+```
 
 ## Cameras (render components)
 
@@ -178,7 +177,7 @@ renderer.on("resize", ({ width, height }) => {
 
 ## Draw and clear
 
-`draw()` performs a full render frame:
+`draw(scene)` performs a full render frame:
 
 1. Resizes if needed, and skips the frame entirely while the canvas
    is still zero-sized.
@@ -188,7 +187,7 @@ renderer.on("resize", ({ width, height }) => {
 4. Emits the `"draw"` event.
 
 ```ts
-renderer.onDraw(({ source }) => {
+renderer.on("draw", ({ source }) => {
   // source is the THREE.WebGPURenderer
 });
 ```

@@ -58,9 +58,37 @@ Components follow a lifecycle managed by the scene engine:
 | `destroy()` | When the actor or component is removed from the scene |
 
 Components that define `update()` or `fixedUpdate()` are
-automatically registered for per-frame updates via the
-`needUpdate` property. Setting `needUpdate = false` on a
-component removes it from the update loop without destroying it.
+registered for per-frame updates via the `needUpdate` property.
+The default is computed before the subclass constructor body runs,
+so a constructor can set `needUpdate = false` to opt out. Setting
+it later removes the component from the update loop without
+destroying it.
+
+## Destruction
+
+`destroy()` runs once; later calls do nothing. It calls the
+protected `onDestroy()` hook, then every teardown registered with
+`addTeardown()` in reverse order, then removes the component from
+its actor and from the start queue. Override `onDestroy()` rather
+than `destroy()` so the bookkeeping cannot be skipped:
+
+```ts
+class Spinner extends ActorComponent {
+  awake() {
+    const onResize = () => this.fit();
+    this.actor.world.renderer.on("resize", onResize);
+    this.addTeardown(() => this.actor.world.renderer.off("resize", onResize));
+  }
+
+  protected override onDestroy(): void {
+    this.mesh.geometry.dispose();
+  }
+}
+```
+
+To destroy a component during gameplay, prefer
+`world.sceneManager.destroyComponent(component)`, which defers the
+destruction to the end of the frame.
 
 ## API
 
@@ -103,8 +131,14 @@ interface ActorComponent {
   /** Returns `"$typeName:$id-$persistentId"`. */
   toString(): string;
 
-  // Remove the component from its actor
+  /** Runs `teardown` when the component is destroyed. */
+  addTeardown(teardown: () => void): void;
+
+  /** Remove the component from its actor. Idempotent. */
   destroy(): void;
+
+  /** Override for component-specific cleanup. */
+  protected onDestroy(): void;
 }
 ```
 
@@ -141,14 +175,6 @@ class PlayerBehavior extends Behavior {
   }
 }
 ```
-
-## Events
-
-`ActorComponent` extends `EventEmitter` and emits:
-
-| Event | When it fires |
-| ----- | ------------- |
-| `metadataInitialized` | After all decorator metadata (properties, signals, component refs) has been resolved |
 
 ## See also
 
