@@ -33,7 +33,7 @@
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "test:e2e": "playwright test",
-    "lint": "eslint src test examples && pnpm run lint:css",
+    "lint": "oxlint src test examples && pnpm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" \"examples/**/*.{ts,css}\" --cache",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },

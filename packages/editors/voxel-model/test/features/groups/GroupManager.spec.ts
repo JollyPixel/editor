@@ -285,9 +285,11 @@ describe("GroupManager emphasis outline", () => {
     assert.equal(findPivotMarker(group)?.visible, false);
 
     group.emphasize(0x00ff00);
-    assert.equal(findPivotMarker(group)?.visible, true);
+    const marker = findPivotMarker(group);
+    assert.ok(marker);
+    assert.equal(marker.visible, true);
     assert.equal(
-      (findPivotMarker(group)?.material as THREE.SpriteMaterial).color.getHex(),
+      (marker.material as THREE.SpriteMaterial).color.getHex(),
       0x00ff00
     );
 
@@ -302,9 +304,11 @@ describe("GroupManager emphasis outline", () => {
     group.emphasize(0x00ff00, "bob");
     group.clearEmphasis("bob");
 
-    assert.equal(findPivotMarker(group)?.visible, true);
+    const marker = findPivotMarker(group);
+    assert.ok(marker);
+    assert.equal(marker.visible, true);
     assert.equal(
-      (findPivotMarker(group)?.material as THREE.SpriteMaterial).color.getHex(),
+      (marker.material as THREE.SpriteMaterial).color.getHex(),
       NEUTRAL_HIGHLIGHT_COLOR
     );
   });

@@ -55,14 +55,15 @@ export function mockBoundingRect(
   width: number,
   height: number
 ): void {
-  element.getBoundingClientRect = () => ({
+  const rect = {
     left: 0,
     top: 0,
     right: width,
     bottom: height,
     width,
     height
-  } as unknown as DOMRect);
+  } as unknown as DOMRect;
+  element.getBoundingClientRect = () => rect;
 }
 
 /**

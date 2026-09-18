@@ -12,7 +12,7 @@
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "dev": "vite",
-    "lint": "eslint src test",
+    "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "publishConfig": {

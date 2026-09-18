@@ -22,7 +22,7 @@
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.test.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "dev": "vite",
-    "lint": "eslint src test examples",
+    "lint": "oxlint src test examples",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "publishConfig": {

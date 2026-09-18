@@ -11,7 +11,7 @@
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "build": "tsc -b",
     "preview": "vite",
-    "lint": "eslint src test",
+    "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
   "publishConfig": {

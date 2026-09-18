@@ -32,7 +32,7 @@
     "bench:compare": "node --max-old-space-size=8192 bench/mesh-compare.bench.ts",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "clean": "rm -f cpu-profile-*.* heap-profile-*.*",
-    "lint": "eslint src test",
+    "lint": "oxlint src test",
     "test-types": "tsc -p test/tsconfig.json && tstyche",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },

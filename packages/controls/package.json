@@ -11,7 +11,7 @@
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
-    "lint": "eslint src test",
+    "lint": "oxlint src test",
     "bench": "jolly-bench",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },

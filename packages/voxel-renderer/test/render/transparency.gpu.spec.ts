@@ -12,6 +12,59 @@ import { chromium } from "@playwright/test";
 // Import Internal Dependencies
 import type { ProbeOptions } from "./fixtures/transparency.ts";
 
+interface ProbeCase {
+  name: string;
+  options: ProbeOptions;
+  expected: number[];
+}
+
+function probeCases(
+  greedy: boolean,
+  reverse: boolean
+): ProbeCase[] {
+  const cases: ProbeCase[] = [];
+  const settings = {
+    greedy, reverse, forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1"
+  };
+  const suffix = `greedy=${greedy}, reverse=${reverse}`;
+  function sample(
+    name: string,
+    options: ProbeOptions,
+    expected: number[]
+  ): void {
+    cases.push({ name: `${name} (${suffix})`, options: { ...settings, ...options }, expected });
+  }
+  sample("front surface", { alpha: 0.5, side: "front" }, [128, 128, 128]);
+  sample("resize shared depth targets", { alpha: 0.5, resize: true }, [192, 192, 192]);
+  sample("recover after draw failure", { alpha: 0.5, failDraw: true }, [192, 192, 192]);
+  sample("both walls", { alpha: 0.5 }, [192, 192, 192]);
+  sample("low alpha", { alpha: 0.02, side: "front" }, [5, 5, 5]);
+  sample("opaque ignores texture alpha", { alpha: 0.02, mode: "opaque" }, [255, 255, 255]);
+  sample("mask discards uncovered texels", { alpha: 0.02, mode: "mask" }, [0, 0, 0]);
+  sample("mask coverage before fading", {
+    alpha: 0.5, mode: "mask", side: "front", opacity: 0.02
+  }, [5, 5, 5]);
+  sample("blend multiplies layer opacity", {
+    alpha: 0.5, side: "front", opacity: 0.1
+  }, [13, 13, 13]);
+  for (const cull of [false, true]) {
+    sample(`chunk boundary cull=${cull}`, {
+      alpha: 0.5, startZ: 3, count: 2, cull
+    }, cull ? [192, 192, 192] : [223, 223, 223]);
+    sample(`separated cubes cull=${cull}`, {
+      alpha: 0.5, count: 2, spacing: 2, cull
+    }, [239, 239, 239]);
+  }
+  sample("interior behind mask hole", {
+    alpha: 1, mode: "mask", hole: true
+  }, [255, 255, 255]);
+  sample("opaque foreground rejects glass", {
+    alpha: 0.5, count: 2, occluder: true
+  }, [0, 255, 0]);
+
+  return cases;
+}
+
 it("composites voxel alpha on the GPU", {
   skip: process.env.npm_lifecycle_event !== "test-gpu" &&
     process.env.VOXEL_GPU_TESTS !== "1",
@@ -50,47 +103,10 @@ it("composites voxel alpha on the GPU", {
       }
     });
     await page.goto(`http://127.0.0.1:${address.port}`);
-    const cases: { name: string; options: ProbeOptions; expected: number[]; }[] = [];
+    const cases: ProbeCase[] = [];
     for (const greedy of [false, true]) {
       for (const reverse of [false, true]) {
-        const settings = {
-          greedy, reverse, forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1"
-        };
-        const suffix = `greedy=${greedy}, reverse=${reverse}`;
-        function sample(
-          name: string,
-          options: ProbeOptions,
-          expected: number[]
-        ): void {
-          cases.push({ name: `${name} (${suffix})`, options: { ...settings, ...options }, expected });
-        }
-        sample("front surface", { alpha: 0.5, side: "front" }, [128, 128, 128]);
-        sample("resize shared depth targets", { alpha: 0.5, resize: true }, [192, 192, 192]);
-        sample("recover after draw failure", { alpha: 0.5, failDraw: true }, [192, 192, 192]);
-        sample("both walls", { alpha: 0.5 }, [192, 192, 192]);
-        sample("low alpha", { alpha: 0.02, side: "front" }, [5, 5, 5]);
-        sample("opaque ignores texture alpha", { alpha: 0.02, mode: "opaque" }, [255, 255, 255]);
-        sample("mask discards uncovered texels", { alpha: 0.02, mode: "mask" }, [0, 0, 0]);
-        sample("mask coverage before fading", {
-          alpha: 0.5, mode: "mask", side: "front", opacity: 0.02
-        }, [5, 5, 5]);
-        sample("blend multiplies layer opacity", {
-          alpha: 0.5, side: "front", opacity: 0.1
-        }, [13, 13, 13]);
-        for (const cull of [false, true]) {
-          sample(`chunk boundary cull=${cull}`, {
-            alpha: 0.5, startZ: 3, count: 2, cull
-          }, cull ? [192, 192, 192] : [223, 223, 223]);
-          sample(`separated cubes cull=${cull}`, {
-            alpha: 0.5, count: 2, spacing: 2, cull
-          }, [239, 239, 239]);
-        }
-        sample("interior behind mask hole", {
-          alpha: 1, mode: "mask", hole: true
-        }, [255, 255, 255]);
-        sample("opaque foreground rejects glass", {
-          alpha: 0.5, count: 2, occluder: true
-        }, [0, 255, 0]);
+        cases.push(...probeCases(greedy, reverse));
       }
     }
     const samples = await page.evaluate(async(cases) => {

@@ -22,7 +22,7 @@
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
-    "lint": "eslint src test && pnpm run lint:css",
+    "lint": "oxlint src test && pnpm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" \"examples/scripts/**/*.ts\" \"examples/public/**/*.css\" --cache",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
