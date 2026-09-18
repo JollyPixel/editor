@@ -109,6 +109,12 @@ interface VoxelEngineOptions {
    */
   collider?: VoxelColliderFactory;
   /**
+   * Keeps the shader-only tileRegion and tileRepeat attributes in memory after
+   * the first render uploads them. Raycasting and colliders never read them.
+   * @default false
+   */
+  retainVertexData?: boolean;
+  /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports
    * roughness and metalness maps but is more expensive to render; "lambert"

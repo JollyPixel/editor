@@ -40,7 +40,7 @@ function triangles(
   let count = 0;
   engine.root.traverse((object) => {
     if (object instanceof THREE.Mesh) {
-      count += object.geometry.getIndex()?.count ?? 0;
+      count += object.geometry.drawRange.count;
     }
   });
 

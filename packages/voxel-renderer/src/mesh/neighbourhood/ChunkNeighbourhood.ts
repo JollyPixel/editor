@@ -23,6 +23,11 @@ export interface ChunkNeighbourhoodOptions {
   minWx: number;
   minWy: number;
   minWz: number;
+  /**
+   * Supplies the reusable lookup window of the n-th non-empty layer, or null
+   * to query chunk storage directly.
+   */
+  windowFor?: (index: number) => Int32Array | null;
 }
 
 /**
@@ -40,7 +45,15 @@ export class ChunkNeighbourhood {
   constructor(
     options: ChunkNeighbourhoodOptions
   ) {
-    const { world, variants, layer, minWx, minWy, minWz } = options;
+    const {
+      world,
+      variants,
+      layer,
+      minWx,
+      minWy,
+      minWz,
+      windowFor
+    } = options;
     const layers: LayerChunkCache[] = [];
     const { chunkSize } = world;
 
@@ -50,7 +63,12 @@ export class ChunkNeighbourhood {
       }
 
       const cache = new LayerChunkCache({
-        layer: candidate, chunkSize, minWx, minWy, minWz
+        layer: candidate,
+        chunkSize,
+        minWx,
+        minWy,
+        minWz,
+        window: windowFor?.(layers.length) ?? null
       });
       if (!cache.empty) {
         layers.push(cache);
@@ -135,6 +153,22 @@ export class ChunkNeighbourhood {
     return false;
   }
 
+  isVacantAt(
+    wx: number,
+    wy: number,
+    wz: number
+  ): boolean {
+    const layers = this.layers;
+
+    for (let i = 0; i < this.#layerCount; i++) {
+      if (layers[i].packedAt(wx, wy, wz) !== VOXEL_ABSENT) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   #occludes(
     neighbour: PackedVoxel,
     oppFace: number,
@@ -174,11 +208,12 @@ export class ChunkNeighbourhood {
 
   boundaryFaces(
     face: BlockVariantFace,
-    position: readonly number[],
+    wx: number,
+    wy: number,
+    wz: number,
     variant: BlockVariant
   ): readonly BlockVariantFace[] {
-    if (face.cull < 0 ||
-      this.#variants.geometryKeyAt(face.slot).surface.side === "front") {
+    if (!face.splittable) {
       return [face];
     }
     const offset = FACE_OFFSETS[face.cull];
@@ -186,9 +221,9 @@ export class ChunkNeighbourhood {
     let faces: readonly BlockVariantFace[] = [face];
     for (const cache of this.layers) {
       const packed = cache.packedAt(
-        position[0] + offset[0],
-        position[1] + offset[1],
-        position[2] + offset[2]
+        wx + offset[0],
+        wy + offset[1],
+        wz + offset[2]
       );
       if (packed === VOXEL_ABSENT) {
         continue;

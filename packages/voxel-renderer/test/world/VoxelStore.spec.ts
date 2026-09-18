@@ -321,3 +321,41 @@ describe("VoxelStore copyFrom", () => {
     }
   });
 });
+
+describe("VoxelStore reserve", () => {
+  it("grows once so the reserved entries fit without another rehash", () => {
+    const store = new VoxelStore();
+    store.reserve(100);
+    const capacity = store.capacity;
+
+    for (let key = 0; key < 100; key++) {
+      store.set(key, key + 1);
+    }
+
+    assert.equal(store.capacity, capacity);
+    assert.equal(store.size, 100);
+  });
+
+  it("keeps every entry when it rehashes", () => {
+    const store = new VoxelStore();
+    for (let key = 0; key < 10; key++) {
+      store.set(key * 17, key);
+    }
+
+    store.reserve(1_000);
+
+    assert.deepEqual(
+      collect(store),
+      new Map(Array.from({ length: 10 }, (_, key) => [key * 17, key]))
+    );
+  });
+
+  it("never shrinks the table", () => {
+    const store = new VoxelStore(256);
+    const capacity = store.capacity;
+
+    store.reserve(1);
+
+    assert.equal(store.capacity, capacity);
+  });
+});

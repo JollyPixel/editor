@@ -11,10 +11,14 @@ import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MeshPassOptions } from "./types.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
+import { QuadIndex } from "./QuadIndex.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
 import { GreedyMesher } from "./meshers/GreedyMesher.ts";
 import { NaiveMesher } from "./meshers/NaiveMesher.ts";
 import { ChunkNeighbourhood } from "./neighbourhood/ChunkNeighbourhood.ts";
+
+// CONSTANTS
+const kMaxWindowChunkSize = 64;
 
 export interface VoxelMeshBuilderOptions {
   alphaTest?: number;
@@ -30,7 +34,8 @@ export interface VoxelMeshBuilderOptions {
 }
 
 /**
- * Builds visible chunk geometry, split by tileset and cutout mode.
+ * Builds visible chunk geometry, split by tileset and cutout mode. Vertex
+ * positions are relative to the chunk origin in world space.
  */
 export class VoxelMeshBuilder {
   readonly stats = new MeshBuildStats();
@@ -41,15 +46,33 @@ export class VoxelMeshBuilder {
   #greedyMesher: GreedyMesher;
   #naiveMesher: NaiveMesher;
   #greedy: boolean;
+  #quadIndex = new QuadIndex();
+  #origin: [number, number, number] = [0, 0, 0];
   #buffers: (GeometryBuffer | undefined)[] = [];
   #bufferFor = (slot: number): GeometryBuffer => {
     let buffer = this.#buffers[slot];
     if (buffer === undefined) {
       buffer = new GeometryBuffer({ tiled: this.#greedy });
+      buffer.reset(...this.#origin);
       this.#buffers[slot] = buffer;
     }
 
     return buffer;
+  };
+  #windows: Int32Array[] = [];
+  #windowFor = (index: number): Int32Array | null => {
+    const span = this.#world.chunkSize + 2;
+    if (span - 2 > kMaxWindowChunkSize) {
+      return null;
+    }
+
+    let window = this.#windows[index];
+    if (window === undefined || window.length !== span * span * span) {
+      window = new Int32Array(span * span * span);
+      this.#windows[index] = window;
+    }
+
+    return window;
   };
 
   constructor(
@@ -110,9 +133,11 @@ export class VoxelMeshBuilder {
       layer,
       minWx: worldOriginX - 1,
       minWy: worldOriginY - 1,
-      minWz: worldOriginZ - 1
+      minWz: worldOriginZ - 1,
+      windowFor: this.#windowFor
     });
 
+    this.#origin = [worldOriginX, worldOriginY, worldOriginZ];
     this.#resetBuffers();
 
     const pass: MeshPassOptions = {
@@ -135,7 +160,7 @@ export class VoxelMeshBuilder {
 
   #resetBuffers(): void {
     for (const buffer of this.#buffers) {
-      buffer?.reset();
+      buffer?.reset(...this.#origin);
     }
   }
 
@@ -149,9 +174,9 @@ export class VoxelMeshBuilder {
         continue;
       }
 
-      const geometry = buffer.toGeometry();
+      const geometry = buffer.toGeometry(this.#quadIndex);
       stats.vertices += buffer.vertexCount;
-      stats.triangles += buffer.indexCount / 3;
+      stats.triangles += buffer.triangleCount;
       stats.geometries++;
       stats.bytesPerVertex = bytesPerVertex(geometry);
       result.set(

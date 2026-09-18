@@ -8,6 +8,7 @@ import {
 
 // CONSTANTS
 const kSpan = 3;
+const kUnresolved = -2;
 
 export interface LayerChunkCacheOptions {
   layer: VoxelLayer;
@@ -15,6 +16,11 @@ export interface LayerChunkCacheOptions {
   minWx: number;
   minWy: number;
   minWz: number;
+  /**
+   * Reusable `(chunkSize + 2)³` scratch memoizing every lookup inside the
+   * padded chunk box. Its previous content is discarded.
+   */
+  window?: Int32Array | null;
 }
 
 /**
@@ -43,6 +49,14 @@ export class LayerChunkCache {
   #centreWy: number;
   #centreWz: number;
   #centreChunk: VoxelChunk | null = null;
+
+  #window: Int32Array | null = null;
+  #pendingWindow: Int32Array | null = null;
+  #centreSwept = false;
+  #windowSpan: number;
+  #minWx: number;
+  #minWy: number;
+  #minWz: number;
 
   constructor(
     options: LayerChunkCacheOptions
@@ -87,9 +101,103 @@ export class LayerChunkCache {
     this.#centreWy = ((baseCy + 1) * chunkSize) + position.y;
     this.#centreWz = ((baseCz + 1) * chunkSize) + position.z;
     this.#centreChunk = this.#chunks[(kSpan * kSpan) + kSpan + 1];
+
+    this.#windowSpan = chunkSize + 2;
+    this.#minWx = minWx;
+    this.#minWy = minWy;
+    this.#minWz = minWz;
+
+    const { window = null } = options;
+    if (!this.empty) {
+      this.#pendingWindow = window;
+    }
   }
 
   packedAt(
+    wx: number,
+    wy: number,
+    wz: number
+  ): PackedVoxel {
+    let window = this.#window;
+    if (window === null) {
+      if (this.#pendingWindow === null) {
+        return this.#lookup(wx, wy, wz);
+      }
+
+      window = this.#prepareWindow(this.#pendingWindow);
+    }
+
+    const span = this.#windowSpan;
+    const x = wx - this.#minWx;
+    const y = wy - this.#minWy;
+    const z = wz - this.#minWz;
+    if ((x | y | z) < 0 || x >= span || y >= span || z >= span) {
+      return this.#lookup(wx, wy, wz);
+    }
+
+    const index = x + (span * (y + (span * z)));
+    let packed = window[index];
+    if (packed === kUnresolved) {
+      const size = this.#size;
+      if (
+        this.#centreSwept &&
+        x > 0 && y > 0 && z > 0 &&
+        x <= size && y <= size && z <= size
+      ) {
+        return VOXEL_ABSENT;
+      }
+
+      packed = this.#lookup(wx, wy, wz);
+      window[index] = packed;
+    }
+
+    return packed;
+  }
+
+  #prepareWindow(
+    window: Int32Array
+  ): Int32Array {
+    const span = this.#windowSpan;
+    if (window.length < span * span * span) {
+      throw new RangeError(
+        `LayerChunkCache: window needs ${span ** 3} cells, got ${window.length}.`
+      );
+    }
+
+    window.fill(kUnresolved);
+    this.#window = window;
+    this.#pendingWindow = null;
+
+    const chunk = this.#centreChunk;
+    if (
+      chunk === null ||
+      this.#centreWx !== this.#minWx + 1 ||
+      this.#centreWy !== this.#minWy + 1 ||
+      this.#centreWz !== this.#minWz + 1
+    ) {
+      return window;
+    }
+
+    this.#centreSwept = true;
+    const { shift, mask } = chunk;
+    const shiftZ = shift * 2;
+    const { keys, values, capacity } = chunk.store;
+    for (let slot = 0; slot < capacity; slot++) {
+      const linearIdx = keys[slot];
+      if (linearIdx < 0) {
+        continue;
+      }
+
+      const x = (linearIdx & mask) + 1;
+      const y = ((linearIdx >> shift) & mask) + 1;
+      const z = (linearIdx >> shiftZ) + 1;
+      window[x + (span * (y + (span * z)))] = values[slot];
+    }
+
+    return window;
+  }
+
+  #lookup(
     wx: number,
     wy: number,
     wz: number

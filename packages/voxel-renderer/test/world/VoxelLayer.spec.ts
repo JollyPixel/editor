@@ -626,3 +626,125 @@ describe("VoxelLayer chunk range edges", () => {
     assert.doesNotThrow(() => layer.markChunkDirty(-kOutOfRangeCoord, 0, 0));
   });
 });
+
+describe("VoxelLayer loadPackedVoxels", () => {
+  it("writes layer-local voxels across chunks", () => {
+    const layer = makeLayer({ position: { x: 10, y: 0, z: 0 } });
+    const positions = new Int32Array([
+      0, 0, 0,
+      5, 1, -3,
+      0, 0, 1,
+      -1, 2, 2
+    ]);
+
+    layer.loadPackedVoxels(positions, [256, 513, 770, 1027]);
+
+    assert.equal(layer.getPackedVoxelAt({ x: 10, y: 0, z: 0 }), 256);
+    assert.equal(layer.getPackedVoxelAt({ x: 15, y: 1, z: -3 }), 513);
+    assert.equal(layer.getPackedVoxelAt({ x: 10, y: 0, z: 1 }), 770);
+    assert.equal(layer.getPackedVoxelAt({ x: 9, y: 2, z: 2 }), 1027);
+    assert.equal(layer.voxelCount, 4);
+    assert.equal(layer.chunkCount, 3);
+  });
+
+  it("marks the written chunks dirty", () => {
+    const layer = makeLayer();
+
+    layer.loadPackedVoxels(new Int32Array([1, 1, 1]), [256]);
+
+    assert.equal(layer.getChunk(0, 0, 0)?.dirty, true);
+  });
+});
+
+describe("VoxelLayer getDirtyChunks", () => {
+  it("keeps tracking when an external dirty listener subscribes and leaves", () => {
+    const layer = makeLayer();
+    const chunk = layer.getOrCreateChunk(0, 0, 0);
+    const changes: boolean[] = [];
+    const unsubscribe = chunk.onDirtyChange((_, dirty) => {
+      changes.push(dirty);
+    });
+
+    chunk.dirty = false;
+    layer.setVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry(1));
+
+    assert.deepEqual(changes, [true, false, true]);
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+    unsubscribe();
+    chunk.dirty = false;
+    layer.setVoxelAt({ x: 2, y: 0, z: 0 }, makeVoxelEntry(1));
+    assert.deepEqual(changes, [true, false, true]);
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+  });
+
+  it("releases only the layer subscription when a chunk is removed", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const chunk = layer.getChunk(0, 0, 0)!;
+    const changes: boolean[] = [];
+    chunk.onDirtyChange((_, dirty) => {
+      changes.push(dirty);
+    });
+
+    layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
+    chunk.dirty = false;
+    chunk.dirty = true;
+
+    assert.deepEqual(changes, [true, false, true]);
+    assert.deepEqual([...layer.getDirtyChunks()], []);
+  });
+
+  it("lists a chunk from its first write until it is marked clean", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const chunk = layer.getChunk(0, 0, 0)!;
+
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+
+    chunk.dirty = false;
+    assert.deepEqual([...layer.getDirtyChunks()], []);
+
+    layer.markChunkDirty(0, 0, 0);
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+  });
+
+  it("forgets a chunk emptied by a removal", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const chunk = layer.getChunk(0, 0, 0)!;
+
+    layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
+    chunk.dirty = true;
+
+    assert.deepEqual([...layer.getDirtyChunks()], []);
+  });
+
+  it("tracks exactly the live chunks after a rebase", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    layer.setVoxelAt({ x: 5, y: 0, z: 0 }, makeVoxelEntry(1));
+    for (const chunk of layer.getChunks()) {
+      chunk.dirty = false;
+    }
+
+    layer.rebase({ x: 2, y: 0, z: 0 });
+
+    assert.deepEqual(
+      new Set(layer.getDirtyChunks()),
+      new Set(layer.getChunks())
+    );
+  });
+
+  it("gives a clone its own dirty set", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const copy = layer.clone();
+
+    for (const chunk of copy.getChunks()) {
+      chunk.dirty = false;
+    }
+
+    assert.equal([...copy.getDirtyChunks()].length, 0);
+    assert.equal([...layer.getDirtyChunks()].length, 1);
+  });
+});

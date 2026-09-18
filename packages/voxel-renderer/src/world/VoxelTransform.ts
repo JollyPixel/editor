@@ -66,6 +66,15 @@ export class VoxelTransform {
     return transform;
   }
 
+  static pack(
+    options: VoxelTransformOptions = {}
+  ): number {
+    return ((options.rotation ?? 0) & kRotationMask) |
+      (options.flipX ? kFlipXBit : 0) |
+      (options.flipZ ? kFlipZBit : 0) |
+      (options.flipY ? kFlipYBit : 0);
+  }
+
   readonly rotation: VoxelRotationStep;
   readonly flipX: boolean;
   readonly flipZ: boolean;
@@ -90,10 +99,7 @@ export class VoxelTransform {
     this.flipX = flipX;
     this.flipZ = flipZ;
     this.flipY = flipY;
-    this.packed = this.rotation |
-      (flipX ? kFlipXBit : 0) |
-      (flipZ ? kFlipZBit : 0) |
-      (flipY ? kFlipYBit : 0);
+    this.packed = VoxelTransform.pack(options);
 
     Object.freeze(this);
   }

@@ -39,7 +39,16 @@ export interface BlockVariantFace {
    */
   region: Uint16Array;
   merge: BlockFaceMerge | null;
+  /**
+   * Shared by mergeable faces that look identical once stretched, whatever
+   * block or transform they come from; -1 when the face never merges.
+   */
+  mergeId: number;
   full: boolean;
+  /**
+   * True when a neighbour's footprint may split this boundary face.
+   */
+  splittable: boolean;
   /** Face normal, signed-normalized to the byte the attribute is emitted as. */
   normalX: number;
   normalY: number;

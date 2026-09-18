@@ -9,9 +9,20 @@ export interface MergedChunkGeometry {
   owned: boolean;
 }
 
-/**
- * Merges chunk geometries, retaining only positions and indices.
- */
+export function drawnIndices(
+  geometry: THREE.BufferGeometry
+): THREE.TypedArray | null {
+  const index = geometry.getIndex();
+  if (!index) {
+    return null;
+  }
+
+  const { start, count } = geometry.drawRange;
+  const end = Math.min(index.count, start + count);
+
+  return index.array.subarray(Math.min(start, end), end);
+}
+
 export function mergeChunkGeometries(
   geometries: ReadonlyMap<string, THREE.BufferGeometry>
 ): MergedChunkGeometry | null {
@@ -28,21 +39,17 @@ export function mergeChunkGeometries(
     };
   }
 
-  /*
-   * Sizing the output up front keeps this to two allocations instead of the
-   * repeated reallocation (and boxed doubles) a `number[]` would cost.
-   */
   let positionLength = 0;
   let indexLength = 0;
   for (const geometry of geometries.values()) {
     const position = geometry.getAttribute("position");
-    const index = geometry.getIndex();
-    if (!position || !index) {
+    const indices = drawnIndices(geometry);
+    if (!position || !indices) {
       continue;
     }
 
     positionLength += position.array.length;
-    indexLength += index.array.length;
+    indexLength += indices.length;
   }
 
   if (positionLength === 0) {
@@ -57,19 +64,13 @@ export function mergeChunkGeometries(
 
   for (const geometry of geometries.values()) {
     const position = geometry.getAttribute("position");
-    const index = geometry.getIndex();
-    if (!position || !index) {
+    const source = drawnIndices(geometry);
+    if (!position || !source) {
       continue;
     }
 
     positions.set(position.array, positionCursor);
     positionCursor += position.array.length;
-
-    /*
-     * Indices are rebased onto the merged vertex range, so they cannot be
-     * copied verbatim the way positions can.
-     */
-    const source = index.array;
     for (let i = 0; i < source.length; i++) {
       indices[indexCursor + i] = source[i] + indexOffset;
     }

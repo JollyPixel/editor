@@ -42,7 +42,7 @@ for (const greedy of [false, true]) {
           geometry.getAttribute("position").count);
       }
       assert.equal(counts.get("front"), 8);
-      assert.equal(counts.get("double"), 40);
+      assert.equal(counts.get("double"), greedy ? 24 : 40);
     });
 
     for (const alphaMode of ["opaque", "mask", "blend"] as const) {

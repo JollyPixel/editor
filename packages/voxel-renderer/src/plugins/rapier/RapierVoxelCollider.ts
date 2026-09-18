@@ -1,17 +1,19 @@
-// Import Third-party Dependencies
-import type * as THREE from "three";
-
 // Import Internal Dependencies
 import type {
   VoxelCollider,
   VoxelChunkCollision
 } from "../../collision/VoxelCollider.ts";
-import { mergeChunkGeometries } from "../../collision/mergeChunkGeometries.ts";
 import type { BlockRegistry } from "../../blocks/BlockRegistry.ts";
+import type { BlockShape } from "../../blocks/shape/BlockShape.ts";
 import type { BlockShapeRegistry } from "../../blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelChunk } from "../../world/VoxelChunk.ts";
-import { voxelBlockId } from "../../world/packedVoxel.ts";
+import {
+  voxelBlockId,
+  voxelTransform
+} from "../../world/packedVoxel.ts";
+import { VoxelTransform } from "../../world/VoxelTransform.ts";
 import type { VoxelCoord } from "../../world/types.ts";
+import { rotateVertex } from "../../mesh/variants/rotation.ts";
 import type {
   RapierAPI,
   RapierRigidBody,
@@ -25,14 +27,26 @@ export interface RapierVoxelColliderOptions {
   shapeRegistry: BlockShapeRegistry;
 }
 
-interface SolidVoxel {
-  lx: number;
-  ly: number;
-  lz: number;
+interface ShapeBounds {
+  min: [number, number, number];
+  max: [number, number, number];
+  full: boolean;
+}
+
+interface ChunkSolids {
+  cubes: number[];
+  boxes: {
+    origin: [number, number, number];
+    bounds: ShapeBounds;
+  }[];
+  vertices: number[];
+  indices: number[];
 }
 
 /**
- * Uses a trimesh when requested by any block; otherwise uses cuboids.
+ * Builds one fixed body per chunk: full cubes greedily merged into cuboids,
+ * partial boxes as their own cuboids, and trimesh-hinted blocks as a
+ * triangle mesh of their shape faces.
  */
 export class RapierVoxelCollider implements VoxelCollider {
   #rapier: RapierAPI;
@@ -41,6 +55,9 @@ export class RapierVoxelCollider implements VoxelCollider {
   #shapeRegistry: BlockShapeRegistry;
 
   #bodies = new Map<string, RapierRigidBody>();
+  #bounds = new Map<string, ShapeBounds>();
+  #shapeVersion = -1;
+  #filled = new Uint8Array(0);
 
   constructor(
     options: RapierVoxelColliderOptions
@@ -56,6 +73,10 @@ export class RapierVoxelCollider implements VoxelCollider {
     collision: VoxelChunkCollision
   ): void {
     this.removeChunk(key);
+    if (this.#shapeVersion !== this.#shapeRegistry.version) {
+      this.#bounds.clear();
+      this.#shapeVersion = this.#shapeRegistry.version;
+    }
 
     const body = this.#buildChunkBody(collision);
     if (body) {
@@ -80,18 +101,24 @@ export class RapierVoxelCollider implements VoxelCollider {
       this.#world.removeRigidBody(body);
     }
     this.#bodies.clear();
+    this.#bounds.clear();
+    this.#filled = new Uint8Array(0);
   }
 
   #buildChunkBody(
     collision: VoxelChunkCollision
   ): RapierRigidBody | null {
-    const { chunk, geometries, layerPosition } = collision;
+    const { chunk, layerPosition } = collision;
     if (chunk.isEmpty()) {
       return null;
     }
 
-    const { solids, hasTrimesh } = this.#collectSolids(chunk);
-    if (solids.length === 0) {
+    const solids = this.#collectSolids(chunk);
+    if (
+      solids.cubes.length === 0 &&
+      solids.boxes.length === 0 &&
+      solids.indices.length === 0
+    ) {
       return null;
     }
 
@@ -101,22 +128,42 @@ export class RapierVoxelCollider implements VoxelCollider {
         .setTranslation(...chunkOrigin(chunk, layerPosition))
     );
 
-    if (hasTrimesh && this.#buildTrimesh(body, geometries)) {
-      return body;
+    this.#buildCubes(body, solids.cubes, chunk.size);
+    for (const { origin, bounds } of solids.boxes) {
+      this.#buildBox(body, origin, bounds);
     }
-
-    this.#buildCuboids(body, solids);
+    if (solids.indices.length > 0) {
+      this.#world.createCollider(
+        this.#rapier.ColliderDesc.trimesh(
+          new Float32Array(solids.vertices),
+          new Uint32Array(solids.indices)
+        ),
+        body
+      );
+    }
 
     return body;
   }
 
   #collectSolids(
     chunk: VoxelChunk
-  ): { solids: SolidVoxel[]; hasTrimesh: boolean; } {
-    const solids: SolidVoxel[] = [];
-    let hasTrimesh = false;
+  ): ChunkSolids {
+    const solids: ChunkSolids = {
+      cubes: [],
+      boxes: [],
+      vertices: [],
+      indices: []
+    };
+    const { shift, mask } = chunk;
+    const { keys, values, capacity } = chunk.store;
 
-    for (const [idx, packed] of chunk.packedEntries()) {
+    for (let slot = 0; slot < capacity; slot++) {
+      const linearIdx = keys[slot];
+      if (linearIdx < 0) {
+        continue;
+      }
+
+      const packed = values[slot];
       const blockDef = this.#blockRegistry.get(voxelBlockId(packed));
       if (!blockDef?.collidable) {
         continue;
@@ -127,62 +174,245 @@ export class RapierVoxelCollider implements VoxelCollider {
         continue;
       }
 
-      solids.push(chunk.fromLinearIndex(idx));
+      const lx = linearIdx & mask;
+      const ly = (linearIdx >> shift) & mask;
+      const lz = linearIdx >> (shift * 2);
+      const transform = VoxelTransform.fromPacked(voxelTransform(packed));
+
       if (shape.collisionHint === "trimesh") {
-        hasTrimesh = true;
+        appendShapeTriangles(solids, shape, transform, [lx, ly, lz]);
+
+        continue;
+      }
+
+      const bounds = this.#boundsOf(shape, transform);
+      if (bounds.full) {
+        solids.cubes.push(linearIdx);
+      }
+      else {
+        solids.boxes.push({ origin: [lx, ly, lz], bounds });
       }
     }
 
-    return { solids, hasTrimesh };
+    return solids;
   }
 
-  #buildTrimesh(
-    body: RapierRigidBody,
-    geometries: ReadonlyMap<string, THREE.BufferGeometry>
-  ): boolean {
-    const merged = mergeChunkGeometries(geometries);
-    if (!merged) {
-      return false;
+  #boundsOf(
+    shape: BlockShape,
+    transform: VoxelTransform
+  ): ShapeBounds {
+    const key = `${shape.id}:${transform.packed}`;
+    let bounds = this.#bounds.get(key);
+    if (bounds !== undefined) {
+      return bounds;
     }
 
-    const { geometry, owned } = merged;
-    try {
-      const position = geometry.getAttribute("position");
-      const index = geometry.getIndex();
-      if (!position || !index) {
-        return false;
+    const min: [number, number, number] = [Infinity, Infinity, Infinity];
+    const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+    for (const face of shape.faces) {
+      for (const vertex of face.vertices) {
+        const [x, y, z] = rotateVertex(vertex, transform);
+        min[0] = Math.min(min[0], x);
+        min[1] = Math.min(min[1], y);
+        min[2] = Math.min(min[2], z);
+        max[0] = Math.max(max[0], x);
+        max[1] = Math.max(max[1], y);
+        max[2] = Math.max(max[2], z);
       }
+    }
 
-      this.#world.createCollider(
-        this.#rapier.ColliderDesc.trimesh(
-          new Float32Array(position.array),
-          new Uint32Array(index.array)
-        ),
-        body
-      );
+    bounds = {
+      min,
+      max,
+      full: min.every((value) => value === 0) &&
+        max.every((value) => value === 1)
+    };
+    this.#bounds.set(key, bounds);
 
-      return true;
+    return bounds;
+  }
+
+  #buildCubes(
+    body: RapierRigidBody,
+    cubes: number[],
+    size: number
+  ): void {
+    if (cubes.length === 0) {
+      return;
+    }
+
+    const volume = size * size * size;
+    if (this.#filled.length < volume) {
+      this.#filled = new Uint8Array(volume);
+    }
+    cubes.sort((a, b) => a - b);
+
+    try {
+      for (const [x, y, z, sx, sy, sz] of mergeCubes(
+        cubes, size, this.#filled
+      )) {
+        this.#world.createCollider(
+          this.#rapier.ColliderDesc
+            .cuboid(sx / 2, sy / 2, sz / 2)
+            .setTranslation(x + (sx / 2), y + (sy / 2), z + (sz / 2)),
+          body
+        );
+      }
     }
     finally {
-      if (owned) {
-        geometry.dispose();
+      for (const index of cubes) {
+        this.#filled[index] = 0;
       }
     }
   }
 
-  #buildCuboids(
+  #buildBox(
     body: RapierRigidBody,
-    solids: readonly SolidVoxel[]
+    origin: readonly [number, number, number],
+    bounds: ShapeBounds
   ): void {
-    for (const { lx, ly, lz } of solids) {
-      this.#world.createCollider(
-        this.#rapier.ColliderDesc
-          .cuboid(0.5, 0.5, 0.5)
-          .setTranslation(lx + 0.5, ly + 0.5, lz + 0.5),
-        body
-      );
+    const { min, max } = bounds;
+    const hx = (max[0] - min[0]) / 2;
+    const hy = (max[1] - min[1]) / 2;
+    const hz = (max[2] - min[2]) / 2;
+    if (hx <= 0 || hy <= 0 || hz <= 0) {
+      return;
+    }
+
+    this.#world.createCollider(
+      this.#rapier.ColliderDesc
+        .cuboid(hx, hy, hz)
+        .setTranslation(
+          origin[0] + min[0] + hx,
+          origin[1] + min[1] + hy,
+          origin[2] + min[2] + hz
+        ),
+      body
+    );
+  }
+}
+
+function appendShapeTriangles(
+  solids: ChunkSolids,
+  shape: BlockShape,
+  transform: VoxelTransform,
+  origin: readonly [number, number, number]
+): void {
+  const { vertices, indices } = solids;
+  const mirrored = (Number(transform.flipX) + Number(transform.flipY) +
+    Number(transform.flipZ)) % 2 !== 0;
+
+  for (const face of shape.faces) {
+    const base = vertices.length / 3;
+    for (const vertex of face.vertices) {
+      const [x, y, z] = rotateVertex(vertex, transform);
+      vertices.push(origin[0] + x, origin[1] + y, origin[2] + z);
+    }
+    for (let i = 1; i < face.vertices.length - 1; i++) {
+      if (mirrored) {
+        indices.push(base, base + i + 1, base + i);
+      }
+      else {
+        indices.push(base, base + i, base + i + 1);
+      }
     }
   }
+}
+
+function* mergeCubes(
+  cubes: readonly number[],
+  size: number,
+  filled: Uint8Array
+): IterableIterator<[number, number, number, number, number, number]> {
+  for (const index of cubes) {
+    filled[index] = 1;
+  }
+
+  for (const index of cubes) {
+    if (filled[index] === 1) {
+      const x = index % size;
+      const y = Math.floor(index / size) % size;
+      const z = Math.floor(index / (size * size));
+
+      yield growBox(filled, size, x, y, z);
+    }
+  }
+}
+
+function cellIndex(
+  size: number,
+  x: number,
+  y: number,
+  z: number
+): number {
+  return x + (size * (y + (size * z)));
+}
+
+// eslint-disable-next-line max-params
+function growBox(
+  filled: Uint8Array,
+  size: number,
+  x: number,
+  y: number,
+  z: number
+): [number, number, number, number, number, number] {
+  let sx = 1;
+  while (x + sx < size && filled[cellIndex(size, x + sx, y, z)] === 1) {
+    sx++;
+  }
+  let sy = 1;
+  while (
+    y + sy < size &&
+    isFilledRun(filled, cellIndex(size, x, y + sy, z), sx)
+  ) {
+    sy++;
+  }
+  let sz = 1;
+  while (
+    z + sz < size &&
+    isFilledRect(filled, size, cellIndex(size, x, y, z + sz), sx, sy)
+  ) {
+    sz++;
+  }
+
+  for (let dz = 0; dz < sz; dz++) {
+    for (let dy = 0; dy < sy; dy++) {
+      const row = cellIndex(size, x, y + dy, z + dz);
+      filled.fill(0, row, row + sx);
+    }
+  }
+
+  return [x, y, z, sx, sy, sz];
+}
+
+function isFilledRun(
+  filled: Uint8Array,
+  start: number,
+  length: number
+): boolean {
+  for (let i = start; i < start + length; i++) {
+    if (filled[i] === 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isFilledRect(
+  filled: Uint8Array,
+  size: number,
+  start: number,
+  sx: number,
+  sy: number
+): boolean {
+  for (let dy = 0; dy < sy; dy++) {
+    if (!isFilledRun(filled, start + (dy * size), sx)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function chunkOrigin(

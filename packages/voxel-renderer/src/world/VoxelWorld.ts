@@ -729,7 +729,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     options: VoxelSetOptions
   ): void {
     const { position, blockId } = options;
-    const transform = new VoxelTransform(options);
+    const transform = VoxelTransform.fromPacked(VoxelTransform.pack(options));
     const changes = this.#changes(layerName);
 
     this.#writeVoxel(
@@ -782,7 +782,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       this.#writeVoxel(
         layerName,
         entry.position,
-        packVoxel(entry.blockId, new VoxelTransform(entry).packed),
+        packVoxel(entry.blockId, VoxelTransform.pack(entry)),
         changes
       );
     }
@@ -882,7 +882,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
 
     layer.setPackedVoxelAt(position, packed);
-    this.#markNeighbourChunksDirty(layer, position);
+    this.#markEditDirty(layer, position);
   }
 
   removeVoxelAt(
@@ -895,15 +895,13 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
 
     layer.removeVoxelAt(position);
-    this.#markNeighbourChunksDirty(layer, position);
+    this.#markEditDirty(layer, position);
   }
 
   * getAllDirtyChunks(): IterableIterator<IterableLayerChunk> {
     for (const layer of this.#layers) {
-      for (const chunk of layer.getChunks()) {
-        if (chunk.dirty) {
-          yield { layer, chunk };
-        }
+      for (const chunk of layer.getDirtyChunks()) {
+        yield { layer, chunk };
       }
 
       if (layer.wasVisible) {
@@ -995,6 +993,24 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   #markAllLayersDirty(): void {
     for (const layer of this.#layers) {
       this.#markLayerDirty(layer);
+    }
+  }
+
+  #markEditDirty(
+    edited: VoxelLayer,
+    position: Vector3Like
+  ): void {
+    const shift = this.#chunkShift;
+
+    for (const layer of this.#layers) {
+      if (layer !== edited) {
+        layer.markChunkDirty(
+          (position.x - layer.position.x) >> shift,
+          (position.y - layer.position.y) >> shift,
+          (position.z - layer.position.z) >> shift
+        );
+      }
+      this.#markNeighbourChunksDirty(layer, position);
     }
   }
 

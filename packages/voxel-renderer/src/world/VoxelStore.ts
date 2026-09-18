@@ -185,10 +185,28 @@ export class VoxelStore {
     this.#size = source.size;
   }
 
+  reserve(
+    size: number
+  ): void {
+    let capacity = this.#keys.length;
+    while (growThreshold(capacity) <= size) {
+      capacity *= 2;
+    }
+
+    if (capacity !== this.#keys.length) {
+      this.#rehash(capacity);
+    }
+  }
+
   #grow(): void {
+    this.#rehash(this.#keys.length * 2);
+  }
+
+  #rehash(
+    capacity: number
+  ): void {
     const oldKeys = this.#keys;
     const oldValues = this.#values;
-    const capacity = oldKeys.length * 2;
 
     this.#keys = new Int32Array(capacity).fill(kFreeKey);
     this.#values = new Uint32Array(capacity);

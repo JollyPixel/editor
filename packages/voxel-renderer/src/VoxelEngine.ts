@@ -103,7 +103,8 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       rebuildBudgetMs = 8,
       viewDistance,
       viewDistancePolicy = "hide",
-      history
+      history,
+      retainVertexData = false
     } = options;
     super();
 
@@ -174,7 +175,8 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       materials: this.#materials,
       inspector: this.inspector,
       collider: this.#collider,
-      logger: this.#logger
+      logger: this.#logger,
+      retainVertexData
     });
     this.#visibility = new ChunkVisibility({
       meshes: this.#meshes,

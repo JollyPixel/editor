@@ -36,7 +36,10 @@ type VoxelColliderFactory = (
 handles and release all remaining resources from `dispose()`.
 
 The geometry map follows renderer draw groups and is split by tileset and
-cutout mode. Treat its string keys as opaque.
+cutout mode. Treat its string keys as opaque. Vertex positions are relative to
+the chunk origin (`chunk` coordinates × `chunk.size` + `layerPosition`),
+and each geometry owns its index attribute while sharing CPU index storage.
+Respect the geometry's draw range when reading indices.
 
 ## Geometry merging
 
@@ -49,21 +52,27 @@ interface MergedChunkGeometry {
 function mergeChunkGeometries(
   geometries: ReadonlyMap<string, THREE.BufferGeometry>
 ): MergedChunkGeometry | null;
+
+function drawnIndices(
+  geometry: THREE.BufferGeometry
+): THREE.TypedArray | null;
 ```
 
 The function returns `null` when there is no collision geometry. Dispose the
-returned geometry only when `owned` is `true`.
+returned geometry only when `owned` is `true`. Merging keeps only the
+indices inside each draw range; `drawnIndices()` returns that range for a
+single geometry.
 
 ## Collision strategy
 
 Each block shape supplies one collision hint:
 
-- `"box"` creates one unit cuboid per solid voxel.
-- `"trimesh"` uses the chunk's rendered triangles.
+- `"box"` creates a cuboid sized to the shape's transformed bounds; full
+  cubes are greedily merged into as few cuboids as possible.
+- `"trimesh"` adds the shape's faces to one triangle mesh per chunk.
 - `"none"` excludes the block from collision.
 
-If any block in a chunk requests `"trimesh"`, the complete chunk uses one
-triangle mesh. It falls back to cuboids when no triangle geometry is available.
+Blocks with `collidable: false` are skipped whatever their hint.
 
 Layer opacity does not affect collision until it reaches `0`, which behaves as
 a hidden layer and removes its colliders.

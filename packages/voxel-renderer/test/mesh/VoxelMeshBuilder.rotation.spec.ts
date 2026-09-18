@@ -28,10 +28,10 @@ describe("VoxelMeshBuilder — ramp rotation base cases (rot=0, rot=2)", () => {
 
     /*
      * Cube: 5 faces (PosZ hidden by the ramp's back wall) = 20 verts.
-     * Ramp(rot=2): 14 verts — NegY, NegX, PosX and the slope; the back wall
+     * Ramp(rot=2): 16 verts (its two triangles pad to quads) — NegY, NegX, PosX and the slope; the back wall
      * is culled against the cube.
      */
-    assert.equal(countChunkVertices(f), 34);
+    assert.equal(countChunkVertices(f), 36);
   });
 
   it("ramp open front (NegZ) adjacent to cube PosZ: cube PosZ face is visible", () => {
@@ -45,9 +45,9 @@ describe("VoxelMeshBuilder — ramp rotation base cases (rot=0, rot=2)", () => {
 
     /*
      * The ramp's open front (rot=0) has no NegZ geometry, so it never
-     * occludes the cube's PosZ face: 24 cube verts + 18 ramp verts = 42.
+     * occludes the cube's PosZ face: 24 cube verts + 20 ramp verts = 44.
      */
-    assert.equal(countChunkVertices(f), 42);
+    assert.equal(countChunkVertices(f), 44);
   });
 });
 
@@ -68,9 +68,9 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
 
     /*
      * Cube keeps all 6 faces (24 verts); the ramp's open front (rot=1) faces
-     * away from the cube, so none of its 5 faces are culled either (18 verts).
+     * away from the cube, so none of its 5 faces are culled either (20 verts).
      */
-    assert.equal(countChunkVertices(f), 42);
+    assert.equal(countChunkVertices(f), 44);
   });
 
   it("ramp(rot=3) back wall adjacent to cube: cube face correctly hidden", () => {
@@ -89,9 +89,9 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
 
     /*
      * Cube's PosX face is hidden by the ramp's back wall (rot=3 turns it to
-     * face NegX): 20 cube verts + the ramp's remaining 14 = 34.
+     * face NegX): 20 cube verts + the ramp's remaining 16 = 36.
      */
-    assert.equal(countChunkVertices(f), 34);
+    assert.equal(countChunkVertices(f), 36);
   });
 
   it("stair(rot=1) open front adjacent to cube: cube face NOT incorrectly hidden", () => {
@@ -159,10 +159,10 @@ describe("VoxelMeshBuilder — a neighbour never hides a face it does not touch"
 
     /*
      * The ramp's slope spans y=0 to y=1, so the cube covers only its top edge.
-     * Ramp keeps all 5 faces (18 verts); the cube keeps all 6 (24 verts)
+     * Ramp keeps all 5 faces (20 verts); the cube keeps all 6 (24 verts)
      * because a ramp does not occlude PosY.
      */
-    assert.equal(countChunkVertices(f), 42);
+    assert.equal(countChunkVertices(f), 44);
     assert.equal(f.builder.stats.culledFaces, 0);
   });
 

@@ -20,6 +20,7 @@ class VoxelStore {
   delete(key: number): boolean;
   clear(): void;
   copyFrom(source: VoxelStore): void;
+  reserve(size: number): void;
 }
 ```
 
@@ -36,6 +37,9 @@ probe cluster back instead of leaving tombstones.
 whatever it held. Capacity is matched to the source, so the slots are copied
 verbatim and the probe clusters stay valid without rehashing. The copy owns its
 arrays and can be written to and grown independently.
+
+`reserve()` grows the table once so `size` entries fit without another rehash.
+It never shrinks the store.
 
 ## Direct iteration
 

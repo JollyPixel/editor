@@ -85,6 +85,10 @@ class VoxelChunk {
   // for rebuild, so an edit during the rebuild is not swallowed
   dirty: boolean;
 
+  // reports every later dirty change, and dirty right away when already set;
+  // VoxelLayer uses it to track its dirty chunks
+  onDirtyChange(listener: VoxelChunkDirtyListener): () => void;
+
   readonly voxelCount: number;
 
   // incremented on every write that reaches the store; never reset
@@ -96,6 +100,12 @@ class VoxelChunk {
 ```
 
 ## Methods
+
+### `onDirtyChange(listener: VoxelChunkDirtyListener): () => void`
+
+Subscribes to dirty-state changes without replacing other listeners. An already
+dirty chunk immediately calls the listener with `true`. The returned function
+removes that listener only; the layer's dirty tracking remains active.
 
 ```ts
 type VoxelLinearCoords = [number, number, number];

@@ -55,7 +55,8 @@ function surfaceArea(
 
   for (const geometry of geometries?.values() ?? []) {
     const positions = geometry.getAttribute("position").array;
-    const indices = geometry.getIndex()!.array;
+    const { start, count } = geometry.drawRange;
+    const indices = geometry.getIndex()!.array.subarray(start, start + count);
 
     for (let i = 0; i < indices.length; i += 3) {
       const a = indices[i] * 3;
@@ -164,7 +165,7 @@ describe("GreedyMesher — merge boundaries", () => {
     assert.equal(countVertices(build(mixed)), 10 * 4);
   });
 
-  it("does not merge voxels with different transforms", () => {
+  it("merges only the faces a transform leaves looking the same", () => {
     const f = makeFixture();
     fill(f, { from: [0, 0, 0], to: [1, 0, 0], blockId: kCubeId, transform: 0 });
     fill(f, {
@@ -174,11 +175,30 @@ describe("GreedyMesher — merge boundaries", () => {
       transform: new VoxelTransform({ rotation: 1 }).packed
     });
 
-    /*
-     * A rotated cube turns its tile sideways, so it cannot share a quad with
-     * an unrotated one even though both are the same block.
-     */
-    assert.equal(countVertices(build(f)), 10 * 4);
+    assert.equal(countVertices(build(f)), 8 * 4);
+  });
+
+  it("merges faces of different blocks drawn with the same tile", () => {
+    const f = makeFixture();
+    f.blockRegistry.register(makeBlockDef(5, "cube", { name: "Twin" }));
+    fill(f, { from: [0, 0, 0], to: [1, 0, 0], blockId: kCubeId });
+    fill(f, { from: [2, 0, 0], to: [3, 0, 0], blockId: 5 });
+
+    assert.equal(countVertices(build(f)), 6 * 4);
+  });
+
+  it("merges double-sided faces that open onto air", () => {
+    const f = makeFixture();
+    f.blockRegistry.register(makeBlockDef(5, "cube", {
+      name: "Glass",
+      alphaMode: "blend",
+      cullCoveredFaces: false
+    }));
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3], blockId: 5 });
+
+    const geometries = build(f);
+    assert.equal(countVertices(geometries), (6 + 48) * 4);
+    assert.equal(surfaceArea(geometries), (2 * 16) + (4 * 4) + 48);
   });
 
   it("does not merge across a chunk boundary", () => {
@@ -281,7 +301,7 @@ describe("GreedyMesher — tile attributes", () => {
     let maxRepeat = 0;
     let maxUv = 0;
     for (let i = 0; i < repeat.count; i++) {
-      maxRepeat = Math.max(maxRepeat, repeat.getX(i), repeat.getY(i));
+      maxRepeat = Math.max(maxRepeat, repeat.array[i * 2], repeat.array[(i * 2) + 1]);
       maxUv = Math.max(maxUv, uv.getX(i), uv.getY(i));
     }
 
@@ -367,11 +387,11 @@ describe("GreedyMesher — tiled attribute layout", () => {
 
     const repeat = geometry.getAttribute("tileRepeat");
     assert.ok(repeat.array instanceof Uint16Array);
-    assert.equal(repeat.normalized, false);
+    assert.equal(repeat.normalized, true);
     assert.equal(repeat.itemSize, 2);
   });
 
-  it("carries the merged span through tileRepeat unscaled", () => {
+  it("carries the merged span through tileRepeat as raw integers", () => {
     const f = makeFixture();
     fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
 
@@ -384,9 +404,9 @@ describe("GreedyMesher — tiled attribute layout", () => {
      */
     let sawFullSpan = false;
     for (let i = 0; i < repeat.count; i++) {
-      assert.ok(Number.isInteger(repeat.getX(i)), `u repeat ${repeat.getX(i)}`);
-      assert.ok(Number.isInteger(repeat.getY(i)), `v repeat ${repeat.getY(i)}`);
-      if (repeat.getX(i) === 4 && repeat.getY(i) === 4) {
+      const repeatU = repeat.array[i * 2];
+      const repeatV = repeat.array[(i * 2) + 1];
+      if (repeatU === 4 && repeatV === 4) {
         sawFullSpan = true;
       }
     }
@@ -408,5 +428,22 @@ describe("GreedyMesher — tiled attribute layout", () => {
       assert.ok(Math.abs(attribute.getZ(i) - expected.scaleU) <= step, "scaleU");
       assert.ok(Math.abs(attribute.getW(i) - expected.scaleV) <= step, "scaleV");
     }
+  });
+});
+
+describe("GreedyMesher — wide chunks", () => {
+  it("merges runs that cross a 32-cell bit-row word", () => {
+    const f = makeFixture({ chunkSize: 64 });
+    fill(f, { from: [0, 0, 0], to: [39, 0, 39] });
+
+    assert.equal(countVertices(build(f)), 6 * 4);
+    assert.equal(surfaceArea(build(f)), (2 * 40 * 40) + (4 * 40));
+  });
+
+  it("culls faces hidden inside a volume spanning the last row bit", () => {
+    const f = makeFixture({ chunkSize: 32 });
+    fill(f, { from: [0, 0, 0], to: [31, 1, 31] });
+
+    assert.equal(countVertices(build(f)), 6 * 4);
   });
 });

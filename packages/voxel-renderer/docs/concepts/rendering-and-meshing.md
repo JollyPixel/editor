@@ -1,7 +1,8 @@
 # Rendering and meshing
 
 `VoxelEngine` turns dirty chunks into Three.js meshes. A write marks the affected
-chunk and any boundary neighbours dirty. `tick()` rebuilds that queue within the
+chunk and any boundary neighbours dirty, in every layer, since a voxel can hide
+or uncover faces of the layers around it. `tick()` rebuilds that queue within the
 configured time budget, while `flush()` rebuilds it immediately.
 
 See the [`VoxelEngine` reference](../api/core/VoxelEngine.md) for lifecycle methods
@@ -10,24 +11,30 @@ and configuration.
 ## Chunk geometry layout
 
 Each chunk has one `THREE.Mesh` per tileset and resolved surface policy,
-parented to `VoxelEngine.root`. A geometry key includes the alpha mode, sides,
+parented to `VoxelEngine.root` and positioned at the chunk origin. A geometry key includes the alpha mode, sides,
 and mask cutoff. Plain opaque/front geometry uses the tileset ID; blend/double
 geometry keeps the historical `:cutout` suffix. Other policies use a
 `:surface=` suffix. Tileset IDs must not end in `:cutout` or contain
 `:surface=`.
 
-The non-greedy layout uses 27 bytes per vertex:
+The non-greedy layout uses 28 bytes per vertex:
 
 | Attribute | Type | Items | Bytes | Notes |
 |---|---|---:|---:|---|
-| `position` | `float32` | 3 | 12 | Absolute world space |
-| `normal` | normalized `int8` | 3 | 3 | Supports non-axis-aligned faces |
+| `position` | `float32` | 3 | 12 | Relative to the chunk origin |
+| `normal` | normalized `int8` | 4 | 4 | Fourth byte unused; WebGPU needs 4-byte strides |
 | `uv` | normalized `uint16` | 2 | 4 | Atlas coordinates |
 | `tileRegion` | normalized `uint16` | 4 | 8 | Atlas offset and scale |
 
+Every face is stored as a quad: triangles repeat their last vertex, and all
+chunk geometries share CPU quad-index storage. Each geometry owns a separate
+index attribute limited to its used indices, so Three.js can release its GPU
+buffer independently when the geometry is disposed.
 Vertices are not shared between faces, so a cube has 24 vertices. `position`
 remains `float32` because raycasting and `mergeChunkGeometries()` read it
-directly. Layer opacity is stored on materials. The material cache distinguishes exact
+directly. Once a chunk has rendered, its `tileRegion` and `tileRepeat` arrays
+are released from JavaScript memory unless `retainVertexData` is set. Layer
+opacity is stored on materials. The material cache distinguishes exact
 opacity values and resolved surface policies.
 
 Opaque and masked geometry write depth at layer opacity `1`. Blended blocks
@@ -82,18 +89,19 @@ distance is about how much is meshed and drawn at all.
 
 ## Greedy meshing
 
-With `greedy: true`, adjacent identical faces are merged into the largest
-available rectangle. Merging stays inside one chunk and applies to full, flat
-faces such as cubes and slabs. Slopes, poles, transformed voxels, and double-sided surfaces remain
-separate. Double-sided boundaries may need polygon splitting.
+With `greedy: true`, adjacent faces that look identical are merged into the
+largest available rectangle, whatever block or transform they come from.
+Merging stays inside one chunk and applies to full, flat faces such as cubes
+and slabs. Slopes and poles remain separate. Double-sided faces merge where
+they open onto air; against a neighbour they may need polygon splitting.
 
-Greedy mode uses 35 bytes per vertex:
+Greedy mode uses 36 bytes per vertex:
 
 | Attribute | Type | Items | Bytes | Notes |
 |---|---|---:|---:|---|
 | `uv` | `float32` | 2 | 8 | Tile space (`0..span`) |
 | `tileRegion` | normalized `uint16` | 4 | 8 | Atlas offset and scale |
-| `tileRepeat` | `uint16` | 2 | 4 | Repeat count per axis |
+| `tileRepeat` | normalized `uint16` | 2 | 4 | Repeat count per axis, rescaled by 65535 in the shader |
 
 The extra attributes let the shader repeat one atlas tile across a merged face.
 A `materialCustomizer` that replaces `onBeforeCompile` or remaps texture UVs

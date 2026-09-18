@@ -65,6 +65,11 @@ Decodes a packed transform, ignoring bits outside `VOXEL_TRANSFORM_MASK`. It
 accepts a whole packed voxel's transform byte, not just the five meaningful
 bits.
 
+#### `VoxelTransform.pack(options?: VoxelTransformOptions): number`
+
+Returns the packed bits `new VoxelTransform(options).packed` would hold,
+without allocating.
+
 ## Methods
 
 #### `equals(other: VoxelTransform): boolean`

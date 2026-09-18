@@ -177,7 +177,9 @@ function triangulate(
         triangle.flatMap((vertex) => vertex.tileUv)
       ),
       merge: null,
-      full: false
+      mergeId: -1,
+      full: false,
+      splittable: false
     });
   }
 

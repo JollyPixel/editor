@@ -79,6 +79,8 @@ export class BlockVariantCache {
   #cutouts: boolean[] = [];
   #geometryKeys: ChunkGeometryKey[] = [];
   #frontFaces = new WeakMap<BlockVariantFace, BlockVariantFace>();
+  #mergeIds = new Map<string, number>();
+  #mergeFaces: BlockVariantFace[] = [];
 
   /**
    * Flat occlusion cache indexed by block and transform.
@@ -120,6 +122,8 @@ export class BlockVariantCache {
     this.#cutouts.length = 0;
     this.#geometryKeys.length = 0;
     this.#frontFaces = new WeakMap();
+    this.#mergeIds.clear();
+    this.#mergeFaces.length = 0;
     this.#occlusion.fill(kOcclusionUnknown);
   }
 
@@ -229,6 +233,45 @@ export class BlockVariantCache {
     }));
   }
 
+  mergeFaceOf(
+    mergeId: number
+  ): BlockVariantFace {
+    return this.#mergeFaces[mergeId];
+  }
+
+  #mergeIdOf(
+    face: BlockVariantFace
+  ): number {
+    const { axis, uAxis, vAxis } = face.merge!;
+    const { positions, tileUvs, region } = face;
+    const corners = new Array<number>(8);
+    for (let i = 0; i < 4; i++) {
+      const corner = (positions[(i * 3) + vAxis] << 1) |
+        positions[(i * 3) + uAxis];
+      corners[corner * 2] = tileUvs[i * 2];
+      corners[(corner * 2) + 1] = tileUvs[(i * 2) + 1];
+    }
+
+    const key = [
+      face.slot,
+      face.cull,
+      axis,
+      face.normalX,
+      face.normalY,
+      face.normalZ,
+      ...region,
+      ...corners
+    ].join(",");
+
+    let mergeId = this.#mergeIds.get(key);
+    if (mergeId === undefined) {
+      mergeId = this.#mergeFaces.push(face) - 1;
+      this.#mergeIds.set(key, mergeId);
+    }
+
+    return mergeId;
+  }
+
   frontFaceOf(
     face: BlockVariantFace
   ): BlockVariantFace {
@@ -309,6 +352,12 @@ export class BlockVariantCache {
     }
 
     const selfOcclusionMask = this.#occlusionMask(shape, rotation, flipY);
+    const mergeFaces = indexMergeFaces(faces);
+    for (const face of mergeFaces) {
+      if (face !== undefined) {
+        face.mergeId = this.#mergeIdOf(face);
+      }
+    }
 
     return {
       blockId,
@@ -317,7 +366,7 @@ export class BlockVariantCache {
       selfOcclusionMask,
       keepsCoveredFaces: !cullsCoveredFaces(blockDef),
       surface,
-      mergeFaces: indexMergeFaces(faces),
+      mergeFaces,
       sweepIndex: 0,
       /*
        * No mesher epoch is ever negative, so a freshly compiled variant always
@@ -402,9 +451,10 @@ export class BlockVariantCache {
         toUnorm16(Math.fround(uvRegion.scaleU)),
         toUnorm16(Math.fround(uvRegion.scaleV))
       ]),
-      // Double-sided boundaries can be split by their neighbour's footprint.
-      merge: surface.side === "double" ? null : merge,
+      merge,
+      mergeId: -1,
       full: merge !== null,
+      splittable: cull >= 0 && surface.side !== "front",
       normalX: toSnorm8(normal[0]),
       normalY: toSnorm8(normal[1]),
       normalZ: toSnorm8(normal[2])

@@ -6,7 +6,10 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { mergeChunkGeometries } from "../../src/collision/index.ts";
+import {
+  drawnIndices,
+  mergeChunkGeometries
+} from "../../src/collision/index.ts";
 
 function makeGeometry(
   positions: number[],
@@ -154,5 +157,34 @@ describe("mergeChunkGeometries — buffer types", () => {
       [...merged.geometry.getAttribute("position").array],
       [0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0, 0, 11, 0, 0, 10, 1, 0]
     );
+  });
+});
+
+describe("mergeChunkGeometries draw range", () => {
+  it("merges only the indices each geometry draws", () => {
+    const shared = [0, 1, 2, 0, 2, 1];
+    const a = makeGeometry([0, 0, 0, 1, 0, 0, 0, 1, 0], shared);
+    const b = makeGeometry([5, 0, 0, 6, 0, 0, 5, 1, 0], shared);
+    a.setDrawRange(0, 3);
+    b.setDrawRange(0, 3);
+
+    const merged = mergeChunkGeometries(new Map([["a", a], ["b", b]]));
+
+    assert.deepEqual([...merged!.geometry.getIndex()!.array], [0, 1, 2, 3, 4, 5]);
+  });
+});
+
+describe("drawnIndices", () => {
+  it("clamps the draw range to the index", () => {
+    const geometry = makeTriangle();
+    geometry.setDrawRange(1, 10);
+
+    assert.deepEqual([...drawnIndices(geometry)!], [1, 2]);
+  });
+
+  it("returns null for a non-indexed geometry", () => {
+    const geometry = new THREE.BufferGeometry();
+
+    assert.equal(drawnIndices(geometry), null);
   });
 });

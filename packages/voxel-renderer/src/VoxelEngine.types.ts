@@ -139,4 +139,13 @@ export interface VoxelEngineOptions {
    * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.
    */
   history?: VoxelHistoryOptions;
+
+  /**
+   * Keeps the shader-only `tileRegion` and `tileRepeat` chunk attributes in
+   * JavaScript memory after their first render uploads them. Raycasting and
+   * colliders never read them; a renderer that did not draw the chunk first
+   * cannot upload them once released.
+   * @default false
+   */
+  retainVertexData?: boolean;
 }

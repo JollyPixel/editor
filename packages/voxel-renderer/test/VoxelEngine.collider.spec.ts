@@ -165,3 +165,50 @@ describe("VoxelEngine — collider wiring", () => {
     assert.equal(fake.disposeCalls, 1);
   });
 });
+
+describe("VoxelEngine — chunk-local collision geometry", () => {
+  it("hands colliders vertices relative to the chunk origin", () => {
+    const fake = makeFakeCollider();
+    const engine = makeEngine({
+      layers: ["Ground"],
+      collider: () => fake.collider
+    });
+    engine.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
+    engine.world.setVoxel("Ground", {
+      position: { x: 10, y: 2, z: 3 },
+      blockId: kCubeId
+    });
+    engine.flush();
+
+    const [{ collision }] = fake.rebuilt;
+    const [geometry] = collision.geometries.values();
+    const positions = geometry.getAttribute("position");
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (let i = 0; i < positions.count; i++) {
+      minX = Math.min(minX, positions.getX(i));
+      maxX = Math.max(maxX, positions.getX(i));
+    }
+
+    assert.deepEqual(
+      [collision.chunk.cx, collision.chunk.cy, collision.chunk.cz],
+      [2, 0, 0]
+    );
+    assert.equal(minX, 1);
+    assert.equal(maxX, 2);
+  });
+
+  it("places each chunk mesh at its chunk origin", () => {
+    const engine = makeEngine({ layers: ["Ground"] });
+    engine.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
+    engine.world.setVoxel("Ground", {
+      position: { x: 10, y: 2, z: 3 },
+      blockId: kCubeId
+    });
+    engine.flush();
+
+    const [mesh] = engine.root.children;
+
+    assert.deepEqual(mesh.position.toArray(), [9, 2, 3]);
+  });
+});

@@ -10,7 +10,8 @@ import {
   firstGeometry,
   getChunk,
   makeMeshFixture as makeFixture,
-  CUBE_ID as kCubeId
+  CUBE_ID as kCubeId,
+  RAMP_ID as kRampId
 } from "../helpers/meshFixture.ts";
 
 describe("VoxelMeshBuilder — isolated cube", () => {
@@ -65,7 +66,7 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     const normals = geometry.getAttribute("normal");
     assert.ok(normals.array instanceof Int8Array);
     assert.equal(normals.normalized, true);
-    assert.equal(normals.itemSize, 3);
+    assert.equal(normals.itemSize, 4);
 
     const uvs = geometry.getAttribute("uv");
     assert.ok(uvs.array instanceof Uint16Array);
@@ -115,15 +116,47 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     }
   });
 
-  it("indexes a small chunk with 16-bit values", () => {
+  it("shares index storage without sharing attribute ownership", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const geometry = firstGeometry(f);
-    const index = geometry.getIndex();
-    assert.ok(index);
+    f.world.setVoxelAt("test", { x: 4, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const first = firstGeometry(f, [0, 0, 0]);
+    const second = firstGeometry(f, [1, 0, 0]);
 
-    assert.ok(index.array instanceof Uint16Array);
-    assert.equal(index.count, 36);
+    assert.notEqual(first.getIndex(), second.getIndex());
+    assert.equal(
+      first.getIndex()!.array.buffer, second.getIndex()!.array.buffer
+    );
+    assert.equal(first.getIndex()!.count, 36);
+    assert.deepEqual(first.drawRange, { start: 0, count: 36 });
+    assert.deepEqual(
+      [...first.getIndex()!.array.subarray(0, 12)],
+      [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7]
+    );
+  });
+
+  it("pads a triangle into a quad whose second half is degenerate", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kRampId, transform: 0 });
+    const geometry = firstGeometry(f);
+    const positions = geometry.getAttribute("position");
+    const quads = positions.count / 4;
+    let padded = 0;
+
+    for (let quad = 0; quad < quads; quad++) {
+      const third = (quad * 4) + 2;
+      const fourth = third + 1;
+      if (
+        positions.getX(third) === positions.getX(fourth) &&
+        positions.getY(third) === positions.getY(fourth) &&
+        positions.getZ(third) === positions.getZ(fourth)
+      ) {
+        padded++;
+      }
+    }
+
+    assert.equal(padded, 2);
+    assert.equal(f.builder.stats.triangles, (quads * 2) - padded);
   });
 });
 
@@ -160,15 +193,12 @@ describe("VoxelMeshBuilder — buffers are reused between chunks", () => {
 
     for (const geometries of [first, second]) {
       const geometry = [...geometries.values()][0];
-      const index = geometry.getIndex();
-      assert.ok(index);
-
       assert.equal(geometry.getAttribute("position").count, 24);
-      assert.equal(index.count, 36);
+      assert.equal(geometry.drawRange.count, 36);
     }
 
     const positions = [...second.values()][0].getAttribute("position");
-    assert.equal(positions.getX(0), 5);
+    assert.equal(positions.getX(0), 1);
   });
 });
 
@@ -282,6 +312,6 @@ describe("VoxelMeshBuilder — derived stats", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     buildGeometries(f);
 
-    assert.equal(f.builder.stats.bytesPerVertex, 12 + 3 + 4 + 8);
+    assert.equal(f.builder.stats.bytesPerVertex, 12 + 4 + 4 + 8);
   });
 });
