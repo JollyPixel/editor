@@ -25,20 +25,28 @@ export function createTreeActor() {
   };
 }
 
-export function createWorld(): {
-  sceneManager: {
-    componentsToBeStarted: ActorComponent[];
-    tree: ReturnType<typeof createTreeActor>;
-    registerActor: ReturnType<typeof mock.fn>;
-    unregisterActor: ReturnType<typeof mock.fn>;
-  };
-} {
+export function createSceneManager() {
+  const componentsToStart: unknown[] = [];
+
   return {
-    sceneManager: {
-      componentsToBeStarted: [],
-      tree: createTreeActor(),
-      registerActor: mock.fn(),
-      unregisterActor: mock.fn()
-    }
+    componentsToStart,
+    scheduleStart: mock.fn((component: unknown) => {
+      componentsToStart.push(component);
+    }),
+    cancelStart: mock.fn((component: unknown) => {
+      const index = componentsToStart.indexOf(component);
+      if (index !== -1) {
+        componentsToStart.splice(index, 1);
+      }
+    }),
+    tree: createTreeActor(),
+    registerActor: mock.fn(),
+    unregisterActor: mock.fn()
+  };
+}
+
+export function createWorld() {
+  return {
+    sceneManager: createSceneManager()
   };
 }

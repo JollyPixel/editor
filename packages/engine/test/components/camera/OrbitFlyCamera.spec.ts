@@ -120,7 +120,8 @@ function createHarness(
         }
       },
       sceneManager: {
-        componentsToBeStarted: [],
+        scheduleStart: () => void 0,
+        cancelStart: () => void 0,
         getSource: () => sceneRoot
       }
     }

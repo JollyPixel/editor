@@ -11,7 +11,7 @@ import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 // Import Internal Dependencies
-import { parse } from "../../../utils/path.ts";
+import { parse } from "../utils/path.ts";
 
 export type Model = {
   object: THREE.Group<THREE.Object3DEventMap>;
@@ -86,14 +86,19 @@ export class ModelAssetLoader implements AssetLoader<Model> {
     object.name = source.name;
 
     object.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
+      if (!(child instanceof THREE.Mesh)) {
+        return;
+      }
 
-        for (const material of extractMaterials(object)) {
-          if (material.map) {
-            material.map.magFilter = THREE.NearestFilter;
-          }
+      child.castShadow = true;
+      child.receiveShadow = true;
+
+      const materials = Array.isArray(child.material) ?
+        child.material :
+        [child.material];
+      for (const material of materials) {
+        if (isMaterialWithMap(material) && material.map) {
+          material.map.magFilter = THREE.NearestFilter;
         }
       }
     });
@@ -130,27 +135,6 @@ function loadMtlMaterials(
   }
 
   return materials;
-}
-
-function* extractMaterials(
-  object: THREE.Object3D | THREE.Group | THREE.Bone
-): Iterable<THREE.MeshPhongMaterial | THREE.MeshStandardMaterial> {
-  for (const child of object.children) {
-    if (child instanceof THREE.Mesh) {
-      const materials = Array.isArray(child.material) ?
-        child.material :
-        [child.material];
-
-      for (const material of materials) {
-        if (isMaterialWithMap(material)) {
-          yield material;
-        }
-      }
-    }
-    else if (child instanceof THREE.Object3D) {
-      yield* extractMaterials(child);
-    }
-  }
 }
 
 function isMaterialWithMap(

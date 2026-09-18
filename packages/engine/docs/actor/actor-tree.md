@@ -75,10 +75,11 @@ child.
 
 ### `getActor(name): Actor | null`
 
-Returns the first actor whose `name` matches exactly. Supports
-path syntax with `/` separators to reach nested children
-(e.g. `"Player/RightHand/Weapon"`). Returns `null` if no match is
-found. Actors pending for destruction are excluded.
+Returns the first actor whose `name` matches exactly, searching the
+whole tree depth-first. A name containing `/` is a path anchored at
+the root actors (e.g. `"Player/RightHand/Weapon"`), matched segment
+by segment with exact names. Returns `null` if no match is found.
+Actors pending for destruction are excluded.
 
 ### `getActors(pattern): IterableIterator<Actor>`
 
@@ -86,8 +87,10 @@ Returns an iterator of all actors matching a glob `pattern`
 (powered by picomatch). Supports:
 
 - Simple globs — `"Enemy_*"`, `"Mesh_??"`.
-- Path globs — `"Player/*/Mesh"`, `"**/Light_*"`.
-- Double-star `**` — matches any depth of descendants.
+- Path globs — `"Player/*/Mesh"`, `"**/Light_*"`. Paths are anchored
+  at the root actors.
+- Double-star `**` — matches zero or more levels, and can be followed
+  by further segments (`"**/RightHand/Weapon"`).
 
 Actors pending for destruction are excluded.
 

@@ -2,12 +2,13 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { Actor } from "../../../actor/Actor.ts";
-import { disposeObject3D } from "../../../utils/disposeObject3D.ts";
-import { createPivotMarker } from "./pivotMarker.ts";
-
-// CONSTANTS
-const kSmoothingSnapEpsilon = 1e-3;
+import { PivotMarker } from "./pivotMarker.ts";
+import {
+  type CameraFocus,
+  type CameraFocusPose,
+  dampScalar,
+  smoothingFactor
+} from "./CameraFocus.ts";
 
 export interface ElasticFocusOptions {
   initialPosition: THREE.Vector3Like;
@@ -31,15 +32,15 @@ export interface ElasticFocusOptions {
  * WASD/look pilot a free-floating pivot; the camera trails behind it at a
  * scroll-adjusted distance, reaching 0 (free-fly) at full zoom-in.
  */
-export class ElasticFocus {
+export class ElasticFocus implements CameraFocus {
+  readonly isLocked = false;
+
   #maxTrailDistance: number;
-  #showPivotMarker: boolean;
-  #sceneProvider: () => THREE.Object3D;
+  #marker: PivotMarker;
 
   #pivotPosition: THREE.Vector3;
   #trailDistance: number;
   #targetTrailDistance: number;
-  #pivotMarker: THREE.Object3D | null = null;
 
   #forward = new THREE.Vector3();
   #cameraPosition = new THREE.Vector3();
@@ -48,23 +49,41 @@ export class ElasticFocus {
     options: ElasticFocusOptions
   ) {
     this.#maxTrailDistance = options.maxTrailDistance;
-    this.#showPivotMarker = options.showPivotMarker;
-    this.#sceneProvider = options.sceneProvider;
+    this.#marker = new PivotMarker({
+      enabled: options.showPivotMarker,
+      sceneProvider: options.sceneProvider
+    });
     this.#pivotPosition = new THREE.Vector3().copy(options.initialPosition);
     this.#trailDistance = options.initialTrailDistance ?? 0;
     this.#targetTrailDistance = this.#trailDistance;
 
     if (this.#targetTrailDistance > 0) {
-      this.#showMarker();
+      this.#marker.show();
     }
+  }
+
+  get isOrbiting(): boolean {
+    return this.#trailDistance > 0;
   }
 
   get trailDistance(): number {
     return this.#trailDistance;
   }
 
-  get pivotPosition(): THREE.Vector3Like {
+  get pivot(): THREE.Vector3Like {
     return this.#pivotPosition;
+  }
+
+  enter(): null {
+    return null;
+  }
+
+  exit(): void {
+    return;
+  }
+
+  nudge(): void {
+    return;
   }
 
   move(
@@ -73,33 +92,36 @@ export class ElasticFocus {
     this.#pivotPosition.add(offset);
   }
 
-  adjustTrailDistance(
-    delta: number
-  ): void {
-    this.#targetTrailDistance = Math.min(
-      this.#maxTrailDistance,
-      Math.max(0, this.#targetTrailDistance + delta)
+  handleScroll(
+    scrollY: number,
+    scrollSpeed: number
+  ): boolean {
+    this.#targetTrailDistance = THREE.MathUtils.clamp(
+      this.#targetTrailDistance - (scrollY * scrollSpeed),
+      0,
+      this.#maxTrailDistance
     );
 
     if (this.#targetTrailDistance > 0) {
-      this.#showMarker();
+      this.#marker.show();
     }
     else {
-      this.#hideMarker();
+      this.#marker.hide();
     }
+
+    return true;
   }
 
   updatePose(
-    transform: Actor["transform"],
-    orientation: THREE.Quaternion,
-    deltaTime: number,
-    responsiveness: number
+    pose: CameraFocusPose
   ): void {
-    this.#trailDistance += (this.#targetTrailDistance - this.#trailDistance) *
-      (1 - Math.exp(-responsiveness * deltaTime));
-    if (Math.abs(this.#targetTrailDistance - this.#trailDistance) < kSmoothingSnapEpsilon) {
-      this.#trailDistance = this.#targetTrailDistance;
-    }
+    const { transform, orientation, deltaTime, responsiveness } = pose;
+
+    this.#trailDistance = dampScalar(
+      this.#trailDistance,
+      this.#targetTrailDistance,
+      smoothingFactor(responsiveness, deltaTime)
+    );
 
     this.#forward.set(0, 0, -1).applyQuaternion(orientation);
     this.#cameraPosition
@@ -107,34 +129,10 @@ export class ElasticFocus {
       .addScaledVector(this.#forward, -this.#trailDistance);
 
     transform.setLocalPosition(this.#cameraPosition);
-
-    if (this.#pivotMarker) {
-      this.#pivotMarker.position.copy(this.#pivotPosition);
-    }
-  }
-
-  #showMarker(): void {
-    if (!this.#showPivotMarker) {
-      return;
-    }
-
-    if (this.#pivotMarker === null) {
-      this.#pivotMarker = createPivotMarker();
-      this.#sceneProvider().add(this.#pivotMarker);
-    }
-    this.#pivotMarker.visible = true;
-  }
-
-  #hideMarker(): void {
-    if (this.#pivotMarker) {
-      this.#pivotMarker.visible = false;
-    }
+    this.#marker.moveTo(this.#pivotPosition);
   }
 
   dispose(): void {
-    if (this.#pivotMarker) {
-      disposeObject3D(this.#pivotMarker);
-      this.#pivotMarker = null;
-    }
+    this.#marker.dispose();
   }
 }

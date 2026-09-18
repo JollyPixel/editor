@@ -226,19 +226,18 @@ describe("Scene", () => {
       assert.strictEqual(sm.getActor("ActorB"), null, "ActorB should be gone after scene swap");
     });
 
-    test("clears componentsToBeStarted when swapping scenes", () => {
-      const { sm } = createSceneSetup();
+    test("drops pending component starts when swapping scenes", () => {
+      const { sm, world } = createSceneSetup();
       const sceneA = new ConcreteScene("A");
-
-      // Manually push a fake component to simulate pending starts
-      sm.componentsToBeStarted.push({ start: mock.fn() } as any);
-
       activateScene(sm, sceneA);
-      // Simulate scene swap
-      const sceneB = new ConcreteScene("B");
-      activateScene(sm, sceneB);
 
-      assert.strictEqual(sm.componentsToBeStarted.length, 0);
+      const start = mock.fn();
+      sm.scheduleStart({ start, actor: world.createActor("Pending") } as any);
+
+      activateScene(sm, new ConcreteScene("B"));
+      sm.beginFrame();
+
+      assert.strictEqual(start.mock.callCount(), 0);
     });
   });
 

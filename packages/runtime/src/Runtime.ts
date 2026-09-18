@@ -138,13 +138,7 @@ export class Runtime<
 
     const sceneManager = new Systems.SceneManager<TContext>();
     const assets = await resolveRuntimeAssetOptions(options.assets);
-    const renderer = await Systems.ThreeRenderer.create(
-      canvas,
-      {
-        sceneManager,
-        renderMode: "direct"
-      }
-    );
+    const renderer = await Systems.ThreeRenderer.create(canvas);
 
     const runtime = new Runtime(
       canvas,

@@ -2,7 +2,8 @@
 
 Playlist-based background music player. Supports multiple playlists
 with configurable end behavior (stop, loop, chain to another playlist).
-Implements `VolumeObserver` to react to master volume changes.
+Track volumes are relative: the master volume of `world.audio` is
+applied once, by the shared `THREE.AudioListener`.
 
 ```ts
 const audioManager = GlobalAudioManager.fromWorld(world);
@@ -31,7 +32,6 @@ const bg = new AudioBackground({
   ]
 });
 
-world.audio.observe(bg);
 
 // Play by path ("playlistName.trackName")
 await bg.play("ambient.forest");
@@ -93,7 +93,5 @@ interface AudioBackground {
   pause(): void;
   resume(): void;
 
-  // VolumeObserver
-  onMasterVolumeChange(volume: number): void;
 }
 ```

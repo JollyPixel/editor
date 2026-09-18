@@ -51,12 +51,7 @@ export class Transform {
   getGlobalOrientation(
     orientation: THREE.Quaternion = new THREE.Quaternion()
   ) {
-    return orientation
-      .set(0, 0, 0, 1)
-      .multiplyQuaternions(
-        this.getParentGlobalOrientation(),
-        this.#object3D.quaternion
-      );
+    return this.#object3D.getWorldQuaternion(orientation);
   }
 
   getGlobalEulerAngles(
@@ -91,18 +86,14 @@ export class Transform {
     return scale.copy(this.#object3D.scale);
   }
 
-  getParentGlobalOrientation() {
-    const ancestorOrientation = new THREE.Quaternion();
-    let ancestorActor = this.#object3D;
-    while (ancestorActor.parent !== null) {
-      ancestorActor = ancestorActor.parent;
-      ancestorOrientation.multiplyQuaternions(
-        ancestorActor.quaternion,
-        ancestorOrientation
-      );
-    }
+  getParentGlobalOrientation(
+    orientation: THREE.Quaternion = new THREE.Quaternion()
+  ) {
+    const parent = this.#object3D.parent;
 
-    return ancestorOrientation;
+    return parent === null ?
+      orientation.identity() :
+      parent.getWorldQuaternion(orientation);
   }
 
   setGlobalMatrix(
@@ -202,20 +193,10 @@ export class Transform {
       return this;
     }
 
-    const localQuaternion = new THREE.Quaternion()
-      .copy(quaternion);
-    const inverseParentQuaternion = new THREE.Quaternion()
-      .setFromRotationMatrix(
-        Transform.Matrix.extractRotation(
-          this.#object3D.parent.matrixWorld
-        )
-      )
-      .invert();
-    localQuaternion.multiplyQuaternions(
-      inverseParentQuaternion,
-      localQuaternion
+    this.#object3D.quaternion.multiplyQuaternions(
+      this.getParentGlobalOrientation(new THREE.Quaternion()).invert(),
+      Transform.Quaternion.copy(quaternion)
     );
-    this.#object3D.quaternion.copy(localQuaternion);
     this.#object3D.updateMatrixWorld(false);
 
     return this;
@@ -233,27 +214,9 @@ export class Transform {
   setGlobalEulerAngles(
     eulerAngles: THREE.Euler
   ) {
-    if (!this.#object3D.parent) {
-      return this;
-    }
-
-    const globalQuaternion = new THREE.Quaternion()
-      .setFromEuler(eulerAngles);
-    const inverseParentQuaternion = new THREE.Quaternion()
-      .setFromRotationMatrix(
-        Transform.Matrix.extractRotation(
-          this.#object3D.parent.matrixWorld
-        )
-      )
-      .invert();
-    globalQuaternion.multiplyQuaternions(
-      inverseParentQuaternion,
-      globalQuaternion
+    return this.setGlobalOrientation(
+      new THREE.Quaternion().setFromEuler(eulerAngles)
     );
-    this.#object3D.quaternion.copy(globalQuaternion);
-    this.#object3D.updateMatrixWorld(false);
-
-    return this;
   }
 
   setLocalScale(
@@ -268,9 +231,9 @@ export class Transform {
   rotateGlobal(
     quaternion: THREE.QuaternionLike
   ) {
-    this.getGlobalOrientation(Transform.Quaternion);
-    const rotation = new THREE.Quaternion().copy(quaternion);
-    rotation.multiply(Transform.Quaternion);
+    const rotation = new THREE.Quaternion()
+      .copy(quaternion)
+      .multiply(this.getGlobalOrientation(Transform.Quaternion));
     this.setGlobalOrientation(rotation);
 
     return this;
@@ -279,9 +242,9 @@ export class Transform {
   rotateLocal(
     quaternion: THREE.QuaternionLike
   ) {
-    const rotation = new THREE.Quaternion().copy(quaternion);
-    rotation.multiply(this.#object3D.quaternion);
-    this.#object3D.quaternion.copy(rotation);
+    this.#object3D.quaternion.premultiply(
+      Transform.Quaternion.copy(quaternion)
+    );
     this.#object3D.updateMatrixWorld(false);
 
     return this;
@@ -290,23 +253,17 @@ export class Transform {
   rotateGlobalEulerAngles(
     eulerAngles: THREE.Euler
   ) {
-    const quaternion = new THREE.Quaternion()
-      .setFromEuler(eulerAngles);
-    this.rotateGlobal(quaternion);
-
-    return this;
+    return this.rotateGlobal(
+      new THREE.Quaternion().setFromEuler(eulerAngles)
+    );
   }
 
   rotateLocalEulerAngles(
     eulerAngles: THREE.Euler
   ) {
-    const quaternion = new THREE.Quaternion()
-      .setFromEuler(eulerAngles);
-    quaternion.multiply(this.#object3D.quaternion);
-    this.#object3D.quaternion.copy(quaternion);
-    this.#object3D.updateMatrixWorld(false);
-
-    return this;
+    return this.rotateLocal(
+      new THREE.Quaternion().setFromEuler(eulerAngles)
+    );
   }
 
   moveGlobal(

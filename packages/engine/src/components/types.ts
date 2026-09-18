@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { Actor } from "../actor/Actor.ts";
+import type { Actor } from "../actor/Actor.ts";
 
 export type StrictComponentEnum =
   | "ScriptBehavior"
@@ -15,7 +15,9 @@ export interface Component {
   actor: Actor<any>;
   typeName: FreeComponentEnum;
   needUpdate: boolean;
+  pendingForDestruction: boolean;
 
+  bind?(): void;
   awake?(): void;
   start?(): void;
   /**

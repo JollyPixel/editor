@@ -33,7 +33,8 @@ function createFakeActor(): Actor {
     componentsRequiringUpdate: [],
     world: {
       sceneManager: {
-        componentsToBeStarted: []
+        scheduleStart: () => void 0,
+        cancelStart: () => void 0
       }
     }
   } as unknown as Actor;

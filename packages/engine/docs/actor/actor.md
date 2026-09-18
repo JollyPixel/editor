@@ -57,7 +57,7 @@ const hand = new Actor(world, {
 });
 
 // Nested actors can be found by path through ActorTree
-const found = world.scene.tree.getActor("Player/RightHand");
+const found = world.sceneManager.tree.getActor("Player/RightHand");
 ```
 
 ## Adding components

@@ -3,14 +3,14 @@ import * as THREE from "three/webgpu";
 import { CSS2DRenderer as ThreeCSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 // Import Internal Dependencies
-import type { WorldDefaultContext } from "../systems/World.ts";
+import type { World, WorldDefaultContext } from "../systems/World.ts";
 import type { UINode } from "./UINode.ts";
 import { type Actor, ActorComponent } from "../actor/index.ts";
-import { UIRendererID } from "./common.ts";
 import type { RenderComponent } from "../systems/rendering/Renderer.ts";
 
 // CONSTANTS
 const kOrthographicCameraZIndex = 10;
+const kRenderersByWorld = new WeakMap<World<any, any>, UIRenderer<any>>();
 
 export interface UIRendererOptions {
   near?: number;
@@ -21,7 +21,11 @@ export interface UIRendererOptions {
 export class UIRenderer<
   TContext = WorldDefaultContext
 > extends ActorComponent<TContext> {
-  static ID = UIRendererID;
+  static for<TContext>(
+    world: World<any, TContext>
+  ): UIRenderer<TContext> | undefined {
+    return kRenderersByWorld.get(world);
+  }
 
   camera: THREE.OrthographicCamera;
   nodes: UINode<TContext>[] = [];
@@ -74,9 +78,7 @@ export class UIRenderer<
       threeCamera: camera,
       depth: kOrthographicCameraZIndex,
       viewport: null,
-      prepareRender: () => {
-        // Sync camera world transform from actor's scene graph
-      }
+      prepareRender: () => void 0
     };
     world.renderer.addRenderComponent(this.#renderComponent);
 
@@ -85,7 +87,8 @@ export class UIRenderer<
     world.renderer.on("resize", this.#boundResize);
     world.renderer.on("draw", this.#boundDraw);
 
-    world[UIRendererID] = this;
+    kRenderersByWorld.set(world, this);
+    this.addTeardown(() => this.clear());
   }
 
   addChildren(
@@ -98,6 +101,15 @@ export class UIRenderer<
 
     node.updateToWorldPosition();
     this.nodes.push(node);
+  }
+
+  removeChildren(
+    node: UINode<TContext>
+  ): void {
+    const nodeIndex = this.nodes.indexOf(node);
+    if (nodeIndex !== -1) {
+      this.nodes.splice(nodeIndex, 1);
+    }
   }
 
   updateWorldPosition(): void {
@@ -120,7 +132,7 @@ export class UIRenderer<
   }
 
   clear(): void {
-    for (const node of this.nodes) {
+    for (const node of [...this.nodes]) {
       node.destroy();
     }
     this.nodes = [];
@@ -132,6 +144,8 @@ export class UIRenderer<
 
     this.#cssRenderer.domElement.remove();
 
-    world[UIRendererID] = undefined;
+    if (kRenderersByWorld.get(world) === this) {
+      kRenderersByWorld.delete(world);
+    }
   }
 }

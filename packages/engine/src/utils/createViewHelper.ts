@@ -5,22 +5,35 @@ import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 // Import Internal Dependencies
 import type { Systems } from "../index.ts";
 
+export interface ViewHelperBinding {
+  helper: ViewHelper;
+  dispose(): void;
+}
+
 export function createViewHelper(
   camera: THREE.Camera,
   world: Systems.World
-): ViewHelper {
+): ViewHelperBinding {
   const helper = new ViewHelper(
     camera,
     world.renderer.canvas
   );
-  world.renderer.onDraw(() => {
-    /*
-     * ViewHelper's runtime checks `renderer.isWebGPURenderer` and supports
-     * WebGPURenderer, but @types/three's declaration hasn't caught up and
-     * still narrows `render()` to WebGLRenderer only.
-     */
-    helper.render(world.renderer.getSource() as unknown as Parameters<ViewHelper["render"]>[0]);
-  });
+  /*
+   * ViewHelper's runtime checks `renderer.isWebGPURenderer` and supports
+   * WebGPURenderer, but @types/three's declaration hasn't caught up and
+   * still narrows `render()` to WebGLRenderer only.
+   */
+  const renderer = world.renderer.getSource() as unknown as Parameters<ViewHelper["render"]>[0];
+  function draw() {
+    helper.render(renderer);
+  }
+  world.renderer.on("draw", draw);
 
-  return helper;
+  return {
+    helper,
+    dispose() {
+      world.renderer.off("draw", draw);
+      helper.dispose();
+    }
+  };
 }

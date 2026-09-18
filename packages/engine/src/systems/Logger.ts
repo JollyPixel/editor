@@ -5,17 +5,27 @@ import pm from "picomatch";
 import type { ConsoleAdapter } from "../adapters/console.ts";
 
 export type LogLevel = "void" | "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+type EmittedLogLevel = Exclude<LogLevel, "void">;
 
 // CONSTANTS
 const kLogLevelValue: Record<LogLevel, number> = {
-  void: 0,
   trace: 10,
   debug: 20,
   info: 30,
   warn: 40,
   error: 50,
-  fatal: 60
+  fatal: 60,
+  void: Infinity
 };
+const kAdapterMethod: Record<EmittedLogLevel, keyof ConsoleAdapter> = {
+  trace: "log",
+  debug: "log",
+  info: "log",
+  warn: "warn",
+  error: "error",
+  fatal: "error"
+};
+const kPrivateToken = Symbol("LoggerPrivate");
 
 export interface LoggerOptions {
   /**
@@ -41,9 +51,6 @@ export interface LoggerOptions {
 export interface LoggerChildOptions {
   namespace: string;
 }
-
-// CONSTANTS
-const kPrivateToken = Symbol("LoggerPrivate");
 
 interface LoggerPrivateOptions {
   token: typeof kPrivateToken;
@@ -212,10 +219,6 @@ export class Logger {
     msg: string,
     meta?: Record<string, unknown>
   ): void {
-    if (this.#root.level === "void") {
-      return;
-    }
-
     this.#emit("trace", msg, meta);
   }
 
@@ -223,10 +226,6 @@ export class Logger {
     msg: string,
     meta?: Record<string, unknown>
   ): void {
-    if (this.#root.level === "void") {
-      return;
-    }
-
     this.#emit("debug", msg, meta);
   }
 
@@ -234,10 +233,6 @@ export class Logger {
     msg: string,
     meta?: Record<string, unknown>
   ): void {
-    if (this.#root.level === "void") {
-      return;
-    }
-
     this.#emit("info", msg, meta);
   }
 
@@ -245,10 +240,6 @@ export class Logger {
     msg: string,
     meta?: Record<string, unknown>
   ): void {
-    if (this.#root.level === "void") {
-      return;
-    }
-
     this.#emit("warn", msg, meta);
   }
 
@@ -256,10 +247,6 @@ export class Logger {
     msg: string,
     meta?: Record<string, unknown>
   ): void {
-    if (this.#root.level === "void") {
-      return;
-    }
-
     this.#emit("error", msg, meta);
   }
 
@@ -267,22 +254,14 @@ export class Logger {
     msg: string,
     meta?: Record<string, unknown>
   ): void {
-    if (this.#root.level === "void") {
-      return;
-    }
-
     this.#emit("fatal", msg, meta);
   }
 
   #emit(
-    level: LogLevel,
+    level: EmittedLogLevel,
     msg: string,
     meta: Record<string, unknown> | undefined
   ): void {
-    if (this.#root.level === "void") {
-      return;
-    }
-
     if (
       !this.isLevelEnabled(level) ||
       !this.isNamespaceEnabled()
@@ -292,29 +271,9 @@ export class Logger {
 
     const ns = this.namespace || "root";
     const formatted = `[${level.toUpperCase()}] [${ns}] ${msg}`;
+    const args = meta === undefined ? [formatted] : [formatted, meta];
 
-    if (level === "warn") {
-      if (meta === undefined) {
-        this.#root.adapter.warn(formatted);
-      }
-      else {
-        this.#root.adapter.warn(formatted, meta);
-      }
-    }
-    else if (level === "error" || level === "fatal") {
-      if (meta === undefined) {
-        this.#root.adapter.error(formatted);
-      }
-      else {
-        this.#root.adapter.error(formatted, meta);
-      }
-    }
-    else if (meta === undefined) {
-      this.#root.adapter.log(formatted);
-    }
-    else {
-      this.#root.adapter.log(formatted, meta);
-    }
+    this.#root.adapter[kAdapterMethod[level]](...args);
   }
 }
 

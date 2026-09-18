@@ -5,9 +5,6 @@ import * as THREE from "three/webgpu";
 import type {
   AudioManager
 } from "./AudioManager.ts";
-import type {
-  VolumeObserver
-} from "./GlobalAudio.ts";
 
 export type AudioBackgroundSoundIndex = [playlistIndex: number, trackIndex: number];
 export type AudioBackgroundSoundPath = `${string}.${string}`;
@@ -43,13 +40,14 @@ export interface AudioBackgroundTrack {
   metadata?: Record<string, any>;
 }
 
-export class AudioBackground implements VolumeObserver {
+export class AudioBackground {
   playlists: AudioBackgroundPlaylist[] = [];
   audio: null | THREE.Audio = null;
 
   #audioManager: AudioManager;
   #onError: (error: Error) => void;
   #currentIndex: AudioBackgroundSoundIndex | null = null;
+  #playRequest = 0;
 
   constructor(
     options: AudioBackgroundOptions
@@ -70,33 +68,20 @@ export class AudioBackground implements VolumeObserver {
     }
   }
 
-  onMasterVolumeChange(
-    masterVolume: number
-  ) {
-    if (!this.audio || this.#currentIndex === null) {
-      return;
+  #resolveIndex(
+    pathOrIndex: AudioBackgroundSoundPath | AudioBackgroundSoundIndex
+  ): AudioBackgroundSoundIndex {
+    if (typeof pathOrIndex !== "string") {
+      return pathOrIndex;
     }
 
-    const track = this.#getTrackByIndex(this.#currentIndex);
-    if (track) {
-      this.audio.setVolume((track.volume ?? 1) * masterVolume);
-    }
-  }
-
-  #getTrackIndexFromPath(
-    path: AudioBackgroundSoundPath
-  ): AudioBackgroundSoundIndex | null {
-    const [playlistName, trackName] = path.split(".");
-
-    const playlistIndex = this.playlists.findIndex((playlist) => playlist.name === playlistName);
-    if (playlistIndex === -1) {
-      return null;
-    }
-
-    const trackIndex = this.playlists[playlistIndex].tracks.findIndex((track) => track.name === trackName);
-    if (trackIndex === -1) {
-      return null;
-    }
+    const [playlistName, trackName] = pathOrIndex.split(".");
+    const playlistIndex = this.playlists.findIndex(
+      (playlist) => playlist.name === playlistName
+    );
+    const trackIndex = this.playlists[playlistIndex]?.tracks.findIndex(
+      (track) => track.name === trackName
+    ) ?? -1;
 
     return [playlistIndex, trackIndex];
   }
@@ -107,29 +92,6 @@ export class AudioBackground implements VolumeObserver {
     const [playlistIndex, trackIndex] = index;
 
     return this.playlists[playlistIndex]?.tracks[trackIndex] ?? null;
-  }
-
-  #getTrackByPath(
-    path: AudioBackgroundSoundPath
-  ): AudioBackgroundTrack | null {
-    const [playlistName, trackName] = path.split(".");
-
-    const playlist = this.playlists.find((playlist) => playlist.name === playlistName);
-    if (!playlist) {
-      return null;
-    }
-
-    return playlist.tracks.find((track) => track.name === trackName) ?? null;
-  }
-
-  #getPlaylistByName(
-    name: string
-  ): AudioBackgroundPlaylist | null {
-    const playlist = this.playlists.find(
-      (playlist) => playlist.name === name
-    ) ?? null;
-
-    return playlist && playlist.tracks.length > 0 ? playlist : null;
   }
 
   get isPlaying() {
@@ -157,25 +119,27 @@ export class AudioBackground implements VolumeObserver {
       return;
     }
 
-    const track = typeof pathOrIndex === "string"
-      ? this.#getTrackByPath(pathOrIndex)
-      : this.#getTrackByIndex(pathOrIndex);
-    if (!track) {
+    const index = this.#resolveIndex(pathOrIndex);
+    const track = this.#getTrackByIndex(index);
+    if (track === null) {
       throw new Error(`Track not found: ${pathOrIndex}`);
     }
 
-    this.#currentIndex = typeof pathOrIndex === "string"
-      ? this.#getTrackIndexFromPath(pathOrIndex)
-      : pathOrIndex;
+    this.stop();
+    this.#currentIndex = index;
+    const request = this.#playRequest;
 
-    if (this.audio) {
-      this.stop();
-    }
-
-    this.audio = await this.#audioManager.loadAudio(track.path, {
+    const audio = await this.#audioManager.loadAudio(track.path, {
       name: track.name,
       volume: track.volume
     });
+    if (request !== this.#playRequest) {
+      this.#audioManager.destroyAudio(audio);
+
+      return;
+    }
+
+    this.audio = audio;
     this.audio.onEnded = () => this.playNext().catch(this.#onError);
     this.audio.play();
   }
@@ -210,17 +174,16 @@ export class AudioBackground implements VolumeObserver {
         break;
       }
       case "play-next-playlist": {
-        const nextPlaylist = this.#getPlaylistByName(playlist.nextPlaylistName ?? "");
+        const nextPlaylistIndex = this.playlists.findIndex(
+          (candidate) => candidate.name === playlist.nextPlaylistName &&
+            candidate.tracks.length > 0
+        );
 
-        if (nextPlaylist) {
-          const nextPlaylistIndex = this.playlists.findIndex(
-            (pl) => pl.name === nextPlaylist.name
-          );
-
-          await this.play([nextPlaylistIndex, 0]);
+        if (nextPlaylistIndex === -1) {
+          this.stop();
         }
         else {
-          this.stop();
+          await this.play([nextPlaylistIndex, 0]);
         }
         break;
       }
@@ -233,6 +196,7 @@ export class AudioBackground implements VolumeObserver {
   }
 
   stop() {
+    this.#playRequest++;
     if (this.audio) {
       this.#audioManager.destroyAudio(this.audio);
       this.audio = null;

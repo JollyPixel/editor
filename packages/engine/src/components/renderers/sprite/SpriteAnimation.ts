@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import * as THREE from "three/webgpu";
-
 export interface SpriteAnimationRange {
   from: number;
   to: number;
@@ -15,8 +12,8 @@ export interface SpriteRunningAnimation {
   frames: number[];
   frameIndex: number;
   loop: boolean;
-  maxDuration: number;
-  clock: THREE.Clock;
+  frameDuration: number;
+  elapsed: number;
 }
 
 export interface SpriteAnimationPlayOptions {
@@ -34,12 +31,10 @@ export class SpriteAnimation {
     animations: SpriteAnimationOptions
   ) {
     for (const [name, value] of Object.entries(animations)) {
-      if (Array.isArray(value)) {
-        this.animations.set(name, value);
-      }
-      else {
-        this.animations.set(name, Array.from(range(value.from, value.to)));
-      }
+      this.animations.set(
+        name,
+        Array.isArray(value) ? value : Array.from(range(value.from, value.to))
+      );
     }
   }
 
@@ -53,8 +48,8 @@ export class SpriteAnimation {
   ) {
     const { loop = false, duration } = options;
 
-    const animation = this.animations.get(animationName);
-    if (!animation) {
+    const frames = this.animations.get(animationName);
+    if (!frames) {
       console.warn(`Animation "${animationName}" not found.`);
 
       return;
@@ -62,31 +57,25 @@ export class SpriteAnimation {
 
     this.animation = {
       name: animationName,
-      frames: animation.slice(0),
+      frames: frames.slice(0),
       frameIndex: 0,
       loop,
-      maxDuration: duration / animation.length,
-      clock: new THREE.Clock(true)
+      frameDuration: duration / frames.length,
+      elapsed: 0
     };
     this.#isPlaying = true;
   }
 
   pause() {
-    if (!this.animation) {
-      return;
+    if (this.animation) {
+      this.#isPlaying = false;
     }
-
-    this.#isPlaying = false;
-    this.animation.clock.stop();
   }
 
   resume() {
-    if (!this.animation) {
-      return;
+    if (this.animation) {
+      this.#isPlaying = true;
     }
-
-    this.#isPlaying = true;
-    this.animation.clock.start();
   }
 
   stop() {
@@ -94,28 +83,33 @@ export class SpriteAnimation {
     this.#isPlaying = false;
   }
 
-  update(): null | number {
-    if (!this.isPlaying || !this.animation) {
+  update(
+    deltaTime: number
+  ): number | null {
+    const animation = this.animation;
+    if (!this.#isPlaying || animation === null || animation.frameDuration <= 0) {
       return null;
     }
 
-    const elapsedTime = this.animation.clock.getElapsedTime();
-    if (
-      this.animation.maxDuration > 0 &&
-      elapsedTime >= this.animation.maxDuration
-    ) {
-      this.animation.clock = new THREE.Clock(true);
-      this.animation.frameIndex = (this.animation.frameIndex + 1) % this.animation.frames.length;
-      const frameId = this.animation.frames[this.animation.frameIndex];
+    animation.elapsed += deltaTime;
+    const steps = Math.floor(animation.elapsed / animation.frameDuration);
+    if (steps === 0) {
+      return null;
+    }
+    animation.elapsed -= steps * animation.frameDuration;
 
-      if (!this.animation.loop) {
-        this.animation = null;
+    const lastIndex = animation.frames.length - 1;
+    if (animation.loop) {
+      animation.frameIndex = (animation.frameIndex + steps) % animation.frames.length;
+    }
+    else {
+      animation.frameIndex = Math.min(animation.frameIndex + steps, lastIndex);
+      if (animation.frameIndex === lastIndex) {
+        this.#isPlaying = false;
       }
-
-      return frameId;
     }
 
-    return null;
+    return animation.frames[animation.frameIndex];
   }
 }
 

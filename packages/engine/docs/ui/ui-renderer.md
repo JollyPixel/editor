@@ -94,7 +94,8 @@ uiRenderer.updateWorldPosition();
 ## Cleanup
 
 Calling `clear()` destroys every registered node, removes the
-CSS overlay from the DOM, and unsubscribes from renderer events:
+CSS overlay from the DOM, and unsubscribes from renderer events.
+Destroying the component calls it too:
 
 ```ts
 uiRenderer.clear();
@@ -104,11 +105,13 @@ uiRenderer.clear();
 
 ```ts
 class UIRenderer extends ActorComponent {
-  static ID: symbol;
+  /** The renderer registered for this world, if any. */
+  static for(world: World): UIRenderer | undefined;
   camera: THREE.OrthographicCamera;
   nodes: UINode[];
 
   addChildren(node: UINode): void;
+  removeChildren(node: UINode): void;
   updateWorldPosition(): void;
   clear(): void;
 }

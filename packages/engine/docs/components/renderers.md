@@ -8,8 +8,10 @@ asset.
 ## ModelRenderer
 
 Renders a 3D model loaded from an OBJ, FBX, or glTF file.
-The model is added to the actor's Three.js group on `awake` and
-removed on `destroy`.
+On `awake`, a clone of the loaded model (skeletons included) is added
+to the actor's Three.js group, so several actors can share one model
+asset. The clone shares geometries and materials with the asset and
+is detached on `destroy` without disposing them.
 
 ```ts
 import { Actor, ModelRenderer } from "@jolly-pixel/engine";
@@ -54,7 +56,7 @@ import { Actor, SpriteRenderer } from "@jolly-pixel/engine";
 
 const actor = new Actor(world, { name: "Player" });
 actor.addComponent(SpriteRenderer, {
-  texture: "textures/player.png",
+  texture: PlayerSpritesheet,
   tileHorizontal: 8,
   tileVertical: 4,
   animations: {
@@ -66,7 +68,7 @@ actor.addComponent(SpriteRenderer, {
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `texture` | — | Path to the spritesheet image |
+| `texture` | — | `AssetReference<THREE.Texture>` declared by the owning scene (for example with `TEXTURE_ASSET`). Each sprite renders a clone, so frames and flips never leak between sprites |
 | `tileHorizontal` | — | Number of columns in the spritesheet |
 | `tileVertical` | — | Number of rows in the spritesheet |
 | `animations` | `{}` | Named animation definitions (frame arrays or ranges) |
@@ -77,7 +79,7 @@ Runtime helpers:
 
 ```ts
 const sprite = actor.addComponentAndGet(SpriteRenderer, {
-  texture: "textures/hero.png",
+  texture: HeroSpritesheet,
   tileHorizontal: 6,
   tileVertical: 2,
   animations: { run: { from: 0, to: 5 } }
@@ -88,6 +90,10 @@ sprite.setHorizontalFlip(true);
 sprite.setOpacity(0.8);
 sprite.animation.play("run", { duration: 0.6, loop: true });
 ```
+
+`duration` is the length of one full cycle, in seconds. Playback
+advances with the frame `deltaTime`. A non-looping animation stops on
+its last frame and `isPlaying` becomes `false`.
 
 ## TextRenderer
 

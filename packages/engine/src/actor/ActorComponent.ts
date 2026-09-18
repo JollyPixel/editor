@@ -2,7 +2,7 @@
 import type { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "./Actor.ts";
+import type { Actor } from "./Actor.ts";
 import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
 import { PersistentIdIncrement } from "../systems/generators/PersistentIdIncrement.ts";
 import type {
@@ -35,6 +35,8 @@ export class ActorComponent<
   typeName: FreeComponentEnum;
 
   #needUpdate = false;
+  #destroyed = false;
+  #teardowns: (() => void)[] = [];
   pendingForDestruction = false;
 
   constructor(
@@ -44,7 +46,8 @@ export class ActorComponent<
     this.typeName = options.typeName;
 
     this.actor.components.push(this);
-    this.actor.world.sceneManager.componentsToBeStarted.push(this);
+    this.actor.world.sceneManager.scheduleStart(this);
+    this.needUpdate = hasUpdateHook(this);
   }
 
   get needUpdate(): boolean {
@@ -79,6 +82,12 @@ export class ActorComponent<
     return this.actor.world.assetCoordinator.get(reference);
   }
 
+  addTeardown(
+    teardown: () => void
+  ): void {
+    this.#teardowns.push(teardown);
+  }
+
   toString(): string {
     return `${this.typeName}:${this.id}-${this.persistentId}`;
   }
@@ -87,17 +96,35 @@ export class ActorComponent<
     return this.pendingForDestruction;
   }
 
-  destroy() {
-    this.needUpdate = false;
-
-    const startIndex = this.actor.world.sceneManager.componentsToBeStarted.indexOf(this);
-    if (startIndex !== -1) {
-      this.actor.world.sceneManager.componentsToBeStarted.splice(startIndex, 1);
+  destroy(): void {
+    if (this.#destroyed) {
+      return;
     }
+    this.#destroyed = true;
+    this.pendingForDestruction = true;
+
+    this.onDestroy();
+    for (const teardown of this.#teardowns.splice(0).reverse()) {
+      teardown();
+    }
+
+    this.needUpdate = false;
+    this.actor.world.sceneManager.cancelStart(this);
 
     const index = this.actor.components.indexOf(this);
     if (index !== -1) {
       this.actor.components.splice(index, 1);
     }
   }
+
+  protected onDestroy(): void {
+    return;
+  }
+}
+
+function hasUpdateHook(
+  component: Component
+): boolean {
+  return typeof component.update === "function" ||
+    typeof component.fixedUpdate === "function";
 }

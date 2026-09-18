@@ -1,12 +1,15 @@
 
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import { describe, mock, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
   Actor,
-  Behavior
+  ActorComponent,
+  Behavior,
+  InputListener,
+  SceneActorComponent
 } from "../src/index.ts";
 import { createActor, createWorld } from "./mocks.ts";
 
@@ -18,7 +21,7 @@ describe("Behavior", () => {
     const behavior = new BehaviorOne(fakeActor);
 
     assert.deepEqual(fakeActor.components, [behavior]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [behavior]);
+    assert.deepEqual(fakeActor.world.sceneManager.componentsToStart, [behavior]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [behavior]
     });
@@ -33,7 +36,7 @@ describe("Behavior", () => {
     const behavior2 = new BehaviorOne(fakeActor);
 
     assert.deepEqual(fakeActor.components, [behavior1, behavior2]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [behavior1, behavior2]);
+    assert.deepEqual(fakeActor.world.sceneManager.componentsToStart, [behavior1, behavior2]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [behavior1, behavior2]
     });
@@ -48,7 +51,7 @@ describe("Behavior", () => {
     const anotherBehavior = new BehaviorTwo(fakeActor);
 
     assert.deepEqual(fakeActor.components, [mockBehavior, anotherBehavior]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [mockBehavior, anotherBehavior]);
+    assert.deepEqual(fakeActor.world.sceneManager.componentsToStart, [mockBehavior, anotherBehavior]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [mockBehavior],
       BehaviorTwo: [anotherBehavior]
@@ -119,7 +122,7 @@ describe("Behavior", () => {
     assert.equal(fakeActor.components.length, 0);
   });
 
-  test("should not proceed to destroy if pending for destruction", () => {
+  test("should still tear down a behavior already marked for destruction", () => {
     const fakeActor = createActor();
 
     // @ts-expect-error
@@ -127,7 +130,8 @@ describe("Behavior", () => {
     behavior.pendingForDestruction = true;
     behavior.destroy();
 
-    assert.equal(fakeActor.components.length, 1);
+    assert.equal(fakeActor.components.length, 0);
+    assert.equal(Object.keys(fakeActor.behaviors).length, 0);
   });
 });
 
@@ -265,6 +269,75 @@ describe("Actor Component Lookup", () => {
     });
   });
 });
+
+describe("Behavior bindings", () => {
+  test("should resolve decorated sibling components before awake", () => {
+    const actor = createRealActor();
+    const consumer = actor.addComponentAndGet(SiblingConsumer);
+    const sibling = actor.addComponentAndGet(Sibling);
+
+    actor.awake();
+
+    assert.strictEqual(consumer.siblingSeenInAwake, sibling);
+  });
+
+  test("should resolve bindings immediately when added to an awoken actor", () => {
+    const actor = createRealActor();
+    const sibling = actor.addComponentAndGet(Sibling);
+    actor.awake();
+
+    const consumer = actor.addComponentAndGet(SiblingConsumer);
+
+    assert.strictEqual(consumer.siblingSeenInAwake, sibling);
+  });
+
+  test("should unsubscribe input listeners on destroy", () => {
+    const keyboard = {
+      on: mock.fn(),
+      off: mock.fn()
+    };
+    const actor = new Actor(
+      { ...createWorld(), input: { keyboard } } as any,
+      { name: "test" }
+    );
+    const listener = actor.addComponentAndGet(KeyListener);
+    actor.awake();
+
+    assert.strictEqual(keyboard.on.mock.callCount(), 1);
+    const [eventName, handler] = keyboard.on.mock.calls[0].arguments;
+    assert.strictEqual(eventName, "down");
+
+    listener.destroy();
+
+    assert.strictEqual(keyboard.off.mock.callCount(), 1);
+    assert.deepEqual(keyboard.off.mock.calls[0].arguments, [eventName, handler]);
+  });
+});
+
+class Sibling extends ActorComponent {
+  constructor(
+    actor: Actor
+  ) {
+    super({ actor, typeName: "Sibling" });
+  }
+}
+
+class SiblingConsumer extends Behavior {
+  sibling: Sibling | undefined = undefined;
+  siblingSeenInAwake: Sibling | undefined = undefined;
+
+  awake() {
+    this.siblingSeenInAwake = this.sibling;
+  }
+}
+SceneActorComponent(Sibling)(SiblingConsumer.prototype, "sibling");
+
+class KeyListener extends Behavior {
+  onKeyDown() {
+    return;
+  }
+}
+InputListener("keyboard.down")(KeyListener.prototype, "onKeyDown");
 
 class BehaviorOne extends Behavior {}
 class BehaviorTwo extends Behavior {}

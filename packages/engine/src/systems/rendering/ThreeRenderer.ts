@@ -8,10 +8,7 @@ import type {
   RenderComponent,
   RendererEvents
 } from "./Renderer.ts";
-import type { WorldDefaultContext } from "../World.ts";
-import type { SceneManager } from "../scene/SceneManager.ts";
 import {
-  type RenderMode,
   type RenderStrategy,
   DirectRenderStrategy
 } from "./RenderStrategy.ts";
@@ -57,14 +54,7 @@ export interface ThreeRendererOutputOptions {
   toneMappingExposure?: number;
 }
 
-export interface ThreeRendererOptions<
-  TContext = WorldDefaultContext
-> {
-  sceneManager: SceneManager<TContext>;
-  /**
-   * @default "direct"
-   */
-  renderMode?: RenderMode;
+export interface ThreeRendererOptions {
   /**
    * Forwarded to `new THREE.WebGPURenderer()`. These can only be chosen when the
    * GPU context is created — `antialias`, `powerPreference`, `alpha`,
@@ -118,47 +108,38 @@ export function resolveRendererSettings(
   };
 }
 
-export class ThreeRenderer<
-  TContext = WorldDefaultContext
-> extends Emitter<ThreeRendererEvents> implements Renderer<THREE.WebGPURenderer> {
+export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Renderer<THREE.WebGPURenderer> {
   webGPURenderer: THREE.WebGPURenderer;
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;
   ratio: number | null = null;
-  sceneManager: SceneManager<TContext>;
 
   #sortedComponents: readonly RenderComponent[] = [];
   #renderOrderDirty = true;
 
   #resizeObserver: ResizeObserver | null = null;
-  #pendingResizeWidth = 0;
-  #pendingResizeHeight = 0;
+  #width = 0;
+  #height = 0;
   #resizeDirty = true;
 
-  private constructor(
-    webGPURenderer: THREE.WebGPURenderer,
-    options: ThreeRendererOptions<TContext>
+  constructor(
+    webGPURenderer: THREE.WebGPURenderer
   ) {
     super();
-    const { sceneManager, renderMode = "direct" } = options;
-
-    this.sceneManager = sceneManager;
     this.webGPURenderer = webGPURenderer;
-    this.setRenderMode(renderMode);
+    this.renderStrategy = new DirectRenderStrategy(webGPURenderer);
   }
 
-  static async create<
-    TContext = WorldDefaultContext
-  >(
+  static async create(
     canvas: HTMLCanvasElement,
-    options: ThreeRendererOptions<TContext>
-  ): Promise<ThreeRenderer<TContext>> {
+    options: ThreeRendererOptions = {}
+  ): Promise<ThreeRenderer> {
     const webGPURenderer = await createWebGPURenderer(
       canvas,
       resolveRendererSettings(options)
     );
 
-    return new ThreeRenderer(webGPURenderer, options);
+    return new ThreeRenderer(webGPURenderer);
   }
 
   get canvas() {
@@ -190,41 +171,8 @@ export class ThreeRenderer<
     }
   }
 
-  updateRenderComponent(
-    _component: RenderComponent
-  ): void {
-    // Nothing to rebind in direct mode.
-  }
-
   markRenderOrderDirty(): void {
     this.#renderOrderDirty = true;
-  }
-
-  setRenderMode(
-    mode: RenderMode
-  ): this {
-    if (mode !== "direct") {
-      throw new Error(
-        `ThreeRenderer: render mode "${mode}" is not supported yet — ` +
-        "composer/post-processing needs to be rebuilt on WebGPURenderer's " +
-        "node-based PostProcessing API. Use \"direct\"."
-      );
-    }
-
-    this.renderStrategy?.dispose();
-    this.renderStrategy = new DirectRenderStrategy(this.webGPURenderer);
-
-    this.markRenderOrderDirty();
-    this.#refreshRenderOrder();
-
-    this.#resizeDirty = true;
-    this.resize();
-
-    if (this.#pendingResizeWidth > 0 && this.#pendingResizeHeight > 0) {
-      this.clear();
-    }
-
-    return this;
   }
 
   setRatio(
@@ -252,82 +200,72 @@ export class ThreeRenderer<
 
     this.#resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!entry) {
-        return;
+      if (entry) {
+        this.#requestSize(entry.contentRect.width, entry.contentRect.height);
       }
-
-      const { width, height } = entry.contentRect;
-      if (this.ratio) {
-        if (width / height > this.ratio) {
-          this.#pendingResizeHeight = Math.round(height);
-          this.#pendingResizeWidth = Math.round(Math.min(width, height * this.ratio));
-        }
-        else {
-          this.#pendingResizeWidth = Math.round(width);
-          this.#pendingResizeHeight = Math.round(Math.min(height, width / this.ratio));
-        }
-      }
-      else {
-        this.#pendingResizeWidth = Math.round(width);
-        this.#pendingResizeHeight = Math.round(height);
-      }
-      this.#resizeDirty = true;
     });
     this.#resizeObserver.observe(target);
   }
 
-  unobserveResize() {
-    if (this.#resizeObserver) {
-      this.#resizeObserver.disconnect();
-      this.#resizeObserver = null;
+  #requestSize(
+    width: number,
+    height: number
+  ): void {
+    if (!this.ratio) {
+      this.#width = Math.round(width);
+      this.#height = Math.round(height);
     }
+    else if (width / height > this.ratio) {
+      this.#height = Math.round(height);
+      this.#width = Math.round(Math.min(width, height * this.ratio));
+    }
+    else {
+      this.#width = Math.round(width);
+      this.#height = Math.round(Math.min(height, width / this.ratio));
+    }
+    this.#resizeDirty = true;
+  }
+
+  unobserveResize() {
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = null;
   }
 
   resize() {
-    if (!this.#resizeDirty) {
-      return;
-    }
-
-    const width = this.#pendingResizeWidth;
-    const height = this.#pendingResizeHeight;
-    if (width === 0 || height === 0) {
+    if (!this.#resizeDirty || this.#width === 0 || this.#height === 0) {
       return;
     }
     this.#resizeDirty = false;
 
-    this.renderStrategy.resize(width, height);
-    this.emit("resize", { width, height });
+    this.renderStrategy.resize(this.#width, this.#height);
+    this.emit("resize", { width: this.#width, height: this.#height });
   }
 
-  draw() {
+  draw(
+    scene: THREE.Scene
+  ) {
     this.resize();
 
-    if (
-      this.#pendingResizeWidth === 0 ||
-      this.#pendingResizeHeight === 0
-    ) {
+    if (this.#width === 0 || this.#height === 0) {
       return;
     }
 
     if (this.#renderOrderDirty) {
-      this.#refreshRenderOrder();
+      this.#sortedComponents = [...this.renderComponents].sort(
+        (a, b) => a.depth - b.depth
+      );
+      this.#renderOrderDirty = false;
     }
 
     this.renderStrategy.render(
-      this.sceneManager.getSource(),
+      scene,
       {
         components: this.#sortedComponents,
-        canvasWidth: this.#pendingResizeWidth,
-        canvasHeight: this.#pendingResizeHeight
+        canvasWidth: this.#width,
+        canvasHeight: this.#height
       }
     );
     this.emit("draw", { source: this.webGPURenderer });
-  }
-
-  onDraw(
-    callback: (event: { source: THREE.WebGPURenderer; }) => void
-  ) {
-    this.on("draw", callback);
   }
 
   clear() {
@@ -342,13 +280,6 @@ export class ThreeRenderer<
 
     this.webGPURenderer.setAnimationLoop(null);
     this.webGPURenderer.dispose();
-  }
-
-  #refreshRenderOrder(): void {
-    this.#sortedComponents = [...this.renderComponents].sort(
-      (a, b) => a.depth - b.depth
-    );
-    this.#renderOrderDirty = false;
   }
 }
 

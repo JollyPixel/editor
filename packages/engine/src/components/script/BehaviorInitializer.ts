@@ -2,13 +2,12 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Behavior } from "./Behavior.ts";
+import type { Actor } from "../../actor/Actor.ts";
 import {
   getBehaviorMetadata,
   type ScenePropertyType,
   type BehaviorMetadata
 } from "./BehaviorDecorators.ts";
-import type { WorldDefaultContext } from "../../systems/World.ts";
 import type { ConsoleAdapter } from "../../adapters/console.ts";
 
 // CONSTANTS
@@ -25,20 +24,31 @@ const kDefaultValues: Record<ScenePropertyType, unknown> = {
   Color: new THREE.Color(0, 0, 0)
 };
 
+export interface InitializableBehavior {
+  actor: Actor<any>;
+  addTeardown(teardown: () => void): void;
+  setProperty(propertyName: string, value: any): void;
+}
+
+type BehaviorRecord = InitializableBehavior & Record<PropertyKey, any>;
+
+interface InputEventTarget {
+  on(eventName: string, listener: (...args: any[]) => void): unknown;
+  off(eventName: string, listener: (...args: any[]) => void): unknown;
+}
+
 export interface BehaviorInitializerOptions {
   consoleAdapter?: ConsoleAdapter;
 }
 
-export class BehaviorInitializer<
-  TContext extends WorldDefaultContext
-> {
-  #behavior: Behavior<any, TContext>;
+export class BehaviorInitializer {
+  #behavior: BehaviorRecord;
   #metadata: BehaviorMetadata;
   #console: ConsoleAdapter;
 
-  static for<TContext extends WorldDefaultContext>(
-    behavior: Behavior<any, TContext>
-  ): BehaviorInitializer<TContext> | null {
+  static for(
+    behavior: InitializableBehavior
+  ): BehaviorInitializer | null {
     const proto = Object.getPrototypeOf(behavior);
     const metadata = getBehaviorMetadata(proto);
     if (!metadata) {
@@ -49,13 +59,13 @@ export class BehaviorInitializer<
   }
 
   constructor(
-    behavior: Behavior<any, any>,
+    behavior: InitializableBehavior,
     metadata: BehaviorMetadata,
     options: BehaviorInitializerOptions = {}
   ) {
     const { consoleAdapter = console } = options;
 
-    this.#behavior = behavior;
+    this.#behavior = behavior as BehaviorRecord;
     this.#metadata = metadata;
     this.#console = consoleAdapter;
   }
@@ -81,25 +91,23 @@ export class BehaviorInitializer<
         continue;
       }
 
-      const [targetName, eventName] = type.split(".") as [string, any];
-      const target = targetName === "input" ? input : input[targetName];
-      target.on(
-        eventName,
-        this.#behavior[methodName].bind(this.#behavior)
-      );
+      const [targetName, eventName] = type.split(".");
+      const target: InputEventTarget = targetName === "input" ?
+        input :
+        (input as unknown as Record<string, InputEventTarget>)[targetName];
+      const listener = this.#behavior[methodName].bind(this.#behavior);
+
+      target.on(eventName, listener);
+      this.#behavior.addTeardown(() => target.off(eventName, listener));
     }
   }
 
   #resolveProperties(): void {
-    for (const [propertyName, properties] of this.#metadata.properties) {
-      const { type } = properties;
-
-      const currentValue = this.#behavior[propertyName];
-      const defaultValue = this.#getDefaultValue(type);
-      const finalValue = currentValue ?? defaultValue;
+    for (const [propertyName, { type }] of this.#metadata.properties) {
+      const finalValue = this.#behavior[propertyName] ?? defaultValueOf(type);
 
       this.#behavior[propertyName] = finalValue;
-      this.#behavior.setProperty(propertyName as any, finalValue);
+      this.#behavior.setProperty(propertyName as string, finalValue);
     }
   }
 
@@ -113,30 +121,29 @@ export class BehaviorInitializer<
         continue;
       }
 
-      const component = this.#behavior.actor.components.find(
-        (component) => component.constructor.name === ComponentClass.name
+      this.#behavior[componentName] = this.#behavior.actor.components.find(
+        (component) => component instanceof ComponentClass
       );
-      this.#behavior[componentName] = component ?? undefined;
     }
   }
+}
 
-  #getDefaultValue(
-    type: ScenePropertyType
-  ): unknown {
-    const value = kDefaultValues[type];
+function defaultValueOf(
+  type: ScenePropertyType
+): unknown {
+  const value = kDefaultValues[type];
 
-    if (
-      value instanceof THREE.Vector2 ||
-      value instanceof THREE.Vector3 ||
-      value instanceof THREE.Vector4 ||
-      value instanceof THREE.Color
-    ) {
-      return value.clone();
-    }
-    if (Array.isArray(value)) {
-      return [...value];
-    }
-
-    return value;
+  if (
+    value instanceof THREE.Vector2 ||
+    value instanceof THREE.Vector3 ||
+    value instanceof THREE.Vector4 ||
+    value instanceof THREE.Color
+  ) {
+    return value.clone();
   }
+  if (Array.isArray(value)) {
+    return [...value];
+  }
+
+  return value;
 }

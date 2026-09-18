@@ -66,6 +66,12 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
 
 ## Decorators
 
+Decorated properties, components, and input listeners are resolved by
+`bind()`, which runs right before `awake()`. A component referenced
+with `@SceneActorComponent` therefore only needs to be added to the
+same actor before the actor awakes, in any order. Input listeners are
+removed when the behavior is destroyed.
+
 ### `@SceneProperty`
 
 Exposes a field as a configurable property in the scene editor.

@@ -90,7 +90,6 @@ class RenderersScene extends Systems.Scene {
         }
       ]
     });
-    this.world.audio.observe(this.audioBackground);
   }
 }
 

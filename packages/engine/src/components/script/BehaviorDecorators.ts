@@ -3,12 +3,7 @@ import "reflect-metadata";
 import type { InputListenerType } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type {
-  ModelRenderer,
-  SpriteRenderer,
-  TextRenderer
-} from "../renderers/index.ts";
-import type { ActorComponent } from "../../actor/index.ts";
+import type { Component } from "../types.ts";
 
 export type ScenePropertyType =
   | "string"
@@ -71,12 +66,7 @@ export function SceneProperty(
   };
 }
 
-export type SceneActorComponentType =
-  | typeof ModelRenderer
-  | typeof SpriteRenderer
-  | typeof TextRenderer
-  | typeof ActorComponent
-  | any;
+export type SceneActorComponentType = abstract new (...args: any[]) => Component;
 
 export function SceneActorComponent(
   classObject: SceneActorComponentType

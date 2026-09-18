@@ -155,13 +155,15 @@ export class UISprite<
     }
   }
 
-  override destroy(): void {
-    const material = this.mesh.material as THREE.MeshBasicMaterial;
+  protected override onDestroy(): void {
+    this.#text?.destroy();
+    if (!this.mesh) {
+      return;
+    }
 
+    const material = this.mesh.material as THREE.MeshBasicMaterial;
     material.map?.dispose();
     material.dispose();
     this.mesh.geometry.dispose();
-
-    this.#text?.destroy();
   }
 }

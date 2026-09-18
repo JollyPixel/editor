@@ -1,3 +1,6 @@
 export * from "./Renderer.ts";
 export * from "./ThreeRenderer.ts";
-export type { RenderMode } from "./RenderStrategy.ts";
+export type {
+  RenderParameters,
+  RenderStrategy
+} from "./RenderStrategy.ts";

@@ -1,12 +1,16 @@
-export type SignalListener<T extends unknown[]> = (...args: T[]) => void;
+export type SignalListener<
+  T extends unknown[]
+> = (...args: T) => void;
 
-export class SignalEvent<T extends unknown[] = []> {
+export class SignalEvent<
+  T extends unknown[] = []
+> {
   #listeners: SignalListener<T>[] = [];
 
   emit(...args: T) {
-    this.#listeners.forEach((listener) => {
-      listener(...args as any);
-    });
+    for (const listener of [...this.#listeners]) {
+      listener(...args);
+    }
   }
 
   connect(
@@ -28,4 +32,3 @@ export class SignalEvent<T extends unknown[] = []> {
     this.#listeners = [];
   }
 }
-
