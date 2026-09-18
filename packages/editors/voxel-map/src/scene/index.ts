@@ -4,6 +4,12 @@ export type {
   LightingMode,
   SceneLightingOutput
 } from "./SceneLighting.ts";
+export { spawnPose } from "./spawnPose.ts";
+export type {
+  SpawnLayer,
+  SpawnPose,
+  SpawnPoseOptions
+} from "./spawnPose.ts";
 export {
   castViewRay,
   viewFocusPoint,

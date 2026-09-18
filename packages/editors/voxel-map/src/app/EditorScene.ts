@@ -27,6 +27,7 @@ import * as THREE from "three";
 import {
   GridRenderer,
   SceneLighting,
+  spawnPose,
   viewFocusPoint,
   ViewFocus
 } from "../scene/index.ts";
@@ -97,6 +98,7 @@ export class EditorScene extends Systems.Scene {
   #subscriptions: Array<() => void> = [];
 
   #orbiting = false;
+  #spawnPending = false;
 
   #onExitOrbitFocusKey = (): void => {
     this.#orbitFlyCamera?.exitOrbitFocus();
@@ -185,10 +187,10 @@ export class EditorScene extends Systems.Scene {
     const orbitFlyCamera = world
       .createActor("camera")
       .addComponentAndGet(OrbitFlyCamera, {
-        position: { x: 8, y: 12, z: 32 },
         focusMode: "lock"
       });
     this.#orbitFlyCamera = orbitFlyCamera;
+    orbitFlyCamera.teleport(spawnPose([]));
     this.#subscriptions.push(
       this.editorState.selection.watch("gizmoDraggingChange", (dragging) => {
         orbitFlyCamera.enabled = !dragging;
@@ -225,6 +227,7 @@ export class EditorScene extends Systems.Scene {
     );
 
     if (this.#voxelRoom) {
+      this.#spawnPending = true;
       this.#voxelSyncClient = new VoxelSyncClient({
         room: this.#voxelRoom,
         engine
@@ -263,6 +266,7 @@ export class EditorScene extends Systems.Scene {
         this.editorState.world.blocksReady = true;
         this.editorState.world.emit("blockRegistryChanged");
         this.editorState.world.emit("reset");
+        this.#spawnCamera();
       });
     }
     else {
@@ -407,6 +411,7 @@ export class EditorScene extends Systems.Scene {
     data: VoxelWorldJSON
   ): void {
     if (this.#voxelSyncClient) {
+      this.#spawnPending = true;
       this.#voxelSyncClient.replaceWorld(data);
     }
     else {
@@ -420,7 +425,25 @@ export class EditorScene extends Systems.Scene {
       );
       this.editorState.world.emit("blockRegistryChanged");
       this.editorState.world.emit("reset");
+      this.#spawnPending = true;
+      this.#spawnCamera();
     }
+  }
+
+  #spawnCamera(): void {
+    const camera = this.#orbitFlyCamera;
+    if (!this.#spawnPending || camera === undefined) {
+      return;
+    }
+
+    this.#spawnPending = false;
+    camera.exitOrbitFocus();
+    camera.teleport(
+      spawnPose(this.engine.world.getLayers(), {
+        fov: camera.camera.fov
+      })
+    );
+    this.#announceCameraMode();
   }
 
   override destroy(): void {
