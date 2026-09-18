@@ -23,7 +23,7 @@
     "./plugins/*": "./dist/plugins/*"
   },
   "scripts": {
-    "prepublishOnly": "rimraf ./dist ./tsconfig.tsbuildinfo && tsc -b",
+    "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "dev": "vite",
     "test-only": "node --test \"test/**/*.spec.ts\"",

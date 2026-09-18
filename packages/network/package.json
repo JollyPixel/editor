@@ -23,7 +23,7 @@
     }
   },
   "scripts": {
-    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "build:schemas": "node scripts/compileSchemas.ts",
     "test-only": "node --test \"test/**/*.spec.ts\"",

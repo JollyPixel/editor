@@ -17,7 +17,7 @@
     "#src/*": "./src/*"
   },
   "scripts": {
-    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.test.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",

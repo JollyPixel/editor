@@ -17,7 +17,7 @@
     }
   },
   "scripts": {
-    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "pnpm run test-only:node && pnpm run test-only:dom",
