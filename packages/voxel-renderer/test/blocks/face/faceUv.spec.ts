@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  defineFace,
   faceUvs,
+  faceUvSpan,
   projectFaceUv
 } from "../../../src/blocks/face/index.ts";
 import {
@@ -46,6 +48,50 @@ describe("faceUvs", () => {
   });
 });
 
+describe("faceUvSpan", () => {
+  it("is one tile on an axis-aligned face", () => {
+    assert.deepEqual(faceUvSpan(FACE.PosZ, [0, 0, 1]), { u: 1, v: 1 });
+  });
+
+  it("stretches v by the slope length of a ramp", () => {
+    const span = faceUvSpan(FACE.PosY, [0, Math.SQRT1_2, -Math.SQRT1_2]);
+
+    assert.equal(span.u, 1);
+    assert.ok(Math.abs(span.v - Math.SQRT2) < 1e-9);
+  });
+
+  it("stretches u when the face leans along it", () => {
+    const span = faceUvSpan(FACE.PosZ, [Math.SQRT1_2, 0, Math.SQRT1_2]);
+
+    assert.ok(Math.abs(span.u - Math.SQRT2) < 1e-9);
+    assert.equal(span.v, 1);
+  });
+
+  it("stays one tile when the face leans along both axes", () => {
+    const third = Math.sqrt(1 / 3);
+
+    assert.deepEqual(
+      faceUvSpan(FACE.PosY, [-third, third, -third]),
+      { u: 1, v: 1 }
+    );
+  });
+
+  it("stays one tile when the normal is parallel to the face plane", () => {
+    assert.deepEqual(faceUvSpan(FACE.PosY, [1, 0, 0]), { u: 1, v: 1 });
+  });
+
+  it("ignores faces with authored uvs", () => {
+    const face = defineFace({
+      face: FACE.PosY,
+      normal: [0, Math.SQRT1_2, -Math.SQRT1_2],
+      vertices: [[0, 0, 0], [0, 1, 1], [1, 1, 1], [1, 0, 0]],
+      uvs: [[1, 0], [1, 1], [0, 1], [0, 0]]
+    });
+
+    assert.deepEqual(face.span, { u: 1, v: 1 });
+  });
+});
+
 describe("built-in shape uv convention", () => {
   const shapes = [...BlockShapeRegistry.createDefault().getAll()];
 
@@ -70,6 +116,32 @@ describe("built-in shape uv convention", () => {
           "reads its texture back to front"
         );
       });
+    });
+
+    it(`${shape.id} span restores the true length of unsheared edges`, () => {
+      for (const definition of shape.faces) {
+        const span = definition.span ?? { u: 1, v: 1 };
+        const axisAligned = definition.normal.filter((n) => n !== 0).length === 1;
+        if (!axisAligned && span.u === 1 && span.v === 1) {
+          continue;
+        }
+
+        definition.vertices.forEach((vertex, index) => {
+          const next = (index + 1) % definition.vertices.length;
+          const uv = definition.uvs[index];
+          const nextUv = definition.uvs[next];
+          const texture = Math.hypot(
+            (nextUv[0] - uv[0]) * span.u,
+            (nextUv[1] - uv[1]) * span.v
+          );
+          const world = Math.hypot(...subtract(definition.vertices[next], vertex));
+
+          assert.ok(
+            Math.abs(texture - world) < 1e-6,
+            `${shape.id} face ${definition.face} edge ${index} is stretched`
+          );
+        });
+      }
     });
   }
 });

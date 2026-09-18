@@ -27,6 +27,11 @@ export interface TileBounds {
   v1: number;
 }
 
+export interface TileSpan {
+  u: number;
+  v: number;
+}
+
 export interface TilesetUVRegion {
   offsetU: number;
   offsetV: number;

@@ -5,7 +5,12 @@ import type {
   Vec3
 } from "../../utils/math.ts";
 import { defaultCullFace } from "./faceCulling.ts";
-import { faceUvs } from "./faceUv.ts";
+import {
+  faceUvs,
+  faceUvSpan
+} from "./faceUv.ts";
+import { UNIT_TILE_SPAN } from "../../tileset/tileRef.ts";
+import type { TileSpan } from "../../tileset/types.ts";
 
 export interface FaceDescriptor {
   face: FACE;
@@ -31,6 +36,7 @@ export interface FaceDefinition {
    * supporting plane.
    */
   readonly slot?: string | null;
+  readonly span?: Readonly<TileSpan>;
 }
 
 export function defineFace(
@@ -51,6 +57,7 @@ export function defineFace(
     vertices,
     uvs: uvs ?? faceUvs(face, vertices),
     cull: cull === undefined ? defaultCullFace(descriptor) : cull,
-    slot: slot ?? null
+    slot: slot ?? null,
+    span: uvs ? UNIT_TILE_SPAN : faceUvSpan(face, normal)
   };
 }

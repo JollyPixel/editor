@@ -58,6 +58,14 @@ describe("blockShapeUv", () => {
     });
   });
 
+  it("spans a ramp slope over its true length", () => {
+    const { spans } = blockShapeUv(shapeOf("ramp"));
+
+    assert.equal(spans.top?.u, 1);
+    assert.ok(Math.abs((spans.top?.v ?? 0) - Math.SQRT2) < 1e-9);
+    assert.deepEqual(spans.front, { u: 1, v: 1 });
+  });
+
   it("keeps a stair off the box path", () => {
     const topology = blockShapeUv(shapeOf("stair"));
 

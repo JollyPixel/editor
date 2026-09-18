@@ -363,7 +363,12 @@ export class BlockVariantCache {
         continue;
       }
 
-      const uvRegion = atlas.uvFor(tileRef.col, tileRef.row, tileRef.size);
+      const uvRegion = atlas.uvFor(
+        tileRef.col,
+        tileRef.row,
+        tileRef.size,
+        textures.spanFor(textureSlot.id, textureSlot.span)
+      );
 
       for (const faceDef of textureSlot.definitions) {
         faces.push(

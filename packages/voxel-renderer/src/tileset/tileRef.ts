@@ -2,7 +2,8 @@
 import type {
   ResolvedTileRef,
   TileBounds,
-  TileRef
+  TileRef,
+  TileSpan
 } from "./types.ts";
 
 // CONSTANTS
@@ -11,6 +12,10 @@ export const WHOLE_TILE_BOUNDS: Readonly<TileBounds> = Object.freeze({
   v0: 0,
   u1: 1,
   v1: 1
+});
+export const UNIT_TILE_SPAN: Readonly<TileSpan> = Object.freeze({
+  u: 1,
+  v: 1
 });
 
 export interface TileRect {
@@ -51,18 +56,29 @@ export function resolveTileRef(
   };
 }
 
+export function tileFootprint(
+  size: number,
+  span: Readonly<TileSpan> = UNIT_TILE_SPAN
+): Pick<TileRect, "width" | "height"> {
+  return {
+    width: Math.max(1, Math.round(size * span.u)),
+    height: Math.max(1, Math.round(size * span.v))
+  };
+}
+
 export function tileRectOf(
   ref: ResolvedTileRef,
   tileSize: number,
-  bounds: TileBounds = WHOLE_TILE_BOUNDS
+  bounds: TileBounds = WHOLE_TILE_BOUNDS,
+  span: Readonly<TileSpan> = UNIT_TILE_SPAN
 ): TileRect {
-  const size = ref.size ?? tileSize;
+  const { width, height } = tileFootprint(ref.size ?? tileSize, span);
 
   return {
-    x: (ref.col * tileSize) + (bounds.u0 * size),
-    y: (ref.row * tileSize) + ((1 - bounds.v1) * size),
-    width: (bounds.u1 - bounds.u0) * size,
-    height: (bounds.v1 - bounds.v0) * size
+    x: (ref.col * tileSize) + (bounds.u0 * width),
+    y: (ref.row * tileSize) + ((1 - bounds.v1) * height),
+    width: (bounds.u1 - bounds.u0) * width,
+    height: (bounds.v1 - bounds.v0) * height
   };
 }
 
@@ -70,14 +86,15 @@ export function tileRefFromRect(
   rect: Pick<TileRect, "x" | "y">,
   template: ResolvedTileRef,
   tileSize: number,
-  bounds: TileBounds = WHOLE_TILE_BOUNDS
+  bounds: TileBounds = WHOLE_TILE_BOUNDS,
+  span: Readonly<TileSpan> = UNIT_TILE_SPAN
 ): ResolvedTileRef {
-  const size = template.size ?? tileSize;
+  const { width, height } = tileFootprint(template.size ?? tileSize, span);
 
   return {
     ...template,
-    col: (rect.x - (bounds.u0 * size)) / tileSize,
-    row: (rect.y - ((1 - bounds.v1) * size)) / tileSize
+    col: (rect.x - (bounds.u0 * width)) / tileSize,
+    row: (rect.y - ((1 - bounds.v1) * height)) / tileSize
   };
 }
 

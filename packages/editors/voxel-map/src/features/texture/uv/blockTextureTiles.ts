@@ -38,11 +38,16 @@ export function findBlocksReferencingTileset(
     const unique = new Map<string, SelectionRect>();
     const shapeUv = blockShapeUv(shape);
     const geometries: UVGeometry[] = [];
-    for (const { slot, tile, bounds } of resolvedBlockTextureSlots(block, shape)) {
+    for (const {
+      slot,
+      tile,
+      bounds,
+      span
+    } of resolvedBlockTextureSlots(block, shape)) {
       if (tile.tilesetId !== tilesetId) {
         continue;
       }
-      const rect = tileRectOf(tile, tileSize, bounds);
+      const rect = tileRectOf(tile, tileSize, bounds, span);
       const key = `${rect.x}:${rect.y}:${rect.width}:${rect.height}`;
       if (!unique.has(key)) {
         unique.set(key, rect);

@@ -20,6 +20,7 @@ class BlockTextures implements Iterable<ResolvedTileRef> {
   );
   [Symbol.iterator](): IterableIterator<ResolvedTileRef>;
   forSlot(slot: string): ResolvedTileRef | undefined;
+  spanFor(slot: string, span: Readonly<TileSpan>): Readonly<TileSpan>;
   tilesetIds(): string[];
   map(mapper: TileRefMapper): BlockTextures;
   withTileset(tilesetId: string | null): BlockTextures;
@@ -36,6 +37,11 @@ Iteration yields every face reference, then `defaultTexture`.
 
 `forSlot()` resolves the reference a [shape slot](./shapeSlots.md) samples: the
 exact slot, then its base slot (`top` for `top.1`), then `defaultTexture`.
+
+`spanFor()` returns `span` when the slot or its base slot has its own face
+texture, and `{ u: 1, v: 1 }` otherwise. A tile shared through `defaultTexture`
+stays one square tile on every face, so a ramp slope samples its true length
+only from a tile of its own.
 
 `tilesetIds()` returns the distinct explicit tileset IDs in iteration order.
 

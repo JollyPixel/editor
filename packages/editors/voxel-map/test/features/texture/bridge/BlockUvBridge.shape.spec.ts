@@ -323,4 +323,62 @@ describe("BlockUvBridge / shape footprint", () => {
       bridge.dispose();
     }
   });
+
+  it("keeps a stacked ramp slope on one square tile", () => {
+    const { engine } = makeFakeVoxelEngine();
+    engine.blockRegistry.register(shapedBlock("ramp"));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, engine);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+
+      const region = uv.get("block-1")!;
+      assert.equal(region.state, "stacked");
+      assert.deepEqual(region.rectFor("top"), {
+        x: 32,
+        y: 16,
+        width: 16,
+        height: 16
+      });
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("gives a free ramp slope its true length", () => {
+    const { engine } = makeFakeVoxelEngine();
+    engine.blockRegistry.register(shapedBlock("ramp"));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, engine);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      uv.setState("block-1", "free");
+
+      const region = uv.get("block-1")!;
+      assert.deepEqual(region.rectFor("top"), {
+        x: 32,
+        y: 16,
+        width: 16,
+        height: 23
+      });
+      assert.deepEqual(region.rectFor("front"), {
+        x: 32,
+        y: 16,
+        width: 16,
+        height: 16
+      });
+
+      const block = engine.blockRegistry.get(1)!;
+      assert.deepEqual(
+        block.faceTextures.top,
+        { col: 2, row: 1, tilesetId: "atlas" }
+      );
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
 });

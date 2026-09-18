@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import type { ResolvedTileRef } from "../tileset/types.ts";
+import type {
+  ResolvedTileRef,
+  TileSpan
+} from "../tileset/types.ts";
+import { UNIT_TILE_SPAN } from "../tileset/tileRef.ts";
 import type { ResolvedBlockDefinition } from "./BlockDefinition.ts";
 import { baseSlotOf } from "./shape/shapeSlots.ts";
 
@@ -41,6 +45,16 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     return this.faceTextures[slot] ??
       this.faceTextures[baseSlotOf(slot)] ??
       this.defaultTexture;
+  }
+
+  spanFor(
+    slot: string,
+    span: Readonly<TileSpan>
+  ): Readonly<TileSpan> {
+    const ownsTile = this.faceTextures[slot] !== undefined ||
+      this.faceTextures[baseSlotOf(slot)] !== undefined;
+
+    return ownsTile ? span : UNIT_TILE_SPAN;
   }
 
   tilesetIds(): string[] {
