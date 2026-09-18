@@ -1,81 +1,15 @@
 # Adapters
 
-Thin interfaces that abstract Browser and Three.js APIs behind
-injectable contracts. This enables unit testing with mocks and
-decouples engine code from `window`, `document`, `navigator`,
-and `canvas` globals.
+Thin interfaces that abstract browser globals behind injectable
+contracts, so engine code can be unit tested with mocks.
 
-Each adapter has a matching `Browser*Adapter` class that delegates
-to the real browser API and is used as the default implementation.
-
-## EventTarget
-
-Base interface shared by all adapters that need event listeners.
-
-```ts
-type EventTargetListener = (...args: any[]) => void | boolean;
-
-interface EventTargetAdapter {
-  addEventListener(
-    type: string,
-    listener: EventTargetListener,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  removeEventListener(
-    type: string,
-    listener: EventTargetListener,
-    options?: boolean | AddEventListenerOptions
-  ): void;
-}
-```
-
-## Canvas
-
-```ts
-interface CanvasAdapter extends EventTargetAdapter {
-  requestFullscreen(): void;
-  requestPointerLock(options?: PointerLockOptions): Promise<void>;
-  focus(options?: FocusOptions): void;
-}
-```
-
-## Document
-
-```ts
-interface DocumentAdapter extends EventTargetAdapter {
-  fullscreenElement?: Element | null;
-  pointerLockElement?: Element | null;
-
-  exitFullscreen(): void;
-  exitPointerLock(): void;
-}
-```
-
-Default: `BrowserDocumentAdapter` (delegates to `document`).
-
-## Window
-
-```ts
-interface WindowAdapter extends EventTargetAdapter {
-  onbeforeunload?: ((this: Window, ev: BeforeUnloadEvent) => any) | null;
-  navigator: NavigatorAdapter;
-}
-```
-
-Default: `BrowserWindowAdapter` (delegates to `window`).
-
-## Navigator
-
-```ts
-interface NavigatorAdapter {
-  getGamepads(): (Gamepad | null)[];
-  vibrate(pattern: VibratePattern): boolean;
-}
-```
-
-Default: `BrowserNavigatorAdapter` (delegates to `navigator`).
+Input-related adapters (`window`, `document`, `navigator`, `canvas`)
+live in `@jolly-pixel/controls`.
 
 ## Console
+
+Used by `Systems.Logger` (`adapter` option) and `BehaviorInitializer`
+(`consoleAdapter` option).
 
 ```ts
 interface ConsoleAdapter {
@@ -84,3 +18,17 @@ interface ConsoleAdapter {
   error(message?: any, ...optionalParams: any[]): void;
 }
 ```
+
+Default: the global `console`.
+
+## Globals
+
+Used by `World` (`globalsAdapter` option) to publish the world instance.
+
+```ts
+interface GlobalsAdapter {
+  setGame(instance: World<any, any>): void;
+}
+```
+
+Default: `BrowserGlobalsAdapter` (assigns `globalThis.game`).

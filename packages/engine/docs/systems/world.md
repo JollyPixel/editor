@@ -39,8 +39,6 @@ interface WorldOptions {
   audio?: GlobalAudio;
   /** Enable the exit mechanism on the input system. @default false */
   enableOnExit?: boolean;
-  /** Abstraction over `window` (useful for testing). @default BrowserWindowAdapter */
-  windowAdapter?: WindowAdapter;
   /** Abstraction over global references (useful for testing). @default BrowserGlobalsAdapter */
   globalsAdapter?: GlobalsAdapter;
 }
