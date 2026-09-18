@@ -58,6 +58,7 @@ interface FaceDefinition {
   readonly vertices: readonly Vec3[];
   readonly uvs: readonly Vec2[];
   readonly cull: Face | null;
+  readonly span?: Readonly<TileSpan>;
 }
 ```
 
@@ -120,6 +121,17 @@ can size each face's region from the shape alone.
 projection, and `defineFace()` applies it to any descriptor that omits `uvs`.
 Pass an explicit `uvs` to opt a face out, for instance to repeat or rotate a
 tile deliberately.
+
+## Slanted faces
+
+The projection flattens a slanted face: a ramp slope is `√2` blocks long but
+spans `v` `0` to `1`. `faceUvSpan(face, normal)` returns how many tiles the face
+really covers along `u` and `v`, `{ u: 1, v: √2 }` for a ramp slope and
+`{ u: 1, v: 1 }` for an axis-aligned face. `defineFace()` stores it as `span`,
+or `{ u: 1, v: 1 }` when the descriptor passes its own `uvs`.
+
+A face leaning along both axes, such as the `rampCornerInner` facet, is sheared
+rather than stretched and keeps `{ u: 1, v: 1 }`.
 
 ## Face
 

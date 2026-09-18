@@ -26,12 +26,18 @@ interface UVMapOptions {
   getCanvasSize: () => Vec2;
 }
 
-type UVSlotGeometryTemplate =
+interface UVSlotSize {
+  width?: number;
+  height?: number;
+}
+
+type UVSlotGeometryTemplate = UVSlotSize & (
   | { shape: "rectangle"; }
   | {
       shape: "triangle";
       corner: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-    };
+    }
+);
 
 interface UVRegionCreateOptions {
   width: number;
@@ -45,7 +51,7 @@ interface UVRegionCreateOptions {
 }
 ```
 
-`width` and `height` are clamped to the canvas. The default `id` comes from `crypto.randomUUID()` and the default color comes from the built-in palette.
+`width` and `height` are clamped to the canvas. A slot template's own `width` or `height` replaces the region's for that slot, clamped the same way; a stacked region keeps the region size for its shared rect. The default `id` comes from `crypto.randomUUID()` and the default color comes from the built-in palette.
 
 A region with `activeSlots` or `slotGeometries` starts free. Other regions start stacked. Pass `state` to override that default; `"unfolded"` packs the net at creation and clamps it into the canvas.
 

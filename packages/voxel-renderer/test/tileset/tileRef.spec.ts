@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   rescaleTileRef,
   resolveTileRef,
+  tileFootprint,
   tileRectOf,
   tileRefFromRect
 } from "../../src/tileset/index.ts";
@@ -18,6 +19,18 @@ describe("tileRectOf", () => {
       width: 16,
       height: 16
     });
+  });
+
+  it("grows a spanned tile downward from its corner", () => {
+    assert.deepEqual(
+      tileRectOf({ col: 2, row: 1 }, 16, undefined, { u: 1, v: Math.SQRT2 }),
+      {
+        x: 32,
+        y: 16,
+        width: 16,
+        height: 23
+      }
+    );
   });
 
   it("anchors a custom size at the tile corner and applies bounds", () => {
@@ -47,6 +60,38 @@ describe("tileRefFromRect", () => {
       col: 3,
       row: 2
     });
+  });
+
+  it("inverts a spanned tileRectOf", () => {
+    const bounds = { u0: 0, v0: 0, u1: 1, v1: 0.5 };
+    const span = { u: 1, v: Math.SQRT2 };
+    const template = { tilesetId: "a", col: 0, row: 0 };
+    const rect = tileRectOf({ ...template, col: 3, row: 2 }, 16, bounds, span);
+
+    assert.deepEqual(tileRefFromRect(rect, template, 16, bounds, span), {
+      ...template,
+      col: 3,
+      row: 2
+    });
+  });
+});
+
+describe("tileFootprint", () => {
+  it("covers one tile without span", () => {
+    assert.deepEqual(tileFootprint(16), { width: 16, height: 16 });
+  });
+
+  it("rounds a slope footprint to whole texels", () => {
+    const span = { u: 1, v: Math.SQRT2 };
+
+    assert.deepEqual(tileFootprint(8, span), { width: 8, height: 11 });
+    assert.deepEqual(tileFootprint(16, span), { width: 16, height: 23 });
+    assert.deepEqual(tileFootprint(32, span), { width: 32, height: 45 });
+    assert.deepEqual(tileFootprint(64, span), { width: 64, height: 91 });
+  });
+
+  it("never shrinks below one texel", () => {
+    assert.deepEqual(tileFootprint(0.2), { width: 1, height: 1 });
   });
 });
 

@@ -54,6 +54,20 @@ describe("BlockTextures.forSlot", () => {
   });
 });
 
+describe("BlockTextures.spanFor", () => {
+  const textures = BlockTextures.of(makeBlock());
+  const span = { u: 1, v: Math.SQRT2 };
+
+  it("keeps the span of a slot with its own texture", () => {
+    assert.equal(textures.spanFor("top", span), span);
+    assert.equal(textures.spanFor("top.2", span), span);
+  });
+
+  it("falls back to one tile for a slot sharing the default texture", () => {
+    assert.deepEqual(textures.spanFor("back", span), { u: 1, v: 1 });
+  });
+});
+
 describe("BlockTextures.tilesetIds", () => {
   it("returns the distinct explicit tileset ids in order", () => {
     const textures = BlockTextures.of(makeBlock());

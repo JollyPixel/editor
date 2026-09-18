@@ -180,7 +180,7 @@ test("stacking keeps the edited face, and undo restores the free faces", async({
   });
 });
 
-test("Create ramp adds a region with triangular side faces", async({ panel }) => {
+test("Create ramp adds a region with triangular sides and a true-length slope", async({ panel }) => {
   await panel.getByRole("button", { name: "Create ramp", exact: true }).click();
 
   const ramp = await panel.evaluate((element: PixelDrawPanel) => {
@@ -191,14 +191,16 @@ test("Create ramp adds a region with triangular side faces", async({ panel }) =>
       state: region.state,
       activeFaces,
       left: faces?.left,
-      right: faces?.right
+      right: faces?.right,
+      top: faces?.top
     };
   });
   expect(ramp).toMatchObject({
     state: "stacked",
     activeFaces: ["back", "left", "right", "top", "bottom"],
     left: { shape: "triangle", corner: "bottom-right" },
-    right: { shape: "triangle", corner: "bottom-right" }
+    right: { shape: "triangle", corner: "bottom-right" },
+    top: { width: 16, height: 23 }
   });
 });
 

@@ -7,6 +7,8 @@ import {
 } from "../../utils/math.ts";
 import type { FaceDefinition } from "../face/index.ts";
 import type { BlockShape } from "./BlockShape.ts";
+import { UNIT_TILE_SPAN } from "../../tileset/tileRef.ts";
+import type { TileSpan } from "../../tileset/types.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;
@@ -27,6 +29,7 @@ export interface ShapeSlot {
   id: string;
   face: FACE;
   definitions: readonly FaceDefinition[];
+  span: Readonly<TileSpan>;
 }
 
 export function slotNameOf(
@@ -91,7 +94,12 @@ function deriveSlots(
     const used = new Set<string>(pinned.keys());
 
     for (const [id, definitions] of pinned) {
-      slots.push({ id, face, definitions });
+      slots.push({
+        id,
+        face,
+        definitions,
+        span: sharedSpanOf(definitions)
+      });
     }
     for (const group of derived) {
       const id = nextFreeSlotId(slotNameOf(face), used);
@@ -99,12 +107,27 @@ function deriveSlots(
       slots.push({
         id,
         face,
-        definitions: group.definitions
+        definitions: group.definitions,
+        span: sharedSpanOf(group.definitions)
       });
     }
   }
 
   return slots;
+}
+
+function sharedSpanOf(
+  definitions: readonly FaceDefinition[]
+): Readonly<TileSpan> {
+  const [first, ...rest] = definitions.map(
+    (definition) => definition.span ?? UNIT_TILE_SPAN
+  );
+  const shared = rest.every(
+    (span) => Math.abs(span.u - first.u) < kEpsilon &&
+      Math.abs(span.v - first.v) < kEpsilon
+  );
+
+  return shared ? first : UNIT_TILE_SPAN;
 }
 
 function nextFreeSlotId(

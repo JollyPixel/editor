@@ -182,7 +182,12 @@ export function buildBlockGeometry(
 
     const region = tilesetManager
       .get(tileRef.tilesetId)
-      ?.uvFor(tileRef.col, tileRef.row, tileRef.size);
+      ?.uvFor(
+        tileRef.col,
+        tileRef.row,
+        tileRef.size,
+        textures.spanFor(range.slot, range.span)
+      );
     if (!region) {
       continue;
     }

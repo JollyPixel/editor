@@ -15,11 +15,15 @@ interface ShapeSlot {
   id: string;
   face: Face;
   definitions: readonly FaceDefinition[];
+  span: Readonly<TileSpan>;
 }
 ```
 
 `shapeSlots()` is memoized per shape, so the returned array may be compared by
 identity.
+
+`span` is the [face span](./BlockShape.md#slanted-faces) shared by the slot's
+polygons, or `{ u: 1, v: 1 }` when they disagree.
 
 ## How a slot is derived
 

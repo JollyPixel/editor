@@ -10,8 +10,13 @@ import {
 import {
   Cube,
   Ramp,
+  RampCornerInner,
   Stair
 } from "../../../src/blocks/shape/library/index.ts";
+import type {
+  ResolvedTileRef,
+  TileSpan
+} from "../../../src/tileset/index.ts";
 
 describe("shapeTextureLayout", () => {
   it("recognizes a cube as six full-tile slots", () => {
@@ -31,6 +36,25 @@ describe("shapeTextureLayout", () => {
 
     assert.equal(layout.isBox, false);
     assert.equal(left?.parts[0].corner, "bottom-right");
+  });
+
+  it("spans a ramp slope over its true length", () => {
+    const layout = shapeTextureLayout(new Ramp());
+    const spans = Object.fromEntries(
+      layout.slots.map((entry) => [entry.slot, entry.span])
+    );
+
+    assert.equal(spans.top.u, 1);
+    assert.ok(Math.abs(spans.top.v - Math.SQRT2) < 1e-9);
+    assert.deepEqual(spans.front, { u: 1, v: 1 });
+    assert.deepEqual(spans.left, { u: 1, v: 1 });
+  });
+
+  it("keeps one tile for the sheared facet of an inner ramp corner", () => {
+    const layout = shapeTextureLayout(new RampCornerInner());
+    const top = layout.slots.find((entry) => entry.slot === "top");
+
+    assert.deepEqual(top?.span, { u: 1, v: 1 });
   });
 
   it("keeps every polygon contributing to a compound stair slot", () => {
@@ -62,4 +86,30 @@ describe("shapeTextureLayout", () => {
       { tilesetId: "atlas", col: 0, row: 0 }
     );
   });
+
+  it("spans a ramp slope only when it owns its texture", () => {
+    const shared = rampSlopeSpan({});
+    const owned = rampSlopeSpan({
+      top: { tilesetId: "atlas", col: 1, row: 0 }
+    });
+
+    assert.deepEqual(shared, { u: 1, v: 1 });
+    assert.ok(Math.abs((owned?.v ?? 0) - Math.SQRT2) < 1e-9);
+  });
 });
+
+function rampSlopeSpan(
+  faceTextures: Record<string, ResolvedTileRef>
+): Readonly<TileSpan> | undefined {
+  const slots = resolvedBlockTextureSlots({
+    id: 1,
+    name: "ramp",
+    shapeId: "ramp",
+    collidable: true,
+    properties: {},
+    defaultTexture: { tilesetId: "atlas", col: 0, row: 0 },
+    faceTextures
+  }, new Ramp());
+
+  return slots.find((entry) => entry.slot === "top")?.span;
+}

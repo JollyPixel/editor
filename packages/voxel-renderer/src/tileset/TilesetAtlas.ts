@@ -8,8 +8,13 @@ import type {
   TilesetDefinition,
   TilesetImage,
   TilesetTexture,
-  TilesetUVRegion
+  TilesetUVRegion,
+  TileSpan
 } from "./types.ts";
+import {
+  tileFootprint,
+  UNIT_TILE_SPAN
+} from "./tileRef.ts";
 
 /**
  * Fills in a missing tile grid, flooring partial tiles out of it.
@@ -45,18 +50,20 @@ export class TilesetAtlas {
   uvFor(
     col: number,
     row: number,
-    size: number = this.def.tileSize
+    size: number = this.def.tileSize,
+    span: Readonly<TileSpan> = UNIT_TILE_SPAN
   ): TilesetUVRegion {
     const { cols, rows, tileSize } = this.def;
     const width = cols * tileSize;
     const height = rows * tileSize;
-    const bottom = ((rows - row) * tileSize) - size;
+    const footprint = tileFootprint(size, span);
+    const bottom = ((rows - row) * tileSize) - footprint.height;
 
     return {
       offsetU: ((col * tileSize) + 0.5) / width,
       offsetV: (bottom + 0.5) / height,
-      scaleU: (size - 1) / width,
-      scaleV: (size - 1) / height
+      scaleU: (footprint.width - 1) / width,
+      scaleV: (footprint.height - 1) / height
     };
   }
 

@@ -9,7 +9,12 @@ class TilesetAtlas {
   readonly texture: TilesetTexture;
 
   constructor(definition: TilesetDefinition, texture: TilesetTexture);
-  uvFor(col: number, row: number, size?: number): TilesetUVRegion;
+  uvFor(
+    col: number,
+    row: number,
+    size?: number,
+    span?: Readonly<TileSpan>
+  ): TilesetUVRegion;
   updateImage(image: TilesetImage): void;
 }
 
@@ -32,6 +37,10 @@ partial tiles at the image edge out of the derived ones.
 `uvFor()` returns the texture rect of a `size` by `size` texel square (default
 `def.tileSize`) anchored at the top-left of tile `(col, row)`. `col` and `row`
 may be fractional. The rect is inset by half a texel on each side.
+
+`span` stretches the square to the [`tileFootprint()`](./tilesets.md) of
+`size`, growing right and down from the same corner. A ramp slope on 16-texel
+tiles samples 16 by 23 texels.
 
 Chunk materials clamp every face to its own rect in the shader, so an MSAA
 sample taken outside the triangle cannot read a neighbouring tile. See

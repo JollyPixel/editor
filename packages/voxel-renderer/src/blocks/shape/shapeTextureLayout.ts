@@ -4,7 +4,8 @@ import type { ResolvedBlockDefinition } from "../BlockDefinition.ts";
 import { BlockTextures } from "../BlockTextures.ts";
 import type {
   ResolvedTileRef,
-  TileBounds
+  TileBounds,
+  TileSpan
 } from "../../tileset/types.ts";
 import {
   buildShapeGeometry,
@@ -37,6 +38,7 @@ export interface ShapeTextureSlotLayout {
   slot: string;
   bounds: TileBounds;
   parts: readonly ShapeTexturePart[];
+  span: Readonly<TileSpan>;
   start: number;
   count: number;
 }
@@ -60,7 +62,13 @@ export function resolvedBlockTextureSlots(
   return shapeTextureLayout(shape).slots.flatMap((entry) => {
     const tile = textures.forSlot(entry.slot);
 
-    return tile ? [{ ...entry, tile }] : [];
+    return tile ? [
+      {
+        ...entry,
+        span: textures.spanFor(entry.slot, entry.span),
+        tile
+      }
+    ] : [];
   });
 }
 
@@ -85,6 +93,7 @@ export function shapeTextureLayout(
       slot: range.slot,
       bounds,
       parts,
+      span: range.span,
       start: range.start,
       count: range.count
     };

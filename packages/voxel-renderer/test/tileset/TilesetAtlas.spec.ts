@@ -90,6 +90,15 @@ describe("TilesetAtlas.uvFor", () => {
     assert.ok(approxEqual(uv.offsetU, 24.5 / 64));
     assert.ok(approxEqual(uv.offsetV, 40.5 / 64));
   });
+
+  it("extends a spanned region downward over whole texels", () => {
+    const uv = atlas.uvFor(0, 0, 16, { u: 1, v: Math.SQRT2 });
+
+    assert.ok(approxEqual(uv.offsetU, 0.5 / 64));
+    assert.ok(approxEqual(uv.offsetV, 41.5 / 64));
+    assert.ok(approxEqual(uv.scaleU, 15 / 64));
+    assert.ok(approxEqual(uv.scaleV, 22 / 64));
+  });
 });
 
 describe("TilesetAtlas.updateImage", () => {

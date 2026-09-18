@@ -50,9 +50,15 @@ export interface UVRegionCreateOptions {
   color?: string;
 }
 
-export type UVSlotGeometryTemplate =
+export interface UVSlotSize {
+  width?: number;
+  height?: number;
+}
+
+export type UVSlotGeometryTemplate = UVSlotSize & (
   | { shape: "rectangle"; }
-  | { shape: "triangle"; corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"; };
+  | { shape: "triangle"; corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"; }
+);
 
 // CONSTANTS
 const kCascadeStep = 16;
@@ -506,8 +512,15 @@ export class UVMap extends Emitter<
 
   #geometryFrom(
     template: UVSlotGeometryTemplate | undefined,
-    rect: SelectionRect
+    regionRect: SelectionRect
   ) {
+    const size = this.#getCanvasSize();
+    const rect = {
+      ...regionRect,
+      width: clamp(template?.width ?? regionRect.width, 1, Math.max(1, size.x)),
+      height: clamp(template?.height ?? regionRect.height, 1, Math.max(1, size.y))
+    };
+
     return template?.shape === "triangle" ?
       { shape: "triangle" as const, corner: template.corner, rect } :
       rect;

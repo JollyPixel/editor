@@ -117,6 +117,7 @@ export {
   type UVMapListener,
   type UVMapOptions,
   type UVSlotGeometryTemplate,
+  type UVSlotSize,
   type UVRegionCreateOptions
 } from "./uv/UVMap.ts";
 export {

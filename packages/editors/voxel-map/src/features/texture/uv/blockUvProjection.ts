@@ -29,6 +29,7 @@ const kRegionColor = "#4488ff";
 const kBoxShapeUv: BlockShapeUv = {
   activeFaces: [...DEFAULT_UV_SLOTS],
   bounds: recordOfFaces(() => WHOLE_TILE_BOUNDS),
+  spans: {},
   triangles: {},
   parts: {},
   faceRanges: {},
@@ -99,7 +100,10 @@ export function blockUvRegion(
     block,
     shape,
     tileSize,
-    shapeUv
+    {
+      ...shapeUv,
+      spans: {}
+    }
   ).stack();
 }
 
@@ -116,7 +120,12 @@ export function freeBlockUvRegion(
     resolvedBlockTextureSlots(block, shape);
   const faces = Object.fromEntries(
     textureSlots.map(({ slot, tile }): [UVSlot, UVGeometry] => {
-      const rect = tileRectOf(tile, tileSize, shapeUv.bounds[slot]);
+      const rect = tileRectOf(
+        tile,
+        tileSize,
+        shapeUv.bounds[slot],
+        shapeUv.spans[slot]
+      );
 
       return [slot, uvGeometryForSlot(rect, shapeUv, slot)];
     })
@@ -162,7 +171,8 @@ export function blockFromUvRegion(
               "shape" in geometry ? geometry.rect : geometry,
               template,
               tileSize,
-              shapeUv.bounds[face]
+              shapeUv.bounds[face],
+              shapeUv.spans[face]
             )
           ];
         })

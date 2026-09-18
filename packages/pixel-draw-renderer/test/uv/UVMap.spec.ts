@@ -71,6 +71,41 @@ describe("UVMap — create", () => {
       shape: "triangle", corner: "bottom-right", rect: { x: 0, y: 0, width: 8, height: 8 }
     });
   });
+  test("sizes a slot from its template while the stacked rect keeps the region size", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 16,
+      height: 16,
+      state: "stacked",
+      activeSlots: ["front", "top"],
+      slotGeometries: {
+        top: { shape: "rectangle", height: 23 }
+      }
+    });
+
+    assert.deepStrictEqual(region.bounds, { x: 0, y: 0, width: 16, height: 16 });
+    assert.deepStrictEqual(region.toJSON().faces?.top, {
+      x: 0, y: 0, width: 16, height: 23
+    });
+    assert.strictEqual(region.free().rectFor("top").height, 23);
+  });
+
+  test("clamps a slot template size to the canvas", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 8,
+      height: 8,
+      activeSlots: ["top"],
+      slotGeometries: {
+        top: { shape: "rectangle", width: 0, height: 10_000 }
+      }
+    });
+
+    assert.deepStrictEqual(region.rectFor("top"), {
+      x: 0, y: 0, width: 1, height: 32
+    });
+  });
+
   test("creates a region with the requested size at the origin, with a palette color", () => {
     const map = makeMap();
     const region = map.create({ width: 8, height: 8 });

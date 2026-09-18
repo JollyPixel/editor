@@ -3,6 +3,7 @@ import {
   shapeTextureLayout,
   type BlockShape,
   type TileBounds,
+  type TileSpan,
   type ShapeTexturePart
 } from "@jolly-pixel/voxel.renderer";
 import type {
@@ -19,6 +20,7 @@ export type UVSlotBounds = TileBounds;
 export interface BlockShapeUv {
   activeFaces: UVSlot[];
   bounds: Partial<Record<UVSlot, UVSlotBounds>>;
+  spans: Partial<Record<UVSlot, Readonly<TileSpan>>>;
   triangles: Partial<Record<UVSlot, UVTriangleCorner>>;
   parts: Partial<Record<UVSlot, UVCompoundPart[]>>;
   faceRanges: FaceRanges;
@@ -32,6 +34,7 @@ export function blockShapeUv(shape: BlockShape): BlockShapeUv {
   const layout = shapeTextureLayout(shape);
   const activeFaces: UVSlot[] = [];
   const bounds: Partial<Record<UVSlot, UVSlotBounds>> = {};
+  const spans: Partial<Record<UVSlot, Readonly<TileSpan>>> = {};
   const triangles: Partial<Record<UVSlot, UVTriangleCorner>> = {};
   const parts: Partial<Record<UVSlot, UVCompoundPart[]>> = {};
   const faceRanges: FaceRanges = {};
@@ -40,6 +43,7 @@ export function blockShapeUv(shape: BlockShape): BlockShapeUv {
     const slot = entry.slot;
     activeFaces.push(slot);
     bounds[slot] = entry.bounds;
+    spans[slot] = entry.span;
     faceRanges[slot] = [{ start: entry.start, count: entry.count }];
 
     if (entry.parts.length > 1) {
@@ -50,7 +54,15 @@ export function blockShapeUv(shape: BlockShape): BlockShapeUv {
     }
   }
 
-  return { activeFaces, bounds, triangles, parts, faceRanges, isBox: layout.isBox };
+  return {
+    activeFaces,
+    bounds,
+    spans,
+    triangles,
+    parts,
+    faceRanges,
+    isBox: layout.isBox
+  };
 }
 
 export function uvGeometryForSlot(

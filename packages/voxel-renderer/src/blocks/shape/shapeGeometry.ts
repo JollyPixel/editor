@@ -3,6 +3,7 @@ import type { FACE } from "../../utils/math.ts";
 import type { FaceDefinition } from "../face/index.ts";
 import type { BlockShape } from "./BlockShape.ts";
 import { shapeSlots } from "./shapeSlots.ts";
+import type { TileSpan } from "../../tileset/types.ts";
 import { VoxelTransform } from "../../world/VoxelTransform.ts";
 import {
   mirrorsWinding,
@@ -22,6 +23,7 @@ export interface ShapeFaceRange {
    * Polygons the slot emitted, in the order their vertices were written.
    */
   definitions: readonly FaceDefinition[];
+  span: Readonly<TileSpan>;
 }
 
 export interface ShapeGeometry {
@@ -87,7 +89,8 @@ export function buildShapeGeometry(
       face: slot.face,
       start,
       count: vertex - start,
-      definitions: slot.definitions
+      definitions: slot.definitions,
+      span: slot.span
     });
   }
 

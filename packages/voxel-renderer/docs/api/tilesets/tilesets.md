@@ -168,6 +168,12 @@ interface TileBounds {
 }
 
 const WHOLE_TILE_BOUNDS: Readonly<TileBounds>;
+const UNIT_TILE_SPAN: Readonly<TileSpan>;
+
+interface TileSpan {
+  u: number;
+  v: number;
+}
 
 interface TileRect {
   x: number;
@@ -176,16 +182,22 @@ interface TileRect {
   height: number;
 }
 
+function tileFootprint(
+  size: number,
+  span?: Readonly<TileSpan>
+): Pick<TileRect, "width" | "height">;
 function tileRectOf(
   ref: ResolvedTileRef,
   tileSize: number,
-  bounds?: TileBounds
+  bounds?: TileBounds,
+  span?: Readonly<TileSpan>
 ): TileRect;
 function tileRefFromRect(
   rect: Pick<TileRect, "x" | "y">,
   template: ResolvedTileRef,
   tileSize: number,
-  bounds?: TileBounds
+  bounds?: TileBounds,
+  span?: Readonly<TileSpan>
 ): ResolvedTileRef;
 ```
 
@@ -194,6 +206,13 @@ texture layouts use it for their slots. `tileRectOf()` returns the texel rectang
 image, that `bounds` (default `WHOLE_TILE_BOUNDS`) covers inside a reference.
 `tileRefFromRect()` is its inverse: it moves `template` so its `bounds` start
 at `rect`.
+
+`TileSpan` is a slot's size in tiles, above `1` on a slanted face such as a
+ramp slope (`{ u: 1, v: √2 }`). `tileFootprint()` rounds `size * span` to whole
+texels, never below one: a slope is 11, 23, 45 and 91 texels tall on 8, 16, 32
+and 64-texel tiles. `tileRectOf()` and `tileRefFromRect()` apply it with a
+default of `UNIT_TILE_SPAN`, so a spanned rect grows down from the tile's
+top-left corner.
 
 ## Loading textures
 

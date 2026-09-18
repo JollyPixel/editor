@@ -14,6 +14,7 @@ import {
   place
 } from "../helpers/meshFixture.ts";
 import { RAMP_ID as kRampId } from "../helpers/ids.ts";
+import type { BlockDefinition } from "../../src/blocks/index.ts";
 
 describe("VoxelMeshBuilder - isolated cube", () => {
   it("emits all 6 faces (24 vertices) when no neighbours exist", () => {
@@ -103,6 +104,24 @@ describe("VoxelMeshBuilder - geometry attribute layout", () => {
       assert.ok(Math.abs(u - nearestU) <= step, `u ${u} at vertex ${i}`);
       assert.ok(Math.abs(v - nearestV) <= step, `v ${v} at vertex ${i}`);
     }
+  });
+
+  it("samples a ramp slope over its true length only when it owns a tile", () => {
+    const step = 1 / 65535;
+    const atlas = makeMeshFixture().tilesetManager.atlas();
+
+    const shared = rampSlopeVs(makeBlockDef(10, "ramp"));
+    const square = atlas.uvFor(0, 0);
+    assert.ok(Math.abs(Math.min(...shared) - square.offsetV) <= step);
+
+    const owned = rampSlopeVs(makeBlockDef(10, "ramp", {
+      faceTextures: { top: { col: 1, row: 0 } }
+    }));
+    const tall = atlas.uvFor(1, 0, undefined, { u: 1, v: Math.SQRT2 });
+    assert.ok(Math.abs(Math.min(...owned) - tall.offsetV) <= step);
+    assert.ok(
+      Math.abs(Math.max(...owned) - (tall.offsetV + tall.scaleV)) <= step
+    );
   });
 
   it("pads a triangle into a quad whose second half is degenerate", () => {
@@ -250,3 +269,22 @@ describe("VoxelMeshBuilder - build statistics", () => {
     assert.equal(fixture.builder.stats.facesPerSolidVoxel, 0);
   });
 });
+
+function rampSlopeVs(
+  block: BlockDefinition
+): number[] {
+  const fixture = makeMeshFixture();
+  fixture.blockRegistry.register(block);
+  place(fixture, [0, 0, 0], block.id);
+  const geometry = firstGeometry(fixture);
+  const normals = geometry.getAttribute("normal");
+  const uvs = geometry.getAttribute("uv");
+  const values: number[] = [];
+  for (let i = 0; i < uvs.count; i++) {
+    if (normals.getY(i) > 0 && normals.getZ(i) < 0) {
+      values.push(uvs.getY(i));
+    }
+  }
+
+  return values;
+}
