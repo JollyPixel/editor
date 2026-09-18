@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/runtime",
   "description": "Jolly Pixel Runtime for web browsers and electron applications.",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

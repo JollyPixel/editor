@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/ui",
   "description": "Common and System's UI for JollyPixel's editors",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "exports": {
     ".": {

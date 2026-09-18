@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/three",
   "description": "Common Three.js utilities and components for JollyPixel's workspaces and editors",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "exports": {
     ".": {

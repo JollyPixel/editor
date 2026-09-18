@@ -1,5 +1,21 @@
 # @jolly-pixel/controls
 
+## 2.1.0
+
+### Minor Changes
+
+- [#654](https://github.com/JollyPixel/editor/pull/654) [`0f3d193`](https://github.com/JollyPixel/editor/commit/0f3d1934381596fb60430044f898d60679713945) Thanks [@fraxken](https://github.com/fraxken)! - Add `AliasedKeyInput` and predefined `InputCombination` presets (`Control`, `Shift`, `Alt`, `Meta`, `Mod`, `Enter`, `Move*`) that treat paired keys as one logical key.
+
+- [#650](https://github.com/JollyPixel/editor/pull/650) [`b18fbfa`](https://github.com/JollyPixel/editor/commit/b18fbfa2df86f72d4e035408867fdb1015fcdc30) Thanks [@fraxken](https://github.com/fraxken)! - Add `bind(input)` to input conditions and `bindInputCondition()`, returning a callable `BoundInputCondition` that keeps the `Input` in a closure.
+
+- [#651](https://github.com/JollyPixel/editor/pull/651) [`b443728`](https://github.com/JollyPixel/editor/commit/b443728ce75d4f1447d8234247d0578d58407e7d) Thanks [@fraxken](https://github.com/fraxken)! - Add `InputCombination.hold()` and `HoldInput` so sequence steps can be required to stay held.
+
+- [#656](https://github.com/JollyPixel/editor/pull/656) [`be5e8bf`](https://github.com/JollyPixel/editor/commit/be5e8bfa64d4a0b17dfac90ab37ec6e9208330d1) Thanks [@fraxken](https://github.com/fraxken)! - Add `Keyboard.addGuard()` and the `KeyboardGuard` port, so another input owner can block keydown and keypress events and release held keys when it engages.
+
+### Patch Changes
+
+- [#653](https://github.com/JollyPixel/editor/pull/653) [`ba79012`](https://github.com/JollyPixel/editor/commit/ba79012690fb47e9c035a028e9b876fb3f92769a) Thanks [@fraxken](https://github.com/fraxken)! - Accept lowercase letter shorthands and mouse `"ANY"`/`"NONE"` sentinels in types, validate the state segment in `isCombinedAction()`, and exclude sentinels from `InputActionQuery.value`.
+
 ## 2.0.0
 
 ### Major Changes

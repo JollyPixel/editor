@@ -1,5 +1,73 @@
 # @jolly-pixel/ui
 
+## 3.0.0
+
+### Major Changes
+
+- [#665](https://github.com/JollyPixel/editor/pull/665) [`25fd361`](https://github.com/JollyPixel/editor/commit/25fd361714e6bb55f8fa61f0404d85a055e245f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-pane-group`: dock layouts store panes as tab groups, a dragged pane joins a group when dropped on a header or tab strip, and `jolly-pane-visibility` reports shown panes.
+  An empty dock is now a placeholder from its first render and previews its size while a drag arms it.
+  `jolly-pane` gains an `icon`, shown in its header and its group tab.
+
+### Minor Changes
+
+- [#678](https://github.com/JollyPixel/editor/pull/678) [`60bef9d`](https://github.com/JollyPixel/editor/commit/60bef9d4d51f63a269e31f26d1817399708f8b6a) Thanks [@fraxken](https://github.com/fraxken)! - Add `closable` and `tooltip` to `jolly-tab`: a closable tab emits `jolly-tab-close` with `{ value }`, and `jolly-tabs` re-renders when tab properties change.
+  Add the `catalogMaxContentBytes` backend option to raise or lower the `catalog:create` size cap.
+
+- [#668](https://github.com/JollyPixel/editor/pull/668) [`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69) Thanks [@fraxken](https://github.com/fraxken)! - Add `layout="wide"` to `jolly-color-picker`: a height-filling row with vertical hue and alpha tracks and editable R/G/B, H/S/L, A and hex fields.
+  Add `hsvToHsl()` and `hslToHsv()` to `@jolly-pixel/color`, keeping hue on grays and saturation through black.
+
+- [#696](https://github.com/JollyPixel/editor/pull/696) [`2fbcaeb`](https://github.com/JollyPixel/editor/commit/2fbcaeb78ac80e4ce706ae66c2c6203513d439c4) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-dialog` gains `headingEditable`, which renders the heading as a
+  content-sized title input and emits `jolly-heading-change` on commit.
+  The header now carries a faint `--jolly-dialog-chrome-bg` tint, and both header
+  and footer take the density-scaled `--jolly-dialog-chrome-padding`.
+  Fields gain `--jolly-field-inset-start`, and a field's description no longer
+  inherits the text alignment that a reflected `align` attribute hints at.
+
+- [#682](https://github.com/JollyPixel/editor/pull/682) [`d8f9e21`](https://github.com/JollyPixel/editor/commit/d8f9e21ba3dfb92135c83f909e542b8cbe668fa7) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-dialog`, the `jolly-color` picker and control details now fade and scale in and out, tuned by `--jolly-duration-enter`, `--jolly-duration-exit`, `--jolly-easing-overlay` and `--jolly-overlay-scale`.
+  Dialog helpers stay in the DOM until the exit transition ends. Reduced motion disables the transitions.
+
+- [#683](https://github.com/JollyPixel/editor/pull/683) [`c9c7379`](https://github.com/JollyPixel/editor/commit/c9c7379f0e9e1255eb1fb8f88bc660fec32c249a) Thanks [@fraxken](https://github.com/fraxken)! - Add `floatWidth`/`floatHeight` to `jolly-pane` to size the window a pane opens when first dragged out of its dock; hidden tabs now fall back to their group size instead of 160x80.
+  Add `hidden`, `floatWidth` and `floatHeight` options to the `Pane` facade.
+
+- [#678](https://github.com/JollyPixel/editor/pull/678) [`60bef9d`](https://github.com/JollyPixel/editor/commit/60bef9d4d51f63a269e31f26d1817399708f8b6a) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-spinner`, an indeterminate busy indicator for work with no known
+  duration, sized from `--jolly-spinner-size` and exported from the `feedback`
+  entry alongside `jolly-progress`.
+
+- [#684](https://github.com/JollyPixel/editor/pull/684) [`3b06ff8`](https://github.com/JollyPixel/editor/commit/3b06ff841b592848f538af79b60b75456d7d5842) Thanks [@fraxken](https://github.com/fraxken)! - Add `double` to `jolly-dock`: a left or right dock can open a second column, which doubles its width and splits it equally between the two columns.
+  `DockState` gains `secondary`, `PanePlacement` gains `column`, and `movePane`/`stackPane` accept a `DockAddress` (`{ dock, column }`).
+
+- [#656](https://github.com/JollyPixel/editor/pull/656) [`be5e8bf`](https://github.com/JollyPixel/editor/commit/be5e8bfa64d4a0b17dfac90ab37ec6e9208330d1) Thanks [@fraxken](https://github.com/fraxken)! - Add `InputLayers` and the shared `inputLayers`: an open `jolly-dialog` or `PopoverController` popover claims keydown and keypress events.
+  Pass `inputLayers` to `Keyboard.addGuard()` so viewport controls ignore keys pressed inside dialogs and popovers.
+
+- [#646](https://github.com/JollyPixel/editor/pull/646) [`2371afa`](https://github.com/JollyPixel/editor/commit/2371afaaff5dd986b36c3ea20a101146ec12b795) Thanks [@fraxken](https://github.com/fraxken)! - `MetricDefinition.palette` colors any metric, and `jolly-dock-layout` now keeps one snapshot, with children reporting typed `LayoutChange` details.
+  Numeric inputs share one entry policy (slider readouts step with arrow keys, axis parse errors show on the field), and components share one default storage adapter.
+
+- [#682](https://github.com/JollyPixel/editor/pull/682) [`15f358a`](https://github.com/JollyPixel/editor/commit/15f358a223cd8fc57d10b9a800a5b5b2edcb0268) Thanks [@fraxken](https://github.com/fraxken)! - Add `showChoice()`, a dialog helper that resolves the picked action value or `null`; `showConfirm()` now builds on it.
+
+- [#644](https://github.com/JollyPixel/editor/pull/644) [`c1d08b8`](https://github.com/JollyPixel/editor/commit/c1d08b8ee5c6d196172c623b0906b10d1061ab40) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-tool-button`, a square rail button with an optional hover flyout, and a `vertical` orientation for `jolly-slider`.
+
+- [#686](https://github.com/JollyPixel/editor/pull/686) [`73b40f6`](https://github.com/JollyPixel/editor/commit/73b40f63553c35fbda9fcd6cc6ed472a63cabebb) Thanks [@fraxken](https://github.com/fraxken)! - Add `iconOnly` (`icon-only`) to `jolly-button-group` to show only segment icons, keeping labels as tooltips and accessible names.
+  Fix `jolly-tree` row layout: leaf rows highlight their full width, with inner padding set by `--jolly-tree-row-padding-inline`.
+
+- [#693](https://github.com/JollyPixel/editor/pull/693) [`6895753`](https://github.com/JollyPixel/editor/commit/6895753c6e09c43758357ee5997b981ce5c401ac) Thanks [@fraxken](https://github.com/fraxken)! - Rename `VoxelDebugger` to `VoxelInspector` (`engine.inspector`, `inspector` option); mesh counters move to `inspector.mesh.stats`.
+  Add block statistics: `inspector.blocks` (per layer, per block, unused, orphans, tileset usage) and `countBlocks()`/`countBlock()`/`voxelCount` on `VoxelWorld` and `VoxelLayer`.
+  Add `TreeNode.detail` to `jolly-tree` for a muted trailing row text.
+
+### Patch Changes
+
+- [#682](https://github.com/JollyPixel/editor/pull/682) [`bd77308`](https://github.com/JollyPixel/editor/commit/bd773087b83d357491bd56e0e3d60808f2ee5434) Thanks [@fraxken](https://github.com/fraxken)! - Dialog helpers now resolve on `jolly-close` instead of `jolly-cancel`, so on Escape they resolve after focus has returned to the opener.
+
+- [#655](https://github.com/JollyPixel/editor/pull/655) [`bb3e894`](https://github.com/JollyPixel/editor/commit/bb3e89489f37e83b2435b3d41fa208e2e53aa3ad) Thanks [@fraxken](https://github.com/fraxken)! - Keep overlay docks click-through when page CSS sets `pointer-events` on `jolly-dock`, and disable the resize strip of an empty overlay dock.
+  Panes, floating windows, controls and solid docks now declare `pointer-events: auto`, so they work inside a `pointer-events: none` layer.
+
+- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync`, add `PresenceChannel`, and slim `ConflictTracker` to `admit`/`admitEach`; presence set before `join()` now travels with the join.
+  Asset rooms stamp the sender's `clientId` server-side, and three's peer syncs drop `resyncIntervalMs` and their message type parameters.
+
+- [#677](https://github.com/JollyPixel/editor/pull/677) [`1e16c34`](https://github.com/JollyPixel/editor/commit/1e16c343d63da08745ad1fdeb12c3dd83364e573) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Fix `jolly-tree` selection and drag-and-drop: clicking empty space below the rows now deselects, dropping below the last row can land as its last child, and row hover/selection highlighting no longer bleeds into the toggle and grip buttons.
+- Updated dependencies [[`d61e341`](https://github.com/JollyPixel/editor/commit/d61e341ffbe1f555237cf0b586d628bf5c94c82f), [`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69), [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9), [`ae6293b`](https://github.com/JollyPixel/editor/commit/ae6293bf83ef24d0e91569994594a87221577ea2), [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788)]:
+  - @jolly-pixel/network@3.0.0
+  - @jolly-pixel/color@1.1.0
+
 ## 2.0.0
 
 ### Major Changes
