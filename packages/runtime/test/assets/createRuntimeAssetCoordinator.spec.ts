@@ -18,7 +18,7 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   createRuntimeAssetCoordinator
-} from "../src/assets/createRuntimeAssetCoordinator.ts";
+} from "../../src/assets/createRuntimeAssetCoordinator.ts";
 
 describe("createRuntimeAssetCoordinator", () => {
   test("registers the default engine asset loaders", () => {

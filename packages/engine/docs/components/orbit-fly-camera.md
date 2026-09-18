@@ -53,7 +53,6 @@ interface OrbitFlyCameraOptions {
   pivotNudgeStep?: number;
   showPivotMarker?: boolean;
   fov?: number;
-  viewHelper?: boolean;
 }
 ```
 
@@ -75,7 +74,6 @@ interface OrbitFlyCameraOptions {
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |
 | `showPivotMarker` | `true` | Draws a marker at the pivot in "lock" and "elastic" modes |
 | `fov` | `60` | Vertical field of view, in degrees |
-| `viewHelper` | `true` | Draws an axis gizmo in a canvas corner from `start()`; removed when the camera is destroyed |
 
 Movement is WASD (forward/right) + Space/Shift (up/down); look-around is
 middle-mouse-drag or Alt+left-drag. Ctrl is reserved for other

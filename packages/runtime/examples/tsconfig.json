@@ -4,7 +4,10 @@
     "rootDir": "..",
     "composite": false,
     "noEmit": true,
-    "rewriteRelativeImportExtensions": false
+    "rewriteRelativeImportExtensions": false,
+    "paths": {
+      "@jolly-pixel/runtime": ["../src/index.ts"]
+    }
   },
   "include": [
     ".",

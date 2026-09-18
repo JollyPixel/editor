@@ -4,7 +4,6 @@ import {
   AudioBackground,
   GlobalAudioManager,
   TextRenderer,
-  createViewHelper,
   AssetTypes,
   Systems
 } from "@jolly-pixel/engine";
@@ -46,8 +45,6 @@ class RenderersScene extends Systems.Scene {
         component.actor.transform
           .setLocalPosition({ x: 10, y: 10, z: 5 })
           .lookAt({ x: 0, y: 0, z: 0 });
-
-        createViewHelper(component.camera, this.world);
       });
 
     const textActor = this.world.createActor("text")
@@ -96,6 +93,7 @@ class RenderersScene extends Systems.Scene {
 const renderersScene = new RenderersScene();
 const runtime = await bootstrapRuntime({
   includePerformanceStats: true,
+  viewHelper: true,
   assets: {
     catalog: "./assets.json"
   },

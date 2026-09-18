@@ -8,6 +8,10 @@ export type {
   FocusHintPosition
 } from "./ui/focus/mountFocusHint.ts";
 export type {
+  ViewHelperOptions,
+  ViewHelperPosition
+} from "./ui/viewHelper/mountViewHelper.ts";
+export type {
   PerformanceStatsPosition
 } from "./stats/mountPerformanceStats.ts";
 export type {

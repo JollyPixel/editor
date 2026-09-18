@@ -16,7 +16,7 @@ import {
 import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { RuntimeSceneLoader } from "../src/assets/RuntimeSceneLoader.ts";
+import { RuntimeSceneLoader } from "../../src/assets/RuntimeSceneLoader.ts";
 
 const TextAssetType = new AssetType<string>("text");
 

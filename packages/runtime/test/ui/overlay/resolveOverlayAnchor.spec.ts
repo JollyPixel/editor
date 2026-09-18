@@ -5,7 +5,7 @@ import { describe, it } from "node:test";
 // Import Internal Dependencies
 import {
   resolveOverlayAnchor
-} from "../src/ui/overlay/resolveOverlayAnchor.ts";
+} from "../../../src/ui/overlay/resolveOverlayAnchor.ts";
 
 describe("resolveOverlayAnchor", () => {
   it("pins a top-left overlay to both start edges", () => {

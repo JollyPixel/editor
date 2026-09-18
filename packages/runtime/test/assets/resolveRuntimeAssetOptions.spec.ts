@@ -11,7 +11,7 @@ import {
 // Import Internal Dependencies
 import {
   resolveRuntimeAssetOptions
-} from "../src/assets/resolveRuntimeAssetOptions.ts";
+} from "../../src/assets/resolveRuntimeAssetOptions.ts";
 
 describe("resolveRuntimeAssetOptions", () => {
   test("keeps an existing catalog", async() => {

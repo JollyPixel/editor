@@ -194,6 +194,10 @@ renderer.on("draw", ({ source }) => {
 
 `clear()` clears the frame buffer without rendering.
 
+`renderComponents` lists the registered cameras in registration order.
+It is read-only; register and remove cameras with `addRenderComponent()` and
+`removeRenderComponent()`.
+
 ## Dispose
 
 `dispose()` releases the GPU context, its programs and its textures,

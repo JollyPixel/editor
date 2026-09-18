@@ -224,8 +224,6 @@ $ pnpm run lint
 
 - [disposeObject3D](./docs/utils/dispose-object-3d.md) — releases the GPU
   resources owned by an Object3D subtree.
-- [createViewHelper](./docs/utils/create-view-helper.md) — draws an axis
-  gizmo for a camera on every frame.
 
 ### 📦 Internals
 

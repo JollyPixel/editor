@@ -2,8 +2,7 @@
 import * as THREE from "three/webgpu";
 import {
   Actor,
-  CameraComponent,
-  createViewHelper
+  CameraComponent
 } from "@jolly-pixel/engine";
 
 // CONSTANTS
@@ -161,13 +160,6 @@ export class FreeFlyCamera extends CameraComponent {
     speed: number
   ) {
     this.#moveSpeed = this.#clampMoveSpeed(speed);
-  }
-
-  start() {
-    createViewHelper(
-      this.threeCamera,
-      this.actor.world
-    );
   }
 
   update(

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "composite": false,
     "noEmit": true,
+    "rewriteRelativeImportExtensions": false,
     "rootDir": "..",
     "types": ["node", "vite/client"],
     "paths": {

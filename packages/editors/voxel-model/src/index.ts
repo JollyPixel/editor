@@ -18,7 +18,8 @@ const session = await EditorSession.open();
 leftPanel.setTextureRoom(session.textureRoom);
 
 const runtime = await Runtime.create("#three-renderer canvas", {
-  focusCanvas: false
+  focusCanvas: false,
+  viewHelper: true
 });
 
 runtime.world.input.keyboard.addGuard(inputLayers);

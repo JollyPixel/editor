@@ -10,14 +10,14 @@ const kBrowserWindow = new Window();
 
 let LoadingClass: typeof import("@jolly-pixel/ui/feedback").Loading;
 let RuntimeLoadingScreenClass:
-  typeof import("../src/ui/RuntimeLoadingScreen.ts").RuntimeLoadingScreen;
+  typeof import("../../src/ui/RuntimeLoadingScreen.ts").RuntimeLoadingScreen;
 
 before(async() => {
   installBrowserGlobals();
 
   ({ Loading: LoadingClass } = await import("@jolly-pixel/ui/feedback"));
   ({ RuntimeLoadingScreen: RuntimeLoadingScreenClass } = await import(
-    "../src/ui/RuntimeLoadingScreen.ts"
+    "../../src/ui/RuntimeLoadingScreen.ts"
   ));
 });
 

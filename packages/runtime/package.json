@@ -8,7 +8,7 @@
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
-    "test-only": "node --test test/**/*.spec.ts",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "dev": "vite",
