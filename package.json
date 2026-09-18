@@ -1,5 +1,6 @@
 {
   "name": "@jolly-pixel/editor",
+  "private": true,
   "version": "1.0.0",
   "description": "N/A",
   "main": "index.js",
@@ -8,7 +9,7 @@
     "build": "pnpm -r --if-present run build",
     "test": "pnpm -r --if-present run test",
     "lint": "eslint packages && pnpm -r --if-present run lint:css",
-    "ci:publish": "pnpm publish -r --access public --no-git-checks",
+    "ci:publish": "changeset publish",
     "ci:version": "changeset version",
     "clear": "clear-ts-build",
     "docs:dev": "vitepress dev docs",
