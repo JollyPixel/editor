@@ -5,6 +5,7 @@ import type { BlockShape } from "./BlockShape.ts";
 import { shapeSlots } from "./shapeSlots.ts";
 import { VoxelTransform } from "../../world/VoxelTransform.ts";
 import {
+  mirrorsWinding,
   rotateNormal,
   rotateVertex
 } from "../../mesh/variants/rotation.ts";
@@ -49,6 +50,7 @@ export function buildShapeGeometry(
   const uvs: number[] = [];
   const indices: number[] = [];
   const ranges: ShapeFaceRange[] = [];
+  const mirrored = mirrorsWinding(transform);
   let vertex = 0;
 
   for (const slot of shapeSlots(shape)) {
@@ -63,7 +65,7 @@ export function buildShapeGeometry(
       const [nx, ny, nz] = rotateNormal(normal, transform);
 
       for (let corner = 0; corner < vertices.length; corner++) {
-        const source = transform.flipY ?
+        const source = mirrored ?
           vertices.length - 1 - corner :
           corner;
         const [x, y, z] = rotateVertex(vertices[source], transform);

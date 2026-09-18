@@ -16,16 +16,20 @@ import type {
   BlockVariantFace
 } from "./types.ts";
 import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
-import { FACES } from "../../utils/math.ts";
+import {
+  FACES,
+  FACE_OPPOSITE
+} from "../../utils/math.ts";
+import { splitBoundaryFace } from "../neighbourhood/splitBoundaryFace.ts";
 import {
   describeMerge,
   indexMergeFaces
 } from "./faceMerge.ts";
 import {
-  rotateFace,
+  transformFace,
   rotateVertex,
   rotateNormal,
-  flipYFace
+  mirrorsWinding
 } from "./rotation.ts";
 import {
   toSnorm8,
@@ -79,6 +83,10 @@ export class BlockVariantCache {
   #cutouts: boolean[] = [];
   #geometryKeys: ChunkGeometryKey[] = [];
   #frontFaces = new WeakMap<BlockVariantFace, BlockVariantFace>();
+  #faceCoverage = new WeakMap<
+    BlockVariantFace,
+    WeakMap<BlockVariant, boolean>
+  >();
   #mergeIds = new Map<string, number>();
   #mergeFaces: BlockVariantFace[] = [];
 
@@ -122,6 +130,7 @@ export class BlockVariantCache {
     this.#cutouts.length = 0;
     this.#geometryKeys.length = 0;
     this.#frontFaces = new WeakMap();
+    this.#faceCoverage = new WeakMap();
     this.#mergeIds.clear();
     this.#mergeFaces.length = 0;
     this.#occlusion.fill(kOcclusionUnknown);
@@ -287,6 +296,25 @@ export class BlockVariantCache {
     return front;
   }
 
+  isFaceCoveredBy(
+    face: BlockVariantFace,
+    neighbour: BlockVariant
+  ): boolean {
+    let coverage = this.#faceCoverage.get(face);
+    if (coverage === undefined) {
+      coverage = new WeakMap();
+      this.#faceCoverage.set(face, coverage);
+    }
+
+    let covered = coverage.get(neighbour);
+    if (covered === undefined) {
+      covered = computeFaceCoverage(face, neighbour);
+      coverage.set(neighbour, covered);
+    }
+
+    return covered;
+  }
+
   #slotFor(
     tilesetId: string,
     surface: BlockSurface
@@ -325,7 +353,6 @@ export class BlockVariantCache {
       alphaCutoff: blockDef.alphaCutoff ?? this.#alphaTest
     });
     const voxelTransform = VoxelTransform.fromPacked(transform);
-    const { rotation, flipY } = voxelTransform;
 
     const textures = BlockTextures.of(blockDef);
     const faces: BlockVariantFace[] = [];
@@ -351,7 +378,7 @@ export class BlockVariantCache {
       }
     }
 
-    const selfOcclusionMask = this.#occlusionMask(shape, rotation, flipY);
+    const selfOcclusionMask = this.#occlusionMask(shape, voxelTransform);
     const mergeFaces = indexMergeFaces(faces);
     for (const face of mergeFaces) {
       if (face !== undefined) {
@@ -386,13 +413,11 @@ export class BlockVariantCache {
       surface,
       voxelTransform
     } = options;
-    const { rotation, flipY } = voxelTransform;
 
-    let cull = -1;
-    if (faceDef.cull !== null) {
-      const worldFace = rotateFace(faceDef.cull, rotation);
-      cull = flipY ? flipYFace(worldFace) : worldFace;
-    }
+    const cull = faceDef.cull === null ?
+      -1 :
+      transformFace(faceDef.cull, voxelTransform);
+    const mirrored = mirrorsWinding(voxelTransform);
 
     const vertexCount = faceDef.vertices.length;
     const positions = new Float32Array(vertexCount * 3);
@@ -401,10 +426,11 @@ export class BlockVariantCache {
 
     for (let i = 0; i < vertexCount; i++) {
       /*
-       * flipY mirrors the face, so vertices are stored in reverse order to
-       * keep the winding (and therefore the front side) correct.
+       * An odd number of flips mirrors the face, so vertices are stored in
+       * reverse order to keep the winding (and therefore the front side)
+       * correct.
        */
-      const vi = flipY ? vertexCount - 1 - i : i;
+      const vi = mirrored ? vertexCount - 1 - i : i;
       const vertex = rotateVertex(
         faceDef.vertices[vi],
         voxelTransform
@@ -463,23 +489,43 @@ export class BlockVariantCache {
 
   #occlusionMask(
     shape: BlockShape,
-    rotation: number,
-    flipY: boolean
+    voxelTransform: VoxelTransform
   ): number {
-    const inverse = (4 - rotation) % 4;
-
     let mask = 0;
-    for (const worldFace of FACES) {
-      const rotated = rotateFace(worldFace, inverse);
-      const localFace = flipY ? flipYFace(rotated) : rotated;
-
+    for (const localFace of FACES) {
       if (shape.occludes(localFace)) {
-        mask |= 1 << worldFace;
+        mask |= 1 << transformFace(localFace, voxelTransform);
       }
     }
 
     return mask;
   }
+}
+
+function computeFaceCoverage(
+  face: BlockVariantFace,
+  neighbour: BlockVariant
+): boolean {
+  const opposite = FACE_OPPOSITE[face.cull];
+
+  let uncovered: BlockVariantFace[] = [face];
+  for (const boundary of neighbour.faces) {
+    if (boundary.cull !== opposite) {
+      continue;
+    }
+
+    uncovered = uncovered.flatMap((piece) => splitBoundaryFace({
+      face: piece,
+      neighbour: boundary,
+      frontSlot: piece.slot,
+      remove: true
+    }));
+    if (uncovered.length === 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function nextPowerOfTwo(

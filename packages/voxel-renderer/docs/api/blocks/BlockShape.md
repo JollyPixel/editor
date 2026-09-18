@@ -77,12 +77,12 @@ defineFace({
 ## Default culling
 
 An omitted `cull` is derived from the geometry: it becomes `face` when every
-vertex lies on that face's own boundary plane, and `null` otherwise. A
-neighbour hides a face only by covering the whole boundary square the face sits
-on, so a face inset into the block (a `slabBottom` top at `y = 0.5`, a `pole`
-side at `x = 0.375`) or spanning several planes (a `ramp` slope) is never
-culled. A partial face still on its boundary plane, such as a `slabBottom` side
-wall, remains cullable because a fully occluding neighbour covers it entirely.
+vertex lies on that face's own boundary plane, and `null` otherwise. A face
+inset into the block (a `slabBottom` top at `y = 0.5`, a `pole` side at
+`x = 0.375`) or spanning several planes (a `ramp` slope) is never culled. A
+boundary face is hidden by an opaque neighbour whose touching faces cover it
+entirely, whether that is the whole boundary square or matching partial faces,
+such as two `ramp` sides or two `stair` sides.
 
 `isBoundaryFace(placement)` reports whether a face qualifies and
 `defaultCullFace(placement)` returns the derived value; both read only `face`

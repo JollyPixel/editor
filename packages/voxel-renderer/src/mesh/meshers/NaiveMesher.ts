@@ -8,10 +8,7 @@ import {
   voxelBlockId,
   voxelTransform
 } from "../../world/packedVoxel.ts";
-import {
-  FACE_OFFSETS,
-  FACE_OPPOSITE
-} from "../../utils/math.ts";
+import { FACE_OFFSETS } from "../../utils/math.ts";
 
 /**
  * Emits every visible face of every voxel without merging.
@@ -79,8 +76,8 @@ export class NaiveMesher implements Mesher {
             wx + offset[0],
             wy + offset[1],
             wz + offset[2],
-            FACE_OPPOSITE[cull],
-            variant
+            variant,
+            face
           );
           if (hidden) {
             stats.culledFaces++;

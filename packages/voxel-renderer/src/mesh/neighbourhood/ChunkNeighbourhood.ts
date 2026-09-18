@@ -120,14 +120,14 @@ export class ChunkNeighbourhood {
     nx: number,
     ny: number,
     nz: number,
-    oppFace: number,
-    variant: BlockVariant
+    variant: BlockVariant,
+    face: BlockVariantFace
   ): boolean {
     if (!this.#selfOpaque) {
       const cache = this.#self;
 
       return cache !== null &&
-        this.#occludes(cache.packedAt(nx, ny, nz), oppFace, variant);
+        this.#occludes(cache.packedAt(nx, ny, nz), variant, face);
     }
 
     const layers = this.layers;
@@ -140,7 +140,7 @@ export class ChunkNeighbourhood {
 
       const neighbour = cache.packedAt(nx, ny, nz);
       if (neighbour !== VOXEL_ABSENT) {
-        if (this.#occludes(neighbour, oppFace, variant)) {
+        if (this.#occludes(neighbour, variant, face)) {
           return true;
         }
 
@@ -171,8 +171,8 @@ export class ChunkNeighbourhood {
 
   #occludes(
     neighbour: PackedVoxel,
-    oppFace: number,
-    variant: BlockVariant
+    variant: BlockVariant,
+    face: BlockVariantFace
   ): boolean {
     if (neighbour === VOXEL_ABSENT) {
       return false;
@@ -181,29 +181,29 @@ export class ChunkNeighbourhood {
     const neighbourBlockId = voxelBlockId(neighbour);
     const transform = voxelTransform(neighbour);
 
-    if (neighbourBlockId !== variant.blockId) {
-      if (variant.keepsCoveredFaces && variant.surface.side === "double") {
-        return false;
-      }
-
-      const occlusionMask = this.#variants.occlusionMaskOf(
-        neighbourBlockId,
-        transform
-      );
-
-      return (occlusionMask & (1 << oppFace)) !== 0;
-    }
-
-    if (variant.keepsCoveredFaces) {
+    const sameBlock = neighbourBlockId === variant.blockId;
+    if (
+      variant.keepsCoveredFaces &&
+      (sameBlock || variant.surface.side === "double")
+    ) {
       return false;
     }
 
-    const selfMask = this.#variants.selfOcclusionMaskOf(
-      neighbourBlockId,
-      transform
-    );
+    const mask = sameBlock ?
+      this.#variants.selfOcclusionMaskOf(neighbourBlockId, transform) :
+      this.#variants.occlusionMaskOf(neighbourBlockId, transform);
+    if ((mask & (1 << FACE_OPPOSITE[face.cull])) !== 0) {
+      return true;
+    }
+    if (face.full || face.splittable) {
+      return false;
+    }
 
-    return (selfMask & (1 << oppFace)) !== 0;
+    const neighbourVariant = this.#variants.get(neighbourBlockId, transform);
+
+    return neighbourVariant !== null &&
+      (sameBlock || neighbourVariant.surface.occludes) &&
+      this.#variants.isFaceCoveredBy(face, neighbourVariant);
   }
 
   boundaryFaces(

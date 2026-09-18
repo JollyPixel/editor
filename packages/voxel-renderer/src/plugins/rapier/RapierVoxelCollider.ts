@@ -13,7 +13,10 @@ import {
 } from "../../world/packedVoxel.ts";
 import { VoxelTransform } from "../../world/VoxelTransform.ts";
 import type { VoxelCoord } from "../../world/types.ts";
-import { rotateVertex } from "../../mesh/variants/rotation.ts";
+import {
+  mirrorsWinding,
+  rotateVertex
+} from "../../mesh/variants/rotation.ts";
 import type {
   RapierAPI,
   RapierRigidBody,
@@ -299,8 +302,7 @@ function appendShapeTriangles(
   origin: readonly [number, number, number]
 ): void {
   const { vertices, indices } = solids;
-  const mirrored = (Number(transform.flipX) + Number(transform.flipY) +
-    Number(transform.flipZ)) % 2 !== 0;
+  const mirrored = mirrorsWinding(transform);
 
   for (const face of shape.faces) {
     const base = vertices.length / 3;

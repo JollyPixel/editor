@@ -8,6 +8,10 @@ import { BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
 import { TilesetManager } from "../../../src/tileset/index.ts";
 import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
 import { VoxelTransform } from "../../../src/world/index.ts";
+import {
+  FACE_AXIS,
+  FACE_POSITIVE
+} from "../../../src/utils/math.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
 import {
   makeAtlasDef,
@@ -141,6 +145,46 @@ describe("BlockVariantCache - occlusionMaskOf", () => {
       assert.equal(cache.occlusionMaskOf(kLeavesId, transform), 0, `transform ${transform}`);
     }
   });
+});
+
+describe("BlockVariantCache - transforms", () => {
+  const { cache } = makeCache();
+
+  for (const blockId of [kRampId, kSlabId]) {
+    it(`keeps every face of block ${blockId} on its cull side, front out`, () => {
+      for (let transform = 0; transform < 32; transform++) {
+        const variant = cache.get(blockId, transform)!;
+        let fullFaces = 0;
+
+        for (const face of variant.faces) {
+          const { positions: p } = face;
+          const edgeA = [p[3] - p[0], p[4] - p[1], p[5] - p[2]];
+          const edgeB = [p[6] - p[0], p[7] - p[1], p[8] - p[2]];
+          const winding = [
+            (edgeA[1] * edgeB[2]) - (edgeA[2] * edgeB[1]),
+            (edgeA[2] * edgeB[0]) - (edgeA[0] * edgeB[2]),
+            (edgeA[0] * edgeB[1]) - (edgeA[1] * edgeB[0])
+          ];
+          const facing = (winding[0] * face.normalX) +
+            (winding[1] * face.normalY) + (winding[2] * face.normalZ);
+          assert.ok(facing > 0, `transform ${transform} winding`);
+
+          if (face.cull < 0) {
+            continue;
+          }
+          const plane = FACE_POSITIVE[face.cull] ? 1 : 0;
+          for (let i = 0; i < face.vertexCount; i++) {
+            assert.equal(p[(i * 3) + FACE_AXIS[face.cull]], plane, `transform ${transform} cull`);
+          }
+          if (face.full) {
+            fullFaces |= 1 << face.cull;
+          }
+        }
+
+        assert.equal(cache.occlusionMaskOf(blockId, transform), fullFaces, `transform ${transform}`);
+      }
+    });
+  }
 });
 
 describe("BlockVariantCache - keepsCoveredFaces", () => {

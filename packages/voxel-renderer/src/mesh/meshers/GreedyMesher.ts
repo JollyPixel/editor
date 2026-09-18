@@ -16,10 +16,7 @@ import {
   voxelBlockId,
   voxelTransform
 } from "../../world/packedVoxel.ts";
-import {
-  FACE_OFFSETS,
-  FACE_OPPOSITE
-} from "../../utils/math.ts";
+import { FACE_OFFSETS } from "../../utils/math.ts";
 
 // CONSTANTS
 const kDirections = 6;
@@ -325,8 +322,8 @@ export class GreedyMesher implements Mesher {
           wx + offset[0],
           wy + offset[1],
           wz + offset[2],
-          FACE_OPPOSITE[cull],
-          variant
+          variant,
+          face
         );
         if (hidden) {
           stats.culledFaces++;
@@ -445,7 +442,6 @@ export class GreedyMesher implements Mesher {
     const neighbourhood = this.#neighbourhood;
     const localVariants = this.#localVariants;
     const offset = FACE_OFFSETS[direction];
-    const opposite = FACE_OPPOSITE[direction];
     const axis = this.#axis;
     const uAxis = this.#uAxis;
     const vAxis = this.#vAxis;
@@ -480,21 +476,21 @@ export class GreedyMesher implements Mesher {
           const variant = localVariants[grid[gridRow + (v * strideV)] - 1];
           const cellY = ny + (v * vY);
           const cellZ = sliceZ + (v * vZ);
+          const face = variant.mergeFaces[direction]!;
 
           if (
             neighbourhood.isNeighbourFaceHidden(
               nx,
               cellY,
               cellZ,
-              opposite,
-              variant
+              variant,
+              face
             )
           ) {
             stats.culledFaces++;
             continue;
           }
 
-          const face = variant.mergeFaces[direction]!;
           if (face.splittable && !neighbourhood.isVacantAt(nx, cellY, cellZ)) {
             this.#emitFace(
               face,
