@@ -33,6 +33,7 @@ import {
 import { PerformanceMonitor } from "../features/performance/index.ts";
 import {
   BrushShortcuts,
+  HistoryShortcuts,
   LocalBrush,
   PeerBrushes
 } from "../features/painting/index.ts";
@@ -208,7 +209,10 @@ export class EditorScene extends Systems.Scene {
         blocks: [],
         material: "lambert",
         onCommand: this.#onVoxelCommand,
-        tilesets: this.#tilesets
+        tilesets: this.#tilesets,
+        history: {
+          enabled: true
+        }
       });
     const { engine } = vr;
     const { world: voxelWorld } = engine;
@@ -334,6 +338,12 @@ export class EditorScene extends Systems.Scene {
       selection: this.editorState.selection
     });
     this.#subscriptions.push(() => shortcuts.dispose());
+
+    const historyShortcuts = new HistoryShortcuts({
+      keyboard,
+      history: engine.history
+    });
+    this.#subscriptions.push(() => historyShortcuts.dispose());
 
     if (this.#voxelRoom) {
       const peerBrushes = world.createActor("peer-brushes")

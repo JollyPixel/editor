@@ -41,7 +41,8 @@ Object.assign(globalThis, {
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,
   PointerEvent: kEmulatedBrowserWindow.PointerEvent,
-  MouseEvent: kEmulatedBrowserWindow.MouseEvent
+  MouseEvent: kEmulatedBrowserWindow.MouseEvent,
+  KeyboardEvent: kEmulatedBrowserWindow.KeyboardEvent
 });
 
 Object.assign(kEmulatedBrowserWindow.HTMLCanvasElement.prototype, {

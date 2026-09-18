@@ -170,6 +170,7 @@ export class LocalBrush extends ActorComponent {
     for (const unsubscribe of this.#unsubscribers.splice(0)) {
       unsubscribe();
     }
+    this.#endStroke();
     this.#preview.destroy();
     super.destroy();
   }
@@ -338,6 +339,7 @@ export class LocalBrush extends ActorComponent {
     });
 
     this.#stroke = stroke;
+    this.engine.history.begin();
     const target = stroke.steer(
       center,
       this.#aimAtPlane(stroke)?.cursor ?? center
@@ -347,7 +349,12 @@ export class LocalBrush extends ActorComponent {
   }
 
   #endStroke(): void {
+    if (this.#stroke === null) {
+      return;
+    }
+
     this.#stroke = null;
+    this.engine.history.commit();
   }
 
   #apply(

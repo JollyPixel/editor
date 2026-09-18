@@ -22,6 +22,7 @@ export interface EditorShellOptions {
 
 export class EditorShell {
   #panels: EditorPanels | null = null;
+  #toolbar: HTMLElementTagNameMap["voxel-brush-toolbar"] | null;
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -50,6 +51,7 @@ export class EditorShell {
     }
 
     const toolbar = document.querySelector("voxel-brush-toolbar");
+    this.#toolbar = toolbar;
     if (toolbar) {
       toolbar.brush = state.brush;
       toolbar.selection = state.selection;
@@ -75,6 +77,9 @@ export class EditorShell {
     handles: EditorSceneHandles
   ): void {
     this.#panels?.adoptHandles(handles);
+    if (this.#toolbar) {
+      this.#toolbar.history = handles.engine.history;
+    }
   }
 
   dispose(): void {

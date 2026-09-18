@@ -17,7 +17,12 @@ import {
   VOXEL_ABSENT,
   type PackedVoxel
 } from "./packedVoxel.ts";
-import type { VoxelEntry, VoxelCoord } from "./types.ts";
+import type {
+  VoxelCellChange,
+  VoxelCoord,
+  VoxelEditRecorder,
+  VoxelEntry
+} from "./types.ts";
 import {
   assertPowerOfTwoChunkSize,
   FACE_OFFSETS,
@@ -45,6 +50,11 @@ export type VoxelWorldEvents = {
   command: (command: VoxelLayerCommand) => void;
 };
 
+interface PendingChanges {
+  layer: VoxelLayer | undefined;
+  cells: VoxelCellChange[];
+}
+
 export type IterableLayerChunk = {
   layer: VoxelLayer;
   chunk: VoxelChunk;
@@ -55,6 +65,8 @@ export type IterableLayerChunk = {
  */
 export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   readonly chunkSize: number;
+
+  recorder: VoxelEditRecorder | null = null;
 
   #layers: VoxelLayer[] = [];
   #layersToRemove: VoxelLayer[] = [];
@@ -718,11 +730,15 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     const { position, blockId } = options;
     const transform = new VoxelTransform(options);
+    const changes = this.#changes(layerName);
 
-    this.setVoxelAt(layerName, position, {
-      blockId,
-      transform: transform.packed
-    });
+    this.#writeVoxel(
+      layerName,
+      position,
+      packVoxel(blockId, transform.packed),
+      changes
+    );
+    this.#record(changes);
     this.#emit({
       action: "voxel-set",
       layerName,
@@ -741,7 +757,15 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     options: VoxelRemoveOptions
   ): void {
-    this.removeVoxelAt(layerName, options.position);
+    const changes = this.#changes(layerName);
+
+    this.#writeVoxel(
+      layerName,
+      options.position,
+      VOXEL_ABSENT,
+      changes
+    );
+    this.#record(changes);
     this.#emit({
       action: "voxel-removed",
       layerName,
@@ -753,12 +777,16 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     entries: VoxelSetOptions[]
   ): void {
+    const changes = this.#changes(layerName);
     for (const entry of entries) {
-      this.setVoxelAt(layerName, entry.position, {
-        blockId: entry.blockId,
-        transform: new VoxelTransform(entry).packed
-      });
+      this.#writeVoxel(
+        layerName,
+        entry.position,
+        packVoxel(entry.blockId, new VoxelTransform(entry).packed),
+        changes
+      );
     }
+    this.#record(changes);
     this.#emit({
       action: "voxels-set",
       layerName,
@@ -770,14 +798,65 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     entries: VoxelRemoveOptions[]
   ): void {
+    const changes = this.#changes(layerName);
     for (const { position } of entries) {
-      this.removeVoxelAt(layerName, position);
+      this.#writeVoxel(layerName, position, VOXEL_ABSENT, changes);
     }
+    this.#record(changes);
     this.#emit({
       action: "voxels-removed",
       layerName,
       metadata: { entries }
     });
+  }
+
+  #changes(
+    layerName: string
+  ): PendingChanges | null {
+    if (this.recorder === null || this.#muted) {
+      return null;
+    }
+
+    return {
+      layer: this.getLayer(layerName),
+      cells: []
+    };
+  }
+
+  #writeVoxel(
+    layerName: string,
+    position: Vector3Like,
+    packed: PackedVoxel,
+    changes: PendingChanges | null
+  ): void {
+    const before = changes?.layer?.getPackedVoxelAt(position) ?? VOXEL_ABSENT;
+    if (packed === VOXEL_ABSENT) {
+      this.removeVoxelAt(layerName, position);
+    }
+    else {
+      this.setPackedVoxelAt(layerName, position, packed);
+    }
+
+    if (changes !== null && before !== packed) {
+      changes.cells.push({
+        layerName,
+        position: {
+          x: position.x,
+          y: position.y,
+          z: position.z
+        },
+        before,
+        after: packed
+      });
+    }
+  }
+
+  #record(
+    changes: PendingChanges | null
+  ): void {
+    if (changes !== null && changes.cells.length > 0) {
+      this.recorder?.record(changes.cells);
+    }
   }
 
   setVoxelAt(

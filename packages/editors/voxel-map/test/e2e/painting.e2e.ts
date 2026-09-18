@@ -186,8 +186,8 @@ test("nothing is painted while no voxel layer is selected", async({ page }) => {
   await page.evaluate(() => {
     window.voxelMapEditor!.scene.editorState.selection.clear();
   });
-  const toolbar = page.getByRole("toolbar", { name: "Brush" });
-  await expect(toolbar).toHaveAttribute("aria-disabled", "true");
+  const brushTools = page.getByRole("group", { name: "Brush" });
+  await expect(brushTools).toHaveAttribute("aria-disabled", "true");
 
   await page.keyboard.press("BracketRight");
   await clickCell(page, { x: 0, y: 0, z: 0 });
@@ -195,4 +195,37 @@ test("nothing is painted while no voxel layer is selected", async({ page }) => {
 
   expect(await voxelCount(page)).toBe(0);
   expect((await brushState(page)).size).toBe(1);
+});
+
+test("undo and redo replay a whole stroke from the toolbar and the keyboard", async({ page }) => {
+  const toolbar = page.locator("voxel-brush-toolbar");
+  const undo = toolbar.getByRole("button", { name: /^Undo/ });
+  const redo = toolbar.getByRole("button", { name: /^Redo/ });
+  const row = [0, 1, 2, 3].map((x) => {
+    return { x, y: 0, z: 0 };
+  });
+
+  await expect(undo).toBeDisabled();
+  await expect(redo).toBeDisabled();
+
+  await setBrush(page, { blockId: 2 });
+  await strokeCells(page, [row[0], row[3]]);
+  await expect.poll(() => voxelCount(page)).toBe(4);
+  await expect(undo).toBeEnabled();
+
+  await test.step("the toolbar undoes the stroke in one step", async() => {
+    await undo.click();
+    await expect.poll(() => voxelCount(page)).toBe(0);
+    await expect(undo).toBeDisabled();
+    await expect(redo).toBeEnabled();
+  });
+
+  await test.step("the shortcuts redo and undo it again", async() => {
+    await page.keyboard.press("Control+KeyY");
+    await expect.poll(() => blocksAt(page, row)).toEqual([2, 2, 2, 2]);
+    await page.keyboard.press("Control+KeyZ");
+    await expect.poll(() => voxelCount(page)).toBe(0);
+    await page.keyboard.press("Control+Shift+KeyZ");
+    await expect.poll(() => voxelCount(page)).toBe(4);
+  });
 });

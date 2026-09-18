@@ -83,6 +83,25 @@ Other sizes throw a `RangeError`.
 
 ```ts
 readonly chunkSize: number;
+recorder: VoxelEditRecorder | null;
+```
+
+`recorder` receives the cells changed by each non-silent `setVoxel`,
+`removeVoxel`, `setVoxelBulk` and `removeVoxelBulk` call, read before the
+write. [`VoxelHistory`](../core/VoxelHistory.md) installs itself there when
+enabled.
+
+```ts
+interface VoxelEditRecorder {
+  record(changes: VoxelCellChange[]): void;
+}
+
+interface VoxelCellChange {
+  layerName: string;
+  position: VoxelCoord;
+  before: PackedVoxel; // VOXEL_ABSENT when the cell was empty
+  after: PackedVoxel; // VOXEL_ABSENT when the cell was cleared
+}
 ```
 
 `VoxelWorld` extends `Emitter<VoxelWorldEvents>` from `@openally/emitt`:
