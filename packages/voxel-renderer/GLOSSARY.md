@@ -104,7 +104,7 @@ definition can choose a default tile and override it for individual faces.
 ### Atlas
 
 The loaded texture prepared from a tileset for rendering. The atlas keeps the
-same tile grid even when padding is added around tiles.
+same tile grid as its tileset.
 
 ## Meshing and visibility
 

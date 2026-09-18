@@ -31,6 +31,7 @@ export class VoxelTransparencyRenderer {
   #quad: THREE.QuadMesh;
   #material: THREE.NodeMaterial;
   #size = new THREE.Vector2();
+  #outputKey = "";
   #accumulationOutput;
   #coverageOutput;
 
@@ -185,6 +186,12 @@ export class VoxelTransparencyRenderer {
       renderer.transparent = true;
       renderer.toneMapping = state.toneMapping;
       renderer.outputColorSpace = state.outputColorSpace;
+      const outputKey =
+        `${renderer.currentToneMapping}:${renderer.currentColorSpace}`;
+      if (outputKey !== this.#outputKey) {
+        this.#outputKey = outputKey;
+        this.#material.needsUpdate = true;
+      }
       this.#quad.render(renderer);
     }
     finally {

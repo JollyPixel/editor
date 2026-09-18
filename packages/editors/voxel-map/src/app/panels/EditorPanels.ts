@@ -8,6 +8,7 @@ import type {
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
 import type { GridRenderer } from "../../scene/GridRenderer.ts";
+import type { SceneLighting } from "../../scene/SceneLighting.ts";
 import type { LocalBrush } from "../../features/painting/index.ts";
 import type {
   TextureEditor,
@@ -39,6 +40,7 @@ export interface EditorPanelsOptions {
 export interface EditorPanelsHandles {
   engine: VoxelEngine;
   gridRenderer: GridRenderer;
+  lighting: SceneLighting;
   localBrush: LocalBrush;
   tilesetActions: TilesetActions | null;
 }
@@ -126,6 +128,7 @@ export class EditorPanels {
   ): void {
     this.#general.engine = handles.engine;
     this.#general.gridRenderer = handles.gridRenderer;
+    this.#general.lighting = handles.lighting;
     this.#general.localBrush = handles.localBrush;
     this.#blocks.engine = handles.engine;
     this.#blocks.tilesetActions = handles.tilesetActions;

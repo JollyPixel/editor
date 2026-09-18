@@ -16,6 +16,7 @@ import {
   type EditorState
 } from "../state/index.ts";
 import type { GridRenderer } from "../../scene/GridRenderer.ts";
+import type { SceneLighting } from "../../scene/SceneLighting.ts";
 import type { LocalBrush } from "../../features/painting/index.ts";
 
 import "../../features/registerElements.ts";
@@ -33,6 +34,9 @@ export class GeneralPanel extends LitElement {
 
   @property({ attribute: false })
   declare gridRenderer: GridRenderer | undefined;
+
+  @property({ attribute: false })
+  declare lighting: SceneLighting | undefined;
 
   @property({ attribute: false })
   declare localBrush: LocalBrush | undefined;
@@ -55,6 +59,7 @@ export class GeneralPanel extends LitElement {
     super();
     this.engine = undefined;
     this.gridRenderer = undefined;
+    this.lighting = undefined;
     this.localBrush = undefined;
     this.onLoadWorld = undefined;
     this.onTeleportToPeer = undefined;
@@ -99,6 +104,7 @@ export class GeneralPanel extends LitElement {
         <map-config-panel
           .engine=${this.engine}
           .gridRenderer=${this.gridRenderer}
+          .lighting=${this.lighting}
           .localBrush=${this.localBrush}
           .onLoadWorld=${this.onLoadWorld}
         ></map-config-panel>

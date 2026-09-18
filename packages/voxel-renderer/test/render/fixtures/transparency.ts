@@ -25,6 +25,13 @@ export interface ProbeOptions {
   occluder?: boolean;
   resize?: boolean;
   failDraw?: boolean;
+  gray?: number;
+  lights?: ProbeLights;
+}
+
+export interface ProbeLights {
+  ambient: number;
+  directional: number;
 }
 
 export async function probe(options: ProbeOptions): Promise<number[]> {
@@ -47,12 +54,17 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   canvas.width = 1;
   canvas.height = 1;
   const context = canvas.getContext("2d")!;
-  context.fillStyle = `rgba(255, 255, 255, ${options.alpha})`;
+  const gray = options.gray ?? 255;
+  context.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${options.alpha})`;
   context.fillRect(0, 0, 1, 1);
   const engine = new VoxelEngine({
     chunkSize: 4,
     greedy: options.greedy,
     materialCustomizer(material, tilesetId) {
+      if (options.lights) {
+        return;
+      }
+
       // A constant unlit white isolates compositing from Lambert lighting.
       const color = tilesetId === "atlas" ? 0xff0000 : 0x0000ff;
       material.emissive.set(options.colored ? color : 0xffffff);
@@ -118,6 +130,17 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(options.background ?? 0);
   scene.add(engine.root);
+  if (options.lights) {
+    const directional = new THREE.DirectionalLight(
+      0xffffff,
+      options.lights.directional
+    );
+    directional.position.set(10, 20, 10);
+    scene.add(
+      new THREE.AmbientLight(0xffffff, options.lights.ambient),
+      directional
+    );
+  }
   if (options.reverseDrawOrder) {
     engine.root.children.reverse();
   }
