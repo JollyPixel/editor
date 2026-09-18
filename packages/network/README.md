@@ -63,8 +63,6 @@ room.send({ hello: "world" });
 - [PresenceChannel](./docs/PresenceChannel.md): typed per-peer presence
 - [Conflicts](./docs/sync/Conflicts.md): server-side conflict resolution
 
-[ARCHITECTURE.md](./ARCHITECTURE.md) covers the wire format and connection lifecycle.
-
 ## ✨ Contributors guide
 
 Read the [contributing guide][contributing] before submitting a change.
