@@ -11,6 +11,10 @@ import {
   state
 } from "lit/decorators.js";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
+import type {
+  VoxelHistory,
+  VoxelHistoryState
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
@@ -48,6 +52,9 @@ export class BrushToolbar extends LitElement {
   @property({ attribute: false })
   declare selection: SelectionStore;
 
+  @property({ attribute: false })
+  declare history: VoxelHistory | null;
+
   @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
 
@@ -63,13 +70,27 @@ export class BrushToolbar extends LitElement {
   @state()
   declare _size: number;
 
+  @state()
+  declare _canUndo: boolean;
+
+  @state()
+  declare _canRedo: boolean;
+
   #subscriptions: Array<() => void> = [];
+
+  #onHistoryChange = (
+    state: VoxelHistoryState
+  ): void => {
+    this._canUndo = state.canUndo;
+    this._canRedo = state.canRedo;
+  };
 
   constructor() {
     super();
 
     this.brush = editorState.brush;
     this.selection = editorState.selection;
+    this.history = null;
     this.disabled = true;
     this.#read();
   }
@@ -89,7 +110,11 @@ export class BrushToolbar extends LitElement {
   ): void {
     if (
       this.isConnected &&
-      (changed.has("brush") || changed.has("selection"))
+      (
+        changed.has("brush") ||
+        changed.has("selection") ||
+        changed.has("history")
+      )
     ) {
       this.#subscribe();
     }
@@ -100,57 +125,77 @@ export class BrushToolbar extends LitElement {
       <jolly-rail
         orientation="horizontal"
         role="toolbar"
-        aria-label="Brush"
-        aria-disabled=${String(this.disabled)}
+        aria-label="Map editing"
       >
-        ${this.#renderChoice(
-          "mode",
-          BRUSH_MODE_OPTIONS,
-          this._mode,
-          "R",
-          (value) => {
-            this.brush.mode = value;
-          }
-        )}
-        <span class="divider" aria-hidden="true"></span>
-        ${this.#renderChoice(
-          "axis",
-          BRUSH_AXIS_OPTIONS,
-          this._axis,
-          "X",
-          (value) => {
-            this.brush.axis = value;
-          }
-        )}
-        <span class="divider" aria-hidden="true"></span>
-        <jolly-tool-button
-          data-tool="size"
-          flyout-side="above"
-          label=${toolLabel(`Size ${this._size}`, "[ / ]", this.disabled)}
-          ?disabled=${this.disabled}
+        <div class="group" role="group" aria-label="History">
+          <jolly-tool-button
+            data-tool="undo"
+            icon="history-undo"
+            label="Undo (Ctrl+Z)"
+            ?disabled=${!this._canUndo}
+            @click=${this.#onUndo}
+          ></jolly-tool-button>
+          <jolly-tool-button
+            data-tool="redo"
+            icon="history-redo"
+            label="Redo (Ctrl+Y)"
+            ?disabled=${!this._canRedo}
+            @click=${this.#onRedo}
+          ></jolly-tool-button>
+        </div>
+        <span class="separator" aria-hidden="true"></span>
+        <div
+          class="group brush"
+          role="group"
+          aria-label="Brush"
+          aria-disabled=${String(this.disabled)}
         >
-          <span class="size">${this._size}</span>
-          <jolly-slider
-            slot="flyout"
-            orientation="vertical"
-            min=${kMinSize}
-            max=${kMaxSize}
-            step="1"
-            .value=${this._size}
-            @jolly-input=${this.#onSizeInput}
-            @jolly-change=${this.#onSizeInput}
-          ></jolly-slider>
-        </jolly-tool-button>
-        <span class="divider" aria-hidden="true"></span>
-        ${this.#renderChoice(
-          "pattern",
-          BRUSH_PATTERN_OPTIONS,
-          this._pattern,
-          "C",
-          (value) => {
-            this.brush.pattern = value;
-          }
-        )}
+          ${this.#renderChoice(
+            "mode",
+            BRUSH_MODE_OPTIONS,
+            this._mode,
+            "R",
+            (value) => {
+              this.brush.mode = value;
+            }
+          )}
+          ${this.#renderChoice(
+            "axis",
+            BRUSH_AXIS_OPTIONS,
+            this._axis,
+            "X",
+            (value) => {
+              this.brush.axis = value;
+            }
+          )}
+          <jolly-tool-button
+            data-tool="size"
+            flyout-side="above"
+            label=${toolLabel(`Size ${this._size}`, "[ / ]", this.disabled)}
+            ?disabled=${this.disabled}
+          >
+            <span class="size">${this._size}</span>
+            <jolly-slider
+              slot="flyout"
+              orientation="vertical"
+              min=${kMinSize}
+              max=${kMaxSize}
+              step="1"
+              .value=${this._size}
+              @jolly-input=${this.#onSizeInput}
+              @jolly-change=${this.#onSizeInput}
+            ></jolly-slider>
+          </jolly-tool-button>
+          ${this.#renderChoice(
+            "pattern",
+            BRUSH_PATTERN_OPTIONS,
+            this._pattern,
+            "C",
+            (value) => {
+              this.brush.pattern = value;
+            }
+          )}
+        </div>
       </jolly-rail>
     `;
   }
@@ -187,6 +232,14 @@ export class BrushToolbar extends LitElement {
     `;
   }
 
+  #onUndo(): void {
+    this.history?.undo();
+  }
+
+  #onRedo(): void {
+    this.history?.redo();
+  }
+
   #onSizeInput(
     event: CustomEvent<JollyChangeDetail<number>>
   ): void {
@@ -199,6 +252,8 @@ export class BrushToolbar extends LitElement {
     this._axis = this.brush.axis;
     this._pattern = this.brush.pattern;
     this._size = this.brush.size;
+    this._canUndo = this.history?.canUndo ?? false;
+    this._canRedo = this.history?.canRedo ?? false;
     this.disabled = this.selection.voxelLayer === null;
   }
 
@@ -206,7 +261,7 @@ export class BrushToolbar extends LitElement {
     this.#unsubscribe();
     this.#read();
 
-    const { brush, selection } = this;
+    const { brush, selection, history } = this;
     this.#subscriptions = [
       brush.watch("modeChange", (mode) => {
         this._mode = mode;
@@ -224,6 +279,13 @@ export class BrushToolbar extends LitElement {
         this.disabled = selection.voxelLayer === null;
       })
     ];
+
+    if (history !== null) {
+      history.on("change", this.#onHistoryChange);
+      this.#subscriptions.push(
+        () => history.off("change", this.#onHistoryChange)
+      );
+    }
   }
 
   #unsubscribe(): void {

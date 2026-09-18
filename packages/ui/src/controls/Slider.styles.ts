@@ -177,11 +177,13 @@ export const sliderStyles = css`
     min-height: auto;
   }
 
-  :host([orientation="vertical"]) .row {
+  :host([orientation="vertical"]) .row,
+  :host([orientation="vertical"][unlabeled]:not([locked])) .row {
     padding: var(--jolly-space-1, 4px) 0;
   }
 
-  :host([orientation="vertical"][unlabeled]:not([locked])) .leading {
+  :host([orientation="vertical"][unlabeled]:not([locked])) .leading,
+  :host([orientation="vertical"]) .trailing:not(:has(.revert, .peers)) {
     display: none;
   }
 

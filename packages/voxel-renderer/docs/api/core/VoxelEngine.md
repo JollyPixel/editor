@@ -99,6 +99,10 @@ interface VoxelEngineOptions {
    */
   viewDistancePolicy?: "hide" | "unload";
   /**
+   * Undo/redo of voxel edits; see VoxelHistory. Disabled by default.
+   */
+  history?: VoxelHistoryOptions;
+  /**
    * Enables collision when provided, disabled by default so no physics backend
    * is required. Called once during construction with the registries.
    * See plugins/rapier for the bundled Rapier3D implementation.
@@ -202,6 +206,7 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
   readonly inspector: VoxelInspector;
+  readonly history: VoxelHistory; // see VoxelHistory.md
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
   focus: THREE.Vector3Like | null;

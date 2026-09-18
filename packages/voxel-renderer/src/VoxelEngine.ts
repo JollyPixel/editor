@@ -30,6 +30,7 @@ import { VoxelWorld } from "./world/VoxelWorld.ts";
 import type { VoxelLayer } from "./world/VoxelLayer.ts";
 import type { VoxelChunk } from "./world/VoxelChunk.ts";
 import { ViewDistance } from "./world/ViewDistance.ts";
+import { VoxelHistory } from "./history/VoxelHistory.ts";
 import {
   isVoxelTilesetCommand,
   type VoxelBlockCommand,
@@ -67,6 +68,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly tilesetManager: TilesetManager;
 
   readonly inspector: VoxelInspector;
+  readonly history: VoxelHistory;
 
   focus: THREE.Vector3Like | null = null;
   viewDistance: ViewDistance;
@@ -100,7 +102,8 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       greedy = false,
       rebuildBudgetMs = 8,
       viewDistance,
-      viewDistancePolicy = "hide"
+      viewDistancePolicy = "hide",
+      history
     } = options;
     super();
 
@@ -125,6 +128,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       (command) => this.#emitCommand(command, "local")
     );
     layers.forEach((name) => this.world.addLayer(name));
+    this.history = new VoxelHistory(this.world, history);
 
     this.blockRegistry = new BlockRegistry(blocks);
     this.inspector = new VoxelInspector(
@@ -437,6 +441,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       this.world.mergeAllLayers();
     }
 
+    this.history.clear();
     this.#rebuildAllChunks("load");
   }
 
@@ -455,6 +460,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.#queue.clear();
     this.#clearChunkMeshes();
     this.inspector.dispose();
+    this.history.dispose();
     this.#collider?.dispose();
     this.#materials.dispose();
     this.tilesetManager.dispose();

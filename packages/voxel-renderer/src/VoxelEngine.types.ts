@@ -9,6 +9,7 @@ import type { VoxelColliderFactory } from "./collision/VoxelCollider.ts";
 import type { VoxelInspectorOptions } from "./inspector/index.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type { ViewDistanceOptions } from "./world/ViewDistance.ts";
+import type { VoxelHistoryOptions } from "./history/VoxelHistory.ts";
 import type {
   VoxelCommandListener,
   VoxelCommandOrigin
@@ -133,4 +134,9 @@ export interface VoxelEngineOptions {
    * @default "hide"
    */
   viewDistancePolicy?: ViewDistancePolicy;
+
+  /**
+   * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.
+   */
+  history?: VoxelHistoryOptions;
 }
