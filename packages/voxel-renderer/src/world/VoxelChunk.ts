@@ -15,6 +15,11 @@ export const DEFAULT_CHUNK_SIZE = 16;
 
 export type VoxelLinearCoords = [number, number, number];
 
+export type VoxelChunkDirtyListener = (
+  chunk: VoxelChunk,
+  dirty: boolean
+) => void;
+
 /**
  * Fixed-size sparse grid storing voxels as packed integers.
  */
@@ -31,7 +36,8 @@ export class VoxelChunk {
    */
   readonly store = new VoxelStore();
 
-  dirty = true;
+  #dirty = true;
+  #dirtyListeners = new Set<VoxelChunkDirtyListener>();
 
   /**
    * Conservative bounds that widen on writes but do not shrink on deletion.
@@ -63,6 +69,36 @@ export class VoxelChunk {
     this.#minX = size;
     this.#minY = size;
     this.#minZ = size;
+  }
+
+  get dirty(): boolean {
+    return this.#dirty;
+  }
+
+  set dirty(
+    value: boolean
+  ) {
+    if (value === this.#dirty) {
+      return;
+    }
+
+    this.#dirty = value;
+    for (const listener of this.#dirtyListeners) {
+      listener(this, value);
+    }
+  }
+
+  onDirtyChange(
+    listener: VoxelChunkDirtyListener
+  ): () => void {
+    this.#dirtyListeners.add(listener);
+    if (this.#dirty) {
+      listener(this, true);
+    }
+
+    return () => {
+      this.#dirtyListeners.delete(listener);
+    };
   }
 
   /**
@@ -160,9 +196,6 @@ export class VoxelChunk {
     }
   }
 
-  /**
-   * Rejects positions outside conservative bounds without a store lookup.
-   */
   mayContain(
     lx: number,
     ly: number,

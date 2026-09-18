@@ -3,364 +3,240 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import type { BlockDefinition } from "../../src/blocks/index.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 import {
   buildGeometries,
   countChunkVertices,
   countLayerVertices,
-  makeMeshFixture as makeFixture,
-  CUBE_ID as kCubeId
+  makeMeshFixture,
+  place,
+  type MeshFixture
 } from "../helpers/meshFixture.ts";
+import {
+  CUBE_ID as kCubeId,
+  LEAVES_ID as kLeavesId
+} from "../helpers/ids.ts";
 
 // CONSTANTS
-const kLeavesId = 4;
 const kGrateId = 5;
+const kBlend = { alphaMode: "blend" } as const;
 
-describe("VoxelMeshBuilder — opacity affects occlusion", () => {
-  it("a neighbour in a translucent layer (opacity < 1) does not occlude", () => {
-    const fixture = makeFixture();
-    const glass = fixture.world.addLayer("glass", { opacity: 0.5 });
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    glass.setVoxelAt({ x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+interface PairCase {
+  name: string;
+  leaves: Partial<BlockDefinition>;
+  row: number[];
+  greedy?: boolean;
+  vertices: number;
+  culledFaces: number;
+}
 
-    // All 6 faces of the "test" cube are emitted — the glass neighbour never occludes.
+const kPairCases: PairCase[] = [
+  {
+    name: "a blended block keeps the solid face seen through it",
+    leaves: { ...kBlend, cullCoveredFaces: true },
+    row: [kCubeId, kLeavesId],
+    vertices: 44,
+    culledFaces: 1
+  },
+  {
+    name: "an opaque block culls the face it covers",
+    leaves: { alphaMode: "opaque", cullCoveredFaces: true },
+    row: [kCubeId, kLeavesId],
+    vertices: 40,
+    culledFaces: 2
+  },
+  {
+    name: "a culling blended block drops the face it shares with itself",
+    leaves: { ...kBlend, cullCoveredFaces: true },
+    row: [kLeavesId, kLeavesId],
+    vertices: 40,
+    culledFaces: 2
+  },
+  {
+    name: "two different blended blocks keep their shared face",
+    leaves: { ...kBlend, cullCoveredFaces: true },
+    row: [kLeavesId, kGrateId],
+    vertices: 48,
+    culledFaces: 0
+  },
+  {
+    name: "a blended block keeps covered faces by default",
+    leaves: kBlend,
+    row: [kLeavesId, kLeavesId],
+    vertices: 48,
+    culledFaces: 0
+  },
+  {
+    name: "a blended block keeps covered faces under the greedy mesher",
+    leaves: { ...kBlend, cullCoveredFaces: false },
+    row: [kLeavesId, kLeavesId],
+    greedy: true,
+    vertices: 32,
+    culledFaces: 0
+  },
+  {
+    name: "a blended run keeps the boundary on both sides of its middle",
+    leaves: { ...kBlend, cullCoveredFaces: false },
+    row: [kLeavesId, kLeavesId, kLeavesId],
+    vertices: 72,
+    culledFaces: 0
+  },
+  {
+    name: "a blended block keeps the face an opaque neighbour covers",
+    leaves: { ...kBlend, cullCoveredFaces: false },
+    row: [kCubeId, kLeavesId],
+    vertices: 48,
+    culledFaces: 0
+  },
+  {
+    name: "a front-sided blended block hides the face it could never show",
+    leaves: { ...kBlend, side: "front", cullCoveredFaces: false },
+    row: [kCubeId, kLeavesId],
+    vertices: 44,
+    culledFaces: 1
+  },
+  {
+    name: "an opaque block that keeps covered faces retains its boundaries",
+    leaves: { cullCoveredFaces: false },
+    row: [kLeavesId, kLeavesId],
+    vertices: 48,
+    culledFaces: 0
+  }
+];
+
+function makeFixture(
+  leaves: Partial<BlockDefinition>,
+  greedy = false
+): MeshFixture {
+  const fixture = makeMeshFixture({ greedy });
+  fixture.blockRegistry.register(makeBlockDef(kLeavesId, "cube", leaves));
+  fixture.blockRegistry.register(
+    makeBlockDef(kGrateId, "cube", { ...kBlend, cullCoveredFaces: true })
+  );
+
+  return fixture;
+}
+
+describe("VoxelMeshBuilder - block transparency and covered faces", () => {
+  for (const { name, leaves, row, greedy, vertices, culledFaces } of kPairCases) {
+    it(name, () => {
+      const fixture = makeFixture(leaves, greedy);
+      row.forEach((blockId, x) => place(fixture, [x, 0, 0], blockId));
+
+      assert.equal(countChunkVertices(fixture), vertices);
+      assert.equal(fixture.builder.stats.culledFaces, culledFaces);
+    });
+  }
+
+  for (const greedy of [false, true]) {
+    it(`splits blended faces into a cutout geometry (greedy=${greedy})`, () => {
+      const fixture = makeFixture({ ...kBlend, cullCoveredFaces: false }, greedy);
+      place(fixture, [0, 0, 0]);
+      place(fixture, [1, 0, 0], kLeavesId);
+
+      assert.deepEqual([...buildGeometries(fixture).keys()], ["atlas", "atlas:cutout"]);
+    });
+  }
+
+  it("emits a single geometry when no block is transparent", () => {
+    const fixture = makeFixture({ alphaMode: "opaque" });
+    place(fixture, [0, 0, 0], kLeavesId);
+
+    assert.deepEqual([...buildGeometries(fixture).keys()], ["atlas"]);
+  });
+
+  it("keeps a blended face covered by an opaque voxel of another layer", () => {
+    const fixture = makeFixture({ ...kBlend, cullCoveredFaces: false });
+    place(fixture.world.addLayer("stone"), [0, 0, 0]);
+    place(fixture, [1, 0, 0], kLeavesId);
+
+    assert.deepEqual([...buildGeometries(fixture).keys()], ["atlas:cutout"]);
+    assert.equal(countChunkVertices(fixture), 24);
+  });
+});
+
+describe("VoxelMeshBuilder - layer opacity and occlusion", () => {
+  it("a neighbour in a translucent layer does not occlude", () => {
+    const fixture = makeMeshFixture();
+    place(fixture.world.addLayer("glass", { opacity: 0.5 }), [1, 0, 0]);
+    place(fixture, [0, 0, 0]);
+
     assert.equal(countChunkVertices(fixture), 24);
   });
 
-  it("a neighbour in a fully opaque layer (opacity === 1) still occludes normally", () => {
-    const fixture = makeFixture();
-    const solid = fixture.world.addLayer("solid");
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    solid.setVoxelAt({ x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+  it("a neighbour in an opaque layer occludes", () => {
+    const fixture = makeMeshFixture();
+    place(fixture.world.addLayer("solid"), [1, 0, 0]);
+    place(fixture, [0, 0, 0]);
 
-    // PosX face of the "test" cube is hidden by the opaque neighbour: 5 faces = 20 verts.
     assert.equal(countChunkVertices(fixture), 20);
   });
 
-  it("a translucent layer keeps every face, even against an opaque neighbour", () => {
-    const fixture = makeFixture();
+  it("a translucent layer keeps every face against an opaque neighbour", () => {
+    const fixture = makeMeshFixture();
     const glass = fixture.world.addLayer("glass", { opacity: 0.5 });
-    glass.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    place(glass, [0, 0, 0]);
+    place(fixture, [1, 0, 0]);
 
-    // Culling a face you can see through leaves a hole into geometry that was never emitted.
     assert.equal(countLayerVertices(fixture, glass), 24);
   });
 
   it("a translucent layer still occludes itself", () => {
-    const fixture = makeFixture();
+    const fixture = makeMeshFixture();
     fixture.layer.opacity = 0.5;
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    place(fixture, [0, 0, 0]);
+    place(fixture, [1, 0, 0]);
 
-    /*
-     * 12 faces minus the 2 the cubes share: keeping them stacks coincident
-     * blended quads, which reads as a checkerboard through the volume.
-     */
     assert.equal(countChunkVertices(fixture), 40);
   });
 
   it("an opaque neighbour occludes through a translucent voxel sharing its cell", () => {
-    const fixture = makeFixture();
-    fixture.world.addLayer("glass", { opacity: 0.5 }).setVoxelAt(
-      { x: 1, y: 0, z: 0 },
-      { blockId: kCubeId, transform: 0 }
-    );
-    fixture.world.addLayer("stone").setVoxelAt(
-      { x: 1, y: 0, z: 0 },
-      { blockId: kCubeId, transform: 0 }
-    );
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const fixture = makeMeshFixture();
+    place(fixture.world.addLayer("glass", { opacity: 0.5 }), [1, 0, 0]);
+    place(fixture.world.addLayer("stone"), [1, 0, 0]);
+    place(fixture, [0, 0, 0]);
 
-    /*
-     * The translucent layer is skipped rather than ending the search, so the
-     * opaque layer under it still hides the PosX face: 5 faces = 20 verts.
-     */
     assert.equal(countChunkVertices(fixture), 20);
   });
 
   it("a translucent layer does not suppress a lower-priority voxel it covers", () => {
-    const fixture = makeFixture();
+    const fixture = makeMeshFixture();
     const glass = fixture.world.addLayer("glass", { opacity: 0.5 });
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    glass.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    place(fixture, [0, 0, 0]);
+    place(glass, [0, 0, 0]);
 
     assert.equal(countLayerVertices(fixture, glass), 24);
     assert.equal(countChunkVertices(fixture), 24);
   });
 });
 
-describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () => {
-  /**
-   * A cutout tile (leaves, a grate, a window) is opaque as far as the mesher
-   * can tell, so without the flag its neighbours are culled and the holes look
-   * into geometry that was never emitted.
-   */
-  function withLeaves(
-    transparent: boolean
-  ) {
-    const fixture = makeFixture();
-    fixture.blockRegistry.register(makeBlockDef(kLeavesId, "cube", {
-      name: "Leaves",
-      alphaMode: transparent ? "blend" : "opaque",
-      cullCoveredFaces: true
-    }));
-
-    return fixture;
-  }
-
-  it("keeps the solid neighbour's face, which is the one seen through the holes", () => {
-    const fixture = withLeaves(true);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    /*
-     * The cube keeps all 6 faces; the leaves still lose the one the opaque
-     * cube covers, which nothing can see through anyway. 24 + 20.
-     */
-    assert.equal(countChunkVertices(fixture), 44);
-  });
-
-  it("culls that face when the same block is not flagged transparent", () => {
-    const fixture = withLeaves(false);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    // 5 faces each: the cube's face is dropped and the holes look into nothing.
-    assert.equal(countChunkVertices(fixture), 40);
-  });
-
-  it("culls the face two neighbours of the same transparent block share", () => {
-    const fixture = withLeaves(true);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    /*
-     * The canopy case: emitting both would put two coplanar quads on the
-     * shared plane, which z-fight. 5 faces each.
-     */
-    assert.equal(countChunkVertices(fixture), 40);
-  });
-
-  it("keeps the shared face between two different transparent blocks", () => {
-    const fixture = withLeaves(true);
-    fixture.blockRegistry.register(
-      makeBlockDef(kGrateId, "cube", {
-        name: "Grate",
-        alphaMode: "blend",
-        cullCoveredFaces: true
-      })
-    );
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });
-
-    // Their holes do not line up, so each still shows through the other.
-    assert.equal(countChunkVertices(fixture), 48);
-  });
-
-  it("splits their faces into a cutout geometry of the same tileset", () => {
-    const fixture = withLeaves(true);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 2, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    const geometries = buildGeometries(fixture);
-
-    assert.deepEqual([...geometries.keys()], ["atlas", "atlas:cutout"]);
-    const atlas = geometries.get("atlas");
-    const cutout = geometries.get("atlas:cutout");
-    assert.ok(atlas);
-    assert.ok(cutout);
-    assert.equal(atlas.getAttribute("position").count, 24);
-    assert.equal(cutout.getAttribute("position").count, 24);
-  });
-
-  it("emits a single geometry when no block is transparent", () => {
-    const fixture = withLeaves(false);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    const geometries = buildGeometries(fixture);
-
-    assert.deepEqual([...geometries.keys()], ["atlas"]);
-  });
-});
-describe("VoxelMeshBuilder — neighbour lookups across chunks and layer positions", () => {
-  it("culls against an opaque layer whose offset shifts it onto a different chunk grid", () => {
-    const fixture = makeFixture();
-    /*
-     * Offset by 2 on X, so this layer's chunk boundaries sit mid-way through
-     * the meshed layer's — the neighbour lookup cannot assume a shared grid.
-     */
+describe("VoxelMeshBuilder - neighbour lookups across chunks and layer positions", () => {
+  it("culls against a layer whose offset puts it on another chunk grid", () => {
+    const fixture = makeMeshFixture();
     const shifted = fixture.world.addLayer("shifted");
     shifted.position = { x: 2, y: 0, z: 0 };
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    shifted.setVoxelAt({ x: 5, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    place(fixture, [0, 0, 0]);
+    place(shifted, [5, 0, 0]);
 
-    // Not adjacent: all 6 faces emitted.
     assert.equal(countChunkVertices(fixture), 24);
 
-    /*
-     * World x=1 is adjacent, but the offset puts it in the shifted layer's
-     * chunk (-1,0,0) — a different grid cell than the chunk being meshed.
-     */
-    shifted.setVoxelAt({ x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    place(shifted, [1, 0, 0]);
 
     assert.equal(countChunkVertices(fixture), 20);
   });
 
-  it("culls a face against a neighbour one chunk over", () => {
-    const fixture = makeFixture();
-    // chunkSize is 4: x=3 is the last column of chunk 0, x=4 the first of chunk 1.
-    fixture.world.setVoxelAt("test", { x: 3, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 4, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+  for (const neighbourX of [4, -1]) {
+    it(`culls a face against a neighbour one chunk over (x=${neighbourX})`, () => {
+      const fixture = makeMeshFixture();
+      const x = neighbourX > 0 ? 3 : 0;
+      place(fixture, [x, 0, 0]);
+      place(fixture, [neighbourX, 0, 0]);
 
-    buildGeometries(fixture);
+      buildGeometries(fixture);
 
-    assert.equal(fixture.builder.stats.culledFaces, 1);
-    assert.equal(fixture.builder.stats.faces, 5);
-  });
-
-  it("culls a face against a neighbour one chunk below on the negative side", () => {
-    const fixture = makeFixture();
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: -1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-
-    buildGeometries(fixture);
-
-    assert.equal(fixture.builder.stats.culledFaces, 1);
-    assert.equal(fixture.builder.stats.faces, 5);
-  });
-});
-
-describe("VoxelMeshBuilder — cullCoveredFaces", () => {
-  function withGlass(
-    cullCoveredFaces: boolean | undefined,
-    greedy = false
-  ) {
-    const fixture = makeFixture({ greedy });
-    fixture.blockRegistry.register(
-      makeBlockDef(kLeavesId, "cube", {
-        name: "Glass",
-        alphaMode: "blend",
-        cullCoveredFaces
-      })
-    );
-
-    return fixture;
-  }
-
-  it("keeps the two directional appearances of a shared boundary", () => {
-    const fixture = withGlass(false);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    buildGeometries(fixture);
-
-    assert.equal(fixture.builder.stats.faces, 12);
-    assert.equal(fixture.builder.stats.culledFaces, 0);
-    assert.equal(countChunkVertices(fixture), 48);
-  });
-
-  it("keeps the boundary the same way under the greedy mesher", () => {
-    const fixture = withGlass(false, true);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    buildGeometries(fixture);
-
-    assert.equal(fixture.builder.stats.culledFaces, 0);
-  });
-
-  it("drops it again once the block culls its own faces", () => {
-    const fixture = withGlass(true);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    assert.equal(countChunkVertices(fixture), 40);
-  });
-
-  it("keeps the boundary on both sides of a three-block run", () => {
-    const fixture = withGlass(false);
-    for (let x = 0; x < 3; x++) {
-      fixture.world.setVoxelAt("test", { x, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-    }
-
-    buildGeometries(fixture);
-
-    assert.equal(fixture.builder.stats.faces, 18);
-    assert.equal(fixture.builder.stats.culledFaces, 0);
-  });
-
-  it("keeps covered faces by default for a transparent block", () => {
-    const fixture = withGlass(undefined);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    assert.equal(countChunkVertices(fixture), 48);
-  });
-
-  for (const greedy of [false, true]) {
-    it(`keeps the face an opaque neighbour covers, double-sided (greedy=${greedy})`, () => {
-      const fixture = withGlass(false, greedy);
-      fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-      fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-      const geometries = buildGeometries(fixture);
-
-      assert.deepEqual([...geometries.keys()], ["atlas", "atlas:cutout"]);
-      assert.equal(geometries.get("atlas")!.getAttribute("position").count, 24);
-      assert.equal(
-        geometries.get("atlas:cutout")!.getAttribute("position").count,
-        24
-      );
+      assert.equal(fixture.builder.stats.culledFaces, 1);
+      assert.equal(fixture.builder.stats.faces, 5);
     });
   }
-
-  it("hides the face an opaque neighbour covers once the block culls", () => {
-    const fixture = withGlass(true);
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    assert.equal(countChunkVertices(fixture), 44);
-  });
-
-  it("hides it for a front-sided block, which could never show it", () => {
-    const fixture = makeFixture();
-    fixture.blockRegistry.register(
-      makeBlockDef(kLeavesId, "cube", {
-        name: "Glass",
-        alphaMode: "blend",
-        side: "front",
-        cullCoveredFaces: false
-      })
-    );
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    assert.equal(countChunkVertices(fixture), 44);
-  });
-
-  it("keeps the face covered by an opaque neighbour in another layer", () => {
-    const fixture = withGlass(false);
-    fixture.world.addLayer("stone").setVoxelAt(
-      { x: 0, y: 0, z: 0 },
-      { blockId: kCubeId, transform: 0 }
-    );
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
-
-    const geometries = buildGeometries(fixture);
-
-    assert.deepEqual([...geometries.keys()], ["atlas:cutout"]);
-    assert.equal(countChunkVertices(fixture), 24);
-  });
-
-  it("retains opaque boundaries for layers that may be faded", () => {
-    const fixture = makeFixture();
-    fixture.blockRegistry.register(
-      makeBlockDef(kGrateId, "cube", { name: "Stone", cullCoveredFaces: false })
-    );
-    fixture.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });
-    fixture.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });
-
-    assert.equal(countChunkVertices(fixture), 48);
-  });
 });

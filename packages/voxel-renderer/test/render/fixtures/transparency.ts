@@ -70,7 +70,6 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
         return;
       }
 
-      // A constant unlit white isolates compositing from Lambert lighting.
       let color = 0xffffff;
       if (tilesetId === "stone") {
         color = 0x00ff00;

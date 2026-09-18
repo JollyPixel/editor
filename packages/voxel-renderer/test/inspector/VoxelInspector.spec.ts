@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../../src/VoxelEngine.ts";
+import { fillChunks } from "../helpers/engine.ts";
 import { makeInspectorEngine } from "./VoxelInspector.helpers.ts";
 
 describe("VoxelInspector - statistics", () => {
@@ -30,26 +31,19 @@ describe("VoxelInspector - statistics", () => {
     });
   });
 
-  it("aggregates the geometry of a single meshed cube", () => {
+  it("sums the statistics of every meshed chunk", () => {
     const engine = makeInspectorEngine();
-    const stats = engine.inspector.mesh.stats;
+    fillChunks(engine, "Ground", 3);
+    engine.tick(0);
+    const { stats } = engine.inspector.mesh;
 
-    assert.equal(stats.chunks, 1);
-    assert.equal(stats.meshes, 1);
-    assert.equal(stats.voxels, 1);
-    assert.equal(stats.faces, 6);
-    assert.equal(stats.culledFaces, 0);
-    assert.equal(stats.vertices, 24);
-    assert.equal(stats.triangles, 12);
-  });
-
-  it("counts the faces culled between two adjacent cubes", () => {
-    const engine = makeInspectorEngine({ voxels: 2 });
-    const stats = engine.inspector.mesh.stats;
-
-    assert.equal(stats.voxels, 2);
-    assert.equal(stats.faces, 10);
-    assert.equal(stats.culledFaces, 2);
+    assert.equal(stats.chunks, 3);
+    assert.equal(stats.meshes, 3);
+    assert.equal(stats.voxels, 3);
+    assert.equal(stats.faces, 18);
+    assert.equal(stats.vertices, 72);
+    assert.equal(stats.triangles, 36);
+    assert.equal(stats.facesPerSolidVoxel, 6);
   });
 
   it("drops the statistics of a chunk once its layer is removed", () => {

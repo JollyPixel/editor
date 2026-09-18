@@ -5,12 +5,10 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { TiledConverter, type TiledMap } from "../../../src/plugins/tiled/index.ts";
 
-// Simple resolver that returns the tileset name as the src path
 function simpleSrc(_src: string, id: string) {
   return `/assets/${id}.png`;
 }
 
-// Minimal 2×2 tile map with a single tileset (4 tiles: 2 cols, 2 rows)
 function makeMinimalMap(
   data: number[] | string = [1, 2, 0, 3],
   overrides: Partial<TiledMap> = {}
@@ -82,7 +80,6 @@ describe("TiledConverter.convert — output structure", () => {
   });
 
   it("blocks array has one entry per unique non-zero tile", () => {
-    // data=[1,2,0,3]: 3 unique non-zero tiles → 3 blocks
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
     assert.ok(result.blocks !== undefined);
     assert.equal(result.blocks!.length, 3);
@@ -95,17 +92,12 @@ describe("TiledConverter.convert — output structure", () => {
   });
 
   it("GID=0 (empty tile) is skipped — no voxel at that position", () => {
-    // data=[1,2,0,3]: position (col=0,row=1) = key "0,0,1" is the zero GID → skipped
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
     const voxels = result.layers[0].voxels;
     assert.equal(voxels["0,0,1"], undefined);
   });
 
   it("non-zero tiles produce voxels at the expected keys", () => {
-    /*
-     * 2-wide map: col=i%2, row=floor(i/2). layerMode=flat → Y=0
-     * i=0: GID=1, key "0,0,0"; i=1: GID=2, key "1,0,0"; i=3: GID=3, key "1,0,1"
-     */
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
     const voxels = result.layers[0].voxels;
     assert.ok("0,0,0" in voxels, "expected voxel at 0,0,0");
@@ -232,14 +224,12 @@ describe("TiledConverter.convert — base64 data", () => {
   const converter = new TiledConverter();
 
   it("decodes base64-encoded GIDs correctly", () => {
-    // Build a base64 string for data [1, 0, 2, 3] (4 little-endian uint32 values)
     const gids = [1, 0, 2, 3];
     const base64 = Buffer.from(new Uint32Array(gids).buffer).toString("base64");
 
     const map = makeMinimalMap(base64);
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc });
 
-    // GID=1 → key "0,0,0"; GID=2 → key "0,0,1"; GID=3 → key "1,0,1"; GID=0 skipped
     const voxels = result.layers[0].voxels;
     assert.ok("0,0,0" in voxels, "GID=1 should produce voxel at 0,0,0");
     assert.ok("0,0,1" in voxels, "GID=2 should produce voxel at 0,0,1");
@@ -368,7 +358,6 @@ describe("TiledConverter.convert — object layers", () => {
 
     const obj = result.objectLayers![0].objects[0];
     assert.equal(obj.name, "PlayerStart");
-    // Pixel→voxel: x=32/16=2, z=48/16=3
     assert.equal(obj.x, 2);
     assert.equal(obj.z, 3);
     assert.equal(obj.properties?.team, "blue");
@@ -386,7 +375,6 @@ describe("TiledConverter.convert — object layers", () => {
   });
 
   it("rounds an object that spans a fraction of a tile", () => {
-    // 40/16 = 2.5 → 3, 8/16 = 0.5 → 1
     const result = converter.convert(
       makeObjectMap({ width: 40, height: 8 }),
       { resolveTilesetSrc: simpleSrc }

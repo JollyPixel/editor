@@ -27,7 +27,7 @@
     "build": "tsc -b",
     "dev": "vite",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test-gpu": "node --test test/render/transparency.gpu.spec.ts",
+    "test-gpu": "node --test test/render/transparency.gpu.ts",
     "bench": "node --max-old-space-size=8192 bench/mesh-build.bench.ts",
     "bench:compare": "node --max-old-space-size=8192 bench/mesh-compare.bench.ts",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",

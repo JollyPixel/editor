@@ -7,7 +7,10 @@ import { BlockTextures } from "../blocks/BlockTextures.ts";
 import type { VoxelWorldJSON } from "./types.ts";
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { TilesetDefinition } from "../tileset/types.ts";
-import type { VoxelEntry } from "../world/types.ts";
+import {
+  packVoxel,
+  type PackedVoxel
+} from "../world/packedVoxel.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 import type { TilesetList } from "../tileset/TilesetList.ts";
@@ -95,7 +98,10 @@ export function deserializeVoxelWorld(
       layer.position = { ...layerJSON.position };
     }
 
-    for (const [key, entryJSON] of Object.entries(layerJSON.voxels)) {
+    const entries = Object.entries(layerJSON.voxels);
+    const positions = new Int32Array(entries.length * 3);
+    const packed: PackedVoxel[] = [];
+    for (const [key, entryJSON] of entries) {
       const parts = key.split(",");
       const x = parseInt(parts[0], 10);
       const y = parseInt(parts[1], 10);
@@ -109,15 +115,13 @@ export function deserializeVoxelWorld(
         continue;
       }
 
-      const entry: VoxelEntry = {
-        blockId: entryJSON.block,
-        transform: entryJSON.transform
-      };
-      layer.setVoxelAt(
-        layer.localToWorld({ x, y, z }),
-        entry
-      );
+      const offset = packed.length * 3;
+      positions[offset] = x;
+      positions[offset + 1] = y;
+      positions[offset + 2] = z;
+      packed.push(packVoxel(entryJSON.block, entryJSON.transform));
     }
+    layer.loadPackedVoxels(positions, packed);
   }
 
   for (const layerJSON of document.objectLayers ?? []) {

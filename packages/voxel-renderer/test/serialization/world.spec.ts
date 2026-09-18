@@ -3,7 +3,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { deserializeVoxelWorld, serializeVoxelWorld } from "../../src/serialization/index.ts";
+import {
+  deserializeVoxelWorld,
+  serializeVoxelWorld,
+  type VoxelWorldJSON
+} from "../../src/serialization/index.ts";
 import { VoxelWorld } from "../../src/world/index.ts";
 import { BlockRegistry, resolveBlockDefinition } from "../../src/blocks/index.ts";
 import type { TilesetDefinition } from "../../src/tileset/index.ts";
@@ -19,24 +23,45 @@ const kAtlas: TilesetDefinition = {
   rows: 4
 };
 
-describe("serializeVoxelWorld", () => {
-  it("preserves layer compositing through cloning and world round-trips", () => {
-    const world = new VoxelWorld(16);
-    const layer = world.addLayer("Glass", { compositing: "replace" });
-    assert.equal(layer.clone().compositing, "replace");
+function untrusted(
+  document: object
+): VoxelWorldJSON {
+  return JSON.parse(JSON.stringify(document));
+}
 
-    const json = serializeVoxelWorld(world);
-    assert.equal(json.layers[0].compositing, "replace");
+function makeRichWorld(): VoxelWorld {
+  const world = new VoxelWorld(16);
+  const ground = world.addLayer("Ground", {
+    opacity: 0.7,
+    properties: { biome: "forest" }
+  });
+  ground.position = { x: 32, y: 0, z: -16 };
+  ground.setVoxelAt({ x: 32, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+  ground.setVoxelAt({ x: 37, y: 3, z: 2 }, makeVoxelEntry(2, 1));
+  ground.setVoxelAt({ x: 31, y: 0, z: -17 }, makeVoxelEntry(3, 2));
+  const glass = world.addLayer("Glass", { compositing: "replace" });
+  glass.visible = false;
+  glass.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(4, 0));
+  world.addObjectLayer("Spawns");
+
+  return world;
+}
+
+describe("voxel world round-trip", () => {
+  it("restores every layer, id and voxel of a saved world", () => {
+    const original = makeRichWorld();
+    const json = serializeVoxelWorld(original);
 
     const restored = new VoxelWorld(16);
-    deserializeVoxelWorld(json, restored);
+    deserializeVoxelWorld(untrusted(json), restored);
+
+    assert.deepEqual(serializeVoxelWorld(restored), json);
+    assert.deepEqual(restored.getVoxelAt({ x: 37, y: 3, z: 2 }), makeVoxelEntry(2, 1));
     assert.equal(restored.getLayer("Glass")?.compositing, "replace");
-
-    delete json.layers[0].compositing;
-    deserializeVoxelWorld(json, restored);
-    assert.equal(restored.getLayer("Glass")?.compositing, "composite");
   });
+});
 
+describe("serializeVoxelWorld", () => {
   it("empty world serializes to version=1 with empty layers", () => {
     const world = new VoxelWorld(16);
     const json = serializeVoxelWorld(world);
@@ -96,26 +121,6 @@ describe("serializeVoxelWorld", () => {
     assert.equal(layerJson.voxels["3,2,1"]?.transform, 3);
   });
 
-  it("opacity is included in layer JSON", () => {
-    const world = new VoxelWorld(16);
-    const layer = world.addLayer("Ground", { opacity: 0.4 });
-
-    const json = serializeVoxelWorld(world);
-
-    assert.equal(json.layers[0].opacity, layer.opacity);
-    assert.equal(json.layers[0].opacity, 0.4);
-  });
-
-  it("position is included in layer JSON", () => {
-    const world = new VoxelWorld(16);
-    const layer = world.addLayer("Ground");
-    layer.position = { x: 16, y: 0, z: -8 };
-
-    const json = serializeVoxelWorld(world);
-
-    assert.deepEqual(json.layers[0].position, { x: 16, y: 0, z: -8 });
-  });
-
   it("stores voxel keys in layer-local space", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
@@ -134,7 +139,7 @@ describe("deserializeVoxelWorld", () => {
     const world = new VoxelWorld(16);
 
     assert.throws(
-      () => deserializeVoxelWorld({ version: 2 } as any, world),
+      () => deserializeVoxelWorld(untrusted({ version: 2 }), world),
       /unsupported version/
     );
   });
@@ -150,7 +155,7 @@ describe("deserializeVoxelWorld", () => {
     assert.equal(world.getLayers().length, 0);
   });
 
-  it("defaults opacity to 1 when the field is absent (pre-opacity save file)", () => {
+  it("defaults opacity and compositing for an older save file", () => {
     const world = new VoxelWorld(16);
     deserializeVoxelWorld(
       {
@@ -171,37 +176,14 @@ describe("deserializeVoxelWorld", () => {
     const layer = world.getLayer("Ground");
     assert.ok(layer !== undefined);
     assert.equal(layer.opacity, 1);
-  });
-
-  it("restores an explicit opacity value", () => {
-    const world = new VoxelWorld(16);
-    deserializeVoxelWorld(
-      {
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
-        layers: [{
-          id: "l1",
-          name: "Ground",
-          visible: true,
-          opacity: 0.6,
-          order: 0,
-          voxels: {}
-        }]
-      },
-      world
-    );
-
-    const layer = world.getLayer("Ground");
-    assert.ok(layer !== undefined);
-    assert.equal(layer.opacity, 0.6);
+    assert.equal(layer.compositing, "composite");
   });
 
   it("skips malformed coordinate keys", () => {
     const world = new VoxelWorld(16);
 
-    assert.doesNotThrow(() => deserializeVoxelWorld(
-      {
+    deserializeVoxelWorld(
+      untrusted({
         version: 1,
         chunkSize: 16,
         tilesets: [],
@@ -211,17 +193,16 @@ describe("deserializeVoxelWorld", () => {
           visible: true,
           order: 0,
           voxels: {
-            // @ts-expect-error
             "not,a,number": { block: 1, transform: 0 },
             "0,0,0": { block: 2, transform: 0 }
           }
         }]
-      },
+      }),
       world
-    ));
+    );
 
-    // Only the valid key "0,0,0" should be present
-    assert.ok(world.getVoxelAt({ x: 0, y: 0, z: 0 }) !== undefined);
+    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
+    assert.equal(world.getLayer("Ground")?.voxelCount, 1);
   });
 
   it("throws when layers is not an array", () => {
@@ -229,7 +210,7 @@ describe("deserializeVoxelWorld", () => {
 
     assert.throws(
       () => deserializeVoxelWorld(
-        { version: 1, chunkSize: 16, tilesets: [] } as any,
+        untrusted({ version: 1, chunkSize: 16, tilesets: [] }),
         world
       ),
       /layers is not an array/
@@ -252,9 +233,31 @@ describe("deserializeVoxelWorld", () => {
     const world = new VoxelWorld(16);
     world.addLayer("Existing");
     assert.throws(
-      () => deserializeVoxelWorld({ version: 2 } as any, world)
+      () => deserializeVoxelWorld(untrusted({ version: 2 }), world)
     );
     assert.equal(world.getLayers().length, 1);
+  });
+
+  it("applies the serialized layer position to local voxel keys", () => {
+    const world = new VoxelWorld(16);
+    deserializeVoxelWorld({
+      version: 1,
+      chunkSize: 16,
+      tilesets: [],
+      layers: [{
+        id: "ground",
+        name: "Ground",
+        visible: true,
+        order: 0,
+        position: { x: 20, y: 3, z: -4 },
+        voxels: {
+          "2,1,5": { block: 1, transform: 0 }
+        }
+      }]
+    }, world);
+
+    assert.ok(world.getVoxelAt({ x: 22, y: 4, z: 1 }) !== undefined);
+    assert.equal(world.getVoxelAt({ x: 2, y: 1, z: 5 }), undefined);
   });
 
   it("registers embedded blocks into the provided registry", () => {
@@ -353,119 +356,6 @@ describe("deserializeVoxelWorld", () => {
 
     assert.equal(registry.has(9), true);
     assert.equal(registry.has(7), false);
-  });
-});
-
-describe("voxel world round-trip", () => {
-  it("single layer with multiple voxels", () => {
-    const original = new VoxelWorld(16);
-    const layer = original.addLayer("Ground");
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
-    layer.setVoxelAt({ x: 5, y: 3, z: 2 }, makeVoxelEntry(2, 1));
-    layer.setVoxelAt({ x: -1, y: 0, z: -1 }, makeVoxelEntry(3, 2));
-
-    const json = serializeVoxelWorld(original);
-
-    const restored = new VoxelWorld(16);
-    deserializeVoxelWorld(json, restored);
-
-    const e1 = restored.getVoxelAt({ x: 0, y: 0, z: 0 });
-    const e2 = restored.getVoxelAt({ x: 5, y: 3, z: 2 });
-    const e3 = restored.getVoxelAt({ x: -1, y: 0, z: -1 });
-
-    assert.ok(e1 !== undefined, "expected voxel at 0,0,0");
-    assert.equal(e1.blockId, 1);
-    assert.equal(e1.transform, 0);
-
-    assert.ok(e2 !== undefined, "expected voxel at 5,3,2");
-    assert.equal(e2.blockId, 2);
-    assert.equal(e2.transform, 1);
-
-    assert.ok(e3 !== undefined, "expected voxel at -1,0,-1");
-    assert.equal(e3.blockId, 3);
-    assert.equal(e3.transform, 2);
-  });
-
-  it("multiple layers preserve name, visibility, and order", () => {
-    const original = new VoxelWorld(16);
-    const base = original.addLayer("Base");
-    const deco = original.addLayer("Deco");
-    deco.visible = false;
-
-    const json = serializeVoxelWorld(original);
-
-    const restored = new VoxelWorld(16);
-    deserializeVoxelWorld(json, restored);
-
-    const restoredBase = restored.getLayer("Base");
-    const restoredDeco = restored.getLayer("Deco");
-
-    assert.ok(restoredBase !== undefined);
-    assert.ok(restoredDeco !== undefined);
-    assert.equal(restoredBase.order, base.order);
-    assert.equal(restoredDeco.visible, false);
-  });
-
-  it("layer opacity is preserved", () => {
-    const original = new VoxelWorld(16);
-    original.addLayer("Ground", { opacity: 0.7 });
-
-    const json = serializeVoxelWorld(original);
-
-    const restored = new VoxelWorld(16);
-    deserializeVoxelWorld(json, restored);
-
-    assert.equal(restored.getLayer("Ground")?.opacity, 0.7);
-  });
-
-  it("layer position is preserved", () => {
-    const original = new VoxelWorld(16);
-    const layer = original.addLayer("Ground");
-    layer.position = { x: 32, y: 0, z: -16 };
-    layer.setVoxelAt({ x: 32, y: 0, z: 0 }, makeVoxelEntry(1));
-
-    const json = serializeVoxelWorld(original);
-
-    const restored = new VoxelWorld(16);
-    deserializeVoxelWorld(json, restored);
-
-    assert.deepEqual(restored.getLayer("Ground")?.position, { x: 32, y: 0, z: -16 });
-    assert.ok(restored.getVoxelAt({ x: 32, y: 0, z: 0 }) !== undefined);
-  });
-
-  it("applies the serialized layer position to local voxel keys", () => {
-    const world = new VoxelWorld(16);
-    deserializeVoxelWorld({
-      version: 1,
-      chunkSize: 16,
-      tilesets: [],
-      layers: [{
-        id: "ground",
-        name: "Ground",
-        visible: true,
-        order: 0,
-        position: { x: 20, y: 3, z: -4 },
-        voxels: {
-          "2,1,5": { block: 1, transform: 0 }
-        }
-      }]
-    }, world);
-
-    assert.ok(world.getVoxelAt({ x: 22, y: 4, z: 1 }) !== undefined);
-    assert.equal(world.getVoxelAt({ x: 2, y: 1, z: 5 }), undefined);
-  });
-
-  it("serialized layer id is restored verbatim", () => {
-    const original = new VoxelWorld(16);
-    const layer = original.addLayer("Ground");
-    const originalId = layer.id;
-
-    const json = serializeVoxelWorld(original);
-
-    const restored = new VoxelWorld(16);
-    deserializeVoxelWorld(json, restored);
-
-    assert.equal(restored.getLayer("Ground")?.id, originalId);
   });
 });
 

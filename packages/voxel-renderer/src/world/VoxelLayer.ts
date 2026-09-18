@@ -163,6 +163,16 @@ export class VoxelLayer {
   #chunkShift: number;
   #chunkMask: number;
   #pendingRemoval: VoxelChunk[] = [];
+  #dirtyChunks = new Set<VoxelChunk>();
+  #dirtySubscriptions = new Map<VoxelChunk, () => void>();
+  #trackDirty = (chunk: VoxelChunk, dirty: boolean): void => {
+    if (dirty) {
+      this.#dirtyChunks.add(chunk);
+    }
+    else {
+      this.#dirtyChunks.delete(chunk);
+    }
+  };
 
   /**
    * Last chunk resolved by key. Terrain generation and brush strokes stay
@@ -308,6 +318,9 @@ export class VoxelLayer {
         this.#chunkSize
       );
       this.#chunks.set(key, chunk);
+      this.#dirtySubscriptions.set(
+        chunk, chunk.onDirtyChange(this.#trackDirty)
+      );
     }
     this.#lastChunkKey = key;
     this.#lastChunk = chunk;
@@ -406,6 +419,58 @@ export class VoxelLayer {
     );
   }
 
+  /**
+   * Writes layer-local `positions` (x, y, z triples) with their `packed`
+   * voxels, sizing each chunk's storage once instead of growing per write.
+   */
+  loadPackedVoxels(
+    positions: Int32Array,
+    packed: ArrayLike<PackedVoxel>
+  ): void {
+    const shift = this.#chunkShift;
+    const mask = this.#chunkMask;
+    const count = packed.length;
+    const additions = new Map<VoxelChunk, number>();
+    let chunk: VoxelChunk | null = null;
+    let run = 0;
+
+    for (let i = 0; i < count; i++) {
+      const next = this.getOrCreateChunk(
+        positions[i * 3] >> shift,
+        positions[(i * 3) + 1] >> shift,
+        positions[(i * 3) + 2] >> shift
+      );
+      if (next !== chunk) {
+        if (chunk !== null) {
+          additions.set(chunk, (additions.get(chunk) ?? 0) + run);
+        }
+        chunk = next;
+        run = 0;
+      }
+      run++;
+    }
+    if (chunk !== null) {
+      additions.set(chunk, (additions.get(chunk) ?? 0) + run);
+    }
+
+    for (const [target, added] of additions) {
+      target.store.reserve(target.voxelCount + added);
+    }
+
+    for (let i = 0; i < count; i++) {
+      const x = positions[i * 3];
+      const y = positions[(i * 3) + 1];
+      const z = positions[(i * 3) + 2];
+
+      this.getOrCreateChunk(x >> shift, y >> shift, z >> shift).setPackedAt(
+        x & mask,
+        y & mask,
+        z & mask,
+        packed[i]
+      );
+    }
+  }
+
   removeVoxelAt(
     position: Vector3Like
   ): void {
@@ -430,6 +495,7 @@ export class VoxelLayer {
       // `getChunk` returned it, so the coordinates are known to be in range.
       this.#chunks.delete(packChunkKey(cx, cy, cz));
       this.#lastChunk = null;
+      this.#release(chunk);
       this.#pendingRemoval.push(chunk);
     }
   }
@@ -555,11 +621,23 @@ export class VoxelLayer {
       }
 
       previous.copyFrom(chunk);
+      this.#release(chunk);
       this.#chunks.set(key, previous);
       chunks.delete(key);
     }
     this.#lastChunk = null;
+    for (const chunk of chunks.values()) {
+      this.#release(chunk);
+    }
     this.#pendingRemoval.push(...chunks.values());
+  }
+
+  #release(
+    chunk: VoxelChunk
+  ): void {
+    this.#dirtySubscriptions.get(chunk)?.();
+    this.#dirtySubscriptions.delete(chunk);
+    this.#dirtyChunks.delete(chunk);
   }
 
   markChunkDirty(
@@ -576,6 +654,13 @@ export class VoxelLayer {
 
   * getChunks(): IterableIterator<VoxelChunk> {
     yield* this.#chunks.values();
+  }
+
+  /**
+   * Chunks whose `dirty` flag is set, without visiting clean ones.
+   */
+  * getDirtyChunks(): IterableIterator<VoxelChunk> {
+    yield* this.#dirtyChunks;
   }
 
   * drainPendingRemovals(): IterableIterator<VoxelChunk> {
@@ -675,7 +760,11 @@ export class VoxelLayer {
     });
 
     for (const [key, chunk] of this.#chunks) {
-      copy.#chunks.set(key, chunk.clone());
+      const clone = chunk.clone();
+      copy.#chunks.set(key, clone);
+      copy.#dirtySubscriptions.set(
+        clone, clone.onDirtyChange(copy.#trackDirty)
+      );
     }
 
     return copy;

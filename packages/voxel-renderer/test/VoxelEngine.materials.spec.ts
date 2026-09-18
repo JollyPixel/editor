@@ -6,109 +6,106 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type { VoxelEngine } from "../src/VoxelEngine.ts";
+import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
 import { makeBlockDef } from "./helpers/blocks.ts";
 import {
+  chunkMeshes,
   makeEngine,
+  placeCube
+} from "./helpers/engine.ts";
+import {
   CUBE_ID as kCubeId,
   LEAVES_ID as kLeavesId
-} from "./helpers/engine.ts";
+} from "./helpers/ids.ts";
 
-/** The material variants VoxelEngine chunk meshes are built with. */
-type ChunkMesh = THREE.Mesh<
-  THREE.BufferGeometry,
-  THREE.MeshLambertMaterial | THREE.MeshStandardMaterial
->;
+type ChunkMaterial = THREE.MeshLambertMaterial | THREE.MeshStandardMaterial;
 
-describe("VoxelEngine — layer opacity on the material", () => {
-  it("renders a fully opaque layer with an opaque material", () => {
-    const engine = makeEngine();
-    engine.world.addLayer("Ground");
-    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+function materialsOf(
+  engine: VoxelEngine
+): ChunkMaterial[] {
+  return chunkMeshes(engine).map((mesh) => mesh.material as ChunkMaterial);
+}
+
+function meshedGround(
+  layerOptions: { opacity?: number; } = {},
+  engineOptions: VoxelEngineOptions = {}
+): VoxelEngine {
+  const engine = makeEngine(engineOptions);
+  engine.world.addLayer("Ground", layerOptions);
+  placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
+
+  return engine;
+}
+
+describe("VoxelEngine - layer opacity on the material", () => {
+  it("renders a fully opaque layer with an opaque front-sided material", () => {
+    const engine = meshedGround();
     engine.flush();
 
-    const material = (engine.root.children[0] as ChunkMesh).material;
+    const [material] = materialsOf(engine);
     assert.equal(material.transparent, false);
     assert.equal(material.opacity, 1);
     assert.equal(material.depthWrite, true);
-    // Nothing can be seen through it, so its back faces stay culled.
     assert.equal(material.side, THREE.FrontSide);
   });
 
-  it("carries the layer opacity on the material instead of the geometry", () => {
-    const engine = makeEngine();
-    engine.world.addLayer("Ground", { opacity: 0.5 });
-    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+  it("carries the layer opacity on a blended front-sided material", () => {
+    const engine = meshedGround({ opacity: 0.5 });
     engine.flush();
 
-    const mesh = engine.root.children[0] as ChunkMesh;
-    assert.equal(mesh.geometry.getAttribute("color"), undefined);
-    assert.equal(mesh.material.transparent, true);
-    assert.equal(mesh.material.opacity, 0.5);
-    assert.equal(mesh.material.depthWrite, false);
-    /*
-     * The mesher emits both faces of a voxel, so a second pass over the same
-     * quads would only blend them twice.
-     */
-    assert.equal(mesh.material.side, THREE.FrontSide);
+    const [material] = materialsOf(engine);
+    assert.equal(material.transparent, true);
+    assert.equal(material.opacity, 0.5);
+    assert.equal(material.depthWrite, false);
+    assert.equal(material.side, THREE.FrontSide);
+  });
+
+  it("keeps an almost-opaque layer out of the opaque material bucket", () => {
+    const engine = meshedGround({ opacity: 0.999 });
+    engine.flush();
+
+    const [material] = materialsOf(engine);
+    assert.equal(material.transparent, true);
+    assert.ok(material.opacity < 1);
   });
 
   it("gives transparent blocks their own double-sided mesh on an opaque layer", () => {
-    const engine = makeEngine({
+    const engine = meshedGround({}, {
       blocks: [
-        makeBlockDef(kCubeId, "cube", { name: "Cube" }),
-        makeBlockDef(kLeavesId, "cube", { name: "Leaves", alphaMode: "blend" })
+        makeBlockDef(kCubeId, "cube"),
+        makeBlockDef(kLeavesId, "cube", { alphaMode: "blend" })
       ]
     });
-    engine.world.addLayer("Ground");
-    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
-    engine.world.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: kLeavesId });
+    placeCube(engine, "Ground", { x: 2, y: 0, z: 0 }, kLeavesId);
     engine.flush();
 
-    const meshes = engine.root.children as ChunkMesh[];
+    const meshes = chunkMeshes(engine);
     const solid = meshes.find((mesh) => !mesh.name.endsWith(":cutout"));
     const cutout = meshes.find((mesh) => mesh.name.endsWith(":cutout"));
     assert.equal(meshes.length, 2);
     assert.ok(solid && cutout);
-    /*
-     * Same texture, opposite sides: the solid pass keeps its back faces
-     * culled, the cutout one shows them through its own holes. The cutout
-     * blends so a half-transparent texel fades instead of coming out solid,
-     * and draws after the opaque pass rather than over it.
-     */
-    assert.equal(solid.material.map, cutout.material.map);
-    assert.equal(solid.material.transparent, false);
-    assert.equal(cutout.material.transparent, true);
-    assert.equal(cutout.material.depthWrite, false);
-    assert.equal(solid.material.side, THREE.FrontSide);
-    assert.equal(cutout.material.side, THREE.DoubleSide);
-  });
 
-  it("keeps an almost-opaque layer out of the opaque material bucket", () => {
-    const engine = makeEngine();
-    engine.world.addLayer("Ground", { opacity: 0.999 });
-    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
-    engine.flush();
-
-    const material = (engine.root.children[0] as ChunkMesh).material;
-    assert.equal(material.transparent, true);
-    assert.ok(material.opacity < 1);
+    const solidMaterial = solid.material as ChunkMaterial;
+    const cutoutMaterial = cutout.material as ChunkMaterial;
+    assert.equal(solidMaterial.map, cutoutMaterial.map);
+    assert.equal(solidMaterial.transparent, false);
+    assert.equal(cutoutMaterial.transparent, true);
+    assert.equal(cutoutMaterial.depthWrite, false);
+    assert.equal(solidMaterial.side, THREE.FrontSide);
+    assert.equal(cutoutMaterial.side, THREE.DoubleSide);
   });
 
   it("preserves distinct layer opacities", () => {
     const engine = makeEngine();
     engine.world.addLayer("A", { opacity: 0.5 });
     engine.world.addLayer("B", { opacity: 0.5001 });
-    /*
-     * Distinct positions, otherwise the higher-priority layer wins compositing
-     * and the other emits no mesh at all.
-     */
-    engine.world.setVoxel("A", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
-    engine.world.setVoxel("B", { position: { x: 8, y: 0, z: 0 }, blockId: kCubeId });
+    placeCube(engine, "A", { x: 0, y: 0, z: 0 });
+    placeCube(engine, "B", { x: 8, y: 0, z: 0 });
     engine.flush();
 
-    const [first, second] = engine.root.children as ChunkMesh[];
-    assert.equal(engine.root.children.length, 2);
-    assert.notEqual(first.material, second.material);
-    assert.deepEqual([first.material.opacity, second.material.opacity].sort(), [0.5, 0.5001]);
+    const [first, second] = materialsOf(engine);
+    assert.notEqual(first, second);
+    assert.deepEqual([first.opacity, second.opacity].sort(), [0.5, 0.5001]);
   });
 });

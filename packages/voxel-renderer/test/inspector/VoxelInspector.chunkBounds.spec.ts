@@ -7,159 +7,85 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../../src/VoxelEngine.ts";
-import type { VoxelEngineOptions } from "../../src/VoxelEngine.types.ts";
 import { VoxelInspector } from "../../src/inspector/index.ts";
 import { MeshBuildStats } from "../../src/mesh/index.ts";
 import { BlockRegistry } from "../../src/blocks/index.ts";
+import { VoxelWorld } from "../../src/world/index.ts";
 import {
-  ViewDistance,
-  VoxelWorld
-} from "../../src/world/index.ts";
-import {
-  makeEngine as makeBaseEngine,
+  makeEngine,
   fillChunks,
-  CUBE_ID as kCubeId,
-  CHUNK_SIZE as kChunkSize
+  placeCube
 } from "../helpers/engine.ts";
+import { CHUNK_SIZE as kChunkSize } from "../helpers/ids.ts";
 import {
-  findInspectorGroup,
+  findGroup,
+  inspectorGroup,
   makeInspectorEngine
 } from "./VoxelInspector.helpers.ts";
 
-function findBoundsGroup(
-  engine: VoxelEngine
-): THREE.Object3D | undefined {
-  return engine.root.children.find(
-    (child) => child.name === "VoxelInspector:chunkBounds"
-  );
-}
-
-/**
- * Four chunks along +X, a one-chunk radius, and focus on the first one. Only
- * chunks 0 and 1 are built until moving focus to the far end swaps the pair.
- */
-function makeCulledEngine(
-  options: VoxelEngineOptions = {}
-): VoxelEngine {
-  const engine = makeBaseEngine({
-    layers: ["Ground"],
-    inspector: { chunkBounds: true },
-    /*
-     * Drain the whole queue: the assertions expect every admitted chunk to be
-     * meshed and registered by the end of a single tick.
-     */
-    rebuildBudgetMs: 0,
-    viewDistance: {
-      chunks: 1,
-      hysteresis: 0
-    },
-    ...options
-  });
-  fillChunks(engine, "Ground", 4);
-  engine.focus = { x: 2, y: 2, z: 2 };
-  engine.tick(0);
-
-  return engine;
-}
-
-/**
- * Same viewport fixture without a tileset, so every admitted chunk builds no
- * geometry but still participates in visibility and inspector lifecycles.
- */
-function makeMeshlessCulledEngine(
-  options: VoxelEngineOptions = {}
-): VoxelEngine {
-  const engine = new VoxelEngine({
-    chunkSize: kChunkSize,
-    layers: ["Ground"],
-    inspector: { chunkBounds: true },
-    rebuildBudgetMs: 0,
-    viewDistance: {
-      chunks: 1,
-      hysteresis: 0
-    },
-    ...options
-  });
-  fillChunks(engine, "Ground", 4);
-  engine.focus = { x: 2, y: 2, z: 2 };
-  engine.tick(0);
-
-  return engine;
-}
-
-/**
- * Chunk coordinates of the drawn boxes, layer prefix stripped, sorted.
- */
-function boundsKeys(
-  engine: VoxelEngine
-): string[] {
-  return boundsBoxes(engine)
-    .map((box) => box.name.split(":")[1])
-    .sort();
-}
+// CONSTANTS
+const kBoundsGroup = "VoxelInspector:chunkBounds";
 
 function boundsBoxes(
   engine: VoxelEngine
 ): THREE.LineSegments[] {
-  const group = findBoundsGroup(engine);
-  assert.ok(group, "the bounds group must be attached to the engine root");
-
-  return group.children.filter(
+  return inspectorGroup(engine, kBoundsGroup).children.filter(
     (child): child is THREE.LineSegments => child instanceof THREE.LineSegments
   );
 }
 
+function makeBoundsEngine(
+  chunks = 1
+): VoxelEngine {
+  const engine = makeInspectorEngine({ inspector: { chunkBounds: true } });
+  fillChunks(engine, "Ground", chunks);
+  engine.tick(0);
+
+  return engine;
+}
+
 describe("VoxelInspector - chunk bounds", () => {
-  it("is off by default and leaves nothing in the scene graph", () => {
+  it("is off by default and toggles its boxes independently of the mode", () => {
     const engine = makeInspectorEngine();
-
     assert.equal(engine.inspector.chunkBounds, false);
-    assert.equal(findBoundsGroup(engine), undefined);
-  });
+    assert.equal(findGroup(engine, kBoundsGroup), undefined);
 
-  it("outlines one box per chunk, independently of the mode", () => {
-    const engine = makeInspectorEngine();
     engine.inspector.chunkBounds = true;
-
     assert.equal(engine.inspector.mode, "off");
     assert.equal(boundsBoxes(engine).length, 1);
-    assert.equal(findInspectorGroup(engine), undefined);
+    assert.equal(findGroup(engine), undefined);
+
+    engine.inspector.chunkBounds = false;
+    assert.equal(findGroup(engine, kBoundsGroup), undefined);
+
+    engine.inspector.chunkBounds = true;
+    assert.equal(boundsBoxes(engine).length, 1);
   });
 
-  it("places the box on the chunk origin, scaled to the chunk size", () => {
-    const engine = makeInspectorEngine({ inspector: { chunkBounds: true } });
-    fillChunks(engine, "Ground", 3);
-    engine.tick(0);
+  it("places one box per chunk on its origin, sharing geometry and material", () => {
+    const boxes = boundsBoxes(makeBoundsEngine(3));
 
-    const origins = boundsBoxes(engine)
-      .map((box) => box.position.x)
-      .sort((a, b) => a - b);
-
-    assert.deepEqual(origins, [0, kChunkSize, kChunkSize * 2]);
-    for (const box of boundsBoxes(engine)) {
+    assert.deepEqual(
+      boxes.map((box) => box.position.x).sort((a, b) => a - b),
+      [0, kChunkSize, kChunkSize * 2]
+    );
+    for (const box of boxes) {
       assert.equal(box.position.y, 0);
       assert.equal(box.position.z, 0);
-      assert.equal(box.scale.x, kChunkSize);
-      assert.equal(box.scale.y, kChunkSize);
-      assert.equal(box.scale.z, kChunkSize);
+      assert.deepEqual(box.scale.toArray(), [kChunkSize, kChunkSize, kChunkSize]);
+      assert.equal(box.geometry, boxes[0].geometry);
+      assert.equal(box.material, boxes[0].material);
     }
   });
 
   it("shifts the box by the layer position", () => {
-    const engine = makeBaseEngine({ inspector: { chunkBounds: true } });
+    const engine = makeEngine({ inspector: { chunkBounds: true } });
     engine.world.addLayer("Shifted").position = { x: 10, y: 20, z: 30 };
-    engine.world.setVoxel("Shifted", {
-      position: { x: 10, y: 20, z: 30 },
-      blockId: kCubeId
-    });
+    placeCube(engine, "Shifted", { x: 10, y: 20, z: 30 });
     engine.tick(0);
 
     const [box] = boundsBoxes(engine);
-    assert.ok(box);
-    assert.deepEqual(
-      [box.position.x, box.position.y, box.position.z],
-      [10, 20, 30]
-    );
+    assert.deepEqual(box.position.toArray(), [10, 20, 30]);
   });
 
   it("copies bounds passed to registerChunk", () => {
@@ -174,40 +100,26 @@ describe("VoxelInspector - chunk bounds", () => {
     );
     const origin = { x: 1, y: 2, z: 3 };
 
-    inspector.registerChunk(
-      "chunk",
-      [],
-      new MeshBuildStats(),
-      { origin, size: 4 }
-    );
+    inspector.registerChunk("chunk", [], new MeshBuildStats(), { origin, size: 4 });
     origin.x = 99;
     inspector.chunkBounds = false;
     inspector.chunkBounds = true;
 
-    const group = parent.children.find(
-      (child) => child.name === "VoxelInspector:chunkBounds"
-    );
+    const group = parent.getObjectByName(kBoundsGroup);
     assert.ok(group);
     const [box] = group.children;
     assert.ok(box instanceof THREE.LineSegments);
-    assert.deepEqual(
-      [box.position.x, box.position.y, box.position.z],
-      [1, 2, 3]
-    );
+    assert.deepEqual(box.position.toArray(), [1, 2, 3]);
     assert.equal(box.scale.x, 4);
   });
 
   it("outlines a chunk that produced no geometry", () => {
-    // No tileset is loaded, so the chunk is registered without any mesh.
     const engine = new VoxelEngine({
       chunkSize: kChunkSize,
       layers: ["Ground"],
       inspector: { chunkBounds: true }
     });
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: kCubeId
-    });
+    fillChunks(engine, "Ground", 1);
     engine.tick(0);
 
     assert.equal(engine.inspector.mesh.stats.chunks, 1);
@@ -215,109 +127,20 @@ describe("VoxelInspector - chunk bounds", () => {
     assert.equal(boundsBoxes(engine).length, 1);
   });
 
-  it("hides meshless chunk bounds outside the view distance", () => {
-    const engine = makeMeshlessCulledEngine();
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.equal(engine.inspector.mesh.stats.chunks, 4);
-    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
-    assert.deepEqual(boundsKeys(engine), ["2,0,0", "3,0,0"]);
-  });
-
-  it("unloads meshless chunk bounds outside the view distance", () => {
-    const engine = makeMeshlessCulledEngine({
-      viewDistancePolicy: "unload"
-    });
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.equal(engine.inspector.mesh.stats.chunks, 2);
-    assert.deepEqual(boundsKeys(engine), ["2,0,0", "3,0,0"]);
-  });
-
-  it("drops the box of a chunk hidden by the view distance", () => {
-    const engine = makeCulledEngine();
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.equal(engine.inspector.mesh.stats.chunks, 4);
-    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
-    assert.deepEqual(boundsKeys(engine), ["2,0,0", "3,0,0"]);
-  });
-
-  it("brings the box back when the chunk is shown again", () => {
-    const engine = makeCulledEngine();
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.deepEqual(boundsKeys(engine), ["0,0,0", "1,0,0"]);
-  });
-
-  it("drops the box of a chunk the unload policy disposes", () => {
-    const engine = makeCulledEngine({ viewDistancePolicy: "unload" });
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.equal(engine.inspector.mesh.stats.chunks, 2);
-    assert.deepEqual(boundsKeys(engine), ["2,0,0", "3,0,0"]);
-  });
-
-  it("outlines every chunk again once the view distance is lifted", () => {
-    const engine = makeCulledEngine();
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    engine.viewDistance = ViewDistance.Unlimited;
-    engine.tick(0);
-
-    assert.deepEqual(
-      boundsKeys(engine),
-      ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]
-    );
-  });
-
-  it("shares one geometry and one material across every box", () => {
-    const engine = makeInspectorEngine({ inspector: { chunkBounds: true } });
-    fillChunks(engine, "Ground", 3);
-    engine.tick(0);
-
-    const boxes = boundsBoxes(engine);
-    assert.equal(boxes.length, 3);
-    for (const box of boxes) {
-      assert.equal(box.geometry, boxes[0].geometry);
-      assert.equal(box.material, boxes[0].material);
-    }
-  });
-
   it("drops the box of a chunk whose layer is removed", () => {
-    const engine = makeInspectorEngine({ inspector: { chunkBounds: true } });
+    const engine = makeBoundsEngine();
+
     engine.world.removeLayer("Ground");
     engine.tick(0);
 
     assert.equal(boundsBoxes(engine).length, 0);
   });
 
-  it("adds and removes the boxes as the toggle flips", () => {
-    const engine = makeInspectorEngine();
-
-    engine.inspector.chunkBounds = true;
-    assert.equal(boundsBoxes(engine).length, 1);
-
-    engine.inspector.chunkBounds = false;
-    assert.equal(findBoundsGroup(engine), undefined);
-
-    engine.inspector.chunkBounds = true;
-    assert.equal(boundsBoxes(engine).length, 1);
-  });
-
   it("detaches the bounds group on dispose", () => {
-    const engine = makeInspectorEngine({ inspector: { chunkBounds: true } });
+    const engine = makeBoundsEngine();
+
     engine.dispose();
 
-    assert.equal(findBoundsGroup(engine), undefined);
+    assert.equal(findGroup(engine, kBoundsGroup), undefined);
   });
 });

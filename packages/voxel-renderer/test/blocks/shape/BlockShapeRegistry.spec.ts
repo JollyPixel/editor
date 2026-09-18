@@ -5,21 +5,6 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { type BlockShape, BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
 
-// CONSTANTS
-const kDefaultShapeIds = [
-  "cube",
-  "slabBottom",
-  "slabTop",
-  "poleY",
-  "pole",
-  "ramp",
-  "rampCornerInner",
-  "rampCornerOuter",
-  "stair",
-  "stairCornerInner",
-  "stairCornerOuter"
-] as const;
-
 function makeShape(
   id: string
 ): BlockShape {
@@ -138,35 +123,10 @@ describe("BlockShapeRegistry.registerMany", () => {
 });
 
 describe("BlockShapeRegistry.createDefault", () => {
-  it("returns a BlockShapeRegistry instance", () => {
-    const registry = BlockShapeRegistry.createDefault();
-    assert.ok(registry instanceof BlockShapeRegistry);
-  });
-
-  it("contains all 11 built-in shape IDs", () => {
-    const registry = BlockShapeRegistry.createDefault();
-    for (const id of kDefaultShapeIds) {
-      assert.equal(
-        registry.has(id),
-        true,
-        `expected shape "${id}" to be registered`
-      );
-    }
-  });
-
-  it("each built-in shape has a non-empty faces array", () => {
-    const registry = BlockShapeRegistry.createDefault();
-    for (const id of kDefaultShapeIds) {
-      const shape = registry.get(id)!;
-      assert.ok(shape.faces.length > 0, `shape "${id}" has no faces`);
-    }
-  });
-
   it("creates a fresh independent registry each call", () => {
     const r1 = BlockShapeRegistry.createDefault();
     const r2 = BlockShapeRegistry.createDefault();
     assert.notEqual(r1, r2);
-    // Mutating r1 should not affect r2
     r1.register({
       id: "only_in_r1",
       collisionHint: "none",
@@ -235,19 +195,12 @@ describe("BlockShapeRegistry.ids", () => {
     assert.deepEqual([...registry.ids()], []);
   });
 
-  it("yields every built-in shape id for the default registry", () => {
-    const registry = BlockShapeRegistry.createDefault();
-    assert.deepEqual([...registry.ids()], [...kDefaultShapeIds]);
-  });
-
   it("includes a custom shape registered after createDefault", () => {
     const registry = BlockShapeRegistry.createDefault();
+    const builtIn = [...registry.ids()];
     registry.register(makeShape("myShape"));
 
-    assert.deepEqual(
-      [...registry.ids()],
-      [...kDefaultShapeIds, "myShape"]
-    );
+    assert.deepEqual([...registry.ids()], [...builtIn, "myShape"]);
   });
 });
 

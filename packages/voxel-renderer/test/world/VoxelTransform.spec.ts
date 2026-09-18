@@ -129,3 +129,27 @@ describe("VoxelTransform#equals", () => {
     assert.equal(a.equals(b), false);
   });
 });
+
+describe("VoxelTransform.pack", () => {
+  it("matches the packed bits of an equivalent instance", () => {
+    for (const rotation of kRotations) {
+      for (const flipX of kBools) {
+        for (const flipZ of kBools) {
+          for (const flipY of kBools) {
+            const options = { rotation, flipX, flipZ, flipY };
+
+            assert.equal(
+              VoxelTransform.pack(options),
+              new VoxelTransform(options).packed
+            );
+          }
+        }
+      }
+    }
+  });
+
+  it("wraps rotations outside 0..3", () => {
+    assert.equal(VoxelTransform.pack({ rotation: 5 }), 1);
+    assert.equal(VoxelTransform.pack({ rotation: -1 }), 3);
+  });
+});

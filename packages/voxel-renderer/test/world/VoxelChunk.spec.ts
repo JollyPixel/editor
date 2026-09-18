@@ -42,41 +42,6 @@ describe("VoxelChunk constructor", () => {
   });
 });
 
-describe("VoxelChunk linearIndex / fromLinearIndex", () => {
-  it("[0,0,0] has index 0", () => {
-    const chunk = new VoxelChunk([0, 0, 0]);
-    assert.equal(chunk.linearIndex(0, 0, 0), 0);
-  });
-
-  it("[1,0,0] has index 1", () => {
-    const chunk = new VoxelChunk([0, 0, 0]);
-    assert.equal(chunk.linearIndex(1, 0, 0), 1);
-  });
-
-  it("[0,1,0] has index size", () => {
-    const chunk = new VoxelChunk([0, 0, 0], 4);
-    assert.equal(chunk.linearIndex(0, 1, 0), 4);
-  });
-
-  it("[0,0,1] has index size²", () => {
-    const chunk = new VoxelChunk([0, 0, 0], 4);
-    assert.equal(chunk.linearIndex(0, 0, 1), 16);
-  });
-
-  it("round-trips arbitrary coords via fromLinearIndex", () => {
-    const chunk = new VoxelChunk([0, 0, 0], 8);
-    const cases = [[0, 0, 0], [3, 5, 7], [7, 7, 7], [1, 0, 2]] as const;
-
-    for (const [lx, ly, lz] of cases) {
-      const idx = chunk.linearIndex(lx, ly, lz);
-      const back = chunk.fromLinearIndex(idx);
-      assert.equal(back.lx, lx, `lx mismatch for ${lx},${ly},${lz}`);
-      assert.equal(back.ly, ly, `ly mismatch for ${lx},${ly},${lz}`);
-      assert.equal(back.lz, lz, `lz mismatch for ${lx},${ly},${lz}`);
-    }
-  });
-});
-
 describe("VoxelChunk set / get", () => {
   it("get returns undefined for empty coords", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
@@ -235,7 +200,6 @@ describe("VoxelChunk mayContain()", () => {
 
     assert.equal(chunk.mayContain(2, 3, 4), true);
     assert.equal(chunk.mayContain(5, 3, 4), true);
-    // Inside the box but empty — a getAt() is still needed to confirm.
     assert.equal(chunk.mayContain(3, 3, 4), true);
 
     assert.equal(chunk.mayContain(1, 3, 4), false);

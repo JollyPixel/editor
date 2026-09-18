@@ -88,8 +88,6 @@ function probeCases(
 }
 
 it("composites voxel alpha on the GPU", {
-  skip: process.env.npm_lifecycle_event !== "test-gpu" &&
-    process.env.VOXEL_GPU_TESTS !== "1",
   timeout: 120_000
 }, async() => {
   const bundle = await build({
@@ -132,7 +130,6 @@ it("composites voxel alpha on the GPU", {
       }
     }
     const samples = await page.evaluate(async(cases) => {
-      // The bundle is served by this test's local HTTP server.
       const modulePath = "/probe.js";
       const { probe }: typeof import("./fixtures/transparency.ts") =
         await import(modulePath);

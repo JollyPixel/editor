@@ -300,7 +300,7 @@ Removes several voxels and emits a single `"voxels-removed"` for the batch.
 
 #### `setPackedVoxelAt(layerName: string, position: THREE.Vector3Like, packed: PackedVoxel): void`
 
-Writes a voxel directly and marks neighbouring chunks dirty for boundary face re-evaluation.
+Writes a voxel directly and marks the affected and neighbouring chunks of every layer dirty for face re-evaluation.
 Throws if the layer is not found. Emits nothing: prefer `setVoxel` unless you are
 loading data peers already have.
 

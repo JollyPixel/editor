@@ -13,7 +13,6 @@ import {
 import type { TiledMapTileset } from "../../../src/plugins/tiled/index.ts";
 import { approxEqual } from "../../helpers/math.ts";
 
-// A 4-column, 2-row tileset starting at GID 1 (8 tiles total)
 function makeTileset(
   firstgid = 1,
   overrides: Partial<TiledMapTileset> = {}
@@ -30,209 +29,97 @@ function makeTileset(
   });
 }
 
-describe("TileSet constants", () => {
-  it("FLIPPED_HORIZONTAL is bit 31", () => {
-    assert.equal(FLIPPED_HORIZONTAL, 0x80000000);
-  });
-
-  it("FLIPPED_VERTICAL is bit 30", () => {
-    assert.equal(FLIPPED_VERTICAL, 0x40000000);
-  });
-
-  it("FLIPPED_ANTI_DIAGONAL is bit 29", () => {
-    assert.equal(FLIPPED_ANTI_DIAGONAL, 0x20000000);
-  });
-
-  it("TILED_FLIPPED_FLAGS is OR of all three", () => {
+describe("TileSet", () => {
+  it("uses Tiled's three high flip bits", () => {
+    assert.deepEqual(
+      [FLIPPED_HORIZONTAL, FLIPPED_VERTICAL, FLIPPED_ANTI_DIAGONAL],
+      [0x80000000, 0x40000000, 0x20000000]
+    );
     assert.equal(TILED_FLIPPED_FLAGS, FLIPPED_HORIZONTAL | FLIPPED_VERTICAL | FLIPPED_ANTI_DIAGONAL);
   });
+
+  it("derives its range and grid from the Tiled definition", () => {
+    const tileset = makeTileset();
+
+    assert.equal(tileset.name, "terrain");
+    assert.equal(tileset.firstgid, 1);
+    assert.equal(tileset.lastgid, 8);
+    assert.equal(tileset.tilewidth, 16);
+    assert.equal(tileset.tileheight, 16);
+    assert.equal(tileset.columns, 4);
+    assert.equal(tileset.rows, 2);
+  });
+
+  const kGids: [string, number, number, boolean][] = [
+    ["the first tile", 1, 0, true],
+    ["a middle tile", 4, 3, true],
+    ["the last tile", 8, 7, true],
+    ["a flipped tile", 3 | FLIPPED_HORIZONTAL, 2, true],
+    ["a gid below the range", 0, -1, false],
+    ["a gid past the range", 9, 8, false]
+  ];
+
+  for (const [name, gid, localId, contained] of kGids) {
+    it(`maps ${name} to local id ${localId}`, () => {
+      const tileset = makeTileset();
+
+      assert.equal(tileset.getTileLocalId(gid), localId);
+      assert.equal(tileset.containsLocalId(localId), contained);
+      assert.equal(tileset.containsGid(gid), contained);
+    });
+  }
 });
 
-describe("TileSet getters", () => {
-  const ts = makeTileset();
+describe("TileSet.getTileProperties", () => {
+  const kTiles: [number, number, number, number, number][] = [
+    [1, 0, 0, 0, 0.5],
+    [2, 1, 0, 0.25, 0.5],
+    [5, 0, 1, 0, 0],
+    [7, 2, 1, 0.5, 0]
+  ];
 
-  it("name", () => {
-    assert.equal(ts.name, "terrain");
+  for (const [gid, col, row, offsetU, offsetV] of kTiles) {
+    it(`places gid ${gid} at column ${col}, row ${row} with a Y-flipped uv`, () => {
+      const props = makeTileset().getTileProperties(gid);
+      assert.ok(props !== null);
+
+      assert.deepEqual([props.coords.x, props.coords.y], [col, row]);
+      assert.ok(approxEqual(props.uv.offset.x, offsetU));
+      assert.ok(approxEqual(props.uv.offset.y, offsetV));
+      assert.ok(approxEqual(props.uv.size.x, 1 / 4));
+      assert.ok(approxEqual(props.uv.size.y, 1 / 2));
+    });
+  }
+
+  it("returns null for a gid outside the tileset", () => {
+    const tileset = makeTileset();
+
+    assert.equal(tileset.getTileProperties(99), null);
+    assert.equal(tileset.getTileProperties(0), null);
   });
 
-  it("firstgid", () => {
-    assert.equal(ts.firstgid, 1);
-  });
-
-  it("lastgid = firstgid + tilecount - 1", () => {
-    assert.equal(ts.lastgid, 8);
-  });
-
-  it("tilewidth / tileheight", () => {
-    assert.equal(ts.tilewidth, 16);
-    assert.equal(ts.tileheight, 16);
-  });
-
-  it("columns", () => {
-    assert.equal(ts.columns, 4);
-  });
-
-  it("rows = tilecount / columns", () => {
-    assert.equal(ts.rows, 2);
-  });
-});
-
-describe("TileSet.getTileLocalId", () => {
-  const ts = makeTileset(1);
-
-  it("GID 1 → local 0", () => {
-    assert.equal(ts.getTileLocalId(1), 0);
-  });
-
-  it("GID 4 → local 3", () => {
-    assert.equal(ts.getTileLocalId(4), 3);
-  });
-
-  it("strips flip bits before subtracting firstgid", () => {
-    const gidWithFlip = 3 | FLIPPED_HORIZONTAL;
-    assert.equal(ts.getTileLocalId(gidWithFlip), 2);
-  });
-
-  it("GID less than firstgid gives negative local id", () => {
-    assert.equal(ts.getTileLocalId(0), -1);
-  });
-});
-
-describe("TileSet.containsLocalId", () => {
-  const ts = makeTileset();
-
-  it("0 is inside (first tile)", () => {
-    assert.equal(ts.containsLocalId(0), true);
-  });
-
-  it("7 is inside (last tile of 8)", () => {
-    assert.equal(ts.containsLocalId(7), true);
-  });
-
-  it("8 is outside", () => {
-    assert.equal(ts.containsLocalId(8), false);
-  });
-
-  it("-1 is outside", () => {
-    assert.equal(ts.containsLocalId(-1), false);
-  });
-});
-
-describe("TileSet.containsGid", () => {
-  const ts = makeTileset(1);
-
-  it("GID 1 (first tile) is contained", () => {
-    assert.equal(ts.containsGid(1), true);
-  });
-
-  it("GID 8 (last tile) is contained", () => {
-    assert.equal(ts.containsGid(8), true);
-  });
-
-  it("GID 0 is not contained", () => {
-    assert.equal(ts.containsGid(0), false);
-  });
-
-  it("GID 9 is not contained", () => {
-    assert.equal(ts.containsGid(9), false);
-  });
-
-  it("GID with flip bits is still contained if base GID is in range", () => {
-    assert.equal(ts.containsGid(3 | FLIPPED_HORIZONTAL), true);
-  });
-});
-
-describe("TileSet.getTileProperties — UV math", () => {
-  // 4 cols, 2 rows, tileSize 16 → image is 64×32
-  const ts = makeTileset(1);
-
-  it("first tile (GID=1, local=0) → col=0, row=0", () => {
-    const props = ts.getTileProperties(1);
+  it("decodes the flip bits", () => {
+    const props = makeTileset().getTileProperties(1 | FLIPPED_HORIZONTAL | FLIPPED_ANTI_DIAGONAL);
     assert.ok(props !== null);
-    assert.equal(props.coords.x, 0);
-    assert.equal(props.coords.y, 0);
-  });
 
-  it("GID=2 (local=1) → col=1, row=0", () => {
-    const props = ts.getTileProperties(2);
-    assert.ok(props !== null);
-    assert.equal(props.coords.x, 1);
-    assert.equal(props.coords.y, 0);
-  });
-
-  it("GID=5 (local=4) → col=0, row=1", () => {
-    const props = ts.getTileProperties(5);
-    assert.ok(props !== null);
-    assert.equal(props.coords.x, 0);
-    assert.equal(props.coords.y, 1);
-  });
-
-  it("UV size is 1/cols × 1/rows", () => {
-    const props = ts.getTileProperties(1);
-    assert.ok(props !== null);
-    assert.ok(approxEqual(props.uv.size.x, 1 / 4));
-    assert.ok(approxEqual(props.uv.size.y, 1 / 2));
-  });
-
-  it("UV offset for (col=0, row=0) → offsetU=0, offsetV=0.5 (Y-flipped)", () => {
-    // Y-flip: offsetV = 1 - (row+1)/rows = 1 - 1/2 = 0.5
-    const props = ts.getTileProperties(1);
-    assert.ok(props !== null);
-    assert.ok(approxEqual(props.uv.offset.x, 0));
-    assert.ok(approxEqual(props.uv.offset.y, 0.5));
-  });
-
-  it("UV offset for (col=2, row=1) → offsetU=0.5, offsetV=0", () => {
-    /*
-     * col=2 → offsetU = 2/4 = 0.5
-     * row=1 → offsetV = 1 - (1+1)/2 = 0
-     */
-    const props = ts.getTileProperties(7);
-    assert.ok(props !== null);
-    assert.ok(approxEqual(props.uv.offset.x, 0.5));
-    assert.ok(approxEqual(props.uv.offset.y, 0));
-  });
-
-  it("returns null for GID outside tileset range", () => {
-    assert.equal(ts.getTileProperties(99), null);
-    assert.equal(ts.getTileProperties(0), null);
-  });
-
-  it("flip bits are correctly decoded", () => {
-    const gid = 1 | FLIPPED_HORIZONTAL | FLIPPED_ANTI_DIAGONAL;
-    const props = ts.getTileProperties(gid);
-    assert.ok(props !== null);
-    assert.equal(props.flippedX, true);
-    assert.equal(props.flippedY, false);
-    assert.equal(props.flippedAD, true);
+    assert.deepEqual(
+      [props.flippedX, props.flippedY, props.flippedAD],
+      [true, false, true]
+    );
   });
 });
 
 describe("TileSet.find", () => {
-  it("returns the tileset containing the GID", () => {
-    // GIDs 1–8
-    const ts1 = makeTileset(1);
-    const ts2 = makeTileset(9, { name: "walls", tilecount: 4, columns: 2 });
-    const found = TileSet.find([ts1, ts2], 10);
-    assert.equal(found, ts2);
+  const first = makeTileset(1);
+  const second = makeTileset(9, { name: "walls", tilecount: 4, columns: 2 });
+
+  it("returns the tileset whose range holds the gid, whatever the order", () => {
+    assert.equal(TileSet.find([first, second], 10), second);
+    assert.equal(TileSet.find([second, first], 3), first);
+    assert.equal(TileSet.find([first], 5), first);
   });
 
-  it("returns the first tileset for GIDs in its range", () => {
-    const ts1 = makeTileset(1);
-    const ts2 = makeTileset(9, { name: "walls", tilecount: 4, columns: 2 });
-    // Deliberately unordered input
-    const found = TileSet.find([ts2, ts1], 3);
-    assert.equal(found, ts1);
-  });
-
-  it("returns null when no tileset contains the GID", () => {
-    // GIDs 10–17
-    const ts = makeTileset(10);
-    assert.equal(TileSet.find([ts], 1), null);
-  });
-
-  it("works with a single tileset", () => {
-    const ts = makeTileset(1);
-    assert.equal(TileSet.find([ts], 5), ts);
+  it("returns null when no tileset contains the gid", () => {
+    assert.equal(TileSet.find([makeTileset(10)], 1), null);
   });
 });

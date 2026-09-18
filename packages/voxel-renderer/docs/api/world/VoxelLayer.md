@@ -208,6 +208,15 @@ Mark the chunk at the given chunk coordinates as dirty so it will be rebuilt.
 layer.markChunkDirty(0, 0, 0);
 ```
 
+### `getDirtyChunks(): IterableIterator<VoxelChunk>`
+
+Iterate only the chunks whose `dirty` flag is set, without visiting clean ones.
+
+### `loadPackedVoxels(positions: Int32Array, packed: ArrayLike<PackedVoxel>): void`
+
+Write layer-local `positions` (x, y, z triples) with their packed voxels. Each
+chunk's storage is sized once for everything it receives.
+
 ### `getChunks(): IterableIterator<VoxelChunk>`
 
 Iterate allocated chunks in this layer.

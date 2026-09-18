@@ -2,63 +2,29 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as THREE from "three";
+
 // Import Internal Dependencies
-import type {
-  VoxelCollider,
-  VoxelChunkCollision,
-  VoxelColliderContext
-} from "../src/collision/index.ts";
+import type { VoxelEngine } from "../src/VoxelEngine.ts";
+import type { VoxelColliderContext } from "../src/collision/index.ts";
+import {
+  makeFakeCollider,
+  type FakeCollider
+} from "./helpers/fakes.ts";
 import {
   makeEngine,
-  CUBE_ID as kCubeId
+  placeCube
 } from "./helpers/engine.ts";
 
-/*
- * No physics backend here on purpose: importing a Rapier symbol would defeat
- * the point of these tests.
- */
-function makeFakeCollider() {
-  const rebuilt: { key: string; collision: VoxelChunkCollision; }[] = [];
-  const removed: string[] = [];
-  let disposeCalls = 0;
+function makeCollidingEngine(): { engine: VoxelEngine; fake: FakeCollider; } {
+  const fake = makeFakeCollider();
+  const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
 
-  const collider: VoxelCollider = {
-    rebuildChunk(key, collision) {
-      rebuilt.push({ key, collision });
-    },
-    removeChunk(key) {
-      removed.push(key);
-    },
-    dispose() {
-      disposeCalls++;
-    }
-  };
-
-  return {
-    collider,
-    rebuilt,
-    removed,
-    get disposeCalls() {
-      return disposeCalls;
-    }
-  };
+  return { engine, fake };
 }
 
-describe("VoxelEngine — collider wiring", () => {
-  it("never calls the factory when no collider option is given", () => {
-    const engine = makeEngine({ layers: ["Ground"] });
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: kCubeId
-    });
-
-    assert.doesNotThrow(() => {
-      engine.init();
-      engine.tick(0);
-      engine.dispose();
-    });
-  });
-
+describe("VoxelEngine - collider wiring", () => {
   it("invokes the factory once with the engine's registries", () => {
     const contexts: VoxelColliderContext[] = [];
     const fake = makeFakeCollider();
@@ -78,88 +44,67 @@ describe("VoxelEngine — collider wiring", () => {
   });
 
   it("rebuilds collision for a dirty chunk with the layer position", () => {
-    const fake = makeFakeCollider();
-    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
+    const { engine, fake } = makeCollidingEngine();
+    engine.world.setLayerPosition("Ground", { x: 8, y: 0, z: 4 });
+    placeCube(engine, "Ground", { x: 8, y: 0, z: 4 });
 
-    engine.world.setLayerPosition("Ground", {
-      x: 8,
-      y: 0,
-      z: 4
-    });
-    // Placed at the offset origin, so it lands in the layer-local chunk 0,0,0.
-    engine.world.setVoxel("Ground", {
-      position: { x: 8, y: 0, z: 4 },
-      blockId: kCubeId
-    });
     engine.tick(0);
 
     assert.equal(fake.rebuilt.length, 1);
-
-    const [{ key, collision }] = fake.rebuilt;
-    assert.match(key, /:0,0,0$/, "key should identify layer + chunk coords");
+    const [[key, collision]] = fake.rebuilt;
+    assert.match(key, /:0,0,0$/);
     assert.deepEqual(collision.layerPosition, { x: 8, y: 0, z: 4 });
-    assert.ok(
-      collision.geometries.size > 0,
-      "expected at least one geometry"
+    assert.ok(collision.geometries.size > 0);
+  });
+
+  it("hands colliders vertices relative to the chunk origin", () => {
+    const { engine, fake } = makeCollidingEngine();
+    engine.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
+    placeCube(engine, "Ground", { x: 10, y: 2, z: 3 });
+
+    engine.flush();
+
+    const [[, collision]] = fake.rebuilt;
+    const [geometry] = collision.geometries.values();
+    const bounds = new THREE.Box3().setFromBufferAttribute(
+      geometry.getAttribute("position") as THREE.BufferAttribute
     );
+    const { cx, cy, cz } = collision.chunk;
+    assert.deepEqual([cx, cy, cz], [2, 0, 0]);
+    assert.equal(bounds.min.x, 1);
+    assert.equal(bounds.max.x, 2);
   });
 
   it("removes collision when a layer is hidden, without rebuilding it", () => {
-    const fake = makeFakeCollider();
-    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
-
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: kCubeId
-    });
+    const { engine, fake } = makeCollidingEngine();
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
     engine.tick(0);
-
     const rebuiltWhileVisible = fake.rebuilt.length;
 
     engine.world.updateLayer("Ground", { visible: false });
     engine.markAllChunksDirty();
     engine.tick(0);
 
-    assert.equal(
-      fake.rebuilt.length,
-      rebuiltWhileVisible,
-      "a hidden layer must not rebuild collision"
-    );
-    assert.ok(fake.removed.length > 0, "expected the chunk collision to be removed");
+    assert.equal(fake.rebuilt.length, rebuiltWhileVisible);
+    assert.equal(fake.live.size, 0);
   });
 
   it("removes collision for a chunk emptied of every voxel", () => {
-    const fake = makeFakeCollider();
-    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
-
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: kCubeId
-    });
+    const { engine, fake } = makeCollidingEngine();
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
     engine.tick(0);
 
-    const [{ key }] = fake.rebuilt;
-
-    engine.world.removeVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 }
-    });
+    engine.world.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
     engine.tick(0);
 
-    assert.ok(
-      fake.removed.includes(key),
-      "the emptied chunk's collision must be released"
-    );
+    assert.equal(fake.live.size, 0);
   });
 
   it("disposes the collider along with the engine", () => {
-    const fake = makeFakeCollider();
-    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
-
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: kCubeId
-    });
+    const { engine, fake } = makeCollidingEngine();
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
     engine.tick(0);
+
     engine.dispose();
 
     assert.equal(fake.disposeCalls, 1);

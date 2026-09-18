@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import RAPIER from "@dimforge/rapier3d";
 import {
-  Camera3DControls
+  CameraComponent
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer
@@ -17,6 +17,7 @@ import {
 } from "../../src/index.ts";
 import { RapierVoxelCollider } from "../../src/plugins/rapier/index.ts";
 import { SphereBehavior } from "./components/SphereController.ts";
+import { FollowCamera } from "./components/FollowCamera.ts";
 import {
   createExamplePane
 } from "./utils/example-switcher.ts";
@@ -27,6 +28,11 @@ const kPlatformMin = 12;
 const kPlatformMax = 19;
 const kPlatformHeight = 2;
 const kSphereRadius = 0.5;
+const kDirtId = 1;
+const kSlabId = 2;
+const kRampId = 3;
+const kStairId = 4;
+const kPoleId = 5;
 
 /*
  * @dimforge/rapier3d 0.19.x loads its WASM binary via a static bundler import
@@ -63,21 +69,28 @@ scene.add(
   dirLight
 );
 
-world.createActor("camera")
-  .addComponent(Camera3DControls)
-  .transform
-  .setLocalPosition({ x: 16, y: 22, z: 50 })
-  .lookAt({ x: 16, y: 1, z: 16 });
-
 /*
- * One block type — collidable fullCube so RapierVoxelCollider creates box
- * colliders for every voxel (compound cuboid strategy, one per solid block).
+ * Every block shares the dirt textures; only the shape changes, so the course
+ * exercises each collider strategy: merged cuboids for cubes, sized cuboids
+ * for slabs, and a shape-face trimesh for ramps, stairs and poles.
  */
 const voxelBlocks: BlockDefinition[] = [
-  {
-    id: 1,
-    name: "Dirt",
-    shapeId: "cube",
+  dirtBlock(kDirtId, "Dirt", "cube"),
+  dirtBlock(kSlabId, "Slab", "slabBottom"),
+  dirtBlock(kRampId, "Ramp", "ramp"),
+  dirtBlock(kStairId, "Stair", "stair"),
+  dirtBlock(kPoleId, "Pole", "poleY")
+];
+
+function dirtBlock(
+  id: number,
+  name: string,
+  shapeId: BlockDefinition["shapeId"]
+): BlockDefinition {
+  return {
+    id,
+    name,
+    shapeId,
     collidable: true,
     faceTextures: {
       [Face.PosY]: {
@@ -111,8 +124,8 @@ const voxelBlocks: BlockDefinition[] = [
       col: 2,
       row: 0
     }
-  }
-];
+  };
+}
 
 /*
  * VoxelRenderer with Rapier physics enabled: RapierVoxelCollider builds box
@@ -139,8 +152,7 @@ const voxelMap = world.createActor("map")
 
 /*
  * ── Flat 32 × 32 ground at y = 0 ─────────────────────────────────────────────
- * Four 16 × 16 chunks, each getting a compound-cuboid collider built from the
- * 16 × 16 = 256 individual voxels (box colliders, most performant strategy).
+ * Four 16 × 16 chunks; each chunk's cubes are merged into a few cuboids.
  */
 for (let x = 0; x < kTerrainSize; x++) {
   for (let z = 0; z < kTerrainSize; z++) {
@@ -159,6 +171,54 @@ for (let y = 1; y <= kPlatformHeight; y++) {
       voxelMap.engine.world.setVoxel("Ground", { position: { x, y, z }, blockId: 1 });
     }
   }
+}
+
+function place(
+  x: number,
+  y: number,
+  z: number,
+  blockId: number,
+  rotation = 0
+): void {
+  voxelMap.engine.world.setVoxel("Ground", {
+    position: { x, y, z },
+    blockId,
+    rotation
+  });
+}
+
+/*
+ * ── Obstacle course ──────────────────────────────────────────────────────────
+ * A ramp climbs the platform from the south, stairs from the east, a field of
+ * slabs makes bumps to roll over, and pillars plus poles block the way.
+ */
+for (let x = 14; x <= 17; x++) {
+  place(x, 1, 21, kRampId, 2);
+  place(x, 1, 20, kDirtId);
+  place(x, 2, 20, kRampId, 2);
+}
+
+for (let z = 14; z <= 17; z++) {
+  place(21, 1, z, kStairId, 1);
+  place(20, 1, z, kDirtId);
+  place(20, 2, z, kStairId, 1);
+}
+
+for (let x = 3; x <= 9; x += 2) {
+  for (let z = 22; z <= 28; z += 2) {
+    place(x, 1, z, kSlabId);
+  }
+}
+
+for (const [x, z] of [[4, 4], [27, 4], [27, 27]]) {
+  for (let y = 1; y <= 3; y++) {
+    place(x, y, z, kDirtId);
+  }
+}
+
+for (let x = 23; x <= 29; x += 3) {
+  place(x, 1, 24, kPoleId);
+  place(x, 2, 24, kPoleId);
 }
 
 /*
@@ -187,6 +247,13 @@ const sphereMesh = new THREE.Mesh(
   new THREE.MeshLambertMaterial({ color: 0xff3333 })
 );
 scene.add(sphereMesh);
+
+world.createActor("camera")
+  .addComponent(CameraComponent)
+  .addComponent(FollowCamera, {
+    target: sphereMesh,
+    offset: { x: 0, y: 6, z: 9 }
+  });
 
 /*
  * ── Physics integration ───────────────────────────────────────────────────────

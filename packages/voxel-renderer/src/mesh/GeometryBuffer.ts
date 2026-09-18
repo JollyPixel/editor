@@ -3,10 +3,13 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { BlockVariantFace } from "./variants/types.ts";
+import type { QuadIndex } from "./QuadIndex.ts";
 
 // CONSTANTS
 const kInitialVertices = 4096;
-const kUint16Limit = 65536;
+const kIndicesPerQuad = 6;
+
+export const TILE_REPEAT_SCALE = 65535;
 
 export interface GeometryBufferOptions {
   /**
@@ -25,7 +28,7 @@ export interface GeometryBufferOptions {
  */
 export class GeometryBuffer {
   vertexCount = 0;
-  indexCount = 0;
+  triangleCount = 0;
 
   readonly tiled: boolean;
 
@@ -33,12 +36,13 @@ export class GeometryBuffer {
   #normals: Int8Array;
   #tileUvs: Float32Array;
   #atlasUvs: Uint16Array;
-  #indices: Uint32Array;
   #regions: Uint16Array;
   #repeats: Uint16Array;
 
   #vertexCapacity: number;
-  #indexCapacity: number;
+  #originX = 0;
+  #originY = 0;
+  #originZ = 0;
 
   constructor(
     options: GeometryBufferOptions = {}
@@ -50,24 +54,37 @@ export class GeometryBuffer {
 
     this.tiled = tiled;
     this.#vertexCapacity = vertexCapacity;
-    this.#indexCapacity = (vertexCapacity * 3) >> 1;
 
     this.#positions = new Float32Array(vertexCapacity * 3);
-    this.#normals = new Int8Array(vertexCapacity * 3);
-    this.#indices = new Uint32Array(this.#indexCapacity);
+    this.#normals = new Int8Array(vertexCapacity * 4);
     this.#tileUvs = new Float32Array(tiled ? vertexCapacity * 2 : 0);
     this.#atlasUvs = new Uint16Array(tiled ? 0 : vertexCapacity * 2);
     this.#regions = new Uint16Array(vertexCapacity * 4);
     this.#repeats = new Uint16Array(tiled ? vertexCapacity * 2 : 0);
   }
 
-  reset(): void {
-    this.vertexCount = 0;
-    this.indexCount = 0;
+  get quadCount(): number {
+    return this.vertexCount >> 2;
   }
 
   /**
-   * Appends a face translated to the voxel's world position.
+   * Empties the buffer; later faces are written relative to the origin.
+   */
+  reset(
+    originX = 0,
+    originY = 0,
+    originZ = 0
+  ): void {
+    this.vertexCount = 0;
+    this.triangleCount = 0;
+    this.#originX = originX;
+    this.#originY = originY;
+    this.#originZ = originZ;
+  }
+
+  /**
+   * Appends a face at the voxel's world position, stored relative to the
+   * buffer origin.
    */
   addFace(
     face: BlockVariantFace,
@@ -75,7 +92,12 @@ export class GeometryBuffer {
     wy: number,
     wz: number
   ): void {
-    this.#write(face, wx, wy, wz, 1, 1, 1, 1, 1);
+    if (this.tiled) {
+      this.#writeTiled(face, wx, wy, wz, 1, 1, 1, 1, 1);
+    }
+    else {
+      this.#writeAtlas(face, wx, wy, wz);
+    }
   }
 
   /**
@@ -107,14 +129,79 @@ export class GeometryBuffer {
     const repeatU = merge.swapped ? spanV : spanU;
     const repeatV = merge.swapped ? spanU : spanV;
 
-    this.#write(face, wx, wy, wz, sx, sy, sz, repeatU, repeatV);
+    this.#writeTiled(face, wx, wy, wz, sx, sy, sz, repeatU, repeatV);
   }
 
-  /**
-   * Writes scaled positions and repeated or atlas-space UVs.
-   */
+  #reserve(): number {
+    const base = this.vertexCount;
+    if (base + 4 > this.#vertexCapacity) {
+      this.#growVertices(base + 4);
+    }
+
+    return base;
+  }
+
   // eslint-disable-next-line max-params
-  #write(
+  #writeCommon(
+    face: BlockVariantFace,
+    base: number,
+    wx: number,
+    wy: number,
+    wz: number,
+    sx: number,
+    sy: number,
+    sz: number
+  ): void {
+    const positions = this.#positions;
+    const normals = this.#normals;
+    const regions = this.#regions;
+    const local = face.positions;
+    const { region, normalX, normalY, normalZ } = face;
+    const last = face.vertexCount - 1;
+    const x = wx - this.#originX;
+    const y = wy - this.#originY;
+    const z = wz - this.#originZ;
+
+    for (let i = 0, n = base * 4, p = base * 3; i < 4; i++, p += 3, n += 4) {
+      const i3 = (i > last ? last : i) * 3;
+      positions[p] = x + (local[i3] * sx);
+      positions[p + 1] = y + (local[i3 + 1] * sy);
+      positions[p + 2] = z + (local[i3 + 2] * sz);
+      normals[n] = normalX;
+      normals[n + 1] = normalY;
+      normals[n + 2] = normalZ;
+      regions[n] = region[0];
+      regions[n + 1] = region[1];
+      regions[n + 2] = region[2];
+      regions[n + 3] = region[3];
+    }
+
+    this.vertexCount = base + 4;
+    this.triangleCount += last - 1;
+  }
+
+  #writeAtlas(
+    face: BlockVariantFace,
+    wx: number,
+    wy: number,
+    wz: number
+  ): void {
+    const base = this.#reserve();
+    const atlasUvs = this.#atlasUvs;
+    const local = face.uvs;
+    const last = face.vertexCount - 1;
+
+    for (let i = 0, u = base * 2; i < 4; i++, u += 2) {
+      const i2 = (i > last ? last : i) * 2;
+      atlasUvs[u] = local[i2];
+      atlasUvs[u + 1] = local[i2 + 1];
+    }
+
+    this.#writeCommon(face, base, wx, wy, wz, 1, 1, 1);
+  }
+
+  // eslint-disable-next-line max-params
+  #writeTiled(
     face: BlockVariantFace,
     wx: number,
     wy: number,
@@ -125,78 +212,30 @@ export class GeometryBuffer {
     repeatU: number,
     repeatV: number
   ): void {
-    const { vertexCount } = face;
-    if (this.vertexCount + vertexCount > this.#vertexCapacity) {
-      this.#growVertices(this.vertexCount + vertexCount);
-    }
-    if (this.indexCount + face.indexCount > this.#indexCapacity) {
-      this.#growIndices(this.indexCount + face.indexCount);
-    }
-
-    const { tiled } = this;
-    const base = this.vertexCount;
-    const positions = this.#positions;
-    const normals = this.#normals;
+    const base = this.#reserve();
     const tileUvs = this.#tileUvs;
-    const atlasUvs = this.#atlasUvs;
-    const regions = this.#regions;
     const repeats = this.#repeats;
-    const localPositions = face.positions;
-    const localTileUvs = face.tileUvs;
-    const localAtlasUvs = face.uvs;
-    const { region, normalX, normalY, normalZ } = face;
+    const local = face.tileUvs;
+    const last = face.vertexCount - 1;
 
-    let p = base * 3;
-    let u = base * 2;
-    for (let i = 0; i < vertexCount; i++) {
-      const i3 = i * 3;
-      positions[p] = wx + (localPositions[i3] * sx);
-      positions[p + 1] = wy + (localPositions[i3 + 1] * sy);
-      positions[p + 2] = wz + (localPositions[i3 + 2] * sz);
-      normals[p] = normalX;
-      normals[p + 1] = normalY;
-      normals[p + 2] = normalZ;
-      p += 3;
-
-      const i2 = i * 2;
-      if (tiled) {
-        tileUvs[u] = localTileUvs[i2] * repeatU;
-        tileUvs[u + 1] = localTileUvs[i2 + 1] * repeatV;
-        repeats[u] = repeatU;
-        repeats[u + 1] = repeatV;
-      }
-      else {
-        atlasUvs[u] = localAtlasUvs[i2];
-        atlasUvs[u + 1] = localAtlasUvs[i2 + 1];
-      }
-
-      const r = (base * 4) + (i * 4);
-      regions[r] = region[0];
-      regions[r + 1] = region[1];
-      regions[r + 2] = region[2];
-      regions[r + 3] = region[3];
-      u += 2;
+    for (let i = 0, u = base * 2; i < 4; i++, u += 2) {
+      const i2 = (i > last ? last : i) * 2;
+      tileUvs[u] = local[i2] * repeatU;
+      tileUvs[u + 1] = local[i2 + 1] * repeatV;
+      repeats[u] = repeatU;
+      repeats[u + 1] = repeatV;
     }
 
-    const indices = this.#indices;
-    let n = this.indexCount;
-    indices[n++] = base;
-    indices[n++] = base + 1;
-    indices[n++] = base + 2;
-    if (vertexCount === 4) {
-      indices[n++] = base;
-      indices[n++] = base + 2;
-      indices[n++] = base + 3;
-    }
-
-    this.indexCount = n;
-    this.vertexCount = base + vertexCount;
+    this.#writeCommon(face, base, wx, wy, wz, sx, sy, sz);
   }
 
   /**
-   * Copies written ranges into exact-size geometry attributes.
+   * Copies written ranges into exact-size geometry attributes that draw
+   * through the shared `quadIndex`.
    */
-  toGeometry(): THREE.BufferGeometry {
+  toGeometry(
+    quadIndex: QuadIndex
+  ): THREE.BufferGeometry {
     const { vertexCount, tiled } = this;
     const geometry = new THREE.BufferGeometry();
 
@@ -206,7 +245,7 @@ export class GeometryBuffer {
     );
     geometry.setAttribute(
       "normal",
-      new THREE.BufferAttribute(this.#normals.slice(0, vertexCount * 3), 3, true)
+      new THREE.BufferAttribute(this.#normals.slice(0, vertexCount * 4), 4, true)
     );
     geometry.setAttribute(
       "uv",
@@ -221,17 +260,13 @@ export class GeometryBuffer {
     if (tiled) {
       geometry.setAttribute(
         "tileRepeat",
-        new THREE.BufferAttribute(this.#repeats.slice(0, vertexCount * 2), 2)
+        new THREE.BufferAttribute(this.#repeats.slice(0, vertexCount * 2), 2, true)
       );
     }
 
-    const indices = this.#indices.subarray(0, this.indexCount);
-    geometry.setIndex(
-      new THREE.BufferAttribute(
-        vertexCount < kUint16Limit ? new Uint16Array(indices) : indices.slice(),
-        1
-      )
-    );
+    const quads = this.quadCount;
+    geometry.setIndex(quadIndex.forQuads(quads));
+    geometry.setDrawRange(0, quads * kIndicesPerQuad);
 
     return geometry;
   }
@@ -245,7 +280,7 @@ export class GeometryBuffer {
     }
 
     this.#positions = grow(this.#positions, capacity * 3);
-    this.#normals = grow(this.#normals, capacity * 3);
+    this.#normals = grow(this.#normals, capacity * 4);
     this.#regions = grow(this.#regions, capacity * 4);
     if (this.tiled) {
       this.#tileUvs = grow(this.#tileUvs, capacity * 2);
@@ -255,18 +290,6 @@ export class GeometryBuffer {
       this.#atlasUvs = grow(this.#atlasUvs, capacity * 2);
     }
     this.#vertexCapacity = capacity;
-  }
-
-  #growIndices(
-    required: number
-  ): void {
-    let capacity = this.#indexCapacity;
-    while (capacity < required) {
-      capacity *= 2;
-    }
-
-    this.#indices = grow(this.#indices, capacity);
-    this.#indexCapacity = capacity;
   }
 }
 

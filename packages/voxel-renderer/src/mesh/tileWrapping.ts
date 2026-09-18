@@ -16,6 +16,7 @@ import {
 
 // Import Internal Dependencies
 import type { BlockSurface } from "../blocks/BlockSurface.ts";
+import { TILE_REPEAT_SCALE } from "./GeometryBuffer.ts";
 
 export type TileWrappedMaterial =
   | THREE.MeshLambertMaterial
@@ -72,11 +73,9 @@ export function enableTileWrapping(
   }
 
   const tileRegion = attribute<"vec4">("tileRegion", "vec4");
-  /*
-   * Must be declared as `uvec2` then converted: the WebGPU backend uploads it as an
-   * integer attribute, so `vec2` would reinterpret the bits rather than convert them.
-   */
-  const tileRepeat = vec2(attribute<"uvec2">("tileRepeat", "uvec2"));
+  const tileRepeat = attribute<"vec2">("tileRepeat", "vec2")
+    .mul(TILE_REPEAT_SCALE)
+    .round();
 
   // Fold tile-space UVs into 0..1, while preserving the far edge.
   const tileCoord = clamp(uv(), vec2(0), tileRepeat);

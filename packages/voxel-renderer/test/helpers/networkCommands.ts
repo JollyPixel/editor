@@ -8,7 +8,6 @@ import { makeBlockDef } from "./blocks.ts";
 
 type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;
 
-/** An added-layer command with empty options, keyed by layer name. */
 export function makeAddedCommand(
   layerName: string
 ): AddedCommand {

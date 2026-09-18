@@ -1,20 +1,20 @@
+// Import Third-party Dependencies
+import * as THREE from "three";
+
 // Import Internal Dependencies
 import { VoxelEngine } from "../../src/VoxelEngine.ts";
 import type { VoxelEngineOptions } from "../../src/VoxelEngine.types.ts";
 import { makeBlockDef } from "./blocks.ts";
 import { makeAtlasDef } from "./atlas.ts";
 import { mockTexture } from "./mockTexture.ts";
+import {
+  CHUNK_SIZE,
+  CUBE_ID
+} from "./ids.ts";
 
 // CONSTANTS
-export const CUBE_ID = 1;
-export const LEAVES_ID = 2;
-export const CHUNK_SIZE = 4;
+const kChunkCoords = /-?\d+,-?\d+,-?\d+/;
 
-/**
- * A 4-wide-chunk engine with a single "cube" block and the `makeAtlasDef()`
- * atlas already registered, so meshing succeeds without a GPU texture.
- * `options` is spread last and overrides any of it.
- */
 export function makeEngine(
   options: VoxelEngineOptions = {}
 ): VoxelEngine {
@@ -30,10 +30,6 @@ export function makeEngine(
   return engine;
 }
 
-/**
- * Places one voxel per chunk across `count` chunks along +X, so chunk `i` is
- * centered on `x = (i * CHUNK_SIZE) + 2`.
- */
 export function fillChunks(
   engine: VoxelEngine,
   layerName: string,
@@ -46,4 +42,35 @@ export function fillChunks(
       blockId
     });
   }
+}
+
+export function placeCube(
+  engine: VoxelEngine,
+  layerName: string,
+  position: { x: number; y: number; z: number; },
+  blockId = CUBE_ID
+): void {
+  engine.world.setVoxel(layerName, { position, blockId });
+}
+
+export function chunkMeshes(
+  engine: VoxelEngine
+): THREE.Mesh[] {
+  return engine.root.children.filter(
+    (child): child is THREE.Mesh => child instanceof THREE.Mesh
+  );
+}
+
+export function chunkCoordsOf(
+  object: THREE.Object3D
+): string {
+  const [coords] = kChunkCoords.exec(object.name) ?? [""];
+
+  return coords;
+}
+
+export function sortedChunkCoords(
+  objects: Iterable<THREE.Object3D>
+): string[] {
+  return [...objects].map(chunkCoordsOf).sort();
 }

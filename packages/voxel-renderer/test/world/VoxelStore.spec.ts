@@ -152,15 +152,10 @@ describe("VoxelStore delete", () => {
     assert.equal(store.size, 1);
   });
 
-  /**
-   * Backward-shift deletion must not orphan a key that probed past the hole,
-   * which is the classic failure mode of tombstone-free open addressing.
-   */
   it("keeps colliding keys reachable after the one before them is deleted", () => {
     const store = new VoxelStore(16);
     const keys: number[] = [];
 
-    // Enough keys that clusters form and probe sequences overlap.
     for (let i = 0; i < 10; i++) {
       keys.push(i);
       store.set(i, i + 1);
@@ -319,5 +314,43 @@ describe("VoxelStore copyFrom", () => {
     for (let key = 1; key < 12; key += 2) {
       assert.equal(target.get(key), key + 1);
     }
+  });
+});
+
+describe("VoxelStore reserve", () => {
+  it("grows once so the reserved entries fit without another rehash", () => {
+    const store = new VoxelStore();
+    store.reserve(100);
+    const capacity = store.capacity;
+
+    for (let key = 0; key < 100; key++) {
+      store.set(key, key + 1);
+    }
+
+    assert.equal(store.capacity, capacity);
+    assert.equal(store.size, 100);
+  });
+
+  it("keeps every entry when it rehashes", () => {
+    const store = new VoxelStore();
+    for (let key = 0; key < 10; key++) {
+      store.set(key * 17, key);
+    }
+
+    store.reserve(1_000);
+
+    assert.deepEqual(
+      collect(store),
+      new Map(Array.from({ length: 10 }, (_, key) => [key * 17, key]))
+    );
+  });
+
+  it("never shrinks the table", () => {
+    const store = new VoxelStore(256);
+    const capacity = store.capacity;
+
+    store.reserve(1);
+
+    assert.equal(store.capacity, capacity);
   });
 });

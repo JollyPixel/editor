@@ -55,10 +55,6 @@ describe("VoxelWorld — layer properties", () => {
   });
 });
 
-/**
- * A change that alters what one layer occludes has to remesh every layer, not
- * just its own: a neighbour's culled faces were decided against the old state.
- */
 describe("VoxelWorld — dirty propagation", () => {
   it("dirties an adjacent chunk when a voxel lands on the boundary", () => {
     const world = new VoxelWorld(4);
@@ -149,5 +145,58 @@ describe("VoxelWorld — chunk enumeration", () => {
 
     assert.equal([...fixture.world.getAllChunks()].length, 2);
     assert.deepEqual([...fixture.world.getAllDirtyChunks()], []);
+  });
+});
+
+describe("VoxelWorld — cross-layer dirty propagation", () => {
+  it("dirties the other layers' chunk holding the edited cell", () => {
+    const world = new VoxelWorld(4);
+    const upper = world.addLayer("Upper");
+    const lower = world.addLayer("Lower");
+    world.setVoxelAt("Lower", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
+    lower.getChunk(0, 0, 0)!.dirty = false;
+
+    world.setVoxelAt("Upper", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
+
+    assert.equal(lower.getChunk(0, 0, 0)?.dirty, true);
+    assert.equal(upper.getChunk(0, 0, 0)?.dirty, true);
+  });
+
+  it("dirties the other layers' neighbour chunk across a boundary", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Upper");
+    const lower = world.addLayer("Lower");
+    world.setVoxelAt("Lower", { x: 4, y: 0, z: 0 }, makeVoxelEntry());
+    lower.getChunk(1, 0, 0)!.dirty = false;
+
+    world.setVoxelAt("Upper", { x: 3, y: 0, z: 0 }, makeVoxelEntry());
+
+    assert.equal(lower.getChunk(1, 0, 0)?.dirty, true);
+  });
+
+  it("dirties the other layers on removal too", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Upper");
+    const lower = world.addLayer("Lower");
+    world.setVoxelAt("Upper", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
+    world.setVoxelAt("Lower", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
+    lower.getChunk(0, 0, 0)!.dirty = false;
+
+    world.removeVoxelAt("Upper", { x: 1, y: 1, z: 1 });
+
+    assert.equal(lower.getChunk(0, 0, 0)?.dirty, true);
+  });
+
+  it("maps the cell through a layer's own position", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Upper");
+    const lower = world.addLayer("Lower");
+    lower.position = { x: 4, y: 0, z: 0 };
+    world.setVoxelAt("Lower", { x: 5, y: 1, z: 1 }, makeVoxelEntry());
+    lower.getChunk(0, 0, 0)!.dirty = false;
+
+    world.setVoxelAt("Upper", { x: 5, y: 1, z: 1 }, makeVoxelEntry());
+
+    assert.equal(lower.getChunk(0, 0, 0)?.dirty, true);
   });
 });

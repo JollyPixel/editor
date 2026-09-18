@@ -13,6 +13,9 @@ import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
 import type { ChunkMaterialCache } from "./ChunkMaterialCache.ts";
 
+// CONSTANTS
+const kShaderOnlyAttributes = ["tileRegion", "tileRepeat"];
+
 export interface ChunkMeshEntry {
   layer: VoxelLayer;
   chunk: VoxelChunk;
@@ -27,6 +30,10 @@ export interface ChunkMeshStoreOptions {
   inspector: VoxelInspector;
   collider?: VoxelCollider | null;
   logger?: VoxelLogger;
+  /**
+   * @default false
+   */
+  retainVertexData?: boolean;
 }
 
 export interface ChunkMeshRemoveOptions {
@@ -48,6 +55,7 @@ export class ChunkMeshStore {
   #inspector: VoxelInspector;
   #collider: VoxelCollider | null;
   #logger: VoxelLogger;
+  #retainVertexData: boolean;
 
   constructor(
     options: ChunkMeshStoreOptions
@@ -58,7 +66,8 @@ export class ChunkMeshStore {
       materials,
       inspector,
       collider = null,
-      logger = NOOP_LOGGER
+      logger = NOOP_LOGGER,
+      retainVertexData = false
     } = options;
 
     this.#root = root;
@@ -67,6 +76,7 @@ export class ChunkMeshStore {
     this.#inspector = inspector;
     this.#collider = collider;
     this.#logger = logger;
+    this.#retainVertexData = retainVertexData;
   }
 
   * [Symbol.iterator](): IterableIterator<[string, ChunkMeshEntry]> {
@@ -88,6 +98,11 @@ export class ChunkMeshStore {
       chunk,
       layer
     );
+    const origin = {
+      x: (chunk.cx * chunk.size) + layer.position.x,
+      y: (chunk.cy * chunk.size) + layer.position.y,
+      z: (chunk.cz * chunk.size) + layer.position.z
+    };
     const meshes: THREE.Mesh[] = [];
     if (geometries) {
       for (const [geometryKey, geometry] of geometries) {
@@ -105,9 +120,14 @@ export class ChunkMeshStore {
           )
         );
         mesh.name = `voxel_chunk_${key}:${geometryKey}`;
+        mesh.position.set(origin.x, origin.y, origin.z);
         this.#materials.retain(mesh.material);
+        if (!this.#retainVertexData) {
+          mesh.onAfterRender = releaseShaderAttributes;
+        }
 
         this.#root.add(mesh);
+        mesh.updateWorldMatrix(true, false);
         meshes.push(mesh);
       }
     }
@@ -123,11 +143,7 @@ export class ChunkMeshStore {
       meshes,
       this.#meshBuilder.stats,
       {
-        origin: {
-          x: (chunk.cx * chunk.size) + layer.position.x,
-          y: (chunk.cy * chunk.size) + layer.position.y,
-          z: (chunk.cz * chunk.size) + layer.position.z
-        },
+        origin,
         size: chunk.size
       }
     );
@@ -208,6 +224,18 @@ export class ChunkMeshStore {
       }
     }
   }
+}
+
+function releaseShaderAttributes(
+  this: THREE.Mesh
+): void {
+  for (const name of kShaderOnlyAttributes) {
+    const attribute = this.geometry.getAttribute(name);
+    if (attribute instanceof THREE.BufferAttribute) {
+      attribute.array = attribute.array.slice(0, 0);
+    }
+  }
+  this.onAfterRender = THREE.Object3D.prototype.onAfterRender;
 }
 
 function chunkKey(

@@ -49,10 +49,6 @@ describe("faceUvs", () => {
 describe("built-in shape uv convention", () => {
   const shapes = [...BlockShapeRegistry.createDefault().getAll()];
 
-  it("registers every documented shape", () => {
-    assert.ok(shapes.length > 0);
-  });
-
   for (const shape of shapes) {
     it(`${shape.id} textures each face over its own footprint`, () => {
       shape.faces.forEach((definition, index) => {
@@ -78,10 +74,6 @@ describe("built-in shape uv convention", () => {
   }
 });
 
-/**
- * `1` when the polygon winds counter-clockwise as seen from outside the block,
- * `-1` otherwise.
- */
 function windingOf(
   vertices: readonly Vec3[],
   normal: Vec3
@@ -99,9 +91,6 @@ function windingOf(
   );
 }
 
-/**
- * Same winding, read in uv space. A tile is mirrored when the two disagree.
- */
 function uvWindingOf(
   uvs: readonly Vec2[]
 ): number {

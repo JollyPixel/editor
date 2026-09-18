@@ -138,6 +138,7 @@ export class ChunkWireframeView implements ChunkInspectorView {
     const overlays: THREE.Mesh[] = [];
     for (const mesh of entry.meshes) {
       const overlay = new THREE.Mesh(mesh.geometry, material);
+      overlay.position.copy(mesh.position);
       overlay.name = `${mesh.name}:wireframe`;
       overlays.push(overlay);
       this.#group.add(overlay);

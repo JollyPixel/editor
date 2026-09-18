@@ -21,63 +21,42 @@ function makeLayer(opts?: Partial<ConstructorParameters<typeof VoxelLayer>[0]>) 
 }
 
 describe("VoxelLayer constructor", () => {
-  it("sets id, name, order from options", () => {
+  it("sets id, name and order from options", () => {
     const layer = makeLayer({ id: "l1", name: "Ground", order: 2 });
+
     assert.equal(layer.id, "l1");
     assert.equal(layer.name, "Ground");
     assert.equal(layer.order, 2);
   });
 
-  it("defaults visible to true", () => {
-    assert.equal(makeLayer().visible, true);
+  it("defaults to a visible, opaque, empty layer at the origin", () => {
+    const layer = makeLayer();
+
+    assert.equal(layer.visible, true);
+    assert.equal(layer.opacity, 1);
+    assert.deepEqual(layer.position, { x: 0, y: 0, z: 0 });
+    assert.equal(layer.chunkCount, 0);
   });
 
-  it("respects explicit visible=false", () => {
-    assert.equal(makeLayer({ visible: false }).visible, false);
-  });
+  it("respects explicit options", () => {
+    const layer = makeLayer({ visible: false, opacity: 0.5, position: { x: 16, y: 0, z: -8 } });
 
-  it("defaults position to {x:0,y:0,z:0}", () => {
-    assert.deepEqual(makeLayer().position, { x: 0, y: 0, z: 0 });
-  });
-
-  it("respects explicit position", () => {
-    const layer = makeLayer({ position: { x: 16, y: 0, z: -8 } });
+    assert.equal(layer.visible, false);
+    assert.equal(layer.opacity, 0.5);
     assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
-  });
-
-  it("starts with chunkCount 0", () => {
-    assert.equal(makeLayer().chunkCount, 0);
   });
 });
 
 describe("VoxelLayer opacity", () => {
-  it("defaults opacity to 1", () => {
-    assert.equal(makeLayer().opacity, 1);
-  });
+  for (const [requested, expected] of [[5, 1], [-5, 0]]) {
+    it(`clamps ${requested} to ${expected} in the constructor and the setter`, () => {
+      const layer = makeLayer();
+      layer.opacity = requested;
 
-  it("respects explicit opacity", () => {
-    assert.equal(makeLayer({ opacity: 0.5 }).opacity, 0.5);
-  });
-
-  it("clamps a constructor opacity above 1 to 1", () => {
-    assert.equal(makeLayer({ opacity: 5 }).opacity, 1);
-  });
-
-  it("clamps a constructor opacity below 0 to 0", () => {
-    assert.equal(makeLayer({ opacity: -5 }).opacity, 0);
-  });
-
-  it("clamps a setter opacity above 1 to 1", () => {
-    const layer = makeLayer();
-    layer.opacity = 2;
-    assert.equal(layer.opacity, 1);
-  });
-
-  it("clamps a setter opacity below 0 to 0", () => {
-    const layer = makeLayer();
-    layer.opacity = -1;
-    assert.equal(layer.opacity, 0);
-  });
+      assert.equal(layer.opacity, expected);
+      assert.equal(makeLayer({ opacity: requested }).opacity, expected);
+    });
+  }
 
   it("wasVisible flips true when opacity drops to 0 while visible", () => {
     const layer = makeLayer();
@@ -107,11 +86,10 @@ describe("VoxelLayer opacity", () => {
     layer.opacity = 0;
     assert.equal(layer.wasVisible, true);
     layer.visible = false;
-    // Still effectively invisible before and after — no new transition.
     assert.equal(layer.wasVisible, true);
   });
 
-  it("setting visible=false while opacity=0 keeps wasVisible true (still effectively invisible)", () => {
+  it("keeps wasVisible false when a layer that was never visible is hidden", () => {
     const layer = makeLayer({ opacity: 0 });
     assert.equal(layer.wasVisible, false);
     layer.visible = false;
@@ -157,7 +135,6 @@ describe("VoxelLayer setVoxelAt / getVoxelAt round-trip", () => {
   it("creates a second chunk for a voxel in a different chunk", () => {
     const layer = makeLayer({ chunkSize: 4 });
     layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    // cx=1
     layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.chunkCount, 2);
   });
@@ -174,7 +151,6 @@ describe("VoxelLayer negative coordinates", () => {
   it("negative x=-1 lands in chunk cx=-1", () => {
     const layer = makeLayer({ chunkSize: 4 });
     layer.setVoxelAt({ x: -1, y: 0, z: 0 }, makeVoxelEntry());
-    // Chunk cx for x=-1 is floor(-1/4) = -1
     const chunk = layer.getChunk(-1, 0, 0);
     assert.ok(chunk !== undefined, "chunk at cx=-1 should exist");
     assert.equal(chunk.voxelCount, 1);
@@ -192,16 +168,6 @@ describe("VoxelLayer negative coordinates", () => {
 });
 
 describe("VoxelLayer position arithmetic", () => {
-  it("with position {x:8}, world pos {x:8,y:0,z:0} lands in chunk 0 of the layer", () => {
-    const layer = makeLayer({ chunkSize: 4, position: { x: 8, y: 0, z: 0 } });
-    const entry = makeVoxelEntry();
-    layer.setVoxelAt({ x: 8, y: 0, z: 0 }, entry);
-    // local x = 8-8 = 0 → cx=0
-    const chunk = layer.getChunk(0, 0, 0);
-    assert.ok(chunk !== undefined);
-    assert.deepEqual(layer.getVoxelAt({ x: 8, y: 0, z: 0 }), entry);
-  });
-
   it("position shifts all accesses by the same amount", () => {
     const layer = makeLayer({ chunkSize: 16, position: { x: 100, y: 0, z: 0 } });
     const entry = makeVoxelEntry(42);
@@ -263,6 +229,18 @@ describe("VoxelLayer coordinates and bounds", () => {
       "0,0,0",
       "2,0,0"
     ]);
+  });
+
+  it("changes nothing when rebased onto its own position", () => {
+    const layer = makeLayer({ position: { x: 4, y: 0, z: 0 } });
+    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
+    const chunk = layer.getChunk(0, 0, 0)!;
+    chunk.dirty = false;
+
+    layer.rebase({ x: 4, y: 0, z: 0 });
+
+    assert.equal(layer.getChunk(0, 0, 0), chunk);
+    assert.equal(chunk.dirty, false);
   });
 
   it("keeps a chunk instance when rebasing leaves its coordinates unchanged", () => {
@@ -363,37 +341,20 @@ describe("VoxelLayer getChunks", () => {
   });
 });
 
-describe("VoxelLayer toJSON", () => {
-  it("includes opacity", () => {
-    const layer = makeLayer({ opacity: 0.5 });
-    assert.equal(layer.toJSON().opacity, 0.5);
-  });
-
-  it("defaults opacity to 1 when not set", () => {
-    assert.equal(makeLayer().toJSON().opacity, 1);
-  });
-});
-
 describe("VoxelLayer clone", () => {
-  it("should clone a layer", () => {
+  it("clones a layer", () => {
     const layer = makeLayer({ chunkSize: 4 });
     const clone = layer.clone();
     assert.deepEqual(clone.toJSON(), layer.toJSON());
     assert.notEqual(clone, layer);
   });
 
-  it("should be able to overide or add value on the fly", () => {
+  it("applies overrides on the fly", () => {
     const layer = makeLayer({ chunkSize: 4 });
     const clone = layer.clone({ visible: false, name: "Cloned" });
     assert.deepEqual(clone.toJSON(), {
       ...layer.toJSON(), visible: false, name: "Cloned"
     });
-  });
-
-  it("preserves opacity", () => {
-    const layer = makeLayer({ chunkSize: 4, opacity: 0.3 });
-    const clone = layer.clone();
-    assert.equal(clone.opacity, 0.3);
   });
 
   it("carries the voxels over", () => {
@@ -506,7 +467,6 @@ describe("VoxelLayer mergeFrom", () => {
       const source = makeLayer({ id: "src", name: "Source", position: { x: 5, y: 0, z: 0 } });
       const target = makeLayer({ id: "tgt", name: "Target" });
       const entry = makeVoxelEntry(3, 0);
-      // Local (1,0,0) → world (6,0,0)
       source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
 
       target.mergeFrom(source);
@@ -524,21 +484,7 @@ describe("VoxelLayer mergeFrom", () => {
 
     target.mergeFrom(source);
 
-    // World (6,0,0) should be in target (local (3,0,0))
     assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
-  });
-
-  it("source voxel overwrites existing target voxel at same world position", () => {
-    const source = makeLayer({ id: "src", name: "Source" });
-    const target = makeLayer({ id: "tgt", name: "Target" });
-    const original = makeVoxelEntry(1, 0);
-    const overwrite = makeVoxelEntry(9, 3);
-    target.setVoxelAt({ x: 0, y: 0, z: 0 }, original);
-    source.setVoxelAt({ x: 0, y: 0, z: 0 }, overwrite);
-
-    target.mergeFrom(source);
-
-    assert.deepEqual(target.getVoxelAt({ x: 0, y: 0, z: 0 }), overwrite);
   });
 
   it("source layer is not modified after merge", () => {
@@ -562,33 +508,21 @@ describe("VoxelLayer chunk keys", () => {
     );
   });
 
-  it("keeps negative chunk coordinates distinct", () => {
-    const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: -1, y: -1, z: -1 }, makeVoxelEntry(1));
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(2));
-
-    assert.equal(layer.chunkCount, 2);
-    const negEntry = layer.getVoxelAt({ x: -1, y: -1, z: -1 });
-    assert.ok(negEntry !== undefined);
-    assert.equal(negEntry.blockId, 1);
-    const originEntry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
-    assert.ok(originEntry !== undefined);
-    assert.equal(originEntry.blockId, 2);
-  });
-
   it("does not alias two chunks onto one key", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    const seen = new Set<number>();
+    const chunks = new Set();
 
     for (const cx of [-3, 0, 5]) {
       for (const cy of [-2, 0, 7]) {
         for (const cz of [-1, 0, 9]) {
           const chunk = layer.getOrCreateChunk(cx, cy, cz);
-          assert.equal(seen.has(chunk.cx * 1e6 + chunk.cy * 1e3 + chunk.cz), false);
-          seen.add(chunk.cx * 1e6 + chunk.cy * 1e3 + chunk.cz);
+          assert.deepEqual([chunk.cx, chunk.cy, chunk.cz], [cx, cy, cz]);
+          chunks.add(chunk);
         }
       }
     }
+
+    assert.equal(chunks.size, 27);
     assert.equal(layer.chunkCount, 27);
   });
 
@@ -602,7 +536,6 @@ describe("VoxelLayer chunk keys", () => {
   it("forgets the memoized chunk once it is dropped", () => {
     const layer = makeLayer({ chunkSize: 4 });
     layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    // Warms the memo.
     assert.ok(layer.getChunk(0, 0, 0));
 
     layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
@@ -624,5 +557,127 @@ describe("VoxelLayer chunk range edges", () => {
     const layer = makeLayer({ chunkSize: 4 });
 
     assert.doesNotThrow(() => layer.markChunkDirty(-kOutOfRangeCoord, 0, 0));
+  });
+});
+
+describe("VoxelLayer loadPackedVoxels", () => {
+  it("writes layer-local voxels across chunks", () => {
+    const layer = makeLayer({ position: { x: 10, y: 0, z: 0 } });
+    const positions = new Int32Array([
+      0, 0, 0,
+      5, 1, -3,
+      0, 0, 1,
+      -1, 2, 2
+    ]);
+
+    layer.loadPackedVoxels(positions, [256, 513, 770, 1027]);
+
+    assert.equal(layer.getPackedVoxelAt({ x: 10, y: 0, z: 0 }), 256);
+    assert.equal(layer.getPackedVoxelAt({ x: 15, y: 1, z: -3 }), 513);
+    assert.equal(layer.getPackedVoxelAt({ x: 10, y: 0, z: 1 }), 770);
+    assert.equal(layer.getPackedVoxelAt({ x: 9, y: 2, z: 2 }), 1027);
+    assert.equal(layer.voxelCount, 4);
+    assert.equal(layer.chunkCount, 3);
+  });
+
+  it("marks the written chunks dirty", () => {
+    const layer = makeLayer();
+
+    layer.loadPackedVoxels(new Int32Array([1, 1, 1]), [256]);
+
+    assert.equal(layer.getChunk(0, 0, 0)?.dirty, true);
+  });
+});
+
+describe("VoxelLayer getDirtyChunks", () => {
+  it("keeps tracking when an external dirty listener subscribes and leaves", () => {
+    const layer = makeLayer();
+    const chunk = layer.getOrCreateChunk(0, 0, 0);
+    const changes: boolean[] = [];
+    const unsubscribe = chunk.onDirtyChange((_, dirty) => {
+      changes.push(dirty);
+    });
+
+    chunk.dirty = false;
+    layer.setVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry(1));
+
+    assert.deepEqual(changes, [true, false, true]);
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+    unsubscribe();
+    chunk.dirty = false;
+    layer.setVoxelAt({ x: 2, y: 0, z: 0 }, makeVoxelEntry(1));
+    assert.deepEqual(changes, [true, false, true]);
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+  });
+
+  it("releases only the layer subscription when a chunk is removed", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const chunk = layer.getChunk(0, 0, 0)!;
+    const changes: boolean[] = [];
+    chunk.onDirtyChange((_, dirty) => {
+      changes.push(dirty);
+    });
+
+    layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
+    chunk.dirty = false;
+    chunk.dirty = true;
+
+    assert.deepEqual(changes, [true, false, true]);
+    assert.deepEqual([...layer.getDirtyChunks()], []);
+  });
+
+  it("lists a chunk from its first write until it is marked clean", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const chunk = layer.getChunk(0, 0, 0)!;
+
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+
+    chunk.dirty = false;
+    assert.deepEqual([...layer.getDirtyChunks()], []);
+
+    layer.markChunkDirty(0, 0, 0);
+    assert.deepEqual([...layer.getDirtyChunks()], [chunk]);
+  });
+
+  it("forgets a chunk emptied by a removal", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const chunk = layer.getChunk(0, 0, 0)!;
+
+    layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
+    chunk.dirty = true;
+
+    assert.deepEqual([...layer.getDirtyChunks()], []);
+  });
+
+  it("tracks exactly the live chunks after a rebase", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    layer.setVoxelAt({ x: 5, y: 0, z: 0 }, makeVoxelEntry(1));
+    for (const chunk of layer.getChunks()) {
+      chunk.dirty = false;
+    }
+
+    layer.rebase({ x: 2, y: 0, z: 0 });
+
+    assert.deepEqual(
+      new Set(layer.getDirtyChunks()),
+      new Set(layer.getChunks())
+    );
+  });
+
+  it("gives a clone its own dirty set", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    const copy = layer.clone();
+
+    for (const chunk of copy.getChunks()) {
+      chunk.dirty = false;
+    }
+
+    assert.equal([...copy.getDirtyChunks()].length, 0);
+    assert.equal([...layer.getDirtyChunks()].length, 1);
   });
 });

@@ -10,7 +10,9 @@ import type { VoxelCoord } from "../world/types.ts";
 export interface VoxelChunkCollision {
   chunk: VoxelChunk;
   /**
-   * Per-tileset geometry that collision adapters may merge or ignore.
+   * Per-tileset geometry that collision adapters may merge or ignore. Vertex
+   * positions are relative to the chunk origin, `chunk` coordinates times
+   * its size plus `layerPosition`.
    */
   geometries: ReadonlyMap<string, THREE.BufferGeometry>;
   layerPosition: VoxelCoord;
