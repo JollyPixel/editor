@@ -21,8 +21,8 @@ export interface DefaultViewport {
 
 /**
  * Fired after a camera or canvas-size change (`applyPan` / `applyZoom` /
- * `resizeCanvas` / `centerTexture`). Emitted at the public-method level, never
- * from the internal `clampCamera` those methods share.
+ * `resizeCanvas` / `centerTexture`), or when a texture resize reframes the
+ * camera. Never emitted from the internal `clampCamera` those methods share.
  */
 export type ViewportEvent = {
   changed: () => void;
@@ -101,7 +101,7 @@ export class Viewport extends Emitter<
     });
     this.#texture = new ViewportTexture({
       size: textureSize,
-      onResize: () => this.clampCamera()
+      onResize: (previous) => this.#onTextureResized(previous)
     });
   }
 
@@ -130,13 +130,7 @@ export class Viewport extends Emitter<
   }
 
   centerTexture(): void {
-    const texPx = this.#texture.pixelSize(
-      this.zoom.value
-    );
-    this.#camera.x = frameAxis(this.#canvasWidth, texPx.x);
-    this.#camera.y = frameAxis(this.#canvasHeight, texPx.y);
-
-    this.clampCamera();
+    this.#frame();
     this.emit("changed");
   }
 
@@ -159,17 +153,73 @@ export class Viewport extends Emitter<
     width: number,
     height: number
   ): void {
+    const previousSlack = this.#slack();
+    const unsized = this.#canvasWidth === 0 || this.#canvasHeight === 0;
+    this.#canvasWidth = width;
+    this.#canvasHeight = height;
+    if (unsized) {
+      this.#frame();
+    }
+    else {
+      this.#reframe(previousSlack);
+    }
+
+    this.emit("changed");
+  }
+
+  #onTextureResized(
+    previous: Readonly<Vec2>
+  ): void {
+    const zoom = this.zoom.value;
+    const { x, y } = this.#camera;
+    this.#reframe({
+      x: this.#canvasWidth - (previous.x * zoom),
+      y: this.#canvasHeight - (previous.y * zoom)
+    });
+
+    if (
+      this.#camera.x !== x ||
+      this.#camera.y !== y
+    ) {
+      this.emit("changed");
+    }
+  }
+
+  #slack(): Vec2 {
     const texPx = this.#texture.pixelSize(
       this.zoom.value
     );
 
-    this.#camera.x += resizeShift(this.#canvasWidth, width, texPx.x);
-    this.#camera.y += resizeShift(this.#canvasHeight, height, texPx.y);
-    this.#canvasWidth = width;
-    this.#canvasHeight = height;
+    return {
+      x: this.#canvasWidth - texPx.x,
+      y: this.#canvasHeight - texPx.y
+    };
+  }
+
+  #frame(): void {
+    const slack = this.#slack();
+    this.#camera.x = frameAxis(slack.x);
+    this.#camera.y = frameAxis(slack.y);
 
     this.clampCamera();
-    this.emit("changed");
+  }
+
+  #reframe(
+    previousSlack: Readonly<Vec2>
+  ): void {
+    const slack = this.#slack();
+    this.#camera.x = reframeAxis(
+      this.#camera.x,
+      previousSlack.x,
+      slack.x
+    );
+    this.#camera.y = reframeAxis(
+      this.#camera.y,
+      previousSlack.y,
+      slack.y
+    );
+
+    this.clampCamera();
   }
 
   applyZoom(
@@ -255,27 +305,26 @@ export class Viewport extends Emitter<
 }
 
 function fitsAxis(
-  canvasSize: number,
-  textureSize: number
+  slack: number
 ): boolean {
-  return textureSize + kFramePadding * 2 <= canvasSize;
+  return slack >= kFramePadding * 2;
 }
 
 function frameAxis(
-  canvasSize: number,
-  textureSize: number
+  slack: number
 ): number {
-  return fitsAxis(canvasSize, textureSize) ?
-    (canvasSize - textureSize) / 2 :
-    kFramePadding;
+  return fitsAxis(slack) ? slack / 2 : kFramePadding;
 }
 
-function resizeShift(
-  previousSize: number,
-  nextSize: number,
-  textureSize: number
+function reframeAxis(
+  camera: number,
+  previousSlack: number,
+  slack: number
 ): number {
-  return fitsAxis(nextSize, textureSize) ?
-    (nextSize - previousSize) / 2 :
-    0;
+  const fits = fitsAxis(slack);
+  if (fitsAxis(previousSlack) !== fits) {
+    return frameAxis(slack);
+  }
+
+  return fits ? camera + ((slack - previousSlack) / 2) : camera;
 }

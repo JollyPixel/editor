@@ -22,7 +22,7 @@ import {
   type WorldStore
 } from "../../app/state/index.ts";
 import type { TilesetEntry } from "../tilesets/tilesetEntries.ts";
-import { blockTilesetStatus } from "../tilesets/blockTilesets.ts";
+import { blockFocusTilesetId } from "../tilesets/blockTilesets.ts";
 import {
   TilesetTab,
   type TextureRoom
@@ -105,6 +105,7 @@ export class TextureEditor extends LitElement {
   #canvasHostEl: HTMLElement | null = null;
   #resizeObserver: ResizeObserver | null = null;
   #subscriptions: Array<() => void> = [];
+  #followedTilesetId: string | null = null;
 
   constructor() {
     super();
@@ -127,7 +128,10 @@ export class TextureEditor extends LitElement {
       this.tilesets.watch("change", this.#requestSync),
       this.tilesets.watch("activeChange", this.#reconcile),
       this.brush.watch("blockChange", this.#onBlockChange),
-      this.worldStore.watch("blockRegistryChanged", this.#requestSync)
+      this.worldStore.watch(
+        "blockRegistryChanged",
+        this.#onBlockRegistryChanged
+      )
     );
   }
 
@@ -280,20 +284,33 @@ export class TextureEditor extends LitElement {
     this.requestUpdate();
   };
 
-  readonly #onBlockChange = (blockId: number): void => {
-    const block = this.engine?.blockRegistry.get(blockId);
+  readonly #onBlockChange = (): void => {
+    this.#followSelectedBlock(true);
+  };
+
+  readonly #onBlockRegistryChanged = (): void => {
+    this.#followSelectedBlock(false);
+    this.requestUpdate();
+  };
+
+  #followSelectedBlock(
+    force: boolean
+  ): void {
+    const block = this.engine?.blockRegistry.get(this.brush.blockId);
     if (block === undefined) {
       return;
     }
 
-    const status = blockTilesetStatus(block, this.tilesets.ids());
-    if (status.kind === "assigned") {
-      this.tilesets.activeTilesetId = status.tilesetId;
+    const tilesetId = blockFocusTilesetId(block, this.tilesets.ids());
+    if (!force && tilesetId === this.#followedTilesetId) {
+      return;
     }
-    else if (status.kind === "mixed") {
-      this.tilesets.activeTilesetId = status.tilesetIds[0];
+
+    this.#followedTilesetId = tilesetId;
+    if (tilesetId !== null) {
+      this.tilesets.activeTilesetId = tilesetId;
     }
-  };
+  }
 
   readonly #onTextureChange = (
     event: CustomEvent<TextureChangeDetail>

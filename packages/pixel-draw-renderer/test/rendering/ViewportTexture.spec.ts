@@ -68,6 +68,45 @@ describe("ViewportTexture", () => {
       );
     });
 
+    test("passes the previous size to onResize", () => {
+      const previousSizes: Vec2[] = [];
+      const texture = new ViewportTexture({
+        size: {
+          x: 8,
+          y: 8
+        },
+        onResize: (previous) => previousSizes.push({ ...previous })
+      });
+      texture.resize({
+        x: 16,
+        y: 32
+      });
+
+      assert.deepStrictEqual(
+        previousSizes,
+        [{ x: 8, y: 8 }]
+      );
+    });
+
+    test("skips onResize when the size is unchanged", () => {
+      let calls = 0;
+      const texture = new ViewportTexture({
+        size: {
+          x: 8,
+          y: 8
+        },
+        onResize: () => {
+          calls++;
+        }
+      });
+      texture.resize({
+        x: 8,
+        y: 8
+      });
+
+      assert.strictEqual(calls, 0);
+    });
+
     test("does not require an onResize callback", () => {
       const texture = new ViewportTexture({
         size: {

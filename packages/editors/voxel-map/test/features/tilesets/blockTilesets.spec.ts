@@ -11,6 +11,7 @@ import type {
 // Import Internal Dependencies
 import {
   assignBlockTileset,
+  blockFocusTilesetId,
   blocksWithoutTileset,
   blockTilesetStatus,
   blockTileSize,
@@ -97,6 +98,31 @@ describe("blockTilesetStatus", () => {
     assert.deepEqual(blockTilesetStatus(makeBlock(1), kKnown), {
       kind: "none"
     });
+  });
+});
+
+describe("blockFocusTilesetId", () => {
+  it("is the tileset of an assigned block", () => {
+    const block = makeBlock(1, { col: 0, row: 0, tilesetId: "wood" });
+
+    assert.equal(blockFocusTilesetId(block, kKnown), "wood");
+  });
+
+  it("is the first referenced tileset of a mixed block", () => {
+    const block = makeBlock(
+      1,
+      { col: 0, row: 0, tilesetId: "stone" },
+      { top: { col: 0, row: 0, tilesetId: "wood" } }
+    );
+
+    assert.equal(blockFocusTilesetId(block, kKnown), "wood");
+  });
+
+  it("is null for a block with a missing tileset or no texture", () => {
+    const missing = makeBlock(1, { col: 0, row: 0, tilesetId: "glass" });
+
+    assert.equal(blockFocusTilesetId(missing, kKnown), null);
+    assert.equal(blockFocusTilesetId(makeBlock(2), kKnown), null);
   });
 });
 
