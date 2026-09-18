@@ -654,8 +654,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       '@pmndrs/detect-gpu':
-        specifier: 6.0.20
-        version: 6.0.20
+        specifier: 6.0.21
+        version: 6.0.21
       three:
         specifier: ^0.186.0
         version: 0.186.0
@@ -1543,8 +1543,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@pmndrs/detect-gpu@6.0.20':
-    resolution: {integrity: sha512-XavJbHaxPOMwSjxVUt0zpEzxxDQ2nPu1pqnyrHKqV3CZHFhkUSz9h86NcoyX7ImemqgayyKWyttU8/rMzxJ7Ig==}
+  '@pmndrs/detect-gpu@6.0.21':
+    resolution: {integrity: sha512-QF4dI69ydwYLh1PsCpdRNxXfs4IJqGiPg0ZE34OGGCHueMCvFM6aU8wMOzXhpxmzBZKcjiXtDmJ7LAqH8uH+DA==}
 
   '@pnpm/deps.graph-sequencer@1100.0.1':
     resolution: {integrity: sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A==}
@@ -4648,7 +4648,7 @@ snapshots:
     dependencies:
       playwright: 1.63.0
 
-  '@pmndrs/detect-gpu@6.0.20': {}
+  '@pmndrs/detect-gpu@6.0.21': {}
 
   '@pnpm/deps.graph-sequencer@1100.0.1': {}
 
