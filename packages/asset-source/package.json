@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",

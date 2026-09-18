@@ -13,7 +13,7 @@
     "#src/*": "./src/*"
   },
   "scripts": {
-    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "bench": "jolly-bench --ignore browser.bench.ts",
     "bench:browser": "node bench/browser.bench.ts",
