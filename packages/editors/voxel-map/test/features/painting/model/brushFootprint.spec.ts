@@ -9,6 +9,7 @@ import {
 import {
   boundsOf,
   cellsOf,
+  isBrushAnchor,
   isBrushAxis,
   isBrushPattern,
   lockAxisOf,
@@ -75,6 +76,63 @@ describe("brushFootprint.boundsOf", () => {
         expected[axis],
         axis
       );
+    }
+  });
+});
+
+describe("brushFootprint anchor", () => {
+  const position = {
+    x: 4,
+    y: 2,
+    z: -1
+  };
+
+  test("accepts the three anchors and nothing else", () => {
+    for (const anchor of ["bottom", "top", "center"]) {
+      assert.ok(isBrushAnchor(anchor));
+    }
+    assert.ok(!isBrushAnchor("middle"));
+    assert.ok(!isBrushAnchor(undefined));
+  });
+
+  test("hangs the Y span below a top anchored cell", () => {
+    assert.deepStrictEqual(
+      boundsOf(footprint({ position, size: 3, axis: "yz", anchor: "top" })),
+      {
+        min: { x: 4, y: 0, z: -2 },
+        span: { x: 1, y: 3, z: 3 }
+      }
+    );
+  });
+
+  test("centers the Y span like X and Z", () => {
+    assert.deepStrictEqual(
+      boundsOf(footprint({ position, size: 4, axis: "xyz", anchor: "center" })),
+      {
+        min: { x: 2, y: 0, z: -3 },
+        span: { x: 4, y: 4, z: 4 }
+      }
+    );
+  });
+
+  test("leaves a flat footprint on the aimed height", () => {
+    for (const anchor of ["bottom", "top", "center"] as const) {
+      assert.strictEqual(
+        boundsOf(footprint({ position, size: 5, anchor })).min.y,
+        position.y
+      );
+    }
+  });
+
+  test("always keeps the aimed cell inside the footprint", () => {
+    for (const anchor of ["bottom", "top", "center"] as const) {
+      for (const size of [1, 2, 3, 4]) {
+        const keys = keysOf(
+          cellsOf(footprint({ position, size, axis: "xy", anchor }))
+        );
+
+        assert.ok(keys.includes("4,2,-1"), `${anchor} ${size}`);
+      }
     }
   });
 });

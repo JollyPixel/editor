@@ -26,6 +26,7 @@ export interface ProbeOptions {
   occluder?: boolean;
   resize?: boolean;
   failDraw?: boolean;
+  samples?: number;
   gray?: number;
   lights?: ProbeLights;
 }
@@ -48,7 +49,10 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     throw new Error("The native WebGPU probe fell back to WebGL.");
   }
   renderer.toneMapping = THREE.NoToneMapping;
-  const pipeline = new VoxelTransparencyRenderer(renderer);
+  const pipeline = new VoxelTransparencyRenderer(
+    renderer,
+    options.samples === undefined ? {} : { samples: options.samples }
+  );
   const target = new THREE.RenderTarget(32, 32);
   renderer.setRenderTarget(target);
   const canvas = document.createElement("canvas");

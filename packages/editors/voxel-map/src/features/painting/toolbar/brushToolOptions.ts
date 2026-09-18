@@ -4,35 +4,68 @@ import type {
   BrushAxis,
   BrushPattern
 } from "../model/brushFootprint.ts";
-import type {
-  ToolChoice,
-  ToolOption
-} from "../../../shared/toolChoice.ts";
+import type { ChoiceOption } from "../../../shared/toolChoice.ts";
 
 // CONSTANTS
 export const BRUSH_DISABLED_LABEL = "Select a voxel layer to paint";
 
 export const BRUSH_MODE_OPTIONS: readonly BrushToolOption<BrushMode>[] = [
-  { value: "build", icon: "brush-build", label: "Build" },
-  { value: "replace", icon: "brush-replace", label: "Replace" }
+  {
+    value: "build",
+    icon: "brush-build",
+    label: "Build"
+  },
+  {
+    value: "replace",
+    icon: "brush-replace",
+    label: "Replace"
+  }
 ];
 
 export const BRUSH_AXIS_OPTIONS: readonly BrushToolOption<BrushAxis>[] = [
-  { value: "xz", icon: "axis-xz", label: "Axis XZ" },
-  { value: "xy", icon: "axis-xy", label: "Axis XY" },
-  { value: "yz", icon: "axis-yz", label: "Axis YZ" },
-  { value: "xyz", icon: "axis-xyz", label: "Axis XYZ" }
+  {
+    value: "xz",
+    label: "Axis XZ"
+  },
+  {
+    value: "xy",
+    label: "Axis XY"
+  },
+  {
+    value: "yz",
+    label: "Axis YZ"
+  },
+  {
+    value: "xyz",
+    label: "Axis XYZ"
+  }
 ];
 
 export const BRUSH_PATTERN_OPTIONS: readonly BrushToolOption<BrushPattern>[] = [
-  { value: "square", icon: "pattern-square", label: "Square" },
-  { value: "circle", icon: "pattern-circle", label: "Circle" }
+  {
+    value: "square",
+    icon: "pattern-square",
+    label: "Square"
+  },
+  {
+    value: "circle",
+    icon: "pattern-circle",
+    label: "Circle"
+  }
 ];
+
+export function ghostLabel(
+  size: number
+): string {
+  return size === 1 ? "Ghost block" : "Ghost block, size 1 only";
+}
 
 export { choiceOf } from "../../../shared/toolChoice.ts";
 
-export type BrushToolOption<TValue extends string> = ToolOption<TValue>;
-export type BrushToolChoice<TValue extends string> = ToolChoice<TValue>;
+export interface BrushToolOption<TValue extends string>
+  extends ChoiceOption<TValue> {
+  icon?: string;
+}
 
 export function toolLabel(
   label: string,

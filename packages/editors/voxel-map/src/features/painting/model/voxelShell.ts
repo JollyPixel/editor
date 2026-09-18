@@ -3,8 +3,13 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 export interface VoxelShell {
   triangles: number[];
+  rims: number[];
   edges: number[];
+  edgeFaces: number[];
+  planes: [number[], number[], number[]];
 }
+
+export type ShellPoint = ArrayLike<number>;
 
 type Vec3 = [number, number, number];
 
@@ -24,6 +29,7 @@ interface EdgeFaces {
 interface EdgeRun {
   axis: number;
   fixed: Vec3;
+  faces: number;
   starts: number[];
 }
 
@@ -56,6 +62,11 @@ export function voxelShell(
 
   const triangles: number[] = [];
   const edgeFaces = new Map<string, EdgeFaces>();
+  const planes = [
+    new Set<number>(),
+    new Set<number>(),
+    new Set<number>()
+  ];
 
   for (const cell of list) {
     for (const { axis, sign } of kDirections) {
@@ -69,6 +80,7 @@ export function voxelShell(
       const a = (axis + 1) % 3;
       const b = (axis + 2) % 3;
       const plane = cell[axis] + (sign > 0 ? 1 : 0);
+      planes[axis].add(plane);
 
       pushQuad(triangles, {
         cell,
@@ -91,10 +103,107 @@ export function voxelShell(
     }
   }
 
+  const creases = mergeCreases(edgeFaces);
+
   return {
     triangles,
-    edges: mergeCreases(edgeFaces)
+    rims: rimsOf(triangles, creases.edges),
+    ...creases,
+    planes: [
+      sortedPlanes(planes[0]),
+      sortedPlanes(planes[1]),
+      sortedPlanes(planes[2])
+    ]
   };
+}
+
+export function edgesFacing(
+  shell: VoxelShell,
+  eye: ShellPoint
+): number[] {
+  const { edges, edgeFaces } = shell;
+  const facing: number[] = [];
+
+  for (let index = 0; index < edgeFaces.length; index++) {
+    const offset = index * 6;
+    if (isFacing(edges, offset, edgeFaces[index], eye)) {
+      for (let component = 0; component < 6; component++) {
+        facing.push(edges[offset + component]);
+      }
+    }
+  }
+
+  return facing;
+}
+
+export function facingKey(
+  shell: VoxelShell,
+  eye: ShellPoint
+): string {
+  return shell.planes
+    .map((planes, axis) => planes.filter(
+      (plane) => plane < eye[axis]
+    ).length)
+    .join(":");
+}
+
+function isFacing(
+  edges: number[],
+  offset: number,
+  faces: number,
+  eye: ShellPoint
+): boolean {
+  for (let normal = 0; normal < 6; normal++) {
+    if ((faces & (1 << normal)) === 0) {
+      continue;
+    }
+
+    const axis = normal >> 1;
+    const side = eye[axis] - edges[offset + axis];
+    if ((normal & 1) === 1 ? side > 0 : side < 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function rimsOf(
+  triangles: number[],
+  edges: number[]
+): number[] {
+  const onEdge = new Set<string>();
+  for (let offset = 0; offset < edges.length; offset += 6) {
+    const point: Vec3 = [
+      edges[offset],
+      edges[offset + 1],
+      edges[offset + 2]
+    ];
+    const axis = [0, 1, 2].find(
+      (candidate) => edges[offset + 3 + candidate] !== point[candidate]
+    ) ?? 0;
+    const end = edges[offset + 3 + axis];
+    for (; point[axis] <= end; point[axis]++) {
+      onEdge.add(keyOf(...point));
+    }
+  }
+
+  const rims: number[] = [];
+  for (let offset = 0; offset < triangles.length; offset += 3) {
+    rims.push(onEdge.has(keyOf(
+      triangles[offset],
+      triangles[offset + 1],
+      triangles[offset + 2]
+    )) ? 1 : 0);
+  }
+
+  return rims;
+}
+
+function sortedPlanes(
+  planes: Set<number>
+): number[] {
+  return [...planes].sort((left, right) => left - right);
 }
 
 function pushQuad(
@@ -144,7 +253,7 @@ function collectEdge(
 
 function mergeCreases(
   edgeFaces: Map<string, EdgeFaces>
-): number[] {
+): Pick<VoxelShell, "edges" | "edgeFaces"> {
   const runs = new Map<string, EdgeRun>();
 
   for (const { axis, start, normals } of edgeFaces.values()) {
@@ -155,12 +264,17 @@ function mergeCreases(
     const fixed: Vec3 = [...start];
     fixed[axis] = 0;
 
-    const runKey = `${axis}:${keyOf(...fixed)}`;
+    const faces = normals.reduce(
+      (mask, normal) => mask | (1 << normal),
+      0
+    );
+    const runKey = `${axis}:${faces}:${keyOf(...fixed)}`;
     const run = runs.get(runKey);
     if (run === undefined) {
       runs.set(runKey, {
         axis,
         fixed,
+        faces,
         starts: [start[axis]]
       });
     }
@@ -170,7 +284,8 @@ function mergeCreases(
   }
 
   const edges: number[] = [];
-  for (const { axis, fixed, starts } of runs.values()) {
+  const masks: number[] = [];
+  for (const { axis, fixed, faces, starts } of runs.values()) {
     starts.sort((left, right) => left - right);
 
     let from = starts[0];
@@ -187,13 +302,17 @@ function mergeCreases(
       head[axis] = from;
       tail[axis] = to;
       edges.push(...head, ...tail);
+      masks.push(faces);
 
       from = next;
       to = next + 1;
     }
   }
 
-  return edges;
+  return {
+    edges,
+    edgeFaces: masks
+  };
 }
 
 function keyOf(

@@ -2,6 +2,9 @@ export * from "./VoxelEngine.ts";
 export * from "./VoxelEngine.types.ts";
 export * from "./types.ts";
 export { VoxelTransparencyRenderer } from "./render/VoxelTransparencyRenderer.ts";
+export type {
+  VoxelTransparencyRendererOptions
+} from "./render/VoxelTransparencyRenderer.ts";
 export * from "./commands.ts";
 export * from "./applyVoxelCommand.ts";
 export * from "./applyTilesetCommand.ts";

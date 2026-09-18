@@ -3,6 +3,11 @@ import type { FACE } from "../../utils/math.ts";
 import type { FaceDefinition } from "../face/index.ts";
 import type { BlockShape } from "./BlockShape.ts";
 import { shapeSlots } from "./shapeSlots.ts";
+import { VoxelTransform } from "../../world/VoxelTransform.ts";
+import {
+  rotateNormal,
+  rotateVertex
+} from "../../mesh/variants/rotation.ts";
 
 export interface ShapeFaceRange {
   /**
@@ -36,7 +41,8 @@ export interface ShapeGeometry {
 }
 
 export function buildShapeGeometry(
-  shape: BlockShape
+  shape: BlockShape,
+  transform: VoxelTransform = VoxelTransform.Identity
 ): ShapeGeometry {
   const positions: number[] = [];
   const normals: number[] = [];
@@ -54,13 +60,17 @@ export function buildShapeGeometry(
         normal,
         uvs: faceUvs
       } = definition;
+      const [nx, ny, nz] = rotateNormal(normal, transform);
 
       for (let corner = 0; corner < vertices.length; corner++) {
-        const [x, y, z] = vertices[corner];
-        const [u, v] = faceUvs[corner];
+        const source = transform.flipY ?
+          vertices.length - 1 - corner :
+          corner;
+        const [x, y, z] = rotateVertex(vertices[source], transform);
+        const [u, v] = faceUvs[source];
 
         positions.push(x, y, z);
-        normals.push(normal[0], normal[1], normal[2]);
+        normals.push(nx, ny, nz);
         uvs.push(u, v);
       }
 

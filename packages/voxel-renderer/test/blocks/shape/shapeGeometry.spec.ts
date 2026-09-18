@@ -15,6 +15,8 @@ import {
   Stair
 } from "../../../src/blocks/shape/library/index.ts";
 import { FACE } from "../../../src/utils/math.ts";
+import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";
+import { rotateVertex } from "../../../src/mesh/variants/rotation.ts";
 
 function rangeOf(
   geometry: ShapeGeometry,
@@ -186,4 +188,99 @@ describe("buildShapeGeometry", () => {
       );
     }
   });
+
+  it("returns the untransformed geometry for the identity transform", () => {
+    const shape = new Stair();
+
+    assert.deepEqual(
+      buildShapeGeometry(shape, VoxelTransform.Identity),
+      buildShapeGeometry(shape)
+    );
+  });
+
+  it("places vertices where the chunk mesher rotates them", () => {
+    const shape = new Ramp();
+    const identity = buildShapeGeometry(shape);
+
+    for (const transform of orientations()) {
+      const geometry = buildShapeGeometry(shape, transform);
+      const expected = new Set(vertexKeys(identity.positions, transform));
+
+      assert.deepEqual(
+        new Set(vertexKeys(geometry.positions)),
+        expected,
+        `transform ${transform.packed}`
+      );
+    }
+  });
+
+  it("keeps every triangle facing its normal once rotated or flipped", () => {
+    for (const shape of [new Cube(), new Ramp(), new Stair()]) {
+      for (const transform of orientations()) {
+        const geometry = buildShapeGeometry(shape, transform);
+
+        for (let index = 0; index < geometry.indices.length; index += 3) {
+          const facing = facingOf(geometry, index);
+
+          assert.ok(
+            facing > 0,
+            `${shape.id} transform ${transform.packed} triangle ${index / 3}`
+          );
+        }
+      }
+    }
+  });
 });
+
+function orientations(): VoxelTransform[] {
+  return [0, 1, 2, 3].flatMap((rotation) => [false, true].map(
+    (flipY) => new VoxelTransform({
+      rotation,
+      flipY
+    })
+  ));
+}
+
+function vertexKeys(
+  positions: Float32Array,
+  transform: VoxelTransform = VoxelTransform.Identity
+): string[] {
+  const keys: string[] = [];
+  for (let index = 0; index < positions.length; index += 3) {
+    const vertex = rotateVertex(
+      [positions[index], positions[index + 1], positions[index + 2]],
+      transform
+    );
+    keys.push(vertex.map((value) => value.toFixed(4)).join(","));
+  }
+
+  return keys;
+}
+
+function facingOf(
+  geometry: ShapeGeometry,
+  index: number
+): number {
+  const { positions, normals, indices } = geometry;
+  const [a, b, c] = [0, 1, 2].map((offset) => {
+    const vertex = indices[index + offset] * 3;
+
+    return [
+      positions[vertex],
+      positions[vertex + 1],
+      positions[vertex + 2]
+    ];
+  });
+  const ab = a.map((value, axis) => b[axis] - value);
+  const ac = a.map((value, axis) => c[axis] - value);
+  const cross = [
+    (ab[1] * ac[2]) - (ab[2] * ac[1]),
+    (ab[2] * ac[0]) - (ab[0] * ac[2]),
+    (ab[0] * ac[1]) - (ab[1] * ac[0])
+  ];
+  const normal = indices[index] * 3;
+
+  return (cross[0] * normals[normal]) +
+    (cross[1] * normals[normal + 1]) +
+    (cross[2] * normals[normal + 2]);
+}

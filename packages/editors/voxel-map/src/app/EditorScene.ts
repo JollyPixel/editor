@@ -27,6 +27,7 @@ import * as THREE from "three";
 import {
   GridRenderer,
   SceneLighting,
+  spawnPose,
   viewFocusPoint,
   ViewFocus
 } from "../scene/index.ts";
@@ -68,6 +69,11 @@ export interface EditorSceneOptions {
   catalog?: TilesetCatalog & TilesetCatalogWriter;
   identity?: EditorIdentity;
   viewFocus?: ViewFocus;
+  /**
+   * MSAA sample count of the scene compositor.
+   * @default 4
+   */
+  samples?: number;
 }
 
 export interface EditorSceneHandles {
@@ -83,6 +89,7 @@ export class EditorScene extends Systems.Scene {
   #defaultLayerName: string;
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
   #identity: EditorIdentity | undefined;
+  #samples: number | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
   #catalog: (TilesetCatalog & TilesetCatalogWriter) | undefined;
   #tilesetDirectory: TilesetDirectory | undefined;
@@ -97,6 +104,7 @@ export class EditorScene extends Systems.Scene {
   #subscriptions: Array<() => void> = [];
 
   #orbiting = false;
+  #spawnPending = false;
 
   #onExitOrbitFocusKey = (): void => {
     this.#orbitFlyCamera?.exitOrbitFocus();
@@ -156,7 +164,8 @@ export class EditorScene extends Systems.Scene {
       voxelRoom,
       catalog,
       identity,
-      viewFocus = new ViewFocus()
+      viewFocus = new ViewFocus(),
+      samples
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
@@ -164,6 +173,7 @@ export class EditorScene extends Systems.Scene {
     this.#tilesets = tilesets;
     this.#voxelRoom = voxelRoom;
     this.#identity = identity;
+    this.#samples = samples;
     this.#viewFocus = viewFocus;
     this.editorState = editorState;
     this.editorState.world.blocksReady = voxelRoom === undefined;
@@ -179,16 +189,16 @@ export class EditorScene extends Systems.Scene {
     );
     scene.add(...this.lighting.lights);
     this.#subscriptions.push(
-      installTransparency(world.renderer)
+      installTransparency(world.renderer, this.#samples)
     );
 
     const orbitFlyCamera = world
       .createActor("camera")
       .addComponentAndGet(OrbitFlyCamera, {
-        position: { x: 8, y: 12, z: 32 },
         focusMode: "lock"
       });
     this.#orbitFlyCamera = orbitFlyCamera;
+    orbitFlyCamera.teleport(spawnPose([]));
     this.#subscriptions.push(
       this.editorState.selection.watch("gizmoDraggingChange", (dragging) => {
         orbitFlyCamera.enabled = !dragging;
@@ -225,6 +235,7 @@ export class EditorScene extends Systems.Scene {
     );
 
     if (this.#voxelRoom) {
+      this.#spawnPending = true;
       this.#voxelSyncClient = new VoxelSyncClient({
         room: this.#voxelRoom,
         engine
@@ -263,6 +274,7 @@ export class EditorScene extends Systems.Scene {
         this.editorState.world.blocksReady = true;
         this.editorState.world.emit("blockRegistryChanged");
         this.editorState.world.emit("reset");
+        this.#spawnCamera();
       });
     }
     else {
@@ -407,6 +419,7 @@ export class EditorScene extends Systems.Scene {
     data: VoxelWorldJSON
   ): void {
     if (this.#voxelSyncClient) {
+      this.#spawnPending = true;
       this.#voxelSyncClient.replaceWorld(data);
     }
     else {
@@ -420,7 +433,25 @@ export class EditorScene extends Systems.Scene {
       );
       this.editorState.world.emit("blockRegistryChanged");
       this.editorState.world.emit("reset");
+      this.#spawnPending = true;
+      this.#spawnCamera();
     }
+  }
+
+  #spawnCamera(): void {
+    const camera = this.#orbitFlyCamera;
+    if (!this.#spawnPending || camera === undefined) {
+      return;
+    }
+
+    this.#spawnPending = false;
+    camera.exitOrbitFocus();
+    camera.teleport(
+      spawnPose(this.engine.world.getLayers(), {
+        fov: camera.camera.fov
+      })
+    );
+    this.#announceCameraMode();
   }
 
   override destroy(): void {

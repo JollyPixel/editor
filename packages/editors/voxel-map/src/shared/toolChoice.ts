@@ -1,18 +1,24 @@
-export interface ToolOption<TValue extends string> {
+export interface ChoiceOption<TValue extends string> {
   value: TValue;
-  icon: string;
   label: string;
 }
 
-export interface ToolChoice<TValue extends string> {
-  active: ToolOption<TValue>;
-  alternatives: ToolOption<TValue>[];
+export interface ToolOption<TValue extends string> extends ChoiceOption<TValue> {
+  icon: string;
 }
 
-export function choiceOf<TValue extends string>(
-  options: readonly ToolOption<TValue>[],
+export interface ToolChoice<TOption> {
+  active: TOption;
+  alternatives: TOption[];
+}
+
+export function choiceOf<
+  TValue extends string,
+  TOption extends ChoiceOption<TValue>
+>(
+  options: readonly TOption[],
   current: TValue
-): ToolChoice<TValue> {
+): ToolChoice<TOption> {
   const active = options.find((option) => option.value === current) ??
     options[0];
 

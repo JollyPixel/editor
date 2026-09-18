@@ -4,6 +4,8 @@ export {
   editorState
 } from "./EditorState.ts";
 export {
+  BRUSH_MAX_SIZE,
+  BRUSH_MIN_SIZE,
   BrushStore,
   type BrushMode,
   type BrushStoreEvents,

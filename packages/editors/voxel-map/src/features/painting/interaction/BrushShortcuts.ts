@@ -15,6 +15,7 @@ export type BrushShortcutCode =
   | "KeyR"
   | "KeyX"
   | "KeyC"
+  | "KeyG"
   | "BracketLeft"
   | "BracketRight";
 
@@ -28,6 +29,7 @@ export const BRUSH_SHORTCUT_CODES: readonly BrushShortcutCode[] = [
   "KeyR",
   "KeyX",
   "KeyC",
+  "KeyG",
   "BracketLeft",
   "BracketRight"
 ];
@@ -53,6 +55,9 @@ export class BrushShortcuts {
         break;
       case "KeyC":
         this.#brush.pattern = this.#brush.pattern === "square" ? "circle" : "square";
+        break;
+      case "KeyG":
+        this.#brush.ghost = !this.#brush.ghost;
         break;
       case "BracketLeft":
         this.#brush.resize(-1);

@@ -20,7 +20,6 @@ import {
   type PropertyRow,
   type PropertyRowsChangeDetail
 } from "../properties/propertyDraft.ts";
-import { formatCount } from "../../blocks/blockUsage.ts";
 import "../properties/CustomPropertiesEditor.ts";
 
 @customElement("layer-panel")
@@ -54,19 +53,7 @@ export class VoxelLayerPanel extends LitElement {
   private declare _position: Vec3Like;
 
   @state()
-  private declare _worldCenter: Vec3Like;
-
-  @state()
-  private declare _voxels: number;
-
-  @state()
-  private declare _chunks: number;
-
-  @state()
-  private declare _worldMin: Vec3Like;
-
-  @state()
-  private declare _worldMax: Vec3Like;
+  private declare _contentOrigin: Vec3Like;
 
   @state()
   private declare _gizmo: boolean;
@@ -83,11 +70,7 @@ export class VoxelLayerPanel extends LitElement {
     this.layerName = null;
     this._layer = null;
     this._position = { x: 0, y: 0, z: 0 };
-    this._worldCenter = { x: 0, y: 0, z: 0 };
-    this._voxels = 0;
-    this._chunks = 0;
-    this._worldMin = { x: 0, y: 0, z: 0 };
-    this._worldMax = { x: 0, y: 0, z: 0 };
+    this._contentOrigin = { x: 0, y: 0, z: 0 };
     this._gizmo = false;
     this._props = [];
   }
@@ -153,15 +136,10 @@ export class VoxelLayerPanel extends LitElement {
         y: layer.position.y,
         z: layer.position.z
       };
-      const center = layer.worldCenter();
       const bounds = layer.worldBounds();
-      this._worldCenter = { ...center };
-      this._worldMin = { ...(bounds?.min ?? layer.position) };
-      this._worldMax = { ...(bounds?.max ?? layer.position) };
+      this._contentOrigin = { ...(bounds?.min ?? layer.position) };
       this._gizmo = this.selection.gizmoLayer === this.layerName;
       this._props = propertyRowsOf(layer.properties);
-      this._voxels = layer.voxelCount;
-      this._chunks = layer.chunkCount;
     }
   }
 
@@ -188,39 +166,16 @@ export class VoxelLayerPanel extends LitElement {
         @jolly-change=${this.#onPositionChange}
       ></jolly-vector3>
 
-      <jolly-text
-        label="Voxels"
-        readonly
-        .value=${formatCount(this._voxels, "voxel")}
-      ></jolly-text>
-
-      <jolly-text
-        label="Chunks"
-        readonly
-        .value=${formatCount(this._chunks, "chunk")}
-      ></jolly-text>
-
       <jolly-vector3
-        label="Content center"
+        label="Content origin"
         disabled
-        .value=${this._worldCenter}
-      ></jolly-vector3>
-
-      <jolly-vector3
-        label="Bounds minimum"
-        disabled
-        .value=${this._worldMin}
-      ></jolly-vector3>
-
-      <jolly-vector3
-        label="Bounds maximum"
-        disabled
-        .value=${this._worldMax}
+        .value=${this._contentOrigin}
       ></jolly-vector3>
 
       <jolly-button
+        ?disabled=${samePosition(this._contentOrigin, this._position)}
         @click=${this.#onRebase}
-      >Rebase origin to minimum</jolly-button>
+      >Rebase to content origin</jolly-button>
 
       <custom-properties-editor
         .rows=${this._props}
@@ -273,9 +228,9 @@ export class VoxelLayerPanel extends LitElement {
     }
 
     world.rebaseLayer(layerName, {
-      x: Math.round(this._worldMin.x),
-      y: Math.round(this._worldMin.y),
-      z: Math.round(this._worldMin.z)
+      x: Math.round(this._contentOrigin.x),
+      y: Math.round(this._contentOrigin.y),
+      z: Math.round(this._contentOrigin.z)
     });
   }
 

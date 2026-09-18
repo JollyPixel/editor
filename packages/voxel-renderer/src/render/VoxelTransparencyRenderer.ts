@@ -11,11 +11,20 @@ import {
 } from "three/tsl";
 
 // CONSTANTS
+const kDefaultSamples = 4;
 const kTargetOptions = {
   type: THREE.HalfFloatType,
   minFilter: THREE.NearestFilter,
   magFilter: THREE.NearestFilter
 };
+
+export interface VoxelTransparencyRendererOptions {
+  /**
+   * MSAA sample count of the offscreen targets; 0 disables antialiasing.
+   * @default 4
+   */
+  samples?: number;
+}
 
 /**
  * Weighted blended transparency for a complete scene and camera.
@@ -24,9 +33,9 @@ const kTargetOptions = {
  */
 export class VoxelTransparencyRenderer {
   #renderer: THREE.WebGPURenderer;
-  #opaque = new THREE.RenderTarget(1, 1, kTargetOptions);
-  #accumulation = new THREE.RenderTarget(1, 1, kTargetOptions);
-  #coverage = new THREE.RenderTarget(1, 1, kTargetOptions);
+  #opaque: THREE.RenderTarget;
+  #accumulation: THREE.RenderTarget;
+  #coverage: THREE.RenderTarget;
   #depth = new THREE.DepthTexture(1, 1);
   #quad: THREE.QuadMesh;
   #material: THREE.NodeMaterial;
@@ -36,9 +45,18 @@ export class VoxelTransparencyRenderer {
   #coverageOutput;
 
   constructor(
-    renderer: THREE.WebGPURenderer
+    renderer: THREE.WebGPURenderer,
+    options: VoxelTransparencyRendererOptions = {}
   ) {
+    const targetOptions = {
+      ...kTargetOptions,
+      samples: options.samples ?? kDefaultSamples
+    };
+
     this.#renderer = renderer;
+    this.#opaque = new THREE.RenderTarget(1, 1, targetOptions);
+    this.#accumulation = new THREE.RenderTarget(1, 1, targetOptions);
+    this.#coverage = new THREE.RenderTarget(1, 1, targetOptions);
     for (const target of [this.#opaque, this.#accumulation, this.#coverage]) {
       target.depthTexture = this.#depth;
       target.texture.name = "output";

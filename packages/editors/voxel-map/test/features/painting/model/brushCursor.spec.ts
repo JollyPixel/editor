@@ -53,6 +53,32 @@ describe("cursor.read", () => {
     assert.strictEqual(read?.pattern, "square");
   });
 
+  test("reads the aimed face and drops an unknown one", () => {
+    const base = {
+      position: { x: 0, y: 0, z: 0 },
+      size: 1
+    };
+
+    assert.strictEqual(cursor.read({ ...base, face: "-z" })?.face, "-z");
+    assert.ok(!("face" in cursor.read({ ...base, face: "up" })!));
+  });
+
+  test("reads the anchor and drops an unknown one", () => {
+    const payload = {
+      position: { x: 1, y: 2, z: 3 },
+      size: 2
+    };
+
+    assert.strictEqual(
+      cursor.read({ ...payload, anchor: "top" })?.anchor,
+      "top"
+    );
+    assert.strictEqual(
+      cursor.read({ ...payload, anchor: "middle" })?.anchor,
+      undefined
+    );
+  });
+
   test("floors a fractional size", () => {
     assert.strictEqual(
       cursor.read({
@@ -94,6 +120,27 @@ describe("cursor.equals", () => {
     assert.ok(cursor.equals(null, null));
     assert.ok(!cursor.equals(null, reference));
     assert.ok(!cursor.equals(reference, null));
+  });
+
+  test("compares the aimed face", () => {
+    assert.ok(cursor.equals(
+      { ...reference, face: "+y" },
+      { ...reference, face: "+y" }
+    ));
+    assert.ok(!cursor.equals(reference, { ...reference, face: "+y" }));
+    assert.ok(!cursor.equals(
+      { ...reference, face: "+y" },
+      { ...reference, face: "-x" }
+    ));
+  });
+
+  test("compares the anchor, a missing one standing for the bottom", () => {
+    assert.ok(cursor.equals(reference, { ...reference, anchor: "bottom" }));
+    assert.ok(!cursor.equals(reference, { ...reference, anchor: "top" }));
+    assert.ok(!cursor.equals(
+      { ...reference, anchor: "center" },
+      { ...reference, anchor: "top" }
+    ));
   });
 
   test("compares the center, size, axis and pattern", () => {

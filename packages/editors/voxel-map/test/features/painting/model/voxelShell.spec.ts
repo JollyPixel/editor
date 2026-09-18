@@ -6,7 +6,11 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { voxelShell } from "../../../../src/features/painting/model/voxelShell.ts";
+import {
+  edgesFacing,
+  facingKey,
+  voxelShell
+} from "../../../../src/features/painting/model/voxelShell.ts";
 import { cellsOf } from "../../../../src/features/painting/model/brushFootprint.ts";
 
 function quadCount(
@@ -154,5 +158,102 @@ describe("voxelShell", () => {
     const shell = voxelShell(ball);
 
     assert.strictEqual(quadCount(shell.triangles), 72);
+  });
+});
+
+describe("voxelShell rims", () => {
+  test("marks every corner of a single cell", () => {
+    const shell = voxelShell([{ x: 0, y: 0, z: 0 }]);
+
+    assert.strictEqual(shell.rims.length, shell.triangles.length / 3);
+    assert.ok(shell.rims.every((rim) => rim === 1));
+  });
+
+  test("leaves the vertices inside a flat face unmarked", () => {
+    const slab = cellsOf({
+      position: { x: 0, y: 0, z: 0 },
+      size: 3,
+      axis: "xz",
+      pattern: "square"
+    });
+    const shell = voxelShell(slab);
+    const min = Math.min(
+      ...shell.edges.filter((_, index) => index % 3 === 0)
+    );
+    const inner = new Set([min + 1, min + 2]);
+
+    for (let index = 0; index < shell.rims.length; index++) {
+      const x = shell.triangles[index * 3];
+      const z = shell.triangles[(index * 3) + 2];
+
+      assert.strictEqual(
+        shell.rims[index],
+        inner.has(x) && inner.has(z) ? 0 : 1,
+        `vertex ${x},${z}`
+      );
+    }
+  });
+});
+
+describe("edgesFacing", () => {
+  const cube = voxelShell([{ x: 0, y: 0, z: 0 }]);
+
+  test("keeps the nine edges of the three faces seen from a corner", () => {
+    const edges = edgesFacing(cube, [5, 5, 5]);
+
+    assert.strictEqual(edges.length / 6, 9);
+    assert.ok(!segmentsOf(edges).includes("0,0,0,1,0,0"));
+    assert.ok(!segmentsOf(edges).includes("0,0,0,0,1,0"));
+    assert.ok(!segmentsOf(edges).includes("0,0,0,0,0,1"));
+  });
+
+  test("keeps the four edges of the only face seen head-on", () => {
+    const edges = edgesFacing(cube, [0.5, 5, 0.5]);
+
+    assert.deepStrictEqual(segmentsOf(edges), [
+      "0,1,0,0,1,1",
+      "0,1,0,1,1,0",
+      "0,1,1,1,1,1",
+      "1,1,0,1,1,1"
+    ]);
+  });
+
+  test("keeps nothing from inside the shell", () => {
+    assert.deepStrictEqual(edgesFacing(cube, [0.5, 0.5, 0.5]), []);
+  });
+
+  test("splits a run where the faces meeting along it change", () => {
+    const shell = voxelShell([
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 1 },
+      { x: 1, y: 1, z: 1 }
+    ]);
+    const convex = "1,1,0,1,1,1";
+    const pinched = "1,1,1,1,1,2";
+
+    assert.ok(segmentsOf(shell.edges).includes(convex));
+    assert.ok(segmentsOf(shell.edges).includes(pinched));
+
+    const facing = segmentsOf(edgesFacing(shell, [-5, -5, 0.5]));
+    assert.ok(!facing.includes(convex));
+    assert.ok(facing.includes(pinched));
+  });
+});
+
+describe("facingKey", () => {
+  const cube = voxelShell([{ x: 0, y: 0, z: 0 }]);
+
+  test("holds while the eye stays on the same side of every plane", () => {
+    assert.strictEqual(
+      facingKey(cube, [5, 5, 5]),
+      facingKey(cube, [2, 9, 3])
+    );
+  });
+
+  test("changes once the eye crosses a face plane", () => {
+    assert.notStrictEqual(
+      facingKey(cube, [5, 5, 5]),
+      facingKey(cube, [0.5, 5, 5])
+    );
   });
 });

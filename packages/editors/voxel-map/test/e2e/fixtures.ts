@@ -98,7 +98,8 @@ export async function openEditor(
   });
   const query = new URLSearchParams({
     world: world.id,
-    "max-fps": String(maxFps)
+    "max-fps": String(maxFps),
+    samples: "0"
   });
   await page.goto(`/?${query}`);
   await waitForEditor(page);

@@ -15,8 +15,8 @@ import type {
 import { EditorStore } from "./EditorStore.ts";
 
 // CONSTANTS
-const kMinSize = 1;
-const kMaxSize = 8;
+export const BRUSH_MIN_SIZE = 1;
+export const BRUSH_MAX_SIZE = 16;
 
 export type RotationMode = typeof VoxelRotation[keyof typeof VoxelRotation] | "auto";
 export type BrushMode = "build" | "replace";
@@ -30,6 +30,7 @@ export type BrushStoreEvents = {
   modeChange: (mode: BrushMode) => void;
   axisChange: (axis: BrushAxis) => void;
   patternChange: (pattern: BrushPattern) => void;
+  ghostChange: (ghost: boolean) => void;
 };
 
 export class BrushStore extends EditorStore<BrushStoreEvents> {
@@ -41,6 +42,7 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
   #mode: BrushMode = "build";
   #axis: BrushAxis = "xz";
   #pattern: BrushPattern = "square";
+  #ghost = false;
 
   get blockId(): number {
     return this.#blockId;
@@ -62,8 +64,8 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     size: number
   ) {
     const next = Math.max(
-      kMinSize,
-      Math.min(kMaxSize, size)
+      BRUSH_MIN_SIZE,
+      Math.min(BRUSH_MAX_SIZE, size)
     );
     if (this.#size === next) {
       return;
@@ -165,6 +167,24 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     this.emit(
       "patternChange",
       pattern
+    );
+  }
+
+  get ghost(): boolean {
+    return this.#ghost;
+  }
+
+  set ghost(
+    ghost: boolean
+  ) {
+    if (this.#ghost === ghost) {
+      return;
+    }
+
+    this.#ghost = ghost;
+    this.emit(
+      "ghostChange",
+      ghost
     );
   }
 

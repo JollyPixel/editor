@@ -3,12 +3,19 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
+  isBrushAnchor,
   isBrushAxis,
   isBrushPattern,
   type BrushFootprint
 } from "./brushFootprint.ts";
+import {
+  isCellFace,
+  type CellFace
+} from "./cellFace.ts";
 
-export type BrushCursor = BrushFootprint;
+export interface BrushCursor extends BrushFootprint {
+  face?: CellFace;
+}
 
 export function read(
   value: unknown
@@ -30,12 +37,16 @@ export function read(
 
   const axis = Reflect.get(value, "axis");
   const pattern = Reflect.get(value, "pattern");
+  const face = Reflect.get(value, "face");
+  const anchor = Reflect.get(value, "anchor");
 
   return {
     position,
     size: Math.floor(size),
     axis: isBrushAxis(axis) ? axis : "xz",
-    pattern: isBrushPattern(pattern) ? pattern : "square"
+    pattern: isBrushPattern(pattern) ? pattern : "square",
+    ...isBrushAnchor(anchor) ? { anchor } : {},
+    ...isCellFace(face) ? { face } : {}
   };
 }
 
@@ -50,6 +61,8 @@ export function equals(
   return a.size === b.size &&
     a.axis === b.axis &&
     a.pattern === b.pattern &&
+    a.face === b.face &&
+    (a.anchor ?? "bottom") === (b.anchor ?? "bottom") &&
     a.position.x === b.position.x &&
     a.position.y === b.position.y &&
     a.position.z === b.position.z;

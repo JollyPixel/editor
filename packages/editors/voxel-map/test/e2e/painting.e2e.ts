@@ -34,6 +34,20 @@ function brushState(
   });
 }
 
+function ghostState(
+  page: Page
+) {
+  return page.evaluate(() => {
+    const { localBrush } = window.voxelMapEditor!.scene;
+    const ghost = localBrush.actor.object3D.getObjectByName("ghost-block");
+
+    return {
+      visible: ghost?.visible ?? false,
+      position: ghost?.position.toArray() ?? null
+    };
+  });
+}
+
 async function setBrush(
   page: Page,
   patch: { blockId?: number; size?: number; }
@@ -145,6 +159,64 @@ test("the X axis builds a wall standing on the aimed cell", async({ page }) => {
   ])).toEqual([1, 1, 1, 1]);
 });
 
+test("a wall removed from a top face digs down into it", async({ page }) => {
+  const wall = [0, 1].flatMap((y) => [-1, 0].map((z) => {
+    return { x: 0, y, z };
+  }));
+  await seedVoxels(page, wall.map((cell) => {
+    return { ...cell, blockId: 1 };
+  }));
+  await setBrush(page, { size: 2 });
+  await page.keyboard.press("KeyX");
+  await page.keyboard.press("KeyX");
+  await expect.poll(async() => (await brushState(page)).axis).toBe("yz");
+
+  await clickCell(page, { x: 0, y: 2, z: 0 }, "right");
+
+  await expect.poll(() => voxelCount(page)).toBe(0);
+});
+
+test("a second right click without moving digs what the first uncovered", async({ page }) => {
+  const floor = [-1, 0, 1].flatMap((x) => [-1, 0, 1].map((z) => {
+    return { x, y: 0, z, blockId: 1 };
+  }));
+  await seedVoxels(page, [
+    ...floor,
+    { x: 0, y: 1, z: 0, blockId: 1 }
+  ]);
+  const point = await cellTopPoint(page, { x: 0, y: 2, z: 0 });
+
+  await pressAt(page, [point], "right");
+  await expect.poll(() => voxelCount(page)).toBe(floor.length);
+  await pressAt(page, [point], "right");
+
+  await expect.poll(() => voxelCount(page)).toBe(floor.length - 1);
+});
+
+test("a removing drag ignores the hole it digs", async({ page }) => {
+  const slab = [0, 1].flatMap((y) => [-3, -2, -1, 0, 1, 2, 3].flatMap(
+    (x) => [-3, -2, -1, 0, 1, 2, 3].map((z) => {
+      return { x, y, z, blockId: 1 };
+    })
+  ));
+  await seedVoxels(page, slab);
+  await setBrush(page, { size: 3 });
+
+  await strokeCells(page, [
+    { x: 0, y: 2, z: 0 },
+    { x: 1, y: 2, z: 0 }
+  ], "right");
+
+  await expect.poll(() => voxelCount(page)).toBe(slab.length - 12);
+  expect(await blocksAt(page, [
+    { x: -1, y: 1, z: 0 },
+    { x: 2, y: 1, z: 1 },
+    { x: 3, y: 1, z: 0 },
+    { x: 0, y: 1, z: 2 },
+    { x: 0, y: 0, z: 0 }
+  ])).toEqual([null, null, 1, 1, 1]);
+});
+
 test("Ctrl+click picks the block under the cursor", async({ page }) => {
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 7 }]);
   await setBrush(page, { blockId: 1 });
@@ -179,6 +251,44 @@ test("the toolbar and the shortcuts drive the same brush", async({ page }) => {
     await toolbar.getByRole("button", { name: /^Build/ }).hover();
     await toolbar.getByRole("button", { name: "Replace", exact: true }).click();
     await expect.poll(async() => (await brushState(page)).mode).toBe("replace");
+  });
+});
+
+test("the ghost block previews the placement at size one", async({ page }) => {
+  const toolbar = page.locator("voxel-brush-toolbar");
+  const ghostButton = toolbar.getByRole("button", { name: /^Ghost block/ });
+  const cell = { x: 0, y: 0, z: 0 };
+
+  await test.step("the toolbar and G toggle it", async() => {
+    await expect(ghostButton).toHaveAttribute("aria-pressed", "false");
+    await ghostButton.click();
+    await expect(ghostButton).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("KeyG");
+    await expect(ghostButton).toHaveAttribute("aria-pressed", "false");
+    await page.keyboard.press("KeyG");
+    await expect(ghostButton).toHaveAttribute("aria-pressed", "true");
+  });
+
+  await test.step("hovering the ground shows the ghost on the place cell", async() => {
+    const point = await cellTopPoint(page, cell);
+    await page.mouse.move(point.x, point.y);
+    await expect.poll(() => ghostState(page)).toEqual({
+      visible: true,
+      position: [0.5, 0.5, 0.5]
+    });
+  });
+
+  await test.step("a larger brush falls back to the footprint", async() => {
+    await page.keyboard.press("BracketRight");
+    await expect.poll(async() => (await ghostState(page)).visible).toBe(false);
+    await page.keyboard.press("BracketLeft");
+    await expect.poll(async() => (await ghostState(page)).visible).toBe(true);
+  });
+
+  await test.step("a click places the block under the ghost", async() => {
+    await setBrush(page, { blockId: 3 });
+    await clickCell(page, cell);
+    await expect.poll(() => blocksAt(page, [cell])).toEqual([3]);
   });
 });
 
