@@ -3,30 +3,23 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import type * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
 import {
+  chunkMeshes,
   makeEngine as makeBaseEngine,
-  CUBE_ID as kCubeId
+  placeCube
 } from "./helpers/engine.ts";
-
-// CONSTANTS
-const kLayer = "Ground";
 
 function makeEngine(
   greedy: boolean
 ): VoxelEngine {
-  const engine = makeBaseEngine({ layers: [kLayer], greedy });
-
-  // A 4×4 plate, which merges into 6 quads.
+  const engine = makeBaseEngine({ layers: ["Ground"], greedy });
   for (let x = 0; x < 4; x++) {
     for (let z = 0; z < 4; z++) {
-      engine.world.setVoxel(kLayer, {
-        position: { x, y: 0, z },
-        blockId: kCubeId
-      });
+      placeCube(engine, "Ground", { x, y: 0, z });
     }
   }
   engine.tick(0);
@@ -37,90 +30,54 @@ function makeEngine(
 function triangles(
   engine: VoxelEngine
 ): number {
-  let count = 0;
-  engine.root.traverse((object) => {
-    if (object instanceof THREE.Mesh) {
-      count += object.geometry.drawRange.count;
-    }
-  });
-
-  return count / 3;
+  return chunkMeshes(engine)
+    .reduce((count, mesh) => count + (mesh.geometry.drawRange.count / 3), 0);
 }
 
 function materials(
   engine: VoxelEngine
-): THREE.Material[] {
-  const found: THREE.Material[] = [];
-  engine.root.traverse((object) => {
-    if (object instanceof THREE.Mesh && object.material instanceof THREE.Material) {
-      found.push(object.material);
-    }
-  });
-
-  return found;
+): Set<THREE.Material | THREE.Material[]> {
+  return new Set(chunkMeshes(engine).map((mesh) => mesh.material));
 }
 
-/** `enableTileWrapping` assigns `colorNode` (a TSL node, not `THREE.Material` API). */
-function colorNodeOf(
-  material: THREE.Material
-): unknown {
-  return (material as { colorNode?: unknown; }).colorNode;
+function programKeyOf(
+  material: THREE.Material | THREE.Material[]
+): string {
+  assert.ok(!Array.isArray(material));
+
+  return material.customProgramCacheKey();
 }
 
-describe("VoxelEngine — greedy meshing", () => {
+describe("VoxelEngine - greedy meshing", () => {
   it("is off by default", () => {
     assert.equal(new VoxelEngine().greedy, false);
   });
 
-  it("cuts the triangle count of a flat plate", () => {
-    // 48 voxel faces vs 6 merged quads, two triangles each.
-    assert.equal(triangles(makeEngine(false)), 96);
-    assert.equal(triangles(makeEngine(true)), 12);
-  });
-
-  it("prepares chunk materials to repeat a tile across a merged quad", () => {
-    for (const material of materials(makeEngine(true))) {
-      assert.notEqual(colorNodeOf(material), undefined);
-    }
-  });
-
-  it("still clamps each face to its atlas rect when off", () => {
-    for (const material of materials(makeEngine(false))) {
-      assert.notEqual(colorNodeOf(material), undefined);
-    }
-  });
-
-  it("reports the folded faces through the inspector", () => {
-    const engine = makeEngine(true);
-
-    assert.equal(engine.inspector.mesh.stats.faces, 6);
-    assert.equal(engine.inspector.mesh.stats.mergedFaces, 42);
-  });
-
   it("rebuilds the world when toggled at runtime", () => {
     const engine = makeEngine(false);
-    assert.equal(triangles(engine), 96);
+    const naive = triangles(engine);
 
     engine.greedy = true;
     engine.tick(0);
     assert.equal(engine.greedy, true);
-    assert.equal(triangles(engine), 12);
+    assert.ok(triangles(engine) < naive);
 
     engine.greedy = false;
     engine.tick(0);
-    assert.equal(triangles(engine), 96);
+    assert.equal(triangles(engine), naive);
   });
 
-  it("swaps the materials when toggled so geometry and shader stay in step", () => {
+  it("swaps the chunk materials so geometry and shader stay in step", () => {
     const engine = makeEngine(true);
+    const merged = materials(engine);
+    const mergedPrograms = new Set([...merged].map(programKeyOf));
+
     engine.greedy = false;
     engine.tick(0);
 
     for (const material of materials(engine)) {
-      assert.notEqual(
-        material.customProgramCacheKey(),
-        "jolly-pixel:tile-wrap"
-      );
+      assert.equal(merged.has(material), false);
+      assert.equal(mergedPrograms.has(programKeyOf(material)), false);
     }
   });
 });

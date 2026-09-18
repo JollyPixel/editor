@@ -59,7 +59,6 @@ describe("VoxelWorld — layer ordering", () => {
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
 
-    // "up" walks towards higher priority, "down" towards lower.
     world.moveLayer("Top", "down");
     assert.deepEqual([top.order, base.order], [0, 1]);
 
@@ -130,6 +129,8 @@ describe("VoxelWorld — layer ordering", () => {
 
     world.moveLayerTo("B", 0);
     world.moveLayerTo("NoSuch", 1);
+    world.moveLayer("A", "down");
+    world.moveLayer("B", "up");
 
     assert.deepEqual(actions, []);
   });
@@ -207,7 +208,6 @@ describe("VoxelWorld — voxel access", () => {
 });
 
 describe("VoxelWorld — compositing", () => {
-  /** Two stacked layers, both holding a voxel at the origin. */
   function stacked() {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");

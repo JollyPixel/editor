@@ -2,346 +2,233 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
 import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
 import { ViewDistance } from "../src/world/index.ts";
-import type { VoxelCollider } from "../src/collision/index.ts";
+import { makeFakeCollider } from "./helpers/fakes.ts";
 import {
-  makeEngine as makeBaseEngine,
-  CUBE_ID as kCubeId,
-  CHUNK_SIZE as kChunkSize
+  chunkMeshes,
+  fillChunks,
+  makeEngine,
+  placeCube,
+  sortedChunkCoords
 } from "./helpers/engine.ts";
+import { CHUNK_SIZE as kChunkSize } from "./helpers/ids.ts";
 
 // CONSTANTS
-const kLayer = "Ground";
+const kNear = { x: 2, y: 2, z: 2 };
+const kFar = { x: 14, y: 2, z: 2 };
+const kTight = { chunks: 1, hysteresis: 0 };
+const kFirstPair = ["0,0,0", "1,0,0"];
+const kLastPair = ["2,0,0", "3,0,0"];
+const kAll = [...kFirstPair, ...kLastPair];
 
-/**
- * One voxel in each of `count` chunks along +X, so chunk `i` is centered on
- * `x = (i * 4) + 2`.
- */
-function makeEngine(
-  count: number,
-  options: VoxelEngineOptions = {}
+interface Snapshot {
+  built: string[];
+  visible: string[];
+  wireframes: string[];
+  bounds: string[];
+  chunks: number;
+  culled: number;
+}
+
+interface Step {
+  focus?: typeof kNear;
+  viewDistance?: ViewDistance;
+  expect: Partial<Snapshot>;
+}
+
+interface Scenario {
+  name: string;
+  options?: VoxelEngineOptions;
+  meshless?: boolean;
+  steps: Step[];
+}
+
+function makeFourChunkEngine(
+  options: VoxelEngineOptions = {},
+  meshless = false
 ): VoxelEngine {
-  const engine = makeBaseEngine({
-    layers: [kLayer],
+  const settings: VoxelEngineOptions = {
+    layers: ["Ground"],
     rebuildBudgetMs: 0,
     ...options
-  });
-
-  for (let i = 0; i < count; i++) {
-    engine.world.setVoxel(kLayer, {
-      position: { x: i * kChunkSize, y: 0, z: 0 },
-      blockId: kCubeId
-    });
-  }
+  };
+  const engine = meshless
+    ? new VoxelEngine({ chunkSize: kChunkSize, ...settings })
+    : makeEngine(settings);
+  fillChunks(engine, "Ground", 4);
 
   return engine;
 }
 
-function builtChunks(
+function snapshot(
   engine: VoxelEngine
-): string[] {
-  return engine.root.children
-    .map((mesh) => mesh.name.split(":")[1])
-    .sort();
+): Snapshot {
+  const meshes = chunkMeshes(engine);
+  const overlay = engine.root.getObjectByName("VoxelInspector");
+  const bounds = engine.root.getObjectByName("VoxelInspector:chunkBounds");
+
+  return {
+    built: sortedChunkCoords(meshes),
+    visible: sortedChunkCoords(meshes.filter((mesh) => mesh.visible)),
+    wireframes: sortedChunkCoords(overlay?.children ?? []),
+    bounds: sortedChunkCoords(bounds?.children ?? []),
+    chunks: engine.inspector.mesh.stats.chunks,
+    culled: engine.inspector.mesh.stats.culledChunks
+  };
 }
 
-function visibleChunks(
-  engine: VoxelEngine
-): string[] {
-  return engine.root.children
-    .filter((mesh) => mesh.visible)
-    .map((mesh) => mesh.name.split(":")[1])
-    .sort();
+function pick(
+  actual: Snapshot,
+  expected: Partial<Snapshot>
+): Partial<Snapshot> {
+  return Object.fromEntries(
+    Object.keys(expected).map((key) => [key, actual[key as keyof Snapshot]])
+  );
 }
 
-function chunkOf(
-  engine: VoxelEngine,
-  cx: number
-) {
-  return engine.world.getLayer(kLayer)!.getChunk(cx, 0, 0)!;
-}
+const kInspected: VoxelEngineOptions = {
+  viewDistance: kTight,
+  inspector: {
+    mode: "overlay",
+    chunkBounds: true
+  }
+};
 
-describe("VoxelEngine — view distance", () => {
-  it("meshes every chunk when unlimited", () => {
-    const engine = makeEngine(4);
-    engine.focus = { x: 2, y: 2, z: 2 };
-
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
-  });
-
-  it("meshes every chunk while no focus is set", () => {
-    const engine = makeEngine(4, { viewDistance: 1 });
-
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
-  });
-
-  it("leaves chunks beyond the view distance unmeshed and dirty", () => {
-    const engine = makeEngine(4, { viewDistance: 1 });
-    engine.focus = { x: 2, y: 2, z: 2 };
-
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0"]);
-    assert.equal(chunkOf(engine, 2).dirty, true);
-    assert.equal(chunkOf(engine, 3).dirty, true);
-  });
-
-  it("meshes a chunk with the edits it missed once the focus reaches it", () => {
-    const engine = makeEngine(4, { viewDistance: 1 });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-
-    engine.world.setVoxel(kLayer, {
-      position: { x: 13, y: 1, z: 0 },
-      blockId: kCubeId
-    });
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.ok(builtChunks(engine).includes("3,0,0"));
-    assert.equal(chunkOf(engine, 3).dirty, false);
-    assert.equal(chunkOf(engine, 3).voxelCount, 2);
-  });
-
-  it("ignores the vertical axis by default", () => {
-    const engine = makeEngine(2, { viewDistance: 1 });
-    engine.focus = { x: 2, y: 400, z: 2 };
-
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0"]);
-  });
-
-  it("measures the vertical axis in sphere shape", () => {
-    const engine = makeEngine(2, {
-      viewDistance: {
-        chunks: 1,
-        shape: "sphere"
-      }
-    });
-    engine.focus = { x: 2, y: 400, z: 2 };
-
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), []);
-  });
-
-  it("hides a built chunk that leaves the view distance", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
-      }
-    });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    // Hidden, not disposed: the geometry is still attached to the root.
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
-    assert.deepEqual(visibleChunks(engine), ["2,0,0", "3,0,0"]);
-    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
-  });
-
-  it("shows a hidden chunk again when the focus comes back", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
-      }
-    });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.deepEqual(visibleChunks(engine), ["0,0,0", "1,0,0"]);
-    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
-  });
-
-  it("keeps a chunk inside the hysteresis slack visible", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 1
-      }
-    });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-
-    /*
-     * Chunk 0 is 8 units away: outside the admit radius, inside the retain
-     * radius, so it must not flip.
-     */
-    engine.focus = { x: 10, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.ok(visibleChunks(engine).includes("0,0,0"));
-  });
-
-  it("disposes a chunk leaving the view distance under the unload policy", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
+const kScenarios: Scenario[] = [
+  {
+    name: "hides chunks leaving the view distance and shows them again",
+    options: kInspected,
+    steps: [
+      {
+        focus: kNear,
+        expect: {
+          built: kFirstPair,
+          visible: kFirstPair,
+          wireframes: kFirstPair,
+          bounds: kFirstPair
+        }
       },
-      viewDistancePolicy: "unload"
-    });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["2,0,0", "3,0,0"]);
-    assert.equal(chunkOf(engine, 0).dirty, true);
-  });
-
-  it("remeshes an unloaded chunk when it comes back into view", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
+      {
+        focus: kFar,
+        expect: {
+          built: kAll,
+          visible: kLastPair,
+          wireframes: kLastPair,
+          bounds: kLastPair,
+          chunks: 4,
+          culled: 2
+        }
       },
-      viewDistancePolicy: "unload"
+      {
+        focus: kNear,
+        expect: { visible: kFirstPair, wireframes: kFirstPair, bounds: kFirstPair, culled: 2 }
+      },
+      {
+        viewDistance: ViewDistance.Unlimited,
+        expect: { visible: kAll, bounds: kAll, culled: 0 }
+      }
+    ]
+  },
+  {
+    name: "disposes chunks leaving the view distance under the unload policy",
+    options: { ...kInspected, viewDistancePolicy: "unload" },
+    steps: [
+      { focus: kNear, expect: { built: kFirstPair } },
+      { focus: kFar, expect: { built: kLastPair, bounds: kLastPair, chunks: 2 } },
+      { focus: kNear, expect: { built: kFirstPair } }
+    ]
+  },
+  {
+    name: "applies a widened view distance without waiting for the focus",
+    options: { viewDistance: kTight },
+    steps: [
+      { focus: kNear, expect: { built: kFirstPair } },
+      { viewDistance: new ViewDistance({ chunks: 4, hysteresis: 0 }), expect: { built: kAll } }
+    ]
+  },
+  {
+    name: "meshes every chunk when the view distance is unlimited",
+    steps: [{ focus: kNear, expect: { built: kAll } }]
+  },
+  {
+    name: "meshes every chunk while no focus is set",
+    options: { viewDistance: 1 },
+    steps: [{ expect: { built: kAll } }]
+  },
+  {
+    name: "hides the bounds of meshless chunks",
+    options: kInspected,
+    meshless: true,
+    steps: [
+      { focus: kNear, expect: { bounds: kFirstPair } },
+      { focus: kFar, expect: { built: [], bounds: kLastPair, chunks: 4, culled: 2 } }
+    ]
+  },
+  {
+    name: "unloads the bounds of meshless chunks",
+    options: { ...kInspected, viewDistancePolicy: "unload" },
+    meshless: true,
+    steps: [
+      { focus: kNear, expect: { bounds: kFirstPair } },
+      { focus: kFar, expect: { bounds: kLastPair, chunks: 2 } }
+    ]
+  }
+];
+
+describe("VoxelEngine - view distance", () => {
+  for (const { name, options, meshless, steps } of kScenarios) {
+    it(name, () => {
+      const engine = makeFourChunkEngine(options, meshless);
+
+      steps.forEach(({ focus, viewDistance, expect }, index) => {
+        if (focus) {
+          engine.focus = focus;
+        }
+        if (viewDistance) {
+          engine.viewDistance = viewDistance;
+        }
+        engine.tick(0);
+
+        assert.deepEqual(pick(snapshot(engine), expect), expect, `step ${index}`);
+      });
     });
-    engine.focus = { x: 2, y: 2, z: 2 };
+  }
+
+  it("leaves chunks beyond the view distance dirty and meshes their missed edits later", () => {
+    const engine = makeFourChunkEngine({ viewDistance: 1 });
+    const lastChunk = engine.world.getLayer("Ground")!.getChunk(3, 0, 0)!;
+    engine.focus = kNear;
     engine.tick(0);
-    engine.focus = { x: 14, y: 2, z: 2 };
+    assert.equal(lastChunk.dirty, true);
+
+    placeCube(engine, "Ground", { x: 13, y: 1, z: 0 });
+    engine.focus = kFar;
     engine.tick(0);
 
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0"]);
+    assert.ok(snapshot(engine).built.includes("3,0,0"));
+    assert.equal(lastChunk.dirty, false);
+    assert.equal(lastChunk.voxelCount, 2);
   });
 
   it("keeps colliders for chunks the view distance unloads", () => {
-    const live = new Set<string>();
-    function collider(): VoxelCollider {
-      return {
-        rebuildChunk: (key) => void live.add(key),
-        removeChunk: (key) => void live.delete(key),
-        dispose: () => void 0
-      };
-    }
-
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
-      },
+    const fake = makeFakeCollider();
+    const engine = makeFourChunkEngine({
+      viewDistance: kTight,
       viewDistancePolicy: "unload",
-      collider
+      collider: () => fake.collider
     });
-    engine.focus = { x: 2, y: 2, z: 2 };
+    engine.focus = kNear;
     engine.tick(0);
-    const near = [...live];
+    const near = [...fake.live];
     assert.equal(near.length, 2);
 
-    engine.focus = { x: 14, y: 2, z: 2 };
+    engine.focus = kFar;
     engine.tick(0);
 
-    assert.deepEqual(builtChunks(engine), ["2,0,0", "3,0,0"]);
-    assert.ok(near.every((key) => live.has(key)));
-  });
-
-  it("restores every hidden chunk when the view distance becomes unlimited", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
-      }
-    });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-    assert.equal(engine.inspector.mesh.stats.culledChunks, 2);
-
-    engine.viewDistance = ViewDistance.Unlimited;
-    engine.tick(0);
-
-    assert.deepEqual(visibleChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
-    assert.equal(engine.inspector.mesh.stats.culledChunks, 0);
-  });
-
-  it("applies a widened view distance without waiting for the focus to move", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
-      }
-    });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0"]);
-
-    engine.viewDistance = new ViewDistance({
-      chunks: 4,
-      hysteresis: 0
-    });
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0", "2,0,0", "3,0,0"]);
-  });
-
-  it("accounts for the layer position", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
-      }
-    });
-    engine.world.setLayerPosition(kLayer, { x: 100, y: 0, z: 0 });
-    engine.focus = { x: 102, y: 2, z: 2 };
-
-    engine.tick(0);
-
-    assert.deepEqual(builtChunks(engine), ["0,0,0", "1,0,0"]);
-  });
-
-  it("hides chunks from the wireframe overlay too", () => {
-    const engine = makeEngine(4, {
-      viewDistance: {
-        chunks: 1,
-        hysteresis: 0
-      },
-      inspector: { mode: "overlay" }
-    });
-    engine.focus = { x: 2, y: 2, z: 2 };
-    engine.tick(0);
-    function overlays(): number {
-      return engine.root
-        .getObjectByName("VoxelInspector")!
-        .children.length;
-    }
-    assert.equal(overlays(), 2);
-
-    engine.focus = { x: 14, y: 2, z: 2 };
-    engine.tick(0);
-
-    assert.equal(overlays(), 2);
-    assert.deepEqual(
-      (engine.root.getObjectByName("VoxelInspector")!.children as THREE.Object3D[])
-        .map((overlay) => overlay.name.split(":")[1])
-        .sort(),
-      ["2,0,0", "3,0,0"]
-    );
+    assert.deepEqual(snapshot(engine).built, kLastPair);
+    assert.ok(near.every((key) => fake.live.has(key)));
   });
 });

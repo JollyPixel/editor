@@ -6,91 +6,47 @@ import assert from "node:assert/strict";
 import {
   clamp,
   FACE,
+  FACES,
   FACE_NORMALS,
   FACE_OFFSETS,
   FACE_OPPOSITE
 } from "../../src/utils/math.ts";
-import { EPSILON } from "../helpers/math.ts";
 
 describe("clamp", () => {
-  it("returns the value unchanged when within range", () => {
-    assert.equal(clamp(0, 1, 0.5), 0.5);
-  });
-
-  it("clamps a value above max down to max", () => {
-    assert.equal(clamp(0, 1, 5), 1);
-  });
-
-  it("clamps a value below min up to min", () => {
-    assert.equal(clamp(0, 1, -5), 0);
-  });
-
-  it("returns the boundary values unchanged", () => {
-    assert.equal(clamp(0, 1, 0), 0);
-    assert.equal(clamp(0, 1, 1), 1);
-  });
+  for (const [value, expected] of [[0.5, 0.5], [5, 1], [-5, 0], [0, 0], [1, 1]]) {
+    it(`clamps ${value} into [0, 1] as ${expected}`, () => {
+      assert.equal(clamp(0, 1, value), expected);
+    });
+  }
 });
 
-describe("FACE constant", () => {
-  it("has exactly 6 distinct values 0–5", () => {
-    const values = Object.values(FACE);
-    assert.equal(values.length, 6);
-    assert.deepEqual(new Set(values), new Set([0, 1, 2, 3, 4, 5]));
-  });
-});
-
-describe("FACE_NORMALS", () => {
-  it("has 6 entries", () => {
-    assert.equal(FACE_NORMALS.length, 6);
+describe("face tables", () => {
+  it("numbers the six faces 0 to 5", () => {
+    assert.deepEqual([...FACES].sort(), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(new Set(Object.values(FACE)), new Set(FACES));
   });
 
-  it("each entry is a unit vector", () => {
-    for (const [i, n] of FACE_NORMALS.entries()) {
-      const len = Math.sqrt(n[0] ** 2 + n[1] ** 2 + n[2] ** 2);
-      assert.ok(Math.abs(len - 1) < EPSILON, `FACE_NORMALS[${i}] is not a unit vector`);
+  it("gives each face an axis-aligned unit normal, shared by its offset", () => {
+    for (const face of FACES) {
+      const normal = FACE_NORMALS[face];
+
+      assert.equal(normal.filter((component) => component !== 0).length, 1, `face ${face}`);
+      assert.equal(Math.abs(normal[0] + normal[1] + normal[2]), 1, `face ${face}`);
+      assert.deepEqual(FACE_OFFSETS[face], normal);
     }
-  });
-
-  it("PosX normal is [1,0,0]", () => {
     assert.deepEqual(FACE_NORMALS[FACE.PosX], [1, 0, 0]);
-  });
-
-  it("NegY normal is [0,-1,0]", () => {
     assert.deepEqual(FACE_NORMALS[FACE.NegY], [0, -1, 0]);
   });
-});
 
-describe("FACE_OFFSETS", () => {
-  it("equals FACE_NORMALS (same axis-aligned values)", () => {
-    for (let i = 0; i < 6; i++) {
-      assert.deepEqual(FACE_OFFSETS[i], FACE_NORMALS[i]);
+  it("pairs every face with the one whose normal it negates", () => {
+    for (const face of FACES) {
+      const opposite = FACE_OPPOSITE[face];
+
+      assert.equal(FACE_OPPOSITE[opposite], face);
+      assert.deepEqual(
+        FACE_NORMALS[opposite],
+        FACE_NORMALS[face].map((component) => -component || 0)
+      );
     }
-  });
-});
-
-describe("FACE_OPPOSITE", () => {
-  it("has 6 entries", () => {
-    assert.equal(FACE_OPPOSITE.length, 6);
-  });
-
-  it("is involutive: opposite(opposite(f)) === f", () => {
-    for (let f = 0; f < 6; f++) {
-      assert.equal(FACE_OPPOSITE[FACE_OPPOSITE[f]], f, `double opposite of face ${f} should be itself`);
-    }
-  });
-
-  it("PosX opposite is NegX and vice versa", () => {
-    assert.equal(FACE_OPPOSITE[FACE.PosX], FACE.NegX);
-    assert.equal(FACE_OPPOSITE[FACE.NegX], FACE.PosX);
-  });
-
-  it("PosY opposite is NegY and vice versa", () => {
-    assert.equal(FACE_OPPOSITE[FACE.PosY], FACE.NegY);
-    assert.equal(FACE_OPPOSITE[FACE.NegY], FACE.PosY);
-  });
-
-  it("PosZ opposite is NegZ and vice versa", () => {
-    assert.equal(FACE_OPPOSITE[FACE.PosZ], FACE.NegZ);
-    assert.equal(FACE_OPPOSITE[FACE.NegZ], FACE.PosZ);
   });
 });

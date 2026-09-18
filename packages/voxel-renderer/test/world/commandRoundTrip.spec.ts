@@ -3,166 +3,272 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelWorld, type VoxelLayer } from "../../src/world/index.ts";
-import type { VoxelLayerCommand } from "../../src/commands.ts";
-import type { VoxelObjectJSON } from "../../src/serialization/index.ts";
+import { VoxelWorld } from "../../src/world/index.ts";
+import { VOXEL_LAYER_COMMAND_ACTIONS, type VoxelLayerCommand } from "../../src/commands.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
+import { makeObject, recordCommands } from "../helpers/fakes.ts";
+import { withoutId } from "../helpers/world.ts";
+
+interface RoundTripCase {
+  name: string;
+  seed?: (world: VoxelWorld) => void;
+  act: (world: VoxelWorld) => void;
+  actions: VoxelLayerCommand["action"][];
+  check?: (remote: VoxelWorld) => void;
+}
 
 interface Peers {
   local: VoxelWorld;
   remote: VoxelWorld;
-  replay: () => void;
+  commands: VoxelLayerCommand[];
 }
 
 function makePeers(
-  seed: (world: VoxelWorld) => void
+  seed: (world: VoxelWorld) => void = () => void 0
 ): Peers {
   const local = new VoxelWorld(4);
   const remote = new VoxelWorld(4);
   seed(local);
   seed(remote);
 
-  const recorded: VoxelLayerCommand[] = [];
-  local.on("command", (command) => recorded.push(command));
+  return { local, remote, commands: recordCommands(local) };
+}
 
+function stateOf(
+  world: VoxelWorld
+): unknown {
   return {
-    local,
-    remote,
-    replay() {
-      for (const event of recorded) {
-        remote.apply(event);
-      }
-    }
+    layers: world.getLayers().map(withoutId),
+    objectLayers: world.getObjectLayers().map(({ id, ...rest }) => structuredClone(rest))
   };
 }
 
-function layersOf(
+function ground(
   world: VoxelWorld
-): unknown[] {
-  return world.getLayers().map((layer: VoxelLayer) => {
-    const { id, ...rest } = layer.toJSON();
-
-    return rest;
-  });
-}
-
-function objectLayersOf(
-  world: VoxelWorld
-): unknown[] {
-  return world.getObjectLayers().map(({ id, ...rest }) => rest);
-}
-
-function assertConverged(
-  { local, remote }: Peers
 ): void {
-  assert.deepEqual(layersOf(remote), layersOf(local));
-  assert.deepEqual(objectLayersOf(remote), objectLayersOf(local));
+  world.addLayer("Ground");
+  world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+  world.setVoxelAt("Ground", { x: 1, y: 0, z: 0 }, makeVoxelEntry(2));
 }
 
-function makeObject(
-  id: string
-): VoxelObjectJSON {
-  return {
-    id,
-    name: id,
-    x: 0,
-    y: 0,
-    z: 0,
-    visible: true
-  };
+function stack(
+  world: VoxelWorld
+): void {
+  for (const name of ["A", "B", "C"]) {
+    world.addLayer(name);
+  }
 }
 
-describe("command round-trip — cloneLayer", () => {
-  it("reproduces the clone, voxels included, on the peer", () => {
-    const peers = makePeers((world) => {
+function spawns(
+  world: VoxelWorld
+): void {
+  world.addObjectLayer("From");
+  world.addObjectLayer("To");
+  world.addObjectToLayer("From", makeObject({ id: "obj1" }));
+  world.addObjectToLayer("From", makeObject({ id: "obj2" }));
+}
+
+const kCases: RoundTripCase[] = [
+  {
+    name: "adds a layer with its options",
+    act: (world) => world.addLayer("Deco", { visible: false, opacity: 0.5 }),
+    actions: ["added"]
+  },
+  {
+    name: "removes a layer",
+    seed: ground,
+    act: (world) => world.removeLayer("Ground"),
+    actions: ["removed"]
+  },
+  {
+    name: "updates a layer",
+    seed: ground,
+    act: (world) => world.updateLayer("Ground", { visible: false }),
+    actions: ["updated"]
+  },
+  {
+    name: "sets then translates a layer position",
+    seed: ground,
+    act: (world) => {
+      world.setLayerPosition("Ground", { x: 2, y: 0, z: 0 });
+      world.translateLayer("Ground", { x: 3, y: 1, z: 0 });
+    },
+    actions: ["position-updated", "position-updated"],
+    check: (remote) => assert.deepEqual(remote.getLayer("Ground")?.position, { x: 5, y: 1, z: 0 })
+  },
+  {
+    name: "rebases a layer without moving its voxels",
+    seed: ground,
+    act: (world) => world.rebaseLayer("Ground", { x: 1, y: 0, z: 0 }),
+    actions: ["position-rebased"],
+    check: (remote) => assert.equal(remote.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, 2)
+  },
+  {
+    name: "swaps a layer with its neighbour",
+    seed: stack,
+    act: (world) => world.moveLayer("A", "up"),
+    actions: ["reordered"]
+  },
+  {
+    name: "moves a layer across the stack",
+    seed: stack,
+    act: (world) => world.moveLayerTo("C", 2),
+    actions: ["layer-moved"]
+  },
+  {
+    name: "sets a transformed voxel",
+    seed: ground,
+    act: (world) => world.setVoxel("Ground", {
+      position: { x: 2, y: 0, z: 0 },
+      blockId: 3,
+      rotation: 1,
+      flipX: true
+    }),
+    actions: ["voxel-set"]
+  },
+  {
+    name: "removes a voxel",
+    seed: ground,
+    act: (world) => world.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } }),
+    actions: ["voxel-removed"]
+  },
+  {
+    name: "sets voxels in bulk",
+    seed: ground,
+    act: (world) => world.setVoxelBulk("Ground", [
+      { position: { x: 2, y: 0, z: 0 }, blockId: 3, rotation: 2 },
+      { position: { x: 9, y: 0, z: 0 }, blockId: 4 }
+    ]),
+    actions: ["voxels-set"]
+  },
+  {
+    name: "removes voxels in bulk",
+    seed: ground,
+    act: (world) => world.removeVoxelBulk("Ground", [
+      { position: { x: 0, y: 0, z: 0 } },
+      { position: { x: 1, y: 0, z: 0 } }
+    ]),
+    actions: ["voxels-removed"]
+  },
+  {
+    name: "clones a layer, voxels included, under a derived name",
+    seed: (world) => {
       world.addLayer("Bottom");
-      world.addLayer("layer");
-      world.setVoxelAt("layer", { x: 1, y: 2, z: 3 }, makeVoxelEntry(7, 1));
-      world.setVoxelAt("layer", { x: 9, y: 0, z: 0 }, makeVoxelEntry(2, 0));
-    });
-
-    peers.local.cloneLayer("layer");
-    peers.replay();
-
-    assertConverged(peers);
-    assert.deepEqual(
-      peers.remote.getLayers().map((layer) => layer.name),
-      ["layer (1)", "layer", "Bottom"]
-    );
-    assert.deepEqual(
-      peers.remote.getLayer("layer (1)")?.getVoxelAt({ x: 1, y: 2, z: 3 }),
-      makeVoxelEntry(7, 1)
-    );
-  });
-
-  it("reproduces repeated clones under the same names", () => {
-    const peers = makePeers((world) => world.addLayer("layer"));
-
-    peers.local.cloneLayer("layer");
-    peers.local.cloneLayer("layer");
-    peers.replay();
-
-    assertConverged(peers);
-  });
-});
-
-describe("command round-trip — mergeLayer", () => {
-  it("consumes the same source and resolves overlaps identically", () => {
-    const peers = makePeers((world) => {
+      ground(world);
+    },
+    act: (world) => {
+      world.cloneLayer("Ground");
+      world.cloneLayer("Ground");
+    },
+    actions: ["cloned", "cloned"],
+    check: (remote) => assert.deepEqual(
+      remote.getLayers().map((layer) => layer.name),
+      ["Ground (1)", "Ground (2)", "Ground", "Bottom"]
+    )
+  },
+  {
+    name: "merges a layer and resolves overlaps identically",
+    seed: (world) => {
       world.addLayer("Target", { properties: { biome: "forest" } });
       world.addLayer("Source", { properties: { seed: 7 } });
-      world.setVoxelAt("Target", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
-      world.setVoxelAt("Source", { x: 0, y: 0, z: 0 }, makeVoxelEntry(9, 0));
-      world.setVoxelAt("Source", { x: 5, y: 0, z: 0 }, makeVoxelEntry(3, 0));
+      world.setVoxelAt("Target", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+      world.setVoxelAt("Source", { x: 0, y: 0, z: 0 }, makeVoxelEntry(9));
+      world.setVoxelAt("Source", { x: 5, y: 0, z: 0 }, makeVoxelEntry(3));
+    },
+    act: (world) => world.mergeLayer("Source", "Target"),
+    actions: ["merged"],
+    check: (remote) => assert.equal(remote.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 9)
+  },
+  {
+    name: "adds an object layer",
+    act: (world) => world.addObjectLayer("Spawns"),
+    actions: ["object-layer-added"]
+  },
+  {
+    name: "removes an object layer",
+    seed: spawns,
+    act: (world) => world.removeObjectLayer("To"),
+    actions: ["object-layer-removed"]
+  },
+  {
+    name: "updates an object layer",
+    seed: spawns,
+    act: (world) => world.updateObjectLayer("From", { visible: false }),
+    actions: ["object-layer-updated"]
+  },
+  {
+    name: "adds an object",
+    seed: spawns,
+    act: (world) => world.addObjectToLayer("To", makeObject({ id: "obj3", x: 5 })),
+    actions: ["object-added"]
+  },
+  {
+    name: "removes an object",
+    seed: spawns,
+    act: (world) => world.removeObjectFromLayer("From", "obj1"),
+    actions: ["object-removed"]
+  },
+  {
+    name: "updates an object",
+    seed: spawns,
+    act: (world) => world.updateObjectInLayer("From", "obj1", { x: 10, visible: false }),
+    actions: ["object-updated"]
+  },
+  {
+    name: "moves an object between object layers",
+    seed: spawns,
+    act: (world) => world.moveObjectToLayer("From", "obj1", "To"),
+    actions: ["object-moved"],
+    check: (remote) => assert.deepEqual(
+      remote.getObjectLayer("To")?.objects.map((object) => object.id),
+      ["obj1"]
+    )
+  }
+];
+
+describe("command round-trip", () => {
+  for (const { name, seed, act, actions, check } of kCases) {
+    it(name, () => {
+      const { local, remote, commands } = makePeers(seed);
+      const before = stateOf(remote);
+
+      act(local);
+      for (const command of commands) {
+        remote.apply(command);
+      }
+
+      assert.deepEqual(commands.map(({ action }) => action), actions);
+      assert.notDeepEqual(stateOf(remote), before);
+      assert.deepEqual(stateOf(remote), stateOf(local));
+      check?.(remote);
     });
+  }
 
-    peers.local.mergeLayer("Source", "Target");
-    peers.replay();
+  it("covers every layer command action", () => {
+    const covered = new Set(kCases.flatMap(({ actions }) => actions));
 
-    assertConverged(peers);
-    assert.equal(peers.remote.getLayer("Source"), undefined);
-    assert.equal(
-      peers.remote.getLayer("Target")?.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId,
-      9
+    assert.deepEqual(
+      VOXEL_LAYER_COMMAND_ACTIONS.filter((action) => !covered.has(action)),
+      []
     );
   });
 
-  it("drops a late voxel command aimed at the consumed layer", () => {
-    const peers = makePeers((world) => {
+  it("drops a late voxel command aimed at a merged-away layer", () => {
+    const { local, remote, commands } = makePeers((world) => {
       world.addLayer("Target");
       world.addLayer("Source");
     });
 
-    const late: VoxelLayerCommand = {
+    local.mergeLayer("Source", "Target");
+    for (const command of commands) {
+      remote.apply(command);
+    }
+    remote.apply({
       action: "voxels-set",
       layerName: "Source",
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 4 }] }
-    };
-
-    peers.local.mergeLayer("Source", "Target");
-    peers.replay();
-
-    assert.doesNotThrow(() => peers.remote.apply(late));
-    assertConverged(peers);
-  });
-});
-
-describe("command round-trip — moveObjectToLayer", () => {
-  it("lands the object in the same layer on the peer", () => {
-    const peers = makePeers((world) => {
-      world.addObjectLayer("From");
-      world.addObjectLayer("To");
-      world.addObjectToLayer("From", makeObject("obj1"));
-      world.addObjectToLayer("From", makeObject("obj2"));
     });
 
-    peers.local.moveObjectToLayer("From", "obj1", "To");
-    peers.replay();
-
-    assertConverged(peers);
-    assert.deepEqual(
-      peers.remote.getObjectLayer("To")?.objects.map((object) => object.id),
-      ["obj1"]
-    );
+    assert.deepEqual(stateOf(remote), stateOf(local));
   });
 });

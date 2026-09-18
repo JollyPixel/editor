@@ -6,20 +6,28 @@ import assert from "node:assert/strict";
 import { ChunkGeometryKey } from "../../src/mesh/index.ts";
 
 describe("ChunkGeometryKey", () => {
-  it("encodes a solid group as the bare tileset id", () => {
-    assert.equal(String(new ChunkGeometryKey("atlas")), "atlas");
-  });
+  const kEncodings: [string, string, boolean][] = [
+    ["atlas", "atlas", false],
+    ["atlas:cutout", "atlas", true],
+    ["pack:atlas", "pack:atlas", false]
+  ];
 
-  it("suffixes a cutout group", () => {
-    assert.equal(String(new ChunkGeometryKey("atlas", true)), "atlas:cutout");
-  });
+  for (const [encoded, tilesetId, cutout] of kEncodings) {
+    it(`round-trips "${encoded}"`, () => {
+      const key = ChunkGeometryKey.parse(encoded);
 
-  it("defaults to a solid group", () => {
-    assert.equal(new ChunkGeometryKey("atlas").cutout, false);
-  });
+      assert.equal(key.tilesetId, tilesetId);
+      assert.equal(key.cutout, cutout);
+      assert.equal(String(key), encoded);
+      assert.equal(String(new ChunkGeometryKey(tilesetId, cutout)), encoded);
+    });
+  }
 
-  it("is frozen", () => {
-    assert.ok(Object.isFrozen(new ChunkGeometryKey("atlas")));
+  it("defaults to a frozen solid group", () => {
+    const key = new ChunkGeometryKey("atlas");
+
+    assert.equal(key.cutout, false);
+    assert.ok(Object.isFrozen(key));
   });
 
   it("rejects a tileset id that would alias a cutout key", () => {
@@ -28,56 +36,12 @@ describe("ChunkGeometryKey", () => {
       RangeError
     );
   });
-});
 
-describe("ChunkGeometryKey.parse", () => {
-  it("reads a solid group", () => {
-    const key = ChunkGeometryKey.parse("atlas");
+  it("compares by tileset and mode", () => {
+    const cutout = new ChunkGeometryKey("atlas", true);
 
-    assert.equal(key.tilesetId, "atlas");
-    assert.equal(key.cutout, false);
-  });
-
-  it("reads a cutout group", () => {
-    const key = ChunkGeometryKey.parse("atlas:cutout");
-
-    assert.equal(key.tilesetId, "atlas");
-    assert.equal(key.cutout, true);
-  });
-
-  it("keeps a colon that is not the cutout suffix", () => {
-    const key = ChunkGeometryKey.parse("pack:atlas");
-
-    assert.equal(key.tilesetId, "pack:atlas");
-    assert.equal(key.cutout, false);
-  });
-
-  it("round-trips both groups", () => {
-    for (const encoded of ["atlas", "atlas:cutout"]) {
-      assert.equal(String(ChunkGeometryKey.parse(encoded)), encoded);
-    }
-  });
-});
-
-describe("ChunkGeometryKey#equals", () => {
-  it("is true for the same tileset and mode", () => {
-    assert.ok(
-      new ChunkGeometryKey("atlas", true)
-        .equals(ChunkGeometryKey.parse("atlas:cutout"))
-    );
-  });
-
-  it("is false when the mode differs", () => {
-    assert.equal(
-      new ChunkGeometryKey("atlas").equals(new ChunkGeometryKey("atlas", true)),
-      false
-    );
-  });
-
-  it("is false when the tileset differs", () => {
-    assert.equal(
-      new ChunkGeometryKey("atlas").equals(new ChunkGeometryKey("other")),
-      false
-    );
+    assert.ok(cutout.equals(ChunkGeometryKey.parse("atlas:cutout")));
+    assert.equal(cutout.equals(new ChunkGeometryKey("atlas")), false);
+    assert.equal(cutout.equals(new ChunkGeometryKey("other", true)), false);
   });
 });

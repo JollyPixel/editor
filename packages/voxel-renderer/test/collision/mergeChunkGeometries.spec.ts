@@ -25,7 +25,6 @@ function makeGeometry(
   return geometry;
 }
 
-// One triangle, 3 vertices.
 function makeTriangle(
   offset = 0
 ): THREE.BufferGeometry {

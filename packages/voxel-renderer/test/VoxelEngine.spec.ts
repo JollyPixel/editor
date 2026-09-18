@@ -4,265 +4,125 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
-import {
-  isVoxelLayerCommand,
-  type VoxelCommand,
-  type VoxelCommandOrigin,
-  type VoxelLayerCommand
+import type {
+  VoxelCommand,
+  VoxelCommandOrigin
 } from "../src/commands.ts";
 import {
-  makeEngine as makeBaseEngine,
-  CUBE_ID as kCubeId
+  chunkMeshes,
+  makeEngine,
+  placeCube
 } from "./helpers/engine.ts";
+import { makeBlockDef } from "./helpers/blocks.ts";
+import {
+  blockDefinedCmd,
+  makeAddedCommand
+} from "./helpers/networkCommands.ts";
+import { resolveBlockDefinition } from "../src/blocks/index.ts";
 
-function makeEngine(
-  onLocalLayerCommand?: (command: VoxelLayerCommand) => void
-): VoxelEngine {
-  return makeBaseEngine({
-    onCommand: (command, { origin }) => {
-      if (origin === "local" && isVoxelLayerCommand(command)) {
-        onLocalLayerCommand?.(command);
-      }
-    }
-  });
+interface Emission {
+  action: string;
+  origin: VoxelCommandOrigin;
 }
 
-describe("VoxelEngine — construction", () => {
-  it("creates layers passed via options", () => {
+function recordEmissions(
+  engine: VoxelEngine
+): Emission[] {
+  const emissions: Emission[] = [];
+  engine.on("command", (command, { origin }) => {
+    emissions.push({ action: command.action, origin });
+  });
+
+  return emissions;
+}
+
+describe("VoxelEngine - construction", () => {
+  it("creates the layers passed via options and no mesh until a tick", () => {
     const engine = new VoxelEngine({ layers: ["Ground"] });
 
     assert.ok(engine.world.getLayer("Ground"));
-  });
-
-  it("has an empty root Object3D group with no meshes until tick/init", () => {
-    const engine = makeEngine();
-
     assert.equal(engine.root.children.length, 0);
   });
-});
 
-describe("VoxelEngine — command emission", () => {
-  it("emits an 'added' event when a layer is added", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-
-    engine.world.addLayer("Ground");
-
-    assert.equal(events.length, 1);
-    assert.equal(events[0].action, "added");
-    assert.equal(events[0].layerName, "Ground");
-  });
-
-  it("emits a 'voxel-set' event when a voxel is placed", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addLayer("Ground");
-
-    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
-
-    const last = events.at(-1)!;
-    assert.equal(last.action, "voxel-set");
-    assert.equal(last.layerName, "Ground");
-  });
-
-  it("emits a 'voxel-removed' event when a voxel is removed", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addLayer("Ground");
-    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
-
-    engine.world.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
-
-    const last = events.at(-1)!;
-    assert.equal(last.action, "voxel-removed");
-  });
-
-  it("emits a 'reordered' event when a layer is moved", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addLayer("A");
-    engine.world.addLayer("B");
-
-    engine.world.moveLayer("B", "down");
-
-    const last = events.at(-1)!;
-    assert.equal(last.action, "reordered");
-    assert.equal(last.layerName, "B");
-  });
-
-  it("emits nothing when a layer is already at the end of the order", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addLayer("A");
-    engine.world.addLayer("B");
-
-    engine.world.moveLayer("A", "down");
-
-    assert.equal(events.at(-1)!.action, "added");
-  });
-
-  it("emits an 'object-added' event when an object is added to an object layer", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addObjectLayer("Objects");
-
-    engine.world.addObjectToLayer("Objects", { id: "o1", name: "Thing", x: 0, y: 0, z: 0, visible: true });
-
-    const last = events.at(-1)!;
-    assert.equal(last.action, "object-added");
-    assert.equal(last.layerName, "Objects");
-  });
-});
-
-describe("VoxelEngine — layer/voxel mutation delegation", () => {
-  it("setVoxel/getVoxel round-trip through world", () => {
-    const engine = makeEngine();
-    engine.world.addLayer("Ground");
-
-    engine.world.setVoxel("Ground", { position: { x: 1, y: 2, z: 3 }, blockId: kCubeId });
-
-    const entry = engine.world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 2, z: 3 });
-    assert.equal(entry?.blockId, kCubeId);
-  });
-
-  it("setVoxelBulk places every entry and fires a single 'voxels-set' event", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addLayer("Ground");
-
-    engine.world.setVoxelBulk("Ground", [
-      { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId },
-      { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId }
-    ]);
-
-    assert.equal(engine.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, kCubeId);
-    assert.equal(engine.world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, kCubeId);
-    const last = events.at(-1)!;
-    assert.equal(last.action, "voxels-set");
-  });
-
-  it("removeLayer removes it from the world", () => {
-    const engine = makeEngine();
-    engine.world.addLayer("Ground");
-
-    const result = engine.world.removeLayer("Ground");
-
-    assert.equal(result, true);
-    assert.equal(engine.world.getLayer("Ground"), undefined);
-  });
-});
-
-describe("VoxelEngine — remote apply", () => {
-  it("emits a remote command once, tagged with its origin", () => {
-    const received: { action: string; origin: VoxelCommandOrigin; }[] = [];
-    const engine = makeBaseEngine({
-      onCommand: (command, { origin }) => received.push({
-        action: command.action,
-        origin
-      })
-    });
-
-    const applied = engine.apply({
-      action: "added",
-      layerName: "Remote",
-      metadata: { options: {} }
-    }, { origin: "remote" });
-
-    assert.equal(applied, true);
-    assert.deepEqual(received, [{ action: "added", origin: "remote" }]);
-  });
-
-  it("defaults to a local origin", () => {
+  it("subscribes the onCommand option before any command is applied", () => {
     const origins: VoxelCommandOrigin[] = [];
-    const engine = makeBaseEngine({
+    const engine = makeEngine({
       onCommand: (_command, { origin }) => origins.push(origin)
     });
 
-    engine.apply({ action: "tileset-added", tileset: { id: "b", src: "b", tileSize: 16 } });
+    engine.world.addLayer("Ground");
 
     assert.deepEqual(origins, ["local"]);
   });
+});
 
-  it("applies a voxel-set command to the world without a local emission", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
+describe("VoxelEngine - command origin", () => {
+  it("tags a local world mutation as local", () => {
+    const engine = makeEngine();
+    const emissions = recordEmissions(engine);
+
     engine.world.addLayer("Ground");
-    events.length = 0;
 
-    engine.apply({
-      action: "voxel-set",
+    assert.deepEqual(emissions, [{ action: "added", origin: "local" }]);
+  });
+
+  it("defaults apply() to a local origin", () => {
+    const engine = makeEngine();
+    const emissions = recordEmissions(engine);
+
+    engine.apply({ action: "tileset-added", tileset: { id: "b", src: "b", tileSize: 16 } });
+
+    assert.deepEqual(emissions, [{ action: "tileset-added", origin: "local" }]);
+  });
+
+  const kRemoteCommands: VoxelCommand[] = [
+    makeAddedCommand("Remote"),
+    {
+      action: "voxels-set",
       layerName: "Ground",
-      metadata: {
-        position: { x: 5, y: 0, z: 5 },
-        blockId: kCubeId,
-        rotation: 0,
-        flipX: false,
-        flipZ: false,
-        flipY: false
-      }
-    }, { origin: "remote" });
-
-    assert.equal(engine.world.getLayer("Ground")!.getVoxelAt({ x: 5, y: 0, z: 5 })?.blockId, kCubeId);
-    assert.equal(events.length, 0);
-  });
-
-  it("applies an 'added' command without a local emission", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-
-    engine.apply({
-      action: "added",
-      layerName: "Remote",
-      metadata: { options: {} }
-    }, { origin: "remote" });
-
-    assert.ok(engine.world.getLayer("Remote"));
-    assert.equal(events.length, 0);
-  });
-
-  it("applies a 'reordered' command without a local emission", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addLayer("A");
-    engine.world.addLayer("B");
-    events.length = 0;
-
-    engine.apply({
+      metadata: { entries: [{ position: { x: 5, y: 0, z: 5 }, blockId: 1 }] }
+    },
+    {
       action: "reordered",
-      layerName: "A",
-      metadata: { direction: "up" }
-    }, { origin: "remote" });
+      layerName: "Ground",
+      metadata: { direction: "down" }
+    },
+    blockDefinedCmd({ id: 4 })
+  ];
 
-    assert.equal(events.length, 0);
+  for (const command of kRemoteCommands) {
+    it(`applies a remote '${command.action}' once, tagged remote`, () => {
+      const engine = makeEngine({ layers: ["Ground", "Top"] });
+      const emissions = recordEmissions(engine);
+
+      assert.equal(engine.apply(command, { origin: "remote" }), true);
+
+      assert.deepEqual(emissions, [{ action: command.action, origin: "remote" }]);
+    });
+  }
+
+  it("keeps tagging local mutations as local after a remote command", () => {
+    const engine = makeEngine({ layers: ["Ground"] });
+    const emissions = recordEmissions(engine);
+
+    engine.apply(makeAddedCommand("Remote"), { origin: "remote" });
+    placeCube(engine, "Ground", { x: 1, y: 0, z: 0 });
+
+    assert.deepEqual(emissions.map(({ origin }) => origin), ["remote", "local"]);
   });
 
-  it("still applies local mutations normally after a remote command", () => {
-    const events: VoxelLayerCommand[] = [];
-    const engine = makeEngine((e) => events.push(e));
-    engine.world.addLayer("Ground");
-    events.length = 0;
+  it("dirties every chunk when a remote block definition lands", () => {
+    const engine = makeEngine({ layers: ["Ground"] });
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
+    engine.tick(0);
 
-    engine.apply({
-      action: "voxel-set",
-      layerName: "Ground",
-      metadata: {
-        position: { x: 0, y: 0, z: 0 },
-        blockId: kCubeId,
-        rotation: 0,
-        flipX: false,
-        flipZ: false,
-        flipY: false
-      }
-    }, { origin: "remote" });
-    assert.equal(events.length, 0);
+    engine.apply(kRemoteCommands[3], { origin: "remote" });
 
-    engine.world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId });
-    assert.equal(events.length, 1);
-    assert.equal(events[0].action, "voxel-set");
+    assert.ok([...engine.world.getAllChunks()].every(({ chunk }) => chunk.dirty));
   });
 });
 
-describe("VoxelEngine — tilesets", () => {
+describe("VoxelEngine - tilesets", () => {
   it("declares the tilesets of a loaded document", () => {
     const engine = makeEngine();
     const data = engine.save();
@@ -304,15 +164,9 @@ describe("VoxelEngine — tilesets", () => {
   it("fills the missing tileset of loaded and defined blocks", () => {
     const engine = makeEngine();
     const data = engine.save();
-    data.blocks = [{
-      id: 9,
-      name: "old",
-      shapeId: "cube",
-      faceTextures: {},
-      defaultTexture: { col: 1, row: 0 },
-      collidable: true,
-      properties: {}
-    }];
+    data.blocks = [
+      resolveBlockDefinition(makeBlockDef(9, "cube", { defaultTexture: { col: 1, row: 0 } }))
+    ];
 
     engine.load(data);
     engine.defineBlock({
@@ -327,10 +181,8 @@ describe("VoxelEngine — tilesets", () => {
   });
 
   it("emits applied tileset commands only", () => {
-    const events: VoxelCommand[] = [];
-    const engine = makeBaseEngine({
-      onCommand: (command) => events.push(command)
-    });
+    const engine = makeEngine();
+    const emissions = recordEmissions(engine);
 
     assert.equal(engine.addTileset({ id: "b", src: "b", tileSize: 16 }), true);
     assert.equal(engine.addTileset({ id: "b", src: "b", tileSize: 16 }), false);
@@ -338,10 +190,10 @@ describe("VoxelEngine — tilesets", () => {
     assert.equal(engine.removeTileset("b"), true);
     assert.equal(engine.removeTileset("b"), false);
 
-    assert.deepEqual(events.map((event) => event.action), [
-      "tileset-added",
-      "tileset-removed"
-    ]);
+    assert.deepEqual(
+      emissions.map(({ action }) => action),
+      ["tileset-added", "tileset-removed"]
+    );
   });
 
   it("rescales block tiles and rebuilds the atlas on resize", () => {
@@ -365,19 +217,15 @@ describe("VoxelEngine — tilesets", () => {
   });
 
   it("drops the chunk meshes textured by a removed tileset", () => {
-    const engine = makeEngine();
-    engine.world.addLayer("Ground");
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: kCubeId
-    });
+    const engine = makeEngine({ layers: ["Ground"] });
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
     engine.flush();
-    assert.ok(engine.root.children.length > 0);
+    assert.equal(chunkMeshes(engine).length, 1);
 
     assert.equal(engine.removeTileset("atlas"), true);
     engine.flush();
 
     assert.equal(engine.tilesetManager.get("atlas"), undefined);
-    assert.equal(engine.root.children.length, 0);
+    assert.equal(chunkMeshes(engine).length, 0);
   });
 });

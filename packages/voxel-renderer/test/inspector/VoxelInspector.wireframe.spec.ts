@@ -3,11 +3,13 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { CUBE_ID as kCubeId } from "../helpers/engine.ts";
 import {
   chunkMeshes,
+  placeCube
+} from "../helpers/engine.ts";
+import {
   inspectorGroup,
-  findInspectorGroup,
+  findGroup,
   makeInspectorEngine,
   overlayMeshes,
   wireframeMaterial
@@ -19,7 +21,7 @@ describe("VoxelInspector - wireframe", () => {
 
     assert.equal(engine.inspector.mode, "off");
     assert.equal(engine.inspector.enabled, false);
-    assert.equal(findInspectorGroup(engine), undefined);
+    assert.equal(findGroup(engine), undefined);
   });
 
   it("adds one wireframe per chunk mesh, sharing its geometry", () => {
@@ -44,17 +46,14 @@ describe("VoxelInspector - wireframe", () => {
 
     engine.inspector.mode = "off";
     assert.equal(chunkMeshes(engine)[0].visible, true);
-    assert.equal(findInspectorGroup(engine), undefined);
+    assert.equal(findGroup(engine), undefined);
   });
 
   it("applies the mode to chunks meshed after it was set", () => {
     const engine = makeInspectorEngine();
     engine.inspector.mode = "wireframe";
 
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 8, z: 0 },
-      blockId: kCubeId
-    });
+    placeCube(engine, "Ground", { x: 0, y: 8, z: 0 });
     engine.tick(0);
 
     assert.equal(inspectorGroup(engine).children.length, 2);
@@ -113,7 +112,7 @@ describe("VoxelInspector - wireframe", () => {
     });
     engine.dispose();
 
-    assert.equal(findInspectorGroup(engine), undefined);
+    assert.equal(findGroup(engine), undefined);
     assert.equal(engine.inspector.mesh.stats.chunks, 0);
   });
 });

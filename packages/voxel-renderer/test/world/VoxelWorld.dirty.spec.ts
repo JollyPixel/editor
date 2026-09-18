@@ -55,10 +55,6 @@ describe("VoxelWorld — layer properties", () => {
   });
 });
 
-/**
- * A change that alters what one layer occludes has to remesh every layer, not
- * just its own: a neighbour's culled faces were decided against the old state.
- */
 describe("VoxelWorld — dirty propagation", () => {
   it("dirties an adjacent chunk when a voxel lands on the boundary", () => {
     const world = new VoxelWorld(4);

@@ -16,17 +16,20 @@ import {
   StairCornerOuter
 } from "../../../../src/blocks/shape/library/index.ts";
 import { FACE, FACES } from "../../../../src/utils/math.ts";
-import type { BlockCollisionHint, BlockShape } from "../../../../src/blocks/shape/index.ts";
+import {
+  type BlockCollisionHint,
+  type BlockShape,
+  BlockShapeRegistry
+} from "../../../../src/blocks/shape/index.ts";
+import { defaultCullFace } from "../../../../src/blocks/face/index.ts";
 
 interface ShapeCase {
   shape: BlockShape;
   id: string;
   collisionHint: BlockCollisionHint;
   faces: number;
-  /** Every face the shape covers completely; all others must stay visible. */
+  cullable: number;
   occludes: readonly FACE[];
-  /** Why the shape has the face count it has, where that is not obvious. */
-  note?: string;
 }
 
 // CONSTANTS
@@ -36,29 +39,15 @@ const kShapes: readonly ShapeCase[] = [
     id: "cube",
     collisionHint: "box",
     faces: 6,
+    cullable: 6,
     occludes: FACES
-  },
-  {
-    shape: new Pole(),
-    id: "pole",
-    collisionHint: "trimesh",
-    faces: 6,
-    occludes: [],
-    note: "sub-voxel column, so it covers nothing"
-  },
-  {
-    shape: new PoleY(),
-    id: "poleY",
-    collisionHint: "trimesh",
-    faces: 6,
-    occludes: [],
-    note: "sub-voxel column, so it covers nothing"
   },
   {
     shape: new Slab("bottom"),
     id: "slabBottom",
     collisionHint: "box",
     faces: 6,
+    cullable: 5,
     occludes: [FACE.NegY]
   },
   {
@@ -66,21 +55,39 @@ const kShapes: readonly ShapeCase[] = [
     id: "slabTop",
     collisionHint: "box",
     faces: 6,
+    cullable: 5,
     occludes: [FACE.PosY]
+  },
+  {
+    shape: new PoleY(),
+    id: "poleY",
+    collisionHint: "trimesh",
+    faces: 6,
+    cullable: 2,
+    occludes: []
+  },
+  {
+    shape: new Pole(),
+    id: "pole",
+    collisionHint: "trimesh",
+    faces: 6,
+    cullable: 2,
+    occludes: []
   },
   {
     shape: new Ramp(),
     id: "ramp",
     collisionHint: "trimesh",
     faces: 5,
-    occludes: [FACE.NegY, FACE.PosZ],
-    note: "2 quads + 2 triangles + 1 diagonal quad"
+    cullable: 4,
+    occludes: [FACE.NegY, FACE.PosZ]
   },
   {
     shape: new RampCornerInner(),
     id: "rampCornerInner",
     collisionHint: "trimesh",
     faces: 7,
+    cullable: 6,
     occludes: [FACE.PosX, FACE.NegY, FACE.PosZ]
   },
   {
@@ -88,6 +95,7 @@ const kShapes: readonly ShapeCase[] = [
     id: "rampCornerOuter",
     collisionHint: "trimesh",
     faces: 5,
+    cullable: 3,
     occludes: [FACE.NegY]
   },
   {
@@ -95,34 +103,45 @@ const kShapes: readonly ShapeCase[] = [
     id: "stair",
     collisionHint: "trimesh",
     faces: 10,
-    occludes: [FACE.NegY, FACE.PosZ],
-    note: "9 boundary quads + 1 interior riser quad"
+    cullable: 8,
+    occludes: [FACE.NegY, FACE.PosZ]
   },
   {
     shape: new StairCornerInner(),
     id: "stairCornerInner",
     collisionHint: "trimesh",
     faces: 12,
-    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ],
-    note: "10 boundary quads + 2 interior riser quads"
+    cullable: 9,
+    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ]
   },
   {
     shape: new StairCornerOuter(),
     id: "stairCornerOuter",
     collisionHint: "trimesh",
     faces: 13,
-    occludes: [FACE.NegY],
-    note: "11 boundary quads + 2 interior riser quads"
+    cullable: 8,
+    occludes: [FACE.NegY]
   }
 ];
 
 describe("Built-in shapes", () => {
-  for (const { shape, id, collisionHint, faces, occludes, note } of kShapes) {
+  it("are exactly what the default registry holds, in order", () => {
+    assert.deepEqual(
+      [...BlockShapeRegistry.createDefault().ids()],
+      kShapes.map(({ id }) => id)
+    );
+  });
+
+  for (const { shape, id, collisionHint, faces, cullable, occludes } of kShapes) {
     describe(id, () => {
-      it(`is a ${collisionHint} of ${faces} faces${note ? ` (${note})` : ""}`, () => {
+      it(`is a ${collisionHint} of ${faces} faces, ${cullable} of them cullable`, () => {
         assert.equal(shape.id, id);
         assert.equal(shape.collisionHint, collisionHint);
         assert.equal(shape.faces.length, faces);
+        assert.equal(
+          shape.faces.filter((face) => defaultCullFace(face) !== null).length,
+          cullable
+        );
       });
 
       it("occludes exactly the faces it covers", () => {
@@ -135,7 +154,7 @@ describe("Built-in shapes", () => {
   }
 });
 
-describe("Built-in shapes — geometry invariants", () => {
+describe("Built-in shapes - geometry invariants", () => {
   it("points every polygon normal outward", () => {
     for (const { shape } of kShapes) {
       for (const face of shape.faces) {
@@ -179,16 +198,12 @@ describe("Built-in shapes — geometry invariants", () => {
   });
 });
 
-describe("Built-in shapes — construction", () => {
+describe("Built-in shapes - construction", () => {
   it("takes a custom id", () => {
     assert.equal(new Cube("myCustomCube").id, "myCustomCube");
   });
 
   it("keeps a slab's occlusion tied to its type, not its id", () => {
-    /*
-     * A "slabTop" reading as a bottom slab (or vice versa) leaves a hole
-     * wherever the mesher trusts the name over the constructor argument.
-     */
     for (const id of ["myBottomSlab", "slab"]) {
       const bottom = new Slab("bottom", id);
       assert.ok(bottom.occludes(FACE.NegY));

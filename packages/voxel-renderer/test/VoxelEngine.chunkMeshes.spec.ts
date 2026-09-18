@@ -7,76 +7,22 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { VoxelEngine } from "../src/VoxelEngine.ts";
+import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
 import {
+  chunkMeshes,
   makeEngine,
-  CUBE_ID as kCubeId
+  placeCube
 } from "./helpers/engine.ts";
 
-function chunkMeshes(
-  engine: VoxelEngine
-): THREE.Mesh[] {
-  return engine.root.children.filter(
-    (child): child is THREE.Mesh => child instanceof THREE.Mesh
-  );
-}
-
-function buildOneChunk(): VoxelEngine {
-  const engine = makeEngine();
-  engine.world.addLayer("Ground");
-  engine.world.setVoxel("Ground", {
-    position: { x: 4, y: 0, z: 0 },
-    blockId: kCubeId
-  });
+function buildOneChunk(
+  options: VoxelEngineOptions = {}
+): VoxelEngine {
+  const engine = makeEngine({ layers: ["Ground"], ...options });
+  placeCube(engine, "Ground", { x: 4, y: 0, z: 0 });
   engine.flush();
 
   return engine;
 }
-
-describe("VoxelEngine — chunk meshes", () => {
-  it("raycasts a chunk-local mesh through the shared index", () => {
-    const engine = buildOneChunk();
-    const raycaster = new THREE.Raycaster(
-      new THREE.Vector3(4.5, 5, 0.5),
-      new THREE.Vector3(0, -1, 0)
-    );
-
-    const [hit] = raycaster.intersectObject(engine.root, true);
-
-    assert.equal(hit.point.y, 1);
-    assert.deepEqual(hit.normal?.toArray(), [0, 1, 0]);
-  });
-
-  it("exposes each owned index to disposal without affecting other chunks", () => {
-    const engine = buildOneChunk();
-    const [mesh] = chunkMeshes(engine);
-    const index = mesh.geometry.getIndex();
-    const disposed: Array<THREE.BufferAttribute | null> = [];
-    mesh.geometry.addEventListener("dispose", () => {
-      disposed.push(mesh.geometry.getIndex());
-    });
-    engine.world.setVoxel("Ground", {
-      position: { x: 8, y: 0, z: 0 },
-      blockId: kCubeId
-    });
-    engine.flush();
-    const other = chunkMeshes(engine).find((entry) => entry !== mesh)!;
-    const otherIndex = other.geometry.getIndex();
-    other.geometry.addEventListener("dispose", () => {
-      disposed.push(other.geometry.getIndex());
-    });
-
-    assert.notEqual(index, otherIndex);
-    assert.equal(index!.array.buffer, otherIndex!.array.buffer);
-
-    engine.world.removeVoxel("Ground", { position: { x: 4, y: 0, z: 0 } });
-    engine.tick(0);
-
-    assert.deepEqual(disposed, [index]);
-    assert.equal(other.geometry.getIndex(), otherIndex);
-    engine.dispose();
-    assert.deepEqual(disposed, [index, otherIndex]);
-  });
-});
 
 function render(
   mesh: THREE.Mesh
@@ -91,10 +37,62 @@ function render(
   );
 }
 
-describe("VoxelEngine — shader-only attributes after upload", () => {
-  it("drops tileRegion once a chunk has been rendered", () => {
+describe("VoxelEngine - chunk meshes", () => {
+  it("raycasts a chunk-local mesh through the shared index", () => {
+    const engine = buildOneChunk();
+    const raycaster = new THREE.Raycaster(
+      new THREE.Vector3(4.5, 5, 0.5),
+      new THREE.Vector3(0, -1, 0)
+    );
+
+    const [hit] = raycaster.intersectObject(engine.root, true);
+
+    assert.equal(hit.point.y, 1);
+    assert.deepEqual(hit.normal?.toArray(), [0, 1, 0]);
+  });
+
+  it("places each chunk mesh at its chunk origin", () => {
+    const engine = makeEngine({ layers: ["Ground"] });
+    engine.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
+    placeCube(engine, "Ground", { x: 10, y: 2, z: 3 });
+    engine.flush();
+
+    const [mesh] = chunkMeshes(engine);
+
+    assert.deepEqual(mesh.position.toArray(), [9, 2, 3]);
+  });
+
+  it("disposes each chunk index on its own", () => {
+    const engine = buildOneChunk();
+    placeCube(engine, "Ground", { x: 8, y: 0, z: 0 });
+    engine.flush();
+    const disposed: Array<THREE.BufferAttribute | null> = [];
+    const [first, second] = chunkMeshes(engine);
+    for (const mesh of [first, second]) {
+      mesh.geometry.addEventListener("dispose", () => {
+        disposed.push(mesh.geometry.getIndex());
+      });
+    }
+    const firstIndex = first.geometry.getIndex();
+    const secondIndex = second.geometry.getIndex();
+
+    engine.world.removeVoxel("Ground", { position: { x: 4, y: 0, z: 0 } });
+    engine.tick(0);
+
+    assert.deepEqual(disposed, [firstIndex]);
+    assert.equal(second.geometry.getIndex(), secondIndex);
+
+    engine.dispose();
+
+    assert.deepEqual(disposed, [firstIndex, secondIndex]);
+  });
+});
+
+describe("VoxelEngine - shader-only attributes after upload", () => {
+  it("drops tileRegion once a chunk has been rendered, and only then", () => {
     const [mesh] = chunkMeshes(buildOneChunk());
     const vertices = mesh.geometry.getAttribute("position").count;
+    assert.ok(mesh.geometry.getAttribute("tileRegion").array.length > 0);
 
     render(mesh);
 
@@ -103,21 +101,8 @@ describe("VoxelEngine — shader-only attributes after upload", () => {
     assert.equal(mesh.geometry.getAttribute("uv").count, vertices);
   });
 
-  it("keeps tileRegion until the chunk is rendered", () => {
-    const [mesh] = chunkMeshes(buildOneChunk());
-
-    assert.ok(mesh.geometry.getAttribute("tileRegion").array.length > 0);
-  });
-
   it("keeps every attribute with retainVertexData", () => {
-    const engine = makeEngine({ retainVertexData: true });
-    engine.world.addLayer("Ground");
-    engine.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: kCubeId
-    });
-    engine.flush();
-    const [mesh] = chunkMeshes(engine);
+    const [mesh] = chunkMeshes(buildOneChunk({ retainVertexData: true }));
     const length = mesh.geometry.getAttribute("tileRegion").array.length;
 
     render(mesh);

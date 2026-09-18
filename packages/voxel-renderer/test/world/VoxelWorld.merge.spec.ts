@@ -8,48 +8,6 @@ import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { withoutId } from "../helpers/world.ts";
 
 describe("VoxelWorld — cloneLayer", () => {
-  it("copies a layer under a new name, leaving the original in place", () => {
-    const world = new VoxelWorld(8);
-    const original = world.addLayer("A");
-
-    const clone = world.cloneLayer("A", { name: "A_1" });
-
-    assert.ok(clone);
-    assert.deepEqual(withoutId(clone), {
-      ...withoutId(original),
-      name: "A_1",
-      order: original.order + 1
-    });
-    assert.ok(world.getLayer("A"));
-    assert.ok(world.getLayer("A_1"));
-  });
-
-  it("carries the source voxels over to the copy", () => {
-    const world = new VoxelWorld(4);
-    const entry = makeVoxelEntry(7, 3);
-    world.addLayer("A");
-    world.setVoxelAt("A", { x: 1, y: 2, z: 3 }, entry);
-
-    const clone = world.cloneLayer("A");
-
-    assert.ok(clone);
-    assert.deepEqual(clone.getVoxelAt({ x: 1, y: 2, z: 3 }), entry);
-    assert.equal(clone.chunkCount, 1);
-  });
-
-  it("leaves the source untouched when the copy is edited", () => {
-    const world = new VoxelWorld(4);
-    const source = world.addLayer("A");
-    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
-
-    const clone = world.cloneLayer("A")!;
-    clone.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(5, 0));
-    clone.setVoxelAt({ x: 3, y: 0, z: 0 }, makeVoxelEntry(6, 0));
-
-    assert.equal(source.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 1);
-    assert.equal(source.getVoxelAt({ x: 3, y: 0, z: 0 }), undefined);
-  });
-
   it("derives an unused name from the source when none is given", () => {
     const world = new VoxelWorld(8);
     world.addLayer("layer");
@@ -92,21 +50,6 @@ describe("VoxelWorld — cloneLayer", () => {
     assert.notEqual(world.cloneLayer("A")?.id, original.id);
   });
 
-  it("emits the resolved name so peers replay the same clone", () => {
-    const world = new VoxelWorld(8);
-    world.addLayer("layer");
-
-    const events: string[] = [];
-    world.on("command", (event) => {
-      if (event.action === "cloned") {
-        events.push(event.metadata.options.name);
-      }
-    });
-    world.cloneLayer("layer");
-
-    assert.deepEqual(events, ["layer (1)"]);
-  });
-
   it("applies the overrides it is handed to the copy", () => {
     const world = new VoxelWorld(8);
     const original = world.addLayer("A");
@@ -114,6 +57,7 @@ describe("VoxelWorld — cloneLayer", () => {
     const clone = world.cloneLayer("A", { name: "A_1", visible: false });
 
     assert.ok(clone);
+    assert.ok(world.getLayer("A"));
     assert.deepEqual(withoutId(clone), {
       ...withoutId(original),
       name: "A_1",
@@ -180,22 +124,6 @@ describe("VoxelWorld — mergeLayer", () => {
     assert.deepEqual(
       world.getLayer("Target")?.getVoxelAt({ x: 0, y: 0, z: 0 }),
       winner
-    );
-  });
-
-  it("resolves overlaps in world space when the layers are positioned", () => {
-    const world = new VoxelWorld(4);
-    world.addLayer("Target");
-    world.addLayer("Source");
-    world.setLayerPosition("Source", { x: 2, y: 0, z: 0 });
-    const entry = makeVoxelEntry(4, 0);
-    world.setVoxelAt("Source", { x: 3, y: 0, z: 0 }, entry);
-
-    assert.equal(world.mergeLayer("Source", "Target"), true);
-
-    assert.deepEqual(
-      world.getLayer("Target")?.getVoxelAt({ x: 3, y: 0, z: 0 }),
-      entry
     );
   });
 

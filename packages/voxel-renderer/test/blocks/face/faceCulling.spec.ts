@@ -101,34 +101,4 @@ describe("defaultCullFace — built-in shapes", () => {
       assert.equal(defaultCullFace(face), face.face);
     }
   });
-
-  /**
-   * Each entry is the number of faces a shape may cull. The rest sit inside
-   * the block, so a neighbour never hides them.
-   */
-  const kCullableCounts: readonly [string, number][] = [
-    ["cube", 6],
-    ["slabBottom", 5],
-    ["slabTop", 5],
-    ["poleY", 2],
-    ["pole", 2],
-    ["ramp", 4],
-    ["rampCornerInner", 6],
-    ["rampCornerOuter", 3],
-    ["stair", 8],
-    ["stairCornerInner", 9],
-    ["stairCornerOuter", 8]
-  ];
-
-  for (const [shapeId, expected] of kCullableCounts) {
-    it(`keeps ${expected} cullable faces on ${shapeId}`, () => {
-      const shape = registry.get(shapeId);
-      assert.ok(shape, `${shapeId} is not registered`);
-
-      const cullable = shape.faces.filter(
-        (face) => defaultCullFace(face) !== null
-      );
-      assert.equal(cullable.length, expected);
-    });
-  }
 });

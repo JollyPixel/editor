@@ -16,13 +16,17 @@ import { TilesetManager } from "../../src/tileset/index.ts";
 import { VoxelMeshBuilder } from "../../src/mesh/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 import { registerAtlas } from "./atlas.ts";
+import {
+  CHUNK_SIZE,
+  CUBE_ID,
+  RAMP_ID,
+  STAIR_ID
+} from "./ids.ts";
 
 // CONSTANTS
-export const CUBE_ID = 1;
-export const RAMP_ID = 2;
-export const STAIR_ID = 3;
-export const LAYER = "test";
-export const CHUNK_SIZE = 4;
+const kLayer = "test";
+
+export type Vec3Tuple = [number, number, number];
 
 export interface MeshFixture {
   world: VoxelWorld;
@@ -37,19 +41,13 @@ export interface MeshFixtureOptions {
   chunkSize?: number;
 }
 
-/**
- * A non-rendering mesh-building fixture: a world holding a single `LAYER`, a
- * registry with cube / ramp / stair, the default shape registry, and a
- * TilesetManager carrying the `makeAtlasDef()` atlas so UV lookup succeeds.
- * Specs needing more blocks register them on `blockRegistry`.
- */
 export function makeMeshFixture(
   options: MeshFixtureOptions = {}
 ): MeshFixture {
   const { greedy = false, chunkSize = CHUNK_SIZE } = options;
 
   const world = new VoxelWorld(chunkSize);
-  const layer = world.addLayer(LAYER);
+  const layer = world.addLayer(kLayer);
 
   const blockRegistry = new BlockRegistry([
     makeBlockDef(CUBE_ID, "cube", { name: "Cube" }),
@@ -71,12 +69,21 @@ export function makeMeshFixture(
   return { world, layer, builder, blockRegistry, tilesetManager };
 }
 
-/** Fills a solid box of `blockId`, inclusive bounds. */
+export function place(
+  target: MeshFixture | VoxelLayer,
+  [x, y, z]: Vec3Tuple,
+  blockId = CUBE_ID,
+  transform = 0
+): void {
+  const layer = "layer" in target ? target.layer : target;
+  layer.setVoxelAt({ x, y, z }, { blockId, transform });
+}
+
 export function fillBox(
   fixture: MeshFixture,
   options: {
-    from: [number, number, number];
-    to: [number, number, number];
+    from: Vec3Tuple;
+    to: Vec3Tuple;
     blockId?: number;
     transform?: number;
   }
@@ -86,18 +93,15 @@ export function fillBox(
   for (let x = from[0]; x <= to[0]; x++) {
     for (let y = from[1]; y <= to[1]; y++) {
       for (let z = from[2]; z <= to[2]; z++) {
-        fixture.world.setVoxelAt(LAYER, { x, y, z }, { blockId, transform });
+        place(fixture, [x, y, z], blockId, transform);
       }
     }
   }
 }
 
-/**
- * Builds the chunk at `chunkCoords`, or null when it holds nothing to mesh.
- */
 export function buildChunk(
   fixture: MeshFixture,
-  chunkCoords: [number, number, number] = [0, 0, 0]
+  chunkCoords: Vec3Tuple = [0, 0, 0]
 ): Map<string, THREE.BufferGeometry> | null {
   const { layer, builder } = fixture;
   const chunk = layer.getChunk(...chunkCoords);
@@ -105,10 +109,6 @@ export function buildChunk(
   return chunk ? builder.buildChunkGeometries(chunk, layer) : null;
 }
 
-/**
- * Total vertices across every tileset geometry. Each quad contributes 4
- * vertices, each triangle 3.
- */
 export function countVertices(
   geometries: Map<string, THREE.BufferGeometry> | null
 ): number {
@@ -120,7 +120,6 @@ export function countVertices(
   return total;
 }
 
-/** Vertices emitted by `layer`'s chunk at the origin. */
 export function countLayerVertices(
   fixture: MeshFixture,
   layer: VoxelLayer
@@ -132,17 +131,15 @@ export function countLayerVertices(
     : 0;
 }
 
-/** Same as `countLayerVertices`, for the fixture's own layer. */
 export function countChunkVertices(
   fixture: MeshFixture
 ): number {
   return countLayerVertices(fixture, fixture.layer);
 }
 
-/** Fetches the chunk at `chunkCoords`, asserting it exists. */
 export function getChunk(
   fixture: MeshFixture,
-  chunkCoords: [number, number, number] = [0, 0, 0]
+  chunkCoords: Vec3Tuple = [0, 0, 0]
 ): VoxelChunk {
   const chunk = fixture.layer.getChunk(...chunkCoords);
   assert.ok(chunk);
@@ -150,14 +147,9 @@ export function getChunk(
   return chunk;
 }
 
-/**
- * Builds the chunk at `chunkCoords`, asserting it produced geometries. Specs
- * exercising the null path (empty / hidden / unregistered) call the builder
- * directly instead of going through this helper.
- */
 export function buildGeometries(
   fixture: MeshFixture,
-  chunkCoords: [number, number, number] = [0, 0, 0]
+  chunkCoords: Vec3Tuple = [0, 0, 0]
 ): Map<string, THREE.BufferGeometry> {
   const geometries = buildChunk(fixture, chunkCoords);
   assert.ok(geometries);
@@ -165,12 +157,11 @@ export function buildGeometries(
   return geometries;
 }
 
-/** Same as `buildGeometries`, narrowed to the single geometry callers expect. */
 export function firstGeometry(
   fixture: MeshFixture,
-  chunkCoords: [number, number, number] = [0, 0, 0]
+  chunkCoords: Vec3Tuple = [0, 0, 0]
 ): THREE.BufferGeometry {
-  const [geometry] = [...buildGeometries(fixture, chunkCoords).values()];
+  const [geometry] = buildGeometries(fixture, chunkCoords).values();
 
   return geometry;
 }

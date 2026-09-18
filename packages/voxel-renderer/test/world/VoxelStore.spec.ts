@@ -152,15 +152,10 @@ describe("VoxelStore delete", () => {
     assert.equal(store.size, 1);
   });
 
-  /**
-   * Backward-shift deletion must not orphan a key that probed past the hole,
-   * which is the classic failure mode of tombstone-free open addressing.
-   */
   it("keeps colliding keys reachable after the one before them is deleted", () => {
     const store = new VoxelStore(16);
     const keys: number[] = [];
 
-    // Enough keys that clusters form and probe sequences overlap.
     for (let i = 0; i < 10; i++) {
       keys.push(i);
       store.set(i, i + 1);

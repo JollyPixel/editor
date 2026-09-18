@@ -11,10 +11,6 @@ export interface TwoLayerWorld {
   b: VoxelLayer;
 }
 
-/**
- * Two layers holding one voxel each, in chunks (0,0,0) and (2,0,0), so a
- * change to "A" can be told apart from one that reaches every layer.
- */
 export function makeTwoLayerWorld(): TwoLayerWorld {
   const world = new VoxelWorld(4);
   const a = world.addLayer("A");
@@ -33,7 +29,6 @@ export function clearAllDirty(
   }
 }
 
-/** The dirty flag of the one chunk each layer of `makeTwoLayerWorld` owns. */
 export function dirtyFlags(
   { a, b }: TwoLayerWorld
 ): { a: boolean; b: boolean; } {
@@ -44,7 +39,6 @@ export function dirtyFlags(
   return { a: chunkA.dirty, b: chunkB.dirty };
 }
 
-/** A layer's JSON without the generated id, for comparing clones. */
 export function withoutId(
   layer: VoxelLayer
 ): Omit<ReturnType<VoxelLayer["toJSON"]>, "id"> {

@@ -3,9 +3,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { BlockShapeRegistry, occlusionMaskOf } from "../../../src/blocks/shape/index.ts";
+import { occlusionMaskOf } from "../../../src/blocks/shape/index.ts";
 import { defineFace } from "../../../src/blocks/face/index.ts";
-import { FACE, FACES } from "../../../src/utils/math.ts";
+import { FACE } from "../../../src/utils/math.ts";
 
 function maskOf(
   faces: readonly FACE[]
@@ -87,38 +87,4 @@ describe("occlusionMaskOf", () => {
 
     assert.equal(mask, maskOf([FACE.NegZ]));
   });
-});
-
-describe("occlusionMaskOf — built-in shapes", () => {
-  const kExpected: readonly [string, FACE[]][] = [
-    ["cube", [...FACES]],
-    ["slabBottom", [FACE.NegY]],
-    ["slabTop", [FACE.PosY]],
-    ["poleY", []],
-    ["pole", []],
-    ["ramp", [FACE.NegY, FACE.PosZ]],
-    ["rampCornerInner", [FACE.NegY, FACE.PosZ, FACE.PosX]],
-    ["rampCornerOuter", [FACE.NegY]],
-    ["stair", [FACE.NegY, FACE.PosZ]],
-    ["stairCornerInner", [FACE.NegY, FACE.PosZ, FACE.PosX]],
-    ["stairCornerOuter", [FACE.NegY]]
-  ];
-
-  const registry = BlockShapeRegistry.createDefault();
-
-  for (const [shapeId, faces] of kExpected) {
-    it(`derives the documented silhouette of ${shapeId}`, () => {
-      const shape = registry.get(shapeId);
-      assert.ok(shape, `${shapeId} is not registered`);
-
-      assert.equal(occlusionMaskOf(shape.faces), maskOf(faces));
-      for (const face of FACES) {
-        assert.equal(
-          shape.occludes(face),
-          faces.includes(face),
-          `${shapeId}.occludes(${face})`
-        );
-      }
-    });
-  }
 });

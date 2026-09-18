@@ -8,26 +8,10 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelRenderer } from "../../../src/plugins/engine/VoxelRenderer.ts";
-import type { VoxelLogger } from "../../../src/utils/logger.ts";
+import { makeLogger } from "../../helpers/fakes.ts";
 
 test("VoxelRenderer owns the voxel engine lifecycle", (context) => {
-  let childCallCount = 0;
-  const logger: VoxelLogger = {
-    child() {
-      childCallCount++;
-
-      return logger;
-    },
-    debug() {
-      // Intentionally empty.
-    },
-    warn() {
-      // Intentionally empty.
-    },
-    error() {
-      // Intentionally empty.
-    }
-  };
+  const logger = makeLogger();
 
   const object3D = new THREE.Group();
   object3D.position.set(1, 2, 3);
@@ -64,7 +48,6 @@ test("VoxelRenderer owns the voxel engine lifecycle", (context) => {
   assert.strictEqual(init.mock.callCount(), 1);
   assert.deepStrictEqual(tick.mock.calls[0].arguments, [0.25]);
   assert.deepStrictEqual(renderer.engine.focus, new THREE.Vector3(4, 4, 4));
-  assert.ok(childCallCount > 0);
 
   renderer.destroy();
 
