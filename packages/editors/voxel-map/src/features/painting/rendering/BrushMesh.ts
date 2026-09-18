@@ -12,6 +12,8 @@ import {
   type BrushShape
 } from "../model/brushFootprint.ts";
 import {
+  edgesFacing,
+  facingKey,
   voxelShell,
   type VoxelShell
 } from "../model/voxelShell.ts";
@@ -26,13 +28,26 @@ import {
 const kInflate = 0.01;
 const kFaceMargin = kInflate + 0.005;
 const kFaceOpacityBoost = 0.35;
-const kDefaultHighlight = 0x9df6ff;
+const kDefaultColor = 0x33e0ff;
+const kSubduedOpacity = 0.5;
+const kRimOpacityBoost = 1.8;
+const kCenterAlpha = 0.5;
+const kMarchSpeed = 0.35;
+const kSubduedEdgeTrim = 1;
+const kHaloColor = 0x0b0f14;
+const kHaloSpread = 1;
+const kDepthBias = 1;
 const kOrigin = {
   x: 0,
   y: 0,
   z: 0
 };
 const kShells = new Map<string, VoxelShell>();
+const kTowardCamera = {
+  polygonOffset: true,
+  polygonOffsetFactor: -kDepthBias,
+  polygonOffsetUnits: -kDepthBias
+};
 
 export interface BrushMeshOptions {
   /**
@@ -40,9 +55,10 @@ export interface BrushMeshOptions {
    */
   color?: THREE.ColorRepresentation;
   /**
-   * @default `color` when it is given, 0x9df6ff otherwise
+   * Draws a fainter fill and a thinner outline without its dark backing.
+   * @default false
    */
-  borderColor?: THREE.ColorRepresentation;
+  subdued?: boolean;
   /**
    * @default DEFAULT_BRUSH_STYLE
    */
@@ -56,32 +72,41 @@ export class BrushMesh extends THREE.Group {
   #fill: THREE.Mesh;
   #fillMaterial: THREE.MeshBasicMaterial;
 
+  #edges = new LineSegmentsGeometry();
+  #halo: LineSegments2;
   #border: LineSegments2;
-  #borderMaterial: Line2NodeMaterial;
 
   #face: THREE.Mesh;
   #faceMaterial: THREE.MeshBasicMaterial;
 
   #style: BrushStyle;
+  #subdued: boolean;
   #hidden = false;
   #drawn = false;
   #faced = false;
   #shapeKey = "";
+  #shell: VoxelShell | null = null;
+  #facingKey = "";
+  #eye = new THREE.Vector3();
 
   constructor(
     options: BrushMeshOptions = {}
   ) {
     super();
 
-    const { color = 0x33e0ff, style = DEFAULT_BRUSH_STYLE } = options;
-    const highlight = options.color ?? kDefaultHighlight;
-    const borderColor = options.borderColor ?? highlight;
+    const {
+      color = kDefaultColor,
+      style = DEFAULT_BRUSH_STYLE,
+      subdued = false
+    } = options;
 
     this.name = "brush";
     this.#style = style;
+    this.#subdued = subdued;
 
     this.#fillMaterial = new THREE.MeshBasicMaterial({
       color,
+      vertexColors: true,
       transparent: true,
       opacity: style.opacity,
       depthWrite: false
@@ -94,18 +119,18 @@ export class BrushMesh extends THREE.Group {
     this.#fill.frustumCulled = false;
     this.#fill.visible = false;
 
-    this.#borderMaterial = new Line2NodeMaterial({
-      color: borderColor,
-      linewidth: style.edgeWidth,
-      depthTest: false
-    });
-    this.#border = new LineSegments2(
-      new LineSegmentsGeometry(),
-      this.#borderMaterial
-    );
-    this.#border.renderOrder = 2;
-    this.#border.frustumCulled = false;
-    this.#border.visible = false;
+    this.#halo = this.#edgeLines({
+      color: kHaloColor,
+      ...kTowardCamera
+    }, 2);
+    this.#halo.onBeforeRender = (_renderer, _scene, camera) => {
+      this.#cullAwayFrom(camera);
+      this.#march();
+    };
+    this.#border = this.#edgeLines({
+      color,
+      ...kTowardCamera
+    }, 3);
 
     this.#faceMaterial = new THREE.MeshBasicMaterial({
       color,
@@ -130,6 +155,7 @@ export class BrushMesh extends THREE.Group {
     this.add(
       this.#fill,
       this.#face,
+      this.#halo,
       this.#border
     );
     this.#applyStyle();
@@ -185,7 +211,11 @@ export class BrushMesh extends THREE.Group {
       return;
     }
 
-    const corners = faceCornersOf(cursor, face, kFaceMargin);
+    const corners = faceCornersOf(
+      cursor.position,
+      face,
+      kFaceMargin
+    );
     const attribute = this.#face.geometry.getAttribute("position");
     corners.forEach((corner, index) => {
       attribute.setXYZ(
@@ -213,12 +243,79 @@ export class BrushMesh extends THREE.Group {
       "position",
       new THREE.Float32BufferAttribute(shell.triangles, 3)
     );
+    geometry.setAttribute(
+      "color",
+      new THREE.Float32BufferAttribute(
+        shell.rims.flatMap(
+          (rim) => [1, 1, 1, rim === 1 ? 1 : kCenterAlpha]
+        ),
+        4
+      )
+    );
     this.#fill.geometry.dispose();
     this.#fill.geometry = geometry;
 
+    this.#shell = shell;
+    this.#facingKey = "";
+    this.#outline(shell.edges);
+  }
+
+  #march(): void {
+    const { edgeStyle, dashSize, gapSize } = this.#style;
+    if (this.#subdued || edgeStyle !== "dashed") {
+      return;
+    }
+
+    const period = dashSize + gapSize;
+    const offset = -((Date.now() / 1000) * kMarchSpeed) % period;
+    this.#halo.material.dashOffset = offset;
+    this.#border.material.dashOffset = offset;
+  }
+
+  #cullAwayFrom(
+    camera: THREE.Camera
+  ): void {
+    const shell = this.#shell;
+    if (shell === null) {
+      return;
+    }
+
+    const eye = this.worldToLocal(
+      this.#eye.setFromMatrixPosition(camera.matrixWorld)
+    ).toArray();
+    const key = facingKey(shell, eye);
+    if (key === this.#facingKey) {
+      return;
+    }
+
+    this.#facingKey = key;
+    this.#outline(edgesFacing(shell, eye));
+  }
+
+  #outline(
+    edges: number[]
+  ): void {
     // Rebuild to keep dash lengths constant in world units.
-    this.#border.geometry.setPositions(shell.edges);
+    this.#edges.setPositions(edges);
     this.#border.computeLineDistances();
+  }
+
+  #edgeLines(
+    parameters: ConstructorParameters<typeof Line2NodeMaterial>[0],
+    renderOrder: number
+  ): LineSegments2 {
+    const lines = new LineSegments2(
+      this.#edges,
+      new Line2NodeMaterial({
+        depthWrite: false,
+        ...parameters
+      })
+    );
+    lines.renderOrder = renderOrder;
+    lines.frustumCulled = false;
+    lines.visible = false;
+
+    return lines;
   }
 
   #applyStyle(): void {
@@ -230,14 +327,28 @@ export class BrushMesh extends THREE.Group {
       gapSize
     } = this.#style;
 
-    this.#fillMaterial.opacity = opacity;
-    this.#faceMaterial.opacity = Math.min(1, opacity + kFaceOpacityBoost);
+    const weight = this.#subdued ? kSubduedOpacity : 1;
+    const width = this.#subdued ?
+      Math.min(edgeWidth, Math.max(1, edgeWidth - kSubduedEdgeTrim)) :
+      edgeWidth;
 
-    this.#borderMaterial.linewidth = edgeWidth;
-    this.#borderMaterial.dashed = edgeStyle === "dashed";
-    this.#borderMaterial.dashSize = dashSize;
-    this.#borderMaterial.gapSize = gapSize;
-    this.#borderMaterial.needsUpdate = true;
+    this.#fillMaterial.opacity =
+      Math.min(1, opacity * kRimOpacityBoost) * weight;
+    this.#faceMaterial.opacity =
+      Math.min(1, opacity + kFaceOpacityBoost) * weight;
+
+    const widths = [
+      [this.#halo, width + kHaloSpread],
+      [this.#border, width]
+    ] as const;
+    for (const [lines, linewidth] of widths) {
+      const { material } = lines;
+      material.linewidth = linewidth;
+      material.dashed = edgeStyle === "dashed";
+      material.dashSize = dashSize;
+      material.gapSize = gapSize;
+      material.needsUpdate = true;
+    }
 
     this.#applyVisibility();
   }
@@ -247,7 +358,9 @@ export class BrushMesh extends THREE.Group {
 
     this.#fill.visible = visible && this.#style.opacity > 0;
     this.#face.visible = visible && this.#faced;
-    this.#border.visible = visible && this.#style.edgeWidth > 0;
+    const edged = visible && this.#style.edgeWidth > 0;
+    this.#halo.visible = edged && !this.#subdued;
+    this.#border.visible = edged;
   }
 }
 
@@ -289,9 +402,16 @@ function shellOf(
       (value, index) => (value - center[index % 3]) * scale[index % 3]
     );
   }
-  const local = {
+  const local: VoxelShell = {
     triangles: toLocal(shell.triangles),
-    edges: toLocal(shell.edges)
+    edges: toLocal(shell.edges),
+    rims: shell.rims,
+    edgeFaces: shell.edgeFaces,
+    planes: [
+      shell.planes[0].map((plane) => (plane - center[0]) * scale[0]),
+      shell.planes[1].map((plane) => (plane - center[1]) * scale[1]),
+      shell.planes[2].map((plane) => (plane - center[2]) * scale[2])
+    ]
   };
   kShells.set(key, local);
 

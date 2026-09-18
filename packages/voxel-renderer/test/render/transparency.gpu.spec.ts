@@ -38,6 +38,12 @@ function probeCases(
   sample("resize shared depth targets", { alpha: 0.5, resize: true }, [192, 192, 192]);
   sample("recover after draw failure", { alpha: 0.5, failDraw: true }, [192, 192, 192]);
   sample("both walls", { alpha: 0.5 }, [192, 192, 192]);
+  sample("both walls without multisampling", {
+    alpha: 0.5, samples: 0
+  }, [192, 192, 192]);
+  sample("opaque foreground rejects glass without multisampling", {
+    alpha: 0.5, count: 2, occluder: true, samples: 0
+  }, [0, 255, 0]);
   sample("low alpha", { alpha: 0.02, side: "front" }, [5, 5, 5]);
   sample("opaque ignores texture alpha", { alpha: 0.02, mode: "opaque" }, [255, 255, 255]);
   sample("mask discards uncovered texels", { alpha: 0.02, mode: "mask" }, [0, 0, 0]);

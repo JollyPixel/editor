@@ -6,14 +6,13 @@ import { describe, test } from "node:test";
 import { BrushStroke } from "../../../../src/features/painting/model/BrushStroke.ts";
 
 describe("BrushStroke", () => {
-  function createStroke(): BrushStroke {
+  function createStroke(
+    origin = { x: 0, y: 0, z: 0 }
+  ): BrushStroke {
     return new BrushStroke({
       mode: "place",
       layerName: "Ground",
-      plane: {
-        axis: "y",
-        value: 0
-      },
+      origin,
       paint: {
         blockId: 1,
         rotation: 0,
@@ -51,27 +50,61 @@ describe("BrushStroke", () => {
     );
   });
 
-  test("holds its goal until the cursor reaches another cell", () => {
-    const stroke = createStroke();
+  test("locks its plane through the origin", () => {
+    assert.deepStrictEqual(
+      createStroke({ x: 2, y: 5, z: 3 }).plane,
+      {
+        axis: "y",
+        value: 5
+      }
+    );
+  });
 
-    stroke.steer({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+  test("starts on its origin wherever the cursor first lands", () => {
+    const stroke = createStroke({ x: 4, y: 0, z: 4 });
 
     assert.deepStrictEqual(
-      stroke.steer({ x: 5, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }),
-      { x: 0, y: 0, z: 0 }
+      stroke.steer({ x: 9, y: 0, z: -2 }),
+      { x: 4, y: 0, z: 4 }
+    );
+  });
+
+  test("moves as far as the cursor moved since the first aim", () => {
+    const stroke = createStroke({ x: 4, y: 0, z: 4 });
+
+    stroke.steer({ x: 9, y: 0, z: -2 });
+
+    assert.deepStrictEqual(
+      stroke.steer({ x: 10, y: 0, z: -2 }),
+      { x: 5, y: 0, z: 4 }
     );
     assert.deepStrictEqual(
-      stroke.steer({ x: 5, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }),
-      { x: 5, y: 0, z: 0 }
+      stroke.steer({ x: 9, y: 0, z: -4 }),
+      { x: 4, y: 0, z: 2 }
     );
   });
 
   test("locks the goal it steers to on the stroke height", () => {
     const stroke = createStroke();
 
+    stroke.steer({ x: 2, y: 9, z: 3 });
+
     assert.deepStrictEqual(
-      stroke.steer({ x: 2, y: 9, z: 3 }, { x: 2, y: 9, z: 3 }),
-      { x: 2, y: 0, z: 3 }
+      stroke.steer({ x: 3, y: 4, z: 3 }),
+      { x: 1, y: 0, z: 0 }
+    );
+  });
+
+  test("grows upward from its origin unless told otherwise", () => {
+    assert.strictEqual(createStroke().anchor, "bottom");
+    assert.strictEqual(
+      new BrushStroke({
+        mode: "remove",
+        layerName: "Ground",
+        origin: { x: 0, y: 0, z: 0 },
+        anchor: "top"
+      }).anchor,
+      "top"
     );
   });
 
@@ -126,10 +159,7 @@ describe("BrushStroke", () => {
       mode: "remove",
       layerName: "Ground",
       axis: "xy",
-      plane: {
-        axis: "z",
-        value: 4
-      }
+      origin: { x: 0, y: 0, z: 4 }
     });
 
     assert.deepStrictEqual(

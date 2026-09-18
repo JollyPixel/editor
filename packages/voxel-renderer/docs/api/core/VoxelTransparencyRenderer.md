@@ -21,8 +21,17 @@ transparency.dispose();
 ## API
 
 ```ts
+interface VoxelTransparencyRendererOptions {
+  // MSAA sample count of the offscreen targets; 0 disables antialiasing.
+  // Default: 4
+  samples?: number;
+}
+
 class VoxelTransparencyRenderer {
-  constructor(renderer: THREE.WebGPURenderer);
+  constructor(
+    renderer: THREE.WebGPURenderer,
+    options?: VoxelTransparencyRendererOptions
+  );
   render(scene: THREE.Scene, camera: THREE.Camera): void;
   dispose(): void;
 }
@@ -37,6 +46,8 @@ depth writes. It then draws transparent geometry twice against that depth:
 once to accumulate weighted color and once to accumulate coverage. A final
 fullscreen draw resolves the result into the caller's current render target,
 or the canvas when no target is selected. Target sizes follow the destination.
+The offscreen targets are multisampled (`samples`), because the renderer's own
+`antialias` setting only covers the canvas.
 
 The compositor temporarily changes renderer state and transparent-material
 blend settings. It restores the render target, viewport, scissor, clear state,

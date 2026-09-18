@@ -2,10 +2,9 @@
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  boundsOf,
-  type BrushFootprint,
-  type CoordAxis
+import type {
+  BrushAnchor,
+  CoordAxis
 } from "./brushFootprint.ts";
 
 // CONSTANTS
@@ -56,21 +55,47 @@ export function cellFaceOf(
   return direction.z < 0 ? "-z" : "+z";
 }
 
+export interface FaceAnchors {
+  place: BrushAnchor;
+  remove: BrushAnchor;
+}
+
+export function anchorsOf(
+  face: CellFace | null
+): FaceAnchors {
+  switch (face) {
+    case "+y":
+      return {
+        place: "bottom",
+        remove: "top"
+      };
+    case "-y":
+      return {
+        place: "top",
+        remove: "bottom"
+      };
+    default:
+      return {
+        place: "center",
+        remove: "center"
+      };
+  }
+}
+
 export function faceCornersOf(
-  footprint: BrushFootprint,
+  cell: VoxelCoord,
   face: CellFace,
   margin = 0
 ): VoxelCoord[] {
-  const { min, span } = boundsOf(footprint);
   const axis = kFaceAxes[face];
   const [u, v] = kCrossAxes[axis];
   const plane = face[0] === "+" ?
-    footprint.position[axis] + 1 + margin :
-    footprint.position[axis] - margin;
-  const lowU = min[u] - margin;
-  const highU = min[u] + span[u] + margin;
-  const lowV = min[v] - margin;
-  const highV = min[v] + span[v] + margin;
+    cell[axis] + 1 + margin :
+    cell[axis] - margin;
+  const lowU = cell[u] - margin;
+  const highU = cell[u] + 1 + margin;
+  const lowV = cell[v] - margin;
+  const highV = cell[v] + 1 + margin;
 
   function corner(
     first: number,

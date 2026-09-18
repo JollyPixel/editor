@@ -3,10 +3,12 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelRotationValue } from "./brushOrientation.ts";
-import type {
-  BrushAxis,
-  BrushPattern,
-  BrushPlane
+import {
+  planeThrough,
+  type BrushAnchor,
+  type BrushAxis,
+  type BrushPattern,
+  type BrushPlane
 } from "./brushFootprint.ts";
 
 export type StrokeMode = "place" | "replace" | "remove";
@@ -19,9 +21,10 @@ export interface VoxelPaint {
 
 export interface BrushStrokeOptions {
   mode: StrokeMode;
-  plane: BrushPlane;
+  origin: VoxelCoord;
   axis?: BrushAxis;
   pattern?: BrushPattern;
+  anchor?: BrushAnchor;
   layerName: string;
   /**
    * Undefined in remove mode.
@@ -30,28 +33,31 @@ export interface BrushStrokeOptions {
 }
 
 /**
- * Plane-locked stroke that interpolates centers and stamps each cell once.
+ * Plane-locked stroke that follows the cursor and stamps each cell once.
  */
 export class BrushStroke {
   readonly mode: StrokeMode;
+  readonly origin: VoxelCoord;
   readonly plane: BrushPlane;
   readonly axis: BrushAxis;
   readonly pattern: BrushPattern;
+  readonly anchor: BrushAnchor;
   readonly layerName: string;
   readonly paint: VoxelPaint | undefined;
 
   #stamped = new Set<string>();
   #last: VoxelCoord | null = null;
-  #cursor: VoxelCoord | null = null;
-  #target: VoxelCoord | null = null;
+  #pivot: VoxelCoord | null = null;
 
   constructor(
     options: BrushStrokeOptions
   ) {
     this.mode = options.mode;
-    this.plane = { ...options.plane };
+    this.origin = { ...options.origin };
     this.axis = options.axis ?? "xz";
+    this.plane = planeThrough(this.axis, this.origin);
     this.pattern = options.pattern ?? "square";
+    this.anchor = options.anchor ?? "bottom";
     this.layerName = options.layerName;
     this.paint = options.paint;
   }
@@ -66,15 +72,17 @@ export class BrushStroke {
   }
 
   steer(
-    center: VoxelCoord,
     cursor: VoxelCoord
   ): VoxelCoord {
-    if (this.#target === null || !sameCell(this.#cursor, cursor)) {
-      this.#cursor = cursor;
-      this.#target = this.lock(center);
-    }
+    this.#pivot ??= { ...cursor };
+    const { origin } = this;
+    const pivot = this.#pivot;
 
-    return this.#target;
+    return this.lock({
+      x: origin.x + cursor.x - pivot.x,
+      y: origin.y + cursor.y - pivot.y,
+      z: origin.z + cursor.z - pivot.z
+    });
   }
 
   advance(

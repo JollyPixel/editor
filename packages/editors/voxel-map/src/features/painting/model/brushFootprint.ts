@@ -4,6 +4,7 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 export type BrushAxis = "xz" | "xy" | "yz" | "xyz";
 export type BrushPattern = "square" | "circle";
 export type CoordAxis = "x" | "y" | "z";
+export type BrushAnchor = "bottom" | "top" | "center";
 
 export const BRUSH_AXES: readonly BrushAxis[] = Object.freeze([
   "xz",
@@ -27,6 +28,7 @@ export interface BrushShape {
 
 export interface BrushFootprint extends BrushShape {
   position: VoxelCoord;
+  anchor?: BrushAnchor;
 }
 
 export interface BrushBounds {
@@ -46,6 +48,14 @@ export function isBrushAxis(
     value === "xy" ||
     value === "yz" ||
     value === "xyz";
+}
+
+export function isBrushAnchor(
+  value: unknown
+): value is BrushAnchor {
+  return value === "bottom" ||
+    value === "top" ||
+    value === "center";
 }
 
 export function isBrushPattern(
@@ -89,8 +99,13 @@ export function planeThrough(
 export function boundsOf(
   footprint: BrushFootprint
 ): BrushBounds {
-  const { position, size, axis } = footprint;
+  const { position, size, axis, anchor = "bottom" } = footprint;
   const half = Math.floor(size / 2);
+  const lift = {
+    bottom: 0,
+    top: size - 1,
+    center: half
+  }[anchor];
   const min = { ...position };
   const span = {
     x: 1,
@@ -104,9 +119,7 @@ export function boundsOf(
     }
 
     span[coord] = size;
-    if (coord !== "y") {
-      min[coord] = position[coord] - half;
-    }
+    min[coord] = position[coord] - (coord === "y" ? lift : half);
   }
 
   return {

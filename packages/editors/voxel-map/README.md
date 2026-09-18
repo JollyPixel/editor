@@ -137,13 +137,18 @@ disabled until a voxel layer is selected.
 | Size | 1 to 16 | `[` / `]`, `Ctrl` + wheel |
 | Pattern | Square, Circle (a ball on `xyz`) | `C` |
 
-Right click removes in both modes. X and Z are centred on the aimed cell and
-walls and volumes grow upward from it. A stroke stays on the plane it started
-on and keeps the mode, axis and pattern it started with. Shortcuts are ignored
-with a modifier held, while typing, and while a dialog is open.
+Right click removes in both modes. X and Z are centred on the aimed cell. The
+height of walls and volumes follows the aimed face: on a top face removing digs
+down from the aimed cell and building rises from the cell above it, a bottom
+face mirrors that, and a side face centres the height too. A stroke stays on
+the plane it started on, keeps the mode, axis, pattern and height anchor it
+started with, and moves by as many cells as the pointer crossed on that plane,
+whatever it has already placed or removed. Shortcuts are ignored with a
+modifier held, while typing, and while a dialog is open.
 
-The preview highlights the hovered cube face, sized to the brush footprint and
-square whatever the block shape or pattern. Peers see it too.
+The preview shows what a right click removes and highlights the hovered cube
+face of the aimed cell, whatever the brush size or pattern; a build lands on
+the other side of that face. Peers see it too.
 
 ## Block transparency
 

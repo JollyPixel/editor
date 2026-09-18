@@ -6,7 +6,8 @@ import { VoxelTransparencyRenderer } from "@jolly-pixel/voxel.renderer";
  * Installs scene compositing for the editor's cameras and releases it on exit.
  */
 export function installTransparency(
-  renderer: Systems.Renderer
+  renderer: Systems.Renderer,
+  samples?: number
 ): () => void {
   if (!(renderer instanceof Systems.ThreeRenderer)) {
     return () => void 0;
@@ -14,7 +15,10 @@ export function installTransparency(
 
   const previous = renderer.renderStrategy;
   const source = renderer.getSource();
-  const transparency = new VoxelTransparencyRenderer(source);
+  const transparency = new VoxelTransparencyRenderer(
+    source,
+    samples === undefined ? {} : { samples }
+  );
   const strategy: typeof previous = {
     render(scene, { components, canvasWidth, canvasHeight }) {
       for (const component of components) {

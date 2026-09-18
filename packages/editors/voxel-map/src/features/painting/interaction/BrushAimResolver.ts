@@ -9,18 +9,18 @@ import {
 // Import Internal Dependencies
 import { castViewRay } from "../../../scene/viewFocus.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
-import type { StrokeMode } from "../model/BrushStroke.ts";
 import type { BrushPlane } from "../model/brushFootprint.ts";
 import {
+  anchorsOf,
   cellFaceOf,
-  type CellFace
+  type CellFace,
+  type FaceAnchors
 } from "../model/cellFace.ts";
 
 // CONSTANTS
 const kPlane = new THREE.Plane();
 const kPlanePoint = new THREE.Vector3();
 const kPlaneNormal = new THREE.Vector3();
-const kUp = new THREE.Vector3(0, 1, 0);
 const kAxisIndex = {
   x: 0,
   y: 1,
@@ -33,11 +33,7 @@ export interface BrushAim {
   place: VoxelCoord;
   remove: VoxelCoord;
   face: CellFace | null;
-}
-
-export interface BrushPlaneAim {
-  cell: VoxelCoord;
-  cursor: VoxelCoord;
+  anchors: FaceAnchors;
 }
 
 export interface BrushAimResolverOptions {
@@ -94,6 +90,10 @@ export class BrushAimResolver {
     this.#aimPointer.set(NaN, NaN);
   }
 
+  invalidate(): void {
+    this.#aimPointer.set(NaN, NaN);
+  }
+
   resolve(
     pointer: THREE.Vector2
   ): BrushAim | null {
@@ -140,7 +140,11 @@ export class BrushAimResolver {
       return {
         place: ground,
         remove: ground,
-        face: "-y"
+        face: "-y",
+        anchors: {
+          place: "bottom",
+          remove: "bottom"
+        }
       };
     }
 
@@ -150,6 +154,10 @@ export class BrushAimResolver {
       "back"
     );
 
+    const face = cellFaceOf(
+      cellFaceStep(this.#raycaster.ray, cell) ?? hit.normal
+    );
+
     return {
       place: this.#neighbourOf(
         cell,
@@ -157,9 +165,8 @@ export class BrushAimResolver {
         hit.normal
       ),
       remove: cell,
-      face: cellFaceOf(
-        cellFaceStep(this.#raycaster.ray, cell) ?? hit.normal
-      )
+      face,
+      anchors: anchorsOf(face)
     };
   }
 
@@ -183,15 +190,15 @@ export class BrushAimResolver {
     return {
       place: cell,
       remove: cell,
-      face: null
+      face: null,
+      anchors: anchorsOf(null)
     };
   }
 
   aimAtPlane(
     pointer: THREE.Vector2,
-    plane: BrushPlane,
-    mode: StrokeMode
-  ): BrushPlaneAim | null {
+    plane: BrushPlane
+  ): VoxelCoord | null {
     this.#raycaster.setFromCamera(
       pointer,
       this.#camera
@@ -217,53 +224,10 @@ export class BrushAimResolver {
       return null;
     }
 
-    const row = voxelCellOf(point);
-    const cell = this.#surfaceCellAt(
-      distance,
-      mode
-    ) ?? row;
-
     return {
-      cell: {
-        ...cell,
-        [plane.axis]: plane.value
-      },
-      cursor: {
-        ...row,
-        [plane.axis]: plane.value
-      }
+      ...voxelCellOf(point),
+      [plane.axis]: plane.value
     };
-  }
-
-  #surfaceCellAt(
-    distance: number,
-    mode: StrokeMode
-  ): VoxelCoord | null {
-    const [hit] = this.#raycaster.intersectObject(
-      this.#solid,
-      true
-    );
-    if (
-      hit === undefined ||
-      hit.distance >= distance
-    ) {
-      return null;
-    }
-
-    const normal = hit.face?.normal ?? kUp;
-    const cell = voxelPositionOf(
-      hit.point,
-      normal,
-      "back"
-    );
-
-    return mode === "place" ?
-      this.#neighbourOf(
-        cell,
-        hit.point,
-        normal
-      ) :
-      cell;
   }
 
   #neighbourOf(

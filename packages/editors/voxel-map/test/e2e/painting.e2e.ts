@@ -145,6 +145,64 @@ test("the X axis builds a wall standing on the aimed cell", async({ page }) => {
   ])).toEqual([1, 1, 1, 1]);
 });
 
+test("a wall removed from a top face digs down into it", async({ page }) => {
+  const wall = [0, 1].flatMap((y) => [-1, 0].map((z) => {
+    return { x: 0, y, z };
+  }));
+  await seedVoxels(page, wall.map((cell) => {
+    return { ...cell, blockId: 1 };
+  }));
+  await setBrush(page, { size: 2 });
+  await page.keyboard.press("KeyX");
+  await page.keyboard.press("KeyX");
+  await expect.poll(async() => (await brushState(page)).axis).toBe("yz");
+
+  await clickCell(page, { x: 0, y: 2, z: 0 }, "right");
+
+  await expect.poll(() => voxelCount(page)).toBe(0);
+});
+
+test("a second right click without moving digs what the first uncovered", async({ page }) => {
+  const floor = [-1, 0, 1].flatMap((x) => [-1, 0, 1].map((z) => {
+    return { x, y: 0, z, blockId: 1 };
+  }));
+  await seedVoxels(page, [
+    ...floor,
+    { x: 0, y: 1, z: 0, blockId: 1 }
+  ]);
+  const point = await cellTopPoint(page, { x: 0, y: 2, z: 0 });
+
+  await pressAt(page, [point], "right");
+  await expect.poll(() => voxelCount(page)).toBe(floor.length);
+  await pressAt(page, [point], "right");
+
+  await expect.poll(() => voxelCount(page)).toBe(floor.length - 1);
+});
+
+test("a removing drag ignores the hole it digs", async({ page }) => {
+  const slab = [0, 1].flatMap((y) => [-3, -2, -1, 0, 1, 2, 3].flatMap(
+    (x) => [-3, -2, -1, 0, 1, 2, 3].map((z) => {
+      return { x, y, z, blockId: 1 };
+    })
+  ));
+  await seedVoxels(page, slab);
+  await setBrush(page, { size: 3 });
+
+  await strokeCells(page, [
+    { x: 0, y: 2, z: 0 },
+    { x: 1, y: 2, z: 0 }
+  ], "right");
+
+  await expect.poll(() => voxelCount(page)).toBe(slab.length - 12);
+  expect(await blocksAt(page, [
+    { x: -1, y: 1, z: 0 },
+    { x: 2, y: 1, z: 1 },
+    { x: 3, y: 1, z: 0 },
+    { x: 0, y: 1, z: 2 },
+    { x: 0, y: 0, z: 0 }
+  ])).toEqual([null, null, 1, 1, 1]);
+});
+
 test("Ctrl+click picks the block under the cursor", async({ page }) => {
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 7 }]);
   await setBrush(page, { blockId: 1 });

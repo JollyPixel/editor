@@ -10,7 +10,10 @@ import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
 import type { BrushShape } from "../model/brushFootprint.ts";
 
-export type BrushTarget = Pick<BrushCursor, "position" | "face">;
+export type BrushTarget = Pick<
+  BrushCursor,
+  "position" | "face" | "anchor"
+>;
 
 export interface BrushPreviewOptions {
   actor: Actor;

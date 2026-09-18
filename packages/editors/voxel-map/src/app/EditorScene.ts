@@ -69,6 +69,11 @@ export interface EditorSceneOptions {
   catalog?: TilesetCatalog & TilesetCatalogWriter;
   identity?: EditorIdentity;
   viewFocus?: ViewFocus;
+  /**
+   * MSAA sample count of the scene compositor.
+   * @default 4
+   */
+  samples?: number;
 }
 
 export interface EditorSceneHandles {
@@ -84,6 +89,7 @@ export class EditorScene extends Systems.Scene {
   #defaultLayerName: string;
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
   #identity: EditorIdentity | undefined;
+  #samples: number | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
   #catalog: (TilesetCatalog & TilesetCatalogWriter) | undefined;
   #tilesetDirectory: TilesetDirectory | undefined;
@@ -158,7 +164,8 @@ export class EditorScene extends Systems.Scene {
       voxelRoom,
       catalog,
       identity,
-      viewFocus = new ViewFocus()
+      viewFocus = new ViewFocus(),
+      samples
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
@@ -166,6 +173,7 @@ export class EditorScene extends Systems.Scene {
     this.#tilesets = tilesets;
     this.#voxelRoom = voxelRoom;
     this.#identity = identity;
+    this.#samples = samples;
     this.#viewFocus = viewFocus;
     this.editorState = editorState;
     this.editorState.world.blocksReady = voxelRoom === undefined;
@@ -181,7 +189,7 @@ export class EditorScene extends Systems.Scene {
     );
     scene.add(...this.lighting.lights);
     this.#subscriptions.push(
-      installTransparency(world.renderer)
+      installTransparency(world.renderer, this.#samples)
     );
 
     const orbitFlyCamera = world

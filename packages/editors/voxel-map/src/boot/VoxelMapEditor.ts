@@ -21,6 +21,7 @@ export interface VoxelMapEditorOptions {
   offline?: boolean;
   world?: AssetId;
   maxFps?: number;
+  samples?: number;
 }
 
 export interface VoxelMapEditorParts {
@@ -67,7 +68,8 @@ export class VoxelMapEditor {
       voxelRoom: session?.worldRoom,
       catalog: session?.catalog,
       identity: session?.identity,
-      viewFocus
+      viewFocus,
+      samples: options.samples
     });
     const shell = new EditorShell({
       state: editorState,

@@ -26,7 +26,8 @@ export function applyBrushStroke(
         position,
         size: brushSize,
         axis: stroke.axis,
-        pattern: stroke.pattern
+        pattern: stroke.pattern,
+        anchor: stroke.anchor
       }))
     );
   }

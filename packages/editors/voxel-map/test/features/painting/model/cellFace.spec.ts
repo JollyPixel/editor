@@ -7,24 +7,12 @@ import {
 
 // Import Internal Dependencies
 import {
+  anchorsOf,
   CELL_FACES,
   cellFaceOf,
   faceCornersOf,
   isCellFace
 } from "../../../../src/features/painting/model/cellFace.ts";
-import type { BrushFootprint } from "../../../../src/features/painting/model/brushFootprint.ts";
-
-function footprint(
-  patch: Partial<BrushFootprint> = {}
-): BrushFootprint {
-  return {
-    position: { x: 0, y: 0, z: 0 },
-    size: 1,
-    axis: "xz",
-    pattern: "square",
-    ...patch
-  };
-}
 
 describe("isCellFace", () => {
   test("accepts the six faces and nothing else", () => {
@@ -59,10 +47,37 @@ describe("cellFaceOf", () => {
   });
 });
 
+describe("anchorsOf", () => {
+  test("digs down from a top face and builds up from it", () => {
+    assert.deepStrictEqual(anchorsOf("+y"), {
+      place: "bottom",
+      remove: "top"
+    });
+  });
+
+  test("digs up from a bottom face and builds down from it", () => {
+    assert.deepStrictEqual(anchorsOf("-y"), {
+      place: "top",
+      remove: "bottom"
+    });
+  });
+
+  test("centers on a side face and without a face", () => {
+    const centered = {
+      place: "center",
+      remove: "center"
+    };
+
+    for (const face of ["+x", "-x", "+z", "-z", null] as const) {
+      assert.deepStrictEqual(anchorsOf(face), centered);
+    }
+  });
+});
+
 describe("faceCornersOf", () => {
-  test("covers the aimed cell face for a single cell brush", () => {
+  test("covers the top face of the aimed cell", () => {
     assert.deepStrictEqual(
-      faceCornersOf(footprint({ position: { x: 2, y: 0, z: -3 } }), "+y"),
+      faceCornersOf({ x: 2, y: 0, z: -3 }, "+y"),
       [
         { x: 2, y: 1, z: -3 },
         { x: 3, y: 1, z: -3 },
@@ -72,49 +87,42 @@ describe("faceCornersOf", () => {
     );
   });
 
-  test("scales with the brush size", () => {
+  test("covers the bottom face of the aimed cell", () => {
     assert.deepStrictEqual(
-      faceCornersOf(footprint({ size: 3 }), "-y"),
+      faceCornersOf({ x: 2, y: 4, z: -3 }, "-y"),
       [
-        { x: -1, y: 0, z: -1 },
-        { x: 2, y: 0, z: -1 },
-        { x: 2, y: 0, z: 2 },
-        { x: -1, y: 0, z: 2 }
+        { x: 2, y: 4, z: -3 },
+        { x: 3, y: 4, z: -3 },
+        { x: 3, y: 4, z: -2 },
+        { x: 2, y: 4, z: -2 }
       ]
     );
   });
 
-  test("spans the footprint side on a vertical face", () => {
+  test("covers a side face of the aimed cell", () => {
     assert.deepStrictEqual(
-      faceCornersOf(footprint({ size: 3 }), "+x"),
+      faceCornersOf({ x: 2, y: 0, z: -3 }, "+x"),
       [
-        { x: 1, y: 0, z: -1 },
-        { x: 1, y: 1, z: -1 },
-        { x: 1, y: 1, z: 2 },
-        { x: 1, y: 0, z: 2 }
+        { x: 3, y: 0, z: -3 },
+        { x: 3, y: 1, z: -3 },
+        { x: 3, y: 1, z: -2 },
+        { x: 3, y: 0, z: -2 }
       ]
     );
-  });
-
-  test("stays on the aimed face of a volume brush", () => {
-    const corners = faceCornersOf(
-      footprint({ size: 4, axis: "xyz" }),
-      "+y"
-    );
-
-    assert.ok(corners.every((corner) => corner.y === 1));
-  });
-
-  test("draws a square around a circle brush", () => {
     assert.deepStrictEqual(
-      faceCornersOf(footprint({ size: 4, pattern: "circle" }), "+y"),
-      faceCornersOf(footprint({ size: 4 }), "+y")
+      faceCornersOf({ x: 2, y: 0, z: -3 }, "-z"),
+      [
+        { x: 2, y: 0, z: -3 },
+        { x: 3, y: 0, z: -3 },
+        { x: 3, y: 1, z: -3 },
+        { x: 2, y: 1, z: -3 }
+      ]
     );
   });
 
   test("grows and lifts the rectangle by the margin", () => {
     assert.deepStrictEqual(
-      faceCornersOf(footprint(), "-z", 0.25),
+      faceCornersOf({ x: 0, y: 0, z: 0 }, "-z", 0.25),
       [
         { x: -0.25, y: -0.25, z: -0.25 },
         { x: 1.25, y: -0.25, z: -0.25 },

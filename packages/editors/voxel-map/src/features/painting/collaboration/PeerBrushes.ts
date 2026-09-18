@@ -148,7 +148,8 @@ export class PeerBrushes extends ActorComponent {
 
     const mesh = new BrushMesh({
       color,
-      style: this.#brush.style
+      style: this.#brush.style,
+      subdued: true
     });
     mesh.hide();
     this.#meshes.set(clientId, mesh);
