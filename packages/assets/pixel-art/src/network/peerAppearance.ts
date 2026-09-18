@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { colorFromKey } from "@jolly-pixel/color";
 import type {
   PeerMetadata,
   Room
@@ -13,20 +12,7 @@ export type PeerColor = (
 export type PeerLabel = (
   clientId: string,
   profile: PeerMetadata
-) => string | undefined;
-
-export function defaultPeerColor(
-  clientId: string
-): string {
-  return colorFromKey(clientId);
-}
-
-export function defaultPeerLabel(
-  _clientId: string,
-  profile: PeerMetadata
-): string | undefined {
-  return typeof profile.username === "string" ? profile.username : undefined;
-}
+) => string;
 
 export function peerProfile(
   room: Room,

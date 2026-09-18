@@ -89,6 +89,7 @@ test.describe("clear texture", () => {
     const keepUv = dialog.getByRole("checkbox");
     await expect(keepUv).not.toBeChecked();
     await dialog.getByRole("button", { name: "Clear", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
     await expect.poll(pixels).toEqual([CLEAR, BLACK]);
 
     await panel.getByRole("button", { name: "Clear texture" }).click();

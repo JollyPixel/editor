@@ -45,6 +45,8 @@ construction instead of by convention.
 | `encodePixelArtDocument(document)` | document → UTF-8 JSON bytes |
 | `decodePixelArtDocument(bytes)` | JSON bytes → validated document |
 | `parsePixelArtDocument(value)` | already-parsed JSON → validated document |
+| `encodePixelBytes(pixels)` | RGBA8 bytes → base64, encoding the view only |
+| `decodePixelBytes(pixels)` | base64 → `Uint8ClampedArray` |
 
 `decodePixelArtDocument` validates rather than asserts, because a document
 reaches it from persistence: an unsupported version, a non-integer size, or
@@ -55,6 +57,12 @@ for a non-positive size or a `pixels` length other than `x * y * 4`.
 
 A loaded document is complete state, not a patch. UV regions are cleared
 before the document's are applied.
+
+`encodePixelBytes` and `decodePixelBytes` are the base64 codec the other
+functions use for the `pixels` field. They are exported so a consumer that
+reads or writes that field on its own, such as a wire snapshot or a
+`texture-replaced` command, does not have to pick its own base64 library and
+stay in step with this one.
 
 ## Seeding a document from an image
 

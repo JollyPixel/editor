@@ -13,8 +13,6 @@ import {
 
 // Import Internal Dependencies
 import {
-  defaultPeerColor,
-  defaultPeerLabel,
   peerProfile,
   type PeerColor,
   type PeerLabel
@@ -27,8 +25,8 @@ import type {
 export interface PixelCursorSyncOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
-  label?: PeerLabel;
-  color?: PeerColor;
+  label: PeerLabel;
+  color: PeerColor;
 }
 
 function decodeCursor(
@@ -68,8 +66,8 @@ export class PixelCursorSync {
   ) {
     this.#room = options.room;
     this.#canvas = options.canvas;
-    this.#label = options.label ?? defaultPeerLabel;
-    this.#color = options.color ?? defaultPeerColor;
+    this.#label = options.label;
+    this.#color = options.color;
     this.#channel = new PresenceChannel(options.room, {
       key: "cursor",
       decode: decodeCursor,

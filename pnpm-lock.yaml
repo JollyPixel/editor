@@ -300,18 +300,12 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
-      '@jolly-pixel/color':
-        specifier: workspace:*
-        version: link:../../color
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
-      js-base64:
-        specifier: 3.9.3
-        version: 3.9.3
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -322,31 +316,28 @@ importers:
       '@jolly-pixel/bench':
         specifier: workspace:*
         version: link:../../bench
+      '@jolly-pixel/color':
+        specifier: workspace:*
+        version: link:../../color
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
 
   packages/assets/voxel-map:
     dependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../../voxel-renderer
-      three:
-        specifier: 0.186.0
-        version: 0.186.0
     devDependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source

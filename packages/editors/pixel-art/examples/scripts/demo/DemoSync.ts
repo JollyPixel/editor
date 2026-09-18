@@ -10,6 +10,7 @@ import {
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import { colorFromKey } from "@jolly-pixel/color";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import {
   LocalStorageAdapter,
@@ -32,6 +33,7 @@ const kUsernameStorageKey = "pixel-draw-demo:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
 });
+const kFallbackUsername = "Guest";
 
 declare global {
   interface Window {
@@ -113,7 +115,9 @@ class DemoTextures {
 
     const collaboration = new PixelCollaboration({
       room,
-      canvas
+      canvas,
+      label: peerLabel,
+      color: peerColor
     });
     this.#bound.set(textureId, {
       room,
@@ -186,6 +190,21 @@ async function resolveCanvasAsset(
   return record;
 }
 
+function peerLabel(
+  _clientId: string,
+  profile: network.PeerMetadata
+): string {
+  return typeof profile.username === "string"
+    ? profile.username
+    : kFallbackUsername;
+}
+
+function peerColor(
+  clientId: string
+): string {
+  return colorFromKey(clientId);
+}
+
 function holdAdd(): Promise<void> {
   const value = Number(
     new URLSearchParams(window.location.search).get(kAddDelayParam)
@@ -207,6 +226,6 @@ function resolveUsername(): Promise<string> {
     confirmLabel: "Join",
     storage: kUsernameStorage,
     storageKey: kUsernameStorageKey,
-    fallbackValue: "Guest"
+    fallbackValue: kFallbackUsername
   });
 }

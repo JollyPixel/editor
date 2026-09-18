@@ -47,6 +47,7 @@ Create the room and the collaboration before joining, so the first snapshot has 
 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
+import { colorFromKey } from "@jolly-pixel/color";
 import {
   AssetCatalog,
   assetRoomName
@@ -70,7 +71,12 @@ const room = networkClient.room<
   PixelServerMessage
 >(assetRoomName(record.kind, record.id.value));
 
-const collaboration = new PixelCollaboration({ room, canvas });
+const collaboration = new PixelCollaboration({
+  room,
+  canvas,
+  label: (_clientId, profile) => String(profile.username),
+  color: (clientId) => colorFromKey(clientId)
+});
 collaboration.sync.on("ready", () => {
   console.log("Initial snapshot received");
 });

@@ -10,6 +10,8 @@ export const TEXTURE_SIZE = {
 export const DEMO_ASSET_PATH = "demo-canvas.pixelart";
 export const WORKER_COUNT = 4;
 
+export const RUNTIME_MAX_FPS = 1;
+
 export function testAssetPath(
   workerIndex: number
 ): string {

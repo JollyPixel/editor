@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
 import type { VoxelLayerCommand } from "@jolly-pixel/voxel.renderer";
-import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "./types.ts";
@@ -126,7 +125,7 @@ function isBulkCommand<
 
 function voxelKey(
   layerName: string,
-  position: Vector3Like
+  position: { x: number; y: number; z: number; }
 ): string {
   const { x, y, z } = position;
 

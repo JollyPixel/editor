@@ -7,6 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import type { PeerMetadata } from "@jolly-pixel/network/client";
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -26,6 +27,19 @@ interface PeerCursorState {
   label?: string;
 }
 
+function peerLabel(
+  _clientId: string,
+  profile: PeerMetadata
+): string {
+  return String(profile.username);
+}
+
+function peerColor(
+  clientId: string
+): string {
+  return `#${clientId}`;
+}
+
 function createHost() {
   return {
     onCursorMove: undefined as CursorListener | undefined,
@@ -39,13 +53,15 @@ function createHost() {
 }
 
 function setup(
-  options: Omit<PixelCursorSyncOptions, "room" | "canvas"> = {},
+  options: Partial<Omit<PixelCursorSyncOptions, "room" | "canvas">> = {},
   room = new MockRoom()
 ) {
   const host = createHost();
   const sync = new PixelCursorSync({
     room,
     canvas: asCanvas(host),
+    label: peerLabel,
+    color: peerColor,
     ...options
   });
 
@@ -81,7 +97,9 @@ describe("PixelCursorSync — construction", () => {
     host.onCursorMove = previous;
     const sync = new PixelCursorSync({
       room,
-      canvas: asCanvas(host)
+      canvas: asCanvas(host),
+      label: peerLabel,
+      color: peerColor
     });
 
     host.onCursorMove?.({ x: 2, y: 3 });
@@ -130,7 +148,7 @@ describe("PixelCursorSync — remote peers", () => {
     assert.strictEqual(clientId, "peer-B");
     assert.deepStrictEqual(state.pos, { x: 1, y: 2 });
     assert.strictEqual(state.label, "Bob");
-    assert.ok(state.color.length > 0);
+    assert.strictEqual(state.color, "#peer-B");
   });
 
   test("ignores presence patches without a cursor", () => {
@@ -164,7 +182,7 @@ describe("PixelCursorSync — remote peers", () => {
     assert.deepStrictEqual(callsOf(cursors.remove), [["peer-B"]]);
   });
 
-  test("uses the label option instead of profile.username", () => {
+  test("names a peer with the label option", () => {
     const { room, cursors } = setup({
       label: (_clientId, profile) => String(profile.displayName)
     });

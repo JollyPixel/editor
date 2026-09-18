@@ -40,8 +40,14 @@ const kPayload: UVGhostPayload = {
   geometry: { x: 0, y: 0, width: 4, height: 4 }
 };
 
+function peerColor(
+  clientId: string
+): string {
+  return `#${clientId}`;
+}
+
 function setup(
-  options: Pick<UVGhostSyncOptions, "color" | "onRemoteRegionDragging"> = {}
+  options: Partial<Pick<UVGhostSyncOptions, "color" | "onRemoteRegionDragging">> = {}
 ) {
   const room = new MockRoom();
   const host = {
@@ -58,6 +64,7 @@ function setup(
   new UVGhostSync({
     room,
     canvas: asCanvas(host),
+    color: peerColor,
     ...options
   });
 
@@ -118,7 +125,7 @@ describe("UVGhostSync — remote peers", () => {
     const [[clientId, state]] = callsOf(overlay.set);
     assert.strictEqual(clientId, "peer-B");
     assert.strictEqual(state.id, kPayload.id);
-    assert.ok(state.color.length > 0);
+    assert.strictEqual(state.color, "#peer-B");
   });
 
   test("colors a peer uvGhost with the color option and the peer profile", () => {

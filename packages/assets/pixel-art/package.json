@@ -53,15 +53,14 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
-    "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
-    "@jolly-pixel/pixel-draw.renderer": "workspace:*",
-    "js-base64": "3.9.3"
+    "@jolly-pixel/pixel-draw.renderer": "workspace:*"
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/bench": "workspace:*",
+    "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*"
   }
 }

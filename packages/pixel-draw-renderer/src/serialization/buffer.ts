@@ -1,13 +1,11 @@
-// Import Third-party Dependencies
-import {
-  fromUint8Array,
-  toUint8Array
-} from "js-base64";
-
 // Import Internal Dependencies
 import {
   InvalidPixelArtDocumentError
 } from "./errors/InvalidPixelArtDocumentError.ts";
+import {
+  decodePixelBytes,
+  encodePixelBytes
+} from "./pixelBytes.ts";
 import {
   PIXEL_ART_DOCUMENT_VERSION,
   type PixelArtDocumentData,
@@ -20,9 +18,7 @@ export function pixelArtSnapshot(
 ): PixelBufferSnapshot {
   return {
     size: buffer.size(),
-    pixels: fromUint8Array(
-      new Uint8Array(buffer.pixels())
-    ),
+    pixels: encodePixelBytes(buffer.pixels()),
     uvRegions: [
       ...buffer.uvRegions
     ].map((region) => region.toJSON())
@@ -51,9 +47,7 @@ export function deserializePixelBuffer(
     );
   }
 
-  const pixels = new Uint8ClampedArray(
-    toUint8Array(document.pixels)
-  );
+  const pixels = decodePixelBytes(document.pixels);
   const expected = document.size.x * document.size.y * 4;
   if (pixels.length < expected) {
     throw new InvalidPixelArtDocumentError(

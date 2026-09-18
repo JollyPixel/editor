@@ -17,6 +17,7 @@ function setup() {
   const collaboration = new PixelCollaboration({
     room,
     canvas,
+    label: (_clientId, profile) => String(profile.username),
     color: () => "#abcdef"
   });
 
@@ -82,6 +83,8 @@ describe("PixelCollaboration", () => {
     const collaboration = new PixelCollaboration({
       room,
       canvas,
+      label: () => "peer",
+      color: () => "#abcdef",
       onRemoteUvDragging: (payload) => dragged.push(payload)
     });
     const payload = { id: "region-A", face: null, geometry: { x: 0, y: 0, width: 4, height: 4 } };

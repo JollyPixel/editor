@@ -11,7 +11,6 @@ import {
   type PeerGhostLayer
 } from "./PeerGhostStream.ts";
 import {
-  defaultPeerColor,
   peerProfile,
   type PeerColor
 } from "../peerAppearance.ts";
@@ -24,7 +23,7 @@ import type {
 export interface SelectionGhostSyncOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
   canvas: PixelArtCanvas;
-  color?: PeerColor;
+  color: PeerColor;
 }
 
 function isSelectionGhostPayload(
@@ -82,7 +81,7 @@ export class SelectionGhostSync {
 
     this.#room = options.room;
     this.#canvas = canvas;
-    this.#color = options.color ?? defaultPeerColor;
+    this.#color = options.color;
     this.#stream = new PeerGhostStream({
       room: options.room,
       key: "selectionGhost",

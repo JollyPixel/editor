@@ -21,6 +21,7 @@ import { PixelPreviewScene } from "./preview/PixelPreviewScene.ts";
 const kStarterRegionId = "pixel-draw-demo:starter-region";
 const kStarterRegionSize = 16;
 const kRotationStorageKey = "pixel-draw-demo:rotation";
+const kMaxFpsParam = "max-fps";
 
 function noop(): void {
   // No 3D runtime is active yet; scene-appearance updates are a no-op.
@@ -124,7 +125,8 @@ async function initRuntime(): Promise<void> {
   });
   const runtimeReady = runtime.load({
     skipLoadingScreen: true,
-    scene: previewScene
+    scene: previewScene,
+    maxFps: resolveMaxFps()
   });
   window.addEventListener("beforeunload", () => {
     previewScene.destroy();
@@ -156,6 +158,14 @@ async function initRuntime(): Promise<void> {
   initializeStarterRegion(canvasManager);
 
   world.renderer.on("resize", () => drawPanel.onResize());
+}
+
+function resolveMaxFps(): number | undefined {
+  const value = Number(
+    new URLSearchParams(window.location.search).get(kMaxFpsParam)
+  );
+
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 function restoreDemoPreferences(): HTMLInputElement {

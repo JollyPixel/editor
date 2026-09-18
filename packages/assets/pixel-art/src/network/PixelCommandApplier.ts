@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
-import { toUint8Array } from "js-base64";
 import {
   applyColorGroups,
+  decodePixelBytes,
   Fill,
   groupPositionsByColor,
   type PixelBuffer
@@ -31,9 +31,7 @@ export function applyCommandToBuffer(
 
     case "texture-replaced":
       buffer.replacePixels(
-        new Uint8ClampedArray(
-          toUint8Array(cmd.metadata.pixels)
-        ),
+        decodePixelBytes(cmd.metadata.pixels),
         cmd.metadata.size
       );
       break;

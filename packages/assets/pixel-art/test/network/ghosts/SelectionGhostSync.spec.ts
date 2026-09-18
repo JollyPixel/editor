@@ -52,6 +52,12 @@ const kMoving: SelectionGhostPayload = {
   blankSource: true
 };
 
+function peerColor(
+  clientId: string
+): string {
+  return `#${clientId}`;
+}
+
 function createOverlay<TState>() {
   return {
     set: mock.fn<(clientId: string, state: TState) => void>(),
@@ -62,7 +68,7 @@ function createOverlay<TState>() {
 }
 
 function setup(
-  options: Pick<SelectionGhostSyncOptions, "color"> = {}
+  options: Partial<Pick<SelectionGhostSyncOptions, "color">> = {}
 ) {
   const room = new MockRoom();
   const host = {
@@ -75,6 +81,7 @@ function setup(
   new SelectionGhostSync({
     room,
     canvas: asCanvas(host),
+    color: peerColor,
     ...options
   });
 
@@ -129,7 +136,7 @@ describe("SelectionGhostSync — remote peers", () => {
     assert.strictEqual(clientId, "peer-B");
     assert.deepStrictEqual(state.rect, kCreating.rect);
     assert.strictEqual(state.mask, null);
-    assert.ok(state.color.length > 0);
+    assert.strictEqual(state.color, "#peer-B");
     assert.deepStrictEqual(callsOf(floating.remove), [["peer-B"]]);
   });
 
