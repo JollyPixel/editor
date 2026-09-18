@@ -7,17 +7,27 @@ import {
   rotateVertex,
   rotateFace,
   rotateNormal,
-  flipYFace
+  transformFace,
+  mirrorsWinding
 } from "../../../src/mesh/variants/rotation.ts";
 import {
   FACE,
   FACES,
   FACE_NORMALS
 } from "../../../src/utils/math.ts";
-import { VoxelTransform } from "../../../src/world/index.ts";
+import {
+  VoxelTransform,
+  VOXEL_TRANSFORM_MASK
+} from "../../../src/world/index.ts";
 import { approxEqual } from "../../helpers/math.ts";
 
 type Vec3 = [number, number, number];
+
+// CONSTANTS
+const kAllTransforms = Array.from(
+  { length: VOXEL_TRANSFORM_MASK + 1 },
+  (_, packed) => VoxelTransform.fromPacked(packed)
+);
 
 function tf(
   rotation: number,
@@ -136,17 +146,27 @@ describe("rotateNormal", () => {
   });
 });
 
-describe("flipYFace", () => {
-  it("swaps the Y faces and passes every other face through", () => {
-    assert.deepEqual(
-      FACES.map(flipYFace),
-      FACES.map((face) => {
-        if (face === FACE.PosY) {
-          return FACE.NegY;
-        }
+describe("transformFace", () => {
+  it("agrees with rotateNormal on every face under every transform", () => {
+    for (const transform of kAllTransforms) {
+      for (const face of FACES) {
+        assertVecApprox(
+          rotateNormal([...FACE_NORMALS[face]], transform),
+          FACE_NORMALS[transformFace(face, transform)],
+          `face ${face} transform ${transform.packed}`
+        );
+      }
+    }
+  });
+});
 
-        return face === FACE.NegY ? FACE.PosY : face;
-      })
-    );
+describe("mirrorsWinding", () => {
+  it("is true only for an odd number of flips", () => {
+    for (const transform of kAllTransforms) {
+      const { flipX, flipY, flipZ } = transform;
+      const flips = [flipX, flipY, flipZ].filter(Boolean).length;
+
+      assert.equal(mirrorsWinding(transform), flips % 2 === 1);
+    }
   });
 });

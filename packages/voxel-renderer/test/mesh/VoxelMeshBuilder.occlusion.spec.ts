@@ -15,11 +15,18 @@ import {
 } from "../helpers/meshFixture.ts";
 import {
   CUBE_ID as kCubeId,
-  LEAVES_ID as kLeavesId
+  LEAVES_ID as kLeavesId,
+  RAMP_ID as kRampId,
+  STAIR_ID as kStairId
 } from "../helpers/ids.ts";
+import {
+  VoxelTransform,
+  type VoxelTransformOptions
+} from "../../src/world/index.ts";
 
 // CONSTANTS
 const kGrateId = 5;
+const kGlassRampId = 6;
 const kBlend = { alphaMode: "blend" } as const;
 
 interface PairCase {
@@ -239,4 +246,65 @@ describe("VoxelMeshBuilder - neighbour lookups across chunks and layer positions
       assert.equal(fixture.builder.stats.faces, 5);
     });
   }
+});
+
+describe("VoxelMeshBuilder - partial boundary faces", () => {
+  type Block = [blockId: number, transform?: VoxelTransformOptions];
+  const kUpsideDownStair: Block = [kStairId, { flipY: true }];
+
+  const kPartialCases: [string, Block, Block, number][] = [
+    ["two ramps cull their shared triangles", [kRampId], [kRampId], 2],
+    ["two stairs cull their shared steps", [kStairId], [kStairId], 4],
+    ["two upside-down stairs cull their shared steps", kUpsideDownStair, kUpsideDownStair, 4],
+    ["a stair culls the ramp triangle it contains", [kStairId], [kRampId], 1],
+    ["mirrored ramps keep their partly overlapping triangles", [kRampId, { rotation: 2 }], [kRampId], 0],
+    ["a blended ramp does not cull an opaque triangle", [kRampId], [kGlassRampId], 0]
+  ];
+
+  for (const greedy of [false, true]) {
+    for (const [name, left, right, culledFaces] of kPartialCases) {
+      it(`${name} (greedy=${greedy})`, () => {
+        const fixture = makeMeshFixture({ greedy });
+        fixture.blockRegistry.register(makeBlockDef(kGlassRampId, "ramp", kBlend));
+        place(fixture, [0, 0, 0], left[0], new VoxelTransform(left[1]).packed);
+        place(fixture, [1, 0, 0], right[0], new VoxelTransform(right[1]).packed);
+
+        buildGeometries(fixture);
+
+        assert.equal(fixture.builder.stats.culledFaces, culledFaces);
+      });
+    }
+  }
+
+  it("culls a flipped stair like the rotation it mirrors", () => {
+    const kEquivalents: [VoxelTransformOptions, VoxelTransformOptions][] = [
+      [{ flipZ: true }, { rotation: 2 }],
+      [{ flipX: true }, {}],
+      [{ flipX: true, flipZ: true, flipY: true }, { rotation: 2, flipY: true }]
+    ];
+    const kNeighbours = [[2, 1, 1], [0, 1, 1], [1, 2, 1], [1, 0, 1], [1, 1, 2], [1, 1, 0]] as const;
+
+    function statsOf(
+      transform: VoxelTransformOptions,
+      neighbour: readonly [number, number, number]
+    ) {
+      const fixture = makeMeshFixture();
+      place(fixture, [1, 1, 1], kStairId, new VoxelTransform(transform).packed);
+      place(fixture, [...neighbour]);
+      buildGeometries(fixture);
+      const { faces, culledFaces, vertices } = fixture.builder.stats;
+
+      return { faces, culledFaces, vertices };
+    }
+
+    for (const [flipped, rotated] of kEquivalents) {
+      for (const neighbour of kNeighbours) {
+        assert.deepEqual(
+          statsOf(flipped, neighbour),
+          statsOf(rotated, neighbour),
+          `${JSON.stringify(flipped)} next to ${neighbour}`
+        );
+      }
+    }
+  });
 });

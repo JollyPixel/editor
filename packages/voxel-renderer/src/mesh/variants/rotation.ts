@@ -1,5 +1,10 @@
 // Import Internal Dependencies
-import { type Vec3, FACE } from "../../utils/math.ts";
+import {
+  FACE_AXIS,
+  FACE_OPPOSITE,
+  type FACE,
+  type Vec3
+} from "../../utils/math.ts";
 import type { VoxelTransform } from "../../world/VoxelTransform.ts";
 
 /*
@@ -102,15 +107,21 @@ export function rotateNormal(
   return [nx, ny, nz];
 }
 
-export function flipYFace(
-  face: FACE
+export function transformFace(
+  face: FACE,
+  transform: VoxelTransform
 ): FACE {
-  if (face === FACE.PosY) {
-    return FACE.NegY;
-  }
-  if (face === FACE.NegY) {
-    return FACE.PosY;
-  }
+  const rotated = rotateFace(face, transform.rotation);
+  const { flipX, flipY, flipZ } = transform;
+  const flipped = [flipX, flipY, flipZ][FACE_AXIS[rotated]];
 
-  return face;
+  return flipped ? FACE_OPPOSITE[rotated] : rotated;
+}
+
+export function mirrorsWinding(
+  transform: VoxelTransform
+): boolean {
+  const { flipX, flipY, flipZ } = transform;
+
+  return (Number(flipX) + Number(flipY) + Number(flipZ)) % 2 !== 0;
 }
