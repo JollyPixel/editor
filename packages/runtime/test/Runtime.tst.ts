@@ -100,3 +100,24 @@ test("runtime.overlay mounts content and returns a disposer", () => {
     runtime.overlay.mount(document.createElement("div"))
   ).type.toBe<RuntimePackage.MountedOverlay>();
 });
+
+test("Runtime options accept both view helper forms", () => {
+  expect<boolean>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["viewHelper"]
+  >();
+  expect<{
+    position: RuntimePackage.ViewHelperPosition;
+    inset: number;
+  }>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["viewHelper"]
+  >();
+  expect<"bottom-right">().type.toBeAssignableTo<
+    RuntimePackage.ViewHelperPosition
+  >();
+  expect<"top-center">().type.not.toBeAssignableTo<
+    RuntimePackage.ViewHelperPosition
+  >();
+  expect<"mountViewHelper">().type.not.toBeAssignableTo<
+    keyof typeof RuntimePackage
+  >();
+});

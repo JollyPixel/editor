@@ -1,3 +1,6 @@
+// Import Node.js Dependencies
+import { fileURLToPath } from "node:url";
+
 // Import Third-party Dependencies
 import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
@@ -7,6 +10,14 @@ import wasm from "vite-plugin-wasm";
 // https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
+  resolve: {
+    alias: [
+      {
+        find: /^@jolly-pixel\/runtime$/,
+        replacement: fileURLToPath(new URL("src/index.ts", import.meta.url))
+      }
+    ]
+  },
   plugins: [
     checker({
       typescript: true

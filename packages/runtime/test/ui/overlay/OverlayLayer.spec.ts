@@ -33,13 +33,13 @@ class FakeResizeObserver {
 }
 
 let OverlayLayer:
-  typeof import("../src/ui/overlay/OverlayLayer.ts").OverlayLayer;
+  typeof import("../../../src/ui/overlay/OverlayLayer.ts").OverlayLayer;
 
 before(async() => {
   installBrowserGlobals();
 
   ({ OverlayLayer } = await import(
-    "../src/ui/overlay/OverlayLayer.ts"
+    "../../../src/ui/overlay/OverlayLayer.ts"
   ));
 });
 

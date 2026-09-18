@@ -20,6 +20,15 @@ interface FocusHintOptions {
   text?: string;
 }
 
+type ViewHelperPosition =
+  | "top-left" | "top-right"
+  | "bottom-left" | "bottom-right";
+
+interface ViewHelperOptions {
+  position?: ViewHelperPosition;
+  inset?: number;
+}
+
 type RuntimeCanvasTarget = HTMLCanvasElement | string;
 
 interface OverlayLayerOptions {
@@ -51,6 +60,7 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
   };
   focusCanvas?: boolean;
   focusHint?: boolean | FocusHintOptions;
+  viewHelper?: boolean | ViewHelperOptions;
   overlay?: OverlayLayerOptions;
   context?: TContext;
   audio?: GlobalAudio;
@@ -119,6 +129,7 @@ It also rejects when the selector matches no element or a non-canvas element.
 | `includePerformanceStats` | `false` | Creates a `StatsRecorder`. `true` also mounts the default HUD. |
 | `focusCanvas` | `true` | Restores canvas focus after page clicks while the runtime is running. |
 | `focusHint` | `false` | Shows a hint over the canvas while it does not hold keyboard focus. |
+| `viewHelper` | `false` | Draws an axis gizmo showing the main camera orientation. See [view helper](#view-helper). |
 | `overlay` | Tracks the canvas | Chooses where runtime overlays are mounted. See [overlays](#overlays). |
 | `context` | `undefined` | Supplies the world's typed application context. |
 | `audio` | Engine default | Supplies the world's global audio service. |
@@ -176,6 +187,32 @@ than the canvas is truncated with an ellipsis.
 
 Combine it with `focusCanvas: false`. The default `focusCanvas: true` restores
 canvas focus after every document click, so the hint would only ever flash.
+
+### View helper
+
+Set `viewHelper` to draw the three.js `ViewHelper` axis gizmo in a corner of
+the canvas. It follows the registered camera with the lowest `depth`, re-reading
+it every frame, so it picks up cameras created by later scenes and switches when
+the main camera changes. Nothing is drawn while no camera is registered.
+
+```ts
+const runtime = await Runtime.create("canvas", {
+  viewHelper: {
+    position: "top-right",
+    inset: 8
+  }
+});
+```
+
+| Option | Default | Behavior |
+|---|---|---|
+| `position` | `"bottom-right"` | Canvas corner the gizmo is drawn in. |
+| `inset` | `0` | Distance in pixels between the gizmo and the canvas edges. |
+
+Passing `true` uses every default. The gizmo is 128 pixels square and drawn
+into the canvas after each frame, not mounted through `runtime.overlay`. It is
+display-only: clicking an axis does not move the camera. It is created on
+`start()` and released on `stop()`.
 
 ### Overlays
 

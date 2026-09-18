@@ -8,24 +8,24 @@ import { Window } from "happy-dom";
 // Import Internal Dependencies
 import type {
   OverlayLayer as OverlayLayerType
-} from "../src/ui/overlay/OverlayLayer.ts";
+} from "../../../src/ui/overlay/OverlayLayer.ts";
 
 // CONSTANTS
 const kBrowserWindow = new Window();
 
 let mountFocusHint:
-  typeof import("../src/ui/focus/mountFocusHint.ts").mountFocusHint;
+  typeof import("../../../src/ui/focus/mountFocusHint.ts").mountFocusHint;
 let OverlayLayer:
-  typeof import("../src/ui/overlay/OverlayLayer.ts").OverlayLayer;
+  typeof import("../../../src/ui/overlay/OverlayLayer.ts").OverlayLayer;
 
 before(async() => {
   installBrowserGlobals();
 
   ({ mountFocusHint } = await import(
-    "../src/ui/focus/mountFocusHint.ts"
+    "../../../src/ui/focus/mountFocusHint.ts"
   ));
   ({ OverlayLayer } = await import(
-    "../src/ui/overlay/OverlayLayer.ts"
+    "../../../src/ui/overlay/OverlayLayer.ts"
   ));
 });
 

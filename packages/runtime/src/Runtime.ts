@@ -46,6 +46,11 @@ import {
   OverlayLayer,
   type OverlayLayerOptions
 } from "./ui/overlay/OverlayLayer.ts";
+import {
+  mountViewHelper,
+  type MountedViewHelper,
+  type ViewHelperOptions
+} from "./ui/viewHelper/mountViewHelper.ts";
 
 // CONSTANTS
 const kDefaultStatsPosition = "top-left";
@@ -61,6 +66,7 @@ export interface RuntimeOptions<
   };
   focusCanvas?: boolean;
   focusHint?: boolean | FocusHintOptions;
+  viewHelper?: boolean | ViewHelperOptions;
   overlay?: OverlayLayerOptions;
   context?: TContext;
   audio?: GlobalAudio;
@@ -82,8 +88,10 @@ export class Runtime<
   #isRunning = false;
   #focusCanvas: boolean;
   #focusHint: FocusHintOptions | null;
+  #viewHelper: ViewHelperOptions | null;
   #statsOverlay: MountedPerformanceStats | null = null;
   #focusHintOverlay: MountedFocusHint | null = null;
+  #viewHelperOverlay: MountedViewHelper | null = null;
 
   #focusCanvasHandler = () => {
     if (document.activeElement !== this.canvas) {
@@ -105,7 +113,8 @@ export class Runtime<
     this.canvas = canvas;
     this.overlay = new OverlayLayer(canvas, options.overlay);
     this.#focusCanvas = options.focusCanvas ?? true;
-    this.#focusHint = resolveFocusHintOptions(options.focusHint);
+    this.#focusHint = resolveToggleOptions(options.focusHint);
+    this.#viewHelper = resolveToggleOptions(options.viewHelper);
     const assetCoordinator = createRuntimeAssetCoordinator(
       this.manager,
       assets
@@ -188,6 +197,12 @@ export class Runtime<
         this.#focusHint
       );
     }
+    if (this.#viewHelper !== null) {
+      this.#viewHelperOverlay = mountViewHelper(
+        this.world.renderer,
+        this.#viewHelper
+      );
+    }
 
     this.world.connect();
     this.world.start();
@@ -225,6 +240,8 @@ export class Runtime<
     }
     this.#focusHintOverlay?.dispose();
     this.#focusHintOverlay = null;
+    this.#viewHelperOverlay?.dispose();
+    this.#viewHelperOverlay = null;
 
     this.world.disconnect();
   }
@@ -267,9 +284,9 @@ export class Runtime<
   }
 }
 
-function resolveFocusHintOptions(
-  option: boolean | FocusHintOptions | undefined
-): FocusHintOptions | null {
+function resolveToggleOptions<TOptions extends object>(
+  option: boolean | TOptions | undefined
+): Partial<TOptions> | null {
   if (!option) {
     return null;
   }

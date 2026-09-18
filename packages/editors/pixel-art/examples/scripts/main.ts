@@ -113,7 +113,8 @@ async function initRuntime(): Promise<void> {
 
   const runtime = await Runtime.create("#canvas-container > canvas", {
     includePerformanceStats: false,
-    focusCanvas: false
+    focusCanvas: false,
+    viewHelper: true
   });
 
   const previewScene = new PixelPreviewScene({

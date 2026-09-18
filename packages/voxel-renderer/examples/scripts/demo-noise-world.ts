@@ -82,7 +82,8 @@ const tilesets = await loadTilesets([tileset.definition]);
 
 const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true,
-  focusCanvas: false
+  focusCanvas: false,
+  viewHelper: true
 });
 const { world } = runtime;
 

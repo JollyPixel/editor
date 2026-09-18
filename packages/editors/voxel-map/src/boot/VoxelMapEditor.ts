@@ -47,6 +47,7 @@ export class VoxelMapEditor {
       },
       focusCanvas: false,
       focusHint: true,
+      viewHelper: true,
       overlay: {
         container: "#game-container"
       }

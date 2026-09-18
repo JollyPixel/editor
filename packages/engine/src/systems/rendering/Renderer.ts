@@ -38,6 +38,7 @@ export interface Renderer<
   Events extends EventMap = RendererEvents<T>
 > {
   readonly canvas: HTMLCanvasElement;
+  readonly renderComponents: readonly RenderComponent[];
 
   getSource(): T;
   setRatio(

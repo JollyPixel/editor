@@ -10,7 +10,6 @@ import {
 // Import Internal Dependencies
 import type { Actor } from "../../../actor/Actor.ts";
 import { CameraComponent } from "../Camera.ts";
-import { createViewHelper } from "../../../utils/createViewHelper.ts";
 import { OrbitFocus } from "./OrbitFocus.ts";
 import { ElasticFocus } from "./ElasticFocus.ts";
 import {
@@ -88,7 +87,6 @@ export interface OrbitFlyCameraOptions {
    * @default 60
    */
   fov?: number;
-  viewHelper?: boolean;
 }
 
 export interface CameraPose {
@@ -111,7 +109,6 @@ export class OrbitFlyCamera extends CameraComponent {
   #maxPitch: number;
   #scrollSpeed: number;
   #speedAdjustStep: number;
-  #viewHelper: boolean;
   #focus: CameraFocus;
 
   // Reused each frame to avoid allocations.
@@ -168,8 +165,7 @@ export class OrbitFlyCamera extends CameraComponent {
       maxPivotDistance = 200,
       pivotNudgeStep = 1,
       initialTrailDistance = 0,
-      showPivotMarker = true,
-      viewHelper = true
+      showPivotMarker = true
     } = options;
 
     this.#yaw = yaw;
@@ -182,7 +178,6 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#maxPitch = maxPitch;
     this.#scrollSpeed = scrollSpeed;
     this.#speedAdjustStep = speedAdjustStep;
-    this.#viewHelper = viewHelper;
 
     const initialPosition = options.position ?? { x: 16, y: 20, z: 40 };
     const sceneProvider = () => this.actor.world.sceneManager.getSource();
@@ -301,18 +296,6 @@ export class OrbitFlyCamera extends CameraComponent {
 
   exitOrbitFocus(): void {
     this.#focus.exit();
-  }
-
-  start() {
-    if (!this.#viewHelper) {
-      return;
-    }
-
-    const binding = createViewHelper(
-      this.threeCamera,
-      this.actor.world
-    );
-    this.addTeardown(() => binding.dispose());
   }
 
   #updateFocusPose(
