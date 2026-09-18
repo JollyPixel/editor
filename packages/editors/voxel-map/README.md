@@ -145,9 +145,10 @@ with a modifier held, while typing, and while a dialog is open.
 ## Block transparency
 
 The block editor offers Opaque, Cutout, and Blended alpha modes, plus Outside
-or Outside and inside face visibility. Cull faces removes covered boundaries
-between voxels using the same block; disabling it keeps their directional
-appearances.
+or Outside and inside face visibility. Cull faces removes the faces a
+neighbouring block covers: boundaries between voxels using the same block, and
+faces against an opaque neighbour. It is off by default for Cutout and Blended
+blocks, which keeps the inside of a block complete when seen through its holes.
 
 Texture edits rescan affected block tiles and switch opaque/blend modes to
 match their alpha. An explicitly selected Cutout mode is preserved. This

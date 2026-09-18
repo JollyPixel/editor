@@ -278,7 +278,7 @@ export class GreedyMesher implements Mesher {
           wy + offset[1],
           wz + offset[2],
           FACE_OPPOSITE[cull],
-          variant.blockId
+          variant
         );
         if (hidden) {
           stats.culledFaces++;
@@ -287,7 +287,7 @@ export class GreedyMesher implements Mesher {
       }
 
       for (const piece of this.#neighbourhood.boundaryFaces(
-        face, [wx, wy, wz], variant.blockId
+        face, [wx, wy, wz], variant
       )) {
         this.#bufferFor(piece.slot).addFace(piece, wx, wy, wz);
         stats.faces++;
@@ -414,7 +414,7 @@ export class GreedyMesher implements Mesher {
               this.#originY + ly + offset[1],
               this.#originZ + lz + offset[2],
               opposite,
-              this.#localVariants[cell - 1].blockId
+              this.#localVariants[cell - 1]
             )
           ) {
             stats.culledFaces++;

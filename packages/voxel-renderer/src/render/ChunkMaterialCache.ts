@@ -11,6 +11,9 @@ import type { MaterialCustomizerFn } from "../VoxelEngine.types.ts";
 import { BlockSurface } from "../blocks/BlockSurface.ts";
 import { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
 
+// CONSTANTS
+const kCoveredFaceOffset = -1;
+
 export type ChunkMaterial =
   | THREE.MeshLambertMaterial
   | THREE.MeshStandardMaterial;
@@ -132,7 +135,10 @@ export class ChunkMaterialCache {
       opacity,
       transparent,
       depthWrite: !transparent,
-      forceSinglePass: true
+      forceSinglePass: true,
+      polygonOffset: !surface.occludes,
+      polygonOffsetFactor: surface.occludes ? 0 : kCoveredFaceOffset,
+      polygonOffsetUnits: surface.occludes ? 0 : kCoveredFaceOffset
     };
 
     const material = this.#type === "standard" ?

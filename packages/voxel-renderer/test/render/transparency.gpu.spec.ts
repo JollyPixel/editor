@@ -58,6 +58,22 @@ function probeCases(
   sample("interior behind mask hole", {
     alpha: 1, mode: "mask", hole: true
   }, [255, 255, 255]);
+  for (const cull of [false, true]) {
+    sample(`covered face against an opaque neighbour cull=${cull}`, {
+      alpha: 1, mode: "mask", hole: true, backing: true, cull
+    }, cull ? [0, 255, 0] : [255, 255, 255]);
+  }
+  const flat = { ambient: Math.PI, directional: 0 };
+  const lit = { ambient: 1.3, directional: 2.25 };
+  sample("flat lighting keeps the authored gray", {
+    alpha: 1, side: "front", gray: 188, lights: flat
+  }, [128, 128, 128]);
+  sample("flat lighting blends the authored gray", {
+    alpha: 0.5, side: "front", gray: 188, lights: flat
+  }, [64, 64, 64]);
+  sample("lit gray follows the Lambert factor", {
+    alpha: 1, side: "front", gray: 188, lights: lit
+  }, reverse ? [53, 53, 53] : [91, 91, 91]);
   sample("opaque foreground rejects glass", {
     alpha: 0.5, count: 2, occluder: true
   }, [0, 255, 0]);

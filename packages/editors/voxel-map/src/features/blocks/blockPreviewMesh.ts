@@ -12,13 +12,12 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { SceneLighting } from "../../scene/SceneLighting.ts";
 import type { TileOpacityProbe } from "./tileOpacity.ts";
 
 // CONSTANTS
 const kCameraFov = 45;
 const kCameraZ = 2.2;
-const kAmbientIntensity = 1.5;
-const kDirIntensity = 1.2;
 const kFitFactor = 0.78;
 const kFallbackColor = 0xaaaaaa;
 const kCheckerCells = 4;
@@ -50,10 +49,7 @@ export interface BlockPreviewStage {
 
 export function createBlockPreviewStage(): BlockPreviewStage {
   const scene = new THREE.Scene();
-  scene.add(new THREE.AmbientLight(0xffffff, kAmbientIntensity));
-  const dir = new THREE.DirectionalLight(0xffffff, kDirIntensity);
-  dir.position.set(3, 5, 3);
-  scene.add(dir);
+  scene.add(...new SceneLighting().lights);
 
   const camera = new THREE.PerspectiveCamera(kCameraFov, 1, 0.1, 20);
   camera.position.set(0, 0, kCameraZ);

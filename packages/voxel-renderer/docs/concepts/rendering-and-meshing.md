@@ -37,14 +37,20 @@ See [BlockSurface](../api/blocks/BlockSurface.md) for defaults and
 [VoxelTransparencyRenderer](../api/core/VoxelTransparencyRenderer.md) for scene
 integration and the limits of weighted color compositing.
 
-## Face culling between identical blocks
+## Culling covered faces
 
-A face is dropped when a neighbour covers it. Masked and blended blocks do
-not hide faces of different blocks, but `cullSelfFaces: true` removes covered
-interfaces between voxels of the same block. Retained double-sided interfaces
-are split into opposing front-sided shared pieces and double-sided exposed
-pieces. This preserves each direction's texture without blending two copies
-of the same boundary from one direction. Gaps between slabs stay visible.
+A face is dropped when an opaque neighbour covers it. Masked and blended
+blocks do not hide faces of different blocks. They keep their own covered
+faces by default; `cullCoveredFaces: true` removes the interfaces between
+voxels of the same block and the faces an opaque neighbour covers. Retained
+double-sided interfaces are split into opposing front-sided shared pieces and
+double-sided exposed pieces. This preserves each direction's texture without
+blending two copies of the same boundary from one direction. Gaps between
+slabs stay visible.
+
+A retained face covered by an opaque neighbour is coplanar with that
+neighbour's face. Mask and blend materials carry a polygon offset of `-1` so
+the retained face wins the depth test.
 
 ## Rebuild scheduling
 

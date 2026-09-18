@@ -19,6 +19,7 @@ import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { GridRenderer } from "../../scene/GridRenderer.ts";
+import type { SceneLighting } from "../../scene/SceneLighting.ts";
 import type { LocalBrush } from "../painting/index.ts";
 import { parseVoxelWorld } from "./parseVoxelWorld.ts";
 import type { EventInput } from "../../shared/domEvents.ts";
@@ -49,6 +50,9 @@ export class MapConfigPanel extends LitElement {
   declare gridRenderer: GridRenderer | undefined;
 
   @property({ attribute: false })
+  declare lighting: SceneLighting | undefined;
+
+  @property({ attribute: false })
   declare localBrush: LocalBrush | undefined;
 
   @property({ attribute: false })
@@ -56,6 +60,9 @@ export class MapConfigPanel extends LitElement {
 
   @state()
   private declare _gridVisible: boolean;
+
+  @state()
+  private declare _flatLighting: boolean;
 
   @state()
   private declare _skyRadius: number;
@@ -66,7 +73,9 @@ export class MapConfigPanel extends LitElement {
   constructor() {
     super();
     this.engine = undefined;
+    this.lighting = undefined;
     this._gridVisible = true;
+    this._flatLighting = false;
     this._skyRadius = 0;
     this.localBrush = undefined;
   }
@@ -79,6 +88,12 @@ export class MapConfigPanel extends LitElement {
       this.gridRenderer
     ) {
       this._gridVisible = this.gridRenderer.visible;
+    }
+    if (
+      changedProperties.has("lighting") &&
+      this.lighting
+    ) {
+      this._flatLighting = this.lighting.mode === "flat";
     }
     if (
       changedProperties.has("localBrush") &&
@@ -95,6 +110,13 @@ export class MapConfigPanel extends LitElement {
         label="Grid visibility"
         .value=${this._gridVisible}
         @jolly-change=${this.#onGridVisibleChange}
+      ></jolly-checkbox>
+
+      <jolly-checkbox
+        align="end"
+        label="Flat lighting"
+        .value=${this._flatLighting}
+        @jolly-change=${this.#onFlatLightingChange}
       ></jolly-checkbox>
 
       <jolly-slider
@@ -120,6 +142,15 @@ export class MapConfigPanel extends LitElement {
   ): void {
     this._gridVisible = event.detail.value;
     this.gridRenderer?.setVisible(this._gridVisible);
+  }
+
+  #onFlatLightingChange(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    this._flatLighting = event.detail.value;
+    if (this.lighting) {
+      this.lighting.mode = this._flatLighting ? "flat" : "lit";
+    }
   }
 
   #onSkyRadiusChange(

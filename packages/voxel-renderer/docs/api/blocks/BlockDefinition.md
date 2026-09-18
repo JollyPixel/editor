@@ -14,7 +14,7 @@ interface BlockDefinition extends BlockSurfaceOptions {
   alphaMode?: BlockAlphaMode;
   side?: BlockSide;
   alphaCutoff?: number;
-  cullSelfFaces?: boolean;
+  cullCoveredFaces?: boolean;
   defaultTilesetId?: string;
   properties?: BlockProperties;
 }
@@ -34,11 +34,20 @@ fractional alpha and do not write depth; use
 [`VoxelTransparencyRenderer`](../core/VoxelTransparencyRenderer.md) to
 composite overlapping surfaces without triangle sorting.
 
-`cullSelfFaces` defaults to `true`. Covered faces shared with another voxel
-of the same block are removed, including partially overlapping double-sided
-boundaries. Set it to `false` to retain the internal interface. This also
-applies to opaque blocks, though their depth-tested outer faces normally hide
-those interfaces.
+`cullCoveredFaces` defaults to `true` for opaque blocks and `false` for
+mask and blend blocks. `cullsCoveredFaces(definition)` returns the resolved
+value. When `true`, faces shared with another voxel of the same block are
+removed, including partially overlapping double-sided boundaries, and a face
+covered by an opaque neighbour is hidden. When `false`, the interfaces between
+voxels of the same block are retained, and a double-sided block also keeps the
+faces an opaque neighbour covers, so its interior stays complete when seen
+through its own holes. A front-sided block never shows such a face, so it
+stays hidden. Opaque blocks honor `false` for same-block interfaces, though
+their depth-tested outer faces normally hide them.
+
+Retaining every interface of a solid volume emits six faces per voxel. Set
+`cullCoveredFaces: true` on blocks used for dense volumes, such as a canopy,
+when that geometry is not worth its cost.
 
 Retained, coincident double-sided boundaries use opposing front-sided pieces,
 so each viewing direction sees one appearance of the interface. Exposed pieces
@@ -52,7 +61,7 @@ registry.register({
   name: "Stained glass",
   shapeId: "cube",
   alphaMode: "blend",
-  cullSelfFaces: false
+  cullCoveredFaces: true
 });
 ```
 

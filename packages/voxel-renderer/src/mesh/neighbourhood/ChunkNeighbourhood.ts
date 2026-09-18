@@ -4,7 +4,10 @@ import type { VoxelLayer } from "../../world/VoxelLayer.ts";
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
 import { LayerChunkCache } from "./LayerChunkCache.ts";
 import { FACE_OFFSETS, FACE_OPPOSITE } from "../../utils/math.ts";
-import type { BlockVariantFace } from "../variants/types.ts";
+import type {
+  BlockVariant,
+  BlockVariantFace
+} from "../variants/types.ts";
 import { splitBoundaryFace } from "./splitBoundaryFace.ts";
 import {
   voxelBlockId,
@@ -100,13 +103,13 @@ export class ChunkNeighbourhood {
     ny: number,
     nz: number,
     oppFace: number,
-    blockId: number
+    variant: BlockVariant
   ): boolean {
     if (!this.#selfOpaque) {
       const cache = this.#self;
 
       return cache !== null &&
-        this.#occludes(cache.packedAt(nx, ny, nz), oppFace, blockId);
+        this.#occludes(cache.packedAt(nx, ny, nz), oppFace, variant);
     }
 
     const layers = this.layers;
@@ -119,7 +122,7 @@ export class ChunkNeighbourhood {
 
       const neighbour = cache.packedAt(nx, ny, nz);
       if (neighbour !== VOXEL_ABSENT) {
-        if (this.#occludes(neighbour, oppFace, blockId)) {
+        if (this.#occludes(neighbour, oppFace, variant)) {
           return true;
         }
 
@@ -135,7 +138,7 @@ export class ChunkNeighbourhood {
   #occludes(
     neighbour: PackedVoxel,
     oppFace: number,
-    blockId: number
+    variant: BlockVariant
   ): boolean {
     if (neighbour === VOXEL_ABSENT) {
       return false;
@@ -144,7 +147,11 @@ export class ChunkNeighbourhood {
     const neighbourBlockId = voxelBlockId(neighbour);
     const transform = voxelTransform(neighbour);
 
-    if (neighbourBlockId !== blockId) {
+    if (neighbourBlockId !== variant.blockId) {
+      if (variant.keepsCoveredFaces && variant.surface.side === "double") {
+        return false;
+      }
+
       const occlusionMask = this.#variants.occlusionMaskOf(
         neighbourBlockId,
         transform
@@ -153,7 +160,7 @@ export class ChunkNeighbourhood {
       return (occlusionMask & (1 << oppFace)) !== 0;
     }
 
-    if (this.#variants.keepsSelfFacesOf(neighbourBlockId, transform)) {
+    if (variant.keepsCoveredFaces) {
       return false;
     }
 
@@ -168,7 +175,7 @@ export class ChunkNeighbourhood {
   boundaryFaces(
     face: BlockVariantFace,
     position: readonly number[],
-    blockId: number
+    variant: BlockVariant
   ): readonly BlockVariantFace[] {
     if (face.cull < 0 ||
       this.#variants.geometryKeyAt(face.slot).surface.side === "front") {
@@ -191,17 +198,14 @@ export class ChunkNeighbourhood {
       );
       if (neighbour) {
         for (const boundary of neighbour.faces) {
-          if (boundary.cull !== opposite) {
+          if (boundary.cull !== opposite || (
+            neighbour.surface.occludes && variant.keepsCoveredFaces
+          )) {
             continue;
           }
-          const remove = neighbour.blockId === blockId &&
-            !neighbour.keepsSelfFaces && cache.layer === this.#self?.layer;
-          faces = faces.flatMap((piece) => splitBoundaryFace({
-            face: piece,
-            neighbour: boundary,
-            frontSlot: this.#variants.frontSlotOf(face.slot),
-            remove
-          }));
+          const remove = neighbour.blockId === variant.blockId &&
+            !variant.keepsCoveredFaces && cache.layer === this.#self?.layer;
+          faces = faces.flatMap((piece) => this.#split(piece, boundary, remove));
         }
       }
       if (cache.opaque && cache.layer.compositing === "replace") {
@@ -210,5 +214,22 @@ export class ChunkNeighbourhood {
     }
 
     return faces;
+  }
+
+  #split(
+    face: BlockVariantFace,
+    neighbour: BlockVariantFace,
+    remove: boolean
+  ): BlockVariantFace[] {
+    if (face.full && neighbour.full) {
+      return remove ? [] : [this.#variants.frontFaceOf(face)];
+    }
+
+    return splitBoundaryFace({
+      face,
+      neighbour,
+      frontSlot: this.#variants.frontSlotOf(face.slot),
+      remove
+    });
   }
 }

@@ -26,6 +26,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   GridRenderer,
+  SceneLighting,
   viewFocusPoint,
   ViewFocus
 } from "../scene/index.ts";
@@ -71,6 +72,7 @@ export interface EditorSceneOptions {
 export interface EditorSceneHandles {
   engine: VoxelEngine;
   gridRenderer: GridRenderer;
+  lighting: SceneLighting;
   localBrush: LocalBrush;
   tilesetActions: TilesetActions | null;
 }
@@ -130,6 +132,7 @@ export class EditorScene extends Systems.Scene {
 
   engine: VoxelEngine;
   gridRenderer: GridRenderer;
+  lighting: SceneLighting;
   localBrush: LocalBrush;
 
   get ready(): Promise<EditorSceneHandles> {
@@ -169,14 +172,11 @@ export class EditorScene extends Systems.Scene {
     const scene = this.world.sceneManager.getSource();
 
     scene.background = new THREE.Color("#262627");
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    dirLight.position.set(10, 20, 10);
-    scene.add(
-      new THREE.AmbientLight("#ffffff", 0.6),
-      dirLight
-    );
-
     const world = this.world;
+    this.lighting = new SceneLighting(
+      world.renderer.getSource()
+    );
+    scene.add(...this.lighting.lights);
     this.#subscriptions.push(
       installTransparency(world.renderer)
     );
@@ -374,6 +374,7 @@ export class EditorScene extends Systems.Scene {
     this.#handles.resolve({
       engine,
       gridRenderer: this.gridRenderer,
+      lighting: this.lighting,
       localBrush: this.localBrush,
       tilesetActions: this.#tilesetActions
     });

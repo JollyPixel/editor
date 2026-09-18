@@ -171,86 +171,97 @@ describe("BlockVariantCache — occlusionMaskOf", () => {
   });
 });
 
-describe("BlockVariantCache — keepsSelfFacesOf", () => {
-  it("is false while a transparent block culls its own faces", () => {
+describe("BlockVariantCache — keepsCoveredFaces", () => {
+  it("is true by default for a transparent block", () => {
     const { cache, blockRegistry } = makeCache();
 
     blockRegistry.register(
-      makeBlockDef(kLeavesId, "cube", { name: "Leaves", alphaMode: "blend" })
+      makeBlockDef(kLeavesId, "cube", { name: "Leaves", alphaMode: "mask" })
     );
     cache.refresh();
 
-    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), false);
+    assert.equal(cache.get(kLeavesId, 0)?.keepsCoveredFaces, true);
   });
 
-  it("is true once a transparent block opts out", () => {
+  it("is false once a transparent block culls its covered faces", () => {
     const { cache, blockRegistry } = makeCache();
 
     blockRegistry.register(
       makeBlockDef(kLeavesId, "cube", {
         name: "Glass",
         alphaMode: "blend",
-        cullSelfFaces: false
+        cullCoveredFaces: true
       })
     );
     cache.refresh();
 
-    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
+    assert.equal(cache.get(kLeavesId, 0)?.keepsCoveredFaces, false);
+  });
+
+  it("is false by default for an opaque block", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", { name: "Stone" })
+    );
+    cache.refresh();
+
+    assert.equal(cache.get(kLeavesId, 0)?.keepsCoveredFaces, false);
   });
 
   it("honours an opaque block that opts out", () => {
     const { cache, blockRegistry } = makeCache();
 
     blockRegistry.register(
-      makeBlockDef(kLeavesId, "cube", { name: "Stone", cullSelfFaces: false })
-    );
-    cache.refresh();
-
-    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
-  });
-
-  it("leaves the occlusion masks of the same entry readable", () => {
-    const { cache, blockRegistry } = makeCache();
-
-    blockRegistry.register(
       makeBlockDef(kLeavesId, "cube", {
-        name: "Glass",
-        alphaMode: "blend",
-        cullSelfFaces: false
+        name: "Stone",
+        cullCoveredFaces: false
       })
     );
     cache.refresh();
 
-    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
-    assert.equal(cache.occlusionMaskOf(kLeavesId, 0), 0);
-    assert.equal(cache.selfOcclusionMaskOf(kLeavesId, 0), 0b111111);
+    assert.equal(cache.get(kLeavesId, 0)?.keepsCoveredFaces, true);
   });
 
   it("follows a registry change", () => {
     const { cache, blockRegistry } = makeCache();
 
     blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", { name: "Glass", alphaMode: "blend" })
+    );
+    cache.refresh();
+    assert.equal(cache.get(kLeavesId, 0)?.keepsCoveredFaces, true);
+
+    blockRegistry.register(
       makeBlockDef(kLeavesId, "cube", {
         name: "Glass",
         alphaMode: "blend",
-        cullSelfFaces: false
+        cullCoveredFaces: true
       })
     );
     cache.refresh();
-    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), true);
+
+    assert.equal(cache.get(kLeavesId, 0)?.keepsCoveredFaces, false);
+  });
+});
+
+describe("BlockVariantCache — frontFaceOf", () => {
+  it("returns one cached front-sided copy of a double-sided face", () => {
+    const { cache, blockRegistry } = makeCache();
 
     blockRegistry.register(
       makeBlockDef(kLeavesId, "cube", { name: "Glass", alphaMode: "blend" })
     );
     cache.refresh();
 
-    assert.equal(cache.keepsSelfFacesOf(kLeavesId, 0), false);
-  });
+    const [face] = cache.get(kLeavesId, 0)!.faces;
+    const front = cache.frontFaceOf(face);
 
-  it("is false for an unknown block", () => {
-    const { cache } = makeCache();
-
-    assert.equal(cache.keepsSelfFacesOf(999, 0), false);
+    assert.equal(face.full, true);
+    assert.equal(cache.geometryKeyAt(face.slot).surface.side, "double");
+    assert.equal(cache.geometryKeyAt(front.slot).surface.side, "front");
+    assert.equal(front.positions, face.positions);
+    assert.equal(cache.frontFaceOf(face), front);
   });
 });
 

@@ -13,12 +13,12 @@ import { ChunkGeometryKey } from "../../src/mesh/ChunkGeometryKey.ts";
 
 for (const greedy of [false, true]) {
   describe(`transparency boundaries (greedy=${greedy})`, () => {
-    for (const cullSelfFaces of [false, true]) {
+    for (const cullCoveredFaces of [false, true]) {
       for (const transform of [0, 1, 4, 5]) {
-        it(`keeps separated slabs (cull=${cullSelfFaces}, transform=${transform})`, () => {
+        it(`keeps separated slabs (cull=${cullCoveredFaces}, transform=${transform})`, () => {
           const fixture = makeMeshFixture({ greedy });
           fixture.blockRegistry.register(makeBlockDef(4, "slabBottom", {
-            alphaMode: "blend", cullSelfFaces
+            alphaMode: "blend", cullCoveredFaces
           }));
           for (const height of [0, 1]) {
             fixture.layer.setVoxelAt({ x: 0, y: height, z: 0 }, { blockId: 4, transform });
@@ -31,7 +31,7 @@ for (const greedy of [false, true]) {
     it("keeps opposing front sides only on a retained shared boundary", () => {
       const fixture = makeMeshFixture({ greedy });
       fixture.blockRegistry.register(makeBlockDef(4, "cube", {
-        alphaMode: "blend", cullSelfFaces: false
+        alphaMode: "blend", cullCoveredFaces: false
       }));
       for (const column of [0, 1]) {
         fixture.layer.setVoxelAt({ x: column, y: 0, z: 0 }, { blockId: 4, transform: 0 });

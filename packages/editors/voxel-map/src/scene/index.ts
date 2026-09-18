@@ -1,4 +1,9 @@
 export { GridRenderer } from "./GridRenderer.ts";
+export { SceneLighting } from "./SceneLighting.ts";
+export type {
+  LightingMode,
+  SceneLightingOutput
+} from "./SceneLighting.ts";
 export {
   castViewRay,
   viewFocusPoint,
