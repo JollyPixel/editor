@@ -1,5 +1,31 @@
 # @jolly-pixel/three
 
+## 3.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync`, add `PresenceChannel`, and slim `ConflictTracker` to `admit`/`admitEach`; presence set before `join()` now travels with the join.
+  Asset rooms stamp the sender's `clientId` server-side, and three's peer syncs drop `resyncIntervalMs` and their message type parameters.
+
+### Minor Changes
+
+- [#634](https://github.com/JollyPixel/editor/pull/634) [`c2d5b26`](https://github.com/JollyPixel/editor/commit/c2d5b264696b45707615292a12451f4a1408a846) Thanks [@fraxken](https://github.com/fraxken)! - Add a live `section.show` grid option for hiding section lines.
+  Keep fine grid lines visible when hidden sections would otherwise suppress them.
+
+### Patch Changes
+
+- [#699](https://github.com/JollyPixel/editor/pull/699) [`9f5cb54`](https://github.com/JollyPixel/editor/commit/9f5cb5412ba47200793de247e3de53e21e8b7ec4) Thanks [@fraxken](https://github.com/fraxken)! - Update three.js to 0.186.0.
+  `disposeObject3D` now ignores the base `Object3D.dispose` added in 0.186, so a plain mesh's geometry and material are freed again.
+  `snapValue` normalizes a negative zero result to positive zero.
+- Updated dependencies [[`d61e341`](https://github.com/JollyPixel/editor/commit/d61e341ffbe1f555237cf0b586d628bf5c94c82f), [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9), [`ae6293b`](https://github.com/JollyPixel/editor/commit/ae6293bf83ef24d0e91569994594a87221577ea2), [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788)]:
+  - @jolly-pixel/network@3.0.0
+
 ## 2.0.0
 
 ### Major Changes

@@ -1,5 +1,23 @@
 # @jolly-pixel/engine
 
+## 5.1.0
+
+### Minor Changes
+
+- [#669](https://github.com/JollyPixel/editor/pull/669) [`b91d177`](https://github.com/JollyPixel/editor/commit/b91d1777197a160daafd69ed4857ff9ea3c999c4) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `OrbitFlyCamera`, a WASD + mouse-look camera with an optional `"lock"` (fixed-pivot orbit) or `"elastic"` (trailing pivot) focus mode, consolidated from voxel-map and voxel-model's near-identical copies.
+
+- [#682](https://github.com/JollyPixel/editor/pull/682) [`bd77308`](https://github.com/JollyPixel/editor/commit/bd773087b83d357491bd56e0e3d60808f2ee5434) Thanks [@fraxken](https://github.com/fraxken)! - Add `showPivotMarker` and `fov` options to `OrbitFlyCamera`.
+
+### Patch Changes
+
+- [#699](https://github.com/JollyPixel/editor/pull/699) [`9f5cb54`](https://github.com/JollyPixel/editor/commit/9f5cb5412ba47200793de247e3de53e21e8b7ec4) Thanks [@fraxken](https://github.com/fraxken)! - Update three.js to 0.186.0.
+  `disposeObject3D` now ignores the base `Object3D.dispose` added in 0.186, so a plain mesh's geometry and material are freed again.
+  `snapValue` normalizes a negative zero result to positive zero.
+- Updated dependencies [[`0f3d193`](https://github.com/JollyPixel/editor/commit/0f3d1934381596fb60430044f898d60679713945), [`b18fbfa`](https://github.com/JollyPixel/editor/commit/b18fbfa2df86f72d4e035408867fdb1015fcdc30), [`b443728`](https://github.com/JollyPixel/editor/commit/b443728ce75d4f1447d8234247d0578d58407e7d), [`be5e8bf`](https://github.com/JollyPixel/editor/commit/be5e8bfa64d4a0b17dfac90ab37ec6e9208330d1), [`ba79012`](https://github.com/JollyPixel/editor/commit/ba79012690fb47e9c035a028e9b876fb3f92769a), [`81f9fcc`](https://github.com/JollyPixel/editor/commit/81f9fcc003a62bb102e5f0cfb4cf439165778ccf)]:
+  - @jolly-pixel/controls@2.1.0
+  - @jolly-pixel/asset@2.0.0
+  - @jolly-pixel/loop@1.0.0
+
 ## 5.0.0
 
 ### Major Changes

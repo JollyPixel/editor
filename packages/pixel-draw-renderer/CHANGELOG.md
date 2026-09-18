@@ -1,5 +1,43 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 5.0.0
+
+### Major Changes
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+- [#661](https://github.com/JollyPixel/editor/pull/661) [`c0195cb`](https://github.com/JollyPixel/editor/commit/c0195cb7a44ae85c1131e406d1a97a79c1247a4f) Thanks [@fraxken](https://github.com/fraxken)! - Move pixel-art persistence and collaboration into `@jolly-pixel/asset.pixel-art`.
+  Remove the renderer's `/asset` and `/network` exports.
+
+### Minor Changes
+
+- [#670](https://github.com/JollyPixel/editor/pull/670) [`4d1b598`](https://github.com/JollyPixel/editor/commit/4d1b5985751cf7ac88539a6ee91a58f3affc218c) Thanks [@fraxken](https://github.com/fraxken)! - Add `FillTool.uvClip` to keep a fill inside the seed's UV slots, or outside every slot; a clipped global fill syncs as a `stroke`.
+  Add `PixelArtCanvas.clearTexture({ includeUV })`, which keeps UV slot pixels by default, and optional masks on `Fill.floodFill()`/`Fill.matchAll()`.
+
+- [#689](https://github.com/JollyPixel/editor/pull/689) [`81f9fcc`](https://github.com/JollyPixel/editor/commit/81f9fcc003a62bb102e5f0cfb4cf439165778ccf) Thanks [@fraxken](https://github.com/fraxken)! - The engine declares a world's tilesets in `engine.tilesets` (`TilesetList`), saved with `defaultTileSize`; `TileRef.size`, tile rescale/rect helpers are added and `load()` warns instead of throwing for an unloaded tileset.
+  `VoxelEngine` and `VoxelWorld` are now emitters: one `"command"` event (`VoxelCommand` + `origin`) and `engine.apply()` replace `onLayerUpdated`/`onBlockUpdated`/`onTilesetUpdated`, `applyRemoteCommand()` and `applyTilesetEvent()`; `applyVoxelCommand()` applies commands headlessly.
+  Add the browser `CatalogClient` (`@jolly-pixel/asset-server/catalog/client`), `catalog:create` `onConflict: "suffix"` and seed entries with a fixed `AssetId`; add the `AssetSource` value object and `createPixelArtDocument()`; `AssetRoom` replaces `assetRoomName()`/`parseAssetRoomName()`.
+
+- [#701](https://github.com/JollyPixel/editor/pull/701) [`40a459c`](https://github.com/JollyPixel/editor/commit/40a459c9a536c6d5304c4549eb5f390e3644bf7a) Thanks [@fraxken](https://github.com/fraxken)! - Export `encodePixelBytes` and `decodePixelBytes`, the base64 codec used for a
+  document's `pixels` field, so consumers reading or writing that field no longer
+  need their own base64 dependency.
+
+- [#672](https://github.com/JollyPixel/editor/pull/672) [`a6c9c55`](https://github.com/JollyPixel/editor/commit/a6c9c5571dae0bf02bdd56c57ef1cd4f6acf7eee) Thanks [@fraxken](https://github.com/fraxken)! - `UVMap.showAll` no longer forces region labels; `showRegionLabels` alone controls them.
+
+### Patch Changes
+
+- [#659](https://github.com/JollyPixel/editor/pull/659) [`853c83b`](https://github.com/JollyPixel/editor/commit/853c83b9070a249087dab57247bc8dad0605b781) Thanks [@fraxken](https://github.com/fraxken)! - Remove the unused `sync`, `catalog`, `rooms`, `static` and `workspace` subpath exports; import from the package root instead.
+  Add a `kinds` entry exposing the asset kind handler contract, used by the renderer asset handlers.
+
+- [#682](https://github.com/JollyPixel/editor/pull/682) [`04d3b3b`](https://github.com/JollyPixel/editor/commit/04d3b3b55b00bfa37599d6d40f568ada7055eea2) Thanks [@fraxken](https://github.com/fraxken)! - `centerTexture()` anchors a texture larger than the viewport to its top-left corner, one axis at a time, instead of centering it.
+  Resizing keeps that anchor on overflowing axes instead of shifting the camera by half the size change.
+- Updated dependencies [[`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69)]:
+  - @jolly-pixel/color@1.1.0
+
 ## 4.0.0
 
 ### Major Changes

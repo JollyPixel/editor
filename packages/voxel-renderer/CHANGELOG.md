@@ -1,5 +1,66 @@
 # @jolly-pixel/voxel.renderer
 
+## 5.0.0
+
+### Major Changes
+
+- [#689](https://github.com/JollyPixel/editor/pull/689) [`81f9fcc`](https://github.com/JollyPixel/editor/commit/81f9fcc003a62bb102e5f0cfb4cf439165778ccf) Thanks [@fraxken](https://github.com/fraxken)! - The engine declares a world's tilesets in `engine.tilesets` (`TilesetList`), saved with `defaultTileSize`; `TileRef.size`, tile rescale/rect helpers are added and `load()` warns instead of throwing for an unloaded tileset.
+  `VoxelEngine` and `VoxelWorld` are now emitters: one `"command"` event (`VoxelCommand` + `origin`) and `engine.apply()` replace `onLayerUpdated`/`onBlockUpdated`/`onTilesetUpdated`, `applyRemoteCommand()` and `applyTilesetEvent()`; `applyVoxelCommand()` applies commands headlessly.
+  Add the browser `CatalogClient` (`@jolly-pixel/asset-server/catalog/client`), `catalog:create` `onConflict: "suffix"` and seed entries with a fixed `AssetId`; add the `AssetSource` value object and `createPixelArtDocument()`; `AssetRoom` replaces `assetRoomName()`/`parseAssetRoomName()`.
+
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
+  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
+  untrusted `profile` (renamed from `identity`).
+  Rooms now report a joining client's resolved rights, and a role absent from a
+  configured rights table is denied instead of granted.
+
+- [#693](https://github.com/JollyPixel/editor/pull/693) [`6895753`](https://github.com/JollyPixel/editor/commit/6895753c6e09c43758357ee5997b981ce5c401ac) Thanks [@fraxken](https://github.com/fraxken)! - Rename `VoxelDebugger` to `VoxelInspector` (`engine.inspector`, `inspector` option); mesh counters move to `inspector.mesh.stats`.
+  Add block statistics: `inspector.blocks` (per layer, per block, unused, orphans, tileset usage) and `countBlocks()`/`countBlock()`/`voxelCount` on `VoxelWorld` and `VoxelLayer`.
+  Add `TreeNode.detail` to `jolly-tree` for a muted trailing row text.
+
+- [#657](https://github.com/JollyPixel/editor/pull/657) [`725fbf7`](https://github.com/JollyPixel/editor/commit/725fbf7c0f8f803eb667ff1b7cef17275a0a52fe) Thanks [@fraxken](https://github.com/fraxken)! - Replace voxel-layer offsets with world-space positions and serialize voxel keys in layer-local space.
+  Add coordinate conversion, bounds, center, and origin-rebasing APIs.
+
+- [#661](https://github.com/JollyPixel/editor/pull/661) [`6bd582e`](https://github.com/JollyPixel/editor/commit/6bd582e59fff4dc04c8f987fbbf9da51376be6a2) Thanks [@fraxken](https://github.com/fraxken)! - Move voxel-map persistence and collaboration into `@jolly-pixel/asset.voxel-map`,
+  and remove the renderer's `/asset` and `/network` exports. `VoxelRenderer` and
+  `TiledMapAssetLoader` move to the new `plugins/engine/index.ts` and
+  `plugins/tiled/asset.ts` entry points, whose `@jolly-pixel/engine` and
+  `@jolly-pixel/asset` requirements are declared as optional peers.
+
+- [#692](https://github.com/JollyPixel/editor/pull/692) [`8431307`](https://github.com/JollyPixel/editor/commit/8431307c65ec6f3cb54e9abd201f43f9a0b16e25) Thanks [@fraxken](https://github.com/fraxken)! - Remove atlas padding (`tilesetPadding`, `AtlasLayout`, `TilesetAtlas.sourceTexture`); `TilesetManager.registerTexture(tilesetId, texture)` needs a declared tileset and `get()` replaces `has()`.
+  Add the `BlockTextures` value object, replacing `tileRefForSlot`, `blockTileRefs`, `blockTilesetIds`, `mapBlockTileRefs` and `assignMissingTileset`.
+  Drop `powerOfTwoTileSizes`, `rescaleBlockTiles`, `rescaleLeavesBlocksOffGrid` and `TilesetList.preferredTileSize`; rename `ShapeTextureBounds` to `TileBounds`.
+
+### Minor Changes
+
+- [#643](https://github.com/JollyPixel/editor/pull/643) [`c22f8a9`](https://github.com/JollyPixel/editor/commit/c22f8a9407ac534117ce8f74e61d454d721c0044) Thanks [@fraxken](https://github.com/fraxken)! - Make the block table's order editable and durable. `BlockRegistry.moveTo()`
+  relocates a definition, `VoxelEngine.moveBlock()` emits it as a new
+  `block-moved` hook and network command, and the document's `blocks` array
+  round trips that order.
+
+- [#641](https://github.com/JollyPixel/editor/pull/641) [`4029a4d`](https://github.com/JollyPixel/editor/commit/4029a4d9da915a4b191a00cad2a92e0d2fe8f544) Thanks [@fraxken](https://github.com/fraxken)! - Blend the cutout draw group of `transparent` blocks instead of only alpha-testing
+  it, so a texel of partial alpha fades rather than coming out solid; the group
+  still writes depth. Add `BlockDefinition.cullSelfFaces`, which keeps the boundary
+  two voxels of the same transparent block share, emitted once from its positive
+  side so the coplanar pair no longer z-fights.
+
+- [#638](https://github.com/JollyPixel/editor/pull/638) [`5596bfb`](https://github.com/JollyPixel/editor/commit/5596bfb3d6151ff7b320f2bde32befc2f497d857) Thanks [@fraxken](https://github.com/fraxken)! - Add `properties` to `BlockDefinition`, a scalar map carried for game code and
+  scrubbed of non-scalar values when resolved. Read a copy with
+  `BlockRegistry.propertiesOf()` or, by world position, with the new
+  `VoxelEngine.blockAt()` and `VoxelEngine.blockPropertiesAt()`.
+
+### Patch Changes
+
+- [#659](https://github.com/JollyPixel/editor/pull/659) [`853c83b`](https://github.com/JollyPixel/editor/commit/853c83b9070a249087dab57247bc8dad0605b781) Thanks [@fraxken](https://github.com/fraxken)! - Remove the unused `sync`, `catalog`, `rooms`, `static` and `workspace` subpath exports; import from the package root instead.
+  Add a `kinds` entry exposing the asset kind handler contract, used by the renderer asset handlers.
+
+- [#699](https://github.com/JollyPixel/editor/pull/699) [`9f5cb54`](https://github.com/JollyPixel/editor/commit/9f5cb5412ba47200793de247e3de53e21e8b7ec4) Thanks [@fraxken](https://github.com/fraxken)! - Update three.js to 0.186.0.
+  `disposeObject3D` now ignores the base `Object3D.dispose` added in 0.186, so a plain mesh's geometry and material are freed again.
+  `snapValue` normalizes a negative zero result to positive zero.
+- Updated dependencies [[`b91d177`](https://github.com/JollyPixel/editor/commit/b91d1777197a160daafd69ed4857ff9ea3c999c4), [`81f9fcc`](https://github.com/JollyPixel/editor/commit/81f9fcc003a62bb102e5f0cfb4cf439165778ccf), [`bd77308`](https://github.com/JollyPixel/editor/commit/bd773087b83d357491bd56e0e3d60808f2ee5434), [`9f5cb54`](https://github.com/JollyPixel/editor/commit/9f5cb5412ba47200793de247e3de53e21e8b7ec4)]:
+  - @jolly-pixel/engine@5.1.0
+  - @jolly-pixel/asset@2.0.0
+
 ## 4.0.0
 
 ### Major Changes
