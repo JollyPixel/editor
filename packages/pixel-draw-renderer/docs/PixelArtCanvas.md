@@ -260,7 +260,7 @@ Reads or changes the element containing the visible canvas and overlays. Reparen
 
 ### `onResize()`
 
-Resizes the canvas and overlays to the current parent bounds. It does nothing when either parent dimension is zero. Call it when the containing layout changes. On each axis, the camera moves by half the size change when the texture fits and stays put when it overflows, so a texture framed by `centerTexture()` stays framed.
+Resizes the canvas and overlays to the current parent bounds. It does nothing when either parent dimension is zero. Call it when the containing layout changes. On each axis, the camera moves by half the size change when the texture fits before and after, and stays put when it overflows both times. An axis where the texture starts or stops fitting is framed again as `centerTexture()` would, and so is the first sizing of a canvas created hidden. Resizing the texture itself follows the same rules.
 
 ### `destroy()`
 

@@ -1,12 +1,47 @@
 // Import Third-party Dependencies
-import type { Page } from "@playwright/test";
+import type {
+  Locator,
+  Page
+} from "@playwright/test";
+import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import { openPane } from "./support/panels.ts";
+import {
+  openPane,
+  type PaneName
+} from "./support/panels.ts";
+import { texturePanel } from "./support/texture.ts";
+
+function textureView(
+  panel: Locator
+) {
+  return panel.evaluate((element: PixelDrawPanel) => {
+    const { camera, viewport, textureSize } = element.canvasManager!;
+
+    return {
+      camera,
+      canvasHeight: viewport.canvasHeight,
+      textureHeight: textureSize.y * viewport.zoom.value
+    };
+  });
+}
+
+async function showPaneCanvas(
+  page: Page,
+  pane: PaneName,
+  previousHeight: number
+) {
+  const panel = texturePanel(page);
+  await openPane(page, pane);
+  await expect.poll(async() => (await textureView(panel)).canvasHeight)
+    .not.toBe(previousHeight);
+
+  return textureView(panel);
+}
 
 async function textureHost(
   page: Page
@@ -55,6 +90,32 @@ test("the texture editor follows the shown tab while Blocks and Paint share a gr
     pane: "paint",
     uvAccess: "view"
   });
+});
+
+test("the texture keeps its frame after a round trip through Paint", async({ page }) => {
+  test.slow();
+  const panel = texturePanel(page);
+  await openPane(page, "Blocks");
+  await expect(panel).toHaveAttribute("data-ready", "");
+  const blocks = await textureView(panel);
+  const paint = await showPaneCanvas(page, "Paint", blocks.canvasHeight);
+
+  const gap = paint.canvasHeight - blocks.canvasHeight;
+  const paintHeight = Math.round(paint.textureHeight + 16 + (gap / 2));
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({
+    width: viewport.width,
+    height: viewport.height + (paintHeight - paint.canvasHeight)
+  });
+  await expect.poll(async() => (await textureView(panel)).canvasHeight)
+    .toBe(paintHeight);
+
+  const before = await showPaneCanvas(page, "Blocks", paintHeight);
+  expect(before.canvasHeight).toBeLessThan(paint.textureHeight + 16);
+  await showPaneCanvas(page, "Paint", before.canvasHeight);
+  await openPane(page, "Blocks");
+
+  await expect.poll(() => textureView(panel)).toEqual(before);
 });
 
 test("the texture editor stays in Paint once it has its own dock", async({ page }) => {

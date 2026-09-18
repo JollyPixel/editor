@@ -5,12 +5,12 @@ import type {
 
 export interface ViewportTextureOptions {
   size: Vec2;
-  onResize?: () => void;
+  onResize?: (previous: Readonly<Vec2>) => void;
 }
 
 export class ViewportTexture {
   #size: Vec2;
-  #onResize?: () => void;
+  #onResize?: (previous: Readonly<Vec2>) => void;
 
   constructor(
     options: ViewportTextureOptions
@@ -26,8 +26,16 @@ export class ViewportTexture {
   resize(
     size: Vec2
   ): void {
+    const previous = this.#size;
+    if (
+      previous.x === size.x &&
+      previous.y === size.y
+    ) {
+      return;
+    }
+
     this.#size = structuredClone(size);
-    this.#onResize?.();
+    this.#onResize?.(previous);
   }
 
   pixelSize(

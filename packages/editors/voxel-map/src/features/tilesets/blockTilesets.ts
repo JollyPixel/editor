@@ -49,6 +49,21 @@ export function blockTilesetStatus(
   return { kind: "assigned", tilesetId: tilesetIds[0] };
 }
 
+export function blockFocusTilesetId(
+  block: ResolvedBlockDefinition,
+  knownTilesetIds: ReadonlySet<string>
+): string | null {
+  const status = blockTilesetStatus(block, knownTilesetIds);
+  switch (status.kind) {
+    case "assigned":
+      return status.tilesetId;
+    case "mixed":
+      return status.tilesetIds[0];
+    default:
+      return null;
+  }
+}
+
 export function countBlocksPerTileset(
   blocks: Iterable<ResolvedBlockDefinition>
 ): Map<string, number> {
