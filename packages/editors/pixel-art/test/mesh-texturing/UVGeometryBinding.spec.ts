@@ -227,6 +227,35 @@ describe("UVGeometryBinding", () => {
       assert.deepStrictEqual(uvOf(geometry, 0), [0, 0.5]);
     });
 
+    test("reprojects every face of an unfolded region moved as a whole", () => {
+      const region = uv.create({
+        id: "net",
+        width: 16,
+        height: 16,
+        state: "unfolded"
+      });
+      const binding = new UVGeometryBinding({
+        geometry,
+        region,
+        textureSize: kTextureSize,
+        faceRanges: boxFaceRanges()
+      });
+      binding.follow(uv);
+
+      uv.move("net", { ...uv.get("net")!.bounds, x: 0, y: 0 });
+
+      const expected = makeGeometry();
+      new UVGeometryBinding({
+        geometry: expected,
+        region: uv.get("net")!,
+        textureSize: kTextureSize,
+        faceRanges: boxFaceRanges()
+      });
+      for (let index = 0; index < 24; index++) {
+        assert.deepStrictEqual(uvOf(geometry, index), uvOf(expected, index));
+      }
+    });
+
     test("tracks region-state-changed", () => {
       const binding = bindCreated();
 
@@ -253,6 +282,14 @@ describe("UVGeometryBinding", () => {
 
       assert.deepStrictEqual(uvOf(geometry, 0), [0.75, 1]);
       assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 0.75]);
+    });
+
+    test("preview projects a drag that did not come from the followed map", () => {
+      const binding = bindCreated();
+
+      binding.preview(null, { x: 32, y: 0, width: 16, height: 16 });
+
+      assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
     });
 
     test("ignores events for other regions", () => {

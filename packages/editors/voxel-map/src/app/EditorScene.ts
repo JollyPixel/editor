@@ -23,6 +23,8 @@ import {
 import type * as network from "@jolly-pixel/network";
 import * as THREE from "three";
 import type { PeerIdentity } from "@jolly-pixel/ui";
+import { PeerRoster } from "@jolly-pixel/ui/network";
+import { PeerFrustums } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import {
@@ -45,8 +47,6 @@ import {
 } from "../features/layers/index.ts";
 import { BlockSelectionPresence } from "../features/blocks/collaboration/BlockSelectionPresence.ts";
 import { LayerSelectionPresence } from "../features/layers/collaboration/LayerSelectionPresence.ts";
-import { PeerRoster } from "../collaboration/PeerRoster.ts";
-import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
 import type { EditorState } from "./state/index.ts";
 import { installTransparency } from "../scene/installTransparency.ts";
 import {
@@ -313,7 +313,10 @@ export class EditorScene extends Systems.Scene {
       this.#peerRoster = new PeerRoster({
         room: this.#voxelRoom,
         identity: this.#identity,
-        presence: this.editorState.presence
+        publish: (peers) => {
+          this.editorState.presence.peers = peers;
+        },
+        log: this.editorState.log
       });
       this.#blockSelections = new BlockSelectionPresence({
         room: this.#voxelRoom,

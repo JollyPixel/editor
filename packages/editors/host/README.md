@@ -94,6 +94,13 @@ await mountStandalone(MyEditor, {
 
 - [`EditorRuntime`](./docs/api/EditorRuntime.md): runtime boot with the
   editor keyboard policy.
+- [`PeerFrustums`](./docs/api/PeerFrustums.md): peer camera frustums as an
+  actor component.
+
+### State
+
+- [`EditorStore`](./docs/api/EditorStore.md): typed emitter whose `watch`
+  returns its own unsubscribe.
 
 The reference also covers [package errors](./docs/api/errors.md).
 

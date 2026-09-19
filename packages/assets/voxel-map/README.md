@@ -2,10 +2,6 @@
   asset.voxel-map
 </h1>
 
-<p align="center">
-  Persistence, Tiled catalog loading, and real-time collaboration for voxel maps
-</p>
-
 ## 💃 Getting Started
 
 This workspace-private package is never published. Add it as a dependency of

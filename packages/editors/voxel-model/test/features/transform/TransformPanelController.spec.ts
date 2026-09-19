@@ -1,20 +1,28 @@
 // Import Node.js Dependencies
-import { describe, test, type TestContext } from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { ReactiveController, ReactiveControllerHost } from "lit";
+import type {
+  ReactiveController,
+  ReactiveControllerHost
+} from "lit";
+import type { OrbitFlyCamera } from "@jolly-pixel/engine";
+import type { ModelCommand } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import {
   TransformPanelController,
   type TransformMode
 } from "#src/features/transform/TransformPanelController.ts";
-import type GroupManager from "#src/features/groups/GroupManager.ts";
-import type { ModelSceneComponent } from "#src/app/ModelSceneComponent.ts";
-import type { PeerMark } from "#src/collaboration/peerMarks.ts";
-import { editorState } from "#src/app/state/index.ts";
+import { ModelDocument } from "#src/model/index.ts";
+import { TransformGizmo } from "#src/scene/TransformGizmo.ts";
+import {
+  TransformLiveSync,
+  TransformLock
+} from "#src/collaboration/index.ts";
+import { createRoomHarness } from "../../collaboration/roomHarness.ts";
 
 class TestHost implements ReactiveControllerHost {
   readonly updateComplete = Promise.resolve(true);
@@ -37,118 +45,99 @@ class TestHost implements ReactiveControllerHost {
   }
 }
 
-interface FakeGroup {
-  group: GroupManager;
-  calls: Record<string, number>;
-  pivotMarkerVisible: boolean | null;
-}
+function createHarness() {
+  const room = createRoomHarness();
+  const scene = new THREE.Scene();
+  const document = new ModelDocument(scene);
+  const lock = new TransformLock({ room: room.room });
+  const gizmo = new TransformGizmo({
+    camera: {
+      threeCamera: new THREE.PerspectiveCamera(),
+      enabled: true
+    } as unknown as OrbitFlyCamera,
+    canvas: globalThis.document.createElement("canvas"),
+    scene,
+    blocks: document.blocks,
+    lock,
+    live: new TransformLiveSync({ room: room.room, blocks: document.blocks })
+  });
+  const host = new TestHost();
+  const controller = new TransformPanelController(host);
+  controller.attach({ document, gizmo, lock });
 
-function makeFakeGroup(): FakeGroup {
-  const state = {
-    position: new THREE.Vector3(1, 2, 3),
-    positionWorld: new THREE.Vector3(10, 20, 30),
-    rotation: new THREE.Euler(0, 0, 0),
-    rotationWorld: new THREE.Euler(
-      THREE.MathUtils.degToRad(45),
-      THREE.MathUtils.degToRad(90),
-      0
-    ),
-    size: new THREE.Vector3(1, 1, 1),
-    pivotOffset: new THREE.Vector3(0, 0, 0),
-    pivotOffsetWorld: new THREE.Vector3(5, 5, 5),
-    scale: new THREE.Vector3(1, 1, 1)
-  };
-  const calls: Record<string, number> = {};
-  function track(
-    name: string
-  ): void {
-    calls[name] = (calls[name] ?? 0) + 1;
-  }
+  const parent = document.blocks.add();
+  parent.rotation = new THREE.Euler(0, THREE.MathUtils.degToRad(90), 0);
+  const block = document.blocks.add({ position: new THREE.Vector3(1, 2, 3) });
+  document.blocks.reparentLocal(block.uuid, parent.uuid);
+  scene.updateMatrixWorld(true);
+  document.blocks.select(block);
 
-  const fakeGroup = {
-    getGroupUUID: () => "fake-uuid",
-    getPosition: () => state.position.clone(),
-    setPosition: () => track("setPosition"),
-    getPositionWorld: () => state.positionWorld.clone(),
-    setPositionWorld: () => track("setPositionWorld"),
-    getRotation: () => state.rotation.clone(),
-    setRotation: () => track("setRotation"),
-    getRotationWorld: () => state.rotationWorld.clone(),
-    setRotationWorld: () => track("setRotationWorld"),
-    getSize: () => state.size.clone(),
-    resize: () => track("resize"),
-    getPivotOffset: () => state.pivotOffset.clone(),
-    setPivotOffset: () => track("setPivotOffset"),
-    getPivotOffsetWorld: () => state.pivotOffsetWorld.clone(),
-    setPivotOffsetWorld: () => track("setPivotOffsetWorld"),
-    getScale: () => state.scale.clone(),
-    setScale: () => track("setScale"),
-    setPivotMarkerVisible: (visible: boolean) => {
-      result.pivotMarkerVisible = visible;
-    }
-  } as unknown as GroupManager;
+  const commands: ModelCommand[] = [];
+  document.blocks.on("command", (command) => commands.push(command));
 
-  const result: FakeGroup = { group: fakeGroup, calls, pivotMarkerVisible: null };
-
-  return result;
-}
-
-function select(
-  t: TestContext,
-  controller: TransformPanelController,
-  group: GroupManager
-): void {
-  controller.hostConnected();
-  t.after(() => controller.hostDisconnected());
-  editorState.modelEvents.emit("groupSelected", { group });
+  return { ...room, document, gizmo, lock, host, controller, block, commands };
 }
 
 describe("TransformPanelController space handling", () => {
-  test("reads the world rotation when space is world", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
+  test("reads local values in local space and world values in world space", () => {
+    const { controller } = createHarness();
 
-    controller.setMode("angle");
-    controller.setSpace("world");
-
-    assert.deepStrictEqual(controller.axisValues, { x: 45, y: 90, z: 0 });
-  });
-
-  test("reads the local rotation when space is local", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
-
-    controller.setMode("angle");
-    controller.setSpace("local");
-
+    controller.mode = "angle";
     assert.deepStrictEqual(controller.axisValues, { x: 0, y: 0, z: 0 });
+
+    controller.space = "world";
+    assert.deepStrictEqual(controller.axisValues, { x: 0, y: 90, z: 0 });
   });
 
-  test("applies angle edits through the world setter when space is world", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
+  test("applies position edits in the active space, then commits", () => {
+    const { controller, block, commands } = createHarness();
 
-    controller.setMode("angle");
-    controller.setSpace("world");
-    controller.setAxisValues({ x: 10, y: 20, z: 30 });
+    controller.mode = "pos";
+    controller.space = "world";
+    controller.axisValues = { x: 5, y: 0, z: 0 };
 
-    assert.equal(fake.calls.setRotationWorld, 1);
-    assert.equal(fake.calls.setRotation, undefined);
+    assert.ok(block.worldPosition.distanceTo(new THREE.Vector3(5, 0, 0)) < 1e-6);
+    assert.deepEqual(commands.map((command) => command.action), ["group-transformed"]);
   });
 
-  test("applies angle edits through the local setter when space is local", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
+  test("applies size edits through resize", () => {
+    const { controller, block } = createHarness();
 
-    controller.setMode("angle");
-    controller.setAxisValues({ x: 10, y: 20, z: 30 });
+    controller.mode = "size";
+    controller.axisValues = { x: 2, y: 3, z: 4 };
 
-    assert.equal(fake.calls.setRotation, 1);
-    assert.equal(fake.calls.setRotationWorld, undefined);
+    assert.deepStrictEqual(block.size, new THREE.Vector3(2, 3, 4));
+  });
+
+  test("configures the gizmo for the active mode", () => {
+    const { controller, gizmo, block } = createHarness();
+
+    controller.mode = "scale";
+    assert.equal(gizmo.controls.object, block.mesh);
+
+    controller.mode = "size";
+    assert.equal(gizmo.controls.enabled, false);
+  });
+});
+
+describe("TransformPanelController refresh", () => {
+  test("re-reads the values after a gizmo edit or a committed transform", () => {
+    const { controller, document, gizmo, block } = createHarness();
+    controller.mode = "pos";
+
+    block.position = new THREE.Vector3(7, 0, 0);
+    gizmo.controls.dispatchEvent({ type: "objectChange" });
+    assert.equal(controller.axisValues.x, 7);
+
+    document.apply({
+      action: "group-transformed",
+      uuid: block.uuid,
+      transform: {
+        ...block.transform,
+        position: { x: 8, y: 0, z: 0 }
+      }
+    });
+    assert.equal(controller.axisValues.x, 8);
   });
 });
 
@@ -156,162 +145,59 @@ describe("TransformPanelController pivot marker visibility", () => {
   const kVisibleModes: TransformMode[] = ["pos", "angle", "size", "pivot"];
 
   for (const mode of kVisibleModes) {
-    test(`shows the pivot marker in ${mode} mode`, (t) => {
-      const controller = new TransformPanelController(new TestHost());
-      const fake = makeFakeGroup();
-      select(t, controller, fake.group);
+    test(`shows the pivot marker in ${mode} mode`, () => {
+      const { controller, block } = createHarness();
 
-      controller.setMode(mode);
+      controller.mode = mode;
 
-      assert.equal(fake.pivotMarkerVisible, true);
+      assert.equal(block.pivotMarkerVisible, true);
     });
   }
 
-  test("hides the pivot marker in scale mode", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
+  test("hides the pivot marker in scale mode, and on the previous selection", () => {
+    const { controller, document, block } = createHarness();
 
-    controller.setMode("scale");
+    controller.mode = "scale";
+    assert.equal(block.pivotMarkerVisible, false);
 
-    assert.equal(fake.pivotMarkerVisible, false);
+    controller.mode = "pos";
+    document.blocks.select(null);
+    assert.equal(block.pivotMarkerVisible, false);
   });
 });
 
-interface FakeLock {
-  lockedByResult: PeerMark | null;
-  claims: string[];
-  releaseCount: number;
-  onChangeListeners: Set<() => void>;
-  fireChange(): void;
-}
-
-function makeFakeLock(): FakeLock {
-  const fake: FakeLock = {
-    lockedByResult: null,
-    claims: [],
-    releaseCount: 0,
-    onChangeListeners: new Set(),
-    fireChange() {
-      for (const listener of fake.onChangeListeners) {
-        listener();
-      }
-    }
-  };
-
-  return fake;
-}
-
-interface FakeSceneManagerStats {
-  gizmoModeCalls: number;
-  commitCalls: string[];
-}
-
-function makeFakeSceneManager(
-  fakeLock: FakeLock
-): { sceneManager: ModelSceneComponent; stats: FakeSceneManagerStats; } {
-  const stats: FakeSceneManagerStats = { gizmoModeCalls: 0, commitCalls: [] };
-
-  const sceneManager = {
-    setGizmoMode: () => {
-      stats.gizmoModeCalls++;
-    },
-    getModelManager: () => {
-      return {
-        commitGroupTransform: (uuid: string) => stats.commitCalls.push(uuid)
-      };
-    },
-    getTransformLock: () => {
-      return {
-        lockedBy: () => fakeLock.lockedByResult,
-        claim: (uuid: string) => fakeLock.claims.push(uuid),
-        release: () => {
-          fakeLock.releaseCount++;
-        },
-        watch: (_event: "change", listener: () => void) => {
-          void _event;
-          fakeLock.onChangeListeners.add(listener);
-
-          return () => fakeLock.onChangeListeners.delete(listener);
-        }
-      };
-    }
-  } as unknown as ModelSceneComponent;
-
-  return { sceneManager, stats };
-}
-
 describe("TransformPanelController transform lock", () => {
-  test("is disabled once a remote peer holds the lock on the selected block", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
-    const fakeLock = makeFakeLock();
-    const { sceneManager } = makeFakeSceneManager(fakeLock);
-    controller.attach(sceneManager);
+  test("is disabled with no selection or while a peer holds the lock", () => {
+    const harness = createHarness();
+    assert.equal(harness.controller.disabled, false);
 
-    fakeLock.lockedByResult = { clientId: "bob", displayName: "Bob", color: "#000000" };
+    harness.addPeer("bob", { presence: { transformLock: harness.block.uuid } });
+    harness.emit("sync");
+    assert.equal(harness.controller.disabled, true);
 
-    assert.equal(controller.disabled, true);
+    harness.document.blocks.select(null);
+    assert.equal(harness.controller.disabled, true);
   });
 
-  test("is enabled when the lock resolves to no remote holder", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
-    const fakeLock = makeFakeLock();
-    const { sceneManager } = makeFakeSceneManager(fakeLock);
-    controller.attach(sceneManager);
+  test("does not mutate the block when locked, even if asked to", () => {
+    const harness = createHarness();
+    harness.addPeer("bob", { presence: { transformLock: harness.block.uuid } });
+    harness.emit("sync");
 
-    assert.equal(controller.disabled, false);
+    harness.controller.mode = "pos";
+    harness.controller.axisValues = { x: 9, y: 9, z: 9 };
+
+    assert.deepStrictEqual(harness.block.position, new THREE.Vector3(1, 2, 3));
+    assert.deepEqual(harness.commands, []);
   });
 
-  test("does not mutate the group when locked, even if asked to", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
-    const fakeLock = makeFakeLock();
-    fakeLock.lockedByResult = { clientId: "bob", displayName: "Bob", color: "#000000" };
-    const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
-    controller.attach(sceneManager);
+  test("requests an update when the lock changes", () => {
+    const harness = createHarness();
+    const before = harness.host.updateCount;
 
-    controller.setMode("pos");
-    controller.setAxisValues({ x: 9, y: 9, z: 9 });
+    harness.addPeer("bob", { presence: { transformLock: "other" } });
+    harness.emit("sync");
 
-    assert.equal(fake.calls.setPosition, undefined);
-    assert.deepEqual(stats.commitCalls, []);
-  });
-
-  test("claims the lock before mutating and releases it after commit", (t) => {
-    const controller = new TransformPanelController(new TestHost());
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
-    const fakeLock = makeFakeLock();
-    const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
-    controller.attach(sceneManager);
-
-    controller.setMode("pos");
-    controller.setAxisValues({ x: 9, y: 9, z: 9 });
-
-    assert.deepEqual(fakeLock.claims, ["fake-uuid"]);
-    assert.deepEqual(stats.commitCalls, ["fake-uuid"]);
-    assert.equal(fakeLock.releaseCount, 1);
-  });
-
-  test("re-syncs the gizmo mode and requests an update when the lock changes", (t) => {
-    const host = new TestHost();
-    const controller = new TransformPanelController(host);
-    const fake = makeFakeGroup();
-    select(t, controller, fake.group);
-    const fakeLock = makeFakeLock();
-    const { sceneManager, stats } = makeFakeSceneManager(fakeLock);
-    controller.attach(sceneManager);
-    const gizmoModeCallsBeforeChange = stats.gizmoModeCalls;
-    const updateCountBeforeChange = host.updateCount;
-
-    fakeLock.fireChange();
-
-    assert.ok(stats.gizmoModeCalls > gizmoModeCallsBeforeChange);
-    assert.ok(host.updateCount > updateCountBeforeChange);
+    assert.ok(harness.host.updateCount > before);
   });
 });

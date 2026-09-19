@@ -3,5 +3,3 @@ export const PRESENCE_KEYS = {
   transformLive: "transformLive",
   transformLock: "transformLock"
 } as const;
-
-export type PresenceKey = typeof PRESENCE_KEYS[keyof typeof PRESENCE_KEYS];

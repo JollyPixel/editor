@@ -25,7 +25,7 @@ import {
 } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import "./tabs/Build.ts";
+import "./BuildTab.ts";
 
 // CONSTANTS
 const kDefaultZoom = {
@@ -46,15 +46,18 @@ export class LeftPanel extends LitElement {
   @state()
   declare mode: LeftPanelMode;
 
+  @state()
+  private declare _canvas: PixelArtCanvas | null;
+
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
 
-  #canvasManager: PixelArtCanvas | null = null;
+  onPeerUvDragging: ((payload: UVGhostPayload) => void) | undefined;
+
   #resizeObserver: ResizeObserver | null = null;
   #texture: LeftPanelTexture | null = null;
   #collaboration: PixelCollaboration | null = null;
-  #onRemoteUvDragging: ((payload: UVGhostPayload) => void) | undefined;
-  #ready = Promise.withResolvers<PixelArtCanvas>();
+  #initializing = false;
 
   static override styles = css`
     :host {
@@ -87,31 +90,18 @@ export class LeftPanel extends LitElement {
   constructor() {
     super();
     this.mode = "build";
+    this._canvas = null;
   }
 
-  get canvasManager(): PixelArtCanvas | null {
-    return this.#canvasManager;
-  }
-
-  get canvasReady(): Promise<PixelArtCanvas> {
-    return this.#ready.promise;
-  }
-
-  public onResize(): void {
+  onResize(): void {
     this.panelElement?.onResize();
   }
 
-  public setTexture(
+  setTexture(
     texture: LeftPanelTexture
   ): void {
     this.#texture = texture;
     void this.#initializeCanvas();
-  }
-
-  public setPeerUvDraggingHandler(
-    handler: (payload: UVGhostPayload) => void
-  ): void {
-    this.#onRemoteUvDragging = handler;
   }
 
   override firstUpdated(): void {
@@ -122,9 +112,10 @@ export class LeftPanel extends LitElement {
 
   async #initializeCanvas(): Promise<void> {
     const texture = this.#texture;
-    if (texture === null || !this.hasUpdated || this.#canvasManager !== null) {
+    if (texture === null || !this.hasUpdated || this.#initializing) {
       return;
     }
+    this.#initializing = true;
 
     const canvas = await this.panelElement.initialize({
       document: texture.document,
@@ -134,8 +125,8 @@ export class LeftPanel extends LitElement {
     });
     canvas.uv.showAll = true;
     canvas.uv.showRegionLabels = true;
-    canvas.mode = this.#canvasModeForTab(this.mode);
-    this.#canvasManager = canvas;
+    canvas.mode = canvasModeForTab(this.mode);
+    this._canvas = canvas;
 
     if (texture.room !== undefined) {
       this.#collaboration = new PixelCollaboration({
@@ -143,17 +134,16 @@ export class LeftPanel extends LitElement {
         canvas,
         label: (_clientId, profile) => readUsername(profile),
         color: peerProfileColor,
-        onRemoteUvDragging: (payload) => this.#onRemoteUvDragging?.(payload)
+        onRemoteUvDragging: (payload) => this.onPeerUvDragging?.(payload)
       });
     }
-    this.#ready.resolve(canvas);
   }
 
   override updated(
     changedProperties: PropertyValues<this>
   ): void {
-    if (changedProperties.has("mode") && this.#canvasManager) {
-      this.#canvasManager.mode = this.#canvasModeForTab(this.mode);
+    if (changedProperties.has("mode") && this._canvas) {
+      this._canvas.mode = canvasModeForTab(this.mode);
     }
   }
 
@@ -163,12 +153,6 @@ export class LeftPanel extends LitElement {
     this.#resizeObserver = null;
     this.#collaboration?.destroy();
     this.#collaboration = null;
-  }
-
-  #canvasModeForTab(
-    mode: LeftPanelMode
-  ): Mode {
-    return mode === "build" ? "uv" : "paint";
   }
 
   private handleTabChange = (
@@ -184,10 +168,19 @@ export class LeftPanel extends LitElement {
         <jolly-tab value="paint" label="Paint"></jolly-tab>
         <jolly-tab value="animate" label="Animate" disabled></jolly-tab>
       </jolly-tabs>
-      <jolly-model-editor-build ?hidden=${this.mode !== "build"}></jolly-model-editor-build>
+      <jolly-model-editor-build
+        ?hidden=${this.mode !== "build"}
+        .canvas=${this._canvas}
+      ></jolly-model-editor-build>
       <pixel-draw-panel></pixel-draw-panel>
     `;
   }
+}
+
+function canvasModeForTab(
+  mode: LeftPanelMode
+): Mode {
+  return mode === "build" ? "uv" : "paint";
 }
 
 customElements.define("jolly-model-editor-left-panel", LeftPanel);

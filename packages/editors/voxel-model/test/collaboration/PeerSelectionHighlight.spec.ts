@@ -7,136 +7,98 @@ import {
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { Actor } from "@jolly-pixel/engine";
-import type { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PeerSelectionHighlight } from "../../src/collaboration/PeerSelectionHighlight.ts";
-import { PresenceStore } from "../../src/app/state/index.ts";
-import ModelManager from "../../src/features/groups/ModelManager.ts";
-import type { PeerMark } from "../../src/collaboration/peerMarks.ts";
+import { PeerSelectionHighlight } from "#src/collaboration/PeerSelectionHighlight.ts";
+import {
+  ModelBlocks,
+  type ModelBlock
+} from "#src/model/index.ts";
+import { PresenceStore } from "#src/state/index.ts";
 
-function createModelManager(): ModelManager {
-  const scene = new THREE.Scene();
-  const transformControl = {
-    attach: () => undefined,
-    detach: () => undefined,
-    getHelper: () => new THREE.Object3D()
-  } as unknown as TransformControls;
-
-  return new ModelManager({ scene, transformControl });
-}
-
-function createFakeActor(): Actor {
-  return {
-    components: [],
-    componentsRequiringUpdate: [],
-    world: {
-      sceneManager: {
-        scheduleStart: () => void 0,
-        cancelStart: () => void 0
-      }
-    }
-  } as unknown as Actor;
-}
+type ShellMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
 function mark(
   clientId: string,
   color: string
-): PeerMark {
+): PresencePeer {
   return { clientId, displayName: clientId, color };
 }
 
 function createHarness() {
-  const modelManager = createModelManager();
+  const blocks = new ModelBlocks(new THREE.Scene());
   const presence = new PresenceStore();
-  const highlight = new PeerSelectionHighlight(createFakeActor(), {
-    modelManager,
-    presence
-  });
+  const highlight = new PeerSelectionHighlight({ blocks, presence });
 
-  return { modelManager, presence, highlight };
+  return { blocks, presence, highlight };
 }
 
-function findEmphasisShell(
-  modelManager: ModelManager,
-  uuid: string
-): THREE.Mesh | undefined {
-  return modelManager.getGroupByUUID(uuid)?.getMesh().children
-    .find((child) => child.name === "emphasis-shell") as THREE.Mesh | undefined;
+function glowOf(
+  block: ModelBlock
+): string | undefined {
+  const shell = block.mesh.children.find(
+    (child): child is ShellMesh => child.name === "emphasis-shell"
+  );
+
+  return shell?.material.color.getHexString();
 }
 
 describe("PeerSelectionHighlight", () => {
   test("emphasizes the block a peer has selected", () => {
     const harness = createHarness();
-    const group = harness.modelManager.addGroup();
+    const block = harness.blocks.add();
 
-    harness.presence.blockSelections = new Map([
-      [group.getGroupUUID(), [mark("bob", "#112233")]]
-    ]);
+    harness.presence.blockSelections = new Map([[block.uuid, [mark("bob", "#112233")]]]);
 
-    const shell = findEmphasisShell(harness.modelManager, group.getGroupUUID());
-    assert.ok(shell);
-    assert.equal((shell.material as THREE.MeshBasicMaterial).color.getHexString(), "112233");
-    harness.highlight.destroy();
+    assert.equal(glowOf(block), "112233");
+    harness.highlight.dispose();
   });
 
   test("clears the glow once the peer deselects", () => {
     const harness = createHarness();
-    const group = harness.modelManager.addGroup();
+    const block = harness.blocks.add();
 
-    harness.presence.blockSelections = new Map([
-      [group.getGroupUUID(), [mark("bob", "#112233")]]
-    ]);
+    harness.presence.blockSelections = new Map([[block.uuid, [mark("bob", "#112233")]]]);
     harness.presence.blockSelections = new Map();
 
-    assert.equal(findEmphasisShell(harness.modelManager, group.getGroupUUID()), undefined);
-    harness.highlight.destroy();
+    assert.equal(glowOf(block), undefined);
+    harness.highlight.dispose();
   });
 
   test("moves the glow when the peer selects a different block", () => {
     const harness = createHarness();
-    const first = harness.modelManager.addGroup();
-    const second = harness.modelManager.addGroup();
+    const first = harness.blocks.add();
+    const second = harness.blocks.add();
 
-    harness.presence.blockSelections = new Map([
-      [first.getGroupUUID(), [mark("bob", "#112233")]]
-    ]);
-    harness.presence.blockSelections = new Map([
-      [second.getGroupUUID(), [mark("bob", "#112233")]]
-    ]);
+    harness.presence.blockSelections = new Map([[first.uuid, [mark("bob", "#112233")]]]);
+    harness.presence.blockSelections = new Map([[second.uuid, [mark("bob", "#112233")]]]);
 
-    assert.equal(findEmphasisShell(harness.modelManager, first.getGroupUUID()), undefined);
-    assert.ok(findEmphasisShell(harness.modelManager, second.getGroupUUID()));
-    harness.highlight.destroy();
+    assert.equal(glowOf(first), undefined);
+    assert.equal(glowOf(second), "112233");
+    harness.highlight.dispose();
   });
 
   test("keeps the glow lit for the remaining peer when one of two deselects", () => {
     const harness = createHarness();
-    const group = harness.modelManager.addGroup();
+    const block = harness.blocks.add();
 
     harness.presence.blockSelections = new Map([
-      [group.getGroupUUID(), [mark("bob", "#ff0000"), mark("cleo", "#0000ff")]]
+      [block.uuid, [mark("bob", "#ff0000"), mark("cleo", "#0000ff")]]
     ]);
-    harness.presence.blockSelections = new Map([
-      [group.getGroupUUID(), [mark("bob", "#ff0000")]]
-    ]);
+    harness.presence.blockSelections = new Map([[block.uuid, [mark("bob", "#ff0000")]]]);
 
-    const shell = findEmphasisShell(harness.modelManager, group.getGroupUUID());
-    assert.ok(shell);
-    assert.equal((shell.material as THREE.MeshBasicMaterial).color.getHexString(), "ff0000");
-    harness.highlight.destroy();
+    assert.equal(glowOf(block), "ff0000");
+    harness.highlight.dispose();
   });
 
-  test("clears every tracked glow on destroy", () => {
+  test("clears every tracked glow on dispose", () => {
     const harness = createHarness();
-    const group = harness.modelManager.addGroup();
+    const block = harness.blocks.add();
 
-    harness.presence.blockSelections = new Map([
-      [group.getGroupUUID(), [mark("bob", "#112233")]]
-    ]);
-    harness.highlight.destroy();
+    harness.presence.blockSelections = new Map([[block.uuid, [mark("bob", "#112233")]]]);
+    harness.highlight.dispose();
 
-    assert.equal(findEmphasisShell(harness.modelManager, group.getGroupUUID()), undefined);
+    assert.equal(glowOf(block), undefined);
   });
 });

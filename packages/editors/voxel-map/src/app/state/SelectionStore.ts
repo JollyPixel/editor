@@ -1,6 +1,8 @@
+// Import Third-party Dependencies
+import { EditorStore } from "@jolly-pixel/editor.host";
+
 // Import Internal Dependencies
 import type { ObjectKey } from "../../features/layers/objects/objectArea.ts";
-import { EditorStore } from "./EditorStore.ts";
 
 export type LayerSelection =
   | { kind: "voxel-layer"; name: string; }
