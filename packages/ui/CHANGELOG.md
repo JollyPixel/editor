@@ -1,5 +1,16 @@
 # @jolly-pixel/ui
 
+## 3.1.0
+
+### Minor Changes
+
+- [#722](https://github.com/JollyPixel/editor/pull/722) [`d6e1b5a`](https://github.com/JollyPixel/editor/commit/d6e1b5a976b4571d78051502df570e85d5b50cce) Thanks [@fraxken](https://github.com/fraxken)! - Add `promptPeerIdentity` and `GUEST_USERNAME`, plus `toPeerMetadata`, `readUsername`, `readPeerId` and `peerProfileColor` under `./network`.
+
+### Patch Changes
+
+- [#713](https://github.com/JollyPixel/editor/pull/713) [`4ae4d68`](https://github.com/JollyPixel/editor/commit/4ae4d683df8328d306023260732c1efc787acd98) Thanks [@fraxken](https://github.com/fraxken)! - Fix the vertical `jolly-slider` padding: an unlabeled slider no longer gets a start-only inset,
+  and the empty trailing slot no longer adds a gap below the lane.
+
 ## 3.0.0
 
 ### Major Changes

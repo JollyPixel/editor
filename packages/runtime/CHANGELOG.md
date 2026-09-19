@@ -1,5 +1,21 @@
 # @jolly-pixel/runtime
 
+## 5.2.0
+
+### Minor Changes
+
+- [#709](https://github.com/JollyPixel/editor/pull/709) [`3b91a42`](https://github.com/JollyPixel/editor/commit/3b91a42d560941a003b777f57060fe18972dc4c8) Thanks [@fraxken](https://github.com/fraxken)! - Move the camera view helper into the runtime as a `viewHelper` option that follows the lowest-depth camera.
+  The engine drops `createViewHelper`, `OrbitFlyCamera` drops its `viewHelper` option, and `Renderer` exposes `renderComponents`.
+
+### Patch Changes
+
+- [#707](https://github.com/JollyPixel/editor/pull/707) [`0bbc913`](https://github.com/JollyPixel/editor/commit/0bbc91316d992bd0e23609df326632efd1cc7d82) Thanks [@fraxken](https://github.com/fraxken)! - Fix double actor destruction, leaked component and listener teardowns, playlists that stopped after one track, squared master volume, `**/a/b` actor paths, and non-looping sprite animations.
+  Breaking: components override `onDestroy()` (with `addTeardown()`), `ThreeRenderer.create(canvas, options)` and `draw(scene)` drop `sceneManager`/render modes/`onDraw`, `GlobalAudio` drops observers, and `SpriteRenderer.texture` is an asset reference.
+- Updated dependencies [[`0bbc913`](https://github.com/JollyPixel/editor/commit/0bbc91316d992bd0e23609df326632efd1cc7d82), [`3b91a42`](https://github.com/JollyPixel/editor/commit/3b91a42d560941a003b777f57060fe18972dc4c8), [`d6e1b5a`](https://github.com/JollyPixel/editor/commit/d6e1b5a976b4571d78051502df570e85d5b50cce), [`4ae4d68`](https://github.com/JollyPixel/editor/commit/4ae4d683df8328d306023260732c1efc787acd98)]:
+  - @jolly-pixel/engine@6.0.0
+  - @jolly-pixel/ui@3.1.0
+  - @jolly-pixel/loop@1.0.0
+
 ## 5.1.0
 
 ### Minor Changes
