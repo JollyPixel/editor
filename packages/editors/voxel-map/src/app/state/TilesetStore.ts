@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
+import { EditorStore } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import {
   entriesEqual,
   type TilesetEntry
 } from "../../features/tilesets/tilesetEntries.ts";
-import { EditorStore } from "./EditorStore.ts";
 
 export type TilesetStoreEvents = {
   change: (entries: readonly TilesetEntry[]) => void;

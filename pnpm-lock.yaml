@@ -397,22 +397,27 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
+      '@jolly-pixel/three':
+        specifier: workspace:*
+        version: link:../../three
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
       '@openally/emitt':
         specifier: 1.0.1
         version: 1.0.1
-    devDependencies:
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
+      three:
+        specifier: 0.186.0
+        version: 0.186.0
 
   packages/editors/pixel-art:
     dependencies:

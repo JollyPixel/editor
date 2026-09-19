@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import type { VoxelLayerCommand } from "@jolly-pixel/voxel.renderer";
-
-// Import Internal Dependencies
-import { EditorStore } from "./EditorStore.ts";
+import { EditorStore } from "@jolly-pixel/editor.host";
 
 export type WorldStoreEvents = {
   layerUpdated: (

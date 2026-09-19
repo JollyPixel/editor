@@ -1,4 +1,3 @@
-export { EditorStore } from "./EditorStore.ts";
 export {
   EditorState,
   editorState

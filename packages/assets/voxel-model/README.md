@@ -2,10 +2,6 @@
   asset.voxel-model
 </h1>
 
-<p align="center">
-  Persistence and real-time collaboration for voxel models
-</p>
-
 ## 💃 Getting Started
 
 This workspace-private package is never published. Add it as a dependency of

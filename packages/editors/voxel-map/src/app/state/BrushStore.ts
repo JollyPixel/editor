@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { VoxelRotation } from "@jolly-pixel/voxel.renderer";
+import { EditorStore } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import {
@@ -12,7 +13,6 @@ import type {
   BrushAxis,
   BrushPattern
 } from "../../features/painting/model/brushFootprint.ts";
-import { EditorStore } from "./EditorStore.ts";
 
 // CONSTANTS
 export const BRUSH_MIN_SIZE = 1;

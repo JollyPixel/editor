@@ -39,12 +39,12 @@
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
+    "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
-    "@openally/emitt": "1.0.1"
-  },
-  "devDependencies": {
-    "@jolly-pixel/engine": "workspace:*"
+    "@openally/emitt": "1.0.1",
+    "three": "0.186.0"
   }
 }

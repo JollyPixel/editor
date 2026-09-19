@@ -1,27 +1,20 @@
 // Import Third-party Dependencies
-import {
-  Actor,
-  ActorComponent
-} from "@jolly-pixel/engine";
+import type { PeerMarkMap } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type ModelManager from "../features/groups/ModelManager.ts";
-import {
-  editorState,
-  type PresenceStore
-} from "../app/state/index.ts";
-import type { PeerMarkMap } from "./peerMarks.ts";
+import type { ModelBlocks } from "../model/index.ts";
+import type { PresenceStore } from "../state/index.ts";
 
 // CONSTANTS
 const kEmphasisOwnerPrefix = "selection:";
 
 export interface PeerSelectionHighlightOptions {
-  modelManager: ModelManager;
-  presence?: PresenceStore;
+  blocks: ModelBlocks;
+  presence: PresenceStore;
 }
 
-export class PeerSelectionHighlight extends ActorComponent {
-  #modelManager: ModelManager;
+export class PeerSelectionHighlight {
+  #blocks: ModelBlocks;
   #presence: PresenceStore;
   #highlightedUuidByClient = new Map<string, string>();
 
@@ -32,26 +25,18 @@ export class PeerSelectionHighlight extends ActorComponent {
   };
 
   constructor(
-    actor: Actor,
     options: PeerSelectionHighlightOptions
   ) {
-    super({
-      actor,
-      typeName: "PeerSelectionHighlight"
-    });
-
-    this.#modelManager = options.modelManager;
-    this.#presence = options.presence ?? editorState.presence;
+    this.#blocks = options.blocks;
+    this.#presence = options.presence;
 
     this.#presence.on("blockSelectionsChange", this.#onSelectionsChange);
     this.#apply(this.#presence.blockSelections);
   }
 
-  override destroy(): void {
+  dispose(): void {
     this.#presence.off("blockSelectionsChange", this.#onSelectionsChange);
     this.#apply(new Map());
-
-    super.destroy();
   }
 
   #apply(
@@ -65,21 +50,19 @@ export class PeerSelectionHighlight extends ActorComponent {
     }
 
     for (const [clientId, uuid] of this.#highlightedUuidByClient) {
-      if (nextUuidByClient.get(clientId) === uuid) {
-        continue;
+      if (nextUuidByClient.get(clientId) !== uuid) {
+        this.#blocks.get(uuid)?.clearEmphasis(`${kEmphasisOwnerPrefix}${clientId}`);
       }
-      this.#modelManager.getGroupByUUID(uuid)?.clearEmphasis(`${kEmphasisOwnerPrefix}${clientId}`);
     }
 
     for (const [uuid, marks] of selections) {
       for (const mark of marks) {
-        if (this.#highlightedUuidByClient.get(mark.clientId) === uuid) {
-          continue;
+        if (this.#highlightedUuidByClient.get(mark.clientId) !== uuid) {
+          this.#blocks.get(uuid)?.emphasize(
+            mark.color,
+            `${kEmphasisOwnerPrefix}${mark.clientId}`
+          );
         }
-        this.#modelManager.getGroupByUUID(uuid)?.emphasize(
-          mark.color,
-          `${kEmphasisOwnerPrefix}${mark.clientId}`
-        );
       }
     }
 

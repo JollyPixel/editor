@@ -5,9 +5,9 @@ import type {
   VoxelBlockUsage,
   VoxelTilesetUsage
 } from "@jolly-pixel/voxel.renderer";
+import { EditorStore } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import { EditorStore } from "./EditorStore.ts";
 import type { WorldStore } from "./WorldStore.ts";
 
 export type BlockUsageStoreEvents = {

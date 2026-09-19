@@ -39,9 +39,15 @@ export class UVGeometryBinding {
     }
 
     this.#region = region;
+    if (face === null) {
+      this.#applyRegion();
+
+      return;
+    }
+
     this.applyFace(
       face,
-      region.geometryFor(face ?? "front")
+      region.geometryFor(face)
     );
   };
 
@@ -55,15 +61,9 @@ export class UVGeometryBinding {
       return;
     }
 
-    if (face === null) {
-      this.#applySlots(this.#region.withRect(rect));
-
-      return;
-    }
-
-    this.applyFace(
+    this.preview(
       face,
-      geometry
+      face === null ? rect : geometry
     );
   };
 
@@ -148,6 +148,24 @@ export class UVGeometryBinding {
     }
 
     uvAttribute.needsUpdate = true;
+  }
+
+  preview(
+    face: UVSlot | null,
+    geometry: UVGeometry
+  ): void {
+    if (face === null) {
+      this.#applySlots(
+        this.#region.withRect("shape" in geometry ? geometry.rect : geometry)
+      );
+
+      return;
+    }
+
+    this.applyFace(
+      face,
+      geometry
+    );
   }
 
   follow(
