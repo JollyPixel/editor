@@ -60,8 +60,7 @@ export class PixelArtDemo {
       defaultMode: "paint",
       zoom: {
         min: 1,
-        max: 32,
-        sensitivity: 1
+        max: 32
       },
       brush: {
         size: 1

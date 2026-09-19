@@ -235,7 +235,7 @@ Controls the area outside the texture and redraws the visible canvas when change
 
 ### `camera` / `zoom`
 
-Convenience accessors for `viewport.camera` and `viewport.zoom`. `camera` returns a copy; `zoom` returns the same `Zoom` instance as the viewport.
+Convenience accessors for `viewport.camera` and `viewport.zoom`. `camera` returns a copy; `zoom` returns the same `Zoom` instance as the viewport. `zoom.value` is the displayed zoom and `zoom.target` the level it eases toward; they are equal at rest.
 
 ### `centerTexture()`
 

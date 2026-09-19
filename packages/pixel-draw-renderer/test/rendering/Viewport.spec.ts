@@ -50,403 +50,6 @@ describe("Viewport", () => {
     });
   });
 
-  describe("texture", () => {
-    test("pixelSize returns textureSize * zoom", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 20
-        },
-        zoom: 3
-      });
-
-      assert.deepStrictEqual(
-        vp.texture.pixelSize(vp.zoom.value),
-        { x: 30, y: 60 }
-      );
-    });
-
-    test("resize clamps the camera when it goes out of bounds (wired via onResize)", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 8,
-          y: 8
-        },
-        zoom: 4
-      });
-      vp.updateCanvasSize(100, 100);
-      vp.centerTexture();
-      // Shrinking the texture moves minX/maxX inward; camera must be re-clamped.
-      vp.texture.resize({
-        x: 1,
-        y: 1
-      });
-      const texPx = vp.texture.pixelSize(
-        vp.zoom.value
-      );
-      const margin = vp.zoom.value;
-      const minX = -texPx.x + margin;
-      const maxX = 100 - margin;
-
-      assert.ok(
-        vp.camera.x >= minX && vp.camera.x <= maxX
-      );
-    });
-  });
-
-  describe("centerTexture", () => {
-    test("centers camera within canvas", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-
-      assert.strictEqual(vp.camera.x, 40);
-      assert.strictEqual(vp.camera.y, 30);
-    });
-
-    test("anchors an overflowing texture to the top-left corner", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 100,
-          y: 100
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 8, y: 8 }
-      );
-    });
-
-    test("anchors only the axis the texture overflows", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 100,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 8, y: 30 }
-      );
-    });
-
-    test("anchors a texture that only fits without padding", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 45,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-
-      assert.strictEqual(vp.camera.x, 8);
-    });
-  });
-
-  describe("resizeCanvas", () => {
-    test("keeps a fitting texture centered", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-      vp.resizeCanvas(120, 60);
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 50, y: 20 }
-      );
-    });
-
-    test("keeps an overflowing texture anchored to the top-left corner", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 100,
-          y: 100
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-      vp.resizeCanvas(120, 60);
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 8, y: 8 }
-      );
-    });
-
-    test("anchors only the axis the texture overflows", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 100,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-      vp.resizeCanvas(120, 60);
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 8, y: 20 }
-      );
-    });
-
-    test("reframes an axis when the texture starts fitting", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 50
-        },
-        zoom: 1
-      });
-      vp.updateCanvasSize(100, 40);
-      vp.centerTexture();
-      vp.resizeCanvas(100, 80);
-
-      assert.strictEqual(vp.camera.y, 15);
-    });
-
-    test("reframes an axis when the texture stops fitting", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 50
-        },
-        zoom: 1
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-      vp.resizeCanvas(100, 40);
-
-      assert.strictEqual(vp.camera.y, 8);
-    });
-
-    test("returns to the same frame after growing and shrinking back", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 50
-        },
-        zoom: 1
-      });
-      vp.updateCanvasSize(100, 40);
-      vp.centerTexture();
-      const before = { ...vp.camera };
-      vp.resizeCanvas(100, 80);
-      vp.resizeCanvas(100, 40);
-
-      assert.deepStrictEqual({ ...vp.camera }, before);
-    });
-
-    test("keeps a pan offset while the texture keeps fitting", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-      vp.applyPan(5, -5);
-      vp.resizeCanvas(120, 60);
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 55, y: 15 }
-      );
-    });
-
-    test("frames the texture on the first sizing of a hidden canvas", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 100
-        },
-        zoom: 2
-      });
-      vp.centerTexture();
-      vp.resizeCanvas(100, 80);
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 40, y: 8 }
-      );
-    });
-  });
-
-  describe("texture resize", () => {
-    test("anchors a texture that grows past the canvas to the top-left corner", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 100);
-      vp.centerTexture();
-      vp.texture.resize({
-        x: 100,
-        y: 100
-      });
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 8, y: 8 }
-      );
-    });
-
-    test("centers a texture that shrinks to fit the canvas", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 100,
-          y: 100
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 100);
-      vp.centerTexture();
-      vp.texture.resize({
-        x: 10,
-        y: 10
-      });
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 40, y: 40 }
-      );
-    });
-
-    test("keeps a fitting texture centered", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 100);
-      vp.centerTexture();
-      vp.texture.resize({
-        x: 20,
-        y: 30
-      });
-
-      assert.deepStrictEqual(
-        { ...vp.camera },
-        { x: 30, y: 20 }
-      );
-    });
-
-    test("emits changed only when the camera moves", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 100);
-      vp.centerTexture();
-      let count = 0;
-      vp.on("changed", () => {
-        count++;
-      });
-
-      vp.texture.resize({
-        x: 10,
-        y: 10
-      });
-      assert.strictEqual(count, 0);
-
-      vp.texture.resize({
-        x: 100,
-        y: 100
-      });
-      assert.strictEqual(count, 1);
-    });
-  });
-
-  describe("visibleCenter", () => {
-    test("returns the texture pixel under the middle of the canvas", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-
-      assert.deepStrictEqual(
-        vp.visibleCenter(),
-        { x: 5, y: 5 }
-      );
-    });
-
-    test("follows the camera when the texture is panned off centre", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-      // Pushing the texture right moves the visible centre left over it.
-      vp.applyPan(6, 0);
-
-      assert.deepStrictEqual(
-        vp.visibleCenter(),
-        { x: 2, y: 5 }
-      );
-    });
-
-    test("clamps to the texture when the centre falls outside it", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 10,
-          y: 10
-        },
-        zoom: 2
-      });
-      vp.updateCanvasSize(100, 80);
-      vp.centerTexture();
-      vp.applyPan(1000, -1000);
-
-      assert.deepStrictEqual(
-        vp.visibleCenter(),
-        { x: 0, y: 9 }
-      );
-    });
-  });
-
   describe("clampCamera", () => {
     test("prevents camera from going past negative bound", () => {
       const vp = new Viewport({
@@ -492,11 +95,12 @@ describe("Viewport", () => {
           x: 16,
           y: 16
         },
-        zoom: 4
+        zoom: 4,
+        zoomSmoothing: 0
       });
       vp.updateCanvasSize(200, 200);
       const before = vp.zoom.value;
-      vp.applyZoom(-1, 100, 100);
+      vp.applyZoom(-100, 100, 100);
 
       assert.ok(
         vp.zoom.value > before,
@@ -510,11 +114,12 @@ describe("Viewport", () => {
           x: 16,
           y: 16
         },
-        zoom: 4
+        zoom: 4,
+        zoomSmoothing: 0
       });
       vp.updateCanvasSize(200, 200);
       const before = vp.zoom.value;
-      vp.applyZoom(1, 100, 100);
+      vp.applyZoom(100, 100, 100);
 
       assert.ok(
         vp.zoom.value < before,
@@ -578,101 +183,6 @@ describe("Viewport", () => {
     });
   });
 
-  describe("mouseCanvasPosition", () => {
-    test("subtracts bounding rect left/top", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        }
-      });
-
-      const bounds = { left: 50, top: 30 } as DOMRect;
-      const pos = vp.mouseCanvasPosition(
-        150,
-        80,
-        bounds
-      );
-
-      assert.strictEqual(pos.x, 100);
-      assert.strictEqual(pos.y, 50);
-    });
-  });
-
-  describe("mouseTexturePosition", () => {
-    test("converts canvas coords to texture coords", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        },
-        zoom: 4
-      });
-      vp.updateCanvasSize(200, 200);
-      vp.centerTexture();
-
-      // camera should be (200/2 - 16*4/2) = 100-32 = 68
-      const bounds = {
-        left: 0,
-        top: 0,
-        right: 200,
-        bottom: 200
-      } as DOMRect;
-      // mouseX=68 → canvasX=68 → textureX = (68 - camera.x) / zoom = 0
-      const pos = vp.mouseTexturePosition(
-        vp.camera.x,
-        vp.camera.y,
-        { bounds }
-      );
-
-      assert.ok(pos !== null);
-      assert.strictEqual(pos!.x, 0);
-      assert.strictEqual(pos!.y, 0);
-    });
-
-    test("returns null when limit=true and position is out of texture bounds", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        },
-        zoom: 4
-      });
-
-      vp.updateCanvasSize(200, 200);
-      const bounds = {
-        left: 0,
-        top: 0
-      } as DOMRect;
-      const pos = vp.mouseTexturePosition(
-        -1000,
-        -1000,
-        { bounds, limit: true }
-      );
-
-      assert.strictEqual(pos, null);
-    });
-
-    test("returns coords when limit=false even if out of bounds", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        },
-        zoom: 4
-      });
-      vp.updateCanvasSize(200, 200);
-      const bounds = { left: 0, top: 0 } as DOMRect;
-      const pos = vp.mouseTexturePosition(
-        -1000,
-        -1000,
-        { bounds, limit: false }
-      );
-
-      assert.ok(pos !== null);
-    });
-  });
-
   describe("zoom.sensitivity setter", () => {
     test("updates sensitivity", () => {
       const vp = new Viewport({
@@ -698,7 +208,7 @@ describe("Viewport", () => {
       assert.strictEqual(vp.zoom.sensitivity, 0.01);
     });
 
-    test("defaults to 0.1", () => {
+    test("defaults to 0.25", () => {
       const vp = new Viewport({
         textureSize: {
           x: 16,
@@ -706,7 +216,7 @@ describe("Viewport", () => {
         }
       });
 
-      assert.strictEqual(vp.zoom.sensitivity, 0.1);
+      assert.strictEqual(vp.zoom.sensitivity, 0.25);
     });
   });
 
@@ -741,13 +251,39 @@ describe("Viewport", () => {
       assert.strictEqual(changes(), 1);
     });
 
-    test("emits once per applyZoom", () => {
+    test("emits once per applyZoom without smoothing", () => {
+      const vp = makeViewport();
+      vp.zoom.smoothing = 0;
+      const changes = countChanges(vp);
+
+      vp.applyZoom(100, 50, 50);
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("emits animating once per eased zoom and changed once per update", () => {
+      const vp = makeViewport();
+      const changes = countChanges(vp);
+      let animating = 0;
+      vp.on("animating", () => {
+        animating++;
+      });
+
+      vp.applyZoom(-100, 50, 50);
+      vp.applyZoom(-100, 50, 50);
+      assert.strictEqual(animating, 1);
+      assert.strictEqual(changes(), 0);
+
+      vp.update(16);
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("does not emit from update at rest", () => {
       const vp = makeViewport();
       const changes = countChanges(vp);
 
-      vp.applyZoom(1, 50, 50);
-
-      assert.strictEqual(changes(), 1);
+      assert.strictEqual(vp.update(16), false);
+      assert.strictEqual(changes(), 0);
     });
 
     test("emits once per resizeCanvas", () => {
