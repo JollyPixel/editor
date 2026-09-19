@@ -19,13 +19,9 @@ export interface DefaultViewport {
   readonly canvasHeight: number;
 }
 
-/**
- * Fired after a camera or canvas-size change (`applyPan` / `applyZoom` /
- * `resizeCanvas` / `centerTexture`), or when a texture resize reframes the
- * camera. Never emitted from the internal `clampCamera` those methods share.
- */
 export type ViewportEvent = {
   changed: () => void;
+  animating: () => void;
 };
 
 export interface MouseTexturePositionOptions {
@@ -61,10 +57,20 @@ export interface ViewportOptions {
    */
   zoomMax?: number;
   /**
-   * Mouse-wheel zoom sensitivity.
-   * @default 0.1
+   * Relative zoom change per mouse-wheel notch at `zoomMin`.
+   * @default 0.25
    */
   zoomSensitivity?: number;
+  /**
+   * Zoom easing time constant in milliseconds; `0` disables easing.
+   * @default 50
+   */
+  zoomSmoothing?: number;
+}
+
+interface ZoomAnchor {
+  screen: Vec2;
+  world: Vec2;
 }
 
 export class Viewport extends Emitter<
@@ -77,6 +83,7 @@ export class Viewport extends Emitter<
   #texture: ViewportTexture;
   #canvasWidth: number = 0;
   #canvasHeight: number = 0;
+  #anchor: ZoomAnchor | null = null;
 
   readonly zoom: Zoom;
 
@@ -90,6 +97,7 @@ export class Viewport extends Emitter<
       zoomMin,
       zoomMax,
       zoomSensitivity,
+      zoomSmoothing,
       textureSize
     } = options;
 
@@ -97,7 +105,8 @@ export class Viewport extends Emitter<
       default: zoom,
       min: zoomMin,
       max: zoomMax,
-      sensitivity: zoomSensitivity
+      sensitivity: zoomSensitivity,
+      smoothing: zoomSmoothing
     });
     this.#texture = new ViewportTexture({
       size: textureSize,
@@ -130,6 +139,7 @@ export class Viewport extends Emitter<
   }
 
   centerTexture(): void {
+    this.#settle();
     this.#frame();
     this.emit("changed");
   }
@@ -153,6 +163,7 @@ export class Viewport extends Emitter<
     width: number,
     height: number
   ): void {
+    this.#settle();
     const previousSlack = this.#slack();
     const unsized = this.#canvasWidth === 0 || this.#canvasHeight === 0;
     this.#canvasWidth = width;
@@ -170,6 +181,7 @@ export class Viewport extends Emitter<
   #onTextureResized(
     previous: Readonly<Vec2>
   ): void {
+    this.#settle();
     const zoom = this.zoom.value;
     const { x, y } = this.#camera;
     this.#reframe({
@@ -222,22 +234,78 @@ export class Viewport extends Emitter<
     this.clampCamera();
   }
 
+  #settle(): void {
+    this.zoom.settle();
+    this.#anchor = null;
+  }
+
+  #followAnchor(): void {
+    if (this.#anchor === null) {
+      return;
+    }
+
+    const { screen, world } = this.#anchor;
+    const zoom = this.zoom.value;
+    this.#camera.x = Math.round(screen.x - (world.x * zoom));
+    this.#camera.y = Math.round(screen.y - (world.y * zoom));
+
+    this.clampCamera();
+  }
+
+  #anchorAt(
+    screen: Vec2
+  ): ZoomAnchor {
+    const zoom = this.zoom.value;
+
+    return {
+      screen,
+      world: {
+        x: (screen.x - this.#camera.x) / zoom,
+        y: (screen.y - this.#camera.y) / zoom
+      }
+    };
+  }
+
   applyZoom(
     delta: number,
     mx: number,
     my: number
   ): void {
-    const oldZoom = this.zoom.value;
-    const worldX = (mx - this.#camera.x) / oldZoom;
-    const worldY = (my - this.#camera.y) / oldZoom;
+    const wasAnimating = this.zoom.isAnimating;
+    this.#anchor = this.#anchorAt({
+      x: mx,
+      y: my
+    });
+    this.zoom.applyDelta(delta);
 
-    const newZoom = this.zoom.applyDelta(delta);
+    if (this.zoom.isAnimating) {
+      if (!wasAnimating) {
+        this.emit("animating");
+      }
 
-    this.#camera.x -= worldX * newZoom - worldX * oldZoom;
-    this.#camera.y -= worldY * newZoom - worldY * oldZoom;
+      return;
+    }
 
-    this.clampCamera();
+    this.#followAnchor();
+    this.#anchor = null;
     this.emit("changed");
+  }
+
+  update(
+    elapsedMs: number
+  ): boolean {
+    if (!this.zoom.isAnimating) {
+      return false;
+    }
+
+    const animating = this.zoom.update(elapsedMs);
+    this.#followAnchor();
+    if (!animating) {
+      this.#anchor = null;
+    }
+    this.emit("changed");
+
+    return animating;
   }
 
   applyPan(
@@ -247,6 +315,13 @@ export class Viewport extends Emitter<
     this.#camera.x += dx;
     this.#camera.y += dy;
     this.clampCamera();
+
+    if (this.#anchor !== null) {
+      this.#anchor = this.#anchorAt({
+        x: this.#anchor.screen.x + dx,
+        y: this.#anchor.screen.y + dy
+      });
+    }
     this.emit("changed");
   }
 

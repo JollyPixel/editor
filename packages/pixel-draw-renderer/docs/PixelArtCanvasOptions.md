@@ -134,10 +134,15 @@ interface ZoomOptions {
   min?: number;
   max?: number;
   sensitivity?: number;
+  smoothing?: number;
 }
 ```
 
-The default zoom fits the texture inside the parent with a small margin. It falls back to `4` when the parent has no size. `min`, `max` and `sensitivity` default to `1`, `32` and `0.1`.
+The default zoom fits the texture inside the parent with a small margin. It falls back to `4` when the parent has no size. `min` and `max` default to `1` and `32`.
+
+`sensitivity` is the relative zoom change per wheel notch at `min` (default `0.25`, so 25%). The step shrinks to half of it at `max`, so zooming is quick from afar and precise up close. A zoom within 3% of a whole level snaps to it, keeping texture pixels evenly sized.
+
+`smoothing` is the easing time constant in milliseconds (default `50`). Wheel input moves `zoom.target` and `zoom.value` eases toward it while the texture pixel under the cursor stays put. `0` applies zoom instantly.
 
 ### `backgroundTransparency`
 

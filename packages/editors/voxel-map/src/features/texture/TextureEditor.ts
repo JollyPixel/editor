@@ -31,8 +31,7 @@ const kCanvasOptions: PixelArtCanvasOptions = {
   zoom: {
     default: 1,
     min: 1,
-    max: 32,
-    sensitivity: 0.6
+    max: 32
   },
   brush: {
     size: 1,

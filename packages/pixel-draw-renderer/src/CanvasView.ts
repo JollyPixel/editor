@@ -55,6 +55,25 @@ export interface CanvasViewOptions {
 export class CanvasView {
   #doc: PixelDocument;
   #onRenderStateChanged = () => this.renderer.drawFrame();
+  #frameRequest: number | null = null;
+  #lastFrameTime = 0;
+  #onViewportAnimating = () => {
+    if (this.#frameRequest !== null) {
+      return;
+    }
+
+    this.#lastFrameTime = performance.now();
+    this.#frameRequest = requestAnimationFrame(this.#animate);
+  };
+  #animate = () => {
+    const now = performance.now();
+    const elapsed = now - this.#lastFrameTime;
+    this.#lastFrameTime = now;
+
+    this.#frameRequest = this.viewport.update(elapsed)
+      ? requestAnimationFrame(this.#animate)
+      : null;
+  };
 
   readonly viewport: Viewport;
   readonly renderer: CanvasRenderer;
@@ -81,8 +100,10 @@ export class CanvasView {
       zoom: zoomDefault,
       zoomMin: options.zoom?.min,
       zoomMax: options.zoom?.max,
-      zoomSensitivity: options.zoom?.sensitivity
+      zoomSensitivity: options.zoom?.sensitivity,
+      zoomSmoothing: options.zoom?.smoothing
     });
+    this.viewport.on("animating", this.#onViewportAnimating);
 
     const computedBackgroundColor = getComputedStyle(parent).backgroundColor;
     const backgroundColor = options.background ?? (
@@ -122,7 +143,6 @@ export class CanvasView {
       floatingSelections: this.renderer.peerFloatingSelections
     });
 
-    // These changes repaint without updating overlay geometry.
     doc.on("changed", this.#onRenderStateChanged);
     this.renderer.floatingSelection.on(
       "changed",
@@ -183,6 +203,11 @@ export class CanvasView {
   }
 
   destroy(): void {
+    this.viewport.off("animating", this.#onViewportAnimating);
+    if (this.#frameRequest !== null) {
+      cancelAnimationFrame(this.#frameRequest);
+      this.#frameRequest = null;
+    }
     this.#doc.off(
       "changed",
       this.#onRenderStateChanged
@@ -220,7 +245,6 @@ export class CanvasView {
       return clamp(4, zoomMin, zoomMax);
     }
 
-    // Keep the fitted texture clear of the container edges.
     const kFitPadding = 0.9;
     const fit = Math.min(
       containerSize.width / textureSize.x,
@@ -231,9 +255,6 @@ export class CanvasView {
   }
 }
 
-/**
- * Accepts inherited backgrounds unless unset or fully transparent.
- */
 function isOpaqueEnough(
   color: string
 ): boolean {
