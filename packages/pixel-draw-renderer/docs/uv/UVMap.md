@@ -13,7 +13,7 @@ canvas.mode = "uv";
 canvas.uv.select(region.id);
 ```
 
-In UV mode, click a visible region to select it, drag it to move it, or press `Delete` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
+In UV mode, click a visible region to select it, drag it to move it, press `R` or `Shift+R` to rotate it, or press `Delete` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
 
 See [`UVRegion`](./UVRegion.md) for region geometry and serialized data.
 
@@ -66,11 +66,12 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"region-dragging"` | `id`, `face`, `rect`, `geometry` |
 | `"region-drag-ended"` | `id`, `committed` |
 | `"region-state-changed"` | `region`, `previous` |
+| `"region-rotated"` | `region`, `previous`, `face` |
 | `"selection-changed"` | `selectedRegionId`, `selectedSlot` |
 | `"visibility-changed"` | `showAll` |
 | `"label-visibility-changed"` | `showRegionLabels` |
 
-`face` is `null` for anything but a free region, since stacked and unfolded regions move whole. `"region-dragging"` is a preview event; it does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
+`face` is `null` for anything but a free region, since stacked and unfolded regions move and rotate whole. `"region-dragging"` is a preview event; it does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
 
 ## Properties
 
@@ -149,7 +150,7 @@ Removes a region and emits `"region-deleted"`. Deleting the selected region also
 move(id: string, rect: SelectionRect, slot?: UVSlot): boolean
 ```
 
-Moves one slot of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `slot` is ignored. The rectangle is clamped to the canvas. Returns `false` when the id is unknown or a free region has no `slot`.
+Moves one slot of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `slot` is ignored. Only the position of `rect` is used: the region keeps its current size and rotation, so a move computed before a rotation cannot undo it. The position is clamped to the canvas. Returns `false` when the id is unknown or a free region has no `slot`.
 
 ### `previewMove(id, rect, slot?)`
 
@@ -157,7 +158,7 @@ Moves one slot of a free region, or the whole of a stacked or unfolded one, in w
 previewMove(id: string, rect: SelectionRect, slot?: UVSlot): void
 ```
 
-Emits `"region-dragging"` with clamped preview geometry. The stored region, history and network state remain unchanged.
+Emits `"region-dragging"` with clamped preview geometry, keeping the current size and rotation like `move()`. The stored region, history and network state remain unchanged.
 
 ### `setState(id, state, slot?)`
 
@@ -173,6 +174,24 @@ Moves a region to one of the three states, emitting `"region-state-changed"` wit
 
 Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because `uv-state` history entries carry the whole previous region.
 
+### `rotate(id, direction, slot?)`
+
+```ts
+rotate(id: string, direction: RotationDirection, slot?: UVSlot): boolean
+
+type RotationDirection = "cw" | "ccw";
+```
+
+Turns a region 90 degrees and emits `"region-rotated"` with the previous region as serialized data. What turns depends on the state, like moving does:
+
+- **stacked**: the shared rect and every slot.
+- **unfolded**: the whole net as one piece around its bounds.
+- **free**: only `slot`, in place. Without a known `slot` nothing turns.
+
+The top-left corner stays fixed and a non-square rect swaps its width and height. The result is then clamped into the canvas: the whole region for stacked and unfolded, only the turned slot for free. Returns `false` for an unknown id or a free region without `slot`. See [`UVRegion.rotated()`](./UVRegion.md#rotateddirection-slot) for the geometry.
+
+In UV mode, `R` and `Shift+R` rotate the selected region, or the selected slot of a free region, clockwise and counter-clockwise. They do nothing during a drag.
+
 ### `select(id, slot?)`
 
 ```ts
@@ -181,14 +200,15 @@ select(id: string | null, slot?: UVSlot): void
 
 Selects a region or clears selection with `null`. For a free region, an omitted or inactive slot falls back to the first active slot; every other state ignores `slot`. A click picks the slot the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in region order through the slots that are exactly coincident with it. A slot that merely overlaps sits below and is reachable only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
 
-### `restore(region)` / `restoreState(region)`
+### `restore(region)` / `restoreState(region)` / `restoreRotation(region, face?)`
 
 ```ts
 restore(region: UVRegion | UVRegionData): UVRegion
 restoreState(region: UVRegion | UVRegionData): boolean
+restoreRotation(region: UVRegion | UVRegionData, face?: UVSlot | null): boolean
 ```
 
-`restore()` adds a saved region without cascading placement and emits `"region-created"`. `restoreState()` replaces an existing region and emits `"region-state-changed"`. History and network hydration use these methods.
+`restore()` adds a saved region without cascading placement and emits `"region-created"`. `restoreState()` replaces an existing region and emits `"region-state-changed"`. `restoreRotation()` replaces an existing region and emits `"region-rotated"` with `face`, which defaults to `null`. History and network hydration use these methods.
 
 ### `clear()`
 

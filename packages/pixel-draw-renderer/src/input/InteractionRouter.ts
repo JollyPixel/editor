@@ -4,6 +4,7 @@ import type { InputActions } from "./InputActions.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type {
   Mode,
+  RotationDirection,
   Vec2
 } from "../types.ts";
 
@@ -232,8 +233,10 @@ export class InteractionRouter implements InputActions {
     return this.#onRedo();
   }
 
-  onRotate(): boolean {
-    return this.#active.onRotate();
+  onRotate(
+    direction: RotationDirection
+  ): boolean {
+    return this.#active.onRotate(direction);
   }
 
   onFlipHorizontal(): boolean {

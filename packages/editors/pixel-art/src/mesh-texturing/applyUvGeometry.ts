@@ -1,10 +1,14 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
-import type {
-  SelectionRect,
-  UVGeometry,
-  UVTriangleCorner,
-  Vec2
+import {
+  rotateCorner,
+  rotateUv,
+  rotationOf,
+  type SelectionRect,
+  type UVGeometry,
+  type UVQuarterTurn,
+  type UVTriangleCorner,
+  type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -17,6 +21,7 @@ export interface ApplyUvRectOptions {
   textureSize: Vec2;
   ranges: readonly FaceVertexRange[];
   corner?: UVTriangleCorner | null;
+  rotation?: UVQuarterTurn;
 }
 
 export function applyUvGeometry(
@@ -27,8 +32,9 @@ export function applyUvGeometry(
   ranges: readonly FaceVertexRange[]
 ): void {
   const rect = "shape" in geometry ? geometry.rect : geometry;
+  const rotation = rotationOf(geometry);
   const corner = "shape" in geometry && geometry.shape === "triangle" ?
-    geometry.corner :
+    rotateCorner(geometry.corner, -rotation) :
     null;
 
   applyUvRect({
@@ -37,7 +43,8 @@ export function applyUvGeometry(
     rect,
     textureSize,
     ranges,
-    corner
+    corner,
+    rotation
   });
 }
 
@@ -50,7 +57,8 @@ export function applyUvRect(
     rect,
     textureSize,
     ranges,
-    corner = null
+    corner = null,
+    rotation = 0
   } = options;
   const u0 = rect.x / textureSize.x;
   const u1 = (rect.x + rect.width) / textureSize.x;
@@ -63,7 +71,10 @@ export function applyUvRect(
     for (let index = range.start; index < end; index++) {
       const baseU = baseUv[index * 2];
       const baseV = baseUv[(index * 2) + 1];
-      const [u, v] = orientUv(baseU, baseV, corner);
+      const [u, v] = rotateUv(
+        ...orientUv(baseU, baseV, corner),
+        rotation
+      );
       uvAttribute.setXY(
         index,
         u0 + (u * (u1 - u0)),

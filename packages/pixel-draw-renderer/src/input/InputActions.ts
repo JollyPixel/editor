@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { Vec2 } from "../types.ts";
+import type {
+  RotationDirection,
+  Vec2
+} from "../types.ts";
 
 export interface InputActions {
   /**
@@ -59,7 +62,9 @@ export interface InputActions {
   onDelete(): boolean;
   onUndo(): boolean;
   onRedo(): boolean;
-  onRotate(): boolean;
+  onRotate(
+    direction: RotationDirection
+  ): boolean;
   onFlipHorizontal(): boolean;
   onFlipVertical(): boolean;
 }

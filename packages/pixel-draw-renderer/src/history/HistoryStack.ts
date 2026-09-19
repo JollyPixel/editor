@@ -143,6 +143,10 @@ export class HistoryStack {
       case "uv-state":
         this.#uvMap.restoreState(entry.before);
         break;
+
+      case "uv-rotate":
+        this.#uvMap.restoreRotation(entry.before, entry.face);
+        break;
     }
   }
 
@@ -195,6 +199,10 @@ export class HistoryStack {
 
       case "uv-state":
         this.#uvMap.restoreState(entry.after);
+        break;
+
+      case "uv-rotate":
+        this.#uvMap.restoreRotation(entry.after, entry.face);
         break;
     }
   }

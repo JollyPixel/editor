@@ -101,6 +101,12 @@ stable ID so block definitions can refer to its tiles.
 One square image in a tileset, addressed by its column and row. A block
 definition can choose a default tile and override it for individual faces.
 
+### Tile Rotation
+
+Clockwise quarter turns of a tile image inside the face it textures. It belongs
+to the tile reference, so it is distinct from a voxel transform, which turns
+the whole placed voxel.
+
 ### Atlas
 
 The loaded texture prepared from a tileset for rendering. The atlas keeps the

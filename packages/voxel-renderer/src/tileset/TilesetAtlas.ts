@@ -9,6 +9,7 @@ import type {
   TilesetImage,
   TilesetTexture,
   TilesetUVRegion,
+  TileRotation,
   TileSpan
 } from "./types.ts";
 import {
@@ -51,12 +52,13 @@ export class TilesetAtlas {
     col: number,
     row: number,
     size: number = this.def.tileSize,
-    span: Readonly<TileSpan> = UNIT_TILE_SPAN
+    span: Readonly<TileSpan> = UNIT_TILE_SPAN,
+    rotation: TileRotation = 0
   ): TilesetUVRegion {
     const { cols, rows, tileSize } = this.def;
     const width = cols * tileSize;
     const height = rows * tileSize;
-    const footprint = tileFootprint(size, span);
+    const footprint = tileFootprint(size, span, rotation);
     const bottom = ((rows - row) * tileSize) - footprint.height;
 
     return {

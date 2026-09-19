@@ -1,12 +1,18 @@
 // Import Internal Dependencies
 import type {
+  RotationDirection,
   SelectionRect,
   Vec2
 } from "../types.ts";
 import {
-  copyGeometry,
   copyRect,
-  rectOf
+  quarterTurn,
+  quarterTurnsOf,
+  rectOf,
+  rotateGeometry,
+  rotateRect,
+  rotationOf,
+  withRotation
 } from "./geometry.ts";
 import { packNet } from "./netLayout.ts";
 import { UVSlotMap } from "./UVSlotMap.ts";
@@ -14,10 +20,14 @@ import {
   DEFAULT_UV_SLOTS,
   type UVSlot,
   type UVGeometry,
+  type UVQuarterTurn,
+  type UVRect,
   type UVRegionState
 } from "./types.ts";
 
 export type {
+  UVQuarterTurn,
+  UVRect,
   UVRegionState,
   UVTriangleCorner,
   UVTriangle,
@@ -38,7 +48,7 @@ interface UVRegionIdentity {
 export type UVRegionData =
   | (UVRegionIdentity & {
     state: "stacked";
-    rect: SelectionRect;
+    rect: UVRect;
     faces?: Record<UVSlot, UVGeometry>;
     activeFaces?: UVSlot[];
     stackedFace?: UVSlot;
@@ -60,6 +70,7 @@ type UVRegionLayout =
   | {
     state: "stacked";
     rect: SelectionRect;
+    rotation: UVQuarterTurn;
     slot: UVSlot | null;
   }
   | {
@@ -109,6 +120,36 @@ function unionOf(
   };
 }
 
+function rotatedRect(
+  rect: SelectionRect,
+  rotation: UVQuarterTurn
+): UVRect {
+  return rotation === 0 ?
+    copyRect(rect) :
+    {
+      ...copyRect(rect),
+      rotation
+    };
+}
+
+function dominantRotation(
+  rotations: readonly UVQuarterTurn[],
+  preferred: UVQuarterTurn
+): UVQuarterTurn {
+  const counts = new Map<UVQuarterTurn, number>();
+  for (const rotation of rotations) {
+    counts.set(rotation, (counts.get(rotation) ?? 0) + 1);
+  }
+
+  const best = Math.max(0, ...counts.values());
+  if ((counts.get(preferred) ?? 0) === best) {
+    return preferred;
+  }
+
+  return rotations.find((rotation) => counts.get(rotation) === best) ??
+    preferred;
+}
+
 /**
  * Immutable region whose mutations return a new instance or `this` on no-op.
  */
@@ -134,9 +175,10 @@ export class UVRegion {
     this.color = data.color;
 
     if (data.state === "stacked") {
+      const rotation = rotationOf(data.rect);
       this.#faces = data.faces ?
         new UVSlotMap(data.faces) :
-        UVSlotMap.shared(data.rect);
+        UVSlotMap.shared(rotatedRect(data.rect, rotation));
       if (
         data.stackedFace !== undefined &&
         !this.#faces.has(data.stackedFace)
@@ -148,6 +190,7 @@ export class UVRegion {
       this.#layout = {
         state: "stacked",
         rect: copyRect(data.rect),
+        rotation,
         slot: data.stackedFace ?? null
       };
     }
@@ -212,7 +255,7 @@ export class UVRegion {
     slot: UVSlot
   ): UVGeometry {
     return this.#layout.state === "stacked" ?
-      copyGeometry(this.#layout.rect) :
+      rotatedRect(this.#layout.rect, this.#layout.rotation) :
       this.#faces.get(slot);
   }
 
@@ -221,7 +264,7 @@ export class UVRegion {
       return [
         {
           slot: null,
-          geometry: copyRect(this.#layout.rect)
+          geometry: rotatedRect(this.#layout.rect, this.#layout.rotation)
         }
       ];
     }
@@ -242,15 +285,33 @@ export class UVRegion {
     }
 
     const target = this.#stackTarget(slot);
-    const rect = rectOf(this.#faces.get(target));
+    const rotation = dominantRotation(
+      this.#renderedFaces().map(
+        (face) => rotationOf(this.#faces.get(face))
+      ),
+      rotationOf(this.#faces.get(target))
+    );
+    const faces = this.#faces.withSlots(
+      new Map(
+        this.#faces.slots.map((face) => {
+          const geometry = this.#faces.get(face);
+
+          return [
+            face,
+            rotateGeometry(geometry, rotation - rotationOf(geometry))
+          ];
+        })
+      )
+    );
+    const rect = rectOf(faces.get(target));
 
     return new UVRegion({
       id: this.id,
       name: this.name,
       color: this.color,
       state: "stacked",
-      rect,
-      faces: this.#faces.stackedAt(rect).toJSON(),
+      rect: rotatedRect(rect, rotation),
+      faces: faces.stackedAt(rect).toJSON(),
       activeFaces: [
         ...this.#activeFaces
       ],
@@ -314,7 +375,7 @@ export class UVRegion {
         name: this.name,
         color: this.color,
         state: "stacked",
-        rect,
+        rect: rotatedRect(rect, this.#layout.rotation),
         faces: this.#faces
           .translated(
             rect.x - this.#layout.rect.x,
@@ -344,7 +405,7 @@ export class UVRegion {
     const previous = this.#faces.get(slot);
     const geometry = "shape" in previous ?
       { ...previous, rect: copyRect(rect) } :
-      copyRect(rect);
+      withRotation(copyRect(rect), rotationOf(previous));
 
     return new UVRegion({
       id: this.id,
@@ -386,6 +447,72 @@ export class UVRegion {
     });
   }
 
+  withGeometry(
+    slot: UVSlot,
+    geometry: UVGeometry
+  ): UVRegion {
+    if (this.#layout.state !== "free" || !this.#faces.has(slot)) {
+      return this;
+    }
+
+    return new UVRegion({
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      state: "free",
+      faces: this.#faces.withSlot(slot, geometry).toJSON(),
+      activeFaces: [
+        ...this.#activeFaces
+      ]
+    });
+  }
+
+  rotated(
+    direction: RotationDirection,
+    slot?: UVSlot
+  ): UVRegion {
+    const turns = quarterTurnsOf(direction);
+    const layout = this.#layout;
+    if (layout.state === "stacked") {
+      const rect = rotateRect(layout.rect, turns);
+
+      return new UVRegion({
+        id: this.id,
+        name: this.name,
+        color: this.color,
+        state: "stacked",
+        rect: rotatedRect(rect, quarterTurn(layout.rotation + turns)),
+        faces: this.#faces.rotated(turns).toJSON(),
+        activeFaces: [
+          ...this.#activeFaces
+        ],
+        stackedFace: layout.slot ?? undefined
+      });
+    }
+
+    let faces: UVSlotMap;
+    if (layout.state === "unfolded") {
+      faces = this.#faces.rotatedWithin(this.bounds, turns);
+    }
+    else if (slot !== undefined && this.#faces.has(slot)) {
+      faces = this.#faces.rotated(turns, [slot]);
+    }
+    else {
+      return this;
+    }
+
+    return new UVRegion({
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      state: layout.state,
+      faces: faces.toJSON(),
+      activeFaces: [
+        ...this.#activeFaces
+      ]
+    });
+  }
+
   toJSON(): UVRegionData {
     const identity: UVRegionIdentity = {
       id: this.id,
@@ -410,7 +537,7 @@ export class UVRegion {
     const data: UVRegionData = {
       ...identity,
       state: "stacked",
-      rect: copyRect(layout.rect)
+      rect: rotatedRect(layout.rect, layout.rotation)
     };
     const faces = this.#faces.slots;
     const hasTopology = this.#activeFaces.length !== faces.length ||
@@ -420,7 +547,8 @@ export class UVRegion {
         const geometry = this.#faces.get(face);
 
         return !isRect(geometry) ||
-          !sameRect(geometry, layout.rect);
+          !sameRect(geometry, layout.rect) ||
+          rotationOf(geometry) !== layout.rotation;
       });
     if (hasTopology) {
       data.faces = this.#faces.toJSON();

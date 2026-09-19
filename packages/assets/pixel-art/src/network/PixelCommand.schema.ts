@@ -70,6 +70,18 @@ const kTextureRectSchema = defineSchema({
   ]
 });
 
+const kQuarterTurnSchema = defineSchema({
+  enum: [0, 1, 2, 3]
+});
+
+const kUVRectSchema = defineSchema({
+  ...kTextureRectSchema,
+  properties: {
+    ...kTextureRectSchema.properties,
+    rotation: kQuarterTurnSchema
+  }
+});
+
 const kNormalizedRectSchema = defineSchema({
   type: "object",
   properties: {
@@ -96,14 +108,16 @@ const kTriangleCornerSchema = defineSchema({
 });
 
 function triangleSchema(
-  rect: JSONSchema
+  rect: JSONSchema,
+  extra: Record<string, JSONSchema> = {}
 ): JSONSchema {
   return {
     type: "object",
     properties: {
       shape: { const: "triangle" },
       corner: kTriangleCornerSchema,
-      rect
+      rect,
+      ...extra
     },
     required: [
       "shape",
@@ -115,13 +129,14 @@ function triangleSchema(
 
 const kUVGeometrySchema: JSONSchema = {
   oneOf: [
-    kTextureRectSchema,
-    triangleSchema(kTextureRectSchema),
+    kUVRectSchema,
+    triangleSchema(kTextureRectSchema, { rotation: kQuarterTurnSchema }),
     {
       type: "object",
       properties: {
         shape: { const: "compound" },
         rect: kTextureRectSchema,
+        rotation: kQuarterTurnSchema,
         parts: {
           type: "array",
           minItems: 1,
@@ -167,7 +182,7 @@ const kUVRegionSchema: JSONSchema = {
       properties: {
         ...kUVRegionIdentityProperties,
         state: { const: "stacked" },
-        rect: kTextureRectSchema,
+        rect: kUVRectSchema,
         faces: kUVFacesSchema,
         stackedFace: kUVSlotSchema
       },
@@ -195,9 +210,19 @@ const kUVRegionSchema: JSONSchema = {
   ]
 };
 
+function metadataSchema(
+  properties: Record<string, JSONSchema>
+): JSONSchema {
+  return {
+    type: "object",
+    properties,
+    required: Object.keys(properties)
+  };
+}
+
 function pixelCommand(
   action: string,
-  properties: Record<string, JSONSchema>
+  ...variants: Record<string, JSONSchema>[]
 ): JSONSchema {
   return {
     type: "object",
@@ -205,11 +230,9 @@ function pixelCommand(
       ...commandHeaderProperties,
       seq: { type: "integer", minimum: 0 },
       action: { const: action },
-      metadata: {
-        type: "object",
-        properties,
-        required: Object.keys(properties)
-      },
+      metadata: variants.length === 1 ?
+        metadataSchema(variants[0]) :
+        { oneOf: variants.map(metadataSchema) },
       originTimestamp: { type: "number" }
     },
     required: [
@@ -255,7 +278,20 @@ export const pixelCommandProtocol: MessageProtocol = defineMessageProtocol({
       }),
       pixelCommand("uv-region-state-changed", {
         region: kUVRegionSchema
-      })
+      }),
+      pixelCommand(
+        "uv-region-rotated",
+        {
+          id: { type: "string" },
+          face: kUVSlotSchema,
+          geometry: kUVGeometrySchema
+        },
+        {
+          id: { type: "string" },
+          face: { type: "null" },
+          region: kUVRegionSchema
+        }
+      )
     ]
   }
 });

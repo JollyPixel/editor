@@ -30,10 +30,13 @@ counts are derived from the image by
 ## Tile references
 
 ```ts
+type TileRotation = 0 | 1 | 2 | 3;
+
 interface ResolvedTileRef {
   col: number;
   row: number;
   tilesetId?: string;
+  rotation?: TileRotation;
   size?: number;
 }
 
@@ -49,7 +52,11 @@ function resolveTileRef(
 A missing `tilesetId` selects the first declared tileset; the engine fills it
 in when it loads or defines a block. `size` is the
 square texture region side in texels, anchored at the tile's top-left corner,
-and defaults to the tileset `tileSize`. `resolveTileRef()`
+and defaults to the tileset `tileSize`. `rotation` turns the tile image
+inside the face by clockwise quarter turns in image space, where y points down.
+It applies before the block's own `VoxelTransform`, so a rotated block carries
+its rotated texture along. An odd rotation swaps the footprint's width and
+height; `col` and `row` still name its top-left corner. `resolveTileRef()`
 expands tuple references and fills the default ID without mutating the input.
 
 The supporting texture and atlas types are:
@@ -184,8 +191,18 @@ interface TileRect {
 
 function tileFootprint(
   size: number,
-  span?: Readonly<TileSpan>
+  span?: Readonly<TileSpan>,
+  rotation?: TileRotation
 ): Pick<TileRect, "width" | "height">;
+function rotateTileUv(
+  u: number,
+  v: number,
+  rotation?: TileRotation
+): [number, number];
+function rotateTileBounds(
+  bounds: Readonly<TileBounds>,
+  rotation?: TileRotation
+): TileBounds;
 function tileRectOf(
   ref: ResolvedTileRef,
   tileSize: number,
@@ -213,6 +230,10 @@ texels, never below one: a slope is 11, 23, 45 and 91 texels tall on 8, 16, 32
 and 64-texel tiles. `tileRectOf()` and `tileRefFromRect()` apply it with a
 default of `UNIT_TILE_SPAN`, so a spanned rect grows down from the tile's
 top-left corner.
+
+Both also honour the reference's `rotation`: the footprint swaps its sides and
+`bounds` turn inside it with `rotateTileBounds()`. `rotateTileUv()` turns a
+tile-local UV the same way; the mesher applies it to every face vertex.
 
 ## Loading textures
 

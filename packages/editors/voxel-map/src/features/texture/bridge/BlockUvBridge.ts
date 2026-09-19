@@ -65,6 +65,7 @@ export class BlockUvBridge {
     this.#uv.on("region-moved", this.#onRegionMoved);
     this.#uv.on("region-dragging", this.#onRegionDragging);
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
+    this.#uv.on("region-rotated", this.#onRegionRotated);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
     this.#unsubscribeRegistry = worldStore.watch(
       "blockRegistryChanged",
@@ -88,6 +89,7 @@ export class BlockUvBridge {
     this.#uv.off("region-moved", this.#onRegionMoved);
     this.#uv.off("region-dragging", this.#onRegionDragging);
     this.#uv.off("region-state-changed", this.#onRegionStateChanged);
+    this.#uv.off("region-rotated", this.#onRegionRotated);
     this.#uv.off("region-deleted", this.#onRegionDeleted);
     this.#unsubscribeRegistry();
     this.#selection.dispose();
@@ -238,6 +240,18 @@ export class BlockUvBridge {
     }
     const block = this.#blockOf(event.region.id);
     if (!block || this.#rederivedOnFree(block, event)) {
+      return;
+    }
+
+    this.#applyRegionToBlock(event.region);
+  };
+
+  readonly #onRegionRotated: UVMapListener<"region-rotated"> = (event) => {
+    if (this.#rebuilding) {
+      return;
+    }
+    const block = this.#blockOf(event.region.id);
+    if (!block || uvRegionsEqual(this.#regionFor(block), event.region)) {
       return;
     }
 

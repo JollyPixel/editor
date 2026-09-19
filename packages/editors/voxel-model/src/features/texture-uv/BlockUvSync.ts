@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import {
   DEFAULT_UV_SLOTS,
+  rotateUv,
+  rotationOf,
   type PixelArtCanvas,
   type UVGeometry,
   type UVMapListener,
@@ -207,6 +209,7 @@ export default class BlockUvSync {
     canvasManager.uv.on("selection-changed", this.#onUvSelectionChanged);
     canvasManager.uv.on("region-moved", this.#onUvRegionChanged);
     canvasManager.uv.on("region-state-changed", this.#onUvRegionStateChanged);
+    canvasManager.uv.on("region-rotated", this.#onUvRegionRotated);
     canvasManager.uv.on("region-dragging", this.#onUvRegionDragging);
   }
 
@@ -258,6 +261,12 @@ export default class BlockUvSync {
   };
 
   readonly #onUvRegionStateChanged: UVMapListener<"region-state-changed"> = (
+    { region }
+  ): void => {
+    this.#reapplyRegion(region);
+  };
+
+  readonly #onUvRegionRotated: UVMapListener<"region-rotated"> = (
     { region }
   ): void => {
     this.#reapplyRegion(region);
@@ -330,10 +339,11 @@ export default class BlockUvSync {
       const vBottom = 1 - ((geometry.y + geometry.height) / textureSize.y);
       const [start, end] = kBoxFaceVertexRanges[slot];
       const mirrorU = flipU.has(slot);
+      const rotation = rotationOf(geometry);
 
       for (let i = start; i < end; i++) {
-        const [rawU, baseV] = kDefaultFaceUV[i - start];
-        const baseU = mirrorU ? 1 - rawU : rawU;
+        const [rawU, rawV] = kDefaultFaceUV[i - start];
+        const [baseU, baseV] = rotateUv(mirrorU ? 1 - rawU : rawU, rawV, rotation);
         uv.setXY(i, u0 + (baseU * (u1 - u0)), vBottom + (baseV * (vTop - vBottom)));
       }
     }

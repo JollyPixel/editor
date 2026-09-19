@@ -6,13 +6,18 @@ import {
   tileRefFromRect,
   WHOLE_TILE_BOUNDS,
   type BlockShape,
-  type ResolvedBlockDefinition
+  type ResolvedBlockDefinition,
+  type ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 import {
   DEFAULT_UV_SLOTS,
   UVRegion,
+  rotateGeometry,
+  rotationOf,
   type SelectionRect,
   type UVGeometry,
+  type UVQuarterTurn,
+  type UVRect,
   type UVSlot
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -35,6 +40,32 @@ const kBoxShapeUv: BlockShapeUv = {
   faceRanges: {},
   isBox: true
 };
+
+function withTileRotation(
+  ref: ResolvedTileRef,
+  rotation: UVQuarterTurn
+): ResolvedTileRef {
+  const { rotation: _previous, ...rest } = ref;
+
+  return rotation === 0 ?
+    rest :
+    {
+      ...rest,
+      rotation
+    };
+}
+
+function rotatedRect(
+  rect: SelectionRect,
+  rotation: UVQuarterTurn
+): UVRect {
+  return rotation === 0 ?
+    rect :
+    {
+      ...rect,
+      rotation
+    };
+}
 
 function recordOfFaces<TValue>(
   valueOf: (face: UVSlot) => TValue
@@ -92,7 +123,10 @@ export function blockUvRegion(
       name: block.name,
       color: kRegionColor,
       state: "stacked",
-      rect: tileRectOf(block.defaultTexture, tileSize)
+      rect: rotatedRect(
+        tileRectOf(block.defaultTexture, tileSize),
+        block.defaultTexture.rotation ?? 0
+      )
     });
   }
 
@@ -126,8 +160,18 @@ export function freeBlockUvRegion(
         shapeUv.bounds[slot],
         shapeUv.spans[slot]
       );
+      const rotation = tile.rotation ?? 0;
+      const rotated = rotateGeometry(
+        uvGeometryForSlot(rect, shapeUv, slot),
+        rotation
+      );
 
-      return [slot, uvGeometryForSlot(rect, shapeUv, slot)];
+      return [
+        slot,
+        "shape" in rotated ?
+          { ...rotated, rect } :
+          rotatedRect(rect, rotation)
+      ];
     })
   ) as Record<UVSlot, UVGeometry>;
 
@@ -169,7 +213,7 @@ export function blockFromUvRegion(
             face,
             tileRefFromRect(
               "shape" in geometry ? geometry.rect : geometry,
-              template,
+              withTileRotation(template, rotationOf(geometry)),
               tileSize,
               shapeUv.bounds[face],
               shapeUv.spans[face]
@@ -192,7 +236,10 @@ export function blockFromUvRegion(
     faceTextures: {},
     defaultTexture: tileRefFromRect(
       region.rectFor(stackedSlot),
-      template,
+      withTileRotation(
+        template,
+        rotationOf(region.geometryFor(stackedSlot))
+      ),
       tileSize,
       shapeUv.bounds[stackedSlot]
     )
@@ -214,7 +261,9 @@ export function uvRegionsEqual(
     return false;
   }
   if (a.state === "stacked" && b.state === "stacked") {
-    return rectsEqual(a.rect, b.rect) && geometriesEqual(a.faces, b.faces);
+    return rectsEqual(a.rect, b.rect) &&
+      rotationOf(a.rect) === rotationOf(b.rect) &&
+      geometriesEqual(a.faces, b.faces);
   }
   if (a.state !== "stacked" && b.state !== "stacked") {
     return arraysEqual(a.activeFaces ?? [], b.activeFaces ?? []) &&

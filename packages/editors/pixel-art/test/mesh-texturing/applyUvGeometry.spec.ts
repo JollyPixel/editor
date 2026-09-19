@@ -161,3 +161,54 @@ describe("applyUvRect", () => {
     ]);
   });
 });
+
+describe("applyUvGeometry — rotation", () => {
+  test("sends the face top edge to the rect right edge on a clockwise turn", () => {
+    const baseUv = Float32Array.from([
+      0, 1,
+      1, 1,
+      0, 0,
+      1, 0
+    ]);
+    const attribute = new THREE.Float32BufferAttribute(baseUv, 2);
+
+    applyUvGeometry(
+      attribute,
+      baseUv,
+      { x: 0, y: 0, width: 16, height: 16, rotation: 1 },
+      { x: 64, y: 64 },
+      [{ start: 0, count: 4 }]
+    );
+
+    assert.deepStrictEqual(Array.from(attribute.array), [
+      0.25, 1,
+      0.25, 0.75,
+      0, 1,
+      0, 0.75
+    ]);
+  });
+
+  test("orients a rotated triangle from its original corner", () => {
+    const baseUv = Float32Array.from(kCanonicalTriangle.flat());
+    const attribute = new THREE.Float32BufferAttribute(baseUv, 2);
+
+    applyUvGeometry(
+      attribute,
+      baseUv,
+      {
+        shape: "triangle",
+        corner: "bottom-left",
+        rect: { x: 0, y: 0, width: 64, height: 64 },
+        rotation: 1
+      },
+      { x: 64, y: 64 },
+      [{ start: 0, count: 3 }]
+    );
+
+    assert.deepStrictEqual(Array.from(attribute.array), [
+      0, 1,
+      0, 0,
+      1, 0
+    ]);
+  });
+});

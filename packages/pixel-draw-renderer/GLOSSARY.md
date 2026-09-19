@@ -80,6 +80,10 @@ The pixel area a fill may touch when `FillTool.uvClip` is on. Seeded inside one 
 
 Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions have region scope; free regions have slot scope.
 
+### UV Rotation
+
+The quarter turns a UV slot's mapping has taken, clockwise in texture space. It follows the UV movement scope: stacked and unfolded regions turn whole, a free region turns one slot. The slot geometry is stored as it looks after the turn, and the rotation tells a mesh which way its UVs face inside it.
+
 ### History Entry
 
 The reversible record of one local edit, used by undo and redo.

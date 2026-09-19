@@ -14,7 +14,7 @@ interface SelectTool {
   shape: boolean;
   readonly hasSelection: boolean;
   readonly isFloating: boolean;
-  rotate(): boolean;
+  rotate(direction?: RotationDirection): boolean;
   flipHorizontal(): boolean;
   flipVertical(): boolean;
   delete(): boolean;
@@ -60,16 +60,16 @@ A drag starts a move only when it begins on a selected pixel. Masked-out cells i
 
 ## Methods
 
-### `rotate()` / `flipHorizontal()` / `flipVertical()` / `delete()`
+### `rotate(direction?)` / `flipHorizontal()` / `flipVertical()` / `delete()`
 
 ```ts
-rotate(): boolean
+rotate(direction?: "cw" | "ccw"): boolean
 flipHorizontal(): boolean
 flipVertical(): boolean
 delete(): boolean
 ```
 
-`rotate()` turns the selection 90 degrees clockwise around its center. The flip methods mirror it horizontally or vertically.
+`rotate()` turns the selection 90 degrees around its center, clockwise by default or counter-clockwise with `"ccw"`. The flip methods mirror it horizontally or vertically.
 
 Each method returns `true` when it applies the transform. It returns `false` when no selection is ready, including while a selection is being created or moved.
 

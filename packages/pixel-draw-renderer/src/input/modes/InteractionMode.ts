@@ -4,6 +4,7 @@
 // Import Internal Dependencies
 import type {
   Mode,
+  RotationDirection,
   Vec2
 } from "../../types.ts";
 
@@ -61,7 +62,9 @@ export abstract class InteractionMode {
     return false;
   }
 
-  onRotate(): boolean {
+  onRotate(
+    _direction: RotationDirection
+  ): boolean {
     return false;
   }
 

@@ -29,6 +29,7 @@ export type KeybindingAction =
   | "redo"
   | "delete"
   | "rotate"
+  | "rotateCounterClockwise"
   | "flipHorizontal"
   | "flipVertical";
 
@@ -49,6 +50,7 @@ const kKeybindingActions: KeybindingAction[] = [
   "redo",
   "delete",
   "rotate",
+  "rotateCounterClockwise",
   "flipHorizontal",
   "flipVertical"
 ];
@@ -60,6 +62,7 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
   redo: ["mod+y", "mod+shift+z"],
   delete: "Delete",
   rotate: "r",
+  rotateCounterClockwise: "shift+r",
   flipHorizontal: "h",
   flipVertical: "v"
 };

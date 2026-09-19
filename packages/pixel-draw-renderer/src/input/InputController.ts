@@ -463,7 +463,9 @@ export class InputController {
       case "delete":
         return this.#actions.onDelete();
       case "rotate":
-        return this.#actions.onRotate();
+        return this.#actions.onRotate("cw");
+      case "rotateCounterClockwise":
+        return this.#actions.onRotate("ccw");
       case "flipHorizontal":
         return this.#actions.onFlipHorizontal();
       case "flipVertical":

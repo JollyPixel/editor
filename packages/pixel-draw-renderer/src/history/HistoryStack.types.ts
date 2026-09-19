@@ -76,6 +76,15 @@ export interface HistoryUvStateEntry {
   after: UVRegionData;
 }
 
+export interface HistoryUvRotateEntry {
+  action: "uv-rotate";
+  timestamp: number;
+  id: string;
+  face: UVSlot | null;
+  before: UVRegionData;
+  after: UVRegionData;
+}
+
 export type HistoryEntry =
   | HistoryStrokeEntry
   | HistoryResizedEntry
@@ -84,7 +93,8 @@ export type HistoryEntry =
   | HistoryUvCreateEntry
   | HistoryUvDeleteEntry
   | HistoryUvMoveEntry
-  | HistoryUvStateEntry;
+  | HistoryUvStateEntry
+  | HistoryUvRotateEntry;
 
 export type HistoryEntryInput =
   | Omit<HistoryStrokeEntry, "timestamp">
@@ -94,4 +104,5 @@ export type HistoryEntryInput =
   | Omit<HistoryUvCreateEntry, "timestamp">
   | Omit<HistoryUvDeleteEntry, "timestamp">
   | Omit<HistoryUvMoveEntry, "timestamp">
-  | Omit<HistoryUvStateEntry, "timestamp">;
+  | Omit<HistoryUvStateEntry, "timestamp">
+  | Omit<HistoryUvRotateEntry, "timestamp">;

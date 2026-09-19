@@ -262,3 +262,29 @@ describe("BlockVariantCache - missing tileset", () => {
     assert.equal(cache.get(kCubeId, 0)?.faces.length, 6);
   });
 });
+
+describe("BlockVariantCache - tile rotation", () => {
+  it("turns each face's tile UVs a quarter clockwise", () => {
+    const { cache } = makeCache({
+      defaultTexture: { col: 0, row: 0, rotation: 1 }
+    });
+    const plain = cache.get(kCubeId, 0)!;
+    const rotated = cache.get(kLeavesId, 0)!;
+
+    assert.equal(rotated.faces.length, plain.faces.length);
+    rotated.faces.forEach((face, index) => {
+      const source = plain.faces[index].tileUvs;
+      for (let i = 0; i < face.vertexCount; i++) {
+        assert.deepEqual(
+          [face.tileUvs[i * 2], face.tileUvs[(i * 2) + 1]],
+          [source[(i * 2) + 1], 1 - source[i * 2]]
+        );
+      }
+      assert.equal(
+        face.merge === null,
+        plain.faces[index].merge === null,
+        "a whole-tile face stays mergeable once rotated"
+      );
+    });
+  });
+});

@@ -41,12 +41,13 @@ type KeybindingsMap = Record<KeybindingAction, Keybinding | Keybinding[]>;
 | Undo | `Ctrl`/`Cmd`+`Z` |
 | Redo | `Ctrl`/`Cmd`+`Y` or `Ctrl`/`Cmd`+`Shift`+`Z` |
 | Delete | `Delete` |
-| Rotate selection | `R` |
+| Rotate clockwise | `R` |
+| Rotate counter-clockwise | `Shift`+`R` |
 | Flip selection horizontal | `H` |
 | Flip selection vertical | `V` |
 
 > [!IMPORTANT]
-> `rotate`, `flipHorizontal`, `flipVertical` only apply in `"select"` mode with an active selection. Any action can be given an array of bindings.
+> `rotate` and `rotateCounterClockwise` apply in `"select"` mode with an active selection, and in `"uv"` mode to the selected UV region or free slot. `flipHorizontal` and `flipVertical` only apply in `"select"` mode. Any action can be given an array of bindings.
 
 ## API
 

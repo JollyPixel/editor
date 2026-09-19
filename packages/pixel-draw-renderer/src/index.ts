@@ -53,7 +53,8 @@ export {
 export type {
   PixelBufferHookAction,
   PixelBufferHookEvent,
-  PixelBufferHookListener
+  PixelBufferHookListener,
+  UVRegionRotation
 } from "./buffer/hooks.ts";
 export {
   HistoryStack,
@@ -69,6 +70,7 @@ export type {
   HistoryUvCreateEntry,
   HistoryUvDeleteEntry,
   HistoryUvMoveEntry,
+  HistoryUvRotateEntry,
   HistoryUvStateEntry
 } from "./history/HistoryStack.types.ts";
 export type {
@@ -83,6 +85,7 @@ export type {
   ByteColorInput,
   PeerStrokePixel,
   RGBA8,
+  RotationDirection,
   SelectionRect,
   Vec2
 } from "./types.ts";
@@ -129,6 +132,8 @@ export {
   type UVRegionSlot,
   type UVRegionState,
   type UVMovementScope,
+  type UVQuarterTurn,
+  type UVRect,
   type UVTriangle,
   type UVTriangleCorner,
   type UVCompound,
@@ -147,7 +152,14 @@ export {
   vec2Equal
 } from "./utils/math.ts";
 export {
+  rotateCorner,
+  rotateGeometry,
+  rotateUv,
+  rotationOf
+} from "./uv/geometry.ts";
+export {
   isUVGeometry,
+  isUVQuarterTurn,
   isUVRegionData,
   isUVSlot,
   isUVTextureRect

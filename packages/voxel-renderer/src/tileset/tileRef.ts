@@ -3,6 +3,7 @@ import type {
   ResolvedTileRef,
   TileBounds,
   TileRef,
+  TileRotation,
   TileSpan
 } from "./types.ts";
 
@@ -58,11 +59,46 @@ export function resolveTileRef(
 
 export function tileFootprint(
   size: number,
-  span: Readonly<TileSpan> = UNIT_TILE_SPAN
+  span: Readonly<TileSpan> = UNIT_TILE_SPAN,
+  rotation: TileRotation = 0
 ): Pick<TileRect, "width" | "height"> {
+  const width = Math.max(1, Math.round(size * span.u));
+  const height = Math.max(1, Math.round(size * span.v));
+
+  return rotation % 2 === 0 ?
+    { width, height } :
+    { width: height, height: width };
+}
+
+export function rotateTileUv(
+  u: number,
+  v: number,
+  rotation: TileRotation = 0
+): [number, number] {
+  switch (rotation) {
+    case 1:
+      return [v, 1 - u];
+    case 2:
+      return [1 - u, 1 - v];
+    case 3:
+      return [1 - v, u];
+    default:
+      return [u, v];
+  }
+}
+
+export function rotateTileBounds(
+  bounds: Readonly<TileBounds>,
+  rotation: TileRotation = 0
+): TileBounds {
+  const [au, av] = rotateTileUv(bounds.u0, bounds.v0, rotation);
+  const [bu, bv] = rotateTileUv(bounds.u1, bounds.v1, rotation);
+
   return {
-    width: Math.max(1, Math.round(size * span.u)),
-    height: Math.max(1, Math.round(size * span.v))
+    u0: Math.min(au, bu),
+    v0: Math.min(av, bv),
+    u1: Math.max(au, bu),
+    v1: Math.max(av, bv)
   };
 }
 
@@ -72,13 +108,15 @@ export function tileRectOf(
   bounds: TileBounds = WHOLE_TILE_BOUNDS,
   span: Readonly<TileSpan> = UNIT_TILE_SPAN
 ): TileRect {
-  const { width, height } = tileFootprint(ref.size ?? tileSize, span);
+  const rotation = ref.rotation ?? 0;
+  const { width, height } = tileFootprint(ref.size ?? tileSize, span, rotation);
+  const local = rotateTileBounds(bounds, rotation);
 
   return {
-    x: (ref.col * tileSize) + (bounds.u0 * width),
-    y: (ref.row * tileSize) + ((1 - bounds.v1) * height),
-    width: (bounds.u1 - bounds.u0) * width,
-    height: (bounds.v1 - bounds.v0) * height
+    x: (ref.col * tileSize) + (local.u0 * width),
+    y: (ref.row * tileSize) + ((1 - local.v1) * height),
+    width: (local.u1 - local.u0) * width,
+    height: (local.v1 - local.v0) * height
   };
 }
 
@@ -89,12 +127,14 @@ export function tileRefFromRect(
   bounds: TileBounds = WHOLE_TILE_BOUNDS,
   span: Readonly<TileSpan> = UNIT_TILE_SPAN
 ): ResolvedTileRef {
-  const { width, height } = tileFootprint(template.size ?? tileSize, span);
+  const rotation = template.rotation ?? 0;
+  const { width, height } = tileFootprint(template.size ?? tileSize, span, rotation);
+  const local = rotateTileBounds(bounds, rotation);
 
   return {
     ...template,
-    col: (rect.x - (bounds.u0 * width)) / tileSize,
-    row: (rect.y - ((1 - bounds.v1) * height)) / tileSize
+    col: (rect.x - (local.u0 * width)) / tileSize,
+    row: (rect.y - ((1 - local.v1) * height)) / tileSize
   };
 }
 

@@ -261,7 +261,8 @@ describe("pixelArtAssetHandler", () => {
       "uv-region-created",
       "uv-region-deleted",
       "uv-region-moved",
-      "uv-region-state-changed"
+      "uv-region-state-changed",
+      "uv-region-rotated"
     ]);
   });
 

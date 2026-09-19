@@ -21,6 +21,7 @@ export type IconName =
   | "copy"
   | "paste"
   | "rotateClockwise"
+  | "rotateCounterClockwise"
   | "flipHorizontal"
   | "flipVertical"
   | "clearTexture"
@@ -311,6 +312,24 @@ registerIcon("rotateClockwise", svg`
     />
     <path
       d="M20 5v6h-6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  `);
+
+registerIcon("rotateCounterClockwise", svg`
+    <path
+      d="M4 11a8 8 0 1 1 2.3 6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+    />
+    <path
+      d="M4 5v6h6"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"

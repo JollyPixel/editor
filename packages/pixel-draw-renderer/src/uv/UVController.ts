@@ -18,6 +18,7 @@ import type {
   UVRegionLayer
 } from "../rendering/overlays/UVRegions.ts";
 import type {
+  RotationDirection,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -246,6 +247,21 @@ export class UVController {
       committed: false
     });
     this.#drag = null;
+  }
+
+  rotate(
+    direction: RotationDirection
+  ): boolean {
+    const id = this.#uvMap.selectedRegionId;
+    if (id === null || this.#drag !== null) {
+      return false;
+    }
+
+    return this.#uvMap.rotate(
+      id,
+      direction,
+      this.#uvMap.selectedSlot ?? undefined
+    );
   }
 
   handleDelete(): boolean {

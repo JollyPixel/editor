@@ -8,6 +8,19 @@ import { mouseEvent } from "./events.ts";
  * Rotate/flip keybindings, shared between the standalone R/H/V coverage and
  * the undo/redo-of-a-transform coverage in the select-mode specs.
  */
+export function rotateCounterClockwiseKey(): KeyboardEvent {
+  return new KeyboardEvent(
+    "keydown",
+    {
+      key: "R",
+      code: "KeyR",
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true
+    }
+  );
+}
+
 export function rotateKey(): KeyboardEvent {
   return new KeyboardEvent(
     "keydown",

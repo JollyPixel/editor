@@ -23,6 +23,9 @@ const runtime = await Runtime.create("#three-renderer canvas", {
 });
 
 runtime.world.input.keyboard.addGuard(inputLayers);
+leftPanel.setCanvasHoverHandler((hovering) => {
+  runtime.world.input.keyboard.enabled = !hovering;
+});
 
 const modelScene = new ModelEditorScene({
   room: session.modelRoom,

@@ -6,6 +6,11 @@ import type { SelectionRect } from "../types.ts";
  */
 export type UVSlot = string;
 
+/**
+ * Clockwise quarter turns in texture space, where y points down.
+ */
+export type UVQuarterTurn = 0 | 1 | 2 | 3;
+
 export type UVRegionState =
   | "stacked"
   | "unfolded"
@@ -17,10 +22,15 @@ export type UVTriangleCorner =
   | "bottom-left"
   | "bottom-right";
 
+export interface UVRect extends SelectionRect {
+  rotation?: UVQuarterTurn;
+}
+
 export interface UVTriangle {
   shape: "triangle";
   rect: SelectionRect;
   corner: UVTriangleCorner;
+  rotation?: UVQuarterTurn;
 }
 
 export type UVCompoundPart =
@@ -45,10 +55,11 @@ export interface UVCompound {
   shape: "compound";
   rect: SelectionRect;
   parts: readonly UVCompoundPart[];
+  rotation?: UVQuarterTurn;
 }
 
 export type UVGeometry =
-  | SelectionRect
+  | UVRect
   | UVTriangle
   | UVCompound;
 

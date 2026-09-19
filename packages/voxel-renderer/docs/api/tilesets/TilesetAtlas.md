@@ -13,7 +13,8 @@ class TilesetAtlas {
     col: number,
     row: number,
     size?: number,
-    span?: Readonly<TileSpan>
+    span?: Readonly<TileSpan>,
+    rotation?: TileRotation
   ): TilesetUVRegion;
   updateImage(image: TilesetImage): void;
 }
@@ -40,7 +41,8 @@ may be fractional. The rect is inset by half a texel on each side.
 
 `span` stretches the square to the [`tileFootprint()`](./tilesets.md) of
 `size`, growing right and down from the same corner. A ramp slope on 16-texel
-tiles samples 16 by 23 texels.
+tiles samples 16 by 23 texels. An odd `rotation` swaps that footprint, so the
+same slope turned a quarter samples 23 by 16 texels.
 
 Chunk materials clamp every face to its own rect in the shader, so an MSAA
 sample taken outside the triangle cannot read a neighbouring tile. See
