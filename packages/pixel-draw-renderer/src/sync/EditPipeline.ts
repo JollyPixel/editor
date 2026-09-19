@@ -8,7 +8,8 @@ import {
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
   PixelBufferHookEvent,
-  PixelBufferHookListener
+  PixelBufferHookListener,
+  UVRegionRotation
 } from "../buffer/hooks.ts";
 import type { History } from "../history/History.ts";
 import type { HistoryEntryInput } from "../history/HistoryStack.types.ts";
@@ -87,6 +88,10 @@ export class EditPipeline {
     this.#uvMap.on(
       "region-state-changed",
       (event) => this.#handleUvStateChanged(event.region, event.previous)
+    );
+    this.#uvMap.on(
+      "region-rotated",
+      (event) => this.#handleUvRotated(event.region, event.previous, event.face)
     );
   }
 
@@ -394,6 +399,10 @@ export class EditPipeline {
         case "uv-region-state-changed":
           this.#uvMap.restoreState(event.metadata.region);
           break;
+
+        case "uv-region-rotated":
+          this.#applyRemoteRotation(event.metadata);
+          break;
       }
     }
     finally {
@@ -532,5 +541,57 @@ export class EditPipeline {
       action: "uv-region-state-changed",
       metadata: { region: data }
     });
+  }
+
+  #handleUvRotated(
+    region: UVRegion,
+    previous: UVRegionData,
+    face: UVSlot | null
+  ): void {
+    if (this.#isApplyingRemote) {
+      return;
+    }
+    const data = region.toJSON();
+    if (!this.#isReplayingHistory) {
+      this.#history.push({
+        action: "uv-rotate",
+        id: region.id,
+        face,
+        before: previous,
+        after: data
+      });
+    }
+    this.#onBufferUpdated?.({
+      action: "uv-region-rotated",
+      metadata: face === null ?
+        {
+          id: region.id,
+          face,
+          region: data
+        } :
+        {
+          id: region.id,
+          face,
+          geometry: region.geometryFor(face)
+        }
+    });
+  }
+
+  #applyRemoteRotation(
+    rotation: UVRegionRotation
+  ): void {
+    if (rotation.face === null) {
+      this.#uvMap.restoreRotation(rotation.region);
+
+      return;
+    }
+
+    const region = this.#uvMap.get(rotation.id);
+    if (region) {
+      this.#uvMap.restoreRotation(
+        region.withGeometry(rotation.face, rotation.geometry),
+        rotation.face
+      );
+    }
   }
 }

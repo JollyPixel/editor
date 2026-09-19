@@ -6,7 +6,7 @@ The mode rail carries Move, Paint, Erase, Fill, Select and UV (hidden unless [`u
 
 The UV toolbar includes independent toggles for region labels and showing every region. Labels display `(name)` or `(id)` inside a stacked UV, with the face on a second line once the region has per-face cells. Show All does not change the label preference.
 
-With a region selected, the toolbar also shows a state dropdown. Its trigger carries the current state; opening it lists the two states the region is not in, and picking one calls `UVMap.setState()`. The parts are `uv-state-button` and `uv-state-menu`, plus `uv-stacked-button`, `uv-unfolded-button` and `uv-free-button` for the options.
+With a region selected, the toolbar also shows a state dropdown. Its trigger carries the current state; opening it lists the two states the region is not in, and picking one calls `UVMap.setState()`. The parts are `uv-state-button` and `uv-state-menu`, plus `uv-stacked-button`, `uv-unfolded-button` and `uv-free-button` for the options. Next to it, `uv-rotate-ccw-button` and `uv-rotate-cw-button` call `UVMap.rotate()` on the selected region, or on the selected slot of a free region.
 
 ```ts
 import "@jolly-pixel/editor.pixel-art";

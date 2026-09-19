@@ -3,9 +3,13 @@ import { ColorPalette } from "@jolly-pixel/color";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { clamp, clampRectSize } from "../utils/math.ts";
+import {
+  clamp,
+  clampRectPosition
+} from "../utils/math.ts";
 import { geometryAt } from "./geometry.ts";
 import type {
+  RotationDirection,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -298,10 +302,7 @@ export class UVMap extends Emitter<
     const previousRect = region.rectFor(
       target ?? kDefaultSlot
     );
-    const clamped = clampRectSize(
-      rect,
-      this.#getCanvasSize()
-    );
+    const clamped = this.#positioned(region, rect, target);
     const moved = region.withRect(
       clamped,
       target ?? undefined
@@ -336,16 +337,15 @@ export class UVMap extends Emitter<
       return;
     }
 
-    const clamped = clampRectSize(
-      rect,
-      this.#getCanvasSize()
-    );
+    const clamped = this.#positioned(region, rect, target);
     this.emit("region-dragging", {
       id,
       face: target,
       rect: clamped,
       geometry: geometryAt(
-        target === null ? region.bounds : region.geometryFor(target),
+        target === null && region.state !== "stacked" ?
+          region.bounds :
+          region.geometryFor(target ?? region.slots[0]),
         clamped
       )
     });
@@ -356,7 +356,7 @@ export class UVMap extends Emitter<
     state: UVRegionState,
     slot?: UVSlot
   ): boolean {
-    return this.#changeState(
+    return this.#replace(
       id,
       (region) => {
         switch (state) {
@@ -376,9 +376,47 @@ export class UVMap extends Emitter<
   ): boolean {
     const next = UVRegion.from(value);
 
-    return this.#changeState(
+    return this.#replace(
       next.id,
       () => next
+    );
+  }
+
+  rotate(
+    id: string,
+    direction: RotationDirection,
+    slot?: UVSlot
+  ): boolean {
+    const region = this.#regions.get(id);
+    if (!region) {
+      return false;
+    }
+
+    const face = region.movementScope === "slot" ? slot ?? null : null;
+    if (region.movementScope === "slot" && face === null) {
+      return false;
+    }
+
+    return this.#replace(
+      id,
+      (current) => this.#clampedRotation(
+        current.rotated(direction, face ?? undefined),
+        face
+      ),
+      face
+    );
+  }
+
+  restoreRotation(
+    value: UVRegion | UVRegionData,
+    face: UVSlot | null = null
+  ): boolean {
+    const next = UVRegion.from(value);
+
+    return this.#replace(
+      next.id,
+      () => next,
+      face
     );
   }
 
@@ -390,9 +428,10 @@ export class UVMap extends Emitter<
     this.#palette.reset();
   }
 
-  #changeState(
+  #replace(
     id: string,
-    transform: (region: UVRegion) => UVRegion
+    transform: (region: UVRegion) => UVRegion,
+    rotatedFace?: UVSlot | null
   ): boolean {
     const region = this.#regions.get(id);
     if (!region) {
@@ -412,10 +451,19 @@ export class UVMap extends Emitter<
       this.#selectedSlot
     );
 
-    this.emit("region-state-changed", {
-      region: next,
-      previous
-    });
+    if (rotatedFace === undefined) {
+      this.emit("region-state-changed", {
+        region: next,
+        previous
+      });
+    }
+    else {
+      this.emit("region-rotated", {
+        region: next,
+        previous,
+        face: rotatedFace
+      });
+    }
     if (selectionChanged) {
       this.#emitSelectionChanged();
     }
@@ -496,6 +544,39 @@ export class UVMap extends Emitter<
       x: clamp(col * kCascadeStep, 0, maxX),
       y: clamp(row * kCascadeStep, 0, maxY)
     };
+  }
+
+  #positioned(
+    region: UVRegion,
+    rect: SelectionRect,
+    slot: UVSlot | null
+  ): SelectionRect {
+    const current = slot === null ? region.bounds : region.rectFor(slot);
+
+    return clampRectPosition(
+      {
+        ...current,
+        x: rect.x,
+        y: rect.y
+      },
+      this.#getCanvasSize()
+    );
+  }
+
+  #clampedRotation(
+    region: UVRegion,
+    slot: UVSlot | null
+  ): UVRegion {
+    if (slot === null) {
+      return this.#clamped(region);
+    }
+
+    const rect = region.rectFor(slot);
+    const clamped = clampRectPosition(rect, this.#getCanvasSize());
+
+    return clamped.x === rect.x && clamped.y === rect.y ?
+      region :
+      region.withRect(clamped, slot);
   }
 
   #clamped(

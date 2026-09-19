@@ -236,6 +236,25 @@ describe("UVGeometryBinding", () => {
       assert.deepStrictEqual(uvOf(geometry, 0), [0, 1]);
     });
 
+    test("tracks region-rotated", () => {
+      bindCreated();
+
+      uv.rotate("tracked", "cw");
+
+      assert.deepStrictEqual(uvOf(geometry, 0), [0.25, 1]);
+      assert.deepStrictEqual(uvOf(geometry, 1), [0.25, 0.75]);
+    });
+
+    test("keeps the rotation while a rotated region is dragged", () => {
+      bindCreated();
+      uv.rotate("tracked", "cw");
+
+      uv.previewMove("tracked", { x: 32, y: 0, width: 16, height: 16 });
+
+      assert.deepStrictEqual(uvOf(geometry, 0), [0.75, 1]);
+      assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 0.75]);
+    });
+
     test("ignores events for other regions", () => {
       bindCreated();
       uv.create({ id: "other", width: 16, height: 16 });

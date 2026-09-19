@@ -3,12 +3,16 @@ import { contrastingColor } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import { rectOf } from "../../uv/geometry.ts";
+import {
+  rectOf,
+  rotationOf
+} from "../../uv/geometry.ts";
 import { compoundOutline } from "../../uv/compoundOutline.ts";
 import type {
   UVCompound,
   UVCompoundPart,
   UVGeometry,
+  UVQuarterTurn,
   UVTriangleCorner
 } from "../../uv/UVRegion.ts";
 import type {
@@ -24,6 +28,7 @@ const kDashArray = "6 4";
 const kSelectedFillOpacity = "0.06";
 const kOutlineCacheLimit = 64;
 const kOutlineCache = new Map<string, Vec2[][] | null>();
+const kMarkerSize = 5;
 
 export interface UVRegionBorderStyle {
   color: string;
@@ -38,6 +43,7 @@ export class UVRegionBorder {
   #group: SVGGElement;
   #casing: SVGGeometryElement;
   #stroke: SVGGeometryElement;
+  #marker: SVGPolygonElement;
   #elementName: string;
 
   constructor(
@@ -48,6 +54,8 @@ export class UVRegionBorder {
     this.#elementName = elementNameOf(geometry);
     this.#casing = UVRegionBorder.#createElement(geometry);
     this.#stroke = UVRegionBorder.#createElement(geometry);
+    this.#marker = document.createElementNS(SVG_NS, "polygon");
+    this.#marker.setAttribute("part", "uv-orientation-marker");
     this.#group.append(
       this.#casing,
       this.#stroke
@@ -94,6 +102,27 @@ export class UVRegionBorder {
       width: screen.width - (2 * inset),
       height: screen.height - (2 * inset)
     });
+    this.#placeMarker(rotationOf(geometry), screen);
+  }
+
+  #placeMarker(
+    rotation: UVQuarterTurn,
+    screen: SelectionRect
+  ): void {
+    if (rotation === 0) {
+      this.#marker.remove();
+
+      return;
+    }
+
+    this.#group.appendChild(this.#marker);
+
+    this.#marker.setAttribute(
+      "points",
+      markerPoints(rotation, screen)
+        .map((point) => `${point.x},${point.y}`)
+        .join(" ")
+    );
   }
 
   #ensureGeometryElements(
@@ -173,6 +202,7 @@ export class UVRegionBorder {
     }
 
     this.#stroke.setAttribute("stroke", style.color);
+    this.#marker.style.fill = style.color;
     this.#stroke.style.strokeWidth = String(style.strokeWidth);
     this.#stroke.style.fill = style.selected ? style.color : "none";
     this.#stroke.style.fillOpacity = style.selected ?
@@ -198,6 +228,46 @@ export class UVRegionBorder {
 
   remove(): void {
     this.#group.remove();
+  }
+}
+
+function markerPoints(
+  rotation: UVQuarterTurn,
+  screen: SelectionRect
+): Vec2[] {
+  const size = Math.min(kMarkerSize, screen.width / 3, screen.height / 3);
+  const left = screen.x;
+  const top = screen.y;
+  const right = screen.x + screen.width;
+  const bottom = screen.y + screen.height;
+  const centerX = screen.x + (screen.width / 2);
+  const centerY = screen.y + (screen.height / 2);
+
+  switch (rotation) {
+    case 1:
+      return [
+        { x: right, y: centerY - size },
+        { x: right, y: centerY + size },
+        { x: right - size, y: centerY }
+      ];
+    case 2:
+      return [
+        { x: centerX - size, y: bottom },
+        { x: centerX + size, y: bottom },
+        { x: centerX, y: bottom - size }
+      ];
+    case 3:
+      return [
+        { x: left, y: centerY - size },
+        { x: left, y: centerY + size },
+        { x: left + size, y: centerY }
+      ];
+    default:
+      return [
+        { x: centerX - size, y: top },
+        { x: centerX + size, y: top },
+        { x: centerX, y: top + size }
+      ];
   }
 }
 

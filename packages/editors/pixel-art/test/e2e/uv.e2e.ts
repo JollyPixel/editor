@@ -49,9 +49,24 @@ async function setRegionState(
   await panel.getByRole("menuitem", { name: state }).click();
 }
 
-function sixFaces(
-  at: (index: number) => TexturePoint
-): Record<string, TexturePoint> {
+function uvRotations(
+  panel: Locator
+): Promise<Record<string, number>> {
+  return panel.evaluate((element: PixelDrawPanel) => {
+    const { uv } = element.canvasManager!;
+    const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
+    const rotations: Record<string, number> = {};
+    for (const slot of region?.activeSlots ?? []) {
+      rotations[slot] = region!.geometryFor(slot).rotation ?? 0;
+    }
+
+    return rotations;
+  });
+}
+
+function sixFaces<TValue>(
+  at: (index: number) => TValue
+): Record<string, TValue> {
   const slots = ["front", "back", "left", "right", "top", "bottom"];
 
   return Object.fromEntries(slots.map((slot, index) => [slot, at(index)]));
@@ -178,6 +193,31 @@ test("stacking keeps the edited face, and undo restores the free faces", async({
       back: kOrigin
     }
   });
+});
+
+test("rotation turns the whole stacked region, and only the selected face once freed", async({ panel }) => {
+  const clockwise = panel.getByRole("button", { name: /^Rotate .* clockwise$/ });
+  await expect(clockwise).toHaveCount(0);
+
+  await clickTexturePixel(panel, kCubeCell);
+  await expect(clockwise).toHaveAccessibleName("Rotate region clockwise");
+  await clockwise.click();
+  expect(await uvRotations(panel)).toEqual(sixFaces(() => 1));
+  await expect(panel.locator("[part=\"uv-orientation-marker\"]")).toHaveCount(1);
+
+  await panel.getByRole("button", { name: "Rotate region counter-clockwise" }).click();
+  expect(await uvRotations(panel)).toEqual(sixFaces(() => 0));
+
+  await setRegionState(panel, "Free");
+  await expect(clockwise).toHaveAccessibleName("Rotate slot \"front\" clockwise");
+  await panel.page().keyboard.press("r");
+  expect(await uvRotations(panel)).toMatchObject({
+    front: 1,
+    back: 0
+  });
+
+  await panel.getByRole("button", { name: "Undo" }).click();
+  expect(await uvRotations(panel)).toMatchObject({ front: 0 });
 });
 
 test("Create ramp adds a region with triangular sides and a true-length slope", async({ panel }) => {

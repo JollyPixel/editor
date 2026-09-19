@@ -52,6 +52,8 @@ export class LeftPanel extends LitElement {
   #textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
   #collaboration: PixelCollaboration | null = null;
   #onRemoteUvDragging: ((payload: UVGhostPayload) => void) | undefined;
+  #canvasHostEl: HTMLElement | null = null;
+  #onCanvasHoverChange: ((hovering: boolean) => void) | undefined;
 
   static override styles = css`
     :host {
@@ -107,6 +109,15 @@ export class LeftPanel extends LitElement {
     this.#onRemoteUvDragging = handler;
   }
 
+  public setCanvasHoverHandler(
+    handler: (hovering: boolean) => void
+  ): void {
+    this.#onCanvasHoverChange = handler;
+    if (this.#canvasHostEl?.matches(":hover")) {
+      handler(true);
+    }
+  }
+
   override async firstUpdated(): Promise<void> {
     const options: PixelArtCanvasOptions = {
       texture: { size: kTextureSize },
@@ -123,7 +134,21 @@ export class LeftPanel extends LitElement {
 
     this.#resizeObserver = new ResizeObserver(() => this.panelElement.onResize());
     this.#resizeObserver.observe(this.panelElement);
+
+    this.#canvasHostEl = this.panelElement.shadowRoot?.querySelector<HTMLElement>(
+      "[part~='canvas-host']"
+    ) ?? null;
+    this.#canvasHostEl?.addEventListener("mouseenter", this.#onCanvasHoverEnter);
+    this.#canvasHostEl?.addEventListener("mouseleave", this.#onCanvasHoverLeave);
   }
+
+  readonly #onCanvasHoverEnter = (): void => {
+    this.#onCanvasHoverChange?.(true);
+  };
+
+  readonly #onCanvasHoverLeave = (): void => {
+    this.#onCanvasHoverChange?.(false);
+  };
 
   #tryAttachCollaboration(): void {
     if (this.#canvasManager && this.#textureRoom) {
@@ -156,6 +181,9 @@ export class LeftPanel extends LitElement {
     super.disconnectedCallback();
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = null;
+    this.#canvasHostEl?.removeEventListener("mouseenter", this.#onCanvasHoverEnter);
+    this.#canvasHostEl?.removeEventListener("mouseleave", this.#onCanvasHoverLeave);
+    this.#canvasHostEl = null;
     this.#destroyCollaboration();
   }
 

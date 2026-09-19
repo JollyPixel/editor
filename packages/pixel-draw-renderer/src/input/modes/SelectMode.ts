@@ -3,6 +3,7 @@ import { InteractionMode } from "./InteractionMode.ts";
 import type { SelectEngine } from "../../tools/SelectEngine.ts";
 import type {
   Mode,
+  RotationDirection,
   Vec2
 } from "../../types.ts";
 
@@ -56,8 +57,10 @@ export class SelectMode extends InteractionMode {
     return this.#select.delete();
   }
 
-  onRotate(): boolean {
-    return this.#select.rotate();
+  onRotate(
+    direction: RotationDirection
+  ): boolean {
+    return this.#select.rotate(direction);
   }
 
   onFlipHorizontal(): boolean {

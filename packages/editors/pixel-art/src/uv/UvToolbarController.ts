@@ -183,6 +183,36 @@ export class UvToolbarController {
     `;
   }
 
+  #renderRotateButtons(
+    uv: UVMap
+  ) {
+    const regionId = uv.selectedRegionId;
+    const region = regionId ? uv.get(regionId) : undefined;
+    if (!regionId || !region) {
+      return nothing;
+    }
+
+    const slot = region.movementScope === "slot" ? uv.selectedSlot : null;
+    const target = slot === null ? "region" : `slot "${slot}"`;
+
+    return html`
+      ${renderRailButton({
+        part: "uv-rotate-ccw-button",
+        label: `Rotate ${target} counter-clockwise`,
+        tooltip: `Rotate ${target} 90° counter-clockwise`,
+        icon: "rotateCounterClockwise",
+        onClick: () => uv.rotate(regionId, "ccw", slot ?? undefined)
+      })}
+      ${renderRailButton({
+        part: "uv-rotate-cw-button",
+        label: `Rotate ${target} clockwise`,
+        tooltip: `Rotate ${target} 90° clockwise`,
+        icon: "rotateClockwise",
+        onClick: () => uv.rotate(regionId, "cw", slot ?? undefined)
+      })}
+    `;
+  }
+
   #renderCreateDelete(
     uv: UVMap
   ) {
@@ -262,6 +292,7 @@ export class UvToolbarController {
       <div class="overlay-toolbar top" part="uv-toolbar">
         ${allowCreateDelete ? this.#renderCreateDelete(uv) : nothing}
         ${this.#renderStateDropdown(uv)}
+        ${this.#renderRotateButtons(uv)}
         ${this.renderVisibilityToggles()}
       </div>
     `;

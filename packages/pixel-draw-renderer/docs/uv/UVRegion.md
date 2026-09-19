@@ -22,10 +22,18 @@ type UVSlot = string;
 // The six default names of a box; a shape may name further slots.
 const DEFAULT_UV_SLOTS: readonly UVSlot[];
 
+// Clockwise quarter turns in texture space, where y points down.
+type UVQuarterTurn = 0 | 1 | 2 | 3;
+
+type UVRect = SelectionRect & {
+  rotation?: UVQuarterTurn;
+};
+
 type UVTriangle = {
   shape: "triangle";
   corner: "top-left" | "top-right" | "bottom-left" | "bottom-right";
   rect: SelectionRect;
+  rotation?: UVQuarterTurn;
 };
 
 type UVNormalizedRect = {
@@ -47,9 +55,10 @@ type UVCompound = {
   shape: "compound";
   rect: SelectionRect;
   parts: readonly UVCompoundPart[];
+  rotation?: UVQuarterTurn;
 };
 
-type UVGeometry = SelectionRect | UVTriangle | UVCompound;
+type UVGeometry = UVRect | UVTriangle | UVCompound;
 
 type UVRegionState = "stacked" | "unfolded" | "free";
 
@@ -59,7 +68,7 @@ type UVRegionData =
       name?: string;
       color: string;
       state: "stacked";
-      rect: SelectionRect;
+      rect: UVRect;
       faces?: Record<UVSlot, UVGeometry>;
       activeFaces?: UVSlot[];
       stackedFace?: UVSlot;
@@ -77,6 +86,8 @@ type UVRegionData =
 `state` is required, and payloads written before the three-state rename do not load. Stacked regions use optional `faces` and `activeFaces` to retain custom topology for a later `free()` or `unfold()`, and `stackedFace` records which face `rect` was taken from. A payload may still place those faces away from `rect`, in which case `free()` restores them around it; `stack()` itself writes them onto `rect`.
 
 `activeFaces` defaults to the slots `faces` carries, keeps the order it was given, and drops any slot the region has no geometry for. A triangle occupies the half of `rect` containing the named right-angle corner. A compound covers the union of its `parts`, each positioned in the `0` to `1` space of `rect` so parts scale with it. Normalized parts must remain inside that space and have positive dimensions. The area no part covers, such as the notch of an L, is outside the region.
+
+A geometry is stored as it looks after rotation: a rotated rect has its width and height swapped, a triangle names the corner it now occupies, and compound parts sit where they turned to. `rotation` only tells a mesh consumer how to orient its UVs inside that rect, and is left out when it is `0`. A stacked region keeps its rotation on `rect`, shared by every slot. [`rotateUv()`](#rotateuvu-v-turns) and [`rotateCorner()`](#rotatecornercorner-turns) turn mesh UVs to match.
 
 Slot names are labels. The consumer decides how `"front"`, `"top"` and any further slot map onto mesh geometry; `@jolly-pixel/voxel.renderer` derives them from a shape and may emit names like `"top.1"`.
 
@@ -152,13 +163,37 @@ Uses the largest active slot's rectangle as the shared rectangle, so a partial s
 
 Stacking a net therefore lands the region on whichever cell won, which for equal-sized faces is the first one in `activeFaces` order. That is the cell the net started from, so `unfold()` followed by `stack()` returns a box region to the rectangle it began with.
 
+When the active faces carry different rotations, the stacked region takes the most common one; a tie goes to the rotation of the slot being stacked on. Faces with another rotation are turned in place to match.
+
+### `rotated(direction, slot?)`
+
+```ts
+rotated(direction: RotationDirection, slot?: UVSlot): UVRegion
+```
+
+Turns the region 90 degrees clockwise (`"cw"`) or counter-clockwise (`"ccw"`), keeping each rect's top-left corner:
+
+- **stacked**: the shared rect and every slot turn together.
+- **unfolded**: the whole net turns as one piece around its `bounds`, whose top-left corner stays put.
+- **free**: only `slot` turns in place. Returns `this` when `slot` is missing or unknown.
+
+Four turns return the starting geometry. Nothing here knows about the canvas; [`UVMap.rotate()`](./UVMap.md#rotateid-direction-slot) clamps the result.
+
+### `withGeometry(slot, geometry)`
+
+```ts
+withGeometry(slot: UVSlot, geometry: UVGeometry): UVRegion
+```
+
+Replaces one slot's geometry of a free region, as a network peer does when it receives a slot rotation. Returns `this` for any other state or an unknown slot.
+
 ### `withRect(rect, face?)`
 
 ```ts
 withRect(rect: SelectionRect, face?: UVSlot): UVRegion
 ```
 
-Replaces the shared rectangle when stacked, or one face's bounds when free. An unfolded region translates every face by `rect` minus its current `bounds` and ignores `face` entirely. It returns `this` when a free region has no `face`.
+Replaces the shared rectangle when stacked, or one face's bounds when free, keeping its rotation. An unfolded region translates every face by `rect` minus its current `bounds` and ignores `face` entirely. It returns `this` when a free region has no `face`.
 
 ### `translated(delta)`
 
@@ -175,3 +210,37 @@ toJSON(): UVRegionData
 ```
 
 Returns an independent serializable copy. `JSON.stringify()` calls it automatically.
+
+## Rotation helpers
+
+### `rotateGeometry(geometry, turns)`
+
+```ts
+rotateGeometry(geometry: UVGeometry, turns: number): UVGeometry
+```
+
+Turns a geometry clockwise by `turns` quarter turns (negative values turn counter-clockwise), keeping the top-left corner of its rect, and adds `turns` to its `rotation`.
+
+### `rotationOf(geometry)`
+
+```ts
+rotationOf(geometry: UVGeometry): UVQuarterTurn
+```
+
+Returns the geometry's `rotation`, or `0`.
+
+### `rotateUv(u, v, turns)`
+
+```ts
+rotateUv(u: number, v: number, turns: number): [number, number]
+```
+
+Turns a mesh UV inside the unit square, with `v` pointing up, so that it follows a clockwise texture-space rotation. After one turn the face's top edge samples the rect's right edge, which is where the overlay draws the orientation marker.
+
+### `rotateCorner(corner, turns)`
+
+```ts
+rotateCorner(corner: UVTriangleCorner, turns: number): UVTriangleCorner
+```
+
+Turns a triangle corner clockwise. A mesh consumer recovers the corner a triangle had before rotating with `rotateCorner(corner, -rotationOf(geometry))`, applies that orientation first, then `rotateUv()`.

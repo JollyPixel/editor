@@ -344,3 +344,63 @@ describe("PixelCommandArbiter — uv regions", () => {
     assert.deepStrictEqual(accept(arbiter, buffer, created), created);
   });
 });
+
+describe("PixelCommandArbiter — uv rotation", () => {
+  test("a slot rotation only claims its own slot", () => {
+    const { arbiter, buffer } = setup();
+    accept(arbiter, buffer, command("uv-region-rotated", {
+      id: "r1",
+      face: "top",
+      geometry: { ...kRect, rotation: 1 }
+    }, {
+      clientId: "A",
+      timestamp: 900
+    }));
+
+    const otherFace = command("uv-region-moved", { id: "r1", face: "left", rect: kRect }, {
+      clientId: "B",
+      timestamp: 500
+    });
+    const sameFace = command("uv-region-moved", { id: "r1", face: "top", rect: kRect }, {
+      clientId: "B",
+      timestamp: 500
+    });
+
+    assert.deepStrictEqual(accept(arbiter, buffer, otherFace), otherFace);
+    assert.strictEqual(accept(arbiter, buffer, sameFace), null);
+  });
+
+  test("a region rotation claims every slot", () => {
+    const { arbiter, buffer } = setup();
+    accept(arbiter, buffer, command("uv-region-rotated", {
+      id: "r1",
+      face: null,
+      region: freeRegion("r1")
+    }, {
+      clientId: "A",
+      timestamp: 900
+    }));
+
+    const stale = command("uv-region-moved", { id: "r1", face: "left", rect: kRect }, {
+      clientId: "B",
+      timestamp: 500
+    });
+
+    assert.strictEqual(accept(arbiter, buffer, stale), null);
+  });
+
+  test("rejects an invalid rotation payload", () => {
+    const { arbiter, buffer } = setup();
+
+    assert.strictEqual(accept(arbiter, buffer, command("uv-region-rotated", {
+      id: "r1",
+      face: "top",
+      geometry: { ...kRect, width: 0 }
+    })), null);
+    assert.strictEqual(accept(arbiter, buffer, command("uv-region-rotated", {
+      id: "r2",
+      face: null,
+      region: freeRegion("r1")
+    })), null);
+  });
+});

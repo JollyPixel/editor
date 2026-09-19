@@ -1,12 +1,13 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
-import type {
-  UVSlot,
-  UVGeometry,
-  UVMap,
-  UVMapListener,
-  UVRegion,
-  Vec2
+import {
+  rotationOf,
+  type UVSlot,
+  type UVGeometry,
+  type UVMap,
+  type UVMapListener,
+  type UVRegion,
+  type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -47,9 +48,16 @@ export class UVGeometryBinding {
   readonly #onRegionDragging: UVMapListener<"region-dragging"> = ({
     id,
     face,
+    rect,
     geometry
   }) => {
     if (id !== this.#region.id) {
+      return;
+    }
+
+    if (face === null) {
+      this.#applySlots(this.#region.withRect(rect));
+
       return;
     }
 
@@ -59,7 +67,7 @@ export class UVGeometryBinding {
     );
   };
 
-  readonly #onRegionStateChanged: UVMapListener<"region-state-changed"> = ({
+  readonly #onRegionReplaced: UVMapListener<"region-state-changed"> = ({
     region
   }) => {
     if (region.id !== this.#region.id) {
@@ -115,6 +123,7 @@ export class UVGeometryBinding {
         uvAttribute,
         baseUv: this.#baseUv,
         rect: "shape" in geometry ? geometry.rect : geometry,
+        rotation: rotationOf(geometry),
         textureSize: this.#textureSize,
         ranges: [
           {
@@ -152,7 +161,8 @@ export class UVGeometryBinding {
     this.#uv = uv;
     uv.on("region-moved", this.#onRegionMoved);
     uv.on("region-dragging", this.#onRegionDragging);
-    uv.on("region-state-changed", this.#onRegionStateChanged);
+    uv.on("region-state-changed", this.#onRegionReplaced);
+    uv.on("region-rotated", this.#onRegionReplaced);
   }
 
   unfollow(): void {
@@ -162,12 +172,19 @@ export class UVGeometryBinding {
 
     this.#uv.off("region-moved", this.#onRegionMoved);
     this.#uv.off("region-dragging", this.#onRegionDragging);
-    this.#uv.off("region-state-changed", this.#onRegionStateChanged);
+    this.#uv.off("region-state-changed", this.#onRegionReplaced);
+    this.#uv.off("region-rotated", this.#onRegionReplaced);
     this.#uv = null;
   }
 
   #applyRegion(): void {
-    for (const { slot, geometry } of this.#region.slotsOf()) {
+    this.#applySlots(this.#region);
+  }
+
+  #applySlots(
+    region: UVRegion
+  ): void {
+    for (const { slot, geometry } of region.slotsOf()) {
       this.applyFace(slot, geometry);
     }
   }

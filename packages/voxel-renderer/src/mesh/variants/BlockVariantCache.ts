@@ -5,7 +5,11 @@ import type {
   BlockShapeRegistry
 } from "../../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../../tileset/TilesetManager.ts";
-import type { TilesetUVRegion } from "../../tileset/types.ts";
+import type {
+  TileRotation,
+  TilesetUVRegion
+} from "../../tileset/types.ts";
+import { rotateTileUv } from "../../tileset/tileRef.ts";
 import type { FaceDefinition } from "../../blocks/face/index.ts";
 import { BlockTextures } from "../../blocks/BlockTextures.ts";
 import { BlockSurface } from "../../blocks/BlockSurface.ts";
@@ -56,6 +60,7 @@ const kSelfOcclusionShift = 6;
 interface CompileFaceOptions {
   faceDef: FaceDefinition;
   uvRegion: TilesetUVRegion;
+  tileRotation?: TileRotation;
   tilesetId?: string;
   surface: BlockSurface;
   voxelTransform: VoxelTransform;
@@ -367,7 +372,8 @@ export class BlockVariantCache {
         tileRef.col,
         tileRef.row,
         tileRef.size,
-        textures.spanFor(textureSlot.id, textureSlot.span)
+        textures.spanFor(textureSlot.id, textureSlot.span),
+        tileRef.rotation
       );
 
       for (const faceDef of textureSlot.definitions) {
@@ -375,6 +381,7 @@ export class BlockVariantCache {
           this.#compileFace({
             faceDef,
             uvRegion,
+            tileRotation: tileRef.rotation,
             tilesetId: tileRef.tilesetId,
             surface,
             voxelTransform
@@ -414,6 +421,7 @@ export class BlockVariantCache {
     const {
       faceDef,
       uvRegion,
+      tileRotation,
       tilesetId,
       surface,
       voxelTransform
@@ -444,7 +452,11 @@ export class BlockVariantCache {
       positions[(i * 3) + 1] = vertex[1];
       positions[(i * 3) + 2] = vertex[2];
 
-      const tileUV = faceDef.uvs[vi];
+      const tileUV = rotateTileUv(
+        faceDef.uvs[vi][0],
+        faceDef.uvs[vi][1],
+        tileRotation
+      );
       tileUvs[i * 2] = tileUV[0];
       tileUvs[(i * 2) + 1] = tileUV[1];
       /*

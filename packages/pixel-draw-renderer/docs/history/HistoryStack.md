@@ -25,6 +25,7 @@ interface HistoryStackOptions {
 | `"uv-create"` / `"uv-delete"` | Full `region` (undo calls the inverse `UVMap` method) |
 | `"uv-move"` | Region `id`, `face` (`null` unless the region is free), and `oldRect` / `newRect` |
 | `"uv-state"` | Region `id` and full `before` / `after` snapshots |
+| `"uv-rotate"` | Region `id`, rotated `face` (`null` unless the region is free), and full `before` / `after` snapshots |
 
 > [!NOTE]
 > When used through `PixelArtCanvas`, undo and redo emit mutation hooks. An attached sync client can propagate the resulting pixel and UV changes. See [uv/UVMap.md](../uv/UVMap.md#history--network).

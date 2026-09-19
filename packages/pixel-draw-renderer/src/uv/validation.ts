@@ -4,6 +4,7 @@ import {
   type UVCompoundPart,
   type UVGeometry,
   type UVNormalizedRect,
+  type UVQuarterTurn,
   type UVSlot,
   type UVTriangleCorner
 } from "./types.ts";
@@ -26,6 +27,20 @@ export function isUVSlot(
   value: unknown
 ): value is UVSlot {
   return typeof value === "string" && value.length > 0;
+}
+
+export function isUVQuarterTurn(
+  value: unknown
+): value is UVQuarterTurn {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
+
+function hasValidRotation(
+  value: object
+): boolean {
+  return !("rotation" in value) ||
+    value.rotation === undefined ||
+    isUVQuarterTurn(value.rotation);
 }
 
 export function isUVTextureRect(
@@ -77,7 +92,10 @@ function isUVCompoundPart(
 export function isUVGeometry(
   value: unknown
 ): value is UVGeometry {
-  if (!isRecord(value) || !("shape" in value)) {
+  if (!isRecord(value) || !hasValidRotation(value)) {
+    return false;
+  }
+  if (!("shape" in value)) {
     return isUVTextureRect(value);
   }
 
@@ -144,6 +162,7 @@ export function isUVRegionData(
 
   return value.state === "stacked" &&
     isUVTextureRect(value.rect) &&
+    hasValidRotation(value.rect) &&
     (faces === undefined || isUVSlots(faces)) &&
     (
       value.stackedFace === undefined ||

@@ -3,6 +3,7 @@ import { InteractionMode } from "./InteractionMode.ts";
 import type { UVController } from "../../uv/UVController.ts";
 import type {
   Mode,
+  RotationDirection,
   Vec2
 } from "../../types.ts";
 
@@ -50,6 +51,12 @@ export class UVMode extends InteractionMode {
 
   onDelete(): boolean {
     return this.#uv.handleDelete();
+  }
+
+  onRotate(
+    direction: RotationDirection
+  ): boolean {
+    return this.#uv.rotate(direction);
   }
 
   onBlur(): void {

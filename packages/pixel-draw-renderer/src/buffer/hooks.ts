@@ -5,6 +5,7 @@ import type {
   Vec2
 } from "../types.ts";
 import type {
+  UVGeometry,
   UVSlot,
   UVRegionData
 } from "../uv/UVRegion.ts";
@@ -81,6 +82,23 @@ export type PixelBufferHookEvent =
       region: UVRegionData;
     };
     originTimestamp?: number;
+  }
+  | {
+    action: "uv-region-rotated";
+    metadata: UVRegionRotation;
+    originTimestamp?: number;
+  };
+
+export type UVRegionRotation =
+  | {
+    id: string;
+    face: UVSlot;
+    geometry: UVGeometry;
+  }
+  | {
+    id: string;
+    face: null;
+    region: UVRegionData;
   };
 
 export type PixelBufferHookAction = PixelBufferHookEvent["action"];

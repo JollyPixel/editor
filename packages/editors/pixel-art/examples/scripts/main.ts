@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { Runtime } from "@jolly-pixel/runtime";
+import type { Systems } from "@jolly-pixel/engine";
 import {
   Dock,
   type ThemePreferences
@@ -147,6 +148,7 @@ async function initRuntime(): Promise<void> {
   syncResolvedTheme();
 
   const { world } = runtime;
+  suspendKeyboardWhileHovered(drawPanel, world.input.keyboard);
 
   drawPanel.addEventListener("texture-change", () => {
     if (drawPanel.canvasManager !== null) {
@@ -159,6 +161,26 @@ async function initRuntime(): Promise<void> {
   initializeStarterRegion(canvasManager);
 
   world.renderer.on("resize", () => drawPanel.onResize());
+}
+
+function suspendKeyboardWhileHovered(
+  drawPanel: PixelDrawPanel,
+  keyboard: Systems.World["input"]["keyboard"]
+): void {
+  const canvasHost = drawPanel.shadowRoot?.querySelector<HTMLElement>(
+    "[part~='canvas-host']"
+  );
+  if (!canvasHost) {
+    return;
+  }
+
+  keyboard.enabled = !canvasHost.matches(":hover");
+  canvasHost.addEventListener("mouseenter", () => {
+    keyboard.enabled = false;
+  });
+  canvasHost.addEventListener("mouseleave", () => {
+    keyboard.enabled = true;
+  });
 }
 
 function resolveMaxFps(): number | undefined {

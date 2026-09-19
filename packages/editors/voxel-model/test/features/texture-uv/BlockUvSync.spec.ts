@@ -132,6 +132,23 @@ describe("BlockUvSync live region updates", () => {
     assert.deepEqual(geometry, { x: 0, y: 0, width: 16, height: 16 });
   });
 
+  test("re-applies a rotated region, turning each face's UVs a quarter clockwise", () => {
+    const { modelManager, uv, sync } = createHarness();
+    const group = modelManager.addGroup({ name: "Block" });
+    const regionId = `block-${group.getGroupUUID()}`;
+    uv.create({ id: regionId, width: 16, height: 16 });
+    uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 });
+    sync.update();
+
+    uv.rotate(regionId, "cw");
+
+    const attribute = group.getMesh().geometry.attributes.uv;
+    assert.equal(attribute.getX(0), 16 / kTextureSize.x);
+    assert.equal(attribute.getY(0), 1);
+    assert.equal(attribute.getX(1), 16 / kTextureSize.x);
+    assert.equal(attribute.getY(1), 1 - (16 / kTextureSize.y));
+  });
+
   test("ignores a moved region that does not belong to any block", () => {
     const { uv, sync } = createHarness();
     sync.update();

@@ -6,7 +6,10 @@ import type {
 import {
   copyGeometry,
   geometryAt,
-  rectOf
+  quarterTurn,
+  rectOf,
+  rotateGeometry,
+  rotateRect
 } from "./geometry.ts";
 import {
   DEFAULT_UV_SLOTS,
@@ -138,6 +141,47 @@ export class UVSlotMap {
             x: rect.x + dx,
             y: rect.y + dy
           });
+        },
+        this.slots
+      )
+    );
+  }
+
+  rotated(
+    turns: number,
+    slots: readonly UVSlot[] = this.slots
+  ): UVSlotMap {
+    return this.withSlots(
+      new Map(
+        slots.map((slot) => [
+          slot,
+          rotateGeometry(this.get(slot), turns)
+        ])
+      )
+    );
+  }
+
+  rotatedWithin(
+    frame: SelectionRect,
+    turns: number
+  ): UVSlotMap {
+    return new UVSlotMap(
+      UVSlotMap.map(
+        (slot) => {
+          let geometry = this.#slots.get(slot)!;
+          let height = frame.height;
+          let width = frame.width;
+          for (let turn = 0; turn < quarterTurn(turns); turn++) {
+            const rect = rectOf(geometry);
+            geometry = geometryAt(rotateGeometry(geometry, 1), {
+              ...rotateRect(rect, 1),
+              x: frame.x + height - (rect.y - frame.y + rect.height),
+              y: frame.y + (rect.x - frame.x)
+            });
+            [width, height] = [height, width];
+          }
+
+          return geometry;
         },
         this.slots
       )

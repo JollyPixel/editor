@@ -152,3 +152,61 @@ describe("applyCommandToBuffer", () => {
     });
   });
 });
+
+describe("applyCommandToBuffer — uv rotation", () => {
+  test("uv-region-moved keeps the stored size", () => {
+    const buffer = makeBuffer();
+    buffer.uvRegions.set(new UVRegion(stackedRegion("r1")).rotated("cw"));
+
+    applyCommandToBuffer(buffer, command("uv-region-moved", {
+      id: "r1",
+      face: null,
+      rect: { x: 4, y: 4, width: 6, height: 1 }
+    }));
+
+    assert.deepStrictEqual(
+      buffer.uvRegions.get("r1")!.geometryFor("front"),
+      { x: 4, y: 4, width: 2, height: 2, rotation: 1 }
+    );
+  });
+
+  test("a slot rotation replaces only that slot geometry", () => {
+    const buffer = makeBuffer();
+    buffer.uvRegions.set(freeRegion("r1"));
+    const geometry = { x: 0, y: 0, width: 2, height: 2, rotation: 1 as const };
+
+    applyCommandToBuffer(buffer, command("uv-region-rotated", {
+      id: "r1",
+      face: "top",
+      geometry
+    }));
+
+    const region = buffer.uvRegions.get("r1")!;
+    assert.deepStrictEqual(region.geometryFor("top"), geometry);
+    assert.strictEqual(region.geometryFor("front").rotation, undefined);
+  });
+
+  test("a region rotation replaces the stored region", () => {
+    const buffer = makeBuffer();
+    buffer.uvRegions.set(stackedRegion("r1"));
+    const rotated = new UVRegion(stackedRegion("r1")).rotated("ccw").toJSON();
+
+    applyCommandToBuffer(buffer, command("uv-region-rotated", {
+      id: "r1",
+      face: null,
+      region: rotated
+    }));
+
+    assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), rotated);
+  });
+
+  test("a slot rotation of an unknown region is a no-op", () => {
+    const buffer = makeBuffer();
+
+    assert.doesNotThrow(() => applyCommandToBuffer(buffer, command("uv-region-rotated", {
+      id: "missing",
+      face: "top",
+      geometry: { x: 0, y: 0, width: 1, height: 1 }
+    })));
+  });
+});

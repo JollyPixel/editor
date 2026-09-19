@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type {
+  RotationDirection,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -7,8 +8,19 @@ import { pointInRect } from "../utils/math.ts";
 import type {
   UVCompoundPart,
   UVGeometry,
+  UVNormalizedRect,
+  UVQuarterTurn,
   UVTriangleCorner
 } from "./types.ts";
+
+// CONSTANTS
+const kQuarterTurns: readonly UVQuarterTurn[] = [0, 1, 2, 3];
+const kClockwiseCorners: readonly UVTriangleCorner[] = [
+  "top-left",
+  "top-right",
+  "bottom-right",
+  "bottom-left"
+];
 
 function copyPart(
   part: UVCompoundPart
@@ -65,18 +77,45 @@ export function copyRect(
   rect: SelectionRect
 ): SelectionRect {
   return {
-    ...rect
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height
   };
+}
+
+export function rotationOf(
+  geometry: UVGeometry
+): UVQuarterTurn {
+  return geometry.rotation ?? 0;
+}
+
+export function withRotation(
+  geometry: UVGeometry,
+  rotation: number
+): UVGeometry {
+  const { rotation: _previous, ...rest } = geometry;
+  const turns = quarterTurn(rotation);
+
+  return turns === 0 ?
+    rest :
+    {
+      ...rest,
+      rotation: turns
+    };
 }
 
 export function copyGeometry(
   geometry: UVGeometry
 ): UVGeometry {
   if (!("shape" in geometry)) {
-    return copyRect(geometry);
+    return withRotation(
+      copyRect(geometry),
+      rotationOf(geometry)
+    );
   }
 
-  return geometry.shape === "compound" ?
+  const copied: UVGeometry = geometry.shape === "compound" ?
     {
       shape: "compound",
       rect: copyRect(geometry.rect),
@@ -87,6 +126,8 @@ export function copyGeometry(
       corner: geometry.corner,
       rect: copyRect(geometry.rect)
     };
+
+  return withRotation(copied, rotationOf(geometry));
 }
 
 export function rectOf(
@@ -108,7 +149,7 @@ export function geometryAt(
       ...copied,
       rect: copyRect(rect)
     } :
-    copyRect(rect);
+    withRotation(copyRect(rect), rotationOf(geometry));
 }
 
 export function geometryKey(
@@ -184,4 +225,118 @@ export function partsOf(
       } :
       scaled;
   });
+}
+
+export function quarterTurn(
+  turns: number
+): UVQuarterTurn {
+  return kQuarterTurns[((turns % 4) + 4) % 4];
+}
+
+export function quarterTurnsOf(
+  direction: RotationDirection
+): UVQuarterTurn {
+  return direction === "cw" ? 1 : 3;
+}
+
+export function rotateCorner(
+  corner: UVTriangleCorner,
+  turns: number
+): UVTriangleCorner {
+  return kClockwiseCorners[
+    (kClockwiseCorners.indexOf(corner) + quarterTurn(turns)) % 4
+  ];
+}
+
+function rotateNormalizedRect(
+  rect: UVNormalizedRect,
+  turns: UVQuarterTurn
+): UVNormalizedRect {
+  let { x, y, width, height } = rect;
+  for (let turn = 0; turn < turns; turn++) {
+    [x, y, width, height] = [1 - (y + height), x, height, width];
+  }
+
+  return {
+    x,
+    y,
+    width,
+    height
+  };
+}
+
+function rotatePart(
+  part: UVCompoundPart,
+  turns: UVQuarterTurn
+): UVCompoundPart {
+  if (!("shape" in part)) {
+    return rotateNormalizedRect(part, turns);
+  }
+
+  return {
+    shape: "triangle",
+    corner: rotateCorner(part.corner, turns),
+    rect: rotateNormalizedRect(part.rect, turns)
+  };
+}
+
+export function rotateRect(
+  rect: SelectionRect,
+  turns: number
+): SelectionRect {
+  const swapped = quarterTurn(turns) % 2 === 1;
+
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: swapped ? rect.height : rect.width,
+    height: swapped ? rect.width : rect.height
+  };
+}
+
+export function rotateGeometry(
+  geometry: UVGeometry,
+  turns: number
+): UVGeometry {
+  const quarter = quarterTurn(turns);
+  if (quarter === 0) {
+    return copyGeometry(geometry);
+  }
+
+  const rect = rotateRect(rectOf(geometry), quarter);
+  const rotation = rotationOf(geometry) + quarter;
+  if (!("shape" in geometry)) {
+    return withRotation(rect, rotation);
+  }
+
+  const rotated: UVGeometry = geometry.shape === "compound" ?
+    {
+      shape: "compound",
+      rect,
+      parts: geometry.parts.map((part) => rotatePart(part, quarter))
+    } :
+    {
+      shape: "triangle",
+      corner: rotateCorner(geometry.corner, quarter),
+      rect
+    };
+
+  return withRotation(rotated, rotation);
+}
+
+export function rotateUv(
+  u: number,
+  v: number,
+  turns: number
+): [number, number] {
+  switch (quarterTurn(turns)) {
+    case 1:
+      return [v, 1 - u];
+    case 2:
+      return [1 - u, 1 - v];
+    case 3:
+      return [1 - v, u];
+    default:
+      return [u, v];
+  }
 }

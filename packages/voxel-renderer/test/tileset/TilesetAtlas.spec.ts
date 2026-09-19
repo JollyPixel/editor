@@ -91,6 +91,15 @@ describe("TilesetAtlas.uvFor", () => {
     assert.ok(approxEqual(uv.offsetV, 40.5 / 64));
   });
 
+  it("swaps a rotated spanned footprint", () => {
+    const uv = atlas.uvFor(0, 0, 16, { u: 1, v: Math.SQRT2 }, 1);
+
+    assert.ok(approxEqual(uv.offsetU, 0.5 / 64));
+    assert.ok(approxEqual(uv.offsetV, 48.5 / 64));
+    assert.ok(approxEqual(uv.scaleU, 22 / 64));
+    assert.ok(approxEqual(uv.scaleV, 15 / 64));
+  });
+
   it("extends a spanned region downward over whole texels", () => {
     const uv = atlas.uvFor(0, 0, 16, { u: 1, v: Math.SQRT2 });
 

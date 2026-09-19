@@ -16,6 +16,8 @@ export type Mode =
   | "select"
   | "uv";
 
+export type RotationDirection = "cw" | "ccw";
+
 export interface SelectionRect {
   x: number;
   y: number;

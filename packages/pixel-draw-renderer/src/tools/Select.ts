@@ -2,6 +2,7 @@
 import { pointInRect } from "../utils/math.ts";
 import type {
   RGBA8,
+  RotationDirection,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -276,7 +277,9 @@ export class Select {
     this.#floating = true;
   }
 
-  rotate(): { oldRect: SelectionRect; newRect: SelectionRect; } | null {
+  rotate(
+    direction: RotationDirection = "cw"
+  ): { oldRect: SelectionRect; newRect: SelectionRect; } | null {
     if (
       this.#state !== "selected" ||
       !this.#rect ||
@@ -288,15 +291,17 @@ export class Select {
 
     const oldRect = this.#rect;
     const newRect = Select.rotateRectCW(oldRect);
-    this.#snapshot = Select.rotateSnapshotCW(
+    this.#snapshot = Select.#rotateGrid(
       this.#snapshot,
       oldRect.width,
-      oldRect.height
+      oldRect.height,
+      direction
     );
-    this.#mask = Select.rotateMaskCW(
+    this.#mask = Select.#rotateGrid(
       this.#mask,
       oldRect.width,
-      oldRect.height
+      oldRect.height,
+      direction
     );
     this.#rect = newRect;
 
@@ -496,10 +501,11 @@ export class Select {
     width: number,
     height: number
   ): RGBA8[] {
-    return Select.#rotateGridCW(
+    return Select.#rotateGrid(
       snapshot,
       width,
-      height
+      height,
+      "cw"
     );
   }
 
@@ -508,10 +514,11 @@ export class Select {
     width: number,
     height: number
   ): boolean[] {
-    return Select.#rotateGridCW(
+    return Select.#rotateGrid(
       mask,
       width,
-      height
+      height,
+      "cw"
     );
   }
 
@@ -563,10 +570,11 @@ export class Select {
     );
   }
 
-  static #rotateGridCW<T>(
+  static #rotateGrid<T>(
     grid: T[],
     width: number,
-    height: number
+    height: number,
+    direction: RotationDirection
   ): T[] {
     const newWidth = height;
     const newHeight = width;
@@ -574,8 +582,8 @@ export class Select {
 
     for (let y = 0; y < newHeight; y++) {
       for (let x = 0; x < newWidth; x++) {
-        const oldX = y;
-        const oldY = height - 1 - x;
+        const oldX = direction === "cw" ? y : width - 1 - y;
+        const oldY = direction === "cw" ? height - 1 - x : x;
         result[(y * newWidth) + x] = grid[(oldY * width) + oldX];
       }
     }

@@ -30,6 +30,11 @@ export type UVMapEvent = {
     region: UVRegion;
     previous: UVRegionData;
   }) => void;
+  "region-rotated": (event: {
+    region: UVRegion;
+    previous: UVRegionData;
+    face: UVSlot | null;
+  }) => void;
   "selection-changed": (event: {
     selectedRegionId: string | null;
     selectedSlot: UVSlot | null;

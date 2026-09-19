@@ -17,6 +17,7 @@ import { makeContainer } from "./helpers/dom.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import {
   rotateKey,
+  rotateCounterClockwiseKey,
   flipHorizontalKey,
   flipVerticalKey,
   paintHorizontalPair,
@@ -73,6 +74,29 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
       readPixel(manager.texture, { x: 3, y: 3 }, 8),
       [255, 0, 0, 255],
       "rotated: the right pixel is now on the bottom"
+    );
+    manager.destroy();
+  });
+
+  test("Shift+R rotates a selection 90deg counter-clockwise", () => {
+    const manager = makeManager();
+    const canvas = manager.canvas();
+
+    paintHorizontalPair(manager);
+    manager.mode = "select";
+    selectHorizontalPair(canvas);
+
+    window.dispatchEvent(rotateCounterClockwiseKey());
+
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 3, y: 2 }, 8),
+      [255, 0, 0, 255],
+      "rotated: the right pixel is now on top"
+    );
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 3, y: 3 }, 8),
+      [0, 0, 0, 255],
+      "rotated: the left pixel is now on the bottom"
     );
     manager.destroy();
   });

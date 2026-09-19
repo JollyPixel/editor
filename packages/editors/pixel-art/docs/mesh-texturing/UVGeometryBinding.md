@@ -39,7 +39,7 @@ A `null` face, which is what a stacked region reports, projects the region's sha
 
 ## `follow()` / `unfollow()`
 
-`follow(uv)` subscribes to `region-moved`, `region-dragging` and `region-state-changed`, filtered to the bound region's id. `region-dragging` fires on every pointer move, so the geometry tracks the pointer instead of jumping on release. Following a map already followed is a no-op; `unfollow()` is idempotent.
+`follow(uv)` subscribes to `region-moved`, `region-dragging`, `region-state-changed` and `region-rotated`, filtered to the bound region's id. A rotated slot's UVs are turned inside its rect with `rotateUv()`, after the triangle corner orientation. `region-dragging` fires on every pointer move, so the geometry tracks the pointer instead of jumping on release. Following a map already followed is a no-op; `unfollow()` is idempotent.
 
 ## `setRegion()` / `setTextureSize()`
 

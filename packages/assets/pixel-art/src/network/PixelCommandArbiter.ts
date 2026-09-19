@@ -2,9 +2,11 @@
 import * as network from "@jolly-pixel/network";
 import {
   DEFAULT_UV_SLOTS,
+  isUVGeometry,
   isUVRegionData,
   uvTargetKey,
   type PixelBuffer,
+  type UVRegionData,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -21,33 +23,18 @@ export type PixelSelectEditCommand = Extract<
 >;
 export type PixelUvRegionCommand = Extract<
   PixelNetworkCommand,
-  { action: "uv-region-moved" | "uv-region-deleted" | "uv-region-state-changed"; }
+  {
+    action:
+      | "uv-region-moved"
+      | "uv-region-deleted"
+      | "uv-region-state-changed"
+      | "uv-region-rotated";
+  }
 >;
 
-function uvConflictKeys(
-  command: PixelUvRegionCommand,
-  buffer: PixelBuffer
+function regionConflictKeys(
+  region: UVRegionData
 ): string[] {
-  if (command.action === "uv-region-moved") {
-    return [
-      uvTargetKey({
-        regionId: command.metadata.id,
-        slot: command.metadata.face
-      })
-    ];
-  }
-
-  if (command.action === "uv-region-deleted") {
-    const { id } = command.metadata;
-    const slots = buffer.uvRegions.get(id)?.slots ?? DEFAULT_UV_SLOTS;
-
-    return [
-      uvTargetKey({ regionId: id, slot: null }),
-      ...slots.map((slot) => uvTargetKey({ regionId: id, slot }))
-    ];
-  }
-
-  const { region } = command.metadata;
   const faces = region.faces ?
     Object.keys(region.faces) :
     DEFAULT_UV_SLOTS;
@@ -59,6 +46,39 @@ function uvConflictKeys(
       slot: face
     }))
   ];
+}
+
+function uvConflictKeys(
+  command: PixelUvRegionCommand,
+  buffer: PixelBuffer
+): string[] {
+  switch (command.action) {
+    case "uv-region-moved":
+      return [
+        uvTargetKey({
+          regionId: command.metadata.id,
+          slot: command.metadata.face
+        })
+      ];
+    case "uv-region-rotated": {
+      const rotation = command.metadata;
+
+      return rotation.face === null ?
+        regionConflictKeys(rotation.region) :
+        [uvTargetKey({ regionId: rotation.id, slot: rotation.face })];
+    }
+    case "uv-region-deleted": {
+      const { id } = command.metadata;
+      const slots = buffer.uvRegions.get(id)?.slots ?? DEFAULT_UV_SLOTS;
+
+      return [
+        uvTargetKey({ regionId: id, slot: null }),
+        ...slots.map((slot) => uvTargetKey({ regionId: id, slot }))
+      ];
+    }
+    default:
+      return regionConflictKeys(command.metadata.region);
+  }
 }
 
 export interface PixelCommandArbiterOptions {
@@ -93,6 +113,10 @@ export class PixelCommandArbiter {
           null;
       case "uv-region-state-changed":
         return isUVRegionData(command.metadata.region) ?
+          this.#admitUvRegion(buffer, command) :
+          null;
+      case "uv-region-rotated":
+        return isValidRotation(command) ?
           this.#admitUvRegion(buffer, command) :
           null;
       case "uv-region-moved":
@@ -171,6 +195,16 @@ export class PixelCommandArbiter {
       uvConflictKeys(command, buffer)
     );
   }
+}
+
+function isValidRotation(
+  command: Extract<PixelNetworkCommand, { action: "uv-region-rotated"; }>
+): boolean {
+  const rotation = command.metadata;
+
+  return rotation.face === null ?
+    isUVRegionData(rotation.region) && rotation.region.id === rotation.id :
+    isUVGeometry(rotation.geometry);
 }
 
 function pixelKey(

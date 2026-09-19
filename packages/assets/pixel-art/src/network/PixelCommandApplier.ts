@@ -68,11 +68,35 @@ export function applyCommandToBuffer(
     case "uv-region-moved": {
       const existing = buffer.uvRegions.get(cmd.metadata.id);
       if (existing) {
+        const { face, rect } = cmd.metadata;
+        const current = face === null ?
+          existing.bounds :
+          existing.rectFor(face);
         buffer.uvRegions.set(
           existing.withRect(
-            cmd.metadata.rect,
-            cmd.metadata.face ?? undefined
+            {
+              ...current,
+              x: rect.x,
+              y: rect.y
+            },
+            face ?? undefined
           )
+        );
+      }
+      break;
+    }
+
+    case "uv-region-rotated": {
+      const rotation = cmd.metadata;
+      if (rotation.face === null) {
+        buffer.uvRegions.set(rotation.region);
+        break;
+      }
+
+      const existing = buffer.uvRegions.get(rotation.id);
+      if (existing) {
+        buffer.uvRegions.set(
+          existing.withGeometry(rotation.face, rotation.geometry)
         );
       }
       break;

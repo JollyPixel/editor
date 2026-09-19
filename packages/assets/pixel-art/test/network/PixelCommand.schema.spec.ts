@@ -196,3 +196,66 @@ describe("pixelSnapshotSchema", () => {
     }).ok, false);
   });
 });
+
+describe("pixelCommandProtocol — uv rotation", () => {
+  function regionRotated(
+    metadata: unknown
+  ): unknown {
+    return {
+      ...kHeader,
+      action: "uv-region-rotated",
+      metadata
+    };
+  }
+
+  test("accepts a slot rotation carrying the rotated geometry", () => {
+    assert.ok(accepts(regionRotated({
+      id: "block-1",
+      face: "top",
+      geometry: { ...kTile, rotation: 1 }
+    })));
+    assert.ok(accepts(regionRotated({
+      id: "block-1",
+      face: "left",
+      geometry: {
+        shape: "triangle",
+        corner: "bottom-left",
+        rect: kTile,
+        rotation: 3
+      }
+    })));
+  });
+
+  test("accepts a region rotation carrying a stacked rect rotation", () => {
+    assert.ok(accepts(regionRotated({
+      id: "block-1",
+      face: null,
+      region: {
+        id: "block-1",
+        color: "#fff",
+        state: "stacked",
+        rect: { ...kTile, rotation: 2 }
+      }
+    })));
+  });
+
+  test("rejects rotations other than quarter turns", () => {
+    assert.strictEqual(accepts(regionRotated({
+      id: "block-1",
+      face: "top",
+      geometry: { ...kTile, rotation: 4 }
+    })), false);
+    assert.strictEqual(
+      accepts(regionCreated({ top: { ...kTile, rotation: 0.5 } })),
+      false
+    );
+  });
+
+  test("rejects a region rotation without its region", () => {
+    assert.strictEqual(accepts(regionRotated({
+      id: "block-1",
+      face: null,
+      geometry: kTile
+    })), false);
+  });
+});

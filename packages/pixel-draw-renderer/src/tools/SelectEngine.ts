@@ -17,6 +17,7 @@ import type {
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
   RGBA8,
+  RotationDirection,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -63,7 +64,9 @@ export interface SelectTool {
   /**
    * Returns `false` when there is no active selection.
    */
-  rotate(): boolean;
+  rotate(
+    direction?: RotationDirection
+  ): boolean;
   flipHorizontal(): boolean;
   flipVertical(): boolean;
   delete(): boolean;
@@ -387,14 +390,16 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     return true;
   }
 
-  rotate(): boolean {
+  rotate(
+    direction: RotationDirection = "cw"
+  ): boolean {
     if (this.#select.state !== "selected") {
       return false;
     }
 
     const isFloating = this.#select.floating;
     const oldMask = this.#select.mask;
-    const result = this.#select.rotate();
+    const result = this.#select.rotate(direction);
     const snapshot = this.#select.snapshot;
     const newMask = this.#select.mask;
     if (!result || !snapshot || !oldMask || !newMask) {

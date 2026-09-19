@@ -1,10 +1,20 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 
+/**
+ * Clockwise quarter turns of the tile image inside its face, in image space
+ * where y points down. Applied before the block's own transform.
+ */
+export type TileRotation = 0 | 1 | 2 | 3;
+
 export interface ResolvedTileRef {
   col: number;
   row: number;
   tilesetId?: string;
+  /**
+   * @default 0
+   */
+  rotation?: TileRotation;
   /**
    * Square texture region size in source texels, anchored at the tile's
    * top-left corner.
