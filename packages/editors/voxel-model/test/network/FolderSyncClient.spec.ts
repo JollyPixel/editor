@@ -3,27 +3,32 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
+import type {
+  FolderNodeJSON,
+  FolderPlacementJSON,
+  VoxelModelNetworkCommand
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import { FolderSyncClient } from "#src/network/FolderSyncClient.ts";
 import FolderManager from "#src/features/folders/FolderManager.ts";
-import type {
-  FolderNetworkCommand,
-  FolderServerMessage,
-  FolderSnapshotJSON
-} from "#src/network/folderTypes.ts";
+import type { VoxelModelRoom } from "#src/network/types.ts";
 
-interface MockRoom extends network.Room<FolderNetworkCommand, FolderServerMessage> {
-  sentCommands: FolderNetworkCommand[];
-  simulateCommand(cmd: FolderNetworkCommand): void;
+interface FolderSnapshotJSON {
+  folders: FolderNodeJSON[];
+  placements: FolderPlacementJSON[];
+}
+
+interface MockRoom extends VoxelModelRoom {
+  sentCommands: VoxelModelNetworkCommand[];
+  simulateCommand(cmd: VoxelModelNetworkCommand): void;
   simulateSnapshot(snapshot: FolderSnapshotJSON): void;
 }
 
 function createMockRoom(
   clientId = "client-A"
 ): MockRoom {
-  const sentCommands: FolderNetworkCommand[] = [];
+  const sentCommands: VoxelModelNetworkCommand[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
 
   function emit(
@@ -65,7 +70,13 @@ function createMockRoom(
       emit("message", { type: "command", data: cmd });
     },
     simulateSnapshot(snapshot) {
-      emit("message", { type: "snapshot", data: snapshot });
+      emit("message", {
+        type: "snapshot",
+        data: {
+          nodes: [],
+          ...snapshot
+        }
+      });
     }
   };
 

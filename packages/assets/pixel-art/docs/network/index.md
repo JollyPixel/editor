@@ -1,6 +1,6 @@
 # Network synchronization
 
-The network API synchronizes one `PixelArtCanvas` through one `@jolly-pixel/network` room. The [pixel-art asset kind](../asset/index.md) owns the authoritative `PixelBuffer`; each browser uses a `PixelCollaboration` (a `PixelSyncClient` plus presence previews) to apply snapshots and exchange committed edits.
+The network API synchronizes one `PixelDocument` through one `@jolly-pixel/network` room. The [pixel-art asset kind](../asset/index.md) owns the authoritative `PixelBuffer`; each browser keeps a `SyncedPixelDocument` (a document plus its `PixelSyncClient`) to apply snapshots and exchange committed edits, and a `PixelCollaboration` adds presence previews to a canvas built on that document.
 
 Cursor and in-progress edit previews are optional. They use the room's presence channel and never change the authoritative buffer.
 
@@ -15,7 +15,7 @@ Start with the setup guide. The API reference is useful when wrapping these clas
 
 | Page | API |
 |---|---|
-| [`PixelSyncClient`](./api/PixelSyncClient.md) | `PixelSyncClient`, `PixelCollaboration`, readiness and notices |
+| [`PixelSyncClient`](./api/PixelSyncClient.md) | `PixelSyncClient`, `SyncedPixelDocument`, `pixelArtModelKind`, `PixelCollaboration`, readiness and notices |
 | [Presence sync](./api/PresenceSync.md) | `PixelCursorSync`, `PixelStrokeGhostSync`, `UVGhostSync` and `SelectionGhostSync` |
 | [Canvas integration](./api/CanvasIntegration.md) | Hooks and remote-application methods used by custom adapters |
 
@@ -31,7 +31,9 @@ import {
   pixelArtRoom,
   PixelStrokeGhostSync,
   PixelSyncClient,
+  pixelArtModelKind,
   SelectionGhostSync,
+  SyncedPixelDocument,
   UVGhostSync,
   type PixelBufferSnapshot,
   type PixelNetworkCommand,

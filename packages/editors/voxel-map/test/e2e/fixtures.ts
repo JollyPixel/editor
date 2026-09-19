@@ -12,6 +12,7 @@ import {
   catalogRoom
 } from "@jolly-pixel/asset-server/catalog/client";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
+import { tilesetAsset } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
 import { SOCKET_URL } from "./constants.ts";
@@ -25,7 +26,7 @@ export { expect } from "@playwright/test";
 
 // CONSTANTS
 const kWorldKind = "voxelmap";
-const kUsernameStorageKey = "voxel-map:username";
+const kUsernameStorageKey = "jolly-pixel:username";
 const kMaxFps = 10;
 
 export interface E2EWorld {
@@ -69,7 +70,7 @@ async function createWorldIn(
     `${folder}/world.voxelmap.json`,
     encodeWorldDocument({
       ...tileset.definition,
-      src: tilesetId
+      asset: tilesetAsset(tilesetId)
     }),
     { kind: kWorldKind }
   );
@@ -97,7 +98,7 @@ export async function openEditor(
     username
   });
   const query = new URLSearchParams({
-    world: world.id,
+    target: world.id,
     "max-fps": String(maxFps),
     samples: "0"
   });

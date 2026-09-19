@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { MessageProtocol } from "@jolly-pixel/network";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type { AssetLiveProtocol } from "./AssetLiveProtocol.ts";
@@ -72,4 +73,8 @@ export interface AssetKindHandler<
   serialize(
     state: TState
   ): Promise<Uint8Array>;
+
+  dependencies?(
+    state: TState
+  ): readonly AssetReferenceData[];
 }

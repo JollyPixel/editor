@@ -328,6 +328,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/asset.pixel-art':
+        specifier: workspace:*
+        version: link:../pixel-art
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -338,6 +341,25 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../../asset
+      '@jolly-pixel/asset-source':
+        specifier: workspace:*
+        version: link:../../asset-source
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../../event-store
+
+  packages/assets/voxel-model:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+    devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
@@ -366,6 +388,31 @@ importers:
       '@jolly-pixel/bench':
         specifier: workspace:*
         version: link:../bench
+
+  packages/editors/host:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@openally/emitt':
+        specifier: 1.0.1
+        version: 1.0.1
+    devDependencies:
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
 
   packages/editors/pixel-art:
     dependencies:
@@ -406,6 +453,9 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
@@ -436,6 +486,9 @@ importers:
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
       '@jolly-pixel/editor.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
@@ -482,12 +535,24 @@ importers:
 
   packages/editors/voxel-model:
     dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../../assets/pixel-art
+      '@jolly-pixel/asset.voxel-model':
+        specifier: workspace:*
+        version: link:../../assets/voxel-model
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
       '@jolly-pixel/editor.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art

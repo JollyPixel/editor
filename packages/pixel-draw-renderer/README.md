@@ -160,6 +160,7 @@ manager.redo();
 ## 📚 API
 
 - [`PixelArtCanvas`](./docs/PixelArtCanvas.md)
+  - [`PixelDocument`](./docs/PixelDocument.md)
   - [`Brush`](./docs/tools/Brush.md)
   - [`BrushTool`](./docs/tools/BrushTool.md)
   - [`FillTool`](./docs/tools/FillTool.md)

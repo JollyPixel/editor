@@ -32,10 +32,13 @@ export function loadTilesets(
     loader = new THREE.TextureLoader(manager)
   } = options;
 
-  const unique = new Map<string, TilesetDefinition>();
+  const unique = new Map<string, TilesetDefinition & { src: string; }>();
   for (const def of definitions) {
-    if (!unique.has(def.id)) {
-      unique.set(def.id, def);
+    if (def.src !== undefined && !unique.has(def.id)) {
+      unique.set(def.id, {
+        ...def,
+        src: def.src
+      });
     }
   }
 

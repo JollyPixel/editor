@@ -57,6 +57,17 @@ describe("loadTilesets", () => {
     assert.equal(calls.length, 0);
   });
 
+  it("skips asset-backed definitions", async() => {
+    const calls: string[] = [];
+    const sources = await loadTilesets([
+      kDefinitions[0],
+      { id: "asset", asset: { id: "a1", kind: "pixelart" }, tileSize: 16 }
+    ], { loader: makeMockLoader(calls) });
+
+    assert.deepEqual(calls, ["/assets/terrain.png"]);
+    assert.deepEqual(sources.map((source) => source.def.id), ["terrain"]);
+  });
+
   it("starts every fetch before awaiting the first one", async() => {
     const started: string[] = [];
     const resolvers: Array<() => void> = [];

@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
 import type {
   AssetManifestData,
-  AssetRecordData
+  AssetRecordData,
+  AssetReferenceData
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type { AssetInlineContent } from "../../events/AssetEvents.schema.ts";
+import type { DependencyMap } from "./DependencyIndex.ts";
 import type { PathConflictPolicy } from "../../writer/AssetWriter.ts";
 
 // CONSTANTS
@@ -60,10 +62,19 @@ export interface CatalogChange {
   readonly eventType: string;
   readonly assetId: string;
   readonly record: AssetRecordData | null;
+  /**
+   * Every outgoing edge of the asset after the change. Absent on deletion
+   * and for assets written before edges were recorded.
+   */
+  readonly dependencies?: readonly AssetReferenceData[];
 }
 
 export type CatalogMessage =
-  | { type: typeof CATALOG_SNAPSHOT; manifest: AssetManifestData; }
+  | {
+    type: typeof CATALOG_SNAPSHOT;
+    manifest: AssetManifestData;
+    dependencies?: DependencyMap;
+  }
   | { type: typeof CATALOG_CHANGED; change: CatalogChange; }
   | {
     type: typeof CATALOG_APPLIED;

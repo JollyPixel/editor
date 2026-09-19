@@ -1,6 +1,7 @@
 // CONSTANTS
 export const CATALOG_URL_PATH = "/__jollypixel/catalog";
 export const ASSET_URL_PREFIX = "/assets/";
+export const LAUNCH_ELEMENT_ID = "jolly-launch";
 
 /**
  * Builds the URL serving one record's bytes.

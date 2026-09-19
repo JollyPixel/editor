@@ -15,10 +15,11 @@ import {
   voxelWorldSchema
 } from "../network/VoxelCommand.schema.ts";
 import { VoxelMapState } from "./VoxelMapState.ts";
+import { VOXEL_MAP_KIND } from "./kind.ts";
 import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
-export const VOXEL_MAP_KIND = "voxelmap";
+export { VOXEL_MAP_KIND };
 export const VOXEL_MAP_COMMAND = "voxelmap.command";
 
 // CONSTANTS
@@ -92,6 +93,12 @@ export function voxelMapAssetHandler(
       return Promise.resolve(
         encodeVoxelDocument(state.toJSON())
       );
+    },
+
+    dependencies(
+      state: VoxelMapState
+    ) {
+      return state.dependencies();
     },
 
     commands: {

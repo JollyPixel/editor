@@ -4,17 +4,14 @@ import type {
   VoxelEngine,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
-import type { CanvasHoverChangeDetail } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
 import type { GridRenderer } from "../../scene/GridRenderer.ts";
 import type { SceneLighting } from "../../scene/SceneLighting.ts";
 import type { LocalBrush } from "../../features/painting/index.ts";
-import type {
-  TextureEditor,
-  TextureRoomFactory
-} from "../../features/texture/TextureEditor.ts";
+import type { TextureEditor } from "../../features/texture/TextureEditor.ts";
+import type { TilesetTextures } from "../../features/tilesets/TilesetTextures.ts";
 import type { TilesetActions } from "../../features/tilesets/TilesetActions.ts";
 import type { ViewFocus } from "../../scene/viewFocus.ts";
 import { BlocksPanel } from "./BlocksPanel.ts";
@@ -31,10 +28,8 @@ import {
 export interface EditorPanelsOptions {
   state: EditorState;
   viewFocus: ViewFocus;
-  textureRooms?: TextureRoomFactory;
   onLoadWorld(data: VoxelWorldJSON): void;
   onTeleportToPeer(clientId: string): void;
-  onCanvasHoverChange(hovering: boolean): void;
 }
 
 export interface EditorPanelsHandles {
@@ -43,6 +38,7 @@ export interface EditorPanelsHandles {
   lighting: SceneLighting;
   localBrush: LocalBrush;
   tilesetActions: TilesetActions | null;
+  textures: TilesetTextures;
 }
 
 export class EditorPanels {
@@ -52,7 +48,6 @@ export class EditorPanels {
   readonly #paint: PaintPanel;
   readonly #layers: LayersPanel;
   readonly #textureEditor: TextureEditor;
-  readonly #onCanvasHoverChange: (hovering: boolean) => void;
   #host: TextureHost = "blocks";
 
   static mount(
@@ -101,7 +96,6 @@ export class EditorPanels {
     this.#blocks = elements.blocks;
     this.#paint = elements.paint;
     this.#layers = elements.layers;
-    this.#onCanvasHoverChange = options.onCanvasHoverChange;
 
     this.#general.state = options.state;
     this.#general.onLoadWorld = options.onLoadWorld;
@@ -114,12 +108,10 @@ export class EditorPanels {
     this.#textureEditor.brush = options.state.brush;
     this.#textureEditor.worldStore = options.state.world;
     this.#textureEditor.tilesets = options.state.tilesets;
-    this.#textureEditor.rooms = options.textureRooms;
 
     this.#layout.addEventListener("jolly-layout-change", this.#place);
     this.#layout.addEventListener("jolly-pane-visibility", this.#place);
     this.#layout.addEventListener("world-loaded", this.#refresh);
-    this.#layout.addEventListener("canvas-hover-change", this.#onHover);
     void this.#layout.updateComplete.then(this.#place);
   }
 
@@ -134,13 +126,17 @@ export class EditorPanels {
     this.#blocks.tilesetActions = handles.tilesetActions;
     this.#layers.engine = handles.engine;
     this.#textureEditor.engine = handles.engine;
+    this.#textureEditor.textures = handles.textures;
+  }
+
+  get layout(): DockLayout {
+    return this.#layout;
   }
 
   dispose(): void {
     this.#layout.removeEventListener("jolly-layout-change", this.#place);
     this.#layout.removeEventListener("jolly-pane-visibility", this.#place);
     this.#layout.removeEventListener("world-loaded", this.#refresh);
-    this.#layout.removeEventListener("canvas-hover-change", this.#onHover);
     this.#textureEditor.remove();
   }
 
@@ -164,9 +160,5 @@ export class EditorPanels {
     this.#general.requestUpdate();
     this.#blocks.requestUpdate();
     this.#layers.requestUpdate();
-  };
-
-  readonly #onHover = (event: CustomEvent<CanvasHoverChangeDetail>): void => {
-    this.#onCanvasHoverChange(event.detail.hovering);
   };
 }

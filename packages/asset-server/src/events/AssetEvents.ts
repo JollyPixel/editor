@@ -4,6 +4,7 @@ import { Buffer } from "node:buffer";
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { PeerIdentity } from "@jolly-pixel/network";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
@@ -211,14 +212,21 @@ function malformed(
 export function writeData(
   path: string,
   kind: string,
-  data: Uint8Array
+  data: Uint8Array,
+  dependencies: readonly AssetReferenceData[] = []
 ): AssetWriteData {
   return {
     path,
     kind,
     hash: contentHash(data),
     size: data.byteLength,
-    content: encodeContent(data)
+    content: encodeContent(data),
+    dependencies: dependencies.map((reference) => {
+      return {
+        id: reference.id,
+        kind: reference.kind
+      };
+    })
   };
 }
 

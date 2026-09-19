@@ -22,8 +22,12 @@
     "#src/*": "./src/*"
   },
   "dependencies": {
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
+    "@jolly-pixel/asset.voxel-model": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/editor.pixel-art": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/network": "workspace:*",

@@ -55,9 +55,12 @@ const canvas = await panel.initialize({
 Cube and Ramp previews in Three.js, with multiplayer sync via
 `@jolly-pixel/network`.
 
-The demo keeps application wiring in `examples/scripts/main.ts`, theme and
-collaboration integration in `examples/scripts/demo/`, and UV-driven Three.js
-rendering in `examples/scripts/preview/`. Shape-specific geometry lives under
+The demo boots through [`@jolly-pixel/editor.host`](../host/README.md):
+`examples/scripts/main.ts` hands its definition to `mountStandalone()`, which
+opens the session on the launch target (the seeded `demo-canvas` asset, or
+`?target=<assetId>`). `examples/scripts/boot/` builds the target document,
+the preview and the texture tabs, which lease every added texture from the
+session. UV-driven Three.js rendering lives in `examples/scripts/preview/`. Shape-specific geometry lives under
 `preview/shapes/`; the gallery, picker, UV projection, and animation remain
 shape-neutral.
 

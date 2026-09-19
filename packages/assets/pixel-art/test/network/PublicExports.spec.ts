@@ -24,6 +24,8 @@ describe("network entry points", () => {
     assert.strictEqual(typeof client.PixelStrokeGhostSync, "function");
     assert.strictEqual(typeof client.UVGhostSync, "function");
     assert.strictEqual(typeof client.SelectionGhostSync, "function");
+    assert.strictEqual(typeof client.SyncedPixelDocument, "function");
+    assert.strictEqual(typeof client.pixelArtModelKind, "function");
   });
 
   test("server entry exports the authoritative server API", () => {

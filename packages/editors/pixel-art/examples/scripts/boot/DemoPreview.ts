@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
-import {
-  Runtime,
-  type RuntimeCanvasTarget
-} from "@jolly-pixel/runtime";
+import type { RuntimeCanvasTarget } from "@jolly-pixel/runtime";
+import { EditorRuntime } from "@jolly-pixel/editor.host";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
@@ -21,7 +19,7 @@ export interface DemoPreviewOptions {
 }
 
 export interface DemoPreview {
-  runtime: Runtime;
+  editorRuntime: EditorRuntime;
   scene: PixelPreviewScene;
 }
 
@@ -34,18 +32,16 @@ export async function openDemoPreview(
     rotationToggle.checked = rotation === "true";
   }
 
-  const runtime = await Runtime.create(options.canvas, {
-    includePerformanceStats: false,
-    focusCanvas: false,
-    viewHelper: true
-  });
   const scene = new PixelPreviewScene({
     canvasManager: options.canvasManager,
     rotating: rotationToggle.checked
   });
-  await runtime.load({
-    skipLoadingScreen: true,
-    scene,
+  const editorRuntime = await EditorRuntime.create(options.canvas, {
+    includePerformanceStats: false,
+    focusCanvas: false,
+    viewHelper: true
+  });
+  await editorRuntime.load(scene, {
     maxFps: options.maxFps
   });
   await scene.ready;
@@ -56,7 +52,7 @@ export async function openDemoPreview(
   });
 
   return {
-    runtime,
+    editorRuntime,
     scene
   };
 }

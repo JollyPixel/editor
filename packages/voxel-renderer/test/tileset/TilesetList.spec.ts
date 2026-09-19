@@ -44,6 +44,19 @@ describe("TilesetList", () => {
     assert.deepEqual(list.get("a"), { id: "a", src: "a", tileSize: 32 });
   });
 
+  it("keeps the asset reference of a resized tileset, copied", () => {
+    const asset = { id: "a1", kind: "pixelart" };
+    const list = new TilesetList([{ id: "a", asset, tileSize: 16 }]);
+    asset.id = "mutated";
+
+    assert.equal(list.resize("a", 32), true);
+    assert.deepEqual(list.get("a"), {
+      id: "a",
+      asset: { id: "a1", kind: "pixelart" },
+      tileSize: 32
+    });
+  });
+
   it("updates the default tile size once", () => {
     const list = new TilesetList();
     assert.equal(list.defaultTileSize, undefined);

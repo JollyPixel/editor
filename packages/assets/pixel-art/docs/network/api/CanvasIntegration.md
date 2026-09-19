@@ -1,6 +1,6 @@
 # PixelArtCanvas network integration
 
-`PixelArtCanvas` exposes mutation hooks and remote-application methods for `PixelSyncClient`. Presence helpers use the same callbacks, typed events and peer overlays.
+`PixelDocument` owns the mutation hook and remote-application methods that `PixelSyncClient` uses; `PixelArtCanvas` forwards each of them to its document. Presence helpers use the canvas callbacks, typed events and peer overlays.
 
 Most applications should use the provided sync classes. These members are useful when adapting another transport or adding application-specific presence.
 
@@ -15,7 +15,7 @@ set onBufferUpdated(listener: PixelBufferHookListener | undefined)
 
 Receives committed local pixel and UV commands. Undo and redo emit replay commands with the original edit time in `originTimestamp`.
 
-The canvas has one callback slot. Read the current callback before replacing it when multiple consumers need the hook. `PixelSyncClient` follows this rule and restores the previous callback when destroyed.
+The document has one callback slot. Read the current callback before replacing it when multiple consumers need the hook. `PixelSyncClient` follows this rule and restores the previous callback when destroyed.
 
 The callback can also be supplied as [`PixelArtCanvasOptions.onBufferUpdated`](../../../../../pixel-draw-renderer/docs/PixelArtCanvasOptions.md#onbufferupdated).
 

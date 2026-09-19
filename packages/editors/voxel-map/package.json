@@ -47,6 +47,7 @@
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/editor.pixel-art": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",

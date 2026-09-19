@@ -12,10 +12,7 @@ import {
   type Toolset
 } from "./tools/Tools.ts";
 import type { SelectEngineEvent } from "./tools/SelectEngine.events.ts";
-import {
-  History,
-  type HistoryState
-} from "./history/History.ts";
+import type { HistoryState } from "./history/History.ts";
 import {
   InteractionRouter,
   type ExternalCursorMoveListener
@@ -54,10 +51,6 @@ import type {
   UVRegionData
 } from "./uv/UVRegion.ts";
 import {
-  pointInGeometry,
-  rectOf
-} from "./uv/geometry.ts";
-import {
   uvSlotGeometries,
   uvSlotMask
 } from "./uv/uvSlotMask.ts";
@@ -91,6 +84,7 @@ export interface ClearTextureOptions {
 }
 
 export interface PixelArtCanvasOptions {
+  document?: PixelDocument;
   defaultMode?: Mode;
   window?: WindowLike;
   texture?: {
@@ -136,12 +130,16 @@ export class PixelArtCanvas {
 
   #edits: EditPipeline;
   #onDrawEnd?: () => void;
+  #onHistoryChange?: (state: HistoryState) => void;
   #onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
   #router: InteractionRouter;
   #tools: Tools;
   #clipboard: SelectionClipboard;
   #clipboardPending = false;
   #onClipboardResult?: (result: ClipboardOperationResult) => void;
+  #onDocumentDrawEnd = () => this.#onDrawEnd?.();
+  #onDocumentHistoryChanged = (state: HistoryState) => this.#onHistoryChange?.(state);
+  #onDocumentReset = () => this.#tools.select.discard();
   #onViewportChanged = () => {
     this.#view.refresh();
     this.#tools.line.refreshPreview();
@@ -162,6 +160,7 @@ export class PixelArtCanvas {
   ) {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
+    this.#onHistoryChange = options.onHistoryChange;
     this.#onClipboardResult = options.onClipboardResult;
     const defaultMode: Mode = options.defaultMode ?? "paint";
     const eraseColor = options.select?.eraseColor === undefined ?
@@ -172,17 +171,19 @@ export class PixelArtCanvas {
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
       : { x: 64, y: 32 };
 
-    this.document = new PixelDocument({
+    this.document = options.document ?? new PixelDocument({
       size: textureSize,
       defaultColor: options.texture?.defaultColor,
       maxSize: options.texture?.maxSize,
       init: options.texture?.init,
       history: {
         enabled: options.history?.enabled,
-        limit: options.history?.limit,
-        onChange: options.onHistoryChange
+        limit: options.history?.limit
       }
     });
+    if (options.onBufferUpdated) {
+      this.document.onBufferUpdated = options.onBufferUpdated;
+    }
     this.uv = this.document.uv;
 
     this.brush = new Brush(options.brush);
@@ -216,13 +217,7 @@ export class PixelArtCanvas {
 
     this.#edits = new EditPipeline({
       brush: this.brush,
-      canvasBuffer: this.document.buffer,
-      viewport: this.#view.viewport,
-      renderer: this.#view.renderer,
-      history: this.document.history,
-      uvMap: this.document.uv,
-      onBufferUpdated: options.onBufferUpdated,
-      onDrawEnd: options.onDrawEnd
+      document: this.document
     });
 
     this.#tools = new Tools({
@@ -245,6 +240,9 @@ export class PixelArtCanvas {
     });
 
     this.#view.viewport.on("changed", this.#onViewportChanged);
+    this.document.on("draw-end", this.#onDocumentDrawEnd);
+    this.document.on("history-changed", this.#onDocumentHistoryChanged);
+    this.document.on("reset", this.#onDocumentReset);
 
     this.#router = new InteractionRouter({
       defaultMode,
@@ -360,7 +358,7 @@ export class PixelArtCanvas {
       return;
     }
 
-    this.#edits.resize(size);
+    this.document.resize(size);
     this.#tools.select.discard();
   }
 
@@ -404,28 +402,7 @@ export class PixelArtCanvas {
   hasTransparency(
     geometry: UVGeometry
   ): boolean {
-    if (!("shape" in geometry)) {
-      return this.document.buffer.hasTransparency(geometry);
-    }
-
-    const bounds = rectOf(geometry);
-    const maxX = Math.ceil(bounds.x + bounds.width);
-    const maxY = Math.ceil(bounds.y + bounds.height);
-    for (let y = Math.floor(bounds.y); y < maxY; y++) {
-      for (let x = Math.floor(bounds.x); x < maxX; x++) {
-        if (
-          pointInGeometry(
-            { x: x + 0.5, y: y + 0.5 },
-            geometry
-          ) &&
-          this.document.buffer.samplePixel(x, y)[3] < 255
-        ) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return this.document.hasTransparency(geometry);
   }
 
   canvas(): HTMLCanvasElement {
@@ -435,13 +412,16 @@ export class PixelArtCanvas {
   destroy(): void {
     this.#input.destroy();
     this.#view.viewport.off("changed", this.#onViewportChanged);
+    this.document.off("draw-end", this.#onDocumentDrawEnd);
+    this.document.off("history-changed", this.#onDocumentHistoryChanged);
+    this.document.off("reset", this.#onDocumentReset);
     this.#view.destroy();
   }
 
   set texture(
     source: HTMLCanvasElement | HTMLImageElement
   ) {
-    this.#edits.replaceTexture(source);
+    this.document.replaceTexture(source);
     this.#tools.select.discard();
   }
 
@@ -459,7 +439,7 @@ export class PixelArtCanvas {
         this.textureSize
       );
 
-    this.#edits.clearTexture(keepMask);
+    this.document.clearTexture(keepMask);
     this.#tools.select.discard();
   }
 
@@ -472,12 +452,11 @@ export class PixelArtCanvas {
 
   undo(): boolean {
     const previousSize = this.textureSize;
-    const entry = this.#edits.runHistoryReplay(() => this.document.history.undo());
+    const entry = this.document.undo();
     if (!entry) {
       return false;
     }
 
-    this.#refreshAfterHistoryApply();
     if (
       previousSize.x !== this.textureSize.x ||
       previousSize.y !== this.textureSize.y
@@ -490,22 +469,17 @@ export class PixelArtCanvas {
         entry.oldMask
       );
     }
-    for (const event of History.buildUndoReplayEvents(entry)) {
-      this.#edits.emitHook(event);
-    }
-    this.#onDrawEnd?.();
 
     return true;
   }
 
   redo(): boolean {
     const previousSize = this.textureSize;
-    const entry = this.#edits.runHistoryReplay(() => this.document.history.redo());
+    const entry = this.document.redo();
     if (!entry) {
       return false;
     }
 
-    this.#refreshAfterHistoryApply();
     if (
       previousSize.x !== this.textureSize.x ||
       previousSize.y !== this.textureSize.y
@@ -521,10 +495,6 @@ export class PixelArtCanvas {
         entry.newMask
       );
     }
-    for (const event of History.buildRedoReplayEvents(entry)) {
-      this.#edits.emitHook(event);
-    }
-    this.#onDrawEnd?.();
 
     return true;
   }
@@ -538,13 +508,13 @@ export class PixelArtCanvas {
   }
 
   get onBufferUpdated(): PixelBufferHookListener | undefined {
-    return this.#edits.onBufferUpdated;
+    return this.document.onBufferUpdated;
   }
 
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
   ) {
-    this.#edits.onBufferUpdated = fn;
+    this.document.onBufferUpdated = fn;
   }
 
   get onCursorMove(): ExternalCursorMoveListener | undefined {
@@ -570,13 +540,7 @@ export class PixelArtCanvas {
   applyRemoteCommand(
     event: PixelBufferHookEvent
   ): void {
-    this.#edits.applyRemoteCommand(event);
-    if (
-      event.action === "resized" ||
-      event.action === "texture-replaced"
-    ) {
-      this.#tools.select.discard();
-    }
+    this.document.applyRemoteCommand(event);
   }
 
   loadSnapshot(
@@ -584,14 +548,13 @@ export class PixelArtCanvas {
     pixels: Uint8ClampedArray,
     uvRegions: (UVRegion | UVRegionData)[] = []
   ): void {
-    this.#edits.loadSnapshot(size, pixels, uvRegions);
-    this.#tools.select.discard();
+    this.document.loadSnapshot(size, pixels, uvRegions);
   }
 
   runLocalRestore<T>(
     fn: () => T
   ): T {
-    return this.#edits.runLocalRestore(fn);
+    return this.document.runLocalRestore(fn);
   }
 
   async copySelection(): Promise<ClipboardOperationResult> {
@@ -707,13 +670,6 @@ export class PixelArtCanvas {
     this.#onClipboardResult?.(result);
 
     return result;
-  }
-
-  #refreshAfterHistoryApply(): void {
-    this.#view.viewport.texture.resize(
-      this.document.buffer.size()
-    );
-    this.#view.drawFrame();
   }
 }
 

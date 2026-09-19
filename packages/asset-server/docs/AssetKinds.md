@@ -15,6 +15,7 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   load(state: TState, content: Uint8Array): void;
   clear(state: TState): void;
   serialize(state: TState): Promise<Uint8Array>;
+  dependencies?(state: TState): readonly AssetReferenceData[];
 }
 
 interface AssetCommands<TState = unknown, TCommand = unknown> {
@@ -33,6 +34,11 @@ path that no registered handler claims.
 `serialize` returns the bytes stored by the asset source. A kind that supports
 live editing provides `commands.live`; other kinds have no dynamic editing
 room.
+
+`dependencies` lists the assets a state references, such as the tilesets of
+a voxel map. The writer records them on every `asset.created` and
+`asset.updated` event, so it runs on every lifecycle write. A kind that
+references nothing omits it. See [dependency edges](./Catalog.md#dependency-edges).
 
 Import the handler contract from `@jolly-pixel/asset-server/kinds`. It exposes
 the handler and live protocol types, `foldAssetEvent`, the built-in handlers

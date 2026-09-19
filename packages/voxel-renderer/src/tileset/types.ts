@@ -49,9 +49,22 @@ export interface TilesetUVRegion {
   scaleV: number;
 }
 
+export interface TilesetAssetReference {
+  id: string;
+  kind: string;
+}
+
 export interface TilesetDefinition {
   id: string;
-  src: string;
+  /**
+   * Image URL. Absent when `asset` holds the pixels.
+   */
+  src?: string;
+  /**
+   * Catalog asset holding the pixels, resolved by the host instead of
+   * `loadTilesets()`.
+   */
+  asset?: TilesetAssetReference;
   /**
    * Tile width/height in pixels (tiles are square).
    */

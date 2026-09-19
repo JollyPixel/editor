@@ -11,8 +11,10 @@ import { render } from "lit";
 import type * as network from "@jolly-pixel/network";
 import {
   LogQueue,
+  type PeerIdentity,
   type PresencePeer
 } from "@jolly-pixel/ui";
+import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -20,15 +22,11 @@ import {
   PresenceStore
 } from "../../src/app/state/index.ts";
 import { PeerRoster } from "../../src/collaboration/PeerRoster.ts";
-import {
-  peerColor,
-  type EditorIdentity
-} from "../../src/collaboration/identity.ts";
 
-const kLocalIdentity: EditorIdentity = {
+const kLocalIdentity: PeerIdentity = {
   username: "Ada",
   peerId: "local-peer",
-  color: peerColor("ignored", { peerId: "local-peer" })
+  color: peerProfileColor("ignored", { peerId: "local-peer" })
 };
 
 type RoomEvent = "sync" | "peer-joined" | "peer-left";
@@ -184,7 +182,7 @@ describe("PeerRoster", () => {
 
     assert.strictEqual(
       currentPeers()[1].color,
-      peerColor("another-connection", { peerId: "shared" })
+      peerProfileColor("another-connection", { peerId: "shared" })
     );
   });
 

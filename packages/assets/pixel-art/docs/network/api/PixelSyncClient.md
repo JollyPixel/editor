@@ -1,6 +1,6 @@
 # PixelSyncClient
 
-Connects one `PixelArtCanvas` to one `@jolly-pixel/network` room. It extends the network package's [`CommandSync`](../../../../../network/docs/sync/CommandSync.md).
+Connects one `PixelDocument` to one `@jolly-pixel/network` room. No canvas is needed; any `PixelArtCanvas` built on the document shows the synced state. It extends the network package's [`CommandSync`](../../../../../network/docs/sync/CommandSync.md).
 
 ## Constructor
 
@@ -9,11 +9,16 @@ new PixelSyncClient(options: PixelSyncClientOptions)
 
 interface PixelSyncClientOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
-  canvas: PixelArtCanvas;
+  document: PixelSyncTarget;
 }
+
+type PixelSyncTarget = Pick<
+  PixelDocument,
+  "onBufferUpdated" | "applyRemoteCommand" | "loadSnapshot"
+>;
 ```
 
-The constructor chains `canvas.onBufferUpdated` and starts listening for room messages. It does not join or leave the room, so construct it before `room.join()`.
+The constructor chains `document.onBufferUpdated` and starts listening for room messages. It does not join or leave the room, so construct it before `room.join()`.
 
 ## Types
 
@@ -44,9 +49,9 @@ type PixelServerMessage = NetworkServerMessage<
 
 | Event | Payload | When |
 |---|---|---|
-| `"snapshot"` | `PixelBufferSnapshot` | every snapshot, after `canvas.loadSnapshot()` |
+| `"snapshot"` | `PixelBufferSnapshot` | every snapshot, after `document.loadSnapshot()` |
 | `"ready"` | none | once, after the first snapshot |
-| `"command"` | `PixelNetworkCommand` | a command from another client, after `canvas.applyRemoteCommand()` |
+| `"command"` | `PixelNetworkCommand` | a command from another client, after `document.applyRemoteCommand()` |
 | `"notice"` | `PixelAssetNotice` | the room refused an edit (`rejected`) or the asset was deleted (`deleted`) |
 
 `ready` is `true` once the first snapshot has been applied.
@@ -57,11 +62,45 @@ Local commands receive an incrementing `seq`, the room's `clientId`, and a times
 
 ## `destroy()`
 
-Restores the previous `canvas.onBufferUpdated` listener and removes the room listener. It does not call `room.leave()`.
+Restores the previous `document.onBufferUpdated` listener and removes the room listener. It does not call `room.leave()`.
+
+## SyncedPixelDocument
+
+A `PixelDocument` plus the `PixelSyncClient` that keeps it in step with one room:
+
+```ts
+new SyncedPixelDocument(
+  room: Room<PixelNetworkCommand, PixelServerMessage>,
+  options?: SyncedPixelDocumentOptions
+)
+
+interface SyncedPixelDocumentOptions {
+  maxSize?: number;
+  history?: { enabled?: boolean; limit?: number; };
+}
+```
+
+- `model` is the document. It starts at 1×1 and takes its size from the first snapshot.
+- `sync` is the `PixelSyncClient`.
+- `ready` resolves once the first snapshot is loaded.
+- `dispose()` destroys the sync client. It does not leave the room.
+
+## pixelArtModelKind
+
+```ts
+function pixelArtModelKind(
+  options?: SyncedPixelDocumentOptions
+): {
+  kind: "pixelart";
+  createModel(room): SyncedPixelDocument;
+};
+```
+
+The asset model kind that an `@jolly-pixel/editor.host` session leases pixel-art assets with. Every lease of one asset shares the same document.
 
 ## PixelCollaboration
 
-Builds a `PixelSyncClient` and every presence helper for one canvas:
+Builds every presence helper for one canvas. The canvas should be built on a synced document, and `room` is that document's room:
 
 ```ts
 new PixelCollaboration(options: {
@@ -76,7 +115,6 @@ type PeerLabel = (clientId: string, profile: PeerMetadata) => string;
 type PeerColor = (clientId: string, profile: PeerMetadata) => string;
 ```
 
-- `sync` is the `PixelSyncClient`, and `ready` mirrors `sync.ready`.
 - `label` and `color` are required and apply to cursors, and `color` to selection and UV ghosts. The host owns peer identity.
 - `onRemoteUvDragging` forwards to `UVGhostSync`'s option of the same name (see [PresenceSync](./PresenceSync.md#uvghostsync)).
 - `destroy()` destroys every helper. It does not leave the room.

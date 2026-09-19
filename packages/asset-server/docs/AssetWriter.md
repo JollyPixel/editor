@@ -36,6 +36,7 @@ interface CreateAssetInput {
   actor: Actor;
   kind?: string;
   assetId?: string;
+  dependencies?: readonly AssetReferenceData[];
 }
 ```
 
@@ -48,6 +49,12 @@ With `onPathConflict: "suffix"`, a taken path gets `-2`, `-3`, ... inserted
 before its first extension (`maps/world.voxelmap.json` becomes
 `maps/world-2.voxelmap.json`) until the path is free. The default, `"reject"`,
 returns `AssetPathConflictError`.
+
+`create` and `update` store the asset's dependency edges in the event's
+`dependencies` field. When the input omits them, the writer loads `data` into
+a fresh state and asks the kind's `dependencies` hook; a kind without the hook,
+or content it cannot load, records none. Edges are deduplicated by id and a
+self reference is dropped.
 
 ## Update, rename and remove
 

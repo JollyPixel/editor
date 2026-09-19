@@ -4,12 +4,17 @@ import {
   AssetCatalog,
   AssetId,
   AssetRecord,
-  type AssetManifestData
+  type AssetManifestData,
+  type AssetReferenceData
 } from "@jolly-pixel/asset";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { CatalogChange } from "./client/protocol.ts";
+import {
+  DependencyIndex,
+  type DependencyMap
+} from "./client/DependencyIndex.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_CREATED,
@@ -36,6 +41,8 @@ export class CatalogProjection extends Emitter<
 > {
   #eventStore: EventStore.EventStore;
   #catalog = new AssetCatalog();
+  #dependencies = new DependencyIndex();
+  #unindexed = new Set<string>();
   #unsubscribe: (() => void) | null = null;
 
   constructor(
@@ -55,6 +62,8 @@ export class CatalogProjection extends Emitter<
 
   load(): void {
     this.#catalog = new AssetCatalog();
+    this.#dependencies.clear();
+    this.#unindexed.clear();
     const events = this.#eventStore.reader.listFromCheckpoints({
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
       eventTypePrefix: ASSET_EVENT_PREFIX
@@ -99,6 +108,32 @@ export class CatalogProjection extends Emitter<
     return this.#catalog.toJSON();
   }
 
+  dependencies(): DependencyMap {
+    return this.#dependencies.toJSON();
+  }
+
+  dependenciesOf(
+    assetId: string
+  ): readonly AssetReferenceData[] {
+    return this.#dependencies.dependenciesOf(assetId);
+  }
+
+  dependentsOf(
+    assetId: string
+  ): readonly string[] {
+    return this.#dependencies.dependentsOf(assetId);
+  }
+
+  closureOf(
+    assetId: string
+  ): AssetReferenceData[] {
+    return this.#dependencies.closureOf(assetId);
+  }
+
+  unindexed(): IterableIterator<string> {
+    return this.#unindexed.values();
+  }
+
   #fold(
     event: AssetEvent
   ): CatalogChange | null {
@@ -114,6 +149,13 @@ export class CatalogProjection extends Emitter<
           source: data.path,
           revision: data.hash
         });
+        if (data.dependencies === undefined) {
+          this.#unindexed.add(event.assetId);
+        }
+        else {
+          this.#unindexed.delete(event.assetId);
+          this.#dependencies.set(event.assetId, data.dependencies);
+        }
 
         return this.#upsert(record, event.eventType);
       }
@@ -138,6 +180,8 @@ export class CatalogProjection extends Emitter<
         }
 
         this.#catalog.remove(id);
+        this.#dependencies.delete(event.assetId);
+        this.#unindexed.delete(event.assetId);
 
         return {
           eventType: event.eventType,
@@ -161,10 +205,20 @@ export class CatalogProjection extends Emitter<
       this.#catalog.add(record);
     }
 
+    const assetId = record.id.value;
+    if (!this.#dependencies.has(assetId)) {
+      return {
+        eventType,
+        assetId,
+        record: record.toJSON()
+      };
+    }
+
     return {
       eventType,
-      assetId: record.id.value,
-      record: record.toJSON()
+      assetId,
+      record: record.toJSON(),
+      dependencies: this.#dependencies.dependenciesOf(assetId)
     };
   }
 }

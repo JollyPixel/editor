@@ -1,48 +1,95 @@
 // Import Third-party Dependencies
+import type { Runtime } from "@jolly-pixel/runtime";
 import {
-  Runtime,
-  type RuntimeCanvasTarget
-} from "@jolly-pixel/runtime";
-import type { AssetId } from "@jolly-pixel/asset";
+  DevOptions,
+  EditorRuntime,
+  type EditorContext,
+  type EditorSession
+} from "@jolly-pixel/editor.host";
+import { VOXEL_MAP_KIND } from "@jolly-pixel/asset.voxel-map/network/client.ts";
+import {
+  DEFAULT_TILE_SIZE,
+  loadTilesets,
+  type TilesetDefinition
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "../app/state/index.ts";
 import { EditorScene } from "../app/EditorScene.ts";
 import { ViewFocus } from "../scene/index.ts";
-import { EditorSession } from "./EditorSession.ts";
 import { EditorShell } from "./EditorShell.ts";
-import { preloadOfflineTilesets } from "./assets/preloadOfflineTilesets.ts";
+import { TilesetAtlases } from "../features/tilesets/TilesetAtlases.ts";
+import {
+  LocalTilesetTextures,
+  SessionTilesetTextures,
+  TILESET_TEXTURE_KIND,
+  type TilesetTextures
+} from "../features/tilesets/TilesetTextures.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
+const kCanvas = "#game-container > canvas";
+const kOfflineTileset: TilesetDefinition = {
+  id: "default",
+  src: "textures/tileset.png",
+  tileSize: DEFAULT_TILE_SIZE
+};
 
-export interface VoxelMapEditorOptions {
-  canvas: RuntimeCanvasTarget;
-  offline?: boolean;
-  world?: AssetId;
-  maxFps?: number;
-  samples?: number;
+export interface VoxelMapDevOptions {
+  offline: boolean;
+  maxFps: number | undefined;
+  samples: number | undefined;
 }
+
+export const VOXEL_MAP_DEV_OPTIONS = new DevOptions<VoxelMapDevOptions>({
+  offline: DevOptions.flag(),
+  maxFps: DevOptions.number(),
+  samples: DevOptions.number()
+});
 
 export interface VoxelMapEditorParts {
   runtime: Runtime;
   scene: EditorScene;
   shell: EditorShell;
+  atlases: TilesetAtlases;
   session?: EditorSession;
 }
 
-export class VoxelMapEditor {
-  static async open(
-    options: VoxelMapEditorOptions
-  ): Promise<VoxelMapEditor> {
-    const {
-      canvas,
-      offline = false,
-      world,
-      maxFps = Infinity
-    } = options;
+interface VoxelMapOpenOptions {
+  session?: EditorSession;
+  dev: VoxelMapDevOptions;
+}
 
-    const runtime = await Runtime.create(canvas, {
+export class VoxelMapEditor {
+  static readonly accepts = VOXEL_MAP_KIND;
+  static readonly identity = {
+    title: "Join voxel map"
+  };
+  static readonly kinds = [TILESET_TEXTURE_KIND];
+  static readonly dev = VOXEL_MAP_DEV_OPTIONS;
+
+  static mount(
+    context: EditorContext<VoxelMapDevOptions>
+  ): Promise<VoxelMapEditor> {
+    return VoxelMapEditor.#open({
+      session: context.session,
+      dev: context.dev
+    });
+  }
+
+  static openOffline(
+    dev: VoxelMapDevOptions
+  ): Promise<VoxelMapEditor> {
+    return VoxelMapEditor.#open({ dev });
+  }
+
+  static async #open(
+    options: VoxelMapOpenOptions
+  ): Promise<VoxelMapEditor> {
+    const { session, dev } = options;
+    const viewFocus = new ViewFocus();
+
+    const editorRuntime = await EditorRuntime.create(kCanvas, {
       includePerformanceStats: {
         position: "top-right"
       },
@@ -53,50 +100,53 @@ export class VoxelMapEditor {
         container: "#game-container"
       }
     });
-    const session = offline
-      ? undefined
-      : await EditorSession.open({ world });
-    await session?.catalog.ready;
+    const { runtime } = editorRuntime;
     const tilesets = session === undefined ?
-      await preloadOfflineTilesets(runtime.manager) :
+      await loadTilesets([kOfflineTileset], { manager: runtime.manager }) :
       [];
-
-    const viewFocus = new ViewFocus();
     const scene = new EditorScene(editorState, {
       defaultLayerName: kDefaultLayerName,
       tilesets,
-      voxelRoom: session?.worldRoom,
+      voxelRoom: session?.target.room,
       catalog: session?.catalog,
       identity: session?.identity,
       viewFocus,
-      samples: options.samples
+      samples: dev.samples
     });
     const shell = new EditorShell({
       state: editorState,
       viewFocus,
-      input: runtime.world.input,
-      scene,
-      textureRooms: session === undefined ?
-        undefined :
-        (assetId) => session.textureRoom(assetId)
+      runtime: editorRuntime,
+      scene
+    });
+    await editorRuntime.load(scene, {
+      maxFps: dev.maxFps ?? Infinity
     });
 
-    await runtime.load({
-      scene,
-      skipLoadingScreen: true,
-      maxFps
+    const handles = await scene.ready;
+    const local = new LocalTilesetTextures(handles.engine);
+    const textures: TilesetTextures = session === undefined ?
+      local :
+      new SessionTilesetTextures(session.assets, local);
+    const atlases = new TilesetAtlases({
+      engine: handles.engine,
+      store: editorState.tilesets,
+      textures,
+      worldStore: editorState.world
     });
-    shell.adoptHandles(await scene.ready);
+    shell.adoptHandles(handles, textures);
 
     return new VoxelMapEditor({
       runtime,
       scene,
       shell,
+      atlases,
       session
     });
   }
 
   #shell: EditorShell;
+  #atlases: TilesetAtlases;
 
   readonly runtime: Runtime;
   readonly scene: EditorScene;
@@ -109,9 +159,11 @@ export class VoxelMapEditor {
     this.scene = parts.scene;
     this.session = parts.session;
     this.#shell = parts.shell;
+    this.#atlases = parts.atlases;
   }
 
   dispose(): void {
+    this.#atlases.dispose();
     this.#shell.dispose();
     this.session?.dispose();
     this.runtime.dispose();

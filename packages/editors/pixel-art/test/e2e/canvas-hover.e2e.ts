@@ -27,7 +27,7 @@ test.describe("3D preview", () => {
     panel: Locator
   ): Promise<boolean | undefined> {
     return panel.page().evaluate(
-      () => window.pixelArtDemo?.preview?.runtime.world.input.keyboard.enabled
+      () => window.pixelArtDemo?.preview?.editorRuntime.runtime.world.input.keyboard.enabled
     );
   }
 

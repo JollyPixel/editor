@@ -90,7 +90,8 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
     context.room.sendTo(client.id, {
       type: CATALOG_SNAPSHOT,
-      manifest: this.#projection.snapshot()
+      manifest: this.#projection.snapshot(),
+      dependencies: this.#projection.dependencies()
     } satisfies CatalogMessage);
   }
 

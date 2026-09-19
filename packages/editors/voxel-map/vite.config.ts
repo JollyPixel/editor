@@ -13,7 +13,10 @@ import {
   PIXEL_ART_KIND,
   pixelArtAssetHandler
 } from "@jolly-pixel/asset.pixel-art";
-import { voxelMapAssetHandler } from "@jolly-pixel/asset.voxel-map";
+import {
+  VOXEL_MAP_KIND,
+  voxelMapAssetHandler
+} from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
 import {
@@ -51,6 +54,7 @@ export default defineConfig(({ mode }) => {
             eventStore: EventStore.persistence.memory()
           } :
           {}),
+        launch: ({ catalog }) => catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value,
         handlers: [
           pixelArtAssetHandler({ defaultSize: tileset.size }),
           voxelMapAssetHandler({ chunkSize: CHUNK_SIZE }),

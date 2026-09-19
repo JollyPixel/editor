@@ -23,6 +23,7 @@ The nested interfaces below are shown for readability; they are fields of `Pixel
 
 ```ts
 interface PixelArtCanvasOptions {
+  document?: PixelDocument;
   defaultMode?: Mode;
   window?: WindowLike;
   texture?: TextureOptions;
@@ -77,6 +78,12 @@ type ColorInput = string | Color;
 ```
 
 `Color` is the [colorjs.io](https://colorjs.io) class.
+
+## Document
+
+### `document`
+
+An existing [`PixelDocument`](./PixelDocument.md) to edit instead of creating one. `texture` and `history` are then ignored, and `onBufferUpdated` replaces the document hook only when given. Destroying the canvas leaves the document intact.
 
 ## Interaction
 

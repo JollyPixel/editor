@@ -11,7 +11,7 @@ test("opens the requested world with its layer, blocks and tileset", async({ pag
     return {
       layers: scene.engine.world.getLayers().map((layer) => layer.name),
       blocks: scene.engine.blockRegistry.size,
-      tilesets: scene.engine.tilesets.definitions().map((tileset) => tileset.src)
+      tilesets: scene.engine.tilesets.definitions().map((tileset) => tileset.asset?.id)
     };
   });
 

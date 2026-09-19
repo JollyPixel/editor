@@ -233,3 +233,92 @@ describe("CatalogClient", () => {
     assert.equal(room.left, true);
   });
 });
+
+describe("CatalogClient — dependencies", () => {
+  function reference(
+    id: string
+  ): { id: string; kind: string; } {
+    return {
+      id,
+      kind: "pixelart"
+    };
+  }
+
+  function changed(
+    room: FakeCatalogRoom,
+    assetId: string,
+    dependencies?: { id: string; kind: string; }[]
+  ): void {
+    room.receive({
+      type: CATALOG_CHANGED,
+      change: {
+        eventType: "asset.updated",
+        assetId,
+        record: {
+          id: assetId,
+          kind: "voxelmap",
+          source: `${assetId}.voxelmap.json`
+        },
+        dependencies
+      }
+    });
+  }
+
+  test("reads edges from the snapshot", () => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    const emitted: string[] = [];
+    client.on("dependencies", (assetId) => emitted.push(assetId));
+
+    room.receive({
+      type: CATALOG_SNAPSHOT,
+      manifest: { version: 1, assets: [] },
+      dependencies: {
+        map: [reference("a")],
+        a: [reference("b")]
+      }
+    });
+
+    assert.deepEqual(client.dependenciesOf("map"), [reference("a")]);
+    assert.deepEqual(client.dependentsOf("a"), ["map"]);
+    assert.deepEqual(client.closureOf("map"), [reference("a"), reference("b")]);
+    assert.deepEqual(emitted, ["map", "a"]);
+  });
+
+  test("emits only when an asset's edges change", () => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+    const emitted: string[] = [];
+    client.on("dependencies", (assetId) => emitted.push(assetId));
+
+    changed(room, "map", [reference("a")]);
+    changed(room, "map", [reference("a")]);
+    changed(room, "map", [reference("b")]);
+    room.receive({
+      type: CATALOG_CHANGED,
+      change: {
+        eventType: "asset.deleted",
+        assetId: "map",
+        record: null
+      }
+    });
+
+    assert.deepEqual(emitted, ["map", "map", "map"]);
+    assert.deepEqual(client.dependenciesOf("map"), []);
+  });
+
+  test("a new snapshot drops edges it no longer lists", () => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+    changed(room, "map", [reference("a")]);
+    const emitted: string[] = [];
+    client.on("dependencies", (assetId) => emitted.push(assetId));
+
+    snapshot(room);
+
+    assert.deepEqual(emitted, ["map"]);
+    assert.deepEqual(client.dependentsOf("a"), []);
+  });
+});

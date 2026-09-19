@@ -10,3 +10,9 @@ export function testAssetPath(
 ): string {
   return `e2e/canvas-${workerIndex}.pixelart`;
 }
+
+export function testAssetId(
+  workerIndex: number
+): string {
+  return `e2e-canvas-${workerIndex}`;
+}

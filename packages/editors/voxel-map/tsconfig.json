@@ -35,6 +35,9 @@
       "path": "../pixel-art"
     },
     {
+      "path": "../host"
+    },
+    {
       "path": "../../pixel-draw-renderer"
     },
     {

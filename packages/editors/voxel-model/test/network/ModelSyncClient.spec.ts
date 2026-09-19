@@ -4,24 +4,27 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type * as network from "@jolly-pixel/network";
 import type { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import type {
+  ModelNodeJSON,
+  VoxelModelNetworkCommand
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import { ModelSyncClient } from "#src/network/ModelSyncClient.ts";
 import ModelManager from "#src/features/groups/ModelManager.ts";
-import type { ModelNetworkCommand, ModelNodeJSON, ModelServerMessage } from "#src/network/types.ts";
+import type { VoxelModelRoom } from "#src/network/types.ts";
 
-interface MockRoom extends network.Room<ModelNetworkCommand, ModelServerMessage> {
-  sentCommands: ModelNetworkCommand[];
-  simulateCommand(cmd: ModelNetworkCommand): void;
-  simulateSnapshot(snapshot: ModelNodeJSON[]): void;
+interface MockRoom extends VoxelModelRoom {
+  sentCommands: VoxelModelNetworkCommand[];
+  simulateCommand(cmd: VoxelModelNetworkCommand): void;
+  simulateSnapshot(nodes: ModelNodeJSON[]): void;
 }
 
 function createMockRoom(
   clientId = "client-A"
 ): MockRoom {
-  const sentCommands: ModelNetworkCommand[] = [];
+  const sentCommands: VoxelModelNetworkCommand[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
 
   function emit(
@@ -62,8 +65,15 @@ function createMockRoom(
     simulateCommand(cmd) {
       emit("message", { type: "command", data: cmd });
     },
-    simulateSnapshot(snapshot) {
-      emit("message", { type: "snapshot", data: snapshot });
+    simulateSnapshot(nodes) {
+      emit("message", {
+        type: "snapshot",
+        data: {
+          nodes,
+          folders: [],
+          placements: []
+        }
+      });
     }
   };
 

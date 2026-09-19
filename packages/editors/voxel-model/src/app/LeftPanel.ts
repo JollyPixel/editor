@@ -7,30 +7,27 @@ import {
   type TemplateResult
 } from "lit";
 import { state, query } from "lit/decorators.js";
-import {
-  type Mode,
-  type PixelArtCanvas,
-  type PixelArtCanvasOptions
+import type {
+  Mode,
+  PixelArtCanvas,
+  PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 import { type PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
-import type * as network from "@jolly-pixel/network";
 import {
   PixelCollaboration,
-  type PixelNetworkCommand,
-  type PixelServerMessage,
+  type PixelArtRoom,
   type UVGhostPayload
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import "@jolly-pixel/ui";
+import {
+  peerProfileColor,
+  readUsername
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  peerColor,
-  readUsername
-} from "../collaboration/identity.ts";
 import "./tabs/Build.ts";
 
 // CONSTANTS
-const kTextureSize = { x: 64, y: 64 };
 const kDefaultZoom = {
   default: 4,
   min: 1,
@@ -39,6 +36,11 @@ const kDefaultZoom = {
 };
 
 type LeftPanelMode = "paint" | "build" | "animate";
+
+export interface LeftPanelTexture {
+  document: PixelDocument;
+  room?: PixelArtRoom;
+}
 
 export class LeftPanel extends LitElement {
   @state()
@@ -49,11 +51,10 @@ export class LeftPanel extends LitElement {
 
   #canvasManager: PixelArtCanvas | null = null;
   #resizeObserver: ResizeObserver | null = null;
-  #textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
+  #texture: LeftPanelTexture | null = null;
   #collaboration: PixelCollaboration | null = null;
   #onRemoteUvDragging: ((payload: UVGhostPayload) => void) | undefined;
-  #canvasHostEl: HTMLElement | null = null;
-  #onCanvasHoverChange: ((hovering: boolean) => void) | undefined;
+  #ready = Promise.withResolvers<PixelArtCanvas>();
 
   static override styles = css`
     :host {
@@ -92,15 +93,19 @@ export class LeftPanel extends LitElement {
     return this.#canvasManager;
   }
 
+  get canvasReady(): Promise<PixelArtCanvas> {
+    return this.#ready.promise;
+  }
+
   public onResize(): void {
     this.panelElement?.onResize();
   }
 
-  public setTextureRoom(
-    room: network.Room<PixelNetworkCommand, PixelServerMessage>
+  public setTexture(
+    texture: LeftPanelTexture
   ): void {
-    this.#textureRoom = room;
-    this.#tryAttachCollaboration();
+    this.#texture = texture;
+    void this.#initializeCanvas();
   }
 
   public setPeerUvDraggingHandler(
@@ -109,64 +114,39 @@ export class LeftPanel extends LitElement {
     this.#onRemoteUvDragging = handler;
   }
 
-  public setCanvasHoverHandler(
-    handler: (hovering: boolean) => void
-  ): void {
-    this.#onCanvasHoverChange = handler;
-    if (this.#canvasHostEl?.matches(":hover")) {
-      handler(true);
-    }
+  override firstUpdated(): void {
+    this.#resizeObserver = new ResizeObserver(() => this.panelElement.onResize());
+    this.#resizeObserver.observe(this.panelElement);
+    void this.#initializeCanvas();
   }
 
-  override async firstUpdated(): Promise<void> {
-    const options: PixelArtCanvasOptions = {
-      texture: { size: kTextureSize },
+  async #initializeCanvas(): Promise<void> {
+    const texture = this.#texture;
+    if (texture === null || !this.hasUpdated || this.#canvasManager !== null) {
+      return;
+    }
+
+    const canvas = await this.panelElement.initialize({
+      document: texture.document,
       defaultMode: "move",
       zoom: kDefaultZoom,
       brush: { size: 8 }
-    };
+    });
+    canvas.uv.showAll = true;
+    canvas.uv.showRegionLabels = true;
+    canvas.mode = this.#canvasModeForTab(this.mode);
+    this.#canvasManager = canvas;
 
-    this.#canvasManager = await this.panelElement.initialize(options);
-    this.#canvasManager.uv.showAll = true;
-    this.#canvasManager.uv.showRegionLabels = true;
-    this.#canvasManager.mode = this.#canvasModeForTab(this.mode);
-    this.#tryAttachCollaboration();
-
-    this.#resizeObserver = new ResizeObserver(() => this.panelElement.onResize());
-    this.#resizeObserver.observe(this.panelElement);
-
-    this.#canvasHostEl = this.panelElement.shadowRoot?.querySelector<HTMLElement>(
-      "[part~='canvas-host']"
-    ) ?? null;
-    this.#canvasHostEl?.addEventListener("mouseenter", this.#onCanvasHoverEnter);
-    this.#canvasHostEl?.addEventListener("mouseleave", this.#onCanvasHoverLeave);
-  }
-
-  readonly #onCanvasHoverEnter = (): void => {
-    this.#onCanvasHoverChange?.(true);
-  };
-
-  readonly #onCanvasHoverLeave = (): void => {
-    this.#onCanvasHoverChange?.(false);
-  };
-
-  #tryAttachCollaboration(): void {
-    if (this.#canvasManager && this.#textureRoom) {
-      this.#destroyCollaboration();
+    if (texture.room !== undefined) {
       this.#collaboration = new PixelCollaboration({
-        room: this.#textureRoom,
-        canvas: this.#canvasManager,
+        room: texture.room,
+        canvas,
         label: (_clientId, profile) => readUsername(profile),
-        color: peerColor,
+        color: peerProfileColor,
         onRemoteUvDragging: (payload) => this.#onRemoteUvDragging?.(payload)
       });
-      this.#textureRoom.join();
     }
-  }
-
-  #destroyCollaboration(): void {
-    this.#collaboration?.destroy();
-    this.#collaboration = null;
+    this.#ready.resolve(canvas);
   }
 
   override updated(
@@ -181,10 +161,8 @@ export class LeftPanel extends LitElement {
     super.disconnectedCallback();
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = null;
-    this.#canvasHostEl?.removeEventListener("mouseenter", this.#onCanvasHoverEnter);
-    this.#canvasHostEl?.removeEventListener("mouseleave", this.#onCanvasHoverLeave);
-    this.#canvasHostEl = null;
-    this.#destroyCollaboration();
+    this.#collaboration?.destroy();
+    this.#collaboration = null;
   }
 
   #canvasModeForTab(

@@ -18,7 +18,7 @@ function tilesetSources(
 ): Promise<string[]> {
   return page.evaluate(() => window.voxelMapEditor!.scene.engine.tilesets
     .definitions()
-    .map((definition) => definition.src));
+    .map((definition) => definition.asset?.id ?? ""));
 }
 
 test.beforeEach(async({ page }) => {

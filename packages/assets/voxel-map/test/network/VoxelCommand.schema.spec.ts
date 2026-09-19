@@ -110,6 +110,32 @@ describe("voxelCommandProtocol", () => {
     }), false);
   });
 
+  test("tileset-added takes an asset reference instead of a src", () => {
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: {
+        id: "stone",
+        asset: { id: "asset-stone", kind: "pixelart" },
+        tileSize: 32
+      }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", tileSize: 32 }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: {
+        id: "stone",
+        asset: { id: "asset-stone" },
+        tileSize: 32
+      }
+    }), false);
+  });
+
   test("rejects a voxel-set missing its transform", () => {
     assert.strictEqual(accepts(layerCommand("voxel-set", {
       position: { x: 0, y: 0, z: 0 },

@@ -1,6 +1,24 @@
 {
   "extends": "../../../tsconfig/lib.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client"
+    ]
+  },
   "references": [
+    {
+      "path": "../host"
+    },
+    {
+      "path": "../../assets/voxel-model"
+    },
+    {
+      "path": "../../asset"
+    },
+    {
+      "path": "../../asset-server"
+    },
     {
       "path": "../../engine"
     },

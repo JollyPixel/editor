@@ -11,6 +11,9 @@
       "path": "../../asset-server"
     },
     {
+      "path": "../pixel-art"
+    },
+    {
       "path": "../../event-store"
     },
     {

@@ -26,6 +26,7 @@ import {
 import {
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND,
+  tilesetAsset,
   voxelMapAssetHandler,
   VoxelMapState
 } from "../../src/index.ts";
@@ -640,7 +641,11 @@ describe("voxelMapAssetHandler — tilesets", () => {
       {
         ...kHeader,
         action: "tileset-added",
-        tileset: { id: "stone", src: "asset-stone", tileSize: 32 }
+        tileset: {
+          id: "stone",
+          asset: tilesetAsset("asset-stone"),
+          tileSize: 32
+        }
       },
       {
         ...kHeader,
@@ -660,7 +665,10 @@ describe("voxelMapAssetHandler — tilesets", () => {
     const document = decodeVoxelDocument(await handler.serialize(state));
 
     assert.deepEqual(document.tilesets, [
-      { id: "stone", src: "asset-stone", tileSize: 16 }
+      { id: "stone", asset: tilesetAsset("asset-stone"), tileSize: 16 }
+    ]);
+    assert.deepEqual(handler.dependencies?.(state), [
+      tilesetAsset("asset-stone")
     ]);
     assert.strictEqual(document.defaultTileSize, 64);
     assert.deepEqual(document.blocks?.[0].defaultTexture, {

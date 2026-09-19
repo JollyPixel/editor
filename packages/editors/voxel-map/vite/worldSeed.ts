@@ -6,7 +6,10 @@ import {
   encodePixelArtDocument,
   serializePixelBuffer
 } from "@jolly-pixel/pixel-draw.renderer";
-import { VoxelMapState } from "@jolly-pixel/asset.voxel-map";
+import {
+  tilesetAsset,
+  VoxelMapState
+} from "@jolly-pixel/asset.voxel-map";
 import {
   blocksFromTileset,
   DEFAULT_TILE_SIZE,
@@ -35,13 +38,13 @@ const kTilesetFile = path.join(
 );
 
 export function readDefaultTileset(
-  src: string
+  assetId: string
 ): Promise<TilesetSeed> {
   return readTilesetSeed({
     file: kTilesetFile,
     definition: {
       id: DEFAULT_TILESET_ID,
-      src,
+      asset: tilesetAsset(assetId),
       tileSize: DEFAULT_TILE_SIZE
     }
   });
@@ -59,11 +62,12 @@ export function encodeWorldDocument(
   definition: ResolvedTilesetDefinition
 ): Uint8Array {
   const state = new VoxelMapState(CHUNK_SIZE);
-  state.tilesets.add({
-    id: definition.id,
-    src: definition.src,
-    tileSize: definition.tileSize
-  });
+  const {
+    cols: _cols,
+    rows: _rows,
+    ...source
+  } = definition;
+  state.tilesets.add(source);
   state.blocks.registerMany(
     blocksFromTileset(definition, {
       limit: DEFAULT_BLOCK_LIMIT

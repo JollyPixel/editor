@@ -3,46 +3,57 @@ import type {
   TilesetDefinition,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
-import type { PixelArtRoom } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import { PixelCollaboration } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  peerProfileColor,
+  readUsername
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type {
   BrushStore,
   WorldStore
 } from "../../app/state/index.ts";
-import { TextureEditorBridge } from "./bridge/TextureEditorBridge.ts";
 import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
 import { definitionsEqual } from "../tilesets/tilesetEntries.ts";
+import type { TilesetTexture } from "../tilesets/TilesetTextures.ts";
 
 export interface TilesetTabOptions {
   canvas: PixelArtCanvas;
   engine: VoxelEngine;
   definition: TilesetDefinition;
-  room?: PixelArtRoom;
+  assetId: string | null;
+  texture: TilesetTexture;
   brush: BrushStore;
   worldStore: WorldStore;
 }
 
 export class TilesetTab {
   readonly canvas: PixelArtCanvas;
-  readonly #engine: VoxelEngine;
-  readonly #bridge: TextureEditorBridge;
+  readonly assetId: string | null;
+  readonly #texture: TilesetTexture;
   readonly #uvBridge: BlockUvBridge;
-  readonly #room: PixelArtRoom | undefined;
+  readonly #collaboration: PixelCollaboration | null;
   #definition: TilesetDefinition;
 
   constructor(
     options: TilesetTabOptions
   ) {
-    const { canvas, engine, definition } = options;
+    const { canvas, engine, definition, texture } = options;
 
     this.canvas = canvas;
-    this.#engine = engine;
+    this.assetId = options.assetId;
+    this.#texture = texture;
     this.#definition = definition;
-    this.#room = options.room;
-    this.#bridge = new TextureEditorBridge({ worldStore: options.worldStore });
-    this.#bridge.attach(canvas, options.room);
+    this.#collaboration = texture.room === undefined ?
+      null :
+      new PixelCollaboration({
+        room: texture.room,
+        canvas,
+        label: (_clientId, profile) => readUsername(profile),
+        color: peerProfileColor
+      });
     this.#uvBridge = new BlockUvBridge(canvas.uv, engine, {
       runLocalRestore: (fn) => canvas.runLocalRestore(fn),
       brush: options.brush,
@@ -68,12 +79,11 @@ export class TilesetTab {
 
   dispose(): void {
     this.#uvBridge.dispose();
-    this.#bridge.destroy();
-    this.#room?.leave();
+    this.#collaboration?.destroy();
+    this.#texture.release();
   }
 
   #apply(): void {
-    this.#bridge.loadTileset(this.#engine, this.#definition);
     this.#uvBridge.setActiveTileset(
       this.#definition.id,
       this.#definition.tileSize

@@ -45,7 +45,8 @@ export function resolveTilesetEntries(
   const known = [...records];
 
   return [...definitions].map((definition) => {
-    const record = resolveTilesetAsset(definition.src, known);
+    const key = definition.asset?.id ?? definition.src;
+    const record = key === undefined ? null : resolveTilesetAsset(key, known);
 
     return {
       definition,
@@ -63,6 +64,8 @@ export function definitionsEqual(
 ): boolean {
   return left.id === right.id &&
     left.src === right.src &&
+    left.asset?.id === right.asset?.id &&
+    left.asset?.kind === right.asset?.kind &&
     left.tileSize === right.tileSize &&
     left.cols === right.cols &&
     left.rows === right.rows;

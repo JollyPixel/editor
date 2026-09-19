@@ -9,9 +9,15 @@ materials.
 ## Definitions
 
 ```ts
+interface TilesetAssetReference {
+  id: string;
+  kind: string;
+}
+
 interface TilesetDefinition {
   id: string;
-  src: string;
+  src?: string;
+  asset?: TilesetAssetReference;
   tileSize: number;
   cols?: number;
   rows?: number;
@@ -22,6 +28,10 @@ type ResolvedTilesetDefinition = TilesetDefinition & {
   rows: number;
 };
 ```
+
+A tileset takes its pixels from the `src` image URL, or from the catalog asset
+named by `asset`. `loadTilesets()` only fetches `src`; the host resolves
+`asset` and registers the texture itself.
 
 Tiles are square and `tileSize` is measured in pixels. Missing row and column
 counts are derived from the image by
@@ -262,7 +272,8 @@ function loadTilesets(
 ): Promise<TilesetSource[]>;
 ```
 
-Definitions are fetched in parallel. A duplicate ID is fetched once. The
+Definitions are fetched in parallel. A duplicate ID is fetched once, and a
+definition without `src` is skipped. The
 optional `manager` reports Three.js loading progress; `loader` allows callers
 to supply a compatible texture loader. Pass the result through
 `VoxelEngineOptions.tilesets`.

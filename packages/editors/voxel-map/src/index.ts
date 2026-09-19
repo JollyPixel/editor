@@ -1,10 +1,19 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
-import { AssetId } from "@jolly-pixel/asset";
+import {
+  exposeDebugHandle,
+  mountStandalone
+} from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import { VoxelMapEditor } from "./boot/VoxelMapEditor.ts";
+import {
+  VOXEL_MAP_DEV_OPTIONS,
+  VoxelMapEditor
+} from "./boot/VoxelMapEditor.ts";
 import "./app/sidebarIcons.ts";
+
+// CONSTANTS
+const kDebugHandle = import.meta.env.DEV ? "voxelMapEditor" : undefined;
 
 declare global {
   interface Window {
@@ -12,19 +21,15 @@ declare global {
   }
 }
 
-const query = new URLSearchParams(location.search);
-const world = query.get("world");
-const maxFps = query.get("max-fps");
-const samples = query.get("samples");
-
-const editor = await VoxelMapEditor.open({
-  canvas: "#game-container > canvas",
-  offline: query.has("offline"),
-  world: world === null ? undefined : new AssetId(world),
-  maxFps: maxFps === null ? undefined : Number(maxFps),
-  samples: samples === null ? undefined : Number(samples)
-});
-
-if (import.meta.env.DEV) {
-  window.voxelMapEditor = editor;
+const dev = VOXEL_MAP_DEV_OPTIONS.read();
+if (dev.offline) {
+  const editor = await VoxelMapEditor.openOffline(dev);
+  if (kDebugHandle !== undefined) {
+    exposeDebugHandle(kDebugHandle, editor);
+  }
+}
+else {
+  await mountStandalone(VoxelMapEditor, {
+    debugHandle: kDebugHandle
+  });
 }

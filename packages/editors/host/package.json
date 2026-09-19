@@ -1,0 +1,50 @@
+{
+  "name": "@jolly-pixel/editor.host",
+  "description": "Shared launch, session and runtime boot for JollyPixel editors",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "prepublishOnly": "rimraf ./dist && tsc -b",
+    "build": "tsc -b",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/editors/host"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/runtime": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
+    "@openally/emitt": "1.0.1"
+  },
+  "devDependencies": {
+    "@jolly-pixel/engine": "workspace:*"
+  }
+}

@@ -1,21 +1,18 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
+import {
+  peerProfileColor,
+  readUsername
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  peerColor,
-  readUsername
-} from "./identity.ts";
 import type { PeerMark } from "./peerMarks.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
-import type {
-  ModelNetworkCommand,
-  ModelServerMessage
-} from "../network/types.ts";
+import type { VoxelModelRoom } from "../network/types.ts";
 import { EditorStore } from "../app/state/index.ts";
 
 export interface GroupTransformLockOptions {
-  room: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  room: VoxelModelRoom;
 }
 
 export type GroupTransformLockEvents = {
@@ -23,7 +20,7 @@ export type GroupTransformLockEvents = {
 };
 
 export class GroupTransformLock extends EditorStore<GroupTransformLockEvents> {
-  #room: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  #room: VoxelModelRoom;
   #heldUuid: string | null = null;
   #locks = new Map<string, string>();
 
@@ -119,7 +116,7 @@ export class GroupTransformLock extends EditorStore<GroupTransformLockEvents> {
     return {
       clientId: winner,
       displayName: readUsername(peer?.profile),
-      color: peerColor(winner, peer?.profile)
+      color: peerProfileColor(winner, peer?.profile)
     };
   }
 

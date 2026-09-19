@@ -1,8 +1,11 @@
 // Import Third-party Dependencies
+import { CommandSync } from "@jolly-pixel/network/client";
 import {
-  CommandSync,
-  type Room
-} from "@jolly-pixel/network/client";
+  isFolderCommand,
+  type VoxelModelAssetNotice,
+  type VoxelModelNetworkCommand,
+  type VoxelModelSnapshot
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import type FolderManager from "../features/folders/FolderManager.ts";
@@ -10,20 +13,17 @@ import type {
   FolderHookEvent,
   FolderHookListener
 } from "../features/folders/hooks.ts";
-import type {
-  FolderNetworkCommand,
-  FolderServerMessage,
-  FolderSnapshotJSON
-} from "./folderTypes.ts";
+import type { VoxelModelRoom } from "./types.ts";
 
 export interface FolderSyncClientOptions {
-  room: Room<FolderNetworkCommand, FolderServerMessage>;
+  room: VoxelModelRoom;
   folderManager: FolderManager;
 }
 
 export class FolderSyncClient extends CommandSync<
-  FolderNetworkCommand,
-  FolderSnapshotJSON
+  VoxelModelNetworkCommand,
+  VoxelModelSnapshot,
+  VoxelModelAssetNotice
 > {
   #folderManager: FolderManager;
   #previousHandler: FolderHookListener | undefined;
@@ -45,17 +45,20 @@ export class FolderSyncClient extends CommandSync<
     this.#previousHandler = folderManager.onFolderUpdated;
     folderManager.onFolderUpdated = this.#handleFolderUpdated;
     this.on("snapshot", (snapshot) => this.#applySnapshot(snapshot));
-    this.on("command", (command) => this.#applyRemote(command));
+    this.on("command", (command) => {
+      if (isFolderCommand(command)) {
+        this.#applyRemote(command);
+      }
+    });
   }
 
   override destroy(): void {
     this.#folderManager.onFolderUpdated = this.#previousHandler;
     super.destroy();
-    this.room.leave();
   }
 
   #applySnapshot(
-    snapshot: FolderSnapshotJSON
+    snapshot: VoxelModelSnapshot
   ): void {
     const target = this.#folderManager;
 
@@ -77,7 +80,7 @@ export class FolderSyncClient extends CommandSync<
   }
 
   #applyRemote(
-    command: FolderNetworkCommand
+    command: FolderHookEvent
   ): void {
     this.#folderManager.applyRemoteCommand(command);
     this.#previousHandler?.(command);

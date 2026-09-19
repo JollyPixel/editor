@@ -1,8 +1,12 @@
 // Import Third-party Dependencies
+import { CommandSync } from "@jolly-pixel/network/client";
 import {
-  CommandSync,
-  type Room
-} from "@jolly-pixel/network/client";
+  isModelCommand,
+  type ModelNodeJSON,
+  type VoxelModelAssetNotice,
+  type VoxelModelNetworkCommand,
+  type VoxelModelSnapshot
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import type ModelManager from "../features/groups/ModelManager.ts";
@@ -14,20 +18,17 @@ import {
   toEuler,
   toVector3
 } from "../features/groups/transformCodec.ts";
-import type {
-  ModelNetworkCommand,
-  ModelNodeJSON,
-  ModelServerMessage
-} from "./types.ts";
+import type { VoxelModelRoom } from "./types.ts";
 
 export interface ModelSyncClientOptions {
-  room: Room<ModelNetworkCommand, ModelServerMessage>;
+  room: VoxelModelRoom;
   modelManager: ModelManager;
 }
 
 export class ModelSyncClient extends CommandSync<
-  ModelNetworkCommand,
-  ModelNodeJSON[]
+  VoxelModelNetworkCommand,
+  VoxelModelSnapshot,
+  VoxelModelAssetNotice
 > {
   #modelManager: ModelManager;
   #previousHandler: ModelHookListener | undefined;
@@ -48,25 +49,28 @@ export class ModelSyncClient extends CommandSync<
     this.#modelManager = modelManager;
     this.#previousHandler = modelManager.onModelUpdated;
     modelManager.onModelUpdated = this.#handleModelUpdated;
-    this.on("snapshot", (snapshot) => this.#applySnapshot(snapshot));
-    this.on("command", (command) => this.#applyRemote(command));
+    this.on("snapshot", (snapshot) => this.#applySnapshot(snapshot.nodes));
+    this.on("command", (command) => {
+      if (isModelCommand(command)) {
+        this.#applyRemote(command);
+      }
+    });
   }
 
   override destroy(): void {
     this.#modelManager.onModelUpdated = this.#previousHandler;
     super.destroy();
-    this.room.leave();
   }
 
   #applySnapshot(
-    snapshot: ModelNodeJSON[]
+    nodes: ModelNodeJSON[]
   ): void {
     const target = this.#modelManager;
 
     target.silently(() => {
       target.disposeAll();
 
-      for (const node of snapshot) {
+      for (const node of nodes) {
         target.addGroup({
           uuid: node.uuid,
           name: node.name,
@@ -78,7 +82,7 @@ export class ModelSyncClient extends CommandSync<
         });
       }
 
-      for (const node of snapshot) {
+      for (const node of nodes) {
         if (node.parentUuid !== null) {
           target.reparentLocal(node.uuid, node.parentUuid);
         }
@@ -90,7 +94,7 @@ export class ModelSyncClient extends CommandSync<
   }
 
   #applyRemote(
-    command: ModelNetworkCommand
+    command: ModelHookEvent
   ): void {
     this.#modelManager.applyRemoteCommand(command);
     this.#previousHandler?.(command);

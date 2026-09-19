@@ -175,6 +175,10 @@ export class CanvasBuffer extends Emitter<
     this.#workingCanvas.height = size.y;
 
     this.#syncCanvasFromBuffer();
+    this.emit(
+      "replaced",
+      { size: this.#buffer.size() }
+    );
   }
 
   pixels(): Uint8ClampedArray {

@@ -43,14 +43,16 @@ Drop `source` and `eventStore` to persist documents under `root`. Each seeded or
 
 ## Browser client
 
-Create the room and the collaboration before joining, so the first snapshot has a target:
+Create the room and the synced document before joining, so the first snapshot has a target. A canvas built on the document shows it, and `PixelCollaboration` adds presence:
 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
 import { colorFromKey } from "@jolly-pixel/color";
 import { AssetCatalog } from "@jolly-pixel/asset";
+import { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import {
   PixelCollaboration,
+  SyncedPixelDocument,
   pixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
@@ -64,21 +66,25 @@ const networkClient = new Client({
 });
 const room = pixelArtRoom(networkClient, record.id.value);
 
+const synced = new SyncedPixelDocument(room, {
+  history: { enabled: true }
+});
+const canvas = new PixelArtCanvas(parent, { document: synced.model });
 const collaboration = new PixelCollaboration({
   room,
   canvas,
   label: (_clientId, profile) => String(profile.username),
   color: (clientId) => colorFromKey(clientId)
 });
-collaboration.sync.on("ready", () => {
-  console.log("Initial snapshot received");
-});
-collaboration.sync.on("notice", (notice) => {
+synced.sync.on("notice", (notice) => {
   console.warn(`asset room: ${notice.type}`);
 });
 
 room.join();
+await synced.ready;
 ```
+
+An `@jolly-pixel/editor.host` session does the same through `pixelArtModelKind`: it leases the asset, joins the room and resolves once the document is ready.
 
 To create a new asset, pass a `CatalogClient` and a `PixelArtDocumentData` to `createPixelArtAsset(catalog, path, document)`. It encodes the document, creates it with the pixel-art kind, suffixes the path on conflict and resolves the new asset id.
 
@@ -86,17 +92,17 @@ To create a new asset, pass a `CatalogClient` and a `PixelArtDocumentData` to `c
 
 ## Startup and snapshots
 
-The server sends a snapshot as soon as the room admits the client. Construct `PixelCollaboration` (or a bare `PixelSyncClient`) and register listeners before `room.join()`.
+The server sends a snapshot as soon as the room admits the client. Construct `SyncedPixelDocument` (or a bare `PixelSyncClient` on a document) and register listeners before `room.join()`.
 
-`collaboration.ready` becomes `true` once the first snapshot has been applied to the canvas. The `"ready"` event fires once; `"snapshot"` fires for every snapshot.
+`synced.ready` resolves once the first snapshot has been applied to the document. The sync client's `"ready"` event fires once; `"snapshot"` fires for every snapshot.
 
 Snapshots replace texture pixels and UV regions, then clear local history. Remote resize and texture-replacement commands also clear local history.
 
 ## Committed edits
 
-Local canvas mutations flow through `canvas.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The asset room replaces the claimed `clientId` with the connection ID, validates the command, resolves conflicts, appends the accepted command to the event log and broadcasts it. When the append fails, the author receives a `"rejected"` notice. `pixelArtAssetHandler` folds the appended event into the buffer.
+Local document mutations flow through `document.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The asset room replaces the claimed `clientId` with the connection ID, validates the command, resolves conflicts, appends the accepted command to the event log and broadcasts it. When the append fails, the author receives a `"rejected"` notice. `pixelArtAssetHandler` folds the appended event into the buffer.
 
-Commands echoed to their sender are ignored. Remote commands use `canvas.applyRemoteCommand()`, which does not emit `onBufferUpdated`, so they are not sent again.
+Commands echoed to their sender are ignored. Remote commands use `document.applyRemoteCommand()`, which does not emit `onBufferUpdated`, so they are not sent again.
 
 Undo and redo keep the original edit timestamp. The default conflict resolver always accepts same-client replay order; commands from different clients use timestamp and then `clientId` as a tie-breaker. Client clocks therefore affect conflict results.
 
@@ -129,9 +135,10 @@ Destroy the collaboration before destroying the canvas. Room and socket lifetime
 
 ```ts
 collaboration.destroy();
+synced.dispose();
 room.leave();
 networkClient.destroy();
 canvas.destroy();
 ```
 
-`collaboration.destroy()` restores the canvas hooks and removes its room listeners. It does not leave the room or close the shared socket.
+`collaboration.destroy()` restores the canvas hooks and removes its room listeners; `synced.dispose()` does the same for the document hook. It does not leave the room or close the shared socket.

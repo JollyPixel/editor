@@ -62,7 +62,7 @@ async function waitForTextureSync(
 ): Promise<string> {
   const id = (await panelState(panel)).activeTextureId!;
   await panel.page().waitForFunction(
-    (textureId) => window.pixelArtDemo?.textures.isSynced(textureId) === true,
+    (textureId) => window.pixelArtDemo?.tabs.isSynced(textureId) === true,
     id
   );
 

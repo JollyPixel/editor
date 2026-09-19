@@ -57,6 +57,7 @@ class VoxelMapState {
   toJSON(): VoxelWorldJSON;
   load(document: VoxelWorldJSON): void;
   applyCommand(command: VoxelNetworkCommand): void;
+  dependencies(): TilesetAssetReference[];
   clear(): void;
 }
 ```
@@ -97,3 +98,29 @@ always admitted and broadcasts a fresh snapshot instead of the command.
 The protocol declares every `VOXEL_COMMAND_ACTIONS` entry and
 `world-replace`. Block commands are appended, folded into
 `VoxelMapState.blocks`, and broadcast like any other command.
+
+## Tileset assets
+
+A tileset whose pixels live in a pixel-art asset names it with
+`TilesetDefinition.asset` instead of a `src` URL. These helpers are exported
+from the root and from `network/client.ts`.
+
+```ts
+function tilesetAsset(assetId: string): TilesetAssetReference;
+function tilesetDependencies(
+  tilesets: Iterable<TilesetDefinition>
+): TilesetAssetReference[];
+function migrateTilesetDefinition(
+  definition: TilesetDefinition
+): TilesetDefinition;
+function migrateTilesetSources(document: VoxelWorldJSON): VoxelWorldJSON;
+```
+
+`tilesetAsset()` builds a `pixelart` reference. The handler's `dependencies`
+hook returns `tilesetDependencies()` of the state, one edge per asset-backed
+tileset.
+
+Older documents stored the asset id in `src`. `VoxelMapState.load()` and a
+`tileset-added` command migrate a `src` containing no `.`, `/` or `:` to
+`asset`; any other `src` is kept as a URL. The next snapshot persists the
+migrated form.

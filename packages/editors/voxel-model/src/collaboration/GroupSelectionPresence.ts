@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -7,15 +6,12 @@ import {
   type ModelEventMap,
   type PresenceStore
 } from "../app/state/index.ts";
-import type {
-  ModelNetworkCommand,
-  ModelServerMessage
-} from "../network/types.ts";
+import type { VoxelModelRoom } from "../network/types.ts";
 import { PeerMarkTracker } from "./PeerMarkTracker.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
 
 export interface GroupSelectionPresenceOptions {
-  room: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  room: VoxelModelRoom;
   presence?: PresenceStore;
 }
 
