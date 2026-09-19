@@ -52,9 +52,9 @@ export interface AssetKindHandler<
   TCommand = unknown
 > {
   readonly kind: string;
-  readonly match: readonly string[];
+  readonly extensions: Readonly<Record<string, string>>;
+  readonly match?: readonly string[];
   readonly snapshot?: SnapshotPolicy;
-  readonly contentTypes?: Readonly<Record<string, string>>;
   readonly commands?: AssetCommands<TState, TCommand>;
 
   create(

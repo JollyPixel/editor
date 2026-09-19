@@ -30,10 +30,10 @@ import {
 
 // Import Internal Dependencies
 import {
-  pixelArtAssetHandler,
+  pixelArtAssetKind,
   PIXEL_ART_COMMAND,
   PIXEL_ART_KIND
-} from "#src/asset/pixelArtAssetHandler.ts";
+} from "#src/index.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
 // CONSTANTS
@@ -100,7 +100,7 @@ function replay(
   eventStore: EventStore.EventStore,
   assetId: string
 ): PixelBuffer {
-  const handler = pixelArtAssetHandler({ defaultSize: kSize });
+  const handler = pixelArtAssetKind({ defaultSize: kSize });
   const state = handler.create(assetId);
   for (const event of eventStore.reader.list(assetId)) {
     foldAssetEvent(handler, state, event);
@@ -136,7 +136,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       await using backend = await createAssetBackend({
         source: new FilesystemAssetSource(root),
         eventStore,
-        handlers: [pixelArtAssetHandler({ defaultSize: kSize })],
+        handlers: [pixelArtAssetKind({ defaultSize: kSize })],
         snapshot: {
           delay: 1_000,
           maxDelay: 5_000
@@ -216,7 +216,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       await using backend = await createAssetBackend({
         source: new FilesystemAssetSource(root),
         eventStore,
-        handlers: [pixelArtAssetHandler({ defaultSize: kSize })],
+        handlers: [pixelArtAssetKind({ defaultSize: kSize })],
         watch: false
       });
       const record = backend.catalog.snapshot().assets[0];

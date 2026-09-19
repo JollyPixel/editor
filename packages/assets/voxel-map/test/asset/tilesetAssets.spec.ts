@@ -13,11 +13,8 @@ import {
 
 // Import Internal Dependencies
 import {
-  migrateTilesetDefinition,
-  migrateTilesetSources,
   tilesetAsset,
-  tilesetDependencies,
-  voxelMapAssetHandler,
+  voxelMapAssetKind,
   VoxelMapState
 } from "#src/index.ts";
 
@@ -28,14 +25,14 @@ const kHeader = {
   timestamp: 1000
 };
 
-function legacyWorld(
-  src: string
+function assetWorld(
+  assetId: string
 ): VoxelWorldJSON {
   return {
     version: 1,
     chunkSize: 16,
     tilesets: [
-      { id: "default", src, tileSize: 32 }
+      { id: "default", asset: tilesetAsset(assetId), tileSize: 32 }
     ],
     layers: []
   };
@@ -50,69 +47,10 @@ describe("tilesetAsset", () => {
   });
 });
 
-describe("migrateTilesetDefinition", () => {
-  test("moves an asset id stored in src to asset", () => {
-    assert.deepEqual(
-      migrateTilesetDefinition({ id: "a", src: "tileset-default", tileSize: 32 }),
-      { id: "a", asset: tilesetAsset("tileset-default"), tileSize: 32 }
-    );
-    assert.deepEqual(
-      migrateTilesetDefinition({
-        id: "a",
-        src: "0f8fad5b-d9cb-469f-a165-70867728950e",
-        tileSize: 16,
-        cols: 4
-      }),
-      {
-        id: "a",
-        asset: tilesetAsset("0f8fad5b-d9cb-469f-a165-70867728950e"),
-        tileSize: 16,
-        cols: 4
-      }
-    );
-  });
-
-  test("keeps URLs and asset-backed definitions", () => {
-    for (const definition of [
-      { id: "a", src: "textures/tileset.png", tileSize: 32 },
-      { id: "a", src: "tileset.png", tileSize: 32 },
-      { id: "a", src: "https://cdn/tileset", tileSize: 32 },
-      { id: "a", asset: tilesetAsset("x"), tileSize: 32 }
-    ]) {
-      assert.strictEqual(migrateTilesetDefinition(definition), definition);
-    }
-  });
-});
-
-describe("migrateTilesetSources", () => {
-  test("migrates every tileset of a document without mutating it", () => {
-    const document = legacyWorld("tileset-default");
-    const migrated = migrateTilesetSources(document);
-
-    assert.deepEqual(migrated.tilesets, [
-      { id: "default", asset: tilesetAsset("tileset-default"), tileSize: 32 }
-    ]);
-    assert.strictEqual(document.tilesets[0].src, "tileset-default");
-  });
-});
-
-describe("tilesetDependencies", () => {
-  test("lists asset-backed tilesets only", () => {
-    assert.deepEqual(tilesetDependencies([
-      { id: "a", asset: tilesetAsset("one"), tileSize: 32 },
-      { id: "b", src: "textures/b.png", tileSize: 32 },
-      { id: "c", asset: tilesetAsset("two"), tileSize: 16 }
-    ]), [
-      tilesetAsset("one"),
-      tilesetAsset("two")
-    ]);
-  });
-});
-
 describe("VoxelMapState tilesets", () => {
-  test("load migrates a legacy document", () => {
+  test("load keeps the asset of every tileset", () => {
     const state = new VoxelMapState(16);
-    state.load(legacyWorld("tileset-default"));
+    state.load(assetWorld("tileset-default"));
 
     assert.deepEqual(state.toJSON().tilesets, [
       { id: "default", asset: tilesetAsset("tileset-default"), tileSize: 32 }
@@ -120,20 +58,32 @@ describe("VoxelMapState tilesets", () => {
     assert.deepEqual(state.dependencies(), [tilesetAsset("tileset-default")]);
   });
 
-  test("a legacy tileset-added command is migrated", () => {
+  test("an added tileset declares its asset", () => {
     const state = new VoxelMapState(16);
     state.applyCommand({
       ...kHeader,
       action: "tileset-added",
-      tileset: { id: "stone", src: "asset-stone", tileSize: 32 }
+      tileset: { id: "stone", asset: tilesetAsset("asset-stone"), tileSize: 32 }
     });
 
     assert.deepEqual(state.dependencies(), [tilesetAsset("asset-stone")]);
   });
 
+  test("a url-backed tileset declares no dependency", () => {
+    const state = new VoxelMapState(16);
+    state.load(assetWorld("tileset-default"));
+    state.applyCommand({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", src: "textures/stone.png", tileSize: 32 }
+    });
+
+    assert.deepEqual(state.dependencies(), [tilesetAsset("tileset-default")]);
+  });
+
   test("removing a tileset drops its dependency", () => {
     const state = new VoxelMapState(16);
-    state.load(legacyWorld("tileset-default"));
+    state.load(assetWorld("tileset-default"));
     state.applyCommand({
       ...kHeader,
       action: "tileset-removed",
@@ -144,13 +94,13 @@ describe("VoxelMapState tilesets", () => {
   });
 });
 
-describe("voxelMapAssetHandler dependencies", () => {
+describe("voxelMapAssetKind dependencies", () => {
   test("reads the tilesets of loaded content", () => {
-    const handler = voxelMapAssetHandler();
+    const handler = voxelMapAssetKind();
     const state = handler.create("map");
     handler.load(
       state,
-      encodeVoxelDocument(legacyWorld("tileset-default"))
+      encodeVoxelDocument(assetWorld("tileset-default"))
     );
 
     assert.deepEqual(handler.dependencies?.(state), [

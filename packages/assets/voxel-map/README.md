@@ -45,12 +45,12 @@ On the server, register the asset kind to persist `.voxelmap.json` files:
 ```ts
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { createAssetBackend } from "@jolly-pixel/asset-server";
-import { voxelMapAssetHandler } from "@jolly-pixel/asset.voxel-map";
+import { voxelMapAssetKind } from "@jolly-pixel/asset.voxel-map";
 
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
-  handlers: [voxelMapAssetHandler({ chunkSize: 16 })]
+  handlers: [voxelMapAssetKind({ chunkSize: 16 })]
 });
 ```
 

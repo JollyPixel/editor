@@ -17,9 +17,9 @@ import { pixelArtSnapshot } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
-  pixelArtAssetHandler,
+  pixelArtAssetKind,
   PIXEL_ART_KIND
-} from "#src/asset/pixelArtAssetHandler.ts";
+} from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/PixelArtState.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
@@ -40,7 +40,7 @@ const kBlue = [0, 0, 255, 255];
 const kAssetId = "asset-1";
 
 function setup() {
-  const handler = pixelArtAssetHandler({
+  const handler = pixelArtAssetKind({
     defaultSize: { x: 8, y: 8 }
   });
   const state = handler.create(kAssetId);

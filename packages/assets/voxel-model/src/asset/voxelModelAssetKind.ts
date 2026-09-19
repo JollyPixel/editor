@@ -8,6 +8,7 @@ import type {
 // Import Internal Dependencies
 import {
   VOXEL_MODEL_COMMAND,
+  VOXEL_MODEL_EXTENSION,
   VOXEL_MODEL_KIND
 } from "./kind.ts";
 import { VoxelModelState } from "./VoxelModelState.ts";
@@ -26,32 +27,25 @@ import {
   type VoxelModelNetworkCommand
 } from "../network/types.ts";
 
-// CONSTANTS
-const kDefaultMatch = ["**/*.voxelmodel.json"] as const;
-const kContentTypes: Readonly<Record<string, string>> = {
-  ".json": "application/json; charset=utf-8"
-};
-
-export interface VoxelModelAssetHandlerOptions {
-  match?: readonly string[];
+export interface VoxelModelAssetKindOptions {
   snapshot?: SnapshotPolicy;
   conflictResolver?: network.ConflictResolver<VoxelModelNetworkCommand>;
 }
 
-export function voxelModelAssetHandler(
-  options: VoxelModelAssetHandlerOptions = {}
+export function voxelModelAssetKind(
+  options: VoxelModelAssetKindOptions = {}
 ): AssetKindHandler<VoxelModelState, VoxelModelNetworkCommand> {
   const {
-    match = kDefaultMatch,
     snapshot,
     conflictResolver
   } = options;
 
   return {
     kind: VOXEL_MODEL_KIND,
-    match,
+    extensions: {
+      [VOXEL_MODEL_EXTENSION]: "application/json; charset=utf-8"
+    },
     snapshot,
-    contentTypes: kContentTypes,
 
     create(): VoxelModelState {
       return new VoxelModelState();

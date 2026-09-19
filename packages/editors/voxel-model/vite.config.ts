@@ -14,13 +14,13 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   PIXEL_ART_KIND,
-  pixelArtAssetHandler
+  pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 import {
   VOXEL_MODEL_KIND,
   createVoxelModelDocument,
   encodeVoxelModelDocument,
-  voxelModelAssetHandler
+  voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
 
 // CONSTANTS
@@ -35,8 +35,8 @@ export default defineConfig({
     createAssetWorkspacePlugin({
       root: path.join(import.meta.dirname, "assets"),
       handlers: [
-        voxelModelAssetHandler(),
-        pixelArtAssetHandler({ defaultSize: kTextureSize })
+        voxelModelAssetKind(),
+        pixelArtAssetKind({ defaultSize: kTextureSize })
       ],
       seed: {
         "textures/model.pixelart": {

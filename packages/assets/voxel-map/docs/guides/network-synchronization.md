@@ -10,7 +10,7 @@ VoxelEngine -> VoxelSyncClient -> network.Room
 network clients <- network.Server <- AssetRoomExtension
                                       |
                                       v
-                        event log -> voxelMapAssetHandler.apply
+                        event log -> voxelMapAssetKind.apply
 ```
 
 ## Command flow

@@ -11,7 +11,7 @@ createAssetWorkspace(options: AssetWorkspaceOptions): Promise<AssetWorkspace>
 ```ts
 await using workspace = await createAssetWorkspace({
   root: "./assets",
-  handlers: [textureAssetHandler()],
+  handlers: [textureAssetKind()],
   seed: {
     "textures/block.png": () => defaultTextureBytes()
   }
@@ -124,7 +124,7 @@ export default defineConfig({
   plugins: [
     createAssetWorkspacePlugin({
       root: path.join(import.meta.dirname, "assets"),
-      handlers: [textureAssetHandler()]
+      handlers: [textureAssetKind()]
     })
   ]
 });

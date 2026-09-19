@@ -1,7 +1,7 @@
 # Synchronizing a world
 
 `VoxelSyncClient` connects a `VoxelEngine` to a network room.
-`voxelMapAssetHandler` owns the authoritative headless world for that room.
+`voxelMapAssetKind` owns the authoritative headless world for that room.
 
 ## Connect a client
 
@@ -43,7 +43,7 @@ import {
   createAssetWorkspacePlugin
 } from "@jolly-pixel/asset-server/plugins/vite.ts";
 import {
-  voxelMapAssetHandler,
+  voxelMapAssetKind,
   VoxelMapState
 } from "@jolly-pixel/asset.voxel-map";
 import { encodeVoxelDocument } from "@jolly-pixel/voxel.renderer";
@@ -53,7 +53,7 @@ export default defineConfig({
     createAssetWorkspacePlugin({
       root: "./assets",
       handlers: [
-        voxelMapAssetHandler({ chunkSize: 16 })
+        voxelMapAssetKind({ chunkSize: 16 })
       ],
       seed: {
         "maps/world.voxelmap.json": () => {

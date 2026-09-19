@@ -6,9 +6,9 @@ state and serialized.
 ```ts
 interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   readonly kind: string;
-  readonly match: readonly string[];
+  readonly extensions: Readonly<Record<string, string>>;
+  readonly match?: readonly string[];
   readonly snapshot?: SnapshotPolicy;
-  readonly contentTypes?: Readonly<Record<string, string>>;
   readonly commands?: AssetCommands<TState, TCommand>;
 
   create(assetId: string): TState;
@@ -27,9 +27,14 @@ interface AssetCommands<TState = unknown, TCommand = unknown> {
 }
 ```
 
-Handlers are checked in registration order. `match` contains globs matched
-against root-relative POSIX paths. The built-in `binary` handler receives any
-path that no registered handler claims.
+`extensions` maps each file extension the kind claims to the content type it
+is served with. Keys start with a dot and may span several dots
+(`.voxelmap.json`). A kind claims a root-relative POSIX path that ends with one
+of its extensions and, when `match` is set, also matches one of those globs.
+`match` can only narrow the claim, never widen it.
+
+Handlers are checked in registration order. The built-in `binary` handler
+receives any path that no registered handler claims.
 
 `serialize` returns the bytes stored by the asset source. A kind that supports
 live editing provides `commands.live`; other kinds have no dynamic editing
@@ -116,11 +121,12 @@ kinds.resolve("textures/grass.png");
 kinds.get("pixelart");
 ```
 
-Registering the same kind twice throws. The reserved `binary` fallback cannot
-be replaced.
+Registering the same kind twice throws, as does a kind with no `extensions`
+or with an extension lacking its leading dot. The reserved `binary` fallback
+cannot be replaced.
 
-`kinds.contentTypes()` collects the `contentTypes` every registered kind
-declares, later registrations winning on a shared extension.
+`kinds.contentTypes()` merges the `extensions` of every registered kind,
+later registrations winning on a shared extension.
 
 ## Built-in kinds
 
@@ -128,35 +134,37 @@ declares, later registrations winning on a shared extension.
 image files so a runtime `AssetType` of the same name can resolve them:
 
 ```ts
-import { textureAssetHandler } from "@jolly-pixel/asset-server";
+import { textureAssetKind } from "@jolly-pixel/asset-server";
 
-const kinds = new AssetKindRegistry([textureAssetHandler()]);
+const kinds = new AssetKindRegistry([textureAssetKind()]);
 ```
 
 Its state is the file's bytes, exactly like `binary`, and it has no
 `commands`, so texture assets get no editing room. The kind exists to
 name the record: `AssetCatalog.resolve()` rejects a record whose kind does not
-match its reference, and nothing on the browser side loads `binary`. Pass
-`match` to narrow the globs from the default image extensions. It declares no
-`contentTypes`: the static handler of `@jolly-pixel/asset-source` already
-serves those image extensions.
+match its reference, and nothing on the browser side loads `binary`. It claims
+`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif` and `.bmp`; pass `match` to narrow
+that claim, for example to `["textures/**"]`.
 
 ## Kinds shipped by other packages
 
-Two handlers live with the domain they serialize rather than here, because
-asset-server does not depend on the renderers:
+Handlers for editable formats live with the domain they serialize rather than
+here, because asset-server does not depend on the renderers. Each claims a
+fixed extension, exported next to its kind (`PIXEL_ART_EXTENSION`,
+`VOXEL_MAP_EXTENSION`, `VOXEL_MODEL_EXTENSION`), so the editors that create
+documents and the server agree on it:
 
 ```ts
-import { pixelArtAssetHandler } from "@jolly-pixel/asset.pixel-art";
-import { voxelMapAssetHandler } from "@jolly-pixel/asset.voxel-map";
+import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
+import { voxelMapAssetKind } from "@jolly-pixel/asset.voxel-map";
 
 await createAssetBackend({
   source,
   eventStore,
   handlers: [
-    pixelArtAssetHandler(),
-    voxelMapAssetHandler(),
-    textureAssetHandler()
+    pixelArtAssetKind(),
+    voxelMapAssetKind(),
+    textureAssetKind()
   ]
 });
 ```

@@ -25,7 +25,7 @@ import {
   createVoxelModelDocument,
   decodeVoxelModelDocument,
   encodeVoxelModelDocument,
-  voxelModelAssetHandler
+  voxelModelAssetKind
 } from "#src/index.ts";
 import {
   groupAdded,
@@ -77,7 +77,7 @@ async function withBackend(
     await using backend = await createAssetBackend({
       source: new FilesystemAssetSource(root),
       eventStore,
-      handlers: [voxelModelAssetHandler({ snapshot: { delay: 0 } })],
+      handlers: [voxelModelAssetKind({ snapshot: { delay: 0 } })],
       watch: false
     });
     const record = backend.catalog.snapshot().assets

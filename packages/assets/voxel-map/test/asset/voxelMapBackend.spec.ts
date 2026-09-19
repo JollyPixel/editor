@@ -23,7 +23,7 @@ import {
 import {
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND,
-  voxelMapAssetHandler,
+  voxelMapAssetKind,
   VoxelMapState
 } from "../../src/index.ts";
 import { voxelSetCmd } from "../helpers/networkCommands.ts";
@@ -64,7 +64,7 @@ function replay(
   eventStore: EventStore.EventStore,
   assetId: string
 ): VoxelMapState {
-  const handler = voxelMapAssetHandler({ chunkSize: kChunkSize });
+  const handler = voxelMapAssetKind({ chunkSize: kChunkSize });
   const state = handler.create(assetId);
   for (const event of eventStore.reader.list(assetId)) {
     foldAssetEvent(handler, state, event);
@@ -92,7 +92,7 @@ describe("voxel-map asset kind over a real back-end", () => {
         source: new FilesystemAssetSource(root),
         eventStore,
         handlers: [
-          voxelMapAssetHandler({
+          voxelMapAssetKind({
             chunkSize: kChunkSize,
             snapshot: {
               delay: 1_000,
@@ -185,7 +185,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       await using backend = await createAssetBackend({
         source: new FilesystemAssetSource(root),
         eventStore,
-        handlers: [voxelMapAssetHandler({ chunkSize: kChunkSize })],
+        handlers: [voxelMapAssetKind({ chunkSize: kChunkSize })],
         watch: false
       });
       const record = backend.catalog.snapshot().assets[0];

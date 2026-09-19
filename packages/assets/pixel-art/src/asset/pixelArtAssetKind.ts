@@ -19,34 +19,29 @@ import {
 } from "../network/PixelCommand.schema.ts";
 import { PixelArtState } from "./PixelArtState.ts";
 import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
-import { PIXEL_ART_KIND } from "./kind.ts";
+import {
+  PIXEL_ART_COMMAND,
+  PIXEL_ART_EXTENSION,
+  PIXEL_ART_KIND
+} from "./kind.ts";
 import type { PixelNetworkCommand } from "../network/types.ts";
 
-export { PIXEL_ART_KIND };
-export const PIXEL_ART_COMMAND = "pixelart.command";
-
 // CONSTANTS
-const kDefaultMatch = ["**/*.pixelart"] as const;
-const kContentTypes: Readonly<Record<string, string>> = {
-  ".pixelart": "application/json; charset=utf-8"
-};
 const kDefaultSize: Vec2 = {
   x: 32,
   y: 32
 };
 
-export interface PixelArtAssetHandlerOptions {
-  match?: readonly string[];
+export interface PixelArtAssetKindOptions {
   defaultSize?: Vec2;
   snapshot?: SnapshotPolicy;
   conflictResolver?: network.ConflictResolver;
 }
 
-export function pixelArtAssetHandler(
-  options: PixelArtAssetHandlerOptions = {}
+export function pixelArtAssetKind(
+  options: PixelArtAssetKindOptions = {}
 ): AssetKindHandler<PixelArtState, PixelNetworkCommand> {
   const {
-    match = kDefaultMatch,
     defaultSize = kDefaultSize,
     snapshot,
     conflictResolver
@@ -54,9 +49,10 @@ export function pixelArtAssetHandler(
 
   return {
     kind: PIXEL_ART_KIND,
-    match,
+    extensions: {
+      [PIXEL_ART_EXTENSION]: "application/json; charset=utf-8"
+    },
     snapshot,
-    contentTypes: kContentTypes,
 
     create(): PixelArtState {
       return new PixelArtState(defaultSize);
@@ -66,7 +62,9 @@ export function pixelArtAssetHandler(
       state: PixelArtState,
       content: Uint8Array
     ): void {
-      state.load(decodePixelArtDocument(content));
+      state.load(
+        decodePixelArtDocument(content)
+      );
     },
 
     clear(
@@ -88,11 +86,16 @@ export function pixelArtAssetHandler(
       protocol: pixelCommandProtocol,
 
       apply(state, command) {
-        applyCommandToBuffer(state.buffer, command);
+        applyCommandToBuffer(
+          state.buffer,
+          command
+        );
       },
 
       live({ state }) {
-        const arbiter = new PixelCommandArbiter({ conflictResolver });
+        const arbiter = new PixelCommandArbiter({
+          conflictResolver
+        });
 
         return {
           snapshotSchema: pixelSnapshotSchema,

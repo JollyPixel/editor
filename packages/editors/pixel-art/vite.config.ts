@@ -13,7 +13,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   PIXEL_ART_KIND,
-  pixelArtAssetHandler
+  pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 
 // Import Internal Dependencies
@@ -65,7 +65,7 @@ export default defineConfig({
       source: new MemoryAssetSource(),
       eventStore: EventStore.persistence.memory(),
       handlers: [
-        pixelArtAssetHandler({
+        pixelArtAssetKind({
           defaultSize: TEXTURE_SIZE
         })
       ],

@@ -43,12 +43,12 @@ On the server, register the asset kind with `@jolly-pixel/asset-server`:
 ```ts
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { createAssetBackend } from "@jolly-pixel/asset-server";
-import { pixelArtAssetHandler } from "@jolly-pixel/asset.pixel-art";
+import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
 
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
-  handlers: [pixelArtAssetHandler({ defaultSize: { x: 32, y: 32 } })]
+  handlers: [pixelArtAssetKind({ defaultSize: { x: 32, y: 32 } })]
 });
 ```
 

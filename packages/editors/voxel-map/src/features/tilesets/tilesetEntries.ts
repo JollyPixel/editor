@@ -19,23 +19,16 @@ export function isTilesetAsset(
 }
 
 export function resolveTilesetAsset(
-  src: string,
+  assetId: string,
   records: Iterable<AssetRecordData>
 ): AssetRecordData | null {
-  let bySource: AssetRecordData | null = null;
   for (const record of records) {
-    if (!isTilesetAsset(record)) {
-      continue;
-    }
-    if (record.id === src) {
+    if (isTilesetAsset(record) && record.id === assetId) {
       return record;
-    }
-    if (bySource === null && record.source === src) {
-      bySource = record;
     }
   }
 
-  return bySource;
+  return null;
 }
 
 export function resolveTilesetEntries(
@@ -45,8 +38,10 @@ export function resolveTilesetEntries(
   const known = [...records];
 
   return [...definitions].map((definition) => {
-    const key = definition.asset?.id ?? definition.src;
-    const record = key === undefined ? null : resolveTilesetAsset(key, known);
+    const assetId = definition.asset?.id;
+    const record = assetId === undefined ?
+      null :
+      resolveTilesetAsset(assetId, known);
 
     return {
       definition,

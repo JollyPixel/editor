@@ -10,7 +10,7 @@ import {
   ASSET_CREATED,
   ASSET_DELETED,
   ASSET_UPDATED,
-  binaryAssetHandler,
+  binaryAssetKind,
   encodeContent,
   foldAssetEvent
 } from "#src/index.ts";
@@ -20,17 +20,17 @@ import {
 } from "../../helpers/bytes.ts";
 import { assetEvent } from "../../helpers/events.ts";
 
-describe("binaryAssetHandler", () => {
+describe("binaryAssetKind", () => {
   test("starts from empty bytes", async() => {
-    const state = binaryAssetHandler.create("a1");
+    const state = binaryAssetKind.create("a1");
 
-    assert.deepEqual(await binaryAssetHandler.serialize(state), new Uint8Array());
+    assert.deepEqual(await binaryAssetKind.serialize(state), new Uint8Array());
   });
 
   test("applies created content", async() => {
-    const state = binaryAssetHandler.create("a1");
+    const state = binaryAssetKind.create("a1");
 
-    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.png",
       kind: "binary",
       hash: "h1",
@@ -39,62 +39,62 @@ describe("binaryAssetHandler", () => {
     }));
 
     assert.strictEqual(
-      text(await binaryAssetHandler.serialize(state)),
+      text(await binaryAssetKind.serialize(state)),
       "hello"
     );
   });
 
   test("the last update wins", async() => {
-    const state = binaryAssetHandler.create("a1");
+    const state = binaryAssetKind.create("a1");
 
-    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
       content: encodeContent(bytes("one"))
     }));
-    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_UPDATED, {
+    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_UPDATED, {
       path: "a.png", kind: "binary", hash: "h2", size: 3,
       content: encodeContent(bytes("two"))
     }));
 
     assert.strictEqual(
-      text(await binaryAssetHandler.serialize(state)),
+      text(await binaryAssetKind.serialize(state)),
       "two"
     );
   });
 
   test("a delete empties the state", async() => {
-    const state = binaryAssetHandler.create("a1");
+    const state = binaryAssetKind.create("a1");
 
-    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
       content: encodeContent(bytes("one"))
     }));
-    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_DELETED, {
+    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_DELETED, {
       path: "a.png",
       kind: "binary"
     }));
 
     assert.deepEqual(
-      await binaryAssetHandler.serialize(state),
+      await binaryAssetKind.serialize(state),
       new Uint8Array()
     );
   });
 
   test("ignores domain events", async() => {
-    const state = binaryAssetHandler.create("a1");
+    const state = binaryAssetKind.create("a1");
 
-    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
       content: encodeContent(bytes("one"))
     }));
     foldAssetEvent(
-      binaryAssetHandler,
+      binaryAssetKind,
       state,
       assetEvent("pixelart.stroke.applied", { x: 1 })
     );
 
     assert.strictEqual(
-      text(await binaryAssetHandler.serialize(state)),
+      text(await binaryAssetKind.serialize(state)),
       "one"
     );
   });
@@ -103,13 +103,13 @@ describe("binaryAssetHandler", () => {
 describe("content encoding", () => {
   test("round-trips arbitrary bytes", async() => {
     const source = new Uint8Array([0, 255, 128, 7, 42]);
-    const state = binaryAssetHandler.create("a1");
+    const state = binaryAssetKind.create("a1");
 
-    foldAssetEvent(binaryAssetHandler, state, assetEvent(ASSET_CREATED, {
+    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.bin", kind: "binary", hash: "h1", size: source.length,
       content: encodeContent(source)
     }));
 
-    assert.deepEqual(await binaryAssetHandler.serialize(state), source);
+    assert.deepEqual(await binaryAssetKind.serialize(state), source);
   });
 });
