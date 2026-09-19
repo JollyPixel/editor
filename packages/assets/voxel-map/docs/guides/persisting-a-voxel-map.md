@@ -6,14 +6,14 @@ the handler when creating the asset backend:
 ```ts
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import {
-  voxelMapAssetHandler
+  voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
 
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
   handlers: [
-    voxelMapAssetHandler({
+    voxelMapAssetKind({
       chunkSize: 16
     })
   ]
@@ -24,7 +24,8 @@ The package installs `@jolly-pixel/asset-server` and
 `@jolly-pixel/event-store` as regular dependencies. Import the package root
 only from server code.
 
-The handler claims `**/*.voxelmap.json` by default. Documents use the same
+The handler claims every `.voxelmap.json` path (`VOXEL_MAP_EXTENSION`).
+Documents use the same
 `VoxelWorldJSON` shape as `VoxelEngine.save()`.
 
 ## In-memory worlds

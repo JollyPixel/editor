@@ -51,9 +51,11 @@ resolveContentType(
 ): string
 ```
 
-Looks up the lowercased extension of `assetPath` in `table`
-(`DEFAULT_CONTENT_TYPES` by default) and falls back to
-`DEFAULT_CONTENT_TYPE` (`application/octet-stream`).
+Picks the longest `table` key (`DEFAULT_CONTENT_TYPES` by default) that ends
+the lowercased file name of `assetPath`, so `.voxelmap.json` wins over
+`.json`. Keys are lowercase and include the leading dot. A file named after
+the extension alone, or matching no key, gets `DEFAULT_CONTENT_TYPE`
+(`application/octet-stream`).
 
 `DEFAULT_CONTENT_TYPES` covers `.json`, `.txt`, `.png`, `.jpg`, `.jpeg`,
 `.webp`, `.gif`, `.bmp` and `.svg`.

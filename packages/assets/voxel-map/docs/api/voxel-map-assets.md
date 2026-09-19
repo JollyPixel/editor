@@ -8,28 +8,30 @@ helpers, and `BlockRegistry` with `blocksFromTileset()`, so a server can seed
 a document with its authoritative block set without importing the renderer
 entry point.
 
-## `voxelMapAssetHandler`
+## `voxelMapAssetKind`
 
-`voxelMapAssetHandler()` creates the `AssetKindHandler` for persisted voxel
+`voxelMapAssetKind()` creates the `AssetKindHandler` for persisted voxel
 maps.
 
 ```ts
 const VOXEL_MAP_KIND = "voxelmap";
 const VOXEL_MAP_COMMAND = "voxelmap.command";
+const VOXEL_MAP_EXTENSION = ".voxelmap.json";
 
-interface VoxelMapAssetHandlerOptions {
-  match?: readonly string[];
+interface VoxelMapAssetKindOptions {
   chunkSize?: number;
   snapshot?: SnapshotPolicy;
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
-function voxelMapAssetHandler(
-  options?: VoxelMapAssetHandlerOptions
+function voxelMapAssetKind(
+  options?: VoxelMapAssetKindOptions
 ): AssetKindHandler<VoxelMapState, VoxelNetworkCommand>;
 ```
 
-`match` defaults to `["**/*.voxelmap.json"]`; `chunkSize` defaults to `16`.
+The kind claims every `VOXEL_MAP_EXTENSION` path, served as JSON. The claim is
+fixed so the server and the editors that create documents agree on it.
+`chunkSize` defaults to `16`.
 The default snapshot policy waits for 5 seconds of quiet and has a 60-second
 maximum delay.
 
@@ -107,20 +109,8 @@ from the root and from `network/client.ts`.
 
 ```ts
 function tilesetAsset(assetId: string): TilesetAssetReference;
-function tilesetDependencies(
-  tilesets: Iterable<TilesetDefinition>
-): TilesetAssetReference[];
-function migrateTilesetDefinition(
-  definition: TilesetDefinition
-): TilesetDefinition;
-function migrateTilesetSources(document: VoxelWorldJSON): VoxelWorldJSON;
 ```
 
 `tilesetAsset()` builds a `pixelart` reference. The handler's `dependencies`
-hook returns `tilesetDependencies()` of the state, one edge per asset-backed
-tileset.
-
-Older documents stored the asset id in `src`. `VoxelMapState.load()` and a
-`tileset-added` command migrate a `src` containing no `.`, `/` or `:` to
-`asset`; any other `src` is kept as a URL. The next snapshot persists the
-migrated form.
+hook returns `VoxelMapState.dependencies()`, one edge per asset-backed
+tileset. A tileset keeping a `src` URL declares no dependency.

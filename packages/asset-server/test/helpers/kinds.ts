@@ -37,7 +37,7 @@ export function counterHandler(
 ): AssetKindHandler<CounterState, CounterCommand> {
   return {
     kind: "counter",
-    match: ["**/*.counter"],
+    extensions: { ".counter": "text/plain; charset=utf-8" },
     snapshot,
     commands: kCounterCommands,
 
@@ -113,7 +113,7 @@ export function linkContent(
 export function linkHandler(): AssetKindHandler<LinkState, LinkCommand> {
   return {
     kind: "link",
-    match: ["**/*.link"],
+    extensions: { ".link": "text/plain; charset=utf-8" },
     commands: {
       eventType: LINK_TARGETS_SET,
       protocol: linkCommandProtocol,

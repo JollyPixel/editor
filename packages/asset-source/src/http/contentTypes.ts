@@ -18,9 +18,18 @@ export function resolveContentType(
   assetPath: string,
   table: Readonly<Record<string, string>> = DEFAULT_CONTENT_TYPES
 ): string {
-  const extension = path.posix.extname(
-    assetPath
-  ).toLowerCase();
+  const name = path.posix.basename(assetPath).toLowerCase();
 
-  return table[extension] ?? DEFAULT_CONTENT_TYPE;
+  let longest: string | null = null;
+  for (const extension of Object.keys(table)) {
+    if (
+      name.length > extension.length &&
+      name.endsWith(extension) &&
+      (longest === null || extension.length > longest.length)
+    ) {
+      longest = extension;
+    }
+  }
+
+  return longest === null ? DEFAULT_CONTENT_TYPE : table[longest];
 }

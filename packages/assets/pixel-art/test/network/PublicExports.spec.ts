@@ -12,7 +12,7 @@ import * as server from "#src/network/server.ts";
 
 describe("network entry points", () => {
   test("root exports persistence APIs only", () => {
-    assert.strictEqual(typeof root.pixelArtAssetHandler, "function");
+    assert.strictEqual(typeof root.pixelArtAssetKind, "function");
     assert.strictEqual(typeof root.PixelArtState, "function");
     assert.strictEqual("PixelSyncClient" in root, false);
   });

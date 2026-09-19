@@ -14,11 +14,6 @@ import {
 
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "../network/types.ts";
-import {
-  migrateTilesetDefinition,
-  migrateTilesetSources,
-  tilesetDependencies
-} from "./tilesetAssets.ts";
 
 export class VoxelMapState implements VoxelCommandTarget {
   readonly world: VoxelWorld;
@@ -42,9 +37,7 @@ export class VoxelMapState implements VoxelCommandTarget {
   load(
     document: VoxelWorldJSON
   ): void {
-    const world = migrateTilesetSources(document);
-
-    deserializeVoxelWorld(world, this.world, {
+    deserializeVoxelWorld(document, this.world, {
       blocks: this.blocks,
       tilesets: this.tilesets
     });
@@ -59,19 +52,15 @@ export class VoxelMapState implements VoxelCommandTarget {
           parseVoxelDocument(command.data)
         );
         break;
-      case "tileset-added":
-        applyVoxelCommand(this, {
-          ...command,
-          tileset: migrateTilesetDefinition(command.tileset)
-        });
-        break;
       default:
         applyVoxelCommand(this, command);
     }
   }
 
   dependencies(): TilesetAssetReference[] {
-    return tilesetDependencies(this.tilesets);
+    return [...this.tilesets].flatMap(
+      ({ asset }) => (asset === undefined ? [] : [{ ...asset }])
+    );
   }
 
   clear(): void {

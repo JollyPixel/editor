@@ -18,7 +18,7 @@ import {
   PixelBuffer,
   serializePixelBuffer
 } from "@jolly-pixel/pixel-draw.renderer";
-import { pixelArtAssetHandler } from "@jolly-pixel/asset.pixel-art";
+import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
 
 export default defineConfig({
   plugins: [
@@ -27,7 +27,7 @@ export default defineConfig({
       source: new MemoryAssetSource(),
       eventStore: EventStore.persistence.memory(),
       handlers: [
-        pixelArtAssetHandler({ defaultSize: { x: 80, y: 80 } })
+        pixelArtAssetKind({ defaultSize: { x: 80, y: 80 } })
       ],
       seed: {
         "main.pixelart": () => encodePixelArtDocument(
@@ -100,7 +100,7 @@ Snapshots replace texture pixels and UV regions, then clear local history. Remot
 
 ## Committed edits
 
-Local document mutations flow through `document.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The asset room replaces the claimed `clientId` with the connection ID, validates the command, resolves conflicts, appends the accepted command to the event log and broadcasts it. When the append fails, the author receives a `"rejected"` notice. `pixelArtAssetHandler` folds the appended event into the buffer.
+Local document mutations flow through `document.onBufferUpdated`. `PixelSyncClient` adds `clientId`, `seq` and `timestamp`, then sends the command to the room. The asset room replaces the claimed `clientId` with the connection ID, validates the command, resolves conflicts, appends the accepted command to the event log and broadcasts it. When the append fails, the author receives a `"rejected"` notice. `pixelArtAssetKind` folds the appended event into the buffer.
 
 Commands echoed to their sender are ignored. Remote commands use `document.applyRemoteCommand()`, which does not emit `onBufferUpdated`, so they are not sent again.
 
@@ -113,7 +113,7 @@ Asset rooms are named after their kind, `"pixelart"`, and expose each command ac
 ```ts
 createAssetWorkspacePlugin({
   root: import.meta.dirname,
-  handlers: [pixelArtAssetHandler()],
+  handlers: [pixelArtAssetKind()],
   rights: {
     viewer: {
       "pixelart.$join": "write",

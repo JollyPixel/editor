@@ -3,7 +3,7 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import { defineConfig } from "vite";
-import { textureAssetHandler } from "@jolly-pixel/asset-server";
+import { textureAssetKind } from "@jolly-pixel/asset-server";
 import {
   createAssetWorkspacePlugin
 } from "@jolly-pixel/asset-server/plugins/vite.ts";
@@ -11,11 +11,11 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   PIXEL_ART_KIND,
-  pixelArtAssetHandler
+  pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 import {
   VOXEL_MAP_KIND,
-  voxelMapAssetHandler
+  voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
@@ -56,9 +56,9 @@ export default defineConfig(({ mode }) => {
           {}),
         launch: ({ catalog }) => catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value,
         handlers: [
-          pixelArtAssetHandler({ defaultSize: tileset.size }),
-          voxelMapAssetHandler({ chunkSize: CHUNK_SIZE }),
-          textureAssetHandler()
+          pixelArtAssetKind({ defaultSize: tileset.size }),
+          voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),
+          textureAssetKind()
         ],
         seed: {
           "textures/block.pixelart": {

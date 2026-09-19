@@ -34,33 +34,9 @@ describe("resolveTilesetAsset", () => {
     assert.equal(resolveTilesetAsset("asset-stone", kRecords)?.id, "asset-stone");
   });
 
-  it("falls back to a pixel-art record whose source matches", () => {
-    assert.equal(
-      resolveTilesetAsset("textures/block.pixelart", kRecords)?.id,
-      "asset-block"
-    );
-  });
-
-  it("prefers an id match over an earlier source match", () => {
-    const records = [
-      {
-        id: "a",
-        kind: "pixelart",
-        source: "b"
-      },
-      {
-        id: "b",
-        kind: "pixelart",
-        source: "textures/b.pixelart"
-      }
-    ];
-
-    assert.equal(resolveTilesetAsset("b", records)?.id, "b");
-  });
-
-  it("ignores records of another kind and unknown sources", () => {
+  it("ignores records of another kind and unknown ids", () => {
     assert.equal(resolveTilesetAsset("map-1", kRecords), null);
-    assert.equal(resolveTilesetAsset("textures/tileset.png", kRecords), null);
+    assert.equal(resolveTilesetAsset("textures/block.pixelart", kRecords), null);
   });
 });
 
@@ -69,12 +45,23 @@ describe("resolveTilesetEntries", () => {
     const entries = resolveTilesetEntries([
       {
         id: "default",
-        src: "asset-block",
+        asset: {
+          id: "asset-block",
+          kind: "pixelart"
+        },
         tileSize: 32
       },
       {
-        id: "legacy",
+        id: "external",
         src: "textures/tileset.png",
+        tileSize: 16
+      },
+      {
+        id: "unknown",
+        asset: {
+          id: "asset-missing",
+          kind: "pixelart"
+        },
         tileSize: 16
       }
     ], kRecords);
@@ -83,42 +70,40 @@ describe("resolveTilesetEntries", () => {
       entries.map(({ assetId, label }) => [assetId, label]),
       [
         ["asset-block", "block"],
-        [null, "legacy"]
+        [null, "external"],
+        [null, "unknown"]
       ]
     );
-  });
-
-  it("resolves an asset-backed tileset by its asset id", () => {
-    const entries = resolveTilesetEntries([
-      {
-        id: "default",
-        asset: { id: "asset-block", kind: "pixelart" },
-        tileSize: 32
-      }
-    ], kRecords);
-
-    assert.deepEqual(entries[0].assetId, "asset-block");
   });
 });
 
 describe("definitionsEqual and entriesEqual", () => {
   const kDefinition = {
     id: "stone",
-    src: "asset-stone",
+    asset: {
+      id: "asset-stone",
+      kind: "pixelart"
+    },
     tileSize: 16
   };
 
   it("compares definitions field by field regardless of key order", () => {
     assert.equal(definitionsEqual(kDefinition, {
       tileSize: 16,
-      src: "asset-stone",
+      asset: {
+        id: "asset-stone",
+        kind: "pixelart"
+      },
       id: "stone"
     }), true);
     assert.equal(definitionsEqual(kDefinition, { ...kDefinition, tileSize: 32 }), false);
     assert.equal(definitionsEqual(kDefinition, { ...kDefinition, cols: 4 }), false);
     assert.equal(definitionsEqual(kDefinition, {
       ...kDefinition,
-      asset: { id: "asset-stone", kind: "pixelart" }
+      asset: {
+        id: "asset-granite",
+        kind: "pixelart"
+      }
     }), false);
   });
 

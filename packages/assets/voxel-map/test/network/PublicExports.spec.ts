@@ -12,7 +12,7 @@ import * as server from "#src/network/server.ts";
 
 describe("public entry points", () => {
   test("root exports persistence APIs only", () => {
-    assert.strictEqual(typeof root.voxelMapAssetHandler, "function");
+    assert.strictEqual(typeof root.voxelMapAssetKind, "function");
     assert.strictEqual(typeof root.VoxelMapState, "function");
     assert.strictEqual("VoxelSyncClient" in root, false);
   });

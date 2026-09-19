@@ -10,9 +10,9 @@ export interface BinaryAssetState {
 /**
  * Fallback handler that treats an asset's bytes as its state.
  */
-export const binaryAssetHandler: AssetKindHandler<BinaryAssetState> = {
+export const binaryAssetKind: AssetKindHandler<BinaryAssetState> = {
   kind: BINARY_KIND,
-  match: ["**/*"],
+  extensions: {},
 
   create(): BinaryAssetState {
     return {

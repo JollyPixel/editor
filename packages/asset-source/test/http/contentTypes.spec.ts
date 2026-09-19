@@ -36,4 +36,27 @@ describe("resolveContentType", () => {
       "application/json"
     );
   });
+
+  test("prefers the longest matching multi-dot extension", () => {
+    const table = {
+      ".json": "application/json",
+      ".voxelmap.json": "application/x-voxelmap"
+    };
+
+    assert.strictEqual(
+      resolveContentType("maps/World.VoxelMap.json", table),
+      "application/x-voxelmap"
+    );
+    assert.strictEqual(
+      resolveContentType("maps/other.json", table),
+      "application/json"
+    );
+  });
+
+  test("ignores a file named after the extension alone", () => {
+    assert.strictEqual(
+      resolveContentType("dir/.json"),
+      DEFAULT_CONTENT_TYPE
+    );
+  });
 });

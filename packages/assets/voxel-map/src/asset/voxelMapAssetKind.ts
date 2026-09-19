@@ -15,19 +15,16 @@ import {
   voxelWorldSchema
 } from "../network/VoxelCommand.schema.ts";
 import { VoxelMapState } from "./VoxelMapState.ts";
-import { VOXEL_MAP_KIND } from "./kind.ts";
+import {
+  VOXEL_MAP_COMMAND,
+  VOXEL_MAP_EXTENSION,
+  VOXEL_MAP_KIND
+} from "./kind.ts";
 import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
-export { VOXEL_MAP_KIND };
-export const VOXEL_MAP_COMMAND = "voxelmap.command";
-
 // CONSTANTS
-const kDefaultMatch = ["**/*.voxelmap.json"] as const;
 const kDefaultChunkSize = 16;
-const kContentTypes: Readonly<Record<string, string>> = {
-  ".json": "application/json; charset=utf-8"
-};
 /**
  * Uses a slower snapshot cadence for bursty, expensive terrain serialization.
  */
@@ -36,12 +33,7 @@ const kDefaultSnapshot: SnapshotPolicy = {
   maxDelay: 60_000
 };
 
-export interface VoxelMapAssetHandlerOptions {
-  /**
-   * Globs claiming voxel-map documents.
-   * @default ["**\/*.voxelmap.json"]
-   */
-  match?: readonly string[];
+export interface VoxelMapAssetKindOptions {
   /**
    * Chunk size used when no document exists.
    * @default 16
@@ -54,11 +46,10 @@ export interface VoxelMapAssetHandlerOptions {
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
-export function voxelMapAssetHandler(
-  options: VoxelMapAssetHandlerOptions = {}
+export function voxelMapAssetKind(
+  options: VoxelMapAssetKindOptions = {}
 ): AssetKindHandler<VoxelMapState, VoxelNetworkCommand> {
   const {
-    match = kDefaultMatch,
     chunkSize = kDefaultChunkSize,
     snapshot = kDefaultSnapshot,
     conflictResolver
@@ -66,9 +57,10 @@ export function voxelMapAssetHandler(
 
   return {
     kind: VOXEL_MAP_KIND,
-    match,
+    extensions: {
+      [VOXEL_MAP_EXTENSION]: "application/json; charset=utf-8"
+    },
     snapshot,
-    contentTypes: kContentTypes,
 
     create(): VoxelMapState {
       return new VoxelMapState(chunkSize);
@@ -78,7 +70,9 @@ export function voxelMapAssetHandler(
       state: VoxelMapState,
       content: Uint8Array
     ): void {
-      state.load(decodeVoxelDocument(content));
+      state.load(
+        decodeVoxelDocument(content)
+      );
     },
 
     clear(
@@ -110,7 +104,9 @@ export function voxelMapAssetHandler(
       },
 
       live({ state }) {
-        const arbiter = new VoxelCommandArbiter({ conflictResolver });
+        const arbiter = new VoxelCommandArbiter({
+          conflictResolver
+        });
 
         return {
           snapshotSchema: voxelWorldSchema,

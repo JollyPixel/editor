@@ -11,7 +11,7 @@ import {
   AssetKindRegistry,
   encodeContent,
   foldAssetEvent,
-  textureAssetHandler,
+  textureAssetKind,
   TEXTURE_KIND
 } from "#src/index.ts";
 import {
@@ -20,9 +20,9 @@ import {
 } from "../../helpers/bytes.ts";
 import { assetEvent } from "../../helpers/events.ts";
 
-describe("textureAssetHandler", () => {
+describe("textureAssetKind", () => {
   test("claims the common image extensions", () => {
-    const registry = new AssetKindRegistry([textureAssetHandler()]);
+    const registry = new AssetKindRegistry([textureAssetKind()]);
 
     for (const path of [
       "a.png",
@@ -42,7 +42,7 @@ describe("textureAssetHandler", () => {
   });
 
   test("leaves other paths to the binary fallback", () => {
-    const registry = new AssetKindRegistry([textureAssetHandler()]);
+    const registry = new AssetKindRegistry([textureAssetKind()]);
 
     assert.strictEqual(registry.resolve("a.txt").kind, "binary");
     assert.strictEqual(registry.resolve("a.png.bak").kind, "binary");
@@ -50,15 +50,28 @@ describe("textureAssetHandler", () => {
 
   test("honours a custom match list", () => {
     const registry = new AssetKindRegistry([
-      textureAssetHandler({ match: ["textures/**/*.png"] })
+      textureAssetKind({ match: ["textures/**/*.png"] })
     ]);
 
     assert.strictEqual(registry.resolve("textures/a.png").kind, TEXTURE_KIND);
     assert.strictEqual(registry.resolve("sprites/a.png").kind, "binary");
   });
 
+  test("match never widens past the image extensions", () => {
+    const registry = new AssetKindRegistry([
+      textureAssetKind({ match: ["textures/**"] })
+    ]);
+
+    assert.strictEqual(registry.resolve("textures/a.png").kind, TEXTURE_KIND);
+    assert.strictEqual(registry.resolve("textures/a.txt").kind, "binary");
+  });
+
+  test("declares the content type of each image extension", () => {
+    assert.strictEqual(textureAssetKind().extensions[".jpg"], "image/jpeg");
+  });
+
   test("stores the bytes verbatim", async() => {
-    const handler = textureAssetHandler();
+    const handler = textureAssetKind();
     const state = handler.create("a1");
 
     foldAssetEvent(handler, state, assetEvent(ASSET_CREATED, {
@@ -73,6 +86,6 @@ describe("textureAssetHandler", () => {
   });
 
   test("has no editing room", () => {
-    assert.strictEqual(textureAssetHandler().commands, undefined);
+    assert.strictEqual(textureAssetKind().commands, undefined);
   });
 });

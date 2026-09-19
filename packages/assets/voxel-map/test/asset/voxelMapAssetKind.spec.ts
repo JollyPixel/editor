@@ -25,9 +25,10 @@ import {
 // Import Internal Dependencies
 import {
   VOXEL_MAP_COMMAND,
+  VOXEL_MAP_EXTENSION,
   VOXEL_MAP_KIND,
   tilesetAsset,
-  voxelMapAssetHandler,
+  voxelMapAssetKind,
   VoxelMapState
 } from "../../src/index.ts";
 import type { VoxelNetworkCommand } from "../../src/network/server.ts";
@@ -45,7 +46,7 @@ interface LiveHarness {
 }
 
 function live(): LiveHarness {
-  const handler = voxelMapAssetHandler({ chunkSize: 16 });
+  const handler = voxelMapAssetKind({ chunkSize: 16 });
   const state = handler.create("asset-1");
 
   return {
@@ -106,17 +107,18 @@ function positionDelta(
   };
 }
 
-describe("voxelMapAssetHandler", () => {
+describe("voxelMapAssetKind", () => {
   test("declares its kind and claims .voxelmap.json paths", () => {
-    const handler = voxelMapAssetHandler();
+    const handler = voxelMapAssetKind();
 
     assert.strictEqual(handler.kind, VOXEL_MAP_KIND);
-    assert.deepEqual(handler.match, ["**/*.voxelmap.json"]);
+    assert.deepEqual(Object.keys(handler.extensions), [VOXEL_MAP_EXTENSION]);
+    assert.strictEqual(handler.match, undefined);
   });
 
   test("snapshots slower than the back-end default", () => {
     assert.deepEqual(
-      voxelMapAssetHandler().snapshot,
+      voxelMapAssetKind().snapshot,
       {
         delay: 5_000,
         maxDelay: 60_000
@@ -125,14 +127,14 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("creates an empty world at the configured chunk size", () => {
-    const state = voxelMapAssetHandler({ chunkSize: 8 }).create("asset-1");
+    const state = voxelMapAssetKind({ chunkSize: 8 }).create("asset-1");
 
     assert.strictEqual(state.world.chunkSize, 8);
     assert.deepEqual(state.world.getLayers(), []);
   });
 
   test("a lifecycle event loads the whole document", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = new VoxelMapState(16);
     source.world.addLayer("Ground");
     source.world.setVoxelAt(
@@ -167,7 +169,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("keeps the tileset list a document arrived with", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = new VoxelMapState(16);
     source.tilesets.add({
       id: "default",
@@ -182,7 +184,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("a domain command mutates the folded world", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
@@ -200,7 +202,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("a delta position applies exactly once per event", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     const layer = state.world.addLayer("Ground");
 
@@ -222,7 +224,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("a world-replace command reloads the whole world", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.world.addLayer("Stale");
 
@@ -244,7 +246,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("a delete empties the world", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
@@ -258,7 +260,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("a malformed document throws before touching the world", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
@@ -278,7 +280,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("a command naming an unknown layer is dropped, not fatal", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
     assert.doesNotThrow(() => {
@@ -289,7 +291,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("a document with a mismatched chunk size is refused", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
@@ -304,7 +306,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("serialize round-trips through apply", async() => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const first = handler.create("asset-1");
     first.world.addLayer("Ground");
     foldAssetEvent(handler, first, event(VOXEL_MAP_COMMAND, voxelSetCmd({
@@ -331,7 +333,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("declares the voxel command stream", () => {
-    const { commands } = voxelMapAssetHandler();
+    const { commands } = voxelMapAssetKind();
 
     assert.strictEqual(commands!.eventType, VOXEL_MAP_COMMAND);
     assert.deepEqual(protocolEvents(commands!.protocol).toSorted(), [
@@ -343,7 +345,7 @@ describe("voxelMapAssetHandler", () => {
   });
 
   test("ignores a command payload the protocol rejects", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
@@ -441,9 +443,9 @@ describe("voxelMapAssetHandler", () => {
   });
 });
 
-describe("voxelMapAssetHandler — block definitions", () => {
+describe("voxelMapAssetKind — block definitions", () => {
   test("a block command survives serialization, so a shape edit outlives the server", async() => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
     foldAssetEvent(handler, state, documentEvent(new VoxelMapState(16)));
@@ -468,7 +470,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
   });
 
   test("replaying the serialized document restores the block table", async() => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = handler.create("asset-1");
     source.blocks.register(makeBlockDef(3, "slope"));
 
@@ -479,7 +481,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
   });
 
   test("a later definition of the same id replaces the earlier one", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
     foldAssetEvent(
@@ -497,7 +499,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
   });
 
   test("a block-removed command drops the definition", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
     foldAssetEvent(
@@ -521,7 +523,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
   });
 
   test("a document load replaces the block table rather than merging into it", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.blocks.register(makeBlockDef(9, "cube"));
 
@@ -536,7 +538,7 @@ describe("voxelMapAssetHandler — block definitions", () => {
   });
 
   test("a delete clears the block table", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.blocks.register(makeBlockDef(3, "slope"));
 
@@ -549,9 +551,9 @@ describe("voxelMapAssetHandler — block definitions", () => {
   });
 });
 
-describe("voxelMapAssetHandler — block order", () => {
+describe("voxelMapAssetKind — block order", () => {
   function seed(
-    handler: ReturnType<typeof voxelMapAssetHandler>,
+    handler: ReturnType<typeof voxelMapAssetKind>,
     state: VoxelMapState
   ): void {
     for (const id of [1, 2, 3]) {
@@ -560,7 +562,7 @@ describe("voxelMapAssetHandler — block order", () => {
   }
 
   test("a block-moved command reorders the block table", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     seed(handler, state);
 
@@ -577,7 +579,7 @@ describe("voxelMapAssetHandler — block order", () => {
   });
 
   test("the order survives serialization and a replay of the document", async() => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = handler.create("asset-1");
     seed(handler, source);
     foldAssetEvent(
@@ -599,7 +601,7 @@ describe("voxelMapAssetHandler — block order", () => {
   });
 
   test("a move replayed after a checkpoint keeps its effect", () => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     seed(handler, state);
     foldAssetEvent(
@@ -623,7 +625,7 @@ describe("voxelMapAssetHandler — block order", () => {
   });
 });
 
-describe("voxelMapAssetHandler — tilesets", () => {
+describe("voxelMapAssetKind — tilesets", () => {
   const kHeader = {
     clientId: "client-A",
     seq: 1,
@@ -631,7 +633,7 @@ describe("voxelMapAssetHandler — tilesets", () => {
   };
 
   test("tileset commands survive serialization", async() => {
-    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
     state.blocks.register(makeBlockDef(1, "cube", {
       defaultTexture: { col: 1, row: 0, tilesetId: "stone" }

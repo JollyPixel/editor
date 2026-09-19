@@ -7,12 +7,12 @@ in server memory.
 
 ```ts
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
-import { pixelArtAssetHandler } from "@jolly-pixel/asset.pixel-art";
+import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
 
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
-  handlers: [pixelArtAssetHandler({ defaultSize: { x: 32, y: 32 } })]
+  handlers: [pixelArtAssetKind({ defaultSize: { x: 32, y: 32 } })]
 });
 ```
 
@@ -33,7 +33,9 @@ the conflict trackers.
 
 ## The `.pixelart` document
 
-The kind matches `**/*.pixelart` by default. The format itself, its codec and
+The kind claims every `.pixelart` path (`PIXEL_ART_EXTENSION`, also exported
+from `network/client.ts` so editors build paths with it). The format itself,
+its codec and
 the PNG seeding helper live in
 [`Serialization`](../../../../pixel-draw-renderer/docs/serialization/index.md)
 and ship from the renderer package root,

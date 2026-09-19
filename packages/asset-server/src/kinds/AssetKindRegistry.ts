@@ -4,14 +4,15 @@ import picomatch from "picomatch";
 // Import Internal Dependencies
 import type { AssetKindHandler } from "./AssetKindHandler.ts";
 import {
-  binaryAssetHandler,
+  binaryAssetKind,
   BINARY_KIND
 } from "./handlers/binary.ts";
 import { UnknownAssetKindError } from "./errors/UnknownAssetKindError.ts";
 
 interface RegisteredKind {
   handler: AssetKindHandler;
-  isMatch: picomatch.Matcher;
+  extensions: readonly string[];
+  isMatch: picomatch.Matcher | null;
 }
 
 /**
@@ -42,12 +43,27 @@ export class AssetKindRegistry {
       );
     }
 
+    const extensions = Object.keys(handler.extensions);
+    if (extensions.length === 0) {
+      throw new TypeError(
+        `Asset kind "${handler.kind}" declares no extensions.`
+      );
+    }
+    const invalid = extensions.find(
+      (extension) => !extension.startsWith(".") || extension.length < 2
+    );
+    if (invalid !== undefined) {
+      throw new TypeError(
+        `Asset kind "${handler.kind}" declares an invalid extension "${invalid}".`
+      );
+    }
+
     this.#kinds.set(handler.kind, {
       handler,
-      isMatch: picomatch(
-        [...handler.match],
-        { dot: true }
-      )
+      extensions,
+      isMatch: handler.match === undefined ?
+        null :
+        picomatch([...handler.match], { dot: true })
     });
 
     return this;
@@ -63,7 +79,7 @@ export class AssetKindRegistry {
     kind: string
   ): AssetKindHandler {
     if (kind === BINARY_KIND) {
-      return binaryAssetHandler;
+      return binaryAssetKind;
     }
 
     const registered = this.#kinds.get(kind);
@@ -77,13 +93,16 @@ export class AssetKindRegistry {
   resolve(
     path: string
   ): AssetKindHandler {
-    for (const { handler, isMatch } of this.#kinds.values()) {
-      if (isMatch(path)) {
+    for (const { handler, extensions, isMatch } of this.#kinds.values()) {
+      if (
+        extensions.some((extension) => path.endsWith(extension)) &&
+        (isMatch === null || isMatch(path))
+      ) {
         return handler;
       }
     }
 
-    return binaryAssetHandler;
+    return binaryAssetKind;
   }
 
   kinds(): IterableIterator<string> {
@@ -93,7 +112,7 @@ export class AssetKindRegistry {
   contentTypes(): Record<string, string> {
     const table: Record<string, string> = {};
     for (const { handler } of this.#kinds.values()) {
-      Object.assign(table, handler.contentTypes);
+      Object.assign(table, handler.extensions);
     }
 
     return table;

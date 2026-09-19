@@ -21,18 +21,18 @@ Serve voxel models through the asset workspace, with their texture as a
 pixel-art asset:
 
 ```ts
-import { pixelArtAssetHandler } from "@jolly-pixel/asset.pixel-art";
+import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
 import {
   createVoxelModelDocument,
   encodeVoxelModelDocument,
-  voxelModelAssetHandler
+  voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
 
 createAssetWorkspacePlugin({
   root,
   handlers: [
-    voxelModelAssetHandler(),
-    pixelArtAssetHandler({ defaultSize: { x: 64, y: 64 } })
+    voxelModelAssetKind(),
+    pixelArtAssetKind({ defaultSize: { x: 64, y: 64 } })
   ],
   seed: {
     "models/model.voxelmodel.json": () => encodeVoxelModelDocument(
@@ -48,12 +48,12 @@ createAssetWorkspacePlugin({
 
 ### Kind
 
-`VOXEL_MODEL_KIND` is `"voxelmodel"`. `voxelModelAssetHandler(options?)`
-claims `**/*.voxelmodel.json` and appends `voxelmodel.command` events.
+`VOXEL_MODEL_KIND` is `"voxelmodel"`. `voxelModelAssetKind(options?)`
+claims every `.voxelmodel.json` path (`VOXEL_MODEL_EXTENSION`) and appends
+`voxelmodel.command` events (`VOXEL_MODEL_COMMAND`).
 
 | Option | Default | Description |
 |---|---|---|
-| `match` | `["**/*.voxelmodel.json"]` | Globs claiming voxel-model documents. |
 | `snapshot` | asset-server default | Snapshot cadence. |
 | `conflictResolver` | last write wins | Resolves concurrent edits of one group, folder or placement. |
 

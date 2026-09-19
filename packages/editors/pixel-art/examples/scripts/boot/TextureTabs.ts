@@ -2,6 +2,7 @@
 import {
   PixelCollaboration,
   createPixelArtAsset,
+  PIXEL_ART_EXTENSION,
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import {
@@ -116,7 +117,7 @@ export class TextureTabs {
       const { catalog } = this.#session;
       const assetId = await createPixelArtAsset(
         catalog,
-        `${name}.pixelart`,
+        `${name}${PIXEL_ART_EXTENSION}`,
         documentFromCanvas(source)
       );
       const lease = this.#session.assets.open(DEMO_TEXTURE_KIND, assetId);
@@ -124,7 +125,7 @@ export class TextureTabs {
       const canvas = this.#panel.addTexture({
         id: assetId,
         name,
-        tooltip: catalog.record(assetId)?.source ?? `${name}.pixelart`,
+        tooltip: catalog.record(assetId)?.source ?? `${name}${PIXEL_ART_EXTENSION}`,
         document: lease.model
       });
       await this.attach(assetId, lease, canvas);

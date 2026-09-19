@@ -26,10 +26,11 @@ import {
 
 // Import Internal Dependencies
 import {
-  pixelArtAssetHandler,
+  pixelArtAssetKind,
   PIXEL_ART_COMMAND,
+  PIXEL_ART_EXTENSION,
   PIXEL_ART_KIND
-} from "#src/asset/pixelArtAssetHandler.ts";
+} from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/PixelArtState.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
@@ -102,7 +103,7 @@ function binding(
 }
 
 function liveProtocol(): AssetLiveProtocol<PixelNetworkCommand> {
-  const handler = pixelArtAssetHandler();
+  const handler = pixelArtAssetKind();
 
   return handler.commands!.live!(binding(handler.create("asset-1")));
 }
@@ -124,22 +125,23 @@ function stroke(
   };
 }
 
-describe("pixelArtAssetHandler", () => {
+describe("pixelArtAssetKind", () => {
   test("declares its kind and claims .pixelart paths", () => {
-    const handler = pixelArtAssetHandler();
+    const handler = pixelArtAssetKind();
 
     assert.strictEqual(handler.kind, PIXEL_ART_KIND);
-    assert.deepEqual(handler.match, ["**/*.pixelart"]);
+    assert.deepEqual(Object.keys(handler.extensions), [PIXEL_ART_EXTENSION]);
+    assert.strictEqual(handler.match, undefined);
   });
 
   test("creates a buffer at the default size", () => {
-    const state = pixelArtAssetHandler().create("asset-1");
+    const state = pixelArtAssetKind().create("asset-1");
 
     assert.deepEqual(state.buffer.size(), { x: 32, y: 32 });
   });
 
   test("honours a configured default size", () => {
-    const state = pixelArtAssetHandler({
+    const state = pixelArtAssetKind({
       defaultSize: { x: 8, y: 8 }
     }).create("asset-1");
 
@@ -147,7 +149,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("a lifecycle event loads the whole document", () => {
-    const handler = pixelArtAssetHandler();
+    const handler = pixelArtAssetKind();
     const state = handler.create("asset-1");
     const source = new PixelBuffer({ size: { x: 4, y: 4 } });
     source.drawPixels([{ x: 2, y: 2 }], kRed);
@@ -159,7 +161,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("a domain command mutates the folded buffer", () => {
-    const handler = pixelArtAssetHandler({
+    const handler = pixelArtAssetKind({
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
@@ -174,7 +176,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("a delete resets the buffer to its default size", () => {
-    const handler = pixelArtAssetHandler({
+    const handler = pixelArtAssetKind({
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
@@ -190,7 +192,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("ignores an unrelated domain event", () => {
-    const handler = pixelArtAssetHandler({
+    const handler = pixelArtAssetKind({
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
@@ -202,7 +204,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("a malformed document throws before touching the buffer", () => {
-    const handler = pixelArtAssetHandler({
+    const handler = pixelArtAssetKind({
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
@@ -225,7 +227,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("serialize round-trips through apply", async() => {
-    const handler = pixelArtAssetHandler({
+    const handler = pixelArtAssetKind({
       defaultSize: { x: 4, y: 4 }
     });
     const first = handler.create("asset-1");
@@ -249,7 +251,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("declares the pixel command stream", () => {
-    const { commands } = pixelArtAssetHandler();
+    const { commands } = pixelArtAssetKind();
 
     assert.strictEqual(commands!.eventType, PIXEL_ART_COMMAND);
     assert.deepEqual(protocolEvents(commands!.protocol), [
@@ -267,7 +269,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("ignores a command payload the protocol rejects", () => {
-    const handler = pixelArtAssetHandler({
+    const handler = pixelArtAssetKind({
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
@@ -317,7 +319,7 @@ describe("pixelArtAssetHandler", () => {
   });
 
   test("live() snapshots the current buffer", () => {
-    const handler = pixelArtAssetHandler({ defaultSize: { x: 2, y: 2 } });
+    const handler = pixelArtAssetKind({ defaultSize: { x: 2, y: 2 } });
     const state = handler.create("asset-1");
     const protocol = handler.commands!.live!(binding(state));
 
