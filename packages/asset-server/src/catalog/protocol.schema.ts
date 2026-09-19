@@ -77,7 +77,8 @@ export const catalogMessageProtocol = defineMessageProtocol({
         type: "object",
         properties: {
           type: { const: CATALOG_SNAPSHOT },
-          manifest: { type: "object" }
+          manifest: { type: "object" },
+          dependencies: { type: "object" }
         },
         required: [
           "type",

@@ -177,6 +177,7 @@ export class SnapshotScheduler {
     const updated = await this.#writer.update({
       assetId,
       data,
+      dependencies: entry.handler.dependencies?.(entry.state),
       actor: kSnapshotActor
     });
     if (!updated.ok) {

@@ -368,7 +368,9 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
   ): void {
     this.tilesets.add(def);
     this.tilesetManager.registerTexture(def.id, texture);
-    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
+    this.#logger.debug(
+      `Loaded tileset '${def.id}' from '${def.src ?? def.asset?.id}'`
+    );
 
     this.#materials.invalidate(def.id);
     this.markAllChunksDirty("loadTileset");

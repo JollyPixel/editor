@@ -7,7 +7,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  testAssetPath,
+  testAssetId,
   RUNTIME_MAX_FPS
 } from "./constants.ts";
 import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
@@ -38,12 +38,12 @@ export async function openDemo(
   } = options;
 
   await page.addInitScript(() => {
-    sessionStorage.setItem("pixel-draw-demo:username", "E2E");
+    sessionStorage.setItem("jolly-pixel:username", "E2E");
   });
 
   const query = new URLSearchParams({
     empty: "true",
-    asset: testAssetPath(base.info().parallelIndex),
+    target: testAssetId(base.info().parallelIndex),
     "import-policy": importPolicy
   });
   if (runtime) {

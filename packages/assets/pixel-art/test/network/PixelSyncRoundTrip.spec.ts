@@ -78,7 +78,7 @@ function setup() {
     brush: { size: 1, maxSize: 1 },
     history: { enabled: true }
   });
-  new PixelSyncClient({ room, canvas: manager });
+  new PixelSyncClient({ room, document: manager.document });
   room.deliverSnapshot(pixelArtSnapshot(buffer));
 
   function paintPixelOneOne(): void {

@@ -1,0 +1,57 @@
+{
+  "name": "@jolly-pixel/asset.voxel-model",
+  "description": "Jolly Pixel voxel-model persistence and collaboration",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./network/client.ts": {
+      "types": "./dist/network/client.d.ts",
+      "default": "./dist/network/client.js"
+    },
+    "./network/server.ts": {
+      "types": "./dist/network/server.d.ts",
+      "default": "./dist/network/server.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "prepublishOnly": "rimraf ./dist ./tsconfig.tsbuildinfo && tsc -b",
+    "build": "tsc -b",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/assets/voxel-model"
+  },
+  "keywords": [],
+  "files": [
+    "dist",
+    "docs"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/network": "workspace:*"
+  },
+  "devDependencies": {
+    "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/event-store": "workspace:*"
+  }
+}

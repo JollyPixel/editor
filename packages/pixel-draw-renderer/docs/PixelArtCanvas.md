@@ -45,7 +45,7 @@ readonly viewport: DefaultViewport
 
 ### `document`
 
-The buffer, UV map and history behind the canvas, plus the `changed` / `resized` / `replaced` events forwarded from [`CanvasBuffer`](./buffer/CanvasBuffer.md). Subscribe here — not to `onDrawEnd` — to mirror the texture elsewhere, such as onto a Three.js material:
+The [`PixelDocument`](./PixelDocument.md) behind the canvas: buffer, UV map and history, plus the `changed` / `resized` / `replaced` events forwarded from [`CanvasBuffer`](./buffer/CanvasBuffer.md). Subscribe here — not to `onDrawEnd` — to mirror the texture elsewhere, such as onto a Three.js material:
 
 ```ts
 canvas.document.on("changed", ({ bounds }) => texture.markDirty(bounds));

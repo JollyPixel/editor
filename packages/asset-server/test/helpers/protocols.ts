@@ -46,3 +46,21 @@ export const counterCommandProtocol: MessageProtocol = defineMessageProtocol({
 export const counterSnapshotSchema: JSONSchema = {
   type: "object"
 };
+
+export const linkCommandProtocol: MessageProtocol = defineMessageProtocol({
+  schema: {
+    oneOf: [
+      {
+        type: "object",
+        properties: {
+          action: { const: "set" },
+          targets: {
+            type: "array",
+            items: { type: "string" }
+          }
+        },
+        required: ["action", "targets"]
+      }
+    ]
+  }
+});

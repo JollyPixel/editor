@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import { fromUint8Array } from "js-base64";
-import type { AssetRecordData } from "@jolly-pixel/asset";
+import type {
+  AssetRecordData,
+  AssetReferenceData
+} from "@jolly-pixel/asset";
 import type * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
@@ -19,6 +22,10 @@ import {
   type CatalogPathConflict
 } from "./protocol.ts";
 import { CatalogRejectedError } from "./errors/CatalogRejectedError.ts";
+import {
+  DependencyIndex,
+  type DependencyMap
+} from "./DependencyIndex.ts";
 
 export interface CatalogRoom {
   on(
@@ -41,6 +48,7 @@ export interface CatalogCreateOptions {
 
 export type CatalogClientEvents = {
   change: () => void;
+  dependencies: (assetId: string) => void;
 };
 
 type AppliedMessage = Extract<CatalogMessage, { type: typeof CATALOG_APPLIED; }>;
@@ -59,6 +67,7 @@ export function catalogRoom(
 export class CatalogClient extends Emitter<CatalogClientEvents> {
   readonly #room: CatalogRoom;
   readonly #records = new Map<string, AssetRecordData>();
+  readonly #dependencies = new DependencyIndex();
   readonly #pending = new Map<string, Settle>();
   readonly #ready = Promise.withResolvers<void>();
 
@@ -83,6 +92,24 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     assetId: string
   ): AssetRecordData | undefined {
     return this.#records.get(assetId);
+  }
+
+  dependenciesOf(
+    assetId: string
+  ): readonly AssetReferenceData[] {
+    return this.#dependencies.dependenciesOf(assetId);
+  }
+
+  dependentsOf(
+    assetId: string
+  ): readonly string[] {
+    return this.#dependencies.dependentsOf(assetId);
+  }
+
+  closureOf(
+    assetId: string
+  ): AssetReferenceData[] {
+    return this.#dependencies.closureOf(assetId);
   }
 
   async create(
@@ -163,30 +190,62 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     message: CatalogMessage
   ): void => {
     switch (message.type) {
-      case CATALOG_SNAPSHOT:
+      case CATALOG_SNAPSHOT: {
         this.#records.clear();
         for (const record of message.manifest.assets) {
           this.#records.set(record.id, record);
         }
+        const changed = this.#replaceDependencies(message.dependencies ?? {});
         this.#ready.resolve();
         this.emit("change");
+        for (const assetId of changed) {
+          this.emit("dependencies", assetId);
+        }
         break;
-      case CATALOG_CHANGED:
-        if (message.change.record === null) {
-          this.#records.delete(message.change.assetId);
+      }
+      case CATALOG_CHANGED: {
+        const { assetId, record, dependencies } = message.change;
+        if (record === null) {
+          this.#records.delete(assetId);
         }
         else {
-          this.#records.set(
-            message.change.assetId,
-            message.change.record
-          );
+          this.#records.set(assetId, record);
         }
+        const changed = dependencies === undefined ?
+          this.#dependencies.delete(assetId) :
+          this.#dependencies.set(assetId, dependencies);
         this.emit("change");
+        if (changed) {
+          this.emit("dependencies", assetId);
+        }
         break;
+      }
       default:
         this.#settle(message);
     }
   };
+
+  #replaceDependencies(
+    dependencies: DependencyMap
+  ): string[] {
+    const changed: string[] = [];
+    const previous = this.#dependencies.toJSON();
+    for (const assetId of Object.keys(previous)) {
+      if (
+        !Object.hasOwn(dependencies, assetId) &&
+        this.#dependencies.delete(assetId)
+      ) {
+        changed.push(assetId);
+      }
+    }
+    for (const [assetId, references] of Object.entries(dependencies)) {
+      if (this.#dependencies.set(assetId, references)) {
+        changed.push(assetId);
+      }
+    }
+
+    return changed;
+  }
 
   #settle(
     message: SettledMessage

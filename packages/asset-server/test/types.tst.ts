@@ -34,6 +34,10 @@ interface LegacyWriteData {
   readonly hash: string;
   readonly size: number;
   readonly content: LegacyInlineContent;
+  readonly dependencies?: {
+    readonly id: string;
+    readonly kind: string;
+  }[];
 }
 
 interface LegacyRenamedData {
@@ -57,7 +61,7 @@ describe("schema-derived payload types", () => {
     expect<AssetInlineContent>().type.toBe<LegacyInlineContent>();
   });
 
-  test("AssetWriteData keeps its fields and narrows content", () => {
+  test("AssetWriteData narrows content and carries optional dependencies", () => {
     expect<AssetWriteData>().type.toBe<LegacyWriteData>();
   });
 

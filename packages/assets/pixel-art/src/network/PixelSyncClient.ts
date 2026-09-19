@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/network/client";
 import {
   decodePixelBytes,
-  type PixelArtCanvas,
+  type PixelDocument,
   type PixelBufferHookEvent,
   type PixelBufferHookListener
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -18,9 +18,14 @@ import type {
   PixelServerMessage
 } from "./types.ts";
 
+export type PixelSyncTarget = Pick<
+  PixelDocument,
+  "onBufferUpdated" | "applyRemoteCommand" | "loadSnapshot"
+>;
+
 export interface PixelSyncClientOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
-  canvas: PixelArtCanvas;
+  document: PixelSyncTarget;
 }
 
 export class PixelSyncClient extends CommandSync<
@@ -28,7 +33,7 @@ export class PixelSyncClient extends CommandSync<
   PixelBufferSnapshot,
   PixelAssetNotice
 > {
-  #canvas: PixelArtCanvas;
+  #document: PixelSyncTarget;
   #previousHandler: PixelBufferHookListener | undefined;
 
   #handleBufferUpdated = (
@@ -44,21 +49,21 @@ export class PixelSyncClient extends CommandSync<
     options: PixelSyncClientOptions
   ) {
     super(options.room);
-    const { canvas } = options;
+    const { document } = options;
 
-    this.#canvas = canvas;
-    this.#previousHandler = canvas.onBufferUpdated;
-    canvas.onBufferUpdated = this.#handleBufferUpdated;
-    this.on("snapshot", (snapshot) => canvas.loadSnapshot(
+    this.#document = document;
+    this.#previousHandler = document.onBufferUpdated;
+    document.onBufferUpdated = this.#handleBufferUpdated;
+    this.on("snapshot", (snapshot) => document.loadSnapshot(
       snapshot.size,
       decodePixelBytes(snapshot.pixels),
       snapshot.uvRegions
     ));
-    this.on("command", (command) => canvas.applyRemoteCommand(command));
+    this.on("command", (command) => document.applyRemoteCommand(command));
   }
 
   override destroy(): void {
-    this.#canvas.onBufferUpdated = this.#previousHandler;
+    this.#document.onBufferUpdated = this.#previousHandler;
     super.destroy();
   }
 }

@@ -13,7 +13,6 @@ import {
   type TextureChangeDetail,
   type UvAccess
 } from "@jolly-pixel/editor.pixel-art";
-import type { PixelArtRoom } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
 // Import Internal Dependencies
 import {
@@ -24,6 +23,10 @@ import {
 } from "../../app/state/index.ts";
 import type { TilesetEntry } from "../tilesets/tilesetEntries.ts";
 import { blockFocusTilesetId } from "../tilesets/blockTilesets.ts";
+import type {
+  TilesetTexture,
+  TilesetTextures
+} from "../tilesets/TilesetTextures.ts";
 import { TilesetTab } from "./TilesetTab.ts";
 
 // CONSTANTS
@@ -37,18 +40,11 @@ const kCanvasOptions: PixelArtCanvasOptions = {
     size: 1,
     color: "#000000"
   },
-  texture: {
-    maxSize: 2048
-  },
   uv: {
     deselectOnEmptyClick: false
-  },
-  history: {
-    enabled: true
   }
 };
-
-export type TextureRoomFactory = (assetId: string) => PixelArtRoom;
+const kDetachedSuffix = "(detached)";
 
 @customElement("texture-editor")
 export class TextureEditor extends LitElement {
@@ -78,7 +74,7 @@ export class TextureEditor extends LitElement {
   declare engine: VoxelEngine | undefined;
 
   @property({ attribute: false })
-  declare rooms: TextureRoomFactory | undefined;
+  declare textures: TilesetTextures | undefined;
 
   @property({ type: Boolean })
   declare active: boolean;
@@ -104,7 +100,7 @@ export class TextureEditor extends LitElement {
   constructor() {
     super();
     this.engine = undefined;
-    this.rooms = undefined;
+    this.textures = undefined;
     this.active = false;
     this.uvAccess = "edit";
     this.brush = editorState.brush;
@@ -141,7 +137,7 @@ export class TextureEditor extends LitElement {
   override updated(
     changed: PropertyValues<this>
   ) {
-    if (changed.has("engine")) {
+    if (changed.has("engine") || changed.has("textures")) {
       this.#disposeTabs();
     }
     if (changed.has("active") && this.active) {
@@ -157,6 +153,7 @@ export class TextureEditor extends LitElement {
     }
 
     return this.tilesets.entries.filter((entry) => (
+      this.#tabs.has(entry.definition.id) ||
       entry.assetId !== null ||
       engine.tilesetManager.get(entry.definition.id) !== undefined
     ));
@@ -178,8 +175,13 @@ export class TextureEditor extends LitElement {
       await this.#adoptPanel(panel);
     }
 
-    const { engine } = this;
-    if (panel === null || panel !== this.#panel || engine === undefined) {
+    const { engine, textures } = this;
+    if (
+      panel === null ||
+      panel !== this.#panel ||
+      engine === undefined ||
+      textures === undefined
+    ) {
       return;
     }
 
@@ -188,15 +190,25 @@ export class TextureEditor extends LitElement {
       const { definition, label, assetId } = entry;
       const tab = this.#tabs.get(definition.id);
       if (tab !== undefined) {
-        panel.renameTexture(definition.id, label);
+        const detached = tab.assetId !== null && assetId !== tab.assetId;
+        panel.renameTexture(
+          definition.id,
+          detached ? `${label} ${kDetachedSuffix}` : label
+        );
         tab.update(definition);
+        continue;
+      }
+
+      const texture = openTexture(textures, entry);
+      if (texture === null) {
         continue;
       }
 
       const canvas = panel.addTexture(
         {
           id: definition.id,
-          name: label
+          name: label,
+          document: texture.document
         },
         { activate: false }
       );
@@ -204,7 +216,8 @@ export class TextureEditor extends LitElement {
         canvas,
         engine,
         definition,
-        room: assetId === null ? undefined : this.rooms?.(assetId),
+        assetId,
+        texture,
         brush: this.brush,
         worldStore: this.worldStore
       }));
@@ -313,6 +326,24 @@ export class TextureEditor extends LitElement {
         .texturesClosable=${false}
       ></pixel-draw-panel>
     `;
+  }
+}
+
+function openTexture(
+  textures: TilesetTextures,
+  entry: TilesetEntry
+): TilesetTexture | null {
+  try {
+    return textures.open(entry);
+  }
+  catch (error) {
+    console.error(
+      "TextureEditor: cannot open tileset",
+      entry.definition.id,
+      error
+    );
+
+    return null;
   }
 }
 

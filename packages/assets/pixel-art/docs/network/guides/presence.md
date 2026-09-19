@@ -15,7 +15,7 @@ import {
   UVGhostSync
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
-const sync = new PixelSyncClient({ room, canvas });
+const sync = new PixelSyncClient({ room, document: canvas.document });
 const presence = [
   new PixelCursorSync({ room, canvas, label, color }),
   new PixelStrokeGhostSync({ room, canvas }),

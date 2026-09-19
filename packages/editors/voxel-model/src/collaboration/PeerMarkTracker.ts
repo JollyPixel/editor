@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
+import {
+  peerProfileColor,
+  readUsername
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  peerColor,
-  readUsername
-} from "./identity.ts";
 import type {
   PeerMark,
   PeerMarkMap
@@ -143,7 +143,7 @@ export class PeerMarkTracker<
       bucket.push({
         clientId,
         displayName: readUsername(peer.profile),
-        color: peerColor(clientId, peer.profile)
+        color: peerProfileColor(clientId, peer.profile)
       });
       marks.set(key, bucket);
     }

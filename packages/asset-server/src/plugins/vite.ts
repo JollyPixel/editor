@@ -1,10 +1,18 @@
 // Import Third-party Dependencies
-import type { Plugin } from "vite";
+import type {
+  HtmlTagDescriptor,
+  IndexHtmlTransformContext,
+  Plugin
+} from "vite";
 import {
   createAssetStaticHandler,
   type AssetStaticHandlerOptions
 } from "@jolly-pixel/asset-source";
-import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
+import {
+  CATALOG_URL_PATH,
+  LAUNCH_ELEMENT_ID,
+  type AssetCatalog
+} from "@jolly-pixel/asset";
 import { WebsocketTransport } from "@jolly-pixel/network/transport/websocket.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network/transport/constants.ts";
 
@@ -82,6 +90,22 @@ export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
   onReady?: (
     workspace: AssetWorkspace
   ) => void | Promise<void>;
+  /**
+   * Picks the asset an HTML page opens. The id is injected as
+   * `{ "target": id }` into a `<script type="application/json">` element
+   * with id `LAUNCH_ELEMENT_ID`. Nothing is injected for `undefined`.
+   */
+  launch?: (
+    request: AssetLaunchRequest
+  ) => string | undefined;
+}
+
+export interface AssetLaunchRequest {
+  /**
+   * Requested page URL, resolved against `http://localhost`.
+   */
+  readonly url: URL;
+  readonly catalog: AssetCatalog;
 }
 
 export function createAssetWorkspacePlugin(
@@ -92,6 +116,7 @@ export function createAssetWorkspacePlugin(
     prefix,
     socketPath = DEFAULT_WEBSOCKET_PATH,
     onReady,
+    launch,
     ...workspaceOptions
   } = options;
 
@@ -127,9 +152,47 @@ export function createAssetWorkspacePlugin(
 
       await onReady?.(workspace);
     },
+    transformIndexHtml(_html, context) {
+      if (launch === undefined || workspace === null) {
+        return [];
+      }
+
+      const target = launch({
+        url: requestUrl(context),
+        catalog: workspace.backend.catalog.catalog
+      });
+
+      return target === undefined ? [] : [launchTag(target)];
+    },
     async closeBundle() {
       await workspace?.close();
       workspace = null;
     }
+  };
+}
+
+function requestUrl(
+  context: IndexHtmlTransformContext
+): URL {
+  return new URL(
+    context.originalUrl ?? context.path,
+    "http://localhost"
+  );
+}
+
+function launchTag(
+  target: string
+): HtmlTagDescriptor {
+  const payload = JSON.stringify({ target })
+    .replaceAll("<", "\\u003c");
+
+  return {
+    tag: "script",
+    attrs: {
+      type: "application/json",
+      id: LAUNCH_ELEMENT_ID
+    },
+    children: payload,
+    injectTo: "head"
   };
 }

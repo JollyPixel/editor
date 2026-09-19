@@ -12,26 +12,29 @@ import {
   serializePixelBuffer
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
+  PIXEL_ART_KIND,
   pixelArtAssetHandler
 } from "@jolly-pixel/asset.pixel-art";
 
 // Import Internal Dependencies
 import {
+  DEMO_ASSET_ID,
   DEMO_ASSET_PATH,
   TEXTURE_SIZE
 } from "./examples/scripts/config.ts";
 import {
   WORKER_COUNT,
+  testAssetId,
   testAssetPath
 } from "./test/e2e/constants.ts";
 
 // CONSTANTS
 const kCatalogMaxContentBytes = 32 * 1024 * 1024;
-const kCanvasPaths = [
-  DEMO_ASSET_PATH,
+const kCanvasSeeds = [
+  [DEMO_ASSET_PATH, DEMO_ASSET_ID],
   ...Array.from(
     { length: WORKER_COUNT },
-    (_, index) => testAssetPath(index)
+    (_, index) => [testAssetPath(index), testAssetId(index)]
   )
 ];
 
@@ -67,8 +70,16 @@ export default defineConfig({
         })
       ],
       seed: Object.fromEntries(
-        kCanvasPaths.map((assetPath) => [assetPath, blankCanvas])
+        kCanvasSeeds.map(([assetPath, id]) => [
+          assetPath,
+          {
+            id,
+            kind: PIXEL_ART_KIND,
+            content: blankCanvas
+          }
+        ])
       ),
+      launch: () => DEMO_ASSET_ID,
       backend: {
         catalogMaxContentBytes: kCatalogMaxContentBytes
       }

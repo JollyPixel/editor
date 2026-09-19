@@ -1,13 +1,11 @@
 // Import Internal Dependencies
-import type {
-  CanvasHoverChangeDetail,
-  PixelDrawPanel
-} from "../../../src/index.ts";
+import type { PixelDrawPanel } from "../../../src/index.ts";
 import type { DemoPreview } from "./DemoPreview.ts";
 
 export class DemoShell {
   readonly #panel: PixelDrawPanel;
   readonly #preview: DemoPreview | null;
+  readonly #resumeKeyboard: () => void;
 
   constructor(
     panel: PixelDrawPanel,
@@ -18,14 +16,19 @@ export class DemoShell {
 
     panel.addEventListener("theme-change", this.#applyTheme);
     panel.addEventListener("texture-change", this.#followActiveTexture);
-    panel.addEventListener("canvas-hover-change", this.#suspendKeyboard);
+    this.#resumeKeyboard = preview === null ?
+      () => void 0 :
+      preview.editorRuntime.suspendKeyboardOnHover(
+        panel,
+        "canvas-hover-change"
+      );
     this.#applyTheme();
   }
 
   dispose(): void {
     this.#panel.removeEventListener("theme-change", this.#applyTheme);
     this.#panel.removeEventListener("texture-change", this.#followActiveTexture);
-    this.#panel.removeEventListener("canvas-hover-change", this.#suspendKeyboard);
+    this.#resumeKeyboard();
     this.#preview?.scene.destroy();
   }
 
@@ -40,14 +43,6 @@ export class DemoShell {
     const canvas = this.#panel.canvasManager;
     if (canvas !== null) {
       this.#preview?.scene.setCanvas(canvas);
-    }
-  };
-
-  readonly #suspendKeyboard = (
-    event: CustomEvent<CanvasHoverChangeDetail>
-  ): void => {
-    if (this.#preview !== null) {
-      this.#preview.runtime.world.input.keyboard.enabled = !event.detail.hovering;
     }
   };
 }

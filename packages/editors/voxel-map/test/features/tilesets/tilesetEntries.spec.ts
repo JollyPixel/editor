@@ -87,6 +87,18 @@ describe("resolveTilesetEntries", () => {
       ]
     );
   });
+
+  it("resolves an asset-backed tileset by its asset id", () => {
+    const entries = resolveTilesetEntries([
+      {
+        id: "default",
+        asset: { id: "asset-block", kind: "pixelart" },
+        tileSize: 32
+      }
+    ], kRecords);
+
+    assert.deepEqual(entries[0].assetId, "asset-block");
+  });
 });
 
 describe("definitionsEqual and entriesEqual", () => {
@@ -104,6 +116,10 @@ describe("definitionsEqual and entriesEqual", () => {
     }), true);
     assert.equal(definitionsEqual(kDefinition, { ...kDefinition, tileSize: 32 }), false);
     assert.equal(definitionsEqual(kDefinition, { ...kDefinition, cols: 4 }), false);
+    assert.equal(definitionsEqual(kDefinition, {
+      ...kDefinition,
+      asset: { id: "asset-stone", kind: "pixelart" }
+    }), false);
   });
 
   it("compares entries in order", () => {

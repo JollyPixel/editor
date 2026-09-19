@@ -21,42 +21,39 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map dev
 
 The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png` under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded before tilesets referenced asset ids shows its `default` tileset as unlinked.
 
-Add `?world=<assetId>` to open a given map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to skip network setup entirely. Nothing is persisted in that mode — the editor is scratch space until the page reloads.
+The Vite plugin injects the first `voxelmap` of the catalog as the launch target. Add `?target=<assetId>` to open another map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to skip network setup entirely. Nothing is persisted in that mode: the editor is scratch space until the page reloads.
 
 ## 🧩 Bootstrap
 
-`src/index.ts` only reads the browser entry point and hands it to
-`VoxelMapEditor.open()`, which owns the boot sequence:
+`src/index.ts` hands the editor class to `mountStandalone()` from
+[`@jolly-pixel/editor.host`](../host/README.md), which reads the launch,
+prompts for the identity, opens the `EditorSession` and calls `mount`:
 
 ```ts
+import { mountStandalone } from "@jolly-pixel/editor.host";
 import { VoxelMapEditor } from "./boot/VoxelMapEditor.ts";
 
-const editor = await VoxelMapEditor.open({
-  canvas: "#game-container > canvas",
-  offline: false
+await mountStandalone(VoxelMapEditor, {
+  debugHandle: import.meta.env.DEV ? "voxelMapEditor" : undefined
 });
 ```
 
-| Option | Description |
-|---|---|
-| `canvas` | Runtime canvas target, a selector or an `HTMLCanvasElement`. |
-| `offline` | Skips identity, catalog, and network setup. Defaults to `false`. |
-| `world` | `AssetId` of the voxelmap to open. Defaults to the first one in the catalog. |
-| `maxFps` | Frame rate cap. Defaults to `Infinity`. |
+Its static members accept `voxelmap` targets and declare the pixel-art model
+kind, so the session leases every tileset of the map in parallel before the
+editor mounts. `?offline` bypasses the host and calls
+`VoxelMapEditor.openOffline()`.
 
-`open()` creates the runtime, opens an `EditorSession` and waits for its
-catalog, builds the `EditorScene`, mounts the `EditorShell`, then loads the
-scene. Offline, it preloads `textures/tileset.png` as the only tileset. `dispose()` unwinds the shell, the session,
-and the runtime.
+`VoxelMapEditor.mount()` boots the runtime through `EditorRuntime`,
+builds the `EditorScene` on the target room, mounts the `EditorShell`, then
+starts `TilesetAtlases` once the scene is ready. Offline, it preloads
+`textures/tileset.png` as the only tileset. `dispose()` unwinds the atlases,
+the shell, the session and the runtime.
 
 The pieces live under `src/boot/`:
 
 | Export | Responsibility |
 |---|---|
-| `assets/resolveEditorAssets` | Turns a request into the `voxelmap` record. |
-| `assets/preloadOfflineTilesets` | Loads `textures/tileset.png` for the offline session. |
-| `EditorSession` | Prompts for the local identity, resolves the world, joins the catalog through `@jolly-pixel/asset-server/catalog/client`, and opens the world room. `textureRoom(assetId)` opens a pixel-art room. `dispose()` destroys the client. |
-| `EditorShell` | Wires `jolly-log` and the editor panels to the state, the scene, and the runtime input. |
+| `EditorShell` | Wires `jolly-log` and the editor panels to the state, the scene, and the editor runtime. |
 
 ### Panels
 
@@ -91,8 +88,13 @@ and removes it. Removing a tileset keeps its asset and leaves its blocks
 without texture; the Block Library outlines those blocks in red and lists them
 above the grid.
 
-The texture editor shows one tab per linked tileset and keeps every tab's room
-joined. Selecting a block activates its tileset's tab. The block editor assigns
+`TilesetAtlases` feeds the engine atlases from the tilesets' pixel documents,
+with no panel involved: each tileset gets a `TilesetAtlasBridge` over the
+`PixelDocument` leased from the session (a local document offline or for an
+unlinked tileset with a source image). The texture editor shows one tab per
+linked tileset; each tab leases the same document and attaches a canvas and the
+presence layers to it. When a peer deletes the asset of an open tab, the tab
+keeps its lease and is labelled `(detached)` until the tileset is removed. Selecting a block activates its tileset's tab. The block editor assigns
 a block to one tileset, keeping its texel position, and sets its UV size, the
 texel side of its region (`TileRef.size`).
 
@@ -113,7 +115,7 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map build
 `test:e2e` runs the Playwright suite in `test/e2e`. It starts `pnpm run dev:e2e`,
 a Vite server on port 3002 whose asset workspace lives in memory. Each test
 creates its own tileset and world through the catalog, then opens
-`/?world=<assetId>&max-fps=<n>`. In dev builds the opened editor is exposed as
+`/?target=<assetId>&max-fps=<n>`. In dev builds the opened editor is exposed as
 `window.voxelMapEditor`.
 
 ```bash

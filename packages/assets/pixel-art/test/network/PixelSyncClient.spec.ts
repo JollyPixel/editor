@@ -19,7 +19,7 @@ import {
   gray
 } from "../fixtures/commands.ts";
 import {
-  asCanvas,
+  asDocument,
   createPixelArtCanvas
 } from "../helpers/canvas.ts";
 import { callsOf } from "../helpers/mock.ts";
@@ -44,7 +44,7 @@ function setup() {
   const host = createHost();
   const client = new PixelSyncClient({
     room,
-    canvas: asCanvas(host)
+    document: asDocument(host)
   });
 
   return {
@@ -54,13 +54,13 @@ function setup() {
   };
 }
 
-describe("PixelSyncClient — canvas hook", () => {
+describe("PixelSyncClient — document hook", () => {
   test("chains the existing onBufferUpdated handler", () => {
     const room = new MockRoom();
     const host = createHost();
     const previous = mock.fn<PixelBufferHookListener>();
     host.onBufferUpdated = previous;
-    new PixelSyncClient({ room, canvas: asCanvas(host) });
+    new PixelSyncClient({ room, document: asDocument(host) });
 
     host.onBufferUpdated?.(kResized);
 
@@ -73,7 +73,7 @@ describe("PixelSyncClient — canvas hook", () => {
     const host = createHost();
     const previous = mock.fn<PixelBufferHookListener>();
     host.onBufferUpdated = previous;
-    const client = new PixelSyncClient({ room, canvas: asCanvas(host) });
+    const client = new PixelSyncClient({ room, document: asDocument(host) });
 
     client.destroy();
     host.onBufferUpdated?.(kResized);
@@ -158,7 +158,7 @@ describe("PixelSyncClient — remote messages", () => {
 });
 
 describe("PixelSyncClient — destroy", () => {
-  test("restores the canvas hook and stops handling room messages", () => {
+  test("restores the document hook and stops handling room messages", () => {
     const { room, host, client } = setup();
 
     client.destroy();
@@ -180,7 +180,7 @@ describe("PixelSyncClient — UV region echoes", () => {
       texture: { size: { x: 64, y: 64 }, maxSize: 64 },
       zoom: { default: 4 }
     });
-    new PixelSyncClient({ room, canvas });
+    new PixelSyncClient({ room, document: canvas.document });
     const created: string[] = [];
     canvas.uv.on("region-created", ({ region }) => created.push(region.id));
 

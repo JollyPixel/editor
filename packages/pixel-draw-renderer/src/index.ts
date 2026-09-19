@@ -6,8 +6,12 @@ export {
   type BrushPaintSource
 } from "./tools/Brush.ts";
 export type { BrushTool } from "./tools/BrushEngine.ts";
-export type { FillTool } from "./tools/FillEngine.ts";
 export type {
+  FillGlobalCommit,
+  FillTool
+} from "./tools/FillEngine.ts";
+export type {
+  SelectEditEntry,
   SelectEngineEvent,
   SelectionProgressEvent,
   SelectTool

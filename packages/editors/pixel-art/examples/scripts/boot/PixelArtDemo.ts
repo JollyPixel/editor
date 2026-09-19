@@ -1,17 +1,26 @@
 // Import Third-party Dependencies
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import type { ThemePreferences } from "@jolly-pixel/ui";
+import {
+  PIXEL_ART_KIND,
+  type SyncedPixelDocument
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import {
+  DevOptions,
+  type EditorContext,
+  type EditorSession
+} from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import type {
-  PixelDrawPanel,
-  TextureImportPolicy
-} from "../../../src/index.ts";
-import { suggestTextureName } from "../../../src/textures/textures.ts";
-import { TEXTURE_SIZE } from "../config.ts";
-import { DemoSession } from "./DemoSession.ts";
+import {
+  isTextureImportPolicy,
+  suggestTextureName
+} from "../../../src/textures/textures.ts";
+import type { PixelDrawPanel } from "../../../src/index.ts";
 import { DemoShell } from "./DemoShell.ts";
-import { DemoTextures } from "./DemoTextures.ts";
+import { TextureTabs } from "./TextureTabs.ts";
+import { DEMO_TEXTURE_KIND } from "./textureKind.ts";
+import { TEXTURE_SIZE } from "../config.ts";
 import {
   openDemoPreview,
   type DemoPreview
@@ -21,30 +30,46 @@ import {
 const kStarterRegionId = "pixel-draw-demo:starter-region";
 const kStarterRegionSize = 16;
 
-export interface PixelArtDemoOptions {
-  asset: string;
-  preview: boolean;
-  starterRegion: boolean;
-  importPolicy?: TextureImportPolicy;
-  maxFps?: number;
-  addDelay?: number;
+export interface PixelArtDemoDevOptions {
+  runtime: string | undefined;
+  empty: boolean;
+  importPolicy: string | undefined;
+  maxFps: number | undefined;
+  addDelay: number | undefined;
 }
+
+export const PIXEL_ART_DEMO_DEV_OPTIONS = new DevOptions<PixelArtDemoDevOptions>({
+  runtime: DevOptions.string(),
+  empty: DevOptions.flag(),
+  importPolicy: DevOptions.string(),
+  maxFps: DevOptions.number(),
+  addDelay: DevOptions.number()
+});
 
 export interface PixelArtDemoParts {
   panel: PixelDrawPanel;
   preview: DemoPreview | null;
   shell: DemoShell;
-  session: DemoSession;
-  textures: DemoTextures;
+  session: EditorSession;
+  target: SyncedPixelDocument;
+  tabs: TextureTabs;
 }
 
 export class PixelArtDemo {
-  static async open(
-    options: PixelArtDemoOptions
+  static readonly accepts = PIXEL_ART_KIND;
+  static readonly identity = {
+    title: "Join pixel-draw demo"
+  };
+  static readonly kinds = [];
+  static readonly dev = PIXEL_ART_DEMO_DEV_OPTIONS;
+
+  static async mount(
+    context: EditorContext<PixelArtDemoDevOptions>
   ): Promise<PixelArtDemo> {
+    const { session, dev } = context;
     const panel = document.querySelector("pixel-draw-panel")!;
-    if (options.importPolicy !== undefined) {
-      panel.textureImportPolicy = options.importPolicy;
+    if (dev.importPolicy !== undefined && isTextureImportPolicy(dev.importPolicy)) {
+      panel.textureImportPolicy = dev.importPolicy;
     }
     const themePreferences = document.querySelector<ThemePreferences>(
       "jolly-theme-preferences"
@@ -53,10 +78,16 @@ export class PixelArtDemo {
     themePreferences.target = panel;
     await themePreferences.updateComplete;
 
+    const { room, record } = session.target;
+    const target = DEMO_TEXTURE_KIND.createModel(room);
+    target.model.buffer.resize(TEXTURE_SIZE);
+    room.join();
+
     const canvas = await panel.initialize({
-      texture: {
-        size: TEXTURE_SIZE
-      },
+      id: record.id,
+      name: suggestTextureName(record.source),
+      tooltip: record.source,
+      document: target.model,
       defaultMode: "paint",
       zoom: {
         min: 1,
@@ -64,31 +95,33 @@ export class PixelArtDemo {
       },
       brush: {
         size: 1
-      },
-      history: {
-        enabled: true
       }
     });
-    const textureId = panel.activeTextureId!;
-    const preview = options.preview ?
+    const preview = dev.runtime === "off" ?
+      null :
       await openDemoPreview({
         canvas: "#canvas-container > canvas",
         canvasManager: canvas,
         rotationToggle: document.querySelector<HTMLInputElement>("#rotation-toggle")!,
-        maxFps: options.maxFps
-      }) :
-      null;
+        maxFps: positive(dev.maxFps)
+      });
     const shell = new DemoShell(panel, preview);
 
-    const session = await DemoSession.open(options.asset);
-    const textures = new DemoTextures({
+    const tabs = new TextureTabs({
       panel,
       session,
-      addDelay: options.addDelay ?? 0
+      addDelay: positive(dev.addDelay) ?? 0
     });
-    panel.renameTexture(textureId, suggestTextureName(session.asset.source));
-    await textures.bind(textureId, session.asset.id.value, canvas);
-    if (options.starterRegion) {
+    await tabs.attach(
+      record.id,
+      {
+        room,
+        ready: target.ready,
+        release: () => target.dispose()
+      },
+      canvas
+    );
+    if (!dev.empty) {
       selectStarterRegion(canvas);
     }
 
@@ -97,7 +130,8 @@ export class PixelArtDemo {
       preview,
       shell,
       session,
-      textures
+      target,
+      tabs
     });
   }
 
@@ -105,8 +139,9 @@ export class PixelArtDemo {
 
   readonly panel: PixelDrawPanel;
   readonly preview: DemoPreview | null;
-  readonly session: DemoSession;
-  readonly textures: DemoTextures;
+  readonly session: EditorSession;
+  readonly target: SyncedPixelDocument;
+  readonly tabs: TextureTabs;
 
   constructor(
     parts: PixelArtDemoParts
@@ -114,15 +149,24 @@ export class PixelArtDemo {
     this.panel = parts.panel;
     this.preview = parts.preview;
     this.session = parts.session;
-    this.textures = parts.textures;
+    this.target = parts.target;
+    this.tabs = parts.tabs;
     this.#shell = parts.shell;
   }
 
   dispose(): void {
     this.#shell.dispose();
-    this.textures.dispose();
+    this.tabs.dispose();
     this.session.dispose();
   }
+}
+
+function positive(
+  value: number | undefined
+): number | undefined {
+  return value !== undefined && Number.isFinite(value) && value > 0 ?
+    value :
+    undefined;
 }
 
 function selectStarterRegion(

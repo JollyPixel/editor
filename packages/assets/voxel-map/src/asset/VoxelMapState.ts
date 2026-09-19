@@ -7,12 +7,18 @@ import {
   serializeVoxelWorld,
   TilesetList,
   VoxelWorld,
+  type TilesetAssetReference,
   type VoxelCommandTarget,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "../network/types.ts";
+import {
+  migrateTilesetDefinition,
+  migrateTilesetSources,
+  tilesetDependencies
+} from "./tilesetAssets.ts";
 
 export class VoxelMapState implements VoxelCommandTarget {
   readonly world: VoxelWorld;
@@ -36,7 +42,9 @@ export class VoxelMapState implements VoxelCommandTarget {
   load(
     document: VoxelWorldJSON
   ): void {
-    deserializeVoxelWorld(document, this.world, {
+    const world = migrateTilesetSources(document);
+
+    deserializeVoxelWorld(world, this.world, {
       blocks: this.blocks,
       tilesets: this.tilesets
     });
@@ -45,12 +53,25 @@ export class VoxelMapState implements VoxelCommandTarget {
   applyCommand(
     command: VoxelNetworkCommand
   ): void {
-    if (command.action === "world-replace") {
-      this.load(parseVoxelDocument(command.data));
+    switch (command.action) {
+      case "world-replace":
+        this.load(
+          parseVoxelDocument(command.data)
+        );
+        break;
+      case "tileset-added":
+        applyVoxelCommand(this, {
+          ...command,
+          tileset: migrateTilesetDefinition(command.tileset)
+        });
+        break;
+      default:
+        applyVoxelCommand(this, command);
     }
-    else {
-      applyVoxelCommand(this, command);
-    }
+  }
+
+  dependencies(): TilesetAssetReference[] {
+    return tilesetDependencies(this.tilesets);
   }
 
   clear(): void {

@@ -4,16 +4,13 @@ import {
   ActorComponent
 } from "@jolly-pixel/engine";
 import type * as network from "@jolly-pixel/network";
+import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type ModelManager from "../features/groups/ModelManager.ts";
 import type { GroupTransformSnapshot } from "../features/groups/hooks.ts";
 import { snapshotTransform } from "../features/groups/transformCodec.ts";
-import type {
-  ModelNetworkCommand,
-  ModelServerMessage
-} from "../network/types.ts";
-import { peerColor } from "./identity.ts";
+import type { VoxelModelRoom } from "../network/types.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
 
 // CONSTANTS
@@ -27,7 +24,7 @@ export interface GroupTransformLivePayload {
 }
 
 export interface GroupTransformLiveSyncOptions {
-  room: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  room: VoxelModelRoom;
   modelManager: ModelManager;
 }
 
@@ -55,7 +52,7 @@ function decodeLivePayload(
 }
 
 export class GroupTransformLiveSync extends ActorComponent {
-  #room: network.Room<ModelNetworkCommand, ModelServerMessage>;
+  #room: VoxelModelRoom;
   #modelManager: ModelManager;
   #streams = new Map<string, LiveStream>();
   #lastSentAt = 0;
@@ -156,7 +153,7 @@ export class GroupTransformLiveSync extends ActorComponent {
       };
       this.#streams.set(clientId, stream);
       localGroup.emphasize(
-        peerColor(clientId, this.#room.peers.get(clientId)?.profile),
+        peerProfileColor(clientId, this.#room.peers.get(clientId)?.profile),
         `${kEmphasisOwnerPrefix}${clientId}`
       );
     }

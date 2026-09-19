@@ -113,7 +113,10 @@ describe("CatalogExtension — join", () => {
       clientId: "A",
       payload: {
         type: CATALOG_SNAPSHOT,
-        manifest: projection.snapshot()
+        manifest: projection.snapshot(),
+        dependencies: {
+          [projection.snapshot().assets[0].id]: []
+        }
       }
     });
     extension.dispose();

@@ -24,6 +24,7 @@ import { Reconciler } from "./reconcile/Reconciler.ts";
 import { ReconciliationWatcher } from "./reconcile/ReconciliationWatcher.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogExtension } from "./catalog/CatalogExtension.ts";
+import { backfillDependencies } from "./catalog/backfillDependencies.ts";
 import { registerAssetRooms } from "./rooms/registerAssetRooms.ts";
 import {
   silentLogger,
@@ -214,6 +215,18 @@ export async function createAssetBackend(
 
   catalog.load();
   catalog.start();
+  const backfilled = await backfillDependencies({
+    catalog,
+    kinds,
+    projector,
+    writer,
+    logger
+  });
+  if (backfilled > 0) {
+    logger
+      .withMetadata({ assets: backfilled })
+      .info("asset dependencies backfilled");
+  }
   const catalogExtension = new CatalogExtension({
     projection: catalog,
     writer,

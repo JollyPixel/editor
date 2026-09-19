@@ -24,6 +24,34 @@ type. See [Typed payloads](./Sync.md#typed-payloads).
 
 Each catalog record uses the asset content hash as its `revision`.
 
+## Dependency edges
+
+The projection also indexes which assets reference which. Edges come from the
+`dependencies` field of `asset.created` and `asset.updated` events (see
+[AssetWriter](./AssetWriter.md#create)), so the catalog never decodes content.
+
+```ts
+projection.dependenciesOf(assetId): readonly AssetReferenceData[];
+projection.dependentsOf(assetId): readonly string[];
+projection.closureOf(assetId): AssetReferenceData[];
+projection.dependencies(): DependencyMap;
+projection.unindexed(): IterableIterator<string>;
+```
+
+- A write replaces every outgoing edge of its asset. A rename keeps them and a
+  deletion drops them.
+- Edges pointing at a deleted asset stay, so `dependentsOf` still lists the
+  assets that reference it.
+- `closureOf` walks edges transitively, breadth first. Each asset is listed
+  once, cycles terminate, and the root is never listed.
+- `unindexed()` lists assets whose newest write predates edges.
+
+`createAssetBackend` backfills these assets once at boot: each one whose kind
+declares [`dependencies`](./AssetKinds.md) is rewritten with unchanged content
+and computed edges. Later boots find nothing to backfill.
+
+The same index is exported as `DependencyIndex` from the browser client entry.
+
 ## Network room
 
 `CatalogExtension` provides the `asset-catalog` room. A client receives a
@@ -71,11 +99,15 @@ means renaming each asset under it, one command at a time.
 ### Messages
 
 ```ts
-{ type: "catalog:snapshot", manifest: AssetManifestData }
-{ type: "catalog:changed", change: { eventType, assetId, record } }
+{ type: "catalog:snapshot", manifest: AssetManifestData, dependencies?: DependencyMap }
+{ type: "catalog:changed", change: { eventType, assetId, record, dependencies? } }
 { type: "catalog:applied", requestId?, command, assetId }
 { type: "catalog:rejected", requestId?, command, reason }
 ```
+
+`dependencies` maps each indexed asset to its outgoing edges. On a change it
+holds every outgoing edge of the asset after the change, and is absent on
+deletion and for an unindexed asset.
 
 A successful command reaches every member as `catalog:changed`, through the
 same projection that carries reconciler writes, then the author alone gets
@@ -130,8 +162,10 @@ await catalog.remove(assetId);
 | `records()` / `record(assetId)` | Current `AssetRecordData`, kept in sync with `catalog:changed`. |
 | `create(path, content, options?)` | Resolves the created asset ID. `options` takes `kind` and `onConflict`. |
 | `rename(assetId, to)` / `remove(assetId)` | Resolve once applied. |
+| `dependenciesOf(assetId)` / `dependentsOf(assetId)` / `closureOf(assetId)` | [Dependency edges](#dependency-edges), kept in sync with the room. |
 | `dispose()` | Leaves the room and rejects pending requests. |
 | `"change"` event | Emitted after the snapshot and each change. |
+| `"dependencies"` event | Receives an asset ID whose outgoing edges changed. |
 
 The client joins the room on construction and sends requests only after
 `ready`. A `catalog:rejected` reply rejects the request with

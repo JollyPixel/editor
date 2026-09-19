@@ -10,6 +10,7 @@ Asset room names are modelled by [`AssetRoom`](./domain/AssetRoom.md).
 ```ts
 const CATALOG_URL_PATH = "/__jollypixel/catalog";
 const ASSET_URL_PREFIX = "/assets/";
+const LAUNCH_ELEMENT_ID = "jolly-launch";
 
 function assetSourceUrl(
   source: string,
@@ -19,6 +20,8 @@ function assetSourceUrl(
 
 `CATALOG_URL_PATH` is the shared route for a catalog manifest.
 `ASSET_URL_PREFIX` is the default route prefix for asset bytes.
+`LAUNCH_ELEMENT_ID` is the id of the `<script type="application/json">`
+element a dev server injects to tell an editor which asset to open.
 
 `assetSourceUrl()` removes empty path segments, percent-encodes each remaining
 segment, and preserves the separators. It accepts a custom prefix with or

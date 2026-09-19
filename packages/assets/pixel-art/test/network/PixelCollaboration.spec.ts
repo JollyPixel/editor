@@ -29,7 +29,7 @@ function setup() {
 }
 
 describe("PixelCollaboration", () => {
-  test("sends buffer edits and publishes previews on one room", async() => {
+  test("publishes previews without sending buffer edits", async() => {
     const { room, canvas, collaboration } = setup();
 
     canvas.onCursorMove?.({ x: 1, y: 1 });
@@ -44,18 +44,7 @@ describe("PixelCollaboration", () => {
       room.presenceUpdates.flatMap((patch) => Object.keys(patch)),
       ["cursor", "strokeGhost"]
     );
-    assert.deepStrictEqual(room.sent.map((sent) => sent.action), ["resized"]);
-    collaboration.destroy();
-    canvas.destroy();
-  });
-
-  test("is ready once the first snapshot lands", () => {
-    const { room, canvas, collaboration } = setup();
-
-    assert.strictEqual(collaboration.ready, false);
-    room.deliverSnapshot();
-
-    assert.strictEqual(collaboration.ready, true);
+    assert.deepStrictEqual(room.sent, []);
     collaboration.destroy();
     canvas.destroy();
   });
@@ -96,19 +85,13 @@ describe("PixelCollaboration", () => {
     canvas.destroy();
   });
 
-  test("destroy releases every canvas hook and room listener", () => {
-    const { room, canvas, collaboration } = setup();
+  test("destroy releases every canvas hook", () => {
+    const { canvas, collaboration } = setup();
 
     collaboration.destroy();
-    room.deliverSnapshot();
-    canvas.onBufferUpdated?.({
-      action: "resized",
-      metadata: { size: { x: 4, y: 4 } }
-    });
 
     assert.strictEqual(canvas.onStrokeProgress, undefined);
-    assert.strictEqual(collaboration.ready, false);
-    assert.deepStrictEqual(room.sent, []);
+    assert.strictEqual(canvas.onCursorMove, undefined);
     canvas.destroy();
   });
 });

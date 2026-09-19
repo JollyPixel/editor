@@ -1,26 +1,15 @@
 // Import Third-party Dependencies
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import { Grid } from "@jolly-pixel/three";
-import type * as network from "@jolly-pixel/network";
+import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { ModelSceneComponent } from "./ModelSceneComponent.ts";
-import type { EditorIdentity } from "../collaboration/identity.ts";
-import type {
-  ModelNetworkCommand,
-  ModelServerMessage
-} from "../network/types.ts";
-import type {
-  FolderNetworkCommand,
-  FolderServerMessage
-} from "../network/folderTypes.ts";
+import type { VoxelModelRoom } from "../network/types.ts";
 
 export interface ModelEditorSceneOptions {
-  room?: network.Room<ModelNetworkCommand, ModelServerMessage>;
-  /** Absent offline, folders stay local only. */
-  folderRoom?: network.Room<FolderNetworkCommand, FolderServerMessage>;
-  /** Absent offline, no collaboration is wired up. */
-  identity?: EditorIdentity;
+  room?: VoxelModelRoom;
+  identity?: PeerIdentity;
 }
 
 export interface ModelEditorSceneHandles {
@@ -28,9 +17,8 @@ export interface ModelEditorSceneHandles {
 }
 
 export class ModelEditorScene extends Systems.Scene {
-  #room: network.Room<ModelNetworkCommand, ModelServerMessage> | undefined;
-  #folderRoom: network.Room<FolderNetworkCommand, FolderServerMessage> | undefined;
-  #identity: EditorIdentity | undefined;
+  #room: VoxelModelRoom | undefined;
+  #identity: PeerIdentity | undefined;
   #handles = Promise.withResolvers<ModelEditorSceneHandles>();
 
   get ready(): Promise<ModelEditorSceneHandles> {
@@ -42,7 +30,6 @@ export class ModelEditorScene extends Systems.Scene {
   ) {
     super("model-editor");
     this.#room = options.room;
-    this.#folderRoom = options.folderRoom;
     this.#identity = options.identity;
   }
 
@@ -86,7 +73,6 @@ export class ModelEditorScene extends Systems.Scene {
       .addComponentAndGet(ModelSceneComponent, {
         camera,
         room: this.#room,
-        folderRoom: this.#folderRoom,
         identity: this.#identity
       });
 

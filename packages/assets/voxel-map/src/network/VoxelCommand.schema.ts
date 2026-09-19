@@ -180,11 +180,24 @@ const kTilesetCommandProperties: Record<
   Record<string, JSONSchema>
 > = {
   "tileset-added": {
-    tileset: objectSchema({
-      id: { type: "string", minLength: 1 },
-      src: { type: "string", minLength: 1 },
-      tileSize: kTileSizeSchema
-    })
+    tileset: {
+      ...objectSchema(
+        {
+          id: { type: "string", minLength: 1 },
+          src: { type: "string", minLength: 1 },
+          asset: objectSchema({
+            id: { type: "string", minLength: 1 },
+            kind: { type: "string", minLength: 1 }
+          }),
+          tileSize: kTileSizeSchema
+        },
+        ["id", "tileSize"]
+      ),
+      anyOf: [
+        { required: ["src"] },
+        { required: ["asset"] }
+      ]
+    }
   },
   "tileset-removed": {
     tilesetId: { type: "string" }

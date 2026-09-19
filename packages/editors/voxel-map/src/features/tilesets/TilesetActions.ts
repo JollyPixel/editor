@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/asset";
 import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/catalog/client";
 import { createPixelArtAsset } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import { tilesetAsset } from "@jolly-pixel/asset.voxel-map/network/client.ts";
 import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
@@ -100,7 +101,7 @@ export class TilesetActions {
     const tilesetId = this.#uniqueTilesetId();
     const added = this.#engine.addTileset({
       id: tilesetId,
-      src: options.assetId,
+      asset: tilesetAsset(options.assetId),
       tileSize: options.tileSize
     });
 

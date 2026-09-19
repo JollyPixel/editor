@@ -96,9 +96,13 @@ export class TilesetList implements Iterable<TilesetDefinition> {
       return false;
     }
 
+    const {
+      cols: _cols,
+      rows: _rows,
+      ...source
+    } = current;
     this.#definitions.set(tilesetId, {
-      id: current.id,
-      src: current.src,
+      ...source,
       tileSize
     });
     this.#version++;
@@ -152,5 +156,12 @@ function isDeclarable(
 function copyDefinition(
   definition: TilesetDefinition
 ): TilesetDefinition {
-  return { ...definition };
+  if (definition.asset === undefined) {
+    return { ...definition };
+  }
+
+  return {
+    ...definition,
+    asset: { ...definition.asset }
+  };
 }

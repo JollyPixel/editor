@@ -10,7 +10,8 @@ import {
 } from "./bytes.ts";
 import {
   counterCommandProtocol,
-  counterSnapshotSchema
+  counterSnapshotSchema,
+  linkCommandProtocol
 } from "./protocols.ts";
 
 export const COUNTER_INCREMENTED = "counter.incremented";
@@ -79,6 +80,79 @@ export function liveCounterHandler(
           }
         };
       }
+    }
+  };
+}
+
+export const LINK_TARGETS_SET = "link.targets-set";
+
+export interface LinkState {
+  targets: string[];
+}
+
+export interface LinkCommand {
+  action: "set";
+  targets: string[];
+}
+
+export function linkReference(
+  id: string
+): { id: string; kind: string; } {
+  return {
+    id,
+    kind: "binary"
+  };
+}
+
+export function linkContent(
+  ...targets: string[]
+): Uint8Array {
+  return bytes(targets.join(","));
+}
+
+export function linkHandler(): AssetKindHandler<LinkState, LinkCommand> {
+  return {
+    kind: "link",
+    match: ["**/*.link"],
+    commands: {
+      eventType: LINK_TARGETS_SET,
+      protocol: linkCommandProtocol,
+      apply: (state, command) => {
+        state.targets = [...command.targets];
+      }
+    },
+
+    create(): LinkState {
+      return { targets: [] };
+    },
+
+    load(
+      state: LinkState,
+      content: Uint8Array
+    ): void {
+      const value = text(content);
+      if (value === "!") {
+        throw new Error("unreadable link");
+      }
+      state.targets = value.length === 0 ? [] : value.split(",");
+    },
+
+    clear(
+      state: LinkState
+    ): void {
+      state.targets = [];
+    },
+
+    serialize(
+      state: LinkState
+    ): Promise<Uint8Array> {
+      return Promise.resolve(linkContent(...state.targets));
+    },
+
+    dependencies(
+      state: LinkState
+    ) {
+      return state.targets.map(linkReference);
     }
   };
 }

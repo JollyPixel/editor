@@ -5,8 +5,8 @@ import {
   type Actor,
   type OrbitFlyCamera
 } from "@jolly-pixel/engine";
-import type * as network from "@jolly-pixel/network";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import ModelManager from "../features/groups/ModelManager.ts";
@@ -21,28 +21,17 @@ import { GroupTransformLock } from "../collaboration/GroupTransformLock.ts";
 import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
 import { PeerSelectionHighlight } from "../collaboration/PeerSelectionHighlight.ts";
 import { PeerRoster } from "../collaboration/PeerRoster.ts";
-import type { EditorIdentity } from "../collaboration/identity.ts";
 import { ModelSyncClient } from "../network/ModelSyncClient.ts";
 import { FolderSyncClient } from "../network/FolderSyncClient.ts";
-import type {
-  ModelNetworkCommand,
-  ModelServerMessage
-} from "../network/types.ts";
-import type {
-  FolderNetworkCommand,
-  FolderServerMessage
-} from "../network/folderTypes.ts";
+import type { VoxelModelRoom } from "../network/types.ts";
 import { editorState } from "./state/index.ts";
 
 export type { GizmoMode, GizmoTarget, GizmoSpace, GizmoConfig } from "../features/transform/GizmoManager.ts";
 
 export interface ModelSceneComponentOptions {
   camera: OrbitFlyCamera;
-  room?: network.Room<ModelNetworkCommand, ModelServerMessage>;
-  /** Absent offline, folders stay local only. */
-  folderRoom?: network.Room<FolderNetworkCommand, FolderServerMessage>;
-  /** Absent offline, no collaboration is wired up. */
-  identity?: EditorIdentity;
+  room?: VoxelModelRoom;
+  identity?: PeerIdentity;
 }
 
 export class ModelSceneComponent extends ActorComponent {
@@ -51,9 +40,8 @@ export class ModelSceneComponent extends ActorComponent {
   #gizmo!: GizmoManager;
   #modelManager!: ModelManager;
   #folderManager!: FolderManager;
-  #room: network.Room<ModelNetworkCommand, ModelServerMessage> | undefined;
-  #folderRoom: network.Room<FolderNetworkCommand, FolderServerMessage> | undefined;
-  #identity: EditorIdentity | undefined;
+  #room: VoxelModelRoom | undefined;
+  #identity: PeerIdentity | undefined;
   #peerRoster: PeerRoster | undefined;
   #groupSelections: GroupSelectionPresence | undefined;
   #peerFrustums: PeerFrustums | undefined;
@@ -71,7 +59,6 @@ export class ModelSceneComponent extends ActorComponent {
     super({ actor, typeName: "ModelScene" });
     this.#camera = options.camera;
     this.#room = options.room;
-    this.#folderRoom = options.folderRoom;
     this.#identity = options.identity;
   }
 
@@ -102,9 +89,9 @@ export class ModelSceneComponent extends ActorComponent {
     this.#folderManager = new FolderManager();
     this.#folderManager.onFolderUpdated = this.#onFolderHookEvent;
 
-    if (this.#folderRoom) {
+    if (this.#room) {
       this.#folderSync = new FolderSyncClient({
-        room: this.#folderRoom,
+        room: this.#room,
         folderManager: this.#folderManager
       });
       this.#folderSync.on("snapshot", this.#onFolderSnapshotApplied);
@@ -146,7 +133,6 @@ export class ModelSceneComponent extends ActorComponent {
     }
 
     this.#room?.join();
-    this.#folderRoom?.join();
   }
 
   readonly #onModelHookEvent = (

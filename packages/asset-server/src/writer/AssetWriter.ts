@@ -3,7 +3,10 @@ import { randomUUID } from "node:crypto";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import { AssetSource as AssetSourcePath } from "@jolly-pixel/asset";
+import {
+  AssetSource as AssetSourcePath,
+  type AssetReferenceData
+} from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
@@ -26,7 +29,8 @@ import {
   ASSET_RENAMED,
   ASSET_UPDATED,
   writeData,
-  type AssetEventDataMap
+  type AssetEventDataMap,
+  type AssetWriteData
 } from "../events/AssetEvents.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetProjection } from "../projection/applyProjection.ts";
@@ -51,9 +55,17 @@ interface WriteOptions {
   alreadyProjected?: boolean;
 }
 
-export interface CreateAssetInput extends WriteOptions {
-  path: string;
+interface ContentWriteOptions extends WriteOptions {
   data: Uint8Array;
+  /**
+   * Assets `data` references.
+   * @default computed by the kind handler from `data`
+   */
+  dependencies?: readonly AssetReferenceData[];
+}
+
+export interface CreateAssetInput extends ContentWriteOptions {
+  path: string;
   kind?: string;
   /**
    * @default the id the identity sidecar records for a vacant path, else a
@@ -63,9 +75,8 @@ export interface CreateAssetInput extends WriteOptions {
   onPathConflict?: PathConflictPolicy;
 }
 
-export interface UpdateAssetInput extends WriteOptions {
+export interface UpdateAssetInput extends ContentWriteOptions {
   assetId: string;
-  data: Uint8Array;
 }
 
 export interface RenameAssetInput extends WriteOptions {
@@ -120,7 +131,7 @@ export class AssetWriter {
       assetId,
       kind,
       ASSET_CREATED,
-      writeData(path, kind, input.data),
+      this.#writeData(assetId, path, kind, input),
       input
     );
     if (!appended.ok) {
@@ -152,7 +163,7 @@ export class AssetWriter {
         input.assetId,
         kind,
         ASSET_UPDATED,
-        writeData(path, kind, input.data),
+        this.#writeData(input.assetId, path, kind, input),
         input
       )
     );
@@ -245,6 +256,52 @@ export class AssetWriter {
       Ok(current);
   }
 
+  #writeData(
+    assetId: string,
+    path: string,
+    kind: string,
+    input: ContentWriteOptions
+  ): AssetWriteData {
+    const references = input.dependencies ??
+      this.#dependencies(assetId, kind, input.data);
+
+    return writeData(
+      path,
+      kind,
+      input.data,
+      uniqueDependencies(assetId, references)
+    );
+  }
+
+  #dependencies(
+    assetId: string,
+    kind: string,
+    data: Uint8Array
+  ): readonly AssetReferenceData[] {
+    const handler = this.#kinds.get(kind);
+    if (handler.dependencies === undefined) {
+      return [];
+    }
+
+    try {
+      const state = handler.create(assetId);
+      handler.load(state, data);
+
+      return handler.dependencies(state);
+    }
+    catch (error) {
+      this.#logger
+        .withMetadata({
+          assetId,
+          kind,
+          reason: asError(error).message
+        })
+        .warn("asset dependencies not computed");
+
+      return [];
+    }
+  }
+
   #dormantId(
     path: string
   ): string | undefined {
@@ -322,15 +379,36 @@ export class AssetWriter {
   }
 }
 
+function uniqueDependencies(
+  assetId: string,
+  references: readonly AssetReferenceData[]
+): AssetReferenceData[] {
+  const unique = new Map<string, AssetReferenceData>();
+  for (const reference of references) {
+    if (
+      reference.id !== assetId &&
+      !unique.has(reference.id)
+    ) {
+      unique.set(reference.id, reference);
+    }
+  }
+
+  return [...unique.values()];
+}
+
 function writableAssetPath(
   input: string
 ): Result<string, AssetPathEscapeError> {
   const result = safeAssetPath(input);
   if (!result.ok) {
-    return Err(new AssetPathEscapeError(input, result.val));
+    return Err(
+      new AssetPathEscapeError(input, result.val)
+    );
   }
   if (isStatePath(result.val)) {
-    return Err(new AssetPathEscapeError(input, "reserved"));
+    return Err(
+      new AssetPathEscapeError(input, "reserved")
+    );
   }
 
   return Ok(result.val);

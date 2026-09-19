@@ -59,6 +59,12 @@
       "path": "./packages/assets/voxel-map"
     },
     {
+      "path": "./packages/assets/voxel-model"
+    },
+    {
+      "path": "./packages/editors/host"
+    },
+    {
       "path": "./packages/editors/pixel-art"
     },
     {

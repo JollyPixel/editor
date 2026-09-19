@@ -27,34 +27,23 @@ import type {
 export interface CanvasViewOptions {
   parent: HTMLDivElement;
   zoom?: ZoomOptions;
-  /**
-   * Outside color;
-   * defaults to the parent's background or `#424242`.
-   */
   background?: ByteColorInput;
   backgroundTransparency?: {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
   brushHighlight: BrushHighlight;
-  /**
-   * Explicit fill for a peer's vacated selection footprint.
-   * @default null (dominant neighbor color)
-   */
   eraseColor?: RGBA8 | null;
-  /**
-   * Whether the selection outline shows its size.
-   * @default true
-   */
   selectionSizeLabel?: boolean;
 }
 
-/**
- * Owns the canvas, overlays, and viewport camera.
- */
 export class CanvasView {
   #doc: PixelDocument;
   #onRenderStateChanged = () => this.renderer.drawFrame();
+  #onTextureSizeChanged = (event: { size: Vec2; }) => {
+    this.viewport.texture.resize(event.size);
+    this.renderer.drawFrame();
+  };
   #frameRequest: number | null = null;
   #lastFrameTime = 0;
   #onViewportAnimating = () => {
@@ -144,6 +133,8 @@ export class CanvasView {
     });
 
     doc.on("changed", this.#onRenderStateChanged);
+    doc.on("resized", this.#onTextureSizeChanged);
+    doc.on("replaced", this.#onTextureSizeChanged);
     this.renderer.floatingSelection.on(
       "changed",
       this.#onRenderStateChanged
@@ -212,6 +203,8 @@ export class CanvasView {
       "changed",
       this.#onRenderStateChanged
     );
+    this.#doc.off("resized", this.#onTextureSizeChanged);
+    this.#doc.off("replaced", this.#onTextureSizeChanged);
     this.renderer.floatingSelection.off(
       "changed",
       this.#onRenderStateChanged

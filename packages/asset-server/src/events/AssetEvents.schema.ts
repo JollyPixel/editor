@@ -39,6 +39,18 @@ export const assetContentSchema = defineSchema({
   ]
 });
 
+export const assetReferenceSchema = defineSchema({
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    kind: { type: "string" }
+  },
+  required: [
+    "id",
+    "kind"
+  ]
+});
+
 export const assetWriteDataSchema = defineSchema({
   type: "object",
   properties: {
@@ -46,7 +58,11 @@ export const assetWriteDataSchema = defineSchema({
     kind: { type: "string" },
     hash: { type: "string" },
     size: { type: "number" },
-    content: assetContentSchema
+    content: assetContentSchema,
+    dependencies: {
+      type: "array",
+      items: assetReferenceSchema
+    }
   },
   required: [
     "path",

@@ -6,7 +6,7 @@ This glossary defines the vocabulary for the local pixel-drawing context. It cov
 
 ### Pixel Document
 
-The editable unit of work: the texture data, UV map, and local undo/redo history. `PixelDocument` is the internal owner of these parts.
+The editable unit of work: the texture data, UV map, and local undo/redo history. `PixelDocument` owns these parts and needs no view: a network client can sync it headless, and several canvases can edit one document.
 
 ### Texture
 

@@ -140,9 +140,26 @@ accepts every `createAssetWorkspace` option plus:
 | `prefix` | `/assets/` | URL prefix the workspace is served under. |
 | `socketPath` | `/ws-sync` | WebSocket upgrade path, kept apart from Vite HMR. |
 | `onReady` | none | Receives the workspace once the back-end is up. |
+| `launch` | none | Picks the asset an HTML page opens, see below. |
 
 Everything is built inside `configureServer`, so a production build never
 opens the event log. `closeBundle` closes the workspace.
+
+`launch` tells an editor page which asset to open, with nothing in the URL:
+
+```ts
+createAssetWorkspacePlugin({
+  root,
+  launch: ({ url, catalog }) => url.searchParams.get("target") ??
+    catalog.toJSON().assets.find((record) => record.kind === "voxelmap")?.id
+});
+```
+
+It receives the requested page URL and the current `AssetCatalog`, and returns
+an asset ID or `undefined`. The ID is written into the page head as
+`<script type="application/json" id="jolly-launch">{"target":"<id>"}</script>`,
+where `LAUNCH_ELEMENT_ID` from `@jolly-pixel/asset` names the element. Nothing
+is injected for `undefined`.
 
 Use `onReady`, or pass your own `server`, when the dev server also hosts rooms
 of its own:

@@ -4,7 +4,6 @@ import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelCursorSync } from "./PixelCursorSync.ts";
-import { PixelSyncClient } from "./PixelSyncClient.ts";
 import { PixelStrokeGhostSync } from "./ghosts/PixelStrokeGhostSync.ts";
 import { SelectionGhostSync } from "./ghosts/SelectionGhostSync.ts";
 import { UVGhostSync } from "./ghosts/UVGhostSync.ts";
@@ -23,15 +22,10 @@ export interface PixelCollaborationOptions {
   canvas: PixelArtCanvas;
   label: PeerLabel;
   color: PeerColor;
-  /**
-   * See `UVGhostSyncOptions.onRemoteRegionDragging`.
-   */
   onRemoteUvDragging?: (payload: UVGhostPayload) => void;
 }
 
 export class PixelCollaboration {
-  readonly sync: PixelSyncClient;
-
   #presence: { destroy(): void; }[];
 
   constructor(
@@ -45,7 +39,6 @@ export class PixelCollaboration {
       onRemoteUvDragging
     } = options;
 
-    this.sync = new PixelSyncClient({ room, canvas });
     this.#presence = [
       new PixelCursorSync({ room, canvas, label, color }),
       new PixelStrokeGhostSync({ room, canvas }),
@@ -59,14 +52,9 @@ export class PixelCollaboration {
     ];
   }
 
-  get ready(): boolean {
-    return this.sync.ready;
-  }
-
   destroy(): void {
     for (const presence of this.#presence) {
       presence.destroy();
     }
-    this.sync.destroy();
   }
 }

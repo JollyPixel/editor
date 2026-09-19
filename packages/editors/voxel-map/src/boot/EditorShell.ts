@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
-import type { Input } from "@jolly-pixel/engine";
-import { inputLayers } from "@jolly-pixel/ui";
+import type { EditorRuntime } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import type { EditorState } from "../app/state/index.ts";
@@ -10,14 +9,16 @@ import type {
 } from "../app/EditorScene.ts";
 import { EditorPanels } from "../app/panels/index.ts";
 import type { ViewFocus } from "../scene/index.ts";
-import type { TextureRoomFactory } from "../features/texture/TextureEditor.ts";
+import type { TilesetTextures } from "../features/tilesets/TilesetTextures.ts";
+
+// CONSTANTS
+const kCanvasHoverEvent = "canvas-hover-change";
 
 export interface EditorShellOptions {
   state: EditorState;
   viewFocus: ViewFocus;
-  input: Input;
+  runtime: EditorRuntime;
   scene: EditorScene;
-  textureRooms?: TextureRoomFactory;
 }
 
 export class EditorShell {
@@ -31,14 +32,9 @@ export class EditorShell {
     const {
       state,
       viewFocus,
-      input,
-      scene,
-      textureRooms
+      runtime,
+      scene
     } = options;
-
-    this.#disposables.push(
-      input.keyboard.addGuard(inputLayers)
-    );
 
     const activityLog = document.querySelector("jolly-log");
     if (activityLog) {
@@ -60,23 +56,26 @@ export class EditorShell {
     const panels = EditorPanels.mount(document, {
       state,
       viewFocus,
-      textureRooms,
       onLoadWorld: (data) => scene.loadWorld(data),
-      onTeleportToPeer: (clientId) => scene.teleportToPeer(clientId),
-      onCanvasHoverChange: (hovering) => {
-        input.keyboard.enabled = !hovering;
-      }
+      onTeleportToPeer: (clientId) => scene.teleportToPeer(clientId)
     });
     if (panels !== null) {
       this.#panels = panels;
-      this.#disposables.push(() => panels.dispose());
+      this.#disposables.push(
+        runtime.suspendKeyboardOnHover(panels.layout, kCanvasHoverEvent),
+        () => panels.dispose()
+      );
     }
   }
 
   adoptHandles(
-    handles: EditorSceneHandles
+    handles: EditorSceneHandles,
+    textures: TilesetTextures
   ): void {
-    this.#panels?.adoptHandles(handles);
+    this.#panels?.adoptHandles({
+      ...handles,
+      textures
+    });
     if (this.#toolbar) {
       this.#toolbar.history = handles.engine.history;
     }
