@@ -1,5 +1,25 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 6.0.0
+
+### Major Changes
+
+- [#723](https://github.com/JollyPixel/editor/pull/723) [`4c3de3b`](https://github.com/JollyPixel/editor/commit/4c3de3b110acdb9642ca70798d7d12e3d66e2967) Thanks [@fraxken](https://github.com/fraxken)! - Wheel zoom is now multiplicative and eased around the cursor (`zoom.smoothing`, `zoom.target`), snaps near whole levels, and keeps the camera on whole pixels.
+  Breaking: `zoom.sensitivity` is now the relative change per notch (default `0.25`), halving toward `max`.
+
+### Minor Changes
+
+- [#719](https://github.com/JollyPixel/editor/pull/719) [`3fa7340`](https://github.com/JollyPixel/editor/commit/3fa7340724862619d60dc63df0564a2e87333ae2) Thanks [@fraxken](https://github.com/fraxken)! - A ramp slope with its own tile now samples its true `√2` length (16 by 23 texels on 16-texel tiles) through the new `TileSpan`; shared `defaultTexture` tiles stay square.
+  `UVSlotGeometryTemplate` accepts a per-slot `width` and `height`.
+
+- [#721](https://github.com/JollyPixel/editor/pull/721) [`710542c`](https://github.com/JollyPixel/editor/commit/710542c574f803f405bec2b5d9270b5f4e83898d) Thanks [@fraxken](https://github.com/fraxken)! - Add 90° UV rotation: `UVMap.rotate()` turns stacked and unfolded regions whole and free slots one at a time (`R`/`Shift+R`), stored as `rotation` on the slot geometry, and `UVMap.move()` now keeps the region's size.
+  `ResolvedTileRef.rotation` turns a tile inside its face, and odd turns swap the footprint.
+
+### Patch Changes
+
+- [#720](https://github.com/JollyPixel/editor/pull/720) [`749d1ea`](https://github.com/JollyPixel/editor/commit/749d1ea50c7e646b0ed446f16975471da4946a23) Thanks [@fraxken](https://github.com/fraxken)! - Reframe the texture when a canvas or texture resize makes it start or stop
+  fitting, so a grow then shrink no longer pushes it out of view.
+
 ## 5.0.0
 
 ### Major Changes
