@@ -7,7 +7,7 @@ import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 import { encodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
-import { TEXTURE_SIZE } from "./constants.ts";
+import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 // CONSTANTS

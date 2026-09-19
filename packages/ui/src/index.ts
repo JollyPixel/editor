@@ -38,6 +38,8 @@ export {
   type JollyFieldEventName
 } from "./field/events.ts";
 export * from "./peer/types.ts";
+export * from "./peer/identity.ts";
+export * from "./peer/promptPeerIdentity.ts";
 
 export * from "./peer/Presence.ts";
 export * from "./peer/PresenceSource.ts";

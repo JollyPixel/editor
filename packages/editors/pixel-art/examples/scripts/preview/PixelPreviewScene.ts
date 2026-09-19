@@ -2,28 +2,19 @@
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import * as THREE from "three";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { PixelCanvasTexture } from "../../../src/mesh-texturing/PixelCanvasTexture.ts";
-import { RegionPreviewFactory } from "./RegionPreviewFactory.ts";
+import {
+  RegionPreviewBehavior,
+  type RegionPreviewStyle
+} from "./RegionPreviewBehavior.ts";
 import { RegionPreviewGallery } from "./RegionPreviewGallery.ts";
 import { RegionPreviewPicker } from "./RegionPreviewPicker.ts";
 
-declare global {
-  interface Window {
-    /**
-     * Current preview mesh count for e2e leak checks.
-     */
-    __uvPreviewMeshCount?: () => number;
-  }
-}
-
-export interface PixelPreviewSceneAppearance {
-  backgroundColor: THREE.ColorRepresentation;
-  borderColor: THREE.ColorRepresentation;
-}
-
-const kSceneAppearances: Record<string, PixelPreviewSceneAppearance> = {
+// CONSTANTS
+const kSceneAppearances = {
   light: {
     backgroundColor: "#eef3f7",
     borderColor: "#101820"
@@ -32,28 +23,30 @@ const kSceneAppearances: Record<string, PixelPreviewSceneAppearance> = {
     backgroundColor: "#161a1d",
     borderColor: "#f2f5f7"
   }
-};
+} as const satisfies Record<ResolvedThemeMode, PixelPreviewSceneAppearance>;
+
+export interface PixelPreviewSceneAppearance {
+  backgroundColor: THREE.ColorRepresentation;
+  borderColor: THREE.ColorRepresentation;
+}
 
 export interface PixelPreviewSceneOptions {
   canvasManager: PixelArtCanvas;
-  /**
-   * @default true
-   */
-  initialRotating?: boolean;
+  rotating: boolean;
 }
 
-/**
- * Owns the preview camera, controls, lights, gallery, and picker.
- */
+interface CanvasBinding {
+  texture: PixelCanvasTexture;
+  gallery: RegionPreviewGallery;
+  picker: RegionPreviewPicker;
+}
+
 export class PixelPreviewScene extends Systems.Scene {
   #canvasManager: PixelArtCanvas;
-  #rotating: boolean;
-  #borderColor: THREE.ColorRepresentation | null = null;
-
   #camera: THREE.Camera | null = null;
-  #canvasTexture!: PixelCanvasTexture;
-  #previewGallery!: RegionPreviewGallery;
-  #previewPicker!: RegionPreviewPicker;
+  #binding: CanvasBinding | null = null;
+  readonly #style: RegionPreviewStyle;
+  readonly #ready = Promise.withResolvers<void>();
 
   constructor(
     options: PixelPreviewSceneOptions
@@ -61,7 +54,18 @@ export class PixelPreviewScene extends Systems.Scene {
     super("pixel-preview");
 
     this.#canvasManager = options.canvasManager;
-    this.#rotating = options.initialRotating ?? true;
+    this.#style = {
+      rotating: options.rotating,
+      borderColor: new THREE.Color(kSceneAppearances.light.borderColor)
+    };
+  }
+
+  get ready(): Promise<void> {
+    return this.#ready.promise;
+  }
+
+  get meshCount(): number {
+    return this.#binding?.gallery.meshes.length ?? 0;
   }
 
   override awake(): void {
@@ -83,14 +87,8 @@ export class PixelPreviewScene extends Systems.Scene {
     orbitCamera.enterOrbitFocus({ x: 0, y: 0, z: 0 });
 
     this.#camera = orbitCamera.camera;
-    this.#bindCanvas(orbitCamera.camera);
-    window.__uvPreviewMeshCount = () => this.#previewGallery.meshes.length;
-
-    /*
-     * SceneManager calls awake next frame, after Runtime.load() resolves.
-     * World-dependent callers must wait for this event.
-     */
-    this.emit("awake");
+    this.#binding = this.#bind(this.#camera);
+    this.#ready.resolve();
   }
 
   setCanvas(
@@ -102,71 +100,71 @@ export class PixelPreviewScene extends Systems.Scene {
 
     this.#canvasManager = canvasManager;
     if (this.#camera !== null) {
-      this.#unbindCanvas();
-      this.#bindCanvas(this.#camera);
+      this.#unbind();
+      this.#binding = this.#bind(this.#camera);
     }
   }
 
   setAppearance(
-    theme: "light" | "dark"
+    theme: ResolvedThemeMode
   ): void {
     const appearance = kSceneAppearances[theme];
     this.world.sceneManager.getSource().background = new THREE.Color(
       appearance.backgroundColor
     );
-    this.#borderColor = appearance.borderColor;
-    this.#previewGallery.setAppearance({
-      borderColor: appearance.borderColor
-    });
+    this.#style.borderColor.set(appearance.borderColor);
   }
 
   setRotating(
     rotating: boolean
   ): void {
-    this.#rotating = rotating;
-    this.#previewGallery.setRotating(rotating);
+    this.#style.rotating = rotating;
   }
 
   override destroy(): void {
-    this.#unbindCanvas();
-    delete window.__uvPreviewMeshCount;
+    this.#unbind();
   }
 
-  #bindCanvas(
+  #bind(
     camera: THREE.Camera
-  ): void {
-    // One upload per animation frame, however many pixels the stroke touched.
-    this.#canvasTexture = new PixelCanvasTexture(this.#canvasManager);
-    this.#canvasTexture.on("resized", () => {
-      this.#previewGallery.refreshTextureSize();
+  ): CanvasBinding {
+    const canvasManager = this.#canvasManager;
+    const texture = new PixelCanvasTexture(canvasManager);
+    const gallery = new RegionPreviewGallery({
+      canvasManager,
+      createPreview: (region, textureSize) => this.world
+        .createActor(`uv-preview-${region.id}`)
+        .addComponentAndGet(RegionPreviewBehavior, {
+          canvasTexture: texture.texture,
+          region,
+          textureSize,
+          style: this.#style
+        })
     });
+    texture.on("resized", () => gallery.refreshTextureSize());
 
-    const previewFactory = new RegionPreviewFactory({
-      world: this.world,
-      canvasTexture: this.#canvasTexture.texture
-    });
-    this.#previewGallery = new RegionPreviewGallery({
-      previewFactory,
-      canvasManager: this.#canvasManager
-    });
-    this.#previewGallery.setRotating(this.#rotating);
-    if (this.#borderColor !== null) {
-      this.#previewGallery.setAppearance({
-        borderColor: this.#borderColor
-      });
-    }
-
-    this.#previewPicker = new RegionPreviewPicker({
-      uv: this.#canvasManager.uv,
+    const picker = new RegionPreviewPicker({
+      uv: canvasManager.uv,
       camera,
       canvas: this.world.renderer.canvas,
-      getMeshes: () => this.#previewGallery.meshes
+      getMeshes: () => gallery.meshes
     });
+
+    return {
+      texture,
+      gallery,
+      picker
+    };
   }
 
-  #unbindCanvas(): void {
-    this.#previewPicker.dispose();
-    this.#previewGallery.dispose();
-    this.#canvasTexture.dispose();
+  #unbind(): void {
+    if (this.#binding === null) {
+      return;
+    }
+
+    this.#binding.picker.dispose();
+    this.#binding.gallery.dispose();
+    this.#binding.texture.dispose();
+    this.#binding = null;
   }
 }

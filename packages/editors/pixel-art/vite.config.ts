@@ -18,7 +18,9 @@ import {
 // Import Internal Dependencies
 import {
   DEMO_ASSET_PATH,
-  TEXTURE_SIZE,
+  TEXTURE_SIZE
+} from "./examples/scripts/config.ts";
+import {
   WORKER_COUNT,
   testAssetPath
 } from "./test/e2e/constants.ts";

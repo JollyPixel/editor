@@ -10,33 +10,34 @@ import {
   catalogRoom
 } from "@jolly-pixel/asset-server/catalog/client";
 import {
-  PIXEL_ART_KIND,
-  type PixelNetworkCommand,
-  type PixelServerMessage
+  pixelArtRoom,
+  type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
 } from "@jolly-pixel/asset.voxel-map/network/client.ts";
+import {
+  promptPeerIdentity,
+  type PeerIdentity
+} from "@jolly-pixel/ui";
+import { toPeerMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  toPeerMetadata,
-  type EditorIdentity
-} from "../collaboration/identity.ts";
-import { resolveEditorIdentity } from "../collaboration/resolveEditorIdentity.ts";
 import {
   resolveEditorAssets,
   type EditorAssets
 } from "./assets/resolveEditorAssets.ts";
 
+// CONSTANTS
+const kIdentityPrompt = {
+  title: "Join voxel map",
+  storageKey: "voxel-map:username"
+};
+
 export type EditorWorldRoom = networkTypes.Room<
   VoxelNetworkCommand,
   VoxelServerMessage
->;
-export type EditorTextureRoom = networkTypes.Room<
-  PixelNetworkCommand,
-  PixelServerMessage
 >;
 
 export interface EditorSessionOptions {
@@ -47,21 +48,24 @@ export class EditorSession {
   static async open(
     options: EditorSessionOptions = {}
   ): Promise<EditorSession> {
-    const identity = await resolveEditorIdentity();
+    const identity = await promptPeerIdentity(kIdentityPrompt);
     const assets = await resolveEditorAssets(options);
 
-    return new EditorSession(identity, assets);
+    return new EditorSession(
+      identity,
+      assets
+    );
   }
 
   #client: network.Client;
 
-  readonly identity: EditorIdentity;
+  readonly identity: PeerIdentity;
   readonly assets: EditorAssets;
   readonly worldRoom: EditorWorldRoom;
   readonly catalog: CatalogClient;
 
   constructor(
-    identity: EditorIdentity,
+    identity: PeerIdentity,
     assets: EditorAssets
   ) {
     this.identity = identity;
@@ -77,15 +81,15 @@ export class EditorSession {
     this.worldRoom = this.#client.room<VoxelNetworkCommand, VoxelServerMessage>(
       worldRoomName
     );
-    this.catalog = new CatalogClient(catalogRoom(this.#client));
+    this.catalog = new CatalogClient(
+      catalogRoom(this.#client)
+    );
   }
 
   textureRoom(
     assetId: string
-  ): EditorTextureRoom {
-    return this.#client.room<PixelNetworkCommand, PixelServerMessage>(
-      new AssetRoom(PIXEL_ART_KIND, assetId).toString()
-    );
+  ): PixelArtRoom {
+    return pixelArtRoom(this.#client, assetId);
   }
 
   dispose(): void {

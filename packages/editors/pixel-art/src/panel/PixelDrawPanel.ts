@@ -19,7 +19,8 @@ import {
   ambientThemeMode,
   resolveThemeColor,
   themeStyles,
-  type JollyTabChangeDetail
+  type JollyTabChangeDetail,
+  type ResolvedThemeMode
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -69,6 +70,10 @@ const kDefaultTextureId = "default";
 const kDefaultTextureName = "Texture";
 
 export type ThemeMode = "light" | "dark" | "auto";
+
+export interface CanvasHoverChangeDetail {
+  hovering: boolean;
+}
 
 export interface PixelDrawTexture {
   readonly id: string;
@@ -193,6 +198,15 @@ export class PixelDrawPanel extends LitElement {
     });
   }
 
+  get resolvedTheme(): ResolvedThemeMode {
+    if (this.theme !== "auto") {
+      return this.theme;
+    }
+
+    return ambientThemeMode(this) ??
+      (this.#prefersDarkQuery?.matches ? "dark" : "light");
+  }
+
   get activeTextureId(): string | null {
     return this.#textures.active?.id ?? null;
   }
@@ -249,7 +263,7 @@ export class PixelDrawPanel extends LitElement {
   ): void {
     super.updated(changedProperties);
     if (changedProperties.has("theme")) {
-      this.#syncCanvasBackground();
+      this.#onThemeChange();
     }
   }
 
@@ -383,9 +397,28 @@ export class PixelDrawPanel extends LitElement {
 
   readonly #onPrefersColorSchemeChange = (): void => {
     if (this.theme === "auto") {
-      this.#syncCanvasBackground();
+      this.#onThemeChange();
     }
   };
+
+  #onThemeChange(): void {
+    this.#syncCanvasBackground();
+    this.dispatchEvent(new CustomEvent<ResolvedThemeMode>("theme-change", {
+      bubbles: true,
+      composed: true,
+      detail: this.resolvedTheme
+    }));
+  }
+
+  #dispatchCanvasHover(
+    hovering: boolean
+  ): void {
+    this.dispatchEvent(new CustomEvent<CanvasHoverChangeDetail>("canvas-hover-change", {
+      bubbles: true,
+      composed: true,
+      detail: { hovering }
+    }));
+  }
 
   #onDockToggle(): void {
     this.colorDocked = !this.colorDocked;
@@ -585,7 +618,12 @@ export class PixelDrawPanel extends LitElement {
           @dragleave=${this.#textureDrop.onDragLeave}
           @drop=${this.#textureDrop.onDrop}
         >
-          <div class="canvas-host" part="canvas-host"></div>
+          <div
+            class="canvas-host"
+            part="canvas-host"
+            @mouseenter=${() => this.#dispatchCanvasHover(true)}
+            @mouseleave=${() => this.#dispatchCanvasHover(false)}
+          ></div>
           ${this.#renderBusy()}
           ${this.#textureDrop.render()}
           <div
@@ -633,9 +671,11 @@ declare global {
 
   interface HTMLElementEventMap {
     colorpicked: CustomEvent<ColorPickedDetail>;
+    "canvas-hover-change": CustomEvent<CanvasHoverChangeDetail>;
     "color-docked-change": CustomEvent<boolean>;
     "texture-add-request": CustomEvent<TextureAddRequestDetail>;
     "texture-change": CustomEvent<TextureChangeDetail>;
     "texture-close-request": CustomEvent<TextureCloseRequestDetail>;
+    "theme-change": CustomEvent<ResolvedThemeMode>;
   }
 }

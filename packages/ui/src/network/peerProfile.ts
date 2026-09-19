@@ -1,19 +1,16 @@
 // Import Third-party Dependencies
+import type { PeerMetadata } from "@jolly-pixel/network/client";
 import { colorFromKey } from "@jolly-pixel/color";
-import type * as network from "@jolly-pixel/network";
 
-// CONSTANTS
-const kFallbackUsername = "Guest";
-
-export interface EditorIdentity {
-  username: string;
-  peerId: string;
-  color: string;
-}
+// Import Internal Dependencies
+import {
+  GUEST_USERNAME,
+  type PeerIdentity
+} from "../peer/identity.ts";
 
 export function toPeerMetadata(
-  identity: EditorIdentity
-): network.PeerMetadata {
+  identity: PeerIdentity
+): PeerMetadata {
   return {
     username: identity.username,
     peerId: identity.peerId
@@ -21,24 +18,24 @@ export function toPeerMetadata(
 }
 
 export function readUsername(
-  profile: network.PeerMetadata | undefined
+  profile: PeerMetadata | undefined
 ): string {
   return typeof profile?.username === "string"
     ? profile.username
-    : kFallbackUsername;
+    : GUEST_USERNAME;
 }
 
 export function readPeerId(
-  profile: network.PeerMetadata | undefined
+  profile: PeerMetadata | undefined
 ): string | undefined {
   return typeof profile?.peerId === "string"
     ? profile.peerId
     : undefined;
 }
 
-export function peerColor(
+export function peerProfileColor(
   clientId: string,
-  profile: network.PeerMetadata | undefined
+  profile: PeerMetadata | undefined
 ): string {
   return colorFromKey(
     readPeerId(profile) ?? clientId

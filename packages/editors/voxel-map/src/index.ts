@@ -4,7 +4,6 @@ import { AssetId } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { VoxelMapEditor } from "./boot/VoxelMapEditor.ts";
-import "./shared/domEvents.ts";
 import "./app/sidebarIcons.ts";
 
 declare global {

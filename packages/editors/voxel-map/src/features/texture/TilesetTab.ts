@@ -3,11 +3,7 @@ import type {
   TilesetDefinition,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
-import type * as network from "@jolly-pixel/network";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import type { PixelArtRoom } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -19,13 +15,11 @@ import { TextureEditorBridge } from "./bridge/TextureEditorBridge.ts";
 import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
 import { definitionsEqual } from "../tilesets/tilesetEntries.ts";
 
-export type TextureRoom = network.Room<PixelNetworkCommand, PixelServerMessage>;
-
 export interface TilesetTabOptions {
   canvas: PixelArtCanvas;
   engine: VoxelEngine;
   definition: TilesetDefinition;
-  room?: TextureRoom;
+  room?: PixelArtRoom;
   brush: BrushStore;
   worldStore: WorldStore;
 }
@@ -35,7 +29,7 @@ export class TilesetTab {
   readonly #engine: VoxelEngine;
   readonly #bridge: TextureEditorBridge;
   readonly #uvBridge: BlockUvBridge;
-  readonly #room: TextureRoom | undefined;
+  readonly #room: PixelArtRoom | undefined;
   #definition: TilesetDefinition;
 
   constructor(

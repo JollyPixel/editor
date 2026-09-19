@@ -3,7 +3,7 @@ import type { Locator } from "@playwright/test";
 
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
-import { TEXTURE_SIZE } from "./constants.ts";
+import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import {
   clickTexturePixel,
   dropFile,
@@ -62,7 +62,7 @@ async function waitForTextureSync(
 ): Promise<string> {
   const id = (await panelState(panel)).activeTextureId!;
   await panel.page().waitForFunction(
-    (textureId) => window.__pixelSyncReadyTextures?.includes(textureId) === true,
+    (textureId) => window.pixelArtDemo?.textures.isSynced(textureId) === true,
     id
   );
 

@@ -52,12 +52,12 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*"
   },
   "devDependencies": {
-    "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/bench": "workspace:*",
     "@jolly-pixel/color": "workspace:*",

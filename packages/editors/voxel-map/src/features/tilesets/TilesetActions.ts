@@ -4,11 +4,8 @@ import {
   type AssetRecordData
 } from "@jolly-pixel/asset";
 import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/catalog/client";
-import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art/network/client.ts";
-import {
-  createPixelArtDocument,
-  encodePixelArtDocument
-} from "@jolly-pixel/pixel-draw.renderer";
+import { createPixelArtAsset } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -85,13 +82,10 @@ export class TilesetActions {
       x: options.cols * options.tileSize,
       y: options.rows * options.tileSize
     });
-    const assetId = await this.#catalog.create(
+    const assetId = await createPixelArtAsset(
+      this.#catalog,
       `${kTextureDirectory}${options.name.trim()}.pixelart`,
-      encodePixelArtDocument(document),
-      {
-        kind: PIXEL_ART_KIND,
-        onConflict: "suffix"
-      }
+      document
     );
 
     return this.link({
