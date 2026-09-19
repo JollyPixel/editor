@@ -93,10 +93,6 @@ export class LeftPanel extends LitElement {
     this._canvas = null;
   }
 
-  onResize(): void {
-    this.panelElement?.onResize();
-  }
-
   setTexture(
     texture: LeftPanelTexture
   ): void {

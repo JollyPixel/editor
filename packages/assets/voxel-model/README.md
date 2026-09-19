@@ -72,8 +72,11 @@ interface VoxelModelDocument {
 }
 ```
 
-`createVoxelModelDocument({ texture? })`, `encodeVoxelModelDocument(document)`
-and `decodeVoxelModelDocument(bytes)` build and (de)serialize it.
+`createVoxelModelDocument({ texture?, blocks? })`,
+`encodeVoxelModelDocument(document)` and `decodeVoxelModelDocument(bytes)`
+build and (de)serialize it. A new document starts with one root block named
+`Block`; `blocks` names the root blocks to create instead, and `[]` leaves the
+model empty.
 `decodeVoxelModelDocument` throws `InvalidVoxelModelDocumentError` on a
 malformed document.
 
@@ -82,17 +85,17 @@ malformed document.
 Model and folder commands share the asset's room and its `voxelmodel.command`
 protocol: `VoxelModelCommand` is the union of `ModelCommand` (`group-*`) and
 `FolderCommand` (`folder-*`, `block-placed`, `block-unplaced`). The snapshot is
-`{ nodes, folders, placements }`. `isModelCommand()` and `isFolderCommand()`
-split the stream on the client.
+`{ nodes, folders, placements }`. `isModelCommand()` splits the stream on
+the client.
 
 The room ignores an edit of an unknown group or folder. Placements are always
-accepted. `ModelCommandArbiter` and `FolderCommandArbiter` resolve conflicts per
-group, folder and placement.
+accepted. `VoxelModelCommandArbiter` resolves conflicts per group, folder
+and placement.
 
 ### Entry points
 
 | Import | Contents |
 |---|---|
 | `@jolly-pixel/asset.voxel-model` | Handler, state, document codec and wire types. |
-| `@jolly-pixel/asset.voxel-model/network/client.ts` | Wire types, `VOXEL_MODEL_KIND` and the command guards, browser-safe. |
-| `@jolly-pixel/asset.voxel-model/network/server.ts` | Command schema, arbiters and command appliers. |
+| `@jolly-pixel/asset.voxel-model/network/client.ts` | Wire types, `VOXEL_MODEL_KIND` and `isModelCommand()`, browser-safe. |
+| `@jolly-pixel/asset.voxel-model/network/server.ts` | Command schema and the command arbiter. |

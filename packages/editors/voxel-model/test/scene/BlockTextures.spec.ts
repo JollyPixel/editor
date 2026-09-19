@@ -21,6 +21,23 @@ import {
 
 // CONSTANTS
 const kTextureSize = { x: 256, y: 256 };
+const kTorsoRegionId = "block-torso";
+const kTorsoSnapshot = {
+  nodes: [
+    {
+      uuid: "torso",
+      name: "Torso",
+      parentUuid: null,
+      position: { x: 0, y: 0, z: 0 },
+      pivotOffset: { x: 0, y: 0, z: 0 },
+      size: { x: 1, y: 1, z: 1 },
+      scale: { x: 1, y: 1, z: 1 },
+      rotation: { x: 0, y: 0, z: 0 }
+    }
+  ],
+  folders: [],
+  placements: []
+};
 
 function createPixels(): PixelDocument {
   const events = new Emitter<PixelDocumentEvent>();
@@ -33,10 +50,16 @@ function createPixels(): PixelDocument {
   }) as unknown as PixelDocument;
 }
 
-function createHarness() {
+function createHarness(
+  pixelsReady: Promise<void> = Promise.resolve()
+) {
   const pixels = createPixels();
   const document = new ModelDocument(new THREE.Scene());
-  const textures = new BlockTextures({ pixels, document });
+  const textures = new BlockTextures({
+    pixels,
+    pixelsReady,
+    document
+  });
 
   return {
     pixels,
@@ -67,7 +90,11 @@ describe("BlockTextures texture", () => {
     const pixels = createPixels();
     const document = new ModelDocument(new THREE.Scene());
     const before = document.blocks.add();
-    new BlockTextures({ pixels, document });
+    new BlockTextures({
+      pixels,
+      pixelsReady: Promise.resolve(),
+      document
+    });
     const after = document.blocks.add();
 
     assert.ok(before.texture);
@@ -261,6 +288,51 @@ describe("BlockTextures regions port", () => {
     blocks.remove(block.uuid);
 
     assert.equal(uv.get(regionIdOf(block)), undefined);
+  });
+});
+
+describe("BlockTextures missing regions", () => {
+  test("creates no region while the texture is still loading", () => {
+    const ready = Promise.withResolvers<void>();
+    const { document, uv } = createHarness(ready.promise);
+
+    document.load(kTorsoSnapshot);
+
+    assert.equal(uv.get(kTorsoRegionId), undefined);
+  });
+
+  test("creates and binds a region for a snapshot block that has none", async() => {
+    const ready = Promise.withResolvers<void>();
+    const { document, uv } = createHarness(ready.promise);
+    document.load(kTorsoSnapshot);
+
+    ready.resolve();
+    await ready.promise;
+
+    assert.equal(uv.get(kTorsoRegionId)?.name, "Torso");
+
+    const block = document.blocks.get("torso")!;
+    uv.move(kTorsoRegionId, { x: 0, y: 0, width: 48, height: 32 });
+    const [u, v] = uvOf(block, 1);
+    uv.move(kTorsoRegionId, { x: 64, y: 0, width: 48, height: 32 });
+
+    assert.deepEqual(uvOf(block, 1), [u + (64 / kTextureSize.x), v]);
+  });
+
+  test("leaves the region the texture already carries untouched", async() => {
+    const ready = Promise.withResolvers<void>();
+    const { document, uv } = createHarness(ready.promise);
+    uv.create({ id: kTorsoRegionId, width: 16, height: 16 });
+    uv.move(kTorsoRegionId, { x: 64, y: 32, width: 16, height: 16 });
+    ready.resolve();
+    await ready.promise;
+
+    document.load(kTorsoSnapshot);
+
+    assert.deepEqual(
+      uv.get(kTorsoRegionId)?.geometryFor("front"),
+      { x: 64, y: 32, width: 16, height: 16 }
+    );
   });
 });
 

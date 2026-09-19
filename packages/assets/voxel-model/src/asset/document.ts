@@ -2,11 +2,18 @@
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { VoxelModelSnapshot } from "../network/types.ts";
+import type {
+  ModelNodeJSON,
+  Vector3JSON,
+  VoxelModelSnapshot
+} from "../network/types.ts";
 import { InvalidVoxelModelDocumentError } from "./InvalidVoxelModelDocumentError.ts";
 
 // CONSTANTS
 export const VOXEL_MODEL_DOCUMENT_VERSION = 1;
+const kDefaultBlockName = "Block";
+const kZeroVector: Vector3JSON = { x: 0, y: 0, z: 0 };
+const kUnitVector: Vector3JSON = { x: 1, y: 1, z: 1 };
 
 export interface VoxelModelDocument extends VoxelModelSnapshot {
   version: typeof VOXEL_MODEL_DOCUMENT_VERSION;
@@ -15,14 +22,16 @@ export interface VoxelModelDocument extends VoxelModelSnapshot {
 
 export interface VoxelModelDocumentOptions {
   texture?: AssetReferenceData;
+  blocks?: Iterable<string>;
 }
 
 export function createVoxelModelDocument(
   options: VoxelModelDocumentOptions = {}
 ): VoxelModelDocument {
+  const { blocks = [kDefaultBlockName] } = options;
   const document: VoxelModelDocument = {
     version: VOXEL_MODEL_DOCUMENT_VERSION,
-    nodes: [],
+    nodes: [...blocks].map(createBlockNode),
     folders: [],
     placements: []
   };
@@ -77,6 +86,21 @@ export function decodeVoxelModelDocument(
   }
 
   return document as VoxelModelDocument;
+}
+
+function createBlockNode(
+  name: string
+): ModelNodeJSON {
+  return {
+    uuid: crypto.randomUUID(),
+    name,
+    parentUuid: null,
+    position: { ...kZeroVector },
+    pivotOffset: { ...kZeroVector },
+    size: { ...kUnitVector },
+    scale: { ...kUnitVector },
+    rotation: { ...kZeroVector }
+  };
 }
 
 function isReference(
