@@ -22,6 +22,7 @@ import {
 } from "@jolly-pixel/asset.voxel-map/network/client.ts";
 import type * as network from "@jolly-pixel/network";
 import * as THREE from "three";
+import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -46,7 +47,6 @@ import { BlockSelectionPresence } from "../features/blocks/collaboration/BlockSe
 import { LayerSelectionPresence } from "../features/layers/collaboration/LayerSelectionPresence.ts";
 import { PeerRoster } from "../collaboration/PeerRoster.ts";
 import { PeerFrustums } from "../collaboration/PeerFrustums.ts";
-import type { EditorIdentity } from "../collaboration/identity.ts";
 import type { EditorState } from "./state/index.ts";
 import { installTransparency } from "../scene/installTransparency.ts";
 import {
@@ -67,7 +67,7 @@ export interface EditorSceneOptions {
   tilesets: TilesetSource[];
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
   catalog?: TilesetCatalog & TilesetCatalogWriter;
-  identity?: EditorIdentity;
+  identity?: PeerIdentity;
   viewFocus?: ViewFocus;
   /**
    * MSAA sample count of the scene compositor.
@@ -88,7 +88,7 @@ export class EditorScene extends Systems.Scene {
   #tilesets: TilesetSource[];
   #defaultLayerName: string;
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
-  #identity: EditorIdentity | undefined;
+  #identity: PeerIdentity | undefined;
   #samples: number | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
   #catalog: (TilesetCatalog & TilesetCatalogWriter) | undefined;

@@ -2,7 +2,8 @@
 import {
   test,
   expect,
-  openDemo
+  openDemo,
+  waitForDemo
 } from "./fixtures.ts";
 import {
   BLACK,
@@ -31,7 +32,7 @@ test("strokes and undos reach a peer and survive a reload", async({ panel, page,
     ])).toEqual([BLACK, CLEAR]);
 
     await page.reload();
-    await page.waitForFunction(() => window.__pixelSyncReady === true);
+    await waitForDemo(page);
     await expect.poll(() => readPixels(panel, pixel)).toEqual([BLACK]);
   }
   finally {

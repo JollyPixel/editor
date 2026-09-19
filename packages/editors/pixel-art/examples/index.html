@@ -28,12 +28,6 @@
       <pixel-draw-panel id="draw-panel" allow-uv-create-delete texture-import-policy="ask"></pixel-draw-panel>
     </jolly-pane>
   </jolly-dock>
-  <script>
-    const initialTheme = document.documentElement.dataset.theme;
-    if (initialTheme && initialTheme !== "auto") {
-      document.querySelector("#draw-panel").setAttribute("theme", initialTheme);
-    }
-  </script>
   <div id="canvas-container">
     <canvas tabindex="-1" id="three-canvas"></canvas>
     <div id="demo-controls">

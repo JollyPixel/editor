@@ -8,9 +8,10 @@ import {
 // Import Internal Dependencies
 import {
   testAssetPath,
-  RUNTIME_MAX_FPS,
-  TEXTURE_SIZE
+  RUNTIME_MAX_FPS
 } from "./constants.ts";
+import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
+import type { PixelArtDemo } from "../../examples/scripts/boot/PixelArtDemo.ts";
 import type {
   PixelDrawPanel,
   TextureImportPolicy
@@ -55,9 +56,15 @@ export async function openDemo(
     query.set("add-delay", String(addDelay));
   }
   await page.goto(`/?${query}`);
-  await page.waitForFunction(() => window.__pixelSyncReady === true);
+  await waitForDemo(page);
 
   return page.locator("pixel-draw-panel");
+}
+
+export async function waitForDemo(
+  page: Page
+): Promise<void> {
+  await page.waitForFunction(() => window.pixelArtDemo !== undefined);
 }
 
 export async function resetCanvas(
@@ -91,8 +98,6 @@ export const test = base.extend<{
 
 declare global {
   interface Window {
-    __pixelSyncReady?: boolean;
-    __pixelSyncReadyTextures?: string[];
-    __uvPreviewMeshCount?: () => number;
+    pixelArtDemo?: PixelArtDemo;
   }
 }

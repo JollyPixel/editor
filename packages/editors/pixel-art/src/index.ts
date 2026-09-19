@@ -1,5 +1,6 @@
 export {
   PixelDrawPanel,
+  type CanvasHoverChangeDetail,
   type PixelDrawTexture,
   type ThemeMode
 } from "./panel/PixelDrawPanel.ts";

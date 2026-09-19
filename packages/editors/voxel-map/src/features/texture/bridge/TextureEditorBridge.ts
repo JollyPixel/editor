@@ -20,13 +20,13 @@ import {
 import {
   PixelCanvasChangeTracker
 } from "@jolly-pixel/editor.pixel-art/change-tracking/PixelCanvasChangeTracker.ts";
+import {
+  peerProfileColor,
+  readUsername
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import { findBlocksReferencingTileset } from "../uv/blockTextureTiles.ts";
-import {
-  peerColor,
-  readUsername
-} from "../../../collaboration/identity.ts";
 import {
   editorState,
   type WorldStore
@@ -110,7 +110,7 @@ export class TextureEditorBridge {
         room,
         canvas,
         label: (_clientId, profile) => readUsername(profile),
-        color: peerColor
+        color: peerProfileColor
       });
       this.#collaboration.sync.on("snapshot", this.#onSurfaceChanged);
       this.#collaboration.sync.on("command", this.#onRemoteCommand);

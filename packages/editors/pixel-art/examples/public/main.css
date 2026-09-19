@@ -4,7 +4,7 @@
  * Same "light-dark() + color-scheme" pattern as PixelDrawPanel.styles.ts: one
  * line per token instead of a default block plus a "prefers-color-scheme"
  * block plus a "[data-theme]" override block. "color-scheme" here starts as
- * "light dark" (OS-driven, "auto") and main.ts sets "data-theme" only to pin
+ * "light dark" (OS-driven, "auto") and DemoShell sets "data-theme" only to pin
  * an explicit light/dark choice, same contract as the "theme" attribute
  * jolly-theme-preferences drives on the panel.
  */

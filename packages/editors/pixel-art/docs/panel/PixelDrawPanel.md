@@ -164,6 +164,9 @@ as soon as the event has been dispatched.
 | `color-docked` attribute / `colorDocked` property | Opens the docked color picker. Off by default. Reflects to the attribute. |
 | `color-docked-change` event | Fires when the user toggles the docked picker; `detail` is the new `boolean`. |
 | `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows the theme scope the panel is embedded in (`jolly-scope`, or any themed ancestor), falling back to `prefers-color-scheme` when there is none; `"light"`/`"dark"` force one regardless. Reflects to the attribute. |
+| `resolvedTheme` | The palette in use, `"light"` or `"dark"`: `theme`, or what `"auto"` resolves to. |
+| `theme-change` event | `detail` is the new `resolvedTheme`. Fires when `theme` changes, and when `prefers-color-scheme` changes under `"auto"`. |
+| `canvas-hover-change` event | `detail: { hovering }`. Fires when the pointer enters or leaves the drawing canvas, for hosts that suspend their own shortcuts meanwhile. |
 
 Destruction is automatic: `disconnectedCallback()` destroys every texture canvas when the element leaves the DOM.
 

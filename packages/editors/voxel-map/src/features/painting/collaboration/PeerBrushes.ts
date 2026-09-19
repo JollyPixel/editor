@@ -12,13 +12,13 @@ import type {
   VoxelNetworkCommand,
   VoxelServerMessage
 } from "@jolly-pixel/asset.voxel-map/network/client.ts";
+import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
   editorState,
   type BrushStore
 } from "../../../app/state/index.ts";
-import { peerColor } from "../../../collaboration/identity.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
 import { overlaps } from "../model/brushFootprint.ts";
@@ -120,7 +120,7 @@ export class PeerBrushes extends ActorComponent {
 
     const mesh = this.#meshFor(
       clientId,
-      peerColor(clientId, peer.profile)
+      peerProfileColor(clientId, peer.profile)
     );
     const peerCursor = this.#channel.values.get(clientId) ?? null;
 

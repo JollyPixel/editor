@@ -4,6 +4,7 @@ import type {
   VoxelEngine,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
+import type { CanvasHoverChangeDetail } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
@@ -16,7 +17,6 @@ import type {
 } from "../../features/texture/TextureEditor.ts";
 import type { TilesetActions } from "../../features/tilesets/TilesetActions.ts";
 import type { ViewFocus } from "../../scene/viewFocus.ts";
-import type { EventCanvasHoverChange } from "../../shared/domEvents.ts";
 import { BlocksPanel } from "./BlocksPanel.ts";
 import { GeneralPanel } from "./GeneralPanel.ts";
 import { LayersPanel } from "./LayersPanel.ts";
@@ -166,7 +166,7 @@ export class EditorPanels {
     this.#layers.requestUpdate();
   };
 
-  readonly #onHover = (event: EventCanvasHoverChange): void => {
+  readonly #onHover = (event: CustomEvent<CanvasHoverChangeDetail>): void => {
     this.#onCanvasHoverChange(event.detail.hovering);
   };
 }

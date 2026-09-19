@@ -266,7 +266,9 @@ test.describe("3D preview", () => {
   function previewMeshCount(
     panel: Locator
   ): Promise<number> {
-    return panel.page().evaluate(() => window.__uvPreviewMeshCount?.() ?? -1);
+    return panel.page().evaluate(
+      () => window.pixelArtDemo?.preview?.scene.meshCount ?? -1
+    );
   }
 
   test("each region owns exactly one preview mesh", async({ panel }) => {

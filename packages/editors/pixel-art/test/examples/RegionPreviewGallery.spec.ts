@@ -12,7 +12,6 @@ import {
 
 // Import Internal Dependencies
 import type { RegionPreview } from "../../examples/scripts/preview/RegionPreviewBehavior.ts";
-import type { RegionPreviewFactoryContract } from "../../examples/scripts/preview/RegionPreviewFactory.ts";
 import { RegionPreviewGallery } from "../../examples/scripts/preview/RegionPreviewGallery.ts";
 
 class FakePreview implements RegionPreview {
@@ -22,6 +21,7 @@ class FakePreview implements RegionPreview {
   readonly followed: UVMap[] = [];
   readonly textureSizes: Vec2[] = [];
   selected = false;
+  disposed = 0;
 
   follow(
     uv: UVMap
@@ -47,43 +47,32 @@ class FakePreview implements RegionPreview {
     this.selected = selected;
   }
 
-  setBorderColor(
-    _color: THREE.ColorRepresentation
-  ): void {
-    // No-op test double.
-  }
-
-  setRotating(
-    _rotating: boolean
-  ): void {
-    // No-op test double.
-  }
-
   setRotation(
     rotation: THREE.Euler
   ): void {
     this.rotation.copy(rotation);
   }
+
+  dispose(): void {
+    this.disposed++;
+  }
 }
 
-class FakePreviewFactory implements RegionPreviewFactoryContract {
+class FakePreviewFactory {
   readonly previews: FakePreview[] = [];
-  readonly destroyed: RegionPreview[] = [];
 
-  create(
+  readonly create = (
     _region: UVRegion,
     _textureSize: Vec2
-  ): FakePreview {
+  ): FakePreview => {
     const preview = new FakePreview();
     this.previews.push(preview);
 
     return preview;
-  }
+  };
 
-  destroy(
-    preview: RegionPreview
-  ): void {
-    this.destroyed.push(preview);
+  get destroyed(): FakePreview[] {
+    return this.previews.filter((preview) => preview.disposed > 0);
   }
 }
 
@@ -100,7 +89,7 @@ describe("RegionPreviewGallery", () => {
     const uv = createUv();
     const factory = new FakePreviewFactory();
     const gallery = new RegionPreviewGallery({
-      previewFactory: factory,
+      createPreview: factory.create,
       canvasManager: {
         uv,
         textureSize: { x: 64, y: 64 }
@@ -128,7 +117,7 @@ describe("RegionPreviewGallery", () => {
     uv.select("second");
     const factory = new FakePreviewFactory();
     const gallery = new RegionPreviewGallery({
-      previewFactory: factory,
+      createPreview: factory.create,
       canvasManager: {
         uv,
         textureSize: { x: 64, y: 64 }
@@ -144,7 +133,7 @@ describe("RegionPreviewGallery", () => {
     const uv = createUv();
     const factory = new FakePreviewFactory();
     new RegionPreviewGallery({
-      previewFactory: factory,
+      createPreview: factory.create,
       canvasManager: {
         uv,
         textureSize: { x: 64, y: 64 }
@@ -160,7 +149,7 @@ describe("RegionPreviewGallery", () => {
     const uv = createUv();
     const factory = new FakePreviewFactory();
     const gallery = new RegionPreviewGallery({
-      previewFactory: factory,
+      createPreview: factory.create,
       canvasManager: {
         uv,
         textureSize: { x: 32, y: 16 }
@@ -180,7 +169,7 @@ describe("RegionPreviewGallery", () => {
     const uv = createUv();
     const factory = new FakePreviewFactory();
     const gallery = new RegionPreviewGallery({
-      previewFactory: factory,
+      createPreview: factory.create,
       canvasManager: {
         uv,
         textureSize: { x: 64, y: 64 }
@@ -193,7 +182,7 @@ describe("RegionPreviewGallery", () => {
     uv.create({ id: "after-dispose", width: 16, height: 16 });
 
     assert.strictEqual(factory.previews.length, 1);
-    assert.deepStrictEqual(factory.destroyed, [factory.previews[0]]);
+    assert.strictEqual(factory.previews[0].disposed, 1);
     assert.deepStrictEqual(gallery.meshes, []);
   });
 });

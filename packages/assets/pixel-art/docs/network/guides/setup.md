@@ -1,6 +1,6 @@
 # Set up network synchronization
 
-One room represents one `.pixelart` asset. Its name is `assetRoomName("pixelart", assetId)`.
+One room represents one `.pixelart` asset. `pixelArtRoom(client, assetId)` opens it.
 
 ## Server
 
@@ -48,14 +48,10 @@ Create the room and the collaboration before joining, so the first snapshot has 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
 import { colorFromKey } from "@jolly-pixel/color";
-import {
-  AssetCatalog,
-  assetRoomName
-} from "@jolly-pixel/asset";
+import { AssetCatalog } from "@jolly-pixel/asset";
 import {
   PixelCollaboration,
-  type PixelNetworkCommand,
-  type PixelServerMessage
+  pixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
 const catalog = await AssetCatalog.fetch();
@@ -64,12 +60,9 @@ const record = [...catalog].find(
 )!;
 
 const networkClient = new Client({
-  identity: { username: "alice" }
+  profile: { username: "alice" }
 });
-const room = networkClient.room<
-  PixelNetworkCommand,
-  PixelServerMessage
->(assetRoomName(record.kind, record.id.value));
+const room = pixelArtRoom(networkClient, record.id.value);
 
 const collaboration = new PixelCollaboration({
   room,
@@ -86,6 +79,8 @@ collaboration.sync.on("notice", (notice) => {
 
 room.join();
 ```
+
+To create a new asset, pass a `CatalogClient` and a `PixelArtDocumentData` to `createPixelArtAsset(catalog, path, document)`. It encodes the document, creates it with the pixel-art kind, suffixes the path on conflict and resolves the new asset id.
 
 `Client` uses `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws-sync` by default. Pass `url` when the server uses another origin or WebSocket path.
 

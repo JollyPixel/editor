@@ -297,6 +297,9 @@ importers:
 
   packages/assets/pixel-art:
     dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
@@ -307,9 +310,6 @@ importers:
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
     devDependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source

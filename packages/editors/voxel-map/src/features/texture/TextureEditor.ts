@@ -13,6 +13,7 @@ import {
   type TextureChangeDetail,
   type UvAccess
 } from "@jolly-pixel/editor.pixel-art";
+import type { PixelArtRoom } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
 // Import Internal Dependencies
 import {
@@ -23,13 +24,9 @@ import {
 } from "../../app/state/index.ts";
 import type { TilesetEntry } from "../tilesets/tilesetEntries.ts";
 import { blockFocusTilesetId } from "../tilesets/blockTilesets.ts";
-import {
-  TilesetTab,
-  type TextureRoom
-} from "./TilesetTab.ts";
+import { TilesetTab } from "./TilesetTab.ts";
 
 // CONSTANTS
-const kCanvasHoverChangeEvent = "canvas-hover-change";
 const kCanvasOptions: PixelArtCanvasOptions = {
   zoom: {
     default: 1,
@@ -52,7 +49,7 @@ const kCanvasOptions: PixelArtCanvasOptions = {
   }
 };
 
-export type TextureRoomFactory = (assetId: string) => TextureRoom;
+export type TextureRoomFactory = (assetId: string) => PixelArtRoom;
 
 @customElement("texture-editor")
 export class TextureEditor extends LitElement {
@@ -102,8 +99,6 @@ export class TextureEditor extends LitElement {
   #tabs = new Map<string, TilesetTab>();
   #panel: PixelDrawPanel | null = null;
   #reconciling: Promise<void> = Promise.resolve();
-  #canvasHostEl: HTMLElement | null = null;
-  #resizeObserver: ResizeObserver | null = null;
   #subscriptions: Array<() => void> = [];
   #followedTilesetId: string | null = null;
 
@@ -241,27 +236,11 @@ export class TextureEditor extends LitElement {
     }
 
     panel.addEventListener("texture-change", this.#onTextureChange);
-    this.#resizeObserver = new ResizeObserver(() => panel.onResize());
-    this.#resizeObserver.observe(panel);
     await panel.configure(kCanvasOptions);
-    if (panel !== this.#panel) {
-      return;
-    }
-
-    this.#canvasHostEl = panel.shadowRoot?.querySelector<HTMLElement>(
-      "[part~='canvas-host']"
-    ) ?? null;
-    this.#canvasHostEl?.addEventListener("mouseenter", this.#onCanvasHoverEnter);
-    this.#canvasHostEl?.addEventListener("mouseleave", this.#onCanvasHoverLeave);
   }
 
   #releasePanel(): void {
     this.#panel?.removeEventListener("texture-change", this.#onTextureChange);
-    this.#canvasHostEl?.removeEventListener("mouseenter", this.#onCanvasHoverEnter);
-    this.#canvasHostEl?.removeEventListener("mouseleave", this.#onCanvasHoverLeave);
-    this.#canvasHostEl = null;
-    this.#resizeObserver?.disconnect();
-    this.#resizeObserver = null;
     this.#panel = null;
   }
 
@@ -318,24 +297,6 @@ export class TextureEditor extends LitElement {
     if (event.detail.source === "user") {
       this.tilesets.activeTilesetId = event.detail.id;
     }
-  };
-
-  #dispatchHoverChange(
-    hovering: boolean
-  ): void {
-    this.dispatchEvent(new CustomEvent(kCanvasHoverChangeEvent, {
-      detail: { hovering },
-      bubbles: true,
-      composed: true
-    }));
-  }
-
-  readonly #onCanvasHoverEnter = (): void => {
-    this.#dispatchHoverChange(true);
-  };
-
-  readonly #onCanvasHoverLeave = (): void => {
-    this.#dispatchHoverChange(false);
   };
 
   override render() {

@@ -3,30 +3,30 @@ import { html } from "lit";
 import type * as network from "@jolly-pixel/network";
 import type {
   LogQueue,
+  PeerIdentity,
   PresencePeer
 } from "@jolly-pixel/ui";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
 } from "@jolly-pixel/asset.voxel-map/network/client.ts";
+import {
+  peerProfileColor,
+  readUsername
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
   editorState,
   type PresenceStore
 } from "../app/state/index.ts";
-import {
-  peerColor,
-  readUsername,
-  type EditorIdentity
-} from "./identity.ts";
 
 export interface PeerRosterOptions {
   room: network.Room<
     VoxelNetworkCommand,
     VoxelServerMessage
   >;
-  identity: EditorIdentity;
+  identity: PeerIdentity;
   presence?: PresenceStore;
   log?: LogQueue;
 }
@@ -36,7 +36,7 @@ export class PeerRoster {
     VoxelNetworkCommand,
     VoxelServerMessage
   >;
-  #identity: EditorIdentity;
+  #identity: PeerIdentity;
   #presence: PresenceStore;
   #log: LogQueue;
   #known = new Map<string, PresencePeer>();
@@ -105,7 +105,7 @@ export class PeerRoster {
         return {
           clientId: peer.clientId,
           displayName: readUsername(peer.profile),
-          color: peerColor(
+          color: peerProfileColor(
             peer.clientId,
             peer.profile
           )

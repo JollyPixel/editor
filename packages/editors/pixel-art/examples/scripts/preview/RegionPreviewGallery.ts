@@ -9,74 +9,39 @@ import type {
 
 // Import Internal Dependencies
 import type { RegionPreview } from "./RegionPreviewBehavior.ts";
-import type { RegionPreviewFactoryContract } from "./RegionPreviewFactory.ts";
 import { centeredGridPositions } from "./centeredGrid.ts";
 
 // CONSTANTS
 const kGridSpacing = 2.4;
 
-export interface RegionPreviewGalleryOptions {
-  previewFactory: RegionPreviewFactoryContract;
-  canvasManager: RegionPreviewCanvas;
-}
+export type CreateRegionPreview = (
+  region: UVRegion,
+  textureSize: Vec2
+) => RegionPreview;
 
 export interface RegionPreviewCanvas {
   readonly uv: UVMap;
   readonly textureSize: Vec2;
 }
 
-export interface RegionPreviewGalleryAppearance {
-  borderColor: THREE.ColorRepresentation;
+export interface RegionPreviewGalleryOptions {
+  createPreview: CreateRegionPreview;
+  canvasManager: RegionPreviewCanvas;
 }
 
 export class RegionPreviewGallery {
-  readonly #previewFactory: RegionPreviewFactoryContract;
+  readonly #createPreview: CreateRegionPreview;
   readonly #canvasManager: RegionPreviewCanvas;
   readonly #previews = new Map<string, RegionPreview>();
-  #appearance: RegionPreviewGalleryAppearance = {
-    borderColor: "#101820"
-  };
-  #rotating = true;
   #disposed = false;
 
   readonly #onRegionCreated: UVMapListener<"region-created"> = ({ region }) => {
     this.#addPreview(region);
   };
 
-  #addPreview(
-    region: UVRegion
-  ): void {
-    // Destroy a stale actor before replacing its preview.
-    const stale = this.#previews.get(region.id);
-    if (stale) {
-      this.#previewFactory.destroy(stale);
-      this.#previews.delete(region.id);
-    }
-
-    const preview = this.#previewFactory.create(
-      region,
-      this.#canvasManager.textureSize
-    );
-    const referencePreview = this.#previews.values().next().value;
-    if (referencePreview) {
-      preview.setRotation(referencePreview.rotation);
-    }
-
-    // Each preview subscribes to UV changes directly.
-    preview.follow(this.#canvasManager.uv);
-
-    this.#previews.set(region.id, preview);
-    this.#relayout();
-    preview.setBorderColor(this.#appearance.borderColor);
-    preview.setRotating(this.#rotating);
-  }
-
   readonly #onRegionDeleted: UVMapListener<"region-deleted"> = ({ region }) => {
-    const preview = this.#previews.get(region.id);
-    if (preview) {
-      this.#previewFactory.destroy(preview);
-      this.#previews.delete(region.id);
-    }
+    this.#previews.get(region.id)?.dispose();
+    this.#previews.delete(region.id);
     this.#relayout();
   };
 
@@ -91,7 +56,7 @@ export class RegionPreviewGallery {
   constructor(
     options: RegionPreviewGalleryOptions
   ) {
-    this.#previewFactory = options.previewFactory;
+    this.#createPreview = options.createPreview;
     this.#canvasManager = options.canvasManager;
 
     const { uv } = this.#canvasManager;
@@ -120,24 +85,6 @@ export class RegionPreviewGallery {
     }
   }
 
-  setAppearance(
-    appearance: RegionPreviewGalleryAppearance
-  ): void {
-    this.#appearance = appearance;
-    for (const preview of this.#previews.values()) {
-      preview.setBorderColor(appearance.borderColor);
-    }
-  }
-
-  setRotating(
-    rotating: boolean
-  ): void {
-    this.#rotating = rotating;
-    for (const preview of this.#previews.values()) {
-      preview.setRotating(rotating);
-    }
-  }
-
   dispose(): void {
     if (this.#disposed) {
       return;
@@ -150,9 +97,29 @@ export class RegionPreviewGallery {
     uv.off("selection-changed", this.#onSelectionChanged);
 
     for (const preview of this.#previews.values()) {
-      this.#previewFactory.destroy(preview);
+      preview.dispose();
     }
     this.#previews.clear();
+  }
+
+  #addPreview(
+    region: UVRegion
+  ): void {
+    this.#previews.get(region.id)?.dispose();
+    this.#previews.delete(region.id);
+
+    const preview = this.#createPreview(
+      region,
+      this.#canvasManager.textureSize
+    );
+    const referencePreview = this.#previews.values().next().value;
+    if (referencePreview) {
+      preview.setRotation(referencePreview.rotation);
+    }
+    preview.follow(this.#canvasManager.uv);
+
+    this.#previews.set(region.id, preview);
+    this.#relayout();
   }
 
   #relayout(): void {

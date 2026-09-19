@@ -27,6 +27,8 @@ Browser code can import the client classes and wire types from the package root:
 import {
   PixelCollaboration,
   PixelCursorSync,
+  createPixelArtAsset,
+  pixelArtRoom,
   PixelStrokeGhostSync,
   PixelSyncClient,
   SelectionGhostSync,

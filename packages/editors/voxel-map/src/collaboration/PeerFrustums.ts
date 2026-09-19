@@ -13,12 +13,10 @@ import type {
   VoxelNetworkCommand,
   VoxelServerMessage
 } from "@jolly-pixel/asset.voxel-map/network/client.ts";
-
-// Import Internal Dependencies
 import {
-  peerColor,
+  peerProfileColor,
   readUsername
-} from "./identity.ts";
+} from "@jolly-pixel/ui/network";
 
 // CONSTANTS
 const kHideWithin = 1.5;
@@ -50,7 +48,7 @@ export class PeerFrustums extends ActorComponent {
       room: options.room,
       parent: this.actor.world.sceneManager.getSource(),
       label: (_clientId, identity) => readUsername(identity),
-      color: (clientId, identity) => peerColor(clientId, identity),
+      color: (clientId, identity) => peerProfileColor(clientId, identity),
       hideWithin: kHideWithin,
       fadeWithin: kFadeWithin,
       frustum: {
