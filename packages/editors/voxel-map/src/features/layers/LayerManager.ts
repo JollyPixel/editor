@@ -118,10 +118,10 @@ export class LayerManager extends LitElement {
     super.connectedCallback();
 
     this.#subscriptions.push(
-      this.worldStore.watch("layerUpdated", this.#onLayerUpdated),
-      this.worldStore.watch("reset", this.#onLayerUpdated),
-      this.selection.watch("change", this.#onSelectionChange),
-      this.presence.watch("layerSelectionsChange", this.#onLayerUpdated)
+      this.worldStore.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.worldStore.subscribe("reset", this.#onLayerUpdated),
+      this.selection.subscribe("change", this.#onSelectionChange),
+      this.presence.subscribe("layerSelectionsChange", this.#onLayerUpdated)
     );
 
     this._selected = this.#selectionFromState();

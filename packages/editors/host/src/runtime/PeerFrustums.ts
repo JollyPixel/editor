@@ -41,7 +41,7 @@ export class PeerFrustums extends ActorComponent {
       room: options.room,
       parent: this.actor.world.sceneManager.getSource(),
       label: (_clientId, identity) => readUsername(identity),
-      color: (clientId, identity) => peerProfileColor(clientId, identity),
+      color: peerProfileColor,
       hideWithin: kHideWithin,
       fadeWithin: kFadeWithin,
       frustum: {

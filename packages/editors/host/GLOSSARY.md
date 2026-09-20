@@ -27,8 +27,7 @@ prompt options, dependency model kinds, and `mount` method.
 
 ### Editor context
 
-The launch, connected session, and parsed development options passed to the
-editor's `mount` method.
+The launch and connected session passed to the editor's `mount` method.
 
 ### Session
 

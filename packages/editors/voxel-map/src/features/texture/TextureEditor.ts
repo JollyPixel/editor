@@ -115,10 +115,10 @@ export class TextureEditor extends LitElement {
     }
 
     this.#subscriptions.push(
-      this.tilesets.watch("change", this.#requestSync),
-      this.tilesets.watch("activeChange", this.#reconcile),
-      this.brush.watch("blockChange", this.#onBlockChange),
-      this.worldStore.watch(
+      this.tilesets.subscribe("change", this.#requestSync),
+      this.tilesets.subscribe("activeChange", this.#reconcile),
+      this.brush.subscribe("blockChange", this.#onBlockChange),
+      this.worldStore.subscribe(
         "blockRegistryChanged",
         this.#onBlockRegistryChanged
       )

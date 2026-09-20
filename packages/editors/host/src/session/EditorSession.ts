@@ -1,11 +1,6 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import {
-  AssetKindMismatchError,
-  AssetNotFoundError,
-  type AssetRecordData,
-  type AssetReferenceData
-} from "@jolly-pixel/asset";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   CATALOG_ROOM,
   CatalogClient
@@ -24,6 +19,7 @@ import {
   type RoomSource
 } from "./AssetLeases.ts";
 import type {
+  AssetDependency,
   AssetLease,
   AssetModelKind,
   AssetRoomLease
@@ -33,7 +29,7 @@ import type {
 export const IDENTITY_STORAGE_KEY = "jolly-pixel:username";
 
 export type EditorSessionEvents = {
-  "dependency-added": (lease: AssetLease<unknown>) => void;
+  "dependency-added": (dependency: AssetDependency) => void;
   "dependency-removed": (reference: AssetReferenceData) => void;
 };
 
@@ -45,25 +41,28 @@ export interface EditorIdentityOptions {
   title: string;
 }
 
-export interface EditorSessionConnectOptions {
+export interface EditorSessionTarget {
   launch: EditorLaunch;
-  identity: PeerIdentity;
-  client: EditorSessionClient;
+  accepts: string;
   kinds: Iterable<AssetModelKind<unknown>>;
-  accepts?: string;
 }
 
-export interface EditorSessionOptions
-  extends Omit<EditorSessionConnectOptions, "identity" | "client"> {
+export interface EditorSessionOptions extends EditorSessionTarget {
   identity: EditorIdentityOptions;
 }
 
-export interface EditorSessionParts {
+export interface EditorSessionConnectOptions extends EditorSessionTarget {
   identity: PeerIdentity;
   client: EditorSessionClient;
+}
+
+export interface EditorSessionParts extends EditorSessionConnectOptions {
   catalog: CatalogClient;
-  kinds: Iterable<AssetModelKind<unknown>>;
-  target: AssetRecordData;
+}
+
+interface SessionDependency {
+  readonly lease: AssetLease<unknown>;
+  readonly view: AssetDependency;
 }
 
 export class EditorSession extends Emitter<EditorSessionEvents> {
@@ -90,10 +89,13 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     const { client } = options;
     const catalog = new CatalogClient(client.room(CATALOG_ROOM));
 
-    let target: AssetRecordData;
+    let session: EditorSession;
     try {
       await catalog.ready;
-      target = EditorSession.#resolveTarget(catalog, options);
+      session = new EditorSession({
+        ...options,
+        catalog
+      });
     }
     catch (error) {
       catalog.dispose();
@@ -102,13 +104,6 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       throw error;
     }
 
-    const session = new EditorSession({
-      identity: options.identity,
-      client,
-      catalog,
-      kinds: options.kinds,
-      target
-    });
     try {
       await Promise.all(
         Array.from(session.dependencies(), (lease) => lease.ready)
@@ -123,22 +118,6 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     return session;
   }
 
-  static #resolveTarget(
-    catalog: CatalogClient,
-    options: EditorSessionConnectOptions
-  ): AssetRecordData {
-    const { launch, accepts } = options;
-    const record = catalog.record(launch.target.value);
-    if (record === undefined) {
-      throw new AssetNotFoundError(launch.target);
-    }
-    if (accepts !== undefined && record.kind !== accepts) {
-      throw new AssetKindMismatchError(launch.target, accepts, record.kind);
-    }
-
-    return record;
-  }
-
   readonly identity: PeerIdentity;
   readonly catalog: CatalogClient;
   readonly assets: AssetLeases;
@@ -146,7 +125,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
 
   #client: EditorSessionClient;
   #kinds = new Map<string, AssetModelKind<unknown>>();
-  #dependencies = new Map<string, AssetLease<unknown>>();
+  #dependencies = new Map<string, SessionDependency>();
   #disposed = false;
 
   readonly #onCatalogChange = (): void => {
@@ -168,24 +147,32 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       rooms: this.#client,
       records: this.catalog
     });
-    this.target = this.assets.openRoom(
-      options.target.kind,
-      options.target.id
-    );
+    try {
+      this.target = this.assets.openRoom(
+        options.accepts,
+        options.launch.target.value
+      );
+      this.#syncDependencies();
+    }
+    catch (error) {
+      this.assets.dispose();
 
-    this.#syncDependencies();
+      throw error;
+    }
     this.catalog.on("change", this.#onCatalogChange);
     this.catalog.on("dependencies", this.#onCatalogChange);
   }
 
-  dependencies(): IterableIterator<AssetLease<unknown>> {
-    return this.#dependencies.values();
+  * dependencies(): IterableIterator<AssetDependency> {
+    for (const { view } of this.#dependencies.values()) {
+      yield view;
+    }
   }
 
   dependency(
     assetId: string
-  ): AssetLease<unknown> | undefined {
-    return this.#dependencies.get(assetId);
+  ): AssetDependency | undefined {
+    return this.#dependencies.get(assetId)?.view;
   }
 
   dispose(): void {
@@ -203,6 +190,9 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   }
 
   #syncDependencies(): void {
+    if (this.#disposed) {
+      return;
+    }
     const wanted = new Map<string, AssetModelKind<unknown>>();
     for (const reference of this.catalog.closureOf(this.target.record.id)) {
       const record = this.catalog.record(reference.id);
@@ -212,25 +202,63 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       }
     }
 
-    for (const [assetId, lease] of this.#dependencies) {
+    const added = new Map<string, SessionDependency>();
+    try {
+      for (const [assetId, kind] of wanted) {
+        if (this.#dependencies.has(assetId)) {
+          continue;
+        }
+        const lease = this.assets.open(kind, assetId);
+        const { record, room, model, ready } = lease;
+        added.set(assetId, {
+          lease,
+          view: Object.freeze({
+            record,
+            room,
+            model,
+            ready
+          })
+        });
+      }
+    }
+    catch (error) {
+      for (const { lease } of added.values()) {
+        lease.release();
+      }
+
+      throw error;
+    }
+
+    const removed: AssetReferenceData[] = [];
+    for (const [assetId, { lease }] of this.#dependencies) {
       if (!wanted.has(assetId)) {
         this.#dependencies.delete(assetId);
         lease.release();
-        this.emit("dependency-removed", {
+        removed.push({
           id: assetId,
           kind: lease.record.kind
         });
       }
     }
 
-    for (const [assetId, kind] of wanted) {
-      if (this.#dependencies.has(assetId)) {
-        continue;
-      }
+    for (const [assetId, dependency] of added) {
+      this.#dependencies.set(assetId, dependency);
+    }
 
-      const lease = this.assets.open(kind, assetId);
-      this.#dependencies.set(assetId, lease);
-      this.emit("dependency-added", lease);
+    for (const reference of removed) {
+      if (this.#disposed) {
+        return;
+      }
+      this.emit("dependency-removed", reference);
+    }
+
+    for (const [assetId, dependency] of added) {
+      if (this.#disposed) {
+        return;
+      }
+      if (this.#dependencies.get(assetId) === dependency) {
+        this.emit("dependency-added", dependency.view);
+      }
     }
   }
 }

@@ -14,7 +14,7 @@ import {
 
 // Import Internal Dependencies
 import { AssetLeases } from "#src/session/AssetLeases.ts";
-import { AssetModelConflictError } from "#src/errors/AssetModelConflictError.ts";
+import { AssetModelConflictError } from "#src/session/errors/AssetModelConflictError.ts";
 import {
   FakeClient,
   fakeModelKind,
@@ -40,6 +40,35 @@ function setup(
 }
 
 describe("AssetLeases", () => {
+  test("disposes a new model when joining its room throws", (context) => {
+    const { client, leases } = setup();
+    const kind = fakeModelKind("pixelart");
+    client.room("pixelart:tex");
+    const room = client.fakeRoom("pixelart:tex");
+    context.mock.method(room, "join", () => {
+      throw new Error("join failed");
+    });
+
+    assert.throws(() => leases.open(kind, "tex"), /join failed/);
+    assert.equal(kind.models[0].disposed, true);
+    assert.equal(room.leaves, 1);
+    assert.equal(leases.has("tex"), false);
+  });
+
+  test("refuses acquisitions after disposal and ignores late releases", () => {
+    const { client, leases } = setup();
+    const kind = fakeModelKind("pixelart");
+    const lease = leases.open(kind, "tex");
+    leases.dispose();
+    lease.release();
+    leases.dispose();
+
+    assert.throws(() => leases.open(kind, "tex"), /disposed/);
+    assert.throws(() => leases.openRoom("voxelmap", "map"), /disposed/);
+    assert.equal(client.fakeRoom("pixelart:tex").leaves, 1);
+    assert.equal(client.rooms.has("voxelmap:map"), false);
+  });
+
   test("the first lease builds the model and joins the asset room", () => {
     const { client, leases } = setup();
     const kind = fakeModelKind("pixelart");
@@ -120,6 +149,17 @@ describe("AssetLeases", () => {
     );
   });
 
+  test("refuses a model lease from another kind object", () => {
+    const { leases } = setup();
+    leases.open(fakeModelKind("pixelart"), "tex");
+
+    assert.throws(
+      () => leases.open(fakeModelKind("pixelart"), "tex"),
+      AssetModelConflictError
+    );
+    assert.equal(leases.holders("tex"), 1);
+  });
+
   test("a room lease shares the entry of a model lease", () => {
     const { client, leases } = setup();
     const kind = fakeModelKind("pixelart");
@@ -146,6 +186,12 @@ describe("AssetLeases", () => {
       () => leases.open(fakeModelKind("pixelart"), "map"),
       AssetKindMismatchError
     );
+    assert.throws(
+      () => leases.openRoom("pixelart", "map"),
+      AssetKindMismatchError
+    );
+
+    leases.openRoom("voxelmap", "map");
     assert.throws(
       () => leases.openRoom("pixelart", "map"),
       AssetKindMismatchError

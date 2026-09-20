@@ -11,14 +11,14 @@ import { AssetId } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import type { LaunchSource } from "#src/launch/LaunchSource.ts";
+import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import {
   LAUNCH_MESSAGE_TYPE,
   HostMessageLaunchSource
-} from "#src/launch/HostMessageLaunchSource.ts";
-import { InjectedLaunchSource } from "#src/launch/InjectedLaunchSource.ts";
-import { QueryLaunchSource } from "#src/launch/QueryLaunchSource.ts";
-import { LaunchNotFoundError } from "#src/errors/LaunchNotFoundError.ts";
+} from "#src/launch/sources/HostMessageLaunchSource.ts";
+import { InjectedLaunchSource } from "#src/launch/sources/InjectedLaunchSource.ts";
+import { QueryLaunchSource } from "#src/launch/sources/QueryLaunchSource.ts";
+import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 
 // CONSTANTS
 const kNothing: LaunchSource = {
@@ -45,7 +45,7 @@ function injectLaunchElement(
 }
 
 function frameIn(
-  parent: Window
+  parent: MessageEventSource
 ): () => void {
   const descriptor = Object.getOwnPropertyDescriptor(window, "parent");
   Object.defineProperty(window, "parent", {
@@ -125,7 +125,7 @@ describe("HostMessageLaunchSource", () => {
   });
 
   test("takes the launch posted by the parent window", async(context) => {
-    const parent = new EventTarget() as unknown as Window;
+    const parent = new MessageChannel().port1;
     context.after(frameIn(parent));
 
     const pending = new HostMessageLaunchSource().read();
@@ -142,7 +142,7 @@ describe("HostMessageLaunchSource", () => {
   });
 
   test("gives up after the timeout", async(context) => {
-    context.after(frameIn(new EventTarget() as unknown as Window));
+    context.after(frameIn(new MessageChannel().port1));
     context.mock.timers.enable({ apis: ["setTimeout"] });
 
     const pending = new HostMessageLaunchSource({ timeout: 50 }).read();

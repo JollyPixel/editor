@@ -67,7 +67,7 @@ export class RightPanel extends LitElement {
 
     this.#unsubscribePresence?.();
     this._peers = presence.peers;
-    this.#unsubscribePresence = presence.watch(
+    this.#unsubscribePresence = presence.subscribe(
       "peersChange",
       (peers) => {
         this._peers = peers;

@@ -193,7 +193,7 @@ export class BlockEditorDialog extends LitElement {
 
     this.#unwatchUsage?.();
     this.#unwatchUsage = this._open ?
-      this.usage.watch("change", this.#onUsageChange) :
+      this.usage.subscribe("change", this.#onUsageChange) :
       null;
   }
 

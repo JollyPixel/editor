@@ -1,27 +1,21 @@
 // Import Internal Dependencies
 import type {
   EditorDefinition,
-  EditorHandle,
-  NoDevOptions
+  EditorHandle
 } from "./EditorDefinition.ts";
 import { EditorLaunch } from "../launch/EditorLaunch.ts";
-import {
-  defaultLaunchSources,
-  type LaunchSource
-} from "../launch/LaunchSource.ts";
+import { defaultLaunchSources } from "../launch/sources/defaultLaunchSources.ts";
+import type { LaunchSource } from "../launch/sources/LaunchSource.ts";
 import { EditorSession } from "../session/EditorSession.ts";
-import { exposeDebugHandle } from "../dev/exposeDebugHandle.ts";
+import { exposeDebugHandle } from "./exposeDebugHandle.ts";
 
 export interface MountStandaloneOptions {
   sources?: Iterable<LaunchSource>;
   debugHandle?: string;
 }
 
-export async function mountStandalone<
-  THandle extends EditorHandle,
-  TDev = NoDevOptions
->(
-  definition: EditorDefinition<THandle, TDev>,
+export async function mountStandalone<THandle extends EditorHandle>(
+  definition: EditorDefinition<THandle>,
   options: MountStandaloneOptions = {}
 ): Promise<THandle> {
   const launch = await EditorLaunch.read(
@@ -38,8 +32,7 @@ export async function mountStandalone<
   try {
     handle = await definition.mount({
       launch,
-      session,
-      dev: definition.dev?.read() ?? ({} as TDev)
+      session
     });
   }
   catch (error) {

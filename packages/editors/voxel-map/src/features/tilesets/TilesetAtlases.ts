@@ -42,7 +42,7 @@ export class TilesetAtlases {
     this.#textures = options.textures;
     this.#worldStore = options.worldStore;
 
-    this.#unsubscribe = this.#store.watch("change", this.reconcile);
+    this.#unsubscribe = this.#store.subscribe("change", this.reconcile);
     this.reconcile();
   }
 

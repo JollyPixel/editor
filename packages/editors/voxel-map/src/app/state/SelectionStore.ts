@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { EditorStore } from "@jolly-pixel/editor.host";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { ObjectKey } from "../../features/layers/objects/objectArea.ts";
@@ -22,7 +22,7 @@ export type SelectionStoreEvents = {
   ) => void;
 };
 
-export class SelectionStore extends EditorStore<SelectionStoreEvents> {
+export class SelectionStore extends Emitter<SelectionStoreEvents> {
   #current: LayerSelection = null;
   #gizmoLayer: string | null = null;
   #gizmoDragging = false;

@@ -6,7 +6,7 @@ import {
   type SyncedPixelDocument
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import {
-  DevOptions,
+  QueryParams,
   type EditorContext,
   type EditorSession
 } from "@jolly-pixel/editor.host";
@@ -30,7 +30,7 @@ import {
 const kStarterRegionId = "pixel-draw-demo:starter-region";
 const kStarterRegionSize = 16;
 
-export interface PixelArtDemoDevOptions {
+export interface PixelArtDemoParams {
   runtime: string | undefined;
   empty: boolean;
   importPolicy: string | undefined;
@@ -38,12 +38,14 @@ export interface PixelArtDemoDevOptions {
   addDelay: number | undefined;
 }
 
-export const PIXEL_ART_DEMO_DEV_OPTIONS = new DevOptions<PixelArtDemoDevOptions>({
-  runtime: DevOptions.string(),
-  empty: DevOptions.flag(),
-  importPolicy: DevOptions.string(),
-  maxFps: DevOptions.number(),
-  addDelay: DevOptions.number()
+export const PIXEL_ART_DEMO_PARAMS = new QueryParams<PixelArtDemoParams>((query) => {
+  return {
+    runtime: query.string("runtime"),
+    empty: query.flag("empty"),
+    importPolicy: query.string("import-policy"),
+    maxFps: query.number("max-fps"),
+    addDelay: query.number("add-delay")
+  };
 });
 
 export interface PixelArtDemoParts {
@@ -61,15 +63,15 @@ export class PixelArtDemo {
     title: "Join pixel-draw demo"
   };
   static readonly kinds = [];
-  static readonly dev = PIXEL_ART_DEMO_DEV_OPTIONS;
 
   static async mount(
-    context: EditorContext<PixelArtDemoDevOptions>
+    context: EditorContext
   ): Promise<PixelArtDemo> {
-    const { session, dev } = context;
+    const { session } = context;
+    const params = PIXEL_ART_DEMO_PARAMS.read();
     const panel = document.querySelector("pixel-draw-panel")!;
-    if (dev.importPolicy !== undefined && isTextureImportPolicy(dev.importPolicy)) {
-      panel.textureImportPolicy = dev.importPolicy;
+    if (params.importPolicy !== undefined && isTextureImportPolicy(params.importPolicy)) {
+      panel.textureImportPolicy = params.importPolicy;
     }
     const themePreferences = document.querySelector<ThemePreferences>(
       "jolly-theme-preferences"
@@ -97,20 +99,20 @@ export class PixelArtDemo {
         size: 1
       }
     });
-    const preview = dev.runtime === "off" ?
+    const preview = params.runtime === "off" ?
       null :
       await openDemoPreview({
         canvas: "#canvas-container > canvas",
         canvasManager: canvas,
         rotationToggle: document.querySelector<HTMLInputElement>("#rotation-toggle")!,
-        maxFps: positive(dev.maxFps)
+        maxFps: positive(params.maxFps)
       });
     const shell = new DemoShell(panel, preview);
 
     const tabs = new TextureTabs({
       panel,
       session,
-      addDelay: positive(dev.addDelay) ?? 0
+      addDelay: positive(params.addDelay) ?? 0
     });
     await tabs.attach(
       record.id,
@@ -121,7 +123,7 @@ export class PixelArtDemo {
       },
       canvas
     );
-    if (!dev.empty) {
+    if (!params.empty) {
       selectStarterRegion(canvas);
     }
 

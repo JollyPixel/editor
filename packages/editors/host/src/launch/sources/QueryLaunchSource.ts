@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { EditorLaunch } from "./EditorLaunch.ts";
+import { EditorLaunch } from "../EditorLaunch.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
 
 // CONSTANTS

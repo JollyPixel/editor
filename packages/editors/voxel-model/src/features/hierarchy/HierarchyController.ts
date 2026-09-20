@@ -266,7 +266,7 @@ export class HierarchyController implements ReactiveController {
       () => document.off("change", this.#onChange),
       () => document.off("reset", this.#onReset),
       () => document.blocks.off("select", this.#onSelect),
-      presence.watch("blockSelectionsChange", this.#onPeerSelections)
+      presence.subscribe("blockSelectionsChange", this.#onPeerSelections)
     ];
   }
 

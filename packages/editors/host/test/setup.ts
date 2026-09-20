@@ -26,7 +26,7 @@ const kDomConstructors = Object.fromEntries(
     .filter((key) => kDomGlobals.has(key) || /^HTML\w*Element$/.test(key))
     .map((key) => [
       key,
-      kEmulatedBrowserWindow[key as keyof Window]
+      Reflect.get(kEmulatedBrowserWindow, key)
     ])
 );
 

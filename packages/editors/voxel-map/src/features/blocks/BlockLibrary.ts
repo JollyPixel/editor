@@ -244,14 +244,14 @@ export class BlockLibrary extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.brush.watch("blockChange", this.#onSelectedBlockChange),
-      this.worldStore.watch("blockRegistryChanged", this.#onBlockRegistryChanged),
-      this.brush.watch("rotationModeChange", this.#onRotationModeChange),
-      this.brush.watch("flipYChange", this.#onFlipYChange),
-      this.presence.watch("blockSelectionsChange", this.#onMarksChange),
-      this.presence.watch("peersChange", this.#onMarksChange),
-      this.tilesets.watch("change", this.#onTilesetsChange),
-      this.usage.watch("change", this.#onUsageChange)
+      this.brush.subscribe("blockChange", this.#onSelectedBlockChange),
+      this.worldStore.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged),
+      this.brush.subscribe("rotationModeChange", this.#onRotationModeChange),
+      this.brush.subscribe("flipYChange", this.#onFlipYChange),
+      this.presence.subscribe("blockSelectionsChange", this.#onMarksChange),
+      this.presence.subscribe("peersChange", this.#onMarksChange),
+      this.tilesets.subscribe("change", this.#onTilesetsChange),
+      this.usage.subscribe("change", this.#onUsageChange)
     );
     this.#refreshMarks();
     this.#refreshUsage();

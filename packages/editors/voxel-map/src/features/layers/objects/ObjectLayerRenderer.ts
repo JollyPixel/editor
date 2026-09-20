@@ -94,9 +94,9 @@ export class ObjectLayerRenderer extends ActorComponent {
 
     canvas.addEventListener("pointerdown", this.#onPointerDown, true);
     this.#subscriptions.push(
-      this.#selection.watch("change", this.#onSelectionChange),
-      this.#worldStore.watch("layerUpdated", this.#onLayerUpdated),
-      this.#worldStore.watch("reset", this.#onWorldReset)
+      this.#selection.subscribe("change", this.#onSelectionChange),
+      this.#worldStore.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.#worldStore.subscribe("reset", this.#onWorldReset)
     );
 
     this.#syncAll();

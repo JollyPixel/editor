@@ -124,9 +124,9 @@ export class TilesetFolder extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.tilesets.watch("change", this.#refresh),
-      this.tilesets.watch("activeChange", this.#refresh),
-      this.worldStore.watch("blockRegistryChanged", this.#refresh)
+      this.tilesets.subscribe("change", this.#refresh),
+      this.tilesets.subscribe("activeChange", this.#refresh),
+      this.worldStore.subscribe("blockRegistryChanged", this.#refresh)
     );
   }
 

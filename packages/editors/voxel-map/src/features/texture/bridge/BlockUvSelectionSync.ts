@@ -26,7 +26,7 @@ export class BlockUvSelectionSync {
     this.#uv = uv;
     this.#brush = brush;
     this.#uv.on("selection-changed", this.#onSelectionChanged);
-    this.#unsubscribe = this.#brush.watch(
+    this.#unsubscribe = this.#brush.subscribe(
       "blockChange",
       this.#onSelectedBlockChange
     );

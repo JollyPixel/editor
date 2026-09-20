@@ -88,11 +88,11 @@ export class VoxelLayerGizmo extends ActorComponent {
       this.#pivot
     );
     this.#subscriptions.push(
-      this.#selection.watch(
+      this.#selection.subscribe(
         "gizmoLayerChange",
         this.setActiveLayer.bind(this)
       ),
-      this.#worldStore.watch(
+      this.#worldStore.subscribe(
         "layerUpdated",
         this.#onLayerUpdated
       )

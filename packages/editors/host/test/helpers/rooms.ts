@@ -8,7 +8,15 @@ import type {
   AssetRecordData,
   AssetReferenceData
 } from "@jolly-pixel/asset";
-import type { Room } from "@jolly-pixel/network/client";
+import { Emitter } from "@openally/emitt";
+import type {
+  Peer,
+  PeerMetadata,
+  Right,
+  Room,
+  RoomEventMap,
+  RoomRights
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type {
@@ -16,35 +24,34 @@ import type {
   SyncedModel
 } from "#src/session/AssetLease.ts";
 
-type Listener = (message: unknown) => void;
-
-export class FakeRoom {
+export class FakeRoom extends Emitter<RoomEventMap> implements Room {
   readonly id: string;
+  readonly clientId = "fake-client";
+  readonly peers = new Map<string, Peer>();
+  readonly role = "editor";
+  readonly rights: RoomRights = {};
+  readonly access: Right = "write";
   joins = 0;
   leaves = 0;
-  #listeners = new Set<Listener>();
 
   constructor(
     id: string
   ) {
+    super();
     this.id = id;
   }
 
-  on(
-    _type: string,
-    listener: Listener
-  ): void {
-    this.#listeners.add(listener);
-  }
-
-  off(
-    _type: string,
-    listener: Listener
-  ): void {
-    this.#listeners.delete(listener);
+  can(): Right {
+    return this.access;
   }
 
   send(): void {
+    return void 0;
+  }
+
+  updatePresence(
+    _patch: PeerMetadata
+  ): void {
     return void 0;
   }
 
@@ -59,9 +66,7 @@ export class FakeRoom {
   receive(
     message: unknown
   ): void {
-    for (const listener of this.#listeners) {
-      listener(message);
-    }
+    this.emit("message", message);
   }
 }
 
@@ -71,14 +76,14 @@ export class FakeClient {
 
   room(
     name: string
-  ): Room<any, any> {
+  ): Room {
     let room = this.rooms.get(name);
     if (room === undefined) {
       room = new FakeRoom(name);
       this.rooms.set(name, room);
     }
 
-    return room as unknown as Room<any, any>;
+    return room;
   }
 
   destroy(): void {

@@ -2,8 +2,8 @@
 import { AssetId } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { LaunchNotFoundError } from "../errors/LaunchNotFoundError.ts";
-import type { LaunchSource } from "./LaunchSource.ts";
+import { LaunchNotFoundError } from "./errors/LaunchNotFoundError.ts";
+import type { LaunchSource } from "./sources/LaunchSource.ts";
 
 export class EditorLaunch {
   static parse(

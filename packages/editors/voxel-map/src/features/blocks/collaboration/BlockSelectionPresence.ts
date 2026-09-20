@@ -48,7 +48,7 @@ export class BlockSelectionPresence {
         this.#presence.blockSelections = marks;
       }
     });
-    this.#unsubscribeBlock = this.#brush.watch(
+    this.#unsubscribeBlock = this.#brush.subscribe(
       "blockChange",
       this.#onBlockChange
     );

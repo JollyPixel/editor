@@ -67,7 +67,7 @@ export class BlockUvBridge {
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
     this.#uv.on("region-rotated", this.#onRegionRotated);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
-    this.#unsubscribeRegistry = worldStore.watch(
+    this.#unsubscribeRegistry = worldStore.subscribe(
       "blockRegistryChanged",
       this.#onBlockRegistryChanged
     );

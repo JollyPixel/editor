@@ -78,8 +78,8 @@ export class LayersPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.state.selection.watch("change", this.#onSelectionChange),
-      this.state.usage.watch("change", this.#onUsageChange)
+      this.state.selection.subscribe("change", this.#onSelectionChange),
+      this.state.usage.subscribe("change", this.#onUsageChange)
     );
     this.#onSelectionChange(this.state.selection.current);
   }

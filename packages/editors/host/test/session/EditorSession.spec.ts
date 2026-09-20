@@ -64,7 +64,7 @@ async function startConnect(
     identity: kIdentity,
     client,
     kinds: options.kinds ?? [],
-    accepts: options.accepts
+    accepts: options.accepts ?? "voxelmap"
   });
 
   client.fakeRoom(CATALOG_ROOM).receive(snapshotMessage(
@@ -92,6 +92,29 @@ async function connect(
 }
 
 describe("EditorSession.connect", () => {
+  test("releases acquired models when a later factory throws", async() => {
+    const kind = fakeModelKind("pixelart");
+    const failure = new Error("factory failed");
+    const audio: AssetModelKind<unknown> = {
+      kind: "audio",
+      createModel: () => {
+        throw failure;
+      }
+    };
+    const { client, pending } = await startConnect({
+      kinds: [kind, audio],
+      dependencies: {
+        map: [tileset("grass"), { id: "sound", kind: "audio" }]
+      }
+    });
+
+    await assert.rejects(pending, failure);
+    assert.equal(kind.models[0].disposed, true);
+    assert.equal(client.fakeRoom("pixelart:grass").leaves, 1);
+    assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
+    assert.equal(client.destroyed, true);
+  });
+
   test("leases the target room-only without joining it", async() => {
     const { client, session } = await connect();
 
@@ -169,6 +192,92 @@ describe("EditorSession.connect", () => {
 });
 
 describe("EditorSession live closure", () => {
+  test("exposes stable dependency views without release ownership", async() => {
+    const kind = fakeModelKind("pixelart");
+    const { client, session } = await connect({ kinds: [kind] });
+    const added: unknown[] = [];
+    session.on("dependency-added", (dependency) => added.push(dependency));
+    client.fakeRoom(CATALOG_ROOM).receive(
+      changedMessage("map", kMap, [tileset("grass")])
+    );
+    const dependency = session.dependency("grass");
+    assert.ok(dependency);
+    assert.equal("release" in dependency, false);
+    assert.equal(Object.isFrozen(dependency), true);
+    assert.equal(added[0], dependency);
+    assert.equal([...session.dependencies()][0], dependency);
+    assert.equal(dependency.model, kind.models[0]);
+    kind.resolveAll();
+    await dependency.ready;
+
+    client.fakeRoom(CATALOG_ROOM).receive(
+      changedMessage("map", kMap, [tileset("grass")])
+    );
+    assert.equal(session.dependency("grass"), dependency);
+    session.dispose();
+  });
+
+  for (const event of ["dependency-added", "dependency-removed"] as const) {
+    test(`stops notifications when disposed during ${event}`, async() => {
+      const kind = fakeModelKind("pixelart");
+      const { client, session } = await connect({
+        kinds: [kind],
+        dependencies: {
+          map: event === "dependency-removed" ? [tileset("grass")] : []
+        },
+        resolveModels: kind
+      });
+      let notifications = 0;
+      session.on(event, () => {
+        notifications++;
+        session.dispose();
+      });
+      const next = event === "dependency-added" ?
+        [tileset("grass"), tileset("stone")] : [tileset("stone")];
+      client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, next));
+
+      assert.equal(notifications, 1);
+      assert.deepEqual([...session.dependencies()], []);
+      assert.equal(kind.models.every((model) => model.disposed), true);
+      assert.equal(client.fakeRoom("pixelart:stone").leaves, 1);
+      assert.equal(client.destroyed, true);
+      assert.throws(() => session.assets.open(kind, "stone"), /disposed/);
+      session.dispose();
+    });
+  }
+
+  test("rolls back additions before removing existing dependencies", async() => {
+    const kind = fakeModelKind("pixelart");
+    const audio: AssetModelKind<unknown> = {
+      kind: "audio",
+      createModel: () => {
+        throw new Error("factory failed");
+      }
+    };
+    const { client, session } = await connect({
+      kinds: [kind, audio],
+      dependencies: { map: [tileset("grass")] },
+      resolveModels: kind
+    });
+    const original = session.dependency("grass");
+    const notifications: string[] = [];
+    session.on("dependency-added", () => notifications.push("added"));
+    session.on("dependency-removed", () => notifications.push("removed"));
+
+    assert.throws(() => {
+      client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, [
+        tileset("stone"),
+        { id: "sound", kind: "audio" }
+      ]));
+    }, /factory failed/);
+    assert.equal(session.dependency("grass"), original);
+    assert.equal(kind.models[0].disposed, false);
+    assert.equal(kind.models[1].disposed, true);
+    assert.equal(session.assets.has("stone"), false);
+    assert.deepEqual(notifications, []);
+    session.dispose();
+  });
+
   test("leases added edges and releases removed ones", async() => {
     const kind = fakeModelKind("pixelart");
     const { client, session } = await connect({

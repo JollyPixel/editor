@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { EditorStore } from "@jolly-pixel/editor.host";
+import { Emitter } from "@openally/emitt";
 import type { PresencePeer } from "@jolly-pixel/ui";
 import type { PeerMarkMap } from "@jolly-pixel/ui/network";
 
@@ -12,7 +12,7 @@ export type PresenceStoreEvents = {
   ) => void;
 };
 
-export class PresenceStore extends EditorStore<PresenceStoreEvents> {
+export class PresenceStore extends Emitter<PresenceStoreEvents> {
   #peers: readonly PresencePeer[] = [];
   #blockSelections: PeerMarkMap<string> = new Map();
 
