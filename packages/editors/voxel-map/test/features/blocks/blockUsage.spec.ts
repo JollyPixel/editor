@@ -7,11 +7,13 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
+  blockIsUnused,
   blockRemovalMessage,
   blockUsageSummary,
   formatCount,
   orphanVoxelsMessage,
   sortBlocksByUsage,
+  tilesetIsUnused,
   tilesetRemovalMessage
 } from "../../../src/features/blocks/blockUsage.ts";
 
@@ -94,6 +96,29 @@ describe("blockUsage", () => {
       tilesetRemovalMessage({ tilesetId: "a", blocks: [1, 2], voxels: 2048 }),
       "2 blocks (2,048 voxels in the map) use this tileset " +
       "and will lose their texture."
+    );
+  });
+
+  it("treats a removal that loses nothing as unused", () => {
+    assert.equal(
+      blockIsUnused({ blockId: 1, voxels: 0, layers: [] }),
+      true
+    );
+    assert.equal(
+      blockIsUnused({
+        blockId: 1,
+        voxels: 1,
+        layers: [{ layerName: "Ground", voxels: 1 }]
+      }),
+      false
+    );
+    assert.equal(
+      tilesetIsUnused({ tilesetId: "a", blocks: [], voxels: 0 }),
+      true
+    );
+    assert.equal(
+      tilesetIsUnused({ tilesetId: "a", blocks: [1], voxels: 0 }),
+      false
     );
   });
 

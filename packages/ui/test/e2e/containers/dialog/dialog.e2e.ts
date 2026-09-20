@@ -123,6 +123,35 @@ test.describe("Dialog", () => {
     await expect(dialog).toHaveCount(0);
   });
 
+  test("an inline confirmation settles inside the open dialog", async({ page }) => {
+    const result = page.locator("main > div");
+    const host = page.locator("#inline-confirm-dialog");
+    const dialog = host.locator("dialog");
+    const remove = host.locator("[data-action=inline-remove]");
+    const confirmation = host.locator(".confirmation");
+
+    await page.locator("[data-action=inline-confirm]").click();
+    await remove.click();
+    await expect(confirmation.getByRole("alert"))
+      .toHaveText("3 blocks use this tileset and will lose their texture.");
+    await expect(host.locator(".body")).toHaveAttribute("inert");
+    await expect(remove).toBeHidden();
+    await expect(page.locator("body > jolly-dialog")).toHaveCount(0);
+
+    await page.keyboard.press("Escape");
+    await expect(result).toHaveAttribute("data-result", "inline:false");
+    await expect(dialog).toHaveAttribute("open");
+    await expect(confirmation).toHaveCount(0);
+    await expect(remove.locator("button")).toBeFocused();
+
+    await remove.click();
+    await expect(confirmation.locator("[data-action=confirm] button"))
+      .toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(result).toHaveAttribute("data-result", "inline:true");
+    await expect(dialog).not.toHaveAttribute("open");
+  });
+
   test("a helper dialog stays mounted until its exit transition ends", async({ page }) => {
     const confirm = page.locator("body > jolly-dialog");
 

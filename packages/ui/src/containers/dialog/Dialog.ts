@@ -8,7 +8,8 @@ import {
 import {
   customElement,
   property,
-  query
+  query,
+  state
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
@@ -18,7 +19,14 @@ import {
   type DialogHeader,
   type DialogIntent
 } from "./dialogHeader.ts";
+import {
+  resolveInlineConfirmation,
+  type InlineConfirmation,
+  type InlineConfirmOptions
+} from "./inlineConfirm.ts";
 import { emitContainerEvent } from "../events.ts";
+import { deepActiveElement } from "../../dom.ts";
+import "../../controls/Button.ts";
 import "../../icon/Icon.ts";
 import type {
   IconName,
@@ -70,6 +78,13 @@ export class Dialog extends LitElement {
   @query("slot[name=actions]")
   declare _actions: HTMLSlotElement;
 
+  @query(".confirmation [data-action=confirm]")
+  declare _confirmAction: HTMLElement | null;
+
+  @state()
+  private declare _confirmation: InlineConfirmation | null;
+
+  #settleConfirmation: ((confirmed: boolean) => void) | null = null;
   #header: DialogHeader = resolveDialogHeader({
     icon: "",
     tone: "",
@@ -87,9 +102,11 @@ export class Dialog extends LitElement {
     this.intent = "";
     this.dismissible = true;
     this.headingEditable = false;
+    this._confirmation = null;
   }
 
   override disconnectedCallback(): void {
+    this.#settleInlineConfirm(false);
     this.#releaseLayer();
 
     super.disconnectedCallback();
@@ -118,6 +135,7 @@ export class Dialog extends LitElement {
 
   override render(): TemplateResult {
     const labelled = this.heading !== "" && !this.headingEditable;
+    const confirmation = this._confirmation;
 
     return html`
       <dialog
@@ -132,9 +150,33 @@ export class Dialog extends LitElement {
         @keydown=${this.#onKeyDown}
       >
         ${this.#renderHeader()}
-        <div class="body"><slot></slot></div>
-        <footer><slot name="actions"></slot></footer>
+        <div class="body" ?inert=${confirmation !== null}><slot></slot></div>
+        <footer class=${confirmation?.danger ? "danger" : ""}>
+          <slot name="actions" ?hidden=${confirmation !== null}></slot>
+          ${confirmation === null ?
+            nothing :
+            this.#renderConfirmation(confirmation)}
+        </footer>
       </dialog>
+    `;
+  }
+
+  #renderConfirmation(
+    confirmation: InlineConfirmation
+  ): TemplateResult {
+    return html`
+      <div class="confirmation" part="confirmation">
+        <p class="message" role="alert">${confirmation.message}</p>
+        <jolly-button
+          data-action="cancel"
+          @click=${() => this.#settleInlineConfirm(false)}
+        >${confirmation.cancelLabel}</jolly-button>
+        <jolly-button
+          data-action="confirm"
+          variant=${confirmation.variant}
+          @click=${() => this.#settleInlineConfirm(true)}
+        >${confirmation.confirmLabel}</jolly-button>
+      </div>
     `;
   }
 
@@ -196,6 +238,47 @@ export class Dialog extends LitElement {
     }
   }
 
+  async confirmInline(
+    options: InlineConfirmOptions
+  ): Promise<boolean> {
+    if (!this.open) {
+      return false;
+    }
+
+    this.#settleInlineConfirm(false);
+
+    const restoreFocus = deepActiveElement();
+    const {
+      promise,
+      resolve
+    } = Promise.withResolvers<boolean>();
+    this.#settleConfirmation = resolve;
+    this._confirmation = resolveInlineConfirmation(options);
+    await this.updateComplete;
+    this._confirmAction?.focus();
+
+    const confirmed = await promise;
+    await this.updateComplete;
+    if (this.open && this._confirmation === null) {
+      restoreFocus?.focus();
+    }
+
+    return confirmed;
+  }
+
+  #settleInlineConfirm(
+    confirmed: boolean
+  ): void {
+    const settle = this.#settleConfirmation;
+    if (settle === null) {
+      return;
+    }
+
+    this.#settleConfirmation = null;
+    this._confirmation = null;
+    settle(confirmed);
+  }
+
   #releaseLayer(): void {
     this.#releaseInputLayer?.();
     this.#releaseInputLayer = null;
@@ -228,6 +311,10 @@ export class Dialog extends LitElement {
   }
 
   #defaultAction(): HTMLElement | null {
+    if (this._confirmation !== null) {
+      return this._confirmAction;
+    }
+
     const actions = (this._actions?.assignedElements() ?? [])
       .filter((element) => element instanceof HTMLElement);
     const candidate = actions.find(
@@ -308,6 +395,13 @@ export class Dialog extends LitElement {
   #onCancel = (
     event: Event
   ) => {
+    if (this._confirmation !== null) {
+      event.preventDefault();
+      this.#settleInlineConfirm(false);
+
+      return;
+    }
+
     if (!this.dismissible) {
       event.preventDefault();
 
@@ -336,14 +430,22 @@ export class Dialog extends LitElement {
       event.clientX <= rect.right &&
       event.clientY >= rect.top &&
       event.clientY <= rect.bottom;
-    if (!inside) {
-      emitContainerEvent(
-        this,
-        "jolly-cancel",
-        undefined
-      );
-      this.close();
+    if (inside) {
+      return;
     }
+
+    if (this._confirmation !== null) {
+      this.#settleInlineConfirm(false);
+
+      return;
+    }
+
+    emitContainerEvent(
+      this,
+      "jolly-cancel",
+      undefined
+    );
+    this.close();
   };
 
   #onBeforeToggle = (
@@ -355,6 +457,7 @@ export class Dialog extends LitElement {
   };
 
   #onClose = () => {
+    this.#settleInlineConfirm(false);
     this.#releaseLayer();
     emitContainerEvent(this, "jolly-close", {
       returnValue: this._dialog.returnValue

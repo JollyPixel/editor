@@ -113,6 +113,36 @@ to field popovers such as the `jolly-color` picker and control details.
 
 Under `prefers-reduced-motion: reduce` the transitions are disabled.
 
+## Inline confirmation
+
+`confirmInline(options)` asks for a confirmation inside the open dialog instead
+of stacking a second one. It resolves to `true` on confirm and `false` on
+cancel, on Escape, on a backdrop click, or when the dialog closes. Called on a
+closed dialog it resolves to `false`.
+
+```ts
+const confirmed = await dialog.confirmInline({
+  message: "3 blocks use this tileset and will lose their texture.",
+  confirmLabel: "Remove",
+  danger: true
+});
+```
+
+| Option | Type | Default |
+|---|---|---|
+| `message` | `string` | |
+| `confirmLabel` | `string` | `"OK"` |
+| `cancelLabel` | `string` | `"Cancel"` |
+| `danger` | `boolean` | `false` |
+
+While confirming, the body is inert, the `actions` slot is hidden and the
+footer shows the message with its two buttons. The confirm button takes the
+focus and is the default action; the focus returns to where it was once the
+confirmation settles. `danger` gives the confirm button the `danger` variant
+and tints the footer. The footer row is exposed as the `confirmation` part.
+
+Use [`showConfirm()`](./dialog-helpers.md) when no dialog is open.
+
 ## Default action
 
 Enter activates the dialog's default action: the `actions` element carrying

@@ -83,9 +83,11 @@ test("the tab edit button renames the tileset asset", async({ page, world }) => 
 test("removing a tileset flags the blocks left without texture", async({ page }) => {
   const editor = await editTileset(page, "tileset");
   await editor.getByRole("button", { name: "Remove" }).click();
-  const confirm = dialog(page, "Remove \"tileset\"");
-  await expect(confirm).toContainText("The texture asset is kept.");
-  await confirm.getByRole("button", { name: "Remove" }).click();
+  await expect(editor.getByRole("alert")).toContainText("Remove \"tileset\"?");
+  await expect(editor.getByRole("alert"))
+    .toContainText("The texture asset is kept.");
+  await expect(page.locator("dialog[open]")).toHaveCount(1);
+  await editor.getByRole("button", { name: "Remove" }).click();
 
   await expect.poll(() => tilesetSources(page)).toEqual([]);
   await expect(editor).toBeHidden();

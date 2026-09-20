@@ -125,6 +125,7 @@ export {
 export * from "./containers/dialog/Dialog.ts";
 export * from "./containers/dialog/dialogHeader.ts";
 export * from "./containers/dialog/dialogHelpers.ts";
+export * from "./containers/dialog/inlineConfirm.ts";
 export * from "./containers/dock/Dock.ts";
 export * from "./containers/dock/DockLayout.ts";
 export * from "./containers/floating/Floating.ts";

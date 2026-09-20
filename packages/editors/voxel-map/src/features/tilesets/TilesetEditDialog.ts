@@ -15,11 +15,10 @@ import type {
   VoxelEngine,
   VoxelTilesetUsage
 } from "@jolly-pixel/voxel.renderer";
-import {
-  showConfirm,
-  type Dialog,
-  type JollyChangeDetail,
-  type LogQueue
+import type {
+  Dialog,
+  JollyChangeDetail,
+  LogQueue
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -34,8 +33,13 @@ import { rescaleLeavesBlocksOffGrid } from "./blockTilesets.ts";
 import { tileSizeOptions } from "./tileSizes.ts";
 import {
   formatCount,
+  tilesetIsUnused,
   tilesetRemovalMessage
 } from "../blocks/blockUsage.ts";
+
+// CONSTANTS
+const kOffGridWarning = "Some blocks will not line up with the new tile " +
+  "grid. They keep covering the same pixels.";
 
 @customElement("tileset-edit-dialog")
 export class TilesetEditDialog extends LitElement {
@@ -56,6 +60,27 @@ export class TilesetEditDialog extends LitElement {
 
     .remove {
       margin-inline-end: auto;
+    }
+
+    .pending {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--jolly-space-2, 8px);
+      padding: var(--jolly-space-2, 8px);
+      border-radius: var(--jolly-radius-sm, 2px);
+      background: color-mix(
+        in oklab,
+        var(--jolly-intent-warning-fill) 16%,
+        transparent
+      );
+    }
+
+    .pending p {
+      flex: 1 1 24ch;
+      margin: 0;
+      line-height: 1.4;
     }
   `;
 
@@ -80,6 +105,9 @@ export class TilesetEditDialog extends LitElement {
   @state()
   private declare _tilesetId: string | null;
 
+  @state()
+  private declare _pendingTileSize: number | null;
+
   @query("jolly-dialog")
   private declare _dialog: Dialog;
 
@@ -89,6 +117,7 @@ export class TilesetEditDialog extends LitElement {
     super();
     this.actions = null;
     this._tilesetId = null;
+    this._pendingTileSize = null;
   }
 
   override connectedCallback() {
@@ -159,6 +188,7 @@ export class TilesetEditDialog extends LitElement {
     const { definition } = entry;
     const usage = this.usage.tilesetUsageOf(definition.id);
     const renamable = this.actions !== null && entry.assetId !== null;
+    const pendingTileSize = this._pendingTileSize;
 
     return html`
       <div class="fields">
@@ -174,12 +204,27 @@ export class TilesetEditDialog extends LitElement {
         <jolly-select
           label="Tile size"
           .options=${tileSizeOptions(definition.tileSize)}
-          .value=${definition.tileSize}
+          .value=${pendingTileSize ?? definition.tileSize}
           ?disabled=${this.actions === null}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
-            void this.#resize(entry, event.detail.value);
+            this.#resize(entry, event.detail.value);
           }}
         ></jolly-select>
+        ${pendingTileSize === null ? nothing : html`
+          <div class="pending" role="alert">
+            <jolly-icon name="warning"></jolly-icon>
+            <p>${kOffGridWarning}</p>
+            <jolly-button
+              @click=${() => {
+                this._pendingTileSize = null;
+              }}
+            >Keep ${definition.tileSize}</jolly-button>
+            <jolly-button
+              variant="accent"
+              @click=${() => this.#applyPendingTileSize(entry)}
+            >Resize to ${pendingTileSize}</jolly-button>
+          </div>
+        `}
       </div>
       <p class="usage">${usageSummary(usage)}</p>
     `;
@@ -208,12 +253,17 @@ export class TilesetEditDialog extends LitElement {
     this.requestUpdate();
   }
 
-  async #resize(
+  #resize(
     entry: TilesetEntry,
     tileSize: number
-  ): Promise<void> {
+  ): void {
     const { definition } = entry;
-    if (this.actions === null || tileSize === definition.tileSize) {
+    if (this.actions === null) {
+      return;
+    }
+
+    this._pendingTileSize = null;
+    if (tileSize === definition.tileSize) {
       return;
     }
 
@@ -225,17 +275,24 @@ export class TilesetEditDialog extends LitElement {
         to: tileSize
       }
     );
-    const confirmed = !offGrid || await showConfirm({
-      title: `Resize "${entry.label}"?`,
-      message: "Some blocks will not line up with the new tile grid. " +
-        "They keep covering the same pixels.",
-      confirmLabel: "Resize",
-      intent: "warning"
-    });
-    if (confirmed) {
-      this.actions.resize(definition.id, tileSize);
+    if (offGrid) {
+      this._pendingTileSize = tileSize;
+
+      return;
     }
+
+    this.actions.resize(definition.id, tileSize);
     this.requestUpdate();
+  }
+
+  #applyPendingTileSize(
+    entry: TilesetEntry
+  ): void {
+    const tileSize = this._pendingTileSize;
+    this._pendingTileSize = null;
+    if (this.actions !== null && tileSize !== null) {
+      this.actions.resize(entry.definition.id, tileSize);
+    }
   }
 
   async #remove(): Promise<void> {
@@ -245,13 +302,13 @@ export class TilesetEditDialog extends LitElement {
     }
 
     const usage = this.usage.tilesetUsageOf(entry.definition.id);
-    const confirmed = await showConfirm({
-      title: `Remove "${entry.label}"?`,
-      message: `${tilesetRemovalMessage(usage)} The texture asset is kept.`,
-      confirmLabel: "Remove",
-      icon: "trash",
-      danger: true
-    });
+    const confirmed = tilesetIsUnused(usage) ||
+      await this._dialog.confirmInline({
+        message: `Remove "${entry.label}"? ` +
+          `${tilesetRemovalMessage(usage)} The texture asset is kept.`,
+        confirmLabel: "Remove",
+        danger: true
+      });
     if (confirmed && this.actions.remove(entry.definition.id)) {
       this.#close();
     }
@@ -263,6 +320,7 @@ export class TilesetEditDialog extends LitElement {
 
   #onClose(): void {
     this._tilesetId = null;
+    this._pendingTileSize = null;
   }
 }
 

@@ -21,7 +21,6 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 import {
   Mixed,
-  showConfirm,
   type Dialog,
   type JollyChangeDetail,
   type JollyHeadingChangeDetail,
@@ -35,6 +34,7 @@ import type {
   TilesetStore
 } from "../../state/index.ts";
 import {
+  blockIsUnused,
   blockRemovalMessage,
   blockUsageSummary,
   formatCount
@@ -380,13 +380,13 @@ export class BlockEditorDialog extends LitElement {
       return;
     }
 
-    const confirmed = await showConfirm({
-      title: `Delete "${block.name}"?`,
-      message: blockRemovalMessage(this.usage.usageOf(block.id)),
-      confirmLabel: "Delete",
-      icon: "trash",
-      danger: true
-    });
+    const usage = this.usage.usageOf(block.id);
+    const confirmed = blockIsUnused(usage) ||
+      await this._dialog.confirmInline({
+        message: `Delete "${block.name}"? ${blockRemovalMessage(usage)}`,
+        confirmLabel: "Delete",
+        danger: true
+      });
     if (!confirmed || !engine.removeBlock(block.id)) {
       return;
     }

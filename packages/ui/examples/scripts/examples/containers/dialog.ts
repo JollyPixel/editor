@@ -50,6 +50,39 @@ function tonedDialog(): HTMLElement[] {
   return [trigger, dialog];
 }
 
+function inlineConfirmDialog(
+  root: HTMLElement
+): HTMLElement[] {
+  const dialog = document.createElement("jolly-dialog");
+  dialog.id = "inline-confirm-dialog";
+  dialog.heading = "Tileset \"Terrain\"";
+  dialog.icon = "sliders";
+  dialog.append(text("Used by 3 blocks, 120 voxels in the map."));
+  const remove = button("Remove", "danger");
+  remove.slot = "actions";
+  remove.dataset.action = "inline-remove";
+  remove.addEventListener("click", async() => {
+    const confirmed = await dialog.confirmInline({
+      message: "3 blocks use this tileset and will lose their texture.",
+      confirmLabel: "Remove",
+      danger: true
+    });
+    root.dataset.result = `inline:${String(confirmed)}`;
+    if (confirmed) {
+      dialog.close();
+    }
+  });
+  const close = button("Close", "accent");
+  close.slot = "actions";
+  close.addEventListener("click", () => dialog.close());
+  dialog.append(remove, close);
+  const trigger = button("Open inline confirm dialog");
+  trigger.dataset.action = "inline-confirm";
+  trigger.addEventListener("click", () => void dialog.showModal());
+
+  return [trigger, dialog];
+}
+
 export const DIALOG_EXAMPLE: GalleryExample = {
   id: "containers/dialog",
   title: "Dialog",
@@ -160,6 +193,7 @@ export const DIALOG_EXAMPLE: GalleryExample = {
       openHeading,
       ...intentButtons(root),
       ...tonedDialog(),
+      ...inlineConfirmDialog(root),
       dialog,
       defaultAction,
       editableHeading

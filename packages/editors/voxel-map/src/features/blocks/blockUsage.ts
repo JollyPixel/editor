@@ -47,6 +47,18 @@ export function blockUsageSummary(
     formatCount(usage.layers.length, "layer");
 }
 
+export function blockIsUnused(
+  usage: VoxelBlockUsage
+): boolean {
+  return usage.voxels === 0;
+}
+
+export function tilesetIsUnused(
+  usage: VoxelTilesetUsage
+): boolean {
+  return usage.blocks.length === 0 && usage.voxels === 0;
+}
+
 export function blockRemovalMessage(
   usage: VoxelBlockUsage
 ): string {

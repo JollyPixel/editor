@@ -170,4 +170,36 @@ export const dialogStyles = css`
     border-top: 1px solid var(--jolly-divider);
     background: var(--jolly-dialog-chrome-bg);
   }
+
+  .body[inert] {
+    opacity: 0.45;
+  }
+
+  slot[hidden] {
+    display: none;
+  }
+
+  footer.danger {
+    background: color-mix(
+      in oklab,
+      var(--jolly-intent-danger-fill) 14%,
+      var(--jolly-dialog-chrome-bg)
+    );
+  }
+
+  .confirmation {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--jolly-space-2, 8px);
+    min-width: 0;
+  }
+
+  .message {
+    flex: 1 1 24ch;
+    margin: 0;
+    line-height: 1.4;
+  }
 `;

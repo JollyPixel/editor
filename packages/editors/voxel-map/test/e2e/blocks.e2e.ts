@@ -260,13 +260,13 @@ test("deleting a placed block asks first and removes its voxels", async({ page }
   await page.getByRole("listbox", { name: "Blocks" })
     .getByRole("option", { name: first, exact: true })
     .dblclick();
-  await titledDialog(page, first)
-    .getByRole("button", { name: "Delete" })
-    .click();
+  const editor = titledDialog(page, first);
+  await editor.getByRole("button", { name: "Delete" }).click();
 
-  const confirm = dialog(page, `Delete "${first}"?`);
-  await expect(confirm).toContainText("2 voxels");
-  await confirm.getByRole("button", { name: "Delete" }).click();
+  await expect(editor.getByRole("alert")).toContainText(`Delete "${first}"?`);
+  await expect(editor.getByRole("alert")).toContainText("2 voxels");
+  await expect(page.locator("dialog[open]")).toHaveCount(1);
+  await editor.getByRole("button", { name: "Delete" }).click();
 
   await expect.poll(() => blockNames(page)).not.toContain(first);
 });
