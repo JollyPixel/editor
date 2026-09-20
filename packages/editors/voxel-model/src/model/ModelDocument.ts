@@ -66,8 +66,13 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
   load(
     snapshot: VoxelModelSnapshot
   ): void {
-    this.blocks.load(snapshot.nodes);
-    this.folders.load(snapshot.folders, snapshot.placements);
+    this.blocks.load(
+      snapshot.nodes
+    );
+    this.folders.load(
+      snapshot.folders,
+      snapshot.placements
+    );
     this.emit("reset");
   }
 }

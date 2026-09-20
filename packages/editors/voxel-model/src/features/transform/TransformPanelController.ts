@@ -20,9 +20,19 @@ import type { TransformLock } from "../../collaboration/index.ts";
 
 // CONSTANTS
 const kDisplayDecimals = 2;
-const kPivotVisibleModes: readonly TransformMode[] = ["pos", "angle", "size", "pivot"];
+const kPivotVisibleModes: readonly TransformMode[] = [
+  "pos",
+  "angle",
+  "size",
+  "pivot"
+];
 
-export type TransformMode = "pos" | "angle" | "size" | "pivot" | "scale";
+export type TransformMode =
+  | "pos"
+  | "angle"
+  | "size"
+  | "pivot"
+  | "scale";
 
 export interface TransformWorkspace {
   document: ModelDocument;
@@ -37,7 +47,11 @@ export class TransformPanelController implements ReactiveController {
   #selected: ModelBlock | null = null;
   #mode: TransformMode = "pos";
   #space: GizmoSpace = "local";
-  #axisValues: THREE.Vector3Like = { x: 0, y: 0, z: 0 };
+  #axisValues: THREE.Vector3Like = {
+    x: 0,
+    y: 0,
+    z: 0
+  };
 
   #onSelect = (
     block: ModelBlock | null
@@ -55,7 +69,10 @@ export class TransformPanelController implements ReactiveController {
     change: ModelChange
   ): void => {
     const { command } = change;
-    if (command.action === "group-transformed" && command.uuid === this.#selected?.uuid) {
+    if (
+      command.action === "group-transformed" &&
+      command.uuid === this.#selected?.uuid
+    ) {
       this.#refresh(this.#selected);
     }
   };
@@ -144,7 +161,10 @@ export class TransformPanelController implements ReactiveController {
 
   #subscribe(): void {
     const workspace = this.#workspace;
-    if (workspace === null || this.#subscriptions.length > 0) {
+    if (
+      workspace === null ||
+      this.#subscriptions.length > 0
+    ) {
       return;
     }
 
@@ -167,25 +187,37 @@ export class TransformPanelController implements ReactiveController {
   }
 
   #syncGizmo(): void {
-    this.#workspace?.gizmo.configure(gizmoConfigFor(this.#mode, this.#space));
+    this.#workspace?.gizmo.configure(
+      gizmoConfigFor(this.#mode, this.#space)
+    );
   }
 
   #syncPivotMarkerVisibility(): void {
     if (this.#selected !== null) {
-      this.#selected.pivotMarkerVisible = kPivotVisibleModes.includes(this.#mode);
+      this.#selected.pivotMarkerVisible = kPivotVisibleModes.includes(
+        this.#mode
+      );
     }
   }
 
   #syncAxisValues(): void {
     if (this.#selected !== null) {
-      this.#axisValues = readAxisValues(this.#selected, this.#mode, this.#space);
+      this.#axisValues = readAxisValues(
+        this.#selected,
+        this.#mode,
+        this.#space
+      );
     }
   }
 
   #applyAxisValues(): void {
     const block = this.#selected;
     const workspace = this.#workspace;
-    if (block === null || workspace === null || workspace.lock.lockedBy(block.uuid) !== null) {
+    if (
+      block === null ||
+      workspace === null ||
+      workspace.lock.lockedBy(block.uuid) !== null
+    ) {
       return;
     }
 
@@ -243,13 +275,29 @@ function gizmoConfigFor(
 ): GizmoConfig | null {
   switch (mode) {
     case "pos":
-      return { mode: "translate", target: "group", space };
+      return {
+        mode: "translate",
+        target: "group",
+        space
+      };
     case "angle":
-      return { mode: "rotate", target: "pivot", space };
+      return {
+        mode: "rotate",
+        target: "pivot",
+        space
+      };
     case "pivot":
-      return { mode: "translate", target: "pivot", space };
+      return {
+        mode: "translate",
+        target: "pivot",
+        space
+      };
     case "scale":
-      return { mode: "scale", target: "mesh", space };
+      return {
+        mode: "scale",
+        target: "mesh",
+        space
+      };
     default:
       return null;
   }
@@ -264,9 +312,13 @@ function readAxisValues(
 
   switch (mode) {
     case "pos":
-      return roundVector3(world ? block.worldPosition : block.position);
+      return roundVector3(
+        world ? block.worldPosition : block.position
+      );
     case "angle": {
-      const rotation = world ? block.worldRotation : block.rotation;
+      const rotation = world
+        ? block.worldRotation
+        : block.rotation;
 
       return roundVector3({
         x: THREE.MathUtils.radToDeg(rotation.x),
@@ -277,7 +329,9 @@ function readAxisValues(
     case "size":
       return roundVector3(block.size);
     case "pivot":
-      return roundVector3(world ? block.worldPivotOffset : block.pivotOffset);
+      return roundVector3(
+        world ? block.worldPivotOffset : block.pivotOffset
+      );
     case "scale":
       return roundVector3(block.scale);
     default:

@@ -27,12 +27,25 @@ export class EditorShell {
   ) {
     const { runtime, texture } = options;
 
-    this.#leftPanel = document.querySelector<LeftPanel>(kLeftPanelSelector)!;
-    this.#rightPanel = document.querySelector<RightPanel>(kRightPanelSelector)!;
+    const leftPanel = document.querySelector<LeftPanel>(
+      kLeftPanelSelector
+    );
+    const rightPanel = document.querySelector<RightPanel>(
+      kRightPanelSelector
+    );
+    if (leftPanel === null || rightPanel === null) {
+      throw new Error("EditorShell: the editor panels are missing from the page.");
+    }
+
+    this.#leftPanel = leftPanel;
+    this.#rightPanel = rightPanel;
 
     this.#leftPanel.setTexture(texture);
     this.#disposables.push(
-      runtime.suspendKeyboardOnHover(this.#leftPanel, kCanvasHoverEvent)
+      runtime.suspendKeyboardOnHover(
+        this.#leftPanel,
+        kCanvasHoverEvent
+      )
     );
   }
 

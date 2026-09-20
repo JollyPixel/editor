@@ -9,7 +9,7 @@ import {
   textField,
   treeRow
 } from "./support/panels.ts";
-import { addNode } from "./support/hierarchy.ts";
+import { addNode, hierarchyAction } from "./support/hierarchy.ts";
 import {
   blockSummary,
   outline,
@@ -34,7 +34,7 @@ test("a block added as a child nests under the selection", async({ page }) => {
 });
 
 test("a cancelled dialog adds nothing", async({ page }) => {
-  await page.getByRole("button", { name: "Add Block" }).click();
+  await hierarchyAction(page, "Add Block").click();
   const form = dialog(page, "New Block");
   await textField(form, "Block name").fill("Ghost");
   await form.getByRole("button", { name: "Cancel" }).click();
@@ -82,7 +82,7 @@ test("a duplicate copies the subtree and mirrors it", async({ page }) => {
   await addNode(page, "Block", "Arm");
 
   await treeRow(page, "Block").click();
-  await page.getByRole("button", { name: "Duplicate" }).click();
+  await hierarchyAction(page, "Duplicate").click();
   const form = dialog(page, "Duplicate");
   await expect(checkboxField(form, "Duplicate children too")).toBeChecked();
   await checkboxField(form, "X").check();
@@ -108,7 +108,7 @@ test("deleting a parent removes or promotes its children", async({ page }) => {
 
   await test.step("keeping the children", async() => {
     await treeRow(page, "Arm").click();
-    await page.getByRole("button", { name: "Delete" }).click();
+    await hierarchyAction(page, "Delete").click();
     const form = dialog(page, "Delete Block");
     await checkboxField(form, "Delete children too").uncheck();
     await form.getByRole("button", { name: "Delete" }).click();
@@ -119,13 +119,13 @@ test("deleting a parent removes or promotes its children", async({ page }) => {
 
   await test.step("with the children", async() => {
     await treeRow(page, "Block").click();
-    await page.getByRole("button", { name: "Delete" }).click();
+    await hierarchyAction(page, "Delete").click();
     await dialog(page, "Delete Block")
       .getByRole("button", { name: "Delete" })
       .click();
 
     await expect(page.getByRole("treeitem")).toHaveCount(0);
     expect(await outline(page)).toEqual([]);
-    await expect(page.getByRole("button", { name: "Delete" })).toBeDisabled();
+    await expect(hierarchyAction(page, "Delete")).toBeDisabled();
   });
 });

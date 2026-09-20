@@ -59,7 +59,7 @@ describe("TransformLock", () => {
       presence: { transformLock: "uuid-1" }
     });
 
-    harness.emit("sync");
+    harness.emitSync();
     const holder = harness.lock.lockedBy("uuid-1");
 
     assert.equal(holder?.clientId, "bob");
@@ -71,7 +71,7 @@ describe("TransformLock", () => {
   it("tracks an incremental claim from a presence patch", () => {
     const harness = createLock();
     harness.addPeer("bob", { presence: {} });
-    harness.emit("sync");
+    harness.emitSync();
 
     harness.emit("peer-presence", {
       clientId: "bob",
@@ -85,7 +85,7 @@ describe("TransformLock", () => {
   it("ignores a presence patch without its own key", () => {
     const harness = createLock();
     harness.addPeer("bob", { presence: { transformLock: "uuid-1" } });
-    harness.emit("sync");
+    harness.emitSync();
 
     harness.emit("peer-presence", {
       clientId: "bob",
@@ -99,7 +99,7 @@ describe("TransformLock", () => {
   it("clears a remote claim when the peer releases it", () => {
     const harness = createLock();
     harness.addPeer("bob", { presence: { transformLock: "uuid-1" } });
-    harness.emit("sync");
+    harness.emitSync();
 
     harness.emit("peer-presence", {
       clientId: "bob",
@@ -113,7 +113,7 @@ describe("TransformLock", () => {
   it("clears a remote claim when the peer leaves", () => {
     const harness = createLock();
     harness.addPeer("bob", { presence: { transformLock: "uuid-1" } });
-    harness.emit("sync");
+    harness.emitSync();
 
     harness.removePeer("bob");
     harness.emit("peer-left", { clientId: "bob" });
@@ -126,7 +126,7 @@ describe("TransformLock", () => {
     const harness = createLock();
     harness.addPeer("zoe", { presence: { transformLock: "uuid-1" } });
     harness.addPeer("ada", { presence: { transformLock: "uuid-1" } });
-    harness.emit("sync");
+    harness.emitSync();
 
     assert.equal(harness.lock.lockedBy("uuid-1")?.clientId, "ada");
     harness.lock.dispose();
@@ -136,7 +136,7 @@ describe("TransformLock", () => {
     const harness = createLock();
     harness.lock.claim("uuid-1");
     harness.addPeer("zoe", { presence: { transformLock: "uuid-1" } });
-    harness.emit("sync");
+    harness.emitSync();
 
     assert.equal(harness.lock.lockedBy("uuid-1"), null);
     harness.lock.dispose();
@@ -150,7 +150,7 @@ describe("TransformLock", () => {
     });
     harness.addPeer("bob", { presence: { transformLock: "uuid-1" } });
 
-    harness.emit("sync");
+    harness.emitSync();
     harness.emit("peer-presence", { clientId: "bob", patch: { transformLock: "uuid-2" } });
     harness.removePeer("bob");
     harness.emit("peer-left", { clientId: "bob" });
@@ -169,7 +169,7 @@ describe("TransformLock", () => {
     unsubscribe();
     harness.addPeer("bob", { presence: { transformLock: "uuid-1" } });
 
-    harness.emit("sync");
+    harness.emitSync();
 
     assert.equal(notifications, 0);
     harness.lock.dispose();

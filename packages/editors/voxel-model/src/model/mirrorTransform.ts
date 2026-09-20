@@ -33,13 +33,23 @@ export function mirrorRotation(
   rotation: THREE.Euler,
   sign: THREE.Vector3
 ): THREE.Euler {
-  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotation);
-  const mirrorMatrix = new THREE.Matrix4().makeScale(sign.x, sign.y, sign.z);
+  const rotationMatrix = new THREE.Matrix4()
+    .makeRotationFromEuler(rotation);
+  const mirrorMatrix = new THREE.Matrix4()
+    .makeScale(
+      sign.x,
+      sign.y,
+      sign.z
+    );
   const mirroredMatrix = mirrorMatrix.clone()
     .multiply(rotationMatrix)
     .multiply(mirrorMatrix);
 
-  const quaternion = new THREE.Quaternion().setFromRotationMatrix(mirroredMatrix);
+  const quaternion = new THREE.Quaternion()
+    .setFromRotationMatrix(mirroredMatrix);
 
-  return new THREE.Euler().setFromQuaternion(quaternion, rotation.order);
+  return new THREE.Euler().setFromQuaternion(
+    quaternion,
+    rotation.order
+  );
 }

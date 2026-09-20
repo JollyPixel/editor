@@ -14,9 +14,17 @@ import type {
   TransformLock
 } from "../collaboration/index.ts";
 
-export type GizmoMode = "translate" | "rotate" | "scale";
-export type GizmoTarget = "group" | "pivot" | "mesh";
-export type GizmoSpace = "world" | "local";
+export type GizmoMode =
+  | "translate"
+  | "rotate"
+  | "scale";
+export type GizmoTarget =
+  | "group"
+  | "pivot"
+  | "mesh";
+export type GizmoSpace =
+  | "world"
+  | "local";
 
 export interface GizmoConfig {
   mode: GizmoMode;
@@ -84,7 +92,10 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     this.emit("change", block);
 
     if (this.#dragging) {
-      this.#live.publish(block.uuid, block.transform);
+      this.#live.publish(
+        block.uuid,
+        block.transform
+      );
     }
   };
 
@@ -104,7 +115,9 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
 
     this.controls.mode = config.mode;
     this.controls.orientation = config.space ?? "world";
-    this.controls.attach(resolveTarget(block, config.target));
+    this.controls.attach(
+      resolveTarget(block, config.target)
+    );
     this.controls.enabled = true;
   };
 
@@ -130,9 +143,18 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     );
     options.scene.add(this.controls.helper);
 
-    this.controls.addEventListener("start", this.#onDragStart);
-    this.controls.addEventListener("change", this.#onObjectChange);
-    this.controls.addEventListener("end", this.#onDragEnd);
+    this.controls.addEventListener(
+      "start",
+      this.#onDragStart
+    );
+    this.controls.addEventListener(
+      "change",
+      this.#onObjectChange
+    );
+    this.controls.addEventListener(
+      "end",
+      this.#onDragEnd
+    );
     this.#blocks.on("select", this.#sync);
     this.#lock.on("change", this.#sync);
   }
@@ -151,9 +173,18 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
   dispose(): void {
     this.#blocks.off("select", this.#sync);
     this.#lock.off("change", this.#sync);
-    this.controls.removeEventListener("start", this.#onDragStart);
-    this.controls.removeEventListener("change", this.#onObjectChange);
-    this.controls.removeEventListener("end", this.#onDragEnd);
+    this.controls.removeEventListener(
+      "start",
+      this.#onDragStart
+    );
+    this.controls.removeEventListener(
+      "change",
+      this.#onObjectChange
+    );
+    this.controls.removeEventListener(
+      "end",
+      this.#onDragEnd
+    );
     this.controls.helper.removeFromParent();
     this.controls.dispose();
   }

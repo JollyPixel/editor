@@ -78,6 +78,25 @@ describe("TransformLiveSync", () => {
     harness.sync.dispose();
   });
 
+  test("ignores a live payload whose transform is malformed", () => {
+    const harness = createHarness();
+    const block = harness.blocks.add();
+
+    harness.emit("peer-presence", {
+      clientId: "bob",
+      patch: {
+        transformLive: {
+          uuid: block.uuid,
+          transform: { position: { x: 5, y: 0, z: "0" } }
+        }
+      }
+    });
+
+    assert.equal(block.position.x, 0);
+    assert.ok(!isGlowing(block));
+    harness.sync.dispose();
+  });
+
   test("does not revert an explicit clear, since the authoritative commit is imminent", () => {
     const harness = createHarness();
     const block = harness.blocks.add();

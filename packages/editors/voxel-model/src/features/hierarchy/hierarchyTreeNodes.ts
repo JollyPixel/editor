@@ -35,8 +35,14 @@ export function collectExpandableIds(
 ): string[] {
   const ids: string[] = [];
   for (const node of nodes) {
-    if (node.children !== undefined && node.children.length > 0) {
-      ids.push(node.id, ...collectExpandableIds(node.children));
+    if (
+      node.children !== undefined &&
+      node.children.length > 0
+    ) {
+      ids.push(
+        node.id,
+        ...collectExpandableIds(node.children)
+      );
     }
   }
 

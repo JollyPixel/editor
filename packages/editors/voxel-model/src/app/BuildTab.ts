@@ -17,9 +17,14 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
-const kTextureSizeValues = [16, 32, 64, 128, 256, 512, 1024, 2048];
+const kTextureSizeValues = [
+  16, 32, 64, 128, 256, 512, 1024, 2048
+];
 const kTextureSizeOptions: JollyOption<number>[] = kTextureSizeValues.map((value) => {
-  return { value, label: String(value) };
+  return {
+    value,
+    label: String(value)
+  };
 });
 
 export class BuildTab extends LitElement {
@@ -62,13 +67,18 @@ export class BuildTab extends LitElement {
   #onTextureResized = (
     event: { size: Vec2; }
   ): void => {
-    this.textureSize = { ...event.size };
+    this.textureSize = {
+      ...event.size
+    };
   };
 
   constructor() {
     super();
     this.canvas = null;
-    this.textureSize = { x: 64, y: 64 };
+    this.textureSize = {
+      x: 64,
+      y: 64
+    };
   }
 
   override willUpdate(
@@ -85,7 +95,9 @@ export class BuildTab extends LitElement {
     if (this.canvas) {
       this.canvas.document.on("resized", this.#onTextureResized);
       this.canvas.document.on("replaced", this.#onTextureResized);
-      this.textureSize = { ...this.canvas.textureSize };
+      this.textureSize = {
+        ...this.canvas.textureSize
+      };
     }
   }
 

@@ -76,15 +76,24 @@ export class ModelHierarchy {
         blocks.reparent(block.uuid, null);
       }
       else {
-        blocks.reparentAtParentPosition(block.uuid, blockParentId);
+        blocks.reparentAtParentPosition(
+          block.uuid,
+          blockParentId
+        );
       }
 
       if (folders.has(parentId)) {
-        folders.place(block.uuid, parentId);
+        folders.place(
+          block.uuid,
+          parentId
+        );
       }
     }
 
-    this.#regions.create(block.uuid, name);
+    this.#regions.create(
+      block.uuid,
+      name
+    );
     blocks.select(block);
 
     return block;
@@ -94,7 +103,10 @@ export class ModelHierarchy {
     name: string,
     parentId: string | null
   ): string {
-    return this.#document.folders.add({ name, parentId });
+    return this.#document.folders.add({
+      name,
+      parentId
+    });
   }
 
   rename(
@@ -123,8 +135,14 @@ export class ModelHierarchy {
     }
 
     const parentIsFolder = parentId !== null && this.isFolder(parentId);
-    blocks.reparent(id, folders.nearestBlockAncestor(parentId) ?? parentId);
-    folders.place(id, parentIsFolder ? parentId : null);
+    blocks.reparent(
+      id,
+      folders.nearestBlockAncestor(parentId) ?? parentId
+    );
+    folders.place(
+      id,
+      parentIsFolder ? parentId : null
+    );
   }
 
   duplicate(
@@ -132,7 +150,10 @@ export class ModelHierarchy {
     options: DuplicateOptions
   ): string | null {
     const nodes = this.nodes();
-    const source = findHierarchyNode(nodes, sourceId);
+    const source = findHierarchyNode(
+      nodes,
+      sourceId
+    );
     if (source === null) {
       return null;
     }
@@ -146,8 +167,14 @@ export class ModelHierarchy {
       duplicatedBlockIds
     );
 
-    if (duplicateId !== null && anyMirrorAxis(options.mirrorAxes)) {
-      this.#document.blocks.mirror(duplicatedBlockIds, options.mirrorAxes);
+    if (
+      duplicateId !== null &&
+      anyMirrorAxis(options.mirrorAxes)
+    ) {
+      this.#document.blocks.mirror(
+        duplicatedBlockIds,
+        options.mirrorAxes
+      );
     }
 
     return duplicateId;
@@ -167,7 +194,10 @@ export class ModelHierarchy {
       this.#removeSubtree(node);
     }
     else {
-      this.#promoteChildrenThenRemove(node, findHierarchyParentId(nodes, id) ?? null);
+      this.#promoteChildrenThenRemove(
+        node,
+        findHierarchyParentId(nodes, id) ?? null
+      );
     }
   }
 
@@ -191,7 +221,13 @@ export class ModelHierarchy {
 
     if (includeChildren) {
       for (const child of node.children) {
-        this.#duplicateNode(child, duplicateId, child.name, true, duplicatedBlockIds);
+        this.#duplicateNode(
+          child,
+          duplicateId,
+          child.name,
+          true,
+          duplicatedBlockIds
+        );
       }
     }
 
@@ -204,17 +240,30 @@ export class ModelHierarchy {
     parentId: string | null
   ): string | null {
     const { blocks, folders } = this.#document;
-    const duplicate = blocks.duplicate(sourceId, name);
+    const duplicate = blocks.duplicate(
+      sourceId,
+      name
+    );
     if (duplicate === null) {
       return null;
     }
 
-    this.#regions.copy(sourceId, duplicate.uuid, name);
+    this.#regions.copy(
+      sourceId,
+      duplicate.uuid,
+      name
+    );
 
     const parentIsFolder = parentId !== null && this.isFolder(parentId);
-    blocks.reparentLocal(duplicate.uuid, folders.nearestBlockAncestor(parentId) ?? parentId);
+    blocks.reparentLocal(
+      duplicate.uuid,
+      folders.nearestBlockAncestor(parentId) ?? parentId
+    );
     if (parentIsFolder) {
-      folders.place(duplicate.uuid, parentId);
+      folders.place(
+        duplicate.uuid,
+        parentId
+      );
     }
 
     return duplicate.uuid;
@@ -277,7 +326,10 @@ export class ModelHierarchy {
 
     for (const [blockUuid, placedFolderId] of [...folders.placements]) {
       if (subtreeIds.has(placedFolderId)) {
-        blocks.reparent(blockUuid, folders.nearestBlockAncestor(placedFolderId));
+        blocks.reparent(
+          blockUuid,
+          folders.nearestBlockAncestor(placedFolderId)
+        );
       }
     }
   }

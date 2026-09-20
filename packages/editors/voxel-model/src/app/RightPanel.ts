@@ -8,18 +8,20 @@ import type {
 
 // Import Internal Dependencies
 import type { ModelWorkspace } from "../scene/index.ts";
-import { HierarchyController } from "../features/hierarchy/HierarchyController.ts";
+import type { HierarchyPanel } from "../features/hierarchy/HierarchyPanel.ts";
 import type { TransformPanel } from "../features/transform/TransformPanel.ts";
-import "../features/hierarchy/hierarchyIcons.ts";
+import "../features/hierarchy/HierarchyPanel.ts";
 import "../features/transform/TransformPanel.ts";
 
 export class RightPanel extends LitElement {
-  #tree = new HierarchyController(this);
   #workspace: ModelWorkspace | null = null;
   #unsubscribePresence: (() => void) | null = null;
 
   @query("jolly-model-editor-transform")
   declare private transformElement: TransformPanel;
+
+  @query("jolly-model-editor-hierarchy")
+  declare private hierarchyElement: HierarchyPanel;
 
   @state()
   private declare _peers: readonly PresencePeer[];
@@ -35,21 +37,9 @@ export class RightPanel extends LitElement {
       --jolly-folder-gap: var(--jolly-space-2, 8px);
     }
 
-    jolly-folder[key="hierarchy"] {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
     jolly-folder[key="transform"]::part(header),
-    jolly-folder[key="hierarchy"]::part(header),
     jolly-folder[key="collaborators"]::part(header) {
       font-size: calc(var(--jolly-font-size, 11px) + 2px);
-    }
-
-    jolly-tree {
-      flex: 1 1 auto;
-      overflow: auto;
-      padding-inline: var(--jolly-space-1, 4px);
     }
   `;
 
@@ -63,7 +53,6 @@ export class RightPanel extends LitElement {
   ): Promise<void> {
     const { presence } = workspace;
     this.#workspace = workspace;
-    this.#tree.attach(workspace);
 
     this.#unsubscribePresence?.();
     this._peers = presence.peers;
@@ -76,6 +65,7 @@ export class RightPanel extends LitElement {
 
     await this.updateComplete;
     this.transformElement.attach(workspace);
+    this.hierarchyElement.attach(workspace);
   }
 
   override disconnectedCallback(): void {
@@ -120,59 +110,7 @@ export class RightPanel extends LitElement {
       >
         <jolly-model-editor-transform></jolly-model-editor-transform>
       </jolly-folder>
-      <jolly-folder
-        key="hierarchy"
-        label="Hierarchy"
-        .collapsible=${false}
-        flush
-      >
-        <jolly-button
-          slot="actions"
-          icon="plus"
-          icon-only
-          label="Add Block"
-          title="Add Block"
-          @click=${this.#tree.addBlock}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="folder-add"
-          icon-only
-          label="Add Folder"
-          title="Add Folder"
-          @click=${this.#tree.addFolder}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="block-duplicate"
-          icon-only
-          label="Duplicate"
-          title="Duplicate"
-          ?disabled=${!this.#tree.hasSelection}
-          @click=${this.#tree.duplicateSelected}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="block-delete"
-          icon-only
-          label="Delete"
-          title="Delete"
-          ?disabled=${!this.#tree.hasSelection}
-          @click=${this.#tree.deleteSelected}
-        ></jolly-button>
-        <jolly-tree
-          .nodes=${this.#tree.nodes}
-          .selected=${this.#tree.selected}
-          .expanded=${this.#tree.expanded}
-          reorderable
-          row-drag
-          renamable
-          @jolly-select=${this.#tree.handleSelect}
-          @jolly-toggle-expand=${this.#tree.handleToggleExpand}
-          @jolly-rename=${this.#tree.handleRename}
-          @jolly-reparent=${this.#tree.handleReparent}
-        ></jolly-tree>
-      </jolly-folder>
+      <jolly-model-editor-hierarchy></jolly-model-editor-hierarchy>
       ${this.#renderCollaborators()}
     `;
   }

@@ -35,7 +35,9 @@ const kDefaultZoom = {
   sensitivity: 0.6
 };
 
-type LeftPanelMode = "paint" | "build" | "animate";
+const kLeftPanelModes = ["paint", "build", "animate"] as const;
+
+type LeftPanelMode = typeof kLeftPanelModes[number];
 
 export interface LeftPanelTexture {
   document: PixelDocument;
@@ -101,14 +103,20 @@ export class LeftPanel extends LitElement {
   }
 
   override firstUpdated(): void {
-    this.#resizeObserver = new ResizeObserver(() => this.panelElement.onResize());
+    this.#resizeObserver = new ResizeObserver(
+      () => this.panelElement.onResize()
+    );
     this.#resizeObserver.observe(this.panelElement);
     void this.#initializeCanvas();
   }
 
   async #initializeCanvas(): Promise<void> {
     const texture = this.#texture;
-    if (texture === null || !this.hasUpdated || this.#initializing) {
+    if (
+      texture === null ||
+      !this.hasUpdated ||
+      this.#initializing
+    ) {
       return;
     }
     this.#initializing = true;
@@ -138,7 +146,10 @@ export class LeftPanel extends LitElement {
   override updated(
     changedProperties: PropertyValues<this>
   ): void {
-    if (changedProperties.has("mode") && this._canvas) {
+    if (
+      changedProperties.has("mode") &&
+      this._canvas
+    ) {
       this._canvas.mode = canvasModeForTab(this.mode);
     }
   }
@@ -154,7 +165,12 @@ export class LeftPanel extends LitElement {
   private handleTabChange = (
     event: CustomEvent<{ value: string; }>
   ): void => {
-    this.mode = event.detail.value as LeftPanelMode;
+    const mode = kLeftPanelModes.find(
+      (candidate) => candidate === event.detail.value
+    );
+    if (mode !== undefined) {
+      this.mode = mode;
+    }
   };
 
   override render(): TemplateResult {

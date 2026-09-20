@@ -10,7 +10,7 @@ import {
   expect,
   waitForEditor
 } from "./fixtures.ts";
-import { addNode } from "./support/hierarchy.ts";
+import { addNode, hierarchyAction } from "./support/hierarchy.ts";
 import {
   dialog,
   treeRow
@@ -60,7 +60,7 @@ test("selecting a block selects its texture region", async({ page }) => {
   await expect(regionToolbar(page)).toBeVisible();
 
   await addNode(page, "Block", "Arm", { asChild: false });
-  await page.getByRole("button", { name: "Delete" }).click();
+  await hierarchyAction(page, "Delete").click();
   await dialog(page, "Delete Block")
     .getByRole("button", { name: "Delete" })
     .click();

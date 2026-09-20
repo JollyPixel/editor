@@ -1,14 +1,20 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
+import { Emitter } from "@openally/emitt";
+import type { VoxelModelServerMessage } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+
+// Import Internal Dependencies
+import type { VoxelModelRoom } from "#src/collaboration/types.ts";
+
+type RoomEvents = network.RoomEventMap<VoxelModelServerMessage>;
 
 export type RoomEvent =
-  | "sync"
   | "peer-joined"
   | "peer-left"
   | "peer-presence";
 
 export interface RoomHarness {
-  room: network.Room<any, any>;
+  room: VoxelModelRoom;
   published: network.PeerMetadata[];
   addPeer(
     clientId: string,
@@ -20,46 +26,42 @@ export interface RoomHarness {
   removePeer(
     clientId: string
   ): void;
-  emit(
-    event: RoomEvent,
-    payload?: unknown
+  emitSync(): void;
+  emit<K extends RoomEvent>(
+    event: K,
+    ...args: Parameters<RoomEvents[K]>
   ): void;
   listenerCount(
-    event: RoomEvent
+    event: keyof RoomEvents
   ): number;
 }
 
 export function createRoomHarness(): RoomHarness {
   const peers = new Map<string, network.Peer>();
-  const listeners = new Map<string, Set<(payload: any) => void>>();
+  const events = new Emitter<RoomEvents>();
   const published: network.PeerMetadata[] = [];
 
-  const room = {
+  const room: VoxelModelRoom = {
     id: "model-room",
     clientId: "local",
     peers,
     role: "default",
     rights: {},
-    access: "write" as const,
-    can: () => "write" as const,
+    access: "write",
+    can: () => "write",
     join: () => void 0,
     leave: () => void 0,
     send: () => void 0,
-    updatePresence: (patch: network.PeerMetadata) => {
+    updatePresence: (patch) => {
       published.push(patch);
     },
-    on: (event: string, listener: (payload: any) => void) => {
-      let bucket = listeners.get(event);
-      if (!bucket) {
-        bucket = new Set();
-        listeners.set(event, bucket);
-      }
-      bucket.add(listener);
+    on: (type, listener) => {
+      events.on(type, listener);
     },
-    off: (event: string, listener: (payload: any) => void) => {
-      listeners.get(event)?.delete(listener);
+    off: (type, listener) => {
+      events.off(type, listener);
     }
-  } as unknown as network.Room<any, any>;
+  };
 
   return {
     room,
@@ -78,13 +80,17 @@ export function createRoomHarness(): RoomHarness {
     removePeer(clientId) {
       peers.delete(clientId);
     },
-    emit(event, payload) {
-      for (const listener of listeners.get(event) ?? []) {
-        listener(payload);
-      }
+    emitSync() {
+      events.emit("sync", {
+        self: room.clientId,
+        clientIds: [...peers.keys()]
+      });
+    },
+    emit(event, ...args) {
+      events.emit(event, ...args);
     },
     listenerCount(event) {
-      return listeners.get(event)?.size ?? 0;
+      return events.listenerCount(event);
     }
   };
 }

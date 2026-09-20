@@ -38,7 +38,10 @@ export class BlockPicker extends ActorComponent {
 
   update(): void {
     const { mouse } = this.actor.world.input;
-    if (!mouse.wasJustPressed("left") || this.#gizmo.dragging) {
+    if (
+      !mouse.wasJustPressed("left") ||
+      this.#gizmo.dragging
+    ) {
       return;
     }
 

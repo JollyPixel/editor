@@ -1,9 +1,16 @@
 // Import Third-party Dependencies
-import type { Page } from "@playwright/test";
+import type {
+  JSHandle,
+  Page
+} from "@playwright/test";
 import type {
   Mesh,
+  Object3D,
   Vector3Like
 } from "three";
+
+// Import Internal Dependencies
+import type { VoxelModelEditor } from "#src/boot/VoxelModelEditor.ts";
 
 export type Axis = "X" | "Y" | "Z";
 
@@ -21,12 +28,27 @@ export interface BlockSummary {
   pivotOffset: Vector3Like;
 }
 
-export function nextFrames(
+function editorOf(
+  page: Page
+): Promise<JSHandle<VoxelModelEditor>> {
+  return page.evaluateHandle(() => {
+    const editor = window.voxelModelEditor;
+    if (editor === undefined) {
+      throw new Error("window.voxelModelEditor is only exposed in dev mode.");
+    }
+
+    return editor;
+  });
+}
+
+export async function nextFrames(
   page: Page,
   count = 2
 ): Promise<void> {
-  return page.evaluate(async(frames) => {
-    const { world } = window.voxelModelEditor!.runtime;
+  const editor = await editorOf(page);
+
+  return editor.evaluate(async({ runtime }, frames) => {
+    const { world } = runtime;
     for (let index = 0; index < frames; index++) {
       await new Promise<void>((resolve) => {
         world.once("afterUpdate", () => resolve());
@@ -35,11 +57,13 @@ export function nextFrames(
   }, count);
 }
 
-export function outline(
+export async function outline(
   page: Page
 ): Promise<string[]> {
-  return page.evaluate(async() => {
-    const { hierarchy } = await window.voxelModelEditor!.scene.ready;
+  const editor = await editorOf(page);
+
+  return editor.evaluate(async({ scene }) => {
+    const { hierarchy } = await scene.ready;
     type Nodes = ReturnType<typeof hierarchy.nodes>;
     const lines: string[] = [];
 
@@ -59,22 +83,26 @@ export function outline(
   });
 }
 
-export function selectedBlock(
+export async function selectedBlock(
   page: Page
 ): Promise<string | null> {
-  return page.evaluate(async() => {
-    const { document } = await window.voxelModelEditor!.scene.ready;
+  const editor = await editorOf(page);
+
+  return editor.evaluate(async({ scene }) => {
+    const { document } = await scene.ready;
 
     return document.blocks.selected?.name ?? null;
   });
 }
 
-export function blockSummary(
+export async function blockSummary(
   page: Page,
   name: string
 ): Promise<BlockSummary | null> {
-  return page.evaluate(async(blockName) => {
-    const { document } = await window.voxelModelEditor!.scene.ready;
+  const editor = await editorOf(page);
+
+  return editor.evaluate(async({ scene }, blockName) => {
+    const { document } = await scene.ready;
     const block = [...document.blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {
@@ -111,17 +139,22 @@ export function blockSummary(
   }, name);
 }
 
-export function blockPoint(
+export async function blockPoint(
   page: Page,
   name: string
 ): Promise<ScreenPoint> {
-  return page.evaluate(async(blockName) => {
-    const editor = window.voxelModelEditor!;
-    const { document, gizmo } = await editor.scene.ready;
+  const editor = await editorOf(page);
+
+  return editor.evaluate(async({ scene, runtime }, blockName) => {
+    const { document, gizmo } = await scene.ready;
     const block = [...document.blocks.values()]
-      .find((candidate) => candidate.name === blockName)!;
+      .find((candidate) => candidate.name === blockName);
+    if (block === undefined) {
+      throw new Error(`No block named '${blockName}'.`);
+    }
+
     const { camera } = gizmo.controls;
-    const bounds = editor.runtime.world.renderer.canvas.getBoundingClientRect();
+    const bounds = runtime.world.renderer.canvas.getBoundingClientRect();
 
     block.mesh.updateWorldMatrix(true, false);
     camera.updateMatrixWorld(true);
@@ -138,20 +171,26 @@ export async function gizmoHandlePoints(
   page: Page,
   axis: Axis
 ): Promise<[ScreenPoint, ScreenPoint]> {
-  await page.waitForFunction(async() => {
-    const { gizmo } = await window.voxelModelEditor!.scene.ready;
+  const editor = await editorOf(page);
+  await page.waitForFunction(async({ scene }) => {
+    const { gizmo } = await scene.ready;
 
     return gizmo.controls.target !== null;
-  });
+  }, editor);
   await nextFrames(page);
 
-  return page.evaluate(async(axisName) => {
+  return editor.evaluate(async({ scene, runtime }, axisName) => {
     const kDragRatio = 3;
-    const editor = window.voxelModelEditor!;
-    const { gizmo } = await editor.scene.ready;
+    const { gizmo } = await scene.ready;
     const { controls } = gizmo;
     const { camera, helper } = controls;
-    const bounds = editor.runtime.world.renderer.canvas.getBoundingClientRect();
+    const bounds = runtime.world.renderer.canvas.getBoundingClientRect();
+
+    function isMesh(
+      object: Object3D | undefined
+    ): object is Mesh {
+      return object !== undefined && "isMesh" in object;
+    }
     const handleName = [
       "transform-handle",
       controls.mode,
@@ -159,20 +198,30 @@ export async function gizmoHandlePoints(
       "positive"
     ].join("-");
     const picker = helper
-      .getObjectByName(handleName)!
-      .getObjectByName("transform-handle-picker") as Mesh;
+      .getObjectByName(handleName)
+      ?.getObjectByName("transform-handle-picker");
+    if (!isMesh(picker)) {
+      throw new Error(`No picker mesh under '${handleName}'.`);
+    }
 
     camera.updateMatrixWorld(true);
     helper.updateMatrixWorld(true);
     const origin = helper.position.clone()
       .setFromMatrixPosition(helper.matrixWorld);
     picker.geometry.computeBoundingBox();
+    const { boundingBox } = picker.geometry;
+    if (boundingBox === null) {
+      throw new Error(`Picker '${handleName}' has no bounding box.`);
+    }
+
     const grab = picker.localToWorld(
-      picker.geometry.boundingBox!.getCenter(picker.position.clone())
+      boundingBox.getCenter(picker.position.clone())
     );
     const reach = grab.sub(origin);
 
-    return [1, kDragRatio].map((ratio) => {
+    function screenPointAt(
+      ratio: number
+    ): ScreenPoint {
       const point = origin.clone()
         .addScaledVector(reach, ratio)
         .project(camera);
@@ -181,7 +230,13 @@ export async function gizmoHandlePoints(
         x: bounds.left + ((point.x + 1) / 2 * bounds.width),
         y: bounds.top + ((1 - point.y) / 2 * bounds.height)
       };
-    }) as [{ x: number; y: number; }, { x: number; y: number; }];
+    }
+    const points: [ScreenPoint, ScreenPoint] = [
+      screenPointAt(1),
+      screenPointAt(kDragRatio)
+    ];
+
+    return points;
   }, axis);
 }
 

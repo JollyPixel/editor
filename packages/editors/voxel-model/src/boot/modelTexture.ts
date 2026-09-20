@@ -26,7 +26,9 @@ export function openModelTexture(
     .find((dependency) => dependency.kind === PIXEL_ART_KIND);
   if (reference === undefined) {
     return {
-      document: new PixelDocument({ size: kLocalTextureSize }),
+      document: new PixelDocument({
+        size: kLocalTextureSize
+      }),
       ready: Promise.resolve(),
       release: () => void 0
     };

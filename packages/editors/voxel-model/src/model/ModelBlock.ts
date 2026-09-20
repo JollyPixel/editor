@@ -190,9 +190,14 @@ export class ModelBlock {
   }
 
   get worldRotation(): THREE.Euler {
-    const quaternion = this.pivot.getWorldQuaternion(new THREE.Quaternion());
+    const quaternion = this.pivot.getWorldQuaternion(
+      new THREE.Quaternion()
+    );
 
-    return new THREE.Euler().setFromQuaternion(quaternion, this.pivot.rotation.order);
+    return new THREE.Euler().setFromQuaternion(
+      quaternion,
+      this.pivot.rotation.order
+    );
   }
 
   set worldRotation(
@@ -200,7 +205,9 @@ export class ModelBlock {
   ) {
     const quaternion = new THREE.Quaternion().setFromEuler(rotation);
     if (this.pivot.parent) {
-      const parentQuaternion = this.pivot.parent.getWorldQuaternion(new THREE.Quaternion());
+      const parentQuaternion = this.pivot.parent.getWorldQuaternion(
+        new THREE.Quaternion()
+      );
       quaternion.premultiply(parentQuaternion.invert());
     }
 

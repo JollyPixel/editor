@@ -205,11 +205,12 @@ describe("ModelHierarchy.duplicate", () => {
       mirrorAxes: { x: true, y: false, z: false }
     });
 
+    assert.ok(duplicateId !== null);
     assert.deepStrictEqual(
-      document.blocks.get(duplicateId!)?.worldPosition,
+      document.blocks.get(duplicateId)?.worldPosition,
       new THREE.Vector3(-2, 0, 0)
     );
-    assert.deepEqual(document.blocks.flipAxesOf(duplicateId!), { x: true, y: false, z: false });
+    assert.deepEqual(document.blocks.flipAxesOf(duplicateId), { x: true, y: false, z: false });
   });
 
   test("returns null for an unknown source", () => {

@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import { Grid } from "@jolly-pixel/three";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
@@ -63,7 +62,23 @@ export class ModelEditorScene extends Systems.Scene {
       pixelsReady
     } = this.#options;
     const scene = this.world.sceneManager.getSource();
-    scene.add(createGrid());
+    scene.add(new Grid({
+      extent: 10,
+      cell: {
+        color: "#3a3a3a",
+        thickness: 1.5
+      },
+      section: {
+        show: false
+      },
+      fade: {
+        from: "origin",
+        distance: 100
+      },
+      axes: {
+        show: true
+      }
+    }));
 
     const camera = this.world
       .createActor("camera")
@@ -96,7 +111,7 @@ export class ModelEditorScene extends Systems.Scene {
       document,
       presence,
       world: this.world,
-      camera: camera.threeCamera as THREE.PerspectiveCamera
+      camera: camera.camera
     });
     const gizmo = new TransformGizmo({
       camera,
@@ -145,24 +160,4 @@ export class ModelEditorScene extends Systems.Scene {
       new Error("The model editor scene was destroyed before it awoke.")
     );
   }
-}
-
-function createGrid(): Grid {
-  return new Grid({
-    extent: 10,
-    cell: {
-      color: "#3a3a3a",
-      thickness: 1.5
-    },
-    section: {
-      show: false
-    },
-    fade: {
-      from: "origin",
-      distance: 100
-    },
-    axes: {
-      show: true
-    }
-  });
 }
