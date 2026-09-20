@@ -20,16 +20,22 @@ export const railButtonStyles = css`
   }
 
   .rail-btn:hover:not(:disabled) {
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
+
     color: var(--color-text-emphasis);
   }
 
   .rail-btn.active {
+    --jolly-icon-tone-strength: 0%;
+
     background: var(--color-accent);
     border-color: var(--color-accent);
     color: var(--color-text-on-accent);
   }
 
   .rail-btn.active:hover:not(:disabled) {
+    --jolly-icon-tone-strength: 0%;
+
     color: var(--color-text-on-accent);
   }
 

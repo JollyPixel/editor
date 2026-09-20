@@ -30,13 +30,14 @@ registerIcon("close", svg`
 
 registerIcon("plus", svg`
   <path
+    class="tone-ink"
     d="M12 5v14M5 12h14"
     fill="none"
     stroke="currentColor"
     stroke-width="2.25"
     stroke-linecap="round"
   />
-`);
+`, { tone: "lime" });
 
 // Circular reset arrow.
 registerIcon("revert", svg`

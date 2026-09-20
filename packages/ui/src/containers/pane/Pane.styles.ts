@@ -27,6 +27,51 @@ export const paneStyles = css`
     pointer-events: auto;
   }
 
+  @media not (forced-colors: active) {
+    :host([toned]) {
+      --jolly-pane-header-bg: var(--jolly-area-fill);
+      --jolly-accent-fill: var(--jolly-area-fill);
+      --jolly-accent-fill-hover: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 88%,
+        white
+      );
+      --jolly-accent-fill-focus: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 76%,
+        white
+      );
+      --jolly-accent-text: var(--jolly-area-tone);
+      --jolly-focus-ring: var(--jolly-area-tone);
+      --jolly-tab-selected-bg: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 14%,
+        transparent
+      );
+      --jolly-tab-selected-bg-hover: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 20%,
+        transparent
+      );
+      --jolly-folder-header-bg: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 16%,
+        transparent
+      );
+      --jolly-folder-header-bg-hover: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 24%,
+        transparent
+      );
+      --jolly-separator-label: var(--jolly-area-tone);
+      --jolly-separator-rule: color-mix(
+        in oklab,
+        var(--jolly-area-tone) 28%,
+        transparent
+      );
+    }
+  }
+
   .header {
     position: relative;
     display: flex;
@@ -71,6 +116,11 @@ export const paneStyles = css`
     z-index: 1;
 
     --jolly-icon-size: 14px;
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
+  }
+
+  :host([toned]) .icon {
+    --jolly-icon-tone-strength: 0%;
   }
 
   .title {
@@ -171,6 +221,11 @@ export const paneStyles = css`
     gap: var(--jolly-row-gap, 4px);
     min-height: 0;
     padding: var(--jolly-space-1, 4px);
+  }
+
+  :host([disabled]) .content {
+    opacity: 0.5;
+    pointer-events: none;
   }
 
   ${contentScrollbar}

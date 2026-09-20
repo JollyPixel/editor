@@ -25,7 +25,8 @@ has `actions`, and its content stays visible while `collapsed`.
 
 Selecting a tab with a click, Left, Right, Home or End emits
 `jolly-tab-change` with `{ value }`. Inside a dock layout it also reports a
-`GroupChange`.
+`GroupChange`. The tab of a `disabled` pane is skipped by both, and an `active`
+naming one falls back to the first enabled pane.
 
 Inside a `jolly-dock-layout`, the layout creates and removes groups while it
 projects the snapshot. A group left with one pane is replaced by that pane.

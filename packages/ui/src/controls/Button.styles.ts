@@ -45,6 +45,16 @@ export const buttonStyles = css`
     outline: none;
   }
 
+  button:hover:not(:disabled),
+  button:focus-visible {
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
+  }
+
+  :host([variant="accent"]) button:is(*, :hover, :focus-visible),
+  :host([variant="danger"]) button:is(*, :hover, :focus-visible) {
+    --jolly-icon-tone-strength: 0%;
+  }
+
   :host([variant="accent"]) button {
     background: var(--jolly-accent-fill);
     color: var(--jolly-text-on-fill);

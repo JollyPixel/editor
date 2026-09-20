@@ -42,6 +42,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 | [0034](./0034-open-layers-claim-the-keyboard.md) | An open dialog or popover claims the keyboard, through a guard `controls` consumes |
 | [0035](./0035-pane-groups-live-in-the-snapshot.md) | Pane groups are slots of the layout snapshot, projected as elements |
 | [0036](./0036-a-double-dock-is-one-dock-with-two-columns.md) | A double dock is one dock with two columns, not two docks |
+| [0037](./0037-colour-is-a-tone-on-the-glyph-and-an-area-on-the-pane.md) | Colour is a tone on the glyph and an area on the pane |
 
 ## Scope boundary
 

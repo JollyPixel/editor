@@ -4,12 +4,12 @@ import { registerIcon } from "@jolly-pixel/ui";
 
 registerIcon("block-duplicate", svg`
   <rect
+    class="tone-fill"
     x="9"
     y="9"
     width="12"
     height="12"
     rx="2"
-    fill="none"
     stroke="currentColor"
     stroke-width="1.5"
   />
@@ -21,9 +21,13 @@ registerIcon("block-duplicate", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "sky" });
 
 registerIcon("block-delete", svg`
+  <path
+    class="tone-fill"
+    d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13z"
+  />
   <path
     d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"
     fill="none"
@@ -39,22 +43,22 @@ registerIcon("block-delete", svg`
     stroke-width="1.5"
     stroke-linecap="round"
   />
-`);
+`, { tone: "coral" });
 
 registerIcon("folder", svg`
   <path
+    class="tone-fill"
     d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"
-    fill="none"
     stroke="currentColor"
     stroke-width="1.5"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "amber" });
 
 registerIcon("folder-add", svg`
   <path
+    class="tone-fill"
     d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"
-    fill="none"
     stroke="currentColor"
     stroke-width="1.5"
     stroke-linejoin="round"
@@ -66,4 +70,4 @@ registerIcon("folder-add", svg`
     stroke-width="1.5"
     stroke-linecap="round"
   />
-`);
+`, { tone: "amber" });

@@ -34,7 +34,7 @@ export class RightPanel extends LitElement {
       box-sizing: border-box;
       font: inherit;
 
-      --jolly-folder-gap: var(--jolly-space-2, 8px);
+      --jolly-folder-gap: var(--jolly-space-1, 4px);
     }
 
     jolly-folder[key="transform"]::part(header),

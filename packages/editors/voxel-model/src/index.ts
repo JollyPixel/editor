@@ -2,6 +2,7 @@
 import { mountStandalone } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
+import "./app/paneIcons.ts";
 import "./app/LeftPanel.ts";
 import "./app/RightPanel.ts";
 import { VoxelModelEditor } from "./boot/VoxelModelEditor.ts";

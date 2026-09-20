@@ -18,7 +18,7 @@ export const panelStyles = css`
     --color-text-muted: light-dark(#465a6e, #90a4b7);
     --color-text-emphasis: light-dark(#0b1420, #fff);
     --color-text-on-accent: #fff;
-    --color-accent: light-dark(#2f6fd8, #3a6fc2);
+    --color-accent: var(--jolly-area-fill, light-dark(#2f6fd8, #3a6fc2));
     --color-canvas-bg: light-dark(#d7e3ee, #0d151d);
     --color-swatch-edge: light-dark(transparent, rgb(255 255 255 / 22%));
     --jolly-ink: var(--color-text);

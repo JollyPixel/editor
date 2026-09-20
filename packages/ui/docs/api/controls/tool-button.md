@@ -13,6 +13,7 @@ It can hold a flyout with related options.
 |---|---|---|
 | `icon` | `IconName \| undefined` | `undefined` |
 | `label` | `string` | `""` |
+| `tone` | `IconTone | ""` | `""` |
 | `active` | `boolean` | `false` |
 | `disabled` | `boolean` | `false` |
 | `flyoutSide` (`flyout-side`) | `"above" \| "below" \| "left" \| "right"` | `"right"` |
@@ -32,7 +33,9 @@ notch that points towards `flyout-side`. The flyout:
   enabled `button`, `jolly-button` or `jolly-tool-button` inside it.
 
 `active` shows the accent fill and sets `aria-pressed` on buttons without a
-flyout. `show()` and `hide()` open and close the flyout programmatically;
+flyout. A toned button tints its hover and `active` fill with the tone instead;
+the tone comes from `tone`, or from the [registered tone](../icon/registry.md#tones)
+of `icon` when `tone` is empty. `show()` and `hide()` open and close the flyout programmatically;
 `show()` does nothing without flyout content or while disabled.
 
 | Part | Element |

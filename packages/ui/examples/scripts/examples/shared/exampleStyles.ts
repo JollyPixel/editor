@@ -91,6 +91,54 @@ export const exampleStyles = css`
     transform: scale(1.25);
   }
 
+  .tone-demo {
+    display: grid;
+    gap: var(--jolly-space-3);
+    justify-items: start;
+  }
+
+  .tone-demo.is-always-on {
+    --jolly-icon-tone-rest: 100%;
+  }
+
+  .tone-grid {
+    display: grid;
+    grid-template-columns: 8ch repeat(5, max-content);
+    gap: var(--jolly-space-2) var(--jolly-space-4);
+    place-items: center;
+  }
+
+  .tone-grid .tone-head {
+    color: var(--jolly-text-muted);
+  }
+
+  .tone-grid .tone-name {
+    justify-self: start;
+  }
+
+  .tone-grid > jolly-icon {
+    --jolly-icon-size: 20px;
+  }
+
+  .tone-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+
+  .tone-on-fill {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--jolly-radius-md);
+    background: var(--jolly-accent-fill);
+    color: var(--jolly-text-on-fill);
+    place-items: center;
+
+    --jolly-icon-size: 20px;
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged);
+  }
+
   .state-matrix {
     --jolly-label-width: 14ch;
     --jolly-field-trailing-width: 48px;

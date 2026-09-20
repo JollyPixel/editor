@@ -15,7 +15,10 @@ import {
 // Import Internal Dependencies
 import {
   getIcon,
-  type IconName
+  iconTone,
+  isIconTone,
+  type IconName,
+  type IconTone
 } from "./registry.ts";
 
 // Registers built-in glyphs with the element.
@@ -38,9 +41,38 @@ export class Icon extends LitElement {
     }
 
     svg {
+      --jolly-icon-tone-mix: var(
+        --jolly-icon-tone-strength,
+        var(--jolly-icon-tone-rest, 100%)
+      );
+
       display: block;
       width: 100%;
       height: 100%;
+    }
+
+    @media (forced-colors: active) {
+      svg {
+        --jolly-icon-tone-mix: 0%;
+      }
+    }
+
+    .tone-fill {
+      fill: color-mix(
+        in oklab,
+        var(--jolly-icon-tone-color, currentcolor) var(--jolly-icon-tone-mix),
+        transparent
+      );
+      transition: fill var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    }
+
+    .tone-ink {
+      color: color-mix(
+        in oklab,
+        var(--jolly-icon-tone-color, currentcolor) var(--jolly-icon-tone-mix),
+        currentcolor
+      );
+      transition: color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
     }
   `;
 
@@ -50,11 +82,23 @@ export class Icon extends LitElement {
   @property({ type: String })
   declare label: string;
 
+  @property({ type: String, reflect: true })
+  declare tone: IconTone | "";
+
+  @property({
+    type: Boolean,
+    attribute: "on-fill",
+    reflect: true
+  })
+  declare onFill: boolean;
+
   constructor() {
     super();
 
     this.name = "";
     this.label = "";
+    this.tone = "";
+    this.onFill = false;
   }
 
   override render(): TemplateResult | typeof nothing {
@@ -74,8 +118,20 @@ export class Icon extends LitElement {
         role=${decorative ? "presentation" : "img"}
         aria-hidden=${decorative ? "true" : nothing}
         aria-label=${decorative ? nothing : this.label}
+        style=${this.#toneStyle()}
       >${svg`${glyph}`}</svg>
     `;
+  }
+
+  #toneStyle(): string | typeof nothing {
+    const tone = isIconTone(this.tone) ? this.tone : iconTone(this.name);
+    if (tone === null) {
+      return nothing;
+    }
+
+    const suffix = this.onFill ? "-on-fill" : "";
+
+    return `--jolly-icon-tone-color: var(--jolly-tone-${tone}${suffix})`;
   }
 
   #warnUnknown(): void {

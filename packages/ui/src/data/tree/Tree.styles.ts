@@ -97,6 +97,11 @@ export const treeStyles = css`
     color: var(--jolly-text-muted, ${kFallback.text});
   }
 
+  .row:hover .node-icon,
+  .row[aria-selected="true"] .node-icon {
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
+  }
+
   .label {
     flex: 1 1 auto;
 

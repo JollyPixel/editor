@@ -57,6 +57,8 @@ export const buttonGroupStyles = css`
   }
 
   .segment:hover:not(:disabled) {
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
+
     background: var(--jolly-control-bg-hover);
   }
 
@@ -67,6 +69,11 @@ export const buttonGroupStyles = css`
   .segment:focus-visible {
     background: var(--jolly-control-bg-focus);
     outline: none;
+  }
+
+  .segment[aria-checked="true"],
+  .segment[aria-checked="true"]:hover:not(:disabled) {
+    --jolly-icon-tone-strength: 0%;
   }
 
   .segment[aria-checked="true"] {
