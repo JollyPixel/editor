@@ -65,6 +65,7 @@ const kDefaultFaceUV: ReadonlyArray<readonly [number, number]> = [
 export interface BlockTexturesOptions {
   pixels: PixelDocument;
   document: ModelDocument;
+  pixelsReady: Promise<void>;
 }
 
 export class BlockTextures implements BlockRegions {
@@ -72,6 +73,8 @@ export class BlockTextures implements BlockRegions {
   #document: ModelDocument;
   #texture: PixelCanvasTexture;
   #bindings = new Map<string, UVGeometryBinding>();
+  #pixelsLoaded = false;
+  #disposed = false;
 
   #onChange = (
     change: ModelChange
@@ -86,6 +89,14 @@ export class BlockTextures implements BlockRegions {
         this.#pixels.uv.delete(
           blockRegionId(command.uuid)
         );
+        break;
+      case "group-renamed":
+        if (change.origin === "local") {
+          this.#pixels.uv.rename(
+            blockRegionId(command.uuid),
+            command.name
+          );
+        }
         break;
       case "group-transformed":
         if (command.flipAxes) {
@@ -103,6 +114,20 @@ export class BlockTextures implements BlockRegions {
     }
     for (const block of this.#document.blocks.values()) {
       this.#bind(block);
+    }
+    if (this.#pixelsLoaded) {
+      this.#createMissingRegions();
+    }
+  };
+
+  #createMissingRegions = (): void => {
+    if (this.#disposed) {
+      return;
+    }
+    for (const block of this.#document.blocks.values()) {
+      if (this.#pixels.uv.get(blockRegionId(block.uuid)) === undefined) {
+        this.create(block.uuid, block.name);
+      }
     }
   };
 
@@ -174,6 +199,10 @@ export class BlockTextures implements BlockRegions {
     this.#document.blocks.on("select", this.#onBlockSelected);
 
     this.#rebindAll();
+    void options.pixelsReady.then(() => {
+      this.#pixelsLoaded = true;
+      this.#createMissingRegions();
+    });
   }
 
   create(
@@ -223,6 +252,7 @@ export class BlockTextures implements BlockRegions {
   }
 
   dispose(): void {
+    this.#disposed = true;
     for (const uuid of [...this.#bindings.keys()]) {
       this.#unbind(uuid);
     }

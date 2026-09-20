@@ -6,14 +6,11 @@ import {
   VOXEL_MODEL_DOCUMENT_VERSION,
   type VoxelModelDocument
 } from "./document.ts";
-import { applyModelCommand } from "../network/applyModelCommand.ts";
-import { applyFolderCommand } from "../network/applyFolderCommand.ts";
-import {
-  isModelCommand,
-  type FolderNodeJSON,
-  type ModelNodeJSON,
-  type VoxelModelCommand,
-  type VoxelModelSnapshot
+import type {
+  FolderNodeJSON,
+  ModelNodeJSON,
+  VoxelModelCommand,
+  VoxelModelSnapshot
 } from "../network/types.ts";
 
 export class VoxelModelState {
@@ -69,7 +66,11 @@ export class VoxelModelState {
       case "folder-renamed":
       case "folder-reparented":
         return this.#folders.has(command.uuid);
-      default:
+      case "group-removed":
+      case "group-renamed":
+      case "group-reparented":
+      case "group-reparented-local":
+      case "group-transformed":
         return this.#nodes.has(command.uuid);
     }
   }
@@ -77,11 +78,69 @@ export class VoxelModelState {
   applyCommand(
     command: VoxelModelCommand
   ): void {
-    if (isModelCommand(command)) {
-      applyModelCommand(this.#nodes, command);
-    }
-    else {
-      applyFolderCommand(this.#folders, this.#placements, command);
+    switch (command.action) {
+      case "group-added":
+        this.#nodes.set(command.uuid, {
+          uuid: command.uuid,
+          name: command.name,
+          parentUuid: null,
+          ...command.transform
+        });
+        break;
+
+      case "group-removed":
+        this.#nodes.delete(command.uuid);
+        break;
+
+      case "group-renamed":
+        this.#patchNode(command.uuid, { name: command.name });
+        break;
+
+      case "group-reparented":
+        this.#patchNode(command.uuid, {
+          parentUuid: command.parentUuid,
+          ...command.transform
+        });
+        break;
+
+      case "group-reparented-local":
+        this.#patchNode(command.uuid, { parentUuid: command.parentUuid });
+        break;
+
+      case "group-transformed":
+        this.#patchNode(command.uuid, {
+          ...command.transform,
+          ...(command.flipAxes ? { flipAxes: command.flipAxes } : {})
+        });
+        break;
+
+      case "folder-added":
+        this.#folders.set(command.uuid, {
+          uuid: command.uuid,
+          name: command.name,
+          parentId: command.parentId
+        });
+        break;
+
+      case "folder-removed":
+        this.#folders.delete(command.uuid);
+        break;
+
+      case "folder-renamed":
+        this.#patchFolder(command.uuid, { name: command.name });
+        break;
+
+      case "folder-reparented":
+        this.#patchFolder(command.uuid, { parentId: command.parentId });
+        break;
+
+      case "block-placed":
+        this.#placements.set(command.blockUuid, command.folderId);
+        break;
+
+      case "block-unplaced":
+        this.#placements.delete(command.blockUuid);
+        break;
     }
   }
 
@@ -114,5 +173,25 @@ export class VoxelModelState {
     }
 
     return document;
+  }
+
+  #patchNode(
+    uuid: string,
+    patch: Partial<ModelNodeJSON>
+  ): void {
+    const node = this.#nodes.get(uuid);
+    if (node) {
+      this.#nodes.set(uuid, { ...node, ...patch });
+    }
+  }
+
+  #patchFolder(
+    uuid: string,
+    patch: Partial<FolderNodeJSON>
+  ): void {
+    const folder = this.#folders.get(uuid);
+    if (folder) {
+      this.#folders.set(uuid, { ...folder, ...patch });
+    }
   }
 }

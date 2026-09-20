@@ -57,6 +57,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 
 ### Editors
 
+- [Editor Host](./packages/editors/host/): Shared launch, session and runtime boot for JollyPixel editors
 - [Voxel Map](./packages/editors/voxel-map/): 3D Voxel Terrain editor
 - [Voxel Model](./packages/editors/voxel-model/): Low-poly/voxel 3D model editor
 - [Pixel Art](./packages/editors/pixel-art/): 2D Pixel-Art texturing editor

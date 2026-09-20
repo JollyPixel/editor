@@ -72,7 +72,10 @@ async function withBackend(
     using eventStore = EventStore.persistence.memory();
     await fs.writeFile(
       path.join(root, kDocumentPath),
-      encodeVoxelModelDocument(createVoxelModelDocument({ texture: kTexture }))
+      encodeVoxelModelDocument(createVoxelModelDocument({
+        texture: kTexture,
+        blocks: []
+      }))
     );
     await using backend = await createAssetBackend({
       source: new FilesystemAssetSource(root),

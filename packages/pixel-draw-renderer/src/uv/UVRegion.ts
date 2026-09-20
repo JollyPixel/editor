@@ -319,6 +319,19 @@ export class UVRegion {
     });
   }
 
+  renamed(
+    name: string
+  ): UVRegion {
+    if (this.name === name) {
+      return this;
+    }
+
+    return new UVRegion({
+      ...this.toJSON(),
+      name
+    });
+  }
+
   free(): UVRegion {
     if (this.#layout.state === "free") {
       return this;

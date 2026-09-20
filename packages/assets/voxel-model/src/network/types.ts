@@ -147,25 +147,10 @@ export const MODEL_COMMAND_ACTIONS: readonly ModelCommandAction[] = [
   "group-transformed"
 ];
 
-export const FOLDER_COMMAND_ACTIONS: readonly FolderCommandAction[] = [
-  "folder-added",
-  "folder-removed",
-  "folder-renamed",
-  "folder-reparented",
-  "block-placed",
-  "block-unplaced"
-];
-
 const kModelActions = new Set<string>(MODEL_COMMAND_ACTIONS);
 
 export function isModelCommand<T extends VoxelModelCommand>(
   command: T
 ): command is Extract<T, ModelCommand> {
   return kModelActions.has(command.action);
-}
-
-export function isFolderCommand<T extends VoxelModelCommand>(
-  command: T
-): command is Extract<T, FolderCommand> {
-  return !kModelActions.has(command.action);
 }

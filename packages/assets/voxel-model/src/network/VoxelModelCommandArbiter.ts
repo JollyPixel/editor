@@ -3,37 +3,42 @@ import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type {
-  FolderCommand,
-  FolderNetworkCommand
+  VoxelModelCommand,
+  VoxelModelNetworkCommand
 } from "./types.ts";
 
-export interface FolderCommandArbiterOptions {
-  conflictResolver?: network.ConflictResolver<FolderNetworkCommand>;
+export interface VoxelModelCommandArbiterOptions {
+  conflictResolver?: network.ConflictResolver<VoxelModelNetworkCommand>;
 }
 
-export class FolderCommandArbiter {
-  #tracker: network.ConflictTracker<FolderNetworkCommand>;
+export class VoxelModelCommandArbiter {
+  #tracker: network.ConflictTracker<VoxelModelNetworkCommand>;
 
   constructor(
-    options: FolderCommandArbiterOptions = {}
+    options: VoxelModelCommandArbiterOptions = {}
   ) {
     this.#tracker = new network.ConflictTracker(
       options.conflictResolver ?? new network.LastWriteWinsResolver()
     );
   }
 
-  admit<TCommand extends FolderNetworkCommand>(
+  admit<TCommand extends VoxelModelNetworkCommand>(
     command: TCommand
   ): network.Admission<TCommand> | null {
-    const key = FolderCommandArbiter.key(command);
+    const key = VoxelModelCommandArbiter.key(command);
 
     return this.#tracker.admit(command, key === null ? [] : [key]);
   }
 
   static key(
-    command: FolderCommand | FolderNetworkCommand
+    command: VoxelModelCommand | VoxelModelNetworkCommand
   ): string | null {
     switch (command.action) {
+      case "group-renamed":
+      case "group-reparented":
+      case "group-reparented-local":
+      case "group-transformed":
+        return `group:${command.uuid}`;
       case "folder-renamed":
       case "folder-reparented":
         return `folder:${command.uuid}`;
