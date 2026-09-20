@@ -1,16 +1,16 @@
 # Selection and hover sync
 
-`PeerSelectionSync` and `PeerHoverSync` publish a local
-`SelectionManager` through room presence and apply remote ids to the peer
+`PeerSelectionSync` and `PeerHoverSync` publish the local ids held by a
+`MeshHighlightState` through room presence, and apply remote ids to the peer
 registries. The renderers remain transport-independent; see
-[peer selection and hover](../selection/peers.md).
+[peer selection and hover](../mesh-highlight/peers.md).
 
 ```ts
 import * as network from "@jolly-pixel/network/client";
 import {
+  MeshHighlightState,
   PeerHoverRegistry,
-  PeerSelectionRegistry,
-  SelectionManager
+  PeerSelectionRegistry
 } from "@jolly-pixel/three";
 import {
   PeerHoverSync,
@@ -21,7 +21,7 @@ const client = new network.Client({ identity: { username } });
 const room = client.room("my-room");
 room.join();
 
-const selection = new SelectionManager();
+const selection = new MeshHighlightState();
 const registry = new PeerSelectionRegistry();
 const hoverRegistry = new PeerHoverRegistry();
 

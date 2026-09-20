@@ -21,14 +21,14 @@ examples/
 ├── frustum/                one folder per example, plus family shared code
 │   ├── local/              /frustum/local/
 │   └── sync/               /frustum/sync/
-└── selection/
+└── mesh-highlight/
     ├── shared/
-    ├── basic/              /selection/basic/
-    ├── peer-sync/          /selection/peer-sync/
-    └── stress/             /selection/stress/
+    ├── basic/              /mesh-highlight/basic/
+    ├── peer-sync/          /mesh-highlight/peer-sync/
+    └── stress/             /mesh-highlight/stress/
 ```
 
-Folders holding several examples of one component (`frustum`, `selection`) are
+Folders holding several examples of one component (`frustum`, `mesh-highlight`) are
 not pages themselves.
 
 ## Adding an example
@@ -46,7 +46,7 @@ build wiring is needed.
 An `index.html` needs a `<canvas>` and a `<jolly-scope>`; `createExample()`
 builds the right-hand `#tools` dock inside that scope on its own. Declare a
 `jolly-dock-layout` in the page only to add a dock of your own, as
-`selection/basic` does for its outliner.
+`mesh-highlight/basic` does for its outliner.
 
 ## The bootstrap
 

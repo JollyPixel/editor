@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { FakeRoom } from "../fixtures/room.ts";
-import { SelectionManager, PeerHoverRegistry } from "#src/index.ts";
+import { MeshHighlightState, PeerHoverRegistry } from "#src/index.ts";
 import { PeerHoverSync } from "#src/network/index.ts";
 
 function setup(
@@ -15,7 +15,7 @@ function setup(
 ) {
   const room = new FakeRoom("three:peer-hover-test");
   const registry = new PeerHoverRegistry();
-  const selection = new SelectionManager();
+  const selection = new MeshHighlightState();
   const sync = new PeerHoverSync({
     room,
     registry,
@@ -38,7 +38,7 @@ describe("remote peers", () => {
     new PeerHoverSync({
       room,
       registry,
-      selection: new SelectionManager(),
+      selection: new MeshHighlightState(),
       throttleMs: 0
     });
 
