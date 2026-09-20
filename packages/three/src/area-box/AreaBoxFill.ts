@@ -2,7 +2,6 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { Vector3Like } from "../types.ts";
 
 /*
  * CONSTANTS
@@ -73,7 +72,7 @@ export class AreaBoxFill extends THREE.Mesh<
   }
 
   resize(
-    size: Vector3Like
+    size: THREE.Vector3Like
   ): void {
     const { x, y, z } = size;
 

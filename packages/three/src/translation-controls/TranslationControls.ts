@@ -2,7 +2,6 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { Vector3Like } from "../types.ts";
 import {
   TranslationGizmo,
   type TranslationHandleTarget
@@ -128,7 +127,7 @@ export class TranslationControls extends THREE.Controls<
   }
 
   set snap(
-    snap: number | Vector3Like | null
+    snap: number | THREE.Vector3Like | null
   ) {
     if (snap === null) {
       this.#snap = null;

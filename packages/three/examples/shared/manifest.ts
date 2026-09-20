@@ -22,6 +22,10 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
         path: "/area-box/"
       },
       {
+        label: "Marquee Box",
+        path: "/marquee-box/"
+      },
+      {
         label: "Translation Controls",
         path: "/translation-controls/"
       }

@@ -7,18 +7,12 @@ import {
 import { Line2NodeMaterial } from "three/webgpu";
 
 // Import Internal Dependencies
-import type { Vector3Like } from "../types.ts";
+import { boxOutlinePositions } from "../common/boxOutline.ts";
 
 // CONSTANTS
 const kTintTarget = new THREE.Color("#ffffff");
 const kTintRatio = 0.4;
 const kRenderOrder = 2;
-
-const kEdgePairs: readonly (readonly [number, number])[] = [
-  [0, 1], [1, 2], [2, 3], [3, 0],
-  [4, 5], [5, 6], [6, 7], [7, 4],
-  [0, 4], [1, 5], [2, 6], [3, 7]
-];
 
 export interface AreaBoxEdgesOptions {
   color: THREE.ColorRepresentation;
@@ -60,7 +54,7 @@ export class AreaBoxEdges extends LineSegments2 {
   }
 
   resize(
-    size: Vector3Like
+    size: THREE.Vector3Like
   ): void {
     if (
       this.#size !== null &&
@@ -77,7 +71,7 @@ export class AreaBoxEdges extends LineSegments2 {
       size.z
     );
     this.geometry.setPositions(
-      outlinePositions(size)
+      boxOutlinePositions(size)
     );
     this.geometry.computeBoundingBox();
     this.geometry.computeBoundingSphere();
@@ -137,21 +131,4 @@ export class AreaBoxEdges extends LineSegments2 {
     this.material.transparent = transparent;
     this.material.needsUpdate = true;
   }
-}
-
-function outlinePositions(
-  size: Vector3Like
-): number[] {
-  const { x, y, z } = size;
-  const corners: readonly (readonly [number, number, number])[] = [
-    [0, 0, 0], [x, 0, 0], [x, 0, z], [0, 0, z],
-    [0, y, 0], [x, y, 0], [x, y, z], [0, y, z]
-  ];
-
-  return kEdgePairs.flatMap(
-    ([from, to]) => [
-      ...corners[from],
-      ...corners[to]
-    ]
-  );
 }

@@ -40,7 +40,7 @@ A non-null `domElement` connects immediately. Pass `null` to defer input until
 ```ts
 interface TranslationControlsOptions {
   space?: "world" | "local";
-  snap?: number | Vector3Like | null;
+  snap?: number | THREE.Vector3Like | null;
   appearance?: TranslationGizmoAppearanceOptions;
 }
 ```
@@ -200,7 +200,7 @@ hides on `detach()`.
 
 ```ts
 space: "world" | "local";
-snap: number | Vector3Like | null;
+snap: number | THREE.Vector3Like | null;
 ```
 
 Both properties are live. A gesture latches its coordinate space when it

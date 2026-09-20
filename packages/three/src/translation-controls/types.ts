@@ -2,7 +2,6 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { Vector3Like } from "../types.ts";
 
 export type TranslationAxis = "x" | "y" | "z";
 export type TranslationDirection = -1 | 1;
@@ -81,7 +80,7 @@ export interface TranslationGizmoAppearanceOptions {
 
 export interface TranslationControlsOptions {
   space?: TranslationSpace;
-  snap?: number | Vector3Like | null;
+  snap?: number | THREE.Vector3Like | null;
   appearance?: TranslationGizmoAppearanceOptions;
 }
 

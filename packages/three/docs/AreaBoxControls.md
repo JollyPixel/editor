@@ -44,8 +44,8 @@ A non-null `domElement` connects immediately, while `null` defers connection unt
 
 ```ts
 interface AreaBoxControlsOptions {
-  snap?: number | Vector3Like | null;
-  minSize?: Vector3Like | null;
+  snap?: number | THREE.Vector3Like | null;
+  minSize?: THREE.Vector3Like | null;
   bounds?: THREE.Box3 | null;
   moveAxes?: AreaAxisPolicy;
   resizeAxes?: AreaAxisPolicy;

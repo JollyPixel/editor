@@ -20,7 +20,6 @@ import {
   type AreaHandleSign,
   axisPolicyIncludes
 } from "./types.ts";
-import type { Vector3Like } from "../types.ts";
 
 // CONSTANTS
 const kGroundAxes: readonly AreaAxis[] = ["x", "z"];
@@ -94,11 +93,11 @@ export interface AreaBoxControlsOptions {
   /**
    * Absolute grid step; `null` disables snapping.
    */
-  snap?: number | Vector3Like | null;
+  snap?: number | THREE.Vector3Like | null;
   /**
    * Minimum extent; takes precedence over `bounds`.
    */
-  minSize?: Vector3Like | null;
+  minSize?: THREE.Vector3Like | null;
   /**
    * Parent-space clamp volume.
    */
@@ -117,8 +116,8 @@ export interface AreaBoxControlsOptions {
 export class AreaBoxControls extends THREE.Controls<
   AreaBoxControlsEventMap, THREE.Camera
 > {
-  snap: number | Vector3Like | null;
-  minSize: Vector3Like | null;
+  snap: number | THREE.Vector3Like | null;
+  minSize: THREE.Vector3Like | null;
   bounds: THREE.Box3 | null;
   moveAxes: AreaAxisPolicy;
 

@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
 
-// Import Internal Dependencies
-import type { Vector3Like } from "../types.ts";
-
 export type GridPlane = "xz" | "xy" | "yz";
 
 export interface PlaneAxes {
@@ -59,9 +56,9 @@ export class GridPlaneValue {
   }
 
   followPosition(
-    cameraPosition: Vector3Like,
+    cameraPosition: THREE.Vector3Like,
     normalOffset: number
-  ): Vector3Like {
+  ): THREE.Vector3Like {
     const { u, v, normal } = kPlaneAxes[this.value];
 
     const result = {

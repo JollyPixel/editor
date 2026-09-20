@@ -22,9 +22,6 @@ import {
 import {
   GridFadeValue
 } from "./GridFadeValue.ts";
-import type {
-  Vector3Like
-} from "../types.ts";
 
 // CONSTANTS
 const kInfiniteGridQuadSize = 2;
@@ -588,7 +585,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
   }
 }
 
-function createOriginVector3(): Vector3Like {
+function createOriginVector3(): THREE.Vector3Like {
   return {
     x: 0,
     y: 0,

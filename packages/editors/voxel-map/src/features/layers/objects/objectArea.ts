@@ -3,7 +3,7 @@ import {
   goldenAngleColor,
   hashKey
 } from "@jolly-pixel/color";
-import type { Vector3Like } from "@jolly-pixel/three";
+import type { Vector3Like } from "three";
 import {
   VoxelFootprint,
   type VoxelObjectJSON

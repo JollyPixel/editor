@@ -7,17 +7,16 @@ import type {
   AreaAxis,
   AxisRange
 } from "./types.ts";
-import type { Vector3Like } from "../types.ts";
 
 export interface AxisConstraintsOptions {
   /**
    * Absolute grid step; `null` disables snapping.
    */
-  snap?: number | Vector3Like | null;
+  snap?: number | THREE.Vector3Like | null;
   /**
    * Minimum extent; takes precedence over `bounds`.
    */
-  minSize?: Vector3Like | null;
+  minSize?: THREE.Vector3Like | null;
   /**
    * Parent-space clamp volume, read live and never mutated.
    */
@@ -28,8 +27,8 @@ export interface AxisConstraintsOptions {
  * Resolves the snapping step, the minimum extent and the clamp range that apply to one axis.
  */
 export class AxisConstraints {
-  readonly snap: number | Vector3Like | null;
-  readonly minSize: Vector3Like | null;
+  readonly snap: number | THREE.Vector3Like | null;
+  readonly minSize: THREE.Vector3Like | null;
   readonly bounds: THREE.Box3 | null;
 
   constructor(

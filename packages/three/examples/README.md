@@ -17,6 +17,7 @@ examples/
 ├── shared/                 code used by two or more examples
 ├── grid/                   /grid/
 ├── area-box/               /area-box/
+├── marquee-box/            /marquee-box/
 ├── translation-controls/   /translation-controls/
 ├── frustum/                one folder per example, plus family shared code
 │   ├── local/              /frustum/local/

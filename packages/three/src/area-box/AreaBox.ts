@@ -6,7 +6,6 @@ import { AreaBoxFill } from "./AreaBoxFill.ts";
 import { AreaBoxEdges } from "./AreaBoxEdges.ts";
 import { AreaBoxLabel } from "./AreaBoxLabel.ts";
 import type { AreaBoxState } from "./types.ts";
-import type { Vector3Like } from "../types.ts";
 
 // CONSTANTS
 const kMinimumExtent = 1e-6;
@@ -41,8 +40,8 @@ export interface AreaBoxDefaults {
 }
 
 export interface AreaBoxOptions {
-  size?: Vector3Like;
-  position?: Vector3Like;
+  size?: THREE.Vector3Like;
+  position?: THREE.Vector3Like;
   color?: THREE.ColorRepresentation;
   opacity?: number;
   edges?: Partial<AreaBoxEdgesDefaults>;
@@ -135,7 +134,7 @@ export class AreaBox extends THREE.Object3D {
   }
 
   set size(
-    size: Vector3Like
+    size: THREE.Vector3Like
   ) {
     this.#size.set(
       Math.max(size.x, kMinimumExtent),
