@@ -7,7 +7,7 @@ entry point.
 - [Peer frustums](./frustums.md) publish a camera or `Object3D` pose and draw
   remote poses.
 - [Peer selection and hover](./selection.md) publish a local
-  `SelectionManager` and update the remote peer registries.
+  `MeshHighlightState` and update the remote peer registries.
 
 The entry point also exports the presence value types and their decoders:
 

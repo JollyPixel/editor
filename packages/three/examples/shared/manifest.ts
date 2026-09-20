@@ -41,19 +41,19 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
     ]
   },
   {
-    label: "Selection",
+    label: "Mesh Highlight",
     examples: [
       {
         label: "Basic",
-        path: "/selection/basic/"
+        path: "/mesh-highlight/basic/"
       },
       {
         label: "Peer Sync",
-        path: "/selection/peer-sync/"
+        path: "/mesh-highlight/peer-sync/"
       },
       {
         label: "Stress",
-        path: "/selection/stress/"
+        path: "/mesh-highlight/stress/"
       }
     ]
   }

@@ -6,8 +6,8 @@ import {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type { PeerSelectionRegistry } from "../selection/peer/PeerSelectionRegistry.ts";
-import type { SelectionManager } from "../selection/SelectionManager.ts";
+import type { PeerSelectionRegistry } from "../mesh-highlight/peer/PeerSelectionRegistry.ts";
+import type { MeshHighlightState } from "../mesh-highlight/MeshHighlightState.ts";
 
 // CONSTANTS
 const kDefaultPresenceKey = "selection";
@@ -17,14 +17,14 @@ export type PeerSelectionId = string | null;
 export interface PeerSelectionSyncOptions {
   room: Room;
   registry: PeerSelectionRegistry;
-  selection: SelectionManager;
+  selection: MeshHighlightState;
   presenceKey?: string;
 }
 
 export class PeerSelectionSync {
   #channel: PresenceChannel<PeerSelectionId>;
   #registry: PeerSelectionRegistry;
-  #selection: SelectionManager;
+  #selection: MeshHighlightState;
 
   #onPeerChange = (
     change: PresenceChange<PeerSelectionId>

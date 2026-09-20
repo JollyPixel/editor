@@ -6,8 +6,8 @@ import {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type { PeerHoverRegistry } from "../selection/peer/PeerHoverRegistry.ts";
-import type { SelectionManager } from "../selection/SelectionManager.ts";
+import type { PeerHoverRegistry } from "../mesh-highlight/peer/PeerHoverRegistry.ts";
+import type { MeshHighlightState } from "../mesh-highlight/MeshHighlightState.ts";
 
 // CONSTANTS
 const kDefaultPresenceKey = "hover";
@@ -18,7 +18,7 @@ export type PeerHoverId = string | null;
 export interface PeerHoverSyncOptions {
   room: Room;
   registry: PeerHoverRegistry;
-  selection: SelectionManager;
+  selection: MeshHighlightState;
   presenceKey?: string;
   throttleMs?: number;
 }
@@ -26,7 +26,7 @@ export interface PeerHoverSyncOptions {
 export class PeerHoverSync {
   #channel: PresenceChannel<PeerHoverId>;
   #registry: PeerHoverRegistry;
-  #selection: SelectionManager;
+  #selection: MeshHighlightState;
   #throttleMs: number;
 
   #hasSent = false;

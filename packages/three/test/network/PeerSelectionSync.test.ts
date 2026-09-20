@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { FakeRoom } from "../fixtures/room.ts";
-import { SelectionManager, PeerSelectionRegistry } from "#src/index.ts";
+import { MeshHighlightState, PeerSelectionRegistry } from "#src/index.ts";
 import { PeerSelectionSync } from "#src/network/index.ts";
 
 function setup(
@@ -15,7 +15,7 @@ function setup(
 ) {
   const room = new FakeRoom("three:peer-selection-test");
   const registry = new PeerSelectionRegistry();
-  const selection = new SelectionManager();
+  const selection = new MeshHighlightState();
   const sync = new PeerSelectionSync({
     room,
     registry,
@@ -37,7 +37,7 @@ describe("remote peers", () => {
     new PeerSelectionSync({
       room,
       registry,
-      selection: new SelectionManager()
+      selection: new MeshHighlightState()
     });
 
     assert.equal(registry.selectionOf("alice"), "box-1");
