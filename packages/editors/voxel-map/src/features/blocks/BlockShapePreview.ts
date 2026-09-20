@@ -30,7 +30,7 @@ export class BlockShapePreview extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
+  declare engine: VoxelEngine;
 
   @property({ attribute: false })
   declare block: ResolvedBlockDefinition | null;
@@ -42,7 +42,6 @@ export class BlockShapePreview extends LitElement {
 
   constructor() {
     super();
-    this.engine = undefined;
     this.block = null;
   }
 
@@ -77,7 +76,7 @@ export class BlockShapePreview extends LitElement {
   #build(): void {
     this.#renderer?.dispose();
     this.#renderer = null;
-    if (!this.engine || !this._well) {
+    if (!this._well) {
       return;
     }
 
@@ -86,6 +85,7 @@ export class BlockShapePreview extends LitElement {
       tilesetManager: this.engine.tilesetManager
     });
     this.#renderer.block = this.block;
+    this.#renderer.onContextLost = () => this.#build();
   }
 }
 

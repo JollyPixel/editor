@@ -6,7 +6,7 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { LayerSelection } from "../../app/state/index.ts";
+import type { LayerSelection } from "../../state/index.ts";
 import type { PeerMarkMap } from "../../collaboration/peerMarks.ts";
 import { layerRefPresenceKey } from "./collaboration/layerPresenceKey.ts";
 import { formatCount } from "../blocks/blockUsage.ts";

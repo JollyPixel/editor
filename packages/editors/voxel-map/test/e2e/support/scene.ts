@@ -120,7 +120,7 @@ export function blocksAt(
   cells: Cell[]
 ): Promise<Array<number | null>> {
   return page.evaluate((targets) => {
-    const { world } = window.voxelMapEditor!.scene.engine;
+    const { world } = window.voxelMapEditor!.workspace.engine;
 
     return targets.map(
       (cell) => world.getVoxelAt(cell)?.blockId ?? null
@@ -132,7 +132,7 @@ export function voxelCount(
   page: Page
 ): Promise<number> {
   return page.evaluate(
-    () => window.voxelMapEditor!.scene.engine.world.voxelCount
+    () => window.voxelMapEditor!.workspace.engine.world.voxelCount
   );
 }
 
@@ -142,7 +142,7 @@ export async function seedVoxels(
   layerName = "Ground"
 ): Promise<void> {
   await page.evaluate((args) => {
-    const { engine } = window.voxelMapEditor!.scene;
+    const { engine } = window.voxelMapEditor!.workspace;
     engine.world.setVoxelBulk(
       args.layerName,
       args.cells.map((cell) => {
@@ -161,7 +161,7 @@ export async function seedVoxels(
     layerName
   });
   await page.waitForFunction((targets) => {
-    const { engine } = window.voxelMapEditor!.scene;
+    const { engine } = window.voxelMapEditor!.workspace;
 
     return targets.every((cell) => engine.world.getVoxelAt(cell) !== undefined) &&
       engine.inspector.mesh.stats.voxels === engine.world.voxelCount;

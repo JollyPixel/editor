@@ -3,7 +3,6 @@ import {
   LitElement,
   html,
   nothing,
-  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
@@ -13,20 +12,16 @@ import {
 } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
-import type {
-  VoxelHistory,
-  VoxelHistoryState
-} from "@jolly-pixel/voxel.renderer";
+import type { VoxelHistoryState } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
   BRUSH_MAX_SIZE,
   BRUSH_MIN_SIZE,
-  editorState,
-  type BrushMode,
-  type BrushStore,
-  type SelectionStore
-} from "../../../app/state/index.ts";
+  type BrushMode
+} from "../../../state/index.ts";
+import type { VoxelMapWorkspace } from "../../../scene/EditorScene.ts";
+import { WorkspaceController } from "../../../shared/WorkspaceController.ts";
 import type {
   BrushAxis,
   BrushPattern
@@ -56,15 +51,6 @@ interface ChoiceTool<TValue extends string> {
 export class BrushToolbar extends LitElement {
   static override styles = brushToolbarStyles;
 
-  @property({ attribute: false })
-  declare brush: BrushStore;
-
-  @property({ attribute: false })
-  declare selection: SelectionStore;
-
-  @property({ attribute: false })
-  declare history: VoxelHistory | null;
-
   @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
 
@@ -89,8 +75,6 @@ export class BrushToolbar extends LitElement {
   @state()
   declare _canRedo: boolean;
 
-  #subscriptions: Array<() => void> = [];
-
   #onHistoryChange = (
     state: VoxelHistoryState
   ): void => {
@@ -98,42 +82,60 @@ export class BrushToolbar extends LitElement {
     this._canRedo = state.canRedo;
   };
 
+  #workspace = new WorkspaceController(this, (workspace) => {
+    const { brush, selection } = workspace.state;
+    const { history } = workspace.engine;
+
+    this._mode = brush.mode;
+    this._axis = brush.axis;
+    this._pattern = brush.pattern;
+    this._size = brush.size;
+    this._ghost = brush.ghost;
+    this._canUndo = history.canUndo;
+    this._canRedo = history.canRedo;
+    this.disabled = selection.voxelLayer === null;
+
+    history.on("change", this.#onHistoryChange);
+
+    return [
+      brush.subscribe("modeChange", (mode) => {
+        this._mode = mode;
+      }),
+      brush.subscribe("axisChange", (axis) => {
+        this._axis = axis;
+      }),
+      brush.subscribe("patternChange", (pattern) => {
+        this._pattern = pattern;
+      }),
+      brush.subscribe("sizeChange", (size) => {
+        this._size = size;
+      }),
+      brush.subscribe("ghostChange", (ghost) => {
+        this._ghost = ghost;
+      }),
+      selection.subscribe("change", () => {
+        this.disabled = selection.voxelLayer === null;
+      }),
+      () => history.off("change", this.#onHistoryChange)
+    ];
+  });
+
   constructor() {
     super();
-
-    this.brush = editorState.brush;
-    this.selection = editorState.selection;
-    this.history = null;
     this.disabled = true;
-    this.#read();
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.#subscribe();
-  }
-
-  override disconnectedCallback(): void {
-    this.#unsubscribe();
-    super.disconnectedCallback();
-  }
-
-  protected override willUpdate(
-    changed: PropertyValues<this>
+  attach(
+    workspace: VoxelMapWorkspace
   ): void {
-    if (
-      this.isConnected &&
-      (
-        changed.has("brush") ||
-        changed.has("selection") ||
-        changed.has("history")
-      )
-    ) {
-      this.#subscribe();
-    }
+    this.#workspace.attach(workspace);
   }
 
-  override render(): TemplateResult {
+  override render(): TemplateResult | typeof nothing {
+    if (this.#workspace.current === null) {
+      return nothing;
+    }
+
     return html`
       <jolly-rail
         orientation="horizontal"
@@ -169,7 +171,7 @@ export class BrushToolbar extends LitElement {
             current: this._mode,
             shortcut: "R",
             select: (value) => {
-              this.brush.mode = value;
+              this.#workspace.attached.state.brush.mode = value;
             }
           })}
           ${this.#renderChoice({
@@ -178,7 +180,7 @@ export class BrushToolbar extends LitElement {
             current: this._axis,
             shortcut: "X",
             select: (value) => {
-              this.brush.axis = value;
+              this.#workspace.attached.state.brush.axis = value;
             },
             content: axisLetters
           })}
@@ -206,7 +208,7 @@ export class BrushToolbar extends LitElement {
             current: this._pattern,
             shortcut: "C",
             select: (value) => {
-              this.brush.pattern = value;
+              this.#workspace.attached.state.brush.pattern = value;
             }
           })}
           <jolly-tool-button
@@ -260,73 +262,22 @@ export class BrushToolbar extends LitElement {
   }
 
   #onUndo(): void {
-    this.history?.undo();
+    this.#workspace.current?.engine.history.undo();
   }
 
   #onRedo(): void {
-    this.history?.redo();
+    this.#workspace.current?.engine.history.redo();
   }
 
   #onGhostToggle(): void {
-    this.brush.ghost = !this.brush.ghost;
+    this.#workspace.attached.state.brush.ghost = !this.#workspace.attached.state.brush.ghost;
   }
 
   #onSizeInput(
     event: CustomEvent<JollyChangeDetail<number>>
   ): void {
-    this.brush.size = event.detail.value;
-    this._size = this.brush.size;
-  }
-
-  #read(): void {
-    this._mode = this.brush.mode;
-    this._axis = this.brush.axis;
-    this._pattern = this.brush.pattern;
-    this._size = this.brush.size;
-    this._ghost = this.brush.ghost;
-    this._canUndo = this.history?.canUndo ?? false;
-    this._canRedo = this.history?.canRedo ?? false;
-    this.disabled = this.selection.voxelLayer === null;
-  }
-
-  #subscribe(): void {
-    this.#unsubscribe();
-    this.#read();
-
-    const { brush, selection, history } = this;
-    this.#subscriptions = [
-      brush.subscribe("modeChange", (mode) => {
-        this._mode = mode;
-      }),
-      brush.subscribe("axisChange", (axis) => {
-        this._axis = axis;
-      }),
-      brush.subscribe("patternChange", (pattern) => {
-        this._pattern = pattern;
-      }),
-      brush.subscribe("sizeChange", (size) => {
-        this._size = size;
-      }),
-      brush.subscribe("ghostChange", (ghost) => {
-        this._ghost = ghost;
-      }),
-      selection.subscribe("change", () => {
-        this.disabled = selection.voxelLayer === null;
-      })
-    ];
-
-    if (history !== null) {
-      history.on("change", this.#onHistoryChange);
-      this.#subscriptions.push(
-        () => history.off("change", this.#onHistoryChange)
-      );
-    }
-  }
-
-  #unsubscribe(): void {
-    for (const unsubscribe of this.#subscriptions.splice(0)) {
-      unsubscribe();
-    }
+    this.#workspace.attached.state.brush.size = event.detail.value;
+    this._size = this.#workspace.attached.state.brush.size;
   }
 }
 

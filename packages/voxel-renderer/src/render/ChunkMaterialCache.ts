@@ -123,9 +123,8 @@ export class ChunkMaterialCache {
     opacity: number,
     surface: BlockSurface
   ): ChunkMaterial {
-    const { texture } = this.#tilesetManager.atlas(
-      tilesetId
-    );
+    const { texture } = this.#tilesetManager.resolve(tilesetId) ??
+      this.#tilesetManager.atlas(tilesetId);
     const transparent = opacity < 1 || surface.alphaMode === "blend";
 
     const options = {

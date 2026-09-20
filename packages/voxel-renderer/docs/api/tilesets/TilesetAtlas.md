@@ -4,11 +4,11 @@ One registered atlas: its resolved grid and the texture chunk materials sample.
 Obtain it from [`TilesetManager.get()` or `atlas()`](./TilesetManager.md).
 
 ```ts
-class TilesetAtlas {
+class TilesetAtlas<TTexture extends THREE.Texture<AtlasSize> = TilesetTexture> {
   readonly def: ResolvedTilesetDefinition;
-  readonly texture: TilesetTexture;
+  readonly texture: TTexture;
 
-  constructor(definition: TilesetDefinition, texture: TilesetTexture);
+  constructor(definition: TilesetDefinition, texture: TTexture);
   uvFor(
     col: number,
     row: number,
@@ -16,7 +16,7 @@ class TilesetAtlas {
     span?: Readonly<TileSpan>,
     rotation?: TileRotation
   ): TilesetUVRegion;
-  updateImage(image: TilesetImage): void;
+  updateImage(image: TTexture["image"]): void;
 }
 
 function resolveTilesetDefinition(

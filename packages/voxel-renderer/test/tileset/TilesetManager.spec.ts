@@ -3,7 +3,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TilesetManager } from "../../src/tileset/index.ts";
+import {
+  createMissingTilesetAtlas,
+  MISSING_TILESET_ID,
+  TilesetManager
+} from "../../src/tileset/index.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import {
   makeAtlasDef,
@@ -121,6 +125,64 @@ describe("TilesetManager.atlas", () => {
 
     assert.equal(manager.atlas("walls").texture, walls);
     assert.equal(manager.atlas("walls").uvFor(0, 0).scaleU, 15 / 32);
+  });
+});
+
+describe("TilesetManager.resolve", () => {
+  it("returns the atlas of a declared tileset", () => {
+    const manager = new TilesetManager();
+    const atlas = registerAtlas(manager);
+
+    assert.equal(manager.resolve("atlas"), atlas);
+    assert.equal(manager.resolve(), atlas);
+  });
+
+  it("returns undefined while a declared tileset has no texture", () => {
+    const manager = new TilesetManager();
+    manager.tilesets.add(makeAtlasDef({ id: "later" }));
+
+    assert.equal(manager.resolve("later"), undefined);
+  });
+
+  it("falls back to one shared missing atlas without bumping the version", () => {
+    const manager = new TilesetManager();
+    const before = manager.version;
+
+    const missing = manager.resolve("gone");
+
+    assert.equal(missing?.def.id, MISSING_TILESET_ID);
+    assert.deepEqual(
+      [missing?.def.cols, missing?.def.rows],
+      [1, 1]
+    );
+    assert.equal(manager.resolve(), missing);
+    assert.equal(manager.resolve(MISSING_TILESET_ID), missing);
+    assert.equal(manager.version, before);
+  });
+
+  it("paints the missing texture red with a white cross", () => {
+    const { texture } = createMissingTilesetAtlas();
+    const { data, width } = texture.image;
+    const pixels = Array.from(data!);
+
+    assert.deepEqual(pixels.slice(0, 4), [255, 255, 255, 255]);
+    assert.deepEqual(
+      pixels.slice((width - 1) * 4, width * 4),
+      [255, 255, 255, 255]
+    );
+    assert.deepEqual(
+      pixels.slice((width / 2) * 4, ((width / 2) + 1) * 4),
+      [255, 23, 68, 255]
+    );
+  });
+
+  it("never declares the reserved id", () => {
+    const manager = new TilesetManager();
+
+    assert.equal(
+      manager.tilesets.add(makeAtlasDef({ id: MISSING_TILESET_ID })),
+      false
+    );
   });
 });
 

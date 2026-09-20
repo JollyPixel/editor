@@ -7,22 +7,18 @@ import {
   state
 } from "lit/decorators.js";
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import {
-  type JollyRenameDetail,
-  type JollyReparentDetail,
-  type JollySelectDetail,
-  type JollyToggleLockDetail,
-  type JollyToggleVisibleDetail,
-  type TreeNode
+import type {
+  JollyRenameDetail,
+  JollyReparentDetail,
+  JollySelectDetail,
+  JollyToggleLockDetail,
+  JollyToggleVisibleDetail,
+  TreeNode
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type PresenceStore,
-  type SelectionStore,
-  type WorldStore
-} from "../../app/state/index.ts";
+import type { MapDocument } from "../../document/index.ts";
+import type { PresenceStore, SelectionStore } from "../../state/index.ts";
 import { ViewFocus } from "../../scene/viewFocus.ts";
 import { AddLayerDialog } from "./AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
@@ -54,13 +50,13 @@ export class LayerManager extends LitElement {
   static override styles = layerManagerStyles;
 
   @property({ attribute: false })
-  declare world: VoxelWorld | undefined;
+  declare world: VoxelWorld;
 
   @property({ attribute: false })
   declare selection: SelectionStore;
 
   @property({ attribute: false })
-  declare worldStore: WorldStore;
+  declare mapDocument: MapDocument;
 
   @property({ attribute: false })
   declare presence: PresenceStore;
@@ -87,10 +83,6 @@ export class LayerManager extends LitElement {
 
   constructor() {
     super();
-    this.world = undefined;
-    this.selection = editorState.selection;
-    this.worldStore = editorState.world;
-    this.presence = editorState.presence;
     this.viewFocus = new ViewFocus();
     this._nodes = [];
     this._selected = [];
@@ -109,7 +101,7 @@ export class LayerManager extends LitElement {
   override willUpdate(
     changedProperties: Map<string | symbol, unknown>
   ): void {
-    if (changedProperties.has("world") && this.world) {
+    if (changedProperties.has("world")) {
       this.#refreshNodes();
     }
   }
@@ -118,8 +110,8 @@ export class LayerManager extends LitElement {
     super.connectedCallback();
 
     this.#subscriptions.push(
-      this.worldStore.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.worldStore.subscribe("reset", this.#onLayerUpdated),
+      this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.mapDocument.subscribe("reset", this.#onLayerUpdated),
       this.selection.subscribe("change", this.#onSelectionChange),
       this.presence.subscribe("layerSelectionsChange", this.#onLayerUpdated)
     );
@@ -188,10 +180,6 @@ export class LayerManager extends LitElement {
   }
 
   #refreshNodes(): void {
-    if (!this.world) {
-      return;
-    }
-
     this._nodes = withLayerBadges(
       layerTreeNodes(this.world),
       this.presence.layerSelections
@@ -232,10 +220,6 @@ export class LayerManager extends LitElement {
   #onToggleVisible(
     event: CustomEvent<JollyToggleVisibleDetail>
   ): void {
-    if (!this.world) {
-      return;
-    }
-
     const { visible } = event.detail;
     const ref = layerRefOf(event.detail.id);
     setLayerEntryVisibility(
@@ -250,10 +234,6 @@ export class LayerManager extends LitElement {
     event: CustomEvent<JollyRenameDetail>
   ): void {
     const ref = layerRefOf(event.detail.id);
-    if (!this.world) {
-      return;
-    }
-
     renameLayerEntry(
       this.world,
       ref,
@@ -266,10 +246,6 @@ export class LayerManager extends LitElement {
     event: CustomEvent<JollyToggleLockDetail>
   ): void {
     const ref = layerRefOf(event.detail.id);
-    if (!this.world) {
-      return;
-    }
-
     setLayerEntryLocked(
       this.world,
       ref,
@@ -279,10 +255,6 @@ export class LayerManager extends LitElement {
   }
 
   async addLayer() {
-    if (!this.world) {
-      return;
-    }
-
     const objectLayer = this.selection.objectLayer;
     const objectLayers = this.world.getObjectLayers();
     const result = await this._addDialog.open({
@@ -308,7 +280,7 @@ export class LayerManager extends LitElement {
 
   async removeLayer() {
     const ref = this.#selectedRef;
-    if (ref === null || !this.world) {
+    if (ref === null) {
       return;
     }
 
@@ -322,10 +294,6 @@ export class LayerManager extends LitElement {
   #onReparent(
     event: CustomEvent<JollyReparentDetail>
   ): void {
-    if (!this.world) {
-      return;
-    }
-
     const relocated = applyLayerReparent(this.world, event.detail);
     this.#followRelocatedObjects(relocated);
     this.#refreshNodes();
@@ -356,7 +324,7 @@ export class LayerManager extends LitElement {
 
   cloneLayer(): void {
     const ref = this.#selectedRef;
-    if (ref === null || !this.world) {
+    if (ref === null) {
       return;
     }
 
@@ -369,7 +337,7 @@ export class LayerManager extends LitElement {
 
   async mergeLayer() {
     const ref = this.#selectedRef;
-    if (ref === null || !this.world) {
+    if (ref === null) {
       return;
     }
 

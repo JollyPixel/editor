@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { LayerSelection } from "../../../app/state/index.ts";
+import type { LayerSelection } from "../../../state/index.ts";
 import type { LayerRef } from "../layerTree.ts";
 
 export function layerRefPresenceKey(

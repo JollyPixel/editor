@@ -9,6 +9,9 @@ import {
   type VoxelObjectJSON
 } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import type { ObjectKey } from "../../../state/index.ts";
+
 // CONSTANTS
 const kDerivedColor = {
   saturation: 0.65,
@@ -18,11 +21,6 @@ const kDerivedColor = {
 export interface AreaTransform {
   position: Vector3Like;
   size: Vector3Like;
-}
-
-export interface ObjectKey {
-  layerName: string;
-  objectId: string;
 }
 
 export type ObjectAreaPatch = Required<

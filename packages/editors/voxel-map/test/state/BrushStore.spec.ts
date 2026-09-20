@@ -10,7 +10,7 @@ import {
   BRUSH_MAX_SIZE,
   BRUSH_MIN_SIZE,
   BrushStore
-} from "../../../src/app/state/BrushStore.ts";
+} from "../../src/state/BrushStore.ts";
 
 describe("BrushStore.size", () => {
   test("reaches sixteen", () => {

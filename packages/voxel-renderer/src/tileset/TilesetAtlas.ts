@@ -6,7 +6,6 @@ import type {
   AtlasSize,
   ResolvedTilesetDefinition,
   TilesetDefinition,
-  TilesetImage,
   TilesetTexture,
   TilesetUVRegion,
   TileRotation,
@@ -31,13 +30,15 @@ export function resolveTilesetDefinition(
   };
 }
 
-export class TilesetAtlas {
+export class TilesetAtlas<
+  TTexture extends THREE.Texture<AtlasSize> = TilesetTexture
+> {
   readonly def: ResolvedTilesetDefinition;
-  readonly texture: TilesetTexture;
+  readonly texture: TTexture;
 
   constructor(
     def: TilesetDefinition,
-    texture: TilesetTexture
+    texture: TTexture
   ) {
     this.def = resolveTilesetDefinition(def, texture.image);
     this.texture = texture;
@@ -70,7 +71,7 @@ export class TilesetAtlas {
   }
 
   updateImage(
-    image: TilesetImage
+    image: TTexture["image"]
   ): void {
     this.texture.image = image;
     this.texture.needsUpdate = true;

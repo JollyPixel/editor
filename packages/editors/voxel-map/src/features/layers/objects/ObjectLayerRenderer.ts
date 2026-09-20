@@ -15,11 +15,8 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type SelectionStore,
-  type WorldStore
-} from "../../../app/state/index.ts";
+import type { MapDocument } from "../../../document/index.ts";
+import type { SelectionStore } from "../../../state/index.ts";
 import {
   objectKey,
   objectPatchFromArea,
@@ -38,8 +35,8 @@ const kMinObjectSize = {
 export interface ObjectLayerRendererOptions {
   world: VoxelWorld;
   camera: THREE.PerspectiveCamera;
-  selection?: SelectionStore;
-  worldStore?: WorldStore;
+  selection: SelectionStore;
+  mapDocument: MapDocument;
 }
 
 /**
@@ -49,7 +46,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   #world: VoxelWorld;
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
-  #worldStore: WorldStore;
+  #mapDocument: MapDocument;
   #scene: ObjectAreaScene;
   #canvas: HTMLCanvasElement | null = null;
   #controls: AreaBoxControls | null = null;
@@ -68,8 +65,8 @@ export class ObjectLayerRenderer extends ActorComponent {
     });
     this.#world = options.world;
     this.#camera = options.camera;
-    this.#selection = options.selection ?? editorState.selection;
-    this.#worldStore = options.worldStore ?? editorState.world;
+    this.#selection = options.selection;
+    this.#mapDocument = options.mapDocument;
     this.#scene = new ObjectAreaScene({
       actor,
       world: options.world,
@@ -95,8 +92,8 @@ export class ObjectLayerRenderer extends ActorComponent {
     canvas.addEventListener("pointerdown", this.#onPointerDown, true);
     this.#subscriptions.push(
       this.#selection.subscribe("change", this.#onSelectionChange),
-      this.#worldStore.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.#worldStore.subscribe("reset", this.#onWorldReset)
+      this.#mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.#mapDocument.subscribe("reset", this.#onWorldReset)
     );
 
     this.#syncAll();

@@ -18,16 +18,15 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { MapDocument } from "../../document/index.ts";
 import { BlockEditorDialog } from "./BlockEditorDialog.ts";
-import {
-  editorState,
-  type BlockUsageStore,
-  type BrushStore,
-  type PresenceStore,
-  type RotationMode,
-  type TilesetStore,
-  type WorldStore
-} from "../../app/state/index.ts";
+import type {
+  BlockUsageStore,
+  BrushStore,
+  PresenceStore,
+  RotationMode,
+  TilesetStore
+} from "../../state/index.ts";
 import { blocksWithoutTileset } from "../tilesets/blockTilesets.ts";
 import {
   formatCount,
@@ -129,13 +128,13 @@ export class BlockLibrary extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
+  declare engine: VoxelEngine;
 
   @property({ attribute: false })
   declare brush: BrushStore;
 
   @property({ attribute: false })
-  declare worldStore: WorldStore;
+  declare mapDocument: MapDocument;
 
   @property({ attribute: false })
   declare presence: PresenceStore;
@@ -190,20 +189,14 @@ export class BlockLibrary extends LitElement {
   constructor() {
     super();
 
-    this.engine = undefined;
-    this.brush = editorState.brush;
-    this.worldStore = editorState.world;
-    this.presence = editorState.presence;
-    this.tilesets = editorState.tilesets;
-    this.usage = editorState.usage;
     this.order = DEFAULT_BLOCK_LIBRARY_ORDER;
     this.layout = "compact";
     this._selectedId = null;
     this._selectedBlock = null;
     this._blocks = [];
     this._shownBlocks = [];
-    this._rotationMode = this.brush.rotationMode;
-    this._flipY = this.brush.flipY;
+    this._rotationMode = "auto";
+    this._flipY = false;
     this._marks = new Map();
     this._problems = new Map();
     this._unused = new Set();
@@ -215,9 +208,7 @@ export class BlockLibrary extends LitElement {
   };
 
   readonly #onBlockRegistryChanged = () => {
-    if (this.engine) {
-      this.#resolveSelection();
-    }
+    this.#resolveSelection();
     this.#refreshBlocks();
   };
 
@@ -245,7 +236,7 @@ export class BlockLibrary extends LitElement {
     super.connectedCallback();
     this.#subscriptions.push(
       this.brush.subscribe("blockChange", this.#onSelectedBlockChange),
-      this.worldStore.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged),
+      this.mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged),
       this.brush.subscribe("rotationModeChange", this.#onRotationModeChange),
       this.brush.subscribe("flipYChange", this.#onFlipYChange),
       this.presence.subscribe("blockSelectionsChange", this.#onMarksChange),
@@ -253,6 +244,8 @@ export class BlockLibrary extends LitElement {
       this.tilesets.subscribe("change", this.#onTilesetsChange),
       this.usage.subscribe("change", this.#onUsageChange)
     );
+    this.#onRotationModeChange();
+    this.#onFlipYChange();
     this.#refreshMarks();
     this.#refreshUsage();
   }
@@ -267,7 +260,7 @@ export class BlockLibrary extends LitElement {
   override willUpdate(
     changed: Map<string, unknown>
   ) {
-    if (changed.has("engine") && this.engine) {
+    if (changed.has("engine")) {
       this.#resolveSelection();
       this.#refreshBlocks();
     }
@@ -365,7 +358,7 @@ export class BlockLibrary extends LitElement {
 
   async #confirmRemoveOrphans(): Promise<void> {
     const { orphanVoxels, orphanBlocks } = this.usage.stats;
-    if (!this.engine || orphanVoxels === 0) {
+    if (orphanVoxels === 0) {
       return;
     }
 
@@ -396,7 +389,7 @@ export class BlockLibrary extends LitElement {
   #onBlockMove(
     event: CustomEvent<BlockMoveDetail>
   ): void {
-    this.engine?.moveBlock(event.detail.id, event.detail.toIndex);
+    this.engine.moveBlock(event.detail.id, event.detail.toIndex);
   }
 
   #onBlockCreate(): void {
@@ -416,16 +409,12 @@ export class BlockLibrary extends LitElement {
   }
 
   async #addBlock(): Promise<void> {
-    if (!this.engine) {
-      return;
-    }
-
     await this.updateComplete;
     await this._dialog?.openForCreate();
   }
 
   async editBlock(): Promise<void> {
-    if (!this.engine || this._selectedBlock === null) {
+    if (this._selectedBlock === null) {
       return;
     }
 
@@ -454,7 +443,7 @@ export class BlockLibrary extends LitElement {
   #resolveSelection(): void {
     this._selectedId = this.brush.blockId;
     this.#refreshMarks();
-    const block = this.engine?.blockRegistry.get(this._selectedId ?? 0) ?? null;
+    const block = this.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
     if (block === this._selectedBlock) {
       return;
     }
@@ -470,10 +459,6 @@ export class BlockLibrary extends LitElement {
   }
 
   #refreshBlocks(): void {
-    if (!this.engine) {
-      return;
-    }
-
     this._blocks = [
       ...this.engine.blockRegistry.getAll()
     ];

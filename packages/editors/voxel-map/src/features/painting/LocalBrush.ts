@@ -4,17 +4,10 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import {
-  type VoxelCoord,
-  type VoxelEngine
-} from "@jolly-pixel/voxel.renderer";
+import type { VoxelCoord, VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type BrushStore,
-  type SelectionStore
-} from "../../app/state/index.ts";
+import type { BrushStore, SelectionStore } from "../../state/index.ts";
 import type { BrushCursor } from "./model/brushCursor.ts";
 import type { BrushShape } from "./model/brushFootprint.ts";
 import {
@@ -51,8 +44,8 @@ const kStaleAimFrames = 2;
 export interface LocalBrushOptions {
   engine: VoxelEngine;
   camera: THREE.PerspectiveCamera;
-  brush?: BrushStore;
-  selection?: SelectionStore;
+  brush: BrushStore;
+  selection: SelectionStore;
   /**
    * Fallback ground-plane side length, in world units.
    * @default 4096
@@ -111,8 +104,8 @@ export class LocalBrush extends ActorComponent {
     const {
       engine,
       camera,
-      brush = editorState.brush,
-      selection = editorState.selection,
+      brush,
+      selection,
       groundPlaneSize = 4096,
       maxDistance = kDefaultMaxDistance,
       skyRadius = kDefaultSkyRadius,

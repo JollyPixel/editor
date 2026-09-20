@@ -11,12 +11,12 @@ import {
 } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type {
-  BrushStore,
-  WorldStore
-} from "../../app/state/index.ts";
+import type { MapDocument } from "../../document/index.ts";
+import {
+  definitionsEqual,
+  type BrushStore
+} from "../../state/index.ts";
 import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
-import { definitionsEqual } from "../tilesets/tilesetEntries.ts";
 import type { TilesetTexture } from "../tilesets/TilesetTextures.ts";
 
 export interface TilesetTabOptions {
@@ -26,7 +26,7 @@ export interface TilesetTabOptions {
   assetId: string | null;
   texture: TilesetTexture;
   brush: BrushStore;
-  worldStore: WorldStore;
+  mapDocument: MapDocument;
 }
 
 export class TilesetTab {
@@ -57,7 +57,7 @@ export class TilesetTab {
     this.#uvBridge = new BlockUvBridge(canvas.uv, engine, {
       runLocalRestore: (fn) => canvas.runLocalRestore(fn),
       brush: options.brush,
-      worldStore: options.worldStore
+      mapDocument: options.mapDocument
     });
     this.#apply();
   }

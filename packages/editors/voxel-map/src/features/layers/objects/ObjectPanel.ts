@@ -13,10 +13,7 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type WorldStore
-} from "../../../app/state/index.ts";
+import type { MapDocument } from "../../../document/index.ts";
 import {
   colorOf,
   derivedColorOf,
@@ -43,13 +40,13 @@ export class ObjectPanel extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare world: VoxelWorld | undefined;
+  declare world: VoxelWorld;
   @property({ type: String })
   declare layerName: string | null;
   @property({ type: String })
   declare objectId: string | null;
   @property({ attribute: false })
-  declare worldStore: WorldStore;
+  declare mapDocument: MapDocument;
 
   @state()
   private declare _object: VoxelObjectJSON | null;
@@ -61,8 +58,6 @@ export class ObjectPanel extends LitElement {
 
   constructor() {
     super();
-    this.world = undefined;
-    this.worldStore = editorState.world;
     this.layerName = null;
     this.objectId = null;
     this._object = null;
@@ -97,7 +92,7 @@ export class ObjectPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.worldStore.subscribe("layerUpdated", this.#onLayerUpdated)
+      this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated)
     );
   }
 
@@ -123,7 +118,7 @@ export class ObjectPanel extends LitElement {
   #syncFromStore(
     options: { resetProperties?: boolean; } = {}
   ): void {
-    if (!this.world || !this.layerName || !this.objectId) {
+    if (!this.layerName || !this.objectId) {
       this._object = null;
 
       return;

@@ -8,11 +8,11 @@ import {
   brushStyleEquals,
   brushStyleFrom,
   type BrushStyle
-} from "../../features/painting/model/BrushStyle.ts";
+} from "../features/painting/model/BrushStyle.ts";
 import type {
   BrushAxis,
   BrushPattern
-} from "../../features/painting/model/brushFootprint.ts";
+} from "../features/painting/model/brushFootprint.ts";
 
 // CONSTANTS
 export const BRUSH_MIN_SIZE = 1;

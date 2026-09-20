@@ -7,11 +7,7 @@ import type {
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type BrushStore,
-  type PresenceStore
-} from "../../../app/state/index.ts";
+import type { BrushStore, PresenceStore } from "../../../state/index.ts";
 import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 
 export interface BlockSelectionPresenceOptions {
@@ -19,8 +15,8 @@ export interface BlockSelectionPresenceOptions {
     VoxelNetworkCommand,
     VoxelServerMessage
   >;
-  brush?: BrushStore;
-  presence?: PresenceStore;
+  brush: BrushStore;
+  presence: PresenceStore;
 }
 
 export class BlockSelectionPresence {
@@ -36,8 +32,8 @@ export class BlockSelectionPresence {
   constructor(
     options: BlockSelectionPresenceOptions
   ) {
-    this.#brush = options.brush ?? editorState.brush;
-    this.#presence = options.presence ?? editorState.presence;
+    this.#brush = options.brush;
+    this.#presence = options.presence;
 
     this.#tracker = new PeerMarkTracker({
       room: options.room,

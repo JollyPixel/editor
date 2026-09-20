@@ -13,25 +13,22 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import type { MapDocument } from "../../../document/index.ts";
 import { findBlocksReferencingTileset } from "../uv/blockTextureTiles.ts";
-import { definitionsEqual } from "../../tilesets/tilesetEntries.ts";
-import {
-  editorState,
-  type WorldStore
-} from "../../../app/state/index.ts";
+import { definitionsEqual } from "../../../state/index.ts";
 
 export interface TilesetAtlasBridgeOptions {
   engine: VoxelEngine;
   document: PixelDocument;
   definition: TilesetDefinition;
-  worldStore?: WorldStore;
+  mapDocument: MapDocument;
   scheduler?: (callback: () => void) => void;
 }
 
 export class TilesetAtlasBridge {
   readonly #engine: VoxelEngine;
   readonly #document: PixelDocument;
-  readonly #worldStore: WorldStore;
+  readonly #mapDocument: MapDocument;
   readonly #scheduler: (callback: () => void) => void;
   readonly #unsubscribe: () => void;
   #definition: TilesetDefinition;
@@ -73,14 +70,14 @@ export class TilesetAtlasBridge {
     this.#engine = options.engine;
     this.#document = options.document;
     this.#definition = options.definition;
-    this.#worldStore = options.worldStore ?? editorState.world;
+    this.#mapDocument = options.mapDocument;
     this.#scheduler = options.scheduler ??
       ((callback) => requestAnimationFrame(callback));
 
     this.#document.on("changed", this.#onChanged);
     this.#document.on("resized", this.#onSurfaceChanged);
     this.#document.on("replaced", this.#onSurfaceChanged);
-    this.#unsubscribe = this.#worldStore.subscribe(
+    this.#unsubscribe = this.#mapDocument.subscribe(
       "blockRegistryChanged",
       this.#onBlockRegistryChanged
     );
@@ -117,7 +114,7 @@ export class TilesetAtlasBridge {
   syncTransparency(
     bounds?: SelectionRect
   ): void {
-    if (!this.#worldStore.blocksReady) {
+    if (!this.#mapDocument.ready) {
       return;
     }
 

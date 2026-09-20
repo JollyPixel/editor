@@ -24,14 +24,13 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type BlockUsageStore,
-  type TilesetStore,
-  type WorldStore
-} from "../../app/state/index.ts";
+import type { MapDocument } from "../../document/index.ts";
+import type {
+  BlockUsageStore,
+  TilesetEntry,
+  TilesetStore
+} from "../../state/index.ts";
 import type { TilesetActions } from "./TilesetActions.ts";
-import type { TilesetEntry } from "./tilesetEntries.ts";
 import { rescaleLeavesBlocksOffGrid } from "./blockTilesets.ts";
 import { tileSizeOptions } from "./tileSizes.ts";
 import {
@@ -89,7 +88,7 @@ export class TilesetManagerDialog extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
+  declare engine: VoxelEngine;
 
   @property({ attribute: false })
   declare actions: TilesetActions | null;
@@ -98,7 +97,7 @@ export class TilesetManagerDialog extends LitElement {
   declare tilesets: TilesetStore;
 
   @property({ attribute: false })
-  declare worldStore: WorldStore;
+  declare mapDocument: MapDocument;
 
   @property({ attribute: false })
   declare usage: BlockUsageStore;
@@ -119,12 +118,7 @@ export class TilesetManagerDialog extends LitElement {
 
   constructor() {
     super();
-    this.engine = undefined;
     this.actions = null;
-    this.tilesets = editorState.tilesets;
-    this.worldStore = editorState.world;
-    this.usage = editorState.usage;
-    this.log = editorState.log;
     this.onAdd = null;
     this._open = false;
   }
@@ -133,7 +127,7 @@ export class TilesetManagerDialog extends LitElement {
     super.connectedCallback();
     this.#subscriptions.push(
       this.tilesets.subscribe("change", this.#refresh),
-      this.worldStore.subscribe("blockRegistryChanged", this.#refresh),
+      this.mapDocument.subscribe("blockRegistryChanged", this.#refresh),
       this.usage.subscribe("change", this.#refresh)
     );
   }
@@ -298,7 +292,7 @@ export class TilesetManagerDialog extends LitElement {
       return;
     }
 
-    const offGrid = this.engine !== undefined && rescaleLeavesBlocksOffGrid(
+    const offGrid = rescaleLeavesBlocksOffGrid(
       this.engine.blockRegistry,
       {
         tilesetId: definition.id,

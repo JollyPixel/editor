@@ -18,8 +18,12 @@ class TilesetManager {
   syncAtlases(): string[];
   get(tilesetId?: string): TilesetAtlas | undefined;
   atlas(tilesetId?: string): TilesetAtlas;
+  resolve(tilesetId?: string): TilesetAtlas | MissingTilesetAtlas | undefined;
   dispose(): void;
 }
+
+const MISSING_TILESET_ID = "$missing";
+type MissingTilesetAtlas = TilesetAtlas<THREE.DataTexture>;
 ```
 
 `tilesets` is the [`TilesetList`](./tilesets.md#tilesetlist) of declared
@@ -45,6 +49,19 @@ the same lookup and throws instead.
 
 `version` increases when atlases or the list change, so cached UV data can be
 invalidated. `dispose()` disposes every texture and clears the list.
+
+## Missing tileset
+
+`resolve()` is the lookup the mesher and the chunk materials use. It returns
+the atlas like `get()`, `undefined` while a declared tileset has no texture,
+and the missing-tileset atlas when the ID is not declared (a removed tileset,
+or no tileset at all).
+
+The missing-tileset atlas is a generated 16x16 single-tile texture, red with a
+white cross. It is created on first use, shared, and disposed by `dispose()`.
+Its faces are meshed under `MISSING_TILESET_ID`, which is also the `tilesetId`
+a `materialCustomizer` receives for them. The ID is reserved:
+`TilesetList.add()` refuses it, so it is never declared or serialized.
 
 ```ts
 engine.tilesets.add(definition);

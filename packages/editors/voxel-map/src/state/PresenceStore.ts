@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
 import type { PresencePeer } from "@jolly-pixel/ui";
+import type { PeerMarkMap } from "@jolly-pixel/ui/network";
 import { Emitter } from "@openally/emitt";
-
-// Import Internal Dependencies
-import type { PeerMarkMap } from "../../collaboration/peerMarks.ts";
 
 export type PresenceStoreEvents = {
   peersChange: (

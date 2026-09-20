@@ -6,9 +6,16 @@ import {
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import { UVMap } from "@jolly-pixel/pixel-draw.renderer";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { editorState } from "../../../../src/app/state/index.ts";
+import { BrushStore } from "../../../../src/state/index.ts";
+import type { MapDocumentEvents } from "../../../../src/document/index.ts";
+
+export interface FakeBridgeOptions {
+  brush: BrushStore;
+  mapDocument: Emitter<MapDocumentEvents>;
+}
 
 export interface BlockTexturePlacement {
   col: number;
@@ -34,8 +41,13 @@ export function makeBlock(
 export function makeFakeVoxelEngine(): {
   engine: VoxelEngine;
   dirtyReasons: string[];
+  bridgeOptions: FakeBridgeOptions;
 } {
   const dirtyReasons: string[] = [];
+  const bridgeOptions: FakeBridgeOptions = {
+    brush: new BrushStore(),
+    mapDocument: new Emitter<MapDocumentEvents>()
+  };
   const registry = new BlockRegistry();
   const fake = {
     blockRegistry: registry,
@@ -51,7 +63,7 @@ export function makeFakeVoxelEngine(): {
 
       for (const def of resolved) {
         registry.register(def);
-        editorState.world.emit("blockRegistryChanged");
+        bridgeOptions.mapDocument.emit("blockRegistryChanged");
       }
       dirtyReasons.push("block-defined");
     },
@@ -62,7 +74,8 @@ export function makeFakeVoxelEngine(): {
 
   return {
     engine: fake as unknown as VoxelEngine,
-    dirtyReasons
+    dirtyReasons,
+    bridgeOptions
   };
 }
 

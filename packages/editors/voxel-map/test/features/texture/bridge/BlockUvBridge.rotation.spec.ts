@@ -14,7 +14,7 @@ import {
 function setupShape(
   shapeId: string
 ) {
-  const { engine } = makeFakeVoxelEngine();
+  const { engine, bridgeOptions } = makeFakeVoxelEngine();
   const uv = makeUv();
   engine.defineBlock({
     id: 1,
@@ -25,7 +25,7 @@ function setupShape(
     faceTextures: {},
     defaultTexture: { col: 2, row: 2, tilesetId: "atlas" }
   });
-  const bridge = new BlockUvBridge(uv, engine);
+  const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
   bridge.setActiveTileset("atlas", 16);
 
   return { engine, uv, bridge };
@@ -33,10 +33,10 @@ function setupShape(
 
 describe("BlockUvBridge / rotation", () => {
   it("rotating a stacked block writes its default tile rotation in place", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }));
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -65,13 +65,13 @@ describe("BlockUvBridge / rotation", () => {
   });
 
   it("builds a rotated stacked region from a rotated default tile", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register({
       ...makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }),
       defaultTexture: { col: 1, row: 2, tilesetId: "atlas", rotation: 2 }
     });
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -89,10 +89,10 @@ describe("BlockUvBridge / rotation", () => {
   });
 
   it("rotating one free face writes only that face's tile rotation", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }));
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");

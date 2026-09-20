@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { BrushMode } from "../../../app/state/index.ts";
+import type { BrushMode } from "../../../state/index.ts";
 import type {
   BrushAxis,
   BrushPattern

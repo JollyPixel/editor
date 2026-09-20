@@ -22,7 +22,7 @@ function tileCenter(
   blockId: number
 ): Promise<TexturePoint> {
   return page.evaluate((id) => {
-    const { engine } = window.voxelMapEditor!.scene;
+    const { engine } = window.voxelMapEditor!.workspace;
     const texture = engine.blockRegistry.get(id)!.defaultTexture!;
     const tileSize = engine.tilesets.definitions()[0].tileSize;
 
@@ -38,7 +38,7 @@ function alphaMode(
   blockId: number
 ): Promise<string | undefined> {
   return page.evaluate(
-    (id) => window.voxelMapEditor!.scene.engine.blockRegistry.get(id)?.alphaMode,
+    (id) => window.voxelMapEditor!.workspace.engine.blockRegistry.get(id)?.alphaMode,
     blockId
   );
 }
@@ -57,7 +57,7 @@ test("the texture follows the selected block", async({ page }) => {
   });
 
   await page.evaluate(() => {
-    window.voxelMapEditor!.scene.editorState.brush.blockId = 5;
+    window.voxelMapEditor!.workspace.state.brush.blockId = 5;
   });
 
   await expect.poll(async() => (await textureState(panel)).selectedRegionId)

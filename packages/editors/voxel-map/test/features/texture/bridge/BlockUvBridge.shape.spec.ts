@@ -27,11 +27,11 @@ describe("BlockUvBridge / shape footprint", () => {
   }
 
   it("sizes a pole region to the width of the pole", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("pole"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
@@ -56,11 +56,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("puts a slab side on the half of the tile its geometry covers", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("slabBottom"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
@@ -85,11 +85,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("keeps a cube region on the whole tile", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("cube"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -107,11 +107,11 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("round-trips every shape's faces back to the tile they came from", () => {
     for (const shape of BlockShapeRegistry.createDefault()) {
-      const { engine } = makeFakeVoxelEngine();
+      const { engine, bridgeOptions } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shape.id));
 
       const uv = makeUv();
-      const bridge = new BlockUvBridge(uv, engine);
+      const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
       try {
         bridge.setActiveTileset("atlas", 16);
         const region = uv.get("block-1");
@@ -142,11 +142,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("resizes the region when the block changes shape", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("cube"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       assert.equal(uv.get("block-1")!.rectFor("front").width, 16);
@@ -167,11 +167,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("keeps a region stacked when the block changes to a non-box shape", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("cube"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       assert.equal(uv.get("block-1")!.state, "stacked");
@@ -198,11 +198,11 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("keeps every face's size across a stack round-trip", () => {
     for (const shapeId of ["pole", "poleY", "slabBottom", "slabTop", "stair"]) {
-      const { engine } = makeFakeVoxelEngine();
+      const { engine, bridgeOptions } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shapeId));
 
       const uv = makeUv();
-      const bridge = new BlockUvBridge(uv, engine);
+      const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
       try {
         bridge.setActiveTileset("atlas", 16);
         uv.setState("block-1", "free");
@@ -225,11 +225,11 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("keeps every face's size across a serialized stack round-trip", () => {
     for (const shapeId of ["pole", "poleY", "slabBottom", "slabTop", "stair"]) {
-      const { engine } = makeFakeVoxelEngine();
+      const { engine, bridgeOptions } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shapeId));
 
       const uv = makeUv();
-      const bridge = new BlockUvBridge(uv, engine);
+      const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
       try {
         bridge.setActiveTileset("atlas", 16);
         uv.setState("block-1", "free");
@@ -252,11 +252,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("stacks a pole onto its largest face, not its smallest", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("pole"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -278,11 +278,11 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("stacks onto the tile the block already used", () => {
     for (const shapeId of ["cube", "pole", "slabBottom"]) {
-      const { engine } = makeFakeVoxelEngine();
+      const { engine, bridgeOptions } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shapeId));
 
       const uv = makeUv();
-      const bridge = new BlockUvBridge(uv, engine);
+      const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
       try {
         bridge.setActiveTileset("atlas", 16);
 
@@ -302,11 +302,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("tracks the triangle a ramp gives a face", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("cube"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -325,11 +325,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("keeps a stacked ramp slope on one square tile", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("ramp"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -348,11 +348,11 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 
   it("gives a free ramp slope its true length", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("ramp"));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");

@@ -12,7 +12,7 @@ import { Keyboard } from "@jolly-pixel/controls";
 import {
   BrushStore,
   SelectionStore
-} from "../../../../src/app/state/index.ts";
+} from "../../../../src/state/index.ts";
 import {
   BrushShortcuts
 } from "../../../../src/features/painting/interaction/BrushShortcuts.ts";

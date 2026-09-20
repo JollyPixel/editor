@@ -2,22 +2,19 @@
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type {
-  TilesetStore,
-  WorldStore
-} from "../../app/state/index.ts";
+import type { MapDocument } from "../../document/index.ts";
+import type { TilesetEntry, TilesetStore } from "../../state/index.ts";
 import { TilesetAtlasBridge } from "../texture/bridge/TilesetAtlasBridge.ts";
 import type {
   TilesetTexture,
   TilesetTextures
 } from "./TilesetTextures.ts";
-import type { TilesetEntry } from "./tilesetEntries.ts";
 
 export interface TilesetAtlasesOptions {
   engine: VoxelEngine;
   store: TilesetStore;
   textures: TilesetTextures;
-  worldStore: WorldStore;
+  mapDocument: MapDocument;
 }
 
 interface AtlasBinding {
@@ -30,7 +27,7 @@ export class TilesetAtlases {
   readonly #engine: VoxelEngine;
   readonly #store: TilesetStore;
   readonly #textures: TilesetTextures;
-  readonly #worldStore: WorldStore;
+  readonly #mapDocument: MapDocument;
   readonly #bindings = new Map<string, AtlasBinding>();
   readonly #unsubscribe: () => void;
 
@@ -40,7 +37,7 @@ export class TilesetAtlases {
     this.#engine = options.engine;
     this.#store = options.store;
     this.#textures = options.textures;
-    this.#worldStore = options.worldStore;
+    this.#mapDocument = options.mapDocument;
 
     this.#unsubscribe = this.#store.subscribe("change", this.reconcile);
     this.reconcile();
@@ -115,7 +112,7 @@ export class TilesetAtlases {
         engine: this.#engine,
         document: texture.document,
         definition: entry.definition,
-        worldStore: this.#worldStore
+        mapDocument: this.#mapDocument
       })
     });
 

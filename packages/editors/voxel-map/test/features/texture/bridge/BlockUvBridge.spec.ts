@@ -10,7 +10,6 @@ import {
 
 // Import Internal Dependencies
 import { BlockUvBridge } from "../../../../src/features/texture/bridge/BlockUvBridge.ts";
-import { editorState } from "../../../../src/app/state/index.ts";
 import {
   makeBlock,
   makeFakeVoxelEngine,
@@ -19,13 +18,13 @@ import {
 
 describe("BlockUvBridge.setActiveTileset", () => {
   it("restores one grid-snapped region per block on the active tileset", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
     engine.blockRegistry.register(makeBlock(2, { col: 2, row: 1, tilesetId: "atlas" }));
     engine.blockRegistry.register(makeBlock(3, { col: 0, row: 0, tilesetId: "other" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -39,7 +38,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
   });
 
   it("restores ramp sides as triangular geometry", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     const ramp = {
       ...makeBlock(1, { col: 2, row: 1, tilesetId: "atlas" }),
       shapeId: "ramp"
@@ -47,7 +46,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
     engine.blockRegistry.register(ramp);
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
@@ -74,12 +73,12 @@ describe("BlockUvBridge.setActiveTileset", () => {
   });
 
   it("rebuilds the region set when the active tileset switches", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
     engine.blockRegistry.register(makeBlock(2, { col: 0, row: 0, tilesetId: "other" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       assert.ok(uv.get("block-1"));
@@ -95,7 +94,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
   });
 
   it("includes a face-only block with no default texture", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register({
       ...makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }),
       defaultTexture: undefined,
@@ -105,7 +104,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
     });
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -127,17 +126,17 @@ describe("BlockUvBridge.setActiveTileset", () => {
 
 describe("BlockUvBridge / blockRegistryChanged", () => {
   it("reflects an externally-updated block's new col/row on the next rebuild", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 0, y: 0, width: 16, height: 16 });
 
       engine.blockRegistry.register(makeBlock(1, { col: 3, row: 2, tilesetId: "atlas" }));
-      editorState.world.emit("blockRegistryChanged");
+      bridgeOptions.mapDocument.emit("blockRegistryChanged");
 
       assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 48, y: 32, width: 16, height: 16 });
     }
@@ -147,11 +146,11 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
   });
 
   it("renames the region when the block definition is renamed", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       assert.equal(uv.get("block-1")?.name, "Block1");
@@ -160,7 +159,7 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
         ...makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }),
         name: "Grass"
       });
-      editorState.world.emit("blockRegistryChanged");
+      bridgeOptions.mapDocument.emit("blockRegistryChanged");
 
       assert.equal(uv.get("block-1")?.name, "Grass");
     }
@@ -172,11 +171,11 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
 
 describe("BlockUvBridge / region-moved", () => {
   it("moves freely (no grid snapping) and updates the block's col/row from the raw position", () => {
-    const { engine, dirtyReasons } = makeFakeVoxelEngine();
+    const { engine, dirtyReasons, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -194,11 +193,11 @@ describe("BlockUvBridge / region-moved", () => {
   });
 
   it("ignores manually-created free-form UV regions (non block-<id> ids)", () => {
-    const { engine, dirtyReasons } = makeFakeVoxelEngine();
+    const { engine, dirtyReasons, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       const region = uv.create({ id: "custom-region", width: 8, height: 8 });
@@ -217,11 +216,11 @@ describe("BlockUvBridge / region-moved", () => {
 
 describe("BlockUvBridge / faceTextures round-trip", () => {
   it("freeing a block region writes all six faceTextures", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
@@ -246,11 +245,11 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
   });
 
   it("moving one face updates only that face's tile", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
@@ -274,11 +273,11 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
   });
 
   it("stacking clears faceTextures and writes defaultTexture", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
@@ -300,17 +299,17 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
   });
 
   it("an free block survives a rebuild triggered from outside", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
       uv.move("block-1", { x: 48, y: 32, width: 16, height: 16 }, "top");
 
-      editorState.world.emit("blockRegistryChanged");
+      bridgeOptions.mapDocument.emit("blockRegistryChanged");
 
       const region = uv.get("block-1")!;
       assert.equal(region.state, "free");
@@ -325,14 +324,14 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
   });
 
   it("a block authored with partial faceTextures rebuilds as free, filling gaps from defaultTexture", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register({
       ...makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }),
       faceTextures: { [Face.PosY]: { col: 2, row: 0, tilesetId: "atlas" } }
     });
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
 
@@ -353,11 +352,11 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
 
 describe("BlockUvBridge / region-deleted", () => {
   it("self-heals a block region deleted via the generic UV toolbar", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       assert.ok(uv.get("block-1"));
@@ -374,11 +373,11 @@ describe("BlockUvBridge / region-deleted", () => {
 
 describe("BlockUvBridge — unfolding a block region", () => {
   it("claims one tile per face, rewriting the block's faceTextures", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 1, row: 1, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "unfolded");
@@ -399,11 +398,11 @@ describe("BlockUvBridge — unfolding a block region", () => {
   });
 
   it("keeps the net tile-aligned, so no face lands on a half tile", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "unfolded");
@@ -420,11 +419,11 @@ describe("BlockUvBridge — unfolding a block region", () => {
   });
 
   it("freeing an unfolded block keeps the tiles the net claimed", () => {
-    const { engine } = makeFakeVoxelEngine();
+    const { engine, bridgeOptions } = makeFakeVoxelEngine();
     engine.blockRegistry.register(makeBlock(1, { col: 1, row: 1, tilesetId: "atlas" }));
 
     const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine);
+    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "unfolded");

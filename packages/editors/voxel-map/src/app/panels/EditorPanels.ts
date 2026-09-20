@@ -1,19 +1,9 @@
 // Import Third-party Dependencies
 import type { DockLayout } from "@jolly-pixel/ui";
-import type {
-  VoxelEngine,
-  VoxelWorldJSON
-} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { EditorState } from "../state/index.ts";
-import type { GridRenderer } from "../../scene/GridRenderer.ts";
-import type { SceneLighting } from "../../scene/SceneLighting.ts";
-import type { LocalBrush } from "../../features/painting/index.ts";
+import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
 import type { TextureEditor } from "../../features/texture/TextureEditor.ts";
-import type { TilesetTextures } from "../../features/tilesets/TilesetTextures.ts";
-import type { TilesetActions } from "../../features/tilesets/TilesetActions.ts";
-import type { ViewFocus } from "../../scene/viewFocus.ts";
 import { BlocksPanel } from "./BlocksPanel.ts";
 import { GeneralPanel } from "./GeneralPanel.ts";
 import { LayersPanel } from "./LayersPanel.ts";
@@ -25,34 +15,21 @@ import {
   type TextureHost
 } from "./textureHost.ts";
 
-export interface EditorPanelsOptions {
-  state: EditorState;
-  viewFocus: ViewFocus;
-  onLoadWorld(data: VoxelWorldJSON): void;
-  onTeleportToPeer(clientId: string): void;
-}
-
-export interface EditorPanelsHandles {
-  engine: VoxelEngine;
-  gridRenderer: GridRenderer;
-  lighting: SceneLighting;
-  localBrush: LocalBrush;
-  tilesetActions: TilesetActions | null;
-  textures: TilesetTextures;
+export interface EditorPanelElements {
+  layout: DockLayout;
+  general: GeneralPanel;
+  blocks: BlocksPanel;
+  paint: PaintPanel;
+  layers: LayersPanel;
 }
 
 export class EditorPanels {
-  readonly #layout: DockLayout;
-  readonly #general: GeneralPanel;
-  readonly #blocks: BlocksPanel;
-  readonly #paint: PaintPanel;
-  readonly #layers: LayersPanel;
-  readonly #textureEditor: TextureEditor;
+  readonly #elements: EditorPanelElements;
+  #textureEditor: TextureEditor | null = null;
   #host: TextureHost = "blocks";
 
   static mount(
-    root: ParentNode,
-    options: EditorPanelsOptions
+    root: ParentNode
   ): EditorPanels | null {
     const layout = root.querySelector("jolly-dock-layout");
     const general = root.querySelector("general-panel");
@@ -69,96 +46,79 @@ export class EditorPanels {
       return null;
     }
 
-    return new EditorPanels(
-      {
-        layout,
-        general,
-        blocks,
-        paint,
-        layers
-      },
-      options
-    );
+    return new EditorPanels({
+      layout,
+      general,
+      blocks,
+      paint,
+      layers
+    });
   }
 
   constructor(
-    elements: {
-      layout: DockLayout;
-      general: GeneralPanel;
-      blocks: BlocksPanel;
-      paint: PaintPanel;
-      layers: LayersPanel;
-    },
-    options: EditorPanelsOptions
+    elements: EditorPanelElements
   ) {
-    this.#layout = elements.layout;
-    this.#general = elements.general;
-    this.#blocks = elements.blocks;
-    this.#paint = elements.paint;
-    this.#layers = elements.layers;
-
-    this.#general.state = options.state;
-    this.#general.onLoadWorld = options.onLoadWorld;
-    this.#general.onTeleportToPeer = options.onTeleportToPeer;
-    this.#blocks.state = options.state;
-    this.#layers.state = options.state;
-    this.#layers.viewFocus = options.viewFocus;
-
-    this.#textureEditor = document.createElement("texture-editor");
-    this.#textureEditor.brush = options.state.brush;
-    this.#textureEditor.worldStore = options.state.world;
-    this.#textureEditor.tilesets = options.state.tilesets;
-
-    this.#layout.addEventListener("jolly-layout-change", this.#place);
-    this.#layout.addEventListener("jolly-pane-visibility", this.#place);
-    this.#layout.addEventListener("world-loaded", this.#refresh);
-    void this.#layout.updateComplete.then(this.#place);
-  }
-
-  adoptHandles(
-    handles: EditorPanelsHandles
-  ): void {
-    this.#general.engine = handles.engine;
-    this.#general.gridRenderer = handles.gridRenderer;
-    this.#general.lighting = handles.lighting;
-    this.#general.localBrush = handles.localBrush;
-    this.#blocks.engine = handles.engine;
-    this.#blocks.tilesetActions = handles.tilesetActions;
-    this.#layers.engine = handles.engine;
-    this.#textureEditor.engine = handles.engine;
-    this.#textureEditor.textures = handles.textures;
+    this.#elements = elements;
   }
 
   get layout(): DockLayout {
-    return this.#layout;
+    return this.#elements.layout;
+  }
+
+  attach(
+    workspace: VoxelMapWorkspace
+  ): void {
+    const { layout, general, blocks, layers } = this.#elements;
+
+    general.attach(workspace);
+    blocks.attach(workspace);
+    layers.attach(workspace);
+
+    const textureEditor = document.createElement("texture-editor");
+    textureEditor.brush = workspace.state.brush;
+    textureEditor.tilesets = workspace.state.tilesets;
+    textureEditor.mapDocument = workspace.mapDocument;
+    textureEditor.engine = workspace.engine;
+    textureEditor.textures = workspace.textures;
+    this.#textureEditor = textureEditor;
+
+    layout.addEventListener("jolly-layout-change", this.#place);
+    layout.addEventListener("jolly-pane-visibility", this.#place);
+    void layout.updateComplete.then(this.#place);
   }
 
   dispose(): void {
-    this.#layout.removeEventListener("jolly-layout-change", this.#place);
-    this.#layout.removeEventListener("jolly-pane-visibility", this.#place);
-    this.#layout.removeEventListener("world-loaded", this.#refresh);
-    this.#textureEditor.remove();
+    const { layout } = this.#elements;
+
+    layout.removeEventListener("jolly-layout-change", this.#place);
+    layout.removeEventListener("jolly-pane-visibility", this.#place);
+    this.#textureEditor?.remove();
+    this.#textureEditor = null;
   }
 
   readonly #place = (): void => {
-    const blocks = this.#layout.placement("blocks");
-    const paint = this.#layout.placement("paint");
-    this.#host = resolveTextureHost(blocks, paint, this.#host);
-    const panel = this.#host === "blocks" ? this.#blocks : this.#paint;
-    if (this.#textureEditor.parentElement !== panel) {
-      panel.append(this.#textureEditor);
+    const textureEditor = this.#textureEditor;
+    if (textureEditor === null) {
+      return;
     }
-    this.#blocks.hostsTextureEditor = this.#host === "blocks";
-    this.#textureEditor.uvAccess = textureUvAccess(
-      this.#host,
-      texturePanesGrouped(blocks, paint)
-    );
-    this.#textureEditor.active = this.#layout.paneVisible(this.#host);
-  };
 
-  readonly #refresh = (): void => {
-    this.#general.requestUpdate();
-    this.#blocks.requestUpdate();
-    this.#layers.requestUpdate();
+    const { layout, blocks, paint } = this.#elements;
+    const blocksPlacement = layout.placement("blocks");
+    const paintPlacement = layout.placement("paint");
+    this.#host = resolveTextureHost(
+      blocksPlacement,
+      paintPlacement,
+      this.#host
+    );
+    const panel = this.#host === "blocks" ? blocks : paint;
+    if (textureEditor.parentElement !== panel) {
+      panel.append(textureEditor);
+    }
+    blocks.hostsTextureEditor = this.#host === "blocks";
+    textureEditor.uvAccess = textureUvAccess(
+      this.#host,
+      texturePanesGrouped(blocksPlacement, paintPlacement)
+    );
+    textureEditor.active = layout.paneVisible(this.#host);
   };
 }

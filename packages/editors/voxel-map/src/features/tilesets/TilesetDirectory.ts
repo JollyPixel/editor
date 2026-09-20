@@ -6,7 +6,8 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { TilesetStore } from "../../app/state/index.ts";
+import type { MapDocumentSignals } from "../../document/index.ts";
+import type { TilesetStore } from "../../state/index.ts";
 import { resolveTilesetEntries } from "./tilesetEntries.ts";
 
 export interface TilesetCatalog {
@@ -18,6 +19,7 @@ export interface TilesetCatalog {
 export interface TilesetDirectoryOptions {
   store: TilesetStore;
   tilesets: TilesetList;
+  mapDocument: MapDocumentSignals;
   catalog?: TilesetCatalog;
 }
 
@@ -25,6 +27,7 @@ export class TilesetDirectory {
   readonly #store: TilesetStore;
   readonly #tilesets: TilesetList;
   readonly #catalog: TilesetCatalog | undefined;
+  readonly #unsubscribe: () => void;
 
   constructor(
     options: TilesetDirectoryOptions
@@ -34,6 +37,10 @@ export class TilesetDirectory {
     this.#catalog = options.catalog;
 
     this.#catalog?.on("change", this.refresh);
+    this.#unsubscribe = options.mapDocument.subscribe(
+      "tilesetsChanged",
+      this.refresh
+    );
     this.refresh();
   }
 
@@ -45,6 +52,7 @@ export class TilesetDirectory {
   };
 
   dispose(): void {
+    this.#unsubscribe();
     this.#catalog?.off("change", this.refresh);
   }
 }

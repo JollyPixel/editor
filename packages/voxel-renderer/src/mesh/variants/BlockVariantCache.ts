@@ -10,6 +10,7 @@ import type {
   TilesetUVRegion
 } from "../../tileset/types.ts";
 import { rotateTileUv } from "../../tileset/tileRef.ts";
+import { MISSING_TILESET_ID } from "../../tileset/missingTileset.ts";
 import type { FaceDefinition } from "../../blocks/face/index.ts";
 import { BlockTextures } from "../../blocks/BlockTextures.ts";
 import { BlockSurface } from "../../blocks/BlockSurface.ts";
@@ -61,7 +62,7 @@ interface CompileFaceOptions {
   faceDef: FaceDefinition;
   uvRegion: TilesetUVRegion;
   tileRotation?: TileRotation;
-  tilesetId?: string;
+  tilesetId: string;
   surface: BlockSurface;
   voxelTransform: VoxelTransform;
 }
@@ -361,28 +362,38 @@ export class BlockVariantCache {
 
     const textures = BlockTextures.of(blockDef);
     const faces: BlockVariantFace[] = [];
+    let pending = false;
     for (const textureSlot of shapeSlots(shape)) {
       const tileRef = textures.forSlot(textureSlot.id);
-      const atlas = tileRef && this.#tilesetManager.get(tileRef.tilesetId);
-      if (!tileRef || !atlas) {
+      if (!tileRef) {
         continue;
       }
 
-      const uvRegion = atlas.uvFor(
-        tileRef.col,
-        tileRef.row,
-        tileRef.size,
-        textures.spanFor(textureSlot.id, textureSlot.span),
-        tileRef.rotation
-      );
+      const atlas = this.#tilesetManager.resolve(tileRef.tilesetId);
+      if (!atlas) {
+        pending = true;
+        continue;
+      }
+
+      const missing = atlas.def.id === MISSING_TILESET_ID;
+      const tileRotation = missing ? undefined : tileRef.rotation;
+      const uvRegion = missing ?
+        atlas.uvFor(0, 0) :
+        atlas.uvFor(
+          tileRef.col,
+          tileRef.row,
+          tileRef.size,
+          textures.spanFor(textureSlot.id, textureSlot.span),
+          tileRotation
+        );
 
       for (const faceDef of textureSlot.definitions) {
         faces.push(
           this.#compileFace({
             faceDef,
             uvRegion,
-            tileRotation: tileRef.rotation,
-            tilesetId: tileRef.tilesetId,
+            tileRotation,
+            tilesetId: atlas.def.id,
             surface,
             voxelTransform
           })
@@ -390,7 +401,9 @@ export class BlockVariantCache {
       }
     }
 
-    const selfOcclusionMask = this.#occlusionMask(shape, voxelTransform);
+    const selfOcclusionMask = pending ?
+      0 :
+      this.#occlusionMask(shape, voxelTransform);
     const mergeFaces = indexMergeFaces(faces);
     for (const face of mergeFaces) {
       if (face !== undefined) {
@@ -479,10 +492,7 @@ export class BlockVariantCache {
 
     return {
       cull,
-      slot: this.#slotFor(
-        tilesetId ?? this.#tilesetManager.defaultTilesetId!,
-        surface
-      ),
+      slot: this.#slotFor(tilesetId, surface),
       vertexCount,
       indexCount: vertexCount === 4 ? 6 : 3,
       positions,

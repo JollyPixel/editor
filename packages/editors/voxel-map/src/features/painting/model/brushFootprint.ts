@@ -19,6 +19,7 @@ export const BRUSH_PATTERNS: readonly BrushPattern[] = Object.freeze([
 
 // CONSTANTS
 const kCoordAxes: readonly CoordAxis[] = ["x", "y", "z"];
+const kRadiusTrim = 0.5;
 
 export interface BrushShape {
   size: number;
@@ -62,6 +63,12 @@ export function isBrushPattern(
   value: unknown
 ): value is BrushPattern {
   return value === "square" || value === "circle";
+}
+
+export function isBall(
+  shape: BrushShape
+): boolean {
+  return shape.axis === "xyz" && shape.pattern === "circle";
 }
 
 export function spans(
@@ -133,7 +140,7 @@ export function cellsOf(
 ): VoxelCoord[] {
   const { min, span } = boundsOf(footprint);
   const circle = footprint.pattern === "circle";
-  const radius = footprint.size / 2;
+  const reach = reachOf(footprint);
   const cells: VoxelCoord[] = [];
 
   for (let dx = 0; dx < span.x; dx++) {
@@ -144,7 +151,7 @@ export function cellsOf(
           y: min.y + dy,
           z: min.z + dz
         };
-        if (circle && !withinRadius(footprint, min, cell, radius)) {
+        if (circle && !withinRadius(footprint, min, cell, reach)) {
           continue;
         }
 
@@ -179,8 +186,9 @@ function withinRadius(
   footprint: BrushFootprint,
   min: VoxelCoord,
   cell: VoxelCoord,
-  radius: number
+  reach: number
 ): boolean {
+  const radius = footprint.size / 2;
   let distance = 0;
 
   for (const coord of kCoordAxes) {
@@ -192,5 +200,22 @@ function withinRadius(
     distance += offset * offset;
   }
 
-  return distance <= radius * radius;
+  return distance <= reach;
+}
+
+function reachOf(
+  shape: BrushShape
+): number {
+  const radius = shape.size / 2;
+  if (shape.axis !== "xyz") {
+    return radius * radius;
+  }
+
+  const pole = radius - 0.5;
+  const offCenter = shape.size % 2 === 0 ? 0.5 : 0;
+
+  return Math.max(
+    (radius * radius) - (radius * kRadiusTrim),
+    (pole * pole) + offCenter
+  );
 }

@@ -67,6 +67,31 @@ function segmentCount(
   return border.geometry.getAttribute("instanceStart").count;
 }
 
+function tintCount(
+  cursor: BrushCursor
+): number {
+  const mesh = new BrushMesh();
+  mesh.draw(cursor);
+  const fill = mesh.children.find(
+    (child) => child instanceof THREE.Mesh &&
+      child.geometry.hasAttribute("color")
+  );
+  assert.ok(fill instanceof THREE.Mesh);
+
+  const colors = fill.geometry.getAttribute("color");
+  const tints = new Set<string>();
+  for (let index = 0; index < colors.count; index++) {
+    tints.add([
+      colors.getX(index),
+      colors.getY(index),
+      colors.getZ(index),
+      colors.getW(index)
+    ].join(","));
+  }
+
+  return tints.size;
+}
+
 describe("BrushMesh", () => {
   test("depth-tests every edge pass so blocks hide the outline", () => {
     const passes = edgeLinesOf(drawnMesh());
@@ -105,6 +130,30 @@ describe("BrushMesh", () => {
 
     renderFrom(mesh, [mesh.position.x, 20, mesh.position.z]);
     assert.equal(segmentCount(mesh), 4);
+  });
+
+  test("traces only the contour of a ball", () => {
+    const ball: BrushCursor = {
+      ...kCursor,
+      size: 8,
+      pattern: "circle"
+    };
+    const mesh = new BrushMesh();
+    mesh.draw(ball);
+    const creases = segmentCount(mesh);
+
+    renderFrom(mesh, [20, 20, 20]);
+    const contour = segmentCount(mesh);
+    assert.ok(contour > 0);
+    assert.ok(contour < creases / 3);
+
+    renderFrom(mesh, [-20, 20, 20]);
+    assert.ok(segmentCount(mesh) < creases / 3);
+  });
+
+  test("tints a ball with one flat color", () => {
+    assert.equal(tintCount({ ...kCursor, size: 5, pattern: "circle" }), 1);
+    assert.equal(tintCount({ ...kCursor, size: 5 }), 2);
   });
 
   test("restores the full outline after a reshape until it renders", () => {

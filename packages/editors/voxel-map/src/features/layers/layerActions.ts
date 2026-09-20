@@ -3,7 +3,7 @@ import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { SelectionStore } from "../../app/state/index.ts";
+import type { SelectionStore } from "../../state/index.ts";
 import type { ViewFocus } from "../../scene/viewFocus.ts";
 import { createObjectAt } from "./objects/objectArea.ts";
 import type { AddLayerResult } from "./AddLayerDialog.ts";
