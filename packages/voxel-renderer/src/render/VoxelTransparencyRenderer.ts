@@ -10,12 +10,15 @@ import {
   vec4
 } from "three/tsl";
 
+// Import Internal Dependencies
+import { SettledSize } from "./SettledSize.ts";
+
 // CONSTANTS
 const kDefaultSamples = 4;
 const kTargetOptions = {
   type: THREE.HalfFloatType,
-  minFilter: THREE.NearestFilter,
-  magFilter: THREE.NearestFilter
+  minFilter: THREE.LinearFilter,
+  magFilter: THREE.LinearFilter
 };
 
 export interface VoxelTransparencyRendererOptions {
@@ -40,6 +43,7 @@ export class VoxelTransparencyRenderer {
   #quad: THREE.QuadMesh;
   #material: THREE.NodeMaterial;
   #size = new THREE.Vector2();
+  #allocated = new SettledSize();
   #outputKey = "";
   #accumulationOutput;
   #coverageOutput;
@@ -123,12 +127,9 @@ export class VoxelTransparencyRenderer {
       this.#accumulation,
       this.#coverage
     ];
-    if (
-      this.#opaque.width !== this.#size.x ||
-      this.#opaque.height !== this.#size.y
-    ) {
+    if (this.#allocated.request(this.#size.x, this.#size.y, target !== null)) {
       for (const buffer of buffers) {
-        buffer.setSize(this.#size.x, this.#size.y);
+        buffer.setSize(this.#allocated.width, this.#allocated.height);
       }
 
       for (const buffer of buffers) {

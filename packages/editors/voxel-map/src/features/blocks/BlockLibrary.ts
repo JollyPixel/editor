@@ -366,6 +366,7 @@ export class BlockLibrary extends LitElement {
       title: "Remove orphan voxels",
       message: orphanVoxelsMessage(orphanVoxels, orphanBlocks),
       confirmLabel: "Remove",
+      icon: "trash",
       danger: true
     });
     if (confirmed) {

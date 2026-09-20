@@ -90,6 +90,7 @@ const inkTokens = css`
   );
   --jolly-tab-badge-fg: var(--jolly-warning);
   --jolly-pane-header-bg: var(--jolly-accent-fill);
+  --jolly-dialog-header-bg: var(--jolly-accent-fill);
   --jolly-dock-resize-bg: color-mix(
     in oklab,
     var(--jolly-accent-fill) 12%,
@@ -154,6 +155,10 @@ const semanticTokens = css`
   --jolly-danger-border: light-dark(var(--jolly-danger-500), var(--jolly-danger-300));
   --jolly-warning: light-dark(var(--jolly-warning-700), var(--jolly-warning-300));
   --jolly-success: light-dark(var(--jolly-success-700), var(--jolly-success-300));
+  --jolly-intent-info-fill: var(--jolly-accent-600);
+  --jolly-intent-success-fill: var(--jolly-success-700);
+  --jolly-intent-warning-fill: var(--jolly-warning-700);
+  --jolly-intent-danger-fill: var(--jolly-danger-700);
   --jolly-modified: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
   --jolly-locked: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
   --jolly-shadow-overlay: 0 2px 8px light-dark(rgb(0 0 0 / 16%), rgb(0 0 0 / 44%));
@@ -236,6 +241,7 @@ export const themeTokens = css`
       --jolly-tab-badge-bg: ButtonFace;
       --jolly-tab-badge-fg: ButtonText;
       --jolly-pane-header-bg: ButtonFace;
+      --jolly-dialog-header-bg: ButtonFace;
       --jolly-dock-resize-bg: ButtonFace;
       --jolly-dock-resize-bg-hover: Highlight;
       --jolly-separator-label: CanvasText;

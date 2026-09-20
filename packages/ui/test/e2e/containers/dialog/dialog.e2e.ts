@@ -195,3 +195,46 @@ test.describe("Input layers", () => {
     await expect(example).toHaveAttribute("data-viewport-keys", "Escape");
   });
 });
+
+test.describe("Dialog header", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "containers/dialog", { theme: "dark" });
+  });
+
+  test("a danger intent draws its icon and raises an alert dialog", async({ page }) => {
+    await page.locator("[data-action=intent-danger]").click();
+
+    const dialog = page.getByRole("alertdialog", {
+      name: "A dialog with the danger intent"
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("header jolly-icon"))
+      .toHaveAttribute("name", "warning");
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  });
+
+  test("a toned dialog becomes an area and paints its header", async({ page }) => {
+    const host = page.locator("#toned-dialog");
+
+    await page.locator("[data-action=toned-dialog]").click();
+    await expect(host.locator("dialog")).toHaveAttribute("open");
+    await expect(host).toHaveAttribute("toned");
+
+    const colours = await host.evaluate((element) => {
+      const probe = document.createElement("div");
+      probe.style.background = "var(--jolly-tone-teal-fill)";
+      element.shadowRoot!.querySelector("dialog")!.append(probe);
+      const header = element.shadowRoot!.querySelector("header")!;
+      const result = {
+        header: getComputedStyle(header).backgroundColor,
+        fill: getComputedStyle(probe).backgroundColor
+      };
+      probe.remove();
+
+      return result;
+    });
+    expect(colours.header).toBe(colours.fill);
+  });
+});

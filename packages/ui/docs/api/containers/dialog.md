@@ -12,6 +12,9 @@
 | Property | Attribute | Type | Default |
 |---|---|---|---|
 | `heading` | | `string` | `""` |
+| `icon` | | `IconName` | `""` |
+| `tone` | | `IconTone | ""` | `""` |
+| `intent` | | `DialogIntent | ""` | `""` |
 | `dismissible` | | `boolean` | `true` |
 | `headingEditable` | `heading-editable` | `boolean` | `false` |
 | `open` | | `boolean` | Read-only |
@@ -22,15 +25,57 @@ default slot supplies body content; the `actions` slot supplies footer actions.
 Escape and backdrop activation emit `jolly-cancel` when `dismissible` is true.
 Closing emits `jolly-close` with `{ returnValue }`.
 
-The header sits on `--jolly-dialog-chrome-bg`, a faint ink tint over the body
-plane; the footer keeps the body plane and only its divider. Both take the same padding on
-every side, `--jolly-dialog-chrome-padding`, which follows
-`--jolly-row-height`, so the chrome shrinks and grows with the density.
+The header is a filled banner like a `jolly-pane` header: it sits on
+`--jolly-dialog-header-bg` with `--jolly-text-on-fill` text and the same
+checker wash. The footer sits on `--jolly-dialog-chrome-bg`, a faint ink tint
+over the body plane. Both take the same padding on every side,
+`--jolly-dialog-chrome-padding`, which follows `--jolly-row-height`, so the
+chrome shrinks and grows with the density.
 
 | Token | Default |
 |---|---|
+| `--jolly-dialog-header-bg` | `--jolly-accent-fill` |
 | `--jolly-dialog-chrome-bg` | `--jolly-ink` at 4% over `--jolly-surface-raised` |
 | `--jolly-dialog-chrome-padding` | `calc(var(--jolly-row-height) * 0.4)` |
+| `--jolly-dialog-backdrop` | `--jolly-dialog-header-bg` at 28% over a themed scrim |
+
+The backdrop is mixed from the header fill, so the fade behind the dialog takes
+the accent, the tone or the intent of the dialog in front of it.
+
+The header, its icon and its title are exposed as the `header`, `icon` and
+`title` parts.
+
+## Icon, tone and intent
+
+`icon` draws a registered glyph before the heading.
+
+`tone` makes the dialog a toned area, as it does for a
+[`jolly-pane`](./pane.md): the header, the focus ring and the accent-filled
+controls inside take the hue. Without a `tone`, the dialog follows the tone its
+`icon` was registered with.
+
+```html
+<jolly-dialog heading="New layer" icon="layers" tone="teal"></jolly-dialog>
+```
+
+`intent` states what the dialog means rather than where it belongs. It colours
+the header only, leaves the content on the regular accent, and wins over
+`tone`. Each intent has a default icon, which an explicit `icon` replaces.
+
+| Intent | Header token | Default icon | Role |
+|---|---|---|---|
+| `info` | `--jolly-intent-info-fill` | `info` | `dialog` |
+| `success` | `--jolly-intent-success-fill` | `check` | `dialog` |
+| `warning` | `--jolly-intent-warning-fill` | `warning` | `alertdialog` |
+| `danger` | `--jolly-intent-danger-fill` | `warning` | `alertdialog` |
+
+```html
+<jolly-dialog heading="Delete layer?" intent="danger"></jolly-dialog>
+```
+
+`DIALOG_INTENTS` lists the four values and `isDialogIntent()` narrows a string
+to `DialogIntent`. Under forced colours the header falls back to system
+colours and the icon alone carries the intent.
 
 ## Editable heading
 

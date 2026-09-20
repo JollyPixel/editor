@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import {
+  DIALOG_INTENTS,
   detailOf,
   showChoice,
   showConfirm,
@@ -12,6 +13,42 @@ import {
   button,
   text
 } from "../shared/containerBuilders.ts";
+
+function intentButtons(
+  root: HTMLElement
+): HTMLElement[] {
+  return DIALOG_INTENTS.map((intent) => {
+    const trigger = button(`Show ${intent} confirm`);
+    trigger.dataset.action = `intent-${intent}`;
+    trigger.addEventListener("click", async() => {
+      root.dataset.result = String(await showConfirm({
+        title: `A dialog with the ${intent} intent`,
+        message: "The header states the intent; the actions keep their own.",
+        intent
+      }));
+    });
+
+    return trigger;
+  });
+}
+
+function tonedDialog(): HTMLElement[] {
+  const dialog = document.createElement("jolly-dialog");
+  dialog.id = "toned-dialog";
+  dialog.heading = "Visibility";
+  dialog.icon = "eye";
+  dialog.tone = "teal";
+  dialog.append(text("A toned dialog is an area: its accent follows the hue."));
+  const close = button("Close", "accent");
+  close.slot = "actions";
+  close.addEventListener("click", () => dialog.close());
+  dialog.append(close);
+  const trigger = button("Open toned dialog");
+  trigger.dataset.action = "toned-dialog";
+  trigger.addEventListener("click", () => void dialog.showModal());
+
+  return [trigger, dialog];
+}
 
 export const DIALOG_EXAMPLE: GalleryExample = {
   id: "containers/dialog",
@@ -121,6 +158,8 @@ export const DIALOG_EXAMPLE: GalleryExample = {
       choice,
       openDefault,
       openHeading,
+      ...intentButtons(root),
+      ...tonedDialog(),
       dialog,
       defaultAction,
       editableHeading

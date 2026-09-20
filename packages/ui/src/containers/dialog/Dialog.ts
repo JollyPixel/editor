@@ -13,7 +13,18 @@ import {
 
 // Import Internal Dependencies
 import { dialogStyles } from "./Dialog.styles.ts";
+import {
+  resolveDialogHeader,
+  type DialogHeader,
+  type DialogIntent
+} from "./dialogHeader.ts";
 import { emitContainerEvent } from "../events.ts";
+import "../../icon/Icon.ts";
+import type {
+  IconName,
+  IconTone
+} from "../../icon/registry.ts";
+import { applyAreaTone } from "../../theme/areaTone.ts";
 import { themeStyles } from "../../theme/styles/themeStyles.ts";
 import {
   ambientThemeMode,
@@ -34,6 +45,15 @@ export class Dialog extends LitElement {
   @property({ type: String })
   declare heading: string;
 
+  @property({ type: String })
+  declare icon: IconName;
+
+  @property({ type: String, reflect: true })
+  declare tone: IconTone | "";
+
+  @property({ type: String, reflect: true })
+  declare intent: DialogIntent | "";
+
   @property({ type: Boolean })
   declare dismissible: boolean;
 
@@ -50,6 +70,11 @@ export class Dialog extends LitElement {
   @query("slot[name=actions]")
   declare _actions: HTMLSlotElement;
 
+  #header: DialogHeader = resolveDialogHeader({
+    icon: "",
+    tone: "",
+    intent: ""
+  });
   #inheritedTheme: ResolvedThemeMode | null = null;
   #releaseInputLayer: (() => void) | null = null;
 
@@ -57,6 +82,9 @@ export class Dialog extends LitElement {
     super();
 
     this.heading = "";
+    this.icon = "";
+    this.tone = "";
+    this.intent = "";
     this.dismissible = true;
     this.headingEditable = false;
   }
@@ -71,10 +99,31 @@ export class Dialog extends LitElement {
     return this._dialog?.open ?? false;
   }
 
+  protected override willUpdate(
+    changed: Map<PropertyKey, unknown>
+  ): void {
+    if (
+      changed.has("icon") ||
+      changed.has("tone") ||
+      changed.has("intent")
+    ) {
+      this.#header = resolveDialogHeader({
+        icon: this.icon,
+        tone: this.tone,
+        intent: this.intent
+      });
+      applyAreaTone(this, this.#header.tone);
+    }
+  }
+
   override render(): TemplateResult {
+    const labelled = this.heading !== "" && !this.headingEditable;
+
     return html`
       <dialog
         class="overlay-motion"
+        role=${this.#header.alert ? "alertdialog" : nothing}
+        aria-labelledby=${labelled ? "title" : nothing}
         tabindex=${this.headingEditable ? "-1" : nothing}
         @beforetoggle=${this.#onBeforeToggle}
         @cancel=${this.#onCancel}
@@ -90,16 +139,39 @@ export class Dialog extends LitElement {
   }
 
   #renderHeader(): TemplateResult | typeof nothing {
-    if (this.heading === "" && !this.headingEditable) {
+    const { icon } = this.#header;
+    if (
+      this.heading === "" &&
+      !this.headingEditable &&
+      icon === ""
+    ) {
       return nothing;
     }
 
+    const glyph = icon === ""
+      ? nothing
+      : html`
+        <jolly-icon
+          class="icon"
+          part="icon"
+          name=${icon}
+          on-fill
+          aria-hidden="true"
+        ></jolly-icon>
+      `;
+
     if (!this.headingEditable) {
-      return html`<header>${this.heading}</header>`;
+      return html`
+        <header part="header">
+          ${glyph}
+          <span id="title" class="title" part="title">${this.heading}</span>
+        </header>
+      `;
     }
 
     return html`
-      <header>
+      <header part="header">
+        ${glyph}
         <input
           class="heading"
           type="text"

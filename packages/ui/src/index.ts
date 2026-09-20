@@ -123,6 +123,7 @@ export {
 } from "./interaction/pointer/PointerDragSession.ts";
 
 export * from "./containers/dialog/Dialog.ts";
+export * from "./containers/dialog/dialogHeader.ts";
 export * from "./containers/dialog/dialogHelpers.ts";
 export * from "./containers/dock/Dock.ts";
 export * from "./containers/dock/DockLayout.ts";

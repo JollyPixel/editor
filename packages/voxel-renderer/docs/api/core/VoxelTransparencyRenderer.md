@@ -46,6 +46,9 @@ depth writes. It then draws transparent geometry twice against that depth:
 once to accumulate weighted color and once to accumulate coverage. A final
 fullscreen draw resolves the result into the caller's current render target,
 or the canvas when no target is selected. Target sizes follow the destination.
+When the destination is the canvas, a new size is adopted only once it has held
+still for a few frames; until then the previous frame size is stretched, so a
+live resize does not reallocate the targets on every frame.
 The offscreen targets are multisampled (`samples`), because the renderer's own
 `antialias` setting only covers the canvas.
 

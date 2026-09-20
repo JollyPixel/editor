@@ -6,6 +6,7 @@ import { kFallback } from "../../theme/styles/fallbacks.ts";
 import {
   contentScrollbar,
   focusRing,
+  headerTexture,
   truncate,
   visuallyHidden
 } from "../../theme/styles/mixins.ts";
@@ -91,24 +92,7 @@ export const paneStyles = css`
   }
 
   .header::before {
-    position: absolute;
-    z-index: 0;
-    inset-block: 0;
-    inset-inline-start: 0;
-    width: 52%;
-    background: conic-gradient(
-        from 90deg,
-        transparent 25%,
-        currentcolor 0 50%,
-        transparent 0 75%,
-        currentcolor 0
-      )
-      0 / 12px 12px;
-    color: var(--jolly-text-on-fill, white);
-    content: "";
-    opacity: 0.07;
-    pointer-events: none;
-    mask-image: linear-gradient(to right, black, transparent);
+    ${headerTexture}
   }
 
   .icon {

@@ -35,6 +35,8 @@ export async function showClearTextureDialog(
 
   const choice = await showChoice({
     title: "Clear texture",
+    icon: "clearTexture",
+    intent: "danger",
     message: options.hasUVRegions ? kMessage : kNoRegionsMessage,
     content,
     actions: [

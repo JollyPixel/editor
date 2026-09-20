@@ -20,12 +20,14 @@ import {
   isSlotElement
 } from "../../dom.ts";
 import "../../icon/Icon.ts";
-import {
-  iconTone,
-  isIconTone,
-  type IconName,
-  type IconTone
+import type {
+  IconName,
+  IconTone
 } from "../../icon/registry.ts";
+import {
+  applyAreaTone,
+  resolveAreaTone
+} from "../../theme/areaTone.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
@@ -210,7 +212,7 @@ export class PaneElement extends LitElement {
   }
 
   get areaTone(): IconTone | null {
-    return isIconTone(this.tone) ? this.tone : iconTone(this.icon);
+    return resolveAreaTone(this.tone, this.icon);
   }
 
   constructor() {
@@ -269,7 +271,7 @@ export class PaneElement extends LitElement {
       this.#presenceProvider?.notify();
     }
     if (changed.has("icon") || changed.has("tone")) {
-      this.#applyAreaTone();
+      applyAreaTone(this, this.areaTone);
     }
     if (
       this.#hosted &&
@@ -289,20 +291,6 @@ export class PaneElement extends LitElement {
     ) {
       this.parentElement.requestUpdate();
     }
-  }
-
-  #applyAreaTone(): void {
-    const tone = this.areaTone;
-    this.toggleAttribute("toned", tone !== null);
-    if (tone === null) {
-      this.style.removeProperty("--jolly-area-tone");
-      this.style.removeProperty("--jolly-area-fill");
-
-      return;
-    }
-
-    this.style.setProperty("--jolly-area-tone", `var(--jolly-tone-${tone})`);
-    this.style.setProperty("--jolly-area-fill", `var(--jolly-tone-${tone}-fill)`);
   }
 
   override render(): TemplateResult {

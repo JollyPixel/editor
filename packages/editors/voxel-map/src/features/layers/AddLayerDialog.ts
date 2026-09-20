@@ -100,6 +100,7 @@ export class AddLayerDialog extends LitElement {
     return html`
       <jolly-dialog
         heading="New"
+        icon="layers"
         @jolly-cancel=${this.#onCancel}
       >
         <div class="fields">

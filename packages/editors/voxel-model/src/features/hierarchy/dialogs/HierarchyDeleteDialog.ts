@@ -45,6 +45,8 @@ export class HierarchyDeleteDialog extends HierarchyDialog<
   protected get frame(): HierarchyDialogFrame {
     return {
       heading: this.heading,
+      icon: "block-delete",
+      intent: "danger",
       confirmLabel: "Delete",
       confirmVariant: "danger"
     };

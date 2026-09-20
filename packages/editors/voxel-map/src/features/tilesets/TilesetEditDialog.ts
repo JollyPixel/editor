@@ -131,6 +131,7 @@ export class TilesetEditDialog extends LitElement {
     return html`
       <jolly-dialog
         heading=${entry === undefined ? "Tileset" : `Tileset "${entry.label}"`}
+        icon="sliders"
         @jolly-close=${this.#onClose}
       >
         ${entry === undefined ? nothing : this.#renderContent(entry)}
@@ -228,7 +229,8 @@ export class TilesetEditDialog extends LitElement {
       title: `Resize "${entry.label}"?`,
       message: "Some blocks will not line up with the new tile grid. " +
         "They keep covering the same pixels.",
-      confirmLabel: "Resize"
+      confirmLabel: "Resize",
+      intent: "warning"
     });
     if (confirmed) {
       this.actions.resize(definition.id, tileSize);
@@ -247,6 +249,7 @@ export class TilesetEditDialog extends LitElement {
       title: `Remove "${entry.label}"?`,
       message: `${tilesetRemovalMessage(usage)} The texture asset is kept.`,
       confirmLabel: "Remove",
+      icon: "trash",
       danger: true
     });
     if (confirmed && this.actions.remove(entry.definition.id)) {

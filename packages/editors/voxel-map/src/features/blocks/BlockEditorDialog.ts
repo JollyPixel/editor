@@ -251,6 +251,7 @@ export class BlockEditorDialog extends LitElement {
       <jolly-dialog
         heading=${values.name}
         heading-editable
+        icon="blocks"
         @jolly-heading-change=${this.#onNameChange}
         @jolly-close=${this.#onDialogClose}
       >
@@ -383,6 +384,7 @@ export class BlockEditorDialog extends LitElement {
       title: `Delete "${block.name}"?`,
       message: blockRemovalMessage(this.usage.usageOf(block.id)),
       confirmLabel: "Delete",
+      icon: "trash",
       danger: true
     });
     if (!confirmed || !engine.removeBlock(block.id)) {
