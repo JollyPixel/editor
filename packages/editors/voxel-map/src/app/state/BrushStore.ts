@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { VoxelRotation } from "@jolly-pixel/voxel.renderer";
-import { EditorStore } from "@jolly-pixel/editor.host";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -33,7 +33,7 @@ export type BrushStoreEvents = {
   ghostChange: (ghost: boolean) => void;
 };
 
-export class BrushStore extends EditorStore<BrushStoreEvents> {
+export class BrushStore extends Emitter<BrushStoreEvents> {
   #blockId = 1;
   #size = 1;
   #style: BrushStyle = DEFAULT_BRUSH_STYLE;

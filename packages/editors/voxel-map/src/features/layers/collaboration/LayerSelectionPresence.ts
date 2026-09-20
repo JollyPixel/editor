@@ -52,7 +52,7 @@ export class LayerSelectionPresence {
         this.#presence.layerSelections = marks;
       }
     });
-    this.#unsubscribeSelection = this.#selection.watch(
+    this.#unsubscribeSelection = this.#selection.subscribe(
       "change",
       this.#onSelectionChange
     );

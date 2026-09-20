@@ -200,7 +200,7 @@ export class EditorScene extends Systems.Scene {
     this.#orbitFlyCamera = orbitFlyCamera;
     orbitFlyCamera.teleport(spawnPose([]));
     this.#subscriptions.push(
-      this.editorState.selection.watch("gizmoDraggingChange", (dragging) => {
+      this.editorState.selection.subscribe("gizmoDraggingChange", (dragging) => {
         orbitFlyCamera.enabled = !dragging;
       })
     );

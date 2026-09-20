@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { mountStandalone } from "#src/editor/mountStandalone.ts";
-import { LaunchNotFoundError } from "#src/errors/LaunchNotFoundError.ts";
+import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 
 describe("mountStandalone", () => {
   test("rejects before any session when no launch source names a target", async() => {

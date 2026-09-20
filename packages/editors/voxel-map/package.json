@@ -42,9 +42,9 @@
   },
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.voxel-map": "workspace:*",
-    "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
@@ -58,7 +58,7 @@
     "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
-    "@openally/emitt": "1.0.1",
+    "@openally/emitt": "1.1.0",
     "lit": "3.3.3",
     "three": "0.186.0"
   }

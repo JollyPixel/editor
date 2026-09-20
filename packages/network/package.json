@@ -53,7 +53,7 @@
   "license": "MIT",
   "dependencies": {
     "@loglayer/transport-pino": "3.3.0",
-    "@openally/emitt": "1.0.1",
+    "@openally/emitt": "1.1.0",
     "@openally/result": "3.1.0",
     "ata-validator": "1.22.0",
     "hyperid": "4.0.0",

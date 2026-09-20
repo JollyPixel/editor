@@ -2,7 +2,7 @@
 import { LAUNCH_ELEMENT_ID } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { EditorLaunch } from "./EditorLaunch.ts";
+import { EditorLaunch } from "../EditorLaunch.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
 
 export class InjectedLaunchSource implements LaunchSource {
@@ -15,23 +15,19 @@ export class InjectedLaunchSource implements LaunchSource {
   }
 
   read(): Promise<EditorLaunch | undefined> {
-    const text = document.getElementById(
-      this.elementId
-    )?.textContent;
-    if (
-      text === undefined ||
-      text === null
-    ) {
-      return Promise.resolve(undefined);
-    }
+    return Promise.resolve(
+      this.#parse(document.getElementById(this.elementId)?.textContent)
+    );
+  }
 
+  #parse(
+    text: string | null | undefined
+  ): EditorLaunch | undefined {
     try {
-      return Promise.resolve(
-        EditorLaunch.parse(JSON.parse(text))
-      );
+      return EditorLaunch.parse(JSON.parse(text ?? "null"));
     }
     catch {
-      return Promise.resolve(undefined);
+      return undefined;
     }
   }
 }

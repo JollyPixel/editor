@@ -10,8 +10,8 @@ export interface SyncedModel<TModel> {
 
 export interface AssetModelKind<
   TModel,
-  TCommand = any,
-  TMessage = any
+  TCommand = unknown,
+  TMessage = unknown
 > {
   readonly kind: string;
   createModel(
@@ -20,8 +20,8 @@ export interface AssetModelKind<
 }
 
 export interface AssetRoomLease<
-  TCommand = any,
-  TMessage = any
+  TCommand = unknown,
+  TMessage = unknown
 > {
   readonly record: AssetRecordData;
   readonly room: Room<TCommand, TMessage>;
@@ -30,9 +30,16 @@ export interface AssetRoomLease<
 
 export interface AssetLease<
   TModel,
-  TCommand = any,
-  TMessage = any
+  TCommand = unknown,
+  TMessage = unknown
 > extends AssetRoomLease<TCommand, TMessage> {
+  readonly model: TModel;
+  readonly ready: Promise<void>;
+}
+
+export interface AssetDependency<TModel = unknown> {
+  readonly record: AssetRecordData;
+  readonly room: Room;
   readonly model: TModel;
   readonly ready: Promise<void>;
 }

@@ -7,7 +7,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  VOXEL_MAP_DEV_OPTIONS,
+  VOXEL_MAP_PARAMS,
   VoxelMapEditor
 } from "./boot/VoxelMapEditor.ts";
 import "./app/sidebarIcons.ts";
@@ -21,9 +21,9 @@ declare global {
   }
 }
 
-const dev = VOXEL_MAP_DEV_OPTIONS.read();
-if (dev.offline) {
-  const editor = await VoxelMapEditor.openOffline(dev);
+const params = VOXEL_MAP_PARAMS.read();
+if (params.offline) {
+  const editor = await VoxelMapEditor.openOffline(params);
   if (kDebugHandle !== undefined) {
     exposeDebugHandle(kDebugHandle, editor);
   }

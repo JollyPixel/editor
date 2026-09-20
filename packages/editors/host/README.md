@@ -33,8 +33,9 @@ flowchart TB
     Editor --> Runtime["EditorRuntime"]
 ```
 
-[Editor boot](./docs/concepts/editor-boot.md) walks through each step and
-what a failure releases.
+The [architecture guide](./ARCHITECTURE.md) shows each step as a diagram: the
+boot sequence, how the target is found, lease sharing and what a failure
+releases. The [glossary](./GLOSSARY.md) defines the vocabulary.
 
 ## 👀 Usage example
 
@@ -44,18 +45,24 @@ import {
   mountStandalone,
   type EditorContext
 } from "@jolly-pixel/editor.host";
-import { pixelArtModelKind } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import {
+  pixelArtModelKind
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
 class MyEditor {
   static readonly accepts = "voxelmap";
   static readonly identity = { title: "Join voxel map" };
-  static readonly kinds = [pixelArtModelKind()];
+  static readonly kinds = [
+    pixelArtModelKind()
+  ];
 
   static async mount(
     context: EditorContext
   ): Promise<MyEditor> {
     const editorRuntime = await EditorRuntime.create("#canvas");
-    await editorRuntime.load(new MyScene(context.session.target.room));
+    await editorRuntime.load(
+      new MyScene(context.session.target.room)
+    );
 
     return new MyEditor(context);
   }
@@ -76,33 +83,23 @@ await mountStandalone(MyEditor, {
 
 ### Boot
 
-- [`mountStandalone`](./docs/api/mountStandalone.md): boots an editor class
-  that satisfies `EditorDefinition`.
-- [`EditorLaunch`](./docs/api/EditorLaunch.md): the target to open, and the
-  launch sources that read it.
-- [`DevOptions`](./docs/api/DevOptions.md): typed query-string switches, and
-  `exposeDebugHandle`.
+- [`mountStandalone`](./docs/mountStandalone.md): the editor definition, launch
+  sources and the debug handle.
+- [`QueryParams`](./docs/QueryParams.md): typed query-string parameters.
 
 ### Session
 
-- [`EditorSession`](./docs/api/EditorSession.md): catalog connection, target
-  lease and live dependency closure.
-- [`AssetLeases`](./docs/api/AssetLeases.md): ref-counted rooms and synced
-  models per asset.
+- [`EditorSession`](./docs/EditorSession.md): the target room, live
+  dependencies and their events.
+- [`AssetLeases`](./docs/AssetLeases.md): shared rooms and synced models per
+  asset.
 
-### Runtime
+### Scene
 
-- [`EditorRuntime`](./docs/api/EditorRuntime.md): runtime boot with the
-  editor keyboard policy.
-- [`PeerFrustums`](./docs/api/PeerFrustums.md): peer camera frustums as an
-  actor component.
-
-### State
-
-- [`EditorStore`](./docs/api/EditorStore.md): typed emitter whose `watch`
-  returns its own unsubscribe.
-
-The reference also covers [package errors](./docs/api/errors.md).
+- [`EditorRuntime`](./docs/EditorRuntime.md): runtime boot with the editor
+  keyboard rules.
+- [`PeerFrustums`](./docs/PeerFrustums.md): peer camera frustums as an actor
+  component.
 
 ## ✨ Contributors guide
 

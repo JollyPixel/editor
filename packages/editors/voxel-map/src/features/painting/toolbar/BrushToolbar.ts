@@ -295,22 +295,22 @@ export class BrushToolbar extends LitElement {
 
     const { brush, selection, history } = this;
     this.#subscriptions = [
-      brush.watch("modeChange", (mode) => {
+      brush.subscribe("modeChange", (mode) => {
         this._mode = mode;
       }),
-      brush.watch("axisChange", (axis) => {
+      brush.subscribe("axisChange", (axis) => {
         this._axis = axis;
       }),
-      brush.watch("patternChange", (pattern) => {
+      brush.subscribe("patternChange", (pattern) => {
         this._pattern = pattern;
       }),
-      brush.watch("sizeChange", (size) => {
+      brush.subscribe("sizeChange", (size) => {
         this._size = size;
       }),
-      brush.watch("ghostChange", (ghost) => {
+      brush.subscribe("ghostChange", (ghost) => {
         this._ghost = ghost;
       }),
-      selection.watch("change", () => {
+      selection.subscribe("change", () => {
         this.disabled = selection.voxelLayer === null;
       })
     ];

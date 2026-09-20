@@ -55,7 +55,7 @@ export class BrushPreview {
     });
     this.#ghost = new GhostBlock(options.ghost);
     this.#actor.addChildren(this.#mesh, this.#ghost);
-    this.#unsubscribeStyle = options.brush.watch(
+    this.#unsubscribeStyle = options.brush.subscribe(
       "styleChange",
       (style: BrushStyle) => {
         this.#mesh.style = style;

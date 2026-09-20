@@ -36,7 +36,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@openally/emitt": "1.0.1"
+    "@openally/emitt": "1.1.0"
   },
   "devDependencies": {
     "@jolly-pixel/bench": "workspace:*",

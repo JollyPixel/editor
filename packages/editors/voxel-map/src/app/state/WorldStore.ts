@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { VoxelLayerCommand } from "@jolly-pixel/voxel.renderer";
-import { EditorStore } from "@jolly-pixel/editor.host";
+import { Emitter } from "@openally/emitt";
 
 export type WorldStoreEvents = {
   layerUpdated: (
@@ -10,7 +10,7 @@ export type WorldStoreEvents = {
   reset: () => void;
 };
 
-export class WorldStore extends EditorStore<WorldStoreEvents> {
+export class WorldStore extends Emitter<WorldStoreEvents> {
   #blocksReady = true;
 
   get blocksReady(): boolean {

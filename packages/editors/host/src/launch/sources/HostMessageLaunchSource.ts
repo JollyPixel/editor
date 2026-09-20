@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { EditorLaunch } from "./EditorLaunch.ts";
+import { EditorLaunch } from "../EditorLaunch.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
 
 // CONSTANTS
@@ -19,7 +19,7 @@ export class HostMessageLaunchSource implements LaunchSource {
     this.timeout = options.timeout ?? kDefaultTimeout;
   }
 
-  async read(): Promise<EditorLaunch | undefined> {
+  read(): Promise<EditorLaunch | undefined> {
     const { parent } = window;
     if (parent === null || parent === window) {
       return Promise.resolve(undefined);
@@ -33,14 +33,9 @@ export class HostMessageLaunchSource implements LaunchSource {
     );
 
     window.addEventListener("message", (event) => {
-      if (
-        event.source !== parent ||
-        event.data?.type !== LAUNCH_MESSAGE_TYPE
-      ) {
-        return;
-      }
-
-      const launch = EditorLaunch.parse(event.data);
+      const launch = event.source === parent ?
+        parseLaunchMessage(event.data) :
+        undefined;
       if (launch !== undefined) {
         resolve(launch);
       }
@@ -51,4 +46,19 @@ export class HostMessageLaunchSource implements LaunchSource {
       listening.abort();
     });
   }
+}
+
+function parseLaunchMessage(
+  data: unknown
+): EditorLaunch | undefined {
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("type" in data) ||
+    data.type !== LAUNCH_MESSAGE_TYPE
+  ) {
+    return undefined;
+  }
+
+  return EditorLaunch.parse(data);
 }

@@ -34,7 +34,7 @@ describe("BrushStore.size", () => {
   test("resize stops at the maximum size", () => {
     const brush = new BrushStore();
     const sizes: number[] = [];
-    brush.watch("sizeChange", (size) => sizes.push(size));
+    brush.subscribe("sizeChange", (size) => sizes.push(size));
 
     brush.size = BRUSH_MAX_SIZE - 1;
     brush.resize(1);
@@ -52,7 +52,7 @@ describe("BrushStore.ghost", () => {
   test("emits once per actual change", () => {
     const brush = new BrushStore();
     const changes: boolean[] = [];
-    brush.watch("ghostChange", (ghost) => changes.push(ghost));
+    brush.subscribe("ghostChange", (ghost) => changes.push(ghost));
 
     brush.ghost = true;
     brush.ghost = true;

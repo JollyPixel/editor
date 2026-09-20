@@ -3,7 +3,7 @@ export class AssetModelConflictError extends Error {
     assetId: string
   ) {
     super(
-      `Asset "${assetId}" is already leased without a model.`
+      `Asset "${assetId}" is already leased without this model kind.`
     );
     this.name = "AssetModelConflictError";
   }

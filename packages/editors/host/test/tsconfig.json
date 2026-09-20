@@ -2,5 +2,6 @@
   "extends": [
     "../tsconfig.json",
     "../../../../tsconfig/test.json"
-  ]
+  ],
+  "exclude": ["./session/oxlint.config.ts"]
 }

@@ -5,7 +5,7 @@ import type {
   VoxelBlockUsage,
   VoxelTilesetUsage
 } from "@jolly-pixel/voxel.renderer";
-import { EditorStore } from "@jolly-pixel/editor.host";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { WorldStore } from "./WorldStore.ts";
@@ -30,7 +30,7 @@ export function emptyBlockStats(): VoxelBlockStats {
   };
 }
 
-export class BlockUsageStore extends EditorStore<BlockUsageStoreEvents> {
+export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
   #source: BlockUsageSource | null = null;
   #stats = emptyBlockStats();
   #pending = false;

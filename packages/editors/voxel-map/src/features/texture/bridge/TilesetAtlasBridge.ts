@@ -80,7 +80,7 @@ export class TilesetAtlasBridge {
     this.#document.on("changed", this.#onChanged);
     this.#document.on("resized", this.#onSurfaceChanged);
     this.#document.on("replaced", this.#onSurfaceChanged);
-    this.#unsubscribe = this.#worldStore.watch(
+    this.#unsubscribe = this.#worldStore.subscribe(
       "blockRegistryChanged",
       this.#onBlockRegistryChanged
     );

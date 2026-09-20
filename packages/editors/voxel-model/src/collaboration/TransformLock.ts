@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { PresenceChannel } from "@jolly-pixel/network/client";
-import { EditorStore } from "@jolly-pixel/editor.host";
+import { Emitter } from "@openally/emitt";
 import type { PresencePeer } from "@jolly-pixel/ui";
 import {
   peerProfileColor,
@@ -19,7 +19,7 @@ export type TransformLockEvents = {
   change: () => void;
 };
 
-export class TransformLock extends EditorStore<TransformLockEvents> {
+export class TransformLock extends Emitter<TransformLockEvents> {
   #room: VoxelModelRoom;
   #channel: PresenceChannel<string | null>;
   #heldUuid: string | null = null;

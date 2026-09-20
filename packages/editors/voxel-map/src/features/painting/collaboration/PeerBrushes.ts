@@ -74,7 +74,7 @@ export class PeerBrushes extends ActorComponent {
       decode: cursor.read,
       equals: cursor.equals
     });
-    this.#unsubscribeStyle = this.#brush.watch(
+    this.#unsubscribeStyle = this.#brush.subscribe(
       "styleChange",
       this.#onStyleChange
     );

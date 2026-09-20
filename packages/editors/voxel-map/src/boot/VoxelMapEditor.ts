@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type { Runtime } from "@jolly-pixel/runtime";
 import {
-  DevOptions,
+  QueryParams,
   EditorRuntime,
   type EditorContext,
   type EditorSession
@@ -35,16 +35,18 @@ const kOfflineTileset: TilesetDefinition = {
   tileSize: DEFAULT_TILE_SIZE
 };
 
-export interface VoxelMapDevOptions {
+export interface VoxelMapParams {
   offline: boolean;
   maxFps: number | undefined;
   samples: number | undefined;
 }
 
-export const VOXEL_MAP_DEV_OPTIONS = new DevOptions<VoxelMapDevOptions>({
-  offline: DevOptions.flag(),
-  maxFps: DevOptions.number(),
-  samples: DevOptions.number()
+export const VOXEL_MAP_PARAMS = new QueryParams<VoxelMapParams>((query) => {
+  return {
+    offline: query.flag("offline"),
+    maxFps: query.number("max-fps"),
+    samples: query.number("samples")
+  };
 });
 
 export interface VoxelMapEditorParts {
@@ -57,7 +59,7 @@ export interface VoxelMapEditorParts {
 
 interface VoxelMapOpenOptions {
   session?: EditorSession;
-  dev: VoxelMapDevOptions;
+  params: VoxelMapParams;
 }
 
 export class VoxelMapEditor {
@@ -66,27 +68,26 @@ export class VoxelMapEditor {
     title: "Join voxel map"
   };
   static readonly kinds = [TILESET_TEXTURE_KIND];
-  static readonly dev = VOXEL_MAP_DEV_OPTIONS;
 
   static mount(
-    context: EditorContext<VoxelMapDevOptions>
+    context: EditorContext
   ): Promise<VoxelMapEditor> {
     return VoxelMapEditor.#open({
       session: context.session,
-      dev: context.dev
+      params: VOXEL_MAP_PARAMS.read()
     });
   }
 
   static openOffline(
-    dev: VoxelMapDevOptions
+    params: VoxelMapParams
   ): Promise<VoxelMapEditor> {
-    return VoxelMapEditor.#open({ dev });
+    return VoxelMapEditor.#open({ params });
   }
 
   static async #open(
     options: VoxelMapOpenOptions
   ): Promise<VoxelMapEditor> {
-    const { session, dev } = options;
+    const { session, params } = options;
     const viewFocus = new ViewFocus();
 
     const editorRuntime = await EditorRuntime.create(kCanvas, {
@@ -111,7 +112,7 @@ export class VoxelMapEditor {
       catalog: session?.catalog,
       identity: session?.identity,
       viewFocus,
-      samples: dev.samples
+      samples: params.samples
     });
     const shell = new EditorShell({
       state: editorState,
@@ -120,7 +121,7 @@ export class VoxelMapEditor {
       scene
     });
     await editorRuntime.load(scene, {
-      maxFps: dev.maxFps ?? Infinity
+      maxFps: params.maxFps ?? Infinity
     });
 
     const handles = await scene.ready;

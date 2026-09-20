@@ -56,7 +56,7 @@
     "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
-    "@openally/emitt": "1.0.1",
+    "@openally/emitt": "1.1.0",
     "@openally/result": "3.1.0",
     "ata-validator": "1.22.0",
     "js-base64": "3.9.3",

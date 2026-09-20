@@ -259,8 +259,8 @@ importers:
         specifier: workspace:*
         version: link:../network
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       '@openally/result':
         specifier: 3.1.0
         version: 3.1.0
@@ -382,8 +382,8 @@ importers:
   packages/controls:
     dependencies:
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
     devDependencies:
       '@jolly-pixel/bench':
         specifier: workspace:*
@@ -413,8 +413,8 @@ importers:
         specifier: workspace:*
         version: link:../../ui
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       three:
         specifier: 0.186.0
         version: 0.186.0
@@ -440,8 +440,8 @@ importers:
         specifier: workspace:*
         version: link:../../ui
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       lit:
         specifier: 3.3.3
         version: 3.3.3
@@ -525,8 +525,8 @@ importers:
         specifier: workspace:*
         version: link:../../voxel-renderer
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       lit:
         specifier: 3.3.3
         version: 3.3.3
@@ -580,8 +580,8 @@ importers:
         specifier: workspace:*
         version: link:../../ui
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       lit:
         specifier: 3.3.3
         version: 3.3.3
@@ -601,8 +601,8 @@ importers:
         specifier: workspace:*
         version: link:../loop
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       picomatch:
         specifier: 4.0.7
         version: 4.0.7
@@ -620,8 +620,8 @@ importers:
   packages/event-store:
     dependencies:
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       '@openally/result':
         specifier: 3.1.0
         version: 3.1.0
@@ -639,8 +639,8 @@ importers:
   packages/loop:
     dependencies:
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
     devDependencies:
       '@jolly-pixel/bench':
         specifier: workspace:*
@@ -655,8 +655,8 @@ importers:
         specifier: 3.3.0
         version: 3.3.0(pino@10.3.1)
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       '@openally/result':
         specifier: 3.1.0
         version: 3.1.0
@@ -694,8 +694,8 @@ importers:
         specifier: workspace:*
         version: link:../image
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       js-base64:
         specifier: 3.9.3
         version: 3.9.3
@@ -769,8 +769,8 @@ importers:
   packages/voxel-renderer:
     dependencies:
       '@openally/emitt':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.1.0
+        version: 1.1.0
       three:
         specifier: 0.186.0
         version: 0.186.0
@@ -1587,8 +1587,8 @@ packages:
     resolution: {integrity: sha512-c1ncm/Ujrbk+6vKFDdLGpkTAgGftFSFC7vx9CiWwWunEMc+a1a3FFHRymxwcykwyptV3lQ/RndYdUUet+a8axQ==}
     hasBin: true
 
-  '@openally/emitt@1.0.1':
-    resolution: {integrity: sha512-B1pDyopD+OsZ7twSJHm0vLMcq/Wdl4dgcl3wqprd2iyaObI/TSHaf5e0iRTF14N1EyAJ/YQAsRa5a64OpwNhBg==}
+  '@openally/emitt@1.1.0':
+    resolution: {integrity: sha512-tEQtUbOViCiGfI/v9K0rR+NThBK5vLWapUzWMbrgfn8PtUCAiRMvAUNud2RG9STN5+uL1QdFC/o/gyuU9G4WKQ==}
     engines: {node: '>=24.x'}
 
   '@openally/result@3.1.0':
@@ -4783,7 +4783,7 @@ snapshots:
 
   '@openally/config.typescript@1.3.0': {}
 
-  '@openally/emitt@1.0.1': {}
+  '@openally/emitt@1.1.0': {}
 
   '@openally/result@3.1.0': {}
 

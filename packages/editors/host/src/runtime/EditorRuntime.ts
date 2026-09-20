@@ -7,12 +7,11 @@ import {
 } from "@jolly-pixel/runtime";
 import { inputLayers } from "@jolly-pixel/ui";
 
+// Import Internal Dependencies
+import { suspendOnHover } from "./suspendOnHover.ts";
+
 export interface EditorRuntimeLoadOptions {
   maxFps?: number;
-}
-
-export interface HoverChangeDetail {
-  hovering: boolean;
 }
 
 export class EditorRuntime {
@@ -49,15 +48,10 @@ export class EditorRuntime {
     target: EventTarget,
     event: string
   ): () => void {
-    const { keyboard } = this.runtime.world.input;
-    function listener(
-      hoverEvent: Event
-    ): void {
-      const { detail } = hoverEvent as CustomEvent<HoverChangeDetail>;
-      keyboard.enabled = !detail.hovering;
-    }
-    target.addEventListener(event, listener);
-
-    return () => target.removeEventListener(event, listener);
+    return suspendOnHover(
+      this.runtime.world.input.keyboard,
+      target,
+      event
+    );
   }
 }

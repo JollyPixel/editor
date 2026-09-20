@@ -132,9 +132,9 @@ export class TilesetManagerDialog extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.tilesets.watch("change", this.#refresh),
-      this.worldStore.watch("blockRegistryChanged", this.#refresh),
-      this.usage.watch("change", this.#refresh)
+      this.tilesets.subscribe("change", this.#refresh),
+      this.worldStore.subscribe("blockRegistryChanged", this.#refresh),
+      this.usage.subscribe("change", this.#refresh)
     );
   }
 

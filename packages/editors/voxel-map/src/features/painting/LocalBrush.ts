@@ -150,14 +150,14 @@ export class LocalBrush extends ActorComponent {
     engine.on("command", markAimStale);
     this.#unsubscribers = [
       () => engine.off("command", markAimStale),
-      brush.watch("sizeChange", markDirty),
-      brush.watch("axisChange", markDirty),
-      brush.watch("patternChange", markDirty),
-      brush.watch("modeChange", markDirty),
-      brush.watch("blockChange", markDirty),
-      brush.watch("rotationModeChange", markDirty),
-      brush.watch("flipYChange", markDirty),
-      brush.watch("ghostChange", markDirty)
+      brush.subscribe("sizeChange", markDirty),
+      brush.subscribe("axisChange", markDirty),
+      brush.subscribe("patternChange", markDirty),
+      brush.subscribe("modeChange", markDirty),
+      brush.subscribe("blockChange", markDirty),
+      brush.subscribe("rotationModeChange", markDirty),
+      brush.subscribe("flipYChange", markDirty),
+      brush.subscribe("ghostChange", markDirty)
     ];
   }
 

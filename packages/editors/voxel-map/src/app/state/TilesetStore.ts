@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
-import { EditorStore } from "@jolly-pixel/editor.host";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -13,7 +13,7 @@ export type TilesetStoreEvents = {
   activeChange: (tilesetId: string | null) => void;
 };
 
-export class TilesetStore extends EditorStore<TilesetStoreEvents> {
+export class TilesetStore extends Emitter<TilesetStoreEvents> {
   #entries: readonly TilesetEntry[] = [];
   #defaultTileSize = DEFAULT_TILE_SIZE;
   #activeTilesetId: string | null = null;

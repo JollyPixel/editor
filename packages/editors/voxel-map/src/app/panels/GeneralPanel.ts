@@ -69,7 +69,7 @@ export class GeneralPanel extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
-    this.#unsubscribe = this.state.presence.watch(
+    this.#unsubscribe = this.state.presence.subscribe(
       "peersChange",
       this.#onPeersChange
     );

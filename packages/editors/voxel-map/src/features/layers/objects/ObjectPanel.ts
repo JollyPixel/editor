@@ -97,7 +97,7 @@ export class ObjectPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.worldStore.watch("layerUpdated", this.#onLayerUpdated)
+      this.worldStore.subscribe("layerUpdated", this.#onLayerUpdated)
     );
   }
 

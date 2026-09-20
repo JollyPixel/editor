@@ -145,7 +145,7 @@ describe("TransformLock", () => {
   it("notifies listeners when a claim appears, moves or leaves", () => {
     const harness = createLock();
     let notifications = 0;
-    const unsubscribe = harness.lock.watch("change", () => {
+    const unsubscribe = harness.lock.subscribe("change", () => {
       notifications++;
     });
     harness.addPeer("bob", { presence: { transformLock: "uuid-1" } });
@@ -163,7 +163,7 @@ describe("TransformLock", () => {
   it("stops notifying once unsubscribed", () => {
     const harness = createLock();
     let notifications = 0;
-    const unsubscribe = harness.lock.watch("change", () => {
+    const unsubscribe = harness.lock.subscribe("change", () => {
       notifications++;
     });
     unsubscribe();

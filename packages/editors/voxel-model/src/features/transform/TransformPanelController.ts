@@ -157,7 +157,7 @@ export class TransformPanelController implements ReactiveController {
       () => document.blocks.off("select", this.#onSelect),
       () => document.off("change", this.#onChange),
       () => gizmo.off("change", this.#refresh),
-      lock.watch("change", this.#onLockChange)
+      lock.subscribe("change", this.#onLockChange)
     ];
   }
 
