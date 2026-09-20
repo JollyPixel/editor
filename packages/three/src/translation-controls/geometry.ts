@@ -2,20 +2,16 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import {
+  ARROW_GEOMETRY_DEFAULTS,
+  type ArrowGeometry,
+  createArrowGeometry,
+  createArrowShaftGeometry
+} from "../common/arrowGeometry.ts";
 import { mergePositions } from "../common/mergePositions.ts";
 import type { TranslationHandleOptions } from "./types.ts";
 
-// CONSTANTS
-const kShaftLength = 0.75;
-const kShaftRadius = 0.045;
-const kHeadLength = 0.4;
-const kHeadRadius = 0.16;
-const kRadialSegments = 10;
-
-export interface TranslationHandleGeometry {
-  geometry: THREE.BufferGeometry;
-  length: number;
-}
+export type TranslationHandleGeometry = ArrowGeometry;
 
 export function createTranslationHandleGeometry(
   options: TranslationHandleOptions
@@ -28,73 +24,56 @@ export function createTranslationHandleGeometry(
 function createArrowHandleGeometry(
   options: Extract<TranslationHandleOptions, { kind: "arrow"; }>
 ): TranslationHandleGeometry {
-  const shaftLength = positive(
-    options.shaftLength ?? kShaftLength,
-    "shaftLength"
-  );
-  const shaftRadius = positive(
-    options.shaftRadius ?? kShaftRadius,
-    "shaftRadius"
-  );
-  const headLength = positive(
-    options.headLength ?? kHeadLength,
-    "headLength"
-  );
-  const headRadius = positive(
-    options.headRadius ?? kHeadRadius,
-    "headRadius"
-  );
-  const radialSegments = segments(
-    options.radialSegments ?? kRadialSegments
-  );
+  const defaults = ARROW_GEOMETRY_DEFAULTS;
 
-  const shaft = new THREE.CylinderGeometry(
-    shaftRadius,
-    shaftRadius,
-    shaftLength,
-    radialSegments,
-    1,
-    false
-  ).translate(0, shaftLength / 2, 0);
-  const head = new THREE.ConeGeometry(
-    headRadius,
-    headLength,
-    radialSegments
-  ).translate(0, shaftLength + (headLength / 2), 0);
-  const geometry = mergePositions([shaft, head]);
-  shaft.dispose();
-  head.dispose();
-
-  return {
-    geometry,
-    length: shaftLength + headLength
-  };
+  return createArrowGeometry({
+    shaftLength: positive(
+      options.shaftLength ?? defaults.shaftLength,
+      "shaftLength"
+    ),
+    shaftRadius: positive(
+      options.shaftRadius ?? defaults.shaftRadius,
+      "shaftRadius"
+    ),
+    headLength: positive(
+      options.headLength ?? defaults.headLength,
+      "headLength"
+    ),
+    headRadius: positive(
+      options.headRadius ?? defaults.headRadius,
+      "headRadius"
+    ),
+    radialSegments: segments(
+      options.radialSegments ?? defaults.radialSegments
+    )
+  });
 }
 
 function createSphereHandleGeometry(
   options: Extract<TranslationHandleOptions, { kind: "sphere"; }>
 ): TranslationHandleGeometry {
+  const defaults = ARROW_GEOMETRY_DEFAULTS;
   const shaftLength = positive(
-    options.shaftLength ?? kShaftLength,
+    options.shaftLength ?? defaults.shaftLength,
     "shaftLength"
   );
   const shaftRadius = positive(
-    options.shaftRadius ?? kShaftRadius,
+    options.shaftRadius ?? defaults.shaftRadius,
     "shaftRadius"
   );
-  const radius = positive(options.radius ?? kHeadRadius, "radius");
+  const radius = positive(
+    options.radius ?? defaults.headRadius,
+    "radius"
+  );
   const radialSegments = segments(
-    options.radialSegments ?? kRadialSegments
+    options.radialSegments ?? defaults.radialSegments
   );
 
-  const shaft = new THREE.CylinderGeometry(
-    shaftRadius,
-    shaftRadius,
+  const shaft = createArrowShaftGeometry({
     shaftLength,
-    radialSegments,
-    1,
-    false
-  ).translate(0, shaftLength / 2, 0);
+    shaftRadius,
+    radialSegments
+  });
   const selector = new THREE.SphereGeometry(
     radius,
     radialSegments,

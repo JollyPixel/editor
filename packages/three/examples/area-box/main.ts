@@ -14,9 +14,9 @@ import {
 // Import Internal Dependencies
 import {
   AreaBox,
-  AreaBoxControls,
+  BoxControls,
   Grid,
-  type AreaAxisPolicy,
+  type BoxAxisPolicy,
   type AreaBoxOptions
 } from "../../src/index.ts";
 import {
@@ -32,7 +32,7 @@ const kSnapOptions: Record<string, number> = {
   "4 units": 4,
   Free: 0
 };
-const kAxisOptions: Record<string, AreaAxisPolicy> = {
+const kAxisOptions: Record<string, BoxAxisPolicy> = {
   "Ground (XZ)": "xz",
   "Volume (XYZ)": "xyz"
 };
@@ -81,7 +81,7 @@ scene.add(new Grid({
   hideCellOnSection: true
 }));
 
-const controls = new AreaBoxControls(camera, canvas, {
+const controls = new BoxControls<AreaBox>(camera, canvas, {
   snap: 1,
   moveAxes: "xyz",
   resizeAxes: "xz"
@@ -104,7 +104,7 @@ function addArea(
 function removeArea(
   area: AreaBox
 ): void {
-  if (controls.area === area) {
+  if (controls.box === area) {
     controls.detach();
   }
 
@@ -115,8 +115,8 @@ function removeArea(
 
 const settings = {
   snap: 1,
-  moveAxes: "xyz" as AreaAxisPolicy,
-  resizeAxes: "xz" as AreaAxisPolicy,
+  moveAxes: "xyz" as BoxAxisPolicy,
+  resizeAxes: "xz" as BoxAxisPolicy,
   bounded: false
 };
 const readout = {
@@ -140,7 +140,7 @@ areasFolder
   .on("click", () => areaDialog.open());
 const removeButton = areasFolder.addButton({ title: "Remove selected" });
 removeButton.on("click", () => {
-  const { area } = controls;
+  const { box: area } = controls;
   if (area !== null) {
     removeArea(area);
     select(null);
@@ -171,7 +171,7 @@ interactionFolder
   .on("change", ({ value }) => {
     controls.resizeAxes = value;
 
-    const { area } = controls;
+    const { box: area } = controls;
     if (area !== null) {
       controls.detach();
       select(area);
@@ -279,7 +279,7 @@ function createAreaDialog() {
 const areaDialog = createAreaDialog();
 
 function refreshReadout(): void {
-  const { area } = controls;
+  const { box: area } = controls;
   if (area === null) {
     readout.selection = "none";
     readout.min = "-";

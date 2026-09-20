@@ -13,7 +13,7 @@ const marquee = new MarqueeBox({
 scene.add(marquee);
 ```
 
-`position` is the **min corner**, as for [`AreaBox`](./AreaBox.md). `size` rebuilds the unrotated edges without changing `scale`.
+`position` is the **min corner**, as for [`AreaBox`](./AreaBox.md). `size` rebuilds the unrotated edges without changing `scale`. Use [`BoxControls`](./BoxControls.md) for pointer movement and resizing.
 
 Rendering requires `THREE.WebGPURenderer`. The pattern moves on its own once the renderer runs through `setAnimationLoop()`. A loop that calls `render()` by hand leaves it frozen.
 
@@ -76,6 +76,15 @@ get min(): THREE.Vector3
 ```
 
 Alias of `position`. Mutate it directly to move the box.
+
+### `state`
+
+```ts
+get state(): BoxState
+set state(state: BoxState)
+```
+
+One of `"idle" | "hovered" | "active"`. `BoxControls` assigns `"active"` on attach and `"idle"` on detach. The marquee draws every state the same way.
 
 ### `edges`
 

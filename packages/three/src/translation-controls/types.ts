@@ -2,9 +2,13 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type {
+  Axis,
+  AxisSign
+} from "../common/axes.ts";
 
-export type TranslationAxis = "x" | "y" | "z";
-export type TranslationDirection = -1 | 1;
+export type TranslationAxis = Axis;
+export type TranslationDirection = AxisSign;
 export type TranslationDirectionPolicy = "positive" | "negative" | "both";
 export type TranslationSpace = "world" | "local";
 

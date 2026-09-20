@@ -2,14 +2,14 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { type Canvas2D, createCanvas2D } from "../common/Canvas2D.ts";
+import { CanvasSprite } from "../common/CanvasSprite.ts";
 
 // CONSTANTS
 const kLabelCanvasWidth = 384;
 const kLabelCanvasHeight = 96;
 const kLabelWorldWidth = 1.6;
-const kLabelWorldHeight = kLabelWorldWidth * (kLabelCanvasHeight / kLabelCanvasWidth);
 const kLabelOffsetY = 0.45;
+const kRenderOrder = 1;
 
 export interface PeerFrustumLabelOptions {
   /**
@@ -31,12 +31,10 @@ export interface PeerFrustumLabelOptions {
  * Billboard nameplate rendered with a canvas texture.
  * Positioned above the owning frustum's local origin.
  */
-export class PeerFrustumLabel extends THREE.Sprite {
+export class PeerFrustumLabel extends CanvasSprite {
   #displayName: string;
   #color: THREE.ColorRepresentation;
   #showNameBox: boolean;
-  #canvas: Canvas2D;
-  #texture: THREE.CanvasTexture;
 
   constructor(
     options: PeerFrustumLabelOptions
@@ -47,43 +45,23 @@ export class PeerFrustumLabel extends THREE.Sprite {
       showNameBox = false
     } = options;
 
-    const canvas = createCanvas2D(
-      kLabelCanvasWidth,
-      kLabelCanvasHeight
-    );
-
-    const texture = new THREE.CanvasTexture(
-      canvas.canvas
-    );
-    texture.colorSpace = THREE.SRGBColorSpace;
-
-    const material = new THREE.SpriteMaterial({
-      map: texture,
-      depthTest: false,
-      depthWrite: false,
-      transparent: true
+    super({
+      width: kLabelCanvasWidth,
+      height: kLabelCanvasHeight,
+      worldWidth: kLabelWorldWidth,
+      renderOrder: kRenderOrder
     });
-    super(material);
 
     this.#displayName = displayName;
     this.#color = color;
     this.#showNameBox = showNameBox;
-    this.#canvas = canvas;
-    this.#texture = texture;
-
-    this.scale.set(
-      kLabelWorldWidth,
-      kLabelWorldHeight,
-      1
-    );
     this.position.set(
       0,
       kLabelOffsetY,
       0
     );
-    this.renderOrder = 1;
 
-    this.#draw();
+    this.redraw();
   }
 
   get displayName(): string {
@@ -94,7 +72,7 @@ export class PeerFrustumLabel extends THREE.Sprite {
     displayName: string
   ) {
     this.#displayName = displayName;
-    this.#draw();
+    this.redraw();
   }
 
   get color(): THREE.ColorRepresentation {
@@ -105,7 +83,7 @@ export class PeerFrustumLabel extends THREE.Sprite {
     color: THREE.ColorRepresentation
   ) {
     this.#color = color;
-    this.#draw();
+    this.redraw();
   }
 
   get opacity(): number {
@@ -126,23 +104,17 @@ export class PeerFrustumLabel extends THREE.Sprite {
     showNameBox: boolean
   ) {
     this.#showNameBox = showNameBox;
-    this.#draw();
+    this.redraw();
   }
 
-  override dispose(): void {
-    this.#texture.dispose();
-    this.material.dispose();
-  }
-
-  #draw(): void {
-    const { context, canvas } = this.#canvas;
-    const { width, height } = canvas;
-
+  protected override paint(
+    context: CanvasRenderingContext2D,
+    width: number,
+    height: number
+  ): void {
     const colorStyle = new THREE.Color(
       this.#color
     ).getStyle();
-
-    context.clearRect(0, 0, width, height);
 
     if (this.#showNameBox) {
       context.fillStyle = "rgba(20, 20, 20, 0.75)";
@@ -171,7 +143,5 @@ export class PeerFrustumLabel extends THREE.Sprite {
     context.fillText(this.#displayName, width / 2, height / 2);
 
     context.shadowColor = "transparent";
-
-    this.#texture.needsUpdate = true;
   }
 }

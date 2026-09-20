@@ -15,7 +15,7 @@ const area = new AreaBox({
 scene.add(area);
 ```
 
-`position` is the **min corner**. Integer `position` and `size` values stay grid-aligned without half-cell offsets. Use [`AreaBoxControls`](./AreaBoxControls.md) for pointer movement and resizing.
+`position` is the **min corner**. Integer `position` and `size` values stay grid-aligned without half-cell offsets. Use [`BoxControls`](./BoxControls.md) for pointer movement and resizing.
 
 `size` lays out the unrotated box without changing its `scale`. Rendering requires `THREE.WebGPURenderer`.
 
@@ -122,11 +122,11 @@ Area color. The getter returns a **copy** of the fill color. Assigning repaints 
 ### `state`
 
 ```ts
-get state(): AreaBoxState
-set state(state: AreaBoxState)
+get state(): BoxState
+set state(state: BoxState)
 ```
 
-Current emphasis level, one of `"idle" | "hovered" | "active"`. Assigning raises opacity, clears smoke toward the area color and tints edges toward white. `AreaBoxControls` assigns `"active"` on attach and `"idle"` on detach. Applications may assign `"hovered"` from their own picking.
+Current emphasis level, one of `"idle" | "hovered" | "active"`. Assigning raises opacity, clears smoke toward the area color and tints edges toward white. `BoxControls` assigns `"active"` on attach and `"idle"` on detach. Applications may assign `"hovered"` from their own picking.
 
 ## Methods
 
