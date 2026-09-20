@@ -13,6 +13,7 @@
 |---|---|---|
 | `value` | `string` | `""` |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` |
+| `variant` | `"default" \| "skew"` | `"default"` |
 
 An absent, disabled, or unknown value selects the first enabled tab, once
 the tabs are slotted; a value set before that is kept as requested. A tab
@@ -39,16 +40,57 @@ tabs.addEventListener("jolly-tab-close", (event) => {
 });
 ```
 
+## Tab actions
+
+A tab with an `action` icon renders a secondary button inside the tab.
+Clicking it emits `jolly-tab-action` with `{ value }` and does not select the
+tab. The button shows on the selected tab and on disabled tabs, which cannot
+be selected; it stays enabled on a disabled tab and is skipped by keyboard
+focus.
+
+```html
+<jolly-tab value="grass" label="grass" badge="12" action="pencil" action-label="Edit"></jolly-tab>
+```
+
+## Trailing controls
+
+The `list-end` slot sits right after the last tab and outside the list's
+scroll area, so a control placed there follows the tabs and stays visible
+when they overflow.
+
+```html
+<jolly-tabs>
+  <jolly-tab value="grass" label="grass"></jolly-tab>
+  <jolly-button slot="list-end" icon="plus" icon-only label="Add"></jolly-button>
+</jolly-tabs>
+```
+
 A tab set with empty panels works as a plain tab strip: the panel area
 collapses to zero height when `jolly-tabs` is not given one.
+
+## Skew variant
+
+`variant="skew"` draws taller tabs as a chain of parallelograms with a
+resting fill, separated by slanted seams. A `list-end` control takes the same
+shape and joins the chain. It is meant for a horizontal strip that floats at
+the start of its row rather than filling it.
+
+| Token | Applies to |
+|---|---|
+| `--jolly-tab-skew` | Horizontal run of the slant, `8px` |
+| `--jolly-tab-skew-seam` | Gap between two chained tabs, `2px` |
 
 ## Parts
 
 | Part | Node |
 |---|---|
-| `list` | The tablist strip |
-| `tab` | Every tab item, the label button plus its close button |
+| `strip` | The tab list plus the `list-end` slot |
+| `list` | The tablist, the scrollable part of the strip |
+| `tab` | Every tab item, the label button plus its action and close buttons |
 | `tab-selected` | The selected tab item, in addition to `tab` |
+| `badge` | The badge chip of a tab |
+| `action` | Every action button |
+| `action-selected` | The action button of the selected tab, in addition to `action` |
 | `close` | Every close button of a closable tab |
 | `close-selected` | The close button of the selected tab, in addition to `close` |
 
@@ -73,3 +115,5 @@ stronger version of the other.
 | `--jolly-tab-selected-bg-hover` | The selected tab, hovered |
 | `--jolly-tab-close-bg-hover` | The round fill behind a hovered close button |
 | `--jolly-tab-close-fg-hover` | The glyph of a hovered close button |
+| `--jolly-tab-badge-bg` | The badge chip fill, an amber tint |
+| `--jolly-tab-badge-fg` | The badge text, amber adapted to the theme |

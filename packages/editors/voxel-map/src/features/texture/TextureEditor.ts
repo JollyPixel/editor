@@ -5,28 +5,45 @@ import {
   css,
   type PropertyValues
 } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import {
+  customElement,
+  property,
+  query
+} from "lit/decorators.js";
 import type { PixelArtCanvasOptions } from "@jolly-pixel/pixel-draw.renderer";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import {
   PixelDrawPanel,
   type TextureChangeDetail,
+  type TextureEditRequestDetail,
   type UvAccess
 } from "@jolly-pixel/editor.pixel-art";
+import type { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
 import type {
+  BlockUsageStore,
   BrushStore,
   TilesetEntry,
   TilesetStore
 } from "../../state/index.ts";
-import { blockFocusTilesetId } from "../tilesets/blockTilesets.ts";
+import {
+  blockFocusTilesetId,
+  countBlocksPerTileset
+} from "../tilesets/blockTilesets.ts";
+import type { TilesetActions } from "../tilesets/TilesetActions.ts";
+import type { TilesetDialogs } from "../tilesets/TilesetDialogs.ts";
 import type {
   TilesetTexture,
   TilesetTextures
 } from "../tilesets/TilesetTextures.ts";
 import { TilesetTab } from "./TilesetTab.ts";
+import {
+  tilesetTabLabels,
+  type TilesetTabLabels
+} from "./tilesetTabLabels.ts";
+import "../tilesets/TilesetDialogs.ts";
 
 // CONSTANTS
 const kCanvasOptions: PixelArtCanvasOptions = {
@@ -43,7 +60,6 @@ const kCanvasOptions: PixelArtCanvasOptions = {
     deselectOnEmptyClick: false
   }
 };
-const kDetachedSuffix = "(detached)";
 
 @customElement("texture-editor")
 export class TextureEditor extends LitElement {
@@ -62,10 +78,16 @@ export class TextureEditor extends LitElement {
     }
 
     .empty {
-      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--jolly-space-2, 8px);
       padding: var(--jolly-space-3, 12px);
       color: var(--jolly-text-muted);
       font-size: var(--jolly-font-size-sm, 12px);
+    }
+
+    .empty p {
+      margin: 0;
     }
   `;
 
@@ -90,7 +112,20 @@ export class TextureEditor extends LitElement {
   @property({ attribute: false })
   declare tilesets: TilesetStore;
 
+  @property({ attribute: false })
+  declare actions: TilesetActions | null;
+
+  @property({ attribute: false })
+  declare usage: BlockUsageStore;
+
+  @property({ attribute: false })
+  declare log: LogQueue;
+
+  @query("tileset-dialogs")
+  private declare _dialogs: TilesetDialogs;
+
   #tabs = new Map<string, TilesetTab>();
+  #placeholders = new Set<string>();
   #panel: PixelDrawPanel | null = null;
   #reconciling: Promise<void> = Promise.resolve();
   #subscriptions: Array<() => void> = [];
@@ -100,6 +135,7 @@ export class TextureEditor extends LitElement {
     super();
     this.active = false;
     this.uvAccess = "edit";
+    this.actions = null;
   }
 
   override connectedCallback() {
@@ -140,16 +176,6 @@ export class TextureEditor extends LitElement {
     this.#reconcile();
   }
 
-  #tabEntries(): TilesetEntry[] {
-    const { engine } = this;
-
-    return this.tilesets.entries.filter((entry) => (
-      this.#tabs.has(entry.definition.id) ||
-      entry.assetId !== null ||
-      engine.tilesetManager.get(entry.definition.id) !== undefined
-    ));
-  }
-
   readonly #reconcile = (): void => {
     this.#reconciling = this.#reconciling
       .then(() => this.#reconcileTabs())
@@ -171,29 +197,35 @@ export class TextureEditor extends LitElement {
       return;
     }
 
-    const entries = this.#tabEntries();
+    const { entries } = this.tilesets;
+    const counts = countBlocksPerTileset(engine.blockRegistry.getAll());
     for (const entry of entries) {
-      const { definition, label, assetId } = entry;
+      const { definition, assetId } = entry;
+      const blocks = counts.get(definition.id) ?? 0;
       const tab = this.#tabs.get(definition.id);
       if (tab !== undefined) {
-        const detached = tab.assetId !== null && assetId !== tab.assetId;
-        panel.renameTexture(
-          definition.id,
-          detached ? `${label} ${kDetachedSuffix}` : label
-        );
+        panel.updateTexture(definition.id, tilesetTabLabels(entry, {
+          blocks,
+          detached: tab.assetId !== null && assetId !== tab.assetId
+        }));
         tab.update(definition);
         continue;
       }
 
+      const labels = tilesetTabLabels(entry, { blocks });
       const texture = openTexture(textures, entry);
       if (texture === null) {
+        this.#showPlaceholder(panel, definition.id, labels);
         continue;
       }
 
+      if (this.#placeholders.delete(definition.id)) {
+        panel.removeTexture(definition.id);
+      }
       const canvas = panel.addTexture(
         {
           id: definition.id,
-          name: label,
+          ...labels,
           document: texture.document
         },
         { activate: false }
@@ -217,11 +249,36 @@ export class TextureEditor extends LitElement {
         this.#tabs.delete(tilesetId);
       }
     }
+    for (const tilesetId of [...this.#placeholders]) {
+      if (!kept.has(tilesetId)) {
+        panel.removeTexture(tilesetId);
+        this.#placeholders.delete(tilesetId);
+      }
+    }
 
     const active = this.tilesets.activeTilesetId;
     if (active !== null && this.#tabs.has(active)) {
       panel.activeTextureId = active;
     }
+  }
+
+  #showPlaceholder(
+    panel: PixelDrawPanel,
+    tilesetId: string,
+    labels: TilesetTabLabels
+  ): void {
+    if (this.#placeholders.has(tilesetId)) {
+      panel.updateTexture(tilesetId, labels);
+
+      return;
+    }
+
+    panel.addTexture({
+      id: tilesetId,
+      ...labels,
+      disabled: true
+    });
+    this.#placeholders.add(tilesetId);
   }
 
   async #adoptPanel(
@@ -234,11 +291,16 @@ export class TextureEditor extends LitElement {
     }
 
     panel.addEventListener("texture-change", this.#onTextureChange);
+    panel.addEventListener("texture-create-request", this.#addTileset);
+    panel.addEventListener("texture-edit-request", this.#onEditRequest);
     await panel.configure(kCanvasOptions);
   }
 
   #releasePanel(): void {
-    this.#panel?.removeEventListener("texture-change", this.#onTextureChange);
+    const panel = this.#panel;
+    panel?.removeEventListener("texture-change", this.#onTextureChange);
+    panel?.removeEventListener("texture-create-request", this.#addTileset);
+    panel?.removeEventListener("texture-edit-request", this.#onEditRequest);
     this.#panel = null;
   }
 
@@ -247,6 +309,7 @@ export class TextureEditor extends LitElement {
       tab.dispose();
     }
     this.#tabs.clear();
+    this.#placeholders.clear();
   }
 
   #teardown(): void {
@@ -297,20 +360,51 @@ export class TextureEditor extends LitElement {
     }
   };
 
-  override render() {
-    if (this.#tabEntries().length === 0) {
-      return html`
-        <p class="empty">
-          No tileset to paint. Add one from the Tilesets folder.
-        </p>
-      `;
-    }
+  readonly #addTileset = (): void => {
+    void this._dialogs.add();
+  };
 
+  readonly #onEditRequest = (
+    event: CustomEvent<TextureEditRequestDetail>
+  ): void => {
+    void this._dialogs.edit(event.detail.id);
+  };
+
+  override render() {
     return html`
-      <pixel-draw-panel
-        .uvAccess=${this.uvAccess}
-        .texturesClosable=${false}
-      ></pixel-draw-panel>
+      ${this.tilesets.entries.length === 0 ?
+        this.#renderEmpty() :
+        html`
+          <pixel-draw-panel
+            texture-tabs="always"
+            texture-add-label="Add tileset"
+            textures-editable
+            .uvAccess=${this.uvAccess}
+            .texturesClosable=${false}
+            .texturesAddable=${this.actions !== null}
+          ></pixel-draw-panel>
+        `}
+      <tileset-dialogs
+        .engine=${this.engine}
+        .actions=${this.actions}
+        .tilesets=${this.tilesets}
+        .mapDocument=${this.mapDocument}
+        .usage=${this.usage}
+        .log=${this.log}
+      ></tileset-dialogs>
+    `;
+  }
+
+  #renderEmpty() {
+    return html`
+      <div class="empty">
+        <p>No tileset yet.</p>
+        <jolly-button
+          icon="plus"
+          ?disabled=${this.actions === null}
+          @click=${this.#addTileset}
+        >Add tileset</jolly-button>
+      </div>
     `;
   }
 }

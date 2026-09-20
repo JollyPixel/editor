@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   isTextureImportPolicy,
+  isTextureTabsMode,
   nextActiveTextureId,
   suggestTextureName,
   textureCanvasOptions
@@ -24,6 +25,15 @@ describe("isTextureImportPolicy", () => {
   test("rejects anything else", () => {
     assert.equal(isTextureImportPolicy(""), false);
     assert.equal(isTextureImportPolicy("Ask"), false);
+  });
+});
+
+describe("isTextureTabsMode", () => {
+  test("accepts auto and always only", () => {
+    assert.equal(isTextureTabsMode("auto"), true);
+    assert.equal(isTextureTabsMode("always"), true);
+    assert.equal(isTextureTabsMode("never"), false);
+    assert.equal(isTextureTabsMode(""), false);
   });
 });
 
@@ -101,7 +111,9 @@ describe("textureCanvasOptions", () => {
     const options = textureCanvasOptions({}, {
       id: "grass",
       name: "Grass",
-      tooltip: "textures/grass.pixelart"
+      tooltip: "textures/grass.pixelart",
+      badge: "12",
+      disabled: true
     });
 
     assert.deepEqual(Object.keys(options), []);

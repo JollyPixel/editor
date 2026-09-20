@@ -59,6 +59,7 @@ export interface ContainerEventMap {
   "jolly-reorder": JollyReorderDetail;
   "jolly-resize": JollyResizeDetail;
   "jolly-resize-end": JollyResizeDetail;
+  "jolly-tab-action": JollyTabChangeDetail;
   "jolly-tab-change": JollyTabChangeDetail;
   "jolly-tab-close": JollyTabChangeDetail;
   "jolly-toggle": JollyToggleDetail;
@@ -90,6 +91,7 @@ declare global {
     "jolly-reorder": CustomEvent<JollyReorderDetail>;
     "jolly-resize": CustomEvent<JollyResizeDetail>;
     "jolly-resize-end": CustomEvent<JollyResizeDetail>;
+    "jolly-tab-action": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-change": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-close": CustomEvent<JollyTabChangeDetail>;
     "jolly-toggle": CustomEvent<JollyToggleDetail>;

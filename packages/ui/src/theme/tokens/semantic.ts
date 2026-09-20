@@ -83,6 +83,12 @@ const inkTokens = css`
     transparent
   );
   --jolly-tab-close-fg-hover: var(--jolly-ink-danger);
+  --jolly-tab-badge-bg: color-mix(
+    in oklab,
+    var(--jolly-warning-500) 24%,
+    transparent
+  );
+  --jolly-tab-badge-fg: var(--jolly-warning);
   --jolly-pane-header-bg: var(--jolly-accent-fill);
   --jolly-dock-resize-bg: color-mix(
     in oklab,
@@ -193,6 +199,8 @@ export const themeTokens = css`
       --jolly-tab-selected-bg-hover: ButtonFace;
       --jolly-tab-close-bg-hover: ButtonFace;
       --jolly-tab-close-fg-hover: ButtonText;
+      --jolly-tab-badge-bg: ButtonFace;
+      --jolly-tab-badge-fg: ButtonText;
       --jolly-pane-header-bg: ButtonFace;
       --jolly-dock-resize-bg: ButtonFace;
       --jolly-dock-resize-bg-hover: Highlight;

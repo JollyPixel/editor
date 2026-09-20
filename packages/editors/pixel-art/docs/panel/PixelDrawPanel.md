@@ -81,7 +81,7 @@ The Import button goes through the same checks. Both report failures and a succe
 
 The panel holds one or more textures, each backed by its own `PixelArtCanvas` with its own pixels, undo history, UV regions, selection and camera. The mode rail, colors and toolbars are shared: mode, brush size, colors and fill and select variants carry over when switching textures.
 
-With one texture the panel looks as it always has. With two or more, a tab strip (`part="texture-tabs"`, built on `jolly-tabs`) appears above the stage, showing each texture name; the canvas resizes itself when the strip appears or disappears. Clicking a tab or using the arrow keys switches texture; the close button and a middle click raise `texture-close-request`.
+With one texture the panel looks as it always has, unless `texture-tabs="always"` keeps the strip up. With two or more, a tab strip (`part="texture-tabs"`, built on `jolly-tabs`) appears above the stage, showing each texture name; the canvas resizes itself when the strip appears or disappears. Clicking a tab or using the arrow keys switches texture; the close button and a middle click raise `texture-close-request`.
 
 The host owns the texture list. The panel never creates or removes a texture on its own; it raises requests and the host answers with `addTexture()` and `removeTexture()`.
 
@@ -110,6 +110,25 @@ panel.addEventListener("texture-close-request", (event) => {
   panel.removeTexture(event.detail.id);
 });
 ```
+
+### Host-managed tabs
+
+A host that manages textures itself, such as the voxel-map tilesets, turns the strip into its texture manager:
+
+```ts
+panel.textureTabs = "always";
+panel.texturesAddable = true;
+panel.texturesEditable = true;
+
+panel.addEventListener("texture-create-request", () => openCreateDialog());
+panel.addEventListener("texture-edit-request", (event) => {
+  openEditDialog(event.detail.id);
+});
+
+panel.updateTexture(id, { badge: "12" });
+```
+
+The add button sits after the tabs and stays visible when they overflow. The edit button shows on the active tab. `badge` is an opaque string, the panel gives it no meaning. A `disabled` texture keeps its tab and its edit button but never becomes active, for an entry the host can describe but not open.
 
 `addTexture(options)` merges `options` over the options given to `configure()` or `initialize()`, one top-level key at a time, so pass `texture` to avoid inheriting the first texture's size and `init`. Callbacks such as `onHistoryChange` stay bound to the canvas they were passed for. The panel's own toolbars only follow the active canvas.
 
@@ -148,15 +167,23 @@ as soon as the event has been dispatched.
 | `initialize(options?)` | `configure(options)`, then creates the first texture and returns its `PixelArtCanvas`. Call once. |
 | `configure(options?)` | Sets the `PixelArtCanvasOptions` every `addTexture()` starts from, without creating a texture. |
 | `canvasManager` | The active texture's `PixelArtCanvas`, or `null` before the first texture. |
-| `addTexture(options, { activate? })` | Creates a texture from `{ id, name, tooltip?, ...PixelArtCanvasOptions }` and returns its canvas. It becomes active unless `activate` is `false` and another texture is active. Throws before `configure()` or for a duplicate `id`. |
+| `addTexture(options, { activate? })` | Creates a texture from `{ id, name, tooltip?, badge?, disabled?, ...PixelArtCanvasOptions }` and returns its canvas. It becomes active unless it is `disabled`, or `activate` is `false` and another texture is active. Throws before `configure()` or for a duplicate `id`. |
 | `removeTexture(id)` | Destroys a texture. Removing the active one activates its right neighbour, or its left one when it was last. Throws for an unknown id or the last texture. |
 | `renameTexture(id, name)` | Updates a tab label. Names need not be unique. |
-| `textures` | `{ id, name, tooltip, canvas }[]` in tab order. |
+| `updateTexture(id, { name?, tooltip?, badge? })` | Updates the tab label, tooltip and badge; omitted keys are kept, an empty `badge` removes it. |
+| `textures` | `{ id, name, tooltip, badge, disabled, canvas }[]` in tab order. |
 | `activeTextureId` | The active texture id, or `null` before the first texture. Setting it switches texture; unknown ids throw. |
 | `texture-import-policy` attribute / `textureImportPolicy` property (`"replace" | "add" | "ask"`, default `"replace"`) | See [texture-import-policy](#texture-import-policy). Reflects to the attribute; unknown values fall back to `"replace"`. |
 | `texture-change` event | `detail: { id, source }`. Fires whenever the active texture changes from one texture to another, so not for the first texture. `source` is `"user"` for a tab click and `"api"` for `activeTextureId`, `addTexture()` or removing the active texture. |
 | `texture-add-request` event | `detail: { name, source, origin, respondWith }`. `name` is the file name without its extension, `source` the decoded `HTMLCanvasElement`, `origin` is `"import"` or `"drop"`. See [Import progress](#import-progress) for `respondWith`. |
 | `texture-close-request` event | `detail: { id }`. Fires from a tab close button or middle click. |
+| `texture-create-request` event | No detail. Fires from the add button. Distinct from `texture-add-request`, which carries an imported image. |
+| `texture-edit-request` event | `detail: { id }`. Fires from a tab edit button and does not switch texture. |
+| `texture-tabs` attribute / `textureTabs` property (`"auto" | "always"`, default `"auto"`) | `auto` shows the strip from two textures, `always` from the first. Unknown values fall back to `"auto"`. |
+| `textures-addable` attribute / `texturesAddable` property | Shows the add button after the tabs. Off by default. |
+| `texture-tabs-variant` attribute / `textureTabsVariant` property (`"default" \| "skew"`, default `"default"`) | Look of the tab strip, passed to `jolly-tabs`. `skew` drops the full-width strip background and chains the tabs and the add button as parallelograms. |
+| `texture-add-label` attribute / `textureAddLabel` property (default `"Add texture"`) | Accessible name and tooltip of the add button, for a host with its own word for a texture. |
+| `textures-editable` attribute / `texturesEditable` property | Shows an edit button in the active tab and in disabled tabs. Off by default. |
 | `textures-closable` attribute / `texturesClosable` property | Shows the tab close buttons. On by default; turn it off when the host does not let the user close textures. |
 | `onResize()` | Resizes the active canvas to its host box. The panel already observes that box itself (its own layout changes, such as the texture tabs appearing, are covered); call it for outer resizes an observer misses, such as a split-pane drag that only repaints on drag end. |
 | `allow-uv-create-delete` attribute / `allowUvCreateDelete` property | Shows the Create/Delete buttons in the UV toolbar. Off by default: creating/deleting regions only makes sense when the panel owns the UV layout (the package's own example); embeddings over a fixed mesh (e.g. voxel-map) leave it off. |
