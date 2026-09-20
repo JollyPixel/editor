@@ -75,25 +75,23 @@ test.describe("controls: chrome", () => {
   });
 
   test("labelled and plain separators share one height", async({ page }) => {
-    for (const example of ["scenarios/editor", "scenarios/editor-states"]) {
-      await openExample(page, example);
+    await openExample(page, "scenarios/editor");
 
-      const separators = page.locator("jolly-separator");
-      await expect(separators).toHaveCount(4);
-      await expect(
-        separators.locator('[role="separator"][aria-label]')
-      ).toHaveCount(2);
-      await expect(
-        separators.locator('[role="separator"]:not([aria-label])')
-      ).toHaveCount(2);
+    const separators = page.locator("jolly-separator");
+    await expect(separators).toHaveCount(4);
+    await expect(
+      separators.locator('[role="separator"][aria-label]')
+    ).toHaveCount(2);
+    await expect(
+      separators.locator('[role="separator"]:not([aria-label])')
+    ).toHaveCount(2);
 
-      const unlabelled = separators.locator(".unlabelled").first();
-      const [labelledBox, unlabelledBox] = await Promise.all([
-        boxOf(separators.locator(".labelled").first()),
-        boxOf(unlabelled)
-      ]);
-      expect(unlabelledBox.height).toBe(labelledBox.height);
-      await expect(unlabelled).toHaveCSS("margin-block-start", "2px");
-    }
+    const unlabelled = separators.locator(".unlabelled").first();
+    const [labelledBox, unlabelledBox] = await Promise.all([
+      boxOf(separators.locator(".labelled").first()),
+      boxOf(unlabelled)
+    ]);
+    expect(unlabelledBox.height).toBe(labelledBox.height);
+    await expect(unlabelled).toHaveCSS("margin-block-start", "2px");
   });
 });

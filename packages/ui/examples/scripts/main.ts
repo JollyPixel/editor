@@ -1,6 +1,11 @@
 // Import Internal Dependencies
 import { detailOf } from "../../src/index.ts";
 import { findExample } from "./manifest.ts";
+import {
+  clearOptions,
+  readOptions,
+  writeOption
+} from "./options.ts";
 import { GalleryRoot } from "./shell/GalleryRoot.ts";
 import type {
   GalleryExample
@@ -23,10 +28,16 @@ function mount(
     disposed.push(current.id);
   }
 
+  const values = readOptions(
+    example,
+    new URLSearchParams(window.location.search)
+  );
+
   root.exampleHost.replaceChildren();
   current = example;
-  dispose = example.render(root.exampleHost);
+  dispose = example.render(root.exampleHost, values);
   root.setActive(example.id);
+  root.showOptions(example.options ?? [], values);
   document.title = `${example.title} | jolly-pixel/ui`;
 }
 
@@ -37,6 +48,9 @@ function select(
   const example = findExample(id);
   const url = new URL(window.location.href);
 
+  if (current !== null) {
+    clearOptions(current, url.searchParams);
+  }
   url.searchParams.set("example", example.id);
   window.history.pushState(
     { example: example.id },
@@ -44,6 +58,21 @@ function select(
     url
   );
   mount(example, root);
+}
+
+function toggle(
+  key: string,
+  value: boolean,
+  root: GalleryRoot
+) {
+  if (current === null) {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  writeOption(url.searchParams, key, value);
+  window.history.replaceState(window.history.state, "", url);
+  mount(current, root);
 }
 
 function start() {
@@ -76,6 +105,13 @@ function start() {
     const detail = detailOf<{ id: string; }>(event);
     if (detail !== null) {
       select(detail.id, root);
+    }
+  });
+
+  root.addEventListener("gallery-option", (event) => {
+    const detail = detailOf<{ key: string; value: boolean; }>(event);
+    if (detail !== null) {
+      toggle(detail.key, detail.value, root);
     }
   });
 

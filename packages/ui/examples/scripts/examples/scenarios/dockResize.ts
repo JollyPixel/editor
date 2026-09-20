@@ -2,7 +2,7 @@
 import type { GalleryExample } from "../../types.ts";
 import {
   placementDock,
-  placementPane,
+  keyedPane,
   text
 } from "../shared/containerBuilders.ts";
 
@@ -25,7 +25,7 @@ export const DOCK_RESIZE_EXAMPLE: GalleryExample = {
     floating.width = 280;
     floating.height = 220;
     floating.append(
-      placementPane("floating", "Floating pane", "Drag my header into either dock.")
+      keyedPane("floating", "Floating pane", "Drag my header into either dock.")
     );
 
     layout.append(

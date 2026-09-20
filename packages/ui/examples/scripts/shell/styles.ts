@@ -90,4 +90,26 @@ export const shellStyles = css`
     min-width: 0;
     padding: var(--jolly-space-4);
   }
+
+  .options {
+    --jolly-label-max-width: none;
+
+    display: grid;
+    flex: 0 0 200px;
+    align-content: start;
+    gap: var(--jolly-space-2);
+    padding: var(--jolly-space-3);
+    border-inline-start: 1px solid var(--jolly-border);
+    background: var(--jolly-surface-sunken);
+  }
+
+  .options[hidden] {
+    display: none;
+  }
+
+  .options h3 {
+    margin: 0;
+    font-size: 0.9em;
+    color: var(--jolly-text-muted);
+  }
 `;

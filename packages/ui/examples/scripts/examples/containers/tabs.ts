@@ -1,10 +1,12 @@
 // Import Internal Dependencies
-import {
-  detailOf,
-  type Tab,
-  type Tabs
+import type {
+  Tab,
+  Tabs
 } from "../../../../src/index.ts";
-import type { GalleryExample } from "../../types.ts";
+import type {
+  GalleryExample,
+  GalleryOptionValues
+} from "../../types.ts";
 
 type TabsOptionKey =
   | "skew"
@@ -12,12 +14,8 @@ type TabsOptionKey =
   | "closable"
   | "badges"
   | "action"
-  | "addButton";
-
-interface TabsBooleanOption {
-  key: TabsOptionKey;
-  label: string;
-}
+  | "addButton"
+  | "preselected";
 
 interface SampleTab {
   value: string;
@@ -26,14 +24,7 @@ interface SampleTab {
 }
 
 // CONSTANTS
-const kOptions: TabsBooleanOption[] = [
-  { key: "skew", label: "Skew variant" },
-  { key: "vertical", label: "Vertical" },
-  { key: "closable", label: "Closable" },
-  { key: "badges", label: "Badges" },
-  { key: "action", label: "Action" },
-  { key: "addButton", label: "Add button" }
-];
+const kPreselectedTab = "stone";
 const kSampleTabs: SampleTab[] = [
   { value: "grass", badge: "12" },
   { value: "stone", badge: "3" },
@@ -56,7 +47,7 @@ function buildTab(
 
 function buildAddButton(
   tabs: Tabs,
-  decorate: (tab: Tab) => void
+  decorate: (tab: Tab) => Tab
 ): HTMLElement {
   let created = 0;
   const add = document.createElement("jolly-button");
@@ -70,44 +61,39 @@ function buildAddButton(
       value: `texture-${created}`,
       badge: "0"
     });
-    decorate(tab);
     tabs.value = tab.value;
-    tabs.append(tab);
+    tabs.append(decorate(tab));
   });
 
   return add;
 }
 
 function buildTabs(
-  options: Record<TabsOptionKey, boolean>
-): { tabs: Tabs; apply: () => void; } {
+  options: GalleryOptionValues<TabsOptionKey>
+): Tabs {
   const tabs = document.createElement("jolly-tabs");
-  tabs.id = "container-example-tabs";
-  tabs.append(...kSampleTabs.map(buildTab));
+  tabs.variant = options.skew ? "skew" : "default";
+  tabs.orientation = options.vertical ? "vertical" : "horizontal";
+  if (options.preselected) {
+    tabs.value = kPreselectedTab;
+  }
 
   function decorate(
     tab: Tab
-  ): void {
+  ): Tab {
     tab.closable = options.closable;
     tab.badge = options.badges ? tab.dataset.badge ?? "" : "";
     tab.action = options.action ? "search" : "";
     tab.actionLabel = "Inspect";
+
+    return tab;
   }
 
-  const add = buildAddButton(tabs, decorate);
-
-  function apply(): void {
-    tabs.variant = options.skew ? "skew" : "default";
-    tabs.orientation = options.vertical ? "vertical" : "horizontal";
-    for (const tab of tabs.querySelectorAll("jolly-tab")) {
-      decorate(tab);
-    }
-    if (options.addButton) {
-      tabs.append(add);
-    }
-    else {
-      add.remove();
-    }
+  tabs.append(
+    ...kSampleTabs.map((sample) => decorate(buildTab(sample)))
+  );
+  if (options.addButton) {
+    tabs.append(buildAddButton(tabs, decorate));
   }
 
   tabs.addEventListener("jolly-tab-close", (event) => {
@@ -119,58 +105,44 @@ function buildTabs(
   tabs.addEventListener("jolly-tab-action", (event) => {
     tabs.dataset.action = event.detail.value;
   });
-  apply();
 
-  return { tabs, apply };
+  return tabs;
 }
 
-function buildOptionsPanel(
-  options: Record<TabsOptionKey, boolean>,
-  apply: () => void
-): HTMLElement {
-  const panel = document.createElement("div");
-  panel.className = "tabs-demo-options";
-
-  const heading = document.createElement("h3");
-  heading.textContent = "Options";
-  panel.append(heading);
-
-  for (const option of kOptions) {
-    const checkbox = document.createElement("jolly-checkbox");
-    checkbox.label = option.label;
-    checkbox.clickableBackground = true;
-    checkbox.align = "end";
-    checkbox.value = options[option.key];
-    checkbox.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<{ value: boolean; }>(event);
-      if (detail !== null) {
-        options[option.key] = detail.value;
-        apply();
-      }
-    });
-    panel.append(checkbox);
-  }
-
-  return panel;
-}
-
-export const TABS_EXAMPLE: GalleryExample = {
+export const TABS_EXAMPLE: GalleryExample<TabsOptionKey> = {
   id: "containers/tabs",
   title: "Tabs",
-  render(host) {
-    const options: Record<TabsOptionKey, boolean> = {
-      skew: false,
-      vertical: false,
-      closable: false,
-      badges: false,
-      action: false,
-      addButton: false
-    };
-    const root = document.createElement("div");
-    root.className = "tabs-demo";
-
-    const { tabs, apply } = buildTabs(options);
-    root.append(tabs, buildOptionsPanel(options, apply));
-    host.append(root);
+  options: [
+    {
+      key: "skew",
+      label: "Skew variant"
+    },
+    {
+      key: "vertical",
+      label: "Vertical"
+    },
+    {
+      key: "closable",
+      label: "Closable"
+    },
+    {
+      key: "badges",
+      label: "Badges"
+    },
+    {
+      key: "action",
+      label: "Action"
+    },
+    {
+      key: "addButton",
+      label: "Add button"
+    },
+    {
+      key: "preselected",
+      label: "Preselected value"
+    }
+  ],
+  render(host, options) {
+    host.append(buildTabs(options));
   }
 };

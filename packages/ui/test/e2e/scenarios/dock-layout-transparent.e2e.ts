@@ -61,6 +61,7 @@ test("raw jolly-theme-preferences report a real extent to their pane", async({ p
       });
     }
 
+    await preferences.evaluate((element) => element.setAttribute("layout", "inline"));
     const flattened = await measure();
     expect(flattened.display).toBe("contents");
 

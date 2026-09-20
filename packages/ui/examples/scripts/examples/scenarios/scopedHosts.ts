@@ -1,46 +1,39 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
-import type { Density } from "../../../../src/index.ts";
 import {
   createScopedHost,
   caption
 } from "../shared/scopedHost.ts";
 
 // CONSTANTS
-const kDensities: Density[] = [
-  "compact",
-  "default",
-  "comfortable"
+const kScopes: Record<string, string>[] = [
+  { density: "compact" },
+  { density: "default" },
+  { density: "comfortable" },
+  { theme: "light" },
+  { theme: "dark" }
 ];
 
-export const DENSITY_EXAMPLE: GalleryExample = {
-  id: "scenarios/density",
-  title: "Density",
+export const SCOPED_HOSTS_EXAMPLE: GalleryExample = {
+  id: "scenarios/scoped-hosts",
+  title: "Scoped density and theme",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
 
     const hint = document.createElement("p");
     hint.className = "scenario-hint";
-    hint.textContent = "Row height and font size per preset. Each pane is its own scope host.";
-    root.append(hint);
+    hint.textContent = "Each pane is its own scope host, carrying one density or theme.";
 
-    for (const density of kDensities) {
-      root.append(
-        buildPreset(density)
-      );
-    }
-
+    root.append(hint, ...kScopes.map(buildScope));
     host.append(root);
   }
 };
 
-function buildPreset(
-  density: Density
+function buildScope(
+  attributes: Record<string, string>
 ): HTMLElement {
-  const { host, content } = createScopedHost({
-    density
-  });
+  const { host, content } = createScopedHost(attributes);
 
   const text = document.createElement("jolly-text");
   text.label = "Name";
@@ -55,11 +48,16 @@ function buildPreset(
   check.label = "Visible";
   check.value = true;
 
+  const color = document.createElement("jolly-color");
+  color.label = "Tint";
+  color.value = "#4488ff";
+
   content.append(
-    caption(density),
+    caption(Object.values(attributes).join(" ")),
     text,
     number,
-    check
+    check,
+    color
   );
 
   return host;

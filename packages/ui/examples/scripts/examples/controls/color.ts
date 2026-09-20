@@ -3,47 +3,35 @@ import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Color } from "../../../../src/index.ts";
 
-export const COLOR_EXAMPLE: GalleryExample = {
+export const COLOR_EXAMPLE: GalleryExample<"alpha"> = {
   id: "controls/color",
   title: "Color",
-  render(host) {
+  options: [
+    {
+      key: "alpha",
+      label: "Alpha"
+    }
+  ],
+  render(host, options) {
+    const initial = options.alpha ? "#4488ffcc" : "#4488ff";
+
     return renderStateMatrix<Color>(host, {
       create() {
         const field = document.createElement("jolly-color");
         field.label = "Tint";
-        field.description = "Accepts #f60 or ff6600";
-        field.value = "#4488ff";
-        field.default = "#4488ff";
+        field.description = options.alpha ?
+          "Eight digit values carry alpha" :
+          "Accepts #f60 or ff6600";
+        field.alpha = options.alpha;
+        field.value = initial;
+        field.default = initial;
 
         return field;
       },
       modified(field) {
-        field.value = "#ff6600";
+        field.value = options.alpha ? "#ff660080" : "#ff6600";
       },
       // Keep the swatch synced while the popup streams drag input.
-      liveInput: true
-    });
-  }
-};
-
-export const COLOR_ALPHA_EXAMPLE: GalleryExample = {
-  id: "controls/color-alpha",
-  title: "Color (alpha)",
-  render(host) {
-    return renderStateMatrix<Color>(host, {
-      create() {
-        const field = document.createElement("jolly-color");
-        field.label = "Tint";
-        field.description = "Eight digit values carry alpha";
-        field.alpha = true;
-        field.value = "#4488ffcc";
-        field.default = "#4488ffcc";
-
-        return field;
-      },
-      modified(field) {
-        field.value = "#ff660080";
-      },
       liveInput: true
     });
   }

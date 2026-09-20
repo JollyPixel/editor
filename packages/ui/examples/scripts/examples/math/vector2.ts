@@ -3,32 +3,32 @@ import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Vector2 } from "../../../../src/index.ts";
 
-export const VECTOR2_EXAMPLE: GalleryExample = {
-  id: "math/vector2",
-  title: "Vector2",
-  render(host) {
-    return renderStateMatrix<Vector2>(host, {
-      liveInput: true,
-      create() {
-        const field = document.createElement("jolly-vector2");
-        field.label = "UV Offset";
-        field.step = 0.01;
-        field.value = { x: 0.5, y: 0.5 };
-        field.default = { x: 0.5, y: 0.5 };
-
-        return field;
-      },
-      modified(field) {
-        field.value = { x: 0.2, y: 0.8 };
-      }
-    });
+// CONSTANTS
+const kPlanes = {
+  xy: {
+    markup: `<jolly-vector2 label="UV Offset" step="0.01"></jolly-vector2>`,
+    initial: { x: 0.5, y: 0.5 },
+    modified: { x: 0.2, y: 0.8 }
+  },
+  xz: {
+    markup: `<jolly-vector2 label="Size" axes="xz" step="1" min="1"></jolly-vector2>`,
+    initial: { x: 4, z: 6 },
+    modified: { x: 8, z: 2 }
   }
 };
 
-export const VECTOR2_XZ_EXAMPLE: GalleryExample = {
-  id: "math/vector2-xz",
-  title: "Vector2 (xz plane)",
-  render(host) {
+export const VECTOR2_EXAMPLE: GalleryExample<"xz"> = {
+  id: "math/vector2",
+  title: "Vector2",
+  options: [
+    {
+      key: "xz",
+      label: "XZ plane"
+    }
+  ],
+  render(host, options) {
+    const plane = options.xz ? kPlanes.xz : kPlanes.xy;
+
     return renderStateMatrix<Vector2>(host, {
       liveInput: true,
       create() {
@@ -37,18 +37,16 @@ export const VECTOR2_XZ_EXAMPLE: GalleryExample = {
          * as an attribute after the constructor, before the value.
          */
         const holder = document.createElement("div");
-        holder.innerHTML = `
-          <jolly-vector2 label="Size" axes="xz" step="1" min="1"></jolly-vector2>
-        `;
+        holder.innerHTML = plane.markup;
 
         const field = holder.querySelector("jolly-vector2")!;
-        field.value = { x: 4, z: 6 };
-        field.default = { x: 4, z: 6 };
+        field.value = { ...plane.initial };
+        field.default = { ...plane.initial };
 
         return field;
       },
       modified(field) {
-        field.value = { x: 8, z: 2 };
+        field.value = { ...plane.modified };
       }
     });
   }

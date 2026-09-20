@@ -1,23 +1,69 @@
 // Import Internal Dependencies
-import { createSimpleExample } from "../shared/example.ts";
+import type {
+  GalleryExample,
+  GalleryOptionValues
+} from "../../types.ts";
 
-export const FOLDER_EXAMPLE = createSimpleExample(
-  "containers/folder",
-  "Folder",
-  () => {
-    const folder = document.createElement("jolly-folder");
-    folder.label = "Transform";
+type FolderOptionKey =
+  | "collapsible"
+  | "flush"
+  | "nested";
+
+export const FOLDER_EXAMPLE: GalleryExample<FolderOptionKey> = {
+  id: "containers/folder",
+  title: "Folder",
+  options: [
+    {
+      key: "collapsible",
+      label: "Collapsible",
+      initial: true
+    },
+    {
+      key: "flush",
+      label: "Flush"
+    },
+    {
+      key: "nested",
+      label: "Nested"
+    }
+  ],
+  render(host, options) {
+    const folder = buildFolder("Transform", options);
+    folder.dataset.folder = "outer";
     folder.append(
       action("plus", "Add channel"),
       action("close", "Clear channels")
     );
-    const content = document.createElement("p");
-    content.textContent = "Position, rotation, and scale controls belong here.";
-    folder.append(content);
 
-    return folder;
+    const row = document.createElement("p");
+    row.dataset.row = "";
+    row.textContent = "Position, rotation, and scale controls belong here.";
+
+    if (options.nested) {
+      const inner = buildFolder("Transform child", options);
+      inner.dataset.folder = "inner";
+      inner.append(row);
+      folder.append(inner);
+    }
+    else {
+      folder.append(row);
+    }
+
+    host.append(folder);
   }
-);
+};
+
+function buildFolder(
+  label: string,
+  options: GalleryOptionValues<FolderOptionKey>
+): HTMLElementTagNameMap["jolly-folder"] {
+  const folder = document.createElement("jolly-folder");
+  folder.label = label;
+  folder.collapsible = options.collapsible;
+  folder.flush = options.flush;
+
+  return folder;
+}
 
 function action(
   icon: string,

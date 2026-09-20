@@ -1,14 +1,23 @@
 // Import Internal Dependencies
 import {
-  themeStyles
+  detailOf,
+  themeStyles,
+  type Checkbox
 } from "../../../src/index.ts";
 import { manifest } from "../manifest.ts";
 import { groupLabelOf } from "../groups.ts";
 import { exampleStyles } from "../examples/shared/exampleStyles.ts";
 import { shellStyles } from "./styles.ts";
+import type {
+  GalleryOption,
+  GalleryOptionValues
+} from "../types.ts";
 
 export class GalleryRoot extends HTMLElement {
   #exampleHost = document.createElement("main");
+  #optionsPanel = document.createElement("aside");
+  #options: readonly GalleryOption[] = [];
+  #checkboxes = new Map<string, Checkbox>();
   #links = new Map<string, HTMLAnchorElement>();
 
   get exampleHost(): HTMLElement {
@@ -37,7 +46,26 @@ export class GalleryRoot extends HTMLElement {
       layout.append(this.#buildDock());
     }
     layout.append(this.#exampleHost);
+    if (layout.dataset.chrome !== "off") {
+      this.#optionsPanel.className = "options";
+      this.#optionsPanel.hidden = true;
+      layout.append(this.#optionsPanel);
+    }
     root.append(layout);
+  }
+
+  showOptions(
+    options: readonly GalleryOption[],
+    values: GalleryOptionValues
+  ) {
+    if (options !== this.#options) {
+      this.#options = options;
+      this.#buildOptions();
+    }
+
+    for (const [key, checkbox] of this.#checkboxes) {
+      checkbox.value = values[key];
+    }
   }
 
   setActive(
@@ -51,6 +79,48 @@ export class GalleryRoot extends HTMLElement {
         link.removeAttribute("aria-current");
       }
     }
+  }
+
+  #buildOptions() {
+    const heading = document.createElement("h3");
+    heading.textContent = "Options";
+
+    this.#checkboxes.clear();
+    this.#optionsPanel.hidden = this.#options.length === 0;
+    this.#optionsPanel.replaceChildren(
+      heading,
+      ...this.#options.map((option) => this.#buildOption(option))
+    );
+  }
+
+  #buildOption(
+    option: GalleryOption
+  ): Checkbox {
+    const checkbox = document.createElement("jolly-checkbox");
+    checkbox.label = option.label;
+    checkbox.clickableBackground = true;
+    checkbox.align = "end";
+    checkbox.dataset.option = option.key;
+    checkbox.addEventListener("jolly-change", (event) => {
+      const detail = detailOf<{ value: boolean; }>(event);
+      if (detail === null) {
+        return;
+      }
+
+      const customEvent = new CustomEvent(
+        "gallery-option",
+        {
+          detail: {
+            key: option.key,
+            value: detail.value
+          }
+        }
+      );
+      this.dispatchEvent(customEvent);
+    });
+    this.#checkboxes.set(option.key, checkbox);
+
+    return checkbox;
   }
 
   #buildDock(): HTMLElement {

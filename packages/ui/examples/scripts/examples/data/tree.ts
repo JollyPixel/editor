@@ -1,24 +1,49 @@
 // Import Internal Dependencies
 import {
-  detailOf,
   resolveReparent,
   type Tree,
   type TreeNode
 } from "../../../../src/index.ts";
-import type { GalleryExample } from "../../types.ts";
+import type {
+  GalleryExample,
+  GalleryOption,
+  GalleryOptionValues
+} from "../../types.ts";
 
-interface TreeBooleanOption {
-  key: "reorderable" | "rowDrag" | "multiple" | "renamable" | "indentGuides";
-  label: string;
-}
+type TreeOptionKey =
+  | "reorderable"
+  | "rowDrag"
+  | "multiple"
+  | "renamable"
+  | "indentGuides";
 
 // CONSTANTS
-const kOptions: TreeBooleanOption[] = [
-  { key: "reorderable", label: "Reorderable" },
-  { key: "rowDrag", label: "Row drag" },
-  { key: "multiple", label: "Multi-select" },
-  { key: "renamable", label: "Renamable" },
-  { key: "indentGuides", label: "Indent guides" }
+const kOptions: GalleryOption<TreeOptionKey>[] = [
+  {
+    key: "reorderable",
+    label: "Reorderable",
+    initial: true
+  },
+  {
+    key: "rowDrag",
+    label: "Row drag",
+    initial: true
+  },
+  {
+    key: "multiple",
+    label: "Multi-select",
+    initial: true
+  },
+  {
+    key: "renamable",
+    label: "Renamable",
+    initial: true
+  },
+  {
+    key: "indentGuides",
+    label: "Indent guides",
+    initial: true
+  }
 ];
 
 function sampleNodes(): TreeNode[] {
@@ -106,13 +131,14 @@ function setNodeField(
   });
 }
 
-function buildTree(): Tree {
+function buildTree(
+  options: GalleryOptionValues<TreeOptionKey>
+): Tree {
   const tree = document.createElement("jolly-tree");
-  tree.reorderable = true;
-  tree.rowDrag = true;
-  tree.multiple = true;
-  tree.renamable = true;
-  tree.indentGuides = true;
+  tree.className = "tree-demo";
+  for (const { key } of kOptions) {
+    tree[key] = options[key];
+  }
   tree.nodes = sampleNodes();
   tree.selected = [];
   tree.expanded = ["scene", "props"];
@@ -175,43 +201,11 @@ function renameNode(
   });
 }
 
-function buildOptionsPanel(
-  tree: Tree
-): HTMLElement {
-  const panel = document.createElement("div");
-  panel.className = "tree-demo-options";
-
-  const heading = document.createElement("h3");
-  heading.textContent = "Options";
-  panel.append(heading);
-
-  for (const option of kOptions) {
-    const checkbox = document.createElement("jolly-checkbox");
-    checkbox.label = option.label;
-    checkbox.clickableBackground = true;
-    checkbox.align = "end";
-    checkbox.value = tree[option.key];
-    checkbox.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<{ value: boolean; }>(event);
-      if (detail !== null) {
-        tree[option.key] = detail.value;
-      }
-    });
-    panel.append(checkbox);
-  }
-
-  return panel;
-}
-
-export const TREE_EXAMPLE: GalleryExample = {
+export const TREE_EXAMPLE: GalleryExample<TreeOptionKey> = {
   id: "data/tree",
   title: "Tree",
-  render(host) {
-    const root = document.createElement("div");
-    root.className = "tree-demo";
-
-    const tree = buildTree();
-    root.append(tree, buildOptionsPanel(tree));
-    host.append(root);
+  options: kOptions,
+  render(host, options) {
+    host.append(buildTree(options));
   }
 };
