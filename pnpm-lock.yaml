@@ -588,6 +588,13 @@ importers:
       three:
         specifier: 0.186.0
         version: 0.186.0
+    devDependencies:
+      '@jolly-pixel/asset-source':
+        specifier: workspace:*
+        version: link:../../asset-source
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../../event-store
 
   packages/engine:
     dependencies:

@@ -20,12 +20,8 @@ import {
   voxelModelCommandProtocol,
   voxelModelSnapshotSchema
 } from "../network/VoxelModelCommand.schema.ts";
-import { ModelCommandArbiter } from "../network/ModelCommandArbiter.ts";
-import { FolderCommandArbiter } from "../network/FolderCommandArbiter.ts";
-import {
-  isModelCommand,
-  type VoxelModelNetworkCommand
-} from "../network/types.ts";
+import { VoxelModelCommandArbiter } from "../network/VoxelModelCommandArbiter.ts";
+import type { VoxelModelNetworkCommand } from "../network/types.ts";
 
 export interface VoxelModelAssetKindOptions {
   snapshot?: SnapshotPolicy;
@@ -85,10 +81,7 @@ export function voxelModelAssetKind(
       },
 
       live({ state }) {
-        const models = new ModelCommandArbiter({
-          conflictResolver
-        });
-        const folders = new FolderCommandArbiter({
+        const arbiter = new VoxelModelCommandArbiter({
           conflictResolver
         });
 
@@ -96,13 +89,7 @@ export function voxelModelAssetKind(
           snapshotSchema: voxelModelSnapshotSchema,
           snapshot: () => state.snapshot(),
           arbitrate(command) {
-            if (!state.accepts(command)) {
-              return null;
-            }
-
-            return isModelCommand(command) ?
-              models.admit(command) :
-              folders.admit(command);
+            return state.accepts(command) ? arbiter.admit(command) : null;
           }
         };
       }

@@ -7,58 +7,70 @@ import checker from "vite-plugin-checker";
 import {
   createAssetWorkspacePlugin
 } from "@jolly-pixel/asset-server/plugins/vite.ts";
-import {
-  encodePixelArtDocument,
-  PixelBuffer,
-  serializePixelBuffer
-} from "@jolly-pixel/pixel-draw.renderer";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+import * as EventStore from "@jolly-pixel/event-store";
 import {
   PIXEL_ART_KIND,
   pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 import {
   VOXEL_MODEL_KIND,
-  createVoxelModelDocument,
-  encodeVoxelModelDocument,
   voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
 
+// Import Internal Dependencies
+import {
+  TEXTURE_SIZE,
+  encodeModelDocument,
+  encodeTextureDocument
+} from "./vite/modelSeed.ts";
+import { E2E_PORT } from "./test/e2e/constants.ts";
+
 // CONSTANTS
-const kTextureSize = { x: 64, y: 64 };
+const kE2EMode = "e2e";
 const kTextureAssetId = "model-texture";
 
-export default defineConfig({
-  plugins: [
-    checker({
-      typescript: false
-    }),
-    createAssetWorkspacePlugin({
-      root: path.join(import.meta.dirname, "assets"),
-      handlers: [
-        voxelModelAssetKind(),
-        pixelArtAssetKind({ defaultSize: kTextureSize })
-      ],
-      seed: {
-        "textures/model.pixelart": {
-          id: kTextureAssetId,
-          kind: PIXEL_ART_KIND,
-          content: () => encodePixelArtDocument(
-            serializePixelBuffer(new PixelBuffer({ size: kTextureSize }))
+export default defineConfig(({ mode }) => {
+  const e2e = mode === kE2EMode;
+
+  return {
+    server: e2e ?
+      {
+        port: E2E_PORT,
+        strictPort: true
+      } :
+      undefined,
+    plugins: [
+      checker({
+        typescript: false
+      }),
+      createAssetWorkspacePlugin({
+        root: path.join(import.meta.dirname, "assets"),
+        ...(e2e ?
+          {
+            source: new MemoryAssetSource(),
+            eventStore: EventStore.persistence.memory()
+          } :
+          {}),
+        handlers: [
+          voxelModelAssetKind(),
+          pixelArtAssetKind({ defaultSize: TEXTURE_SIZE })
+        ],
+        seed: {
+          "textures/model.pixelart": {
+            id: kTextureAssetId,
+            kind: PIXEL_ART_KIND,
+            content: () => encodeTextureDocument()
+          },
+          "models/model.voxelmodel.json": () => encodeModelDocument(
+            kTextureAssetId
           )
         },
-        "models/model.voxelmodel.json": () => encodeVoxelModelDocument(
-          createVoxelModelDocument({
-            texture: {
-              id: kTextureAssetId,
-              kind: PIXEL_ART_KIND
-            }
-          })
-        )
-      },
-      launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value
-    })
-  ],
-  esbuild: {
-    target: "es2024"
-  }
+        launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value
+      })
+    ],
+    esbuild: {
+      target: "es2024"
+    }
+  };
 });

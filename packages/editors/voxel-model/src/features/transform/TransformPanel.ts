@@ -1,6 +1,15 @@
 // Import Third-party Dependencies
-import { LitElement, css, html, type TemplateResult } from "lit";
-import { type JollyChangeDetail, type JollyOption } from "@jolly-pixel/ui";
+import {
+  LitElement,
+  css,
+  html,
+  type TemplateResult
+} from "lit";
+import type { Vector3Like } from "three";
+import type {
+  JollyChangeDetail,
+  JollyOption
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import "./transformIcons.ts";
@@ -8,8 +17,7 @@ import type { GizmoSpace } from "../../scene/index.ts";
 import {
   TransformPanelController,
   type TransformMode,
-  type TransformWorkspace,
-  type Vector3Value
+  type TransformWorkspace
 } from "./TransformPanelController.ts";
 
 // CONSTANTS
@@ -103,7 +111,7 @@ export class TransformPanel extends LitElement {
         step="0.01"
         ?disabled=${this.#transform.disabled}
         .value=${this.#transform.axisValues}
-        @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vector3Value>>) => {
+        @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vector3Like>>) => {
           this.#transform.axisValues = event.detail.value;
         }}
       ></jolly-vector3>

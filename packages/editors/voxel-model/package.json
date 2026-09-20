@@ -6,12 +6,14 @@
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
     "dev": "vite",
+    "dev:e2e": "vite --mode e2e",
     "build": "vite build",
     "preview": "vite preview",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json",
-    "lint": "oxlint src test && pnpm run lint:css",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p vite/tsconfig.json",
+    "lint": "oxlint src test vite vite.config.ts playwright.config.ts && pnpm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
   },
   "keywords": [],
@@ -20,6 +22,10 @@
   ],
   "imports": {
     "#src/*": "./src/*"
+  },
+  "devDependencies": {
+    "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/event-store": "workspace:*"
   },
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",

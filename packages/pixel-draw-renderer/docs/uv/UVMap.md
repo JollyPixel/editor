@@ -174,6 +174,14 @@ Moves a region to one of the three states, emitting `"region-state-changed"` wit
 
 Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because `uv-state` history entries carry the whole previous region.
 
+### `rename(id, name)`
+
+```ts
+rename(id: string, name: string): boolean
+```
+
+Replaces a region's name and keeps everything else, emitting `"region-state-changed"` so the rename reaches history and peers like any other replacement. Returns `false` for an unknown id or an unchanged name.
+
 ### `rotate(id, direction, slot?)`
 
 ```ts

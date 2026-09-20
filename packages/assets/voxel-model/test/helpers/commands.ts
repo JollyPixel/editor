@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { NetworkCommandHeader } from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import type {
   GroupTransformJSON,
@@ -18,15 +21,16 @@ let seq = 0;
 
 export function networkCommand<T extends VoxelModelCommand>(
   command: T,
-  clientId = "client-A"
+  overrides: Partial<NetworkCommandHeader> = {}
 ): T & VoxelModelNetworkCommand {
   seq++;
 
   return {
     ...command,
-    clientId,
+    clientId: "client-A",
     seq,
-    timestamp: 1000 + seq
+    timestamp: 1000 + seq,
+    ...overrides
   } as T & VoxelModelNetworkCommand;
 }
 

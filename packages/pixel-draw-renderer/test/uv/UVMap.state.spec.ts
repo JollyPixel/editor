@@ -133,3 +133,53 @@ describe("UVMap — free / stack", () => {
     );
   });
 });
+
+describe("UVMap rename", () => {
+  test("renames a region and emits region-state-changed", () => {
+    const map = makeMap();
+    const region = map.create({ name: "Torso", width: 4, height: 4 });
+    const events: EventPayload<"region-state-changed">[] = [];
+    map.on("region-state-changed", (e) => events.push(e));
+
+    assert.ok(map.rename(region.id, "Chest"));
+
+    assert.strictEqual(map.get(region.id)!.name, "Chest");
+    assert.strictEqual(events.length, 1);
+    assert.strictEqual(events[0].region, map.get(region.id));
+    assert.strictEqual(events[0].previous.name, "Torso");
+  });
+
+  test("keeps the layout, color and selection of the region", () => {
+    const map = makeMap();
+    const region = map.create({ name: "Torso", width: 4, height: 4 });
+    map.setState(region.id, "free");
+    map.move(region.id, { x: 24, y: 24, width: 4, height: 4 }, "top");
+    map.select(region.id, "top");
+    const before = map.get(region.id)!.toJSON();
+
+    map.rename(region.id, "Chest");
+
+    assert.deepStrictEqual(
+      map.get(region.id)!.toJSON(),
+      { ...before, name: "Chest" }
+    );
+    assert.strictEqual(map.selectedRegionId, region.id);
+    assert.strictEqual(map.selectedSlot, "top");
+  });
+
+  test("returns false without emitting when the name is unchanged", () => {
+    const map = makeMap();
+    const region = map.create({ name: "Torso", width: 4, height: 4 });
+    const events: EventPayload<"region-state-changed">[] = [];
+    map.on("region-state-changed", (e) => events.push(e));
+
+    assert.ok(!map.rename(region.id, "Torso"));
+    assert.deepStrictEqual(events, []);
+  });
+
+  test("returns false for an unknown id", () => {
+    const map = makeMap();
+
+    assert.ok(!map.rename("no-such", "Chest"));
+  });
+});

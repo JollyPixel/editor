@@ -18,6 +18,7 @@ jobs:
       ui: ${{ steps.filter.outputs.ui }}
       pixel-art: ${{ steps.filter.outputs.pixel-art }}
       voxel-map: ${{ steps.filter.outputs.voxel-map }}
+      voxel-model: ${{ steps.filter.outputs.voxel-model }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -66,6 +67,28 @@ jobs:
               - 'packages/three/**'
               - 'packages/ui/**'
               - 'packages/resize-handle/**'
+              - 'package.json'
+              - '.npmrc'
+              - 'pnpm-workspace.yaml'
+              - 'pnpm-lock.yaml'
+              - 'tsconfig.json'
+              - 'tsconfig/**'
+              - '.github/workflows/node.js.yml'
+            voxel-model:
+              - 'packages/editors/voxel-model/**'
+              - 'packages/editors/pixel-art/**'
+              - 'packages/editors/host/**'
+              - 'packages/pixel-draw-renderer/**'
+              - 'packages/assets/**'
+              - 'packages/asset/**'
+              - 'packages/asset-server/**'
+              - 'packages/asset-source/**'
+              - 'packages/network/**'
+              - 'packages/event-store/**'
+              - 'packages/engine/**'
+              - 'packages/runtime/**'
+              - 'packages/three/**'
+              - 'packages/ui/**'
               - 'package.json'
               - '.npmrc'
               - 'pnpm-workspace.yaml'
@@ -208,5 +231,41 @@ jobs:
         with:
           name: voxel-map-e2e-results
           path: packages/editors/voxel-map/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  voxel-model-e2e:
+    needs: changes
+    # TODO: enable together with voxel-map-e2e once its CI-only timeouts are fixed
+    if: false && needs.changes.outputs.voxel-model == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build dependencies
+        run: pnpm run build
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run Voxel Model E2E tests
+        run: pnpm --filter @jolly-pixel/editor.voxel-model test:e2e
+      - name: Upload Voxel Model E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: voxel-model-e2e-results
+          path: packages/editors/voxel-model/test-results
           if-no-files-found: ignore
           retention-days: 7

@@ -25,6 +25,7 @@ export interface ModelEditorSceneOptions {
   identity: PeerIdentity;
   presence: PresenceStore;
   pixels: PixelDocument;
+  pixelsReady: Promise<void>;
 }
 
 export interface ModelWorkspace {
@@ -54,7 +55,13 @@ export class ModelEditorScene extends Systems.Scene {
   }
 
   override awake(): void {
-    const { room, identity, presence, pixels } = this.#options;
+    const {
+      room,
+      identity,
+      presence,
+      pixels,
+      pixelsReady
+    } = this.#options;
     const scene = this.world.sceneManager.getSource();
     scene.add(createGrid());
 
@@ -74,7 +81,11 @@ export class ModelEditorScene extends Systems.Scene {
       });
 
     const document = new ModelDocument(scene);
-    const textures = new BlockTextures({ pixels, document });
+    const textures = new BlockTextures({
+      pixels,
+      pixelsReady,
+      document
+    });
     const hierarchy = new ModelHierarchy({
       document,
       regions: textures
