@@ -3,7 +3,6 @@ import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type { GridFadeFrom } from "./shader.ts";
-import type { Vector3Like } from "../types.ts";
 
 export class GridFadeValue {
   readonly from: GridFadeFrom;
@@ -28,7 +27,7 @@ export class GridFadeValue {
    */
   trackTarget(
     targetPositionUniform: THREE.Vector3,
-    fallbackPosition?: Vector3Like
+    fallbackPosition?: THREE.Vector3Like
   ): void {
     if (this.from === "target" && this.target) {
       this.target.getWorldPosition(
@@ -45,9 +44,9 @@ export class GridFadeValue {
   }
 
   anchorPosition(
-    cameraPosition: Vector3Like,
-    targetPositionUniform: Vector3Like
-  ): Vector3Like {
+    cameraPosition: THREE.Vector3Like,
+    targetPositionUniform: THREE.Vector3Like
+  ): THREE.Vector3Like {
     return this.from === "target" && this.target ? targetPositionUniform : cameraPosition;
   }
 }

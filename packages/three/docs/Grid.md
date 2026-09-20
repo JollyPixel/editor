@@ -296,9 +296,9 @@ class GridPlaneValue {
   clone(): GridPlaneValue
   orientGeometry(geometry: THREE.PlaneGeometry): void
   followPosition(
-    cameraPosition: Vector3Like,
+    cameraPosition: THREE.Vector3Like,
     normalOffset: number
-  ): Vector3Like
+  ): THREE.Vector3Like
 }
 
 class GridStyleValue {
@@ -313,12 +313,12 @@ class GridFadeValue {
   target: THREE.Object3D | null
   trackTarget(
     targetPositionUniform: THREE.Vector3,
-    fallbackPosition?: Vector3Like
+    fallbackPosition?: THREE.Vector3Like
   ): void
   anchorPosition(
-    cameraPosition: Vector3Like,
-    targetPositionUniform: Vector3Like
-  ): Vector3Like
+    cameraPosition: THREE.Vector3Like,
+    targetPositionUniform: THREE.Vector3Like
+  ): THREE.Vector3Like
 }
 ```
 

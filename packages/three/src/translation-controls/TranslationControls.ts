@@ -2,7 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { Vector3Like } from "../types.ts";
+import { AXIS_DIRECTION } from "../common/axes.ts";
+import { PointerDrag } from "../common/PointerDrag.ts";
+import {
+  snapStepFor,
+  snapValue
+} from "../common/snap.ts";
 import {
   TranslationGizmo,
   type TranslationHandleTarget
@@ -18,11 +23,6 @@ import type {
 } from "./types.ts";
 
 // CONSTANTS
-const kAxisDirection: Record<TranslationAxis, THREE.Vector3> = {
-  x: new THREE.Vector3(1, 0, 0),
-  y: new THREE.Vector3(0, 1, 0),
-  z: new THREE.Vector3(0, 0, 1)
-};
 const kProjectionEpsilon = 1e-6;
 
 const _axisDirection = new THREE.Vector3();
@@ -36,7 +36,6 @@ const _targetQuaternion = new THREE.Quaternion();
 const _worldPosition = new THREE.Vector3();
 
 interface TranslationSession {
-  pointerId: number;
   target: THREE.Object3D;
   parent: THREE.Object3D | null;
   axis: TranslationAxis;
@@ -58,7 +57,7 @@ export class TranslationControls extends THREE.Controls<
 > {
   readonly helper: THREE.Object3D;
 
-  #element: HTMLElement | null = null;
+  #drag: PointerDrag;
   #gizmo: TranslationGizmo;
   #target: THREE.Object3D | null = null;
   #space: TranslationSpace = "world";
@@ -80,6 +79,12 @@ export class TranslationControls extends THREE.Controls<
     this.helper = this.#gizmo;
     this.space = options.space ?? "world";
     this.snap = options.snap ?? null;
+    this.#drag = new PointerDrag({
+      press: (event) => this.#claim(event),
+      hover: (event) => this.#hover(event),
+      drag: (event) => this.#applyDrag(event),
+      release: () => this.#finishSession()
+    });
 
     if (domElement !== null) {
       this.connect(domElement);
@@ -128,7 +133,7 @@ export class TranslationControls extends THREE.Controls<
   }
 
   set snap(
-    snap: number | Vector3Like | null
+    snap: number | THREE.Vector3Like | null
   ) {
     if (snap === null) {
       this.#snap = null;
@@ -155,7 +160,7 @@ export class TranslationControls extends THREE.Controls<
       return;
     }
 
-    this.#endSession();
+    this.#drag.end();
     this.#target = target;
     this.#gizmo.setTarget(target);
   }
@@ -165,7 +170,7 @@ export class TranslationControls extends THREE.Controls<
       return;
     }
 
-    this.#endSession();
+    this.#drag.end();
     this.#target = null;
     this.#gizmo.setTarget(null);
   }
@@ -179,29 +184,12 @@ export class TranslationControls extends THREE.Controls<
   override connect(
     element: HTMLElement
   ): void {
-    if (element === this.#element) {
-      return;
-    }
-    if (this.#element !== null) {
-      this.disconnect();
-    }
-
     super.connect(element);
-    this.#element = element;
-    element.addEventListener("pointerdown", this.#onPointerDown);
-    element.addEventListener("pointermove", this.#onPointerHover);
+    this.#drag.connect(element);
   }
 
   override disconnect(): void {
-    const element = this.#element;
-    if (element === null) {
-      return;
-    }
-
-    this.#endSession();
-    element.removeEventListener("pointerdown", this.#onPointerDown);
-    element.removeEventListener("pointermove", this.#onPointerHover);
-    this.#element = null;
+    this.#drag.disconnect();
     this.domElement = null;
   }
 
@@ -211,9 +199,9 @@ export class TranslationControls extends THREE.Controls<
     this.#gizmo.dispose();
   }
 
-  readonly #onPointerDown = (
+  #claim(
     event: PointerEvent
-  ): void => {
+  ): void {
     if (
       !this.enabled ||
       event.button !== 0 ||
@@ -229,30 +217,25 @@ export class TranslationControls extends THREE.Controls<
     }
 
     this.#beginSession(event, target, handle);
-  };
+  }
 
-  readonly #onPointerHover = (
+  #hover(
     event: PointerEvent
-  ): void => {
-    if (
-      !this.enabled ||
-      this.#target === null ||
-      this.#session !== null
-    ) {
+  ): void {
+    if (!this.enabled || this.#target === null) {
       return;
     }
 
     this.#gizmo.hover(this.#pick(event));
-  };
+  }
 
-  readonly #onPointerMove = (
+  #applyDrag(
     event: PointerEvent
-  ): void => {
+  ): void {
     const session = this.#session;
     if (
       !this.enabled ||
       session === null ||
-      event.pointerId !== session.pointerId ||
       !this.#updateRay(event)
     ) {
       return;
@@ -267,21 +250,21 @@ export class TranslationControls extends THREE.Controls<
       return;
     }
 
-    let distance = _intersection
+    const distance = _intersection
       .sub(session.startWorldPosition)
       .dot(session.axisDirection) - session.startScalar;
-    const step = this.#stepFor(session.axis);
-    if (!event.altKey && step !== null) {
-      distance = Math.round(distance / step) * step;
-    }
 
     _worldPosition
       .copy(session.axisDirection)
-      .multiplyScalar(distance)
+      .multiplyScalar(
+        event.altKey
+          ? distance
+          : snapValue(distance, snapStepFor(this.#snap, session.axis))
+      )
       .add(session.startWorldPosition);
 
     if (session.target.parent !== session.parent) {
-      this.#endSession();
+      this.#drag.end();
 
       return;
     }
@@ -308,17 +291,7 @@ export class TranslationControls extends THREE.Controls<
       ...this.#gestureEvent(session),
       changed: true
     });
-  };
-
-  readonly #onPointerUp = (
-    event: PointerEvent
-  ): void => {
-    if (this.#session?.pointerId !== event.pointerId) {
-      return;
-    }
-
-    this.#endSession();
-  };
+  }
 
   #beginSession(
     event: PointerEvent,
@@ -328,7 +301,7 @@ export class TranslationControls extends THREE.Controls<
     target.updateWorldMatrix(true, false);
     target.getWorldPosition(_worldPosition);
 
-    _axisDirection.copy(kAxisDirection[handle.axis]);
+    _axisDirection.copy(AXIS_DIRECTION[handle.axis]);
     if (this.#space === "local") {
       target.getWorldQuaternion(_targetQuaternion);
       _axisDirection.applyQuaternion(_targetQuaternion).normalize();
@@ -361,7 +334,6 @@ export class TranslationControls extends THREE.Controls<
 
     const startWorldPosition = _worldPosition.clone();
     const session: TranslationSession = {
-      pointerId: event.pointerId,
       target,
       parent: target.parent,
       axis: handle.axis,
@@ -378,14 +350,7 @@ export class TranslationControls extends THREE.Controls<
     this.#session = session;
     this.#gizmo.hover(null);
     this.#gizmo.activate(handle);
-
-    const element = this.#element;
-    if (element !== null) {
-      element.addEventListener("pointermove", this.#onPointerMove);
-      element.addEventListener("pointerup", this.#onPointerUp);
-      element.addEventListener("pointercancel", this.#onPointerUp);
-      element.setPointerCapture?.(event.pointerId);
-    }
+    this.#drag.begin(event);
 
     this.dispatchEvent({
       type: "start",
@@ -393,20 +358,10 @@ export class TranslationControls extends THREE.Controls<
     });
   }
 
-  #endSession(): void {
+  #finishSession(): void {
     const session = this.#session;
     if (session === null) {
       return;
-    }
-
-    const element = this.#element;
-    if (element !== null) {
-      element.removeEventListener("pointermove", this.#onPointerMove);
-      element.removeEventListener("pointerup", this.#onPointerUp);
-      element.removeEventListener("pointercancel", this.#onPointerUp);
-      if (element.hasPointerCapture?.(session.pointerId)) {
-        element.releasePointerCapture(session.pointerId);
-      }
     }
 
     this.#session = null;
@@ -440,20 +395,10 @@ export class TranslationControls extends THREE.Controls<
   #updateRay(
     event: PointerEvent
   ): boolean {
-    const element = this.#element;
-    if (element === null) {
+    if (!this.#drag.toNdc(event, _pointer)) {
       return false;
     }
 
-    const rect = element.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-      return false;
-    }
-
-    _pointer.set(
-      (((event.clientX - rect.left) / rect.width) * 2) - 1,
-      (-((event.clientY - rect.top) / rect.height) * 2) + 1
-    );
     this.#raycaster.setFromCamera(_pointer, this.object);
 
     return true;
@@ -477,16 +422,6 @@ export class TranslationControls extends THREE.Controls<
     _cameraDirection
       .subVectors(_cameraPosition, worldPosition)
       .normalize();
-  }
-
-  #stepFor(
-    axis: TranslationAxis
-  ): number | null {
-    if (this.#snap === null || typeof this.#snap === "number") {
-      return this.#snap;
-    }
-
-    return this.#snap[axis];
   }
 
   #gestureEvent(

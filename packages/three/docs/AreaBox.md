@@ -15,7 +15,7 @@ const area = new AreaBox({
 scene.add(area);
 ```
 
-`position` is the **min corner**. Integer `position` and `size` values stay grid-aligned without half-cell offsets. Use [`AreaBoxControls`](./AreaBoxControls.md) for pointer movement and resizing.
+`position` is the **min corner**. Integer `position` and `size` values stay grid-aligned without half-cell offsets. Use [`BoxControls`](./BoxControls.md) for pointer movement and resizing.
 
 `size` lays out the unrotated box without changing its `scale`. Rendering requires `THREE.WebGPURenderer`.
 
@@ -33,8 +33,8 @@ interface AreaBoxEdgesDefaults {
 }
 
 interface AreaBoxOptions {
-  size?: Vector3Like;
-  position?: Vector3Like;
+  size?: THREE.Vector3Like;
+  position?: THREE.Vector3Like;
   color?: THREE.ColorRepresentation;
   opacity?: number;
   edges?: Partial<AreaBoxEdgesDefaults>;
@@ -65,7 +65,7 @@ The appearance options are constructor-only. Use `fill.material`, `edges.materia
 
 ```ts
 get size(): THREE.Vector3
-set size(size: Vector3Like)
+set size(size: THREE.Vector3Like)
 ```
 
 World-unit extent. The getter returns a **copy**. Assign to `size` to resize and lay out all rendered children.
@@ -122,11 +122,11 @@ Area color. The getter returns a **copy** of the fill color. Assigning repaints 
 ### `state`
 
 ```ts
-get state(): AreaBoxState
-set state(state: AreaBoxState)
+get state(): BoxState
+set state(state: BoxState)
 ```
 
-Current emphasis level, one of `"idle" | "hovered" | "active"`. Assigning raises opacity, clears smoke toward the area color and tints edges toward white. `AreaBoxControls` assigns `"active"` on attach and `"idle"` on detach. Applications may assign `"hovered"` from their own picking.
+Current emphasis level, one of `"idle" | "hovered" | "active"`. Assigning raises opacity, clears smoke toward the area color and tints edges toward white. `BoxControls` assigns `"active"` on attach and `"idle"` on detach. Applications may assign `"hovered"` from their own picking.
 
 ## Methods
 
@@ -178,7 +178,7 @@ The transparent `FrontSide` material **writes depth**, so its near face hides th
 
 | Method | Description |
 |---|---|
-| `resize(size: Vector3Like)` | Scales the unit box and re-centers it on the min-corner anchor. |
+| `resize(size: THREE.Vector3Like)` | Scales the unit box and re-centers it on the min-corner anchor. |
 | `emphasize(opacity: number, tint: number)` | Scales the constructor `opacity` by `opacity`, clamped to `1`, and clears the smoke toward the area color by `tint` (0 to 1). |
 | `get/set color` | Reads a copy of the area color, or repaints the material in place and re-applies the last `emphasize()` arguments. |
 | `dispose()` | Releases the geometry and the material, once. |
@@ -204,7 +204,7 @@ It keeps the area color as-is, and opts out of frustum culling because fat lines
 
 | Method | Description |
 |---|---|
-| `resize(size: Vector3Like)` | Rebuilds the segments so they trace the box instead of stretching with it, then recomputes the geometry bounds. A resize to the size already traced is dropped: a rebuild swaps in fresh instanced buffers, and destroying the previous ones mid-frame faults the WebGPU queue with a buffer the pass being encoded still references. |
+| `resize(size: THREE.Vector3Like)` | Rebuilds the segments so they trace the box instead of stretching with it, then recomputes the geometry bounds. A resize to the size already traced is dropped: a rebuild swaps in fresh instanced buffers, and destroying the previous ones mid-frame faults the WebGPU queue with a buffer the pass being encoded still references. |
 | `emphasize(opacity: number, tint: number)` | Scales the constructor `opacity` by `opacity`, clamped to `1`, and tints the color toward white by `tint * 0.4`. Toggles `material.transparent` when the result crosses full opacity. |
 | `get/set color` | Reads a copy of the edge color, or repaints the material in place and re-applies the last `emphasize()` arguments. |
 | `dispose()` | Releases the geometry and the material, once. |

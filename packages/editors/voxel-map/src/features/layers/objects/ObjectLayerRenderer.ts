@@ -5,9 +5,9 @@ import {
   ActorComponent
 } from "@jolly-pixel/engine";
 import {
-  AreaBoxControls,
+  BoxControls,
   type AreaBox,
-  type AreaBoxDragEvent
+  type BoxDragEvent
 } from "@jolly-pixel/three";
 import type {
   VoxelLayerCommand,
@@ -49,7 +49,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   #mapDocument: MapDocument;
   #scene: ObjectAreaScene;
   #canvas: HTMLCanvasElement | null = null;
-  #controls: AreaBoxControls | null = null;
+  #controls: BoxControls<AreaBox> | null = null;
   #selectedKey: string | null = null;
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
@@ -78,7 +78,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     const canvas = this.actor.world.renderer.canvas;
     this.#canvas = canvas;
 
-    const controls = new AreaBoxControls(this.#camera, canvas, {
+    const controls = new BoxControls<AreaBox>(this.#camera, canvas, {
       snap: 1,
       minSize: kMinObjectSize,
       moveAxes: "xyz",
@@ -286,18 +286,18 @@ export class ObjectLayerRenderer extends ActorComponent {
   };
 
   readonly #onDragChange = (
-    event: AreaBoxDragEvent
+    event: BoxDragEvent
   ): void => this.#persist(event);
 
   readonly #onDragEnd = (
-    event: AreaBoxDragEvent
+    event: BoxDragEvent
   ): void => {
     this.#persist(event);
     this.#selection.gizmoDragging = false;
   };
 
   #persist(
-    event: AreaBoxDragEvent
+    event: BoxDragEvent
   ): void {
     const key = this.#selectedKey;
     if (key === null) {

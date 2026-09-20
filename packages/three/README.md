@@ -32,8 +32,9 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 ### Components
 
-- [AreaBox](docs/AreaBox.md): Translucent axis-aligned area, moved and resized on a grid by [AreaBoxControls](docs/AreaBoxControls.md).
+- [AreaBox](docs/AreaBox.md): Translucent axis-aligned area, moved and resized on a grid by [BoxControls](docs/BoxControls.md).
 - [Grid](docs/Grid.md): Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
+- [MarqueeBox](docs/MarqueeBox.md): Empty axis-aligned box with animated two-color dashed edges, for 3D selections, moved and resized by [BoxControls](docs/BoxControls.md). (TSL, `THREE.WebGPURenderer`).
 - [MeshHighlight](docs/mesh-highlight/index.md): Draws local and peer selection, with outline and postprocess rendering techniques.
 - [TranslationControls](docs/TranslationControls.md): Customizable axis handles for translating one `THREE.Object3D` in world or local space.
 

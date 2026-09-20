@@ -4,7 +4,7 @@ import {
   voxelCellOf,
   voxelPositionOf
 } from "@jolly-pixel/voxel.renderer";
-import type { Vector3Like } from "@jolly-pixel/three";
+import type { Vector3Like } from "three";
 
 // CONSTANTS
 const kScreenCenter = new THREE.Vector2(0, 0);

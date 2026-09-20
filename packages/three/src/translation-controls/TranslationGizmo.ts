@@ -2,6 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import {
+  AXES,
+  AXIS_COLOR,
+  AXIS_DIRECTION,
+  HANDLE_HIGHLIGHT_COLOR
+} from "../common/axes.ts";
 import { screenScaleFactor } from "../common/screenScaleFactor.ts";
 import { createTranslationHandleGeometry } from "./geometry.ts";
 import { TranslationCenter } from "./TranslationCenter.ts";
@@ -19,7 +25,6 @@ import type {
 } from "./types.ts";
 
 // CONSTANTS
-const kAxes: readonly TranslationAxis[] = ["x", "y", "z"];
 const kDefaultSize = 0.05;
 const kDefaultGap = 0.15;
 const kDefaultPickerRadius = 0.28;
@@ -30,24 +35,11 @@ const kDefaultCenterRadius = 0.13;
 const kDefaultCenterSegments = 16;
 const kDefaultHandle: TranslationHandleOptions = { kind: "arrow" };
 const kDefaultDirections: TranslationDirectionPolicy = "positive";
-const kDefaultHoverColor = "#ffd452";
-const kDefaultActiveColor = "#ffd452";
 const kDefaultOutline: Required<TranslationOutlineOptions> = {
   color: "#080b11",
   opacity: 1,
   scale: 1.18
 };
-const kAxisColor: Record<TranslationAxis, THREE.ColorRepresentation> = {
-  x: "#ff6b6b",
-  y: "#7ee787",
-  z: "#6fb3ff"
-};
-const kAxisDirection: Record<TranslationAxis, THREE.Vector3> = {
-  x: new THREE.Vector3(1, 0, 0),
-  y: new THREE.Vector3(0, 1, 0),
-  z: new THREE.Vector3(0, 0, 1)
-};
-const kUpDirection = new THREE.Vector3(0, 1, 0);
 const kIdentityQuaternion = new THREE.Quaternion();
 
 const _desiredMatrix = new THREE.Matrix4();
@@ -104,7 +96,7 @@ export class TranslationGizmo extends THREE.Object3D {
     this.matrixAutoUpdate = false;
     this.visible = false;
 
-    for (const axis of kAxes) {
+    for (const axis of AXES) {
       const axisAppearance = options.axes?.[axis];
       if (axisAppearance === false) {
         continue;
@@ -305,7 +297,7 @@ export class TranslationGizmo extends THREE.Object3D {
         direction,
         geometry,
         length,
-        color: overrides.color ?? kAxisColor[axis],
+        color: overrides.color ?? AXIS_COLOR[axis],
         hoverColor: this.#appearance.hoverColor,
         activeColor: this.#appearance.activeColor,
         outline: this.#appearance.outline,
@@ -316,13 +308,13 @@ export class TranslationGizmo extends THREE.Object3D {
       });
 
       _handleDirection
-        .copy(kAxisDirection[axis])
+        .copy(AXIS_DIRECTION[axis])
         .multiplyScalar(direction);
       handle.position
         .copy(_handleDirection)
         .multiplyScalar(this.#appearance.gap);
       handle.quaternion.setFromUnitVectors(
-        kUpDirection,
+        AXIS_DIRECTION.y,
         _handleDirection
       );
 
@@ -374,8 +366,8 @@ function resolveAppearance(
       options.picker?.lengthScale ?? kDefaultPickerLengthScale,
       "picker.lengthScale"
     ),
-    hoverColor: options.hoverColor ?? kDefaultHoverColor,
-    activeColor: options.activeColor ?? kDefaultActiveColor,
+    hoverColor: options.hoverColor ?? HANDLE_HIGHLIGHT_COLOR,
+    activeColor: options.activeColor ?? HANDLE_HIGHLIGHT_COLOR,
     outline: resolveOutline(options.outline),
     depthTest: options.depthTest ?? false,
     renderOrder: finite(
