@@ -14,6 +14,8 @@ import {
   placeCube
 } from "./helpers/engine.ts";
 import { makeBlockDef } from "./helpers/blocks.ts";
+import { mockTexture } from "./helpers/mockTexture.ts";
+import { MISSING_TILESET_ID } from "../src/tileset/index.ts";
 import {
   blockDefinedCmd,
   makeAddedCommand
@@ -216,7 +218,7 @@ describe("VoxelEngine - tilesets", () => {
     assert.equal(engine.tilesetManager.atlas("atlas").def.tileSize, 32);
   });
 
-  it("drops the chunk meshes textured by a removed tileset", () => {
+  it("redraws the blocks of a removed tileset with the missing texture", () => {
     const engine = makeEngine({ layers: ["Ground"] });
     placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
     engine.flush();
@@ -226,6 +228,48 @@ describe("VoxelEngine - tilesets", () => {
     engine.flush();
 
     assert.equal(engine.tilesetManager.get("atlas"), undefined);
-    assert.equal(chunkMeshes(engine).length, 0);
+    const meshes = chunkMeshes(engine);
+    assert.equal(meshes.length, 1);
+    assert.ok(meshes[0].name.includes(MISSING_TILESET_ID));
+    assert.equal(
+      meshes[0].geometry.getAttribute("position").count,
+      6 * 4
+    );
+  });
+
+  it("keeps culling against a block drawn with the missing texture", () => {
+    const engine = makeEngine({ layers: ["Ground"] });
+    engine.loadTileset({ id: "b", src: "b", tileSize: 16 }, mockTexture());
+    engine.defineBlock(makeBlockDef(7, "cube", {
+      defaultTexture: { col: 0, row: 0, tilesetId: "b" }
+    }));
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
+    placeCube(engine, "Ground", { x: 1, y: 0, z: 0 }, 7);
+
+    engine.removeTileset("b");
+    engine.flush();
+
+    assert.deepEqual(
+      chunkMeshes(engine)
+        .map((mesh) => mesh.geometry.getAttribute("position").count)
+        .sort(),
+      [5 * 4, 5 * 4]
+    );
+  });
+
+  it("stops culling against a block whose tileset has no texture yet", () => {
+    const engine = makeEngine({ layers: ["Ground"] });
+    engine.addTileset({ id: "later", src: "later", tileSize: 16 });
+    engine.defineBlock(makeBlockDef(7, "cube", {
+      defaultTexture: { col: 0, row: 0, tilesetId: "later" }
+    }));
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
+    placeCube(engine, "Ground", { x: 1, y: 0, z: 0 }, 7);
+
+    engine.flush();
+
+    const meshes = chunkMeshes(engine);
+    assert.equal(meshes.length, 1);
+    assert.equal(meshes[0].geometry.getAttribute("position").count, 6 * 4);
   });
 });

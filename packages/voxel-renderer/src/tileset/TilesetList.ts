@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { TilesetDefinition } from "./types.ts";
 import { isTileSize } from "./tileSize.ts";
+import { MISSING_TILESET_ID } from "./missingTileset.ts";
 
 export class TilesetList implements Iterable<TilesetDefinition> {
   #definitions = new Map<string, TilesetDefinition>();
@@ -150,7 +151,9 @@ export class TilesetList implements Iterable<TilesetDefinition> {
 function isDeclarable(
   definition: TilesetDefinition
 ): boolean {
-  return definition.id.length > 0 && isTileSize(definition.tileSize);
+  return definition.id.length > 0 &&
+    definition.id !== MISSING_TILESET_ID &&
+    isTileSize(definition.tileSize);
 }
 
 function copyDefinition(

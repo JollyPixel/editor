@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   resolveTilesetDefinition,
-  TilesetAtlas
+  TilesetAtlas,
+  type TilesetTexture
 } from "../../src/tileset/index.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { approxEqual } from "../helpers/math.ts";
@@ -113,7 +114,7 @@ describe("TilesetAtlas.uvFor", () => {
 describe("TilesetAtlas.updateImage", () => {
   it("replaces the image and flags it for re-upload", () => {
     const texture = mockTexture(64, 64);
-    const atlas = new TilesetAtlas(kDefinition, texture);
+    const atlas = new TilesetAtlas<TilesetTexture>(kDefinition, texture);
 
     const next = { width: 64, height: 64 } as unknown as HTMLCanvasElement;
     atlas.updateImage(next);

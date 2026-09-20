@@ -41,7 +41,6 @@ export class VoxelMeshBuilder {
   readonly stats = new MeshBuildStats();
 
   #world: VoxelWorld;
-  #tilesetManager: TilesetManager;
   #variants: BlockVariantCache;
   #greedyMesher: GreedyMesher;
   #naiveMesher: NaiveMesher;
@@ -79,7 +78,6 @@ export class VoxelMeshBuilder {
     options: VoxelMeshBuilderOptions
   ) {
     this.#world = options.world;
-    this.#tilesetManager = options.tilesetManager;
     this.#greedy = options.greedy ?? false;
     this.#variants = new BlockVariantCache({
       blockRegistry: options.blockRegistry,
@@ -113,10 +111,7 @@ export class VoxelMeshBuilder {
     const { stats } = this;
     stats.reset();
 
-    if (
-      this.#tilesetManager.defaultTilesetId === null ||
-      chunk.voxelCount === 0
-    ) {
+    if (chunk.voxelCount === 0) {
       return null;
     }
     const startedAt = performance.now();

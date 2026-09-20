@@ -329,8 +329,11 @@ replaces it, which is how a resized source image takes effect. Emits no command.
 Shorthands for `apply()` with `tileset-added`, `tileset-removed` and
 `tileset-resized`. Each returns whether the list changed.
 
-Faces whose tileset has no atlas are skipped by the mesher, so blocks using a
-removed tileset disappear while their voxels stay.
+Blocks using a removed tileset keep their voxels and are drawn with the
+[missing-tileset texture](../tilesets/TilesetManager.md#missing-tileset), a
+red tile with a white cross. A tileset that is declared but has no texture yet
+is different: its blocks are not drawn and do not cull their neighbours until
+`loadTileset()` provides the texture.
 
 #### `save(): VoxelWorldJSON`
 

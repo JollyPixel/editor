@@ -2,6 +2,10 @@
 import type { TilesetTexture } from "./types.ts";
 import { TilesetAtlas } from "./TilesetAtlas.ts";
 import { TilesetList } from "./TilesetList.ts";
+import {
+  createMissingTilesetAtlas,
+  type MissingTilesetAtlas
+} from "./missingTileset.ts";
 
 export interface TilesetManagerOptions {
   tilesets?: TilesetList;
@@ -11,6 +15,7 @@ export class TilesetManager {
   readonly tilesets: TilesetList;
 
   #atlases = new Map<string, TilesetAtlas>();
+  #missing: MissingTilesetAtlas | null = null;
   #version = 0;
 
   constructor(
@@ -82,6 +87,19 @@ export class TilesetManager {
     return id === null ? undefined : this.#atlases.get(id);
   }
 
+  resolve(
+    tilesetId?: string
+  ): TilesetAtlas | MissingTilesetAtlas | undefined {
+    const id = tilesetId ?? this.defaultTilesetId;
+    if (id !== null && this.tilesets.has(id)) {
+      return this.#atlases.get(id);
+    }
+
+    this.#missing ??= createMissingTilesetAtlas();
+
+    return this.#missing;
+  }
+
   atlas(
     tilesetId?: string
   ): TilesetAtlas {
@@ -103,6 +121,8 @@ export class TilesetManager {
       atlas.texture.dispose();
     }
     this.#atlases.clear();
+    this.#missing?.texture.dispose();
+    this.#missing = null;
     this.tilesets.clear();
     this.#version++;
   }

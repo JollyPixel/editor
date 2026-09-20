@@ -1,6 +1,7 @@
 export * from "./types.ts";
 export * from "./loadTilesets.ts";
 export * from "./TilesetAtlas.ts";
+export * from "./missingTileset.ts";
 export * from "./TilesetManager.ts";
 export * from "./TilesetList.ts";
 export * from "./tileSize.ts";
