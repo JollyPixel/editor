@@ -9,6 +9,7 @@ import {
 import {
   boundsOf,
   cellsOf,
+  isBall,
   isBrushAnchor,
   isBrushAxis,
   isBrushPattern,
@@ -42,6 +43,25 @@ function keysOf(
   cells: Iterable<{ x: number; y: number; z: number; }>
 ): string[] {
   return [...cells].map((cell) => `${cell.x},${cell.y},${cell.z}`).sort();
+}
+
+function layersOf(
+  size: number
+): string[][] {
+  const keys = new Set(keysOf(cellsOf(footprint({
+    size,
+    axis: "xyz",
+    pattern: "circle",
+    anchor: "center"
+  }))));
+  const half = Math.floor(size / 2);
+  const range = Array.from({ length: size }, (_, index) => index - half);
+
+  return range.slice(0, Math.ceil(size / 2)).map(
+    (y) => range.map(
+      (z) => range.map((x) => (keys.has(`${x},${y},${z}`) ? "#" : ".")).join("")
+    )
+  );
 }
 
 describe("brushFootprint.boundsOf", () => {
@@ -231,6 +251,86 @@ describe("brushFootprint.cellsOf", () => {
     assert.strictEqual(cells.length, 32);
     assert.strictEqual(Math.min(...cells.map((cell) => cell.y)), 0);
     assert.strictEqual(Math.max(...cells.map((cell) => cell.y)), 3);
+  });
+
+  test("a ball rounds its caps instead of stacking square plates", () => {
+    assert.deepStrictEqual(layersOf(5), [
+      [
+        ".....",
+        "..#..",
+        ".###.",
+        "..#..",
+        "....."
+      ],
+      [
+        "..#..",
+        ".###.",
+        "#####",
+        ".###.",
+        "..#.."
+      ],
+      [
+        ".###.",
+        "#####",
+        "#####",
+        "#####",
+        ".###."
+      ]
+    ]);
+    assert.deepStrictEqual(layersOf(7)[0], [
+      ".......",
+      ".......",
+      "...#...",
+      "..###..",
+      "...#...",
+      ".......",
+      "......."
+    ]);
+  });
+
+  test("a ball spans its full size on every axis", () => {
+    for (let size = 1; size <= 16; size++) {
+      const cells = cellsOf(footprint({
+        size,
+        axis: "xyz",
+        pattern: "circle"
+      }));
+
+      for (const coord of ["x", "y", "z"] as const) {
+        const values = cells.map((cell) => cell[coord]);
+
+        assert.strictEqual(
+          Math.max(...values) - Math.min(...values) + 1,
+          size,
+          `${size} ${coord}`
+        );
+      }
+    }
+  });
+
+  test("a ball is symmetric around its center", () => {
+    for (const size of [6, 9]) {
+      const cells = cellsOf(footprint({
+        size,
+        axis: "xyz",
+        pattern: "circle",
+        anchor: "center"
+      }));
+      const keys = new Set(keysOf(cells));
+      const flip = size % 2 === 0 ? -1 : 0;
+
+      for (const { x, y, z } of cells) {
+        assert.ok(keys.has(`${flip - x},${y},${z}`));
+        assert.ok(keys.has(`${x},${flip - y},${z}`));
+        assert.ok(keys.has(`${x},${y},${flip - z}`));
+      }
+    }
+  });
+
+  test("only an xyz circle is a ball", () => {
+    assert.ok(isBall(footprint({ axis: "xyz", pattern: "circle" })));
+    assert.ok(!isBall(footprint({ axis: "xyz" })));
+    assert.ok(!isBall(footprint({ pattern: "circle" })));
   });
 });
 

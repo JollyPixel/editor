@@ -9,6 +9,7 @@ import type { BrushCursor } from "../model/brushCursor.ts";
 import {
   boundsOf,
   cellsOf,
+  isBall,
   type BrushShape
 } from "../model/brushFootprint.ts";
 import {
@@ -17,6 +18,11 @@ import {
   voxelShell,
   type VoxelShell
 } from "../model/voxelShell.ts";
+import {
+  contourEdges,
+  voxelSolid,
+  type VoxelSolid
+} from "../model/voxelContour.ts";
 import { faceCornersOf } from "../model/cellFace.ts";
 import {
   DEFAULT_BRUSH_STYLE,
@@ -42,12 +48,20 @@ const kOrigin = {
   y: 0,
   z: 0
 };
-const kShells = new Map<string, VoxelShell>();
+const kShells = new Map<string, BrushShell>();
 const kTowardCamera = {
   polygonOffset: true,
   polygonOffsetFactor: -kDepthBias,
   polygonOffsetUnits: -kDepthBias
 };
+
+interface BrushShell {
+  local: VoxelShell;
+  source: VoxelShell;
+  solid: VoxelSolid | null;
+  center: number[];
+  scale: number[];
+}
 
 export interface BrushMeshOptions {
   /**
@@ -86,7 +100,7 @@ export class BrushMesh extends THREE.Group {
   #faced = false;
   #shelled = true;
   #shapeKey = "";
-  #shell: VoxelShell | null = null;
+  #shell: BrushShell | null = null;
   #facingKey = "";
   #eye = new THREE.Vector3();
 
@@ -251,7 +265,9 @@ export class BrushMesh extends THREE.Group {
     }
     this.#shapeKey = key;
 
-    const shell = shellOf(key, shape);
+    const brushShell = shellOf(key, shape);
+    const shell = brushShell.local;
+    const flat = brushShell.solid !== null;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
       "position",
@@ -261,7 +277,7 @@ export class BrushMesh extends THREE.Group {
       "color",
       new THREE.Float32BufferAttribute(
         shell.rims.flatMap(
-          (rim) => [1, 1, 1, rim === 1 ? 1 : kCenterAlpha]
+          (rim) => [1, 1, 1, rim === 1 && !flat ? 1 : kCenterAlpha]
         ),
         4
       )
@@ -269,7 +285,7 @@ export class BrushMesh extends THREE.Group {
     this.#fill.geometry.dispose();
     this.#fill.geometry = geometry;
 
-    this.#shell = shell;
+    this.#shell = brushShell;
     this.#facingKey = "";
     this.#outline(shell.edges);
   }
@@ -297,13 +313,21 @@ export class BrushMesh extends THREE.Group {
     const eye = this.worldToLocal(
       this.#eye.setFromMatrixPosition(camera.matrixWorld)
     ).toArray();
-    const key = facingKey(shell, eye);
+    const key = shell.solid === null ?
+      facingKey(shell.local, eye) :
+      eye.map((value) => value.toFixed(2)).join(":");
     if (key === this.#facingKey) {
       return;
     }
 
     this.#facingKey = key;
-    this.#outline(edgesFacing(shell, eye));
+    if (shell.solid === null) {
+      this.#outline(edgesFacing(shell.local, eye));
+
+      return;
+    }
+
+    this.#outline(contourOf(shell, shell.solid, eye));
   }
 
   #outline(
@@ -386,10 +410,25 @@ function shapeKeyOf(
   return `${shape.size}:${shape.axis}:${shape.pattern}`;
 }
 
+function contourOf(
+  shell: BrushShell,
+  solid: VoxelSolid,
+  eye: number[]
+): number[] {
+  const { center, scale } = shell;
+  const sourceEye = eye.map(
+    (value, index) => (value / scale[index]) + center[index]
+  );
+
+  return contourEdges(shell.source, solid, sourceEye).map(
+    (value, index) => (value - center[index % 3]) * scale[index % 3]
+  );
+}
+
 function shellOf(
   key: string,
   shape: BrushShape
-): VoxelShell {
+): BrushShell {
   const cached = kShells.get(key);
   if (cached !== undefined) {
     return cached;
@@ -400,7 +439,8 @@ function shellOf(
     position: kOrigin
   };
   const { min, span } = boundsOf(footprint);
-  const shell = voxelShell(cellsOf(footprint));
+  const cells = cellsOf(footprint);
+  const shell = voxelShell(cells);
   const center = [
     min.x + (span.x / 2),
     min.y + (span.y / 2),
@@ -429,7 +469,14 @@ function shellOf(
       shell.planes[2].map((plane) => (plane - center[2]) * scale[2])
     ]
   };
-  kShells.set(key, local);
+  const brushShell: BrushShell = {
+    local,
+    source: shell,
+    solid: isBall(shape) ? voxelSolid(cells) : null,
+    center,
+    scale
+  };
+  kShells.set(key, brushShell);
 
-  return local;
+  return brushShell;
 }
