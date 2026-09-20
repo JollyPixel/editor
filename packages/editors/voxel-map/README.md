@@ -83,15 +83,19 @@ change to the world room.
 
 A tileset is a `pixelart` asset. Its definition's `src` holds the asset id;
 an older `src` matching a pixel-art record's source path also resolves. A
-definition that resolves to no asset is unlinked: it is listed but has no
-texture tab and cannot be edited. The definition `id` is an internal key that
+definition that resolves to no asset is unlinked: its name is
+read-only, and when it has no source image to open it keeps a disabled texture
+tab that cannot be painted but can still be edited and removed. The definition `id` is an internal key that
 blocks reference, and the label shown everywhere is the asset's file name.
 
-The Tilesets folder of the Blocks pane lists each tileset with its tile size
-and block count; clicking one opens its texture tab. `+` creates a blank
-pixel-art asset (the server suffixes a taken path) or links an existing one. The manage dialog sets the map's
-default tile size, renames a tileset (a catalog rename), changes its tile size
-and removes it. Removing a tileset keeps its asset and leaves its blocks
+Tilesets are managed from the texture editor's tab strip, which stays visible
+with a single tileset. Each tab shows its block count as a badge, with the tile
+size in its tooltip. `+` after the tabs creates a blank pixel-art asset (the
+server suffixes a taken path) or links an existing one; the tile size chosen
+there becomes the map's default for the next tileset. The edit button of the
+active tab opens a dialog for that tileset alone: it renames it (a catalog
+rename), changes its tile size and removes it. A session without
+`TilesetActions` hides `+` and opens the dialog read-only. Removing a tileset keeps its asset and leaves its blocks
 without texture; the Block Library outlines those blocks in red and lists them
 above the grid.
 
@@ -99,7 +103,7 @@ above the grid.
 with no panel involved: each tileset gets a `TilesetAtlasBridge` over the
 `PixelDocument` leased from the session (a local document offline or for an
 unlinked tileset with a source image). The texture editor shows one tab per
-linked tileset; each tab leases the same document and attaches a canvas and the
+tileset; each tab that can be opened leases the same document and attaches a canvas and the
 presence layers to it. When a peer deletes the asset of an open tab, the tab
 keeps its lease and is labelled `(detached)` until the tileset is removed. Selecting a block activates its tileset's tab. The block editor assigns
 a block to one tileset, keeping its texel position, and sets its UV size, the

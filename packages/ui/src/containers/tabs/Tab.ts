@@ -11,12 +11,18 @@ import {
   property
 } from "lit/decorators.js";
 
+// Import Internal Dependencies
+import type { IconName } from "../../icon/registry.ts";
+
 // CONSTANTS
 const kStripProperties = [
   "label",
   "disabled",
   "closable",
-  "tooltip"
+  "tooltip",
+  "badge",
+  "action",
+  "actionLabel"
 ] as const;
 
 @customElement("jolly-tab")
@@ -51,6 +57,15 @@ export class Tab extends LitElement {
   @property({ type: String })
   declare tooltip: string;
 
+  @property({ type: String })
+  declare badge: string;
+
+  @property({ type: String })
+  declare action: IconName;
+
+  @property({ type: String, attribute: "action-label" })
+  declare actionLabel: string;
+
   constructor() {
     super();
 
@@ -60,6 +75,9 @@ export class Tab extends LitElement {
     this.active = false;
     this.closable = false;
     this.tooltip = "";
+    this.badge = "";
+    this.action = "";
+    this.actionLabel = "";
   }
 
   override connectedCallback(): void {

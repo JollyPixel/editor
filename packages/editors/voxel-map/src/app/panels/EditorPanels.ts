@@ -80,6 +80,9 @@ export class EditorPanels {
     textureEditor.mapDocument = workspace.mapDocument;
     textureEditor.engine = workspace.engine;
     textureEditor.textures = workspace.textures;
+    textureEditor.actions = workspace.tilesetActions;
+    textureEditor.usage = workspace.usage;
+    textureEditor.log = workspace.state.log;
     this.#textureEditor = textureEditor;
 
     layout.addEventListener("jolly-layout-change", this.#place);

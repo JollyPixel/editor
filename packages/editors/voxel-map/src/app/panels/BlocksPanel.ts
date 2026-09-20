@@ -18,7 +18,6 @@ import type {
   BlockLibrary,
   BlockSelectionChangeDetail
 } from "../../features/blocks/BlockLibrary.ts";
-import type { TilesetFolder } from "../../features/tilesets/TilesetFolder.ts";
 
 import "../../features/registerElements.ts";
 
@@ -64,12 +63,6 @@ export class BlocksPanel extends LitElement {
   @query("jolly-folder.library")
   declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
 
-  @query("jolly-folder.tilesets")
-  declare _tilesetsFolder: HTMLElementTagNameMap["jolly-folder"] | null;
-
-  @query("tileset-folder")
-  declare _tilesetFolder: TilesetFolder | null;
-
   @query("block-library")
   declare _blockLibrary: BlockLibrary | null;
 
@@ -109,21 +102,6 @@ export class BlocksPanel extends LitElement {
     await this._blockLibrary?.editBlock();
   };
 
-  readonly #addTileset = async(): Promise<void> => {
-    this.#openTilesetsFolder();
-    await this._tilesetFolder?.addTileset();
-  };
-
-  readonly #manageTilesets = async(): Promise<void> => {
-    await this._tilesetFolder?.manageTilesets();
-  };
-
-  #openTilesetsFolder(): void {
-    if (this._tilesetsFolder !== null && !this._tilesetsFolder.open) {
-      this._tilesetsFolder.open = true;
-    }
-  }
-
   #openFolder(): void {
     if (this._folder !== null && !this._folder.open) {
       this._folder.open = true;
@@ -136,43 +114,7 @@ export class BlocksPanel extends LitElement {
       return html`<slot></slot>`;
     }
 
-    const editable = workspace.tilesetActions !== null;
-
     return html`
-      <jolly-folder
-        class="tilesets"
-        flush
-        key="tilesets"
-        label="Tilesets"
-        storage-key="voxel-map:folder:tilesets"
-      >
-        <jolly-button
-          slot="actions"
-          icon="plus"
-          icon-only
-          label="Add tileset"
-          title="Add tileset"
-          ?disabled=${!editable}
-          @click=${this.#addTileset}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="sliders"
-          icon-only
-          label="Manage tilesets"
-          title="Manage tilesets"
-          @click=${this.#manageTilesets}
-        ></jolly-button>
-        <tileset-folder
-          .engine=${workspace.engine}
-          .actions=${workspace.tilesetActions}
-          .tilesets=${workspace.state.tilesets}
-          .mapDocument=${workspace.mapDocument}
-          .usage=${workspace.usage}
-          .log=${workspace.state.log}
-        ></tileset-folder>
-      </jolly-folder>
-
       <jolly-folder
         class="library"
         flush

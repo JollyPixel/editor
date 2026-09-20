@@ -120,9 +120,16 @@ export const panelStyles = css`
   .texture-tabs {
     flex: 0 0 auto;
     min-width: 0;
-    background: var(--color-bg-surface);
     font-size: 12px;
     user-select: none;
+  }
+
+  .texture-tabs:not([variant="skew"]) {
+    background: var(--color-bg-surface);
+  }
+
+  .texture-tabs::part(tab) {
+    min-height: calc(var(--jolly-control-height, 20px) + 8px);
   }
 
   .texture-tabs::part(list) {

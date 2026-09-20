@@ -12,8 +12,11 @@ export type {
   TextureChangeDetail,
   TextureChangeSource,
   TextureCloseRequestDetail,
+  TextureEditRequestDetail,
   TextureImportOrigin,
-  TextureImportPolicy
+  TextureImportPolicy,
+  TextureTabsMode,
+  TextureUpdate
 } from "./textures/textures.ts";
 export type { UvAccess } from "./uv/UvAccessPolicy.ts";
 export type {

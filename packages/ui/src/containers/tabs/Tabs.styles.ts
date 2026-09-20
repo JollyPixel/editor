@@ -22,14 +22,29 @@ export const tabsStyles = css`
     flex-direction: row;
   }
 
+  .strip {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    align-items: stretch;
+  }
+
   .list {
     display: flex;
-    flex: 0 0 auto;
+    min-width: 0;
+    flex: 0 1 auto;
     gap: 1px;
   }
 
+  :host([orientation="vertical"]) .strip,
   :host([orientation="vertical"]) .list {
     flex-direction: column;
+  }
+
+  slot[name="list-end"] {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
   }
 
   .item {
@@ -116,14 +131,66 @@ export const tabsStyles = css`
   }
 
   .label {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: var(--jolly-space-1, 4px);
+  }
+
+  .text {
     ${truncate}
 
     min-width: 0;
-    flex: 1 1 auto;
   }
 
-  :host(:not([orientation="vertical"])) .item[data-closable] .label {
+  .badge {
+    flex: 0 0 auto;
+    min-width: 1ch;
+    padding: 0 4px;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-tab-badge-bg, ${kFallback.tabBadgeBg});
+    color: var(--jolly-tab-badge-fg, ${kFallback.tabBadgeFg});
+    font-size: 0.85em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+  }
+
+  :host(:not([orientation="vertical"])) .item[data-closable] .label,
+  :host(:not([orientation="vertical"])) .item[data-action] .label {
     padding-inline-end: var(--jolly-space-1, 4px);
+  }
+
+  .action {
+    display: inline-grid;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    padding: 0;
+    border-radius: var(--jolly-radius-sm, 2px);
+    margin: auto var(--jolly-space-1, 4px) auto 0;
+    place-items: center;
+    color: inherit;
+    opacity: 0.9;
+    transition:
+      background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease),
+      opacity var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+  }
+
+  .item:not([data-selected], [data-disabled]) .action {
+    display: none;
+  }
+
+  .action jolly-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .action:hover {
+    background: var(--jolly-tab-bg-hover, ${kFallback.controlBg});
+    opacity: 1;
   }
 
   .close {
@@ -152,6 +219,65 @@ export const tabsStyles = css`
     background: var(--jolly-tab-close-bg-hover, ${kFallback.tabCloseBgHover});
     color: var(--jolly-tab-close-fg-hover, ${kFallback.inkDanger});
     opacity: 1;
+  }
+
+  :host([variant="skew"]) {
+    --jolly-tab-skew: 8px;
+    --jolly-tab-skew-seam: 2px;
+    --jolly-tab-skew-fill: var(--jolly-control-bg, ${kFallback.controlBg});
+    --jolly-tab-skew-fill-hover: var(--jolly-control-bg-hover, ${kFallback.controlBg});
+  }
+
+  :host([variant="skew"]) .list {
+    gap: 0;
+  }
+
+  :host([variant="skew"]) .item,
+  :host([variant="skew"]) ::slotted([slot="list-end"]) {
+    min-height: calc(var(--jolly-control-height, 20px) + 8px);
+    box-sizing: border-box;
+    padding-inline: var(--jolly-tab-skew);
+    border-radius: 0;
+    background: var(--jolly-tab-skew-fill);
+    clip-path: polygon(
+      var(--jolly-tab-skew) 0,
+      100% 0,
+      calc(100% - var(--jolly-tab-skew)) 100%,
+      0 100%
+    );
+  }
+
+  :host([variant="skew"]) .item + .item,
+  :host([variant="skew"]) ::slotted([slot="list-end"]) {
+    margin-inline-start: calc(
+      var(--jolly-tab-skew-seam) - var(--jolly-tab-skew)
+    );
+  }
+
+  :host([variant="skew"]) .item:hover:not([data-disabled]),
+  :host([variant="skew"]) ::slotted([slot="list-end"]:hover) {
+    background: var(--jolly-tab-skew-fill-hover);
+  }
+
+  :host([variant="skew"]) .item[data-selected] {
+    background: var(--jolly-tab-selected-bg, ${kFallback.folderHeaderBg});
+  }
+
+  :host([variant="skew"]) .item[data-selected]:hover {
+    background: var(--jolly-tab-selected-bg-hover, ${kFallback.folderHeaderBgHover});
+  }
+
+  :host([variant="skew"]) slot[name="list-end"] {
+    align-items: stretch;
+  }
+
+  :host([variant="skew"]) ::slotted([slot="list-end"]) {
+    display: inline-flex;
+    align-items: center;
+
+    --jolly-control-bg: transparent;
+    --jolly-control-bg-hover: transparent;
+    --jolly-control-bg-active: transparent;
   }
 
   .panels {

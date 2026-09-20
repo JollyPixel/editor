@@ -30,6 +30,7 @@ export type IconName =
   | "import"
   | "export"
   | "add"
+  | "edit"
   | "cube"
   | "triangle"
   | "trash"
@@ -524,6 +525,22 @@ registerIcon("triangle", svg`
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linejoin="round"
+    />
+  `);
+
+registerIcon("edit", svg`
+    <path
+      d="M4 20l1-4.5L15.8 4.7a1.6 1.6 0 0 1 2.3 0l1.2 1.2a1.6 1.6 0 0 1 0 2.3L8.5 19 4 20Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M13.5 7l3.5 3.5"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linecap="round"
     />
   `);
 

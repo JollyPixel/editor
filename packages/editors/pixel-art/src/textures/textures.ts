@@ -8,10 +8,49 @@ export type TextureImportPolicy = "replace" | "add" | "ask";
 
 export type TextureImportOrigin = "import" | "drop";
 
+export type TextureTabsMode = "auto" | "always";
+
 export interface PixelDrawTextureOptions extends PixelArtCanvasOptions {
+  /**
+   * Unique key of the texture inside the panel, reported by every texture event.
+   */
   id: string;
+  /**
+   * Label of the texture tab.
+   */
   name: string;
+  /**
+   * Native tooltip of the texture tab.
+   * @default ""
+   */
   tooltip?: string;
+  /**
+   * Short chip rendered after the tab label, such as a usage count.
+   * The panel gives it no meaning.
+   * @default ""
+   */
+  badge?: string;
+  /**
+   * A disabled texture keeps its tab but can never become the active one.
+   * Its edit button stays usable.
+   * @default false
+   */
+  disabled?: boolean;
+}
+
+export interface TextureUpdate {
+  /**
+   * New tab label. Left unchanged when omitted.
+   */
+  name?: string;
+  /**
+   * New tab tooltip. Left unchanged when omitted.
+   */
+  tooltip?: string;
+  /**
+   * New tab badge, an empty string removes it. Left unchanged when omitted.
+   */
+  badge?: string;
 }
 
 export interface PixelDrawInitializeOptions extends PixelArtCanvasOptions {
@@ -40,6 +79,16 @@ export interface AddTextureOptions {
 
 export interface TextureCloseRequestDetail {
   id: string;
+}
+
+export interface TextureEditRequestDetail {
+  id: string;
+}
+
+export function isTextureTabsMode(
+  value: string
+): value is TextureTabsMode {
+  return value === "auto" || value === "always";
 }
 
 export function isTextureImportPolicy(
@@ -79,12 +128,14 @@ export function nextActiveTextureId(
 
 export function textureCanvasOptions(
   base: PixelArtCanvasOptions,
-  texture: PixelDrawTextureOptions | PixelDrawInitializeOptions
+  texture: Partial<PixelDrawTextureOptions>
 ): PixelArtCanvasOptions {
   const {
     id: _id,
     name: _name,
     tooltip: _tooltip,
+    badge: _badge,
+    disabled: _disabled,
     ...overrides
   } = texture;
 

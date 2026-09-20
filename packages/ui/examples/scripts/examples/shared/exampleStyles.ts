@@ -292,7 +292,8 @@ export const exampleStyles = css`
     inset-block-end: var(--jolly-space-3);
   }
 
-  .tree-demo {
+  .tree-demo,
+  .tabs-demo {
     display: flex;
     align-items: flex-start;
     gap: var(--jolly-space-4);
@@ -308,7 +309,13 @@ export const exampleStyles = css`
     background: var(--jolly-surface-sunken);
   }
 
-  .tree-demo-options {
+  .tabs-demo jolly-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .tree-demo-options,
+  .tabs-demo-options {
     --jolly-label-max-width: none;
 
     display: grid;
@@ -320,7 +327,8 @@ export const exampleStyles = css`
     background: var(--jolly-surface-sunken);
   }
 
-  .tree-demo-options h3 {
+  .tree-demo-options h3,
+  .tabs-demo-options h3 {
     margin: 0;
     font-size: 0.9em;
     color: var(--jolly-text-muted);

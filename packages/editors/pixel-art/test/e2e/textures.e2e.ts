@@ -291,4 +291,74 @@ test.describe("texture API", () => {
 
     expect(await userSource).toBe("user");
   });
+
+  test("texture-tabs always shows the strip for a single texture, with its badge", async({ panel }) => {
+    await expect(panel.locator("jolly-tabs")).toHaveCount(0);
+
+    await panel.evaluate((element: PixelDrawPanel) => {
+      element.textureTabs = "always";
+      element.updateTexture(element.activeTextureId!, { badge: "3" });
+    });
+
+    const tab = panel.getByRole("tab");
+    await expect(tab).toHaveCount(1);
+    await expect(tab.locator("[part~=badge]")).toHaveText("3");
+
+    await panel.evaluate((element: PixelDrawPanel) => {
+      element.updateTexture(element.activeTextureId!, { badge: "" });
+    });
+    await expect(tab.locator("[part~=badge]")).toHaveCount(0);
+  });
+
+  test("the add and edit buttons only raise their request events", async({ panel }) => {
+    await panel.evaluate((element: PixelDrawPanel) => {
+      element.textureTabs = "always";
+      element.texturesAddable = true;
+      element.texturesEditable = true;
+      element.addEventListener("texture-create-request", () => {
+        element.dataset.created = "yes";
+      });
+      element.addEventListener("texture-edit-request", (event) => {
+        element.dataset.edited = event.detail.id;
+      });
+    });
+    const before = await panelState(panel);
+
+    await panel.getByRole("button", { name: "Add texture" }).click();
+    await expect(panel).toHaveAttribute("data-created", "yes");
+
+    await panel.getByRole("button", { name: /^Edit / }).click();
+    await expect(panel).toHaveAttribute("data-edited", before.activeTextureId!);
+    expect(await panelState(panel)).toMatchObject({
+      activeTextureId: before.activeTextureId,
+      textureIds: before.textureIds
+    });
+  });
+
+  test("a disabled texture keeps a tab and its edit button but never activates", async({ panel }) => {
+    const result = await panel.evaluate((element: PixelDrawPanel) => {
+      element.texturesEditable = true;
+      element.addEventListener("texture-edit-request", (event) => {
+        element.dataset.edited = event.detail.id;
+      });
+      const firstId = element.activeTextureId;
+      element.addTexture({
+        id: "unlinked",
+        name: "Unlinked",
+        disabled: true
+      });
+      element.activeTextureId = "unlinked";
+
+      return {
+        firstId,
+        activeId: element.activeTextureId
+      };
+    });
+    expect(result.activeId).toBe(result.firstId);
+
+    await expect(panel.getByRole("tab", { name: "Unlinked" })).toBeDisabled();
+    await panel.getByRole("button", { name: "Edit Unlinked" }).click();
+    await expect(panel).toHaveAttribute("data-edited", "unlinked");
+    expect((await panelState(panel)).activeTextureId).toBe(result.firstId);
+  });
 });

@@ -25,6 +25,8 @@ let kTabsId = 0;
 
 export type TabsOrientation = "horizontal" | "vertical";
 
+export type TabsVariant = "default" | "skew";
+
 @customElement("jolly-tabs")
 export class Tabs extends LitElement {
   static override styles = [
@@ -37,10 +39,13 @@ export class Tabs extends LitElement {
   @property({ type: String, reflect: true })
   declare orientation: TabsOrientation;
 
+  @property({ type: String, reflect: true })
+  declare variant: TabsVariant;
+
   @state()
   declare _tabs: Tab[];
 
-  @query("slot")
+  @query("slot:not([name])")
   declare _slot: HTMLSlotElement;
 
   #generatedId: string;
@@ -50,59 +55,88 @@ export class Tabs extends LitElement {
 
     this.value = "";
     this.orientation = "horizontal";
+    this.variant = "default";
     this._tabs = [];
     this.#generatedId = `jolly-tabs-${++kTabsId}`;
   }
 
   override render(): TemplateResult {
     return html`
-      <div
-        class="list"
-        part="list"
-        role="tablist"
-        aria-orientation=${this.orientation}
-        @keydown=${this.#onKeyDown}
-      >
-        ${this._tabs.map((tab, index) => html`
-          <div
-            class="item"
-            part=${tab.value === this.value ? "tab tab-selected" : "tab"}
-            ?data-closable=${tab.closable}
-            ?data-disabled=${tab.disabled}
-            ?data-selected=${tab.value === this.value}
-          >
-            <button
-              id=${this.#buttonId(index)}
-              class="label"
-              type="button"
-              role="tab"
-              aria-controls=${this.#panelId(index)}
-              aria-selected=${String(tab.value === this.value)}
-              tabindex=${tab.value === this.value ? "0" : "-1"}
-              ?disabled=${tab.disabled}
-              title=${tab.tooltip || nothing}
-              data-index=${index}
-              @click=${this.#onSelect}
-              @mousedown=${this.#onMouseDown}
-              @auxclick=${this.#onAuxClick}
-            >${tab.label}</button>
-            ${tab.closable ? html`
-              <button
-                class="close"
-                part=${tab.value === this.value ? "close close-selected" : "close"}
-                type="button"
-                tabindex="-1"
-                aria-label=${`Close ${tab.label}`}
-                ?disabled=${tab.disabled}
-                data-index=${index}
-                @click=${this.#onCloseClick}
-              ><jolly-icon name="close" aria-hidden="true"></jolly-icon></button>
-            ` : nothing}
-          </div>
-        `)}
+      <div class="strip" part="strip">
+        <div
+          class="list"
+          part="list"
+          role="tablist"
+          aria-orientation=${this.orientation}
+          @keydown=${this.#onKeyDown}
+        >
+          ${this._tabs.map((tab, index) => this.#renderItem(tab, index))}
+        </div>
+        <slot name="list-end"></slot>
       </div>
       <div class="panels">
         <slot @slotchange=${this.#onSlotChange}></slot>
+      </div>
+    `;
+  }
+
+  #renderItem(
+    tab: Tab,
+    index: number
+  ): TemplateResult {
+    const selected = tab.value === this.value;
+
+    return html`
+      <div
+        class="item"
+        part=${selected ? "tab tab-selected" : "tab"}
+        ?data-closable=${tab.closable}
+        ?data-action=${tab.action !== ""}
+        ?data-disabled=${tab.disabled}
+        ?data-selected=${selected}
+      >
+        <button
+          id=${this.#buttonId(index)}
+          class="label"
+          type="button"
+          role="tab"
+          aria-controls=${this.#panelId(index)}
+          aria-selected=${String(selected)}
+          tabindex=${selected ? "0" : "-1"}
+          ?disabled=${tab.disabled}
+          title=${tab.tooltip || nothing}
+          data-index=${index}
+          @click=${this.#onSelect}
+          @mousedown=${this.#onMouseDown}
+          @auxclick=${this.#onAuxClick}
+        ><span class="text">${tab.label}</span>${tab.badge === "" ?
+          nothing :
+          html`<span class="badge" part="badge">${tab.badge}</span>`
+        }</button>
+        ${tab.action === "" ? nothing : html`
+          <button
+            class="action"
+            part=${selected ? "action action-selected" : "action"}
+            type="button"
+            tabindex="-1"
+            aria-label=${`${tab.actionLabel || tab.action} ${tab.label}`}
+            title=${tab.actionLabel || nothing}
+            data-index=${index}
+            @click=${this.#onActionClick}
+          ><jolly-icon name=${tab.action} aria-hidden="true"></jolly-icon></button>
+        `}
+        ${tab.closable ? html`
+          <button
+            class="close"
+            part=${selected ? "close close-selected" : "close"}
+            type="button"
+            tabindex="-1"
+            aria-label=${`Close ${tab.label}`}
+            ?disabled=${tab.disabled}
+            data-index=${index}
+            @click=${this.#onCloseClick}
+          ><jolly-icon name="close" aria-hidden="true"></jolly-icon></button>
+        ` : nothing}
       </div>
     `;
   }
@@ -210,6 +244,24 @@ export class Tabs extends LitElement {
     const index = this.#closableIndex(event);
     if (index !== -1) {
       this.#requestClose(index);
+    }
+  };
+
+  #onActionClick = (
+    event: MouseEvent
+  ) => {
+    event.stopPropagation();
+    if (!isButtonElement(event.currentTarget)) {
+      return;
+    }
+
+    const tab = this._tabs[Number(event.currentTarget.dataset.index)];
+    if (tab !== undefined && tab.action !== "") {
+      emitContainerEvent(
+        this,
+        "jolly-tab-action",
+        { value: tab.value }
+      );
     }
   };
 

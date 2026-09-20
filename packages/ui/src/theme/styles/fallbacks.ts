@@ -25,6 +25,10 @@ export const kFallback = {
   paneHeaderBg: unsafeCSS("#2f6fd8"),
   /** --jolly-tab-close-bg-hover */
   tabCloseBgHover: unsafeCSS("rgb(221 68 51 / 0.22)"),
+  /** --jolly-tab-badge-bg */
+  tabBadgeBg: unsafeCSS("oklch(70% 0.125 75deg / 0.24)"),
+  /** --jolly-warning-500 */
+  tabBadgeFg: unsafeCSS("oklch(70% 0.125 75deg)"),
   /** --jolly-danger-500 */
   inkDanger: unsafeCSS("oklch(58% 0.190 26.4)"),
   /** --jolly-neutral-500 */

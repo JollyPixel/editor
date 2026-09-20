@@ -10,7 +10,8 @@ import {
 // Import Internal Dependencies
 import {
   nextActiveTextureId,
-  type PixelDrawTextureOptions
+  type PixelDrawTextureOptions,
+  type TextureUpdate
 } from "./textures.ts";
 import { ToolSettings } from "../tools/ToolSettings.ts";
 
@@ -27,7 +28,9 @@ const kUvRefreshEvents = [
 export interface TextureEntry {
   readonly id: string;
   name: string;
-  readonly tooltip: string;
+  tooltip: string;
+  badge: string;
+  readonly disabled: boolean;
   readonly host: HTMLDivElement;
   readonly canvas: PixelArtCanvas;
 }
@@ -97,7 +100,14 @@ export class TextureSet {
     options: PixelDrawTextureOptions,
     activate = true
   ): TextureEntry {
-    const { id, name, tooltip = "", ...canvasOptions } = options;
+    const {
+      id,
+      name,
+      tooltip = "",
+      badge = "",
+      disabled = false,
+      ...canvasOptions
+    } = options;
     if (this.#entries.has(id)) {
       throw new Error(`PixelDrawPanel: texture "${id}" already exists`);
     }
@@ -125,25 +135,38 @@ export class TextureSet {
       id,
       name,
       tooltip,
+      badge,
+      disabled,
       host,
       canvas
     };
     this.#entries.set(id, entry);
-    if (activate || this.#active === null) {
+    if (!disabled && (activate || this.#active === null)) {
       this.activate(entry);
     }
     else {
-      this.#show(this.#active.host);
+      this.#show(this.#active?.host ?? null);
       this.#host.requestUpdate();
     }
 
     return entry;
   }
 
+  update(
+    id: string,
+    changes: TextureUpdate
+  ): void {
+    const entry = this.get(id);
+    entry.name = changes.name ?? entry.name;
+    entry.tooltip = changes.tooltip ?? entry.tooltip;
+    entry.badge = changes.badge ?? entry.badge;
+    this.#host.requestUpdate();
+  }
+
   activate(
     entry: TextureEntry
   ): void {
-    if (entry === this.#active) {
+    if (entry === this.#active || entry.disabled) {
       return;
     }
 
@@ -163,12 +186,15 @@ export class TextureSet {
     id: string
   ): TextureEntry | null {
     const entry = this.get(id);
-    if (this.#entries.size === 1) {
+    if (this.#entries.size === 1 && !entry.disabled) {
       throw new Error(`PixelDrawPanel: cannot remove "${id}", the last texture`);
     }
 
+    const candidates = [...this.#entries.values()]
+      .filter((candidate) => candidate === entry || !candidate.disabled)
+      .map((candidate) => candidate.id);
     const nextId = nextActiveTextureId(
-      [...this.#entries.keys()],
+      candidates,
       id,
       this.#active?.id ?? null
     );
@@ -179,6 +205,9 @@ export class TextureSet {
       null;
     if (next !== null) {
       this.activate(next);
+    }
+    else if (entry === this.#active) {
+      this.#deactivate();
     }
 
     this.#destroy(entry);
@@ -244,12 +273,14 @@ export class TextureSet {
   }
 
   #show(
-    visible: HTMLDivElement
+    visible: HTMLDivElement | null
   ): void {
     for (const { host } of this.#entries.values()) {
       host.hidden = host !== visible;
     }
-    visible.hidden = false;
+    if (visible !== null) {
+      visible.hidden = false;
+    }
   }
 
   #subscribe(
