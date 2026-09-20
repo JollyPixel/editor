@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   expect,
+  type Locator,
   type Page
 } from "@playwright/test";
 
@@ -18,13 +19,22 @@ export interface AddNodeOptions {
   asChild?: boolean;
 }
 
+export function hierarchyAction(
+  page: Page,
+  name: string
+): Locator {
+  return page
+    .locator(`jolly-model-editor-hierarchy jolly-button[label="${name}"]`)
+    .getByRole("button");
+}
+
 export async function addNode(
   page: Page,
   kind: NodeKind,
   name: string,
   options: AddNodeOptions = {}
 ): Promise<void> {
-  await page.getByRole("button", { name: `Add ${kind}` }).click();
+  await hierarchyAction(page, `Add ${kind}`).click();
   const form = dialog(page, `New ${kind}`);
   await textField(form, `${kind} name`).fill(name);
   if (options.asChild === false) {

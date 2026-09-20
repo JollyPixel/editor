@@ -7,7 +7,10 @@ import type { GroupTransformJSON } from "@jolly-pixel/asset.voxel-model/network/
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { ModelBlocks } from "../model/index.ts";
+import {
+  parseGroupTransformJSON,
+  type ModelBlocks
+} from "../model/index.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
 import type { VoxelModelRoom } from "./types.ts";
 
@@ -148,14 +151,16 @@ function decodeLivePayload(
     return undefined;
   }
 
-  const uuid = Reflect.get(value, "uuid");
-  const transform = Reflect.get(value, "transform");
-  if (typeof uuid !== "string" || typeof transform !== "object" || transform === null) {
+  const uuid: unknown = Reflect.get(value, "uuid");
+  const transform = parseGroupTransformJSON(
+    Reflect.get(value, "transform")
+  );
+  if (typeof uuid !== "string" || transform === undefined) {
     return undefined;
   }
 
   return {
     uuid,
-    transform: transform as GroupTransformJSON
+    transform
   };
 }

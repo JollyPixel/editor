@@ -87,7 +87,7 @@ test("a block dragged by a peer is locked and follows the drag live", async({ pa
 
     await expect(x).toBeDisabled();
     await expect.poll(
-      async() => (await blockSummary(page, "Block"))!.position.x
+      async() => (await blockSummary(page, "Block"))?.position.x
     ).toBeGreaterThan(0.1);
 
     await peer.mouse.up();

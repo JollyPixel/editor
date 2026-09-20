@@ -4,12 +4,9 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Emitter } from "@openally/emitt";
 import {
   DEFAULT_UV_SLOTS,
-  UVMap,
-  type PixelDocument,
-  type PixelDocumentEvent
+  PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -40,14 +37,9 @@ const kTorsoSnapshot = {
 };
 
 function createPixels(): PixelDocument {
-  const events = new Emitter<PixelDocumentEvent>();
-  const canvas = document.createElement("canvas");
-
-  return Object.assign(events, {
-    uv: new UVMap({ getCanvasSize: () => kTextureSize }),
-    size: () => kTextureSize,
-    buffer: { canvas: () => canvas }
-  }) as unknown as PixelDocument;
+  return new PixelDocument({
+    size: kTextureSize
+  });
 }
 
 function createHarness(
@@ -131,7 +123,9 @@ describe("BlockTextures region binding", () => {
       }
     });
 
-    assert.deepEqual(uvOf(document.blocks.get("late")!, 1), [48 / kTextureSize.x, 1]);
+    const block = document.blocks.get("late");
+    assert.ok(block);
+    assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
   });
 
   test("honors flipAxes already recorded on first mapping", () => {
@@ -311,7 +305,8 @@ describe("BlockTextures missing regions", () => {
 
     assert.equal(uv.get(kTorsoRegionId)?.name, "Torso");
 
-    const block = document.blocks.get("torso")!;
+    const block = document.blocks.get("torso");
+    assert.ok(block);
     uv.move(kTorsoRegionId, { x: 0, y: 0, width: 48, height: 32 });
     const [u, v] = uvOf(block, 1);
     uv.move(kTorsoRegionId, { x: 64, y: 0, width: 48, height: 32 });
@@ -342,12 +337,13 @@ describe("BlockTextures rename", () => {
     const block = blocks.add({ name: "Torso" });
     textures.create(block.uuid, block.name);
     uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
-    const before = uv.get(regionIdOf(block))!.toJSON();
+    const before = uv.get(regionIdOf(block))?.toJSON();
+    assert.ok(before);
 
     blocks.rename(block.uuid, "Chest");
 
     assert.deepEqual(
-      uv.get(regionIdOf(block))!.toJSON(),
+      uv.get(regionIdOf(block))?.toJSON(),
       { ...before, name: "Chest" }
     );
   });
@@ -376,7 +372,7 @@ describe("BlockTextures rename", () => {
     });
 
     assert.equal(block.name, "Chest");
-    assert.equal(uv.get(regionIdOf(block))!.name, "Torso");
+    assert.equal(uv.get(regionIdOf(block))?.name, "Torso");
   });
 });
 

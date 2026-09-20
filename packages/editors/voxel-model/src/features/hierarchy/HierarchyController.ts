@@ -28,9 +28,18 @@ import {
   collectExpandableIds,
   toTreeNodes
 } from "./hierarchyTreeNodes.ts";
-import { promptName } from "./dialogs/promptName.ts";
-import { promptDuplicate } from "./dialogs/promptDuplicate.ts";
-import { promptDelete } from "./dialogs/promptDelete.ts";
+import type {
+  HierarchyNameContext,
+  HierarchyNameResult
+} from "./dialogs/HierarchyNameDialog.ts";
+import type {
+  HierarchyDuplicateContext,
+  HierarchyDuplicateResult
+} from "./dialogs/HierarchyDuplicateDialog.ts";
+import type {
+  HierarchyDeleteContext,
+  HierarchyDeleteResult
+} from "./dialogs/HierarchyDeleteDialog.ts";
 
 export interface HierarchyWorkspace {
   document: ModelDocument;
@@ -38,8 +47,21 @@ export interface HierarchyWorkspace {
   presence: PresenceStore;
 }
 
+export interface HierarchyDialogs {
+  promptName(
+    context: HierarchyNameContext
+  ): Promise<HierarchyNameResult | null>;
+  promptDuplicate(
+    context: HierarchyDuplicateContext
+  ): Promise<HierarchyDuplicateResult | null>;
+  promptDelete(
+    context: HierarchyDeleteContext
+  ): Promise<HierarchyDeleteResult | null>;
+}
+
 export class HierarchyController implements ReactiveController {
   #host: ReactiveControllerHost;
+  #dialogs: HierarchyDialogs;
   #workspace: HierarchyWorkspace | null = null;
   #subscriptions: Array<() => void> = [];
   #nodes: TreeNode[] = [];
@@ -74,9 +96,11 @@ export class HierarchyController implements ReactiveController {
   };
 
   constructor(
-    host: ReactiveControllerHost
+    host: ReactiveControllerHost,
+    dialogs: HierarchyDialogs
   ) {
     this.#host = host;
+    this.#dialogs = dialogs;
     host.addController(this);
   }
 
@@ -120,7 +144,9 @@ export class HierarchyController implements ReactiveController {
     const blocks = this.#workspace?.document.blocks;
     const uuid = selected[0];
 
-    blocks?.select(uuid === undefined ? null : blocks.get(uuid) ?? null);
+    blocks?.select(
+      uuid === undefined ? null : blocks.get(uuid) ?? null
+    );
     this.#selected = selected;
     this.#host.requestUpdate();
   };
@@ -138,7 +164,10 @@ export class HierarchyController implements ReactiveController {
   readonly handleRename = (
     event: CustomEvent<JollyRenameDetail>
   ): void => {
-    this.#workspace?.hierarchy.rename(event.detail.id, event.detail.name);
+    this.#workspace?.hierarchy.rename(
+      event.detail.id,
+      event.detail.name
+    );
   };
 
   readonly handleReparent = (
@@ -157,7 +186,10 @@ export class HierarchyController implements ReactiveController {
     }
 
     for (const movedId of movedIds) {
-      hierarchy.move(movedId, findParentId(nextNodes, movedId) ?? null);
+      hierarchy.move(
+        movedId,
+        findParentId(nextNodes, movedId) ?? null
+      );
     }
 
     if (where === "inside") {
@@ -168,7 +200,7 @@ export class HierarchyController implements ReactiveController {
 
   readonly addBlock = async(): Promise<void> => {
     const parentId = this.#selected[0] ?? null;
-    const result = await promptName({
+    const result = await this.#dialogs.promptName({
       heading: "New Block",
       fieldLabel: "Block name",
       defaultName: "Block",
@@ -184,7 +216,7 @@ export class HierarchyController implements ReactiveController {
 
   readonly addFolder = async(): Promise<void> => {
     const parentId = this.#selected[0] ?? null;
-    const result = await promptName({
+    const result = await this.#dialogs.promptName({
       heading: "New Folder",
       fieldLabel: "Folder name",
       defaultName: "Folder",
@@ -205,13 +237,18 @@ export class HierarchyController implements ReactiveController {
     }
 
     const hasChildren = source.children.length > 0;
-    const result = await promptDuplicate({ hasChildren });
+    const result = await this.#dialogs.promptDuplicate({
+      hasChildren
+    });
     const workspace = this.#workspace;
     if (result === null || workspace === null) {
       return;
     }
 
-    const duplicateId = workspace.hierarchy.duplicate(source.id, result);
+    const duplicateId = workspace.hierarchy.duplicate(
+      source.id,
+      result
+    );
     if (duplicateId === null) {
       return;
     }
@@ -219,7 +256,9 @@ export class HierarchyController implements ReactiveController {
     if (result.includeChildren && hasChildren) {
       this.#expand(duplicateId);
     }
-    workspace.document.blocks.select(workspace.document.blocks.get(duplicateId) ?? null);
+    workspace.document.blocks.select(
+      workspace.document.blocks.get(duplicateId) ?? null
+    );
     this.#selected = [duplicateId];
     this.#host.requestUpdate();
   };
@@ -230,8 +269,10 @@ export class HierarchyController implements ReactiveController {
       return;
     }
 
-    const result = await promptDelete({
-      heading: source.kind === "folder" ? "Delete Folder" : "Delete Block",
+    const result = await this.#dialogs.promptDelete({
+      heading: source.kind === "folder"
+        ? "Delete Folder"
+        : "Delete Block",
       hasChildren: source.children.length > 0
     });
     const workspace = this.#workspace;
@@ -239,22 +280,34 @@ export class HierarchyController implements ReactiveController {
       return;
     }
 
-    workspace.hierarchy.remove(source.id, { withChildren: result.deleteChildren });
+    workspace.hierarchy.remove(
+      source.id,
+      { withChildren: result.deleteChildren }
+    );
     workspace.document.blocks.select(null);
   };
 
   #selectedHierarchyNode(): HierarchyNode | null {
     const sourceId = this.#selected[0];
-    if (sourceId === undefined || this.#workspace === null) {
+    if (
+      sourceId === undefined ||
+      this.#workspace === null
+    ) {
       return null;
     }
 
-    return findHierarchyNode(this.#workspace.hierarchy.nodes(), sourceId);
+    return findHierarchyNode(
+      this.#workspace.hierarchy.nodes(),
+      sourceId
+    );
   }
 
   #subscribe(): void {
     const workspace = this.#workspace;
-    if (workspace === null || this.#subscriptions.length > 0) {
+    if (
+      workspace === null ||
+      this.#subscriptions.length > 0
+    ) {
       return;
     }
 
@@ -266,7 +319,10 @@ export class HierarchyController implements ReactiveController {
       () => document.off("change", this.#onChange),
       () => document.off("reset", this.#onReset),
       () => document.blocks.off("select", this.#onSelect),
-      presence.subscribe("blockSelectionsChange", this.#onPeerSelections)
+      presence.subscribe(
+        "blockSelectionsChange",
+        this.#onPeerSelections
+      )
     ];
   }
 

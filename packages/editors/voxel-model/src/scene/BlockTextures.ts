@@ -291,7 +291,9 @@ export class BlockTextures implements BlockRegions {
 
     this.#unbind(block.uuid);
 
-    const axes = this.#document.blocks.flipAxesOf(block.uuid);
+    const axes = this.#document.blocks.flipAxesOf(
+      block.uuid
+    );
     resetBoxUv(block, axes);
 
     const binding = new UVGeometryBinding({
@@ -348,7 +350,9 @@ function boxFaceRanges(
   axes: MirrorAxes | undefined
 ): FaceRanges {
   return Object.fromEntries(DEFAULT_UV_SLOTS.map((slot) => {
-    const vertexSlot = isSwapped(slot, axes) ? kSlotOpposite[slot] : slot;
+    const vertexSlot = isSwapped(slot, axes)
+      ? kSlotOpposite[slot]
+      : slot;
 
     return [
       slot,

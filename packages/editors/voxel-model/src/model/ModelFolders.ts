@@ -6,6 +6,9 @@ import type {
   FolderPlacementJSON
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
+// Import Internal Dependencies
+import { unhandledCommand } from "./unhandledCommand.ts";
+
 export interface FolderRecord {
   name: string;
   parentId: string | null;
@@ -49,8 +52,16 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
       parentId = null
     } = options;
 
-    this.#folders.set(uuid, { name, parentId });
-    this.#emit({ action: "folder-added", uuid, name, parentId });
+    this.#folders.set(
+      uuid,
+      { name, parentId }
+    );
+    this.#emit({
+      action: "folder-added",
+      uuid,
+      name,
+      parentId
+    });
 
     return uuid;
   }
@@ -59,7 +70,10 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
     uuid: string
   ): void {
     if (this.#folders.delete(uuid)) {
-      this.#emit({ action: "folder-removed", uuid });
+      this.#emit({
+        action: "folder-removed",
+        uuid
+      });
     }
   }
 
@@ -73,7 +87,11 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
     }
 
     folder.name = name;
-    this.#emit({ action: "folder-renamed", uuid, name });
+    this.#emit({
+      action: "folder-renamed",
+      uuid,
+      name
+    });
   }
 
   reparent(
@@ -86,7 +104,11 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
     }
 
     folder.parentId = parentId;
-    this.#emit({ action: "folder-reparented", uuid, parentId });
+    this.#emit({
+      action: "folder-reparented",
+      uuid,
+      parentId
+    });
   }
 
   place(
@@ -95,14 +117,21 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
   ): void {
     if (folderId === null) {
       if (this.#placements.delete(blockUuid)) {
-        this.#emit({ action: "block-unplaced", blockUuid });
+        this.#emit({
+          action: "block-unplaced",
+          blockUuid
+        });
       }
 
       return;
     }
 
     this.#placements.set(blockUuid, folderId);
-    this.#emit({ action: "block-placed", blockUuid, folderId });
+    this.#emit({
+      action: "block-placed",
+      blockUuid,
+      folderId
+    });
   }
 
   nearestBlockAncestor(
@@ -136,7 +165,10 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
     while (queue.length > 0) {
       const current = queue.shift();
       for (const [folderId, record] of this.#folders) {
-        if (record.parentId === current && !subtreeIds.has(folderId)) {
+        if (
+          record.parentId === current &&
+          !subtreeIds.has(folderId)
+        ) {
           subtreeIds.add(folderId);
           queue.push(folderId);
         }
@@ -166,27 +198,35 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
           break;
 
         case "folder-renamed":
-          this.rename(command.uuid, command.name);
+          this.rename(
+            command.uuid,
+            command.name
+          );
           break;
 
         case "folder-reparented":
-          this.reparent(command.uuid, command.parentId);
+          this.reparent(
+            command.uuid,
+            command.parentId
+          );
           break;
 
         case "block-placed":
-          this.place(command.blockUuid, command.folderId);
+          this.place(
+            command.blockUuid,
+            command.folderId
+          );
           break;
 
         case "block-unplaced":
-          this.place(command.blockUuid, null);
+          this.place(
+            command.blockUuid,
+            null
+          );
           break;
 
-        default: {
-          const unhandled: never = command;
-          throw new Error(
-            `ModelFolders.apply: unhandled action '${(unhandled as FolderCommand).action}'.`
-          );
-        }
+        default:
+          throw unhandledCommand("ModelFolders.apply", command);
       }
     });
   }
@@ -205,7 +245,10 @@ export class ModelFolders extends Emitter<ModelFoldersEvents> {
       });
     }
     for (const placement of placements) {
-      this.#placements.set(placement.blockUuid, placement.folderId);
+      this.#placements.set(
+        placement.blockUuid,
+        placement.folderId
+      );
     }
   }
 

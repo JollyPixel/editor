@@ -2,7 +2,9 @@
 import type { ModelBlocks } from "./ModelBlocks.ts";
 import type { ModelFolders } from "./ModelFolders.ts";
 
-export type HierarchyNodeKind = "block" | "folder";
+export type HierarchyNodeKind =
+  | "block"
+  | "folder";
 
 export interface HierarchyNode {
   id: string;
@@ -36,11 +38,16 @@ export function buildHierarchyNodes(
       id: block.uuid,
       name: block.name || "Block",
       kind: "block",
-      parentId: folders.placements.get(block.uuid) ?? blocks.parentOf(block.uuid)
+      parentId: folders.placements.get(
+        block.uuid
+      ) ?? blocks.parentOf(block.uuid)
     });
   }
 
-  const byParent = Map.groupBy(flatNodes, (node) => node.parentId);
+  const byParent = Map.groupBy(
+    flatNodes,
+    (node) => node.parentId
+  );
 
   function build(
     parentId: string | null
@@ -67,7 +74,10 @@ export function findHierarchyNode(
       return node;
     }
 
-    const found = findHierarchyNode(node.children, id);
+    const found = findHierarchyNode(
+      node.children,
+      id
+    );
     if (found !== null) {
       return found;
     }
@@ -86,7 +96,11 @@ export function findHierarchyParentId(
       return parentId;
     }
 
-    const found = findHierarchyParentId(node.children, id, node.id);
+    const found = findHierarchyParentId(
+      node.children,
+      id,
+      node.id
+    );
     if (found !== undefined) {
       return found;
     }

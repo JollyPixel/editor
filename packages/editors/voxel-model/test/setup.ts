@@ -7,9 +7,9 @@ const kEmulatedBrowserWindow = new Window();
 const kElementConstructors = Object.fromEntries(
   Object.keys(kEmulatedBrowserWindow)
     .filter((key) => key.startsWith("HTML") && key.endsWith("Element"))
-    .map((key) => [
+    .map((key): [string, unknown] => [
       key,
-      kEmulatedBrowserWindow[key as keyof Window]
+      Reflect.get(kEmulatedBrowserWindow, key)
     ])
 );
 
@@ -26,11 +26,31 @@ Object.assign(globalThis, {
   getComputedStyle: kEmulatedBrowserWindow.getComputedStyle.bind(kEmulatedBrowserWindow)
 });
 
+function createImageData(
+  width: number,
+  height: number
+) {
+  return {
+    width,
+    height,
+    data: new Uint8ClampedArray(width * height * 4)
+  };
+}
+
 const kStub2dContext = {
   beginPath: () => undefined,
   arc: () => undefined,
   fill: () => undefined,
-  fillStyle: ""
+  fillStyle: "",
+  imageSmoothingEnabled: false,
+  createImageData,
+  putImageData: () => undefined,
+  getImageData: (
+    _x: number,
+    _y: number,
+    width: number,
+    height: number
+  ) => createImageData(width, height)
 };
 
 function stubGetContext(
@@ -39,5 +59,6 @@ function stubGetContext(
   return contextId === "2d" ? kStub2dContext : null;
 }
 
-kEmulatedBrowserWindow.HTMLCanvasElement.prototype.getContext =
-  stubGetContext as typeof kEmulatedBrowserWindow.HTMLCanvasElement.prototype.getContext;
+Object.assign(kEmulatedBrowserWindow.HTMLCanvasElement.prototype, {
+  getContext: stubGetContext
+});

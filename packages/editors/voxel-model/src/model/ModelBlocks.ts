@@ -22,6 +22,7 @@ import {
   mirrorSignFromAxes,
   mirrorVector
 } from "./mirrorTransform.ts";
+import { unhandledCommand } from "./unhandledCommand.ts";
 
 export type ModelBlocksEvents = {
   command: (command: ModelCommand) => void;
@@ -171,7 +172,11 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> {
     }
 
     block.name = name;
-    this.#emit({ action: "group-renamed", uuid, name });
+    this.#emit({
+      action: "group-renamed",
+      uuid,
+      name
+    });
   }
 
   commitTransform(
@@ -346,12 +351,8 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> {
           }
           break;
 
-        default: {
-          const unhandled: never = command;
-          throw new Error(
-            `ModelBlocks.apply: unhandled action '${(unhandled as ModelCommand).action}'.`
-          );
-        }
+        default:
+          throw unhandledCommand("ModelBlocks.apply", command);
       }
     });
   }

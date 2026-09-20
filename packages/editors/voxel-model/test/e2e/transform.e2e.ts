@@ -127,10 +127,14 @@ test("clicking the viewport selects a block, and empty space clears it", async({
 
   await test.step("empty space", async() => {
     const canvas = await page.locator("#three-renderer canvas").boundingBox();
+    if (canvas === null) {
+      throw new Error("The viewport canvas is not visible.");
+    }
+
     await pressAt(page, [
       {
-        x: canvas!.x + 8,
-        y: canvas!.y + 8
+        x: canvas.x + 8,
+        y: canvas.y + 8
       }
     ]);
 
@@ -146,8 +150,12 @@ test("dragging a gizmo arrow moves the block along that axis only", async({ page
   await pressAt(page, await gizmoHandlePoints(page, "X"));
 
   const moved = await blockSummary(page, "Block");
-  expect(moved!.position.x).toBeGreaterThan(0.1);
-  expect(moved!.position).toMatchObject({ y: 0, z: 0 });
+  if (moved === null) {
+    throw new Error("The dragged block is missing from the document.");
+  }
+
+  expect(moved.position.x).toBeGreaterThan(0.1);
+  expect(moved.position).toMatchObject({ y: 0, z: 0 });
   await expect(page.getByRole("textbox", { name: "X" }))
-    .toHaveValue(moved!.position.x.toFixed(2));
+    .toHaveValue(moved.position.x.toFixed(2));
 });
