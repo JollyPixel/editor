@@ -10,7 +10,10 @@ import {
 
 // Import Internal Dependencies
 import {
+  ICON_TONES,
   getIcon,
+  iconTone,
+  isIconTone,
   registerIcon
 } from "../../src/icon/registry.ts";
 
@@ -34,5 +37,36 @@ describe("Icon.registerIcon", () => {
     registerIcon("test-template-glyph", glyph);
 
     assert.equal(getIcon("test-template-glyph"), glyph);
+  });
+
+  test("records the default tone of a glyph", () => {
+    registerIcon("test-toned-glyph", "<path />", { tone: "violet" });
+
+    assert.equal(iconTone("test-toned-glyph"), "violet");
+  });
+
+  test("reports no tone for an untoned or unknown glyph", () => {
+    registerIcon("test-untoned-glyph", "<path />");
+
+    assert.equal(iconTone("test-untoned-glyph"), null);
+    assert.equal(iconTone("test-never-registered"), null);
+  });
+
+  test("drops the tone when a glyph is registered again without one", () => {
+    registerIcon("test-retoned-glyph", "<path />", { tone: "coral" });
+    registerIcon("test-retoned-glyph", "<path />");
+
+    assert.equal(iconTone("test-retoned-glyph"), null);
+  });
+});
+
+describe("Icon.isIconTone", () => {
+  test("accepts every declared tone and rejects anything else", () => {
+    for (const tone of ICON_TONES) {
+      assert.ok(isIconTone(tone));
+    }
+
+    assert.equal(isIconTone(""), false);
+    assert.equal(isIconTone("magenta"), false);
   });
 });

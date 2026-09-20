@@ -21,6 +21,10 @@ import {
   type PaneMoveCommand
 } from "../pane/Pane.ts";
 import { paneGroupStyles } from "./PaneGroup.styles.ts";
+import {
+  resolveActiveTab,
+  tabNavigationTarget
+} from "./tabSelection.ts";
 import type { Rect } from "../../geometry/Rect.ts";
 import { horizontalInsertionLine } from "../../interaction/drag/DragSession.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
@@ -68,11 +72,16 @@ export class PaneGroup extends LitElement {
   }
 
   override render(): TemplateResult {
+    const areaTone = this._panes
+      .find((pane) => pane.layoutKey === this.active)
+      ?.areaTone ?? null;
+
     return html`
       <div
         class="tabs"
         part="tabs"
         role="tablist"
+        style=${areaTone === null ? nothing : `--jolly-pane-header-bg: var(--jolly-tone-${areaTone}-fill)`}
         @keydown=${this.#onKeyDown}
       >
         ${this._panes.map((pane, index) => {
@@ -87,6 +96,7 @@ export class PaneGroup extends LitElement {
               data-index=${index}
               data-key=${pane.layoutKey}
               aria-selected=${String(selected)}
+              ?disabled=${pane.disabled}
               tabindex=${selected ? "0" : "-1"}
               ?data-grabbed=${selected && this._grabbed}
               ?data-dragging=${pane.layoutKey === this._dragging}
@@ -103,12 +113,8 @@ export class PaneGroup extends LitElement {
     `;
   }
 
-  protected override willUpdate(
-    changed: Map<PropertyKey, unknown>
-  ): void {
-    if (changed.has("active") || changed.has("_panes")) {
-      this.active = this.#resolveActive();
-    }
+  protected override willUpdate(): void {
+    this.active = this.#resolveActive();
   }
 
   protected override updated(): void {
@@ -206,6 +212,7 @@ export class PaneGroup extends LitElement {
       <jolly-icon
         part="tab-icon"
         name=${pane.icon}
+        on-fill
         aria-hidden="true"
       ></jolly-icon>
     `;
@@ -218,15 +225,7 @@ export class PaneGroup extends LitElement {
   }
 
   #resolveActive(): string {
-    if (this._panes.length === 0) {
-      return this.active;
-    }
-
-    const requested = this._panes.find(
-      (pane) => pane.layoutKey === this.active
-    );
-
-    return (requested ?? this._panes[0]).layoutKey;
+    return resolveActiveTab(this._panes, this.active);
   }
 
   #onSlotChange = () => {
@@ -300,7 +299,7 @@ export class PaneGroup extends LitElement {
       return;
     }
 
-    const next = this.#navigationTarget(event.key, current);
+    const next = tabNavigationTarget(this._panes, event.key, current);
     if (next === -1) {
       return;
     }
@@ -312,30 +311,15 @@ export class PaneGroup extends LitElement {
     });
   };
 
-  #navigationTarget(
-    key: string,
-    current: number
-  ): number {
-    const last = this._panes.length - 1;
-    switch (key) {
-      case "Home":
-        return 0;
-      case "End":
-        return last;
-      case "ArrowLeft":
-        return current <= 0 ? last : current - 1;
-      case "ArrowRight":
-        return current >= last ? 0 : current + 1;
-      default:
-        return -1;
-    }
-  }
-
   #selectIndex(
     index: number
   ): void {
     const pane = this._panes[index];
-    if (pane === undefined || pane.layoutKey === this.active) {
+    if (
+      pane === undefined ||
+      pane.disabled ||
+      pane.layoutKey === this.active
+    ) {
       return;
     }
 

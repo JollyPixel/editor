@@ -72,11 +72,15 @@ export const paneGroupStyles = css`
   }
 
   .tab:hover {
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
+
     background: rgb(255 255 255 / 10%);
     opacity: 1;
   }
 
   .tab[aria-selected="true"] {
+    --jolly-icon-tone-strength: 0%;
+
     background: rgb(255 255 255 / 18%);
     opacity: 1;
   }
@@ -88,6 +92,12 @@ export const paneGroupStyles = css`
     height: 2px;
     background: currentcolor;
     content: "";
+  }
+
+  .tab:disabled {
+    background: transparent;
+    opacity: 0.35;
+    cursor: not-allowed;
   }
 
   .tab[data-grabbed] {

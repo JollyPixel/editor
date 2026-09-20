@@ -26,6 +26,7 @@ export async function promptPeerIdentity(
 ): Promise<PeerIdentity> {
   const username = await resolveStoredPrompt({
     title: options.title,
+    intent: "info",
     label: "Username",
     confirmLabel: "Join",
     storage: options.storage ?? kSessionStorage,

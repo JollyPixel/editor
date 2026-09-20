@@ -13,6 +13,7 @@
 |---|---|---|---|
 | `heading` | `heading` | `string` | `""` |
 | `icon` | `icon` | `IconName` | `""` |
+| `tone` | `tone` | `IconTone | ""` | `""` |
 | `key` | `key` | `string` | `""` |
 | `reorderable` | `reorderable` | `boolean` | `false` |
 | `collapsible` | `collapsible` | `boolean` | `false` |
@@ -20,6 +21,7 @@
 | `grow` | `grow` | `boolean` | `false` |
 | `dragging` | `dragging` | `boolean` | `false` |
 | `locked` | `locked` | `boolean` | `false` |
+| `disabled` | `disabled` | `boolean` | `false` |
 | `grouped` | `grouped` | `boolean` | Derived from its parent |
 | `inactive` | `inactive` | `boolean` | Set by its group |
 | `floatWidth` | `float-width` | `number \| undefined` | `undefined` |
@@ -38,6 +40,15 @@ glyph before the title. The component exposes `header`, `icon`, `title`,
 `jolly-pane-group` is `grouped`, and `inactive` while another tab is shown.
 `floatWidth` and `floatHeight` size, in pixels, the window a dock layout opens
 when the pane is first dragged out of its dock.
+
+A `disabled` pane dims its content and makes it inert. Inside a
+`jolly-pane-group` its tab is disabled too: it cannot be selected or dragged,
+keyboard navigation skips it, and it is never resolved as the active pane.
+
+A pane whose `icon` has a [registered tone](../icon/registry.md#tones), or that
+sets `tone`, is a toned area: its header, the tab bar of its group while it is
+active, and the folder headers, separators and accent-filled controls inside it
+take that hue instead of the accent. The read-only `areaTone` getter returns the resolved tone or `null`.
 
 While its grip is grabbed, Up and Down move the pane within its dock, Left and
 Right send it to the adjacent dock, and Shift with Up or Down joins it to the

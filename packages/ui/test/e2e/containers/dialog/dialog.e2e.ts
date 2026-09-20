@@ -123,6 +123,35 @@ test.describe("Dialog", () => {
     await expect(dialog).toHaveCount(0);
   });
 
+  test("an inline confirmation settles inside the open dialog", async({ page }) => {
+    const result = page.locator("main > div");
+    const host = page.locator("#inline-confirm-dialog");
+    const dialog = host.locator("dialog");
+    const remove = host.locator("[data-action=inline-remove]");
+    const confirmation = host.locator(".confirmation");
+
+    await page.locator("[data-action=inline-confirm]").click();
+    await remove.click();
+    await expect(confirmation.getByRole("alert"))
+      .toHaveText("3 blocks use this tileset and will lose their texture.");
+    await expect(host.locator(".body")).toHaveAttribute("inert");
+    await expect(remove).toBeHidden();
+    await expect(page.locator("body > jolly-dialog")).toHaveCount(0);
+
+    await page.keyboard.press("Escape");
+    await expect(result).toHaveAttribute("data-result", "inline:false");
+    await expect(dialog).toHaveAttribute("open");
+    await expect(confirmation).toHaveCount(0);
+    await expect(remove.locator("button")).toBeFocused();
+
+    await remove.click();
+    await expect(confirmation.locator("[data-action=confirm] button"))
+      .toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(result).toHaveAttribute("data-result", "inline:true");
+    await expect(dialog).not.toHaveAttribute("open");
+  });
+
   test("a helper dialog stays mounted until its exit transition ends", async({ page }) => {
     const confirm = page.locator("body > jolly-dialog");
 
@@ -193,5 +222,48 @@ test.describe("Input layers", () => {
 
     await page.keyboard.press("Escape");
     await expect(example).toHaveAttribute("data-viewport-keys", "Escape");
+  });
+});
+
+test.describe("Dialog header", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "containers/dialog", { theme: "dark" });
+  });
+
+  test("a danger intent draws its icon and raises an alert dialog", async({ page }) => {
+    await page.locator("[data-action=intent-danger]").click();
+
+    const dialog = page.getByRole("alertdialog", {
+      name: "A dialog with the danger intent"
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("header jolly-icon"))
+      .toHaveAttribute("name", "warning");
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  });
+
+  test("a toned dialog becomes an area and paints its header", async({ page }) => {
+    const host = page.locator("#toned-dialog");
+
+    await page.locator("[data-action=toned-dialog]").click();
+    await expect(host.locator("dialog")).toHaveAttribute("open");
+    await expect(host).toHaveAttribute("toned");
+
+    const colours = await host.evaluate((element) => {
+      const probe = document.createElement("div");
+      probe.style.background = "var(--jolly-tone-teal-fill)";
+      element.shadowRoot!.querySelector("dialog")!.append(probe);
+      const header = element.shadowRoot!.querySelector("header")!;
+      const result = {
+        header: getComputedStyle(header).backgroundColor,
+        fill: getComputedStyle(probe).backgroundColor
+      };
+      probe.remove();
+
+      return result;
+    });
+    expect(colours.header).toBe(colours.fill);
   });
 });

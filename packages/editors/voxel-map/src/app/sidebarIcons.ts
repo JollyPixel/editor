@@ -21,50 +21,70 @@ registerIcon("transform", svg`
     fill="currentColor"
   />
   <path
+    class="tone-ink"
     fill-rule="evenodd"
     clip-rule="evenodd"
     d="M12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8ZM12 10C13.1046 10 14 10.8954 14 12C14 13.1046 13.1046 14 12 14C10.8954 14 10 13.1046 10 12C10 10.8954 10.8954 10 12 10Z"
     fill="currentColor"
   />
-`);
+`, { tone: "teal" });
 
 registerIcon("pencil", svg`
   <path
-    d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+    class="tone-ink"
+    d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25Z"
     fill="currentColor"
   />
-`);
+  <path
+    d="M20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+    fill="currentColor"
+  />
+`, { tone: "pink" });
 
 registerIcon("voxel-layer", svg`
+  <path
+    class="tone-fill"
+    d="M12 2L21 7V17L12 22L3 17V7L12 2Z"
+  />
   <path
     fill-rule="evenodd"
     clip-rule="evenodd"
     d="M12 2L21 7V17L12 22L3 17V7L12 2ZM12 4.31L5.06 8.17L12 12.03L18.94 8.17L12 4.31ZM5 9.87V15.82L11 19.15V13.2L5 9.87ZM13 19.15L19 15.82V9.87L13 13.2V19.15Z"
     fill="currentColor"
   />
-`);
+`, { tone: "violet" });
 
 registerIcon("object-layer", svg`
   <path
+    class="tone-ink"
     d="M10.5 3H9C7.34315 3 6 4.34315 6 6V9C6 10.1046 5.10457 11 4 11H3V13H4C5.10457 13 6 13.8954 6 15V18C6 19.6569 7.34315 21 9 21H10.5V19H9C8.44772 19 8 18.5523 8 18V15C8 13.8135 7.31672 12.7865 6.32297 12C7.31672 11.2135 8 10.1865 8 9V6C8 5.44772 8.44772 5 9 5H10.5V3Z"
     fill="currentColor"
   />
   <path
+    class="tone-ink"
     d="M13.5 3H15C16.6569 3 18 4.34315 18 6V9C18 10.1046 18.8954 11 20 11H21V13H20C18.8954 13 18 13.8954 18 15V18C18 19.6569 16.6569 21 15 21H13.5V19H15C15.5523 19 16 18.5523 16 18V15C16 13.8135 16.6833 12.7865 17.677 12C16.6833 11.2135 16 10.1865 16 9V6C16 5.44772 15.5523 5 15 5H13.5V3Z"
     fill="currentColor"
   />
-`);
+`, { tone: "teal" });
 
 registerIcon("object-area", svg`
+  <path
+    class="tone-fill"
+    d="M7.5 7.5h9v9h-9z"
+  />
   <path
     fill-rule="evenodd"
     clip-rule="evenodd"
     d="M4 4H10V6H6V10H4V4ZM14 4H20V10H18V6H14V4ZM6 14V18H10V20H4V14H6ZM18 14H20V20H14V18H18V14Z"
     fill="currentColor"
   />
-`);
+`, { tone: "amber" });
 
 registerIcon("trash", svg`
+  <path
+    class="tone-fill"
+    d="M6 7l1 13h10l1-13z"
+  />
   <path
     d="M4 7h16M10 4h4M6 7l1 13h10l1-13M10 11v5M14 11v5"
     fill="none"
@@ -73,9 +93,13 @@ registerIcon("trash", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "coral" });
 
 registerIcon("copy", svg`
+  <path
+    class="tone-fill"
+    d="M9 9h10v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9z"
+  />
   <path
     d="M9 9h10v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"
     fill="none"
@@ -84,29 +108,46 @@ registerIcon("copy", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "sky" });
 
 registerIcon("merge", svg`
+  <path
+    class="tone-fill"
+    d="M3 16H21V21H3z"
+  />
   <path
     fill-rule="evenodd"
     clip-rule="evenodd"
     d="M3 3H21V8H19V5H5V8H3V3ZM3 16H21V21H3V16ZM5 18V19H19V18H5ZM11 8V11H9L12 15L15 11H13V8H11Z"
     fill="currentColor"
   />
-`);
+`, { tone: "violet" });
 
 registerIcon("sliders", svg`
   <path
-    d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"
+    d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+  <path
+    class="tone-ink"
+    d="M15 4v4M9 10v4M17 16v4"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "sky" });
 
 registerIcon("blocks", svg`
+  <path
+    class="tone-fill"
+    d="M4 4h7v7H4zM13 13h7v7h-7z"
+  />
   <path
     d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"
     fill="none"
@@ -114,9 +155,13 @@ registerIcon("blocks", svg`
     stroke-width="2"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "amber" });
 
 registerIcon("layers", svg`
+  <path
+    class="tone-fill"
+    d="M12 3 21 8l-9 5-9-5 9-5z"
+  />
   <path
     d="M12 3 21 8l-9 5-9-5 9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5"
     fill="none"
@@ -125,7 +170,7 @@ registerIcon("layers", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "violet" });
 
 registerIcon("order-usage", svg`
   <path

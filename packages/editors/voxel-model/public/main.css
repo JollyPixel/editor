@@ -24,8 +24,17 @@ jolly-scope {
   --jolly-label-width: 15ch;
 }
 
+jolly-pane-group::part(tab) {
+  flex: 1 1 0;
+}
+
 jolly-pane::part(content) {
   padding: 0;
+}
+
+jolly-pane[key="build"]::part(content),
+jolly-pane[key="paint"]::part(content) {
+  overflow: hidden;
 }
 
 jolly-dock {

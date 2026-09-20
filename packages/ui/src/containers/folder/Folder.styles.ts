@@ -25,7 +25,12 @@ export const folderStyles = css`
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
-    min-height: var(--jolly-row-height, 20px);
+    min-height: max(
+      var(--jolly-row-height, 20px),
+      calc(
+        var(--jolly-control-height, 20px) + 2 * var(--jolly-space-1, 4px)
+      )
+    );
     overflow: hidden;
     padding-inline: var(--jolly-space-1, 4px);
     border: 0;
@@ -124,6 +129,13 @@ export const folderStyles = css`
     --jolly-control-bg-hover: var(--jolly-folder-action-bg-hover);
     --jolly-control-bg-focus: var(--jolly-folder-action-bg-focus);
     --jolly-control-bg-active: var(--jolly-folder-action-bg-active);
+    --jolly-tone-coral: light-dark(var(--jolly-coral-400), var(--jolly-coral-600));
+    --jolly-tone-amber: light-dark(var(--jolly-amber-400), var(--jolly-amber-600));
+    --jolly-tone-lime: light-dark(var(--jolly-lime-400), var(--jolly-lime-600));
+    --jolly-tone-teal: light-dark(var(--jolly-teal-400), var(--jolly-teal-600));
+    --jolly-tone-sky: light-dark(var(--jolly-sky-400), var(--jolly-sky-600));
+    --jolly-tone-violet: light-dark(var(--jolly-violet-400), var(--jolly-violet-600));
+    --jolly-tone-pink: light-dark(var(--jolly-pink-400), var(--jolly-pink-600));
   }
 
   ::slotted(jolly-button[slot="actions"][variant="danger"]) {

@@ -19,7 +19,12 @@ import {
   isFlyoutAction,
   opensOnClick
 } from "./toolButtonFlyout.ts";
-import type { IconName } from "../icon/registry.ts";
+import {
+  iconTone,
+  isIconTone,
+  type IconName,
+  type IconTone
+} from "../icon/registry.ts";
 import "../icon/Icon.ts";
 
 export type ToolButtonFlyoutSide =
@@ -45,6 +50,9 @@ export class ToolButton extends LitElement {
 
   @property({ type: String })
   declare label: string;
+
+  @property({ type: String, reflect: true })
+  declare tone: IconTone | "";
 
   @property({ type: Boolean, reflect: true })
   declare active: boolean;
@@ -79,6 +87,7 @@ export class ToolButton extends LitElement {
     super();
 
     this.label = "";
+    this.tone = "";
     this.active = false;
     this.disabled = false;
     this.flyoutSide = ToolButton.Defaults.flyoutSide;
@@ -131,11 +140,14 @@ export class ToolButton extends LitElement {
   }
 
   override render(): TemplateResult {
+    const tone = this.#resolveTone();
+
     return html`
       <button
-        class="button"
+        class=${tone === null ? "button" : "button toned"}
         part="button"
         type="button"
+        style=${tone === null ? nothing : `--jolly-icon-tone-color: var(--jolly-tone-${tone})`}
         ?disabled=${this.disabled}
         aria-label=${this.label === "" ? nothing : this.label}
         aria-pressed=${this._hasFlyout ? nothing : String(this.active)}
@@ -163,6 +175,14 @@ export class ToolButton extends LitElement {
         <slot name="flyout" @slotchange=${this.#onFlyoutSlotChange}></slot>
       </div>
     `;
+  }
+
+  #resolveTone(): IconTone | null {
+    if (isIconTone(this.tone)) {
+      return this.tone;
+    }
+
+    return this.icon === undefined ? null : iconTone(this.icon);
   }
 
   #onPointerEnter = (

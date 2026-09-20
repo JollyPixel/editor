@@ -25,5 +25,7 @@ test("the rail, toolbars and dialogs keep working after a DOM move", async({ pan
   await expect(showAll).not.toHaveAttribute("aria-pressed", shown!);
 
   await panel.getByRole("button", { name: "Clear texture" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("alertdialog", { name: "Clear texture" })
+  ).toBeVisible();
 });

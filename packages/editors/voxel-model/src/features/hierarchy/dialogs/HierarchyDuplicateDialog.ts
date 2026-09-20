@@ -68,6 +68,7 @@ export class HierarchyDuplicateDialog extends HierarchyDialog<
   protected get frame(): HierarchyDialogFrame {
     return {
       heading: "Duplicate",
+      icon: "block-duplicate",
       confirmLabel: "Duplicate",
       confirmVariant: "accent"
     };

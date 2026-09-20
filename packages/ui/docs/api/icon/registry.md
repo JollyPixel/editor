@@ -14,7 +14,8 @@ import {
 The package registers these names on a shared 24 by 24 SVG grid:
 
 `chevron`, `close`, `plus`, `revert`, `drag`, `lock`, `eye`, `search`,
-`check`, `info`, and `warning`.
+`check`, `info`, and `warning`. `plus` carries the `lime` tone; the others
+have none.
 
 ## Register a Lit SVG glyph
 
@@ -34,7 +35,11 @@ registerIcon("cube", svg`
 ```
 
 ```ts
-registerIcon(name: string, glyph: IconGlyph): void
+registerIcon(
+  name: string,
+  glyph: IconGlyph,
+  options?: RegisterIconOptions
+): void
 ```
 
 `IconGlyph` accepts a Lit `SVGTemplateResult` or a markup string.
@@ -44,6 +49,37 @@ rendering them; registry changes do not request updates from existing
 
 Glyphs should use the 24 by 24 view box expected by `jolly-icon`.
 `currentColor` makes strokes and fills follow the surrounding text color.
+
+## Tones
+
+A glyph opts into colour with two classes and a default tone:
+
+```ts
+registerIcon("cube", svg`
+  <path class="tone-fill" d="m12 3 7 4v8l-7 4-7-4V7l7-4Z" />
+  <path
+    d="m12 3 7 4v8l-7 4-7-4V7l7-4Z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+`, { tone: "violet" });
+```
+
+- `tone-fill` fills a closed shape with the tone, under the outline.
+- `tone-ink` shifts a `currentColor` stroke or fill towards the tone, for glyphs
+  with no closed shape.
+
+`ICON_TONES` lists the tones: `coral`, `amber`, `lime`, `teal`, `sky`, `violet`
+and `pink`. Each resolves to `--jolly-tone-<name>`, or
+`--jolly-tone-<name>-on-fill` over an accent fill;
+`--jolly-tone-<name>-fill` is the solid ground a toned area paints. A glyph registered without a
+tone keeps following `currentColor`.
+
+```ts
+iconTone(name: IconName): IconTone | null
+isIconTone(value: string): value is IconTone
+```
 
 ## Register a markup string
 
@@ -98,5 +134,6 @@ its accessible label.
 `BuiltinIconName` is the union of the eleven package names. `IconName`
 preserves completion for those names while accepting application-defined
 strings.
-`IconGlyph` is `string | SVGTemplateResult`.
+`IconGlyph` is `string | SVGTemplateResult`. `IconTone` is the union of
+`ICON_TONES`, and `RegisterIconOptions` is `{ tone?: IconTone }`.
 

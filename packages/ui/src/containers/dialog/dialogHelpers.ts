@@ -1,25 +1,35 @@
 // Import Internal Dependencies
 import { Dialog } from "./Dialog.ts";
+import type { DialogIntent } from "./dialogHeader.ts";
 import {
   Button,
   type ButtonVariant
 } from "../../controls/Button.ts";
 import { Text } from "../../controls/Text.ts";
 import { detailOf } from "../../dom.ts";
+import type {
+  IconName,
+  IconTone
+} from "../../icon/registry.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import type { JollyChangeDetail } from "../../field/events.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 
-export interface PromptOptions {
+export interface DialogHeaderOptions {
   title?: string;
+  icon?: IconName;
+  tone?: IconTone;
+  intent?: DialogIntent;
+}
+
+export interface PromptOptions extends DialogHeaderOptions {
   label: string;
   defaultValue?: string;
   confirmLabel?: string;
   cancelLabel?: string;
 }
 
-export interface ConfirmOptions {
-  title?: string;
+export interface ConfirmOptions extends DialogHeaderOptions {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
@@ -32,8 +42,8 @@ export interface ChoiceAction<TValue extends string = string> {
   variant?: ButtonVariant;
 }
 
-export interface ChoiceOptions<TValue extends string = string> {
-  title?: string;
+export interface ChoiceOptions<TValue extends string = string>
+  extends DialogHeaderOptions {
   message: string;
   content?: readonly Node[];
   actions: readonly ChoiceAction<TValue>[];
@@ -48,14 +58,13 @@ export interface StoredPromptOptions extends PromptOptions {
 }
 
 export function showPrompt({
-  title = "",
   label,
   defaultValue = "",
   confirmLabel = "OK",
-  cancelLabel = "Cancel"
+  cancelLabel = "Cancel",
+  ...header
 }: PromptOptions): Promise<string | null> {
-  const dialog = new Dialog();
-  dialog.heading = title;
+  const dialog = headedDialog(header);
 
   let value = defaultValue;
   const field = new Text();
@@ -103,10 +112,14 @@ export async function showConfirm({
   message,
   confirmLabel = "OK",
   cancelLabel = "Cancel",
-  danger = false
+  danger = false,
+  intent = danger ? "danger" : undefined,
+  ...header
 }: ConfirmOptions): Promise<boolean> {
   const choice = await showChoice({
+    ...header,
     title,
+    intent,
     message,
     cancelLabel,
     actions: [
@@ -123,15 +136,14 @@ export async function showConfirm({
 }
 
 export function showChoice<TValue extends string>({
-  title = "",
   message,
   content = [],
   actions,
   cancelLabel = "Cancel",
-  focus
+  focus,
+  ...header
 }: ChoiceOptions<TValue>): Promise<TValue | null> {
-  const dialog = new Dialog();
-  dialog.heading = title;
+  const dialog = headedDialog(header);
 
   const text = document.createElement("p");
   text.textContent = message;
@@ -185,6 +197,18 @@ export async function resolveStoredPrompt({
   storage.set(storageKey, value);
 
   return value;
+}
+
+function headedDialog(
+  header: DialogHeaderOptions
+): Dialog {
+  const dialog = new Dialog();
+  dialog.heading = header.title ?? "";
+  dialog.icon = header.icon ?? "";
+  dialog.tone = header.tone ?? "";
+  dialog.intent = header.intent ?? "";
+
+  return dialog;
 }
 
 function actionButton(

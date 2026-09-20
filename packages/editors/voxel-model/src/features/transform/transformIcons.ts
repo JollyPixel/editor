@@ -10,6 +10,7 @@ registerIcon("transform-position", svg`
     stroke-linecap="round"
   />
   <path
+    class="tone-ink"
     d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"
     fill="none"
     stroke="currentColor"
@@ -17,10 +18,11 @@ registerIcon("transform-position", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "teal" });
 
 registerIcon("transform-angle", svg`
   <path
+    class="tone-ink"
     d="M20 12a8 8 0 1 1-2.34-5.66"
     fill="none"
     stroke="currentColor"
@@ -41,16 +43,16 @@ registerIcon("transform-angle", svg`
     r="1.75"
     fill="currentColor"
   />
-`);
+`, { tone: "coral" });
 
 registerIcon("transform-size", svg`
   <rect
+    class="tone-fill"
     x="3"
     y="9"
     width="12"
     height="12"
     rx="1"
-    fill="none"
     stroke="currentColor"
     stroke-width="2"
   />
@@ -62,14 +64,14 @@ registerIcon("transform-size", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "sky" });
 
 registerIcon("transform-pivot", svg`
   <circle
+    class="tone-fill"
     cx="12"
     cy="12"
     r="6"
-    fill="none"
     stroke="currentColor"
     stroke-width="2"
   />
@@ -85,7 +87,7 @@ registerIcon("transform-pivot", svg`
     r="2"
     fill="currentColor"
   />
-`);
+`, { tone: "pink" });
 
 registerIcon("transform-scale", svg`
   <rect
@@ -100,12 +102,12 @@ registerIcon("transform-scale", svg`
     stroke-dasharray="3 3"
   />
   <rect
+    class="tone-fill"
     x="6"
     y="11"
     width="7"
     height="7"
     rx="1"
-    fill="none"
     stroke="currentColor"
     stroke-width="2"
   />
@@ -117,12 +119,12 @@ registerIcon("transform-scale", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "violet" });
 
 registerIcon("transform-local", svg`
   <path
+    class="tone-fill"
     d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"
-    fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linejoin="round"
@@ -134,14 +136,14 @@ registerIcon("transform-local", svg`
     stroke-width="2"
     stroke-linecap="round"
   />
-`);
+`, { tone: "amber" });
 
 registerIcon("transform-global", svg`
   <circle
+    class="tone-fill"
     cx="12"
     cy="12"
     r="9"
-    fill="none"
     stroke="currentColor"
     stroke-width="2"
   />
@@ -152,4 +154,4 @@ registerIcon("transform-global", svg`
     stroke-width="2"
     stroke-linejoin="round"
   />
-`);
+`, { tone: "teal" });

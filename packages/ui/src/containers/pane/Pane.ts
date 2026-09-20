@@ -20,7 +20,14 @@ import {
   isSlotElement
 } from "../../dom.ts";
 import "../../icon/Icon.ts";
-import type { IconName } from "../../icon/registry.ts";
+import type {
+  IconName,
+  IconTone
+} from "../../icon/registry.ts";
+import {
+  applyAreaTone,
+  resolveAreaTone
+} from "../../theme/areaTone.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
@@ -80,6 +87,9 @@ export class PaneElement extends LitElement {
   declare icon: IconName;
 
   @property({ type: String, reflect: true })
+  declare tone: IconTone | "";
+
+  @property({ type: String, reflect: true })
   declare key: string;
 
   @property({ type: Boolean, reflect: true })
@@ -99,6 +109,9 @@ export class PaneElement extends LitElement {
 
   @property({ type: Boolean, reflect: true })
   declare locked: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare disabled: boolean;
 
   @property({ type: Boolean, reflect: true })
   declare grouped: boolean;
@@ -198,11 +211,16 @@ export class PaneElement extends LitElement {
       this.key;
   }
 
+  get areaTone(): IconTone | null {
+    return resolveAreaTone(this.tone, this.icon);
+  }
+
   constructor() {
     super();
 
     this.heading = "";
     this.icon = "";
+    this.tone = "";
     this.key = "";
     this.reorderable = false;
     this.collapsible = false;
@@ -210,6 +228,7 @@ export class PaneElement extends LitElement {
     this.grow = false;
     this.dragging = false;
     this.locked = false;
+    this.disabled = false;
     this.grouped = false;
     this.inactive = false;
     this.storageKey = "";
@@ -251,11 +270,26 @@ export class PaneElement extends LitElement {
     if (changed.has("presence")) {
       this.#presenceProvider?.notify();
     }
+    if (changed.has("icon") || changed.has("tone")) {
+      applyAreaTone(this, this.areaTone);
+    }
     if (
       this.#hosted &&
       changed.has("locked")
     ) {
       this.movable = !this.locked;
+    }
+  }
+
+  protected override updated(
+    changed: Map<PropertyKey, unknown>
+  ): void {
+    if (
+      changed.has("disabled") &&
+      this.grouped &&
+      this.parentElement instanceof LitElement
+    ) {
+      this.parentElement.requestUpdate();
     }
   }
 
@@ -297,6 +331,7 @@ export class PaneElement extends LitElement {
                   class="icon"
                   part="icon"
                   name=${this.icon}
+                  on-fill
                   aria-hidden="true"
                 ></jolly-icon>
               `
@@ -328,7 +363,7 @@ export class PaneElement extends LitElement {
             @slotchange=${this.#onActionsChange}
           ></slot>
         `}
-      <div class="content" part="content">
+      <div class="content" part="content" ?inert=${this.disabled}>
         <slot
           @slotchange=${this.#folders.onContentChange}
           @jolly-folder-reorder=${this.#folders.onReorderCommand}

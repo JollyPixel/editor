@@ -8,11 +8,15 @@ import { query } from "lit/decorators.js";
 import type {
   Button,
   ButtonVariant,
-  Dialog
+  Dialog,
+  DialogIntent,
+  IconName
 } from "@jolly-pixel/ui";
 
 export interface HierarchyDialogFrame {
   heading: string;
+  icon?: IconName;
+  intent?: DialogIntent;
   confirmLabel: string;
   confirmVariant: ButtonVariant;
 }
@@ -58,11 +62,19 @@ export abstract class HierarchyDialog<TContext, TResult> extends LitElement {
   }
 
   override render(): TemplateResult {
-    const { heading, confirmLabel, confirmVariant } = this.frame;
+    const {
+      heading,
+      icon = "",
+      intent = "",
+      confirmLabel,
+      confirmVariant
+    } = this.frame;
 
     return html`
       <jolly-dialog
         heading=${heading}
+        icon=${icon}
+        intent=${intent}
         @jolly-close=${this.#onClose}
       >
         ${this.renderFields()}

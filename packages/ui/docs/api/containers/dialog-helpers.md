@@ -39,7 +39,19 @@ action focused on open. Do not use `"cancel"` as an action value.
 prompt and stores its result. It accepts a `StorageAdapter` and uses
 `LocalStorageAdapter` by default.
 
-The matching option types are `PromptOptions`, `ConfirmOptions`,
+Every helper takes the header options of
+[`jolly-dialog`](./dialog.md#icon-tone-and-intent): `title`, `icon`, `tone` and
+`intent`. `showConfirm()` with `danger: true` defaults to `intent: "danger"`.
+
+```ts
+const resize = await showConfirm({
+  title: "Resize tileset?",
+  message: "Tiles outside the new grid are dropped.",
+  intent: "warning"
+});
+```
+
+The matching option types are `DialogHeaderOptions`, `PromptOptions`, `ConfirmOptions`,
 `ChoiceOptions`, `ChoiceAction`, and `StoredPromptOptions`.
 
 Both helpers confirm on Enter and cancel on Escape, through the

@@ -56,6 +56,24 @@ export const toolButtonStyles = css`
     color: var(--jolly-text-on-fill);
   }
 
+  .button.toned:hover:not(:disabled),
+  :host([open]) .button.toned,
+  :host([active]) .button.toned {
+    --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
+  }
+
+  .button.toned:hover:not(:disabled),
+  :host([open]) .button.toned {
+    background: color-mix(in oklab, var(--jolly-icon-tone-color) 16%, transparent);
+  }
+
+  :host([active]) .button.toned,
+  :host([active]) .button.toned:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--jolly-icon-tone-color) 26%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--jolly-icon-tone-color) 60%, transparent);
+    color: var(--jolly-text, ${kFallback.text});
+  }
+
   .button:disabled {
     opacity: 0.4;
     cursor: default;

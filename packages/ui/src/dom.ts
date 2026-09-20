@@ -37,6 +37,17 @@ export function isDocumentOrShadowRoot(
   return node instanceof Document || node instanceof ShadowRoot;
 }
 
+export function deepActiveElement(
+  root: Document | ShadowRoot = document
+): HTMLElement | null {
+  let active = root.activeElement;
+  while (active?.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+
+  return active instanceof HTMLElement ? active : null;
+}
+
 /**
  * Narrows a custom event to its detail.
  */

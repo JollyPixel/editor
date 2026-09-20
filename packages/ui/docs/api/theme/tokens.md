@@ -29,3 +29,11 @@ Components consume semantic properties such as `--jolly-surface`,
 `--jolly-field-trailing-width`, `--jolly-field-inset-start`,
 `--jolly-field-inset-end`,
 `--jolly-folder-indent`, `--jolly-gutter-width`, and `--jolly-dock-size`.
+
+Seven tones add hue: `coral`, `amber`, `lime`, `teal`, `sky`, `violet` and
+`pink`. Each has `--jolly-tone-<name>` for ink on a surface,
+`--jolly-tone-<name>-on-fill` for ink over an accent fill, and
+`--jolly-tone-<name>-fill` for a solid ground under white text. Inside a toned
+[`jolly-pane`](../containers/pane.md), `--jolly-area-tone` and
+`--jolly-area-fill` hold the pane's hue, and `--jolly-accent-fill`,
+`--jolly-accent-text` and `--jolly-focus-ring` resolve to it.

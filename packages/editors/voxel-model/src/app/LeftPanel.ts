@@ -26,6 +26,7 @@ import {
 
 // Import Internal Dependencies
 import "./BuildTab.ts";
+import type { TexturePane } from "./texturePanes.ts";
 
 // CONSTANTS
 const kDefaultZoom = {
@@ -35,10 +36,6 @@ const kDefaultZoom = {
   sensitivity: 0.6
 };
 
-const kLeftPanelModes = ["paint", "build", "animate"] as const;
-
-type LeftPanelMode = typeof kLeftPanelModes[number];
-
 export interface LeftPanelTexture {
   document: PixelDocument;
   room?: PixelArtRoom;
@@ -46,7 +43,7 @@ export interface LeftPanelTexture {
 
 export class LeftPanel extends LitElement {
   @state()
-  declare mode: LeftPanelMode;
+  declare mode: TexturePane;
 
   @state()
   private declare _canvas: PixelArtCanvas | null;
@@ -68,19 +65,6 @@ export class LeftPanel extends LitElement {
       height: 100%;
       box-sizing: border-box;
       font: inherit;
-    }
-
-    jolly-tabs {
-      flex-shrink: 0;
-    }
-
-    jolly-tabs::part(list) {
-      display: flex;
-    }
-
-    jolly-tabs::part(tab) {
-      flex: 1 1 0;
-      text-align: center;
     }
 
     pixel-draw-panel {
@@ -156,30 +140,20 @@ export class LeftPanel extends LitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.#resizeObserver?.disconnect();
-    this.#resizeObserver = null;
-    this.#collaboration?.destroy();
-    this.#collaboration = null;
-  }
+    queueMicrotask(() => {
+      if (this.isConnected) {
+        return;
+      }
 
-  private handleTabChange = (
-    event: CustomEvent<{ value: string; }>
-  ): void => {
-    const mode = kLeftPanelModes.find(
-      (candidate) => candidate === event.detail.value
-    );
-    if (mode !== undefined) {
-      this.mode = mode;
-    }
-  };
+      this.#resizeObserver?.disconnect();
+      this.#resizeObserver = null;
+      this.#collaboration?.destroy();
+      this.#collaboration = null;
+    });
+  }
 
   override render(): TemplateResult {
     return html`
-      <jolly-tabs .value=${this.mode} @jolly-tab-change=${this.handleTabChange}>
-        <jolly-tab value="build" label="Build"></jolly-tab>
-        <jolly-tab value="paint" label="Paint"></jolly-tab>
-        <jolly-tab value="animate" label="Animate" disabled></jolly-tab>
-      </jolly-tabs>
       <jolly-model-editor-build
         ?hidden=${this.mode !== "build"}
         .canvas=${this._canvas}
@@ -190,7 +164,7 @@ export class LeftPanel extends LitElement {
 }
 
 function canvasModeForTab(
-  mode: LeftPanelMode
+  mode: TexturePane
 ): Mode {
   return mode === "build" ? "uv" : "paint";
 }

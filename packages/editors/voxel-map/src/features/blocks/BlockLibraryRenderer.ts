@@ -27,6 +27,7 @@ import { WebGLContextLease } from "./WebGLContextLease.ts";
 // CONSTANTS
 const kSuperSampling = 2;
 const kMaxPixelRatio = 3;
+const kSettleFrames = 6;
 const kOpacityCheckIntervalMs = 250;
 
 export interface CellEntry {
@@ -63,6 +64,11 @@ export class BlockLibraryRenderer {
   #cellSize = 1;
   #canvasWidth = 0;
   #canvasHeight = 0;
+  #drawnCols = 0;
+  #drawnRows = 0;
+  #drawnCellSize = 0;
+  #pendingCellSize = 0;
+  #stableFrames = 0;
   #layoutDirty = true;
   #tilesetVersion: number;
   #container: HTMLElement;
@@ -207,17 +213,41 @@ export class BlockLibraryRenderer {
     const width = this.#cols * this.#cellSize;
     const height = rows * this.#cellSize;
     if (
-      width === this.#canvasWidth &&
-      height === this.#canvasHeight
+      width !== this.#canvasWidth ||
+      height !== this.#canvasHeight
     ) {
-      return;
+      this.#canvasWidth = width;
+      this.#canvasHeight = height;
+      this.canvas.style.width = `${width}px`;
+      this.canvas.style.height = `${height}px`;
     }
 
-    this.#canvasWidth = width;
-    this.#canvasHeight = height;
+    const reflowed = this.#cols !== this.#drawnCols ||
+      rows !== this.#drawnRows;
+    if (!reflowed) {
+      if (this.#cellSize === this.#drawnCellSize) {
+        this.#stableFrames = 0;
+
+        return;
+      }
+
+      if (this.#cellSize === this.#pendingCellSize) {
+        this.#stableFrames++;
+      }
+      else {
+        this.#pendingCellSize = this.#cellSize;
+        this.#stableFrames = 0;
+      }
+      if (this.#stableFrames < kSettleFrames) {
+        return;
+      }
+    }
+
+    this.#drawnCols = this.#cols;
+    this.#drawnRows = rows;
+    this.#drawnCellSize = this.#cellSize;
+    this.#stableFrames = 0;
     this.#renderer.setSize(width, height, false);
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
   }
 
   #startLoop(): void {
@@ -253,8 +283,9 @@ export class BlockLibraryRenderer {
 
     this.#renderer.clear();
 
-    const totalRows = blockGridRows(this.#cells.length, this.#cols);
+    const totalRows = this.#drawnRows;
     const cellSize = this.#cellSize;
+    const drawnCellSize = this.#drawnCellSize;
 
     const scrollTop = this.#container.scrollTop;
     const containerH = this.#container.clientHeight;
@@ -270,11 +301,11 @@ export class BlockLibraryRenderer {
       cell.mesh.position.set(0, 0, 0);
       cell.mesh.rotation.set(PREVIEW_TILT, this.#rot, 0);
 
-      const x = cell.x * cellSize;
-      const y = (totalRows - 1 - cell.y) * cellSize;
+      const x = cell.x * drawnCellSize;
+      const y = (totalRows - 1 - cell.y) * drawnCellSize;
 
-      this.#renderer.setViewport(x, y, cellSize, cellSize);
-      this.#renderer.setScissor(x, y, cellSize, cellSize);
+      this.#renderer.setViewport(x, y, drawnCellSize, drawnCellSize);
+      this.#renderer.setScissor(x, y, drawnCellSize, drawnCellSize);
       this.#renderer.setScissorTest(true);
       this.#renderer.clearDepth();
 

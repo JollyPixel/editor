@@ -12,6 +12,7 @@ export function showImportTextureDialog(
 ): Promise<ImportTextureChoice | null> {
   return showChoice<ImportTextureChoice>({
     title: "Import texture",
+    icon: "import",
     message: `Replace the current texture with "${options.name}", ` +
       "or add it as a new texture?",
     actions: [

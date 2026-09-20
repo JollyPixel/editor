@@ -76,6 +76,7 @@ export class MergeLayerDialog extends LitElement {
     return html`
       <jolly-dialog
         heading="Merge layer"
+        icon="merge"
         @jolly-cancel=${this.#onCancel}
       >
         <div class="fields">

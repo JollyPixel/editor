@@ -1,11 +1,12 @@
 // Import Third-party Dependencies
 import {
+  html,
   svg,
-  type SVGTemplateResult
+  type TemplateResult
 } from "lit";
 
 // Import Internal Dependencies
-import { getIcon, registerIcon } from "@jolly-pixel/ui/icon";
+import { registerIcon } from "@jolly-pixel/ui/icon";
 
 export type IconName =
   | "move"
@@ -44,30 +45,14 @@ export type IconName =
 
 registerIcon("move", svg`
     <path
-      d="M6 9v5"
+      class="tone-ink"
+      d="M6 9v5M9 6v6M12 5v7M15 6v6"
       stroke="currentColor"
       stroke-width="2.4"
       stroke-linecap="round"
     />
     <path
-      d="M9 6v6"
-      stroke="currentColor"
-      stroke-width="2.4"
-      stroke-linecap="round"
-    />
-    <path
-      d="M12 5v7"
-      stroke="currentColor"
-      stroke-width="2.4"
-      stroke-linecap="round"
-    />
-    <path
-      d="M15 6v6"
-      stroke="currentColor"
-      stroke-width="2.4"
-      stroke-linecap="round"
-    />
-    <path
+      class="tone-ink"
       d="M6 14a6 6 0 0 0 6 6h1a6 6 0 0 0 6-6v-3a1.5 1.5 0 0 0-3 0"
       fill="none"
       stroke="currentColor"
@@ -75,10 +60,11 @@ registerIcon("move", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "teal" });
 
 registerIcon("paint", svg`
     <path
+      class="tone-ink"
       d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
       fill="none"
       stroke="currentColor"
@@ -86,11 +72,12 @@ registerIcon("paint", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "coral" });
 
 registerIcon("eraser", svg`
     <g transform="rotate(-45 12 12)">
       <rect
+        class="tone-ink"
         x="2.5"
         y="8"
         width="19"
@@ -101,6 +88,7 @@ registerIcon("eraser", svg`
         stroke-width="2.2"
       />
       <path
+        class="tone-ink"
         d="M9.5 8v8"
         stroke="currentColor"
         stroke-width="2.2"
@@ -112,11 +100,12 @@ registerIcon("eraser", svg`
       stroke-width="2.2"
       stroke-linecap="round"
     />
-  `);
+  `, { tone: "pink" });
 
 registerIcon("fill", svg`
     <g transform="rotate(-20 12 11)">
       <path
+        class="tone-ink"
         d="M6 4h10l-1.5 12a2 2 0 0 1-2 1.8h-3a2 2 0 0 1-2-1.8L6 4Z"
         fill="none"
         stroke="currentColor"
@@ -125,6 +114,7 @@ registerIcon("fill", svg`
         stroke-linecap="round"
       />
       <path
+        class="tone-ink"
         d="M5.3 8h11.4"
         stroke="currentColor"
         stroke-width="2.4"
@@ -132,21 +122,22 @@ registerIcon("fill", svg`
       />
     </g>
     <path
+      class="tone-ink"
       d="M14 15c1.5 1.5 2 2.7 2 3.6"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linecap="round"
     />
-    <circle cx="18.5" cy="19.5" r="1.9" fill="currentColor" />
-  `);
+    <circle class="tone-ink" cx="18.5" cy="19.5" r="1.9" fill="currentColor" />
+  `, { tone: "sky" });
 
 registerIcon("fillGlobal", svg`
-    <rect x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
+    <rect class="tone-ink" x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
     <rect x="13" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
     <rect x="4" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
-    <rect x="13" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
-  `);
+    <rect class="tone-ink" x="13" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
+  `, { tone: "sky" });
 
 registerIcon("select", svg`
     <rect
@@ -160,11 +151,11 @@ registerIcon("select", svg`
       stroke-width="2.4"
       stroke-dasharray="3.5 3"
     />
-    <circle cx="4.5" cy="4.5" r="1.7" fill="currentColor" />
-    <circle cx="19.5" cy="4.5" r="1.7" fill="currentColor" />
-    <circle cx="4.5" cy="19.5" r="1.7" fill="currentColor" />
-    <circle cx="19.5" cy="19.5" r="1.7" fill="currentColor" />
-  `);
+    <circle class="tone-ink" cx="4.5" cy="4.5" r="1.7" fill="currentColor" />
+    <circle class="tone-ink" cx="19.5" cy="4.5" r="1.7" fill="currentColor" />
+    <circle class="tone-ink" cx="4.5" cy="19.5" r="1.7" fill="currentColor" />
+    <circle class="tone-ink" cx="19.5" cy="19.5" r="1.7" fill="currentColor" />
+  `, { tone: "violet" });
 
 registerIcon("wand", svg`
     <path
@@ -174,15 +165,17 @@ registerIcon("wand", svg`
       stroke-linecap="round"
     />
     <path
+      class="tone-ink"
       d="M18 4l.9 2.1L21 7l-2.1.9L18 10l-.9-2.1L15 7l2.1-.9L18 4Z"
       fill="currentColor"
     />
-    <circle cx="12.5" cy="5" r="1" fill="currentColor" />
-    <circle cx="20" cy="12.5" r="1" fill="currentColor" />
-  `);
+    <circle class="tone-ink" cx="12.5" cy="5" r="1" fill="currentColor" />
+    <circle class="tone-ink" cx="20" cy="12.5" r="1" fill="currentColor" />
+  `, { tone: "amber" });
 
 registerIcon("uv", svg`
     <rect
+      class="tone-ink"
       x="4"
       y="4"
       width="7"
@@ -215,6 +208,7 @@ registerIcon("uv", svg`
       stroke-dasharray="2.5 2.5"
     />
     <rect
+      class="tone-ink"
       x="13"
       y="13"
       width="7"
@@ -224,10 +218,11 @@ registerIcon("uv", svg`
       stroke="currentColor"
       stroke-width="2.2"
     />
-  `);
+  `, { tone: "lime" });
 
 registerIcon("undo", svg`
     <path
+      class="tone-ink"
       d="M4 10h6a6 6 0 1 1-5.7 8"
       fill="none"
       stroke="currentColor"
@@ -236,6 +231,7 @@ registerIcon("undo", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M4 5v5h5"
       fill="none"
       stroke="currentColor"
@@ -243,10 +239,11 @@ registerIcon("undo", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "teal" });
 
 registerIcon("redo", svg`
     <path
+      class="tone-ink"
       d="M20 10h-6a6 6 0 1 0 5.7 8"
       fill="none"
       stroke="currentColor"
@@ -255,6 +252,7 @@ registerIcon("redo", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M20 5v5h-5"
       fill="none"
       stroke="currentColor"
@@ -262,10 +260,11 @@ registerIcon("redo", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "teal" });
 
 registerIcon("copy", svg`
     <rect
+      class="tone-ink"
       x="8"
       y="8"
       width="12"
@@ -283,7 +282,7 @@ registerIcon("copy", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "sky" });
 
 registerIcon("paste", svg`
     <path
@@ -295,16 +294,18 @@ registerIcon("paste", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "sky" });
 
 registerIcon("rotateClockwise", svg`
     <path
+      class="tone-ink"
       d="M20 11a8 8 0 1 0-2.3 6"
       fill="none"
       stroke="currentColor"
@@ -312,6 +313,7 @@ registerIcon("rotateClockwise", svg`
       stroke-linecap="round"
     />
     <path
+      class="tone-ink"
       d="M20 5v6h-6"
       fill="none"
       stroke="currentColor"
@@ -319,10 +321,11 @@ registerIcon("rotateClockwise", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "amber" });
 
 registerIcon("rotateCounterClockwise", svg`
     <path
+      class="tone-ink"
       d="M4 11a8 8 0 1 1 2.3 6"
       fill="none"
       stroke="currentColor"
@@ -330,6 +333,7 @@ registerIcon("rotateCounterClockwise", svg`
       stroke-linecap="round"
     />
     <path
+      class="tone-ink"
       d="M4 5v6h6"
       fill="none"
       stroke="currentColor"
@@ -337,29 +341,31 @@ registerIcon("rotateCounterClockwise", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "amber" });
 
 registerIcon("flipHorizontal", svg`
     <path d="M12 3v18" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2" />
     <path
+      class="tone-ink"
       d="M4 6l6 6-6 6V6ZM20 6l-6 6 6 6V6Z"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "amber" });
 
 registerIcon("flipVertical", svg`
     <path d="M3 12h18" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2" />
     <path
+      class="tone-ink"
       d="M6 4l6 6 6-6H6ZM6 20l6-6 6 6H6Z"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "amber" });
 
 registerIcon("clearTexture", svg`
     <rect
@@ -373,27 +379,31 @@ registerIcon("clearTexture", svg`
       stroke-width="2.2"
     />
     <path
+      class="tone-ink"
       d="M7 17 17 7"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linecap="round"
     />
     <path
+      class="tone-ink"
       d="m7 13 4 4"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linecap="round"
     />
-  `);
+  `, { tone: "coral" });
 
 registerIcon("swap", svg`
     <path
+      class="tone-ink"
       d="M3 8h13"
       stroke="currentColor"
       stroke-width="2.4"
       stroke-linecap="round"
     />
     <path
+      class="tone-ink"
       d="M13 4l4 4-4 4"
       fill="none"
       stroke="currentColor"
@@ -402,12 +412,14 @@ registerIcon("swap", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M21 16H8"
       stroke="currentColor"
       stroke-width="2.4"
       stroke-linecap="round"
     />
     <path
+      class="tone-ink"
       d="M11 20l-4-4 4-4"
       fill="none"
       stroke="currentColor"
@@ -415,16 +427,18 @@ registerIcon("swap", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "teal" });
 
 registerIcon("eyedropper", svg`
     <path
+      class="tone-ink"
       d="M11 7l6 6"
       stroke="currentColor"
       stroke-width="2.4"
       stroke-linecap="round"
     />
     <path
+      class="tone-ink"
       d="M4 16 15.7 4.3a1 1 0 0 1 1.4 0l2.6 2.6a1 1 0 0 1 0 1.4L8 20H4v-4Z"
       fill="none"
       stroke="currentColor"
@@ -432,10 +446,11 @@ registerIcon("eyedropper", svg`
       stroke-linejoin="round"
       stroke-linecap="round"
     />
-  `);
+  `, { tone: "pink" });
 
 registerIcon("import", svg`
     <path
+      class="tone-ink"
       d="M12 15V4"
       stroke="currentColor"
       stroke-width="2.4"
@@ -443,6 +458,7 @@ registerIcon("import", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M7.5 8.5 12 4l4.5 4.5"
       fill="none"
       stroke="currentColor"
@@ -458,10 +474,11 @@ registerIcon("import", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "lime" });
 
 registerIcon("export", svg`
     <path
+      class="tone-ink"
       d="M12 4v11"
       stroke="currentColor"
       stroke-width="2.4"
@@ -469,6 +486,7 @@ registerIcon("export", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M7.5 10.5 12 15l4.5-4.5"
       fill="none"
       stroke="currentColor"
@@ -484,25 +502,21 @@ registerIcon("export", svg`
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "sky" });
 
 registerIcon("add", svg`
     <path
-      d="M12 5v14"
+      class="tone-ink"
+      d="M12 5v14M5 12h14"
       stroke="currentColor"
       stroke-width="2.4"
       stroke-linecap="round"
     />
-    <path
-      d="M5 12h14"
-      stroke="currentColor"
-      stroke-width="2.4"
-      stroke-linecap="round"
-    />
-  `);
+  `, { tone: "lime" });
 
 registerIcon("cube", svg`
     <path
+      class="tone-ink"
       d="m12 3 7 4v8l-7 4-7-4V7l7-4Z"
       fill="none"
       stroke="currentColor"
@@ -516,20 +530,22 @@ registerIcon("cube", svg`
       stroke-width="2"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "amber" });
 
 registerIcon("triangle", svg`
     <path
+      class="tone-ink"
       d="M5 19 12 5l7 14H5Z"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "amber" });
 
 registerIcon("edit", svg`
     <path
+      class="tone-ink"
       d="M4 20l1-4.5L15.8 4.7a1.6 1.6 0 0 1 2.3 0l1.2 1.2a1.6 1.6 0 0 1 0 2.3L8.5 19 4 20Z"
       fill="none"
       stroke="currentColor"
@@ -537,12 +553,13 @@ registerIcon("edit", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M13.5 7l3.5 3.5"
       stroke="currentColor"
       stroke-width="2.4"
       stroke-linecap="round"
     />
-  `);
+  `, { tone: "coral" });
 
 registerIcon("trash", svg`
     <path
@@ -559,6 +576,7 @@ registerIcon("trash", svg`
       stroke-linejoin="round"
     />
     <path
+      class="tone-ink"
       d="M6.5 7 7.3 19.2a2 2 0 0 0 2 1.8h5.4a2 2 0 0 0 2-1.8L17.5 7"
       fill="none"
       stroke="currentColor"
@@ -567,18 +585,13 @@ registerIcon("trash", svg`
       stroke-linecap="round"
     />
     <path
-      d="M10 11v6"
+      class="tone-ink"
+      d="M10 11v6M14 11v6"
       stroke="currentColor"
       stroke-width="2"
       stroke-linecap="round"
     />
-    <path
-      d="M14 11v6"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-    />
-  `);
+  `, { tone: "coral" });
 
 registerIcon("collapse", svg`
     <path
@@ -662,23 +675,25 @@ registerIcon("label", svg`
       stroke-width="2.2"
     />
     <path
+      class="tone-ink"
       d="M7 9h10M7 13h6"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linecap="round"
     />
-  `);
+  `, { tone: "violet" });
 
 registerIcon("unfold", svg`
     <path
+      class="tone-ink"
       d="M3 5h18v14H3zM9 5v14M15 5v14M3 12h18"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `);
+  `, { tone: "lime" });
 
 registerIcon("chevronDown", svg`
     <path
@@ -710,10 +725,6 @@ registerIcon("dockPicker", svg`
 
 export function renderIcon(
   name: IconName
-): SVGTemplateResult {
-  return svg`
-    <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      ${getIcon(name)}
-    </svg>
-  `;
+): TemplateResult {
+  return html`<jolly-icon class="icon" name=${name} aria-hidden="true"></jolly-icon>`;
 }

@@ -119,6 +119,7 @@ export async function removeLayerEntry(
     title: "Delete layer",
     message: removalMessage(world, ref),
     confirmLabel: "Delete",
+    icon: "trash",
     danger: true
   });
   if (!confirmed) {
@@ -183,7 +184,9 @@ export async function mergeLayerEntry(
         `Merge "${ref.name}" into "${target}"?`,
         ...warnings
       ].join(" "),
-      confirmLabel: "Merge"
+      confirmLabel: "Merge",
+      icon: "merge",
+      intent: "warning"
     });
     if (!confirmed) {
       return;

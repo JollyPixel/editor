@@ -19,6 +19,8 @@ export const colorPickerRailStyles = css`
   }
 
   .swap-btn {
+    --jolly-icon-tone-strength: 0%;
+
     position: absolute;
     top: 50%;
     left: 50%;
@@ -26,8 +28,8 @@ export const colorPickerRailStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     padding: 0;
     border: none;
     border-radius: 50%;
@@ -74,8 +76,8 @@ export const colorPickerRailStyles = css`
   }
 
   .swap-btn .icon {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
   }
 
   .dock-btn {

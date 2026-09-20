@@ -90,6 +90,7 @@ const inkTokens = css`
   );
   --jolly-tab-badge-fg: var(--jolly-warning);
   --jolly-pane-header-bg: var(--jolly-accent-fill);
+  --jolly-dialog-header-bg: var(--jolly-accent-fill);
   --jolly-dock-resize-bg: color-mix(
     in oklab,
     var(--jolly-accent-fill) 12%,
@@ -135,24 +136,60 @@ const semanticTokens = css`
   --jolly-text: light-dark(var(--jolly-neutral-900), var(--jolly-neutral-50));
   --jolly-text-muted: light-dark(var(--jolly-neutral-600), var(--jolly-neutral-400));
   --jolly-text-on-fill: var(--jolly-neutral-0);
-  --jolly-accent-fill: var(--jolly-accent-600);
-  --jolly-accent-text: light-dark(var(--jolly-accent-700), var(--jolly-accent-300));
+  --jolly-accent-fill: var(--jolly-area-fill, var(--jolly-accent-600));
+  --jolly-accent-text: var(
+    --jolly-area-tone,
+    light-dark(var(--jolly-accent-700), var(--jolly-accent-300))
+  );
   --jolly-separator-label: var(--jolly-accent-text);
   --jolly-separator-rule: color-mix(
     in oklab,
     var(--jolly-accent-text) 28%,
     transparent
   );
-  --jolly-focus-ring: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
+  --jolly-focus-ring: var(
+    --jolly-area-tone,
+    light-dark(var(--jolly-accent-600), var(--jolly-accent-400))
+  );
   --jolly-danger: light-dark(var(--jolly-danger-700), var(--jolly-danger-300));
   --jolly-danger-border: light-dark(var(--jolly-danger-500), var(--jolly-danger-300));
   --jolly-warning: light-dark(var(--jolly-warning-700), var(--jolly-warning-300));
   --jolly-success: light-dark(var(--jolly-success-700), var(--jolly-success-300));
+  --jolly-intent-info-fill: var(--jolly-accent-600);
+  --jolly-intent-success-fill: var(--jolly-success-700);
+  --jolly-intent-warning-fill: var(--jolly-warning-700);
+  --jolly-intent-danger-fill: var(--jolly-danger-700);
   --jolly-modified: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
   --jolly-locked: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
   --jolly-shadow-overlay: 0 2px 8px light-dark(rgb(0 0 0 / 16%), rgb(0 0 0 / 44%));
   --jolly-shadow-floating: 0 4px 16px light-dark(rgb(0 0 0 / 18%), rgb(0 0 0 / 50%));
   --jolly-shadow-modal: 0 12px 40px light-dark(rgb(0 0 0 / 24%), rgb(0 0 0 / 60%));
+`;
+
+const toneTokens = css`
+  --jolly-tone-coral: light-dark(var(--jolly-coral-600), var(--jolly-coral-400));
+  --jolly-tone-amber: light-dark(var(--jolly-amber-600), var(--jolly-amber-400));
+  --jolly-tone-lime: light-dark(var(--jolly-lime-600), var(--jolly-lime-400));
+  --jolly-tone-teal: light-dark(var(--jolly-teal-600), var(--jolly-teal-400));
+  --jolly-tone-sky: light-dark(var(--jolly-sky-600), var(--jolly-sky-400));
+  --jolly-tone-violet: light-dark(var(--jolly-violet-600), var(--jolly-violet-400));
+  --jolly-tone-pink: light-dark(var(--jolly-pink-600), var(--jolly-pink-400));
+  --jolly-tone-coral-on-fill: var(--jolly-coral-300);
+  --jolly-tone-amber-on-fill: var(--jolly-amber-300);
+  --jolly-tone-lime-on-fill: var(--jolly-lime-300);
+  --jolly-tone-teal-on-fill: var(--jolly-teal-300);
+  --jolly-tone-sky-on-fill: var(--jolly-sky-300);
+  --jolly-tone-violet-on-fill: var(--jolly-violet-300);
+  --jolly-tone-pink-on-fill: var(--jolly-pink-300);
+  --jolly-tone-coral-fill: var(--jolly-coral-600);
+  --jolly-tone-amber-fill: var(--jolly-amber-600);
+  --jolly-tone-lime-fill: var(--jolly-lime-600);
+  --jolly-tone-teal-fill: var(--jolly-teal-600);
+  --jolly-tone-sky-fill: var(--jolly-sky-600);
+  --jolly-tone-violet-fill: var(--jolly-violet-600);
+  --jolly-tone-pink-fill: var(--jolly-pink-600);
+  --jolly-icon-tone-rest: 55%;
+  --jolly-icon-tone-engaged: 100%;
 `;
 
 export const themeTokens = css`
@@ -166,6 +203,8 @@ export const themeTokens = css`
     ${inkTokens}
 
     ${semanticTokens}
+
+    ${toneTokens}
   }
 
   :host([theme="light"]) {
@@ -202,6 +241,7 @@ export const themeTokens = css`
       --jolly-tab-badge-bg: ButtonFace;
       --jolly-tab-badge-fg: ButtonText;
       --jolly-pane-header-bg: ButtonFace;
+      --jolly-dialog-header-bg: ButtonFace;
       --jolly-dock-resize-bg: ButtonFace;
       --jolly-dock-resize-bg-hover: Highlight;
       --jolly-separator-label: CanvasText;
