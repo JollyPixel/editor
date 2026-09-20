@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import { Emitter } from "@openally/emitt";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
+import { TransformControls } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import type {
@@ -47,20 +47,22 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
   #config: GizmoConfig | null = null;
   #dragging = false;
 
-  #onDraggingChanged = (
-    event: { value: unknown; }
-  ): void => {
-    this.#dragging = event.value === true;
-    this.#camera.enabled = !this.#dragging;
+  #onDragStart = (): void => {
+    this.#dragging = true;
+    this.#camera.enabled = false;
+
+    const block = this.#blocks.selected;
+    if (block !== null) {
+      this.#lock.claim(block.uuid);
+    }
+  };
+
+  #onDragEnd = (): void => {
+    this.#dragging = false;
+    this.#camera.enabled = true;
 
     const block = this.#blocks.selected;
     if (block === null) {
-      return;
-    }
-
-    if (this.#dragging) {
-      this.#lock.claim(block.uuid);
-
       return;
     }
 
@@ -89,26 +91,21 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
   #sync = (): void => {
     const block = this.#blocks.selected;
     const config = this.#config;
-    if (block === null) {
-      this.controls.detach();
-    }
-
     if (
       config === null ||
       block === null ||
       this.#lock.lockedBy(block.uuid) !== null
     ) {
       this.controls.enabled = false;
-      this.controls.getHelper().visible = false;
+      this.controls.detach();
 
       return;
     }
 
+    this.controls.mode = config.mode;
+    this.controls.orientation = config.space ?? "world";
     this.controls.attach(resolveTarget(block, config.target));
-    this.controls.setMode(config.mode);
-    this.controls.setSpace(config.space ?? "world");
     this.controls.enabled = true;
-    this.controls.getHelper().visible = true;
   };
 
   constructor(
@@ -122,19 +119,20 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
 
     this.controls = new TransformControls(
       options.camera.threeCamera,
-      options.canvas
+      options.canvas,
+      {
+        appearance: {
+          center: {
+            interactive: true
+          }
+        }
+      }
     );
-    this.controls.getHelper().visible = false;
-    options.scene.add(this.controls.getHelper());
+    options.scene.add(this.controls.helper);
 
-    this.controls.addEventListener(
-      "dragging-changed",
-      this.#onDraggingChanged
-    );
-    this.controls.addEventListener(
-      "objectChange",
-      this.#onObjectChange
-    );
+    this.controls.addEventListener("start", this.#onDragStart);
+    this.controls.addEventListener("change", this.#onObjectChange);
+    this.controls.addEventListener("end", this.#onDragEnd);
     this.#blocks.on("select", this.#sync);
     this.#lock.on("change", this.#sync);
   }
@@ -153,16 +151,10 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
   dispose(): void {
     this.#blocks.off("select", this.#sync);
     this.#lock.off("change", this.#sync);
-    this.controls.removeEventListener(
-      "dragging-changed",
-      this.#onDraggingChanged
-    );
-    this.controls.removeEventListener(
-      "objectChange",
-      this.#onObjectChange
-    );
-    this.controls.detach();
-    this.controls.getHelper().removeFromParent();
+    this.controls.removeEventListener("start", this.#onDragStart);
+    this.controls.removeEventListener("change", this.#onObjectChange);
+    this.controls.removeEventListener("end", this.#onDragEnd);
+    this.controls.helper.removeFromParent();
     this.controls.dispose();
   }
 }

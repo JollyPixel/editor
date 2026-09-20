@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
-import type { Vector3Like } from "three";
+import type {
+  Mesh,
+  Vector3Like
+} from "three";
 
 export type Axis = "X" | "Y" | "Z";
 
@@ -138,45 +141,40 @@ export async function gizmoHandlePoints(
   await page.waitForFunction(async() => {
     const { gizmo } = await window.voxelModelEditor!.scene.ready;
 
-    return gizmo.controls.object !== undefined;
+    return gizmo.controls.target !== null;
   });
   await nextFrames(page);
 
   return page.evaluate(async(axisName) => {
-    const kHandleGrabRatio = 0.4;
+    const kDragRatio = 3;
     const editor = window.voxelModelEditor!;
     const { gizmo } = await editor.scene.ready;
     const { controls } = gizmo;
-    const { camera } = controls;
+    const { camera, helper } = controls;
     const bounds = editor.runtime.world.renderer.canvas.getBoundingClientRect();
-    const anchor = controls.object!;
-    const direction = anchor.position.clone().set(
-      axisName === "X" ? 1 : 0,
-      axisName === "Y" ? 1 : 0,
-      axisName === "Z" ? 1 : 0
-    );
-    if (controls.space === "local") {
-      direction.applyQuaternion(
-        anchor.getWorldQuaternion(anchor.quaternion.clone())
-      );
-    }
+    const handleName = [
+      "transform-handle",
+      controls.mode,
+      axisName.toLowerCase(),
+      "positive"
+    ].join("-");
+    const picker = helper
+      .getObjectByName(handleName)!
+      .getObjectByName("transform-handle-picker") as Mesh;
 
     camera.updateMatrixWorld(true);
-    const origin = anchor.getWorldPosition(anchor.position.clone());
-    const distance = origin.distanceTo(
-      camera.getWorldPosition(camera.position.clone())
+    helper.updateMatrixWorld(true);
+    const origin = helper.position.clone()
+      .setFromMatrixPosition(helper.matrixWorld);
+    picker.geometry.computeBoundingBox();
+    const grab = picker.localToWorld(
+      picker.geometry.boundingBox!.getCenter(picker.position.clone())
     );
-    const fieldOfView = "fov" in camera ? Number(camera.fov) : 50;
-    const zoom = "zoom" in camera ? Number(camera.zoom) : 1;
-    const gizmoScale = distance * controls.size / 4 * Math.min(
-      1.9 * Math.tan(Math.PI * fieldOfView / 360) / zoom,
-      7
-    );
-    const handleLength = gizmoScale * kHandleGrabRatio;
+    const reach = grab.sub(origin);
 
-    return [handleLength, handleLength * 3].map((offset) => {
+    return [1, kDragRatio].map((ratio) => {
       const point = origin.clone()
-        .addScaledVector(direction, offset)
+        .addScaledVector(reach, ratio)
         .project(camera);
 
       return {

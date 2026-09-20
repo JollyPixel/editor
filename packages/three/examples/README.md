@@ -18,7 +18,7 @@ examples/
 ├── grid/                   /grid/
 ├── area-box/               /area-box/
 ├── marquee-box/            /marquee-box/
-├── translation-controls/   /translation-controls/
+├── transform-controls/     /transform-controls/
 ├── frustum/                one folder per example, plus family shared code
 │   ├── local/              /frustum/local/
 │   └── sync/               /frustum/sync/

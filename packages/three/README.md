@@ -36,7 +36,7 @@ scene.add(grid); // self-updating: no manual .update() call needed
 - [Grid](docs/Grid.md): Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
 - [MarqueeBox](docs/MarqueeBox.md): Empty axis-aligned box with animated two-color dashed edges, for 3D selections, moved and resized by [BoxControls](docs/BoxControls.md). (TSL, `THREE.WebGPURenderer`).
 - [MeshHighlight](docs/mesh-highlight/index.md): Draws local and peer selection, with outline and postprocess rendering techniques.
-- [TranslationControls](docs/TranslationControls.md): Customizable axis handles for translating one `THREE.Object3D` in world or local space.
+- [TransformControls](docs/TransformControls.md): Customizable translate, rotate and scale gizmo for one `THREE.Object3D`, with a configurable orientation and pivot.
 
 ### Network
 

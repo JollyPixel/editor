@@ -7,9 +7,10 @@ export interface PointerDragHandlers {
    */
   press: (event: PointerEvent) => void;
   /**
-   * Pointer motion while no drag is running.
+   * Pointer motion while no drag is running; returns whether the
+   * pointer is over something a press would grab.
    */
-  hover: (event: PointerEvent) => void;
+  hover: (event: PointerEvent) => boolean;
   /**
    * Motion of the dragging pointer.
    */
@@ -20,10 +21,14 @@ export interface PointerDragHandlers {
   release: () => void;
 }
 
+type DragCursor = "grab" | "grabbing";
+
 export class PointerDrag {
   #handlers: PointerDragHandlers;
   #element: HTMLElement | null = null;
   #pointerId: number | null = null;
+  #cursor: DragCursor | null = null;
+  #hostCursor = "";
 
   constructor(
     handlers: PointerDragHandlers
@@ -59,6 +64,7 @@ export class PointerDrag {
     }
 
     this.end();
+    this.#showCursor(null);
     element.removeEventListener("pointerdown", this.#onPointerDown);
     element.removeEventListener("pointermove", this.#onPointerMove);
     this.#element = null;
@@ -76,6 +82,7 @@ export class PointerDrag {
     element.addEventListener("pointerup", this.#onPointerUp);
     element.addEventListener("pointercancel", this.#onPointerUp);
     element.setPointerCapture?.(event.pointerId);
+    this.#showCursor("grabbing");
   }
 
   end(): void {
@@ -92,6 +99,7 @@ export class PointerDrag {
       element.releasePointerCapture(pointerId);
     }
 
+    this.#showCursor(null);
     this.#handlers.release();
   }
 
@@ -127,7 +135,7 @@ export class PointerDrag {
     event: PointerEvent
   ): void => {
     if (this.#pointerId === null) {
-      this.#handlers.hover(event);
+      this.#hover(event);
     }
     else if (event.pointerId === this.#pointerId) {
       this.#handlers.drag(event);
@@ -137,8 +145,34 @@ export class PointerDrag {
   readonly #onPointerUp = (
     event: PointerEvent
   ): void => {
-    if (event.pointerId === this.#pointerId) {
-      this.end();
+    if (event.pointerId !== this.#pointerId) {
+      return;
+    }
+
+    this.end();
+    if (event.type === "pointerup") {
+      this.#hover(event);
     }
   };
+
+  #hover(
+    event: PointerEvent
+  ): void {
+    this.#showCursor(this.#handlers.hover(event) ? "grab" : null);
+  }
+
+  #showCursor(
+    cursor: DragCursor | null
+  ): void {
+    const element = this.#element;
+    if (element === null || cursor === this.#cursor) {
+      return;
+    }
+
+    if (this.#cursor === null) {
+      this.#hostCursor = element.style.cursor;
+    }
+    this.#cursor = cursor;
+    element.style.cursor = cursor ?? this.#hostCursor;
+  }
 }
