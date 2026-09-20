@@ -2,6 +2,7 @@
 import type { Runtime } from "@jolly-pixel/runtime";
 import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 import {
+  DevOptions,
   EditorRuntime,
   type EditorContext,
   type EditorSession
@@ -20,6 +21,14 @@ import {
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";
 
+export interface VoxelModelDevOptions {
+  maxFps: number | undefined;
+}
+
+export const VOXEL_MODEL_DEV_OPTIONS = new DevOptions<VoxelModelDevOptions>({
+  maxFps: DevOptions.number()
+});
+
 export interface VoxelModelEditorParts {
   runtime: Runtime;
   scene: ModelEditorScene;
@@ -34,11 +43,12 @@ export class VoxelModelEditor {
     title: "Join voxel model"
   };
   static readonly kinds = [MODEL_TEXTURE_KIND];
+  static readonly dev = VOXEL_MODEL_DEV_OPTIONS;
 
   static async mount(
-    context: EditorContext
+    context: EditorContext<VoxelModelDevOptions>
   ): Promise<VoxelModelEditor> {
-    const { session } = context;
+    const { session, dev } = context;
     const texture = openModelTexture(session);
 
     const scene = new ModelEditorScene({
@@ -57,7 +67,7 @@ export class VoxelModelEditor {
       texture
     });
     await editorRuntime.load(scene, {
-      maxFps: Infinity
+      maxFps: dev.maxFps ?? Infinity
     });
 
     const workspace = await scene.ready;

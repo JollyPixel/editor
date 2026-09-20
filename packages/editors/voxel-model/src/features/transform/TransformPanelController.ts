@@ -23,7 +23,6 @@ const kDisplayDecimals = 2;
 const kPivotVisibleModes: readonly TransformMode[] = ["pos", "angle", "size", "pivot"];
 
 export type TransformMode = "pos" | "angle" | "size" | "pivot" | "scale";
-export type Vector3Value = { x: number; y: number; z: number; };
 
 export interface TransformWorkspace {
   document: ModelDocument;
@@ -38,7 +37,7 @@ export class TransformPanelController implements ReactiveController {
   #selected: ModelBlock | null = null;
   #mode: TransformMode = "pos";
   #space: GizmoSpace = "local";
-  #axisValues: Vector3Value = { x: 0, y: 0, z: 0 };
+  #axisValues: THREE.Vector3Like = { x: 0, y: 0, z: 0 };
 
   #onSelect = (
     block: ModelBlock | null
@@ -108,12 +107,12 @@ export class TransformPanelController implements ReactiveController {
     this.#host.requestUpdate();
   }
 
-  get axisValues(): Vector3Value {
+  get axisValues(): THREE.Vector3Like {
     return this.#axisValues;
   }
 
   set axisValues(
-    value: Vector3Value
+    value: THREE.Vector3Like
   ) {
     this.#axisValues = value;
     this.#applyAxisValues();
@@ -260,35 +259,35 @@ function readAxisValues(
   block: ModelBlock,
   mode: TransformMode,
   space: GizmoSpace
-): Vector3Value {
+): THREE.Vector3Like {
   const world = space === "world";
 
   switch (mode) {
     case "pos":
-      return roundVector3Value(world ? block.worldPosition : block.position);
+      return roundVector3(world ? block.worldPosition : block.position);
     case "angle": {
       const rotation = world ? block.worldRotation : block.rotation;
 
-      return roundVector3Value({
+      return roundVector3({
         x: THREE.MathUtils.radToDeg(rotation.x),
         y: THREE.MathUtils.radToDeg(rotation.y),
         z: THREE.MathUtils.radToDeg(rotation.z)
       });
     }
     case "size":
-      return roundVector3Value(block.size);
+      return roundVector3(block.size);
     case "pivot":
-      return roundVector3Value(world ? block.worldPivotOffset : block.pivotOffset);
+      return roundVector3(world ? block.worldPivotOffset : block.pivotOffset);
     case "scale":
-      return roundVector3Value(block.scale);
+      return roundVector3(block.scale);
     default:
       return { x: 0, y: 0, z: 0 };
   }
 }
 
-function roundVector3Value(
-  value: Vector3Value
-): Vector3Value {
+function roundVector3(
+  value: THREE.Vector3Like
+): THREE.Vector3Like {
   return {
     x: Number(value.x.toFixed(kDisplayDecimals)),
     y: Number(value.y.toFixed(kDisplayDecimals)),
