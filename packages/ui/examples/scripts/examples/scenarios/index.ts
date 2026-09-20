@@ -1,7 +1,5 @@
 // Import Internal Dependencies
-import { DENSITY_EXAMPLE } from "./density.ts";
-import { THEME_EXAMPLE } from "./theme.ts";
-import { NUMERIC_ENTRY_EXAMPLE } from "./numericEntry.ts";
+import { SCOPED_HOSTS_EXAMPLE } from "./scopedHosts.ts";
 import { STEP_SIZES_EXAMPLE } from "./stepSizes.ts";
 import { COLOR_POPOVER_EXAMPLE } from "./colorPopover.ts";
 import { REORDER_PERSIST_EXAMPLE } from "./reorderPersistence.ts";
@@ -12,20 +10,14 @@ import { DOCK_LAYOUT_DOUBLE_EXAMPLE } from "./dockLayoutDouble.ts";
 import { DOCK_LAYOUT_TRANSPARENT_EXAMPLE } from "./dockLayoutTransparent.ts";
 import { DIALOG_ESCAPE_EXAMPLE } from "./dialogEscape.ts";
 import { LOCKING_EXAMPLE } from "./locking.ts";
-import {
-  EDITOR_EXAMPLE,
-  EDITOR_STATES_EXAMPLE
-} from "./editor.ts";
-import { FACADE_PARITY_EXAMPLE } from "./facadeParity.ts";
-import { FACADE_HIDDEN_EXAMPLE } from "./facadeHidden.ts";
+import { EDITOR_EXAMPLE } from "./editor.ts";
+import { FACADE_EXAMPLE } from "./facade.ts";
 import { STATS_CYCLE_EXAMPLE } from "./statsCycle.ts";
 import { MIXED_PER_AXIS_EXAMPLE } from "./mixedPerAxis.ts";
 import { UNLABELED_FIELDS_EXAMPLE } from "./unlabeledFields.ts";
 
 export const SCENARIOS_EXAMPLES = [
-  DENSITY_EXAMPLE,
-  THEME_EXAMPLE,
-  NUMERIC_ENTRY_EXAMPLE,
+  SCOPED_HOSTS_EXAMPLE,
   STEP_SIZES_EXAMPLE,
   COLOR_POPOVER_EXAMPLE,
   REORDER_PERSIST_EXAMPLE,
@@ -37,9 +29,7 @@ export const SCENARIOS_EXAMPLES = [
   DIALOG_ESCAPE_EXAMPLE,
   LOCKING_EXAMPLE,
   EDITOR_EXAMPLE,
-  EDITOR_STATES_EXAMPLE,
-  FACADE_PARITY_EXAMPLE,
-  FACADE_HIDDEN_EXAMPLE,
+  FACADE_EXAMPLE,
   STATS_CYCLE_EXAMPLE,
   MIXED_PER_AXIS_EXAMPLE,
   UNLABELED_FIELDS_EXAMPLE

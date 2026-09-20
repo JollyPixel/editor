@@ -1,3 +1,18 @@
+// Import Internal Dependencies
+import type { IconName } from "../../../../src/index.ts";
+
+export interface KeyedPaneOptions {
+  icon?: IconName;
+  collapsible?: boolean;
+}
+
+export interface DockLayoutStage {
+  layout: HTMLElementTagNameMap["jolly-dock-layout"];
+  stage: HTMLElement;
+  viewport: HTMLElement;
+  reset: HTMLElementTagNameMap["jolly-button"];
+}
+
 export function pane(
   title: string,
   content: string
@@ -17,21 +32,6 @@ export function folder(
   const element = document.createElement("jolly-folder");
   element.label = label;
   element.append(text(`${label} content`));
-
-  return element;
-}
-
-export function tabs(
-  value = ""
-): HTMLElementTagNameMap["jolly-tabs"] {
-  const element = document.createElement("jolly-tabs");
-  element.id = "container-example-tabs";
-  element.value = value;
-  element.append(
-    tab("build", "Build"),
-    tab("paint", "Paint"),
-    tab("disabled", "Disabled", true)
-  );
 
   return element;
 }
@@ -76,7 +76,7 @@ export function placementDock(
   element.side = side;
   element.key = side;
   element.collapsible = true;
-  const resident = placementPane(
+  const resident = keyedPane(
     side,
     `${side === "left" ? "Left" : "Right"} dock`,
     "Drag or focus the separator to resize."
@@ -87,27 +87,41 @@ export function placementDock(
   return element;
 }
 
-export function placementPane(
+export function keyedPane(
   key: string,
   title: string,
-  content: string
+  content: string,
+  options: KeyedPaneOptions = {}
 ): HTMLElementTagNameMap["jolly-pane"] {
   const element = pane(title, content);
   element.key = key;
+  element.icon = options.icon ?? "";
+  element.collapsible = options.collapsible ?? false;
 
   return element;
 }
 
-function tab(
-  value: string,
-  label: string,
-  disabled = false
-): HTMLElementTagNameMap["jolly-tab"] {
-  const element = document.createElement("jolly-tab");
-  element.value = value;
-  element.label = label;
-  element.disabled = disabled;
-  element.append(text(`${label} panel`));
+export function dockLayoutStage(
+  storageKey: string
+): DockLayoutStage {
+  const stage = document.createElement("div");
+  stage.className = "dock-layout-stage";
 
-  return element;
+  const layout = document.createElement("jolly-dock-layout");
+  layout.storageKey = storageKey;
+  stage.append(layout);
+
+  const viewport = text("Viewport");
+  viewport.className = "dock-layout-viewport";
+
+  const reset = button("Reset layout");
+  reset.dataset.action = "reset-layout";
+  reset.addEventListener("click", () => layout.resetLayout());
+
+  return {
+    layout,
+    stage,
+    viewport,
+    reset
+  };
 }

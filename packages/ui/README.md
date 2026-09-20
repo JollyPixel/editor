@@ -155,6 +155,10 @@ Adding an example:
   gallery clears `host` on its own.
 - Keep DOM access inside `render`. The manifest sweep imports every example in Node, where
   `HTMLElement` does not exist at module scope.
+- Give a component one page, and declare its variants as `options` rather than as sibling pages.
+  The shell renders one checkbox per option, remounts the example on a toggle, and keeps the state
+  in the URL (`/?example=containers/tabs&closable=1`), so a variant stays deep-linkable and survives
+  a reload. End to end tests pass them through `openExample(page, id, { options })`.
 
 ## Contributors Guide
 

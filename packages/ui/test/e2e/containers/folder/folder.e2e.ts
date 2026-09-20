@@ -104,52 +104,49 @@ test.describe("Folder", () => {
     await expect(folder).not.toHaveAttribute("open");
   });
 
-  test("a non-collapsible folder stays open, toggle-less, aligned with its neighbour", async({ page }) => {
-    await openExample(page, "containers/folder-collapsible");
+  test("a non-collapsible folder stays open, toggle-less, aligned like a collapsible", async({ page }) => {
+    const folder = page.locator("jolly-folder");
 
-    const pinned = page.locator("jolly-folder[data-folder=pinned]");
-    const collapsible = page.locator("jolly-folder[data-folder=collapsible]");
-    const row = pinned.locator("p[data-row=pinned]");
+    await openExample(page, "containers/folder");
+    await expect(folder.locator(".chevron")).toHaveCount(1);
+    const toggleLabel = await boxOf(folder.locator(".toggle .label"));
 
-    await expect(pinned.locator(".toggle")).toHaveCount(0);
-    await expect(pinned.locator(".chevron")).toHaveCount(0);
-    await expect(pinned.locator(".title .label")).toHaveText("Always open");
-    await expect(pinned.locator("jolly-button[data-action=pinned]")).toBeVisible();
-    const [pinnedLabel, toggleLabel] = await Promise.all([
-      boxOf(pinned.locator(".title .label")),
-      boxOf(collapsible.locator(".toggle .label"))
-    ]);
-    expect(pinnedLabel.x).toBe(toggleLabel.x);
+    await openExample(page, "containers/folder", {
+      options: { collapsible: false }
+    });
+    await expect(folder.locator(".toggle")).toHaveCount(0);
+    await expect(folder.locator(".chevron")).toHaveCount(0);
+    await expect(folder.locator(".title .label")).toHaveText("Transform");
+    await expect(folder.locator("jolly-button[data-action=plus]")).toBeVisible();
+    expect((await boxOf(folder.locator(".title .label"))).x).toBe(toggleLabel.x);
 
-    await pinned.locator(".header").click();
-    await expect(pinned).toHaveAttribute("open");
-    await expect(row).toBeVisible();
-
-    await expect(collapsible.locator(".chevron")).toHaveCount(1);
-    await collapsible.locator(".toggle").click();
-    await expect(collapsible).not.toHaveAttribute("open");
-    await expect(collapsible.locator("p[data-row=collapsible]")).toBeHidden();
+    await folder.locator(".header").click();
+    await expect(folder).toHaveAttribute("open");
+    await expect(folder.locator("p[data-row]")).toBeVisible();
   });
 
   test("flush folders and a zero indent token drop the content inset", async({ page }) => {
-    await openExample(page, "containers/folder-flush");
+    const outer = page.locator("jolly-folder[data-folder=outer]");
+    const row = page.locator("p[data-row]");
 
-    const indented = page.locator("jolly-folder[data-folder=indented]");
-    const flush = page.locator("jolly-folder[data-folder=flush]");
-    await expect(indented.locator(".content").first()).toHaveCSS("padding-left", "4px");
-    await expect(flush.locator(".content").first()).toHaveCSS("padding-left", "0px");
-    expect((await boxOf(page.locator("p[data-row=flush]"))).x)
-      .toBe((await boxOf(flush)).x);
+    await openExample(page, "containers/folder", {
+      options: { nested: true, flush: true }
+    });
+    await expect(outer.locator(".content").first()).toHaveCSS("padding-left", "0px");
+    expect((await boxOf(row)).x).toBe((await boxOf(outer)).x);
 
-    await indented.evaluate(
+    await openExample(page, "containers/folder", {
+      options: { nested: true }
+    });
+    await expect(outer.locator(".content").first()).toHaveCSS("padding-left", "4px");
+    await outer.evaluate(
       (element: HTMLElement) => element.style.setProperty("--jolly-folder-indent", "0px")
     );
-    expect((await boxOf(page.locator("p[data-row=indented]"))).x)
-      .toBe((await boxOf(indented)).x);
+    expect((await boxOf(row)).x).toBe((await boxOf(outer)).x);
   });
 
   test("holds a nested field short of the header bar it sits under", async({ page }) => {
-    await openExample(page, "scenarios/facade-parity");
+    await openExample(page, "scenarios/facade");
 
     const folder = page.locator("jolly-folder").first();
     const value = folder.locator("jolly-slider input[type=text]");

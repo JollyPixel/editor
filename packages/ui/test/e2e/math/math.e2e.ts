@@ -173,7 +173,9 @@ test.describe("transform", () => {
   });
 
   test("stacked sub-fields put each label above its value", async({ page }) => {
-    await openExample(page, "math/transform-stacked");
+    await openExample(page, "math/transform", {
+      options: { stacked: true, lockedRotation: false }
+    });
 
     const position = page.locator("jolly-vector3[label='Position']");
     await expect(position).toHaveAttribute("label-position", "top");
@@ -203,7 +205,9 @@ test("vector2 edits an x/z pair painted with the z ramp", async({ page }) => {
   await openExample(page, "math/vector3");
   const zColor = await axisTagColor(page, "jolly-vector3", "z");
 
-  await openExample(page, "math/vector2-xz");
+  await openExample(page, "math/vector2", {
+    options: { xz: true }
+  });
   await recordChanges(page);
 
   const field = row(page, "jolly-vector2", "default");

@@ -7,6 +7,7 @@ export interface GotoOptions {
   theme?: "light" | "dark";
   room?: string;
   as?: string;
+  options?: Record<string, boolean>;
 }
 
 export type ExampleOptions = Omit<GotoOptions, "example" | "chrome">;
@@ -15,9 +16,10 @@ export async function gotoGallery(
   page: Page,
   options: GotoOptions = {}
 ): Promise<void> {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(options)) {
-    params.set(key, value);
+  const { options: exampleOptions = {}, ...rest } = options;
+  const params = new URLSearchParams(rest);
+  for (const [key, value] of Object.entries(exampleOptions)) {
+    params.set(key, value ? "1" : "0");
   }
 
   const query = params.toString();

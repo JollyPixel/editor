@@ -64,42 +64,29 @@ const kLayers = [
 
 const kLabelWidth = "10ch";
 const kFieldTrailingWidth = "48px";
-
-export interface EditorScenarioOptions {
-  salted: boolean;
-}
+const kGutterWidth = "14px";
+const kLayoutStorageKey = "gallery-example:editor:layout";
 
 export const EDITOR_EXAMPLE: GalleryExample = {
   id: "scenarios/editor",
   title: "Editor",
-  render(host) {
-    mountEditor(host, { salted: false });
-  }
-};
-
-export const EDITOR_STATES_EXAMPLE: GalleryExample = {
-  id: "scenarios/editor-states",
-  title: "Editor (salted states)",
-  render(host) {
-    mountEditor(host, { salted: true });
-  }
+  render: mountEditor
 };
 
 function mountEditor(
-  host: HTMLElement,
-  options: EditorScenarioOptions
+  host: HTMLElement
 ): void {
   const shell = document.createElement("div");
   shell.className = "editor-shell";
   shell.append(
     buildRail(),
     buildOutliner(),
-    buildStage(options),
-    buildInspector(options)
+    buildStage(),
+    buildInspector()
   );
 
   const layout = document.createElement("jolly-dock-layout");
-  layout.storageKey = storageKey(options, "layout");
+  layout.storageKey = kLayoutStorageKey;
   layout.append(shell, buildPalette());
   host.append(layout);
 }
@@ -213,9 +200,7 @@ function buildStats(): HTMLElementTagNameMap["jolly-folder"] {
   return folder;
 }
 
-function buildStage(
-  options: EditorScenarioOptions
-): HTMLElement {
+function buildStage(): HTMLElement {
   const column = document.createElement("div");
   column.className = "editor-stage";
 
@@ -255,18 +240,14 @@ function buildStage(
 
   const viewport = document.createElement("div");
   viewport.className = "editor-viewport";
-  viewport.textContent = options.salted
-    ? "Every field state, on one screen"
-    : "Viewport";
+  viewport.textContent = "Every field state, on one screen";
 
   column.append(toolbar, viewport);
 
   return column;
 }
 
-function buildInspector(
-  options: EditorScenarioOptions
-): HTMLElementTagNameMap["jolly-dock"] {
+function buildInspector(): HTMLElementTagNameMap["jolly-dock"] {
   const dock = document.createElement("jolly-dock");
   dock.side = "right";
   dock.key = "inspector";
@@ -276,17 +257,14 @@ function buildInspector(
     "--jolly-field-trailing-width",
     kFieldTrailingWidth
   );
-
-  if (options.salted) {
-    dock.style.setProperty("--jolly-gutter-width", "14px");
-  }
+  dock.style.setProperty("--jolly-gutter-width", kGutterWidth);
 
   const pane = labelledPane("inspector", "Inspector");
   pane.grow = false;
   pane.append(
-    buildTransform(options),
-    buildMaterial(options),
-    buildPhysics(options)
+    buildTransform(),
+    buildMaterial(),
+    buildPhysics()
   );
 
   dock.append(pane);
@@ -294,9 +272,7 @@ function buildInspector(
   return dock;
 }
 
-function buildTransform(
-  options: EditorScenarioOptions
-): HTMLElementTagNameMap["jolly-folder"] {
+function buildTransform(): HTMLElementTagNameMap["jolly-folder"] {
   const folder = document.createElement("jolly-folder");
   folder.label = "Transform";
   folder.open = true;
@@ -317,35 +293,31 @@ function buildTransform(
   scale.default = 1;
   folder.append(separator(), scale);
 
-  if (options.salted) {
-    const readonlyField = bind(document.createElement("jolly-number"));
-    readonlyField.label = "Bounds";
-    readonlyField.value = 128;
-    readonlyField.readonly = true;
-    readonlyField.align = "end";
-    readonlyField.description = "Derived from the mesh, not editable.";
+  const readonlyField = bind(document.createElement("jolly-number"));
+  readonlyField.label = "Bounds";
+  readonlyField.value = 128;
+  readonlyField.readonly = true;
+  readonlyField.align = "end";
+  readonlyField.description = "Derived from the mesh, not editable.";
 
-    // 45 degrees about Y.
-    const rotation = bind(document.createElement("jolly-quaternion"));
-    rotation.label = "Rotation";
-    rotation.value = {
-      x: 0,
-      y: 0.3826834323650898,
-      z: 0,
-      w: 0.9238795325112867
-    };
-    rotation.lockedBy = kPeers[0];
-    rotation.peers = [kPeers[0], kPeers[1]];
+  // 45 degrees about Y.
+  const rotation = bind(document.createElement("jolly-quaternion"));
+  rotation.label = "Rotation";
+  rotation.value = {
+    x: 0,
+    y: 0.3826834323650898,
+    z: 0,
+    w: 0.9238795325112867
+  };
+  rotation.lockedBy = kPeers[0];
+  rotation.peers = [kPeers[0], kPeers[1]];
 
-    folder.append(readonlyField, rotation);
-  }
+  folder.append(readonlyField, rotation);
 
   return folder;
 }
 
-function buildMaterial(
-  options: EditorScenarioOptions
-): HTMLElementTagNameMap["jolly-folder"] {
+function buildMaterial(): HTMLElementTagNameMap["jolly-folder"] {
   const folder = document.createElement("jolly-folder");
   folder.label = "Material";
   folder.open = true;
@@ -380,42 +352,38 @@ function buildMaterial(
     name
   );
 
-  if (options.salted) {
-    const errored = bind(document.createElement("jolly-text"));
-    errored.label = "Texture";
-    errored.value = "rock_diffuse";
-    errored.error = "No file matches that name.";
+  const errored = bind(document.createElement("jolly-text"));
+  errored.label = "Texture";
+  errored.value = "rock_diffuse";
+  errored.error = "No file matches that name.";
 
-    const mixed = bind(document.createElement("jolly-select"));
-    mixed.label = "Blend";
-    mixed.options = kShadingModes;
-    mixed.value = Mixed;
+  const mixed = bind(document.createElement("jolly-select"));
+  mixed.label = "Blend";
+  mixed.options = kShadingModes;
+  mixed.value = Mixed;
 
-    const peered = bind(document.createElement("jolly-slider"));
-    peered.label = "Metalness";
-    peered.min = 0;
-    peered.max = 1;
-    peered.step = 0.01;
-    peered.value = 0.8;
-    peered.peers = kPeers;
+  const peered = bind(document.createElement("jolly-slider"));
+  peered.label = "Metalness";
+  peered.min = 0;
+  peered.max = 1;
+  peered.step = 0.01;
+  peered.value = 0.8;
+  peered.peers = kPeers;
 
-    const erroredSlider = bind(document.createElement("jolly-slider"));
-    erroredSlider.label = "Emission";
-    erroredSlider.min = 0;
-    erroredSlider.max = 10;
-    erroredSlider.step = 0.1;
-    erroredSlider.value = 8.5;
-    erroredSlider.error = "Above the safe range for this material.";
+  const erroredSlider = bind(document.createElement("jolly-slider"));
+  erroredSlider.label = "Emission";
+  erroredSlider.min = 0;
+  erroredSlider.max = 10;
+  erroredSlider.step = 0.1;
+  erroredSlider.value = 8.5;
+  erroredSlider.error = "Above the safe range for this material.";
 
-    folder.append(errored, mixed, peered, erroredSlider);
-  }
+  folder.append(errored, mixed, peered, erroredSlider);
 
   return folder;
 }
 
-function buildPhysics(
-  options: EditorScenarioOptions
-): HTMLElementTagNameMap["jolly-folder"] {
+function buildPhysics(): HTMLElementTagNameMap["jolly-folder"] {
   const folder = document.createElement("jolly-folder");
   folder.label = "Physics";
   folder.open = true;
@@ -443,15 +411,13 @@ function buildPhysics(
 
   folder.append(collides, damping, separator(), layers);
 
-  if (options.salted) {
-    const disabled = bind(document.createElement("jolly-checkbox"));
-    disabled.label = "Kinematic";
-    disabled.clickableBackground = true;
-    disabled.value = false;
-    disabled.disabled = true;
+  const disabled = bind(document.createElement("jolly-checkbox"));
+  disabled.label = "Kinematic";
+  disabled.clickableBackground = true;
+  disabled.value = false;
+  disabled.disabled = true;
 
-    folder.append(disabled);
-  }
+  folder.append(disabled);
 
   return folder;
 }
@@ -503,13 +469,4 @@ function separator(
   element.label = label;
 
   return element;
-}
-
-function storageKey(
-  options: EditorScenarioOptions,
-  name: string
-): string {
-  const variant = options.salted ? "states" : "plain";
-
-  return `gallery-example:editor:${variant}:${name}`;
 }

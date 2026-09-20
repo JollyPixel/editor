@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { createSimpleExample } from "../shared/example.ts";
+import type { GalleryExample } from "../../types.ts";
 import {
   button,
   text
@@ -9,10 +9,10 @@ import {
   inputLayers
 } from "../../../../src/index.ts";
 
-export const DIALOG_ESCAPE_EXAMPLE = createSimpleExample(
-  "scenarios/dialog-escape",
-  "Dialog Escape",
-  () => {
+export const DIALOG_ESCAPE_EXAMPLE: GalleryExample = {
+  id: "scenarios/dialog-escape",
+  title: "Dialog Escape",
+  render(host) {
     const root = document.createElement("div");
     root.className = "chrome-row";
     root.dataset.viewportKeys = "";
@@ -29,11 +29,6 @@ export const DIALOG_ESCAPE_EXAMPLE = createSimpleExample(
     function recordViewportKey(
       event: KeyboardEvent
     ): void {
-      if (!root.isConnected) {
-        document.removeEventListener("keydown", recordViewportKey);
-
-        return;
-      }
       if (inputLayers.blocks(event)) {
         return;
       }
@@ -44,7 +39,8 @@ export const DIALOG_ESCAPE_EXAMPLE = createSimpleExample(
       ].filter(Boolean).join(",");
     }
     document.addEventListener("keydown", recordViewportKey);
+    host.append(root);
 
-    return root;
+    return () => document.removeEventListener("keydown", recordViewportKey);
   }
-);
+};

@@ -37,6 +37,7 @@ export const DOCK_LAYOUT_TRANSPARENT_EXAMPLE: GalleryExample = {
     chrome.heading = "Configuration";
     chrome.locked = true;
     const preferences = document.createElement("jolly-theme-preferences");
+    preferences.layout = "stack";
     preferences.storageKey = "gallery-dock-layout-transparent";
     chrome.append(preferences);
 

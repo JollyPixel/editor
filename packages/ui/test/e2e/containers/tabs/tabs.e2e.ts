@@ -10,18 +10,11 @@ import { openExample } from "../../support/gallery.ts";
 import { boxOf } from "../../support/pointer.ts";
 import { styleOf } from "../../support/styles.ts";
 
-async function openTabs(
+function openTabs(
   page: Page,
-  ...options: string[]
+  options: Record<string, boolean> = {}
 ): Promise<void> {
-  await openExample(page, "containers/tabs");
-  for (const option of options) {
-    const box = page.locator("jolly-checkbox")
-      .filter({ hasText: option })
-      .locator("input");
-    await box.click();
-    await expect(box).toBeChecked();
-  }
+  return openExample(page, "containers/tabs", { options });
 }
 
 test.describe("Tabs", () => {
@@ -46,7 +39,7 @@ test.describe("Tabs", () => {
       }
     });
 
-    await openExample(page, "containers/tab");
+    await openTabs(page, { preselected: true });
 
     const tabs = page.locator("jolly-tabs [role=tab]");
     await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
@@ -55,7 +48,7 @@ test.describe("Tabs", () => {
   });
 
   test("selects a tab appended in the same update", async({ page }) => {
-    await openTabs(page, "Add button");
+    await openTabs(page, { addButton: true });
 
     const tabs = page.locator("jolly-tabs [role=tab]");
     const add = page.getByRole("button", { name: "Add tab" });
@@ -74,7 +67,7 @@ test.describe("Tabs", () => {
 
 test.describe("Tabs (badge, action, list-end)", () => {
   test("the action shows on the selected and disabled tabs and never selects", async({ page }) => {
-    await openTabs(page, "Badges", "Action");
+    await openTabs(page, { badges: true, action: true });
 
     const host = page.locator("jolly-tabs");
     const tabs = host.locator("[role=tab]");
@@ -98,11 +91,10 @@ test.describe("Tabs (badge, action, list-end)", () => {
 
   for (const variant of ["default", "skew"]) {
     test(`the list-end slot follows the ${variant} list, outside of it`, async({ page }) => {
-      await openTabs(
-        page,
-        "Add button",
-        ...(variant === "skew" ? ["Skew variant"] : [])
-      );
+      await openTabs(page, {
+        addButton: true,
+        skew: variant === "skew"
+      });
 
       const host = page.locator("jolly-tabs");
       const [listBox, addBox] = await Promise.all([
@@ -118,7 +110,7 @@ test.describe("Tabs (badge, action, list-end)", () => {
 
 test.describe("Tabs (closable)", () => {
   test.beforeEach(async({ page }) => {
-    await openTabs(page, "Closable");
+    await openTabs(page, { closable: true });
   });
 
   test("the close button and a middle click close without selecting", async({ page }) => {

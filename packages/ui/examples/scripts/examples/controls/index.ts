@@ -6,10 +6,7 @@ import { SLIDER_EXAMPLE } from "./slider.ts";
 import { RANGE_EXAMPLE } from "./range.ts";
 import { FLAGS_EXAMPLE } from "./flags.ts";
 import { SELECT_EXAMPLE } from "./select.ts";
-import {
-  COLOR_EXAMPLE,
-  COLOR_ALPHA_EXAMPLE
-} from "./color.ts";
+import { COLOR_EXAMPLE } from "./color.ts";
 import { COLOR_PICKER_EXAMPLE } from "./colorPicker.ts";
 import { BUTTON_GROUP_EXAMPLE } from "./buttonGroup.ts";
 import { SCENE_CONTROLS_EXAMPLE } from "./controls.ts";
@@ -25,7 +22,6 @@ export const CONTROLS_EXAMPLES = [
   FLAGS_EXAMPLE,
   SELECT_EXAMPLE,
   COLOR_EXAMPLE,
-  COLOR_ALPHA_EXAMPLE,
   COLOR_PICKER_EXAMPLE,
   BUTTON_GROUP_EXAMPLE,
   SCENE_CONTROLS_EXAMPLE,

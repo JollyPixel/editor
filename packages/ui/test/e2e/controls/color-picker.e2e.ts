@@ -124,7 +124,9 @@ test.describe("color: popup", () => {
 
 test.describe("color: alpha", () => {
   test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/color-alpha");
+    await openExample(page, "controls/color", {
+      options: { alpha: true }
+    });
     await recordFieldChanges(page);
   });
 

@@ -94,6 +94,39 @@ test.describe("gallery shell", () => {
     await expect(page.locator("gallery-root .token-grid")).toBeVisible();
   });
 
+  test("an option toggle remounts the example, lands in the URL, and leaves with it", async({ page }) => {
+    await gotoGallery(page, { example: "containers/tabs" });
+
+    const closable = page.locator("gallery-root .options [data-option=closable] input");
+    const close = page.locator("gallery-root jolly-tabs [part~=close]");
+    await expect(page.locator("gallery-root .options jolly-checkbox")).toHaveCount(7);
+    await expect(close).toHaveCount(0);
+
+    await closable.click();
+    await expect(closable).toBeChecked();
+    await expect(close).toHaveCount(4);
+    expect(new URL(page.url()).searchParams.get("closable")).toBe("1");
+
+    await reloadGallery(page);
+    await expect(closable).toBeChecked();
+    await expect(close).toHaveCount(4);
+
+    await navLink(page, kFirst.id).click();
+    await expect(page.locator("gallery-root .options")).toBeHidden();
+    expect(new URL(page.url()).searchParams.has("closable")).toBe(false);
+  });
+
+  test("chrome=off renders neither the nav nor the options panel", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/tabs",
+      chrome: "off",
+      options: { closable: true }
+    });
+
+    await expect(page.locator("gallery-root .options")).toHaveCount(0);
+    await expect(page.locator("gallery-root jolly-tabs [part~=close]")).toHaveCount(4);
+  });
+
   test("chrome=off renders the example with no nav", async({ page }) => {
     await gotoGallery(page, {
       example: kFirst.id,

@@ -11,7 +11,9 @@ import {
 } from "../support/gallery.ts";
 
 test("a pane facade created hidden stays hidden until toggled, then remembers", async({ page }) => {
-  await openExample(page, "scenarios/facade-hidden");
+  await openExample(page, "scenarios/facade", {
+    options: { hidden: true }
+  });
 
   const frame = page.locator("jolly-floating");
   await expect(frame).toBeHidden();
