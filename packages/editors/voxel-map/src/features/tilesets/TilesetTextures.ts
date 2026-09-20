@@ -8,7 +8,7 @@ import {
 import type { AssetLeases } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import type { TilesetEntry } from "./tilesetEntries.ts";
+import type { TilesetEntry } from "../../state/index.ts";
 
 // CONSTANTS
 export const TILESET_MAX_SIZE = 2048;

@@ -43,17 +43,24 @@ kind, so the session leases every tileset of the map in parallel before the
 editor mounts. `?offline` bypasses the host and calls
 `VoxelMapEditor.openOffline()`.
 
-`VoxelMapEditor.mount()` boots the runtime through `EditorRuntime`,
-builds the `EditorScene` on the target room, mounts the `EditorShell`, then
-starts `TilesetAtlases` once the scene is ready. Offline, it preloads
-`textures/tileset.png` as the only tileset. `dispose()` unwinds the atlases,
-the shell, the session and the runtime.
+`VoxelMapEditor.mount()` creates the `EditorState`, boots the runtime through
+`EditorRuntime`, builds the `EditorScene` on the target room and mounts the
+`EditorShell`. Once the scene resolves its `VoxelMapWorkspace`, the shell
+attaches it to the panels and the brush toolbar. Offline, it preloads
+`textures/tileset.png` as the only tileset. `dispose()` unwinds the shell, the
+session and the runtime; the scene releases everything it built.
+
+`EditorScene` owns the map: a `MapDocument` relays the engine commands as
+`layerUpdated`, `blockRegistryChanged`, `tilesetsChanged` and `reset`, over a
+`WorldSource` that loads worlds locally (`LocalWorldSource`) or through the
+room (`RoomWorldSource`). Online, `MapCollaboration` groups the roster, the
+peer selections, the peer brushes and the peer frustums.
 
 The pieces live under `src/boot/`:
 
 | Export | Responsibility |
 |---|---|
-| `EditorShell` | Wires `jolly-log` and the editor panels to the state, the scene, and the editor runtime. |
+| `EditorShell` | Wires `jolly-log` to the state, then attaches the workspace to the panels and the brush toolbar. |
 
 ### Panels
 
@@ -70,8 +77,8 @@ the two is the shown tab. Without it, the block library fills the Blocks pane.
 
 The map's tileset list is `engine.tilesets` from `@jolly-pixel/voxel.renderer`;
 `TilesetDirectory` mirrors it, with catalog labels, into the `TilesetStore`
-whenever the engine applies a tileset event, a snapshot arrives or the catalog
-changes. `TilesetActions` edits it through the engine, which publishes the
+whenever the `MapDocument` reports `tilesetsChanged` (a tileset command or a
+world reset) or the catalog changes. `TilesetActions` edits it through the engine, which publishes the
 change to the world room.
 
 A tileset is a `pixelart` asset. Its definition's `src` holds the asset id;

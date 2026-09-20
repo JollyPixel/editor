@@ -9,11 +9,8 @@ import type {
 import type { JollyChangeDetail, Vec3Like } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type SelectionStore,
-  type WorldStore
-} from "../../../app/state/index.ts";
+import type { MapDocument } from "../../../document/index.ts";
+import type { SelectionStore } from "../../../state/index.ts";
 import {
   propertiesOf,
   propertyRowsOf,
@@ -35,7 +32,7 @@ export class VoxelLayerPanel extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare world: VoxelWorld | undefined;
+  declare world: VoxelWorld;
 
   @property({ type: String })
   declare layerName: string | null;
@@ -44,7 +41,7 @@ export class VoxelLayerPanel extends LitElement {
   declare selection: SelectionStore;
 
   @property({ attribute: false })
-  declare worldStore: WorldStore;
+  declare mapDocument: MapDocument;
 
   @state()
   private declare _layer: VoxelLayer | null;
@@ -64,9 +61,6 @@ export class VoxelLayerPanel extends LitElement {
 
   constructor() {
     super();
-    this.world = undefined;
-    this.selection = editorState.selection;
-    this.worldStore = editorState.world;
     this.layerName = null;
     this._layer = null;
     this._position = { x: 0, y: 0, z: 0 };
@@ -97,7 +91,7 @@ export class VoxelLayerPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.worldStore.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
       this.selection.subscribe("gizmoLayerChange", this.#onGizmoLayerChange)
     );
   }
@@ -121,7 +115,7 @@ export class VoxelLayerPanel extends LitElement {
   }
 
   #syncFromLayer(): void {
-    if (!this.world || !this.layerName) {
+    if (!this.layerName) {
       this._layer = null;
 
       return;

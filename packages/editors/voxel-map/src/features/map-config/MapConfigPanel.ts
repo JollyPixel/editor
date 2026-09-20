@@ -11,16 +11,10 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type {
-  VoxelEngine,
-  VoxelWorldJSON
-} from "@jolly-pixel/voxel.renderer";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { GridRenderer } from "../../scene/GridRenderer.ts";
-import type { SceneLighting } from "../../scene/SceneLighting.ts";
-import type { LocalBrush } from "../painting/index.ts";
+import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
 import { parseVoxelWorld } from "./parseVoxelWorld.ts";
 import type { EventInput } from "../../shared/domEvents.ts";
 
@@ -44,19 +38,7 @@ export class MapConfigPanel extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
-
-  @property({ attribute: false })
-  declare gridRenderer: GridRenderer | undefined;
-
-  @property({ attribute: false })
-  declare lighting: SceneLighting | undefined;
-
-  @property({ attribute: false })
-  declare localBrush: LocalBrush | undefined;
-
-  @property({ attribute: false })
-  declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
+  declare workspace: VoxelMapWorkspace;
 
   @state()
   private declare _gridVisible: boolean;
@@ -72,34 +54,19 @@ export class MapConfigPanel extends LitElement {
 
   constructor() {
     super();
-    this.engine = undefined;
-    this.lighting = undefined;
     this._gridVisible = true;
     this._flatLighting = false;
     this._skyRadius = 0;
-    this.localBrush = undefined;
   }
 
   override willUpdate(
     changedProperties: PropertyValues<this>
   ): void {
-    if (
-      changedProperties.has("gridRenderer") &&
-      this.gridRenderer
-    ) {
-      this._gridVisible = this.gridRenderer.visible;
-    }
-    if (
-      changedProperties.has("lighting") &&
-      this.lighting
-    ) {
-      this._flatLighting = this.lighting.mode === "flat";
-    }
-    if (
-      changedProperties.has("localBrush") &&
-      this.localBrush
-    ) {
-      this._skyRadius = this.localBrush.skyRadius;
+    if (changedProperties.has("workspace")) {
+      const { gridRenderer, lighting, localBrush } = this.workspace;
+      this._gridVisible = gridRenderer.visible;
+      this._flatLighting = lighting.mode === "flat";
+      this._skyRadius = localBrush.skyRadius;
     }
   }
 
@@ -141,33 +108,25 @@ export class MapConfigPanel extends LitElement {
     event: CustomEvent<JollyChangeDetail<boolean>>
   ): void {
     this._gridVisible = event.detail.value;
-    this.gridRenderer?.setVisible(this._gridVisible);
+    this.workspace.gridRenderer.setVisible(this._gridVisible);
   }
 
   #onFlatLightingChange(
     event: CustomEvent<JollyChangeDetail<boolean>>
   ): void {
     this._flatLighting = event.detail.value;
-    if (this.lighting) {
-      this.lighting.mode = this._flatLighting ? "flat" : "lit";
-    }
+    this.workspace.lighting.mode = this._flatLighting ? "flat" : "lit";
   }
 
   #onSkyRadiusChange(
     event: CustomEvent<JollyChangeDetail<number>>
   ): void {
     this._skyRadius = event.detail.value;
-    if (this.localBrush) {
-      this.localBrush.skyRadius = this._skyRadius;
-    }
+    this.workspace.localBrush.skyRadius = this._skyRadius;
   }
 
   #onSave(): void {
-    if (!this.engine) {
-      return;
-    }
-
-    const json = this.engine.save();
+    const json = this.workspace.engine.save();
     const blob = new Blob([JSON.stringify(json, null, 2)], {
       type: "application/json"
     });
@@ -197,14 +156,7 @@ export class MapConfigPanel extends LitElement {
     try {
       const text = await file.text();
       const data = parseVoxelWorld(text);
-      this.onLoadWorld?.(data);
-
-      this.dispatchEvent(
-        new CustomEvent("world-loaded", {
-          bubbles: true,
-          composed: true
-        })
-      );
+      this.workspace.loadWorld(data);
     }
     catch (err) {
       console.error("Failed to load map:", err);

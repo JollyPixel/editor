@@ -3,7 +3,7 @@ import * as THREE from "three";
 import type { Actor } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import type { BrushStore } from "../../../app/state/index.ts";
+import type { BrushStore } from "../../../state/index.ts";
 import { BrushMesh } from "./BrushMesh.ts";
 import {
   GhostBlock,

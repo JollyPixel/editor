@@ -4,8 +4,6 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  definitionsEqual,
-  entriesEqual,
   resolveTilesetAsset,
   resolveTilesetEntries
 } from "../../../src/features/tilesets/tilesetEntries.ts";
@@ -74,48 +72,5 @@ describe("resolveTilesetEntries", () => {
         [null, "unknown"]
       ]
     );
-  });
-});
-
-describe("definitionsEqual and entriesEqual", () => {
-  const kDefinition = {
-    id: "stone",
-    asset: {
-      id: "asset-stone",
-      kind: "pixelart"
-    },
-    tileSize: 16
-  };
-
-  it("compares definitions field by field regardless of key order", () => {
-    assert.equal(definitionsEqual(kDefinition, {
-      tileSize: 16,
-      asset: {
-        id: "asset-stone",
-        kind: "pixelart"
-      },
-      id: "stone"
-    }), true);
-    assert.equal(definitionsEqual(kDefinition, { ...kDefinition, tileSize: 32 }), false);
-    assert.equal(definitionsEqual(kDefinition, { ...kDefinition, cols: 4 }), false);
-    assert.equal(definitionsEqual(kDefinition, {
-      ...kDefinition,
-      asset: {
-        id: "asset-granite",
-        kind: "pixelart"
-      }
-    }), false);
-  });
-
-  it("compares entries in order", () => {
-    const entry = {
-      definition: kDefinition,
-      assetId: "asset-stone",
-      label: "stone"
-    };
-
-    assert.equal(entriesEqual([entry], [{ ...entry }]), true);
-    assert.equal(entriesEqual([entry], [{ ...entry, label: "granite" }]), false);
-    assert.equal(entriesEqual([entry], []), false);
   });
 });

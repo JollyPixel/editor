@@ -13,7 +13,7 @@ import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { TilesetStore } from "../../app/state/index.ts";
+import type { TilesetStore } from "../../state/index.ts";
 import { isTilesetAsset } from "./tilesetEntries.ts";
 
 // CONSTANTS

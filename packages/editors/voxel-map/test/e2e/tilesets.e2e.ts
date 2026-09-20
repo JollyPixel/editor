@@ -16,7 +16,7 @@ import {
 function tilesetSources(
   page: Page
 ): Promise<string[]> {
-  return page.evaluate(() => window.voxelMapEditor!.scene.engine.tilesets
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.tilesets
     .definitions()
     .map((definition) => definition.asset?.id ?? ""));
 }

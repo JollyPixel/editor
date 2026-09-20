@@ -8,7 +8,7 @@ import type {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { WorldStore } from "./WorldStore.ts";
+import type { MapDocumentSignals } from "../document/index.ts";
 
 export type BlockUsageStoreEvents = {
   change: (stats: VoxelBlockStats) => void;
@@ -19,42 +19,36 @@ export type BlockUsageSource = Pick<
   "stats" | "usageOf" | "tilesetUsageOf"
 >;
 
-export function emptyBlockStats(): VoxelBlockStats {
-  return {
-    voxels: 0,
-    layers: [],
-    blocks: new Map(),
-    unusedBlocks: [],
-    orphanBlocks: [],
-    orphanVoxels: 0
-  };
+export interface BlockUsageStoreOptions {
+  mapDocument: MapDocumentSignals;
+  source: BlockUsageSource;
 }
 
 export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
-  #source: BlockUsageSource | null = null;
-  #stats = emptyBlockStats();
+  #source: BlockUsageSource;
+  #stats: VoxelBlockStats;
   #pending = false;
+  #subscriptions: Array<() => void>;
 
   constructor(
-    world: WorldStore
+    options: BlockUsageStoreOptions
   ) {
     super();
+    const { mapDocument, source } = options;
+
+    this.#source = source;
+    this.#stats = source.stats;
 
     const invalidate = () => this.invalidate();
-    world.on("layerUpdated", invalidate);
-    world.on("blockRegistryChanged", invalidate);
-    world.on("reset", invalidate);
+    this.#subscriptions = [
+      mapDocument.subscribe("layerUpdated", invalidate),
+      mapDocument.subscribe("blockRegistryChanged", invalidate),
+      mapDocument.subscribe("reset", invalidate)
+    ];
   }
 
   get stats(): VoxelBlockStats {
     return this.#stats;
-  }
-
-  attach(
-    source: BlockUsageSource | null
-  ): void {
-    this.#source = source;
-    this.#refresh();
   }
 
   countOf(
@@ -73,21 +67,13 @@ export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
   usageOf(
     blockId: number
   ): VoxelBlockUsage {
-    return this.#source?.usageOf(blockId) ?? {
-      blockId,
-      voxels: 0,
-      layers: []
-    };
+    return this.#source.usageOf(blockId);
   }
 
   tilesetUsageOf(
     tilesetId: string
   ): VoxelTilesetUsage {
-    return this.#source?.tilesetUsageOf(tilesetId) ?? {
-      tilesetId,
-      blocks: [],
-      voxels: 0
-    };
+    return this.#source.tilesetUsageOf(tilesetId);
   }
 
   invalidate(): void {
@@ -98,12 +84,14 @@ export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
     this.#pending = true;
     queueMicrotask(() => {
       this.#pending = false;
-      this.#refresh();
+      this.#stats = this.#source.stats;
+      this.emit("change", this.#stats);
     });
   }
 
-  #refresh(): void {
-    this.#stats = this.#source?.stats ?? emptyBlockStats();
-    this.emit("change", this.#stats);
+  dispose(): void {
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
   }
 }

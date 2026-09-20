@@ -110,7 +110,7 @@ export async function waitForEditor(
   page: Page
 ): Promise<void> {
   await page.waitForFunction(
-    () => window.voxelMapEditor?.scene.editorState.world.blocksReady === true
+    () => window.voxelMapEditor?.workspace.mapDocument.ready === true
   );
 }
 

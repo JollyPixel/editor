@@ -29,7 +29,7 @@ interface LayerSummary {
 function voxelLayers(
   page: Page
 ): Promise<LayerSummary[]> {
-  return page.evaluate(() => window.voxelMapEditor!.scene.engine.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.world
     .getLayers()
     .map((layer) => {
       return {
@@ -43,7 +43,7 @@ function voxelLayers(
 function objectLayers(
   page: Page
 ): Promise<Array<{ name: string; objects: string[]; }>> {
-  return page.evaluate(() => window.voxelMapEditor!.scene.engine.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.world
     .getObjectLayers()
     .map((layer) => {
       return {

@@ -1,20 +1,13 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
-import type {
-  VoxelEngine,
-  VoxelWorld
-} from "@jolly-pixel/voxel.renderer";
+import { customElement, query, state } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type EditorState,
-  type LayerSelection
-} from "../state/index.ts";
+import type { LayerSelection } from "../../state/index.ts";
+import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
+import { WorkspaceController } from "../../shared/WorkspaceController.ts";
 import type { LayerManager } from "../../features/layers/LayerManager.ts";
 import { formatCount } from "../../features/blocks/blockUsage.ts";
-import { ViewFocus } from "../../scene/viewFocus.ts";
 
 import "../../features/registerElements.ts";
 
@@ -43,15 +36,6 @@ export class LayersPanel extends LitElement {
     }
   `;
 
-  @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
-
-  @property({ attribute: false })
-  declare state: EditorState;
-
-  @property({ attribute: false })
-  declare viewFocus: ViewFocus;
-
   @state()
   declare _selection: LayerSelection;
 
@@ -61,43 +45,29 @@ export class LayersPanel extends LitElement {
   @query("layer-manager")
   declare _layerManager: LayerManager | null;
 
-  #subscriptions: Array<() => void> = [];
+  #workspace = new WorkspaceController(this, (workspace) => {
+    const { selection } = workspace.state;
+    this._selection = selection.current;
 
-  get world(): VoxelWorld | undefined {
-    return this.engine?.world;
-  }
+    return [
+      selection.subscribe("change", (current) => {
+        this._selection = current;
+      }),
+      workspace.usage.subscribe("change", () => this.requestUpdate()),
+      workspace.mapDocument.subscribe("reset", () => this.requestUpdate())
+    ];
+  });
 
   constructor() {
     super();
-    this.engine = undefined;
-    this.state = editorState;
-    this.viewFocus = new ViewFocus();
     this._selection = null;
   }
 
-  override connectedCallback() {
-    super.connectedCallback();
-    this.#subscriptions.push(
-      this.state.selection.subscribe("change", this.#onSelectionChange),
-      this.state.usage.subscribe("change", this.#onUsageChange)
-    );
-    this.#onSelectionChange(this.state.selection.current);
+  attach(
+    workspace: VoxelMapWorkspace
+  ): void {
+    this.#workspace.attach(workspace);
   }
-
-  override disconnectedCallback() {
-    super.disconnectedCallback();
-    for (const unsubscribe of this.#subscriptions.splice(0)) {
-      unsubscribe();
-    }
-  }
-
-  readonly #onUsageChange = (): void => {
-    this.requestUpdate();
-  };
-
-  readonly #onSelectionChange = (selection: LayerSelection): void => {
-    this._selection = selection;
-  };
 
   readonly #addLayer = async(): Promise<void> => {
     if (this._folder !== null && !this._folder.open) {
@@ -124,10 +94,15 @@ export class LayersPanel extends LitElement {
 
   get #canMergeVoxelLayer(): boolean {
     return this.#canEditVoxelLayer &&
-      (this.world?.getLayers().length ?? 0) > 1;
+      this.#workspace.attached.engine.world.getLayers().length > 1;
   }
 
   override render() {
+    const workspace = this.#workspace.current;
+    if (workspace === null) {
+      return nothing;
+    }
+
     return html`
       <jolly-folder
         key="layers"
@@ -138,7 +113,7 @@ export class LayersPanel extends LitElement {
           slot="actions"
           class="total"
           title="Voxels placed in the map"
-        >${formatCount(this.state.usage.stats.voxels, "voxel")}</span>
+        >${formatCount(workspace.usage.stats.voxels, "voxel")}</span>
         <jolly-button
           slot="actions"
           icon="plus"
@@ -177,19 +152,21 @@ export class LayersPanel extends LitElement {
         ></jolly-button>
 
         <layer-manager
-          .world=${this.world}
-          .selection=${this.state.selection}
-          .worldStore=${this.state.world}
-          .presence=${this.state.presence}
-          .viewFocus=${this.viewFocus}
+          .world=${workspace.engine.world}
+          .selection=${workspace.state.selection}
+          .mapDocument=${workspace.mapDocument}
+          .presence=${workspace.state.presence}
+          .viewFocus=${workspace.viewFocus}
           style="height:200px;"
         ></layer-manager>
-        ${this.#renderSelectionPanel()}
+        ${this.#renderSelectionPanel(workspace)}
       </jolly-folder>
     `;
   }
 
-  #renderSelectionPanel() {
+  #renderSelectionPanel(
+    workspace: VoxelMapWorkspace
+  ) {
     const selection = this._selection;
     if (selection === null) {
       return nothing;
@@ -198,15 +175,15 @@ export class LayersPanel extends LitElement {
     switch (selection.kind) {
       case "voxel-layer":
         return html`<layer-panel
-          .world=${this.world}
-          .selection=${this.state.selection}
-          .worldStore=${this.state.world}
+          .world=${workspace.engine.world}
+          .selection=${workspace.state.selection}
+          .mapDocument=${workspace.mapDocument}
           .layerName=${selection.name}
         ></layer-panel>`;
       case "object":
         return html`<object-panel
-          .world=${this.world}
-          .worldStore=${this.state.world}
+          .world=${workspace.engine.world}
+          .mapDocument=${workspace.mapDocument}
           .layerName=${selection.layerName}
           .objectId=${selection.objectId}
         ></object-panel>`;

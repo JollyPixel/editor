@@ -6,7 +6,7 @@ import { Emitter } from "@openally/emitt";
 import {
   entriesEqual,
   type TilesetEntry
-} from "../../features/tilesets/tilesetEntries.ts";
+} from "./tilesetEntry.ts";
 
 export type TilesetStoreEvents = {
   change: (entries: readonly TilesetEntry[]) => void;

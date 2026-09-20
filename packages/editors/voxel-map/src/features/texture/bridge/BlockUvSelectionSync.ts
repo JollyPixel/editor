@@ -5,7 +5,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { BrushStore } from "../../../app/state/index.ts";
+import type { BrushStore } from "../../../state/index.ts";
 import {
   blockIdFromUvRegion,
   blockUvRegionId

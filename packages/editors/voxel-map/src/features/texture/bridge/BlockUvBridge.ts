@@ -12,6 +12,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import type { MapDocumentSignals } from "../../../document/index.ts";
 import {
   blockFromUvRegion,
   blockIdFromUvRegion,
@@ -22,16 +23,12 @@ import {
 } from "../uv/blockUvProjection.ts";
 import { blockShapeUv } from "../uv/blockShapeUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
-import {
-  editorState,
-  type BrushStore,
-  type WorldStore
-} from "../../../app/state/index.ts";
+import type { BrushStore } from "../../../state/index.ts";
 
 export interface BlockUvBridgeOptions {
   runLocalRestore?: <T>(fn: () => T) => T;
-  brush?: BrushStore;
-  worldStore?: WorldStore;
+  brush: BrushStore;
+  mapDocument: MapDocumentSignals;
 }
 
 /**
@@ -51,14 +48,13 @@ export class BlockUvBridge {
   constructor(
     uv: UVMap,
     engine: VoxelEngine,
-    options: BlockUvBridgeOptions = {}
+    options: BlockUvBridgeOptions
   ) {
     this.#uv = uv;
     this.#engine = engine;
-    const worldStore = options.worldStore ?? editorState.world;
     this.#selection = new BlockUvSelectionSync(
       uv,
-      options.brush ?? editorState.brush
+      options.brush
     );
     this.#runLocalRestore = options.runLocalRestore ?? ((fn) => fn());
 
@@ -67,7 +63,7 @@ export class BlockUvBridge {
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
     this.#uv.on("region-rotated", this.#onRegionRotated);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
-    this.#unsubscribeRegistry = worldStore.subscribe(
+    this.#unsubscribeRegistry = options.mapDocument.subscribe(
       "blockRegistryChanged",
       this.#onBlockRegistryChanged
     );

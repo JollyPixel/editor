@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { VoxelRotation } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { RotationMode } from "../../../app/state/index.ts";
+import type { RotationMode } from "../../../state/index.ts";
 
 // CONSTANTS
 const kDirection = new THREE.Vector3();

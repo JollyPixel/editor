@@ -2,21 +2,15 @@
 import { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { BlockUsageStore } from "./BlockUsageStore.ts";
 import { BrushStore } from "./BrushStore.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
 import { TilesetStore } from "./TilesetStore.ts";
-import { WorldStore } from "./WorldStore.ts";
 
 export class EditorState {
   readonly selection = new SelectionStore();
   readonly brush = new BrushStore();
   readonly presence = new PresenceStore();
-  readonly world = new WorldStore();
-  readonly usage = new BlockUsageStore(this.world);
   readonly tilesets = new TilesetStore();
   readonly log = new LogQueue();
 }
-
-export const editorState = new EditorState();

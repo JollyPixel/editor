@@ -69,7 +69,7 @@ export class BlockLibraryViewport extends LitElement {
   static override styles = blockLibraryViewportStyles;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
+  declare engine: VoxelEngine;
 
   @property({ attribute: false })
   declare blocks: ResolvedBlockDefinition[];
@@ -117,7 +117,6 @@ export class BlockLibraryViewport extends LitElement {
 
   constructor() {
     super();
-    this.engine = undefined;
     this.blocks = [];
     this.marks = new Map();
     this.selectedId = null;
@@ -434,10 +433,6 @@ export class BlockLibraryViewport extends LitElement {
   }
 
   #build(): void {
-    if (!this.engine) {
-      return;
-    }
-
     this.#renderer?.dispose();
     this.#renderer = new BlockLibraryRenderer(this._scroller, {
       shapeRegistry: this.engine.shapeRegistry,

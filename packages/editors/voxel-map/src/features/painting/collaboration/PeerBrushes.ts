@@ -15,10 +15,7 @@ import type {
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type BrushStore
-} from "../../../app/state/index.ts";
+import type { BrushStore } from "../../../state/index.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
 import { overlaps } from "../model/brushFootprint.ts";
@@ -30,7 +27,7 @@ const kPresenceCursorKey = "brush";
 
 export interface PeerBrushesOptions {
   room: Room<VoxelNetworkCommand, VoxelServerMessage>;
-  brush?: BrushStore;
+  brush: BrushStore;
 }
 
 export class PeerBrushes extends ActorComponent {
@@ -68,7 +65,7 @@ export class PeerBrushes extends ActorComponent {
     });
 
     this.#room = options.room;
-    this.#brush = options.brush ?? editorState.brush;
+    this.#brush = options.brush;
     this.#channel = new PresenceChannel(options.room, {
       key: kPresenceCursorKey,
       decode: cursor.read,

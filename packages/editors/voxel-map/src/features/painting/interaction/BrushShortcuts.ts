@@ -5,7 +5,7 @@ import type { Keyboard } from "@jolly-pixel/controls";
 import type {
   BrushStore,
   SelectionStore
-} from "../../../app/state/index.ts";
+} from "../../../state/index.ts";
 import {
   BRUSH_AXES,
   type BrushAxis

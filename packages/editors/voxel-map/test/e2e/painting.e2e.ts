@@ -22,7 +22,7 @@ function brushState(
   page: Page
 ) {
   return page.evaluate(() => {
-    const { brush } = window.voxelMapEditor!.scene.editorState;
+    const { brush } = window.voxelMapEditor!.workspace.state;
 
     return {
       blockId: brush.blockId,
@@ -38,7 +38,7 @@ function ghostState(
   page: Page
 ) {
   return page.evaluate(() => {
-    const { localBrush } = window.voxelMapEditor!.scene;
+    const { localBrush } = window.voxelMapEditor!.workspace;
     const ghost = localBrush.actor.object3D.getObjectByName("ghost-block");
 
     return {
@@ -53,7 +53,7 @@ async function setBrush(
   patch: { blockId?: number; size?: number; }
 ): Promise<void> {
   await page.evaluate((values) => {
-    const { brush } = window.voxelMapEditor!.scene.editorState;
+    const { brush } = window.voxelMapEditor!.workspace.state;
     if (values.blockId !== undefined) {
       brush.blockId = values.blockId;
     }
@@ -294,7 +294,7 @@ test("the ghost block previews the placement at size one", async({ page }) => {
 
 test("nothing is painted while no voxel layer is selected", async({ page }) => {
   await page.evaluate(() => {
-    window.voxelMapEditor!.scene.editorState.selection.clear();
+    window.voxelMapEditor!.workspace.state.selection.clear();
   });
   const brushTools = page.getByRole("group", { name: "Brush" });
   await expect(brushTools).toHaveAttribute("aria-disabled", "true");

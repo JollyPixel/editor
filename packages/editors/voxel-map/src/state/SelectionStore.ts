@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 
-// Import Internal Dependencies
-import type { ObjectKey } from "../../features/layers/objects/objectArea.ts";
+export interface ObjectKey {
+  layerName: string;
+  objectId: string;
+}
 
 export type LayerSelection =
   | { kind: "voxel-layer"; name: string; }

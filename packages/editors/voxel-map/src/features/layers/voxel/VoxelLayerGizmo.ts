@@ -11,23 +11,20 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type SelectionStore,
-  type WorldStore
-} from "../../../app/state/index.ts";
+import type { MapDocument } from "../../../document/index.ts";
+import type { SelectionStore } from "../../../state/index.ts";
 
 export interface VoxelLayerGizmoOptions {
   world: VoxelWorld;
   camera: THREE.PerspectiveCamera;
-  selection?: SelectionStore;
-  worldStore?: WorldStore;
+  selection: SelectionStore;
+  mapDocument: MapDocument;
 }
 
 export class VoxelLayerGizmo extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
-  #worldStore: WorldStore;
+  #mapDocument: MapDocument;
   #controls: TranslationControls | null = null;
   #pivot = new THREE.Object3D();
   #pivotOffset = new THREE.Vector3();
@@ -45,8 +42,8 @@ export class VoxelLayerGizmo extends ActorComponent {
     });
     this.#world = options.world;
     this.#camera = options.camera;
-    this.#selection = options.selection ?? editorState.selection;
-    this.#worldStore = options.worldStore ?? editorState.world;
+    this.#selection = options.selection;
+    this.#mapDocument = options.mapDocument;
   }
 
   awake(): void {
@@ -92,7 +89,7 @@ export class VoxelLayerGizmo extends ActorComponent {
         "gizmoLayerChange",
         this.setActiveLayer.bind(this)
       ),
-      this.#worldStore.subscribe(
+      this.#mapDocument.subscribe(
         "layerUpdated",
         this.#onLayerUpdated
       )

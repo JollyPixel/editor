@@ -2,39 +2,27 @@
 import type { EditorRuntime } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import type { EditorState } from "../app/state/index.ts";
-import type {
-  EditorScene,
-  EditorSceneHandles
-} from "../app/EditorScene.ts";
+import type { EditorState } from "../state/index.ts";
+import type { VoxelMapWorkspace } from "../scene/EditorScene.ts";
 import { EditorPanels } from "../app/panels/index.ts";
-import type { ViewFocus } from "../scene/index.ts";
-import type { TilesetTextures } from "../features/tilesets/TilesetTextures.ts";
 
 // CONSTANTS
 const kCanvasHoverEvent = "canvas-hover-change";
 
 export interface EditorShellOptions {
   state: EditorState;
-  viewFocus: ViewFocus;
   runtime: EditorRuntime;
-  scene: EditorScene;
 }
 
 export class EditorShell {
-  #panels: EditorPanels | null = null;
+  #panels: EditorPanels | null;
   #toolbar: HTMLElementTagNameMap["voxel-brush-toolbar"] | null;
   #disposables: Array<() => void> = [];
 
   constructor(
     options: EditorShellOptions
   ) {
-    const {
-      state,
-      viewFocus,
-      runtime,
-      scene
-    } = options;
+    const { state, runtime } = options;
 
     const activityLog = document.querySelector("jolly-log");
     if (activityLog) {
@@ -46,21 +34,11 @@ export class EditorShell {
       );
     }
 
-    const toolbar = document.querySelector("voxel-brush-toolbar");
-    this.#toolbar = toolbar;
-    if (toolbar) {
-      toolbar.brush = state.brush;
-      toolbar.selection = state.selection;
-    }
+    this.#toolbar = document.querySelector("voxel-brush-toolbar");
 
-    const panels = EditorPanels.mount(document, {
-      state,
-      viewFocus,
-      onLoadWorld: (data) => scene.loadWorld(data),
-      onTeleportToPeer: (clientId) => scene.teleportToPeer(clientId)
-    });
+    const panels = EditorPanels.mount(document);
+    this.#panels = panels;
     if (panels !== null) {
-      this.#panels = panels;
       this.#disposables.push(
         runtime.suspendKeyboardOnHover(panels.layout, kCanvasHoverEvent),
         () => panels.dispose()
@@ -68,17 +46,11 @@ export class EditorShell {
     }
   }
 
-  adoptHandles(
-    handles: EditorSceneHandles,
-    textures: TilesetTextures
+  adoptWorkspace(
+    workspace: VoxelMapWorkspace
   ): void {
-    this.#panels?.adoptHandles({
-      ...handles,
-      textures
-    });
-    if (this.#toolbar) {
-      this.#toolbar.history = handles.engine.history;
-    }
+    this.#panels?.attach(workspace);
+    this.#toolbar?.attach(workspace);
   }
 
   dispose(): void {

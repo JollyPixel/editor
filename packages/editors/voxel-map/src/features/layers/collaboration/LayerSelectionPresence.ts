@@ -7,11 +7,7 @@ import type {
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type PresenceStore,
-  type SelectionStore
-} from "../../../app/state/index.ts";
+import type { PresenceStore, SelectionStore } from "../../../state/index.ts";
 import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 import {
   layerPresenceKey,
@@ -23,8 +19,8 @@ export interface LayerSelectionPresenceOptions {
     VoxelNetworkCommand,
     VoxelServerMessage
   >;
-  selection?: SelectionStore;
-  presence?: PresenceStore;
+  selection: SelectionStore;
+  presence: PresenceStore;
 }
 
 export class LayerSelectionPresence {
@@ -40,8 +36,8 @@ export class LayerSelectionPresence {
   constructor(
     options: LayerSelectionPresenceOptions
   ) {
-    this.#selection = options.selection ?? editorState.selection;
-    this.#presence = options.presence ?? editorState.presence;
+    this.#selection = options.selection;
+    this.#presence = options.presence;
 
     this.#tracker = new PeerMarkTracker({
       room: options.room,

@@ -15,13 +15,13 @@ import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import type { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type TilesetStore,
-  type WorldStore
-} from "../../app/state/index.ts";
+import type { MapDocument } from "../../document/index.ts";
+import type {
+  BlockUsageStore,
+  TilesetEntry,
+  TilesetStore
+} from "../../state/index.ts";
 import type { TilesetActions } from "./TilesetActions.ts";
-import type { TilesetEntry } from "./tilesetEntries.ts";
 import { countBlocksPerTileset } from "./blockTilesets.ts";
 import { AddTilesetDialog } from "./AddTilesetDialog.ts";
 import { TilesetManagerDialog } from "./TilesetManagerDialog.ts";
@@ -86,7 +86,7 @@ export class TilesetFolder extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
+  declare engine: VoxelEngine;
 
   @property({ attribute: false })
   declare actions: TilesetActions | null;
@@ -95,7 +95,10 @@ export class TilesetFolder extends LitElement {
   declare tilesets: TilesetStore;
 
   @property({ attribute: false })
-  declare worldStore: WorldStore;
+  declare mapDocument: MapDocument;
+
+  @property({ attribute: false })
+  declare usage: BlockUsageStore;
 
   @property({ attribute: false })
   declare log: LogQueue;
@@ -113,11 +116,7 @@ export class TilesetFolder extends LitElement {
 
   constructor() {
     super();
-    this.engine = undefined;
     this.actions = null;
-    this.tilesets = editorState.tilesets;
-    this.worldStore = editorState.world;
-    this.log = editorState.log;
     this._busy = false;
   }
 
@@ -126,7 +125,7 @@ export class TilesetFolder extends LitElement {
     this.#subscriptions.push(
       this.tilesets.subscribe("change", this.#refresh),
       this.tilesets.subscribe("activeChange", this.#refresh),
-      this.worldStore.subscribe("blockRegistryChanged", this.#refresh)
+      this.mapDocument.subscribe("blockRegistryChanged", this.#refresh)
     );
   }
 
@@ -198,7 +197,8 @@ export class TilesetFolder extends LitElement {
         .engine=${this.engine}
         .actions=${this.actions}
         .tilesets=${this.tilesets}
-        .worldStore=${this.worldStore}
+        .mapDocument=${this.mapDocument}
+        .usage=${this.usage}
         .log=${this.log}
         .onAdd=${() => void this.addTileset()}
       ></tileset-manager-dialog>

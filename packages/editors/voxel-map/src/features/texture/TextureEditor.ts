@@ -15,13 +15,12 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type BrushStore,
-  type TilesetStore,
-  type WorldStore
-} from "../../app/state/index.ts";
-import type { TilesetEntry } from "../tilesets/tilesetEntries.ts";
+import type { MapDocument } from "../../document/index.ts";
+import type {
+  BrushStore,
+  TilesetEntry,
+  TilesetStore
+} from "../../state/index.ts";
 import { blockFocusTilesetId } from "../tilesets/blockTilesets.ts";
 import type {
   TilesetTexture,
@@ -71,10 +70,10 @@ export class TextureEditor extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
+  declare engine: VoxelEngine;
 
   @property({ attribute: false })
-  declare textures: TilesetTextures | undefined;
+  declare textures: TilesetTextures;
 
   @property({ type: Boolean })
   declare active: boolean;
@@ -86,7 +85,7 @@ export class TextureEditor extends LitElement {
   declare brush: BrushStore;
 
   @property({ attribute: false })
-  declare worldStore: WorldStore;
+  declare mapDocument: MapDocument;
 
   @property({ attribute: false })
   declare tilesets: TilesetStore;
@@ -99,13 +98,8 @@ export class TextureEditor extends LitElement {
 
   constructor() {
     super();
-    this.engine = undefined;
-    this.textures = undefined;
     this.active = false;
     this.uvAccess = "edit";
-    this.brush = editorState.brush;
-    this.worldStore = editorState.world;
-    this.tilesets = editorState.tilesets;
   }
 
   override connectedCallback() {
@@ -118,7 +112,7 @@ export class TextureEditor extends LitElement {
       this.tilesets.subscribe("change", this.#requestSync),
       this.tilesets.subscribe("activeChange", this.#reconcile),
       this.brush.subscribe("blockChange", this.#onBlockChange),
-      this.worldStore.subscribe(
+      this.mapDocument.subscribe(
         "blockRegistryChanged",
         this.#onBlockRegistryChanged
       )
@@ -148,9 +142,6 @@ export class TextureEditor extends LitElement {
 
   #tabEntries(): TilesetEntry[] {
     const { engine } = this;
-    if (engine === undefined) {
-      return [];
-    }
 
     return this.tilesets.entries.filter((entry) => (
       this.#tabs.has(entry.definition.id) ||
@@ -176,12 +167,7 @@ export class TextureEditor extends LitElement {
     }
 
     const { engine, textures } = this;
-    if (
-      panel === null ||
-      panel !== this.#panel ||
-      engine === undefined ||
-      textures === undefined
-    ) {
+    if (panel === null || panel !== this.#panel) {
       return;
     }
 
@@ -219,7 +205,7 @@ export class TextureEditor extends LitElement {
         assetId,
         texture,
         brush: this.brush,
-        worldStore: this.worldStore
+        mapDocument: this.mapDocument
       }));
     }
 
@@ -287,7 +273,7 @@ export class TextureEditor extends LitElement {
   #followSelectedBlock(
     force: boolean
   ): void {
-    const block = this.engine?.blockRegistry.get(this.brush.blockId);
+    const block = this.engine.blockRegistry.get(this.brush.blockId);
     if (block === undefined) {
       return;
     }

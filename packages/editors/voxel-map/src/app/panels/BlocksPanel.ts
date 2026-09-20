@@ -1,17 +1,14 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import {
   LocalStorageAdapter,
   type StorageAdapter
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type EditorState
-} from "../state/index.ts";
+import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
+import { WorkspaceController } from "../../shared/WorkspaceController.ts";
 import {
   parseBlockLibraryOrder,
   type BlockLibraryOrder
@@ -21,7 +18,6 @@ import type {
   BlockLibrary,
   BlockSelectionChangeDetail
 } from "../../features/blocks/BlockLibrary.ts";
-import type { TilesetActions } from "../../features/tilesets/TilesetActions.ts";
 import type { TilesetFolder } from "../../features/tilesets/TilesetFolder.ts";
 
 import "../../features/registerElements.ts";
@@ -48,15 +44,6 @@ export class BlocksPanel extends LitElement {
       min-height: 0;
     }
   `;
-
-  @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
-
-  @property({ attribute: false })
-  declare state: EditorState;
-
-  @property({ attribute: false })
-  declare tilesetActions: TilesetActions | null;
 
   @property({
     type: Boolean,
@@ -86,15 +73,22 @@ export class BlocksPanel extends LitElement {
   @query("block-library")
   declare _blockLibrary: BlockLibrary | null;
 
+  #workspace = new WorkspaceController(this, (workspace) => [
+    workspace.mapDocument.subscribe("reset", () => this.requestUpdate())
+  ]);
+
   constructor() {
     super();
-    this.engine = undefined;
-    this.state = editorState;
-    this.tilesetActions = null;
     this.hostsTextureEditor = false;
     this._canEditBlock = false;
     this.storage = new LocalStorageAdapter();
     this._order = parseBlockLibraryOrder(this.storage.get(kOrderStorageKey));
+  }
+
+  attach(
+    workspace: VoxelMapWorkspace
+  ): void {
+    this.#workspace.attach(workspace);
   }
 
   readonly #onOrderChange = (
@@ -137,7 +131,12 @@ export class BlocksPanel extends LitElement {
   }
 
   override render() {
-    const editable = this.tilesetActions !== null;
+    const workspace = this.#workspace.current;
+    if (workspace === null) {
+      return html`<slot></slot>`;
+    }
+
+    const editable = workspace.tilesetActions !== null;
 
     return html`
       <jolly-folder
@@ -165,11 +164,12 @@ export class BlocksPanel extends LitElement {
           @click=${this.#manageTilesets}
         ></jolly-button>
         <tileset-folder
-          .engine=${this.engine}
-          .actions=${this.tilesetActions}
-          .tilesets=${this.state.tilesets}
-          .worldStore=${this.state.world}
-          .log=${this.state.log}
+          .engine=${workspace.engine}
+          .actions=${workspace.tilesetActions}
+          .tilesets=${workspace.state.tilesets}
+          .mapDocument=${workspace.mapDocument}
+          .usage=${workspace.usage}
+          .log=${workspace.state.log}
         ></tileset-folder>
       </jolly-folder>
 
@@ -195,12 +195,12 @@ export class BlocksPanel extends LitElement {
           @click=${this.#editBlock}
         ></jolly-button>
         <block-library
-          .engine=${this.engine}
-          .brush=${this.state.brush}
-          .worldStore=${this.state.world}
-          .presence=${this.state.presence}
-          .tilesets=${this.state.tilesets}
-          .usage=${this.state.usage}
+          .engine=${workspace.engine}
+          .brush=${workspace.state.brush}
+          .mapDocument=${workspace.mapDocument}
+          .presence=${workspace.state.presence}
+          .tilesets=${workspace.state.tilesets}
+          .usage=${workspace.usage}
           .order=${this._order}
           .layout=${this.hostsTextureEditor ? "compact" : "fill"}
           @block-selection-change=${this.#onBlockSelectionChange}

@@ -27,7 +27,7 @@ function brushBlock(
   page: Page
 ): Promise<number> {
   return page.evaluate(
-    () => window.voxelMapEditor!.scene.editorState.brush.blockId
+    () => window.voxelMapEditor!.workspace.state.brush.blockId
   );
 }
 
@@ -35,7 +35,7 @@ function blockNames(
   page: Page
 ): Promise<string[]> {
   return page.evaluate(() => [
-    ...window.voxelMapEditor!.scene.engine.blockRegistry.getAll()
+    ...window.voxelMapEditor!.workspace.engine.blockRegistry.getAll()
   ].map((block) => block.name));
 }
 
@@ -44,7 +44,7 @@ function blockSurface(
   blockId: number
 ): Promise<{ alphaMode?: string; side?: string; }> {
   return page.evaluate((id) => {
-    const block = window.voxelMapEditor!.scene.engine.blockRegistry.get(id);
+    const block = window.voxelMapEditor!.workspace.engine.blockRegistry.get(id);
 
     return {
       alphaMode: block?.alphaMode,
@@ -60,7 +60,7 @@ async function eraseBlockTile(
   await openPane(page, "Paint");
   const panel = texturePanel(page);
   const texel = await page.evaluate((id) => {
-    const { engine } = window.voxelMapEditor!.scene;
+    const { engine } = window.voxelMapEditor!.workspace;
     const texture = engine.blockRegistry.get(id)!.defaultTexture!;
     const tileSize = engine.tilesets.definitions()[0].tileSize;
 
@@ -79,7 +79,7 @@ function blockTileSize(
   blockId: number
 ): Promise<number | undefined> {
   return page.evaluate((id) => {
-    const block = window.voxelMapEditor!.scene.engine.blockRegistry.get(id);
+    const block = window.voxelMapEditor!.workspace.engine.blockRegistry.get(id);
     const refs = Object.values(block?.faceTextures ?? {});
 
     return (block?.defaultTexture ?? refs[0])?.size;
@@ -193,8 +193,8 @@ test("moving a block to another tileset shows that tileset texture", async({ pag
   await form.getByRole("button", { name: "Create" }).click();
   await expect(form).toBeHidden();
 
-  const stoneId = await page.evaluate(() => window.voxelMapEditor!.scene
-    .editorState.tilesets.entries
+  const stoneId = await page.evaluate(() => window.voxelMapEditor!.workspace
+    .state.tilesets.entries
     .find((entry) => entry.label === "stone")!
     .definition.id);
   const [first, second] = await blockNames(page);

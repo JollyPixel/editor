@@ -29,12 +29,11 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  editorState,
-  type BlockUsageStore,
-  type BrushStore,
-  type TilesetStore
-} from "../../app/state/index.ts";
+import type {
+  BlockUsageStore,
+  BrushStore,
+  TilesetStore
+} from "../../state/index.ts";
 import {
   blockRemovalMessage,
   blockUsageSummary,
@@ -111,7 +110,7 @@ export class BlockEditorDialog extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine | undefined;
+  declare engine: VoxelEngine;
 
   @property({ attribute: false })
   declare block: ResolvedBlockDefinition | null;
@@ -143,10 +142,6 @@ export class BlockEditorDialog extends LitElement {
   constructor() {
     super();
 
-    this.engine = undefined;
-    this.brush = editorState.brush;
-    this.tilesets = editorState.tilesets;
-    this.usage = editorState.usage;
     this.block = null;
     this._mode = "edit";
     this._open = false;
@@ -477,7 +472,7 @@ export class BlockEditorDialog extends LitElement {
       return undefined;
     }
 
-    const atlas = this.engine?.tilesetManager.get(tilesetId)?.def;
+    const atlas = this.engine.tilesetManager.get(tilesetId)?.def;
 
     return {
       tileSize,
@@ -599,19 +594,11 @@ export class BlockEditorDialog extends LitElement {
   #applyBlock(
     updated: ResolvedBlockDefinition
   ): void {
-    if (!this.engine) {
-      return;
-    }
-
     this.engine.defineBlock(updated);
     this.block = updated;
   }
 
   #confirmCreate(): void {
-    if (!this.engine) {
-      return;
-    }
-
     const { blockRegistry } = this.engine;
     const definition = blockDefinitionFromDraft(
       this._draft,
