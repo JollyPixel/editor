@@ -14,6 +14,7 @@ import {
 // Import Internal Dependencies
 import { dockStyles } from "./Dock.styles.ts";
 import type { DockColumn } from "./layout.ts";
+import { sharedAreaTone } from "./sharedTone.ts";
 import { emitContainerEvent } from "../events.ts";
 import {
   isPane,
@@ -33,6 +34,7 @@ import {
   type DragStack
 } from "../../interaction/drag/DragSession.ts";
 import type { Rect } from "../../geometry/Rect.ts";
+import type { IconTone } from "../../icon/registry.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
@@ -86,6 +88,9 @@ export class Dock extends LitElement {
 
   @property({ type: Boolean, reflect: true })
   declare split: boolean;
+
+  @property({ type: Boolean, reflect: true, attribute: "share-tone" })
+  declare shareTone: boolean;
 
   @property({ type: Number, attribute: "min-size" })
   declare minSize: number;
@@ -153,6 +158,10 @@ export class Dock extends LitElement {
     return this.double && !this.overlay && this.axis === "y";
   }
 
+  get sharedTone(): IconTone | null {
+    return this.shareTone ? sharedAreaTone(this.slots()) : null;
+  }
+
   constructor() {
     super();
 
@@ -166,6 +175,7 @@ export class Dock extends LitElement {
     this.empty = false;
     this.double = false;
     this.split = false;
+    this.shareTone = false;
     this.minSize = 120;
     this.maxSize = Number.POSITIVE_INFINITY;
     this.storageKey = "";
@@ -250,6 +260,10 @@ export class Dock extends LitElement {
     ) {
       this.#applySize();
     }
+
+    if (changed.has("shareTone")) {
+      this.#refreshPanes();
+    }
   }
 
   override disconnectedCallback(): void {
@@ -284,6 +298,12 @@ export class Dock extends LitElement {
     return this.slots().flatMap(
       (slot) => (isPaneGroup(slot) ? slot.panes() : [slot])
     );
+  }
+
+  refreshAreaTones(): void {
+    if (this.shareTone) {
+      this.#refreshPanes();
+    }
   }
 
   acceptsSecondary(
@@ -530,7 +550,14 @@ export class Dock extends LitElement {
 
   #onSlotChange = () => {
     this.#readOccupancy();
+    this.refreshAreaTones();
   };
+
+  #refreshPanes(): void {
+    for (const pane of this.panes()) {
+      pane.refreshAreaTone();
+    }
+  }
 
   #connectResizeHandle(): void {
     if (!this.hasUpdated) {

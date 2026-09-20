@@ -48,7 +48,9 @@ keyboard navigation skips it, and it is never resolved as the active pane.
 A pane whose `icon` has a [registered tone](../icon/registry.md#tones), or that
 sets `tone`, is a toned area: its header, the tab bar of its group while it is
 active, and the folder headers, separators and accent-filled controls inside it
-take that hue instead of the accent. The read-only `areaTone` getter returns the resolved tone or `null`.
+take that hue instead of the accent. The read-only `ownTone` getter returns the
+resolved tone or `null`. `areaTone` returns the tone the pane paints, which is
+`ownTone` unless its dock sets [`share-tone`](./dock.md).
 
 While its grip is grabbed, Up and Down move the pane within its dock, Left and
 Right send it to the adjacent dock, and Shift with Up or Down joins it to the

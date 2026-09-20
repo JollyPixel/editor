@@ -211,8 +211,12 @@ export class PaneElement extends LitElement {
       this.key;
   }
 
-  get areaTone(): IconTone | null {
+  get ownTone(): IconTone | null {
     return resolveAreaTone(this.tone, this.icon);
+  }
+
+  get areaTone(): IconTone | null {
+    return this.closest("jolly-dock")?.sharedTone ?? this.ownTone;
   }
 
   constructor() {
@@ -254,6 +258,9 @@ export class PaneElement extends LitElement {
     if (!this.grouped) {
       this.inactive = false;
     }
+    if (this.hasUpdated) {
+      this.refreshAreaTone();
+    }
     this.#hosted = this.#managed ||
       this.closest("jolly-floating") !== null;
     if (this.#hosted) {
@@ -289,6 +296,16 @@ export class PaneElement extends LitElement {
       this.grouped &&
       this.parentElement instanceof LitElement
     ) {
+      this.parentElement.requestUpdate();
+    }
+    if (changed.has("icon") || changed.has("tone")) {
+      this.closest("jolly-dock")?.refreshAreaTones?.();
+    }
+  }
+
+  refreshAreaTone(): void {
+    applyAreaTone(this, this.areaTone);
+    if (this.grouped && this.parentElement instanceof LitElement) {
       this.parentElement.requestUpdate();
     }
   }

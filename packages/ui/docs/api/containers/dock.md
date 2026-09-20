@@ -20,6 +20,7 @@
 | `empty` | `empty` | `boolean` | Derived from slotted panes |
 | `double` | `double` | `boolean` | `false` |
 | `split` | `split` | `boolean` | Derived from the `secondary` slot |
+| `shareTone` | `share-tone` | `boolean` | `false` |
 | `minSize` | `min-size` | `number` | `120` |
 | `maxSize` | `max-size` | `number` | `Infinity` |
 | `storageKey` | `storage-key` | `string` | `""` |
@@ -50,6 +51,14 @@ stays against the edge. `double` is ignored on top and bottom docks.
 second column: the dock must be `double`, expanded, and hold another slot.
 Until the column is open, its drop zone is a 48px band just past the inner
 edge.
+
+By default each pane of a dock is its own
+[toned area](./pane.md), so the two columns of a split dock can show two hues.
+With `share-tone`, every pane in the dock, untoned ones included, takes one
+tone: that of the first toned pane on screen, reading the primary column before
+the secondary one and a group through its active tab. The read-only
+`sharedTone` getter returns that tone, or `null` when `share-tone` is off or no
+pane on screen is toned. A pane that leaves the dock returns to its own tone.
 
 An overlay dock is `pointer-events: none !important`, so the area around its
 panes reaches whatever it covers even when page CSS sets `pointer-events` on

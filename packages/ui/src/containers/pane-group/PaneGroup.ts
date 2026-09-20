@@ -117,11 +117,16 @@ export class PaneGroup extends LitElement {
     this.active = this.#resolveActive();
   }
 
-  protected override updated(): void {
+  protected override updated(
+    changed: Map<PropertyKey, unknown>
+  ): void {
     for (const pane of this._panes) {
       if (pane.parentElement === this) {
         pane.inactive = pane.layoutKey !== this.active;
       }
+    }
+    if (changed.has("active") || changed.has("_panes")) {
+      this.closest("jolly-dock")?.refreshAreaTones?.();
     }
   }
 
