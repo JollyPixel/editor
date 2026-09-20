@@ -85,6 +85,7 @@ export class BlockShapePreview extends LitElement {
       tilesetManager: this.engine.tilesetManager
     });
     this.#renderer.block = this.block;
+    this.#renderer.onContextLost = () => this.#build();
   }
 }
 

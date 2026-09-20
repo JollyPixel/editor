@@ -22,6 +22,7 @@ import {
   type BlockPreviewSources
 } from "./blockPreviewMesh.ts";
 import { TileOpacityProbe } from "./tileOpacity.ts";
+import { WebGLContextLease } from "./WebGLContextLease.ts";
 
 // CONSTANTS
 const kSuperSampling = 2;
@@ -46,8 +47,10 @@ export interface BlockLibraryRendererOptions {
 export class BlockLibraryRenderer {
   readonly canvas: HTMLCanvasElement;
   onLayoutChange: (() => void) | null = null;
+  onContextLost: (() => void) | null = null;
 
   #renderer: THREE.WebGLRenderer;
+  #contextLease: WebGLContextLease;
   #scene: THREE.Scene;
   #camera: THREE.PerspectiveCamera;
   #cells: CellEntry[] = [];
@@ -87,6 +90,8 @@ export class BlockLibraryRenderer {
     );
     this.#renderer.autoClear = false;
     this.#renderer.setClearColor(0x000000, 0);
+    this.#contextLease = new WebGLContextLease(this.#renderer);
+    this.#contextLease.onLost = () => this.onContextLost?.();
 
     this.canvas = this.#renderer.domElement;
     this.canvas.style.display = "block";
@@ -169,7 +174,7 @@ export class BlockLibraryRenderer {
       this.#removeCell(cell);
     }
     this.#cells = [];
-    this.#renderer.dispose();
+    this.#contextLease.release();
     this.canvas.remove();
   }
 

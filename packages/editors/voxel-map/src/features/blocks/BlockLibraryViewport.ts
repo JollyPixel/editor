@@ -130,6 +130,13 @@ export class BlockLibraryViewport extends LitElement {
     this._insertAt = null;
   }
 
+  override connectedCallback() {
+    super.connectedCallback();
+    if (this.hasUpdated) {
+      this.requestUpdate();
+    }
+  }
+
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.#endDrag();
@@ -145,7 +152,7 @@ export class BlockLibraryViewport extends LitElement {
       this.#connectResizeHandle();
     }
 
-    if (changed.has("engine")) {
+    if (changed.has("engine") || this.#renderer === null) {
       this.#build();
     }
     else if (changed.has("blocks")) {
@@ -440,6 +447,10 @@ export class BlockLibraryViewport extends LitElement {
       blocks: this.blocks
     });
     this.#renderer.onLayoutChange = () => this.#syncGrid();
+    this.#renderer.onContextLost = () => {
+      this.#build();
+      this.#syncGrid();
+    };
   }
 
   #syncGrid(): void {

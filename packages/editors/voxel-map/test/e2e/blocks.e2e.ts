@@ -102,6 +102,24 @@ test("clicking a block selects it for the brush", async({ page }) => {
   expect(await brushBlock(page)).toBe(2);
 });
 
+test("the library redraws after the browser drops its WebGL context", async({ page }) => {
+  const canvas = page.locator("block-library-viewport canvas");
+  await expect(canvas).toHaveCount(1);
+
+  await canvas.evaluate((element: HTMLCanvasElement) => {
+    element.dataset.dropped = "true";
+    element
+      .getContext("webgl2")!
+      .getExtension("WEBGL_lose_context")!
+      .loseContext();
+  });
+
+  await expect(canvas).not.toHaveAttribute("data-dropped");
+  expect(await canvas.evaluate(
+    (element: HTMLCanvasElement) => element.getContext("webgl2")!.isContextLost()
+  )).toBe(false);
+});
+
 test("the add cell creates a block and selects it", async({ page }) => {
   await page.getByRole("button", { name: "Add block" }).click();
   const editor = titledDialog(page, "New Block");
