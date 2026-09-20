@@ -16,12 +16,18 @@ interface Harness {
   send: (type: string, pointerId?: number) => PointerEvent;
 }
 
-function createHarness(): Harness {
+function createHarness(
+  grabbable = false
+): Harness {
   const calls: string[] = [];
   const element = createPointerTarget();
   const drag = new PointerDrag({
     press: () => calls.push("press"),
-    hover: () => calls.push("hover"),
+    hover: () => {
+      calls.push("hover");
+
+      return grabbable;
+    },
     drag: () => calls.push("drag"),
     release: () => calls.push("release")
   });
@@ -77,16 +83,24 @@ describe("PointerDrag", () => {
     assert.equal(drag.active, true);
   });
 
-  test("releases on pointerup and on pointercancel", () => {
-    for (const type of ["pointerup", "pointercancel"]) {
-      const { drag, calls, send } = createHarness();
+  test("releases on pointerup, then hovers where the pointer stopped", () => {
+    const { drag, calls, send } = createHarness();
 
-      drag.begin(send("pointerdown"));
-      send(type);
+    drag.begin(send("pointerdown"));
+    send("pointerup");
 
-      assert.deepEqual(calls, ["press", "release"]);
-      assert.equal(drag.active, false);
-    }
+    assert.deepEqual(calls, ["press", "release", "hover"]);
+    assert.equal(drag.active, false);
+  });
+
+  test("releases on pointercancel", () => {
+    const { drag, calls, send } = createHarness();
+
+    drag.begin(send("pointerdown"));
+    send("pointercancel");
+
+    assert.deepEqual(calls, ["press", "release"]);
+    assert.equal(drag.active, false);
   });
 
   test("releases once when ended by the owner", () => {
@@ -131,6 +145,43 @@ describe("PointerDrag", () => {
     );
 
     assert.deepEqual(calls, ["press"]);
+  });
+
+  describe("cursor", () => {
+    test("shows grab over a grabbable spot and grabbing while dragging", () => {
+      const { drag, element, send } = createHarness(true);
+
+      send("pointermove");
+      assert.equal(element.style.cursor, "grab");
+
+      drag.begin(send("pointerdown"));
+      assert.equal(element.style.cursor, "grabbing");
+
+      send("pointerup");
+      assert.equal(element.style.cursor, "grab");
+    });
+
+    test("leaves the host cursor alone away from a grabbable spot", () => {
+      const { element, send } = createHarness();
+      element.style.cursor = "crosshair";
+
+      send("pointermove");
+
+      assert.equal(element.style.cursor, "crosshair");
+    });
+
+    test("restores the host cursor on cancel and on disconnect", () => {
+      const { drag, element, send } = createHarness(true);
+      element.style.cursor = "crosshair";
+
+      drag.begin(send("pointerdown"));
+      send("pointercancel");
+      assert.equal(element.style.cursor, "crosshair");
+
+      send("pointermove");
+      drag.disconnect();
+      assert.equal(element.style.cursor, "crosshair");
+    });
   });
 
   describe("toNdc", () => {

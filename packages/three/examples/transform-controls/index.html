@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Translation Controls - @jolly-pixel/three</title>
+  <title>Transform Controls - @jolly-pixel/three</title>
   <link rel="stylesheet" href="/main.css">
 </head>
 
@@ -13,17 +13,21 @@
   <jolly-scope>
     <jolly-controls
       position="bottom-left"
-      max-entries-per-row="3"
+      max-entries-per-row="4"
       heading="Controls"
     >
       <jolly-control
-        description="Translate"
-        details="Drag one colored handle to move the cube on that axis."
+        description="Transform"
+        details="Drag a handle to translate, rotate or scale the cube."
       ><kbd>Drag handle</kbd></jolly-control>
       <jolly-control
         description="Ignore the grid"
         details="Hold Alt during a gesture to suspend snapping."
       ><kbd>Alt</kbd> + <kbd>Drag</kbd></jolly-control>
+      <jolly-control
+        description="Cancel"
+        details="Press Escape during a gesture to restore the cube."
+      ><kbd>Esc</kbd></jolly-control>
       <jolly-control
         description="Orbit"
         details="Drag outside the gizmo to orbit the camera."

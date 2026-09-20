@@ -28,6 +28,8 @@ controls.addEventListener("change", ({ min, size }) => {
 
 Shift remains live until the first movement, then the drag plane locks to prevent jumps.
 
+The element's cursor becomes `grab` over the volume or an arrow and `grabbing` during a gesture, then returns to its previous value.
+
 Each of the six constant-screen-size arrows has a thin shaft, cone head and enlarged invisible picker. Pickers may cover small areas, and arrows win hit tests over the volume. Reduce `handleSize` for areas one or two cells wide.
 
 ## Constructor

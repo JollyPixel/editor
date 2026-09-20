@@ -4,7 +4,7 @@ import {
   type Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import { TranslationControls } from "@jolly-pixel/three";
+import { TransformControls } from "@jolly-pixel/three";
 import type {
   VoxelWorld,
   VoxelLayerCommand
@@ -25,9 +25,8 @@ export class VoxelLayerGizmo extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
   #mapDocument: MapDocument;
-  #controls: TranslationControls | null = null;
-  #pivot = new THREE.Object3D();
-  #pivotOffset = new THREE.Vector3();
+  #controls: TransformControls | null = null;
+  #anchor = new THREE.Object3D();
   #activeLayer: string | null = null;
   #world: VoxelWorld;
   #subscriptions: Array<() => void> = [];
@@ -47,15 +46,18 @@ export class VoxelLayerGizmo extends ActorComponent {
   }
 
   awake(): void {
-    const controls = new TranslationControls(
+    const controls = new TransformControls(
       this.#camera,
       this.actor.world.renderer.canvas,
       {
-        space: "world",
-        snap: 1,
+        mode: "translate",
+        orientation: "world",
+        snap: {
+          translate: 1
+        },
         appearance: {
-          size: 0.05,
           center: false,
+          planes: false,
           directions: "positive",
           handle: {
             kind: "arrow"
@@ -82,7 +84,7 @@ export class VoxelLayerGizmo extends ActorComponent {
 
     this.actor.addChildren(
       controls.helper,
-      this.#pivot
+      this.#anchor
     );
     this.#subscriptions.push(
       this.#selection.subscribe(
@@ -141,7 +143,7 @@ export class VoxelLayerGizmo extends ActorComponent {
     }
 
     this.#repositionPivot();
-    controls.attach(this.#pivot);
+    controls.attach(this.#anchor);
   }
 
   #repositionPivot(): void {
@@ -158,12 +160,14 @@ export class VoxelLayerGizmo extends ActorComponent {
 
     const center = layer.worldCenter();
 
-    this.#pivotOffset.set(
-      center.x - layer.position.x,
-      center.y - layer.position.y,
-      center.z - layer.position.z
-    );
-    this.#pivot.position.copy(center);
+    this.#anchor.position.copy(layer.position);
+    if (this.#controls !== null) {
+      this.#controls.pivot = {
+        x: center.x - layer.position.x,
+        y: center.y - layer.position.y,
+        z: center.z - layer.position.z
+      };
+    }
   }
 
   readonly #onDraggingStarted = (): void => {
@@ -178,11 +182,11 @@ export class VoxelLayerGizmo extends ActorComponent {
     if (!this.#activeLayer) {
       return;
     }
-    const position = this.#pivot.position;
+    const position = this.#anchor.position;
     this.#world.setLayerPosition(this.#activeLayer, {
-      x: Math.round(position.x - this.#pivotOffset.x),
-      y: Math.round(position.y - this.#pivotOffset.y),
-      z: Math.round(position.z - this.#pivotOffset.z)
+      x: Math.round(position.x),
+      y: Math.round(position.y),
+      z: Math.round(position.z)
     });
   };
 

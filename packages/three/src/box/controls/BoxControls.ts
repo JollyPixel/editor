@@ -263,12 +263,7 @@ export class BoxControls<
     if (face !== null) {
       return this.#beginResize(event, box, face);
     }
-
-    box.toBox3(_bounds);
-    if (
-      _bounds.containsPoint(this.#parentRay.origin) ||
-      this.#parentRay.intersectBox(_bounds, _hit) === null
-    ) {
+    if (!this.#pickBody(box, _hit)) {
       return false;
     }
 
@@ -279,12 +274,26 @@ export class BoxControls<
 
   #hover(
     event: PointerEvent
-  ): void {
-    if (!this.enabled || !this.#castParentRay(event)) {
-      return;
+  ): boolean {
+    const box = this.#box;
+    if (!this.enabled || box === null || !this.#castParentRay(event)) {
+      return false;
     }
 
-    this.#handles.hover(this.#pickFace());
+    const face = this.#pickFace();
+    this.#handles.hover(face);
+
+    return face !== null || this.#pickBody(box, _hit);
+  }
+
+  #pickBody(
+    box: BoxVolume,
+    hit: THREE.Vector3
+  ): boolean {
+    box.toBox3(_bounds);
+
+    return !_bounds.containsPoint(this.#parentRay.origin) &&
+      this.#parentRay.intersectBox(_bounds, hit) !== null;
   }
 
   #applyDrag(
