@@ -336,6 +336,50 @@ describe("BlockTextures missing regions", () => {
   });
 });
 
+describe("BlockTextures rename", () => {
+  test("a local block rename renames its region", () => {
+    const { blocks, uv, textures } = createHarness();
+    const block = blocks.add({ name: "Torso" });
+    textures.create(block.uuid, block.name);
+    uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
+    const before = uv.get(regionIdOf(block))!.toJSON();
+
+    blocks.rename(block.uuid, "Chest");
+
+    assert.deepEqual(
+      uv.get(regionIdOf(block))!.toJSON(),
+      { ...before, name: "Chest" }
+    );
+  });
+
+  test("keeps the renamed region mapped onto the mesh", () => {
+    const { blocks, uv, textures } = createHarness();
+    const block = blocks.add({ name: "Torso" });
+    textures.create(block.uuid, block.name);
+    blocks.rename(block.uuid, "Chest");
+
+    uv.setState(regionIdOf(block), "stacked");
+    uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
+
+    assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
+  });
+
+  test("leaves a remote rename to the pixel document sync", () => {
+    const { document, blocks, uv, textures } = createHarness();
+    const block = blocks.add({ name: "Torso" });
+    textures.create(block.uuid, block.name);
+
+    document.apply({
+      action: "group-renamed",
+      uuid: block.uuid,
+      name: "Chest"
+    });
+
+    assert.equal(block.name, "Chest");
+    assert.equal(uv.get(regionIdOf(block))!.name, "Torso");
+  });
+});
+
 describe("BlockTextures selection", () => {
   test("selecting a block selects its region, and the reverse", () => {
     const { blocks, uv, textures } = createHarness();

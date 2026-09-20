@@ -371,6 +371,16 @@ export class UVMap extends Emitter<
     );
   }
 
+  rename(
+    id: string,
+    name: string
+  ): boolean {
+    return this.#replace(
+      id,
+      (region) => region.renamed(name)
+    );
+  }
+
   restoreState(
     value: UVRegion | UVRegionData
   ): boolean {

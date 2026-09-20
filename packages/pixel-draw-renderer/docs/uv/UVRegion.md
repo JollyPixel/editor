@@ -203,6 +203,14 @@ translated(delta: Vec2): UVRegion
 
 Moves the whole region by `delta`, in any state. Returns `this` for a zero delta.
 
+### `renamed(name)`
+
+```ts
+renamed(name: string): UVRegion
+```
+
+Returns a copy carrying `name`, or `this` when the name is unchanged.
+
 ### `toJSON()`
 
 ```ts

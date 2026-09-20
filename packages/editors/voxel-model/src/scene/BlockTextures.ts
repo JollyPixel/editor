@@ -90,6 +90,14 @@ export class BlockTextures implements BlockRegions {
           blockRegionId(command.uuid)
         );
         break;
+      case "group-renamed":
+        if (change.origin === "local") {
+          this.#pixels.uv.rename(
+            blockRegionId(command.uuid),
+            command.name
+          );
+        }
+        break;
       case "group-transformed":
         if (command.flipAxes) {
           this.#bindByUuid(command.uuid);
