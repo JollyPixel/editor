@@ -206,7 +206,9 @@ test("a lone tileset leaves the tileset field disabled", async({ page }) => {
 test("moving a block to another tileset shows that tileset texture", async({ page }) => {
   await page.getByRole("button", { name: "Add tileset", exact: true }).click();
   const form = dialog(page, "Add tileset");
-  await selectField(form, "Source").selectOption({ label: "New texture" });
+  await buttonGroup(form, "Source")
+    .getByRole("radio", { name: "New", exact: true })
+    .click();
   await textField(form, "Name").fill("stone");
   await form.getByRole("button", { name: "Create" }).click();
   await expect(form).toBeHidden();
