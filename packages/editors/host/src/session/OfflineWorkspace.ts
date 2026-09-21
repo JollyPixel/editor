@@ -1,14 +1,20 @@
 // Import Third-party Dependencies
 import {
   createAssetBackend,
+  PROJECTION_STATE_PATH,
   seedAssetSource,
   silentLogger,
   type AssetBackend,
   type AssetEventDataMap,
   type AssetKindHandler,
-  type AssetSeedMap
+  type AssetSeedMap,
+  type SnapshotPolicy
 } from "@jolly-pixel/asset-server/backend";
-import { MemoryAssetSource } from "@jolly-pixel/asset-source/core";
+import {
+  MemoryAssetSource,
+  type AssetSource
+} from "@jolly-pixel/asset-source/core";
+import { IndexedDbAssetSource } from "@jolly-pixel/asset-source/indexeddb";
 import { colorFromKey } from "@jolly-pixel/color";
 import * as EventStore from "@jolly-pixel/event-store";
 import { Server } from "@jolly-pixel/network";
@@ -22,13 +28,32 @@ import { toPeerMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { StandaloneConnection } from "../editor/mountStandalone.ts";
+import { EditorLaunch } from "../launch/EditorLaunch.ts";
+import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
+import type { LaunchSource } from "../launch/sources/LaunchSource.ts";
+import { QueryLaunchSource } from "../launch/sources/QueryLaunchSource.ts";
+import type { SessionWorkspace } from "./SessionWorkspace.ts";
+
+// CONSTANTS
+export const OFFLINE_DATABASE_PREFIX = "jolly-workspace:";
+export const DEFAULT_OFFLINE_WORKSPACE_NAME = "default";
+
+const kPersistentSnapshotPolicy: SnapshotPolicy = {
+  delay: 500,
+  maxDelay: 5_000
+};
+
+export type OfflineStorage = "memory" | "indexeddb";
+
+export type OfflineSeed =
+  | AssetSeedMap
+  | (() => AssetSeedMap | Promise<AssetSeedMap>);
 
 export interface OfflineWorkspaceOptions {
   handlers: AssetKindHandler[];
-  /**
-   * Documents the workspace starts with, keyed by asset path.
-   */
-  seed?: AssetSeedMap;
+  seed?: OfflineSeed;
+  storage?: OfflineStorage;
+  name?: string;
 }
 
 export interface OfflineWorkspaceParts {
@@ -36,26 +61,47 @@ export interface OfflineWorkspaceParts {
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   server: Server;
   detach: () => void;
+  storage?: OfflineStorage;
+  databaseName?: string;
+  release?: () => void;
 }
 
-/**
- * An asset back-end living in the page, on memory storage. Nothing outlives
- * the page.
- */
-export class OfflineWorkspace {
+interface OpenedSource {
+  source: AssetSource;
+  storage: OfflineStorage;
+  release?: () => void;
+}
+
+export class OfflineWorkspace implements SessionWorkspace {
   static async open(
     options: OfflineWorkspaceOptions
   ): Promise<OfflineWorkspace> {
-    const source = new MemoryAssetSource();
-    if (options.seed !== undefined) {
-      await seedAssetSource(source, options.seed);
+    const {
+      handlers,
+      seed,
+      storage: requested = "memory",
+      name = DEFAULT_OFFLINE_WORKSPACE_NAME
+    } = options;
+    const databaseName = `${OFFLINE_DATABASE_PREFIX}${name}`;
+    const { source, storage, release } = await openSource(
+      requested,
+      databaseName
+    );
+
+    await source.delete(PROJECTION_STATE_PATH);
+    if (seed !== undefined && (await source.list()).length === 0) {
+      await seedAssetSource(
+        source,
+        typeof seed === "function" ? await seed() : seed
+      );
     }
 
     const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
     const backend = await createAssetBackend({
       source,
       eventStore,
-      handlers: options.handlers,
+      handlers,
+      snapshot: storage === "indexeddb" ? kPersistentSnapshotPolicy : undefined,
       watch: false
     });
     const server = new Server({
@@ -66,28 +112,82 @@ export class OfflineWorkspace {
       backend,
       eventStore,
       server,
-      detach: backend.attach(server)
+      detach: backend.attach(server),
+      storage,
+      databaseName,
+      release
     });
   }
 
   readonly backend: AssetBackend;
+  readonly storage: OfflineStorage;
 
   #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   #server: Server;
   #transport: LoopbackTransport;
   #detach: () => void;
+  #databaseName: string | undefined;
+  #release: (() => void) | undefined;
   #closing: Promise<void> | undefined;
+
+  readonly #onVisibilityChange = (): void => {
+    if (document.visibilityState === "hidden") {
+      void this.backend.flush();
+    }
+  };
+
+  readonly #onPageHide = (): void => {
+    void this.backend.flush();
+  };
 
   constructor(
     parts: OfflineWorkspaceParts
   ) {
     this.backend = parts.backend;
+    this.storage = parts.storage ?? "memory";
     this.#eventStore = parts.eventStore;
     this.#server = parts.server;
     this.#detach = parts.detach;
+    this.#databaseName = parts.databaseName;
+    this.#release = parts.release;
     this.#transport = new LoopbackTransport({
       server: parts.server
     });
+
+    if (this.persistent) {
+      globalThis.document?.addEventListener(
+        "visibilitychange",
+        this.#onVisibilityChange
+      );
+      globalThis.window?.addEventListener("pagehide", this.#onPageHide);
+    }
+  }
+
+  get persistent(): boolean {
+    return this.storage === "indexeddb";
+  }
+
+  launchSources(
+    accepts: string
+  ): LaunchSource[] {
+    const { catalog } = this.backend;
+
+    return [
+      new QueryLaunchSource(),
+      new LastOpenedLaunchSource({
+        accepts,
+        isKnown: (assetId) => catalog.record(assetId)?.kind === accepts
+      }),
+      {
+        read: () => {
+          const [first] = catalog.catalog.byKind(accepts);
+
+          return Promise.resolve(
+            EditorLaunch.fromTarget(first?.id.value)
+          );
+        }
+      }
+    ];
   }
 
   connect(): StandaloneConnection {
@@ -104,6 +204,7 @@ export class OfflineWorkspace {
 
     return {
       identity,
+      workspace: this,
       client: {
         room: (name) => client.room(name),
         destroy: () => {
@@ -114,6 +215,15 @@ export class OfflineWorkspace {
     };
   }
 
+  async reset(): Promise<void> {
+    await this.close();
+    if (this.persistent && this.#databaseName !== undefined) {
+      await IndexedDbAssetSource.destroy({
+        name: this.#databaseName
+      });
+    }
+  }
+
   close(): Promise<void> {
     this.#closing ??= this.#close();
 
@@ -121,9 +231,82 @@ export class OfflineWorkspace {
   }
 
   async #close(): Promise<void> {
+    globalThis.document?.removeEventListener(
+      "visibilitychange",
+      this.#onVisibilityChange
+    );
+    globalThis.window?.removeEventListener("pagehide", this.#onPageHide);
+
     this.#detach();
     await this.#server.close();
+    await this.backend.flush();
     await this.backend.close();
     this.#eventStore.close();
+
+    const { source } = this.backend;
+    if (source instanceof IndexedDbAssetSource) {
+      source.close();
+    }
+    this.#release?.();
   }
+}
+
+async function openSource(
+  requested: OfflineStorage,
+  databaseName: string
+): Promise<OpenedSource> {
+  if (requested === "memory") {
+    return {
+      source: new MemoryAssetSource(),
+      storage: "memory"
+    };
+  }
+
+  const release = await acquireTabLock(databaseName);
+  if (release === null) {
+    return {
+      source: new MemoryAssetSource(),
+      storage: "memory"
+    };
+  }
+
+  void globalThis.navigator?.storage?.persist?.().catch(() => false);
+
+  try {
+    return {
+      source: await IndexedDbAssetSource.open({
+        name: databaseName
+      }),
+      storage: "indexeddb",
+      release
+    };
+  }
+  catch (error) {
+    release();
+
+    throw error;
+  }
+}
+
+async function acquireTabLock(
+  name: string
+): Promise<(() => void) | null> {
+  const locks = globalThis.navigator?.locks;
+  if (locks === undefined) {
+    return () => void 0;
+  }
+
+  const acquired = Promise.withResolvers<boolean>();
+  const released = Promise.withResolvers<void>();
+  void locks.request(
+    name,
+    { ifAvailable: true },
+    (lock) => {
+      acquired.resolve(lock !== null);
+
+      return lock === null ? undefined : released.promise;
+    }
+  );
+
+  return await acquired.promise ? released.resolve : null;
 }

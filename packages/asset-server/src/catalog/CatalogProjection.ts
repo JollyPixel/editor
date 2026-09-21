@@ -104,6 +104,14 @@ export class CatalogProjection extends Emitter<
     return true;
   }
 
+  record(
+    assetId: string
+  ): AssetRecord | undefined {
+    const id = new AssetId(assetId);
+
+    return this.#catalog.has(id) ? this.#catalog.get(id) : undefined;
+  }
+
   snapshot(): AssetManifestData {
     return this.#catalog.toJSON();
   }

@@ -41,6 +41,7 @@ path separators and reject paths that escape their root.
 - [`AssetSource`](./docs/AssetSource.md): shared storage contract and path rules
 - [`Memory`](./docs/Memory.md): isolated in-process storage
 - [`Filesystem`](./docs/Filesystem.md): persistent Node.js storage
+- [`IndexedDB`](./docs/IndexedDb.md): persistent browser storage
 - [`Utilities`](./docs/Utilities.md): path, state-directory and JSON helpers
 - [`Http`](./docs/Http.md): serving a source over HTTP
 

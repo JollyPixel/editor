@@ -59,6 +59,7 @@ system events.
   filesystem storage
 - [`Asset kinds`](./docs/AssetKinds.md): custom state, serialization and editing rooms
 - [`Catalog`](./docs/Catalog.md): catalog projection, network messages and HTTP access
+- [`Archive`](./docs/Archive.md): ZIP export and import of an asset with its dependencies
 - [`Rooms`](./docs/Rooms.md): dynamic editing rooms and eviction
 - [`Sync`](./docs/Sync.md): lifecycle events, snapshots and reconciliation
 

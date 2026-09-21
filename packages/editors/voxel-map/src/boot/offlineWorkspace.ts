@@ -22,9 +22,6 @@ import {
 } from "./worldSeed.ts";
 
 // CONSTANTS
-export const OFFLINE_MAP_ID = "offline-map";
-
-const kOfflineTilesetAssetId = "offline-tileset";
 const kTilesetUrl = "textures/tileset.png";
 
 export async function openOfflineWorkspace(): Promise<OfflineWorkspace> {
@@ -33,11 +30,12 @@ export async function openOfflineWorkspace(): Promise<OfflineWorkspace> {
     throw new Error(`Unable to load "${kTilesetUrl}" (${response.status}).`);
   }
 
+  const tilesetAssetId = crypto.randomUUID();
   const tileset = await tilesetSeedFromPng(
     new Uint8Array(await response.arrayBuffer()),
     {
       id: DEFAULT_TILESET_ID,
-      asset: tilesetAsset(kOfflineTilesetAssetId),
+      asset: tilesetAsset(tilesetAssetId),
       tileSize: DEFAULT_TILE_SIZE
     }
   );
@@ -48,14 +46,15 @@ export async function openOfflineWorkspace(): Promise<OfflineWorkspace> {
       voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),
       textureAssetKind()
     ],
+    storage: "indexeddb",
     seed: {
       "textures/block.pixelart": {
-        id: kOfflineTilesetAssetId,
+        id: tilesetAssetId,
         kind: PIXEL_ART_KIND,
         content: () => encodeTilesetDocument(tileset)
       },
       "maps/overworld.voxelmap.json": {
-        id: OFFLINE_MAP_ID,
+        id: crypto.randomUUID(),
         kind: VOXEL_MAP_KIND,
         content: () => encodeWorldDocument(tileset.definition)
       }

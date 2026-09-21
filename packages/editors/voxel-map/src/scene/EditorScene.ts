@@ -44,6 +44,7 @@ import {
   type TilesetCatalogWriter
 } from "../features/tilesets/TilesetActions.ts";
 import { TilesetAtlases } from "../features/tilesets/TilesetAtlases.ts";
+import type { MapArchives } from "../features/map-config/MapArchives.ts";
 import {
   LocalTilesetTextures,
   SessionTilesetTextures,
@@ -67,6 +68,7 @@ export interface EditorSceneSession {
   identity: PeerIdentity;
   catalog: TilesetCatalog & TilesetCatalogWriter;
   assets: AssetLeases;
+  archives: MapArchives;
 }
 
 export interface EditorSceneOptions {
@@ -91,6 +93,7 @@ export interface VoxelMapWorkspace {
   tilesetActions: TilesetActions;
   textures: TilesetTextures;
   viewFocus: ViewFocus;
+  archives: MapArchives;
   loadWorld(data: VoxelWorldJSON): void;
   teleportToPeer(clientId: string): void;
 }
@@ -308,6 +311,7 @@ export class EditorScene extends Systems.Scene {
       tilesetActions,
       textures,
       viewFocus,
+      archives: session.archives,
       loadWorld: (data) => {
         this.#spawnPending = true;
         mapDocument.load(data);

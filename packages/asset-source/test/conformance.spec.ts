@@ -5,12 +5,16 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { IDBFactory } from "fake-indexeddb";
+
 // Import Internal Dependencies
 import {
   FilesystemAssetSource,
   MemoryAssetSource,
   type AssetSource
 } from "#src/index.ts";
+import { IndexedDbAssetSource } from "#src/persistence/indexeddb/index.ts";
 import { tempWorkspace } from "./helpers/tempWorkspace.ts";
 import {
   bytes,
@@ -40,6 +44,20 @@ const implementations: {
       return {
         source: new FilesystemAssetSource(workspace.root),
         [Symbol.asyncDispose]: () => workspace[Symbol.asyncDispose]()
+      };
+    }
+  },
+  {
+    name: "IndexedDbAssetSource",
+    create: async() => {
+      const source = await IndexedDbAssetSource.open({
+        name: "conformance",
+        factory: new IDBFactory()
+      });
+
+      return {
+        source,
+        [Symbol.asyncDispose]: () => Promise.resolve(source.close())
       };
     }
   }

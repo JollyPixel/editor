@@ -260,7 +260,9 @@ export class AssetProjector {
     }
 
     fold.projected = desired;
-    this.#dirty.delete(assetId);
+    if (fold.desiredEventId === desiredEventId) {
+      this.#dirty.delete(assetId);
+    }
     this.#state.advance(assetId, desiredEventId);
     this.#stateDirty = true;
     this.#logger

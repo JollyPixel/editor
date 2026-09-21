@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import { fromUint8Array } from "js-base64";
+import {
+  fromUint8Array,
+  toUint8Array
+} from "js-base64";
 import type {
   AssetRecordData,
   AssetReferenceData
@@ -13,14 +16,24 @@ import {
   CATALOG_CHANGED,
   CATALOG_CREATE,
   CATALOG_DELETE,
+  CATALOG_EXPORT,
+  CATALOG_IMPORT,
+  CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
   type CatalogCommand,
+  type CatalogCommandType,
+  type CatalogInlineContent,
   type CatalogMessage,
   type CatalogPathConflict
 } from "./protocol.ts";
+import type {
+  ImportConflictPolicy,
+  ImportPlan,
+  ImportReport
+} from "../../archive/AssetArchive.ts";
 import { CatalogRejectedError } from "./errors/CatalogRejectedError.ts";
 import {
   DependencyIndex,
@@ -44,6 +57,10 @@ export interface CatalogRoom {
 export interface CatalogCreateOptions {
   kind?: string;
   onConflict?: CatalogPathConflict;
+}
+
+export interface CatalogImportOptions {
+  onConflict: ImportConflictPolicy;
 }
 
 export type CatalogClientEvents = {
@@ -123,12 +140,11 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       path,
       kind: options.kind,
       onConflict: options.onConflict,
-      content: {
-        type: "inline",
-        encoding: "base64",
-        data: fromUint8Array(content)
-      }
+      content: inlineContent(content)
     });
+    if (message.command !== CATALOG_CREATE) {
+      throw unexpectedReply(message, CATALOG_CREATE);
+    }
 
     return message.assetId;
   }
@@ -153,6 +169,53 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       requestId: crypto.randomUUID(),
       assetId
     });
+  }
+
+  async exportArchive(
+    root?: string
+  ): Promise<Uint8Array> {
+    const message = await this.#request({
+      type: CATALOG_EXPORT,
+      requestId: crypto.randomUUID(),
+      root
+    });
+    if (message.command !== CATALOG_EXPORT) {
+      throw unexpectedReply(message, CATALOG_EXPORT);
+    }
+
+    return toUint8Array(message.content.data);
+  }
+
+  async planImport(
+    archive: Uint8Array
+  ): Promise<ImportPlan> {
+    const message = await this.#request({
+      type: CATALOG_PLAN,
+      requestId: crypto.randomUUID(),
+      content: inlineContent(archive)
+    });
+    if (message.command !== CATALOG_PLAN) {
+      throw unexpectedReply(message, CATALOG_PLAN);
+    }
+
+    return message.plan;
+  }
+
+  async importArchive(
+    archive: Uint8Array,
+    options: CatalogImportOptions
+  ): Promise<ImportReport> {
+    const message = await this.#request({
+      type: CATALOG_IMPORT,
+      requestId: crypto.randomUUID(),
+      content: inlineContent(archive),
+      onConflict: options.onConflict
+    });
+    if (message.command !== CATALOG_IMPORT) {
+      throw unexpectedReply(message, CATALOG_IMPORT);
+    }
+
+    return message.report;
   }
 
   dispose(): void {
@@ -258,4 +321,24 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     this.#pending.delete(message.requestId);
     settle?.(message);
   }
+}
+
+function inlineContent(
+  data: Uint8Array
+): CatalogInlineContent {
+  return {
+    type: "inline",
+    encoding: "base64",
+    data: fromUint8Array(data)
+  };
+}
+
+function unexpectedReply(
+  message: AppliedMessage,
+  command: CatalogCommandType
+): CatalogRejectedError {
+  return new CatalogRejectedError(
+    `unexpected "${message.command}" reply`,
+    command
+  );
 }

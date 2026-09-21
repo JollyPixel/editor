@@ -1,5 +1,7 @@
 export * from "./launch/EditorLaunch.ts";
 export type { LaunchSource } from "./launch/sources/LaunchSource.ts";
+export * from "./launch/sources/LastOpenedLaunchSource.ts";
+export * from "./launch/sources/QueryLaunchSource.ts";
 export * from "./launch/errors/LaunchNotFoundError.ts";
 export * from "./session/AssetLease.ts";
 export { AssetLeases } from "./session/AssetLeases.ts";
@@ -10,6 +12,9 @@ export {
   type EditorIdentityOptions
 } from "./session/EditorSession.ts";
 export * from "./session/errors/AssetModelConflictError.ts";
+export * from "./session/errors/ArchiveImportDisabledError.ts";
+export * from "./session/SessionArchive.ts";
+export type { SessionWorkspace } from "./session/SessionWorkspace.ts";
 export {
   EditorRuntime,
   type EditorRuntimeLoadOptions

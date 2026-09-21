@@ -59,7 +59,7 @@ export interface AssetBackendOptions {
    */
   reconcileDebounce?: number;
   /**
-   * Decoded size cap of a `catalog:create` payload.
+   * Decoded size cap of a catalog payload: created content and archives.
    * @default DEFAULT_CATALOG_MAX_CONTENT_BYTES
    */
   catalogMaxContentBytes?: number;
@@ -227,9 +227,23 @@ export async function createAssetBackend(
       .withMetadata({ assets: backfilled })
       .info("asset dependencies backfilled");
   }
+  async function flush(
+    assetId?: string
+  ): Promise<void> {
+    await scheduler.flush(assetId);
+    await projector.flush(assetId);
+  }
+
   const catalogExtension = new CatalogExtension({
     projection: catalog,
     writer,
+    archive: {
+      source,
+      kinds,
+      writer,
+      catalog,
+      flush
+    },
     maxContentBytes: catalogMaxContentBytes
   });
 
@@ -254,10 +268,7 @@ export async function createAssetBackend(
       catalogExtension
     },
 
-    async flush(assetId) {
-      await scheduler.flush(assetId);
-      await projector.flush(assetId);
-    },
+    flush,
 
     attach(server, attachOptions = {}) {
       server.register(catalogExtension);

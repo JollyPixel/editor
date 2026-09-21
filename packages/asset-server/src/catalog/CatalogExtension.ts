@@ -10,6 +10,7 @@ import {
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
   Err,
+  Ok,
   type Result
 } from "@openally/result";
 
@@ -20,20 +21,35 @@ import {
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
+  CATALOG_DELETE,
+  CATALOG_EXPORT,
+  CATALOG_PLAN,
   CATALOG_RENAME,
   CATALOG_REJECTED,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
+  type CatalogApplied,
   type CatalogChange,
   type CatalogCommand,
+  type CatalogInlineContent,
+  type CatalogLifecycleCommandType,
   type CatalogMessage
 } from "./client/protocol.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
 import {
   actorOf,
-  decodeContent
+  decodeContent,
+  encodeContent
 } from "../events/AssetEvents.ts";
+import type {
+  ArchiveBackend,
+  AssetArchive
+} from "../archive/AssetArchive.ts";
+import { exportAssetArchive } from "../archive/exportAssetArchive.ts";
+import { readAssetArchive } from "../archive/readAssetArchive.ts";
+import { planAssetImport } from "../archive/planAssetImport.ts";
+import { importAssetArchive } from "../archive/importAssetArchive.ts";
 import { asError } from "../utils/asError.ts";
 
 // CONSTANTS
@@ -42,6 +58,7 @@ export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 export interface CatalogExtensionOptions {
   projection: CatalogProjection;
   writer: AssetWriter;
+  archive?: ArchiveBackend;
   id?: string;
   maxContentBytes?: number;
 }
@@ -53,6 +70,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
   #projection: CatalogProjection;
   #writer: AssetWriter;
+  #archive: ArchiveBackend | null;
   #maxContentBytes: number;
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
@@ -65,6 +83,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.id = options.id ?? CATALOG_ROOM;
     this.#projection = options.projection;
     this.#writer = options.writer;
+    this.#archive = options.archive ?? null;
     this.#maxContentBytes = options.maxContentBytes ??
       DEFAULT_CATALOG_MAX_CONTENT_BYTES;
     this.#onChanged = (change) => this.#broadcast?.broadcast({
@@ -113,8 +132,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       {
         type: CATALOG_APPLIED,
         requestId: command.requestId,
-        command: command.type,
-        assetId: result.val.assetId
+        ...result.val
       } satisfies CatalogMessage :
       {
         type: CATALOG_REJECTED,
@@ -134,41 +152,133 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#broadcast = null;
   }
 
-  #execute(
+  async #execute(
     command: CatalogCommand,
     actor: EventStore.Actor
-  ): Promise<Result<EventStore.Event, Error>> {
+  ): Promise<Result<CatalogApplied, Error>> {
     switch (command.type) {
       case CATALOG_CREATE: {
-        const data = decodeContent(command.content);
-        if (data.byteLength > this.#maxContentBytes) {
-          return Promise.resolve(
-            Err(new CatalogContentTooLargeError(
-              data.byteLength,
-              this.#maxContentBytes
-            ))
-          );
-        }
+        const data = this.#decode(command.content);
 
-        return this.#writer.create({
-          path: command.path,
-          kind: command.kind,
-          onPathConflict: command.onConflict,
-          data,
-          actor
-        });
+        return data.ok ?
+          applied(command.type, await this.#writer.create({
+            path: command.path,
+            kind: command.kind,
+            onPathConflict: command.onConflict,
+            data: data.val,
+            actor
+          })) :
+          data;
       }
       case CATALOG_RENAME:
-        return this.#writer.rename({
+        return applied(command.type, await this.#writer.rename({
           assetId: command.assetId,
           to: command.to,
           actor
-        });
-      default:
-        return this.#writer.remove({
+        }));
+      case CATALOG_DELETE:
+        return applied(command.type, await this.#writer.remove({
           assetId: command.assetId,
           actor
+        }));
+      case CATALOG_EXPORT: {
+        const backend = this.#archiveBackend();
+        if (!backend.ok) {
+          return backend;
+        }
+
+        const archive = await exportAssetArchive(backend.val, {
+          root: command.root
         });
+        if (archive.byteLength > this.#maxContentBytes) {
+          return Err(new CatalogContentTooLargeError(
+            archive.byteLength,
+            this.#maxContentBytes
+          ));
+        }
+
+        return Ok({
+          command: command.type,
+          content: encodeContent(archive)
+        });
+      }
+      case CATALOG_PLAN: {
+        const backend = this.#archiveBackend();
+        if (!backend.ok) {
+          return backend;
+        }
+
+        return this.#readArchive(command.content)
+          .andThen((archive) => planAssetImport(backend.val, archive))
+          .map((plan) => {
+            return {
+              command: command.type,
+              plan
+            };
+          });
+      }
+      default: {
+        const backend = this.#archiveBackend();
+        if (!backend.ok) {
+          return backend;
+        }
+
+        const archive = this.#readArchive(command.content);
+        if (!archive.ok) {
+          return archive;
+        }
+
+        const report = await importAssetArchive(backend.val, archive.val, {
+          onConflict: command.onConflict,
+          actor
+        });
+
+        return report.map((value) => {
+          return {
+            command: command.type,
+            report: value
+          };
+        });
+      }
     }
   }
+
+  #archiveBackend(): Result<ArchiveBackend, Error> {
+    return this.#archive === null ?
+      Err(new Error("Archives are not available on this catalog.")) :
+      Ok(this.#archive);
+  }
+
+  #readArchive(
+    content: CatalogInlineContent
+  ): Result<AssetArchive, Error> {
+    return this.#decode(content).andThen(
+      (bytes) => readAssetArchive(bytes)
+    );
+  }
+
+  #decode(
+    content: CatalogInlineContent
+  ): Result<Uint8Array, Error> {
+    const data = decodeContent(content);
+
+    return data.byteLength > this.#maxContentBytes ?
+      Err(new CatalogContentTooLargeError(
+        data.byteLength,
+        this.#maxContentBytes
+      )) :
+      Ok(data);
+  }
+}
+
+function applied(
+  command: CatalogLifecycleCommandType,
+  written: Result<EventStore.Event, Error>
+): Result<CatalogApplied, Error> {
+  return written.map((event) => {
+    return {
+      command,
+      assetId: event.assetId
+    };
+  });
 }

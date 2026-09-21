@@ -26,8 +26,14 @@ target's kind to an editor module and calls its `mount` itself. Once it exists:
 
 ## Offline workspaces
 
-- ZIP import/export that includes the map and its referenced assets. Save JSON
-  currently keeps only asset IDs, so tilesets created offline cannot be restored
-  after the page is reloaded.
-- LocalStorage support to restore browser workspaces, including asset content
-  and identities, across page reloads.
+- Import as copy: an optional `rebind(state, idMap)` on `AssetKindHandler`, and
+  a third option in the collision dialog.
+- Whole-workspace export and import in the UI. If it outgrows the room cap, an
+  HTTP streaming endpoint for that case only, with an Origin check.
+- Offer offline mode when the socket or catalog is unreachable, and a build
+  flag for static hosting.
+- Host shell: a per-asset "Export" action and in-place navigation after an
+  import.
+- A shared-tab workspace over `BroadcastChannel` instead of the tab lock.
+- voxel-model and pixel-art have no archive UI yet. The `session.archive` port
+  already serves them.

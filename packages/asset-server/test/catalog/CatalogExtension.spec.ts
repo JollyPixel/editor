@@ -27,6 +27,9 @@ import {
   CATALOG_CHANGED,
   CATALOG_CREATE,
   CATALOG_DELETE,
+  CATALOG_EXPORT,
+  CATALOG_IMPORT,
+  CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
   CATALOG_ROOM,
@@ -250,7 +253,14 @@ describe("CatalogExtension — broadcast", () => {
 
     assert.deepEqual(
       protocolEvents(extension.protocols.inbound!),
-      [CATALOG_CREATE, CATALOG_RENAME, CATALOG_DELETE]
+      [
+        CATALOG_CREATE,
+        CATALOG_RENAME,
+        CATALOG_DELETE,
+        CATALOG_EXPORT,
+        CATALOG_PLAN,
+        CATALOG_IMPORT
+      ]
     );
     assert.deepEqual(
       protocolEvents(extension.protocols.outbound!),

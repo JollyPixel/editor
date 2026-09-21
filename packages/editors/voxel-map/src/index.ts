@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
 import {
-  EditorLaunch,
   mountStandalone,
   type MountStandaloneOptions
 } from "@jolly-pixel/editor.host";
@@ -23,18 +22,11 @@ declare global {
 }
 
 async function offlineOptions(): Promise<MountStandaloneOptions> {
-  const {
-    OFFLINE_MAP_ID,
-    openOfflineWorkspace
-  } = await import("./boot/offlineWorkspace.ts");
+  const { openOfflineWorkspace } = await import("./boot/offlineWorkspace.ts");
   const workspace = await openOfflineWorkspace();
 
   return {
-    sources: [
-      {
-        read: () => Promise.resolve(EditorLaunch.fromTarget(OFFLINE_MAP_ID))
-      }
-    ],
+    sources: workspace.launchSources(VoxelMapEditor.accepts),
     connect: () => workspace.connect()
   };
 }
