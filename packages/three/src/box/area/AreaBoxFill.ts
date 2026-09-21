@@ -16,6 +16,7 @@ const kFillSmoke = 0.45;
 
 // Render after the camera-following grid so opacity controls its blend.
 const kRenderOrder = 1;
+const kDepthBias = 2;
 
 export interface AreaBoxFillOptions {
   color: THREE.ColorRepresentation;
@@ -61,7 +62,10 @@ export class AreaBoxFill extends THREE.Mesh<
         transparent: true,
         opacity,
         depthWrite: true,
-        side: THREE.FrontSide
+        side: THREE.FrontSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -kDepthBias,
+        polygonOffsetUnits: -kDepthBias
       })
     );
 

@@ -53,6 +53,14 @@ describe("AreaBoxFill", () => {
       assert.equal(fill.material.depthWrite, true);
       assert.equal(fill.material.side, THREE.FrontSide);
     });
+
+    test("wins the depth tie against a coplanar voxel face", () => {
+      const { material } = createFill();
+
+      assert.equal(material.polygonOffset, true);
+      assert.ok(material.polygonOffsetFactor < -1);
+      assert.ok(material.polygonOffsetUnits < -1);
+    });
   });
 
   describe("face shading", () => {

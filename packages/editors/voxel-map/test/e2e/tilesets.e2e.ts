@@ -10,9 +10,9 @@ import {
   expect
 } from "./fixtures.ts";
 import {
+  buttonGroup,
   dialog,
   openPane,
-  selectField,
   textField
 } from "./support/panels.ts";
 import { texturePanel } from "./support/texture.ts";
@@ -55,7 +55,9 @@ test("a single tileset keeps its tab, and the add button creates a new one", asy
 
   await texturePanel(page).getByRole("button", { name: "Add tileset" }).click();
   const form = dialog(page, "Add tileset");
-  await selectField(form, "Source").selectOption({ label: "New texture" });
+  await buttonGroup(form, "Source")
+    .getByRole("radio", { name: "New", exact: true })
+    .click();
   await textField(form, "Name").fill("stone");
   await form.getByRole("button", { name: "Create" }).click();
   await expect(form).toBeHidden();

@@ -94,6 +94,8 @@ See [`AreaBoxFill`](#areaboxfill) for its material and shading.
 
 The fill and edges use `renderOrder` values 1 and 2 so a camera-following transparent grid draws first. Give other transparent backdrops a render order below 1.
 
+Both materials carry a polygon offset of `-2` towards the camera, so a face or edge coplanar with grid-aligned geometry draws over it instead of z-fighting.
+
 ### `edges`
 
 ```ts

@@ -30,7 +30,7 @@ import type {
 } from "../../state/index.ts";
 import type { TilesetActions } from "./TilesetActions.ts";
 import { rescaleLeavesBlocksOffGrid } from "./blockTilesets.ts";
-import { tileSizeOptions } from "./tileSizes.ts";
+import { tileSizeSegments } from "./tileSizes.ts";
 import {
   formatCount,
   tilesetIsUnused,
@@ -50,6 +50,7 @@ export class TilesetEditDialog extends LitElement {
       gap: var(--jolly-row-gap, 4px);
 
       --jolly-label-width: 80px;
+      --jolly-field-inset-end: 0;
     }
 
     .usage {
@@ -201,15 +202,15 @@ export class TilesetEditDialog extends LitElement {
             void this.#rename(entry, event.detail.value);
           }}
         ></jolly-text>
-        <jolly-select
+        <jolly-button-group
           label="Tile size"
-          .options=${tileSizeOptions(definition.tileSize)}
+          .options=${tileSizeSegments(definition.tileSize)}
           .value=${pendingTileSize ?? definition.tileSize}
           ?disabled=${this.actions === null}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
             this.#resize(entry, event.detail.value);
           }}
-        ></jolly-select>
+        ></jolly-button-group>
         ${pendingTileSize === null ? nothing : html`
           <div class="pending" role="alert">
             <jolly-icon name="warning"></jolly-icon>

@@ -15,19 +15,8 @@ export function tileSizes(
     [...TILE_SIZES, current].sort((left, right) => left - right);
 }
 
-export function tileSizeOptions(
-  current?: number
-): JollyOption<number>[] {
-  return tileSizes(current).map((size) => {
-    return {
-      label: `${size}px`,
-      value: size
-    };
-  });
-}
-
 /**
- * Same sizes without the unit, for a button group too narrow to carry it.
+ * Labels carry no unit, a button group is too narrow for it.
  */
 export function tileSizeSegments(
   current?: number

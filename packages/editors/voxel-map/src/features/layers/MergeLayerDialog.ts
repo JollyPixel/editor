@@ -26,6 +26,7 @@ export class MergeLayerDialog extends LitElement {
       gap: var(--jolly-row-gap, 4px);
 
       --jolly-label-width: 70px;
+      --jolly-field-inset-end: 0;
     }
 
     .hint {

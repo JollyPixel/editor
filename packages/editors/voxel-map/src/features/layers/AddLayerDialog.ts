@@ -13,8 +13,8 @@ import type {
 
 // CONSTANTS
 const kOptions: JollyOption<AddKind>[] = [
-  { value: "voxel-layer", label: "Voxel Layer" },
-  { value: "object-layer", label: "Object Layer" },
+  { value: "voxel-layer", label: "Voxel" },
+  { value: "object-layer", label: "Objects" },
   { value: "object", label: "Object" }
 ];
 
@@ -43,6 +43,7 @@ export class AddLayerDialog extends LitElement {
       gap: var(--jolly-row-gap, 4px);
 
       --jolly-label-width: 70px;
+      --jolly-field-inset-end: 0;
     }
   `;
 
@@ -104,12 +105,12 @@ export class AddLayerDialog extends LitElement {
         @jolly-cancel=${this.#onCancel}
       >
         <div class="fields">
-          <jolly-select
+          <jolly-button-group
             label="Kind"
             .options=${this.#options()}
             .value=${this._kind}
             @jolly-change=${this.#onKindChange}
-          ></jolly-select>
+          ></jolly-button-group>
           <jolly-text
             label="Name"
             .value=${this._name}
@@ -131,20 +132,9 @@ export class AddLayerDialog extends LitElement {
   }
 
   #options(): JollyOption<AddKind>[] {
-    if (this._canAddObject) {
-      return kOptions;
-    }
-
-    const options: JollyOption<AddKind>[] = [];
-    for (const option of kOptions) {
-      options.push(
-        option.value === "object"
-          ? { ...option, disabled: true }
-          : option
-      );
-    }
-
-    return options;
+    return this._canAddObject ?
+      kOptions :
+      kOptions.filter((option) => option.value !== "object");
   }
 
   #onKindChange(

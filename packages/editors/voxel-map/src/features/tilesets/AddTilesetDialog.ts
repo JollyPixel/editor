@@ -22,7 +22,7 @@ import {
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { tileSizeOptions } from "./tileSizes.ts";
+import { tileSizeSegments } from "./tileSizes.ts";
 
 // CONSTANTS
 const kDefaultName = "tileset";
@@ -59,6 +59,7 @@ export class AddTilesetDialog extends LitElement {
       gap: var(--jolly-row-gap, 4px);
 
       --jolly-label-width: 80px;
+      --jolly-field-inset-end: 0;
     }
   `;
 
@@ -130,19 +131,19 @@ export class AddTilesetDialog extends LitElement {
         @jolly-cancel=${this.#onCancel}
       >
         <div class="fields">
-          <jolly-select
+          <jolly-button-group
             label="Source"
             .options=${this.#sourceOptions()}
             .value=${this._source}
             @jolly-change=${this.#onSourceChange}
-          ></jolly-select>
+          ></jolly-button-group>
           ${linking ? this.#renderLinkFields() : this.#renderCreateFields()}
-          <jolly-select
+          <jolly-button-group
             label="Tile size"
-            .options=${tileSizeOptions(this._tileSize)}
+            .options=${tileSizeSegments(this._tileSize)}
             .value=${this._tileSize}
             @jolly-change=${this.#onTileSizeChange}
-          ></jolly-select>
+          ></jolly-button-group>
           ${linking ? nothing : this.#renderGridFields()}
         </div>
 
@@ -210,11 +211,11 @@ export class AddTilesetDialog extends LitElement {
   #sourceOptions(): JollyOption<AddTilesetSource>[] {
     return [
       {
-        label: "New texture",
+        label: "New",
         value: "create"
       },
       {
-        label: "Existing texture",
+        label: "Existing",
         value: "link",
         disabled: this._linkable.length === 0
       }

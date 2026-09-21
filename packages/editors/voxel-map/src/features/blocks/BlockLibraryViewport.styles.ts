@@ -16,7 +16,6 @@ export const blockLibraryViewportStyles = css`
     min-height: 100px;
     max-height: 240px;
     padding: var(--block-grid-inset);
-    background: var(--jolly-well-bg, #0e1316);
     border-radius: var(--jolly-radius-sm, 3px);
     cursor: pointer;
   }
@@ -91,7 +90,7 @@ export const blockLibraryViewportStyles = css`
     position: absolute;
     box-sizing: border-box;
     border-radius: var(--jolly-radius-sm, 4px);
-    background: color-mix(in srgb, var(--jolly-well-bg, #0e1316) 60%, transparent);
+    background: color-mix(in srgb, var(--jolly-surface, #0e1316) 60%, transparent);
   }
 
   .layer.drop {
@@ -104,7 +103,7 @@ export const blockLibraryViewportStyles = css`
     margin-inline-start: -1px;
     border-radius: 1px;
     background: var(--jolly-accent, #4c9aff);
-    box-shadow: 0 0 0 1px var(--jolly-well-bg, #0e1316);
+    box-shadow: 0 0 0 1px var(--jolly-surface, #0e1316);
   }
 
   .layer.actions {
@@ -165,6 +164,6 @@ export const blockLibraryViewportStyles = css`
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    box-shadow: 0 0 0 1px var(--jolly-well-bg, #0e1316);
+    box-shadow: 0 0 0 1px var(--jolly-surface, #0e1316);
   }
 `;

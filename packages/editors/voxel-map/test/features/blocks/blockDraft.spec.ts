@@ -68,6 +68,24 @@ describe("blockDefinitionFromDraft", () => {
       size: 64
     });
   });
+
+  it("places the texture on the given tile", () => {
+    const definition = blockDefinitionFromDraft(
+      {
+        name: "Stone",
+        shapeId: "cube",
+        tilesetId: "terrain"
+      },
+      1,
+      { col: 3, row: 2 }
+    );
+
+    assert.deepEqual(definition.defaultTexture, {
+      tilesetId: "terrain",
+      col: 3,
+      row: 2
+    });
+  });
 });
 
 describe("previewBlockFromDraft", () => {

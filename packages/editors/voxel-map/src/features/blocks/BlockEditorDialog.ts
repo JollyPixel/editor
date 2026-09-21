@@ -17,6 +17,7 @@ import {
   type BlockAlphaMode,
   type BlockSide,
   type BlockShapeID,
+  type TileRect,
   type VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
 import {
@@ -43,7 +44,10 @@ import {
   assignBlockTileset,
   blockTilesetStatus,
   blockTileSize,
+  firstFreeTile,
+  occupiedTileRects,
   resizeBlockTiles,
+  type TilePosition,
   type TilesetGrid
 } from "../tilesets/blockTilesets.ts";
 import { tileSizeSegments } from "../tilesets/tileSizes.ts";
@@ -483,6 +487,38 @@ export class BlockEditorDialog extends LitElement {
     };
   }
 
+  #occupiedIn(
+    tilesetId: string,
+    grid: TilesetGrid,
+    ignoredBlockId?: number
+  ): TileRect[] {
+    const { blockRegistry, shapeRegistry } = this.engine;
+    const blocks = [...blockRegistry.getAll()]
+      .filter((block) => block.id !== ignoredBlockId);
+
+    return occupiedTileRects(
+      blocks,
+      (shapeId) => shapeRegistry.get(shapeId),
+      tilesetId,
+      grid.tileSize
+    );
+  }
+
+  #freeTileFor(
+    draft: BlockDraft
+  ): TilePosition | undefined {
+    const grid = this.#gridOf(draft.tilesetId);
+    if (grid === undefined) {
+      return undefined;
+    }
+
+    return firstFreeTile(
+      grid,
+      draft.size ?? grid.tileSize,
+      this.#occupiedIn(draft.tilesetId, grid)
+    );
+  }
+
   #shapeOptions(): JollyOption<BlockShapeID>[] {
     if (!this.engine) {
       return [];
@@ -563,7 +599,9 @@ export class BlockEditorDialog extends LitElement {
     this.#applyBlock(assignBlockTileset(this.block, {
       tilesetId,
       target,
-      sourceOf: (id) => this.#gridOf(id)
+      sourceOf: (id) => this.#gridOf(id),
+      shape: this.engine.shapeRegistry.get(this.block.shapeId),
+      occupied: this.#occupiedIn(tilesetId, target, this.block.id)
     }));
   }
 
@@ -604,7 +642,8 @@ export class BlockEditorDialog extends LitElement {
     const { blockRegistry } = this.engine;
     const definition = blockDefinitionFromDraft(
       this._draft,
-      blockRegistry.nextId
+      blockRegistry.nextId,
+      this.#freeTileFor(this._draft)
     );
 
     this.engine.defineBlock(definition);

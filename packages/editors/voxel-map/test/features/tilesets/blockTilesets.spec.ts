@@ -3,9 +3,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  ResolvedBlockDefinition,
-  ResolvedTileRef
+import {
+  BlockShapeRegistry,
+  type ResolvedBlockDefinition,
+  type ResolvedTileRef,
+  type TileRect
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -16,14 +18,23 @@ import {
   blockTilesetStatus,
   blockTileSize,
   countBlocksPerTileset,
+  firstFreeTile,
+  occupiedTileRects,
   rescaleLeavesBlocksOffGrid,
   resizeBlockTiles,
+  type TilesetAssignment,
   type TilesetGrid
 } from "../../../src/features/tilesets/blockTilesets.ts";
 
 // CONSTANTS
 const kKnown = new Set(["stone", "wood"]);
+const kShapes = BlockShapeRegistry.createDefault();
 const kGrids: Record<string, TilesetGrid> = {
+  brick: {
+    tileSize: 16,
+    width: 64,
+    height: 64
+  },
   stone: {
     tileSize: 32,
     width: 128,
@@ -35,6 +46,15 @@ const kGrids: Record<string, TilesetGrid> = {
     height: 64
   }
 };
+
+function rect(
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): TileRect {
+  return { x, y, width, height };
+}
 
 function makeBlock(
   id: number,
@@ -154,21 +174,23 @@ describe("countBlocksPerTileset and blocksWithoutTileset", () => {
 describe("assignBlockTileset", () => {
   function assign(
     block: ResolvedBlockDefinition,
-    tilesetId: string
+    tilesetId: string,
+    options: Pick<TilesetAssignment, "occupied" | "shape"> = {}
   ): ResolvedBlockDefinition {
     return assignBlockTileset(block, {
       tilesetId,
       target: kGrids[tilesetId],
-      sourceOf: (id) => (id === undefined ? undefined : kGrids[id])
+      sourceOf: (id) => (id === undefined ? undefined : kGrids[id]),
+      ...options
     });
   }
 
-  it("keeps the pixel position and area when the tile size differs", () => {
+  it("starts at the top-left tile of an empty tileset and keeps the area", () => {
     const block = makeBlock(1, { col: 1, row: 2, tilesetId: "wood" });
 
     assert.deepEqual(assign(block, "stone").defaultTexture, {
-      col: 0.5,
-      row: 1,
+      col: 0,
+      row: 0,
       tilesetId: "stone",
       size: 16
     });
@@ -178,25 +200,111 @@ describe("assignBlockTileset", () => {
     const block = makeBlock(1, { col: 1, row: 1, tilesetId: "gone" });
 
     assert.deepEqual(assign(block, "wood").defaultTexture, {
+      col: 0,
+      row: 0,
+      tilesetId: "wood"
+    });
+  });
+
+  it("skips the tiles other blocks occupy", () => {
+    const block = makeBlock(1, { col: 3, row: 3, tilesetId: "brick" });
+    const assigned = assign(block, "wood", {
+      occupied: [rect(0, 0, 16, 16)]
+    });
+
+    assert.deepEqual(assigned.defaultTexture, {
       col: 1,
+      row: 0,
+      tilesetId: "wood"
+    });
+  });
+
+  it("moves to the next row once a row is full", () => {
+    const block = makeBlock(1, { col: 3, row: 3, tilesetId: "brick" });
+    const assigned = assign(block, "wood", {
+      occupied: [rect(0, 0, 64, 16)]
+    });
+
+    assert.deepEqual(assigned.defaultTexture, {
+      col: 0,
       row: 1,
       tilesetId: "wood"
     });
   });
 
-  it("clamps the region inside the target atlas", () => {
-    const block = makeBlock(1, { col: 3, row: 3, tilesetId: "stone" });
+  it("falls back to the top-left tile when the atlas is full", () => {
+    const block = makeBlock(1, { col: 3, row: 3, tilesetId: "brick" });
+    const assigned = assign(block, "wood", {
+      occupied: [rect(0, 0, 64, 64)]
+    });
 
-    assert.deepEqual(assign(block, "wood").defaultTexture, {
-      col: 2,
-      row: 2,
-      tilesetId: "wood",
-      size: 32
+    assert.deepEqual(assigned.defaultTexture, {
+      col: 0,
+      row: 0,
+      tilesetId: "wood"
     });
   });
 
-  it("moves every slot and leaves the ones already assigned", () => {
-    const top = { col: 1, row: 0, tilesetId: "stone" };
+  it("keeps the faces of a block in their relative layout", () => {
+    const block = makeBlock(
+      1,
+      { col: 2, row: 1, tilesetId: "brick" },
+      { top: { col: 3, row: 2, tilesetId: "brick" } }
+    );
+    const assigned = assign(block, "wood", {
+      occupied: [rect(0, 0, 16, 16)]
+    });
+
+    assert.deepEqual(assigned.defaultTexture, {
+      col: 1,
+      row: 0,
+      tilesetId: "wood"
+    });
+    assert.deepEqual(assigned.faceTextures.top, {
+      col: 2,
+      row: 1,
+      tilesetId: "wood"
+    });
+  });
+
+  it("keeps faces sharing a tile on the same tile", () => {
+    const block = makeBlock(
+      1,
+      { col: 2, row: 1, tilesetId: "brick" },
+      { top: { col: 2, row: 1, tilesetId: "brick" } }
+    );
+    const assigned = assign(block, "wood", {
+      occupied: [rect(0, 0, 16, 16)]
+    });
+
+    assert.deepEqual(assigned.faceTextures.top, assigned.defaultTexture);
+    assert.equal(assigned.defaultTexture?.col, 1);
+  });
+
+  it("lays the faces out on the target grid when offsets leave it", () => {
+    const block = makeBlock(
+      1,
+      { col: 2, row: 0, tilesetId: "wood" },
+      { top: { col: 1, row: 0, tilesetId: "wood" } }
+    );
+    const assigned = assign(block, "stone");
+
+    assert.deepEqual(assigned.faceTextures.top, {
+      col: 0,
+      row: 0,
+      tilesetId: "stone",
+      size: 16
+    });
+    assert.deepEqual(assigned.defaultTexture, {
+      col: 1,
+      row: 0,
+      tilesetId: "stone",
+      size: 16
+    });
+  });
+
+  it("leaves the slots already assigned and places around them", () => {
+    const top = { col: 0, row: 0, tilesetId: "stone" };
     const block = makeBlock(
       1,
       { col: 2, row: 0, tilesetId: "wood" },
@@ -205,7 +313,80 @@ describe("assignBlockTileset", () => {
     const assigned = assign(block, "stone");
 
     assert.equal(assigned.faceTextures.top, top);
-    assert.equal(assigned.defaultTexture?.tilesetId, "stone");
+    assert.deepEqual(assigned.defaultTexture, {
+      col: 1,
+      row: 0,
+      tilesetId: "stone",
+      size: 16
+    });
+  });
+
+  it("reserves the span of a sloped face", () => {
+    const block = makeBlock(
+      1,
+      { col: 1, row: 0, tilesetId: "brick" },
+      { top: { col: 0, row: 0, tilesetId: "brick" } }
+    );
+    const assigned = assign(block, "wood", {
+      shape: kShapes.get("ramp"),
+      occupied: [rect(0, 16, 64, 16)]
+    });
+
+    assert.equal(assigned.faceTextures.top.row, 2);
+    assert.equal(assigned.defaultTexture?.row, 2);
+  });
+
+  it("returns the block untouched when every slot is already assigned", () => {
+    const block = makeBlock(1, { col: 1, row: 1, tilesetId: "wood" });
+
+    assert.equal(assign(block, "wood"), block);
+  });
+});
+
+describe("occupiedTileRects", () => {
+  it("collects the unique footprints of one tileset", () => {
+    const blocks = [
+      makeBlock(1, { col: 1, row: 0, tilesetId: "wood" }),
+      makeBlock(2, { col: 1, row: 0, tilesetId: "wood" }),
+      makeBlock(3, { col: 0, row: 0, tilesetId: "stone" })
+    ];
+
+    assert.deepEqual(
+      occupiedTileRects(blocks, (id) => kShapes.get(id), "wood", 16),
+      [rect(16, 0, 16, 16)]
+    );
+  });
+
+  it("covers the span of a sloped face", () => {
+    const ramp: ResolvedBlockDefinition = {
+      ...makeBlock(1, undefined, {
+        top: { col: 0, row: 1, tilesetId: "wood" }
+      }),
+      shapeId: "ramp"
+    };
+
+    assert.deepEqual(
+      occupiedTileRects([ramp], (id) => kShapes.get(id), "wood", 16),
+      [rect(0, 16, 16, 23)]
+    );
+  });
+});
+
+describe("firstFreeTile", () => {
+  it("returns the top-left tile of an empty tileset", () => {
+    assert.deepEqual(firstFreeTile(kGrids.wood, 16, []), {
+      col: 0,
+      row: 0
+    });
+  });
+
+  it("fits a region larger than one tile between occupied tiles", () => {
+    const position = firstFreeTile(kGrids.wood, 32, [rect(16, 0, 16, 16)]);
+
+    assert.deepEqual(position, {
+      col: 2,
+      row: 0
+    });
   });
 });
 

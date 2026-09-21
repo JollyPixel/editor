@@ -10,6 +10,7 @@ import {
   expect
 } from "./fixtures.ts";
 import {
+  buttonGroup,
   dialog,
   openPane,
   selectField,
@@ -67,7 +68,9 @@ async function addEntry(
 ): Promise<void> {
   await page.getByRole("button", { name: "Add layer" }).click();
   const form = dialog(page, "New");
-  await selectField(form, "Kind").selectOption({ label: kind });
+  await buttonGroup(form, "Kind")
+    .getByRole("radio", { name: kind, exact: true })
+    .click();
   await textField(form, "Name").fill(name);
   await form.getByRole("button", { name: "Create" }).click();
   await expect(form).toBeHidden();
@@ -78,7 +81,7 @@ test.beforeEach(async({ page }) => {
 });
 
 test("a new voxel layer is listed and selected", async({ page }) => {
-  await addEntry(page, "Voxel Layer", "Caves");
+  await addEntry(page, "Voxel", "Caves");
 
   const row = layerRow(page, "Caves");
   await expect(row).toHaveAttribute("aria-selected", "true");
@@ -105,7 +108,7 @@ test("cloning copies the voxels and removing asks first", async({ page }) => {
 });
 
 test("merging folds a layer into the chosen target", async({ page }) => {
-  await addEntry(page, "Voxel Layer", "Top");
+  await addEntry(page, "Voxel", "Top");
   await seedVoxels(page, [{ x: 0, y: 1, z: 0, blockId: 2 }], "Top");
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
 
@@ -132,7 +135,7 @@ test("the eye hides and shows a layer", async({ page }) => {
 });
 
 test("objects are added inside the selected object layer and renamed in place", async({ page }) => {
-  await addEntry(page, "Object Layer", "Spawns");
+  await addEntry(page, "Objects", "Spawns");
   await addEntry(page, "Object", "Player");
 
   const object = page.getByRole("treeitem", { name: /^Player/ });
