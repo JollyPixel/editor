@@ -10,6 +10,7 @@ import { BoxEdgesGeometry } from "../BoxEdgesGeometry.ts";
 const kTintTarget = new THREE.Color("#ffffff");
 const kTintRatio = 0.4;
 const kRenderOrder = 2;
+const kDepthBias = 2;
 
 export interface AreaBoxEdgesOptions {
   color: THREE.ColorRepresentation;
@@ -41,7 +42,10 @@ export class AreaBoxEdges extends LineSegments2 {
         linewidth: width,
         transparent: opacity < 1,
         opacity,
-        depthWrite: false
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -kDepthBias,
+        polygonOffsetUnits: -kDepthBias
       })
     );
 

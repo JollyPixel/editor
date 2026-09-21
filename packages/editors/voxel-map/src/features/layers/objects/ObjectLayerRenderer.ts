@@ -156,9 +156,6 @@ export class ObjectLayerRenderer extends ActorComponent {
 
     for (const [key, area] of this.#scene.entries) {
       area.visible = this.#scene.shown(key);
-      if (area.label !== null) {
-        area.label.visible = key === selectedKey;
-      }
     }
 
     this.#syncGizmo(selectedKey);

@@ -57,6 +57,14 @@ describe("AreaBoxEdges", () => {
       // Fat lines expand beyond the source segments used for frustum tests.
       assert.equal(createEdges().frustumCulled, false);
     });
+
+    test("wins the depth tie against a coplanar voxel edge", () => {
+      const { material } = createEdges();
+
+      assert.equal(material.polygonOffset, true);
+      assert.ok(material.polygonOffsetFactor < -1);
+      assert.ok(material.polygonOffsetUnits < -1);
+    });
   });
 
   describe("resize", () => {
