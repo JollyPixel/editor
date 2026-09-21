@@ -17,6 +17,10 @@
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
     },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
     "./parser": {
       "types": "./dist/protocol/MessageParser.d.ts",
       "default": "./dist/protocol/MessageParser.js"

@@ -397,9 +397,18 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/asset-source':
+        specifier: workspace:*
+        version: link:../../asset-source
+      '@jolly-pixel/color':
+        specifier: workspace:*
+        version: link:../../color
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../../event-store
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network

@@ -1,6 +1,3 @@
-// Import Node.js Dependencies
-import { Buffer } from "node:buffer";
-
 // Import Third-party Dependencies
 import {
   Extension,
@@ -143,10 +140,13 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   ): Promise<Result<EventStore.Event, Error>> {
     switch (command.type) {
       case CATALOG_CREATE: {
-        const size = Buffer.byteLength(command.content.data, "base64");
-        if (size > this.#maxContentBytes) {
+        const data = decodeContent(command.content);
+        if (data.byteLength > this.#maxContentBytes) {
           return Promise.resolve(
-            Err(new CatalogContentTooLargeError(size, this.#maxContentBytes))
+            Err(new CatalogContentTooLargeError(
+              data.byteLength,
+              this.#maxContentBytes
+            ))
           );
         }
 
@@ -154,7 +154,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
           path: command.path,
           kind: command.kind,
           onPathConflict: command.onConflict,
-          data: decodeContent(command.content),
+          data,
           actor
         });
       }

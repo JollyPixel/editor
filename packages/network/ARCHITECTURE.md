@@ -250,7 +250,7 @@ process or in a worker thread.
 ```mermaid
 flowchart TD
   ServerRoom["ServerRoom"] -->|"Extension instance"| InProcess["Extension<br/>server process"]
-  ServerRoom -->|"WorkerExtensionDescriptor"| Proxy["WorkerExtensionProxy"]
+  ServerRoom -->|"Extension"| Proxy["WorkerExtensionProxy<br/>network/node"]
   Proxy <-->|"dispatch results and context calls"| Host["WorkerExtensionHost"]
   Host --> WorkerExtension["Extension<br/>worker thread"]
 ```

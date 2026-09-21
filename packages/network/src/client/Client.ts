@@ -37,11 +37,40 @@ import {
   type Logger
 } from "./logger.ts";
 
+export type ClientSocketEventType = "open" | "message" | "error" | "close";
+
+export interface ClientSocketEvent {
+  readonly data?: unknown;
+  readonly code?: number;
+  readonly reason?: string;
+}
+
+/**
+ * The part of a `WebSocket` the client relies on.
+ */
+export interface ClientSocket {
+  send(
+    data: string
+  ): void;
+
+  close(): void;
+
+  addEventListener(
+    type: ClientSocketEventType,
+    listener: (event: ClientSocketEvent) => void
+  ): void;
+}
+
 export interface ClientOptions {
   url?: string;
   profile?: PeerMetadata;
   credential?: string;
   logger?: Logger;
+  /**
+   * Opens the connection in place of a `WebSocket`. `url` and `credential`
+   * are ignored when it is set.
+   */
+  socket?: () => ClientSocket;
 }
 
 export type ClientEventMap = {
@@ -141,7 +170,7 @@ export class Client extends Emitter<ClientEventMap> {
 
   #profile: PeerMetadata;
   #logger: Logger;
-  #socket: WebSocket;
+  #socket: ClientSocket;
   #ready = false;
   #closed = false;
   #destroyed = false;
@@ -154,10 +183,12 @@ export class Client extends Emitter<ClientEventMap> {
     super();
     this.#profile = options.profile ?? {};
     this.#logger = options.logger ?? createLogger();
-    this.#socket = new WebSocket(
-      options.url ?? getDefaultUrl(),
-      protocolsFor(options.credential)
-    );
+    this.#socket = options.socket === undefined ?
+      new WebSocket(
+        options.url ?? getDefaultUrl(),
+        protocolsFor(options.credential)
+      ) :
+      options.socket();
 
     this.#socket.addEventListener("open", () => {
       this.#ready = true;
@@ -307,7 +338,7 @@ export class Client extends Emitter<ClientEventMap> {
   }
 
   #handleMessage(
-    raw: string
+    raw: unknown
   ): void {
     Envelope.parseServer(raw)
       .orTee((error) => this.#logger

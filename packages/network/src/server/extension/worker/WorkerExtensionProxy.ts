@@ -6,10 +6,10 @@ import {
   Extension,
   type RoomBroadcast,
   type RoomContext,
-  type WorkerExtensionDescriptor,
   type RoomPeer
 } from "../Extension.ts";
 import type { Logger } from "../../logger.ts";
+import type { WorkerExtensionDescriptor } from "./WorkerExtensionDescriptor.ts";
 import {
   PendingCallRegistry,
   PendingCallTimeoutError

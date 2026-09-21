@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
+import { defineSchema } from "@jolly-pixel/network";
 import {
-  defineSchema,
   Validator,
   type Infer
 } from "ata-validator";
 import {
   writeJsonFile,
   type AssetSource
-} from "@jolly-pixel/asset-source";
+} from "@jolly-pixel/asset-source/core";
 
 // Import Internal Dependencies
 import {

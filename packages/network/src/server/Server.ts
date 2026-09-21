@@ -13,12 +13,7 @@ import {
   RightsTable,
   type RightsMap
 } from "./rights/RightsTable.ts";
-import {
-  Extension,
-  type AnyExtension,
-  type WorkerExtensionDescriptor
-} from "./extension/Extension.ts";
-import { WorkerExtensionProxy } from "./extension/worker/WorkerExtensionProxy.ts";
+import type { AnyExtension } from "./extension/Extension.ts";
 import { RoomRegistry } from "./room/RoomRegistry.ts";
 import { BypassAuthentication } from "./auth/providers/BypassAuthentication.ts";
 import type {
@@ -63,7 +58,6 @@ export class Server {
   #auth: AuthenticationProvider;
   #sessions = new ClientSessions();
   #dispatcher: EnvelopeDispatcher;
-  #workerProxies: WorkerExtensionProxy[] = [];
 
   constructor(
     options: ServerOptions = {}
@@ -84,17 +78,9 @@ export class Server {
   }
 
   register(
-    extension: AnyExtension | WorkerExtensionDescriptor
+    extension: AnyExtension
   ): void {
-    const resolvedExtension = extension instanceof Extension ?
-      extension :
-      new WorkerExtensionProxy(extension, { logger: this.logger });
-
-    if (resolvedExtension instanceof WorkerExtensionProxy) {
-      this.#workerProxies.push(resolvedExtension);
-    }
-
-    this.#rooms.register(resolvedExtension);
+    this.#rooms.register(extension);
   }
 
   setRoomResolver(
@@ -112,10 +98,6 @@ export class Server {
   async close(): Promise<void> {
     this.#sessions.clear();
     await this.#rooms.close();
-
-    await Promise.allSettled(
-      this.#workerProxies.map((proxy) => proxy.close())
-    );
   }
 
   async [Symbol.asyncDispose](): Promise<void> {

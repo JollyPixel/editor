@@ -8,6 +8,15 @@
       "path": "../../asset-server"
     },
     {
+      "path": "../../asset-source"
+    },
+    {
+      "path": "../../color"
+    },
+    {
+      "path": "../../event-store"
+    },
+    {
       "path": "../../network"
     },
     {

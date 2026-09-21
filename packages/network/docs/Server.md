@@ -30,7 +30,7 @@ interface ServerOptions {
 }
 ```
 
-- `register(extension)` — registers a static room under `extension.id`. Pass an `Extension` or a [worker descriptor](./Extension.md#worker-extensions).
+- `register(extension)` — registers a static room under `extension.id`. Pass an `Extension`, including a [worker proxy](./Extension.md#worker-extensions) from `@jolly-pixel/network/node`.
 - `close()` — stops workers and disposes rooms. Call it before process exit when using worker extensions. Also available as `[Symbol.asyncDispose]` for `await using`.
 - `logger` — a `loglayer` `ILogLayer` passed to every room.
 - `rights` — see [Rights](./Rights.md). One table for the whole server; there is no per-room override.

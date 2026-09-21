@@ -33,7 +33,7 @@ export class ReconciliationWatcher {
   #logger: Logger;
 
   #unwatch: (() => void) | null = null;
-  #handle: NodeJS.Timeout | null = null;
+  #handle: ReturnType<typeof setTimeout> | null = null;
   #running: Promise<void> | null = null;
   #again = false;
 
@@ -75,7 +75,7 @@ export class ReconciliationWatcher {
       () => void this.run(),
       this.#debounce
     );
-    this.#handle.unref();
+    this.#handle.unref?.();
   }
 
   run(): Promise<void> {

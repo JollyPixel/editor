@@ -85,3 +85,13 @@ never share a file. A deleted asset frees its path.
 Call `backend.flush(assetId)` when the caller must wait for the resulting
 source write. The `alreadyProjected` input option is reserved for source-backed
 reconciliation, where the bytes already exist in the source.
+
+## Ordering
+
+`create`, `update`, `rename` and `remove` run one at a time, in call order.
+Hashing the content is asynchronous, so the writer queues each call instead
+of letting a small write overtake a large one. A call never sees the checks of
+another call half applied. Inputs are copied when a call is queued, including
+content bytes, dependency references and actor metadata. Later caller mutations
+do not change the queued operation. `writeData()` also snapshots its bytes and
+dependency references before hashing.

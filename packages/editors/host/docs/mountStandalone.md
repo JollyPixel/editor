@@ -65,18 +65,61 @@ function mountStandalone<THandle extends EditorHandle>(
 interface MountStandaloneOptions {
   sources?: Iterable<LaunchSource>;
   debugHandle?: string;
+  connect?: () => StandaloneConnection | Promise<StandaloneConnection>;
+}
+
+interface StandaloneConnection {
+  identity: PeerIdentity;
+  client: EditorSessionClient;
 }
 ```
 
 `debugHandle` exposes the returned instance as `globalThis[debugHandle]`.
-An editor that boots without `mountStandalone`, such as an offline mode, does
-the same with `exposeDebugHandle`:
+
+`connect` replaces the username prompt and the WebSocket client. It runs after
+the launch is read, and the session destroys the returned client when it is
+disposed or fails to open.
+
+## Offline
+
+`@jolly-pixel/editor.host/offline` runs the asset back-end inside the page, on
+memory storage. The editor mounts through the same `mount` as online, with a
+catalog, rooms and leases, and nothing outlives the page.
 
 ```ts
-function exposeDebugHandle(name: string, handle: unknown): () => void;
+import { EditorLaunch, mountStandalone } from "@jolly-pixel/editor.host";
+
+const { OfflineWorkspace } = await import("@jolly-pixel/editor.host/offline");
+const workspace = await OfflineWorkspace.open({
+  handlers: [voxelMapAssetKind({ chunkSize: 16 })],
+  seed: {
+    "maps/scratch.voxelmap.json": {
+      id: "scratch",
+      kind: VOXEL_MAP_KIND,
+      content: () => encodeWorld()
+    }
+  }
+});
+
+await mountStandalone(VoxelMapEditor, {
+  sources: [
+    { read: async() => EditorLaunch.fromTarget("scratch") }
+  ],
+  connect: () => workspace.connect()
+});
 ```
 
-The returned function deletes the global, unless another value replaced it.
+| Member | Role |
+|---|---|
+| `OfflineWorkspace.open({ handlers, seed? })` | seeds the memory source, then starts the back-end and its server |
+| `connect()` | a guest identity and a loopback client; destroying the client closes the workspace |
+| `backend` | the `AssetBackend`, for a host needing its handles |
+| `close()` | stops the server and the back-end; safe to call twice |
+
+The seed gives the target a fixed id, because the launch target injected by
+the Vite plugin names an asset of the server's catalog, not of this one. Load
+the entry with a dynamic `import()` so an online boot does not bundle the
+back-end.
 
 ## Launch sources
 

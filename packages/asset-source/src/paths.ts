@@ -1,6 +1,3 @@
-// Import Node.js Dependencies
-import path from "node:path";
-
 // Import Third-party Dependencies
 import {
   Err,
@@ -16,6 +13,39 @@ import { STATE_DIRECTORY } from "./constants.ts";
 // eslint-disable-next-line no-control-regex
 const kControlCharacters = /[\u0000-\u001F\u007F]/;
 const kWindowsDrive = /^[a-zA-Z]:/;
+
+function normalizePosix(
+  relative: string
+): string {
+  const segments: string[] = [];
+  for (const segment of relative.split("/")) {
+    if (
+      segment === "" ||
+      segment === "."
+    ) {
+      continue;
+    }
+
+    if (
+      segment === ".." &&
+      segments.length > 0 &&
+      segments.at(-1) !== ".."
+    ) {
+      segments.pop();
+
+      continue;
+    }
+
+    segments.push(segment);
+  }
+
+  const joined = segments.join("/");
+  if (joined === "") {
+    return relative.endsWith("/") ? "./" : ".";
+  }
+
+  return relative.endsWith("/") ? `${joined}/` : joined;
+}
 
 export type AssetPathRejection =
   | "empty"
@@ -37,13 +67,13 @@ export function safeAssetPath(
 
   const posix = input.replaceAll("\\", "/");
   if (
-    path.posix.isAbsolute(posix) ||
+    posix.startsWith("/") ||
     kWindowsDrive.test(posix)
   ) {
     return Err("absolute");
   }
 
-  const normalized = path.posix.normalize(posix);
+  const normalized = normalizePosix(posix);
   if (
     normalized === ".." ||
     normalized.startsWith("../")
@@ -78,21 +108,4 @@ export function isStatePath(
 
   return lowered === STATE_DIRECTORY ||
     lowered.startsWith(`${STATE_DIRECTORY}/`);
-}
-
-export function toRelativePosix(
-  root: string,
-  absolute: string
-): string | null {
-  const relative = path.relative(root, absolute);
-  if (
-    relative.length === 0 ||
-    relative === ".." ||
-    relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
-  ) {
-    return null;
-  }
-
-  return relative.replaceAll("\\", "/");
 }

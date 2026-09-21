@@ -1,6 +1,3 @@
-// Import Node.js Dependencies
-import { Buffer } from "node:buffer";
-
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { PeerIdentity } from "@jolly-pixel/network";
@@ -15,6 +12,10 @@ import {
   type Infer,
   type ValidationError
 } from "ata-validator";
+import {
+  fromUint8Array,
+  toUint8Array
+} from "js-base64";
 
 // Import Internal Dependencies
 import {
@@ -209,24 +210,27 @@ function malformed(
   };
 }
 
-export function writeData(
+export async function writeData(
   path: string,
   kind: string,
   data: Uint8Array,
   dependencies: readonly AssetReferenceData[] = []
-): AssetWriteData {
+): Promise<AssetWriteData> {
+  const snapshot = Uint8Array.from(data);
+  const references = dependencies.map((reference) => {
+    return {
+      id: reference.id,
+      kind: reference.kind
+    };
+  });
+
   return {
     path,
     kind,
-    hash: contentHash(data),
-    size: data.byteLength,
-    content: encodeContent(data),
-    dependencies: dependencies.map((reference) => {
-      return {
-        id: reference.id,
-        kind: reference.kind
-      };
-    })
+    hash: await contentHash(snapshot),
+    size: snapshot.byteLength,
+    content: encodeContent(snapshot),
+    dependencies: references
   };
 }
 
@@ -236,18 +240,13 @@ export function encodeContent(
   return {
     type: "inline",
     encoding: "base64",
-    data: Buffer.from(
-      data.buffer,
-      data.byteOffset,
-      data.byteLength
-    ).toString("base64")
+    data: fromUint8Array(data)
   };
 }
 
 export function decodeContent(
   content: AssetInlineContent
 ): Uint8Array {
-  return new Uint8Array(
-    Buffer.from(content.data, "base64")
-  );
+  return toUint8Array(content.data);
 }
+

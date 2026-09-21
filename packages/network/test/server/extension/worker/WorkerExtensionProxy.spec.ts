@@ -13,10 +13,8 @@ import {
   actionProtocols,
   OPAQUE_PROTOCOLS
 } from "../../../helpers/protocols.ts";
-import type {
-  RoomContext,
-  WorkerExtensionDescriptor
-} from "#src/index.ts";
+import { Server, type RoomContext } from "#src/index.ts";
+import type { WorkerExtensionDescriptor } from "#src/node.ts";
 import { createFakeTransportFactory } from "../../../helpers/FakeWorkerTransport.ts";
 import {
   DISPATCH_METHODS,
@@ -288,5 +286,23 @@ describe("WorkerExtensionProxy — identity", () => {
       subject: "client-1",
       role: "default"
     });
+  });
+});
+
+describe("Server worker ownership", () => {
+  test("disposes a registered worker through its room exactly once", async(t) => {
+    const { factory, transports } = createFakeTransportFactory();
+    const server = new Server();
+    const proxy = new WorkerExtensionProxy(createDescriptor(), {
+      logger: server.logger,
+      transportFactory: factory
+    });
+    const terminate = t.mock.method(transports[0], "terminate");
+    server.register(proxy);
+
+    await server.close();
+
+    assert.equal(transports[0].terminated, true);
+    assert.equal(terminate.mock.callCount(), 1);
   });
 });

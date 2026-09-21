@@ -273,3 +273,22 @@ describe("SnapshotScheduler — triggers", () => {
     });
   });
 });
+
+describe("SnapshotScheduler browser timers", () => {
+  test("tracks snapshots when timers return numbers", async(t) => {
+    await using harness = await syncHarness({
+      handlers: [counterHandler()]
+    });
+    const assetId = await counterAsset(harness);
+    t.mock.method(globalThis, "setTimeout", () => 1);
+    const clear = t.mock.method(globalThis, "clearTimeout", () => void 0);
+
+    increment(harness, assetId);
+    assert.equal(harness.scheduler.pending, 1);
+    await harness.scheduler.flush();
+
+    assert.equal(harness.scheduler.pending, 0);
+    assert.equal(clear.mock.calls[0].arguments[0], 1);
+    assert.equal(text(await harness.source.read("a.counter")), "1");
+  });
+});

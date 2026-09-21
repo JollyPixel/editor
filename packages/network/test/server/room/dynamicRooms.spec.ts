@@ -561,3 +561,30 @@ describe("dynamic rooms — concurrent joins", () => {
     await server.close();
   });
 });
+
+describe("Server browser timers", () => {
+  test("evicts an empty room with a numeric timer handle", async(t) => {
+    const callbacks: (() => void)[] = [];
+    t.mock.method(globalThis, "setTimeout", (callback: () => void) => {
+      callbacks.push(callback);
+
+      return callbacks.length;
+    });
+    t.mock.method(globalThis, "clearTimeout", () => void 0);
+    const { server, evicted, extensions } = harness();
+
+    try {
+      await join(server, "A", "pixelart:asset-1");
+      await server.handleDisconnect("A");
+      assert.equal(callbacks.length, 1);
+
+      callbacks[0]();
+      await server.settled();
+      assert.deepEqual(evicted, ["pixelart:asset-1"]);
+      assert.equal(extensions.get("pixelart:asset-1")?.disposed, 1);
+    }
+    finally {
+      await server.close();
+    }
+  });
+});

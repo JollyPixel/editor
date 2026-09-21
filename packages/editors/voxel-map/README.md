@@ -21,7 +21,7 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map dev
 
 The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png` under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded before tilesets referenced asset ids shows its `default` tileset as unlinked.
 
-The Vite plugin injects the first `voxelmap` of the catalog as the launch target. Add `?target=<assetId>` to open another map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to skip network setup entirely. Nothing is persisted in that mode: the editor is scratch space until the page reloads.
+The Vite plugin injects the first `voxelmap` of the catalog as the launch target. Add `?target=<assetId>` to open another map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to run the asset back-end inside the page instead of connecting to the server: the editor opens a seeded scratch map as a guest, no socket is opened, and nothing outlives the page.
 
 ## 🧩 Bootstrap
 
@@ -40,27 +40,30 @@ await mountStandalone(VoxelMapEditor, {
 
 Its static members accept `voxelmap` targets and declare the pixel-art model
 kind, so the session leases every tileset of the map in parallel before the
-editor mounts. `?offline` bypasses the host and calls
-`VoxelMapEditor.openOffline()`.
+editor mounts. `?offline` goes through the same `mountStandalone()` call:
+`src/boot/offlineWorkspace.ts`, loaded on demand, seeds an `OfflineWorkspace`
+from `@jolly-pixel/editor.host/offline` with the default tileset and map, and
+hands its loopback connection to the host.
 
 `VoxelMapEditor.mount()` creates the `EditorState`, boots the runtime through
 `EditorRuntime`, builds the `EditorScene` on the target room and mounts the
 `EditorShell`. Once the scene resolves its `VoxelMapWorkspace`, the shell
-attaches it to the panels and the brush toolbar. Offline, it preloads
-`textures/tileset.png` as the only tileset. `dispose()` unwinds the shell, the
+attaches it to the panels and the brush toolbar. `dispose()` unwinds the shell, the
 session and the runtime; the scene releases everything it built.
 
 `EditorScene` owns the map: a `MapDocument` relays the engine commands as
 `layerUpdated`, `blockRegistryChanged`, `tilesetsChanged` and `reset`, over a
-`WorldSource` that loads worlds locally (`LocalWorldSource`) or through the
-room (`RoomWorldSource`). Online, `MapCollaboration` groups the roster, the
-peer selections, the peer brushes and the peer frustums.
+`WorldSource` that loads worlds through the room (`RoomWorldSource`).
+`MapCollaboration` groups the roster, the peer selections, the peer brushes
+and the peer frustums.
 
 The pieces live under `src/boot/`:
 
 | Export | Responsibility |
 |---|---|
 | `EditorShell` | Wires `jolly-log` to the state, then attaches the workspace to the panels and the brush toolbar. |
+| `worldSeed` | Encodes the default tileset and map documents, shared by the Vite seed and the offline workspace. |
+| `openOfflineWorkspace` | Fetches `textures/tileset.png` and opens the seeded in-page workspace behind `?offline`. |
 
 ### Panels
 
@@ -101,7 +104,7 @@ above the grid.
 
 `TilesetAtlases` feeds the engine atlases from the tilesets' pixel documents,
 with no panel involved: each tileset gets a `TilesetAtlasBridge` over the
-`PixelDocument` leased from the session (a local document offline or for an
+`PixelDocument` leased from the session (a local document for an
 unlinked tileset with a source image). The texture editor shows one tab per
 tileset; each tab that can be opened leases the same document and attaches a canvas and the
 presence layers to it. When a peer deletes the asset of an open tab, the tab

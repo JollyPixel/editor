@@ -7,3 +7,6 @@ export {
 export type {
   FilesystemAssetSourceOptions
 } from "./FilesystemAssetSource.ts";
+export {
+  toRelativePosix
+} from "./toRelativePosix.ts";

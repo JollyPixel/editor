@@ -20,6 +20,9 @@ Peers see each other's `role` and `profile`. `subject` never leaves the server.
 ## Configuring
 
 ```ts
+import { Server } from "@jolly-pixel/network";
+import { PasswordAuthentication } from "@jolly-pixel/network/node";
+
 const server = new Server({
   rights: {
     viewer: { "voxel.renderer.*": "read" },
@@ -58,6 +61,8 @@ Returning `null` refuses the connection.
 The default when no `auth` is given. Every client becomes `{ subject: clientId, role: defaultRole }`.
 
 ### `PasswordAuthentication`
+
+Import this Node.js provider from `@jolly-pixel/network/node`.
 
 ```ts
 new PasswordAuthentication({

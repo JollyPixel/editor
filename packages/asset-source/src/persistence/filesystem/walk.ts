@@ -4,7 +4,7 @@ import type { Dir } from "node:fs";
 import path from "node:path";
 
 // Import Internal Dependencies
-import { toRelativePosix } from "../../paths.ts";
+import { toRelativePosix } from "./toRelativePosix.ts";
 import type { AssetPathMatcher } from "./ignoredPaths.ts";
 
 export interface WalkOptions {

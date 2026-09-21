@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  Validator
-} from "ata-validator";
+import { defineSchema } from "@jolly-pixel/network";
+import { Validator } from "ata-validator";
 import {
   writeJsonFile,
   type AssetSource
-} from "@jolly-pixel/asset-source";
+} from "@jolly-pixel/asset-source/core";
 
 // Import Internal Dependencies
 import {
@@ -78,8 +76,12 @@ export class ProjectionState {
       return;
     }
 
-    this.#checkpoints = new Map(Object.entries(data.checkpoints));
-    this.#failures = new Map(Object.entries(data.failures));
+    this.#checkpoints = new Map(
+      Object.entries(data.checkpoints)
+    );
+    this.#failures = new Map(
+      Object.entries(data.failures)
+    );
   }
 
   checkpoint(
@@ -98,7 +100,10 @@ export class ProjectionState {
     assetId: string,
     eventId: number
   ): void {
-    this.#checkpoints.set(assetId, eventId);
+    this.#checkpoints.set(
+      assetId,
+      eventId
+    );
     this.#failures.delete(assetId);
   }
 
@@ -149,7 +154,10 @@ export class ProjectionState {
       logger
     );
 
-    return new ProjectionState(source, data);
+    return new ProjectionState(
+      source,
+      data
+    );
   }
 
   static parse(
@@ -174,8 +182,12 @@ export class ProjectionState {
     return {
       data: {
         version: kStateVersion,
-        checkpoints: Object.fromEntries(checkpoints.entries),
-        failures: Object.fromEntries(failures.entries)
+        checkpoints: Object.fromEntries(
+          checkpoints.entries
+        ),
+        failures: Object.fromEntries(
+          failures.entries
+        )
       },
       dropped: checkpoints.dropped + failures.dropped
     };
@@ -193,7 +205,10 @@ function validRecord<TValue>(
     };
   }
 
-  return keepValid(Object.entries(input), validator);
+  return keepValid(
+    Object.entries(input),
+    validator
+  );
 }
 
 function sortedRecord<TValue>(

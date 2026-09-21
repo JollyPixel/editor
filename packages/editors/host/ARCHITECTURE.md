@@ -225,3 +225,28 @@ flowchart TB
 
 `EditorRuntime.create` installs the guard. The hover branch exists only after
 the editor calls `suspendKeyboardOnHover`.
+
+## Offline
+
+```mermaid
+flowchart TB
+  Editor["editor entry<br/>?offline"] -->|"dynamic import"| Offline["OfflineWorkspace.open"]
+
+  subgraph Page["Same page"]
+    direction TB
+    Offline --> Source["MemoryAssetSource<br/>seeded documents"]
+    Offline --> Events["memory event store"]
+    Source --> Backend["asset back-end"]
+    Events --> Backend
+    Backend --> Server["network Server<br/>catalog room, asset rooms"]
+    Server <-->|"LoopbackTransport"| Client["network Client"]
+  end
+
+  Client -->|"connect()"| Mount["mountStandalone<br/>EditorSession.connect"]
+  Mount --> MountFn["Editor.mount(context)"]
+```
+
+Offline swaps the transport and the storage, nothing else: the session, the
+leases and the editor are the online ones. The username prompt is skipped for
+a guest identity. Disposing the session destroys the client, which closes the
+workspace.
