@@ -88,6 +88,10 @@ protocol: `VoxelModelCommand` is the union of `ModelCommand` (`group-*`) and
 `{ nodes, folders, placements }`. `isModelCommand()` splits the stream on
 the client.
 
+Both unions, the snapshot and the node shapes are inferred from the JSON
+Schema that validates the room, so `modelCommandSchema` and its siblings on
+`network/server.ts` are the single source of truth for the wire format.
+
 The room ignores an edit of an unknown group or folder. Placements are always
 accepted. `VoxelModelCommandArbiter` resolves conflicts per group, folder
 and placement.

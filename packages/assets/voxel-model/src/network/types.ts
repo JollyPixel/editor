@@ -5,90 +5,25 @@ import type {
   AssetRoomRejectedMessage
 } from "@jolly-pixel/asset-server/kinds";
 
-export interface Vector3JSON {
-  x: number;
-  y: number;
-  z: number;
-}
+// Import Internal Dependencies
+import type {
+  folderCommandSchema,
+  folderNodeSchema,
+  folderPlacementSchema,
+  groupTransformSchema,
+  mirrorAxesSchema,
+  modelCommandSchema,
+  modelNodeSchema,
+  vector3Schema,
+  voxelModelSnapshotSchema
+} from "./VoxelModelCommand.schema.ts";
 
-export interface MirrorAxes {
-  x: boolean;
-  y: boolean;
-  z: boolean;
-}
+export type Vector3JSON = network.Infer<typeof vector3Schema>;
+export type MirrorAxes = network.Infer<typeof mirrorAxesSchema>;
+export type GroupTransformJSON = network.Infer<typeof groupTransformSchema>;
 
-export interface GroupTransformJSON {
-  position: Vector3JSON;
-  pivotOffset: Vector3JSON;
-  size: Vector3JSON;
-  scale: Vector3JSON;
-  rotation: Vector3JSON;
-}
-
-export type ModelCommand =
-  | {
-    action: "group-added";
-    uuid: string;
-    name: string;
-    transform: GroupTransformJSON;
-  }
-  | {
-    action: "group-removed";
-    uuid: string;
-  }
-  | {
-    action: "group-renamed";
-    uuid: string;
-    name: string;
-  }
-  | {
-    action: "group-reparented";
-    uuid: string;
-    parentUuid: string | null;
-    transform: GroupTransformJSON;
-  }
-  | {
-    action: "group-reparented-local";
-    uuid: string;
-    parentUuid: string | null;
-  }
-  | {
-    action: "group-transformed";
-    uuid: string;
-    transform: GroupTransformJSON;
-    flipAxes?: MirrorAxes;
-  };
-
-export type FolderCommand =
-  | {
-    action: "folder-added";
-    uuid: string;
-    name: string;
-    parentId: string | null;
-  }
-  | {
-    action: "folder-removed";
-    uuid: string;
-  }
-  | {
-    action: "folder-renamed";
-    uuid: string;
-    name: string;
-  }
-  | {
-    action: "folder-reparented";
-    uuid: string;
-    parentId: string | null;
-  }
-  | {
-    action: "block-placed";
-    blockUuid: string;
-    folderId: string;
-  }
-  | {
-    action: "block-unplaced";
-    blockUuid: string;
-  };
+export type ModelCommand = network.Infer<typeof modelCommandSchema>;
+export type FolderCommand = network.Infer<typeof folderCommandSchema>;
 
 export type VoxelModelCommand = ModelCommand | FolderCommand;
 
@@ -99,34 +34,10 @@ export type ModelNetworkCommand = ModelCommand & network.NetworkCommandHeader;
 export type FolderNetworkCommand = FolderCommand & network.NetworkCommandHeader;
 export type VoxelModelNetworkCommand = VoxelModelCommand & network.NetworkCommandHeader;
 
-export interface ModelNodeJSON {
-  uuid: string;
-  name: string;
-  parentUuid: string | null;
-  position: Vector3JSON;
-  pivotOffset: Vector3JSON;
-  size: Vector3JSON;
-  scale: Vector3JSON;
-  rotation: Vector3JSON;
-  flipAxes?: MirrorAxes;
-}
-
-export interface FolderNodeJSON {
-  uuid: string;
-  name: string;
-  parentId: string | null;
-}
-
-export interface FolderPlacementJSON {
-  blockUuid: string;
-  folderId: string;
-}
-
-export interface VoxelModelSnapshot {
-  nodes: ModelNodeJSON[];
-  folders: FolderNodeJSON[];
-  placements: FolderPlacementJSON[];
-}
+export type ModelNodeJSON = network.Infer<typeof modelNodeSchema>;
+export type FolderNodeJSON = network.Infer<typeof folderNodeSchema>;
+export type FolderPlacementJSON = network.Infer<typeof folderPlacementSchema>;
+export type VoxelModelSnapshot = network.Infer<typeof voxelModelSnapshotSchema>;
 
 export type VoxelModelAssetNotice =
   | AssetRoomDeletedMessage
