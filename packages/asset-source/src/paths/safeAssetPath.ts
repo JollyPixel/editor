@@ -6,46 +6,13 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import { AssetPathEscapeError } from "./errors/AssetPathEscapeError.ts";
-import { STATE_DIRECTORY } from "./constants.ts";
+import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
+import { normalizePosix } from "./normalizePosix.ts";
 
 // CONSTANTS
 // eslint-disable-next-line no-control-regex
 const kControlCharacters = /[\u0000-\u001F\u007F]/;
 const kWindowsDrive = /^[a-zA-Z]:/;
-
-function normalizePosix(
-  relative: string
-): string {
-  const segments: string[] = [];
-  for (const segment of relative.split("/")) {
-    if (
-      segment === "" ||
-      segment === "."
-    ) {
-      continue;
-    }
-
-    if (
-      segment === ".." &&
-      segments.length > 0 &&
-      segments.at(-1) !== ".."
-    ) {
-      segments.pop();
-
-      continue;
-    }
-
-    segments.push(segment);
-  }
-
-  const joined = segments.join("/");
-  if (joined === "") {
-    return relative.endsWith("/") ? "./" : ".";
-  }
-
-  return relative.endsWith("/") ? `${joined}/` : joined;
-}
 
 export type AssetPathRejection =
   | "empty"
@@ -99,13 +66,4 @@ export function normalizeAssetPath(
   }
 
   return result.val;
-}
-
-export function isStatePath(
-  assetPath: string
-): boolean {
-  const lowered = assetPath.toLowerCase();
-
-  return lowered === STATE_DIRECTORY ||
-    lowered.startsWith(`${STATE_DIRECTORY}/`);
 }

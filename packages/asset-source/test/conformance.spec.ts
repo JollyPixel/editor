@@ -14,7 +14,7 @@ import {
   MemoryAssetSource,
   type AssetSource
 } from "#src/index.ts";
-import { IndexedDbAssetSource } from "#src/persistence/indexeddb/index.ts";
+import { IndexedDbAssetSource } from "#src/persistence/indexeddb/IndexedDbAssetSource.ts";
 import { tempWorkspace } from "./helpers/tempWorkspace.ts";
 import {
   bytes,

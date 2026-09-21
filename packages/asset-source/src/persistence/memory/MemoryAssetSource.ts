@@ -3,7 +3,7 @@ import type { AssetSource } from "../../AssetSource.ts";
 import {
   isStatePath,
   normalizeAssetPath
-} from "../../paths.ts";
+} from "../../paths/index.ts";
 
 export class MemoryAssetSource implements AssetSource {
   #files = new Map<string, Uint8Array>();

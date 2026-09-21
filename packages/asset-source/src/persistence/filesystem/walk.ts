@@ -9,6 +9,7 @@ import type { AssetPathMatcher } from "./ignoredPaths.ts";
 
 export interface WalkOptions {
   isIgnored: AssetPathMatcher;
+  isTemporary: (name: string) => boolean;
 }
 
 export async function* walk(
@@ -54,7 +55,7 @@ async function* walkDirectory(
     }
     else if (
       dirent.isFile() &&
-      !isTemporary(dirent.name)
+      !options.isTemporary(dirent.name)
     ) {
       yield relative;
     }
@@ -73,10 +74,4 @@ async function openRoot(
     }
     throw error;
   }
-}
-
-function isTemporary(
-  name: string
-): boolean {
-  return name.startsWith(".") && name.endsWith(".tmp");
 }

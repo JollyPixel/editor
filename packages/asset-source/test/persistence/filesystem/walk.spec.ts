@@ -7,12 +7,30 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+// Import Third-party Dependencies
+import { AtomicFile } from "@openally/atomic-fs";
+
 // Import Internal Dependencies
 import {
   createIgnoredPathMatcher
 } from "#src/persistence/filesystem/ignoredPaths.ts";
-import { walk } from "#src/persistence/filesystem/walk.ts";
+import {
+  walk,
+  type WalkOptions
+} from "#src/persistence/filesystem/walk.ts";
 import { tempWorkspace } from "../../helpers/tempWorkspace.ts";
+
+// CONSTANTS
+const kAtomic = new AtomicFile();
+
+function walkOptions(
+  ignore: readonly string[] = []
+): WalkOptions {
+  return {
+    isIgnored: createIgnoredPathMatcher(ignore),
+    isTemporary: kAtomic.isTemporary
+  };
+}
 
 async function collect(
   iterator: AsyncIterableIterator<string>
@@ -47,9 +65,7 @@ describe("walk", () => {
     ]);
 
     const files = await collect(
-      walk(workspace.root, {
-        isIgnored: createIgnoredPathMatcher([])
-      })
+      walk(workspace.root, walkOptions())
     );
 
     assert.deepEqual(files.sort(), [
@@ -61,14 +77,12 @@ describe("walk", () => {
   test("does not yield directories or temporary files", async() => {
     await using workspace = await tempWorkspace();
     await writeFiles(workspace.root, [
-      "empty/.keep.tmp",
-      ".sprite.png.deadbeef.tmp"
+      "empty/.keep.deadbeefcafe.tmp",
+      ".sprite.png.deadbeefcafe.tmp"
     ]);
 
     const files = await collect(
-      walk(workspace.root, {
-        isIgnored: createIgnoredPathMatcher([])
-      })
+      walk(workspace.root, walkOptions())
     );
 
     assert.deepEqual(files, []);
@@ -83,9 +97,7 @@ describe("walk", () => {
     const opendir = t.mock.method(fs, "opendir");
 
     const files = await collect(
-      walk(workspace.root, {
-        isIgnored: createIgnoredPathMatcher(["skip/**"])
-      })
+      walk(workspace.root, walkOptions(["skip/**"]))
     );
 
     assert.deepEqual(files, ["keep/sprite.png"]);
@@ -104,9 +116,7 @@ describe("walk", () => {
     ]);
     const opendir = t.mock.method(fs, "opendir");
 
-    const iterator = walk(workspace.root, {
-      isIgnored: createIgnoredPathMatcher([])
-    });
+    const iterator = walk(workspace.root, walkOptions());
     const first = await iterator.next();
     await iterator.return?.();
 
@@ -124,9 +134,7 @@ describe("walk", () => {
     await using workspace = await tempWorkspace();
 
     const files = await collect(
-      walk(path.join(workspace.root, "missing"), {
-        isIgnored: createIgnoredPathMatcher([])
-      })
+      walk(path.join(workspace.root, "missing"), walkOptions())
     );
 
     assert.deepEqual(files, []);
@@ -138,9 +146,7 @@ describe("walk", () => {
 
     await assert.rejects(
       () => collect(
-        walk(path.join(workspace.root, "sprite.png"), {
-          isIgnored: createIgnoredPathMatcher([])
-        })
+        walk(path.join(workspace.root, "sprite.png"), walkOptions())
       ),
       { code: "ENOTDIR" }
     );
@@ -158,9 +164,7 @@ describe("walk", () => {
     );
 
     const files = await collect(
-      walk(workspace.root, {
-        isIgnored: createIgnoredPathMatcher([])
-      })
+      walk(workspace.root, walkOptions())
     );
 
     assert.deepEqual(files, ["sprite.png"]);

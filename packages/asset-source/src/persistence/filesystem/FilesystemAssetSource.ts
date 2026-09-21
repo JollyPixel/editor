@@ -1,6 +1,9 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
 
+// Import Third-party Dependencies
+import { AtomicFile } from "@openally/atomic-fs";
+
 // Import Internal Dependencies
 import type { AssetSource } from "../../AssetSource.ts";
 import { FilesystemAssetWatcher } from "./FilesystemAssetWatcher.ts";
@@ -10,8 +13,6 @@ import {
   type AssetPathMatcher
 } from "./ignoredPaths.ts";
 import { walk } from "./walk.ts";
-import { writeFileAtomically } from "./writeFileAtomically.ts";
-import { writeFileIfAbsent } from "./writeFileIfAbsent.ts";
 
 export interface FilesystemAssetSourceOptions {
   /**
@@ -26,6 +27,7 @@ export class FilesystemAssetSource implements AssetSource {
 
   #isIgnored: AssetPathMatcher;
   #paths: FilesystemPathResolver;
+  #atomic = new AtomicFile({ mkdir: true });
 
   constructor(
     root: string,
@@ -92,7 +94,7 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string,
     data: Uint8Array
   ): Promise<void> {
-    await writeFileAtomically(
+    await this.#atomic.write(
       await this.#paths.contained(assetPath),
       data
     );
@@ -102,7 +104,7 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string,
     data: Uint8Array
   ): Promise<boolean> {
-    return writeFileIfAbsent(
+    return this.#atomic.writeIfAbsent(
       await this.#paths.contained(assetPath),
       data
     );
@@ -121,7 +123,10 @@ export class FilesystemAssetSource implements AssetSource {
     const files: string[] = [];
     const asyncIterable = walk(
       this.root,
-      { isIgnored: this.#isIgnored }
+      {
+        isIgnored: this.#isIgnored,
+        isTemporary: this.#atomic.isTemporary
+      }
     );
     for await (const file of asyncIterable) {
       files.push(file);
