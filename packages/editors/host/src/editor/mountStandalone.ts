@@ -8,15 +8,18 @@ import type {
 } from "./EditorDefinition.ts";
 import { EditorLaunch } from "../launch/EditorLaunch.ts";
 import { defaultLaunchSources } from "../launch/sources/defaultLaunchSources.ts";
+import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
 import type { LaunchSource } from "../launch/sources/LaunchSource.ts";
 import {
   EditorSession,
   type EditorSessionClient
 } from "../session/EditorSession.ts";
+import type { SessionWorkspace } from "../session/SessionWorkspace.ts";
 
 export interface StandaloneConnection {
   identity: PeerIdentity;
   client: EditorSessionClient;
+  workspace?: SessionWorkspace;
 }
 
 export interface MountStandaloneOptions {
@@ -62,6 +65,13 @@ export async function mountStandalone<THandle extends EditorHandle>(
     session.dispose();
 
     throw error;
+  }
+
+  if (session.workspace !== null) {
+    LastOpenedLaunchSource.remember(
+      definition.accepts,
+      launch.target.value
+    );
   }
 
   if (options.debugHandle !== undefined) {

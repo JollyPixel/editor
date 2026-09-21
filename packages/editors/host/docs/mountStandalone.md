@@ -82,19 +82,21 @@ disposed or fails to open.
 
 ## Offline
 
-`@jolly-pixel/editor.host/offline` runs the asset back-end inside the page, on
-memory storage. The editor mounts through the same `mount` as online, with a
-catalog, rooms and leases, and nothing outlives the page.
+`@jolly-pixel/editor.host/offline` runs the asset back-end inside the page. The
+editor mounts through the same `mount` as online, with a catalog, rooms and
+leases. On `"memory"` storage nothing outlives the page; on `"indexeddb"`
+asset content and ids survive a reload.
 
 ```ts
-import { EditorLaunch, mountStandalone } from "@jolly-pixel/editor.host";
+import { mountStandalone } from "@jolly-pixel/editor.host";
 
 const { OfflineWorkspace } = await import("@jolly-pixel/editor.host/offline");
 const workspace = await OfflineWorkspace.open({
   handlers: [voxelMapAssetKind({ chunkSize: 16 })],
+  storage: "indexeddb",
   seed: {
     "maps/scratch.voxelmap.json": {
-      id: "scratch",
+      id: crypto.randomUUID(),
       kind: VOXEL_MAP_KIND,
       content: () => encodeWorld()
     }
@@ -102,24 +104,45 @@ const workspace = await OfflineWorkspace.open({
 });
 
 await mountStandalone(VoxelMapEditor, {
-  sources: [
-    { read: async() => EditorLaunch.fromTarget("scratch") }
-  ],
+  sources: workspace.launchSources(VoxelMapEditor.accepts),
   connect: () => workspace.connect()
 });
 ```
 
 | Member | Role |
 |---|---|
-| `OfflineWorkspace.open({ handlers, seed? })` | seeds the memory source, then starts the back-end and its server |
-| `connect()` | a guest identity and a loopback client; destroying the client closes the workspace |
+| `OfflineWorkspace.open({ handlers, seed?, storage?, name? })` | opens the storage, seeds it when empty, then starts the back-end and its server |
+| `connect()` | a guest identity, a loopback client and the workspace; destroying the client closes the workspace |
+| `launchSources(accepts)` | `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind |
+| `storage` / `persistent` | the storage the workspace got, which may not be the one asked for |
 | `backend` | the `AssetBackend`, for a host needing its handles |
-| `close()` | stops the server and the back-end; safe to call twice |
+| `reset()` | closes the workspace and deletes its database |
+| `close()` | flushes, then stops the server and the back-end; safe to call twice |
 
-The seed gives the target a fixed id, because the launch target injected by
-the Vite plugin names an asset of the server's catalog, not of this one. Load
-the entry with a dynamic `import()` so an online boot does not bundle the
-back-end.
+`storage` defaults to `"memory"`. `name` defaults to `"default"` and selects
+the `jolly-workspace:<name>` database. `seed` is a seed map or a function
+returning one, used only when the storage holds no asset: a seeded asset the
+user deleted does not come back.
+
+On `"indexeddb"`:
+
+- Give seeded assets random ids. A fixed id would make the first map of every
+  user the same asset, and their archives would collide on import.
+- One tab owns a workspace, through a Web Lock on the database name. A second
+  tab gets `"memory"` storage: `persistent` is `false` and the editor should
+  say so.
+- Snapshots are taken after 500 ms of quiet and at most every 5 s, and pending
+  ones are flushed when the page is hidden. A browser does not guarantee
+  writes started while the page goes away, so the short delay is what bounds
+  the loss.
+- Boot works as on a fresh clone: the event log starts empty and the
+  reconciler recreates every asset from the stored files, with the ids of
+  `.jollypixel/assets.json`.
+
+The launch target injected by the Vite plugin names an asset of the server's
+catalog, not of this one, hence `launchSources`. `mountStandalone` remembers
+the opened target of an offline session for the next launch. Load the entry
+with a dynamic `import()` so an online boot does not bundle the back-end.
 
 ## Launch sources
 

@@ -17,6 +17,7 @@ import {
 import { ViewFocus } from "../scene/index.ts";
 import { EditorShell } from "./EditorShell.ts";
 import { TILESET_TEXTURE_KIND } from "../features/tilesets/TilesetTextures.ts";
+import { MapArchives } from "../features/map-config/MapArchives.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
@@ -77,7 +78,14 @@ export class VoxelMapEditor {
         room: session.target.room,
         identity: session.identity,
         catalog: session.catalog,
-        assets: session.assets
+        assets: session.assets,
+        archives: new MapArchives({
+          archive: session.archive,
+          workspace: session.workspace,
+          accepts: VoxelMapEditor.accepts,
+          target: () => session.catalog.record(session.target.record.id) ??
+            session.target.record
+        })
       },
       samples: params.samples
     });

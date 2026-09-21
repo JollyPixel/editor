@@ -31,20 +31,24 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
     const { engine } = workspace;
 
     return {
-      target: session.target.record.id,
+      target: session.target.record.source,
+      persistent: session.workspace?.persistent,
       username: session.identity.username,
       layers: engine.world.getLayers().map((layer) => layer.name),
       blocks: engine.blockRegistry.size,
-      tilesets: engine.tilesets.definitions().map((tileset) => tileset.asset?.id)
+      tilesets: engine.tilesets.definitions().map(
+        (tileset) => session.catalog.record(tileset.asset?.id ?? "")?.source
+      )
     };
   });
 
   expect(state).toEqual({
-    target: "offline-map",
+    target: "maps/overworld.voxelmap.json",
+    persistent: true,
     username: "Guest",
     layers: ["Ground"],
     blocks: 32,
-    tilesets: ["offline-tileset"]
+    tilesets: ["textures/block.pixelart"]
   });
   expect(sockets).toEqual([]);
 });
@@ -56,17 +60,23 @@ test("snapshots offline map and texture edits", async({ page }) => {
   await page.goto("/?offline&max-fps=10&samples=0");
   await waitForEditor(page);
   const before = await page.evaluate(() => {
-    const { catalog } = window.voxelMapEditor!.session;
+    const { session, workspace } = window.voxelMapEditor!;
+    const mapId = session.target.record.id;
+    const [tileset] = workspace.engine.tilesets.definitions();
+    const textureId = tileset.asset!.id;
 
     return {
-      map: catalog.record("offline-map")!.revision,
-      texture: catalog.record("offline-tileset")!.revision
+      mapId,
+      textureId,
+      map: session.catalog.record(mapId)!.revision,
+      texture: session.catalog.record(textureId)!.revision
     };
   });
 
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 2 }]);
   await expect.poll(() => page.evaluate(
-    () => window.voxelMapEditor!.session.catalog.record("offline-map")!.revision
+    (mapId) => window.voxelMapEditor!.session.catalog.record(mapId)!.revision,
+    before.mapId
   ), { timeout: 10_000 }).not.toBe(before.map);
 
   await openPane(page, "Paint");
@@ -86,8 +96,9 @@ test("snapshots offline map and texture edits", async({ page }) => {
   await clickTexel(panel, texel);
   await expect.poll(() => pixelAlpha(panel, texel)).toBe(0);
   await expect.poll(() => page.evaluate(
-    () => window.voxelMapEditor!.session.catalog
-      .record("offline-tileset")!.revision
+    (textureId) => window.voxelMapEditor!.session.catalog
+      .record(textureId)!.revision,
+    before.textureId
   )).not.toBe(before.texture);
 
   await page.evaluate(() => window.voxelMapEditor!.dispose());

@@ -9,7 +9,8 @@ import * as esbuild from "esbuild";
 // CONSTANTS
 const kSrcDir = path.join(import.meta.dirname, "..", "src");
 const kEntryPoints = [
-  path.join(kSrcDir, "core.ts")
+  path.join(kSrcDir, "core.ts"),
+  path.join(kSrcDir, "persistence", "indexeddb", "index.ts")
 ];
 
 describe("Asset source browser compatibility", () => {

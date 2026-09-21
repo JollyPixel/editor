@@ -24,6 +24,11 @@ import type {
   AssetModelKind,
   AssetRoomLease
 } from "./AssetLease.ts";
+import {
+  CatalogSessionArchive,
+  type SessionArchive
+} from "./SessionArchive.ts";
+import type { SessionWorkspace } from "./SessionWorkspace.ts";
 
 // CONSTANTS
 export const IDENTITY_STORAGE_KEY = "jolly-pixel:username";
@@ -54,6 +59,7 @@ export interface EditorSessionOptions extends EditorSessionTarget {
 export interface EditorSessionConnectOptions extends EditorSessionTarget {
   identity: PeerIdentity;
   client: EditorSessionClient;
+  workspace?: SessionWorkspace;
 }
 
 export interface EditorSessionParts extends EditorSessionConnectOptions {
@@ -120,6 +126,8 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
 
   readonly identity: PeerIdentity;
   readonly catalog: CatalogClient;
+  readonly workspace: SessionWorkspace | null;
+  readonly archive: SessionArchive;
   readonly assets: AssetLeases;
   readonly target: AssetRoomLease;
 
@@ -138,6 +146,11 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     super();
     this.identity = options.identity;
     this.catalog = options.catalog;
+    this.workspace = options.workspace ?? null;
+    this.archive = new CatalogSessionArchive({
+      catalog: this.catalog,
+      canImport: this.workspace?.persistent ?? true
+    });
     this.#client = options.client;
     for (const kind of options.kinds) {
       this.#kinds.set(kind.kind, kind);

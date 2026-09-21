@@ -30,6 +30,8 @@ readonly identity: PeerIdentity;
 readonly catalog: CatalogClient;
 readonly assets: AssetLeases;
 readonly target: AssetRoomLease;
+readonly archive: SessionArchive;
+readonly workspace: SessionWorkspace | null;
 ```
 
 `target` exposes the target's `record` and `room`. The room is not joined and
@@ -39,6 +41,36 @@ has no model: the editor attaches its own model, then joins.
 remembers the entered username per tab. `assets` is the session's
 [`AssetLeases`](./AssetLeases.md), where panels open their own leases.
 `catalog` comes from `@jolly-pixel/asset-server/catalog/client`.
+
+## Archives
+
+`archive` exports and imports `.zip`
+[asset archives](../../../asset-server/docs/Archive.md) through the catalog
+room, the same way offline and on a server.
+
+```ts
+const blob = await session.archive.export(session.target.record.id);
+
+const plan = await session.archive.plan(file);
+const report = await session.archive.import(file, {
+  onConflict: plan.live.length > 0 ? "replace" : "keep"
+});
+```
+
+| Member | Role |
+|---|---|
+| `canImport` | `false` on a workspace that does not persist, where an import would be lost by the reload that follows it |
+| `export(assetId?)` | the asset with everything it references, or the whole workspace |
+| `plan(file)` | the `ImportPlan`: which ids are `live` or `fresh`, and the `sharedDependents` a replace would affect; writes nothing |
+| `import(file, { onConflict })` | the `ImportReport`; rejects with `ArchiveImportDisabledError` when `canImport` is `false` |
+
+Ask for `onConflict` only when `plan.live` is not empty. An editor cannot
+remount in place: after an import, reload onto `?target=<report.root.id>`.
+
+`workspace` is `null` on a server session. On an
+[offline workspace](./mountStandalone.md#offline) it tells whether the storage
+is `persistent` and offers `reset()`, which closes the workspace and deletes
+what the browser stored.
 
 ## Dependencies
 

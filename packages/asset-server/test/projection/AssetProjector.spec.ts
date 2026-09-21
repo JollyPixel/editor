@@ -602,3 +602,57 @@ describe("AssetProjector — rejected events", () => {
     assert.strictEqual(warnings[0].metadata.reason, "unsupported");
   });
 });
+
+class SlowAssetSource extends MemoryAssetSource {
+  override async write(
+    path: string,
+    data: Uint8Array
+  ): Promise<void> {
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+    await super.write(path, data);
+  }
+}
+
+describe("AssetProjector — events absorbed during a write", () => {
+  test("projects an update that arrives while a write is in flight", async() => {
+    await using harness = await syncHarness({
+      source: new SlowAssetSource()
+    });
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("0"),
+      actor: kActor
+    })).unwrap();
+    for (let index = 1; index <= 5; index++) {
+      await harness.writer.update({
+        assetId: created.assetId,
+        data: bytes(String(index)),
+        actor: kActor
+      });
+    }
+    await harness.projector.flush();
+
+    assert.strictEqual(text(await harness.source.read("a.png")), "5");
+    assert.strictEqual(harness.projector.pending, 0);
+  });
+
+  test("projects a deletion that arrives while a write is in flight", async() => {
+    await using harness = await syncHarness({
+      source: new SlowAssetSource()
+    });
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("0"),
+      actor: kActor
+    })).unwrap();
+    await harness.writer.remove({
+      assetId: created.assetId,
+      actor: kActor
+    });
+    await harness.projector.flush();
+
+    assert.strictEqual(await harness.source.exists("a.png"), false);
+  });
+});

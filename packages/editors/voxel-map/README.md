@@ -21,7 +21,9 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map dev
 
 The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png` under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded before tilesets referenced asset ids shows its `default` tileset as unlinked.
 
-The Vite plugin injects the first `voxelmap` of the catalog as the launch target. Add `?target=<assetId>` to open another map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to run the asset back-end inside the page instead of connecting to the server: the editor opens a seeded scratch map as a guest, no socket is opened, and nothing outlives the page.
+The Vite plugin injects the first `voxelmap` of the catalog as the launch target. Add `?target=<assetId>` to open another map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to run the asset back-end inside the page instead of connecting to the server: the editor opens a seeded map as a guest and no socket is opened. The workspace is stored in the browser (IndexedDB), so maps, tilesets and their ids survive a reload, and the last opened map is reopened. A second tab on the same workspace is not saved and says so.
+
+The Map Config folder of the General tab exports the map with its tilesets as one `.zip` and imports such an archive, offline or on a server. When the archive holds assets the workspace already has, a dialog offers to replace them or to keep them, once for the whole archive, and names the assets outside the archive that a replace would affect. The editor then reloads onto the imported map. Offline, **Reset workspace** deletes what the browser stored and seeds a new map.
 
 ## 🧩 Bootstrap
 
@@ -41,9 +43,10 @@ await mountStandalone(VoxelMapEditor, {
 Its static members accept `voxelmap` targets and declare the pixel-art model
 kind, so the session leases every tileset of the map in parallel before the
 editor mounts. `?offline` goes through the same `mountStandalone()` call:
-`src/boot/offlineWorkspace.ts`, loaded on demand, seeds an `OfflineWorkspace`
-from `@jolly-pixel/editor.host/offline` with the default tileset and map, and
-hands its loopback connection to the host.
+`src/boot/offlineWorkspace.ts`, loaded on demand, opens an IndexedDB-backed
+`OfflineWorkspace` from `@jolly-pixel/editor.host/offline`, seeds it with the
+default tileset and map under random ids when it is empty, and hands its
+launch sources and loopback connection to the host.
 
 `VoxelMapEditor.mount()` creates the `EditorState`, boots the runtime through
 `EditorRuntime`, builds the `EditorScene` on the target room and mounts the
@@ -63,7 +66,12 @@ The pieces live under `src/boot/`:
 |---|---|
 | `EditorShell` | Wires `jolly-log` to the state, then attaches the workspace to the panels and the brush toolbar. |
 | `worldSeed` | Encodes the default tileset and map documents, shared by the Vite seed and the offline workspace. |
-| `openOfflineWorkspace` | Fetches `textures/tileset.png` and opens the seeded in-page workspace behind `?offline`. |
+| `openOfflineWorkspace` | Fetches `textures/tileset.png` and opens the persisted in-page workspace behind `?offline`. |
+
+`MapArchives` (`src/features/map-config/`) adapts the session's `archive` and
+`workspace` ports for `map-config-panel`: the download name comes from the
+map path, an import remembers its root as last opened, and `launchUrl` builds
+the `?target=` reload.
 
 ### Panels
 

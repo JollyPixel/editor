@@ -13,6 +13,7 @@ projection.start();
   after it. See [Replay](./Sync.md#replay).
 - `catalog` exposes the current `AssetCatalog`.
 - `size` is the number of cataloged assets.
+- `record(assetId)` returns the `AssetRecord`, or `undefined`.
 - `snapshot()` returns `AssetManifestData`.
 - `changed` is emitted for each recognized lifecycle event applied to the
   catalog. A deleted asset has `record: null`.
@@ -67,10 +68,12 @@ server.register(new CatalogExtension({
 ```
 
 - `writer` is the `AssetWriter` that runs the commands.
-- `maxContentBytes` caps the decoded size of a `catalog:create` payload.
-  Defaults to `DEFAULT_CATALOG_MAX_CONTENT_BYTES` (16 MiB). A larger payload
-  is rejected with `CatalogContentTooLargeError` before anything is decoded
-  or written.
+- `archive` is the back-end the [archive commands](#archives) run against.
+  Without it they are rejected.
+- `maxContentBytes` caps the decoded size of a `catalog:create` payload and
+  of an archive, exported or imported. Defaults to
+  `DEFAULT_CATALOG_MAX_CONTENT_BYTES` (16 MiB). A larger payload is rejected
+  with `CatalogContentTooLargeError` before anything is written.
 - `id` overrides the room name. Defaults to `CATALOG_ROOM`.
 
 `createAssetBackend().attach(server)` registers this room with the backend
@@ -83,6 +86,9 @@ option.
 { type: "catalog:create", requestId?, path, kind?, onConflict?, content: CatalogInlineContent }
 { type: "catalog:rename", requestId?, assetId, to }
 { type: "catalog:delete", requestId?, assetId }
+{ type: "catalog:export", requestId?, root? }
+{ type: "catalog:plan", requestId?, content: CatalogInlineContent }
+{ type: "catalog:import", requestId?, content: CatalogInlineContent, onConflict: "replace" | "keep" }
 ```
 
 `content` is the `{ type: "inline", encoding: "base64", data }` shape built by
@@ -102,6 +108,9 @@ means renaming each asset under it, one command at a time.
 { type: "catalog:snapshot", manifest: AssetManifestData, dependencies?: DependencyMap }
 { type: "catalog:changed", change: { eventType, assetId, record, dependencies? } }
 { type: "catalog:applied", requestId?, command, assetId }
+{ type: "catalog:applied", requestId?, command: "catalog:export", content: CatalogInlineContent }
+{ type: "catalog:applied", requestId?, command: "catalog:plan", plan: ImportPlan }
+{ type: "catalog:applied", requestId?, command: "catalog:import", report: ImportReport }
 { type: "catalog:rejected", requestId?, command, reason }
 ```
 
@@ -115,9 +124,9 @@ same projection that carries reconciler writes, then the author alone gets
 alone and broadcasts nothing. Both echo the command's `requestId`.
 
 A payload that does not match a command schema gets the room's `"error"`
-envelope. Rights are checked per command under `asset-catalog.catalog:create`,
-`asset-catalog.catalog:rename` and `asset-catalog.catalog:delete`, so a role
-can create without deleting:
+envelope. Rights are checked per command under `asset-catalog.<command type>`
+(`asset-catalog.catalog:create`, `asset-catalog.catalog:import`, ...), so a
+role can create without deleting:
 
 ```ts
 new Server({
@@ -133,6 +142,20 @@ Without a rights table every member can run every command.
 
 Deleting an asset that is open in its own room sends that room a final notice.
 See [Deleted assets](./Rooms.md#deleted-assets).
+
+### Archives
+
+`catalog:export`, `catalog:plan` and `catalog:import` run
+[`exportAssetArchive`, `planAssetImport` and `importAssetArchive`](./Archive.md)
+on the back-end, so an offline workspace and a server share one
+implementation and the rights table applies. The archive travels as inline
+base64 content, and each reply goes to the requesting client only.
+
+- `catalog:export` without `root` exports the whole workspace.
+- `catalog:plan` writes nothing. Run it first to learn which ids are already
+  live and ask for `onConflict` only when some are.
+- An archive that fails validation or the pre-flight is answered with
+  `catalog:rejected`, the `reason` naming the asset at fault.
 
 ## Browser client
 
@@ -162,6 +185,9 @@ await catalog.remove(assetId);
 | `records()` / `record(assetId)` | Current `AssetRecordData`, kept in sync with `catalog:changed`. |
 | `create(path, content, options?)` | Resolves the created asset ID. `options` takes `kind` and `onConflict`. |
 | `rename(assetId, to)` / `remove(assetId)` | Resolve once applied. |
+| `exportArchive(root?)` | Resolves the [archive](./Archive.md) bytes of `root`, or of the whole workspace. |
+| `planImport(archive)` | Resolves the `ImportPlan`, writing nothing. |
+| `importArchive(archive, { onConflict })` | Resolves the `ImportReport`. |
 | `dependenciesOf(assetId)` / `dependentsOf(assetId)` / `closureOf(assetId)` | [Dependency edges](#dependency-edges), kept in sync with the room. |
 | `dispose()` | Leaves the room and rejects pending requests. |
 | `"change"` event | Emitted after the snapshot and each change. |
