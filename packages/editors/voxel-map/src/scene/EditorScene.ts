@@ -25,7 +25,6 @@ import {
   type EditorState
 } from "../state/index.ts";
 import { MapCollaboration } from "../collaboration/MapCollaboration.ts";
-import { PerformanceMonitor } from "../features/performance/index.ts";
 import {
   BrushShortcuts,
   HistoryShortcuts,
@@ -264,9 +263,6 @@ export class EditorScene extends Systems.Scene {
         selection: state.selection,
         mapDocument
       });
-    world.createActor("performance")
-      .addComponent(PerformanceMonitor, { engine });
-
     const collaboration = new MapCollaboration({
       room: session.room,
       identity: session.identity,

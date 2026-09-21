@@ -15,11 +15,14 @@ import {
   InspectedChunkRegistry,
   type VoxelMeshStats
 } from "./InspectedChunkRegistry.ts";
+import { voxelMetrics } from "./voxelMetrics.ts";
+import type { VoxelMetric } from "./VoxelMetric.ts";
 import type {
   ChunkInspectorView,
   InspectedChunkBounds
 } from "./types.ts";
 
+export type { VoxelMetric } from "./VoxelMetric.ts";
 export type { VoxelInspectorMode } from "./ChunkWireframeView.ts";
 export type { VoxelMeshStats } from "./InspectedChunkRegistry.ts";
 export type { InspectedChunkBounds } from "./types.ts";
@@ -68,6 +71,7 @@ export interface VoxelInspectorOptions {
 export class VoxelInspector {
   readonly mesh: VoxelMeshInspector;
   readonly blocks: VoxelBlockInspector;
+  readonly metrics: readonly VoxelMetric[];
 
   #chunks = new InspectedChunkRegistry();
   #wireframe: ChunkWireframeView;
@@ -88,6 +92,7 @@ export class VoxelInspector {
     } = options;
 
     this.mesh = this.#chunks;
+    this.metrics = voxelMetrics(this.#chunks);
     this.blocks = new VoxelBlockInspector({
       world,
       blockRegistry

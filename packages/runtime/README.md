@@ -10,7 +10,7 @@
 
 - Web runtime with [Vite][vite]
 - Desktop runtime with [Electron.js][electron]
-- Optional themeable performance statistics
+- Themeable performance statistics, with a metric registry any subsystem contributes to
 - GPU and FPS detection with [detect-gpu](https://github.com/pmndrs/detect-gpu)
 - Catalog-backed asset loading with operation-scoped progress
 

@@ -98,12 +98,13 @@ function renderFrame(): void {
 ```
 
 ```ts
-addMetric(definition: MetricDefinition): void
+addMetric(definition: MetricDefinition): () => void
 track(id: string, value: number): void
 ```
 
 An empty metric ID, a duplicate ID, or tracking an unknown ID throws an
-`Error`. `track()` ignores `NaN` and infinite values.
+`Error`. `track()` ignores `NaN` and infinite values. `addMetric()` returns a
+function unregistering the metric again.
 
 Pending values are reduced when the window flushes:
 
@@ -132,6 +133,35 @@ recorder.addMetric({
 Use a sampled metric for a live source that is cheap to read at refresh time.
 Use `track()` when values arrive as events or several observations must be
 aggregated within the window.
+
+## Register a source
+
+A subsystem describing several metrics hands them over at once.
+
+```ts
+addSource(source: MetricSource): () => void
+removeMetric(id: string): boolean
+get revision(): number
+```
+
+```ts
+const release = recorder.addSource(engine.inspector);
+
+release();
+```
+
+The returned function unregisters every metric the source described. Hold it
+whenever the source is shorter-lived than the recorder: a metric left behind
+keeps sampling through a `sample()` closure that outlives what it reads.
+
+A colliding ID throws, and nothing of that source stays registered.
+
+`removeMetric()` returns whether a metric was registered under that ID.
+`revision` moves whenever metrics are added or removed, so a readout built from
+`definitions` can tell that it went stale without diffing them.
+
+See [Metric definitions](./metric-definition.md#describing-metrics-from-another-package)
+for the `MetricSource` contract.
 
 ## Read values and history
 

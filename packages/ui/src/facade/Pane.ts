@@ -4,6 +4,10 @@ import "../containers/floating/Floating.ts";
 import "../theme/components/ScopeHost.ts";
 import { FacadeContainer } from "./Container.ts";
 import { documentThemeMode } from "../theme/ambientTheme.ts";
+import type {
+  IconName,
+  IconTone
+} from "../icon/registry.ts";
 import type { PresenceSource } from "../peer/PresenceSource.ts";
 import {
   FacadeFolder,
@@ -15,6 +19,13 @@ const kDefaultLabelWidth = "16ch";
 
 export interface PaneOptions {
   title?: string;
+  /**
+   * Identity the pane persists and reorders under, and what a
+   * `jolly-pane-group` addresses it by. Required to join a group as a tab.
+   */
+  key?: string;
+  icon?: IconName;
+  tone?: IconTone;
   /**
    * Mounts into an existing element, such as a `jolly-dock`, instead of
    * floating. The container's own subtree must already sit under a theme
@@ -28,6 +39,14 @@ export interface PaneOptions {
    * @default true
    */
   grow?: boolean;
+  /**
+   * In `container` mode only: wraps the pane in a `jolly-floating` inside the
+   * container instead of appending it there. Pass a `jolly-dock-layout` as the
+   * container to have it adopt the pane, which is what lets the window be
+   * docked into one of its groups; the layout then owns the geometry.
+   * @default false
+   */
+  floating?: boolean;
   /**
    * Folds the pane to its header. See `jolly-pane`'s own `collapsible`.
    * @default false
@@ -68,6 +87,11 @@ export class Pane extends FacadeContainer {
     super();
     this.#pane = document.createElement("jolly-pane");
     this.#pane.heading = options.title ?? "";
+    this.#pane.key = options.key ?? "";
+    if (options.icon !== undefined) {
+      this.#pane.icon = options.icon;
+    }
+    this.#pane.tone = options.tone ?? "";
     this.#pane.collapsible = options.collapsible ?? false;
     this.#pane.locked = options.locked ?? false;
     this.#pane.storageKey = options.storageKey ?? "";
@@ -81,7 +105,7 @@ export class Pane extends FacadeContainer {
       )
       : this.#mountInto(
         options.container,
-        options.grow ?? true,
+        options,
         options.labelWidth
       );
     this.element.hidden = options.hidden ?? false;
@@ -115,16 +139,31 @@ export class Pane extends FacadeContainer {
 
   #mountInto(
     container: HTMLElement,
-    grow: boolean,
+    options: PaneOptions,
     labelWidth: string | undefined
   ): HTMLElement {
-    this.#pane.grow = grow;
     if (labelWidth !== undefined) {
       this.#pane.style.setProperty("--jolly-label-width", labelWidth);
     }
-    container.append(this.#pane);
+    if (options.floating !== true) {
+      this.#pane.grow = options.grow ?? true;
+      container.append(this.#pane);
 
-    return this.#pane;
+      return this.#pane;
+    }
+
+    const frame = document.createElement("jolly-floating");
+    frame.storageKey = options.storageKey ?? "";
+    if (options.floatWidth !== undefined) {
+      frame.width = options.floatWidth;
+    }
+    if (options.floatHeight !== undefined) {
+      frame.height = options.floatHeight;
+    }
+    frame.append(this.#pane);
+    container.append(frame);
+
+    return frame;
   }
 
   #mountFloating(

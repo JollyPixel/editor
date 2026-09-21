@@ -1,1 +1,4 @@
-export { PerformanceMonitor } from "./PerformanceMonitor.ts";
+export {
+  mountInspectorControls,
+  type InspectorControlsOptions
+} from "./inspectorControls.ts";

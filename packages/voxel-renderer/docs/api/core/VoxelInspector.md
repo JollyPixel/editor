@@ -31,6 +31,7 @@ class VoxelInspector {
   chunkBounds: boolean;
   readonly mesh: VoxelMeshInspector;
   readonly blocks: VoxelBlockInspector;
+  readonly metrics: readonly VoxelMetric[];
 
   constructor(
     context: VoxelInspectorContext,
@@ -56,6 +57,16 @@ interface VoxelInspectorContext {
 
 interface VoxelMeshInspector {
   readonly stats: VoxelMeshStats;
+}
+
+interface VoxelMetric {
+  id: string;
+  label: string;
+  unit?: "count" | "decimal" | "ms" | "percent";
+  better?: "higher" | "lower";
+  group?: string;
+  tile?: boolean;
+  sample(): number;
 }
 
 interface InspectedChunkBounds {
@@ -244,6 +255,38 @@ All counters start at `0`. `facesPerSolidVoxel` is `faces` divided by
 `reset()` clears the instance. `copyFrom()` replaces every field with another
 instance's counters, and `clone()` returns an independent copy.
 
+## Metrics
+
+`inspector.metrics` describes the same counters as metric definitions a
+performance recorder can sample, so a host displays them without restating a
+label, a unit or a derived ratio.
+
+```ts
+runtime.metrics.addSource(engine.inspector);
+```
+
+`VoxelMetric` is declared by this package and matched structurally, so nothing
+here depends on a UI library. It is compatible with `MetricDefinition` of
+`@jolly-pixel/ui/stats`, which `test/inspector/VoxelMetric.tst.ts` pins.
+
+| Metric | Unit | Value |
+|---|---|---|
+| `chunks` | count | `mesh.stats.chunks` |
+| `meshes` | count | `mesh.stats.meshes` |
+| `voxels` | count | `mesh.stats.voxels` |
+| `faces` | count | `mesh.stats.faces` |
+| `meshTriangles` | count | `mesh.stats.triangles` |
+| `culledFaces` | percent | culled share of every candidate face |
+| `mergedFaces` | percent | merged share of every emitted face |
+| `facesPerVoxel` | decimal | `mesh.stats.facesPerSolidVoxel` |
+| `buildTimeMs` | ms | `mesh.stats.buildTimeMs` |
+
+The two shares are the ratios described above, and are `0` before anything is
+built. Every metric samples the live statistics, so one registration keeps
+following rebuilds. They are filed under the `voxel` group and set
+`tile: false`, which keeps them in a full readout rather than in a HUD
+cycling one metric at a time.
+
 ## Block statistics
 
 `inspector.blocks` reads the voxels stored in `engine.world` and joins them
@@ -327,9 +370,9 @@ counters are also available directly; see
 ## Example
 
 `examples/noise-world.html` wires all three to its HUD: `G` cycles the
-wireframe modes, a `chunk bounds` checkbox toggles the outlines, and the panel
-shows faces, culling ratio, triangles, vertices and chunk meshes, refreshed
-four times per second.
+wireframe modes, a `chunk bounds` checkbox toggles the outlines, and the mesh
+counters reach the panel through `runtime.metrics.addSource()`, refreshed four
+times per second.
 
 ```bash
 pnpm --filter @jolly-pixel/voxel.renderer dev

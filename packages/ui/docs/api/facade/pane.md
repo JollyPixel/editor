@@ -7,8 +7,12 @@ new Pane(options?: PaneOptions)
 
 interface PaneOptions {
   title?: string;
+  key?: string;
+  icon?: IconName;
+  tone?: IconTone;
   container?: HTMLElement;
   grow?: boolean;
+  floating?: boolean;
   collapsible?: boolean;
   locked?: boolean;
   storageKey?: string;
@@ -22,8 +26,12 @@ interface PaneOptions {
 | Option | Default | Behavior |
 |---|---|---|
 | `title` | `""` | Sets the `jolly-pane` heading. |
+| `key` | `""` | Identity the pane persists and reorders under. A `jolly-pane-group` addresses its tabs by this, so a pane joining one needs it. |
+| `icon` | none | Glyph shown in the pane header and on its group tab. |
+| `tone` | `""` | Colours that glyph and the pane area. |
 | `container` | none | Appends the pane to this element. Without it, the pane floats under `document.body`. |
 | `grow` | `true` in container mode | Makes a mounted pane fill the container and scroll its content. Ignored for a floating pane. |
+| `floating` | `false` | Wraps the pane in a `jolly-floating` inside `container` rather than appending it there. |
 | `collapsible` | `false` | Enables folding the pane to its header. |
 | `locked` | `false` | Keeps the pane at its authored position inside a `jolly-dock-layout`. |
 | `storageKey` | derived | Namespace the pane and its floating window persist under. Derived from the page path and the title when unset, so renaming the pane drops what it remembered. |
@@ -67,6 +75,48 @@ const pane = new Pane({
   grow: false
 });
 ```
+
+## Floating inside a dock layout
+
+A pane floating under `document.body` is outside every `jolly-dock-layout`,
+so no layout knows it and it cannot be dropped into one of their groups. Pass
+the layout as the `container` with `floating`, and the pane floats as one the
+layout owns.
+
+```ts
+const pane = new Pane({
+  title: "Performance",
+  key: "performance",
+  container: document.querySelector("jolly-dock-layout"),
+  floating: true
+});
+```
+
+The layout adopts it on the next sync, stores its geometry in the layout
+snapshot, and the window drags into any dock or pane group like an authored
+pane. `key` is what the snapshot and the groups address it by.
+
+## Contributing to a pane the facade did not create
+
+`Pane` always creates a `jolly-pane`. To add builders inside one that already
+exists, such as a pane authored in HTML, wrap it with `FacadeHost`.
+
+```ts
+import { FacadeHost } from "@jolly-pixel/ui";
+
+const host = FacadeHost.query("jolly-pane[key=general]");
+const folder = host.addFolder({ title: "Performance" });
+```
+
+```ts
+new FacadeHost(element: HTMLElement)
+FacadeHost.query(selector: string, root?: ParentNode): FacadeHost
+```
+
+A host creates no element of its own, so several hosts can contribute to one
+pane. Its `dispose()` disposes what it added and leaves the element itself in
+place, unlike every other builder. `query()` throws when the selector matches
+no element.
 
 ## Methods
 

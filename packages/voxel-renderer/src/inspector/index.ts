@@ -5,6 +5,7 @@ export {
   type VoxelInspectorOptions,
   type VoxelInspectorMode,
   type VoxelMeshInspector,
-  type VoxelMeshStats
+  type VoxelMeshStats,
+  type VoxelMetric
 } from "./VoxelInspector.ts";
 export * from "./VoxelBlockInspector.ts";
