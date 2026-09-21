@@ -14,8 +14,10 @@ import {
 } from "#src/asset/document.ts";
 import { InvalidVoxelModelDocumentError } from "#src/asset/InvalidVoxelModelDocumentError.ts";
 import {
-  TRANSFORM,
-  groupAdded
+  blockAdded,
+  blockNode,
+  folderAdded,
+  folderNode
 } from "../helpers/commands.ts";
 
 // CONSTANTS
@@ -25,41 +27,31 @@ const kTexture = {
 };
 
 describe("VoxelModelState", () => {
-  test("applies model and folder commands into one snapshot", () => {
+  test("applies block and folder commands into one snapshot", () => {
     const state = new VoxelModelState();
 
-    state.applyCommand(groupAdded("a", "Head"));
-    state.applyCommand({ action: "group-renamed", uuid: "a", name: "Skull" });
-    state.applyCommand({ action: "folder-added", uuid: "f", name: "Parts", parentId: null });
-    state.applyCommand({ action: "block-placed", blockUuid: "a", folderId: "f" });
+    state.applyCommand(folderAdded("f"));
+    state.applyCommand(blockAdded("a", "f"));
+    state.applyCommand({ action: "node-renamed", id: "a", name: "Skull" });
 
     assert.deepEqual(state.snapshot(), {
       nodes: [
-        {
-          uuid: "a",
-          name: "Skull",
-          parentUuid: null,
-          ...TRANSFORM
-        }
-      ],
-      folders: [{ uuid: "f", name: "Parts", parentId: null }],
-      placements: [{ blockUuid: "a", folderId: "f" }]
+        folderNode("f"),
+        { ...blockNode("a", "f"), name: "Skull" }
+      ]
     });
   });
 
-  test("accepts additions and placements, and edits of known ids only", () => {
+  test("accepts what its tree accepts", () => {
     const state = new VoxelModelState();
 
-    assert.equal(state.accepts(groupAdded("a")), true);
-    assert.equal(state.accepts({ action: "group-removed", uuid: "a" }), false);
-    assert.equal(state.accepts({ action: "folder-renamed", uuid: "f", name: "x" }), false);
-    assert.equal(state.accepts({ action: "block-unplaced", blockUuid: "a" }), true);
+    assert.equal(state.accepts(blockAdded("a")), true);
+    assert.equal(state.accepts(blockAdded("a", "missing")), false);
+    assert.equal(state.accepts({ action: "node-removed", id: "a" }), false);
 
-    state.applyCommand(groupAdded("a"));
-    state.applyCommand({ action: "folder-added", uuid: "f", name: "F", parentId: null });
+    state.applyCommand(blockAdded("a"));
 
-    assert.equal(state.accepts({ action: "group-removed", uuid: "a" }), true);
-    assert.equal(state.accepts({ action: "folder-renamed", uuid: "f", name: "x" }), true);
+    assert.equal(state.accepts({ action: "node-removed", id: "a" }), true);
   });
 
   test("its texture is its only dependency", () => {
@@ -77,7 +69,7 @@ describe("VoxelModelState", () => {
   test("round-trips through the document codec", () => {
     const state = new VoxelModelState();
     state.load(createVoxelModelDocument({ texture: kTexture }));
-    state.applyCommand(groupAdded("a"));
+    state.applyCommand(blockAdded("a"));
 
     const reloaded = new VoxelModelState();
     reloaded.load(decodeVoxelModelDocument(encodeVoxelModelDocument(state.toJSON())));
@@ -99,19 +91,17 @@ describe("decodeVoxelModelDocument", () => {
       InvalidVoxelModelDocumentError
     );
     assert.throws(
-      () => decodeVoxelModelDocument(encode({ version: 2, nodes: [], folders: [], placements: [] })),
+      () => decodeVoxelModelDocument(encode({ version: 1, nodes: [] })),
       InvalidVoxelModelDocumentError
     );
     assert.throws(
-      () => decodeVoxelModelDocument(encode({ version: 1, nodes: [], folders: [] })),
+      () => decodeVoxelModelDocument(encode({ version: 2 })),
       InvalidVoxelModelDocumentError
     );
     assert.throws(
       () => decodeVoxelModelDocument(encode({
-        version: 1,
+        version: 2,
         nodes: [],
-        folders: [],
-        placements: [],
         texture: "tex"
       })),
       InvalidVoxelModelDocumentError

@@ -7,6 +7,7 @@ import { PeerRoster } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { ModelDocument } from "../model/index.ts";
+import type { ModelBlocks } from "../scene/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import { BlockSelectionPresence } from "./BlockSelectionPresence.ts";
 import { ModelSyncClient } from "./ModelSyncClient.ts";
@@ -19,6 +20,7 @@ export interface ModelCollaborationOptions {
   room: VoxelModelRoom;
   identity: PeerIdentity;
   document: ModelDocument;
+  blocks: ModelBlocks;
   presence: PresenceStore;
   world: Systems.World;
   camera: THREE.PerspectiveCamera;
@@ -37,7 +39,12 @@ export class ModelCollaboration {
   constructor(
     options: ModelCollaborationOptions
   ) {
-    const { room, document, presence } = options;
+    const {
+      room,
+      document,
+      blocks,
+      presence
+    } = options;
 
     this.sync = new ModelSyncClient({ room, document });
     this.#roster = new PeerRoster({
@@ -49,11 +56,11 @@ export class ModelCollaboration {
     });
     this.#selections = new BlockSelectionPresence({
       room,
-      blocks: document.blocks,
+      blocks,
       presence
     });
     this.#highlight = new PeerSelectionHighlight({
-      blocks: document.blocks,
+      blocks,
       presence
     });
     this.frustums = options.world
@@ -64,7 +71,7 @@ export class ModelCollaboration {
       });
     this.live = new TransformLiveSync({
       room,
-      blocks: document.blocks
+      blocks
     });
     this.lock = new TransformLock({ room });
   }

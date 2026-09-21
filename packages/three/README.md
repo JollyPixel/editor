@@ -38,6 +38,10 @@ scene.add(grid); // self-updating: no manual .update() call needed
 - [MeshHighlight](docs/mesh-highlight/index.md): Draws local and peer selection, with outline and postprocess rendering techniques.
 - [TransformControls](docs/TransformControls.md): Customizable translate, rotate and scale gizmo for one `THREE.Object3D`, with a configurable orientation and pivot.
 
+### Utilities
+
+- `createCanvas2D(width, height)`: Returns a sized `{ canvas, context }` pair for canvas-backed textures, and throws when no 2D context is available.
+
 ### Network
 
 Optional integrations are exported from `@jolly-pixel/three/network`.

@@ -21,15 +21,16 @@ describe("createVoxelModelDocument", () => {
     assert.strictEqual(document.nodes.length, 1);
     assert.partialDeepStrictEqual(document.nodes[0], {
       name: "Block",
-      parentUuid: null,
-      position: { x: 0, y: 0, z: 0 },
-      pivotOffset: { x: 0, y: 0, z: 0 },
-      size: { x: 1, y: 1, z: 1 },
-      scale: { x: 1, y: 1, z: 1 },
-      rotation: { x: 0, y: 0, z: 0 }
+      kind: "block",
+      parentId: null,
+      transform: {
+        position: { x: 0, y: 0, z: 0 },
+        pivotOffset: { x: 0, y: 0, z: 0 },
+        size: { x: 1, y: 1, z: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
     });
-    assert.deepEqual(document.folders, []);
-    assert.deepEqual(document.placements, []);
   });
 
   test("gives each block its own identity", () => {
@@ -41,7 +42,7 @@ describe("createVoxelModelDocument", () => {
       [first.name, second.name],
       ["Head", "Torso"]
     );
-    assert.notStrictEqual(first.uuid, second.uuid);
+    assert.notStrictEqual(first.id, second.id);
   });
 
   test("creates an empty model when no block is asked for", () => {

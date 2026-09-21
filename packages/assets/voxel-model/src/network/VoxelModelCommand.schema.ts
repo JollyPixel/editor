@@ -3,12 +3,17 @@ import {
   COMMAND_HEADER_REQUIRED,
   commandHeaderProperties,
   defineMessageProtocol,
+  defineSchema,
   type JSONSchema,
   type MessageProtocol
 } from "@jolly-pixel/network";
 
 // CONSTANTS
-const kVector3Schema: JSONSchema = {
+const kNullableIdSchema = defineSchema({
+  type: ["string", "null"]
+});
+
+export const vector3Schema = defineSchema({
   type: "object",
   properties: {
     x: { type: "number" },
@@ -16,31 +21,9 @@ const kVector3Schema: JSONSchema = {
     z: { type: "number" }
   },
   required: ["x", "y", "z"]
-};
+});
 
-const kTransformSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    position: kVector3Schema,
-    pivotOffset: kVector3Schema,
-    size: kVector3Schema,
-    scale: kVector3Schema,
-    rotation: kVector3Schema
-  },
-  required: [
-    "position",
-    "pivotOffset",
-    "size",
-    "scale",
-    "rotation"
-  ]
-};
-
-const kNullableIdSchema: JSONSchema = {
-  type: ["string", "null"]
-};
-
-const kMirrorAxesSchema: JSONSchema = {
+export const mirrorAxesSchema = defineSchema({
   type: "object",
   properties: {
     x: { type: "boolean" },
@@ -48,136 +31,153 @@ const kMirrorAxesSchema: JSONSchema = {
     z: { type: "boolean" }
   },
   required: ["x", "y", "z"]
-};
+});
 
-export const modelNodeSchema: JSONSchema = {
+export const blockTransformSchema = defineSchema({
   type: "object",
   properties: {
-    uuid: { type: "string" },
-    name: { type: "string" },
-    parentUuid: kNullableIdSchema,
-    position: kVector3Schema,
-    pivotOffset: kVector3Schema,
-    size: kVector3Schema,
-    scale: kVector3Schema,
-    rotation: kVector3Schema,
-    flipAxes: kMirrorAxesSchema
+    position: vector3Schema,
+    pivotOffset: vector3Schema,
+    size: vector3Schema,
+    scale: vector3Schema,
+    rotation: vector3Schema
   },
   required: [
-    "uuid",
-    "name",
-    "parentUuid",
     "position",
     "pivotOffset",
     "size",
     "scale",
     "rotation"
   ]
-};
+});
 
-export const folderNodeSchema: JSONSchema = {
+export const folderNodeSchema = defineSchema({
   type: "object",
   properties: {
-    uuid: { type: "string" },
+    kind: { const: "folder" },
+    id: { type: "string" },
+    parentId: kNullableIdSchema,
+    name: { type: "string" }
+  },
+  required: ["kind", "id", "parentId", "name"]
+});
+
+export const blockNodeSchema = defineSchema({
+  type: "object",
+  properties: {
+    kind: { const: "block" },
+    id: { type: "string" },
+    parentId: kNullableIdSchema,
     name: { type: "string" },
-    parentId: kNullableIdSchema
+    transform: blockTransformSchema,
+    flipAxes: mirrorAxesSchema
   },
-  required: ["uuid", "name", "parentId"]
-};
+  required: ["kind", "id", "parentId", "name", "transform"]
+});
 
-export const folderPlacementSchema: JSONSchema = {
+export const modelNodeSchema = defineSchema({
+  oneOf: [folderNodeSchema, blockNodeSchema]
+});
+
+export const nodeTransformSchema = defineSchema({
   type: "object",
   properties: {
-    blockUuid: { type: "string" },
-    folderId: { type: "string" }
+    id: { type: "string" },
+    transform: blockTransformSchema
   },
-  required: ["blockUuid", "folderId"]
-};
+  required: ["id", "transform"]
+});
 
-export const voxelModelSnapshotSchema: JSONSchema = {
+export const voxelModelSnapshotSchema = defineSchema({
   type: "object",
   properties: {
-    nodes: { type: "array", items: modelNodeSchema },
-    folders: { type: "array", items: folderNodeSchema },
-    placements: { type: "array", items: folderPlacementSchema }
+    nodes: { type: "array", items: modelNodeSchema }
   },
-  required: ["nodes", "folders", "placements"]
-};
+  required: ["nodes"]
+});
+
+export const voxelModelCommandSchema = defineSchema({
+  oneOf: [
+    commandVariant("node-added", {
+      node: modelNodeSchema
+    }),
+    commandVariant("node-removed", {
+      id: { type: "string" }
+    }),
+    commandVariant("node-renamed", {
+      id: { type: "string" },
+      name: { type: "string" }
+    }),
+    commandVariant("node-moved", {
+      id: { type: "string" },
+      parentId: kNullableIdSchema,
+      transforms: { type: "array", items: nodeTransformSchema }
+    }),
+    commandVariant("node-transformed", {
+      id: { type: "string" },
+      transform: blockTransformSchema
+    }, {
+      flipAxes: mirrorAxesSchema
+    })
+  ]
+});
 
 export const voxelModelCommandProtocol: MessageProtocol = defineMessageProtocol({
   schema: {
-    oneOf: [
-      commandVariant("group-added", {
-        uuid: { type: "string" },
-        name: { type: "string" },
-        transform: kTransformSchema
-      }),
-      commandVariant("group-removed", {
-        uuid: { type: "string" }
-      }),
-      commandVariant("group-renamed", {
-        uuid: { type: "string" },
-        name: { type: "string" }
-      }),
-      commandVariant("group-reparented", {
-        uuid: { type: "string" },
-        parentUuid: kNullableIdSchema,
-        transform: kTransformSchema
-      }),
-      commandVariant("group-reparented-local", {
-        uuid: { type: "string" },
-        parentUuid: kNullableIdSchema
-      }),
-      commandVariant("group-transformed", {
-        uuid: { type: "string" },
-        transform: kTransformSchema
-      }, {
-        flipAxes: kMirrorAxesSchema
-      }),
-      commandVariant("folder-added", {
-        uuid: { type: "string" },
-        name: { type: "string" },
-        parentId: kNullableIdSchema
-      }),
-      commandVariant("folder-removed", {
-        uuid: { type: "string" }
-      }),
-      commandVariant("folder-renamed", {
-        uuid: { type: "string" },
-        name: { type: "string" }
-      }),
-      commandVariant("folder-reparented", {
-        uuid: { type: "string" },
-        parentId: kNullableIdSchema
-      }),
-      commandVariant("block-placed", {
-        blockUuid: { type: "string" },
-        folderId: { type: "string" }
-      }),
-      commandVariant("block-unplaced", {
-        blockUuid: { type: "string" }
-      })
-    ]
+    oneOf: voxelModelCommandSchema.oneOf.map(networkVariant)
   }
 });
 
-function commandVariant(
-  action: string,
-  properties: Record<string, JSONSchema>,
-  optionalProperties: Record<string, JSONSchema> = {}
-): JSONSchema {
+/**
+ * Shape of one command as it travels without its network header, so `Infer`
+ * yields the bare command union the editor works with.
+ */
+type CommandVariant<
+  TAction extends string,
+  TRequired extends Record<string, JSONSchema>,
+  TOptional extends Record<string, JSONSchema>
+> = {
+  [keyword: string]: unknown;
+  type: "object";
+  properties: { action: { const: TAction; }; } & TRequired & TOptional;
+  required: ("action" | Extract<keyof TRequired, string>)[];
+};
+
+function commandVariant<
+  const TAction extends string,
+  const TRequired extends Record<string, JSONSchema>,
+  const TOptional extends Record<string, JSONSchema> = Record<never, never>
+>(
+  action: TAction,
+  properties: TRequired,
+  optionalProperties: TOptional = {} as TOptional
+): CommandVariant<TAction, TRequired, TOptional> {
   return {
     type: "object",
     properties: {
-      ...commandHeaderProperties,
       action: { const: action },
       ...properties,
       ...optionalProperties
     },
     required: [
-      ...COMMAND_HEADER_REQUIRED,
       "action",
-      ...Object.keys(properties)
+      ...Object.keys(properties) as Extract<keyof TRequired, string>[]
+    ]
+  };
+}
+
+function networkVariant(
+  variant: JSONSchema
+): JSONSchema {
+  return {
+    ...variant,
+    properties: {
+      ...commandHeaderProperties,
+      ...variant.properties
+    },
+    required: [
+      ...COMMAND_HEADER_REQUIRED,
+      ...variant.required ?? []
     ]
   };
 }

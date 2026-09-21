@@ -7,11 +7,12 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type {
-  ModelBlock,
   ModelChange,
   ModelDocument
 } from "../../model/index.ts";
 import type {
+  ModelBlock,
+  ModelBlocks,
   GizmoConfig,
   GizmoSpace,
   TransformGizmo
@@ -36,6 +37,7 @@ export type TransformMode =
 
 export interface TransformWorkspace {
   document: ModelDocument;
+  blocks: ModelBlocks;
   gizmo: TransformGizmo;
   lock: TransformLock;
 }
@@ -68,12 +70,9 @@ export class TransformPanelController implements ReactiveController {
   #onChange = (
     change: ModelChange
   ): void => {
-    const { command } = change;
-    if (
-      command.action === "group-transformed" &&
-      command.uuid === this.#selected?.uuid
-    ) {
-      this.#refresh(this.#selected);
+    const selected = this.#selected;
+    if (selected !== null && rewritesTransformOf(change, selected.uuid)) {
+      this.#refresh(selected);
     }
   };
 
@@ -147,7 +146,7 @@ export class TransformPanelController implements ReactiveController {
     this.#unsubscribe();
     this.#workspace = workspace;
     this.#subscribe();
-    this.#onSelect(workspace.document.blocks.selected);
+    this.#onSelect(workspace.blocks.selected);
     this.#syncGizmo();
   }
 
@@ -168,12 +167,17 @@ export class TransformPanelController implements ReactiveController {
       return;
     }
 
-    const { document, gizmo, lock } = workspace;
-    document.blocks.on("select", this.#onSelect);
+    const {
+      document,
+      blocks,
+      gizmo,
+      lock
+    } = workspace;
+    blocks.on("select", this.#onSelect);
     document.on("change", this.#onChange);
     gizmo.on("change", this.#refresh);
     this.#subscriptions = [
-      () => document.blocks.off("select", this.#onSelect),
+      () => blocks.off("select", this.#onSelect),
       () => document.off("change", this.#onChange),
       () => gizmo.off("change", this.#refresh),
       lock.subscribe("change", this.#onLockChange)
@@ -265,7 +269,22 @@ export class TransformPanelController implements ReactiveController {
         break;
     }
 
-    workspace.document.blocks.commitTransform(block.uuid);
+    workspace.blocks.commitTransform(block.uuid);
+  }
+}
+
+function rewritesTransformOf(
+  change: ModelChange,
+  uuid: string
+): boolean {
+  const { command } = change;
+  switch (command.action) {
+    case "node-transformed":
+      return command.id === uuid;
+    case "node-moved":
+      return command.transforms.some(({ id }) => id === uuid);
+    default:
+      return false;
   }
 }
 

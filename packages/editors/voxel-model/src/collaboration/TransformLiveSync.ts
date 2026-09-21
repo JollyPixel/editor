@@ -3,14 +3,12 @@ import {
   PresenceChannel,
   type PresenceChange
 } from "@jolly-pixel/network/client";
-import type { GroupTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import {
-  parseGroupTransformJSON,
-  type ModelBlocks
-} from "../model/index.ts";
+import { parseBlockTransformJSON } from "../model/index.ts";
+import type { ModelBlocks } from "../scene/index.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
 import type { VoxelModelRoom } from "./types.ts";
 
@@ -21,7 +19,7 @@ const kEmphasisOwnerPrefix = "transform-live:";
 
 export interface TransformLivePayload {
   uuid: string;
-  transform: GroupTransformJSON;
+  transform: BlockTransformJSON;
 }
 
 export interface TransformLiveSyncOptions {
@@ -31,7 +29,7 @@ export interface TransformLiveSyncOptions {
 
 interface LiveStream {
   uuid: string;
-  baseline: GroupTransformJSON;
+  baseline: BlockTransformJSON;
   timer?: ReturnType<typeof setTimeout>;
 }
 
@@ -69,7 +67,7 @@ export class TransformLiveSync {
 
   publish(
     uuid: string,
-    transform: GroupTransformJSON
+    transform: BlockTransformJSON
   ): void {
     const now = Date.now();
     if (now - this.#lastSentAt < kThrottleMs) {
@@ -152,7 +150,7 @@ function decodeLivePayload(
   }
 
   const uuid: unknown = Reflect.get(value, "uuid");
-  const transform = parseGroupTransformJSON(
+  const transform = parseBlockTransformJSON(
     Reflect.get(value, "transform")
   );
   if (typeof uuid !== "string" || transform === undefined) {

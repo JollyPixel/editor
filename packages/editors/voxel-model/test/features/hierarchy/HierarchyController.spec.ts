@@ -3,12 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
 import type { ReactiveControllerHost } from "lit";
 
 // Import Internal Dependencies
 import {
-  ModelDocument,
   ModelHierarchy,
   type HierarchyNode
 } from "#src/model/index.ts";
@@ -29,6 +27,10 @@ import type {
   HierarchyDeleteContext,
   HierarchyDeleteResult
 } from "#src/features/hierarchy/dialogs/HierarchyDeleteDialog.ts";
+import {
+  createModelFixture,
+  type ModelFixture
+} from "../../fixtures/model.ts";
 
 // CONSTANTS
 const kNoMirror = {
@@ -49,9 +51,8 @@ interface DialogCalls {
   delete: HierarchyDeleteContext[];
 }
 
-interface Harness {
+interface Harness extends ModelFixture {
   controller: HierarchyController;
-  document: ModelDocument;
   hierarchy: ModelHierarchy;
   calls: DialogCalls;
 }
@@ -59,13 +60,15 @@ interface Harness {
 function createHarness(
   answers: DialogAnswers = {}
 ): Harness {
-  const document = new ModelDocument(new THREE.Scene());
+  const fixture = createModelFixture();
+  const { document, blocks } = fixture;
   const hierarchy = new ModelHierarchy({
     document,
     regions: {
       create: () => undefined,
       copy: () => undefined
-    }
+    },
+    poses: blocks
   });
   const calls: DialogCalls = {
     name: [],
@@ -98,13 +101,14 @@ function createHarness(
   const controller = new HierarchyController(host, dialogs);
   controller.attach({
     document,
+    blocks,
     hierarchy,
     presence: new PresenceStore()
   });
 
   return {
+    ...fixture,
     controller,
-    document,
     hierarchy,
     calls
   };
@@ -122,8 +126,8 @@ function selectBlock(
   harness: Harness,
   name: string
 ): string {
-  const block = harness.document.blocks.add({ name });
-  harness.document.blocks.select(block);
+  const block = harness.addBlock({ name });
+  harness.blocks.select(block);
 
   return block.uuid;
 }
@@ -246,8 +250,10 @@ describe("HierarchyController.duplicateSelected", () => {
       }
     });
     const bodyUuid = selectBlock(harness, "Body");
-    const arm = harness.document.blocks.add({ name: "Arm" });
-    harness.document.blocks.reparentLocal(arm.uuid, bodyUuid);
+    harness.addBlock({
+      name: "Arm",
+      parentId: bodyUuid
+    });
 
     await harness.controller.duplicateSelected();
 
@@ -255,7 +261,7 @@ describe("HierarchyController.duplicateSelected", () => {
     assert.equal(harness.hierarchy.nodes().length, 2);
     const [copyId] = harness.controller.selected;
     assert.notEqual(copyId, bodyUuid);
-    assert.equal(harness.document.blocks.selected?.uuid, copyId);
+    assert.equal(harness.blocks.selected?.uuid, copyId);
     assert.ok(harness.controller.expanded.includes(copyId));
   });
 
@@ -273,8 +279,10 @@ describe("HierarchyController.deleteSelected", () => {
   test("names the dialog after the selected kind", async() => {
     const harness = createHarness();
     const bodyUuid = selectBlock(harness, "Body");
-    const arm = harness.document.blocks.add({ name: "Arm" });
-    harness.document.blocks.reparentLocal(arm.uuid, bodyUuid);
+    harness.addBlock({
+      name: "Arm",
+      parentId: bodyUuid
+    });
 
     await harness.controller.deleteSelected();
 
@@ -294,13 +302,15 @@ describe("HierarchyController.deleteSelected", () => {
       delete: { deleteChildren: false }
     });
     const bodyUuid = selectBlock(harness, "Body");
-    const arm = harness.document.blocks.add({ name: "Arm" });
-    harness.document.blocks.reparentLocal(arm.uuid, bodyUuid);
+    harness.addBlock({
+      name: "Arm",
+      parentId: bodyUuid
+    });
 
     await harness.controller.deleteSelected();
 
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Arm"]);
-    assert.equal(harness.document.blocks.selected, null);
+    assert.equal(harness.blocks.selected, null);
   });
 
   test("removes the subtree when the children go too", async() => {
@@ -308,8 +318,10 @@ describe("HierarchyController.deleteSelected", () => {
       delete: { deleteChildren: true }
     });
     const bodyUuid = selectBlock(harness, "Body");
-    const arm = harness.document.blocks.add({ name: "Arm" });
-    harness.document.blocks.reparentLocal(arm.uuid, bodyUuid);
+    harness.addBlock({
+      name: "Arm",
+      parentId: bodyUuid
+    });
 
     await harness.controller.deleteSelected();
 

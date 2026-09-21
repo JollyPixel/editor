@@ -3,37 +3,33 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
 import {
   DEFAULT_UV_SLOTS,
   PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  createBlockTransform,
+  type VoxelModelSnapshot
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import { BlockTextures } from "#src/scene/BlockTextures.ts";
-import {
-  ModelDocument,
-  type ModelBlock
-} from "#src/model/index.ts";
+import { BlockTextures } from "#src/scene/textures/BlockTextures.ts";
+import type { ModelBlock } from "#src/scene/blocks/index.ts";
+import { createModelFixture } from "../../fixtures/model.ts";
 
 // CONSTANTS
 const kTextureSize = { x: 256, y: 256 };
 const kTorsoRegionId = "block-torso";
-const kTorsoSnapshot = {
+const kTorsoSnapshot: VoxelModelSnapshot = {
   nodes: [
     {
-      uuid: "torso",
+      kind: "block",
+      id: "torso",
+      parentId: null,
       name: "Torso",
-      parentUuid: null,
-      position: { x: 0, y: 0, z: 0 },
-      pivotOffset: { x: 0, y: 0, z: 0 },
-      size: { x: 1, y: 1, z: 1 },
-      scale: { x: 1, y: 1, z: 1 },
-      rotation: { x: 0, y: 0, z: 0 }
+      transform: createBlockTransform()
     }
-  ],
-  folders: [],
-  placements: []
+  ]
 };
 
 function createPixels(): PixelDocument {
@@ -46,18 +42,20 @@ function createHarness(
   pixelsReady: Promise<void> = Promise.resolve()
 ) {
   const pixels = createPixels();
-  const document = new ModelDocument(new THREE.Scene());
+  const { document, blocks, addBlock } = createModelFixture();
   const textures = new BlockTextures({
     pixels,
     pixelsReady,
-    document
+    document,
+    blocks
   });
 
   return {
     pixels,
     uv: pixels.uv,
     document,
-    blocks: document.blocks,
+    blocks,
+    addBlock,
     textures
   };
 }
@@ -80,14 +78,15 @@ function regionIdOf(
 describe("BlockTextures texture", () => {
   test("shares one texture across existing and future blocks", () => {
     const pixels = createPixels();
-    const document = new ModelDocument(new THREE.Scene());
-    const before = document.blocks.add();
+    const { document, blocks, addBlock } = createModelFixture();
+    const before = addBlock();
     new BlockTextures({
       pixels,
       pixelsReady: Promise.resolve(),
-      document
+      document,
+      blocks
     });
-    const after = document.blocks.add();
+    const after = addBlock();
 
     assert.ok(before.texture);
     assert.equal(after.texture, before.texture);
@@ -96,8 +95,8 @@ describe("BlockTextures texture", () => {
 
 describe("BlockTextures region binding", () => {
   test("maps a region created after its block onto the mesh", () => {
-    const { blocks, uv } = createHarness();
-    const block = blocks.add({ name: "Block" });
+    const { addBlock, uv } = createHarness();
+    const block = addBlock({ name: "Block" });
 
     uv.create({ id: regionIdOf(block), width: 16, height: 16 });
     uv.move(regionIdOf(block), { x: 0, y: 0, width: 16, height: 16 });
@@ -106,35 +105,33 @@ describe("BlockTextures region binding", () => {
   });
 
   test("maps an existing region onto a block added later", () => {
-    const { document, uv } = createHarness();
+    const { document, blocks, uv } = createHarness();
     uv.create({ id: "block-late", width: 16, height: 16 });
     uv.move("block-late", { x: 32, y: 0, width: 16, height: 16 });
 
     document.apply({
-      action: "group-added",
-      uuid: "late",
-      name: "Late",
-      transform: {
-        position: { x: 0, y: 0, z: 0 },
-        pivotOffset: { x: 0, y: 0, z: 0 },
-        size: { x: 1, y: 1, z: 1 },
-        scale: { x: 1, y: 1, z: 1 },
-        rotation: { x: 0, y: 0, z: 0 }
+      action: "node-added",
+      node: {
+        kind: "block",
+        id: "late",
+        parentId: null,
+        name: "Late",
+        transform: createBlockTransform()
       }
     });
 
-    const block = document.blocks.get("late");
+    const block = blocks.get("late");
     assert.ok(block);
     assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
   });
 
   test("honors flipAxes already recorded on first mapping", () => {
-    const { document, blocks, uv } = createHarness();
-    const block = blocks.add({ name: "Block" });
+    const { document, addBlock, uv } = createHarness();
+    const block = addBlock({ name: "Block" });
     const regionId = regionIdOf(block);
     document.apply({
-      action: "group-transformed",
-      uuid: block.uuid,
+      action: "node-transformed",
+      id: block.uuid,
       transform: block.transform,
       flipAxes: { x: true, y: false, z: false }
     });
@@ -157,7 +154,7 @@ describe("BlockTextures region binding", () => {
 describe("BlockTextures live region updates", () => {
   function bound() {
     const harness = createHarness();
-    const block = harness.blocks.add({ name: "Block" });
+    const block = harness.addBlock({ name: "Block" });
     const regionId = regionIdOf(block);
     harness.uv.create({ id: regionId, width: 16, height: 16 });
     harness.uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 });
@@ -217,8 +214,8 @@ describe("BlockTextures live region updates", () => {
   });
 
   test("swaps the axis-perpendicular faces and mirrors U on the rest, for an X mirror", () => {
-    const { blocks, uv } = createHarness();
-    const block = blocks.add({ name: "Block" });
+    const { document, addBlock, uv } = createHarness();
+    const block = addBlock({ name: "Block" });
     const regionId = regionIdOf(block);
     uv.create({
       id: regionId,
@@ -231,7 +228,7 @@ describe("BlockTextures live region updates", () => {
     uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
     uv.move(regionId, { x: 0, y: 100, width: 16, height: 16 }, "front");
 
-    blocks.mirror([block.uuid], { x: true, y: false, z: false });
+    document.transform(block.uuid, block.transform, { x: true, y: false, z: false });
 
     assert.equal(uvOf(block, 0)[0], 100 / kTextureSize.x);
     assert.equal(uvOf(block, 1)[0], 116 / kTextureSize.x);
@@ -242,8 +239,8 @@ describe("BlockTextures live region updates", () => {
 
 describe("BlockTextures regions port", () => {
   test("create adds an unfolded region named after the block", () => {
-    const { blocks, uv, textures } = createHarness();
-    const block = blocks.add();
+    const { addBlock, uv, textures } = createHarness();
+    const block = addBlock();
 
     textures.create(block.uuid, "Head");
 
@@ -252,9 +249,9 @@ describe("BlockTextures regions port", () => {
   });
 
   test("copy clones the source region onto the duplicate", () => {
-    const { blocks, uv, textures } = createHarness();
-    const source = blocks.add({ name: "Block" });
-    const duplicate = blocks.add({ name: "Block Copy" });
+    const { addBlock, uv, textures } = createHarness();
+    const source = addBlock({ name: "Block" });
+    const duplicate = addBlock({ name: "Block Copy" });
     uv.create({ id: regionIdOf(source), width: 16, height: 16 });
     uv.move(regionIdOf(source), { x: 64, y: 32, width: 16, height: 16 });
 
@@ -265,9 +262,9 @@ describe("BlockTextures regions port", () => {
   });
 
   test("copy falls back to a default region when the source has none", () => {
-    const { blocks, uv, textures } = createHarness();
-    const source = blocks.add();
-    const duplicate = blocks.add();
+    const { addBlock, uv, textures } = createHarness();
+    const source = addBlock();
+    const duplicate = addBlock();
 
     textures.copy(source.uuid, duplicate.uuid, "Copy");
 
@@ -275,11 +272,11 @@ describe("BlockTextures regions port", () => {
   });
 
   test("deletes a block's region when the block is removed", () => {
-    const { blocks, uv, textures } = createHarness();
-    const block = blocks.add();
+    const { document, addBlock, uv, textures } = createHarness();
+    const block = addBlock();
     textures.create(block.uuid, "Block");
 
-    blocks.remove(block.uuid);
+    document.remove(block.uuid);
 
     assert.equal(uv.get(regionIdOf(block)), undefined);
   });
@@ -297,7 +294,7 @@ describe("BlockTextures missing regions", () => {
 
   test("creates and binds a region for a snapshot block that has none", async() => {
     const ready = Promise.withResolvers<void>();
-    const { document, uv } = createHarness(ready.promise);
+    const { document, blocks, uv } = createHarness(ready.promise);
     document.load(kTorsoSnapshot);
 
     ready.resolve();
@@ -305,7 +302,7 @@ describe("BlockTextures missing regions", () => {
 
     assert.equal(uv.get(kTorsoRegionId)?.name, "Torso");
 
-    const block = document.blocks.get("torso");
+    const block = blocks.get("torso");
     assert.ok(block);
     uv.move(kTorsoRegionId, { x: 0, y: 0, width: 48, height: 32 });
     const [u, v] = uvOf(block, 1);
@@ -333,14 +330,14 @@ describe("BlockTextures missing regions", () => {
 
 describe("BlockTextures rename", () => {
   test("a local block rename renames its region", () => {
-    const { blocks, uv, textures } = createHarness();
-    const block = blocks.add({ name: "Torso" });
+    const { document, addBlock, uv, textures } = createHarness();
+    const block = addBlock({ name: "Torso" });
     textures.create(block.uuid, block.name);
     uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
     const before = uv.get(regionIdOf(block))?.toJSON();
     assert.ok(before);
 
-    blocks.rename(block.uuid, "Chest");
+    document.rename(block.uuid, "Chest");
 
     assert.deepEqual(
       uv.get(regionIdOf(block))?.toJSON(),
@@ -349,10 +346,10 @@ describe("BlockTextures rename", () => {
   });
 
   test("keeps the renamed region mapped onto the mesh", () => {
-    const { blocks, uv, textures } = createHarness();
-    const block = blocks.add({ name: "Torso" });
+    const { document, addBlock, uv, textures } = createHarness();
+    const block = addBlock({ name: "Torso" });
     textures.create(block.uuid, block.name);
-    blocks.rename(block.uuid, "Chest");
+    document.rename(block.uuid, "Chest");
 
     uv.setState(regionIdOf(block), "stacked");
     uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
@@ -361,13 +358,13 @@ describe("BlockTextures rename", () => {
   });
 
   test("leaves a remote rename to the pixel document sync", () => {
-    const { document, blocks, uv, textures } = createHarness();
-    const block = blocks.add({ name: "Torso" });
+    const { document, addBlock, uv, textures } = createHarness();
+    const block = addBlock({ name: "Torso" });
     textures.create(block.uuid, block.name);
 
     document.apply({
-      action: "group-renamed",
-      uuid: block.uuid,
+      action: "node-renamed",
+      id: block.uuid,
       name: "Chest"
     });
 
@@ -378,9 +375,9 @@ describe("BlockTextures rename", () => {
 
 describe("BlockTextures selection", () => {
   test("selecting a block selects its region, and the reverse", () => {
-    const { blocks, uv, textures } = createHarness();
-    const first = blocks.add();
-    const second = blocks.add();
+    const { blocks, addBlock, uv, textures } = createHarness();
+    const first = addBlock();
+    const second = addBlock();
     textures.create(first.uuid, "First");
     textures.create(second.uuid, "Second");
 

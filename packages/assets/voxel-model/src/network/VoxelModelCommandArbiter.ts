@@ -25,28 +25,27 @@ export class VoxelModelCommandArbiter {
   admit<TCommand extends VoxelModelNetworkCommand>(
     command: TCommand
   ): network.Admission<TCommand> | null {
-    const key = VoxelModelCommandArbiter.key(command);
-
-    return this.#tracker.admit(command, key === null ? [] : [key]);
+    return this.#tracker.admit(
+      command,
+      VoxelModelCommandArbiter.keys(command)
+    );
   }
 
-  static key(
+  static keys(
     command: VoxelModelCommand | VoxelModelNetworkCommand
-  ): string | null {
+  ): string[] {
     switch (command.action) {
-      case "group-renamed":
-      case "group-reparented":
-      case "group-reparented-local":
-      case "group-transformed":
-        return `group:${command.uuid}`;
-      case "folder-renamed":
-      case "folder-reparented":
-        return `folder:${command.uuid}`;
-      case "block-placed":
-      case "block-unplaced":
-        return `placement:${command.blockUuid}`;
+      case "node-renamed":
+        return [`name:${command.id}`];
+      case "node-moved":
+        return [
+          `parent:${command.id}`,
+          ...command.transforms.map(({ id }) => `transform:${id}`)
+        ];
+      case "node-transformed":
+        return [`transform:${command.id}`];
       default:
-        return null;
+        return [];
     }
   }
 }

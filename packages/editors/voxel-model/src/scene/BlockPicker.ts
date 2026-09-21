@@ -7,7 +7,7 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import type { ModelBlocks } from "../model/index.ts";
+import type { ModelBlocks } from "./blocks/index.ts";
 import type { TransformGizmo } from "./TransformGizmo.ts";
 
 export interface BlockPickerOptions {

@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import { Grid } from "@jolly-pixel/three";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
@@ -15,8 +16,9 @@ import {
   type VoxelModelRoom
 } from "../collaboration/index.ts";
 import type { PresenceStore } from "../state/index.ts";
+import { ModelBlocks } from "./blocks/index.ts";
 import { BlockPicker } from "./BlockPicker.ts";
-import { BlockTextures } from "./BlockTextures.ts";
+import { BlockTextures } from "./textures/index.ts";
 import { TransformGizmo } from "./TransformGizmo.ts";
 
 export interface ModelEditorSceneOptions {
@@ -29,6 +31,7 @@ export interface ModelEditorSceneOptions {
 
 export interface ModelWorkspace {
   document: ModelDocument;
+  blocks: ModelBlocks;
   hierarchy: ModelHierarchy;
   textures: BlockTextures;
   gizmo: TransformGizmo;
@@ -61,7 +64,14 @@ export class ModelEditorScene extends Systems.Scene {
       pixels,
       pixelsReady
     } = this.#options;
+
     const scene = this.world.sceneManager.getSource();
+    scene.background = new THREE.Color("#262627");
+
+    scene.add(
+      new THREE.HemisphereLight("#dceaff", "#151820", 2.5),
+      new THREE.DirectionalLight("#ffffff", 3)
+    );
     scene.add(new Grid({
       extent: 10,
       cell: {
@@ -95,20 +105,27 @@ export class ModelEditorScene extends Systems.Scene {
         initialTrailDistance: 12
       });
 
-    const document = new ModelDocument(scene);
+    const document = new ModelDocument();
+    const blocks = new ModelBlocks({
+      document,
+      scene
+    });
     const textures = new BlockTextures({
       pixels,
       pixelsReady,
-      document
+      document,
+      blocks
     });
     const hierarchy = new ModelHierarchy({
       document,
-      regions: textures
+      regions: textures,
+      poses: blocks
     });
     const collaboration = new ModelCollaboration({
       room,
       identity,
       document,
+      blocks,
       presence,
       world: this.world,
       camera: camera.camera
@@ -117,7 +134,7 @@ export class ModelEditorScene extends Systems.Scene {
       camera,
       canvas: this.world.renderer.canvas,
       scene,
-      blocks: document.blocks,
+      blocks,
       lock: collaboration.lock,
       live: collaboration.live
     });
@@ -125,19 +142,21 @@ export class ModelEditorScene extends Systems.Scene {
       .createActor("block-picker")
       .addComponentAndGet(BlockPicker, {
         camera,
-        blocks: document.blocks,
+        blocks,
         gizmo
       });
 
     this.#disposables.push(
       () => gizmo.dispose(),
       () => collaboration.dispose(),
-      () => textures.dispose()
+      () => textures.dispose(),
+      () => blocks.dispose()
     );
     room.join();
 
     this.#workspace.resolve({
       document,
+      blocks,
       hierarchy,
       textures,
       gizmo,

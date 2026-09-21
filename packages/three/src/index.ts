@@ -3,3 +3,4 @@ export * from "./grid/Grid.ts";
 export * from "./peer-frustum/PeerFrustum.ts";
 export * from "./mesh-highlight/index.ts";
 export * from "./transform-controls/index.ts";
+export * from "./common/Canvas2D.ts";

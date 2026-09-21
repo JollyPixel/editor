@@ -2,12 +2,6 @@
 import * as THREE from "three";
 import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
-export function anyMirrorAxis(
-  axes: MirrorAxes
-): boolean {
-  return axes.x || axes.y || axes.z;
-}
-
 export function mirrorSignFromAxes(
   axes: MirrorAxes
 ): THREE.Vector3 {

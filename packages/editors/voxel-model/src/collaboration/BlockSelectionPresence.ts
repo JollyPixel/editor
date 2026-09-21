@@ -2,7 +2,7 @@
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { ModelBlocks } from "../model/index.ts";
+import type { ModelBlocks } from "../scene/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
 import type { VoxelModelRoom } from "./types.ts";
