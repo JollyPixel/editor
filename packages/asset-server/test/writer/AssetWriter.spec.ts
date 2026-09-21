@@ -14,6 +14,7 @@ import {
   ASSET_CREATED,
   ASSET_DELETED,
   ASSET_RENAMED,
+  ASSET_UPDATED,
   AssetPathConflictError,
   UnknownAssetKindError
 } from "#src/index.ts";
@@ -339,5 +340,125 @@ describe("AssetWriter — remove", () => {
 
     assert.strictEqual(event.eventType, ASSET_DELETED);
     assert.strictEqual(harness.identity.byId(created.assetId), undefined);
+  });
+});
+
+describe("AssetWriter — ordering", () => {
+  test("applies overlapping writes in call order, whatever their size", async() => {
+    await using harness = await syncHarness();
+    const created = (await harness.writer.create({
+      path: "a.bin",
+      data: bytes("0"),
+      actor: kActor
+    })).unwrap();
+
+    const results = await Promise.all([
+      harness.writer.update({
+        assetId: created.assetId,
+        data: new Uint8Array(4 * 1024 * 1024),
+        actor: kActor
+      }),
+      harness.writer.rename({
+        assetId: created.assetId,
+        to: "b.bin",
+        actor: kActor
+      }),
+      harness.writer.update({
+        assetId: created.assetId,
+        data: bytes("1"),
+        actor: kActor
+      }),
+      harness.writer.remove({
+        assetId: created.assetId,
+        actor: kActor
+      })
+    ]);
+
+    assert.deepEqual(results.map((result) => result.ok), [true, true, true, true]);
+    assert.deepEqual(lifecycleTypes(harness.eventStore), [
+      ASSET_CREATED,
+      ASSET_UPDATED,
+      ASSET_RENAMED,
+      ASSET_UPDATED,
+      ASSET_DELETED
+    ]);
+  });
+});
+
+describe("AssetWriter input ownership", () => {
+  test("captures create and update inputs before queueing", async() => {
+    await using harness = await syncHarness();
+    const input = {
+      path: "original.bin",
+      assetId: "original",
+      data: Buffer.from("one"),
+      dependencies: [{ id: "dependency", kind: "binary" }],
+      actor: { type: "user" as const, id: "alice" }
+    };
+    const created = harness.writer.create(input);
+    input.path = "changed.bin";
+    input.assetId = "changed";
+    input.data.fill(0);
+    input.dependencies[0].id = "changed";
+    input.actor.id = "bob";
+
+    const creation = (await created).unwrap();
+    assert.equal(creation.assetId, "original");
+    assert.deepEqual(creation.actor, { type: "user", id: "alice" });
+    await harness.projector.flush();
+    assert.equal(text(await harness.source.read("original.bin")), "one");
+    assert.partialDeepStrictEqual(creation.eventData, {
+      dependencies: [{ id: "dependency", kind: "binary" }]
+    });
+
+    const update = {
+      assetId: "original",
+      data: Buffer.from("two"),
+      actor: { type: "user" as const, id: "alice" }
+    };
+    const updated = harness.writer.update(update);
+    update.assetId = "changed";
+    update.data.fill(0);
+    update.actor.id = "bob";
+
+    const event = (await updated).unwrap();
+    assert.deepEqual(event.actor, { type: "user", id: "alice" });
+    await harness.projector.flush();
+    assert.equal(text(await harness.source.read("original.bin")), "two");
+  });
+
+  test("captures rename and remove inputs before queueing", async() => {
+    await using harness = await syncHarness();
+    await harness.writer.create({
+      path: "original.bin",
+      assetId: "original",
+      data: bytes("one"),
+      actor: kActor
+    });
+    const rename = {
+      assetId: "original",
+      to: "renamed.bin",
+      actor: { type: "user" as const, id: "alice" }
+    };
+    const renamed = harness.writer.rename(rename);
+    rename.assetId = "missing";
+    rename.to = "wrong.bin";
+    rename.actor.id = "bob";
+    const event = (await renamed).unwrap();
+    assert.deepEqual(event.actor, { type: "user", id: "alice" });
+    assert.equal(harness.projector.desired("original")?.path, "renamed.bin");
+
+    const remove = {
+      assetId: "original",
+      actor: { type: "user" as const, id: "alice" }
+    };
+    const removed = harness.writer.remove(remove);
+    remove.assetId = "missing";
+    remove.actor.id = "bob";
+    assert.deepEqual((await removed).unwrap().actor, {
+      type: "user",
+      id: "alice"
+    });
+    assert.equal(harness.projector.desired("original"), null);
   });
 });

@@ -2,7 +2,7 @@
 import chokidar, { type ChokidarOptions } from "chokidar";
 
 // Import Internal Dependencies
-import { toRelativePosix } from "../../paths.ts";
+import { toRelativePosix } from "./toRelativePosix.ts";
 import type { AssetPathMatcher } from "./ignoredPaths.ts";
 
 type FilesystemEvent = "add" | "change" | "unlink";

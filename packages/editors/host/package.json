@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./offline": {
+      "types": "./dist/session/OfflineWorkspace.d.ts",
+      "default": "./dist/session/OfflineWorkspace.js"
     }
   },
   "imports": {
@@ -40,7 +44,10 @@
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",

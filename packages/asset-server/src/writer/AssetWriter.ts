@@ -1,6 +1,3 @@
-// Import Node.js Dependencies
-import { randomUUID } from "node:crypto";
-
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
@@ -16,7 +13,7 @@ import {
   AssetPathEscapeError,
   isStatePath,
   safeAssetPath
-} from "@jolly-pixel/asset-source";
+} from "@jolly-pixel/asset-source/core";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
@@ -39,6 +36,7 @@ import {
   type Logger
 } from "../logger.ts";
 import { asError } from "../utils/asError.ts";
+import { TaskChain } from "../utils/TaskChain.ts";
 
 export type PathConflictPolicy = "reject" | "suffix";
 
@@ -94,6 +92,7 @@ export class AssetWriter {
   #projector: AssetProjector;
   #identity: IdentitySidecar;
   #logger: Logger;
+  #writes = new TaskChain();
 
   constructor(
     options: AssetWriterOptions
@@ -105,7 +104,45 @@ export class AssetWriter {
     this.#logger = options.logger ?? silentLogger();
   }
 
-  async create(
+  create(
+    input: CreateAssetInput
+  ): Promise<Result<EventStore.Event, Error>> {
+    const snapshot = copyContentInput(input);
+
+    return this.#writes.run(() => this.#create(snapshot));
+  }
+
+  update(
+    input: UpdateAssetInput
+  ): Promise<Result<EventStore.Event, Error>> {
+    const snapshot = copyContentInput(input);
+
+    return this.#writes.run(() => this.#update(snapshot));
+  }
+
+  rename(
+    input: RenameAssetInput
+  ): Promise<Result<EventStore.Event, Error>> {
+    const snapshot = {
+      ...input,
+      actor: { ...input.actor }
+    };
+
+    return this.#writes.run(() => this.#rename(snapshot));
+  }
+
+  remove(
+    input: DeleteAssetInput
+  ): Promise<Result<EventStore.Event, Error>> {
+    const snapshot = {
+      ...input,
+      actor: { ...input.actor }
+    };
+
+    return this.#writes.run(() => this.#remove(snapshot));
+  }
+
+  async #create(
     input: CreateAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
     const writable = writableAssetPath(input.path);
@@ -125,13 +162,13 @@ export class AssetWriter {
       return Err(vacant.val);
     }
 
-    const assetId = input.assetId ?? this.#dormantId(path) ?? randomUUID();
+    const assetId = input.assetId ?? this.#dormantId(path) ?? crypto.randomUUID();
     const kind = input.kind ?? this.#kinds.resolve(path).kind;
     const appended = this.#append(
       assetId,
       kind,
       ASSET_CREATED,
-      this.#writeData(assetId, path, kind, input),
+      await this.#writeData(assetId, path, kind, input),
       input
     );
     if (!appended.ok) {
@@ -148,28 +185,26 @@ export class AssetWriter {
     return appended;
   }
 
-  update(
+  async #update(
     input: UpdateAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
     const current = this.#current(input.assetId);
     if (!current.ok) {
-      return Promise.resolve(current);
+      return current;
     }
 
     const { path, kind } = current.val;
 
-    return Promise.resolve(
-      this.#append(
-        input.assetId,
-        kind,
-        ASSET_UPDATED,
-        this.#writeData(input.assetId, path, kind, input),
-        input
-      )
+    return this.#append(
+      input.assetId,
+      kind,
+      ASSET_UPDATED,
+      await this.#writeData(input.assetId, path, kind, input),
+      input
     );
   }
 
-  async rename(
+  async #rename(
     input: RenameAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
     const found = this.#current(input.assetId);
@@ -216,7 +251,7 @@ export class AssetWriter {
     return appended;
   }
 
-  async remove(
+  async #remove(
     input: DeleteAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
     const found = this.#current(input.assetId);
@@ -261,7 +296,7 @@ export class AssetWriter {
     path: string,
     kind: string,
     input: ContentWriteOptions
-  ): AssetWriteData {
+  ): Promise<AssetWriteData> {
     const references = input.dependencies ??
       this.#dependencies(assetId, kind, input.data);
 
@@ -377,6 +412,21 @@ export class AssetWriter {
 
     return result;
   }
+}
+
+function copyContentInput<TInput extends ContentWriteOptions>(
+  input: TInput
+): TInput {
+  return {
+    ...input,
+    actor: { ...input.actor },
+    data: Uint8Array.from(input.data),
+    dependencies: input.dependencies?.map(
+      (reference) => {
+        return { ...reference };
+      }
+    )
+  };
 }
 
 function uniqueDependencies(

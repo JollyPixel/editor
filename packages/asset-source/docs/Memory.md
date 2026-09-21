@@ -23,3 +23,14 @@ stored asset. Each source has its own data.
 
 The source implements the shared [`AssetSource`](./AssetSource.md) storage
 contract. It does not provide `isIgnored` or `watch`.
+
+## Browser entry
+
+`@jolly-pixel/asset-source/core` exports everything except the filesystem
+source and the HTTP handler: the `AssetSource` contract, `MemoryAssetSource`,
+the path and JSON utilities, and the constants. It imports no Node.js builtin,
+so a browser bundle can use it.
+
+```ts
+import { MemoryAssetSource } from "@jolly-pixel/asset-source/core";
+```

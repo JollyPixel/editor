@@ -30,7 +30,7 @@ import {
   linkReference
 } from "../helpers/kinds.ts";
 import { bytes } from "../helpers/bytes.ts";
-import { contentHash } from "#src/utils/index.ts";
+import { sha256Hex } from "../helpers/hash.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -77,7 +77,7 @@ function legacyCreated(
     eventData: {
       path,
       kind: "link",
-      hash: contentHash(data),
+      hash: sha256Hex(data),
       size: data.byteLength,
       content: encodeContent(data)
     },
@@ -318,7 +318,7 @@ describe("createAssetBackend — dependency backfill", () => {
       eventData: {
         path: "a.png",
         kind: "binary",
-        hash: contentHash(data),
+        hash: sha256Hex(data),
         size: data.byteLength,
         content: encodeContent(data)
       },

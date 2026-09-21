@@ -153,9 +153,11 @@ told the room takes no messages.
 
 ## Worker extensions
 
-Register a `WorkerExtensionDescriptor` to run CPU-bound handlers in a dedicated `worker_threads.Worker`. Write the extension itself the same way as an in-process extension.
+Construct a `WorkerExtensionProxy` from `@jolly-pixel/network/node` and register it to run CPU-bound handlers in a dedicated `worker_threads.Worker`. Write the extension itself the same way as an in-process extension.
 
 ```ts
+import { WorkerExtensionProxy } from "@jolly-pixel/network/node";
+
 interface WorkerExtensionDescriptor {
   id: string;
   name: string;
@@ -168,13 +170,13 @@ interface WorkerExtensionDescriptor {
   restartWindowMs?: number;
 }
 
-server.register({
+server.register(new WorkerExtensionProxy({
   id: "voxel-map:world-1",
   name: "voxel.renderer",
   protocols,
   modulePath: new URL("./extensions/VoxelMeshExtension.ts", import.meta.url),
   workerData: { chunkSize: 32 }
-});
+}, { logger: server.logger }));
 ```
 
 - `id` / `name` / `protocols` — same meaning as the matching `Extension` members. Parsing happens on the main thread, so the worker receives an already-parsed message.

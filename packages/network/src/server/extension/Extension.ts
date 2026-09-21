@@ -56,18 +56,3 @@ export abstract class Extension<
 }
 
 export type AnyExtension = Extension<unknown>;
-
-/**
- * Configures an extension hosted in a worker thread.
- */
-export interface WorkerExtensionDescriptor {
-  id: string;
-  name: string;
-  protocols: MessageProtocols;
-  modulePath: string | URL;
-  exportName?: string;
-  workerData?: unknown;
-  rpcTimeoutMs?: number;
-  maxRestarts?: number;
-  restartWindowMs?: number;
-}

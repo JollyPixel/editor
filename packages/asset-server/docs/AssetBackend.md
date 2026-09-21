@@ -73,3 +73,35 @@ Commit `assets.json` so paths keep the same asset IDs when a checkout has no
 local event log. `state.json` stores machine-local projection positions and is
 ignored by the generated `.gitignore`. The host chooses where the event store
 is persisted.
+
+## Browser entry
+
+`@jolly-pixel/asset-server/backend` exports `createAssetBackend`, the kind
+handlers, the event helpers, the writer, the asset rooms, `seedAssetSource`
+and `silentLogger`. It leaves out `createAssetWorkspace`, the HTTP handlers and
+the Vite plugins, and imports no Node.js builtin.
+
+With a `MemoryAssetSource`, a memory event store and a
+[`LoopbackTransport`](../../network/docs/Transports.md#loopbacktransport), the
+whole back-end runs inside a page:
+
+```ts
+import {
+  createAssetBackend,
+  type AssetEventDataMap
+} from "@jolly-pixel/asset-server/backend";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source/core";
+import * as EventStore from "@jolly-pixel/event-store";
+import { Server } from "@jolly-pixel/network";
+
+const backend = await createAssetBackend({
+  source: new MemoryAssetSource(),
+  eventStore: EventStore.persistence.memory<AssetEventDataMap>(),
+  handlers,
+  watch: false
+});
+backend.attach(new Server());
+```
+
+Content hashes are SHA-256 digests computed with the WebCrypto API, which
+Node.js and browsers both provide.

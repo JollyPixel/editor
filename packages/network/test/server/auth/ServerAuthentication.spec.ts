@@ -6,8 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { PasswordAuthentication } from "#src/node.ts";
 import {
-  PasswordAuthentication,
   RightsTable,
   Server,
   UnknownDefaultRoleError,

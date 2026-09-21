@@ -5,6 +5,7 @@ export * from "./session/AssetLease.ts";
 export { AssetLeases } from "./session/AssetLeases.ts";
 export {
   EditorSession,
+  type EditorSessionClient,
   type EditorSessionEvents,
   type EditorIdentityOptions
 } from "./session/EditorSession.ts";
@@ -16,5 +17,4 @@ export {
 export * from "./runtime/PeerFrustums.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";
-export * from "./editor/exposeDebugHandle.ts";
 export * from "./params/QueryParams.ts";

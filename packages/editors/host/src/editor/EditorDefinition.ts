@@ -15,7 +15,9 @@ export interface EditorHandle {
   dispose(): void;
 }
 
-export interface EditorDefinition<THandle extends EditorHandle> {
+export interface EditorDefinition<
+  THandle extends EditorHandle
+> {
   readonly accepts: string;
   readonly identity: EditorIdentityOptions;
   readonly kinds: Iterable<AssetModelKind<unknown>>;

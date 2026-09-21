@@ -1,6 +1,3 @@
-// Import Node.js Dependencies
-import timers from "node:timers/promises";
-
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 
@@ -14,6 +11,7 @@ import {
   type Logger
 } from "../logger.ts";
 import { asError } from "../utils/asError.ts";
+import { yieldToEventLoop } from "../utils/yieldToEventLoop.ts";
 
 // CONSTANTS
 const kReplayYieldEvery = 250;
@@ -138,7 +136,7 @@ export class AssetStateStore {
         from = event.eventVersion;
         if (++sinceYield >= kReplayYieldEvery) {
           sinceYield = 0;
-          await timers.setImmediate();
+          await yieldToEventLoop();
         }
       }
 

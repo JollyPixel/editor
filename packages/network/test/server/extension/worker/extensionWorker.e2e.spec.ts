@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { WorkerExtensionProxy } from "#src/server/extension/worker/WorkerExtensionProxy.ts";
+import { WorkerExtensionProxy } from "#src/node.ts";
 import { createLogger } from "#src/server/logger.ts";
 import { OPAQUE_PROTOCOLS } from "../../../helpers/protocols.ts";
 import type {

@@ -7,7 +7,6 @@ import {
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer/plugins/engine/index.ts";
 import type {
-  TilesetSource,
   VoxelEngine,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
@@ -17,7 +16,6 @@ import type { AssetLeases } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import {
-  LocalWorldSource,
   MapDocument,
   RoomWorldSource,
   type VoxelMapRoom
@@ -64,7 +62,7 @@ import {
 const kDefaultLayerName = "Ground";
 const kExitOrbitFocusKey = "Escape";
 
-export interface EditorSceneOnline {
+export interface EditorSceneSession {
   room: VoxelMapRoom;
   identity: PeerIdentity;
   catalog: TilesetCatalog & TilesetCatalogWriter;
@@ -74,8 +72,7 @@ export interface EditorSceneOnline {
 export interface EditorSceneOptions {
   state: EditorState;
   viewFocus: ViewFocus;
-  tilesets: TilesetSource[];
-  online?: EditorSceneOnline;
+  session: EditorSceneSession;
   /**
    * MSAA sample count of the scene compositor.
    * @default 4
@@ -91,7 +88,7 @@ export interface VoxelMapWorkspace {
   gridRenderer: GridRenderer;
   lighting: SceneLighting;
   localBrush: LocalBrush;
-  tilesetActions: TilesetActions | null;
+  tilesetActions: TilesetActions;
   textures: TilesetTextures;
   viewFocus: ViewFocus;
   loadWorld(data: VoxelWorldJSON): void;
@@ -105,7 +102,7 @@ export class EditorScene extends Systems.Scene {
   #camera: OrbitFlyCamera | undefined;
 
   #orbiting = false;
-  #spawnPending: boolean;
+  #spawnPending = true;
 
   get ready(): Promise<VoxelMapWorkspace> {
     return this.#workspace.promise;
@@ -120,15 +117,13 @@ export class EditorScene extends Systems.Scene {
   ) {
     super("editor");
     this.#options = options;
-    this.#spawnPending = options.online !== undefined;
   }
 
   override awake(): void {
     const {
       state,
       viewFocus,
-      tilesets,
-      online,
+      session,
       samples
     } = this.#options;
     const world = this.world;
@@ -160,10 +155,10 @@ export class EditorScene extends Systems.Scene {
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
         chunkSize: 16,
-        layers: online === undefined ? [kDefaultLayerName] : [],
+        layers: [],
         blocks: [],
         material: "lambert",
-        tilesets,
+        tilesets: [],
         history: {
           enabled: true
         }
@@ -171,13 +166,11 @@ export class EditorScene extends Systems.Scene {
 
     const mapDocument = new MapDocument({
       engine,
-      source: online === undefined ?
-        new LocalWorldSource({ engine, tilesets }) :
-        new RoomWorldSource({
-          engine,
-          room: online.room,
-          defaultLayerName: kDefaultLayerName
-        })
+      source: new RoomWorldSource({
+        engine,
+        room: session.room,
+        defaultLayerName: kDefaultLayerName
+      })
     });
     const usage = new BlockUsageStore({
       mapDocument,
@@ -186,20 +179,18 @@ export class EditorScene extends Systems.Scene {
     const tilesetDirectory = new TilesetDirectory({
       store: state.tilesets,
       tilesets: engine.tilesets,
-      catalog: online?.catalog,
+      catalog: session.catalog,
       mapDocument
     });
-    const tilesetActions = online === undefined ?
-      null :
-      new TilesetActions({
-        engine,
-        catalog: online.catalog,
-        store: state.tilesets
-      });
-    const localTextures = new LocalTilesetTextures(engine);
-    const textures = online === undefined ?
-      localTextures :
-      new SessionTilesetTextures(online.assets, localTextures);
+    const tilesetActions = new TilesetActions({
+      engine,
+      catalog: session.catalog,
+      store: state.tilesets
+    });
+    const textures = new SessionTilesetTextures(
+      session.assets,
+      new LocalTilesetTextures(engine)
+    );
     const atlases = new TilesetAtlases({
       engine,
       store: state.tilesets,
@@ -239,7 +230,7 @@ export class EditorScene extends Systems.Scene {
         camera: camera.camera,
         brush: state.brush,
         selection: state.selection,
-        color: online?.identity.color
+        color: session.identity.color
       });
     localBrush.onFocusRequest = (point) => {
       camera.enterOrbitFocus(point);
@@ -273,16 +264,14 @@ export class EditorScene extends Systems.Scene {
     world.createActor("performance")
       .addComponent(PerformanceMonitor, { engine });
 
-    const collaboration = online === undefined ?
-      null :
-      new MapCollaboration({
-        room: online.room,
-        identity: online.identity,
-        state,
-        world,
-        camera: camera.camera,
-        localBrush
-      });
+    const collaboration = new MapCollaboration({
+      room: session.room,
+      identity: session.identity,
+      state,
+      world,
+      camera: camera.camera,
+      localBrush
+    });
 
     this.#disposables.push(
       () => keyboard.off(kExitOrbitFocusKey, exitOrbitFocus),
@@ -295,7 +284,7 @@ export class EditorScene extends Systems.Scene {
       }),
       () => shortcuts.dispose(),
       () => historyShortcuts.dispose(),
-      () => collaboration?.dispose(),
+      () => collaboration.dispose(),
       () => atlases.dispose(),
       () => tilesetDirectory.dispose(),
       () => usage.dispose(),
@@ -306,7 +295,7 @@ export class EditorScene extends Systems.Scene {
     );
 
     this.#selectFallbackLayer(engine);
-    online?.room.join();
+    session.room.join();
 
     this.#workspace.resolve({
       state,
@@ -324,7 +313,7 @@ export class EditorScene extends Systems.Scene {
         mapDocument.load(data);
       },
       teleportToPeer: (clientId) => {
-        const pose = collaboration?.frustums.poseOf(clientId);
+        const pose = collaboration.frustums.poseOf(clientId);
         if (pose !== undefined) {
           camera.teleport(pose);
         }

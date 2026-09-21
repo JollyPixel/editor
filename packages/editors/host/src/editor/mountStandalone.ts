@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { PeerIdentity } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import type {
   EditorDefinition,
@@ -6,12 +9,24 @@ import type {
 import { EditorLaunch } from "../launch/EditorLaunch.ts";
 import { defaultLaunchSources } from "../launch/sources/defaultLaunchSources.ts";
 import type { LaunchSource } from "../launch/sources/LaunchSource.ts";
-import { EditorSession } from "../session/EditorSession.ts";
-import { exposeDebugHandle } from "./exposeDebugHandle.ts";
+import {
+  EditorSession,
+  type EditorSessionClient
+} from "../session/EditorSession.ts";
+
+export interface StandaloneConnection {
+  identity: PeerIdentity;
+  client: EditorSessionClient;
+}
 
 export interface MountStandaloneOptions {
   sources?: Iterable<LaunchSource>;
   debugHandle?: string;
+  /**
+   * Replaces the username prompt and the WebSocket client, for a back-end
+   * that is not the page's asset server.
+   */
+  connect?: () => StandaloneConnection | Promise<StandaloneConnection>;
 }
 
 export async function mountStandalone<THandle extends EditorHandle>(
@@ -21,12 +36,20 @@ export async function mountStandalone<THandle extends EditorHandle>(
   const launch = await EditorLaunch.read(
     options.sources ?? defaultLaunchSources()
   );
-  const session = await EditorSession.open({
+  const target = {
     launch,
-    identity: definition.identity,
     kinds: definition.kinds,
     accepts: definition.accepts
-  });
+  };
+  const session = options.connect === undefined ?
+    await EditorSession.open({
+      ...target,
+      identity: definition.identity
+    }) :
+    await EditorSession.connect({
+      ...target,
+      ...await options.connect()
+    });
 
   let handle: THandle;
   try {
@@ -42,7 +65,9 @@ export async function mountStandalone<THandle extends EditorHandle>(
   }
 
   if (options.debugHandle !== undefined) {
-    exposeDebugHandle(options.debugHandle, handle);
+    Object.assign(globalThis, {
+      [options.debugHandle]: handle
+    });
   }
 
   return handle;

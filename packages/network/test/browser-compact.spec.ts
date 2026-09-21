@@ -7,25 +7,37 @@ import { describe, it } from "node:test";
 import * as esbuild from "esbuild";
 
 // CONSTANTS
-const kNetworkClientDir = path.join(import.meta.dirname, "..", "src", "client");
+const kNetworkSrcDir = path.join(import.meta.dirname, "..", "src");
 const kEntryPoints = [
-  path.join(kNetworkClientDir, "index.ts")
+  path.join(kNetworkSrcDir, "client", "index.ts"),
+  path.join(kNetworkSrcDir, "index.ts"),
+  path.join(kNetworkSrcDir, "transport", "loopback.ts")
 ];
 
-describe("Network client browser compatibility", () => {
+describe("Network browser compatibility", () => {
   for (const entryPoint of kEntryPoints) {
-    const entryName = path.relative(kNetworkClientDir, entryPoint);
+    const entryName = path.relative(kNetworkSrcDir, entryPoint);
 
     it(`should bundle '${entryName}' for a browser target with no Node.js builtins`, async() => {
       try {
-        await esbuild.build({
+        const result = await esbuild.build({
           entryPoints: [entryPoint],
           bundle: true,
+          metafile: true,
           write: false,
           platform: "browser",
           external: [],
           logLevel: "silent"
         });
+        const inputs = Object.keys(result.metafile.inputs);
+        const nodeOnlyPaths = [
+          "server/auth/password",
+          "server/auth/providers/PasswordAuthentication",
+          "server/extension/worker/"
+        ];
+        assert.equal(inputs.some((input) => nodeOnlyPaths.some(
+          (nodeOnlyPath) => input.includes(nodeOnlyPath)
+        )), false);
       }
       catch (error: any) {
         const reasons = (error.errors ?? [])

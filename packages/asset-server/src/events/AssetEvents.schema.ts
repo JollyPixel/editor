@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  type Infer
-} from "ata-validator";
+import { defineSchema } from "@jolly-pixel/network";
+import type { Infer } from "ata-validator";
 
 export const assetInlineContentSchema = defineSchema({
   type: "object",

@@ -1,8 +1,9 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
 import {
-  exposeDebugHandle,
-  mountStandalone
+  EditorLaunch,
+  mountStandalone,
+  type MountStandaloneOptions
 } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
@@ -21,15 +22,24 @@ declare global {
   }
 }
 
-const params = VOXEL_MAP_PARAMS.read();
-if (params.offline) {
-  const editor = await VoxelMapEditor.openOffline(params);
-  if (kDebugHandle !== undefined) {
-    exposeDebugHandle(kDebugHandle, editor);
-  }
+async function offlineOptions(): Promise<MountStandaloneOptions> {
+  const {
+    OFFLINE_MAP_ID,
+    openOfflineWorkspace
+  } = await import("./boot/offlineWorkspace.ts");
+  const workspace = await openOfflineWorkspace();
+
+  return {
+    sources: [
+      {
+        read: () => Promise.resolve(EditorLaunch.fromTarget(OFFLINE_MAP_ID))
+      }
+    ],
+    connect: () => workspace.connect()
+  };
 }
-else {
-  await mountStandalone(VoxelMapEditor, {
-    debugHandle: kDebugHandle
-  });
-}
+
+await mountStandalone(VoxelMapEditor, {
+  ...(VOXEL_MAP_PARAMS.read().offline ? await offlineOptions() : {}),
+  debugHandle: kDebugHandle
+});

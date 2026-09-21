@@ -36,6 +36,26 @@ interface ClientOptions {
    */
   credential?: string;
   logger?: Logger;
+  /**
+   * Opens the connection in place of a `WebSocket`. `url` and `credential`
+   * are ignored when it is set.
+   */
+  socket?: () => ClientSocket;
+}
+
+interface ClientSocket {
+  send(data: string): void;
+  close(): void;
+  addEventListener(
+    type: "open" | "message" | "error" | "close",
+    listener: (event: ClientSocketEvent) => void
+  ): void;
+}
+
+interface ClientSocketEvent {
+  readonly data?: unknown;
+  readonly code?: number;
+  readonly reason?: string;
 }
 ```
 
@@ -43,6 +63,8 @@ interface ClientOptions {
 - `ready` — whether the socket finished opening. The `"ready"` event fires once at that point.
 - `room(name, options?)` — returns the handle for `name`; the same name always returns the same instance, and only the first call's options apply. It does not join.
 - `destroy()` — closes the socket.
+
+A `WebSocket` satisfies `ClientSocket`. `socket` exists for a server living in the same process: see [LoopbackTransport](./Transports.md#loopbacktransport).
 
 `profile` is untrusted: the server never reads a role or a user id from it. The connection's role comes from [authentication](./Authentication.md), and `credential` is what the server's provider inspects to decide it.
 

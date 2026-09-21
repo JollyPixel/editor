@@ -11,10 +11,13 @@ import {
   ASSET_DELETED,
   ASSET_RENAMED,
   ASSET_UPDATED,
+  decodeContent,
   describeRejection,
   encodeContent,
-  parseAssetEvent
+  parseAssetEvent,
+  writeData
 } from "#src/index.ts";
+import { contentHash } from "#src/utils/contentHash.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { assetEvent } from "../helpers/events.ts";
 
@@ -169,5 +172,40 @@ describe("parseAssetEvent", () => {
       describeRejection(rejection),
       "event belongs to another domain"
     );
+  });
+});
+
+describe("inline content", () => {
+  test("round-trips bytes through base64", () => {
+    const data = Uint8Array.from([0, 1, 2, 250, 251, 252, 253, 254, 255]);
+    const content = encodeContent(data.subarray(2, 7));
+
+    assert.deepEqual(
+      decodeContent(content),
+      data.subarray(2, 7)
+    );
+  });
+});
+
+describe("writeData", () => {
+  test("snapshots bytes and references before hashing", async() => {
+    const data = Buffer.from([0, 1, 2, 3]);
+    const dependencies = [{ id: "original", kind: "binary" }];
+    const pending = writeData(
+      "a.bin",
+      "binary",
+      data.subarray(1, 3),
+      dependencies
+    );
+    data.fill(9);
+    dependencies[0].id = "changed";
+    dependencies.push({ id: "added", kind: "binary" });
+
+    const result = await pending;
+
+    assert.deepEqual(decodeContent(result.content), new Uint8Array([1, 2]));
+    assert.equal(result.size, 2);
+    assert.equal(result.hash, await contentHash(new Uint8Array([1, 2])));
+    assert.deepEqual(result.dependencies, [{ id: "original", kind: "binary" }]);
   });
 });

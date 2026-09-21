@@ -23,7 +23,7 @@ const kSnapshotActor: EventStore.Actor = {
 };
 
 interface PendingSnapshot {
-  handle: NodeJS.Timeout;
+  handle: ReturnType<typeof setTimeout>;
   firstEventAt: number;
 }
 
@@ -115,7 +115,7 @@ export class SnapshotScheduler {
       () => void this.snapshot(assetId),
       delay
     );
-    handle.unref();
+    handle.unref?.();
 
     this.#pending.set(assetId, {
       firstEventAt,
@@ -170,7 +170,7 @@ export class SnapshotScheduler {
     }
 
     const data = await entry.handler.serialize(entry.state);
-    if (contentHash(data) === desired.hash) {
+    if (await contentHash(data) === desired.hash) {
       return false;
     }
 

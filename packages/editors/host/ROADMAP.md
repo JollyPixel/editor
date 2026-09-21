@@ -20,9 +20,14 @@ target's kind to an editor module and calls its `mount` itself. Once it exists:
 
 ## Editors
 
-- Offline mode on a `MemoryAssetSource` backend instead of the PNG path, so
-  voxel-map's `?offline` branch can go through `mountStandalone` like the
-  online boot, and `exposeDebugHandle` stops being public.
 - voxel-renderer model/view split, so a voxel-map (and voxel-model) target can
   be leased as a synced model instead of room-only, with the editor keeping
   only the view.
+
+## Offline workspaces
+
+- ZIP import/export that includes the map and its referenced assets. Save JSON
+  currently keeps only asset IDs, so tilesets created offline cannot be restored
+  after the page is reloaded.
+- LocalStorage support to restore browser workspaces, including asset content
+  and identities, across page reloads.

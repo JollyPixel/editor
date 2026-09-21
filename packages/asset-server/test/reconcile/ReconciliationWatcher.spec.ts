@@ -217,3 +217,16 @@ describe("ReconciliationWatcher — real filesystem (integration)", () => {
     }
   });
 });
+
+describe("ReconciliationWatcher browser timers", () => {
+  test("clears numeric debounce handles on close", async(t) => {
+    await using harness = await syncHarness();
+    t.mock.method(globalThis, "setTimeout", () => 1);
+    const clear = t.mock.method(globalThis, "clearTimeout", () => void 0);
+
+    harness.watcher.notify("a.bin");
+    await harness.watcher.close();
+
+    assert.equal(clear.mock.calls[0].arguments[0], 1);
+  });
+});

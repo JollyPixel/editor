@@ -123,7 +123,10 @@ export class Reconciler {
       });
     }
 
-    const diff = matchRenames(projected, scan.entries);
+    const diff = matchRenames(
+      projected,
+      scan.entries
+    );
     const report: MutableReport = {
       created: 0,
       updated: 0,
@@ -236,7 +239,11 @@ export class Reconciler {
     const unreadable = new Set<string>();
 
     for (let index = 0; index < paths.length; index += kReadConcurrency) {
-      const batch = paths.slice(index, index + kReadConcurrency);
+      const batch = paths.slice(
+        index,
+        index + kReadConcurrency
+      );
+
       const results = await Promise.all(
         batch.map(async(path): Promise<ReadOutcome> => {
           try {
@@ -244,16 +251,24 @@ export class Reconciler {
               path,
               entry: {
                 path,
-                hash: contentHash(await this.#source.read(path))
+                hash: await contentHash(
+                  await this.#source.read(path)
+                )
               }
             };
           }
           catch (error) {
             this.#logger
-              .withMetadata({ path, reason: asError(error).message })
+              .withMetadata({
+                path,
+                reason: asError(error).message
+              })
               .warn("asset not readable, left untouched");
 
-            return { path, entry: null };
+            return {
+              path,
+              entry: null
+            };
           }
         })
       );
@@ -268,6 +283,9 @@ export class Reconciler {
       }
     }
 
-    return { entries, unreadable };
+    return {
+      entries,
+      unreadable
+    };
   }
 }

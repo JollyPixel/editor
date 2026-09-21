@@ -19,7 +19,7 @@ interface RoomEntry {
   name: string;
   room: ServerRoom;
   resolution: RoomResolution | null;
-  evictionHandle: NodeJS.Timeout | null;
+  evictionHandle: ReturnType<typeof setTimeout> | null;
 }
 
 export interface RoomRegistryOptions {
@@ -141,7 +141,7 @@ export class RoomRegistry {
       () => void this.#evict(entry),
       entry.resolution.graceMs ?? this.#graceMs
     );
-    entry.evictionHandle.unref();
+    entry.evictionHandle.unref?.();
   }
 
   async settled(
