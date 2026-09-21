@@ -1,5 +1,8 @@
 // Import Internal Dependencies
 import type {
+  ButtonGroupDefaults
+} from "../controls/ButtonGroup.ts";
+import type {
   Interval,
   JollyOption
 } from "../controls/types.ts";
@@ -21,9 +24,13 @@ const kMathTags: readonly DispatchTag[] = [
   "jolly-vector4"
 ];
 
+export type ButtonGroupLayout = ButtonGroupDefaults["layout"];
+
 export type DispatchTag =
+  | "jolly-button-group"
   | "jolly-checkbox"
   | "jolly-color"
+  | "jolly-flags"
   | "jolly-number"
   | "jolly-point2d"
   | "jolly-quaternion"
@@ -35,7 +42,11 @@ export type DispatchTag =
   | "jolly-vector3"
   | "jolly-vector4";
 
-export type DispatchView = "point2d" | "quaternion";
+export type DispatchView =
+  | "buttons"
+  | "flags"
+  | "point2d"
+  | "quaternion";
 
 export interface DispatchOptions<TValue> {
   min?: number;
@@ -57,6 +68,15 @@ export interface DispatchOptions<TValue> {
    * itself carries.
    */
   axes?: Vector2Pair;
+  /*
+   * How a `view: "buttons"` group arranges its options.
+   */
+  layout?: ButtonGroupLayout;
+  /*
+   * Columns of a `layout: "grid"` button group. Zero lets the grid size
+   * itself.
+   */
+  columns?: number;
 }
 
 export function dispatchTag<TValue>(
@@ -64,6 +84,13 @@ export function dispatchTag<TValue>(
   options: DispatchOptions<TValue> = {}
 ): DispatchTag {
   if (options.options !== undefined) {
+    if (options.view === "buttons") {
+      return "jolly-button-group";
+    }
+    if (options.view === "flags" && typeof value === "number") {
+      return "jolly-flags";
+    }
+
     return "jolly-select";
   }
   if (typeof value === "boolean") {
@@ -117,6 +144,22 @@ export function toJollyOptions<TValue>(
       label
     };
   });
+}
+
+export function numericOptions<TValue>(
+  record: Record<string, TValue>
+): JollyOption<number>[] {
+  const options: JollyOption<number>[] = [];
+  for (const [label, value] of Object.entries(record)) {
+    if (typeof value === "number") {
+      options.push({
+        value,
+        label
+      });
+    }
+  }
+
+  return options;
 }
 
 function isInterval(

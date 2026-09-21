@@ -11,7 +11,7 @@ import {
   state
 } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
-import type { JollyChangeDetail } from "@jolly-pixel/ui";
+import { FieldBinding } from "@jolly-pixel/ui";
 import type { VoxelHistoryState } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -64,9 +64,6 @@ export class BrushToolbar extends LitElement {
   declare _pattern: BrushPattern;
 
   @state()
-  declare _size: number;
-
-  @state()
   declare _ghost: boolean;
 
   @state()
@@ -74,6 +71,13 @@ export class BrushToolbar extends LitElement {
 
   @state()
   declare _canRedo: boolean;
+
+  #size = new FieldBinding<number>(this, {
+    read: () => this.#workspace.attached.state.brush.size,
+    write: (value) => {
+      this.#workspace.attached.state.brush.size = value;
+    }
+  });
 
   #onHistoryChange = (
     state: VoxelHistoryState
@@ -89,7 +93,6 @@ export class BrushToolbar extends LitElement {
     this._mode = brush.mode;
     this._axis = brush.axis;
     this._pattern = brush.pattern;
-    this._size = brush.size;
     this._ghost = brush.ghost;
     this._canUndo = history.canUndo;
     this._canRedo = history.canRedo;
@@ -107,8 +110,8 @@ export class BrushToolbar extends LitElement {
       brush.subscribe("patternChange", (pattern) => {
         this._pattern = pattern;
       }),
-      brush.subscribe("sizeChange", (size) => {
-        this._size = size;
+      brush.subscribe("sizeChange", () => {
+        this.requestUpdate();
       }),
       brush.subscribe("ghostChange", (ghost) => {
         this._ghost = ghost;
@@ -187,19 +190,19 @@ export class BrushToolbar extends LitElement {
           <jolly-tool-button
             data-tool="size"
             flyout-side="above"
-            label=${toolLabel(`Size ${this._size}`, "[ / ]", this.disabled)}
+            label=${toolLabel(`Size ${this.#size.value}`, "[ / ]", this.disabled)}
             ?disabled=${this.disabled}
           >
-            <span class="size">${this._size}</span>
+            <span class="size">${this.#size.value}</span>
             <jolly-slider
               slot="flyout"
               orientation="vertical"
               min=${BRUSH_MIN_SIZE}
               max=${BRUSH_MAX_SIZE}
               step="1"
-              .value=${this._size}
-              @jolly-input=${this.#onSizeInput}
-              @jolly-change=${this.#onSizeInput}
+              .value=${this.#size.value}
+              @jolly-input=${this.#size.input}
+              @jolly-change=${this.#size.commit}
             ></jolly-slider>
           </jolly-tool-button>
           ${this.#renderChoice({
@@ -214,7 +217,7 @@ export class BrushToolbar extends LitElement {
           <jolly-tool-button
             data-tool="ghost"
             icon="brush-ghost"
-            label=${toolLabel(ghostLabel(this._size), "G", this.disabled)}
+            label=${toolLabel(ghostLabel(this.#size.value), "G", this.disabled)}
             ?active=${this._ghost}
             ?disabled=${this.disabled}
             @click=${this.#onGhostToggle}
@@ -271,13 +274,6 @@ export class BrushToolbar extends LitElement {
 
   #onGhostToggle(): void {
     this.#workspace.attached.state.brush.ghost = !this.#workspace.attached.state.brush.ghost;
-  }
-
-  #onSizeInput(
-    event: CustomEvent<JollyChangeDetail<number>>
-  ): void {
-    this.#workspace.attached.state.brush.size = event.detail.value;
-    this._size = this.#workspace.attached.state.brush.size;
   }
 }
 

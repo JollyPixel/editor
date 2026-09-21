@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  formatHex,
-  formatRgba
-} from "@jolly-pixel/color";
+import { formatRgba } from "@jolly-pixel/color";
 import {
   LitElement,
   html,
@@ -14,14 +11,14 @@ import {
 } from "lit/decorators.js";
 import {
   ensureFontFace,
+  FieldBinding,
   PopoverController
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { assertElement } from "../shared/dom.ts";
 import {
-  applyPickerChange,
-  colorWithOpacity
+  colorWithOpacity,
+  pickerSource
 } from "./pickerChange.ts";
 import { colorSwatchStyles } from "./ColorSwatch.styles.ts";
 
@@ -47,6 +44,7 @@ export class ColorSwatch extends LitElement {
 
   #swatchElement: HTMLButtonElement | null = null;
   #popoverElement: HTMLElement | null = null;
+  #picker = new FieldBinding(this, pickerSource(this));
 
   #popup = new PopoverController(this, {
     anchor: () => this.#swatchElement,
@@ -70,14 +68,18 @@ export class ColorSwatch extends LitElement {
   }
 
   override firstUpdated(): void {
-    this.#swatchElement = assertElement(
-      this.renderRoot.querySelector<HTMLButtonElement>("button"),
-      "ColorSwatch: button element not found"
-    );
-    this.#popoverElement = assertElement(
-      this.renderRoot.querySelector<HTMLElement>(".popover"),
-      "ColorSwatch: popover element not found"
-    );
+    const swatch = this.renderRoot.querySelector<HTMLButtonElement>("button");
+    if (swatch === null) {
+      throw new Error("ColorSwatch: button element not found");
+    }
+
+    const popover = this.renderRoot.querySelector<HTMLElement>(".popover");
+    if (popover === null) {
+      throw new Error("ColorSwatch: popover element not found");
+    }
+
+    this.#swatchElement = swatch;
+    this.#popoverElement = popover;
   }
 
   override updated(
@@ -99,12 +101,6 @@ export class ColorSwatch extends LitElement {
   close(): void {
     this.#popup.hide();
   }
-
-  readonly #onPickerChange = (
-    event: Event
-  ): void => {
-    applyPickerChange(this, event);
-  };
 
   override render() {
     const color = colorWithOpacity(this.color, this.opacity);
@@ -128,9 +124,9 @@ export class ColorSwatch extends LitElement {
       >
         <jolly-color-picker
           alpha
-          .value=${formatHex(color, true)}
-          @jolly-input=${this.#onPickerChange}
-          @jolly-change=${this.#onPickerChange}
+          .value=${this.#picker.value}
+          @jolly-input=${this.#picker.input}
+          @jolly-change=${this.#picker.commit}
         ></jolly-color-picker>
       </div>
     `;

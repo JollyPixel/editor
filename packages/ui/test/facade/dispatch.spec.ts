@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   dispatchTag,
   isMathTag,
+  numericOptions,
   toJollyOptions
 } from "../../src/facade/dispatch.ts";
 
@@ -207,5 +208,64 @@ describe("facade.isMathTag", () => {
   test("leaves a scalar control alone", () => {
     assert.equal(isMathTag("jolly-number"), false);
     assert.equal(isMathTag("jolly-range"), false);
+  });
+});
+
+describe("facade.dispatchTag alternate option views", () => {
+  test("dispatches options with view buttons to jolly-button-group", () => {
+    assert.equal(
+      dispatchTag("translate", {
+        options: { translate: "translate", rotate: "rotate" },
+        view: "buttons"
+      }),
+      "jolly-button-group"
+    );
+  });
+
+  test("dispatches a numeric mask with view flags to jolly-flags", () => {
+    assert.equal(
+      dispatchTag(5, {
+        options: { Default: 1, Player: 2, Terrain: 4 },
+        view: "flags"
+      }),
+      "jolly-flags"
+    );
+  });
+
+  test("ignores view flags when the value is not a number", () => {
+    assert.equal(
+      dispatchTag("player", {
+        options: { Default: "default", Player: "player" },
+        view: "flags"
+      }),
+      "jolly-select"
+    );
+  });
+
+  test("keeps options without a view at jolly-select", () => {
+    assert.equal(
+      dispatchTag(1, { options: { Default: 1, Player: 2 } }),
+      "jolly-select"
+    );
+  });
+});
+
+describe("facade.numericOptions", () => {
+  test("maps a numeric record to labelled flag options", () => {
+    assert.deepEqual(
+      numericOptions({ Default: 1, Player: 2, Terrain: 4 }),
+      [
+        { value: 1, label: "Default" },
+        { value: 2, label: "Player" },
+        { value: 4, label: "Terrain" }
+      ]
+    );
+  });
+
+  test("drops entries that are not numbers", () => {
+    assert.deepEqual(
+      numericOptions({ Default: 1, Broken: "2" }),
+      [{ value: 1, label: "Default" }]
+    );
   });
 });

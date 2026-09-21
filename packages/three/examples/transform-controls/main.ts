@@ -1,10 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import {
-  formatVector,
-  type JollyChangeDetail,
-  type JollyOption
-} from "@jolly-pixel/ui";
+import { formatVector } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -23,38 +19,17 @@ import {
 } from "../shared/example.ts";
 
 // CONSTANTS
-const kModeOptions: JollyOption<TransformMode>[] = [
-  {
-    value: "translate",
-    label: "Pos"
-  },
-  {
-    value: "rotate",
-    label: "Angle"
-  },
-  {
-    value: "scale",
-    label: "Scale"
-  }
-];
-const kOrientationOptions: JollyOption<OrientationName>[] = [
-  {
-    value: "world",
-    label: "Global"
-  },
-  {
-    value: "local",
-    label: "Local"
-  },
-  {
-    value: "parent",
-    label: "Parent"
-  },
-  {
-    value: "view",
-    label: "View"
-  }
-];
+const kModeOptions: Record<string, TransformMode> = {
+  Pos: "translate",
+  Angle: "rotate",
+  Scale: "scale"
+};
+const kOrientationOptions: Record<string, OrientationName> = {
+  Global: "world",
+  Local: "local",
+  Parent: "parent",
+  View: "view"
+};
 const kPivotOptions = {
   Origin: "origin",
   "Bottom corner": "corner",
@@ -105,13 +80,6 @@ type PivotName = typeof kPivotOptions[keyof typeof kPivotOptions];
 type PivotPresetName = Exclude<PivotName, "custom">;
 type OrientationName = "world" | "local" | "parent" | "view";
 type ShapeName = typeof kShapeOptions[keyof typeof kShapeOptions];
-
-interface ButtonGroupOptions<TValue> {
-  label: string;
-  options: JollyOption<TValue>[];
-  value: TValue;
-  change: (value: TValue) => void;
-}
 
 const {
   canvas,
@@ -221,29 +189,31 @@ statusFolder.addMonitor(readout, "scale", { label: "Scale" });
 statusFolder.addMonitor(readout, "state", { label: "Gesture" });
 
 const transformFolder = pane.addFolder({ title: "Transform" });
-const modeGroup = createButtonGroup({
-  label: "Transform mode",
-  options: kModeOptions,
-  value: settings.mode,
-  change: (value) => {
-    settings.mode = value;
+const modeGroup = transformFolder
+  .addBinding(settings, "mode", {
+    label: "",
+    view: "buttons",
+    options: kModeOptions
+  })
+  .on("change", ({ value }) => {
     transform.mode = value;
     showModeFolders();
     refreshReadout();
-  }
-});
-const orientationGroup = createButtonGroup({
-  label: "Transform orientation",
-  options: kOrientationOptions,
-  value: settings.orientation,
-  change: (value) => {
-    settings.orientation = value;
+  });
+modeGroup.element.setAttribute("aria-label", "Transform mode");
+
+const orientationGroup = transformFolder
+  .addBinding(settings, "orientation", {
+    label: "",
+    view: "buttons",
+    options: kOrientationOptions
+  })
+  .on("change", ({ value }) => {
     transform.orientation = value;
-  }
-});
-transformFolder.element.append(
-  modeGroup,
-  orientationGroup
+  });
+orientationGroup.element.setAttribute(
+  "aria-label",
+  "Transform orientation"
 );
 transformFolder
   .addBinding(settings, "values", {
@@ -412,8 +382,8 @@ function showModeFolders(): void {
   rotateFolder.hidden = mode !== "rotate";
   scaleFolder.hidden = mode !== "scale";
   axisHandlesFolder.hidden = mode === "rotate";
-  modeGroup.toggleAttribute("disabled", settings.editPivot);
-  orientationGroup.toggleAttribute("disabled", mode === "scale");
+  modeGroup.disabled = settings.editPivot;
+  orientationGroup.disabled = mode === "scale";
 }
 
 function activeMode(): TransformMode {
@@ -540,22 +510,6 @@ function rebuild(): void {
   transform = createTransformControls();
   applySnap();
   applyAxes();
-}
-
-function createButtonGroup<TValue>(
-  options: ButtonGroupOptions<TValue>
-): HTMLElement {
-  const group = document.createElement("jolly-button-group");
-  group.setAttribute("aria-label", options.label);
-  group.options = options.options;
-  group.value = options.value;
-  group.addEventListener("jolly-change", (event) => {
-    const { detail } = event as CustomEvent<JollyChangeDetail<TValue>>;
-    group.value = detail.value;
-    options.change(detail.value);
-  });
-
-  return group;
 }
 
 function applyValues(): void {

@@ -2,7 +2,7 @@
 import "../controls/Separator.ts";
 import { FacadeItem } from "./FacadeItem.ts";
 
-export class Separator extends FacadeItem {
+export class FacadeSeparator extends FacadeItem {
   readonly element: HTMLElement;
 
   constructor() {

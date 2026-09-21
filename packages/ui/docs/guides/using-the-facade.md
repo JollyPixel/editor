@@ -153,14 +153,7 @@ import {
   Pane
 } from "@jolly-pixel/ui";
 
-const dockElement = document.querySelector<
-  HTMLElementTagNameMap["jolly-dock"]
->("#tools");
-if (dockElement === null) {
-  throw new Error("Missing #tools dock");
-}
-
-const dock = DockFacade.from(dockElement);
+const dock = DockFacade.query("#tools");
 const pane = new Pane({
   title: "Inspector",
   container: dock.element,
@@ -171,9 +164,34 @@ const pane = new Pane({
 dock.sync();
 ```
 
-`DockFacade.from()` requires an upgraded `jolly-dock` inside a
-`jolly-dock-layout`. Call `sync()` after adding panes so the layout reconciles
-the new children.
+`DockFacade.query()` throws when the selector matches no upgraded
+`jolly-dock`; `DockFacade.from()` takes the element when you already hold it.
+Either way the dock must sit inside a `jolly-dock-layout`. Call `sync()` after
+adding panes so the layout reconciles the new children.
+
+## Add content the facade does not bind
+
+Not every row carries a value. `addNote()` adds field-aligned explanatory
+text, `addThemePreferences()` adds the theme and density controls, and
+`addElement()` adopts an element you built yourself:
+
+```ts
+const peers = pane.addFolder({ title: "Peer rendering" });
+peers.addNote({
+  description: "Your own selection wins silhouette overlaps."
+});
+
+const chrome = pane.addFolder({ title: "Appearance" });
+chrome.addThemePreferences({ storageKey: "my-editor" });
+
+const preview = document.createElement("canvas");
+peers.addElement(preview).hidden = !settings.preview;
+```
+
+Prefer `addElement()` over `builder.element.append()`. The appended element is
+then tracked like every other builder, and on a floating `Pane` it lands
+inside the pane rather than beside it, because `pane.element` is the
+`jolly-floating` wrapper in that mode.
 
 ## Manage builder state
 
@@ -185,8 +203,25 @@ Pane and folder builders also provide:
 - `disposeAll()` disposes the direct builders it created and clears its
   internal child list.
 
+Disposing a builder on its own detaches it from the container that created it,
+so the container stops holding it and `disposeAll()` will not reach it twice.
+
 Elements appended directly to a builder's `element` are outside that child
 list. `disposeAll()` leaves them in place.
+
+Every builder type is exported, under a `Facade` prefix where an element
+already owns the plain name: `FacadeFolder`, `FacadeBinding`, `FacadeMonitor`,
+`FacadeButton`, `FacadeSeparator`, `FacadeNote` and `FacadeElement`.
+
+```ts
+import type { FacadeFolder } from "@jolly-pixel/ui";
+
+function bindLighting(
+  folder: FacadeFolder
+): void {
+  folder.addBinding(lighting, "intensity", { min: 0, max: 4 });
+}
+```
 
 See the [facade API](../api/facade/README.md) for constructor options and each
 returned builder surface.

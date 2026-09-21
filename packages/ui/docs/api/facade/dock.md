@@ -12,14 +12,19 @@ static DockFacade.from(
 dock is outside a layout or the layout has not upgraded to `DockLayout`.
 
 ```ts
-const dockElement = document.querySelector<
-  HTMLElementTagNameMap["jolly-dock"]
->("#tools");
-if (dockElement === null) {
-  throw new Error("Missing #tools dock");
-}
+static DockFacade.query(
+  selector: string,
+  root?: ParentNode
+): DockFacade
+```
 
-const dock = DockFacade.from(dockElement);
+`query()` resolves the selector against `root`, which defaults to `document`,
+and throws an `Error` naming the selector when it matches nothing or matches
+an element that is not an upgraded `jolly-dock`. It is `from()` plus the
+lookup every caller was writing by hand.
+
+```ts
+const dock = DockFacade.query("#tools");
 const inspector = new Pane({
   title: "Inspector",
   container: dock.element,

@@ -78,11 +78,35 @@ const pane = new Pane({
 | `addMonitors(object, fields)` | `void` | Adds each configured number or string property. |
 | `addButton(options?)` | Button builder | Appends a `jolly-button`. |
 | `addSeparator()` | Separator builder | Appends a `jolly-separator`. |
+| `addNote(options?)` | Note builder | Appends a `jolly-property-row` carrying text. |
+| `addThemePreferences(options?)` | Element builder | Appends a `jolly-theme-preferences`. |
+| `addElement(element)` | Element builder | Appends and tracks an element the caller built. |
 | `addPresence(options?)` | `Presence` | Appends a `jolly-presence`. |
 | `refresh()` | `void` | Re-reads bindings and monitors created through this pane. |
 | `disposeAll()` | `void` | Disposes direct child builders and clears the child list. |
 | `dispose()` | `void` | Removes `element`. |
 
 `hidden` and `disabled` read and write the corresponding state on
-`pane.element`.
+`pane.element`. `dispose()` also removes the `jolly-scope` a floating pane
+created.
+
+## Presence
+
+```ts
+pane.presence: PresenceSource | null
+```
+
+Writes the pane's own `presence` property, which every field below it resolves
+through. A binding's `path` then matches against the peer locks that source
+reports, so fields become read-only while a peer holds them.
+
+```ts
+import { RoomPresenceSource } from "@jolly-pixel/ui/network";
+
+pane.presence = new RoomPresenceSource(room, identity);
+pane.addBinding(map, "width", { path: "map.width" });
+```
+
+Without a source the pane resolves to `NullPresenceSource` and no field ever
+locks. See [Presence and locking](../peer/presence-source.md).
 

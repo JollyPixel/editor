@@ -4,7 +4,8 @@ import {
   formatCount,
   formatDecimal,
   formatMilliseconds,
-  formatPercent
+  formatPercent,
+  type FacadeFolder
 } from "@jolly-pixel/ui";
 import type { Keyboard } from "@jolly-pixel/controls";
 import type { VoxelInspectorMode } from "@jolly-pixel/voxel.renderer";
@@ -53,8 +54,8 @@ export interface PerformanceHUDOptions {
 export class PerformanceHUD {
   #pane: Pane;
   #keyboard: Keyboard;
-  #worldFolder: ReturnType<Pane["addFolder"]>;
-  #meshFolder: ReturnType<Pane["addFolder"]>;
+  #worldFolder: FacadeFolder;
+  #meshFolder: FacadeFolder;
   #onDebugModeChange: (mode: VoxelInspectorMode) => void;
   #onChunkBoundsChange: (enabled: boolean) => void;
 

@@ -32,6 +32,9 @@ export const FACADE_EXAMPLE: GalleryExample<"hidden"> = {
       hidden: options.hidden
     });
     const scene = pane.addFolder({ title: "Scene" });
+    scene.addNote({
+      description: "Every row below is built by the facade, not by a template."
+    });
     scene.addBinding(state, "enabled");
     scene.addBinding(state, "speed", { min: 0, max: 5, step: 0.1 });
     scene.addBinding(state, "mode", {
@@ -43,6 +46,17 @@ export const FACADE_EXAMPLE: GalleryExample<"hidden"> = {
       state.speed = 1.5;
       pane.refresh();
     });
+
+    const readout = document.createElement("span");
+    readout.dataset.role = "facade-readout";
+    readout.textContent = "appended through addElement";
+    scene.addElement(readout);
+
+    const appearance = pane.addFolder({
+      title: "Appearance",
+      expanded: false
+    });
+    appearance.addThemePreferences({ storageKey: kStorageKey });
 
     const toggle = document.createElement("jolly-button");
     toggle.textContent = "Toggle pane";

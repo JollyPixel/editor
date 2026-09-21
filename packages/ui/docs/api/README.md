@@ -29,3 +29,4 @@ not. See [the ADR index](../adr/README.md) for the reasoning behind that split.
 - [Geometry](./geometry.md) — rectangles, placement and measurement helpers.
 - [DOM](./dom.md) — the low-level DOM helpers the elements share.
 - [Shared field API](./field/shared-field-api.md) — what every field element has in common.
+- [`FieldBinding`](./field/field-binding.md) — wires a field in a Lit template to one value.

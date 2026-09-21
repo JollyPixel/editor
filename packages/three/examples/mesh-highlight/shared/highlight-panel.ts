@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { Pane } from "@jolly-pixel/ui";
+import type {
+  FacadeFolder,
+  FacadeItem,
+  Pane
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -8,14 +12,8 @@ import {
 } from "../../../src/index.ts";
 import { hexOf } from "./selectables.ts";
 
-type PaneFolder = ReturnType<Pane["addFolder"]>;
-
-interface Hideable {
-  hidden: boolean | string;
-}
-
 interface ModeScopedElement {
-  element: Hideable;
+  element: FacadeItem;
   modes: MeshHighlightMode[];
 }
 
@@ -25,7 +23,7 @@ export interface HighlightPeerPanelOptions {
   boundingBox?: boolean;
   maxDistance: { default: number; max: number; };
   onModeChange?: (mode: MeshHighlightMode) => void;
-  extraPeerBindings?: (peerFolder: PaneFolder) => void;
+  extraPeerBindings?: (peerFolder: FacadeFolder) => void;
 }
 
 export function bindHighlightAndPeerPanel(
@@ -42,18 +40,19 @@ export function bindHighlightAndPeerPanel(
   const appearance = highlight.appearance;
   const scoped: ModeScopedElement[] = [];
 
-  function only(
+  function only<TItem extends FacadeItem>(
     modes: MeshHighlightMode[],
-    element: Hideable
-  ): void {
+    element: TItem
+  ): TItem {
     scoped.push({ element, modes });
+
+    return element;
   }
 
   const highlightFolder = pane.addFolder({ title: "Selection" });
-
-  const modeHintRow = document.createElement("jolly-property-row");
-  modeHintRow.description = "MeshHighlight owns local and peer rendering, including mode changes.";
-  highlightFolder.element.append(modeHintRow);
+  highlightFolder.addNote({
+    description: "MeshHighlight owns local and peer rendering, including mode changes."
+  });
 
   const modeSettings = { mode: highlight.mode };
   highlightFolder
@@ -104,10 +103,12 @@ export function bindHighlightAndPeerPanel(
     .on("change", ({ value }) => highlight.configure({ xray: value })));
 
   const peerFolder = pane.addFolder({ title: "Peer rendering" });
-  const priorityHintRow = document.createElement("jolly-property-row");
-  priorityHintRow.description = "Your own selection wins silhouette overlaps in both highlight modes.";
-  peerFolder.element.append(priorityHintRow);
-  only(["highlight", "highlightJfa"], priorityHintRow);
+  only(
+    ["highlight", "highlightJfa"],
+    peerFolder.addNote({
+      description: "Your own selection wins silhouette overlaps in both highlight modes."
+    })
+  );
   extraPeerBindings?.(peerFolder);
 
   const highlightSettings = { edgeThickness: appearance.highlight.edgeThickness };
@@ -150,9 +151,9 @@ export function bindHighlightAndPeerPanel(
 
   const { visibility } = highlight;
   if (visibility) {
-    const visibilityHintRow = document.createElement("jolly-property-row");
-    visibilityHintRow.description = "Skips remote indicators that are distant or outside the camera frustum.";
-    peerVisibilityFolder.element.append(visibilityHintRow);
+    peerVisibilityFolder.addNote({
+      description: "Skips remote indicators that are distant or outside the camera frustum."
+    });
 
     const visibilitySettings = { maxDistance: maxDistance.default };
     peerVisibilityFolder

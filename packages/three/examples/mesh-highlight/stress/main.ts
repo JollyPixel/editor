@@ -220,12 +220,12 @@ stressFolder
 
 const selectionFolder = pane.addFolder({ title: "Selection" });
 
-const perfHintRow = document.createElement("jolly-property-row");
-perfHintRow.label = "perf note";
-perfHintRow.description = "\"outline\" re-merges geometry on every change and is local-only, so its own " +
-  "\"count\" caps lower below; both \"peer colors\" modes never rebuild geometry, stay uncapped, " +
-  "and are the only modes where peers are visible.";
-selectionFolder.element.append(perfHintRow);
+selectionFolder.addNote({
+  label: "perf note",
+  description: "\"outline\" re-merges geometry on every change and is local-only, so its own " +
+    "\"count\" caps lower below; both \"peer colors\" modes never rebuild geometry, stay uncapped, " +
+    "and are the only modes where peers are visible."
+});
 
 const modeSettings: { mode: RenderMode; } = { mode: renderMode };
 selectionFolder
@@ -292,9 +292,9 @@ peerColorsFolder.addButton({ title: "Randomize assignment" }).on("click", () => 
   peers.assign(grid.randomIds(Math.round(peerColorsSettings.peerCount)));
 });
 
-const clusterHintRow = document.createElement("jolly-property-row");
-clusterHintRow.description = "Packs peers tightly around your selection to stress the priority guarantee.";
-peerColorsFolder.element.append(clusterHintRow);
+peerColorsFolder.addNote({
+  description: "Packs peers tightly around your selection to stress the priority guarantee."
+});
 peerColorsFolder.addButton({ title: "Cluster around selection" }).on("click", () => {
   clusterPeersAroundSelection(Math.round(peerColorsSettings.peerCount));
 });

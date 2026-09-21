@@ -10,7 +10,7 @@ export interface FolderOptions {
   expanded?: boolean;
 }
 
-export class Folder extends FacadeContainer {
+export class FacadeFolder extends FacadeContainer {
   readonly element: HTMLElementTagNameMap["jolly-folder"];
 
   constructor(
@@ -28,7 +28,7 @@ export class Folder extends FacadeContainer {
 
   protected createFolder(
     options: FolderOptions
-  ): Folder {
-    return new Folder(options);
+  ): FacadeFolder {
+    return new FacadeFolder(options);
   }
 }

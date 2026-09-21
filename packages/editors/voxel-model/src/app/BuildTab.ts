@@ -6,10 +6,10 @@ import {
   type PropertyValues,
   type TemplateResult
 } from "lit";
-import { property, state } from "lit/decorators.js";
-import type {
-  JollyChangeDetail,
-  JollyOption
+import { property } from "lit/decorators.js";
+import {
+  FieldBinding,
+  type JollyOption
 } from "@jolly-pixel/ui";
 import type {
   PixelArtCanvas,
@@ -26,13 +26,17 @@ const kTextureSizeOptions: JollyOption<number>[] = kTextureSizeValues.map((value
     label: String(value)
   };
 });
+const kDefaultTextureSize: Vec2 = {
+  x: 64,
+  y: 64
+};
 
 export class BuildTab extends LitElement {
   @property({ attribute: false })
   declare canvas: PixelArtCanvas | null;
 
-  @state()
-  private declare textureSize: Vec2;
+  #width = textureAxisBinding(this, "x");
+  #height = textureAxisBinding(this, "y");
 
   static override styles = css`
     :host {
@@ -64,21 +68,13 @@ export class BuildTab extends LitElement {
     }
   `;
 
-  #onTextureResized = (
-    event: { size: Vec2; }
-  ): void => {
-    this.textureSize = {
-      ...event.size
-    };
+  #onTextureResized = (): void => {
+    this.requestUpdate();
   };
 
   constructor() {
     super();
     this.canvas = null;
-    this.textureSize = {
-      x: 64,
-      y: 64
-    };
   }
 
   override willUpdate(
@@ -95,9 +91,6 @@ export class BuildTab extends LitElement {
     if (this.canvas) {
       this.canvas.document.on("resized", this.#onTextureResized);
       this.canvas.document.on("replaced", this.#onTextureResized);
-      this.textureSize = {
-        ...this.canvas.textureSize
-      };
     }
   }
 
@@ -107,21 +100,6 @@ export class BuildTab extends LitElement {
     this.canvas?.document.off("replaced", this.#onTextureResized);
   }
 
-  #resizeTexture(
-    axis: keyof Vec2,
-    event: CustomEvent<JollyChangeDetail<number>>
-  ): void {
-    if (!this.canvas) {
-      return;
-    }
-
-    this.textureSize = {
-      ...this.textureSize,
-      [axis]: event.detail.value
-    };
-    this.canvas.textureSize = this.textureSize;
-  }
-
   override render(): TemplateResult {
     return html`
       <section id="texture">
@@ -129,24 +107,40 @@ export class BuildTab extends LitElement {
           <jolly-select
             title="Width"
             .options=${kTextureSizeOptions}
-            .value=${this.textureSize.x}
-            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
-              this.#resizeTexture("x", event);
-            }}
+            .value=${this.#width.value}
+            @jolly-change=${this.#width.commit}
           ></jolly-select>
           <span class="separator">×</span>
           <jolly-select
             title="Height"
             .options=${kTextureSizeOptions}
-            .value=${this.textureSize.y}
-            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
-              this.#resizeTexture("y", event);
-            }}
+            .value=${this.#height.value}
+            @jolly-change=${this.#height.commit}
           ></jolly-select>
         </jolly-property-row>
       </section>
     `;
   }
+}
+
+function textureAxisBinding(
+  host: BuildTab,
+  axis: keyof Vec2
+): FieldBinding<number> {
+  return new FieldBinding<number>(host, {
+    read: () => (host.canvas?.textureSize ?? kDefaultTextureSize)[axis],
+    write: (value) => {
+      const { canvas } = host;
+      if (canvas === null) {
+        return;
+      }
+
+      canvas.textureSize = {
+        ...canvas.textureSize,
+        [axis]: value
+      };
+    }
+  });
 }
 
 customElements.define("jolly-model-editor-build", BuildTab);

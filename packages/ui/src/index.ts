@@ -37,6 +37,10 @@ export {
   type JollyChangeDetail,
   type JollyFieldEventName
 } from "./field/events.ts";
+export {
+  FieldBinding,
+  type FieldSource
+} from "./field/FieldBinding.ts";
 export * from "./peer/types.ts";
 export * from "./peer/identity.ts";
 export * from "./peer/promptPeerIdentity.ts";
@@ -221,27 +225,49 @@ export * from "./facade/Pane.ts";
 export * from "./facade/Dock.ts";
 export type {
   Disposable,
+  FacadeContainer,
   MonitorFields
 } from "./facade/Container.ts";
 export type {
-  FolderOptions
+  FacadeItem
+} from "./facade/FacadeItem.ts";
+export {
+  FacadeFolder,
+  type FolderOptions
 } from "./facade/Folder.ts";
-export type {
-  BindingChangeEvent,
-  BindingChangeHandler,
-  BindingOptions
+export {
+  FacadeBinding,
+  type BindingChangeEvent,
+  type BindingChangeHandler,
+  type BindingOptions
 } from "./facade/Binding.ts";
-export type {
-  MonitorKey,
-  MonitorOptions,
-  MonitorValue
+export {
+  FacadeMonitor,
+  type MonitorKey,
+  type MonitorOptions,
+  type MonitorValue
 } from "./facade/Monitor.ts";
 export type {
   DispatchView
 } from "./facade/dispatch.ts";
-export type {
-  ButtonOptions
+export {
+  FacadeButton,
+  type ButtonOptions
 } from "./facade/Button.ts";
+export {
+  FacadeSeparator
+} from "./facade/Separator.ts";
+export {
+  FacadeNote,
+  type NoteOptions
+} from "./facade/Note.ts";
+export {
+  FacadeElement
+} from "./facade/Element.ts";
+export type {
+  FacadeThemePreferences,
+  ThemePreferencesOptions
+} from "./facade/ThemePreferences.ts";
 export * from "./facade/Presence.ts";
 
 export * from "./dom.ts";

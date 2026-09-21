@@ -6,7 +6,7 @@ import { FacadeContainer } from "./Container.ts";
 import { documentThemeMode } from "../theme/ambientTheme.ts";
 import type { PresenceSource } from "../peer/PresenceSource.ts";
 import {
-  Folder,
+  FacadeFolder,
   type FolderOptions
 } from "./Folder.ts";
 
@@ -60,6 +60,7 @@ export class Pane extends FacadeContainer {
   readonly element: HTMLElement;
 
   #pane: HTMLElementTagNameMap["jolly-pane"];
+  #scope: HTMLElement | null = null;
 
   constructor(
     options: PaneOptions = {}
@@ -96,14 +97,20 @@ export class Pane extends FacadeContainer {
     this.#pane.presence = value;
   }
 
+  override dispose(): void {
+    super.dispose();
+    this.#scope?.remove();
+    this.#scope = null;
+  }
+
   protected get contentHost(): HTMLElement {
     return this.#pane;
   }
 
   protected createFolder(
     options: FolderOptions
-  ): Folder {
-    return new Folder(options);
+  ): FacadeFolder {
+    return new FacadeFolder(options);
   }
 
   #mountInto(
@@ -137,6 +144,7 @@ export class Pane extends FacadeContainer {
     }
     scope.append(floating);
     document.body.append(scope);
+    this.#scope = scope;
 
     return floating;
   }

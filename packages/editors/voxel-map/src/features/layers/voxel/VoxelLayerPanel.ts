@@ -6,7 +6,7 @@ import type {
   VoxelLayerCommand,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
-import type { JollyChangeDetail, Vec3Like } from "@jolly-pixel/ui";
+import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
@@ -17,6 +17,12 @@ import {
   type PropertyRow,
   type PropertyRowsChangeDetail
 } from "../properties/propertyDraft.ts";
+import {
+  gizmoSource,
+  layerPositionSource,
+  roundPosition,
+  samePosition
+} from "./layerSources.ts";
 import "../properties/CustomPropertiesEditor.ts";
 
 @customElement("layer-panel")
@@ -47,25 +53,35 @@ export class VoxelLayerPanel extends LitElement {
   private declare _layer: VoxelLayer | null;
 
   @state()
-  private declare _position: Vec3Like;
-
-  @state()
   private declare _contentOrigin: Vec3Like;
-
-  @state()
-  private declare _gizmo: boolean;
 
   @state()
   private declare _props: PropertyRow[];
   #subscriptions: Array<() => void> = [];
 
+  #position = new FieldBinding(this, layerPositionSource({
+    position: () => this._layer?.position ?? null,
+    move: (position) => {
+      if (this.layerName !== null) {
+        this.world.setLayerPosition(this.layerName, position);
+      }
+    }
+  }));
+
+  #gizmo = new FieldBinding(this, gizmoSource({
+    enabled: () => this.selection.gizmoLayer === this.layerName,
+    toggle: (enabled) => {
+      if (this.layerName !== null) {
+        this.selection.gizmoLayer = enabled ? this.layerName : null;
+      }
+    }
+  }));
+
   constructor() {
     super();
     this.layerName = null;
     this._layer = null;
-    this._position = { x: 0, y: 0, z: 0 };
     this._contentOrigin = { x: 0, y: 0, z: 0 };
-    this._gizmo = false;
     this._props = [];
   }
 
@@ -85,7 +101,7 @@ export class VoxelLayerPanel extends LitElement {
   };
 
   #onGizmoLayerChange = () => {
-    this._gizmo = this.selection.gizmoLayer === this.layerName;
+    this.requestUpdate();
   };
 
   override connectedCallback() {
@@ -125,16 +141,12 @@ export class VoxelLayerPanel extends LitElement {
     this._layer = layer;
 
     if (layer) {
-      this._position = {
-        x: layer.position.x,
-        y: layer.position.y,
-        z: layer.position.z
-      };
       const bounds = layer.worldBounds();
       this._contentOrigin = { ...(bounds?.min ?? layer.position) };
-      this._gizmo = this.selection.gizmoLayer === this.layerName;
       this._props = propertyRowsOf(layer.properties);
     }
+
+    this.requestUpdate();
   }
 
   override render() {
@@ -148,16 +160,16 @@ export class VoxelLayerPanel extends LitElement {
       <jolly-checkbox
         align="end"
         label="Gizmo"
-        .value=${this._gizmo}
-        @jolly-change=${this.#onGizmoChange}
+        .value=${this.#gizmo.value}
+        @jolly-change=${this.#gizmo.commit}
       ></jolly-checkbox>
 
       <jolly-vector3
         label="Position"
         step="1"
-        .value=${this._position}
-        @jolly-input=${this.#onPositionChange}
-        @jolly-change=${this.#onPositionChange}
+        .value=${this.#position.value}
+        @jolly-input=${this.#position.input}
+        @jolly-change=${this.#position.commit}
       ></jolly-vector3>
 
       <jolly-vector3
@@ -167,7 +179,7 @@ export class VoxelLayerPanel extends LitElement {
       ></jolly-vector3>
 
       <jolly-button
-        ?disabled=${samePosition(this._contentOrigin, this._position)}
+        ?disabled=${samePosition(roundPosition(this._contentOrigin), this.#position.value)}
         @click=${this.#onRebase}
       >Rebase to content origin</jolly-button>
 
@@ -177,42 +189,6 @@ export class VoxelLayerPanel extends LitElement {
         @property-rows-change=${this.#onPropertyRowsChange}
       ></custom-properties-editor>
     `;
-  }
-
-  #onGizmoChange(
-    event: CustomEvent<JollyChangeDetail<boolean>>
-  ): void {
-    if (!this.layerName) {
-      return;
-    }
-
-    this._gizmo = event.detail.value;
-    this.selection.gizmoLayer = this._gizmo ? this.layerName : null;
-  }
-
-  #onPositionChange(
-    event: CustomEvent<JollyChangeDetail<Vec3Like>>
-  ): void {
-    const { world, layerName } = this;
-    if (!world || !layerName) {
-      return;
-    }
-
-    const { x, y, z } = event.detail.value;
-    const position = {
-      x: Math.round(x),
-      y: Math.round(y),
-      z: Math.round(z)
-    };
-    if (samePosition(position, this._position)) {
-      return;
-    }
-
-    this._position = position;
-    world.setLayerPosition(
-      layerName,
-      position
-    );
   }
 
   #onRebase(): void {
@@ -245,15 +221,6 @@ export class VoxelLayerPanel extends LitElement {
       properties: propertiesOf(this._props)
     });
   }
-}
-
-function samePosition(
-  left: Vec3Like,
-  right: Vec3Like
-): boolean {
-  return left.x === right.x &&
-    left.y === right.y &&
-    left.z === right.z;
 }
 
 declare global {

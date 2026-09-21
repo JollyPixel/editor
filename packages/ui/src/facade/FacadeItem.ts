@@ -1,3 +1,19 @@
+export interface FacadeOwner {
+  release(
+    child: FacadeItem
+  ): void;
+}
+
+// CONSTANTS
+const kOwners = new WeakMap<object, FacadeOwner>();
+
+export function adoptFacadeItem(
+  child: FacadeItem,
+  owner: FacadeOwner
+): void {
+  kOwners.set(child, owner);
+}
+
 export abstract class FacadeItem<
   TElement extends HTMLElement = HTMLElement
 > {
@@ -24,6 +40,8 @@ export abstract class FacadeItem<
   }
 
   dispose(): void {
+    kOwners.get(this)?.release(this);
+    kOwners.delete(this);
     this.element.remove();
   }
 
