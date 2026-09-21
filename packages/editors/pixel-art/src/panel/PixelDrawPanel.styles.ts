@@ -122,6 +122,8 @@ export const panelStyles = css`
     min-width: 0;
     font-size: 12px;
     user-select: none;
+
+    --texture-tab-height: calc(var(--jolly-control-height, 20px) + 8px);
   }
 
   .texture-tabs:not([variant="skew"]) {
@@ -129,7 +131,11 @@ export const panelStyles = css`
   }
 
   .texture-tabs::part(tab) {
-    min-height: calc(var(--jolly-control-height, 20px) + 8px);
+    min-height: var(--texture-tab-height);
+  }
+
+  .texture-add {
+    --jolly-control-height: var(--texture-tab-height);
   }
 
   .texture-tabs::part(list) {
