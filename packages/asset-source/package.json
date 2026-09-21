@@ -16,8 +16,8 @@
       "default": "./dist/core.js"
     },
     "./indexeddb": {
-      "types": "./dist/persistence/indexeddb/index.d.ts",
-      "default": "./dist/persistence/indexeddb/index.js"
+      "types": "./dist/persistence/indexeddb/IndexedDbAssetSource.d.ts",
+      "default": "./dist/persistence/indexeddb/IndexedDbAssetSource.js"
     }
   },
   "scripts": {
@@ -52,6 +52,7 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
+    "@openally/atomic-fs": "1.0.0",
     "@openally/result": "3.1.0",
     "chokidar": "^5.0.0",
     "picomatch": "4.0.7"

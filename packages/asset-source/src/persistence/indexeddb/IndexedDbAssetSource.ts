@@ -3,7 +3,7 @@ import type { AssetSource } from "../../AssetSource.ts";
 import {
   isStatePath,
   normalizeAssetPath
-} from "../../paths.ts";
+} from "../../paths/index.ts";
 
 // CONSTANTS
 const kDatabaseVersion = 1;

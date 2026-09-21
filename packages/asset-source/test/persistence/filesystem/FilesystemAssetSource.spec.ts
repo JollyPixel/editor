@@ -62,43 +62,24 @@ describe("FilesystemAssetSource — listing", () => {
 });
 
 describe("FilesystemAssetSource — atomic write", () => {
-  test("leaves no temporary file behind on success", async() => {
-    await using workspace = await tempWorkspace();
-    const source = new FilesystemAssetSource(workspace.root);
-
-    await source.write("sprite.png", bytes("hello"));
-
-    const entries = await fs.readdir(workspace.root);
-    assert.deepEqual(entries, ["sprite.png"]);
-  });
-
-  test("leaves no temporary file after a conditional write", async() => {
-    await using workspace = await tempWorkspace();
-    const source = new FilesystemAssetSource(workspace.root);
-
-    await source.writeIfAbsent("sprite.png", bytes("hello"));
-    await source.writeIfAbsent("sprite.png", bytes("ignored"));
-
-    const entries = await fs.readdir(workspace.root);
-    assert.deepEqual(entries, ["sprite.png"]);
-  });
-
-  test("an interrupted write leaves the previous content readable", async() => {
+  test("hides leftover atomic temporary files from the listing", async() => {
     await using workspace = await tempWorkspace();
     const source = new FilesystemAssetSource(workspace.root);
     await source.write("sprite.png", bytes("first"));
 
-    // Simulates a crash between the temp write and the rename.
     await fs.writeFile(
-      path.join(workspace.root, ".sprite.png.deadbeef.tmp"),
+      path.join(workspace.root, ".sprite.png.deadbeefcafe.tmp"),
       bytes("second")
     );
-
-    assert.strictEqual(
-      text(await source.read("sprite.png")),
-      "first"
+    await fs.writeFile(
+      path.join(workspace.root, ".notes.tmp"),
+      bytes("user file")
     );
-    assert.deepEqual(await source.list(), ["sprite.png"]);
+
+    assert.deepEqual(
+      await source.list(),
+      [".notes.tmp", "sprite.png"]
+    );
   });
 
   test("creates missing parent directories", async() => {

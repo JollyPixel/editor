@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { IDBFactory } from "fake-indexeddb";
 
 // Import Internal Dependencies
-import { IndexedDbAssetSource } from "#src/persistence/indexeddb/index.ts";
+import { IndexedDbAssetSource } from "#src/persistence/indexeddb/IndexedDbAssetSource.ts";
 import {
   bytes,
   text

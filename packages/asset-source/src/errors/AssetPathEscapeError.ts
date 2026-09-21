@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { AssetPathRejection } from "../paths.ts";
+import type { AssetPathRejection } from "../paths/index.ts";
 
 export class AssetPathEscapeError extends Error {
   readonly path: string;

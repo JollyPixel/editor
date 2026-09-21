@@ -15,7 +15,7 @@ import {
   isStatePath,
   safeAssetPath,
   type AssetPathRejection
-} from "../paths.ts";
+} from "../paths/index.ts";
 import {
   DEFAULT_CONTENT_TYPES,
   resolveContentType

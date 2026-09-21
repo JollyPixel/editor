@@ -4,7 +4,7 @@ import path from "node:path";
 
 // Import Internal Dependencies
 import { AssetPathEscapeError } from "../../errors/AssetPathEscapeError.ts";
-import { normalizeAssetPath } from "../../paths.ts";
+import { normalizeAssetPath } from "../../paths/index.ts";
 import { toRelativePosix } from "./toRelativePosix.ts";
 
 export class FilesystemPathResolver {

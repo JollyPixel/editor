@@ -26,14 +26,15 @@ const source = new FilesystemAssetSource("./assets", {
 source is created: `list()` returns an empty array, and the first `write`
 creates the required directories.
 
-Writes replace a file through a temporary file and rename. An interrupted
-write leaves the previous file readable, and temporary files are excluded from
-listings.
+Writes are delegated to [`@openally/atomic-fs`](https://github.com/OpenAlly/npm-packages/tree/main/src/atomic-fs).
+A file is replaced through a temporary sibling that is flushed to disk and then
+renamed, so an interrupted write leaves the previous file readable. Temporary
+files are excluded from listings.
 
-`writeIfAbsent()` writes a temporary file and then links it into place. The
-link fails when the destination is occupied, so concurrent conditional writes
-cannot replace each other. Filesystems without hard-link support reject this
-operation. `exists()` checks the path without reading the file.
+`writeIfAbsent()` links the temporary file into place. The link fails when the
+destination is occupied, so concurrent conditional writes cannot replace each
+other. Filesystems without hard-link support reject this operation. `exists()`
+checks the path without reading the file.
 
 ## Ignored paths
 
