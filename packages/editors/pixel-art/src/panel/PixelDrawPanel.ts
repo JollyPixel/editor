@@ -38,7 +38,6 @@ import {
   ColorController,
   type ColorPickedDetail
 } from "../color/ColorController.ts";
-import { assertElement } from "../shared/dom.ts";
 import {
   UvAccessPolicy,
   type UvAccess
@@ -393,10 +392,12 @@ export class PixelDrawPanel extends LitElement {
   #element(
     selector: string
   ): HTMLElement {
-    return assertElement(
-      this.renderRoot.querySelector<HTMLElement>(selector),
-      `PixelDrawPanel: ${selector} element not found`
-    );
+    const element = this.renderRoot.querySelector<HTMLElement>(selector);
+    if (element === null) {
+      throw new Error(`PixelDrawPanel: ${selector} element not found`);
+    }
+
+    return element;
   }
 
   #observeCanvasHost(): void {

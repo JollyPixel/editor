@@ -337,10 +337,10 @@ function refreshStatus(): void {
 
 const priorityStackFolder = pane.addFolder({ title: "Priority stack" });
 
-const priorityStackHintRow = document.createElement("jolly-property-row");
-priorityStackHintRow.description = "Orbiters keep overlapping Cone - stays visible through them in " +
-  "either highlight mode below, not in outline mode.";
-priorityStackFolder.element.append(priorityStackHintRow);
+priorityStackFolder.addNote({
+  description: "Orbiters keep overlapping Cone - stays visible through them in " +
+    "either highlight mode below, not in outline mode."
+});
 
 const orbitSettings = { spin: orbitEnabled };
 priorityStackFolder

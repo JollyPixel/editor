@@ -19,15 +19,17 @@ defaults to `true` and maps to `open`.
 
 ## Methods
 
-Folders can add folders, bindings, monitors, buttons, separators, and presence
-views. Their method signatures match the [`Pane` methods](./pane.md#methods).
+Folders can add folders, bindings, monitors, buttons, separators, notes, theme
+preferences, plain elements, and presence views. Their method signatures match
+the [`Pane` methods](./pane.md#methods).
 
 `refresh()` re-reads the folder's direct bindings and monitors. It also calls
 `refresh()` on nested folders created through the facade.
 
 `disposeAll()` removes direct child builders and starts a new empty child
-list. Application elements appended directly to `folder.element` are not
-tracked and remain in the folder.
+list. Elements appended directly to `folder.element` are not tracked and remain
+in the folder; `addElement()` adds one that is. Disposing a builder on its own
+also detaches it, so the folder stops holding it.
 
 ```ts
 const state = { visible: true };

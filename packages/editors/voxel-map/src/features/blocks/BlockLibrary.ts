@@ -12,8 +12,8 @@ import {
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
 import {
+  FieldBinding,
   showConfirm,
-  type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
 
@@ -164,12 +164,6 @@ export class BlockLibrary extends LitElement {
   private declare _shownBlocks: ResolvedBlockDefinition[];
 
   @state()
-  private declare _rotationMode: RotationMode;
-
-  @state()
-  private declare _flipY: boolean;
-
-  @state()
   private declare _marks: PeerMarkMap<number>;
 
   @state()
@@ -186,6 +180,20 @@ export class BlockLibrary extends LitElement {
 
   #subscriptions: Array<() => void> = [];
 
+  #rotation = new FieldBinding<RotationMode>(this, {
+    read: () => this.brush.rotationMode,
+    write: (value) => {
+      this.brush.rotationMode = value;
+    }
+  });
+
+  #flipY = new FieldBinding<boolean>(this, {
+    read: () => this.brush.flipY,
+    write: (value) => {
+      this.brush.flipY = value;
+    }
+  });
+
   constructor() {
     super();
 
@@ -195,12 +203,14 @@ export class BlockLibrary extends LitElement {
     this._selectedBlock = null;
     this._blocks = [];
     this._shownBlocks = [];
-    this._rotationMode = "auto";
-    this._flipY = false;
     this._marks = new Map();
     this._problems = new Map();
     this._unused = new Set();
   }
+
+  readonly #onBrushOptionChange = () => {
+    this.requestUpdate();
+  };
 
   readonly #onSelectedBlockChange = () => {
     this.#resolveSelection();
@@ -210,14 +220,6 @@ export class BlockLibrary extends LitElement {
   readonly #onBlockRegistryChanged = () => {
     this.#resolveSelection();
     this.#refreshBlocks();
-  };
-
-  readonly #onRotationModeChange = () => {
-    this._rotationMode = this.brush.rotationMode;
-  };
-
-  readonly #onFlipYChange = () => {
-    this._flipY = this.brush.flipY;
   };
 
   readonly #onMarksChange = () => {
@@ -237,15 +239,13 @@ export class BlockLibrary extends LitElement {
     this.#subscriptions.push(
       this.brush.subscribe("blockChange", this.#onSelectedBlockChange),
       this.mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged),
-      this.brush.subscribe("rotationModeChange", this.#onRotationModeChange),
-      this.brush.subscribe("flipYChange", this.#onFlipYChange),
+      this.brush.subscribe("rotationModeChange", this.#onBrushOptionChange),
+      this.brush.subscribe("flipYChange", this.#onBrushOptionChange),
       this.presence.subscribe("blockSelectionsChange", this.#onMarksChange),
       this.presence.subscribe("peersChange", this.#onMarksChange),
       this.tilesets.subscribe("change", this.#onTilesetsChange),
       this.usage.subscribe("change", this.#onUsageChange)
     );
-    this.#onRotationModeChange();
-    this.#onFlipYChange();
     this.#refreshMarks();
     this.#refreshUsage();
   }
@@ -293,14 +293,14 @@ export class BlockLibrary extends LitElement {
         <jolly-button-group
           aria-label="Rotation"
           .options=${kRotationOptions}
-          .value=${this._rotationMode}
-          @jolly-change=${this.#onRotationChange}
+          .value=${this.#rotation.value}
+          @jolly-change=${this.#rotation.commit}
         ></jolly-button-group>
         <jolly-checkbox
           align="end"
           label="Flip Y"
-          .value=${this._flipY}
-          @jolly-change=${this.#onFlipYToggle}
+          .value=${this.#flipY.value}
+          @jolly-change=${this.#flipY.commit}
         ></jolly-checkbox>
       </div>
 
@@ -395,18 +395,6 @@ export class BlockLibrary extends LitElement {
 
   #onBlockCreate(): void {
     void this.#addBlock();
-  }
-
-  #onRotationChange(
-    event: CustomEvent<JollyChangeDetail<RotationMode>>
-  ): void {
-    this.brush.rotationMode = event.detail.value;
-  }
-
-  #onFlipYToggle(
-    event: CustomEvent<JollyChangeDetail<boolean>>
-  ): void {
-    this.brush.flipY = event.detail.value;
   }
 
   async #addBlock(): Promise<void> {

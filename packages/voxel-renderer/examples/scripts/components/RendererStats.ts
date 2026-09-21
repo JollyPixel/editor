@@ -5,18 +5,18 @@ import {
 } from "@jolly-pixel/engine";
 import {
   formatCount,
-  type Pane
+  type FacadeFolder
 } from "@jolly-pixel/ui";
 import { StatsRecorder } from "@jolly-pixel/ui/stats";
 import type * as THREE from "three/webgpu";
 
 export interface RendererStatsOptions {
-  folder: ReturnType<Pane["addFolder"]>;
+  folder: FacadeFolder;
   onRefresh?: () => void;
 }
 
 export class RendererStats extends ActorComponent {
-  #folder: ReturnType<Pane["addFolder"]>;
+  #folder: FacadeFolder;
   #onRefresh?: () => void;
   #recorder = new StatsRecorder();
   #unsubscribe: (() => void) | null = null;

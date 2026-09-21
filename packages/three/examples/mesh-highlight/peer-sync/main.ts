@@ -210,12 +210,10 @@ sessionFolder.addButton({ title: "Change name" }).on("click", () => {
 });
 
 const peersFolder = pane.addFolder({ title: "Peers" });
-const peersRow = document.createElement("jolly-property-row");
-peersRow.label = "selecting";
+const peersRow = peersFolder.addNote({ label: "selecting" });
 const peersListElt = document.createElement("div");
 peersListElt.className = "peer-legend";
-peersRow.appendChild(peersListElt);
-peersFolder.element.append(peersRow);
+peersRow.element.appendChild(peersListElt);
 
 function refreshPeersLegend(): void {
   const rows: { name: string; color: string; selected: string; }[] = [

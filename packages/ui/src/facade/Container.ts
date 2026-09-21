@@ -1,19 +1,24 @@
 // Import Internal Dependencies
 import {
-  Binding,
+  FacadeBinding,
   type BindingOptions
 } from "./Binding.ts";
 import {
-  Button,
+  FacadeButton,
   type ButtonOptions
 } from "./Button.ts";
-
+import { FacadeElement } from "./Element.ts";
+import {
+  adoptFacadeItem,
+  FacadeItem,
+  type FacadeOwner
+} from "./FacadeItem.ts";
 import type {
-  Folder,
+  FacadeFolder,
   FolderOptions
 } from "./Folder.ts";
 import {
-  Monitor,
+  FacadeMonitor,
   type MonitorKey,
   type MonitorOptions
 } from "./Monitor.ts";
@@ -22,11 +27,19 @@ import {
   type MonitorFields
 } from "./monitorFields.ts";
 import {
+  FacadeNote,
+  type NoteOptions
+} from "./Note.ts";
+import {
   Presence,
   type PresenceOptions
 } from "./Presence.ts";
-import { FacadeItem } from "./FacadeItem.ts";
-import { Separator } from "./Separator.ts";
+import { FacadeSeparator } from "./Separator.ts";
+import {
+  createThemePreferences,
+  type FacadeThemePreferences,
+  type ThemePreferencesOptions
+} from "./ThemePreferences.ts";
 
 export type { MonitorFields } from "./monitorFields.ts";
 
@@ -38,53 +51,49 @@ export interface Disposable {
   dispose(): void;
 }
 
+type RefreshableItem = FacadeItem & Refreshable;
+
 export abstract class FacadeContainer extends FacadeItem {
   abstract override readonly element: HTMLElement;
 
-  #children: Disposable[] = [];
-  #refreshable: Refreshable[] = [];
+  #children: FacadeItem[] = [];
+  #refreshable: RefreshableItem[] = [];
+  #owner: FacadeOwner = {
+    release: (child) => this.#release(child)
+  };
 
   protected abstract get contentHost(): HTMLElement;
 
   protected abstract createFolder(
     options: FolderOptions
-  ): Folder;
+  ): FacadeFolder;
 
   addFolder(
     options: FolderOptions = {}
-  ): Folder {
-    const folder = this.createFolder(options);
-    this.contentHost.append(folder.element);
-    this.#children.push(folder);
-    this.#refreshable.push(folder);
-
-    return folder;
+  ): FacadeFolder {
+    return this.#adoptRefreshable(
+      this.createFolder(options)
+    );
   }
 
   addBinding<TObject extends object, TKey extends keyof TObject>(
     object: TObject,
     key: TKey,
     options?: BindingOptions<TObject[TKey]>
-  ): Binding<TObject, TKey> {
-    const binding = new Binding(object, key, options);
-    this.contentHost.append(binding.element);
-    this.#children.push(binding);
-    this.#refreshable.push(binding);
-
-    return binding;
+  ): FacadeBinding<TObject, TKey> {
+    return this.#adoptRefreshable(
+      new FacadeBinding(object, key, options)
+    );
   }
 
   addMonitor<TObject extends object, TKey extends MonitorKey<TObject>>(
     object: TObject,
     key: TKey,
     options?: MonitorOptions<TObject[TKey]>
-  ): Monitor<TObject, TKey> {
-    const monitor = new Monitor(object, key, options);
-    this.contentHost.append(monitor.element);
-    this.#children.push(monitor);
-    this.#refreshable.push(monitor);
-
-    return monitor;
+  ): FacadeMonitor<TObject, TKey> {
+    return this.#adoptRefreshable(
+      new FacadeMonitor(object, key, options)
+    );
   }
 
   addMonitors<TObject extends object>(
@@ -98,43 +107,85 @@ export abstract class FacadeContainer extends FacadeItem {
 
   addButton(
     options?: ButtonOptions
-  ): Button {
-    const button = new Button(options);
-    this.contentHost.append(button.element);
-    this.#children.push(button);
-
-    return button;
+  ): FacadeButton {
+    return this.#adopt(new FacadeButton(options));
   }
 
-  addSeparator(): Separator {
-    const separator = new Separator();
-    this.contentHost.append(separator.element);
-    this.#children.push(separator);
+  addSeparator(): FacadeSeparator {
+    return this.#adopt(new FacadeSeparator());
+  }
 
-    return separator;
+  addNote(
+    options: NoteOptions = {}
+  ): FacadeNote {
+    return this.#adopt(new FacadeNote(options));
+  }
+
+  addThemePreferences(
+    options: ThemePreferencesOptions = {}
+  ): FacadeThemePreferences {
+    return this.#adopt(createThemePreferences(options));
+  }
+
+  addElement<TElement extends HTMLElement>(
+    element: TElement
+  ): FacadeElement<TElement> {
+    return this.#adopt(new FacadeElement(element));
   }
 
   addPresence(
     options: PresenceOptions = {}
   ): Presence {
-    const presence = new Presence(options);
-    this.contentHost.append(presence.element);
-    this.#children.push(presence);
-
-    return presence;
+    return this.#adopt(new Presence(options));
   }
 
   disposeAll(): void {
-    for (const child of this.#children) {
-      child.dispose();
-    }
+    const children = this.#children;
     this.#children = [];
     this.#refreshable = [];
+    for (const child of children) {
+      child.dispose();
+    }
   }
 
   refresh(): void {
     for (const child of this.#refreshable) {
       child.refresh();
     }
+  }
+
+  #adopt<TChild extends FacadeItem>(
+    child: TChild
+  ): TChild {
+    this.contentHost.append(child.element);
+    this.#children.push(child);
+    adoptFacadeItem(child, this.#owner);
+
+    return child;
+  }
+
+  #adoptRefreshable<TChild extends RefreshableItem>(
+    child: TChild
+  ): TChild {
+    this.#refreshable.push(child);
+
+    return this.#adopt(child);
+  }
+
+  #release(
+    child: FacadeItem
+  ): void {
+    removeItem(this.#children, child);
+    removeItem(this.#refreshable, child);
+  }
+}
+
+function removeItem(
+  items: FacadeItem[],
+  child: FacadeItem
+): void {
+  const index = items.indexOf(child);
+  if (index !== -1) {
+    items.splice(index, 1);
   }
 }

@@ -2,6 +2,7 @@
 import {
   dispatchTag,
   isMathTag,
+  numericOptions,
   toJollyOptions,
   type DispatchOptions,
   type DispatchTag
@@ -47,7 +48,7 @@ export type BindingChangeHandler<TValue> = (
   event: BindingChangeEvent<TValue>
 ) => void;
 
-export class Binding<
+export class FacadeBinding<
   TObject extends object,
   TKey extends keyof TObject
 > extends FacadeItem {
@@ -195,6 +196,30 @@ function buildElement<TValue>(
         element.options = toJollyOptions(
           options.options
         );
+      }
+
+      return element;
+    }
+    case "jolly-button-group": {
+      const element = document.createElement(tag);
+      if (options.options !== undefined) {
+        element.options = toJollyOptions(
+          options.options
+        );
+      }
+      if (options.layout !== undefined) {
+        element.layout = options.layout;
+      }
+      if (options.columns !== undefined) {
+        element.columns = options.columns;
+      }
+
+      return element;
+    }
+    case "jolly-flags": {
+      const element = document.createElement(tag);
+      if (options.options !== undefined) {
+        element.options = numericOptions(options.options);
       }
 
       return element;

@@ -6,9 +6,9 @@ import {
   type TemplateResult
 } from "lit";
 import type { Vector3Like } from "three";
-import type {
-  JollyChangeDetail,
-  JollyOption
+import {
+  FieldBinding,
+  type JollyOption
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -67,6 +67,31 @@ const kSpaceModes: readonly TransformMode[] = ["pos", "angle", "pivot"];
 export class TransformPanel extends LitElement {
   #transform = new TransformPanelController(this);
 
+  #mode = new FieldBinding<TransformMode>(this, {
+    read: () => this.#transform.mode,
+    write: (value) => {
+      this.#transform.mode = value;
+    }
+  });
+
+  #space = new FieldBinding<GizmoSpace>(this, {
+    read: () => this.#transform.space,
+    write: (value) => {
+      this.#transform.space = value;
+    }
+  });
+
+  #axisValues = new FieldBinding<Vector3Like>(this, {
+    read: () => {
+      const { x, y, z } = this.#transform.axisValues;
+
+      return { x, y, z };
+    },
+    write: (value) => {
+      this.#transform.axisValues = value;
+    }
+  });
+
   static override styles = css`
     :host {
       display: flex;
@@ -91,29 +116,23 @@ export class TransformPanel extends LitElement {
         icon-only
         aria-label="Transform mode"
         .options=${kTransformModes}
-        .value=${this.#transform.mode}
-        @jolly-change=${(event: CustomEvent<JollyChangeDetail<TransformMode>>) => {
-          this.#transform.mode = event.detail.value;
-        }}
+        .value=${this.#mode.value}
+        @jolly-change=${this.#mode.commit}
       ></jolly-button-group>
 
       <jolly-button-group
         aria-label="Transform space"
         .options=${kSpaceOptions}
-        .value=${this.#transform.space}
+        .value=${this.#space.value}
         ?disabled=${this.#transform.disabled || !kSpaceModes.includes(this.#transform.mode)}
-        @jolly-change=${(event: CustomEvent<JollyChangeDetail<GizmoSpace>>) => {
-          this.#transform.space = event.detail.value;
-        }}
+        @jolly-change=${this.#space.commit}
       ></jolly-button-group>
 
       <jolly-vector3
         step="0.01"
         ?disabled=${this.#transform.disabled}
-        .value=${this.#transform.axisValues}
-        @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vector3Like>>) => {
-          this.#transform.axisValues = event.detail.value;
-        }}
+        .value=${this.#axisValues.value}
+        @jolly-change=${this.#axisValues.commit}
       ></jolly-vector3>
     `;
   }

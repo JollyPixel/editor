@@ -37,7 +37,7 @@ export type MonitorKey<TObject> = {
  * `jolly-graph` when `options.view` is `"graph"`. A vector value is joined
  * into `x, y, z` unless `format` says otherwise.
  */
-export class Monitor<
+export class FacadeMonitor<
   TObject extends object,
   TKey extends MonitorKey<TObject>
 > extends FacadeItem {

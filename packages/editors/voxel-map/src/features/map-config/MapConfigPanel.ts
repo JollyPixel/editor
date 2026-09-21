@@ -3,8 +3,7 @@ import {
   LitElement,
   html,
   css,
-  nothing,
-  type PropertyValues
+  nothing
 } from "lit";
 import {
   customElement,
@@ -13,9 +12,9 @@ import {
   state
 } from "lit/decorators.js";
 import {
+  FieldBinding,
   showChoice,
-  showConfirm,
-  type JollyChangeDetail
+  showConfirm
 } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
@@ -64,15 +63,6 @@ export class MapConfigPanel extends LitElement {
   declare workspace: VoxelMapWorkspace;
 
   @state()
-  private declare _gridVisible: boolean;
-
-  @state()
-  private declare _flatLighting: boolean;
-
-  @state()
-  private declare _skyRadius: number;
-
-  @state()
   private declare _busy: boolean;
 
   @state()
@@ -81,24 +71,29 @@ export class MapConfigPanel extends LitElement {
   @query("#file-input")
   declare private _fileInput: HTMLInputElement;
 
+  #gridVisible = new FieldBinding<boolean>(this, {
+    read: () => this.workspace.gridRenderer.visible,
+    write: (value) => this.workspace.gridRenderer.setVisible(value)
+  });
+
+  #flatLighting = new FieldBinding<boolean>(this, {
+    read: () => this.workspace.lighting.mode === "flat",
+    write: (value) => {
+      this.workspace.lighting.mode = value ? "flat" : "lit";
+    }
+  });
+
+  #skyRadius = new FieldBinding<number>(this, {
+    read: () => this.workspace.localBrush.skyRadius,
+    write: (value) => {
+      this.workspace.localBrush.skyRadius = value;
+    }
+  });
+
   constructor() {
     super();
-    this._gridVisible = true;
-    this._flatLighting = false;
-    this._skyRadius = 0;
     this._busy = false;
     this._error = null;
-  }
-
-  override willUpdate(
-    changedProperties: PropertyValues<this>
-  ): void {
-    if (changedProperties.has("workspace")) {
-      const { gridRenderer, lighting, localBrush } = this.workspace;
-      this._gridVisible = gridRenderer.visible;
-      this._flatLighting = lighting.mode === "flat";
-      this._skyRadius = localBrush.skyRadius;
-    }
   }
 
   override render() {
@@ -106,15 +101,15 @@ export class MapConfigPanel extends LitElement {
       <jolly-checkbox
         align="end"
         label="Grid visibility"
-        .value=${this._gridVisible}
-        @jolly-change=${this.#onGridVisibleChange}
+        .value=${this.#gridVisible.value}
+        @jolly-change=${this.#gridVisible.commit}
       ></jolly-checkbox>
 
       <jolly-checkbox
         align="end"
         label="Flat lighting"
-        .value=${this._flatLighting}
-        @jolly-change=${this.#onFlatLightingChange}
+        .value=${this.#flatLighting.value}
+        @jolly-change=${this.#flatLighting.commit}
       ></jolly-checkbox>
 
       <jolly-slider
@@ -122,9 +117,9 @@ export class MapConfigPanel extends LitElement {
         min="0"
         max="32"
         step="1"
-        .value=${this._skyRadius}
-        @jolly-input=${this.#onSkyRadiusChange}
-        @jolly-change=${this.#onSkyRadiusChange}
+        .value=${this.#skyRadius.value}
+        @jolly-input=${this.#skyRadius.input}
+        @jolly-change=${this.#skyRadius.commit}
       ></jolly-slider>
 
       ${this.#renderArchives()}
@@ -175,27 +170,6 @@ export class MapConfigPanel extends LitElement {
         @change=${this.#onFileSelected}
       />
     `;
-  }
-
-  #onGridVisibleChange(
-    event: CustomEvent<JollyChangeDetail<boolean>>
-  ): void {
-    this._gridVisible = event.detail.value;
-    this.workspace.gridRenderer.setVisible(this._gridVisible);
-  }
-
-  #onFlatLightingChange(
-    event: CustomEvent<JollyChangeDetail<boolean>>
-  ): void {
-    this._flatLighting = event.detail.value;
-    this.workspace.lighting.mode = this._flatLighting ? "flat" : "lit";
-  }
-
-  #onSkyRadiusChange(
-    event: CustomEvent<JollyChangeDetail<number>>
-  ): void {
-    this._skyRadius = event.detail.value;
-    this.workspace.localBrush.skyRadius = this._skyRadius;
   }
 
   async #onExport(): Promise<void> {

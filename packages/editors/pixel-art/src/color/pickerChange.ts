@@ -4,10 +4,7 @@ import {
   parseColor,
   type RGBA
 } from "@jolly-pixel/color";
-import {
-  detailOf,
-  type JollyChangeDetail
-} from "@jolly-pixel/ui";
+import type { FieldSource } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
@@ -35,11 +32,23 @@ export function colorWithOpacity(
   };
 }
 
+export function pickerSource(
+  element: ColorValueElement
+): FieldSource<string> {
+  return {
+    read: () => formatHex(
+      colorWithOpacity(element.color, element.opacity),
+      true
+    ),
+    write: (value) => applyPickerChange(element, value)
+  };
+}
+
 export function applyPickerChange(
   element: ColorValueElement,
-  event: Event
+  value: string
 ): void {
-  const detail = colorChangeFromPicker(event);
+  const detail = colorChangeOf(value);
   if (detail === null) {
     return;
   }
@@ -53,15 +62,10 @@ export function applyPickerChange(
   }));
 }
 
-function colorChangeFromPicker(
-  event: Event
+export function colorChangeOf(
+  value: string
 ): ColorChangeDetail | null {
-  const detail = detailOf<JollyChangeDetail<string>>(event);
-  if (detail === null) {
-    return null;
-  }
-
-  const parsed = parseColor(detail.value);
+  const parsed = parseColor(value);
   if (parsed === null) {
     return null;
   }

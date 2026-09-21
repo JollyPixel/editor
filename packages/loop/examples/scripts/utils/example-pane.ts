@@ -25,14 +25,7 @@ export function createExamplePane(
 ): Pane {
   const { title = kDefaultTitle } = options;
 
-  const dockElement = document.querySelector<
-    HTMLElementTagNameMap["jolly-dock"]
-  >("#tools");
-  if (dockElement === null) {
-    throw new Error("createExamplePane: no #tools jolly-dock in this page");
-  }
-  const dock = DockFacade.from(dockElement);
-
+  const dock = DockFacade.query("#tools");
   const chrome = new Pane({
     title: "Examples",
     container: dock.element,
@@ -51,11 +44,7 @@ export function createExamplePane(
         window.location.assign(value);
       }
     });
-
-  const preferences = document.createElement("jolly-theme-preferences");
-  preferences.layout = "stack";
-  preferences.storageKey = "loop-examples";
-  chrome.element.append(preferences);
+  chrome.addThemePreferences({ storageKey: "loop-examples" });
 
   const pane = new Pane({
     title,

@@ -24,24 +24,12 @@ export interface ExamplePaneOptions {
   title?: string;
 }
 
-/**
- * Two stacked panes in the same dock, docked to the right edge: a compact
- * chrome pane (page switcher, theme, density) above the pane this returns,
- * which grows to fill the rest and scrolls its own content. `F3` toggles the
- * whole dock. The dock and its `jolly-scope` theme host are declared in each
- * page's HTML.
- */
 export function createExamplePane(
   options: ExamplePaneOptions = {}
 ): Pane {
   const { title = kDefaultTitle } = options;
 
-  const dockElement = document.querySelector<HTMLElementTagNameMap["jolly-dock"]>("#tools");
-  if (dockElement === null) {
-    throw new Error("createExamplePane: no #tools jolly-dock in this page's HTML");
-  }
-  const dock = DockFacade.from(dockElement);
-
+  const dock = DockFacade.query("#tools");
   const chrome = new Pane({
     title: "Configuration",
     container: dock.element,
@@ -61,20 +49,8 @@ export function createExamplePane(
       }
     });
 
-  const preferences = document.createElement("jolly-theme-preferences");
-  /*
-   * Two rows at the top of the pane rather than flattened into it, see
-   * @jolly-pixel/ui docs/api/theme/theme-preferences.md.
-   */
-  preferences.layout = "stack";
-  preferences.storageKey = "voxel-renderer-examples";
-  chrome.element.append(preferences);
+  chrome.addThemePreferences({ storageKey: "voxel-renderer-examples" });
 
-  /*
-   * Not `grow`: it would claim leftover flex space even with little content.
-   * `max-height: 100%` in main.css caps it instead, so it only scrolls its
-   * own content once that would otherwise exceed the dock.
-   */
   const pane = new Pane({
     title,
     container: dock.element,
@@ -96,9 +72,6 @@ export function createExamplePane(
   return pane;
 }
 
-/**
- * `/index.html` and `/` are the same page; the switcher only knows the latter.
- */
 function currentExample(): string {
   const { pathname } = window.location;
 

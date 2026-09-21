@@ -41,10 +41,7 @@ export function createExamplePane(
       value !== current && window.location.assign(value);
     });
 
-  const preferences = document.createElement("jolly-theme-preferences");
-  preferences.layout = "stack";
-  preferences.storageKey = "three-examples";
-  chrome.element.append(preferences);
+  chrome.addThemePreferences({ storageKey: "three-examples" });
 
   const pane = new Pane({
     title,

@@ -2,23 +2,21 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
-  VoxelFootprint,
   type VoxelWorld,
   type VoxelObjectJSON,
   type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  JollyChangeDetail,
-  Vec3Like
-} from "@jolly-pixel/ui";
+import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
 import {
-  colorOf,
-  derivedColorOf,
-  isNoopPatch
-} from "./objectArea.ts";
+  objectColorSource,
+  objectPositionSource,
+  objectSizeSource,
+  type ObjectPort
+} from "./objectSources.ts";
+import { derivedColorOf } from "./objectArea.ts";
 import {
   propertiesOf,
   propertyRowsOf,
@@ -55,6 +53,15 @@ export class ObjectPanel extends LitElement {
   private declare _props: PropertyRow[];
 
   #subscriptions: Array<() => void> = [];
+
+  #port: ObjectPort = {
+    object: () => this._object,
+    patch: (patch) => this.#patch(patch)
+  };
+
+  #color = new FieldBinding(this, objectColorSource(this.#port));
+  #position = new FieldBinding(this, objectPositionSource(this.#port));
+  #size = new FieldBinding(this, objectSizeSource(this.#port));
 
   constructor() {
     super();
@@ -143,26 +150,25 @@ export class ObjectPanel extends LitElement {
     }
 
     const locked = object.locked ?? false;
-    const footprint = VoxelFootprint.of(object);
 
     return html`
       <jolly-separator label=${object.name}></jolly-separator>
 
       <jolly-color
         label="Color"
-        .value=${colorOf(object)}
+        .value=${this.#color.value}
         .default=${derivedColorOf(object)}
-        @jolly-input=${this.#onColorChange}
-        @jolly-change=${this.#onColorChange}
+        @jolly-input=${this.#color.input}
+        @jolly-change=${this.#color.commit}
       ></jolly-color>
 
       <jolly-vector3
         label="Position"
         step="1"
         ?disabled=${locked}
-        .value=${{ x: object.x, y: object.y, z: object.z }}
-        @jolly-input=${this.#onPositionChange}
-        @jolly-change=${this.#onPositionChange}
+        .value=${this.#position.value}
+        @jolly-input=${this.#position.input}
+        @jolly-change=${this.#position.commit}
       ></jolly-vector3>
 
       <jolly-vector2
@@ -171,12 +177,9 @@ export class ObjectPanel extends LitElement {
         step="1"
         min="1"
         ?disabled=${locked}
-        .value=${{
-          x: footprint.width,
-          z: footprint.height
-        }}
-        @jolly-input=${this.#onSizeChange}
-        @jolly-change=${this.#onSizeChange}
+        .value=${this.#size.value}
+        @jolly-input=${this.#size.input}
+        @jolly-change=${this.#size.commit}
       ></jolly-vector2>
 
       ${this.#renderProperties()}
@@ -189,40 +192,6 @@ export class ObjectPanel extends LitElement {
       storage-key="voxel-map:folder:object-properties"
       @property-rows-change=${this.#onPropertyRowsChange}
     ></custom-properties-editor>`;
-  }
-
-  #onColorChange(
-    event: CustomEvent<JollyChangeDetail<string>>
-  ): void {
-    const value = event.detail.value;
-    const object = this._object;
-
-    const derived = object === null ? null : derivedColorOf(object);
-    this.#patch({
-      color: derived !== null && sameColor(value, derived)
-        ? undefined
-        : value
-    });
-  }
-
-  #onPositionChange(
-    event: CustomEvent<JollyChangeDetail<Vec3Like>>
-  ): void {
-    const { x, y, z } = event.detail.value;
-    this.#patch({
-      x: Math.round(x),
-      y: Math.round(y),
-      z: Math.round(z)
-    });
-  }
-
-  #onSizeChange(
-    event: CustomEvent<JollyChangeDetail<Record<"x" | "z", number>>>
-  ): void {
-    const { x: width, z: height } = event.detail.value;
-    this.#patch(
-      new VoxelFootprint(width, height).toJSON()
-    );
   }
 
   #onPropertyRowsChange(
@@ -247,22 +216,8 @@ export class ObjectPanel extends LitElement {
     if (!world || !layerName || !objectId) {
       return;
     }
-    if (
-      this._object !== null &&
-      isNoopPatch(this._object, patch)
-    ) {
-      return;
-    }
-
     world.updateObjectInLayer(layerName, objectId, patch);
   }
-}
-
-function sameColor(
-  left: string,
-  right: string
-): boolean {
-  return left.toLowerCase() === right.toLowerCase();
 }
 
 declare global {

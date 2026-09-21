@@ -45,6 +45,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 | [0037](./0037-colour-is-a-tone-on-the-glyph-and-an-area-on-the-pane.md) | Colour is a tone on the glyph and an area on the pane |
 | [0038](./0038-a-dialog-intent-is-not-a-tone.md) | A dialog's intent is not a tone |
 | [0039](./0039-a-confirmation-inside-a-dialog-is-a-state.md) | A confirmation inside a dialog is a state of that dialog |
+| [0040](./0040-declarative-bindings-read-through.md) | A declarative binding reads through to its source and keeps no mirror |
 
 ## Scope boundary
 

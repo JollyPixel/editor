@@ -11,15 +11,25 @@ interface BindingOptions<TValue> {
   max?: number;
   step?: number;
   options?: Record<string, TValue>;
-  view?: "point2d" | "quaternion";
+  view?: "buttons" | "flags" | "point2d" | "quaternion";
+  layout?: "segmented" | "grid";
+  columns?: number;
   alpha?: boolean;
   axisLabels?: Record<string, string>;
   axes?: "xy" | "xz" | "yz";
+  path?: string;
 }
 ```
 
 `label` defaults to the property key. `align` defaults to `"end"` for a
 checkbox and `"start"` for every other field.
+
+`path` is the lock path forwarded to the field's `path` property. It is the
+consumer's own identifier for the bound value, opaque to the package, and it
+is what a [`PresenceSource`](../peer/presence-source.md) matches a peer's lock
+against. Leave it unset for a field no peer can hold. See
+[the shared field API](../field/shared-field-api.md) and
+[`Pane` presence](./pane.md#presence).
 
 ## Control selection
 
@@ -27,6 +37,8 @@ The initial property value and the options determine the element:
 
 | Value or option | Element |
 |---|---|
+| `options` with `view: "buttons"` | `jolly-button-group` |
+| `options` with `view: "flags"` and a number | `jolly-flags` |
 | `options` is present | `jolly-select` |
 | Boolean | `jolly-checkbox` |
 | Number with both `min` and `max` | `jolly-slider` |
@@ -43,11 +55,44 @@ The initial property value and the options determine the element:
 become option labels and its record values become bound values. Declaration
 order is retained.
 
+`view` picks a different control for the same options. `"buttons"` makes a
+`jolly-button-group`, for a handful of options worth showing at once:
+
+```ts
+folder.addBinding(settings, "mode", {
+  label: "Mode",
+  view: "buttons",
+  options: {
+    Pos: "translate",
+    Angle: "rotate",
+    Scale: "scale"
+  }
+});
+```
+
+`"flags"` makes a `jolly-flags` when the bound value is a number, editing it
+as a bitmask. Each option value carries one bit, and a committed edit writes
+the complete mask:
+
+```ts
+folder.addBinding(layer, "mask", {
+  label: "Layers",
+  view: "flags",
+  options: {
+    Default: 1,
+    Player: 2,
+    Terrain: 4
+  }
+});
+```
+
+Option entries that are not numbers are dropped, and `view: "flags"` on a
+value that is not a number falls back to `jolly-select`.
+
 Vector shapes are tested widest first, so `{ x, y, z }` is a three-axis value
-rather than the two-axis one it also satisfies. `view` picks an alternate
-control for a shape that already dispatches: `"point2d"` turns a two-axis value
-into a drag pad, `"quaternion"` reads a four-axis value as a rotation and edits
-it in degrees. A `view` the value does not match is ignored.
+rather than the two-axis one it also satisfies. `"point2d"` turns a two-axis
+value into a drag pad, and `"quaternion"` reads a four-axis value as a rotation
+and edits it in degrees. A `view` the value does not match is ignored.
 
 A two-axis value is bound on the plane it carries, so `{ x, z }` gets a field
 labelled X and Z writing back those same keys. `axes` overrides that plane.
@@ -70,6 +115,8 @@ directly.
 | `alpha` | `jolly-color` | Adds an alpha channel and switches output to `#rrggbbaa`. Defaults to on when the bound value is already eight digits. |
 | `axisLabels` | vectors, `jolly-quaternion` | Per-axis accessible names, e.g. `{ x: "pitch" }`. |
 | `axes` | `jolly-vector2` | Which plane the field edits. Defaults to the pair the bound value carries. |
+| `layout` | `jolly-button-group` | `"segmented"` in a row, or `"grid"`. Defaults to the element's `"segmented"`. |
+| `columns` | `jolly-button-group` | Columns of a `"grid"` layout. Zero lets the grid size itself. |
 
 ## Write-back and change handlers
 
