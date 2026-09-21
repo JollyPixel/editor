@@ -12,6 +12,8 @@ import {
 
 - [`Pane`](./pane.md) is the facade entry point.
 - [`DockFacade`](./dock.md) wraps an authored `jolly-dock`.
+- [`FacadeHost`](./pane.md#contributing-to-a-pane-the-facade-did-not-create)
+  adds builders inside an element the caller already owns.
 - [Folder builders](./folder.md) group facade children.
 - [Bindings](./binding.md) edit object properties.
 - [Monitors](./monitor.md) display object properties.

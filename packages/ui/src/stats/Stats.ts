@@ -14,6 +14,7 @@ import {
 // Import Internal Dependencies
 import { statsStyles } from "./Stats.styles.ts";
 import {
+  resolveMetricFormat,
   resolveMetricRange,
   type MetricDefinition
 } from "./MetricDefinition.ts";
@@ -21,7 +22,6 @@ import type {
   StatsRecorder,
   StatsSnapshot
 } from "./StatsRecorder.ts";
-import { formatInteger } from "../monitors/format.ts";
 import { defaultStorageAdapter } from "../storage/defaultStorage.ts";
 import { NamespacedStore } from "../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
@@ -170,16 +170,22 @@ export class StatsElement extends LitElement {
     }
   }
 
+  #definitions(): readonly MetricDefinition[] {
+    return this.recorder?.definitions.filter(
+      ({ tile }) => tile !== false
+    ) ?? [];
+  }
+
   #restoreSelection(): void {
     const stored = this.#store.read("metric");
-    const definitions = this.recorder?.definitions ?? [];
+    const definitions = this.#definitions();
     this.#selectedId = definitions.some(
       ({ id }) => id === stored
     ) ? stored : (definitions[0]?.id ?? null);
   }
 
   #ensureSelection(): void {
-    const definitions = this.recorder?.definitions ?? [];
+    const definitions = this.#definitions();
     if (!definitions.some(({ id }) => id === this.#selectedId)) {
       this.#selectedId = definitions[0]?.id ?? null;
     }
@@ -203,7 +209,7 @@ export class StatsElement extends LitElement {
   #cycle(
     delta: number
   ): void {
-    const definitions = this.recorder?.definitions ?? [];
+    const definitions = this.#definitions();
     if (definitions.length === 0) {
       return;
     }
@@ -242,7 +248,7 @@ export class StatsElement extends LitElement {
   };
 
   #selectedDefinition(): MetricDefinition | null {
-    return this.recorder?.definitions.find(
+    return this.#definitions().find(
       ({ id }) => id === this.#selectedId
     ) ?? null;
   }
@@ -474,7 +480,7 @@ export class StatsElement extends LitElement {
     definition: MetricDefinition,
     value: number
   ): string {
-    return definition.format?.(value) ?? formatInteger(value);
+    return resolveMetricFormat(definition)(value);
   }
 }
 

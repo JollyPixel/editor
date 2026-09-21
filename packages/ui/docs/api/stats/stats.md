@@ -29,6 +29,9 @@ Click, Enter, Space, ArrowRight, or ArrowDown selects the next metric.
 Right-click, ArrowLeft, or ArrowUp selects the previous metric. Selection wraps
 at both ends.
 
+The cycle covers every registered metric but the ones whose definition sets
+`tile: false`, which belong to a full readout rather than this tile.
+
 The element subscribes when connected and whenever `recorder` changes. It
 unsubscribes when disconnected. Its accessible name contains the selected
 metric label and formatted value.

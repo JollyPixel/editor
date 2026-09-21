@@ -46,6 +46,10 @@ export class EditorShell {
     }
   }
 
+  get layout(): HTMLElementTagNameMap["jolly-dock-layout"] | null {
+    return this.#panels?.layout ?? null;
+  }
+
   adoptWorkspace(
     workspace: VoxelMapWorkspace
   ): void {

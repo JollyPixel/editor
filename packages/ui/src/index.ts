@@ -223,6 +223,7 @@ export * from "./feedback/LogQueue.types.ts";
 
 export * from "./facade/Pane.ts";
 export * from "./facade/Dock.ts";
+export * from "./facade/Host.ts";
 export type {
   Disposable,
   FacadeContainer,

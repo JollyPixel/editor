@@ -14,6 +14,16 @@ export type {
 export type {
   PerformanceStatsPosition
 } from "./stats/mountPerformanceStats.ts";
+export { RuntimeMetrics } from "./metrics/RuntimeMetrics.ts";
+export {
+  RendererMetrics,
+  type RendererMetricsOptions
+} from "./metrics/RendererMetrics.ts";
+export type {
+  MetricsPanel,
+  MetricsPanelKeyboard,
+  MetricsPanelOptions
+} from "./metrics/MetricsPanel.ts";
 export type {
   RuntimeCanvasTarget
 } from "./resolveRuntimeCanvas.ts";

@@ -17,10 +17,16 @@ import {
 import { ViewFocus } from "../scene/index.ts";
 import { EditorShell } from "./EditorShell.ts";
 import { TILESET_TEXTURE_KIND } from "../features/tilesets/TilesetTextures.ts";
+import {
+  mountInspectorControls
+} from "../features/performance/index.ts";
 import { MapArchives } from "../features/map-config/MapArchives.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
+const kPerformanceStorageKey = "voxel-map:performance-hud";
+const kPerformancePaneKey = "performance";
+const kPerformanceToggleKey = "F3";
 
 export interface VoxelMapParams {
   offline: boolean;
@@ -99,6 +105,21 @@ export class VoxelMapEditor {
 
     const workspace = await scene.ready;
     shell.adoptWorkspace(workspace);
+    runtime.metrics.addSource(workspace.engine.inspector);
+
+    const panel = await runtime.mountMetricsPanel({
+      target: shell.layout ?? undefined,
+      floating: true,
+      key: kPerformancePaneKey,
+      title: "Performance [F3]",
+      storageKey: kPerformanceStorageKey,
+      toggleKey: kPerformanceToggleKey,
+      hidden: true
+    });
+    mountInspectorControls({
+      panel,
+      engine: workspace.engine
+    });
 
     return new VoxelMapEditor({
       runtime,

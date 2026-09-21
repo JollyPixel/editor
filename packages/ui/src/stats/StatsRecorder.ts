@@ -10,6 +10,7 @@ import type {
   MetricAggregation,
   MetricDefinition
 } from "./MetricDefinition.ts";
+import type { MetricSource } from "./MetricSource.ts";
 
 // CONSTANTS
 const kDefaultHistorySize = 60;
@@ -55,6 +56,7 @@ export class StatsRecorder {
   #beginTime: number | null = null;
   #windowStart: number;
   #frames = 0;
+  #revision = 0;
 
   constructor(
     options: StatsRecorderOptions = {}
@@ -78,6 +80,10 @@ export class StatsRecorder {
     if (memory !== null) {
       this.addMetric(memory);
     }
+  }
+
+  get revision(): number {
+    return this.#revision;
   }
 
   get definitions(): readonly MetricDefinition[] {
@@ -135,7 +141,7 @@ export class StatsRecorder {
 
   addMetric(
     definition: MetricDefinition
-  ): void {
+  ): () => void {
     if (definition.id === "") {
       throw new Error("Stats metric id cannot be empty");
     }
@@ -151,6 +157,38 @@ export class StatsRecorder {
       historyCount: 0,
       historyIndex: 0
     });
+    this.#revision++;
+
+    return () => this.removeMetric(definition.id);
+  }
+
+  addSource(
+    source: MetricSource
+  ): () => void {
+    const removals: (() => void)[] = [];
+    try {
+      for (const definition of source.metrics) {
+        removals.push(this.addMetric(definition));
+      }
+    }
+    catch (error) {
+      release(removals);
+
+      throw error;
+    }
+
+    return () => release(removals);
+  }
+
+  removeMetric(
+    id: string
+  ): boolean {
+    const removed = this.#metrics.delete(id);
+    if (removed) {
+      this.#revision++;
+    }
+
+    return removed;
   }
 
   snapshot(): StatsSnapshot {
@@ -226,6 +264,14 @@ export class StatsRecorder {
     value: number
   ): void {
     this.#metrics.get(id)?.pending.push(value);
+  }
+}
+
+function release(
+  removals: readonly (() => void)[]
+): void {
+  for (const remove of removals) {
+    remove();
   }
 }
 

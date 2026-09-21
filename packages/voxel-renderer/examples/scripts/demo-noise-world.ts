@@ -7,8 +7,7 @@ import {
   Control,
   Controls,
   formatCount,
-  formatMilliseconds,
-  formatPercent
+  formatMilliseconds
 } from "@jolly-pixel/ui";
 
 // Registers the declarative controls declared by the example page.
@@ -23,7 +22,6 @@ import {
   type VoxelInspectorMode,
   type VoxelEngine
 } from "../../src/index.ts";
-import { RendererStats } from "./components/RendererStats.ts";
 import { FreeFlyCamera } from "./components/FreeFlyCamera.ts";
 import {
   TerrainBlock,
@@ -145,10 +143,6 @@ const worldStats = {
   meshMs: 0
 };
 const meshStats = {
-  faces: 0,
-  culled: 0,
-  merged: 0,
-  triangles: 0,
   vertices: 0,
   meshes: "",
   drawn: ""
@@ -180,14 +174,6 @@ worldFolder.addMonitors(worldStats, {
 
 const meshFolder = pane.addFolder({ title: "Mesh" });
 meshFolder.addMonitors(meshStats, {
-  faces: { label: "faces", format: formatCount },
-  culled: { label: "culled", format: formatPercent },
-  merged: { label: "merged", format: formatPercent },
-  /*
-   * Named apart from the renderer's own counters: these cover every built
-   * chunk, not just what survived frustum culling this frame.
-   */
-  triangles: { label: "mesh tris", format: formatCount },
   vertices: { label: "mesh verts", format: formatCount },
   meshes: { label: "meshes" },
   drawn: { label: "drawn chunks" }
@@ -244,11 +230,9 @@ controlsFolder
  * Chunks are meshed over several frames (the engine tick is budgeted), so the
  * mesh counters are polled with the renderer counters on the same cadence.
  */
-world.createActor("hud")
-  .addComponent(RendererStats, {
-    folder: meshFolder,
-    onRefresh: syncStats
-  });
+runtime.metrics.addSource(engine.inspector);
+await runtime.mountMetricsPanel({ target: pane });
+runtime.stats.subscribe(() => syncStats());
 
 await runtime.load({
   skipLoadingScreen: true
@@ -381,16 +365,9 @@ function syncStats(): void {
   }
 
   const {
-    faces, culledFaces, mergedFaces, triangles, vertices, meshes, chunks,
-    culledChunks
+    vertices, meshes, chunks, culledChunks
   } = engine.inspector.mesh.stats;
-  const candidates = faces + culledFaces;
-  const emitted = faces + mergedFaces;
 
-  meshStats.faces = faces;
-  meshStats.culled = candidates === 0 ? 0 : (culledFaces / candidates) * 100;
-  meshStats.merged = emitted === 0 ? 0 : (mergedFaces / emitted) * 100;
-  meshStats.triangles = triangles;
   meshStats.vertices = vertices;
   meshStats.meshes = `${formatCount(meshes)} / ${formatCount(chunks)}`;
   meshStats.drawn = `${formatCount(chunks - culledChunks)} / ${formatCount(chunks)}`;

@@ -57,6 +57,7 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
     mount?: boolean;
     position?: PerformanceStatsPosition;
     inset?: number;
+    panel?: boolean | MetricsPanelOptions;
   };
   focusCanvas?: boolean;
   focusHint?: boolean | FocusHintOptions;
@@ -86,7 +87,8 @@ class Runtime<TContext = Systems.WorldDefaultContext> {
   readonly overlay: OverlayLayer;
   readonly manager: THREE.LoadingManager;
   readonly running: boolean;
-  stats?: StatsRecorder;
+  readonly stats: StatsRecorder;
+  readonly metrics: RuntimeMetrics;
 
   static create<TContext>(
     target: RuntimeCanvasTarget,
@@ -94,6 +96,7 @@ class Runtime<TContext = Systems.WorldDefaultContext> {
   ): Promise<Runtime<TContext>>;
 
   load(options?: RuntimeLoadOptions<TContext>): Promise<void>;
+  mountMetricsPanel(options?: MetricsPanelOptions): Promise<MetricsPanel>;
   start(): void;
   stop(): void;
   dispose(): void;
@@ -126,7 +129,7 @@ It also rejects when the selector matches no element or a non-canvas element.
 
 | Option | Default | Behavior |
 |---|---|---|
-| `includePerformanceStats` | `false` | Creates a `StatsRecorder`. `true` also mounts the default HUD. |
+| `includePerformanceStats` | `false` | Mounts the corner HUD. `runtime.stats` exists either way. |
 | `focusCanvas` | `true` | Restores canvas focus after page clicks while the runtime is running. |
 | `focusHint` | `false` | Shows a hint over the canvas while it does not hold keyboard focus. |
 | `viewHelper` | `false` | Draws an axis gizmo showing the main camera orientation. See [view helper](#view-helper). |
@@ -136,9 +139,11 @@ It also rejects when the selector matches no element or a non-canvas element.
 | `assets` | Empty catalog and default loaders | Configures the runtime asset coordinator. |
 | `loop` | `GameLoop` defaults | Configures the loop's `FrameScheduler`. |
 
-Pass `{ mount: false }` to create `runtime.stats` without mounting the default
-HUD. The mounted HUD accepts any `OverlayPosition` (default `"top-left"`) and
-an `inset` in pixels (default `8`). It is anchored to the canvas through
+`runtime.stats` and `runtime.metrics` always exist, and the loop brackets
+every frame with them. The option decides what is displayed: `{ mount: false }`
+leaves the recorder unmounted, and `{ panel: true }` adds a full readout beside
+the corner HUD. The HUD accepts any `OverlayPosition` (default `"top-left"`)
+and an `inset` in pixels (default `8`). It is anchored to the canvas through
 `runtime.overlay`.
 
 ```ts
@@ -148,13 +153,13 @@ const runtime = await Runtime.create("canvas", {
   }
 });
 
-runtime.stats?.begin();
-// Measure custom work.
-runtime.stats?.end();
+runtime.stats.begin();
+runtime.stats.end();
 ```
 
 See [frame scheduling and performance](../guides/frame-scheduling-and-performance.md)
-for loop and HUD configuration.
+for loop, HUD and readout configuration, and [metrics](#metrics) for what the
+runtime records.
 
 ### Canvas focus hint
 
@@ -264,6 +269,87 @@ mounted.dispose();
 | `inset` | `8` | Distance in pixels from the anchored edges. The slot is also capped to the layer size minus twice this value. |
 | `interactive` | `false` | Lets the element receive pointer events. The layer itself never does. |
 
+## Metrics
+
+`runtime.metrics` is the registry every metric goes through, so one recorder
+feeds both the corner HUD and the readout panel.
+
+```ts
+class RuntimeMetrics {
+  readonly recorder: StatsRecorder;
+  readonly revision: number;
+  readonly panel: MetricsPanel | null;
+
+  addMetric(definition: MetricDefinition): () => void;
+  addSource(source: MetricSource): () => void;
+  removeMetric(id: string): boolean;
+  track(id: string, value: number): void;
+}
+```
+
+A subsystem describing metrics hands them over as a source, and gets back a
+function releasing them again.
+
+```ts
+const release = runtime.metrics.addSource(engine.inspector);
+```
+
+The source is anything carrying a `metrics` array, matched structurally, so a
+package need not depend on `@jolly-pixel/ui` to describe what it counts. See
+[`MetricSource`](../../../ui/docs/api/stats/metric-definition.md#describing-metrics-from-another-package).
+
+Hold the returned function whenever the source dies before the runtime does. A
+metric left behind keeps sampling a disposed subsystem through its `sample()`
+closure.
+
+The runtime registers the `WebGPURenderer` counters itself, under the
+`renderer` group: `calls`, `renderedTriangles`, `geometries` and `textures`.
+It latches the render counters on every `draw`, which the renderer otherwise
+resets between frames.
+
+### The readout panel
+
+`mountMetricsPanel()` builds a full readout from the metric definitions: one
+folder per group, one row per metric, labelled and formatted as its definition
+describes. Metrics registered later join it on their own.
+
+```ts
+interface MetricsPanelOptions {
+  target?: HTMLElement | FacadeContainer;
+  floating?: boolean;
+  key?: string;
+  title?: string;
+  storageKey?: string;
+  toggleKey?: string;
+  keyboard?: MetricsPanelKeyboard;
+  hidden?: boolean;
+  collapsible?: boolean;
+}
+```
+
+| Option | Default | Behavior |
+|---|---|---|
+| `target` | floats | An `HTMLElement` receives a pane of its own; a `FacadeContainer` takes the folders directly, merging the readout into a pane the caller owns. |
+| `floating` | `false` | Floats the pane inside the target rather than appending it. Targeting a `jolly-dock-layout` this way lets the window be docked into its groups. |
+| `key` | derived | Identity the pane persists and docks under. |
+| `title` | `"Performance"` | Heading of the pane the panel creates. Unused with a `FacadeContainer`. |
+| `storageKey` | derived | Namespace the pane persists under. |
+| `toggleKey` | none | `KeyboardEvent.code` toggling the readout, through the runtime's keyboard. |
+| `hidden` | `false` | Starts the readout hidden. |
+| `collapsible` | `true` | Enables folding the created pane to its header. |
+
+```ts
+const panel = await runtime.mountMetricsPanel({
+  target: inspectorPane,
+  toggleKey: "F3"
+});
+
+panel.container.addFolder({ title: "inspector" });
+```
+
+`panel.container` is the container the rows were added to, so a consumer adds
+controls of its own beside them. Mounting a second panel disposes the first.
+
 ## Services
 
 `world` exposes the renderer, input, scene manager, audio service, application
@@ -332,5 +418,5 @@ marks input as exited, and removes the focus listeners.
 
 The focus hint, when enabled, is mounted by `start()` and removed by `stop()`.
 
-`dispose()` calls `stop()`, removes the mounted performance HUD, and disposes
+`dispose()` calls `stop()`, removes the mounted performance HUD and readout, and disposes
 the world. Do not reuse the runtime after disposal.

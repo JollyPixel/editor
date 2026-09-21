@@ -47,8 +47,12 @@ Use `Infinity` to remove the detected render cap. This option overrides
 
 ## Show performance statistics
 
-Set `includePerformanceStats` to `true` to mount the default HUD in the
-top-left corner of the canvas:
+The runtime always records. `runtime.stats` is a `StatsRecorder` the loop
+brackets around every frame, and `runtime.metrics` is where metrics are
+registered. `includePerformanceStats` only decides what is displayed.
+
+Set it to `true` to mount the default HUD in the top-left corner of the
+canvas:
 
 ```ts
 const runtime = await Runtime.create("canvas", {
@@ -85,3 +89,83 @@ const recorder = runtime.stats;
 
 See the [`StatsRecorder` reference](../../../ui/docs/api/stats/stats-recorder.md)
 for the recorder API.
+
+## Record what a subsystem counts
+
+The HUD cycles one metric at a time. Anything a subsystem counts joins it
+through `runtime.metrics`, as a source describing its own metrics:
+
+```ts
+const release = runtime.metrics.addSource(engine.inspector);
+```
+
+Hold `release` whenever the subsystem is torn down before the runtime is,
+because a metric left behind keeps sampling it.
+
+A source is anything carrying a `metrics` array of
+[metric definitions](../../../ui/docs/api/stats/metric-definition.md). Each
+definition names its own `label`, the `unit` a display formats it with, and the
+`group` a readout files it under, so nothing downstream repeats them.
+
+The renderer's own counters are registered by the runtime, under the
+`renderer` group.
+
+## Show a full readout
+
+A HUD showing one metric at a time is not a readout. Add a panel listing every
+registered metric, grouped as the definitions describe:
+
+```ts
+const runtime = await Runtime.create("canvas", {
+  includePerformanceStats: {
+    panel: {
+      title: "Performance [F3]",
+      toggleKey: "F3",
+      hidden: true
+    }
+  }
+});
+```
+
+The panel floats by default. To put it in a dock, or to merge it into a pane
+the application already owns, mount it once the pane exists and give it a
+target:
+
+```ts
+const panel = await runtime.mountMetricsPanel({
+  target: inspectorPane,
+  toggleKey: "F3"
+});
+```
+
+An `HTMLElement` target receives a pane of its own; a facade container takes
+the folders directly. Metrics registered after the panel is mounted join it on
+their own, so the order between mounting and `addSource()` does not matter.
+
+A readout that should stay a window, yet be dockable, targets the
+`jolly-dock-layout` with `floating`:
+
+```ts
+const panel = await runtime.mountMetricsPanel({
+  target: document.querySelector("jolly-dock-layout"),
+  floating: true,
+  key: "performance",
+  toggleKey: "F3",
+  hidden: true
+});
+```
+
+The layout then owns the window, so it can be dragged into any of its docks or
+merged into a pane group as a tab. Without a layout target the pane floats
+under `document.body`, where no layout can accept it.
+
+Add controls of your own beside the rows through `panel.container`:
+
+```ts
+panel.container
+  .addFolder({ title: "inspector" })
+  .addBinding(inspector, "chunkBounds", { label: "chunk bounds" });
+```
+
+A metric belonging in the readout but not in the corner HUD sets `tile: false`
+on its definition, which keeps the HUD cycle short.

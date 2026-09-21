@@ -16,6 +16,10 @@ import {
 } from "./support/panels.ts";
 import { texturePanel } from "./support/texture.ts";
 
+// CONSTANTS
+const kPerformancePane = "performance";
+const kPerformanceToggleKey = "F3";
+
 function textureView(
   panel: Locator
 ) {
@@ -59,6 +63,38 @@ async function textureHost(
   }
 
   return null;
+}
+
+async function dragPaneToTab(
+  page: Page,
+  pane: Locator,
+  tab: string
+): Promise<void> {
+  const source = await pane.locator(".header").first().boundingBox();
+  const target = await page.getByRole("tab", { name: tab }).boundingBox();
+  await page.mouse.move(
+    source!.x + (source!.width / 2),
+    source!.y + (source!.height / 2)
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    target!.x + (target!.width / 2),
+    target!.y + (target!.height / 2),
+    { steps: 16 }
+  );
+  await page.mouse.up();
+}
+
+function leftGroups(
+  page: Page
+): Promise<string[][]> {
+  return page.evaluate(() => {
+    const layout = document.querySelector("jolly-dock-layout")!;
+
+    return layout.snapshot().docks.left.groups.map(
+      (group) => [...group.panes]
+    );
+  });
 }
 
 async function dragTabToDock(
@@ -129,4 +165,16 @@ test("the texture editor stays in Paint once it has its own dock", async({ page 
     uvAccess: "edit"
   });
   await expect(page.getByRole("listbox", { name: "Blocks" })).toBeVisible();
+});
+
+test("the performance readout merges into the pane group it is dropped on", async({ page }) => {
+  await page.keyboard.press(kPerformanceToggleKey);
+  const readout = page.locator(`jolly-pane[key='${kPerformancePane}']`);
+  await expect(readout).toBeAttached();
+
+  await dragPaneToTab(page, readout, "General");
+
+  await expect.poll(() => leftGroups(page)).toEqual([
+    ["general", kPerformancePane, "blocks", "paint", "layers"]
+  ]);
 });

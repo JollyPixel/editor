@@ -86,6 +86,45 @@ test("performance stats accept every overlay position and an inset", () => {
   >();
 });
 
+test("performance stats accept a readout panel", () => {
+  expect<{
+    panel: true;
+  }>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["includePerformanceStats"]
+  >();
+  expect<{
+    panel: {
+      target: HTMLElement;
+      toggleKey: string;
+    };
+  }>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["includePerformanceStats"]
+  >();
+  expect<"MetricsPanel">().type.not.toBeAssignableTo<
+    keyof typeof RuntimePackage
+  >();
+});
+
+test("every metric goes through runtime.metrics", () => {
+  expect(runtime.metrics).type.toBe<RuntimePackage.RuntimeMetrics>();
+  expect(runtime.metrics.addSource).type.toBeCallableWith({
+    metrics: [
+      {
+        id: "chunks",
+        label: "chunks",
+        unit: "count",
+        sample: () => 1
+      }
+    ]
+  });
+  expect(
+    runtime.metrics.addSource({ metrics: [] })
+  ).type.toBe<() => void>();
+  expect(runtime.metrics.addSource).type.not.toBeCallableWith({
+    metrics: [{ label: "chunks" }]
+  });
+});
+
 test("runtime.overlay mounts content and returns a disposer", () => {
   expect(runtime.overlay).type.toBe<RuntimePackage.OverlayLayer>();
   expect(runtime.overlay.mount).type.toBeCallableWith(

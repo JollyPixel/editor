@@ -46,6 +46,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 | [0038](./0038-a-dialog-intent-is-not-a-tone.md) | A dialog's intent is not a tone |
 | [0039](./0039-a-confirmation-inside-a-dialog-is-a-state.md) | A confirmation inside a dialog is a state of that dialog |
 | [0040](./0040-declarative-bindings-read-through.md) | A declarative binding reads through to its source and keeps no mirror |
+| [0041](./0041-metric-sources-are-structural.md) | A metric source is structural, and `unit` replaces an imported formatter |
 
 ## Scope boundary
 

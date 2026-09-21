@@ -4,7 +4,7 @@ import {
   Systems,
   type GlobalAudio
 } from "@jolly-pixel/engine";
-import type { StatsRecorder } from "@jolly-pixel/ui/stats";
+import { StatsRecorder } from "@jolly-pixel/ui/stats";
 import {
   GameLoop,
   type FrameSchedulerOptions
@@ -33,6 +33,12 @@ import {
   resolveRuntimeCanvas,
   type RuntimeCanvasTarget
 } from "./resolveRuntimeCanvas.ts";
+import { RendererMetrics } from "./metrics/RendererMetrics.ts";
+import { RuntimeMetrics } from "./metrics/RuntimeMetrics.ts";
+import type {
+  MetricsPanel,
+  MetricsPanelOptions
+} from "./metrics/MetricsPanel.ts";
 import type {
   MountedPerformanceStats,
   PerformanceStatsPosition
@@ -63,6 +69,7 @@ export interface RuntimeOptions<
     mount?: boolean;
     position?: PerformanceStatsPosition;
     inset?: number;
+    panel?: boolean | MetricsPanelOptions;
   };
   focusCanvas?: boolean;
   focusHint?: boolean | FocusHintOptions;
@@ -82,7 +89,8 @@ export class Runtime<
 
   readonly canvas: HTMLCanvasElement;
   readonly overlay: OverlayLayer;
-  stats?: StatsRecorder;
+  readonly stats: StatsRecorder;
+  readonly metrics: RuntimeMetrics;
   readonly manager = new THREE.LoadingManager();
 
   #isRunning = false;
@@ -90,6 +98,8 @@ export class Runtime<
   #focusHint: FocusHintOptions | null;
   #viewHelper: ViewHelperOptions | null;
   #statsOverlay: MountedPerformanceStats | null = null;
+  #metricsPanel: MetricsPanel | null = null;
+  #rendererMetrics: RendererMetrics;
   #focusHintOverlay: MountedFocusHint | null = null;
   #viewHelperOverlay: MountedViewHelper | null = null;
 
@@ -103,6 +113,10 @@ export class Runtime<
     event.preventDefault();
   };
 
+  #captureRendererFrame = () => {
+    this.#rendererMetrics.captureFrame();
+  };
+
   private constructor(
     canvas: HTMLCanvasElement,
     renderer: Systems.Renderer<THREE.WebGPURenderer>,
@@ -112,6 +126,15 @@ export class Runtime<
   ) {
     this.canvas = canvas;
     this.overlay = new OverlayLayer(canvas, options.overlay);
+
+    this.stats = new StatsRecorder();
+    this.metrics = new RuntimeMetrics(this.stats);
+    this.#rendererMetrics = new RendererMetrics(
+      renderer.getSource()
+    );
+    this.metrics.addSource(this.#rendererMetrics);
+    renderer.on("draw", this.#captureRendererFrame);
+
     this.#focusCanvas = options.focusCanvas ?? true;
     this.#focusHint = resolveToggleOptions(options.focusHint);
     this.#viewHelper = resolveToggleOptions(options.viewHelper);
@@ -173,6 +196,21 @@ export class Runtime<
     return bootstrapRuntime(this, options);
   }
 
+  async mountMetricsPanel(
+    options: MetricsPanelOptions = {}
+  ): Promise<MetricsPanel> {
+    const { MetricsPanel } = await import("./metrics/MetricsPanel.ts");
+
+    this.#metricsPanel?.dispose();
+    this.#metricsPanel = new MetricsPanel(this.stats, {
+      keyboard: this.world.input.keyboard,
+      ...options
+    });
+    this.metrics.attachPanel(this.#metricsPanel);
+
+    return this.#metricsPanel;
+  }
+
   start() {
     if (this.#isRunning) {
       return;
@@ -208,9 +246,9 @@ export class Runtime<
     this.world.start();
     this.loop.start({
       frame: (schedule) => {
-        this.stats?.begin();
+        this.stats.begin();
         const exit = this.world.tick(schedule);
-        this.stats?.end();
+        this.stats.end();
         if (exit) {
           this.stop();
         }
@@ -248,8 +286,12 @@ export class Runtime<
 
   dispose() {
     this.stop();
+    this.world.renderer.off("draw", this.#captureRendererFrame);
     this.#statsOverlay?.dispose();
     this.#statsOverlay = null;
+    this.#metricsPanel?.dispose();
+    this.#metricsPanel = null;
+    this.metrics.attachPanel(null);
     this.overlay.dispose();
     this.world.dispose();
   }
@@ -261,26 +303,25 @@ export class Runtime<
       return;
     }
 
-    const { StatsRecorder } = await import("@jolly-pixel/ui/stats");
-    this.stats = new StatsRecorder();
-
     const settings = typeof option === "object" ? option : {};
-    const mount = settings.mount ?? true;
-    if (!mount) {
-      return;
+    if (settings.mount ?? true) {
+      const { mountPerformanceStats } = await import(
+        "./stats/mountPerformanceStats.ts"
+      );
+      this.#statsOverlay = await mountPerformanceStats(
+        this.stats,
+        this.overlay,
+        {
+          position: settings.position ?? kDefaultStatsPosition,
+          inset: settings.inset ?? kDefaultStatsInset
+        }
+      );
     }
-
-    const { mountPerformanceStats } = await import(
-      "./stats/mountPerformanceStats.ts"
-    );
-    this.#statsOverlay = await mountPerformanceStats(
-      this.stats,
-      this.overlay,
-      {
-        position: settings.position ?? kDefaultStatsPosition,
-        inset: settings.inset ?? kDefaultStatsInset
-      }
-    );
+    if (settings.panel) {
+      await this.mountMetricsPanel(
+        settings.panel === true ? {} : settings.panel
+      );
+    }
   }
 }
 
