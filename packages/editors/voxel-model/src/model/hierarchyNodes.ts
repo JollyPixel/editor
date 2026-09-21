@@ -1,10 +1,17 @@
-// Import Internal Dependencies
-import type { ModelBlocks } from "./ModelBlocks.ts";
-import type { ModelFolders } from "./ModelFolders.ts";
+// Import Third-party Dependencies
+import type {
+  ModelNodeJSON,
+  ModelNodeKind,
+  ModelTreeReader
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
-export type HierarchyNodeKind =
-  | "block"
-  | "folder";
+// CONSTANTS
+const kFallbackNames: Record<ModelNodeKind, string> = {
+  folder: "Folder",
+  block: "Block"
+};
+
+export type HierarchyNodeKind = ModelNodeKind;
 
 export interface HierarchyNode {
   id: string;
@@ -13,49 +20,21 @@ export interface HierarchyNode {
   children: HierarchyNode[];
 }
 
-interface FlatNode {
-  id: string;
-  name: string;
-  kind: HierarchyNodeKind;
-  parentId: string | null;
-}
-
 export function buildHierarchyNodes(
-  blocks: ModelBlocks,
-  folders: ModelFolders
+  tree: ModelTreeReader
 ): HierarchyNode[] {
-  const flatNodes: FlatNode[] = [];
-  for (const [id, folder] of folders.folders) {
-    flatNodes.push({
-      id,
-      name: folder.name || "Folder",
-      kind: "folder",
-      parentId: folder.parentId
-    });
-  }
-  for (const block of blocks.values()) {
-    flatNodes.push({
-      id: block.uuid,
-      name: block.name || "Block",
-      kind: "block",
-      parentId: folders.placements.get(
-        block.uuid
-      ) ?? blocks.parentOf(block.uuid)
-    });
-  }
-
   const byParent = Map.groupBy(
-    flatNodes,
+    tree.values(),
     (node) => node.parentId
   );
 
   function build(
     parentId: string | null
   ): HierarchyNode[] {
-    return (byParent.get(parentId) ?? []).map((node) => {
+    return foldersFirst(byParent.get(parentId) ?? []).map((node) => {
       return {
         id: node.id,
-        name: node.name,
+        name: node.name || kFallbackNames[node.kind],
         kind: node.kind,
         children: build(node.id)
       };
@@ -86,34 +65,11 @@ export function findHierarchyNode(
   return null;
 }
 
-export function findHierarchyParentId(
-  nodes: readonly HierarchyNode[],
-  id: string,
-  parentId: string | null = null
-): string | null | undefined {
-  for (const node of nodes) {
-    if (node.id === id) {
-      return parentId;
-    }
-
-    const found = findHierarchyParentId(
-      node.children,
-      id,
-      node.id
-    );
-    if (found !== undefined) {
-      return found;
-    }
-  }
-
-  return undefined;
-}
-
-export function collectHierarchyIds(
-  node: HierarchyNode
-): string[] {
+function foldersFirst(
+  nodes: readonly ModelNodeJSON[]
+): ModelNodeJSON[] {
   return [
-    node.id,
-    ...node.children.flatMap(collectHierarchyIds)
+    ...nodes.filter((node) => node.kind === "folder"),
+    ...nodes.filter((node) => node.kind === "block")
   ];
 }

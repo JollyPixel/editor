@@ -7,11 +7,10 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  anyMirrorAxis,
   mirrorRotation,
   mirrorSignFromAxes,
   mirrorVector
-} from "#src/model/mirrorTransform.ts";
+} from "#src/scene/blocks/mirrorTransform.ts";
 
 function boxCorners(): THREE.Vector3[] {
   const half = 0.5;
@@ -84,15 +83,5 @@ describe("mirrorVector", () => {
       mirrorVector(new THREE.Vector3(2, 3, 4), sign),
       new THREE.Vector3(-2, 3, -4)
     );
-  });
-});
-
-describe("anyMirrorAxis", () => {
-  test("is false when no axis is selected", () => {
-    assert.equal(anyMirrorAxis({ x: false, y: false, z: false }), false);
-  });
-
-  test("is true when at least one axis is selected", () => {
-    assert.equal(anyMirrorAxis({ x: false, y: true, z: false }), true);
   });
 });

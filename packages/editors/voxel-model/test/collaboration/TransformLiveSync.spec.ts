@@ -5,29 +5,29 @@ import {
   test
 } from "node:test";
 
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
 import { PeerSelectionHighlight } from "#src/collaboration/PeerSelectionHighlight.ts";
 import { TransformLiveSync } from "#src/collaboration/TransformLiveSync.ts";
-import {
-  ModelBlocks,
-  type ModelBlock
-} from "#src/model/index.ts";
+import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { PresenceStore } from "#src/state/index.ts";
 import { createRoomHarness } from "./roomHarness.ts";
+import { createModelFixture } from "../fixtures/model.ts";
 
 function createHarness() {
   const room = createRoomHarness();
   room.addPeer("bob");
-  const blocks = new ModelBlocks(new THREE.Scene());
+  const { blocks, addBlock } = createModelFixture();
   const sync = new TransformLiveSync({
     room: room.room,
     blocks
   });
 
-  return { ...room, blocks, sync };
+  return {
+    ...room,
+    blocks,
+    addBlock,
+    sync
+  };
 }
 
 function publishLive(
@@ -70,7 +70,7 @@ function isGlowing(
 describe("TransformLiveSync", () => {
   test("moves the real block to the live position", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     publishLive(harness, block.uuid, 5);
 
@@ -80,7 +80,7 @@ describe("TransformLiveSync", () => {
 
   test("ignores a live payload whose transform is malformed", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     harness.emit("peer-presence", {
       clientId: "bob",
@@ -99,7 +99,7 @@ describe("TransformLiveSync", () => {
 
   test("does not revert an explicit clear, since the authoritative commit is imminent", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     publishLive(harness, block.uuid, 5);
     clearLive(harness);
@@ -111,7 +111,7 @@ describe("TransformLiveSync", () => {
   test("reverts to the pre-drag baseline once the stream goes silent", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     publishLive(harness, block.uuid, 5);
     t.mock.timers.tick(4999);
@@ -125,7 +125,7 @@ describe("TransformLiveSync", () => {
   test("keeps a drag that outlasts the expiry, as long as updates keep arriving", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     publishLive(harness, block.uuid, 5);
     t.mock.timers.tick(3000);
@@ -139,7 +139,7 @@ describe("TransformLiveSync", () => {
 
   test("reverts to the pre-drag baseline when the peer disconnects mid-drag", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     publishLive(harness, block.uuid, 5);
     harness.removePeer("bob");
@@ -151,7 +151,7 @@ describe("TransformLiveSync", () => {
 
   test("shows a peer-colored outline while the stream is live, removed once it ends", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     publishLive(harness, block.uuid, 5);
     assert.ok(isGlowing(block));
@@ -163,7 +163,7 @@ describe("TransformLiveSync", () => {
 
   test("does not clear a peer's selection glow once their drag stream ends", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
     const presence = new PresenceStore();
     const highlight = new PeerSelectionHighlight({
       blocks: harness.blocks,
@@ -183,7 +183,7 @@ describe("TransformLiveSync", () => {
 
   test("leaves the block at its last live position on dispose", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     publishLive(harness, block.uuid, 5);
     harness.sync.dispose();
@@ -194,7 +194,7 @@ describe("TransformLiveSync", () => {
   test("publishes a throttled live transform, and null on clear", (t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 1000 });
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     harness.sync.publish(block.uuid, block.transform);
     harness.sync.publish(block.uuid, block.transform);

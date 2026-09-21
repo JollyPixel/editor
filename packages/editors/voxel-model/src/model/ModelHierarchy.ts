@@ -1,17 +1,19 @@
 // Import Third-party Dependencies
-import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import {
+  createBlockTransform,
+  type BlockTransformJSON,
+  type MirrorAxes,
+  type ModelNodeJSON,
+  type NodeTransformJSON,
+  type Vector3JSON
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import type { ModelBlock } from "./ModelBlock.ts";
 import type { ModelDocument } from "./ModelDocument.ts";
 import {
   buildHierarchyNodes,
-  collectHierarchyIds,
-  findHierarchyNode,
-  findHierarchyParentId,
   type HierarchyNode
 } from "./hierarchyNodes.ts";
-import { anyMirrorAxis } from "./mirrorTransform.ts";
 
 export interface BlockRegions {
   create(
@@ -25,9 +27,24 @@ export interface BlockRegions {
   ): void;
 }
 
+export interface BlockPoses {
+  under(
+    uuid: string,
+    parentUuid: string | null
+  ): BlockTransformJSON;
+  originUnder(
+    parentUuid: string
+  ): Vector3JSON;
+  mirror(
+    uuids: Iterable<string>,
+    axes: MirrorAxes
+  ): NodeTransformJSON[];
+}
+
 export interface ModelHierarchyOptions {
   document: ModelDocument;
   regions: BlockRegions;
+  poses: BlockPoses;
 }
 
 export interface DuplicateOptions {
@@ -42,68 +59,52 @@ export interface RemoveOptions {
 export class ModelHierarchy {
   #document: ModelDocument;
   #regions: BlockRegions;
+  #poses: BlockPoses;
 
   constructor(
     options: ModelHierarchyOptions
   ) {
     this.#document = options.document;
     this.#regions = options.regions;
+    this.#poses = options.poses;
   }
 
   nodes(): HierarchyNode[] {
-    return buildHierarchyNodes(
-      this.#document.blocks,
-      this.#document.folders
-    );
+    return buildHierarchyNodes(this.#document.tree);
   }
 
   isFolder(
     id: string
   ): boolean {
-    return this.#document.folders.has(id);
+    return this.#document.tree.get(id)?.kind === "folder";
   }
 
   createBlock(
     name: string,
     parentId: string | null
-  ): ModelBlock {
-    const { blocks, folders } = this.#document;
-    const block = blocks.add({ name });
-
-    if (parentId !== null) {
-      const blockParentId = folders.nearestBlockAncestor(parentId);
-      if (blockParentId === null) {
-        blocks.reparent(block.uuid, null);
-      }
-      else {
-        blocks.reparentAtParentPosition(
-          block.uuid,
-          blockParentId
-        );
-      }
-
-      if (folders.has(parentId)) {
-        folders.place(
-          block.uuid,
-          parentId
-        );
-      }
+  ): string | null {
+    const parentUuid = this.#document.tree.enclosingBlockOf(parentId);
+    const id = this.#document.addBlock({
+      name,
+      parentId,
+      transform: parentUuid === null ?
+        createBlockTransform() :
+        createBlockTransform({
+          position: this.#poses.originUnder(parentUuid)
+        })
+    });
+    if (id !== null) {
+      this.#regions.create(id, name);
     }
 
-    this.#regions.create(
-      block.uuid,
-      name
-    );
-    blocks.select(block);
-
-    return block;
+    return id;
   }
 
   createFolder(
     name: string,
     parentId: string | null
-  ): string {
-    return this.#document.folders.add({
+  ): string | null {
+    return this.#document.addFolder({
       name,
       parentId
     });
@@ -113,68 +114,57 @@ export class ModelHierarchy {
     id: string,
     name: string
   ): void {
-    if (this.isFolder(id)) {
-      this.#document.folders.rename(id, name);
-    }
-    else {
-      this.#document.blocks.rename(id, name);
-    }
+    this.#document.rename(id, name);
   }
 
   move(
     id: string,
     parentId: string | null
   ): void {
-    const { blocks, folders } = this.#document;
+    const { tree } = this.#document;
+    const parentUuid = tree.enclosingBlockOf(parentId);
+    const transforms = this.#blocksCarriedBy(id)
+      .filter((uuid) => tree.transformParentOf(uuid) !== parentUuid)
+      .map((uuid) => {
+        return {
+          id: uuid,
+          transform: this.#poses.under(uuid, parentUuid)
+        };
+      });
 
-    if (this.isFolder(id)) {
-      folders.reparent(id, parentId);
-      this.#reparentPlacedBlocksUnder(id);
-
-      return;
-    }
-
-    const parentIsFolder = parentId !== null && this.isFolder(parentId);
-    blocks.reparent(
-      id,
-      folders.nearestBlockAncestor(parentId) ?? parentId
-    );
-    folders.place(
-      id,
-      parentIsFolder ? parentId : null
-    );
+    this.#document.move(id, parentId, transforms);
   }
 
   duplicate(
     sourceId: string,
     options: DuplicateOptions
   ): string | null {
-    const nodes = this.nodes();
-    const source = findHierarchyNode(
-      nodes,
-      sourceId
-    );
-    if (source === null) {
+    const source = this.#document.tree.get(sourceId);
+    if (source === undefined) {
       return null;
     }
 
-    const duplicatedBlockIds: string[] = [];
+    const { mirrorAxes } = options;
+    const duplicatedUuids: string[] = [];
     const duplicateId = this.#duplicateNode(
       source,
-      findHierarchyParentId(nodes, sourceId) ?? null,
+      source.parentId,
       `${source.name} Copy`,
       options.includeChildren,
-      duplicatedBlockIds
+      duplicatedUuids
     );
 
     if (
       duplicateId !== null &&
-      anyMirrorAxis(options.mirrorAxes)
+      (mirrorAxes.x || mirrorAxes.y || mirrorAxes.z)
     ) {
-      this.#document.blocks.mirror(
-        duplicatedBlockIds,
-        options.mirrorAxes
+      const mirrored = this.#poses.mirror(
+        duplicatedUuids,
+        mirrorAxes
       );
+      for (const { id, transform } of mirrored) {
+        this.#document.transform(id, transform, mirrorAxes);
+      }
     }
 
     return duplicateId;
@@ -184,30 +174,47 @@ export class ModelHierarchy {
     id: string,
     options: RemoveOptions
   ): void {
-    const nodes = this.nodes();
-    const node = findHierarchyNode(nodes, id);
-    if (node === null) {
+    const { tree } = this.#document;
+    const node = tree.get(id);
+    if (node === undefined) {
       return;
     }
 
-    if (options.withChildren) {
-      this.#removeSubtree(node);
+    if (!options.withChildren) {
+      for (const child of tree.childrenOf(id)) {
+        this.move(child.id, node.parentId);
+      }
     }
-    else {
-      this.#promoteChildrenThenRemove(
-        node,
-        findHierarchyParentId(nodes, id) ?? null
-      );
+    this.#document.remove(id);
+  }
+
+  #blocksCarriedBy(
+    id: string
+  ): string[] {
+    const { tree } = this.#document;
+    const node = tree.get(id);
+    if (node === undefined) {
+      return [];
     }
+    if (node.kind === "block") {
+      return [node.id];
+    }
+
+    return tree.childrenOf(id).flatMap(
+      (child) => this.#blocksCarriedBy(child.id)
+    );
   }
 
   #duplicateNode(
-    node: HierarchyNode,
+    node: ModelNodeJSON,
     parentId: string | null,
     name: string,
     includeChildren: boolean,
-    duplicatedBlockIds: string[]
+    duplicatedUuids: string[]
   ): string | null {
+    const children = includeChildren ?
+      this.#document.tree.childrenOf(node.id) :
+      [];
     const duplicateId = node.kind === "folder" ?
       this.createFolder(name, parentId) :
       this.#duplicateBlock(node.id, name, parentId);
@@ -216,121 +223,40 @@ export class ModelHierarchy {
     }
 
     if (node.kind === "block") {
-      duplicatedBlockIds.push(duplicateId);
+      duplicatedUuids.push(duplicateId);
     }
-
-    if (includeChildren) {
-      for (const child of node.children) {
-        this.#duplicateNode(
-          child,
-          duplicateId,
-          child.name,
-          true,
-          duplicatedBlockIds
-        );
-      }
+    for (const child of children) {
+      this.#duplicateNode(
+        child,
+        duplicateId,
+        child.name,
+        true,
+        duplicatedUuids
+      );
     }
 
     return duplicateId;
   }
 
   #duplicateBlock(
-    sourceId: string,
+    sourceUuid: string,
     name: string,
     parentId: string | null
   ): string | null {
-    const { blocks, folders } = this.#document;
-    const duplicate = blocks.duplicate(
-      sourceId,
-      name
-    );
-    if (duplicate === null) {
+    const source = this.#document.tree.block(sourceUuid);
+    if (source === undefined) {
       return null;
     }
 
-    this.#regions.copy(
-      sourceId,
-      duplicate.uuid,
-      name
-    );
-
-    const parentIsFolder = parentId !== null && this.isFolder(parentId);
-    blocks.reparentLocal(
-      duplicate.uuid,
-      folders.nearestBlockAncestor(parentId) ?? parentId
-    );
-    if (parentIsFolder) {
-      folders.place(
-        duplicate.uuid,
-        parentId
-      );
+    const uuid = this.#document.addBlock({
+      name,
+      parentId,
+      transform: source.transform
+    });
+    if (uuid !== null) {
+      this.#regions.copy(sourceUuid, uuid, name);
     }
 
-    return duplicate.uuid;
-  }
-
-  #removeSubtree(
-    node: HierarchyNode
-  ): void {
-    const ids = collectHierarchyIds(node);
-
-    for (const id of ids.filter((id) => !this.isFolder(id))) {
-      this.#removeBlock(id);
-    }
-    for (const id of ids.filter((id) => this.isFolder(id))) {
-      this.#document.folders.remove(id);
-    }
-  }
-
-  #promoteChildrenThenRemove(
-    node: HierarchyNode,
-    parentId: string | null
-  ): void {
-    const { blocks, folders } = this.#document;
-
-    for (const child of node.children) {
-      this.move(child.id, parentId);
-    }
-
-    if (node.kind === "folder") {
-      folders.remove(node.id);
-
-      return;
-    }
-
-    for (const descendantId of collectHierarchyIds(node)) {
-      if (
-        descendantId !== node.id &&
-        !this.isFolder(descendantId) &&
-        blocks.parentOf(descendantId) === node.id
-      ) {
-        blocks.reparent(descendantId, parentId);
-      }
-    }
-
-    this.#removeBlock(node.id);
-  }
-
-  #removeBlock(
-    uuid: string
-  ): void {
-    this.#document.folders.place(uuid, null);
-    this.#document.blocks.remove(uuid);
-  }
-
-  #reparentPlacedBlocksUnder(
-    folderId: string
-  ): void {
-    const { blocks, folders } = this.#document;
-    const subtreeIds = folders.subtreeOf(folderId);
-
-    for (const [blockUuid, placedFolderId] of [...folders.placements]) {
-      if (subtreeIds.has(placedFolderId)) {
-        blocks.reparent(
-          blockUuid,
-          folders.nearestBlockAncestor(placedFolderId)
-        );
-      }
-    }
+    return uuid;
   }
 }

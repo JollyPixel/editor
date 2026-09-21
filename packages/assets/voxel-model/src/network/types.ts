@@ -7,36 +7,29 @@ import type {
 
 // Import Internal Dependencies
 import type {
-  folderCommandSchema,
+  blockNodeSchema,
+  blockTransformSchema,
   folderNodeSchema,
-  folderPlacementSchema,
-  groupTransformSchema,
   mirrorAxesSchema,
-  modelCommandSchema,
-  modelNodeSchema,
+  nodeTransformSchema,
   vector3Schema,
+  voxelModelCommandSchema,
   voxelModelSnapshotSchema
 } from "./VoxelModelCommand.schema.ts";
 
 export type Vector3JSON = network.Infer<typeof vector3Schema>;
 export type MirrorAxes = network.Infer<typeof mirrorAxesSchema>;
-export type GroupTransformJSON = network.Infer<typeof groupTransformSchema>;
+export type BlockTransformJSON = network.Infer<typeof blockTransformSchema>;
+export type NodeTransformJSON = network.Infer<typeof nodeTransformSchema>;
 
-export type ModelCommand = network.Infer<typeof modelCommandSchema>;
-export type FolderCommand = network.Infer<typeof folderCommandSchema>;
-
-export type VoxelModelCommand = ModelCommand | FolderCommand;
-
-export type ModelCommandAction = ModelCommand["action"];
-export type FolderCommandAction = FolderCommand["action"];
-
-export type ModelNetworkCommand = ModelCommand & network.NetworkCommandHeader;
-export type FolderNetworkCommand = FolderCommand & network.NetworkCommandHeader;
-export type VoxelModelNetworkCommand = VoxelModelCommand & network.NetworkCommandHeader;
-
-export type ModelNodeJSON = network.Infer<typeof modelNodeSchema>;
 export type FolderNodeJSON = network.Infer<typeof folderNodeSchema>;
-export type FolderPlacementJSON = network.Infer<typeof folderPlacementSchema>;
+export type BlockNodeJSON = network.Infer<typeof blockNodeSchema>;
+export type ModelNodeJSON = FolderNodeJSON | BlockNodeJSON;
+export type ModelNodeKind = ModelNodeJSON["kind"];
+
+export type VoxelModelCommand = network.Infer<typeof voxelModelCommandSchema>;
+export type VoxelModelCommandAction = VoxelModelCommand["action"];
+export type VoxelModelNetworkCommand = VoxelModelCommand & network.NetworkCommandHeader;
 export type VoxelModelSnapshot = network.Infer<typeof voxelModelSnapshotSchema>;
 
 export type VoxelModelAssetNotice =
@@ -48,20 +41,3 @@ export type VoxelModelServerMessage = network.NetworkServerMessage<
   VoxelModelSnapshot,
   VoxelModelAssetNotice
 >;
-
-export const MODEL_COMMAND_ACTIONS: readonly ModelCommandAction[] = [
-  "group-added",
-  "group-removed",
-  "group-renamed",
-  "group-reparented",
-  "group-reparented-local",
-  "group-transformed"
-];
-
-const kModelActions = new Set<string>(MODEL_COMMAND_ACTIONS);
-
-export function isModelCommand<T extends VoxelModelCommand>(
-  command: T
-): command is Extract<T, ModelCommand> {
-  return kModelActions.has(command.action);
-}

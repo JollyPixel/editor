@@ -8,7 +8,7 @@ import { TransformControls } from "@jolly-pixel/three";
 import type {
   ModelBlock,
   ModelBlocks
-} from "../model/index.ts";
+} from "./blocks/index.ts";
 import type {
   TransformLiveSync,
   TransformLock
@@ -135,8 +135,25 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
       options.canvas,
       {
         appearance: {
+          size: 0.200,
+          handle: {
+            kind: "sphere"
+          },
           center: {
             interactive: true
+          },
+          planes: {
+            inset: 0.065,
+            size: 0.30
+          },
+          rings: {
+            frontOnly: false
+          },
+          flipTowardCamera: true,
+          viewRing: false,
+          outline: {
+            color: "#292a2c",
+            width: 2.5
           }
         }
       }

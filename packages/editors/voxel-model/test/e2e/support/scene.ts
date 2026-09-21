@@ -89,9 +89,9 @@ export async function selectedBlock(
   const editor = await editorOf(page);
 
   return editor.evaluate(async({ scene }) => {
-    const { document } = await scene.ready;
+    const { blocks } = await scene.ready;
 
-    return document.blocks.selected?.name ?? null;
+    return blocks.selected?.name ?? null;
   });
 }
 
@@ -102,8 +102,8 @@ export async function blockSummary(
   const editor = await editorOf(page);
 
   return editor.evaluate(async({ scene }, blockName) => {
-    const { document } = await scene.ready;
-    const block = [...document.blocks.values()]
+    const { blocks } = await scene.ready;
+    const block = [...blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {
       return null;
@@ -146,8 +146,8 @@ export async function blockPoint(
   const editor = await editorOf(page);
 
   return editor.evaluate(async({ scene, runtime }, blockName) => {
-    const { document, gizmo } = await scene.ready;
-    const block = [...document.blocks.values()]
+    const { blocks, gizmo } = await scene.ready;
+    const block = [...blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {
       throw new Error(`No block named '${blockName}'.`);

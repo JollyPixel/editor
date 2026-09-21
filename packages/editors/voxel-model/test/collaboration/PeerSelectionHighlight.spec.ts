@@ -11,11 +11,9 @@ import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { PeerSelectionHighlight } from "#src/collaboration/PeerSelectionHighlight.ts";
-import {
-  ModelBlocks,
-  type ModelBlock
-} from "#src/model/index.ts";
+import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { PresenceStore } from "#src/state/index.ts";
+import { createModelFixture } from "../fixtures/model.ts";
 
 type ShellMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
@@ -27,11 +25,16 @@ function mark(
 }
 
 function createHarness() {
-  const blocks = new ModelBlocks(new THREE.Scene());
+  const { blocks, addBlock } = createModelFixture();
   const presence = new PresenceStore();
   const highlight = new PeerSelectionHighlight({ blocks, presence });
 
-  return { blocks, presence, highlight };
+  return {
+    blocks,
+    addBlock,
+    presence,
+    highlight
+  };
 }
 
 function glowOf(
@@ -47,7 +50,7 @@ function glowOf(
 describe("PeerSelectionHighlight", () => {
   test("emphasizes the block a peer has selected", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     harness.presence.blockSelections = new Map([[block.uuid, [mark("bob", "#112233")]]]);
 
@@ -57,7 +60,7 @@ describe("PeerSelectionHighlight", () => {
 
   test("clears the glow once the peer deselects", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     harness.presence.blockSelections = new Map([[block.uuid, [mark("bob", "#112233")]]]);
     harness.presence.blockSelections = new Map();
@@ -68,8 +71,8 @@ describe("PeerSelectionHighlight", () => {
 
   test("moves the glow when the peer selects a different block", () => {
     const harness = createHarness();
-    const first = harness.blocks.add();
-    const second = harness.blocks.add();
+    const first = harness.addBlock();
+    const second = harness.addBlock();
 
     harness.presence.blockSelections = new Map([[first.uuid, [mark("bob", "#112233")]]]);
     harness.presence.blockSelections = new Map([[second.uuid, [mark("bob", "#112233")]]]);
@@ -81,7 +84,7 @@ describe("PeerSelectionHighlight", () => {
 
   test("keeps the glow lit for the remaining peer when one of two deselects", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     harness.presence.blockSelections = new Map([
       [block.uuid, [mark("bob", "#ff0000"), mark("cleo", "#0000ff")]]
@@ -94,7 +97,7 @@ describe("PeerSelectionHighlight", () => {
 
   test("clears every tracked glow on dispose", () => {
     const harness = createHarness();
-    const block = harness.blocks.add();
+    const block = harness.addBlock();
 
     harness.presence.blockSelections = new Map([[block.uuid, [mark("bob", "#112233")]]]);
     harness.highlight.dispose();

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { createCanvas2D } from "@jolly-pixel/three";
 
 // CONSTANTS
 const kPivotMarkerSize = 0.025;
@@ -68,13 +69,7 @@ export class PivotMarker {
 function circleTexture(
   size: number
 ): THREE.Texture {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext("2d");
-  if (context === null) {
-    throw new Error("PivotMarker: 2D canvas context is unavailable.");
-  }
+  const { canvas, context } = createCanvas2D(size, size);
 
   context.beginPath();
   context.arc(size / 2, size / 2, (size / 2) - 1, 0, Math.PI * 2);

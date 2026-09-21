@@ -33,7 +33,7 @@ export const mirrorAxesSchema = defineSchema({
   required: ["x", "y", "z"]
 });
 
-export const groupTransformSchema = defineSchema({
+export const blockTransformSchema = defineSchema({
   type: "object",
   properties: {
     position: vector3Schema,
@@ -51,126 +51,80 @@ export const groupTransformSchema = defineSchema({
   ]
 });
 
-export const modelNodeSchema = defineSchema({
-  type: "object",
-  properties: {
-    uuid: { type: "string" },
-    name: { type: "string" },
-    parentUuid: kNullableIdSchema,
-    position: vector3Schema,
-    pivotOffset: vector3Schema,
-    size: vector3Schema,
-    scale: vector3Schema,
-    rotation: vector3Schema,
-    flipAxes: mirrorAxesSchema
-  },
-  required: [
-    "uuid",
-    "name",
-    "parentUuid",
-    "position",
-    "pivotOffset",
-    "size",
-    "scale",
-    "rotation"
-  ]
-});
-
 export const folderNodeSchema = defineSchema({
   type: "object",
   properties: {
-    uuid: { type: "string" },
-    name: { type: "string" },
-    parentId: kNullableIdSchema
+    kind: { const: "folder" },
+    id: { type: "string" },
+    parentId: kNullableIdSchema,
+    name: { type: "string" }
   },
-  required: ["uuid", "name", "parentId"]
+  required: ["kind", "id", "parentId", "name"]
 });
 
-export const folderPlacementSchema = defineSchema({
+export const blockNodeSchema = defineSchema({
   type: "object",
   properties: {
-    blockUuid: { type: "string" },
-    folderId: { type: "string" }
+    kind: { const: "block" },
+    id: { type: "string" },
+    parentId: kNullableIdSchema,
+    name: { type: "string" },
+    transform: blockTransformSchema,
+    flipAxes: mirrorAxesSchema
   },
-  required: ["blockUuid", "folderId"]
+  required: ["kind", "id", "parentId", "name", "transform"]
+});
+
+export const modelNodeSchema = defineSchema({
+  oneOf: [folderNodeSchema, blockNodeSchema]
+});
+
+export const nodeTransformSchema = defineSchema({
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    transform: blockTransformSchema
+  },
+  required: ["id", "transform"]
 });
 
 export const voxelModelSnapshotSchema = defineSchema({
   type: "object",
   properties: {
-    nodes: { type: "array", items: modelNodeSchema },
-    folders: { type: "array", items: folderNodeSchema },
-    placements: { type: "array", items: folderPlacementSchema }
+    nodes: { type: "array", items: modelNodeSchema }
   },
-  required: ["nodes", "folders", "placements"]
+  required: ["nodes"]
 });
 
-export const modelCommandSchema = defineSchema({
+export const voxelModelCommandSchema = defineSchema({
   oneOf: [
-    commandVariant("group-added", {
-      uuid: { type: "string" },
-      name: { type: "string" },
-      transform: groupTransformSchema
+    commandVariant("node-added", {
+      node: modelNodeSchema
     }),
-    commandVariant("group-removed", {
-      uuid: { type: "string" }
+    commandVariant("node-removed", {
+      id: { type: "string" }
     }),
-    commandVariant("group-renamed", {
-      uuid: { type: "string" },
+    commandVariant("node-renamed", {
+      id: { type: "string" },
       name: { type: "string" }
     }),
-    commandVariant("group-reparented", {
-      uuid: { type: "string" },
-      parentUuid: kNullableIdSchema,
-      transform: groupTransformSchema
+    commandVariant("node-moved", {
+      id: { type: "string" },
+      parentId: kNullableIdSchema,
+      transforms: { type: "array", items: nodeTransformSchema }
     }),
-    commandVariant("group-reparented-local", {
-      uuid: { type: "string" },
-      parentUuid: kNullableIdSchema
-    }),
-    commandVariant("group-transformed", {
-      uuid: { type: "string" },
-      transform: groupTransformSchema
+    commandVariant("node-transformed", {
+      id: { type: "string" },
+      transform: blockTransformSchema
     }, {
       flipAxes: mirrorAxesSchema
     })
   ]
 });
 
-export const folderCommandSchema = defineSchema({
-  oneOf: [
-    commandVariant("folder-added", {
-      uuid: { type: "string" },
-      name: { type: "string" },
-      parentId: kNullableIdSchema
-    }),
-    commandVariant("folder-removed", {
-      uuid: { type: "string" }
-    }),
-    commandVariant("folder-renamed", {
-      uuid: { type: "string" },
-      name: { type: "string" }
-    }),
-    commandVariant("folder-reparented", {
-      uuid: { type: "string" },
-      parentId: kNullableIdSchema
-    }),
-    commandVariant("block-placed", {
-      blockUuid: { type: "string" },
-      folderId: { type: "string" }
-    }),
-    commandVariant("block-unplaced", {
-      blockUuid: { type: "string" }
-    })
-  ]
-});
-
 export const voxelModelCommandProtocol: MessageProtocol = defineMessageProtocol({
   schema: {
-    oneOf: [
-      ...modelCommandSchema.oneOf.map(networkVariant),
-      ...folderCommandSchema.oneOf.map(networkVariant)
-    ]
+    oneOf: voxelModelCommandSchema.oneOf.map(networkVariant)
   }
 });
 

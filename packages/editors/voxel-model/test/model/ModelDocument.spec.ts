@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import { createBlockTransform } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import {
@@ -22,44 +22,79 @@ function recordChanges(
 
 describe("ModelDocument", () => {
   test("tags local block and folder edits with a local origin", () => {
-    const document = new ModelDocument(new THREE.Scene());
+    const document = new ModelDocument();
     const changes = recordChanges(document);
 
-    const block = document.blocks.add({ name: "Block" });
-    const folderId = document.folders.add({ name: "Folder" });
+    const folderId = document.addFolder({ name: "Limbs" });
+    const blockId = document.addBlock({ name: "Arm", parentId: folderId });
+    document.rename(blockId!, "Leg");
 
     assert.deepEqual(
-      changes.map(({ command, origin }) => [command.action, origin]),
+      changes.map((change) => [change.command.action, change.origin]),
       [
-        ["group-added", "local"],
-        ["folder-added", "local"]
+        ["node-added", "local"],
+        ["node-added", "local"],
+        ["node-renamed", "local"]
       ]
     );
-    assert.ok(document.blocks.get(block.uuid));
-    assert.ok(document.folders.has(folderId));
+    assert.deepEqual(document.tree.get(blockId!), {
+      kind: "block",
+      id: blockId,
+      parentId: folderId,
+      name: "Leg",
+      transform: createBlockTransform()
+    });
   });
 
-  test("applies a remote command once, tagged remote, without a local echo", () => {
-    const document = new ModelDocument(new THREE.Scene());
-    const block = document.blocks.add({ name: "Block" });
+  test("refuses an edit its tree rejects, without a change", () => {
+    const document = new ModelDocument();
     const changes = recordChanges(document);
 
-    document.apply({ action: "group-renamed", uuid: block.uuid, name: "Torso" });
-    document.apply({ action: "folder-added", uuid: "f1", name: "Remote", parentId: null });
+    assert.equal(document.addBlock({ name: "Arm", parentId: "missing" }), null);
+    assert.equal(document.rename("missing", "x"), false);
+    assert.equal(document.remove("missing"), false);
+    assert.deepEqual(changes, []);
+  });
 
-    assert.equal(block.name, "Torso");
-    assert.ok(document.folders.has("f1"));
+  test("applies a remote command once, tagged remote", () => {
+    const document = new ModelDocument();
+    const changes = recordChanges(document);
+
+    document.apply({
+      action: "node-added",
+      node: {
+        kind: "folder",
+        id: "f",
+        parentId: null,
+        name: "Limbs"
+      }
+    });
+
+    assert.equal(document.tree.has("f"), true);
     assert.deepEqual(
-      changes.map(({ command, origin }) => [command.action, origin]),
-      [
-        ["group-renamed", "remote"],
-        ["folder-added", "remote"]
-      ]
+      changes.map((change) => change.origin),
+      ["remote"]
     );
+  });
+
+  test("reports every node a removal takes with it", () => {
+    const document = new ModelDocument();
+    const folderId = document.addFolder({ name: "Limbs" });
+    const blockId = document.addBlock({ name: "Arm", parentId: folderId });
+    const changes = recordChanges(document);
+
+    document.remove(folderId!);
+
+    assert.deepEqual(
+      changes[0].removed.map((node) => node.id),
+      [folderId, blockId]
+    );
+    assert.equal(document.tree.size, 0);
   });
 
   test("loads a snapshot as one reset, with no change events", () => {
-    const document = new ModelDocument(new THREE.Scene());
+    const document = new ModelDocument();
+    document.addBlock({ name: "Stale" });
     const changes = recordChanges(document);
     let resets = 0;
     document.on("reset", () => resets++);
@@ -67,23 +102,19 @@ describe("ModelDocument", () => {
     document.load({
       nodes: [
         {
-          uuid: "block",
-          name: "Block",
-          parentUuid: null,
-          position: { x: 0, y: 0, z: 0 },
-          pivotOffset: { x: 0, y: 0, z: 0 },
-          size: { x: 1, y: 1, z: 1 },
-          scale: { x: 1, y: 1, z: 1 },
-          rotation: { x: 0, y: 0, z: 0 }
+          kind: "folder",
+          id: "f",
+          parentId: null,
+          name: "Limbs"
         }
-      ],
-      folders: [{ uuid: "f1", name: "Folder", parentId: null }],
-      placements: [{ blockUuid: "block", folderId: "f1" }]
+      ]
     });
 
     assert.equal(resets, 1);
     assert.deepEqual(changes, []);
-    assert.ok(document.blocks.get("block"));
-    assert.equal(document.folders.placements.get("block"), "f1");
+    assert.deepEqual(
+      [...document.tree.values()].map((node) => node.id),
+      ["f"]
+    );
   });
 });

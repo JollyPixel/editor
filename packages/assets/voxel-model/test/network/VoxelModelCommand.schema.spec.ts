@@ -11,7 +11,11 @@ import { MessageParser } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { voxelModelCommandProtocol } from "#src/network/VoxelModelCommand.schema.ts";
 import type { VoxelModelCommand } from "#src/network/types.ts";
-import { TRANSFORM } from "../helpers/commands.ts";
+import {
+  TRANSFORM,
+  blockNode,
+  folderNode
+} from "../helpers/commands.ts";
 
 // CONSTANTS
 const kHeader = {
@@ -21,64 +25,28 @@ const kHeader = {
 };
 const kCommands: readonly VoxelModelCommand[] = [
   {
-    action: "group-added",
-    uuid: "group-1",
-    name: "Group",
-    transform: TRANSFORM
+    action: "node-added",
+    node: blockNode("node-1")
   },
   {
-    action: "group-removed",
-    uuid: "group-1"
+    action: "node-removed",
+    id: "node-1"
   },
   {
-    action: "group-renamed",
-    uuid: "group-1",
+    action: "node-renamed",
+    id: "node-1",
     name: "Renamed"
   },
   {
-    action: "group-reparented",
-    uuid: "group-1",
-    parentUuid: null,
+    action: "node-moved",
+    id: "node-1",
+    parentId: "node-2",
+    transforms: [{ id: "node-1", transform: TRANSFORM }]
+  },
+  {
+    action: "node-transformed",
+    id: "node-1",
     transform: TRANSFORM
-  },
-  {
-    action: "group-reparented-local",
-    uuid: "group-1",
-    parentUuid: "group-2"
-  },
-  {
-    action: "group-transformed",
-    uuid: "group-1",
-    transform: TRANSFORM
-  },
-  {
-    action: "folder-added",
-    uuid: "folder-1",
-    name: "Folder",
-    parentId: null
-  },
-  {
-    action: "folder-removed",
-    uuid: "folder-1"
-  },
-  {
-    action: "folder-renamed",
-    uuid: "folder-1",
-    name: "Renamed"
-  },
-  {
-    action: "folder-reparented",
-    uuid: "folder-1",
-    parentId: "folder-2"
-  },
-  {
-    action: "block-placed",
-    blockUuid: "block-1",
-    folderId: "folder-1"
-  },
-  {
-    action: "block-unplaced",
-    blockUuid: "block-1"
   }
 ];
 
@@ -117,52 +85,77 @@ describe("voxelModelCommandProtocol", () => {
 
   test("rejects an unknown action", () => {
     assert.strictEqual(
-      accepts({ ...kHeader, action: "group-exploded", uuid: "group-1" }),
+      accepts({ ...kHeader, action: "node-exploded", id: "node-1" }),
       false
     );
   });
 
   test("rejects a command missing a required field", () => {
-    assert.strictEqual(accepts({ ...kHeader, action: "group-removed" }), false);
+    assert.strictEqual(accepts({ ...kHeader, action: "node-removed" }), false);
     assert.strictEqual(
-      accepts({ ...kHeader, action: "block-placed", blockUuid: "block-1" }),
+      accepts({ ...kHeader, action: "node-moved", id: "node-1", parentId: null }),
       false
     );
   });
 
   test("rejects a required field of the wrong type", () => {
     assert.strictEqual(
-      accepts({ ...kHeader, action: "group-removed", uuid: 42 }),
+      accepts({ ...kHeader, action: "node-removed", id: 42 }),
       false
-    );
-    assert.strictEqual(
-      accepts({ ...kHeader, action: "folder-reparented", uuid: "folder-1", parentId: 42 }),
-      false
-    );
-  });
-
-  test("accepts a nullable parent on both folder and group commands", () => {
-    assert.strictEqual(
-      accepts({ ...kHeader, action: "folder-reparented", uuid: "folder-1", parentId: null }),
-      true
     );
     assert.strictEqual(
       accepts({
         ...kHeader,
-        action: "group-reparented",
-        uuid: "group-1",
-        parentUuid: null,
-        transform: TRANSFORM
+        action: "node-moved",
+        id: "node-1",
+        parentId: 42,
+        transforms: []
+      }),
+      false
+    );
+  });
+
+  test("accepts a nullable parent", () => {
+    assert.strictEqual(
+      accepts({
+        ...kHeader,
+        action: "node-moved",
+        id: "node-1",
+        parentId: null,
+        transforms: []
       }),
       true
     );
   });
 
-  test("treats flipAxes on group-transformed as optional", () => {
+  test("adds a folder or a block, told apart by kind", () => {
+    assert.strictEqual(
+      accepts({ ...kHeader, action: "node-added", node: folderNode("f") }),
+      true
+    );
+    assert.strictEqual(
+      accepts({
+        ...kHeader,
+        action: "node-added",
+        node: { ...folderNode("f"), kind: "group" }
+      }),
+      false
+    );
+    assert.strictEqual(
+      accepts({
+        ...kHeader,
+        action: "node-added",
+        node: { kind: "block", id: "b", parentId: null, name: "b" }
+      }),
+      false
+    );
+  });
+
+  test("treats flipAxes on node-transformed as optional", () => {
     const command = {
       ...kHeader,
-      action: "group-transformed",
-      uuid: "group-1",
+      action: "node-transformed",
+      id: "node-1",
       transform: TRANSFORM
     };
 

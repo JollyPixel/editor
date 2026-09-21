@@ -3,17 +3,15 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type {
-  ModelNodeJSON,
-  Vector3JSON,
+  BlockNodeJSON,
   VoxelModelSnapshot
 } from "../network/types.ts";
+import { createBlockTransform } from "../model/blockTransform.ts";
 import { InvalidVoxelModelDocumentError } from "./InvalidVoxelModelDocumentError.ts";
 
 // CONSTANTS
-export const VOXEL_MODEL_DOCUMENT_VERSION = 1;
+export const VOXEL_MODEL_DOCUMENT_VERSION = 2;
 const kDefaultBlockName = "Block";
-const kZeroVector: Vector3JSON = { x: 0, y: 0, z: 0 };
-const kUnitVector: Vector3JSON = { x: 1, y: 1, z: 1 };
 
 export interface VoxelModelDocument extends VoxelModelSnapshot {
   version: typeof VOXEL_MODEL_DOCUMENT_VERSION;
@@ -31,9 +29,7 @@ export function createVoxelModelDocument(
   const { blocks = [kDefaultBlockName] } = options;
   const document: VoxelModelDocument = {
     version: VOXEL_MODEL_DOCUMENT_VERSION,
-    nodes: [...blocks].map(createBlockNode),
-    folders: [],
-    placements: []
+    nodes: [...blocks].map(createBlockNode)
   };
   if (options.texture !== undefined) {
     document.texture = {
@@ -72,14 +68,8 @@ export function decodeVoxelModelDocument(
       `unsupported version ${String(document.version)}`
     );
   }
-  if (
-    !Array.isArray(document.nodes) ||
-    !Array.isArray(document.folders) ||
-    !Array.isArray(document.placements)
-  ) {
-    throw new InvalidVoxelModelDocumentError(
-      "nodes, folders and placements must be arrays"
-    );
+  if (!Array.isArray(document.nodes)) {
+    throw new InvalidVoxelModelDocumentError("nodes must be an array");
   }
   if (document.texture !== undefined && !isReference(document.texture)) {
     throw new InvalidVoxelModelDocumentError("texture must be an asset reference");
@@ -90,16 +80,13 @@ export function decodeVoxelModelDocument(
 
 function createBlockNode(
   name: string
-): ModelNodeJSON {
+): BlockNodeJSON {
   return {
-    uuid: crypto.randomUUID(),
+    kind: "block",
+    id: crypto.randomUUID(),
+    parentId: null,
     name,
-    parentUuid: null,
-    position: { ...kZeroVector },
-    pivotOffset: { ...kZeroVector },
-    size: { ...kUnitVector },
-    scale: { ...kUnitVector },
-    rotation: { ...kZeroVector }
+    transform: createBlockTransform()
   };
 }
 

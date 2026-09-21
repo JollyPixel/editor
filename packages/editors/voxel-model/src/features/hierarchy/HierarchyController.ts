@@ -18,11 +18,14 @@ import type { VoxelModelCommand } from "@jolly-pixel/asset.voxel-model/network/c
 import {
   findHierarchyNode,
   type HierarchyNode,
-  type ModelBlock,
   type ModelChange,
   type ModelDocument,
   type ModelHierarchy
 } from "../../model/index.ts";
+import type {
+  ModelBlock,
+  ModelBlocks
+} from "../../scene/index.ts";
 import type { PresenceStore } from "../../state/index.ts";
 import {
   collectExpandableIds,
@@ -43,6 +46,7 @@ import type {
 
 export interface HierarchyWorkspace {
   document: ModelDocument;
+  blocks: ModelBlocks;
   hierarchy: ModelHierarchy;
   presence: PresenceStore;
 }
@@ -141,7 +145,7 @@ export class HierarchyController implements ReactiveController {
     event: CustomEvent<JollySelectDetail>
   ): void => {
     const { selected } = event.detail;
-    const blocks = this.#workspace?.document.blocks;
+    const blocks = this.#workspace?.blocks;
     const uuid = selected[0];
 
     blocks?.select(
@@ -206,10 +210,18 @@ export class HierarchyController implements ReactiveController {
       defaultName: "Block",
       offerAddAsChild: parentId !== null
     });
-    if (result !== null) {
-      this.#workspace?.hierarchy.createBlock(
-        result.name || "Block",
-        result.addAsChild ? parentId : null
+    const workspace = this.#workspace;
+    if (result === null || workspace === null) {
+      return;
+    }
+
+    const uuid = workspace.hierarchy.createBlock(
+      result.name || "Block",
+      result.addAsChild ? parentId : null
+    );
+    if (uuid !== null) {
+      workspace.blocks.select(
+        workspace.blocks.get(uuid) ?? null
       );
     }
   };
@@ -256,8 +268,8 @@ export class HierarchyController implements ReactiveController {
     if (result.includeChildren && hasChildren) {
       this.#expand(duplicateId);
     }
-    workspace.document.blocks.select(
-      workspace.document.blocks.get(duplicateId) ?? null
+    workspace.blocks.select(
+      workspace.blocks.get(duplicateId) ?? null
     );
     this.#selected = [duplicateId];
     this.#host.requestUpdate();
@@ -284,7 +296,7 @@ export class HierarchyController implements ReactiveController {
       source.id,
       { withChildren: result.deleteChildren }
     );
-    workspace.document.blocks.select(null);
+    workspace.blocks.select(null);
   };
 
   #selectedHierarchyNode(): HierarchyNode | null {
@@ -311,14 +323,18 @@ export class HierarchyController implements ReactiveController {
       return;
     }
 
-    const { document, presence } = workspace;
+    const {
+      document,
+      blocks,
+      presence
+    } = workspace;
     document.on("change", this.#onChange);
     document.on("reset", this.#onReset);
-    document.blocks.on("select", this.#onSelect);
+    blocks.on("select", this.#onSelect);
     this.#subscriptions = [
       () => document.off("change", this.#onChange),
       () => document.off("reset", this.#onReset),
-      () => document.blocks.off("select", this.#onSelect),
+      () => blocks.off("select", this.#onSelect),
       presence.subscribe(
         "blockSelectionsChange",
         this.#onPeerSelections
@@ -356,14 +372,10 @@ function expandedParentOf(
   command: VoxelModelCommand
 ): string | null {
   switch (command.action) {
-    case "group-reparented":
-    case "group-reparented-local":
-      return command.parentUuid;
-    case "folder-added":
-    case "folder-reparented":
+    case "node-added":
+      return command.node.parentId;
+    case "node-moved":
       return command.parentId;
-    case "block-placed":
-      return command.folderId;
     default:
       return null;
   }

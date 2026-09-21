@@ -28,7 +28,8 @@ import {
   voxelModelAssetKind
 } from "#src/index.ts";
 import {
-  groupAdded,
+  blockAdded,
+  folderAdded,
   networkCommand
 } from "../helpers/commands.ts";
 
@@ -109,7 +110,7 @@ describe("voxel-model asset kind over a real back-end", () => {
     });
   });
 
-  test("one room carries model and folder commands to the file", async() => {
+  test("one room carries block and folder commands to the file", async() => {
     await withBackend(async({ root, eventStore, backend, recordId }) => {
       const server = new Server();
       backend.attach(server);
@@ -119,10 +120,10 @@ describe("voxel-model asset kind over a real back-end", () => {
       server.handleConnect(client("A", sent), { subject: "A", role: "default" });
       await server.handleMessage("A", { room, kind: "join" });
       for (const command of [
-        groupAdded("a"),
-        { action: "folder-added", uuid: "f", name: "Parts", parentId: null } as const,
-        { action: "block-placed", blockUuid: "a", folderId: "f" } as const,
-        { action: "group-renamed", uuid: "missing", name: "x" } as const
+        folderAdded("f"),
+        blockAdded("a", "f"),
+        { action: "node-renamed", id: "missing", name: "x" } as const,
+        blockAdded("b", "missing")
       ]) {
         await server.handleMessage("A", {
           room,
@@ -134,21 +135,21 @@ describe("voxel-model asset kind over a real back-end", () => {
       const appended = eventStore.reader
         .list(recordId)
         .filter((event) => event.eventType === VOXEL_MODEL_COMMAND);
-      assert.equal(appended.length, 3);
+      assert.equal(appended.length, 2);
 
       await backend.flush(recordId);
       const onDisk = decodeVoxelModelDocument(
         await fs.readFile(path.join(root, kDocumentPath))
       );
-      assert.deepEqual(onDisk.nodes.map((node) => node.uuid), ["a"]);
-      assert.deepEqual(onDisk.placements, [{ blockUuid: "a", folderId: "f" }]);
+      assert.deepEqual(
+        onDisk.nodes.map((node) => [node.id, node.parentId]),
+        [["f", null], ["a", "f"]]
+      );
       assert.deepEqual(onDisk.texture, kTexture);
 
       const snapshot = sent.find((message) => message.payload?.type === "snapshot");
       assert.deepEqual(snapshot?.payload?.data, {
-        nodes: [],
-        folders: [],
-        placements: []
+        nodes: []
       });
 
       await server.close();

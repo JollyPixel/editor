@@ -6,10 +6,8 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  ModelBlock,
-  NEUTRAL_HIGHLIGHT_COLOR
-} from "#src/model/index.ts";
+import { ModelBlock } from "#src/scene/blocks/ModelBlock.ts";
+import { NEUTRAL_HIGHLIGHT_COLOR } from "#src/scene/blocks/PivotMarker.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;

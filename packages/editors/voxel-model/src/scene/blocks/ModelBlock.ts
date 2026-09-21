@@ -1,17 +1,13 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { GroupTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import {
   PivotMarker,
   NEUTRAL_HIGHLIGHT_COLOR
 } from "./PivotMarker.ts";
-import {
-  toEuler,
-  toVector3,
-  toVector3JSON
-} from "./transformCodec.ts";
+import { plainVector3 } from "./plainVector3.ts";
 
 // CONSTANTS
 const kSelectionScale = 1.06;
@@ -249,24 +245,26 @@ export class ModelBlock {
     return this.#size.clone();
   }
 
-  get transform(): GroupTransformJSON {
+  get transform(): BlockTransformJSON {
     return {
-      position: toVector3JSON(this.root.position),
-      pivotOffset: toVector3JSON(this.pivot.position),
-      size: toVector3JSON(this.#size),
-      scale: toVector3JSON(this.mesh.scale),
-      rotation: toVector3JSON(this.pivot.rotation)
+      position: plainVector3(this.root.position),
+      pivotOffset: plainVector3(this.pivot.position),
+      size: plainVector3(this.#size),
+      scale: plainVector3(this.mesh.scale),
+      rotation: plainVector3(this.pivot.rotation)
     };
   }
 
   set transform(
-    transform: GroupTransformJSON
+    transform: BlockTransformJSON
   ) {
-    this.position = toVector3(transform.position);
-    this.pivotOffset = toVector3(transform.pivotOffset);
-    this.rotation = toEuler(transform.rotation);
-    this.scale = toVector3(transform.scale);
-    this.resize(toVector3(transform.size));
+    const { rotation } = transform;
+
+    this.position = new THREE.Vector3().copy(transform.position);
+    this.pivotOffset = new THREE.Vector3().copy(transform.pivotOffset);
+    this.rotation = new THREE.Euler(rotation.x, rotation.y, rotation.z);
+    this.scale = new THREE.Vector3().copy(transform.scale);
+    this.resize(new THREE.Vector3().copy(transform.size));
   }
 
   emphasize(
