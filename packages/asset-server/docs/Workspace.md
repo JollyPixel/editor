@@ -115,7 +115,7 @@ known `AssetId`.
 
 The catalog hands the browser workspace-relative `source` paths, which have to
 resolve to something. Serve them with
-[`createAssetStaticHandler`](../../asset-source/docs/Http.md), passing the
+[`createAssetStaticHandler`](../../asset-source/docs/http/Http.md), passing the
 content types the registered kinds declare:
 
 ```ts
