@@ -22,7 +22,7 @@ Requests outside the prefix are passed to `next()`. `GET` and `HEAD` answer
 `AssetSource`, so an in-memory source is servable too.
 
 The request target is stripped of its query and fragment, decoded once, then
-validated by [`safeAssetPath`](./Utilities.md#safeassetpath), so the source
+validated by [`safeAssetPath`](../Utilities.md#safeassetpath), so the source
 only ever sees a root-relative POSIX path. The rejection decides the status:
 
 | Case | Status |

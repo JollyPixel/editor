@@ -167,7 +167,8 @@ Missing assets and directory targets return `404`. Invalid encodings and
 control characters return `400`; absolute or escaping paths return `403`.
 Other read failures return `500`.
 
-Details: [storage contract](./docs/AssetSource.md),
-[filesystem](./docs/Filesystem.md), [memory](./docs/Memory.md),
-[IndexedDB](./docs/IndexedDb.md), [HTTP](./docs/Http.md), and
+Details: [storage contract](./README.md#assetsource),
+[filesystem](./docs/persistence/Filesystem.md),
+[memory](./docs/persistence/Memory.md),
+[IndexedDB](./docs/persistence/IndexedDb.md), [HTTP](./docs/http/Http.md), and
 [path utilities](./docs/Utilities.md).
