@@ -87,14 +87,17 @@ await backend.writer.rename({ assetId, to: "textures/ground.png", actor });
 await backend.writer.remove({ assetId, actor });
 ```
 
+`remove` drops the asset whatever still references it. Refusing that is the
+catalog room's job, see
+[Delete protection](./Catalog.md#delete-protection).
+
 ## Errors
 
 Every method returns failures as an error result and appends nothing:
 
 - an unknown asset ID;
 - a path that escapes the source root, or that names the `.jollypixel/` state
-  directory: `AssetPathEscapeError`. Paths are
-  [root-relative POSIX paths](../../asset-source/docs/AssetSource.md#paths);
+  directory: `AssetPathEscapeError`. Paths are root-relative POSIX paths.
 - a `kind` passed to `create` that no handler registers:
   `UnknownAssetKindError`;
 - a `create` (without `onPathConflict: "suffix"`) or `rename` target already

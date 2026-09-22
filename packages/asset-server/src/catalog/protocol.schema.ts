@@ -61,7 +61,8 @@ export const catalogCommandProtocol = defineMessageProtocol({
         properties: {
           type: { const: CATALOG_DELETE },
           requestId: kString,
-          assetId: kString
+          assetId: kString,
+          force: { type: "boolean" }
         },
         required: [
           "type",

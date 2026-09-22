@@ -59,6 +59,14 @@ export interface CatalogCreateOptions {
   onConflict?: CatalogPathConflict;
 }
 
+export interface CatalogRemoveOptions {
+  /**
+   * Delete the asset even when others still reference it.
+   * @default false
+   */
+  force?: boolean;
+}
+
 export interface CatalogImportOptions {
   onConflict: ImportConflictPolicy;
 }
@@ -162,12 +170,14 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   }
 
   async remove(
-    assetId: string
+    assetId: string,
+    options: CatalogRemoveOptions = {}
   ): Promise<void> {
     await this.#request({
       type: CATALOG_DELETE,
       requestId: crypto.randomUUID(),
-      assetId
+      assetId,
+      force: options.force
     });
   }
 

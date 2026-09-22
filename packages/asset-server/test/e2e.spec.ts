@@ -32,7 +32,11 @@ import {
   STATE_GITIGNORE_PATH
 } from "#src/index.ts";
 import { tempWorkspace } from "./helpers/tempWorkspace.ts";
-import { liveCounterHandler } from "./helpers/kinds.ts";
+import {
+  linkContent,
+  linkHandler,
+  liveCounterHandler
+} from "./helpers/kinds.ts";
 import { bytes } from "./helpers/bytes.ts";
 
 function client(
@@ -315,6 +319,86 @@ describe("asset-server — end to end", () => {
       payload: { type: "deleted" }
     });
     await assert.rejects(fs.access(path.join(workspace.root, "a.counter")));
+
+    await server.close();
+  });
+
+  test("a delete is refused while another asset references the target", async() => {
+    await using workspace = await tempWorkspace();
+    using eventStore = EventStore.persistence.memory();
+
+    await using backend = await createAssetBackend({
+      source: new FilesystemAssetSource(workspace.root),
+      eventStore,
+      handlers: [linkHandler()],
+      watch: false
+    });
+    const server = new Server();
+    backend.attach(server);
+
+    const author = recorder("A");
+    server.handleConnect(author, { subject: author.id, role: "default" });
+    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_CREATE,
+        requestId: "target",
+        path: "textures/grass.png",
+        content: encodeContent(bytes("grass"))
+      }
+    });
+    const targetId = (author.received.at(-1) as {
+      payload: { assetId: string; };
+    }).payload.assetId;
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_CREATE,
+        requestId: "link",
+        path: "a.link",
+        content: encodeContent(linkContent(targetId))
+      }
+    });
+    await backend.flush();
+
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_DELETE,
+        requestId: "refused",
+        assetId: targetId
+      }
+    });
+    const refused = (author.received.at(-1) as {
+      payload: { type: string; reason: string; };
+    }).payload;
+
+    await server.handleMessage("A", {
+      room: CATALOG_ROOM,
+      kind: "message",
+      payload: {
+        type: CATALOG_DELETE,
+        requestId: "forced",
+        assetId: targetId,
+        force: true
+      }
+    });
+    await backend.flush();
+
+    assert.strictEqual(refused.type, CATALOG_REJECTED);
+    assert.match(refused.reason, /still referenced by "a.link"/);
+    assert.strictEqual(
+      (author.received.at(-1) as { payload: { type: string; }; }).payload.type,
+      CATALOG_APPLIED
+    );
+    await assert.rejects(
+      fs.access(path.join(workspace.root, "textures", "grass.png"))
+    );
 
     await server.close();
   });

@@ -19,6 +19,7 @@ interface AssetBackendOptions {
   watch?: boolean;
   reconcileDebounce?: number;
   catalogMaxContentBytes?: number;
+  catalogDeleteProtection?: boolean;
   logger?: Logger;
 }
 ```
@@ -35,6 +36,8 @@ when the source supports it. `reconcileDebounce` defaults to 200 ms.
 
 `catalogMaxContentBytes` defaults to 16 MiB of decoded content for catalog
 create and archive commands. See [Catalog](./Catalog.md#network-room).
+`catalogDeleteProtection` defaults to `true`. See
+[Delete protection](./Catalog.md#delete-protection).
 `logger` defaults to a silent logger.
 
 ## Returned backend

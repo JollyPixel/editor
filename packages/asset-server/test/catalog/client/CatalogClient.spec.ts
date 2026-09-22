@@ -7,6 +7,7 @@ import {
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
+  CATALOG_DELETE,
   CATALOG_RENAME,
   CATALOG_REJECTED,
   CATALOG_SNAPSHOT,
@@ -218,6 +219,31 @@ describe("CatalogClient", () => {
 
     await removed;
     assert.equal(room.sent[0].type, "catalog:delete");
+  });
+
+  test("sends the force flag only when the caller asks for it", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+
+    void client.remove("a1");
+    void client.remove("a1", { force: true });
+    await flush();
+
+    assert.deepEqual(room.sent, [
+      {
+        type: CATALOG_DELETE,
+        requestId: room.requestId(0),
+        assetId: "a1",
+        force: undefined
+      },
+      {
+        type: CATALOG_DELETE,
+        requestId: room.requestId(1),
+        assetId: "a1",
+        force: true
+      }
+    ]);
   });
 
   test("rejects pending requests and leaves the room on dispose", async() => {

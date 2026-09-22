@@ -65,6 +65,7 @@ export interface CatalogDeleteCommand {
   type: typeof CATALOG_DELETE;
   requestId?: string;
   assetId: string;
+  force?: boolean;
 }
 
 export interface CatalogExportCommand {

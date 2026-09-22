@@ -17,7 +17,11 @@ import {
   ASSET_UPDATED
 } from "#src/index.ts";
 import { syncHarness } from "../helpers/backend.ts";
-import { counterHandler } from "../helpers/kinds.ts";
+import {
+  counterHandler,
+  linkContent,
+  linkHandler
+} from "../helpers/kinds.ts";
 import {
   bytes,
   text
@@ -345,6 +349,31 @@ describe("Reconciler — external drift", () => {
       deleted: 0,
       failed: 0
     });
+  });
+
+  test("deletes an asset other assets still reference", async() => {
+    await using harness = await syncHarness({ handlers: [linkHandler()] });
+    const target = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+    await harness.writer.create({
+      path: "b.link",
+      data: linkContent(target.assetId),
+      actor: kActor
+    });
+    await harness.projector.flush();
+
+    await harness.source.delete("a.png");
+    const report = (await harness.reconciler.reconcile()).unwrap();
+
+    assert.strictEqual(report.deleted, 1);
+    assert.strictEqual(harness.identity.byId(target.assetId), undefined);
+    assert.strictEqual(
+      lifecycleEvents(harness.eventStore).at(-1)?.eventType,
+      ASSET_DELETED
+    );
   });
 
   test("the projection is unchanged after reconciling an external edit", async() => {
