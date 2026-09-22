@@ -1,39 +1,39 @@
 // Import Third-party Dependencies
 import { AssetId } from "@jolly-pixel/asset";
+import * as z from "zod";
 
 // Import Internal Dependencies
 import { LaunchNotFoundError } from "./errors/LaunchNotFoundError.ts";
 import type { ShellChannel } from "./ShellChannel.ts";
 import type { LaunchSource } from "./sources/LaunchSource.ts";
 
+// CONSTANTS
+const kTargetSchema = z.string().refine((target) => target.trim() !== "");
+const kLaunchSchema = z.object({
+  target: kTargetSchema
+});
+
 export class EditorLaunch {
   static parse(
     value: unknown,
     shell: ShellChannel | null = null
   ): EditorLaunch | undefined {
-    if (
-      typeof value !== "object" ||
-      value === null ||
-      !("target" in value)
-    ) {
-      return undefined;
-    }
+    const parsed = kLaunchSchema.safeParse(value);
 
-    return EditorLaunch.fromTarget(value.target, shell);
+    return parsed.success ?
+      new EditorLaunch(new AssetId(parsed.data.target), shell) :
+      undefined;
   }
 
   static fromTarget(
     target: unknown,
     shell: ShellChannel | null = null
   ): EditorLaunch | undefined {
-    if (
-      typeof target !== "string" ||
-      target.trim() === ""
-    ) {
-      return undefined;
-    }
+    const parsed = kTargetSchema.safeParse(target);
 
-    return new EditorLaunch(new AssetId(target), shell);
+    return parsed.success ?
+      new EditorLaunch(new AssetId(parsed.data), shell) :
+      undefined;
   }
 
   static async read(

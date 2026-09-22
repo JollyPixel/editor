@@ -1,4 +1,11 @@
+// Import Third-party Dependencies
+import * as z from "zod";
+
+// CONSTANTS
 const kSuspensions = new WeakMap<Suspendable, Suspension>();
+const kHoverChangeDetailSchema = z.object({
+  hovering: z.boolean()
+});
 
 interface Suspension {
   readonly enabled: boolean;
@@ -19,12 +26,8 @@ function isHoverChange(
   if (!(event instanceof CustomEvent)) {
     return false;
   }
-  const detail: unknown = event.detail;
 
-  return typeof detail === "object" &&
-    detail !== null &&
-    "hovering" in detail &&
-    typeof detail.hovering === "boolean";
+  return kHoverChangeDetailSchema.safeParse(event.detail).success;
 }
 
 export function suspendOnHover(

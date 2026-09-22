@@ -192,6 +192,7 @@ constants and `CatalogClient`, with no Node.js dependency.
 ```ts
 import {
   CatalogClient,
+  CatalogSessionArchive,
   catalogRoom
 } from "@jolly-pixel/asset-server/catalog/client";
 
@@ -241,6 +242,22 @@ The client joins the room on construction and sends requests only after
 type). `catalogRoom(client)` opens the `CATALOG_ROOM` room on a
 `@jolly-pixel/network/client` `Client`; any object matching `CatalogRoom`
 works.
+
+`CatalogSessionArchive` adapts those archive methods for browser files. It
+exports a ZIP `Blob` and accepts a `Blob` for planning and importing. Pass
+`canImport` when constructing it; an import with `canImport: false` rejects
+with `ArchiveImportDisabledError`, while export and planning remain available.
+
+```ts
+const archive = new CatalogSessionArchive({ catalog, canImport: true });
+const blob = await archive.export(assetId);
+const plan = await archive.plan(file);
+const report = await archive.import(file, { onConflict: "keep" });
+```
+
+The browser client entry also exports `ARCHIVE_MIME_TYPE`, `ArchiveCatalog`
+and `CatalogSessionArchiveOptions`. The caller decides whether import is
+available; the adapter does not inspect workspace persistence.
 
 ## HTTP handler
 

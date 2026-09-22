@@ -55,6 +55,20 @@ describe("AssetLeases", () => {
     assert.equal(leases.has("tex"), false);
   });
 
+  test("leaves the room when a document factory throws", () => {
+    const { client, leases } = setup();
+    const failure = new Error("factory failed");
+
+    assert.throws(() => leases.open({
+      kind: "pixelart",
+      createDocument: () => {
+        throw failure;
+      }
+    }, "tex"), failure);
+    assert.equal(client.fakeRoom("pixelart:tex").leaves, 1);
+    assert.equal(leases.has("tex"), false);
+  });
+
   test("refuses acquisitions after disposal and ignores late releases", () => {
     const { client, leases } = setup();
     const kind = fakeDocumentKind("pixelart");

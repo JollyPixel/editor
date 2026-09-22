@@ -184,6 +184,25 @@ describe("OfflineWorkspace on IndexedDB", () => {
     await third.close();
   });
 
+  test("failed seeding releases the persistent database", async() => {
+    const failure = new Error("seed failed");
+    await assert.rejects(
+      OfflineWorkspace.open({
+        handlers: [],
+        storage: "indexeddb",
+        name: "failed-seed",
+        seed: () => {
+          throw failure;
+        }
+      }),
+      failure
+    );
+
+    const workspace = await open("failed-seed");
+    assert.equal(workspace.persistent, true);
+    await workspace.close();
+  });
+
   test("reset empties the database", async() => {
     const first = await open("reset");
     await first.backend.writer.create({

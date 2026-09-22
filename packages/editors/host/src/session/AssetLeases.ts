@@ -139,17 +139,18 @@ export class AssetLeases {
     const room = this.#rooms.room(
       new AssetRoom(record.kind, record.id).toString()
     );
-    const synced = kind?.createDocument(room);
-    if (synced !== undefined) {
-      try {
+    let synced: SyncedDocument<unknown> | undefined;
+    try {
+      synced = kind?.createDocument(room);
+      if (synced !== undefined) {
         room.join();
       }
-      catch (error) {
-        synced.dispose();
-        room.leave();
+    }
+    catch (error) {
+      synced?.dispose();
+      room.leave();
 
-        throw error;
-      }
+      throw error;
     }
 
     const entry: LeaseEntry<unknown> = {

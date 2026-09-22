@@ -70,7 +70,9 @@ remembers the entered username per tab. `assets` is the session's
 
 `archive` exports and imports `.zip`
 [asset archives](../../../asset-server/docs/Archive.md) through the catalog
-room, the same way offline and on a server.
+room, the same way offline and on a server. The adapter is
+`CatalogSessionArchive` from `@jolly-pixel/asset-server/catalog/client`;
+`EditorSession` passes it the workspace's import capability.
 
 ```ts
 const blob = await session.archive.export(session.target.record.id);

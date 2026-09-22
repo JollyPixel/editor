@@ -115,12 +115,16 @@ await mountStandalone(VoxelMapEditor, {
 | Member | Role |
 |---|---|
 | `OfflineWorkspace.open({ handlers, seed?, storage?, name? })` | opens the storage, seeds it when empty, then starts the back-end and its server |
-| `connect()` | a guest identity, a loopback client and the workspace; destroying the client closes the workspace |
+| `connect()` | a guest identity, a loopback client and the workspace; destroying the last client closes the workspace |
 | `launchSources(accepts)` | `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind |
 | `storage` / `persistent` | the storage the workspace got, which may not be the one asked for |
 | `backend` | the `AssetBackend`, for a host needing its handles |
 | `reset()` | closes the workspace and deletes its database |
 | `close()` | flushes, then stops the server and the back-end; safe to call twice |
+
+Several clients can share one workspace. Destroying one client leaves the others
+connected; destroying the last closes the workspace. Once closing starts,
+`connect()` refuses new connections.
 
 `storage` defaults to `"memory"`. `name` defaults to `"default"` and selects
 the `jolly-workspace:<name>` database. `seed` is a seed map or a function

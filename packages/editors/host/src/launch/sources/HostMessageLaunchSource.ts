@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import * as z from "zod";
+
 // Import Internal Dependencies
 import { EditorLaunch } from "../EditorLaunch.ts";
 import {
@@ -11,6 +14,9 @@ import type { LaunchSource } from "./LaunchSource.ts";
 export const LAUNCH_MESSAGE_TYPE = "jolly-launch";
 const kDefaultTimeout = 1000;
 const kAnyOrigin = "*";
+const kLaunchMessageSchema = z.object({
+  type: z.literal(LAUNCH_MESSAGE_TYPE)
+});
 
 export interface HostMessageLaunchSourceOptions {
   timeout?: number;
@@ -62,12 +68,7 @@ function parseLaunchMessage(
   data: unknown,
   shell: ShellChannelOptions
 ): EditorLaunch | undefined {
-  if (
-    typeof data !== "object" ||
-    data === null ||
-    !("type" in data) ||
-    data.type !== LAUNCH_MESSAGE_TYPE
-  ) {
+  if (!kLaunchMessageSchema.safeParse(data).success) {
     return undefined;
   }
 

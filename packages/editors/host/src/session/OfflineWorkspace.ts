@@ -88,35 +88,65 @@ export class OfflineWorkspace implements SessionWorkspace {
       databaseName
     );
 
-    await source.delete(PROJECTION_STATE_PATH);
-    if (seed !== undefined && (await source.list()).length === 0) {
-      await seedAssetSource(
+    let eventStore: EventStore.TypedEventStore<AssetEventDataMap> | undefined;
+    let backend: AssetBackend | undefined;
+    let server: Server | undefined;
+    try {
+      await source.delete(PROJECTION_STATE_PATH);
+      if (seed !== undefined && (await source.list()).length === 0) {
+        await seedAssetSource(
+          source,
+          typeof seed === "function" ? await seed() : seed
+        );
+      }
+
+      eventStore = EventStore.persistence.memory<AssetEventDataMap>();
+      backend = await createAssetBackend({
         source,
-        typeof seed === "function" ? await seed() : seed
-      );
+        eventStore,
+        handlers,
+        snapshot: storage === "indexeddb" ? kPersistentSnapshotPolicy : undefined,
+        watch: false
+      });
+      server = new Server({
+        logger: silentLogger()
+      });
+
+      return new OfflineWorkspace({
+        backend,
+        eventStore,
+        server,
+        detach: backend.attach(server),
+        storage,
+        databaseName,
+        release
+      });
     }
+    catch (error) {
+      await Promise.allSettled([
+        backend?.close(),
+        server?.close()
+      ]);
+      try {
+        eventStore?.close();
+      }
+      catch {
+        // Preserve the startup error.
+      }
+      try {
+        if (source instanceof IndexedDbAssetSource) {
+          source.close();
+        }
+      }
+      catch {
+        // Preserve the startup error.
+      }
+      finally {
+        release?.();
+      }
 
-    const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
-    const backend = await createAssetBackend({
-      source,
-      eventStore,
-      handlers,
-      snapshot: storage === "indexeddb" ? kPersistentSnapshotPolicy : undefined,
-      watch: false
-    });
-    const server = new Server({
-      logger: silentLogger()
-    });
-
-    return new OfflineWorkspace({
-      backend,
-      eventStore,
-      server,
-      detach: backend.attach(server),
-      storage,
-      databaseName,
-      release
-    });
+      throw error;
+    }
   }
 
   readonly backend: AssetBackend;
@@ -129,6 +159,7 @@ export class OfflineWorkspace implements SessionWorkspace {
   #databaseName: string | undefined;
   #release: (() => void) | undefined;
   #closing: Promise<void> | undefined;
+  #connections = 0;
 
   readonly #onVisibilityChange = (): void => {
     if (document.visibilityState === "hidden") {
@@ -191,6 +222,9 @@ export class OfflineWorkspace implements SessionWorkspace {
   }
 
   connect(): StandaloneConnection {
+    if (this.#closing !== undefined) {
+      throw new Error("Offline workspace is closing.");
+    }
     const peerId = crypto.randomUUID();
     const identity: PeerIdentity = {
       username: GUEST_USERNAME,
@@ -201,6 +235,8 @@ export class OfflineWorkspace implements SessionWorkspace {
       profile: toPeerMetadata(identity),
       socket: () => this.#transport.connect()
     });
+    this.#connections++;
+    let destroyed = false;
 
     return {
       identity,
@@ -208,8 +244,15 @@ export class OfflineWorkspace implements SessionWorkspace {
       client: {
         room: (name) => client.room(name),
         destroy: () => {
+          if (destroyed) {
+            return;
+          }
+          destroyed = true;
           client.destroy();
-          void this.close();
+          this.#connections--;
+          if (this.#connections === 0) {
+            void this.close();
+          }
         }
       }
     };

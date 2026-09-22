@@ -111,9 +111,13 @@ describe("EditorLaunch.read", () => {
 describe("EditorLaunch.parse", () => {
   test("accepts a non-empty string target only", () => {
     assert.equal(EditorLaunch.parse({ target: "x" })?.target.value, "x");
+    assert.equal(EditorLaunch.parse({ target: " x " })?.target.value, " x ");
+    assert.equal(EditorLaunch.parse({ target: "x", extra: true })?.target.value, "x");
     assert.equal(EditorLaunch.parse({ target: " " }), undefined);
     assert.equal(EditorLaunch.parse({ target: 1 }), undefined);
     assert.equal(EditorLaunch.parse(null), undefined);
+    assert.equal(EditorLaunch.fromTarget(" "), undefined);
+    assert.equal(EditorLaunch.fromTarget(null), undefined);
   });
 });
 
@@ -169,6 +173,14 @@ describe("HostMessageLaunchSource", () => {
     window.dispatchEvent(new MessageEvent("message", {
       source: window,
       data: { type: LAUNCH_MESSAGE_TYPE, target: "ignored" }
+    }));
+    window.dispatchEvent(new MessageEvent("message", {
+      source: parent,
+      data: { type: "other", target: "ignored" }
+    }));
+    window.dispatchEvent(new MessageEvent("message", {
+      source: parent,
+      data: { type: LAUNCH_MESSAGE_TYPE, target: 1 }
     }));
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,

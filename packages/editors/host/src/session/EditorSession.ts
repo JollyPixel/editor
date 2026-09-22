@@ -3,7 +3,8 @@ import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   CATALOG_ROOM,
-  CatalogClient
+  CatalogClient,
+  CatalogSessionArchive
 } from "@jolly-pixel/asset-server/catalog/client";
 import * as network from "@jolly-pixel/network/client";
 import {
@@ -24,10 +25,7 @@ import type {
   AssetDocumentKind,
   AssetRoomLease
 } from "./AssetLease.ts";
-import {
-  CatalogSessionArchive,
-  type SessionArchive
-} from "./SessionArchive.ts";
+import type { SessionArchive } from "./SessionArchive.ts";
 import type { SessionWorkspace } from "./SessionWorkspace.ts";
 
 // CONSTANTS
