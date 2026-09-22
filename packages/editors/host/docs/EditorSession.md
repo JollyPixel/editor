@@ -1,7 +1,7 @@
 # EditorSession
 
 The editor's connection to the asset server. It holds the target's room and
-keeps one synced model per dependency, following the catalog as edges come and
+keeps one synced document per dependency, following the catalog as edges come and
 go. [`mountStandalone`](./mountStandalone.md) opens it and passes it to
 `mount` as `context.session`.
 
@@ -9,17 +9,17 @@ go. [`mountStandalone`](./mountStandalone.md) opens it and passes it to
 static async mount(context: EditorContext): Promise<MyEditor> {
   const { session } = context;
 
-  const model = new MyTargetModel(session.target.room);
+  const document = new MyTargetDocument(session.target.room);
   session.target.room.join();
 
   for (const lease of session.dependencies()) {
     await lease.ready;
     if (session.dependency(lease.record.id) === lease) {
-      addTexture(lease.record.id, lease.model);
+      addTexture(lease.record.id, lease.document);
     }
   }
 
-  return new MyEditor(session, model);
+  return new MyEditor(session, document);
 }
 ```
 
@@ -30,12 +30,36 @@ readonly identity: PeerIdentity;
 readonly catalog: CatalogClient;
 readonly assets: AssetLeases;
 readonly target: AssetRoomLease;
+readonly targetReady: Promise<void>;
 readonly archive: SessionArchive;
 readonly workspace: SessionWorkspace | null;
 ```
 
-`target` exposes the target's `record` and `room`. The room is not joined and
-has no model: the editor attaches its own model, then joins.
+`target` exposes the target's `record` and `room`. Its shape depends on the
+editor: register a document kind for `accepts` in `kinds` and the session opens
+the target as a document lease, joining its room and building its document like
+any dependency. Leave it out and the target stays room-only, with no document
+and an unjoined room the editor wires itself.
+
+`targetReady` settles when the target document has its first snapshot, and
+resolves immediately for a room-only target. `connect()` already awaits it, so
+by the time an editor mounts, a leased target is loaded.
+
+`targetLease(kind)` returns that same document as a typed, refcounted
+[`AssetLease`](./AssetLeases.md). It adds a holder, so release it when the
+editor is disposed:
+
+```ts
+const target = session.targetLease(VOXEL_MAP_KIND_OBJECT);
+
+paint(target.document);
+// later
+target.release();
+```
+
+Because the snapshot lands before `mount()`, an editor cannot learn the target's
+contents from a one-off event. Read the current state when attaching, and treat
+later events as updates.
 
 `identity` contains `username`, `peerId`, and `color`. The username prompt
 remembers the entered username per tab. `assets` is the session's
@@ -78,10 +102,10 @@ what the browser stored.
 dependencies(): IterableIterator<AssetDependency>;
 dependency(assetId: string): AssetDependency | undefined;
 
-interface AssetDependency<TModel = unknown> {
+interface AssetDependency<TDocument = unknown> {
   readonly record: AssetRecordData;
   readonly room: Room;
-  readonly model: TModel;
+  readonly document: TDocument;
   readonly ready: Promise<void>;
 }
 ```
@@ -90,16 +114,16 @@ A dependency is an asset of the target's closure whose kind appears in the
 editor's `kinds`. Assets of other kinds are not leased. Before `mount` starts,
 the session waits for a snapshot of its dependencies to become ready. Leases
 added while that snapshot is syncing may still be pending. Await each lease's
-`ready` before using its model, then check that `session.dependency(id)` still
+`ready` before using its document, then check that `session.dependency(id)` still
 returns that lease.
 
 Dependencies are frozen views owned by the session and have no `release()`
 method. Lookup, iteration, and events share the same view until the dependency
 is removed. Acquire a separate lease through `assets.open` when a panel needs
-to keep the model alive independently.
+to keep the document alive independently.
 
-`model` is typed `unknown` here. Checking `lease.record.kind` does not narrow
-the model's TypeScript type. Use a model type guard, or open a typed lease with
+`document` is typed `unknown` here. Checking `lease.record.kind` does not narrow
+the document's TypeScript type. Use a document type guard, or open a typed lease with
 `session.assets.open(kind, assetId)` and release it when finished. Reuse the
 same kind object registered in the editor's `kinds`.
 
@@ -107,7 +131,7 @@ same kind object registered in the editor's `kinds`.
 
 | Event | Payload | When |
 |---|---|---|
-| `dependency-added` | `AssetDependency` | the catalog gained an edge to a supported asset; the model may still be syncing, await `ready` |
+| `dependency-added` | `AssetDependency` | the catalog gained an edge to a supported asset; the document may still be syncing, await `ready` |
 | `dependency-removed` | `{ id, kind }` | the edge was removed or the record deleted; the session's lease is already released |
 
 ```ts
@@ -115,7 +139,7 @@ session.on("dependency-added", async(lease) => {
   try {
     await lease.ready;
     if (session.dependency(lease.record.id) === lease) {
-      addTexture(lease.record.id, lease.model);
+      addTexture(lease.record.id, lease.document);
     }
   }
   catch (error) {
@@ -129,7 +153,7 @@ The equality check skips a lease removed or replaced while syncing, including
 leases cleared by session disposal. The error handler reports readiness
 failures and errors from `addTexture`.
 
-Dependency updates commit before events are emitted. If a model factory throws,
+Dependency updates commit before events are emitted. If a document factory throws,
 new acquisitions are released and the previous dependency set is retained.
 Disposing the session from an event listener stops subsequent notifications.
 

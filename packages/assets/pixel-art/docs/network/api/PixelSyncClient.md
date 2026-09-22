@@ -80,23 +80,23 @@ interface SyncedPixelDocumentOptions {
 }
 ```
 
-- `model` is the document. It starts at 1×1 and takes its size from the first snapshot.
+- `document` is the document. It starts at 1×1 and takes its size from the first snapshot.
 - `sync` is the `PixelSyncClient`.
 - `ready` resolves once the first snapshot is loaded.
 - `dispose()` destroys the sync client. It does not leave the room.
 
-## pixelArtModelKind
+## pixelArtDocumentKind
 
 ```ts
-function pixelArtModelKind(
+function pixelArtDocumentKind(
   options?: SyncedPixelDocumentOptions
 ): {
   kind: "pixelart";
-  createModel(room): SyncedPixelDocument;
+  createDocument(room): SyncedPixelDocument;
 };
 ```
 
-The asset model kind that an `@jolly-pixel/editor.host` session leases pixel-art assets with. Every lease of one asset shares the same document.
+The asset document kind that an `@jolly-pixel/editor.host` session leases pixel-art assets with. Every lease of one asset shares the same document.
 
 ## PixelCollaboration
 

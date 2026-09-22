@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-
-// Import Internal Dependencies
 import {
   ModelDocument,
   type AddBlockOptions
-} from "#src/model/index.ts";
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+
+// Import Internal Dependencies
 import {
   ModelBlocks,
   type ModelBlock

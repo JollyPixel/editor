@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
 import { Emitter } from "@openally/emitt";
-import type { VoxelModelServerMessage } from "@jolly-pixel/asset.voxel-model/network/client.ts";
-
-// Import Internal Dependencies
-import type { VoxelModelRoom } from "#src/collaboration/types.ts";
+import type {
+  VoxelModelRoom,
+  VoxelModelServerMessage
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 type RoomEvents = network.RoomEventMap<VoxelModelServerMessage>;
 

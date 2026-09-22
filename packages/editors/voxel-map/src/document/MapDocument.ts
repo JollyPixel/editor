@@ -26,18 +26,18 @@ export type MapDocumentSignals = Pick<
   "subscribe"
 >;
 
-export interface MapDocumentEngine {
+export interface MapCommandSource {
   on(event: "command", listener: VoxelCommandListener): unknown;
   off(event: "command", listener: VoxelCommandListener): unknown;
 }
 
 export interface MapDocumentOptions {
-  engine: MapDocumentEngine;
+  commands: MapCommandSource;
   source: WorldSource;
 }
 
 export class MapDocument extends Emitter<MapDocumentEvents> {
-  #engine: MapDocumentEngine;
+  #commands: MapCommandSource;
   #source: WorldSource;
 
   #onCommand = (
@@ -68,10 +68,10 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
     options: MapDocumentOptions
   ) {
     super();
-    this.#engine = options.engine;
+    this.#commands = options.commands;
     this.#source = options.source;
 
-    this.#engine.on("command", this.#onCommand);
+    this.#commands.on("command", this.#onCommand);
     this.#source.on("reset", this.#onSourceReset);
   }
 
@@ -82,7 +82,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
   }
 
   dispose(): void {
-    this.#engine.off("command", this.#onCommand);
+    this.#commands.off("command", this.#onCommand);
     this.#source.off("reset", this.#onSourceReset);
     this.#source.dispose();
   }

@@ -20,8 +20,8 @@ import type {
 
 // Import Internal Dependencies
 import type {
-  AssetModelKind,
-  SyncedModel
+  AssetDocumentKind,
+  SyncedDocument
 } from "#src/session/AssetLease.ts";
 
 export class FakeRoom extends Emitter<RoomEventMap> implements Room {
@@ -132,26 +132,26 @@ export function changedMessage(
   };
 }
 
-export interface FakeModel {
+export interface FakeDocument {
   readonly room: Room;
   disposed: boolean;
 }
 
-export interface FakeModelKind extends AssetModelKind<FakeModel> {
-  readonly models: FakeModel[];
+export interface FakeDocumentKind extends AssetDocumentKind<FakeDocument> {
+  readonly documents: FakeDocument[];
   resolveAll(): void;
   rejectAll(error: Error): void;
 }
 
-export function fakeModelKind(
+export function fakeDocumentKind(
   kind: string
-): FakeModelKind {
-  const models: FakeModel[] = [];
+): FakeDocumentKind {
+  const documents: FakeDocument[] = [];
   const pending: Array<PromiseWithResolvers<void>> = [];
 
   return {
     kind,
-    models,
+    documents,
     resolveAll: () => {
       for (const { resolve } of pending.splice(0)) {
         resolve();
@@ -162,20 +162,20 @@ export function fakeModelKind(
         reject(error);
       }
     },
-    createModel(room): SyncedModel<FakeModel> {
-      const model: FakeModel = {
+    createDocument(room): SyncedDocument<FakeDocument> {
+      const document: FakeDocument = {
         room,
         disposed: false
       };
-      models.push(model);
+      documents.push(document);
       const resolvers = Promise.withResolvers<void>();
       pending.push(resolvers);
 
       return {
-        model,
+        document,
         ready: resolvers.promise,
         dispose: () => {
-          model.disposed = true;
+          document.disposed = true;
         }
       };
     }

@@ -3,14 +3,16 @@ import {
   PresenceChannel,
   type PresenceChange
 } from "@jolly-pixel/network/client";
-import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type {
+  BlockTransformJSON,
+  VoxelModelRoom
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import { parseBlockTransformJSON } from "../model/index.ts";
 import type { ModelBlocks } from "../scene/index.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
-import type { VoxelModelRoom } from "./types.ts";
 
 // CONSTANTS
 const kThrottleMs = 50;

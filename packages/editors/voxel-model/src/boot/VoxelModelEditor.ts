@@ -1,9 +1,14 @@
 // Import Third-party Dependencies
 import type { Runtime } from "@jolly-pixel/runtime";
-import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import {
+  VOXEL_MODEL_KIND,
+  voxelModelDocumentKind,
+  type ModelDocument
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 import {
   EditorRuntime,
   QueryParams,
+  type AssetLease,
   type EditorContext,
   type EditorSession
 } from "@jolly-pixel/editor.host";
@@ -13,13 +18,14 @@ import { ModelEditorScene } from "../scene/index.ts";
 import { PresenceStore } from "../state/index.ts";
 import { EditorShell } from "./EditorShell.ts";
 import {
-  MODEL_TEXTURE_KIND,
+  TEXTURE_DOCUMENT_KIND,
   openModelTexture,
   type ModelTexture
 } from "./modelTexture.ts";
 
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";
+const kModelKind = voxelModelDocumentKind();
 
 export interface VoxelModelParams {
   maxFps: number | undefined;
@@ -37,6 +43,7 @@ export interface VoxelModelEditorParts {
   session: EditorSession;
   shell: EditorShell;
   texture: ModelTexture;
+  target: AssetLease<ModelDocument>;
 }
 
 export class VoxelModelEditor {
@@ -44,7 +51,7 @@ export class VoxelModelEditor {
   static readonly identity = {
     title: "Join voxel model"
   };
-  static readonly kinds = [MODEL_TEXTURE_KIND];
+  static readonly kinds = [kModelKind, TEXTURE_DOCUMENT_KIND];
 
   static async mount(
     context: EditorContext
@@ -52,9 +59,11 @@ export class VoxelModelEditor {
     const { session } = context;
     const params = VOXEL_MODEL_PARAMS.read();
     const texture = openModelTexture(session);
+    const target = session.targetLease(kModelKind);
 
     const scene = new ModelEditorScene({
-      room: session.target.room,
+      room: target.room,
+      document: target.document,
       identity: session.identity,
       presence: new PresenceStore(),
       pixels: texture.document,
@@ -80,12 +89,14 @@ export class VoxelModelEditor {
       scene,
       session,
       shell,
-      texture
+      texture,
+      target
     });
   }
 
   #shell: EditorShell;
   #texture: ModelTexture;
+  #target: AssetLease<ModelDocument>;
 
   readonly runtime: Runtime;
   readonly scene: ModelEditorScene;
@@ -99,11 +110,13 @@ export class VoxelModelEditor {
     this.session = parts.session;
     this.#shell = parts.shell;
     this.#texture = parts.texture;
+    this.#target = parts.target;
   }
 
   dispose(): void {
     this.#shell.dispose();
     this.#texture.release();
+    this.#target.release();
     this.session.dispose();
     this.runtime.dispose();
   }

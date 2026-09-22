@@ -41,3 +41,8 @@ export type VoxelModelServerMessage = network.NetworkServerMessage<
   VoxelModelSnapshot,
   VoxelModelAssetNotice
 >;
+
+export type VoxelModelRoom = network.Room<
+  VoxelModelNetworkCommand,
+  VoxelModelServerMessage
+>;

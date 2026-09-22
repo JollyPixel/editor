@@ -1,17 +1,22 @@
 # Rendering and meshing
 
-`VoxelEngine` turns dirty chunks into Three.js meshes. A write marks the affected
+`VoxelView` turns dirty chunks into Three.js meshes. A write marks the affected
 chunk and any boundary neighbours dirty, in every layer, since a voxel can hide
 or uncover faces of the layers around it. `tick()` rebuilds that queue within the
 configured time budget, while `flush()` rebuilds it immediately.
 
-See the [`VoxelEngine` reference](../api/core/VoxelEngine.md) for lifecycle methods
+The view reads a [`VoxelDocument`](../api/core/VoxelDocument.md) and subscribes
+to it; the document holds the voxels and knows nothing about meshes.
+[`VoxelEngine`](../api/core/VoxelEngine.md) composes the pair for applications
+that want a single object.
+
+See the [`VoxelView` reference](../api/core/VoxelView.md) for lifecycle methods
 and configuration.
 
 ## Chunk geometry layout
 
 Each chunk has one `THREE.Mesh` per tileset and resolved surface policy,
-parented to `VoxelEngine.root` and positioned at the chunk origin. A geometry key includes the alpha mode, sides,
+parented to `VoxelView.root` and positioned at the chunk origin. A geometry key includes the alpha mode, sides,
 and mask cutoff. Plain opaque/front geometry uses the tileset ID; blend/double
 geometry keeps the historical `:cutout` suffix. Other policies use a
 `:surface=` suffix. Tileset IDs must not end in `:cutout` or contain

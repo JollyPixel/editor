@@ -9,12 +9,14 @@ import {
 import type { Room } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { AssetModelConflictError } from "./errors/AssetModelConflictError.ts";
+import {
+  AssetDocumentConflictError
+} from "./errors/AssetDocumentConflictError.ts";
 import type {
   AssetLease,
-  AssetModelKind,
+  AssetDocumentKind,
   AssetRoomLease,
-  SyncedModel
+  SyncedDocument
 } from "./AssetLease.ts";
 
 export interface RoomSource {
@@ -30,23 +32,23 @@ export interface AssetLeasesOptions {
   records: AssetRecords;
 }
 
-interface LeaseEntry<TModel> {
+interface LeaseEntry<TDocument> {
   readonly record: AssetRecordData;
   readonly room: Room;
-  readonly kind: AssetModelKind<TModel> | undefined;
-  readonly synced: SyncedModel<TModel> | undefined;
+  readonly kind: AssetDocumentKind<TDocument> | undefined;
+  readonly synced: SyncedDocument<TDocument> | undefined;
   holders: number;
 }
 
-interface ModelLeaseEntry<TModel> extends LeaseEntry<TModel> {
-  readonly kind: AssetModelKind<TModel>;
-  readonly synced: SyncedModel<TModel>;
+interface DocumentLeaseEntry<TDocument> extends LeaseEntry<TDocument> {
+  readonly kind: AssetDocumentKind<TDocument>;
+  readonly synced: SyncedDocument<TDocument>;
 }
 
-function isModelledBy<TModel>(
+function hasDocumentKind<TDocument>(
   entry: LeaseEntry<unknown>,
-  kind: AssetModelKind<TModel>
-): entry is ModelLeaseEntry<TModel> {
+  kind: AssetDocumentKind<TDocument>
+): entry is DocumentLeaseEntry<TDocument> {
   return entry.kind === kind;
 }
 
@@ -75,18 +77,18 @@ export class AssetLeases {
     return this.#entries.get(assetId)?.holders ?? 0;
   }
 
-  open<TModel, TCommand, TMessage>(
-    kind: AssetModelKind<TModel, TCommand, TMessage>,
+  open<TDocument, TCommand, TMessage>(
+    kind: AssetDocumentKind<TDocument, TCommand, TMessage>,
     assetId: string
-  ): AssetLease<TModel, TCommand, TMessage> {
+  ): AssetLease<TDocument, TCommand, TMessage> {
     const entry = this.#acquire(kind.kind, assetId, kind);
-    if (!isModelledBy(entry, kind)) {
-      throw new AssetModelConflictError(assetId);
+    if (!hasDocumentKind(entry, kind)) {
+      throw new AssetDocumentConflictError(assetId);
     }
 
     return {
       ...this.#lease<TCommand, TMessage>(entry),
-      model: entry.synced.model,
+      document: entry.synced.document,
       ready: entry.synced.ready
     };
   }
@@ -109,7 +111,7 @@ export class AssetLeases {
   #acquire(
     kindName: string,
     assetId: string,
-    kind?: AssetModelKind<unknown>
+    kind?: AssetDocumentKind<unknown>
   ): LeaseEntry<unknown> {
     if (this.#disposed) {
       throw new Error("Asset leases have been disposed.");
@@ -132,12 +134,12 @@ export class AssetLeases {
 
   #create(
     record: AssetRecordData,
-    kind: AssetModelKind<unknown> | undefined
+    kind: AssetDocumentKind<unknown> | undefined
   ): LeaseEntry<unknown> {
     const room = this.#rooms.room(
       new AssetRoom(record.kind, record.id).toString()
     );
-    const synced = kind?.createModel(room);
+    const synced = kind?.createDocument(room);
     if (synced !== undefined) {
       try {
         room.join();

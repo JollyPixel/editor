@@ -3,10 +3,15 @@ import type { Runtime } from "@jolly-pixel/runtime";
 import {
   QueryParams,
   EditorRuntime,
+  type AssetLease,
   type EditorContext,
   type EditorSession
 } from "@jolly-pixel/editor.host";
-import { VOXEL_MAP_KIND } from "@jolly-pixel/asset.voxel-map/network/client.ts";
+import {
+  VOXEL_MAP_KIND,
+  voxelMapDocumentKind,
+  type SyncedVoxelMap
+} from "@jolly-pixel/asset.voxel-map/network/client.ts";
 
 // Import Internal Dependencies
 import { EditorState } from "../state/index.ts";
@@ -27,6 +32,12 @@ const kCanvas = "#game-container > canvas";
 const kPerformanceStorageKey = "voxel-map:performance-hud";
 const kPerformancePaneKey = "performance";
 const kPerformanceToggleKey = "F3";
+const kMapKind = voxelMapDocumentKind({
+  chunkSize: 16,
+  history: {
+    enabled: true
+  }
+});
 
 export interface VoxelMapParams {
   offline: boolean;
@@ -48,6 +59,7 @@ export interface VoxelMapEditorParts {
   shell: EditorShell;
   workspace: VoxelMapWorkspace;
   session: EditorSession;
+  target: AssetLease<SyncedVoxelMap>;
 }
 
 export class VoxelMapEditor {
@@ -55,7 +67,7 @@ export class VoxelMapEditor {
   static readonly identity = {
     title: "Join voxel map"
   };
-  static readonly kinds = [TILESET_TEXTURE_KIND];
+  static readonly kinds = [kMapKind, TILESET_TEXTURE_KIND];
 
   static async mount(
     context: EditorContext
@@ -64,6 +76,7 @@ export class VoxelMapEditor {
     const params = VOXEL_MAP_PARAMS.read();
     const state = new EditorState();
     const viewFocus = new ViewFocus();
+    const target = session.targetLease(kMapKind);
 
     const editorRuntime = await EditorRuntime.create(kCanvas, {
       includePerformanceStats: {
@@ -81,7 +94,8 @@ export class VoxelMapEditor {
       state,
       viewFocus,
       session: {
-        room: session.target.room,
+        room: target.room,
+        map: target.document,
         identity: session.identity,
         catalog: session.catalog,
         assets: session.assets,
@@ -126,11 +140,13 @@ export class VoxelMapEditor {
       scene,
       shell,
       workspace,
-      session
+      session,
+      target
     });
   }
 
   #shell: EditorShell;
+  #target: AssetLease<SyncedVoxelMap>;
 
   readonly runtime: Runtime;
   readonly scene: EditorScene;
@@ -145,10 +161,12 @@ export class VoxelMapEditor {
     this.session = parts.session;
     this.workspace = parts.workspace;
     this.#shell = parts.shell;
+    this.#target = parts.target;
   }
 
   dispose(): void {
     this.#shell.dispose();
+    this.#target.release();
     this.session.dispose();
     this.runtime.dispose();
   }

@@ -4,4 +4,5 @@ export {
   VOXEL_MAP_KIND
 } from "../asset/kind.ts";
 export * from "./VoxelSyncClient.ts";
+export * from "./SyncedVoxelMap.ts";
 export * from "../asset/tilesetAssets.ts";

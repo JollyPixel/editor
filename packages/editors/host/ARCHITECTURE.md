@@ -60,7 +60,7 @@ flowchart TB
 
 The host owns launch resolution and session setup. After `mount` succeeds, the
 editor owns the returned session and decides whether to create an
-`EditorRuntime`. The editor also owns its scene, panels, and target model.
+`EditorRuntime`. The editor also owns its scene, panels, and target document.
 
 ## Boot
 
@@ -88,7 +88,7 @@ sequenceDiagram
   A-->>S: target lease, room not joined
   loop each dependency with a known kind
     S->>A: open(kind, assetId)
-    A-->>S: lease { model, ready }
+    A-->>S: lease { document, ready }
   end
   S->>S: await every ready
   S-->>M: session
@@ -96,7 +96,7 @@ sequenceDiagram
   E-->>M: handle
 ```
 
-`mount` starts with every dependency model already synced. The target is the
+`mount` starts with every dependency document already synced. The target is the
 exception: the session only reserves its room. The `connect` option supplies an
 identity and client instead of the default username prompt and network client.
 It may also supply a `SessionWorkspace`. `mountStandalone` exposes the handle on
@@ -133,35 +133,39 @@ returns a target, `EditorLaunch.read` throws before a client is created.
 flowchart TB
   Session["EditorSession"]
 
-  subgraph TargetSide["Target: owned by the editor"]
+  subgraph TargetSide["Target"]
     direction TB
-    TargetLease["session.target<br/>record + room"]
-    TargetModel["editor's own model"]
-    Join["editor calls room.join()"]
-    TargetLease --> TargetModel --> Join
+    TargetKind{"kind registered<br/>for accepts?"}
+    TargetLeased["session.target<br/>record + room + document + ready"]
+    TargetRoom["session.target<br/>record + room"]
+    TargetJoin["session joins the room"]
+    EditorJoin["editor joins the room itself"]
+    TargetKind -->|"yes"| TargetLeased --> TargetJoin
+    TargetKind -->|"no"| TargetRoom --> EditorJoin
   end
 
   subgraph DependencySide["Dependencies: owned by the session"]
     direction TB
     Closure["catalog closure of the target"]
     Filter{"kind listed in<br/>Editor.kinds?"}
-    DepLease["lease<br/>record + room + model + ready"]
+    DepLease["lease<br/>record + room + document + ready"]
     Skipped["not leased"]
     Closure --> Filter
     Filter -->|"yes"| DepLease
     Filter -->|"no"| Skipped
   end
 
-  Session --> TargetLease
+  Session --> TargetKind
   Session --> Closure
 ```
 
-The session never builds the target model because each editor syncs its target
-differently. It builds dependency models from the `AssetModelKind` objects in
-`kinds`, and joins their rooms itself. `AssetLeases` checks the catalog record
+The session builds the target document when the editor registered a document
+kind for `accepts`, and leaves the target room-only otherwise, for editors that
+sync it themselves. It builds dependency documents from the same
+`AssetDocumentKind` objects in `kinds`, and joins their rooms itself. `AssetLeases` checks the catalog record
 exists and has the requested kind before opening a room. A dependency is used
 only when its reference kind matches its current record kind and the editor
-registered a model kind for it.
+registered a document kind for it.
 
 The session exposes `target`, `catalog`, `assets`, `identity`, `archive`, and
 `workspace` (`null` for the default server connection). Editors can read the
@@ -211,25 +215,26 @@ stateDiagram-v2
   Closed --> [*]
 
   note right of Open
-    one room and at most one model,
+    one room and at most one document,
     shared by every holder
   end note
   note right of Closed
-    model disposed, room left
+    document disposed, room left
   end note
 ```
 
-A panel that opens its own lease on a dependency keeps the model alive after
+A panel that opens its own lease on a dependency keeps the document alive after
 the session drops the edge. The entry remembers how it was first opened:
 
 | First opened with | Then `openRoom` | Then `open(sameKind)` | Then `open(otherKind)` |
 |---|---|---|---|
-| `open(kind)` | shares | shares | `AssetModelConflictError` |
-| `openRoom` | shares | `AssetModelConflictError` | `AssetModelConflictError` |
+| `open(kind)` | shares | shares | `AssetDocumentConflictError` |
+| `openRoom` | shares | `AssetDocumentConflictError` | `AssetDocumentConflictError` |
 
-The model kind comparison is by object identity. Reuse the same kind object in
+The document kind comparison is by object identity. Reuse the same kind object in
 the editor's `kinds` and in later `assets.open` calls. A room-only lease does
-not join the room; a model lease creates its model and joins on first open.
+not join the room; a document lease creates its document and joins on first
+open.
 `release()` is idempotent for each holder, and `AssetLeases.dispose()` closes
 all entries, including leases still held by panels.
 
@@ -265,8 +270,8 @@ flowchart TB
   Read["read launch"] -->|"no source answers"| E1["LaunchNotFoundError<br/>nothing to release"]
   Read --> Connect["connect catalog, lease target"]
   Connect -->|"catalog or target fails"| E2["catalog disposed<br/>client destroyed"]
-  Connect --> Ready["await dependency models"]
-  Ready -->|"a model rejects ready"| E3["session disposed"]
+  Connect --> Ready["await dependency documents"]
+  Ready -->|"a document rejects ready"| E3["session disposed"]
   Ready --> MountStep["Editor.mount(context)"]
   MountStep -->|"throws"| E3
   MountStep --> Running["editor running"]

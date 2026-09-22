@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
+import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import type { ModelBlocks } from "../scene/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
-import type { VoxelModelRoom } from "./types.ts";
 
 export interface BlockSelectionPresenceOptions {
   room: VoxelModelRoom;

@@ -1,35 +1,35 @@
 # AssetLeases
 
-Shares one room, and one synced model, per asset between every holder. An
+Shares one room, and one synced document, per asset between every holder. An
 editor reaches it as [`session.assets`](./EditorSession.md#properties) and
 never constructs it.
 
 ```ts
-const lease = session.assets.open(pixelArtModelKind(), assetId);
+const lease = session.assets.open(pixelArtDocumentKind(), assetId);
 await lease.ready;
 
-paint(lease.model);
+paint(lease.document);
 
 lease.release();
 ```
 
-## Model kinds
+## Document kinds
 
 ```ts
-interface AssetModelKind<TModel, TCommand = unknown, TMessage = unknown> {
+interface AssetDocumentKind<TDocument, TCommand = unknown, TMessage = unknown> {
   readonly kind: string;
-  createModel(room: Room<TCommand, TMessage>): SyncedModel<TModel>;
+  createDocument(room: Room<TCommand, TMessage>): SyncedDocument<TDocument>;
 }
 
-interface SyncedModel<TModel> {
-  readonly model: TModel;
+interface SyncedDocument<TDocument> {
+  readonly document: TDocument;
   readonly ready: Promise<void>;
   dispose(): void;
 }
 ```
 
-A model kind pairs an asset kind with the factory of its synced model. Asset
-packages export them, such as `pixelArtModelKind()` from
+A document kind pairs an asset kind with the factory of its synced document. Asset
+packages export them, such as `pixelArtDocumentKind()` from
 `@jolly-pixel/asset.pixel-art/network/client.ts`.
 
 Create each kind object once and reuse it, for the editor's static `kinds` and
@@ -39,10 +39,10 @@ for every `open` call. Two kind objects for the same asset
 ## Opening
 
 ```ts
-open<TModel, TCommand, TMessage>(
-  kind: AssetModelKind<TModel, TCommand, TMessage>,
+open<TDocument, TCommand, TMessage>(
+  kind: AssetDocumentKind<TDocument, TCommand, TMessage>,
   assetId: string
-): AssetLease<TModel, TCommand, TMessage>;
+): AssetLease<TDocument, TCommand, TMessage>;
 
 openRoom<TCommand, TMessage>(
   kind: string,
@@ -50,9 +50,9 @@ openRoom<TCommand, TMessage>(
 ): AssetRoomLease<TCommand, TMessage>;
 ```
 
-`open` builds the model and joins the room on the first lease of an asset.
+`open` builds the document and joins the room on the first lease of an asset.
 `openRoom` opens the room only and leaves joining to the holder. Later leases
-of the same asset share the room and the model.
+of the same asset share the room and the document.
 
 ## Leases
 
@@ -63,14 +63,14 @@ interface AssetRoomLease<TCommand = unknown, TMessage = unknown> {
   release(): void;
 }
 
-interface AssetLease<TModel, TCommand = unknown, TMessage = unknown>
+interface AssetLease<TDocument, TCommand = unknown, TMessage = unknown>
   extends AssetRoomLease<TCommand, TMessage> {
-  readonly model: TModel;
+  readonly document: TDocument;
   readonly ready: Promise<void>;
 }
 ```
 
-The last `release()` of an asset disposes its model and leaves its room. A
+The last `release()` of an asset disposes its document and leaves its room. A
 second `release()` of one lease does nothing. See the
 [lease lifecycle](../ARCHITECTURE.md#lease-lifecycle).
 
@@ -90,4 +90,4 @@ holders(assetId: string): number;
 |---|---|---|
 | `AssetNotFoundError` | `@jolly-pixel/asset` | the catalog has no record for `assetId` |
 | `AssetKindMismatchError` | `@jolly-pixel/asset` | the record has another kind |
-| `AssetModelConflictError` | this package | `open` targets an asset first opened with `openRoom`, or with another kind object |
+| `AssetDocumentConflictError` | this package | `open` targets an asset first opened with `openRoom`, or with another kind object |

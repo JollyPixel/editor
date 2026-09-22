@@ -4,22 +4,21 @@ import type { Systems } from "@jolly-pixel/engine";
 import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
+import type {
+  VoxelModelRoom
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import type { ModelDocument } from "../model/index.ts";
 import type { ModelBlocks } from "../scene/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import { BlockSelectionPresence } from "./BlockSelectionPresence.ts";
-import { ModelSyncClient } from "./ModelSyncClient.ts";
 import { PeerSelectionHighlight } from "./PeerSelectionHighlight.ts";
 import { TransformLiveSync } from "./TransformLiveSync.ts";
 import { TransformLock } from "./TransformLock.ts";
-import type { VoxelModelRoom } from "./types.ts";
 
 export interface ModelCollaborationOptions {
   room: VoxelModelRoom;
   identity: PeerIdentity;
-  document: ModelDocument;
   blocks: ModelBlocks;
   presence: PresenceStore;
   world: Systems.World;
@@ -27,7 +26,6 @@ export interface ModelCollaborationOptions {
 }
 
 export class ModelCollaboration {
-  readonly sync: ModelSyncClient;
   readonly lock: TransformLock;
   readonly live: TransformLiveSync;
   readonly frustums: PeerFrustums;
@@ -41,12 +39,10 @@ export class ModelCollaboration {
   ) {
     const {
       room,
-      document,
       blocks,
       presence
     } = options;
 
-    this.sync = new ModelSyncClient({ room, document });
     this.#roster = new PeerRoster({
       room,
       identity: options.identity,
@@ -77,7 +73,6 @@ export class ModelCollaboration {
   }
 
   dispose(): void {
-    this.sync.destroy();
     this.#roster.dispose();
     this.#selections.dispose();
     this.#highlight.dispose();

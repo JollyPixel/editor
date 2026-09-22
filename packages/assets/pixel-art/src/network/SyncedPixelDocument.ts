@@ -25,7 +25,7 @@ export interface SyncedPixelDocumentOptions {
 }
 
 export class SyncedPixelDocument {
-  readonly model: PixelDocument;
+  readonly document: PixelDocument;
   readonly sync: PixelSyncClient;
   readonly ready: Promise<void>;
 
@@ -33,14 +33,14 @@ export class SyncedPixelDocument {
     room: Room<PixelNetworkCommand, PixelServerMessage>,
     options: SyncedPixelDocumentOptions = {}
   ) {
-    this.model = new PixelDocument({
+    this.document = new PixelDocument({
       size: kInitialSize,
       maxSize: options.maxSize,
       history: options.history
     });
     this.sync = new PixelSyncClient({
       room,
-      document: this.model
+      document: this.document
     });
     this.ready = new Promise((resolve) => {
       this.sync.once("ready", resolve);
@@ -52,18 +52,18 @@ export class SyncedPixelDocument {
   }
 }
 
-export interface PixelArtModelKind {
+export interface PixelArtDocumentKind {
   readonly kind: typeof PIXEL_ART_KIND;
-  createModel(
+  createDocument(
     room: Room<PixelNetworkCommand, PixelServerMessage>
   ): SyncedPixelDocument;
 }
 
-export function pixelArtModelKind(
+export function pixelArtDocumentKind(
   options: SyncedPixelDocumentOptions = {}
-): PixelArtModelKind {
+): PixelArtDocumentKind {
   return {
     kind: PIXEL_ART_KIND,
-    createModel: (room) => new SyncedPixelDocument(room, options)
+    createDocument: (room) => new SyncedPixelDocument(room, options)
   };
 }

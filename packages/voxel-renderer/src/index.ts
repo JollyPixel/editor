@@ -1,4 +1,6 @@
 export * from "./VoxelEngine.ts";
+export * from "./document/index.ts";
+export * from "./view/index.ts";
 export * from "./VoxelEngine.types.ts";
 export * from "./types.ts";
 export { VoxelTransparencyRenderer } from "./render/VoxelTransparencyRenderer.ts";

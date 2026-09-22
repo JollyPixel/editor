@@ -3,13 +3,13 @@ import {
   createBlockTransform,
   type BlockTransformJSON,
   type MirrorAxes,
+  type ModelDocument,
   type ModelNodeJSON,
   type NodeTransformJSON,
   type Vector3JSON
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import type { ModelDocument } from "./ModelDocument.ts";
 import {
   buildHierarchyNodes,
   type HierarchyNode

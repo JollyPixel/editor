@@ -17,14 +17,14 @@ import { CATALOG_ROOM } from "@jolly-pixel/asset-server/catalog/client";
 // Import Internal Dependencies
 import { EditorSession } from "#src/session/EditorSession.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import type { AssetModelKind } from "#src/session/AssetLease.ts";
+import type { AssetDocumentKind } from "#src/session/AssetLease.ts";
 import {
   FakeClient,
   changedMessage,
-  fakeModelKind,
+  fakeDocumentKind,
   record,
   snapshotMessage,
-  type FakeModelKind
+  type FakeDocumentKind
 } from "../helpers/rooms.ts";
 
 // CONSTANTS
@@ -50,9 +50,9 @@ function tileset(
 interface ConnectOptions {
   target?: string;
   accepts?: string;
-  kinds?: AssetModelKind<unknown>[];
+  kinds?: AssetDocumentKind<unknown>[];
   dependencies?: Record<string, AssetReferenceData[]>;
-  resolveModels?: FakeModelKind;
+  resolveDocuments?: FakeDocumentKind;
 }
 
 async function startConnect(
@@ -83,7 +83,7 @@ async function connect(
   options: ConnectOptions = {}
 ) {
   const { client, pending } = await startConnect(options);
-  options.resolveModels?.resolveAll();
+  options.resolveDocuments?.resolveAll();
 
   return {
     client,
@@ -93,11 +93,11 @@ async function connect(
 
 describe("EditorSession.connect", () => {
   test("releases acquired models when a later factory throws", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const failure = new Error("factory failed");
-    const audio: AssetModelKind<unknown> = {
+    const audio: AssetDocumentKind<unknown> = {
       kind: "audio",
-      createModel: () => {
+      createDocument: () => {
         throw failure;
       }
     };
@@ -109,7 +109,7 @@ describe("EditorSession.connect", () => {
     });
 
     await assert.rejects(pending, failure);
-    assert.equal(kind.models[0].disposed, true);
+    assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("pixelart:grass").leaves, 1);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
     assert.equal(client.destroyed, true);
@@ -136,13 +136,13 @@ describe("EditorSession.connect", () => {
   });
 
   test("leases every modelled dependency and resolves once all are ready", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
       dependencies: {
         map: [tileset("grass"), tileset("stone"), { id: "sound", kind: "audio" }]
       },
-      resolveModels: kind
+      resolveDocuments: kind
     });
 
     const leased = [...session.dependencies()].map((lease) => lease.record.id);
@@ -160,7 +160,7 @@ describe("EditorSession.connect", () => {
   });
 
   test("disposes everything when a dependency fails to get ready", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { client, pending } = await startConnect({
       kinds: [kind],
       dependencies: { map: [tileset("grass")] }
@@ -168,13 +168,13 @@ describe("EditorSession.connect", () => {
     kind.rejectAll(new Error("sync failed"));
 
     await assert.rejects(pending, /sync failed/);
-    assert.equal(kind.models[0].disposed, true);
+    assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
     assert.equal(client.destroyed, true);
   });
 
   test("follows the transitive closure of the target", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { session } = await connect({
       kinds: [kind],
       dependencies: {
@@ -182,18 +182,18 @@ describe("EditorSession.connect", () => {
         grass: [tileset("stone")],
         stone: [tileset("grass")]
       },
-      resolveModels: kind
+      resolveDocuments: kind
     });
 
     assert.equal(session.dependency("stone")?.record.id, "stone");
-    assert.equal(kind.models.length, 2);
+    assert.equal(kind.documents.length, 2);
     session.dispose();
   });
 });
 
 describe("EditorSession live closure", () => {
   test("exposes stable dependency views without release ownership", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({ kinds: [kind] });
     const added: unknown[] = [];
     session.on("dependency-added", (dependency) => added.push(dependency));
@@ -206,7 +206,7 @@ describe("EditorSession live closure", () => {
     assert.equal(Object.isFrozen(dependency), true);
     assert.equal(added[0], dependency);
     assert.equal([...session.dependencies()][0], dependency);
-    assert.equal(dependency.model, kind.models[0]);
+    assert.equal(dependency.document, kind.documents[0]);
     kind.resolveAll();
     await dependency.ready;
 
@@ -219,13 +219,13 @@ describe("EditorSession live closure", () => {
 
   for (const event of ["dependency-added", "dependency-removed"] as const) {
     test(`stops notifications when disposed during ${event}`, async() => {
-      const kind = fakeModelKind("pixelart");
+      const kind = fakeDocumentKind("pixelart");
       const { client, session } = await connect({
         kinds: [kind],
         dependencies: {
           map: event === "dependency-removed" ? [tileset("grass")] : []
         },
-        resolveModels: kind
+        resolveDocuments: kind
       });
       let notifications = 0;
       session.on(event, () => {
@@ -238,7 +238,7 @@ describe("EditorSession live closure", () => {
 
       assert.equal(notifications, 1);
       assert.deepEqual([...session.dependencies()], []);
-      assert.equal(kind.models.every((model) => model.disposed), true);
+      assert.equal(kind.documents.every((document) => document.disposed), true);
       assert.equal(client.fakeRoom("pixelart:stone").leaves, 1);
       assert.equal(client.destroyed, true);
       assert.throws(() => session.assets.open(kind, "stone"), /disposed/);
@@ -247,17 +247,17 @@ describe("EditorSession live closure", () => {
   }
 
   test("rolls back additions before removing existing dependencies", async() => {
-    const kind = fakeModelKind("pixelart");
-    const audio: AssetModelKind<unknown> = {
+    const kind = fakeDocumentKind("pixelart");
+    const audio: AssetDocumentKind<unknown> = {
       kind: "audio",
-      createModel: () => {
+      createDocument: () => {
         throw new Error("factory failed");
       }
     };
     const { client, session } = await connect({
       kinds: [kind, audio],
       dependencies: { map: [tileset("grass")] },
-      resolveModels: kind
+      resolveDocuments: kind
     });
     const original = session.dependency("grass");
     const notifications: string[] = [];
@@ -271,19 +271,19 @@ describe("EditorSession live closure", () => {
       ]));
     }, /factory failed/);
     assert.equal(session.dependency("grass"), original);
-    assert.equal(kind.models[0].disposed, false);
-    assert.equal(kind.models[1].disposed, true);
+    assert.equal(kind.documents[0].disposed, false);
+    assert.equal(kind.documents[1].disposed, true);
     assert.equal(session.assets.has("stone"), false);
     assert.deepEqual(notifications, []);
     session.dispose();
   });
 
   test("leases added edges and releases removed ones", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
       dependencies: { map: [tileset("grass")] },
-      resolveModels: kind
+      resolveDocuments: kind
     });
     const added: string[] = [];
     const removed: AssetReferenceData[] = [];
@@ -296,35 +296,35 @@ describe("EditorSession live closure", () => {
 
     assert.deepEqual(added, ["stone"]);
     assert.deepEqual(removed, [tileset("grass")]);
-    assert.equal(kind.models[0].disposed, true);
+    assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("pixelart:grass").leaves, 1);
     session.dispose();
   });
 
   test("a panel lease keeps a removed dependency alive", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
       dependencies: { map: [tileset("grass")] },
-      resolveModels: kind
+      resolveDocuments: kind
     });
     const panel = session.assets.open(kind, "grass");
 
     client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, []));
 
     assert.equal(session.dependency("grass"), undefined);
-    assert.equal(panel.model.disposed, false);
+    assert.equal(panel.document.disposed, false);
     panel.release();
-    assert.equal(panel.model.disposed, true);
+    assert.equal(panel.document.disposed, true);
     session.dispose();
   });
 
   test("drops a dependency whose record is deleted", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
       dependencies: { map: [tileset("grass")] },
-      resolveModels: kind
+      resolveDocuments: kind
     });
     const removed: string[] = [];
     session.on("dependency-removed", (reference) => removed.push(reference.id));
@@ -336,11 +336,11 @@ describe("EditorSession live closure", () => {
   });
 
   test("dispose releases everything and destroys the client", async() => {
-    const kind = fakeModelKind("pixelart");
+    const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
       dependencies: { map: [tileset("grass")] },
-      resolveModels: kind
+      resolveDocuments: kind
     });
 
     session.dispose();
@@ -348,9 +348,71 @@ describe("EditorSession live closure", () => {
       changedMessage("map", kMap, [tileset("stone")])
     );
 
-    assert.equal(kind.models.length, 1);
-    assert.equal(kind.models[0].disposed, true);
+    assert.equal(kind.documents.length, 1);
+    assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
     assert.equal(client.destroyed, true);
+  });
+});
+
+describe("EditorSession target document", () => {
+  test("keeps the target room-only when no kind is registered", async() => {
+    const { client, session } = await connect();
+
+    await session.targetReady;
+
+    assert.equal(client.fakeRoom("voxelmap:map").joins, 0);
+    assert.equal("document" in session.target, false);
+    session.dispose();
+  });
+
+  test("leases the target as a document and joins its room once", async() => {
+    const kind = fakeDocumentKind("voxelmap");
+    const { client, session } = await connect({
+      kinds: [kind],
+      resolveDocuments: kind
+    });
+
+    await session.targetReady;
+
+    assert.equal(kind.documents.length, 1);
+    assert.equal(client.fakeRoom("voxelmap:map").joins, 1);
+    assert.equal(kind.documents[0].room, client.fakeRoom("voxelmap:map"));
+    session.dispose();
+  });
+
+  test("rejects and disposes when the target never becomes ready", async() => {
+    const kind = fakeDocumentKind("voxelmap");
+    const failure = new Error("target failed");
+    const { client, pending } = await startConnect({ kinds: [kind] });
+
+    kind.rejectAll(failure);
+
+    await assert.rejects(pending, failure);
+    assert.equal(kind.documents[0].disposed, true);
+    assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
+    assert.equal(client.destroyed, true);
+  });
+
+  test("targetLease shares the document the session already holds", async() => {
+    const kind = fakeDocumentKind("voxelmap");
+    const { client, session } = await connect({
+      kinds: [kind],
+      resolveDocuments: kind
+    });
+
+    const lease = session.targetLease(kind);
+
+    assert.equal(lease.document, kind.documents[0]);
+    assert.equal(kind.documents.length, 1);
+
+    lease.release();
+
+    assert.equal(lease.document.disposed, false);
+    assert.equal(client.fakeRoom("voxelmap:map").leaves, 0);
+
+    session.dispose();
+
+    assert.equal(lease.document.disposed, true);
   });
 });

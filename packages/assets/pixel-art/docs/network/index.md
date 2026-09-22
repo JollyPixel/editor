@@ -15,7 +15,7 @@ Start with the setup guide. The API reference is useful when wrapping these clas
 
 | Page | API |
 |---|---|
-| [`PixelSyncClient`](./api/PixelSyncClient.md) | `PixelSyncClient`, `SyncedPixelDocument`, `pixelArtModelKind`, `PixelCollaboration`, readiness and notices |
+| [`PixelSyncClient`](./api/PixelSyncClient.md) | `PixelSyncClient`, `SyncedPixelDocument`, `pixelArtDocumentKind`, `PixelCollaboration`, readiness and notices |
 | [Presence sync](./api/PresenceSync.md) | `PixelCursorSync`, `PixelStrokeGhostSync`, `UVGhostSync` and `SelectionGhostSync` |
 | [Canvas integration](./api/CanvasIntegration.md) | Hooks and remote-application methods used by custom adapters |
 
@@ -31,7 +31,7 @@ import {
   pixelArtRoom,
   PixelStrokeGhostSync,
   PixelSyncClient,
-  pixelArtModelKind,
+  pixelArtDocumentKind,
   SelectionGhostSync,
   SyncedPixelDocument,
   UVGhostSync,

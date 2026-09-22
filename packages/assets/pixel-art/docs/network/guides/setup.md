@@ -69,7 +69,7 @@ const room = pixelArtRoom(networkClient, record.id.value);
 const synced = new SyncedPixelDocument(room, {
   history: { enabled: true }
 });
-const canvas = new PixelArtCanvas(parent, { document: synced.model });
+const canvas = new PixelArtCanvas(parent, { document: synced.document });
 const collaboration = new PixelCollaboration({
   room,
   canvas,
@@ -84,7 +84,7 @@ room.join();
 await synced.ready;
 ```
 
-An `@jolly-pixel/editor.host` session does the same through `pixelArtModelKind`: it leases the asset, joins the room and resolves once the document is ready.
+An `@jolly-pixel/editor.host` session does the same through `pixelArtDocumentKind`: it leases the asset, joins the room and resolves once the document is ready.
 
 To create a new asset, pass a `CatalogClient` and a `PixelArtDocumentData` to `createPixelArtAsset(catalog, path, document)`. It encodes the document, creates it with the pixel-art kind, suffixes the path on conflict and resolves the new asset id.
 

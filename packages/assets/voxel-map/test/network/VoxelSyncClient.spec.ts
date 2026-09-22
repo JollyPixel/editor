@@ -3,22 +3,18 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
 import {
   resolveBlockDefinition,
-  VoxelEngine,
+  VoxelDocument,
   type VoxelCommand,
   type VoxelCommandOrigin,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  type VoxelNetworkCommand,
-  type VoxelServerMessage,
-  VoxelSyncClient
-} from "../../src/network/client.ts";
+import { VoxelSyncClient } from "../../src/network/client.ts";
 import { voxelSetCmd } from "../helpers/networkCommands.ts";
+import { createMockRoom } from "../helpers/room.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 
 interface ReceivedCommand {
@@ -26,88 +22,23 @@ interface ReceivedCommand {
   origin: VoxelCommandOrigin;
 }
 
-function makeEngine(): VoxelEngine {
-  const engine = new VoxelEngine({ chunkSize: 16 });
-  engine.world.addLayer("Ground");
+function makeDocument(): VoxelDocument {
+  const document = new VoxelDocument({ chunkSize: 16 });
+  document.world.addLayer("Ground");
 
-  return engine;
+  return document;
 }
 
 function record(
-  engine: VoxelEngine
+  document: VoxelDocument
 ): ReceivedCommand[] {
   const received: ReceivedCommand[] = [];
-  engine.on("command", (command, { origin }) => received.push({
+  document.on("command", (command, { origin }) => received.push({
     command,
     origin
   }));
 
   return received;
-}
-
-interface MockRoom extends network.Room<VoxelNetworkCommand, VoxelServerMessage> {
-  sentCommands: VoxelNetworkCommand[];
-  left: boolean;
-  simulateCommand(cmd: VoxelNetworkCommand): void;
-  simulateSnapshot(snapshot: VoxelWorldJSON): void;
-}
-
-function createMockRoom(clientId = "client-A"): MockRoom {
-  const sentCommands: VoxelNetworkCommand[] = [];
-  const listeners = new Map<string, Set<(payload: unknown) => void>>();
-
-  function emit(type: string, payload: unknown): void {
-    for (const listener of listeners.get(type) ?? []) {
-      listener(payload);
-    }
-  }
-
-  const room: MockRoom = {
-    id: "test-room",
-    clientId,
-    peers: new Map(),
-
-    role: "default",
-
-    rights: {},
-
-    access: "write" as const,
-
-    can: () => "write" as const,
-    sentCommands,
-    left: false,
-    on: (type, listener) => {
-      let set = listeners.get(type);
-      if (!set) {
-        set = new Set();
-        listeners.set(type, set);
-      }
-      set.add(listener as (payload: unknown) => void);
-    },
-    off: (type, listener) => {
-      listeners.get(type)?.delete(listener as (payload: unknown) => void);
-    },
-    join() {
-      return void 0;
-    },
-    send(cmd) {
-      sentCommands.push(cmd);
-    },
-    updatePresence() {
-      return void 0;
-    },
-    leave() {
-      room.left = true;
-    },
-    simulateCommand(cmd) {
-      emit("message", { type: "command", data: cmd });
-    },
-    simulateSnapshot(snapshot) {
-      emit("message", { type: "snapshot", data: snapshot });
-    }
-  };
-
-  return room;
 }
 
 function makeEmptySnapshot(): VoxelWorldJSON {
@@ -130,11 +61,11 @@ const kPeerHeader = {
 
 describe("VoxelSyncClient — local commands", () => {
   it("sends a command when the world changes", () => {
-    const engine = makeEngine();
+    const document = makeDocument();
     const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.world.setVoxel("Ground", {
+    document.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
     });
@@ -145,12 +76,12 @@ describe("VoxelSyncClient — local commands", () => {
   });
 
   it("stamps each command with clientId and a timestamp", () => {
-    const engine = makeEngine();
+    const document = makeDocument();
     const room = createMockRoom("client-B");
     const before = Date.now();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.world.addLayer("Layer1");
+    document.world.addLayer("Layer1");
 
     const cmd = room.sentCommands[0];
     assert.equal(cmd.clientId, "client-B");
@@ -159,13 +90,13 @@ describe("VoxelSyncClient — local commands", () => {
   });
 
   it("increments seq per outbound command", () => {
-    const engine = makeEngine();
+    const document = makeDocument();
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.world.addLayer("L1");
-    engine.world.addLayer("L2");
-    engine.world.addLayer("L3");
+    document.world.addLayer("L1");
+    document.world.addLayer("L2");
+    document.world.addLayer("L3");
 
     assert.deepEqual(
       room.sentCommands.map((command) => command.seq),
@@ -174,12 +105,12 @@ describe("VoxelSyncClient — local commands", () => {
   });
 
   it("leaves listeners registered before it untouched", () => {
-    const engine = makeEngine();
-    const received = record(engine);
+    const document = makeDocument();
+    const received = record(document);
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.world.addLayer("L1");
+    document.world.addLayer("L1");
 
     assert.equal(received.length, 1);
     assert.equal(room.sentCommands.length, 1);
@@ -187,10 +118,10 @@ describe("VoxelSyncClient — local commands", () => {
 });
 
 describe("VoxelSyncClient — remote commands", () => {
-  it("applies commands from a different client to the engine", () => {
-    const engine = makeEngine();
+  it("applies commands from a different client to the document", () => {
+    const document = makeDocument();
     const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand(voxelSetCmd({
       x: 5,
@@ -200,17 +131,17 @@ describe("VoxelSyncClient — remote commands", () => {
     }));
 
     assert.equal(
-      engine.world.getLayer("Ground")!.getVoxelAt({ x: 5, y: 0, z: 5 })?.blockId,
+      document.world.getLayer("Ground")!.getVoxelAt({ x: 5, y: 0, z: 5 })?.blockId,
       2
     );
     assert.equal(room.sentCommands.length, 0);
   });
 
   it("notifies local listeners with a remote origin", () => {
-    const engine = makeEngine();
-    const received = record(engine);
+    const document = makeDocument();
+    const received = record(document);
     const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand(voxelSetCmd({ clientId: "client-B" }));
 
@@ -221,25 +152,25 @@ describe("VoxelSyncClient — remote commands", () => {
   });
 
   it("does not apply its own echoed command", () => {
-    const engine = makeEngine();
-    const received = record(engine);
+    const document = makeDocument();
+    const received = record(document);
     const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand(voxelSetCmd({ clientId: "client-A" }));
 
     assert.equal(
-      engine.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      document.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 }),
       undefined
     );
     assert.equal(received.length, 0);
   });
 
   it("ignores a world-replace command", () => {
-    const engine = makeEngine();
-    const received = record(engine);
+    const document = makeDocument();
+    const received = record(document);
     const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand({
       ...kPeerHeader,
@@ -247,22 +178,22 @@ describe("VoxelSyncClient — remote commands", () => {
       data: makeEmptySnapshot()
     });
 
-    assert.ok(engine.world.getLayer("Ground"));
+    assert.ok(document.world.getLayer("Ground"));
     assert.equal(received.length, 0);
   });
 });
 
 describe("VoxelSyncClient — snapshot loading", () => {
-  it("loads a snapshot into the engine", () => {
-    const engine = makeEngine();
+  it("loads a snapshot into the document", () => {
+    const document = makeDocument();
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateSnapshot(snapshotWithTileset());
 
-    assert.deepEqual(engine.tilesets.definitions().map(({ id }) => id), ["stone"]);
-    assert.equal(engine.defaultTileSize, 16);
-    assert.equal(engine.world.getLayer("Ground"), undefined);
+    assert.deepEqual(document.tilesets.definitions().map(({ id }) => id), ["stone"]);
+    assert.equal(document.defaultTileSize, 16);
+    assert.equal(document.world.getLayer("Ground"), undefined);
     assert.equal(room.sentCommands.length, 0);
   });
 });
@@ -270,7 +201,7 @@ describe("VoxelSyncClient — snapshot loading", () => {
 describe("VoxelSyncClient — replaceWorld", () => {
   it("sends a stamped world-replace command carrying the data", () => {
     const room = createMockRoom("client-A");
-    const client = new VoxelSyncClient({ room, engine: makeEngine() });
+    const client = new VoxelSyncClient({ room, document: makeDocument() });
 
     const data = makeEmptySnapshot();
     client.replaceWorld(data);
@@ -285,26 +216,26 @@ describe("VoxelSyncClient — replaceWorld", () => {
 });
 
 describe("VoxelSyncClient — destroy", () => {
-  it("stops listening for room messages and leaves the room", () => {
-    const engine = makeEngine();
+  it("stops listening for room messages and leaves the room to its lease", () => {
+    const document = makeDocument();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room, engine });
+    const client = new VoxelSyncClient({ room, document });
 
     client.destroy();
     room.simulateSnapshot(snapshotWithTileset());
 
-    assert.deepEqual(engine.tilesets.definitions(), []);
-    assert.equal(room.left, true);
+    assert.deepEqual(document.tilesets.definitions(), []);
+    assert.equal(room.left, false);
   });
 
   it("stops forwarding local commands and keeps other listeners", () => {
-    const engine = makeEngine();
-    const received = record(engine);
+    const document = makeDocument();
+    const received = record(document);
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room, engine });
+    const client = new VoxelSyncClient({ room, document });
 
     client.destroy();
-    engine.world.addLayer("L");
+    document.world.addLayer("L");
 
     assert.equal(room.sentCommands.length, 0);
     assert.equal(received.length, 1);
@@ -313,11 +244,11 @@ describe("VoxelSyncClient — destroy", () => {
 
 describe("VoxelSyncClient — block commands", () => {
   it("publishes a local definition", () => {
-    const engine = makeEngine();
+    const document = makeDocument();
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.defineBlock(makeBlockDef(4, "slope"));
+    document.defineBlock(makeBlockDef(4, "slope"));
 
     assert.equal(room.sentCommands.length, 1);
     const [command] = room.sentCommands;
@@ -329,15 +260,15 @@ describe("VoxelSyncClient — block commands", () => {
   });
 
   it("publishes a local removal, and nothing for an unknown id", () => {
-    const engine = makeEngine();
-    engine.defineBlock(makeBlockDef(4, "cube"));
+    const document = makeDocument();
+    document.defineBlock(makeBlockDef(4, "cube"));
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.removeBlock(99);
+    document.removeBlock(99);
     assert.equal(room.sentCommands.length, 0);
 
-    engine.removeBlock(4);
+    document.removeBlock(4);
     const [command] = room.sentCommands;
     assert.equal(
       command.action === "block-removed" ? command.blockId : null,
@@ -346,11 +277,11 @@ describe("VoxelSyncClient — block commands", () => {
   });
 
   it("publishes one command per block of a batch", () => {
-    const engine = makeEngine();
+    const document = makeDocument();
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.defineBlocks([
+    document.defineBlocks([
       makeBlockDef(4, "slope"),
       makeBlockDef(5, "cube")
     ]);
@@ -362,10 +293,10 @@ describe("VoxelSyncClient — block commands", () => {
   });
 
   it("registers a peer definition without re-publishing it", () => {
-    const engine = makeEngine();
-    const received = record(engine);
+    const document = makeDocument();
+    const received = record(document);
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand({
       ...kPeerHeader,
@@ -373,7 +304,7 @@ describe("VoxelSyncClient — block commands", () => {
       block: resolveBlockDefinition(makeBlockDef(4, "slope"))
     });
 
-    assert.equal(engine.blockRegistry.get(4)?.shapeId, "slope");
+    assert.equal(document.blocks.get(4)?.shapeId, "slope");
     assert.deepEqual(
       received.map(({ command, origin }) => [command.action, origin]),
       [["block-defined", "remote"]]
@@ -382,10 +313,10 @@ describe("VoxelSyncClient — block commands", () => {
   });
 
   it("stays quiet when a peer removal names an unknown block", () => {
-    const engine = makeEngine();
-    const received = record(engine);
+    const document = makeDocument();
+    const received = record(document);
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand({
       ...kPeerHeader,
@@ -397,9 +328,9 @@ describe("VoxelSyncClient — block commands", () => {
   });
 
   it("ignores the echo of its own block command", () => {
-    const engine = makeEngine();
+    const document = makeDocument();
     const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand({
       ...kPeerHeader,
@@ -408,34 +339,34 @@ describe("VoxelSyncClient — block commands", () => {
       block: resolveBlockDefinition(makeBlockDef(4, "slope"))
     });
 
-    assert.equal(engine.blockRegistry.has(4), false);
+    assert.equal(document.blocks.has(4), false);
   });
 });
 
 describe("VoxelSyncClient — block reorder", () => {
-  function makeEngineWithBlocks(): VoxelEngine {
-    const engine = makeEngine();
-    engine.defineBlocks([
+  function makeDocumentWithBlocks(): VoxelDocument {
+    const document = makeDocument();
+    document.defineBlocks([
       makeBlockDef(1, "cube"),
       makeBlockDef(2, "cube"),
       makeBlockDef(3, "cube")
     ]);
 
-    return engine;
+    return document;
   }
 
   function ids(
-    engine: VoxelEngine
+    document: VoxelDocument
   ): number[] {
-    return [...engine.blockRegistry].map((block) => block.id);
+    return [...document.blocks].map((block) => block.id);
   }
 
   it("publishes a local move", () => {
-    const engine = makeEngineWithBlocks();
+    const document = makeDocumentWithBlocks();
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
-    engine.moveBlock(3, 0);
+    document.moveBlock(3, 0);
 
     assert.equal(room.sentCommands.length, 1);
     const [command] = room.sentCommands;
@@ -448,9 +379,9 @@ describe("VoxelSyncClient — block reorder", () => {
   });
 
   it("applies a peer move without re-publishing it", () => {
-    const engine = makeEngineWithBlocks();
+    const document = makeDocumentWithBlocks();
     const room = createMockRoom();
-    new VoxelSyncClient({ room, engine });
+    new VoxelSyncClient({ room, document });
 
     room.simulateCommand({
       ...kPeerHeader,
@@ -459,24 +390,24 @@ describe("VoxelSyncClient — block reorder", () => {
       toIndex: 2
     });
 
-    assert.deepEqual(ids(engine), [2, 3, 1]);
+    assert.deepEqual(ids(document), [2, 3, 1]);
     assert.equal(room.sentCommands.length, 0);
   });
 });
 
 describe("VoxelSyncClient — tilesets", () => {
   function makeClient() {
-    const engine = makeEngine();
+    const document = makeDocument();
     const room = createMockRoom();
-    const client = new VoxelSyncClient({ room, engine });
+    const client = new VoxelSyncClient({ room, document });
     room.simulateSnapshot(snapshotWithTileset());
-    const received = record(engine);
+    const received = record(document);
 
-    return { engine, received, room, client };
+    return { document, received, room, client };
   }
 
   it("applies a remote tileset command without echoing it", () => {
-    const { engine, received, room } = makeClient();
+    const { document, received, room } = makeClient();
 
     room.simulateCommand({
       ...kPeerHeader,
@@ -484,7 +415,7 @@ describe("VoxelSyncClient — tilesets", () => {
       tileset: { id: "wood", src: "asset-wood", tileSize: 16 }
     });
 
-    assert.deepEqual(engine.tilesets.definitions().map(({ id }) => id), ["stone", "wood"]);
+    assert.deepEqual(document.tilesets.definitions().map(({ id }) => id), ["stone", "wood"]);
     assert.deepEqual(
       received.map(({ command, origin }) => [command.action, origin]),
       [["tileset-added", "remote"]]
@@ -492,9 +423,9 @@ describe("VoxelSyncClient — tilesets", () => {
     assert.equal(room.sentCommands.length, 0);
   });
 
-  it("rescales the engine blocks on a remote resize without echoing them", () => {
-    const { engine, room } = makeClient();
-    engine.blockRegistry.register(makeBlockDef(1, "cube", {
+  it("rescales the document blocks on a remote resize without echoing them", () => {
+    const { document, room } = makeClient();
+    document.blocks.register(makeBlockDef(1, "cube", {
       defaultTexture: { col: 1, row: 1, tilesetId: "stone" }
     }));
 
@@ -505,7 +436,7 @@ describe("VoxelSyncClient — tilesets", () => {
       tileSize: 16
     });
 
-    assert.deepEqual(engine.blockRegistry.get(1)?.defaultTexture, {
+    assert.deepEqual(document.blocks.get(1)?.defaultTexture, {
       col: 2,
       row: 2,
       tilesetId: "stone",
@@ -515,11 +446,11 @@ describe("VoxelSyncClient — tilesets", () => {
   });
 
   it("sends a local tileset change", () => {
-    const { engine, received, room } = makeClient();
+    const { document, received, room } = makeClient();
 
-    assert.equal(engine.removeTileset("stone"), true);
+    assert.equal(document.removeTileset("stone"), true);
 
-    assert.deepEqual(engine.tilesets.definitions(), []);
+    assert.deepEqual(document.tilesets.definitions(), []);
     assert.deepEqual(
       received.map(({ command, origin }) => [command.action, origin]),
       [["tileset-removed", "local"]]
@@ -529,9 +460,9 @@ describe("VoxelSyncClient — tilesets", () => {
   });
 
   it("sends nothing for a local change that does not apply", () => {
-    const { engine, room } = makeClient();
+    const { document, room } = makeClient();
 
-    assert.equal(engine.removeTileset("missing"), false);
+    assert.equal(document.removeTileset("missing"), false);
     assert.equal(room.sentCommands.length, 0);
   });
 });

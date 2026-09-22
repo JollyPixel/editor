@@ -21,6 +21,19 @@ The complete layered voxel scene. `VoxelWorld` owns voxel layers and object
 layers, resolves reads at world positions, and coordinates changes that affect
 more than one layer.
 
+### Document
+
+Everything a peer synchronizes about a world: its voxel layers, block registry,
+tileset declarations and undo history. `VoxelDocument` owns them and emits the
+command stream, and draws nothing.
+
+### View
+
+The Three.js side of a document: the chunk meshes, their materials, the atlas
+textures, the shape registry, the collider and the inspector. `VoxelView`
+subscribes to a document and keeps the meshes in step with it. `VoxelEngine`
+composes a document and a view into one object.
+
 ### Chunk
 
 A fixed-size cubic region within a voxel layer. Chunks are the unit used to

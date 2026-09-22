@@ -1,20 +1,9 @@
 // Import Third-party Dependencies
+import type { VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
 import type {
-  VoxelEngine,
-  VoxelWorldJSON
-} from "@jolly-pixel/voxel.renderer";
-import {
-  VoxelSyncClient,
-  type VoxelNetworkCommand,
-  type VoxelServerMessage
+  SyncedVoxelMap
 } from "@jolly-pixel/asset.voxel-map/network/client.ts";
-import type * as network from "@jolly-pixel/network";
 import { Emitter } from "@openally/emitt";
-
-export type VoxelMapRoom = network.Room<
-  VoxelNetworkCommand,
-  VoxelServerMessage
->;
 
 export type WorldSourceEvents = {
   reset: () => void;
@@ -26,46 +15,57 @@ export interface WorldSource extends Emitter<WorldSourceEvents> {
   dispose(): void;
 }
 
-export interface RoomWorldSourceOptions {
-  engine: VoxelEngine;
-  room: VoxelMapRoom;
+export interface LeasedWorldSourceOptions {
+  map: SyncedVoxelMap;
   defaultLayerName: string;
 }
 
-export class RoomWorldSource
+/**
+ * Adapts the leased `SyncedVoxelMap` to the editor's reset signal. A snapshot
+ * can already have landed before this source exists, so `ready` reports what
+ * the lease holds rather than waiting for an event that has been and gone.
+ */
+export class LeasedWorldSource
   extends Emitter<WorldSourceEvents>
   implements WorldSource {
-  #client: VoxelSyncClient;
-  #ready = false;
+  #map: SyncedVoxelMap;
+  #defaultLayerName: string;
+
+  #onLoaded = (): void => {
+    this.#seedDefaultLayer();
+    this.emit("reset");
+  };
 
   get ready(): boolean {
-    return this.#ready;
+    return this.#map.loaded;
   }
 
   constructor(
-    options: RoomWorldSourceOptions
+    options: LeasedWorldSourceOptions
   ) {
     super();
-    const { engine, room, defaultLayerName } = options;
+    this.#map = options.map;
+    this.#defaultLayerName = options.defaultLayerName;
 
-    this.#client = new VoxelSyncClient({ room, engine });
-    this.#client.on("snapshot", () => {
-      if (engine.world.getLayers().length === 0) {
-        engine.world.addLayer(defaultLayerName);
-      }
-
-      this.#ready = true;
-      this.emit("reset");
-    });
+    this.#map.voxels.on("loaded", this.#onLoaded);
+    if (this.ready) {
+      this.#seedDefaultLayer();
+    }
   }
 
   load(
     data: VoxelWorldJSON
   ): void {
-    this.#client.replaceWorld(data);
+    this.#map.replaceWorld(data);
   }
 
   dispose(): void {
-    this.#client.destroy();
+    this.#map.voxels.off("loaded", this.#onLoaded);
+  }
+
+  #seedDefaultLayer(): void {
+    if (this.#map.voxels.world.getLayers().length === 0) {
+      this.#map.voxels.world.addLayer(this.#defaultLayerName);
+    }
   }
 }

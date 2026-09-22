@@ -1,16 +1,17 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import {
-  ModelTree,
-  createBlockTransform,
-  type BlockTransformJSON,
-  type MirrorAxes,
-  type ModelNodeJSON,
-  type ModelTreeReader,
-  type NodeTransformJSON,
-  type VoxelModelCommand,
-  type VoxelModelSnapshot
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+
+// Import Internal Dependencies
+import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
+import { createBlockTransform } from "./blockTransform.ts";
+import type {
+  BlockTransformJSON,
+  MirrorAxes,
+  ModelNodeJSON,
+  NodeTransformJSON,
+  VoxelModelCommand,
+  VoxelModelSnapshot
+} from "../network/types.ts";
 
 export type ModelOrigin = "local" | "remote";
 

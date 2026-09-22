@@ -47,7 +47,7 @@ class FakeWorldSource
 function setup() {
   const engine = new Emitter<VoxelEngineEvents>();
   const source = new FakeWorldSource();
-  const mapDocument = new MapDocument({ engine, source });
+  const mapDocument = new MapDocument({ commands: engine, source });
   const seen: string[] = [];
   for (const event of kEvents) {
     mapDocument.on(event, () => seen.push(event));
