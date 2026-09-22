@@ -1,0 +1,39 @@
+{
+  "name": "@jolly-pixel/studio",
+  "description": "JollyPixel studio: one project, its assets and one editor per tab",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p vite/tsconfig.json",
+    "lint": "oxlint src test vite vite.config.ts && pnpm run lint:css",
+    "lint:css": "stylelint \"public/**/*.css\" --cache"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/studio"
+  },
+  "keywords": [],
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@jolly-pixel/editor.voxel-map": "workspace:*",
+    "@jolly-pixel/editor.voxel-model": "workspace:*"
+  },
+  "dependencies": {
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset.pixel-art": "workspace:*",
+    "@jolly-pixel/asset.voxel-map": "workspace:*",
+    "@jolly-pixel/asset.voxel-model": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/pixel-draw.renderer": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
+    "@jolly-pixel/voxel.renderer": "workspace:*"
+  }
+}

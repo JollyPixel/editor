@@ -1,10 +1,16 @@
 // Import Internal Dependencies
 import { EditorLaunch } from "../EditorLaunch.ts";
+import {
+  READY_MESSAGE_TYPE,
+  ShellChannel,
+  type ShellChannelOptions
+} from "../ShellChannel.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
 
 // CONSTANTS
 export const LAUNCH_MESSAGE_TYPE = "jolly-launch";
 const kDefaultTimeout = 1000;
+const kAnyOrigin = "*";
 
 export interface HostMessageLaunchSourceOptions {
   timeout?: number;
@@ -19,7 +25,7 @@ export class HostMessageLaunchSource implements LaunchSource {
     this.timeout = options.timeout ?? kDefaultTimeout;
   }
 
-  read(): Promise<EditorLaunch | undefined> {
+  async read(): Promise<EditorLaunch | undefined> {
     const { parent } = window;
     if (parent === null || parent === window) {
       return Promise.resolve(undefined);
@@ -34,12 +40,16 @@ export class HostMessageLaunchSource implements LaunchSource {
 
     window.addEventListener("message", (event) => {
       const launch = event.source === parent ?
-        parseLaunchMessage(event.data) :
+        parseLaunchMessage(event.data, {
+          port: parent,
+          origin: event.origin
+        }) :
         undefined;
       if (launch !== undefined) {
         resolve(launch);
       }
     }, { signal: listening.signal });
+    parent.postMessage({ type: READY_MESSAGE_TYPE }, kAnyOrigin);
 
     return promise.finally(() => {
       clearTimeout(timer);
@@ -49,7 +59,8 @@ export class HostMessageLaunchSource implements LaunchSource {
 }
 
 function parseLaunchMessage(
-  data: unknown
+  data: unknown,
+  shell: ShellChannelOptions
 ): EditorLaunch | undefined {
   if (
     typeof data !== "object" ||
@@ -60,5 +71,5 @@ function parseLaunchMessage(
     return undefined;
   }
 
-  return EditorLaunch.parse(data);
+  return EditorLaunch.parse(data, new ShellChannel(shell));
 }

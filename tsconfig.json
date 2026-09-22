@@ -72,6 +72,9 @@
     },
     {
       "path": "./packages/editors/voxel-model"
+    },
+    {
+      "path": "./packages/studio"
     }
   ]
 }

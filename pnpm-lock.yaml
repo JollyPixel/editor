@@ -767,6 +767,46 @@ importers:
         specifier: 44.3.0
         version: 44.3.0(supports-color@10.2.2)
 
+  packages/studio:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../asset-server
+      '@jolly-pixel/asset.pixel-art':
+        specifier: workspace:*
+        version: link:../assets/pixel-art
+      '@jolly-pixel/asset.voxel-map':
+        specifier: workspace:*
+        version: link:../assets/voxel-map
+      '@jolly-pixel/asset.voxel-model':
+        specifier: workspace:*
+        version: link:../assets/voxel-model
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../editors/host
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../network
+      '@jolly-pixel/pixel-draw.renderer':
+        specifier: workspace:*
+        version: link:../pixel-draw-renderer
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@jolly-pixel/voxel.renderer':
+        specifier: workspace:*
+        version: link:../voxel-renderer
+    devDependencies:
+      '@jolly-pixel/editor.voxel-map':
+        specifier: workspace:*
+        version: link:../editors/voxel-map
+      '@jolly-pixel/editor.voxel-model':
+        specifier: workspace:*
+        version: link:../editors/voxel-model
+
   packages/three:
     dependencies:
       three:

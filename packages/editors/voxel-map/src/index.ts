@@ -31,7 +31,11 @@ async function offlineOptions(): Promise<MountStandaloneOptions> {
   };
 }
 
-await mountStandalone(VoxelMapEditor, {
-  ...(VOXEL_MAP_PARAMS.read().offline ? await offlineOptions() : {}),
-  debugHandle: kDebugHandle
-});
+async function boot(): Promise<void> {
+  await mountStandalone(VoxelMapEditor, {
+    ...(VOXEL_MAP_PARAMS.read().offline ? await offlineOptions() : {}),
+    debugHandle: kDebugHandle
+  });
+}
+
+void boot();

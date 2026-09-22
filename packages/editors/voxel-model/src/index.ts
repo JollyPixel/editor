@@ -13,6 +13,6 @@ declare global {
   }
 }
 
-await mountStandalone(VoxelModelEditor, {
+void mountStandalone(VoxelModelEditor, {
   debugHandle: import.meta.env.DEV ? "voxelModelEditor" : undefined
 });

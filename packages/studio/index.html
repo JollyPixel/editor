@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JollyPixel Studio</title>
+  <link rel="stylesheet" href="./main.css">
+</head>
+
+<body>
+  <jolly-scope theme="dark" density="comfortable">
+    <jolly-dock-layout storage-key="studio:layout">
+      <jolly-dock
+        key="left"
+        side="left"
+        collapsible
+        size="280"
+        min-size="200"
+        max-size="480"
+      >
+        <jolly-pane key="assets" heading="Assets" icon="folder" locked>
+          <jolly-tree id="asset-tree"></jolly-tree>
+        </jolly-pane>
+      </jolly-dock>
+      <section id="workbench">
+        <jolly-tabs id="editor-tabs"></jolly-tabs>
+        <div id="editor-frames"></div>
+      </section>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./src/index.ts"></script>
+</body>
+
+</html>

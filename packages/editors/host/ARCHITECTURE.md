@@ -109,8 +109,9 @@ remembers the successfully opened target for the next launch.
 flowchart TB
   Start["EditorLaunch.read(sources)"] --> Framed{"inside a frame?"}
   Framed -->|"no"| Query
-  Framed -->|"yes"| Wait["wait 1000 ms for<br/>{ type: 'jolly-launch', target }<br/>from window.parent"]
-  Wait -->|"received"| Found["EditorLaunch"]
+  Framed -->|"yes"| Ready["post { type: 'jolly-ready' }<br/>to window.parent"]
+  Ready --> Wait["wait 1000 ms for<br/>{ type: 'jolly-launch', target }<br/>from window.parent"]
+  Wait -->|"received"| Found["EditorLaunch<br/>with a ShellChannel"]
   Wait -->|"timeout"| Query{"?target= present?"}
   Query -->|"yes"| Found
   Query -->|"no"| Element{"injected JSON element<br/>present and valid?"}
@@ -120,7 +121,10 @@ flowchart TB
 
 The first source that answers wins. A page outside a frame skips the wait, so
 a plain tab boots without the timeout. The injected element is written by the
-asset workspace Vite plugin's `launch` option.
+asset workspace Vite plugin's `launch` option. Only a launch answered by the
+parent carries a `ShellChannel`, reachable as `context.shell`, through which
+the editor posts `jolly-shell` commands such as `open-asset` back to the
+parent.
 
 `mountStandalone({ sources })` replaces this list. Offline workspaces provide
 their own list: `?target=`, the last opened ID if the catalog still has it with

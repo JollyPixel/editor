@@ -58,7 +58,8 @@ export async function mountStandalone<THandle extends EditorHandle>(
   try {
     handle = await definition.mount({
       launch,
-      session
+      session,
+      shell: launch.shell
     });
   }
   catch (error) {

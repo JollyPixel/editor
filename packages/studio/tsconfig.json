@@ -1,0 +1,41 @@
+{
+  "extends": "../../tsconfig/lib.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client"
+    ]
+  },
+  "references": [
+    {
+      "path": "../asset-server"
+    },
+    {
+      "path": "../assets/pixel-art"
+    },
+    {
+      "path": "../assets/voxel-map"
+    },
+    {
+      "path": "../assets/voxel-model"
+    },
+    {
+      "path": "../pixel-draw-renderer"
+    },
+    {
+      "path": "../voxel-renderer"
+    },
+    {
+      "path": "../asset"
+    },
+    {
+      "path": "../editors/host"
+    },
+    {
+      "path": "../network"
+    },
+    {
+      "path": "../ui"
+    }
+  ]
+}
