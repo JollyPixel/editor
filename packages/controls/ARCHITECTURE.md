@@ -4,6 +4,8 @@
 their browser listeners, and advances input state once per frame. Each device
 can also be used on its own.
 
+## Application and Input
+
 ```mermaid
 flowchart TB
     App["Application"] --> Input["Input"]
@@ -13,17 +15,22 @@ flowchart TB
     Input --> Touchpad["Touchpad"]
     Input --> Screen["Screen"]
 
-    Browser["Canvas, document, window, navigator"] --> Adapters["Browser adapters"]
-    Adapters --> Mouse
-    Adapters --> Keyboard
-    Adapters --> Gamepad
-    Adapters --> Touchpad
-    Adapters --> Screen
-
     App --> Combinations["InputCombination"]
     App --> Axes["AxisMap"]
     Combinations -->|queries| Input
     Axes -->|samples| Input
+```
+
+## Browser adapters and devices
+
+```mermaid
+flowchart TB
+    Browser["Canvas, document, window, navigator"] --> Adapters["Browser adapters"]
+    Adapters --> Mouse["Mouse"]
+    Adapters --> Keyboard["Keyboard"]
+    Adapters --> Gamepad["Gamepad"]
+    Adapters --> Touchpad["Touchpad"]
+    Adapters --> Screen["Screen"]
 ```
 
 `Mouse`, `Keyboard`, `Gamepad`, and `Touchpad` keep their own button, key,

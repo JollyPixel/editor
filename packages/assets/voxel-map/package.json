@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.voxel-map",
-  "description": "Jolly Pixel voxel-map persistence and collaboration",
+  "description": "Voxel-map assets",
   "version": "1.0.0",
   "type": "module",
   "private": true,

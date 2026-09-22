@@ -2,49 +2,27 @@
   asset.pixel-art
 </h1>
 
+<p align="center">
+  Pixel-art assets
+</p>
+
 ## 💃 Getting Started
 
-This workspace-private package is never published. Add it as a dependency of
-another workspace:
-
-```json
-{
-  "dependencies": {
-    "@jolly-pixel/asset.pixel-art": "1.0.0"
-  }
-}
-```
+This workspace-private package stores `.pixelart` documents. Add `"@jolly-pixel/asset.pixel-art": "workspace:*"` to another workspace's dependencies.
 
 ## 👀 Usage example
 
-Attach a canvas to a room in the browser:
+### Register the kind
 
 ```ts
-import { Client } from "@jolly-pixel/network/client";
-import { colorFromKey } from "@jolly-pixel/color";
-import {
-  PixelCollaboration,
-  pixelArtRoom
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
-
-const room = pixelArtRoom(new Client(), assetId);
-const collaboration = new PixelCollaboration({
-  room,
-  canvas,
-  label: (_clientId, profile) => String(profile.username),
-  color: (clientId) => colorFromKey(clientId)
-});
-
-room.join();
-```
-
-On the server, register the asset kind with `@jolly-pixel/asset-server`:
-
-```ts
-import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
-import { createAssetBackend } from "@jolly-pixel/asset-server";
 import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
+import { createAssetBackend } from "@jolly-pixel/asset-server";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
+import * as EventStore from "@jolly-pixel/event-store";
 
+using eventStore = await EventStore.persistence.sqlite(
+  "./assets/.jollypixel/events.db"
+);
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
@@ -52,49 +30,44 @@ await createAssetBackend({
 });
 ```
 
-For an in-memory canvas, pass a `MemoryAssetSource` and a
-`persistence.memory()` event store instead.
+The handler claims `.pixelart` files. `defaultSize` is used when a state is created or cleared; it defaults to 32 by 32. The renderer package owns the document codec. Use `MemoryAssetSource` and an in-memory event store for an ephemeral workspace.
+
+### Connect a document
+
+Create the synced document before joining the room so it receives the first snapshot.
+
+```ts
+import { Client } from "@jolly-pixel/network/client";
+import {
+  SyncedPixelDocument,
+  pixelArtRoom
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+
+const client = new Client();
+const room = pixelArtRoom(client, assetId);
+const synced = new SyncedPixelDocument(room);
+
+room.join();
+await synced.ready;
+
+// Pass synced.document to PixelArtCanvas or another document consumer.
+// On teardown: synced.dispose(); room.leave(); client.destroy();
+```
+
+`PixelCollaboration` adds cursors and in-progress previews to a `PixelArtCanvas` built on that document. See the [network API](./docs/network.md) for its constructor and lifecycle.
 
 ## 📚 API
 
-- [Pixel-art asset kind](./docs/asset/index.md)
-- [Network synchronization](./docs/network/index.md)
-  - [`PixelSyncClient`](./docs/network/api/PixelSyncClient.md)
-  - [Presence sync](./docs/network/api/PresenceSync.md)
-  - [`PixelArtCanvas` integration](./docs/network/api/CanvasIntegration.md)
+- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, and the kind and event constants for server registration.
+- `@jolly-pixel/asset.pixel-art/network/client.ts` exports `SyncedPixelDocument`, `PixelSyncClient`, `pixelArtRoom`, `createPixelArtAsset`, `PixelCollaboration`, presence helpers, and wire types.
+- `@jolly-pixel/asset.pixel-art/network/server.ts` exports `PixelCommandArbiter`, `applyCommandToBuffer`, and the command and snapshot schemas.
 
-### Guides
-
-- [Set up network synchronization](./docs/network/guides/setup.md)
-- [Add presence previews](./docs/network/guides/presence.md)
-
-## 🧪 Benchmarks
-
-The suite measures `applyCommandToBuffer` for strokes and global fills, and
-last-write-wins conflict resolution.
-
-```bash
-$ pnpm --filter @jolly-pixel/asset.pixel-art bench
-```
+The package root imports server dependencies. Browser code should use the client entry point. The [network API](./docs/network.md) covers commands, snapshots, notices, and presence helpers. [Architecture](./ARCHITECTURE.md) covers replay and conflict handling. The pixel document format and codec are documented by [pixel-draw.renderer](../../pixel-draw-renderer/docs/serialization/index.md).
 
 ## ✨ Contributors guide
 
-If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
-
-Run these commands from the monorepo root:
-
-```bash
-$ pnpm --filter @jolly-pixel/asset.pixel-art test
-$ pnpm run lint
-```
-
-> [!CAUTION]
-> In case you introduce a new feature or fix a bug, make sure to include tests for it as well.
+Read the [contributing guide](../../../CONTRIBUTING.md) before submitting a change. Run `pnpm --filter @jolly-pixel/asset.pixel-art test` and `pnpm run lint` from the monorepo root.
 
 ## 📃 License
 
 MIT
-
-<!-- Reference-style links for DRYness -->
-
-[contributing]: ../../../CONTRIBUTING.md

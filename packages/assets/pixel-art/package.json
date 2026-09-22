@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.pixel-art",
-  "description": "Jolly Pixel pixel-art persistence and collaboration",
+  "description": "Pixel-art assets",
   "version": "1.0.0",
   "type": "module",
   "private": true,
