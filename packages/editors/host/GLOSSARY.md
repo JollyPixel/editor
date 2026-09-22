@@ -29,11 +29,29 @@ prompt options, dependency model kinds, and `mount` method.
 
 The launch and connected session passed to the editor's `mount` method.
 
+### Mount
+
+Start an editor for the selected asset. `mountStandalone` finds the target and
+opens a session, then calls the editor's `mount(context)` method. That method
+sets up the editor and returns a handle whose `dispose()` ends its session.
+
 ### Session
 
 The owner of an editor's catalog connection, target room lease, and dependency
 leases. It updates dependency leases as the catalog changes and releases its
 resources on disposal.
+
+### Asset room
+
+The network room for one asset, where clients receive its current state and
+editing updates. A target room is handed to the editor to join; the session
+joins rooms for supported dependencies. See the
+[asset-server glossary](../../asset-server/GLOSSARY.md#asset-room).
+
+### Dependency
+
+An asset referenced by the target, directly or through another dependency.
+The session opens a model for it when the editor registered its asset model kind.
 
 ### Asset lease
 
@@ -48,5 +66,24 @@ The session uses these registrations to lease supported dependencies.
 
 ### Synced model
 
-A model bound to an asset room, with a readiness promise and a disposal method.
-Leases for the same asset share one synced model.
+An asset's editable model together with the code that keeps it updated from its
+room. The `SyncedModel` wrapper exposes the `model`, a `ready` promise for the
+initial sync, and `dispose()` to stop syncing. The session creates these for
+supported dependencies; each editor creates its target model itself. Leases for
+the same asset share one synced model.
+
+### Archive
+
+A ZIP file containing one asset and the assets it references, or every asset
+in a workspace. It contains serialized asset content, not editing history.
+`session.archive` can export one, check an import for conflicts with `plan`,
+and import it when `canImport` is true. See the
+[archive format](../../asset-server/docs/Archive.md).
+
+### Workspace
+
+The collection of assets available through a catalog. An `OfflineWorkspace`
+runs the asset back-end in the page and stores that collection in memory or
+IndexedDB. The optional `session.workspace` reports whether its storage
+persists across reloads and provides `reset()`; it is `null` for a session
+connected to the usual asset server.

@@ -37,6 +37,8 @@ interface CreateAssetInput {
   kind?: string;
   assetId?: string;
   dependencies?: readonly AssetReferenceData[];
+  onPathConflict?: "reject" | "suffix";
+  alreadyProjected?: boolean;
 }
 ```
 
@@ -59,6 +61,27 @@ self reference is dropped.
 ## Update, rename and remove
 
 ```ts
+interface UpdateAssetInput {
+  assetId: string;
+  data: Uint8Array;
+  actor: Actor;
+  dependencies?: readonly AssetReferenceData[];
+  alreadyProjected?: boolean;
+}
+
+interface RenameAssetInput {
+  assetId: string;
+  to: string;
+  actor: Actor;
+  alreadyProjected?: boolean;
+}
+
+interface DeleteAssetInput {
+  assetId: string;
+  actor: Actor;
+  alreadyProjected?: boolean;
+}
+
 await backend.writer.update({ assetId, data: nextBytes, actor });
 await backend.writer.rename({ assetId, to: "textures/ground.png", actor });
 await backend.writer.remove({ assetId, actor });

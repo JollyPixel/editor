@@ -3,6 +3,17 @@
 The event store is the backend's history. The catalog, physical projection,
 and live state are separate views of that history.
 
+## Read by task
+
+- [Startup and ownership](./architecture/Startup.md): assembly order, files,
+  injected resources, and shutdown.
+- [Events and projections](./architecture/EventsAndProjections.md): which
+  events change the catalog, source, and live state.
+- [Rooms and reconciliation](./architecture/RoomsAndReconciliation.md): edits
+  from clients and changes made directly to physical storage.
+
+For callable signatures, use the [API docs](./README.md#api).
+
 ## Workspace map
 
 ```mermaid

@@ -14,6 +14,7 @@ flowchart TB
     Frame["parent frame message"]
     Query["?target= query"]
     Injected["injected JSON element"]
+    OfflineSources["offline query, last opened,<br/>first matching record"]
   end
 
   subgraph Host["editor.host"]
@@ -22,7 +23,8 @@ flowchart TB
     Launch["EditorLaunch<br/>target id"]
     Session["EditorSession"]
     Leases["AssetLeases<br/>one room per asset"]
-    Runtime["EditorRuntime"]
+    Archive["SessionArchive"]
+    Workspace["optional SessionWorkspace"]
   end
 
   subgraph Editor["Editor class"]
@@ -30,6 +32,7 @@ flowchart TB
     Definition["static accepts, identity, kinds"]
     MountFn["static mount(context)"]
     Handle["instance<br/>dispose()"]
+    Runtime["optional EditorRuntime"]
   end
 
   subgraph Server["Asset server"]
@@ -41,19 +44,23 @@ flowchart TB
   Frame --> Launch
   Query --> Launch
   Injected --> Launch
+  OfflineSources --> Launch
   Mount --> Launch
   Definition --> Mount
   Launch --> Session
   Session --> Leases
+  Session --> Archive
+  Session --> Workspace
   Session <-->|"records, dependency edges"| Catalog
   Leases <-->|"join, leave"| Rooms
   Session -->|"context"| MountFn
-  MountFn --> Runtime
+  MountFn -.-> Runtime
   MountFn --> Handle
 ```
 
-The host owns everything above `mount`. The editor owns its scene, its panels
-and the model of the asset it edits.
+The host owns launch resolution and session setup. After `mount` succeeds, the
+editor owns the returned session and decides whether to create an
+`EditorRuntime`. The editor also owns its scene, panels, and target model.
 
 ## Boot
 
@@ -70,8 +77,12 @@ sequenceDiagram
   E->>M: mountStandalone(Editor)
   M->>L: read() in order
   L-->>M: EditorLaunch { target }
-  M->>S: open({ launch, accepts, identity, kinds })
-  S->>S: prompt username
+  alt default connection
+    M->>S: open({ launch, accepts, identity, kinds })
+    S->>S: prompt username, create WebSocket client
+  else supplied connect option
+    M->>S: connect({ launch, accepts, kinds, identity, client, workspace? })
+  end
   S->>C: connect, await ready
   S->>A: openRoom(accepts, target)
   A-->>S: target lease, room not joined
@@ -86,7 +97,11 @@ sequenceDiagram
 ```
 
 `mount` starts with every dependency model already synced. The target is the
-exception: the session only reserves its room.
+exception: the session only reserves its room. The `connect` option supplies an
+identity and client instead of the default username prompt and network client.
+It may also supply a `SessionWorkspace`. `mountStandalone` exposes the handle on
+`globalThis` when `debugHandle` is set. For a workspace-backed session it also
+remembers the successfully opened target for the next launch.
 
 ## Finding the target
 
@@ -106,6 +121,11 @@ flowchart TB
 The first source that answers wins. A page outside a frame skips the wait, so
 a plain tab boots without the timeout. The injected element is written by the
 asset workspace Vite plugin's `launch` option.
+
+`mountStandalone({ sources })` replaces this list. Offline workspaces provide
+their own list: `?target=`, the last opened ID if the catalog still has it with
+the accepted kind, then the first catalog record of that kind. If no source
+returns a target, `EditorLaunch.read` throws before a client is created.
 
 ## Target and dependencies
 
@@ -138,7 +158,16 @@ flowchart TB
 
 The session never builds the target model because each editor syncs its target
 differently. It builds dependency models from the `AssetModelKind` objects in
-`kinds`, and joins their rooms itself.
+`kinds`, and joins their rooms itself. `AssetLeases` checks the catalog record
+exists and has the requested kind before opening a room. A dependency is used
+only when its reference kind matches its current record kind and the editor
+registered a model kind for it.
+
+The session exposes `target`, `catalog`, `assets`, `identity`, `archive`, and
+`workspace` (`null` for the default server connection). Editors can read the
+current dependencies with `dependencies()` or `dependency(assetId)`. These are
+frozen views without `release()`: the session owns those leases. A panel that
+needs a longer lifetime opens its own lease through `session.assets`.
 
 ## Following the catalog
 
@@ -161,8 +190,13 @@ sequenceDiagram
   S-->>E: "dependency-removed" ({ id, kind })
 ```
 
-Only the boot waits for `ready`. A lease announced by `dependency-added` may
-still be syncing.
+Only the boot waits for the readiness promises in its initial dependency
+snapshot. A lease announced by `dependency-added` may still be syncing. After
+awaiting it, check that `session.dependency(id)` is still that view; an edge
+could have been removed or replaced meanwhile. On each catalog change the
+session acquires newly wanted leases, releases removed ones, updates its map,
+then emits removal and addition events. If an acquisition throws, it releases
+the leases opened in that pass and keeps the previous dependency set.
 
 ## Lease lifecycle
 
@@ -193,13 +227,44 @@ the session drops the edge. The entry remembers how it was first opened:
 | `open(kind)` | shares | shares | `AssetModelConflictError` |
 | `openRoom` | shares | `AssetModelConflictError` | `AssetModelConflictError` |
 
+The model kind comparison is by object identity. Reuse the same kind object in
+the editor's `kinds` and in later `assets.open` calls. A room-only lease does
+not join the room; a model lease creates its model and joins on first open.
+`release()` is idempotent for each holder, and `AssetLeases.dispose()` closes
+all entries, including leases still held by panels.
+
+## Archives and workspace capability
+
+```mermaid
+flowchart TB
+  Editor -->|"export, plan, import"| Archive["session.archive"]
+  Archive --> Catalog["CatalogClient archive commands"]
+  Catalog <--> Server["asset server catalog room"]
+  Workspace["session.workspace"] -->|"persistent?"| Archive
+```
+
+`session.archive` sends archive operations through the catalog connection for
+both online and offline sessions. `export(assetId?)` returns a ZIP `Blob` for
+one asset and its referenced assets, or for the whole catalog when no ID is
+given. `plan(file)` reports import conflicts without writing. `import(file, {
+onConflict })` performs the import and returns a report. A memory-backed
+workspace sets `archive.canImport` to `false`; `import` then throws
+`ArchiveImportDisabledError`. Default server sessions and persistent offline
+workspaces allow import. See the [archive API](./docs/EditorSession.md#archives)
+and the [archive format](../../asset-server/docs/Archive.md).
+
+`session.workspace` is the optional capability supplied by a custom
+connection. It reports `persistent` and offers `reset()`. For
+`OfflineWorkspace`, reset closes the workspace and deletes its IndexedDB
+database when one exists.
+
 ## Failure and teardown
 
 ```mermaid
 flowchart TB
   Read["read launch"] -->|"no source answers"| E1["LaunchNotFoundError<br/>nothing to release"]
   Read --> Connect["connect catalog, lease target"]
-  Connect -->|"unknown target or wrong kind"| E2["catalog disposed<br/>client destroyed"]
+  Connect -->|"catalog or target fails"| E2["catalog disposed<br/>client destroyed"]
   Connect --> Ready["await dependency models"]
   Ready -->|"a model rejects ready"| E3["session disposed"]
   Ready --> MountStep["Editor.mount(context)"]
@@ -210,7 +275,10 @@ flowchart TB
 ```
 
 After a successful `mount` the session belongs to the editor: the host never
-disposes it again.
+disposes it again. The editor handle's `dispose()` must dispose the session.
+Session disposal removes catalog listeners, closes all leases, disposes the
+catalog client, and destroys the network client. For an offline connection,
+destroying that client also starts workspace closure.
 
 ## Runtime keyboard
 
@@ -223,8 +291,12 @@ flowchart TB
   Hover -->|"no"| Scene["runtime keyboard<br/>scene shortcuts"]
 ```
 
-`EditorRuntime.create` installs the guard. The hover branch exists only after
-the editor calls `suspendKeyboardOnHover`.
+`EditorRuntime.create` wraps `Runtime.create` and installs the input-layer
+guard. `load` starts a scene without a loading screen and can set `maxFps`.
+The hover branch exists only after the editor calls `suspendKeyboardOnHover`.
+Overlapping hover bindings keep the runtime keyboard suspended until the last
+one releases it. `PeerFrustums` is a separate actor component for peer camera
+poses, labels, and frustum display; editors add it to their scenes as needed.
 
 ## Offline
 
@@ -234,7 +306,7 @@ flowchart TB
 
   subgraph Page["Same page"]
     direction TB
-    Offline --> Source["MemoryAssetSource<br/>seeded documents"]
+    Offline --> Source["MemoryAssetSource or<br/>IndexedDbAssetSource"]
     Offline --> Events["memory event store"]
     Source --> Backend["asset back-end"]
     Events --> Backend
@@ -246,7 +318,23 @@ flowchart TB
   Mount --> MountFn["Editor.mount(context)"]
 ```
 
-Offline swaps the transport and the storage, nothing else: the session, the
-leases and the editor are the online ones. The username prompt is skipped for
-a guest identity. Disposing the session destroys the client, which closes the
-workspace.
+`OfflineWorkspace.open` starts an asset back-end and network server in the
+page. It uses a loopback client and a guest identity, so the same catalog,
+session, leases, and editor mounting path work without the remote server.
+The offline code is reached through the separate `./offline` entry point so
+an online entry point can load it only when needed.
+
+Storage defaults to memory. With `storage: "indexeddb"`, the asset source
+persists documents and IDs under `jolly-workspace:<name>` (`default` if no
+name is supplied). The event store remains in memory. On reopening, the
+back-end reconciles from stored files; the workspace clears its projection
+checkpoint before doing so. Seeds are applied only when the source is empty.
+Persistent storage uses delayed snapshots and flushes on page visibility
+changes and page hide. Closing flushes and stops the back-end and server.
+
+An IndexedDB workspace holds a Web Lock for its database name when the browser
+supports the Locks API. If another tab holds that lock, `open` falls back to
+memory storage. Callers should inspect the returned `storage` or `persistent`
+value, since it can differ from the requested storage. A memory workspace can
+export and plan an archive, but cannot import one. Disposing its session
+destroys the client and closes the workspace.

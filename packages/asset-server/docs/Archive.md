@@ -56,7 +56,14 @@ textures/block.pixelart
 ## exportAssetArchive
 
 ```ts
-exportAssetArchive(backend, { root?: string }): Promise<Uint8Array>
+interface ExportAssetArchiveOptions {
+  root?: string;
+}
+
+exportAssetArchive(
+  backend: ArchiveBackend,
+  options?: ExportAssetArchiveOptions
+): Promise<Uint8Array>
 ```
 
 Flushes the root and every asset of its closure before reading them, so
@@ -67,7 +74,15 @@ whole workspace is exported. An unknown `root` rejects with
 ## readAssetArchive
 
 ```ts
-readAssetArchive(bytes, { maxEntryBytes?, maxBytes? }): Result<AssetArchive, AssetArchiveError>
+interface ReadAssetArchiveOptions {
+  maxEntryBytes?: number;
+  maxBytes?: number;
+}
+
+readAssetArchive(
+  bytes: Uint8Array,
+  options?: ReadAssetArchiveOptions
+): Result<AssetArchive, AssetArchiveError>
 ```
 
 Pure: decodes and validates without a back-end. `AssetArchive` holds `root`,
@@ -98,17 +113,37 @@ asset is loaded into a throwaway state of its kind: a document that does not
 load rejects the archive with `unreadable-asset` and the `assetId` at fault.
 A live id of another kind rejects with `kind-mismatch`.
 
-| `ImportPlan` member | Description |
-|---|---|
-| `root` | The archive root, when it has one. |
-| `live` | Archive assets whose id is already in the catalog, at their current path. |
-| `fresh` | Archive assets the workspace does not know. |
-| `sharedDependents` | Live assets referenced by assets outside the archive, with those `dependents`. Replacing them changes what the dependents see. |
+```ts
+interface ImportPlan {
+  readonly root?: AssetReferenceData;
+  readonly live: readonly AssetArchiveEntry[];
+  readonly fresh: readonly AssetArchiveEntry[];
+  readonly sharedDependents: readonly SharedDependents[];
+}
+
+interface SharedDependents extends AssetArchiveEntry {
+  readonly dependents: readonly AssetArchiveEntry[];
+}
+```
+
+`live` contains existing IDs at their current paths; `fresh` contains IDs
+the workspace does not know. `sharedDependents` identifies existing assets
+referenced from outside the archive. Replacing one changes what those
+dependents see.
 
 ## importAssetArchive
 
 ```ts
-importAssetArchive(backend, archive, { onConflict, actor }): Promise<Result<ImportReport, ...>>
+interface ImportAssetArchiveOptions {
+  onConflict: "replace" | "keep";
+  actor: Actor;
+}
+
+importAssetArchive(
+  backend: ArchiveBackend,
+  archive: AssetArchive,
+  options: ImportAssetArchiveOptions
+): Promise<Result<ImportReport, AssetImportError>>
 ```
 
 Runs the plan first: nothing is written when it fails. `onConflict` applies

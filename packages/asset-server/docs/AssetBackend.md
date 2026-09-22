@@ -9,30 +9,44 @@ createAssetBackend(options: AssetBackendOptions): Promise<AssetBackend>
 
 ## Options
 
-| Option | Default | Description |
-|---|---|---|
-| `source` | required | Physical asset storage. |
-| `eventStore` | required | Event store used for asset and domain events. |
-| `handlers` | `[]` | Asset kind handlers. Unmatched paths use `binary`. |
-| `snapshot` | `2_000` / `30_000` ms | Default quiet and maximum snapshot delays. |
-| `reconcileOnStart` | `true` | Scan the source when the backend starts. |
-| `watch` | `true` | Watch sources that implement `watch()`. |
-| `reconcileDebounce` | `200` ms | Quiet period before external changes are scanned. |
-| `catalogMaxContentBytes` | 16 MiB | Decoded size cap of a `catalog:create` payload and of an archive. See [Catalog](./Catalog.md#network-room). |
-| `logger` | silent | A `loglayer` logger. |
+```ts
+interface AssetBackendOptions {
+  source: AssetSource;
+  eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
+  handlers?: AssetKindHandler[];
+  snapshot?: SnapshotPolicy;
+  reconcileOnStart?: boolean;
+  watch?: boolean;
+  reconcileDebounce?: number;
+  catalogMaxContentBytes?: number;
+  logger?: Logger;
+}
+```
 
-A handler may override either default snapshot delay. See
+`source` and `eventStore` are required. `handlers` defaults to `[]`; unmatched
+paths use the built-in `binary` kind.
+
+`snapshot` sets the default quiet delay (2,000 ms) and maximum delay
+(30,000 ms). A handler can override either value. See
 [Asset kinds](./AssetKinds.md#snapshot-policy).
+
+`reconcileOnStart` and `watch` default to `true`. `watch` only has an effect
+when the source supports it. `reconcileDebounce` defaults to 200 ms.
+
+`catalogMaxContentBytes` defaults to 16 MiB of decoded content for catalog
+create and archive commands. See [Catalog](./Catalog.md#network-room).
+`logger` defaults to a silent logger.
 
 ## Returned backend
 
 ```ts
 interface AssetBackend extends AsyncDisposable {
   readonly source: AssetSource;
-  readonly eventStore: EventStore;
+  readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   readonly kinds: AssetKindRegistry;
   readonly writer: AssetWriter;
   readonly catalog: CatalogProjection;
+  readonly internals: AssetBackendInternals;
 
   flush(assetId?: string): Promise<void>;
   attach(server: Server, options?: { graceMs?: number }): () => void;

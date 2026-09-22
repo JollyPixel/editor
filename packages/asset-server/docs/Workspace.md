@@ -20,23 +20,44 @@ await using workspace = await createAssetWorkspace({
 
 ## Options
 
-| Option | Default | Description |
-|---|---|---|
-| `root` | required | Filesystem root, behind the default source and event log. |
-| `handlers` | `[]` | Asset kind handlers. Unmatched paths use `binary`. |
-| `seed` | none | Starter documents, written only where the workspace holds no file. |
-| `source` | `FilesystemAssetSource(root)` | Physical storage. |
-| `eventStore` | sqlite in the state directory | Event log. |
-| `server` | a new `Server` | Network server hosting the rooms. |
-| `extensions` | `[]` | Extensions registered before the asset rooms attach. |
-| `rights` | none | Rights map for the server it builds. |
-| `roomGraceMs` | server default | Grace period before an empty room is evicted. |
-| `compactOnOpen` | `true` | Drop the events superseded by each asset's newest checkpoint. |
-| `logger` | silent | A `loglayer` logger. Left unset, the server keeps its own. |
-| `backend` | `{}` | Extra [`AssetBackend`](./AssetBackend.md) options. |
+```ts
+interface AssetWorkspaceOptions {
+  root: string;
+  handlers?: AssetKindHandler[];
+  seed?: AssetSeedMap;
+  source?: AssetSource;
+  eventStore?: EventStore.TypedEventStore<AssetEventDataMap>;
+  server?: Server;
+  extensions?: Extension[];
+  rights?: RightsMap;
+  defaultRole?: string;
+  auth?: AuthenticationProvider;
+  logger?: Logger;
+  roomGraceMs?: number;
+  compactOnOpen?: boolean;
+  backend?: AssetBackendTuning;
+}
 
-The workspace owns only what it creates: a source, event store or server
-passed in is left open by `close()`.
+type AssetBackendTuning = Omit<
+  AssetBackendOptions,
+  "source" | "eventStore" | "handlers" | "logger"
+>;
+```
+
+`root` is required. Without injected instances, the workspace creates a
+`FilesystemAssetSource(root)`, a SQLite event store under `.jollypixel/`, and
+a `Server`. `handlers` and `extensions` default to empty arrays. `seed` adds
+starter documents before the backend starts.
+
+`rights`, `defaultRole`, `auth`, and `roomGraceMs` configure a server created
+by the workspace. `logger` defaults to a silent logger; when it is omitted,
+the server keeps its own default. `backend` passes extra
+[`AssetBackendOptions`](./AssetBackend.md#options) and defaults to `{}`.
+`compactOnOpen` defaults to `true`.
+
+`close()` detaches the room resolver, closes the backend, and closes the
+event store if the workspace created it. It leaves the server and source
+open. Close the server first so room eviction can flush pending snapshots.
 
 Seeding runs before the back-end starts, so the first reconciliation catalogs
 the starter documents.
@@ -134,13 +155,24 @@ One plugin mounts the whole workspace on the dev server: the catalog route,
 static delivery and the WebSocket the asset rooms are edited through. It
 accepts every `createAssetWorkspace` option plus:
 
-| Option | Default | Description |
-|---|---|---|
-| `catalogPath` | `/__jollypixel/catalog` | Catalog route. |
-| `prefix` | `/assets/` | URL prefix the workspace is served under. |
-| `socketPath` | `/ws-sync` | WebSocket upgrade path, kept apart from Vite HMR. |
-| `onReady` | none | Receives the workspace once the back-end is up. |
-| `launch` | none | Picks the asset an HTML page opens, see below. |
+```ts
+interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
+  catalogPath?: string;
+  prefix?: string;
+  socketPath?: string;
+  onReady?: (workspace: AssetWorkspace) => void | Promise<void>;
+  launch?: (request: AssetLaunchRequest) => string | undefined;
+}
+
+interface AssetLaunchRequest {
+  readonly url: URL;
+  readonly catalog: AssetCatalog;
+}
+```
+
+`catalogPath` defaults to `/__jollypixel/catalog`, `prefix` to `/assets/`,
+and `socketPath` to `/ws-sync`. `onReady` runs when the workspace is ready.
+`launch` selects the asset an HTML page opens.
 
 Everything is built inside `configureServer`, so a production build never
 opens the event log. `closeBundle` closes the workspace.
