@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { EditorLaunch } from "../launch/EditorLaunch.ts";
+import type { ShellChannel } from "../launch/ShellChannel.ts";
 import type { AssetDocumentKind } from "../session/AssetLease.ts";
 import type {
   EditorIdentityOptions,
@@ -9,6 +10,7 @@ import type {
 export interface EditorContext {
   launch: EditorLaunch;
   session: EditorSession;
+  shell: ShellChannel | null;
 }
 
 export interface EditorHandle {

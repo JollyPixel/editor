@@ -35,6 +35,7 @@ interface EditorDefinition<THandle extends EditorHandle> {
 interface EditorContext {
   launch: EditorLaunch;
   session: EditorSession;
+  shell: ShellChannel | null;
 }
 
 interface EditorHandle {
@@ -53,6 +54,8 @@ An editor class satisfies the definition with static members.
 
 `context.launch.target` is the target's `AssetId`. The session belongs to the
 editor once `mount` returns, so `dispose()` must call `session.dispose()`.
+`context.shell` is the [shell channel](#shell-channel) when a parent frame
+launched the page, `null` otherwise.
 
 ## Options
 
@@ -150,7 +153,7 @@ By default the target is read from the first source that answers:
 
 | Order | Source |
 |---|---|
-| 1 | `{ type: "jolly-launch", target }` posted by the parent frame, waited for 1000 ms |
+| 1 | `{ type: "jolly-launch", target }` posted by the parent frame in answer to the page's `{ type: "jolly-ready" }`, waited for 1000 ms |
 | 2 | the `target` query parameter |
 | 3 | the JSON element injected by the asset workspace Vite plugin's `launch` option |
 
@@ -173,7 +176,32 @@ await mountStandalone(MyEditor, { sources: [fromHash] });
 
 `EditorLaunch.fromTarget(value)` accepts a non-blank string and
 `EditorLaunch.parse(value)` an object with a `target` property. Both return
-`undefined` for anything else.
+`undefined` for anything else. Both take an optional `ShellChannel` as second
+argument, `null` by default, exposed as `launch.shell`.
+
+## Shell channel
+
+A page inside a frame posts `{ type: "jolly-ready" }` to its parent as soon
+as the launch source starts reading, then waits for the parent's
+`jolly-launch`. A launch that came this way carries a `ShellChannel` bound to
+the parent and to the origin of its answer. The channel posts commands back
+and never receives a reply:
+
+```ts
+class ShellChannel {
+  readonly origin: string;
+  openAsset(id: AssetId | string): void;
+}
+```
+
+| Command | Message |
+|---|---|
+| `openAsset(id)` | `{ type: "jolly-shell", command: "open-asset", target: id }` |
+
+`isReadyMessage(data)` and `isShellCommand(data)` narrow a message for a
+shell that listens on its own window. A launch read from the query string or
+the injected element has no channel, so `context.shell` is `null` and an
+editor hides what only a shell can do.
 
 ## Errors
 

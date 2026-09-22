@@ -1,5 +1,7 @@
 export * from "./launch/EditorLaunch.ts";
+export * from "./launch/ShellChannel.ts";
 export type { LaunchSource } from "./launch/sources/LaunchSource.ts";
+export * from "./launch/sources/HostMessageLaunchSource.ts";
 export * from "./launch/sources/LastOpenedLaunchSource.ts";
 export * from "./launch/sources/QueryLaunchSource.ts";
 export * from "./launch/errors/LaunchNotFoundError.ts";
@@ -7,6 +9,7 @@ export * from "./session/AssetLease.ts";
 export { AssetLeases } from "./session/AssetLeases.ts";
 export {
   EditorSession,
+  IDENTITY_STORAGE_KEY,
   type EditorSessionClient,
   type EditorSessionEvents,
   type EditorIdentityOptions

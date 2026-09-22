@@ -49,13 +49,18 @@ describe("mountStandalone", () => {
       }
     });
 
+    let shell: unknown = "unset";
     const handle = await mountStandalone({
       accepts: BINARY_KIND,
       identity: { title: "never prompted" },
       kinds: [],
-      mount: (context) => Promise.resolve({
-        dispose: () => context.session.dispose()
-      })
+      mount: (context) => {
+        shell = context.shell;
+
+        return Promise.resolve({
+          dispose: () => context.session.dispose()
+        });
+      }
     }, {
       sources: [
         {
@@ -68,6 +73,7 @@ describe("mountStandalone", () => {
 
     try {
       assert.equal(Reflect.get(globalThis, "hostTestHandle"), handle);
+      assert.equal(shell, null);
     }
     finally {
       Reflect.deleteProperty(globalThis, "hostTestHandle");

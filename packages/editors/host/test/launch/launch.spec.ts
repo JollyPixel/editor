@@ -16,6 +16,10 @@ import {
   LAUNCH_MESSAGE_TYPE,
   HostMessageLaunchSource
 } from "#src/launch/sources/HostMessageLaunchSource.ts";
+import {
+  READY_MESSAGE_TYPE,
+  SHELL_MESSAGE_TYPE
+} from "#src/launch/ShellChannel.ts";
 import { InjectedLaunchSource } from "#src/launch/sources/InjectedLaunchSource.ts";
 import { QueryLaunchSource } from "#src/launch/sources/QueryLaunchSource.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
@@ -42,6 +46,30 @@ function injectLaunchElement(
   element.id = id;
   element.textContent = text;
   document.head.append(element);
+}
+
+type FakeParent = MessagePort & {
+  posted: Array<{
+    message: unknown;
+    origin: string;
+  }>;
+};
+
+function fakeParent(): FakeParent {
+  const posted: FakeParent["posted"] = [];
+
+  return Object.assign(new MessageChannel().port1, {
+    posted,
+    postMessage(
+      message: unknown,
+      origin: string
+    ): void {
+      posted.push({
+        message,
+        origin
+      });
+    }
+  });
 }
 
 function frameIn(
@@ -110,7 +138,9 @@ describe("QueryLaunchSource", () => {
   test("reads ?target= or a custom parameter", async() => {
     window.history.replaceState(null, "", "/?target=abc&world=def");
 
-    assert.equal((await new QueryLaunchSource().read())?.target.value, "abc");
+    const launch = await new QueryLaunchSource().read();
+    assert.equal(launch?.target.value, "abc");
+    assert.equal(launch?.shell, null);
     assert.equal((await new QueryLaunchSource("world").read())?.target.value, "def");
     assert.equal(await new QueryLaunchSource("asset").read(), undefined);
   });
@@ -124,25 +154,62 @@ describe("HostMessageLaunchSource", () => {
     );
   });
 
-  test("takes the launch posted by the parent window", async(context) => {
-    const parent = new MessageChannel().port1;
+  test("posts ready and takes the launch posted by the parent window", async(context) => {
+    const parent = fakeParent();
     context.after(frameIn(parent));
 
     const pending = new HostMessageLaunchSource().read();
+    assert.deepEqual(parent.posted, [
+      {
+        message: { type: READY_MESSAGE_TYPE },
+        origin: "*"
+      }
+    ]);
+
     window.dispatchEvent(new MessageEvent("message", {
       source: window,
       data: { type: LAUNCH_MESSAGE_TYPE, target: "ignored" }
     }));
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
+      origin: "http://studio.test",
       data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
     }));
 
-    assert.equal((await pending)?.target.value, "from-host");
+    const launch = await pending;
+    assert.equal(launch?.target.value, "from-host");
+    assert.equal(launch?.shell?.origin, "http://studio.test");
+  });
+
+  test("answers the parent through the shell channel", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+
+    const pending = new HostMessageLaunchSource().read();
+    window.dispatchEvent(new MessageEvent("message", {
+      source: parent,
+      origin: "http://studio.test",
+      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
+    }));
+    const launch = await pending;
+    parent.posted.length = 0;
+
+    launch?.shell?.openAsset("tileset-1");
+
+    assert.deepEqual(parent.posted, [
+      {
+        message: {
+          type: SHELL_MESSAGE_TYPE,
+          command: "open-asset",
+          target: "tileset-1"
+        },
+        origin: "http://studio.test"
+      }
+    ]);
   });
 
   test("gives up after the timeout", async(context) => {
-    context.after(frameIn(new MessageChannel().port1));
+    context.after(frameIn(fakeParent()));
     context.mock.timers.enable({ apis: ["setTimeout"] });
 
     const pending = new HostMessageLaunchSource({ timeout: 50 }).read();

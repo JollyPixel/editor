@@ -84,7 +84,7 @@ await mountStandalone(MyEditor, {
 ### Boot
 
 - [`mountStandalone`](./docs/mountStandalone.md): the editor definition, launch
-  sources and the debug handle.
+  sources, the shell channel and the debug handle.
 - [`QueryParams`](./docs/QueryParams.md): typed query-string parameters.
 
 ### Session

@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
   const e2e = mode === kE2EMode;
 
   return {
+    base: "./",
     server: e2e ?
       {
         port: E2E_PORT,
