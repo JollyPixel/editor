@@ -2,51 +2,27 @@
   asset.voxel-map
 </h1>
 
+<p align="center">
+  Voxel-map assets
+</p>
+
 ## 💃 Getting Started
 
-This workspace-private package is never published. Add it as a dependency of
-another workspace:
-
-```json
-{
-  "dependencies": {
-    "@jolly-pixel/asset.voxel-map": "1.0.0"
-  }
-}
-```
+This workspace-private package stores `.voxelmap.json` worlds. Add `"@jolly-pixel/asset.voxel-map": "workspace:*"` to another workspace's dependencies.
 
 ## 👀 Usage example
 
-Synchronize a `VoxelEngine` with a room:
+### Register the kind
 
 ```ts
-import { Client } from "@jolly-pixel/network/client";
-import { assetRoomName } from "@jolly-pixel/asset";
-import {
-  VoxelSyncClient,
-  type VoxelNetworkCommand,
-  type VoxelServerMessage
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
-
-const room = new Client().room<
-  VoxelNetworkCommand,
-  VoxelServerMessage
->(assetRoomName("voxelmap", assetId));
-const sync = new VoxelSyncClient({
-  room,
-  engine
-});
-
-room.join();
-```
-
-On the server, register the asset kind to persist `.voxelmap.json` files:
-
-```ts
-import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
-import { createAssetBackend } from "@jolly-pixel/asset-server";
 import { voxelMapAssetKind } from "@jolly-pixel/asset.voxel-map";
+import { createAssetBackend } from "@jolly-pixel/asset-server";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
+import * as EventStore from "@jolly-pixel/event-store";
 
+using eventStore = await EventStore.persistence.sqlite(
+  "./assets/.jollypixel/events.db"
+);
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
@@ -54,41 +30,45 @@ await createAssetBackend({
 });
 ```
 
-For an in-memory world, pass a `MemoryAssetSource` and a `persistence.memory()`
-event store instead.
+The default `chunkSize` is 16. The handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy.
+
+### Connect a world
+
+Construct the sync client before joining the room. `document` is a `VoxelDocument`; a `VoxelEngine` can be used when the editor also needs rendering.
+
+```ts
+import { assetRoomName } from "@jolly-pixel/asset";
+import { Client } from "@jolly-pixel/network/client";
+import { VoxelDocument } from "@jolly-pixel/voxel.renderer";
+import {
+  VoxelSyncClient,
+  type VoxelMapRoom
+} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+
+const client = new Client();
+const document = new VoxelDocument();
+const room: VoxelMapRoom = client.room(assetRoomName("voxelmap", assetId));
+const sync = new VoxelSyncClient({ room, document });
+
+room.join();
+
+// On teardown: sync.destroy(); room.leave(); client.destroy();
+```
+
+The first snapshot loads the document. Local document commands go to the room; accepted remote commands are applied with a remote origin. `sync.replaceWorld(document.save())` sends a full replacement and produces a new snapshot.
 
 ## 📚 API
 
-- [Voxel-map asset APIs](./docs/api/voxel-map-assets.md)
-- Network
-  - [`VoxelSyncClient`](./docs/api/network/VoxelSyncClient.md)
-  - [`VoxelCommandArbiter`](./docs/api/network/VoxelCommandArbiter.md)
-  - [Network protocol](./docs/api/network/protocol.md)
+- `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `tilesetAsset`, and the kind and event constants for server registration and persistence.
+- `@jolly-pixel/asset.voxel-map/network/client.ts` exports `VoxelSyncClient`, `SyncedVoxelMap`, wire types, and tileset helpers.
+- `@jolly-pixel/asset.voxel-map/network/server.ts` exports `VoxelCommandArbiter` and the protocol and snapshot schemas.
 
-### Guides
-
-- [Persisting a voxel map](./docs/guides/persisting-a-voxel-map.md)
-- [Synchronizing a world](./docs/guides/synchronizing-a-world.md)
-- [Network synchronization](./docs/guides/network-synchronization.md)
+The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The document format and engine commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
 
 ## ✨ Contributors guide
 
-If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
-
-Run these commands from the monorepo root:
-
-```bash
-$ pnpm --filter @jolly-pixel/asset.voxel-map test
-$ pnpm run lint
-```
-
-> [!CAUTION]
-> In case you introduce a new feature or fix a bug, make sure to include tests for it as well.
+Read the [contributing guide](../../../CONTRIBUTING.md) before submitting a change. Run `pnpm --filter @jolly-pixel/asset.voxel-map test` and `pnpm run lint` from the monorepo root.
 
 ## 📃 License
 
 MIT
-
-<!-- Reference-style links for DRYness -->
-
-[contributing]: ../../../CONTRIBUTING.md

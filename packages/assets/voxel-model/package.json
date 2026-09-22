@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.voxel-model",
-  "description": "Jolly Pixel voxel-model persistence and collaboration",
+  "description": "Voxel-model assets",
   "version": "1.0.0",
   "type": "module",
   "private": true,
