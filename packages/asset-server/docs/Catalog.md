@@ -67,6 +67,16 @@ server.register(new CatalogExtension({
 }));
 ```
 
+```ts
+interface CatalogExtensionOptions {
+  projection: CatalogProjection;
+  writer: AssetWriter;
+  archive?: ArchiveBackend;
+  id?: string;
+  maxContentBytes?: number;
+}
+```
+
 - `writer` is the `AssetWriter` that runs the commands.
 - `archive` is the back-end the [archive commands](#archives) run against.
   Without it they are rejected.
@@ -177,6 +187,17 @@ const assetId = await catalog.create("textures/new.pixelart", bytes, {
 });
 await catalog.rename(assetId, "textures/stone.pixelart");
 await catalog.remove(assetId);
+```
+
+```ts
+interface CatalogCreateOptions {
+  kind?: string;
+  onConflict?: "reject" | "suffix";
+}
+
+interface CatalogImportOptions {
+  onConflict: "replace" | "keep";
+}
 ```
 
 | Member | Description |

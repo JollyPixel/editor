@@ -8,10 +8,10 @@
 
 ## 💃 Getting Started
 
-Install the package with npm:
+Install the package with pnpm:
 
 ```bash
-$ npm i @jolly-pixel/asset-server
+$ pnpm add @jolly-pixel/asset-server
 ```
 
 `@jolly-pixel/asset-server` runs on the server. Browser code should use
