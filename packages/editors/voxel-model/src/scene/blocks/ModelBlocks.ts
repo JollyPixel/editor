@@ -5,15 +5,13 @@ import type {
   BlockNodeJSON,
   BlockTransformJSON,
   MirrorAxes,
+  ModelChange,
+  ModelDocument,
   NodeTransformJSON
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import type {
-  BlockPoses,
-  ModelChange,
-  ModelDocument
-} from "../../model/index.ts";
+import type { BlockPoses } from "../../model/index.ts";
 import { ModelBlock } from "./ModelBlock.ts";
 import { plainVector3 } from "./plainVector3.ts";
 import {

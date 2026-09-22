@@ -12,14 +12,16 @@ import {
   type JollyToggleExpandDetail,
   type TreeNode
 } from "@jolly-pixel/ui";
-import type { VoxelModelCommand } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type {
+  ModelChange,
+  ModelDocument,
+  VoxelModelCommand
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import {
   findHierarchyNode,
   type HierarchyNode,
-  type ModelChange,
-  type ModelDocument,
   type ModelHierarchy
 } from "../../model/index.ts";
 import type {
@@ -130,7 +132,7 @@ export class HierarchyController implements ReactiveController {
     this.#unsubscribe();
     this.#workspace = workspace;
     this.#subscribe();
-    this.#rebuild();
+    this.#onReset();
   }
 
   hostConnected(): void {

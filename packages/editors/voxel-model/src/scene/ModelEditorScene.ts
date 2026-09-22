@@ -4,16 +4,16 @@ import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import { Grid } from "@jolly-pixel/three";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { PeerIdentity } from "@jolly-pixel/ui";
+import type {
+  ModelDocument,
+  VoxelModelRoom
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import {
-  ModelDocument,
-  ModelHierarchy
-} from "../model/index.ts";
+import { ModelHierarchy } from "../model/index.ts";
 import {
   ModelCollaboration,
-  type TransformLock,
-  type VoxelModelRoom
+  type TransformLock
 } from "../collaboration/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import { ModelBlocks } from "./blocks/index.ts";
@@ -23,6 +23,7 @@ import { TransformGizmo } from "./TransformGizmo.ts";
 
 export interface ModelEditorSceneOptions {
   room: VoxelModelRoom;
+  document: ModelDocument;
   identity: PeerIdentity;
   presence: PresenceStore;
   pixels: PixelDocument;
@@ -59,6 +60,7 @@ export class ModelEditorScene extends Systems.Scene {
   override awake(): void {
     const {
       room,
+      document,
       identity,
       presence,
       pixels,
@@ -105,7 +107,6 @@ export class ModelEditorScene extends Systems.Scene {
         initialTrailDistance: 12
       });
 
-    const document = new ModelDocument();
     const blocks = new ModelBlocks({
       document,
       scene
@@ -124,7 +125,6 @@ export class ModelEditorScene extends Systems.Scene {
     const collaboration = new ModelCollaboration({
       room,
       identity,
-      document,
       blocks,
       presence,
       world: this.world,
@@ -152,7 +152,6 @@ export class ModelEditorScene extends Systems.Scene {
       () => textures.dispose(),
       () => blocks.dispose()
     );
-    room.join();
 
     this.#workspace.resolve({
       document,

@@ -1,8 +1,14 @@
 # VoxelEngine
 
-Builds and maintains the chunked Three.js meshes of a [`VoxelWorld`](../world/VoxelWorld.md),
-along with its blocks, tilesets and materials. Applications own the engine
-directly and attach `engine.root` to their Three.js scene.
+Composes a [`VoxelDocument`](./VoxelDocument.md) with the
+[`VoxelView`](./VoxelView.md) drawn from it, and forwards the members of both.
+Applications that want one object for a world own the engine directly and
+attach `engine.root` to their Three.js scene.
+
+Reach for the two halves instead when they need separate lifetimes: a document
+synced over the network and handed to the editor that renders it, a headless
+document on a server, or several views of one document. `new VoxelEngine({
+document })` adopts an existing document and builds only the view.
 
 Editing the world itself (layers, voxels, objects) goes through `engine.world`,
 which owns those methods and emits the [commands](./commands.md).
@@ -65,6 +71,17 @@ engine.world.setLayerPosition("Ground", {
 ```
 
 ## VoxelEngineOptions
+
+`VoxelEngineOptions` is [`VoxelDocumentOptions`](./VoxelDocument.md) and
+[`VoxelViewOptions`](./VoxelView.md) together, plus `document`. Passing
+`document` makes the engine adopt that one and ignore every document option.
+
+```ts
+interface VoxelEngineOptions {
+  /** Adopt this document instead of building a private one. */
+  document?: VoxelDocument;
+}
+```
 
 ```ts
 type MaterialCustomizerFn = (
@@ -204,8 +221,13 @@ interface VoxelApplyOptions {
 
 ## Properties
 
+Everything below `document` and `view` is a getter onto one of them.
+
 ```ts
 class VoxelEngine extends Emitter<VoxelEngineEvents> {
+  readonly document: VoxelDocument;
+  readonly view: VoxelView;
+
   readonly root: THREE.Group; // container for all chunk meshes
   readonly world: VoxelWorld;
   readonly blockRegistry: BlockRegistry;

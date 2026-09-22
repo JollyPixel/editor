@@ -29,19 +29,3 @@ Will be done in the future (but ignore them for now)
   HTTP streaming endpoint for that case only, with an Origin check.
 - voxel-model and pixel-art have no archive UI yet. The `session.archive` port
   already serves them.
-
-## Editors
-
-▎ voxel-renderer model/view split, so a voxel-map (and voxel-model) target can be leased as a synced model instead of room-only, with the editor keeping only the view.
-
-Three things stacked:
-
-1. VoxelEngine is one class doing two jobs. packages/voxel-renderer/src/VoxelEngine.ts:62 holds the model (world, blockRegistry, shapeRegistry, tilesetManager, history, plus applyVoxelCommand/applyTilesetCommand) and the view (root: THREE.Group, VoxelMeshBuilder, ChunkMaterialCache, ChunkMeshStore, ChunkRebuildQueue, ChunkVisibility, collider) in the same object. Splitting means a headless model — voxel data + command application + history, no Three.js — and a view that subscribes to it and maintains meshes.
-
-2. "leased as a synced model instead of room-only" is about AssetLeases in the host (packages/editors/host/src/session/AssetLeases.ts). It hands out two shapes:
-- openRoom(kind, id) → AssetRoomLease: just { record, room, release }. The caller gets a raw network room and wires its own state.
-- open(kindHandler, id) → AssetLease: adds model + ready, built by an AssetModelKind.createModel(room) (AssetLease.ts:11). The model is created once and shared by every holder, refcounted.
-
-Today the target asset always takes the room-only path — EditorSession.ts:164 calls this.assets.openRoom(options.accepts, …). Only dependencies get synced models: EditorSession.#syncDependencies calls assets.open(kind, assetId), which is how voxel-model gets a live PixelDocument for its texture (MODEL_TEXTURE_KIND, boot/modelTexture.ts:37).
-
-3. What changes. Once voxel-renderer has a model/view split, you can register a AssetModelKind for the voxel-map and voxel-model kinds. The target then leases as { model, ready, room }, the sync layer lives in the package (with the room as transport) instead of being re-wired in each editor's boot code, and VoxelMapEditor/VoxelModelEditor keep only the view + tools. Side benefit: a voxel-model opened as a dependency of a voxel-map would get the same synced model for free, same as textures do now.

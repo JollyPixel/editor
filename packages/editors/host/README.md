@@ -23,7 +23,7 @@ an editor workspace:
 
 An editor opens one asset, its target. The host reads the target from the
 page, connects a session to the asset server, leases the target's
-dependencies with synced models and hands the result to the editor's `mount`.
+dependencies with synced documents and hands the result to the editor's `mount`.
 
 ```mermaid
 flowchart TB
@@ -46,14 +46,14 @@ import {
   type EditorContext
 } from "@jolly-pixel/editor.host";
 import {
-  pixelArtModelKind
+  pixelArtDocumentKind
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 
 class MyEditor {
   static readonly accepts = "voxelmap";
   static readonly identity = { title: "Join voxel map" };
   static readonly kinds = [
-    pixelArtModelKind()
+    pixelArtDocumentKind()
   ];
 
   static async mount(
@@ -91,7 +91,7 @@ await mountStandalone(MyEditor, {
 
 - [`EditorSession`](./docs/EditorSession.md): the target room, live
   dependencies and their events.
-- [`AssetLeases`](./docs/AssetLeases.md): shared rooms and synced models per
+- [`AssetLeases`](./docs/AssetLeases.md): shared rooms and synced documents per
   asset.
 
 ### Scene

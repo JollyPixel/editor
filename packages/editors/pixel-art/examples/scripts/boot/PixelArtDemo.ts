@@ -81,15 +81,15 @@ export class PixelArtDemo {
     await themePreferences.updateComplete;
 
     const { room, record } = session.target;
-    const target = DEMO_TEXTURE_KIND.createModel(room);
-    target.model.buffer.resize(TEXTURE_SIZE);
+    const target = DEMO_TEXTURE_KIND.createDocument(room);
+    target.document.buffer.resize(TEXTURE_SIZE);
     room.join();
 
     const canvas = await panel.initialize({
       id: record.id,
       name: suggestTextureName(record.source),
       tooltip: record.source,
-      document: target.model,
+      document: target.document,
       defaultMode: "paint",
       zoom: {
         min: 1,

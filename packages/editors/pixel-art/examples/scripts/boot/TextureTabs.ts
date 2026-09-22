@@ -121,12 +121,12 @@ export class TextureTabs {
         documentFromCanvas(source)
       );
       const lease = this.#session.assets.open(DEMO_TEXTURE_KIND, assetId);
-      lease.model.buffer.loadTexture(source);
+      lease.document.buffer.loadTexture(source);
       const canvas = this.#panel.addTexture({
         id: assetId,
         name,
         tooltip: catalog.record(assetId)?.source ?? `${name}${PIXEL_ART_EXTENSION}`,
-        document: lease.model
+        document: lease.document
       });
       await this.attach(assetId, lease, canvas);
     }

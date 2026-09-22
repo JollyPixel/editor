@@ -13,12 +13,15 @@ import type {
 import * as THREE from "three";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 import type { AssetLeases } from "@jolly-pixel/editor.host";
+import type {
+  SyncedVoxelMap,
+  VoxelMapRoom
+} from "@jolly-pixel/asset.voxel-map/network/client.ts";
 
 // Import Internal Dependencies
 import {
   MapDocument,
-  RoomWorldSource,
-  type VoxelMapRoom
+  LeasedWorldSource
 } from "../document/index.ts";
 import {
   BlockUsageStore,
@@ -64,6 +67,7 @@ const kExitOrbitFocusKey = "Escape";
 
 export interface EditorSceneSession {
   room: VoxelMapRoom;
+  map: SyncedVoxelMap;
   identity: PeerIdentity;
   catalog: TilesetCatalog & TilesetCatalogWriter;
   assets: AssetLeases;
@@ -156,21 +160,15 @@ export class EditorScene extends Systems.Scene {
     const { engine } = world
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
-        chunkSize: 16,
-        layers: [],
-        blocks: [],
+        document: session.map.voxels,
         material: "lambert",
-        tilesets: [],
-        history: {
-          enabled: true
-        }
+        tilesets: []
       });
 
     const mapDocument = new MapDocument({
-      engine,
-      source: new RoomWorldSource({
-        engine,
-        room: session.room,
+      commands: engine.document,
+      source: new LeasedWorldSource({
+        map: session.map,
         defaultLayerName: kDefaultLayerName
       })
     });
@@ -294,7 +292,9 @@ export class EditorScene extends Systems.Scene {
     );
 
     this.#selectFallbackLayer(engine);
-    session.room.join();
+    if (mapDocument.ready) {
+      this.#spawnCamera(engine);
+    }
 
     this.#workspace.resolve({
       state,

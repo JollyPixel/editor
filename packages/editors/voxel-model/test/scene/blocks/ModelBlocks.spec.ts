@@ -7,11 +7,11 @@ import * as THREE from "three";
 import {
   createBlockTransform,
   type BlockTransformJSON,
+  type ModelDocument,
   type VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import type { ModelDocument } from "#src/model/index.ts";
 import {
   createModelFixture,
   type ModelFixture

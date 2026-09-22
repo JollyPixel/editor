@@ -2,14 +2,12 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { createBlockTransform } from "@jolly-pixel/asset.voxel-model/network/client.ts";
-
 // Import Internal Dependencies
 import {
   ModelDocument,
   type ModelChange
-} from "#src/model/index.ts";
+} from "#src/model/ModelDocument.ts";
+import { createBlockTransform } from "#src/model/blockTransform.ts";
 
 function recordChanges(
   document: ModelDocument

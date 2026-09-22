@@ -11,7 +11,7 @@ export {
   type EditorSessionEvents,
   type EditorIdentityOptions
 } from "./session/EditorSession.ts";
-export * from "./session/errors/AssetModelConflictError.ts";
+export * from "./session/errors/AssetDocumentConflictError.ts";
 export * from "./session/errors/ArchiveImportDisabledError.ts";
 export * from "./session/SessionArchive.ts";
 export type { SessionWorkspace } from "./session/SessionWorkspace.ts";

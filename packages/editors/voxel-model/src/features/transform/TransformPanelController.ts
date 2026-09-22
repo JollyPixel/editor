@@ -4,12 +4,12 @@ import type {
   ReactiveControllerHost
 } from "lit";
 import * as THREE from "three";
-
-// Import Internal Dependencies
 import type {
   ModelChange,
   ModelDocument
-} from "../../model/index.ts";
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+
+// Import Internal Dependencies
 import type {
   ModelBlock,
   ModelBlocks,

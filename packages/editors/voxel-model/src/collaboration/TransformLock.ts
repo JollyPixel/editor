@@ -2,6 +2,7 @@
 import { PresenceChannel } from "@jolly-pixel/network/client";
 import { Emitter } from "@openally/emitt";
 import type { PresencePeer } from "@jolly-pixel/ui";
+import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 import {
   peerProfileColor,
   readUsername
@@ -9,7 +10,6 @@ import {
 
 // Import Internal Dependencies
 import { PRESENCE_KEYS } from "./presenceKeys.ts";
-import type { VoxelModelRoom } from "./types.ts";
 
 export interface TransformLockOptions {
   room: VoxelModelRoom;

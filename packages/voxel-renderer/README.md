@@ -132,7 +132,9 @@ does not depend on an ECS runtime.
 
 ### Core and world API
 
-- [`VoxelEngine`](docs/api/core/VoxelEngine.md).
+- [`VoxelDocument`](docs/api/core/VoxelDocument.md) (voxel data, headless),
+  [`VoxelView`](docs/api/core/VoxelView.md) (the meshes drawn from it), and
+  [`VoxelEngine`](docs/api/core/VoxelEngine.md) (both together).
 - [`VoxelInspector`, mesh and block statistics](docs/api/core/VoxelInspector.md),
   [`VoxelHistory` undo/redo](docs/api/core/VoxelHistory.md), and
   [commands](docs/api/core/commands.md).

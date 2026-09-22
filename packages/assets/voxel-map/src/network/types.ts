@@ -30,3 +30,8 @@ export type VoxelServerMessage = network.NetworkServerMessage<
   VoxelWorldJSON,
   VoxelAssetNotice
 >;
+
+export type VoxelMapRoom = network.Room<
+  VoxelNetworkCommand,
+  VoxelServerMessage
+>;

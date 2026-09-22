@@ -56,6 +56,10 @@ and `VoxelStore` owns its sparse packed values.
 
 Application edits go through `VoxelWorld`, which emits the
 [layer commands](../api/core/commands.md) and marks the chunks it touched dirty;
-[`VoxelEngine`](../api/core/VoxelEngine.md) picks those up to update rendering
-and collision. A world used on its own, with no engine around it, is what a
+[`VoxelView`](../api/core/VoxelView.md) picks those up to update rendering and
+collision.
+
+One level up, [`VoxelDocument`](../api/core/VoxelDocument.md) wraps the world
+with the block registry, the tileset declarations and the history, and is the
+whole of what a peer synchronizes. A document with no view attached is what a
 headless server or an offline tool runs.

@@ -18,12 +18,12 @@ page data. Sources are checked in order until one returns a launch.
 ### Target
 
 The asset opened by the editor. The session holds a room lease for it; the
-editor owns its model and synchronization.
+editor owns its document and synchronization.
 
 ### Editor definition
 
 The contract an editor supplies to the host: its accepted asset kind, identity
-prompt options, dependency model kinds, and `mount` method.
+prompt options, dependency document kinds, and `mount` method.
 
 ### Editor context
 
@@ -51,26 +51,27 @@ joins rooms for supported dependencies. See the
 ### Dependency
 
 An asset referenced by the target, directly or through another dependency.
-The session opens a model for it when the editor registered its asset model kind.
+The session opens a document for it when the editor registered its asset
+document kind.
 
 ### Asset lease
 
-A consumer's reference to a shared asset room, optionally with a synced model.
-Releasing the last lease disposes the model and leaves the room. A room-only
-lease exposes the asset record and room without a model.
+A consumer's reference to a shared asset room, optionally with a synced document.
+Releasing the last lease disposes the document and leaves the room. A room-only
+lease exposes the asset record and room without a document.
 
-### Asset model kind
+### Asset document kind
 
-The registration that pairs an asset kind with a factory for its synced model.
+The registration that pairs an asset kind with a factory for its synced document.
 The session uses these registrations to lease supported dependencies.
 
-### Synced model
+### Synced document
 
-An asset's editable model together with the code that keeps it updated from its
-room. The `SyncedModel` wrapper exposes the `model`, a `ready` promise for the
+An asset's editable document together with the code that keeps it updated from its
+room. The `SyncedDocument` wrapper exposes the `document`, a `ready` promise for the
 initial sync, and `dispose()` to stop syncing. The session creates these for
-supported dependencies; each editor creates its target model itself. Leases for
-the same asset share one synced model.
+supported dependencies; each editor creates its target document itself. Leases for
+the same asset share one synced document.
 
 ### Archive
 

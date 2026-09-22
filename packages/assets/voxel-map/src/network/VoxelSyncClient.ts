@@ -1,24 +1,21 @@
 // Import Third-party Dependencies
-import {
-  CommandSync,
-  type Room
-} from "@jolly-pixel/network/client";
+import { CommandSync } from "@jolly-pixel/network/client";
 import type {
   VoxelCommandListener,
-  VoxelEngine,
+  VoxelDocument,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type {
   VoxelAssetNotice,
-  VoxelNetworkCommand,
-  VoxelServerMessage
+  VoxelMapRoom,
+  VoxelNetworkCommand
 } from "./types.ts";
 
 export interface VoxelSyncClientOptions {
-  room: Room<VoxelNetworkCommand, VoxelServerMessage>;
-  engine: VoxelEngine;
+  room: VoxelMapRoom;
+  document: VoxelDocument;
 }
 
 export class VoxelSyncClient extends CommandSync<
@@ -26,7 +23,7 @@ export class VoxelSyncClient extends CommandSync<
   VoxelWorldJSON,
   VoxelAssetNotice
 > {
-  #engine: VoxelEngine;
+  #document: VoxelDocument;
 
   #sendLocalCommand: VoxelCommandListener = (command, { origin }) => {
     if (origin === "local") {
@@ -38,11 +35,11 @@ export class VoxelSyncClient extends CommandSync<
     options: VoxelSyncClientOptions
   ) {
     super(options.room);
-    const { engine } = options;
+    const { document } = options;
 
-    this.#engine = engine;
-    engine.on("command", this.#sendLocalCommand);
-    this.on("snapshot", (snapshot) => engine.load(snapshot));
+    this.#document = document;
+    document.on("command", this.#sendLocalCommand);
+    this.on("snapshot", (snapshot) => document.load(snapshot));
     this.on("command", (command) => this.#applyRemote(command));
   }
 
@@ -56,9 +53,8 @@ export class VoxelSyncClient extends CommandSync<
   }
 
   override destroy(): void {
-    this.#engine.off("command", this.#sendLocalCommand);
+    this.#document.off("command", this.#sendLocalCommand);
     super.destroy();
-    this.room.leave();
   }
 
   #applyRemote(
@@ -68,6 +64,6 @@ export class VoxelSyncClient extends CommandSync<
       return;
     }
 
-    this.#engine.apply(command, { origin: "remote" });
+    this.#document.apply(command, { origin: "remote" });
   }
 }

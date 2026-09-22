@@ -21,7 +21,7 @@ import {
 import type {
   AssetDependency,
   AssetLease,
-  AssetModelKind,
+  AssetDocumentKind,
   AssetRoomLease
 } from "./AssetLease.ts";
 import {
@@ -49,7 +49,7 @@ export interface EditorIdentityOptions {
 export interface EditorSessionTarget {
   launch: EditorLaunch;
   accepts: string;
-  kinds: Iterable<AssetModelKind<unknown>>;
+  kinds: Iterable<AssetDocumentKind<unknown>>;
 }
 
 export interface EditorSessionOptions extends EditorSessionTarget {
@@ -111,9 +111,10 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     }
 
     try {
-      await Promise.all(
-        Array.from(session.dependencies(), (lease) => lease.ready)
-      );
+      await Promise.all([
+        session.targetReady,
+        ...Array.from(session.dependencies(), (lease) => lease.ready)
+      ]);
     }
     catch (error) {
       session.dispose();
@@ -130,9 +131,10 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   readonly archive: SessionArchive;
   readonly assets: AssetLeases;
   readonly target: AssetRoomLease;
+  readonly targetReady: Promise<void>;
 
   #client: EditorSessionClient;
-  #kinds = new Map<string, AssetModelKind<unknown>>();
+  #kinds = new Map<string, AssetDocumentKind<unknown>>();
   #dependencies = new Map<string, SessionDependency>();
   #disposed = false;
 
@@ -161,10 +163,17 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       records: this.catalog
     });
     try {
-      this.target = this.assets.openRoom(
-        options.accepts,
-        options.launch.target.value
-      );
+      const assetId = options.launch.target.value;
+      const kind = this.#kinds.get(options.accepts);
+      if (kind === undefined) {
+        this.target = this.assets.openRoom(options.accepts, assetId);
+        this.targetReady = Promise.resolve();
+      }
+      else {
+        const lease = this.assets.open(kind, assetId);
+        this.target = lease;
+        this.targetReady = lease.ready;
+      }
       this.#syncDependencies();
     }
     catch (error) {
@@ -174,6 +183,12 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     }
     this.catalog.on("change", this.#onCatalogChange);
     this.catalog.on("dependencies", this.#onCatalogChange);
+  }
+
+  targetLease<TDocument, TCommand, TMessage>(
+    kind: AssetDocumentKind<TDocument, TCommand, TMessage>
+  ): AssetLease<TDocument, TCommand, TMessage> {
+    return this.assets.open(kind, this.target.record.id);
   }
 
   * dependencies(): IterableIterator<AssetDependency> {
@@ -206,7 +221,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     if (this.#disposed) {
       return;
     }
-    const wanted = new Map<string, AssetModelKind<unknown>>();
+    const wanted = new Map<string, AssetDocumentKind<unknown>>();
     for (const reference of this.catalog.closureOf(this.target.record.id)) {
       const record = this.catalog.record(reference.id);
       const kind = this.#kinds.get(reference.kind);
@@ -222,13 +237,13 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
           continue;
         }
         const lease = this.assets.open(kind, assetId);
-        const { record, room, model, ready } = lease;
+        const { record, room, document, ready } = lease;
         added.set(assetId, {
           lease,
           view: Object.freeze({
             record,
             room,
-            model,
+            document,
             ready
           })
         });

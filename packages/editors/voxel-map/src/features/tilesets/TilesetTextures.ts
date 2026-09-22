@@ -2,7 +2,7 @@
 import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import {
-  pixelArtModelKind,
+  pixelArtDocumentKind,
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type { AssetLeases } from "@jolly-pixel/editor.host";
@@ -12,7 +12,7 @@ import type { TilesetEntry } from "../../state/index.ts";
 
 // CONSTANTS
 export const TILESET_MAX_SIZE = 2048;
-export const TILESET_TEXTURE_KIND = pixelArtModelKind({
+export const TILESET_TEXTURE_KIND = pixelArtDocumentKind({
   maxSize: TILESET_MAX_SIZE,
   history: {
     enabled: true
@@ -115,7 +115,7 @@ export class SessionTilesetTextures implements TilesetTextures {
     const lease = this.#assets.open(TILESET_TEXTURE_KIND, entry.assetId);
 
     return {
-      document: lease.model,
+      document: lease.document,
       room: lease.room,
       ready: lease.ready,
       release: () => lease.release()

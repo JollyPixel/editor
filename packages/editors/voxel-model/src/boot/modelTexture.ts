@@ -2,14 +2,14 @@
 import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import {
   PIXEL_ART_KIND,
-  pixelArtModelKind,
+  pixelArtDocumentKind,
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type { EditorSession } from "@jolly-pixel/editor.host";
 
 // CONSTANTS
 const kLocalTextureSize = { x: 64, y: 64 };
-export const MODEL_TEXTURE_KIND = pixelArtModelKind();
+export const TEXTURE_DOCUMENT_KIND = pixelArtDocumentKind();
 
 export interface ModelTexture {
   document: PixelDocument;
@@ -34,10 +34,10 @@ export function openModelTexture(
     };
   }
 
-  const lease = session.assets.open(MODEL_TEXTURE_KIND, reference.id);
+  const lease = session.assets.open(TEXTURE_DOCUMENT_KIND, reference.id);
 
   return {
-    document: lease.model,
+    document: lease.document,
     ready: lease.ready,
     room: lease.room,
     release: () => lease.release()

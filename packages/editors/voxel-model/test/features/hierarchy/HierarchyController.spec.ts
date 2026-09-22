@@ -328,3 +328,39 @@ describe("HierarchyController.deleteSelected", () => {
     assert.deepEqual(harness.hierarchy.nodes(), []);
   });
 });
+
+describe("HierarchyController.attach", () => {
+  test("expands the folders of a document loaded before attaching", () => {
+    const fixture = createModelFixture();
+    const { document, blocks } = fixture;
+    const folderId = document.addFolder({ name: "Limbs" });
+    document.addBlock({
+      name: "Arm",
+      parentId: folderId
+    });
+
+    const harness = createHarness();
+    harness.controller.attach({
+      document,
+      blocks,
+      hierarchy: new ModelHierarchy({
+        document,
+        regions: {
+          create: () => undefined,
+          copy: () => undefined
+        },
+        poses: blocks
+      }),
+      presence: new PresenceStore()
+    });
+
+    const [folder] = harness.controller.nodes;
+
+    assert.equal(folder.label, "Limbs");
+    assert.deepEqual(
+      folder.children?.map((child) => child.label),
+      ["Arm"]
+    );
+    assert.deepEqual(harness.controller.expanded, [folderId]);
+  });
+});

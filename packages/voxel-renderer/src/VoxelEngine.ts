@@ -1,110 +1,66 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import * as THREE from "three";
+import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { BlockRegistry } from "./blocks/BlockRegistry.ts";
-import { applyBlockCommand } from "./blocks/applyBlockCommand.ts";
-import { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
-import type { VoxelCollider } from "./collision/VoxelCollider.ts";
-import { VoxelInspector } from "./inspector/index.ts";
-import { VoxelMeshBuilder } from "./mesh/index.ts";
-import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
-import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";
-import { ChunkRebuildQueue } from "./render/ChunkRebuildQueue.ts";
-import { ChunkViewport } from "./render/ChunkViewport.ts";
-import { ChunkVisibility } from "./render/ChunkVisibility.ts";
-import {
-  deserializeVoxelWorld,
-  serializeVoxelWorld
-} from "./serialization/world.ts";
+import type {
+  BlockDefinition,
+  BlockProperties,
+  ResolvedBlockDefinition
+} from "./blocks/BlockDefinition.ts";
+import type { BlockRegistry } from "./blocks/BlockRegistry.ts";
+import type { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
+import type { VoxelCommand } from "./commands.ts";
+import { VoxelDocument } from "./document/VoxelDocument.ts";
+import type { VoxelHistory } from "./history/VoxelHistory.ts";
+import type { VoxelInspector } from "./inspector/index.ts";
 import type { VoxelWorldJSON } from "./serialization/types.ts";
-import { TilesetManager } from "./tileset/TilesetManager.ts";
 import type { TilesetList } from "./tileset/TilesetList.ts";
+import type { TilesetManager } from "./tileset/TilesetManager.ts";
+import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type {
   TilesetDefinition,
   TilesetTexture
 } from "./tileset/types.ts";
-import type { TilesetSource } from "./tileset/loadTilesets.ts";
-import { VoxelWorld } from "./world/VoxelWorld.ts";
-import type { VoxelLayer } from "./world/VoxelLayer.ts";
-import type { VoxelChunk } from "./world/VoxelChunk.ts";
-import { ViewDistance } from "./world/ViewDistance.ts";
-import { VoxelHistory } from "./history/VoxelHistory.ts";
-import {
-  isVoxelTilesetCommand,
-  type VoxelBlockCommand,
-  type VoxelCommand,
-  type VoxelCommandOrigin
-} from "./commands.ts";
-import { applyVoxelCommand } from "./applyVoxelCommand.ts";
-import {
-  resolveBlockDefinition,
-  type BlockDefinition,
-  type BlockProperties,
-  type ResolvedBlockDefinition
-} from "./blocks/BlockDefinition.ts";
-import { BlockTextures } from "./blocks/BlockTextures.ts";
-import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
+import type { ViewDistance } from "./world/ViewDistance.ts";
+import type { VoxelWorld } from "./world/VoxelWorld.ts";
+import { VoxelView } from "./view/VoxelView.ts";
+import type { ViewDistancePolicy } from "./view/VoxelView.types.ts";
 import type {
   VoxelApplyOptions,
   VoxelEngineEvents,
-  VoxelEngineOptions,
-  VoxelLoadOptions,
-  ViewDistancePolicy
+  VoxelEngineLoadOptions,
+  VoxelEngineOptions
 } from "./VoxelEngine.types.ts";
 
-type BlockDefinedCommand = Extract<
-  VoxelBlockCommand,
-  { action: "block-defined"; }
->;
-
+/**
+ * Composes a `VoxelDocument` with the `VoxelView` drawn from it.
+ */
 export class VoxelEngine extends Emitter<VoxelEngineEvents> {
-  readonly root = new THREE.Group();
+  readonly document: VoxelDocument;
+  readonly view: VoxelView;
 
-  readonly world: VoxelWorld;
-  readonly blockRegistry: BlockRegistry;
-  readonly shapeRegistry: BlockShapeRegistry;
-  readonly tilesetManager: TilesetManager;
+  #pendingTilesets: TilesetSource[] = [];
 
-  readonly inspector: VoxelInspector;
-  readonly history: VoxelHistory;
-
-  focus: THREE.Vector3Like | null = null;
-  viewDistance: ViewDistance;
-  viewDistancePolicy: ViewDistancePolicy;
-
-  #meshBuilder: VoxelMeshBuilder;
-  #materials: ChunkMaterialCache;
-  #meshes: ChunkMeshStore;
-  #queue = new ChunkRebuildQueue();
-  #visibility: ChunkVisibility;
-  #collider: VoxelCollider | null;
-  #rebuildBudgetMs: number;
-  #logger: VoxelLogger;
+  #onDocumentLoaded = (): void => {
+    for (const { def, texture } of this.#pendingTilesets.splice(0)) {
+      this.view.tilesets.registerTexture(def.id, texture);
+    }
+  };
 
   constructor(
     options: VoxelEngineOptions = {}
   ) {
     const {
-      chunkSize = 16,
-      material = "lambert",
-      materialCustomizer,
-      layers = [],
-      collider,
-      blocks = [],
-      shapes = [],
-      alphaTest = 0.1,
-      logger = NOOP_LOGGER,
-      onCommand,
-      inspector,
-      tilesets,
-      greedy = false,
-      rebuildBudgetMs = 8,
-      viewDistance,
-      viewDistancePolicy = "hide",
+      document,
+      chunkSize,
+      layers,
+      blocks,
       history,
-      retainVertexData = false
+      onCommand,
+      logger,
+      tilesets,
+      ...viewOptions
     } = options;
     super();
 
@@ -112,467 +68,216 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       this.on("command", onCommand);
     }
 
-    this.root.name = "VoxelEngine";
-
-    this.#rebuildBudgetMs = rebuildBudgetMs;
-    this.viewDistance = viewDistance === undefined ?
-      ViewDistance.Unlimited :
-      ViewDistance.from(viewDistance);
-    this.viewDistancePolicy = viewDistancePolicy;
-    this.#logger = logger.child({
-      namespace: "VoxelEngine"
+    this.document = document ?? new VoxelDocument({
+      chunkSize,
+      layers,
+      blocks,
+      history,
+      logger,
+      tilesets: Array.from(tilesets ?? [], (source) => source.def)
     });
-
-    this.world = new VoxelWorld(chunkSize);
-    this.world.on(
+    this.document.on(
       "command",
-      (command) => this.#emitCommand(command, "local")
+      (command, context) => this.emit("command", command, context)
     );
-    layers.forEach((name) => this.world.addLayer(name));
-    this.history = new VoxelHistory(this.world, history);
-
-    this.blockRegistry = new BlockRegistry(blocks);
-    this.inspector = new VoxelInspector(
-      {
-        parent: this.root,
-        world: this.world,
-        blockRegistry: this.blockRegistry
-      },
-      inspector
-    );
-    this.shapeRegistry = BlockShapeRegistry
-      .createDefault();
-    shapes.forEach(
-      (shape) => this.shapeRegistry.register(shape)
-    );
-
-    this.tilesetManager = new TilesetManager();
-    this.#registerTilesets(tilesets);
-
-    this.#meshBuilder = new VoxelMeshBuilder({
-      world: this.world,
-      blockRegistry: this.blockRegistry,
-      shapeRegistry: this.shapeRegistry,
-      tilesetManager: this.tilesetManager,
-      alphaTest,
-      greedy
-    });
-
-    this.#collider = collider?.({
-      blockRegistry: this.blockRegistry,
-      shapeRegistry: this.shapeRegistry
-    }) ?? null;
-
-    this.#materials = new ChunkMaterialCache({
-      tilesetManager: this.tilesetManager,
-      type: material,
-      customizer: materialCustomizer,
-      tileWrapping: greedy
-    });
-    this.#meshes = new ChunkMeshStore({
-      root: this.root,
-      meshBuilder: this.#meshBuilder,
-      materials: this.#materials,
-      inspector: this.inspector,
-      collider: this.#collider,
-      logger: this.#logger,
-      retainVertexData
-    });
-    this.#visibility = new ChunkVisibility({
-      meshes: this.#meshes,
-      unload: (layer, chunk) => {
-        this.#removeChunk(
-          layer,
-          chunk,
-          { collider: false }
-        );
-        chunk.dirty = true;
-      }
+    this.document.on("loaded", this.#onDocumentLoaded);
+    this.view = new VoxelView(this.document, {
+      ...viewOptions,
+      logger,
+      tilesets
     });
   }
 
-  init(): void {
-    this.#rebuildAllChunks("init");
+  get root(): THREE.Group {
+    return this.view.root;
   }
 
-  tick(
-    _deltaTime: number
-  ): void {
-    for (const { layer, chunk } of this.world.getAllChunksToBeRemoved()) {
-      this.#removeChunk(layer, chunk);
-    }
-
-    const viewport = this.#viewport();
-
-    this.#visibility.update(viewport);
-    this.#enqueueDirtyChunks(viewport);
-    this.#queue.drain(
-      this.#rebuildBudgetMs,
-      (layer, chunk) => this.#meshes.rebuild(layer, chunk)
-    );
+  get world(): VoxelWorld {
+    return this.document.world;
   }
 
-  flush(): void {
-    this.#enqueueDirtyChunks(this.#viewport());
-    this.#queue.drain(
-      0,
-      (layer, chunk) => this.#meshes.rebuild(layer, chunk)
-    );
+  get blockRegistry(): BlockRegistry {
+    return this.document.blocks;
   }
 
-  get pendingRebuilds(): number {
-    return this.#queue.size;
+  get history(): VoxelHistory {
+    return this.document.history;
+  }
+
+  get tilesets(): TilesetList {
+    return this.document.tilesets;
+  }
+
+  get shapeRegistry(): BlockShapeRegistry {
+    return this.view.shapes;
+  }
+
+  get tilesetManager(): TilesetManager {
+    return this.view.tilesets;
+  }
+
+  get inspector(): VoxelInspector {
+    return this.view.inspector;
+  }
+
+  get focus(): THREE.Vector3Like | null {
+    return this.view.focus;
+  }
+
+  set focus(focus: THREE.Vector3Like | null) {
+    this.view.focus = focus;
+  }
+
+  get viewDistance(): ViewDistance {
+    return this.view.viewDistance;
+  }
+
+  set viewDistance(viewDistance: ViewDistance) {
+    this.view.viewDistance = viewDistance;
+  }
+
+  get viewDistancePolicy(): ViewDistancePolicy {
+    return this.view.viewDistancePolicy;
+  }
+
+  set viewDistancePolicy(policy: ViewDistancePolicy) {
+    this.view.viewDistancePolicy = policy;
   }
 
   get greedy(): boolean {
-    return this.#meshBuilder.greedy;
+    return this.view.greedy;
   }
 
   set greedy(value: boolean) {
-    if (value === this.#meshBuilder.greedy) {
-      return;
-    }
+    this.view.greedy = value;
+  }
 
-    this.#meshBuilder.greedy = value;
-    this.#materials.tileWrapping = value;
-    this.#materials.invalidate();
-    this.#clearChunkMeshes();
-    this.markAllChunksDirty("greedy");
+  get pendingRebuilds(): number {
+    return this.view.pendingRebuilds;
+  }
+
+  get defaultTileSize(): number | undefined {
+    return this.document.defaultTileSize;
+  }
+
+  set defaultTileSize(defaultTileSize: number) {
+    this.document.defaultTileSize = defaultTileSize;
+  }
+
+  init(): void {
+    this.view.init();
+  }
+
+  tick(
+    deltaTime: number
+  ): void {
+    this.view.tick(deltaTime);
+  }
+
+  flush(): void {
+    this.view.flush();
   }
 
   apply(
     command: VoxelCommand,
     options: VoxelApplyOptions = {}
   ): boolean {
-    const { origin = "local" } = options;
-
-    const resolved = command.action === "block-defined" ?
-      this.#blockDefined(command.block) :
-      command;
-    const applied = applyVoxelCommand(
-      {
-        world: this.world,
-        blocks: this.blockRegistry,
-        tilesets: this.tilesets
-      },
-      resolved,
-      this.#logger
-    );
-    if (!applied) {
-      return false;
-    }
-
-    if (isVoxelTilesetCommand(resolved)) {
-      this.#syncAtlases(resolved.action);
-    }
-    else if (resolved.action === "block-moved") {
-      this.#emitCommand({
-        ...resolved,
-        toIndex: this.blockRegistry.indexOf(resolved.blockId)
-      }, origin);
-
-      return true;
-    }
-    else if (
-      resolved.action === "block-defined" ||
-      resolved.action === "block-removed"
-    ) {
-      this.markAllChunksDirty(resolved.action);
-    }
-
-    this.#emitCommand(resolved, origin);
-
-    return true;
+    return this.document.apply(command, options);
   }
 
   defineBlock(
     def: BlockDefinition
   ): void {
-    this.defineBlocks([def]);
+    this.document.defineBlock(def);
   }
 
   defineBlocks(
     defs: Iterable<BlockDefinition>
   ): void {
-    const commands = Array.from(defs, (def) => this.#blockDefined(def));
-    if (commands.length === 0) {
-      return;
-    }
-
-    for (const command of commands) {
-      applyBlockCommand(this.blockRegistry, command);
-    }
-    this.markAllChunksDirty("block-defined");
-
-    for (const command of commands) {
-      this.#emitCommand(command, "local");
-    }
+    this.document.defineBlocks(defs);
   }
 
   blockAt(
     position: THREE.Vector3Like
   ): ResolvedBlockDefinition | undefined {
-    const entry = this.world.getVoxelAt(position);
-
-    return entry && this.blockRegistry.get(entry.blockId);
+    return this.document.blockAt(position);
   }
 
   blockPropertiesAt(
     position: THREE.Vector3Like
   ): BlockProperties | undefined {
-    const entry = this.world.getVoxelAt(position);
-
-    return entry && this.blockRegistry.propertiesOf(entry.blockId);
+    return this.document.blockPropertiesAt(position);
   }
 
   removeBlock(
     blockId: number
   ): boolean {
-    return this.apply({
-      action: "block-removed",
-      blockId
-    });
+    return this.document.removeBlock(blockId);
   }
 
   moveBlock(
     blockId: number,
     toIndex: number
   ): boolean {
-    return this.apply({
-      action: "block-moved",
-      blockId,
-      toIndex
-    });
-  }
-
-  get tilesets(): TilesetList {
-    return this.tilesetManager.tilesets;
-  }
-
-  get defaultTileSize(): number | undefined {
-    return this.tilesets.defaultTileSize;
-  }
-
-  set defaultTileSize(
-    defaultTileSize: number
-  ) {
-    this.apply({
-      action: "default-tile-size-updated",
-      defaultTileSize
-    });
-  }
-
-  loadTileset(
-    def: TilesetDefinition,
-    texture: TilesetTexture
-  ): void {
-    this.tilesets.add(def);
-    this.tilesetManager.registerTexture(def.id, texture);
-    this.#logger.debug(
-      `Loaded tileset '${def.id}' from '${def.src ?? def.asset?.id}'`
-    );
-
-    this.#materials.invalidate(def.id);
-    this.markAllChunksDirty("loadTileset");
+    return this.document.moveBlock(blockId, toIndex);
   }
 
   addTileset(
     tileset: TilesetDefinition
   ): boolean {
-    return this.apply({
-      action: "tileset-added",
-      tileset
-    });
+    return this.document.addTileset(tileset);
   }
 
   removeTileset(
     tilesetId: string
   ): boolean {
-    return this.apply({
-      action: "tileset-removed",
-      tilesetId
-    });
+    return this.document.removeTileset(tilesetId);
   }
 
   resizeTileset(
     tilesetId: string,
     tileSize: number
   ): boolean {
-    return this.apply({
-      action: "tileset-resized",
-      tilesetId,
-      tileSize
-    });
+    return this.document.resizeTileset(tilesetId, tileSize);
   }
 
-  save(): VoxelWorldJSON {
-    this.#logger.debug("Serializing world to JSON...");
-
-    return serializeVoxelWorld(this.world, {
-      tilesets: this.tilesets,
-      defaultTileSize: this.tilesets.defaultTileSize,
-      blocks: this.blockRegistry
-    });
-  }
-
-  load(
-    data: VoxelWorldJSON,
-    options: VoxelLoadOptions = {}
+  loadTileset(
+    def: TilesetDefinition,
+    texture: TilesetTexture
   ): void {
-    this.#clearChunkMeshes();
-    this.#logger.debug("Cleared existing chunk meshes while loading new world.");
-
-    this.world.silently(
-      () => deserializeVoxelWorld(data, this.world, {
-        blocks: this.blockRegistry,
-        tilesets: this.tilesets
-      })
-    );
-
-    this.tilesetManager.syncAtlases();
-    this.#registerTilesets(options.tilesets);
-    for (const tilesetDef of this.tilesets) {
-      if (!this.tilesetManager.get(tilesetDef.id)) {
-        this.#logger.warn(
-          `Tileset '${tilesetDef.id}' is not loaded; its faces are skipped until it is.`
-        );
-      }
-    }
-
-    this.#materials.invalidate();
-
-    if (options.mergeLayers) {
-      this.world.mergeAllLayers();
-    }
-
-    this.history.clear();
-    this.#rebuildAllChunks("load");
+    this.view.loadTileset(def, texture);
   }
 
   markAllChunksDirty(
     source?: string
   ): void {
-    this.#logger.debug("Marking all chunks dirty...", { source });
-
-    for (const { chunk } of this.world.getAllChunks()) {
-      chunk.dirty = true;
-    }
+    this.view.markAllChunksDirty(source);
   }
 
-  dispose(): void {
-    this.#logger.debug("Disposing VoxelEngine.");
-    this.#queue.clear();
-    this.#clearChunkMeshes();
-    this.inspector.dispose();
-    this.history.dispose();
-    this.#collider?.dispose();
-    this.#materials.dispose();
-    this.tilesetManager.dispose();
-    this.world.removeAllListeners();
-    this.removeAllListeners();
+  save(): VoxelWorldJSON {
+    return this.document.save();
   }
 
-  #blockDefined(
-    block: BlockDefinition
-  ): BlockDefinedCommand {
-    const resolved = resolveBlockDefinition(block);
-
-    return {
-      action: "block-defined",
-      block: BlockTextures.of(resolved)
-        .withTileset(this.tilesets.defaultTilesetId)
-        .applyTo(resolved)
-    };
-  }
-
-  #emitCommand(
-    command: VoxelCommand,
-    origin: VoxelCommandOrigin
+  load(
+    data: VoxelWorldJSON,
+    options: VoxelEngineLoadOptions = {}
   ): void {
-    this.emit("command", command, { origin });
-  }
+    const { tilesets, mergeLayers } = options;
+    const sources = Array.from(tilesets ?? []).filter(
+      ({ def }) => !this.view.tilesets.get(def.id)
+    );
 
-  #viewport(): ChunkViewport {
-    return new ChunkViewport({
-      focus: this.focus,
-      viewDistance: this.viewDistance,
-      policy: this.viewDistancePolicy,
-      chunkSize: this.world.chunkSize
+    this.#pendingTilesets = sources;
+    this.document.load(data, {
+      mergeLayers,
+      tilesets: sources.map(({ def }) => def)
     });
   }
 
-  #enqueueDirtyChunks(
-    viewport: ChunkViewport
-  ): void {
-    let grew = false;
-
-    for (const { layer, chunk } of this.world.getAllDirtyChunks()) {
-      if (!viewport.contains(layer, chunk, false)) {
-        continue;
-      }
-
-      chunk.dirty = false;
-      if (!layer.visible || layer.opacity === 0) {
-        if (layer.wasVisible) {
-          this.#removeChunk(layer, chunk);
-        }
-
-        continue;
-      }
-
-      grew = this.#queue.push(layer, chunk) || grew;
-    }
-
-    if (viewport.focus === null) {
-      return;
-    }
-
-    if (grew || this.#queue.focusMovedSinceSort(viewport)) {
-      this.#queue.sortBy(viewport);
-    }
-  }
-
-  #removeChunk(
-    layer: VoxelLayer,
-    chunk: VoxelChunk,
-    options: { collider?: boolean; } = {}
-  ): void {
-    this.#queue.cancel(chunk);
-    this.#meshes.remove(layer, chunk, options);
-  }
-
-  #clearChunkMeshes(): void {
-    this.#meshes.clear();
-    this.#visibility.reset();
-  }
-
-  #rebuildAllChunks(
-    source?: string
-  ): void {
-    this.#logger.debug("Rebuilding all chunks...", { source });
-
-    this.#queue.clear();
-    this.markAllChunksDirty(source);
-    this.flush();
-  }
-
-  #syncAtlases(
-    source: string
-  ): void {
-    for (const tilesetId of this.tilesetManager.syncAtlases()) {
-      this.#materials.invalidate(tilesetId);
-    }
-    this.markAllChunksDirty(source);
-  }
-
-  #registerTilesets(
-    sources: Iterable<TilesetSource> = []
-  ): void {
-    for (const { def, texture } of sources) {
-      if (!this.tilesetManager.get(def.id)) {
-        this.tilesets.add(def);
-        this.tilesetManager.registerTexture(def.id, texture);
-      }
-    }
+  dispose(): void {
+    this.document.off("loaded", this.#onDocumentLoaded);
+    this.view.dispose();
+    this.document.dispose();
+    this.removeAllListeners();
   }
 }

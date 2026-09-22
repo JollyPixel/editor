@@ -2,21 +2,21 @@
 import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { Room } from "@jolly-pixel/network/client";
 
-export interface SyncedModel<TModel> {
-  readonly model: TModel;
+export interface SyncedDocument<TDocument> {
+  readonly document: TDocument;
   readonly ready: Promise<void>;
   dispose(): void;
 }
 
-export interface AssetModelKind<
-  TModel,
+export interface AssetDocumentKind<
+  TDocument,
   TCommand = unknown,
   TMessage = unknown
 > {
   readonly kind: string;
-  createModel(
+  createDocument(
     room: Room<TCommand, TMessage>
-  ): SyncedModel<TModel>;
+  ): SyncedDocument<TDocument>;
 }
 
 export interface AssetRoomLease<
@@ -29,17 +29,17 @@ export interface AssetRoomLease<
 }
 
 export interface AssetLease<
-  TModel,
+  TDocument,
   TCommand = unknown,
   TMessage = unknown
 > extends AssetRoomLease<TCommand, TMessage> {
-  readonly model: TModel;
+  readonly document: TDocument;
   readonly ready: Promise<void>;
 }
 
-export interface AssetDependency<TModel = unknown> {
+export interface AssetDependency<TDocument = unknown> {
   readonly record: AssetRecordData;
   readonly room: Room;
-  readonly model: TModel;
+  readonly document: TDocument;
   readonly ready: Promise<void>;
 }

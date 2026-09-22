@@ -9,13 +9,13 @@ import {
   UVGeometryBinding
 } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
 import type { UVGhostPayload } from "@jolly-pixel/asset.pixel-art/network/client.ts";
-
-// Import Internal Dependencies
 import type {
-  BlockRegions,
   ModelChange,
   ModelDocument
-} from "../../model/index.ts";
+} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+
+// Import Internal Dependencies
+import type { BlockRegions } from "../../model/index.ts";
 import type {
   ModelBlock,
   ModelBlocks

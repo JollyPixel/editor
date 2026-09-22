@@ -8,7 +8,7 @@ Boots an editor class in a page: finds the target, opens the
 class VoxelModelEditor {
   static readonly accepts = VOXEL_MODEL_KIND;
   static readonly identity = { title: "Join voxel model" };
-  static readonly kinds = [MODEL_TEXTURE_KIND];
+  static readonly kinds = [TEXTURE_DOCUMENT_KIND];
 
   static async mount(context: EditorContext): Promise<VoxelModelEditor> {
     // ...
@@ -28,7 +28,7 @@ await mountStandalone(VoxelModelEditor);
 interface EditorDefinition<THandle extends EditorHandle> {
   readonly accepts: string;
   readonly identity: { title: string; };
-  readonly kinds: Iterable<AssetModelKind<unknown>>;
+  readonly kinds: Iterable<AssetDocumentKind<unknown>>;
   mount(context: EditorContext): Promise<THandle>;
 }
 
@@ -48,7 +48,7 @@ An editor class satisfies the definition with static members.
 |---|---|
 | `accepts` | the asset kind of the target; any other kind is refused |
 | `identity.title` | title of the username prompt |
-| `kinds` | dependency kinds the session leases with a synced [model](./AssetLeases.md#model-kinds) |
+| `kinds` | dependency kinds the session leases with a synced [document](./AssetLeases.md#document-kinds) |
 | `mount` | builds the editor from a connected session and returns its instance |
 
 `context.launch.target` is the target's `AssetId`. The session belongs to the
