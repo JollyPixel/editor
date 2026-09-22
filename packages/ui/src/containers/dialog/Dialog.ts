@@ -14,6 +14,7 @@ import {
 
 // Import Internal Dependencies
 import { dialogStyles } from "./Dialog.styles.ts";
+import { dismissDialog } from "./dialogDismiss.ts";
 import {
   resolveDialogHeader,
   type DialogHeader,
@@ -35,7 +36,7 @@ import type {
 import { applyAreaTone } from "../../theme/areaTone.ts";
 import { themeStyles } from "../../theme/styles/themeStyles.ts";
 import {
-  ambientThemeMode,
+  adoptAmbientTheme,
   type ResolvedThemeMode
 } from "../../theme/ambientTheme.ts";
 import { inputLayers } from "../../interaction/input/InputLayers.ts";
@@ -227,15 +228,30 @@ export class Dialog extends LitElement {
   }
 
   async showModal(): Promise<void> {
-    this.#syncInheritedTheme();
+    this.#inheritedTheme = adoptAmbientTheme(this, this.#inheritedTheme);
     await this.updateComplete;
     if (!this._dialog.open) {
       this._dialog.showModal();
       if (this.headingEditable) {
         this._dialog.focus();
       }
-      this.#releaseInputLayer ??= inputLayers.push();
+      this.#releaseInputLayer ??= inputLayers.push({
+        dismiss: () => this.#dismiss()
+      });
     }
+  }
+
+  #dismiss(): boolean {
+    return dismissDialog({
+      dismissible: this.dismissible,
+      settleConfirmation: (confirmed) => {
+        this.#settleInlineConfirm(confirmed);
+      },
+      cancel: () => {
+        emitContainerEvent(this, "jolly-cancel", undefined);
+      },
+      close: () => this.close()
+    });
   }
 
   async confirmInline(
@@ -290,24 +306,6 @@ export class Dialog extends LitElement {
     if (this._dialog?.open) {
       this._dialog.close(returnValue);
     }
-  }
-
-  #syncInheritedTheme(): void {
-    const configured = this.getAttribute("theme");
-    if (
-      configured !== null &&
-      configured !== this.#inheritedTheme
-    ) {
-      return;
-    }
-
-    const inherited = ambientThemeMode(this);
-    if (inherited === null) {
-      return;
-    }
-
-    this.#inheritedTheme = inherited;
-    this.setAttribute("theme", inherited);
   }
 
   #defaultAction(): HTMLElement | null {

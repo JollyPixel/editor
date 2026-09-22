@@ -37,6 +37,24 @@ export function ambientThemeMode(
   return inherited ?? documentThemeMode(element.ownerDocument);
 }
 
+export function adoptAmbientTheme(
+  element: Element,
+  adopted: ResolvedThemeMode | null
+): ResolvedThemeMode | null {
+  const configured = element.getAttribute("theme");
+  if (configured !== null && configured !== adopted) {
+    return adopted;
+  }
+
+  const inherited = ambientThemeMode(element);
+  if (inherited === null) {
+    return adopted;
+  }
+  element.setAttribute("theme", inherited);
+
+  return inherited;
+}
+
 export function documentThemeMode(
   doc: Document = document
 ): ResolvedThemeMode | null {

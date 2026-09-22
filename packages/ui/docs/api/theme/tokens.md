@@ -16,6 +16,9 @@ The root entry point exports these theme styles and helpers:
 - `ambientThemeMode(element)` resolves the theme an element that declares
   tokens of its own should adopt: the surrounding scope, then the page's own
   scope host, then `null` when the page picked no side.
+- `adoptAmbientTheme(element, adopted)` sets the element's `theme` attribute
+  to its ambient theme and returns that mode. Pass the returned value back on
+  the next call: a `theme` the author set is left alone.
 - `documentThemeMode(doc?)` resolves the page scope host's theme, for
   detached UI such as a floating window appended to the body.
 

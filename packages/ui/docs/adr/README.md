@@ -47,6 +47,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 | [0039](./0039-a-confirmation-inside-a-dialog-is-a-state.md) | A confirmation inside a dialog is a state of that dialog |
 | [0040](./0040-declarative-bindings-read-through.md) | A declarative binding reads through to its source and keeps no mirror |
 | [0041](./0041-metric-sources-are-structural.md) | A metric source is structural, and `unit` replaces an imported formatter |
+| [0042](./0042-open-layers-can-be-dismissed.md) | An open layer can be dismissed, and a layer that refuses wins |
 
 ## Scope boundary
 

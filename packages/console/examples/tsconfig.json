@@ -1,0 +1,16 @@
+{
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/examples.json"
+  ],
+  "compilerOptions": {
+    "paths": {
+      "@jolly-pixel/console": [
+        "../src/index.ts"
+      ],
+      "@jolly-pixel/console/element": [
+        "../src/element/index.ts"
+      ]
+    }
+  }
+}

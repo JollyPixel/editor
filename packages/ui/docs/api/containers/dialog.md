@@ -95,7 +95,9 @@ content, up to the width of the header. Such a dialog opens with the focus on
 itself rather than on the title, so showing one never arms a rename.
 
 While open, the dialog holds a layer on `inputLayers`, so a viewport keyboard
-guarded by it ignores the keys pressed inside the dialog. See
+guarded by it ignores the keys pressed inside the dialog. The layer can be
+dismissed through `inputLayers.dismissAll()`, which cancels the dialog the way
+Escape does unless `dismissible` is `false`. See
 [Interaction helpers](../interaction/README.md#input-layers).
 
 ## Motion

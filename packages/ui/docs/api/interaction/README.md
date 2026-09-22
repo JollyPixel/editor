@@ -21,11 +21,16 @@ is open, every `keydown` and `keypress` is claimed in a `window` capture
 listener, before any other listener runs. `keyup` is never claimed.
 
 ```ts
+interface InputLayerOptions {
+  dismiss?: () => boolean;
+}
+
 class InputLayers {
   constructor(options?: { target?: () => EventTarget });
 
   readonly open: boolean;
-  push(): () => void;
+  push(options?: InputLayerOptions): () => void;
+  dismissAll(): boolean;
   blocks(event: Event): boolean;
   onEngage(listener: () => void): () => void;
 }
@@ -38,9 +43,18 @@ const inputLayers: InputLayers;
 closed the last layer during that event's dispatch, as Escape does.
 `onEngage` listeners run when the first layer opens.
 
+`dismiss` closes the layer's owner and returns whether it did. `dismissAll()`
+calls it on every open layer, newest first, and returns `true` only when every
+layer closed. A layer pushed without `dismiss` refuses. A refusing layer stays
+open and the others still close. A caller that gets `false` should not open
+over it; see [ADR-0042](../../adr/0042-open-layers-can-be-dismissed.md).
+
 `jolly-dialog` holds a layer while it is open, and so does every popover
 driven by `PopoverController`, from `beforetoggle` to close. Hover flyouts
-such as `jolly-tool-button` do not.
+such as `jolly-tool-button` do not. A dialog dismisses like a cancel: a
+pending inline confirmation settles as `false`, `jolly-cancel` fires, and the
+dialog closes. With `dismissible` set to `false` it refuses. A popover
+dismisses by hiding.
 
 The shape matches the `KeyboardGuard` of `@jolly-pixel/controls`, which `ui`
 does not depend on. An editor wires the two together once:

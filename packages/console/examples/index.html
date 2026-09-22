@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>jolly-pixel/console example</title>
+</head>
+
+<body>
+  <jolly-scope theme="dark">
+    <main>
+      <h1>Console</h1>
+      <p>Press Ctrl+K (Cmd+K on macOS) to open the console.</p>
+      <p>
+        Brush size: <output id="brush-size"></output>,
+        shape: <output id="brush-shape"></output>,
+        ghost: <output id="brush-ghost"></output>
+      </p>
+      <jolly-button id="open-console">Open console</jolly-button>
+      <jolly-button id="open-dialog">Open dialog</jolly-button>
+      <jolly-button id="open-locked-dialog">Open locked dialog</jolly-button>
+      <input id="notes" type="text" aria-label="Notes" placeholder="Notes">
+    </main>
+
+    <jolly-dialog id="dialog" heading="Layer settings">
+      <p>A dismissible dialog.</p>
+      <jolly-button slot="actions" data-action="close">Close</jolly-button>
+    </jolly-dialog>
+
+    <jolly-dialog id="locked-dialog" heading="Choose a username">
+      <p>This dialog is not dismissible.</p>
+      <jolly-button slot="actions" data-action="close">Done</jolly-button>
+    </jolly-dialog>
+
+    <jolly-console></jolly-console>
+  </jolly-scope>
+  <script type="module" src="./main.ts"></script>
+</body>
+
+</html>
