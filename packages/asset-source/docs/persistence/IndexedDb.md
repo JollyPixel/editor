@@ -36,7 +36,5 @@ source.close(): void
 - `destroy` deletes the database. It waits for every open connection, so
   `close()` the source first.
 
-The source implements the shared [`AssetSource`](./AssetSource.md) storage
+The source implements the shared [`AssetSource`](../../README.md#assetsource) storage
 contract. It does not provide `isIgnored` or `watch`.
-
-Tests run it on `fake-indexeddb`, passing `new IDBFactory()` as `factory`.

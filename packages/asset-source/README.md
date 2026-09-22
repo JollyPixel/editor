@@ -6,6 +6,26 @@
   Physical asset storage
 </p>
 
+## 💡 About 
+
+An `AssetSource` stores bytes under root-relative POSIX paths. Its four common
+operations read, write, delete and list assets. Both built-in sources normalize
+path separators and reject paths that escape their root.
+
+```mermaid
+flowchart TB
+    Caller["Asset backend or other caller"]
+    Contract["AssetSource<br/>byte storage contract"]
+    FS["FilesystemAssetSource"]
+    Memory["MemoryAssetSource"]
+    IDB["IndexedDbAssetSource"]
+
+    Caller --> Contract
+    Contract --> FS
+    Contract --> Memory
+    Contract --> IDB
+```
+
 ## 💃 Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
@@ -32,18 +52,60 @@ await source.write(
 );
 ```
 
-`AssetSource` stores bytes under root-relative POSIX paths. Its four common
-operations read, write, delete and list assets. Both built-in sources normalize
-path separators and reject paths that escape their root.
-
 ## 📚 API
 
-- [`AssetSource`](./docs/AssetSource.md): shared storage contract and path rules
-- [`Memory`](./docs/Memory.md): isolated in-process storage
-- [`Filesystem`](./docs/Filesystem.md): persistent Node.js storage
-- [`IndexedDB`](./docs/IndexedDb.md): persistent browser storage
-- [`Utilities`](./docs/Utilities.md): path, state-directory and JSON helpers
-- [`Http`](./docs/Http.md): serving a source over HTTP
+### `AssetSource`
+
+All persistence sources implement this contract:
+
+```ts
+interface AssetSource {
+  // Rejects when the asset is missing.
+  read(path: string): Promise<Uint8Array>;
+  // Reports the current state; use writeIfAbsent for concurrent creation.
+  exists(path: string): Promise<boolean>;
+  write(path: string, data: Uint8Array): Promise<void>;
+  // Creates atomically; returns true if created, false if occupied.
+  writeIfAbsent(path: string, data: Uint8Array): Promise<boolean>;
+  delete(path: string): Promise<void>;
+  // Returns sorted paths, excluding .jollypixel/ state files.
+  list(): Promise<string[]>;
+  // Optional: reports whether a path is hidden from listing and watching.
+  isIgnored?(path: string): boolean;
+  // Optional: reports changed paths and returns a function to stop watching.
+  watch?(onChange: (path: string) => void): () => void;
+}
+```
+
+> [!IMPORTANT]
+> 
+> Paths are normalized to root-relative POSIX form. Empty, absolute and
+> root-escaping paths are rejected. State files remain available to direct
+> storage operations.
+
+### 📦 Persistence
+
+- [`MemoryAssetSource`](./docs/persistence/Memory.md) stores assets in one
+  in-process instance.
+- [`FilesystemAssetSource`](./docs/persistence/Filesystem.md) stores assets on
+  the local filesystem in Node.js.
+- [`IndexedDbAssetSource`](./docs/persistence/IndexedDb.md) stores assets in
+  browser IndexedDB across page reloads.
+
+> [!NOTE]
+> 
+> The filesystem source provides both optional methods. The memory and IndexedDB
+> sources provide neither. The browser-safe `core` entry exports the contract,
+> memory source and utilities without loading Node.js builtins.
+
+### ✂️ Utilities
+
+[Path, state-directory and JSON helpers](./docs/Utilities.md)
+
+### 🌍 HTTP serving
+
+[`createAssetStaticHandler`](./docs/http/Http.md) serves any `AssetSource` over
+HTTP as connect-style middleware.
 
 ## ✨ Contributors guide
 

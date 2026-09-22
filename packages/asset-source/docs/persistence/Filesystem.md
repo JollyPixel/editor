@@ -26,7 +26,6 @@ const source = new FilesystemAssetSource("./assets", {
 source is created: `list()` returns an empty array, and the first `write`
 creates the required directories.
 
-Writes are delegated to [`@openally/atomic-fs`](https://github.com/OpenAlly/npm-packages/tree/main/src/atomic-fs).
 A file is replaced through a temporary sibling that is flushed to disk and then
 renamed, so an interrupted write leaves the previous file readable. Temporary
 files are excluded from listings.
@@ -83,4 +82,4 @@ access the filesystem.
 operation outside `root`.
 
 The remaining read, write, delete and list behavior follows the shared
-[`AssetSource`](./AssetSource.md) contract.
+[`AssetSource`](../../README.md#assetsource) contract.

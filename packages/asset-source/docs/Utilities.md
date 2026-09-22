@@ -108,5 +108,5 @@ encodes the text as UTF-8 and writes it through the source.
 ## Filesystem defaults
 
 `DEFAULT_IGNORED_PATHS` contains the globs used by `FilesystemAssetSource`.
-See [Filesystem persistence](./Filesystem.md#ignored-paths) for the values and
+See [Filesystem persistence](./persistence/Filesystem.md#ignored-paths) for the values and
 matching behavior.
