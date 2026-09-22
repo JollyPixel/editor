@@ -95,7 +95,7 @@ option.
 ```ts
 { type: "catalog:create", requestId?, path, kind?, onConflict?, content: CatalogInlineContent }
 { type: "catalog:rename", requestId?, assetId, to }
-{ type: "catalog:delete", requestId?, assetId }
+{ type: "catalog:delete", requestId?, assetId, force? }
 { type: "catalog:export", requestId?, root? }
 { type: "catalog:plan", requestId?, content: CatalogInlineContent }
 { type: "catalog:import", requestId?, content: CatalogInlineContent, onConflict: "replace" | "keep" }
@@ -153,6 +153,23 @@ Without a rights table every member can run every command.
 Deleting an asset that is open in its own room sends that room a final notice.
 See [Deleted assets](./Rooms.md#deleted-assets).
 
+### Delete protection
+
+`catalog:delete` is refused when [`dependentsOf`](#dependency-edges) still
+lists a live asset, and the `reason` names up to three of them by path. A
+client that warned its user resends the command with `force: true`, which
+skips the check. The `catalogDeleteProtection` backend option turns the whole
+check off.
+
+A client warns without a round trip: `CatalogClient.dependentsOf` reads the
+same index. Deleting a folder is one command per asset, so a caller either
+deletes dependents first or forces each command.
+
+Only the room command is guarded.
+[`AssetWriter.remove`](./AssetWriter.md#update-rename-and-remove)
+and reconciliation stay free, so a file deleted from the source is still
+dropped from the catalog.
+
 ### Archives
 
 `catalog:export`, `catalog:plan` and `catalog:import` run
@@ -186,13 +203,17 @@ const assetId = await catalog.create("textures/new.pixelart", bytes, {
   onConflict: "suffix"
 });
 await catalog.rename(assetId, "textures/stone.pixelart");
-await catalog.remove(assetId);
+await catalog.remove(assetId, { force: true });
 ```
 
 ```ts
 interface CatalogCreateOptions {
   kind?: string;
   onConflict?: "reject" | "suffix";
+}
+
+interface CatalogRemoveOptions {
+  force?: boolean;
 }
 
 interface CatalogImportOptions {
@@ -205,7 +226,7 @@ interface CatalogImportOptions {
 | `ready` | Resolves on the first `catalog:snapshot`. |
 | `records()` / `record(assetId)` | Current `AssetRecordData`, kept in sync with `catalog:changed`. |
 | `create(path, content, options?)` | Resolves the created asset ID. `options` takes `kind` and `onConflict`. |
-| `rename(assetId, to)` / `remove(assetId)` | Resolve once applied. |
+| `rename(assetId, to)` / `remove(assetId, options?)` | Resolve once applied. `remove` takes `force` to bypass [delete protection](#delete-protection). |
 | `exportArchive(root?)` | Resolves the [archive](./Archive.md) bytes of `root`, or of the whole workspace. |
 | `planImport(archive)` | Resolves the `ImportPlan`, writing nothing. |
 | `importArchive(archive, { onConflict })` | Resolves the `ImportReport`. |

@@ -63,6 +63,12 @@ export interface AssetBackendOptions {
    * @default DEFAULT_CATALOG_MAX_CONTENT_BYTES
    */
   catalogMaxContentBytes?: number;
+  /**
+   * Refuse a catalog delete command aimed at an asset other assets still
+   * reference. Reconciliation is never refused.
+   * @default true
+   */
+  catalogDeleteProtection?: boolean;
   logger?: Logger;
 }
 
@@ -117,6 +123,7 @@ export async function createAssetBackend(
     watch = true,
     reconcileDebounce,
     catalogMaxContentBytes,
+    catalogDeleteProtection,
     logger = silentLogger()
   } = options;
 
@@ -244,7 +251,8 @@ export async function createAssetBackend(
       catalog,
       flush
     },
-    maxContentBytes: catalogMaxContentBytes
+    maxContentBytes: catalogMaxContentBytes,
+    deleteProtection: catalogDeleteProtection
   });
 
   if (watch) {

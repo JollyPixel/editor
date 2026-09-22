@@ -14,11 +14,6 @@ Install the package with pnpm:
 $ pnpm add @jolly-pixel/asset-server
 ```
 
-`@jolly-pixel/asset-server` runs on the server. Browser code should use
-[`@jolly-pixel/asset`](../asset/README.md) for asset records and catalogs.
-Physical storage providers are supplied by
-[`@jolly-pixel/asset-source`](../asset-source/README.md).
-
 ## 👀 Usage example
 
 ```ts
@@ -55,8 +50,6 @@ system events.
   live state and reconciliation
 - [`AssetBackend`](./docs/AssetBackend.md): setup, options and lifecycle
 - [`AssetWriter`](./docs/AssetWriter.md): create, update, rename and remove assets
-- [`AssetSource`](../asset-source/docs/AssetSource.md): in-memory and
-  filesystem storage
 - [`Asset kinds`](./docs/AssetKinds.md): custom state, serialization and editing rooms
 - [`Catalog`](./docs/Catalog.md): catalog projection, network messages and HTTP access
 - [`Archive`](./docs/Archive.md): ZIP export and import of an asset with its dependencies

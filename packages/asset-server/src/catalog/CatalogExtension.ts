@@ -31,11 +31,16 @@ import {
   type CatalogApplied,
   type CatalogChange,
   type CatalogCommand,
+  type CatalogDeleteCommand,
   type CatalogInlineContent,
   type CatalogLifecycleCommandType,
   type CatalogMessage
 } from "./client/protocol.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
+import {
+  AssetHasDependentsError,
+  type DependentAsset
+} from "./errors/AssetHasDependentsError.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
 import {
   actorOf,
@@ -61,6 +66,11 @@ export interface CatalogExtensionOptions {
   archive?: ArchiveBackend;
   id?: string;
   maxContentBytes?: number;
+  /**
+   * Refuse a delete command aimed at an asset other assets still reference.
+   * @default true
+   */
+  deleteProtection?: boolean;
 }
 
 export class CatalogExtension extends Extension<CatalogCommand> {
@@ -72,6 +82,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   #writer: AssetWriter;
   #archive: ArchiveBackend | null;
   #maxContentBytes: number;
+  #deleteProtection: boolean;
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
   #onChanged: (change: CatalogChange) => void;
@@ -86,6 +97,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#archive = options.archive ?? null;
     this.#maxContentBytes = options.maxContentBytes ??
       DEFAULT_CATALOG_MAX_CONTENT_BYTES;
+    this.#deleteProtection = options.deleteProtection ?? true;
     this.#onChanged = (change) => this.#broadcast?.broadcast({
       type: CATALOG_CHANGED,
       change
@@ -176,11 +188,17 @@ export class CatalogExtension extends Extension<CatalogCommand> {
           to: command.to,
           actor
         }));
-      case CATALOG_DELETE:
+      case CATALOG_DELETE: {
+        const deletable = this.#deletable(command);
+        if (!deletable.ok) {
+          return deletable;
+        }
+
         return applied(command.type, await this.#writer.remove({
           assetId: command.assetId,
           actor
         }));
+      }
       case CATALOG_EXPORT: {
         const backend = this.#archiveBackend();
         if (!backend.ok) {
@@ -241,6 +259,34 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         });
       }
     }
+  }
+
+  #deletable(
+    command: CatalogDeleteCommand
+  ): Result<void, AssetHasDependentsError> {
+    if (!this.#deleteProtection || command.force === true) {
+      return Ok(undefined);
+    }
+
+    const dependents = this.#dependents(command.assetId);
+
+    return dependents.length === 0 ?
+      Ok(undefined) :
+      Err(new AssetHasDependentsError(command.assetId, dependents));
+  }
+
+  #dependents(
+    assetId: string
+  ): DependentAsset[] {
+    return this.#projection
+      .dependentsOf(assetId)
+      .flatMap((dependentId) => {
+        const record = this.#projection.record(dependentId);
+
+        return record === undefined ?
+          [] :
+          [{ id: dependentId, path: record.source }];
+      });
   }
 
   #archiveBackend(): Result<ArchiveBackend, Error> {
