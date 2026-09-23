@@ -1,5 +1,20 @@
 # @jolly-pixel/network
 
+## 4.0.0
+
+### Major Changes
+
+- [#743](https://github.com/JollyPixel/editor/pull/743) [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242) Thanks [@fraxken](https://github.com/fraxken)! - Move password authentication and worker proxies to `network/node`; register workers as extension instances.
+  Support browser timers and snapshot mutable asset inputs before asynchronous writes.
+
+### Minor Changes
+
+- [#760](https://github.com/JollyPixel/editor/pull/760) [`8d2c08f`](https://github.com/JollyPixel/editor/commit/8d2c08f484a8ab7b1ef055c6d45c8267f7c6fc6d) Thanks [@fraxken](https://github.com/fraxken)! - Add `ChannelTransport` and `ChannelTransportHost` (`@jolly-pixel/network/transport/channel.ts`) to relay client connections over a `BroadcastChannel`, `MessagePort` or worker.
+
+- [#743](https://github.com/JollyPixel/editor/pull/743) [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242) Thanks [@fraxken](https://github.com/fraxken)! - The asset back-end can run inside a browser page: `LoopbackTransport` and `ClientOptions.socket` connect a `Client` to an in-process `Server`.
+  New Node-free entries `@jolly-pixel/asset-source/core` and `@jolly-pixel/asset-server/backend`.
+  Content hashes use WebCrypto: `writeData()` is async and `AssetWriter` applies writes one at a time, in call order.
+
 ## 3.0.0
 
 ### Major Changes

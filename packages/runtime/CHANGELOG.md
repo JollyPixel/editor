@@ -1,5 +1,29 @@
 # @jolly-pixel/runtime
 
+## 5.2.0
+
+### Minor Changes
+
+- [#765](https://github.com/JollyPixel/editor/pull/765) [`f92e245`](https://github.com/JollyPixel/editor/commit/f92e2453211663158b04606da2008ba25cc35529) Thanks [@fraxken](https://github.com/fraxken)! - Add `Runtime.nextFrame()`/`frames(count)`, `VoxelEngine.whenIdle()`, `projectToClient()` in three,
+  and `textureClientPosition()` on the pixel-draw canvas viewport (typed `CanvasViewport`).
+
+- [#748](https://github.com/JollyPixel/editor/pull/748) [`54c361c`](https://github.com/JollyPixel/editor/commit/54c361c02b8f7ddf26cf71e0453f8f224566cffc) Thanks [@fraxken](https://github.com/fraxken)! - Own performance metrics in the runtime: a subsystem describes what it counts
+  through the structural `MetricSource`, `runtime.metrics` registers it on one
+  recorder, and `mountMetricsPanel()` builds a dockable readout from them.
+
+- [#709](https://github.com/JollyPixel/editor/pull/709) [`3b91a42`](https://github.com/JollyPixel/editor/commit/3b91a42d560941a003b777f57060fe18972dc4c8) Thanks [@fraxken](https://github.com/fraxken)! - Move the camera view helper into the runtime as a `viewHelper` option that follows the lowest-depth camera.
+  The engine drops `createViewHelper`, `OrbitFlyCamera` drops its `viewHelper` option, and `Renderer` exposes `renderComponents`.
+
+### Patch Changes
+
+- [#707](https://github.com/JollyPixel/editor/pull/707) [`0bbc913`](https://github.com/JollyPixel/editor/commit/0bbc91316d992bd0e23609df326632efd1cc7d82) Thanks [@fraxken](https://github.com/fraxken)! - Fix double actor destruction, leaked component and listener teardowns, playlists that stopped after one track, squared master volume, `**/a/b` actor paths, and non-looping sprite animations.
+  Breaking: components override `onDestroy()` (with `addTeardown()`), `ThreeRenderer.create(canvas, options)` and `draw(scene)` drop `sceneManager`/render modes/`onDraw`, `GlobalAudio` drops observers, and `SpriteRenderer.texture` is an asset reference.
+- Updated dependencies [[`9e4b7a1`](https://github.com/JollyPixel/editor/commit/9e4b7a16d5348458027d06eafc68baf51ca4f519), [`f7b4ec2`](https://github.com/JollyPixel/editor/commit/f7b4ec2fea370220bba2d2ca68f0cb570ed80fcf), [`956a942`](https://github.com/JollyPixel/editor/commit/956a942bec3670dc9cb0a9714a3abe2843330688), [`566c46f`](https://github.com/JollyPixel/editor/commit/566c46f6a0ecab46dd1950f747a1fdb3e764d46a), [`0bbc913`](https://github.com/JollyPixel/editor/commit/0bbc91316d992bd0e23609df326632efd1cc7d82), [`60d0df3`](https://github.com/JollyPixel/editor/commit/60d0df3699f65c5dc38bff6a2458db1c2f05bee0), [`267f172`](https://github.com/JollyPixel/editor/commit/267f172136cd77d1b16b67e3734ff068b65d2fb0), [`54c361c`](https://github.com/JollyPixel/editor/commit/54c361c02b8f7ddf26cf71e0453f8f224566cffc), [`3b91a42`](https://github.com/JollyPixel/editor/commit/3b91a42d560941a003b777f57060fe18972dc4c8), [`94c4da8`](https://github.com/JollyPixel/editor/commit/94c4da893f24adfbf59d1031d3c3731c9b4ff567), [`d6e1b5a`](https://github.com/JollyPixel/editor/commit/d6e1b5a976b4571d78051502df570e85d5b50cce), [`2bb278b`](https://github.com/JollyPixel/editor/commit/2bb278b095453aa8bf1e66c4d5fb36b98a9647cb), [`4ae4d68`](https://github.com/JollyPixel/editor/commit/4ae4d683df8328d306023260732c1efc787acd98)]:
+  - @jolly-pixel/asset@2.1.0
+  - @jolly-pixel/ui@3.1.0
+  - @jolly-pixel/engine@6.0.0
+  - @jolly-pixel/loop@1.0.0
+
 ## 5.1.0
 
 ### Minor Changes

@@ -1,5 +1,67 @@
 # @jolly-pixel/voxel.renderer
 
+## 6.0.0
+
+### Major Changes
+
+- [#725](https://github.com/JollyPixel/editor/pull/725) [`9e4b7a1`](https://github.com/JollyPixel/editor/commit/9e4b7a16d5348458027d06eafc68baf51ca4f519) Thanks [@fraxken](https://github.com/fraxken)! - Track asset dependency edges: `AssetKindHandler.dependencies`, a `dependencies` field on write events, a live catalog edge index with boot backfill, and a Vite `launch` option.
+  `TilesetDefinition.src` is now optional; an asset-backed tileset names its pixels with `asset` instead.
+  `PixelDocument` now owns edits, history replay and remote sync, so it runs headless and several `PixelArtCanvas` can share one through the new `document` option.
+
+- [#712](https://github.com/JollyPixel/editor/pull/712) [`b2f9c84`](https://github.com/JollyPixel/editor/commit/b2f9c84847533ea970260c7f86a4b41fc0084023) Thanks [@fraxken](https://github.com/fraxken)! - Rename `BlockDefinition.cullSelfFaces` to `cullCoveredFaces`, now `false` by
+  default for mask and blend blocks. When `false`, a double-sided block also
+  keeps the faces an opaque neighbour covers.
+
+- [#717](https://github.com/JollyPixel/editor/pull/717) [`9ddfefa`](https://github.com/JollyPixel/editor/commit/9ddfefa06a3f0d3b9e334184d08c611056b87290) Thanks [@fraxken](https://github.com/fraxken)! - Faster meshing and leaner chunk geometry: meshes sit at their chunk origin with chunk-local positions, draw through a shared quad index, and greedy merges faces by appearance.
+  Edits now dirty every layer's chunks, and Rapier colliders merge cubes into cuboids, size slabs correctly and build trimeshes from shape faces.
+
+### Minor Changes
+
+- [#765](https://github.com/JollyPixel/editor/pull/765) [`f92e245`](https://github.com/JollyPixel/editor/commit/f92e2453211663158b04606da2008ba25cc35529) Thanks [@fraxken](https://github.com/fraxken)! - Add `Runtime.nextFrame()`/`frames(count)`, `VoxelEngine.whenIdle()`, `projectToClient()` in three,
+  and `textureClientPosition()` on the pixel-draw canvas viewport (typed `CanvasViewport`).
+
+- [#731](https://github.com/JollyPixel/editor/pull/731) [`9b5942f`](https://github.com/JollyPixel/editor/commit/9b5942ff723494fab75046415884b5e700a58072) Thanks [@fraxken](https://github.com/fraxken)! - Draw blocks of a removed tileset with a red missing-tileset texture (`MISSING_TILESET_ID`, `TilesetManager.resolve()`) instead of hiding them.
+  Blocks whose declared tileset has no texture yet no longer cull their neighbours, which left holes in the mesh.
+
+- [#719](https://github.com/JollyPixel/editor/pull/719) [`3fa7340`](https://github.com/JollyPixel/editor/commit/3fa7340724862619d60dc63df0564a2e87333ae2) Thanks [@fraxken](https://github.com/fraxken)! - A ramp slope with its own tile now samples its true `√2` length (16 by 23 texels on 16-texel tiles) through the new `TileSpan`; shared `defaultTexture` tiles stay square.
+  `UVSlotGeometryTemplate` accepts a per-slot `width` and `height`.
+
+- [#748](https://github.com/JollyPixel/editor/pull/748) [`54c361c`](https://github.com/JollyPixel/editor/commit/54c361c02b8f7ddf26cf71e0453f8f224566cffc) Thanks [@fraxken](https://github.com/fraxken)! - Own performance metrics in the runtime: a subsystem describes what it counts
+  through the structural `MetricSource`, `runtime.metrics` registers it on one
+  recorder, and `mountMetricsPanel()` builds a dockable readout from them.
+
+- [#716](https://github.com/JollyPixel/editor/pull/716) [`3419b6f`](https://github.com/JollyPixel/editor/commit/3419b6ff79ca0afd1bbcbb3b4e27c90669347e3e) Thanks [@fraxken](https://github.com/fraxken)! - `buildShapeGeometry()` accepts an optional `VoxelTransform` and returns the geometry oriented
+  like the chunk mesher places it (rotation, flips, flipY winding).
+
+- [#716](https://github.com/JollyPixel/editor/pull/716) [`b096df1`](https://github.com/JollyPixel/editor/commit/b096df1a835aed2b8c2f0dc1eb24d5f9940bbf5d) Thanks [@fraxken](https://github.com/fraxken)! - Multisample the `VoxelTransparencyRenderer` offscreen targets, so scenes drawn
+  through the compositor are antialiased again. The new `samples` option
+  (default 4) sets the MSAA level; 0 disables it.
+
+- [#721](https://github.com/JollyPixel/editor/pull/721) [`710542c`](https://github.com/JollyPixel/editor/commit/710542c574f803f405bec2b5d9270b5f4e83898d) Thanks [@fraxken](https://github.com/fraxken)! - Add 90° UV rotation: `UVMap.rotate()` turns stacked and unfolded regions whole and free slots one at a time (`R`/`Shift+R`), stored as `rotation` on the slot geometry, and `UVMap.move()` now keeps the region's size.
+  `ResolvedTileRef.rotation` turns a tile inside its face, and odd turns swap the footprint.
+
+- [#713](https://github.com/JollyPixel/editor/pull/713) [`4ae4d68`](https://github.com/JollyPixel/editor/commit/4ae4d683df8328d306023260732c1efc787acd98) Thanks [@fraxken](https://github.com/fraxken)! - Add optional `VoxelHistory` undo/redo of voxel edits (`engine.history`, disabled by default, 10 entries),
+  with `begin()`/`commit()` grouping and replay that keeps cells a peer changed since.
+
+- [#755](https://github.com/JollyPixel/editor/pull/755) [`32471c1`](https://github.com/JollyPixel/editor/commit/32471c172bcc5104c27b8a9b26f1c956f23a360a) Thanks [@fraxken](https://github.com/fraxken)! - Split `VoxelEngine` into a headless `VoxelDocument` (voxels, blocks, tileset
+  declarations, history, command stream) and a `VoxelView` that draws it.
+  `VoxelEngine` now composes the two and forwards their members, and accepts an
+  existing `document` so a synced one can be adopted.
+
+### Patch Changes
+
+- [#712](https://github.com/JollyPixel/editor/pull/712) [`3921dca`](https://github.com/JollyPixel/editor/commit/3921dca419e4b559c19a01bb4a03f03265e0234e) Thanks [@fraxken](https://github.com/fraxken)! - Rebuild the `VoxelTransparencyRenderer` resolve pass when the renderer's tone
+  mapping or output color space changes, so runtime switches take effect.
+
+- [#739](https://github.com/JollyPixel/editor/pull/739) [`f7b4ec2`](https://github.com/JollyPixel/editor/commit/f7b4ec2fea370220bba2d2ca68f0cb570ed80fcf) Thanks [@fraxken](https://github.com/fraxken)! - `VoxelTransparencyRenderer` waits for the canvas size to settle before
+  reallocating its offscreen targets, removing the FPS drop of a live resize.
+
+- [#718](https://github.com/JollyPixel/editor/pull/718) [`766b301`](https://github.com/JollyPixel/editor/commit/766b301fde0dcc651588e8bcefc5bf52707c5780) Thanks [@fraxken](https://github.com/fraxken)! - Cull partial boundary faces, such as ramp and stair sides, that an opaque neighbour covers entirely.
+  Fix `flipX`/`flipZ` voxels culling the wrong sides and rendering their faces with an inverted winding.
+- Updated dependencies [[`9e4b7a1`](https://github.com/JollyPixel/editor/commit/9e4b7a16d5348458027d06eafc68baf51ca4f519), [`0bbc913`](https://github.com/JollyPixel/editor/commit/0bbc91316d992bd0e23609df326632efd1cc7d82), [`3b91a42`](https://github.com/JollyPixel/editor/commit/3b91a42d560941a003b777f57060fe18972dc4c8)]:
+  - @jolly-pixel/asset@2.1.0
+  - @jolly-pixel/engine@6.0.0
+
 ## 5.0.0
 
 ### Major Changes

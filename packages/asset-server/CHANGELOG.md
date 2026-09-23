@@ -1,5 +1,45 @@
 # @jolly-pixel/asset-server
 
+## 4.0.0
+
+### Major Changes
+
+- [#727](https://github.com/JollyPixel/editor/pull/727) [`3f115d7`](https://github.com/JollyPixel/editor/commit/3f115d726114f00b281f74d42182fd37b3502d44) Thanks [@fraxken](https://github.com/fraxken)! - `AssetKindHandler` replaces `match` + `contentTypes` with required `extensions` (extension to content type, multi-dot allowed); `match` now only narrows the claim.
+  `textureAssetHandler`/`binaryAssetHandler` are renamed `textureAssetKind`/`binaryAssetKind`, and `resolveContentType` picks the longest matching extension.
+
+### Minor Changes
+
+- [#760](https://github.com/JollyPixel/editor/pull/760) [`8d2c08f`](https://github.com/JollyPixel/editor/commit/8d2c08f484a8ab7b1ef055c6d45c8267f7c6fc6d) Thanks [@fraxken](https://github.com/fraxken)! - Add archive import as copy with new IDs and optional asset-kind reference rebinding.
+  Report incompatible kind collisions during planning so callers can offer copy.
+  Add `CatalogProjection.dependenciesFirst` and `DependencyIndex.dependenciesFirst`.
+
+- [#744](https://github.com/JollyPixel/editor/pull/744) [`711429b`](https://github.com/JollyPixel/editor/commit/711429bbf691c24a26f2b53d843e0eb63a098e41) Thanks [@fraxken](https://github.com/fraxken)! - Add ZIP asset archives: `exportAssetArchive`, `readAssetArchive`, `planAssetImport` and `importAssetArchive`.
+  The catalog room gains `catalog:export`, `catalog:plan` and `catalog:import`, with matching `CatalogClient` methods.
+  Fix `AssetProjector` dropping an event absorbed while a slower write of the same asset was in flight.
+
+- [#725](https://github.com/JollyPixel/editor/pull/725) [`9e4b7a1`](https://github.com/JollyPixel/editor/commit/9e4b7a16d5348458027d06eafc68baf51ca4f519) Thanks [@fraxken](https://github.com/fraxken)! - Track asset dependency edges: `AssetKindHandler.dependencies`, a `dependencies` field on write events, a live catalog edge index with boot backfill, and a Vite `launch` option.
+  `TilesetDefinition.src` is now optional; an asset-backed tileset names its pixels with `asset` instead.
+  `PixelDocument` now owns edits, history replay and remote sync, so it runs headless and several `PixelArtCanvas` can share one through the new `document` option.
+
+- [#754](https://github.com/JollyPixel/editor/pull/754) [`0537d74`](https://github.com/JollyPixel/editor/commit/0537d742cf409edd25c18a52547a9c92e1d1a673) Thanks [@fraxken](https://github.com/fraxken)! - Refuse `catalog:delete` while another asset still references the target, naming the dependents in the rejection reason.
+  A caller that warned its user resends with `force: true`; `catalogDeleteProtection: false` turns the check off, and `AssetWriter.remove` and reconciliation stay unguarded.
+
+- [#760](https://github.com/JollyPixel/editor/pull/760) [`737f586`](https://github.com/JollyPixel/editor/commit/737f586ad7ab8ff8caa129f781fb3f657f76df64) Thanks [@fraxken](https://github.com/fraxken)! - Export `CatalogSessionArchive` from the browser catalog client for Blob-based archive operations.
+  Allow callers to disable import while keeping export and planning available.
+
+- [#743](https://github.com/JollyPixel/editor/pull/743) [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242) Thanks [@fraxken](https://github.com/fraxken)! - The asset back-end can run inside a browser page: `LoopbackTransport` and `ClientOptions.socket` connect a `Client` to an in-process `Server`.
+  New Node-free entries `@jolly-pixel/asset-source/core` and `@jolly-pixel/asset-server/backend`.
+  Content hashes use WebCrypto: `writeData()` is async and `AssetWriter` applies writes one at a time, in call order.
+
+### Patch Changes
+
+- [#743](https://github.com/JollyPixel/editor/pull/743) [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242) Thanks [@fraxken](https://github.com/fraxken)! - Move password authentication and worker proxies to `network/node`; register workers as extension instances.
+  Support browser timers and snapshot mutable asset inputs before asynchronous writes.
+- Updated dependencies [[`9e4b7a1`](https://github.com/JollyPixel/editor/commit/9e4b7a16d5348458027d06eafc68baf51ca4f519), [`3f115d7`](https://github.com/JollyPixel/editor/commit/3f115d726114f00b281f74d42182fd37b3502d44), [`2c0dcdf`](https://github.com/JollyPixel/editor/commit/2c0dcdfdd4990c315ee873f9eb2eaabe34155dd1), [`8d2c08f`](https://github.com/JollyPixel/editor/commit/8d2c08f484a8ab7b1ef055c6d45c8267f7c6fc6d), [`711429b`](https://github.com/JollyPixel/editor/commit/711429bbf691c24a26f2b53d843e0eb63a098e41), [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242), [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242)]:
+  - @jolly-pixel/asset@2.1.0
+  - @jolly-pixel/asset-source@2.1.0
+  - @jolly-pixel/network@4.0.0
+
 ## 3.0.0
 
 ### Major Changes
