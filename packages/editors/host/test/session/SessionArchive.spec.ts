@@ -22,13 +22,14 @@ import {
 import { ArchiveImportDisabledError } from "#src/session/errors/ArchiveImportDisabledError.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { EditorSession } from "#src/session/EditorSession.ts";
-import { OfflineWorkspace } from "#src/session/OfflineWorkspace.ts";
+import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 
 // CONSTANTS
 const kPlan: ImportPlan = {
   live: [],
   fresh: [],
-  sharedDependents: []
+  sharedDependents: [],
+  incompatible: []
 };
 const kReport: ImportReport = {
   created: [],

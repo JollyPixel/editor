@@ -1,9 +1,12 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
 import {
+  CatalogUnavailableError,
+  LaunchNotFoundError,
   mountStandalone,
   type MountStandaloneOptions
 } from "@jolly-pixel/editor.host";
+import { showChoice } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -23,19 +26,66 @@ declare global {
 
 async function offlineOptions(): Promise<MountStandaloneOptions> {
   const { openOfflineWorkspace } = await import("./boot/offlineWorkspace.ts");
-  const workspace = await openOfflineWorkspace();
+  const name = new URLSearchParams(location.search).get("workspace") ??
+    "default";
+  const workspace = await openOfflineWorkspace(name);
 
   return {
-    sources: workspace.launchSources(VoxelMapEditor.accepts),
+    sources: await workspace.launchSources(VoxelMapEditor.accepts),
     connect: () => workspace.connect()
   };
 }
 
 async function boot(): Promise<void> {
-  await mountStandalone(VoxelMapEditor, {
-    ...(VOXEL_MAP_PARAMS.read().offline ? await offlineOptions() : {}),
-    debugHandle: kDebugHandle
-  });
+  if (
+    VOXEL_MAP_PARAMS.read().offline ||
+    import.meta.env.MODE === "static"
+  ) {
+    await mountStandalone(VoxelMapEditor, {
+      ...await offlineOptions(),
+      debugHandle: kDebugHandle
+    });
+
+    return;
+  }
+
+  for (;;) {
+    try {
+      await mountStandalone(VoxelMapEditor, {
+        debugHandle: kDebugHandle
+      });
+
+      return;
+    }
+    catch (error) {
+      if (
+        !(error instanceof CatalogUnavailableError) &&
+        !(error instanceof LaunchNotFoundError)
+      ) {
+        throw error;
+      }
+      const choice = await showChoice<"retry" | "offline">({
+        title: "Connection unavailable",
+        message: "The asset server is unreachable.",
+        actions: [
+          { value: "retry", label: "Retry" },
+          { value: "offline", label: "Open offline workspace" }
+        ],
+        focus: "retry"
+      });
+      if (choice === "offline") {
+        await mountStandalone(VoxelMapEditor, {
+          ...await offlineOptions(),
+          debugHandle: kDebugHandle
+        });
+
+        return;
+      }
+      if (choice === null) {
+        throw error;
+      }
+    }
+  }
 }
 
 void boot();

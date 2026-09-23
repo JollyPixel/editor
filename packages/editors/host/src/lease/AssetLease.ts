@@ -5,6 +5,7 @@ import type { Room } from "@jolly-pixel/network/client";
 export interface SyncedDocument<TDocument> {
   readonly document: TDocument;
   readonly ready: Promise<void>;
+
   dispose(): void;
 }
 
@@ -14,6 +15,7 @@ export interface AssetDocumentKind<
   TMessage = unknown
 > {
   readonly kind: string;
+
   createDocument(
     room: Room<TCommand, TMessage>
   ): SyncedDocument<TDocument>;
@@ -25,6 +27,7 @@ export interface AssetRoomLease<
 > {
   readonly record: AssetRecordData;
   readonly room: Room<TCommand, TMessage>;
+
   release(): void;
 }
 
@@ -37,7 +40,9 @@ export interface AssetLease<
   readonly ready: Promise<void>;
 }
 
-export interface AssetDependency<TDocument = unknown> {
+export interface AssetDependency<
+  TDocument = unknown
+> {
   readonly record: AssetRecordData;
   readonly room: Room;
   readonly document: TDocument;

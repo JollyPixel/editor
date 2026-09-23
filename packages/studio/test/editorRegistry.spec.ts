@@ -9,7 +9,8 @@ import assert from "node:assert/strict";
 import {
   EDITOR_PAGES,
   editorPageFor,
-  editorPageUrl
+  editorPageUrl,
+  offlineEditorPages
 } from "../src/editors/editorRegistry.ts";
 
 describe("editorPageFor", () => {
@@ -37,6 +38,18 @@ describe("editorPageUrl", () => {
     assert.equal(
       editorPageUrl("/editors/voxel-map/", "map a&b"),
       "/editors/voxel-map/?target=map+a%26b"
+    );
+  });
+
+  test("keeps offline workspace parameters before the target", () => {
+    const pages = offlineEditorPages("studio");
+    const page = editorPageFor("voxelmodel", pages);
+    assert.ok(page);
+    const url = editorPageUrl(page, "model");
+
+    assert.equal(
+      url,
+      "/editors/voxel-model/?offline=&workspace=studio&target=model"
     );
   });
 });

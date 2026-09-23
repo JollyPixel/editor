@@ -1,4 +1,11 @@
+// Import Third-party Dependencies
+import * as z from "zod";
+
+// CONSTANTS
 const kSuspensions = new WeakMap<Suspendable, Suspension>();
+const kHoverChangeDetailSchema = z.object({
+  hovering: z.boolean()
+});
 
 interface Suspension {
   readonly enabled: boolean;
@@ -19,12 +26,10 @@ function isHoverChange(
   if (!(event instanceof CustomEvent)) {
     return false;
   }
-  const detail: unknown = event.detail;
 
-  return typeof detail === "object" &&
-    detail !== null &&
-    "hovering" in detail &&
-    typeof detail.hovering === "boolean";
+  return kHoverChangeDetailSchema.safeParse(
+    event.detail
+  ).success;
 }
 
 export function suspendOnHover(
@@ -38,6 +43,7 @@ export function suspendOnHover(
     if (suspension === undefined) {
       return;
     }
+
     suspension.holders--;
     if (suspension.holders === 0) {
       suspendable.enabled = suspension.enabled;
@@ -52,6 +58,7 @@ export function suspendOnHover(
     if (!isHoverChange(hoverEvent)) {
       return;
     }
+
     if (!hoverEvent.detail.hovering) {
       resume();
     }
@@ -61,14 +68,23 @@ export function suspendOnHover(
         holders: 0
       };
       suspension.holders++;
-      kSuspensions.set(suspendable, suspension);
+      kSuspensions.set(
+        suspendable,
+        suspension
+      );
       suspendable.enabled = false;
     }
   }
-  target.addEventListener(event, listener);
+  target.addEventListener(
+    event,
+    listener
+  );
 
   return () => {
-    target.removeEventListener(event, listener);
+    target.removeEventListener(
+      event,
+      listener
+    );
     resume();
   };
 }

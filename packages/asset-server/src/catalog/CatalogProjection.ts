@@ -138,6 +138,12 @@ export class CatalogProjection extends Emitter<
     return this.#dependencies.closureOf(assetId);
   }
 
+  dependenciesFirst(
+    starts: Iterable<AssetReferenceData>
+  ): AssetReferenceData[] {
+    return this.#dependencies.dependenciesFirst(starts);
+  }
+
   unindexed(): IterableIterator<string> {
     return this.#unindexed.values();
   }

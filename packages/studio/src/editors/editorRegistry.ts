@@ -22,5 +22,21 @@ export function editorPageUrl(
 ): string {
   const query = new URLSearchParams({ [kTargetParam]: target });
 
-  return `${page}?${query}`;
+  return `${page}${page.includes("?") ? "&" : "?"}${query}`;
+}
+
+export function offlineEditorPages(
+  workspace: string
+): ReadonlyMap<string, string> {
+  const query = new URLSearchParams({
+    offline: "",
+    workspace
+  });
+
+  return new Map(
+    [...EDITOR_PAGES].map(([kind, page]) => [
+      kind,
+      `${page}?${query}`
+    ])
+  );
 }

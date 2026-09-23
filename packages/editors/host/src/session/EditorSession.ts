@@ -3,7 +3,8 @@ import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   CATALOG_ROOM,
-  CatalogClient
+  CatalogClient,
+  CatalogSessionArchive
 } from "@jolly-pixel/asset-server/catalog/client";
 import * as network from "@jolly-pixel/network/client";
 import {
@@ -13,25 +14,24 @@ import {
 import { toPeerMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { EditorLaunch } from "../launch/EditorLaunch.ts";
+import type { EditorLaunch } from "../launch/index.ts";
 import {
   AssetLeases,
   type RoomSource
-} from "./AssetLeases.ts";
+} from "../lease/AssetLeases.ts";
 import type {
   AssetDependency,
   AssetLease,
   AssetDocumentKind,
   AssetRoomLease
-} from "./AssetLease.ts";
-import {
-  CatalogSessionArchive,
-  type SessionArchive
-} from "./SessionArchive.ts";
-import type { SessionWorkspace } from "./SessionWorkspace.ts";
+} from "../lease/AssetLease.ts";
+import type { SessionArchive } from "./SessionArchive.ts";
+import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
+import { CatalogUnavailableError } from "./errors/CatalogUnavailableError.ts";
 
 // CONSTANTS
 export const IDENTITY_STORAGE_KEY = "jolly-pixel:username";
+const kCatalogTimeoutMs = 5_000;
 
 export type EditorSessionEvents = {
   "dependency-added": (dependency: AssetDependency) => void;
@@ -60,6 +60,7 @@ export interface EditorSessionConnectOptions extends EditorSessionTarget {
   identity: PeerIdentity;
   client: EditorSessionClient;
   workspace?: SessionWorkspace;
+  catalogTimeoutMs?: number;
 }
 
 export interface EditorSessionParts extends EditorSessionConnectOptions {
@@ -85,7 +86,8 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       identity,
       client: new network.Client({
         profile: toPeerMetadata(identity)
-      })
+      }),
+      catalogTimeoutMs: kCatalogTimeoutMs
     });
   }
 
@@ -93,11 +95,21 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     options: EditorSessionConnectOptions
   ): Promise<EditorSession> {
     const { client } = options;
-    const catalog = new CatalogClient(client.room(CATALOG_ROOM));
+    const catalog = new CatalogClient(
+      client.room(CATALOG_ROOM)
+    );
 
     let session: EditorSession;
     try {
-      await catalog.ready;
+      if (options.catalogTimeoutMs === undefined) {
+        await catalog.ready;
+      }
+      else {
+        await catalogReadyWithin(
+          catalog.ready,
+          options.catalogTimeoutMs
+        );
+      }
       session = new EditorSession({
         ...options,
         catalog
@@ -113,7 +125,10 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     try {
       await Promise.all([
         session.targetReady,
-        ...Array.from(session.dependencies(), (lease) => lease.ready)
+        ...Array.from(
+          session.dependencies(),
+          (lease) => lease.ready
+        )
       ]);
     }
     catch (error) {
@@ -146,6 +161,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     options: EditorSessionParts
   ) {
     super();
+
     this.identity = options.identity;
     this.catalog = options.catalog;
     this.workspace = options.workspace ?? null;
@@ -166,7 +182,10 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       const assetId = options.launch.target.value;
       const kind = this.#kinds.get(options.accepts);
       if (kind === undefined) {
-        this.target = this.assets.openRoom(options.accepts, assetId);
+        this.target = this.assets.openRoom(
+          options.accepts,
+          assetId
+        );
         this.targetReady = Promise.resolve();
       }
       else {
@@ -181,6 +200,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
 
       throw error;
     }
+
     this.catalog.on("change", this.#onCatalogChange);
     this.catalog.on("dependencies", this.#onCatalogChange);
   }
@@ -188,7 +208,10 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   targetLease<TDocument, TCommand, TMessage>(
     kind: AssetDocumentKind<TDocument, TCommand, TMessage>
   ): AssetLease<TDocument, TCommand, TMessage> {
-    return this.assets.open(kind, this.target.record.id);
+    return this.assets.open(
+      kind,
+      this.target.record.id
+    );
   }
 
   * dependencies(): IterableIterator<AssetDependency> {
@@ -221,6 +244,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     if (this.#disposed) {
       return;
     }
+
     const wanted = new Map<string, AssetDocumentKind<unknown>>();
     for (const reference of this.catalog.closureOf(this.target.record.id)) {
       const record = this.catalog.record(reference.id);
@@ -288,5 +312,26 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
         this.emit("dependency-added", dependency.view);
       }
     }
+  }
+}
+
+async function catalogReadyWithin(
+  ready: Promise<void>,
+  timeoutMs: number
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      ready,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new CatalogUnavailableError()),
+          timeoutMs
+        );
+      })
+    ]);
+  }
+  finally {
+    clearTimeout(timer);
   }
 }

@@ -16,8 +16,9 @@ import { CATALOG_ROOM } from "@jolly-pixel/asset-server/catalog/client";
 
 // Import Internal Dependencies
 import { EditorSession } from "#src/session/EditorSession.ts";
+import { CatalogUnavailableError } from "#src/session/errors/CatalogUnavailableError.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import type { AssetDocumentKind } from "#src/session/AssetLease.ts";
+import type { AssetDocumentKind } from "#src/lease/AssetLease.ts";
 import {
   FakeClient,
   changedMessage,
@@ -92,6 +93,22 @@ async function connect(
 }
 
 describe("EditorSession.connect", () => {
+  test("closes a client when the catalog never becomes ready", async() => {
+    const client = new FakeClient();
+    await assert.rejects(
+      EditorSession.connect({
+        launch: new EditorLaunch(new AssetId("map")),
+        identity: kIdentity,
+        client,
+        kinds: [],
+        accepts: "voxelmap",
+        catalogTimeoutMs: 1
+      }),
+      CatalogUnavailableError
+    );
+    assert.strictEqual(client.destroyed, true);
+  });
+
   test("releases acquired models when a later factory throws", async() => {
     const kind = fakeDocumentKind("pixelart");
     const failure = new Error("factory failed");

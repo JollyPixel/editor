@@ -22,7 +22,7 @@ import type {
 import type {
   AssetDocumentKind,
   SyncedDocument
-} from "#src/session/AssetLease.ts";
+} from "#src/lease/AssetLease.ts";
 
 export class FakeRoom extends Emitter<RoomEventMap> implements Room {
   readonly id: string;

@@ -72,6 +72,20 @@ export function voxelModelAssetKind(
       return state.dependencies();
     },
 
+    rebind(
+      state: VoxelModelState,
+      idMap: ReadonlyMap<string, string>
+    ): void {
+      const document = state.toJSON();
+      if (document.texture !== undefined) {
+        document.texture = {
+          ...document.texture,
+          id: idMap.get(document.texture.id) ?? document.texture.id
+        };
+      }
+      state.load(document);
+    },
+
     commands: {
       eventType: VOXEL_MODEL_COMMAND,
       protocol: voxelModelCommandProtocol,

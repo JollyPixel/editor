@@ -72,28 +72,3 @@ export type ArchiveBackend = Pick<
   AssetBackend,
   "source" | "kinds" | "writer" | "catalog" | "flush"
 >;
-
-export type ImportConflictPolicy = "replace" | "keep";
-
-export interface SharedDependents extends AssetArchiveEntry {
-  readonly dependents: readonly AssetArchiveEntry[];
-}
-
-export interface ImportPlan {
-  readonly root?: AssetReferenceData;
-  readonly live: readonly AssetArchiveEntry[];
-  readonly fresh: readonly AssetArchiveEntry[];
-  readonly sharedDependents: readonly SharedDependents[];
-}
-
-export interface ImportFailure extends AssetArchiveEntry {
-  readonly reason: string;
-}
-
-export interface ImportReport {
-  readonly root?: AssetReferenceData;
-  readonly created: readonly AssetArchiveEntry[];
-  readonly replaced: readonly AssetArchiveEntry[];
-  readonly kept: readonly AssetArchiveEntry[];
-  readonly failed: readonly ImportFailure[];
-}

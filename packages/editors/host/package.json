@@ -10,8 +10,8 @@
       "default": "./dist/index.js"
     },
     "./offline": {
-      "types": "./dist/session/OfflineWorkspace.d.ts",
-      "default": "./dist/session/OfflineWorkspace.js"
+      "types": "./dist/workspace/index.d.ts",
+      "default": "./dist/workspace/index.js"
     }
   },
   "imports": {
@@ -53,7 +53,8 @@
     "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@openally/emitt": "1.1.0",
-    "three": "0.186.0"
+    "three": "0.186.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "fake-indexeddb": "6.2.5"

@@ -19,8 +19,13 @@ export class EditorRuntime {
     canvas: RuntimeCanvasTarget,
     options?: RuntimeOptions
   ): Promise<EditorRuntime> {
-    const runtime = await Runtime.create(canvas, options);
-    runtime.world.input.keyboard.addGuard(inputLayers);
+    const runtime = await Runtime.create(
+      canvas,
+      options
+    );
+    runtime.world.input.keyboard.addGuard(
+      inputLayers
+    );
 
     return new EditorRuntime(runtime);
   }

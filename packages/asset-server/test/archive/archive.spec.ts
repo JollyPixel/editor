@@ -379,7 +379,7 @@ describe("planAssetImport", () => {
     assert.strictEqual(plan.val.assetId, "a");
   });
 
-  test("rejects a live id of another kind", async() => {
+  test("reports a live id of another kind", async() => {
     await using workspace = await archiveWorkspace();
     await workspace.backend.writer.create({
       path: "a.png",
@@ -394,12 +394,109 @@ describe("planAssetImport", () => {
 
     const plan = planAssetImport(workspace.backend, archive);
 
-    assert.ok(plan.val instanceof AssetArchiveError);
-    assert.strictEqual(plan.val.rejection, "kind-mismatch");
+    assert.strictEqual(plan.ok, true);
+    assert.deepEqual(plan.unwrap().incompatible, [
+      { id: "a", kind: "binary", path: "a.png" }
+    ]);
   });
 });
 
 describe("importAssetArchive", () => {
+  test("keep and replace reject an existing id of another kind", async() => {
+    await using workspace = await archiveWorkspace();
+    await workspace.backend.writer.create({
+      path: "a.png",
+      data: bytes("png"),
+      assetId: "a",
+      actor: ARCHIVE_ACTOR
+    });
+    const archive = readAssetArchive(zipArchive(
+      { version: 1, assets: [{ id: "a", kind: "link", path: "a.link" }] },
+      { "a.link": linkContent() }
+    )).unwrap();
+
+    for (const onConflict of ["keep", "replace"] as const) {
+      const result = await importAssetArchive(workspace.backend, archive, {
+        onConflict,
+        actor: ARCHIVE_ACTOR
+      });
+
+      assert.ok(result.val instanceof AssetArchiveError);
+      assert.strictEqual(result.val.rejection, "kind-mismatch");
+      assert.strictEqual(result.val.assetId, "a");
+    }
+    assert.strictEqual(workspace.backend.catalog.size, 1);
+  });
+
+  test("copy accepts an existing id of another kind", async() => {
+    await using workspace = await archiveWorkspace();
+    await workspace.backend.writer.create({
+      path: "a.png",
+      data: bytes("png"),
+      assetId: "a",
+      actor: ARCHIVE_ACTOR
+    });
+    const archive = readAssetArchive(zipArchive(
+      { version: 1, assets: [{ id: "a", kind: "link", path: "a.link" }] },
+      { "a.link": linkContent() }
+    )).unwrap();
+
+    const report = (await importAssetArchive(workspace.backend, archive, {
+      onConflict: "copy",
+      actor: ARCHIVE_ACTOR
+    })).unwrap();
+
+    assert.strictEqual(workspace.backend.catalog.record("a")?.kind, "binary");
+    assert.strictEqual(report.created[0].kind, "link");
+    assert.notStrictEqual(report.created[0].id, "a");
+  });
+
+  test("copy rejects a kind that cannot rebind internal references", async() => {
+    await using workspace = await archiveWorkspace();
+    const target = await workspace.link("target.link");
+    const map = await workspace.link("map.link", target);
+    const archive = await exported(workspace, map);
+    delete workspace.backend.kinds.get("link").rebind;
+
+    const result = await importAssetArchive(workspace.backend, archive, {
+      onConflict: "copy",
+      actor: ARCHIVE_ACTOR
+    });
+
+    assert.strictEqual(result.ok, false);
+    assert.strictEqual(workspace.backend.catalog.size, 2);
+  });
+
+  test("copies the archive graph with new ids and leaves originals", async() => {
+    await using workspace = await archiveWorkspace();
+    const texture = await workspace.link("texture.link");
+    const map = await workspace.link("map.link", texture);
+    const archive = await exported(workspace, map);
+
+    const report = (await importAssetArchive(workspace.backend, archive, {
+      onConflict: "copy",
+      actor: ARCHIVE_ACTOR
+    })).unwrap();
+    const [copiedTexture, copiedMap] = report.created;
+
+    assert.notStrictEqual(copiedTexture.id, texture);
+    assert.notStrictEqual(copiedMap.id, map);
+    assert.deepEqual(report.root, { id: copiedMap.id, kind: "link" });
+    assert.deepEqual(
+      workspace.backend.catalog.dependenciesOf(copiedMap.id),
+      [linkReference(copiedTexture.id)]
+    );
+    assert.deepEqual(
+      workspace.backend.catalog.dependenciesOf(map),
+      [linkReference(texture)]
+    );
+    assert.strictEqual(
+      text(await workspace.source.read(copiedMap.path)),
+      copiedTexture.id
+    );
+    assert.deepEqual(report.failed, []);
+  });
+
   test("creates every asset under its archived id", async() => {
     await using origin = await archiveWorkspace();
     const texture = await origin.link("textures/block.link");

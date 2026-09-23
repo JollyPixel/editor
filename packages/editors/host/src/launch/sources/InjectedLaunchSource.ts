@@ -15,8 +15,12 @@ export class InjectedLaunchSource implements LaunchSource {
   }
 
   read(): Promise<EditorLaunch | undefined> {
+    const elementText = document.getElementById(
+      this.elementId
+    )?.textContent;
+
     return Promise.resolve(
-      this.#parse(document.getElementById(this.elementId)?.textContent)
+      this.#parse(elementText)
     );
   }
 
@@ -24,7 +28,9 @@ export class InjectedLaunchSource implements LaunchSource {
     text: string | null | undefined
   ): EditorLaunch | undefined {
     try {
-      return EditorLaunch.parse(JSON.parse(text ?? "null"));
+      return EditorLaunch.parse(
+        JSON.parse(text ?? "null")
+      );
     }
     catch {
       return undefined;

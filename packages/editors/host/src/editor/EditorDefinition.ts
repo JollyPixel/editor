@@ -1,7 +1,11 @@
 // Import Internal Dependencies
-import type { EditorLaunch } from "../launch/EditorLaunch.ts";
-import type { ShellChannel } from "../launch/ShellChannel.ts";
-import type { AssetDocumentKind } from "../session/AssetLease.ts";
+import type {
+  EditorLaunch,
+  ShellChannel
+} from "../launch/index.ts";
+import type {
+  AssetDocumentKind
+} from "../lease/AssetLease.ts";
 import type {
   EditorIdentityOptions,
   EditorSession
@@ -23,5 +27,8 @@ export interface EditorDefinition<
   readonly accepts: string;
   readonly identity: EditorIdentityOptions;
   readonly kinds: Iterable<AssetDocumentKind<unknown>>;
-  mount(context: EditorContext): Promise<THandle>;
+
+  mount(
+    context: EditorContext
+  ): Promise<THandle>;
 }

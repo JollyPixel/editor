@@ -92,6 +92,9 @@ describe("suspendOnHover", () => {
 
     target.dispatchEvent(new Event(kHoverEvent));
     target.dispatchEvent(new CustomEvent(kHoverEvent, { detail: "over" }));
+    target.dispatchEvent(new CustomEvent(kHoverEvent, {
+      detail: { hovering: "true" }
+    }));
 
     assert.equal(keyboard.enabled, true);
   });

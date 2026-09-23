@@ -53,8 +53,10 @@ import type {
 } from "../archive/AssetArchive.ts";
 import { exportAssetArchive } from "../archive/exportAssetArchive.ts";
 import { readAssetArchive } from "../archive/readAssetArchive.ts";
-import { planAssetImport } from "../archive/planAssetImport.ts";
-import { importAssetArchive } from "../archive/importAssetArchive.ts";
+import {
+  importAssetArchive,
+  planAssetImport
+} from "../archive/import/importAssetArchive.ts";
 import { asError } from "../utils/asError.ts";
 
 // CONSTANTS

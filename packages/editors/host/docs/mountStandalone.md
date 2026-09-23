@@ -93,10 +93,10 @@ asset content and ids survive a reload.
 ```ts
 import { mountStandalone } from "@jolly-pixel/editor.host";
 
-const { OfflineWorkspace } = await import("@jolly-pixel/editor.host/offline");
-const workspace = await OfflineWorkspace.open({
+const { openSharedTabWorkspace } =
+  await import("@jolly-pixel/editor.host/offline");
+const workspace = await openSharedTabWorkspace({
   handlers: [voxelMapAssetKind({ chunkSize: 16 })],
-  storage: "indexeddb",
   seed: {
     "maps/scratch.voxelmap.json": {
       id: crypto.randomUUID(),
@@ -107,7 +107,7 @@ const workspace = await OfflineWorkspace.open({
 });
 
 await mountStandalone(VoxelMapEditor, {
-  sources: workspace.launchSources(VoxelMapEditor.accepts),
+  sources: await workspace.launchSources(VoxelMapEditor.accepts),
   connect: () => workspace.connect()
 });
 ```
@@ -115,12 +115,18 @@ await mountStandalone(VoxelMapEditor, {
 | Member | Role |
 |---|---|
 | `OfflineWorkspace.open({ handlers, seed?, storage?, name? })` | opens the storage, seeds it when empty, then starts the back-end and its server |
-| `connect()` | a guest identity, a loopback client and the workspace; destroying the client closes the workspace |
-| `launchSources(accepts)` | `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind |
-| `storage` / `persistent` | the storage the workspace got, which may not be the one asked for |
-| `backend` | the `AssetBackend`, for a host needing its handles |
-| `reset()` | closes the workspace and deletes its database |
+| `openSharedTabWorkspace({ handlers, seed?, name? })` | opens the persistent workspace in one tab and connects other tabs to it over BroadcastChannel; resolves a `StandaloneWorkspace` |
+| `StandaloneWorkspace` | the members below that every workspace shares: `persistent`, `connect()`, `launchSources()`, `reset()`, `close()` |
+| `connect()` | a guest identity, a local or BroadcastChannel client and the workspace |
+| `launchSources(accepts)` | a known `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind; await it for a shared follower |
+| `storage` / `persistent` | direct workspaces expose both; shared workspaces expose `persistent` |
+| `backend` | the `AssetBackend` on a direct `OfflineWorkspace` |
+| `reset()` | closes the owner workspace and deletes its database; unavailable in a follower tab |
 | `close()` | flushes, then stops the server and the back-end; safe to call twice |
+
+Several clients can share one workspace. Destroying one client leaves the others
+connected; destroying the last closes the workspace. Once closing starts,
+`connect()` refuses new connections.
 
 `storage` defaults to `"memory"`. `name` defaults to `"default"` and selects
 the `jolly-workspace:<name>` database. `seed` is a seed map or a function
@@ -131,9 +137,10 @@ On `"indexeddb"`:
 
 - Give seeded assets random ids. A fixed id would make the first map of every
   user the same asset, and their archives would collide on import.
-- One tab owns a workspace, through a Web Lock on the database name. A second
-  tab gets `"memory"` storage: `persistent` is `false` and the editor should
-  say so.
+- `openSharedTabWorkspace` uses the Web Lock to select one database owner.
+  Other tabs use the owner's catalog and asset rooms over BroadcastChannel.
+  When Web Locks are unavailable it returns a memory workspace.
+- Direct `OfflineWorkspace.open` still falls back to memory in a second tab.
 - Snapshots are taken after 500 ms of quiet and at most every 5 s, and pending
   ones are flushed when the page is hidden. A browser does not guarantee
   writes started while the page goes away, so the short delay is what bounds
@@ -208,6 +215,7 @@ editor hides what only a shell can do.
 | Error | From | Thrown when |
 |---|---|---|
 | `LaunchNotFoundError` | this package | no source answers |
+| `CatalogUnavailableError` | this package | the catalog does not answer before the connection timeout |
 | `AssetNotFoundError` | `@jolly-pixel/asset` | the catalog has no record for the target |
 | `AssetKindMismatchError` | `@jolly-pixel/asset` | the target's kind is not `accepts` |
 

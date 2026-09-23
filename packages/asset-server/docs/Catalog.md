@@ -35,6 +35,7 @@ The projection also indexes which assets reference which. Edges come from the
 projection.dependenciesOf(assetId): readonly AssetReferenceData[];
 projection.dependentsOf(assetId): readonly string[];
 projection.closureOf(assetId): AssetReferenceData[];
+projection.dependenciesFirst(starts: Iterable<AssetReferenceData>): AssetReferenceData[];
 projection.dependencies(): DependencyMap;
 projection.unindexed(): IterableIterator<string>;
 ```
@@ -45,6 +46,8 @@ projection.unindexed(): IterableIterator<string>;
   assets that reference it.
 - `closureOf` walks edges transitively, breadth first. Each asset is listed
   once, cycles terminate, and the root is never listed.
+- `dependenciesFirst` lists `starts` and everything they reach, each asset
+  once and after its dependencies. Archive export writes assets in this order.
 - `unindexed()` lists assets whose newest write predates edges.
 
 `createAssetBackend` backfills these assets once at boot: each one whose kind
@@ -98,7 +101,7 @@ option.
 { type: "catalog:delete", requestId?, assetId, force? }
 { type: "catalog:export", requestId?, root? }
 { type: "catalog:plan", requestId?, content: CatalogInlineContent }
-{ type: "catalog:import", requestId?, content: CatalogInlineContent, onConflict: "replace" | "keep" }
+{ type: "catalog:import", requestId?, content: CatalogInlineContent, onConflict: "replace" | "keep" | "copy" }
 ```
 
 `content` is the `{ type: "inline", encoding: "base64", data }` shape built by
@@ -192,6 +195,7 @@ constants and `CatalogClient`, with no Node.js dependency.
 ```ts
 import {
   CatalogClient,
+  CatalogSessionArchive,
   catalogRoom
 } from "@jolly-pixel/asset-server/catalog/client";
 
@@ -217,7 +221,7 @@ interface CatalogRemoveOptions {
 }
 
 interface CatalogImportOptions {
-  onConflict: "replace" | "keep";
+  onConflict: "replace" | "keep" | "copy";
 }
 ```
 
@@ -241,6 +245,22 @@ The client joins the room on construction and sends requests only after
 type). `catalogRoom(client)` opens the `CATALOG_ROOM` room on a
 `@jolly-pixel/network/client` `Client`; any object matching `CatalogRoom`
 works.
+
+`CatalogSessionArchive` adapts those archive methods for browser files. It
+exports a ZIP `Blob` and accepts a `Blob` for planning and importing. Pass
+`canImport` when constructing it; an import with `canImport: false` rejects
+with `ArchiveImportDisabledError`, while export and planning remain available.
+
+```ts
+const archive = new CatalogSessionArchive({ catalog, canImport: true });
+const blob = await archive.export(assetId);
+const plan = await archive.plan(file);
+const report = await archive.import(file, { onConflict: "keep" });
+```
+
+The browser client entry also exports `ARCHIVE_MIME_TYPE`, `ArchiveCatalog`
+and `CatalogSessionArchiveOptions`. The caller decides whether import is
+available; the adapter does not inspect workspace persistence.
 
 ## HTTP handler
 

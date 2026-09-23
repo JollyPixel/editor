@@ -77,4 +77,9 @@ export interface AssetKindHandler<
   dependencies?(
     state: TState
   ): readonly AssetReferenceData[];
+
+  rebind?(
+    state: TState,
+    idMap: ReadonlyMap<string, string>
+  ): void;
 }

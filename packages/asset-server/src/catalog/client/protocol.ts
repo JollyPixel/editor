@@ -13,7 +13,7 @@ import type {
   ImportConflictPolicy,
   ImportPlan,
   ImportReport
-} from "../../archive/AssetArchive.ts";
+} from "../../archive/import/AssetImport.ts";
 
 // CONSTANTS
 export const CATALOG_ROOM = "asset-catalog";

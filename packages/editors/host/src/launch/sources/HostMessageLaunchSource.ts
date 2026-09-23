@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import * as z from "zod";
+
 // Import Internal Dependencies
 import { EditorLaunch } from "../EditorLaunch.ts";
 import {
@@ -11,6 +14,9 @@ import type { LaunchSource } from "./LaunchSource.ts";
 export const LAUNCH_MESSAGE_TYPE = "jolly-launch";
 const kDefaultTimeout = 1000;
 const kAnyOrigin = "*";
+const kLaunchMessageSchema = z.object({
+  type: z.literal(LAUNCH_MESSAGE_TYPE)
+});
 
 export interface HostMessageLaunchSourceOptions {
   timeout?: number;
@@ -27,11 +33,17 @@ export class HostMessageLaunchSource implements LaunchSource {
 
   async read(): Promise<EditorLaunch | undefined> {
     const { parent } = window;
-    if (parent === null || parent === window) {
+    if (
+      parent === null ||
+      parent === window
+    ) {
       return Promise.resolve(undefined);
     }
 
-    const { promise, resolve } = Promise.withResolvers<EditorLaunch | undefined>();
+    const {
+      promise,
+      resolve
+    } = Promise.withResolvers<EditorLaunch | undefined>();
     const listening = new AbortController();
     const timer = setTimeout(
       () => resolve(undefined),
@@ -49,7 +61,10 @@ export class HostMessageLaunchSource implements LaunchSource {
         resolve(launch);
       }
     }, { signal: listening.signal });
-    parent.postMessage({ type: READY_MESSAGE_TYPE }, kAnyOrigin);
+    parent.postMessage(
+      { type: READY_MESSAGE_TYPE },
+      kAnyOrigin
+    );
 
     return promise.finally(() => {
       clearTimeout(timer);
@@ -62,14 +77,12 @@ function parseLaunchMessage(
   data: unknown,
   shell: ShellChannelOptions
 ): EditorLaunch | undefined {
-  if (
-    typeof data !== "object" ||
-    data === null ||
-    !("type" in data) ||
-    data.type !== LAUNCH_MESSAGE_TYPE
-  ) {
+  if (!kLaunchMessageSchema.safeParse(data).success) {
     return undefined;
   }
 
-  return EditorLaunch.parse(data, new ShellChannel(shell));
+  return EditorLaunch.parse(
+    data,
+    new ShellChannel(shell)
+  );
 }

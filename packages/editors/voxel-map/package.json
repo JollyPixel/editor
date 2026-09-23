@@ -7,6 +7,7 @@
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
     "build": "pnpm run typecheck && vite build",
+    "build:static": "pnpm run typecheck && vite build --mode static",
     "dev": "vite",
     "dev:e2e": "vite --mode e2e",
     "preview": "vite preview",

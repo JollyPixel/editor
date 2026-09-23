@@ -1,9 +1,18 @@
 // Import Third-party Dependencies
 import { AssetId } from "@jolly-pixel/asset";
+import * as z from "zod";
 
 // CONSTANTS
 export const READY_MESSAGE_TYPE = "jolly-ready";
 export const SHELL_MESSAGE_TYPE = "jolly-shell";
+const kShellCommandSchema = z.object({
+  type: z.literal(SHELL_MESSAGE_TYPE),
+  command: z.literal("open-asset"),
+  target: z.string()
+});
+const kReadyMessageSchema = z.object({
+  type: z.literal(READY_MESSAGE_TYPE)
+});
 
 export interface ShellReadyMessage {
   type: typeof READY_MESSAGE_TYPE;
@@ -61,25 +70,11 @@ export class ShellChannel {
 export function isShellCommand(
   data: unknown
 ): data is ShellCommand {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "type" in data &&
-    data.type === SHELL_MESSAGE_TYPE &&
-    "command" in data &&
-    data.command === "open-asset" &&
-    "target" in data &&
-    typeof data.target === "string"
-  );
+  return kShellCommandSchema.safeParse(data).success;
 }
 
 export function isReadyMessage(
   data: unknown
 ): data is ShellReadyMessage {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "type" in data &&
-    data.type === READY_MESSAGE_TYPE
-  );
+  return kReadyMessageSchema.safeParse(data).success;
 }

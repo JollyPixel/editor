@@ -111,7 +111,8 @@ planAssetImport(backend, archive): Result<ImportPlan, AssetArchiveError | Unknow
 The read-only import pre-flight. Every kind must be registered, and every
 asset is loaded into a throwaway state of its kind: a document that does not
 load rejects the archive with `unreadable-asset` and the `assetId` at fault.
-A live id of another kind rejects with `kind-mismatch`.
+A live id of another kind is listed in `incompatible`. Keep and replace
+reject that collision; import as copy accepts it.
 
 ```ts
 interface ImportPlan {
@@ -119,6 +120,7 @@ interface ImportPlan {
   readonly live: readonly AssetArchiveEntry[];
   readonly fresh: readonly AssetArchiveEntry[];
   readonly sharedDependents: readonly SharedDependents[];
+  readonly incompatible: readonly AssetArchiveEntry[];
 }
 
 interface SharedDependents extends AssetArchiveEntry {
@@ -135,7 +137,7 @@ dependents see.
 
 ```ts
 interface ImportAssetArchiveOptions {
-  onConflict: "replace" | "keep";
+  onConflict: "replace" | "keep" | "copy";
   actor: Actor;
 }
 
@@ -155,6 +157,9 @@ snapshot.
 - A live id with `"replace"` has its content updated. It keeps its current
   path and its open rooms reload.
 - A live id with `"keep"` is skipped.
+- `"copy"` gives every archived asset a new id, suffixes occupied paths,
+  and rebinds references between archived assets. The report root uses its
+  new id. Kinds with internal references must provide `rebind`.
 
 The function resolves once the written content reached the source, so a
 caller may reload right after it.

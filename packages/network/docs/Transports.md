@@ -95,3 +95,46 @@ Envelopes are serialized to JSON and delivered on a later microtask, so a messag
 The root entry and this transport are browser-compatible. Node.js adapters
 (`WorkerExtensionProxy` and `PasswordAuthentication`) are exported separately
 from `@jolly-pixel/network/node`.
+
+## ChannelTransport
+
+Use `ChannelTransport` when the server lives in another browsing context: another tab over a `BroadcastChannel`, an iframe over a `MessagePort`, or a worker. `ChannelTransportHost` runs next to the server and relays each remote connection to a local socket, usually one opened by `LoopbackTransport`.
+
+```ts
+import * as network from "@jolly-pixel/network";
+import {
+  ChannelTransport,
+  ChannelTransportHost
+} from "@jolly-pixel/network/transport/channel.ts";
+import {
+  LoopbackTransport
+} from "@jolly-pixel/network/transport/loopback.ts";
+
+// Next to the server
+const loopback = new LoopbackTransport({ server });
+const host = new ChannelTransportHost({
+  port: new BroadcastChannel("workspace"),
+  open: () => loopback.connect()
+});
+
+// In another tab, once it knows host.id
+const transport = new ChannelTransport({
+  port: new BroadcastChannel("workspace"),
+  host: hostId
+});
+const client = new network.Client({
+  socket: () => transport.connect()
+});
+```
+
+| Member | Role |
+|---|---|
+| `ChannelTransportHost({ port, open, id? })` | answers the connections addressed to `id` (a random UUID by default) |
+| `host.close()` | closes every relayed socket and stops listening; the port stays open |
+| `ChannelTransport({ port, host })` | opens connections served by the host with that id |
+| `transport.connect()` | returns the `ClientSocket` a `Client` expects; throws once the transport is closed |
+| `transport.close(event?)` | closes every open socket with `event` (code `1001` by default) and stops listening |
+
+A port is anything with `postMessage` and `message` listeners: a `BroadcastChannel`, a `MessagePort` (started for you) or a `Worker`. Transport messages carry `CHANNEL_TRANSPORT_TAG`, so the port can carry other messages too, and `isChannelTransportMessage` tells them apart.
+
+The transport does not find its host. Share `host.id` over the same port, or any other way, before connecting. A socket opened before the host listens never opens.

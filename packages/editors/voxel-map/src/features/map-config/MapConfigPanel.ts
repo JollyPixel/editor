@@ -257,6 +257,7 @@ function askConflictPolicy(
   plan: ImportPlan
 ): Promise<ImportConflictPolicy | null> {
   const content: Node[] = [];
+  const incompatible = plan.incompatible.length > 0;
   if (plan.sharedDependents.length > 0) {
     const warning = document.createElement("p");
     warning.textContent = "Replacing also changes assets outside the archive:";
@@ -272,13 +273,24 @@ function askConflictPolicy(
     }
     content.push(warning, list);
   }
+  if (incompatible) {
+    const warning = document.createElement("p");
+    warning.textContent = "Some existing IDs have a different asset kind. " +
+      "Import those assets as a copy.";
+    content.push(warning);
+  }
 
   return showChoice<ImportConflictPolicy>({
     title: "Import archive",
     message: `${plan.live.length} of the archived assets already exist in ` +
       "this workspace.",
     content,
-    actions: [
+    actions: incompatible ? [
+      {
+        value: "copy",
+        label: "Import as copy"
+      }
+    ] : [
       {
         value: "keep",
         label: "Keep mine"
@@ -287,9 +299,13 @@ function askConflictPolicy(
         value: "replace",
         label: "Replace",
         variant: "danger"
+      },
+      {
+        value: "copy",
+        label: "Import as copy"
       }
     ],
-    focus: "keep"
+    focus: incompatible ? "copy" : "keep"
   });
 }
 

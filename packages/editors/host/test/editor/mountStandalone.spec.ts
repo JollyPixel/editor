@@ -12,7 +12,7 @@ import { BINARY_KIND } from "@jolly-pixel/asset-server/backend";
 import { mountStandalone } from "#src/editor/mountStandalone.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
-import { OfflineWorkspace } from "#src/session/OfflineWorkspace.ts";
+import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 
 describe("mountStandalone", () => {
   test("rejects before any session when no launch source names a target", async() => {

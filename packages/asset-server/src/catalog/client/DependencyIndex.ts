@@ -84,6 +84,29 @@ export class DependencyIndex {
     return closure;
   }
 
+  dependenciesFirst(
+    starts: Iterable<AssetReferenceData>
+  ): AssetReferenceData[] {
+    const visited = new Set<string>();
+    const ordered: AssetReferenceData[] = [];
+    const visit = (reference: AssetReferenceData): void => {
+      if (visited.has(reference.id)) {
+        return;
+      }
+      visited.add(reference.id);
+      for (const dependency of this.#outgoing.get(reference.id) ?? []) {
+        visit(dependency);
+      }
+      ordered.push(copyReference(reference));
+    };
+
+    for (const start of starts) {
+      visit(start);
+    }
+
+    return ordered;
+  }
+
   toJSON(): DependencyMap {
     return Object.fromEntries(
       Array.from(

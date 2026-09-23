@@ -13,8 +13,8 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { AssetLeases } from "#src/session/AssetLeases.ts";
-import { AssetDocumentConflictError } from "#src/session/errors/AssetDocumentConflictError.ts";
+import { AssetLeases } from "#src/lease/AssetLeases.ts";
+import { AssetDocumentConflictError } from "#src/lease/errors/AssetDocumentConflictError.ts";
 import {
   FakeClient,
   fakeDocumentKind,
@@ -52,6 +52,20 @@ describe("AssetLeases", () => {
     assert.throws(() => leases.open(kind, "tex"), /join failed/);
     assert.equal(kind.documents[0].disposed, true);
     assert.equal(room.leaves, 1);
+    assert.equal(leases.has("tex"), false);
+  });
+
+  test("leaves the room when a document factory throws", () => {
+    const { client, leases } = setup();
+    const failure = new Error("factory failed");
+
+    assert.throws(() => leases.open({
+      kind: "pixelart",
+      createDocument: () => {
+        throw failure;
+      }
+    }, "tex"), failure);
+    assert.equal(client.fakeRoom("pixelart:tex").leaves, 1);
     assert.equal(leases.has("tex"), false);
   });
 

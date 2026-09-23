@@ -16,7 +16,7 @@ import {
 } from "#src/editor/mountStandalone.ts";
 import type { EditorContext } from "#src/editor/EditorDefinition.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { OfflineWorkspace } from "#src/session/OfflineWorkspace.ts";
+import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 
 // CONSTANTS
 const kAssetId = "offline-asset";
@@ -49,6 +49,24 @@ function offlineOptions(
 }
 
 describe("OfflineWorkspace", () => {
+  test("keeps serving clients until the last connection is destroyed", async() => {
+    const workspace = await openWorkspace();
+    const first = workspace.connect();
+    const second = workspace.connect();
+
+    first.client.destroy();
+    first.client.destroy();
+    const third = workspace.connect();
+    const room = second.client.room("test-room");
+    room.join();
+    room.leave();
+
+    second.client.destroy();
+    third.client.destroy();
+    await workspace.close();
+    assert.throws(() => workspace.connect(), /closing/);
+  });
+
   test("mounts an editor on the seeded target without a username prompt", async() => {
     const workspace = await openWorkspace();
     const contexts: EditorContext[] = [];

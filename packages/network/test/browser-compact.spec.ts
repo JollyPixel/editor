@@ -11,7 +11,8 @@ const kNetworkSrcDir = path.join(import.meta.dirname, "..", "src");
 const kEntryPoints = [
   path.join(kNetworkSrcDir, "client", "index.ts"),
   path.join(kNetworkSrcDir, "index.ts"),
-  path.join(kNetworkSrcDir, "transport", "loopback.ts")
+  path.join(kNetworkSrcDir, "transport", "loopback.ts"),
+  path.join(kNetworkSrcDir, "transport", "channel.ts")
 ];
 
 describe("Network browser compatibility", () => {

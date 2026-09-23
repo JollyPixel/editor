@@ -21,14 +21,6 @@ through `context.shell`. Still open:
 
 ## Offline workspaces
 
-- Import as copy: an optional `rebind(state, idMap)` on `AssetKindHandler`, and
-  a third option in the collision dialog.
-- Offer offline mode when the socket or catalog is unreachable, and a build
-  flag for static hosting.
-- A shared-tab workspace over `BroadcastChannel` instead of the tab lock.
-
-Will be done in the future (but ignore them for now)
-
 - Host shell: a per-asset "Export" action and in-place navigation after an
   import.
 - Whole-workspace export and import in the UI. If it outgrows the room cap, an
