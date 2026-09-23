@@ -41,15 +41,11 @@ const kMapKind = voxelMapDocumentKind({
 
 export interface VoxelMapParams {
   offline: boolean;
-  maxFps: number | undefined;
-  samples: number | undefined;
 }
 
 export const VOXEL_MAP_PARAMS = new QueryParams<VoxelMapParams>((query) => {
   return {
-    offline: query.flag("offline"),
-    maxFps: query.number("max-fps"),
-    samples: query.number("samples")
+    offline: query.flag("offline")
   };
 });
 
@@ -73,7 +69,6 @@ export class VoxelMapEditor {
     context: EditorContext
   ): Promise<VoxelMapEditor> {
     const { session } = context;
-    const params = VOXEL_MAP_PARAMS.read();
     const state = new EditorState();
     const viewFocus = new ViewFocus();
     const target = session.targetLease(kMapKind);
@@ -107,14 +102,14 @@ export class VoxelMapEditor {
             session.target.record
         })
       },
-      samples: params.samples
+      samples: editorRuntime.samples
     });
     const shell = new EditorShell({
       state,
       runtime: editorRuntime
     });
     await editorRuntime.load(scene, {
-      maxFps: params.maxFps ?? Infinity
+      maxFps: Infinity
     });
 
     const workspace = await scene.ready;
@@ -148,6 +143,7 @@ export class VoxelMapEditor {
   #shell: EditorShell;
   #target: AssetLease<SyncedVoxelMap>;
 
+  readonly ready: Promise<void>;
   readonly runtime: Runtime;
   readonly scene: EditorScene;
   readonly workspace: VoxelMapWorkspace;
@@ -162,6 +158,10 @@ export class VoxelMapEditor {
     this.workspace = parts.workspace;
     this.#shell = parts.shell;
     this.#target = parts.target;
+    this.ready = Promise.all([
+      parts.target.ready,
+      parts.scene.ready
+    ]).then(() => undefined);
   }
 
   dispose(): void {

@@ -37,13 +37,10 @@ export async function openDemo(
     addDelay = 0
   } = options;
 
-  await page.addInitScript(() => {
-    sessionStorage.setItem("jolly-pixel:username", "E2E");
-  });
-
   const query = new URLSearchParams({
     empty: "true",
     target: testAssetId(base.info().parallelIndex),
+    username: "E2E",
     "import-policy": importPolicy
   });
   if (runtime) {
@@ -64,7 +61,14 @@ export async function openDemo(
 export async function waitForDemo(
   page: Page
 ): Promise<void> {
-  await page.waitForFunction(() => window.pixelArtDemo !== undefined);
+  await page.waitForFunction(() => {
+    const state = document.documentElement.dataset.editorState;
+    if (state === "failed") {
+      throw new Error("The editor failed to boot.");
+    }
+
+    return state === "ready";
+  });
 }
 
 export async function resetCanvas(

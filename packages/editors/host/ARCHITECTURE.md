@@ -99,9 +99,10 @@ sequenceDiagram
 `mount` starts with every dependency document already synced. The target is the
 exception: the session only reserves its room. The `connect` option supplies an
 identity and client instead of the default username prompt and network client.
-It may also supply a `SessionWorkspace`. `mountStandalone` exposes the handle on
-`globalThis` when `debugHandle` is set. For a workspace-backed session it also
-remembers the successfully opened target for the next launch.
+It may also supply a `SessionWorkspace`. `mountStandalone` then awaits `handle.ready`,
+exposes the handle as `window.jollyEditor` in dev, and marks the page
+`data-editor-state="ready"`. For a workspace-backed session it also remembers
+the successfully opened target for the next launch.
 
 ## Finding the target
 

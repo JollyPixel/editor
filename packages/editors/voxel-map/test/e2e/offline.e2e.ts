@@ -82,17 +82,22 @@ test("shares an offline catalog with a second tab", async({ page }) => {
 });
 
 test("offers an offline workspace when the socket is unreachable", async({ page }) => {
-  await page.addInitScript(() => {
-    sessionStorage.setItem("jolly-pixel:username", "Guest");
-  });
   await page.routeWebSocket("**/ws-sync", (socket) => {
     socket.close();
   });
-  await page.goto("/");
-  await dialog(page, "Connection unavailable")
-    .getByRole("button", { name: "Open offline workspace" })
-    .click();
-  await waitForEditor(page);
+  await page.goto("/?username=Guest");
+  const offline = dialog(page, "Connection unavailable")
+    .getByRole("button", { name: "Open offline workspace" });
+  await expect(offline).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-editor-state",
+    "failed"
+  );
+  await offline.click();
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-editor-state",
+    "ready"
+  );
 
   expect(await page.evaluate(
     () => window.voxelMapEditor?.session.workspace?.persistent

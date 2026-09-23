@@ -14,6 +14,10 @@ class VoxelModelEditor {
     // ...
   }
 
+  readonly ready: Promise<void>;
+  readonly session: EditorSession;
+  readonly runtime: Runtime;
+
   dispose(): void {
     this.session.dispose();
   }
@@ -39,6 +43,9 @@ interface EditorContext {
 }
 
 interface EditorHandle {
+  readonly ready: Promise<void>;
+  readonly session: EditorSession;
+  readonly runtime: Runtime | null;
   dispose(): void;
 }
 ```
@@ -57,6 +64,11 @@ editor once `mount` returns, so `dispose()` must call `session.dispose()`.
 `context.shell` is the [shell channel](#shell-channel) when a parent frame
 launched the page, `null` otherwise.
 
+The returned handle exposes the session and the `Runtime` of its 3D view,
+`null` for an editor without one. `ready` resolves once the target document is
+loaded and the scene has awoken; `mountStandalone` waits for it before
+resolving, and disposes the handle when it rejects.
+
 ## Options
 
 ```ts
@@ -67,6 +79,7 @@ function mountStandalone<THandle extends EditorHandle>(
 
 interface MountStandaloneOptions {
   sources?: Iterable<LaunchSource>;
+  dev?: boolean;
   debugHandle?: string;
   connect?: () => StandaloneConnection | Promise<StandaloneConnection>;
 }
@@ -77,7 +90,12 @@ interface StandaloneConnection {
 }
 ```
 
-`debugHandle` exposes the returned instance as `globalThis[debugHandle]`.
+`dev` enables the hooks meant for development builds; pass
+`import.meta.env.DEV`. Once the handle is ready it is exposed as
+`window.jollyEditor`, typed as `EditorHandle`, and as `globalThis[debugHandle]`
+when `debugHandle` is set. A `username` query parameter is stored as the tab's
+identity (see [`rememberQueryUsername`](./EditorSession.md#identity)) so the
+prompt is skipped. Without `dev`, neither happens.
 
 `connect` replaces the username prompt and the WebSocket client. It runs after
 the launch is read, and the session destroys the returned client when it is
@@ -153,6 +171,25 @@ The launch target injected by the Vite plugin names an asset of the server's
 catalog, not of this one, hence `launchSources`. `mountStandalone` remembers
 the opened target of an offline session for the next launch. Load the entry
 with a dynamic `import()` so an online boot does not bundle the back-end.
+
+## Boot state
+
+`mountStandalone` sets `data-editor-state` on `document.documentElement`:
+
+| Value | When |
+|---|---|
+| `booting` | before the launch is read |
+| `ready` | once `handle.ready` resolves, after the dev handle is published |
+| `failed` | when any boot step throws |
+
+The attribute is set in every build. `EDITOR_STATE_ATTRIBUTE` and
+`DEBUG_HANDLE` (`"jollyEditor"`) name the attribute and the global.
+
+```ts
+await page.waitForFunction(
+  () => document.documentElement.dataset.editorState === "ready"
+);
+```
 
 ## Launch sources
 

@@ -17,6 +17,7 @@ import {
 import type { EditorContext } from "#src/editor/EditorDefinition.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
+import { editorHandle } from "../helpers/editorHandle.ts";
 
 // CONSTANTS
 const kAssetId = "offline-asset";
@@ -78,9 +79,7 @@ describe("OfflineWorkspace", () => {
       mount: (context) => {
         contexts.push(context);
 
-        return Promise.resolve({
-          dispose: () => context.session.dispose()
-        });
+        return Promise.resolve(editorHandle(context.session));
       }
     }, offlineOptions(workspace, kAssetId));
 
@@ -104,9 +103,7 @@ describe("OfflineWorkspace", () => {
       mount: (context) => {
         contexts.push(context);
 
-        return Promise.resolve({
-          dispose: () => context.session.dispose()
-        });
+        return Promise.resolve(editorHandle(context.session));
       }
     }, offlineOptions(workspace, kAssetId));
 

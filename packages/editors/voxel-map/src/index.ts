@@ -16,7 +16,10 @@ import {
 import "./app/sidebarIcons.ts";
 
 // CONSTANTS
-const kDebugHandle = import.meta.env.DEV ? "voxelMapEditor" : undefined;
+const kDebugOptions = {
+  dev: import.meta.env.DEV,
+  debugHandle: "voxelMapEditor"
+};
 
 declare global {
   interface Window {
@@ -43,7 +46,7 @@ async function boot(): Promise<void> {
   ) {
     await mountStandalone(VoxelMapEditor, {
       ...await offlineOptions(),
-      debugHandle: kDebugHandle
+      ...kDebugOptions
     });
 
     return;
@@ -51,9 +54,7 @@ async function boot(): Promise<void> {
 
   for (;;) {
     try {
-      await mountStandalone(VoxelMapEditor, {
-        debugHandle: kDebugHandle
-      });
+      await mountStandalone(VoxelMapEditor, kDebugOptions);
 
       return;
     }
@@ -76,7 +77,7 @@ async function boot(): Promise<void> {
       if (choice === "offline") {
         await mountStandalone(VoxelMapEditor, {
           ...await offlineOptions(),
-          debugHandle: kDebugHandle
+          ...kDebugOptions
         });
 
         return;

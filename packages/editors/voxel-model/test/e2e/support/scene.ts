@@ -11,13 +11,15 @@ import type {
 
 // Import Internal Dependencies
 import type { VoxelModelEditor } from "#src/boot/VoxelModelEditor.ts";
+import {
+  clientPointOf,
+  type ScreenPoint,
+  type ViewSnapshot
+} from "./projection.ts";
+
+export type { ScreenPoint } from "./projection.ts";
 
 export type Axis = "X" | "Y" | "Z";
-
-export interface ScreenPoint {
-  x: number;
-  y: number;
-}
 
 export interface BlockSummary {
   position: Vector3Like;
@@ -47,14 +49,10 @@ export async function nextFrames(
 ): Promise<void> {
   const editor = await editorOf(page);
 
-  return editor.evaluate(async({ runtime }, frames) => {
-    const { world } = runtime;
-    for (let index = 0; index < frames; index++) {
-      await new Promise<void>((resolve) => {
-        world.once("afterUpdate", () => resolve());
-      });
-    }
-  }, count);
+  return editor.evaluate(
+    ({ runtime }, frames) => runtime.frames(frames),
+    count
+  );
 }
 
 export async function outline(
@@ -62,8 +60,8 @@ export async function outline(
 ): Promise<string[]> {
   const editor = await editorOf(page);
 
-  return editor.evaluate(async({ scene }) => {
-    const { hierarchy } = await scene.ready;
+  return editor.evaluate(({ workspace }) => {
+    const { hierarchy } = workspace;
     type Nodes = ReturnType<typeof hierarchy.nodes>;
     const lines: string[] = [];
 
@@ -88,8 +86,8 @@ export async function selectedBlock(
 ): Promise<string | null> {
   const editor = await editorOf(page);
 
-  return editor.evaluate(async({ scene }) => {
-    const { blocks } = await scene.ready;
+  return editor.evaluate(({ workspace }) => {
+    const { blocks } = workspace;
 
     return blocks.selected?.name ?? null;
   });
@@ -101,8 +99,8 @@ export async function blockSummary(
 ): Promise<BlockSummary | null> {
   const editor = await editorOf(page);
 
-  return editor.evaluate(async({ scene }, blockName) => {
-    const { blocks } = await scene.ready;
+  return editor.evaluate(({ workspace }, blockName) => {
+    const { blocks } = workspace;
     const block = [...blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {
@@ -145,8 +143,8 @@ export async function blockPoint(
 ): Promise<ScreenPoint> {
   const editor = await editorOf(page);
 
-  return editor.evaluate(async({ scene, runtime }, blockName) => {
-    const { blocks, gizmo } = await scene.ready;
+  const { view, point } = await editor.evaluate(({ workspace, runtime }, blockName) => {
+    const { blocks, gizmo } = workspace;
     const block = [...blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {
@@ -155,16 +153,27 @@ export async function blockPoint(
 
     const { camera } = gizmo.controls;
     const bounds = runtime.world.renderer.canvas.getBoundingClientRect();
-
     block.mesh.updateWorldMatrix(true, false);
     camera.updateMatrixWorld(true);
-    const point = block.mesh.getWorldPosition(block.position).project(camera);
+    const snapshot: ViewSnapshot = {
+      projection: camera.projectionMatrix.toArray(),
+      world: camera.matrixWorld.toArray(),
+      bounds: {
+        left: bounds.left,
+        top: bounds.top,
+        width: bounds.width,
+        height: bounds.height
+      }
+    };
+    const { x, y, z } = block.mesh.getWorldPosition(camera.position.clone());
 
     return {
-      x: bounds.left + ((point.x + 1) / 2 * bounds.width),
-      y: bounds.top + ((1 - point.y) / 2 * bounds.height)
+      view: snapshot,
+      point: { x, y, z }
     };
   }, name);
+
+  return clientPointOf(view, point);
 }
 
 export async function gizmoHandlePoints(
@@ -172,16 +181,16 @@ export async function gizmoHandlePoints(
   axis: Axis
 ): Promise<[ScreenPoint, ScreenPoint]> {
   const editor = await editorOf(page);
-  await page.waitForFunction(async({ scene }) => {
-    const { gizmo } = await scene.ready;
+  await page.waitForFunction(({ workspace }) => {
+    const { gizmo } = workspace;
 
     return gizmo.controls.target !== null;
   }, editor);
   await nextFrames(page);
 
-  return editor.evaluate(async({ scene, runtime }, axisName) => {
+  const { view, points } = await editor.evaluate(({ workspace, runtime }, axisName) => {
     const kDragRatio = 3;
-    const { gizmo } = await scene.ready;
+    const { gizmo } = workspace;
     const { controls } = gizmo;
     const { camera, helper } = controls;
     const bounds = runtime.world.renderer.canvas.getBoundingClientRect();
@@ -219,25 +228,34 @@ export async function gizmoHandlePoints(
     );
     const reach = grab.sub(origin);
 
-    function screenPointAt(
+    function worldPointAt(
       ratio: number
-    ): ScreenPoint {
-      const point = origin.clone()
-        .addScaledVector(reach, ratio)
-        .project(camera);
+    ): Vector3Like {
+      const { x, y, z } = origin.clone().addScaledVector(reach, ratio);
 
-      return {
-        x: bounds.left + ((point.x + 1) / 2 * bounds.width),
-        y: bounds.top + ((1 - point.y) / 2 * bounds.height)
-      };
+      return { x, y, z };
     }
-    const points: [ScreenPoint, ScreenPoint] = [
-      screenPointAt(1),
-      screenPointAt(kDragRatio)
-    ];
+    const snapshot: ViewSnapshot = {
+      projection: camera.projectionMatrix.toArray(),
+      world: camera.matrixWorld.toArray(),
+      bounds: {
+        left: bounds.left,
+        top: bounds.top,
+        width: bounds.width,
+        height: bounds.height
+      }
+    };
 
-    return points;
+    return {
+      view: snapshot,
+      points: [worldPointAt(1), worldPointAt(kDragRatio)]
+    };
   }, axis);
+
+  return [
+    clientPointOf(view, points[0]),
+    clientPointOf(view, points[1])
+  ];
 }
 
 export async function pressAt(

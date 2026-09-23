@@ -88,6 +88,7 @@ itself, and only the mesher, the collider and block previews read them.
 init(): void;                   // builds meshes for voxels already present
 tick(deltaTime: number): void;  // rebuilds dirty chunks within the budget
 flush(): void;                  // rebuilds every pending chunk now
+whenIdle(): Promise<void>;       // see VoxelEngine.md#rebuild-budget
 loadTileset(def: TilesetDefinition, texture: TilesetTexture): void;
 markAllChunksDirty(source?: string): void;
 dispose(): void;                // frees meshes, materials, textures, listeners

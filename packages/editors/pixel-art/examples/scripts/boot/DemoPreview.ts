@@ -15,7 +15,6 @@ export interface DemoPreviewOptions {
   canvas: RuntimeCanvasTarget;
   canvasManager: PixelArtCanvas;
   rotationToggle: HTMLInputElement;
-  maxFps?: number;
 }
 
 export interface DemoPreview {
@@ -41,9 +40,7 @@ export async function openDemoPreview(
     focusCanvas: false,
     viewHelper: true
   });
-  await editorRuntime.load(scene, {
-    maxFps: options.maxFps
-  });
+  await editorRuntime.load(scene);
   await scene.ready;
 
   rotationToggle.addEventListener("change", () => {

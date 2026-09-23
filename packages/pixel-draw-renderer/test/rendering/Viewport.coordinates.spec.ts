@@ -159,4 +159,88 @@ describe("Viewport coordinates", () => {
       assert.ok(pos !== null);
     });
   });
+
+  describe("textureClientPosition", () => {
+    const bounds = {
+      left: 40,
+      top: 25
+    };
+
+    function roundTrip(
+      vp: Viewport,
+      point: { x: number; y: number; }
+    ) {
+      const client = vp.textureClientPosition(point, bounds);
+
+      return vp.mouseTexturePosition(
+        client.x,
+        client.y,
+        { bounds: bounds as DOMRect }
+      );
+    }
+
+    test("returns the centre of the texel in client coordinates", () => {
+      const vp = new Viewport({
+        textureSize: {
+          x: 16,
+          y: 16
+        },
+        zoom: 4
+      });
+      vp.updateCanvasSize(200, 200);
+      vp.centerTexture();
+
+      assert.deepStrictEqual(
+        vp.textureClientPosition({ x: 2, y: 3 }, bounds),
+        {
+          x: 40 + vp.camera.x + 10,
+          y: 25 + vp.camera.y + 14
+        }
+      );
+    });
+
+    test("round-trips with mouseTexturePosition across zoom levels and pans", () => {
+      const points = [
+        { x: 0, y: 0 },
+        { x: 7, y: 11 },
+        { x: 15, y: 15 }
+      ];
+      for (const zoom of [1, 3, 8, 32]) {
+        const vp = new Viewport({
+          textureSize: {
+            x: 16,
+            y: 16
+          },
+          zoom,
+          zoomMax: 32
+        });
+        vp.updateCanvasSize(300, 200);
+        vp.centerTexture();
+
+        for (const pan of [{ x: 0, y: 0 }, { x: 13, y: -7 }, { x: -40, y: 22 }]) {
+          vp.applyPan(pan.x, pan.y);
+          for (const point of points) {
+            assert.deepStrictEqual(roundTrip(vp, point), point);
+          }
+        }
+      }
+    });
+
+    test("round-trips at a fractional zoom mid-animation", () => {
+      const vp = new Viewport({
+        textureSize: {
+          x: 16,
+          y: 16
+        },
+        zoom: 4
+      });
+      vp.updateCanvasSize(200, 200);
+      vp.centerTexture();
+      vp.applyZoom(-300, 100, 100);
+      vp.update(10);
+
+      assert.ok(!Number.isInteger(vp.zoom.value));
+      assert.deepStrictEqual(roundTrip(vp, { x: 5, y: 9 }), { x: 5, y: 9 });
+    });
+  });
 });

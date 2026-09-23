@@ -48,6 +48,7 @@ export class VoxelView {
   #materials: ChunkMaterialCache;
   #meshes: ChunkMeshStore;
   #queue = new ChunkRebuildQueue();
+  #idleWaiters: Array<() => void> = [];
   #visibility: ChunkVisibility;
   #collider: VoxelCollider | null;
   #rebuildBudgetMs: number;
@@ -199,6 +200,7 @@ export class VoxelView {
       this.#rebuildBudgetMs,
       (layer, chunk) => this.#meshes.rebuild(layer, chunk)
     );
+    this.#settleIdleWaiters();
   }
 
   flush(): void {
@@ -207,10 +209,21 @@ export class VoxelView {
       0,
       (layer, chunk) => this.#meshes.rebuild(layer, chunk)
     );
+    this.#settleIdleWaiters();
   }
 
   get pendingRebuilds(): number {
     return this.#queue.size;
+  }
+
+  whenIdle(): Promise<void> {
+    if (this.#isIdle()) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      this.#idleWaiters.push(resolve);
+    });
   }
 
   get greedy(): boolean {
@@ -229,10 +242,6 @@ export class VoxelView {
     this.markAllChunksDirty("greedy");
   }
 
-  /**
-   * Declares a tileset and registers its texture without broadcasting a
-   * command, for an atlas loaded outside the edit stream.
-   */
   loadTileset(
     def: TilesetDefinition,
     texture: TilesetTexture
@@ -268,6 +277,33 @@ export class VoxelView {
     this.#collider?.dispose();
     this.#materials.dispose();
     this.tilesets.dispose();
+  }
+
+  #isIdle(): boolean {
+    if (this.#queue.size > 0) {
+      return false;
+    }
+
+    const viewport = this.#viewport();
+    for (const layer of this.document.world.getLayers()) {
+      for (const chunk of layer.getDirtyChunks()) {
+        if (viewport.contains(layer, chunk, false)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  #settleIdleWaiters(): void {
+    if (this.#idleWaiters.length === 0 || !this.#isIdle()) {
+      return;
+    }
+
+    for (const resolve of this.#idleWaiters.splice(0)) {
+      resolve();
+    }
   }
 
   #viewport(): ChunkViewport {

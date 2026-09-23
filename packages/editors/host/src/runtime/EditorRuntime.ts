@@ -9,6 +9,14 @@ import { inputLayers } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { suspendOnHover } from "./suspendOnHover.ts";
+import {
+  HOST_PARAMS,
+  type HostParams
+} from "../params/HostParams.ts";
+
+export interface EditorRuntimeCreateOptions extends RuntimeOptions {
+  params?: HostParams;
+}
 
 export interface EditorRuntimeLoadOptions {
   maxFps?: number;
@@ -17,25 +25,36 @@ export interface EditorRuntimeLoadOptions {
 export class EditorRuntime {
   static async create(
     canvas: RuntimeCanvasTarget,
-    options?: RuntimeOptions
+    options: EditorRuntimeCreateOptions = {}
   ): Promise<EditorRuntime> {
+    const {
+      params,
+      ...runtimeOptions
+    } = options;
     const runtime = await Runtime.create(
       canvas,
-      options
+      runtimeOptions
     );
     runtime.world.input.keyboard.addGuard(
       inputLayers
     );
 
-    return new EditorRuntime(runtime);
+    return new EditorRuntime(runtime, params);
   }
 
   readonly runtime: Runtime;
+  readonly params: HostParams;
+
+  get samples(): number | undefined {
+    return this.params.samples;
+  }
 
   constructor(
-    runtime: Runtime
+    runtime: Runtime,
+    params: HostParams = HOST_PARAMS.read()
   ) {
     this.runtime = runtime;
+    this.params = params;
   }
 
   async load(
@@ -45,7 +64,7 @@ export class EditorRuntime {
     await this.runtime.load({
       scene,
       skipLoadingScreen: true,
-      maxFps: options.maxFps
+      maxFps: this.params.maxFps ?? options.maxFps
     });
   }
 

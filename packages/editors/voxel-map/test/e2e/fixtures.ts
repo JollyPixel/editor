@@ -26,7 +26,6 @@ export { expect } from "@playwright/test";
 
 // CONSTANTS
 const kWorldKind = "voxelmap";
-const kUsernameStorageKey = "jolly-pixel:username";
 const kMaxFps = 10;
 
 export interface E2EWorld {
@@ -91,14 +90,9 @@ export async function openEditor(
     maxFps = kMaxFps
   } = options;
 
-  await page.addInitScript((entry) => {
-    sessionStorage.setItem(entry.key, entry.username);
-  }, {
-    key: kUsernameStorageKey,
-    username
-  });
   const query = new URLSearchParams({
     target: world.id,
+    username,
     "max-fps": String(maxFps),
     samples: "0"
   });
@@ -109,9 +103,14 @@ export async function openEditor(
 export async function waitForEditor(
   page: Page
 ): Promise<void> {
-  await page.waitForFunction(
-    () => window.voxelMapEditor?.workspace.mapDocument.ready === true
-  );
+  await page.waitForFunction(() => {
+    const state = document.documentElement.dataset.editorState;
+    if (state === "failed") {
+      throw new Error("The editor failed to boot.");
+    }
+
+    return state === "ready";
+  });
 }
 
 export const test = base.extend<{

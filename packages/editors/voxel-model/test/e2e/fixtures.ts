@@ -24,7 +24,6 @@ import {
 export { expect } from "@playwright/test";
 
 // CONSTANTS
-const kUsernameStorageKey = "jolly-pixel:username";
 const kMaxFps = 5;
 
 export interface E2EModel {
@@ -85,14 +84,9 @@ export async function openEditor(
     maxFps = kMaxFps
   } = options;
 
-  await page.addInitScript((entry) => {
-    sessionStorage.setItem(entry.key, entry.username);
-  }, {
-    key: kUsernameStorageKey,
-    username
-  });
   const query = new URLSearchParams({
     target: model.id,
+    username,
     "max-fps": String(maxFps)
   });
   await page.goto(`/?${query}`);
@@ -102,9 +96,14 @@ export async function openEditor(
 export async function waitForEditor(
   page: Page
 ): Promise<void> {
-  await page.waitForFunction(
-    () => window.voxelModelEditor !== undefined
-  );
+  await page.waitForFunction(() => {
+    const state = document.documentElement.dataset.editorState;
+    if (state === "failed") {
+      throw new Error("The editor failed to boot.");
+    }
+
+    return state === "ready";
+  });
 }
 
 export const test = base.extend<{

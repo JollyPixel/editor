@@ -45,3 +45,27 @@ class QueryString {
 | `flag(name)` | `false` | `true`, whatever the value |
 | `number(name, fallback?)` | `fallback` | the number, or `fallback` when it does not parse |
 | `string(name)` | `undefined` | the raw value |
+
+## Host parameters
+
+`HOST_PARAMS` reads the parameters every editor shares, so an editor's own
+set leaves them out.
+
+```ts
+interface HostParams {
+  maxFps: number | undefined;
+  samples: number | undefined;
+  username: string | undefined;
+}
+
+HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada");
+// { maxFps: 10, samples: 0, username: "Ada" }
+```
+
+| Parameter | Field | Accepted values | Used by |
+|---|---|---|---|
+| `max-fps` | `maxFps` | a positive number | [`EditorRuntime.load`](./EditorRuntime.md#loading-a-scene) |
+| `samples` | `samples` | a non-negative integer | [`EditorRuntime.samples`](./EditorRuntime.md#properties) |
+| `username` | `username` | a non-blank string, trimmed | [`rememberQueryUsername`](./EditorSession.md#identity), in dev only |
+
+Any other value reads as `undefined`.

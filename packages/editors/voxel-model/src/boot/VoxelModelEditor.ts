@@ -7,14 +7,16 @@ import {
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 import {
   EditorRuntime,
-  QueryParams,
   type AssetLease,
   type EditorContext,
   type EditorSession
 } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import { ModelEditorScene } from "../scene/index.ts";
+import {
+  ModelEditorScene,
+  type ModelWorkspace
+} from "../scene/index.ts";
 import { PresenceStore } from "../state/index.ts";
 import { EditorShell } from "./EditorShell.ts";
 import {
@@ -27,19 +29,10 @@ import {
 const kCanvas = "#three-renderer canvas";
 const kModelKind = voxelModelDocumentKind();
 
-export interface VoxelModelParams {
-  maxFps: number | undefined;
-}
-
-export const VOXEL_MODEL_PARAMS = new QueryParams<VoxelModelParams>((query) => {
-  return {
-    maxFps: query.number("max-fps")
-  };
-});
-
 export interface VoxelModelEditorParts {
   runtime: Runtime;
   scene: ModelEditorScene;
+  workspace: ModelWorkspace;
   session: EditorSession;
   shell: EditorShell;
   texture: ModelTexture;
@@ -57,7 +50,6 @@ export class VoxelModelEditor {
     context: EditorContext
   ): Promise<VoxelModelEditor> {
     const { session } = context;
-    const params = VOXEL_MODEL_PARAMS.read();
     const texture = openModelTexture(session);
     const target = session.targetLease(kModelKind);
 
@@ -78,7 +70,7 @@ export class VoxelModelEditor {
       texture
     });
     await editorRuntime.load(scene, {
-      maxFps: params.maxFps ?? Infinity
+      maxFps: Infinity
     });
 
     const workspace = await scene.ready;
@@ -87,6 +79,7 @@ export class VoxelModelEditor {
     return new VoxelModelEditor({
       runtime: editorRuntime.runtime,
       scene,
+      workspace,
       session,
       shell,
       texture,
@@ -98,8 +91,10 @@ export class VoxelModelEditor {
   #texture: ModelTexture;
   #target: AssetLease<ModelDocument>;
 
+  readonly ready: Promise<void>;
   readonly runtime: Runtime;
   readonly scene: ModelEditorScene;
+  readonly workspace: ModelWorkspace;
   readonly session: EditorSession;
 
   constructor(
@@ -107,10 +102,16 @@ export class VoxelModelEditor {
   ) {
     this.runtime = parts.runtime;
     this.scene = parts.scene;
+    this.workspace = parts.workspace;
     this.session = parts.session;
     this.#shell = parts.shell;
     this.#texture = parts.texture;
     this.#target = parts.target;
+    this.ready = Promise.all([
+      parts.target.ready,
+      parts.texture.ready,
+      parts.scene.ready
+    ]).then(() => undefined);
   }
 
   dispose(): void {

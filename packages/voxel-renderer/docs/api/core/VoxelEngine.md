@@ -252,6 +252,7 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
 init(): void;                   // builds meshes for any voxels already present (e.g. after deserialize)
 tick(deltaTime: number): void;  // rebuilds dirty chunks within a time budget; call once per frame
 flush(): void;                  // rebuilds every pending chunk now, ignoring the budget
+whenIdle(): Promise<void>;       // resolves once no chunk in view is left to mesh
 dispose(): void;                // disposes meshes, materials, tileset textures and listeners
 ```
 
@@ -267,6 +268,18 @@ const engine = new VoxelEngine({ rebuildBudgetMs: 8 });
 
 engine.focus = focusPoint;  // prioritize chunks near this point
 engine.pendingRebuilds;     // 0 once the world is up to date
+```
+
+`pendingRebuilds` only counts queued chunks: a chunk edited since the last tick
+is dirty but not queued yet. `whenIdle()` also waits for those. It resolves at
+once when nothing inside the view distance is dirty or queued, otherwise at the
+end of the first `tick()` or `flush()` that leaves nothing to mesh. Chunks
+beyond the view distance do not hold it back. It never resolves after
+`dispose()`.
+
+```ts
+engine.world.setVoxel("Ground", { position, blockId });
+await engine.whenIdle();    // the new voxel is meshed
 ```
 
 ### Focus

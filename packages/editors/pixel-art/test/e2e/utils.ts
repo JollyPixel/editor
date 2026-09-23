@@ -153,13 +153,12 @@ export function readPixels(
   points: TexturePoint[]
 ): Promise<string[]> {
   return panel.evaluate((element: PixelDrawPanel, targets) => {
-    const texture = element.canvasManager!.textureCanvas();
-    const context = texture.getContext("2d")!;
+    const { buffer } = element.canvasManager!.document;
 
-    return targets.map(({ x, y }) => {
-      const rgba = context.getImageData(x, y, 1, 1).data;
+    return buffer.samplePixels(targets).map(({ r, g, b, a }) => {
+      const bytes = [r, g, b, a];
 
-      return `#${Array.from(rgba, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+      return `#${bytes.map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
     });
   }, points);
 }
@@ -172,13 +171,13 @@ export function readRenderedPixels(
     const canvasManager = element.canvasManager!;
     const canvas = canvasManager.canvas();
     const bounds = canvas.getBoundingClientRect();
-    const { camera, zoom } = canvasManager.viewport;
     const context = canvas.getContext("2d")!;
 
-    return targets.map(({ x, y }) => {
+    return targets.map((target) => {
+      const client = canvasManager.viewport.textureClientPosition(target, bounds);
       const rgba = context.getImageData(
-        Math.floor((camera.x + ((x + 0.5) * zoom.value)) * canvas.width / bounds.width),
-        Math.floor((camera.y + ((y + 0.5) * zoom.value)) * canvas.height / bounds.height),
+        Math.floor((client.x - bounds.left) * canvas.width / bounds.width),
+        Math.floor((client.y - bounds.top) * canvas.height / bounds.height),
         1,
         1
       ).data;
@@ -192,15 +191,13 @@ export function textureToScreenPoint(
   panel: Locator,
   point: TexturePoint
 ): Promise<TexturePoint> {
-  return panel.evaluate((element: PixelDrawPanel, { x, y }) => {
+  return panel.evaluate((element: PixelDrawPanel, target) => {
     const canvasManager = element.canvasManager!;
-    const bounds = canvasManager.canvas().getBoundingClientRect();
-    const { camera, zoom } = canvasManager.viewport;
 
-    return {
-      x: bounds.left + camera.x + ((x + 0.5) * zoom.value),
-      y: bounds.top + camera.y + ((y + 0.5) * zoom.value)
-    };
+    return canvasManager.viewport.textureClientPosition(
+      target,
+      canvasManager.canvas().getBoundingClientRect()
+    );
   }, point);
 }
 

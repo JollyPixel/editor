@@ -75,7 +75,7 @@ class MyEditor {
 }
 
 await mountStandalone(MyEditor, {
-  debugHandle: "myEditor"
+  dev: import.meta.env.DEV
 });
 ```
 
