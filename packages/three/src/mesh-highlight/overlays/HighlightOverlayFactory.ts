@@ -20,6 +20,16 @@ export interface HighlightOverlayCreateOptions {
    * Dashed lines when supported.
    */
   dashed?: boolean;
+  /**
+   * Opacity of the portion hidden behind other geometry, when supported.
+   */
+  occludedOpacity?: number;
+  /**
+   * Whether this indicator belongs to a peer rather than the local user,
+   * when supported. Techniques that render local and peer indicators with
+   * overlapping geometry can use this to make the local one win.
+   */
+  peer?: boolean;
 }
 
 export interface HighlightOverlayFactory {

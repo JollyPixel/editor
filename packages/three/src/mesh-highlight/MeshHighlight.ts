@@ -420,7 +420,8 @@ export class MeshHighlight extends EventTarget {
     if (mode === "outline") {
       return new ObjectOverlayRenderer({
         registry: this.#overlayRegistry,
-        renderScene: () => this.#renderer.render(this.#scene, this.#camera)
+        renderScene: () => this.#renderer.render(this.#scene, this.#camera),
+        camera: this.#camera
       });
     }
 
@@ -440,7 +441,8 @@ export class MeshHighlight extends EventTarget {
 
     return new HighlightPassRenderer({
       highlight,
-      overlayRegistry: this.#overlayRegistry
+      overlayRegistry: this.#overlayRegistry,
+      camera: this.#camera
     });
   }
 }

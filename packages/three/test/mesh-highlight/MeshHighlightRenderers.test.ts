@@ -17,22 +17,29 @@ import {
   type HighlightOverlay
 } from "#src/index.ts";
 
+// CONSTANTS
+const kCamera = new THREE.PerspectiveCamera();
+
 class TestOverlay implements HighlightOverlay {
   color: THREE.ColorRepresentation;
   opacity: number;
   xray: boolean;
   fillOpacity = 0;
   linewidth = 1;
+  occludedOpacity = 0;
+  peer: boolean;
   disposeCount = 0;
 
   constructor(
     color: THREE.ColorRepresentation,
     opacity: number,
-    xray: boolean
+    xray: boolean,
+    peer: boolean
   ) {
     this.color = color;
     this.opacity = opacity;
     this.xray = xray;
+    this.peer = peer;
   }
 
   dispose(): void {
@@ -55,8 +62,10 @@ function createRegistry(
         const overlay = new TestOverlay(
           options.color,
           options.opacity,
-          options.xray ?? false
+          options.xray ?? false,
+          options.peer ?? false
         );
+        overlay.occludedOpacity = options.occludedOpacity ?? options.opacity;
         overlays.push(overlay);
 
         return overlay;
@@ -88,7 +97,8 @@ describe("ObjectOverlayRenderer", () => {
     const overlays: TestOverlay[] = [];
     const renderer = new ObjectOverlayRenderer({
       registry: createRegistry(overlays),
-      renderScene: () => void 0
+      renderScene: () => void 0,
+      camera: kCamera
     });
     const target = new THREE.Mesh();
     const appearance = new MeshHighlightAppearance();
@@ -117,7 +127,8 @@ describe("ObjectOverlayRenderer", () => {
     const overlays: TestOverlay[] = [];
     const renderer = new ObjectOverlayRenderer({
       registry: createRegistry(overlays),
-      renderScene: () => void 0
+      renderScene: () => void 0,
+      camera: kCamera
     });
     const target = new THREE.Mesh();
     const appearance = new MeshHighlightAppearance();
@@ -133,6 +144,76 @@ describe("ObjectOverlayRenderer", () => {
     assert.strictEqual(overlays.length, 2);
     assert.strictEqual(overlays[0].disposeCount, 1);
     assert.strictEqual(overlays[1].disposeCount, 1);
+  });
+
+  test("marks a peer indicator's overlay as belonging to a peer", () => {
+    const overlays: TestOverlay[] = [];
+    const renderer = new ObjectOverlayRenderer({
+      registry: createRegistry(overlays),
+      renderScene: () => void 0,
+      camera: kCamera
+    });
+    const target = new THREE.Mesh();
+
+    renderer.sync(
+      [indicator(target, { source: "peer" })],
+      new MeshHighlightAppearance()
+    );
+
+    assert.strictEqual(overlays[0].peer, true);
+  });
+
+  test("replaces the overlay when an indicator's source changes, technique staying the same", () => {
+    const overlays: TestOverlay[] = [];
+    const renderer = new ObjectOverlayRenderer({
+      registry: createRegistry(overlays),
+      renderScene: () => void 0,
+      camera: kCamera
+    });
+    const target = new THREE.Mesh();
+    const appearance = new MeshHighlightAppearance();
+    renderer.sync([indicator(target, { source: "peer" })], appearance);
+
+    renderer.sync([indicator(target, { source: "local" })], appearance);
+
+    assert.strictEqual(overlays.length, 2);
+    assert.strictEqual(overlays[0].disposeCount, 1);
+    assert.strictEqual(overlays[1].peer, false);
+  });
+
+  test("dims any indicator's occluded opacity by the configured scale, local and peer alike", () => {
+    const overlays: TestOverlay[] = [];
+    const renderer = new ObjectOverlayRenderer({
+      registry: createRegistry(overlays),
+      renderScene: () => void 0,
+      camera: kCamera
+    });
+    const peerTarget = new THREE.Mesh();
+    const localTarget = new THREE.Mesh();
+    const appearance = new MeshHighlightAppearance({ occludedOpacityScale: 0.25 });
+
+    renderer.sync([
+      { ...indicator(peerTarget, { source: "peer", opacity: 0.8 }), objectId: "peer" },
+      { ...indicator(localTarget, { source: "local", opacity: 0.8 }), objectId: "local" }
+    ], appearance);
+
+    const [peerOverlay, localOverlay] = overlays;
+    assert.strictEqual(peerOverlay.occludedOpacity, 0.2);
+    assert.strictEqual(localOverlay.occludedOpacity, 0.2);
+  });
+
+  test("leaves the occluded opacity at the visible one when no scale is configured", () => {
+    const overlays: TestOverlay[] = [];
+    const renderer = new ObjectOverlayRenderer({
+      registry: createRegistry(overlays),
+      renderScene: () => void 0,
+      camera: kCamera
+    });
+    const target = new THREE.Mesh();
+
+    renderer.sync([indicator(target, { opacity: 0.8 })], new MeshHighlightAppearance());
+
+    assert.strictEqual(overlays[0].occludedOpacity, 0.8);
   });
 });
 
@@ -156,7 +237,8 @@ describe("HighlightPassRenderer", () => {
     const highlight = new TestHighlight();
     const renderer = new HighlightPassRenderer({
       highlight,
-      overlayRegistry: createRegistry(overlays)
+      overlayRegistry: createRegistry(overlays),
+      camera: kCamera
     });
     const highlighted = new THREE.Mesh();
     const outlined = new THREE.Mesh();
@@ -188,7 +270,8 @@ describe("HighlightPassRenderer", () => {
     const highlight = new TestHighlight();
     const renderer = new HighlightPassRenderer({
       highlight,
-      overlayRegistry: createRegistry(overlays)
+      overlayRegistry: createRegistry(overlays),
+      camera: kCamera
     });
     renderer.sync([
       indicator(new THREE.Group())

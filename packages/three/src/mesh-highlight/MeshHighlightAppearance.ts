@@ -34,6 +34,12 @@ export interface MeshHighlightAppearanceOptions {
   highlight?: HighlightPassAppearanceOptions;
   highlightJfa?: HighlightPassJfaAppearanceOptions;
   xray?: boolean;
+  /**
+   * Multiplies any indicator's opacity for the portion hidden behind other
+   * geometry, when xray is enabled and the technique supports it. Leave
+   * unset to draw the hidden portion at the same opacity as the visible one.
+   */
+  occludedOpacityScale?: number;
 }
 
 export interface HighlightIndicatorAppearance {
@@ -72,6 +78,7 @@ export class MeshHighlightAppearance {
   readonly highlight: HighlightPassAppearance;
   readonly highlightJfa: HighlightPassJfaAppearance;
   readonly xray: boolean;
+  readonly occludedOpacityScale: number | null;
 
   constructor(
     options: MeshHighlightAppearanceOptions = {}
@@ -118,6 +125,9 @@ export class MeshHighlightAppearance {
       )
     });
     this.xray = options.xray ?? false;
+    this.occludedOpacityScale = options.occludedOpacityScale === undefined ?
+      null :
+      normalizedOpacity(options.occludedOpacityScale);
 
     Object.freeze(this);
   }
@@ -150,7 +160,8 @@ export class MeshHighlightAppearance {
         ...this.highlightJfa,
         ...options.highlightJfa
       },
-      xray: options.xray ?? this.xray
+      xray: options.xray ?? this.xray,
+      occludedOpacityScale: options.occludedOpacityScale ?? this.occludedOpacityScale ?? undefined
     });
   }
 }

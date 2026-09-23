@@ -6,10 +6,8 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { PeerSelectionHighlight } from "#src/collaboration/PeerSelectionHighlight.ts";
 import { TransformLiveSync } from "#src/collaboration/TransformLiveSync.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
-import { PresenceStore } from "#src/state/index.ts";
 import { createRoomHarness } from "./roomHarness.ts";
 import { createModelFixture } from "../fixtures/model.ts";
 
@@ -64,7 +62,9 @@ function clearLive(
 function isGlowing(
   block: ModelBlock
 ): boolean {
-  return block.mesh.children.some((child) => child.name === "emphasis-shell");
+  const marker = block.pivot.children.find((child) => child.name === "pivot_visual");
+
+  return marker?.visible ?? false;
 }
 
 describe("TransformLiveSync", () => {
@@ -164,20 +164,13 @@ describe("TransformLiveSync", () => {
   test("does not clear a peer's selection glow once their drag stream ends", () => {
     const harness = createHarness();
     const block = harness.addBlock();
-    const presence = new PresenceStore();
-    const highlight = new PeerSelectionHighlight({
-      blocks: harness.blocks,
-      presence
-    });
 
-    presence.blockSelections = new Map([
-      [block.uuid, [{ clientId: "bob", displayName: "bob", color: "#112233" }]]
-    ]);
+    block.emphasize("#112233", "selection:bob");
     publishLive(harness, block.uuid, 5);
     clearLive(harness);
 
     assert.ok(isGlowing(block), "bob's selection glow must survive the end of their drag stream");
-    highlight.dispose();
+    block.clearEmphasis("selection:bob");
     harness.sync.dispose();
   });
 

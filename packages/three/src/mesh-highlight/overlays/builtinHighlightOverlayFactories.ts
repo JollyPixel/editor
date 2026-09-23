@@ -4,6 +4,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { HighlightOutline } from "./HighlightOutline.ts";
 import { HighlightBoundingBox } from "./HighlightBoundingBox.ts";
+import { HighlightBoxSilhouette } from "./HighlightBoxSilhouette.ts";
 import type { HighlightOverlayFactory } from "./HighlightOverlayFactory.ts";
 import { HighlightOverlayRegistry } from "./HighlightOverlayRegistry.ts";
 
@@ -17,6 +18,20 @@ export const outlineOverlayFactory: HighlightOverlayFactory = {
     linewidth: options.linewidth,
     xray: options.xray,
     dashed: options.dashed
+  })
+};
+
+export const boxSilhouetteOverlayFactory: HighlightOverlayFactory = {
+  id: "boxSilhouette",
+  supports: (target) => target instanceof THREE.Mesh && target.geometry instanceof THREE.BoxGeometry,
+  create: (target, options) => new HighlightBoxSilhouette({
+    target: target as THREE.Mesh,
+    color: options.color,
+    opacity: options.opacity,
+    linewidth: options.linewidth,
+    xray: options.xray,
+    occludedOpacity: options.occludedOpacity,
+    peer: options.peer
   })
 };
 
@@ -43,6 +58,7 @@ export function createDefaultHighlightOverlayRegistry(): HighlightOverlayRegistr
   });
   registry.register(outlineOverlayFactory);
   registry.register(boundingBoxOverlayFactory);
+  registry.register(boxSilhouetteOverlayFactory);
 
   return registry;
 }

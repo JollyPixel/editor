@@ -22,6 +22,9 @@ import {
 
 export type ModelBlocksEvents = {
   select: (block: ModelBlock | null) => void;
+  hover: (block: ModelBlock | null) => void;
+  blockAdded: (block: ModelBlock) => void;
+  blockRemoved: (uuid: string) => void;
 };
 
 export interface ModelBlocksOptions {
@@ -35,6 +38,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   #blocks = new Map<string, ModelBlock>();
   #byMesh = new Map<THREE.Object3D, ModelBlock>();
   #selected: ModelBlock | null = null;
+  #hovered: ModelBlock | null = null;
   #texture: THREE.Texture | null = null;
 
   #onChange = (
@@ -113,6 +117,10 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     return this.#selected;
   }
 
+  get hovered(): ModelBlock | null {
+    return this.#hovered;
+  }
+
   get texture(): THREE.Texture | null {
     return this.#texture;
   }
@@ -145,17 +153,18 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   select(
     block: ModelBlock | null
   ): void {
-    if (this.#selected !== block) {
-      if (this.#selected !== null) {
-        this.#selected.selected = false;
-      }
-      this.#selected = block;
-      if (block !== null) {
-        block.selected = true;
-      }
-    }
-
+    this.#selected = block;
     this.emit("select", block);
+  }
+
+  hover(
+    block: ModelBlock | null
+  ): void {
+    if (block === this.#hovered) {
+      return;
+    }
+    this.#hovered = block;
+    this.emit("hover", block);
   }
 
   applyTransform(
@@ -269,6 +278,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     block.transform = node.transform;
     this.#blocks.set(block.uuid, block);
     this.#byMesh.set(block.mesh, block);
+    this.emit("blockAdded", block);
 
     return block;
   }
@@ -295,9 +305,13 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     if (this.#selected === block) {
       this.select(null);
     }
+    if (this.#hovered === block) {
+      this.hover(null);
+    }
     this.#blocks.delete(uuid);
     this.#byMesh.delete(block.mesh);
     block.dispose();
+    this.emit("blockRemoved", uuid);
   }
 
   #parentObject(

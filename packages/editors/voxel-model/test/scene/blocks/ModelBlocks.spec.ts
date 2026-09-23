@@ -304,7 +304,7 @@ describe("ModelBlocks poses", () => {
 });
 
 describe("ModelBlocks selection", () => {
-  test("select toggles the block flags and emits the selected block", () => {
+  test("select updates the selected getter and emits the selected block", () => {
     const fixture = createModelFixture();
     const first = fixture.addBlock();
     const second = fixture.addBlock();
@@ -314,8 +314,6 @@ describe("ModelBlocks selection", () => {
     fixture.blocks.select(first);
     fixture.blocks.select(second);
 
-    assert.equal(first.selected, false);
-    assert.equal(second.selected, true);
     assert.equal(fixture.blocks.selected, second);
     assert.deepEqual(selections, [first, second]);
   });
@@ -348,6 +346,45 @@ describe("ModelBlocks selection", () => {
 
     assert.equal(fixture.blocks.fromMesh(block.mesh), block);
     assert.equal(fixture.blocks.fromMesh(block.pivot), undefined);
+  });
+});
+
+describe("ModelBlocks hover", () => {
+  test("hover updates the hovered getter and emits the hovered block", () => {
+    const fixture = createModelFixture();
+    const first = fixture.addBlock();
+    const second = fixture.addBlock();
+    const hovers: unknown[] = [];
+    fixture.blocks.on("hover", (block) => hovers.push(block));
+
+    fixture.blocks.hover(first);
+    fixture.blocks.hover(second);
+    fixture.blocks.hover(null);
+
+    assert.equal(fixture.blocks.hovered, null);
+    assert.deepEqual(hovers, [first, second, null]);
+  });
+
+  test("hovering the same block again does not re-emit", () => {
+    const fixture = createModelFixture();
+    const block = fixture.addBlock();
+    let emitted = 0;
+    fixture.blocks.on("hover", () => emitted++);
+
+    fixture.blocks.hover(block);
+    fixture.blocks.hover(block);
+
+    assert.equal(emitted, 1);
+  });
+
+  test("removing the hovered block clears the hover", () => {
+    const fixture = createModelFixture();
+    const block = fixture.addBlock();
+    fixture.blocks.hover(block);
+
+    fixture.document.remove(block.uuid);
+
+    assert.equal(fixture.blocks.hovered, null);
   });
 });
 

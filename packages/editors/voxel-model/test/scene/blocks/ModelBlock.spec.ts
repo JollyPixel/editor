@@ -12,6 +12,8 @@ import { NEUTRAL_HIGHLIGHT_COLOR } from "#src/scene/blocks/PivotMarker.ts";
 // CONSTANTS
 const kEpsilon = 1e-6;
 
+type TexturedMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+
 function assertEulerClose(
   actual: THREE.Euler,
   expected: THREE.Euler
@@ -21,20 +23,19 @@ function assertEulerClose(
   assert.ok(Math.abs(actual.z - expected.z) < kEpsilon, `z: ${actual.z} !== ${expected.z}`);
 }
 
-function shellOf(
-  block: ModelBlock,
-  name: "emphasis-shell" | "selection-shell"
-): THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> | undefined {
-  return block.mesh.children.find(
-    (child): child is THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> => child.name === name
-  );
-}
-
 function pivotMarkerOf(
   block: ModelBlock
 ): THREE.Sprite | undefined {
   return block.pivot.children.find(
     (child): child is THREE.Sprite => child.name === "pivot_visual"
+  );
+}
+
+function textureGhostOf(
+  block: ModelBlock
+): TexturedMesh | undefined {
+  return block.mesh.children.find(
+    (child): child is TexturedMesh => child.name === "selection-texture-ghost"
   );
 }
 
@@ -180,86 +181,67 @@ describe("ModelBlock name", () => {
   });
 });
 
-describe("ModelBlock selection", () => {
-  test("adds a neutral glow shell when selected", () => {
+describe("ModelBlock selection ghost", () => {
+  test("adds a front-face-only texture duplicate when shown", () => {
     const block = new ModelBlock();
 
-    block.selected = true;
+    block.showSelectionGhost();
 
-    assert.equal(block.selected, true);
-    assert.equal(shellOf(block, "selection-shell")?.material.color.getHex(), NEUTRAL_HIGHLIGHT_COLOR);
+    const ghost = textureGhostOf(block);
+    assert.equal(ghost?.material.side, THREE.FrontSide);
+    assert.equal(ghost?.material.depthTest, false);
+    assert.equal(ghost?.material.depthWrite, false);
+    assert.equal(ghost?.material.opacity, 1);
+    assert.equal(ghost?.geometry, block.mesh.geometry);
   });
 
-  test("keeps a single shell when selected twice", () => {
+  test("keeps a single ghost when shown twice", () => {
     const block = new ModelBlock();
 
-    block.selected = true;
-    const first = shellOf(block, "selection-shell");
-    block.selected = true;
+    block.showSelectionGhost();
+    const first = textureGhostOf(block);
+    block.showSelectionGhost();
 
-    assert.equal(shellOf(block, "selection-shell"), first);
+    assert.equal(textureGhostOf(block), first);
   });
 
-  test("removes the shell when deselected", () => {
+  test("is removed on hide", () => {
     const block = new ModelBlock();
-    block.selected = true;
-    const shell = shellOf(block, "selection-shell");
+    block.showSelectionGhost();
+    const ghost = textureGhostOf(block);
 
-    block.selected = false;
+    block.hideSelectionGhost();
 
-    assert.equal(shellOf(block, "selection-shell"), undefined);
-    assert.equal(shell?.parent, null);
+    assert.equal(textureGhostOf(block), undefined);
+    assert.equal(ghost?.parent, null);
+  });
+
+  test("tolerates hiding when nothing is shown", () => {
+    const block = new ModelBlock();
+
+    assert.doesNotThrow(() => block.hideSelectionGhost());
+  });
+
+  test("follows texture changes while shown", () => {
+    const block = new ModelBlock();
+    block.showSelectionGhost();
+    const texture = new THREE.Texture();
+
+    block.texture = texture;
+
+    assert.equal(textureGhostOf(block)?.material.map, texture);
+  });
+
+  test("emphasize does not create a ghost", () => {
+    const block = new ModelBlock();
+
+    block.emphasize(0x00ff00);
+
+    assert.equal(textureGhostOf(block), undefined);
   });
 });
 
-describe("ModelBlock emphasis outline", () => {
-  test("adds a back-face additive glow sharing the mesh geometry", () => {
-    const block = new ModelBlock();
-
-    block.emphasize(0x00ff00);
-
-    const shell = shellOf(block, "emphasis-shell");
-    assert.equal(shell?.material.color.getHex(), 0x00ff00);
-    assert.equal(shell?.material.side, THREE.BackSide);
-    assert.equal(shell?.material.blending, THREE.AdditiveBlending);
-    assert.equal(shell?.material.depthWrite, false);
-    assert.equal(shell?.geometry, block.mesh.geometry);
-  });
-
-  test("recolors an existing shell instead of duplicating it", () => {
-    const block = new ModelBlock();
-
-    block.emphasize(0x00ff00);
-    block.emphasize(0x0000ff);
-
-    const shells = block.mesh.children.filter((child) => child.name === "emphasis-shell");
-    assert.equal(shells.length, 1);
-    assert.equal(shellOf(block, "emphasis-shell")?.material.color.getHex(), 0x0000ff);
-  });
-
-  test("removes the shell on clearEmphasis, and tolerates nothing to clear", () => {
-    const block = new ModelBlock();
-    assert.doesNotThrow(() => block.clearEmphasis());
-
-    block.emphasize(0x00ff00);
-    const shell = shellOf(block, "emphasis-shell");
-    block.clearEmphasis();
-
-    assert.equal(shellOf(block, "emphasis-shell"), undefined);
-    assert.equal(shell?.parent, null);
-  });
-
-  test("coexists with the selection glow as an independent shell", () => {
-    const block = new ModelBlock();
-
-    block.selected = true;
-    block.emphasize(0x00ff00);
-    block.selected = false;
-
-    assert.equal(shellOf(block, "selection-shell"), undefined);
-    assert.equal(shellOf(block, "emphasis-shell")?.material.color.getHex(), 0x00ff00);
-  });
-
+describe("ModelBlock emphasis", () => {
   test("shows and tints the pivot marker on emphasize, hides it again on clear", () => {
     const block = new ModelBlock();
     assert.equal(pivotMarkerOf(block)?.visible, false);
@@ -270,6 +252,12 @@ describe("ModelBlock emphasis outline", () => {
 
     block.clearEmphasis();
     assert.equal(pivotMarkerOf(block)?.visible, false);
+  });
+
+  test("tolerates clearing when nothing was emphasized", () => {
+    const block = new ModelBlock();
+
+    assert.doesNotThrow(() => block.clearEmphasis());
   });
 
   test("keeps the local pivot marker visible after a peer's emphasis clears", () => {
@@ -291,9 +279,9 @@ describe("ModelBlock emphasis outline", () => {
     block.emphasize(0x0000ff, "cleo");
     block.clearEmphasis("cleo");
 
-    assert.equal(shellOf(block, "emphasis-shell")?.material.color.getHex(), 0xff0000);
+    assert.equal(pivotMarkerOf(block)?.material.color.getHex(), 0xff0000);
 
     block.clearEmphasis("bob");
-    assert.equal(shellOf(block, "emphasis-shell"), undefined);
+    assert.equal(pivotMarkerOf(block)?.visible, false);
   });
 });

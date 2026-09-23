@@ -3,20 +3,16 @@ import * as THREE from "three";
 import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import {
-  PivotMarker,
-  NEUTRAL_HIGHLIGHT_COLOR
-} from "./PivotMarker.ts";
+import { PivotMarker } from "./PivotMarker.ts";
 import { plainVector3 } from "./plainVector3.ts";
 
 // CONSTANTS
-const kSelectionScale = 1.06;
-const kSelectionOpacity = 0.6;
 const kTransformRoundDecimals = 2;
-const kEmphasisScale = 1.12;
-const kEmphasisOpacity = 0.85;
 const kDefaultEmphasisOwner = "default";
 const kLocalPivotOwner = "local";
+const kSelectionGhostRenderOrder = 1000;
+const kSelectionGhostOpacity = 1;
+export const SELECTION_HIGHLIGHT_COLOR = 0xff00ff;
 
 export interface ModelBlockOptions {
   uuid?: string;
@@ -39,9 +35,7 @@ export class ModelBlock {
 
   #size: THREE.Vector3;
   #pivotMarker = new PivotMarker();
-  #selectionShell: BlockMesh | null = null;
-  #emphasisShell: BlockMesh | null = null;
-  #emphasisOwners = new Map<string, THREE.ColorRepresentation>();
+  #selectionTextureGhost: BlockMesh | null = null;
 
   constructor(
     options: ModelBlockOptions = {}
@@ -103,32 +97,6 @@ export class ModelBlock {
     this.root.name = value;
   }
 
-  get selected(): boolean {
-    return this.#selectionShell !== null;
-  }
-
-  set selected(
-    value: boolean
-  ) {
-    if (value === this.selected) {
-      return;
-    }
-
-    if (value) {
-      this.#selectionShell = this.#createGlowShell(
-        NEUTRAL_HIGHLIGHT_COLOR,
-        kSelectionOpacity,
-        kSelectionScale,
-        "selection-shell"
-      );
-
-      return;
-    }
-
-    this.#disposeShell(this.#selectionShell);
-    this.#selectionShell = null;
-  }
-
   get pivotMarkerVisible(): boolean {
     return this.#pivotMarker.isShownBy(kLocalPivotOwner);
   }
@@ -153,6 +121,11 @@ export class ModelBlock {
   ) {
     this.mesh.material.map = texture;
     this.mesh.material.needsUpdate = true;
+
+    if (this.#selectionTextureGhost !== null) {
+      this.#selectionTextureGhost.material.map = texture;
+      this.#selectionTextureGhost.material.needsUpdate = true;
+    }
   }
 
   get position(): THREE.Vector3 {
@@ -267,30 +240,29 @@ export class ModelBlock {
     this.resize(new THREE.Vector3().copy(transform.size));
   }
 
+  showSelectionGhost(): void {
+    if (this.#selectionTextureGhost !== null) {
+      return;
+    }
+    this.#selectionTextureGhost = this.#createTextureGhost();
+  }
+
+  hideSelectionGhost(): void {
+    this.#disposeTextureGhost(this.#selectionTextureGhost);
+    this.#selectionTextureGhost = null;
+  }
+
   emphasize(
     color: THREE.ColorRepresentation,
     owner: string = kDefaultEmphasisOwner
   ): void {
-    this.#emphasisOwners.set(owner, color);
     this.#pivotMarker.show(owner, color);
-    this.#applyShellColor(color);
   }
 
   clearEmphasis(
     owner: string = kDefaultEmphasisOwner
   ): void {
-    this.#emphasisOwners.delete(owner);
     this.#pivotMarker.hide(owner);
-
-    const remaining = [...this.#emphasisOwners.values()].at(-1);
-    if (remaining !== undefined) {
-      this.#applyShellColor(remaining);
-
-      return;
-    }
-
-    this.#disposeShell(this.#emphasisShell);
-    this.#emphasisShell = null;
   }
 
   syncMeshToPivot(): void {
@@ -341,62 +313,40 @@ export class ModelBlock {
   dispose(): void {
     this.mesh.geometry.dispose();
     this.mesh.material.dispose();
-    this.#disposeShell(this.#selectionShell);
-    this.#disposeShell(this.#emphasisShell);
+    this.#disposeTextureGhost(this.#selectionTextureGhost);
     this.#pivotMarker.dispose();
     this.root.removeFromParent();
   }
 
-  #applyShellColor(
-    color: THREE.ColorRepresentation
-  ): void {
-    if (this.#emphasisShell === null) {
-      this.#emphasisShell = this.#createGlowShell(
-        color,
-        kEmphasisOpacity,
-        kEmphasisScale,
-        "emphasis-shell"
-      );
-
-      return;
-    }
-
-    this.#emphasisShell.material.color.set(color);
-  }
-
-  #createGlowShell(
-    color: THREE.ColorRepresentation,
-    opacity: number,
-    scale: number,
-    name: string
-  ): BlockMesh {
-    const shell = new THREE.Mesh(
+  #createTextureGhost(): BlockMesh {
+    const ghost = new THREE.Mesh(
       this.mesh.geometry,
       new THREE.MeshBasicMaterial({
-        color,
-        side: THREE.BackSide,
+        map: this.mesh.material.map,
+        color: this.mesh.material.color,
+        side: THREE.FrontSide,
         transparent: true,
-        opacity,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending
+        opacity: kSelectionGhostOpacity,
+        depthTest: false,
+        depthWrite: false
       })
     );
-    shell.name = name;
-    shell.scale.setScalar(scale);
-    this.mesh.add(shell);
+    ghost.name = "selection-texture-ghost";
+    ghost.renderOrder = kSelectionGhostRenderOrder;
+    this.mesh.add(ghost);
 
-    return shell;
+    return ghost;
   }
 
-  #disposeShell(
-    shell: BlockMesh | null
+  #disposeTextureGhost(
+    ghost: BlockMesh | null
   ): void {
-    if (shell === null) {
+    if (ghost === null) {
       return;
     }
 
-    this.mesh.remove(shell);
-    shell.material.dispose();
+    this.mesh.remove(ghost);
+    ghost.material.dispose();
   }
 }
 
