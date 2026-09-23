@@ -37,7 +37,7 @@ interface VoxelViewOptions {
   collider?: VoxelColliderFactory;
   /** @default "lambert" */
   material?: "lambert" | "standard";
-  /** Called once for each new material with its tileset ID. */
+  /** Called once for each new material with its tileset ID and surface. */
   materialCustomizer?: MaterialCustomizerFn;
   /** Shapes registered after the defaults from BlockShapeRegistry. */
   shapes?: BlockShape[];

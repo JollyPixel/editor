@@ -14,6 +14,7 @@ interface BlockDefinition extends BlockSurfaceOptions {
   alphaMode?: BlockAlphaMode;
   side?: BlockSide;
   alphaCutoff?: number;
+  materialGroup?: string;
   cullCoveredFaces?: boolean;
   defaultTilesetId?: string;
   properties?: BlockProperties;
@@ -27,8 +28,8 @@ default slot, so definitions written before slots keep loading. `collidable`
 defaults to `true`. `defaultTilesetId` fills tile references that omit a
 tileset and is removed from the resolved definition.
 
-[`BlockSurface`](./BlockSurface.md) defines `alphaMode`, `side`, and
-`alphaCutoff`. Opaque blocks ignore texture alpha. Masked blocks discard
+[`BlockSurface`](./BlockSurface.md) defines `alphaMode`, `side`,
+`alphaCutoff`, and `materialGroup`. Opaque blocks ignore texture alpha. Masked blocks discard
 uncovered texels before applying the layer fade. Blended blocks preserve
 fractional alpha and do not write depth; use
 [`VoxelTransparencyRenderer`](../core/VoxelTransparencyRenderer.md) to

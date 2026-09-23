@@ -475,6 +475,7 @@ emits nothing.
 
 The material customizer receives the resolved [BlockSurface](../blocks/BlockSurface.md)
 for each draw group. It can distinguish masked and blended geometry without
-inferring the policy from the material opacity. To composite overlapping
+inferring the policy from the material opacity, and reads
+`surface.materialGroup` to tune grouped blocks apart on a shared atlas. To composite overlapping
 blended chunks, install [VoxelTransparencyRenderer](./VoxelTransparencyRenderer.md)
 in the application render loop.

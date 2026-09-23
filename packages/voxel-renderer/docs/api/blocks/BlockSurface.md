@@ -11,6 +11,7 @@ interface BlockSurfaceOptions {
   alphaMode?: BlockAlphaMode;
   side?: BlockSide;
   alphaCutoff?: number;
+  materialGroup?: string;
 }
 
 class BlockSurface {
@@ -18,6 +19,7 @@ class BlockSurface {
   readonly alphaMode: BlockAlphaMode;
   readonly side: BlockSide;
   readonly alphaCutoff: number;
+  readonly materialGroup?: string;
   readonly occludes: boolean;
 }
 ```
@@ -27,10 +29,11 @@ class BlockSurface {
 | `alphaMode` | `"opaque"` | Ignores texture alpha. `"mask"` discards uncovered texels; `"blend"` preserves fractional alpha. |
 | `side` | `"front"` for opaque, `"double"` otherwise | Shows outward faces only, or both outward and inward faces. |
 | `alphaCutoff` | `0.1` for mask, `0` otherwise | Mask texels below the cutoff are discarded before layer opacity is applied. |
+| `materialGroup` | None | Gives the block its own chunk material on the same atlas, shared with every block naming the same group. |
 | `occludes` | Derived | True only for opaque surfaces; the shape still determines which boundaries are covered. |
 
-The instance is frozen. Invalid modes, sides, or non-finite cutoffs outside
-`[0, 1]` throw `RangeError`. Cutoffs are validated even for modes that do not
+The instance is frozen. Invalid modes, sides, non-finite cutoffs outside
+`[0, 1]`, or an empty or non-string material group throw `RangeError`. Cutoffs are validated even for modes that do not
 use them. `BlockRegistry.register()` validates the same settings.
 
 `VoxelEngineOptions.alphaTest` supplies the cutoff for mask blocks without an
@@ -41,6 +44,30 @@ need their resolved defaults.
 These settings apply to the whole block. Texture slots select tiles but do
 not override the surface policy. [`cullCoveredFaces`](./BlockDefinition.md)
 independently controls the faces a neighbour covers.
+
+A material group lets one atlas carry materials tuned apart. The
+`materialCustomizer` receives the surface, so it can read the group:
+
+```ts
+const engine = new VoxelEngine({
+  material: "standard",
+  blocks: [
+    { id: 1, name: "Sandstone", shapeId: "cube", defaultTexture },
+    { id: 2, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
+  ],
+  materialCustomizer(material, _tilesetId, surface) {
+    if (
+      material instanceof THREE.MeshStandardMaterial &&
+      surface.materialGroup === "gold"
+    ) {
+      material.metalness = 1;
+    }
+  }
+});
+```
+
+Each group adds a draw call per chunk and greedy faces never merge across
+groups.
 
 The legacy block property `transparent` has been removed. Use
 `alphaMode: "blend"` for smooth transparency, or `alphaMode: "mask"` for

@@ -33,7 +33,8 @@ export interface VoxelViewOptions {
   material?: "lambert" | "standard";
 
   /**
-   * Called once for each new material with its tileset ID.
+   * Called once for each new material with its tileset ID and surface;
+   * `surface.materialGroup` tells grouped blocks apart.
    */
   materialCustomizer?: MaterialCustomizerFn;
 
