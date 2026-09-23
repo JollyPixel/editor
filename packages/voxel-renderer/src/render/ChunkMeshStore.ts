@@ -34,6 +34,14 @@ export interface ChunkMeshStoreOptions {
    * @default false
    */
   retainVertexData?: boolean;
+  /**
+   * @default false
+   */
+  castShadow?: boolean;
+  /**
+   * @default false
+   */
+  receiveShadow?: boolean;
 }
 
 export interface ChunkMeshRemoveOptions {
@@ -56,6 +64,8 @@ export class ChunkMeshStore {
   #collider: VoxelCollider | null;
   #logger: VoxelLogger;
   #retainVertexData: boolean;
+  #castShadow: boolean;
+  #receiveShadow: boolean;
 
   constructor(
     options: ChunkMeshStoreOptions
@@ -67,7 +77,9 @@ export class ChunkMeshStore {
       inspector,
       collider = null,
       logger = NOOP_LOGGER,
-      retainVertexData = false
+      retainVertexData = false,
+      castShadow = false,
+      receiveShadow = false
     } = options;
 
     this.#root = root;
@@ -77,10 +89,38 @@ export class ChunkMeshStore {
     this.#collider = collider;
     this.#logger = logger;
     this.#retainVertexData = retainVertexData;
+    this.#castShadow = castShadow;
+    this.#receiveShadow = receiveShadow;
   }
 
   * [Symbol.iterator](): IterableIterator<[string, ChunkMeshEntry]> {
     yield* this.#entries;
+  }
+
+  get castShadow(): boolean {
+    return this.#castShadow;
+  }
+
+  set castShadow(
+    value: boolean
+  ) {
+    this.#castShadow = value;
+    for (const mesh of this.#meshes()) {
+      mesh.castShadow = value;
+    }
+  }
+
+  get receiveShadow(): boolean {
+    return this.#receiveShadow;
+  }
+
+  set receiveShadow(
+    value: boolean
+  ) {
+    this.#receiveShadow = value;
+    for (const mesh of this.#meshes()) {
+      mesh.receiveShadow = value;
+    }
   }
 
   rebuild(
@@ -121,6 +161,8 @@ export class ChunkMeshStore {
         );
         mesh.name = `voxel_chunk_${key}:${geometryKey}`;
         mesh.position.set(origin.x, origin.y, origin.z);
+        mesh.castShadow = this.#castShadow;
+        mesh.receiveShadow = this.#receiveShadow;
         this.#materials.retain(mesh.material);
         if (!this.#retainVertexData) {
           mesh.onAfterRender = releaseShaderAttributes;
@@ -207,6 +249,12 @@ export class ChunkMeshStore {
       this.#disposeMeshes(entry);
     }
     this.#entries.clear();
+  }
+
+  * #meshes(): IterableIterator<THREE.Mesh> {
+    for (const entry of this.#entries.values()) {
+      yield* entry.meshes;
+    }
   }
 
   #disposeMeshes(

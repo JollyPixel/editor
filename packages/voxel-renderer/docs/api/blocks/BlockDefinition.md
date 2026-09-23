@@ -8,12 +8,13 @@ interface BlockDefinition extends BlockSurfaceOptions {
   id: number;
   name: string;
   shapeId: BlockShapeID;
-  faceTextures?: Record<string, TileRef>;
+  faceTextures?: Partial<Record<TextureSlotKey, TileRef>>;
   defaultTexture?: TileRef;
   collidable?: boolean;
   alphaMode?: BlockAlphaMode;
   side?: BlockSide;
   alphaCutoff?: number;
+  materialGroup?: string;
   cullCoveredFaces?: boolean;
   defaultTilesetId?: string;
   properties?: BlockProperties;
@@ -23,12 +24,14 @@ interface BlockDefinition extends BlockSurfaceOptions {
 `faceTextures` is keyed by texture slot, not by face. A slot missing from it
 falls back to its base slot, then to `defaultTexture`, so a `"top.1"` written by
 no one uses the tile of `"top"`. A numeric `Face` key is read as that face's
-default slot, so definitions written before slots keep loading. `collidable`
+default slot, so definitions written before slots keep loading. A key matching
+no slot is ignored, and the view logs a warning for it; see
+[slot keys](./shapeSlots.md#slot-keys). `collidable`
 defaults to `true`. `defaultTilesetId` fills tile references that omit a
 tileset and is removed from the resolved definition.
 
-[`BlockSurface`](./BlockSurface.md) defines `alphaMode`, `side`, and
-`alphaCutoff`. Opaque blocks ignore texture alpha. Masked blocks discard
+[`BlockSurface`](./BlockSurface.md) defines `alphaMode`, `side`,
+`alphaCutoff`, and `materialGroup`. Opaque blocks ignore texture alpha. Masked blocks discard
 uncovered texels before applying the layer fade. Blended blocks preserve
 fractional alpha and do not write depth; use
 [`VoxelTransparencyRenderer`](../core/VoxelTransparencyRenderer.md) to

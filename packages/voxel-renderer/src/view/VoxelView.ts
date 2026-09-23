@@ -28,6 +28,7 @@ import { ViewDistance } from "../world/ViewDistance.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type {
+  TileMinification,
   ViewDistancePolicy,
   VoxelViewOptions
 } from "./VoxelView.types.ts";
@@ -98,11 +99,16 @@ export class VoxelView {
       inspector,
       tilesets,
       greedy = false,
+      tileMinification = "average",
       rebuildBudgetMs = 8,
       viewDistance,
       viewDistancePolicy = "hide",
-      retainVertexData = false
+      retainVertexData = false,
+      castShadow = false,
+      receiveShadow = false,
+      ambientOcclusion: requestedAo = 0
     } = options;
+    const ambientOcclusion = THREE.MathUtils.clamp(requestedAo, 0, 1);
 
     this.document = document;
     this.root.name = "VoxelView";
@@ -140,7 +146,9 @@ export class VoxelView {
       shapeRegistry: this.shapes,
       tilesetManager: this.tilesets,
       alphaTest,
-      greedy
+      greedy,
+      ambientOcclusion: ambientOcclusion > 0,
+      logger: this.#logger
     });
 
     this.#collider = collider?.({
@@ -152,7 +160,9 @@ export class VoxelView {
       tilesetManager: this.tilesets,
       type: material,
       customizer: materialCustomizer,
-      tileWrapping: greedy
+      tileWrapping: greedy,
+      tileAveraging: tileMinification === "average",
+      ambientOcclusion
     });
     this.#meshes = new ChunkMeshStore({
       root: this.root,
@@ -161,7 +171,9 @@ export class VoxelView {
       inspector: this.inspector,
       collider: this.#collider,
       logger: this.#logger,
-      retainVertexData
+      retainVertexData,
+      castShadow,
+      receiveShadow
     });
     this.#visibility = new ChunkVisibility({
       meshes: this.#meshes,
@@ -192,6 +204,7 @@ export class VoxelView {
       this.#removeChunk(layer, chunk);
     }
 
+    this.tilesets.refreshAverages();
     const viewport = this.#viewport();
 
     this.#visibility.update(viewport);
@@ -240,6 +253,60 @@ export class VoxelView {
     this.#materials.invalidate();
     this.#clearChunkMeshes();
     this.markAllChunksDirty("greedy");
+  }
+
+  get tileMinification(): TileMinification {
+    return this.#materials.tileAveraging ? "average" : "nearest";
+  }
+
+  set tileMinification(
+    value: TileMinification
+  ) {
+    const averaging = value === "average";
+    if (averaging === this.#materials.tileAveraging) {
+      return;
+    }
+
+    this.#materials.tileAveraging = averaging;
+    this.#materials.invalidate();
+    this.markAllChunksDirty("tileMinification");
+  }
+
+  get ambientOcclusion(): number {
+    return this.#materials.aoStrength.value;
+  }
+
+  set ambientOcclusion(
+    value: number
+  ) {
+    const strength = THREE.MathUtils.clamp(value, 0, 1);
+    this.#materials.aoStrength.value = strength;
+
+    const enabled = strength > 0;
+    if (enabled !== this.#meshBuilder.ambientOcclusion) {
+      this.#meshBuilder.ambientOcclusion = enabled;
+      this.markAllChunksDirty("ambientOcclusion");
+    }
+  }
+
+  get castShadow(): boolean {
+    return this.#meshes.castShadow;
+  }
+
+  set castShadow(
+    value: boolean
+  ) {
+    this.#meshes.castShadow = value;
+  }
+
+  get receiveShadow(): boolean {
+    return this.#meshes.receiveShadow;
+  }
+
+  set receiveShadow(
+    value: boolean
+  ) {
+    this.#meshes.receiveShadow = value;
   }
 
   loadTileset(

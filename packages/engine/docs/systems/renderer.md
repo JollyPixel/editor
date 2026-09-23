@@ -130,6 +130,56 @@ interface RenderParameters {
 }
 ```
 
+## Post-processing
+
+A render component with a `postProcessing` function is drawn through a
+`THREE.RenderPipeline` instead of a direct render. The function returns
+the pipeline's output node and receives the objects to build it from:
+
+```ts
+interface PostProcessingContext {
+  renderer: THREE.WebGPURenderer;
+  scene: THREE.Scene;
+  camera: THREE.Camera;
+}
+
+type PostProcessing = (context: PostProcessingContext) => THREE.Node;
+```
+
+```ts
+import { ao } from "three/addons/tsl/display/GTAONode.js";
+import { mrt, normalView, output, pass, vec3, vec4 } from "three/tsl";
+
+camera.postProcessing = ({ scene, camera }) => {
+  // GTAO samples depth with textureGather, which rejects MSAA textures.
+  const scenePass = pass(scene, camera, { samples: 0 });
+  scenePass.setMRT(mrt({ output, normal: normalView }));
+
+  const occlusion = ao(
+    scenePass.getTextureNode("depth"),
+    scenePass.getTextureNode("normal"),
+    camera
+  ).getTextureNode();
+
+  return scenePass.getTextureNode("output")
+    .mul(vec4(vec3(occlusion.r), 1));
+};
+```
+
+The default strategy builds one pipeline per camera and keeps it across
+frames. It rebuilds the pipeline when the function, the scene or the
+camera's `THREE.Camera` changes (`setProjectionMode`), and disposes it
+when the camera is removed, loses its post-processing, or the strategy
+is disposed.
+
+- A `pass()` inherits the canvas MSAA sample count. Pass `{ samples: 0 }`
+  to any pass whose depth or normals are sampled by a later node.
+- The pipeline draws inside the camera's viewport and replaces what lower
+  cameras drew there.
+- Pass targets follow the canvas size, not the viewport size.
+- A custom `RenderStrategy` ignores `postProcessing` unless it
+  implements it.
+
 ## Cameras (render components)
 
 Cameras are registered as **render components** — anything

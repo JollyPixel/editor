@@ -9,11 +9,15 @@ import type {
   RenderComponent,
   RenderViewport
 } from "../../../src/systems/rendering/Renderer.ts";
+import type {
+  PostProcessing
+} from "../../../src/systems/rendering/PostProcessing.ts";
 
 export interface RenderComponentStubOptions {
   depth?: number;
   viewport?: RenderViewport | null;
   camera?: THREE.Camera;
+  postProcessing?: PostProcessing | null;
 }
 
 export function createRenderComponent(
@@ -22,13 +26,15 @@ export function createRenderComponent(
   const {
     depth = 0,
     viewport = null,
-    camera = new THREE.PerspectiveCamera()
+    camera = new THREE.PerspectiveCamera(),
+    postProcessing = null
   } = options;
 
   return {
     threeCamera: camera,
     depth,
     viewport,
+    postProcessing,
     prepareRender: mock.fn((
       _canvasWidth: number,
       _canvasHeight: number
@@ -36,6 +42,17 @@ export function createRenderComponent(
       // no-op
     })
   } satisfies RenderComponent & { prepareRender: ReturnType<typeof mock.fn>; };
+}
+
+export function createPipelineSpy(
+  outputNode: THREE.Node,
+  onRender: () => void = () => void 0
+) {
+  return {
+    outputNode,
+    render: mock.fn(onRender),
+    dispose: mock.fn()
+  };
 }
 
 /**

@@ -12,6 +12,7 @@ import {
 import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
 import { VoxelTransform } from "../../../src/world/index.ts";
 import {
+  FACE,
   FACE_AXIS,
   FACE_POSITIVE
 } from "../../../src/utils/math.ts";
@@ -21,6 +22,7 @@ import {
   registerAtlas
 } from "../../helpers/atlas.ts";
 import { mockTexture } from "../../helpers/mockTexture.ts";
+import { makeLogger } from "../../helpers/fakes.ts";
 import {
   CUBE_ID as kCubeId,
   LEAVES_ID as kLeavesId,
@@ -302,5 +304,67 @@ describe("BlockVariantCache - tile rotation", () => {
         "a whole-tile face stays mergeable once rotated"
       );
     });
+  });
+});
+
+describe("BlockVariantCache - unknown faceTextures keys", () => {
+  function makeWarningCache(
+    faceTextures: BlockDefinition["faceTextures"]
+  ) {
+    const warnings: string[] = [];
+    const blockRegistry = new BlockRegistry([
+      makeBlockDef(kCubeId, "cube", { faceTextures })
+    ]);
+    const tilesetManager = new TilesetManager();
+    registerAtlas(tilesetManager);
+    const cache = new BlockVariantCache({
+      blockRegistry,
+      shapeRegistry: BlockShapeRegistry.createDefault(),
+      tilesetManager,
+      logger: makeLogger(warnings)
+    });
+    cache.refresh();
+
+    return { cache, blockRegistry, warnings };
+  }
+
+  it("warns once per registration, whatever the transform", () => {
+    const { cache, blockRegistry, warnings } = makeWarningCache({
+      negY: { col: 1, row: 0 }
+    });
+    cache.get(kCubeId, 0);
+    cache.get(kCubeId, 1);
+    blockRegistry.register(makeBlockDef(kRampId, "ramp"));
+    cache.refresh();
+    cache.get(kCubeId, 0);
+
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /negY/);
+    assert.match(warnings[0], /shape 'cube'/);
+  });
+
+  it("warns again once the block is registered anew", () => {
+    const { cache, blockRegistry, warnings } = makeWarningCache({
+      negY: { col: 1, row: 0 }
+    });
+    cache.get(kCubeId, 0);
+    blockRegistry.register(makeBlockDef(kCubeId, "cube", {
+      faceTextures: { posX: { col: 1, row: 0 } }
+    }));
+    cache.refresh();
+    cache.get(kCubeId, 0);
+
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[1], /posX/);
+  });
+
+  it("stays silent for slot and face keys", () => {
+    const { cache, warnings } = makeWarningCache({
+      top: { col: 1, row: 0 },
+      [FACE.NegY]: { col: 1, row: 0 }
+    });
+    cache.get(kCubeId, 0);
+
+    assert.deepEqual(warnings, []);
   });
 });

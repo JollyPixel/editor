@@ -9,6 +9,7 @@ import {
   voxelTransform
 } from "../../world/packedVoxel.ts";
 import { FACE_OFFSETS } from "../../utils/math.ts";
+import { AO_UNOCCLUDED } from "../ambientOcclusion.ts";
 
 /**
  * Emits every visible face of every voxel without merging.
@@ -32,7 +33,8 @@ export class NaiveMesher implements Mesher {
       worldOriginY,
       worldOriginZ,
       stats,
-      bufferFor
+      bufferFor,
+      ambientOcclusion
     } = options;
     const { shift, mask } = chunk;
     const shiftZ = shift * 2;
@@ -85,8 +87,12 @@ export class NaiveMesher implements Mesher {
           }
         }
 
+        const ao = ambientOcclusion ?
+          neighbourhood.ambientOcclusionAt(cull, wx, wy, wz) :
+          AO_UNOCCLUDED;
+
         if (!face.splittable) {
-          bufferFor(face.slot).addFace(face, wx, wy, wz);
+          bufferFor(face.slot).addFace(face, wx, wy, wz, ao);
           stats.faces++;
           emitted = true;
 
@@ -101,7 +107,7 @@ export class NaiveMesher implements Mesher {
           variant
         );
         for (const piece of pieces) {
-          bufferFor(piece.slot).addFace(piece, wx, wy, wz);
+          bufferFor(piece.slot).addFace(piece, wx, wy, wz, ao);
           stats.faces++;
           emitted = true;
         }

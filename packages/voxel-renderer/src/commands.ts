@@ -7,6 +7,7 @@ import type {
   VoxelLayerOptions
 } from "./world/VoxelLayer.ts";
 import type { VoxelCoord } from "./world/types.ts";
+import type { VoxelPatchCells } from "./world/voxelPatch.ts";
 import type {
   ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
@@ -99,6 +100,13 @@ export type VoxelLayerCommand =
     };
   }
   | {
+    action: "voxels-patched";
+    layerName: string;
+    metadata: {
+      cells: VoxelPatchCells;
+    };
+  }
+  | {
     action: "reordered";
     layerName: string;
     metadata: {
@@ -175,6 +183,7 @@ export const VOXEL_LAYER_COMMAND_ACTIONS: readonly VoxelLayerCommandAction[] = [
   "voxel-removed",
   "voxels-set",
   "voxels-removed",
+  "voxels-patched",
   "reordered",
   "layer-moved",
   "object-layer-added",

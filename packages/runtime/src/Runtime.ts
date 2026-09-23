@@ -61,6 +61,8 @@ import {
 // CONSTANTS
 const kDefaultStatsPosition = "top-left";
 const kDefaultStatsInset = 8;
+// Runtimes created with an explicit pixel ratio keep it through `load()`.
+const kFixedPixelRatio = new WeakSet<object>();
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -79,12 +81,17 @@ export interface RuntimeOptions<
   audio?: GlobalAudio;
   assets?: RuntimeAssetOptions;
   loop?: FrameSchedulerOptions;
+  /**
+   * Forwarded to `Systems.ThreeRenderer.create()`.
+   */
+  renderer?: Systems.ThreeRendererOptions;
 }
 
 export class Runtime<
   TContext = Systems.WorldDefaultContext
 > {
   readonly world: Systems.World<THREE.WebGPURenderer, TContext>;
+  readonly renderer: Systems.ThreeRenderer;
   readonly loop: GameLoop;
 
   readonly canvas: HTMLCanvasElement;
@@ -119,12 +126,13 @@ export class Runtime<
 
   private constructor(
     canvas: HTMLCanvasElement,
-    renderer: Systems.Renderer<THREE.WebGPURenderer>,
+    renderer: Systems.ThreeRenderer,
     sceneManager: Systems.SceneManager<TContext>,
     options: RuntimeOptions<TContext>,
     assets: ResolvedRuntimeAssetOptions
   ) {
     this.canvas = canvas;
+    this.renderer = renderer;
     this.overlay = new OverlayLayer(canvas, options.overlay);
 
     this.stats = new StatsRecorder();
@@ -170,7 +178,11 @@ export class Runtime<
 
     const sceneManager = new Systems.SceneManager<TContext>();
     const assets = await resolveRuntimeAssetOptions(options.assets);
-    const renderer = await Systems.ThreeRenderer.create(canvas);
+    const renderer = await Systems.ThreeRenderer.create(
+      canvas,
+      options.renderer
+    );
+    const output = options.renderer?.output;
 
     const runtime = new Runtime(
       canvas,
@@ -179,6 +191,12 @@ export class Runtime<
       options,
       assets
     );
+    if (
+      output?.pixelRatio !== undefined ||
+      output?.maxPixelRatio !== undefined
+    ) {
+      kFixedPixelRatio.add(runtime);
+    }
     await runtime.#initializePerformanceStats(
       options.includePerformanceStats
     );
@@ -193,7 +211,9 @@ export class Runtime<
   load(
     options: RuntimeLoadOptions<TContext> = {}
   ): Promise<void> {
-    return bootstrapRuntime(this, options);
+    return bootstrapRuntime(this, options, {
+      adaptivePixelRatio: !kFixedPixelRatio.has(this)
+    });
   }
 
   nextFrame(): Promise<void> {

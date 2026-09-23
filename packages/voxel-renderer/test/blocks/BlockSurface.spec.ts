@@ -11,10 +11,10 @@ import { makeBlockDef } from "../helpers/blocks.ts";
 describe("BlockSurface", () => {
   it("resolves independent alpha and side defaults", () => {
     assert.deepEqual({ ...new BlockSurface() }, {
-      alphaMode: "opaque", side: "front", alphaCutoff: 0
+      alphaMode: "opaque", side: "front", alphaCutoff: 0, materialGroup: undefined
     });
     assert.deepEqual({ ...new BlockSurface({ alphaMode: "blend" }) }, {
-      alphaMode: "blend", side: "double", alphaCutoff: 0
+      alphaMode: "blend", side: "double", alphaCutoff: 0, materialGroup: undefined
     });
 
     const surface = new BlockSurface({
@@ -41,6 +41,28 @@ describe("BlockSurface", () => {
     }
   });
 
+  it("keeps a material group and rejects an empty or non-string one", () => {
+    assert.equal(new BlockSurface().materialGroup, undefined);
+    assert.equal(
+      new BlockSurface({ materialGroup: "gold" }).materialGroup,
+      "gold"
+    );
+    assert.throws(
+      () => new BlockSurface({ materialGroup: "" }),
+      RangeError
+    );
+    assert.throws(() => new BlockRegistry([
+      makeBlockDef(1, "cube", { materialGroup: 42 as unknown as string })
+    ]), RangeError);
+
+    for (const alphaMode of ["opaque", "blend"] as const) {
+      const surface = new BlockSurface({ alphaMode, materialGroup: "gold" });
+      const key = new ChunkGeometryKey("atlas", surface).toString();
+      assert.notEqual(key, new ChunkGeometryKey("atlas", alphaMode === "blend").toString());
+      assert.deepEqual(ChunkGeometryKey.parse(key).surface, surface);
+    }
+  });
+
   it("round-trips every policy without grouping different surfaces together", () => {
     const keys = new Set<string>();
     for (const alphaMode of ["opaque", "mask", "blend"] as const) {
@@ -53,6 +75,9 @@ describe("BlockSurface", () => {
     }
 
     assert.equal(keys.size, 6);
+    assert.equal(keys.has(new ChunkGeometryKey("atlas", new BlockSurface({
+      materialGroup: "gold"
+    })).toString()), false);
     assert.notEqual(new ChunkGeometryKey("atlas", new BlockSurface({
       alphaMode: "mask", alphaCutoff: 0.3
     })).toString(), new ChunkGeometryKey("atlas", new BlockSurface({

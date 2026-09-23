@@ -25,6 +25,40 @@ identity.
 `span` is the [face span](./BlockShape.md#slanted-faces) shared by the slot's
 polygons, or `{ u: 1, v: 1 }` when they disagree.
 
+## Slot keys
+
+```ts
+const FACE_SLOT_NAMES: readonly ["right", "left", "top", "bottom", "front", "back"];
+
+type FaceSlotName = typeof FACE_SLOT_NAMES[number];
+type TextureSlotKey =
+  | FaceSlotName
+  | `${FaceSlotName}.${number}`
+  | Face
+  | (string & {});
+
+function slotNameOf(face: Face): FaceSlotName;
+function slotKeyOf(key: string): string;
+function unknownTextureSlots(
+  keys: Iterable<string>,
+  shape: BlockShape
+): string[];
+```
+
+`TextureSlotKey` types the keys of `faceTextures`. It stays open to any string
+because a shape may [pin](#pinning-a-slot) a slot under a name of its own, so
+the type gives completion but does not reject a typo such as `negY`.
+
+`slotKeyOf()` reads a numeric `Face` key as that face's slot and returns any
+other key unchanged.
+
+`unknownTextureSlots()` returns the keys that cannot texture any polygon of
+`shape`. A key is known when it is one of the shape's slots, the base of one, or
+a built-in face slot name. The last rule lets one texture map serve a cube and a
+`ramp`, which has no `back` slot. When a view builds a block, it logs a
+warning through its `logger` for each block whose keys are unknown. The warning
+is logged once per registration of that block.
+
 ## How a slot is derived
 
 Polygons of one face are grouped by their supporting plane. Coplanar polygons

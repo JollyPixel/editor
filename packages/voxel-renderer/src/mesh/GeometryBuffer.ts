@@ -4,10 +4,18 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { BlockVariantFace } from "./variants/types.ts";
 import type { QuadIndex } from "./QuadIndex.ts";
+import {
+  AO_UNOCCLUDED,
+  aoUAxis,
+  aoVAxis,
+  aoVertexByte
+} from "./ambientOcclusion.ts";
+import { FACE_AXIS } from "../utils/math.ts";
 
 // CONSTANTS
 const kInitialVertices = 4096;
 const kIndicesPerQuad = 6;
+const kUnoccludedShade = 127;
 
 export const TILE_REPEAT_SCALE = 65535;
 
@@ -40,6 +48,8 @@ export class GeometryBuffer {
   #repeats: Uint16Array;
 
   #vertexCapacity: number;
+  #shade = new Int8Array(4);
+  #start = 0;
   #originX = 0;
   #originY = 0;
   #originZ = 0;
@@ -84,14 +94,18 @@ export class GeometryBuffer {
 
   /**
    * Appends a face at the voxel's world position, stored relative to the
-   * buffer origin.
+   * buffer origin. `ao` packs the face's corner levels (see
+   * `packAoCorners`).
    */
+  // eslint-disable-next-line max-params
   addFace(
     face: BlockVariantFace,
     wx: number,
     wy: number,
-    wz: number
+    wz: number,
+    ao = AO_UNOCCLUDED
   ): void {
+    this.#prepareShade(face, ao);
     if (this.tiled) {
       this.#writeTiled(face, wx, wy, wz, 1, 1, 1, 1, 1);
     }
@@ -110,8 +124,10 @@ export class GeometryBuffer {
     wy: number,
     wz: number,
     spanU: number,
-    spanV: number
+    spanV: number,
+    ao = AO_UNOCCLUDED
   ): void {
+    this.#prepareShade(face, ao);
     const merge = face.merge!;
 
     // Only the two axes in the face plane stretch.
@@ -130,6 +146,37 @@ export class GeometryBuffer {
     const repeatV = merge.swapped ? spanU : spanV;
 
     this.#writeTiled(face, wx, wy, wz, sx, sy, sz, repeatU, repeatV);
+  }
+
+  /**
+   * Resolves per-vertex brightness, and rotates a quad by one vertex when
+   * its default diagonal would join the two darker corners.
+   */
+  #prepareShade(
+    face: BlockVariantFace,
+    ao: number
+  ): void {
+    const shade = this.#shade;
+    this.#start = 0;
+    if (ao === AO_UNOCCLUDED || face.cull < 0) {
+      shade.fill(kUnoccludedShade);
+
+      return;
+    }
+
+    const axis = FACE_AXIS[face.cull];
+    const uAxis = aoUAxis(axis);
+    const vAxis = aoVAxis(axis);
+    const local = face.positions;
+    const last = face.vertexCount - 1;
+    for (let i = 0; i < 4; i++) {
+      const i3 = (i > last ? last : i) * 3;
+      shade[i] = aoVertexByte(ao, local[i3 + uAxis], local[i3 + vAxis]);
+    }
+
+    if (face.vertexCount === 4 && shade[0] + shade[2] < shade[1] + shade[3]) {
+      this.#start = 1;
+    }
   }
 
   #reserve(): number {
@@ -156,6 +203,8 @@ export class GeometryBuffer {
     const normals = this.#normals;
     const regions = this.#regions;
     const local = face.positions;
+    const shade = this.#shade;
+    const start = this.#start;
     const { region, normalX, normalY, normalZ } = face;
     const last = face.vertexCount - 1;
     const x = wx - this.#originX;
@@ -163,13 +212,15 @@ export class GeometryBuffer {
     const z = wz - this.#originZ;
 
     for (let i = 0, n = base * 4, p = base * 3; i < 4; i++, p += 3, n += 4) {
-      const i3 = (i > last ? last : i) * 3;
+      const source = (i + start) & 3;
+      const i3 = (source > last ? last : source) * 3;
       positions[p] = x + (local[i3] * sx);
       positions[p + 1] = y + (local[i3 + 1] * sy);
       positions[p + 2] = z + (local[i3 + 2] * sz);
       normals[n] = normalX;
       normals[n + 1] = normalY;
       normals[n + 2] = normalZ;
+      normals[n + 3] = shade[source];
       regions[n] = region[0];
       regions[n + 1] = region[1];
       regions[n + 2] = region[2];
@@ -190,9 +241,11 @@ export class GeometryBuffer {
     const atlasUvs = this.#atlasUvs;
     const local = face.uvs;
     const last = face.vertexCount - 1;
+    const start = this.#start;
 
     for (let i = 0, u = base * 2; i < 4; i++, u += 2) {
-      const i2 = (i > last ? last : i) * 2;
+      const source = (i + start) & 3;
+      const i2 = (source > last ? last : source) * 2;
       atlasUvs[u] = local[i2];
       atlasUvs[u + 1] = local[i2 + 1];
     }
@@ -217,9 +270,11 @@ export class GeometryBuffer {
     const repeats = this.#repeats;
     const local = face.tileUvs;
     const last = face.vertexCount - 1;
+    const start = this.#start;
 
     for (let i = 0, u = base * 2; i < 4; i++, u += 2) {
-      const i2 = (i > last ? last : i) * 2;
+      const source = (i + start) & 3;
+      const i2 = (source > last ? last : source) * 2;
       tileUvs[u] = local[i2] * repeatU;
       tileUvs[u + 1] = local[i2 + 1] * repeatV;
       repeats[u] = repeatU;

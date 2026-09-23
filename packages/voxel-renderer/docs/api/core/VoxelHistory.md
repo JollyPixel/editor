@@ -37,7 +37,8 @@ object, block and tileset commands are not recorded. Silent writes are not
 recorded either: the `*At` primitives, `engine.load()`, and commands replayed
 with `apply()`, including those from peers.
 
-Each call becomes one entry unless it happens inside `begin()` / `commit()`.
+Each call becomes one entry unless it happens inside `begin()` / `commit()`
+or `world.transaction()`.
 Cells an edit leaves unchanged are ignored, and an entry with no changed cell
 is dropped. A new entry clears the redo stack.
 

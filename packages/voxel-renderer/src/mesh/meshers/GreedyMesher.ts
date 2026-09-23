@@ -17,11 +17,15 @@ import {
   voxelTransform
 } from "../../world/packedVoxel.ts";
 import { FACE_OFFSETS } from "../../utils/math.ts";
+import { AO_UNOCCLUDED } from "../ambientOcclusion.ts";
 
 // CONSTANTS
 const kDirections = 6;
 const kNotMergeable = -1;
 const kInitialLocalVariants = 16;
+// Mask cells pack `(mergeId + 1) << kAoBits | ao` so only equal AO merges.
+const kAoBits = 8;
+const kAoMask = 0xFF;
 
 function strideOf(
   axis: number,
@@ -86,6 +90,7 @@ export class GreedyMesher implements Mesher {
   #originZ = 0;
   #stats!: MeshBuildStats;
   #bufferFor!: GeometryBufferFactory;
+  #ambientOcclusion = false;
 
   #min = [0, 0, 0];
   #max = [-1, -1, -1];
@@ -128,6 +133,7 @@ export class GreedyMesher implements Mesher {
     this.#originZ = options.worldOriginZ;
     this.#stats = options.stats;
     this.#bufferFor = options.bufferFor;
+    this.#ambientOcclusion = options.ambientOcclusion;
     this.#emitted = false;
 
     this.#resize(chunk.size);
@@ -335,6 +341,17 @@ export class GreedyMesher implements Mesher {
     }
   }
 
+  #aoAt(
+    face: BlockVariantFace,
+    wx: number,
+    wy: number,
+    wz: number
+  ): number {
+    return this.#ambientOcclusion ?
+      this.#neighbourhood.ambientOcclusionAt(face.cull, wx, wy, wz) :
+      AO_UNOCCLUDED;
+  }
+
   #emitFace(
     face: BlockVariantFace,
     variant: BlockVariant,
@@ -343,9 +360,10 @@ export class GreedyMesher implements Mesher {
     wz: number
   ): void {
     const stats = this.#stats;
+    const ao = this.#aoAt(face, wx, wy, wz);
 
     if (!face.splittable) {
-      this.#bufferFor(face.slot).addFace(face, wx, wy, wz);
+      this.#bufferFor(face.slot).addFace(face, wx, wy, wz, ao);
       stats.faces++;
       this.#emitted = true;
 
@@ -360,7 +378,7 @@ export class GreedyMesher implements Mesher {
       variant
     );
     for (const piece of pieces) {
-      this.#bufferFor(piece.slot).addFace(piece, wx, wy, wz);
+      this.#bufferFor(piece.slot).addFace(piece, wx, wy, wz, ao);
       stats.faces++;
       this.#emitted = true;
     }
@@ -502,7 +520,12 @@ export class GreedyMesher implements Mesher {
             continue;
           }
 
-          mask[maskRow + v] = face.mergeId + 1;
+          mask[maskRow + v] = ((face.mergeId + 1) << kAoBits) | this.#aoAt(
+            face,
+            nx - offset[0],
+            cellY - offset[1],
+            cellZ - offset[2]
+          );
           visibleBits |= bit;
         }
 
@@ -560,7 +583,7 @@ export class GreedyMesher implements Mesher {
           else if (axis === 1) {
             ly = slice;
           }
-          const face = this.#variants.mergeFaceOf(cell - 1);
+          const face = this.#variants.mergeFaceOf((cell >> kAoBits) - 1);
 
           this.#bufferFor(face.slot).addMergedFace(
             face,
@@ -568,7 +591,8 @@ export class GreedyMesher implements Mesher {
             this.#originY + ly,
             this.#originZ + lz,
             spanU,
-            spanV
+            spanV,
+            cell & kAoMask
           );
           stats.faces++;
           stats.mergedFaces += (spanU * spanV) - 1;

@@ -1,5 +1,5 @@
 // Import Node.js Dependencies
-import { before, describe, test } from "node:test";
+import { before, describe, mock, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -18,11 +18,15 @@ import { RuntimeSceneLoader } from "../src/assets/RuntimeSceneLoader.ts";
 const kBrowserWindow = new Window();
 
 let RuntimeClass: typeof import("../src/Runtime.ts").Runtime;
+let bootstrap: typeof import("../src/bootstrap/bootstrapRuntime.ts").bootstrapRuntime;
 
 before(async() => {
   installBrowserGlobals();
 
   ({ Runtime: RuntimeClass } = await import("../src/Runtime.ts"));
+  ({ bootstrapRuntime: bootstrap } = await import(
+    "../src/bootstrap/bootstrapRuntime.ts"
+  ));
 });
 
 class TestScene extends Systems.Scene {
@@ -44,6 +48,7 @@ function createFakeRuntime(
   );
 
   const startCalls: string[] = [];
+  const setPixelRatio = mock.fn((_ratio: number) => void 0);
   const runtime = Object.assign(
     Object.create(RuntimeClass.prototype),
     {
@@ -53,7 +58,7 @@ function createFakeRuntime(
       world: {
         renderer: {
           getSource: () => {
-            return { setPixelRatio: () => void 0 };
+            return { setPixelRatio };
           }
         },
         assetCoordinator: coordinator,
@@ -65,7 +70,7 @@ function createFakeRuntime(
     }
   ) as Runtime;
 
-  return { runtime, startCalls };
+  return { runtime, startCalls, setPixelRatio };
 }
 
 describe("Runtime.load (skipLoadingScreen)", () => {
@@ -99,6 +104,28 @@ describe("Runtime.load (skipLoadingScreen)", () => {
 
     assert.strictEqual(container.childElementCount, 0);
     assert.deepStrictEqual(startCalls, []);
+  });
+});
+
+describe("Runtime.load (pixel ratio)", () => {
+  test("adapts the pixel ratio to the device by default", async() => {
+    const { runtime, setPixelRatio } = createFakeRuntime();
+
+    await runtime.load({ skipLoadingScreen: true });
+
+    assert.strictEqual(setPixelRatio.mock.callCount(), 1);
+  });
+
+  test("keeps the pixel ratio when adaptation is turned off", async() => {
+    const { runtime, setPixelRatio } = createFakeRuntime();
+
+    await bootstrap(
+      runtime,
+      { skipLoadingScreen: true },
+      { adaptivePixelRatio: false }
+    );
+
+    assert.strictEqual(setPixelRatio.mock.callCount(), 0);
   });
 });
 

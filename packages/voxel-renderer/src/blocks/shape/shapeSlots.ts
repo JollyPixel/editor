@@ -12,15 +12,28 @@ import type { TileSpan } from "../../tileset/types.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;
-const kFaceSlotNames: readonly string[] = [
+const kSlotCache = new WeakMap<BlockShape, readonly ShapeSlot[]>();
+
+export const FACE_SLOT_NAMES = [
   "right",
   "left",
   "top",
   "bottom",
   "front",
   "back"
-];
-const kSlotCache = new WeakMap<BlockShape, readonly ShapeSlot[]>();
+] as const;
+
+export type FaceSlotName = typeof FACE_SLOT_NAMES[number];
+
+/**
+ * Key of a block's `faceTextures`. Any string is accepted because a shape may
+ * pin its polygons to a slot name of its own.
+ */
+export type TextureSlotKey =
+  | FaceSlotName
+  | `${FaceSlotName}.${number}`
+  | FACE
+  | (string & {});
 
 export interface ShapeSlot {
   /**
@@ -34,8 +47,21 @@ export interface ShapeSlot {
 
 export function slotNameOf(
   face: FACE
+): FaceSlotName {
+  return FACE_SLOT_NAMES[face];
+}
+
+/**
+ * Reads a numeric `FACE` key as that face's default slot.
+ */
+export function slotKeyOf(
+  key: string
 ): string {
-  return kFaceSlotNames[face];
+  const face = Number(key);
+
+  return Number.isInteger(face) && face >= 0 && face < FACES.length ?
+    slotNameOf(face as FACE) :
+    key;
 }
 
 /**
@@ -65,6 +91,31 @@ export function shapeSlots(
   kSlotCache.set(shape, slots);
 
   return slots;
+}
+
+/**
+ * `faceTextures` keys that cannot texture any polygon of `shape`. Built-in face
+ * slot names are always known, so one texture map can be shared by a cube and
+ * a ramp, which has no `back`.
+ */
+export function unknownTextureSlots(
+  keys: Iterable<string>,
+  shape: BlockShape
+): string[] {
+  const known = new Set<string>(FACE_SLOT_NAMES);
+  for (const slot of shapeSlots(shape)) {
+    known.add(slot.id);
+    known.add(baseSlotOf(slot.id));
+  }
+
+  const unknown: string[] = [];
+  for (const key of keys) {
+    if (!known.has(slotKeyOf(key))) {
+      unknown.push(key);
+    }
+  }
+
+  return unknown;
 }
 
 interface SlotGroup {

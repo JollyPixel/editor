@@ -5,6 +5,11 @@ export interface BlockSurfaceOptions {
   alphaMode?: BlockAlphaMode;
   side?: BlockSide;
   alphaCutoff?: number;
+  /**
+   * Gives the block its own chunk material, shared by every block naming the
+   * same group; the material customizer reads it from the surface.
+   */
+  materialGroup?: string;
 }
 
 /**
@@ -14,6 +19,7 @@ export class BlockSurface {
   readonly alphaMode: BlockAlphaMode;
   readonly side: BlockSide;
   readonly alphaCutoff: number;
+  readonly materialGroup?: string;
 
   constructor(
     options: BlockSurfaceOptions = {}
@@ -40,9 +46,18 @@ export class BlockSurface {
       throw new RangeError("Alpha cutoff must be between 0 and 1.");
     }
 
+    const { materialGroup } = options;
+    if (
+      materialGroup !== undefined &&
+      (typeof materialGroup !== "string" || materialGroup === "")
+    ) {
+      throw new RangeError("Material group must be a non-empty string.");
+    }
+
     this.alphaMode = alphaMode;
     this.side = side;
     this.alphaCutoff = alphaMode === "mask" ? alphaCutoff : 0;
+    this.materialGroup = materialGroup;
     Object.freeze(this);
   }
 

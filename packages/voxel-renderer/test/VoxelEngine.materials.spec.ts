@@ -109,3 +109,73 @@ describe("VoxelEngine - layer opacity on the material", () => {
     assert.deepEqual([first.opacity, second.opacity].sort(), [0.5, 0.5001]);
   });
 });
+
+describe("VoxelEngine - material groups", () => {
+  const kGoldId = 5;
+
+  function goldEngine(
+    groups: Array<string | undefined>
+  ): VoxelEngine {
+    const engine = meshedGround({}, {
+      material: "standard",
+      blocks: [
+        makeBlockDef(kCubeId, "cube"),
+        makeBlockDef(kGoldId, "cube", { materialGroup: groups[1] })
+      ],
+      materialCustomizer(material, _tilesetId, surface) {
+        if (
+          material instanceof THREE.MeshStandardMaterial &&
+          surface.materialGroup === "gold"
+        ) {
+          material.metalness = 1;
+        }
+      }
+    });
+    placeCube(engine, "Ground", { x: 2, y: 0, z: 0 }, kGoldId);
+    engine.flush();
+
+    return engine;
+  }
+
+  it("gives a grouped block its own customizable material on one atlas", () => {
+    const engine = goldEngine([undefined, "gold"]);
+
+    const materials = materialsOf(engine) as THREE.MeshStandardMaterial[];
+    assert.equal(materials.length, 2);
+    assert.deepEqual(
+      materials.map((material) => material.metalness).sort(),
+      [0, 1]
+    );
+    assert.equal(materials[0].map, materials[1].map);
+  });
+
+  it("shares one material between ungrouped blocks", () => {
+    const engine = goldEngine([undefined, undefined]);
+
+    assert.equal(materialsOf(engine).length, 1);
+  });
+});
+
+describe("VoxelEngine - tile minification", () => {
+  it("fades distant tiles to their average colour by default", () => {
+    assert.equal(meshedGround().tileMinification, "average");
+  });
+
+  it("honours the constructor option", () => {
+    const engine = meshedGround({}, { tileMinification: "nearest" });
+
+    assert.equal(engine.tileMinification, "nearest");
+  });
+
+  it("replaces chunk materials when switched", () => {
+    const engine = meshedGround();
+    engine.flush();
+    const [before] = materialsOf(engine);
+
+    engine.tileMinification = "nearest";
+    engine.flush();
+
+    assert.equal(engine.tileMinification, "nearest");
+    assert.notEqual(materialsOf(engine)[0], before);
+  });
+});

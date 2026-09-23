@@ -3,6 +3,10 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type { RenderComponent } from "./Renderer.ts";
+import {
+  type CameraPipelineFactory,
+  CameraPipelines
+} from "./CameraPipelines.ts";
 
 export interface RenderParameters {
   /** Pre-sorted by `depth` ascending — strategies must not re-sort. */
@@ -26,11 +30,14 @@ export interface RenderStrategy {
 
 export class DirectRenderStrategy implements RenderStrategy {
   #renderer: THREE.WebGPURenderer;
+  #pipelines: CameraPipelines;
 
   constructor(
-    renderer: THREE.WebGPURenderer
+    renderer: THREE.WebGPURenderer,
+    createPipeline?: CameraPipelineFactory
   ) {
     this.#renderer = renderer;
+    this.#pipelines = new CameraPipelines(renderer, createPipeline);
   }
 
   render(
@@ -67,8 +74,15 @@ export class DirectRenderStrategy implements RenderStrategy {
         this.#renderer.clear();
       }
 
-      this.#renderer.render(scene, rc.threeCamera);
+      const pipeline = this.#pipelines.acquire(rc, scene);
+      if (pipeline) {
+        pipeline.render();
+      }
+      else {
+        this.#renderer.render(scene, rc.threeCamera);
+      }
     }
+    this.#pipelines.retain(sorted);
 
     if (hasViewports) {
       this.#renderer.setScissorTest(false);
@@ -85,5 +99,6 @@ export class DirectRenderStrategy implements RenderStrategy {
 
   dispose(): void {
     // The WebGPURenderer is owned by ThreeRenderer, not by the strategy.
+    this.#pipelines.dispose();
   }
 }

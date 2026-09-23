@@ -258,6 +258,81 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   });
 });
 
+describe("VoxelCommandArbiter — patch commands", () => {
+  function voxelsPatchedCmd(
+    xs: number[],
+    opts: { clientId?: string; timestamp?: number; } = {}
+  ): VoxelNetworkCommand {
+    return {
+      action: "voxels-patched",
+      layerName: "Ground",
+      metadata: {
+        cells: xs.flatMap((x) => [x, 0, 0, x + 1, 0])
+      },
+      clientId: opts.clientId ?? "client-A",
+      seq: 1,
+      timestamp: opts.timestamp ?? 1000
+    };
+  }
+
+  test("keys a patch by every cell it touches", () => {
+    assert.deepStrictEqual(
+      VoxelCommandArbiter.keys(voxelsPatchedCmd([0, 1])),
+      ["Ground:0,0,0", "Ground:1,0,0"]
+    );
+  });
+
+  test("narrows a patch to the cells that win", () => {
+    const arbiter = new VoxelCommandArbiter();
+    commit(arbiter, voxelSetCmd({
+      clientId: "late",
+      timestamp: 2000,
+      x: 1
+    }));
+
+    const narrowed = admitted(arbiter, voxelsPatchedCmd([0, 1, 2], {
+      clientId: "early",
+      timestamp: 1000
+    }));
+
+    assert.deepStrictEqual(
+      narrowed?.action === "voxels-patched" && narrowed.metadata.cells,
+      [0, 0, 0, 1, 0, 2, 0, 0, 3, 0]
+    );
+  });
+
+  test("records every cell of a patch", () => {
+    const arbiter = new VoxelCommandArbiter();
+    commit(arbiter, voxelsPatchedCmd([0, 1], { timestamp: 2000 }));
+
+    assert.strictEqual(
+      admitted(arbiter, voxelSetCmd({
+        clientId: "early",
+        timestamp: 1000,
+        x: 1
+      })),
+      null
+    );
+  });
+
+  test("passes an uncontested patch through untouched", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const command = voxelsPatchedCmd([0, 1, 2]);
+
+    assert.strictEqual(admitted(arbiter, command), command);
+  });
+
+  test("rejects a patch that is not a whole number of cells", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const command = voxelsPatchedCmd([0]);
+    if (command.action === "voxels-patched") {
+      command.metadata.cells.pop();
+    }
+
+    assert.strictEqual(admitted(arbiter, command), null);
+  });
+});
+
 describe("VoxelCommandArbiter — object commands", () => {
   const header = {
     clientId: "client-A",

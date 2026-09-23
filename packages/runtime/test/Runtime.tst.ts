@@ -3,6 +3,7 @@ import {
   expect,
   test
 } from "tstyche";
+import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import * as RuntimePackage from "../src/index.ts";
@@ -138,6 +139,25 @@ test("runtime.overlay mounts content and returns a disposer", () => {
   expect(
     runtime.overlay.mount(document.createElement("div"))
   ).type.toBe<RuntimePackage.MountedOverlay>();
+});
+
+test("the runtime exposes its concrete renderer", () => {
+  expect(runtime.renderer).type.toBe<Systems.ThreeRenderer>();
+  expect(runtime.renderer.renderStrategy).type.toBe<Systems.RenderStrategy>();
+});
+
+test("Runtime options forward the renderer options", () => {
+  expect<{
+    webgpu: { antialias: false; };
+    output: { pixelRatio: number; };
+  }>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["renderer"]
+  >();
+  expect<{
+    output: { pixelRatio: string; };
+  }>().type.not.toBeAssignableTo<
+    RuntimePackage.RuntimeOptions<TestContext>["renderer"]
+  >();
 });
 
 test("Runtime options accept both view helper forms", () => {

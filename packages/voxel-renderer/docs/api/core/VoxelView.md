@@ -37,7 +37,7 @@ interface VoxelViewOptions {
   collider?: VoxelColliderFactory;
   /** @default "lambert" */
   material?: "lambert" | "standard";
-  /** Called once for each new material with its tileset ID. */
+  /** Called once for each new material with its tileset ID and surface. */
   materialCustomizer?: MaterialCustomizerFn;
   /** Shapes registered after the defaults from BlockShapeRegistry. */
   shapes?: BlockShape[];
@@ -47,6 +47,8 @@ interface VoxelViewOptions {
   inspector?: VoxelInspectorOptions;
   /** @default false */
   greedy?: boolean;
+  /** Distant tiles fade to their average colour, see rendering and meshing. @default "average" */
+  tileMinification?: "average" | "nearest";
   /** Preloaded atlases, see loadTilesets. */
   tilesets?: Iterable<TilesetSource>;
   /** @default 8 */
@@ -57,6 +59,12 @@ interface VoxelViewOptions {
   viewDistancePolicy?: "hide" | "unload";
   /** @default false */
   retainVertexData?: boolean;
+  /** @default false */
+  castShadow?: boolean;
+  /** @default false */
+  receiveShadow?: boolean;
+  /** 0 (off) to 1. @default 0 */
+  ambientOcclusion?: number;
 }
 ```
 
@@ -71,6 +79,10 @@ class VoxelView {
   readonly inspector: VoxelInspector;
 
   greedy: boolean;                     // assigning rebuilds every chunk
+  tileMinification: "average" | "nearest"; // assigning replaces the materials
+  castShadow: boolean;                 // assigning updates built chunks
+  receiveShadow: boolean;              // assigning updates built chunks
+  ambientOcclusion: number;            // switching on or off rebuilds every chunk
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";

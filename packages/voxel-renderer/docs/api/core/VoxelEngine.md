@@ -132,6 +132,22 @@ interface VoxelEngineOptions {
    */
   retainVertexData?: boolean;
   /**
+   * Chunk meshes cast shadows. Chunks built later inherit the flag.
+   * @default false
+   */
+  castShadow?: boolean;
+  /**
+   * Chunk meshes receive shadows. Chunks built later inherit the flag.
+   * @default false
+   */
+  receiveShadow?: boolean;
+  /**
+   * Strength of the ambient occlusion baked into chunk vertices, clamped to
+   * 0 (off) through 1. See the rendering and meshing concept page.
+   * @default 0
+   */
+  ambientOcclusion?: number;
+  /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports
    * roughness and metalness maps but is more expensive to render; "lambert"
@@ -192,6 +208,15 @@ interface VoxelEngineOptions {
   greedy?: boolean;
 
   /**
+   * `"average"` fades distant faces to the average colour of their tile
+   * instead of letting nearest sampling shimmer. Falls back to `"nearest"`
+   * when the atlas pixels cannot be read.
+   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#distant-tiles).
+   * @default "average"
+   */
+  tileMinification?: "average" | "nearest";
+
+  /**
    * Pre-loaded atlases, registered synchronously during construction. Use
    * `loadTilesets()` to fetch them before constructing `VoxelEngine`.
    */
@@ -237,6 +262,10 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly history: VoxelHistory; // see VoxelHistory.md
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
+  tileMinification: "average" | "nearest"; // read/write; assigning replaces the materials
+  castShadow: boolean; // read/write; assigning updates built chunks
+  receiveShadow: boolean; // read/write; assigning updates built chunks
+  ambientOcclusion: number; // read/write; switching on or off rebuilds every chunk
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";
@@ -463,6 +492,7 @@ emits nothing.
 
 The material customizer receives the resolved [BlockSurface](../blocks/BlockSurface.md)
 for each draw group. It can distinguish masked and blended geometry without
-inferring the policy from the material opacity. To composite overlapping
+inferring the policy from the material opacity, and reads
+`surface.materialGroup` to tune grouped blocks apart on a shared atlas. To composite overlapping
 blended chunks, install [VoxelTransparencyRenderer](./VoxelTransparencyRenderer.md)
 in the application render loop.

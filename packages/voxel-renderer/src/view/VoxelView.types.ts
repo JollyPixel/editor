@@ -20,6 +20,10 @@ export type MaterialCustomizerFn = (
   surface: BlockSurface
 ) => void;
 
+export type TileMinification =
+  | "average"
+  | "nearest";
+
 export interface VoxelViewOptions {
   /**
    * Collision factory called once with the registries; disabled when omitted.
@@ -33,7 +37,8 @@ export interface VoxelViewOptions {
   material?: "lambert" | "standard";
 
   /**
-   * Called once for each new material with its tileset ID.
+   * Called once for each new material with its tileset ID and surface;
+   * `surface.materialGroup` tells grouped blocks apart.
    */
   materialCustomizer?: MaterialCustomizerFn;
 
@@ -63,6 +68,16 @@ export interface VoxelViewOptions {
    * @default false
    */
   greedy?: boolean;
+
+  /**
+   * How atlas tiles are drawn once a screen pixel covers several texels.
+   * `"average"` fades distant faces toward the average colour of their tile,
+   * which stops the moire and shimmer that `"nearest"` shows far away.
+   * Needs readable atlas pixels (a 2D canvas, same-origin images); falls
+   * back to `"nearest"` otherwise.
+   * @default "average"
+   */
+  tileMinification?: TileMinification;
 
   /**
    * Preloaded atlases (see `loadTilesets`) registered synchronously during
@@ -98,4 +113,24 @@ export interface VoxelViewOptions {
    * @default false
    */
   retainVertexData?: boolean;
+
+  /**
+   * Strength of the ambient occlusion baked into chunk vertices, from 0 (off)
+   * to 1 (fully occluded corners turn black). Darkens the albedo, so it
+   * shades direct and indirect light alike.
+   * @default 0
+   */
+  ambientOcclusion?: number;
+
+  /**
+   * Chunk meshes cast shadows; assignable later through `castShadow`.
+   * @default false
+   */
+  castShadow?: boolean;
+
+  /**
+   * Chunk meshes receive shadows; assignable later through `receiveShadow`.
+   * @default false
+   */
+  receiveShadow?: boolean;
 }

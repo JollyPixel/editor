@@ -7,11 +7,15 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { ChunkMaterialCache } from "../../src/render/index.ts";
-import { TilesetManager } from "../../src/tileset/index.ts";
+import {
+  AtlasAverages,
+  TilesetManager
+} from "../../src/tileset/index.ts";
 import {
   makeAtlasDef,
   registerAtlas
 } from "../helpers/atlas.ts";
+import { readableTexture } from "../helpers/mockTexture.ts";
 
 function makeCache(
   options: Partial<ConstructorParameters<typeof ChunkMaterialCache>[0]> = {}
@@ -132,5 +136,45 @@ describe("ChunkMaterialCache — invalidate", () => {
     cache.invalidate();
 
     assert.notEqual(cache.resolve("atlas", 1), before);
+  });
+});
+
+describe("ChunkMaterialCache — tile averaging", () => {
+  function readableAtlasCache(
+    tileAveraging?: boolean
+  ) {
+    const tilesetManager = new TilesetManager();
+    const texture = readableTexture();
+    registerAtlas(tilesetManager, makeAtlasDef(), texture);
+    const cache = new ChunkMaterialCache({
+      tilesetManager,
+      tileAveraging
+    });
+
+    return { cache, texture };
+  }
+
+  it("builds the average table of a readable atlas by default", () => {
+    const { cache, texture } = readableAtlasCache();
+    assert.equal(cache.tileAveraging, true);
+
+    cache.resolve("atlas", 1);
+
+    assert.ok(AtlasAverages.peek(texture));
+  });
+
+  it("skips the table when averaging is off", () => {
+    const { cache, texture } = readableAtlasCache(false);
+
+    cache.resolve("atlas", 1);
+
+    assert.equal(AtlasAverages.peek(texture), undefined);
+  });
+
+  it("falls back to plain sampling when the atlas cannot be read", () => {
+    const material = makeCache().resolve("atlas", 1);
+
+    assert.ok(material.map);
+    assert.ok((material as { colorNode?: unknown; }).colorNode);
   });
 });

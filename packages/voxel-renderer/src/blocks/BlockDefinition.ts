@@ -5,10 +5,9 @@ import type {
   TileRef
 } from "../tileset/types.ts";
 import {
-  FACES,
-  type FACE
-} from "../utils/math.ts";
-import { slotNameOf } from "./shape/shapeSlots.ts";
+  slotKeyOf,
+  type TextureSlotKey
+} from "./shape/shapeSlots.ts";
 import type { BlockShapeID } from "./shape/BlockShape.ts";
 import {
   BlockSurface,
@@ -30,7 +29,7 @@ export interface BlockDefinition extends BlockSurfaceOptions {
    * slot, so documents written before slots keep loading.
    * @default {}
    */
-  faceTextures?: Record<string, TileRef>;
+  faceTextures?: Partial<Record<TextureSlotKey, TileRef>>;
   defaultTexture?: TileRef;
   /**
    * If false, the mesh builder will not emit collision geometry for this block.
@@ -64,16 +63,6 @@ export type ResolvedBlockDefinition =
     collidable: boolean;
     properties: BlockProperties;
   };
-
-export function slotKeyOf(
-  key: string
-): string {
-  const face = Number(key);
-
-  return Number.isInteger(face) && face >= 0 && face < FACES.length ?
-    slotNameOf(face as FACE) :
-    key;
-}
 
 export function cullsCoveredFaces(
   def: Pick<BlockDefinition, "alphaMode" | "cullCoveredFaces">

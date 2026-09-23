@@ -151,6 +151,30 @@ const kCases: RoundTripCase[] = [
     actions: ["voxels-removed"]
   },
   {
+    name: "patches voxels",
+    seed: ground,
+    act: (world) => world.patchVoxels("Ground", [
+      0, 0, 0, 0, 0,
+      2, 0, 0, 3, 5,
+      9, 0, 0, 4, 0
+    ]),
+    actions: ["voxels-patched"]
+  },
+  {
+    name: "coalesces a transaction into one patch per layer",
+    seed: (world) => {
+      world.addLayer("Top");
+      ground(world);
+    },
+    act: (world) => world.transaction(() => {
+      world.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: 3, rotation: 1 });
+      world.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
+      world.setVoxel("Top", { position: { x: 0, y: 1, z: 0 }, blockId: 6 });
+      world.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: 4 });
+    }),
+    actions: ["voxels-patched", "voxels-patched"]
+  },
+  {
     name: "clones a layer, voxels included, under a derived name",
     seed: (world) => {
       world.addLayer("Bottom");

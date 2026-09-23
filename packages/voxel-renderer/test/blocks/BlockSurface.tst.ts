@@ -17,4 +17,6 @@ test("block surfaces expose explicit alpha modes without the legacy flag", () =>
   expect(BlockSurface).type.not.toBeConstructableWith({ alphaMode: "cutout" });
   expect(BlockSurface).type.not.toBeConstructableWith({ side: "back" });
   expect(BlockSurface).type.not.toBeConstructableWith({ transparent: true });
+  expect(BlockSurface).type.toBeConstructableWith({ materialGroup: "gold" });
+  expect(BlockSurface).type.not.toBeConstructableWith({ materialGroup: 1 });
 });

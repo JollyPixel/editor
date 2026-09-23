@@ -41,6 +41,12 @@ import { VoxelTransform } from "./VoxelTransform.ts";
 import type { VoxelLayerCommand } from "../commands.ts";
 import { dispatchCommand } from "./dispatchCommand.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
+import { VoxelEditBatch } from "./VoxelEditBatch.ts";
+import {
+  assertVoxelPatchCells,
+  VOXEL_PATCH_STRIDE
+} from "./voxelPatch.ts";
+import { isAir } from "../blocks/BlockId.ts";
 
 // CONSTANTS
 let kLayerIdCounter = 0;
@@ -74,6 +80,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   #chunkShift: number;
   #chunkMask: number;
   #muted = false;
+  #batch: VoxelEditBatch | null = null;
 
   constructor(
     chunkSize: number = DEFAULT_CHUNK_SIZE
@@ -729,6 +736,16 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     options: VoxelSetOptions
   ): void {
     const { position, blockId } = options;
+    if (this.#batch !== null) {
+      this.#batchWrite(
+        layerName,
+        position,
+        packVoxel(blockId, VoxelTransform.pack(options))
+      );
+
+      return;
+    }
+
     const transform = VoxelTransform.fromPacked(VoxelTransform.pack(options));
     const changes = this.#changes(layerName);
 
@@ -757,6 +774,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     options: VoxelRemoveOptions
   ): void {
+    if (this.#batch !== null) {
+      this.#batchWrite(layerName, options.position, VOXEL_ABSENT);
+
+      return;
+    }
+
     const changes = this.#changes(layerName);
 
     this.#writeVoxel(
@@ -777,6 +800,18 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     entries: VoxelSetOptions[]
   ): void {
+    if (this.#batch !== null) {
+      for (const entry of entries) {
+        this.#batchWrite(
+          layerName,
+          entry.position,
+          packVoxel(entry.blockId, VoxelTransform.pack(entry))
+        );
+      }
+
+      return;
+    }
+
     const changes = this.#changes(layerName);
     for (const entry of entries) {
       this.#writeVoxel(
@@ -798,6 +833,14 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     entries: VoxelRemoveOptions[]
   ): void {
+    if (this.#batch !== null) {
+      for (const { position } of entries) {
+        this.#batchWrite(layerName, position, VOXEL_ABSENT);
+      }
+
+      return;
+    }
+
     const changes = this.#changes(layerName);
     for (const { position } of entries) {
       this.#writeVoxel(layerName, position, VOXEL_ABSENT, changes);
@@ -808,6 +851,83 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       layerName,
       metadata: { entries }
     });
+  }
+
+  patchVoxels(
+    layerName: string,
+    cells: readonly number[]
+  ): void {
+    assertVoxelPatchCells(cells);
+
+    this.transaction(() => {
+      for (let index = 0; index < cells.length; index += VOXEL_PATCH_STRIDE) {
+        const blockId = cells[index + 3];
+        this.#batchWrite(
+          layerName,
+          {
+            x: cells[index],
+            y: cells[index + 1],
+            z: cells[index + 2]
+          },
+          isAir(blockId) ? VOXEL_ABSENT : packVoxel(blockId, cells[index + 4])
+        );
+      }
+    });
+  }
+
+  transaction<T>(
+    fn: () => T
+  ): T {
+    if (this.#batch !== null) {
+      return fn();
+    }
+
+    const batch = new VoxelEditBatch(this.chunkSize);
+    this.#batch = batch;
+    try {
+      return fn();
+    }
+    finally {
+      this.#batch = null;
+      batch.markDirty(this.#layers);
+      this.#flushBatch(batch);
+    }
+  }
+
+  #batchWrite(
+    layerName: string,
+    position: Vector3Like,
+    packed: PackedVoxel
+  ): void {
+    const layer = this.getLayer(layerName);
+    if (!layer) {
+      if (packed === VOXEL_ABSENT) {
+        return;
+      }
+
+      throw new Error(`VoxelWorld: layer "${layerName}" does not exist.`);
+    }
+
+    const track = !this.#muted;
+    this.#batch!.write(layer, position, packed, {
+      track,
+      record: track && this.recorder !== null
+    });
+  }
+
+  #flushBatch(
+    batch: VoxelEditBatch
+  ): void {
+    for (const { layer, cells, changes } of batch.drain()) {
+      if (changes.length > 0) {
+        this.recorder?.record(changes);
+      }
+      this.emit("command", {
+        action: "voxels-patched",
+        layerName: layer.name,
+        metadata: { cells }
+      });
+    }
   }
 
   #changes(
@@ -966,6 +1086,9 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     if (this.#muted) {
       return;
     }
+    if (this.#batch !== null) {
+      this.#flushBatch(this.#batch);
+    }
 
     this.emit("command", event);
   }
@@ -1000,6 +1123,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     edited: VoxelLayer,
     position: Vector3Like
   ): void {
+    if (this.#batch !== null) {
+      this.#batch.touch(edited, position);
+
+      return;
+    }
+
     const shift = this.#chunkShift;
 
     for (const layer of this.#layers) {
@@ -1030,27 +1159,22 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     const cy = y >> shift;
     const cz = z >> shift;
 
-    const lx = x & mask;
-    const ly = y & mask;
-    const lz = z & mask;
+    const minDx = (x & mask) === 0 ? -1 : 0;
+    const maxDx = (x & mask) === s - 1 ? 1 : 0;
+    const minDy = (y & mask) === 0 ? -1 : 0;
+    const maxDy = (y & mask) === s - 1 ? 1 : 0;
+    const minDz = (z & mask) === 0 ? -1 : 0;
+    const maxDz = (z & mask) === s - 1 ? 1 : 0;
 
-    if (lx === 0) {
-      layer.markChunkDirty(cx - 1, cy, cz);
-    }
-    if (lx === s - 1) {
-      layer.markChunkDirty(cx + 1, cy, cz);
-    }
-    if (ly === 0) {
-      layer.markChunkDirty(cx, cy - 1, cz);
-    }
-    if (ly === s - 1) {
-      layer.markChunkDirty(cx, cy + 1, cz);
-    }
-    if (lz === 0) {
-      layer.markChunkDirty(cx, cy, cz - 1);
-    }
-    if (lz === s - 1) {
-      layer.markChunkDirty(cx, cy, cz + 1);
+    // Edge and corner chunks sample this cell for ambient occlusion.
+    for (let dx = minDx; dx <= maxDx; dx++) {
+      for (let dy = minDy; dy <= maxDy; dy++) {
+        for (let dz = minDz; dz <= maxDz; dz++) {
+          if ((dx | dy | dz) !== 0) {
+            layer.markChunkDirty(cx + dx, cy + dy, cz + dz);
+          }
+        }
+      }
     }
   }
 }

@@ -6,10 +6,12 @@ import {
   enableTileClamping,
   enableTileWrapping
 } from "../mesh/index.ts";
+import { AtlasAverages } from "../tileset/AtlasAverages.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MaterialCustomizerFn } from "../VoxelEngine.types.ts";
 import { BlockSurface } from "../blocks/BlockSurface.ts";
 import { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
+import { createAoStrength } from "../mesh/ambientOcclusion.ts";
 
 // CONSTANTS
 const kCoveredFaceOffset = -1;
@@ -30,6 +32,16 @@ export interface ChunkMaterialCacheOptions {
    * @default false
    */
   tileWrapping?: boolean;
+  /**
+   * Distant faces fade to the average colour of their atlas rect.
+   * @default true
+   */
+  tileAveraging?: boolean;
+  /**
+   * Ambient occlusion strength shared by every chunk material, 0 to 1.
+   * @default 0
+   */
+  ambientOcclusion?: number;
 }
 
 /**
@@ -38,6 +50,8 @@ export interface ChunkMaterialCacheOptions {
  */
 export class ChunkMaterialCache {
   tileWrapping: boolean;
+  tileAveraging: boolean;
+  readonly aoStrength: ReturnType<typeof createAoStrength>;
 
   #materials = new Map<string, ChunkMaterial>();
   #keys = new Map<THREE.Material, string>();
@@ -53,13 +67,17 @@ export class ChunkMaterialCache {
       tilesetManager,
       type = "lambert",
       customizer,
-      tileWrapping = false
+      tileWrapping = false,
+      tileAveraging = true,
+      ambientOcclusion = 0
     } = options;
 
     this.#tilesetManager = tilesetManager;
     this.#type = type;
     this.#customizer = customizer;
     this.tileWrapping = tileWrapping;
+    this.tileAveraging = tileAveraging;
+    this.aoStrength = createAoStrength(ambientOcclusion);
   }
 
   resolve(
@@ -144,12 +162,18 @@ export class ChunkMaterialCache {
       new THREE.MeshStandardMaterial(options) :
       new THREE.MeshLambertMaterial(options);
 
-    if (this.tileWrapping) {
-      enableTileWrapping(material, surface);
-    }
-    else {
-      enableTileClamping(material, surface);
-    }
+    const averages = this.tileAveraging ?
+      AtlasAverages.of(texture)?.texture :
+      null;
+    const enable = this.tileWrapping ?
+      enableTileWrapping :
+      enableTileClamping;
+    enable(
+      material,
+      surface,
+      this.aoStrength,
+      averages
+    );
     this.#customizer?.(
       material,
       tilesetId,

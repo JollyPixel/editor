@@ -6,7 +6,8 @@ const kCutoutSuffix = ":cutout";
 const kSurfaceSuffix = ":surface=";
 
 /**
- * A chunk draw group identified by its atlas and surface policy.
+ * A chunk draw group identified by its atlas, surface policy, and material
+ * group.
  */
 export class ChunkGeometryKey {
   readonly tilesetId: string;
@@ -53,17 +54,19 @@ export class ChunkGeometryKey {
   }
 
   toString(): string {
-    const { alphaMode, side } = this.surface;
+    const { alphaMode, side, materialGroup } = this.surface;
 
     if (
       alphaMode === "opaque" &&
-      side === "front"
+      side === "front" &&
+      materialGroup === undefined
     ) {
       return this.tilesetId;
     }
     if (
       alphaMode === "blend" &&
-      side === "double"
+      side === "double" &&
+      materialGroup === undefined
     ) {
       return this.tilesetId + kCutoutSuffix;
     }

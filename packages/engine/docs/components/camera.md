@@ -58,6 +58,7 @@ interface CameraOptions {
   viewport?: RenderViewport | null;
   depth?: number;
   addAudioListener?: boolean;
+  postProcessing?: PostProcessing | null;
 }
 ```
 
@@ -71,6 +72,7 @@ interface CameraOptions {
 | `viewport` | `null` | Normalized rect; `null` is the full canvas |
 | `depth` | `0` | Render order — lower first |
 | `addAudioListener` | `false` | Attaches the world's `THREE.AudioListener` |
+| `postProcessing` | `null` | Builds the camera's output node; see [post-processing](#post-processing) |
 
 > [!NOTE]
 > The default `near`/`far` pair is a 100,000:1 ratio, which leaves
@@ -96,8 +98,26 @@ world.createActor("p2").addComponent(CameraComponent, {
 });
 ```
 
-Viewports only apply in the renderer's `"direct"` mode — see the
-[render modes](../systems/renderer.md#render-modes) warning.
+Viewports are honoured by the default
+[render strategy](../systems/renderer.md#render-strategy); a custom
+strategy decides for itself.
+
+## Post-processing
+
+`postProcessing` returns the output node of a `THREE.RenderPipeline`
+that replaces the camera's direct render. See
+[post-processing](../systems/renderer.md#post-processing).
+
+```ts
+import { pass } from "three/tsl";
+
+camera.postProcessing = ({ scene, camera }) => {
+  return pass(scene, camera);
+};
+
+// Back to a direct render
+camera.postProcessing = null;
+```
 
 ## Runtime changes
 

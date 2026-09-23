@@ -102,6 +102,7 @@ engine forwards as local commands.
 | `"voxel-removed"` | `{ position: Vector3Like }` | |
 | `"voxels-set"` | `{ entries: VoxelSetOptions[] }` | Bulk placement |
 | `"voxels-removed"` | `{ entries: VoxelRemoveOptions[] }` | Bulk removal |
+| `"voxels-patched"` | `{ cells: VoxelPatchCells }` | Emitted by `transaction()` and `patchVoxels()`. Five numbers per cell: `x, y, z, blockId, transform`; block `0` removes the voxel. |
 | `"reordered"` | `{ direction: "up" \| "down" }` | One step; `"up"` raises priority. |
 | `"layer-moved"` | `{ toIndex: number }` | Absolute position, already clamped. |
 | `"object-layer-added"` | `{}` | |

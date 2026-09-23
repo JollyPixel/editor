@@ -45,6 +45,9 @@ await runtime.load({
 Use `Infinity` to remove the detected render cap. This option overrides
 `runtime.loop.scheduler.maxFps` during startup.
 
+The detected pixel ratio is skipped when `Runtime.create()` received
+`renderer.output.pixelRatio` or `renderer.output.maxPixelRatio`.
+
 ## Show performance statistics
 
 The runtime always records. `runtime.stats` is a `StatsRecorder` the loop

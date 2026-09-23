@@ -156,6 +156,7 @@ const view = {
 const controls = {
   seed: settings.seed,
   greedy: engine.greedy,
+  minification: engine.tileMinification,
   debug: engine.inspector.mode,
   chunkBounds: engine.inspector.chunkBounds
 };
@@ -211,6 +212,17 @@ controlsFolder
   .addBinding(controls, "greedy", { label: "greedy [M]" })
   .on("change", ({ value }) => setGreedy(value));
 controlsFolder
+  .addBinding(controls, "minification", {
+    options: {
+      average: "average",
+      nearest: "nearest"
+    },
+    label: "far tiles [N]"
+  })
+  .on("change", ({ value }) => {
+    engine.tileMinification = value;
+  });
+controlsFolder
   .addBinding(controls, "debug", {
     options: {
       off: "off",
@@ -251,6 +263,16 @@ document.addEventListener("keydown", (event) => {
   // off → wireframe over the textures → wireframe only.
   if (event.code === "KeyG") {
     setDebugMode(engine.inspector.nextMode());
+
+    return;
+  }
+
+  if (event.code === "KeyN") {
+    controls.minification = controls.minification === "average" ?
+      "nearest" :
+      "average";
+    engine.tileMinification = controls.minification;
+    pane.refresh();
 
     return;
   }

@@ -8,6 +8,9 @@ import type {
   RenderComponent,
   RenderViewport
 } from "../../systems/rendering/Renderer.ts";
+import type {
+  PostProcessing
+} from "../../systems/rendering/PostProcessing.ts";
 import type { WorldDefaultContext } from "../../systems/World.ts";
 
 export type CameraProjectionMode = "perspective" | "orthographic";
@@ -49,6 +52,11 @@ export interface CameraOptions {
    * @default false
    */
   addAudioListener?: boolean;
+  /**
+   * Builds the output node the camera renders through.
+   * @default null
+   */
+  postProcessing?: PostProcessing | null;
 }
 
 export class CameraComponent<
@@ -62,6 +70,7 @@ export class CameraComponent<
   #orthographicScale: number;
   #viewport: RenderViewport | null;
   #depth: number;
+  #postProcessing: PostProcessing | null;
 
   #projectionDirty = true;
   #lastCanvasWidth = 0;
@@ -82,6 +91,16 @@ export class CameraComponent<
 
   get viewport(): RenderViewport | null {
     return this.#viewport;
+  }
+
+  get postProcessing(): PostProcessing | null {
+    return this.#postProcessing;
+  }
+
+  set postProcessing(
+    postProcessing: PostProcessing | null
+  ) {
+    this.#postProcessing = postProcessing;
   }
 
   get projectionMode(): CameraProjectionMode {
@@ -121,7 +140,8 @@ export class CameraComponent<
       orthographicScale = 1,
       viewport = null,
       depth = 0,
-      addAudioListener = false
+      addAudioListener = false,
+      postProcessing = null
     } = options;
 
     this.#projectionMode = projectionMode;
@@ -131,6 +151,7 @@ export class CameraComponent<
     this.#orthographicScale = orthographicScale;
     this.#viewport = viewport;
     this.#depth = depth;
+    this.#postProcessing = postProcessing;
 
     this.#threeCamera = this.#createThreeCamera();
     if (addAudioListener) {

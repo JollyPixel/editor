@@ -53,7 +53,6 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
   #redoStack: VoxelHistoryEntry[] = [];
   #group: Map<string, VoxelCellChange> | null = null;
   #depth = 0;
-  #replaying = false;
 
   constructor(
     world: VoxelWorld,
@@ -148,9 +147,6 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
   #record(
     changes: VoxelCellChange[]
   ): void {
-    if (this.#replaying) {
-      return;
-    }
     if (this.#group === null) {
       this.#push(changes);
 
@@ -230,17 +226,19 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
       }
     }
 
-    this.#replaying = true;
+    const world = this.#world;
+    const recorder = world.recorder;
+    world.recorder = null;
     try {
       for (const [layerName, entries] of removals) {
-        this.#world.removeVoxelBulk(layerName, entries);
+        world.removeVoxelBulk(layerName, entries);
       }
       for (const [layerName, entries] of writes) {
-        this.#world.setVoxelBulk(layerName, entries);
+        world.setVoxelBulk(layerName, entries);
       }
     }
     finally {
-      this.#replaying = false;
+      world.recorder = recorder;
     }
   }
 

@@ -16,6 +16,7 @@ import { MeshBuildStats } from "./MeshBuildStats.ts";
 import { GreedyMesher } from "./meshers/GreedyMesher.ts";
 import { NaiveMesher } from "./meshers/NaiveMesher.ts";
 import { ChunkNeighbourhood } from "./neighbourhood/ChunkNeighbourhood.ts";
+import type { VoxelLogger } from "../utils/logger.ts";
 
 // CONSTANTS
 const kMaxWindowChunkSize = 64;
@@ -31,6 +32,12 @@ export interface VoxelMeshBuilderOptions {
    * @default false
    */
   greedy?: boolean;
+  /**
+   * Bakes per-vertex ambient occlusion into the normal attribute's `w`.
+   * @default false
+   */
+  ambientOcclusion?: boolean;
+  logger?: VoxelLogger;
 }
 
 /**
@@ -39,6 +46,8 @@ export interface VoxelMeshBuilderOptions {
  */
 export class VoxelMeshBuilder {
   readonly stats = new MeshBuildStats();
+
+  ambientOcclusion: boolean;
 
   #world: VoxelWorld;
   #variants: BlockVariantCache;
@@ -79,11 +88,13 @@ export class VoxelMeshBuilder {
   ) {
     this.#world = options.world;
     this.#greedy = options.greedy ?? false;
+    this.ambientOcclusion = options.ambientOcclusion ?? false;
     this.#variants = new BlockVariantCache({
       blockRegistry: options.blockRegistry,
       shapeRegistry: options.shapeRegistry,
       tilesetManager: options.tilesetManager,
-      alphaTest: options.alphaTest
+      alphaTest: options.alphaTest,
+      logger: options.logger
     });
     this.#greedyMesher = new GreedyMesher(this.#variants);
     this.#naiveMesher = new NaiveMesher(this.#variants);
@@ -142,7 +153,8 @@ export class VoxelMeshBuilder {
       worldOriginY,
       worldOriginZ,
       stats,
-      bufferFor: this.#bufferFor
+      bufferFor: this.#bufferFor,
+      ambientOcclusion: this.ambientOcclusion
     };
     const mesher = this.#greedy ? this.#greedyMesher : this.#naiveMesher;
     const emitted = mesher.mesh(pass);
