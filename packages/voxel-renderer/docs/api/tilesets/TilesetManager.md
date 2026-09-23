@@ -19,6 +19,7 @@ class TilesetManager {
   get(tilesetId?: string): TilesetAtlas | undefined;
   atlas(tilesetId?: string): TilesetAtlas;
   resolve(tilesetId?: string): TilesetAtlas | MissingTilesetAtlas | undefined;
+  refreshAverages(): void;
   dispose(): void;
 }
 
@@ -46,6 +47,12 @@ of a tileset whose `tileSize` changed. It returns the affected IDs.
 `get()` returns the atlas of the given ID, or of the default tileset when the
 ID is omitted, and `undefined` when that tileset has no atlas. `atlas()` does
 the same lookup and throws instead.
+
+`refreshAverages()` rebuilds the average table of every atlas whose texture
+changed since it was built (see
+[distant tiles](../../concepts/rendering-and-meshing.md#distant-tiles)).
+`VoxelView.tick()` calls it, so an edit pushed through
+`TilesetAtlas.updateImage()` reaches distant faces on the next tick.
 
 `version` increases when atlases or the list change, so cached UV data can be
 invalidated. `dispose()` disposes every texture and clears the list.

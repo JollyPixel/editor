@@ -4,11 +4,15 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  AtlasAverages,
   createMissingTilesetAtlas,
   MISSING_TILESET_ID,
   TilesetManager
 } from "../../src/tileset/index.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
+import {
+  mockTexture,
+  readableTexture
+} from "../helpers/mockTexture.ts";
 import {
   makeAtlasDef,
   registerAtlas
@@ -235,5 +239,22 @@ describe("TilesetManager.dispose", () => {
     assert.equal(manager.defaultTilesetId, null);
     assert.equal(manager.tilesets.size, 0);
     assert.equal(manager.get("atlas"), undefined);
+  });
+});
+
+describe("TilesetManager.refreshAverages", () => {
+  it("rebuilds the tables of updated atlas textures", () => {
+    const manager = new TilesetManager();
+    const data = new Uint8Array(4);
+    const texture = readableTexture(1, 1, data);
+    registerAtlas(manager, makeAtlasDef(), texture);
+    const table = AtlasAverages.of(texture)!;
+
+    data.set([255, 255, 255, 255]);
+    texture.needsUpdate = true;
+    manager.refreshAverages();
+
+    assert.equal(table.refresh(), false);
+    assert.equal(table.average(0, 0, 1, 1)[0], 1);
   });
 });

@@ -28,6 +28,7 @@ import { ViewDistance } from "../world/ViewDistance.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type {
+  TileMinification,
   ViewDistancePolicy,
   VoxelViewOptions
 } from "./VoxelView.types.ts";
@@ -98,6 +99,7 @@ export class VoxelView {
       inspector,
       tilesets,
       greedy = false,
+      tileMinification = "average",
       rebuildBudgetMs = 8,
       viewDistance,
       viewDistancePolicy = "hide",
@@ -159,6 +161,7 @@ export class VoxelView {
       type: material,
       customizer: materialCustomizer,
       tileWrapping: greedy,
+      tileAveraging: tileMinification === "average",
       ambientOcclusion
     });
     this.#meshes = new ChunkMeshStore({
@@ -201,6 +204,7 @@ export class VoxelView {
       this.#removeChunk(layer, chunk);
     }
 
+    this.tilesets.refreshAverages();
     const viewport = this.#viewport();
 
     this.#visibility.update(viewport);
@@ -249,6 +253,23 @@ export class VoxelView {
     this.#materials.invalidate();
     this.#clearChunkMeshes();
     this.markAllChunksDirty("greedy");
+  }
+
+  get tileMinification(): TileMinification {
+    return this.#materials.tileAveraging ? "average" : "nearest";
+  }
+
+  set tileMinification(
+    value: TileMinification
+  ) {
+    const averaging = value === "average";
+    if (averaging === this.#materials.tileAveraging) {
+      return;
+    }
+
+    this.#materials.tileAveraging = averaging;
+    this.#materials.invalidate();
+    this.markAllChunksDirty("tileMinification");
   }
 
   get ambientOcclusion(): number {

@@ -20,6 +20,10 @@ export type MaterialCustomizerFn = (
   surface: BlockSurface
 ) => void;
 
+export type TileMinification =
+  | "average"
+  | "nearest";
+
 export interface VoxelViewOptions {
   /**
    * Collision factory called once with the registries; disabled when omitted.
@@ -64,6 +68,16 @@ export interface VoxelViewOptions {
    * @default false
    */
   greedy?: boolean;
+
+  /**
+   * How atlas tiles are drawn once a screen pixel covers several texels.
+   * `"average"` fades distant faces toward the average colour of their tile,
+   * which stops the moire and shimmer that `"nearest"` shows far away.
+   * Needs readable atlas pixels (a 2D canvas, same-origin images); falls
+   * back to `"nearest"` otherwise.
+   * @default "average"
+   */
+  tileMinification?: TileMinification;
 
   /**
    * Preloaded atlases (see `loadTilesets`) registered synchronously during

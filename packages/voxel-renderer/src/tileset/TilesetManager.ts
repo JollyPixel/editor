@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { TilesetTexture } from "./types.ts";
+import { AtlasAverages } from "./AtlasAverages.ts";
 import { TilesetAtlas } from "./TilesetAtlas.ts";
 import { TilesetList } from "./TilesetList.ts";
 import {
@@ -114,6 +115,15 @@ export class TilesetManager {
     }
 
     return atlas;
+  }
+
+  /**
+   * Rebuilds the average tables of atlases whose texture changed since.
+   */
+  refreshAverages(): void {
+    for (const atlas of this.#atlases.values()) {
+      AtlasAverages.peek(atlas.texture)?.refresh();
+    }
   }
 
   dispose(): void {

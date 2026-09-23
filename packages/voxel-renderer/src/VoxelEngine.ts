@@ -25,7 +25,10 @@ import type {
 import type { ViewDistance } from "./world/ViewDistance.ts";
 import type { VoxelWorld } from "./world/VoxelWorld.ts";
 import { VoxelView } from "./view/VoxelView.ts";
-import type { ViewDistancePolicy } from "./view/VoxelView.types.ts";
+import type {
+  TileMinification,
+  ViewDistancePolicy
+} from "./view/VoxelView.types.ts";
 import type {
   VoxelApplyOptions,
   VoxelEngineEvents,
@@ -150,6 +153,16 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
 
   set greedy(value: boolean) {
     this.view.greedy = value;
+  }
+
+  get tileMinification(): TileMinification {
+    return this.view.tileMinification;
+  }
+
+  set tileMinification(
+    value: TileMinification
+  ) {
+    this.view.tileMinification = value;
   }
 
   get ambientOcclusion(): number {

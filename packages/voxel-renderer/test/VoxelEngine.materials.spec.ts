@@ -155,3 +155,27 @@ describe("VoxelEngine - material groups", () => {
     assert.equal(materialsOf(engine).length, 1);
   });
 });
+
+describe("VoxelEngine - tile minification", () => {
+  it("fades distant tiles to their average colour by default", () => {
+    assert.equal(meshedGround().tileMinification, "average");
+  });
+
+  it("honours the constructor option", () => {
+    const engine = meshedGround({}, { tileMinification: "nearest" });
+
+    assert.equal(engine.tileMinification, "nearest");
+  });
+
+  it("replaces chunk materials when switched", () => {
+    const engine = meshedGround();
+    engine.flush();
+    const [before] = materialsOf(engine);
+
+    engine.tileMinification = "nearest";
+    engine.flush();
+
+    assert.equal(engine.tileMinification, "nearest");
+    assert.notEqual(materialsOf(engine)[0], before);
+  });
+});

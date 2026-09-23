@@ -208,6 +208,15 @@ interface VoxelEngineOptions {
   greedy?: boolean;
 
   /**
+   * `"average"` fades distant faces to the average colour of their tile
+   * instead of letting nearest sampling shimmer. Falls back to `"nearest"`
+   * when the atlas pixels cannot be read.
+   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#distant-tiles).
+   * @default "average"
+   */
+  tileMinification?: "average" | "nearest";
+
+  /**
    * Pre-loaded atlases, registered synchronously during construction. Use
    * `loadTilesets()` to fetch them before constructing `VoxelEngine`.
    */
@@ -253,6 +262,7 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly history: VoxelHistory; // see VoxelHistory.md
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
+  tileMinification: "average" | "nearest"; // read/write; assigning replaces the materials
   castShadow: boolean; // read/write; assigning updates built chunks
   receiveShadow: boolean; // read/write; assigning updates built chunks
   ambientOcclusion: number; // read/write; switching on or off rebuilds every chunk

@@ -6,6 +6,7 @@ import {
   enableTileClamping,
   enableTileWrapping
 } from "../mesh/index.ts";
+import { AtlasAverages } from "../tileset/AtlasAverages.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MaterialCustomizerFn } from "../VoxelEngine.types.ts";
 import { BlockSurface } from "../blocks/BlockSurface.ts";
@@ -32,6 +33,11 @@ export interface ChunkMaterialCacheOptions {
    */
   tileWrapping?: boolean;
   /**
+   * Distant faces fade to the average colour of their atlas rect.
+   * @default true
+   */
+  tileAveraging?: boolean;
+  /**
    * Ambient occlusion strength shared by every chunk material, 0 to 1.
    * @default 0
    */
@@ -44,6 +50,7 @@ export interface ChunkMaterialCacheOptions {
  */
 export class ChunkMaterialCache {
   tileWrapping: boolean;
+  tileAveraging: boolean;
   readonly aoStrength: ReturnType<typeof createAoStrength>;
 
   #materials = new Map<string, ChunkMaterial>();
@@ -61,6 +68,7 @@ export class ChunkMaterialCache {
       type = "lambert",
       customizer,
       tileWrapping = false,
+      tileAveraging = true,
       ambientOcclusion = 0
     } = options;
 
@@ -68,6 +76,7 @@ export class ChunkMaterialCache {
     this.#type = type;
     this.#customizer = customizer;
     this.tileWrapping = tileWrapping;
+    this.tileAveraging = tileAveraging;
     this.aoStrength = createAoStrength(ambientOcclusion);
   }
 
@@ -153,12 +162,18 @@ export class ChunkMaterialCache {
       new THREE.MeshStandardMaterial(options) :
       new THREE.MeshLambertMaterial(options);
 
-    if (this.tileWrapping) {
-      enableTileWrapping(material, surface, this.aoStrength);
-    }
-    else {
-      enableTileClamping(material, surface, this.aoStrength);
-    }
+    const averages = this.tileAveraging ?
+      AtlasAverages.of(texture)?.texture :
+      null;
+    const enable = this.tileWrapping ?
+      enableTileWrapping :
+      enableTileClamping;
+    enable(
+      material,
+      surface,
+      this.aoStrength,
+      averages
+    );
     this.#customizer?.(
       material,
       tilesetId,
