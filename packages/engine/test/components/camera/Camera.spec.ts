@@ -246,6 +246,35 @@ describe("Components.Camera.CameraComponent", () => {
       );
     });
   });
+
+  describe("postProcessing", () => {
+    test("should default to a direct render", () => {
+      const camera = new CameraComponent(actor as unknown as Actor);
+
+      assert.strictEqual(camera.postProcessing, null);
+    });
+
+    test("should take the post-processing from the options", () => {
+      const postProcessing = createOutputNode;
+      const camera = new CameraComponent(
+        actor as unknown as Actor,
+        { postProcessing }
+      );
+
+      assert.strictEqual(camera.postProcessing, postProcessing);
+    });
+
+    test("should replace and clear the post-processing", () => {
+      const postProcessing = createOutputNode;
+      const camera = new CameraComponent(actor as unknown as Actor);
+
+      camera.postProcessing = postProcessing;
+      assert.strictEqual(camera.postProcessing, postProcessing);
+
+      camera.postProcessing = null;
+      assert.strictEqual(camera.postProcessing, null);
+    });
+  });
 });
 
 describe("Components.Camera.Camera3DControls", () => {
@@ -360,3 +389,7 @@ describe("Components.Camera.Camera3DControls", () => {
     });
   });
 });
+
+function createOutputNode() {
+  return new THREE.Node();
+}

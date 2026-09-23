@@ -10,7 +10,10 @@ import {
 // Import Internal Dependencies
 import type { Runtime } from "../Runtime.ts";
 import { RuntimeLoadingScreen } from "../ui/RuntimeLoadingScreen.ts";
-import { configureRuntimeDevice } from "./configureRuntimeDevice.ts";
+import {
+  configureRuntimeDevice,
+  type ConfigureRuntimeDeviceOptions
+} from "./configureRuntimeDevice.ts";
 
 export interface RuntimeLoadOptions<
   TContext = Systems.WorldDefaultContext
@@ -49,7 +52,8 @@ export async function bootstrapRuntime<
   TContext = Systems.WorldDefaultContext
 >(
   runtime: Runtime<TContext>,
-  options: RuntimeLoadOptions<TContext> = {}
+  options: RuntimeLoadOptions<TContext> = {},
+  device: ConfigureRuntimeDeviceOptions = {}
 ): Promise<void> {
   const {
     loadingDelay = 850,
@@ -59,11 +63,15 @@ export async function bootstrapRuntime<
     skipLoadingScreen = false,
     maxFps
   } = options;
+  const deviceOptions = {
+    ...device,
+    maxFps
+  };
 
   if (skipLoadingScreen) {
     runtime.canvas.style.opacity = "1";
 
-    await configureRuntimeDevice(runtime, { maxFps });
+    await configureRuntimeDevice(runtime, deviceOptions);
     await loadInitialAssets(runtime, null, assets);
 
     if (scene !== undefined) {
@@ -83,7 +91,7 @@ export async function bootstrapRuntime<
   try {
     await Promise.all([
       loadingScreen.start(),
-      configureRuntimeDevice(runtime, { maxFps }),
+      configureRuntimeDevice(runtime, deviceOptions),
       waitForLoadingDelay(loadingDelay)
     ]);
 

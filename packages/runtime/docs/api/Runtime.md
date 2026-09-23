@@ -67,6 +67,7 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
   audio?: GlobalAudio;
   assets?: RuntimeAssetOptions;
   loop?: FrameSchedulerOptions;
+  renderer?: Systems.ThreeRendererOptions;
 }
 
 interface RuntimeLoadOptions<
@@ -82,6 +83,7 @@ interface RuntimeLoadOptions<
 
 class Runtime<TContext = Systems.WorldDefaultContext> {
   readonly world: Systems.World<THREE.WebGPURenderer, TContext>;
+  readonly renderer: Systems.ThreeRenderer;
   readonly loop: GameLoop;
   readonly canvas: HTMLCanvasElement;
   readonly overlay: OverlayLayer;
@@ -146,6 +148,7 @@ for options.
 | `audio` | Engine default | Supplies the world's global audio service. |
 | `assets` | Empty catalog and default loaders | Configures the runtime asset coordinator. |
 | `loop` | `GameLoop` defaults | Configures the loop's `FrameScheduler`. |
+| `renderer` | Engine defaults | Forwarded to `ThreeRenderer.create()`. An explicit `output.pixelRatio` or `output.maxPixelRatio` survives `load()`. |
 
 `runtime.stats` and `runtime.metrics` always exist, and the loop brackets
 every frame with them. The option decides what is displayed: `{ mount: false }`
@@ -363,6 +366,9 @@ controls of its own beside them. Mounting a second panel disposes the first.
 `world` exposes the renderer, input, scene manager, audio service, application
 context, and asset coordinator. The runtime installs its scene loader on the
 world's `SceneManager` during construction.
+
+`renderer` is the same object as `world.renderer`, typed as the concrete
+`ThreeRenderer`, so its `renderStrategy` needs no `instanceof` check.
 
 `loop` exists as soon as construction completes. Configure its scheduler before
 the first call to `start()` or `load()`.

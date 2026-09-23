@@ -2,6 +2,9 @@
 import * as THREE from "three/webgpu";
 import type { EventMap } from "@openally/emitt";
 
+// Import Internal Dependencies
+import type { PostProcessing } from "./PostProcessing.ts";
+
 export interface RenderViewport {
   /** Normalized [0, 1]. x=0 is left */
   x: number;
@@ -17,6 +20,11 @@ export interface RenderComponent {
   readonly threeCamera: THREE.Camera;
   readonly depth: number;
   readonly viewport: Readonly<RenderViewport> | null;
+  /**
+   * Replaces the direct render with a `THREE.RenderPipeline`.
+   * @default null
+   */
+  readonly postProcessing?: PostProcessing | null;
 
   prepareRender(
     canvasWidth: number,

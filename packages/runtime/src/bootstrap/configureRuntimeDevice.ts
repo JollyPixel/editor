@@ -10,6 +10,11 @@ export interface ConfigureRuntimeDeviceOptions {
    * Overrides the GPU-benchmarked estimate.
    */
   maxFps?: number;
+  /**
+   * Lowers the pixel ratio to fit the detected device.
+   * @default true
+   */
+  adaptivePixelRatio?: boolean;
 }
 
 export async function configureRuntimeDevice<TContext>(
@@ -34,9 +39,11 @@ export async function configureRuntimeDevice<TContext>(
   }
 
   runtime.loop.scheduler.maxFps = options.maxFps ?? fps ?? Infinity;
-  runtime.world.renderer.getSource().setPixelRatio(
-    getDevicePixelRatio(isMobile)
-  );
+  if (options.adaptivePixelRatio ?? true) {
+    runtime.world.renderer.getSource().setPixelRatio(
+      getDevicePixelRatio(isMobile)
+    );
+  }
 }
 
 function getDevicePixelRatio(
