@@ -74,16 +74,17 @@ describe("Systems.Rendering.resolveRendererSettings", () => {
       const { shadows } = resolveRendererSettings({}, 1);
 
       assert.strictEqual(shadows.enabled, false);
+      assert.strictEqual(shadows.type, THREE.PCFShadowMap);
     });
 
-    test("should default to PCFSoftShadowMap once enabled", () => {
+    test("should default to PCFShadowMap once enabled", () => {
       const { shadows } = resolveRendererSettings(
         { output: { shadows: {} } },
         1
       );
 
       assert.strictEqual(shadows.enabled, true);
-      assert.strictEqual(shadows.type, THREE.PCFSoftShadowMap);
+      assert.strictEqual(shadows.type, THREE.PCFShadowMap);
     });
 
     test("should accept an explicit shadow map type", () => {

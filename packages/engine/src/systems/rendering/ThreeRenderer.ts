@@ -37,7 +37,7 @@ export interface ThreeRendererOutputOptions {
    * @default false
    */
   shadows?: false | {
-    /** @default THREE.PCFSoftShadowMap */
+    /** @default THREE.PCFShadowMap */
     type?: THREE.ShadowMapType;
   };
   /**
@@ -100,7 +100,7 @@ export function resolveRendererSettings(
     pixelRatio,
     shadows: {
       enabled: shadows !== false,
-      type: (shadows === false ? undefined : shadows.type) ?? THREE.PCFSoftShadowMap
+      type: (shadows === false ? undefined : shadows.type) ?? THREE.PCFShadowMap
     },
     outputColorSpace,
     toneMapping,
