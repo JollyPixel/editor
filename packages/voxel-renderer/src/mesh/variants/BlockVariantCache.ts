@@ -14,8 +14,14 @@ import { MISSING_TILESET_ID } from "../../tileset/missingTileset.ts";
 import type { FaceDefinition } from "../../blocks/face/index.ts";
 import { BlockTextures } from "../../blocks/BlockTextures.ts";
 import { BlockSurface } from "../../blocks/BlockSurface.ts";
-import { cullsCoveredFaces } from "../../blocks/BlockDefinition.ts";
-import { shapeSlots } from "../../blocks/shape/shapeSlots.ts";
+import {
+  cullsCoveredFaces,
+  type ResolvedBlockDefinition
+} from "../../blocks/BlockDefinition.ts";
+import {
+  shapeSlots,
+  unknownTextureSlots
+} from "../../blocks/shape/shapeSlots.ts";
 import type {
   BlockVariant,
   BlockVariantFace
@@ -44,6 +50,10 @@ import {
   VoxelTransform,
   VOXEL_TRANSFORM_MASK
 } from "../../world/VoxelTransform.ts";
+import {
+  NOOP_LOGGER,
+  type VoxelLogger
+} from "../../utils/logger.ts";
 
 /*
  * CONSTANTS
@@ -72,6 +82,11 @@ export interface BlockVariantCacheOptions {
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
+  /**
+   * Receives a warning for each `faceTextures` key no slot of the block's
+   * shape can use.
+   */
+  logger?: VoxelLogger;
 }
 
 /**
@@ -82,6 +97,8 @@ export class BlockVariantCache {
   #shapeRegistry: BlockShapeRegistry;
   #tilesetManager: TilesetManager;
   #alphaTest: number;
+  #logger: VoxelLogger;
+  #checkedSlots = new WeakMap<ResolvedBlockDefinition, BlockShape>();
 
   #variants = new Map<number, BlockVariant | null>();
   #slots = new Map<string, number>();
@@ -112,6 +129,7 @@ export class BlockVariantCache {
     this.#shapeRegistry = options.shapeRegistry;
     this.#tilesetManager = options.tilesetManager;
     this.#alphaTest = options.alphaTest ?? 0.1;
+    this.#logger = options.logger ?? NOOP_LOGGER;
   }
 
   refresh(): void {
@@ -340,6 +358,36 @@ export class BlockVariantCache {
     return slot;
   }
 
+  #warnUnknownTextureSlots(
+    blockDef: ResolvedBlockDefinition,
+    shape: BlockShape
+  ): void {
+    if (this.#checkedSlots.get(blockDef) === shape) {
+      return;
+    }
+    this.#checkedSlots.set(blockDef, shape);
+
+    const unknown = unknownTextureSlots(
+      Object.keys(blockDef.faceTextures),
+      shape
+    );
+    if (unknown.length === 0) {
+      return;
+    }
+
+    const expected = shapeSlots(shape).map((slot) => slot.id).join(", ");
+    this.#logger.warn(
+      `Block '${blockDef.name}' (#${blockDef.id}) has faceTextures keys ` +
+      `matching no slot of shape '${shape.id}': ${unknown.join(", ")}. ` +
+      `Expected one of: ${expected}.`,
+      {
+        blockId: blockDef.id,
+        shapeId: shape.id,
+        keys: unknown
+      }
+    );
+  }
+
   #compile(
     blockId: number,
     transform: number
@@ -353,6 +401,7 @@ export class BlockVariantCache {
     if (!shape) {
       return null;
     }
+    this.#warnUnknownTextureSlots(blockDef, shape);
 
     const surface = new BlockSurface({
       ...blockDef,

@@ -16,6 +16,7 @@ import { MeshBuildStats } from "./MeshBuildStats.ts";
 import { GreedyMesher } from "./meshers/GreedyMesher.ts";
 import { NaiveMesher } from "./meshers/NaiveMesher.ts";
 import { ChunkNeighbourhood } from "./neighbourhood/ChunkNeighbourhood.ts";
+import type { VoxelLogger } from "../utils/logger.ts";
 
 // CONSTANTS
 const kMaxWindowChunkSize = 64;
@@ -31,6 +32,7 @@ export interface VoxelMeshBuilderOptions {
    * @default false
    */
   greedy?: boolean;
+  logger?: VoxelLogger;
 }
 
 /**
@@ -83,7 +85,8 @@ export class VoxelMeshBuilder {
       blockRegistry: options.blockRegistry,
       shapeRegistry: options.shapeRegistry,
       tilesetManager: options.tilesetManager,
-      alphaTest: options.alphaTest
+      alphaTest: options.alphaTest,
+      logger: options.logger
     });
     this.#greedyMesher = new GreedyMesher(this.#variants);
     this.#naiveMesher = new NaiveMesher(this.#variants);

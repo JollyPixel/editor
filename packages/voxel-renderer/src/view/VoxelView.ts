@@ -142,7 +142,8 @@ export class VoxelView {
       shapeRegistry: this.shapes,
       tilesetManager: this.tilesets,
       alphaTest,
-      greedy
+      greedy,
+      logger: this.#logger
     });
 
     this.#collider = collider?.({
