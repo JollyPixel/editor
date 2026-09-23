@@ -74,7 +74,7 @@ await ThreeRenderer.create(canvas, {
 await ThreeRenderer.create(canvas, {
   output: {
     maxPixelRatio: 1.5,
-    shadows: { type: THREE.PCFSoftShadowMap },
+    shadows: { type: THREE.PCFShadowMap },
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 1
   }
@@ -85,7 +85,7 @@ await ThreeRenderer.create(canvas, {
 | ------ | ------- | ----- |
 | `pixelRatio` | `min(devicePixelRatio, maxPixelRatio)` | An explicit value ignores the cap |
 | `maxPixelRatio` | `2` | A 3× DPR display is 9× the fragments uncapped |
-| `shadows` | `false` | `{}` enables it with `PCFSoftShadowMap` |
+| `shadows` | `false` | `{}` enables it with `PCFShadowMap` |
 | `outputColorSpace` | `THREE.SRGBColorSpace` | |
 | `toneMapping` | `THREE.NeutralToneMapping` | |
 | `toneMappingExposure` | `1.25` | Lower it if bright surfaces clip to white |
@@ -93,6 +93,10 @@ await ThreeRenderer.create(canvas, {
 `resolveRendererSettings(options, devicePixelRatio)` exposes the
 same merge as a pure function, if you need to inspect the resolved
 configuration without creating a context.
+
+`shadows.type` supports `THREE.BasicShadowMap`, `THREE.PCFShadowMap`, and
+`THREE.VSMShadowMap`. `THREE.PCFSoftShadowMap` was removed from
+`WebGPURenderer`; use `THREE.PCFShadowMap` for filtered shadows.
 
 The underlying `THREE.WebGPURenderer` stays accessible via
 `getSource()`:

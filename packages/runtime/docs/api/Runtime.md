@@ -127,6 +127,12 @@ renderer and world. It rejects when the canvas target or asset catalog is
 invalid, when the catalog request fails, or when renderer initialization fails.
 It also rejects when the selector matches no element or a non-canvas element.
 
+The runtime uses the engine's `ThreeRenderer`. Shadows are disabled by default.
+When enabled, their default type is `THREE.PCFShadowMap`. Supported types are
+`THREE.BasicShadowMap`, `THREE.PCFShadowMap`, and `THREE.VSMShadowMap`.
+See the [renderer configuration](../../../engine/docs/systems/renderer.md)
+for options.
+
 ### Options
 
 | Option | Default | Behavior |
