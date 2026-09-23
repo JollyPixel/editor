@@ -93,7 +93,8 @@ export class VoxelLayerPanel extends LitElement {
       event.action !== "voxel-set" &&
       event.action !== "voxel-removed" &&
       event.action !== "voxels-set" &&
-      event.action !== "voxels-removed"
+      event.action !== "voxels-removed" &&
+      event.action !== "voxels-patched"
     ) {
       return;
     }

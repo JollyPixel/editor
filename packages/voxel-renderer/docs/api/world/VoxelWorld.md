@@ -296,6 +296,49 @@ world.setVoxelBulk("Ground", [
 
 Removes several voxels and emits a single `"voxels-removed"` for the batch.
 
+#### `transaction<T>(fn: () => T): T`
+
+Runs `fn` and returns its result. Use it for large writes such as world
+generation. Writes land immediately, but the voxel commands they emit are held
+until `fn` returns:
+
+- dirty chunks are marked once per touched chunk rather than once per voxel,
+  in every layer;
+- the changed cells go out as one `"voxels-patched"` per layer, where the
+  last write to a cell wins and cells that end up unchanged are left out;
+- the history records the whole transaction as a single undo step.
+
+A nested `transaction` joins the outer one. A layer, object, block or tileset
+command inside the transaction first flushes the pending cells, so peers see
+the same order. If `fn` throws, the writes made so far are still flushed.
+
+```ts
+world.transaction(() => {
+  for (const cell of island) {
+    world.setVoxel("Ground", { position: cell, blockId: Block.Stone });
+  }
+});
+```
+
+#### `patchVoxels(layerName: string, cells: readonly number[]): void`
+
+Applies a flat patch in a transaction. It emits `"voxels-patched"`, or nothing
+when called through `apply()`. `cells` holds `VOXEL_PATCH_STRIDE` (5) numbers
+per cell: `x, y, z, blockId, transform`, in world space. A `blockId` of `0`
+removes the voxel. Throws a `RangeError` when the length is not a multiple
+of 5.
+
+```ts
+world.patchVoxels("Ground", [
+  0, 0, 0, 1, 0,
+  1, 0, 0, 0, 0
+]);
+
+for (const { x, y, z, blockId } of voxelPatchCells(command.metadata.cells)) {
+  // ...
+}
+```
+
 #### `setVoxelAt(layerName: string, position: THREE.Vector3Like, entry: VoxelEntry): void`
 
 #### `setPackedVoxelAt(layerName: string, position: THREE.Vector3Like, packed: PackedVoxel): void`

@@ -155,6 +155,16 @@ describe("voxelCommandProtocol", () => {
     })), false);
   });
 
+  test("accepts a patch made of integer cells only", () => {
+    assert.strictEqual(accepts(layerCommand("voxels-patched", {
+      cells: [0, 0, 0, 1, 0, -4, 2, 8, 0, 0]
+    })), true);
+    assert.strictEqual(accepts(layerCommand("voxels-patched", {
+      cells: [0, 0, 0.5, 1, 0]
+    })), false);
+    assert.strictEqual(accepts(layerCommand("voxels-patched", {})), false);
+  });
+
   test("accepts a position update carrying a position or a delta", () => {
     const delta = { x: 1, y: 0, z: 0 };
 

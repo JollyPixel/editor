@@ -75,6 +75,26 @@ describe("VoxelSyncClient — local commands", () => {
     assert.equal(room.sentCommands[0].clientId, "client-A");
   });
 
+  it("sends a whole transaction as one patch per layer", () => {
+    const document = makeDocument();
+    const room = createMockRoom("client-A");
+    new VoxelSyncClient({ room, document });
+
+    document.world.transaction(() => {
+      for (let x = 0; x < 20; x++) {
+        document.world.setVoxel("Ground", {
+          position: { x, y: 0, z: 0 },
+          blockId: 1
+        });
+      }
+    });
+
+    assert.deepEqual(
+      room.sentCommands.map(({ action }) => action),
+      ["voxels-patched"]
+    );
+  });
+
   it("stamps each command with clientId and a timestamp", () => {
     const document = makeDocument();
     const room = createMockRoom("client-B");
@@ -134,6 +154,24 @@ describe("VoxelSyncClient — remote commands", () => {
       document.world.getLayer("Ground")!.getVoxelAt({ x: 5, y: 0, z: 5 })?.blockId,
       2
     );
+    assert.equal(room.sentCommands.length, 0);
+  });
+
+  it("applies a peer's patch to the document", () => {
+    const document = makeDocument();
+    const room = createMockRoom("client-A");
+    new VoxelSyncClient({ room, document });
+
+    room.simulateCommand({
+      ...kPeerHeader,
+      action: "voxels-patched",
+      layerName: "Ground",
+      metadata: { cells: [1, 0, 0, 2, 0, 3, 0, 0, 4, 0] }
+    });
+
+    const ground = document.world.getLayer("Ground")!;
+    assert.equal(ground.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, 2);
+    assert.equal(ground.getVoxelAt({ x: 3, y: 0, z: 0 })?.blockId, 4);
     assert.equal(room.sentCommands.length, 0);
   });
 

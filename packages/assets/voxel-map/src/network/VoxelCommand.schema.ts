@@ -118,6 +118,12 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
       items: objectSchema({ position: kVector3Schema })
     }
   }),
+  "voxels-patched": objectSchema({
+    cells: {
+      type: "array",
+      items: { type: "integer" }
+    }
+  }),
   reordered: objectSchema({
     direction: { enum: ["up", "down"] }
   }),

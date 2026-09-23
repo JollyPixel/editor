@@ -20,7 +20,7 @@ Renderer commands cover voxels and layers, objects, block definitions, and tiles
 
 ## Server protocol
 
-`VoxelCommandArbiter.admit(command)` returns an admission or `null`. Bulk `voxels-set` and `voxels-removed` commands may be narrowed to the entries that win. `key(command)` returns one collision key or `null`; `keys(command)` returns all keys, including each cell in a bulk command. The [architecture page](../ARCHITECTURE.md) lists the key rules.
+`VoxelCommandArbiter.admit(command)` returns an admission or `null`. Bulk `voxels-set`, `voxels-removed` and `voxels-patched` commands may be narrowed to the cells that win; a patch whose length is not a whole number of cells is rejected. `key(command)` returns one collision key or `null`; `keys(command)` returns all keys, including each cell in a bulk command. The [architecture page](../ARCHITECTURE.md) lists the key rules.
 
 `voxelCommandProtocol` validates command messages. `voxelWorldSchema` checks the snapshot header; the renderer parses the full document. `VoxelMapState.applyCommand()` applies commands to the headless world, block registry, and tileset list.
 

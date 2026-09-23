@@ -8,7 +8,8 @@ const kVoxelActions: readonly VoxelLayerCommandAction[] = [
   "voxel-set",
   "voxel-removed",
   "voxels-set",
-  "voxels-removed"
+  "voxels-removed",
+  "voxels-patched"
 ];
 
 /**
@@ -113,6 +114,13 @@ export function dispatchCommand(
       world.removeVoxelBulk(
         cmd.layerName,
         cmd.metadata.entries
+      );
+      break;
+
+    case "voxels-patched":
+      world.patchVoxels(
+        cmd.layerName,
+        cmd.metadata.cells
       );
       break;
 

@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
-import type { VoxelLayerCommand } from "@jolly-pixel/voxel.renderer";
+import {
+  VOXEL_PATCH_STRIDE,
+  type VoxelLayerCommand
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "./types.ts";
@@ -8,6 +11,11 @@ import type { VoxelNetworkCommand } from "./types.ts";
 type BulkCommand = Extract<
   VoxelNetworkCommand,
   { action: "voxels-set" | "voxels-removed"; }
+>;
+
+type PatchCommand = Extract<
+  VoxelNetworkCommand,
+  { action: "voxels-patched"; }
 >;
 
 export interface VoxelCommandArbiterOptions {
@@ -31,6 +39,9 @@ export class VoxelCommandArbiter {
     if (isBulkCommand(command)) {
       return this.#admitEntries(command);
     }
+    if (command.action === "voxels-patched") {
+      return this.#admitPatch(command);
+    }
 
     const keys = command.action === "world-replace" ?
       [] :
@@ -46,6 +57,9 @@ export class VoxelCommandArbiter {
       return command.metadata.entries.map(
         (entry) => voxelKey(command.layerName, entry.position)
       );
+    }
+    if (command.action === "voxels-patched") {
+      return patchKeys(command.layerName, command.metadata.cells);
     }
 
     const key = VoxelCommandArbiter.key(command);
@@ -109,6 +123,57 @@ export class VoxelCommandArbiter {
       commit
     };
   }
+
+  #admitPatch(
+    command: PatchCommand
+  ): network.Admission<PatchCommand> | null {
+    const { cells } = command.metadata;
+    if (cells.length % VOXEL_PATCH_STRIDE !== 0) {
+      return null;
+    }
+
+    const { indices, commit } = this.#tracker.admitEach(
+      command,
+      patchKeys(command.layerName, cells)
+    );
+    if (indices.length === 0) {
+      return null;
+    }
+
+    const admitted = indices.length * VOXEL_PATCH_STRIDE === cells.length ?
+      command :
+      {
+        ...command,
+        metadata: {
+          cells: indices.flatMap((index) => {
+            const offset = index * VOXEL_PATCH_STRIDE;
+
+            return cells.slice(offset, offset + VOXEL_PATCH_STRIDE);
+          })
+        }
+      };
+
+    return {
+      command: admitted,
+      commit
+    };
+  }
+}
+
+function patchKeys(
+  layerName: string,
+  cells: readonly number[]
+): string[] {
+  const keys: string[] = [];
+  for (let offset = 0; offset < cells.length; offset += VOXEL_PATCH_STRIDE) {
+    keys.push(voxelKey(layerName, {
+      x: cells[offset],
+      y: cells[offset + 1],
+      z: cells[offset + 2]
+    }));
+  }
+
+  return keys;
 }
 
 function isBulkCommand<
