@@ -83,5 +83,6 @@ const errFn = function(d, _all) {
 };
 function isValid(data) { return _fn(data); }
 function validate(data) { return _fn(data) ? VALID : { valid: false, errors: errFn(data, true).errors }; }
-export { validate, isValid };
-export default { validate, isValid };
+const schemaHash = "d856af3a2e4657a3";
+export { validate, isValid, schemaHash };
+export default { validate, isValid, schemaHash };

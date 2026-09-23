@@ -7,6 +7,7 @@ updates:
       interval: "weekly"
     ignore:
       - dependency-name: "typescript"
+      - dependency-name: "ata-validator"
     cooldown:
       default-days: 5
     groups:
