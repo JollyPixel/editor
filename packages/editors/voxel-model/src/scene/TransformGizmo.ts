@@ -14,6 +14,9 @@ import type {
   TransformLock
 } from "../collaboration/index.ts";
 
+// CONSTANTS
+const kGizmoRenderOrder = 1001;
+
 export type GizmoMode =
   | "translate"
   | "rotate"
@@ -154,7 +157,8 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
           outline: {
             color: "#292a2c",
             width: 2.5
-          }
+          },
+          renderOrder: kGizmoRenderOrder
         }
       }
     );

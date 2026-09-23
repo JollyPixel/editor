@@ -11,8 +11,8 @@ import type {
 // Import Internal Dependencies
 import type { ModelBlocks } from "../scene/index.ts";
 import type { PresenceStore } from "../state/index.ts";
+import { BlockHoverPresence } from "./BlockHoverPresence.ts";
 import { BlockSelectionPresence } from "./BlockSelectionPresence.ts";
-import { PeerSelectionHighlight } from "./PeerSelectionHighlight.ts";
 import { TransformLiveSync } from "./TransformLiveSync.ts";
 import { TransformLock } from "./TransformLock.ts";
 
@@ -32,7 +32,7 @@ export class ModelCollaboration {
 
   #roster: PeerRoster;
   #selections: BlockSelectionPresence;
-  #highlight: PeerSelectionHighlight;
+  #hovers: BlockHoverPresence;
 
   constructor(
     options: ModelCollaborationOptions
@@ -55,7 +55,8 @@ export class ModelCollaboration {
       blocks,
       presence
     });
-    this.#highlight = new PeerSelectionHighlight({
+    this.#hovers = new BlockHoverPresence({
+      room,
       blocks,
       presence
     });
@@ -75,7 +76,7 @@ export class ModelCollaboration {
   dispose(): void {
     this.#roster.dispose();
     this.#selections.dispose();
-    this.#highlight.dispose();
+    this.#hovers.dispose();
     this.live.dispose();
     this.lock.dispose();
   }

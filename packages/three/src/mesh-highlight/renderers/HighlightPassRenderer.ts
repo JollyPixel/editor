@@ -22,6 +22,7 @@ export interface HighlightPassTarget {
 export interface HighlightPassRendererOptions {
   highlight: HighlightPassTarget;
   overlayRegistry: HighlightOverlayRegistry;
+  camera: THREE.Camera;
 }
 
 export class HighlightPassRenderer implements MeshHighlightRenderer {
@@ -34,7 +35,8 @@ export class HighlightPassRenderer implements MeshHighlightRenderer {
     this.#highlight = options.highlight;
     this.#overlays = new ObjectOverlayRenderer({
       registry: options.overlayRegistry,
-      renderScene: () => void 0
+      renderScene: () => void 0,
+      camera: options.camera
     });
   }
 

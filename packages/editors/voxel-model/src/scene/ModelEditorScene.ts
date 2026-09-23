@@ -20,6 +20,7 @@ import { ModelBlocks } from "./blocks/index.ts";
 import { BlockPicker } from "./BlockPicker.ts";
 import { BlockTextures } from "./textures/index.ts";
 import { TransformGizmo } from "./TransformGizmo.ts";
+import { HighlightBridge } from "./HighlightBridge.ts";
 
 export interface ModelEditorSceneOptions {
   room: VoxelModelRoom;
@@ -111,6 +112,7 @@ export class ModelEditorScene extends Systems.Scene {
       document,
       scene
     });
+
     const textures = new BlockTextures({
       pixels,
       pixelsReady,
@@ -146,7 +148,24 @@ export class ModelEditorScene extends Systems.Scene {
         gizmo
       });
 
+    /*
+     * OrbitFlyCamera self-registers as a render component on awake().
+     * HighlightBridge renders the base scene itself as part of drawing the
+     * highlight overlay, so it takes over that camera's render pass instead
+     * of running alongside it, or the scene would be drawn twice.
+     */
+    this.world.renderer.removeRenderComponent(camera);
+    const highlight = new HighlightBridge({
+      renderer: this.world.renderer.getSource(),
+      scene,
+      camera,
+      blocks,
+      presence
+    });
+    this.world.renderer.addRenderComponent(highlight);
+
     this.#disposables.push(
+      () => highlight.dispose(),
       () => gizmo.dispose(),
       () => collaboration.dispose(),
       () => textures.dispose(),

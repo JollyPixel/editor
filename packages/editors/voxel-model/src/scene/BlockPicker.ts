@@ -22,6 +22,12 @@ export class BlockPicker extends ActorComponent {
   #gizmo: TransformGizmo;
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
+  #meshes: THREE.Object3D[] = [];
+  #meshesDirty = true;
+
+  #onBlocksChanged = (): void => {
+    this.#meshesDirty = true;
+  };
 
   constructor(
     actor: Actor,
@@ -34,37 +40,44 @@ export class BlockPicker extends ActorComponent {
     this.#camera = options.camera;
     this.#blocks = options.blocks;
     this.#gizmo = options.gizmo;
+
+    this.#blocks.on("blockAdded", this.#onBlocksChanged);
+    this.#blocks.on("blockRemoved", this.#onBlocksChanged);
+    this.addTeardown(() => {
+      this.#blocks.off("blockAdded", this.#onBlocksChanged);
+      this.#blocks.off("blockRemoved", this.#onBlocksChanged);
+    });
   }
 
   update(): void {
-    const { mouse } = this.actor.world.input;
-    if (
-      !mouse.wasJustPressed("left") ||
-      this.#gizmo.dragging
-    ) {
+    if (this.#gizmo.dragging) {
       return;
     }
 
+    const { mouse } = this.actor.world.input;
     const { x, y } = mouse.viewportPosition;
     this.#raycaster.setFromCamera(
       this.#pointer.set(x, y),
       this.#camera.threeCamera
     );
 
-    const meshes = [
-      ...this.#blocks.values()
-    ].map((block) => block.mesh);
-    const [hit] = this.#raycaster.intersectObjects(meshes, false);
+    const [hit] = this.#raycaster.intersectObjects(this.#meshList(), false);
+    const hoveredBlock = hit === undefined ?
+      null :
+      this.#blocks.fromMesh(hit.object) ?? null;
+    this.#blocks.hover(hoveredBlock);
 
-    if (hit === undefined) {
-      this.#blocks.select(null);
+    if (mouse.wasJustPressed("left")) {
+      this.#blocks.select(hoveredBlock);
+    }
+  }
 
-      return;
+  #meshList(): THREE.Object3D[] {
+    if (this.#meshesDirty) {
+      this.#meshes = [...this.#blocks.values()].map((block) => block.mesh);
+      this.#meshesDirty = false;
     }
 
-    const block = this.#blocks.fromMesh(hit.object);
-    if (block) {
-      this.#blocks.select(block);
-    }
+    return this.#meshes;
   }
 }
