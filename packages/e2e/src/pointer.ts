@@ -13,6 +13,13 @@ export type Box = NonNullable<
   Awaited<ReturnType<Locator["boundingBox"]>>
 >;
 
+export type MouseButton = "left" | "right" | "middle";
+
+export interface PressOptions {
+  button?: MouseButton;
+  settle?: (page: Page) => Promise<void>;
+}
+
 export async function boxOf(
   locator: Locator
 ): Promise<Box> {
@@ -82,4 +89,30 @@ export async function scrubBy(
     y: from.y
   }, 4);
   await page.mouse.up();
+}
+
+export async function pressAt(
+  page: Page,
+  points: Iterable<Point>,
+  options: PressOptions = {}
+): Promise<void> {
+  const {
+    button = "left",
+    settle = async() => undefined
+  } = options;
+  const [first, ...rest] = points;
+  if (first === undefined) {
+    return;
+  }
+
+  await page.mouse.move(first.x, first.y);
+  await settle(page);
+  await page.mouse.down({ button });
+  await settle(page);
+  for (const point of rest) {
+    await page.mouse.move(point.x, point.y, { steps: 4 });
+    await settle(page);
+  }
+  await page.mouse.up({ button });
+  await settle(page);
 }

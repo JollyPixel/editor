@@ -4,6 +4,7 @@ import {
   expect,
   type Locator
 } from "@playwright/test";
+import { fieldRow as row, boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
@@ -11,8 +12,6 @@ import {
   fieldChanges,
   recordFieldChanges
 } from "../support/events.ts";
-import { fieldRow as row } from "../support/locators.ts";
-import { boxOf } from "../support/pointer.ts";
 import { styleOf } from "../support/styles.ts";
 
 function gradientOf(

@@ -1,10 +1,8 @@
+// Import Third-party Dependencies
+import { waitForEditor } from "@jolly-pixel/e2e/editor";
+
 // Import Internal Dependencies
-import {
-  test,
-  expect,
-  openEditor,
-  waitForEditor
-} from "./fixtures.ts";
+import { test, expect } from "./fixtures.ts";
 import {
   blocksAt,
   clickCell,
@@ -28,26 +26,19 @@ test("painted voxels survive a reload", async({ page }) => {
   await expect.poll(() => blocksAt(page, [kCell])).toEqual([1]);
 });
 
-test("a peer sees edits and appears among the collaborators", async({ page, browser, world }) => {
-  const peerContext = await browser.newContext();
-  const peer = await peerContext.newPage();
+test("a peer sees edits and appears among the collaborators", async({ page, peer }) => {
+  test.slow();
+  await expect(page.getByRole("button", { name: "Select Peer" })).toBeVisible();
+  await expect(peer.getByRole("button", { name: "Select E2E" })).toBeVisible();
 
-  try {
-    await openEditor(peer, world, { username: "Peer" });
-    await expect(page.getByRole("button", { name: "Select Peer" })).toBeVisible();
-    await expect(peer.getByRole("button", { name: "Select E2E" })).toBeVisible();
+  await pinCamera(page);
+  await clickCell(page, kCell);
+  await expect.poll(() => blocksAt(peer, [kCell])).toEqual([1]);
 
-    await pinCamera(page);
-    await clickCell(page, kCell);
-    await expect.poll(() => blocksAt(peer, [kCell])).toEqual([1]);
+  await pinCamera(peer);
+  await clickCell(peer, { x: 0, y: 1, z: 0 }, "right");
+  await expect.poll(() => blocksAt(page, [kCell])).toEqual([null]);
 
-    await pinCamera(peer);
-    await clickCell(peer, { x: 0, y: 1, z: 0 }, "right");
-    await expect.poll(() => blocksAt(page, [kCell])).toEqual([null]);
-  }
-  finally {
-    await peerContext.close();
-  }
-
+  await peer.context().close();
   await expect(page.getByRole("button", { name: "Select Peer" })).toBeHidden();
 });

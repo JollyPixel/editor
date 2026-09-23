@@ -8,6 +8,8 @@ import type {
   Object3D,
   Vector3Like
 } from "three";
+import { pressAt } from "@jolly-pixel/e2e";
+import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import type { VoxelModelEditor } from "#src/boot/VoxelModelEditor.ts";
@@ -41,18 +43,6 @@ function editorOf(
 
     return editor;
   });
-}
-
-export async function nextFrames(
-  page: Page,
-  count = 2
-): Promise<void> {
-  const editor = await editorOf(page);
-
-  return editor.evaluate(
-    ({ runtime }, frames) => runtime.frames(frames),
-    count
-  );
 }
 
 export async function outline(
@@ -258,26 +248,11 @@ export async function gizmoHandlePoints(
   ];
 }
 
-export async function pressAt(
-  page: Page,
-  points: ScreenPoint[]
-): Promise<void> {
-  const [first, ...rest] = points;
-  await page.mouse.move(first.x, first.y);
-  await nextFrames(page);
-  await page.mouse.down();
-  await nextFrames(page);
-  for (const point of rest) {
-    await page.mouse.move(point.x, point.y, { steps: 4 });
-    await nextFrames(page);
-  }
-  await page.mouse.up();
-  await nextFrames(page);
-}
-
 export async function clickBlock(
   page: Page,
   name: string
 ): Promise<void> {
-  await pressAt(page, [await blockPoint(page, name)]);
+  await pressAt(page, [await blockPoint(page, name)], {
+    settle: nextFrames
+  });
 }

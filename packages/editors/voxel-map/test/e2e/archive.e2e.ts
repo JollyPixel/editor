@@ -4,13 +4,11 @@ import {
   test,
   type Page
 } from "@playwright/test";
+import { dialog } from "@jolly-pixel/e2e";
+import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import { waitForEditor } from "./fixtures.ts";
-import {
-  dialog,
-  openPane
-} from "./support/panels.ts";
+import { openPane } from "./support/panels.ts";
 
 // CONSTANTS
 const kOfflineUrl = "/?offline&max-fps=10&samples=0";

@@ -3,18 +3,18 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
+import {
+  buttonGroup,
+  dialog,
+  textField
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import {
-  buttonGroup,
-  dialog,
-  openPane,
-  textField
-} from "./support/panels.ts";
+import { openPane } from "./support/panels.ts";
 import { texturePanel } from "./support/texture.ts";
 
 function tilesetSources(
@@ -68,7 +68,7 @@ test("a single tileset keeps its tab, and the add button creates a new one", asy
   await expect.poll(async() => (await tilesetSources(page)).length).toBe(2);
 });
 
-test("the tab edit button renames the tileset asset", async({ page, world }) => {
+test("the tab edit button renames the tileset asset", async({ page, target }) => {
   const editor = await editTileset(page, "tileset");
   const name = textField(editor, "Name");
   await name.fill("terrain.pixelart");
@@ -76,7 +76,7 @@ test("the tab edit button renames the tileset asset", async({ page, world }) => 
 
   await expect(editor).toBeHidden();
   await expect(tilesetTab(page, /^terrain/)).toBeVisible();
-  expect(await tilesetSources(page)).toEqual([world.tilesetId]);
+  expect(await tilesetSources(page)).toEqual([target.tilesetId]);
 
   const renamed = await editTileset(page, "terrain");
   await expect(textField(renamed, "Name")).toHaveValue("terrain");

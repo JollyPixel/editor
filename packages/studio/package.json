@@ -25,6 +25,7 @@
   "license": "MIT",
   "devDependencies": {
     "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/e2e": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/editor.voxel-map": "workspace:*",
     "@jolly-pixel/editor.voxel-model": "workspace:*"

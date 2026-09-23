@@ -3,6 +3,7 @@ import {
   test,
   expect
 } from "@playwright/test";
+import { fieldRow as row, scrubBy } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
@@ -12,8 +13,6 @@ import {
   recordFieldChanges as recordChanges,
   recordFieldInputs
 } from "../support/events.ts";
-import { fieldRow as row } from "../support/locators.ts";
-import { scrubBy } from "../support/pointer.ts";
 import { styleOf } from "../support/styles.ts";
 
 test.describe("number", () => {

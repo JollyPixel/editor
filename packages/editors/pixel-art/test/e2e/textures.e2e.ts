@@ -2,7 +2,11 @@
 import type { Locator } from "@playwright/test";
 
 // Import Internal Dependencies
-import { test, expect } from "./fixtures.ts";
+import {
+  test,
+  expect,
+  demo
+} from "./fixtures.ts";
 import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import {
   clickTexturePixel,
@@ -87,7 +91,7 @@ async function addThroughDialog(
 }
 
 test.describe("import policy ask", () => {
-  test.use({ demo: { importPolicy: "ask" } });
+  test.use({ editor: demo({ importPolicy: "ask" }) });
 
   test("Replace current replaces the active texture without a tab", async({ panel, page }) => {
     await importPng(panel, uniqueName("ask-replace"));
@@ -223,7 +227,7 @@ test.describe("import policy ask", () => {
 });
 
 test.describe("import policy add", () => {
-  test.use({ demo: { importPolicy: "add" } });
+  test.use({ editor: demo({ importPolicy: "add" }) });
 
   test("Import adds a tab without asking", async({ panel, page }) => {
     const name = uniqueName("add");
@@ -237,7 +241,7 @@ test.describe("import policy add", () => {
 });
 
 test.describe("import progress", () => {
-  test.use({ demo: { importPolicy: "ask", addDelay: 1_500 } });
+  test.use({ editor: demo({ importPolicy: "ask", addDelay: 1_500 }) });
 
   test("a busy scrim covers the stage until the host has added the texture", async({ panel, page }) => {
     const busy = panel.locator(".stage-busy");

@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
+import {
+  pressAt,
+  type MouseButton
+} from "@jolly-pixel/e2e";
+import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -20,8 +25,6 @@ const kCameraPose = {
   pitch: -Math.atan2(14, 10)
 };
 
-export type MouseButton = "left" | "right";
-
 export interface Cell {
   x: number;
   y: number;
@@ -41,16 +44,6 @@ export async function pinCamera(
     });
   }, kCameraPose);
   await nextFrames(page);
-}
-
-export function nextFrames(
-  page: Page,
-  count = 2
-): Promise<void> {
-  return page.evaluate(
-    (frames) => window.voxelMapEditor!.runtime.frames(frames),
-    count
-  );
 }
 
 export async function cellTopPoint(
@@ -82,30 +75,15 @@ export async function cellTopPoint(
   });
 }
 
-export async function pressAt(
-  page: Page,
-  points: ScreenPoint[],
-  button: MouseButton = "left"
-): Promise<void> {
-  const [first, ...rest] = points;
-  await page.mouse.move(first.x, first.y);
-  await nextFrames(page);
-  await page.mouse.down({ button });
-  await nextFrames(page);
-  for (const point of rest) {
-    await page.mouse.move(point.x, point.y, { steps: 4 });
-    await nextFrames(page);
-  }
-  await page.mouse.up({ button });
-  await nextFrames(page);
-}
-
 export async function clickCell(
   page: Page,
   cell: Cell,
   button: MouseButton = "left"
 ): Promise<void> {
-  await pressAt(page, [await cellTopPoint(page, cell)], button);
+  await pressAt(page, [await cellTopPoint(page, cell)], {
+    button,
+    settle: nextFrames
+  });
 }
 
 export async function strokeCells(
@@ -117,7 +95,10 @@ export async function strokeCells(
   for (const cell of cells) {
     points.push(await cellTopPoint(page, cell));
   }
-  await pressAt(page, points, button);
+  await pressAt(page, points, {
+    button,
+    settle: nextFrames
+  });
 }
 
 export function blocksAt(

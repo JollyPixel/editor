@@ -15,6 +15,7 @@ import {
   PIXEL_ART_KIND,
   pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
+import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -22,21 +23,9 @@ import {
   DEMO_ASSET_PATH,
   TEXTURE_SIZE
 } from "./examples/scripts/config.ts";
-import {
-  WORKER_COUNT,
-  testAssetId,
-  testAssetPath
-} from "./test/e2e/constants.ts";
 
 // CONSTANTS
 const kCatalogMaxContentBytes = 32 * 1024 * 1024;
-const kCanvasSeeds = [
-  [DEMO_ASSET_PATH, DEMO_ASSET_ID],
-  ...Array.from(
-    { length: WORKER_COUNT },
-    (_, index) => [testAssetPath(index), testAssetId(index)]
-  )
-];
 
 function blankCanvas(): Uint8Array {
   return encodePixelArtDocument(
@@ -52,7 +41,7 @@ function blankCanvas(): Uint8Array {
 export default defineConfig({
   root: "examples",
   server: {
-    port: 3000,
+    port: PORTS.pixelArt,
     strictPort: true,
     allowedHosts: true
   },
@@ -69,16 +58,13 @@ export default defineConfig({
           defaultSize: TEXTURE_SIZE
         })
       ],
-      seed: Object.fromEntries(
-        kCanvasSeeds.map(([assetPath, id]) => [
-          assetPath,
-          {
-            id,
-            kind: PIXEL_ART_KIND,
-            content: blankCanvas
-          }
-        ])
-      ),
+      seed: {
+        [DEMO_ASSET_PATH]: {
+          id: DEMO_ASSET_ID,
+          kind: PIXEL_ART_KIND,
+          content: blankCanvas
+        }
+      },
       launch: () => DEMO_ASSET_ID,
       backend: {
         catalogMaxContentBytes: kCatalogMaxContentBytes

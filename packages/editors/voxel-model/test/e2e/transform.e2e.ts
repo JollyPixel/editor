@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
 import type { Vector3Like } from "three";
+import { treeRow, pressAt } from "@jolly-pixel/e2e";
+import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -8,12 +10,10 @@ import {
   expect
 } from "./fixtures.ts";
 import { addNode } from "./support/hierarchy.ts";
-import { treeRow } from "./support/panels.ts";
 import {
   blockSummary,
   clickBlock,
   gizmoHandlePoints,
-  pressAt,
   selectedBlock
 } from "./support/scene.ts";
 
@@ -136,7 +136,7 @@ test("clicking the viewport selects a block, and empty space clears it", async({
         x: canvas.x + 8,
         y: canvas.y + 8
       }
-    ]);
+    ], { settle: nextFrames });
 
     await expect(treeRow(page, "Arm")).toHaveAttribute("aria-selected", "false");
     await expect(page.getByRole("textbox", { name: "X" })).toBeDisabled();
@@ -147,7 +147,9 @@ test("clicking the viewport selects a block, and empty space clears it", async({
 test("dragging a gizmo arrow moves the block along that axis only", async({ page }) => {
   await chooseMode(page, "Pos");
 
-  await pressAt(page, await gizmoHandlePoints(page, "X"));
+  await pressAt(page, await gizmoHandlePoints(page, "X"), {
+    settle: nextFrames
+  });
 
   const moved = await blockSummary(page, "Block");
   if (moved === null) {

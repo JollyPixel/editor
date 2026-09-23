@@ -4,12 +4,6 @@ import {
   expect,
   type Page
 } from "@playwright/test";
-
-// Import Internal Dependencies
-import {
-  openExample,
-  reloadGallery
-} from "../../support/gallery.ts";
 import {
   boxOf,
   centerOf,
@@ -17,7 +11,13 @@ import {
   hold,
   widthOf,
   type Point
-} from "../../support/pointer.ts";
+} from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
+import {
+  openExample,
+  reloadGallery
+} from "../../support/gallery.ts";
 import {
   dropIntoDock,
   slotsOf

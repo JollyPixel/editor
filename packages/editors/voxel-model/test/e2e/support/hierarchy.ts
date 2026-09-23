@@ -4,14 +4,12 @@ import {
   type Locator,
   type Page
 } from "@playwright/test";
-
-// Import Internal Dependencies
 import {
   checkboxField,
   dialog,
   textField,
   treeRow
-} from "./panels.ts";
+} from "@jolly-pixel/e2e";
 
 export type NodeKind = "Block" | "Folder";
 

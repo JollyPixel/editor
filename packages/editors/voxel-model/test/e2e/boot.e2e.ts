@@ -1,14 +1,13 @@
+// Import Third-party Dependencies
+import { treeRow } from "@jolly-pixel/e2e";
+
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import { treeRow } from "./support/panels.ts";
 import { hierarchyAction } from "./support/hierarchy.ts";
-import {
-  blockSummary,
-  outline
-} from "./support/scene.ts";
+import { blockSummary, outline } from "./support/scene.ts";
 
 test("opens the requested model with its default block and texture regions", async({ page }) => {
   await expect(treeRow(page, "Block")).toBeVisible();

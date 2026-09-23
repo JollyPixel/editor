@@ -5,14 +5,14 @@ import {
   type Locator,
   type Page
 } from "@playwright/test";
+import {
+  fieldRow as row,
+  boxOf,
+  widthOf
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
-import { fieldRow as row } from "../support/locators.ts";
-import {
-  boxOf,
-  widthOf
-} from "../support/pointer.ts";
 import { styleOf } from "../support/styles.ts";
 
 // CONSTANTS

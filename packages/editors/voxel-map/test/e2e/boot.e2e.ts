@@ -4,7 +4,7 @@ import {
   expect
 } from "./fixtures.ts";
 
-test("opens the requested world with its layer, blocks and tileset", async({ page, world }) => {
+test("opens the requested world with its layer, blocks and tileset", async({ page, target }) => {
   const state = await page.evaluate(() => {
     const { engine } = window.voxelMapEditor!.workspace;
 
@@ -18,6 +18,6 @@ test("opens the requested world with its layer, blocks and tileset", async({ pag
   expect(state).toEqual({
     layers: ["Ground"],
     blocks: 32,
-    tilesets: [world.tilesetId]
+    tilesets: [target.tilesetId]
   });
 });

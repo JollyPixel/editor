@@ -4,10 +4,10 @@ import {
   expect,
   type Locator
 } from "@playwright/test";
+import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
-import { boxOf } from "../support/pointer.ts";
 
 function isOpen(
   details: Locator

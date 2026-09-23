@@ -4,13 +4,10 @@ import {
   expect,
   type Page
 } from "@playwright/test";
+import { boxOf, hold } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
-import {
-  boxOf,
-  hold
-} from "../support/pointer.ts";
 import { paneKeysOf } from "../support/dock.ts";
 import { styleOf } from "../support/styles.ts";
 

@@ -2,7 +2,11 @@
 import type { Locator } from "@playwright/test";
 
 // Import Internal Dependencies
-import { test, expect } from "./fixtures.ts";
+import {
+  test,
+  expect,
+  demo
+} from "./fixtures.ts";
 import {
   clickTexturePixel,
   dragStroke,
@@ -261,7 +265,7 @@ test("Show all and region labels toggle independently", async({ panel }) => {
 });
 
 test.describe("3D preview", () => {
-  test.use({ demo: { runtime: true } });
+  test.use({ editor: demo({ runtime: true }) });
 
   function previewMeshCount(
     panel: Locator

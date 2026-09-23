@@ -3,11 +3,11 @@ import {
   test,
   expect
 } from "@playwright/test";
+import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
 import { runUntilGone } from "../support/clock.ts";
-import { boxOf } from "../support/pointer.ts";
 import { styleOf } from "../support/styles.ts";
 
 test.describe("Log", () => {

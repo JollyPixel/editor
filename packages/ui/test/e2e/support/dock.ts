@@ -1,11 +1,8 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
+import { boxOf, dragTo } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import {
-  boxOf,
-  dragTo
-} from "./pointer.ts";
 import { openExample } from "./gallery.ts";
 
 export function openDockLayout(

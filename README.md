@@ -44,6 +44,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 
 ### UI
 
+- [@jolly-pixel/studio](./packages/studio) - One project, its assets and one editor per tab
 - [@jolly-pixel/ui](./packages/ui) - Design System (declarative UI components + Facade API)
 - [@jolly-pixel/arbor](./packages/arbor) - Stylable tree view widget with drag'n'drop support
 - [@jolly-pixel/resize-handle](./packages/resize-handle) - Resize handles / splitters
@@ -52,7 +53,8 @@ We provide agnostic renderers and engines (often used by our editors below):
 
 - [@jolly-pixel/three](./packages/three) - Three.js utilities (Grid, Frustum, ...)
 - [@jolly-pixel/color](./packages/color) - Color utilities (Parsing, Palettes, Color Spaces, Color Conversions ...)
-- [@jolly-pixel/bench](./packages/bench) - Shared benchmarking harness and CLI (workspace-private)
+- [@jolly-pixel/bench](./packages/bench) - Shared benchmarking harness and CLI
+- [@jolly-pixel/e2e](./packages/e2e) - Shared Playwright config, locators and editor fixtures for e2e suites
 - [@jolly-pixel/image](./packages/image) - PNG codecs and browser raster decoding
 
 ### Editors

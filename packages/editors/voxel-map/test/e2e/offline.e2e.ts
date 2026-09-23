@@ -3,10 +3,11 @@ import {
   expect,
   test
 } from "@playwright/test";
+import { dialog, recordSockets } from "@jolly-pixel/e2e";
+import { openEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import { waitForEditor } from "./fixtures.ts";
-import { dialog, openPane } from "./support/panels.ts";
+import { openPane } from "./support/panels.ts";
 import { seedVoxels } from "./support/scene.ts";
 import {
   clickTexel,
@@ -15,16 +16,18 @@ import {
   texturePanel
 } from "./support/texture.ts";
 
-test("boots the seeded map from an in-page workspace, without a socket", async({ page }) => {
-  const sockets: string[] = [];
-  page.on("websocket", (socket) => {
-    if (!socket.url().includes("token=")) {
-      sockets.push(socket.url());
-    }
-  });
+// CONSTANTS
+const kOffline = {
+  maxFps: 10,
+  query: {
+    offline: "",
+    samples: "0"
+  }
+};
 
-  await page.goto("/?offline&max-fps=10&samples=0");
-  await waitForEditor(page);
+test("boots the seeded map from an in-page workspace, without a socket", async({ page }) => {
+  const sockets = recordSockets(page);
+  await openEditor(page, kOffline);
 
   const state = await page.evaluate(() => {
     const { workspace, session } = window.voxelMapEditor!;
@@ -54,12 +57,10 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
 });
 
 test("shares an offline catalog with a second tab", async({ page }) => {
-  await page.goto("/?offline&max-fps=10&samples=0");
-  await waitForEditor(page);
+  await openEditor(page, kOffline);
   const second = await page.context().newPage();
   try {
-    await second.goto("/?offline&max-fps=10&samples=0");
-    await waitForEditor(second);
+    await openEditor(second, kOffline);
     const id = await page.evaluate(
       () => window.voxelMapEditor!.session.catalog.create(
         "shared.bin",
@@ -108,8 +109,7 @@ test("snapshots offline map and texture edits", async({ page }) => {
   test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/?offline&max-fps=10&samples=0");
-  await waitForEditor(page);
+  await openEditor(page, kOffline);
   const before = await page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
     const mapId = session.target.record.id;

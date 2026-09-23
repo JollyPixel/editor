@@ -17,6 +17,7 @@ import {
   VOXEL_MAP_KIND,
   voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
+import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -25,7 +26,6 @@ import {
   encodeWorldDocument,
   readDefaultTileset
 } from "./vite/worldSeed.ts";
-import { E2E_PORT } from "./test/e2e/constants.ts";
 
 // CONSTANTS
 const kE2EMode = "e2e";
@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
     base: "./",
     server: e2e ?
       {
-        port: E2E_PORT,
+        port: PORTS.voxelMap,
         strictPort: true
       } :
       {

@@ -1,18 +1,15 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
+import { pressAt } from "@jolly-pixel/e2e";
+import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import {
-  test,
-  expect
-} from "./fixtures.ts";
+import { test, expect } from "./fixtures.ts";
 import {
   blocksAt,
   cellTopPoint,
   clickCell,
-  nextFrames,
   pinCamera,
-  pressAt,
   seedVoxels,
   strokeCells,
   voxelCount
@@ -186,9 +183,15 @@ test("a second right click without moving digs what the first uncovered", async(
   ]);
   const point = await cellTopPoint(page, { x: 0, y: 2, z: 0 });
 
-  await pressAt(page, [point], "right");
+  await pressAt(page, [point], {
+    button: "right",
+    settle: nextFrames
+  });
   await expect.poll(() => voxelCount(page)).toBe(floor.length);
-  await pressAt(page, [point], "right");
+  await pressAt(page, [point], {
+    button: "right",
+    settle: nextFrames
+  });
 
   await expect.poll(() => voxelCount(page)).toBe(floor.length - 1);
 });
@@ -223,7 +226,7 @@ test("Ctrl+click picks the block under the cursor", async({ page }) => {
   const point = await cellTopPoint(page, { x: 0, y: 1, z: 0 });
 
   await page.keyboard.down("Control");
-  await pressAt(page, [point]);
+  await pressAt(page, [point], { settle: nextFrames });
   await page.keyboard.up("Control");
 
   await expect.poll(async() => (await brushState(page)).blockId).toBe(7);

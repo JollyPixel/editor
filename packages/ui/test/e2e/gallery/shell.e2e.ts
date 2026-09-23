@@ -5,6 +5,7 @@ import {
   type Locator,
   type Page
 } from "@playwright/test";
+import { boxOf, widthOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { manifest } from "../../../examples/scripts/manifest.ts";
@@ -13,10 +14,6 @@ import {
   gotoGallery,
   reloadGallery
 } from "../support/gallery.ts";
-import {
-  boxOf,
-  widthOf
-} from "../support/pointer.ts";
 import {
   resolvedColorOf,
   styleOf

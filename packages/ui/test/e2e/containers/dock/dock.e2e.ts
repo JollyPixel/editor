@@ -3,14 +3,14 @@ import {
   test,
   expect
 } from "@playwright/test";
-
-// Import Internal Dependencies
-import { openExample } from "../../support/gallery.ts";
 import {
   boxOf,
   dragTo,
   widthOf
-} from "../../support/pointer.ts";
+} from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
+import { openExample } from "../../support/gallery.ts";
 import {
   resolvedColorOf,
   styleOf

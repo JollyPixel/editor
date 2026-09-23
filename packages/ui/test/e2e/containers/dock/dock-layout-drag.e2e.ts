@@ -3,18 +3,18 @@ import {
   test,
   expect
 } from "@playwright/test";
+import {
+  boxOf,
+  centerOf,
+  dragTo,
+  hold
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
   partStyleOf,
   styleOf
 } from "../../support/styles.ts";
-import {
-  boxOf,
-  centerOf,
-  dragTo,
-  hold
-} from "../../support/pointer.ts";
 import {
   dropIntoDock,
   openDockLayout,
