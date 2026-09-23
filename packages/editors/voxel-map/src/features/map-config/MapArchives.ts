@@ -59,7 +59,8 @@ export class MapArchives {
   }
 
   get canReset(): boolean {
-    return this.#workspace?.persistent === true;
+    return this.#workspace?.persistent === true &&
+      this.#workspace.canReset !== false;
   }
 
   get volatile(): boolean {

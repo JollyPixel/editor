@@ -2,7 +2,7 @@
 import type {
   ImportPlan,
   ImportReport
-} from "../../archive/AssetArchive.ts";
+} from "../../archive/import/AssetImport.ts";
 import type { CatalogImportOptions } from "./CatalogClient.ts";
 import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";
 

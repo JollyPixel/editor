@@ -43,7 +43,8 @@ function sessionArchive(
     plan: () => Promise.resolve({
       live: [],
       fresh: [],
-      sharedDependents: []
+      sharedDependents: [],
+      incompatible: []
     }),
     import: () => Promise.resolve(report)
   };

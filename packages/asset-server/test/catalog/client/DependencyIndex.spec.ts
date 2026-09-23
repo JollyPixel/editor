@@ -85,6 +85,19 @@ describe("DependencyIndex", () => {
     );
   });
 
+  test("dependenciesFirst lists each asset once, after its dependencies", () => {
+    const index = new DependencyIndex();
+    index.set("map", [ref("a"), ref("b")]);
+    index.set("a", [ref("c")]);
+    index.set("b", [ref("c"), ref("map")]);
+
+    assert.deepEqual(
+      index.dependenciesFirst([ref("map"), ref("c"), ref("e")])
+        .map(({ id }) => id),
+      ["c", "a", "b", "map", "e"]
+    );
+  });
+
   test("returned edges are copies", () => {
     const index = new DependencyIndex();
     const input = [ref("a")];

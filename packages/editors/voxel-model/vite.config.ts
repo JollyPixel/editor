@@ -32,6 +32,7 @@ const kTextureAssetId = "model-texture";
 
 export default defineConfig(({ mode }) => {
   const e2e = mode === kE2EMode;
+  const staticHosting = mode === "static";
 
   return {
     base: "./",
@@ -45,7 +46,7 @@ export default defineConfig(({ mode }) => {
       checker({
         typescript: false
       }),
-      createAssetWorkspacePlugin({
+      ...staticHosting ? [] : [createAssetWorkspacePlugin({
         root: path.join(import.meta.dirname, "assets"),
         ...(e2e ?
           {
@@ -68,7 +69,7 @@ export default defineConfig(({ mode }) => {
           )
         },
         launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value
-      })
+      })]
     ],
     esbuild: {
       target: "es2024"

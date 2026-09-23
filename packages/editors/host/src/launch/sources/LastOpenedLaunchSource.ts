@@ -7,7 +7,9 @@ export const LAST_OPENED_STORAGE_PREFIX = "jolly-pixel:last-opened:";
 
 export interface LastOpenedLaunchSourceOptions {
   accepts: string;
-  isKnown(assetId: string): boolean;
+  isKnown(
+    assetId: string
+  ): boolean;
 }
 
 export class LastOpenedLaunchSource implements LaunchSource {
@@ -39,7 +41,9 @@ export class LastOpenedLaunchSource implements LaunchSource {
   }
 
   read(): Promise<EditorLaunch | undefined> {
-    return Promise.resolve(this.#read());
+    return Promise.resolve(
+      this.#read()
+    );
   }
 
   #read(): EditorLaunch | undefined {

@@ -803,12 +803,18 @@ importers:
         specifier: workspace:*
         version: link:../voxel-renderer
     devDependencies:
+      '@jolly-pixel/asset-source':
+        specifier: workspace:*
+        version: link:../asset-source
       '@jolly-pixel/editor.voxel-map':
         specifier: workspace:*
         version: link:../editors/voxel-map
       '@jolly-pixel/editor.voxel-model':
         specifier: workspace:*
         version: link:../editors/voxel-model
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../event-store
 
   packages/three:
     dependencies:

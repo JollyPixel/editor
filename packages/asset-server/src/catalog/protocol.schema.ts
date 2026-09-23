@@ -33,7 +33,9 @@ export const catalogCommandProtocol = defineMessageProtocol({
           requestId: kString,
           path: kString,
           kind: kString,
-          onConflict: { enum: ["reject", "suffix"] },
+          onConflict: {
+            enum: ["reject", "suffix"]
+          },
           content: assetInlineContentSchema
         },
         required: [
@@ -96,7 +98,9 @@ export const catalogCommandProtocol = defineMessageProtocol({
           type: { const: CATALOG_IMPORT },
           requestId: kString,
           content: assetInlineContentSchema,
-          onConflict: { enum: ["replace", "keep"] }
+          onConflict: {
+            enum: ["replace", "keep", "copy"]
+          }
         },
         required: [
           "type",

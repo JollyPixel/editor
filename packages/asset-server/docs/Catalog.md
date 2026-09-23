@@ -35,6 +35,7 @@ The projection also indexes which assets reference which. Edges come from the
 projection.dependenciesOf(assetId): readonly AssetReferenceData[];
 projection.dependentsOf(assetId): readonly string[];
 projection.closureOf(assetId): AssetReferenceData[];
+projection.dependenciesFirst(starts: Iterable<AssetReferenceData>): AssetReferenceData[];
 projection.dependencies(): DependencyMap;
 projection.unindexed(): IterableIterator<string>;
 ```
@@ -45,6 +46,8 @@ projection.unindexed(): IterableIterator<string>;
   assets that reference it.
 - `closureOf` walks edges transitively, breadth first. Each asset is listed
   once, cycles terminate, and the root is never listed.
+- `dependenciesFirst` lists `starts` and everything they reach, each asset
+  once and after its dependencies. Archive export writes assets in this order.
 - `unindexed()` lists assets whose newest write predates edges.
 
 `createAssetBackend` backfills these assets once at boot: each one whose kind
@@ -98,7 +101,7 @@ option.
 { type: "catalog:delete", requestId?, assetId, force? }
 { type: "catalog:export", requestId?, root? }
 { type: "catalog:plan", requestId?, content: CatalogInlineContent }
-{ type: "catalog:import", requestId?, content: CatalogInlineContent, onConflict: "replace" | "keep" }
+{ type: "catalog:import", requestId?, content: CatalogInlineContent, onConflict: "replace" | "keep" | "copy" }
 ```
 
 `content` is the `{ type: "inline", encoding: "base64", data }` shape built by
@@ -218,7 +221,7 @@ interface CatalogRemoveOptions {
 }
 
 interface CatalogImportOptions {
-  onConflict: "replace" | "keep";
+  onConflict: "replace" | "keep" | "copy";
 }
 ```
 

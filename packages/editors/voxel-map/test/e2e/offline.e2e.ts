@@ -6,7 +6,7 @@ import {
 
 // Import Internal Dependencies
 import { waitForEditor } from "./fixtures.ts";
-import { openPane } from "./support/panels.ts";
+import { dialog, openPane } from "./support/panels.ts";
 import { seedVoxels } from "./support/scene.ts";
 import {
   clickTexel,
@@ -51,6 +51,52 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
     tilesets: ["textures/block.pixelart"]
   });
   expect(sockets).toEqual([]);
+});
+
+test("shares an offline catalog with a second tab", async({ page }) => {
+  await page.goto("/?offline&max-fps=10&samples=0");
+  await waitForEditor(page);
+  const second = await page.context().newPage();
+  try {
+    await second.goto("/?offline&max-fps=10&samples=0");
+    await waitForEditor(second);
+    const id = await page.evaluate(
+      () => window.voxelMapEditor!.session.catalog.create(
+        "shared.bin",
+        new TextEncoder().encode("shared"),
+        { kind: "binary" }
+      )
+    );
+
+    await expect.poll(() => second.evaluate(
+      (assetId) => window.voxelMapEditor?.session.catalog.record(assetId)?.source,
+      id
+    )).toBe("shared.bin");
+    expect(await second.evaluate(
+      () => window.voxelMapEditor?.session.workspace?.persistent
+    )).toBe(true);
+  }
+  finally {
+    await second.close();
+  }
+});
+
+test("offers an offline workspace when the socket is unreachable", async({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("jolly-pixel:username", "Guest");
+  });
+  await page.routeWebSocket("**/ws-sync", (socket) => {
+    socket.close();
+  });
+  await page.goto("/");
+  await dialog(page, "Connection unavailable")
+    .getByRole("button", { name: "Open offline workspace" })
+    .click();
+  await waitForEditor(page);
+
+  expect(await page.evaluate(
+    () => window.voxelMapEditor?.session.workspace?.persistent
+  )).toBe(true);
 });
 
 test("snapshots offline map and texture edits", async({ page }) => {

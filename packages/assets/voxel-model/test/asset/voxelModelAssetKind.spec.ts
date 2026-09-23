@@ -10,12 +10,27 @@ import { AssetKindRegistry } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {
+  createVoxelModelDocument,
   VOXEL_MODEL_EXTENSION,
   VOXEL_MODEL_KIND,
   voxelModelAssetKind
 } from "#src/index.ts";
 
 describe("voxelModelAssetKind", () => {
+  test("rebinds the texture reference on a copied model", () => {
+    const handler = voxelModelAssetKind();
+    const state = handler.create("model");
+    state.load(createVoxelModelDocument({
+      texture: { id: "original", kind: "pixelart" }
+    }));
+
+    handler.rebind?.(state, new Map([["original", "copied"]]));
+
+    assert.deepEqual(handler.dependencies?.(state), [
+      { id: "copied", kind: "pixelart" }
+    ]);
+  });
+
   test("declares its kind and claims .voxelmodel.json paths", () => {
     const handler = voxelModelAssetKind();
 

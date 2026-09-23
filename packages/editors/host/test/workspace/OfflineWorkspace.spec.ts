@@ -16,7 +16,7 @@ import {
 } from "#src/editor/mountStandalone.ts";
 import type { EditorContext } from "#src/editor/EditorDefinition.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { OfflineWorkspace } from "#src/session/OfflineWorkspace.ts";
+import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 
 // CONSTANTS
 const kAssetId = "offline-asset";

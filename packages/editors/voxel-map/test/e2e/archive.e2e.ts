@@ -94,3 +94,34 @@ test("exports the map, resets the workspace and imports it back", async({ page }
   });
   expect(errors).toEqual([]);
 });
+
+test("imports a map and its tileset as a copy", async({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto(kOfflineUrl);
+  await waitForEditor(page);
+  const original = await offlineIds(page);
+  await openPane(page, "General");
+
+  const downloading = page.waitForEvent("download");
+  await page.locator("map-config-panel #export-map").click();
+  const archivePath = await (await downloading).path();
+  await page.locator("map-config-panel input[type=file]")
+    .setInputFiles(archivePath);
+  await dialog(page, "Import archive")
+    .getByRole("button", { name: "Import as copy" })
+    .click();
+  await page.waitForURL((url) => {
+    const target = url.searchParams.get("target");
+
+    return target !== null && target !== original.mapId;
+  });
+  await waitForEditor(page);
+
+  const copied = await offlineIds(page);
+  expect(copied.mapId).not.toBe(original.mapId);
+  expect(copied.tilesetIds[0]).not.toBe(original.tilesetIds[0]);
+  expect(await page.evaluate(
+    (id) => window.voxelMapEditor!.session.catalog.record(id)?.kind,
+    original.mapId
+  )).toBe("voxelmap");
+});

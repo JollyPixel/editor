@@ -5,8 +5,8 @@ export * from "./launch/sources/HostMessageLaunchSource.ts";
 export * from "./launch/sources/LastOpenedLaunchSource.ts";
 export * from "./launch/sources/QueryLaunchSource.ts";
 export * from "./launch/errors/LaunchNotFoundError.ts";
-export * from "./session/AssetLease.ts";
-export { AssetLeases } from "./session/AssetLeases.ts";
+export * from "./lease/AssetLease.ts";
+export { AssetLeases } from "./lease/AssetLeases.ts";
 export {
   EditorSession,
   IDENTITY_STORAGE_KEY,
@@ -14,10 +14,11 @@ export {
   type EditorSessionEvents,
   type EditorIdentityOptions
 } from "./session/EditorSession.ts";
-export * from "./session/errors/AssetDocumentConflictError.ts";
+export * from "./lease/errors/AssetDocumentConflictError.ts";
 export * from "./session/errors/ArchiveImportDisabledError.ts";
+export * from "./session/errors/CatalogUnavailableError.ts";
 export * from "./session/SessionArchive.ts";
-export type { SessionWorkspace } from "./session/SessionWorkspace.ts";
+export type { SessionWorkspace } from "./workspace/SessionWorkspace.ts";
 export {
   EditorRuntime,
   type EditorRuntimeLoadOptions

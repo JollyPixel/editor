@@ -15,13 +15,14 @@ import {
 import type {
   ImportPlan,
   ImportReport
-} from "#src/archive/AssetArchive.ts";
+} from "#src/archive/import/AssetImport.ts";
 
 // CONSTANTS
 const kPlan: ImportPlan = {
   live: [],
   fresh: [],
-  sharedDependents: []
+  sharedDependents: [],
+  incompatible: []
 };
 const kReport: ImportReport = {
   created: [],

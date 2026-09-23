@@ -45,6 +45,11 @@ and an unjoined room the editor wires itself.
 resolves immediately for a room-only target. `connect()` already awaits it, so
 by the time an editor mounts, a leased target is loaded.
 
+`EditorSession.open()` waits up to five seconds for the network catalog
+snapshot, then throws `CatalogUnavailableError` and destroys its client.
+`EditorSession.connect()` accepts `catalogTimeoutMs` for supplied clients;
+without it, the caller owns connection liveness.
+
 `targetLease(kind)` returns that same document as a typed, refcounted
 [`AssetLease`](./AssetLeases.md). It adds a holder, so release it when the
 editor is disposed:
@@ -87,16 +92,18 @@ const report = await session.archive.import(file, {
 |---|---|
 | `canImport` | `false` on a workspace that does not persist, where an import would be lost by the reload that follows it |
 | `export(assetId?)` | the asset with everything it references, or the whole workspace |
-| `plan(file)` | the `ImportPlan`: which ids are `live` or `fresh`, and the `sharedDependents` a replace would affect; writes nothing |
+| `plan(file)` | the `ImportPlan`: which ids are `live` or `fresh`, incompatible kinds, and the `sharedDependents` a replace would affect; writes nothing |
 | `import(file, { onConflict })` | the `ImportReport`; rejects with `ArchiveImportDisabledError` when `canImport` is `false` |
 
 Ask for `onConflict` only when `plan.live` is not empty. An editor cannot
 remount in place: after an import, reload onto `?target=<report.root.id>`.
+`"copy"` duplicates the whole archive under new IDs and returns the new root.
 
 `workspace` is `null` on a server session. On an
 [offline workspace](./mountStandalone.md#offline) it tells whether the storage
 is `persistent` and offers `reset()`, which closes the workspace and deletes
 what the browser stored.
+Shared follower tabs set `canReset` to `false`; reset from the owner tab.
 
 ## Dependencies
 

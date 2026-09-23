@@ -20,11 +20,15 @@ import type {
 } from "./AssetLease.ts";
 
 export interface RoomSource {
-  room(name: string): Room;
+  room(
+    name: string
+  ): Room;
 }
 
 export interface AssetRecords {
-  record(assetId: string): AssetRecordData | undefined;
+  record(
+    assetId: string
+  ): AssetRecordData | undefined;
 }
 
 export interface AssetLeasesOptions {
@@ -40,7 +44,9 @@ interface LeaseEntry<TDocument> {
   holders: number;
 }
 
-interface DocumentLeaseEntry<TDocument> extends LeaseEntry<TDocument> {
+interface DocumentLeaseEntry<
+  TDocument
+> extends LeaseEntry<TDocument> {
   readonly kind: AssetDocumentKind<TDocument>;
   readonly synced: SyncedDocument<TDocument>;
 }
@@ -81,7 +87,11 @@ export class AssetLeases {
     kind: AssetDocumentKind<TDocument, TCommand, TMessage>,
     assetId: string
   ): AssetLease<TDocument, TCommand, TMessage> {
-    const entry = this.#acquire(kind.kind, assetId, kind);
+    const entry = this.#acquire(
+      kind.kind,
+      assetId,
+      kind
+    );
     if (!hasDocumentKind(entry, kind)) {
       throw new AssetDocumentConflictError(assetId);
     }
@@ -97,7 +107,9 @@ export class AssetLeases {
     kind: string,
     assetId: string
   ): AssetRoomLease<TCommand, TMessage> {
-    return this.#lease(this.#acquire(kind, assetId));
+    return this.#lease(
+      this.#acquire(kind, assetId)
+    );
   }
 
   dispose(): void {
@@ -116,11 +128,15 @@ export class AssetLeases {
     if (this.#disposed) {
       throw new Error("Asset leases have been disposed.");
     }
+
     const existing = this.#entries.get(assetId);
     const record = existing?.record ?? this.#records.record(assetId);
     if (record === undefined) {
-      throw new AssetNotFoundError(new AssetId(assetId));
+      throw new AssetNotFoundError(
+        new AssetId(assetId)
+      );
     }
+
     if (record.kind !== kindName) {
       throw new AssetKindMismatchError(
         new AssetId(assetId),
@@ -137,8 +153,12 @@ export class AssetLeases {
     kind: AssetDocumentKind<unknown> | undefined
   ): LeaseEntry<unknown> {
     const room = this.#rooms.room(
-      new AssetRoom(record.kind, record.id).toString()
+      new AssetRoom(
+        record.kind,
+        record.id
+      ).toString()
     );
+
     let synced: SyncedDocument<unknown> | undefined;
     try {
       synced = kind?.createDocument(room);
@@ -160,7 +180,10 @@ export class AssetLeases {
       synced,
       holders: 0
     };
-    this.#entries.set(record.id, entry);
+    this.#entries.set(
+      record.id,
+      entry
+    );
 
     return entry;
   }

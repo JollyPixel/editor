@@ -9,7 +9,10 @@ import {
   VOXEL_MAP_KIND,
   voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
-import { OfflineWorkspace } from "@jolly-pixel/editor.host/offline";
+import {
+  openSharedTabWorkspace,
+  type StandaloneWorkspace
+} from "@jolly-pixel/editor.host/offline";
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -24,7 +27,9 @@ import {
 // CONSTANTS
 const kTilesetUrl = "textures/tileset.png";
 
-export async function openOfflineWorkspace(): Promise<OfflineWorkspace> {
+export async function openOfflineWorkspace(
+  name: string = "default"
+): Promise<StandaloneWorkspace> {
   const response = await fetch(kTilesetUrl);
   if (!response.ok) {
     throw new Error(`Unable to load "${kTilesetUrl}" (${response.status}).`);
@@ -40,7 +45,8 @@ export async function openOfflineWorkspace(): Promise<OfflineWorkspace> {
     }
   );
 
-  return OfflineWorkspace.open({
+  return openSharedTabWorkspace({
+    name,
     handlers: [
       pixelArtAssetKind({ defaultSize: tileset.size }),
       voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),

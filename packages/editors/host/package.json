@@ -10,8 +10,8 @@
       "default": "./dist/index.js"
     },
     "./offline": {
-      "types": "./dist/session/OfflineWorkspace.d.ts",
-      "default": "./dist/session/OfflineWorkspace.js"
+      "types": "./dist/workspace/index.d.ts",
+      "default": "./dist/workspace/index.js"
     }
   },
   "imports": {

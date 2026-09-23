@@ -35,6 +35,7 @@ const tileset = await readDefaultTileset(kTilesetAssetId);
 
 export default defineConfig(({ mode }) => {
   const e2e = mode === kE2EMode;
+  const staticHosting = mode === "static";
 
   return {
     base: "./",
@@ -46,7 +47,7 @@ export default defineConfig(({ mode }) => {
       {
         allowedHosts: true
       },
-    plugins: [
+    plugins: staticHosting ? [] : [
       createAssetWorkspacePlugin({
         root: path.join(import.meta.dirname, "assets"),
         ...(e2e ?

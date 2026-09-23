@@ -33,11 +33,17 @@ export class HostMessageLaunchSource implements LaunchSource {
 
   async read(): Promise<EditorLaunch | undefined> {
     const { parent } = window;
-    if (parent === null || parent === window) {
+    if (
+      parent === null ||
+      parent === window
+    ) {
       return Promise.resolve(undefined);
     }
 
-    const { promise, resolve } = Promise.withResolvers<EditorLaunch | undefined>();
+    const {
+      promise,
+      resolve
+    } = Promise.withResolvers<EditorLaunch | undefined>();
     const listening = new AbortController();
     const timer = setTimeout(
       () => resolve(undefined),
@@ -55,7 +61,10 @@ export class HostMessageLaunchSource implements LaunchSource {
         resolve(launch);
       }
     }, { signal: listening.signal });
-    parent.postMessage({ type: READY_MESSAGE_TYPE }, kAnyOrigin);
+    parent.postMessage(
+      { type: READY_MESSAGE_TYPE },
+      kAnyOrigin
+    );
 
     return promise.finally(() => {
       clearTimeout(timer);
@@ -72,5 +81,8 @@ function parseLaunchMessage(
     return undefined;
   }
 
-  return EditorLaunch.parse(data, new ShellChannel(shell));
+  return EditorLaunch.parse(
+    data,
+    new ShellChannel(shell)
+  );
 }

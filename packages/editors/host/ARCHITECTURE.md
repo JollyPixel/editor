@@ -342,8 +342,11 @@ Persistent storage uses delayed snapshots and flushes on page visibility
 changes and page hide. Closing flushes and stops the back-end and server.
 
 An IndexedDB workspace holds a Web Lock for its database name when the browser
-supports the Locks API. If another tab holds that lock, `open` falls back to
-memory storage. Callers should inspect the returned `storage` or `persistent`
-value, since it can differ from the requested storage. A memory workspace can
-export and plan an archive, but cannot import one. Disposing its session
-destroys the client and closes the workspace.
+supports the Locks API. Direct `OfflineWorkspace.open` falls back to memory
+when another tab owns the database. `openSharedTabWorkspace` instead connects
+the second tab to the owner over BroadcastChannel with the network package's
+`ChannelTransport`, forwarding the existing network room protocol. The owner
+alone writes IndexedDB. If Web Locks are unavailable, the shared opener uses
+memory storage. A memory workspace can export and plan an archive, but cannot
+import one. Disposing a session destroys its client; the owner stays open while
+other tabs use it.

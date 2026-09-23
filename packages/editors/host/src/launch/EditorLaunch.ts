@@ -8,7 +8,9 @@ import type { ShellChannel } from "./ShellChannel.ts";
 import type { LaunchSource } from "./sources/LaunchSource.ts";
 
 // CONSTANTS
-const kTargetSchema = z.string().refine((target) => target.trim() !== "");
+const kTargetSchema = z.string().refine(
+  (target) => target.trim() !== ""
+);
 const kLaunchSchema = z.object({
   target: kTargetSchema
 });

@@ -108,6 +108,23 @@ function positionDelta(
 }
 
 describe("voxelMapAssetKind", () => {
+  test("rebinds copied tileset assets without changing tileset keys", () => {
+    const handler = voxelMapAssetKind();
+    const state = handler.create("map");
+    state.tilesets.add({
+      id: "default",
+      asset: tilesetAsset("original"),
+      tileSize: 16
+    });
+
+    handler.rebind?.(state, new Map([["original", "copied"]]));
+
+    assert.strictEqual(state.tilesets.defaultTilesetId, "default");
+    assert.deepEqual(handler.dependencies?.(state), [
+      tilesetAsset("copied")
+    ]);
+  });
+
   test("declares its kind and claims .voxelmap.json paths", () => {
     const handler = voxelMapAssetKind();
 

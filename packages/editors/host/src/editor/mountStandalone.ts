@@ -6,15 +6,19 @@ import type {
   EditorDefinition,
   EditorHandle
 } from "./EditorDefinition.ts";
-import { EditorLaunch } from "../launch/EditorLaunch.ts";
-import { defaultLaunchSources } from "../launch/sources/defaultLaunchSources.ts";
-import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
-import type { LaunchSource } from "../launch/sources/LaunchSource.ts";
+import {
+  EditorLaunch,
+  HostMessageLaunchSource,
+  InjectedLaunchSource,
+  LastOpenedLaunchSource,
+  QueryLaunchSource,
+  type LaunchSource
+} from "../launch/index.ts";
 import {
   EditorSession,
   type EditorSessionClient
 } from "../session/EditorSession.ts";
-import type { SessionWorkspace } from "../session/SessionWorkspace.ts";
+import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 
 export interface StandaloneConnection {
   identity: PeerIdentity;
@@ -37,7 +41,11 @@ export async function mountStandalone<THandle extends EditorHandle>(
   options: MountStandaloneOptions = {}
 ): Promise<THandle> {
   const launch = await EditorLaunch.read(
-    options.sources ?? defaultLaunchSources()
+    options.sources ?? [
+      new HostMessageLaunchSource(),
+      new QueryLaunchSource(),
+      new InjectedLaunchSource()
+    ]
   );
   const target = {
     launch,

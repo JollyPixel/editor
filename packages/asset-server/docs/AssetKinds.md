@@ -16,6 +16,7 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   clear(state: TState): void;
   serialize(state: TState): Promise<Uint8Array>;
   dependencies?(state: TState): readonly AssetReferenceData[];
+  rebind?(state: TState, idMap: ReadonlyMap<string, string>): void;
 }
 
 interface AssetCommands<TState = unknown, TCommand = unknown> {
@@ -44,6 +45,10 @@ room.
 a voxel map. The writer records them on every `asset.created` and
 `asset.updated` event, so it runs on every lifecycle write. A kind that
 references nothing omits it. See [dependency edges](./Catalog.md#dependency-edges).
+
+`rebind` changes references to IDs present in `idMap` when importing an
+archive as a copy. The handler mutates the loaded state before serialization.
+Kinds with no references can omit it.
 
 Import the handler contract from `@jolly-pixel/asset-server/kinds`. It exposes
 the handler and live protocol types, `foldAssetEvent`, the built-in handlers

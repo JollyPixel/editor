@@ -1,6 +1,12 @@
+// Import Node.js Dependencies
+import fs from "node:fs/promises";
+import path from "node:path";
+
 // Import Third-party Dependencies
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { textureAssetKind } from "@jolly-pixel/asset-server";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+import * as EventStore from "@jolly-pixel/event-store";
 import {
   createAssetWorkspacePlugin
 } from "@jolly-pixel/asset-server/plugins/vite.ts";
@@ -11,6 +17,7 @@ import { voxelModelAssetKind } from "@jolly-pixel/asset.voxel-model";
 // Import Internal Dependencies
 import {
   editorPagesPlugin,
+  resolveEditorPages,
   type EditorPage
 } from "./vite/editorPages.ts";
 import { resolveProjectRoot } from "./vite/projectRoot.ts";
@@ -33,20 +40,50 @@ const kEditorPages: EditorPage[] = [
 
 const seed = await createStudioSeed();
 
-export default defineConfig({
-  plugins: [
-    editorPagesPlugin({
-      pages: kEditorPages
-    }),
-    createAssetWorkspacePlugin({
-      root: resolveProjectRoot(import.meta.dirname),
-      handlers: [
-        pixelArtAssetKind({ defaultSize: seed.tilesetSize }),
-        voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),
-        voxelModelAssetKind(),
-        textureAssetKind()
-      ],
-      seed: seed.assets
-    })
-  ]
+function staticEditorPagesPlugin(): Plugin {
+  return {
+    name: "studio-static-editor-pages",
+    apply: "build",
+    async closeBundle() {
+      for (const [name, source] of resolveEditorPages(kEditorPages)) {
+        await fs.cp(
+          source,
+          path.join(import.meta.dirname, "dist", "editors", name),
+          { recursive: true }
+        );
+      }
+    }
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const staticHosting = mode === "static";
+  const e2e = mode === "e2e";
+
+  return {
+    base: "./",
+    server: e2e ? {
+      port: 3004,
+      strictPort: true
+    } : undefined,
+    plugins: [
+      editorPagesPlugin({
+        pages: kEditorPages
+      }),
+      ...staticHosting ? [staticEditorPagesPlugin()] : [createAssetWorkspacePlugin({
+        root: resolveProjectRoot(import.meta.dirname),
+        ...(e2e ? {
+          source: new MemoryAssetSource(),
+          eventStore: EventStore.persistence.memory()
+        } : {}),
+        handlers: [
+          pixelArtAssetKind({ defaultSize: seed.tilesetSize }),
+          voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),
+          voxelModelAssetKind(),
+          textureAssetKind()
+        ],
+        seed: seed.assets
+      })]
+    ]
+  };
 });

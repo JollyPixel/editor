@@ -95,6 +95,30 @@ export function voxelMapAssetKind(
       return state.dependencies();
     },
 
+    rebind(
+      state: VoxelMapState,
+      idMap: ReadonlyMap<string, string>
+    ): void {
+      state.tilesets.replace(
+        state.tilesets.definitions().map((definition) => {
+          const asset = definition.asset;
+          if (asset === undefined) {
+            return definition;
+          }
+          const id = idMap.get(asset.id);
+
+          return id === undefined ? definition : {
+            ...definition,
+            asset: {
+              ...asset,
+              id
+            }
+          };
+        }),
+        state.tilesets.defaultTileSize
+      );
+    },
+
     commands: {
       eventType: VOXEL_MAP_COMMAND,
       protocol: voxelCommandProtocol,

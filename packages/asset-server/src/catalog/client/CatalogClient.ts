@@ -33,7 +33,7 @@ import type {
   ImportConflictPolicy,
   ImportPlan,
   ImportReport
-} from "../../archive/AssetArchive.ts";
+} from "../../archive/import/AssetImport.ts";
 import { CatalogRejectedError } from "./errors/CatalogRejectedError.ts";
 import {
   DependencyIndex,

@@ -13,8 +13,8 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { AssetLeases } from "#src/session/AssetLeases.ts";
-import { AssetDocumentConflictError } from "#src/session/errors/AssetDocumentConflictError.ts";
+import { AssetLeases } from "#src/lease/AssetLeases.ts";
+import { AssetDocumentConflictError } from "#src/lease/errors/AssetDocumentConflictError.ts";
 import {
   FakeClient,
   fakeDocumentKind,

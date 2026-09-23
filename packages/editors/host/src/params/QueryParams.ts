@@ -20,7 +20,9 @@ export class QueryString {
     fallback?: number
   ): number | undefined {
     const value = this.#query.get(name);
-    const parsed = value === null ? Number.NaN : Number(value);
+    const parsed = value === null
+      ? Number.NaN
+      : Number(value);
 
     return Number.isNaN(parsed) ? fallback : parsed;
   }
@@ -44,6 +46,8 @@ export class QueryParams<T> {
   read(
     search?: string
   ): T {
-    return this.#parse(new QueryString(search));
+    return this.#parse(
+      new QueryString(search)
+    );
   }
 }

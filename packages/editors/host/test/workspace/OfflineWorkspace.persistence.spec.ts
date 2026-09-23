@@ -19,7 +19,7 @@ import {
   LastOpenedLaunchSource
 } from "#src/launch/sources/LastOpenedLaunchSource.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { OfflineWorkspace } from "#src/session/OfflineWorkspace.ts";
+import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -268,6 +268,24 @@ describe("OfflineWorkspace launch sources", () => {
 
     try {
       assert.strictEqual(await target(workspace), kSeedIds[0]);
+    }
+    finally {
+      location.search = search;
+      await workspace.close();
+    }
+  });
+
+  test("ignores a query target absent from the offline catalog", async() => {
+    localStorage.clear();
+    const workspace = await OfflineWorkspace.open({
+      handlers: [],
+      seed
+    });
+    const search = location.search;
+    location.search = "?target=server-only";
+
+    try {
+      assert.ok(kSeedIds.includes(await target(workspace)));
     }
     finally {
       location.search = search;

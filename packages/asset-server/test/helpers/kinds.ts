@@ -153,6 +153,13 @@ export function linkHandler(): AssetKindHandler<LinkState, LinkCommand> {
       state: LinkState
     ) {
       return state.targets.map(linkReference);
+    },
+
+    rebind(
+      state: LinkState,
+      idMap: ReadonlyMap<string, string>
+    ): void {
+      state.targets = state.targets.map((id) => idMap.get(id) ?? id);
     }
   };
 }
