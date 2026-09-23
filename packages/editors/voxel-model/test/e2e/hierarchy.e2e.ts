@@ -1,14 +1,16 @@
-// Import Internal Dependencies
-import {
-  test,
-  expect
-} from "./fixtures.ts";
+// Import Third-party Dependencies
 import {
   checkboxField,
   dialog,
   textField,
   treeRow
-} from "./support/panels.ts";
+} from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
+import {
+  test,
+  expect
+} from "./fixtures.ts";
 import { addNode, hierarchyAction } from "./support/hierarchy.ts";
 import {
   blockSummary,

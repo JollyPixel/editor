@@ -100,4 +100,46 @@ describe("VoxelEngine - chunk rebuild orchestration", () => {
     assert.equal(engine.pendingRebuilds, 0);
     assert.equal(chunkMeshes(engine).length, 1);
   });
+
+  it("whenIdle() resolves at once when nothing is left to mesh", async() => {
+    const engine = makeGroundEngine();
+
+    await engine.whenIdle();
+  });
+
+  it("whenIdle() waits for a dirty chunk that is not queued yet", async() => {
+    const engine = withOneCube();
+    let idle = false;
+    const pending = engine.whenIdle().then(() => {
+      idle = true;
+    });
+
+    await Promise.resolve();
+    assert.equal(engine.pendingRebuilds, 0);
+    assert.equal(idle, false);
+
+    engine.tick(0);
+    await pending;
+    assert.equal(chunkMeshes(engine).length, 1);
+  });
+
+  it("whenIdle() resolves once the budgeted queue drains", async() => {
+    const engine = makeGroundEngine({ rebuildBudgetMs: Number.MIN_VALUE });
+    fillChunks(engine, "Ground", 3);
+    let idle = false;
+    const pending = engine.whenIdle().then(() => {
+      idle = true;
+    });
+
+    engine.tick(0);
+    await Promise.resolve();
+    assert.ok(engine.pendingRebuilds > 0);
+    assert.equal(idle, false);
+
+    while (engine.pendingRebuilds > 0) {
+      engine.tick(0);
+    }
+    await pending;
+    assert.equal(chunkMeshes(engine).length, 3);
+  });
 });

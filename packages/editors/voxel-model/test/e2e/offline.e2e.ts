@@ -1,17 +1,22 @@
 // Import Third-party Dependencies
-import { expect, test } from "@playwright/test";
-
-// Import Internal Dependencies
-import { treeRow } from "./support/panels.ts";
+import {
+  expect,
+  test
+} from "@playwright/test";
+import {
+  recordSockets,
+  treeRow
+} from "@jolly-pixel/e2e";
+import { openEditor } from "@jolly-pixel/e2e/editor";
 
 test("opens a persistent offline model without a socket", async({ page }) => {
-  const sockets: string[] = [];
-  page.on("websocket", (socket) => {
-    if (!socket.url().includes("token=")) {
-      sockets.push(socket.url());
+  const sockets = recordSockets(page);
+  await openEditor(page, {
+    maxFps: 5,
+    query: {
+      offline: ""
     }
   });
-  await page.goto("/?offline&max-fps=5");
   await expect(treeRow(page, "Block")).toBeVisible();
 
   expect(await page.evaluate(

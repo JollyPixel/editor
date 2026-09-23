@@ -3,15 +3,15 @@ import {
   test,
   expect
 } from "@playwright/test";
-
-// Import Internal Dependencies
 import {
   boxOf,
   centerOf,
   dragTo,
   heightOf,
   widthOf
-} from "../../support/pointer.ts";
+} from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import { reloadGallery } from "../../support/gallery.ts";
 import {
   dropIntoDock,

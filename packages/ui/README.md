@@ -180,8 +180,9 @@ End-to-end tests follow the production ownership model under `test/e2e/`:
 - `gallery/` verifies the gallery harness and manifest.
 - `scenarios/` holds multi-component workflows that do not belong to one source
   module.
-- `support/` owns navigation, event capture, locator, pointer, and computed-style
-  helpers. Do not duplicate these helpers in a spec.
+- `support/` owns navigation, event capture, dock and computed-style helpers.
+  Pointer and locator helpers come from `@jolly-pixel/e2e`. Do not duplicate
+  these helpers in a spec.
 
 Keep a test with the component that owns the observed contract. Put only
 deliberately cross-component user workflows in `scenarios/`.

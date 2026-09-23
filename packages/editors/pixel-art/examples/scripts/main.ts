@@ -13,7 +13,8 @@ declare global {
 }
 
 const demo = await mountStandalone(PixelArtDemo, {
-  debugHandle: import.meta.env.DEV ? "pixelArtDemo" : undefined
+  dev: import.meta.env.DEV,
+  debugHandle: "pixelArtDemo"
 });
 window.addEventListener("beforeunload", () => demo.dispose(), {
   once: true

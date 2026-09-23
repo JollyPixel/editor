@@ -43,11 +43,9 @@ export function pixelAlpha(
   point: TexturePoint
 ): Promise<number> {
   return panel.evaluate((element: PixelDrawPanel, target) => {
-    const texture = element.canvasManager!.textureCanvas();
+    const { buffer } = element.canvasManager!.document;
 
-    return texture.getContext("2d")!
-      .getImageData(target.x, target.y, 1, 1)
-      .data[3];
+    return buffer.samplePixel(target.x, target.y)[3];
   }, point);
 }
 
@@ -57,13 +55,11 @@ export async function clickTexel(
 ): Promise<void> {
   const screen = await panel.evaluate((element: PixelDrawPanel, target) => {
     const canvasManager = element.canvasManager!;
-    const bounds = canvasManager.canvas().getBoundingClientRect();
-    const { camera, zoom } = canvasManager.viewport;
 
-    return {
-      x: bounds.left + camera.x + ((target.x + 0.5) * zoom.value),
-      y: bounds.top + camera.y + ((target.y + 0.5) * zoom.value)
-    };
+    return canvasManager.viewport.textureClientPosition(
+      target,
+      canvasManager.canvas().getBoundingClientRect()
+    );
   }, point);
   const { mouse } = panel.page();
   await mouse.move(screen.x, screen.y);

@@ -23,3 +23,13 @@ None of the three fire for `replacePixels()` or `copyToMaster()`; callers drive 
 Unlike `PixelBuffer.pixels()`, `CanvasBuffer.pixels()` returns a copy.
 
 `writePixels(pixels)` overwrites the texture with RGBA data of the current size, keeping the same canvas element. Like `replacePixels()`, it resets the retained master data.
+
+## Reading pixels
+
+`samplePixel(x, y)` and `samplePixels(positions)` read the working pixels, the same data the canvas shows and the colour picker reads. See [`PixelBuffer`](./PixelBuffer.md#samplepixelx-y) for their return shapes. A consumer reads through the document:
+
+```ts
+const [r, g, b, a] = canvas.document.buffer.samplePixel(3, 5);
+```
+
+A pixel outside the texture reads as transparent black.

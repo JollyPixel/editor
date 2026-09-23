@@ -6,9 +6,7 @@ import {
   Server
 } from "@jolly-pixel/network";
 import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/plugins/vite.ts";
-
-// Import Internal Dependencies
-import { PORT } from "./test/e2e/constants.ts";
+import { PORTS } from "@jolly-pixel/e2e";
 
 const network = new Server();
 network.setRoomResolver((roomName) => {
@@ -21,7 +19,7 @@ network.setRoomResolver((roomName) => {
 export default defineConfig({
   root: "examples",
   server: {
-    port: PORT,
+    port: PORTS.ui,
     strictPort: true,
     allowedHosts: true
   },

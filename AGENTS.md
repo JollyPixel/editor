@@ -18,6 +18,8 @@
 - Put tests under the package's `test/` directory.
 - Use `happy-dom` when DOM mocking is needed.
 - Use `tstyche` for testing types.
+- Build e2e suites on `@jolly-pixel/e2e` (`packages/e2e/README.md`); keep only
+  domain helpers in the suite.
 - Run the relevant package tests, `pnpm run typecheck`, and `pnpm run lint`.
 
 ## Package routing

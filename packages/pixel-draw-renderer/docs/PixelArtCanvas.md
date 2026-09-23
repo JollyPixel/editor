@@ -40,7 +40,7 @@ readonly document: PixelDocument
 readonly brush: Brush
 readonly tools: Toolset
 readonly uv: UVMap
-readonly viewport: DefaultViewport
+readonly viewport: CanvasViewport
 ```
 
 ### `document`
@@ -79,9 +79,23 @@ interface DefaultViewport {
   readonly canvasWidth: number;
   readonly canvasHeight: number;
 }
+
+interface CanvasViewport extends DefaultViewport {
+  textureClientPosition(
+    point: Readonly<Vec2>,
+    bounds: Pick<DOMRectReadOnly, "left" | "top">
+  ): Vec2;
+}
 ```
 
 `canvasWidth` and `canvasHeight` are `0` until the canvas is first sized, and follow every resize.
+
+`textureClientPosition(point, bounds)` returns the client coordinates of the centre of the texel at `point`, for `bounds` taken from `canvas().getBoundingClientRect()`. It is the inverse of the pointer mapping: a pointer event at the returned position lands on `point`, at any zoom and pan. `point` may lie outside the texture.
+
+```ts
+const bounds = canvas.canvas().getBoundingClientRect();
+const { x, y } = canvas.viewport.textureClientPosition({ x: 3, y: 5 }, bounds);
+```
 
 ## Interaction
 

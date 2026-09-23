@@ -4,10 +4,10 @@ import {
   expect,
   type Page
 } from "@playwright/test";
+import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../../support/gallery.ts";
-import { boxOf } from "../../support/pointer.ts";
 import { styleOf } from "../../support/styles.ts";
 
 function openTabs(

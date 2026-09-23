@@ -18,12 +18,15 @@ export * from "./lease/errors/AssetDocumentConflictError.ts";
 export * from "./session/errors/ArchiveImportDisabledError.ts";
 export * from "./session/errors/CatalogUnavailableError.ts";
 export * from "./session/SessionArchive.ts";
+export * from "./session/rememberQueryUsername.ts";
 export type { SessionWorkspace } from "./workspace/SessionWorkspace.ts";
 export {
   EditorRuntime,
+  type EditorRuntimeCreateOptions,
   type EditorRuntimeLoadOptions
 } from "./runtime/EditorRuntime.ts";
 export * from "./runtime/PeerFrustums.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";
 export * from "./params/QueryParams.ts";
+export * from "./params/HostParams.ts";

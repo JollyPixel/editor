@@ -2,11 +2,7 @@
 import type { Page } from "@playwright/test";
 
 // Import Internal Dependencies
-import {
-  test,
-  expect,
-  openEditor
-} from "./fixtures.ts";
+import { test, expect } from "./fixtures.ts";
 import { openPane } from "./support/panels.ts";
 import {
   clickTexel,
@@ -76,24 +72,16 @@ test("erasing a block tile makes the block transparent", async({ page }) => {
   await expect.poll(() => alphaMode(page, 1)).toBe("blend");
 });
 
-test("texture edits reach a peer", async({ page, browser, world }) => {
-  const peerContext = await browser.newContext();
-  const peer = await peerContext.newPage();
+test("texture edits reach a peer", async({ page, peer }) => {
+  test.slow();
+  await openPane(peer, "Paint");
+  const texel = await tileCenter(page, 2);
+  const peerPanel = texturePanel(peer);
+  await expect.poll(() => pixelAlpha(peerPanel, texel)).toBe(255);
 
-  try {
-    await openEditor(peer, world, { username: "Peer" });
-    await openPane(peer, "Paint");
-    const texel = await tileCenter(page, 2);
-    const peerPanel = texturePanel(peer);
-    await expect.poll(() => pixelAlpha(peerPanel, texel)).toBe(255);
+  const panel = texturePanel(page);
+  await setTextureMode(panel, "Erase");
+  await clickTexel(panel, texel);
 
-    const panel = texturePanel(page);
-    await setTextureMode(panel, "Erase");
-    await clickTexel(panel, texel);
-
-    await expect.poll(() => pixelAlpha(peerPanel, texel)).toBe(0);
-  }
-  finally {
-    await peerContext.close();
-  }
+  await expect.poll(() => pixelAlpha(peerPanel, texel)).toBe(0);
 });

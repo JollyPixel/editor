@@ -3,23 +3,20 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
+import {
+  buttonGroup,
+  dialog,
+  selectField,
+  textField
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import {
-  buttonGroup,
-  dialog,
-  openPane,
-  selectField,
-  textField
-} from "./support/panels.ts";
-import {
-  blocksAt,
-  seedVoxels
-} from "./support/scene.ts";
+import { openPane } from "./support/panels.ts";
+import { blocksAt, seedVoxels } from "./support/scene.ts";
 
 interface LayerSummary {
   name: string;

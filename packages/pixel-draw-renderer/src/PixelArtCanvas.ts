@@ -30,7 +30,7 @@ import type {
 } from "./input/Keybindings.ts";
 import type { WindowLike } from "./input/WindowLike.ts";
 import type {
-  DefaultViewport
+  CanvasViewport
 } from "./rendering/Viewport.ts";
 import type {
   Zoom,
@@ -148,7 +148,7 @@ export class PixelArtCanvas {
 
   readonly document: PixelDocument;
   readonly brush: Brush;
-  readonly viewport: DefaultViewport;
+  readonly viewport: CanvasViewport;
   readonly uv: UVMap;
   readonly tools: Toolset;
   readonly peerPresence: PeerPresence;

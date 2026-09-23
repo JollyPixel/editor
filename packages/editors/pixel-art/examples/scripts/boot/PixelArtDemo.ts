@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import type { Runtime } from "@jolly-pixel/runtime";
 import type { ThemePreferences } from "@jolly-pixel/ui";
 import {
   PIXEL_ART_KIND,
@@ -34,7 +35,6 @@ export interface PixelArtDemoParams {
   runtime: string | undefined;
   empty: boolean;
   importPolicy: string | undefined;
-  maxFps: number | undefined;
   addDelay: number | undefined;
 }
 
@@ -43,7 +43,6 @@ export const PIXEL_ART_DEMO_PARAMS = new QueryParams<PixelArtDemoParams>((query)
     runtime: query.string("runtime"),
     empty: query.flag("empty"),
     importPolicy: query.string("import-policy"),
-    maxFps: query.number("max-fps"),
     addDelay: query.number("add-delay")
   };
 });
@@ -104,8 +103,7 @@ export class PixelArtDemo {
       await openDemoPreview({
         canvas: "#canvas-container > canvas",
         canvasManager: canvas,
-        rotationToggle: document.querySelector<HTMLInputElement>("#rotation-toggle")!,
-        maxFps: positive(params.maxFps)
+        rotationToggle: document.querySelector<HTMLInputElement>("#rotation-toggle")!
       });
     const shell = new DemoShell(panel, preview);
 
@@ -139,6 +137,8 @@ export class PixelArtDemo {
 
   readonly #shell: DemoShell;
 
+  readonly ready: Promise<void>;
+  readonly runtime: Runtime | null;
   readonly panel: PixelDrawPanel;
   readonly preview: DemoPreview | null;
   readonly session: EditorSession;
@@ -154,6 +154,11 @@ export class PixelArtDemo {
     this.target = parts.target;
     this.tabs = parts.tabs;
     this.#shell = parts.shell;
+    this.runtime = parts.preview?.editorRuntime.runtime ?? null;
+    this.ready = Promise.all([
+      parts.target.ready,
+      parts.preview?.scene.ready
+    ]).then(() => undefined);
   }
 
   dispose(): void {

@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { Runtime } from "@jolly-pixel/runtime";
+
 // Import Internal Dependencies
 import type {
   EditorLaunch,
@@ -18,6 +21,10 @@ export interface EditorContext {
 }
 
 export interface EditorHandle {
+  readonly ready: Promise<void>;
+  readonly session: EditorSession;
+  readonly runtime: Runtime | null;
+
   dispose(): void;
 }
 

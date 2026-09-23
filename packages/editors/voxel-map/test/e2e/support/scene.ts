@@ -1,5 +1,19 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
+import {
+  pressAt,
+  type MouseButton
+} from "@jolly-pixel/e2e";
+import { nextFrames } from "@jolly-pixel/e2e/editor";
+
+// Import Internal Dependencies
+import {
+  clientPointOf,
+  type ScreenPoint,
+  type ViewSnapshot
+} from "./projection.ts";
+
+export type { ScreenPoint } from "./projection.ts";
 
 // CONSTANTS
 const kCameraPose = {
@@ -11,17 +25,10 @@ const kCameraPose = {
   pitch: -Math.atan2(14, 10)
 };
 
-export type MouseButton = "left" | "right";
-
 export interface Cell {
   x: number;
   y: number;
   z: number;
-}
-
-export interface ScreenPoint {
-  x: number;
-  y: number;
 }
 
 export async function pinCamera(
@@ -39,60 +46,33 @@ export async function pinCamera(
   await nextFrames(page);
 }
 
-export function nextFrames(
-  page: Page,
-  count = 2
-): Promise<void> {
-  return page.evaluate(async(frames) => {
-    const { world } = window.voxelMapEditor!.runtime;
-    for (let index = 0; index < frames; index++) {
-      await new Promise<void>((resolve) => {
-        world.once("afterUpdate", () => resolve());
-      });
-    }
-  }, count);
-}
-
-export function cellTopPoint(
+export async function cellTopPoint(
   page: Page,
   cell: Cell
 ): Promise<ScreenPoint> {
-  return page.evaluate((target) => {
+  const view = await page.evaluate((): ViewSnapshot => {
     const { scene } = window.voxelMapEditor!;
     const camera = scene.camera!.camera;
-    const canvas = scene.world.renderer.canvas;
-    const bounds = canvas.getBoundingClientRect();
-    const point = camera.position.clone().set(
-      target.x + 0.5,
-      target.y,
-      target.z + 0.5
-    );
+    const bounds = scene.world.renderer.canvas.getBoundingClientRect();
     camera.updateMatrixWorld(true);
-    point.project(camera);
 
     return {
-      x: bounds.left + ((point.x + 1) / 2 * bounds.width),
-      y: bounds.top + ((1 - point.y) / 2 * bounds.height)
+      projection: camera.projectionMatrix.toArray(),
+      world: camera.matrixWorld.toArray(),
+      bounds: {
+        left: bounds.left,
+        top: bounds.top,
+        width: bounds.width,
+        height: bounds.height
+      }
     };
-  }, cell);
-}
+  });
 
-export async function pressAt(
-  page: Page,
-  points: ScreenPoint[],
-  button: MouseButton = "left"
-): Promise<void> {
-  const [first, ...rest] = points;
-  await page.mouse.move(first.x, first.y);
-  await nextFrames(page);
-  await page.mouse.down({ button });
-  await nextFrames(page);
-  for (const point of rest) {
-    await page.mouse.move(point.x, point.y, { steps: 4 });
-    await nextFrames(page);
-  }
-  await page.mouse.up({ button });
-  await nextFrames(page);
+  return clientPointOf(view, {
+    x: cell.x + 0.5,
+    y: cell.y,
+    z: cell.z + 0.5
+  });
 }
 
 export async function clickCell(
@@ -100,7 +80,10 @@ export async function clickCell(
   cell: Cell,
   button: MouseButton = "left"
 ): Promise<void> {
-  await pressAt(page, [await cellTopPoint(page, cell)], button);
+  await pressAt(page, [await cellTopPoint(page, cell)], {
+    button,
+    settle: nextFrames
+  });
 }
 
 export async function strokeCells(
@@ -112,7 +95,10 @@ export async function strokeCells(
   for (const cell of cells) {
     points.push(await cellTopPoint(page, cell));
   }
-  await pressAt(page, points, button);
+  await pressAt(page, points, {
+    button,
+    settle: nextFrames
+  });
 }
 
 export function blocksAt(
@@ -163,8 +149,10 @@ export async function seedVoxels(
   await page.waitForFunction((targets) => {
     const { engine } = window.voxelMapEditor!.workspace;
 
-    return targets.every((cell) => engine.world.getVoxelAt(cell) !== undefined) &&
-      engine.inspector.mesh.stats.voxels === engine.world.voxelCount;
+    return targets.every((cell) => engine.world.getVoxelAt(cell) !== undefined);
   }, cells);
+  await page.evaluate(
+    () => window.voxelMapEditor!.workspace.engine.whenIdle()
+  );
   await nextFrames(page);
 }

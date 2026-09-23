@@ -3,10 +3,10 @@ import {
   test,
   expect
 } from "@playwright/test";
+import { fieldRow as row } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
-import { fieldRow as row } from "../support/locators.ts";
 import { styleOf } from "../support/styles.ts";
 
 test.describe("colored fields", () => {

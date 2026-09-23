@@ -5,17 +5,17 @@ import {
   type Locator,
   type Page
 } from "@playwright/test";
+import {
+  boxOf,
+  centerOf,
+  hold
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
   openExample,
   reloadGallery
 } from "../../support/gallery.ts";
-import {
-  boxOf,
-  centerOf,
-  hold
-} from "../../support/pointer.ts";
 import {
   partStyleOf,
   styleOf

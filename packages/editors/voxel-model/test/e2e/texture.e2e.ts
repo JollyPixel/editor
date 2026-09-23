@@ -3,18 +3,12 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
+import { dialog, treeRow } from "@jolly-pixel/e2e";
+import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import {
-  test,
-  expect,
-  waitForEditor
-} from "./fixtures.ts";
+import { test, expect } from "./fixtures.ts";
 import { addNode, hierarchyAction } from "./support/hierarchy.ts";
-import {
-  dialog,
-  treeRow
-} from "./support/panels.ts";
 
 function regionToolbar(
   page: Page

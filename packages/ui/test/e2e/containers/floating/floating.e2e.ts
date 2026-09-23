@@ -3,12 +3,6 @@ import {
   test,
   expect
 } from "@playwright/test";
-
-// Import Internal Dependencies
-import {
-  openExample,
-  reloadGallery
-} from "../../support/gallery.ts";
 import {
   boxOf,
   centerOf,
@@ -16,7 +10,13 @@ import {
   heightOf,
   hold,
   widthOf
-} from "../../support/pointer.ts";
+} from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
+import {
+  openExample,
+  reloadGallery
+} from "../../support/gallery.ts";
 
 test.describe("Floating", () => {
   test.beforeEach(async({ page }) => {

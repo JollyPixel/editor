@@ -13,6 +13,12 @@ import "./app/LeftPanel.ts";
 import "./app/RightPanel.ts";
 import { VoxelModelEditor } from "./boot/VoxelModelEditor.ts";
 
+// CONSTANTS
+const kDebugOptions = {
+  dev: import.meta.env.DEV,
+  debugHandle: "voxelModelEditor"
+};
+
 declare global {
   interface Window {
     voxelModelEditor?: VoxelModelEditor;
@@ -32,14 +38,13 @@ async function offlineOptions(): Promise<MountStandaloneOptions> {
 }
 
 async function boot(): Promise<void> {
-  const debugHandle = import.meta.env.DEV ? "voxelModelEditor" : undefined;
   if (
     import.meta.env.MODE === "static" ||
       new URLSearchParams(location.search).has("offline")
   ) {
     await mountStandalone(VoxelModelEditor, {
       ...await offlineOptions(),
-      debugHandle
+      ...kDebugOptions
     });
 
     return;
@@ -47,7 +52,7 @@ async function boot(): Promise<void> {
 
   for (;;) {
     try {
-      await mountStandalone(VoxelModelEditor, { debugHandle });
+      await mountStandalone(VoxelModelEditor, kDebugOptions);
 
       return;
     }
@@ -70,7 +75,7 @@ async function boot(): Promise<void> {
       if (choice === "offline") {
         await mountStandalone(VoxelModelEditor, {
           ...await offlineOptions(),
-          debugHandle
+          ...kDebugOptions
         });
 
         return;

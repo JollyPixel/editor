@@ -4,6 +4,7 @@ import {
   expect,
   type Locator
 } from "@playwright/test";
+import { fieldRow as row } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
@@ -11,7 +12,6 @@ import {
   fieldChanges,
   recordFieldChanges
 } from "../support/events.ts";
-import { fieldRow as row } from "../support/locators.ts";
 
 // CONSTANTS
 const kChecked = '.segment[aria-checked="true"]';

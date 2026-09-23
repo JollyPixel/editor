@@ -12,11 +12,20 @@ import type {
 // CONSTANTS
 const kFramePadding = 8;
 
+export type ClientOrigin = Pick<DOMRectReadOnly, "left" | "top">;
+
 export interface DefaultViewport {
   readonly zoom: Zoom;
   readonly camera: Readonly<Vec2>;
   readonly canvasWidth: number;
   readonly canvasHeight: number;
+}
+
+export interface CanvasViewport extends DefaultViewport {
+  textureClientPosition(
+    point: Readonly<Vec2>,
+    bounds: ClientOrigin
+  ): Vec2;
 }
 
 export type ViewportEvent = {
@@ -75,7 +84,7 @@ interface ZoomAnchor {
 
 export class Viewport extends Emitter<
   ViewportEvent
-> implements DefaultViewport {
+> implements CanvasViewport {
   #camera: Vec2 = {
     x: 0,
     y: 0
@@ -351,6 +360,18 @@ export class Viewport extends Emitter<
     return {
       x: Math.floor(mx - bounds.left),
       y: Math.floor(my - bounds.top)
+    };
+  }
+
+  textureClientPosition(
+    point: Readonly<Vec2>,
+    bounds: ClientOrigin
+  ): Vec2 {
+    const zoom = this.zoom.value;
+
+    return {
+      x: bounds.left + this.#camera.x + ((point.x + 0.5) * zoom),
+      y: bounds.top + this.#camera.y + ((point.y + 0.5) * zoom)
     };
   }
 

@@ -5,6 +5,12 @@ import {
   type Locator,
   type Page
 } from "@playwright/test";
+import {
+  fieldRow,
+  boxOf,
+  centerOf,
+  hold
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
@@ -12,12 +18,6 @@ import {
   fieldChanges,
   recordFieldChanges
 } from "../support/events.ts";
-import { fieldRow } from "../support/locators.ts";
-import {
-  boxOf,
-  centerOf,
-  hold
-} from "../support/pointer.ts";
 
 function row(
   page: Page,

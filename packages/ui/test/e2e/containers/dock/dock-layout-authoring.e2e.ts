@@ -4,19 +4,19 @@ import {
   expect,
   type Page
 } from "@playwright/test";
-
-// Import Internal Dependencies
-import {
-  partStyleOf,
-  shadowBlurOf
-} from "../../support/styles.ts";
 import {
   boxOf,
   centerOf,
   hold,
   widthOf,
   type Point
-} from "../../support/pointer.ts";
+} from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
+import {
+  partStyleOf,
+  shadowBlurOf
+} from "../../support/styles.ts";
 import {
   openDockLayout,
   paneKeysOf

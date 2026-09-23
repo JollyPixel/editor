@@ -96,6 +96,8 @@ class Runtime<TContext = Systems.WorldDefaultContext> {
   ): Promise<Runtime<TContext>>;
 
   load(options?: RuntimeLoadOptions<TContext>): Promise<void>;
+  nextFrame(): Promise<void>;
+  frames(count: number): Promise<void>;
   mountMetricsPanel(options?: MetricsPanelOptions): Promise<MetricsPanel>;
   start(): void;
   stop(): void;
@@ -420,3 +422,15 @@ The focus hint, when enabled, is mounted by `start()` and removed by `stop()`.
 
 `dispose()` calls `stop()`, removes the mounted performance HUD and readout, and disposes
 the world. Do not reuse the runtime after disposal.
+
+## Frame stepping
+
+`nextFrame()` resolves after the next rendered frame: the world has updated
+and drawn, and emitted `afterUpdate`. Fixed steps without a render do not count.
+`frames(count)` resolves after `count` rendered frames, at once when `count` is
+zero or less. Neither resolves while the runtime is stopped.
+
+```ts
+camera.position.set(0, 10, 10);
+await runtime.frames(2);
+```

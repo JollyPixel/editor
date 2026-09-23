@@ -1,20 +1,20 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
+import {
+  buttonGroup,
+  dialog,
+  dialogTitle,
+  selectField,
+  textField,
+  titledDialog
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import {
-  buttonGroup,
-  dialog,
-  dialogTitle,
-  openPane,
-  selectField,
-  textField,
-  titledDialog
-} from "./support/panels.ts";
+import { openPane } from "./support/panels.ts";
 import { seedVoxels } from "./support/scene.ts";
 import {
   clickTexel,

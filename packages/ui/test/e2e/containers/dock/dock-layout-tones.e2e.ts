@@ -4,13 +4,10 @@ import {
   expect,
   type Page
 } from "@playwright/test";
+import { centerOf, dragTo } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../../support/gallery.ts";
-import {
-  centerOf,
-  dragTo
-} from "../../support/pointer.ts";
 
 // CONSTANTS
 const kExample = "scenarios/dock-layout-tones";

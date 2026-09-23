@@ -41,6 +41,7 @@ scene.add(grid); // self-updating: no manual .update() call needed
 ### Utilities
 
 - `createCanvas2D(width, height)`: Returns a sized `{ canvas, context }` pair for canvas-backed textures, and throws when no 2D context is available.
+- `projectToClient(camera, canvas, point)`: Projects a world point to client coordinates over `canvas.getBoundingClientRect()`, y pointing down, for placing HTML over a 3D view or aiming pointer events. Refreshes the camera's world matrices first, so a camera moved since the last render projects from its new pose. Returns `null` when the point is outside the camera's near and far range, including behind it.
 
 ### Network
 

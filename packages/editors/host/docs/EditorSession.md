@@ -71,6 +71,21 @@ remembers the entered username per tab. `assets` is the session's
 [`AssetLeases`](./AssetLeases.md), where panels open their own leases.
 `catalog` comes from `@jolly-pixel/asset-server/catalog/client`.
 
+## Identity
+
+The username prompt stores the entered name in `sessionStorage` under
+`IDENTITY_STORAGE_KEY` (`"jolly-pixel:username"`) and skips itself while a name
+is stored.
+
+```ts
+function rememberQueryUsername(search?: string): void;
+```
+
+Stores the `username` query parameter under that key, so the prompt does not
+open. `search` defaults to `location.search`; nothing happens without the
+parameter. `mountStandalone` calls it when `dev` is set; a page that prompts on
+its own calls it behind `import.meta.env.DEV`.
+
 ## Archives
 
 `archive` exports and imports `.zip`

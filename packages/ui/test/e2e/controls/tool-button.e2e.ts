@@ -3,15 +3,15 @@ import {
   test,
   expect
 } from "@playwright/test";
-
-// Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
 import {
   boxOf,
   centerOf,
   hold,
   widthOf
-} from "../support/pointer.ts";
+} from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
+import { openExample } from "../support/gallery.ts";
 
 test.describe("Tool button", () => {
   test.beforeEach(async({ page }) => {

@@ -1,0 +1,35 @@
+{
+  "name": "@jolly-pixel/e2e",
+  "description": "Shared Playwright config, locators and editor fixtures for JollyPixel e2e suites",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./editor": "./src/editor/index.ts"
+  },
+  "scripts": {
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/e2e"
+  },
+  "keywords": [],
+  "directories": {
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/network": "workspace:*"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

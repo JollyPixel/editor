@@ -156,6 +156,10 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     return this.view.pendingRebuilds;
   }
 
+  whenIdle(): Promise<void> {
+    return this.view.whenIdle();
+  }
+
   get defaultTileSize(): number | undefined {
     return this.document.defaultTileSize;
   }

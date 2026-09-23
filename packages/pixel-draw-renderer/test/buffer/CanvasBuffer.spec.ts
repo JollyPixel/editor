@@ -71,6 +71,29 @@ describe("CanvasBuffer", () => {
       assert.strictEqual(a, 255);
     });
 
+    test("reads an erased or out-of-bounds pixel as transparent", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: kTestMaxSize
+      });
+      buf.drawPixels([
+        { x: 1, y: 1 }
+      ], { r: 255, g: 0, b: 0, a: 255 });
+      buf.drawPixels([
+        { x: 2, y: 2 }
+      ], { r: 0, g: 0, b: 0, a: 0 });
+
+      assert.deepStrictEqual(buf.samplePixel(2, 2), [0, 0, 0, 0]);
+      assert.deepStrictEqual(buf.samplePixel(4, 0), [0, 0, 0, 0]);
+      assert.deepStrictEqual(
+        buf.samplePixels([{ x: 1, y: 1 }, { x: -1, y: 1 }]),
+        [
+          { r: 255, g: 0, b: 0, a: 255 },
+          { r: 0, g: 0, b: 0, a: 0 }
+        ]
+      );
+    });
+
     test("draws multiple pixels at once", () => {
       const buf = new CanvasBuffer({
         size: { x: 4, y: 4 },

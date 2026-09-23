@@ -5,7 +5,10 @@ import {
   CatalogClient,
   catalogRoom
 } from "@jolly-pixel/asset-server/catalog/client";
-import { IDENTITY_STORAGE_KEY } from "@jolly-pixel/editor.host";
+import {
+  IDENTITY_STORAGE_KEY,
+  rememberQueryUsername
+} from "@jolly-pixel/editor.host";
 import { Client } from "@jolly-pixel/network/client";
 import {
   promptPeerIdentity,
@@ -49,6 +52,9 @@ function required<TElement extends Element>(
 }
 
 async function boot(): Promise<void> {
+  if (import.meta.env.DEV) {
+    rememberQueryUsername();
+  }
   const offline = import.meta.env.MODE === "static" ||
     new URLSearchParams(location.search).has("offline");
   const connection = offline ?

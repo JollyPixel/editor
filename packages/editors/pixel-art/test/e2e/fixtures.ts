@@ -1,23 +1,40 @@
 // Import Third-party Dependencies
-import {
-  test as base,
-  type Locator,
-  type Page
+import type {
+  Locator,
+  Page
 } from "@playwright/test";
+import {
+  PORTS,
+  socketUrl
+} from "@jolly-pixel/e2e";
+import {
+  e2eFolder,
+  editorFixture,
+  type EditorTarget,
+  type OpenEditorOptions
+} from "@jolly-pixel/e2e/editor";
+import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
+import {
+  encodePixelArtDocument,
+  PixelBuffer,
+  serializePixelBuffer
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import {
-  testAssetId,
-  RUNTIME_MAX_FPS
-} from "./constants.ts";
 import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import type { PixelArtDemo } from "../../examples/scripts/boot/PixelArtDemo.ts";
-import type {
-  PixelDrawPanel,
-  TextureImportPolicy
-} from "../../src/index.ts";
+import type { TextureImportPolicy } from "../../src/index.ts";
 
 export { expect } from "@playwright/test";
+
+// CONSTANTS
+const kRuntimeMaxFps = 1;
+const kTransparent = {
+  r: 0,
+  g: 0,
+  b: 0,
+  a: 0
+};
 
 export interface DemoOptions {
   runtime?: boolean;
@@ -26,74 +43,62 @@ export interface DemoOptions {
   addDelay?: number;
 }
 
-export async function openDemo(
-  page: Page,
+export function demo(
   options: DemoOptions = {}
-): Promise<Locator> {
+): OpenEditorOptions {
   const {
     runtime = false,
-    maxFps = RUNTIME_MAX_FPS,
+    maxFps = kRuntimeMaxFps,
     importPolicy = "replace",
     addDelay = 0
   } = options;
 
-  await page.addInitScript(() => {
-    sessionStorage.setItem("jolly-pixel:username", "E2E");
-  });
-
-  const query = new URLSearchParams({
+  const query: Record<string, string> = {
     empty: "true",
-    target: testAssetId(base.info().parallelIndex),
     "import-policy": importPolicy
-  });
-  if (runtime) {
-    query.set("max-fps", String(maxFps));
-  }
-  else {
-    query.set("runtime", "off");
+  };
+  if (!runtime) {
+    query.runtime = "off";
   }
   if (addDelay > 0) {
-    query.set("add-delay", String(addDelay));
+    query["add-delay"] = String(addDelay);
   }
-  await page.goto(`/?${query}`);
-  await waitForDemo(page);
 
+  return {
+    username: "E2E",
+    maxFps: runtime ? maxFps : undefined,
+    query
+  };
+}
+
+export function demoPanel(
+  page: Page
+): Locator {
   return page.locator("pixel-draw-panel");
 }
 
-export async function waitForDemo(
-  page: Page
-): Promise<void> {
-  await page.waitForFunction(() => window.pixelArtDemo !== undefined);
-}
+export const test = editorFixture<EditorTarget>({
+  socketUrl: socketUrl(PORTS.pixelArt),
+  editor: demo(),
+  async create(catalog) {
+    const blank = new PixelBuffer({
+      size: TEXTURE_SIZE,
+      defaultColor: kTransparent
+    });
+    const id = await catalog.create(
+      `${e2eFolder()}/canvas.pixelart`,
+      encodePixelArtDocument(serializePixelBuffer(blank)),
+      { kind: PIXEL_ART_KIND }
+    );
 
-export async function resetCanvas(
-  panel: Locator
-): Promise<void> {
-  await panel.evaluate((element: PixelDrawPanel, size) => {
-    const canvas = element.canvasManager!;
-    const blank = document.createElement("canvas");
-    blank.width = size.x;
-    blank.height = size.y;
-    canvas.texture = blank;
-    canvas.uv.clear();
-    canvas.document.history.clear();
-  }, TEXTURE_SIZE);
-}
-
-export const test = base.extend<{
-  demo: DemoOptions;
+    return { id };
+  }
+}).extend<{
   panel: Locator;
 }>({
-  demo: [{}, { option: true }],
-  panel: [
-    async({ page, demo }, use) => {
-      const panel = await openDemo(page, demo);
-      await resetCanvas(panel);
-      await use(panel);
-    },
-    { auto: true }
-  ]
+  panel: async({ page }, use) => {
+    await use(demoPanel(page));
+  }
 });
 
 declare global {

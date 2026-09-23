@@ -78,6 +78,8 @@ export type {
   HistoryUvStateEntry
 } from "./history/HistoryStack.types.ts";
 export type {
+  CanvasViewport,
+  ClientOrigin,
   DefaultViewport
 } from "./rendering/Viewport.ts";
 export { PeerPresence } from "./rendering/presence/PeerPresence.ts";

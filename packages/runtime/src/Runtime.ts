@@ -196,6 +196,20 @@ export class Runtime<
     return bootstrapRuntime(this, options);
   }
 
+  nextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      this.world.once("afterUpdate", () => resolve());
+    });
+  }
+
+  async frames(
+    count: number
+  ): Promise<void> {
+    for (let index = 0; index < count; index++) {
+      await this.nextFrame();
+    }
+  }
+
   async mountMetricsPanel(
     options: MetricsPanelOptions = {}
   ): Promise<MetricsPanel> {

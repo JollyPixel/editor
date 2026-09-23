@@ -13,6 +13,7 @@ import {
 import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
 import { voxelMapAssetKind } from "@jolly-pixel/asset.voxel-map";
 import { voxelModelAssetKind } from "@jolly-pixel/asset.voxel-model";
+import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -63,7 +64,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: "./",
     server: e2e ? {
-      port: 3004,
+      port: PORTS.studio,
       strictPort: true
     } : undefined,
     plugins: [

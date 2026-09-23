@@ -402,6 +402,18 @@ importers:
         specifier: workspace:*
         version: link:../bench
 
+  packages/e2e:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../asset-server
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../network
+      '@playwright/test':
+        specifier: ^1.63.0
+        version: 1.63.0
+
   packages/editors/host:
     dependencies:
       '@jolly-pixel/asset':
@@ -487,6 +499,9 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
@@ -566,6 +581,9 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
 
   packages/editors/voxel-model:
     dependencies:
@@ -621,6 +639,9 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -806,6 +827,9 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../asset-source
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../e2e
       '@jolly-pixel/editor.voxel-map':
         specifier: workspace:*
         version: link:../editors/voxel-map
@@ -841,6 +865,9 @@ importers:
         specifier: workspace:*
         version: link:../resize-handle
     devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../e2e
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network

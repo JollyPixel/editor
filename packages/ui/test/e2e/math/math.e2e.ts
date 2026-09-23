@@ -5,6 +5,11 @@ import {
   type Locator,
   type Page
 } from "@playwright/test";
+import {
+  fieldRow as row,
+  boxOf,
+  scrubBy
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { openExample } from "../support/gallery.ts";
@@ -12,11 +17,6 @@ import {
   fieldChanges as changes,
   recordFieldChanges as recordChanges
 } from "../support/events.ts";
-import { fieldRow as row } from "../support/locators.ts";
-import {
-  boxOf,
-  scrubBy
-} from "../support/pointer.ts";
 import { styleOf } from "../support/styles.ts";
 
 function axisTagColor(

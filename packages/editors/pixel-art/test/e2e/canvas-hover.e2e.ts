@@ -2,7 +2,11 @@
 import type { Locator } from "@playwright/test";
 
 // Import Internal Dependencies
-import { test, expect } from "./fixtures.ts";
+import {
+  test,
+  expect,
+  demo
+} from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 test("the panel reports the pointer entering and leaving the canvas", async({ panel, page }) => {
@@ -21,7 +25,7 @@ test("the panel reports the pointer entering and leaving the canvas", async({ pa
 });
 
 test.describe("3D preview", () => {
-  test.use({ demo: { runtime: true } });
+  test.use({ editor: demo({ runtime: true }) });
 
   function keyboardEnabled(
     panel: Locator
