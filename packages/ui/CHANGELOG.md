@@ -1,5 +1,48 @@
 # @jolly-pixel/ui
 
+## 3.1.0
+
+### Minor Changes
+
+- [#739](https://github.com/JollyPixel/editor/pull/739) [`f7b4ec2`](https://github.com/JollyPixel/editor/commit/f7b4ec2fea370220bba2d2ca68f0cb570ed80fcf) Thanks [@fraxken](https://github.com/fraxken)! - Restyle the `jolly-dialog` header as a filled banner and add `icon`, `tone` and
+  `intent` (`info`, `success`, `warning`, `danger`), also accepted by the dialog
+  helpers. The backdrop now takes the hue of the header.
+
+- [#739](https://github.com/JollyPixel/editor/pull/739) [`956a942`](https://github.com/JollyPixel/editor/commit/956a942bec3670dc9cb0a9714a3abe2843330688) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-dialog.confirmInline()`, which asks for a confirmation in the footer
+  of the open dialog instead of stacking a second one.
+
+- [#740](https://github.com/JollyPixel/editor/pull/740) [`566c46f`](https://github.com/JollyPixel/editor/commit/566c46f6a0ecab46dd1950f747a1fdb3e764d46a) Thanks [@fraxken](https://github.com/fraxken)! - Add `share-tone` to `jolly-dock`: every pane of the dock, both columns of a `double` one included, takes the tone of its first toned pane on screen.
+  `jolly-pane` gains `ownTone`; `areaTone` now returns the shared tone inside such a dock.
+
+- [#746](https://github.com/JollyPixel/editor/pull/746) [`60d0df3`](https://github.com/JollyPixel/editor/commit/60d0df3699f65c5dc38bff6a2458db1c2f05bee0) Thanks [@fraxken](https://github.com/fraxken)! - Export the facade builder types and add `addNote`, `addThemePreferences`,
+  `addElement`, `DockFacade.query`, the `buttons` and `flags` binding views, and
+  `FieldBinding` for Lit templates. Disposing a floating `Pane` now removes its
+  `jolly-scope`.
+
+- [#739](https://github.com/JollyPixel/editor/pull/739) [`267f172`](https://github.com/JollyPixel/editor/commit/267f172136cd77d1b16b67e3734ff068b65d2fb0) Thanks [@fraxken](https://github.com/fraxken)! - Add icon tones: `registerIcon(name, glyph, { tone })` with `tone-fill` and
+  `tone-ink` glyph classes, seven `--jolly-tone-*` hues, and toned panes that
+  recolour their header, tabs, folders and accent controls. Add `disabled` to
+  `jolly-pane`, which also disables its `jolly-pane-group` tab.
+
+- [#748](https://github.com/JollyPixel/editor/pull/748) [`54c361c`](https://github.com/JollyPixel/editor/commit/54c361c02b8f7ddf26cf71e0453f8f224566cffc) Thanks [@fraxken](https://github.com/fraxken)! - Own performance metrics in the runtime: a subsystem describes what it counts
+  through the structural `MetricSource`, `runtime.metrics` registers it on one
+  recorder, and `mountMetricsPanel()` builds a dockable readout from them.
+
+- [#737](https://github.com/JollyPixel/editor/pull/737) [`94c4da8`](https://github.com/JollyPixel/editor/commit/94c4da893f24adfbf59d1031d3c3731c9b4ff567) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tab` gains `badge`, `action` and `actionLabel`; the action button emits `jolly-tab-action` without selecting the tab.
+  `jolly-tabs` gains a `list-end` slot that follows the last tab outside the scrolling list, and a `variant="skew"` chained-parallelogram look.
+  New `--jolly-tab-badge-bg` and `--jolly-tab-badge-fg` tokens tint the badge amber per theme.
+
+- [#722](https://github.com/JollyPixel/editor/pull/722) [`d6e1b5a`](https://github.com/JollyPixel/editor/commit/d6e1b5a976b4571d78051502df570e85d5b50cce) Thanks [@fraxken](https://github.com/fraxken)! - Add `promptPeerIdentity` and `GUEST_USERNAME`, plus `toPeerMetadata`, `readUsername`, `readPeerId` and `peerProfileColor` under `./network`.
+
+- [#726](https://github.com/JollyPixel/editor/pull/726) [`2bb278b`](https://github.com/JollyPixel/editor/commit/2bb278b095453aa8bf1e66c4d5fb36b98a9647cb) Thanks [@fraxken](https://github.com/fraxken)! - Add `PeerRoster` and `PeerMarkTracker` to `@jolly-pixel/ui/network`, moved out of the voxel-map and voxel-model editors.
+
+### Patch Changes
+
+- [#713](https://github.com/JollyPixel/editor/pull/713) [`4ae4d68`](https://github.com/JollyPixel/editor/commit/4ae4d683df8328d306023260732c1efc787acd98) Thanks [@fraxken](https://github.com/fraxken)! - Fix the vertical `jolly-slider` padding: an unlabeled slider no longer gets a start-only inset,
+  and the empty trailing slot no longer adds a gap below the lane.
+- Updated dependencies [[`8d2c08f`](https://github.com/JollyPixel/editor/commit/8d2c08f484a8ab7b1ef055c6d45c8267f7c6fc6d), [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242), [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242)]:
+  - @jolly-pixel/network@4.0.0
+
 ## 3.0.0
 
 ### Major Changes

@@ -1,5 +1,13 @@
 # @jolly-pixel/asset
 
+## 2.1.0
+
+### Minor Changes
+
+- [#725](https://github.com/JollyPixel/editor/pull/725) [`9e4b7a1`](https://github.com/JollyPixel/editor/commit/9e4b7a16d5348458027d06eafc68baf51ca4f519) Thanks [@fraxken](https://github.com/fraxken)! - Track asset dependency edges: `AssetKindHandler.dependencies`, a `dependencies` field on write events, a live catalog edge index with boot backfill, and a Vite `launch` option.
+  `TilesetDefinition.src` is now optional; an asset-backed tileset names its pixels with `asset` instead.
+  `PixelDocument` now owns edits, history replay and remote sync, so it runs headless and several `PixelArtCanvas` can share one through the new `document` option.
+
 ## 2.0.0
 
 ### Major Changes

@@ -1,5 +1,43 @@
 # @jolly-pixel/three
 
+## 4.0.0
+
+### Major Changes
+
+- [#733](https://github.com/JollyPixel/editor/pull/733) [`9c2c92a`](https://github.com/JollyPixel/editor/commit/9c2c92a6a0f1e92a0b4ccb3df6dee7c4f0be8ba3) Thanks [@fraxken](https://github.com/fraxken)! - Rename `AreaBoxControls` to `BoxControls<TBox>` (`area` becomes `box`), which
+  now also drives `MarqueeBox`; `Area*` policy, drag and state types take a `Box`
+  prefix. `AreaBox` and `MarqueeBox` share a new `BoxVolume` base.
+
+- [#733](https://github.com/JollyPixel/editor/pull/733) [`18727dc`](https://github.com/JollyPixel/editor/commit/18727dc442a89059f5a54ad8d82310fbdd9575c2) Thanks [@fraxken](https://github.com/fraxken)! - Add `MarqueeBox`, an empty 3D selection box with animated two-color dashed
+  edges. Remove the exported `Vector3Like`, use `THREE.Vector3Like` instead.
+
+- [#732](https://github.com/JollyPixel/editor/pull/732) [`0c8bfe0`](https://github.com/JollyPixel/editor/commit/0c8bfe0f1d4c1b5d08df50246c3393153f9f75e6) Thanks [@fraxken](https://github.com/fraxken)! - Rename the `selection` module to `mesh-highlight`: `SelectionSystem` becomes
+  `MeshHighlight`, `SelectionManager` becomes `MeshHighlightState`, and the
+  appearance, overlay, resolver and renderer types take a `Highlight` prefix.
+  Selection state and the `PeerSelection*`/`PeerHover*` layer are unchanged.
+
+- [#735](https://github.com/JollyPixel/editor/pull/735) [`37cdf85`](https://github.com/JollyPixel/editor/commit/37cdf8581496b58a0d0e73964b5699937f2baac5) Thanks [@fraxken](https://github.com/fraxken)! - Replace `TranslationControls` with `TransformControls`: translate, rotate and
+  scale modes, plane and center handles, configurable orientation and pivot,
+  per-mode snapping, axis policy, limits and cancellable gestures.
+
+### Minor Changes
+
+- [#735](https://github.com/JollyPixel/editor/pull/735) [`37cdf85`](https://github.com/JollyPixel/editor/commit/37cdf8581496b58a0d0e73964b5699937f2baac5) Thanks [@fraxken](https://github.com/fraxken)! - `TransformControls` and `BoxControls` show a `grab` cursor over a handle and
+  `grabbing` during a gesture, then restore the element's previous cursor.
+
+- [#765](https://github.com/JollyPixel/editor/pull/765) [`f92e245`](https://github.com/JollyPixel/editor/commit/f92e2453211663158b04606da2008ba25cc35529) Thanks [@fraxken](https://github.com/fraxken)! - Add `Runtime.nextFrame()`/`frames(count)`, `VoxelEngine.whenIdle()`, `projectToClient()` in three,
+  and `textureClientPosition()` on the pixel-draw canvas viewport (typed `CanvasViewport`).
+
+- [#750](https://github.com/JollyPixel/editor/pull/750) [`378e517`](https://github.com/JollyPixel/editor/commit/378e517c294ff66e37baef2a977b9bb1c83dc6a5) Thanks [@fraxken](https://github.com/fraxken)! - Export `createCanvas2D(width, height)` and its `Canvas2D` result, the sized
+  canvas and 2D context pair behind the package's canvas-backed textures.
+
+### Patch Changes
+
+- [#741](https://github.com/JollyPixel/editor/pull/741) [`003ae39`](https://github.com/JollyPixel/editor/commit/003ae39e80dada8821a2f074c2660d7cf42ab73a) Thanks [@fraxken](https://github.com/fraxken)! - Bias the `AreaBox` fill and edges towards the camera so faces coplanar with
+  grid-aligned geometry no longer z-fight.
+- Updated dependencies [[`8d2c08f`](https://github.com/JollyPixel/editor/commit/8d2c08f484a8ab7b1ef055c6d45c8267f7c6fc6d), [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242), [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242)]:
+  - @jolly-pixel/network@4.0.0
+
 ## 3.0.0
 
 ### Major Changes
