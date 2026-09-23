@@ -3,7 +3,18 @@ import type { VoxelWorld } from "../../world/VoxelWorld.ts";
 import type { VoxelLayer } from "../../world/VoxelLayer.ts";
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
 import { LayerChunkCache } from "./LayerChunkCache.ts";
-import { FACE_OFFSETS, FACE_OPPOSITE } from "../../utils/math.ts";
+import {
+  FACE_AXIS,
+  FACE_OFFSETS,
+  FACE_OPPOSITE
+} from "../../utils/math.ts";
+import {
+  AO_UNOCCLUDED,
+  aoCornerLevel,
+  aoUAxis,
+  aoVAxis,
+  packAoCorners
+} from "../ambientOcclusion.ts";
 import type {
   BlockVariant,
   BlockVariantFace
@@ -167,6 +178,106 @@ export class ChunkNeighbourhood {
     }
 
     return true;
+  }
+
+  /**
+   * Packed corner levels of the voxel face pointing towards `direction`,
+   * sampled from the eight cells around the cell in front of it. A cell
+   * occludes when it fully covers at least one of its faces, so cutout
+   * blocks and thin shapes cast none. Always unoccluded for `direction < 0`.
+   */
+  ambientOcclusionAt(
+    direction: number,
+    wx: number,
+    wy: number,
+    wz: number
+  ): number {
+    if (direction < 0) {
+      return AO_UNOCCLUDED;
+    }
+
+    const axis = FACE_AXIS[direction];
+    const offset = FACE_OFFSETS[direction];
+    const uAxis = aoUAxis(axis);
+    const vAxis = aoVAxis(axis);
+    const x = wx + offset[0];
+    const y = wy + offset[1];
+    const z = wz + offset[2];
+    const ux = uAxis === 0 ? 1 : 0;
+    const uy = uAxis === 1 ? 1 : 0;
+    const vy = vAxis === 1 ? 1 : 0;
+    const vz = vAxis === 2 ? 1 : 0;
+
+    const uMin = this.#occluderAt(x - ux, y - uy, z);
+    const uMax = this.#occluderAt(x + ux, y + uy, z);
+    const vMin = this.#occluderAt(x, y - vy, z - vz);
+    const vMax = this.#occluderAt(x, y + vy, z + vz);
+
+    return packAoCorners(
+      aoCornerLevel(
+        uMin,
+        vMin,
+        this.#occluderAt(x - ux, y - uy - vy, z - vz)
+      ),
+      aoCornerLevel(
+        uMax,
+        vMin,
+        this.#occluderAt(x + ux, y + uy - vy, z - vz)
+      ),
+      aoCornerLevel(
+        uMin,
+        vMax,
+        this.#occluderAt(x - ux, y - uy + vy, z + vz)
+      ),
+      aoCornerLevel(
+        uMax,
+        vMax,
+        this.#occluderAt(x + ux, y + uy + vy, z + vz)
+      )
+    );
+  }
+
+  #occluderAt(
+    wx: number,
+    wy: number,
+    wz: number
+  ): boolean {
+    if (!this.#selfOpaque) {
+      const cache = this.#self;
+
+      return cache !== null && this.#castsOcclusion(cache.packedAt(wx, wy, wz));
+    }
+
+    const layers = this.layers;
+    for (let i = 0; i < this.#layerCount; i++) {
+      const cache = layers[i];
+      if (!cache.opaque) {
+        continue;
+      }
+
+      const packed = cache.packedAt(wx, wy, wz);
+      if (packed === VOXEL_ABSENT) {
+        continue;
+      }
+      if (this.#castsOcclusion(packed)) {
+        return true;
+      }
+      if (cache.layer.compositing === "replace") {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  #castsOcclusion(
+    packed: PackedVoxel
+  ): boolean {
+    return packed !== VOXEL_ABSENT &&
+      this.#variants.occlusionMaskOf(
+        voxelBlockId(packed),
+        voxelTransform(packed)
+      ) !== 0;
   }
 
   #occludes(

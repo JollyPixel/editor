@@ -243,10 +243,9 @@ export class VoxelEditBatch {
       }
 
       for (const touched of chunks.values()) {
-        for (const box of this.#dirtyBoxes(edited, touched)) {
-          for (const layer of layers) {
-            this.#markBox(layer, box);
-          }
+        const box = this.#dirtyBox(edited, touched);
+        for (const layer of layers) {
+          this.#markBox(layer, box);
         }
       }
     }
@@ -374,43 +373,29 @@ export class VoxelEditBatch {
     return touched;
   }
 
-  * #dirtyBoxes(
+  /**
+   * The touched chunk grown by one cell past each boundary it was edited on,
+   * so face, edge and corner neighbours all rebuild. Bits set by different
+   * cells may widen it past what one edit needs.
+   */
+  #dirtyBox(
     layer: VoxelLayer,
     touched: TouchedChunk
-  ): IterableIterator<WorldBox> {
+  ): WorldBox {
     const size = this.#size;
+    const { faces } = touched;
     const minX = layer.position.x + (touched.cx * size);
     const minY = layer.position.y + (touched.cy * size);
     const minZ = layer.position.z + (touched.cz * size);
-    const chunk: WorldBox = {
-      minX,
-      minY,
-      minZ,
-      maxX: minX + size - 1,
-      maxY: minY + size - 1,
-      maxZ: minZ + size - 1
-    };
-    yield chunk;
 
-    const { faces } = touched;
-    if (faces & kFaceMinX) {
-      yield { ...chunk, minX: chunk.minX - 1, maxX: chunk.minX - 1 };
-    }
-    if (faces & kFaceMaxX) {
-      yield { ...chunk, minX: chunk.maxX + 1, maxX: chunk.maxX + 1 };
-    }
-    if (faces & kFaceMinY) {
-      yield { ...chunk, minY: chunk.minY - 1, maxY: chunk.minY - 1 };
-    }
-    if (faces & kFaceMaxY) {
-      yield { ...chunk, minY: chunk.maxY + 1, maxY: chunk.maxY + 1 };
-    }
-    if (faces & kFaceMinZ) {
-      yield { ...chunk, minZ: chunk.minZ - 1, maxZ: chunk.minZ - 1 };
-    }
-    if (faces & kFaceMaxZ) {
-      yield { ...chunk, minZ: chunk.maxZ + 1, maxZ: chunk.maxZ + 1 };
-    }
+    return {
+      minX: faces & kFaceMinX ? minX - 1 : minX,
+      minY: faces & kFaceMinY ? minY - 1 : minY,
+      minZ: faces & kFaceMinZ ? minZ - 1 : minZ,
+      maxX: minX + size - (faces & kFaceMaxX ? 0 : 1),
+      maxY: minY + size - (faces & kFaceMaxY ? 0 : 1),
+      maxZ: minZ + size - (faces & kFaceMaxZ ? 0 : 1)
+    };
   }
 
   #markBox(

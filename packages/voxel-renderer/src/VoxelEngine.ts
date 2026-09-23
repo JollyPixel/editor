@@ -152,6 +152,16 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.view.greedy = value;
   }
 
+  get ambientOcclusion(): number {
+    return this.view.ambientOcclusion;
+  }
+
+  set ambientOcclusion(
+    value: number
+  ) {
+    this.view.ambientOcclusion = value;
+  }
+
   get castShadow(): boolean {
     return this.view.castShadow;
   }

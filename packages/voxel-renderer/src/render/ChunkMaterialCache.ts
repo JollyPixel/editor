@@ -10,6 +10,7 @@ import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MaterialCustomizerFn } from "../VoxelEngine.types.ts";
 import { BlockSurface } from "../blocks/BlockSurface.ts";
 import { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
+import { createAoStrength } from "../mesh/ambientOcclusion.ts";
 
 // CONSTANTS
 const kCoveredFaceOffset = -1;
@@ -30,6 +31,11 @@ export interface ChunkMaterialCacheOptions {
    * @default false
    */
   tileWrapping?: boolean;
+  /**
+   * Ambient occlusion strength shared by every chunk material, 0 to 1.
+   * @default 0
+   */
+  ambientOcclusion?: number;
 }
 
 /**
@@ -38,6 +44,7 @@ export interface ChunkMaterialCacheOptions {
  */
 export class ChunkMaterialCache {
   tileWrapping: boolean;
+  readonly aoStrength: ReturnType<typeof createAoStrength>;
 
   #materials = new Map<string, ChunkMaterial>();
   #keys = new Map<THREE.Material, string>();
@@ -53,13 +60,15 @@ export class ChunkMaterialCache {
       tilesetManager,
       type = "lambert",
       customizer,
-      tileWrapping = false
+      tileWrapping = false,
+      ambientOcclusion = 0
     } = options;
 
     this.#tilesetManager = tilesetManager;
     this.#type = type;
     this.#customizer = customizer;
     this.tileWrapping = tileWrapping;
+    this.aoStrength = createAoStrength(ambientOcclusion);
   }
 
   resolve(
@@ -145,10 +154,10 @@ export class ChunkMaterialCache {
       new THREE.MeshLambertMaterial(options);
 
     if (this.tileWrapping) {
-      enableTileWrapping(material, surface);
+      enableTileWrapping(material, surface, this.aoStrength);
     }
     else {
-      enableTileClamping(material, surface);
+      enableTileClamping(material, surface, this.aoStrength);
     }
     this.#customizer?.(
       material,

@@ -32,6 +32,11 @@ export interface VoxelMeshBuilderOptions {
    * @default false
    */
   greedy?: boolean;
+  /**
+   * Bakes per-vertex ambient occlusion into the normal attribute's `w`.
+   * @default false
+   */
+  ambientOcclusion?: boolean;
   logger?: VoxelLogger;
 }
 
@@ -41,6 +46,8 @@ export interface VoxelMeshBuilderOptions {
  */
 export class VoxelMeshBuilder {
   readonly stats = new MeshBuildStats();
+
+  ambientOcclusion: boolean;
 
   #world: VoxelWorld;
   #variants: BlockVariantCache;
@@ -81,6 +88,7 @@ export class VoxelMeshBuilder {
   ) {
     this.#world = options.world;
     this.#greedy = options.greedy ?? false;
+    this.ambientOcclusion = options.ambientOcclusion ?? false;
     this.#variants = new BlockVariantCache({
       blockRegistry: options.blockRegistry,
       shapeRegistry: options.shapeRegistry,
@@ -145,7 +153,8 @@ export class VoxelMeshBuilder {
       worldOriginY,
       worldOriginZ,
       stats,
-      bufferFor: this.#bufferFor
+      bufferFor: this.#bufferFor,
+      ambientOcclusion: this.ambientOcclusion
     };
     const mesher = this.#greedy ? this.#greedyMesher : this.#naiveMesher;
     const emitted = mesher.mesh(pass);

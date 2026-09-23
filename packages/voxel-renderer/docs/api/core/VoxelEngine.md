@@ -142,6 +142,12 @@ interface VoxelEngineOptions {
    */
   receiveShadow?: boolean;
   /**
+   * Strength of the ambient occlusion baked into chunk vertices, clamped to
+   * 0 (off) through 1. See the rendering and meshing concept page.
+   * @default 0
+   */
+  ambientOcclusion?: number;
+  /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports
    * roughness and metalness maps but is more expensive to render; "lambert"
@@ -249,6 +255,7 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   greedy: boolean; // read/write; assigning rebuilds every chunk
   castShadow: boolean; // read/write; assigning updates built chunks
   receiveShadow: boolean; // read/write; assigning updates built chunks
+  ambientOcclusion: number; // read/write; switching on or off rebuilds every chunk
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";

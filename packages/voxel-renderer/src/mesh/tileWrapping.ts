@@ -17,6 +17,10 @@ import {
 // Import Internal Dependencies
 import type { BlockSurface } from "../blocks/BlockSurface.ts";
 import { TILE_REPEAT_SCALE } from "./GeometryBuffer.ts";
+import {
+  aoFactorNode,
+  type AoStrengthUniform
+} from "./ambientOcclusion.ts";
 
 export type TileWrappedMaterial =
   | THREE.MeshLambertMaterial
@@ -29,7 +33,8 @@ export type TileWrappedMaterial =
  */
 export function enableTileClamping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface
+  surface?: BlockSurface,
+  aoStrength?: AoStrengthUniform
 ): void {
   const { map } = material;
   if (!map) {
@@ -46,7 +51,7 @@ export function enableTileClamping(
     )
   ).level(float(0));
 
-  const tint = reference("color", "color", material);
+  const tint = shadedTint(material, aoStrength);
 
   (material as { colorNode?: unknown; }).colorNode = Fn(() => {
     if (surface?.alphaMode === "mask") {
@@ -65,7 +70,8 @@ export function enableTileClamping(
  */
 export function enableTileWrapping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface
+  surface?: BlockSurface,
+  aoStrength?: AoStrengthUniform
 ): void {
   const { map } = material;
   if (!map) {
@@ -94,7 +100,7 @@ export function enableTileWrapping(
    * `materialColor` re-samples the atlas at raw UVs; read material.color directly.
    * Opacity is omitted: setupDiffuseColor() applies it after this node.
    */
-  const tint = reference("color", "color", material);
+  const tint = shadedTint(material, aoStrength);
 
   /*
    * The WebGPU build aliases the classic material names onto their node
@@ -110,6 +116,15 @@ export function enableTileWrapping(
     return vec4(tint, float(1)).mul(vec4(sampledDiffuseColor.rgb, alpha));
   })();
   configureClassicAlpha(material, surface);
+}
+
+function shadedTint(
+  material: TileWrappedMaterial,
+  aoStrength?: AoStrengthUniform
+) {
+  const tint = reference("color", "color", material);
+
+  return aoStrength === undefined ? tint : tint.mul(aoFactorNode(aoStrength));
 }
 
 function configureClassicAlpha(

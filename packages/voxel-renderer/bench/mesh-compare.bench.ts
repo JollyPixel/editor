@@ -9,7 +9,7 @@ import {
 } from "./common.ts";
 
 /**
- * Naive vs greedy on one world, interleaved inside a single process.
+ * Naive vs greedy, with and without ambient occlusion, on one world, interleaved inside a single process.
  *
  * Separate process runs can drift heavily under thermal throttling. Alternating
  * variants on the same chunks cancels most machine drift; reporting min keeps
@@ -51,6 +51,24 @@ const variants = [
   {
     name: "greedy",
     builder: new VoxelMeshBuilder({ ...shared, greedy: true }),
+    times: [] as number[]
+  },
+  {
+    name: "naive+ao",
+    builder: new VoxelMeshBuilder({
+      ...shared,
+      greedy: false,
+      ambientOcclusion: true
+    }),
+    times: [] as number[]
+  },
+  {
+    name: "greedy+ao",
+    builder: new VoxelMeshBuilder({
+      ...shared,
+      greedy: true,
+      ambientOcclusion: true
+    }),
     times: [] as number[]
   }
 ] satisfies { name: string; builder: VoxelMeshBuilder; times: number[]; }[];

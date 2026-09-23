@@ -1159,27 +1159,22 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     const cy = y >> shift;
     const cz = z >> shift;
 
-    const lx = x & mask;
-    const ly = y & mask;
-    const lz = z & mask;
+    const minDx = (x & mask) === 0 ? -1 : 0;
+    const maxDx = (x & mask) === s - 1 ? 1 : 0;
+    const minDy = (y & mask) === 0 ? -1 : 0;
+    const maxDy = (y & mask) === s - 1 ? 1 : 0;
+    const minDz = (z & mask) === 0 ? -1 : 0;
+    const maxDz = (z & mask) === s - 1 ? 1 : 0;
 
-    if (lx === 0) {
-      layer.markChunkDirty(cx - 1, cy, cz);
-    }
-    if (lx === s - 1) {
-      layer.markChunkDirty(cx + 1, cy, cz);
-    }
-    if (ly === 0) {
-      layer.markChunkDirty(cx, cy - 1, cz);
-    }
-    if (ly === s - 1) {
-      layer.markChunkDirty(cx, cy + 1, cz);
-    }
-    if (lz === 0) {
-      layer.markChunkDirty(cx, cy, cz - 1);
-    }
-    if (lz === s - 1) {
-      layer.markChunkDirty(cx, cy, cz + 1);
+    // Edge and corner chunks sample this cell for ambient occlusion.
+    for (let dx = minDx; dx <= maxDx; dx++) {
+      for (let dy = minDy; dy <= maxDy; dy++) {
+        for (let dz = minDz; dz <= maxDz; dz++) {
+          if ((dx | dy | dz) !== 0) {
+            layer.markChunkDirty(cx + dx, cy + dy, cz + dz);
+          }
+        }
+      }
     }
   }
 }

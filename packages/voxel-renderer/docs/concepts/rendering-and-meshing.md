@@ -27,7 +27,7 @@ The non-greedy layout uses 28 bytes per vertex:
 | Attribute | Type | Items | Bytes | Notes |
 |---|---|---:|---:|---|
 | `position` | `float32` | 3 | 12 | Relative to the chunk origin |
-| `normal` | normalized `int8` | 4 | 4 | Fourth byte unused; WebGPU needs 4-byte strides |
+| `normal` | normalized `int8` | 4 | 4 | Fourth byte holds [ambient occlusion](#ambient-occlusion), 1 when lit |
 | `uv` | normalized `uint16` | 2 | 4 | Atlas coordinates |
 | `tileRegion` | normalized `uint16` | 4 | 8 | Atlas offset and scale |
 
@@ -113,8 +113,8 @@ A `materialCustomizer` that replaces `onBeforeCompile` or remaps texture UVs
 conflicts with this shader modification.
 
 Greedy meshing allocates a scratch grid proportional to `chunkSize³`. Large
-chunks increase that cost, and the approach does not support per-vertex lighting
-or ambient occlusion.
+chunks increase that cost. With ambient occlusion enabled, faces only merge
+when their corner shading matches.
 
 ```ts
 const engine = new VoxelEngine({
@@ -139,7 +139,8 @@ type TileWrappedMaterial =
 
 function enableTileWrapping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface
+  surface?: BlockSurface,
+  aoStrength?: UniformNode<number>
 ): void;
 ```
 
@@ -159,7 +160,8 @@ The export is available for compatible custom material setup.
 ```ts
 function enableTileClamping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface
+  surface?: BlockSurface,
+  aoStrength?: UniformNode<number>
 ): void;
 ```
 
@@ -169,4 +171,41 @@ sample taken outside the triangle cannot read a neighbouring tile. It also lets 
 reference a rect at a fractional tile offset.
 
 The optional `surface` applies alpha-mode and mask-cutoff behavior to the
-shader. The engine supplies it when creating chunk materials.
+shader. The optional `aoStrength`, a TSL `uniform()`, multiplies the color by
+the baked ambient occlusion. The engine supplies both when creating chunk
+materials.
+
+## Ambient occlusion
+
+`ambientOcclusion` bakes contact shading into chunk vertices, so creases
+between blocks darken without a post-processing pass. It is a strength from
+`0` (off, the default) to `1`, where a fully enclosed corner turns black.
+
+```ts
+const engine = new VoxelEngine({
+  ambientOcclusion: 0.5
+});
+
+// Switching on or off rebuilds every chunk; other changes only update a uniform.
+engine.ambientOcclusion = 0.8;
+```
+
+Each face corner looks at the three cells around it in the layer in front of
+the face: two sides and the diagonal. Every occluder lowers the corner by one
+level out of three, and two occluding sides darken it fully. Vertices between
+corners, such as the top edge of a slab side, interpolate the four corners. The
+quad is triangulated along the diagonal joining its two brighter corners, so
+the shading stays symmetric.
+
+- A cell occludes when its block fully covers at least one of its faces.
+  Cutout blocks and thin shapes such as poles cast nothing.
+- Only faces on the voxel boundary receive occlusion. Ramp slopes and the inner
+  step of a stair stay lit, since their crease lies inside a single cell.
+- The shading multiplies the albedo, so it darkens direct and indirect light
+  alike. A `materialCustomizer` that replaces `colorNode` drops it.
+
+Baking roughly doubles chunk build time; a
+`bench/mesh-compare.bench.ts` run on 190k voxels took 124 ms instead of 64 ms.
+Greedy meshing merges fewer faces (310k triangles instead of 168k in that
+run). An edit on a chunk edge or corner also rebuilds the diagonal chunks
+that sample it.

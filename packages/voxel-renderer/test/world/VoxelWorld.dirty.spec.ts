@@ -66,6 +66,23 @@ describe("VoxelWorld — dirty propagation", () => {
     assert.equal(layer.getChunk(1, 0, 0)?.dirty, true);
   });
 
+  it("dirties the edge and corner chunks of a voxel on a chunk corner", () => {
+    const world = new VoxelWorld(4);
+    const layer = world.addLayer("Ground");
+    const corner = layer.getOrCreateChunk(1, 1, 1);
+    const edge = layer.getOrCreateChunk(1, 1, 0);
+    const beyond = layer.getOrCreateChunk(2, 1, 1);
+    for (const chunk of [corner, edge, beyond]) {
+      chunk.dirty = false;
+    }
+
+    world.setVoxelAt("Ground", { x: 3, y: 3, z: 3 }, makeVoxelEntry());
+
+    assert.equal(corner.dirty, true);
+    assert.equal(edge.dirty, true);
+    assert.equal(beyond.dirty, false);
+  });
+
   it("dirties every layer when one is removed", () => {
     const fixture = makeTwoLayerWorld();
     clearAllDirty(fixture.world);

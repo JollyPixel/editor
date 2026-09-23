@@ -14,6 +14,10 @@ export interface MeshPassOptions {
   worldOriginZ: number;
   stats: MeshBuildStats;
   bufferFor: GeometryBufferFactory;
+  /**
+   * Bakes per-vertex ambient occlusion into emitted faces.
+   */
+  ambientOcclusion: boolean;
 }
 
 /**

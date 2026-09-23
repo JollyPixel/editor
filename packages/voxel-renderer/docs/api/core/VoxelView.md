@@ -61,6 +61,8 @@ interface VoxelViewOptions {
   castShadow?: boolean;
   /** @default false */
   receiveShadow?: boolean;
+  /** 0 (off) to 1. @default 0 */
+  ambientOcclusion?: number;
 }
 ```
 
@@ -77,6 +79,7 @@ class VoxelView {
   greedy: boolean;                     // assigning rebuilds every chunk
   castShadow: boolean;                 // assigning updates built chunks
   receiveShadow: boolean;              // assigning updates built chunks
+  ambientOcclusion: number;            // switching on or off rebuilds every chunk
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";

@@ -101,6 +101,14 @@ export interface VoxelViewOptions {
   retainVertexData?: boolean;
 
   /**
+   * Strength of the ambient occlusion baked into chunk vertices, from 0 (off)
+   * to 1 (fully occluded corners turn black). Darkens the albedo, so it
+   * shades direct and indirect light alike.
+   * @default 0
+   */
+  ambientOcclusion?: number;
+
+  /**
    * Chunk meshes cast shadows; assignable later through `castShadow`.
    * @default false
    */

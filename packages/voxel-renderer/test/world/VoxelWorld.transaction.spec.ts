@@ -285,6 +285,21 @@ describe("VoxelWorld.transaction - dirty chunks", () => {
     assert.equal(other.getChunk(1, 0, 0)?.dirty, true);
     assert.equal(other.getChunk(2, 0, 0)?.dirty, false);
   });
+
+  it("dirties the diagonal chunk of a corner write", () => {
+    const world = new VoxelWorld(4);
+    const layer = world.addLayer("A");
+    layer.getOrCreateChunk(1, 1, 1);
+    layer.getOrCreateChunk(1, 1, 0);
+    clearAllDirty(world);
+
+    world.transaction(() => {
+      world.setVoxel("A", { position: { x: 3, y: 3, z: 3 }, blockId: 1 });
+    });
+
+    assert.equal(layer.getChunk(1, 1, 1)?.dirty, true);
+    assert.equal(layer.getChunk(1, 1, 0)?.dirty, true);
+  });
 });
 
 describe("VoxelWorld.transaction - history", () => {

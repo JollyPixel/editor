@@ -103,8 +103,10 @@ export class VoxelView {
       viewDistancePolicy = "hide",
       retainVertexData = false,
       castShadow = false,
-      receiveShadow = false
+      receiveShadow = false,
+      ambientOcclusion: requestedAo = 0
     } = options;
+    const ambientOcclusion = THREE.MathUtils.clamp(requestedAo, 0, 1);
 
     this.document = document;
     this.root.name = "VoxelView";
@@ -143,6 +145,7 @@ export class VoxelView {
       tilesetManager: this.tilesets,
       alphaTest,
       greedy,
+      ambientOcclusion: ambientOcclusion > 0,
       logger: this.#logger
     });
 
@@ -155,7 +158,8 @@ export class VoxelView {
       tilesetManager: this.tilesets,
       type: material,
       customizer: materialCustomizer,
-      tileWrapping: greedy
+      tileWrapping: greedy,
+      ambientOcclusion
     });
     this.#meshes = new ChunkMeshStore({
       root: this.root,
@@ -245,6 +249,23 @@ export class VoxelView {
     this.#materials.invalidate();
     this.#clearChunkMeshes();
     this.markAllChunksDirty("greedy");
+  }
+
+  get ambientOcclusion(): number {
+    return this.#materials.aoStrength.value;
+  }
+
+  set ambientOcclusion(
+    value: number
+  ) {
+    const strength = THREE.MathUtils.clamp(value, 0, 1);
+    this.#materials.aoStrength.value = strength;
+
+    const enabled = strength > 0;
+    if (enabled !== this.#meshBuilder.ambientOcclusion) {
+      this.#meshBuilder.ambientOcclusion = enabled;
+      this.markAllChunksDirty("ambientOcclusion");
+    }
   }
 
   get castShadow(): boolean {
