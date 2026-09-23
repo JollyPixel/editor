@@ -98,4 +98,16 @@ export interface VoxelViewOptions {
    * @default false
    */
   retainVertexData?: boolean;
+
+  /**
+   * Chunk meshes cast shadows; assignable later through `castShadow`.
+   * @default false
+   */
+  castShadow?: boolean;
+
+  /**
+   * Chunk meshes receive shadows; assignable later through `receiveShadow`.
+   * @default false
+   */
+  receiveShadow?: boolean;
 }

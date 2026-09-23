@@ -57,6 +57,10 @@ interface VoxelViewOptions {
   viewDistancePolicy?: "hide" | "unload";
   /** @default false */
   retainVertexData?: boolean;
+  /** @default false */
+  castShadow?: boolean;
+  /** @default false */
+  receiveShadow?: boolean;
 }
 ```
 
@@ -71,6 +75,8 @@ class VoxelView {
   readonly inspector: VoxelInspector;
 
   greedy: boolean;                     // assigning rebuilds every chunk
+  castShadow: boolean;                 // assigning updates built chunks
+  receiveShadow: boolean;              // assigning updates built chunks
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";

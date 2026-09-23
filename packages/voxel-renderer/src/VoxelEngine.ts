@@ -152,6 +152,26 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.view.greedy = value;
   }
 
+  get castShadow(): boolean {
+    return this.view.castShadow;
+  }
+
+  set castShadow(
+    value: boolean
+  ) {
+    this.view.castShadow = value;
+  }
+
+  get receiveShadow(): boolean {
+    return this.view.receiveShadow;
+  }
+
+  set receiveShadow(
+    value: boolean
+  ) {
+    this.view.receiveShadow = value;
+  }
+
   get pendingRebuilds(): number {
     return this.view.pendingRebuilds;
   }

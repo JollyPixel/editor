@@ -132,6 +132,16 @@ interface VoxelEngineOptions {
    */
   retainVertexData?: boolean;
   /**
+   * Chunk meshes cast shadows. Chunks built later inherit the flag.
+   * @default false
+   */
+  castShadow?: boolean;
+  /**
+   * Chunk meshes receive shadows. Chunks built later inherit the flag.
+   * @default false
+   */
+  receiveShadow?: boolean;
+  /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports
    * roughness and metalness maps but is more expensive to render; "lambert"
@@ -237,6 +247,8 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly history: VoxelHistory; // see VoxelHistory.md
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
+  castShadow: boolean; // read/write; assigning updates built chunks
+  receiveShadow: boolean; // read/write; assigning updates built chunks
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";

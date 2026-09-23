@@ -101,7 +101,9 @@ export class VoxelView {
       rebuildBudgetMs = 8,
       viewDistance,
       viewDistancePolicy = "hide",
-      retainVertexData = false
+      retainVertexData = false,
+      castShadow = false,
+      receiveShadow = false
     } = options;
 
     this.document = document;
@@ -161,7 +163,9 @@ export class VoxelView {
       inspector: this.inspector,
       collider: this.#collider,
       logger: this.#logger,
-      retainVertexData
+      retainVertexData,
+      castShadow,
+      receiveShadow
     });
     this.#visibility = new ChunkVisibility({
       meshes: this.#meshes,
@@ -240,6 +244,26 @@ export class VoxelView {
     this.#materials.invalidate();
     this.#clearChunkMeshes();
     this.markAllChunksDirty("greedy");
+  }
+
+  get castShadow(): boolean {
+    return this.#meshes.castShadow;
+  }
+
+  set castShadow(
+    value: boolean
+  ) {
+    this.#meshes.castShadow = value;
+  }
+
+  get receiveShadow(): boolean {
+    return this.#meshes.receiveShadow;
+  }
+
+  set receiveShadow(
+    value: boolean
+  ) {
+    this.#meshes.receiveShadow = value;
   }
 
   loadTileset(
