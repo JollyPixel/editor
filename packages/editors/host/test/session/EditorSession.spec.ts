@@ -12,11 +12,13 @@ import {
   AssetNotFoundError,
   type AssetReferenceData
 } from "@jolly-pixel/asset";
-import { CATALOG_ROOM } from "@jolly-pixel/asset-server/catalog/client";
+import {
+  CATALOG_ROOM,
+  CatalogUnavailableError
+} from "@jolly-pixel/asset-server/catalog/client";
 
 // Import Internal Dependencies
 import { EditorSession } from "#src/session/EditorSession.ts";
-import { CatalogUnavailableError } from "#src/session/errors/CatalogUnavailableError.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { AssetDocumentKind } from "#src/lease/AssetLease.ts";
 import {
@@ -67,12 +69,15 @@ async function startConnect(
     kinds: options.kinds ?? [],
     accepts: options.accepts ?? "voxelmap"
   });
+  pending.catch(() => undefined);
 
   client.fakeRoom(CATALOG_ROOM).receive(snapshotMessage(
     [kMap, kGrass, kStone, kSound],
     options.dependencies ?? {}
   ));
-  await Promise.resolve();
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
 
   return {
     client,

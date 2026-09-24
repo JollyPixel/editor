@@ -1,14 +1,6 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import {
-  fromUint8Array,
-  toUint8Array
-} from "js-base64";
-import type {
-  AssetRecordData,
-  AssetReferenceData
-} from "@jolly-pixel/asset";
-import type * as network from "@jolly-pixel/network/client";
+import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
@@ -23,23 +15,29 @@ import {
   CATALOG_RENAME,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
+  type CatalogApplied,
   type CatalogCommand,
   type CatalogCommandType,
-  type CatalogInlineContent,
   type CatalogMessage,
-  type CatalogPathConflict
+  type CatalogRequest
 } from "./protocol.ts";
+import type { PathConflictPolicy } from "../../writer/AssetWriter.ts";
 import type {
   ImportConflictPolicy,
   ImportPlan,
   ImportReport
 } from "../../archive/import/AssetImport.ts";
+import {
+  decodeContent,
+  encodeContent
+} from "../../events/inlineContent.ts";
 import { CatalogRejectedError } from "./errors/CatalogRejectedError.ts";
+import { CatalogUnavailableError } from "./errors/CatalogUnavailableError.ts";
 import {
   DependencyIndex,
-  type DependencyMap
+  type DependencyMap,
+  type ReadonlyDependencyIndex
 } from "./DependencyIndex.ts";
-import { liveDependents } from "./liveDependents.ts";
 
 export interface CatalogRoom {
   on(
@@ -55,9 +53,19 @@ export interface CatalogRoom {
   leave(): void;
 }
 
+export interface CatalogRoomSource {
+  room(
+    name: string
+  ): CatalogRoom;
+}
+
+export interface CatalogConnectOptions {
+  timeoutMs?: number;
+}
+
 export interface CatalogCreateOptions {
   kind?: string;
-  onConflict?: CatalogPathConflict;
+  onConflict?: PathConflictPolicy;
 }
 
 export interface CatalogRemoveOptions {
@@ -77,20 +85,36 @@ export type CatalogClientEvents = {
   dependencies: (assetId: string) => void;
 };
 
-type AppliedMessage = Extract<CatalogMessage, { type: typeof CATALOG_APPLIED; }>;
+type Reply<TType extends CatalogCommandType> = Extract<
+  CatalogApplied,
+  { command: TType; }
+>;
 type SettledMessage = Extract<
   CatalogMessage,
   { type: typeof CATALOG_APPLIED | typeof CATALOG_REJECTED; }
 >;
 type Settle = (message: SettledMessage | null) => void;
 
-export function catalogRoom(
-  client: network.Client
-): CatalogRoom {
-  return client.room<CatalogCommand, CatalogMessage>(CATALOG_ROOM);
-}
-
 export class CatalogClient extends Emitter<CatalogClientEvents> {
+  static async connect(
+    rooms: CatalogRoomSource,
+    options: CatalogConnectOptions = {}
+  ): Promise<CatalogClient> {
+    const catalog = new CatalogClient(rooms.room(CATALOG_ROOM));
+    try {
+      await (options.timeoutMs === undefined ?
+        catalog.ready :
+        readyWithin(catalog.ready, options.timeoutMs));
+    }
+    catch (error) {
+      catalog.dispose();
+
+      throw error;
+    }
+
+    return catalog;
+  }
+
   readonly #room: CatalogRoom;
   readonly #records = new Map<string, AssetRecordData>();
   readonly #dependencies = new DependencyIndex();
@@ -110,6 +134,10 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     return this.#ready.promise;
   }
 
+  get dependencies(): ReadonlyDependencyIndex {
+    return this.#dependencies;
+  }
+
   records(): IterableIterator<AssetRecordData> {
     return this.#records.values();
   }
@@ -120,28 +148,12 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     return this.#records.get(assetId);
   }
 
-  dependenciesOf(
-    assetId: string
-  ): readonly AssetReferenceData[] {
-    return this.#dependencies.dependenciesOf(assetId);
-  }
-
   dependentsOf(
     assetId: string
-  ): readonly string[] {
-    return this.#dependencies.dependentsOf(assetId);
-  }
-
-  liveDependentsOf(
-    assetId: string
   ): AssetRecordData[] {
-    return liveDependents(this, assetId);
-  }
-
-  closureOf(
-    assetId: string
-  ): AssetReferenceData[] {
-    return this.#dependencies.closureOf(assetId);
+    return this.#dependencies
+      .dependentsOf(assetId)
+      .flatMap((dependentId) => this.#records.get(dependentId) ?? []);
   }
 
   async create(
@@ -149,19 +161,15 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     content: Uint8Array,
     options: CatalogCreateOptions = {}
   ): Promise<string> {
-    const message = await this.#request({
+    const reply = await this.#request({
       type: CATALOG_CREATE,
-      requestId: crypto.randomUUID(),
       path,
       kind: options.kind,
       onConflict: options.onConflict,
-      content: inlineContent(content)
+      content: encodeContent(content)
     });
-    if (message.command !== CATALOG_CREATE) {
-      throw unexpectedReply(message, CATALOG_CREATE);
-    }
 
-    return message.assetId;
+    return reply.assetId;
   }
 
   async rename(
@@ -170,7 +178,6 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   ): Promise<void> {
     await this.#request({
       type: CATALOG_RENAME,
-      requestId: crypto.randomUUID(),
       assetId,
       to
     });
@@ -182,7 +189,6 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   ): Promise<void> {
     await this.#request({
       type: CATALOG_DELETE,
-      requestId: crypto.randomUUID(),
       assetId,
       force: options.force
     });
@@ -191,48 +197,36 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   async exportArchive(
     root?: string
   ): Promise<Uint8Array> {
-    const message = await this.#request({
+    const reply = await this.#request({
       type: CATALOG_EXPORT,
-      requestId: crypto.randomUUID(),
       root
     });
-    if (message.command !== CATALOG_EXPORT) {
-      throw unexpectedReply(message, CATALOG_EXPORT);
-    }
 
-    return toUint8Array(message.content.data);
+    return decodeContent(reply.content);
   }
 
   async planImport(
     archive: Uint8Array
   ): Promise<ImportPlan> {
-    const message = await this.#request({
+    const reply = await this.#request({
       type: CATALOG_PLAN,
-      requestId: crypto.randomUUID(),
-      content: inlineContent(archive)
+      content: encodeContent(archive)
     });
-    if (message.command !== CATALOG_PLAN) {
-      throw unexpectedReply(message, CATALOG_PLAN);
-    }
 
-    return message.plan;
+    return reply.plan;
   }
 
   async importArchive(
     archive: Uint8Array,
     options: CatalogImportOptions
   ): Promise<ImportReport> {
-    const message = await this.#request({
+    const reply = await this.#request({
       type: CATALOG_IMPORT,
-      requestId: crypto.randomUUID(),
-      content: inlineContent(archive),
+      content: encodeContent(archive),
       onConflict: options.onConflict
     });
-    if (message.command !== CATALOG_IMPORT) {
-      throw unexpectedReply(message, CATALOG_IMPORT);
-    }
 
-    return message.report;
+    return reply.report;
   }
 
   dispose(): void {
@@ -244,24 +238,42 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     this.#pending.clear();
   }
 
+  async #request<TRequest extends CatalogRequest>(
+    request: TRequest
+  ): Promise<Reply<TRequest["type"]>>;
   async #request(
-    command: CatalogCommand & { requestId: string; }
-  ): Promise<AppliedMessage> {
+    request: CatalogRequest
+  ): Promise<CatalogApplied> {
     await this.ready;
 
-    const { promise, resolve, reject } = Promise.withResolvers<AppliedMessage>();
-    this.#pending.set(command.requestId, (message) => {
+    const requestId = crypto.randomUUID();
+    const { promise, resolve, reject } = Promise.withResolvers<
+      CatalogApplied
+    >();
+    this.#pending.set(requestId, (message) => {
       if (message === null) {
-        reject(new CatalogRejectedError("catalog client disposed", command.type));
+        reject(new CatalogRejectedError(
+          "catalog client disposed",
+          request.type
+        ));
       }
-      else if (message.type === CATALOG_APPLIED) {
+      else if (message.type === CATALOG_REJECTED) {
+        reject(new CatalogRejectedError(message.reason, message.command));
+      }
+      else if (message.command === request.type) {
         resolve(message);
       }
       else {
-        reject(new CatalogRejectedError(message.reason, message.command));
+        reject(new CatalogRejectedError(
+          `unexpected "${message.command}" reply`,
+          request.type
+        ));
       }
     });
-    this.#room.send(command);
+    this.#room.send({
+      ...request,
+      requestId
+    });
 
     return promise;
   }
@@ -300,8 +312,11 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
         }
         break;
       }
-      default:
-        this.#settle(message);
+      default: {
+        const settle = this.#pending.get(message.requestId);
+        this.#pending.delete(message.requestId);
+        settle?.(message);
+      }
     }
   };
 
@@ -326,36 +341,25 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
 
     return changed;
   }
+}
 
-  #settle(
-    message: SettledMessage
-  ): void {
-    if (message.requestId === undefined) {
-      return;
-    }
-
-    const settle = this.#pending.get(message.requestId);
-    this.#pending.delete(message.requestId);
-    settle?.(message);
+async function readyWithin(
+  ready: Promise<void>,
+  timeoutMs: number
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      ready,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new CatalogUnavailableError()),
+          timeoutMs
+        );
+      })
+    ]);
   }
-}
-
-function inlineContent(
-  data: Uint8Array
-): CatalogInlineContent {
-  return {
-    type: "inline",
-    encoding: "base64",
-    data: fromUint8Array(data)
-  };
-}
-
-function unexpectedReply(
-  message: AppliedMessage,
-  command: CatalogCommandType
-): CatalogRejectedError {
-  return new CatalogRejectedError(
-    `unexpected "${message.command}" reply`,
-    command
-  );
+  finally {
+    clearTimeout(timer);
+  }
 }

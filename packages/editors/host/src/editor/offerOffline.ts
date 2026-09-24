@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import { showChoice } from "@jolly-pixel/ui";
+import { CatalogUnavailableError } from "@jolly-pixel/asset-server/catalog/client";
 
 // Import Internal Dependencies
 import { LaunchNotFoundError } from "../launch/errors/LaunchNotFoundError.ts";
-import { CatalogUnavailableError } from "../session/errors/CatalogUnavailableError.ts";
 
 export type OfflineOffer = "retry" | "offline";
 

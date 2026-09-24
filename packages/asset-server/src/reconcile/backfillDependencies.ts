@@ -2,11 +2,11 @@
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import type { CatalogProjection } from "./CatalogProjection.ts";
+import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
-import { decodeContent } from "../events/AssetEvents.ts";
+import { decodeContent } from "../events/inlineContent.ts";
 import {
   silentLogger,
   type Logger
@@ -37,8 +37,13 @@ export async function backfillDependencies(
     logger = silentLogger()
   } = options;
 
+  const unindexed = Array.from(
+    catalog.unindexed(),
+    (record) => record.id.value
+  );
+
   let rewritten = 0;
-  for (const assetId of [...catalog.unindexed()]) {
+  for (const assetId of unindexed) {
     const desired = projector.desired(assetId);
     if (
       desired === null ||

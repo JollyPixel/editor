@@ -46,14 +46,15 @@ resolves immediately for a room-only target. `connect()` already awaits it, so
 by the time an editor mounts, a leased target is loaded.
 
 `EditorSession.open()` waits up to five seconds for the network catalog
-snapshot, then throws `CatalogUnavailableError` and destroys its client.
+snapshot, then throws `CatalogUnavailableError` (from
+`@jolly-pixel/asset-server/catalog/client`) and destroys its client.
 `EditorSession.connect()` accepts `catalogTimeoutMs` for supplied clients;
 without it, the caller owns connection liveness.
 
 A page that needs the catalog without a session calls
 `openCatalog(client, timeoutMs?)` instead. It resolves once the snapshot
-lands. On failure or timeout it disposes the catalog, destroys the client and
-rethrows (`CatalogUnavailableError` on timeout). `CATALOG_TIMEOUT_MS` is the
+lands. It wraps `CatalogClient.connect`: on failure or timeout it also
+destroys the client and rethrows (`CatalogUnavailableError` on timeout). `CATALOG_TIMEOUT_MS` is the
 five-second timeout `open()` uses.
 
 `targetLease(kind)` returns that same document as a typed, refcounted
@@ -97,7 +98,7 @@ its own calls it behind `import.meta.env.DEV`.
 `archive` exports and imports `.zip`
 [asset archives](../../../asset-server/docs/Archive.md) through the catalog
 room, the same way offline and on a server. The adapter is
-`CatalogSessionArchive` from `@jolly-pixel/asset-server/catalog/client`;
+`CatalogSessionArchive`, built over the `CatalogClient` archive methods;
 `EditorSession` passes it the workspace's import capability.
 
 ```ts

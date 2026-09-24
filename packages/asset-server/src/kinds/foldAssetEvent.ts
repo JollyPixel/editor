@@ -7,9 +7,9 @@ import {
   ASSET_CREATED,
   ASSET_DELETED,
   ASSET_UPDATED,
-  decodeContent,
   parseAssetEvent
 } from "../events/AssetEvents.ts";
+import { decodeContent } from "../events/inlineContent.ts";
 import { parseAssetCommand } from "./parseAssetCommand.ts";
 
 export function foldAssetEvent<TState, TCommand>(

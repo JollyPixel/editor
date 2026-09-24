@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
-import { CATALOG_ROOM, CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
 import type { ClientSocketEvent } from "@jolly-pixel/network/client";
 import { ChannelTransport } from "@jolly-pixel/network/transport/channel.ts";
 
 // Import Internal Dependencies
 import type { StandaloneConnection } from "../../editor/mountStandalone.ts";
 import type { LaunchSource } from "../../launch/index.ts";
+import { openCatalog } from "../../session/openCatalog.ts";
 import { catalogLaunchSources } from "../catalogLaunchSources.ts";
 import { guestConnection } from "../guestConnection.ts";
 import type { StandaloneWorkspace } from "../SessionWorkspace.ts";
@@ -79,11 +79,8 @@ export class RemoteWorkspace implements StandaloneWorkspace {
     accepts: string
   ): Promise<LaunchSource[]> {
     const connection = this.connect();
-    const catalog = new CatalogClient(
-      connection.client.room(CATALOG_ROOM)
-    );
+    const catalog = await openCatalog(connection.client);
     try {
-      await catalog.ready;
       const known = new Set(
         [...catalog.records()]
           .filter((record) => record.kind === accepts)

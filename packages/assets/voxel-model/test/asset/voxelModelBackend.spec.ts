@@ -106,7 +106,7 @@ describe("voxel-model asset kind over a real back-end", () => {
   test("indexes the texture as a dependency", async() => {
     await withBackend(async({ backend, recordId }) => {
       assert.equal(backend.catalog.snapshot().assets[0].kind, VOXEL_MODEL_KIND);
-      assert.deepEqual(backend.catalog.dependenciesOf(recordId), [kTexture]);
+      assert.deepEqual(backend.catalog.dependencies.dependenciesOf(recordId), [kTexture]);
     });
   });
 

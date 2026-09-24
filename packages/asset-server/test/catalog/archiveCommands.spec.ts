@@ -22,8 +22,7 @@ import {
 } from "#src/index.ts";
 import {
   CatalogClient,
-  CatalogRejectedError,
-  catalogRoom
+  CatalogRejectedError
 } from "#src/catalog/client/index.ts";
 import {
   archiveWorkspace,
@@ -51,8 +50,7 @@ async function connect(
   const client = new Client({
     socket: () => transport.connect()
   });
-  const catalog = new CatalogClient(catalogRoom(client));
-  await catalog.ready;
+  const catalog = await CatalogClient.connect(client);
 
   return {
     catalog,

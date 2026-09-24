@@ -15,7 +15,6 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import type { CatalogProjection } from "./CatalogProjection.ts";
 import { catalogProtocols } from "./protocol.schema.ts";
 import {
   CATALOG_APPLIED,
@@ -23,6 +22,7 @@ import {
   CATALOG_CREATE,
   CATALOG_DELETE,
   CATALOG_EXPORT,
+  CATALOG_IMPORT,
   CATALOG_PLAN,
   CATALOG_RENAME,
   CATALOG_REJECTED,
@@ -32,21 +32,18 @@ import {
   type CatalogChange,
   type CatalogCommand,
   type CatalogDeleteCommand,
-  type CatalogInlineContent,
-  type CatalogLifecycleCommandType,
   type CatalogMessage
 } from "./client/protocol.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
-import {
-  AssetHasDependentsError,
-  type DependentAsset
-} from "./errors/AssetHasDependentsError.ts";
-import type { AssetWriter } from "../writer/AssetWriter.ts";
+import { AssetHasDependentsError } from "./errors/AssetHasDependentsError.ts";
 import {
   actorOf,
+  type AssetInlineContent
+} from "../events/AssetEvents.ts";
+import {
   decodeContent,
   encodeContent
-} from "../events/AssetEvents.ts";
+} from "../events/inlineContent.ts";
 import type {
   ArchiveBackend,
   AssetArchive
@@ -63,9 +60,7 @@ import { asError } from "../utils/asError.ts";
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 
 export interface CatalogExtensionOptions {
-  projection: CatalogProjection;
-  writer: AssetWriter;
-  archive?: ArchiveBackend;
+  backend: ArchiveBackend;
   id?: string;
   maxContentBytes?: number;
   /**
@@ -80,9 +75,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   readonly name = CATALOG_ROOM;
   readonly protocols: MessageProtocols = catalogProtocols;
 
-  #projection: CatalogProjection;
-  #writer: AssetWriter;
-  #archive: ArchiveBackend | null;
+  #backend: ArchiveBackend;
   #maxContentBytes: number;
   #deleteProtection: boolean;
   #broadcast: RoomBroadcast | null = null;
@@ -94,9 +87,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   ) {
     super();
     this.id = options.id ?? CATALOG_ROOM;
-    this.#projection = options.projection;
-    this.#writer = options.writer;
-    this.#archive = options.archive ?? null;
+    this.#backend = options.backend;
     this.#maxContentBytes = options.maxContentBytes ??
       DEFAULT_CATALOG_MAX_CONTENT_BYTES;
     this.#deleteProtection = options.deleteProtection ?? true;
@@ -104,7 +95,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       type: CATALOG_CHANGED,
       change
     } satisfies CatalogMessage);
-    this.#projection.on(
+    this.#backend.catalog.on(
       "changed",
       this.#onChanged
     );
@@ -118,10 +109,11 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#broadcast = context.room;
     this.#members.add(client.id);
 
+    const { catalog } = this.#backend;
     context.room.sendTo(client.id, {
       type: CATALOG_SNAPSHOT,
-      manifest: this.#projection.snapshot(),
-      dependencies: this.#projection.dependencies()
+      manifest: catalog.snapshot(),
+      dependencies: catalog.dependencies.toJSON()
     } satisfies CatalogMessage);
   }
 
@@ -158,7 +150,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   }
 
   override dispose(): void {
-    this.#projection.off(
+    this.#backend.catalog.off(
       "changed",
       this.#onChanged
     );
@@ -170,44 +162,49 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogCommand,
     actor: EventStore.Actor
   ): Promise<Result<CatalogApplied, Error>> {
+    const backend = this.#backend;
+
     switch (command.type) {
       case CATALOG_CREATE: {
         const data = this.#decode(command.content);
+        if (!data.ok) {
+          return data;
+        }
 
-        return data.ok ?
-          applied(command.type, await this.#writer.create({
-            path: command.path,
-            kind: command.kind,
-            onPathConflict: command.onConflict,
-            data: data.val,
-            actor
-          })) :
-          data;
+        const written = await backend.writer.create({
+          path: command.path,
+          kind: command.kind,
+          onPathConflict: command.onConflict,
+          data: data.val,
+          actor
+        });
+
+        return applied(command.type, written);
       }
-      case CATALOG_RENAME:
-        return applied(command.type, await this.#writer.rename({
+      case CATALOG_RENAME: {
+        const written = await backend.writer.rename({
           assetId: command.assetId,
           to: command.to,
           actor
-        }));
+        });
+
+        return applied(command.type, written);
+      }
       case CATALOG_DELETE: {
         const deletable = this.#deletable(command);
         if (!deletable.ok) {
           return deletable;
         }
 
-        return applied(command.type, await this.#writer.remove({
+        const written = await backend.writer.remove({
           assetId: command.assetId,
           actor
-        }));
+        });
+
+        return applied(command.type, written);
       }
       case CATALOG_EXPORT: {
-        const backend = this.#archiveBackend();
-        if (!backend.ok) {
-          return backend;
-        }
-
-        const archive = await exportAssetArchive(backend.val, {
+        const archive = await exportAssetArchive(backend, {
           root: command.root
         });
         if (archive.byteLength > this.#maxContentBytes) {
@@ -222,33 +219,22 @@ export class CatalogExtension extends Extension<CatalogCommand> {
           content: encodeContent(archive)
         });
       }
-      case CATALOG_PLAN: {
-        const backend = this.#archiveBackend();
-        if (!backend.ok) {
-          return backend;
-        }
-
+      case CATALOG_PLAN:
         return this.#readArchive(command.content)
-          .andThen((archive) => planAssetImport(backend.val, archive))
+          .andThen((archive) => planAssetImport(backend, archive))
           .map((plan) => {
             return {
               command: command.type,
               plan
             };
           });
-      }
-      default: {
-        const backend = this.#archiveBackend();
-        if (!backend.ok) {
-          return backend;
-        }
-
+      case CATALOG_IMPORT: {
         const archive = this.#readArchive(command.content);
         if (!archive.ok) {
           return archive;
         }
 
-        const report = await importAssetArchive(backend.val, archive.val, {
+        const report = await importAssetArchive(backend, archive.val, {
           onConflict: command.onConflict,
           actor
         });
@@ -270,34 +256,22 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       return Ok(undefined);
     }
 
-    const dependents = this.#dependents(command.assetId);
-
-    return dependents.length === 0 ?
-      Ok(undefined) :
-      Err(new AssetHasDependentsError(command.assetId, dependents));
-  }
-
-  #dependents(
-    assetId: string
-  ): DependentAsset[] {
-    return this.#projection
-      .liveDependentsOf(assetId)
+    const dependents = this.#backend.catalog
+      .dependentsOf(command.assetId)
       .map((record) => {
         return {
           id: record.id.value,
           path: record.source
         };
       });
-  }
 
-  #archiveBackend(): Result<ArchiveBackend, Error> {
-    return this.#archive === null ?
-      Err(new Error("Archives are not available on this catalog.")) :
-      Ok(this.#archive);
+    return dependents.length === 0 ?
+      Ok(undefined) :
+      Err(new AssetHasDependentsError(command.assetId, dependents));
   }
 
   #readArchive(
-    content: CatalogInlineContent
+    content: AssetInlineContent
   ): Result<AssetArchive, Error> {
     return this.#decode(content).andThen(
       (bytes) => readAssetArchive(bytes)
@@ -305,7 +279,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   }
 
   #decode(
-    content: CatalogInlineContent
+    content: AssetInlineContent
   ): Result<Uint8Array, Error> {
     const data = decodeContent(content);
 
@@ -319,7 +293,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 }
 
 function applied(
-  command: CatalogLifecycleCommandType,
+  command: Extract<CatalogApplied, { assetId: string; }>["command"],
   written: Result<EventStore.Event, Error>
 ): Result<CatalogApplied, Error> {
   return written.map((event) => {

@@ -10,11 +10,11 @@ import {
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_EVENT_PREFIX,
-  decodeContent,
   describeRejection,
   parseAssetEvent,
   type AssetEventRejection
 } from "../events/AssetEvents.ts";
+import { decodeContent } from "../events/inlineContent.ts";
 import {
   applyProjection,
   type AssetProjection

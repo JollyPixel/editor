@@ -17,7 +17,7 @@ import {
 import {
   decodeContent,
   encodeContent
-} from "#src/events/AssetEvents.ts";
+} from "#src/events/inlineContent.ts";
 import {
   countingReads,
   syncHarness

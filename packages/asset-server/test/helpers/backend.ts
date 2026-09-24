@@ -6,7 +6,9 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import {
   AssetKindRegistry,
   AssetWriter,
+  type ArchiveBackend,
   type AssetKindHandler,
+  type CatalogProjection,
   type SnapshotPolicy
 } from "#src/index.ts";
 import { IdentitySidecar } from "#src/identity/index.ts";
@@ -167,6 +169,22 @@ export async function syncHarness(
       if (ownsEventStore) {
         eventStore.close();
       }
+    }
+  };
+}
+
+export function archiveBackend(
+  sync: SyncHarness,
+  catalog: CatalogProjection
+): ArchiveBackend {
+  return {
+    source: sync.source,
+    kinds: sync.kinds,
+    writer: sync.writer,
+    catalog,
+    async flush(assetId) {
+      await sync.scheduler.flush(assetId);
+      await sync.projector.flush(assetId);
     }
   };
 }

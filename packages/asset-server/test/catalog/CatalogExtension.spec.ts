@@ -37,6 +37,7 @@ import {
   type CatalogCommand
 } from "#src/index.ts";
 import {
+  archiveBackend,
   syncHarness,
   type SyncHarness
 } from "../helpers/backend.ts";
@@ -107,7 +108,9 @@ describe("CatalogExtension — join", () => {
     });
     projection.load();
 
-    const extension = new CatalogExtension({ projection, writer: harness.writer });
+    const extension = new CatalogExtension({
+      backend: archiveBackend(harness, projection)
+    });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
 
@@ -132,7 +135,9 @@ describe("CatalogExtension — join", () => {
     });
     projection.load();
 
-    const extension = new CatalogExtension({ projection, writer: harness.writer });
+    const extension = new CatalogExtension({
+      backend: archiveBackend(harness, projection)
+    });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.onClientConnect(client("B"), peer("B"), room.context);
@@ -154,7 +159,9 @@ describe("CatalogExtension — broadcast", () => {
     projection.load();
     projection.start();
 
-    const extension = new CatalogExtension({ projection, writer: harness.writer });
+    const extension = new CatalogExtension({
+      backend: archiveBackend(harness, projection)
+    });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
 
@@ -180,7 +187,9 @@ describe("CatalogExtension — broadcast", () => {
     });
     projection.start();
 
-    const extension = new CatalogExtension({ projection, writer: harness.writer });
+    const extension = new CatalogExtension({
+      backend: archiveBackend(harness, projection)
+    });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
 
@@ -204,7 +213,9 @@ describe("CatalogExtension — broadcast", () => {
     });
     projection.start();
 
-    const extension = new CatalogExtension({ projection, writer: harness.writer });
+    const extension = new CatalogExtension({
+      backend: archiveBackend(harness, projection)
+    });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.onClientDisconnect("A");
@@ -227,7 +238,9 @@ describe("CatalogExtension — broadcast", () => {
     });
     projection.start();
 
-    const extension = new CatalogExtension({ projection, writer: harness.writer });
+    const extension = new CatalogExtension({
+      backend: archiveBackend(harness, projection)
+    });
     const room = fakeRoom();
     extension.onClientConnect(client("A"), peer("A"), room.context);
     extension.dispose();
@@ -245,10 +258,9 @@ describe("CatalogExtension — broadcast", () => {
   test("names its wire events for the rights table", async() => {
     await using harness = await syncHarness();
     const extension = new CatalogExtension({
-      projection: new CatalogProjection({
+      backend: archiveBackend(harness, new CatalogProjection({
         eventStore: harness.eventStore
-      }),
-      writer: harness.writer
+      }))
     });
 
     assert.deepEqual(
@@ -288,8 +300,7 @@ async function commandHarness(
   projection.start();
 
   const extension = new CatalogExtension({
-    projection,
-    writer: sync.writer,
+    backend: archiveBackend(sync, projection),
     maxContentBytes
   });
   const room = fakeRoom();
@@ -366,6 +377,7 @@ describe("CatalogExtension — commands", () => {
 
     await commands.send({
       type: CATALOG_CREATE,
+      requestId: "r101",
       path: "a.png",
       content: encodeContent(bytes("one"))
     });
@@ -389,6 +401,7 @@ describe("CatalogExtension — commands", () => {
 
     await commands.send({
       type: CATALOG_RENAME,
+      requestId: "r102",
       assetId: created.assetId,
       to: "b.png"
     });
@@ -474,6 +487,7 @@ describe("CatalogExtension — commands", () => {
 
     await commands.send({
       type: CATALOG_CREATE,
+      requestId: "r103",
       path: "../escape.png",
       content: encodeContent(bytes("x"))
     });
@@ -487,6 +501,7 @@ describe("CatalogExtension — commands", () => {
 
     await commands.send({
       type: CATALOG_CREATE,
+      requestId: "r104",
       path: "a.png",
       content: encodeContent(bytes("12345"))
     });
@@ -500,6 +515,7 @@ describe("CatalogExtension — commands", () => {
 
     await commands.send({
       type: CATALOG_RENAME,
+      requestId: "r105",
       assetId: "ghost",
       to: "b.png"
     });
@@ -530,8 +546,7 @@ describe("CatalogExtension — server", () => {
       }
     });
     server.register(new CatalogExtension({
-      projection,
-      writer: sync.writer
+      backend: archiveBackend(sync, projection)
     }));
     const author = recorder("A");
     server.handleConnect(author, { subject: "A", role: "author" });
@@ -542,6 +557,7 @@ describe("CatalogExtension — server", () => {
       kind: "message",
       payload: {
         type: CATALOG_DELETE,
+        requestId: "r106",
         assetId: created.assetId
       }
     });
@@ -551,6 +567,7 @@ describe("CatalogExtension — server", () => {
       kind: "message",
       payload: {
         type: CATALOG_CREATE,
+        requestId: "r107",
         path: "b.png",
         content: encodeContent(bytes("two"))
       }
@@ -578,8 +595,7 @@ describe("CatalogExtension — server", () => {
 
     const server = new Server();
     server.register(new CatalogExtension({
-      projection,
-      writer: sync.writer
+      backend: archiveBackend(sync, projection)
     }));
     const author = recorder("A");
     server.handleConnect(author, { subject: "A", role: "default" });

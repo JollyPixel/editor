@@ -7,6 +7,7 @@ import type {
 
 // Import Internal Dependencies
 import type { AssetInlineContent } from "../../events/AssetEvents.schema.ts";
+import type { AssetEventType } from "../../events/AssetEvents.ts";
 import type { DependencyMap } from "./DependencyIndex.ts";
 import type { PathConflictPolicy } from "../../writer/AssetWriter.ts";
 import type {
@@ -17,6 +18,7 @@ import type {
 
 // CONSTANTS
 export const CATALOG_ROOM = "asset-catalog";
+export const ARCHIVE_MIME_TYPE = "application/zip";
 
 export const CATALOG_SNAPSHOT = "catalog:snapshot";
 export const CATALOG_CHANGED = "catalog:changed";
@@ -30,64 +32,43 @@ export const CATALOG_EXPORT = "catalog:export";
 export const CATALOG_PLAN = "catalog:plan";
 export const CATALOG_IMPORT = "catalog:import";
 
-export type CatalogLifecycleCommandType =
-  | typeof CATALOG_CREATE
-  | typeof CATALOG_RENAME
-  | typeof CATALOG_DELETE;
-
-export type CatalogCommandType =
-  | CatalogLifecycleCommandType
-  | typeof CATALOG_EXPORT
-  | typeof CATALOG_PLAN
-  | typeof CATALOG_IMPORT;
-
-export type CatalogPathConflict = PathConflictPolicy;
-
-export type CatalogInlineContent = AssetInlineContent;
-
 export interface CatalogCreateCommand {
   type: typeof CATALOG_CREATE;
-  requestId?: string;
   path: string;
   kind?: string;
-  onConflict?: CatalogPathConflict;
-  content: CatalogInlineContent;
+  onConflict?: PathConflictPolicy;
+  content: AssetInlineContent;
 }
 
 export interface CatalogRenameCommand {
   type: typeof CATALOG_RENAME;
-  requestId?: string;
   assetId: string;
   to: string;
 }
 
 export interface CatalogDeleteCommand {
   type: typeof CATALOG_DELETE;
-  requestId?: string;
   assetId: string;
   force?: boolean;
 }
 
 export interface CatalogExportCommand {
   type: typeof CATALOG_EXPORT;
-  requestId?: string;
   root?: string;
 }
 
 export interface CatalogPlanCommand {
   type: typeof CATALOG_PLAN;
-  requestId?: string;
-  content: CatalogInlineContent;
+  content: AssetInlineContent;
 }
 
 export interface CatalogImportCommand {
   type: typeof CATALOG_IMPORT;
-  requestId?: string;
-  content: CatalogInlineContent;
+  content: AssetInlineContent;
   onConflict: ImportConflictPolicy;
 }
 
-export type CatalogCommand =
+export type CatalogRequest =
   | CatalogCreateCommand
   | CatalogRenameCommand
   | CatalogDeleteCommand
@@ -95,20 +76,20 @@ export type CatalogCommand =
   | CatalogPlanCommand
   | CatalogImportCommand;
 
-type CatalogLifecycleApplied<
-  TCommand extends CatalogLifecycleCommandType = CatalogLifecycleCommandType
-> = TCommand extends unknown ?
-  { command: TCommand; assetId: string; } :
-  never;
+export type CatalogCommand = CatalogRequest & { requestId: string; };
+
+export type CatalogCommandType = CatalogRequest["type"];
 
 export type CatalogApplied =
-  | CatalogLifecycleApplied
-  | { command: typeof CATALOG_EXPORT; content: CatalogInlineContent; }
+  | { command: typeof CATALOG_CREATE; assetId: string; }
+  | { command: typeof CATALOG_RENAME; assetId: string; }
+  | { command: typeof CATALOG_DELETE; assetId: string; }
+  | { command: typeof CATALOG_EXPORT; content: AssetInlineContent; }
   | { command: typeof CATALOG_PLAN; plan: ImportPlan; }
   | { command: typeof CATALOG_IMPORT; report: ImportReport; };
 
 export interface CatalogChange {
-  readonly eventType: string;
+  readonly eventType: AssetEventType;
   readonly assetId: string;
   readonly record: AssetRecordData | null;
   /**
@@ -127,11 +108,11 @@ export type CatalogMessage =
   | { type: typeof CATALOG_CHANGED; change: CatalogChange; }
   | (CatalogApplied & {
     type: typeof CATALOG_APPLIED;
-    requestId?: string;
+    requestId: string;
   })
   | {
     type: typeof CATALOG_REJECTED;
-    requestId?: string;
+    requestId: string;
     command: CatalogCommandType;
     reason: string;
   };
