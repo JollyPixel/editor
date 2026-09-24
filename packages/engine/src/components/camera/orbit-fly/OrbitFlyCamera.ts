@@ -9,7 +9,7 @@ import {
 
 // Import Internal Dependencies
 import type { Actor } from "../../../actor/Actor.ts";
-import { CameraComponent } from "../Camera.ts";
+import { CameraComponent, type CameraOptions } from "../Camera.ts";
 import { OrbitFocus } from "./OrbitFocus.ts";
 import { ElasticFocus } from "./ElasticFocus.ts";
 import {
@@ -22,7 +22,7 @@ const kRestingVelocitySq = 1e-6;
 
 export type OrbitFlyCameraFocusMode = "none" | "lock" | "elastic";
 
-export interface OrbitFlyCameraOptions {
+export interface OrbitFlyCameraOptions extends CameraOptions {
   position?: THREE.Vector3Like;
   /**
    * "elastic" mode's pivot the camera starts trailing behind.
@@ -87,6 +87,11 @@ export interface OrbitFlyCameraOptions {
    * @default 60
    */
   fov?: number;
+  /**
+   * Far clipping plane.
+   * @default 2000
+   */
+  far?: number;
 }
 
 export interface CameraPose {
@@ -144,9 +149,9 @@ export class OrbitFlyCamera extends CameraComponent {
     options: OrbitFlyCameraOptions = {}
   ) {
     super(actor, {
+      ...options,
       fov: options.fov ?? 60,
-      near: 0.1,
-      far: 2000
+      far: options.far ?? 2000
     });
 
     const {
