@@ -22,8 +22,7 @@ import { PORTS } from "@jolly-pixel/e2e";
 // Import Internal Dependencies
 import {
   TEXTURE_SIZE,
-  encodeModelDocument,
-  encodeTextureDocument
+  encodeModelDocument
 } from "./vite/modelSeed.ts";
 
 // CONSTANTS
@@ -61,8 +60,7 @@ export default defineConfig(({ mode }) => {
         seed: {
           "textures/model.pixelart": {
             id: kTextureAssetId,
-            kind: PIXEL_ART_KIND,
-            content: () => encodeTextureDocument()
+            kind: PIXEL_ART_KIND
           },
           "models/model.voxelmodel.json": () => encodeModelDocument(
             kTextureAssetId

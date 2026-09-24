@@ -9,12 +9,16 @@ import assert from "node:assert/strict";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import { seedAssetSource } from "#src/index.ts";
+import {
+  seedAssetSource,
+  UnknownAssetKindError
+} from "#src/index.ts";
 import { IdentitySidecar } from "#src/identity/index.ts";
 import {
   bytes,
   text
 } from "../helpers/bytes.ts";
+import { counterHandler } from "../helpers/kinds.ts";
 
 describe("seedAssetSource", () => {
   test("writes the documents a workspace does not hold yet", async() => {
@@ -138,5 +142,50 @@ describe("seedAssetSource", () => {
     const sidecar = await IdentitySidecar.load(source);
 
     assert.strictEqual(sidecar.size, 0);
+  });
+
+  test("serializes a new handler state for an entry without content", async() => {
+    const source = new MemoryAssetSource();
+
+    const written = await seedAssetSource(
+      source,
+      {
+        "score.counter": {
+          id: "score",
+          kind: "counter"
+        }
+      },
+      { handlers: [counterHandler()] }
+    );
+
+    assert.deepStrictEqual(written, ["score.counter"]);
+    assert.strictEqual(text(await source.read("score.counter")), "0");
+  });
+
+  test("rejects an entry without content whose kind has no handler", async() => {
+    const source = new MemoryAssetSource();
+
+    await assert.rejects(
+      seedAssetSource(source, {
+        "score.counter": {
+          id: "score",
+          kind: "counter"
+        }
+      }),
+      UnknownAssetKindError
+    );
+  });
+
+  test("needs no handler for an existing entry without content", async() => {
+    const source = new MemoryAssetSource([["score.counter", bytes("7")]]);
+
+    const written = await seedAssetSource(source, {
+      "score.counter": {
+        id: "score",
+        kind: "counter"
+      }
+    });
+
+    assert.deepStrictEqual(written, []);
   });
 });

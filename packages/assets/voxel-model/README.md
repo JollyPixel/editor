@@ -66,7 +66,7 @@ const blockId = synced.document.addBlock({ name: "Body" });
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, the document codec, `VoxelModelState`, `ModelTree`, `ModelDocument`, and the kind and event constants.
+- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, the document codec, `VoxelModelState`, `ModelTree`, `ModelDocument`, the `VOXEL_MODEL_ASSET` descriptor, and the kind and event constants.
 - `@jolly-pixel/asset.voxel-model/network/client.ts` exports `ModelSyncClient`, `SyncedModelDocument`, `voxelModelDocumentKind`, and model types.
 - `@jolly-pixel/asset.voxel-model/network/server.ts` exports `VoxelModelCommandArbiter` and the command and snapshot schemas.
 

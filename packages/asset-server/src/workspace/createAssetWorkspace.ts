@@ -124,7 +124,7 @@ export async function createAssetWorkspace(
 
   const source = options.source ?? new FilesystemAssetSource(root);
   if (seed) {
-    await seedAssetSource(source, seed);
+    await seedAssetSource(source, seed, { handlers });
   }
 
   const ownsEventStore = options.eventStore === undefined;

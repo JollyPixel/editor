@@ -16,14 +16,24 @@ import type { AddressInfo } from "node:net";
 import {
   createEditorPagesHandler,
   editorPagesPlugin,
+  editorsModule,
+  readEditorPackages,
   resolveEditorPages,
-  EDITOR_PAGES_PREFIX
+  EDITOR_PAGES_PREFIX,
+  EDITORS_MODULE_ID,
+  type EditorPackage
 } from "../vite/editorPages.ts";
 
 // CONSTANTS
 const kPassThroughStatus = 418;
 const kIndexHtml = "<!DOCTYPE html><title>Voxel Map Editor</title>";
 const kBundle = "export const editor = true;";
+const kVoxelMapEditor: EditorPackage = {
+  package: "@jolly-pixel/editor.voxel-map",
+  name: "voxel-map",
+  kinds: ["voxelmap"],
+  dist: "/pkg/dist"
+};
 
 interface PagesServer extends AsyncDisposable {
   fetch(pathname: string, init?: RequestInit): Promise<Response>;
@@ -70,54 +80,116 @@ function listen(
   });
 }
 
-describe("resolveEditorPages", () => {
-  test("resolves the dist folder from the located package", () => {
-    const located: string[] = [];
-    const pages = resolveEditorPages(
-      [
-        {
-          name: "voxel-map",
-          package: "@jolly-pixel/editor.voxel-map"
-        },
-        {
-          name: "pixel-art",
-          package: "@jolly-pixel/editor.pixel-art",
-          dist: "dist-page"
-        }
-      ],
-      (packageName) => {
-        located.push(packageName);
+async function createPackage(
+  editor: unknown
+): Promise<string> {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "studio-editor-"));
+  await fs.writeFile(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "editor",
+      jollypixel: { editor }
+    })
+  );
 
-        return path.join("/pkg", packageName);
-      }
-    );
+  return root;
+}
 
-    assert.deepEqual(located, [
-      "@jolly-pixel/editor.voxel-map",
-      "@jolly-pixel/editor.pixel-art"
+describe("readEditorPackages", () => {
+  test("reads the editor manifest of each located package", async() => {
+    const voxelMap = await createPackage({
+      name: "voxel-map",
+      kinds: ["voxelmap"]
+    });
+    const pixelArt = await createPackage({
+      name: "pixel-art",
+      kinds: ["pixelart"],
+      dist: "dist-page"
+    });
+    const roots = new Map([
+      ["@jolly-pixel/editor.voxel-map", voxelMap],
+      ["@jolly-pixel/editor.pixel-art", pixelArt]
     ]);
-    assert.strictEqual(
-      pages.get("voxel-map"),
-      path.resolve("/pkg/@jolly-pixel/editor.voxel-map/dist")
-    );
-    assert.strictEqual(
-      pages.get("pixel-art"),
-      path.resolve("/pkg/@jolly-pixel/editor.pixel-art/dist-page")
+    const located: string[] = [];
+    const editors = readEditorPackages(roots.keys(), (packageName) => {
+      located.push(packageName);
+
+      return roots.get(packageName) ?? "";
+    });
+
+    assert.deepEqual(located, [...roots.keys()]);
+    assert.deepEqual(editors, [
+      {
+        package: "@jolly-pixel/editor.voxel-map",
+        name: "voxel-map",
+        kinds: ["voxelmap"],
+        dist: path.join(voxelMap, "dist")
+      },
+      {
+        package: "@jolly-pixel/editor.pixel-art",
+        name: "pixel-art",
+        kinds: ["pixelart"],
+        dist: path.join(pixelArt, "dist-page")
+      }
+    ]);
+  });
+
+  test("reads the editor packages installed in the studio", () => {
+    const [voxelMap, voxelModel] = readEditorPackages([
+      "@jolly-pixel/editor.voxel-map",
+      "@jolly-pixel/editor.voxel-model"
+    ]);
+
+    assert.deepEqual(voxelMap.kinds, ["voxelmap"]);
+    assert.deepEqual(voxelModel.kinds, ["voxelmodel"]);
+    assert.match(voxelMap.dist, /[\\/]voxel-map[\\/]dist$/);
+  });
+
+  test("rejects a package without an editor manifest", async() => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "studio-editor-"));
+    await fs.writeFile(path.join(root, "package.json"), "{}");
+
+    assert.throws(
+      () => readEditorPackages(["editor"], () => root),
+      /"editor" declares no "jollypixel.editor" manifest/
     );
   });
 
-  test("locates the editor packages installed in the studio", () => {
-    const pages = resolveEditorPages([
-      {
-        name: "voxel-map",
-        package: "@jolly-pixel/editor.voxel-map"
-      }
-    ]);
+  test("rejects an invalid manifest", async() => {
+    const manifests = [
+      { name: "../escape", kinds: ["voxelmap"] },
+      { name: "voxel-map", kinds: [] },
+      { name: "voxel-map", kinds: [""] },
+      { name: "voxel-map", kinds: ["voxelmap"], dist: 1 }
+    ];
+    for (const manifest of manifests) {
+      const root = await createPackage(manifest);
 
-    assert.match(
-      pages.get("voxel-map") ?? "",
-      /[\\/]voxel-map[\\/]dist$/
+      assert.throws(
+        () => readEditorPackages(["editor"], () => root),
+        TypeError
+      );
+    }
+  });
+
+  test("rejects two packages declaring the same editor", async() => {
+    const root = await createPackage({
+      name: "voxel-map",
+      kinds: ["voxelmap"]
+    });
+
+    assert.throws(
+      () => readEditorPackages(["a", "b"], () => root),
+      /Editor "voxel-map" is declared by more than one package/
     );
+  });
+});
+
+describe("resolveEditorPages", () => {
+  test("maps each editor name to its dist folder", () => {
+    const pages = resolveEditorPages([kVoxelMapEditor]);
+
+    assert.deepEqual([...pages], [["voxel-map", "/pkg/dist"]]);
   });
 });
 
@@ -243,15 +315,7 @@ describe("createEditorPagesHandler", () => {
 describe("editorPagesPlugin", () => {
   test("registers the handler on the dev server", () => {
     const registered: unknown[] = [];
-    const plugin = editorPagesPlugin({
-      pages: [
-        {
-          name: "voxel-map",
-          package: "@jolly-pixel/editor.voxel-map"
-        }
-      ],
-      locate: () => "/pkg"
-    });
+    const plugin = editorPagesPlugin({ editors: [kVoxelMapEditor] });
     const { configureServer } = plugin;
     assert.strictEqual(typeof configureServer, "function");
 
@@ -262,9 +326,29 @@ describe("editorPagesPlugin", () => {
     };
     void (configureServer as (server: unknown) => void)(server);
 
-    assert.strictEqual(plugin.apply, "serve");
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(typeof registered[0], "function");
     assert.strictEqual(EDITOR_PAGES_PREFIX, "/editors/");
+  });
+
+  test("serves the editor descriptors as a virtual module", () => {
+    const plugin = editorPagesPlugin({ editors: [kVoxelMapEditor] });
+    const resolveId = plugin.resolveId as (id: string) => string | null;
+    const load = plugin.load as (id: string) => string | null;
+    const resolved = resolveId(EDITORS_MODULE_ID);
+
+    assert.ok(resolved);
+    assert.strictEqual(resolveId("lit"), null);
+    assert.strictEqual(load(resolved), editorsModule([kVoxelMapEditor]));
+    assert.strictEqual(load("lit"), null);
+  });
+});
+
+describe("editorsModule", () => {
+  test("exports the name and kinds of each editor", () => {
+    assert.strictEqual(
+      editorsModule([kVoxelMapEditor]),
+      "export default [{\"name\":\"voxel-map\",\"kinds\":[\"voxelmap\"]}];\n"
+    );
   });
 });

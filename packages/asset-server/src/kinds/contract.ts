@@ -1,3 +1,4 @@
+export type * from "./AssetKindDescriptor.ts";
 export type * from "./AssetKindHandler.ts";
 export * from "./AssetLiveProtocol.ts";
 export * from "./foldAssetEvent.ts";

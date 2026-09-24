@@ -4,6 +4,14 @@
   "version": "1.2.0",
   "type": "module",
   "private": true,
+  "jollypixel": {
+    "editor": {
+      "name": "voxel-map",
+      "kinds": [
+        "voxelmap"
+      ]
+    }
+  },
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
     "build": "pnpm run typecheck && vite build",

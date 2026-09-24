@@ -58,7 +58,7 @@ await synced.ready;
 
 ## 📚 API
 
-- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, and the kind and event constants for server registration.
+- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, the kind and event constants for server registration, and the document builders `createPixelArtDocument(size)` and `pixelArtDocumentFromPng(png)` for seeds and fixtures.
 - `@jolly-pixel/asset.pixel-art/network/client.ts` exports `SyncedPixelDocument`, `PixelSyncClient`, `pixelArtRoom`, `createPixelArtAsset`, `PixelCollaboration`, presence helpers, and wire types.
 - `@jolly-pixel/asset.pixel-art/network/server.ts` exports `PixelCommandArbiter`, `applyCommandToBuffer`, and the command and snapshot schemas.
 

@@ -59,7 +59,8 @@ The first snapshot loads the document. Local document commands go to the room; a
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `tilesetAsset`, and the kind and event constants for server registration and persistence.
+- `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `tilesetAsset`, the `VOXEL_MAP_ASSET` descriptor, and the kind and event constants for server registration and persistence.
+- `createTilesetDocument(png, definition)` encodes a tileset image and resolves its tile grid; `createVoxelMapDocument({ chunkSize, tileset, blockLimit?, layer? })` encodes a map holding that tileset, up to `blockLimit` (32) blocks from its tiles and one `layer` (`"Ground"`).
 - `@jolly-pixel/asset.voxel-map/network/client.ts` exports `VoxelSyncClient`, `SyncedVoxelMap`, wire types, and tileset helpers.
 - `@jolly-pixel/asset.voxel-map/network/server.ts` exports `VoxelCommandArbiter` and the protocol and snapshot schemas.
 

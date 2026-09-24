@@ -13,17 +13,13 @@ import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
 import type { ShellCommand } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
-  type IconName,
   type LogEntry
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
 import { AssetPath } from "../catalog/AssetPath.ts";
-import {
-  editorPageFor,
-  editorPageUrl
-} from "../editors/editorRegistry.ts";
+import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import {
   EditorTabs,
   type EditorTabsOptions
@@ -36,8 +32,7 @@ const kNoEditorDetail = "no editor";
 export interface StudioOptions {
   catalog: CatalogClient;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
-  pages?: ReadonlyMap<string, string>;
-  iconFor?: (kind: string) => IconName | undefined;
+  editors: EditorRegistry;
 }
 
 @customElement("jolly-studio")
@@ -55,7 +50,7 @@ export class Studio extends LitElement {
   declare _frames: HTMLElement | null;
 
   #catalog: CatalogClient | null = null;
-  #pages: ReadonlyMap<string, string> | undefined;
+  #editors: EditorRegistry | null = null;
   #tabs: EditorTabs | null = null;
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
@@ -79,7 +74,7 @@ export class Studio extends LitElement {
     }
 
     this.#catalog = options.catalog;
-    this.#pages = options.pages;
+    this.#editors = options.editors;
     this.#tabs = new EditorTabs({
       strip: this._strip,
       frames: this._frames,
@@ -89,7 +84,7 @@ export class Studio extends LitElement {
     this.#catalog.on("change", this.#syncTabs);
     this._assets = {
       catalog: options.catalog,
-      iconFor: options.iconFor,
+      iconFor: (kind) => options.editors.iconFor(kind),
       detailFor: (kind) => (this.canOpen(kind) ? undefined : kNoEditorDetail)
     };
   }
@@ -97,24 +92,24 @@ export class Studio extends LitElement {
   canOpen(
     kind: string
   ): boolean {
-    return editorPageFor(kind, this.#pages) !== undefined;
+    return this.#editors?.editorFor(kind) !== undefined;
   }
 
   openAsset(
     assetId: string
   ): Promise<boolean> {
     const record = this.#catalog?.record(assetId);
-    const page = record === undefined ?
+    const url = record === undefined ?
       undefined :
-      editorPageFor(record.kind, this.#pages);
-    if (this.#tabs === null || record === undefined || page === undefined) {
+      this.#editors?.pageUrl(record.kind, assetId);
+    if (this.#tabs === null || record === undefined || url === undefined) {
       return Promise.resolve(false);
     }
 
     return this.#tabs.open({
       id: assetId,
       label: AssetPath.parse(record.source).name,
-      url: editorPageUrl(page, assetId)
+      url
     });
   }
 

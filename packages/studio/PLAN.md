@@ -70,7 +70,9 @@ renamable row otherwise renames on double-click instead of opening.
   over the target document, presence, `Join pixel art` identity title.
   Generic demo boot pieces move to `src/` and the demo imports them there.
 - Vite build to `dist-page/`, `base: "./"`, a `build:page` script the studio
-  `build` depends on. Registry gains `pixelart`.
+  `build` depends on. The package declares a `jollypixel.editor` manifest
+  (`pixel-art`, kinds `pixelart`, dist `dist-page`) and the studio
+  `vite.config.ts` lists it; nothing else changes in the shell.
 - voxel-map Paint tab: an action calling `context.shell.openAsset` for the
   selected tileset, hidden when `context.shell` is null.
 - Tests: the editor mounts over a fake session with `happy-dom` and joins
@@ -92,11 +94,70 @@ renamable row otherwise renames on double-click instead of opening.
 - Editor host `ROADMAP.md` updated: shell exists, the `EditorDefinition`
   revisit is now unblocked.
 
+## Dynamic kinds and editors
+
+The goal is kinds and editors loaded from outside the monorepo (a project
+folder, a package in `node_modules`). The rule: the shell consumes data only.
+Kind code stays in handlers on the back-end, editor code stays in iframes.
+
+### D1 — Data-only registry (done 2026-09-24)
+
+- `AssetKindDescriptor` (`asset-server/kinds`): kind, label, SVG icon and
+  tone. Each asset package exports one (`PIXEL_ART_ASSET`, `VOXEL_MAP_ASSET`,
+  `VOXEL_MODEL_ASSET`).
+- Editor packages declare `jollypixel.editor` (`name`, `kinds`, `dist`) in
+  `package.json`. `readEditorPackages` reads it; `editorPagesPlugin` serves
+  the pages and the `virtual:jolly-pixel/editors` module.
+- `EditorRegistry` replaces `editorRegistry.ts`, `kindIcon` and
+  `offlineEditorPages`.
+- Seed entries without `content` get the handler's blank document. The
+  document builders live in the asset packages (`createPixelArtDocument`,
+  `pixelArtDocumentFromPng`, `createTilesetDocument`,
+  `createVoxelMapDocument`); `createStudioProject` is the studio's single
+  handler and seed list.
+
+Open from D1: the voxel-map and voxel-model e2e suites were not rerun after
+their fixtures moved to the builders. `pixelArtAssetKind` still takes the
+tileset size as `defaultSize`, because `PixelArtState.clear()` resets to it;
+separating the new-texture size from the seed needs a decision on what
+`clear` should restore.
+
+### D2 — New asset from the shell
+
+- Catalog `create` accepts a path and a kind without content; the back-end
+  writes the handler's `serialize(create(id))`, as seeding does. Protocol
+  schema, `CatalogClient.create` and asset-server docs updated.
+- `<asset-browser>` gains a New action per registered kind, labelled and
+  iconed from the descriptor, named with the kind's extension. The
+  extension joins `AssetKindDescriptor` so the shell never reads a handler.
+- Tests: asset-server creates a contentless asset of each built-in kind and
+  rejects an unknown kind; the browser action sends the command.
+- Exit: create a map, a model and a texture from the tree and open each.
+
+### D3 — `project.json`
+
+- `project/.jollypixel/project.json` lists the editor packages and the kind
+  packages. The Vite config reads it instead of hard-coded lists; the
+  handler list comes from the kind packages (one factory export per package,
+  taking the project's options).
+- The editors' own Vite configs and offline workspaces keep their private
+  lists until they open a project the same way.
+- Tests: a project file resolves editors and kinds; a missing package or a
+  kind claimed twice fails with the package named.
+
+### D4 — External sources
+
+- Resolve packages from the project folder's `node_modules`, not only the
+  studio's, and descriptors or editors from a local folder.
+- Replace the `virtual:jolly-pixel/editors` build-time module with a served
+  manifest (`/editors.json` plus descriptors), so adding an editor needs no
+  studio rebuild. The registry and the manifest shapes stay the same.
+- Settle trust: an external editor runs same-origin in an iframe today.
+
 ## Later, out of this plan
 
-Identity in the launch message, authentication, `project.json`, settings
-pane, new-asset factories, runtime tab, in-process mounting. Tracked in
-`ROADMAP.md` once P5 lands.
+Identity in the launch message, authentication, settings pane, runtime tab,
+in-process mounting. Tracked in `ROADMAP.md` once P5 lands.
 
 Boot tracing for the host and runtime abstractions: `mountStandalone`, the
 session open, `Runtime.create`, the bootstrap steps and the scene's ready

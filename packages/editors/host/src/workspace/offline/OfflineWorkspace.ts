@@ -80,7 +80,8 @@ export class OfflineWorkspace implements StandaloneWorkspace {
       if (seed !== undefined && (await source.list()).length === 0) {
         await seedAssetSource(
           source,
-          typeof seed === "function" ? await seed() : seed
+          typeof seed === "function" ? await seed() : seed,
+          { handlers }
         );
       }
 

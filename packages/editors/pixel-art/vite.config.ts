@@ -7,11 +7,6 @@ import {
   createAssetWorkspacePlugin
 } from "@jolly-pixel/asset-server/plugins/vite.ts";
 import {
-  encodePixelArtDocument,
-  PixelBuffer,
-  serializePixelBuffer
-} from "@jolly-pixel/pixel-draw.renderer";
-import {
   PIXEL_ART_KIND,
   pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
@@ -26,16 +21,6 @@ import {
 
 // CONSTANTS
 const kCatalogMaxContentBytes = 32 * 1024 * 1024;
-
-function blankCanvas(): Uint8Array {
-  return encodePixelArtDocument(
-    serializePixelBuffer(
-      new PixelBuffer({
-        size: TEXTURE_SIZE
-      })
-    )
-  );
-}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -61,8 +46,7 @@ export default defineConfig({
       seed: {
         [DEMO_ASSET_PATH]: {
           id: DEMO_ASSET_ID,
-          kind: PIXEL_ART_KIND,
-          content: blankCanvas
+          kind: PIXEL_ART_KIND
         }
       },
       launch: () => DEMO_ASSET_ID,
