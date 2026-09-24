@@ -13,6 +13,10 @@ import { BlockRegistry, resolveBlockDefinition } from "../../src/blocks/index.ts
 import type { TilesetDefinition } from "../../src/tileset/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
+import {
+  MaterialGroup,
+  MaterialGroupList
+} from "../../src/materials/index.ts";
 
 // CONSTANTS
 const kAtlas: TilesetDefinition = {
@@ -107,6 +111,21 @@ describe("serializeVoxelWorld", () => {
     );
   });
 
+  it("embeds material groups only when there are some", () => {
+    const world = new VoxelWorld(16);
+
+    assert.equal(
+      serializeVoxelWorld(world, { materialGroups: [] }).materialGroups,
+      undefined
+    );
+    assert.deepEqual(
+      serializeVoxelWorld(world, {
+        materialGroups: [new MaterialGroup({ id: "gold", metalness: 1 })]
+      }).materialGroups,
+      [new MaterialGroup({ id: "gold", metalness: 1 }).toJSON()]
+    );
+  });
+
   it("serializes a single voxel correctly", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
@@ -135,6 +154,27 @@ describe("serializeVoxelWorld", () => {
 });
 
 describe("deserializeVoxelWorld", () => {
+  it("replaces the material groups, clearing them when none are saved", () => {
+    const materialGroups = new MaterialGroupList([{ id: "stale" }]);
+    const document: VoxelWorldJSON = {
+      version: 1,
+      chunkSize: 16,
+      tilesets: [],
+      layers: [],
+      materialGroups: [{ id: "gold", metalness: 1 }]
+    };
+
+    deserializeVoxelWorld(document, new VoxelWorld(16), { materialGroups });
+    assert.deepEqual([...materialGroups.ids()], ["gold"]);
+
+    deserializeVoxelWorld(
+      { ...document, materialGroups: undefined },
+      new VoxelWorld(16),
+      { materialGroups }
+    );
+    assert.equal(materialGroups.size, 0);
+  });
+
   it("throws when version is not 1", () => {
     const world = new VoxelWorld(16);
 

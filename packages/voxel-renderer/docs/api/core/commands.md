@@ -2,7 +2,8 @@
 
 Every change to a voxel document is a `VoxelCommand`. The engine emits each one
 on its `"command"` event and replays one with `apply()`, so a single listener
-and a single entry point cover layers, voxels, objects, blocks and tilesets.
+and a single entry point cover layers, voxels, objects, blocks, tilesets and
+material groups.
 
 ```ts
 import {
@@ -28,7 +29,8 @@ engine.off("command", onCommand);
 type VoxelCommand =
   | VoxelLayerCommand
   | VoxelBlockCommand
-  | VoxelTilesetCommand;
+  | VoxelTilesetCommand
+  | VoxelMaterialGroupCommand;
 
 type VoxelCommandListener = (
   command: VoxelCommand,
@@ -44,11 +46,12 @@ interface VoxelCommandContext {
 replayed with `engine.apply(command, { origin: "remote" })`. A network adapter
 sends only local commands; UI listeners usually ignore the origin.
 
-`isVoxelLayerCommand()`, `isVoxelBlockCommand()` and `isVoxelTilesetCommand()`
-narrow a command (or any `{ action: string }`) to one category.
-`VOXEL_COMMAND_ACTIONS` lists every action; `VOXEL_LAYER_COMMAND_ACTIONS`,
-`VOXEL_BLOCK_COMMAND_ACTIONS` and `VOXEL_TILESET_COMMAND_ACTIONS` list each
-category. `VoxelCommandAction` and the per-category `*CommandAction` types are
+`isVoxelLayerCommand()`, `isVoxelBlockCommand()`, `isVoxelTilesetCommand()` and
+`isVoxelMaterialGroupCommand()` narrow a command (or any `{ action: string }`)
+to one category. `VOXEL_COMMAND_ACTIONS` lists every action;
+`VOXEL_LAYER_COMMAND_ACTIONS`, `VOXEL_BLOCK_COMMAND_ACTIONS`,
+`VOXEL_TILESET_COMMAND_ACTIONS` and `VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS` list
+each category. `VoxelCommandAction` and the per-category `*CommandAction` types are
 the matching unions.
 
 ## Applying commands
@@ -64,10 +67,12 @@ interface VoxelCommandTarget {
   readonly world: VoxelWorld;
   readonly blocks: BlockRegistry;
   readonly tilesets: TilesetList;
+  readonly materialGroups: MaterialGroupList;
 }
 ```
 
-Routes a command to `world.apply()`, `applyBlockCommand()` or
+Routes a command to `world.apply()`, `applyBlockCommand()`,
+[`applyMaterialGroupCommand()`](../materials/MaterialGroup.md#commands) or
 [`applyTilesetCommand()`](../tilesets/tilesets.md#tileset-commands) and returns
 whether it changed anything. Layer commands always return `true`. It does not
 emit, rebuild meshes or rescale atlases; use it on a headless document such as
@@ -145,3 +150,15 @@ type VoxelTilesetCommand =
 `engine.apply()` and its shorthands emit them only when the command changed the
 list. `engine.load()`, `engine.loadTileset()` and direct `engine.tilesets`
 mutations do not.
+
+## Material group commands
+
+```ts
+type VoxelMaterialGroupCommand =
+  | { action: "material-group-defined"; group: MaterialGroupJSON; }
+  | { action: "material-group-removed"; groupId: string; };
+```
+
+`engine.defineMaterialGroup()`, `removeMaterialGroup()` and `apply()` emit
+them when the list changed. The emitted definition has every finish field
+filled in. See [MaterialGroup](../materials/MaterialGroup.md).

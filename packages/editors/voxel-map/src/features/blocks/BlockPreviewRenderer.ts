@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { disposeObject3D } from "@jolly-pixel/engine";
 import type {
   BlockShapeRegistry,
+  MaterialGroupList,
   ResolvedBlockDefinition,
   TilesetManager
 } from "@jolly-pixel/voxel.renderer";
@@ -27,6 +28,7 @@ const kOpacityCheckIntervalMs = 250;
 export interface BlockPreviewRendererOptions {
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
+  materialGroups?: MaterialGroupList;
 }
 
 export class BlockPreviewRenderer {
@@ -48,6 +50,7 @@ export class BlockPreviewRenderer {
   #rot = 0;
   #size = 0;
   #sizeDirty = true;
+  #materialGroupsVersion = -1;
 
   constructor(
     container: HTMLElement,
@@ -57,8 +60,10 @@ export class BlockPreviewRenderer {
     this.#sources = {
       shapeRegistry: options.shapeRegistry,
       tilesetManager: options.tilesetManager,
-      tileOpacity: new TileOpacityProbe(options.tilesetManager)
+      tileOpacity: new TileOpacityProbe(options.tilesetManager),
+      materialGroups: options.materialGroups
     };
+    this.#materialGroupsVersion = options.materialGroups?.version ?? -1;
 
     this.#renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -75,7 +80,7 @@ export class BlockPreviewRenderer {
     this.canvas.style.display = "block";
     container.appendChild(this.canvas);
 
-    const stage = createBlockPreviewStage();
+    const stage = createBlockPreviewStage(this.#renderer);
     this.#scene = stage.scene;
     this.#camera = stage.camera;
 
@@ -173,7 +178,12 @@ export class BlockPreviewRenderer {
     if (this.#sizeDirty) {
       this.#syncSize();
     }
-    if (time - this.#opacityCheckAt >= kOpacityCheckIntervalMs) {
+    const groupsVersion = this.#sources.materialGroups?.version ?? -1;
+    if (groupsVersion !== this.#materialGroupsVersion) {
+      this.#materialGroupsVersion = groupsVersion;
+      this.#buildMesh();
+    }
+    else if (time - this.#opacityCheckAt >= kOpacityCheckIntervalMs) {
       this.#opacityCheckAt = time;
       this.#refreshEmptySlots();
     }

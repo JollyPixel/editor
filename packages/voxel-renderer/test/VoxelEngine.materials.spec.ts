@@ -156,6 +156,69 @@ describe("VoxelEngine - material groups", () => {
   });
 });
 
+describe("VoxelEngine - document material group finishes", () => {
+  const kGoldId = 5;
+
+  function lambertGold(): VoxelEngine {
+    const engine = meshedGround({}, {
+      blocks: [
+        makeBlockDef(kCubeId, "cube"),
+        makeBlockDef(kGoldId, "cube", { materialGroup: "gold" })
+      ]
+    });
+    placeCube(engine, "Ground", { x: 2, y: 0, z: 0 }, kGoldId);
+    engine.flush();
+
+    return engine;
+  }
+
+  function goldMaterial(
+    engine: VoxelEngine
+  ): ChunkMaterial | undefined {
+    return materialsOf(engine).find(
+      (material) => material instanceof THREE.MeshStandardMaterial
+    );
+  }
+
+  it("rebuilds a lambert view with a standard material for a defined group", () => {
+    const engine = lambertGold();
+    assert.equal(goldMaterial(engine), undefined);
+
+    engine.defineMaterialGroup({ id: "gold", roughness: 0.3, metalness: 1 });
+    engine.flush();
+
+    const gold = goldMaterial(engine);
+    assert.ok(gold instanceof THREE.MeshStandardMaterial);
+    assert.equal(gold.metalness, 1);
+    assert.equal(gold.roughness, 0.3);
+    assert.equal(materialsOf(engine).length, 2);
+  });
+
+  it("edits the finish of the drawn material in place", () => {
+    const engine = lambertGold();
+    engine.defineMaterialGroup({ id: "gold" });
+    engine.flush();
+    const gold = goldMaterial(engine);
+
+    engine.defineMaterialGroup({ id: "gold", emissive: "#ff0000" });
+
+    assert.equal(engine.view.pendingRebuilds, 0);
+    assert.equal(goldMaterial(engine), gold);
+    assert.equal(gold?.emissive.getHexString(), "ff0000");
+  });
+
+  it("goes back to the view material when the group is removed", () => {
+    const engine = lambertGold();
+    engine.defineMaterialGroup({ id: "gold", metalness: 1 });
+    engine.flush();
+
+    engine.removeMaterialGroup("gold");
+    engine.flush();
+
+    assert.equal(goldMaterial(engine), undefined);
+  });
+});
+
 describe("VoxelEngine - tile minification", () => {
   it("fades distant tiles to their average colour by default", () => {
     assert.equal(meshedGround().tileMinification, "average");

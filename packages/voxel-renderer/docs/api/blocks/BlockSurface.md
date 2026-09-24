@@ -45,16 +45,27 @@ These settings apply to the whole block. Texture slots select tiles but do
 not override the surface policy. [`cullCoveredFaces`](./BlockDefinition.md)
 independently controls the faces a neighbour covers.
 
-A material group lets one atlas carry materials tuned apart. The
-`materialCustomizer` receives the surface, so it can read the group:
+A material group lets one atlas carry materials tuned apart. Declaring the
+group's finish in the document makes it travel with the map:
 
 ```ts
 const engine = new VoxelEngine({
-  material: "standard",
   blocks: [
     { id: 1, name: "Sandstone", shapeId: "cube", defaultTexture },
     { id: 2, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
   ],
+  materialGroups: [
+    { id: "gold", roughness: 0.35, metalness: 1 }
+  ]
+});
+```
+
+See [MaterialGroup](../materials/MaterialGroup.md). The `materialCustomizer`
+also receives the surface, so host code can still read the group:
+
+```ts
+const engine = new VoxelEngine({
+  material: "standard",
   materialCustomizer(material, _tilesetId, surface) {
     if (
       material instanceof THREE.MeshStandardMaterial &&

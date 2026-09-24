@@ -14,7 +14,8 @@ import {
 import {
   FieldBinding,
   showChoice,
-  showConfirm
+  showConfirm,
+  type JollyOption
 } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
@@ -24,6 +25,17 @@ import type {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
 import type { EventInput } from "../../shared/domEvents.ts";
+import type {
+  LightingMode,
+  ViewSettings
+} from "../../state/index.ts";
+
+// CONSTANTS
+const kLightingOptions: JollyOption<LightingMode>[] = [
+  { label: "Flat", value: "flat" },
+  { label: "Studio", value: "studio" },
+  { label: "Daylight", value: "daylight" }
+];
 
 @customElement("map-config-panel")
 export class MapConfigPanel extends LitElement {
@@ -76,12 +88,10 @@ export class MapConfigPanel extends LitElement {
     write: (value) => this.workspace.gridRenderer.setVisible(value)
   });
 
-  #flatLighting = new FieldBinding<boolean>(this, {
-    read: () => this.workspace.lighting.mode === "flat",
-    write: (value) => {
-      this.workspace.lighting.mode = value ? "flat" : "lit";
-    }
-  });
+  #lighting = this.#viewBinding("lighting");
+  #reflections = this.#viewBinding("reflections");
+  #ambientOcclusion = this.#viewBinding("ambientOcclusion");
+  #shadows = this.#viewBinding("shadows");
 
   #skyRadius = new FieldBinding<number>(this, {
     read: () => this.workspace.localBrush.skyRadius,
@@ -105,13 +115,6 @@ export class MapConfigPanel extends LitElement {
         @jolly-change=${this.#gridVisible.commit}
       ></jolly-checkbox>
 
-      <jolly-checkbox
-        align="end"
-        label="Flat lighting"
-        .value=${this.#flatLighting.value}
-        @jolly-change=${this.#flatLighting.commit}
-      ></jolly-checkbox>
-
       <jolly-slider
         label="Sky radius"
         min="0"
@@ -122,8 +125,55 @@ export class MapConfigPanel extends LitElement {
         @jolly-change=${this.#skyRadius.commit}
       ></jolly-slider>
 
+      ${this.#renderView()}
       ${this.#renderArchives()}
     `;
+  }
+
+  #renderView() {
+    return html`
+      <jolly-separator label="View"></jolly-separator>
+      <jolly-select
+        label="Lighting"
+        .options=${kLightingOptions}
+        .value=${this.#lighting.value}
+        @jolly-change=${this.#lighting.commit}
+      ></jolly-select>
+      <jolly-checkbox
+        align="end"
+        label="Reflections"
+        description="Shows the metal and roughness of material groups"
+        .value=${this.#reflections.value}
+        @jolly-change=${this.#reflections.commit}
+      ></jolly-checkbox>
+      <jolly-checkbox
+        align="end"
+        label="Occlusion"
+        description="Darkens corners; rebuilds every chunk"
+        .value=${this.#ambientOcclusion.value}
+        @jolly-change=${this.#ambientOcclusion.commit}
+      ></jolly-checkbox>
+      <jolly-checkbox
+        align="end"
+        label="Shadows"
+        description="Sun shadows around the camera"
+        .value=${this.#shadows.value}
+        @jolly-change=${this.#shadows.commit}
+      ></jolly-checkbox>
+    `;
+  }
+
+  #viewBinding<TKey extends keyof ViewSettings>(
+    key: TKey
+  ): FieldBinding<ViewSettings[TKey]> {
+    return new FieldBinding<ViewSettings[TKey]>(this, {
+      read: () => this.workspace.state.view.settings[key],
+      write: (value) => {
+        const patch: Partial<ViewSettings> = {};
+        patch[key] = value;
+        this.workspace.state.view.update(patch);
+      }
+    });
   }
 
   #renderArchives() {

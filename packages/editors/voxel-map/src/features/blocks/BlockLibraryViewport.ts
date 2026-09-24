@@ -444,6 +444,7 @@ export class BlockLibraryViewport extends LitElement {
     this.#renderer = new BlockLibraryRenderer(this._scroller, {
       shapeRegistry: this.engine.shapeRegistry,
       tilesetManager: this.engine.tilesetManager,
+      materialGroups: this.engine.materialGroups,
       blocks: this.blocks
     });
     this.#renderer.onLayoutChange = () => this.#syncGrid();

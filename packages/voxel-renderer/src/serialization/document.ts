@@ -20,6 +20,7 @@ export function parseVoxelDocument(
   const objectLayers = fields.get("objectLayers");
   const tilesets = fields.get("tilesets");
   const defaultTileSize = fields.get("defaultTileSize");
+  const materialGroups = fields.get("materialGroups");
 
   if (version !== 1) {
     throw new InvalidVoxelDocumentError(
@@ -50,6 +51,9 @@ export function parseVoxelDocument(
   }
   if (Array.isArray(blocks)) {
     document.blocks = blocks;
+  }
+  if (Array.isArray(materialGroups)) {
+    document.materialGroups = materialGroups;
   }
   if (Array.isArray(objectLayers)) {
     document.objectLayers = objectLayers;

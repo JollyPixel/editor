@@ -82,7 +82,8 @@ export class BlockShapePreview extends LitElement {
 
     this.#renderer = new BlockPreviewRenderer(this._well, {
       shapeRegistry: this.engine.shapeRegistry,
-      tilesetManager: this.engine.tilesetManager
+      tilesetManager: this.engine.tilesetManager,
+      materialGroups: this.engine.materialGroups
     });
     this.#renderer.block = this.block;
     this.#renderer.onContextLost = () => this.#build();

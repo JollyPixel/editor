@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 import {
   BlockShapeRegistry,
+  MaterialGroupList,
   TilesetList,
   TilesetManager,
   VoxelTransform,
@@ -153,6 +154,25 @@ describe("buildBlockPreviewMesh", () => {
 
     assert.equal(material.color.getHex(), 0xaaaaaa);
     assertFitted(mesh.geometry);
+  });
+
+  it("draws a block of a defined material group with its finish", () => {
+    const sources = {
+      ...kSources,
+      materialGroups: new MaterialGroupList([
+        { id: "gold", roughness: 0.3, metalness: 1 }
+      ])
+    };
+
+    const gold = buildBlockPreviewMesh(blockOf({ materialGroup: "gold" }), sources);
+    const [textured] = gold.material as THREE.Material[];
+    assert.ok(textured instanceof THREE.MeshStandardMaterial);
+    assert.equal(textured.metalness, 1);
+    assert.equal(textured.roughness, 0.3);
+
+    const plain = buildBlockPreviewMesh(blockOf({ materialGroup: "silver" }), sources);
+    const [lambert] = plain.material as THREE.Material[];
+    assert.ok(lambert instanceof THREE.MeshLambertMaterial);
   });
 
   it("covers the whole index buffer with its groups", () => {

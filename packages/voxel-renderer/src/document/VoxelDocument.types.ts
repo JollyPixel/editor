@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
 import type { VoxelHistoryOptions } from "../history/VoxelHistory.ts";
+import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
 import type { TilesetDefinition } from "../tileset/types.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
 import type {
@@ -54,6 +55,8 @@ export interface VoxelDocumentOptions {
    * Tileset definitions declared before any texture is registered for them.
    */
   tilesets?: Iterable<TilesetDefinition>;
+
+  materialGroups?: Iterable<MaterialGroupJSON>;
 
   /**
    * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.

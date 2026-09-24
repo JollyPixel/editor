@@ -10,6 +10,7 @@ import {
   MAX_TILE_SIZE,
   type VoxelBlockCommandAction,
   type VoxelLayerCommandAction,
+  type VoxelMaterialGroupCommandAction,
   type VoxelTilesetCommandAction
 } from "@jolly-pixel/voxel.renderer";
 
@@ -217,6 +218,35 @@ const kTilesetCommandProperties: Record<
   }
 };
 
+const kUnitSchema: JSONSchema = {
+  type: "number",
+  minimum: 0,
+  maximum: 1
+};
+
+const kMaterialGroupSchema = objectSchema(
+  {
+    id: { type: "string", minLength: 1 },
+    roughness: kUnitSchema,
+    metalness: kUnitSchema,
+    emissive: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+    emissiveIntensity: { type: "number", minimum: 0 }
+  },
+  ["id"]
+);
+
+const kMaterialGroupCommandProperties: Record<
+  VoxelMaterialGroupCommandAction,
+  Record<string, JSONSchema>
+> = {
+  "material-group-defined": {
+    group: kMaterialGroupSchema
+  },
+  "material-group-removed": {
+    groupId: { type: "string", minLength: 1 }
+  }
+};
+
 export const voxelWorldSchema: JSONSchema = {
   type: "object",
   properties: {
@@ -225,6 +255,10 @@ export const voxelWorldSchema: JSONSchema = {
     tilesets: { type: "array" },
     defaultTileSize: { type: "number" },
     blocks: { type: "array" },
+    materialGroups: {
+      type: "array",
+      items: kMaterialGroupSchema
+    },
     layers: { type: "array" },
     objectLayers: { type: "array" }
   },
@@ -268,6 +302,9 @@ export const voxelCommandProtocol: MessageProtocol = defineMessageProtocol({
         ([action, properties]) => commandVariant(action, properties)
       ),
       ...Object.entries(kTilesetCommandProperties).map(
+        ([action, properties]) => commandVariant(action, properties)
+      ),
+      ...Object.entries(kMaterialGroupCommandProperties).map(
         ([action, properties]) => commandVariant(action, properties)
       ),
       commandVariant("world-replace", {

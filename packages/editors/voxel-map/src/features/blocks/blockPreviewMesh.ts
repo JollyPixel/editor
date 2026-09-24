@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import {
   buildShapeGeometry,
   shapeSlots,
@@ -9,6 +10,7 @@ import {
   type FaceDefinition,
   type ResolvedBlockDefinition,
   type BlockShapeRegistry,
+  type MaterialGroupList,
   type TilesetManager
 } from "@jolly-pixel/voxel.renderer";
 
@@ -27,6 +29,8 @@ const kCheckerDark = [0x45, 0x4b, 0x51];
 const kOutlineColor = 0xd0d6dc;
 const kOutlineOpacity = 0.35;
 const kOutlineThresholdAngle = 20;
+const kEnvironmentBlur = 0.04;
+const kEnvironmentIntensity = 0.6;
 
 export const BLOCK_TEXTURED_MATERIAL = 0;
 export const BLOCK_EMPTY_MATERIAL = 1;
@@ -41,6 +45,7 @@ export interface BlockPreviewSources {
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
   tileOpacity: TileOpacityProbe;
+  materialGroups?: MaterialGroupList;
 }
 
 export interface BlockPreviewStage {
@@ -48,9 +53,19 @@ export interface BlockPreviewStage {
   camera: THREE.PerspectiveCamera;
 }
 
-export function createBlockPreviewStage(): BlockPreviewStage {
+export function createBlockPreviewStage(
+  renderer?: THREE.WebGLRenderer
+): BlockPreviewStage {
   const scene = new THREE.Scene();
   scene.add(...new SceneLighting().lights);
+  if (renderer) {
+    const room = new RoomEnvironment();
+    const generator = new THREE.PMREMGenerator(renderer);
+    scene.environment = generator.fromScene(room, kEnvironmentBlur).texture;
+    scene.environmentIntensity = kEnvironmentIntensity;
+    generator.dispose();
+    room.dispose();
+  }
 
   const camera = new THREE.PerspectiveCamera(kCameraFov, 1, 0.1, 20);
   camera.position.set(0, 0, kCameraZ);
@@ -114,14 +129,22 @@ export function buildBlockPreviewMesh(
   const texture = textureOf(block, sources);
   const surface = new BlockSurface(block);
   const side = surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide;
+  const surfaceOptions = {
+    map: texture,
+    side,
+    alphaTest: surface.alphaCutoff,
+    transparent: surface.alphaMode === "blend",
+    depthWrite: surface.alphaMode !== "blend"
+  };
+  const group = surface.materialGroup === undefined ?
+    undefined :
+    sources.materialGroups?.get(surface.materialGroup);
+  const textured = group === undefined ?
+    new THREE.MeshLambertMaterial(surfaceOptions) :
+    new THREE.MeshStandardMaterial(surfaceOptions);
+  group?.applyTo(textured);
   const materials = [
-    new THREE.MeshLambertMaterial({
-      map: texture,
-      side,
-      alphaTest: surface.alphaCutoff,
-      transparent: surface.alphaMode === "blend",
-      depthWrite: surface.alphaMode !== "blend"
-    }),
+    textured,
     new THREE.MeshLambertMaterial({
       map: createCheckerTexture(),
       side,

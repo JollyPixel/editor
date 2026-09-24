@@ -10,7 +10,6 @@ import type {
   VoxelEngine,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
-import * as THREE from "three";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 import type { AssetLeases } from "@jolly-pixel/editor.host";
 import type {
@@ -54,6 +53,7 @@ import {
 } from "../features/tilesets/TilesetTextures.ts";
 import { GridRenderer } from "./GridRenderer.ts";
 import { SceneLighting } from "./SceneLighting.ts";
+import { SceneEnvironment } from "./SceneEnvironment.ts";
 import { installTransparency } from "./installTransparency.ts";
 import { spawnPose } from "./spawnPose.ts";
 import {
@@ -106,6 +106,7 @@ export class EditorScene extends Systems.Scene {
   #workspace = Promise.withResolvers<VoxelMapWorkspace>();
   #disposables: Array<() => void> = [];
   #camera: OrbitFlyCamera | undefined;
+  #environment: SceneEnvironment | undefined;
 
   #orbiting = false;
   #spawnPending = true;
@@ -135,7 +136,6 @@ export class EditorScene extends Systems.Scene {
     const world = this.world;
     const scene = world.sceneManager.getSource();
 
-    scene.background = new THREE.Color("#262627");
     const lighting = new SceneLighting(world.renderer.getSource());
     scene.add(...lighting.lights);
     this.#disposables.push(
@@ -164,6 +164,15 @@ export class EditorScene extends Systems.Scene {
         material: "lambert",
         tilesets: []
       });
+
+    const environment = new SceneEnvironment({
+      renderer: world.renderer.getSource(),
+      scene,
+      lighting,
+      chunks: engine
+    });
+    environment.apply(state.view.settings);
+    this.#environment = environment;
 
     const mapDocument = new MapDocument({
       commands: engine.document,
@@ -279,6 +288,10 @@ export class EditorScene extends Systems.Scene {
         this.#selectFallbackLayer(engine);
         this.#spawnCamera(engine);
       }),
+      state.view.subscribe("change", (settings) => {
+        environment.apply(settings);
+      }),
+      () => environment.dispose(),
       () => shortcuts.dispose(),
       () => historyShortcuts.dispose(),
       () => collaboration.dispose(),
@@ -321,11 +334,18 @@ export class EditorScene extends Systems.Scene {
     });
   }
 
+  override update(): void {
+    if (this.#camera !== undefined) {
+      this.#environment?.follow(this.#camera.camera);
+    }
+  }
+
   override destroy(): void {
     for (const dispose of this.#disposables.splice(0)) {
       dispose();
     }
     this.#camera = undefined;
+    this.#environment = undefined;
     this.#workspace.reject(
       new Error("The editor scene was destroyed before it awoke.")
     );

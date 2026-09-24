@@ -5,3 +5,4 @@ export * from "./SelectionStore.ts";
 export * from "./TilesetStore.ts";
 export * from "./BlockUsageStore.ts";
 export * from "./tilesetEntry.ts";
+export * from "./ViewStore.ts";

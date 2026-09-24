@@ -521,3 +521,24 @@ describe("VoxelCommandArbiter — tileset commands", () => {
     }), "default-tile-size");
   });
 });
+
+describe("VoxelCommandArbiter — material group commands", () => {
+  const kHeader = {
+    clientId: "client-A",
+    seq: 1,
+    timestamp: 1000
+  };
+
+  test("keys a material group command by its group id", () => {
+    assert.strictEqual(VoxelCommandArbiter.key({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "gold" }
+    }), "material-group:gold");
+    assert.strictEqual(VoxelCommandArbiter.key({
+      ...kHeader,
+      action: "material-group-removed",
+      groupId: "gold"
+    }), "material-group:gold");
+  });
+});

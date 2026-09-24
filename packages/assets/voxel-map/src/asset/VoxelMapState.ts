@@ -3,6 +3,7 @@ import {
   applyVoxelCommand,
   BlockRegistry,
   deserializeVoxelWorld,
+  MaterialGroupList,
   parseVoxelDocument,
   serializeVoxelWorld,
   TilesetList,
@@ -19,6 +20,7 @@ export class VoxelMapState implements VoxelCommandTarget {
   readonly world: VoxelWorld;
   readonly blocks = new BlockRegistry();
   readonly tilesets = new TilesetList();
+  readonly materialGroups = new MaterialGroupList();
 
   constructor(
     chunkSize: number
@@ -30,7 +32,8 @@ export class VoxelMapState implements VoxelCommandTarget {
     return serializeVoxelWorld(this.world, {
       tilesets: this.tilesets,
       defaultTileSize: this.tilesets.defaultTileSize,
-      blocks: this.blocks
+      blocks: this.blocks,
+      materialGroups: this.materialGroups
     });
   }
 
@@ -39,7 +42,8 @@ export class VoxelMapState implements VoxelCommandTarget {
   ): void {
     deserializeVoxelWorld(document, this.world, {
       blocks: this.blocks,
-      tilesets: this.tilesets
+      tilesets: this.tilesets,
+      materialGroups: this.materialGroups
     });
   }
 
@@ -67,5 +71,6 @@ export class VoxelMapState implements VoxelCommandTarget {
     this.world.clear();
     this.blocks.clear();
     this.tilesets.clear();
+    this.materialGroups.clear();
   }
 }

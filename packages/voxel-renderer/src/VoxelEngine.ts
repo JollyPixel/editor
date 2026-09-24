@@ -14,6 +14,11 @@ import type { VoxelCommand } from "./commands.ts";
 import { VoxelDocument } from "./document/VoxelDocument.ts";
 import type { VoxelHistory } from "./history/VoxelHistory.ts";
 import type { VoxelInspector } from "./inspector/index.ts";
+import type {
+  MaterialGroup,
+  MaterialGroupJSON
+} from "./materials/MaterialGroup.ts";
+import type { MaterialGroupList } from "./materials/MaterialGroupList.ts";
 import type { VoxelWorldJSON } from "./serialization/types.ts";
 import type { TilesetList } from "./tileset/TilesetList.ts";
 import type { TilesetManager } from "./tileset/TilesetManager.ts";
@@ -59,6 +64,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       chunkSize,
       layers,
       blocks,
+      materialGroups,
       history,
       onCommand,
       logger,
@@ -75,6 +81,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       chunkSize,
       layers,
       blocks,
+      materialGroups,
       history,
       logger,
       tilesets: Array.from(tilesets ?? [], (source) => source.def)
@@ -109,6 +116,10 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
 
   get tilesets(): TilesetList {
     return this.document.tilesets;
+  }
+
+  get materialGroups(): MaterialGroupList {
+    return this.document.materialGroups;
   }
 
   get shapeRegistry(): BlockShapeRegistry {
@@ -267,6 +278,18 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     toIndex: number
   ): boolean {
     return this.document.moveBlock(blockId, toIndex);
+  }
+
+  defineMaterialGroup(
+    group: MaterialGroup | MaterialGroupJSON
+  ): boolean {
+    return this.document.defineMaterialGroup(group);
+  }
+
+  removeMaterialGroup(
+    groupId: string
+  ): boolean {
+    return this.document.removeMaterialGroup(groupId);
   }
 
   addTileset(

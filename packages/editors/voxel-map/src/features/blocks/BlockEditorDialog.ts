@@ -29,6 +29,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { MapDocumentSignals } from "../../document/index.ts";
 import type {
   BlockUsageStore,
   BrushStore,
@@ -57,7 +58,9 @@ import {
   DEFAULT_BLOCK_NAME,
   type BlockDraft
 } from "./blockDraft.ts";
+import { materialGroupNameOf } from "./materialGroupSources.ts";
 import "./BlockShapePreview.ts";
+import "./BlockMaterialFinish.ts";
 
 // CONSTANTS
 const kMissingTileset = "Missing tileset";
@@ -126,6 +129,9 @@ export class BlockEditorDialog extends LitElement {
 
   @property({ attribute: false })
   declare usage: BlockUsageStore;
+
+  @property({ attribute: false })
+  declare mapDocument: MapDocumentSignals;
 
   @state()
   private declare _mode: BlockEditorMode;
@@ -276,6 +282,7 @@ export class BlockEditorDialog extends LitElement {
               @jolly-change=${this.#onShapeChange}
             ></jolly-select>
             ${creating ? nothing : this.#renderTransparency()}
+            ${creating ? nothing : this.#renderMaterial()}
             ${creating ? nothing : this.#renderUsage()}
           </div>
           <div class="shape">
@@ -436,6 +443,40 @@ export class BlockEditorDialog extends LitElement {
         @jolly-change=${this.#onCullCoveredFacesChange}
       ></jolly-checkbox>
     `;
+  }
+
+  #renderMaterial() {
+    const { block } = this;
+    if (!block) {
+      return nothing;
+    }
+
+    return html`
+      <jolly-separator label="Material"></jolly-separator>
+      <jolly-text
+        label="Group"
+        placeholder="None"
+        description="Blocks naming the same group share one finish"
+        .value=${block.materialGroup ?? ""}
+        @jolly-change=${this.#onMaterialGroupChange}
+      ></jolly-text>
+      ${block.materialGroup === undefined ? nothing : html`
+        <block-material-finish
+          .engine=${this.engine}
+          .mapDocument=${this.mapDocument}
+          .groupId=${block.materialGroup}
+        ></block-material-finish>
+      `}
+    `;
+  }
+
+  #onMaterialGroupChange(
+    event: CustomEvent<JollyChangeDetail<string>>
+  ): void {
+    const materialGroup = materialGroupNameOf(event.detail.value);
+    if (materialGroup !== this.block?.materialGroup) {
+      this.#applyEdit({ materialGroup });
+    }
   }
 
   #onAlphaModeChange(

@@ -309,6 +309,7 @@ export class BlockLibrary extends LitElement {
         .brush=${this.brush}
         .tilesets=${this.tilesets}
         .usage=${this.usage}
+        .mapDocument=${this.mapDocument}
         .block=${this._selectedBlock}
       ></block-editor-dialog>
     `;

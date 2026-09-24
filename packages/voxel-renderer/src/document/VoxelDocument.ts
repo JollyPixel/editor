@@ -21,6 +21,11 @@ import {
 } from "../commands.ts";
 import { VoxelHistory } from "../history/VoxelHistory.ts";
 import {
+  MaterialGroup,
+  type MaterialGroupJSON
+} from "../materials/MaterialGroup.ts";
+import { MaterialGroupList } from "../materials/MaterialGroupList.ts";
+import {
   deserializeVoxelWorld,
   serializeVoxelWorld
 } from "../serialization/world.ts";
@@ -47,6 +52,7 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   readonly world: VoxelWorld;
   readonly blocks: BlockRegistry;
   readonly tilesets: TilesetList;
+  readonly materialGroups: MaterialGroupList;
   readonly history: VoxelHistory;
 
   #logger: VoxelLogger;
@@ -59,6 +65,7 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
       layers = [],
       blocks = [],
       tilesets = [],
+      materialGroups = [],
       history,
       logger = NOOP_LOGGER,
       onCommand
@@ -86,6 +93,7 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     for (const tileset of tilesets) {
       this.tilesets.add(tileset);
     }
+    this.materialGroups = new MaterialGroupList(materialGroups);
   }
 
   get chunkSize(): number {
@@ -98,14 +106,13 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   ): boolean {
     const { origin = "local" } = options;
 
-    const resolved = command.action === "block-defined" ?
-      this.#blockDefined(command.block) :
-      command;
-    const applied = applyVoxelCommand(
+    const resolved = this.#resolve(command);
+    const applied = resolved !== null && applyVoxelCommand(
       {
         world: this.world,
         blocks: this.blocks,
-        tilesets: this.tilesets
+        tilesets: this.tilesets,
+        materialGroups: this.materialGroups
       },
       resolved,
       this.#logger
@@ -197,6 +204,24 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     });
   }
 
+  defineMaterialGroup(
+    group: MaterialGroup | MaterialGroupJSON
+  ): boolean {
+    return this.apply({
+      action: "material-group-defined",
+      group: group instanceof MaterialGroup ? group.toJSON() : group
+    });
+  }
+
+  removeMaterialGroup(
+    groupId: string
+  ): boolean {
+    return this.apply({
+      action: "material-group-removed",
+      groupId
+    });
+  }
+
   get defaultTileSize(): number | undefined {
     return this.tilesets.defaultTileSize;
   }
@@ -256,7 +281,8 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     return serializeVoxelWorld(this.world, {
       tilesets: this.tilesets,
       defaultTileSize: this.tilesets.defaultTileSize,
-      blocks: this.blocks
+      blocks: this.blocks,
+      materialGroups: this.materialGroups
     });
   }
 
@@ -267,7 +293,8 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     this.world.silently(
       () => deserializeVoxelWorld(data, this.world, {
         blocks: this.blocks,
-        tilesets: this.tilesets
+        tilesets: this.tilesets,
+        materialGroups: this.materialGroups
       })
     );
 
@@ -289,6 +316,24 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     this.tilesets.clear();
     this.world.removeAllListeners();
     this.removeAllListeners();
+  }
+
+  #resolve(
+    command: VoxelCommand
+  ): VoxelCommand | null {
+    if (command.action === "block-defined") {
+      return this.#blockDefined(command.block);
+    }
+    if (command.action === "material-group-defined") {
+      const group = MaterialGroup.parse(command.group);
+
+      return group && {
+        action: command.action,
+        group: group.toJSON()
+      };
+    }
+
+    return command;
   }
 
   #blockDefined(
