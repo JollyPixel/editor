@@ -13,6 +13,7 @@ import { AssetId } from "@jolly-pixel/asset";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import {
+  ANY_SHELL_ORIGIN,
   LAUNCH_MESSAGE_TYPE,
   HostMessageLaunchSource
 } from "#src/launch/sources/HostMessageLaunchSource.ts";
@@ -23,8 +24,10 @@ import {
 import { InjectedLaunchSource } from "#src/launch/sources/InjectedLaunchSource.ts";
 import { QueryLaunchSource } from "#src/launch/sources/QueryLaunchSource.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
+import { captureLogs } from "../helpers/logs.ts";
 
 // CONSTANTS
+const kStudioOrigin = "http://studio.test";
 const kNothing: LaunchSource = {
   read: () => Promise.resolve(undefined)
 };
@@ -106,6 +109,17 @@ describe("EditorLaunch.read", () => {
   test("throws LaunchNotFoundError when no source resolves", async() => {
     await assert.rejects(EditorLaunch.read([kNothing]), LaunchNotFoundError);
   });
+
+  test("logs each source read until one answers", async() => {
+    const { logger, metas } = captureLogs();
+
+    await EditorLaunch.read([kNothing, launchOf("a"), launchOf("b")], logger);
+
+    assert.deepEqual(
+      metas.map((meta) => [meta?.index, meta?.target]),
+      [[0, null], [1, "a"]]
+    );
+  });
 });
 
 describe("EditorLaunch.parse", () => {
@@ -162,11 +176,13 @@ describe("HostMessageLaunchSource", () => {
     const parent = fakeParent();
     context.after(frameIn(parent));
 
-    const pending = new HostMessageLaunchSource().read();
+    const pending = new HostMessageLaunchSource({
+      origins: [kStudioOrigin]
+    }).read();
     assert.deepEqual(parent.posted, [
       {
         message: { type: READY_MESSAGE_TYPE },
-        origin: "*"
+        origin: kStudioOrigin
       }
     ]);
 
@@ -184,23 +200,25 @@ describe("HostMessageLaunchSource", () => {
     }));
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
-      origin: "http://studio.test",
+      origin: kStudioOrigin,
       data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
     }));
 
     const launch = await pending;
     assert.equal(launch?.target.value, "from-host");
-    assert.equal(launch?.shell?.origin, "http://studio.test");
+    assert.equal(launch?.shell?.origin, kStudioOrigin);
   });
 
   test("answers the parent through the shell channel", async(context) => {
     const parent = fakeParent();
     context.after(frameIn(parent));
 
-    const pending = new HostMessageLaunchSource().read();
+    const pending = new HostMessageLaunchSource({
+      origins: [kStudioOrigin]
+    }).read();
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
-      origin: "http://studio.test",
+      origin: kStudioOrigin,
       data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
     }));
     const launch = await pending;
@@ -215,9 +233,92 @@ describe("HostMessageLaunchSource", () => {
           command: "open-asset",
           target: "tileset-1"
         },
-        origin: "http://studio.test"
+        origin: kStudioOrigin
       }
     ]);
+  });
+
+  test("posts ready to its own origin by default", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+
+    const pending = new HostMessageLaunchSource({ timeout: 50 }).read();
+    context.mock.timers.tick(50);
+    await pending;
+
+    assert.deepEqual(
+      parent.posted.map(({ origin }) => origin),
+      [location.origin]
+    );
+  });
+
+  test("posts ready once per allowed origin", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+
+    const pending = new HostMessageLaunchSource({
+      timeout: 50,
+      origins: [kStudioOrigin, "http://other.test", kStudioOrigin]
+    }).read();
+    context.mock.timers.tick(50);
+    await pending;
+
+    assert.deepEqual(
+      parent.posted.map(({ origin }) => origin),
+      [kStudioOrigin, "http://other.test"]
+    );
+  });
+
+  test("ignores a launch from an origin outside the allow-list", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+    const { logger, lines } = captureLogs();
+
+    const pending = new HostMessageLaunchSource({
+      origins: [kStudioOrigin],
+      logger
+    }).read();
+    window.dispatchEvent(new MessageEvent("message", {
+      source: parent,
+      origin: "http://evil.test",
+      data: { type: LAUNCH_MESSAGE_TYPE, target: "hijacked" }
+    }));
+    window.dispatchEvent(new MessageEvent("message", {
+      source: parent,
+      origin: kStudioOrigin,
+      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
+    }));
+
+    const launch = await pending;
+    assert.equal(launch?.target.value, "from-host");
+    assert.deepEqual(lines, [
+      "[DEBUG] [root] ready posted",
+      "[WARN] [root] launch rejected",
+      "[DEBUG] [root] launch accepted"
+    ]);
+  });
+
+  test("accepts any origin once ANY_SHELL_ORIGIN is allowed", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+
+    const pending = new HostMessageLaunchSource({
+      origins: [ANY_SHELL_ORIGIN]
+    }).read();
+    window.dispatchEvent(new MessageEvent("message", {
+      source: parent,
+      origin: "http://anywhere.test",
+      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
+    }));
+
+    const launch = await pending;
+    assert.deepEqual(
+      parent.posted.map(({ origin }) => origin),
+      [ANY_SHELL_ORIGIN]
+    );
+    assert.equal(launch?.shell?.origin, "http://anywhere.test");
   });
 
   test("gives up after the timeout", async(context) => {

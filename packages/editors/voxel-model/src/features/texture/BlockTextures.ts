@@ -36,7 +36,6 @@ export interface BlockTexturesOptions {
   document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
-  pixelsReady: Promise<void>;
 }
 
 export class BlockTextures implements BlockRegions {
@@ -46,8 +45,6 @@ export class BlockTextures implements BlockRegions {
   #selection: BlockSelectionStore;
   #texture: PixelCanvasTexture;
   #bindings = new Map<string, UVGeometryBinding>();
-  #pixelsLoaded = false;
-  #disposed = false;
 
   #onChange = (
     change: ModelChange
@@ -95,15 +92,10 @@ export class BlockTextures implements BlockRegions {
     for (const block of this.#blocks.values()) {
       this.#bind(block);
     }
-    if (this.#pixelsLoaded) {
-      this.#createMissingRegions();
-    }
+    this.#createMissingRegions();
   };
 
   #createMissingRegions = (): void => {
-    if (this.#disposed) {
-      return;
-    }
     for (const block of this.#blocks.values()) {
       if (this.#pixels.uv.get(blockRegionId(block.uuid)) === undefined) {
         this.create(block.uuid, block.name);
@@ -180,10 +172,6 @@ export class BlockTextures implements BlockRegions {
     this.#selection.on("select", this.#onBlockSelected);
 
     this.#rebindAll();
-    void options.pixelsReady.then(() => {
-      this.#pixelsLoaded = true;
-      this.#createMissingRegions();
-    });
   }
 
   create(
@@ -233,7 +221,6 @@ export class BlockTextures implements BlockRegions {
   }
 
   dispose(): void {
-    this.#disposed = true;
     for (const uuid of [...this.#bindings.keys()]) {
       this.#unbind(uuid);
     }

@@ -17,7 +17,7 @@ import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
 import {
   encodeModelDocument,
   TEXTURE_SIZE
-} from "../../vite/modelSeed.ts";
+} from "../../src/boot/modelProject.ts";
 
 export { expect } from "@playwright/test";
 

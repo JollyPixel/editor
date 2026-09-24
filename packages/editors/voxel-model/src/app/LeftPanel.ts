@@ -38,7 +38,7 @@ const kDefaultZoom = {
 
 export interface LeftPanelTexture {
   document: PixelDocument;
-  room?: PixelArtRoom;
+  room: PixelArtRoom;
 }
 
 export class LeftPanel extends LitElement {
@@ -116,15 +116,13 @@ export class LeftPanel extends LitElement {
     canvas.mode = canvasModeForTab(this.mode);
     this._canvas = canvas;
 
-    if (texture.room !== undefined) {
-      this.#collaboration = new PixelCollaboration({
-        room: texture.room,
-        canvas,
-        label: (_clientId, profile) => readUsername(profile),
-        color: peerProfileColor,
-        onRemoteUvDragging: (payload) => this.onPeerUvDragging?.(payload)
-      });
-    }
+    this.#collaboration = new PixelCollaboration({
+      room: texture.room,
+      canvas,
+      label: (_clientId, profile) => readUsername(profile),
+      color: peerProfileColor,
+      onRemoteUvDragging: (payload) => this.onPeerUvDragging?.(payload)
+    });
   }
 
   override updated(

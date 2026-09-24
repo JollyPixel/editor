@@ -9,13 +9,14 @@ import {
   catalogRoom
 } from "@jolly-pixel/asset-server/catalog/client";
 import {
+  HOST_PARAMS,
   IDENTITY_STORAGE_KEY,
+  offerOffline,
   rememberQueryUsername
 } from "@jolly-pixel/editor.host";
 import { Client } from "@jolly-pixel/network/client";
 import {
   promptPeerIdentity,
-  showChoice,
   showConfirm
 } from "@jolly-pixel/ui";
 import { toPeerMetadata } from "@jolly-pixel/ui/network";
@@ -59,7 +60,7 @@ async function boot(): Promise<void> {
     rememberQueryUsername();
   }
   const offline = import.meta.env.MODE === "static" ||
-    new URLSearchParams(location.search).has("offline");
+    HOST_PARAMS.read().offline;
   const connection = offline ?
     await connectOffline() :
     await connectWithOffer();
@@ -166,15 +167,7 @@ async function connectWithOffer(): Promise<StudioConnection> {
       return await connectOnline();
     }
     catch (error) {
-      const choice = await showChoice<"retry" | "offline">({
-        title: "Connection unavailable",
-        message: "The asset catalog is unreachable.",
-        actions: [
-          { value: "retry", label: "Retry" },
-          { value: "offline", label: "Open offline workspace" }
-        ],
-        focus: "retry"
-      });
+      const choice = await offerOffline("The asset catalog is unreachable.");
       if (choice === "offline") {
         return connectOffline();
       }

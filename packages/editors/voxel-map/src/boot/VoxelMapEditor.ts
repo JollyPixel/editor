@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import type { Runtime } from "@jolly-pixel/runtime";
 import {
-  QueryParams,
   EditorRuntime,
   type AssetLease,
   type EditorContext,
@@ -37,16 +36,6 @@ const kMapKind = voxelMapDocumentKind({
   history: {
     enabled: true
   }
-});
-
-export interface VoxelMapParams {
-  offline: boolean;
-}
-
-export const VOXEL_MAP_PARAMS = new QueryParams<VoxelMapParams>((query) => {
-  return {
-    offline: query.flag("offline")
-  };
 });
 
 export interface VoxelMapEditorParts {

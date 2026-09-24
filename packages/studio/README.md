@@ -38,8 +38,10 @@ focuses the tab if it is already open. Rows whose kind has no editor page say
 
 Each tab is an iframe on `/editors/<name>/`. The page posts `jolly-ready`,
 the shell answers with `jolly-launch` and the target id, and the editor can
-post `jolly-shell` commands back (`open-asset` today). An editor page can
-also be opened directly:
+post `jolly-shell` commands back (`open-asset` today). Set
+`jolly-pixel:debug` in `localStorage` (for example to `host.*,studio.tabs`)
+to log the handshake and each editor's boot steps. An editor page can also be
+opened directly:
 
 ```
 http://localhost:5173/editors/voxel-map/?target=map-overworld

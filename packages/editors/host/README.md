@@ -84,7 +84,8 @@ await mountStandalone(MyEditor, {
 ### Boot
 
 - [`mountStandalone`](./docs/mountStandalone.md): the editor definition, launch
-  sources, the shell channel and the debug handle.
+  sources, the shell channel and the debug handle; `bootStandalone` adds the
+  offline fallback.
 - [`QueryParams`](./docs/QueryParams.md): typed query-string parameters.
 
 ### Session

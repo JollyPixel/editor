@@ -9,32 +9,40 @@ import assert from "node:assert/strict";
 import { HOST_PARAMS } from "#src/params/HostParams.ts";
 
 describe("HOST_PARAMS", () => {
-  test("reads max-fps, samples and username", () => {
+  test("reads every host parameter", () => {
     assert.deepEqual(
-      HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada"),
+      HOST_PARAMS.read(
+        "?max-fps=10&samples=0&username=Ada&offline&workspace=%20demo%20"
+      ),
       {
         maxFps: 10,
         samples: 0,
-        username: "Ada"
+        username: "Ada",
+        offline: true,
+        workspace: "demo"
       }
     );
   });
 
-  test("absent parameters are undefined", () => {
+  test("absent parameters are undefined or false", () => {
     assert.deepEqual(HOST_PARAMS.read(""), {
       maxFps: undefined,
       samples: undefined,
-      username: undefined
+      username: undefined,
+      offline: false,
+      workspace: undefined
     });
   });
 
   test("drops values the runtime cannot use", () => {
     assert.deepEqual(
-      HOST_PARAMS.read("?max-fps=0&samples=1.5&username=%20"),
+      HOST_PARAMS.read("?max-fps=0&samples=1.5&username=%20&workspace="),
       {
         maxFps: undefined,
         samples: undefined,
-        username: undefined
+        username: undefined,
+        offline: false,
+        workspace: undefined
       }
     );
     assert.equal(HOST_PARAMS.read("?max-fps=-5").maxFps, undefined);

@@ -2,6 +2,7 @@
 import type { Runtime } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
+import type { HostLogger } from "../debug/readDebugLogger.ts";
 import type {
   EditorLaunch,
   ShellChannel
@@ -18,6 +19,7 @@ export interface EditorContext {
   launch: EditorLaunch;
   session: EditorSession;
   shell: ShellChannel | null;
+  logger: HostLogger;
 }
 
 export interface EditorHandle {

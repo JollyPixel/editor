@@ -5,6 +5,7 @@ export interface OpenEditorOptions {
   target?: string;
   username?: string;
   maxFps?: number;
+  debug?: string;
   query?: Record<string, string>;
 }
 
@@ -15,6 +16,7 @@ export function editorPath(
     target,
     username,
     maxFps,
+    debug,
     query = {}
   } = options;
 
@@ -27,6 +29,9 @@ export function editorPath(
   }
   if (maxFps !== undefined) {
     params.set("max-fps", String(maxFps));
+  }
+  if (debug !== undefined) {
+    params.set("debug", debug);
   }
   for (const [name, value] of Object.entries(query)) {
     params.set(name, value);

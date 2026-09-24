@@ -110,8 +110,8 @@ the successfully opened target for the next launch.
 flowchart TB
   Start["EditorLaunch.read(sources)"] --> Framed{"inside a frame?"}
   Framed -->|"no"| Query
-  Framed -->|"yes"| Ready["post { type: 'jolly-ready' }<br/>to window.parent"]
-  Ready --> Wait["wait 1000 ms for<br/>{ type: 'jolly-launch', target }<br/>from window.parent"]
+  Framed -->|"yes"| Ready["post { type: 'jolly-ready' }<br/>to window.parent, once per allowed origin"]
+  Ready --> Wait["wait 1000 ms for<br/>{ type: 'jolly-launch', target }<br/>from window.parent on an allowed origin"]
   Wait -->|"received"| Found["EditorLaunch<br/>with a ShellChannel"]
   Wait -->|"timeout"| Query{"?target= present?"}
   Query -->|"yes"| Found
@@ -121,7 +121,8 @@ flowchart TB
 ```
 
 The first source that answers wins. A page outside a frame skips the wait, so
-a plain tab boots without the timeout. The injected element is written by the
+a plain tab boots without the timeout. Allowed origins default to the page's
+own origin, the studio's case. The injected element is written by the
 asset workspace Vite plugin's `launch` option. Only a launch answered by the
 parent carries a `ShellChannel`, reachable as `context.shell`, through which
 the editor posts `jolly-shell` commands such as `open-asset` back to the
@@ -312,7 +313,7 @@ poses, labels, and frustum display; editors add it to their scenes as needed.
 
 ```mermaid
 flowchart TB
-  Editor["editor entry<br/>?offline"] -->|"dynamic import"| Offline["OfflineWorkspace.open"]
+  Editor["bootStandalone<br/>?offline or no server"] -->|"dynamic import"| Offline["OfflineWorkspace.open"]
 
   subgraph Page["Same page"]
     direction TB
@@ -332,7 +333,9 @@ flowchart TB
 page. It uses a loopback client and a guest identity, so the same catalog,
 session, leases, and editor mounting path work without the remote server.
 The offline code is reached through the separate `./offline` entry point so
-an online entry point can load it only when needed.
+an online entry point can load it only when needed. `bootStandalone` imports
+it the same way, and asks the editor for its handlers and seed only once it
+goes offline.
 
 Storage defaults to memory. With `storage: "indexeddb"`, the asset source
 persists documents and IDs under `jolly-workspace:<name>` (`default` if no

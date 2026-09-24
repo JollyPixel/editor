@@ -21,11 +21,13 @@ import type {
   EditorContext,
   EditorHandle
 } from "#src/editor/EditorDefinition.ts";
+import type { HostLogger } from "#src/debug/readDebugLogger.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { IDENTITY_STORAGE_KEY } from "#src/session/EditorSession.ts";
 import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
+import { captureLogs } from "../helpers/logs.ts";
 
 // CONSTANTS
 const kAssetId = "debug-target";
@@ -194,6 +196,60 @@ describe("mountStandalone", () => {
     assert.equal(disposed, true);
     assert.equal(editorState(), "failed");
     assert.equal(Reflect.get(globalThis, DEBUG_HANDLE), undefined);
+
+    await workspace.close();
+  });
+
+  test("traces each boot step in order", async() => {
+    const workspace = await openWorkspace();
+    const { logger, lines } = captureLogs(["host.boot"]);
+
+    let editorLogger: HostLogger | undefined;
+    const handle = await mountStandalone(definition((context) => {
+      editorLogger = context.logger;
+
+      return Promise.resolve(editorHandle(context.session));
+    }), {
+      ...offlineOptions(workspace),
+      logger
+    });
+
+    assert.deepEqual(lines, [
+      "[DEBUG] [host.boot] state booting",
+      "[DEBUG] [host.boot] launch started",
+      "[DEBUG] [host.boot] launch source read",
+      "[DEBUG] [host.boot] launch done",
+      "[DEBUG] [host.boot] session started",
+      "[DEBUG] [host.boot] session done",
+      "[DEBUG] [host.boot] mount started",
+      "[DEBUG] [host.boot] mount done",
+      "[DEBUG] [host.boot] ready started",
+      "[DEBUG] [host.boot] ready done",
+      "[DEBUG] [host.boot] state ready"
+    ]);
+    assert.equal(editorLogger?.namespace, "editor");
+
+    handle.dispose();
+    await workspace.close();
+  });
+
+  test("names the boot step that failed", async() => {
+    const workspace = await openWorkspace();
+    const { logger, lines, metas } = captureLogs(["host.boot"]);
+    const error = new Error("mount failed");
+
+    await assert.rejects(
+      mountStandalone(definition(() => Promise.reject(error)), {
+        ...offlineOptions(workspace),
+        logger
+      }),
+      error
+    );
+    assert.deepEqual(lines.slice(-2), [
+      "[ERROR] [host.boot] mount failed",
+      "[DEBUG] [host.boot] state failed"
+    ]);
+    assert.equal(metas.at(-2)?.error, error);
 
     await workspace.close();
   });

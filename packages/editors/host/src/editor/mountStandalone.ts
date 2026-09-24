@@ -7,6 +7,10 @@ import type {
   EditorHandle
 } from "./EditorDefinition.ts";
 import {
+  readDebugLogger,
+  type HostLogger
+} from "../debug/readDebugLogger.ts";
+import {
   EditorLaunch,
   HostMessageLaunchSource,
   InjectedLaunchSource,
@@ -48,21 +52,43 @@ export interface MountStandaloneOptions {
    * that is not the page's asset server.
    */
   connect?: () => StandaloneConnection | Promise<StandaloneConnection>;
+  /**
+   * Origins the default `HostMessageLaunchSource` accepts a launch from.
+   * @default [location.origin]
+   */
+  origins?: Iterable<string>;
+  /**
+   * @default readDebugLogger()
+   */
+  logger?: HostLogger;
 }
 
-export async function mountStandalone<THandle extends EditorHandle>(
+export async function mountStandalone<
+  THandle extends EditorHandle
+>(
   definition: EditorDefinition<THandle>,
   options: MountStandaloneOptions = {}
 ): Promise<THandle> {
-  markEditorState("booting");
+  const logger = options.logger ?? readDebugLogger();
+  const boot = new BootTrace(
+    logger.child({ namespace: "host.boot" })
+  );
+
+  boot.state("booting");
   try {
-    const handle = await mountEditor(definition, options);
-    markEditorState("ready");
+    const handle = await mountEditor(
+      definition,
+      options,
+      logger,
+      boot
+    );
+    boot.state("ready");
 
     return handle;
   }
   catch (error) {
-    markEditorState("failed");
+    boot.fail(error);
+    boot.state("failed");
 
     throw error;
   }
@@ -70,16 +96,22 @@ export async function mountStandalone<THandle extends EditorHandle>(
 
 async function mountEditor<THandle extends EditorHandle>(
   definition: EditorDefinition<THandle>,
-  options: MountStandaloneOptions
+  options: MountStandaloneOptions,
+  logger: HostLogger,
+  boot: BootTrace
 ): Promise<THandle> {
   const dev = options.dev === true;
-  const launch = await EditorLaunch.read(
+  const launch = await boot.step("launch", () => EditorLaunch.read(
     options.sources ?? [
-      new HostMessageLaunchSource(),
+      new HostMessageLaunchSource({
+        origins: options.origins,
+        logger: logger.child({ namespace: "host.launch" })
+      }),
       new QueryLaunchSource(),
       new InjectedLaunchSource()
-    ]
-  );
+    ],
+    boot.logger
+  ));
   const target = {
     launch,
     kinds: definition.kinds,
@@ -89,23 +121,27 @@ async function mountEditor<THandle extends EditorHandle>(
   if (dev) {
     rememberQueryUsername();
   }
-  const session = options.connect === undefined ?
-    await EditorSession.open({
-      ...target,
-      identity: definition.identity
-    }) :
-    await EditorSession.connect({
-      ...target,
-      ...await options.connect()
-    });
+  const { connect } = options;
+  const session = await boot.step("session", async() => (
+    connect === undefined ?
+      EditorSession.open({
+        ...target,
+        identity: definition.identity
+      }) :
+      EditorSession.connect({
+        ...target,
+        ...await connect()
+      })
+  ));
 
   let handle: THandle;
   try {
-    handle = await definition.mount({
+    handle = await boot.step("mount", () => definition.mount({
       launch,
       session,
-      shell: launch.shell
-    });
+      shell: launch.shell,
+      logger: logger.child({ namespace: "editor" })
+    }));
   }
   catch (error) {
     session.dispose();
@@ -114,7 +150,7 @@ async function mountEditor<THandle extends EditorHandle>(
   }
 
   try {
-    await handle.ready;
+    await boot.step("ready", () => handle.ready);
   }
   catch (error) {
     handle.dispose();
@@ -143,8 +179,46 @@ async function mountEditor<THandle extends EditorHandle>(
   return handle;
 }
 
-function markEditorState(
-  state: EditorState
-): void {
-  document.documentElement.setAttribute(EDITOR_STATE_ATTRIBUTE, state);
+class BootTrace {
+  readonly logger: HostLogger;
+
+  #step: string | null = null;
+
+  constructor(
+    logger: HostLogger
+  ) {
+    this.logger = logger;
+  }
+
+  async step<T>(
+    name: string,
+    run: () => Promise<T>
+  ): Promise<T> {
+    const startedAt = performance.now();
+    this.#step = name;
+    this.logger.debug(`${name} started`);
+
+    const result = await run();
+    this.logger.debug(`${name} done`, {
+      ms: Math.round(performance.now() - startedAt)
+    });
+    this.#step = null;
+
+    return result;
+  }
+
+  state(
+    state: EditorState
+  ): void {
+    document.documentElement.setAttribute(EDITOR_STATE_ATTRIBUTE, state);
+    this.logger.debug(`state ${state}`);
+  }
+
+  fail(
+    error: unknown
+  ): void {
+    this.logger.error(`${this.#step ?? "boot"} failed`, {
+      error
+    });
+  }
 }

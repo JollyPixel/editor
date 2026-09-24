@@ -1,5 +1,12 @@
 // Import Third-party Dependencies
 import type { Runtime } from "@jolly-pixel/runtime";
+import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  PIXEL_ART_KIND,
+  pixelArtDocumentKind,
+  type PixelNetworkCommand,
+  type PixelServerMessage
+} from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import {
   VOXEL_MODEL_KIND,
   voxelModelDocumentKind,
@@ -19,15 +26,17 @@ import {
 } from "../scene/ModelEditorScene.ts";
 import { PresenceStore } from "../state/index.ts";
 import { EditorShell } from "./EditorShell.ts";
-import {
-  TEXTURE_DOCUMENT_KIND,
-  openModelTexture,
-  type ModelTexture
-} from "./modelTexture.ts";
 
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";
 const kModelKind = voxelModelDocumentKind();
+const kTextureKind = pixelArtDocumentKind();
+
+export type ModelTextureLease = AssetLease<
+  PixelDocument,
+  PixelNetworkCommand,
+  PixelServerMessage
+>;
 
 export interface VoxelModelEditorParts {
   runtime: Runtime;
@@ -35,7 +44,7 @@ export interface VoxelModelEditorParts {
   workspace: ModelWorkspace;
   session: EditorSession;
   shell: EditorShell;
-  texture: ModelTexture;
+  texture: ModelTextureLease;
   target: AssetLease<ModelDocument>;
 }
 
@@ -44,22 +53,32 @@ export class VoxelModelEditor {
   static readonly identity = {
     title: "Join voxel model"
   };
-  static readonly kinds = [kModelKind, TEXTURE_DOCUMENT_KIND];
+  static readonly kinds = [kModelKind, kTextureKind];
 
   static async mount(
     context: EditorContext
   ): Promise<VoxelModelEditor> {
     const { session } = context;
-    const texture = openModelTexture(session);
+    const reference = session.catalog
+      .dependenciesOf(session.target.record.id)
+      .find((dependency) => dependency.kind === PIXEL_ART_KIND);
+    if (reference === undefined) {
+      throw new Error("VoxelModelEditor: the model has no pixel-art texture.");
+    }
+
+    const texture = session.assets.open(
+      kTextureKind,
+      reference.id
+    );
     const target = session.targetLease(kModelKind);
+    await texture.ready;
 
     const scene = new ModelEditorScene({
       room: target.room,
       document: target.document,
       identity: session.identity,
       presence: new PresenceStore(),
-      pixels: texture.document,
-      pixelsReady: texture.ready
+      pixels: texture.document
     });
     const editorRuntime = await EditorRuntime.create(kCanvas, {
       focusCanvas: false,
@@ -88,7 +107,7 @@ export class VoxelModelEditor {
   }
 
   #shell: EditorShell;
-  #texture: ModelTexture;
+  #texture: ModelTextureLease;
   #target: AssetLease<ModelDocument>;
 
   readonly ready: Promise<void>;
@@ -109,7 +128,6 @@ export class VoxelModelEditor {
     this.#target = parts.target;
     this.ready = Promise.all([
       parts.target.ready,
-      parts.texture.ready,
       parts.scene.ready
     ]).then(() => undefined);
   }

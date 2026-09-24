@@ -1,7 +1,7 @@
 # Editor navigation
 
 `@jolly-pixel/e2e/editor` relies on the editor host contracts: `?target=`,
-`?username=` and `?max-fps=` query parameters, `data-editor-state` on `<html>`,
+`?username=`, `?max-fps=` and `?debug=` query parameters, `data-editor-state` on `<html>`,
 and `window.jollyEditor` in dev builds.
 
 ## Navigation
@@ -18,6 +18,7 @@ and `window.jollyEditor` in dev builds.
 | `target` | `target=` |
 | `username` | `username=` |
 | `maxFps` | `max-fps=` |
+| `debug` | `debug=`, the boot trace namespaces such as `host.*`; `""` logs every namespace |
 | `query` | extra entries, written last; `""` gives a bare flag such as `offline=` |
 
 ## Frames

@@ -25,4 +25,4 @@ The snapshot is `{ nodes: ModelNodeJSON[] }`. `VoxelModelNetworkCommand` adds `c
 - `node-moved` carries an ID, new parent ID, and block transforms changed by the move.
 - `node-transformed` carries a block ID, transform, and optional flip axes.
 
-`voxelModelCommandProtocol` validates commands and `voxelModelSnapshotSchema` validates snapshots. `VoxelModelCommandArbiter.admit(command)` returns an admission or `null`; `keys(command)` exposes the collision keys described in [architecture](../ARCHITECTURE.md). The stored document also has a version and optional texture reference; these are outside the live snapshot.
+`voxelModelCommandProtocol` validates commands and `voxelModelSnapshotSchema` validates snapshots. `VoxelModelCommandArbiter.admit(command)` returns an admission or `null`; `keys(command)` exposes the collision keys described in [architecture](../ARCHITECTURE.md). The stored document also has a version and a required texture reference; these are outside the live snapshot.

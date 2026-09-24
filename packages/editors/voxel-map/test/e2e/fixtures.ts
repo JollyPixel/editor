@@ -1,3 +1,7 @@
+// Import Node.js Dependencies
+import fs from "node:fs/promises";
+import path from "node:path";
+
 // Import Third-party Dependencies
 import {
   PORTS,
@@ -17,8 +21,18 @@ import {
 // Import Internal Dependencies
 import {
   CHUNK_SIZE,
-  readDefaultTileset
-} from "../../vite/worldSeed.ts";
+  createDefaultTileset
+} from "../../src/boot/worldProject.ts";
+
+// CONSTANTS
+const kTilesetFile = path.join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "public",
+  "textures",
+  "tileset.png"
+);
 
 export { expect } from "@playwright/test";
 
@@ -37,7 +51,10 @@ export const test = editorFixture<E2EWorld>({
   },
   async create(catalog) {
     const folder = e2eFolder();
-    const tileset = await readDefaultTileset("");
+    const tileset = await createDefaultTileset(
+      await fs.readFile(kTilesetFile),
+      ""
+    );
     const tilesetId = await catalog.create(
       `${folder}/tileset.pixelart`,
       tileset.content,

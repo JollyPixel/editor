@@ -66,6 +66,15 @@ describe("VoxelModelState", () => {
     assert.equal(state.texture, null);
   });
 
+  test("refuses to serialize before a document is loaded", () => {
+    const state = new VoxelModelState();
+
+    assert.throws(
+      () => state.toJSON(),
+      InvalidVoxelModelDocumentError
+    );
+  });
+
   test("round-trips through the document codec", () => {
     const state = new VoxelModelState();
     state.load(createVoxelModelDocument({ texture: kTexture }));
@@ -103,6 +112,13 @@ describe("decodeVoxelModelDocument", () => {
         version: 2,
         nodes: [],
         texture: "tex"
+      })),
+      InvalidVoxelModelDocumentError
+    );
+    assert.throws(
+      () => decodeVoxelModelDocument(encode({
+        version: 2,
+        nodes: []
       })),
       InvalidVoxelModelDocumentError
     );

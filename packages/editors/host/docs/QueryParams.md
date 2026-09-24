@@ -56,10 +56,12 @@ interface HostParams {
   maxFps: number | undefined;
   samples: number | undefined;
   username: string | undefined;
+  offline: boolean;
+  workspace: string | undefined;
 }
 
-HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada");
-// { maxFps: 10, samples: 0, username: "Ada" }
+HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
+// { maxFps: 10, samples: 0, username: "Ada", offline: true, workspace: undefined }
 ```
 
 | Parameter | Field | Accepted values | Used by |
@@ -67,5 +69,7 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada");
 | `max-fps` | `maxFps` | a positive number | [`EditorRuntime.load`](./EditorRuntime.md#loading-a-scene) |
 | `samples` | `samples` | a non-negative integer | [`EditorRuntime.samples`](./EditorRuntime.md#properties) |
 | `username` | `username` | a non-blank string, trimmed | [`rememberQueryUsername`](./EditorSession.md#identity), in dev only |
+| `offline` | `offline` | present, whatever the value | [`bootStandalone`](./mountStandalone.md#offline-fallback) |
+| `workspace` | `workspace` | a non-blank string, trimmed | [`bootStandalone`](./mountStandalone.md#offline-fallback) |
 
-Any other value reads as `undefined`.
+Any other value reads as `undefined`, and an absent `offline` as `false`.

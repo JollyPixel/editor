@@ -13,9 +13,15 @@ import {
   VOXEL_MODEL_DOCUMENT_VERSION
 } from "#src/index.ts";
 
+// CONSTANTS
+const kTexture = {
+  id: "model-texture",
+  kind: "pixelart"
+};
+
 describe("createVoxelModelDocument", () => {
   test("starts with one root block named Block", () => {
-    const document = createVoxelModelDocument();
+    const document = createVoxelModelDocument({ texture: kTexture });
 
     assert.strictEqual(document.version, VOXEL_MODEL_DOCUMENT_VERSION);
     assert.strictEqual(document.nodes.length, 1);
@@ -35,6 +41,7 @@ describe("createVoxelModelDocument", () => {
 
   test("gives each block its own identity", () => {
     const [first, second] = createVoxelModelDocument({
+      texture: kTexture,
       blocks: ["Head", "Torso"]
     }).nodes;
 
@@ -46,19 +53,23 @@ describe("createVoxelModelDocument", () => {
   });
 
   test("creates an empty model when no block is asked for", () => {
-    const document = createVoxelModelDocument({ blocks: [] });
+    const document = createVoxelModelDocument({
+      texture: kTexture,
+      blocks: []
+    });
 
     assert.deepEqual(document.nodes, []);
-    assert.strictEqual(document.texture, undefined);
+  });
+
+  test("copies the texture reference it is given", () => {
+    const document = createVoxelModelDocument({ texture: kTexture });
+
+    assert.deepEqual(document.texture, kTexture);
+    assert.notStrictEqual(document.texture, kTexture);
   });
 
   test("round-trips its blocks and texture reference", () => {
-    const document = createVoxelModelDocument({
-      texture: {
-        id: "model-texture",
-        kind: "pixelart"
-      }
-    });
+    const document = createVoxelModelDocument({ texture: kTexture });
 
     const decoded = decodeVoxelModelDocument(
       encodeVoxelModelDocument(document)

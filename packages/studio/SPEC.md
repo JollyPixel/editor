@@ -215,8 +215,9 @@ Today `HostMessageLaunchSource` waits one second for `jolly-launch` from the
 parent, then falls back to the query string. The shell replaces the race:
 
 1. The editor page posts `{ type: "jolly-ready" }` to its parent as soon as
-   the launch source starts reading, with `*` as target origin since the
-   page does not know its host yet.
+   the launch source starts reading, once per allowed origin (the page's own
+   origin by default), so another origin never learns the page is framed.
+   A `jolly-launch` from an origin outside the list is ignored.
 2. The shell answers with `{ type: "jolly-launch", target }`, addressed to
    its own origin.
 3. The timeout stays as a fallback for a page framed by something else. The
