@@ -17,12 +17,10 @@ import {
   VOXEL_MAP_KIND,
   tilesetAsset
 } from "@jolly-pixel/asset.voxel-map";
+import { DEFAULT_CHUNK_SIZE } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  CHUNK_SIZE,
-  createDefaultTileset
-} from "../../src/boot/worldProject.ts";
+import { createDefaultTileset } from "../../src/boot/worldProject.ts";
 
 // CONSTANTS
 const kTilesetFile = path.join(
@@ -63,7 +61,7 @@ export const test = editorFixture<E2EWorld>({
     const id = await catalog.create(
       `${folder}/world.voxelmap.json`,
       createVoxelMapDocument({
-        chunkSize: CHUNK_SIZE,
+        chunkSize: DEFAULT_CHUNK_SIZE,
         tileset: {
           ...tileset.definition,
           asset: tilesetAsset(tilesetId)

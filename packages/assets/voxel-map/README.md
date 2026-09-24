@@ -26,11 +26,11 @@ using eventStore = await EventStore.persistence.sqlite(
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
-  handlers: [voxelMapAssetKind({ chunkSize: 16 })]
+  handlers: [voxelMapAssetKind()]
 });
 ```
 
-The default `chunkSize` is 16. The handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy.
+The default `chunkSize` is 16. A map saved with another chunk size still loads, and is saved back with the handler's. The handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy.
 
 ### Connect a world
 

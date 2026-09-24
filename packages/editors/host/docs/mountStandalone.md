@@ -192,7 +192,7 @@ import { mountStandalone } from "@jolly-pixel/editor.host";
 const { openSharedTabWorkspace } =
   await import("@jolly-pixel/editor.host/offline");
 const workspace = await openSharedTabWorkspace({
-  handlers: [voxelMapAssetKind({ chunkSize: 16 })],
+  handlers: [voxelMapAssetKind()],
   seed: {
     "maps/scratch.voxelmap.json": {
       id: crypto.randomUUID(),

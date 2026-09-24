@@ -27,6 +27,9 @@ const engine = new VoxelEngine({
 engine.load(document);
 ```
 
+Passing `document.chunkSize` keeps the saved chunk layout. An engine with
+another chunk size loads the document too, and re-partitions its voxels.
+
 Every referenced tileset must be registered by the time `load()` applies the
 document. A document carrying block definitions replaces the registry with
 them, so a saved shape survives the load. A document without any leaves the

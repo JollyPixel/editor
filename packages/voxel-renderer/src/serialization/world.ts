@@ -1,8 +1,5 @@
 // Import Internal Dependencies
 import { parseVoxelDocument } from "./document.ts";
-import {
-  InvalidVoxelDocumentError
-} from "./errors/InvalidVoxelDocumentError.ts";
 import { BlockTextures } from "../blocks/BlockTextures.ts";
 import type { VoxelWorldJSON } from "./types.ts";
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
@@ -59,11 +56,6 @@ export function deserializeVoxelWorld(
   const { blocks, tilesets } = options;
 
   const document = parseVoxelDocument(data);
-  if (document.chunkSize !== world.chunkSize) {
-    throw new InvalidVoxelDocumentError(
-      `chunkSize ${document.chunkSize} does not match the world's ${world.chunkSize}`
-    );
-  }
 
   tilesets?.replace(document.tilesets, document.defaultTileSize);
   if (blocks && document.blocks) {

@@ -29,6 +29,7 @@ import { TilesetList } from "../tileset/TilesetList.ts";
 import type { TilesetDefinition } from "../tileset/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
 import { VoxelWorld } from "../world/VoxelWorld.ts";
+import { DEFAULT_CHUNK_SIZE } from "../world/VoxelChunk.ts";
 import type {
   VoxelApplyOptions,
   VoxelDocumentEvents,
@@ -54,7 +55,7 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     options: VoxelDocumentOptions = {}
   ) {
     const {
-      chunkSize = 16,
+      chunkSize = DEFAULT_CHUNK_SIZE,
       layers = [],
       blocks = [],
       tilesets = [],

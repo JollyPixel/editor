@@ -307,19 +307,31 @@ describe("voxelMapAssetKind", () => {
     });
   });
 
-  test("a document with a mismatched chunk size is refused", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
+  test("a document saved with another chunk size loads", async() => {
+    const source = new VoxelMapState(32);
+    source.world.addLayer("Ground");
+    source.world.setVoxelAt(
+      "Ground",
+      {
+        x: 20,
+        y: 0,
+        z: -3
+      },
+      {
+        blockId: 4,
+        transform: 0
+      }
+    );
+    const handler = voxelMapAssetKind();
     const state = handler.create("asset-1");
-    state.world.addLayer("Ground");
 
-    assert.throws(
-      () => foldAssetEvent(handler, state, documentEvent(new VoxelMapState(8))),
-      /chunkSize 8 does not match/
-    );
-    assert.deepEqual(
-      state.world.getLayers().map((layer) => layer.name),
-      ["Ground"]
-    );
+    foldAssetEvent(handler, state, documentEvent(source));
+
+    assert.equal(state.world.chunkSize, 16);
+    assert.equal(state.world.getVoxelAt({ x: 20, y: 0, z: -3 })?.blockId, 4);
+    const saved = decodeVoxelDocument(await handler.serialize(state));
+    assert.equal(saved.chunkSize, 16);
+    assert.deepEqual(Object.keys(saved.layers[0].voxels), ["20,0,-3"]);
   });
 
   test("serialize round-trips through apply", async() => {

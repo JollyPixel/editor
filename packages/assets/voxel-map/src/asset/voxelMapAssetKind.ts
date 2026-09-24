@@ -5,6 +5,7 @@ import type {
   SnapshotPolicy
 } from "@jolly-pixel/asset-server/kinds";
 import {
+  DEFAULT_CHUNK_SIZE,
   decodeVoxelDocument,
   encodeVoxelDocument
 } from "@jolly-pixel/voxel.renderer";
@@ -24,7 +25,6 @@ import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
-const kDefaultChunkSize = 16;
 /**
  * Uses a slower snapshot cadence for bursty, expensive terrain serialization.
  */
@@ -35,7 +35,8 @@ const kDefaultSnapshot: SnapshotPolicy = {
 
 export interface VoxelMapAssetKindOptions {
   /**
-   * Chunk size used when no document exists.
+   * Chunk size of the server-side world. A document saved with another size
+   * is re-partitioned on load and saved back with this one.
    * @default 16
    */
   chunkSize?: number;
@@ -50,7 +51,7 @@ export function voxelMapAssetKind(
   options: VoxelMapAssetKindOptions = {}
 ): AssetKindHandler<VoxelMapState, VoxelNetworkCommand> {
   const {
-    chunkSize = kDefaultChunkSize,
+    chunkSize = DEFAULT_CHUNK_SIZE,
     snapshot = kDefaultSnapshot,
     conflictResolver
   } = options;

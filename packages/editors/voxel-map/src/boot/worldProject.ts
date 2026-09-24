@@ -16,10 +16,12 @@ import {
   voxelMapAssetKind,
   type TilesetDocument
 } from "@jolly-pixel/asset.voxel-map";
-import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
+import {
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_TILE_SIZE
+} from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
-export const CHUNK_SIZE = 16;
 export const DEFAULT_TILESET_ID = "default";
 const kTilesetUrl = "textures/tileset.png";
 
@@ -48,7 +50,7 @@ export async function createWorldProject(
   return {
     handlers: [
       pixelArtAssetKind({ defaultSize: tileset.size }),
-      voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),
+      voxelMapAssetKind(),
       textureAssetKind()
     ],
     seed: {
@@ -61,7 +63,7 @@ export async function createWorldProject(
         id: crypto.randomUUID(),
         kind: VOXEL_MAP_KIND,
         content: () => createVoxelMapDocument({
-          chunkSize: CHUNK_SIZE,
+          chunkSize: DEFAULT_CHUNK_SIZE,
           tileset: tileset.definition
         })
       }

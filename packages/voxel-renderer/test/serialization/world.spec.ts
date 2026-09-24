@@ -217,15 +217,43 @@ describe("deserializeVoxelWorld", () => {
     );
   });
 
-  it("throws when the chunk size differs from the world", () => {
+  it("re-partitions a document saved with another chunk size", () => {
+    const voxels = {
+      "0,0,0": { block: 1, transform: 0 },
+      "7,0,0": { block: 2, transform: 0 },
+      "8,0,0": { block: 3, transform: 0 },
+      "15,9,-1": { block: 4, transform: 0 },
+      "16,0,0": { block: 5, transform: 0 }
+    };
     const world = new VoxelWorld(16);
 
-    assert.throws(
-      () => deserializeVoxelWorld(
-        { version: 1, chunkSize: 8, tilesets: [], layers: [] },
-        world
-      ),
-      /chunkSize 8 does not match the world's 16/
+    deserializeVoxelWorld(
+      untrusted({
+        version: 1,
+        chunkSize: 8,
+        tilesets: [],
+        layers: [{
+          id: "l1",
+          name: "Ground",
+          visible: true,
+          order: 0,
+          voxels
+        }]
+      }),
+      world
+    );
+
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.equal(layer.voxelCount, 5);
+    assert.equal(layer.chunkCount, 3);
+    assert.equal(world.getVoxelAt({ x: 15, y: 9, z: -1 })?.blockId, 4);
+
+    const json = serializeVoxelWorld(world);
+    assert.equal(json.chunkSize, 16);
+    assert.deepEqual(
+      Object.keys(json.layers[0].voxels).sort(),
+      Object.keys(voxels).sort()
     );
   });
 
@@ -345,7 +373,7 @@ describe("deserializeVoxelWorld", () => {
     assert.throws(() => deserializeVoxelWorld(
       {
         version: 1,
-        chunkSize: 8,
+        chunkSize: 0,
         tilesets: [],
         blocks: [resolveBlockDefinition(makeBlockDef(7, "cube"))],
         layers: []

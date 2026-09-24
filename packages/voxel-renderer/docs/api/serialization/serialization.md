@@ -85,9 +85,10 @@ function deserializeVoxelWorld(
 ```
 
 The function validates `data`, then replaces the world's voxel and object
-layers. It throws `InvalidVoxelDocumentError` when the document is malformed or
-its chunk size differs from the target world. The target is left unchanged on
-those failures.
+layers. It throws `InvalidVoxelDocumentError` when the document is malformed,
+and leaves the target unchanged. Voxel keys are layer coordinates, so a document
+saved with another `chunkSize` loads into the world's own chunks; serializing
+the world again writes the world's `chunkSize`.
 
 `options.tilesets` is replaced with the document's tilesets and
 `defaultTileSize`. When both `blocks` and `tilesets` are supplied, tile
