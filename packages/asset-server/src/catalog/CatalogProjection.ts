@@ -15,6 +15,7 @@ import {
   DependencyIndex,
   type DependencyMap
 } from "./client/DependencyIndex.ts";
+import { liveDependents } from "./client/liveDependents.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_CREATED,
@@ -130,6 +131,12 @@ export class CatalogProjection extends Emitter<
     assetId: string
   ): readonly string[] {
     return this.#dependencies.dependentsOf(assetId);
+  }
+
+  liveDependentsOf(
+    assetId: string
+  ): AssetRecord[] {
+    return liveDependents(this, assetId);
   }
 
   closureOf(

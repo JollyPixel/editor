@@ -113,13 +113,9 @@ export class AssetImportPlan {
     }
 
     const dependents = catalog
-      .dependentsOf(asset.id)
-      .filter((assetId) => !archived.has(assetId))
-      .flatMap((assetId) => {
-        const dependent = catalog.record(assetId);
-
-        return dependent === undefined ? [] : [archiveEntryOf(dependent)];
-      });
+      .liveDependentsOf(asset.id)
+      .filter((dependent) => !archived.has(dependent.id.value))
+      .map((dependent) => archiveEntryOf(dependent));
     if (dependents.length > 0) {
       this.#sharedDependents.push({
         ...current,

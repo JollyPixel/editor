@@ -3,35 +3,18 @@ import "@jolly-pixel/ui";
 import { PIXEL_ART_ASSET } from "@jolly-pixel/asset.pixel-art";
 import { VOXEL_MAP_ASSET } from "@jolly-pixel/asset.voxel-map";
 import { VOXEL_MODEL_ASSET } from "@jolly-pixel/asset.voxel-model";
-import {
-  CATALOG_ROOM,
-  CatalogClient,
-  catalogRoom
-} from "@jolly-pixel/asset-server/catalog/client";
-import {
-  HOST_PARAMS,
-  IDENTITY_STORAGE_KEY,
-  offerOffline,
-  rememberQueryUsername
-} from "@jolly-pixel/editor.host";
-import { Client } from "@jolly-pixel/network/client";
-import {
-  promptPeerIdentity,
-  showConfirm
-} from "@jolly-pixel/ui";
-import { toPeerMetadata } from "@jolly-pixel/ui/network";
+import { rememberQueryUsername } from "@jolly-pixel/editor.host";
+import { showConfirm } from "@jolly-pixel/ui";
 import editors from "virtual:jolly-pixel/editors";
 
 // Import Internal Dependencies
+import { connectStudio } from "./connection.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
 import "./icons.ts";
 import type { Studio } from "./shell/Studio.ts";
 import "./shell/Studio.ts";
 
 // CONSTANTS
-const kIdentityTitle = "Join studio";
-const kCatalogTimeoutMs = 5_000;
-const kOfflineWorkspace = "studio";
 const kAssetKinds = [
   PIXEL_ART_ASSET,
   VOXEL_MAP_ASSET,
@@ -59,15 +42,11 @@ async function boot(): Promise<void> {
   if (import.meta.env.DEV) {
     rememberQueryUsername();
   }
-  const offline = import.meta.env.MODE === "static" ||
-    HOST_PARAMS.read().offline;
-  const connection = offline ?
-    await connectOffline() :
-    await connectWithOffer();
+  const connection = await connectStudio();
   const studio = required("jolly-studio");
   await studio.attach({
     catalog: connection.catalog,
-    editors: createEditorRegistry(connection.offline),
+    editors: createEditorRegistry(connection.editorQuery),
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",
       message: `Close "${tab.label}" to open another editor?`,
@@ -81,16 +60,9 @@ async function boot(): Promise<void> {
 }
 
 function createEditorRegistry(
-  offline: boolean
+  query: Readonly<Record<string, string>>
 ): EditorRegistry {
-  const registry = new EditorRegistry({
-    query: offline ?
-      {
-        offline: "",
-        workspace: kOfflineWorkspace
-      } :
-      {}
-  });
+  const registry = new EditorRegistry({ query });
   for (const descriptor of kAssetKinds) {
     registry.registerKind(descriptor);
   }
@@ -99,83 +71,6 @@ function createEditorRegistry(
   }
 
   return registry;
-}
-
-interface StudioConnection {
-  catalog: CatalogClient;
-  offline: boolean;
-}
-
-async function connectOnline(): Promise<StudioConnection> {
-  const identity = await promptPeerIdentity({
-    title: kIdentityTitle,
-    storageKey: IDENTITY_STORAGE_KEY
-  });
-  const client = new Client({
-    profile: toPeerMetadata(identity)
-  });
-  const catalog = new CatalogClient(catalogRoom(client));
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    await Promise.race([
-      catalog.ready,
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () => reject(new Error("The asset catalog is unavailable.")),
-          kCatalogTimeoutMs
-        );
-      })
-    ]);
-  }
-  catch (error) {
-    catalog.dispose();
-    client.destroy();
-
-    throw error;
-  }
-  finally {
-    clearTimeout(timer);
-  }
-
-  return { catalog, offline: false };
-}
-
-async function connectOffline(): Promise<StudioConnection> {
-  const { openStudioOfflineWorkspace } =
-    await import("./offlineWorkspace.ts");
-  const workspace = await openStudioOfflineWorkspace();
-  const connection = workspace.connect();
-  const catalog = new CatalogClient(
-    connection.client.room(CATALOG_ROOM)
-  );
-  try {
-    await catalog.ready;
-  }
-  catch (error) {
-    catalog.dispose();
-    connection.client.destroy();
-
-    throw error;
-  }
-
-  return { catalog, offline: true };
-}
-
-async function connectWithOffer(): Promise<StudioConnection> {
-  for (;;) {
-    try {
-      return await connectOnline();
-    }
-    catch (error) {
-      const choice = await offerOffline("The asset catalog is unreachable.");
-      if (choice === "offline") {
-        return connectOffline();
-      }
-      if (choice === null) {
-        throw error;
-      }
-    }
-  }
 }
 
 void boot();

@@ -165,6 +165,20 @@ with the workspace's launch sources and connection.
 for a page that connects without `mountStandalone`. It resolves `"retry"`,
 `"offline"`, or `null` when cancelled.
 
+`withOfflineFallback` runs that same loop for any connection:
+
+```ts
+function withOfflineFallback<TValue>(options: {
+  message: string;
+  online: () => Promise<TValue>;
+  offline: () => Promise<TValue>;
+}): Promise<TValue>;
+```
+
+It retries `online` on Retry and switches to `offline` on Open offline
+workspace. Only `CatalogUnavailableError` and `LaunchNotFoundError` show the
+dialog; any other error, or cancelling it, is rethrown.
+
 ## Offline
 
 `@jolly-pixel/editor.host/offline` runs the asset back-end inside the page. The

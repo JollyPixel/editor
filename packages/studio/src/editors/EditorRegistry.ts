@@ -8,6 +8,10 @@ import {
 
 // Import Internal Dependencies
 import {
+  AssetKindSet,
+  type AssetKindEntry
+} from "../catalog/AssetKindSet.ts";
+import {
   EDITOR_PAGES_PREFIX,
   type EditorDescriptor
 } from "./EditorDescriptor.ts";
@@ -15,7 +19,6 @@ import {
 // CONSTANTS
 const kTargetParam = "target";
 const kKindIconPrefix = "kind:";
-const kFallbackIcon: IconName = "file";
 
 export interface EditorRegistryOptions {
   /**
@@ -29,11 +32,11 @@ export interface EditorRegistryOptions {
 }
 
 /**
- * Resolves the icon and the editor page of an asset kind. Registering a
- * kind twice, or a kind in two editors, throws.
+ * Resolves the editor page of an asset kind. Registering a kind twice, or a
+ * kind in two editors, throws.
  */
 export class EditorRegistry {
-  #kinds = new Map<string, AssetKindDescriptor>();
+  #kinds = new Map<string, AssetKindEntry>();
   #editors = new Map<string, EditorDescriptor>();
   #query: Readonly<Record<string, string>>;
   #prefix: string;
@@ -59,10 +62,15 @@ export class EditorRegistry {
       );
     }
 
+    const name: IconName = `${kKindIconPrefix}${kind}`;
     if (icon !== undefined) {
-      registerIcon(`${kKindIconPrefix}${kind}`, icon.svg, { tone });
+      registerIcon(name, icon.svg, { tone });
     }
-    this.#kinds.set(kind, { ...descriptor });
+    this.#kinds.set(kind, {
+      kind,
+      label: descriptor.label,
+      icon: icon === undefined ? undefined : name
+    });
 
     return this;
   }
@@ -90,18 +98,11 @@ export class EditorRegistry {
     return this;
   }
 
-  kinds(): AssetKindDescriptor[] {
-    return [...this.#kinds.values()].map((descriptor) => {
-      return { ...descriptor };
+  kindSet(): AssetKindSet {
+    return new AssetKindSet({
+      kinds: this.#kinds.values(),
+      editable: this.#editors.keys()
     });
-  }
-
-  iconFor(
-    kind: string
-  ): IconName {
-    return this.#kinds.get(kind)?.icon === undefined ?
-      kFallbackIcon :
-      `${kKindIconPrefix}${kind}`;
   }
 
   editorFor(

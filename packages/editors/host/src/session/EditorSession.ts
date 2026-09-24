@@ -2,9 +2,8 @@
 import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
-  CATALOG_ROOM,
-  CatalogClient,
-  CatalogSessionArchive
+  CatalogSessionArchive,
+  type CatalogClient
 } from "@jolly-pixel/asset-server/catalog/client";
 import * as network from "@jolly-pixel/network/client";
 import {
@@ -27,11 +26,13 @@ import type {
 } from "../lease/AssetLease.ts";
 import type { SessionArchive } from "./SessionArchive.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
-import { CatalogUnavailableError } from "./errors/CatalogUnavailableError.ts";
+import {
+  CATALOG_TIMEOUT_MS,
+  openCatalog
+} from "./openCatalog.ts";
 
 // CONSTANTS
 export const IDENTITY_STORAGE_KEY = "jolly-pixel:username";
-const kCatalogTimeoutMs = 5_000;
 
 export type EditorSessionEvents = {
   "dependency-added": (dependency: AssetDependency) => void;
@@ -87,7 +88,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       client: new network.Client({
         profile: toPeerMetadata(identity)
       }),
-      catalogTimeoutMs: kCatalogTimeoutMs
+      catalogTimeoutMs: CATALOG_TIMEOUT_MS
     });
   }
 
@@ -95,21 +96,13 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     options: EditorSessionConnectOptions
   ): Promise<EditorSession> {
     const { client } = options;
-    const catalog = new CatalogClient(
-      client.room(CATALOG_ROOM)
+    const catalog = await openCatalog(
+      client,
+      options.catalogTimeoutMs
     );
 
     let session: EditorSession;
     try {
-      if (options.catalogTimeoutMs === undefined) {
-        await catalog.ready;
-      }
-      else {
-        await catalogReadyWithin(
-          catalog.ready,
-          options.catalogTimeoutMs
-        );
-      }
       session = new EditorSession({
         ...options,
         catalog
@@ -312,26 +305,5 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
         this.emit("dependency-added", dependency.view);
       }
     }
-  }
-}
-
-async function catalogReadyWithin(
-  ready: Promise<void>,
-  timeoutMs: number
-): Promise<void> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    await Promise.race([
-      ready,
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () => reject(new CatalogUnavailableError()),
-          timeoutMs
-        );
-      })
-    ]);
-  }
-  finally {
-    clearTimeout(timer);
   }
 }

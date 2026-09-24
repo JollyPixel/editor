@@ -39,6 +39,7 @@ import {
   DependencyIndex,
   type DependencyMap
 } from "./DependencyIndex.ts";
+import { liveDependents } from "./liveDependents.ts";
 
 export interface CatalogRoom {
   on(
@@ -129,6 +130,12 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     assetId: string
   ): readonly string[] {
     return this.#dependencies.dependentsOf(assetId);
+  }
+
+  liveDependentsOf(
+    assetId: string
+  ): AssetRecordData[] {
+    return liveDependents(this, assetId);
   }
 
   closureOf(

@@ -112,8 +112,10 @@ describe("AssetTreeModel", () => {
 
   test("resolves icons and details per kind", () => {
     const model = new AssetTreeModel(kRecords, {
-      iconFor: (kind) => (kind === "voxelmap" ? "map" : undefined),
-      detailFor: (kind) => (kind === "binary" ? "no editor" : undefined)
+      presenter: {
+        iconFor: (kind) => (kind === "voxelmap" ? "map" : undefined),
+        detailFor: (kind) => (kind === "binary" ? "no editor" : undefined)
+      }
     });
 
     assert.equal(model.node(assetNodeId("map-1"))?.icon, "map");

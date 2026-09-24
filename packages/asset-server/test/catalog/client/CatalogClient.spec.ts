@@ -347,4 +347,29 @@ describe("CatalogClient — dependencies", () => {
     assert.deepEqual(emitted, ["map"]);
     assert.deepEqual(client.dependentsOf("a"), []);
   });
+
+  test("liveDependentsOf lists only the dependents with a record", () => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    room.receive({
+      type: CATALOG_SNAPSHOT,
+      manifest: { version: 1, assets: [] },
+      dependencies: {
+        map: [reference("a")]
+      }
+    });
+
+    assert.deepEqual(client.dependentsOf("a"), ["map"]);
+    assert.deepEqual(client.liveDependentsOf("a"), []);
+
+    changed(room, "map", [reference("a")]);
+
+    assert.deepEqual(client.liveDependentsOf("a"), [
+      {
+        id: "map",
+        kind: "voxelmap",
+        source: "map.voxelmap.json"
+      }
+    ]);
+  });
 });

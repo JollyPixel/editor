@@ -50,6 +50,12 @@ snapshot, then throws `CatalogUnavailableError` and destroys its client.
 `EditorSession.connect()` accepts `catalogTimeoutMs` for supplied clients;
 without it, the caller owns connection liveness.
 
+A page that needs the catalog without a session calls
+`openCatalog(client, timeoutMs?)` instead. It resolves once the snapshot
+lands. On failure or timeout it disposes the catalog, destroys the client and
+rethrows (`CatalogUnavailableError` on timeout). `CATALOG_TIMEOUT_MS` is the
+five-second timeout `open()` uses.
+
 `targetLease(kind)` returns that same document as a typed, refcounted
 [`AssetLease`](./AssetLeases.md). It adds a holder, so release it when the
 editor is disposed:

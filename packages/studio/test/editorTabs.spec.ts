@@ -281,6 +281,27 @@ describe("EditorTabs", () => {
     assert.equal(tabs.active, "model-1");
   });
 
+  test("concurrent opens during an eviction stay within the cap", async() => {
+    const pending: Array<(confirmed: boolean) => void> = [];
+    const { tabs, itemValues } = harness({
+      cap: 1,
+      confirmEvict: () => new Promise((resolve) => {
+        pending.push(resolve);
+      })
+    });
+    await tabs.open(kMap);
+
+    const first = tabs.open(kModel);
+    const second = tabs.open(kModel);
+    for (const resolve of pending) {
+      resolve(true);
+    }
+
+    assert.deepEqual(await Promise.all([first, second]), [true, true]);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "model-1"]);
+    assert.equal(tabs.size, 1);
+  });
+
   test("follows the strip's change and close events", async() => {
     const { tabs, strip } = harness();
     await tabs.open(kMap);

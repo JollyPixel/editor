@@ -34,6 +34,7 @@ The projection also indexes which assets reference which. Edges come from the
 ```ts
 projection.dependenciesOf(assetId): readonly AssetReferenceData[];
 projection.dependentsOf(assetId): readonly string[];
+projection.liveDependentsOf(assetId): AssetRecord[];
 projection.closureOf(assetId): AssetReferenceData[];
 projection.dependenciesFirst(starts: Iterable<AssetReferenceData>): AssetReferenceData[];
 projection.dependencies(): DependencyMap;
@@ -44,6 +45,7 @@ projection.unindexed(): IterableIterator<string>;
   deletion drops them.
 - Edges pointing at a deleted asset stay, so `dependentsOf` still lists the
   assets that reference it.
+- `liveDependentsOf` keeps only the dependents that still have a record.
 - `closureOf` walks edges transitively, breadth first. Each asset is listed
   once, cycles terminate, and the root is never listed.
 - `dependenciesFirst` lists `starts` and everything they reach, each asset
@@ -158,14 +160,14 @@ See [Deleted assets](./Rooms.md#deleted-assets).
 
 ### Delete protection
 
-`catalog:delete` is refused when [`dependentsOf`](#dependency-edges) still
-lists a live asset, and the `reason` names up to three of them by path. A
+`catalog:delete` is refused when [`liveDependentsOf`](#dependency-edges)
+lists an asset, and the `reason` names up to three of them by path. A
 client that warned its user resends the command with `force: true`, which
 skips the check. The `catalogDeleteProtection` backend option turns the whole
 check off.
 
-A client warns without a round trip: `CatalogClient.dependentsOf` reads the
-same index. Deleting a folder is one command per asset, so a caller either
+A client warns without a round trip: `CatalogClient.liveDependentsOf` applies the
+same rule. Deleting a folder is one command per asset, so a caller either
 deletes dependents first or forces each command.
 
 Only the room command is guarded.
@@ -235,6 +237,7 @@ interface CatalogImportOptions {
 | `planImport(archive)` | Resolves the `ImportPlan`, writing nothing. |
 | `importArchive(archive, { onConflict })` | Resolves the `ImportReport`. |
 | `dependenciesOf(assetId)` / `dependentsOf(assetId)` / `closureOf(assetId)` | [Dependency edges](#dependency-edges), kept in sync with the room. |
+| `liveDependentsOf(assetId)` | The dependents that still have a record, as `AssetRecordData`; the assets delete protection counts. |
 | `dispose()` | Leaves the room and rejects pending requests. |
 | `"change"` event | Emitted after the snapshot and each change. |
 | `"dependencies"` event | Receives an asset ID whose outgoing edges changed. |
