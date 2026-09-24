@@ -97,9 +97,9 @@ whenever the `MapDocument` reports `tilesetsChanged` (a tileset command or a
 world reset) or the catalog changes. `TilesetActions` edits it through the engine, which publishes the
 change to the world room.
 
-A tileset is a `pixelart` asset. Its definition's `src` holds the asset id;
-an older `src` matching a pixel-art record's source path also resolves. A
-definition that resolves to no asset is unlinked: its name is
+A tileset is a `pixelart` asset. Its definition links it through
+`asset.id`; `src` is not used to resolve it, so a definition with only a `src`
+loads unlinked. A definition that resolves to no asset is unlinked: its name is
 read-only, and when it has no source image to open it keeps a disabled texture
 tab that cannot be painted but can still be edited and removed. The definition `id` is an internal key that
 blocks reference, and the label shown everywhere is the asset's file name.

@@ -37,12 +37,12 @@ textures/block.pixelart
 ```json
 {
   "version": 1,
-  "root": { "id": "…", "kind": "voxel-map" },
+  "root": { "id": "…", "kind": "voxelmap" },
   "assets": [
-    { "id": "…", "kind": "pixel-art", "path": "textures/block.pixelart" },
-    { "id": "…", "kind": "voxel-map", "path": "maps/overworld.voxelmap.json" }
+    { "id": "…", "kind": "pixelart", "path": "textures/block.pixelart" },
+    { "id": "…", "kind": "voxelmap", "path": "maps/overworld.voxelmap.json" }
   ],
-  "missing": [{ "id": "…", "kind": "pixel-art" }]
+  "missing": [{ "id": "…", "kind": "pixelart" }]
 }
 ```
 
