@@ -12,5 +12,7 @@ import {
 const kTilesetFile = path.join(import.meta.dirname, "tileset.png");
 
 export async function readStudioProject(): Promise<StudioProject> {
-  return createStudioProject(await fs.readFile(kTilesetFile));
+  return createStudioProject(
+    await fs.readFile(kTilesetFile)
+  );
 }

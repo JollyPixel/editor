@@ -1,8 +1,5 @@
 declare module "virtual:jolly-pixel/editors" {
-  const editors: readonly {
-    name: string;
-    kinds: readonly string[];
-  }[];
+  const editors: readonly import("./EditorDescriptor.ts").EditorDescriptor[];
 
   export default editors;
 }
