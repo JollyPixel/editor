@@ -28,6 +28,8 @@ export {
 export * from "./runtime/PeerFrustums.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";
+export * from "./editor/bootStandalone.ts";
+export * from "./editor/offerOffline.ts";
 export * from "./debug/readDebugLogger.ts";
 export * from "./params/QueryParams.ts";
 export * from "./params/HostParams.ts";

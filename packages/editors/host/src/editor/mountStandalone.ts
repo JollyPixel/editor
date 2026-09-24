@@ -63,7 +63,9 @@ export interface MountStandaloneOptions {
   logger?: HostLogger;
 }
 
-export async function mountStandalone<THandle extends EditorHandle>(
+export async function mountStandalone<
+  THandle extends EditorHandle
+>(
   definition: EditorDefinition<THandle>,
   options: MountStandaloneOptions = {}
 ): Promise<THandle> {

@@ -110,6 +110,61 @@ by default. It applies to the default launch sources only; see
 [Shell channel](#shell-channel). `logger` replaces the logger read by
 `readDebugLogger()`.
 
+## Offline fallback
+
+`bootStandalone` is the entry point of an editor that can also run offline.
+It mounts online through `mountStandalone`, and mounts on an in-page
+workspace when asked to or when the asset server cannot be reached.
+
+```ts
+void bootStandalone(VoxelMapEditor, {
+  dev: import.meta.env.DEV,
+  debugHandle: "voxelMapEditor",
+  forceOffline: import.meta.env.MODE === "static",
+  offline: async() => {
+    const { loadWorldProject } = await import("./boot/worldProject.ts");
+
+    return loadWorldProject();
+  }
+});
+```
+
+```ts
+function bootStandalone<THandle extends EditorHandle>(
+  definition: EditorDefinition<THandle>,
+  options: BootStandaloneOptions
+): Promise<THandle>;
+
+interface BootStandaloneOptions
+  extends Omit<MountStandaloneOptions, "connect"> {
+  offline: () => OfflineProject | Promise<OfflineProject>;
+  forceOffline?: boolean;
+}
+
+type OfflineProject = Pick<OfflineWorkspaceOptions, "handlers" | "seed">;
+```
+
+| Option | Role |
+|---|---|
+| `offline` | the handlers and seed of the in-page workspace; called only once the editor goes offline, so import them dynamically |
+| `forceOffline` | skips the server; pass `import.meta.env.MODE === "static"` for a static build |
+| `sources` | replaces the launch sources of the online attempt only |
+
+The editor goes offline straight away when `forceOffline` is set or the page
+has the `offline` [query parameter](./QueryParams.md#host-parameters).
+Otherwise, when the online mount throws `CatalogUnavailableError` or
+`LaunchNotFoundError`, `offerOffline` asks the user to retry or to open the
+offline workspace, and cancelling rethrows the error. Any other error is
+rethrown without asking.
+
+Offline, `openSharedTabWorkspace` opens the workspace named by the
+`workspace` query parameter (`"default"` without it), and the editor mounts
+with the workspace's launch sources and connection.
+
+`offerOffline(message)` shows the Retry / Open offline workspace dialog alone,
+for a page that connects without `mountStandalone`. It resolves `"retry"`,
+`"offline"`, or `null` when cancelled.
+
 ## Offline
 
 `@jolly-pixel/editor.host/offline` runs the asset back-end inside the page. The

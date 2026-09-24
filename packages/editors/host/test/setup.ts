@@ -43,5 +43,8 @@ Object.assign(globalThis, {
   EventTarget: kEmulatedBrowserWindow.EventTarget,
   KeyboardEvent: kEmulatedBrowserWindow.KeyboardEvent,
   PointerEvent: kEmulatedBrowserWindow.PointerEvent,
-  MouseEvent: kEmulatedBrowserWindow.MouseEvent
+  MouseEvent: kEmulatedBrowserWindow.MouseEvent,
+  getComputedStyle: kEmulatedBrowserWindow.getComputedStyle.bind(
+    kEmulatedBrowserWindow
+  )
 });

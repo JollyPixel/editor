@@ -9,21 +9,11 @@ import {
 } from "@jolly-pixel/asset-server/plugins/vite.ts";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
-import {
-  PIXEL_ART_KIND,
-  pixelArtAssetKind
-} from "@jolly-pixel/asset.pixel-art";
-import {
-  VOXEL_MODEL_KIND,
-  voxelModelAssetKind
-} from "@jolly-pixel/asset.voxel-model";
+import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
 import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import {
-  TEXTURE_SIZE,
-  encodeModelDocument
-} from "./vite/modelSeed.ts";
+import { createModelProject } from "./src/boot/modelProject.ts";
 
 // CONSTANTS
 const kE2EMode = "e2e";
@@ -53,19 +43,7 @@ export default defineConfig(({ mode }) => {
             eventStore: EventStore.persistence.memory()
           } :
           {}),
-        handlers: [
-          voxelModelAssetKind(),
-          pixelArtAssetKind({ defaultSize: TEXTURE_SIZE })
-        ],
-        seed: {
-          "textures/model.pixelart": {
-            id: kTextureAssetId,
-            kind: PIXEL_ART_KIND
-          },
-          "models/model.voxelmodel.json": () => encodeModelDocument(
-            kTextureAssetId
-          )
-        },
+        ...createModelProject(kTextureAssetId),
         launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value
       })]
     ],

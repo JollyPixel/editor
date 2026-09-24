@@ -32,26 +32,31 @@ The Map Config folder of the General tab exports the map with its tilesets as on
 
 ## 🧩 Bootstrap
 
-`src/index.ts` hands the editor class to `mountStandalone()` from
+`src/index.ts` hands the editor class to `bootStandalone()` from
 [`@jolly-pixel/editor.host`](../host/README.md), which reads the launch,
 prompts for the identity, opens the `EditorSession` and calls `mount`:
 
 ```ts
-import { mountStandalone } from "@jolly-pixel/editor.host";
+import { bootStandalone } from "@jolly-pixel/editor.host";
 import { VoxelMapEditor } from "./boot/VoxelMapEditor.ts";
 
-await mountStandalone(VoxelMapEditor, {
-  debugHandle: import.meta.env.DEV ? "voxelMapEditor" : undefined
+void bootStandalone(VoxelMapEditor, {
+  dev: import.meta.env.DEV,
+  debugHandle: "voxelMapEditor",
+  forceOffline: import.meta.env.MODE === "static",
+  offline: async() => {
+    const { loadWorldProject } = await import("./boot/worldProject.ts");
+
+    return loadWorldProject();
+  }
 });
 ```
 
 Its static members accept `voxelmap` targets and declare the pixel-art model
 kind, so the session leases every tileset of the map in parallel before the
-editor mounts. `?offline` goes through the same `mountStandalone()` call:
-`src/boot/offlineWorkspace.ts`, loaded on demand, opens an IndexedDB-backed
-`StandaloneWorkspace` from `@jolly-pixel/editor.host/offline`, seeds it with the
-default tileset and map under random ids when it is empty, and hands its
-launch sources and local connection to the host.
+editor mounts. Offline, the host opens an IndexedDB-backed workspace, seeds it
+with the project of `loadWorldProject()` when it is empty, and mounts the same
+editor on it.
 
 `VoxelMapEditor.mount()` creates the `EditorState`, boots the runtime through
 `EditorRuntime`, builds the `EditorScene` on the target room and mounts the
@@ -70,8 +75,8 @@ The pieces live under `src/boot/`:
 | Export | Responsibility |
 |---|---|
 | `EditorShell` | Wires `jolly-log` to the state, then attaches the workspace to the panels and the brush toolbar. |
-| `worldSeed` | Encodes the default tileset and map documents, shared by the Vite seed and the offline workspace. |
-| `openOfflineWorkspace` | Fetches `textures/tileset.png` and opens the persisted in-page workspace behind `?offline`. |
+| `createWorldProject` | Builds the asset handlers and the seed (default tileset and map), shared by the Vite seed and the offline workspace. |
+| `loadWorldProject` | Fetches `textures/tileset.png` and builds the offline project under a random tileset id. |
 
 `MapArchives` (`src/features/map-config/`) adapts the session's `archive` and
 `workspace` ports for `map-config-panel`: the download name comes from the
