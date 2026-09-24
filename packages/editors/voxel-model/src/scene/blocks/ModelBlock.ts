@@ -3,14 +3,15 @@ import * as THREE from "three";
 import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
+import { BlockNode } from "./BlockNode.ts";
 import { PivotMarker } from "./PivotMarker.ts";
+import { RenderOrder } from "../renderOrder.ts";
 import { plainVector3 } from "./plainVector3.ts";
 
 // CONSTANTS
 const kTransformRoundDecimals = 2;
 const kDefaultEmphasisOwner = "default";
 const kLocalPivotOwner = "local";
-const kSelectionGhostRenderOrder = 1000;
 const kSelectionGhostOpacity = 1;
 export const SELECTION_HIGHLIGHT_COLOR = 0xff00ff;
 
@@ -29,11 +30,11 @@ export interface ModelBlockOptions {
 type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
 export class ModelBlock {
-  readonly root = new THREE.Group();
-  readonly pivot = new THREE.Group();
+  readonly node = new BlockNode();
   readonly mesh: BlockMesh;
 
   #size: THREE.Vector3;
+  #pivotOffset = new THREE.Vector3();
   #pivotMarker = new PivotMarker();
   #selectionTextureGhost: BlockMesh | null = null;
 
@@ -52,49 +53,44 @@ export class ModelBlock {
       uuid
     } = options;
 
-    this.root.position.copy(position);
-    if (uuid !== undefined) {
-      this.root.uuid = uuid;
-    }
-
-    this.pivot.position.copy(pivotOffset);
+    this.node.position.copy(position);
+    this.node.scale.copy(scale);
     if (rotation !== undefined) {
-      this.pivot.rotation.copy(rotation);
+      this.node.rotation.copy(rotation);
     }
-    this.root.add(this.pivot);
+    if (uuid !== undefined) {
+      this.node.uuid = uuid;
+    }
+    this.node.name = name ?? "";
 
     this.#size = size.clone();
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(size.x, size.y, size.z),
       new THREE.MeshBasicMaterial({
         color,
-        transparent: true,
         alphaTest: 0.01,
         side: THREE.DoubleSide,
         map: texture
       })
     );
-    this.mesh.position.copy(pivotOffset).negate();
-    this.mesh.scale.copy(scale);
-    this.mesh.name = name || `mesh_${this.root.uuid}`;
-    this.root.name = name ?? "";
+    this.mesh.name = name || `mesh_${this.node.uuid}`;
+    this.moveBoxAroundPivot(pivotOffset);
 
-    this.pivot.add(this.mesh);
-    this.pivot.add(this.#pivotMarker.object);
+    this.node.add(this.mesh, this.#pivotMarker.object);
   }
 
   get uuid(): string {
-    return this.root.uuid;
+    return this.node.uuid;
   }
 
   get name(): string {
-    return this.root.name;
+    return this.node.name;
   }
 
   set name(
     value: string
   ) {
-    this.root.name = value;
+    this.node.name = value;
   }
 
   get pivotMarkerVisible(): boolean {
@@ -129,43 +125,47 @@ export class ModelBlock {
   }
 
   get position(): THREE.Vector3 {
-    return this.root.position.clone();
+    return this.node.position.clone();
   }
 
   set position(
     position: THREE.Vector3
   ) {
-    this.root.position.copy(position);
+    this.node.position.copy(position);
   }
 
   get worldPosition(): THREE.Vector3 {
-    return this.root.getWorldPosition(new THREE.Vector3());
+    return this.node.getWorldPosition(new THREE.Vector3());
   }
 
   set worldPosition(
     position: THREE.Vector3
   ) {
-    this.root.position.copy(toParentSpace(this.root, position));
+    this.node.position.copy(
+      this.node.parent ?
+        this.node.parent.worldToLocal(position.clone()) :
+        position
+    );
   }
 
   get rotation(): THREE.Euler {
-    return this.pivot.rotation.clone();
+    return this.node.rotation.clone();
   }
 
   set rotation(
     rotation: THREE.Euler
   ) {
-    this.pivot.rotation.copy(rotation);
+    this.node.rotation.copy(rotation);
   }
 
   get worldRotation(): THREE.Euler {
-    const quaternion = this.pivot.getWorldQuaternion(
+    const quaternion = this.node.getWorldQuaternion(
       new THREE.Quaternion()
     );
 
     return new THREE.Euler().setFromQuaternion(
       quaternion,
-      this.pivot.rotation.order
+      this.node.rotation.order
     );
   }
 
@@ -173,45 +173,60 @@ export class ModelBlock {
     rotation: THREE.Euler
   ) {
     const quaternion = new THREE.Quaternion().setFromEuler(rotation);
-    if (this.pivot.parent) {
-      const parentQuaternion = this.pivot.parent.getWorldQuaternion(
+    if (this.node.parent) {
+      const parentQuaternion = this.node.parent.getWorldQuaternion(
         new THREE.Quaternion()
       );
       quaternion.premultiply(parentQuaternion.invert());
     }
 
-    this.pivot.quaternion.copy(quaternion);
+    this.node.quaternion.copy(quaternion);
   }
 
   get scale(): THREE.Vector3 {
-    return this.mesh.scale.clone();
+    return this.node.scale.clone();
   }
 
   set scale(
     scale: THREE.Vector3
   ) {
-    this.mesh.scale.copy(scale);
+    this.node.scale.copy(scale);
+  }
+
+  get effectiveScale(): THREE.Vector3 {
+    return new THREE.Vector3().copy(this.node.effectiveScale);
   }
 
   get pivotOffset(): THREE.Vector3 {
-    return this.pivot.position.clone();
+    return this.#pivotOffset.clone();
   }
 
-  set pivotOffset(
+  moveBoxAroundPivot(
     offset: THREE.Vector3
-  ) {
-    this.pivot.position.copy(offset);
-    this.syncMeshToPivot();
+  ): void {
+    this.#pivotOffset.copy(offset);
+    this.#placeMesh();
   }
 
-  get worldPivotOffset(): THREE.Vector3 {
-    return this.pivot.getWorldPosition(new THREE.Vector3());
-  }
-
-  set worldPivotOffset(
+  movePivot(
     offset: THREE.Vector3
-  ) {
-    this.pivotOffset = toParentSpace(this.pivot, offset);
+  ): void {
+    const before = this.mesh.getWorldPosition(new THREE.Vector3());
+    this.moveBoxAroundPivot(offset);
+    const after = this.mesh.getWorldPosition(new THREE.Vector3());
+    this.worldPosition = this.worldPosition.add(before.sub(after));
+  }
+
+  movePivotTo(
+    world: THREE.Vector3
+  ): void {
+    const center = this.mesh.getWorldPosition(new THREE.Vector3());
+    const toNodeSpace = this.node.matrixWorld
+      .clone()
+      .setPosition(0, 0, 0)
+      .invert();
+
+    this.movePivot(center.sub(world).applyMatrix4(toNodeSpace).negate());
   }
 
   get size(): THREE.Vector3 {
@@ -220,11 +235,11 @@ export class ModelBlock {
 
   get transform(): BlockTransformJSON {
     return {
-      position: plainVector3(this.root.position),
-      pivotOffset: plainVector3(this.pivot.position),
+      position: plainVector3(this.node.position),
+      pivotOffset: plainVector3(this.#pivotOffset),
       size: plainVector3(this.#size),
-      scale: plainVector3(this.mesh.scale),
-      rotation: plainVector3(this.pivot.rotation)
+      scale: plainVector3(this.node.scale),
+      rotation: plainVector3(this.node.rotation)
     };
   }
 
@@ -234,7 +249,7 @@ export class ModelBlock {
     const { rotation } = transform;
 
     this.position = new THREE.Vector3().copy(transform.position);
-    this.pivotOffset = new THREE.Vector3().copy(transform.pivotOffset);
+    this.moveBoxAroundPivot(new THREE.Vector3().copy(transform.pivotOffset));
     this.rotation = new THREE.Euler(rotation.x, rotation.y, rotation.z);
     this.scale = new THREE.Vector3().copy(transform.scale);
     this.resize(new THREE.Vector3().copy(transform.size));
@@ -265,23 +280,19 @@ export class ModelBlock {
     this.#pivotMarker.hide(owner);
   }
 
-  syncMeshToPivot(): void {
-    this.mesh.position.copy(this.pivot.position).negate();
-  }
-
   roundTransform(
     decimals: number = kTransformRoundDecimals
   ): void {
-    roundVector(this.root.position, decimals);
-    roundVector(this.pivot.position, decimals);
-    this.pivot.rotation.set(
-      roundAngle(this.pivot.rotation.x, decimals),
-      roundAngle(this.pivot.rotation.y, decimals),
-      roundAngle(this.pivot.rotation.z, decimals)
+    roundVector(this.node.position, decimals);
+    roundVector(this.#pivotOffset, decimals);
+    this.node.rotation.set(
+      roundAngle(this.node.rotation.x, decimals),
+      roundAngle(this.node.rotation.y, decimals),
+      roundAngle(this.node.rotation.z, decimals)
     );
-    roundVector(this.mesh.scale, decimals);
+    roundVector(this.node.scale, decimals);
 
-    this.syncMeshToPivot();
+    this.#placeMesh();
   }
 
   resize(
@@ -315,7 +326,11 @@ export class ModelBlock {
     this.mesh.material.dispose();
     this.#disposeTextureGhost(this.#selectionTextureGhost);
     this.#pivotMarker.dispose();
-    this.root.removeFromParent();
+    this.node.removeFromParent();
+  }
+
+  #placeMesh(): void {
+    this.mesh.position.copy(this.#pivotOffset).negate();
   }
 
   #createTextureGhost(): BlockMesh {
@@ -328,11 +343,11 @@ export class ModelBlock {
         transparent: true,
         opacity: kSelectionGhostOpacity,
         depthTest: false,
-        depthWrite: false
+        depthWrite: true
       })
     );
     ghost.name = "selection-texture-ghost";
-    ghost.renderOrder = kSelectionGhostRenderOrder;
+    ghost.renderOrder = RenderOrder.selectionGhost;
     this.mesh.add(ghost);
 
     return ghost;
@@ -348,15 +363,6 @@ export class ModelBlock {
     this.mesh.remove(ghost);
     ghost.material.dispose();
   }
-}
-
-function toParentSpace(
-  object: THREE.Object3D,
-  worldPoint: THREE.Vector3
-): THREE.Vector3 {
-  return object.parent ?
-    object.parent.worldToLocal(worldPoint.clone()) :
-    worldPoint.clone();
 }
 
 function roundTo(

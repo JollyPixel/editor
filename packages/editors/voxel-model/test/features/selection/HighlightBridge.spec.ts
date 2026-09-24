@@ -8,10 +8,10 @@ import { HighlightBoxSilhouette } from "@jolly-pixel/three";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { HighlightBridge } from "#src/scene/HighlightBridge.ts";
+import { HighlightBridge } from "#src/features/selection/HighlightBridge.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { PresenceStore } from "#src/state/index.ts";
-import { createModelFixture } from "../fixtures/model.ts";
+import { createModelFixture } from "../../fixtures/model.ts";
 
 function stubCamera(): OrbitFlyCamera {
   return {
@@ -27,7 +27,7 @@ function stubRenderer(): THREE.WebGPURenderer {
 function pivotMarkerOf(
   block: ModelBlock
 ): THREE.Sprite | undefined {
-  return block.pivot.children.find(
+  return block.node.children.find(
     (child): child is THREE.Sprite => child.name === "pivot_visual"
   );
 }
@@ -41,17 +41,18 @@ function overlayOf(
 }
 
 function createHarness() {
-  const { scene, blocks, addBlock } = createModelFixture();
+  const { scene, blocks, selection, addBlock } = createModelFixture();
   const presence = new PresenceStore();
   const highlight = new HighlightBridge({
     renderer: stubRenderer(),
     scene,
     camera: stubCamera(),
     blocks,
+    selection,
     presence
   });
 
-  return { blocks, addBlock, presence, highlight };
+  return { selection, addBlock, presence, highlight };
 }
 
 function peerMarks(
@@ -66,22 +67,22 @@ function peerMarks(
 
 describe("HighlightBridge local selection", () => {
   test("shows the selection ghost and a box outline on the selected block", () => {
-    const { blocks, addBlock } = createHarness();
+    const { selection, addBlock } = createHarness();
     const block = addBlock();
 
-    blocks.select(block);
+    selection.select(block.uuid);
 
     assert.ok(block.mesh.children.some((child) => child.name === "selection-texture-ghost"));
     assert.ok(overlayOf(block));
   });
 
   test("hides the ghost again once a different block is selected", () => {
-    const { blocks, addBlock } = createHarness();
+    const { selection, addBlock } = createHarness();
     const first = addBlock();
     const second = addBlock();
 
-    blocks.select(first);
-    blocks.select(second);
+    selection.select(first.uuid);
+    selection.select(second.uuid);
 
     assert.ok(!first.mesh.children.some((child) => child.name === "selection-texture-ghost"));
   });
@@ -89,10 +90,10 @@ describe("HighlightBridge local selection", () => {
 
 describe("HighlightBridge local hover", () => {
   test("shows a box outline on the hovered block", () => {
-    const { blocks, addBlock } = createHarness();
+    const { selection, addBlock } = createHarness();
     const block = addBlock();
 
-    blocks.hover(block);
+    selection.hover(block.uuid);
 
     assert.ok(overlayOf(block));
   });
@@ -155,7 +156,7 @@ describe("HighlightBridge peer hover", () => {
 
 describe("HighlightBridge block lifecycle", () => {
   test("registers blocks that already existed before construction", () => {
-    const { scene, blocks, addBlock } = createModelFixture();
+    const { scene, blocks, selection, addBlock } = createModelFixture();
     const block = addBlock();
     const presence = new PresenceStore();
 
@@ -164,18 +165,19 @@ describe("HighlightBridge block lifecycle", () => {
       scene,
       camera: stubCamera(),
       blocks,
+      selection,
       presence
     });
-    blocks.select(block);
+    selection.select(block.uuid);
 
     assert.ok(overlayOf(block));
   });
 
   test("registers blocks added after construction", () => {
-    const { blocks, addBlock } = createHarness();
+    const { selection, addBlock } = createHarness();
 
     const block = addBlock();
-    blocks.select(block);
+    selection.select(block.uuid);
 
     assert.ok(overlayOf(block));
   });
@@ -183,13 +185,13 @@ describe("HighlightBridge block lifecycle", () => {
 
 describe("HighlightBridge dispose", () => {
   test("stops forwarding further block and presence changes", () => {
-    const { blocks, addBlock, presence, highlight } = createHarness();
+    const { selection, addBlock, presence, highlight } = createHarness();
     const block = addBlock();
 
     highlight.dispose();
 
-    assert.doesNotThrow(() => blocks.select(block));
-    assert.doesNotThrow(() => blocks.hover(block));
+    assert.doesNotThrow(() => selection.select(block.uuid));
+    assert.doesNotThrow(() => selection.hover(block.uuid));
     assert.doesNotThrow(() => {
       presence.blockSelections = peerMarks(block.uuid);
     });

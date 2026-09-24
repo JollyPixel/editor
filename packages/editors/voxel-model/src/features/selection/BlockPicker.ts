@@ -7,18 +7,21 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import type { ModelBlocks } from "./blocks/index.ts";
-import type { TransformGizmo } from "./TransformGizmo.ts";
+import type { ModelBlocks } from "../../scene/blocks/index.ts";
+import type { BlockSelectionStore } from "../../state/index.ts";
+import type { TransformGizmo } from "../transform/gizmo/TransformGizmo.ts";
 
 export interface BlockPickerOptions {
   camera: OrbitFlyCamera;
   blocks: ModelBlocks;
+  selection: BlockSelectionStore;
   gizmo: TransformGizmo;
 }
 
 export class BlockPicker extends ActorComponent {
   #camera: OrbitFlyCamera;
   #blocks: ModelBlocks;
+  #selection: BlockSelectionStore;
   #gizmo: TransformGizmo;
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
@@ -39,6 +42,7 @@ export class BlockPicker extends ActorComponent {
     });
     this.#camera = options.camera;
     this.#blocks = options.blocks;
+    this.#selection = options.selection;
     this.#gizmo = options.gizmo;
 
     this.#blocks.on("blockAdded", this.#onBlocksChanged);
@@ -62,13 +66,13 @@ export class BlockPicker extends ActorComponent {
     );
 
     const [hit] = this.#raycaster.intersectObjects(this.#meshList(), false);
-    const hoveredBlock = hit === undefined ?
+    const hovered = hit === undefined ?
       null :
-      this.#blocks.fromMesh(hit.object) ?? null;
-    this.#blocks.hover(hoveredBlock);
+      this.#blocks.fromMesh(hit.object)?.uuid ?? null;
+    this.#selection.hover(hovered);
 
     if (mouse.wasJustPressed("left")) {
-      this.#blocks.select(hoveredBlock);
+      this.#selection.select(hovered);
     }
   }
 

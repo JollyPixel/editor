@@ -13,7 +13,7 @@ import {
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import { BlockTextures } from "#src/scene/textures/BlockTextures.ts";
+import { BlockTextures } from "#src/features/texture/BlockTextures.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
 
@@ -42,12 +42,13 @@ function createHarness(
   pixelsReady: Promise<void> = Promise.resolve()
 ) {
   const pixels = createPixels();
-  const { document, blocks, addBlock } = createModelFixture();
+  const { document, blocks, selection, addBlock } = createModelFixture();
   const textures = new BlockTextures({
     pixels,
     pixelsReady,
     document,
-    blocks
+    blocks,
+    selection
   });
 
   return {
@@ -55,6 +56,7 @@ function createHarness(
     uv: pixels.uv,
     document,
     blocks,
+    selection,
     addBlock,
     textures
   };
@@ -78,13 +80,14 @@ function regionIdOf(
 describe("BlockTextures texture", () => {
   test("shares one texture across existing and future blocks", () => {
     const pixels = createPixels();
-    const { document, blocks, addBlock } = createModelFixture();
+    const { document, blocks, selection, addBlock } = createModelFixture();
     const before = addBlock();
     new BlockTextures({
       pixels,
       pixelsReady: Promise.resolve(),
       document,
-      blocks
+      blocks,
+      selection
     });
     const after = addBlock();
 
@@ -375,16 +378,16 @@ describe("BlockTextures rename", () => {
 
 describe("BlockTextures selection", () => {
   test("selecting a block selects its region, and the reverse", () => {
-    const { blocks, addBlock, uv, textures } = createHarness();
+    const { selection, addBlock, uv, textures } = createHarness();
     const first = addBlock();
     const second = addBlock();
     textures.create(first.uuid, "First");
     textures.create(second.uuid, "Second");
 
-    blocks.select(first);
+    selection.select(first.uuid);
     assert.equal(uv.selectedRegionId, regionIdOf(first));
 
     uv.select(regionIdOf(second));
-    assert.equal(blocks.selected, second);
+    assert.equal(selection.selected, second.uuid);
   });
 });

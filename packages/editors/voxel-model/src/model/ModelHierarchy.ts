@@ -5,8 +5,7 @@ import {
   type MirrorAxes,
   type ModelDocument,
   type ModelNodeJSON,
-  type NodeTransformJSON,
-  type Vector3JSON
+  type NodeTransformJSON
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
@@ -32,9 +31,6 @@ export interface BlockPoses {
     uuid: string,
     parentUuid: string | null
   ): BlockTransformJSON;
-  originUnder(
-    parentUuid: string
-  ): Vector3JSON;
   mirror(
     uuids: Iterable<string>,
     axes: MirrorAxes
@@ -83,15 +79,10 @@ export class ModelHierarchy {
     name: string,
     parentId: string | null
   ): string | null {
-    const parentUuid = this.#document.tree.enclosingBlockOf(parentId);
     const id = this.#document.addBlock({
       name,
       parentId,
-      transform: parentUuid === null ?
-        createBlockTransform() :
-        createBlockTransform({
-          position: this.#poses.originUnder(parentUuid)
-        })
+      transform: createBlockTransform()
     });
     if (id !== null) {
       this.#regions.create(id, name);

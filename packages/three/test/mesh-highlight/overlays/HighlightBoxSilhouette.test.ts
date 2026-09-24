@@ -7,6 +7,9 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { HighlightBoxSilhouette } from "#src/index.ts";
+import {
+  createDefaultHighlightOverlayRegistry
+} from "#src/mesh-highlight/overlays/builtinHighlightOverlayFactories.ts";
 
 function createTarget(
   size: [number, number, number] = [1, 1, 1]
@@ -215,6 +218,18 @@ describe("xray", () => {
     assert.strictEqual(overlay.renderOrder, before);
   });
 
+  test("xrayDepthWrite keeps depth write on under xray, even after toggling", () => {
+    const overlay = new HighlightBoxSilhouette({ target: createTarget(), xray: true, xrayDepthWrite: true });
+
+    assert.strictEqual(overlay.material.depthWrite, true);
+    assert.strictEqual(backPassOf(overlay)?.material.depthWrite, false);
+
+    overlay.xray = false;
+    overlay.xray = true;
+
+    assert.strictEqual(overlay.material.depthWrite, true);
+  });
+
   test("toggling xray back off removes the occluded pass", () => {
     const overlay = new HighlightBoxSilhouette({ target: createTarget(), xray: true });
 
@@ -291,6 +306,16 @@ describe("update", () => {
     assert.strictEqual(`#${last.getHexString()}`, "#0000ff");
   });
 
+  test("still accepts a color change after a camera inside the box left nothing to draw", () => {
+    const overlay = new HighlightBoxSilhouette({ target: createTarget() });
+
+    overlay.update(new THREE.Vector3(0, 0, 0));
+    overlay.color = "#0000ff";
+
+    assert.strictEqual(overlay.geometry.getAttribute("position").count, 0);
+    assert.strictEqual(`#${overlay.color.getHexString()}`, "#0000ff");
+  });
+
   test("never grows past halfExtents + linewidth, however many edges are kept", () => {
     const overlay = new HighlightBoxSilhouette({ target: createTarget() });
 
@@ -335,5 +360,22 @@ describe("dispose", () => {
     overlay.dispose();
 
     assert.ok(backMaterialDisposed);
+  });
+});
+
+describe("boxSilhouette factory", () => {
+  test("draws a peer indicator one step below the requested render order", () => {
+    const registry = createDefaultHighlightOverlayRegistry();
+    const [local, peer] = [false, true].map((isPeer) => registry.create(createTarget(), {
+      technique: "boxSilhouette",
+      color: "#ffffff",
+      opacity: 1,
+      xray: true,
+      peer: isPeer,
+      renderOrder: 42
+    }) as HighlightBoxSilhouette);
+
+    assert.strictEqual(local.renderOrder, 42);
+    assert.strictEqual(peer.renderOrder, 41);
   });
 });

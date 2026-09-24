@@ -74,7 +74,9 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
           xray: appearance.xray,
           dashed,
           occludedOpacity: occludedOpacityFor(indicator, appearance),
-          peer: indicator.source === "peer"
+          peer: indicator.source === "peer",
+          renderOrder: appearance.renderOrder ?? undefined,
+          xrayDepthWrite: appearance.xrayDepthWrite
         });
         created.push(overlay);
         next.set(indicator.objectId, {

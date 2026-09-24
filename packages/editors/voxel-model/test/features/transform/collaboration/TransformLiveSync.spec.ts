@@ -6,10 +6,10 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { TransformLiveSync } from "#src/collaboration/TransformLiveSync.ts";
+import { TransformLiveSync } from "#src/features/transform/collaboration/TransformLiveSync.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
-import { createRoomHarness } from "./roomHarness.ts";
-import { createModelFixture } from "../fixtures/model.ts";
+import { createRoomHarness } from "../../../collaboration/roomHarness.ts";
+import { createModelFixture } from "../../../fixtures/model.ts";
 
 function createHarness() {
   const room = createRoomHarness();
@@ -62,7 +62,7 @@ function clearLive(
 function isGlowing(
   block: ModelBlock
 ): boolean {
-  const marker = block.pivot.children.find((child) => child.name === "pivot_visual");
+  const marker = block.node.children.find((child) => child.name === "pivot_visual");
 
   return marker?.visible ?? false;
 }

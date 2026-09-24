@@ -264,6 +264,14 @@ type TransformAxisHandleOptions =
     shaftRadius?: number;
     size?: number;
     radialSegments?: number;
+  }
+  | {
+    kind: "slab";
+    shaftLength?: number;
+    shaftRadius?: number;
+    size?: number;
+    depth?: number;
+    radialSegments?: number;
   };
 ```
 

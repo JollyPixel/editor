@@ -10,9 +10,13 @@ import {
 import type { PeerMarkMap } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { ModelBlock, ModelBlocks } from "./blocks/index.ts";
-import { SELECTION_HIGHLIGHT_COLOR } from "./blocks/ModelBlock.ts";
-import type { PresenceStore } from "../state/index.ts";
+import type { ModelBlock, ModelBlocks } from "../../scene/blocks/index.ts";
+import { SELECTION_HIGHLIGHT_COLOR } from "../../scene/blocks/ModelBlock.ts";
+import { RenderOrder } from "../../scene/renderOrder.ts";
+import type {
+  BlockSelectionStore,
+  PresenceStore
+} from "../../state/index.ts";
 
 // CONSTANTS
 const kBoxSilhouetteTechnique = "boxSilhouette";
@@ -26,6 +30,7 @@ export interface HighlightBridgeOptions {
   scene: THREE.Scene;
   camera: OrbitFlyCamera;
   blocks: ModelBlocks;
+  selection: BlockSelectionStore;
   presence: PresenceStore;
 }
 
@@ -36,6 +41,7 @@ export class HighlightBridge implements Systems.RenderComponent {
 
   #meshHighlight: MeshHighlight;
   #blocks: ModelBlocks;
+  #selection: BlockSelectionStore;
   #presence: PresenceStore;
   #selectedBlock: ModelBlock | null = null;
   #highlightedUuidByClient = new Map<string, string>();
@@ -54,18 +60,18 @@ export class HighlightBridge implements Systems.RenderComponent {
   };
 
   #onSelect = (
-    block: ModelBlock | null
+    uuid: string | null
   ): void => {
     this.#selectedBlock?.hideSelectionGhost();
-    this.#selectedBlock = block;
-    block?.showSelectionGhost();
-    this.#meshHighlight.select(block?.uuid ?? null);
+    this.#selectedBlock = uuid === null ? null : this.#blocks.get(uuid) ?? null;
+    this.#selectedBlock?.showSelectionGhost();
+    this.#meshHighlight.select(uuid);
   };
 
   #onHover = (
-    block: ModelBlock | null
+    uuid: string | null
   ): void => {
-    this.#meshHighlight.hover(block?.uuid ?? null);
+    this.#meshHighlight.hover(uuid);
   };
 
   #onPresenceChange = (
@@ -86,6 +92,7 @@ export class HighlightBridge implements Systems.RenderComponent {
     this.threeCamera = options.camera.threeCamera;
     this.depth = options.camera.depth;
     this.#blocks = options.blocks;
+    this.#selection = options.selection;
     this.#presence = options.presence;
 
     const peerColorAllocator: PeerColorAllocator = {
@@ -101,6 +108,8 @@ export class HighlightBridge implements Systems.RenderComponent {
       chips: true,
       appearance: {
         xray: true,
+        xrayDepthWrite: true,
+        renderOrder: RenderOrder.outline,
         selected: { color: SELECTION_HIGHLIGHT_COLOR, opacity: kSelectionOpacity },
         hovered: { color: SELECTION_HIGHLIGHT_COLOR, opacity: kHoverOpacity },
         outline: { linewidth: kOutlineThickness },
@@ -113,15 +122,15 @@ export class HighlightBridge implements Systems.RenderComponent {
     for (const block of this.#blocks.values()) {
       this.#onBlockAdded(block);
     }
-    this.#onSelect(this.#blocks.selected);
-    this.#onHover(this.#blocks.hovered);
+    this.#onSelect(this.#selection.selected);
+    this.#onHover(this.#selection.hovered);
     this.#applyPresence(this.#presence.blockSelections);
     this.#applyHoverPresence(this.#presence.blockHovers);
 
     this.#blocks.on("blockAdded", this.#onBlockAdded);
     this.#blocks.on("blockRemoved", this.#onBlockRemoved);
-    this.#blocks.on("select", this.#onSelect);
-    this.#blocks.on("hover", this.#onHover);
+    this.#selection.on("select", this.#onSelect);
+    this.#selection.on("hover", this.#onHover);
     this.#presence.on("blockSelectionsChange", this.#onPresenceChange);
     this.#presence.on("blockHoversChange", this.#onHoverPresenceChange);
   }
@@ -134,8 +143,8 @@ export class HighlightBridge implements Systems.RenderComponent {
   dispose(): void {
     this.#blocks.off("blockAdded", this.#onBlockAdded);
     this.#blocks.off("blockRemoved", this.#onBlockRemoved);
-    this.#blocks.off("select", this.#onSelect);
-    this.#blocks.off("hover", this.#onHover);
+    this.#selection.off("select", this.#onSelect);
+    this.#selection.off("hover", this.#onHover);
     this.#presence.off("blockSelectionsChange", this.#onPresenceChange);
     this.#presence.off("blockHoversChange", this.#onHoverPresenceChange);
     this.#meshHighlight.dispose();

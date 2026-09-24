@@ -5,6 +5,9 @@ import {
   encodeVoxelModelDocument
 } from "@jolly-pixel/asset.voxel-model";
 
+// Import Internal Dependencies
+export * from "../src/boot/modelSeed.ts";
+
 // CONSTANTS
 export const TEXTURE_SIZE = { x: 64, y: 64 };
 

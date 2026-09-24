@@ -10,16 +10,19 @@ import type {
 
 // Import Internal Dependencies
 import type { ModelBlocks } from "../scene/index.ts";
-import type { PresenceStore } from "../state/index.ts";
-import { BlockHoverPresence } from "./BlockHoverPresence.ts";
-import { BlockSelectionPresence } from "./BlockSelectionPresence.ts";
-import { TransformLiveSync } from "./TransformLiveSync.ts";
-import { TransformLock } from "./TransformLock.ts";
+import type {
+  BlockSelectionStore,
+  PresenceStore
+} from "../state/index.ts";
+import { BlockMarkPresence } from "../features/selection/collaboration/BlockMarkPresence.ts";
+import { TransformLiveSync } from "../features/transform/collaboration/TransformLiveSync.ts";
+import { TransformLock } from "../features/transform/collaboration/TransformLock.ts";
 
 export interface ModelCollaborationOptions {
   room: VoxelModelRoom;
   identity: PeerIdentity;
   blocks: ModelBlocks;
+  selection: BlockSelectionStore;
   presence: PresenceStore;
   world: Systems.World;
   camera: THREE.PerspectiveCamera;
@@ -31,8 +34,8 @@ export class ModelCollaboration {
   readonly frustums: PeerFrustums;
 
   #roster: PeerRoster;
-  #selections: BlockSelectionPresence;
-  #hovers: BlockHoverPresence;
+  #selections: BlockMarkPresence;
+  #hovers: BlockMarkPresence;
 
   constructor(
     options: ModelCollaborationOptions
@@ -40,6 +43,7 @@ export class ModelCollaboration {
     const {
       room,
       blocks,
+      selection,
       presence
     } = options;
 
@@ -50,16 +54,8 @@ export class ModelCollaboration {
         presence.peers = peers;
       }
     });
-    this.#selections = new BlockSelectionPresence({
-      room,
-      blocks,
-      presence
-    });
-    this.#hovers = new BlockHoverPresence({
-      room,
-      blocks,
-      presence
-    });
+    this.#selections = new BlockMarkPresence({ room, selection, presence, mark: "select" });
+    this.#hovers = new BlockMarkPresence({ room, selection, presence, mark: "hover" });
     this.frustums = options.world
       .createActor("peer-frustums")
       .addComponentAndGet(PeerFrustums, {

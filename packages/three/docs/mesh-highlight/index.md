@@ -107,6 +107,8 @@ Use `highlight.configure()` for a partial update or assign a complete
 | `highlightJfa.borderThickness` | `1` | JFA border width |
 | `highlightJfa.isolatedFillOpacity` | `0.15` | JFA hover fill |
 | `xray` | `false` | Draw object overlays through geometry |
+| `renderOrder` | technique default | Object-overlay render order; peer indicators draw one below (box silhouette) |
+| `xrayDepthWrite` | `false` | Keep the visible portion writing depth under xray (box silhouette) |
 
 Opacity values are clamped to `0..1`. Thickness and resolution values are
 validated when the appearance is created.

@@ -6,8 +6,8 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { TransformLock } from "#src/collaboration/TransformLock.ts";
-import { createRoomHarness } from "./roomHarness.ts";
+import { TransformLock } from "#src/features/transform/collaboration/TransformLock.ts";
+import { createRoomHarness } from "../../../collaboration/roomHarness.ts";
 
 function createLock() {
   const room = createRoomHarness();

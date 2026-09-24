@@ -77,9 +77,10 @@ export async function selectedBlock(
   const editor = await editorOf(page);
 
   return editor.evaluate(({ workspace }) => {
-    const { blocks } = workspace;
+    const { blocks, selection } = workspace;
+    const uuid = selection.selected;
 
-    return blocks.selected?.name ?? null;
+    return uuid === null ? null : blocks.get(uuid)?.name ?? null;
   });
 }
 
@@ -141,7 +142,11 @@ export async function blockPoint(
       throw new Error(`No block named '${blockName}'.`);
     }
 
-    const { camera } = gizmo.controls;
+    const controls = gizmo.activeControls;
+    if (controls === null) {
+      throw new Error("No active gizmo tool.");
+    }
+    const { camera } = controls;
     const bounds = runtime.world.renderer.canvas.getBoundingClientRect();
     block.mesh.updateWorldMatrix(true, false);
     camera.updateMatrixWorld(true);
@@ -174,14 +179,17 @@ export async function gizmoHandlePoints(
   await page.waitForFunction(({ workspace }) => {
     const { gizmo } = workspace;
 
-    return gizmo.controls.target !== null;
+    return (gizmo.activeControls?.target ?? null) !== null;
   }, editor);
   await nextFrames(page);
 
   const { view, points } = await editor.evaluate(({ workspace, runtime }, axisName) => {
     const kDragRatio = 3;
     const { gizmo } = workspace;
-    const { controls } = gizmo;
+    const controls = gizmo.activeControls;
+    if (controls === null) {
+      throw new Error("No active gizmo tool.");
+    }
     const { camera, helper } = controls;
     const bounds = runtime.world.renderer.canvas.getBoundingClientRect();
 

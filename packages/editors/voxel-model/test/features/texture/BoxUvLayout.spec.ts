@@ -8,7 +8,7 @@ import { DEFAULT_UV_SLOTS } from "@jolly-pixel/pixel-draw.renderer";
 import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import { BoxUvLayout } from "#src/scene/textures/BoxUvLayout.ts";
+import { BoxUvLayout } from "#src/features/texture/BoxUvLayout.ts";
 
 // CONSTANTS
 const kSlots = ["right", "left", "top", "bottom", "front", "back"] as const;

@@ -69,10 +69,21 @@ export interface TransformCubeHandleOptions {
   radialSegments?: number;
 }
 
+export interface TransformSlabHandleOptions {
+  kind: "slab";
+  shaftLength?: number;
+  shaftRadius?: number;
+  size?: number;
+  /** Defaults to half of `size`. */
+  depth?: number;
+  radialSegments?: number;
+}
+
 export type TransformAxisHandleOptions =
   | TransformArrowHandleOptions
   | TransformSphereHandleOptions
-  | TransformCubeHandleOptions;
+  | TransformCubeHandleOptions
+  | TransformSlabHandleOptions;
 
 export interface TransformAxisAppearanceOptions {
   color?: THREE.ColorRepresentation;

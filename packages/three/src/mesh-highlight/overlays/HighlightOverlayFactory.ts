@@ -30,6 +30,14 @@ export interface HighlightOverlayCreateOptions {
    * overlapping geometry can use this to make the local one win.
    */
   peer?: boolean;
+  /**
+   * Render order for the local indicator, when supported.
+   */
+  renderOrder?: number;
+  /**
+   * Keeps writing depth under xray, when supported.
+   */
+  xrayDepthWrite?: boolean;
 }
 
 export interface HighlightOverlayFactory {

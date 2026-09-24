@@ -13,41 +13,21 @@ import {
 
 // Import Internal Dependencies
 import "./transformIcons.ts";
-import type { GizmoSpace } from "../../scene/index.ts";
+import type {
+  GizmoSpace,
+  TransformMode
+} from "./gizmo/gizmoTools.ts";
 import {
   TransformPanelController,
-  type TransformMode,
   type TransformWorkspace
 } from "./TransformPanelController.ts";
+import { TRANSFORM_MODES } from "./transformModes.ts";
 
 // CONSTANTS
-const kTransformModes: JollyOption<TransformMode>[] = [
-  {
-    value: "pos",
-    label: "Pos",
-    icon: "transform-position"
-  },
-  {
-    value: "angle",
-    label: "Angle",
-    icon: "transform-angle"
-  },
-  {
-    value: "size",
-    label: "Size",
-    icon: "transform-size"
-  },
-  {
-    value: "pivot",
-    label: "Pivot",
-    icon: "transform-pivot"
-  },
-  {
-    value: "scale",
-    label: "Scale",
-    icon: "transform-scale"
-  }
-];
+const kTransformModes: JollyOption<TransformMode>[] = Object.entries(TRANSFORM_MODES)
+  .map(([value, { label, icon }]) => {
+    return { value: value as TransformMode, label, icon };
+  });
 
 const kSpaceOptions: JollyOption<GizmoSpace>[] = [
   {
@@ -61,8 +41,6 @@ const kSpaceOptions: JollyOption<GizmoSpace>[] = [
     icon: "transform-global"
   }
 ];
-
-const kSpaceModes: readonly TransformMode[] = ["pos", "angle", "pivot"];
 
 export class TransformPanel extends LitElement {
   #transform = new TransformPanelController(this);
@@ -124,7 +102,7 @@ export class TransformPanel extends LitElement {
         aria-label="Transform space"
         .options=${kSpaceOptions}
         .value=${this.#space.value}
-        ?disabled=${this.#transform.disabled || !kSpaceModes.includes(this.#transform.mode)}
+        ?disabled=${this.#transform.disabled || !TRANSFORM_MODES[this.#transform.mode].spaces}
         @jolly-change=${this.#space.commit}
       ></jolly-button-group>
 

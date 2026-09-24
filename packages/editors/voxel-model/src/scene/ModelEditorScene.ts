@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
-import { Grid } from "@jolly-pixel/three";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 import type {
@@ -11,16 +10,22 @@ import type {
 
 // Import Internal Dependencies
 import { ModelHierarchy } from "../model/index.ts";
+import { ModelCollaboration } from "../collaboration/index.ts";
 import {
-  ModelCollaboration,
-  type TransformLock
-} from "../collaboration/index.ts";
-import type { PresenceStore } from "../state/index.ts";
+  BlockSelectionStore,
+  type PresenceStore
+} from "../state/index.ts";
 import { ModelBlocks } from "./blocks/index.ts";
-import { BlockPicker } from "./BlockPicker.ts";
-import { BlockTextures } from "./textures/index.ts";
-import { TransformGizmo } from "./TransformGizmo.ts";
-import { HighlightBridge } from "./HighlightBridge.ts";
+import {
+  BlockPicker,
+  HighlightBridge
+} from "../features/selection/index.ts";
+import { BlockTextures } from "../features/texture/index.ts";
+import {
+  TransformGizmo,
+  type TransformLock
+} from "../features/transform/index.ts";
+import { createModelGrid } from "./modelGrid.ts";
 
 export interface ModelEditorSceneOptions {
   room: VoxelModelRoom;
@@ -34,6 +39,7 @@ export interface ModelEditorSceneOptions {
 export interface ModelWorkspace {
   document: ModelDocument;
   blocks: ModelBlocks;
+  selection: BlockSelectionStore;
   hierarchy: ModelHierarchy;
   textures: BlockTextures;
   gizmo: TransformGizmo;
@@ -75,23 +81,7 @@ export class ModelEditorScene extends Systems.Scene {
       new THREE.HemisphereLight("#dceaff", "#151820", 2.5),
       new THREE.DirectionalLight("#ffffff", 3)
     );
-    scene.add(new Grid({
-      extent: 10,
-      cell: {
-        color: "#3a3a3a",
-        thickness: 1.5
-      },
-      section: {
-        show: false
-      },
-      fade: {
-        from: "origin",
-        distance: 100
-      },
-      axes: {
-        show: true
-      }
-    }));
+    scene.add(createModelGrid());
 
     const camera = this.world
       .createActor("camera")
@@ -108,16 +98,19 @@ export class ModelEditorScene extends Systems.Scene {
         initialTrailDistance: 12
       });
 
+    const selection = new BlockSelectionStore();
     const blocks = new ModelBlocks({
       document,
-      scene
+      scene,
+      selection
     });
 
     const textures = new BlockTextures({
       pixels,
       pixelsReady,
       document,
-      blocks
+      blocks,
+      selection
     });
     const hierarchy = new ModelHierarchy({
       document,
@@ -128,6 +121,7 @@ export class ModelEditorScene extends Systems.Scene {
       room,
       identity,
       blocks,
+      selection,
       presence,
       world: this.world,
       camera: camera.camera
@@ -137,6 +131,7 @@ export class ModelEditorScene extends Systems.Scene {
       canvas: this.world.renderer.canvas,
       scene,
       blocks,
+      selection,
       lock: collaboration.lock,
       live: collaboration.live
     });
@@ -145,6 +140,7 @@ export class ModelEditorScene extends Systems.Scene {
       .addComponentAndGet(BlockPicker, {
         camera,
         blocks,
+        selection,
         gizmo
       });
 
@@ -160,6 +156,7 @@ export class ModelEditorScene extends Systems.Scene {
       scene,
       camera,
       blocks,
+      selection,
       presence
     });
     this.world.renderer.addRenderComponent(highlight);
@@ -175,6 +172,7 @@ export class ModelEditorScene extends Systems.Scene {
     this.#workspace.resolve({
       document,
       blocks,
+      selection,
       hierarchy,
       textures,
       gizmo,

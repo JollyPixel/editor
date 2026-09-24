@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   blockRegionId,
   blockUuidFromRegion
-} from "#src/scene/textures/blockRegionId.ts";
+} from "#src/features/texture/blockRegionId.ts";
 
 describe("blockRegionId", () => {
   test("round-trips a block uuid", () => {

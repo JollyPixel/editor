@@ -38,7 +38,7 @@ export default defineConfig({
 });
 ```
 
-`createVoxelModelDocument({ texture?, blocks? })` creates a version 2 document. It starts with one root block named `Block` unless `blocks` supplies root names; `blocks: []` creates an empty tree. `decodeVoxelModelDocument()` throws `InvalidVoxelModelDocumentError` for malformed bytes.
+`createVoxelModelDocument({ texture?, blocks? })` creates a version 2 document. A block's `position` is its pivot point, relative to its parent's pivot, and `pivotOffset` is where that pivot sits on the box, from the box center along the box's own axes. A block's `scale` applies around its pivot and carries its child blocks. Children never skew: each child takes its parent's scale on the same axis, whatever its rotation. It starts with one root block named `Block` unless `blocks` supplies root names; `blocks: []` creates an empty tree. `decodeVoxelModelDocument()` throws `InvalidVoxelModelDocumentError` for malformed bytes.
 Set `texture` to a pixel-art asset reference when the model uses one.
 
 ### Connect a model
