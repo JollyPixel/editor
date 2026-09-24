@@ -40,6 +40,7 @@ interface EditorContext {
   launch: EditorLaunch;
   session: EditorSession;
   shell: ShellChannel | null;
+  logger: HostLogger;
 }
 
 interface EditorHandle {
@@ -62,7 +63,8 @@ An editor class satisfies the definition with static members.
 `context.launch.target` is the target's `AssetId`. The session belongs to the
 editor once `mount` returns, so `dispose()` must call `session.dispose()`.
 `context.shell` is the [shell channel](#shell-channel) when a parent frame
-launched the page, `null` otherwise.
+launched the page, `null` otherwise. `context.logger` is the `editor`
+namespace of the [boot trace](#boot-tracing), for the editor's own steps.
 
 The returned handle exposes the session and the `Runtime` of its 3D view,
 `null` for an editor without one. `ready` resolves once the target document is
@@ -82,6 +84,8 @@ interface MountStandaloneOptions {
   dev?: boolean;
   debugHandle?: string;
   connect?: () => StandaloneConnection | Promise<StandaloneConnection>;
+  origins?: Iterable<string>;
+  logger?: HostLogger;
 }
 
 interface StandaloneConnection {
@@ -100,6 +104,11 @@ prompt is skipped. Without `dev`, neither happens.
 `connect` replaces the username prompt and the WebSocket client. It runs after
 the launch is read, and the session destroys the returned client when it is
 disposed or fails to open.
+
+`origins` lists the parent origins allowed to launch the page, `[location.origin]`
+by default. It applies to the default launch sources only; see
+[Shell channel](#shell-channel). `logger` replaces the logger read by
+`readDebugLogger()`.
 
 ## Offline
 
@@ -197,7 +206,7 @@ By default the target is read from the first source that answers:
 
 | Order | Source |
 |---|---|
-| 1 | `{ type: "jolly-launch", target }` posted by the parent frame in answer to the page's `{ type: "jolly-ready" }`, waited for 1000 ms |
+| 1 | `{ type: "jolly-launch", target }` posted by the parent frame from an allowed origin in answer to the page's `{ type: "jolly-ready" }`, waited for 1000 ms |
 | 2 | the `target` query parameter |
 | 3 | the JSON element injected by the asset workspace Vite plugin's `launch` option |
 
@@ -227,8 +236,26 @@ argument, `null` by default, exposed as `launch.shell`.
 
 A page inside a frame posts `{ type: "jolly-ready" }` to its parent as soon
 as the launch source starts reading, then waits for the parent's
-`jolly-launch`. A launch that came this way carries a `ShellChannel` bound to
-the parent and to the origin of its answer. The channel posts commands back
+`jolly-launch`. The ready message is posted once per allowed origin, so a
+parent on another origin never receives it, and a `jolly-launch` from an
+origin outside the list is ignored:
+
+```ts
+new HostMessageLaunchSource({
+  timeout?: number;
+  origins?: Iterable<string>;
+  logger?: HostLogger;
+});
+```
+
+| Option | Default | Role |
+|---|---|---|
+| `timeout` | `1000` | milliseconds to wait for `jolly-launch` |
+| `origins` | `[location.origin]` | parent origins allowed to launch the page; `ANY_SHELL_ORIGIN` (`"*"`) allows every origin |
+| `logger` | none | receives `ready posted`, `launch accepted`, `launch rejected` and `launch timed out` |
+
+A launch that came this way carries a `ShellChannel` bound to the parent and
+to the origin of its answer. The channel posts commands back
 and never receives a reply:
 
 ```ts
@@ -246,6 +273,38 @@ class ShellChannel {
 shell that listens on its own window. A launch read from the query string or
 the injected element has no channel, so `context.shell` is `null` and an
 editor hides what only a shell can do.
+
+## Boot tracing
+
+`mountStandalone` logs each boot step to a `HostLogger`, the engine's
+`Systems.Logger`. Nothing is logged unless the page enables it:
+
+| Switch | Example |
+|---|---|
+| `?debug=` query parameter | `?debug=host.*,editor`; a bare `?debug` enables every namespace |
+| `jolly-pixel:debug` in `localStorage` | `localStorage.setItem("jolly-pixel:debug", "*")`, for pages framed by the studio |
+
+The query parameter wins over the stored value. Namespaces are comma-separated
+globs:
+
+| Namespace | Logs |
+|---|---|
+| `host.boot` | `state <state>`, `<step> started` and `<step> done` with `ms` for the `launch`, `session`, `mount` and `ready` steps, `launch source read` per source, `<step> failed` with the error |
+| `host.launch` | the handshake of the default `HostMessageLaunchSource` |
+| `editor` | `context.logger` and the children an editor derives from it |
+| `studio.tabs` | the studio side of the handshake |
+
+```ts
+function readDebugLogger(options?: {
+  search?: string;
+  storage?: Pick<Storage, "getItem"> | null;
+}): HostLogger;
+```
+
+`search` defaults to `location.search` and `storage` to `localStorage`. A
+storage that throws enables nothing. `DEBUG_QUERY_PARAM` and
+`DEBUG_STORAGE_KEY` name both switches. `EditorLaunch.read(sources, logger?)`
+logs each source it reads.
 
 ## Errors
 

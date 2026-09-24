@@ -26,6 +26,13 @@ describe("editorPath", () => {
     assert.equal(path, "/?target=asset-1&username=E2E&max-fps=10&samples=0");
   });
 
+  it("writes the debug namespaces after max-fps", () => {
+    assert.equal(editorPath({
+      maxFps: 5,
+      debug: "host.*"
+    }), "/?max-fps=5&debug=host.*");
+  });
+
   it("writes an empty query value as a bare flag", () => {
     assert.equal(editorPath({
       maxFps: 5,

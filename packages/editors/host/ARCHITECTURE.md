@@ -110,8 +110,8 @@ the successfully opened target for the next launch.
 flowchart TB
   Start["EditorLaunch.read(sources)"] --> Framed{"inside a frame?"}
   Framed -->|"no"| Query
-  Framed -->|"yes"| Ready["post { type: 'jolly-ready' }<br/>to window.parent"]
-  Ready --> Wait["wait 1000 ms for<br/>{ type: 'jolly-launch', target }<br/>from window.parent"]
+  Framed -->|"yes"| Ready["post { type: 'jolly-ready' }<br/>to window.parent, once per allowed origin"]
+  Ready --> Wait["wait 1000 ms for<br/>{ type: 'jolly-launch', target }<br/>from window.parent on an allowed origin"]
   Wait -->|"received"| Found["EditorLaunch<br/>with a ShellChannel"]
   Wait -->|"timeout"| Query{"?target= present?"}
   Query -->|"yes"| Found
@@ -121,7 +121,8 @@ flowchart TB
 ```
 
 The first source that answers wins. A page outside a frame skips the wait, so
-a plain tab boots without the timeout. The injected element is written by the
+a plain tab boots without the timeout. Allowed origins default to the page's
+own origin, the studio's case. The injected element is written by the
 asset workspace Vite plugin's `launch` option. Only a launch answered by the
 parent carries a `ShellChannel`, reachable as `context.shell`, through which
 the editor posts `jolly-shell` commands such as `open-asset` back to the

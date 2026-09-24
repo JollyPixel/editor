@@ -3,6 +3,7 @@ import { AssetId } from "@jolly-pixel/asset";
 import * as z from "zod";
 
 // Import Internal Dependencies
+import type { HostLogger } from "../debug/readDebugLogger.ts";
 import { LaunchNotFoundError } from "./errors/LaunchNotFoundError.ts";
 import type { ShellChannel } from "./ShellChannel.ts";
 import type { LaunchSource } from "./sources/LaunchSource.ts";
@@ -39,13 +40,21 @@ export class EditorLaunch {
   }
 
   static async read(
-    sources: Iterable<LaunchSource>
+    sources: Iterable<LaunchSource>,
+    logger?: HostLogger
   ): Promise<EditorLaunch> {
+    let index = 0;
     for (const source of sources) {
       const launch = await source.read();
+      logger?.debug("launch source read", {
+        index,
+        source: source.constructor.name,
+        target: launch?.target.value ?? null
+      });
       if (launch !== undefined) {
         return launch;
       }
+      index++;
     }
 
     throw new LaunchNotFoundError();

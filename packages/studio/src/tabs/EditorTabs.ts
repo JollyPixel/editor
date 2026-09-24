@@ -3,6 +3,8 @@ import {
   isReadyMessage,
   isShellCommand,
   LAUNCH_MESSAGE_TYPE,
+  readDebugLogger,
+  type HostLogger,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
 import type { IconName } from "@jolly-pixel/ui";
@@ -47,6 +49,10 @@ export interface EditorTabsOptions {
    */
   confirmEvict?: (tab: EditorTab) => boolean | Promise<boolean>;
   onShellCommand?: (command: ShellCommand, from: EditorTab) => void;
+  /**
+   * @default readDebugLogger()
+   */
+  logger?: HostLogger;
 }
 
 interface OpenTab {
@@ -66,6 +72,7 @@ export class EditorTabs {
   #launchOrigin: string;
   #confirmEvict: (tab: EditorTab) => boolean | Promise<boolean>;
   #onShellCommand: ((command: ShellCommand, from: EditorTab) => void) | undefined;
+  #logger: HostLogger;
   #open = new Map<string, OpenTab>();
   #active: string | null = null;
   #clock = 0;
@@ -81,6 +88,9 @@ export class EditorTabs {
     this.#launchOrigin = options.launchOrigin ?? location.origin;
     this.#confirmEvict = options.confirmEvict ?? (() => true);
     this.#onShellCommand = options.onShellCommand;
+    this.#logger = (options.logger ?? readDebugLogger()).child({
+      namespace: "studio.tabs"
+    });
 
     this.#homeItem = document.createElement(kTabTag);
     Object.assign(this.#homeItem, {
@@ -106,23 +116,14 @@ export class EditorTabs {
     window.addEventListener("message", this.#onMessage, { signal });
   }
 
-  /**
-   * Id of the active editor tab, or `HOME_TAB_ID` when home is shown.
-   */
   get active(): string {
     return this.#active ?? HOME_TAB_ID;
   }
 
-  /**
-   * Number of open editor tabs, home excluded.
-   */
   get size(): number {
     return this.#open.size;
   }
 
-  /**
-   * Open editor tab ids in strip order, home excluded.
-   */
   ids(): string[] {
     return [...this.#strip.children].flatMap((item) => {
       const id = String(Reflect.get(item, "value"));
@@ -218,10 +219,6 @@ export class EditorTabs {
     return true;
   }
 
-  /**
-   * Moves an editor tab to a strip index, home included. Home keeps the
-   * first index.
-   */
   move(
     id: string,
     index: number
@@ -324,6 +321,10 @@ export class EditorTabs {
     }
 
     if (isReadyMessage(event.data)) {
+      this.#logger.debug("launch posted", {
+        target: entry.tab.id,
+        origin: this.#launchOrigin
+      });
       entry.frame.contentWindow?.postMessage(
         {
           type: LAUNCH_MESSAGE_TYPE,
@@ -333,6 +334,11 @@ export class EditorTabs {
       );
     }
     else if (isShellCommand(event.data)) {
+      this.#logger.debug("shell command", {
+        from: entry.tab.id,
+        command: event.data.command,
+        target: event.data.target
+      });
       this.#onShellCommand?.(event.data, entry.tab);
     }
   };
