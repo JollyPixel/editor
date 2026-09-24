@@ -17,6 +17,7 @@ import {
 // Import Internal Dependencies
 import {
   EditorTabs,
+  HOME_TAB_ID,
   type EditorTab,
   type EditorTabsOptions
 } from "../src/tabs/EditorTabs.ts";
@@ -43,6 +44,7 @@ interface Harness {
   tabs: EditorTabs;
   strip: HTMLElement & { value: string; };
   frames: HTMLElement;
+  home: HTMLElement;
   itemValues(): string[];
   frameOf(id: string): HTMLIFrameElement;
   visibleFrames(): string[];
@@ -57,10 +59,12 @@ function harness(
     value: ""
   });
   const frames = document.createElement("div");
-  document.body.append(strip, frames);
+  const home = document.createElement("section");
+  document.body.append(strip, frames, home);
   const tabs = new EditorTabs({
     strip,
     frames,
+    home,
     launchOrigin: kOrigin,
     ...options
   });
@@ -72,6 +76,7 @@ function harness(
     tabs,
     strip,
     frames,
+    home,
     itemValues: () => [...strip.children].map(
       (item) => String(Reflect.get(item, "value"))
     ),
@@ -114,7 +119,7 @@ describe("EditorTabs", () => {
 
     assert.equal(await tabs.open(kMap), true);
 
-    assert.deepEqual(itemValues(), ["map-1"]);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1"]);
     assert.equal(strip.value, "map-1");
     assert.equal(tabs.active, "map-1");
     assert.ok(frameOf("map-1").src.endsWith(kMap.url));
@@ -132,7 +137,7 @@ describe("EditorTabs", () => {
 
     assert.equal(await tabs.open(kMap), true);
 
-    assert.deepEqual(itemValues(), ["map-1", "model-1"]);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1"]);
     assert.equal(tabs.active, "map-1");
     assert.equal(frameOf("map-1").hidden, false);
     assert.equal(frameOf("model-1").hidden, true);
@@ -147,7 +152,7 @@ describe("EditorTabs", () => {
 
     assert.equal(tabs.close("model-1"), true);
 
-    assert.deepEqual(itemValues(), ["map-1", "map-2"]);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "map-2"]);
     assert.equal(frames.querySelectorAll("iframe").length, 2);
     assert.equal(tabs.active, "map-2");
     assert.equal(tabs.close("model-1"), false);
@@ -164,15 +169,81 @@ describe("EditorTabs", () => {
     assert.equal(strip.value, "model-1");
   });
 
-  test("clears the strip when the last tab closes", async() => {
-    const { tabs, strip } = harness();
+  test("starts on a fixed home tab that is not closable", () => {
+    const { tabs, strip, home } = harness();
+    const [item] = strip.children;
+
+    assert.equal(tabs.active, HOME_TAB_ID);
+    assert.equal(strip.value, HOME_TAB_ID);
+    assert.equal(home.hidden, false);
+    assert.equal(Reflect.get(item, "fixed"), true);
+    assert.notEqual(Reflect.get(item, "closable"), true);
+    assert.equal(tabs.close(HOME_TAB_ID), false);
+    assert.deepEqual(tabs.ids(), []);
+  });
+
+  test("returns to home when the last tab closes", async() => {
+    const { tabs, strip, home } = harness();
     await tabs.open(kMap);
+    assert.equal(home.hidden, true);
 
     tabs.close("map-1");
 
-    assert.equal(tabs.active, null);
-    assert.equal(strip.value, "");
+    assert.equal(tabs.active, HOME_TAB_ID);
+    assert.equal(strip.value, HOME_TAB_ID);
+    assert.equal(home.hidden, false);
     assert.equal(tabs.size, 0);
+  });
+
+  test("focusing home hides every frame and keeps them open", async() => {
+    const { tabs, home, visibleFrames } = harness();
+    await tabs.open(kMap);
+
+    assert.equal(tabs.focus(HOME_TAB_ID), true);
+
+    assert.equal(home.hidden, false);
+    assert.deepEqual(visibleFrames(), []);
+    assert.equal(tabs.size, 1);
+  });
+
+  test("home does not count toward the cap", async() => {
+    const { tabs } = harness({ cap: 1 });
+
+    assert.equal(await tabs.open(kMap), true);
+    assert.deepEqual(tabs.ids(), ["map-1"]);
+  });
+
+  test("moves a tab on the strip's reorder event and keeps home first", async() => {
+    const { tabs, strip, itemValues } = harness();
+    await tabs.open(kMap);
+    await tabs.open(kModel);
+    await tabs.open(kOther);
+
+    strip.dispatchEvent(new CustomEvent("jolly-tab-reorder", {
+      detail: {
+        value: "map-2",
+        index: 1
+      }
+    }));
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-2", "map-1", "model-1"]);
+    assert.deepEqual(tabs.ids(), ["map-2", "map-1", "model-1"]);
+
+    assert.equal(tabs.move("map-2", 3), true);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1", "map-2"]);
+
+    assert.equal(tabs.move("map-1", 0), true);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1", "map-2"]);
+    assert.equal(tabs.move(HOME_TAB_ID, 2), false);
+  });
+
+  test("gives an editor tab its icon", async() => {
+    const { tabs, strip } = harness();
+    await tabs.open({
+      ...kMap,
+      icon: "kind:voxelmap"
+    });
+
+    assert.equal(Reflect.get(strip.children[1], "icon"), "kind:voxelmap");
   });
 
   test("evicts the least recently activated tab at the cap", async() => {
@@ -192,7 +263,7 @@ describe("EditorTabs", () => {
     assert.equal(await tabs.open(kOther), true);
 
     assert.deepEqual(asked, ["model-1"]);
-    assert.deepEqual(itemValues(), ["map-1", "map-2"]);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "map-2"]);
     assert.equal(tabs.active, "map-2");
   });
 
@@ -206,7 +277,7 @@ describe("EditorTabs", () => {
 
     assert.equal(await tabs.open(kOther), false);
 
-    assert.deepEqual(itemValues(), ["map-1", "model-1"]);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1"]);
     assert.equal(tabs.active, "model-1");
   });
 
@@ -293,7 +364,7 @@ describe("EditorTabs", () => {
     assert.equal(tabs.relabel("map-1", "renamed.voxelmap.json"), true);
     assert.equal(tabs.relabel("missing", "x"), false);
 
-    assert.equal(Reflect.get(strip.children[0], "label"), "renamed.voxelmap.json");
+    assert.equal(Reflect.get(strip.children[1], "label"), "renamed.voxelmap.json");
     assert.equal(frameOf("map-1").title, "renamed.voxelmap.json");
   });
 
@@ -310,6 +381,6 @@ describe("EditorTabs", () => {
     assert.equal(tabs.size, 0);
     assert.equal(strip.children.length, 0);
     assert.equal(frames.children.length, 0);
-    assert.equal(tabs.active, null);
+    assert.equal(tabs.active, HOME_TAB_ID);
   });
 });

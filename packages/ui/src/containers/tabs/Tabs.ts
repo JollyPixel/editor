@@ -16,8 +16,19 @@ import {
 import { emitContainerEvent } from "../events.ts";
 import type { Tab } from "./Tab.ts";
 import { tabsStyles } from "./Tabs.styles.ts";
+import {
+  tabDropTarget,
+  tabSegment
+} from "./tabReorder.ts";
 import { nextEnabledIndex } from "../../controls/roving.ts";
 import { isButtonElement } from "../../dom.ts";
+import type { Rect } from "../../geometry/Rect.ts";
+import {
+  horizontalInsertionLine,
+  startDragSession,
+  verticalInsertionLine,
+  type DragSessionHandle
+} from "../../interaction/drag/DragSession.ts";
 import "../../icon/Icon.ts";
 
 // CONSTANTS
@@ -42,13 +53,23 @@ export class Tabs extends LitElement {
   @property({ type: String, reflect: true })
   declare variant: TabsVariant;
 
+  @property({ type: Boolean, reflect: true })
+  declare reorderable: boolean;
+
   @state()
   declare _tabs: Tab[];
+
+  @state()
+  declare _dragging: Tab | null;
 
   @query("slot:not([name])")
   declare _slot: HTMLSlotElement;
 
+  @query(".list")
+  declare _list: HTMLElement | null;
+
   #generatedId: string;
+  #session: DragSessionHandle | null = null;
 
   constructor() {
     super();
@@ -56,8 +77,16 @@ export class Tabs extends LitElement {
     this.value = "";
     this.orientation = "horizontal";
     this.variant = "default";
+    this.reorderable = false;
     this._tabs = [];
+    this._dragging = null;
     this.#generatedId = `jolly-tabs-${++kTabsId}`;
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#session?.cancel();
+    this.#session = null;
   }
 
   override render(): TemplateResult {
@@ -85,6 +114,12 @@ export class Tabs extends LitElement {
     index: number
   ): TemplateResult {
     const selected = tab.value === this.value;
+    const icon = tab.icon === "" ?
+      nothing :
+      html`<jolly-icon class="icon" name=${tab.icon} aria-hidden="true"></jolly-icon>`;
+    const text = tab.iconOnly ?
+      nothing :
+      html`<span class="text">${tab.label}</span>`;
 
     return html`
       <div
@@ -94,6 +129,8 @@ export class Tabs extends LitElement {
         ?data-action=${tab.action !== ""}
         ?data-disabled=${tab.disabled}
         ?data-selected=${selected}
+        ?data-fixed=${tab.fixed}
+        ?data-dragging=${tab === this._dragging}
       >
         <button
           id=${this.#buttonId(index)}
@@ -102,14 +139,16 @@ export class Tabs extends LitElement {
           role="tab"
           aria-controls=${this.#panelId(index)}
           aria-selected=${String(selected)}
+          aria-label=${tab.iconOnly ? tab.label : nothing}
           tabindex=${selected ? "0" : "-1"}
           ?disabled=${tab.disabled}
-          title=${tab.tooltip || nothing}
+          title=${tab.tooltip || (tab.iconOnly ? tab.label : nothing)}
           data-index=${index}
           @click=${this.#onSelect}
           @mousedown=${this.#onMouseDown}
           @auxclick=${this.#onAuxClick}
-        ><span class="text">${tab.label}</span>${tab.badge === "" ?
+          @pointerdown=${this.#onPointerDown}
+        >${icon}${text}${tab.badge === "" ?
           nothing :
           html`<span class="badge" part="badge">${tab.badge}</span>`
         }</button>
@@ -201,6 +240,87 @@ export class Tabs extends LitElement {
       );
     }
   }
+
+  #onPointerDown = (
+    event: PointerEvent
+  ) => {
+    if (
+      !this.reorderable ||
+      event.button !== 0 ||
+      this.#session !== null ||
+      !isButtonElement(event.currentTarget)
+    ) {
+      return;
+    }
+
+    const from = Number(event.currentTarget.dataset.index);
+    const tab = this._tabs[from];
+    const segment = tabSegment(
+      this._tabs.map((candidate) => candidate.fixed),
+      from
+    );
+    const items = [
+      ...this.renderRoot.querySelectorAll<HTMLElement>(".item")
+    ];
+    const list = this._list;
+    if (
+      tab === undefined ||
+      tab.disabled ||
+      segment === null ||
+      segment.end - segment.start < 2 ||
+      list === null
+    ) {
+      return;
+    }
+
+    const axis = this.orientation === "horizontal" ? "x" : "y";
+    const rects = items.slice(segment.start, segment.end)
+      .map((item) => item.getBoundingClientRect());
+    const candidates = rects.map((rect) => (axis === "x" ?
+      { start: rect.x, size: rect.width } :
+      { start: rect.y, size: rect.height }));
+    const bounds = unionOf(rects);
+    const insertionLine = axis === "x" ?
+      horizontalInsertionLine :
+      verticalInsertionLine;
+
+    this.#session = startDragSession({
+      source: items[from],
+      event,
+      handle: event.currentTarget,
+      ghostLabel: tab.label,
+      zones: () => [{
+        id: this.#generatedId,
+        rect: rectOf(list),
+        candidates,
+        axis,
+        source: from - segment.start,
+        line: (index) => insertionLine(bounds, candidates, index)
+      }],
+      onStart: () => {
+        this._dragging = tab;
+      },
+      onCommit: (result) => {
+        const index = result.zone === null ?
+          null :
+          tabDropTarget(segment, from, result.index);
+        if (index !== null) {
+          emitContainerEvent(
+            this,
+            "jolly-tab-reorder",
+            {
+              value: tab.value,
+              index
+            }
+          );
+        }
+      },
+      onEnd: () => {
+        this.#session = null;
+        this._dragging = null;
+      }
+    });
+  };
 
   #onSelect = (
     event: MouseEvent
@@ -359,6 +479,35 @@ export class Tabs extends LitElement {
   ): string {
     return `${this.id || this.#generatedId}-panel-${index}`;
   }
+}
+
+function rectOf(
+  element: Element
+): Rect {
+  const rect = element.getBoundingClientRect();
+
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height
+  };
+}
+
+function unionOf(
+  rects: readonly DOMRect[]
+): Rect {
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+
+  return {
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top
+  };
 }
 
 declare global {

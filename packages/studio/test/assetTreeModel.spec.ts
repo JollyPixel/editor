@@ -155,6 +155,45 @@ describe("AssetTreeModel", () => {
   });
 });
 
+describe("AssetTreeModel kind filter", () => {
+  test("shows only the assets of the kind and the folders holding them", () => {
+    const model = new AssetTreeModel(kRecords, { kind: "pixelart" });
+
+    assert.deepEqual(shape(model.nodes), [
+      ["textures", [["blocks", ["stone.pixelart"]], "A.pixelart", "b.pixelart"]]
+    ]);
+    assert.equal(model.has(kMaps), false);
+    assert.equal(model.has(assetNodeId("readme")), false);
+  });
+
+  test("shows every asset for a null kind", () => {
+    const model = new AssetTreeModel(kRecords, { kind: null });
+
+    assert.deepEqual(shape(model.nodes), shape(kModel.nodes));
+  });
+
+  test("still relocates and lists hidden assets under a visible folder", () => {
+    const model = new AssetTreeModel([
+      ...kRecords,
+      {
+        id: "map-in-textures",
+        kind: "voxelmap",
+        source: "textures/level.voxelmap.json"
+      }
+    ], { kind: "pixelart" });
+
+    assert.equal(model.has(assetNodeId("map-in-textures")), false);
+    assert.ok(
+      model.assetsUnder(kTextures).some((asset) => asset.id === "map-in-textures")
+    );
+    assert.ok(
+      model.renameOf(kTextures, "images")?.renames.some(
+        (rename) => rename.to === "images/level.voxelmap.json"
+      )
+    );
+  });
+});
+
 describe("AssetTreeModel.renameOf", () => {
   test("renames an asset in its folder and keeps its extension", () => {
     assert.deepEqual(plain(kModel.renameOf(assetNodeId("map-2"), "tunnel")), {

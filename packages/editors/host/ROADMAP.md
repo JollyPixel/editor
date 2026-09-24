@@ -18,12 +18,3 @@ through `context.shell`. Still open:
   and the bootstrap steps log nothing, so a page that hangs at boot gives
   no clue without temporary `console.log` inserts. A debug logger that the
   editors, the studio and the e2e suites can switch on.
-
-## Offline workspaces
-
-- Host shell: a per-asset "Export" action and in-place navigation after an
-  import.
-- Whole-workspace export and import in the UI. If it outgrows the room cap, an
-  HTTP streaming endpoint for that case only, with an Origin check.
-- voxel-model and pixel-art have no archive UI yet. The `session.archive` port
-  already serves them.

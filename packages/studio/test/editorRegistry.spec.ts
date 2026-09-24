@@ -70,6 +70,20 @@ describe("EditorRegistry", () => {
     assert.equal(iconTone(icon), "lime");
   });
 
+  test("lists the registered kinds in registration order", () => {
+    const registry = new EditorRegistry()
+      .registerKind(kMapKind)
+      .registerKind({
+        kind: "texture",
+        label: "Texture"
+      });
+
+    assert.deepEqual(
+      registry.kinds().map(({ kind, label }) => [kind, label]),
+      [["voxelmap", "Voxel map"], ["texture", "Texture"]]
+    );
+  });
+
   test("falls back to the file icon", () => {
     const registry = new EditorRegistry().registerKind({
       kind: "texture",

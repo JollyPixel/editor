@@ -11,10 +11,16 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
-import type {
-  IconName,
-  JollyReparentDetail
+import {
+  ARCHIVE_MIME_TYPE,
+  type CatalogClient
+} from "@jolly-pixel/asset-server/catalog/client";
+import {
+  LocalStorageAdapter,
+  type IconName,
+  type JollyChangeDetail,
+  type JollyOption,
+  type JollyReparentDetail
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -29,11 +35,28 @@ import "./AssetDeleteDialog.ts";
 
 // CONSTANTS
 const kProjectRoot = "the project root";
+const kKindStorageKey = "studio:asset-kind";
+const kArchiveExtension = ".zip";
+const kAllKinds: JollyOption<string> = {
+  value: "",
+  label: "All kinds",
+  icon: "all-kinds"
+};
+
+export interface AssetKindFilter {
+  kind: string;
+  label: string;
+  icon: IconName;
+}
 
 export interface AssetBrowserOptions {
   catalog: CatalogClient;
   iconFor?: (kind: string) => IconName | undefined;
   detailFor?: (kind: string) => string | undefined;
+  /**
+   * Kinds offered by the filter row, in display order.
+   */
+  kinds?: readonly AssetKindFilter[];
 }
 
 export interface AssetOpenDetail {
@@ -63,6 +86,9 @@ export class AssetBrowser extends LitElement {
   @state()
   declare _pendingLabels: ReadonlyMap<string, string>;
 
+  @state()
+  declare _kind: string;
+
   @query("jolly-tree")
   declare _tree: HTMLElementTagNameMap["jolly-tree"] | null;
 
@@ -70,6 +96,7 @@ export class AssetBrowser extends LitElement {
   declare _deleteDialog: AssetDeleteDialog;
 
   #catalog: CatalogClient | null = null;
+  #storage = new LocalStorageAdapter();
 
   constructor() {
     super();
@@ -78,6 +105,7 @@ export class AssetBrowser extends LitElement {
     this._expanded = null;
     this._selected = [];
     this._pendingLabels = new Map();
+    this._kind = this.#storage.get(kKindStorageKey) ?? "";
   }
 
   override connectedCallback(): void {
@@ -101,12 +129,34 @@ export class AssetBrowser extends LitElement {
     if (changed.has("options")) {
       this.#listen();
     }
+    else if (changed.has("_kind")) {
+      this.#onCatalogChange();
+    }
   }
 
   override render(): TemplateResult {
     const empty = this._selected.length === 0;
+    const exportable = this.#selectedAsset() !== null;
+    const kinds = this.options?.kinds ?? [];
 
     return html`
+      <jolly-button-group
+        class="kinds"
+        icon-only
+        aria-label="Asset kind"
+        .options=${[
+          kAllKinds,
+          ...kinds.map((kind) => {
+            return {
+              value: kind.kind,
+              label: kind.label,
+              icon: kind.icon
+            };
+          })
+        ]}
+        .value=${this._kind}
+        @jolly-change=${this.#onKindChange}
+      ></jolly-button-group>
       <jolly-toolbar label="Asset actions">
         <jolly-button
           icon="pencil"
@@ -124,6 +174,14 @@ export class AssetBrowser extends LitElement {
           title="Delete (Del)"
           ?disabled=${empty}
           @click=${this.#deleteSelected}
+        ></jolly-button>
+        <jolly-button
+          icon="export"
+          icon-only
+          label="Export"
+          title="Export as a ZIP archive"
+          ?disabled=${!exportable}
+          @click=${this.#exportSelected}
         ></jolly-button>
       </jolly-toolbar>
       <jolly-tree
@@ -265,6 +323,35 @@ export class AssetBrowser extends LitElement {
     }
   }
 
+  async #export(
+    asset: AssetLeafData
+  ): Promise<void> {
+    const catalog = this.#catalog;
+    if (catalog === null) {
+      return;
+    }
+
+    try {
+      const bytes = await catalog.exportArchive(asset.id);
+      download(
+        new Blob([Uint8Array.from(bytes)], { type: ARCHIVE_MIME_TYPE }),
+        `${asset.path.stem || asset.id}${kArchiveExtension}`
+      );
+    }
+    catch (error) {
+      this.#error(`Could not export "${asset.path.name}": ${reasonOf(error)}`);
+    }
+  }
+
+  #selectedAsset(): AssetLeafData | null {
+    const [nodeId] = this._selected;
+    const data = nodeId === undefined ?
+      undefined :
+      this._model.node(nodeId)?.data;
+
+    return data?.type === "asset" ? data : null;
+  }
+
   #followFolder(
     relocation: AssetRelocation
   ): void {
@@ -298,13 +385,17 @@ export class AssetBrowser extends LitElement {
   }
 
   readonly #onCatalogChange = (): void => {
-    const records = this.#catalog?.records() ?? [];
+    const records = [...this.#catalog?.records() ?? []];
+    const kinds = this.options?.kinds ?? [];
     const model = new AssetTreeModel(records, {
       iconFor: this.options?.iconFor,
-      detailFor: this.options?.detailFor
+      detailFor: this.options?.detailFor,
+      kind: kinds.some(({ kind }) => kind === this._kind) ? this._kind : null
     });
     this._model = model;
-    this._expanded ??= this.#catalog === null ? null : new Set(model.folderIds());
+    this._expanded ??= this.#catalog === null ?
+      null :
+      new Set(new AssetTreeModel(records).folderIds());
     this._selected = this._selected.filter((nodeId) => model.has(nodeId));
 
     const labels = new Map(this._pendingLabels);
@@ -315,6 +406,20 @@ export class AssetBrowser extends LitElement {
       }
     }
     this._pendingLabels = labels;
+  };
+
+  readonly #onKindChange = (
+    event: CustomEvent<JollyChangeDetail<string>>
+  ): void => {
+    this._kind = event.detail.value;
+    this.#storage.set(kKindStorageKey, this._kind);
+  };
+
+  readonly #exportSelected = (): void => {
+    const asset = this.#selectedAsset();
+    if (asset !== null) {
+      void this.#export(asset);
+    }
   };
 
   readonly #acceptDrop = (
@@ -444,6 +549,18 @@ function reasonOf(
   error: unknown
 ): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function download(
+  blob: Blob,
+  fileName: string
+): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 declare global {

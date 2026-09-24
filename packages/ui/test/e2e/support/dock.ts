@@ -5,6 +5,9 @@ import { boxOf, dragTo } from "@jolly-pixel/e2e";
 // Import Internal Dependencies
 import { openExample } from "./gallery.ts";
 
+// CONSTANTS
+export const DOCK_HANDLE_SIZE = 4;
+
 export function openDockLayout(
   page: Page
 ): Promise<void> {

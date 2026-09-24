@@ -37,6 +37,11 @@ export type AssetTreeNode = TreeNode<AssetNodeData>;
 export interface AssetTreeOptions {
   iconFor?: (kind: string) => IconName | undefined;
   detailFor?: (kind: string) => string | undefined;
+  /**
+   * Shows only the assets of this kind and the folders holding them.
+   * Folder relocations and deletions still cover every asset under them.
+   */
+  kind?: string | null;
 }
 
 export interface AssetRename {
@@ -86,6 +91,9 @@ export class AssetTreeModel {
         path: AssetPath.parse(record.source)
       };
       this.#assets.push(data);
+      if (options.kind && options.kind !== record.kind) {
+        continue;
+      }
       this.#add(this.#folderAt(data.path.parent), {
         id: assetNodeId(record.id),
         label: data.path.name,

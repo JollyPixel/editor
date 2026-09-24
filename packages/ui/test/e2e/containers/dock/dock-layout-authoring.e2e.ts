@@ -18,6 +18,7 @@ import {
   shadowBlurOf
 } from "../../support/styles.ts";
 import {
+  DOCK_HANDLE_SIZE,
   openDockLayout,
   paneKeysOf
 } from "../../support/dock.ts";
@@ -192,7 +193,7 @@ test.describe("DockLayout", () => {
     const original = await size();
 
     await handle.dblclick();
-    await expect.poll(() => widthOf(dock)).toBe(0);
+    await expect.poll(() => widthOf(dock)).toBe(DOCK_HANDLE_SIZE);
 
     const point = await centerOf(handle);
     await hold(page, point, {
@@ -203,6 +204,6 @@ test.describe("DockLayout", () => {
     await expect.poll(size).toBe(original);
 
     await handle.dblclick();
-    await expect.poll(() => widthOf(dock)).toBe(original);
+    await expect.poll(() => widthOf(dock)).toBe(original + DOCK_HANDLE_SIZE);
   });
 });

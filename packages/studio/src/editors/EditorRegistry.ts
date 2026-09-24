@@ -90,6 +90,12 @@ export class EditorRegistry {
     return this;
   }
 
+  kinds(): AssetKindDescriptor[] {
+    return [...this.#kinds.values()].map((descriptor) => {
+      return { ...descriptor };
+    });
+  }
+
   iconFor(
     kind: string
   ): IconName {

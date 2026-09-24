@@ -259,16 +259,24 @@ export const dockStyles = css`
   :host([side="right"]) .resize-handle {
     top: 0;
     bottom: 0;
-    width: 4px;
+    width: var(--jolly-dock-handle-size, 4px);
     cursor: ew-resize;
   }
 
   :host([side="left"]) .resize-handle {
-    right: -4px;
+    right: calc(-1 * var(--jolly-dock-handle-size, 4px));
   }
 
   :host([side="right"]) .resize-handle {
-    left: -4px;
+    left: calc(-1 * var(--jolly-dock-handle-size, 4px));
+  }
+
+  :host(:is([collapsed], :not([overlay]))[side="left"]) .resize-handle {
+    right: 0;
+  }
+
+  :host(:is([collapsed], :not([overlay]))[side="right"]) .resize-handle {
+    left: 0;
   }
 
   :host([side="left"]) .resize-handle::after,
@@ -286,16 +294,24 @@ export const dockStyles = css`
   :host([side="bottom"]) .resize-handle {
     right: 0;
     left: 0;
-    height: 4px;
+    height: var(--jolly-dock-handle-size, 4px);
     cursor: ns-resize;
   }
 
   :host([side="top"]) .resize-handle {
-    bottom: -4px;
+    bottom: calc(-1 * var(--jolly-dock-handle-size, 4px));
   }
 
   :host([side="bottom"]) .resize-handle {
-    top: -4px;
+    top: calc(-1 * var(--jolly-dock-handle-size, 4px));
+  }
+
+  :host(:is([collapsed], :not([overlay]))[side="top"]) .resize-handle {
+    bottom: 0;
+  }
+
+  :host(:is([collapsed], :not([overlay]))[side="bottom"]) .resize-handle {
+    top: 0;
   }
 
   :host([side="top"]) .resize-handle::after,

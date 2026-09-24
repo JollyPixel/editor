@@ -52,3 +52,45 @@ registerIcon("file", `
     fill="currentColor"
   />
 `);
+
+registerIcon("home", `
+  <path
+    d="M5 11v9h5v-6h4v6h5v-9"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M3 12l9-8 9 8M5 11v9h5v-6h4v6h5v-9"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+    fill="none"
+  />
+`);
+
+registerIcon("export", `
+  <path
+    d="M4 15v5h16v-5"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M12 4v11M7 10l5 5 5-5M4 15v5h16v-5"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "sky" });
+
+registerIcon("all-kinds", `
+  <path
+    class="tone-ink"
+    d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"
+    fill="currentColor"
+  />
+`);

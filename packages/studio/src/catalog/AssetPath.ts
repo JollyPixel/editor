@@ -46,6 +46,10 @@ export class AssetPath {
     return dot === -1 ? "" : this.name.slice(dot);
   }
 
+  get stem(): string {
+    return this.name.slice(0, this.name.length - this.extension.length);
+  }
+
   child(
     name: string
   ): AssetPath {

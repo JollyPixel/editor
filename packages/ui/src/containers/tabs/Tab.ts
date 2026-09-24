@@ -22,7 +22,10 @@ const kStripProperties = [
   "tooltip",
   "badge",
   "action",
-  "actionLabel"
+  "actionLabel",
+  "icon",
+  "iconOnly",
+  "fixed"
 ] as const;
 
 @customElement("jolly-tab")
@@ -66,6 +69,19 @@ export class Tab extends LitElement {
   @property({ type: String, attribute: "action-label" })
   declare actionLabel: string;
 
+  @property({ type: String })
+  declare icon: IconName;
+
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "icon-only"
+  })
+  declare iconOnly: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare fixed: boolean;
+
   constructor() {
     super();
 
@@ -78,6 +94,9 @@ export class Tab extends LitElement {
     this.badge = "";
     this.action = "";
     this.actionLabel = "";
+    this.icon = "";
+    this.iconOnly = false;
+    this.fixed = false;
   }
 
   override connectedCallback(): void {
