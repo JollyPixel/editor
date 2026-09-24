@@ -25,6 +25,7 @@ const kDefaultHeadLength = 0.3;
 const kDefaultHeadRadius = 0.11;
 const kDefaultSphereRadius = 0.1;
 const kDefaultCubeSize = 0.18;
+const kDefaultSlabSize = 0.22;
 
 export type AxisHandleGeometry = ArrowGeometry;
 
@@ -42,6 +43,8 @@ export function createAxisHandleGeometry(
       return createSphereHandleGeometry(options);
     case "cube":
       return createCubeHandleGeometry(options);
+    case "slab":
+      return createSlabHandleGeometry(options);
     default:
       return createArrowHandleGeometry(options);
   }
@@ -152,6 +155,27 @@ function createCubeHandleGeometry(
   return {
     geometry: mergeShaftWith(tip, dimensions),
     length: dimensions.shaftLength + (size / 2)
+  };
+}
+
+function createSlabHandleGeometry(
+  options: Extract<TransformAxisHandleOptions, { kind: "slab"; }>
+): AxisHandleGeometry {
+  const dimensions = shaftDimensions(options);
+  const size = positive(
+    options.size ?? kDefaultSlabSize,
+    "handle size"
+  );
+  const depth = positive(
+    options.depth ?? (size / 2),
+    "handle depth"
+  );
+  const tip = new THREE.BoxGeometry(size, depth, size)
+    .translate(0, dimensions.shaftLength, 0);
+
+  return {
+    geometry: mergeShaftWith(tip, dimensions),
+    length: dimensions.shaftLength + (depth / 2)
   };
 }
 

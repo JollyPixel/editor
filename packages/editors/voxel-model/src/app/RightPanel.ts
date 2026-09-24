@@ -7,15 +7,23 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { ModelWorkspace } from "../scene/index.ts";
+import type { ModelWorkspace } from "../scene/ModelEditorScene.ts";
 import type { HierarchyPanel } from "../features/hierarchy/HierarchyPanel.ts";
 import type { TransformPanel } from "../features/transform/TransformPanel.ts";
 import "../features/hierarchy/HierarchyPanel.ts";
 import "../features/transform/TransformPanel.ts";
+import { WorkspaceController } from "../shared/WorkspaceController.ts";
 
 export class RightPanel extends LitElement {
-  #workspace: ModelWorkspace | null = null;
-  #unsubscribePresence: (() => void) | null = null;
+  #workspace = new WorkspaceController<ModelWorkspace>(this, ({ presence }) => {
+    this._peers = presence.peers;
+
+    return [
+      presence.subscribe("peersChange", (peers) => {
+        this._peers = peers;
+      })
+    ];
+  });
 
   @query("jolly-model-editor-transform")
   declare private transformElement: TransformPanel;
@@ -51,33 +59,17 @@ export class RightPanel extends LitElement {
   async attach(
     workspace: ModelWorkspace
   ): Promise<void> {
-    const { presence } = workspace;
-    this.#workspace = workspace;
-
-    this.#unsubscribePresence?.();
-    this._peers = presence.peers;
-    this.#unsubscribePresence = presence.subscribe(
-      "peersChange",
-      (peers) => {
-        this._peers = peers;
-      }
-    );
+    this.#workspace.attach(workspace);
 
     await this.updateComplete;
     this.transformElement.attach(workspace);
     this.hierarchyElement.attach(workspace);
   }
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.#unsubscribePresence?.();
-    this.#unsubscribePresence = null;
-  }
-
   readonly #onPeerSelect = (
     event: CustomEvent<JollyPeerSelectDetail>
   ): void => {
-    this.#workspace?.teleportToPeer(event.detail.clientId);
+    this.#workspace.current?.teleportToPeer(event.detail.clientId);
   };
 
   #renderCollaborators(): TemplateResult | typeof nothing {

@@ -65,6 +65,12 @@ export interface HighlightBoxSilhouetteOptions {
    * @default false
    */
   peer?: boolean;
+  /**
+   * Keeps the visible portion writing depth under xray, so transparent passes
+   * drawn later (a grid, for instance) are hidden behind the outline.
+   * @default false
+   */
+  xrayDepthWrite?: boolean;
 }
 
 type SilhouetteMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
@@ -88,6 +94,7 @@ function createBackPass(
   const material = front.material.clone();
   material.opacity = occludedOpacity;
   material.depthFunc = THREE.GreaterDepth;
+  material.depthWrite = false;
 
   const mesh = new THREE.Mesh(front.geometry, material);
   mesh.renderOrder = renderOrder;
@@ -104,6 +111,7 @@ export class HighlightBoxSilhouette extends THREE.Mesh<THREE.BufferGeometry, THR
   #color: THREE.Color;
   #renderOrder: number;
   #xray: boolean;
+  #xrayDepthWrite: boolean;
   #occludedOpacity: number;
   #outerColorStart: number;
   #back: SilhouetteMesh | null = null;
@@ -123,7 +131,8 @@ export class HighlightBoxSilhouette extends THREE.Mesh<THREE.BufferGeometry, THR
       renderOrder = defaultRenderOrder(xray, peer),
       innerThickness = 0.02,
       innerColor = "#000000",
-      occludedOpacity = opacity
+      occludedOpacity = opacity,
+      xrayDepthWrite = false
     } = options;
 
     const halfExtents = halfExtentsOf(target);
@@ -155,6 +164,7 @@ export class HighlightBoxSilhouette extends THREE.Mesh<THREE.BufferGeometry, THR
     this.#color = colorObject;
     this.#renderOrder = renderOrder;
     this.#xray = xray;
+    this.#xrayDepthWrite = xrayDepthWrite;
     this.#occludedOpacity = occludedOpacity;
     this.#outerColorStart = built.outerColorStart;
     this.renderOrder = renderOrder;
@@ -267,7 +277,7 @@ export class HighlightBoxSilhouette extends THREE.Mesh<THREE.BufferGeometry, THR
    * dimmed. The two never overlap a pixel, so there is nothing to blend twice.
    */
   #applyXray(): void {
-    this.material.depthWrite = !this.#xray;
+    this.material.depthWrite = !this.#xray || this.#xrayDepthWrite;
 
     if (!this.#xray) {
       this.#back?.removeFromParent();

@@ -16,10 +16,11 @@ import type {
 
 // Import Internal Dependencies
 import type { BlockRegions } from "../../model/index.ts";
+import type { BlockSelectionStore } from "../../state/index.ts";
 import type {
   ModelBlock,
   ModelBlocks
-} from "../blocks/index.ts";
+} from "../../scene/blocks/index.ts";
 import { BoxUvLayout } from "./BoxUvLayout.ts";
 import {
   blockRegionId,
@@ -34,6 +35,7 @@ export interface BlockTexturesOptions {
   pixels: PixelDocument;
   document: ModelDocument;
   blocks: ModelBlocks;
+  selection: BlockSelectionStore;
   pixelsReady: Promise<void>;
 }
 
@@ -41,6 +43,7 @@ export class BlockTextures implements BlockRegions {
   #pixels: PixelDocument;
   #document: ModelDocument;
   #blocks: ModelBlocks;
+  #selection: BlockSelectionStore;
   #texture: PixelCanvasTexture;
   #bindings = new Map<string, UVGeometryBinding>();
   #pixelsLoaded = false;
@@ -131,21 +134,20 @@ export class BlockTextures implements BlockRegions {
   };
 
   #onRegionSelected: UVMapListener<"selection-changed"> = ({ selectedRegionId }) => {
-    const blocks = this.#blocks;
     const uuid = selectedRegionId === null
       ? null
       : blockUuidFromRegion(selectedRegionId);
-    const block = uuid === null ? null : blocks.get(uuid) ?? null;
+    const next = uuid === null ? null : this.#blocks.get(uuid)?.uuid ?? null;
 
-    if (blocks.selected !== block) {
-      blocks.select(block);
+    if (this.#selection.selected !== next) {
+      this.#selection.select(next);
     }
   };
 
   #onBlockSelected = (
-    block: ModelBlock | null
+    uuid: string | null
   ): void => {
-    const regionId = block ? blockRegionId(block.uuid) : null;
+    const regionId = uuid === null ? null : blockRegionId(uuid);
     if (this.#pixels.uv.selectedRegionId !== regionId) {
       this.#pixels.uv.select(regionId);
     }
@@ -158,6 +160,7 @@ export class BlockTextures implements BlockRegions {
     this.#pixels = pixels;
     this.#document = options.document;
     this.#blocks = options.blocks;
+    this.#selection = options.selection;
     this.#texture = new PixelCanvasTexture({
       document: pixels,
       get textureSize() {
@@ -174,7 +177,7 @@ export class BlockTextures implements BlockRegions {
     pixels.uv.on("selection-changed", this.#onRegionSelected);
     this.#document.on("change", this.#onChange);
     this.#document.on("reset", this.#rebindAll);
-    this.#blocks.on("select", this.#onBlockSelected);
+    this.#selection.on("select", this.#onBlockSelected);
 
     this.#rebindAll();
     void options.pixelsReady.then(() => {
@@ -242,7 +245,7 @@ export class BlockTextures implements BlockRegions {
     uv.off("selection-changed", this.#onRegionSelected);
     this.#document.off("change", this.#onChange);
     this.#document.off("reset", this.#rebindAll);
-    this.#blocks.off("select", this.#onBlockSelected);
+    this.#selection.off("select", this.#onBlockSelected);
     this.#blocks.texture = null;
     this.#texture.off("resized", this.#onResized);
     this.#texture.dispose();

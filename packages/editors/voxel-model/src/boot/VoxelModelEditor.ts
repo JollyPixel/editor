@@ -16,7 +16,7 @@ import {
 import {
   ModelEditorScene,
   type ModelWorkspace
-} from "../scene/index.ts";
+} from "../scene/ModelEditorScene.ts";
 import { PresenceStore } from "../state/index.ts";
 import { EditorShell } from "./EditorShell.ts";
 import {

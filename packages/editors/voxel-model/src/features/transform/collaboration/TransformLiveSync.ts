@@ -10,9 +10,9 @@ import type {
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import { parseBlockTransformJSON } from "../model/index.ts";
-import type { ModelBlocks } from "../scene/index.ts";
-import { PRESENCE_KEYS } from "./presenceKeys.ts";
+import { parseBlockTransformJSON } from "./blockTransformCodec.ts";
+import type { ModelBlocks } from "../../../scene/index.ts";
+import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 
 // CONSTANTS
 const kThrottleMs = 50;

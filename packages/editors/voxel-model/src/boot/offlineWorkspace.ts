@@ -13,7 +13,7 @@ import {
 import {
   TEXTURE_SIZE,
   encodeModelDocument
-} from "../../vite/modelSeed.ts";
+} from "./modelSeed.ts";
 
 export function openOfflineWorkspace(
   name: string = "default"

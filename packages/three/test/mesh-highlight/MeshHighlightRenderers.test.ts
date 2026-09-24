@@ -14,7 +14,8 @@ import {
   type HighlightEntry,
   type ResolvedHighlightIndicator,
   type HighlightPassTarget,
-  type HighlightOverlay
+  type HighlightOverlay,
+  type HighlightOverlayCreateOptions
 } from "#src/index.ts";
 
 // CONSTANTS
@@ -200,6 +201,29 @@ describe("ObjectOverlayRenderer", () => {
     const [peerOverlay, localOverlay] = overlays;
     assert.strictEqual(peerOverlay.occludedOpacity, 0.2);
     assert.strictEqual(localOverlay.occludedOpacity, 0.2);
+  });
+
+  test("forwards the appearance render order and xray depth write to the factory", () => {
+    const received: HighlightOverlayCreateOptions[] = [];
+    const registry = new HighlightOverlayRegistry({ defaultId: "outline", fallbackId: "outline" });
+    registry.register({
+      id: "outline",
+      supports: () => true,
+      create: (_target, options) => {
+        received.push(options);
+
+        return new TestOverlay(options.color, options.opacity, options.xray ?? false, options.peer ?? false);
+      }
+    });
+    const renderer = new ObjectOverlayRenderer({ registry, renderScene: () => void 0, camera: kCamera });
+
+    renderer.sync(
+      [indicator(new THREE.Mesh())],
+      new MeshHighlightAppearance({ renderOrder: 42, xrayDepthWrite: true })
+    );
+
+    assert.strictEqual(received[0].renderOrder, 42);
+    assert.strictEqual(received[0].xrayDepthWrite, true);
   });
 
   test("leaves the occluded opacity at the visible one when no scale is configured", () => {

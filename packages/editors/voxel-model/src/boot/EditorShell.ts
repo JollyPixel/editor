@@ -6,7 +6,7 @@ import type { DockLayout } from "@jolly-pixel/ui";
 import type { LeftPanel } from "../app/LeftPanel.ts";
 import type { RightPanel } from "../app/RightPanel.ts";
 import { visibleTexturePane } from "../app/texturePanes.ts";
-import type { ModelWorkspace } from "../scene/index.ts";
+import type { ModelWorkspace } from "../scene/ModelEditorScene.ts";
 import type { ModelTexture } from "./modelTexture.ts";
 
 // CONSTANTS

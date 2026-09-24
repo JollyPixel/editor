@@ -48,6 +48,16 @@ describe("MeshHighlightAppearance", () => {
     assert.strictEqual(current.hovered.opacity, 0.35);
   });
 
+  test("with preserves renderOrder and xrayDepthWrite", () => {
+    const current = new MeshHighlightAppearance({ renderOrder: 42, xrayDepthWrite: true });
+    const next = current.with({ xray: true });
+
+    assert.strictEqual(new MeshHighlightAppearance().renderOrder, null);
+    assert.strictEqual(new MeshHighlightAppearance().xrayDepthWrite, false);
+    assert.strictEqual(next.renderOrder, 42);
+    assert.strictEqual(next.xrayDepthWrite, true);
+  });
+
   test("copies mutable colors at the boundary", () => {
     const input = new THREE.Color("#ff0000");
     const appearance = new MeshHighlightAppearance({

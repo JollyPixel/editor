@@ -75,7 +75,7 @@ describe("ModelBlocks projection", () => {
     assert.equal(fixture.blocks.size, 1);
     assert.equal(block?.name, "Torso");
     assert.deepEqual(block?.transform, transformAt({ x: 1, y: 2, z: 3 }));
-    assert.equal(block?.root.parent, fixture.scene);
+    assert.equal(block?.node.parent, fixture.scene);
   });
 
   test("parents a block to the pivot of its nearest block, through folders", () => {
@@ -90,7 +90,7 @@ describe("ModelBlocks projection", () => {
       parentId: folderId
     });
 
-    assert.equal(arm.root.parent, body.pivot);
+    assert.equal(arm.node.parent, body.node);
   });
 
   test("follows renames, transforms and removals of either origin", () => {
@@ -110,7 +110,7 @@ describe("ModelBlocks projection", () => {
     fixture.document.remove(block.uuid);
 
     assert.equal(fixture.blocks.get(block.uuid), undefined);
-    assert.equal(block.root.parent, null);
+    assert.equal(block.node.parent, null);
   });
 
   test("drops the views of a whole removed subtree", () => {
@@ -122,7 +122,7 @@ describe("ModelBlocks projection", () => {
     fixture.document.remove(folderId!);
 
     assert.equal(fixture.blocks.size, 0);
-    assert.equal(hand.root.parent, null);
+    assert.equal(hand.node.parent, null);
   });
 
   test("re-parents the blocks a moved folder carries and applies their transforms", () => {
@@ -135,7 +135,7 @@ describe("ModelBlocks projection", () => {
       { id: arm.uuid, transform: transformAt({ x: -2, y: 0, z: 0 }) }
     ]);
 
-    assert.equal(arm.root.parent, body.pivot);
+    assert.equal(arm.node.parent, body.node);
     assert.equal(arm.position.x, -2);
   });
 
@@ -165,8 +165,8 @@ describe("ModelBlocks projection", () => {
     assert.equal(fixture.blocks.get(stale.uuid), undefined);
     assert.equal(fixture.blocks.size, 2);
     assert.equal(
-      fixture.blocks.get("child")?.root.parent,
-      fixture.blocks.get("parent")?.pivot
+      fixture.blocks.get("child")?.node.parent,
+      fixture.blocks.get("parent")?.node
     );
   });
 
@@ -220,7 +220,7 @@ describe("ModelBlocks poses", () => {
     const fixture = createModelFixture();
     const { parent, child } = rotatedParentWithChild(fixture);
     const worldPosition = child.worldPosition;
-    const worldRotation = child.pivot.getWorldQuaternion(new THREE.Quaternion());
+    const worldRotation = child.node.getWorldQuaternion(new THREE.Quaternion());
 
     const transform = fixture.blocks.under(child.uuid, parent.uuid);
     fixture.document.move(child.uuid, parent.uuid, [
@@ -228,13 +228,135 @@ describe("ModelBlocks poses", () => {
     ]);
     fixture.scene.updateMatrixWorld(true);
 
-    assert.equal(child.root.parent, parent.pivot);
+    assert.equal(child.node.parent, parent.node);
     assertCloseTo(child.worldPosition, worldPosition.toArray());
     assert.ok(
-      child.pivot
+      child.node
         .getWorldQuaternion(new THREE.Quaternion())
         .angleTo(worldRotation) < 1e-6
     );
+  });
+
+  test("a block's scale carries its children around its pivot", () => {
+    const fixture = createModelFixture();
+    const parent = fixture.addBlock({
+      transform: createBlockTransform({
+        pivotOffset: { x: 1, y: 0, z: 0 },
+        scale: { x: 2, y: 2, z: 2 }
+      })
+    });
+    const child = fixture.addBlock({
+      parentId: parent.uuid,
+      transform: createBlockTransform({
+        position: { x: 1, y: 0, z: 0 },
+        pivotOffset: { x: 0, y: 0.5, z: 0 }
+      })
+    });
+    fixture.scene.updateMatrixWorld(true);
+
+    assertCloseTo(parent.worldPosition, [0, 0, 0]);
+    assertCloseTo(parent.mesh.getWorldPosition(new THREE.Vector3()), [-2, 0, 0]);
+    assertCloseTo(child.worldPosition, [2, 0, 0]);
+    assertCloseTo(child.worldPosition, [2, 0, 0]);
+    assertCloseTo(child.mesh.getWorldPosition(new THREE.Vector3()), [2, -1, 0]);
+    assertCloseTo(child.mesh.getWorldScale(new THREE.Vector3()), [2, 2, 2]);
+  });
+
+  test("under keeps the world size of a block moved between differently scaled parents", () => {
+    const fixture = createModelFixture();
+    const parent = fixture.addBlock({
+      transform: createBlockTransform({
+        scale: { x: 2, y: 2, z: 2 }
+      })
+    });
+    const child = fixture.addBlock({
+      transform: createBlockTransform({
+        position: { x: 4, y: 0, z: 0 },
+        pivotOffset: { x: 0, y: 1, z: 0 }
+      })
+    });
+    fixture.scene.updateMatrixWorld(true);
+    const worldPivot = child.worldPosition;
+
+    const transform = fixture.blocks.under(child.uuid, parent.uuid);
+    fixture.document.move(child.uuid, parent.uuid, [
+      { id: child.uuid, transform }
+    ]);
+    fixture.scene.updateMatrixWorld(true);
+
+    assert.deepEqual(transform.scale, { x: 0.5, y: 0.5, z: 0.5 });
+    assertCloseTo(child.worldPosition, [4, 0, 0]);
+    assertCloseTo(child.worldPosition, worldPivot.toArray());
+    assertCloseTo(child.mesh.getWorldScale(new THREE.Vector3()), [1, 1, 1]);
+  });
+
+  test("a per-axis scale stretches children along that axis of the parent only", () => {
+    const fixture = createModelFixture();
+    const parent = fixture.addBlock({
+      transform: createBlockTransform({
+        scale: { x: 3, y: 1, z: 1 }
+      })
+    });
+    const child = fixture.addBlock({
+      parentId: parent.uuid,
+      transform: transformAt({ x: 1, y: 1, z: 1 })
+    });
+    fixture.scene.updateMatrixWorld(true);
+
+    assertCloseTo(child.worldPosition, [3, 1, 1]);
+    assertCloseTo(child.mesh.getWorldScale(new THREE.Vector3()), [3, 1, 1]);
+  });
+
+  test("a child takes its parent's scale on the same axis whatever its rotation", () => {
+    const fixture = createModelFixture();
+    const parent = fixture.addBlock({
+      transform: createBlockTransform({
+        scale: { x: 3, y: 1, z: 1 }
+      })
+    });
+    const child = fixture.addBlock({
+      parentId: parent.uuid,
+      transform: createBlockTransform({
+        position: { x: 1, y: 0, z: 0 },
+        rotation: { x: 0, y: Math.PI / 2, z: 0 }
+      })
+    });
+    fixture.scene.updateMatrixWorld(true);
+
+    assertCloseTo(child.worldPosition, [3, 0, 0]);
+    assertCloseTo(child.mesh.getWorldScale(new THREE.Vector3()), [3, 1, 1]);
+  });
+
+  test("an angled child stays a box under a stretched parent", () => {
+    const fixture = createModelFixture();
+    const parent = fixture.addBlock({
+      transform: createBlockTransform({
+        scale: { x: 3, y: 1, z: 1 }
+      })
+    });
+    const child = fixture.addBlock({
+      parentId: parent.uuid,
+      transform: createBlockTransform({
+        pivotOffset: { x: 0.5, y: 0, z: 0 },
+        rotation: { x: 0, y: Math.PI / 6, z: 0 }
+      })
+    });
+    fixture.scene.updateMatrixWorld(true);
+
+    const x = new THREE.Vector3();
+    const y = new THREE.Vector3();
+    const z = new THREE.Vector3();
+    child.mesh.matrixWorld.extractBasis(x, y, z);
+    const scale = child.mesh.getWorldScale(new THREE.Vector3());
+
+    assert.ok(Math.abs(x.dot(y)) < 1e-6 && Math.abs(x.dot(z)) < 1e-6 && Math.abs(y.dot(z)) < 1e-6);
+    assertCloseTo(scale, [3, 1, 1]);
+    assertCloseTo(child.worldPosition, [0, 0, 0]);
+    assertCloseTo(
+      child.mesh.getWorldPosition(new THREE.Vector3()),
+      [-1.5 * Math.cos(Math.PI / 6), 0, 1.5 * Math.sin(Math.PI / 6)]
+    );
+    assert.deepEqual(child.transform.scale, { x: 1, y: 1, z: 1 });
   });
 
   test("under the scene restores the world pose as the local one", () => {
@@ -253,7 +375,7 @@ describe("ModelBlocks poses", () => {
     );
   });
 
-  test("originUnder puts a new child on its parent's position", () => {
+  test("a new child with the default transform sits on its parent's pivot", () => {
     const fixture = createModelFixture();
     const parent = fixture.addBlock({
       transform: createBlockTransform({
@@ -264,9 +386,7 @@ describe("ModelBlocks poses", () => {
 
     const child = fixture.addBlock({
       parentId: parent.uuid,
-      transform: createBlockTransform({
-        position: fixture.blocks.originUnder(parent.uuid)
-      })
+      transform: createBlockTransform()
     });
     fixture.scene.updateMatrixWorld(true);
 
@@ -304,40 +424,16 @@ describe("ModelBlocks poses", () => {
 });
 
 describe("ModelBlocks selection", () => {
-  test("select updates the selected getter and emits the selected block", () => {
-    const fixture = createModelFixture();
-    const first = fixture.addBlock();
-    const second = fixture.addBlock();
-    const selections: unknown[] = [];
-    fixture.blocks.on("select", (block) => selections.push(block));
-
-    fixture.blocks.select(first);
-    fixture.blocks.select(second);
-
-    assert.equal(fixture.blocks.selected, second);
-    assert.deepEqual(selections, [first, second]);
-  });
-
-  test("select emits even when the selection is unchanged", () => {
+  test("removing the selected and hovered block clears both marks", () => {
     const fixture = createModelFixture();
     const block = fixture.addBlock();
-    let emitted = 0;
-    fixture.blocks.on("select", () => emitted++);
-
-    fixture.blocks.select(block);
-    fixture.blocks.select(block);
-
-    assert.equal(emitted, 2);
-  });
-
-  test("removing the selected block clears the selection", () => {
-    const fixture = createModelFixture();
-    const block = fixture.addBlock();
-    fixture.blocks.select(block);
+    fixture.selection.select(block.uuid);
+    fixture.selection.hover(block.uuid);
 
     fixture.document.remove(block.uuid);
 
-    assert.equal(fixture.blocks.selected, null);
+    assert.equal(fixture.selection.selected, null);
+    assert.equal(fixture.selection.hovered, null);
   });
 
   test("fromMesh resolves a block from its mesh only", () => {
@@ -345,46 +441,7 @@ describe("ModelBlocks selection", () => {
     const block = fixture.addBlock();
 
     assert.equal(fixture.blocks.fromMesh(block.mesh), block);
-    assert.equal(fixture.blocks.fromMesh(block.pivot), undefined);
-  });
-});
-
-describe("ModelBlocks hover", () => {
-  test("hover updates the hovered getter and emits the hovered block", () => {
-    const fixture = createModelFixture();
-    const first = fixture.addBlock();
-    const second = fixture.addBlock();
-    const hovers: unknown[] = [];
-    fixture.blocks.on("hover", (block) => hovers.push(block));
-
-    fixture.blocks.hover(first);
-    fixture.blocks.hover(second);
-    fixture.blocks.hover(null);
-
-    assert.equal(fixture.blocks.hovered, null);
-    assert.deepEqual(hovers, [first, second, null]);
-  });
-
-  test("hovering the same block again does not re-emit", () => {
-    const fixture = createModelFixture();
-    const block = fixture.addBlock();
-    let emitted = 0;
-    fixture.blocks.on("hover", () => emitted++);
-
-    fixture.blocks.hover(block);
-    fixture.blocks.hover(block);
-
-    assert.equal(emitted, 1);
-  });
-
-  test("removing the hovered block clears the hover", () => {
-    const fixture = createModelFixture();
-    const block = fixture.addBlock();
-    fixture.blocks.hover(block);
-
-    fixture.document.remove(block.uuid);
-
-    assert.equal(fixture.blocks.hovered, null);
+    assert.equal(fixture.blocks.fromMesh(block.node), undefined);
   });
 });
 

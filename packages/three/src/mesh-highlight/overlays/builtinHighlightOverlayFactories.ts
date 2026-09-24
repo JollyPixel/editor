@@ -31,7 +31,11 @@ export const boxSilhouetteOverlayFactory: HighlightOverlayFactory = {
     linewidth: options.linewidth,
     xray: options.xray,
     occludedOpacity: options.occludedOpacity,
-    peer: options.peer
+    peer: options.peer,
+    renderOrder: options.renderOrder === undefined || !options.peer ?
+      options.renderOrder :
+      options.renderOrder - 1,
+    xrayDepthWrite: options.xrayDepthWrite
   })
 };
 

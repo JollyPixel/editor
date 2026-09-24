@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import { PRESENCE_KEYS } from "./presenceKeys.ts";
+import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 
 export interface TransformLockOptions {
   room: VoxelModelRoom;

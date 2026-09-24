@@ -139,7 +139,7 @@ describe("ModelHierarchy.createBlock", () => {
 
     assert.ok(uuid);
     assert.equal(document.tree.get(uuid)?.parentId, folderId);
-    assert.equal(blocks.get(uuid)?.root.parent, parent.pivot);
+    assert.equal(blocks.get(uuid)?.node.parent, parent.node);
   });
 
   test("returns null and creates no region under an unknown parent", () => {
@@ -181,7 +181,7 @@ describe("ModelHierarchy.move", () => {
     hierarchy.move(block.uuid, anchor.uuid);
     scene.updateMatrixWorld(true);
 
-    assert.equal(block.root.parent, anchor.pivot);
+    assert.equal(block.node.parent, anchor.node);
     assert.deepStrictEqual(
       blocks.get(block.uuid)?.worldPosition,
       new THREE.Vector3(3, 2, 0)
@@ -211,7 +211,7 @@ describe("ModelHierarchy.move", () => {
       parentId: anchor.uuid,
       transforms: [{ id: block.uuid }]
     });
-    assert.equal(nested.root.parent, block.pivot);
+    assert.equal(nested.node.parent, block.node);
   });
 
   test("rewrites no transform when the transform parent is unchanged", () => {
@@ -366,7 +366,7 @@ describe("ModelHierarchy.remove", () => {
 
     assert.deepEqual(shapeOf(hierarchy.nodes()), [["Limbs", ["Arm"]]]);
     assert.equal(document.tree.transformParentOf(arm.uuid), null);
-    assert.equal(arm.root.parent?.type, "Scene");
+    assert.equal(arm.node.parent?.type, "Scene");
   });
 
   test("without children, removing a folder keeps its blocks at the folder's parent", () => {

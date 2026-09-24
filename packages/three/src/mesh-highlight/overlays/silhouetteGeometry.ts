@@ -299,11 +299,19 @@ export function buildSilhouetteGeometry(
    * ones, and writeOuterColor below only repaints that trailing slice.
    */
   const parts = [...innerParts, ...outerParts];
-  const geometry = parts.length > 0 ? mergeGeometries(parts) : new THREE.BufferGeometry();
+  const geometry = parts.length > 0 ? mergeGeometries(parts) : emptySilhouetteGeometry();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
 
   return { geometry, outerColorStart };
+}
+
+function emptySilhouetteGeometry(): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(0), 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(0), 3));
+
+  return geometry;
 }
 
 export function writeOuterColor(

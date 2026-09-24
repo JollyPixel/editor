@@ -26,7 +26,7 @@ function assertEulerClose(
 function pivotMarkerOf(
   block: ModelBlock
 ): THREE.Sprite | undefined {
-  return block.pivot.children.find(
+  return block.node.children.find(
     (child): child is THREE.Sprite => child.name === "pivot_visual"
   );
 }
@@ -56,7 +56,7 @@ describe("ModelBlock rotation space", () => {
   test("world rotation composes the parent's rotation on top of the local one", () => {
     const parent = new ModelBlock();
     const child = new ModelBlock();
-    parent.pivot.add(child.root);
+    parent.node.add(child.node);
 
     const parentRotation = new THREE.Euler(0, THREE.MathUtils.degToRad(90), 0);
     const childRotation = new THREE.Euler(THREE.MathUtils.degToRad(45), 0, 0);
@@ -73,7 +73,7 @@ describe("ModelBlock rotation space", () => {
   test("worldRotation round-trips through a rotated parent", () => {
     const parent = new ModelBlock();
     const child = new ModelBlock();
-    parent.pivot.add(child.root);
+    parent.node.add(child.node);
     parent.rotation = new THREE.Euler(0, THREE.MathUtils.degToRad(60), 0);
 
     const desiredWorld = new THREE.Euler(
@@ -103,10 +103,12 @@ describe("ModelBlock accessors", () => {
     assert.equal(block.position.x, 1);
   });
 
-  test("moving the pivot keeps the mesh anchored to it", () => {
+  test("moveBoxAroundPivot shifts the mesh and keeps the pivot in place", () => {
     const block = new ModelBlock();
 
-    block.pivotOffset = new THREE.Vector3(0.5, 0, 0);
+    block.moveBoxAroundPivot(new THREE.Vector3(0.5, 0, 0));
+
+    assert.equal(block.position.x, 0);
 
     assert.equal(block.mesh.position.x, -0.5);
   });
@@ -124,6 +126,45 @@ describe("ModelBlock accessors", () => {
     target.transform = source.transform;
 
     assert.deepEqual(target.transform, source.transform);
+  });
+});
+
+describe("ModelBlock pivot placement", () => {
+  function rotatedBlock(): ModelBlock {
+    const block = new ModelBlock({
+      position: new THREE.Vector3(2, 0, 0),
+      pivotOffset: new THREE.Vector3(0.5, 0, 0),
+      rotation: new THREE.Euler(0, Math.PI / 4, Math.PI / 6)
+    });
+    new THREE.Scene().add(block.node);
+    block.node.updateMatrixWorld(true);
+
+    return block;
+  }
+
+  test("movePivot keeps a rotated box where it is and stores the offset as given", () => {
+    const block = rotatedBlock();
+    const before = block.mesh.matrixWorld.clone();
+
+    block.movePivot(new THREE.Vector3(0.25, -0.5, 0.1));
+    block.node.updateMatrixWorld(true);
+
+    assert.deepEqual(block.pivotOffset.toArray(), [0.25, -0.5, 0.1]);
+    block.mesh.matrixWorld.elements.forEach((value, index) => {
+      assert.ok(Math.abs(value - before.elements[index]) < kEpsilon, `element ${index}`);
+    });
+  });
+
+  test("movePivotTo puts the pivot on a world point without moving the box", () => {
+    const block = rotatedBlock();
+    const before = block.mesh.getWorldPosition(new THREE.Vector3());
+    const target = new THREE.Vector3(3, 1, -1);
+
+    block.movePivotTo(target);
+    block.node.updateMatrixWorld(true);
+
+    assert.ok(block.worldPosition.distanceTo(target) < kEpsilon);
+    assert.ok(block.mesh.getWorldPosition(new THREE.Vector3()).distanceTo(before) < kEpsilon);
   });
 });
 
@@ -190,7 +231,7 @@ describe("ModelBlock selection ghost", () => {
     const ghost = textureGhostOf(block);
     assert.equal(ghost?.material.side, THREE.FrontSide);
     assert.equal(ghost?.material.depthTest, false);
-    assert.equal(ghost?.material.depthWrite, false);
+    assert.equal(ghost?.material.depthWrite, true);
     assert.equal(ghost?.material.opacity, 1);
     assert.equal(ghost?.geometry, block.mesh.geometry);
   });

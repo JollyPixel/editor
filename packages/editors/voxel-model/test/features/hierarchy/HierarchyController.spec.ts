@@ -61,7 +61,7 @@ function createHarness(
   answers: DialogAnswers = {}
 ): Harness {
   const fixture = createModelFixture();
-  const { document, blocks } = fixture;
+  const { document, blocks, selection } = fixture;
   const hierarchy = new ModelHierarchy({
     document,
     regions: {
@@ -93,7 +93,7 @@ function createHarness(
     }
   };
   const host: ReactiveControllerHost = {
-    addController: () => undefined,
+    addController: (controller) => controller.hostConnected?.(),
     removeController: () => undefined,
     requestUpdate: () => undefined,
     updateComplete: Promise.resolve(true)
@@ -102,6 +102,7 @@ function createHarness(
   controller.attach({
     document,
     blocks,
+    selection,
     hierarchy,
     presence: new PresenceStore()
   });
@@ -127,7 +128,7 @@ function selectBlock(
   name: string
 ): string {
   const block = harness.addBlock({ name });
-  harness.blocks.select(block);
+  harness.selection.select(block.uuid);
 
   return block.uuid;
 }
@@ -261,7 +262,7 @@ describe("HierarchyController.duplicateSelected", () => {
     assert.equal(harness.hierarchy.nodes().length, 2);
     const [copyId] = harness.controller.selected;
     assert.notEqual(copyId, bodyUuid);
-    assert.equal(harness.blocks.selected?.uuid, copyId);
+    assert.equal(harness.selection.selected, copyId);
     assert.ok(harness.controller.expanded.includes(copyId));
   });
 
@@ -310,7 +311,7 @@ describe("HierarchyController.deleteSelected", () => {
     await harness.controller.deleteSelected();
 
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Arm"]);
-    assert.equal(harness.blocks.selected, null);
+    assert.equal(harness.selection.selected, null);
   });
 
   test("removes the subtree when the children go too", async() => {
@@ -332,7 +333,7 @@ describe("HierarchyController.deleteSelected", () => {
 describe("HierarchyController.attach", () => {
   test("expands the folders of a document loaded before attaching", () => {
     const fixture = createModelFixture();
-    const { document, blocks } = fixture;
+    const { document, blocks, selection } = fixture;
     const folderId = document.addFolder({ name: "Limbs" });
     document.addBlock({
       name: "Arm",
@@ -343,6 +344,7 @@ describe("HierarchyController.attach", () => {
     harness.controller.attach({
       document,
       blocks,
+      selection,
       hierarchy: new ModelHierarchy({
         document,
         regions: {

@@ -2,10 +2,15 @@
 import * as THREE from "three";
 import { createCanvas2D } from "@jolly-pixel/three";
 
+// Import Internal Dependencies
+import { RenderOrder } from "../renderOrder.ts";
+
 // CONSTANTS
 const kPivotMarkerSize = 0.025;
 const kPivotMarkerTextureSize = 64;
-const kPivotRenderOrder = Infinity;
+const kPosition = new THREE.Vector3();
+const kQuaternion = new THREE.Quaternion();
+const kScale = new THREE.Vector3();
 export const NEUTRAL_HIGHLIGHT_COLOR = 0xcccccc;
 
 export class PivotMarker {
@@ -27,9 +32,14 @@ export class PivotMarker {
     this.object = new THREE.Sprite(material);
     this.object.name = "pivot_visual";
     this.object.visible = false;
-    this.object.renderOrder = kPivotRenderOrder;
+    this.object.renderOrder = RenderOrder.pivotMarker;
     this.object.frustumCulled = false;
     this.object.scale.setScalar(kPivotMarkerSize);
+    this.object.onBeforeRender = () => {
+      this.object.matrixWorld
+        .decompose(kPosition, kQuaternion, kScale)
+        .compose(kPosition, kQuaternion, kScale.setScalar(kPivotMarkerSize));
+    };
   }
 
   isShownBy(

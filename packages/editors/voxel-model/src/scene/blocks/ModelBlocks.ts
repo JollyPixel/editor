@@ -12,6 +12,8 @@ import type {
 
 // Import Internal Dependencies
 import type { BlockPoses } from "../../model/index.ts";
+import type { BlockSelectionStore } from "../../state/index.ts";
+import { BlockNode } from "./BlockNode.ts";
 import { ModelBlock } from "./ModelBlock.ts";
 import { plainVector3 } from "./plainVector3.ts";
 import {
@@ -21,8 +23,6 @@ import {
 } from "./mirrorTransform.ts";
 
 export type ModelBlocksEvents = {
-  select: (block: ModelBlock | null) => void;
-  hover: (block: ModelBlock | null) => void;
   blockAdded: (block: ModelBlock) => void;
   blockRemoved: (uuid: string) => void;
 };
@@ -30,6 +30,7 @@ export type ModelBlocksEvents = {
 export interface ModelBlocksOptions {
   document: ModelDocument;
   scene: THREE.Object3D;
+  selection: BlockSelectionStore;
 }
 
 export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPoses {
@@ -37,8 +38,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   #scene: THREE.Object3D;
   #blocks = new Map<string, ModelBlock>();
   #byMesh = new Map<THREE.Object3D, ModelBlock>();
-  #selected: ModelBlock | null = null;
-  #hovered: ModelBlock | null = null;
+  #selection: BlockSelectionStore;
   #texture: THREE.Texture | null = null;
 
   #onChange = (
@@ -103,6 +103,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     super();
     this.#document = options.document;
     this.#scene = options.scene;
+    this.#selection = options.selection;
 
     this.#document.on("change", this.#onChange);
     this.#document.on("reset", this.#onReset);
@@ -111,14 +112,6 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
 
   get size(): number {
     return this.#blocks.size;
-  }
-
-  get selected(): ModelBlock | null {
-    return this.#selected;
-  }
-
-  get hovered(): ModelBlock | null {
-    return this.#hovered;
   }
 
   get texture(): THREE.Texture | null {
@@ -148,23 +141,6 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     object: THREE.Object3D
   ): ModelBlock | undefined {
     return this.#byMesh.get(object);
-  }
-
-  select(
-    block: ModelBlock | null
-  ): void {
-    this.#selected = block;
-    this.emit("select", block);
-  }
-
-  hover(
-    block: ModelBlock | null
-  ): void {
-    if (block === this.#hovered) {
-      return;
-    }
-    this.#hovered = block;
-    this.emit("hover", block);
   }
 
   applyTransform(
@@ -200,31 +176,17 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     const parentRotation = parent.getWorldQuaternion(new THREE.Quaternion());
     const rotation = new THREE.Euler().setFromQuaternion(
       parentRotation.invert().multiply(
-        block.pivot.getWorldQuaternion(new THREE.Quaternion())
+        block.node.getWorldQuaternion(new THREE.Quaternion())
       ),
-      block.pivot.rotation.order
+      block.node.rotation.order
     );
 
     return {
       ...block.transform,
       position: plainVector3(parent.worldToLocal(block.worldPosition)),
+      scale: plainVector3(block.effectiveScale.divide(BlockNode.anchorScaleOf(parent))),
       rotation: plainVector3(rotation)
     };
-  }
-
-  originUnder(
-    parentUuid: string
-  ): THREE.Vector3Like {
-    const parent = this.#blocks.get(parentUuid);
-    if (!parent) {
-      throw new Error(`No block ${parentUuid} to take an origin from.`);
-    }
-
-    this.#scene.updateMatrixWorld(true);
-
-    return plainVector3(
-      parent.pivot.worldToLocal(parent.worldPosition)
-    );
   }
 
   mirror(
@@ -241,7 +203,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
           block,
           position: block.worldPosition,
           rotation: block.worldRotation,
-          pivotOffset: block.worldPivotOffset
+          pivotOffset: block.pivotOffset
         };
       });
 
@@ -249,7 +211,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       block.worldPosition = mirrorVector(position, sign);
       this.#scene.updateMatrixWorld(true);
       block.worldRotation = mirrorRotation(rotation, sign);
-      block.worldPivotOffset = mirrorVector(pivotOffset, sign);
+      block.moveBoxAroundPivot(mirrorVector(pivotOffset, sign));
       this.#scene.updateMatrixWorld(true);
 
       return {
@@ -289,8 +251,8 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     const parent = this.#parentObject(
       this.#document.tree.transformParentOf(block.uuid)
     );
-    if (block.root.parent !== parent) {
-      parent.add(block.root);
+    if (block.node.parent !== parent) {
+      parent.add(block.node);
     }
   }
 
@@ -302,12 +264,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       return;
     }
 
-    if (this.#selected === block) {
-      this.select(null);
-    }
-    if (this.#hovered === block) {
-      this.hover(null);
-    }
+    this.#selection.forget(uuid);
     this.#blocks.delete(uuid);
     this.#byMesh.delete(block.mesh);
     block.dispose();
@@ -319,6 +276,6 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   ): THREE.Object3D {
     return parentUuid === null ?
       this.#scene :
-      this.#blocks.get(parentUuid)?.pivot ?? this.#scene;
+      this.#blocks.get(parentUuid)?.node ?? this.#scene;
   }
 }

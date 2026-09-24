@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  ReactiveController,
-  ReactiveControllerHost
-} from "lit";
+import type { ReactiveControllerHost } from "lit";
 import {
   findParentId,
   resolveReparent,
@@ -24,11 +21,11 @@ import {
   type HierarchyNode,
   type ModelHierarchy
 } from "../../model/index.ts";
+import type { ModelBlocks } from "../../scene/index.ts";
 import type {
-  ModelBlock,
-  ModelBlocks
-} from "../../scene/index.ts";
-import type { PresenceStore } from "../../state/index.ts";
+  BlockSelectionStore,
+  PresenceStore
+} from "../../state/index.ts";
 import {
   collectExpandableIds,
   toTreeNodes
@@ -45,10 +42,12 @@ import type {
   HierarchyDeleteContext,
   HierarchyDeleteResult
 } from "./dialogs/HierarchyDeleteDialog.ts";
+import { WorkspaceController } from "../../shared/WorkspaceController.ts";
 
 export interface HierarchyWorkspace {
   document: ModelDocument;
   blocks: ModelBlocks;
+  selection: BlockSelectionStore;
   hierarchy: ModelHierarchy;
   presence: PresenceStore;
 }
@@ -65,11 +64,10 @@ export interface HierarchyDialogs {
   ): Promise<HierarchyDeleteResult | null>;
 }
 
-export class HierarchyController implements ReactiveController {
+export class HierarchyController {
   #host: ReactiveControllerHost;
   #dialogs: HierarchyDialogs;
-  #workspace: HierarchyWorkspace | null = null;
-  #subscriptions: Array<() => void> = [];
+  #connection: WorkspaceController<HierarchyWorkspace>;
   #nodes: TreeNode[] = [];
   #selected: string[] = [];
   #expanded: string[] = [];
@@ -91,9 +89,9 @@ export class HierarchyController implements ReactiveController {
   };
 
   #onSelect = (
-    block: ModelBlock | null
+    uuid: string | null
   ): void => {
-    this.#selected = block ? [block.uuid] : [];
+    this.#selected = uuid === null ? [] : [uuid];
     this.#host.requestUpdate();
   };
 
@@ -107,7 +105,14 @@ export class HierarchyController implements ReactiveController {
   ) {
     this.#host = host;
     this.#dialogs = dialogs;
-    host.addController(this);
+    this.#connection = new WorkspaceController(
+      host,
+      (workspace) => this.#subscribeTo(workspace)
+    );
+  }
+
+  get #workspace(): HierarchyWorkspace | null {
+    return this.#connection.current;
   }
 
   get nodes(): TreeNode[] {
@@ -129,30 +134,21 @@ export class HierarchyController implements ReactiveController {
   attach(
     workspace: HierarchyWorkspace
   ): void {
-    this.#unsubscribe();
-    this.#workspace = workspace;
-    this.#subscribe();
+    this.#connection.attach(workspace);
     this.#onReset();
-  }
-
-  hostConnected(): void {
-    this.#subscribe();
-  }
-
-  hostDisconnected(): void {
-    this.#unsubscribe();
   }
 
   readonly handleSelect = (
     event: CustomEvent<JollySelectDetail>
   ): void => {
     const { selected } = event.detail;
-    const blocks = this.#workspace?.blocks;
+    const workspace = this.#workspace;
     const uuid = selected[0];
-
-    blocks?.select(
-      uuid === undefined ? null : blocks.get(uuid) ?? null
-    );
+    if (workspace !== null) {
+      workspace.selection.select(
+        uuid === undefined ? null : workspace.blocks.get(uuid)?.uuid ?? null
+      );
+    }
     this.#selected = selected;
     this.#host.requestUpdate();
   };
@@ -222,9 +218,7 @@ export class HierarchyController implements ReactiveController {
       result.addAsChild ? parentId : null
     );
     if (uuid !== null) {
-      workspace.blocks.select(
-        workspace.blocks.get(uuid) ?? null
-      );
+      workspace.selection.select(workspace.blocks.get(uuid)?.uuid ?? null);
     }
   };
 
@@ -270,9 +264,7 @@ export class HierarchyController implements ReactiveController {
     if (result.includeChildren && hasChildren) {
       this.#expand(duplicateId);
     }
-    workspace.blocks.select(
-      workspace.blocks.get(duplicateId) ?? null
-    );
+    workspace.selection.select(workspace.blocks.get(duplicateId)?.uuid ?? null);
     this.#selected = [duplicateId];
     this.#host.requestUpdate();
   };
@@ -298,7 +290,7 @@ export class HierarchyController implements ReactiveController {
       source.id,
       { withChildren: result.deleteChildren }
     );
-    workspace.blocks.select(null);
+    workspace.selection.select(null);
   };
 
   #selectedHierarchyNode(): HierarchyNode | null {
@@ -316,38 +308,27 @@ export class HierarchyController implements ReactiveController {
     );
   }
 
-  #subscribe(): void {
-    const workspace = this.#workspace;
-    if (
-      workspace === null ||
-      this.#subscriptions.length > 0
-    ) {
-      return;
-    }
-
+  #subscribeTo(
+    workspace: HierarchyWorkspace
+  ): Array<() => void> {
     const {
       document,
-      blocks,
+      selection,
       presence
     } = workspace;
     document.on("change", this.#onChange);
     document.on("reset", this.#onReset);
-    blocks.on("select", this.#onSelect);
-    this.#subscriptions = [
+    selection.on("select", this.#onSelect);
+
+    return [
       () => document.off("change", this.#onChange),
       () => document.off("reset", this.#onReset),
-      () => blocks.off("select", this.#onSelect),
+      () => selection.off("select", this.#onSelect),
       presence.subscribe(
         "blockSelectionsChange",
         this.#onPeerSelections
       )
     ];
-  }
-
-  #unsubscribe(): void {
-    for (const unsubscribe of this.#subscriptions.splice(0)) {
-      unsubscribe();
-    }
   }
 
   #expand(

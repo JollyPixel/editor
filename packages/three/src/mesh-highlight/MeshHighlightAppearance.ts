@@ -40,6 +40,16 @@ export interface MeshHighlightAppearanceOptions {
    * unset to draw the hidden portion at the same opacity as the visible one.
    */
   occludedOpacityScale?: number;
+  /**
+   * Render order of object overlays, when the technique supports it. Peer
+   * indicators draw one step below so the local one stays on top.
+   */
+  renderOrder?: number;
+  /**
+   * Keeps the visible portion writing depth under xray, when the technique
+   * supports it, so transparent passes drawn later sort against the overlay.
+   */
+  xrayDepthWrite?: boolean;
 }
 
 export interface HighlightIndicatorAppearance {
@@ -79,6 +89,8 @@ export class MeshHighlightAppearance {
   readonly highlightJfa: HighlightPassJfaAppearance;
   readonly xray: boolean;
   readonly occludedOpacityScale: number | null;
+  readonly renderOrder: number | null;
+  readonly xrayDepthWrite: boolean;
 
   constructor(
     options: MeshHighlightAppearanceOptions = {}
@@ -128,6 +140,8 @@ export class MeshHighlightAppearance {
     this.occludedOpacityScale = options.occludedOpacityScale === undefined ?
       null :
       normalizedOpacity(options.occludedOpacityScale);
+    this.renderOrder = options.renderOrder ?? null;
+    this.xrayDepthWrite = options.xrayDepthWrite ?? false;
 
     Object.freeze(this);
   }
@@ -161,7 +175,9 @@ export class MeshHighlightAppearance {
         ...options.highlightJfa
       },
       xray: options.xray ?? this.xray,
-      occludedOpacityScale: options.occludedOpacityScale ?? this.occludedOpacityScale ?? undefined
+      occludedOpacityScale: options.occludedOpacityScale ?? this.occludedOpacityScale ?? undefined,
+      renderOrder: options.renderOrder ?? this.renderOrder ?? undefined,
+      xrayDepthWrite: options.xrayDepthWrite ?? this.xrayDepthWrite
     });
   }
 }
