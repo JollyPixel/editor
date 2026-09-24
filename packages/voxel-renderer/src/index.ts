@@ -13,6 +13,7 @@ export * from "./applyTilesetCommand.ts";
 
 export * from "./blocks/index.ts";
 export * from "./collision/index.ts";
+export * from "./materials/index.ts";
 export * from "./serialization/index.ts";
 export * from "./tileset/index.ts";
 export * from "./world/index.ts";

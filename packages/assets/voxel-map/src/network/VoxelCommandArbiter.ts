@@ -92,6 +92,10 @@ export class VoxelCommandArbiter {
         return `tileset:${command.tilesetId}`;
       case "default-tile-size-updated":
         return "default-tile-size";
+      case "material-group-defined":
+        return `material-group:${command.group.id}`;
+      case "material-group-removed":
+        return `material-group:${command.groupId}`;
       default:
         return null;
     }

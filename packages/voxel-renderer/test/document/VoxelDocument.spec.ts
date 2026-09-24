@@ -151,6 +151,54 @@ describe("VoxelDocument.apply", () => {
   });
 });
 
+describe("VoxelDocument - material groups", () => {
+  it("emits the normalized group without invalidating chunks", () => {
+    const document = makeDocument();
+    const emitted: VoxelCommand[] = [];
+    document.on("command", (command) => emitted.push(command));
+    const events = trace(document);
+
+    assert.equal(document.defineMaterialGroup({ id: "gold", metalness: 1 }), true);
+
+    assert.deepEqual(events, [
+      { event: "command", action: "material-group-defined", origin: "local" }
+    ]);
+    assert.deepEqual(emitted, [{
+      action: "material-group-defined",
+      group: {
+        id: "gold",
+        roughness: 1,
+        metalness: 1,
+        emissive: "#000000",
+        emissiveIntensity: 1
+      }
+    }]);
+  });
+
+  it("rejects an invalid group without emitting", () => {
+    const document = makeDocument();
+    const events = trace(document);
+
+    assert.equal(document.defineMaterialGroup({ id: "gold", metalness: 3 }), false);
+    assert.equal(document.removeMaterialGroup("gold"), false);
+    assert.deepEqual(events, []);
+  });
+
+  it("saves and restores the groups", () => {
+    const document = makeDocument();
+    document.defineMaterialGroup({ id: "gold", roughness: 0.3, metalness: 1 });
+    const saved = document.save();
+
+    const restored = makeDocument();
+    restored.load(saved);
+
+    assert.deepEqual(
+      restored.materialGroups.toJSON(),
+      document.materialGroups.toJSON()
+    );
+  });
+});
+
 describe("VoxelDocument.registerTileset", () => {
   it("invalidates without emitting a command", () => {
     const document = makeDocument();

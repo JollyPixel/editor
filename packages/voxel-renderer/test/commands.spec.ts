@@ -6,10 +6,12 @@ import assert from "node:assert/strict";
 import {
   isVoxelBlockCommand,
   isVoxelLayerCommand,
+  isVoxelMaterialGroupCommand,
   isVoxelTilesetCommand,
   VOXEL_BLOCK_COMMAND_ACTIONS,
   VOXEL_COMMAND_ACTIONS,
   VOXEL_LAYER_COMMAND_ACTIONS,
+  VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
   VOXEL_TILESET_COMMAND_ACTIONS
 } from "../src/commands.ts";
 
@@ -20,7 +22,8 @@ describe("command guards", () => {
       const matches = [
         isVoxelLayerCommand(command),
         isVoxelBlockCommand(command),
-        isVoxelTilesetCommand(command)
+        isVoxelTilesetCommand(command),
+        isVoxelMaterialGroupCommand(command)
       ].filter(Boolean);
 
       assert.equal(matches.length, 1, action);
@@ -32,7 +35,8 @@ describe("command guards", () => {
       new Set(VOXEL_COMMAND_ACTIONS).size,
       VOXEL_LAYER_COMMAND_ACTIONS.length +
       VOXEL_BLOCK_COMMAND_ACTIONS.length +
-      VOXEL_TILESET_COMMAND_ACTIONS.length
+      VOXEL_TILESET_COMMAND_ACTIONS.length +
+      VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.length
     );
   });
 
@@ -42,5 +46,6 @@ describe("command guards", () => {
     assert.equal(isVoxelLayerCommand(command), false);
     assert.equal(isVoxelBlockCommand(command), false);
     assert.equal(isVoxelTilesetCommand(command), false);
+    assert.equal(isVoxelMaterialGroupCommand(command), false);
   });
 });

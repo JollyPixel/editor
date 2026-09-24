@@ -85,6 +85,34 @@ describe("voxelCommandProtocol", () => {
     }), true);
   });
 
+  test("accepts material group commands and rejects an invalid finish", () => {
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "gold", roughness: 0.3, metalness: 1, emissive: "#FFaa00" }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-removed",
+      groupId: "gold"
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "gold", metalness: 2 }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "gold", emissive: "gold" }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "" }
+    }), false);
+  });
+
   test("rejects an invalid tile size or tileset id", () => {
     assert.strictEqual(accepts({
       ...kHeader,

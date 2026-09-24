@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
 import {
+  isVoxelMaterialGroupCommand,
   isVoxelTilesetCommand,
   type VoxelCommand
 } from "../commands.ts";
@@ -60,6 +61,14 @@ export class VoxelView {
   ): void => {
     if (isVoxelTilesetCommand(command)) {
       this.#syncAtlases();
+    }
+    else if (isVoxelMaterialGroupCommand(command)) {
+      const groupId = command.action === "material-group-defined" ?
+        command.group.id :
+        command.groupId;
+      if (this.#materials.refreshGroup(groupId)) {
+        this.markAllChunksDirty(command.action);
+      }
     }
   };
 
@@ -158,6 +167,7 @@ export class VoxelView {
 
     this.#materials = new ChunkMaterialCache({
       tilesetManager: this.tilesets,
+      materialGroups: document.materialGroups,
       type: material,
       customizer: materialCustomizer,
       tileWrapping: greedy,

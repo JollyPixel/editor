@@ -13,6 +13,10 @@ import { BlockRegistry, resolveBlockDefinition } from "../../src/blocks/index.ts
 import type { TilesetDefinition } from "../../src/tileset/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
+import {
+  MaterialGroup,
+  MaterialGroupList
+} from "../../src/materials/index.ts";
 
 // CONSTANTS
 const kAtlas: TilesetDefinition = {
@@ -107,6 +111,21 @@ describe("serializeVoxelWorld", () => {
     );
   });
 
+  it("embeds material groups only when there are some", () => {
+    const world = new VoxelWorld(16);
+
+    assert.equal(
+      serializeVoxelWorld(world, { materialGroups: [] }).materialGroups,
+      undefined
+    );
+    assert.deepEqual(
+      serializeVoxelWorld(world, {
+        materialGroups: [new MaterialGroup({ id: "gold", metalness: 1 })]
+      }).materialGroups,
+      [new MaterialGroup({ id: "gold", metalness: 1 }).toJSON()]
+    );
+  });
+
   it("serializes a single voxel correctly", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
@@ -135,6 +154,27 @@ describe("serializeVoxelWorld", () => {
 });
 
 describe("deserializeVoxelWorld", () => {
+  it("replaces the material groups, clearing them when none are saved", () => {
+    const materialGroups = new MaterialGroupList([{ id: "stale" }]);
+    const document: VoxelWorldJSON = {
+      version: 1,
+      chunkSize: 16,
+      tilesets: [],
+      layers: [],
+      materialGroups: [{ id: "gold", metalness: 1 }]
+    };
+
+    deserializeVoxelWorld(document, new VoxelWorld(16), { materialGroups });
+    assert.deepEqual([...materialGroups.ids()], ["gold"]);
+
+    deserializeVoxelWorld(
+      { ...document, materialGroups: undefined },
+      new VoxelWorld(16),
+      { materialGroups }
+    );
+    assert.equal(materialGroups.size, 0);
+  });
+
   it("throws when version is not 1", () => {
     const world = new VoxelWorld(16);
 
@@ -217,15 +257,43 @@ describe("deserializeVoxelWorld", () => {
     );
   });
 
-  it("throws when the chunk size differs from the world", () => {
+  it("re-partitions a document saved with another chunk size", () => {
+    const voxels = {
+      "0,0,0": { block: 1, transform: 0 },
+      "7,0,0": { block: 2, transform: 0 },
+      "8,0,0": { block: 3, transform: 0 },
+      "15,9,-1": { block: 4, transform: 0 },
+      "16,0,0": { block: 5, transform: 0 }
+    };
     const world = new VoxelWorld(16);
 
-    assert.throws(
-      () => deserializeVoxelWorld(
-        { version: 1, chunkSize: 8, tilesets: [], layers: [] },
-        world
-      ),
-      /chunkSize 8 does not match the world's 16/
+    deserializeVoxelWorld(
+      untrusted({
+        version: 1,
+        chunkSize: 8,
+        tilesets: [],
+        layers: [{
+          id: "l1",
+          name: "Ground",
+          visible: true,
+          order: 0,
+          voxels
+        }]
+      }),
+      world
+    );
+
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.equal(layer.voxelCount, 5);
+    assert.equal(layer.chunkCount, 3);
+    assert.equal(world.getVoxelAt({ x: 15, y: 9, z: -1 })?.blockId, 4);
+
+    const json = serializeVoxelWorld(world);
+    assert.equal(json.chunkSize, 16);
+    assert.deepEqual(
+      Object.keys(json.layers[0].voxels).sort(),
+      Object.keys(voxels).sort()
     );
   });
 
@@ -345,7 +413,7 @@ describe("deserializeVoxelWorld", () => {
     assert.throws(() => deserializeVoxelWorld(
       {
         version: 1,
-        chunkSize: 8,
+        chunkSize: 0,
         tilesets: [],
         blocks: [resolveBlockDefinition(makeBlockDef(7, "cube"))],
         layers: []

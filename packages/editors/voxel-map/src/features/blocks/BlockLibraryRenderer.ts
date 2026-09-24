@@ -4,6 +4,7 @@ import { disposeObject3D } from "@jolly-pixel/engine";
 import type {
   ResolvedBlockDefinition,
   BlockShapeRegistry,
+  MaterialGroupList,
   TilesetManager
 } from "@jolly-pixel/voxel.renderer";
 
@@ -42,6 +43,7 @@ export interface CellEntry {
 export interface BlockLibraryRendererOptions {
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
+  materialGroups?: MaterialGroupList;
   blocks?: ResolvedBlockDefinition[];
 }
 
@@ -71,6 +73,7 @@ export class BlockLibraryRenderer {
   #stableFrames = 0;
   #layoutDirty = true;
   #tilesetVersion: number;
+  #materialGroupsVersion: number;
   #container: HTMLElement;
   #resizeObserver: ResizeObserver;
 
@@ -81,8 +84,10 @@ export class BlockLibraryRenderer {
     this.#sources = {
       shapeRegistry: options.shapeRegistry,
       tilesetManager: options.tilesetManager,
-      tileOpacity: new TileOpacityProbe(options.tilesetManager)
+      tileOpacity: new TileOpacityProbe(options.tilesetManager),
+      materialGroups: options.materialGroups
     };
+    this.#materialGroupsVersion = options.materialGroups?.version ?? -1;
     this.#tilesetManager = options.tilesetManager;
     this.#tilesetVersion = options.tilesetManager.version;
     this.#container = container;
@@ -103,7 +108,7 @@ export class BlockLibraryRenderer {
     this.canvas.style.display = "block";
     container.appendChild(this.canvas);
 
-    const stage = createBlockPreviewStage();
+    const stage = createBlockPreviewStage(this.#renderer);
     this.#scene = stage.scene;
     this.#camera = stage.camera;
 
@@ -261,8 +266,13 @@ export class BlockLibraryRenderer {
   #render(
     time: number
   ): void {
+    const groupsVersion = this.#sources.materialGroups?.version ?? -1;
     if (this.#tilesetVersion !== this.#tilesetManager.version) {
       this.#rebuildCells();
+    }
+    else if (groupsVersion !== this.#materialGroupsVersion) {
+      this.#materialGroupsVersion = groupsVersion;
+      this.#rebuildGroupedCells();
     }
     else if (time - this.#opacityCheckAt >= kOpacityCheckIntervalMs) {
       this.#opacityCheckAt = time;
@@ -325,6 +335,22 @@ export class BlockLibraryRenderer {
     }
     this.#cells = [];
     this.setBlocks(blocks);
+  }
+
+  #rebuildGroupedCells(): void {
+    for (let index = 0; index < this.#cells.length; index++) {
+      const cell = this.#cells[index];
+      if (cell.block.materialGroup === undefined) {
+        continue;
+      }
+
+      this.#removeCell(cell);
+      this.#cells[index] = {
+        ...this.#createCell(cell.block),
+        x: cell.x,
+        y: cell.y
+      };
+    }
   }
 
   #createCell(

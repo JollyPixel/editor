@@ -1,8 +1,5 @@
 // Import Internal Dependencies
 import { parseVoxelDocument } from "./document.ts";
-import {
-  InvalidVoxelDocumentError
-} from "./errors/InvalidVoxelDocumentError.ts";
 import { BlockTextures } from "../blocks/BlockTextures.ts";
 import type { VoxelWorldJSON } from "./types.ts";
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
@@ -14,16 +11,20 @@ import {
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 import type { TilesetList } from "../tileset/TilesetList.ts";
+import type { MaterialGroup } from "../materials/MaterialGroup.ts";
+import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
 
 export interface VoxelSerializeOptions {
   tilesets?: Iterable<TilesetDefinition>;
   defaultTileSize?: number;
   blocks?: Iterable<ResolvedBlockDefinition>;
+  materialGroups?: Iterable<MaterialGroup>;
 }
 
 export interface VoxelDeserializeOptions {
   blocks?: BlockRegistry;
   tilesets?: TilesetList;
+  materialGroups?: MaterialGroupList;
 }
 
 export function serializeVoxelWorld(
@@ -47,6 +48,13 @@ export function serializeVoxelWorld(
   if (options.blocks) {
     document.blocks = [...options.blocks];
   }
+  const materialGroups = Array.from(
+    options.materialGroups ?? [],
+    (group) => group.toJSON()
+  );
+  if (materialGroups.length > 0) {
+    document.materialGroups = materialGroups;
+  }
 
   return document;
 }
@@ -56,16 +64,12 @@ export function deserializeVoxelWorld(
   world: VoxelWorld,
   options: VoxelDeserializeOptions = {}
 ): void {
-  const { blocks, tilesets } = options;
+  const { blocks, tilesets, materialGroups } = options;
 
   const document = parseVoxelDocument(data);
-  if (document.chunkSize !== world.chunkSize) {
-    throw new InvalidVoxelDocumentError(
-      `chunkSize ${document.chunkSize} does not match the world's ${world.chunkSize}`
-    );
-  }
 
   tilesets?.replace(document.tilesets, document.defaultTileSize);
+  materialGroups?.replace(document.materialGroups ?? []);
   if (blocks && document.blocks) {
     blocks.clear();
     blocks.registerMany(document.blocks);

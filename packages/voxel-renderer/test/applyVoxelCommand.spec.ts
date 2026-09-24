@@ -8,6 +8,7 @@ import {
   type VoxelCommandTarget
 } from "../src/applyVoxelCommand.ts";
 import { BlockRegistry } from "../src/blocks/index.ts";
+import { MaterialGroupList } from "../src/materials/index.ts";
 import { TilesetList } from "../src/tileset/index.ts";
 import { VoxelWorld } from "../src/world/index.ts";
 import {
@@ -19,7 +20,8 @@ function makeTarget(): VoxelCommandTarget {
   return {
     world: new VoxelWorld(4),
     blocks: new BlockRegistry(),
-    tilesets: new TilesetList()
+    tilesets: new TilesetList(),
+    materialGroups: new MaterialGroupList()
   };
 }
 
@@ -54,5 +56,23 @@ describe("applyVoxelCommand", () => {
     assert.equal(applyVoxelCommand(target, command), false);
 
     assert.equal(target.tilesets.get("a")?.tileSize, 16);
+  });
+
+  it("routes a material group command to the group list", () => {
+    const target = makeTarget();
+    const command = {
+      action: "material-group-defined",
+      group: { id: "gold", metalness: 1 }
+    } as const;
+
+    assert.equal(applyVoxelCommand(target, command), true);
+    assert.equal(applyVoxelCommand(target, command), false);
+    assert.equal(target.materialGroups.get("gold")?.metalness, 1);
+
+    assert.equal(applyVoxelCommand(target, {
+      action: "material-group-removed",
+      groupId: "gold"
+    }), true);
+    assert.equal(target.materialGroups.has("gold"), false);
   });
 });

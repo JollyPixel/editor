@@ -1,11 +1,20 @@
 // Import Third-party Dependencies
-import { LogQueue } from "@jolly-pixel/ui";
+import {
+  LocalStorageAdapter,
+  LogQueue,
+  type StorageAdapter
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { BrushStore } from "./BrushStore.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
 import { TilesetStore } from "./TilesetStore.ts";
+import { ViewStore } from "./ViewStore.ts";
+
+export interface EditorStateOptions {
+  storage?: StorageAdapter;
+}
 
 export class EditorState {
   readonly selection = new SelectionStore();
@@ -13,4 +22,12 @@ export class EditorState {
   readonly presence = new PresenceStore();
   readonly tilesets = new TilesetStore();
   readonly log = new LogQueue();
+  readonly view: ViewStore;
+
+  constructor(
+    options: EditorStateOptions = {}
+  ) {
+    const { storage = new LocalStorageAdapter() } = options;
+    this.view = new ViewStore(storage);
+  }
 }

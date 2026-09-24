@@ -271,6 +271,7 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   viewDistancePolicy: "hide" | "unload";
   readonly pendingRebuilds: number;
   readonly tilesets: TilesetList;
+  readonly materialGroups: MaterialGroupList;
   defaultTileSize: number | undefined;
 }
 ```
@@ -466,6 +467,15 @@ nothing for an unknown ID or a move that changes nothing. The order is a
 document concern only, so no chunk is marked dirty. See
 [`BlockRegistry` ordering](../blocks/BlockRegistry.md#ordering).
 
+#### `defineMaterialGroup(group)`, `removeMaterialGroup(groupId)`
+
+Shorthands for `apply()` with `material-group-defined` and
+`material-group-removed`. Each returns whether the list changed. A defined
+group draws its blocks with a `MeshStandardMaterial` carrying its finish, even
+when `material` is `"lambert"`. Editing the finish of a group updates its
+materials in place; defining or removing one rebuilds every chunk. See
+[MaterialGroup](../materials/MaterialGroup.md).
+
 ### Commands
 
 #### `apply(command: VoxelCommand, options?: VoxelApplyOptions): boolean`
@@ -493,6 +503,8 @@ emits nothing.
 The material customizer receives the resolved [BlockSurface](../blocks/BlockSurface.md)
 for each draw group. It can distinguish masked and blended geometry without
 inferring the policy from the material opacity, and reads
-`surface.materialGroup` to tune grouped blocks apart on a shared atlas. To composite overlapping
+`surface.materialGroup` to tune grouped blocks apart on a shared atlas. It runs
+after the document finish of a [material group](../materials/MaterialGroup.md)
+is applied, so it can override it on a new material. To composite overlapping
 blended chunks, install [VoxelTransparencyRenderer](./VoxelTransparencyRenderer.md)
 in the application render loop.

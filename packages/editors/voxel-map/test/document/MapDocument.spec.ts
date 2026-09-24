@@ -23,6 +23,7 @@ const kEvents: Array<keyof MapDocumentEvents> = [
   "layerUpdated",
   "blockRegistryChanged",
   "tilesetsChanged",
+  "materialGroupsChanged",
   "reset"
 ];
 
@@ -69,15 +70,19 @@ describe("MapDocument", () => {
     engine.emit("command", command("added"), { origin: "local" });
     engine.emit("command", command("block-defined"), { origin: "remote" });
     engine.emit("command", command("tileset-added"), { origin: "local" });
+    engine.emit("command", command("material-group-removed"), {
+      origin: "remote"
+    });
 
     assert.deepEqual(seen, [
       "layerUpdated",
       "blockRegistryChanged",
-      "tilesetsChanged"
+      "tilesetsChanged",
+      "materialGroupsChanged"
     ]);
   });
 
-  it("announces tilesets and blocks before the reset of a source", () => {
+  it("announces tilesets, blocks and material groups before the reset of a source", () => {
     const { source, seen } = setup();
 
     source.emit("reset");
@@ -85,6 +90,7 @@ describe("MapDocument", () => {
     assert.deepEqual(seen, [
       "tilesetsChanged",
       "blockRegistryChanged",
+      "materialGroupsChanged",
       "reset"
     ]);
   });

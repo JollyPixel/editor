@@ -7,6 +7,8 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { ChunkMaterialCache } from "../../src/render/index.ts";
+import { BlockSurface } from "../../src/blocks/index.ts";
+import { MaterialGroupList } from "../../src/materials/index.ts";
 import {
   AtlasAverages,
   TilesetManager
@@ -104,6 +106,84 @@ describe("ChunkMaterialCache — resolve", () => {
     cache.resolve("atlas", 1);
 
     assert.deepEqual(seen, ["atlas"]);
+  });
+});
+
+describe("ChunkMaterialCache — material groups", () => {
+  const kGold = new BlockSurface({ materialGroup: "gold" });
+
+  it("gives a defined group a standard material carrying its finish", () => {
+    const materialGroups = new MaterialGroupList([
+      { id: "gold", roughness: 0.2, metalness: 1 }
+    ]);
+    const cache = makeCache({ materialGroups });
+
+    const plain = cache.resolve("atlas", 1);
+    const gold = cache.resolve("atlas", 1, kGold);
+
+    assert.ok(plain instanceof THREE.MeshLambertMaterial);
+    assert.ok(gold instanceof THREE.MeshStandardMaterial);
+    assert.equal(gold.roughness, 0.2);
+    assert.equal(gold.metalness, 1);
+  });
+
+  it("keeps the view material for a group the document does not define", () => {
+    const cache = makeCache({ materialGroups: new MaterialGroupList() });
+
+    assert.ok(
+      cache.resolve("atlas", 1, kGold) instanceof THREE.MeshLambertMaterial
+    );
+  });
+
+  it("runs the customizer after the finish", () => {
+    const materialGroups = new MaterialGroupList([
+      { id: "gold", metalness: 1 }
+    ]);
+    const cache = makeCache({
+      materialGroups,
+      customizer: (material) => {
+        if (material instanceof THREE.MeshStandardMaterial) {
+          material.metalness = 0.5;
+        }
+      }
+    });
+
+    const gold = cache.resolve("atlas", 1, kGold);
+    assert.ok(gold instanceof THREE.MeshStandardMaterial);
+    assert.equal(gold.metalness, 0.5);
+  });
+
+  it("updates a changed finish in place", () => {
+    const materialGroups = new MaterialGroupList([{ id: "gold" }]);
+    const cache = makeCache({ materialGroups });
+    const gold = cache.resolve("atlas", 1, kGold);
+
+    materialGroups.define({ id: "gold", metalness: 1 });
+
+    assert.equal(cache.refreshGroup("gold"), false);
+    assert.equal(cache.resolve("atlas", 1, kGold), gold);
+    assert.ok(gold instanceof THREE.MeshStandardMaterial);
+    assert.equal(gold.metalness, 1);
+  });
+
+  it("evicts the group materials when the group appears or goes", () => {
+    const materialGroups = new MaterialGroupList();
+    const cache = makeCache({ materialGroups });
+    const plain = cache.resolve("atlas", 1);
+    const before = cache.resolve("atlas", 1, kGold);
+
+    materialGroups.define({ id: "gold" });
+    assert.equal(cache.refreshGroup("gold"), true);
+    const after = cache.resolve("atlas", 1, kGold);
+    assert.notEqual(after, before);
+    assert.ok(after instanceof THREE.MeshStandardMaterial);
+    assert.equal(cache.resolve("atlas", 1), plain);
+
+    materialGroups.remove("gold");
+    assert.equal(cache.refreshGroup("gold"), true);
+    assert.ok(
+      cache.resolve("atlas", 1, kGold) instanceof THREE.MeshLambertMaterial
+    );
   });
 });
 

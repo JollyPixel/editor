@@ -30,6 +30,10 @@ offline without contacting an asset server.
 
 The Map Config folder of the General tab exports the map with its tilesets as one `.zip` and imports such an archive, offline or on a server. When the archive holds assets the workspace already has, a dialog offers to replace them, keep them, or import the archive as a copy, once for the whole archive, and names the assets outside the archive that a replace would affect. The editor then reloads onto the imported map. Offline, **Reset workspace** deletes what the browser stored and seeds a new map.
 
+Its View section sets how this browser draws the map; nothing there is saved in the map. **Lighting** picks Flat, Studio (the default) or Daylight, which adds a sky and a warm sun. **Reflections** lights material groups with a studio environment, which metal needs to show. **Occlusion** darkens corners and rebuilds every chunk. **Shadows** casts sun shadows around the camera. All three are off by default.
+
+The block editor's Material section names a block's material group. **Finish** saves roughness, metalness and glow for the whole group in the map. Block thumbnails show the finish.
+
 ## 🧩 Bootstrap
 
 `src/index.ts` hands the editor class to `bootStandalone()` from

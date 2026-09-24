@@ -46,6 +46,8 @@ interface VoxelDocumentOptions {
   blocks?: BlockDefinition[];
   /** Tileset definitions declared before any texture is registered. */
   tilesets?: Iterable<TilesetDefinition>;
+  /** Finishes of the named material groups; invalid entries are skipped. */
+  materialGroups?: Iterable<MaterialGroupJSON>;
   /** Undo/redo of voxel edits; disabled by default. */
   history?: VoxelHistoryOptions;
   /** Debug logger; defaults to a no-op implementation. */
@@ -62,6 +64,7 @@ class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   readonly world: VoxelWorld;
   readonly blocks: BlockRegistry;
   readonly tilesets: TilesetList;   // declarations only, no atlases
+  readonly materialGroups: MaterialGroupList;
   readonly history: VoxelHistory;   // see VoxelHistory.md
   readonly chunkSize: number;
   defaultTileSize: number | undefined;
@@ -71,6 +74,9 @@ class VoxelDocument extends Emitter<VoxelDocumentEvents> {
 `tilesets` holds only what a tileset *is*. The atlas textures built from those
 declarations belong to the view's
 [`TilesetManager`](../tilesets/TilesetManager.md).
+
+`materialGroups` holds the [surface finishes](../materials/MaterialGroup.md)
+that travel with the map.
 
 ## Events
 
@@ -107,6 +113,9 @@ removeTileset(tilesetId: string): boolean;
 resizeTileset(tilesetId: string, tileSize: number): boolean;
 registerTileset(def: TilesetDefinition): boolean;
 
+defineMaterialGroup(group: MaterialGroup | MaterialGroupJSON): boolean;
+removeMaterialGroup(groupId: string): boolean;
+
 save(): VoxelWorldJSON;
 load(data: VoxelWorldJSON, options?: VoxelLoadOptions): void;
 dispose(): void;
@@ -120,8 +129,13 @@ in that case. A rejected command is never broadcast.
 through an edit, which is what
 [`VoxelView.loadTileset()`](./VoxelView.md) calls.
 
+`defineMaterialGroup()` adds or replaces a group and broadcasts it with every
+field filled in. It returns `false` for an invalid finish or one equal to the
+current definition. Neither group method emits `invalidated`; the view
+decides whether a chunk needs rebuilding.
+
 `load()` replaces the world, drops the undo history, and emits `loaded`. The
-snapshot replaces the tileset list wholesale, so `options.tilesets`
+snapshot replaces the tileset list and the material groups wholesale, so `options.tilesets`
 declarations are applied after it:
 
 ```ts

@@ -32,7 +32,6 @@ const kPerformanceStorageKey = "voxel-map:performance-hud";
 const kPerformancePaneKey = "performance";
 const kPerformanceToggleKey = "F3";
 const kMapKind = voxelMapDocumentKind({
-  chunkSize: 16,
   history: {
     enabled: true
   }

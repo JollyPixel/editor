@@ -22,7 +22,10 @@ import {
   VOXEL_MODEL_KIND,
   voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
-import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
+import {
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_TILE_SIZE
+} from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 const kTilesetUrl = "textures/tileset.png";
@@ -30,7 +33,6 @@ const kTilesetAssetId = "tileset-default";
 const kMapAssetId = "map-overworld";
 const kModelTextureAssetId = "model-texture";
 const kModelAssetId = "model-default";
-const kChunkSize = 16;
 const kModelTextureSize = {
   x: 64,
   y: 64
@@ -54,7 +56,7 @@ export async function createStudioProject(
   return {
     handlers: [
       pixelArtAssetKind({ defaultSize: tileset.size }),
-      voxelMapAssetKind({ chunkSize: kChunkSize }),
+      voxelMapAssetKind(),
       voxelModelAssetKind(),
       textureAssetKind()
     ],
@@ -68,7 +70,7 @@ export async function createStudioProject(
         id: kMapAssetId,
         kind: VOXEL_MAP_KIND,
         content: () => createVoxelMapDocument({
-          chunkSize: kChunkSize,
+          chunkSize: DEFAULT_CHUNK_SIZE,
           tileset: tileset.definition
         })
       },

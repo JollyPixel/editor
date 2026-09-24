@@ -19,7 +19,8 @@ import {
   resolveBlockDefinition,
   VOXEL_BLOCK_COMMAND_ACTIONS,
   VOXEL_TILESET_COMMAND_ACTIONS,
-  VOXEL_LAYER_COMMAND_ACTIONS
+  VOXEL_LAYER_COMMAND_ACTIONS,
+  VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -307,19 +308,31 @@ describe("voxelMapAssetKind", () => {
     });
   });
 
-  test("a document with a mismatched chunk size is refused", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
+  test("a document saved with another chunk size loads", async() => {
+    const source = new VoxelMapState(32);
+    source.world.addLayer("Ground");
+    source.world.setVoxelAt(
+      "Ground",
+      {
+        x: 20,
+        y: 0,
+        z: -3
+      },
+      {
+        blockId: 4,
+        transform: 0
+      }
+    );
+    const handler = voxelMapAssetKind();
     const state = handler.create("asset-1");
-    state.world.addLayer("Ground");
 
-    assert.throws(
-      () => foldAssetEvent(handler, state, documentEvent(new VoxelMapState(8))),
-      /chunkSize 8 does not match/
-    );
-    assert.deepEqual(
-      state.world.getLayers().map((layer) => layer.name),
-      ["Ground"]
-    );
+    foldAssetEvent(handler, state, documentEvent(source));
+
+    assert.equal(state.world.chunkSize, 16);
+    assert.equal(state.world.getVoxelAt({ x: 20, y: 0, z: -3 })?.blockId, 4);
+    const saved = decodeVoxelDocument(await handler.serialize(state));
+    assert.equal(saved.chunkSize, 16);
+    assert.deepEqual(Object.keys(saved.layers[0].voxels), ["20,0,-3"]);
   });
 
   test("serialize round-trips through apply", async() => {
@@ -357,6 +370,7 @@ describe("voxelMapAssetKind", () => {
       ...VOXEL_LAYER_COMMAND_ACTIONS,
       ...VOXEL_BLOCK_COMMAND_ACTIONS,
       ...VOXEL_TILESET_COMMAND_ACTIONS,
+      ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
       "world-replace"
     ].toSorted());
   });
@@ -565,6 +579,42 @@ describe("voxelMapAssetKind — block definitions", () => {
     }));
 
     assert.deepEqual([...state.blocks.getAll()], []);
+  });
+});
+
+describe("voxelMapAssetKind — material groups", () => {
+  test("a material group command survives serialization", async() => {
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+
+    foldAssetEvent(handler, state, documentEvent(new VoxelMapState(16)));
+    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
+      action: "material-group-defined",
+      group: { id: "gold", metalness: 1 },
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    }));
+
+    const document = decodeVoxelDocument(await handler.serialize(state));
+
+    assert.deepEqual(
+      document.materialGroups?.map((group) => [group.id, group.metalness]),
+      [["gold", 1]]
+    );
+  });
+
+  test("a delete clears the material groups", () => {
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    state.materialGroups.define({ id: "gold" });
+
+    foldAssetEvent(handler, state, event(ASSET_DELETED, {
+      path: "world.voxelmap.json",
+      kind: VOXEL_MAP_KIND
+    }));
+
+    assert.equal(state.materialGroups.size, 0);
   });
 });
 

@@ -12,6 +12,7 @@ import type {
   ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
 import type { TilesetDefinition } from "./tileset/types.ts";
+import type { MaterialGroupJSON } from "./materials/MaterialGroup.ts";
 import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
@@ -246,17 +247,38 @@ export const VOXEL_TILESET_COMMAND_ACTIONS: readonly VoxelTilesetCommandAction[]
   "default-tile-size-updated"
 ];
 
+export type VoxelMaterialGroupCommand =
+  | {
+    action: "material-group-defined";
+    group: MaterialGroupJSON;
+  }
+  | {
+    action: "material-group-removed";
+    groupId: string;
+  };
+
+export type VoxelMaterialGroupCommandAction =
+  VoxelMaterialGroupCommand["action"];
+
+export const VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS:
+readonly VoxelMaterialGroupCommandAction[] = [
+  "material-group-defined",
+  "material-group-removed"
+];
+
 export type VoxelCommand =
   | VoxelLayerCommand
   | VoxelBlockCommand
-  | VoxelTilesetCommand;
+  | VoxelTilesetCommand
+  | VoxelMaterialGroupCommand;
 
 export type VoxelCommandAction = VoxelCommand["action"];
 
 export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
   ...VOXEL_BLOCK_COMMAND_ACTIONS,
-  ...VOXEL_TILESET_COMMAND_ACTIONS
+  ...VOXEL_TILESET_COMMAND_ACTIONS,
+  ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS
 ];
 
 export type VoxelCommandOrigin = "local" | "remote";
@@ -294,6 +316,14 @@ export function isVoxelTilesetCommand(
   command: { action: string; }
 ): command is VoxelTilesetCommand {
   return VOXEL_TILESET_COMMAND_ACTIONS.some(
+    (action) => action === command.action
+  );
+}
+
+export function isVoxelMaterialGroupCommand(
+  command: { action: string; }
+): command is VoxelMaterialGroupCommand {
+  return VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.some(
     (action) => action === command.action
   );
 }

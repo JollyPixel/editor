@@ -34,6 +34,7 @@ interface VoxelWorldJSON {
   defaultTileSize?: number;
   layers: VoxelLayerJSON[];
   blocks?: ResolvedBlockDefinition[];
+  materialGroups?: MaterialGroupJSON[];
   objectLayers?: VoxelObjectLayerJSON[];
 }
 ```
@@ -47,6 +48,8 @@ Migrate legacy `transparent: true` to `alphaMode: "blend"` before loading old
 content; the renderer no longer reads the legacy property.
 
 `blocks` contains definitions embedded by `VoxelEngine.save()` or a converter.
+`materialGroups` stores the [finish](../materials/MaterialGroup.md) of each
+group named by a block's `materialGroup`.
 `objectLayers` stores placed objects such as spawn points and trigger zones.
 `defaultTileSize` is the tile size pre-selected for a new tileset. The mesher
 never reads it, and a value that fails `isTileSize()` is dropped on parse.
@@ -58,6 +61,7 @@ interface VoxelSerializeOptions {
   tilesets?: Iterable<TilesetDefinition>;
   defaultTileSize?: number;
   blocks?: Iterable<ResolvedBlockDefinition>;
+  materialGroups?: Iterable<MaterialGroup>;
 }
 
 function serializeVoxelWorld(
@@ -67,7 +71,8 @@ function serializeVoxelWorld(
 ```
 
 The world does not own loaded tileset metadata or the block registry, so callers
-pass those collections explicitly. `blocks` is omitted when it is not supplied.
+pass those collections explicitly. `blocks` is omitted when it is not supplied,
+and `materialGroups` when it is empty.
 
 ## Deserializing a world
 
@@ -75,6 +80,7 @@ pass those collections explicitly. `blocks` is omitted when it is not supplied.
 interface VoxelDeserializeOptions {
   blocks?: BlockRegistry;
   tilesets?: TilesetList;
+  materialGroups?: MaterialGroupList;
 }
 
 function deserializeVoxelWorld(
@@ -85,13 +91,17 @@ function deserializeVoxelWorld(
 ```
 
 The function validates `data`, then replaces the world's voxel and object
-layers. It throws `InvalidVoxelDocumentError` when the document is malformed or
-its chunk size differs from the target world. The target is left unchanged on
-those failures.
+layers. It throws `InvalidVoxelDocumentError` when the document is malformed,
+and leaves the target unchanged. Voxel keys are layer coordinates, so a document
+saved with another `chunkSize` loads into the world's own chunks; serializing
+the world again writes the world's `chunkSize`.
 
 `options.tilesets` is replaced with the document's tilesets and
 `defaultTileSize`. When both `blocks` and `tilesets` are supplied, tile
 references without `tilesetId` are assigned the first declared tileset.
+
+`options.materialGroups` is replaced with the document's groups, and emptied
+for a document without any. Invalid or duplicate groups are skipped.
 
 Embedded block definitions are registered when `options.blocks` is supplied. A
 document carrying a `blocks` array is authoritative: the registry is emptied
@@ -133,7 +143,8 @@ class InvalidVoxelDocumentError extends Error {
 
 `parseVoxelDocument()` requires version `1`, a positive integer `chunkSize`,
 and a `layers` array. A missing or malformed `tilesets` value becomes an empty
-array. Malformed `blocks` and `objectLayers` values are omitted. Unknown
+array. Malformed `blocks`, `materialGroups` and `objectLayers` values are
+omitted. Unknown
 top-level keys are discarded.
 
 The parser validates the top-level document shape. Collection elements are
