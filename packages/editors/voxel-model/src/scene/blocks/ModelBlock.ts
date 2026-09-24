@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import { clampUvRegion } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
 
 // Import Internal Dependencies
 import { BlockNode } from "./BlockNode.ts";
@@ -27,7 +28,7 @@ export interface ModelBlockOptions {
   texture?: THREE.Texture | null;
 }
 
-type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicNodeMaterial>;
 
 export class ModelBlock {
   readonly node = new BlockNode();
@@ -66,7 +67,7 @@ export class ModelBlock {
     this.#size = size.clone();
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(size.x, size.y, size.z),
-      new THREE.MeshBasicMaterial({
+      new THREE.MeshBasicNodeMaterial({
         color,
         alphaTest: 0.01,
         side: THREE.DoubleSide,
@@ -74,6 +75,7 @@ export class ModelBlock {
       })
     );
     this.mesh.name = name || `mesh_${this.node.uuid}`;
+    clampUvRegion(this.mesh);
     this.moveBoxAroundPivot(pivotOffset);
 
     this.node.add(this.mesh, this.#pivotMarker.object);
@@ -336,7 +338,7 @@ export class ModelBlock {
   #createTextureGhost(): BlockMesh {
     const ghost = new THREE.Mesh(
       this.mesh.geometry,
-      new THREE.MeshBasicMaterial({
+      new THREE.MeshBasicNodeMaterial({
         map: this.mesh.material.map,
         color: this.mesh.material.color,
         side: THREE.FrontSide,
@@ -346,6 +348,7 @@ export class ModelBlock {
         depthWrite: true
       })
     );
+    clampUvRegion(ghost);
     ghost.name = "selection-texture-ghost";
     ghost.renderOrder = RenderOrder.selectionGhost;
     this.mesh.add(ghost);

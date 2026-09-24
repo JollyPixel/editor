@@ -7,7 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import {
   UVMap,
   UVRegion,
@@ -17,7 +17,9 @@ import {
 
 // Import Internal Dependencies
 import { UVGeometryBinding } from "#src/mesh-texturing/UVGeometryBinding.ts";
-import { applyUvGeometry } from "#src/mesh-texturing/applyUvGeometry.ts";
+import { clampUvRegion } from "#src/mesh-texturing/clampUvRegion.ts";
+import type { FaceRanges } from "#src/mesh-texturing/types.ts";
+import { edgeOf, regionOf } from "./regionAttributes.ts";
 import { boxFaceRanges } from "../../examples/scripts/preview/shapes/faceRanges.ts";
 
 // CONSTANTS
@@ -330,37 +332,124 @@ describe("UVGeometryBinding", () => {
   });
 });
 
-describe("applyUvGeometry — compound", () => {
-  test("maps a compound through its bounds, leaving the base uvs oriented", () => {
-    const geometry = new THREE.BufferGeometry();
-    const baseUv = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
-    geometry.setAttribute(
-      "uv",
-      new THREE.BufferAttribute(new Float32Array(8), 2)
-    );
+describe("UVGeometryBinding region attributes", () => {
+  function bind(
+    geometry: THREE.BufferGeometry,
+    faceRanges: FaceRanges = boxFaceRanges()
+  ): UVGeometryBinding {
+    clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()));
 
-    applyUvGeometry(
-      geometry.getAttribute("uv") as THREE.BufferAttribute,
-      baseUv,
-      {
-        shape: "compound",
-        rect: { x: 0, y: 0, width: 16, height: 16 },
-        parts: [
-          { x: 0, y: 0.5, width: 1, height: 0.5 },
-          { x: 0.5, y: 0, width: 0.5, height: 0.5 }
-        ]
-      },
-      { x: 32, y: 32 },
-      [{ start: 0, count: 4 }]
-    );
+    return new UVGeometryBinding({
+      geometry,
+      region: stackedRegion(),
+      textureSize: kTextureSize,
+      faceRanges
+    });
+  }
 
-    const uv = geometry.getAttribute("uv");
+  test("writes the region before the geometry is clamped", () => {
+    const geometry = makeGeometry();
 
-    assert.deepEqual(
-      [uv.getX(0), uv.getY(0)],
-      [0, 0.5],
-      "a compound is placed by its bounds, exactly like a plain rect"
-    );
-    assert.deepEqual([uv.getX(2), uv.getY(2)], [0.5, 1]);
+    new UVGeometryBinding({
+      geometry,
+      region: stackedRegion(),
+      textureSize: kTextureSize,
+      faceRanges: boxFaceRanges()
+    });
+    clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()));
+
+    assert.deepStrictEqual(regionOf(geometry, 0), [0.5, 48.5, 15.5, 63.5]);
   });
+
+  test("writes the region of every face on construction", () => {
+    const geometry = makeGeometry();
+
+    bind(geometry);
+
+    assert.deepStrictEqual(regionOf(geometry, 0), [0.5, 48.5, 15.5, 63.5]);
+    assert.deepStrictEqual(regionOf(geometry, 23), [0.5, 48.5, 15.5, 63.5]);
+  });
+
+  test("follows a face moved with applyFace", () => {
+    const geometry = makeGeometry();
+    const binding = bind(geometry);
+
+    binding.applyFace("top", { x: 32, y: 0, width: 16, height: 16 });
+
+    assert.deepStrictEqual(regionOf(geometry, 8), [32.5, 48.5, 47.5, 63.5]);
+    assert.deepStrictEqual(regionOf(geometry, 4), [0.5, 48.5, 15.5, 63.5]);
+  });
+
+  test("follows a whole-region drag preview", () => {
+    const geometry = makeGeometry();
+    const binding = bind(geometry);
+
+    binding.preview(null, { x: 16, y: 16, width: 16, height: 16 });
+
+    assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 32.5, 31.5, 47.5]);
+  });
+
+  test("bounds a whole-region triangle by its rect only", () => {
+    const geometry = makeGeometry();
+    const binding = bind(geometry);
+
+    binding.applyFace(null, {
+      shape: "triangle",
+      rect: { x: 16, y: 16, width: 16, height: 16 },
+      corner: "top-left"
+    });
+
+    assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 32.5, 31.5, 47.5]);
+    assert.deepStrictEqual(edgeOf(geometry, 0), [0, 0, 1]);
+  });
+
+  test("follows a texture resize", () => {
+    const geometry = makeGeometry();
+    const binding = bind(geometry);
+
+    binding.setTextureSize({ x: 32, y: 32 });
+
+    assert.deepStrictEqual(regionOf(geometry, 0), [0.5, 16.5, 15.5, 31.5]);
+  });
+
+  test("writes the diagonal of a triangle face", () => {
+    const geometry = makeGeometry();
+    const binding = bind(geometry, { left: [{ start: 0, count: 3 }] });
+
+    binding.applyFace("left", {
+      shape: "triangle",
+      rect: { x: 0, y: 0, width: 16, height: 16 },
+      corner: "bottom-left"
+    });
+
+    const [nx, ny] = edgeOf(geometry, 0);
+    assert.ok(Math.hypot(nx, ny) > 0.99);
+    assert.deepStrictEqual(edgeOf(geometry, 3), [0, 0, 1]);
+  });
+
+  for (const rotation of [0, 1, 2, 3] as const) {
+    test(`keeps a triangle rotated ${rotation} turns inside its diagonal`, () => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        "uv",
+        new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1], 2)
+      );
+      const binding = bind(geometry, { left: [{ start: 0, count: 3 }] });
+
+      binding.applyFace("left", {
+        shape: "triangle",
+        rect: { x: 16, y: 0, width: 16, height: 16 },
+        corner: "top-right",
+        rotation
+      });
+
+      const [nx, ny, c] = edgeOf(geometry, 0);
+      for (let index = 0; index < 3; index++) {
+        const [u, v] = uvOf(geometry, index);
+        const distance = (nx * u * kTextureSize.x) +
+          (ny * v * kTextureSize.y) - c;
+        assert.ok(distance < 0.1, `vertex ${index} is ${distance} texels out`);
+      }
+    });
+  }
 });

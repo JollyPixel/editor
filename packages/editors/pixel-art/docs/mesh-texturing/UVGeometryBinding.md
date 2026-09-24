@@ -19,6 +19,8 @@ binding.follow(canvas.uv);
 
 The constructor snapshots the geometry's `uv` attribute as its projection base and applies the region right away. **Pass geometry whose UVs have not already been rewritten** — a second binding over the same geometry would read the first one's output as its base and compound the projections.
 
+Every write also records each vertex's texel bounds in a `uvRegion` attribute and, for a triangle face, the diagonal in `uvEdge`, adding both attributes to the geometry if it lacks them. A material prepared with [`clampUvRegion()`](./clampUvRegion.md) reads them to keep samples inside the face's rect; other materials ignore them.
+
 ## Face ranges
 
 A `FaceVertexRange` is `{ start, count }` in vertices, naming a slice of the vertex list one UV face owns. `FaceRanges` maps a face to a *list* of those slices, because a shape may emit several polygons into the same face slot; a stair, for instance, splits its top into two quads.

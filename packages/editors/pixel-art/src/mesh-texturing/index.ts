@@ -11,10 +11,12 @@ export {
 } from "./UVGeometryBinding.ts";
 export {
   applyUvGeometry,
-  applyUvRect,
-  orientUv,
-  type ApplyUvRectOptions
+  orientUv
 } from "./applyUvGeometry.ts";
+export {
+  clampUvRegion,
+  type UvRegionClampedMesh
+} from "./clampUvRegion.ts";
 export type {
   FaceRanges,
   FaceVertexRange,

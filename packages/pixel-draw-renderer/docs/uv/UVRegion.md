@@ -237,6 +237,30 @@ rotationOf(geometry: UVGeometry): UVQuarterTurn
 
 Returns the geometry's `rotation`, or `0`.
 
+### `withRotation(geometry, rotation)`
+
+```ts
+withRotation(geometry: UVGeometry, rotation: number): UVGeometry
+```
+
+Returns a shallow copy of `geometry` with `rotation` set to that many quarter turns, without moving or reshaping it. The key is left out when the turns reduce to `0`. A nested `rect` or `parts` is shared with the input.
+
+### `rectOf(geometry)`
+
+```ts
+rectOf(geometry: UVGeometry): SelectionRect
+```
+
+Returns a copy of the geometry's bounding rect, without its shape or `rotation`.
+
+### `triangleCornerOf(geometry)`
+
+```ts
+triangleCornerOf(geometry: UVGeometry): UVTriangleCorner | null
+```
+
+Returns the corner of a triangle geometry, before any `rotation` is applied, or `null` for a rect or compound.
+
 ### `rotateUv(u, v, turns)`
 
 ```ts

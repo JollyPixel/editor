@@ -158,10 +158,13 @@ export {
   vec2Equal
 } from "./utils/math.ts";
 export {
+  rectOf,
   rotateCorner,
   rotateGeometry,
   rotateUv,
-  rotationOf
+  rotationOf,
+  triangleCornerOf,
+  withRotation
 } from "./uv/geometry.ts";
 export {
   isUVGeometry,
