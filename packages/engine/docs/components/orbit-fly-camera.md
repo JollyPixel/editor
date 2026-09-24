@@ -30,10 +30,26 @@ actor.addComponent(OrbitFlyCamera, {
 
 ## Options
 
+`OrbitFlyCameraOptions` extends [`CameraOptions`](camera.md#options), so
+`near`, `projectionMode`, `orthographicScale`, `viewport`, `depth`,
+`addAudioListener` and `postProcessing` all work here. Only the `fov` and
+`far` defaults differ.
+
+```ts
+import { pass } from "three/tsl";
+
+actor.addComponent(OrbitFlyCamera, {
+  far: 5000,
+  postProcessing: ({ scene, camera }) => {
+    return pass(scene, camera);
+  }
+});
+```
+
 ```ts
 type OrbitFlyCameraFocusMode = "none" | "lock" | "elastic";
 
-interface OrbitFlyCameraOptions {
+interface OrbitFlyCameraOptions extends CameraOptions {
   position?: THREE.Vector3Like;
   pivotPosition?: THREE.Vector3Like;
   initialTrailDistance?: number;
@@ -53,6 +69,7 @@ interface OrbitFlyCameraOptions {
   pivotNudgeStep?: number;
   showPivotMarker?: boolean;
   fov?: number;
+  far?: number;
 }
 ```
 
@@ -74,6 +91,7 @@ interface OrbitFlyCameraOptions {
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |
 | `showPivotMarker` | `true` | Draws a marker at the pivot in "lock" and "elastic" modes |
 | `fov` | `60` | Vertical field of view, in degrees |
+| `far` | `2000` | Far clipping plane |
 
 Movement is WASD (forward/right) + Space/Shift (up/down); look-around is
 middle-mouse-drag or Alt+left-drag. Ctrl is reserved for other

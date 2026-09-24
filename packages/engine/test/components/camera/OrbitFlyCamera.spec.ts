@@ -11,9 +11,12 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   OrbitFlyCamera,
-  type OrbitFlyCameraFocusMode
+  type OrbitFlyCameraOptions
 } from "../../../src/components/camera/orbit-fly/OrbitFlyCamera.ts";
 import type { Actor } from "../../../src/actor/Actor.ts";
+import type {
+  PostProcessing
+} from "../../../src/systems/rendering/PostProcessing.ts";
 
 // CONSTANTS
 const kFrame = 1 / 60;
@@ -23,6 +26,10 @@ function pivotArray(
   pivot: THREE.Vector3Like | null
 ): [number, number, number] | null {
   return pivot === null ? null : [pivot.x, pivot.y, pivot.z];
+}
+
+function unusedPostProcessing(): never {
+  throw new Error("not rendered in this test");
 }
 
 interface CameraHarness {
@@ -39,19 +46,8 @@ interface CameraHarness {
   pressOnce(...codes: string[]): void;
 }
 
-interface CameraHarnessOptions {
-  focusMode?: OrbitFlyCameraFocusMode;
-  minPivotDistance?: number;
-  maxPivotDistance?: number;
-  position?: THREE.Vector3Like;
-  pivotPosition?: THREE.Vector3Like;
-  initialTrailDistance?: number;
-  showPivotMarker?: boolean;
-  fov?: number;
-}
-
 function createHarness(
-  options: CameraHarnessOptions = {}
+  options: OrbitFlyCameraOptions = {}
 ): CameraHarness {
   const held = new Set<string>();
   const offset = new THREE.Vector3();
@@ -842,5 +838,21 @@ describe("OrbitFlyCamera options", () => {
   test("fov defaults to 60 and is configurable", () => {
     assert.equal(createHarness().camera.fov, 60);
     assert.equal(createHarness({ fov: 45 }).camera.fov, 45);
+  });
+
+  test("far defaults to 2000 and camera options are forwarded", () => {
+    assert.equal(createHarness().camera.far, 2000);
+
+    const postProcessing: PostProcessing = unusedPostProcessing;
+    const viewport = { x: 0, y: 0, width: 0.5, height: 1 };
+    const { camera } = createHarness({
+      near: 0.5, far: 500, depth: 2, viewport, postProcessing
+    });
+
+    assert.deepEqual(
+      [camera.near, camera.far, camera.depth, camera.viewport],
+      [0.5, 500, 2, viewport]
+    );
+    assert.equal(camera.postProcessing, postProcessing);
   });
 });
