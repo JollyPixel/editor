@@ -281,13 +281,12 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     assetId: string
   ): DependentAsset[] {
     return this.#projection
-      .dependentsOf(assetId)
-      .flatMap((dependentId) => {
-        const record = this.#projection.record(dependentId);
-
-        return record === undefined ?
-          [] :
-          [{ id: dependentId, path: record.source }];
+      .liveDependentsOf(assetId)
+      .map((record) => {
+        return {
+          id: record.id.value,
+          path: record.source
+        };
       });
   }
 

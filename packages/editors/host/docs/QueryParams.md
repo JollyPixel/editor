@@ -73,3 +73,11 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
 | `workspace` | `workspace` | a non-blank string, trimmed | [`bootStandalone`](./mountStandalone.md#offline-fallback) |
 
 Any other value reads as `undefined`, and an absent `offline` as `false`.
+
+`offlineWorkspaceQuery(workspace)` writes the `offline` and `workspace`
+parameters, for a shell that opens editor pages on its own offline workspace:
+
+```ts
+new URLSearchParams(offlineWorkspaceQuery("studio")).toString();
+// "offline=&workspace=studio"
+```

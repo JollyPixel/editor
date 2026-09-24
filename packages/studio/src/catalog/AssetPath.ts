@@ -47,7 +47,10 @@ export class AssetPath {
   }
 
   get stem(): string {
-    return this.name.slice(0, this.name.length - this.extension.length);
+    return this.name.slice(
+      0,
+      this.name.length - this.extension.length
+    );
   }
 
   child(

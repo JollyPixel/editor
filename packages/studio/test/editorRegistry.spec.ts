@@ -63,14 +63,14 @@ describe("EditorRegistry", () => {
 
   test("registers the icon of a kind under its own name", () => {
     const registry = new EditorRegistry().registerKind(kMapKind);
-    const icon = registry.iconFor("voxelmap");
+    const icon = registry.kindSet().iconFor("voxelmap");
 
     assert.equal(icon, "kind:voxelmap");
     assert.notEqual(getIcon(icon), null);
     assert.equal(iconTone(icon), "lime");
   });
 
-  test("lists the registered kinds in registration order", () => {
+  test("snapshots the registered kinds in registration order", () => {
     const registry = new EditorRegistry()
       .registerKind(kMapKind)
       .registerKind({
@@ -78,20 +78,35 @@ describe("EditorRegistry", () => {
         label: "Texture"
       });
 
-    assert.deepEqual(
-      registry.kinds().map(({ kind, label }) => [kind, label]),
-      [["voxelmap", "Voxel map"], ["texture", "Texture"]]
-    );
+    assert.deepEqual(registry.kindSet().entries, [
+      {
+        kind: "voxelmap",
+        label: "Voxel map",
+        icon: "kind:voxelmap"
+      },
+      {
+        kind: "texture",
+        label: "Texture",
+        icon: undefined
+      }
+    ]);
   });
 
-  test("falls back to the file icon", () => {
-    const registry = new EditorRegistry().registerKind({
-      kind: "texture",
-      label: "Texture"
-    });
+  test("snapshots the kinds an editor opens", () => {
+    const registry = new EditorRegistry().registerEditor(kMapEditor);
+    const kinds = registry.kindSet();
 
-    assert.equal(registry.iconFor("texture"), "file");
-    assert.equal(registry.iconFor("unknown"), "file");
+    assert.equal(kinds.detailFor("voxelmap"), undefined);
+    assert.equal(kinds.detailFor("texture"), "no editor");
+  });
+
+  test("a snapshot ignores later registrations", () => {
+    const registry = new EditorRegistry();
+    const kinds = registry.kindSet();
+    registry.registerKind(kMapKind).registerEditor(kMapEditor);
+
+    assert.equal(kinds.has("voxelmap"), false);
+    assert.equal(kinds.detailFor("voxelmap"), "no editor");
   });
 
   test("rejects a kind registered twice", () => {

@@ -10,7 +10,6 @@ import {
   state
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
-import type { ShellCommand } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
   type LogEntry
@@ -18,16 +17,10 @@ import {
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
-import { AssetPath } from "../catalog/AssetPath.ts";
+import { StudioSession } from "./StudioSession.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
-import {
-  EditorTabs,
-  type EditorTabsOptions
-} from "../tabs/EditorTabs.ts";
+import type { EditorTabsOptions } from "../tabs/EditorTabs.ts";
 import "./assets/AssetBrowser.ts";
-
-// CONSTANTS
-const kNoEditorDetail = "no editor";
 
 export interface StudioOptions {
   catalog: CatalogClient;
@@ -52,9 +45,7 @@ export class Studio extends LitElement {
   @query("#studio-home")
   declare _home: HTMLElement | null;
 
-  #catalog: CatalogClient | null = null;
-  #editors: EditorRegistry | null = null;
-  #tabs: EditorTabs | null = null;
+  #session: StudioSession | null = null;
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
 
@@ -62,10 +53,6 @@ export class Studio extends LitElement {
     super();
     this._assets = null;
     this._log = [];
-  }
-
-  get tabs(): EditorTabs | null {
-    return this.#tabs;
   }
 
   async attach(
@@ -80,53 +67,30 @@ export class Studio extends LitElement {
       throw new Error("The studio must be connected before it is attached.");
     }
 
-    this.#catalog = options.catalog;
-    this.#editors = options.editors;
-    this.#tabs = new EditorTabs({
-      strip: this._strip,
-      frames: this._frames,
-      home: this._home,
-      confirmEvict: options.confirmEvict,
-      onShellCommand: this.#onShellCommand
+    this.#session?.dispose();
+    const session = new StudioSession({
+      catalog: options.catalog,
+      editors: options.editors,
+      tabs: {
+        strip: this._strip,
+        frames: this._frames,
+        home: this._home,
+        confirmEvict: options.confirmEvict
+      }
     });
-    this.#catalog.on("change", this.#syncTabs);
+    this.#session = session;
     this._assets = {
       catalog: options.catalog,
-      iconFor: (kind) => options.editors.iconFor(kind),
-      detailFor: (kind) => (this.canOpen(kind) ? undefined : kNoEditorDetail),
-      kinds: options.editors.kinds().map(({ kind, label }) => {
-        return {
-          kind,
-          label,
-          icon: options.editors.iconFor(kind)
-        };
-      })
+      kinds: session.kinds
     };
-  }
-
-  canOpen(
-    kind: string
-  ): boolean {
-    return this.#editors?.editorFor(kind) !== undefined;
   }
 
   openAsset(
     assetId: string
   ): Promise<boolean> {
-    const record = this.#catalog?.record(assetId);
-    const url = record === undefined ?
-      undefined :
-      this.#editors?.pageUrl(record.kind, assetId);
-    if (this.#tabs === null || record === undefined || url === undefined) {
-      return Promise.resolve(false);
-    }
-
-    return this.#tabs.open({
-      id: assetId,
-      label: AssetPath.parse(record.source).name,
-      url,
-      icon: this.#editors?.iconFor(record.kind)
-    });
+    return this.#session?.openAsset(
+      assetId
+    ) ?? Promise.resolve(false);
   }
 
   override connectedCallback(): void {
@@ -141,8 +105,8 @@ export class Studio extends LitElement {
     super.disconnectedCallback();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    this.#catalog?.off("change", this.#syncTabs);
-    this.#tabs?.dispose();
+    this.#session?.dispose();
+    this.#session = null;
   }
 
   protected override createRenderRoot(): HTMLElement {
@@ -195,26 +159,6 @@ export class Studio extends LitElement {
     event: HTMLElementEventMap["asset-error"]
   ): void => {
     this.#queue.push(event.detail.message);
-  };
-
-  readonly #onShellCommand = (
-    command: ShellCommand
-  ): void => {
-    if (command.command === "open-asset") {
-      void this.openAsset(command.target);
-    }
-  };
-
-  readonly #syncTabs = (): void => {
-    for (const assetId of this.#tabs?.ids() ?? []) {
-      const record = this.#catalog?.record(assetId);
-      if (record === undefined) {
-        this.#tabs?.close(assetId);
-      }
-      else {
-        this.#tabs?.relabel(assetId, AssetPath.parse(record.source).name);
-      }
-    }
   };
 }
 

@@ -1,3 +1,7 @@
+// Import Node.js Dependencies
+import fs from "node:fs/promises";
+import path from "node:path";
+
 // Import Third-party Dependencies
 import {
   defineConfig,
@@ -14,9 +18,15 @@ import { PORTS } from "@jolly-pixel/e2e";
 import { readEditorPackages } from "./vite/editorManifest.ts";
 import { editorPagesPlugin } from "./vite/editorPagesPlugin.ts";
 import { resolveProjectRoot } from "./vite/projectRoot.ts";
-import { readStudioProject } from "./vite/seed/index.ts";
+import { createStudioProject } from "./src/seed.ts";
 
 // CONSTANTS
+const kTilesetFile = path.join(
+  import.meta.dirname,
+  "public",
+  "textures",
+  "tileset.png"
+);
 const kEditors = readEditorPackages([
   "@jolly-pixel/editor.voxel-map",
   "@jolly-pixel/editor.voxel-model"
@@ -25,7 +35,9 @@ const kEditors = readEditorPackages([
 async function assetWorkspacePlugin(
   inMemory: boolean
 ): Promise<Plugin> {
-  const { handlers, seed } = await readStudioProject();
+  const { handlers, seed } = await createStudioProject(
+    await fs.readFile(kTilesetFile)
+  );
 
   return createAssetWorkspacePlugin({
     root: resolveProjectRoot(import.meta.dirname),

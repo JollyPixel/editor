@@ -191,6 +191,10 @@ describe("CatalogProjection — dependency index", () => {
     const map = await createLink(harness, "map.link", "tex");
     assert.deepEqual(projection.dependenciesOf(map), [linkReference("tex")]);
     assert.deepEqual(projection.dependentsOf("tex"), [map]);
+    assert.deepEqual(
+      projection.liveDependentsOf("tex").map((record) => record.id.value),
+      [map]
+    );
     assert.deepEqual(changes.at(-1)?.dependencies, [linkReference("tex")]);
 
     await harness.writer.update({

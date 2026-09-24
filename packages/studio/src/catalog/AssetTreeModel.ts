@@ -10,8 +10,8 @@ import type {
 import { AssetPath } from "./AssetPath.ts";
 
 // CONSTANTS
-export const FOLDER_NODE_PREFIX = "folder:";
-export const ASSET_NODE_PREFIX = "asset:";
+const kFolderNodePrefix = "folder:";
+const kAssetNodePrefix = "asset:";
 const kFolderIcon: IconName = "folder";
 const kCollator = new Intl.Collator(undefined, {
   numeric: true,
@@ -34,9 +34,13 @@ export type AssetNodeData = AssetFolderData | AssetLeafData;
 
 export type AssetTreeNode = TreeNode<AssetNodeData>;
 
+export interface AssetKindPresenter {
+  iconFor(kind: string): IconName | undefined;
+  detailFor(kind: string): string | undefined;
+}
+
 export interface AssetTreeOptions {
-  iconFor?: (kind: string) => IconName | undefined;
-  detailFor?: (kind: string) => string | undefined;
+  presenter?: AssetKindPresenter;
   /**
    * Shows only the assets of this kind and the folders holding them.
    * Folder relocations and deletions still cover every asset under them.
@@ -61,13 +65,13 @@ export type AssetDrop = Pick<JollyReparentDetail, "targetId" | "where">;
 export function folderNodeId(
   path: AssetPath
 ): string {
-  return `${FOLDER_NODE_PREFIX}${path}`;
+  return `${kFolderNodePrefix}${path}`;
 }
 
 export function assetNodeId(
   assetId: string
 ): string {
-  return `${ASSET_NODE_PREFIX}${assetId}`;
+  return `${kAssetNodePrefix}${assetId}`;
 }
 
 export class AssetTreeModel {
@@ -97,8 +101,8 @@ export class AssetTreeModel {
       this.#add(this.#folderAt(data.path.parent), {
         id: assetNodeId(record.id),
         label: data.path.name,
-        icon: options.iconFor?.(record.kind),
-        detail: options.detailFor?.(record.kind),
+        icon: options.presenter?.iconFor(record.kind),
+        detail: options.presenter?.detailFor(record.kind),
         renamable: true,
         data
       });

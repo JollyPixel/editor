@@ -14,6 +14,7 @@ export const DEFAULT_TAB_CAP = 4;
 export const HOME_TAB_ID = "studio:home";
 const kTabTag = "jolly-tab";
 const kHomeLabel = "Home";
+const kFirstEditorIndex = 1;
 const kHomeIcon: IconName = "home";
 
 export interface EditorTab {
@@ -59,7 +60,6 @@ interface OpenTab {
   tab: EditorTab;
   item: HTMLElement;
   frame: HTMLIFrameElement;
-  activatedAt: number;
 }
 
 export class EditorTabs {
@@ -75,7 +75,6 @@ export class EditorTabs {
   #logger: HostLogger;
   #open = new Map<string, OpenTab>();
   #active: string | null = null;
-  #clock = 0;
   #listening = new AbortController();
 
   constructor(
@@ -125,11 +124,11 @@ export class EditorTabs {
   }
 
   ids(): string[] {
-    return [...this.#strip.children].flatMap((item) => {
-      const id = String(Reflect.get(item, "value"));
+    const items = [...this.#strip.children];
 
-      return this.#open.has(id) ? [id] : [];
-    });
+    return [...this.#open.values()]
+      .sort((left, right) => items.indexOf(left.item) - items.indexOf(right.item))
+      .map((entry) => entry.tab.id);
   }
 
   has(
@@ -141,15 +140,15 @@ export class EditorTabs {
   async open(
     tab: EditorTab
   ): Promise<boolean> {
-    if (this.#open.has(tab.id)) {
-      return this.focus(tab.id);
-    }
-    if (this.#open.size >= this.cap) {
-      const victim = this.#leastRecent();
+    while (!this.#open.has(tab.id) && this.#open.size >= this.cap) {
+      const [victim] = this.#open.values();
       if (victim === undefined || !await this.#confirmEvict(victim.tab)) {
         return false;
       }
       this.close(victim.tab.id);
+    }
+    if (this.#open.has(tab.id)) {
+      return this.focus(tab.id);
     }
 
     const item = document.createElement(kTabTag);
@@ -168,8 +167,7 @@ export class EditorTabs {
     this.#open.set(tab.id, {
       tab,
       item,
-      frame,
-      activatedAt: 0
+      frame
     });
 
     return this.focus(tab.id);
@@ -189,7 +187,8 @@ export class EditorTabs {
       return false;
     }
 
-    entry.activatedAt = ++this.#clock;
+    this.#open.delete(id);
+    this.#open.set(id, entry);
     this.#show(entry);
 
     return true;
@@ -207,13 +206,7 @@ export class EditorTabs {
     entry.item.remove();
     entry.frame.remove();
     if (this.#active === id) {
-      const next = this.#mostRecent();
-      if (next === undefined) {
-        this.#show(null);
-      }
-      else {
-        this.focus(next.tab.id);
-      }
+      this.focus([...this.#open.keys()].at(-1) ?? HOME_TAB_ID);
     }
 
     return true;
@@ -231,7 +224,7 @@ export class EditorTabs {
     const others = [...this.#strip.children].filter(
       (item) => item !== entry.item
     );
-    const reference = others[Math.max(index, 1)] ?? null;
+    const reference = others[Math.max(index, kFirstEditorIndex)] ?? null;
     this.#strip.insertBefore(entry.item, reference);
 
     return true;
@@ -273,28 +266,6 @@ export class EditorTabs {
     for (const other of this.#open.values()) {
       other.frame.hidden = other !== entry;
     }
-  }
-
-  #leastRecent(): OpenTab | undefined {
-    let found: OpenTab | undefined;
-    for (const entry of this.#open.values()) {
-      if (found === undefined || entry.activatedAt < found.activatedAt) {
-        found = entry;
-      }
-    }
-
-    return found;
-  }
-
-  #mostRecent(): OpenTab | undefined {
-    let found: OpenTab | undefined;
-    for (const entry of this.#open.values()) {
-      if (found === undefined || entry.activatedAt > found.activatedAt) {
-        found = entry;
-      }
-    }
-
-    return found;
   }
 
   #entryOf(

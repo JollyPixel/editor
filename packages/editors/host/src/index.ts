@@ -17,6 +17,7 @@ export {
 export * from "./lease/errors/AssetDocumentConflictError.ts";
 export * from "./session/errors/ArchiveImportDisabledError.ts";
 export * from "./session/errors/CatalogUnavailableError.ts";
+export * from "./session/openCatalog.ts";
 export * from "./session/SessionArchive.ts";
 export * from "./session/rememberQueryUsername.ts";
 export type { SessionWorkspace } from "./workspace/SessionWorkspace.ts";

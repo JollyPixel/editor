@@ -7,10 +7,8 @@ import {
   mountStandalone,
   type MountStandaloneOptions
 } from "./mountStandalone.ts";
-import { offerOffline } from "./offerOffline.ts";
-import { LaunchNotFoundError } from "../launch/errors/LaunchNotFoundError.ts";
+import { withOfflineFallback } from "./offerOffline.ts";
 import { HOST_PARAMS } from "../params/HostParams.ts";
-import { CatalogUnavailableError } from "../session/errors/CatalogUnavailableError.ts";
 import type {
   OfflineWorkspaceOptions
 } from "../workspace/offline/OfflineWorkspace.ts";
@@ -60,28 +58,9 @@ export async function bootStandalone<
     return mountOffline();
   }
 
-  for (;;) {
-    try {
-      return await mountStandalone(
-        definition,
-        mountOptions
-      );
-    }
-    catch (error) {
-      if (
-        !(error instanceof CatalogUnavailableError) &&
-        !(error instanceof LaunchNotFoundError)
-      ) {
-        throw error;
-      }
-
-      const choice = await offerOffline("The asset server is unreachable.");
-      if (choice === "offline") {
-        return mountOffline();
-      }
-      if (choice === null) {
-        throw error;
-      }
-    }
-  }
+  return withOfflineFallback({
+    message: "The asset server is unreachable.",
+    online: () => mountStandalone(definition, mountOptions),
+    offline: mountOffline
+  });
 }

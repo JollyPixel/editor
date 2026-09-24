@@ -25,12 +25,16 @@ import {
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
-export const TILESET_ASSET_ID = "tileset-default";
-export const MAP_ASSET_ID = "map-overworld";
-export const MODEL_TEXTURE_ASSET_ID = "model-texture";
-export const MODEL_ASSET_ID = "model-default";
-export const CHUNK_SIZE = 16;
-export const MODEL_TEXTURE_SIZE = { x: 64, y: 64 };
+const kTilesetUrl = "textures/tileset.png";
+const kTilesetAssetId = "tileset-default";
+const kMapAssetId = "map-overworld";
+const kModelTextureAssetId = "model-texture";
+const kModelAssetId = "model-default";
+const kChunkSize = 16;
+const kModelTextureSize = {
+  x: 64,
+  y: 64
+};
 const kTilesetId = "default";
 
 export interface StudioProject {
@@ -43,43 +47,43 @@ export async function createStudioProject(
 ): Promise<StudioProject> {
   const tileset = await createTilesetDocument(tilesetPng, {
     id: kTilesetId,
-    asset: tilesetAsset(TILESET_ASSET_ID),
+    asset: tilesetAsset(kTilesetAssetId),
     tileSize: DEFAULT_TILE_SIZE
   });
 
   return {
     handlers: [
       pixelArtAssetKind({ defaultSize: tileset.size }),
-      voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),
+      voxelMapAssetKind({ chunkSize: kChunkSize }),
       voxelModelAssetKind(),
       textureAssetKind()
     ],
     seed: {
       "textures/tileset.pixelart": {
-        id: TILESET_ASSET_ID,
+        id: kTilesetAssetId,
         kind: PIXEL_ART_KIND,
         content: () => tileset.content
       },
       "maps/overworld.voxelmap.json": {
-        id: MAP_ASSET_ID,
+        id: kMapAssetId,
         kind: VOXEL_MAP_KIND,
         content: () => createVoxelMapDocument({
-          chunkSize: CHUNK_SIZE,
+          chunkSize: kChunkSize,
           tileset: tileset.definition
         })
       },
       "textures/model.pixelart": {
-        id: MODEL_TEXTURE_ASSET_ID,
+        id: kModelTextureAssetId,
         kind: PIXEL_ART_KIND,
-        content: () => createPixelArtDocument(MODEL_TEXTURE_SIZE)
+        content: () => createPixelArtDocument(kModelTextureSize)
       },
       "models/model.voxelmodel.json": {
-        id: MODEL_ASSET_ID,
+        id: kModelAssetId,
         kind: VOXEL_MODEL_KIND,
         content: () => encodeVoxelModelDocument(
           createVoxelModelDocument({
             texture: {
-              id: MODEL_TEXTURE_ASSET_ID,
+              id: kModelTextureAssetId,
               kind: PIXEL_ART_KIND
             }
           })
@@ -87,4 +91,15 @@ export async function createStudioProject(
       }
     }
   };
+}
+
+export async function loadStudioProject(): Promise<StudioProject> {
+  const response = await fetch(kTilesetUrl);
+  if (!response.ok) {
+    throw new Error(`Unable to load "${kTilesetUrl}" (${response.status}).`);
+  }
+
+  return createStudioProject(
+    new Uint8Array(await response.arrayBuffer())
+  );
 }

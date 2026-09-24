@@ -17,13 +17,13 @@ import {
 } from "@jolly-pixel/asset-server/catalog/client";
 import {
   LocalStorageAdapter,
-  type IconName,
   type JollyChangeDetail,
   type JollyOption,
   type JollyReparentDetail
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import {
   AssetTreeModel,
   folderNodeId,
@@ -43,20 +43,9 @@ const kAllKinds: JollyOption<string> = {
   icon: "all-kinds"
 };
 
-export interface AssetKindFilter {
-  kind: string;
-  label: string;
-  icon: IconName;
-}
-
 export interface AssetBrowserOptions {
   catalog: CatalogClient;
-  iconFor?: (kind: string) => IconName | undefined;
-  detailFor?: (kind: string) => string | undefined;
-  /**
-   * Kinds offered by the filter row, in display order.
-   */
-  kinds?: readonly AssetKindFilter[];
+  kinds: AssetKindSet;
 }
 
 export interface AssetOpenDetail {
@@ -137,23 +126,13 @@ export class AssetBrowser extends LitElement {
   override render(): TemplateResult {
     const empty = this._selected.length === 0;
     const exportable = this.#selectedAsset() !== null;
-    const kinds = this.options?.kinds ?? [];
 
     return html`
       <jolly-button-group
         class="kinds"
         icon-only
         aria-label="Asset kind"
-        .options=${[
-          kAllKinds,
-          ...kinds.map((kind) => {
-            return {
-              value: kind.kind,
-              label: kind.label,
-              icon: kind.icon
-            };
-          })
-        ]}
+        .options=${[kAllKinds, ...this.#kinds.toOptions()]}
         .value=${this._kind}
         @jolly-change=${this.#onKindChange}
       ></jolly-button-group>
@@ -203,6 +182,10 @@ export class AssetBrowser extends LitElement {
       ></jolly-tree>
       <asset-delete-dialog></asset-delete-dialog>
     `;
+  }
+
+  get #kinds(): AssetKindSet {
+    return this.options?.kinds ?? AssetKindSet.EMPTY;
   }
 
   #listen(): void {
@@ -285,7 +268,7 @@ export class AssetBrowser extends LitElement {
     const deleted = new Set(assets.map((asset) => asset.id));
     const dependents = new Set<string>();
     for (const asset of assets) {
-      for (const dependent of liveDependents(catalog, asset.id)) {
+      for (const dependent of catalog.liveDependentsOf(asset.id)) {
         if (!deleted.has(dependent.id)) {
           dependents.add(dependent.source);
         }
@@ -311,7 +294,7 @@ export class AssetBrowser extends LitElement {
     try {
       for (const asset of assets) {
         await catalog.remove(asset.id, {
-          force: liveDependents(catalog, asset.id).length > 0
+          force: catalog.liveDependentsOf(asset.id).length > 0
         });
         removed++;
       }
@@ -386,11 +369,10 @@ export class AssetBrowser extends LitElement {
 
   readonly #onCatalogChange = (): void => {
     const records = [...this.#catalog?.records() ?? []];
-    const kinds = this.options?.kinds ?? [];
+    const kinds = this.#kinds;
     const model = new AssetTreeModel(records, {
-      iconFor: this.options?.iconFor,
-      detailFor: this.options?.detailFor,
-      kind: kinds.some(({ kind }) => kind === this._kind) ? this._kind : null
+      presenter: kinds,
+      kind: kinds.has(this._kind) ? this._kind : null
     });
     this._model = model;
     this._expanded ??= this.#catalog === null ?
@@ -502,24 +484,6 @@ export class AssetBrowser extends LitElement {
       void this.#delete(nodeId);
     }
   };
-}
-
-function liveDependents(
-  catalog: CatalogClient,
-  assetId: string
-): Array<{ id: string; source: string; }> {
-  const live: Array<{ id: string; source: string; }> = [];
-  for (const dependentId of catalog.dependentsOf(assetId)) {
-    const record = catalog.record(dependentId);
-    if (record !== undefined) {
-      live.push({
-        id: record.id,
-        source: record.source
-      });
-    }
-  }
-
-  return live;
 }
 
 function relocationFailure(
