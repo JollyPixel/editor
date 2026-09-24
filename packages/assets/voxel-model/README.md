@@ -16,6 +16,10 @@ This workspace-private package stores `.voxelmodel.json` model trees. Add `"@jol
 
 ```ts
 import {
+  PIXEL_ART_KIND,
+  pixelArtAssetKind
+} from "@jolly-pixel/asset.pixel-art";
+import {
   createVoxelModelDocument,
   encodeVoxelModelDocument,
   voxelModelAssetKind
@@ -23,14 +27,23 @@ import {
 import { createAssetWorkspacePlugin } from "@jolly-pixel/asset-server/plugins/vite.ts";
 import { defineConfig } from "vite";
 
+const texture = {
+  id: crypto.randomUUID(),
+  kind: PIXEL_ART_KIND
+};
+
 export default defineConfig({
   plugins: [
     createAssetWorkspacePlugin({
       root: import.meta.dirname,
-      handlers: [voxelModelAssetKind()],
+      handlers: [
+        voxelModelAssetKind(),
+        pixelArtAssetKind()
+      ],
       seed: {
+        "textures/model.pixelart": texture,
         "models/model.voxelmodel.json": () => encodeVoxelModelDocument(
-          createVoxelModelDocument()
+          createVoxelModelDocument({ texture })
         )
       }
     })
@@ -38,8 +51,7 @@ export default defineConfig({
 });
 ```
 
-`createVoxelModelDocument({ texture?, blocks? })` creates a version 2 document. A block's `position` is its pivot point, relative to its parent's pivot, and `pivotOffset` is where that pivot sits on the box, from the box center along the box's own axes. A block's `scale` applies around its pivot and carries its child blocks. Children never skew: each child takes its parent's scale on the same axis, whatever its rotation. It starts with one root block named `Block` unless `blocks` supplies root names; `blocks: []` creates an empty tree. `decodeVoxelModelDocument()` throws `InvalidVoxelModelDocumentError` for malformed bytes.
-Set `texture` to a pixel-art asset reference when the model uses one.
+`createVoxelModelDocument({ texture, blocks? })` creates a version 2 document. `texture` is a required pixel-art asset reference. A block's `position` is its pivot point, relative to its parent's pivot, and `pivotOffset` is where that pivot sits on the box, from the box center along the box's own axes. A block's `scale` applies around its pivot and carries its child blocks. Children never skew: each child takes its parent's scale on the same axis, whatever its rotation. It starts with one root block named `Block` unless `blocks` supplies root names; `blocks: []` creates an empty tree. `decodeVoxelModelDocument()` throws `InvalidVoxelModelDocumentError` for malformed bytes or a missing texture.
 
 ### Connect a model
 

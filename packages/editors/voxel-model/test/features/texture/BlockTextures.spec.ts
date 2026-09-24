@@ -38,14 +38,11 @@ function createPixels(): PixelDocument {
   });
 }
 
-function createHarness(
-  pixelsReady: Promise<void> = Promise.resolve()
-) {
+function createHarness() {
   const pixels = createPixels();
   const { document, blocks, selection, addBlock } = createModelFixture();
   const textures = new BlockTextures({
     pixels,
-    pixelsReady,
     document,
     blocks,
     selection
@@ -84,7 +81,6 @@ describe("BlockTextures texture", () => {
     const before = addBlock();
     new BlockTextures({
       pixels,
-      pixelsReady: Promise.resolve(),
       document,
       blocks,
       selection
@@ -286,22 +282,9 @@ describe("BlockTextures regions port", () => {
 });
 
 describe("BlockTextures missing regions", () => {
-  test("creates no region while the texture is still loading", () => {
-    const ready = Promise.withResolvers<void>();
-    const { document, uv } = createHarness(ready.promise);
-
+  test("creates and binds a region for a snapshot block that has none", () => {
+    const { document, blocks, uv } = createHarness();
     document.load(kTorsoSnapshot);
-
-    assert.equal(uv.get(kTorsoRegionId), undefined);
-  });
-
-  test("creates and binds a region for a snapshot block that has none", async() => {
-    const ready = Promise.withResolvers<void>();
-    const { document, blocks, uv } = createHarness(ready.promise);
-    document.load(kTorsoSnapshot);
-
-    ready.resolve();
-    await ready.promise;
 
     assert.equal(uv.get(kTorsoRegionId)?.name, "Torso");
 
@@ -314,13 +297,10 @@ describe("BlockTextures missing regions", () => {
     assert.deepEqual(uvOf(block, 1), [u + (64 / kTextureSize.x), v]);
   });
 
-  test("leaves the region the texture already carries untouched", async() => {
-    const ready = Promise.withResolvers<void>();
-    const { document, uv } = createHarness(ready.promise);
+  test("leaves the region the texture already carries untouched", () => {
+    const { document, uv } = createHarness();
     uv.create({ id: kTorsoRegionId, width: 16, height: 16 });
     uv.move(kTorsoRegionId, { x: 64, y: 32, width: 16, height: 16 });
-    ready.resolve();
-    await ready.promise;
 
     document.load(kTorsoSnapshot);
 

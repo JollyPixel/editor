@@ -33,7 +33,6 @@ export interface ModelEditorSceneOptions {
   identity: PeerIdentity;
   presence: PresenceStore;
   pixels: PixelDocument;
-  pixelsReady: Promise<void>;
 }
 
 export interface ModelWorkspace {
@@ -70,8 +69,7 @@ export class ModelEditorScene extends Systems.Scene {
       document,
       identity,
       presence,
-      pixels,
-      pixelsReady
+      pixels
     } = this.#options;
 
     const scene = this.world.sceneManager.getSource();
@@ -107,7 +105,6 @@ export class ModelEditorScene extends Systems.Scene {
 
     const textures = new BlockTextures({
       pixels,
-      pixelsReady,
       document,
       blocks,
       selection
@@ -144,12 +141,6 @@ export class ModelEditorScene extends Systems.Scene {
         gizmo
       });
 
-    /*
-     * OrbitFlyCamera self-registers as a render component on awake().
-     * HighlightBridge renders the base scene itself as part of drawing the
-     * highlight overlay, so it takes over that camera's render pass instead
-     * of running alongside it, or the scene would be drawn twice.
-     */
     this.world.renderer.removeRenderComponent(camera);
     const highlight = new HighlightBridge({
       renderer: this.world.renderer.getSource(),

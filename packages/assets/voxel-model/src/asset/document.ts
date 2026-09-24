@@ -15,30 +15,30 @@ const kDefaultBlockName = "Block";
 
 export interface VoxelModelDocument extends VoxelModelSnapshot {
   version: typeof VOXEL_MODEL_DOCUMENT_VERSION;
-  texture?: AssetReferenceData;
+  texture: AssetReferenceData;
 }
 
 export interface VoxelModelDocumentOptions {
-  texture?: AssetReferenceData;
+  texture: AssetReferenceData;
   blocks?: Iterable<string>;
 }
 
 export function createVoxelModelDocument(
-  options: VoxelModelDocumentOptions = {}
+  options: VoxelModelDocumentOptions
 ): VoxelModelDocument {
-  const { blocks = [kDefaultBlockName] } = options;
-  const document: VoxelModelDocument = {
-    version: VOXEL_MODEL_DOCUMENT_VERSION,
-    nodes: [...blocks].map(createBlockNode)
-  };
-  if (options.texture !== undefined) {
-    document.texture = {
-      id: options.texture.id,
-      kind: options.texture.kind
-    };
-  }
+  const {
+    texture,
+    blocks = [kDefaultBlockName]
+  } = options;
 
-  return document;
+  return {
+    version: VOXEL_MODEL_DOCUMENT_VERSION,
+    nodes: [...blocks].map(createBlockNode),
+    texture: {
+      id: texture.id,
+      kind: texture.kind
+    }
+  };
 }
 
 export function encodeVoxelModelDocument(
@@ -71,7 +71,7 @@ export function decodeVoxelModelDocument(
   if (!Array.isArray(document.nodes)) {
     throw new InvalidVoxelModelDocumentError("nodes must be an array");
   }
-  if (document.texture !== undefined && !isReference(document.texture)) {
+  if (!isReference(document.texture)) {
     throw new InvalidVoxelModelDocumentError("texture must be an asset reference");
   }
 

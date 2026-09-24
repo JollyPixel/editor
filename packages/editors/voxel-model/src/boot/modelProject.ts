@@ -15,7 +15,10 @@ import {
 } from "@jolly-pixel/asset.voxel-model";
 
 // CONSTANTS
-export const TEXTURE_SIZE = { x: 64, y: 64 };
+export const TEXTURE_SIZE = {
+  x: 64,
+  y: 64
+};
 
 export interface ModelProject {
   handlers: AssetKindHandler[];

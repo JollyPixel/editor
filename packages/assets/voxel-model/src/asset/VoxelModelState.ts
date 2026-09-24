@@ -6,6 +6,7 @@ import {
   VOXEL_MODEL_DOCUMENT_VERSION,
   type VoxelModelDocument
 } from "./document.ts";
+import { InvalidVoxelModelDocumentError } from "./InvalidVoxelModelDocumentError.ts";
 import { ModelTree } from "../model/ModelTree.ts";
 import type {
   VoxelModelCommand,
@@ -26,12 +27,10 @@ export class VoxelModelState {
     document: VoxelModelDocument
   ): void {
     this.#tree.load(document.nodes);
-    this.#texture = document.texture === undefined ?
-      null :
-      {
-        id: document.texture.id,
-        kind: document.texture.kind
-      };
+    this.#texture = {
+      id: document.texture.id,
+      kind: document.texture.kind
+    };
   }
 
   clear(): void {
@@ -62,14 +61,14 @@ export class VoxelModelState {
   }
 
   toJSON(): VoxelModelDocument {
-    const document: VoxelModelDocument = {
-      version: VOXEL_MODEL_DOCUMENT_VERSION,
-      ...this.snapshot()
-    };
-    if (this.#texture !== null) {
-      document.texture = { ...this.#texture };
+    if (this.#texture === null) {
+      throw new InvalidVoxelModelDocumentError("texture is missing");
     }
 
-    return document;
+    return {
+      version: VOXEL_MODEL_DOCUMENT_VERSION,
+      ...this.snapshot(),
+      texture: { ...this.#texture }
+    };
   }
 }
