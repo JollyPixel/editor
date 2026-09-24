@@ -6,16 +6,16 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  ImportPlan,
-  ImportReport
+import {
+  ARCHIVE_MIME_TYPE,
+  type ImportPlan,
+  type ImportReport
 } from "@jolly-pixel/asset-server/catalog/client";
 import { BINARY_KIND } from "@jolly-pixel/asset-server/backend";
 import { AssetId } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
-  ARCHIVE_MIME_TYPE,
   CatalogSessionArchive,
   type ArchiveCatalog
 } from "#src/session/SessionArchive.ts";

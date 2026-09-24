@@ -1,10 +1,7 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
-import {
-  CatalogSessionArchive,
-  type CatalogClient
-} from "@jolly-pixel/asset-server/catalog/client";
+import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
 import * as network from "@jolly-pixel/network/client";
 import {
   promptPeerIdentity,
@@ -24,7 +21,10 @@ import type {
   AssetDocumentKind,
   AssetRoomLease
 } from "../lease/AssetLease.ts";
-import type { SessionArchive } from "./SessionArchive.ts";
+import {
+  CatalogSessionArchive,
+  type SessionArchive
+} from "./SessionArchive.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 import {
   CATALOG_TIMEOUT_MS,
@@ -239,7 +239,8 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     }
 
     const wanted = new Map<string, AssetDocumentKind<unknown>>();
-    for (const reference of this.catalog.closureOf(this.target.record.id)) {
+    const { dependencies } = this.catalog;
+    for (const reference of dependencies.closureOf(this.target.record.id)) {
       const record = this.catalog.record(reference.id);
       const kind = this.#kinds.get(reference.kind);
       if (record?.kind === reference.kind && kind !== undefined) {

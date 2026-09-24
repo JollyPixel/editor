@@ -308,6 +308,7 @@ describe("asset-server — end to end", () => {
       kind: "message",
       payload: {
         type: CATALOG_DELETE,
+        requestId: "r101",
         assetId: counter.id
       }
     });

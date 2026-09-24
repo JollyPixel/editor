@@ -153,8 +153,7 @@ Built with `@jolly-pixel/ui`, in one `jolly-scope`: a header row above one
     many went through.
   - Delete (key or action) opens `<asset-delete-dialog>`, listing the live
     assets outside the deleted set that still reference it, from
-    `dependentsOf`. Confirming forces each command that still has a live
-    dependent.
+    `dependentsOf`. Confirming forces each command.
   - Export downloads the selected asset and its dependencies as
     `<stem>.zip`, from `CatalogClient.exportArchive`. It is disabled on a
     folder: an archive has a single root.

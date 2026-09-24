@@ -12,10 +12,6 @@ import {
   type Infer,
   type ValidationError
 } from "ata-validator";
-import {
-  fromUint8Array,
-  toUint8Array
-} from "js-base64";
 
 // Import Internal Dependencies
 import {
@@ -25,6 +21,7 @@ import {
   assetWriteDataSchema,
   type AssetInlineContent
 } from "./AssetEvents.schema.ts";
+import { encodeContent } from "./inlineContent.ts";
 import { contentHash } from "../utils/contentHash.ts";
 
 // CONSTANTS
@@ -232,21 +229,5 @@ export async function writeData(
     content: encodeContent(snapshot),
     dependencies: references
   };
-}
-
-export function encodeContent(
-  data: Uint8Array
-): AssetInlineContent {
-  return {
-    type: "inline",
-    encoding: "base64",
-    data: fromUint8Array(data)
-  };
-}
-
-export function decodeContent(
-  content: AssetInlineContent
-): Uint8Array {
-  return toUint8Array(content.data);
 }
 

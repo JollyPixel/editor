@@ -60,7 +60,7 @@ export class VoxelModelEditor {
   ): Promise<VoxelModelEditor> {
     const { session } = context;
     const reference = session.catalog
-      .dependenciesOf(session.target.record.id)
+      .dependencies.dependenciesOf(session.target.record.id)
       .find((dependency) => dependency.kind === PIXEL_ART_KIND);
     if (reference === undefined) {
       throw new Error("VoxelModelEditor: the model has no pixel-art texture.");

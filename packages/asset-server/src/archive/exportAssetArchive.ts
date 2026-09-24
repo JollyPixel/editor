@@ -38,7 +38,7 @@ export async function exportAssetArchive(
   const assets: AssetArchiveEntry[] = [];
   const missing: AssetReferenceData[] = [];
   const files: Zippable = {};
-  for (const reference of catalog.dependenciesFirst(starts)) {
+  for (const reference of catalog.dependencies.dependenciesFirst(starts)) {
     const record = catalog.record(reference.id);
     if (record === undefined) {
       missing.push(reference);
@@ -96,7 +96,7 @@ async function flushClosure(
       flushed.add(assetId);
       await backend.flush(assetId);
     }
-    pending = backend.catalog
+    pending = backend.catalog.dependencies
       .closureOf(rootId)
       .map((reference) => reference.id)
       .filter((assetId) => !flushed.has(assetId));

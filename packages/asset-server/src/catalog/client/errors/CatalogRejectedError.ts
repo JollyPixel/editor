@@ -2,11 +2,11 @@
 import type { CatalogCommandType } from "../protocol.ts";
 
 export class CatalogRejectedError extends Error {
-  readonly command: CatalogCommandType | null;
+  readonly command: CatalogCommandType;
 
   constructor(
     reason: string,
-    command: CatalogCommandType | null = null
+    command: CatalogCommandType
   ) {
     super(reason);
     this.name = "CatalogRejectedError";

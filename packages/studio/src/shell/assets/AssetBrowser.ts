@@ -268,7 +268,7 @@ export class AssetBrowser extends LitElement {
     const deleted = new Set(assets.map((asset) => asset.id));
     const dependents = new Set<string>();
     for (const asset of assets) {
-      for (const dependent of catalog.liveDependentsOf(asset.id)) {
+      for (const dependent of catalog.dependentsOf(asset.id)) {
         if (!deleted.has(dependent.id)) {
           dependents.add(dependent.source);
         }
@@ -293,9 +293,7 @@ export class AssetBrowser extends LitElement {
     let removed = 0;
     try {
       for (const asset of assets) {
-        await catalog.remove(asset.id, {
-          force: catalog.liveDependentsOf(asset.id).length > 0
-        });
+        await catalog.remove(asset.id, { force: true });
         removed++;
       }
     }

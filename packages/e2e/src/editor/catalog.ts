@@ -3,10 +3,7 @@ import crypto from "node:crypto";
 
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network/client";
-import {
-  CatalogClient,
-  catalogRoom
-} from "@jolly-pixel/asset-server/catalog/client";
+import { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
 
 export async function withCatalog<T>(
   socketUrl: string,
@@ -15,15 +12,17 @@ export async function withCatalog<T>(
   const client = new network.Client({
     url: socketUrl
   });
-  const catalog = new CatalogClient(catalogRoom(client));
 
   try {
-    await catalog.ready;
-
-    return await fn(catalog);
+    const catalog = await CatalogClient.connect(client);
+    try {
+      return await fn(catalog);
+    }
+    finally {
+      catalog.dispose();
+    }
   }
   finally {
-    catalog.dispose();
     client.destroy();
   }
 }

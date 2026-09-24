@@ -5,6 +5,16 @@ export type DependencyMap = Readonly<
   Record<string, readonly AssetReferenceData[]>
 >;
 
+export type ReadonlyDependencyIndex = Pick<
+  DependencyIndex,
+  | "has"
+  | "dependenciesOf"
+  | "dependentsOf"
+  | "closureOf"
+  | "dependenciesFirst"
+  | "toJSON"
+>;
+
 export class DependencyIndex {
   #outgoing = new Map<string, readonly AssetReferenceData[]>();
   #incoming = new Map<string, Set<string>>();

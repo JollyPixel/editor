@@ -483,11 +483,11 @@ describe("importAssetArchive", () => {
     assert.notStrictEqual(copiedMap.id, map);
     assert.deepEqual(report.root, { id: copiedMap.id, kind: "link" });
     assert.deepEqual(
-      workspace.backend.catalog.dependenciesOf(copiedMap.id),
+      workspace.backend.catalog.dependencies.dependenciesOf(copiedMap.id),
       [linkReference(copiedTexture.id)]
     );
     assert.deepEqual(
-      workspace.backend.catalog.dependenciesOf(map),
+      workspace.backend.catalog.dependencies.dependenciesOf(map),
       [linkReference(texture)]
     );
     assert.strictEqual(
@@ -518,7 +518,7 @@ describe("importAssetArchive", () => {
       texture
     );
     assert.deepEqual(
-      target.backend.catalog.dependenciesOf(map),
+      target.backend.catalog.dependencies.dependenciesOf(map),
       [linkReference(texture)]
     );
   });
@@ -601,7 +601,7 @@ describe("importAssetArchive", () => {
     );
     assert.strictEqual(
       target.backend.catalog.record(
-        target.backend.catalog.dependenciesOf(map)[0].id
+        target.backend.catalog.dependencies.dependenciesOf(map)[0].id
       )?.source,
       "texture-2.link"
     );

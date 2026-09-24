@@ -16,7 +16,6 @@ export {
 } from "./session/EditorSession.ts";
 export * from "./lease/errors/AssetDocumentConflictError.ts";
 export * from "./session/errors/ArchiveImportDisabledError.ts";
-export * from "./session/errors/CatalogUnavailableError.ts";
 export * from "./session/openCatalog.ts";
 export * from "./session/SessionArchive.ts";
 export * from "./session/rememberQueryUsername.ts";

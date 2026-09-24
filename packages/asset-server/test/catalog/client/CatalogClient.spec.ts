@@ -10,9 +10,11 @@ import {
   CATALOG_DELETE,
   CATALOG_RENAME,
   CATALOG_REJECTED,
+  CATALOG_ROOM,
   CATALOG_SNAPSHOT,
   CatalogClient,
   CatalogRejectedError,
+  CatalogUnavailableError,
   type CatalogCommand,
   type CatalogMessage,
   type CatalogRoom
@@ -58,7 +60,7 @@ class FakeCatalogRoom implements CatalogRoom {
   requestId(
     index: number
   ): string {
-    return this.sent[index].requestId ?? "";
+    return this.sent[index].requestId;
   }
 }
 
@@ -192,18 +194,13 @@ describe("CatalogClient", () => {
     });
   });
 
-  test("ignores replies without a known request id", async() => {
+  test("ignores replies with an unknown request id", async() => {
     const room = new FakeCatalogRoom();
     const client = new CatalogClient(room);
     snapshot(room);
 
     const removed = client.remove("a1");
     await flush();
-    room.receive({
-      type: CATALOG_APPLIED,
-      command: CATALOG_RENAME,
-      assetId: "a1"
-    });
     room.receive({
       type: CATALOG_APPLIED,
       requestId: "unknown",
@@ -213,7 +210,7 @@ describe("CatalogClient", () => {
     room.receive({
       type: CATALOG_APPLIED,
       requestId: room.requestId(0),
-      command: CATALOG_RENAME,
+      command: CATALOG_DELETE,
       assetId: "a1"
     });
 
@@ -305,9 +302,9 @@ describe("CatalogClient — dependencies", () => {
       }
     });
 
-    assert.deepEqual(client.dependenciesOf("map"), [reference("a")]);
-    assert.deepEqual(client.dependentsOf("a"), ["map"]);
-    assert.deepEqual(client.closureOf("map"), [reference("a"), reference("b")]);
+    assert.deepEqual(client.dependencies.dependenciesOf("map"), [reference("a")]);
+    assert.deepEqual(client.dependencies.dependentsOf("a"), ["map"]);
+    assert.deepEqual(client.dependencies.closureOf("map"), [reference("a"), reference("b")]);
     assert.deepEqual(emitted, ["map", "a"]);
   });
 
@@ -331,7 +328,7 @@ describe("CatalogClient — dependencies", () => {
     });
 
     assert.deepEqual(emitted, ["map", "map", "map"]);
-    assert.deepEqual(client.dependenciesOf("map"), []);
+    assert.deepEqual(client.dependencies.dependenciesOf("map"), []);
   });
 
   test("a new snapshot drops edges it no longer lists", () => {
@@ -345,10 +342,10 @@ describe("CatalogClient — dependencies", () => {
     snapshot(room);
 
     assert.deepEqual(emitted, ["map"]);
-    assert.deepEqual(client.dependentsOf("a"), []);
+    assert.deepEqual(client.dependencies.dependentsOf("a"), []);
   });
 
-  test("liveDependentsOf lists only the dependents with a record", () => {
+  test("dependentsOf lists only the dependents with a record", () => {
     const room = new FakeCatalogRoom();
     const client = new CatalogClient(room);
     room.receive({
@@ -359,17 +356,84 @@ describe("CatalogClient — dependencies", () => {
       }
     });
 
-    assert.deepEqual(client.dependentsOf("a"), ["map"]);
-    assert.deepEqual(client.liveDependentsOf("a"), []);
+    assert.deepEqual(client.dependencies.dependentsOf("a"), ["map"]);
+    assert.deepEqual(client.dependentsOf("a"), []);
 
     changed(room, "map", [reference("a")]);
 
-    assert.deepEqual(client.liveDependentsOf("a"), [
+    assert.deepEqual(client.dependentsOf("a"), [
       {
         id: "map",
         kind: "voxelmap",
         source: "map.voxelmap.json"
       }
     ]);
+  });
+});
+
+describe("CatalogClient.connect", () => {
+  function roomSource(
+    room: FakeCatalogRoom
+  ): { names: string[]; room(name: string): FakeCatalogRoom; } {
+    const names: string[] = [];
+
+    return {
+      names,
+      room(name) {
+        names.push(name);
+
+        return room;
+      }
+    };
+  }
+
+  test("opens the catalog room and resolves once the snapshot arrives", async() => {
+    const room = new FakeCatalogRoom();
+    const source = roomSource(room);
+
+    const connecting = CatalogClient.connect(source);
+    snapshot(room);
+    const client = await connecting;
+
+    assert.deepEqual(source.names, [CATALOG_ROOM]);
+    assert.strictEqual(room.joined, true);
+    assert.strictEqual(client.record("a1")?.source, "textures/a.pixelart");
+  });
+
+  test("rejects and leaves the room when no snapshot arrives in time", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const room = new FakeCatalogRoom();
+
+    const connecting = CatalogClient.connect(roomSource(room), {
+      timeoutMs: 100
+    });
+    t.mock.timers.tick(100);
+
+    await assert.rejects(connecting, CatalogUnavailableError);
+    assert.strictEqual(room.left, true);
+  });
+});
+
+describe("CatalogClient — replies", () => {
+  test("rejects a reply for another command type", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+
+    const renamed = client.rename("a1", "textures/b.pixelart");
+    await flush();
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(0),
+      command: CATALOG_DELETE,
+      assetId: "a1"
+    });
+
+    await assert.rejects(renamed, (error: unknown) => {
+      assert.ok(error instanceof CatalogRejectedError);
+      assert.strictEqual(error.command, CATALOG_RENAME);
+
+      return true;
+    });
   });
 });

@@ -380,7 +380,7 @@ logs each source it reads.
 | Error | From | Thrown when |
 |---|---|---|
 | `LaunchNotFoundError` | this package | no source answers |
-| `CatalogUnavailableError` | this package | the catalog does not answer before the connection timeout |
+| `CatalogUnavailableError` | `@jolly-pixel/asset-server/catalog/client` | the catalog does not answer before the connection timeout |
 | `AssetNotFoundError` | `@jolly-pixel/asset` | the catalog has no record for the target |
 | `AssetKindMismatchError` | `@jolly-pixel/asset` | the target's kind is not `accepts` |
 

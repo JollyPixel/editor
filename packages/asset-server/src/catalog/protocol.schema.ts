@@ -40,6 +40,7 @@ export const catalogCommandProtocol = defineMessageProtocol({
         },
         required: [
           "type",
+          "requestId",
           "path",
           "content"
         ]
@@ -54,6 +55,7 @@ export const catalogCommandProtocol = defineMessageProtocol({
         },
         required: [
           "type",
+          "requestId",
           "assetId",
           "to"
         ]
@@ -68,6 +70,7 @@ export const catalogCommandProtocol = defineMessageProtocol({
         },
         required: [
           "type",
+          "requestId",
           "assetId"
         ]
       },
@@ -78,7 +81,10 @@ export const catalogCommandProtocol = defineMessageProtocol({
           requestId: kString,
           root: kString
         },
-        required: ["type"]
+        required: [
+          "type",
+          "requestId"
+        ]
       },
       {
         type: "object",
@@ -89,6 +95,7 @@ export const catalogCommandProtocol = defineMessageProtocol({
         },
         required: [
           "type",
+          "requestId",
           "content"
         ]
       },
@@ -104,6 +111,7 @@ export const catalogCommandProtocol = defineMessageProtocol({
         },
         required: [
           "type",
+          "requestId",
           "content",
           "onConflict"
         ]
@@ -152,6 +160,7 @@ export const catalogMessageProtocol = defineMessageProtocol({
         },
         required: [
           "type",
+          "requestId",
           "command"
         ]
       },
@@ -165,6 +174,7 @@ export const catalogMessageProtocol = defineMessageProtocol({
         },
         required: [
           "type",
+          "requestId",
           "command",
           "reason"
         ]

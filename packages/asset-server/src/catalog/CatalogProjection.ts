@@ -4,8 +4,7 @@ import {
   AssetCatalog,
   AssetId,
   AssetRecord,
-  type AssetManifestData,
-  type AssetReferenceData
+  type AssetManifestData
 } from "@jolly-pixel/asset";
 import { Emitter } from "@openally/emitt";
 
@@ -13,9 +12,8 @@ import { Emitter } from "@openally/emitt";
 import type { CatalogChange } from "./client/protocol.ts";
 import {
   DependencyIndex,
-  type DependencyMap
+  type ReadonlyDependencyIndex
 } from "./client/DependencyIndex.ts";
-import { liveDependents } from "./client/liveDependents.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_CREATED,
@@ -24,7 +22,8 @@ import {
   ASSET_RENAMED,
   ASSET_UPDATED,
   parseAssetEvent,
-  type AssetEvent
+  type AssetEvent,
+  type AssetEventType
 } from "../events/AssetEvents.ts";
 
 export type CatalogProjectionEventMap = {
@@ -43,7 +42,6 @@ export class CatalogProjection extends Emitter<
   #eventStore: EventStore.EventStore;
   #catalog = new AssetCatalog();
   #dependencies = new DependencyIndex();
-  #unindexed = new Set<string>();
   #unsubscribe: (() => void) | null = null;
 
   constructor(
@@ -57,6 +55,10 @@ export class CatalogProjection extends Emitter<
     return this.#catalog;
   }
 
+  get dependencies(): ReadonlyDependencyIndex {
+    return this.#dependencies;
+  }
+
   get size(): number {
     return this.#catalog.size;
   }
@@ -64,7 +66,6 @@ export class CatalogProjection extends Emitter<
   load(): void {
     this.#catalog = new AssetCatalog();
     this.#dependencies.clear();
-    this.#unindexed.clear();
     const events = this.#eventStore.reader.listFromCheckpoints({
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
       eventTypePrefix: ASSET_EVENT_PREFIX
@@ -117,42 +118,20 @@ export class CatalogProjection extends Emitter<
     return this.#catalog.toJSON();
   }
 
-  dependencies(): DependencyMap {
-    return this.#dependencies.toJSON();
-  }
-
-  dependenciesOf(
-    assetId: string
-  ): readonly AssetReferenceData[] {
-    return this.#dependencies.dependenciesOf(assetId);
-  }
-
   dependentsOf(
     assetId: string
-  ): readonly string[] {
-    return this.#dependencies.dependentsOf(assetId);
-  }
-
-  liveDependentsOf(
-    assetId: string
   ): AssetRecord[] {
-    return liveDependents(this, assetId);
+    return this.#dependencies
+      .dependentsOf(assetId)
+      .flatMap((dependentId) => this.record(dependentId) ?? []);
   }
 
-  closureOf(
-    assetId: string
-  ): AssetReferenceData[] {
-    return this.#dependencies.closureOf(assetId);
-  }
-
-  dependenciesFirst(
-    starts: Iterable<AssetReferenceData>
-  ): AssetReferenceData[] {
-    return this.#dependencies.dependenciesFirst(starts);
-  }
-
-  unindexed(): IterableIterator<string> {
-    return this.#unindexed.values();
+  * unindexed(): IterableIterator<AssetRecord> {
+    for (const record of this.#catalog) {
+      if (!this.#dependencies.has(record.id.value)) {
+        yield record;
+      }
+    }
   }
 
   #fold(
@@ -164,36 +143,27 @@ export class CatalogProjection extends Emitter<
       case ASSET_CREATED:
       case ASSET_UPDATED: {
         const data = event.eventData;
-        const record = new AssetRecord({
+        if (data.dependencies !== undefined) {
+          this.#dependencies.set(event.assetId, data.dependencies);
+        }
+
+        return this.#upsert(new AssetRecord({
           id,
           kind: data.kind,
           source: data.path,
           revision: data.hash
-        });
-        if (data.dependencies === undefined) {
-          this.#unindexed.add(event.assetId);
-        }
-        else {
-          this.#unindexed.delete(event.assetId);
-          this.#dependencies.set(event.assetId, data.dependencies);
-        }
-
-        return this.#upsert(record, event.eventType);
+        }), event.eventType);
       }
       case ASSET_RENAMED: {
         const data = event.eventData;
-        const previous = this.#catalog.has(id) ?
-          this.#catalog.get(id) :
-          null;
+        const previous = this.record(event.assetId);
 
-        const record = new AssetRecord({
+        return this.#upsert(new AssetRecord({
           id,
           kind: previous?.kind ?? data.kind,
           source: data.to,
           revision: previous?.revision ?? data.hash
-        });
-
-        return this.#upsert(record, event.eventType);
+        }), event.eventType);
       }
       case ASSET_DELETED: {
         if (!this.#catalog.has(id)) {
@@ -202,7 +172,6 @@ export class CatalogProjection extends Emitter<
 
         this.#catalog.remove(id);
         this.#dependencies.delete(event.assetId);
-        this.#unindexed.delete(event.assetId);
 
         return {
           eventType: event.eventType,
@@ -217,7 +186,7 @@ export class CatalogProjection extends Emitter<
 
   #upsert(
     record: AssetRecord,
-    eventType: string
+    eventType: AssetEventType
   ): CatalogChange {
     if (this.#catalog.has(record.id)) {
       this.#catalog.replace(record);
@@ -227,19 +196,17 @@ export class CatalogProjection extends Emitter<
     }
 
     const assetId = record.id.value;
-    if (!this.#dependencies.has(assetId)) {
-      return {
-        eventType,
-        assetId,
-        record: record.toJSON()
-      };
-    }
-
-    return {
+    const change: CatalogChange = {
       eventType,
       assetId,
-      record: record.toJSON(),
-      dependencies: this.#dependencies.dependenciesOf(assetId)
+      record: record.toJSON()
     };
+
+    return this.#dependencies.has(assetId) ?
+      {
+        ...change,
+        dependencies: this.#dependencies.dependenciesOf(assetId)
+      } :
+      change;
   }
 }

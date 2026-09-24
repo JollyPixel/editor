@@ -85,6 +85,15 @@ function legacyCreated(
   }).unwrap();
 }
 
+function unindexedIds(
+  projection: CatalogProjection
+): string[] {
+  return Array.from(
+    projection.unindexed(),
+    (record) => record.id.value
+  );
+}
+
 describe("dependency edges on lifecycle events", () => {
   test("create and update record the handler's edges", async() => {
     await using harness = await syncHarness({ handlers: [linkHandler()] });
@@ -189,10 +198,10 @@ describe("CatalogProjection — dependency index", () => {
     projection.on("changed", (change) => changes.push(change));
 
     const map = await createLink(harness, "map.link", "tex");
-    assert.deepEqual(projection.dependenciesOf(map), [linkReference("tex")]);
-    assert.deepEqual(projection.dependentsOf("tex"), [map]);
+    assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference("tex")]);
+    assert.deepEqual(projection.dependencies.dependentsOf("tex"), [map]);
     assert.deepEqual(
-      projection.liveDependentsOf("tex").map((record) => record.id.value),
+      projection.dependentsOf("tex").map((record) => record.id.value),
       [map]
     );
     assert.deepEqual(changes.at(-1)?.dependencies, [linkReference("tex")]);
@@ -202,25 +211,25 @@ describe("CatalogProjection — dependency index", () => {
       data: linkContent("other"),
       actor: kActor
     });
-    assert.deepEqual(projection.dependentsOf("tex"), []);
-    assert.deepEqual(projection.dependentsOf("other"), [map]);
+    assert.deepEqual(projection.dependencies.dependentsOf("tex"), []);
+    assert.deepEqual(projection.dependencies.dependentsOf("other"), [map]);
 
     await harness.writer.rename({
       assetId: map,
       to: "renamed.link",
       actor: kActor
     });
-    assert.deepEqual(projection.dependenciesOf(map), [linkReference("other")]);
+    assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference("other")]);
     assert.deepEqual(changes.at(-1)?.dependencies, [linkReference("other")]);
 
     await harness.writer.remove({
       assetId: map,
       actor: kActor
     });
-    assert.deepEqual(projection.dependenciesOf(map), []);
-    assert.deepEqual(projection.dependentsOf("other"), []);
+    assert.deepEqual(projection.dependencies.dependenciesOf(map), []);
+    assert.deepEqual(projection.dependencies.dependentsOf("other"), []);
     assert.strictEqual(changes.at(-1)?.dependencies, undefined);
-    assert.deepEqual(projection.dependencies(), {});
+    assert.deepEqual(projection.dependencies.toJSON(), {});
 
     projection.close();
   });
@@ -237,8 +246,8 @@ describe("CatalogProjection — dependency index", () => {
     const projection = new CatalogProjection({ eventStore: harness.eventStore });
     projection.load();
 
-    assert.deepEqual(projection.dependentsOf(texture), [map]);
-    assert.deepEqual(projection.dependenciesOf(map), [linkReference(texture)]);
+    assert.deepEqual(projection.dependencies.dependentsOf(texture), [map]);
+    assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference(texture)]);
   });
 
   test("closureOf resolves transitive edges and survives cycles", async() => {
@@ -255,8 +264,8 @@ describe("CatalogProjection — dependency index", () => {
       actor: kActor
     });
 
-    assert.deepEqual(projection.closureOf(a), [linkReference(b)]);
-    assert.deepEqual(projection.closureOf(b), [linkReference(a)]);
+    assert.deepEqual(projection.dependencies.closureOf(a), [linkReference(b)]);
+    assert.deepEqual(projection.dependencies.closureOf(b), [linkReference(a)]);
     projection.close();
   });
 
@@ -267,8 +276,8 @@ describe("CatalogProjection — dependency index", () => {
     const projection = new CatalogProjection({ eventStore });
     projection.load();
 
-    assert.deepEqual([...projection.unindexed()], ["old"]);
-    assert.deepEqual(projection.dependencies(), {});
+    assert.deepEqual(unindexedIds(projection), ["old"]);
+    assert.deepEqual(projection.dependencies.toJSON(), {});
     eventStore.close();
   });
 });
@@ -289,10 +298,10 @@ describe("createAssetBackend — dependency backfill", () => {
         watch: false
       });
 
-      assert.deepEqual(backend.catalog.dependenciesOf("old"), [
+      assert.deepEqual(backend.catalog.dependencies.dependenciesOf("old"), [
         linkReference("tex")
       ]);
-      assert.deepEqual([...backend.catalog.unindexed()], []);
+      assert.deepEqual(unindexedIds(backend.catalog), []);
     }
 
     const count = eventStore.reader.list("old").length;
@@ -304,7 +313,7 @@ describe("createAssetBackend — dependency backfill", () => {
         watch: false
       });
 
-      assert.deepEqual(backend.catalog.dependentsOf("tex"), ["old"]);
+      assert.deepEqual(backend.catalog.dependencies.dependentsOf("tex"), ["old"]);
     }
     assert.strictEqual(eventStore.reader.list("old").length, count);
     eventStore.close();
@@ -336,6 +345,6 @@ describe("createAssetBackend — dependency backfill", () => {
     });
 
     assert.strictEqual(eventStore.reader.list("png").length, 1);
-    assert.deepEqual([...backend.catalog.unindexed()], ["png"]);
+    assert.deepEqual(unindexedIds(backend.catalog), ["png"]);
   });
 });

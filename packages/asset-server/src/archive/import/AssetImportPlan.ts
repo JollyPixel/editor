@@ -113,7 +113,7 @@ export class AssetImportPlan {
     }
 
     const dependents = catalog
-      .liveDependentsOf(asset.id)
+      .dependentsOf(asset.id)
       .filter((dependent) => !archived.has(dependent.id.value))
       .map((dependent) => archiveEntryOf(dependent));
     if (dependents.length > 0) {
