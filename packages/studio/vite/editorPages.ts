@@ -13,8 +13,19 @@ import type {
   Plugin
 } from "vite";
 
+// Import Internal Dependencies
+import {
+  EDITOR_PAGES_PREFIX,
+  type EditorDescriptor
+} from "../src/editors/EditorDescriptor.ts";
+
+export { EDITOR_PAGES_PREFIX };
+
 // CONSTANTS
-export const EDITOR_PAGES_PREFIX = "/editors/";
+export const EDITORS_MODULE_ID = "virtual:jolly-pixel/editors";
+export const EDITOR_MANIFEST_FIELD = "jollypixel";
+const kResolvedEditorsModuleId = `\0${EDITORS_MODULE_ID}`;
+const kEditorName = /^[a-z0-9][a-z0-9-]*$/;
 const kIndexFile = "index.html";
 const kDefaultDist = "dist";
 const kFallbackContentType = "application/octet-stream";
@@ -38,14 +49,12 @@ const kContentTypes: Record<string, string> = {
   ".woff2": "font/woff2"
 };
 
-export interface EditorPage {
-  name: string;
+export interface EditorPackage extends EditorDescriptor {
   package: string;
   /**
-   * Built page folder, relative to the package root.
-   * @default "dist"
+   * Absolute path of the built page folder.
    */
-  dist?: string;
+  dist: string;
 }
 
 export type PackageLocator = (packageName: string) => string;
@@ -59,9 +68,8 @@ export interface EditorPagesHandlerOptions {
 }
 
 export interface EditorPagesPluginOptions {
-  pages: Iterable<EditorPage>;
+  editors: readonly EditorPackage[];
   prefix?: string;
-  locate?: PackageLocator;
 }
 
 interface PageRoute {
@@ -78,19 +86,51 @@ export function locatePackage(
   return path.dirname(require.resolve(`${packageName}/package.json`));
 }
 
-export function resolveEditorPages(
-  pages: Iterable<EditorPage>,
+/**
+ * Reads the `jollypixel.editor` field of each package's `package.json`:
+ * `{ name, kinds, dist? }`, where `dist` is relative to the package root and
+ * defaults to `"dist"`.
+ */
+export function readEditorPackages(
+  packageNames: Iterable<string>,
   locate: PackageLocator = locatePackage
-): Map<string, string> {
-  const resolved = new Map<string, string>();
-  for (const page of pages) {
-    resolved.set(
-      page.name,
-      path.resolve(locate(page.package), page.dist ?? kDefaultDist)
-    );
+): EditorPackage[] {
+  const editors: EditorPackage[] = [];
+  const names = new Set<string>();
+  for (const packageName of packageNames) {
+    const editor = readEditorPackage(packageName, locate(packageName));
+    if (names.has(editor.name)) {
+      throw new TypeError(
+        `Editor "${editor.name}" is declared by more than one package.`
+      );
+    }
+
+    names.add(editor.name);
+    editors.push(editor);
   }
 
-  return resolved;
+  return editors;
+}
+
+export function resolveEditorPages(
+  editors: Iterable<EditorPackage>
+): Map<string, string> {
+  return new Map(
+    Array.from(editors, (editor) => [editor.name, editor.dist])
+  );
+}
+
+export function editorsModule(
+  editors: Iterable<EditorDescriptor>
+): string {
+  const descriptors = Array.from(editors, ({ name, kinds }) => {
+    return {
+      name,
+      kinds
+    };
+  });
+
+  return `export default ${JSON.stringify(descriptors)};\n`;
 }
 
 export function createEditorPagesHandler(
@@ -143,11 +183,18 @@ export function editorPagesPlugin(
 ): Plugin {
   return {
     name: "studio-editor-pages",
-    apply: "serve",
+    resolveId(id) {
+      return id === EDITORS_MODULE_ID ? kResolvedEditorsModuleId : null;
+    },
+    load(id) {
+      return id === kResolvedEditorsModuleId ?
+        editorsModule(options.editors) :
+        null;
+    },
     configureServer(server) {
       server.middlewares.use(
         createEditorPagesHandler({
-          pages: resolveEditorPages(options.pages, options.locate),
+          pages: resolveEditorPages(options.editors),
           prefix: options.prefix
         })
       );
@@ -254,4 +301,57 @@ function reply(
 ): void {
   response.statusCode = status;
   response.end();
+}
+
+function readEditorPackage(
+  packageName: string,
+  root: string
+): EditorPackage {
+  const manifest: unknown = JSON.parse(
+    fs.readFileSync(path.join(root, "package.json"), "utf8")
+  );
+  const field = isRecord(manifest) ? manifest[EDITOR_MANIFEST_FIELD] : null;
+  const editor = isRecord(field) ? field.editor : null;
+  if (!isRecord(editor)) {
+    throw new TypeError(
+      `"${packageName}" declares no "${EDITOR_MANIFEST_FIELD}.editor" manifest.`
+    );
+  }
+
+  const { name, kinds, dist = kDefaultDist } = editor;
+  if (typeof name !== "string" || !kEditorName.test(name)) {
+    throw new TypeError(
+      `"${packageName}" declares an invalid editor name.`
+    );
+  }
+  if (!isStringArray(kinds) || kinds.length === 0) {
+    throw new TypeError(
+      `"${packageName}" must declare the asset kinds its editor opens.`
+    );
+  }
+  if (typeof dist !== "string") {
+    throw new TypeError(
+      `"${packageName}" declares an invalid editor dist folder.`
+    );
+  }
+
+  return {
+    package: packageName,
+    name,
+    kinds: [...kinds],
+    dist: path.resolve(root, dist)
+  };
+}
+
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(
+  value: unknown
+): value is string[] {
+  return Array.isArray(value) &&
+    value.every((item) => typeof item === "string" && item !== "");
 }

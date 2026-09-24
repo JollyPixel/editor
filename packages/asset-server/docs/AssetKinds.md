@@ -133,6 +133,27 @@ cannot be replaced.
 `kinds.contentTypes()` merges the `extensions` of every registered kind,
 later registrations winning on a shared extension.
 
+## Descriptor
+
+```ts
+interface AssetKindDescriptor {
+  kind: string;
+  label: string;
+  icon?: AssetKindIcon;
+}
+
+interface AssetKindIcon {
+  svg: string;
+  tone?: string;
+}
+```
+
+A descriptor is the kind's presentation as plain data: a label and an icon
+whose `svg` holds the children of a 24x24 view box. A host that lists or
+opens assets reads it without loading the handler, so a descriptor can also
+come from a manifest. Packages export one beside their handler
+(`PIXEL_ART_ASSET`, `VOXEL_MAP_ASSET`, `VOXEL_MODEL_ASSET`).
+
 ## Built-in kinds
 
 `binary` is the reserved fallback. `texture` is a shipped handler that claims

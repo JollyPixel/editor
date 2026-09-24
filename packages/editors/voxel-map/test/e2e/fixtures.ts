@@ -9,14 +9,14 @@ import {
 } from "@jolly-pixel/e2e/editor";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
+  createVoxelMapDocument,
   VOXEL_MAP_KIND,
   tilesetAsset
 } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
 import {
-  encodeTilesetDocument,
-  encodeWorldDocument,
+  CHUNK_SIZE,
   readDefaultTileset
 } from "../../vite/worldSeed.ts";
 
@@ -40,14 +40,17 @@ export const test = editorFixture<E2EWorld>({
     const tileset = await readDefaultTileset("");
     const tilesetId = await catalog.create(
       `${folder}/tileset.pixelart`,
-      encodeTilesetDocument(tileset),
+      tileset.content,
       { kind: PIXEL_ART_KIND }
     );
     const id = await catalog.create(
       `${folder}/world.voxelmap.json`,
-      encodeWorldDocument({
-        ...tileset.definition,
-        asset: tilesetAsset(tilesetId)
+      createVoxelMapDocument({
+        chunkSize: CHUNK_SIZE,
+        tileset: {
+          ...tileset.definition,
+          asset: tilesetAsset(tilesetId)
+        }
       }),
       { kind: VOXEL_MAP_KIND }
     );

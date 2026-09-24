@@ -95,12 +95,20 @@ type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
 interface AssetSeedEntry {
   id: string;
   kind: string;
-  content: AssetSeedFactory;
+  content?: AssetSeedFactory;
 }
 
 type AssetSeedMap = Record<string, AssetSeedFactory | AssetSeedEntry>;
 
-seedAssetSource(source: AssetSource, seed: AssetSeedMap): Promise<string[]>
+interface SeedAssetSourceOptions {
+  handlers?: Iterable<AssetKindHandler>;
+}
+
+seedAssetSource(
+  source: AssetSource,
+  seed: AssetSeedMap,
+  options?: SeedAssetSourceOptions
+): Promise<string[]>
 ```
 
 Writes each starter document whose path the source does not hold, and returns
@@ -109,7 +117,20 @@ never called: once the workspace exists it is the source of truth.
 
 An `AssetSeedEntry` also records its `id` in the identity sidecar when its
 document is written, so other seeded documents can reference the asset by a
-known `AssetId`.
+known `AssetId`. Without `content`, the entry is written as the serialized
+`create(id)` state of its kind's handler, taken from `handlers`; an unknown
+kind rejects with `UnknownAssetKindError`. The workspace passes its own
+`handlers`:
+
+```ts
+await createAssetWorkspace({
+  root: "./assets",
+  handlers: [pixelArtAssetKind({ defaultSize: { x: 64, y: 64 } })],
+  seed: {
+    "textures/model.pixelart": { id: "model-texture", kind: "pixelart" }
+  }
+});
+```
 
 ## Serving the workspace
 

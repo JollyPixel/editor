@@ -5,6 +5,8 @@ import {
   pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 import {
+  createTilesetDocument,
+  createVoxelMapDocument,
   tilesetAsset,
   VOXEL_MAP_KIND,
   voxelMapAssetKind
@@ -18,10 +20,7 @@ import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import {
   CHUNK_SIZE,
-  DEFAULT_TILESET_ID,
-  encodeTilesetDocument,
-  encodeWorldDocument,
-  tilesetSeedFromPng
+  DEFAULT_TILESET_ID
 } from "./worldSeed.ts";
 
 // CONSTANTS
@@ -36,7 +35,7 @@ export async function openOfflineWorkspace(
   }
 
   const tilesetAssetId = crypto.randomUUID();
-  const tileset = await tilesetSeedFromPng(
+  const tileset = await createTilesetDocument(
     new Uint8Array(await response.arrayBuffer()),
     {
       id: DEFAULT_TILESET_ID,
@@ -57,12 +56,15 @@ export async function openOfflineWorkspace(
       "textures/block.pixelart": {
         id: tilesetAssetId,
         kind: PIXEL_ART_KIND,
-        content: () => encodeTilesetDocument(tileset)
+        content: () => tileset.content
       },
       "maps/overworld.voxelmap.json": {
         id: crypto.randomUUID(),
         kind: VOXEL_MAP_KIND,
-        content: () => encodeWorldDocument(tileset.definition)
+        content: () => createVoxelMapDocument({
+          chunkSize: CHUNK_SIZE,
+          tileset: tileset.definition
+        })
       }
     }
   });

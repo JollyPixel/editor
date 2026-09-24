@@ -14,6 +14,7 @@ import {
   pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 import {
+  createVoxelMapDocument,
   VOXEL_MAP_KIND,
   voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
@@ -22,8 +23,6 @@ import { PORTS } from "@jolly-pixel/e2e";
 // Import Internal Dependencies
 import {
   CHUNK_SIZE,
-  encodeTilesetDocument,
-  encodeWorldDocument,
   readDefaultTileset
 } from "./vite/worldSeed.ts";
 
@@ -66,11 +65,12 @@ export default defineConfig(({ mode }) => {
           "textures/block.pixelart": {
             id: kTilesetAssetId,
             kind: PIXEL_ART_KIND,
-            content: () => encodeTilesetDocument(tileset)
+            content: () => tileset.content
           },
-          "maps/overworld.voxelmap.json": () => encodeWorldDocument(
-            tileset.definition
-          )
+          "maps/overworld.voxelmap.json": () => createVoxelMapDocument({
+            chunkSize: CHUNK_SIZE,
+            tileset: tileset.definition
+          })
         }
       })
     ]

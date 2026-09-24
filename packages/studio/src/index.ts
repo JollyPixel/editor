@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
+import { PIXEL_ART_ASSET } from "@jolly-pixel/asset.pixel-art";
+import { VOXEL_MAP_ASSET } from "@jolly-pixel/asset.voxel-map";
+import { VOXEL_MODEL_ASSET } from "@jolly-pixel/asset.voxel-model";
 import {
   CATALOG_ROOM,
   CatalogClient,
@@ -16,34 +19,34 @@ import {
   showConfirm
 } from "@jolly-pixel/ui";
 import { toPeerMetadata } from "@jolly-pixel/ui/network";
+import editors from "virtual:jolly-pixel/editors";
 
 // Import Internal Dependencies
-import { kindIcon } from "./icons.ts";
-import { offlineEditorPages } from "./editors/editorRegistry.ts";
-import {
-  StudioShell,
-  type AssetTreeElement
-} from "./shell/StudioShell.ts";
-import {
-  EditorTabs,
-  type TabStrip
-} from "./tabs/EditorTabs.ts";
+import { EditorRegistry } from "./editors/EditorRegistry.ts";
+import "./icons.ts";
+import type { Studio } from "./shell/Studio.ts";
+import "./shell/Studio.ts";
 
 // CONSTANTS
 const kIdentityTitle = "Join studio";
 const kCatalogTimeoutMs = 5_000;
 const kOfflineWorkspace = "studio";
+const kAssetKinds = [
+  PIXEL_ART_ASSET,
+  VOXEL_MAP_ASSET,
+  VOXEL_MODEL_ASSET
+];
 
 declare global {
   interface Window {
-    studio?: StudioShell;
+    studio?: Studio;
   }
 }
 
-function required<TElement extends Element>(
-  selector: string
-): TElement {
-  const element = document.querySelector<TElement>(selector);
+function required<TName extends keyof HTMLElementTagNameMap>(
+  selector: TName
+): HTMLElementTagNameMap[TName] {
+  const element = document.querySelector(selector);
   if (element === null) {
     throw new Error(`Missing shell element "${selector}".`);
   }
@@ -60,30 +63,41 @@ async function boot(): Promise<void> {
   const connection = offline ?
     await connectOffline() :
     await connectWithOffer();
-  const { catalog } = connection;
-
-  const tabs = new EditorTabs({
-    strip: required<TabStrip>("#editor-tabs"),
-    frames: required("#editor-frames"),
+  const studio = required("jolly-studio");
+  await studio.attach({
+    catalog: connection.catalog,
+    editors: createEditorRegistry(connection.offline),
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",
       message: `Close "${tab.label}" to open another editor?`,
       confirmLabel: "Close"
-    }),
-    onShellCommand: (command) => shell.handleShellCommand(command)
-  });
-  const shell = new StudioShell({
-    catalog,
-    tree: required<AssetTreeElement>("#asset-tree"),
-    tabs,
-    pages: connection.offline ?
-      offlineEditorPages(kOfflineWorkspace) : undefined,
-    iconFor: kindIcon
+    })
   });
 
   if (import.meta.env.DEV) {
-    window.studio = shell;
+    window.studio = studio;
   }
+}
+
+function createEditorRegistry(
+  offline: boolean
+): EditorRegistry {
+  const registry = new EditorRegistry({
+    query: offline ?
+      {
+        offline: "",
+        workspace: kOfflineWorkspace
+      } :
+      {}
+  });
+  for (const descriptor of kAssetKinds) {
+    registry.registerKind(descriptor);
+  }
+  for (const editor of editors) {
+    registry.registerEditor(editor);
+  }
+
+  return registry;
 }
 
 interface StudioConnection {

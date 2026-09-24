@@ -7,13 +7,16 @@ import {
   e2eFolder,
   editorFixture
 } from "@jolly-pixel/e2e/editor";
-import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
+import {
+  createPixelArtDocument,
+  PIXEL_ART_KIND
+} from "@jolly-pixel/asset.pixel-art";
 import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
 
 // Import Internal Dependencies
 import {
   encodeModelDocument,
-  encodeTextureDocument
+  TEXTURE_SIZE
 } from "../../vite/modelSeed.ts";
 
 export { expect } from "@playwright/test";
@@ -32,7 +35,7 @@ export const test = editorFixture<E2EModel>({
     const folder = e2eFolder();
     const textureId = await catalog.create(
       `${folder}/model.pixelart`,
-      encodeTextureDocument(),
+      createPixelArtDocument(TEXTURE_SIZE),
       { kind: PIXEL_ART_KIND }
     );
     const id = await catalog.create(

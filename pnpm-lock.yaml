@@ -823,6 +823,9 @@ importers:
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../voxel-renderer
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*

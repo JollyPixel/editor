@@ -1,29 +1,28 @@
 // Import Third-party Dependencies
-import type { AssetSeedMap } from "@jolly-pixel/asset-server/backend";
-import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
+  textureAssetKind,
+  type AssetKindHandler,
+  type AssetSeedMap
+} from "@jolly-pixel/asset-server/backend";
+import {
+  createPixelArtDocument,
+  PIXEL_ART_KIND,
+  pixelArtAssetKind
+} from "@jolly-pixel/asset.pixel-art";
+import {
+  createTilesetDocument,
+  createVoxelMapDocument,
   tilesetAsset,
   VOXEL_MAP_KIND,
-  VoxelMapState
+  voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
 import {
   createVoxelModelDocument,
   encodeVoxelModelDocument,
-  VOXEL_MODEL_KIND
+  VOXEL_MODEL_KIND,
+  voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
-import {
-  createPixelBufferFromPng,
-  encodePixelArtDocument,
-  PixelBuffer,
-  serializePixelBuffer
-} from "@jolly-pixel/pixel-draw.renderer";
-import {
-  blocksFromTileset,
-  DEFAULT_TILE_SIZE,
-  encodeVoxelDocument,
-  resolveTilesetDefinition,
-  type ResolvedTilesetDefinition
-} from "@jolly-pixel/voxel.renderer";
+import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 export const TILESET_ASSET_ID = "tileset-default";
@@ -33,53 +32,46 @@ export const MODEL_ASSET_ID = "model-default";
 export const CHUNK_SIZE = 16;
 export const MODEL_TEXTURE_SIZE = { x: 64, y: 64 };
 const kTilesetId = "default";
-const kLayerName = "Ground";
-const kBlockLimit = 32;
 
-export interface StudioSeed {
-  tilesetSize: {
-    x: number;
-    y: number;
-  };
-  assets: AssetSeedMap;
+export interface StudioProject {
+  handlers: AssetKindHandler[];
+  seed: AssetSeedMap;
 }
 
-export async function createStudioSeedFromPng(
-  bytes: Uint8Array
-): Promise<StudioSeed> {
-  const tileset = await createPixelBufferFromPng(bytes);
-  const tilesetSize = tileset.size();
-  const definition = resolveTilesetDefinition(
-    {
-      id: kTilesetId,
-      asset: tilesetAsset(TILESET_ASSET_ID),
-      tileSize: DEFAULT_TILE_SIZE
-    },
-    {
-      width: tilesetSize.x,
-      height: tilesetSize.y
-    }
-  );
+export async function createStudioProject(
+  tilesetPng: Uint8Array
+): Promise<StudioProject> {
+  const tileset = await createTilesetDocument(tilesetPng, {
+    id: kTilesetId,
+    asset: tilesetAsset(TILESET_ASSET_ID),
+    tileSize: DEFAULT_TILE_SIZE
+  });
 
   return {
-    tilesetSize,
-    assets: {
+    handlers: [
+      pixelArtAssetKind({ defaultSize: tileset.size }),
+      voxelMapAssetKind({ chunkSize: CHUNK_SIZE }),
+      voxelModelAssetKind(),
+      textureAssetKind()
+    ],
+    seed: {
       "textures/tileset.pixelart": {
         id: TILESET_ASSET_ID,
         kind: PIXEL_ART_KIND,
-        content: () => encodePixelArtDocument(serializePixelBuffer(tileset))
+        content: () => tileset.content
       },
       "maps/overworld.voxelmap.json": {
         id: MAP_ASSET_ID,
         kind: VOXEL_MAP_KIND,
-        content: () => encodeMapDocument(definition)
+        content: () => createVoxelMapDocument({
+          chunkSize: CHUNK_SIZE,
+          tileset: tileset.definition
+        })
       },
       "textures/model.pixelart": {
         id: MODEL_TEXTURE_ASSET_ID,
         kind: PIXEL_ART_KIND,
-        content: () => encodePixelArtDocument(
-          serializePixelBuffer(new PixelBuffer({ size: MODEL_TEXTURE_SIZE }))
-        )
+        content: () => createPixelArtDocument(MODEL_TEXTURE_SIZE)
       },
       "models/model.voxelmodel.json": {
         id: MODEL_ASSET_ID,
@@ -95,24 +87,4 @@ export async function createStudioSeedFromPng(
       }
     }
   };
-}
-
-function encodeMapDocument(
-  definition: ResolvedTilesetDefinition
-): Uint8Array {
-  const state = new VoxelMapState(CHUNK_SIZE);
-  const {
-    cols: _cols,
-    rows: _rows,
-    ...source
-  } = definition;
-  state.tilesets.add(source);
-  state.blocks.registerMany(
-    blocksFromTileset(definition, {
-      limit: kBlockLimit
-    })
-  );
-  state.world.addLayer(kLayerName);
-
-  return encodeVoxelDocument(state.toJSON());
 }

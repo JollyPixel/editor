@@ -24,6 +24,7 @@ tree.expanded = ["scene"];
 | `reorderable` | `boolean` | `false` |
 | `rowDrag` | `boolean` | `false` |
 | `renamable` | `boolean` | `false` |
+| `activateOnDoubleClick` | `boolean` | `false` |
 | `indentGuides` | `boolean` | `false` |
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 
@@ -116,6 +117,20 @@ same way a drop does not move a node. A blank field or a name equal to the
 current label commits nothing, so a stray edit never erases a label nor sends
 a redundant write. Double-click on an opted-in row renames instead of emitting
 `jolly-activate`.
+
+A tree whose rows open something on double-click, like a file browser, sets
+`activateOnDoubleClick`: double-click then always emits `jolly-activate`, and
+renaming starts from F2 or from `beginRename(id)`, for a toolbar action.
+
+```ts
+tree.activateOnDoubleClick = true;
+renameButton.addEventListener("click", () => {
+  tree.beginRename(tree.selected[0]);
+});
+```
+
+`beginRename` returns `false` and does nothing when the row does not opt in
+or another interaction (a rename, a drag, a keyboard move) is in progress.
 
 ## Showing parent/child indent guides
 

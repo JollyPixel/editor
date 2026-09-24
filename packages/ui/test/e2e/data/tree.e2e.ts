@@ -153,6 +153,31 @@ test.describe("Tree", () => {
     await expect(crate).toBeFocused();
   });
 
+  test("activates on double-click and renames on request when opted in", async({ page }) => {
+    const tree = page.locator(kTree);
+    const camera = rowOf(page, "camera");
+    await tree.evaluate((element: HTMLElementTagNameMap["jolly-tree"]) => {
+      element.activateOnDoubleClick = true;
+      element.addEventListener("jolly-activate", (event) => {
+        if (event instanceof CustomEvent) {
+          element.setAttribute("data-activated", event.detail.id);
+        }
+      }, { once: true });
+    });
+
+    await camera.dblclick();
+    await expect(tree).toHaveAttribute("data-activated", "camera");
+    await expect(camera.locator(".rename")).toHaveCount(0);
+
+    const started = await tree.evaluate(
+      (element: HTMLElementTagNameMap["jolly-tree"]) => element.beginRename("camera")
+    );
+    expect(started).toBe(true);
+    await camera.locator(".rename").fill("Lens");
+    await camera.locator(".rename").press("Enter");
+    await expect(camera.locator(".label")).toHaveText("Lens");
+  });
+
   test("reparents with the keyboard move state", async({ page }) => {
     const lighting = rowOf(page, "lighting");
     await lighting.click();

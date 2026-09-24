@@ -56,7 +56,7 @@ pages bundle. Editor code has no HMR here.
 |---|---|
 | `vite.config.ts`, `vite/` | back-end plugin, editor pages plugin, seed |
 | `src/catalog/` | tree model from catalog records |
-| `src/editors/` | asset kind to editor page registry |
+| `src/editors/` | `EditorRegistry`: kind icons and editor pages |
 | `src/tabs/` | tab strip, iframe stack, launch handshake |
 | `src/shell/` | wires the catalog, the tree and the tabs |
 

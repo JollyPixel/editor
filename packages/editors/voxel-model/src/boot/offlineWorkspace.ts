@@ -12,8 +12,7 @@ import {
 // Import Internal Dependencies
 import {
   TEXTURE_SIZE,
-  encodeModelDocument,
-  encodeTextureDocument
+  encodeModelDocument
 } from "../../vite/modelSeed.ts";
 
 export function openOfflineWorkspace(
@@ -30,8 +29,7 @@ export function openOfflineWorkspace(
     seed: {
       "textures/model.pixelart": {
         id: textureId,
-        kind: PIXEL_ART_KIND,
-        content: () => encodeTextureDocument()
+        kind: PIXEL_ART_KIND
       },
       "models/model.voxelmodel.json": {
         id: crypto.randomUUID(),

@@ -1,6 +1,6 @@
 # @jolly-pixel/studio — SPEC
 
-Status: P1 and P2 built on 2026-09-22. P3 is next.
+Status: P1 and P2 built on 2026-09-22, P3 on 2026-09-24. P4 is next.
 
 ## Goal
 
@@ -81,19 +81,34 @@ studio origin therefore reaches the studio back-end without any editor change.
   package, defaulting to `packages/studio/project`, which is gitignored like
   the editors' roots. The seed applies only to paths the root lacks, so
   pointing at a real project directory is safe.
-- `handlers`: pixel-art, voxel-map, voxel-model, texture.
-- `seed`: one tileset, one map referencing it, one model with its texture, so
-  the tree is never empty. The studio owns a `seed/` module composed from the
-  public asset packages and renderers (`VoxelMapState`,
-  `createVoxelModelDocument`, `PixelBuffer`, the document encoders) plus its
-  own copy of the tileset PNG. It imports nothing from the editors' private
-  `vite/` folders.
+- `handlers` and `seed` from `createStudioProject` in `src/seed.ts`, which the
+  offline workspace shares. Handlers: pixel-art, voxel-map, voxel-model,
+  texture. Seed: one tileset, one map referencing it, one model with its
+  texture, so the tree is never empty. Documents come from the asset packages'
+  builders (`createTilesetDocument`, `createVoxelMapDocument`,
+  `createPixelArtDocument`, `createVoxelModelDocument`) and the studio's copy of
+  the tileset PNG. A seed entry without `content` gets its handler's blank
+  document. It imports nothing from the editors' private `vite/` folders.
 
 A second plugin, `editorPagesPlugin`, serves each registered editor's `dist/`
 directory at `/editors/<name>/` with `index.html` as the directory index.
-The dist path is resolved from the editor package, which the studio lists as
-a `devDependency` so `pnpm -r build` runs the editors' existing `build`
-scripts first. Editors set `base: "./"` so their bundles work under that
+`vite.config.ts` lists editor package names only; `readEditorPackages` reads
+each one's `package.json`:
+
+```json
+"jollypixel": {
+  "editor": {
+    "name": "voxel-map",
+    "kinds": ["voxelmap"],
+    "dist": "dist"
+  }
+}
+```
+
+`dist` is optional. The plugin also serves the `name` and `kinds` of every
+editor as the `virtual:jolly-pixel/editors` module the shell boots from. The
+studio lists each editor package as a `devDependency` so `pnpm -r build` runs
+the editors' existing `build` scripts first. Editors set `base: "./"` so their bundles work under that
 prefix and stop colliding with the asset-server's `/assets/` route.
 
 Two constraints on editor pages surfaced while building this:
@@ -112,13 +127,24 @@ Two constraints on editor pages surfaced while building this:
 
 Built with `@jolly-pixel/ui`, in one `jolly-scope` and one `jolly-dock-layout`:
 
-- **Left dock**: `jolly-tree` bound to a `CatalogClient`. Folders are path
-  prefixes, leaves are assets, icon by kind. Folder node ids are
-  `folder:<path>`, asset node ids `asset:<id>`, so a rename keeps the node.
-  Folders start expanded and the user's toggles are kept across catalog
-  changes. Rename emits a catalog rename; renaming a folder renames each
-  asset under it, as the catalog documents. Delete asks first and shows
-  dependents from `dependentsOf`.
+- **Left dock**: `<asset-browser>`, a toolbar and a `jolly-tree` bound to a
+  `CatalogClient`. Folders are path prefixes, leaves are assets, icon by
+  kind. Folder node ids are `folder:<path>`, asset node ids `asset:<id>`, so
+  a rename keeps the node. Folders start expanded and the user's toggles are
+  kept across catalog changes.
+  - Double-click or Enter opens an asset. F2 or the Rename action edits the
+    name in place; an asset keeps its extension, since reconciliation infers
+    the kind from it. A name holding a separator is refused: moving is a drag.
+  - Renaming or dragging a folder sends one catalog rename per asset under
+    it. The new label shows while the commands run and reverts on a
+    rejection. Commands already applied are not rolled back; the log says how
+    many went through.
+  - Delete (key or action) opens `<asset-delete-dialog>`, listing the live
+    assets outside the deleted set that still reference it, from
+    `dependentsOf`. Confirming forces each command that still has a live
+    dependent.
+  - Failures go to a `jolly-log` over the workbench, never to the console
+    only.
 - **Center**: `jolly-tabs` with closable tabs above a stack of iframes. One
   iframe per open asset, keyed by asset id. Activating a tree row focuses the
   existing tab or opens a new one. Closing a tab removes the iframe, which
@@ -130,19 +156,22 @@ Built with `@jolly-pixel/ui`, in one `jolly-scope` and one `jolly-dock-layout`:
 
 ### Editor registry
 
-A static map from asset kind to editor page, owned by the shell:
+`EditorRegistry` (`src/editors/EditorRegistry.ts`) resolves a kind's icon and
+editor page from data only, so the shell never loads a kind's handler or an
+editor's code:
 
-```ts
-{
-  voxelmap: "/editors/voxel-map/",
-  voxelmodel: "/editors/voxel-model/",
-  pixelart: "/editors/pixel-art/"
-}
-```
+- `registerKind(descriptor)` takes an `AssetKindDescriptor` exported by the
+  asset package (`PIXEL_ART_ASSET`, `VOXEL_MAP_ASSET`, `VOXEL_MODEL_ASSET`) and
+  registers its SVG icon as `kind:<kind>`. A kind without an icon, or an
+  unregistered one, shows `file`.
+- `registerEditor({ name, kinds })` takes the entries of
+  `virtual:jolly-pixel/editors`. A kind opened by two editors throws.
+- `pageUrl(kind, target)` builds `/editors/<name>/?<query>&target=<id>`; the
+  offline shell passes `{ offline: "", workspace: "studio" }` as `query`.
 
-A kind with no entry, such as `texture`, opens nothing and the row shows a
-`no editor` detail. `pixelart` joins the map in P4, when its page exists.
-Registration by configuration is the later "custom kinds" work.
+A kind with no editor, such as `texture`, opens nothing and the row shows a
+`no editor` detail. `pixelart` gets an editor in P4, when its page declares
+the manifest.
 
 ### Pixel-art page
 
@@ -212,11 +241,11 @@ request unopened.
 | Later feature | Where it lands |
 |---|---|
 | Authentication | Shell logs in once; the launch message carries a token; the network `AuthenticationProvider` checks it on upgrade. Editors never learn how identity was obtained. |
-| Project configuration | `project/.jollypixel/project.json` beside the event log. Registered kinds and editor pages move there. |
+| Project configuration | `project/.jollypixel/project.json` beside the event log. The editor package list and the kind descriptors move there; the registry and the manifests keep their shapes. |
 | User preferences | A per-user store the shell owns; layout keys stay in `localStorage` until then. |
 | Runtime tab | Another page in another iframe. No editor contract involved. |
 | In-process editors | The `EditorDefinition` revisit: `mount` takes a container, not `document`. |
-| New asset | A default-document factory per kind on the client, then a tree action. |
+| New asset | The server builds the blank document from the kind's handler, as seed entries without `content` do; the tree action sends only a path and a kind. |
 
 ## Limits
 
@@ -225,7 +254,8 @@ request unopened.
 - Editor code has no HMR inside the studio. Editors keep their own Vite
   config and back-end for standalone development and e2e.
 - Handler registration is duplicated between the studio and each editor's
-  Vite config until `project.json` owns it.
+  Vite config until `project.json` owns it; within the studio,
+  `createStudioProject` is the single list.
 - The same user has a different presence color in each tab, since color
   derives from the per-page peer id. Fixed when identity rides the launch
   message.
@@ -253,8 +283,20 @@ Settled while building P1 and P2, 2026-09-22:
 - Editor entries drop their top-level `await` (see the server-side section).
 - The shell is plain DOM over `@jolly-pixel/ui` elements, no Lit component
   of its own: a `StudioShell` wires a `CatalogClient`, the tree and an
-  `EditorTabs` controller. Fine while the shell has one screen.
+  `EditorTabs` controller. Fine while the shell has one screen. Superseded
+  in P3, below.
 - Inactive editor frames are `display: none`. Their sockets stay open; their
   render loops pause with the frame, which is the cheap side of the tab cap.
 - Seeded ids are fixed (`map-overworld`, `tileset-default`, `model-default`,
   `model-texture`) so the README and the tests can name them.
+
+Settled while building P3, 2026-09-24:
+
+- The shell is Lit, one element per panel, like the editors: `<jolly-studio>`
+  owns layout, tabs and routing; `<asset-browser>` owns the tree, its state
+  and the catalog commands. Each later panel gets its own folder under
+  `src/shell/`. Pure decisions live in `AssetPath` and `AssetTreeModel`,
+  which are the only unit-tested parts; element flows are e2e.
+- `EditorTabs` stays an imperative controller: an iframe reloads when it is
+  moved or re-created, so a template must never own the frames.
+- Partial folder renames and deletes are reported, not rolled back.

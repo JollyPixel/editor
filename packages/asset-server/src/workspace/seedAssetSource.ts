@@ -6,16 +6,28 @@ import {
   IdentitySidecar,
   type IdentityEntry
 } from "../identity/IdentitySidecar.ts";
+import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 
 export type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
 
 export interface AssetSeedEntry {
   id: string;
   kind: string;
-  content: AssetSeedFactory;
+  /**
+   * @default the serialized `create(id)` state of the kind's handler
+   */
+  content?: AssetSeedFactory;
 }
 
 export type AssetSeedMap = Record<string, AssetSeedFactory | AssetSeedEntry>;
+
+export interface SeedAssetSourceOptions {
+  /**
+   * Handlers that build the document of an entry without `content`.
+   */
+  handlers?: Iterable<AssetKindHandler>;
+}
 
 interface NormalizedSeed {
   content: AssetSeedFactory;
@@ -24,13 +36,15 @@ interface NormalizedSeed {
 
 export async function seedAssetSource(
   source: AssetSource,
-  seed: AssetSeedMap
+  seed: AssetSeedMap,
+  options: SeedAssetSourceOptions = {}
 ): Promise<string[]> {
+  const registry = new AssetKindRegistry(options.handlers);
   const written: string[] = [];
   const identities: IdentityEntry[] = [];
 
   for (const [assetPath, value] of Object.entries(seed)) {
-    const { content, identity } = normalizeSeed(value);
+    const { content, identity } = normalizeSeed(value, registry);
     if (
       await source.exists(assetPath) ||
       !await source.writeIfAbsent(assetPath, await content())
@@ -59,7 +73,8 @@ export async function seedAssetSource(
 }
 
 function normalizeSeed(
-  value: AssetSeedFactory | AssetSeedEntry
+  value: AssetSeedFactory | AssetSeedEntry,
+  registry: AssetKindRegistry
 ): NormalizedSeed {
   if (typeof value === "function") {
     return {
@@ -69,10 +84,21 @@ function normalizeSeed(
   }
 
   return {
-    content: value.content,
+    content: value.content ?? defaultContent(value, registry),
     identity: {
       id: value.id,
       kind: value.kind
     }
+  };
+}
+
+function defaultContent(
+  entry: AssetSeedEntry,
+  registry: AssetKindRegistry
+): AssetSeedFactory {
+  return () => {
+    const handler = registry.get(entry.kind);
+
+    return handler.serialize(handler.create(entry.id));
   };
 }

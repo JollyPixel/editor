@@ -1,4 +1,5 @@
 export * from "./asset/kind.ts";
+export * from "./asset/descriptor.ts";
 export * from "./asset/document.ts";
 export * from "./asset/InvalidVoxelModelDocumentError.ts";
 export * from "./asset/VoxelModelState.ts";

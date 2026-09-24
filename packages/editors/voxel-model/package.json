@@ -3,6 +3,14 @@
   "version": "1.0.3",
   "type": "module",
   "private": true,
+  "jollypixel": {
+    "editor": {
+      "name": "voxel-model",
+      "kinds": [
+        "voxelmodel"
+      ]
+    }
+  },
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
     "dev": "vite",

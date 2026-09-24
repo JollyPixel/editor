@@ -40,6 +40,7 @@
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
-    "@jolly-pixel/voxel.renderer": "workspace:*"
+    "@jolly-pixel/voxel.renderer": "workspace:*",
+    "lit": "3.3.3"
   }
 }
