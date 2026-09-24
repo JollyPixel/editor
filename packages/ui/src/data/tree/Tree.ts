@@ -68,6 +68,13 @@ export class Tree<TData = unknown> extends LitElement {
   @property({
     type: Boolean,
     reflect: true,
+    attribute: "activate-on-double-click"
+  })
+  declare activateOnDoubleClick: boolean;
+
+  @property({
+    type: Boolean,
+    reflect: true,
     attribute: "indent-guides"
   })
   declare indentGuides: boolean;
@@ -92,6 +99,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.reorderable = false;
     this.rowDrag = false;
     this.renamable = false;
+    this.activateOnDoubleClick = false;
     this.indentGuides = false;
     this.acceptDrop = null;
     this._interaction = idleTreeInteraction();
@@ -315,6 +323,18 @@ export class Tree<TData = unknown> extends LitElement {
     `;
   }
 
+  beginRename(
+    id: string
+  ): boolean {
+    if (!this.#isRenamable(id) || this._interaction.kind !== "idle") {
+      return false;
+    }
+
+    this.#startRename(id);
+
+    return true;
+  }
+
   #isRenamable(
     id: string
   ): boolean {
@@ -410,7 +430,7 @@ export class Tree<TData = unknown> extends LitElement {
       return;
     }
 
-    if (this.#isRenamable(id)) {
+    if (!this.activateOnDoubleClick && this.#isRenamable(id)) {
       event.preventDefault();
       this.#startRename(id);
 

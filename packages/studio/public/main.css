@@ -24,11 +24,16 @@ jolly-scope {
   --jolly-accent-fill: #48f;
 }
 
+jolly-studio {
+  display: contents;
+}
+
 jolly-pane::part(content) {
   padding: 0;
 }
 
 #workbench {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -51,4 +56,10 @@ jolly-pane::part(content) {
 
 #editor-frames iframe[hidden] {
   display: none;
+}
+
+#workbench jolly-log {
+  position: absolute;
+  inset-block-end: 12px;
+  inset-inline-start: 12px;
 }

@@ -1,6 +1,6 @@
 # @jolly-pixel/studio — SPEC
 
-Status: P1 and P2 built on 2026-09-22. P3 is next.
+Status: P1 and P2 built on 2026-09-22, P3 on 2026-09-24. P4 is next.
 
 ## Goal
 
@@ -112,13 +112,24 @@ Two constraints on editor pages surfaced while building this:
 
 Built with `@jolly-pixel/ui`, in one `jolly-scope` and one `jolly-dock-layout`:
 
-- **Left dock**: `jolly-tree` bound to a `CatalogClient`. Folders are path
-  prefixes, leaves are assets, icon by kind. Folder node ids are
-  `folder:<path>`, asset node ids `asset:<id>`, so a rename keeps the node.
-  Folders start expanded and the user's toggles are kept across catalog
-  changes. Rename emits a catalog rename; renaming a folder renames each
-  asset under it, as the catalog documents. Delete asks first and shows
-  dependents from `dependentsOf`.
+- **Left dock**: `<asset-browser>`, a toolbar and a `jolly-tree` bound to a
+  `CatalogClient`. Folders are path prefixes, leaves are assets, icon by
+  kind. Folder node ids are `folder:<path>`, asset node ids `asset:<id>`, so
+  a rename keeps the node. Folders start expanded and the user's toggles are
+  kept across catalog changes.
+  - Double-click or Enter opens an asset. F2 or the Rename action edits the
+    name in place; an asset keeps its extension, since reconciliation infers
+    the kind from it. A name holding a separator is refused: moving is a drag.
+  - Renaming or dragging a folder sends one catalog rename per asset under
+    it. The new label shows while the commands run and reverts on a
+    rejection. Commands already applied are not rolled back; the log says how
+    many went through.
+  - Delete (key or action) opens `<asset-delete-dialog>`, listing the live
+    assets outside the deleted set that still reference it, from
+    `dependentsOf`. Confirming forces each command that still has a live
+    dependent.
+  - Failures go to a `jolly-log` over the workbench, never to the console
+    only.
 - **Center**: `jolly-tabs` with closable tabs above a stack of iframes. One
   iframe per open asset, keyed by asset id. Activating a tree row focuses the
   existing tab or opens a new one. Closing a tab removes the iframe, which
@@ -253,8 +264,20 @@ Settled while building P1 and P2, 2026-09-22:
 - Editor entries drop their top-level `await` (see the server-side section).
 - The shell is plain DOM over `@jolly-pixel/ui` elements, no Lit component
   of its own: a `StudioShell` wires a `CatalogClient`, the tree and an
-  `EditorTabs` controller. Fine while the shell has one screen.
+  `EditorTabs` controller. Fine while the shell has one screen. Superseded
+  in P3, below.
 - Inactive editor frames are `display: none`. Their sockets stay open; their
   render loops pause with the frame, which is the cheap side of the tab cap.
 - Seeded ids are fixed (`map-overworld`, `tileset-default`, `model-default`,
   `model-texture`) so the README and the tests can name them.
+
+Settled while building P3, 2026-09-24:
+
+- The shell is Lit, one element per panel, like the editors: `<jolly-studio>`
+  owns layout, tabs and routing; `<asset-browser>` owns the tree, its state
+  and the catalog commands. Each later panel gets its own folder under
+  `src/shell/`. Pure decisions live in `AssetPath` and `AssetTreeModel`,
+  which are the only unit-tested parts; element flows are e2e.
+- `EditorTabs` stays an imperative controller: an iframe reloads when it is
+  moved or re-created, so a template must never own the frames.
+- Partial folder renames and deletes are reported, not rolled back.

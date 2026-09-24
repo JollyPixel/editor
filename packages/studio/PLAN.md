@@ -47,13 +47,22 @@ host gained `ShellChannel`, `context.shell` and the ready post in
 `HostMessageLaunchSource`; the `mountStandalone` doc and the architecture
 guide describe both. Editor pages must be rebuilt after a host change.
 
-## P3 — Catalog actions
+## P3 — Catalog actions (done 2026-09-24)
 
 - Inline rename, delete with dependents listed, drag to reparent as rename.
-  `folderRenames(records, folder, to)` already yields the per-asset renames.
 - Errors surface in a `jolly-log` or dialog, never in the console only.
-- Tests: rename and delete map to the right catalog commands; a rejected
-  command restores the previous label.
+- Tests: `AssetPath` and `AssetTreeModel` unit specs (rename targets,
+  folder renames, drop targets, moves). The element flows (a rejected
+  command restores the label, delete with dependents) move to P5's e2e.
+
+Shipped as `src/catalog/AssetPath.ts` (value object: name, parent,
+extension, rebase), `src/catalog/AssetTreeModel.ts` (replaces
+`assetTree.ts`), `src/shell/Studio.ts` (`<jolly-studio>`: layout, tabs,
+routing; `StudioShell` is gone) and `src/shell/assets/` (`<asset-browser>`,
+`<asset-delete-dialog>`), on the editors' one-element-per-panel pattern. The
+shell renders in light DOM so `main.css` still styles the layout.
+`jolly-tree` gained `activateOnDoubleClick` and `beginRename(id)`, since a
+renamable row otherwise renames on double-click instead of opening.
 
 ## P4 — Pixel-art page
 
