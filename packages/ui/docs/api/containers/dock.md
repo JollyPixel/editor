@@ -32,7 +32,16 @@ then takes no space and paints nothing, but still accepts a dragged pane and
 grows back to `size`. Leave `align` and `overlay` unset on a dock meant to
 start empty, so what lands there fills it. Resizing emits `jolly-resize`
 and then `jolly-resize-end` with `{ width, height, collapsed }`. Double-click
-or Enter toggles a collapsible dock. Public geometry methods support
+or Enter toggles a collapsible dock.
+
+The resize handle of a dock that is not an overlay sits on its inner edge,
+inside the dock, and adds its thickness to `size`: panes never slide under
+it, and neither does whatever sits next to the dock. A collapsed dock
+shrinks to that handle, which stays visible. `--jolly-dock-handle-size` sets
+the thickness (`4px`). An overlay dock keeps its handle just past its inner
+edge.
+
+Public geometry methods support
 `jolly-dock-layout`; `slots()` returns the slotted panes and groups, and
 `panes()` every pane, grouped ones included.
 

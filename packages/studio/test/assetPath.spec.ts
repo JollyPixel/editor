@@ -27,6 +27,12 @@ describe("AssetPath", () => {
     assert.equal(AssetPath.parse("README").extension, "");
   });
 
+  test("reads the stem as the name without its extension", () => {
+    assert.equal(AssetPath.parse("maps/overworld.voxelmap.json").stem, "overworld");
+    assert.equal(AssetPath.parse(".gitkeep").stem, ".gitkeep");
+    assert.equal(AssetPath.parse("README").stem, "README");
+  });
+
   test("renames within the same folder", () => {
     const path = AssetPath.parse("textures/stone");
 

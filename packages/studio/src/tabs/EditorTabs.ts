@@ -5,15 +5,20 @@ import {
   LAUNCH_MESSAGE_TYPE,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
+import type { IconName } from "@jolly-pixel/ui";
 
 // CONSTANTS
 export const DEFAULT_TAB_CAP = 4;
+export const HOME_TAB_ID = "studio:home";
 const kTabTag = "jolly-tab";
+const kHomeLabel = "Home";
+const kHomeIcon: IconName = "home";
 
 export interface EditorTab {
   id: string;
   label: string;
   url: string;
+  icon?: IconName;
 }
 
 export interface TabStrip extends HTMLElement {
@@ -23,6 +28,11 @@ export interface TabStrip extends HTMLElement {
 export interface EditorTabsOptions {
   strip: TabStrip;
   frames: HTMLElement;
+  /**
+   * Shown when no editor tab is active, behind a fixed tab that cannot be
+   * closed and does not count toward `cap`.
+   */
+  home: HTMLElement;
   /**
    * @default DEFAULT_TAB_CAP
    */
@@ -51,6 +61,8 @@ export class EditorTabs {
 
   #strip: TabStrip;
   #frames: HTMLElement;
+  #home: HTMLElement;
+  #homeItem: HTMLElement;
   #launchOrigin: string;
   #confirmEvict: (tab: EditorTab) => boolean | Promise<boolean>;
   #onShellCommand: ((command: ShellCommand, from: EditorTab) => void) | undefined;
@@ -65,9 +77,21 @@ export class EditorTabs {
     this.cap = options.cap ?? DEFAULT_TAB_CAP;
     this.#strip = options.strip;
     this.#frames = options.frames;
+    this.#home = options.home;
     this.#launchOrigin = options.launchOrigin ?? location.origin;
     this.#confirmEvict = options.confirmEvict ?? (() => true);
     this.#onShellCommand = options.onShellCommand;
+
+    this.#homeItem = document.createElement(kTabTag);
+    Object.assign(this.#homeItem, {
+      value: HOME_TAB_ID,
+      label: kHomeLabel,
+      icon: kHomeIcon,
+      iconOnly: true,
+      fixed: true
+    });
+    this.#strip.prepend(this.#homeItem);
+    this.#show(null);
 
     const { signal } = this.#listening;
     this.#strip.addEventListener("jolly-tab-change", (event) => {
@@ -76,19 +100,35 @@ export class EditorTabs {
     this.#strip.addEventListener("jolly-tab-close", (event) => {
       this.close(event.detail.value);
     }, { signal });
+    this.#strip.addEventListener("jolly-tab-reorder", (event) => {
+      this.move(event.detail.value, event.detail.index);
+    }, { signal });
     window.addEventListener("message", this.#onMessage, { signal });
   }
 
-  get active(): string | null {
-    return this.#active;
+  /**
+   * Id of the active editor tab, or `HOME_TAB_ID` when home is shown.
+   */
+  get active(): string {
+    return this.#active ?? HOME_TAB_ID;
   }
 
+  /**
+   * Number of open editor tabs, home excluded.
+   */
   get size(): number {
     return this.#open.size;
   }
 
+  /**
+   * Open editor tab ids in strip order, home excluded.
+   */
   ids(): string[] {
-    return [...this.#open.keys()];
+    return [...this.#strip.children].flatMap((item) => {
+      const id = String(Reflect.get(item, "value"));
+
+      return this.#open.has(id) ? [id] : [];
+    });
   }
 
   has(
@@ -115,6 +155,7 @@ export class EditorTabs {
     Object.assign(item, {
       value: tab.id,
       label: tab.label,
+      icon: tab.icon ?? "",
       closable: true
     });
     const frame = document.createElement("iframe");
@@ -136,17 +177,19 @@ export class EditorTabs {
   focus(
     id: string
   ): boolean {
+    if (id === HOME_TAB_ID) {
+      this.#show(null);
+
+      return true;
+    }
+
     const entry = this.#open.get(id);
     if (entry === undefined) {
       return false;
     }
 
     entry.activatedAt = ++this.#clock;
-    this.#active = id;
-    this.#strip.value = id;
-    for (const other of this.#open.values()) {
-      other.frame.hidden = other !== entry;
-    }
+    this.#show(entry);
 
     return true;
   }
@@ -163,15 +206,36 @@ export class EditorTabs {
     entry.item.remove();
     entry.frame.remove();
     if (this.#active === id) {
-      this.#active = null;
       const next = this.#mostRecent();
       if (next === undefined) {
-        this.#strip.value = "";
+        this.#show(null);
       }
       else {
         this.focus(next.tab.id);
       }
     }
+
+    return true;
+  }
+
+  /**
+   * Moves an editor tab to a strip index, home included. Home keeps the
+   * first index.
+   */
+  move(
+    id: string,
+    index: number
+  ): boolean {
+    const entry = this.#open.get(id);
+    if (entry === undefined) {
+      return false;
+    }
+
+    const others = [...this.#strip.children].filter(
+      (item) => item !== entry.item
+    );
+    const reference = others[Math.max(index, 1)] ?? null;
+    this.#strip.insertBefore(entry.item, reference);
 
     return true;
   }
@@ -199,6 +263,18 @@ export class EditorTabs {
     this.#listening.abort();
     for (const id of this.ids()) {
       this.close(id);
+    }
+    this.#homeItem.remove();
+  }
+
+  #show(
+    entry: OpenTab | null
+  ): void {
+    this.#active = entry?.tab.id ?? null;
+    this.#strip.value = this.active;
+    this.#home.hidden = entry !== null;
+    for (const other of this.#open.values()) {
+      other.frame.hidden = other !== entry;
     }
   }
 

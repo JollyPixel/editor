@@ -125,13 +125,25 @@ Two constraints on editor pages surfaced while building this:
 
 ## Shell
 
-Built with `@jolly-pixel/ui`, in one `jolly-scope` and one `jolly-dock-layout`:
+Built with `@jolly-pixel/ui`, in one `jolly-scope`: a header row above one
+`jolly-dock-layout`.
 
-- **Left dock**: `<asset-browser>`, a toolbar and a `jolly-tree` bound to a
-  `CatalogClient`. Folders are path prefixes, leaves are assets, icon by
-  kind. Folder node ids are `folder:<path>`, asset node ids `asset:<id>`, so
-  a rename keeps the node. Folders start expanded and the user's toggles are
-  kept across catalog changes.
+- **Header**: spans the whole width, above the asset dock and the workbench.
+  It holds the editor tabs and, on the far right, a `jolly-toolbar` reserved
+  for project actions (settings, run). It is plain markup in `Studio`, not an
+  element of its own.
+- **Left dock**: `<asset-browser>` in a pane whose header is hidden, with a
+  wider resize handle (`--jolly-dock-handle-size: 8px`). It holds a kind
+  filter, a toolbar and a `jolly-tree` bound to a `CatalogClient`. Folders are
+  path prefixes, leaves are assets, icon by kind. Folder node ids are
+  `folder:<path>`, asset node ids `asset:<id>`, so a rename keeps the node.
+  Folders start expanded and the user's toggles are kept across catalog
+  changes.
+  - The kind filter is a `jolly-button-group`: All, then one button per
+    registered kind, iconed and labelled from its descriptor. A kind shows
+    only its assets and the folders holding them; renaming, moving or
+    deleting a folder still covers every asset under it. The choice is kept
+    in `localStorage` under `studio:asset-kind`.
   - Double-click or Enter opens an asset. F2 or the Rename action edits the
     name in place; an asset keeps its extension, since reconciliation infers
     the kind from it. A name holding a separator is refused: moving is a drag.
@@ -143,12 +155,20 @@ Built with `@jolly-pixel/ui`, in one `jolly-scope` and one `jolly-dock-layout`:
     assets outside the deleted set that still reference it, from
     `dependentsOf`. Confirming forces each command that still has a live
     dependent.
+  - Export downloads the selected asset and its dependencies as
+    `<stem>.zip`, from `CatalogClient.exportArchive`. It is disabled on a
+    folder: an archive has a single root.
   - Failures go to a `jolly-log` over the workbench, never to the console
     only.
-- **Center**: `jolly-tabs` with closable tabs above a stack of iframes. One
-  iframe per open asset, keyed by asset id. Activating a tree row focuses the
-  existing tab or opens a new one. Closing a tab removes the iframe, which
-  disposes the editor, its session and its contexts.
+- **Tabs**: a reorderable `jolly-tabs` in the header. The first tab is Home,
+  a `fixed`, icon-only tab that cannot be closed or moved; it shows the
+  in-page `#studio-home` view (empty for now), does not count toward the tab
+  cap and is shown at boot and whenever the last editor tab closes. Editor
+  tabs carry their kind icon and can be dragged among themselves.
+- **Workbench**: a stack of iframes, one per open asset, keyed by asset id,
+  next to the home view. Activating a tree row focuses the existing tab or
+  opens a new one. Closing a tab removes the iframe, which disposes the
+  editor, its session and its contexts.
 - **Identity**: the shell prompts once with `promptPeerIdentity` under the
   host's `jolly-pixel:username` key. Same-origin iframes in the same browser
   tab share `sessionStorage`, so editor pages find the stored name and do not

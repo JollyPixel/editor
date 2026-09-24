@@ -19,6 +19,7 @@ import {
   reloadGallery
 } from "../../support/gallery.ts";
 import {
+  DOCK_HANDLE_SIZE,
   dropIntoDock,
   slotsOf
 } from "../../support/dock.ts";
@@ -130,7 +131,7 @@ test.describe("DockLayout groups", () => {
     await page.mouse.up();
 
     await expect(right).not.toHaveAttribute("empty");
-    await expect.poll(() => widthOf(right)).toBe(240);
+    await expect.poll(() => widthOf(right)).toBe(240 + DOCK_HANDLE_SIZE);
     await expect(slotsOf(page, "right")).resolves.toEqual([["layers"]]);
 
     await dropIntoDock(page, "jolly-pane[key='layers'] .header", "left", 20);
@@ -170,7 +171,7 @@ test.describe("DockLayout groups", () => {
 
     await expect(slotsOf(page, "right")).resolves.toEqual([["layers"], ["paint"]]);
     await expect(right).not.toHaveAttribute("collapsed");
-    await expect.poll(() => widthOf(right)).toBe(240);
+    await expect.poll(() => widthOf(right)).toBe(240 + DOCK_HANDLE_SIZE);
   });
 
   test("a tab dropped into another dock takes its own slot", async({ page }) => {

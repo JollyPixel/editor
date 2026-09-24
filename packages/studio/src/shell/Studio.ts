@@ -49,6 +49,9 @@ export class Studio extends LitElement {
   @query("#editor-frames")
   declare _frames: HTMLElement | null;
 
+  @query("#studio-home")
+  declare _home: HTMLElement | null;
+
   #catalog: CatalogClient | null = null;
   #editors: EditorRegistry | null = null;
   #tabs: EditorTabs | null = null;
@@ -69,7 +72,11 @@ export class Studio extends LitElement {
     options: StudioOptions
   ): Promise<void> {
     await this.updateComplete;
-    if (this._strip === null || this._frames === null) {
+    if (
+      this._strip === null ||
+      this._frames === null ||
+      this._home === null
+    ) {
       throw new Error("The studio must be connected before it is attached.");
     }
 
@@ -78,6 +85,7 @@ export class Studio extends LitElement {
     this.#tabs = new EditorTabs({
       strip: this._strip,
       frames: this._frames,
+      home: this._home,
       confirmEvict: options.confirmEvict,
       onShellCommand: this.#onShellCommand
     });
@@ -85,7 +93,14 @@ export class Studio extends LitElement {
     this._assets = {
       catalog: options.catalog,
       iconFor: (kind) => options.editors.iconFor(kind),
-      detailFor: (kind) => (this.canOpen(kind) ? undefined : kNoEditorDetail)
+      detailFor: (kind) => (this.canOpen(kind) ? undefined : kNoEditorDetail),
+      kinds: options.editors.kinds().map(({ kind, label }) => {
+        return {
+          kind,
+          label,
+          icon: options.editors.iconFor(kind)
+        };
+      })
     };
   }
 
@@ -109,7 +124,8 @@ export class Studio extends LitElement {
     return this.#tabs.open({
       id: assetId,
       label: AssetPath.parse(record.source).name,
-      url
+      url,
+      icon: this.#editors?.iconFor(record.kind)
     });
   }
 
@@ -135,29 +151,37 @@ export class Studio extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      <jolly-dock-layout storage-key="studio:layout">
-        <jolly-dock
-          key="left"
-          side="left"
-          collapsible
-          size="280"
-          min-size="200"
-          max-size="480"
-        >
-          <jolly-pane key="assets" heading="Assets" icon="folder" locked>
-            <asset-browser
-              .options=${this._assets}
-              @asset-open=${this.#onAssetOpen}
-              @asset-error=${this.#onAssetError}
-            ></asset-browser>
-          </jolly-pane>
-        </jolly-dock>
-        <section id="workbench">
-          <jolly-tabs id="editor-tabs"></jolly-tabs>
-          <div id="editor-frames"></div>
-          <jolly-log .entries=${this._log}></jolly-log>
-        </section>
-      </jolly-dock-layout>
+      <header id="studio-header">
+        <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
+        <jolly-toolbar id="studio-actions" label="Studio actions"></jolly-toolbar>
+      </header>
+      <div id="studio-main">
+        <jolly-dock-layout storage-key="studio:layout">
+          <jolly-dock
+            id="asset-dock"
+            key="left"
+            side="left"
+            collapsible
+            size="280"
+            min-size="200"
+            max-size="480"
+          >
+            <jolly-pane key="assets" heading="Assets" icon="folder" locked>
+              <asset-browser
+                .options=${this._assets}
+                @asset-open=${this.#onAssetOpen}
+                @asset-error=${this.#onAssetError}
+              ></asset-browser>
+            </jolly-pane>
+          </jolly-dock>
+          <section id="workbench">
+            <div id="editor-frames">
+              <section id="studio-home" aria-label="Home"></section>
+            </div>
+            <jolly-log .entries=${this._log}></jolly-log>
+          </section>
+        </jolly-dock-layout>
+      </div>
     `;
   }
 

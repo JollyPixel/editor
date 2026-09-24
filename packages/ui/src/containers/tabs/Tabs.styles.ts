@@ -145,6 +145,16 @@ export const tabsStyles = css`
     min-width: 0;
   }
 
+  .icon {
+    width: var(--jolly-tab-icon-size, 16px);
+    height: var(--jolly-tab-icon-size, 16px);
+    flex: 0 0 auto;
+  }
+
+  .item[data-dragging] {
+    opacity: 0.5;
+  }
+
   .badge {
     flex: 0 0 auto;
     min-width: 1ch;

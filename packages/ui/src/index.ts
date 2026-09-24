@@ -181,6 +181,7 @@ export type {
   JollyReorderDetail,
   JollyResizeDetail,
   JollyTabChangeDetail,
+  JollyTabReorderDetail,
   JollyToggleDetail,
   PaneVisibilityDetail
 } from "./containers/events.ts";

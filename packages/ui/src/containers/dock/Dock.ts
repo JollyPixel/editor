@@ -47,6 +47,7 @@ import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
 const kZoneBand = 48;
+const kHandleSize = "var(--jolly-dock-handle-size, 4px)";
 
 export type DockSide = "bottom" | "left" | "right" | "top";
 export type DockAlign = "end" | "start";
@@ -331,7 +332,7 @@ export class Dock extends LitElement {
     const thickness = vertical ? rect.width : rect.height;
     const span = vertical ? rect.height : rect.width;
 
-    if (thickness > 0) {
+    if (thickness > 0 && !this.collapsed) {
       return {
         x: rect.x,
         y: rect.y,
@@ -380,7 +381,7 @@ export class Dock extends LitElement {
 
     const rect = this.getBoundingClientRect();
     const vertical = this.axis === "y";
-    if ((vertical ? rect.width : rect.height) > 0) {
+    if ((vertical ? rect.width : rect.height) > 0 && !this.collapsed) {
       return undefined;
     }
 
@@ -569,8 +570,8 @@ export class Dock extends LitElement {
     this.#resizeHandle = new ResizeHandle(this, {
       direction: this.side,
       handle: this._handle,
-      minSize: this.minSize * this.#columns(),
-      maxSize: this.maxSize * this.#columns()
+      minSize: (this.minSize * this.#columns()) + this.#handleThickness(),
+      maxSize: (this.maxSize * this.#columns()) + this.#handleThickness()
     });
     this.#removeResizeListeners = forwardResizeEvents(
       this,
@@ -634,8 +635,9 @@ export class Dock extends LitElement {
       return;
     }
 
-    const measured = this.getBoundingClientRect()[this.#dimension()] /
-      this.#columns();
+    const measured = (
+      this.getBoundingClientRect()[this.#dimension()] - this.#handleThickness()
+    ) / this.#columns();
     if (measured > 0) {
       this.size = Math.min(
         Math.max(measured, this.minSize),
@@ -646,23 +648,60 @@ export class Dock extends LitElement {
 
   #applySize(): void {
     const dimension = this.#dimension();
-    const inert = this.collapsed || (this.empty && !this.overlay);
-    this._handle?.classList.toggle("disabled", inert);
+    const vanished = this.empty && !this.overlay;
+    this._handle?.classList.toggle("disabled", this.collapsed || vanished);
+    if (this.#docked()) {
+      this.style.setProperty(this.#handleInset(), kHandleSize);
+    }
+    else {
+      this.style.removeProperty(this.#handleInset());
+    }
 
-    if (inert) {
+    if (vanished) {
       this.style[dimension] = "0px";
 
       return;
     }
+    if (this.collapsed) {
+      this.style[dimension] = kHandleSize;
 
-    this.style[dimension] = `${Math.min(
+      return;
+    }
+
+    const size = Math.min(
       Math.max(this.size, this.minSize),
       this.maxSize
-    ) * this.#columns()}px`;
+    ) * this.#columns();
+    this.style[dimension] = this.#docked() ?
+      `calc(${size}px + ${kHandleSize})` :
+      `${size}px`;
   }
 
   #columns(): number {
     return this.split ? 2 : 1;
+  }
+
+  #docked(): boolean {
+    return !this.overlay && !this.empty;
+  }
+
+  #handleThickness(): number {
+    return this.#docked() && this._handle ?
+      this._handle.getBoundingClientRect()[this.#dimension()] :
+      0;
+  }
+
+  #handleInset(): string {
+    switch (this.side) {
+      case "left":
+        return "padding-right";
+      case "right":
+        return "padding-left";
+      case "top":
+        return "padding-bottom";
+      default:
+        return "padding-top";
+    }
   }
 
   #restore(): void {

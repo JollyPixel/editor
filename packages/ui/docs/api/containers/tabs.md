@@ -14,6 +14,7 @@
 | `value` | `string` | `""` |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` |
 | `variant` | `"default" \| "skew"` | `"default"` |
+| `reorderable` | `boolean` | `false` |
 
 An absent, disabled, or unknown value selects the first enabled tab, once
 the tabs are slotted; a value set before that is kept as requested. A tab
@@ -37,6 +38,23 @@ tabs.addEventListener("jolly-tab-close", (event) => {
     (tab) => tab.value === event.detail.value
   );
   closed?.remove();
+});
+```
+
+## Reordering
+
+A `reorderable` tab set lets the user drag a tab along the strip. Dropping it
+emits `jolly-tab-reorder` with `{ value, index }`, where `index` is the
+position the tab asks to occupy. The element moves nothing: move the
+`jolly-tab` in the listener. A `fixed` tab cannot be dragged and keeps its
+index, since no other tab can be dropped across it.
+
+```js
+tabs.addEventListener("jolly-tab-reorder", (event) => {
+  const tabList = [...tabs.querySelectorAll("jolly-tab")];
+  const moved = tabList.find((tab) => tab.value === event.detail.value);
+  const rest = tabList.filter((tab) => tab !== moved);
+  tabs.insertBefore(moved, rest[event.detail.index] ?? null);
 });
 ```
 

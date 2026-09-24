@@ -94,6 +94,22 @@ renamable row otherwise renames on double-click instead of opening.
 - Editor host `ROADMAP.md` updated: shell exists, the `EditorDefinition`
   revisit is now unblocked.
 
+## Shell design (done 2026-09-24)
+
+- `jolly-tabs` gains `reorderable` and `jolly-tab-reorder`; `jolly-tab`
+  gains `icon`, `icon-only` and `fixed`. A docked `jolly-dock` keeps its
+  handle inside its inner edge and stays visible as that handle when
+  collapsed, so the shell's and an editor's collapsed handles no longer sit
+  on each other.
+- Header row with the tabs and an empty project toolbar; Home tab and view;
+  kind filter; Export; headerless asset pane with a wider handle.
+- Tests: `EditorTabs` home and reorder, the tree kind filter,
+  `EditorRegistry.kinds`, `AssetPath.stem`; `shell.e2e.ts` covers home and
+  reorder, the filter, export and the collapsed handle.
+
+Open: editor pages bundle their own `ui`, so the dock fix reaches an
+editor's docks only once its page is rebuilt. Tab order is not persisted.
+
 ## Dynamic kinds and editors
 
 The goal is kinds and editors loaded from outside the monorepo (a project

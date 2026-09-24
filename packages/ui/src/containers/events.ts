@@ -21,6 +21,12 @@ export interface JollyTabChangeDetail {
   value: string;
 }
 
+export interface JollyTabReorderDetail {
+  value: string;
+  /** Index the tab asks to occupy once moved. */
+  index: number;
+}
+
 export interface JollyHeadingChangeDetail {
   heading: string;
 }
@@ -62,6 +68,7 @@ export interface ContainerEventMap {
   "jolly-tab-action": JollyTabChangeDetail;
   "jolly-tab-change": JollyTabChangeDetail;
   "jolly-tab-close": JollyTabChangeDetail;
+  "jolly-tab-reorder": JollyTabReorderDetail;
   "jolly-toggle": JollyToggleDetail;
 }
 
@@ -94,6 +101,7 @@ declare global {
     "jolly-tab-action": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-change": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-close": CustomEvent<JollyTabChangeDetail>;
+    "jolly-tab-reorder": CustomEvent<JollyTabReorderDetail>;
     "jolly-toggle": CustomEvent<JollyToggleDetail>;
   }
 }

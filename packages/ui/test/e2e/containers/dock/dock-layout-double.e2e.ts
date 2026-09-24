@@ -18,6 +18,7 @@ import {
   openExample,
   reloadGallery
 } from "../../support/gallery.ts";
+import { DOCK_HANDLE_SIZE } from "../../support/dock.ts";
 
 function columnsOf(
   page: Page,
@@ -69,7 +70,7 @@ test.describe("DockLayout double docks", () => {
   test("a pane dropped past the inner edge opens a second column", async({ page }) => {
     const left = page.locator("jolly-dock[key='left']");
     const before = await boxOf(left);
-    expect(before.width).toBe(200);
+    expect(before.width).toBe(200 + DOCK_HANDLE_SIZE);
     await expect(left).not.toHaveAttribute("split");
 
     await hold(
@@ -86,7 +87,7 @@ test.describe("DockLayout double docks", () => {
     await page.mouse.up();
 
     await expect(left).toHaveAttribute("split");
-    await expect.poll(() => widthOf(left)).toBe(400);
+    await expect.poll(() => widthOf(left)).toBe(400 + DOCK_HANDLE_SIZE);
     await expect(columnsOf(page, "left")).resolves.toEqual([
       [["general", "blocks"], ["layers"]],
       [["paint"]]
@@ -114,12 +115,12 @@ test.describe("DockLayout double docks", () => {
       y: handle.y + (handle.height / 2)
     });
 
-    await expect.poll(() => widthOf(left)).toBe(500);
+    await expect.poll(() => widthOf(left)).toBe(500 + DOCK_HANDLE_SIZE);
     await expect.poll(() => widthOf(left.locator(".secondary"))).toBeCloseTo(250, 0);
 
     await reloadGallery(page);
     await expect(left).toHaveAttribute("split");
-    await expect.poll(() => widthOf(left)).toBe(500);
+    await expect.poll(() => widthOf(left)).toBe(500 + DOCK_HANDLE_SIZE);
     await expect(columnsOf(page, "left")).resolves.toEqual([
       [["general", "blocks"], ["layers"]],
       [["paint"]]
@@ -137,7 +138,7 @@ test.describe("DockLayout double docks", () => {
     });
 
     await expect(left).not.toHaveAttribute("split");
-    await expect.poll(() => widthOf(left)).toBe(200);
+    await expect.poll(() => widthOf(left)).toBe(200 + DOCK_HANDLE_SIZE);
     await expect(columnsOf(page, "left")).resolves.toEqual([
       [["general", "blocks"], ["layers"], ["paint"]],
       []
@@ -174,7 +175,7 @@ test.describe("DockLayout double docks", () => {
     );
 
     await expect(right).toHaveAttribute("split");
-    await expect.poll(() => widthOf(right)).toBe(360);
+    await expect.poll(() => widthOf(right)).toBe(360 + DOCK_HANDLE_SIZE);
     const [primary, secondary, handle] = await Promise.all([
       boxOf(right.locator(".primary")),
       boxOf(right.locator(".secondary")),
@@ -191,11 +192,11 @@ test.describe("DockLayout double docks", () => {
 
     await left.locator(".resize-handle").dblclick();
     await expect(left).toHaveAttribute("collapsed");
-    await expect.poll(() => widthOf(left)).toBe(0);
+    await expect.poll(() => widthOf(left)).toBe(DOCK_HANDLE_SIZE);
     await expect(page.locator("jolly-pane[key='paint']")).toBeHidden();
 
     await left.locator(".resize-handle").dblclick();
-    await expect.poll(() => widthOf(left)).toBe(400);
+    await expect.poll(() => widthOf(left)).toBe(400 + DOCK_HANDLE_SIZE);
   });
 
   test("the keyboard steps a pane through the second column", async({ page }) => {
