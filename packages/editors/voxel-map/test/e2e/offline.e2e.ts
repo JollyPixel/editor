@@ -4,30 +4,29 @@ import {
   test
 } from "@playwright/test";
 import { dialog, recordSockets } from "@jolly-pixel/e2e";
-import { openEditor } from "@jolly-pixel/e2e/editor";
+import {
+  openEditor,
+  waitForEditor
+} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
+import { OFFLINE_EDITOR } from "./support/offline.ts";
 import { openPane } from "./support/panels.ts";
-import { seedVoxels } from "./support/scene.ts";
 import {
+  blocksAt,
+  seedVoxels
+} from "./support/scene.ts";
+import {
+  blockTileCenter,
   clickTexel,
   pixelAlpha,
   setTextureMode,
   texturePanel
 } from "./support/texture.ts";
 
-// CONSTANTS
-const kOffline = {
-  maxFps: 10,
-  query: {
-    offline: "",
-    samples: "0"
-  }
-};
-
 test("boots the seeded map from an in-page workspace, without a socket", async({ page }) => {
   const sockets = recordSockets(page);
-  await openEditor(page, kOffline);
+  await openEditor(page, OFFLINE_EDITOR);
 
   const state = await page.evaluate(() => {
     const { workspace, session } = window.voxelMapEditor!;
@@ -57,10 +56,10 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
 });
 
 test("shares an offline catalog with a second tab", async({ page }) => {
-  await openEditor(page, kOffline);
+  await openEditor(page, OFFLINE_EDITOR);
   const second = await page.context().newPage();
   try {
-    await openEditor(second, kOffline);
+    await openEditor(second, OFFLINE_EDITOR);
     const id = await page.evaluate(
       () => window.voxelMapEditor!.session.catalog.create(
         "shared.bin",
@@ -105,11 +104,11 @@ test("offers an offline workspace when the socket is unreachable", async({ page 
   )).toBe(true);
 });
 
-test("snapshots offline map and texture edits", async({ page }) => {
+test("keeps offline map and texture edits across a reload", async({ page }) => {
   test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await openEditor(page, kOffline);
+  await openEditor(page, OFFLINE_EDITOR);
   const before = await page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
     const mapId = session.target.record.id;
@@ -132,16 +131,7 @@ test("snapshots offline map and texture edits", async({ page }) => {
 
   await openPane(page, "Paint");
   const panel = texturePanel(page);
-  const texel = await page.evaluate(() => {
-    const { engine } = window.voxelMapEditor!.workspace;
-    const texture = engine.blockRegistry.get(1)!.defaultTexture!;
-    const tileSize = engine.tilesets.definitions()[0].tileSize;
-
-    return {
-      x: texture.col * tileSize + Math.floor(tileSize / 2),
-      y: texture.row * tileSize + Math.floor(tileSize / 2)
-    };
-  });
+  const texel = await blockTileCenter(page, 1);
   await expect.poll(() => pixelAlpha(panel, texel)).toBe(255);
   await setTextureMode(panel, "Erase");
   await clickTexel(panel, texel);
@@ -151,6 +141,23 @@ test("snapshots offline map and texture edits", async({ page }) => {
       .record(textureId)!.revision,
     before.textureId
   )).not.toBe(before.texture);
+
+  await page.reload();
+  await waitForEditor(page);
+  expect(await page.evaluate(() => {
+    const { session, workspace } = window.voxelMapEditor!;
+
+    return {
+      mapId: session.target.record.id,
+      textureId: workspace.engine.tilesets.definitions()[0].asset!.id
+    };
+  })).toEqual({
+    mapId: before.mapId,
+    textureId: before.textureId
+  });
+  expect(await blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([2]);
+  await openPane(page, "Paint");
+  await expect.poll(() => pixelAlpha(texturePanel(page), texel)).toBe(0);
 
   await page.evaluate(() => window.voxelMapEditor!.dispose());
   expect(errors).toEqual([]);

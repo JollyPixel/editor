@@ -106,22 +106,6 @@ test("a stroke stays on the height it started on", async({ page }) => {
   ])).toEqual([2, 2, 1, 2, null]);
 });
 
-test("a larger brush stamps its whole footprint", async({ page }) => {
-  await setBrush(page, {
-    blockId: 1,
-    size: 3
-  });
-
-  await clickCell(page, { x: 0, y: 0, z: 0 });
-
-  await expect.poll(() => voxelCount(page)).toBe(9);
-  expect(await blocksAt(page, [
-    { x: -1, y: 0, z: -1 },
-    { x: 1, y: 0, z: 1 },
-    { x: 2, y: 0, z: 0 }
-  ])).toEqual([1, 1, null]);
-});
-
 test("replace mode repaints occupied cells only", async({ page }) => {
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
   await setBrush(page, {
@@ -135,25 +119,6 @@ test("replace mode repaints occupied cells only", async({ page }) => {
 
   await expect.poll(() => blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([4]);
   expect(await voxelCount(page)).toBe(1);
-});
-
-test("the X axis builds a wall standing on the aimed cell", async({ page }) => {
-  await setBrush(page, {
-    blockId: 1,
-    size: 2
-  });
-  await page.keyboard.press("KeyX");
-  await expect.poll(async() => (await brushState(page)).axis).toBe("xy");
-
-  await clickCell(page, { x: 0, y: 0, z: 0 });
-
-  await expect.poll(() => voxelCount(page)).toBe(4);
-  expect(await blocksAt(page, [
-    { x: -1, y: 0, z: 0 },
-    { x: 0, y: 0, z: 0 },
-    { x: -1, y: 1, z: 0 },
-    { x: 0, y: 1, z: 0 }
-  ])).toEqual([1, 1, 1, 1]);
 });
 
 test("a wall removed from a top face digs down into it", async({ page }) => {

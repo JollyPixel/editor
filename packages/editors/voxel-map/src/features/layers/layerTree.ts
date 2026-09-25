@@ -63,21 +63,6 @@ export function layerRefOf(
     };
 }
 
-export function layerSelectionOf(
-  ref: LayerRef
-): LayerSelection {
-  return ref.kind === "object" ?
-    {
-      kind: "object",
-      layerName: ref.layerName,
-      objectId: ref.objectId
-    } :
-    {
-      kind: ref.kind,
-      name: ref.name
-    };
-}
-
 export function layerSelectionsOf(
   world: VoxelWorld
 ): LayerSelection[] {

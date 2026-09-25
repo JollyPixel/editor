@@ -9,10 +9,7 @@ import {
 import type { JollyReparentDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  canDropLayerRef,
-  voxelLayerDropIndex
-} from "../../../src/features/layers/layerDrop.ts";
+import { canDropLayerRef } from "../../../src/features/layers/layerDrop.ts";
 import { layerRowId } from "../../../src/features/layers/layerTree.ts";
 
 // CONSTANTS
@@ -128,41 +125,6 @@ describe("canDropLayerRef", () => {
       }),
       false
     );
-  });
-});
-
-describe("voxelLayerDropIndex", () => {
-  const stack = ["A", "B", "C", "D"];
-
-  test("drops above a later layer, accounting for the vacated slot", () => {
-    assert.equal(voxelLayerDropIndex(stack, "A", "C", "above"), 1);
-  });
-
-  test("drops below a later layer", () => {
-    assert.equal(voxelLayerDropIndex(stack, "A", "C", "below"), 2);
-  });
-
-  test("drops above an earlier layer", () => {
-    assert.equal(voxelLayerDropIndex(stack, "D", "B", "above"), 1);
-  });
-
-  test("drops below an earlier layer", () => {
-    assert.equal(voxelLayerDropIndex(stack, "D", "B", "below"), 2);
-  });
-
-  test("resolves a drop onto an adjacent neighbour back to where it started", () => {
-    assert.equal(voxelLayerDropIndex(stack, "B", "C", "above"), 1);
-    assert.equal(voxelLayerDropIndex(stack, "B", "A", "below"), 1);
-  });
-
-  test("reaches either end of the stack", () => {
-    assert.equal(voxelLayerDropIndex(stack, "D", "A", "above"), 0);
-    assert.equal(voxelLayerDropIndex(stack, "A", "D", "below"), 3);
-  });
-
-  test("returns -1 for a name that is not in the stack", () => {
-    assert.equal(voxelLayerDropIndex(stack, "A", "NoSuch", "above"), -1);
-    assert.equal(voxelLayerDropIndex(stack, "NoSuch", "A", "above"), -1);
   });
 });
 

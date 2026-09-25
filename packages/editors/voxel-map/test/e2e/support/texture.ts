@@ -4,10 +4,44 @@ import type {
   Page
 } from "@playwright/test";
 import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
+import {
+  buttonGroup,
+  dialog,
+  textField
+} from "@jolly-pixel/e2e";
 
 export interface TexturePoint {
   x: number;
   y: number;
+}
+
+export function blockTileCenter(
+  page: Page,
+  blockId: number
+): Promise<TexturePoint> {
+  return page.evaluate((id) => {
+    const { engine } = window.voxelMapEditor!.workspace;
+    const texture = engine.blockRegistry.get(id)!.defaultTexture!;
+    const tileSize = engine.tilesets.definitions()[0].tileSize;
+
+    return {
+      x: (texture.col * tileSize) + Math.floor(tileSize / 2),
+      y: (texture.row * tileSize) + Math.floor(tileSize / 2)
+    };
+  }, blockId);
+}
+
+export async function createBlankTileset(
+  page: Page,
+  name: string
+): Promise<void> {
+  const form = dialog(page, "Add tileset");
+  await buttonGroup(form, "Source")
+    .getByRole("radio", { name: "New", exact: true })
+    .click();
+  await textField(form, "Name").fill(name);
+  await form.getByRole("button", { name: "Create" }).click();
+  await form.waitFor({ state: "hidden" });
 }
 
 export function texturePanel(

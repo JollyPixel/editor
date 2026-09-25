@@ -23,9 +23,6 @@ function createCamera(
   return camera;
 }
 
-/**
- * A one-unit cube whose min corner sits on the given cell.
- */
 function createBlock(
   position: THREE.Vector3Like
 ): THREE.Object3D {

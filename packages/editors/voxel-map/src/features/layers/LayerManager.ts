@@ -43,7 +43,6 @@ import {
 import {
   layerRefOf,
   layerRowId,
-  layerSelectionOf,
   layerTreeNodes,
   withLayerBadges,
   type LayerRef
@@ -204,7 +203,7 @@ export class LayerManager extends LitElement {
     }
 
     this._selected = [id];
-    this.selection.current = layerSelectionOf(layerRefOf(id));
+    this.selection.current = layerRefOf(id);
   }
 
   #onToggleExpand(

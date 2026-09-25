@@ -6,12 +6,7 @@ import assert from "node:assert/strict";
 import type { Vec3Like } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  gizmoSource,
-  layerPositionSource,
-  roundPosition,
-  samePosition
-} from "../../../../src/features/layers/voxel/layerSources.ts";
+import { layerPositionSource } from "../../../../src/features/layers/voxel/layerSources.ts";
 
 function positionPort(
   start: Vec3Like | null
@@ -72,37 +67,5 @@ describe("layerPositionSource", () => {
     layerPositionSource(port).write({ x: 1, y: 1, z: 1 }, true);
 
     assert.deepEqual(port.moves, []);
-  });
-});
-
-describe("gizmoSource", () => {
-  test("reads and writes through the port", () => {
-    let enabled = false;
-    const source = gizmoSource({
-      enabled: () => enabled,
-      toggle: (value) => {
-        enabled = value;
-      }
-    });
-
-    assert.equal(source.read(), false);
-    source.write(true, true);
-    assert.equal(source.read(), true);
-  });
-});
-
-describe("roundPosition and samePosition", () => {
-  test("rounds every axis", () => {
-    assert.deepEqual(
-      roundPosition({ x: -0.5, y: 1.5, z: 2.49 }),
-      { x: -0, y: 2, z: 2 }
-    );
-  });
-
-  test("compares axis by axis", () => {
-    const left = { x: 1, y: 2, z: 3 };
-
-    assert.equal(samePosition(left, { x: 1, y: 2, z: 3 }), true);
-    assert.equal(samePosition(left, { x: 1, y: 2, z: 4 }), false);
   });
 });

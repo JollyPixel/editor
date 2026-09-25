@@ -2,24 +2,20 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { Keyboard } from "@jolly-pixel/controls";
+
 // Import Internal Dependencies
 import {
   HistoryShortcuts,
-  type HistoryShortcutListener
+  type HistoryShortcutCode
 } from "../../../../src/features/painting/interaction/HistoryShortcuts.ts";
 
 function setup() {
-  const listeners = new Map<string, HistoryShortcutListener>();
+  const keyboard = new Keyboard();
   const calls: string[] = [];
   const shortcuts = new HistoryShortcuts({
-    keyboard: {
-      on: (code, listener) => {
-        listeners.set(code, listener);
-      },
-      off: (code) => {
-        listeners.delete(code);
-      }
-    },
+    keyboard,
     history: {
       undo: () => calls.push("undo") > 0,
       redo: () => calls.push("redo") > 0
@@ -27,7 +23,7 @@ function setup() {
   });
 
   function press(
-    code: string,
+    code: HistoryShortcutCode,
     modifiers: Partial<KeyboardEventInit> = {}
   ): boolean {
     const event = new KeyboardEvent("keydown", {
@@ -35,12 +31,12 @@ function setup() {
       cancelable: true,
       ...modifiers
     });
-    listeners.get(code)?.(event);
+    keyboard.emit(code, event);
 
     return event.defaultPrevented;
   }
 
-  return { shortcuts, listeners, calls, press };
+  return { shortcuts, calls, press };
 }
 
 describe("HistoryShortcuts", () => {
@@ -72,11 +68,13 @@ describe("HistoryShortcuts", () => {
     assert.deepEqual(calls, []);
   });
 
-  it("unbinds every key on dispose", () => {
-    const { shortcuts, listeners } = setup();
+  it("stops answering the keys once disposed", () => {
+    const { shortcuts, calls, press } = setup();
 
     shortcuts.dispose();
+    press("KeyZ", { ctrlKey: true });
+    press("KeyY", { ctrlKey: true });
 
-    assert.equal(listeners.size, 0);
+    assert.deepEqual(calls, []);
   });
 });

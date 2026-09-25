@@ -5,13 +5,14 @@ import {
   type Page
 } from "@playwright/test";
 import { dialog } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import {
+  openEditor,
+  waitForEditor
+} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
+import { OFFLINE_EDITOR } from "./support/offline.ts";
 import { openPane } from "./support/panels.ts";
-
-// CONSTANTS
-const kOfflineUrl = "/?offline&max-fps=10&samples=0";
 
 interface OfflineIds {
   mapId: string;
@@ -33,24 +34,12 @@ function offlineIds(
   });
 }
 
-test("a reload reopens the same persisted map", async({ page }) => {
-  await page.goto(kOfflineUrl);
-  await waitForEditor(page);
-  const before = await offlineIds(page);
-
-  await page.reload();
-  await waitForEditor(page);
-
-  expect(await offlineIds(page)).toEqual(before);
-});
-
 test("exports the map, resets the workspace and imports it back", async({ page }) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 
-  await page.goto(kOfflineUrl);
-  await waitForEditor(page);
+  await openEditor(page, OFFLINE_EDITOR);
   const exported = await offlineIds(page);
   await openPane(page, "General");
 
@@ -95,8 +84,7 @@ test("exports the map, resets the workspace and imports it back", async({ page }
 
 test("imports a map and its tileset as a copy", async({ page }) => {
   test.setTimeout(90_000);
-  await page.goto(kOfflineUrl);
-  await waitForEditor(page);
+  await openEditor(page, OFFLINE_EDITOR);
   const original = await offlineIds(page);
   await openPane(page, "General");
 

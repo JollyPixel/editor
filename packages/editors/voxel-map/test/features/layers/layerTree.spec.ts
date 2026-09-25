@@ -13,7 +13,6 @@ import type { TreeNode } from "@jolly-pixel/ui";
 import {
   layerRefOf,
   layerRowId,
-  layerSelectionOf,
   layerTreeNodes,
   withLayerBadges,
   type LayerRef
@@ -42,14 +41,6 @@ describe("layer tree references", () => {
     for (const ref of refs) {
       assert.deepStrictEqual(layerRefOf(layerRowId(ref)), ref);
     }
-  });
-
-  test("converts a tree reference to editor selection", () => {
-    assert.deepStrictEqual(layerSelectionOf(refs[2]), {
-      kind: "object",
-      layerName: "Triggers/Inside",
-      objectId: "spawn"
-    });
   });
 });
 

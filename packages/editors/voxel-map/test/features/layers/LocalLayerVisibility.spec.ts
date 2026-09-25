@@ -87,6 +87,18 @@ describe("LocalLayerVisibility", () => {
 
     assert.ok(clone);
     assert.strictEqual(visibility.resolve(`voxel:${clone.name}`, true), false);
+    assert.deepStrictEqual(
+      [...visibility.keys],
+      ["voxel:Ground", `voxel:${clone.name}`]
+    );
+  });
+
+  test("gives a cloned layer no override when its source has none", () => {
+    const { world, visibility } = setup();
+
+    world.cloneLayer("Ground");
+
+    assert.deepStrictEqual([...visibility.keys], []);
   });
 
   test("forgets the override of a removed or merged layer", () => {
@@ -124,6 +136,10 @@ describe("LocalLayerVisibility", () => {
     world.objectLayers.moveObject("Triggers", object.id, "Spawns");
 
     assert.deepStrictEqual([...visibility.keys], [`obj:Spawns/${object.id}`]);
+    assert.strictEqual(
+      visibility.resolve(`obj:Spawns/${object.id}`, true),
+      false
+    );
   });
 
   test("forgets a removed object", () => {

@@ -4,6 +4,7 @@ import type {
   Page
 } from "@playwright/test";
 import {
+  boxOf,
   buttonGroup,
   dialog,
   selectField,
@@ -114,10 +115,7 @@ test("a new voxel layer is listed and selected", async({ page }) => {
 test("clicking the empty tree area keeps the layer selected", async({ page }) => {
   const manager = page.locator("layer-manager");
   const row = layerRow(page, "Ground");
-  const box = await manager.boundingBox();
-  if (box === null) {
-    throw new Error("The layer manager is not rendered");
-  }
+  const box = await boxOf(manager);
 
   await row.click();
   await manager.click({ position: { x: 8, y: box.height - 8 } });
@@ -204,6 +202,8 @@ test("hiding an object layer or an object stays local to the page", async({ page
 
   await expect(page.getByRole("treeitem", { name: /^Player/ })
     .getByRole("button", { name: "Show" })).toBeVisible();
+  await expect(layerRow(page, "Spawns")
+    .getByRole("button", { name: "Hide" })).toHaveCount(0);
   expect(await objectVisibility(page)).toEqual([
     { name: "Spawns", visible: true, objects: [true] }
   ]);

@@ -4,6 +4,10 @@ import type {
   Page
 } from "@playwright/test";
 import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
+import {
+  centerOf,
+  dragTo
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -70,19 +74,11 @@ async function dragPaneToTab(
   pane: Locator,
   tab: string
 ): Promise<void> {
-  const source = await pane.locator(".header").first().boundingBox();
-  const target = await page.getByRole("tab", { name: tab }).boundingBox();
-  await page.mouse.move(
-    source!.x + (source!.width / 2),
-    source!.y + (source!.height / 2)
+  await dragTo(
+    page,
+    pane.locator(".header").first(),
+    await centerOf(page.getByRole("tab", { name: tab }))
   );
-  await page.mouse.down();
-  await page.mouse.move(
-    target!.x + (target!.width / 2),
-    target!.y + (target!.height / 2),
-    { steps: 16 }
-  );
-  await page.mouse.up();
 }
 
 function leftGroups(
@@ -102,16 +98,11 @@ async function dragTabToDock(
   tab: string,
   dock: string
 ): Promise<void> {
-  const source = await page.getByRole("tab", { name: tab }).boundingBox();
-  const target = await page.locator(`jolly-dock[key='${dock}']`).boundingBox();
-  await page.mouse.move(source!.x + (source!.width / 2), source!.y + (source!.height / 2));
-  await page.mouse.down();
-  await page.mouse.move(
-    target!.x + (target!.width / 2),
-    target!.y + (target!.height / 2),
-    { steps: 16 }
+  await dragTo(
+    page,
+    page.getByRole("tab", { name: tab }),
+    await centerOf(page.locator(`jolly-dock[key='${dock}']`))
   );
-  await page.mouse.up();
 }
 
 test("the texture editor follows the shown tab while Blocks and Paint share a group", async({ page }) => {

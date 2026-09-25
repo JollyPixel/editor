@@ -22,10 +22,6 @@ import {
 // CONSTANTS
 const kAccepts = "voxel-map";
 
-Object.assign(globalThis, {
-  localStorage: window.localStorage
-});
-
 function sessionArchive(
   report: ImportReport,
   canImport = true

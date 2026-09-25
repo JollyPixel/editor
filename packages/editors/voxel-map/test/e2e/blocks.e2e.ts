@@ -2,10 +2,8 @@
 import type { Page } from "@playwright/test";
 import {
   buttonGroup,
-  dialog,
   dialogTitle,
   selectField,
-  textField,
   titledDialog
 } from "@jolly-pixel/e2e";
 
@@ -17,7 +15,9 @@ import {
 import { openPane } from "./support/panels.ts";
 import { seedVoxels } from "./support/scene.ts";
 import {
+  blockTileCenter,
   clickTexel,
+  createBlankTileset,
   setTextureMode,
   texturePanel,
   textureState
@@ -59,16 +59,7 @@ async function eraseBlockTile(
 ): Promise<void> {
   await openPane(page, "Paint");
   const panel = texturePanel(page);
-  const texel = await page.evaluate((id) => {
-    const { engine } = window.voxelMapEditor!.workspace;
-    const texture = engine.blockRegistry.get(id)!.defaultTexture!;
-    const tileSize = engine.tilesets.definitions()[0].tileSize;
-
-    return {
-      x: (texture.col * tileSize) + Math.floor(tileSize / 2),
-      y: (texture.row * tileSize) + Math.floor(tileSize / 2)
-    };
-  }, blockId);
+  const texel = await blockTileCenter(page, blockId);
 
   await setTextureMode(panel, "Erase");
   await clickTexel(panel, texel);
@@ -154,28 +145,22 @@ test("double-clicking a block edits it in place", async({ page }) => {
   expect((await blockNames(page))[0]).toBe("Bedrock");
 });
 
-test("an opaque block hides the transparency section", async({ page }) => {
-  const [first] = await blockNames(page);
-  const library = page.getByRole("listbox", { name: "Blocks" });
-
-  await library.getByRole("option", { name: first, exact: true }).dblclick();
-  const editor = titledDialog(page, first);
-
-  await expect(editor.getByText("Transparency")).toBeHidden();
-  await expect(buttonGroup(editor, "Alpha")).toBeHidden();
-});
-
 test("a transparent block edits its alpha mode and its sides", async({ page }) => {
-  await eraseBlockTile(page, 1);
-  await expect.poll(() => blockSurface(page, 1))
-    .toEqual({ alphaMode: "blend", side: undefined });
-
-  await openPane(page, "Blocks");
   const [first] = await blockNames(page);
   const library = page.getByRole("listbox", { name: "Blocks" });
   await library.getByRole("option", { name: first, exact: true }).dblclick();
   const editor = titledDialog(page, first);
   const alpha = buttonGroup(editor, "Alpha");
+  await expect(editor.getByText("Transparency")).toBeHidden();
+  await expect(alpha).toBeHidden();
+  await editor.getByRole("button", { name: "Close" }).click();
+
+  await eraseBlockTile(page, 1);
+  await expect.poll(() => blockSurface(page, 1))
+    .toEqual({ alphaMode: "blend", side: undefined });
+
+  await openPane(page, "Blocks");
+  await library.getByRole("option", { name: first, exact: true }).dblclick();
 
   await expect(editor.getByText("Transparency")).toBeVisible();
   await expect(alpha.getByRole("radio", { name: "Blended" }))
@@ -205,13 +190,7 @@ test("a lone tileset leaves the tileset field disabled", async({ page }) => {
 
 test("moving a block to another tileset shows that tileset texture", async({ page }) => {
   await page.getByRole("button", { name: "Add tileset", exact: true }).click();
-  const form = dialog(page, "Add tileset");
-  await buttonGroup(form, "Source")
-    .getByRole("radio", { name: "New", exact: true })
-    .click();
-  await textField(form, "Name").fill("stone");
-  await form.getByRole("button", { name: "Create" }).click();
-  await expect(form).toBeHidden();
+  await createBlankTileset(page, "stone");
 
   const stoneId = await page.evaluate(() => window.voxelMapEditor!.workspace
     .state.tilesets.entries
@@ -225,7 +204,9 @@ test("moving a block to another tileset shows that tileset texture", async({ pag
   await expect.poll(async() => (await textureState(panel)).activeTextureId)
     .not.toBe(stoneId);
 
-  await selectField(titledDialog(page, first), "Tileset")
+  const editor = titledDialog(page, first);
+  await expect(editor.locator("jolly-select[disabled]")).toHaveCount(0);
+  await selectField(editor, "Tileset")
     .selectOption({ label: "stone" });
 
   await expect.poll(() => textureState(panel)).toMatchObject({

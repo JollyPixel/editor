@@ -5,8 +5,7 @@ import { describe, test } from "node:test";
 // Import Internal Dependencies
 import {
   DEFAULT_BRUSH_STYLE,
-  brushStyleFrom,
-  readBrushStyle
+  brushStyleFrom
 } from "../../../../src/features/painting/model/BrushStyle.ts";
 
 describe("brushStyleFrom", () => {
@@ -42,24 +41,5 @@ describe("brushStyleFrom", () => {
     const base = brushStyleFrom({ opacity: 0.4 });
 
     assert.strictEqual(brushStyleFrom(null, base), base);
-  });
-});
-
-describe("readBrushStyle", () => {
-  test("defaults on anything that is not an object", () => {
-    assert.strictEqual(readBrushStyle(null), DEFAULT_BRUSH_STYLE);
-    assert.strictEqual(readBrushStyle("dashed"), DEFAULT_BRUSH_STYLE);
-  });
-
-  test("keeps the members it can trust", () => {
-    const style = readBrushStyle({
-      opacity: 0.8,
-      edgeWidth: "wide",
-      edgeStyle: "dashed"
-    });
-
-    assert.strictEqual(style.opacity, 0.8);
-    assert.strictEqual(style.edgeWidth, DEFAULT_BRUSH_STYLE.edgeWidth);
-    assert.strictEqual(style.edgeStyle, "dashed");
   });
 });

@@ -51,19 +51,6 @@ export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
     return this.#stats;
   }
 
-  countOf(
-    blockId: number
-  ): number {
-    return this.#stats.blocks.get(blockId) ?? 0;
-  }
-
-  voxelsIn(
-    layerName: string
-  ): number {
-    return this.#stats.layers
-      .find((layer) => layer.layerName === layerName)?.voxels ?? 0;
-  }
-
   usageOf(
     blockId: number
   ): VoxelBlockUsage {
