@@ -7,9 +7,9 @@ Collision is disabled unless `VoxelEngineOptions.collider` supplies a factory.
 
 ```ts
 interface VoxelChunkCollision {
-  chunk: VoxelChunk;
+  origin: VoxelCoord;
+  chunks: readonly VoxelChunk[];
   geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
-  layerPosition: VoxelCoord;
 }
 
 interface VoxelCollider {
@@ -35,12 +35,18 @@ type VoxelColliderFactory = (
 `removeChunk()` is a no-op for an unknown key. Implementations own their physics
 handles and release all remaining resources from `dispose()`.
 
-`rebuildChunk()` runs whenever the view meshes a chunk, including a chunk that
-draws no face; the map is then empty. The map follows renderer draw groups,
-keyed by `ChunkGeometryKey` (`tilesetId` and `surface`). Vertex positions are relative to
-the chunk origin (`chunk` coordinates × `chunk.size` + `layerPosition`),
-and each geometry owns its index attribute while sharing CPU index storage.
-Respect the geometry's draw range when reading indices.
+`rebuildChunk()` runs whenever the view meshes a key, including one that
+draws no face; the map is then empty. A key covers one chunk cell: `chunks`
+holds the layer chunks drawn there, highest compositing priority first, and
+every one of them starts at the world-space `origin`. Layers at opacity `1`
+on the chunk grid share a key; a faded layer or one off the chunk grid gets a
+key of its own with a single chunk. Voxels hidden by a higher layer stay in
+their chunk, so a collider sees them too.
+
+The map follows renderer draw groups, keyed by `ChunkGeometryKey` (`tilesetId`
+and `surface`). Vertex positions are relative to `origin`, and each geometry
+owns its index attribute while sharing CPU index storage. Respect the
+geometry's draw range when reading indices.
 
 ## Geometry merging
 

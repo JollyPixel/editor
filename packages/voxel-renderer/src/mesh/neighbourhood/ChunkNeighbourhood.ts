@@ -30,7 +30,6 @@ import {
 export interface ChunkNeighbourhoodOptions {
   world: VoxelWorld;
   variants: BlockVariantCache;
-  layer: VoxelLayer;
   minWx: number;
   minWy: number;
   minWz: number;
@@ -46,12 +45,13 @@ export interface ChunkNeighbourhoodOptions {
  */
 export class ChunkNeighbourhood {
   readonly layers: readonly LayerChunkCache[];
-  readonly selfIndex: number;
 
   #variants: BlockVariantCache;
   #layerCount: number;
-  #selfOpaque: boolean;
-  #self: LayerChunkCache | null;
+  #selfLayer: VoxelLayer | null = null;
+  #selfIndex = -1;
+  #selfOpaque = true;
+  #self: LayerChunkCache | null = null;
 
   constructor(
     options: ChunkNeighbourhoodOptions
@@ -59,7 +59,6 @@ export class ChunkNeighbourhood {
     const {
       world,
       variants,
-      layer,
       minWx,
       minWy,
       minWz,
@@ -87,14 +86,23 @@ export class ChunkNeighbourhood {
     }
 
     this.layers = layers;
-    this.selfIndex = layers.findIndex(
-      (cache) => cache.layer === layer
-    );
-
     this.#variants = variants;
     this.#layerCount = layers.length;
+  }
+
+  get self(): VoxelLayer | null {
+    return this.#selfLayer;
+  }
+
+  set self(
+    layer: VoxelLayer
+  ) {
+    this.#selfLayer = layer;
+    this.#selfIndex = this.layers.findIndex(
+      (cache) => cache.layer === layer
+    );
     this.#selfOpaque = layer.opacity >= 1;
-    this.#self = layers[this.selfIndex] ?? null;
+    this.#self = this.layers[this.#selfIndex] ?? null;
   }
 
   winsCompositing(
@@ -103,7 +111,7 @@ export class ChunkNeighbourhood {
     wz: number
   ): boolean {
     const layers = this.layers;
-    const selfIndex = this.selfIndex;
+    const selfIndex = this.#selfIndex;
 
     for (let i = 0; i < this.#layerCount; i++) {
       if (i === selfIndex) {

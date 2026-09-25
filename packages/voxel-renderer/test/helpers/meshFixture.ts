@@ -115,7 +115,7 @@ export function buildChunk(
   const { layer, builder } = fixture;
   const chunk = layer.getChunk(...chunkCoords);
 
-  return chunk ? builder.buildChunkGeometries(chunk, layer) : new Map();
+  return chunk ? builder.buildChunkGeometries([{ layer, chunk }]) : new Map();
 }
 
 export function countVertices(
@@ -136,7 +136,7 @@ export function countLayerVertices(
   const chunk = layer.getChunk(0, 0, 0);
 
   return chunk
-    ? countVertices(fixture.builder.buildChunkGeometries(chunk, layer))
+    ? countVertices(fixture.builder.buildChunkGeometries([{ layer, chunk }]))
     : 0;
 }
 

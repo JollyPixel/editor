@@ -5,23 +5,30 @@ import * as THREE from "three";
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
 import type { VoxelInspector } from "../inspector/index.ts";
 import type { VoxelMeshBuilder } from "../mesh/index.ts";
-import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
+import type { IterableLayerChunk } from "../world/VoxelWorld.ts";
+import type { VoxelCoord } from "../world/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
 import type { ChunkMaterialCache } from "./ChunkMaterialCache.ts";
+import type {
+  ChunkMeshLayout,
+  ChunkMeshTarget
+} from "./ChunkMeshLayout.ts";
 
 // CONSTANTS
 const kShaderOnlyAttributes = ["tileRegion", "tileRepeat"];
 
 export interface ChunkMeshEntry {
-  layer: VoxelLayer;
-  chunk: VoxelChunk;
+  target: ChunkMeshTarget;
+  origin: VoxelCoord;
+  members: readonly IterableLayerChunk[];
   meshes: THREE.Mesh[];
   visible: boolean;
 }
 
 export interface ChunkMeshStoreOptions {
   root: THREE.Group;
+  layout: ChunkMeshLayout;
   meshBuilder: VoxelMeshBuilder;
   materials: ChunkMaterialCache;
   inspector: VoxelInspector;
@@ -41,20 +48,15 @@ export interface ChunkMeshStoreOptions {
   receiveShadow?: boolean;
 }
 
-export interface ChunkMeshRemoveOptions {
-  /**
-   * @default true
-   */
-  collider?: boolean;
-}
-
 /**
  * Owns built chunk entries, inspector registrations, and collider registrations.
  * Materials belong to `ChunkMaterialCache` and are not disposed here.
  */
 export class ChunkMeshStore {
   #entries = new Map<string, ChunkMeshEntry>();
+  #placements = new Map<VoxelChunk, string>();
   #root: THREE.Group;
+  #layout: ChunkMeshLayout;
   #meshBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
   #inspector: VoxelInspector;
@@ -69,6 +71,7 @@ export class ChunkMeshStore {
   ) {
     const {
       root,
+      layout,
       meshBuilder,
       materials,
       inspector,
@@ -80,6 +83,7 @@ export class ChunkMeshStore {
     } = options;
 
     this.#root = root;
+    this.#layout = layout;
     this.#meshBuilder = meshBuilder;
     this.#materials = materials;
     this.#inspector = inspector;
@@ -120,31 +124,37 @@ export class ChunkMeshStore {
     }
   }
 
-  rebuild(
-    layer: VoxelLayer,
+  targetContaining(
     chunk: VoxelChunk
+  ): ChunkMeshTarget | undefined {
+    const key = this.#placements.get(chunk);
+
+    return key === undefined ? undefined : this.#entries.get(key)?.target;
+  }
+
+  rebuild(
+    target: ChunkMeshTarget
   ): void {
-    const key = chunkKey(layer, chunk);
-    this.#logger.debug(
-      `Rebuilding chunk '${key}' with layer name '${layer.name}'`
-    );
+    const { key } = target;
+    const members = this.#layout.membersOf(target);
+    if (members.length === 0) {
+      this.remove(key);
 
-    this.remove(layer, chunk);
+      return;
+    }
 
-    const geometries = this.#meshBuilder.buildChunkGeometries(
-      chunk,
-      layer
-    );
-    const origin = {
-      x: (chunk.cx * chunk.size) + layer.position.x,
-      y: (chunk.cy * chunk.size) + layer.position.y,
-      z: (chunk.cz * chunk.size) + layer.position.z
-    };
+    this.#logger.debug(`Rebuilding chunk '${key}'`);
+    this.#discard(key);
+
+    const geometries = this.#meshBuilder.buildChunkGeometries(members);
+    const [first] = members;
+    const origin = this.#layout.originOf(first.layer, first.chunk);
+    const opacity = target.layer?.opacity ?? 1;
     const meshes: THREE.Mesh[] = [];
     for (const [geometryKey, geometry] of geometries) {
       const mesh = new THREE.Mesh(
         geometry,
-        this.#materials.resolve(geometryKey, layer.opacity)
+        this.#materials.resolve(geometryKey, opacity)
       );
       mesh.name = `voxel_chunk_${key}:${geometryKey}`;
       mesh.position.set(origin.x, origin.y, origin.z);
@@ -161,57 +171,58 @@ export class ChunkMeshStore {
     }
 
     this.#entries.set(key, {
-      layer,
-      chunk,
+      target,
+      origin,
+      members,
       meshes,
       visible: true
     });
+    for (const { chunk } of members) {
+      this.#placements.set(chunk, key);
+    }
     this.#inspector.registerChunk(
       key,
       meshes,
       this.#meshBuilder.stats,
       {
         origin,
-        size: chunk.size
+        size: first.chunk.size
       }
     );
 
     if (this.#collider) {
-      const layerPosition = layer.position;
       this.#logger.debug(
-        `Rebuilding collision for chunk '${key}' with layer name '${layer.name}'`,
-        { position: layerPosition }
+        `Rebuilding collision for chunk '${key}'`,
+        { origin }
       );
 
       this.#collider.rebuildChunk(key, {
-        chunk,
-        geometries,
-        layerPosition
+        origin,
+        chunks: members.map(({ chunk }) => chunk),
+        geometries
       });
     }
   }
 
   remove(
-    layer: VoxelLayer,
-    chunk: VoxelChunk,
-    options: ChunkMeshRemoveOptions = {}
+    key: string
   ): void {
-    const { collider = true } = options;
-    const key = chunkKey(layer, chunk);
-    this.#logger.debug(
-      `Removing chunk '${key}' with layer name '${layer.name}'`
-    );
+    this.#logger.debug(`Removing chunk '${key}'`);
 
+    this.#discard(key);
+    this.#collider?.removeChunk(key);
+  }
+
+  unload(
+    key: string
+  ): void {
     this.#inspector.unregisterChunk(key);
 
     const entry = this.#entries.get(key);
     if (entry) {
       this.#disposeMeshes(entry);
-      this.#entries.delete(key);
-    }
-
-    if (collider) {
-      this.#collider?.removeChunk(key);
+      entry.meshes = [];
+      entry.visible = false;
     }
   }
 
@@ -238,11 +249,31 @@ export class ChunkMeshStore {
       this.#disposeMeshes(entry);
     }
     this.#entries.clear();
+    this.#placements.clear();
   }
 
   * #meshes(): IterableIterator<THREE.Mesh> {
     for (const entry of this.#entries.values()) {
       yield* entry.meshes;
+    }
+  }
+
+  #discard(
+    key: string
+  ): void {
+    this.#inspector.unregisterChunk(key);
+
+    const entry = this.#entries.get(key);
+    if (!entry) {
+      return;
+    }
+
+    this.#disposeMeshes(entry);
+    this.#entries.delete(key);
+    for (const { chunk } of entry.members) {
+      if (this.#placements.get(chunk) === key) {
+        this.#placements.delete(chunk);
+      }
     }
   }
 
@@ -273,11 +304,4 @@ function releaseShaderAttributes(
     }
   }
   this.onAfterRender = THREE.Object3D.prototype.onAfterRender;
-}
-
-function chunkKey(
-  layer: VoxelLayer,
-  chunk: VoxelChunk
-): string {
-  return `${layer.id}:${chunk.toString()}`;
 }

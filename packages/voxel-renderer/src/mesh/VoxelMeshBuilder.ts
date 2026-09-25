@@ -2,9 +2,10 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import type { VoxelWorld } from "../world/VoxelWorld.ts";
-import type { VoxelChunk } from "../world/VoxelChunk.ts";
-import type { VoxelLayer } from "../world/VoxelLayer.ts";
+import type {
+  IterableLayerChunk,
+  VoxelWorld
+} from "../world/VoxelWorld.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
@@ -117,19 +118,20 @@ export class VoxelMeshBuilder {
   }
 
   buildChunkGeometries(
-    chunk: VoxelChunk,
-    layer: VoxelLayer
+    members: readonly IterableLayerChunk[]
   ): Map<ChunkGeometryKey, THREE.BufferGeometry> {
     const { stats } = this;
     stats.reset();
 
-    if (chunk.voxelCount === 0) {
+    const drawn = members.filter(({ chunk }) => chunk.voxelCount > 0);
+    if (drawn.length === 0) {
       return new Map();
     }
     const startedAt = performance.now();
     this.#variants.refresh();
 
     const chunkSize = this.#world.chunkSize;
+    const [{ layer, chunk }] = drawn;
     const worldOriginX = (chunk.cx * chunkSize) + layer.position.x;
     const worldOriginY = (chunk.cy * chunkSize) + layer.position.y;
     const worldOriginZ = (chunk.cz * chunkSize) + layer.position.z;
@@ -137,7 +139,6 @@ export class VoxelMeshBuilder {
     const neighbourhood = new ChunkNeighbourhood({
       world: this.#world,
       variants: this.#variants,
-      layer,
       minWx: worldOriginX - 1,
       minWy: worldOriginY - 1,
       minWz: worldOriginZ - 1,
@@ -147,18 +148,21 @@ export class VoxelMeshBuilder {
     this.#origin = [worldOriginX, worldOriginY, worldOriginZ];
     this.#resetBuffers();
 
-    const pass: MeshPassOptions = {
-      chunk,
-      neighbourhood,
-      worldOriginX,
-      worldOriginY,
-      worldOriginZ,
-      stats,
-      bufferFor: this.#bufferFor,
-      ambientOcclusion: this.ambientOcclusion
-    };
     const mesher = this.#greedy ? this.#greedyMesher : this.#naiveMesher;
-    mesher.mesh(pass);
+    for (const member of drawn) {
+      neighbourhood.self = member.layer;
+      const pass: MeshPassOptions = {
+        chunk: member.chunk,
+        neighbourhood,
+        worldOriginX,
+        worldOriginY,
+        worldOriginZ,
+        stats,
+        bufferFor: this.#bufferFor,
+        ambientOcclusion: this.ambientOcclusion
+      };
+      mesher.mesh(pass);
+    }
 
     const geometries = this.#collectGeometries();
     stats.buildTimeMs = performance.now() - startedAt;

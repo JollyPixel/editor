@@ -25,11 +25,12 @@ class RapierVoxelCollider implements VoxelCollider {
 }
 ```
 
-The implementation creates one fixed rigid body per chunk, placed at the chunk
-origin. Full cubes are merged into cuboids, other `"box"` shapes such as slabs
-get a cuboid of their own bounds, and `"trimesh"` shapes share one triangle
-mesh built from their shape faces. Removing a chunk removes that body and its
-attached colliders.
+The implementation creates one fixed rigid body per key, placed at the
+collision `origin`, from the voxels of every chunk in `chunks`. Full cubes are
+merged into cuboids, a cell filled in several layers counting once, other
+`"box"` shapes such as slabs get a cuboid of their own bounds, and `"trimesh"`
+shapes share one triangle mesh built from their shape faces. Removing a key
+removes that body and its attached colliders.
 
 `RapierAPI`, `RapierWorld`, and the other Rapier types are structural interfaces
 for the subset used by this package. Voxel-renderer never imports the Rapier

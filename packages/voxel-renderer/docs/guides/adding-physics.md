@@ -29,8 +29,9 @@ const engine = new VoxelEngine({
 ```
 
 The factory runs once after the block and shape registries have been created.
-Chunk colliders are rebuilt with chunk meshes and removed when a chunk becomes
-empty, its layer is hidden, or the engine is disposed.
+Chunk colliders are rebuilt with chunk meshes, one per chunk cell shared by the
+layers drawn there, and removed when no layer draws in the cell any more, the
+layers are hidden, or the engine is disposed.
 
 Step the Rapier world from the application's fixed update:
 

@@ -112,7 +112,7 @@ function meshAll(
   let bytesPerVertex = 0;
 
   for (const { layer, chunk } of engine.world.getAllChunks()) {
-    const geometries = builder.buildChunkGeometries(chunk, layer);
+    const geometries = builder.buildChunkGeometries([{ layer, chunk }]);
     if (geometries === null) {
       continue;
     }

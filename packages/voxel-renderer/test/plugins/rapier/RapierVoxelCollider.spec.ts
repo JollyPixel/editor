@@ -135,11 +135,15 @@ function makeChunk(
 }
 
 function collisionOf(
-  chunk: VoxelChunk,
+  chunks: VoxelChunk | VoxelChunk[],
   geometries: VoxelChunkCollision["geometries"] = kNoGeometries,
-  layerPosition = { x: 0, y: 0, z: 0 }
+  origin = { x: 0, y: 0, z: 0 }
 ): VoxelChunkCollision {
-  return { chunk, geometries, layerPosition };
+  return {
+    origin,
+    chunks: Array.isArray(chunks) ? chunks : [chunks],
+    geometries
+  };
 }
 
 function makeTriangle(): THREE.BufferGeometry {
@@ -263,16 +267,39 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
     assert.deepEqual([desc.hx, desc.hy, desc.hz], [0.5, 0.5, 0.5]);
   });
 
-  it("places the body at the chunk origin plus the layer position", () => {
+  it("places the body at the collision origin", () => {
     const { collider, rapier } = makeCollider([makeBlockDef(1, "cube")]);
 
     collider.rebuildChunk(
       "a",
-      collisionOf(makeChunk([[0, 0, 0]], 4, [2, 0, 1]), kNoGeometries, { x: 8, y: 0, z: 0 })
+      collisionOf(makeChunk([[0, 0, 0]], 4, [2, 0, 1]), kNoGeometries, { x: 16, y: 0, z: 4 })
     );
 
     assert.equal(rapier.bodyDescs.length, 1);
     assert.deepEqual(rapier.bodyDescs[0].translation, { x: 16, y: 0, z: 4 });
+  });
+
+  it("builds one body from the solids of every layer chunk", () => {
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk("a", collisionOf([
+      makeChunk([[0, 0, 0], [1, 0, 0]]),
+      makeChunk([[1, 0, 0], [2, 0, 0]])
+    ]));
+
+    assert.equal(world.rigidBodies.length, 1);
+    assert.deepEqual(
+      world.colliderCalls.map(({ desc }) => [desc.hx, desc.translation]),
+      [[1.5, { x: 1.5, y: 0.5, z: 0.5 }]]
+    );
+  });
+
+  it("creates no body without chunks", () => {
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk("a", collisionOf([]));
+
+    assert.equal(world.rigidBodies.length, 0);
   });
 
   it("builds a single trimesh when a shape hints trimesh", () => {

@@ -13,11 +13,24 @@ that want a single object.
 See the [`VoxelView` reference](../api/core/VoxelView.md) for lifecycle methods
 and configuration.
 
+## Layers sharing chunk meshes
+
+Layers composite into shared meshes. Every visible layer at opacity `1`
+whose position is a multiple of the chunk size draws into one set of meshes
+per chunk cell, so stacking layers does not multiply chunks, geometries, or
+draw calls. Faces are still culled and composited per layer, as described in
+the [world model](./world-model.md#layer-compositing), and greedy merging
+stays within a layer.
+
+A layer drawn with opacity below `1`, or moved off the chunk grid, keeps a set
+of meshes per layer chunk. Changing its opacity or position moves its voxels
+between the shared cell meshes and its own.
+
 ## Chunk geometry layout
 
-Each chunk has one `THREE.Mesh` per tileset and resolved surface policy,
+Each chunk cell has one `THREE.Mesh` per tileset and resolved surface policy,
 parented to the `"VoxelView:chunks"` group of `VoxelView.root` and positioned
-at the chunk origin. A `ChunkGeometryKey` pairs the tileset ID with the
+at the cell origin. A `ChunkGeometryKey` pairs the tileset ID with the
 surface: alpha mode, sides, mask cutoff and material group. Plain opaque/front
 geometry is named after the tileset ID; other surfaces append a `:surface=`
 suffix. Tileset IDs must not contain `:surface=`.
