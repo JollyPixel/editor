@@ -98,7 +98,7 @@ describe("applyLayerReparent — objects", () => {
 
   test("carries the object itself across, not a fresh one", () => {
     const world = makeWorld();
-    const original = world.getObjectLayer("Triggers")?.objects[0];
+    const original = world.objectLayers.get("Triggers")?.objects[0];
 
     applyLayerReparent(world, {
       movedIds: [
@@ -112,7 +112,7 @@ describe("applyLayerReparent — objects", () => {
       where: "inside"
     });
 
-    assert.equal(world.getObjectLayer("Spawns")?.objects[0], original);
+    assert.equal(world.objectLayers.get("Spawns")?.objects[0], original);
   });
 
   test("emits one object-moved command for the whole move", () => {
@@ -202,9 +202,9 @@ function makeWorld(): VoxelWorld {
   world.addLayer("A");
   world.addLayer("B");
   world.addLayer("C");
-  world.addObjectLayer("Triggers");
-  world.addObjectLayer("Spawns");
-  world.addObjectToLayer("Triggers", {
+  world.objectLayers.add("Triggers");
+  world.objectLayers.add("Spawns");
+  world.objectLayers.addObject("Triggers", {
     id: "obj_1",
     name: "Area",
     visible: true,
@@ -236,7 +236,7 @@ function objectIds(
   layerName: string
 ): string[] {
   return world
-    .getObjectLayer(layerName)
+    .objectLayers.get(layerName)
     ?.objects
     .map((object) => object.id) ?? [];
 }

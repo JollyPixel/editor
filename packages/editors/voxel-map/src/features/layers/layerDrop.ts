@@ -113,7 +113,7 @@ function moveObjectToLayer(
   moved: Extract<LayerRef, { kind: "object"; }>,
   targetLayerName: string
 ): boolean {
-  return world.moveObjectToLayer(
+  return world.objectLayers.moveObject(
     moved.layerName,
     moved.objectId,
     targetLayerName

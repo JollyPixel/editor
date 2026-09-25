@@ -56,7 +56,7 @@ function geometriesOf(
   fixture: MeshFixture,
   chunk: Vec3Tuple = [0, 0, 0]
 ): THREE.BufferGeometry[] {
-  return [...buildChunk(fixture, chunk)?.values() ?? []];
+  return [...buildChunk(fixture, chunk).values()];
 }
 
 function shadedVertices(

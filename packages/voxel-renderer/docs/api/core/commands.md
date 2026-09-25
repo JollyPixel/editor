@@ -61,7 +61,7 @@ function applyVoxelCommand(
   target: VoxelCommandTarget,
   command: VoxelCommand,
   logger?: VoxelLogger
-): boolean;
+): VoxelCommand | null;
 
 interface VoxelCommandTarget {
   readonly world: VoxelWorld;
@@ -74,19 +74,22 @@ interface VoxelCommandTarget {
 Routes a command to `world.apply()`, `applyBlockCommand()`,
 [`applyMaterialGroupCommand()`](../materials/MaterialGroup.md#commands) or
 [`applyTilesetCommand()`](../tilesets/tilesets.md#tileset-commands) and returns
-whether it changed anything. Layer commands always return `true`. It does not
-emit, rebuild meshes or rescale atlases; use it on a headless document such as
-a server-side state. `engine.apply()` wraps it with those side effects.
+the command as applied, or `null` when it changed nothing. It does not emit, rebuild meshes or rescale atlases; use it on
+a headless document such as a server-side state. `engine.apply()` wraps it
+with those side effects and broadcasts the returned command.
 
 ```ts
 function applyBlockCommand(
   registry: BlockRegistry,
-  command: VoxelBlockCommand
-): boolean;
+  command: VoxelBlockCommand,
+  defaultTilesetId: string | null
+): VoxelBlockCommand | null;
 ```
 
-Registers, unregisters or moves a block and returns whether the registry
-changed.
+Registers, unregisters or moves a block. A defined block gets
+`defaultTilesetId` in its texture references that name no tileset; a move
+comes back with the index the block landed on. Returns `null` when the
+registry did not change.
 
 ## Layer commands
 
@@ -99,7 +102,7 @@ engine forwards as local commands.
 | `"added"` | `{ options: VoxelLayerConfigurableOptions }` | |
 | `"removed"` | `{}` | |
 | `"updated"` | `{ options: Partial<VoxelLayerConfigurableOptions> }` | |
-| `"cloned"` | `{ options: PartialExcept<VoxelLayerOptions, "name"> }` | `layerName` is the source layer; `options.name` is the resolved clone name. |
+| `"cloned"` | `{ options: VoxelLayerCloneOptions }` | `layerName` is the source layer; `options.name` is the resolved clone name. |
 | `"merged"` | `{ targetLayerName: string }` | `layerName` is the source layer, which the merge removes. |
 | `"position-updated"` | `{ position: VoxelCoord }` or `{ delta: VoxelCoord }` | |
 | `"position-rebased"` | `{ position: VoxelCoord }` | |

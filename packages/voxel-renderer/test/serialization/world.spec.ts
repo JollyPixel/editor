@@ -46,7 +46,7 @@ function makeRichWorld(): VoxelWorld {
   const glass = world.addLayer("Glass", { compositing: "replace" });
   glass.visible = false;
   glass.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(4, 0));
-  world.addObjectLayer("Spawns");
+  world.objectLayers.add("Spawns");
 
   return world;
 }
@@ -217,6 +217,28 @@ describe("deserializeVoxelWorld", () => {
     assert.ok(layer !== undefined);
     assert.equal(layer.opacity, 1);
     assert.equal(layer.compositing, "composite");
+  });
+
+  it("stacks layers by their saved order and renumbers them densely", () => {
+    const world = new VoxelWorld(16);
+
+    deserializeVoxelWorld(
+      untrusted({
+        version: 1,
+        chunkSize: 16,
+        tilesets: [],
+        layers: [
+          { id: "top", name: "Top", visible: true, order: 7, voxels: {} },
+          { id: "ground", name: "Ground", visible: true, order: 2, voxels: {} }
+        ]
+      }),
+      world
+    );
+
+    assert.deepEqual(
+      world.getLayers().map(({ name, order }) => [name, order]),
+      [["Top", 1], ["Ground", 0]]
+    );
   });
 
   it("skips malformed coordinate keys", () => {

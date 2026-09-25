@@ -10,6 +10,14 @@ import {
   drawnIndices,
   mergeChunkGeometries
 } from "../../src/collision/index.ts";
+import { BlockSurface } from "../../src/blocks/index.ts";
+import { ChunkGeometryKey } from "../../src/mesh/index.ts";
+
+function key(
+  tilesetId: string
+): ChunkGeometryKey {
+  return new ChunkGeometryKey(tilesetId, new BlockSurface());
+}
 
 function makeGeometry(
   positions: number[],
@@ -42,7 +50,7 @@ describe("mergeChunkGeometries", () => {
   it("returns the input geometry unowned on the single-tileset fast path", () => {
     const geometry = makeTriangle();
 
-    const merged = mergeChunkGeometries(new Map([["atlas", geometry]]));
+    const merged = mergeChunkGeometries(new Map([[key("atlas"), geometry]]));
 
     assert.ok(merged);
     assert.equal(merged.geometry, geometry, "no copy should be allocated");
@@ -51,8 +59,8 @@ describe("mergeChunkGeometries", () => {
 
   it("concatenates positions and returns an owned geometry", () => {
     const merged = mergeChunkGeometries(new Map([
-      ["a", makeTriangle(0)],
-      ["b", makeTriangle(10)]
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
     ]));
 
     assert.ok(merged);
@@ -62,8 +70,8 @@ describe("mergeChunkGeometries", () => {
 
   it("offsets indices of subsequent geometries by the preceding vertex count", () => {
     const merged = mergeChunkGeometries(new Map([
-      ["a", makeTriangle(0)],
-      ["b", makeTriangle(10)]
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
     ]));
 
     assert.ok(merged);
@@ -84,8 +92,8 @@ describe("mergeChunkGeometries", () => {
     );
 
     const merged = mergeChunkGeometries(new Map([
-      ["a", first],
-      ["b", makeTriangle(10)]
+      [key("a"), first],
+      [key("b"), makeTriangle(10)]
     ]));
 
     assert.ok(merged);
@@ -100,8 +108,8 @@ describe("mergeChunkGeometries", () => {
     );
 
     const merged = mergeChunkGeometries(new Map([
-      ["a", makeTriangle(0)],
-      ["b", nonIndexed]
+      [key("a"), makeTriangle(0)],
+      [key("b"), nonIndexed]
     ]));
 
     assert.ok(merged);
@@ -121,8 +129,8 @@ describe("mergeChunkGeometries", () => {
     );
 
     const merged = mergeChunkGeometries(new Map([
-      ["a", nonIndexed],
-      ["b", other]
+      [key("a"), nonIndexed],
+      [key("b"), other]
     ]));
 
     assert.equal(merged, null);
@@ -132,8 +140,8 @@ describe("mergeChunkGeometries", () => {
 describe("mergeChunkGeometries — buffer types", () => {
   it("allocates typed arrays rather than boxed number arrays", () => {
     const merged = mergeChunkGeometries(new Map([
-      ["a", makeTriangle(0)],
-      ["b", makeTriangle(10)]
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
     ]));
 
     assert.ok(merged);
@@ -147,8 +155,8 @@ describe("mergeChunkGeometries — buffer types", () => {
 
   it("preserves every vertex of every source geometry", () => {
     const merged = mergeChunkGeometries(new Map([
-      ["a", makeTriangle(0)],
-      ["b", makeTriangle(10)]
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
     ]));
 
     assert.ok(merged);
@@ -167,7 +175,7 @@ describe("mergeChunkGeometries draw range", () => {
     a.setDrawRange(0, 3);
     b.setDrawRange(0, 3);
 
-    const merged = mergeChunkGeometries(new Map([["a", a], ["b", b]]));
+    const merged = mergeChunkGeometries(new Map([[key("a"), a], [key("b"), b]]));
 
     assert.deepEqual([...merged!.geometry.getIndex()!.array], [0, 1, 2, 3, 4, 5]);
   });

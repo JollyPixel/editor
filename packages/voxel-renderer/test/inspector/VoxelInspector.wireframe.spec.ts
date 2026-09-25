@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  chunkGroup,
   chunkMeshes,
   placeCube
 } from "../helpers/engine.ts";
@@ -41,11 +42,12 @@ describe("VoxelInspector - wireframe", () => {
     const engine = makeInspectorEngine();
 
     engine.inspector.mode = "wireframe";
-    assert.equal(chunkMeshes(engine)[0].visible, false);
+    assert.equal(chunkGroup(engine).visible, false);
+    assert.equal(chunkMeshes(engine)[0].visible, true);
     assert.equal(inspectorGroup(engine).children.length, 1);
 
     engine.inspector.mode = "off";
-    assert.equal(chunkMeshes(engine)[0].visible, true);
+    assert.equal(chunkGroup(engine).visible, true);
     assert.equal(findGroup(engine), undefined);
   });
 
@@ -57,9 +59,7 @@ describe("VoxelInspector - wireframe", () => {
     engine.tick(0);
 
     assert.equal(inspectorGroup(engine).children.length, 2);
-    for (const mesh of chunkMeshes(engine)) {
-      assert.equal(mesh.visible, false);
-    }
+    assert.equal(chunkGroup(engine).visible, false);
   });
 
   it("removes the wireframe of a chunk that is rebuilt", () => {

@@ -3,8 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { VoxelEngine } from "../src/VoxelEngine.ts";
-import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
+import type {
+  VoxelEngine,
+  VoxelEngineOptions
+} from "../src/VoxelEngine.ts";
 import {
   chunkCoordsOf,
   chunkMeshes,
@@ -51,7 +53,7 @@ describe("VoxelEngine - chunk rebuild orchestration", () => {
 
     engine.dispose();
 
-    assert.equal(engine.root.children.length, 0);
+    assert.equal(chunkMeshes(engine).length, 0);
   });
 
   it("flush() ignores the budget", () => {

@@ -8,7 +8,7 @@ Collision is disabled unless `VoxelEngineOptions.collider` supplies a factory.
 ```ts
 interface VoxelChunkCollision {
   chunk: VoxelChunk;
-  geometries: ReadonlyMap<string, THREE.BufferGeometry>;
+  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
   layerPosition: VoxelCoord;
 }
 
@@ -35,8 +35,9 @@ type VoxelColliderFactory = (
 `removeChunk()` is a no-op for an unknown key. Implementations own their physics
 handles and release all remaining resources from `dispose()`.
 
-The geometry map follows renderer draw groups and is split by tileset and
-cutout mode. Treat its string keys as opaque. Vertex positions are relative to
+`rebuildChunk()` runs whenever the view meshes a chunk, including a chunk that
+draws no face; the map is then empty. The map follows renderer draw groups,
+keyed by `ChunkGeometryKey` (`tilesetId` and `surface`). Vertex positions are relative to
 the chunk origin (`chunk` coordinates × `chunk.size` + `layerPosition`),
 and each geometry owns its index attribute while sharing CPU index storage.
 Respect the geometry's draw range when reading indices.
@@ -50,7 +51,7 @@ interface MergedChunkGeometry {
 }
 
 function mergeChunkGeometries(
-  geometries: ReadonlyMap<string, THREE.BufferGeometry>
+  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>
 ): MergedChunkGeometry | null;
 
 function drawnIndices(

@@ -8,9 +8,9 @@ import { makeObject, recordCommands } from "../helpers/fakes.ts";
 
 function makeWorld(): VoxelWorld {
   const world = new VoxelWorld(4);
-  world.addObjectLayer("From");
-  world.addObjectLayer("To");
-  world.addObjectToLayer("From", makeObject());
+  world.objectLayers.add("From");
+  world.objectLayers.add("To");
+  world.objectLayers.addObject("From", makeObject());
 
   return world;
 }
@@ -18,24 +18,24 @@ function makeWorld(): VoxelWorld {
 describe("VoxelWorld - object edits", () => {
   it("moves the object itself rather than a copy", () => {
     const world = makeWorld();
-    const before = world.getObjectLayer("From")!.objects[0];
+    const before = world.objectLayers.get("From")!.objects[0];
 
-    assert.equal(world.moveObjectToLayer("From", "obj1", "To"), true);
+    assert.equal(world.objectLayers.moveObject("From", "obj1", "To"), true);
 
-    assert.deepEqual(world.getObjectLayer("From")?.objects, []);
-    assert.equal(world.getObjectLayer("To")?.objects[0], before);
+    assert.deepEqual(world.objectLayers.get("From")?.objects, []);
+    assert.equal(world.objectLayers.get("To")?.objects[0], before);
   });
 
   it("moves nothing when a layer or the object is unknown", () => {
     const world = makeWorld();
     const commands = recordCommands(world);
 
-    assert.equal(world.moveObjectToLayer("NoSuch", "obj1", "To"), false);
-    assert.equal(world.moveObjectToLayer("From", "obj1", "NoSuch"), false);
-    assert.equal(world.moveObjectToLayer("From", "nope", "To"), false);
-    assert.equal(world.moveObjectToLayer("From", "obj1", "From"), false);
+    assert.equal(world.objectLayers.moveObject("NoSuch", "obj1", "To"), false);
+    assert.equal(world.objectLayers.moveObject("From", "obj1", "NoSuch"), false);
+    assert.equal(world.objectLayers.moveObject("From", "nope", "To"), false);
+    assert.equal(world.objectLayers.moveObject("From", "obj1", "From"), false);
 
-    assert.equal(world.getObjectLayer("From")?.objects.length, 1);
+    assert.equal(world.objectLayers.get("From")?.objects.length, 1);
     assert.deepEqual(commands, []);
   });
 
@@ -43,10 +43,31 @@ describe("VoxelWorld - object edits", () => {
     const world = makeWorld();
     const commands = recordCommands(world);
 
-    assert.equal(world.updateObjectInLayer("NoSuch", "obj1", { x: 5 }), false);
-    assert.equal(world.updateObjectInLayer("From", "nope", { x: 5 }), false);
+    assert.equal(world.objectLayers.updateObject("NoSuch", "obj1", { x: 5 }), false);
+    assert.equal(world.objectLayers.updateObject("From", "nope", { x: 5 }), false);
 
-    assert.equal(world.getObjectLayer("From")?.objects[0].x, 0);
+    assert.equal(world.objectLayers.get("From")?.objects[0].x, 0);
     assert.deepEqual(commands, []);
+  });
+});
+
+describe("VoxelWorld - object layers", () => {
+  it("never hands out an id that a restored object layer already holds", () => {
+    const world = new VoxelWorld(4);
+    world.objectLayers.add("Loaded").id = "obj_layer_1";
+
+    world.objectLayers.add("Spawns");
+    world.objectLayers.add("Triggers");
+
+    const ids = world.objectLayers.toArray().map((layer) => layer.id);
+    assert.equal(new Set(ids).size, 3);
+  });
+
+  it("empties with the world", () => {
+    const world = makeWorld();
+
+    world.clear();
+
+    assert.equal(world.objectLayers.size, 0);
   });
 });

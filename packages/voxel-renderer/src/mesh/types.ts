@@ -21,8 +21,8 @@ export interface MeshPassOptions {
 }
 
 /**
- * Emits chunk geometry into the pass buffers; true when it wrote a face.
+ * Emits chunk geometry into the pass buffers.
  */
 export interface Mesher {
-  mesh(options: MeshPassOptions): boolean;
+  mesh(pass: MeshPassOptions): void;
 }

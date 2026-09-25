@@ -9,6 +9,7 @@ import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MeshPassOptions } from "./types.ts";
+import type { ChunkGeometryKey } from "./ChunkGeometryKey.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { QuadIndex } from "./QuadIndex.ts";
@@ -118,12 +119,12 @@ export class VoxelMeshBuilder {
   buildChunkGeometries(
     chunk: VoxelChunk,
     layer: VoxelLayer
-  ): Map<string, THREE.BufferGeometry> | null {
+  ): Map<ChunkGeometryKey, THREE.BufferGeometry> {
     const { stats } = this;
     stats.reset();
 
     if (chunk.voxelCount === 0) {
-      return null;
+      return new Map();
     }
     const startedAt = performance.now();
     this.#variants.refresh();
@@ -157,9 +158,9 @@ export class VoxelMeshBuilder {
       ambientOcclusion: this.ambientOcclusion
     };
     const mesher = this.#greedy ? this.#greedyMesher : this.#naiveMesher;
-    const emitted = mesher.mesh(pass);
+    mesher.mesh(pass);
 
-    const geometries = emitted ? this.#collectGeometries() : null;
+    const geometries = this.#collectGeometries();
     stats.buildTimeMs = performance.now() - startedAt;
 
     return geometries;
@@ -171,8 +172,8 @@ export class VoxelMeshBuilder {
     }
   }
 
-  #collectGeometries(): Map<string, THREE.BufferGeometry> | null {
-    const result = new Map<string, THREE.BufferGeometry>();
+  #collectGeometries(): Map<ChunkGeometryKey, THREE.BufferGeometry> {
+    const result = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
     const { stats } = this;
 
     for (let slot = 0; slot < this.#buffers.length; slot++) {
@@ -186,13 +187,10 @@ export class VoxelMeshBuilder {
       stats.triangles += buffer.triangleCount;
       stats.geometries++;
       stats.bytesPerVertex = bytesPerVertex(geometry);
-      result.set(
-        this.#variants.geometryKeyAt(slot).toString(),
-        geometry
-      );
+      result.set(this.#variants.geometryKeyAt(slot), geometry);
     }
 
-    return result.size > 0 ? result : null;
+    return result;
   }
 }
 

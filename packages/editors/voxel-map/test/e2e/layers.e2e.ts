@@ -42,7 +42,7 @@ function objectLayers(
   page: Page
 ): Promise<Array<{ name: string; objects: string[]; }>> {
   return page.evaluate(() => window.voxelMapEditor!.workspace.engine.world
-    .getObjectLayers()
+    .objectLayers.toArray()
     .map((layer) => {
       return {
         name: layer.name,

@@ -7,7 +7,7 @@ import { VoxelEngine } from "../src/VoxelEngine.ts";
 import type {
   VoxelCommand,
   VoxelCommandOrigin
-} from "../src/commands.ts";
+} from "../src/commands/index.ts";
 import {
   chunkMeshes,
   makeEngine,
@@ -43,7 +43,7 @@ describe("VoxelEngine - construction", () => {
     const engine = new VoxelEngine({ layers: ["Ground"] });
 
     assert.ok(engine.world.getLayer("Ground"));
-    assert.equal(engine.root.children.length, 0);
+    assert.equal(chunkMeshes(engine).length, 0);
   });
 
   it("subscribes the onCommand option before any command is applied", () => {
@@ -87,7 +87,7 @@ describe("VoxelEngine - command origin", () => {
     {
       action: "reordered",
       layerName: "Ground",
-      metadata: { direction: "down" }
+      metadata: { direction: "up" }
     },
     blockDefinedCmd({ id: 4 })
   ];
@@ -102,6 +102,19 @@ describe("VoxelEngine - command origin", () => {
       assert.deepEqual(emissions, [{ action: command.action, origin: "remote" }]);
     });
   }
+
+  it("neither reports nor emits a remote layer command that changes nothing", () => {
+    const engine = makeEngine({ layers: ["Ground", "Top"] });
+    const emissions = recordEmissions(engine);
+
+    assert.equal(engine.apply({
+      action: "reordered",
+      layerName: "Ground",
+      metadata: { direction: "down" }
+    }, { origin: "remote" }), false);
+
+    assert.deepEqual(emissions, []);
+  });
 
   it("keeps tagging local mutations as local after a remote command", () => {
     const engine = makeEngine({ layers: ["Ground"] });

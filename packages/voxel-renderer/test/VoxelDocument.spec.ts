@@ -3,25 +3,21 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelDocument } from "../../src/document/VoxelDocument.ts";
+import { VoxelDocument } from "../src/VoxelDocument.ts";
 import type {
   VoxelCommand,
   VoxelCommandOrigin
-} from "../../src/commands.ts";
-import type {
-  VoxelInvalidation
-} from "../../src/document/VoxelDocument.types.ts";
-import { makeBlockDef } from "../helpers/blocks.ts";
-import { makeAtlasDef } from "../helpers/atlas.ts";
+} from "../src/commands/index.ts";
+import { makeBlockDef } from "./helpers/blocks.ts";
+import { makeAtlasDef } from "./helpers/atlas.ts";
 import {
   CHUNK_SIZE,
   CUBE_ID,
   LEAVES_ID
-} from "../helpers/ids.ts";
+} from "./helpers/ids.ts";
 
 type Trace =
   | { event: "command"; action: string; origin: VoxelCommandOrigin; }
-  | { event: "invalidated"; reason: VoxelInvalidation["reason"]; }
   | { event: "loaded"; };
 
 function makeDocument(
@@ -44,17 +40,13 @@ function trace(
     action: command.action,
     origin
   }));
-  document.on("invalidated", ({ reason }) => events.push({
-    event: "invalidated",
-    reason
-  }));
   document.on("loaded", () => events.push({ event: "loaded" }));
 
   return events;
 }
 
 describe("VoxelDocument - block definitions", () => {
-  it("invalidates before emitting, once for a whole batch", () => {
+  it("emits one command per definition of a batch", () => {
     const document = makeDocument();
     const events = trace(document);
 
@@ -64,7 +56,6 @@ describe("VoxelDocument - block definitions", () => {
     ]);
 
     assert.deepEqual(events, [
-      { event: "invalidated", reason: "block-defined" },
       { event: "command", action: "block-defined", origin: "local" },
       { event: "command", action: "block-defined", origin: "local" }
     ]);
@@ -130,14 +121,13 @@ describe("VoxelDocument.apply", () => {
     ]);
   });
 
-  it("invalidates on a tileset command and emits it afterwards", () => {
+  it("emits an applied tileset command", () => {
     const document = makeDocument();
     const events = trace(document);
 
     document.addTileset(makeAtlasDef({ id: "stone" }));
 
     assert.deepEqual(events, [
-      { event: "invalidated", reason: "tileset-added" },
       { event: "command", action: "tileset-added", origin: "local" }
     ]);
   });
@@ -152,7 +142,7 @@ describe("VoxelDocument.apply", () => {
 });
 
 describe("VoxelDocument - material groups", () => {
-  it("emits the normalized group without invalidating chunks", () => {
+  it("emits the normalized group", () => {
     const document = makeDocument();
     const emitted: VoxelCommand[] = [];
     document.on("command", (command) => emitted.push(command));
@@ -196,24 +186,6 @@ describe("VoxelDocument - material groups", () => {
       restored.materialGroups.toJSON(),
       document.materialGroups.toJSON()
     );
-  });
-});
-
-describe("VoxelDocument.registerTileset", () => {
-  it("invalidates without emitting a command", () => {
-    const document = makeDocument();
-    const events = trace(document);
-
-    assert.equal(document.registerTileset(makeAtlasDef({ id: "stone" })), true);
-    assert.deepEqual(events, [
-      { event: "invalidated", reason: "tileset-registered" }
-    ]);
-  });
-
-  it("reports a definition it already holds", () => {
-    const document = makeDocument();
-
-    assert.equal(document.registerTileset(makeAtlasDef()), false);
   });
 });
 

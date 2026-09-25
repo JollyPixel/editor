@@ -3,45 +3,29 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { BlockSurface } from "../../src/blocks/BlockSurface.ts";
 import { ChunkGeometryKey } from "../../src/mesh/index.ts";
 
 describe("ChunkGeometryKey", () => {
-  const kEncodings: [string, string, boolean][] = [
-    ["atlas", "atlas", false],
-    ["atlas:cutout", "atlas", true],
-    ["pack:atlas", "pack:atlas", false]
-  ];
+  it("encodes the default opaque front surface as the bare tileset id", () => {
+    const key = new ChunkGeometryKey("pack:atlas", new BlockSurface());
 
-  for (const [encoded, tilesetId, cutout] of kEncodings) {
-    it(`round-trips "${encoded}"`, () => {
-      const key = ChunkGeometryKey.parse(encoded);
-
-      assert.equal(key.tilesetId, tilesetId);
-      assert.equal(key.cutout, cutout);
-      assert.equal(String(key), encoded);
-      assert.equal(String(new ChunkGeometryKey(tilesetId, cutout)), encoded);
-    });
-  }
-
-  it("defaults to a frozen solid group", () => {
-    const key = new ChunkGeometryKey("atlas");
-
-    assert.equal(key.cutout, false);
+    assert.equal(String(key), "pack:atlas");
     assert.ok(Object.isFrozen(key));
   });
 
-  it("rejects a tileset id that would alias a cutout key", () => {
-    assert.throws(
-      () => new ChunkGeometryKey("atlas:cutout"),
-      RangeError
-    );
+  it("appends any other surface to the tileset id", () => {
+    const surface = new BlockSurface({ alphaMode: "blend" });
+    const key = new ChunkGeometryKey("atlas", surface);
+
+    assert.equal(String(key), `atlas:surface=${JSON.stringify(surface)}`);
+    assert.equal(key.surface, surface);
   });
 
-  it("compares by tileset and mode", () => {
-    const cutout = new ChunkGeometryKey("atlas", true);
-
-    assert.ok(cutout.equals(ChunkGeometryKey.parse("atlas:cutout")));
-    assert.equal(cutout.equals(new ChunkGeometryKey("atlas")), false);
-    assert.equal(cutout.equals(new ChunkGeometryKey("other", true)), false);
+  it("rejects a tileset id that would alias a surface key", () => {
+    assert.throws(
+      () => new ChunkGeometryKey("atlas:surface={}", new BlockSurface()),
+      RangeError
+    );
   });
 });

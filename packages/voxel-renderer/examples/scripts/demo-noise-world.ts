@@ -24,7 +24,6 @@ import {
 } from "../../src/index.ts";
 import { FreeFlyCamera } from "./components/FreeFlyCamera.ts";
 import {
-  TerrainBlock,
   generateTerrain,
   type TerrainStats
 } from "./utils/terrain.ts";
@@ -35,7 +34,6 @@ import {
 
 // CONSTANTS
 const kTerrainLayer = "Terrain";
-const kWaterLayer = "Water";
 const kSkyColor = "#8ec5e8";
 const kCameraSpeed = 120;
 
@@ -120,7 +118,7 @@ const voxelMap = world.createActor("map")
     focus: cameraActor.object3D,
     greedy: true,
     chunkSize: settings.chunkSize,
-    layers: [kTerrainLayer, kWaterLayer],
+    layers: [kTerrainLayer],
     blocks: tileset.blocks,
     material: "lambert",
     alphaTest: 0.5,
@@ -292,7 +290,7 @@ function rebuild(
   settings.seed = seed;
   controls.seed = seed;
 
-  resetLayers(engine);
+  resetLayer(engine);
   report = buildWorld(engine, settings);
   syncStats();
   pane.refresh();
@@ -400,8 +398,8 @@ function syncStats(): void {
 }
 
 /**
- * Fills both layers from the noise generator and measures the two costs that
- * matter: writing voxels, then meshing every dirty chunk.
+ * Fills the terrain layer from the noise generator and measures the two costs
+ * that matter: writing voxels, then meshing every dirty chunk.
  */
 function buildWorld(
   engine: VoxelEngine,
@@ -410,7 +408,7 @@ function buildWorld(
   const generateStart = performance.now();
   const terrain = generateTerrain(
     (position, blockId) => engine.world.setVoxel(
-      blockId === TerrainBlock.Water ? kWaterLayer : kTerrainLayer,
+      kTerrainLayer,
       { position, blockId }
     ),
     { seed, size }
@@ -437,18 +435,16 @@ function buildWorld(
 }
 
 /**
- * Drops both layers and recreates them empty. Removals are processed by the
- * engine tick, so one is run before the layers come back.
+ * Drops the layer and recreates it empty. Removals are processed by the
+ * engine tick, so one is run before the layer comes back.
  */
-function resetLayers(
+function resetLayer(
   engine: VoxelEngine
 ): void {
   engine.world.removeLayer(kTerrainLayer);
-  engine.world.removeLayer(kWaterLayer);
   engine.tick(0);
 
   engine.world.addLayer(kTerrainLayer);
-  engine.world.addLayer(kWaterLayer);
 }
 
 function countChunks(

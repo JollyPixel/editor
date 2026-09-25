@@ -29,6 +29,10 @@ export type { InspectedChunkBounds } from "./types.ts";
 
 export interface VoxelInspectorContext {
   parent: THREE.Object3D;
+  /**
+   * Group of the textured chunk meshes, hidden in `"wireframe"` mode.
+   */
+  solids: THREE.Object3D;
   world: VoxelWorld;
   blockRegistry: BlockRegistry;
 }
@@ -82,7 +86,7 @@ export class VoxelInspector {
     context: VoxelInspectorContext,
     options: VoxelInspectorOptions = {}
   ) {
-    const { parent, world, blockRegistry } = context;
+    const { parent, solids, world, blockRegistry } = context;
     const {
       mode,
       color,
@@ -99,6 +103,7 @@ export class VoxelInspector {
     });
     this.#wireframe = new ChunkWireframeView({
       parent,
+      solids,
       chunks: this.#chunks,
       mode,
       color,

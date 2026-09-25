@@ -14,7 +14,6 @@ import {
   CUBE_ID as kCubeId,
   LEAVES_ID as kLeavesId
 } from "../helpers/ids.ts";
-import { ChunkGeometryKey } from "../../src/mesh/ChunkGeometryKey.ts";
 
 for (const greedy of [false, true]) {
   describe(`transparency boundaries (greedy=${greedy})`, () => {
@@ -46,7 +45,7 @@ for (const greedy of [false, true]) {
       const counts = new Map<string, number>();
       for (const [key, geometry] of buildGeometries(fixture)) {
         counts.set(
-          ChunkGeometryKey.parse(key).surface.side,
+          key.surface.side,
           geometry.getAttribute("position").count
         );
       }

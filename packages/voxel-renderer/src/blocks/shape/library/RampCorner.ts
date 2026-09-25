@@ -3,7 +3,7 @@ import { FACE } from "../../../utils/math.ts";
 import {
   SQRT2_OVER_2,
   SQRT3_OVER_3
-} from "../../../constants.ts";
+} from "./normals.ts";
 import {
   defineFace,
   type FaceDefinition

@@ -44,6 +44,11 @@ interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
    **/
   position?: VoxelCoord;
 }
+
+// Carried by the "cloned" layer command; `name` is the resolved clone name.
+interface VoxelLayerCloneOptions extends Partial<VoxelLayerOptions> {
+  name: string;
+}
 ```
 
 ## Properties
@@ -56,7 +61,8 @@ class VoxelLayer {
   order: number;
   visible: boolean;
   opacity: number;
-  wasVisible: boolean;
+  // visible with an opacity above 0
+  readonly effectivelyVisible: boolean;
 
   // number of currently allocated chunks
   readonly chunkCount: number;

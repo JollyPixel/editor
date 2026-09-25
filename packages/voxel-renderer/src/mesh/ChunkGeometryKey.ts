@@ -1,9 +1,8 @@
 // Import Internal Dependencies
-import { BlockSurface } from "../blocks/BlockSurface.ts";
+import type { BlockSurface } from "../blocks/BlockSurface.ts";
 
 // CONSTANTS
-const kCutoutSuffix = ":cutout";
-const kSurfaceSuffix = ":surface=";
+const kSurfaceSeparator = ":surface=";
 
 /**
  * A chunk draw group identified by its atlas, surface policy, and material
@@ -15,47 +14,19 @@ export class ChunkGeometryKey {
 
   constructor(
     tilesetId: string,
-    surface: BlockSurface | boolean = false
+    surface: BlockSurface
   ) {
-    if (
-      tilesetId.endsWith(kCutoutSuffix) ||
-      tilesetId.includes(kSurfaceSuffix)
-    ) {
-      throw new RangeError("Tileset id uses a reserved geometry suffix.");
+    if (tilesetId.includes(kSurfaceSeparator)) {
+      throw new RangeError("Tileset id uses a reserved geometry separator.");
     }
 
     this.tilesetId = tilesetId;
-    this.surface = typeof surface === "boolean"
-      ? new BlockSurface({ alphaMode: surface ? "blend" : "opaque" })
-      : surface;
+    this.surface = surface;
     Object.freeze(this);
-  }
-
-  get cutout(): boolean {
-    return !this.surface.occludes;
-  }
-
-  static parse(
-    key: string
-  ): ChunkGeometryKey {
-    const separator = key.lastIndexOf(kSurfaceSuffix);
-    if (separator !== -1) {
-      return new ChunkGeometryKey(
-        key.slice(0, separator),
-        new BlockSurface(
-          JSON.parse(key.slice(separator + kSurfaceSuffix.length))
-        )
-      );
-    }
-
-    return key.endsWith(kCutoutSuffix) ?
-      new ChunkGeometryKey(key.slice(0, -kCutoutSuffix.length), true) :
-      new ChunkGeometryKey(key);
   }
 
   toString(): string {
     const { alphaMode, side, materialGroup } = this.surface;
-
     if (
       alphaMode === "opaque" &&
       side === "front" &&
@@ -63,20 +34,7 @@ export class ChunkGeometryKey {
     ) {
       return this.tilesetId;
     }
-    if (
-      alphaMode === "blend" &&
-      side === "double" &&
-      materialGroup === undefined
-    ) {
-      return this.tilesetId + kCutoutSuffix;
-    }
 
-    return this.tilesetId + kSurfaceSuffix + JSON.stringify(this.surface);
-  }
-
-  equals(
-    other: ChunkGeometryKey
-  ): boolean {
-    return this.toString() === other.toString();
+    return this.tilesetId + kSurfaceSeparator + JSON.stringify(this.surface);
   }
 }

@@ -26,6 +26,7 @@ export type VoxelInspectorMode =
 
 export interface ChunkWireframeViewOptions {
   parent: THREE.Object3D;
+  solids: THREE.Object3D;
   chunks: Iterable<InspectedChunkEntry>;
   /**
    * @default "off"
@@ -43,12 +44,12 @@ export interface ChunkWireframeViewOptions {
 }
 
 /**
- * Draws a wireframe copy of every chunk mesh, and owns the `visible` flag of
- * the textured meshes: `"wireframe"` hides them, and a culled chunk is hidden
- * in every mode.
+ * Draws a wireframe copy of every chunk mesh; `"wireframe"` hides the group
+ * holding the textured meshes.
  */
 export class ChunkWireframeView implements ChunkInspectorView {
   #parent: THREE.Object3D;
+  #solids: THREE.Object3D;
   #chunks: Iterable<InspectedChunkEntry>;
   #group = new THREE.Group();
   #overlays = new Map<string, THREE.Mesh[]>();
@@ -63,6 +64,7 @@ export class ChunkWireframeView implements ChunkInspectorView {
   ) {
     const {
       parent,
+      solids,
       chunks,
       mode = "off",
       color = kDefaultColor,
@@ -70,12 +72,14 @@ export class ChunkWireframeView implements ChunkInspectorView {
     } = options;
 
     this.#parent = parent;
+    this.#solids = solids;
     this.#chunks = chunks;
     this.#mode = mode;
     this.#color = color;
     this.#opacity = opacity;
 
     this.#group.name = "VoxelInspector";
+    solids.visible = mode !== "wireframe";
     if (this.enabled) {
       parent.add(this.#group);
     }
@@ -91,6 +95,7 @@ export class ChunkWireframeView implements ChunkInspectorView {
     }
 
     this.#mode = value;
+    this.#solids.visible = value !== "wireframe";
     for (const entry of this.#chunks) {
       this.refresh(entry);
     }
@@ -120,11 +125,6 @@ export class ChunkWireframeView implements ChunkInspectorView {
   refresh(
     entry: InspectedChunkEntry
   ): void {
-    const visible = !entry.culled && this.#mode !== "wireframe";
-    for (const mesh of entry.meshes) {
-      mesh.visible = visible;
-    }
-
     if (this.#mode === "off" || entry.culled) {
       this.release(entry.key);
 

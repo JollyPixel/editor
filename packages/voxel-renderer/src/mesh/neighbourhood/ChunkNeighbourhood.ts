@@ -69,7 +69,7 @@ export class ChunkNeighbourhood {
     const { chunkSize } = world;
 
     for (const candidate of world.getLayers()) {
-      if (!candidate.visible || candidate.opacity === 0) {
+      if (!candidate.effectivelyVisible) {
         continue;
       }
 
@@ -180,12 +180,6 @@ export class ChunkNeighbourhood {
     return true;
   }
 
-  /**
-   * Packed corner levels of the voxel face pointing towards `direction`,
-   * sampled from the eight cells around the cell in front of it. A cell
-   * occludes when it fully covers at least one of its faces, so cutout
-   * blocks and thin shapes cast none. Always unoccluded for `direction < 0`.
-   */
   ambientOcclusionAt(
     direction: number,
     wx: number,

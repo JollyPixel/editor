@@ -58,42 +58,42 @@ describe("VoxelLayer opacity", () => {
     });
   }
 
-  it("wasVisible flips true when opacity drops to 0 while visible", () => {
-    const layer = makeLayer();
-    assert.equal(layer.wasVisible, false);
-    layer.opacity = 0;
-    assert.equal(layer.wasVisible, true);
-  });
+  const kEffectiveVisibility: [boolean, number, boolean][] = [
+    [true, 1, true],
+    [true, 0.5, true],
+    [true, 0, false],
+    [false, 1, false],
+    [false, 0, false]
+  ];
 
-  it("wasVisible flips back false when opacity rises above 0 again", () => {
-    const layer = makeLayer();
-    layer.opacity = 0;
-    assert.equal(layer.wasVisible, true);
-    layer.opacity = 1;
-    assert.equal(layer.wasVisible, false);
-  });
+  for (const [visible, opacity, expected] of kEffectiveVisibility) {
+    const state = expected ? "visible" : "hidden";
+    it(`is effectively ${state} when visible=${visible} and opacity=${opacity}`, () => {
+      const layer = makeLayer();
+      layer.visible = visible;
+      layer.opacity = opacity;
 
-  it("wasVisible is unaffected by opacity changes that stay above 0", () => {
-    const layer = makeLayer();
-    layer.opacity = 0.5;
-    assert.equal(layer.wasVisible, false);
-    layer.opacity = 0.8;
-    assert.equal(layer.wasVisible, false);
-  });
+      assert.equal(layer.effectivelyVisible, expected);
+    });
+  }
+});
 
-  it("wasVisible does not flip again when opacity is already 0 and visible is toggled off too", () => {
-    const layer = makeLayer();
-    layer.opacity = 0;
-    assert.equal(layer.wasVisible, true);
-    layer.visible = false;
-    assert.equal(layer.wasVisible, true);
-  });
+describe("VoxelLayer.markBoxDirty", () => {
+  it("dirties the existing chunks overlapping a world box, through the layer position", () => {
+    const layer = makeLayer({ chunkSize: 4, position: { x: 4, y: 0, z: 0 } });
+    for (const x of [0, 4, 8]) {
+      layer.setVoxelAt({ x: x + 4, y: 0, z: 0 }, makeVoxelEntry());
+    }
+    for (const chunk of layer.getChunks()) {
+      chunk.dirty = false;
+    }
 
-  it("keeps wasVisible false when a layer that was never visible is hidden", () => {
-    const layer = makeLayer({ opacity: 0 });
-    assert.equal(layer.wasVisible, false);
-    layer.visible = false;
-    assert.equal(layer.wasVisible, false);
+    layer.markBoxDirty({ x: 7, y: 0, z: 0 }, { x: 8, y: 0, z: 0 });
+
+    assert.deepEqual(
+      [...layer.getChunks()].map((chunk) => [chunk.cx, chunk.dirty]),
+      [[0, true], [1, true], [2, false]]
+    );
   });
 });
 

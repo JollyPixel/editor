@@ -13,7 +13,7 @@ import {
   VOXEL_LAYER_COMMAND_ACTIONS,
   VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
   VOXEL_TILESET_COMMAND_ACTIONS
-} from "../src/commands.ts";
+} from "../../src/commands/index.ts";
 
 describe("command guards", () => {
   it("classifies each action into exactly one category", () => {

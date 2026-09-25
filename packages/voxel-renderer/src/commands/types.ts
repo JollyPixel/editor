@@ -3,25 +3,24 @@ import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
 import type {
-  VoxelLayerConfigurableOptions,
-  VoxelLayerOptions
-} from "./world/VoxelLayer.ts";
-import type { VoxelCoord } from "./world/types.ts";
-import type { VoxelPatchCells } from "./world/voxelPatch.ts";
+  VoxelLayerCloneOptions,
+  VoxelLayerConfigurableOptions
+} from "../world/VoxelLayer.ts";
+import type {
+  VoxelSetOptions,
+  VoxelRemoveOptions
+} from "../world/VoxelWorld.ts";
+import type { VoxelCoord } from "../world/types.ts";
+import type { VoxelPatchCells } from "../world/voxelPatch.ts";
 import type {
   ResolvedBlockDefinition
-} from "./blocks/BlockDefinition.ts";
-import type { TilesetDefinition } from "./tileset/types.ts";
-import type { MaterialGroupJSON } from "./materials/MaterialGroup.ts";
+} from "../blocks/BlockDefinition.ts";
+import type { TilesetDefinition } from "../tileset/types.ts";
+import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
 import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
-} from "./serialization/types.ts";
-import type {
-  VoxelSetOptions,
-  VoxelRemoveOptions,
-  PartialExcept
-} from "./types.ts";
+} from "../serialization/types.ts";
 
 export type VoxelLayerCommand =
   | {
@@ -47,7 +46,7 @@ export type VoxelLayerCommand =
     action: "cloned";
     layerName: string;
     metadata: {
-      options: PartialExcept<VoxelLayerOptions, "name">;
+      options: VoxelLayerCloneOptions;
     };
   }
   | {
@@ -172,30 +171,6 @@ export type VoxelLayerCommand =
 
 export type VoxelLayerCommandAction = VoxelLayerCommand["action"];
 
-export const VOXEL_LAYER_COMMAND_ACTIONS: readonly VoxelLayerCommandAction[] = [
-  "added",
-  "removed",
-  "updated",
-  "cloned",
-  "merged",
-  "position-updated",
-  "position-rebased",
-  "voxel-set",
-  "voxel-removed",
-  "voxels-set",
-  "voxels-removed",
-  "voxels-patched",
-  "reordered",
-  "layer-moved",
-  "object-layer-added",
-  "object-layer-removed",
-  "object-layer-updated",
-  "object-added",
-  "object-removed",
-  "object-moved",
-  "object-updated"
-];
-
 export type VoxelBlockCommand =
   | {
     action: "block-defined";
@@ -212,12 +187,6 @@ export type VoxelBlockCommand =
   };
 
 export type VoxelBlockCommandAction = VoxelBlockCommand["action"];
-
-export const VOXEL_BLOCK_COMMAND_ACTIONS: readonly VoxelBlockCommandAction[] = [
-  "block-defined",
-  "block-removed",
-  "block-moved"
-];
 
 export type VoxelTilesetCommand =
   | {
@@ -240,13 +209,6 @@ export type VoxelTilesetCommand =
 
 export type VoxelTilesetCommandAction = VoxelTilesetCommand["action"];
 
-export const VOXEL_TILESET_COMMAND_ACTIONS: readonly VoxelTilesetCommandAction[] = [
-  "tileset-added",
-  "tileset-removed",
-  "tileset-resized",
-  "default-tile-size-updated"
-];
-
 export type VoxelMaterialGroupCommand =
   | {
     action: "material-group-defined";
@@ -260,12 +222,6 @@ export type VoxelMaterialGroupCommand =
 export type VoxelMaterialGroupCommandAction =
   VoxelMaterialGroupCommand["action"];
 
-export const VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS:
-readonly VoxelMaterialGroupCommandAction[] = [
-  "material-group-defined",
-  "material-group-removed"
-];
-
 export type VoxelCommand =
   | VoxelLayerCommand
   | VoxelBlockCommand
@@ -273,13 +229,6 @@ export type VoxelCommand =
   | VoxelMaterialGroupCommand;
 
 export type VoxelCommandAction = VoxelCommand["action"];
-
-export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
-  ...VOXEL_LAYER_COMMAND_ACTIONS,
-  ...VOXEL_BLOCK_COMMAND_ACTIONS,
-  ...VOXEL_TILESET_COMMAND_ACTIONS,
-  ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS
-];
 
 export type VoxelCommandOrigin = "local" | "remote";
 
@@ -295,35 +244,3 @@ export type VoxelCommandListener = (
   command: VoxelCommand,
   context: VoxelCommandContext
 ) => void;
-
-export function isVoxelLayerCommand(
-  command: { action: string; }
-): command is VoxelLayerCommand {
-  return VOXEL_LAYER_COMMAND_ACTIONS.some(
-    (action) => action === command.action
-  );
-}
-
-export function isVoxelBlockCommand(
-  command: { action: string; }
-): command is VoxelBlockCommand {
-  return VOXEL_BLOCK_COMMAND_ACTIONS.some(
-    (action) => action === command.action
-  );
-}
-
-export function isVoxelTilesetCommand(
-  command: { action: string; }
-): command is VoxelTilesetCommand {
-  return VOXEL_TILESET_COMMAND_ACTIONS.some(
-    (action) => action === command.action
-  );
-}
-
-export function isVoxelMaterialGroupCommand(
-  command: { action: string; }
-): command is VoxelMaterialGroupCommand {
-  return VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.some(
-    (action) => action === command.action
-  );
-}

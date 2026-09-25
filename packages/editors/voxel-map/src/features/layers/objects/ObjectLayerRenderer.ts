@@ -315,7 +315,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     }
 
     const { layerName, objectId } = parseObjectKey(key);
-    this.#world.updateObjectInLayer(
+    this.#world.objectLayers.updateObject(
       layerName,
       objectId,
       patch

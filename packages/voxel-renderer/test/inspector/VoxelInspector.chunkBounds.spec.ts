@@ -93,6 +93,7 @@ describe("VoxelInspector - chunk bounds", () => {
     const inspector = new VoxelInspector(
       {
         parent,
+        solids: new THREE.Group(),
         world: new VoxelWorld(kChunkSize),
         blockRegistry: new BlockRegistry()
       },

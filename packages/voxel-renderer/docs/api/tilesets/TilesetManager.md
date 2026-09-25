@@ -55,7 +55,8 @@ changed since it was built (see
 `TilesetAtlas.updateImage()` reaches distant faces on the next tick.
 
 `version` increases when atlases or the list change, so cached UV data can be
-invalidated. `dispose()` disposes every texture and clears the list.
+invalidated. `dispose()` disposes every texture and leaves the list, which
+belongs to the document.
 
 ## Missing tileset
 

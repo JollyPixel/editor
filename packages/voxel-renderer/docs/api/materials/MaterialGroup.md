@@ -108,9 +108,10 @@ first of duplicate IDs. Mutating the list directly emits no command; use
 function applyMaterialGroupCommand(
   groups: MaterialGroupList,
   command: VoxelMaterialGroupCommand
-): boolean;
+): VoxelMaterialGroupCommand | null;
 ```
 
 Applies a `material-group-defined` or `material-group-removed`
-[command](../core/commands.md#material-group-commands) to a list and returns
-whether it changed.
+[command](../core/commands.md#material-group-commands) to a list. Returns the
+command as applied, a defined group with every field filled in, or `null` when
+the list did not change.

@@ -10,8 +10,15 @@ import type {
 } from "./blocks/BlockDefinition.ts";
 import type { BlockRegistry } from "./blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
-import type { VoxelCommand } from "./commands.ts";
-import { VoxelDocument } from "./document/VoxelDocument.ts";
+import type {
+  VoxelCommand,
+  VoxelCommandListener
+} from "./commands/types.ts";
+import {
+  VoxelDocument,
+  type VoxelApplyOptions,
+  type VoxelDocumentOptions
+} from "./VoxelDocument.ts";
 import type { VoxelHistory } from "./history/VoxelHistory.ts";
 import type { VoxelInspector } from "./inspector/index.ts";
 import type {
@@ -22,24 +29,32 @@ import type { MaterialGroupList } from "./materials/MaterialGroupList.ts";
 import type { VoxelWorldJSON } from "./serialization/types.ts";
 import type { TilesetList } from "./tileset/TilesetList.ts";
 import type { TilesetManager } from "./tileset/TilesetManager.ts";
-import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type {
   TilesetDefinition,
   TilesetTexture
 } from "./tileset/types.ts";
 import type { ViewDistance } from "./world/ViewDistance.ts";
 import type { VoxelWorld } from "./world/VoxelWorld.ts";
-import { VoxelView } from "./view/VoxelView.ts";
-import type {
-  TileMinification,
-  ViewDistancePolicy
-} from "./view/VoxelView.types.ts";
-import type {
-  VoxelApplyOptions,
-  VoxelEngineEvents,
-  VoxelEngineLoadOptions,
-  VoxelEngineOptions
-} from "./VoxelEngine.types.ts";
+import {
+  VoxelView,
+  type TileMinification,
+  type ViewDistancePolicy,
+  type VoxelViewLoadOptions,
+  type VoxelViewOptions
+} from "./VoxelView.ts";
+
+export type VoxelEngineEvents = {
+  command: VoxelCommandListener;
+};
+
+export interface VoxelEngineOptions
+  extends Omit<VoxelDocumentOptions, "tilesets">, VoxelViewOptions {
+  /**
+   * Document to draw. A private one is built from the document options when
+   * omitted; every other document option is then ignored.
+   */
+  document?: VoxelDocument;
+}
 
 /**
  * Composes a `VoxelDocument` with the `VoxelView` drawn from it.
@@ -47,14 +62,6 @@ import type {
 export class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly document: VoxelDocument;
   readonly view: VoxelView;
-
-  #pendingTilesets: TilesetSource[] = [];
-
-  #onDocumentLoaded = (): void => {
-    for (const { def, texture } of this.#pendingTilesets.splice(0)) {
-      this.view.tilesets.registerTexture(def.id, texture);
-    }
-  };
 
   constructor(
     options: VoxelEngineOptions = {}
@@ -90,7 +97,6 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
       "command",
       (command, context) => this.emit("command", command, context)
     );
-    this.document.on("loaded", this.#onDocumentLoaded);
     this.view = new VoxelView(this.document, {
       ...viewOptions,
       logger,
@@ -127,7 +133,7 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
   }
 
   get tilesetManager(): TilesetManager {
-    return this.view.tilesets;
+    return this.view.tilesetManager;
   }
 
   get inspector(): VoxelInspector {
@@ -330,22 +336,12 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
 
   load(
     data: VoxelWorldJSON,
-    options: VoxelEngineLoadOptions = {}
+    options: VoxelViewLoadOptions = {}
   ): void {
-    const { tilesets, mergeLayers } = options;
-    const sources = Array.from(tilesets ?? []).filter(
-      ({ def }) => !this.view.tilesets.get(def.id)
-    );
-
-    this.#pendingTilesets = sources;
-    this.document.load(data, {
-      mergeLayers,
-      tilesets: sources.map(({ def }) => def)
-    });
+    this.view.load(data, options);
   }
 
   dispose(): void {
-    this.document.off("loaded", this.#onDocumentLoaded);
     this.view.dispose();
     this.document.dispose();
     this.removeAllListeners();

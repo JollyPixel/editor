@@ -56,12 +56,8 @@ export interface VoxelEditBatchFlush {
 }
 
 interface WorldBox {
-  minX: number;
-  minY: number;
-  minZ: number;
-  maxX: number;
-  maxY: number;
-  maxZ: number;
+  min: Vector3Like;
+  max: Vector3Like;
 }
 
 export interface VoxelEditWriteOptions {
@@ -149,9 +145,6 @@ export class VoxelEditBatch {
     );
   }
 
-  /**
-   * Coordinates are layer-local.
-   */
   #touch(
     layer: VoxelLayer,
     x: number,
@@ -191,11 +184,6 @@ export class VoxelEditBatch {
     return touched;
   }
 
-  /**
-   * Yields the changed cells of each layer as a patch, plus the history
-   * changes of the recorded ones, then forgets them. Cells whose value ended
-   * up unchanged are skipped.
-   */
   * drain(): IterableIterator<VoxelEditBatchFlush> {
     if (this.#pendingCells === 0) {
       return;
@@ -230,10 +218,6 @@ export class VoxelEditBatch {
     }
   }
 
-  /**
-   * Marks, in every layer, the chunks overlapping each touched chunk and the
-   * one-voxel slab past each face a write landed on.
-   */
   markDirty(
     layers: readonly VoxelLayer[]
   ): void {
@@ -243,9 +227,9 @@ export class VoxelEditBatch {
       }
 
       for (const touched of chunks.values()) {
-        const box = this.#dirtyBox(edited, touched);
+        const { min, max } = this.#dirtyBox(edited, touched);
         for (const layer of layers) {
-          this.#markBox(layer, box);
+          layer.markBoxDirty(min, max);
         }
       }
     }
@@ -373,11 +357,6 @@ export class VoxelEditBatch {
     return touched;
   }
 
-  /**
-   * The touched chunk grown by one cell past each boundary it was edited on,
-   * so face, edge and corner neighbours all rebuild. Bits set by different
-   * cells may widen it past what one edit needs.
-   */
   #dirtyBox(
     layer: VoxelLayer,
     touched: TouchedChunk
@@ -389,31 +368,16 @@ export class VoxelEditBatch {
     const minZ = layer.position.z + (touched.cz * size);
 
     return {
-      minX: faces & kFaceMinX ? minX - 1 : minX,
-      minY: faces & kFaceMinY ? minY - 1 : minY,
-      minZ: faces & kFaceMinZ ? minZ - 1 : minZ,
-      maxX: minX + size - (faces & kFaceMaxX ? 0 : 1),
-      maxY: minY + size - (faces & kFaceMaxY ? 0 : 1),
-      maxZ: minZ + size - (faces & kFaceMaxZ ? 0 : 1)
-    };
-  }
-
-  #markBox(
-    layer: VoxelLayer,
-    box: WorldBox
-  ): void {
-    const shift = this.#shift;
-    const { x, y, z } = layer.position;
-
-    const maxCx = (box.maxX - x) >> shift;
-    const maxCy = (box.maxY - y) >> shift;
-    const maxCz = (box.maxZ - z) >> shift;
-    for (let cx = (box.minX - x) >> shift; cx <= maxCx; cx++) {
-      for (let cy = (box.minY - y) >> shift; cy <= maxCy; cy++) {
-        for (let cz = (box.minZ - z) >> shift; cz <= maxCz; cz++) {
-          layer.markChunkDirty(cx, cy, cz);
-        }
+      min: {
+        x: faces & kFaceMinX ? minX - 1 : minX,
+        y: faces & kFaceMinY ? minY - 1 : minY,
+        z: faces & kFaceMinZ ? minZ - 1 : minZ
+      },
+      max: {
+        x: minX + size - (faces & kFaceMaxX ? 0 : 1),
+        y: minY + size - (faces & kFaceMaxY ? 0 : 1),
+        z: minZ + size - (faces & kFaceMaxZ ? 0 : 1)
       }
-    }
+    };
   }
 }

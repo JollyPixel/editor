@@ -16,11 +16,11 @@ and configuration.
 ## Chunk geometry layout
 
 Each chunk has one `THREE.Mesh` per tileset and resolved surface policy,
-parented to `VoxelView.root` and positioned at the chunk origin. A geometry key includes the alpha mode, sides,
-and mask cutoff. Plain opaque/front geometry uses the tileset ID; blend/double
-geometry keeps the historical `:cutout` suffix. Other policies use a
-`:surface=` suffix. Tileset IDs must not end in `:cutout` or contain
-`:surface=`.
+parented to the `"VoxelView:chunks"` group of `VoxelView.root` and positioned
+at the chunk origin. A `ChunkGeometryKey` pairs the tileset ID with the
+surface: alpha mode, sides, mask cutoff and material group. Plain opaque/front
+geometry is named after the tileset ID; other surfaces append a `:surface=`
+suffix. Tileset IDs must not contain `:surface=`.
 
 The non-greedy layout uses 28 bytes per vertex:
 

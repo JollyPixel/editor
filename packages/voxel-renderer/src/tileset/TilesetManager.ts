@@ -133,7 +133,6 @@ export class TilesetManager {
     this.#atlases.clear();
     this.#missing?.texture.dispose();
     this.#missing = null;
-    this.tilesets.clear();
     this.#version++;
   }
 }

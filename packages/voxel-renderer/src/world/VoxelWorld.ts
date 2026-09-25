@@ -7,13 +7,13 @@ import type { Vector3Like } from "three";
 // Import Internal Dependencies
 import {
   VoxelLayer,
+  type VoxelLayerCloneOptions,
   type VoxelLayerConfigurableOptions,
   type VoxelLayerOptions
 } from "./VoxelLayer.ts";
 import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "./VoxelChunk.ts";
 import {
   packVoxel,
-  unpackVoxel,
   VOXEL_ABSENT,
   type PackedVoxel
 } from "./packedVoxel.ts";
@@ -28,20 +28,19 @@ import {
   FACE_OFFSETS,
   type FACE
 } from "../utils/math.ts";
-import type {
-  VoxelObjectJSON,
-  VoxelObjectLayerJSON
-} from "../serialization/types.ts";
-import type {
-  PartialExcept,
-  VoxelSetOptions,
-  VoxelRemoveOptions
-} from "../types.ts";
-import { VoxelTransform } from "./VoxelTransform.ts";
-import type { VoxelLayerCommand } from "../commands.ts";
+import {
+  VoxelTransform,
+  type VoxelTransformOptions
+} from "./VoxelTransform.ts";
+import type { VoxelLayerCommand } from "../commands/types.ts";
 import { dispatchCommand } from "./dispatchCommand.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
-import { VoxelEditBatch } from "./VoxelEditBatch.ts";
+import {
+  VoxelEditBatch,
+  type VoxelEditWriteOptions
+} from "./VoxelEditBatch.ts";
+import { VoxelObjectLayers } from "./VoxelObjectLayers.ts";
+import { VoxelLayerStack } from "./VoxelLayerStack.ts";
 import {
   assertVoxelPatchCells,
   VOXEL_PATCH_STRIDE
@@ -49,37 +48,48 @@ import {
 import { isAir } from "../blocks/BlockId.ts";
 
 // CONSTANTS
-let kLayerIdCounter = 0;
-let kObjectLayerIdCounter = 0;
+const kUntrackedWrite: VoxelEditWriteOptions = {
+  track: false,
+  record: false
+};
 
 export type VoxelWorldEvents = {
   command: (command: VoxelLayerCommand) => void;
 };
-
-interface PendingChanges {
-  layer: VoxelLayer | undefined;
-  cells: VoxelCellChange[];
-}
 
 export type IterableLayerChunk = {
   layer: VoxelLayer;
   chunk: VoxelChunk;
 };
 
+export interface VoxelSetOptions extends VoxelTransformOptions {
+  position: Vector3Like;
+  blockId: number;
+}
+
+export interface VoxelRemoveOptions {
+  position: Vector3Like;
+}
+
+interface VoxelWrite {
+  position: Vector3Like;
+  packed: PackedVoxel;
+}
+
 /**
  * Layered voxel data ordered from highest to lowest compositing priority.
  */
 export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   readonly chunkSize: number;
+  readonly objectLayers = new VoxelObjectLayers(
+    (command) => this.#emit(command)
+  );
 
   recorder: VoxelEditRecorder | null = null;
 
-  #layers: VoxelLayer[] = [];
-  #layersToRemove: VoxelLayer[] = [];
-  #objectLayers: Map<string, VoxelObjectLayerJSON> = new Map();
-  #chunkShift: number;
-  #chunkMask: number;
+  #layers = new VoxelLayerStack();
   #muted = false;
+  #captured: VoxelLayerCommand[] | null = null;
   #batch: VoxelEditBatch | null = null;
 
   constructor(
@@ -89,8 +99,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     assertPowerOfTwoChunkSize(chunkSize, "VoxelWorld");
 
     this.chunkSize = chunkSize;
-    this.#chunkShift = Math.log2(chunkSize);
-    this.#chunkMask = chunkSize - 1;
   }
 
   addLayer(
@@ -98,14 +106,13 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     options: VoxelLayerConfigurableOptions = {}
   ): VoxelLayer {
     const layer = new VoxelLayer({
-      id: `layer_${kLayerIdCounter++}`,
+      id: this.#layers.nextId("layer_"),
       name,
-      order: this.#layers.length,
+      order: this.#layers.size,
       chunkSize: this.chunkSize,
       ...options
     });
-    this.#layers.push(layer);
-    this.#sortLayers();
+    this.#layers.insert(0, layer);
     this.#emit({
       action: "added",
       layerName: name,
@@ -150,16 +157,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   removeLayer(
     name: string
   ): boolean {
-    const idx = this.#layers.findIndex(
-      (layer) => layer.name === name
-    );
-    if (idx === -1) {
+    const layer = this.getLayer(name);
+    if (!layer) {
       return false;
     }
 
-    const layer = this.#layers[idx];
-    this.#layersToRemove.push(layer);
-    this.#layers.splice(idx, 1);
+    this.#layers.detach(layer);
     this.#markAllLayersDirty();
     this.#emit({
       action: "removed",
@@ -174,15 +177,9 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string,
     direction: "up" | "down"
   ): void {
-    const idx = this.#layers.findIndex(
-      (layer) => layer.name === name
-    );
-    if (idx === -1) {
-      return;
-    }
-
+    const index = this.#layers.indexOf(name);
     const delta = direction === "up" ? -1 : 1;
-    if (!this.#relocateLayer(idx, idx + delta)) {
+    if (index === -1 || !this.#moveLayer(index, index + delta)) {
       return;
     }
 
@@ -197,18 +194,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string,
     toIndex: number
   ): void {
-    const idx = this.#layers.findIndex(
-      (layer) => layer.name === name
-    );
-    if (idx === -1) {
-      return;
-    }
-
+    const index = this.#layers.indexOf(name);
     const clamped = Math.min(
       Math.max(Math.trunc(toIndex), 0),
-      this.#layers.length - 1
+      this.#layers.size - 1
     );
-    if (!this.#relocateLayer(idx, clamped)) {
+    if (index === -1 || !this.#moveLayer(index, clamped)) {
       return;
     }
 
@@ -216,34 +207,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       action: "layer-moved",
       layerName: name,
       metadata: { toIndex: clamped }
-    });
-  }
-
-  #relocateLayer(
-    fromIndex: number,
-    toIndex: number
-  ): boolean {
-    if (
-      toIndex === fromIndex ||
-      toIndex < 0 ||
-      toIndex >= this.#layers.length
-    ) {
-      return false;
-    }
-
-    const [layer] = this.#layers.splice(fromIndex, 1);
-    this.#layers.splice(toIndex, 0, layer);
-    this.#renumberLayers();
-    this.#markAllLayersDirty();
-
-    return true;
-  }
-
-  #renumberLayers(): void {
-    const lastIndex = this.#layers.length - 1;
-
-    this.#layers.forEach((entry, index) => {
-      entry.order = lastIndex - index;
     });
   }
 
@@ -257,21 +220,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
   }
 
-  #updateLayerVisibility(
-    layer: VoxelLayer,
-    visible: boolean
-  ): void {
-    const wasVisible = layer.visible;
-    layer.visible = visible;
-
-    if (wasVisible === visible) {
-      this.#markLayerDirty(layer);
-    }
-    else {
-      this.#markAllLayersDirty();
-    }
-  }
-
   setLayerOpacity(
     name: string,
     opacity: number
@@ -279,22 +227,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     const layer = this.getLayer(name);
     if (layer) {
       this.#updateLayerOpacity(layer, opacity);
-    }
-  }
-
-  #updateLayerOpacity(
-    layer: VoxelLayer,
-    opacity: number
-  ): void {
-    const wasOccluding = layer.opacity >= 1;
-    layer.opacity = opacity;
-    const isOccluding = layer.opacity >= 1;
-
-    if (wasOccluding === isOccluding) {
-      this.#markLayerDirty(layer);
-    }
-    else {
-      this.#markAllLayersDirty();
     }
   }
 
@@ -357,7 +289,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   }
 
   getLayers(): readonly VoxelLayer[] {
-    return this.#layers;
+    return this.#layers.toArray();
   }
 
   get voxelCount(): number {
@@ -394,34 +326,30 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   getLayer(
     name: string
   ): VoxelLayer | undefined {
-    return this.#layers.find(
-      (layer) => layer.name === name
-    );
+    return this.#layers.get(name);
   }
 
   cloneLayer(
     name: string,
     options: Partial<VoxelLayerOptions> = {}
   ): VoxelLayer | undefined {
-    const index = this.#layers.findIndex(
-      (layer) => layer.name === name
-    );
-    if (index === -1) {
+    const index = this.#layers.indexOf(name);
+    const layer = this.#layers.at(index);
+    if (!layer) {
       return undefined;
     }
 
-    const layer = this.#layers[index];
-    const resolved: PartialExcept<VoxelLayerOptions, "name"> = {
+    const resolved: VoxelLayerCloneOptions = {
       ...options,
       name: this.uniqueLayerName(options.name ?? layer.name)
     };
     const clone = layer.clone({
       ...resolved,
-      id: `${layer.id}_${kLayerIdCounter++}`
+      id: this.#layers.nextId(`${layer.id}_`)
     });
 
-    this.#layers.splice(index, 0, clone);
-    this.#renumberLayers();
+    this.#layers.insert(index, clone);
+    this.#markAllLayersDirty();
     this.#emit({
       action: "cloned",
       layerName: name,
@@ -434,17 +362,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   uniqueLayerName(
     base: string
   ): string {
-    if (this.getLayer(base) === undefined) {
-      return base;
-    }
-
-    const root = base.replace(/ \(\d+\)$/, "");
-    for (let index = 1; ; index++) {
-      const candidate = `${root} (${index})`;
-      if (this.getLayer(candidate) === undefined) {
-        return candidate;
-      }
-    }
+    return this.#layers.uniqueName(base);
   }
 
   mergeLayer(
@@ -465,10 +383,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       ...target.properties
     };
 
-    const index = this.#layers.indexOf(source);
-    this.#layersToRemove.push(source);
-    this.#layers.splice(index, 1);
-    this.#renumberLayers();
+    this.#layers.detach(source);
     this.#markAllLayersDirty();
     this.#emit({
       action: "merged",
@@ -480,242 +395,40 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   }
 
   mergeAllLayers(): VoxelLayer | null {
-    if (this.#layers.length === 0) {
-      return null;
-    }
-    if (this.#layers.length === 1) {
-      return this.#layers[0];
+    if (this.#layers.size <= 1) {
+      return this.#layers.at(0) ?? null;
     }
 
-    const sorted = [...this.#layers].sort((a, b) => a.order - b.order);
-    const target = sorted[0];
-
-    for (let i = 1; i < sorted.length; i++) {
-      target.mergeFrom(sorted[i], { overwrite: true });
+    const [target, ...sources] = [...this.#layers].reverse();
+    for (const source of sources) {
+      target.mergeFrom(source, { overwrite: true });
+      this.#layers.detach(source);
     }
-
-    for (let i = 1; i < sorted.length; i++) {
-      const idx = this.#layers.findIndex((l) => l === sorted[i]);
-      if (idx !== -1) {
-        this.#layersToRemove.push(this.#layers[idx]);
-        this.#layers.splice(idx, 1);
-      }
-    }
-
-    this.#markLayerDirty(target);
+    target.markAllDirty();
 
     return target;
-  }
-
-  addObjectLayer(
-    name: string,
-    options: Partial<Pick<VoxelObjectLayerJSON, "visible" | "order">> = {}
-  ): VoxelObjectLayerJSON {
-    const layer: VoxelObjectLayerJSON = {
-      id: `obj_layer_${kObjectLayerIdCounter++}`,
-      name,
-      visible: options.visible ?? true,
-      order: options.order ?? this.#objectLayers.size,
-      objects: []
-    };
-    this.#objectLayers.set(name, layer);
-    this.#emit({
-      action: "object-layer-added",
-      layerName: name,
-      metadata: {}
-    });
-
-    return layer;
-  }
-
-  removeObjectLayer(
-    name: string
-  ): boolean {
-    if (!this.#objectLayers.delete(name)) {
-      return false;
-    }
-
-    this.#emit({
-      action: "object-layer-removed",
-      layerName: name,
-      metadata: {}
-    });
-
-    return true;
-  }
-
-  getObjectLayer(
-    name: string
-  ): VoxelObjectLayerJSON | undefined {
-    return this.#objectLayers.get(name);
-  }
-
-  getObjectLayers(): readonly VoxelObjectLayerJSON[] {
-    return [...this.#objectLayers.values()];
-  }
-
-  updateObjectLayer(
-    name: string,
-    patch: Partial<Pick<VoxelObjectLayerJSON, "visible">>
-  ): boolean {
-    const layer = this.#objectLayers.get(name);
-    if (!layer) {
-      return false;
-    }
-
-    if (patch.visible !== undefined) {
-      layer.visible = patch.visible;
-    }
-    this.#emit({
-      action: "object-layer-updated",
-      layerName: name,
-      metadata: { patch }
-    });
-
-    return true;
-  }
-
-  addObjectToLayer(
-    layerName: string,
-    object: VoxelObjectJSON
-  ): boolean {
-    const layer = this.#objectLayers.get(layerName);
-    if (!layer) {
-      return false;
-    }
-
-    layer.objects.push(object);
-    this.#emit({
-      action: "object-added",
-      layerName,
-      metadata: { object }
-    });
-
-    return true;
-  }
-
-  removeObjectFromLayer(
-    layerName: string,
-    objectId: string
-  ): boolean {
-    const layer = this.#objectLayers.get(layerName);
-    if (!layer) {
-      return false;
-    }
-
-    const idx = layer.objects.findIndex(
-      (object) => object.id === objectId
-    );
-    if (idx === -1) {
-      return false;
-    }
-
-    layer.objects.splice(idx, 1);
-    this.#emit({
-      action: "object-removed",
-      layerName,
-      metadata: { objectId }
-    });
-
-    return true;
-  }
-
-  moveObjectToLayer(
-    fromLayerName: string,
-    objectId: string,
-    toLayerName: string
-  ): boolean {
-    const from = this.#objectLayers.get(fromLayerName);
-    const to = this.#objectLayers.get(toLayerName);
-    if (!from || !to || from === to) {
-      return false;
-    }
-
-    const index = from.objects.findIndex(
-      (object) => object.id === objectId
-    );
-    if (index === -1) {
-      return false;
-    }
-
-    const [object] = from.objects.splice(index, 1);
-    to.objects.push(object);
-    this.#emit({
-      action: "object-moved",
-      layerName: fromLayerName,
-      metadata: {
-        objectId,
-        fromLayerName,
-        toLayerName
-      }
-    });
-
-    return true;
-  }
-
-  updateObjectInLayer(
-    layerName: string,
-    objectId: string,
-    patch: Partial<VoxelObjectJSON>
-  ): boolean {
-    const layer = this.#objectLayers.get(layerName);
-    if (!layer) {
-      return false;
-    }
-
-    const obj = layer.objects.find(
-      (object) => object.id === objectId
-    );
-    if (!obj) {
-      return false;
-    }
-
-    Object.assign(obj, patch);
-    this.#emit({
-      action: "object-updated",
-      layerName,
-      metadata: { objectId, patch }
-    });
-
-    return true;
   }
 
   getVoxelAt(
     position: Vector3Like
   ): VoxelEntry | undefined {
-    return this.getVoxelWithLayerAt(position)?.entry;
+    return this.#compositedLayerAt(position)?.getVoxelAt(position);
   }
 
   getPackedVoxelAt(
     position: Vector3Like
   ): PackedVoxel {
-    for (const layer of this.#layers) {
-      if (!layer.visible || layer.opacity === 0) {
-        continue;
-      }
-      const packed = layer.getPackedVoxelAt(position);
-      if (packed !== VOXEL_ABSENT) {
-        return packed;
-      }
-    }
-
-    return VOXEL_ABSENT;
+    return this.#compositedLayerAt(position)?.getPackedVoxelAt(position) ??
+      VOXEL_ABSENT;
   }
 
   getVoxelWithLayerAt(
     position: Vector3Like
   ): { entry: VoxelEntry; layer: VoxelLayer; } | undefined {
-    for (const layer of this.#layers) {
-      if (!layer.visible || layer.opacity === 0) {
-        continue;
-      }
-      const packed = layer.getPackedVoxelAt(position);
-      if (packed !== VOXEL_ABSENT) {
-        return { entry: unpackVoxel(packed), layer };
-      }
-    }
+    const layer = this.#compositedLayerAt(position);
+    const entry = layer?.getVoxelAt(position);
 
-    return undefined;
+    return layer && entry && { entry, layer };
   }
 
   getVoxelNeighbour(
@@ -736,121 +449,78 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     options: VoxelSetOptions
   ): void {
     const { position, blockId } = options;
-    if (this.#batch !== null) {
-      this.#batchWrite(
-        layerName,
-        position,
-        packVoxel(blockId, VoxelTransform.pack(options))
-      );
-
-      return;
-    }
-
     const transform = VoxelTransform.fromPacked(VoxelTransform.pack(options));
-    const changes = this.#changes(layerName);
 
-    this.#writeVoxel(
+    this.#write(
       layerName,
-      position,
-      packVoxel(blockId, transform.packed),
-      changes
-    );
-    this.#record(changes);
-    this.#emit({
-      action: "voxel-set",
-      layerName,
-      metadata: {
-        position,
-        blockId,
-        rotation: transform.rotation,
-        flipX: transform.flipX,
-        flipZ: transform.flipZ,
-        flipY: transform.flipY
+      [{ position, packed: packVoxel(blockId, transform.packed) }],
+      {
+        action: "voxel-set",
+        layerName,
+        metadata: {
+          position,
+          blockId,
+          rotation: transform.rotation,
+          flipX: transform.flipX,
+          flipZ: transform.flipZ,
+          flipY: transform.flipY
+        }
       }
-    });
+    );
   }
 
   removeVoxel(
     layerName: string,
     options: VoxelRemoveOptions
   ): void {
-    if (this.#batch !== null) {
-      this.#batchWrite(layerName, options.position, VOXEL_ABSENT);
+    const { position } = options;
 
-      return;
-    }
-
-    const changes = this.#changes(layerName);
-
-    this.#writeVoxel(
+    this.#write(
       layerName,
-      options.position,
-      VOXEL_ABSENT,
-      changes
+      [{ position, packed: VOXEL_ABSENT }],
+      {
+        action: "voxel-removed",
+        layerName,
+        metadata: { position }
+      }
     );
-    this.#record(changes);
-    this.#emit({
-      action: "voxel-removed",
-      layerName,
-      metadata: { position: options.position }
-    });
   }
 
   setVoxelBulk(
     layerName: string,
     entries: VoxelSetOptions[]
   ): void {
-    if (this.#batch !== null) {
-      for (const entry of entries) {
-        this.#batchWrite(
-          layerName,
-          entry.position,
-          packVoxel(entry.blockId, VoxelTransform.pack(entry))
-        );
-      }
-
-      return;
-    }
-
-    const changes = this.#changes(layerName);
-    for (const entry of entries) {
-      this.#writeVoxel(
-        layerName,
-        entry.position,
-        packVoxel(entry.blockId, VoxelTransform.pack(entry)),
-        changes
-      );
-    }
-    this.#record(changes);
-    this.#emit({
-      action: "voxels-set",
+    this.#write(
       layerName,
-      metadata: { entries }
-    });
+      entries.map((entry) => {
+        return {
+          position: entry.position,
+          packed: packVoxel(entry.blockId, VoxelTransform.pack(entry))
+        };
+      }),
+      {
+        action: "voxels-set",
+        layerName,
+        metadata: { entries }
+      }
+    );
   }
 
   removeVoxelBulk(
     layerName: string,
     entries: VoxelRemoveOptions[]
   ): void {
-    if (this.#batch !== null) {
-      for (const { position } of entries) {
-        this.#batchWrite(layerName, position, VOXEL_ABSENT);
-      }
-
-      return;
-    }
-
-    const changes = this.#changes(layerName);
-    for (const { position } of entries) {
-      this.#writeVoxel(layerName, position, VOXEL_ABSENT, changes);
-    }
-    this.#record(changes);
-    this.#emit({
-      action: "voxels-removed",
+    this.#write(
       layerName,
-      metadata: { entries }
-    });
+      entries.map(({ position }) => {
+        return { position, packed: VOXEL_ABSENT };
+      }),
+      {
+        action: "voxels-removed",
+        layerName,
+        metadata: { entries }
+      }
+    );
   }
 
   patchVoxels(
@@ -859,20 +529,30 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     assertVoxelPatchCells(cells);
 
-    this.transaction(() => {
-      for (let index = 0; index < cells.length; index += VOXEL_PATCH_STRIDE) {
-        const blockId = cells[index + 3];
-        this.#batchWrite(
-          layerName,
-          {
-            x: cells[index],
-            y: cells[index + 1],
-            z: cells[index + 2]
-          },
-          isAir(blockId) ? VOXEL_ABSENT : packVoxel(blockId, cells[index + 4])
-        );
-      }
-    });
+    const layer = this.getLayer(layerName);
+    const recording = !this.#muted && this.recorder !== null;
+    const direct = this.#batch === null &&
+      this.#captured === null &&
+      !recording;
+    if (layer && direct) {
+      this.#patchLayer(layer, cells);
+
+      return;
+    }
+
+    const writes: VoxelWrite[] = [];
+    for (let index = 0; index < cells.length; index += VOXEL_PATCH_STRIDE) {
+      writes.push({
+        position: {
+          x: cells[index],
+          y: cells[index + 1],
+          z: cells[index + 2]
+        },
+        packed: packPatchCell(cells, index)
+      });
+    }
+
+    this.transaction(() => this.#write(layerName, writes));
   }
 
   transaction<T>(
@@ -889,93 +569,8 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
     finally {
       this.#batch = null;
-      batch.markDirty(this.#layers);
+      batch.markDirty(this.#layers.toArray());
       this.#flushBatch(batch);
-    }
-  }
-
-  #batchWrite(
-    layerName: string,
-    position: Vector3Like,
-    packed: PackedVoxel
-  ): void {
-    const layer = this.getLayer(layerName);
-    if (!layer) {
-      if (packed === VOXEL_ABSENT) {
-        return;
-      }
-
-      throw new Error(`VoxelWorld: layer "${layerName}" does not exist.`);
-    }
-
-    const track = !this.#muted;
-    this.#batch!.write(layer, position, packed, {
-      track,
-      record: track && this.recorder !== null
-    });
-  }
-
-  #flushBatch(
-    batch: VoxelEditBatch
-  ): void {
-    for (const { layer, cells, changes } of batch.drain()) {
-      if (changes.length > 0) {
-        this.recorder?.record(changes);
-      }
-      this.emit("command", {
-        action: "voxels-patched",
-        layerName: layer.name,
-        metadata: { cells }
-      });
-    }
-  }
-
-  #changes(
-    layerName: string
-  ): PendingChanges | null {
-    if (this.recorder === null || this.#muted) {
-      return null;
-    }
-
-    return {
-      layer: this.getLayer(layerName),
-      cells: []
-    };
-  }
-
-  #writeVoxel(
-    layerName: string,
-    position: Vector3Like,
-    packed: PackedVoxel,
-    changes: PendingChanges | null
-  ): void {
-    const before = changes?.layer?.getPackedVoxelAt(position) ?? VOXEL_ABSENT;
-    if (packed === VOXEL_ABSENT) {
-      this.removeVoxelAt(layerName, position);
-    }
-    else {
-      this.setPackedVoxelAt(layerName, position, packed);
-    }
-
-    if (changes !== null && before !== packed) {
-      changes.cells.push({
-        layerName,
-        position: {
-          x: position.x,
-          y: position.y,
-          z: position.z
-        },
-        before,
-        after: packed
-      });
-    }
-  }
-
-  #record(
-    changes: PendingChanges | null
-  ): void {
-    if (changes !== null && changes.cells.length > 0) {
-      this.recorder?.record(changes.cells);
     }
   }
 
@@ -1001,8 +596,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       throw new Error(`VoxelWorld: layer "${layerName}" does not exist.`);
     }
 
-    layer.setPackedVoxelAt(position, packed);
-    this.#markEditDirty(layer, position);
+    this.#store(layer, position, packed);
   }
 
   removeVoxelAt(
@@ -1010,171 +604,312 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     position: Vector3Like
   ): void {
     const layer = this.getLayer(layerName);
-    if (!layer) {
-      return;
-    }
-
-    layer.removeVoxelAt(position);
-    this.#markEditDirty(layer, position);
-  }
-
-  * getAllDirtyChunks(): IterableIterator<IterableLayerChunk> {
-    for (const layer of this.#layers) {
-      for (const chunk of layer.getDirtyChunks()) {
-        yield { layer, chunk };
-      }
-
-      if (layer.wasVisible) {
-        layer.wasVisible = false;
-      }
+    if (layer) {
+      this.#store(layer, position, VOXEL_ABSENT);
     }
   }
 
-  * getAllChunks(): IterableIterator<IterableLayerChunk> {
-    for (const layer of this.#layers) {
-      for (const chunk of layer.getChunks()) {
-        yield { layer, chunk };
-      }
-    }
+  getAllDirtyChunks(): IterableIterator<IterableLayerChunk> {
+    return layerChunks(this.#layers, (layer) => layer.getDirtyChunks());
+  }
+
+  getAllChunks(): IterableIterator<IterableLayerChunk> {
+    return layerChunks(this.#layers, (layer) => layer.getChunks());
   }
 
   * getAllChunksToBeRemoved(): IterableIterator<IterableLayerChunk> {
-    do {
-      const layer = this.#layersToRemove.pop();
-      if (!layer) {
-        break;
-      }
-      if (!layer.visible && !layer.wasVisible) {
-        continue;
-      }
-
-      for (const chunk of layer.getChunks()) {
-        yield { layer, chunk };
-      }
-    } while (this.#layersToRemove.length > 0);
-
-    for (const layer of this.#layers) {
-      for (const chunk of layer.drainPendingRemovals()) {
-        yield { layer, chunk };
-      }
-    }
+    yield* layerChunks(
+      this.#layers.drainDetached(),
+      (layer) => layer.getChunks()
+    );
+    yield* layerChunks(
+      this.#layers,
+      (layer) => layer.drainPendingRemovals()
+    );
   }
 
   apply(
     command: VoxelLayerCommand,
     logger?: VoxelLogger
-  ): void {
-    this.silently(() => dispatchCommand(this, command, logger));
+  ): VoxelLayerCommand | null {
+    const batch = this.#batch;
+    if (batch !== null) {
+      this.#flushBatch(batch);
+    }
+
+    const captured: VoxelLayerCommand[] = [];
+    this.#batch = null;
+    try {
+      this.#redirect(
+        captured,
+        () => dispatchCommand(this, command, logger)
+      );
+    }
+    finally {
+      this.#batch = batch;
+    }
+
+    return captured.at(-1) ?? null;
   }
 
   silently<T>(
     fn: () => T
   ): T {
-    const previous = this.#muted;
-    this.#muted = true;
-    try {
-      return fn();
+    return this.#redirect(null, fn);
+  }
+
+  clear(): void {
+    this.#layers.clear();
+    this.objectLayers.clear();
+  }
+
+  #write(
+    layerName: string,
+    writes: readonly VoxelWrite[],
+    command?: VoxelLayerCommand
+  ): void {
+    const layer = this.getLayer(layerName);
+    if (!layer) {
+      if (writes.some(({ packed }) => packed !== VOXEL_ABSENT)) {
+        throw new Error(`VoxelWorld: layer "${layerName}" does not exist.`);
+      }
+
+      return;
     }
-    finally {
-      this.#muted = previous;
+
+    const batch = this.#batch;
+    const recorder = this.#muted ? null : this.recorder;
+    if (batch !== null) {
+      const options = {
+        track: this.#publishing,
+        record: recorder !== null
+      };
+      for (const { position, packed } of writes) {
+        batch.write(layer, position, packed, options);
+      }
+
+      return;
+    }
+
+    const changes: VoxelCellChange[] = [];
+    for (const { position, packed } of writes) {
+      const before = recorder === null ?
+        packed :
+        layer.getPackedVoxelAt(position);
+      this.#store(layer, position, packed);
+
+      if (before !== packed) {
+        changes.push({
+          layerName,
+          position: {
+            x: position.x,
+            y: position.y,
+            z: position.z
+          },
+          before,
+          after: packed
+        });
+      }
+    }
+    if (changes.length > 0) {
+      recorder?.record(changes);
+    }
+    if (command) {
+      this.#emit(command);
     }
   }
 
-  #emit(
-    event: VoxelLayerCommand
+  #patchLayer(
+    layer: VoxelLayer,
+    cells: readonly number[]
   ): void {
-    if (this.#muted) {
+    const batch = new VoxelEditBatch(this.chunkSize);
+    const position = { x: 0, y: 0, z: 0 };
+    let written = 0;
+    try {
+      for (; written < cells.length; written += VOXEL_PATCH_STRIDE) {
+        position.x = cells[written];
+        position.y = cells[written + 1];
+        position.z = cells[written + 2];
+        batch.write(
+          layer,
+          position,
+          packPatchCell(cells, written),
+          kUntrackedWrite
+        );
+      }
+    }
+    finally {
+      batch.markDirty(this.#layers.toArray());
+      if (written > 0) {
+        this.#emit({
+          action: "voxels-patched",
+          layerName: layer.name,
+          metadata: { cells: cells.slice(0, written) }
+        });
+      }
+    }
+  }
+
+  #store(
+    layer: VoxelLayer,
+    position: Vector3Like,
+    packed: PackedVoxel
+  ): void {
+    if (packed === VOXEL_ABSENT) {
+      layer.removeVoxelAt(position);
+    }
+    else {
+      layer.setPackedVoxelAt(position, packed);
+    }
+
+    if (this.#batch !== null) {
+      this.#batch.touch(layer, position);
+
+      return;
+    }
+
+    for (const candidate of this.#layers) {
+      candidate.markCellDirty(position);
+    }
+  }
+
+  #flushBatch(
+    batch: VoxelEditBatch
+  ): void {
+    for (const { layer, cells, changes } of batch.drain()) {
+      if (changes.length > 0) {
+        this.recorder?.record(changes);
+      }
+      this.#publish({
+        action: "voxels-patched",
+        layerName: layer.name,
+        metadata: { cells }
+      });
+    }
+  }
+
+  get #publishing(): boolean {
+    return !this.#muted || this.#captured !== null;
+  }
+
+  #emit(
+    command: VoxelLayerCommand
+  ): void {
+    if (!this.#publishing) {
       return;
     }
     if (this.#batch !== null) {
       this.#flushBatch(this.#batch);
     }
 
-    this.emit("command", event);
+    this.#publish(command);
   }
 
-  clear(): void {
-    this.#layers = [];
-    this.#layersToRemove = [];
-    this.#objectLayers.clear();
+  #publish(
+    command: VoxelLayerCommand
+  ): void {
+    if (this.#captured !== null) {
+      this.#captured.push(command);
+    }
+    else if (!this.#muted) {
+      this.emit("command", command);
+    }
   }
 
-  #sortLayers(): void {
-    this.#layers.sort(
-      (a, b) => b.order - a.order
+  #redirect<T>(
+    captured: VoxelLayerCommand[] | null,
+    fn: () => T
+  ): T {
+    const muted = this.#muted;
+    const previous = this.#captured;
+    this.#muted = true;
+    this.#captured = captured;
+    try {
+      return fn();
+    }
+    finally {
+      this.#muted = muted;
+      this.#captured = previous;
+    }
+  }
+
+  #compositedLayerAt(
+    position: Vector3Like
+  ): VoxelLayer | undefined {
+    return this.#layers.toArray().find(
+      (layer) => layer.effectivelyVisible &&
+        layer.getPackedVoxelAt(position) !== VOXEL_ABSENT
     );
   }
 
-  #markLayerDirty(
-    layer: VoxelLayer
+  #moveLayer(
+    fromIndex: number,
+    toIndex: number
+  ): boolean {
+    if (!this.#layers.move(fromIndex, toIndex)) {
+      return false;
+    }
+    this.#markAllLayersDirty();
+
+    return true;
+  }
+
+  #updateLayerVisibility(
+    layer: VoxelLayer,
+    visible: boolean
   ): void {
-    for (const chunk of layer.getChunks()) {
-      chunk.dirty = true;
+    const flipped = layer.visible !== visible;
+    layer.visible = visible;
+    this.#markLayerChanged(layer, flipped);
+  }
+
+  #updateLayerOpacity(
+    layer: VoxelLayer,
+    opacity: number
+  ): void {
+    const wasOccluding = layer.opacity >= 1;
+    layer.opacity = opacity;
+    this.#markLayerChanged(layer, wasOccluding !== layer.opacity >= 1);
+  }
+
+  #markLayerChanged(
+    layer: VoxelLayer,
+    affectsOtherLayers: boolean
+  ): void {
+    if (affectsOtherLayers) {
+      this.#markAllLayersDirty();
+    }
+    else {
+      layer.markAllDirty();
     }
   }
 
   #markAllLayersDirty(): void {
     for (const layer of this.#layers) {
-      this.#markLayerDirty(layer);
+      layer.markAllDirty();
     }
   }
+}
 
-  #markEditDirty(
-    edited: VoxelLayer,
-    position: Vector3Like
-  ): void {
-    if (this.#batch !== null) {
-      this.#batch.touch(edited, position);
+function packPatchCell(
+  cells: readonly number[],
+  index: number
+): PackedVoxel {
+  const blockId = cells[index + 3];
 
-      return;
-    }
+  return isAir(blockId) ?
+    VOXEL_ABSENT :
+    packVoxel(blockId, cells[index + 4]);
+}
 
-    const shift = this.#chunkShift;
-
-    for (const layer of this.#layers) {
-      if (layer !== edited) {
-        layer.markChunkDirty(
-          (position.x - layer.position.x) >> shift,
-          (position.y - layer.position.y) >> shift,
-          (position.z - layer.position.z) >> shift
-        );
-      }
-      this.#markNeighbourChunksDirty(layer, position);
-    }
-  }
-
-  #markNeighbourChunksDirty(
-    layer: VoxelLayer,
-    position: Vector3Like
-  ): void {
-    const s = this.chunkSize;
-    const shift = this.#chunkShift;
-    const mask = this.#chunkMask;
-
-    const x = position.x - layer.position.x;
-    const y = position.y - layer.position.y;
-    const z = position.z - layer.position.z;
-
-    const cx = x >> shift;
-    const cy = y >> shift;
-    const cz = z >> shift;
-
-    const minDx = (x & mask) === 0 ? -1 : 0;
-    const maxDx = (x & mask) === s - 1 ? 1 : 0;
-    const minDy = (y & mask) === 0 ? -1 : 0;
-    const maxDy = (y & mask) === s - 1 ? 1 : 0;
-    const minDz = (z & mask) === 0 ? -1 : 0;
-    const maxDz = (z & mask) === s - 1 ? 1 : 0;
-
-    // Edge and corner chunks sample this cell for ambient occlusion.
-    for (let dx = minDx; dx <= maxDx; dx++) {
-      for (let dy = minDy; dy <= maxDy; dy++) {
-        for (let dz = minDz; dz <= maxDz; dz++) {
-          if ((dx | dy | dz) !== 0) {
-            layer.markChunkDirty(cx + dx, cy + dy, cz + dz);
-          }
-        }
-      }
+function* layerChunks(
+  layers: Iterable<VoxelLayer>,
+  chunksOf: (layer: VoxelLayer) => Iterable<VoxelChunk>
+): IterableIterator<IterableLayerChunk> {
+  for (const layer of layers) {
+    for (const chunk of chunksOf(layer)) {
+      yield { layer, chunk };
     }
   }
 }

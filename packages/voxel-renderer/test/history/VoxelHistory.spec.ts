@@ -11,7 +11,7 @@ import {
   VoxelWorld,
   type VoxelCellChange
 } from "../../src/world/index.ts";
-import type { VoxelLayerCommand } from "../../src/commands.ts";
+import type { VoxelLayerCommand } from "../../src/commands/index.ts";
 import { makeEngine } from "../helpers/engine.ts";
 
 // CONSTANTS
@@ -254,7 +254,7 @@ describe("VoxelHistory", () => {
     history.undo();
 
     assert.deepEqual(commands.map((command) => command.action), [
-      "voxels-removed"
+      "voxels-patched"
     ]);
     assert.equal(history.canRedo, true);
     assert.equal(history.canUndo, false);

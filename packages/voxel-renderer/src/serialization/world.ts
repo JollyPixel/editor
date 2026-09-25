@@ -38,9 +38,7 @@ export function serializeVoxelWorld(
     layers: world
       .getLayers()
       .map((layer) => layer.toJSON()),
-    objectLayers: [
-      ...world.getObjectLayers()
-    ]
+    objectLayers: world.objectLayers.toArray()
   };
   if (options.defaultTileSize !== undefined) {
     document.defaultTileSize = options.defaultTileSize;
@@ -97,7 +95,6 @@ export function deserializeVoxelWorld(
     });
 
     layer.id = layerJSON.id;
-    layer.order = layerJSON.order;
     if (layerJSON.position) {
       layer.position = { ...layerJSON.position };
     }
@@ -129,7 +126,7 @@ export function deserializeVoxelWorld(
   }
 
   for (const layerJSON of document.objectLayers ?? []) {
-    const layer = world.addObjectLayer(layerJSON.name, {
+    const layer = world.objectLayers.add(layerJSON.name, {
       visible: layerJSON.visible,
       order: layerJSON.order
     });

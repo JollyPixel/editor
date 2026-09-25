@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/index.ts";
 import { FACE } from "../../src/utils/math.ts";
-import type { VoxelLayerCommand } from "../../src/commands.ts";
+import type { VoxelLayerCommand } from "../../src/commands/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 describe("VoxelWorld — layer lifecycle", () => {
@@ -54,6 +54,21 @@ describe("VoxelWorld — layer lifecycle", () => {
 });
 
 describe("VoxelWorld — layer ordering", () => {
+  it("stacks a layer added after a removal on top, with dense orders", () => {
+    const world = new VoxelWorld(4);
+    for (const name of ["A", "B", "C"]) {
+      world.addLayer(name);
+    }
+
+    world.removeLayer("A");
+    world.addLayer("D");
+
+    assert.deepEqual(
+      world.getLayers().map((layer) => [layer.name, layer.order]),
+      [["D", 2], ["C", 1], ["B", 0]]
+    );
+  });
+
   it("swaps a layer's priority with its neighbour in the stack", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
@@ -180,6 +195,27 @@ describe("VoxelWorld — voxel access", () => {
     assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
     assert.equal(world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 }), undefined);
     assert.equal(world.getVoxelNeighbour({ x: 0, y: 0, z: 0 }, FACE.PosX), undefined);
+  });
+
+  it("never hands out a layer id that a restored layer already holds", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Loaded").id = "layer_1";
+
+    const added = world.addLayer("Added");
+
+    assert.notEqual(added.id, "layer_1");
+    assert.equal(new Set(world.getLayers().map((layer) => layer.id)).size, 2);
+  });
+
+  it("emits nothing for an erase aimed at a layer that does not exist", () => {
+    const world = new VoxelWorld(4);
+    const actions: string[] = [];
+    world.on("command", (command) => actions.push(command.action));
+
+    world.removeVoxel("NoSuch", { position: { x: 0, y: 0, z: 0 } });
+    world.removeVoxelBulk("NoSuch", [{ position: { x: 0, y: 0, z: 0 } }]);
+
+    assert.deepEqual(actions, []);
   });
 
   it("refuses to write to a layer that does not exist, but tolerates erasing from one", () => {

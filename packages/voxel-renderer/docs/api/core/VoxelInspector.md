@@ -51,6 +51,7 @@ class VoxelInspector {
 
 interface VoxelInspectorContext {
   parent: THREE.Object3D;
+  solids: THREE.Object3D; // group of the textured chunk meshes
   world: VoxelWorld;
   blockRegistry: BlockRegistry;
 }

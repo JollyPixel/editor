@@ -16,18 +16,27 @@ export class QuadIndex {
   forQuads(
     quads: number
   ): THREE.BufferAttribute {
-    if (this.#attribute !== null && quads <= this.#capacity) {
+    if (
+      this.#attribute !== null &&
+      quads <= this.#capacity
+    ) {
       return new THREE.BufferAttribute(
-        this.#attribute.array.subarray(0, quads * kIndicesPerQuad), 1
+        this.#attribute.array.subarray(0, quads * kIndicesPerQuad),
+        1
       );
     }
 
-    let capacity = Math.max(kInitialQuads, this.#capacity * 2);
+    let capacity = Math.max(
+      kInitialQuads,
+      this.#capacity * 2
+    );
     while (capacity < quads) {
       capacity *= 2;
     }
 
-    const indices = new Uint32Array(capacity * kIndicesPerQuad);
+    const indices = new Uint32Array(
+      capacity * kIndicesPerQuad
+    );
     for (let i = 0, quad = 0; quad < capacity; quad++) {
       const vertex = quad * 4;
       indices[i++] = vertex;
@@ -42,7 +51,8 @@ export class QuadIndex {
     this.#capacity = capacity;
 
     return new THREE.BufferAttribute(
-      indices.subarray(0, quads * kIndicesPerQuad), 1
+      indices.subarray(0, quads * kIndicesPerQuad),
+      1
     );
   }
 }

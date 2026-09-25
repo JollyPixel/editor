@@ -13,7 +13,10 @@ import {
 import { BlockRegistry } from "../../src/blocks/index.ts";
 import { BlockShapeRegistry } from "../../src/blocks/shape/index.ts";
 import { TilesetManager } from "../../src/tileset/index.ts";
-import { VoxelMeshBuilder } from "../../src/mesh/index.ts";
+import {
+  VoxelMeshBuilder,
+  type ChunkGeometryKey
+} from "../../src/mesh/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 import { registerAtlas } from "./atlas.ts";
 import {
@@ -108,18 +111,18 @@ export function fillBox(
 export function buildChunk(
   fixture: MeshFixture,
   chunkCoords: Vec3Tuple = [0, 0, 0]
-): Map<string, THREE.BufferGeometry> | null {
+): Map<ChunkGeometryKey, THREE.BufferGeometry> {
   const { layer, builder } = fixture;
   const chunk = layer.getChunk(...chunkCoords);
 
-  return chunk ? builder.buildChunkGeometries(chunk, layer) : null;
+  return chunk ? builder.buildChunkGeometries(chunk, layer) : new Map();
 }
 
 export function countVertices(
-  geometries: Map<string, THREE.BufferGeometry> | null
+  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>
 ): number {
   let total = 0;
-  for (const geometry of geometries?.values() ?? []) {
+  for (const geometry of geometries.values()) {
     total += geometry.getAttribute("position").count;
   }
 
@@ -156,11 +159,20 @@ export function getChunk(
 export function buildGeometries(
   fixture: MeshFixture,
   chunkCoords: Vec3Tuple = [0, 0, 0]
-): Map<string, THREE.BufferGeometry> {
+): Map<ChunkGeometryKey, THREE.BufferGeometry> {
   const geometries = buildChunk(fixture, chunkCoords);
-  assert.ok(geometries);
+  assert.ok(geometries.size > 0);
 
   return geometries;
+}
+
+export function geometryAlphaModes(
+  fixture: MeshFixture
+): string[] {
+  return Array.from(
+    buildGeometries(fixture).keys(),
+    (key) => key.surface.alphaMode
+  );
 }
 
 export function firstGeometry(
