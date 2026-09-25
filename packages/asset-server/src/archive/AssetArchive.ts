@@ -10,8 +10,6 @@ import { assetReferenceSchema } from "../events/AssetEvents.schema.ts";
 // CONSTANTS
 export const ASSET_ARCHIVE_VERSION = 1;
 export const ASSET_ARCHIVE_MANIFEST_PATH = "bundle.json";
-export const DEFAULT_ARCHIVE_MAX_ENTRY_BYTES = 16 * 1024 * 1024;
-export const DEFAULT_ARCHIVE_MAX_BYTES = 64 * 1024 * 1024;
 
 export const assetArchiveEntrySchema = defineSchema({
   type: "object",

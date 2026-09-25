@@ -81,6 +81,7 @@ interface CatalogExtensionOptions {
   backend: ArchiveBackend;
   id?: string;
   maxContentBytes?: number;
+  archiveLimits?: ArchiveLimits;
   deleteProtection?: boolean;
 }
 ```
@@ -94,11 +95,14 @@ interface CatalogExtensionOptions {
   of an archive, exported or imported. Defaults to
   `DEFAULT_CATALOG_MAX_CONTENT_BYTES` (16 MiB). A larger payload is rejected
   with `CatalogContentTooLargeError` before anything is written.
+- `archiveLimits` caps the decoded entry and archive sizes of an archive
+  sent to `catalog:plan` or `catalog:import`. Defaults to the
+  [`readAssetArchive`](./Archive.md#readassetarchive) limits.
 - `id` overrides the room name. Defaults to `CATALOG_ROOM`.
 
 `createAssetBackend().attach(server)` registers this room with the backend
-writer for the usual setup, capped by the `catalogMaxContentBytes` backend
-option.
+writer for the usual setup, capped by the `catalogMaxContentBytes` and
+`catalogArchiveLimits` backend options.
 
 ### Commands
 
@@ -263,7 +267,8 @@ request with `CatalogRejectedError` (`message` is the reason, `command` the
 command type).
 
 The entry also exports `ARCHIVE_MIME_TYPE` (`"application/zip"`), the type
-of the bytes `exportArchive` resolves.
+of the bytes `exportArchive` resolves, plus `ArchiveLimits`,
+`DEFAULT_ARCHIVE_MAX_ENTRY_BYTES` and `DEFAULT_ARCHIVE_MAX_BYTES`.
 
 ## HTTP handler
 

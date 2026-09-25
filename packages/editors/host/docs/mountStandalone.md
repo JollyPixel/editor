@@ -141,12 +141,12 @@ interface BootStandaloneOptions
   forceOffline?: boolean;
 }
 
-type OfflineProject = Pick<OfflineWorkspaceOptions, "handlers" | "seed">;
+type OfflineProject = Pick<OfflineWorkspaceOptions, "handlers" | "seed" | "backend">;
 ```
 
 | Option | Role |
 |---|---|
-| `offline` | the handlers and seed of the in-page workspace; called only once the editor goes offline, so import them dynamically |
+| `offline` | the handlers, seed and backend tuning of the in-page workspace; called only once the editor goes offline, so import them dynamically |
 | `forceOffline` | skips the server; pass `import.meta.env.MODE === "static"` for a static build |
 | `sources` | replaces the launch sources of the online attempt only |
 
@@ -210,8 +210,8 @@ await mountStandalone(VoxelMapEditor, {
 
 | Member | Role |
 |---|---|
-| `OfflineWorkspace.open({ handlers, seed?, storage?, name? })` | opens the storage, seeds it when empty, then starts the back-end and its server |
-| `openSharedTabWorkspace({ handlers, seed?, name? })` | opens the persistent workspace in one tab and connects other tabs to it over BroadcastChannel; resolves a `StandaloneWorkspace` |
+| `OfflineWorkspace.open({ handlers, seed?, storage?, name?, backend? })` | opens the storage, seeds it when empty, then starts the back-end and its server |
+| `openSharedTabWorkspace({ handlers, seed?, name?, backend? })` | opens the persistent workspace in one tab and connects other tabs to it over BroadcastChannel; resolves a `StandaloneWorkspace` |
 | `StandaloneWorkspace` | the members below that every workspace shares: `persistent`, `connect()`, `launchSources()`, `reset()`, `close()` |
 | `connect()` | a guest identity, a local or BroadcastChannel client and the workspace |
 | `launchSources(accepts)` | a known `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind; await it for a shared follower |
@@ -227,7 +227,10 @@ connected; destroying the last closes the workspace. Once closing starts,
 `storage` defaults to `"memory"`. `name` defaults to `"default"` and selects
 the `jolly-workspace:<name>` database. `seed` is a seed map or a function
 returning one, used only when the storage holds no asset: a seeded asset the
-user deleted does not come back.
+user deleted does not come back. `backend` takes the
+[`AssetBackendTuning`](../../../asset-server/docs/Workspace.md) the Vite
+workspace plugin takes, such as `catalogArchiveLimits`; `watch` is always
+off.
 
 On `"indexeddb"`:
 

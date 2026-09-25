@@ -44,6 +44,10 @@ type AssetBackendTuning = Omit<
 >;
 ```
 
+`AssetBackendTuning` is also exported by the browser-safe `./backend` entry,
+so an editor can declare its tuning once for this workspace and its offline
+one.
+
 `root` is required. Without injected instances, the workspace creates a
 `FilesystemAssetSource(root)`, a SQLite event store under `.jollypixel/`, and
 a `Server`. `handlers` and `extensions` default to empty arrays. `seed` adds

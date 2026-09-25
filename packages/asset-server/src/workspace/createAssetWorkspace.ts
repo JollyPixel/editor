@@ -24,7 +24,7 @@ import {
 import {
   createAssetBackend,
   type AssetBackend,
-  type AssetBackendOptions
+  type AssetBackendTuning
 } from "../createAssetBackend.ts";
 import {
   silentLogger,
@@ -34,11 +34,6 @@ import {
   seedAssetSource,
   type AssetSeedMap
 } from "./seedAssetSource.ts";
-
-export type AssetBackendTuning = Omit<
-  AssetBackendOptions,
-  "source" | "eventStore" | "handlers" | "logger"
->;
 
 export interface AssetWorkspaceOptions {
   /**

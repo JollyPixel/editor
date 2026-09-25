@@ -12,6 +12,7 @@ export type {
 export type {
   AssetArchiveEntry
 } from "../../archive/AssetArchive.ts";
+export * from "../../archive/ArchiveLimits.ts";
 export type {
   ImportConflictPolicy,
   ImportFailure,

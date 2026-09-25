@@ -50,6 +50,7 @@ import type {
 } from "../archive/AssetArchive.ts";
 import { exportAssetArchive } from "../archive/exportAssetArchive.ts";
 import { readAssetArchive } from "../archive/readAssetArchive.ts";
+import type { ArchiveLimits } from "../archive/ArchiveLimits.ts";
 import {
   importAssetArchive,
   planAssetImport
@@ -64,6 +65,10 @@ export interface CatalogExtensionOptions {
   id?: string;
   maxContentBytes?: number;
   /**
+   * Decoded size caps of an archive received by plan and import.
+   */
+  archiveLimits?: ArchiveLimits;
+  /**
    * Refuse a delete command aimed at an asset other assets still reference.
    * @default true
    */
@@ -77,6 +82,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
   #backend: ArchiveBackend;
   #maxContentBytes: number;
+  #archiveLimits: ArchiveLimits;
   #deleteProtection: boolean;
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
@@ -90,6 +96,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#backend = options.backend;
     this.#maxContentBytes = options.maxContentBytes ??
       DEFAULT_CATALOG_MAX_CONTENT_BYTES;
+    this.#archiveLimits = { ...options.archiveLimits };
     this.#deleteProtection = options.deleteProtection ?? true;
     this.#onChanged = (change) => this.#broadcast?.broadcast({
       type: CATALOG_CHANGED,
@@ -274,7 +281,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     content: AssetInlineContent
   ): Result<AssetArchive, Error> {
     return this.#decode(content).andThen(
-      (bytes) => readAssetArchive(bytes)
+      (bytes) => readAssetArchive(bytes, this.#archiveLimits)
     );
   }
 
