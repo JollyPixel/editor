@@ -11,9 +11,9 @@ import type {
 } from "./collision/VoxelCollider.ts";
 import {
   isVoxelMaterialGroupCommand,
-  isVoxelTilesetCommand,
-  type VoxelCommand
-} from "./commands.ts";
+  isVoxelTilesetCommand
+} from "./commands/categories.ts";
+import type { VoxelCommand } from "./commands/types.ts";
 import type {
   VoxelDocument,
   VoxelLoadOptions

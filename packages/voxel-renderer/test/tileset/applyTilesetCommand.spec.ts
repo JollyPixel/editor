@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   applyTilesetCommand,
+  TilesetList,
   type TilesetDocument
-} from "../src/applyTilesetCommand.ts";
-import { TilesetList } from "../src/tileset/index.ts";
-import { BlockRegistry } from "../src/blocks/index.ts";
+} from "../../src/tileset/index.ts";
+import { BlockRegistry } from "../../src/blocks/index.ts";
 
 function makeDocument(): TilesetDocument {
   return {

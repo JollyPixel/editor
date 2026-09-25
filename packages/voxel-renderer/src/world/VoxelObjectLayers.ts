@@ -3,7 +3,7 @@ import type {
   VoxelObjectJSON,
   VoxelObjectLayerJSON
 } from "../serialization/types.ts";
-import type { VoxelLayerCommand } from "../commands.ts";
+import type { VoxelLayerCommand } from "../commands/types.ts";
 
 export type VoxelObjectLayerOptions = Partial<
   Pick<VoxelObjectLayerJSON, "visible" | "order">

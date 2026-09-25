@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/index.ts";
-import { VOXEL_LAYER_COMMAND_ACTIONS, type VoxelLayerCommand } from "../../src/commands.ts";
+import { VOXEL_LAYER_COMMAND_ACTIONS, type VoxelLayerCommand } from "../../src/commands/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeObject, recordCommands } from "../helpers/fakes.ts";
 import { withoutId } from "../helpers/world.ts";

@@ -7,7 +7,7 @@ import { VoxelDocument } from "../src/VoxelDocument.ts";
 import type {
   VoxelCommand,
   VoxelCommandOrigin
-} from "../src/commands.ts";
+} from "../src/commands/index.ts";
 import { makeBlockDef } from "./helpers/blocks.ts";
 import { makeAtlasDef } from "./helpers/atlas.ts";
 import {

@@ -11,7 +11,7 @@ import {
   VoxelWorld,
   type VoxelCellChange
 } from "../../src/world/index.ts";
-import type { VoxelLayerCommand } from "../../src/commands.ts";
+import type { VoxelLayerCommand } from "../../src/commands/index.ts";
 import { makeEngine } from "../helpers/engine.ts";
 
 // CONSTANTS

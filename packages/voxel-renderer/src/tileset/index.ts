@@ -7,3 +7,4 @@ export * from "./TilesetList.ts";
 export * from "./tileSize.ts";
 export * from "./tileRef.ts";
 export * from "./AtlasAverages.ts";
+export * from "./applyTilesetCommand.ts";

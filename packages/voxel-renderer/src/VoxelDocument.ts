@@ -3,19 +3,19 @@ import { Emitter } from "@openally/emitt";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { applyVoxelCommand } from "./applyVoxelCommand.ts";
-import type {
-  BlockDefinition,
-  BlockProperties,
-  ResolvedBlockDefinition
+import { applyVoxelCommand } from "./commands/applyVoxelCommand.ts";
+import {
+  resolveBlockDefinition,
+  type BlockDefinition,
+  type BlockProperties,
+  type ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
 import { BlockRegistry } from "./blocks/BlockRegistry.ts";
-import { defineBlock } from "./blocks/applyBlockCommand.ts";
 import type {
   VoxelCommand,
   VoxelCommandListener,
   VoxelCommandOrigin
-} from "./commands.ts";
+} from "./commands/types.ts";
 import {
   VoxelHistory,
   type VoxelHistoryOptions
@@ -168,14 +168,11 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   defineBlocks(
     defs: Iterable<BlockDefinition>
   ): void {
-    const { defaultTilesetId } = this.tilesets;
-    const commands = Array.from(
-      defs,
-      (def) => defineBlock(this.blocks, def, defaultTilesetId)
-    );
-
-    for (const command of commands) {
-      this.#emitCommand(command, "local");
+    for (const def of defs) {
+      this.apply({
+        action: "block-defined",
+        block: resolveBlockDefinition(def)
+      });
     }
   }
 

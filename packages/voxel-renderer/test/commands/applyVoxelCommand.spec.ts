@@ -6,15 +6,15 @@ import assert from "node:assert/strict";
 import {
   applyVoxelCommand,
   type VoxelCommandTarget
-} from "../src/applyVoxelCommand.ts";
-import { BlockRegistry } from "../src/blocks/index.ts";
-import { MaterialGroupList } from "../src/materials/index.ts";
-import { TilesetList } from "../src/tileset/index.ts";
-import { VoxelWorld } from "../src/world/index.ts";
+} from "../../src/commands/index.ts";
+import { BlockRegistry } from "../../src/blocks/index.ts";
+import { MaterialGroupList } from "../../src/materials/index.ts";
+import { TilesetList } from "../../src/tileset/index.ts";
+import { VoxelWorld } from "../../src/world/index.ts";
 import {
   blockDefinedCmd,
   makeAddedCommand
-} from "./helpers/networkCommands.ts";
+} from "../helpers/networkCommands.ts";
 
 function makeTarget(): VoxelCommandTarget {
   return {

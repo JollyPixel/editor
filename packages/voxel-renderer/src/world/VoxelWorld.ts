@@ -32,7 +32,7 @@ import {
   VoxelTransform,
   type VoxelTransformOptions
 } from "./VoxelTransform.ts";
-import type { VoxelLayerCommand } from "../commands.ts";
+import type { VoxelLayerCommand } from "../commands/types.ts";
 import { dispatchCommand } from "./dispatchCommand.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
 import { VoxelEditBatch } from "./VoxelEditBatch.ts";
@@ -80,6 +80,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
 
   #layers = new VoxelLayerStack();
   #muted = false;
+  #captured: VoxelLayerCommand[] | null = null;
   #batch: VoxelEditBatch | null = null;
 
   constructor(
@@ -613,21 +614,31 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   apply(
     command: VoxelLayerCommand,
     logger?: VoxelLogger
-  ): void {
-    this.silently(() => dispatchCommand(this, command, logger));
+  ): VoxelLayerCommand | null {
+    const batch = this.#batch;
+    if (batch !== null) {
+      this.#flushBatch(batch);
+    }
+
+    const captured: VoxelLayerCommand[] = [];
+    this.#batch = null;
+    try {
+      this.#redirect(
+        captured,
+        () => dispatchCommand(this, command, logger)
+      );
+    }
+    finally {
+      this.#batch = batch;
+    }
+
+    return captured.at(-1) ?? null;
   }
 
   silently<T>(
     fn: () => T
   ): T {
-    const previous = this.#muted;
-    this.#muted = true;
-    try {
-      return fn();
-    }
-    finally {
-      this.#muted = previous;
-    }
+    return this.#redirect(null, fn);
   }
 
   clear(): void {
@@ -653,7 +664,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     const recorder = this.#muted ? null : this.recorder;
     if (batch !== null) {
       const options = {
-        track: !this.#muted,
+        track: this.#publishing,
         record: recorder !== null
       };
       for (const { position, packed } of writes) {
@@ -721,7 +732,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       if (changes.length > 0) {
         this.recorder?.record(changes);
       }
-      this.emit("command", {
+      this.#publish({
         action: "voxels-patched",
         layerName: layer.name,
         metadata: { cells }
@@ -729,17 +740,49 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
   }
 
+  get #publishing(): boolean {
+    return !this.#muted || this.#captured !== null;
+  }
+
   #emit(
     command: VoxelLayerCommand
   ): void {
-    if (this.#muted) {
+    if (!this.#publishing) {
       return;
     }
     if (this.#batch !== null) {
       this.#flushBatch(this.#batch);
     }
 
-    this.emit("command", command);
+    this.#publish(command);
+  }
+
+  #publish(
+    command: VoxelLayerCommand
+  ): void {
+    if (this.#captured !== null) {
+      this.#captured.push(command);
+    }
+    else if (!this.#muted) {
+      this.emit("command", command);
+    }
+  }
+
+  #redirect<T>(
+    captured: VoxelLayerCommand[] | null,
+    fn: () => T
+  ): T {
+    const muted = this.#muted;
+    const previous = this.#captured;
+    this.#muted = true;
+    this.#captured = captured;
+    try {
+      return fn();
+    }
+    finally {
+      this.#muted = muted;
+      this.#captured = previous;
+    }
   }
 
   #compositedLayerAt(

@@ -9,7 +9,7 @@ import {
   type VoxelCoord
 } from "../../src/world/index.ts";
 import { VoxelHistory } from "../../src/history/index.ts";
-import type { VoxelLayerCommand } from "../../src/commands.ts";
+import type { VoxelLayerCommand } from "../../src/commands/index.ts";
 import { recordCommands } from "../helpers/fakes.ts";
 import { clearAllDirty } from "../helpers/world.ts";
 

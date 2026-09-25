@@ -2,7 +2,7 @@
 import type {
   VoxelBlockCommand,
   VoxelLayerCommand
-} from "../../src/commands.ts";
+} from "../../src/commands/index.ts";
 import { resolveBlockDefinition } from "../../src/blocks/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 

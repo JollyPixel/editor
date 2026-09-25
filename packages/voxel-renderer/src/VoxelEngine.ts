@@ -13,7 +13,7 @@ import type { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
 import type {
   VoxelCommand,
   VoxelCommandListener
-} from "./commands.ts";
+} from "./commands/types.ts";
 import {
   VoxelDocument,
   type VoxelApplyOptions,

@@ -401,12 +401,18 @@ Voxels of `blockId` across all layers; `0` when none.
 
 ### Commands
 
-#### `apply(command: VoxelLayerCommand, logger?: VoxelLogger): void`
+#### `apply(command: VoxelLayerCommand, logger?: VoxelLogger): VoxelLayerCommand | null`
 
 Replays a layer command onto this world without emitting it, so a network
 adapter cannot echo it back. Every action of the union is handled; an unknown
 one throws. On an engine, prefer `engine.apply()`, which emits it once with its
 origin.
+
+Returns the command the world would have emitted for the same local change, or
+`null` when nothing changed. A `layer-moved` index comes back clamped, a
+`cloned` name comes back unique, and a `voxels-patched` keeps only the cells
+that changed. Pending writes of an open `transaction()` are emitted first, so
+they keep their place in the stream.
 
 A voxel command naming a layer this world no longer has is dropped rather than
 thrown, since a peer can still be painting a layer that was just merged or
@@ -418,8 +424,8 @@ error.
 #### `silently<T>(fn: () => T): T`
 
 Runs `fn` with the `"command"` event muted and returns its result. Use it for
-mutations peers already know about, such as deserializing a document.
-`apply()` is built on it, and nesting is safe.
+mutations peers already know about, such as deserializing a document. Nesting
+is safe.
 
 ```ts
 world.silently(() => deserializeVoxelWorld(snapshot, world));

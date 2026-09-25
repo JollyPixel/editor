@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { MaterialGroup } from "./MaterialGroup.ts";
 import type { MaterialGroupList } from "./MaterialGroupList.ts";
-import type { VoxelMaterialGroupCommand } from "../commands.ts";
+import type { VoxelMaterialGroupCommand } from "../commands/types.ts";
 
 /**
  * Applies the command and returns it as applied, or null when it changed

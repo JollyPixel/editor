@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/index.ts";
 import { FACE } from "../../src/utils/math.ts";
-import type { VoxelLayerCommand } from "../../src/commands.ts";
+import type { VoxelLayerCommand } from "../../src/commands/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 describe("VoxelWorld — layer lifecycle", () => {

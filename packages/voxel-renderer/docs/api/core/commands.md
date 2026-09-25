@@ -74,8 +74,7 @@ interface VoxelCommandTarget {
 Routes a command to `world.apply()`, `applyBlockCommand()`,
 [`applyMaterialGroupCommand()`](../materials/MaterialGroup.md#commands) or
 [`applyTilesetCommand()`](../tilesets/tilesets.md#tileset-commands) and returns
-the command as applied, or `null` when it changed nothing. Layer commands are
-always returned. It does not emit, rebuild meshes or rescale atlases; use it on
+the command as applied, or `null` when it changed nothing. It does not emit, rebuild meshes or rescale atlases; use it on
 a headless document such as a server-side state. `engine.apply()` wraps it
 with those side effects and broadcasts the returned command.
 

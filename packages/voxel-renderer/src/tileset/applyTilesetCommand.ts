@@ -1,10 +1,10 @@
 // Import Internal Dependencies
-import { rescaleTileRef } from "./tileset/tileRef.ts";
-import { BlockTextures } from "./blocks/BlockTextures.ts";
-import type { TilesetList } from "./tileset/TilesetList.ts";
-import type { BlockRegistry } from "./blocks/BlockRegistry.ts";
-import type { ResolvedBlockDefinition } from "./blocks/BlockDefinition.ts";
-import type { VoxelTilesetCommand } from "./commands.ts";
+import { rescaleTileRef } from "./tileRef.ts";
+import { BlockTextures } from "../blocks/BlockTextures.ts";
+import type { TilesetList } from "./TilesetList.ts";
+import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
+import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
+import type { VoxelTilesetCommand } from "../commands/types.ts";
 
 export interface TilesetDocument {
   readonly tilesets: TilesetList;

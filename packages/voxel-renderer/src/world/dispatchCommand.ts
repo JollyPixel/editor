@@ -2,7 +2,7 @@
 import type {
   VoxelLayerCommand,
   VoxelLayerCommandAction
-} from "../commands.ts";
+} from "../commands/types.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
 import type { VoxelWorld } from "./VoxelWorld.ts";
 

@@ -1,21 +1,22 @@
 // Import Internal Dependencies
-import { applyBlockCommand } from "./blocks/applyBlockCommand.ts";
+import { applyBlockCommand } from "../blocks/applyBlockCommand.ts";
 import {
   applyMaterialGroupCommand
-} from "./materials/applyMaterialGroupCommand.ts";
-import type { MaterialGroupList } from "./materials/MaterialGroupList.ts";
+} from "../materials/applyMaterialGroupCommand.ts";
+import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
 import {
   applyTilesetCommand,
   type TilesetDocument
-} from "./applyTilesetCommand.ts";
+} from "../tileset/applyTilesetCommand.ts";
 import {
   isVoxelBlockCommand,
   isVoxelLayerCommand,
   isVoxelMaterialGroupCommand,
-  type VoxelCommand
-} from "./commands.ts";
-import type { VoxelWorld } from "./world/VoxelWorld.ts";
-import type { VoxelLogger } from "./utils/logger.ts";
+  isVoxelTilesetCommand
+} from "./categories.ts";
+import type { VoxelCommand } from "./types.ts";
+import type { VoxelWorld } from "../world/VoxelWorld.ts";
+import type { VoxelLogger } from "../utils/logger.ts";
 
 export interface VoxelCommandTarget extends TilesetDocument {
   readonly world: VoxelWorld;
@@ -32,9 +33,7 @@ export function applyVoxelCommand(
   logger?: VoxelLogger
 ): VoxelCommand | null {
   if (isVoxelLayerCommand(command)) {
-    target.world.apply(command, logger);
-
-    return command;
+    return target.world.apply(command, logger);
   }
   if (isVoxelBlockCommand(command)) {
     return applyBlockCommand(
@@ -46,6 +45,12 @@ export function applyVoxelCommand(
   if (isVoxelMaterialGroupCommand(command)) {
     return applyMaterialGroupCommand(target.materialGroups, command);
   }
+  if (isVoxelTilesetCommand(command)) {
+    return applyTilesetCommand(target, command);
+  }
 
-  return applyTilesetCommand(target, command);
+  const unhandled: never = command;
+  throw new Error(
+    `applyVoxelCommand: unhandled action '${(unhandled as VoxelCommand).action}'.`
+  );
 }

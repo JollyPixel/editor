@@ -5,9 +5,7 @@ export { VoxelTransparencyRenderer } from "./render/VoxelTransparencyRenderer.ts
 export type {
   VoxelTransparencyRendererOptions
 } from "./render/VoxelTransparencyRenderer.ts";
-export * from "./commands.ts";
-export * from "./applyVoxelCommand.ts";
-export * from "./applyTilesetCommand.ts";
+export * from "./commands/index.ts";
 
 export * from "./blocks/index.ts";
 export * from "./collision/index.ts";

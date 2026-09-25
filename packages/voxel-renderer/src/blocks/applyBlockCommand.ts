@@ -5,9 +5,9 @@ import {
   resolveBlockDefinition,
   type BlockDefinition
 } from "./BlockDefinition.ts";
-import type { VoxelBlockCommand } from "../commands.ts";
+import type { VoxelBlockCommand } from "../commands/types.ts";
 
-export type BlockDefinedCommand = Extract<
+type BlockDefinedCommand = Extract<
   VoxelBlockCommand,
   { action: "block-defined"; }
 >;
@@ -48,7 +48,7 @@ export function applyBlockCommand(
  * Registers the block with the default tileset filled into its texture
  * references that name none.
  */
-export function defineBlock(
+function defineBlock(
   registry: BlockRegistry,
   definition: BlockDefinition,
   defaultTilesetId: string | null
