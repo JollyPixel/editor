@@ -3,35 +3,27 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ChunkRebuildQueue, ChunkViewport } from "../../src/render/index.ts";
 import {
-  ViewDistance,
-  type VoxelChunk,
-  VoxelLayer
-} from "../../src/world/index.ts";
+  ChunkRebuildQueue,
+  ChunkViewport,
+  type ChunkMeshTarget
+} from "../../src/render/index.ts";
+import { ViewDistance } from "../../src/world/index.ts";
 
 // CONSTANTS
 const kChunkSize = 4;
 
-function makeLayer(): VoxelLayer {
-  return new VoxelLayer({
-    id: "layer_0",
-    name: "Ground",
-    order: 0,
-    chunkSize: kChunkSize
-  });
-}
-
-function chunkAt(
-  layer: VoxelLayer,
+function targetAt(
   cx: number
-): VoxelChunk {
-  layer.setVoxelAt(
-    { x: cx * kChunkSize, y: 0, z: 0 },
-    { blockId: 1, transform: 0 }
-  );
-
-  return layer.getChunk(cx, 0, 0)!;
+): ChunkMeshTarget {
+  return {
+    key: `cell:${cx},0,0`,
+    layer: null,
+    cx,
+    cy: 0,
+    cz: 0,
+    origin: { x: cx * kChunkSize, y: 0, z: 0 }
+  };
 }
 
 function makeViewport(
@@ -47,57 +39,74 @@ function makeViewport(
 
 function drainAll(
   queue: ChunkRebuildQueue
-): VoxelChunk[] {
-  const rebuilt: VoxelChunk[] = [];
-  queue.drain(0, (_layer, chunk) => rebuilt.push(chunk));
+): ChunkMeshTarget[] {
+  const rebuilt: ChunkMeshTarget[] = [];
+  queue.drain(0, (target) => void rebuilt.push(target));
 
   return rebuilt;
 }
 
 describe("ChunkRebuildQueue — push", () => {
-  it("queues a chunk once", () => {
+  it("queues a target key once", () => {
     const queue = new ChunkRebuildQueue();
-    const layer = makeLayer();
-    const chunk = chunkAt(layer, 0);
 
-    assert.equal(queue.push(layer, chunk), true);
-    assert.equal(queue.push(layer, chunk), false);
+    assert.equal(queue.push(targetAt(0)), true);
+    assert.equal(queue.push(targetAt(0)), false);
     assert.equal(queue.size, 1);
+  });
+
+  it("rebuilds the latest target pushed under a key", () => {
+    const queue = new ChunkRebuildQueue();
+    const moved = {
+      ...targetAt(0),
+      origin: { x: 8, y: 0, z: 0 }
+    };
+
+    queue.push(targetAt(0));
+    queue.push(moved);
+
+    assert.deepEqual(drainAll(queue), [moved]);
   });
 });
 
 describe("ChunkRebuildQueue — cancel", () => {
-  it("skips a cancelled chunk without rebuilding it", () => {
+  it("skips a cancelled target without rebuilding it", () => {
     const queue = new ChunkRebuildQueue();
-    const layer = makeLayer();
-    const kept = chunkAt(layer, 0);
-    const dropped = chunkAt(layer, 1);
+    const kept = targetAt(0);
 
-    queue.push(layer, kept);
-    queue.push(layer, dropped);
-    queue.cancel(dropped);
+    queue.push(kept);
+    queue.push(targetAt(1));
+    queue.cancel(targetAt(1).key);
 
     assert.deepEqual(drainAll(queue), [kept]);
+  });
+
+  it("rebuilds a target pushed again after a cancel once", () => {
+    const queue = new ChunkRebuildQueue();
+
+    queue.push(targetAt(0));
+    queue.cancel(targetAt(0).key);
+    queue.push(targetAt(0));
+
+    assert.equal(drainAll(queue).length, 1);
   });
 });
 
 describe("ChunkRebuildQueue — drain", () => {
   it("empties the queue when the budget is disabled", () => {
     const queue = new ChunkRebuildQueue();
-    const layer = makeLayer();
     for (let cx = 0; cx < 5; cx++) {
-      queue.push(layer, chunkAt(layer, cx));
+      queue.push(targetAt(cx));
     }
 
     assert.equal(drainAll(queue).length, 5);
     assert.equal(queue.size, 0);
   });
 
-  it("rebuilds at least one chunk even with an exhausted budget", () => {
+  it("rebuilds at least one target even with an exhausted budget", () => {
     const queue = new ChunkRebuildQueue();
-    const layer = makeLayer();
-    queue.push(layer, chunkAt(layer, 0));
-    queue.push(layer, chunkAt(layer, 1));
+    queue.push(targetAt(0));
+    queue.push(targetAt(1));
 
     let rebuilt = 0;
     queue.drain(Number.MIN_VALUE, () => {
@@ -110,11 +119,9 @@ describe("ChunkRebuildQueue — drain", () => {
 
   it("resumes where the previous drain stopped", () => {
     const queue = new ChunkRebuildQueue();
-    const layer = makeLayer();
-    const first = chunkAt(layer, 0);
-    const second = chunkAt(layer, 1);
-    queue.push(layer, first);
-    queue.push(layer, second);
+    const second = targetAt(1);
+    queue.push(targetAt(0));
+    queue.push(second);
 
     queue.drain(Number.MIN_VALUE, () => void 0);
 
@@ -128,13 +135,12 @@ describe("ChunkRebuildQueue — drain", () => {
 });
 
 describe("ChunkRebuildQueue — sortBy", () => {
-  it("drains chunks nearest the focus first", () => {
+  it("drains targets nearest the focus first", () => {
     const queue = new ChunkRebuildQueue();
-    const layer = makeLayer();
-    const far = chunkAt(layer, 4);
-    const near = chunkAt(layer, 0);
-    queue.push(layer, far);
-    queue.push(layer, near);
+    const far = targetAt(4);
+    const near = targetAt(0);
+    queue.push(far);
+    queue.push(near);
 
     queue.sortBy(makeViewport({ x: 2, y: 2, z: 2 }));
 

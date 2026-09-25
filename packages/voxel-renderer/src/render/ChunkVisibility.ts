@@ -1,12 +1,13 @@
 // Import Internal Dependencies
-import type { VoxelLayer } from "../world/VoxelLayer.ts";
-import type { VoxelChunk } from "../world/VoxelChunk.ts";
-import type { ChunkMeshStore } from "./ChunkMeshStore.ts";
+import type {
+  ChunkMeshEntry,
+  ChunkMeshStore
+} from "./ChunkMeshStore.ts";
 import type { ChunkViewport } from "./ChunkViewport.ts";
 
 export type ChunkUnloadFn = (
-  layer: VoxelLayer,
-  chunk: VoxelChunk
+  key: string,
+  entry: ChunkMeshEntry
 ) => void;
 
 export interface ChunkVisibilityOptions {
@@ -52,18 +53,13 @@ export class ChunkVisibility {
     this.#last = viewport;
 
     for (const [key, entry] of this.#meshes) {
-      const { layer, chunk, visible } = entry;
-      const inView = viewport.contains(
-        layer,
-        chunk,
-        visible
-      );
-      if (inView === visible) {
+      const inView = viewport.contains(entry.origin, entry.visible);
+      if (inView === entry.visible) {
         continue;
       }
 
       if (!inView && viewport.policy === "unload") {
-        this.#unload(layer, chunk);
+        this.#unload(key, entry);
 
         continue;
       }

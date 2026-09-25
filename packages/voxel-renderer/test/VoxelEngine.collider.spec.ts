@@ -43,7 +43,7 @@ describe("VoxelEngine - collider wiring", () => {
     assert.equal(contexts[0].shapeRegistry, engine.shapeRegistry);
   });
 
-  it("rebuilds collision for a dirty chunk with the layer position", () => {
+  it("rebuilds collision for a dirty chunk at its world origin", () => {
     const { engine, fake } = makeCollidingEngine();
     engine.world.setLayerPosition("Ground", { x: 8, y: 0, z: 4 });
     placeCube(engine, "Ground", { x: 8, y: 0, z: 4 });
@@ -52,12 +52,13 @@ describe("VoxelEngine - collider wiring", () => {
 
     assert.equal(fake.rebuilt.length, 1);
     const [[key, collision]] = fake.rebuilt;
-    assert.match(key, /:0,0,0$/);
-    assert.deepEqual(collision.layerPosition, { x: 8, y: 0, z: 4 });
+    assert.equal(key, "cell:2,0,1");
+    assert.deepEqual(collision.origin, { x: 8, y: 0, z: 4 });
+    assert.equal(collision.chunks.length, 1);
     assert.ok(collision.geometries.size > 0);
   });
 
-  it("rebuilds collision for a chunk that draws no face", () => {
+  it("hands one collision with every composited layer chunk of a cell", () => {
     const { engine, fake } = makeCollidingEngine();
     engine.world.addLayer("Top", { compositing: "replace" });
     placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
@@ -65,8 +66,26 @@ describe("VoxelEngine - collider wiring", () => {
 
     engine.tick(0);
 
+    assert.equal(fake.rebuilt.length, 1);
+    const [[key, collision]] = fake.rebuilt;
+    assert.equal(key, "cell:0,0,0");
+    assert.deepEqual(collision.chunks, [
+      engine.world.getLayer("Top")!.getChunk(0, 0, 0),
+      engine.world.getLayer("Ground")!.getChunk(0, 0, 0)
+    ]);
+  });
+
+  it("rebuilds collision for a chunk that draws no face", () => {
+    const { engine, fake } = makeCollidingEngine();
+    engine.world.addLayer("Top", { compositing: "replace" });
+    engine.world.setLayerPosition("Ground", { x: 1, y: 0, z: 0 });
+    placeCube(engine, "Ground", { x: 1, y: 0, z: 0 });
+    placeCube(engine, "Top", { x: 1, y: 0, z: 0 });
+
+    engine.tick(0);
+
     const groundId = engine.world.getLayer("Ground")!.id;
-    const ground = fake.rebuilt.find(([key]) => key.startsWith(`${groundId}:`));
+    const ground = fake.rebuilt.find(([key]) => key === `layer:${groundId}:0,0,0`);
     assert.ok(ground);
     assert.equal(ground[1].geometries.size, 0);
     assert.ok(fake.live.has(ground[0]));
@@ -84,8 +103,9 @@ describe("VoxelEngine - collider wiring", () => {
     const bounds = new THREE.Box3().setFromBufferAttribute(
       geometry.getAttribute("position") as THREE.BufferAttribute
     );
-    const { cx, cy, cz } = collision.chunk;
+    const [{ cx, cy, cz }] = collision.chunks;
     assert.deepEqual([cx, cy, cz], [2, 0, 0]);
+    assert.deepEqual(collision.origin, { x: 9, y: 2, z: 3 });
     assert.equal(bounds.min.x, 1);
     assert.equal(bounds.max.x, 2);
   });

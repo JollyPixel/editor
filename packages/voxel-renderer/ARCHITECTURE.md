@@ -63,9 +63,9 @@ sequenceDiagram
     Document-->>App: command event
     App->>View: tick(deltaTime)
     View->>View: update visibility and find dirty chunks
-    View->>Queue: enqueue in-range, visible chunks
-    Queue->>Store: rebuild(layer, chunk) within time budget
-    Store->>Builder: buildChunkGeometries(chunk, layer)
+    View->>Queue: enqueue the mesh targets of in-range, visible chunks
+    Queue->>Store: rebuild(target) within time budget
+    Store->>Builder: buildChunkGeometries(layer chunks of the target)
     Builder-->>Store: geometry by tileset and surface policy
     Store->>Store: replace meshes and update inspector
     Note over Store: Updated meshes live under view.root
@@ -78,6 +78,13 @@ updates view-distance visibility, queues eligible dirty chunks, and drains the
 queue within `rebuildBudgetMs` (8 ms by default). `flush()` drains the eligible
 queue immediately. `init()` and document loads mark the whole world dirty and
 flush chunks eligible for the current view distance.
+
+`ChunkMeshLayout` maps each dirty layer chunk to a mesh target. Visible layers
+at opacity `1` whose position is a multiple of the chunk size share one target
+per chunk cell, so overlapping layers cost one set of meshes and draw calls.
+Faded layers and layers off the chunk grid keep one target per layer chunk.
+When a chunk moves to another target, the view rebuilds or removes the one it
+left.
 
 `VoxelMeshBuilder` resolves block shapes, textures, and neighbouring cells,
 then runs the naive mesher or optional greedy mesher. The resulting geometries

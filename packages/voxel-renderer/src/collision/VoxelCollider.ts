@@ -9,14 +9,20 @@ import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { VoxelCoord } from "../world/types.ts";
 
 export interface VoxelChunkCollision {
-  chunk: VoxelChunk;
+  /**
+   * World-space origin shared by every chunk in `chunks`.
+   */
+  origin: VoxelCoord;
+  /**
+   * Layer chunks drawn together, highest compositing priority first.
+   */
+  chunks: readonly VoxelChunk[];
   /**
    * Per draw group geometry that collision adapters may merge or ignore;
-   * empty when the chunk draws no face. Vertex positions are relative to the
-   * chunk origin, `chunk` coordinates times its size plus `layerPosition`.
+   * empty when the chunks draw no face. Vertex positions are relative to
+   * `origin`.
    */
   geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
-  layerPosition: VoxelCoord;
 }
 
 /**

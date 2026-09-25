@@ -24,6 +24,10 @@ import {
 } from "./inspector/index.ts";
 import { VoxelMeshBuilder } from "./mesh/index.ts";
 import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
+import {
+  ChunkMeshLayout,
+  type ChunkMeshTarget
+} from "./render/ChunkMeshLayout.ts";
 import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";
 import { ChunkRebuildQueue } from "./render/ChunkRebuildQueue.ts";
 import { ChunkViewport } from "./render/ChunkViewport.ts";
@@ -40,8 +44,6 @@ import {
   ViewDistance,
   type ViewDistanceOptions
 } from "./world/ViewDistance.ts";
-import type { VoxelChunk } from "./world/VoxelChunk.ts";
-import type { VoxelLayer } from "./world/VoxelLayer.ts";
 
 export type ViewDistancePolicy =
   | "hide"
@@ -189,6 +191,7 @@ export class VoxelView {
   viewDistancePolicy: ViewDistancePolicy;
 
   #chunkGroup = new THREE.Group();
+  #layout: ChunkMeshLayout;
   #meshBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
   #meshes: ChunkMeshStore;
@@ -324,8 +327,10 @@ export class VoxelView {
       tileAveraging: tileMinification === "average",
       ambientOcclusion
     });
+    this.#layout = new ChunkMeshLayout(document.world);
     this.#meshes = new ChunkMeshStore({
       root: this.#chunkGroup,
+      layout: this.#layout,
       meshBuilder: this.#meshBuilder,
       materials: this.#materials,
       inspector: this.inspector,
@@ -337,13 +342,12 @@ export class VoxelView {
     });
     this.#visibility = new ChunkVisibility({
       meshes: this.#meshes,
-      unload: (layer, chunk) => {
-        this.#removeChunk(
-          layer,
-          chunk,
-          { collider: false }
-        );
-        chunk.dirty = true;
+      unload: (key, entry) => {
+        this.#queue.cancel(key);
+        this.#meshes.unload(key);
+        for (const { chunk } of entry.members) {
+          chunk.dirty = true;
+        }
       }
     });
 
@@ -364,11 +368,6 @@ export class VoxelView {
   tick(
     _deltaTime: number
   ): void {
-    const { world } = this.document;
-    for (const { layer, chunk } of world.getAllChunksToBeRemoved()) {
-      this.#removeChunk(layer, chunk);
-    }
-
     this.tilesetManager.refreshAverages();
     const viewport = this.#viewport();
 
@@ -376,7 +375,7 @@ export class VoxelView {
     this.#enqueueDirtyChunks(viewport);
     this.#queue.drain(
       this.#rebuildBudgetMs,
-      (layer, chunk) => this.#meshes.rebuild(layer, chunk)
+      (target) => this.#meshes.rebuild(target)
     );
     this.#settleIdleWaiters();
   }
@@ -385,7 +384,7 @@ export class VoxelView {
     this.#enqueueDirtyChunks(this.#viewport());
     this.#queue.drain(
       0,
-      (layer, chunk) => this.#meshes.rebuild(layer, chunk)
+      (target) => this.#meshes.rebuild(target)
     );
     this.#settleIdleWaiters();
   }
@@ -538,7 +537,7 @@ export class VoxelView {
     const viewport = this.#viewport();
     for (const layer of this.document.world.getLayers()) {
       for (const chunk of layer.getDirtyChunks()) {
-        if (viewport.contains(layer, chunk, false)) {
+        if (viewport.contains(this.#layout.originOf(layer, chunk), false)) {
           return false;
         }
       }
@@ -569,21 +568,31 @@ export class VoxelView {
   #enqueueDirtyChunks(
     viewport: ChunkViewport
   ): void {
+    const { world } = this.document;
     let grew = false;
 
-    for (const { layer, chunk } of this.document.world.getAllDirtyChunks()) {
-      if (!viewport.contains(layer, chunk, false)) {
+    for (const { chunk } of world.getAllChunksToBeRemoved()) {
+      const placed = this.#meshes.targetContaining(chunk);
+      if (placed !== undefined) {
+        grew = this.#retire(placed) || grew;
+      }
+    }
+
+    for (const { layer, chunk } of world.getAllDirtyChunks()) {
+      const origin = this.#layout.originOf(layer, chunk);
+      if (!viewport.contains(origin, false)) {
         continue;
       }
 
       chunk.dirty = false;
-      if (!layer.effectivelyVisible) {
-        this.#removeChunk(layer, chunk);
-
-        continue;
+      const target = this.#layout.targetOf(layer, chunk);
+      const placed = this.#meshes.targetContaining(chunk);
+      if (placed !== undefined && placed.key !== target?.key) {
+        grew = this.#retire(placed) || grew;
       }
-
-      grew = this.#queue.push(layer, chunk) || grew;
+      if (target !== null) {
+        grew = this.#queue.push(target) || grew;
+      }
     }
 
     if (viewport.focus === null) {
@@ -595,13 +604,17 @@ export class VoxelView {
     }
   }
 
-  #removeChunk(
-    layer: VoxelLayer,
-    chunk: VoxelChunk,
-    options: { collider?: boolean; } = {}
-  ): void {
-    this.#queue.cancel(chunk);
-    this.#meshes.remove(layer, chunk, options);
+  #retire(
+    target: ChunkMeshTarget
+  ): boolean {
+    if (target.layer === null) {
+      return this.#queue.push(target);
+    }
+
+    this.#queue.cancel(target.key);
+    this.#meshes.remove(target.key);
+
+    return false;
   }
 
   #clearChunkMeshes(): void {

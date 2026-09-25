@@ -4,38 +4,19 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ChunkViewport } from "../../src/render/index.ts";
-import {
-  ViewDistance,
-  type VoxelChunk,
-  VoxelLayer
-} from "../../src/world/index.ts";
+import { ViewDistance } from "../../src/world/index.ts";
 
 // CONSTANTS
 const kChunkSize = 4;
 
-function makeChunk(
+function originOf(
   cx: number,
-  position = { x: 0, y: 0, z: 0 }
-): { layer: VoxelLayer; chunk: VoxelChunk; } {
-  const layer = new VoxelLayer({
-    id: "layer_0",
-    name: "Ground",
-    order: 0,
-    chunkSize: kChunkSize,
-    position
-  });
-  layer.setVoxelAt(
-    {
-      x: (cx * kChunkSize) + position.x,
-      y: position.y,
-      z: position.z
-    },
-    { blockId: 1, transform: 0 }
-  );
-
+  offset = { x: 0, y: 0, z: 0 }
+): { x: number; y: number; z: number; } {
   return {
-    layer,
-    chunk: layer.getChunk(cx, 0, 0)!
+    x: (cx * kChunkSize) + offset.x,
+    y: offset.y,
+    z: offset.z
   };
 }
 
@@ -61,65 +42,58 @@ describe("ChunkViewport — unbounded", () => {
   });
 
   it("keeps every chunk while unbounded", () => {
-    const { layer, chunk } = makeChunk(100);
-    assert.equal(makeViewport(null).contains(layer, chunk, false), true);
+    assert.equal(makeViewport(null).contains(originOf(100), false), true);
   });
 });
 
 describe("ChunkViewport — contains", () => {
   it("admits a chunk inside the radius", () => {
-    const { layer, chunk } = makeChunk(0);
     const viewport = makeViewport(
       { x: 2, y: 2, z: 2 },
       new ViewDistance({ chunks: 1, hysteresis: 0 })
     );
 
-    assert.equal(viewport.contains(layer, chunk, false), true);
+    assert.equal(viewport.contains(originOf(0), false), true);
   });
 
   it("rejects a chunk beyond the radius", () => {
-    const { layer, chunk } = makeChunk(4);
     const viewport = makeViewport(
       { x: 2, y: 2, z: 2 },
       new ViewDistance({ chunks: 1, hysteresis: 0 })
     );
 
-    assert.equal(viewport.contains(layer, chunk, false), false);
+    assert.equal(viewport.contains(originOf(4), false), false);
   });
 
   it("keeps a chunk already in view within the hysteresis slack", () => {
-    const { layer, chunk } = makeChunk(2);
+    const origin = originOf(2);
     const viewport = makeViewport(
       { x: 2, y: 2, z: 2 },
       new ViewDistance({ chunks: 1, hysteresis: 1 })
     );
 
-    assert.equal(viewport.contains(layer, chunk, false), false);
-    assert.equal(viewport.contains(layer, chunk, true), true);
+    assert.equal(viewport.contains(origin, false), false);
+    assert.equal(viewport.contains(origin, true), true);
   });
 
-  it("measures from the chunk center shifted by the layer position", () => {
-    const near = makeChunk(0, { x: 0, y: 0, z: 0 });
-    const far = makeChunk(0, { x: 40, y: 0, z: 0 });
+  it("measures from the center of the chunk at the given origin", () => {
     const viewport = makeViewport(
       { x: 2, y: 2, z: 2 },
       new ViewDistance({ chunks: 1, hysteresis: 0 })
     );
 
-    assert.equal(viewport.contains(near.layer, near.chunk, false), true);
-    assert.equal(viewport.contains(far.layer, far.chunk, false), false);
+    assert.equal(viewport.contains(originOf(0), false), true);
+    assert.equal(viewport.contains(originOf(0, { x: 40, y: 0, z: 0 }), false), false);
   });
 });
 
 describe("ChunkViewport — distanceSquaredTo", () => {
   it("orders chunks by their distance to the focus", () => {
-    const near = makeChunk(0);
-    const far = makeChunk(3);
     const viewport = makeViewport({ x: 2, y: 2, z: 2 });
 
     assert.ok(
-      viewport.distanceSquaredTo(near.layer, near.chunk) <
-        viewport.distanceSquaredTo(far.layer, far.chunk)
+      viewport.distanceSquaredTo(originOf(0)) <
+        viewport.distanceSquaredTo(originOf(3))
     );
   });
 });

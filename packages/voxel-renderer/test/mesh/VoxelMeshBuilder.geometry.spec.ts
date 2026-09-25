@@ -28,7 +28,7 @@ describe("VoxelMeshBuilder - isolated cube", () => {
     const fixture = makeMeshFixture();
     const chunk = fixture.layer.getOrCreateChunk(0, 0, 0);
 
-    assert.equal(fixture.builder.buildChunkGeometries(chunk, fixture.layer).size, 0);
+    assert.equal(fixture.builder.buildChunkGeometries([{ layer: fixture.layer, chunk }]).size, 0);
   });
 
   it("emits identical geometry for an opaque and a translucent layer", () => {
@@ -188,7 +188,10 @@ describe("VoxelMeshBuilder - precompiled geometry follows registry changes", () 
     const unknownId = 99;
     place(fixture, [0, 0, 0], unknownId);
 
-    assert.equal(fixture.builder.buildChunkGeometries(getChunk(fixture), fixture.layer).size, 0);
+    const geometries = fixture.builder.buildChunkGeometries([
+      { layer: fixture.layer, chunk: getChunk(fixture) }
+    ]);
+    assert.equal(geometries.size, 0);
 
     fixture.blockRegistry.register(makeBlockDef(unknownId, "cube"));
 
@@ -249,7 +252,7 @@ describe("VoxelMeshBuilder - build statistics", () => {
     place(fixture, [0, 0, 0]);
     place(fixture.world.addLayer("top"), [0, 0, 0]);
 
-    fixture.builder.buildChunkGeometries(getChunk(fixture), fixture.layer);
+    fixture.builder.buildChunkGeometries([{ layer: fixture.layer, chunk: getChunk(fixture) }]);
 
     assert.equal(fixture.builder.stats.voxels, 1);
     assert.equal(fixture.builder.stats.hiddenVoxels, 1);
@@ -262,7 +265,7 @@ describe("VoxelMeshBuilder - build statistics", () => {
     buildGeometries(fixture);
 
     const empty = fixture.layer.getOrCreateChunk(2, 0, 0);
-    assert.equal(fixture.builder.buildChunkGeometries(empty, fixture.layer).size, 0);
+    assert.equal(fixture.builder.buildChunkGeometries([{ layer: fixture.layer, chunk: empty }]).size, 0);
 
     assert.equal(fixture.builder.stats.faces, 0);
     assert.equal(fixture.builder.stats.vertices, 0);

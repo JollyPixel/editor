@@ -12,7 +12,6 @@ import {
   voxelTransform
 } from "../../world/packedVoxel.ts";
 import { VoxelTransform } from "../../world/VoxelTransform.ts";
-import type { VoxelCoord } from "../../world/types.ts";
 import {
   mirrorsWinding,
   rotateVertex
@@ -168,12 +167,16 @@ export class RapierVoxelCollider implements VoxelCollider {
   #buildChunkBody(
     collision: VoxelChunkCollision
   ): RapierRigidBody | null {
-    const { chunk, layerPosition } = collision;
-    if (chunk.isEmpty()) {
-      return null;
+    const { origin, chunks } = collision;
+    const solids: ChunkSolids = {
+      cubes: [],
+      boxes: [],
+      vertices: [],
+      indices: []
+    };
+    for (const chunk of chunks) {
+      this.#collectSolids(chunk, solids);
     }
-
-    const solids = this.#collectSolids(chunk);
     if (
       solids.cubes.length === 0 &&
       solids.boxes.length === 0 &&
@@ -185,10 +188,10 @@ export class RapierVoxelCollider implements VoxelCollider {
     const body = this.#world.createRigidBody(
       this.#rapier.RigidBodyDesc
         .fixed()
-        .setTranslation(...chunkOrigin(chunk, layerPosition))
+        .setTranslation(origin.x, origin.y, origin.z)
     );
 
-    this.#buildCubes(body, solids.cubes, chunk.size);
+    this.#buildCubes(body, solids.cubes, chunks[0].size);
     for (const { origin, bounds } of solids.boxes) {
       this.#buildBox(body, origin, bounds);
     }
@@ -206,14 +209,9 @@ export class RapierVoxelCollider implements VoxelCollider {
   }
 
   #collectSolids(
-    chunk: VoxelChunk
-  ): ChunkSolids {
-    const solids: ChunkSolids = {
-      cubes: [],
-      boxes: [],
-      vertices: [],
-      indices: []
-    };
+    chunk: VoxelChunk,
+    solids: ChunkSolids
+  ): void {
     const { shift, mask } = chunk;
     const { keys, values, capacity } = chunk.store;
 
@@ -253,8 +251,6 @@ export class RapierVoxelCollider implements VoxelCollider {
         solids.boxes.push({ origin: [lx, ly, lz], bounds });
       }
     }
-
-    return solids;
   }
 
   #boundsOf(
@@ -472,15 +468,4 @@ function isFilledRect(
   }
 
   return true;
-}
-
-function chunkOrigin(
-  chunk: VoxelChunk,
-  layerPosition: VoxelCoord
-): [x: number, y: number, z: number] {
-  return [
-    (chunk.cx * chunk.size) + layerPosition.x,
-    (chunk.cy * chunk.size) + layerPosition.y,
-    (chunk.cz * chunk.size) + layerPosition.z
-  ];
 }

@@ -2,8 +2,6 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import type { VoxelLayer } from "../world/VoxelLayer.ts";
-import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { ViewDistance } from "../world/ViewDistance.ts";
 import type { ViewDistancePolicy } from "../VoxelView.ts";
 
@@ -56,18 +54,14 @@ export class ChunkViewport {
   }
 
   contains(
-    layer: VoxelLayer,
-    chunk: VoxelChunk,
+    origin: THREE.Vector3Like,
     retain: boolean
   ): boolean {
     if (this.unbounded) {
       return true;
     }
 
-    const { x, y, z } = this.#centerOffset(
-      layer,
-      chunk
-    );
+    const { x, y, z } = this.#centerOffset(origin);
     const { chunkSize } = this;
 
     return retain ?
@@ -76,13 +70,9 @@ export class ChunkViewport {
   }
 
   distanceSquaredTo(
-    layer: VoxelLayer,
-    chunk: VoxelChunk
+    origin: THREE.Vector3Like
   ): number {
-    const { x, y, z } = this.#centerOffset(
-      layer,
-      chunk
-    );
+    const { x, y, z } = this.#centerOffset(origin);
 
     return (x * x) + (y * y) + (z * z);
   }
@@ -115,16 +105,15 @@ export class ChunkViewport {
   }
 
   #centerOffset(
-    layer: VoxelLayer,
-    chunk: VoxelChunk
+    origin: THREE.Vector3Like
   ): THREE.Vector3Like {
     const { chunkSize, focus } = this;
     const half = chunkSize / 2;
     const offset = this.#offset;
 
-    offset.x = (chunk.cx * chunkSize) + half + layer.position.x - focus!.x;
-    offset.y = (chunk.cy * chunkSize) + half + layer.position.y - focus!.y;
-    offset.z = (chunk.cz * chunkSize) + half + layer.position.z - focus!.z;
+    offset.x = origin.x + half - focus!.x;
+    offset.y = origin.y + half - focus!.y;
+    offset.z = origin.z + half - focus!.z;
 
     return offset;
   }

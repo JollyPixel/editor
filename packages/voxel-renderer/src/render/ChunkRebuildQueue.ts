@@ -2,64 +2,64 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import type { VoxelLayer } from "../world/VoxelLayer.ts";
-import type { VoxelChunk } from "../world/VoxelChunk.ts";
+import type { ChunkMeshTarget } from "./ChunkMeshLayout.ts";
 import type { ChunkViewport } from "./ChunkViewport.ts";
 
 interface PendingRebuild {
-  layer: VoxelLayer;
-  chunk: VoxelChunk;
+  target: ChunkMeshTarget;
   distance: number;
 }
 
 export type ChunkRebuildFn = (
-  layer: VoxelLayer,
-  chunk: VoxelChunk
+  target: ChunkMeshTarget
 ) => void;
 
 /**
- * Chunks awaiting a mesh rebuild, drained nearest-to-focus first under a
+ * Mesh targets awaiting a rebuild, drained nearest-to-focus first under a
  * per-tick time budget.
  */
 export class ChunkRebuildQueue {
   #pending: PendingRebuild[] = [];
-  #chunks = new Set<VoxelChunk>();
+  #queued = new Map<string, PendingRebuild>();
   #lastSortFocus: THREE.Vector3Like | null = null;
 
   get size(): number {
-    return this.#chunks.size;
+    return this.#queued.size;
   }
 
   /**
-   * Returns false when the chunk was already queued.
+   * Returns false when the target key was already queued; the newer target
+   * then replaces the queued one.
    */
   push(
-    layer: VoxelLayer,
-    chunk: VoxelChunk
+    target: ChunkMeshTarget
   ): boolean {
-    if (this.#chunks.has(chunk)) {
+    const queued = this.#queued.get(target.key);
+    if (queued !== undefined) {
+      queued.target = target;
+
       return false;
     }
 
-    this.#chunks.add(chunk);
-    this.#pending.push({
-      layer,
-      chunk,
+    const pending: PendingRebuild = {
+      target,
       distance: 0
-    });
+    };
+    this.#queued.set(target.key, pending);
+    this.#pending.push(pending);
 
     return true;
   }
 
   cancel(
-    chunk: VoxelChunk
+    key: string
   ): void {
-    this.#chunks.delete(chunk);
+    this.#queued.delete(key);
   }
 
   clear(): void {
     this.#pending = [];
-    this.#chunks.clear();
+    this.#queued.clear();
     this.#lastSortFocus = null;
   }
 
@@ -76,8 +76,7 @@ export class ChunkRebuildQueue {
   ): void {
     for (const pending of this.#pending) {
       pending.distance = viewport.distanceSquaredTo(
-        pending.layer,
-        pending.chunk
+        pending.target.origin
       );
     }
     this.#pending.sort(
@@ -102,12 +101,14 @@ export class ChunkRebuildQueue {
     let index = 0;
 
     while (index < pending.length) {
-      const { layer, chunk } = pending[index++];
-      if (!this.#chunks.delete(chunk)) {
+      const next = pending[index++];
+      const { key } = next.target;
+      if (this.#queued.get(key) !== next) {
         continue;
       }
+      this.#queued.delete(key);
 
-      rebuild(layer, chunk);
+      rebuild(next.target);
 
       if (performance.now() >= deadline) {
         break;
