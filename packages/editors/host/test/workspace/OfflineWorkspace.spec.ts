@@ -7,6 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { BINARY_KIND } from "@jolly-pixel/asset-server/backend";
+import {
+  CATALOG_ROOM,
+  CatalogClient
+} from "@jolly-pixel/asset-server/catalog/client";
 import { AssetNotFoundError } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -16,14 +20,20 @@ import {
 } from "#src/editor/mountStandalone.ts";
 import type { EditorContext } from "#src/editor/EditorDefinition.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
+import {
+  OfflineWorkspace,
+  type OfflineWorkspaceOptions
+} from "#src/workspace/offline/OfflineWorkspace.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 
 // CONSTANTS
 const kAssetId = "offline-asset";
 
-function openWorkspace(): Promise<OfflineWorkspace> {
+function openWorkspace(
+  options: Partial<OfflineWorkspaceOptions> = {}
+): Promise<OfflineWorkspace> {
   return OfflineWorkspace.open({
+    ...options,
     handlers: [],
     seed: {
       "notes/readme.bin": {
@@ -50,6 +60,30 @@ function offlineOptions(
 }
 
 describe("OfflineWorkspace", () => {
+  test("applies the backend tuning to the catalog room", async() => {
+    const workspace = await openWorkspace({
+      backend: {
+        catalogArchiveLimits: { maxEntryBytes: 4 }
+      }
+    });
+    const { client } = workspace.connect();
+    const catalog = new CatalogClient(client.room(CATALOG_ROOM));
+    try {
+      await catalog.ready;
+      const archive = await catalog.exportArchive(kAssetId);
+
+      await assert.rejects(
+        catalog.planImport(archive),
+        /exceeds 4 bytes/
+      );
+    }
+    finally {
+      catalog.dispose();
+      client.destroy();
+      await workspace.close();
+    }
+  });
+
   test("keeps serving clients until the last connection is destroyed", async() => {
     const workspace = await openWorkspace();
     const first = workspace.connect();

@@ -15,7 +15,7 @@ import type {
 
 export type OfflineProject = Pick<
   OfflineWorkspaceOptions,
-  "handlers" | "seed"
+  "handlers" | "seed" | "backend"
 >;
 
 export interface BootStandaloneOptions extends Omit<

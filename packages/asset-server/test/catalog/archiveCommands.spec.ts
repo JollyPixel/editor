@@ -32,6 +32,7 @@ import { text } from "../helpers/bytes.ts";
 
 // CONSTANTS
 const kTinyContentCap = 64;
+const kTinyEntryCap = 4;
 
 interface Connection extends AsyncDisposable {
   readonly catalog: CatalogClient;
@@ -103,7 +104,9 @@ describe("catalog archive commands over loopback", () => {
     await using exporter = await connect(origin);
     const archive = await exporter.catalog.exportArchive(map);
 
-    await using capped = await archiveWorkspace(kTinyContentCap);
+    await using capped = await archiveWorkspace({
+      catalogMaxContentBytes: kTinyContentCap
+    });
     const cappedMap = await capped.link("map.link");
     await using connection = await connect(capped);
 
@@ -116,6 +119,28 @@ describe("catalog archive commands over loopback", () => {
       CatalogRejectedError
     );
     assert.strictEqual(capped.backend.catalog.size, 1);
+  });
+
+  test("applies the configured archive limits to plan and import", async() => {
+    await using origin = await archiveWorkspace();
+    const map = await origin.link("map.link");
+    await using exporter = await connect(origin);
+    const archive = await exporter.catalog.exportArchive(map);
+
+    await using capped = await archiveWorkspace({
+      catalogArchiveLimits: { maxEntryBytes: kTinyEntryCap }
+    });
+    await using connection = await connect(capped);
+
+    await assert.rejects(
+      connection.catalog.planImport(archive),
+      /exceeds 4 bytes/
+    );
+    await assert.rejects(
+      connection.catalog.importArchive(archive, { onConflict: "keep" }),
+      CatalogRejectedError
+    );
+    assert.strictEqual(capped.backend.catalog.size, 0);
   });
 
   test("rejects a corrupt archive with the reason", async() => {

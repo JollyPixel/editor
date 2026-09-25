@@ -24,6 +24,7 @@ import { Reconciler } from "./reconcile/Reconciler.ts";
 import { ReconciliationWatcher } from "./reconcile/ReconciliationWatcher.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogExtension } from "./catalog/CatalogExtension.ts";
+import type { ArchiveLimits } from "./archive/ArchiveLimits.ts";
 import { backfillDependencies } from "./reconcile/backfillDependencies.ts";
 import { registerAssetRooms } from "./rooms/registerAssetRooms.ts";
 import {
@@ -64,6 +65,10 @@ export interface AssetBackendOptions {
    */
   catalogMaxContentBytes?: number;
   /**
+   * Decoded size caps of an archive the catalog plans or imports.
+   */
+  catalogArchiveLimits?: ArchiveLimits;
+  /**
    * Refuse a catalog delete command aimed at an asset other assets still
    * reference. Reconciliation is never refused.
    * @default true
@@ -71,6 +76,15 @@ export interface AssetBackendOptions {
   catalogDeleteProtection?: boolean;
   logger?: Logger;
 }
+
+/**
+ * The options a host may forward to `createAssetBackend` without owning its
+ * source, event store, kinds or logger.
+ */
+export type AssetBackendTuning = Omit<
+  AssetBackendOptions,
+  "source" | "eventStore" | "handlers" | "logger"
+>;
 
 /**
  * Internal stages exposed to tests, tooling, and hosts.
@@ -123,6 +137,7 @@ export async function createAssetBackend(
     watch = true,
     reconcileDebounce,
     catalogMaxContentBytes,
+    catalogArchiveLimits,
     catalogDeleteProtection,
     logger = silentLogger()
   } = options;
@@ -250,6 +265,7 @@ export async function createAssetBackend(
       flush
     },
     maxContentBytes: catalogMaxContentBytes,
+    archiveLimits: catalogArchiveLimits,
     deleteProtection: catalogDeleteProtection
   });
 

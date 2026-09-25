@@ -74,19 +74,27 @@ whole workspace is exported. An unknown `root` rejects with
 ## readAssetArchive
 
 ```ts
-interface ReadAssetArchiveOptions {
+interface ArchiveLimits {
   maxEntryBytes?: number;
   maxBytes?: number;
 }
 
 readAssetArchive(
   bytes: Uint8Array,
-  options?: ReadAssetArchiveOptions
+  limits?: ArchiveLimits
 ): Result<AssetArchive, AssetArchiveError>
 ```
 
 Pure: decodes and validates without a back-end. `AssetArchive` holds `root`,
 `missing` and `assets`, each asset with its decoded `data`.
+
+`limits` caps decoded sizes, in bytes. `maxEntryBytes` defaults to
+`DEFAULT_ARCHIVE_MAX_ENTRY_BYTES` (16 MiB) and `maxBytes` to
+`DEFAULT_ARCHIVE_MAX_BYTES` (64 MiB). The catalog room reads archives with
+the `catalogArchiveLimits` back-end option. The constants and
+`ArchiveLimits` are also exported by the browser-safe
+`@jolly-pixel/asset-server/catalog/client` entry, so an exporter can check
+an archive before sending it.
 
 | `rejection` | Cause |
 |---|---|
@@ -97,7 +105,7 @@ Pure: decodes and validates without a back-end. `AssetArchive` holds `root`,
 | `duplicate` | An asset id is listed twice. |
 | `missing-entry` | A listed asset has no ZIP entry. |
 | `unexpected-entry` | A file is absent from the manifest. |
-| `too-large` | An entry exceeds `maxEntryBytes` (16 MiB) or the archive `maxBytes` (64 MiB), decoded. |
+| `too-large` | An entry exceeds `maxEntryBytes` or the archive exceeds `maxBytes`, decoded. |
 
 Directory entries, `__MACOSX/` and `.DS_Store`, which an operating system
 adds when re-zipping, are ignored.

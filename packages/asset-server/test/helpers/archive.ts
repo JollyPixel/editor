@@ -11,7 +11,8 @@ import {
 import {
   ASSET_ARCHIVE_MANIFEST_PATH,
   createAssetBackend,
-  type AssetBackend
+  type AssetBackend,
+  type AssetBackendOptions
 } from "#src/index.ts";
 import {
   linkContent,
@@ -34,16 +35,21 @@ export interface ArchiveWorkspace extends AsyncDisposable {
   ): Promise<string>;
 }
 
+export type ArchiveWorkspaceOptions = Pick<
+  AssetBackendOptions,
+  "catalogMaxContentBytes" | "catalogArchiveLimits"
+>;
+
 export async function archiveWorkspace(
-  catalogMaxContentBytes?: number
+  options: ArchiveWorkspaceOptions = {}
 ): Promise<ArchiveWorkspace> {
   const source = new MemoryAssetSource();
   const eventStore = EventStore.persistence.memory();
   const backend = await createAssetBackend({
+    ...options,
     source,
     eventStore,
     handlers: [linkHandler()],
-    catalogMaxContentBytes,
     watch: false
   });
 

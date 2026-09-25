@@ -5,6 +5,7 @@ import {
   seedAssetSource,
   silentLogger,
   type AssetBackend,
+  type AssetBackendTuning,
   type AssetEventDataMap,
   type AssetKindHandler,
   type AssetSeedMap,
@@ -44,6 +45,7 @@ export interface OfflineWorkspaceOptions {
   seed?: OfflineSeed;
   storage?: OfflineStorage;
   name?: string;
+  backend?: AssetBackendTuning;
 }
 
 export interface OfflineWorkspaceParts {
@@ -64,7 +66,8 @@ export class OfflineWorkspace implements StandaloneWorkspace {
       handlers,
       seed,
       storage: requested = "memory",
-      name = DEFAULT_OFFLINE_WORKSPACE_NAME
+      name = DEFAULT_OFFLINE_WORKSPACE_NAME,
+      backend: tuning = {}
     } = options;
     const databaseName = `${OFFLINE_DATABASE_PREFIX}${name}`;
     const { source, storage, release } = await openOfflineSource(
@@ -87,10 +90,12 @@ export class OfflineWorkspace implements StandaloneWorkspace {
 
       eventStore = EventStore.persistence.memory<AssetEventDataMap>();
       backend = await createAssetBackend({
+        ...tuning,
         source,
         eventStore,
         handlers,
-        snapshot: storage === "indexeddb" ? kPersistentSnapshotPolicy : undefined,
+        snapshot: tuning.snapshot ??
+          (storage === "indexeddb" ? kPersistentSnapshotPolicy : undefined),
         watch: false
       });
       server = new Server({

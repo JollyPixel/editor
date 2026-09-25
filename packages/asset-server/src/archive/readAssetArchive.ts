@@ -8,27 +8,25 @@ import {
 // Import Internal Dependencies
 import {
   ASSET_ARCHIVE_MANIFEST_PATH,
-  DEFAULT_ARCHIVE_MAX_BYTES,
-  DEFAULT_ARCHIVE_MAX_ENTRY_BYTES,
   type AssetArchive,
   type AssetArchiveAsset
 } from "./AssetArchive.ts";
+import {
+  DEFAULT_ARCHIVE_MAX_BYTES,
+  DEFAULT_ARCHIVE_MAX_ENTRY_BYTES,
+  type ArchiveLimits
+} from "./ArchiveLimits.ts";
 import { ArchiveFiles } from "./format/ArchiveFiles.ts";
 import { parseArchiveManifest } from "./format/ArchiveManifest.ts";
 import { AssetArchiveError } from "./errors/AssetArchiveError.ts";
 
-export interface ReadAssetArchiveOptions {
-  maxEntryBytes?: number;
-  maxBytes?: number;
-}
-
 export function readAssetArchive(
   bytes: Uint8Array,
-  options: ReadAssetArchiveOptions = {}
+  limits: ArchiveLimits = {}
 ): Result<AssetArchive, AssetArchiveError> {
   const unzipped = ArchiveFiles.unzip(bytes, {
-    maxEntryBytes: options.maxEntryBytes ?? DEFAULT_ARCHIVE_MAX_ENTRY_BYTES,
-    maxBytes: options.maxBytes ?? DEFAULT_ARCHIVE_MAX_BYTES
+    maxEntryBytes: limits.maxEntryBytes ?? DEFAULT_ARCHIVE_MAX_ENTRY_BYTES,
+    maxBytes: limits.maxBytes ?? DEFAULT_ARCHIVE_MAX_BYTES
   });
   if (!unzipped.ok) {
     return unzipped;
