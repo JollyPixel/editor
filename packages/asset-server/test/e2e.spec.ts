@@ -5,6 +5,7 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
+import http from "node:http";
 import path from "node:path";
 
 // Import Third-party Dependencies
@@ -60,29 +61,30 @@ function recorder(
 async function catalogOverHttp(
   handler: ReturnType<typeof createCatalogHandler>
 ): Promise<unknown> {
-  const headers = new Map<string, string>();
-  const chunks: string[] = [];
-  const response = {
-    statusCode: 0,
-    setHeader: (key: string, value: string) => headers.set(key, value),
-    end: (payload?: string) => {
-      if (payload !== undefined) {
-        chunks.push(payload);
-      }
-    }
-  };
+  const server = http.createServer((request, response) => {
+    handler(request, response, () => {
+      response.statusCode = 404;
+      response.end();
+    });
+  });
+  server.listen(0, "127.0.0.1");
+  await new Promise((resolve) => {
+    server.once("listening", resolve);
+  });
+  const { port } = server.address() as { port: number; };
 
-  handler(
-    { url: "/__jollypixel/catalog", method: "GET" } as never,
-    response as never,
-    () => {
-      throw new Error("handler did not claim the request");
-    }
-  );
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${port}/__jollypixel/catalog`
+    );
+    assert.strictEqual(response.status, 200);
 
-  assert.strictEqual(response.statusCode, 200);
-
-  return JSON.parse(chunks.join(""));
+    return await response.json();
+  }
+  finally {
+    server.closeAllConnections();
+    server.close();
+  }
 }
 
 describe("asset-server — end to end", () => {

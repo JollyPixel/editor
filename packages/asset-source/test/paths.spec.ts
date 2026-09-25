@@ -44,7 +44,14 @@ describe("safeAssetPath", () => {
       ["..\\secret.txt", "traversal"],
       [".", "directory"],
       ["textures/", "directory"],
-      ["./", "directory"]
+      ["./", "directory"],
+      ["textures/..", "directory"],
+      ["sprite.png:stream", "reserved"],
+      ["sprite.", "reserved"],
+      ["sprite ", "reserved"],
+      ["CON", "reserved"],
+      ["textures/nul.png", "reserved"],
+      ["aux/sprite.png", "reserved"]
     ]) {
       const result = safeAssetPath(input);
 

@@ -54,6 +54,7 @@
     "@jolly-pixel/asset": "workspace:*",
     "@openally/atomic-fs": "1.0.0",
     "@openally/result": "3.1.0",
+    "@openally/servo": "1.1.0",
     "chokidar": "^5.0.0",
     "picomatch": "4.0.7"
   },

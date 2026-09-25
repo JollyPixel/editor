@@ -1,5 +1,4 @@
 // Import Node.js Dependencies
-import { Buffer } from "node:buffer";
 import type {
   IncomingMessage,
   ServerResponse
@@ -7,6 +6,10 @@ import type {
 
 // Import Third-party Dependencies
 import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
+import {
+  allowMethods,
+  sendJson
+} from "@openally/servo";
 
 // Import Internal Dependencies
 import type { CatalogProjection } from "./CatalogProjection.ts";
@@ -48,32 +51,16 @@ export function createCatalogHandler(
       return;
     }
 
-    if (
-      request.method !== "GET" &&
-      request.method !== "HEAD"
-    ) {
-      response.statusCode = 405;
-      response.setHeader("allow", "GET, HEAD");
-      response.end();
-
+    if (!allowMethods(request, response)) {
       return;
     }
 
-    const payload = JSON.stringify(
-      projection.snapshot()
-    );
-
-    response.statusCode = 200;
-    response.setHeader(
-      "content-type",
-      "application/json; charset=utf-8"
-    );
-    response.setHeader(
-      "content-length",
-      String(Buffer.byteLength(payload))
-    );
-    response.end(
-      request.method === "HEAD" ? undefined : payload
-    );
+    sendJson(request, response, {
+      body: projection.snapshot(),
+      cacheControl: "no-cache",
+      etag: true
+    }).catch(() => {
+      response.destroy();
+    });
   };
 }

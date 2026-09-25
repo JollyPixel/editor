@@ -1,7 +1,8 @@
-// Import Node.js Dependencies
-import path from "node:path";
+// Import Third-party Dependencies
+import { contentType } from "@openally/servo";
 
-export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
+export { DEFAULT_CONTENT_TYPE } from "@openally/servo";
+
 export const DEFAULT_CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".json": "application/json; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
@@ -18,18 +19,5 @@ export function resolveContentType(
   assetPath: string,
   table: Readonly<Record<string, string>> = DEFAULT_CONTENT_TYPES
 ): string {
-  const name = path.posix.basename(assetPath).toLowerCase();
-
-  let longest: string | null = null;
-  for (const extension of Object.keys(table)) {
-    if (
-      name.length > extension.length &&
-      name.endsWith(extension) &&
-      (longest === null || extension.length > longest.length)
-    ) {
-      longest = extension;
-    }
-  }
-
-  return longest === null ? DEFAULT_CONTENT_TYPE : table[longest];
+  return contentType(assetPath, table);
 }

@@ -32,15 +32,36 @@ describe("resolveContentType", () => {
 
   test("uses the table it is given", () => {
     assert.strictEqual(
-      resolveContentType("a.pixelart", { ".pixelart": "application/json" }),
-      "application/json"
+      resolveContentType("a.pixelart", { ".pixelart": "image/x-pixelart" }),
+      "image/x-pixelart"
     );
+  });
+
+  test("adds a UTF-8 charset to a textual type without parameters", () => {
+    assert.strictEqual(
+      resolveContentType("a.pixelart", { ".pixelart": "application/json" }),
+      "application/json; charset=utf-8"
+    );
+    assert.strictEqual(
+      resolveContentType("icons/logo.svg"),
+      "image/svg+xml; charset=utf-8"
+    );
+  });
+
+  test("serves web page files as the octet stream", () => {
+    for (const assetPath of ["index.html", "main.js", "style.css"]) {
+      assert.strictEqual(
+        resolveContentType(assetPath),
+        DEFAULT_CONTENT_TYPE,
+        assetPath
+      );
+    }
   });
 
   test("prefers the longest matching multi-dot extension", () => {
     const table = {
       ".json": "application/json",
-      ".voxelmap.json": "application/x-voxelmap"
+      ".VoxelMap.json": "application/x-voxelmap"
     };
 
     assert.strictEqual(
@@ -49,7 +70,7 @@ describe("resolveContentType", () => {
     );
     assert.strictEqual(
       resolveContentType("maps/other.json", table),
-      "application/json"
+      "application/json; charset=utf-8"
     );
   });
 
