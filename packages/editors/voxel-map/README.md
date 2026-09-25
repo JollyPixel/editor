@@ -166,7 +166,21 @@ belongs to the E2E suite.
 ## Brush toolbar
 
 The toolbar at the bottom of the viewport sets how the brush paints. It is
-disabled until a voxel layer is selected.
+disabled while no voxel layer is selected, and a notice above it says why:
+with an object layer or object selected it offers to select the last voxel
+layer again; in a map without voxel layers it asks for one, and a paint click
+logs a warning in `jolly-log`.
+
+A layer is always selected while the map has one. Clicking outside the layer
+rows keeps the selection. When the selected layer is removed, locally or by a
+peer, the selection moves to the next layer of the same kind (the previous one
+if it was the last), a removed object hands it to its object layer, and a
+renamed layer keeps it. `SelectionStore.reconcile()` applies these rules on
+every `layerUpdated` and `reset`.
+
+The eye toggle of a layer, object layer or object is local: peers never see it
+and it lasts until the page reloads. `LayerVisibilityStore` holds the
+overrides over the saved `visible` values.
 
 | Tool | Values | Shortcut |
 |---|---|---|

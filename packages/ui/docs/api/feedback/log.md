@@ -61,12 +61,13 @@ animating out included:
   position: absolute;
   inset-block-start: 0;
   inset-inline-start: 0;
-  width: 420px;
+  width: 460px;
   height: 220px;
-  background: linear-gradient(
-    to bottom right,
-    rgb(0 0 0 / 0.8),
-    transparent 70%
+  background: radial-gradient(
+    ellipse 100% 100% at top left,
+    rgb(0 0 0 / 0.85),
+    rgb(0 0 0 / 0.6) 45%,
+    transparent
   );
   transition: opacity 200ms ease;
   pointer-events: none;
@@ -76,6 +77,11 @@ animating out included:
   opacity: 0;
 }
 ```
+
+The ellipse is sized to the box, so the scrim is fully transparent at its
+right and bottom edges and shows no seam over a light scene. A diagonal
+`linear-gradient` does not reach zero at the top-right and bottom-left
+corners.
 
 `empty` is derived, so writing to it only holds until the next render.
 

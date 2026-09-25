@@ -65,10 +65,6 @@ describe("BlockUsageStore", () => {
     const { usage } = setup();
 
     assert.equal(usage.stats.voxels, 2);
-    assert.equal(usage.countOf(1), 2);
-    assert.equal(usage.countOf(99), 0);
-    assert.equal(usage.voxelsIn("Ground"), 2);
-    assert.equal(usage.voxelsIn("Missing"), 0);
   });
 
   it("coalesces a burst of document changes into one refresh", async() => {

@@ -8,7 +8,7 @@ import type {
 } from "./brushFootprint.ts";
 
 // CONSTANTS
-export const CELL_FACES: readonly CellFace[] = Object.freeze([
+const kCellFaces: readonly CellFace[] = Object.freeze([
   "+x",
   "-x",
   "+y",
@@ -35,7 +35,7 @@ export type CellFace = "+x" | "-x" | "+y" | "-y" | "+z" | "-z";
 export function isCellFace(
   value: unknown
 ): value is CellFace {
-  return CELL_FACES.some((face) => face === value);
+  return kCellFaces.some((face) => face === value);
 }
 
 export function cellFaceOf(

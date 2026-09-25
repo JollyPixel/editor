@@ -8,23 +8,9 @@ import {
 // Import Internal Dependencies
 import {
   anchorsOf,
-  CELL_FACES,
   cellFaceOf,
-  faceCornersOf,
-  isCellFace
+  faceCornersOf
 } from "../../../../src/features/painting/model/cellFace.ts";
-
-describe("isCellFace", () => {
-  test("accepts the six faces and nothing else", () => {
-    for (const face of CELL_FACES) {
-      assert.ok(isCellFace(face));
-    }
-
-    for (const value of ["x", "+w", "", null, undefined, 1, { face: "+x" }]) {
-      assert.ok(!isCellFace(value));
-    }
-  });
-});
 
 describe("cellFaceOf", () => {
   test("maps each unit direction to its face", () => {

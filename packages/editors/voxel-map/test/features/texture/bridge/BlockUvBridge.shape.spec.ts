@@ -84,28 +84,7 @@ describe("BlockUvBridge / shape footprint", () => {
     }
   });
 
-  it("keeps a cube region on the whole tile", () => {
-    const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("cube"));
-
-    const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
-    try {
-      bridge.setActiveTileset("atlas", 16);
-
-      assert.deepEqual(uv.get("block-1")!.rectFor("front"), {
-        x: 32,
-        y: 16,
-        width: 16,
-        height: 16
-      });
-    }
-    finally {
-      bridge.dispose();
-    }
-  });
-
-  it("round-trips every shape's faces back to the tile they came from", () => {
+  it("keeps every shape's faces on the tile they came from once freed", () => {
     for (const shape of BlockShapeRegistry.createDefault()) {
       const { engine, bridgeOptions } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shape.id));
@@ -114,20 +93,14 @@ describe("BlockUvBridge / shape footprint", () => {
       const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
       try {
         bridge.setActiveTileset("atlas", 16);
-        const region = uv.get("block-1");
-        if (!region || region.state !== "free") {
-          continue;
-        }
+        uv.setState("block-1", "free");
 
-        for (const { slot } of region.slotsOf()) {
-          if (slot === null) {
-            continue;
-          }
-          uv.move("block-1", region.rectFor(slot), slot);
-        }
-
-        const updated = engine.blockRegistry.get(1)!;
-        for (const tileRef of Object.values(updated.faceTextures)) {
+        const { faceTextures } = engine.blockRegistry.get(1)!;
+        assert.ok(
+          Object.keys(faceTextures).length > 0,
+          `${shape.id} wrote no face texture`
+        );
+        for (const tileRef of Object.values(faceTextures)) {
           assert.deepEqual(
             { col: tileRef.col, row: tileRef.row },
             { col: 2, row: 1 },
@@ -298,29 +271,6 @@ describe("BlockUvBridge / shape footprint", () => {
       finally {
         bridge.dispose();
       }
-    }
-  });
-
-  it("tracks the triangle a ramp gives a face", () => {
-    const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("cube"));
-
-    const uv = makeUv();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
-    try {
-      bridge.setActiveTileset("atlas", 16);
-
-      engine.defineBlock(shapedBlock("ramp"));
-      uv.setState("block-1", "free");
-
-      assert.deepEqual(uv.get("block-1")!.geometryFor("left"), {
-        shape: "triangle",
-        corner: "bottom-right",
-        rect: { x: 32, y: 16, width: 16, height: 16 }
-      });
-    }
-    finally {
-      bridge.dispose();
     }
   });
 

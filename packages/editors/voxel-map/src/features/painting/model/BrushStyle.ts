@@ -48,22 +48,6 @@ export function brushStyleFrom(
   });
 }
 
-export function readBrushStyle(
-  value: unknown
-): BrushStyle {
-  if (typeof value !== "object" || value === null) {
-    return DEFAULT_BRUSH_STYLE;
-  }
-
-  return brushStyleFrom({
-    opacity: numberOf(Reflect.get(value, "opacity")),
-    edgeWidth: numberOf(Reflect.get(value, "edgeWidth")),
-    edgeStyle: edgeStyleOf(Reflect.get(value, "edgeStyle")),
-    dashSize: numberOf(Reflect.get(value, "dashSize")),
-    gapSize: numberOf(Reflect.get(value, "gapSize"))
-  });
-}
-
 export function brushStyleEquals(
   a: BrushStyle,
   b: BrushStyle
@@ -73,18 +57,6 @@ export function brushStyleEquals(
     a.edgeStyle === b.edgeStyle &&
     a.dashSize === b.dashSize &&
     a.gapSize === b.gapSize;
-}
-
-function numberOf(
-  value: unknown
-): number | undefined {
-  return typeof value === "number" ? value : undefined;
-}
-
-function edgeStyleOf(
-  value: unknown
-): BrushEdgeStyle | undefined {
-  return value === "solid" || value === "dashed" ? value : undefined;
 }
 
 function clamp(

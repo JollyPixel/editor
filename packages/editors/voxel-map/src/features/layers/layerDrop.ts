@@ -18,7 +18,7 @@ export function canDropLayerRef(
   );
 }
 
-export function voxelLayerDropIndex(
+function voxelLayerDropIndex(
   stack: readonly string[],
   movedName: string,
   targetName: string,

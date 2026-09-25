@@ -9,12 +9,11 @@ export interface ObjectKey {
 export type LayerSelection =
   | { kind: "voxel-layer"; name: string; }
   | { kind: "object-layer"; name: string; }
-  | { kind: "object"; layerName: string; objectId: string; }
-  | null;
+  | { kind: "object"; layerName: string; objectId: string; };
 
 export type SelectionStoreEvents = {
   change: (
-    selection: LayerSelection
+    selection: LayerSelection | null
   ) => void;
   gizmoLayerChange: (
     name: string | null
@@ -25,34 +24,36 @@ export type SelectionStoreEvents = {
 };
 
 export class SelectionStore extends Emitter<SelectionStoreEvents> {
-  #current: LayerSelection = null;
+  #current: LayerSelection | null = null;
+  #entries: readonly LayerSelection[] = [];
+  #lastVoxelLayer: string | null = null;
   #gizmoLayer: string | null = null;
   #gizmoDragging = false;
 
-  get current(): LayerSelection {
+  get current(): LayerSelection | null {
     return this.#current;
   }
 
   set current(
     selection: LayerSelection
   ) {
-    if (selectionKey(this.#current) === selectionKey(selection)) {
-      return;
-    }
-
-    this.#current = selection;
-    this.emit(
-      "change",
-      selection
-    );
-
-    this.gizmoLayer = null;
+    this.#assign(selection);
   }
 
   get voxelLayer(): string | null {
     return this.#current?.kind === "voxel-layer"
       ? this.#current.name
       : null;
+  }
+
+  get lastVoxelLayer(): string | null {
+    const names = this.#entries.flatMap(
+      (entry) => (entry.kind === "voxel-layer" ? [entry.name] : [])
+    );
+
+    return this.#lastVoxelLayer !== null && names.includes(this.#lastVoxelLayer)
+      ? this.#lastVoxelLayer
+      : names[0] ?? null;
   }
 
   get objectLayer(): string | null {
@@ -120,11 +121,12 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   }
 
   selectVoxelLayer(
-    name: string | null
+    name: string
   ): void {
-    this.current = name === null
-      ? null
-      : { kind: "voxel-layer", name };
+    this.current = {
+      kind: "voxel-layer",
+      name
+    };
   }
 
   selectObjectLayer(
@@ -146,13 +148,82 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
     };
   }
 
-  clear(): void {
-    this.current = null;
+  reconcile(
+    entries: readonly LayerSelection[]
+  ): void {
+    const previous = this.#entries;
+    this.#entries = [...entries];
+
+    this.#assign(
+      fallbackSelection(this.#current, previous, this.#entries)
+    );
+  }
+
+  #assign(
+    selection: LayerSelection | null
+  ): void {
+    if (selectionKey(this.#current) === selectionKey(selection)) {
+      return;
+    }
+
+    this.#current = selection;
+    if (selection?.kind === "voxel-layer") {
+      this.#lastVoxelLayer = selection.name;
+    }
+    this.emit(
+      "change",
+      selection
+    );
+
+    this.gizmoLayer = null;
   }
 }
 
+function fallbackSelection(
+  current: LayerSelection | null,
+  previous: readonly LayerSelection[],
+  next: readonly LayerSelection[]
+): LayerSelection | null {
+  if (current === null) {
+    return firstLayerOf(next);
+  }
+
+  const key = selectionKey(current);
+  if (next.some((entry) => selectionKey(entry) === key)) {
+    return current;
+  }
+
+  if (current.kind === "object") {
+    return fallbackSelection(
+      {
+        kind: "object-layer",
+        name: current.layerName
+      },
+      previous,
+      next
+    );
+  }
+
+  const before = previous.filter((entry) => entry.kind === current.kind);
+  const after = next.filter((entry) => entry.kind === current.kind);
+  const index = before.findIndex((entry) => selectionKey(entry) === key);
+  if (index !== -1 && after.length > 0) {
+    return after[Math.min(index, after.length - 1)];
+  }
+
+  return firstLayerOf(next);
+}
+
+function firstLayerOf(
+  entries: readonly LayerSelection[]
+): LayerSelection | null {
+  return entries.find((entry) => entry.kind === "voxel-layer") ??
+    entries.find((entry) => entry.kind === "object-layer") ??
+    null;
+}
+
 function selectionKey(
-  selection: LayerSelection
+  selection: LayerSelection | null
 ): string | null {
   if (selection === null) {
     return null;

@@ -8,6 +8,8 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import type { LayerVisibilityStore } from "../../../state/index.ts";
+import { layerRowId } from "../layerTree.ts";
 import {
   areaTransformOf,
   colorOf,
@@ -19,6 +21,7 @@ import {
 export interface ObjectAreaSceneOptions {
   actor: Actor;
   world: VoxelWorld;
+  visibility: Pick<LayerVisibilityStore, "resolve">;
   onRemoving?: (key: string) => void;
 }
 
@@ -28,6 +31,7 @@ export interface ObjectAreaSceneOptions {
 export class ObjectAreaScene {
   #actor: Actor;
   #world: VoxelWorld;
+  #visibility: Pick<LayerVisibilityStore, "resolve">;
   #onRemoving: (key: string) => void;
   #areas = new Map<string, AreaBox>();
 
@@ -36,6 +40,7 @@ export class ObjectAreaScene {
   ) {
     this.#actor = options.actor;
     this.#world = options.world;
+    this.#visibility = options.visibility;
     this.#onRemoving = options.onRemoving ?? (() => void 0);
   }
 
@@ -67,10 +72,28 @@ export class ObjectAreaScene {
       return false;
     }
 
-    const { layerName } = parseObjectKey(key);
+    const { layerName, objectId } = parseObjectKey(key);
+    const layer = this.#world.objectLayers.get(layerName);
+    if (layer === undefined) {
+      return false;
+    }
 
-    return this.#world.objectLayers.get(layerName)?.visible === true &&
-      object.visible;
+    const layerShown = this.#visibility.resolve(
+      layerRowId({
+        kind: "object-layer",
+        name: layerName
+      }),
+      layer.visible
+    );
+
+    return layerShown && this.#visibility.resolve(
+      layerRowId({
+        kind: "object",
+        layerName,
+        objectId
+      }),
+      object.visible
+    );
   }
 
   locked(

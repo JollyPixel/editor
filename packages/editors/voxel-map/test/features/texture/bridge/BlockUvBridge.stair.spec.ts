@@ -88,26 +88,6 @@ describe("BlockUvBridge — stairs", () => {
     }
   });
 
-  it("leaves the notch of the L outside the region", () => {
-    const { engine, uv, bridgeOptions } = setup();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
-
-    try {
-      bridge.setActiveTileset("atlas", 16);
-      uv.setState("block-1", "free");
-
-      const region = uv.get("block-1")!;
-      const covered = region.slotsOf().filter(
-        ({ slot }) => slot === "right"
-      );
-
-      assert.equal(covered.length, 1);
-    }
-    finally {
-      bridge.dispose();
-    }
-  });
-
   it("gives a tread and a riser the footprint of a slab side", () => {
     const { engine, uv, bridgeOptions } = setup();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);

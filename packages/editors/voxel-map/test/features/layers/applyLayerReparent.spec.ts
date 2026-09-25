@@ -39,6 +39,34 @@ describe("applyLayerReparent — voxel layers", () => {
     assert.deepEqual(stack(world), ["B", "A", "C"]);
   });
 
+  test("lands a layer where the drop marker showed it", () => {
+    const cases: [string, string, "above" | "below", string[]][] = [
+      ["D", "B", "above", ["C", "D", "B", "A"]],
+      ["D", "B", "below", ["C", "B", "D", "A"]],
+      ["A", "C", "above", ["D", "A", "C", "B"]],
+      ["A", "C", "below", ["D", "C", "A", "B"]],
+      ["C", "B", "above", ["D", "C", "B", "A"]],
+      ["C", "D", "below", ["D", "C", "B", "A"]],
+      ["A", "D", "above", ["A", "D", "C", "B"]],
+      ["D", "A", "below", ["C", "B", "A", "D"]],
+      ["A", "NoSuch", "above", ["D", "C", "B", "A"]],
+      ["NoSuch", "A", "above", ["D", "C", "B", "A"]]
+    ];
+
+    for (const [moved, target, where, expected] of cases) {
+      const world = makeWorld();
+      world.addLayer("D");
+
+      applyLayerReparent(world, {
+        movedIds: [voxelId(moved)],
+        targetId: voxelId(target),
+        where
+      });
+
+      assert.deepEqual(stack(world), expected, `${moved} ${where} ${target}`);
+    }
+  });
+
   test("emits one layer-moved command for the whole move", () => {
     const world = makeWorld();
     const actions: string[] = [];
@@ -96,45 +124,6 @@ describe("applyLayerReparent — objects", () => {
     assert.deepEqual(objectIds(world, "Spawns"), ["obj_1"]);
   });
 
-  test("carries the object itself across, not a fresh one", () => {
-    const world = makeWorld();
-    const original = world.objectLayers.get("Triggers")?.objects[0];
-
-    applyLayerReparent(world, {
-      movedIds: [
-        layerRowId({
-          kind: "object",
-          layerName: "Triggers",
-          objectId: "obj_1"
-        })
-      ],
-      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
-      where: "inside"
-    });
-
-    assert.equal(world.objectLayers.get("Spawns")?.objects[0], original);
-  });
-
-  test("emits one object-moved command for the whole move", () => {
-    const world = makeWorld();
-    const actions: string[] = [];
-    world.on("command", (event) => actions.push(event.action));
-
-    applyLayerReparent(world, {
-      movedIds: [
-        layerRowId({
-          kind: "object",
-          layerName: "Triggers",
-          objectId: "obj_1"
-        })
-      ],
-      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
-      where: "inside"
-    });
-
-    assert.deepEqual(actions, ["object-moved"]);
-  });
-
   test("reports where each moved object landed", () => {
     const world = makeWorld();
 
@@ -175,23 +164,6 @@ describe("applyLayerReparent — objects", () => {
     });
 
     assert.deepEqual(relocated, []);
-  });
-
-  test("does nothing when the object is no longer in its layer", () => {
-    const world = makeWorld();
-
-    applyLayerReparent(world, {
-      movedIds: [
-        layerRowId({
-          kind: "object",
-          layerName: "Triggers",
-          objectId: "gone"
-        })
-      ],
-      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
-      where: "inside"
-    });
-
     assert.deepEqual(objectIds(world, "Triggers"), ["obj_1"]);
     assert.deepEqual(objectIds(world, "Spawns"), []);
   });

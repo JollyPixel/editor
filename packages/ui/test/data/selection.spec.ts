@@ -156,4 +156,48 @@ describe("Data.resolveSelection", () => {
     assert.deepEqual(shiftResult, { selected: ["a1"], anchorId: "a1" });
     assert.deepEqual(ctrlResult, { selected: ["a1"], anchorId: "a1" });
   });
+
+  test("ctrl removes the last selected row when selection is optional", () => {
+    const result = resolveSelection({
+      rows: kRows,
+      clickedId: "a1",
+      current: ["a1"],
+      anchorId: "a1",
+      shiftKey: false,
+      ctrlKey: true,
+      multiple: true
+    });
+
+    assert.deepEqual(result, { selected: [], anchorId: "a1" });
+  });
+
+  test("ctrl keeps the last selected row when selection is required", () => {
+    const result = resolveSelection({
+      rows: kRows,
+      clickedId: "a1",
+      current: ["a1"],
+      anchorId: "a1",
+      shiftKey: false,
+      ctrlKey: true,
+      multiple: true,
+      requireSelection: true
+    });
+
+    assert.deepEqual(result, { selected: ["a1"], anchorId: "a1" });
+  });
+
+  test("ctrl still removes a row from a larger selection when selection is required", () => {
+    const result = resolveSelection({
+      rows: kRows,
+      clickedId: "a1",
+      current: ["a1", "a2"],
+      anchorId: "a1",
+      shiftKey: false,
+      ctrlKey: true,
+      multiple: true,
+      requireSelection: true
+    });
+
+    assert.deepEqual(result, { selected: ["a2"], anchorId: "a2" });
+  });
 });

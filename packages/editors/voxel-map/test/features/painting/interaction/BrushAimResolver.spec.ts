@@ -97,26 +97,18 @@ describe("BrushAimResolver.aimAtPlane", () => {
   });
 
   test("reads the height row whatever surface stands in the way", () => {
-    const resolver = createResolver(
+    const covered = createResolver(
       [{ x: 0, y: 0, z: 0 }],
       aimingDownAtFace
     );
     const bare = createResolver([], aimingDownAtFace);
 
-    assert.deepStrictEqual(
-      resolver.aimAtPlane(kPointer, heightOf(0)),
-      bare.aimAtPlane(kPointer, heightOf(0))
-    );
-  });
-
-  test("keeps reading the same row once the surface is dug away", () => {
-    const solid = [{ x: 0, y: 0, z: 0 }];
-    const before = createResolver(solid, aimingDownAtFace)
-      .aimAtPlane(kPointer, heightOf(0));
-    const after = createResolver([], aimingDownAtFace)
-      .aimAtPlane(kPointer, heightOf(0));
-
-    assert.deepStrictEqual(after, before);
+    for (const resolver of [covered, bare]) {
+      assert.deepStrictEqual(
+        resolver.aimAtPlane(kPointer, heightOf(0)),
+        { x: 0, y: 0, z: 0 }
+      );
+    }
   });
 
   test("reports nothing beyond the brush reach", () => {

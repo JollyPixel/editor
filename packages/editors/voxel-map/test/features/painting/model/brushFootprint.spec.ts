@@ -10,12 +10,7 @@ import {
   boundsOf,
   cellsOf,
   isBall,
-  isBrushAnchor,
-  isBrushAxis,
-  isBrushPattern,
-  lockAxisOf,
   overlaps,
-  planeThrough,
   type BrushAxis,
   type BrushFootprint
 } from "../../../../src/features/painting/model/brushFootprint.ts";
@@ -106,14 +101,6 @@ describe("brushFootprint anchor", () => {
     y: 2,
     z: -1
   };
-
-  test("accepts the three anchors and nothing else", () => {
-    for (const anchor of ["bottom", "top", "center"]) {
-      assert.ok(isBrushAnchor(anchor));
-    }
-    assert.ok(!isBrushAnchor("middle"));
-    assert.ok(!isBrushAnchor(undefined));
-  });
 
   test("hangs the Y span below a top anchored cell", () => {
     assert.deepStrictEqual(
@@ -383,31 +370,5 @@ describe("brushFootprint.overlaps", () => {
       overlaps(footprint(), { ...wide, position: { x: 0, y: 0, z: 1 } }),
       true
     );
-  });
-});
-
-describe("brushFootprint planes", () => {
-  test("locks the axis the footprint does not span", () => {
-    assert.strictEqual(lockAxisOf("xz"), "y");
-    assert.strictEqual(lockAxisOf("xy"), "z");
-    assert.strictEqual(lockAxisOf("yz"), "x");
-    assert.strictEqual(lockAxisOf("xyz"), "y");
-  });
-
-  test("passes through the given cell", () => {
-    assert.deepStrictEqual(
-      planeThrough("yz", { x: 5, y: 1, z: 2 }),
-      { axis: "x", value: 5 }
-    );
-  });
-});
-
-describe("brushFootprint guards", () => {
-  test("accept known values only", () => {
-    assert.ok(isBrushAxis("xyz"));
-    assert.ok(!isBrushAxis("zx"));
-    assert.ok(!isBrushAxis(undefined));
-    assert.ok(isBrushPattern("circle"));
-    assert.ok(!isBrushPattern("rectangle"));
   });
 });

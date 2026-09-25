@@ -23,10 +23,6 @@ const kCanvas2DStub = new Proxy({}, {
   }
 });
 
-/*
- * Element constructors are copied wholesale: decorated Lit components
- * reference them at module scope, so a missing one throws on import.
- */
 const kElementConstructors = Object.fromEntries(
   Object.keys(kEmulatedBrowserWindow)
     .filter((key) => key.startsWith("HTML") && key.endsWith("Element"))
@@ -40,6 +36,7 @@ Object.assign(globalThis, {
   ...kElementConstructors,
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,
+  localStorage: kEmulatedBrowserWindow.localStorage,
   PointerEvent: kEmulatedBrowserWindow.PointerEvent,
   MouseEvent: kEmulatedBrowserWindow.MouseEvent,
   KeyboardEvent: kEmulatedBrowserWindow.KeyboardEvent

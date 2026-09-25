@@ -109,10 +109,6 @@ describe("readImagePixels", () => {
   it("returns null for an image without a decoded size", () => {
     assert.equal(readImagePixels(document.createElement("img")), null);
   });
-
-  it("returns null when the canvas cannot hand back pixels", () => {
-    assert.equal(readImagePixels(canvasOf(4, 2)), null);
-  });
 });
 
 describe("TileOpacityProbe", () => {

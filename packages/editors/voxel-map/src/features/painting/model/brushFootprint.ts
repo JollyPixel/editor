@@ -12,10 +12,6 @@ export const BRUSH_AXES: readonly BrushAxis[] = Object.freeze([
   "yz",
   "xyz"
 ]);
-export const BRUSH_PATTERNS: readonly BrushPattern[] = Object.freeze([
-  "square",
-  "circle"
-]);
 
 // CONSTANTS
 const kCoordAxes: readonly CoordAxis[] = ["x", "y", "z"];
@@ -78,7 +74,7 @@ export function spans(
   return axis.includes(coord);
 }
 
-export function lockAxisOf(
+function lockAxisOf(
   axis: BrushAxis
 ): CoordAxis {
   switch (axis) {

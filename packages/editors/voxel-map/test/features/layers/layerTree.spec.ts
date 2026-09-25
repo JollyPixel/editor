@@ -13,12 +13,12 @@ import type { TreeNode } from "@jolly-pixel/ui";
 import {
   layerRefOf,
   layerRowId,
-  layerSelectionOf,
   layerTreeNodes,
   withLayerBadges,
   type LayerRef
 } from "../../../src/features/layers/layerTree.ts";
 import type { PeerMark } from "../../../src/collaboration/peerMarks.ts";
+import { LayerVisibilityStore } from "../../../src/state/LayerVisibilityStore.ts";
 
 describe("layer tree references", () => {
   const refs: LayerRef[] = [
@@ -41,14 +41,6 @@ describe("layer tree references", () => {
     for (const ref of refs) {
       assert.deepStrictEqual(layerRefOf(layerRowId(ref)), ref);
     }
-  });
-
-  test("converts a tree reference to editor selection", () => {
-    assert.deepStrictEqual(layerSelectionOf(refs[2]), {
-      kind: "object",
-      layerName: "Triggers/Inside",
-      objectId: "spawn"
-    });
   });
 });
 
@@ -79,7 +71,10 @@ describe("layerTreeNodes", () => {
         ]
       }
     };
-    const nodes = layerTreeNodes(world as unknown as VoxelWorld);
+    const nodes = layerTreeNodes(
+      world as unknown as VoxelWorld,
+      new LayerVisibilityStore()
+    );
 
     assert.strictEqual(nodes.length, 2);
     assert.deepStrictEqual(nodes[0].data, {
@@ -102,6 +97,46 @@ describe("layerTreeNodes", () => {
         objectId: "spawn"
       }
     });
+  });
+
+  test("shows local visibility overrides over the saved values", () => {
+    const world = {
+      getLayers: () => [
+        {
+          name: "Ground",
+          visible: true,
+          voxelCount: 0
+        }
+      ],
+      objectLayers: {
+        toArray: () => [
+          {
+            name: "Triggers",
+            visible: false,
+            objects: [
+              {
+                id: "spawn",
+                name: "Spawn",
+                visible: true
+              }
+            ]
+          }
+        ]
+      }
+    };
+    const visibility = new LayerVisibilityStore();
+    visibility.override("voxel:Ground", false);
+    visibility.override("object:Triggers", true);
+    visibility.override("obj:Triggers/spawn", false);
+
+    const [ground, triggers] = layerTreeNodes(
+      world as unknown as VoxelWorld,
+      visibility
+    );
+
+    assert.strictEqual(ground.visible, false);
+    assert.strictEqual(triggers.visible, true);
+    assert.strictEqual(triggers.children?.[0].visible, false);
   });
 });
 

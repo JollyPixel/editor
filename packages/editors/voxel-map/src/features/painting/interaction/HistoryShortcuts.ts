@@ -17,7 +17,7 @@ export interface HistoryShortcutsOptions {
   history: Pick<VoxelHistory, "undo" | "redo">;
 }
 
-export const HISTORY_SHORTCUT_CODES: readonly HistoryShortcutCode[] = [
+const kHistoryShortcutCodes: readonly HistoryShortcutCode[] = [
   "KeyZ",
   "KeyY"
 ];
@@ -54,13 +54,13 @@ export class HistoryShortcuts {
     this.#keyboard = options.keyboard;
     this.#history = options.history;
 
-    for (const code of HISTORY_SHORTCUT_CODES) {
+    for (const code of kHistoryShortcutCodes) {
       this.#keyboard.on(code, this.#onKey);
     }
   }
 
   dispose(): void {
-    for (const code of HISTORY_SHORTCUT_CODES) {
+    for (const code of kHistoryShortcutCodes) {
       this.#keyboard.off(code, this.#onKey);
     }
   }

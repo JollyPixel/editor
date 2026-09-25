@@ -42,15 +42,17 @@ describe("cursor.read", () => {
   });
 
   test("falls back on unknown axis and pattern values", () => {
-    const read = cursor.read({
-      position: { x: 0, y: 0, z: 0 },
-      size: 1,
-      axis: "diagonal",
-      pattern: 3
-    });
+    for (const [axis, pattern] of [["diagonal", 3], ["zx", "rectangle"]]) {
+      const read = cursor.read({
+        position: { x: 0, y: 0, z: 0 },
+        size: 1,
+        axis,
+        pattern
+      });
 
-    assert.strictEqual(read?.axis, "xz");
-    assert.strictEqual(read?.pattern, "square");
+      assert.strictEqual(read?.axis, "xz");
+      assert.strictEqual(read?.pattern, "square");
+    }
   });
 
   test("reads the aimed face and drops an unknown one", () => {
@@ -60,7 +62,9 @@ describe("cursor.read", () => {
     };
 
     assert.strictEqual(cursor.read({ ...base, face: "-z" })?.face, "-z");
-    assert.ok(!("face" in cursor.read({ ...base, face: "up" })!));
+    for (const face of ["up", "+w", null]) {
+      assert.ok(!("face" in cursor.read({ ...base, face })!));
+    }
   });
 
   test("reads the anchor and drops an unknown one", () => {

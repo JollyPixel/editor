@@ -33,8 +33,10 @@ import {
   LocalBrush
 } from "../features/painting/index.ts";
 import {
+  LocalLayerVisibility,
   ObjectLayerRenderer,
-  VoxelLayerGizmo
+  VoxelLayerGizmo,
+  layerSelectionsOf
 } from "../features/layers/index.ts";
 import {
   TilesetDirectory,
@@ -181,6 +183,11 @@ export class EditorScene extends Systems.Scene {
         defaultLayerName: kDefaultLayerName
       })
     });
+    const layerVisibility = new LocalLayerVisibility({
+      world: engine.world,
+      mapDocument,
+      visibility: state.layerVisibility
+    });
     const usage = new BlockUsageStore({
       mapDocument,
       source: engine.inspector.blocks
@@ -245,6 +252,9 @@ export class EditorScene extends Systems.Scene {
       camera.enterOrbitFocus(point);
       this.#announceCameraMode();
     };
+    localBrush.onPaintBlocked = () => {
+      state.log.push("No voxel layer to paint on: add one in the Layers panel");
+    };
 
     const shortcuts = new BrushShortcuts({
       keyboard,
@@ -268,7 +278,8 @@ export class EditorScene extends Systems.Scene {
         world: engine.world,
         camera: camera.camera,
         selection: state.selection,
-        mapDocument
+        mapDocument,
+        visibility: state.layerVisibility
       });
     const collaboration = new MapCollaboration({
       room: session.room,
@@ -284,8 +295,11 @@ export class EditorScene extends Systems.Scene {
       state.selection.subscribe("gizmoDraggingChange", (dragging) => {
         camera.enabled = !dragging;
       }),
+      mapDocument.subscribe("layerUpdated", () => {
+        this.#reconcileSelection(engine);
+      }),
       mapDocument.subscribe("reset", () => {
-        this.#selectFallbackLayer(engine);
+        this.#reconcileSelection(engine);
         this.#spawnCamera(engine);
       }),
       state.view.subscribe("change", (settings) => {
@@ -298,13 +312,14 @@ export class EditorScene extends Systems.Scene {
       () => atlases.dispose(),
       () => tilesetDirectory.dispose(),
       () => usage.dispose(),
+      () => layerVisibility.dispose(),
       () => mapDocument.dispose(),
       () => {
         viewFocus.provider = null;
       }
     );
 
-    this.#selectFallbackLayer(engine);
+    this.#reconcileSelection(engine);
     if (mapDocument.ready) {
       this.#spawnCamera(engine);
     }
@@ -351,20 +366,12 @@ export class EditorScene extends Systems.Scene {
     );
   }
 
-  #selectFallbackLayer(
+  #reconcileSelection(
     engine: VoxelEngine
   ): void {
-    const { selection } = this.#options.state;
-    const layers = engine.world.getLayers();
-    const selected = selection.voxelLayer;
-    if (
-      selected !== null &&
-      layers.some((layer) => layer.name === selected)
-    ) {
-      return;
-    }
-
-    selection.selectVoxelLayer(layers[0]?.name ?? null);
+    this.#options.state.selection.reconcile(
+      layerSelectionsOf(engine.world)
+    );
   }
 
   #spawnCamera(

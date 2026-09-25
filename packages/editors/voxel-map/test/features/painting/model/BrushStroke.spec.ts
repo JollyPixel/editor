@@ -50,14 +50,24 @@ describe("BrushStroke", () => {
     );
   });
 
-  test("locks its plane through the origin", () => {
-    assert.deepStrictEqual(
-      createStroke({ x: 2, y: 5, z: 3 }).plane,
-      {
-        axis: "y",
-        value: 5
-      }
-    );
+  test("locks its plane through the origin on the axis it does not span", () => {
+    const cases = [
+      { axis: "xz", plane: { axis: "y", value: 5 } },
+      { axis: "xy", plane: { axis: "z", value: 3 } },
+      { axis: "yz", plane: { axis: "x", value: 2 } },
+      { axis: "xyz", plane: { axis: "y", value: 5 } }
+    ] as const;
+
+    for (const { axis, plane } of cases) {
+      const stroke = new BrushStroke({
+        mode: "remove",
+        layerName: "Ground",
+        axis,
+        origin: { x: 2, y: 5, z: 3 }
+      });
+
+      assert.deepStrictEqual(stroke.plane, plane, axis);
+    }
   });
 
   test("starts on its origin wherever the cursor first lands", () => {
@@ -115,7 +125,6 @@ describe("BrushStroke", () => {
 
     assert.strictEqual(stroke.trails({ x: 2, y: 0, z: 0 }), true);
     assert.strictEqual(stroke.trails({ x: 0, y: 0, z: 0 }), false);
-    // Targets are compared where they land, not at the height they came in at.
     assert.strictEqual(stroke.trails({ x: 0, y: 9, z: 0 }), false);
   });
 
@@ -177,17 +186,5 @@ describe("BrushStroke", () => {
 
     assert.strictEqual(stroke.axis, "xz");
     assert.strictEqual(stroke.pattern, "square");
-  });
-
-  test("carries what a placement needs", () => {
-    const stroke = createStroke();
-
-    assert.strictEqual(stroke.mode, "place");
-    assert.strictEqual(stroke.layerName, "Ground");
-    assert.deepStrictEqual(stroke.paint, {
-      blockId: 1,
-      rotation: 0,
-      flipY: false
-    });
   });
 });

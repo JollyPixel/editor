@@ -6,7 +6,10 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { LayerSelection } from "../../state/index.ts";
+import type {
+  LayerSelection,
+  LayerVisibilityStore
+} from "../../state/index.ts";
 import type { PeerMarkMap } from "../../collaboration/peerMarks.ts";
 import { layerRefPresenceKey } from "./collaboration/layerPresenceKey.ts";
 import { formatCount } from "../blocks/blockUsage.ts";
@@ -60,23 +63,35 @@ export function layerRefOf(
     };
 }
 
-export function layerSelectionOf(
-  ref: LayerRef
-): LayerSelection {
-  return ref.kind === "object" ?
-    {
-      kind: "object",
-      layerName: ref.layerName,
-      objectId: ref.objectId
-    } :
-    {
-      kind: ref.kind,
-      name: ref.name
-    };
+export function layerSelectionsOf(
+  world: VoxelWorld
+): LayerSelection[] {
+  return [
+    ...world.getLayers().map((layer): LayerSelection => {
+      return {
+        kind: "voxel-layer",
+        name: layer.name
+      };
+    }),
+    ...world.objectLayers.toArray().flatMap((layer): LayerSelection[] => [
+      {
+        kind: "object-layer",
+        name: layer.name
+      },
+      ...layer.objects.map((object): LayerSelection => {
+        return {
+          kind: "object",
+          layerName: layer.name,
+          objectId: object.id
+        };
+      })
+    ])
+  ];
 }
 
 export function layerTreeNodes(
-  world: VoxelWorld
+  world: VoxelWorld,
+  visibility: Pick<LayerVisibilityStore, "resolve">
 ): TreeNode<LayerRef>[] {
   return [
     ...world.getLayers().map((layer): TreeNode<LayerRef> => {
@@ -84,13 +99,14 @@ export function layerTreeNodes(
         kind: "voxel-layer",
         name: layer.name
       };
+      const id = layerRowId(ref);
 
       return {
-        id: layerRowId(ref),
+        id,
         label: layer.name,
         icon: "voxel-layer",
         detail: formatCount(layer.voxelCount, "voxel"),
-        visible: layer.visible,
+        visible: visibility.resolve(id, layer.visible),
         data: ref
       };
     }),
@@ -99,12 +115,13 @@ export function layerTreeNodes(
         kind: "object-layer",
         name: layer.name
       };
+      const id = layerRowId(ref);
 
       return {
-        id: layerRowId(ref),
+        id,
         label: layer.name,
         icon: "object-layer",
-        visible: layer.visible,
+        visible: visibility.resolve(id, layer.visible),
         data: ref,
         children: layer.objects.map((object): TreeNode<LayerRef> => {
           const objectRef: LayerRef = {
@@ -112,12 +129,13 @@ export function layerTreeNodes(
             layerName: layer.name,
             objectId: object.id
           };
+          const objectId = layerRowId(objectRef);
 
           return {
-            id: layerRowId(objectRef),
+            id: objectId,
             label: object.name,
             icon: "object-area",
-            visible: object.visible,
+            visible: visibility.resolve(objectId, object.visible),
             locked: object.locked ?? false,
             renamable: true,
             data: objectRef

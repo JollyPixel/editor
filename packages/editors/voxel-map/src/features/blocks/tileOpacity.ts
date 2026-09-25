@@ -74,7 +74,7 @@ export function readImagePixels(
   try {
     context.drawImage(image, 0, 0);
 
-    return context.getImageData(0, 0, width, height) ?? null;
+    return context.getImageData(0, 0, width, height);
   }
   catch {
     return null;

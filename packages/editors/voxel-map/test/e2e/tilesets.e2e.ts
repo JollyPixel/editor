@@ -4,7 +4,6 @@ import type {
   Page
 } from "@playwright/test";
 import {
-  buttonGroup,
   dialog,
   textField
 } from "@jolly-pixel/e2e";
@@ -15,7 +14,10 @@ import {
   expect
 } from "./fixtures.ts";
 import { openPane } from "./support/panels.ts";
-import { texturePanel } from "./support/texture.ts";
+import {
+  createBlankTileset,
+  texturePanel
+} from "./support/texture.ts";
 
 function tilesetSources(
   page: Page
@@ -54,13 +56,7 @@ test("a single tileset keeps its tab, and the add button creates a new one", asy
   await expect(page.locator("tileset-folder")).toHaveCount(0);
 
   await texturePanel(page).getByRole("button", { name: "Add tileset" }).click();
-  const form = dialog(page, "Add tileset");
-  await buttonGroup(form, "Source")
-    .getByRole("radio", { name: "New", exact: true })
-    .click();
-  await textField(form, "Name").fill("stone");
-  await form.getByRole("button", { name: "Create" }).click();
-  await expect(form).toBeHidden();
+  await createBlankTileset(page, "stone");
 
   const stone = tilesetTab(page, /^stone/);
   await expect(stone).toHaveAttribute("aria-selected", "true");

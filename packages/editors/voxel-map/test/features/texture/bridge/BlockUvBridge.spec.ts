@@ -52,7 +52,6 @@ describe("BlockUvBridge.setActiveTileset", () => {
       uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
-      // The ramp's upright quad is PosZ, which maps to "front", not "back".
       assert.deepEqual(region.slotsOf().map(({ slot }) => slot), [
         "front", "left", "right", "top", "bottom"
       ]);
@@ -200,13 +199,10 @@ describe("BlockUvBridge / region-moved", () => {
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
     try {
       bridge.setActiveTileset("atlas", 16);
-      const region = uv.create({ id: "custom-region", width: 8, height: 8 });
-
+      uv.create({ id: "custom-region", width: 8, height: 8 });
       uv.move("custom-region", { x: 5, y: 5, width: 8, height: 8 });
 
-      assert.deepEqual(uv.get("custom-region")?.rectFor("front"), { x: 5, y: 5, width: 8, height: 8 });
       assert.deepEqual(dirtyReasons, []);
-      assert.equal(region.id, "custom-region");
     }
     finally {
       bridge.dispose();

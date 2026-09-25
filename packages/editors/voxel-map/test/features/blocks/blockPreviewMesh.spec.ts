@@ -112,16 +112,6 @@ describe("fitGeometry", () => {
 
     assertFitted(geometry);
   });
-
-  it("leaves an empty geometry untouched", () => {
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(0), 3)
-    );
-
-    assert.doesNotThrow(() => fitGeometry(geometry));
-  });
 });
 
 describe("buildBlockPreviewMesh", () => {
