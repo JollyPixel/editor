@@ -2,50 +2,193 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
-import type { VoxelCollider } from "../collision/VoxelCollider.ts";
+import type { BlockSurface } from "./blocks/BlockSurface.ts";
+import type { BlockShape } from "./blocks/shape/BlockShape.ts";
+import { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
+import type {
+  VoxelCollider,
+  VoxelColliderFactory
+} from "./collision/VoxelCollider.ts";
 import {
   isVoxelMaterialGroupCommand,
   isVoxelTilesetCommand,
   type VoxelCommand
-} from "../commands.ts";
-import type { VoxelDocument } from "../document/VoxelDocument.ts";
-import type { VoxelInvalidation } from "../document/VoxelDocument.types.ts";
-import { VoxelInspector } from "../inspector/index.ts";
-import { VoxelMeshBuilder } from "../mesh/index.ts";
-import { ChunkMaterialCache } from "../render/ChunkMaterialCache.ts";
-import { ChunkMeshStore } from "../render/ChunkMeshStore.ts";
-import { ChunkRebuildQueue } from "../render/ChunkRebuildQueue.ts";
-import { ChunkViewport } from "../render/ChunkViewport.ts";
-import { ChunkVisibility } from "../render/ChunkVisibility.ts";
-import { TilesetManager } from "../tileset/TilesetManager.ts";
-import type { TilesetSource } from "../tileset/loadTilesets.ts";
+} from "./commands.ts";
+import type {
+  VoxelDocument,
+  VoxelLoadOptions
+} from "./VoxelDocument.ts";
+import {
+  VoxelInspector,
+  type VoxelInspectorOptions
+} from "./inspector/index.ts";
+import { VoxelMeshBuilder } from "./mesh/index.ts";
+import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
+import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";
+import { ChunkRebuildQueue } from "./render/ChunkRebuildQueue.ts";
+import { ChunkViewport } from "./render/ChunkViewport.ts";
+import { ChunkVisibility } from "./render/ChunkVisibility.ts";
+import { TilesetManager } from "./tileset/TilesetManager.ts";
+import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type {
   TilesetDefinition,
   TilesetTexture
-} from "../tileset/types.ts";
-import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
-import { ViewDistance } from "../world/ViewDistance.ts";
-import type { VoxelChunk } from "../world/VoxelChunk.ts";
-import type { VoxelLayer } from "../world/VoxelLayer.ts";
-import type {
-  TileMinification,
-  ViewDistancePolicy,
-  VoxelViewOptions
-} from "./VoxelView.types.ts";
+} from "./tileset/types.ts";
+import type { VoxelWorldJSON } from "./serialization/types.ts";
+import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
+import {
+  ViewDistance,
+  type ViewDistanceOptions
+} from "./world/ViewDistance.ts";
+import type { VoxelChunk } from "./world/VoxelChunk.ts";
+import type { VoxelLayer } from "./world/VoxelLayer.ts";
+
+export type ViewDistancePolicy =
+  | "hide"
+  | "unload";
+
+export type MaterialCustomizerFn = (
+  material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
+  tilesetId: string,
+  surface: BlockSurface
+) => void;
+
+export type TileMinification =
+  | "average"
+  | "nearest";
+
+export interface VoxelViewLoadOptions
+  extends Omit<VoxelLoadOptions, "tilesets"> {
+  /**
+   * Atlases to register before loading a world that uses them.
+   */
+  tilesets?: Iterable<TilesetSource>;
+}
+
+export interface VoxelViewOptions {
+  /**
+   * Collision factory called once with the registries; disabled when omitted.
+   */
+  collider?: VoxelColliderFactory;
+
+  /**
+   * Chunk material type.
+   * @default "lambert"
+   */
+  material?: "lambert" | "standard";
+
+  /**
+   * Called once for each new material with its tileset ID and surface;
+   * `surface.materialGroup` tells grouped blocks apart.
+   */
+  materialCustomizer?: MaterialCustomizerFn;
+
+  /**
+   * Shapes registered after the defaults from `BlockShapeRegistry`.
+   */
+  shapes?: BlockShape[];
+
+  /**
+   * Alpha-test cutoff; 0 disables fragment discards.
+   * @default 0.1
+   */
+  alphaTest?: number;
+
+  /**
+   * Debug logger; defaults to a no-op implementation.
+   */
+  logger?: VoxelLogger;
+
+  /**
+   * Initial inspector view; mesh counters are collected in every mode.
+   */
+  inspector?: VoxelInspectorOptions;
+
+  /**
+   * Enables greedy merging; incompatible with custom UV shader compilation.
+   * @default false
+   */
+  greedy?: boolean;
+
+  /**
+   * How atlas tiles are drawn once a screen pixel covers several texels.
+   * `"average"` fades distant faces toward the average colour of their tile,
+   * which stops the moire and shimmer that `"nearest"` shows far away.
+   * Needs readable atlas pixels (a 2D canvas, same-origin images); falls
+   * back to `"nearest"` otherwise.
+   * @default "average"
+   */
+  tileMinification?: TileMinification;
+
+  /**
+   * Preloaded atlases (see `loadTilesets`) registered synchronously during
+   * construction.
+   */
+  tilesets?: Iterable<TilesetSource>;
+
+  /**
+   * Per-tick rebuild budget in milliseconds; 0 drains the queue.
+   * @default 8
+   */
+  rebuildBudgetMs?: number;
+
+  /**
+   * Chunk radius around `focus` kept meshed and drawn, as a radius in chunks
+   * or a full `ViewDistance` description. Ignored while `focus` is null.
+   * @default Infinity
+   */
+  viewDistance?: number | ViewDistanceOptions;
+
+  /**
+   * What happens to a chunk that leaves the view distance: `"hide"` keeps its
+   * geometry ready to show again, `"unload"` frees it and remeshes on return.
+   * @default "hide"
+   */
+  viewDistancePolicy?: ViewDistancePolicy;
+
+  /**
+   * Keeps the shader-only `tileRegion` and `tileRepeat` chunk attributes in
+   * JavaScript memory after their first render uploads them. Raycasting and
+   * colliders never read them; a renderer that did not draw the chunk first
+   * cannot upload them once released.
+   * @default false
+   */
+  retainVertexData?: boolean;
+
+  /**
+   * Strength of the ambient occlusion baked into chunk vertices, from 0 (off)
+   * to 1 (fully occluded corners turn black). Darkens the albedo, so it
+   * shades direct and indirect light alike.
+   * @default 0
+   */
+  ambientOcclusion?: number;
+
+  /**
+   * Chunk meshes cast shadows; assignable later through `castShadow`.
+   * @default false
+   */
+  castShadow?: boolean;
+
+  /**
+   * Chunk meshes receive shadows; assignable later through `receiveShadow`.
+   * @default false
+   */
+  receiveShadow?: boolean;
+}
 
 export class VoxelView {
   readonly root = new THREE.Group();
 
   readonly document: VoxelDocument;
   readonly shapes: BlockShapeRegistry;
-  readonly tilesets: TilesetManager;
+  readonly tilesetManager: TilesetManager;
   readonly inspector: VoxelInspector;
 
   focus: THREE.Vector3Like | null = null;
   viewDistance: ViewDistance;
   viewDistancePolicy: ViewDistancePolicy;
 
+  #chunkGroup = new THREE.Group();
   #meshBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
   #meshes: ChunkMeshStore;
@@ -55,12 +198,14 @@ export class VoxelView {
   #collider: VoxelCollider | null;
   #rebuildBudgetMs: number;
   #logger: VoxelLogger;
+  #stagedTilesets: TilesetSource[] = [];
 
   #onCommand = (
     command: VoxelCommand
   ): void => {
     if (isVoxelTilesetCommand(command)) {
       this.#syncAtlases();
+      this.markAllChunksDirty(command.action);
     }
     else if (isVoxelMaterialGroupCommand(command)) {
       const groupId = command.action === "material-group-defined" ?
@@ -70,21 +215,24 @@ export class VoxelView {
         this.markAllChunksDirty(command.action);
       }
     }
-  };
-
-  #onInvalidated = (
-    invalidation: VoxelInvalidation
-  ): void => {
-    this.markAllChunksDirty(invalidation.reason);
+    else if (
+      command.action === "block-defined" ||
+      command.action === "block-removed"
+    ) {
+      this.markAllChunksDirty(command.action);
+    }
   };
 
   #onLoaded = (): void => {
     this.#clearChunkMeshes();
     this.#logger.debug("Cleared existing chunk meshes while loading a world.");
 
-    this.tilesets.syncAtlases();
+    for (const { def, texture } of this.#stagedTilesets.splice(0)) {
+      this.tilesetManager.registerTexture(def.id, texture);
+    }
+    this.tilesetManager.syncAtlases();
     for (const tilesetDef of this.document.tilesets) {
-      if (!this.tilesets.get(tilesetDef.id)) {
+      if (!this.tilesetManager.get(tilesetDef.id)) {
         this.#logger.warn(
           `Tileset '${tilesetDef.id}' is not loaded; its faces are skipped until it is.`
         );
@@ -121,6 +269,8 @@ export class VoxelView {
 
     this.document = document;
     this.root.name = "VoxelView";
+    this.#chunkGroup.name = "VoxelView:chunks";
+    this.root.add(this.#chunkGroup);
 
     this.#rebuildBudgetMs = rebuildBudgetMs;
     this.viewDistance = viewDistance === undefined ?
@@ -134,6 +284,7 @@ export class VoxelView {
     this.inspector = new VoxelInspector(
       {
         parent: this.root,
+        solids: this.#chunkGroup,
         world: document.world,
         blockRegistry: document.blocks
       },
@@ -144,16 +295,15 @@ export class VoxelView {
       (shape) => this.shapes.register(shape)
     );
 
-    this.tilesets = new TilesetManager({
+    this.tilesetManager = new TilesetManager({
       tilesets: document.tilesets
     });
-    this.#registerTilesets(tilesets);
 
     this.#meshBuilder = new VoxelMeshBuilder({
       world: document.world,
       blockRegistry: document.blocks,
       shapeRegistry: this.shapes,
-      tilesetManager: this.tilesets,
+      tilesetManager: this.tilesetManager,
       alphaTest,
       greedy,
       ambientOcclusion: ambientOcclusion > 0,
@@ -166,7 +316,7 @@ export class VoxelView {
     }) ?? null;
 
     this.#materials = new ChunkMaterialCache({
-      tilesetManager: this.tilesets,
+      tilesetManager: this.tilesetManager,
       materialGroups: document.materialGroups,
       type: material,
       customizer: materialCustomizer,
@@ -175,7 +325,7 @@ export class VoxelView {
       ambientOcclusion
     });
     this.#meshes = new ChunkMeshStore({
-      root: this.root,
+      root: this.#chunkGroup,
       meshBuilder: this.#meshBuilder,
       materials: this.#materials,
       inspector: this.inspector,
@@ -197,8 +347,13 @@ export class VoxelView {
       }
     });
 
+    for (const { def, texture } of tilesets ?? []) {
+      if (!this.tilesetManager.get(def.id)) {
+        this.loadTileset(def, texture);
+      }
+    }
+
     document.on("command", this.#onCommand);
-    document.on("invalidated", this.#onInvalidated);
     document.on("loaded", this.#onLoaded);
   }
 
@@ -214,7 +369,7 @@ export class VoxelView {
       this.#removeChunk(layer, chunk);
     }
 
-    this.tilesets.refreshAverages();
+    this.tilesetManager.refreshAverages();
     const viewport = this.#viewport();
 
     this.#visibility.update(viewport);
@@ -323,8 +478,8 @@ export class VoxelView {
     def: TilesetDefinition,
     texture: TilesetTexture
   ): void {
-    this.document.registerTileset(def);
-    this.tilesets.registerTexture(def.id, texture);
+    this.document.tilesets.add(def);
+    this.tilesetManager.registerTexture(def.id, texture);
     this.#logger.debug(
       `Loaded tileset '${def.id}' from '${def.src ?? def.asset?.id}'`
     );
@@ -333,27 +488,46 @@ export class VoxelView {
     this.markAllChunksDirty("loadTileset");
   }
 
+  load(
+    data: VoxelWorldJSON,
+    options: VoxelViewLoadOptions = {}
+  ): void {
+    const { tilesets = [], mergeLayers } = options;
+
+    this.#stagedTilesets = Array.from(tilesets).filter(
+      ({ def }) => !this.tilesetManager.get(def.id)
+    );
+    try {
+      this.document.load(data, {
+        mergeLayers,
+        tilesets: this.#stagedTilesets.map(({ def }) => def)
+      });
+    }
+    finally {
+      this.#stagedTilesets = [];
+    }
+  }
+
   markAllChunksDirty(
     source?: string
   ): void {
     this.#logger.debug("Marking all chunks dirty...", { source });
 
-    for (const { chunk } of this.document.world.getAllChunks()) {
-      chunk.dirty = true;
+    for (const layer of this.document.world.getLayers()) {
+      layer.markAllDirty();
     }
   }
 
   dispose(): void {
     this.#logger.debug("Disposing VoxelView.");
     this.document.off("command", this.#onCommand);
-    this.document.off("invalidated", this.#onInvalidated);
     this.document.off("loaded", this.#onLoaded);
     this.#queue.clear();
     this.#clearChunkMeshes();
     this.inspector.dispose();
     this.#collider?.dispose();
     this.#materials.dispose();
-    this.tilesets.dispose();
+    this.tilesetManager.dispose();
   }
 
   #isIdle(): boolean {
@@ -403,10 +577,8 @@ export class VoxelView {
       }
 
       chunk.dirty = false;
-      if (!layer.visible || layer.opacity === 0) {
-        if (layer.wasVisible) {
-          this.#removeChunk(layer, chunk);
-        }
+      if (!layer.effectivelyVisible) {
+        this.#removeChunk(layer, chunk);
 
         continue;
       }
@@ -448,19 +620,8 @@ export class VoxelView {
   }
 
   #syncAtlases(): void {
-    for (const tilesetId of this.tilesets.syncAtlases()) {
+    for (const tilesetId of this.tilesetManager.syncAtlases()) {
       this.#materials.invalidate(tilesetId);
-    }
-  }
-
-  #registerTilesets(
-    sources: Iterable<TilesetSource> = []
-  ): void {
-    for (const { def, texture } of sources) {
-      if (!this.tilesets.get(def.id)) {
-        this.document.registerTileset(def);
-        this.tilesets.registerTexture(def.id, texture);
-      }
     }
   }
 }

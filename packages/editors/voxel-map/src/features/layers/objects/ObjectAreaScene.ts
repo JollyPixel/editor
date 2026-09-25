@@ -55,7 +55,7 @@ export class ObjectAreaScene {
     const { layerName, objectId } = parseObjectKey(key);
 
     return this.#world
-      .getObjectLayer(layerName)
+      .objectLayers.get(layerName)
       ?.objects.find((candidate) => candidate.id === objectId);
   }
 
@@ -69,7 +69,7 @@ export class ObjectAreaScene {
 
     const { layerName } = parseObjectKey(key);
 
-    return this.#world.getObjectLayer(layerName)?.visible === true &&
+    return this.#world.objectLayers.get(layerName)?.visible === true &&
       object.visible;
   }
 
@@ -84,7 +84,7 @@ export class ObjectAreaScene {
   syncAll(
     skipKey: string | null = null
   ): void {
-    const layers = this.#world.getObjectLayers();
+    const layers = this.#world.objectLayers.toArray();
     const names = new Set(
       layers.map((layer) => layer.name)
     );
@@ -103,7 +103,7 @@ export class ObjectAreaScene {
     layerName: string,
     skipKey: string | null = null
   ): void {
-    const objects = this.#world.getObjectLayer(
+    const objects = this.#world.objectLayers.get(
       layerName
     )?.objects ?? [];
     const alive = new Set(

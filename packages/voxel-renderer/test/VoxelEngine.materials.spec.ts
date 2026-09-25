@@ -6,8 +6,10 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { VoxelEngine } from "../src/VoxelEngine.ts";
-import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
+import type {
+  VoxelEngine,
+  VoxelEngineOptions
+} from "../src/VoxelEngine.ts";
 import { makeBlockDef } from "./helpers/blocks.ts";
 import {
   chunkMeshes,
@@ -81,8 +83,8 @@ describe("VoxelEngine - layer opacity on the material", () => {
     engine.flush();
 
     const meshes = chunkMeshes(engine);
-    const solid = meshes.find((mesh) => !mesh.name.endsWith(":cutout"));
-    const cutout = meshes.find((mesh) => mesh.name.endsWith(":cutout"));
+    const solid = meshes.find((mesh) => !mesh.name.includes(":surface="));
+    const cutout = meshes.find((mesh) => mesh.name.includes(":surface="));
     assert.equal(meshes.length, 2);
     assert.ok(solid && cutout);
 

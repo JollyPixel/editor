@@ -249,7 +249,7 @@ describe("BlockVariantCache - missing tileset", () => {
     assert.equal(variant.faces.length, 6);
     assert.equal(variant.occlusionMask, kAllFaces);
     variant.faces.forEach((face, index) => {
-      assert.equal(cache.tilesetIdAt(face.slot), MISSING_TILESET_ID);
+      assert.equal(cache.geometryKeyAt(face.slot).tilesetId, MISSING_TILESET_ID);
       assert.deepEqual(face.tileUvs, plain.faces[index].tileUvs);
     });
   });

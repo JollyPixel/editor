@@ -6,6 +6,17 @@ import { VoxelEngine } from "../../../src/VoxelEngine.ts";
 import { VoxelTransparencyRenderer } from "../../../src/render/VoxelTransparencyRenderer.ts";
 import type { BlockAlphaMode, BlockSide } from "../../../src/blocks/BlockSurface.ts";
 
+function chunkGroupOf(
+  engine: VoxelEngine
+): THREE.Object3D {
+  const chunks = engine.root.getObjectByName("VoxelView:chunks");
+  if (!chunks) {
+    throw new Error("The engine root holds no chunk group.");
+  }
+
+  return chunks;
+}
+
 export interface ProbeOptions {
   alpha: number;
   mode?: BlockAlphaMode;
@@ -159,6 +170,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     }, { blockId: options.colored ? depthIndex % 2 + 1 : 1, transform: 0 });
   }
   engine.flush();
+  const chunks = chunkGroupOf(engine);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(options.background ?? 0);
   scene.add(engine.root);
@@ -174,7 +186,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     );
   }
   if (options.reverseDrawOrder) {
-    engine.root.children.reverse();
+    chunks.children.reverse();
   }
   const occluder = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
@@ -201,7 +213,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       renderer.getMRT() !== null) {
       throw new Error("Compositing did not restore renderer state.");
     }
-    for (const child of engine.root.children) {
+    for (const child of chunks.children) {
       if (child instanceof THREE.Mesh) {
         const material = child.material;
         if (material.blending !== THREE.NormalBlending ||

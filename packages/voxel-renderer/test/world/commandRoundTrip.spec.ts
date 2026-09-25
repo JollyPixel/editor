@@ -39,7 +39,7 @@ function stateOf(
 ): unknown {
   return {
     layers: world.getLayers().map(withoutId),
-    objectLayers: world.getObjectLayers().map(({ id, ...rest }) => structuredClone(rest))
+    objectLayers: world.objectLayers.toArray().map(({ id, ...rest }) => structuredClone(rest))
   };
 }
 
@@ -62,10 +62,10 @@ function stack(
 function spawns(
   world: VoxelWorld
 ): void {
-  world.addObjectLayer("From");
-  world.addObjectLayer("To");
-  world.addObjectToLayer("From", makeObject({ id: "obj1" }));
-  world.addObjectToLayer("From", makeObject({ id: "obj2" }));
+  world.objectLayers.add("From");
+  world.objectLayers.add("To");
+  world.objectLayers.addObject("From", makeObject({ id: "obj1" }));
+  world.objectLayers.addObject("From", makeObject({ id: "obj2" }));
 }
 
 const kCases: RoundTripCase[] = [
@@ -205,46 +205,46 @@ const kCases: RoundTripCase[] = [
   },
   {
     name: "adds an object layer",
-    act: (world) => world.addObjectLayer("Spawns"),
+    act: (world) => world.objectLayers.add("Spawns"),
     actions: ["object-layer-added"]
   },
   {
     name: "removes an object layer",
     seed: spawns,
-    act: (world) => world.removeObjectLayer("To"),
+    act: (world) => world.objectLayers.remove("To"),
     actions: ["object-layer-removed"]
   },
   {
     name: "updates an object layer",
     seed: spawns,
-    act: (world) => world.updateObjectLayer("From", { visible: false }),
+    act: (world) => world.objectLayers.update("From", { visible: false }),
     actions: ["object-layer-updated"]
   },
   {
     name: "adds an object",
     seed: spawns,
-    act: (world) => world.addObjectToLayer("To", makeObject({ id: "obj3", x: 5 })),
+    act: (world) => world.objectLayers.addObject("To", makeObject({ id: "obj3", x: 5 })),
     actions: ["object-added"]
   },
   {
     name: "removes an object",
     seed: spawns,
-    act: (world) => world.removeObjectFromLayer("From", "obj1"),
+    act: (world) => world.objectLayers.removeObject("From", "obj1"),
     actions: ["object-removed"]
   },
   {
     name: "updates an object",
     seed: spawns,
-    act: (world) => world.updateObjectInLayer("From", "obj1", { x: 10, visible: false }),
+    act: (world) => world.objectLayers.updateObject("From", "obj1", { x: 10, visible: false }),
     actions: ["object-updated"]
   },
   {
     name: "moves an object between object layers",
     seed: spawns,
-    act: (world) => world.moveObjectToLayer("From", "obj1", "To"),
+    act: (world) => world.objectLayers.moveObject("From", "obj1", "To"),
     actions: ["object-moved"],
     check: (remote) => assert.deepEqual(
-      remote.getObjectLayer("To")?.objects.map((object) => object.id),
+      remote.objectLayers.get("To")?.objects.map((object) => object.id),
       ["obj1"]
     )
   }

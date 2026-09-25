@@ -57,6 +57,21 @@ describe("VoxelEngine - collider wiring", () => {
     assert.ok(collision.geometries.size > 0);
   });
 
+  it("rebuilds collision for a chunk that draws no face", () => {
+    const { engine, fake } = makeCollidingEngine();
+    engine.world.addLayer("Top", { compositing: "replace" });
+    placeCube(engine, "Ground", { x: 0, y: 0, z: 0 });
+    placeCube(engine, "Top", { x: 0, y: 0, z: 0 });
+
+    engine.tick(0);
+
+    const groundId = engine.world.getLayer("Ground")!.id;
+    const ground = fake.rebuilt.find(([key]) => key.startsWith(`${groundId}:`));
+    assert.ok(ground);
+    assert.equal(ground[1].geometries.size, 0);
+    assert.ok(fake.live.has(ground[0]));
+  });
+
   it("hands colliders vertices relative to the chunk origin", () => {
     const { engine, fake } = makeCollidingEngine();
     engine.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };

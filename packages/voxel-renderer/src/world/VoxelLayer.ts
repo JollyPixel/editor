@@ -34,6 +34,8 @@ const kChunkBiasY = 1 << (kChunkBitsY - 1);
 const kChunkBiasXZ = 1 << (kChunkBitsXZ - 1);
 const kChunkSpanY = 1 << kChunkBitsY;
 const kChunkSpanXZ = 1 << kChunkBitsXZ;
+const kCellMin = new Vector3();
+const kCellMax = new Vector3();
 
 /**
  * Packs validated chunk coordinates into disjoint biased int32 fields.
@@ -137,6 +139,10 @@ export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
   position?: VoxelCoord;
 }
 
+export interface VoxelLayerCloneOptions extends Partial<VoxelLayerOptions> {
+  name: string;
+}
+
 /**
  * A named, ordered layer of voxel data.
  * Voxels are organized into chunks for efficient dirty-flagging and mesh rebuilding.
@@ -149,14 +155,8 @@ export class VoxelLayer {
   order: number;
   position: VoxelCoord;
   properties: Record<string, any> = {};
-  /**
-   * Set to true the frame a layer stops being effectively visible
-   * (`visible` turning false, or `opacity` reaching `0`), so the renderer
-   * knows to remove its chunk meshes once. Cleared the following frame.
-   */
-  wasVisible = false;
+  visible: boolean;
 
-  #visible: boolean;
   #opacity: number;
   #chunks = new Map<number, VoxelChunk>();
   #chunkSize: number;
@@ -204,22 +204,11 @@ export class VoxelLayer {
     this.#chunkSize = chunkSize;
     this.#chunkShift = Math.log2(chunkSize);
     this.#chunkMask = chunkSize - 1;
-    this.#visible = visible;
+    this.visible = visible;
     this.#opacity = clamp(0, 1, opacity);
     this.compositing = compositing;
     this.position = structuredClone(position);
     this.properties = structuredClone(properties);
-  }
-
-  get visible() {
-    return this.#visible;
-  }
-
-  set visible(
-    value: boolean
-  ) {
-    this.#trackEffectiveVisibilityChange(value, this.#opacity);
-    this.#visible = value;
   }
 
   get opacity() {
@@ -229,29 +218,11 @@ export class VoxelLayer {
   set opacity(
     value: number
   ) {
-    const clamped = clamp(0, 1, value);
-    this.#trackEffectiveVisibilityChange(this.#visible, clamped);
-    this.#opacity = clamped;
+    this.#opacity = clamp(0, 1, value);
   }
 
-  /**
-   * Updates `wasVisible` when "effective visibility" (visible && opacity > 0)
-   * flips, regardless of whether `visible` or `opacity` triggered the flip.
-   * Must be called with the pre-mutation `#visible`/`#opacity` still in place.
-   */
-  #trackEffectiveVisibilityChange(
-    nextVisible: boolean,
-    nextOpacity: number
-  ): void {
-    const wasEffectivelyVisible = this.#visible && this.#opacity > 0;
-    const isEffectivelyVisible = nextVisible && nextOpacity > 0;
-
-    if (wasEffectivelyVisible && !isEffectivelyVisible) {
-      this.wasVisible = true;
-    }
-    else if (!wasEffectivelyVisible && isEffectivelyVisible) {
-      this.wasVisible = false;
-    }
+  get effectivelyVisible(): boolean {
+    return this.visible && this.#opacity > 0;
   }
 
   #worldToChunk(
@@ -508,41 +479,13 @@ export class VoxelLayer {
     let minZ = Infinity;
     let maxZ = -Infinity;
 
-    for (const chunk of this.getChunks()) {
-      const ox = chunk.cx * this.#chunkSize;
-      const oy = chunk.cy * this.#chunkSize;
-      const oz = chunk.cz * this.#chunkSize;
-
-      const { keys, capacity } = chunk.store;
-      for (let slot = 0; slot < capacity; slot++) {
-        const linearIdx = keys[slot];
-        if (linearIdx < 0) {
-          continue;
-        }
-        const { lx, ly, lz } = chunk.fromLinearIndex(linearIdx);
-        const x = ox + lx;
-        const y = oy + ly;
-        const z = oz + lz;
-
-        if (x < minX) {
-          minX = x;
-        }
-        if (x > maxX) {
-          maxX = x;
-        }
-        if (y < minY) {
-          minY = y;
-        }
-        if (y > maxY) {
-          maxY = y;
-        }
-        if (z < minZ) {
-          minZ = z;
-        }
-        if (z > maxZ) {
-          maxZ = z;
-        }
-      }
+    for (const [x, y, z] of this.#localVoxels()) {
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
     }
 
     if (minX === Infinity) {
@@ -586,22 +529,17 @@ export class VoxelLayer {
     const dy = this.position.y - position.y;
     const dz = this.position.z - position.z;
     const chunks = new Map(this.#chunks);
-    const entries: Array<[VoxelCoord, PackedVoxel]> = [];
-
-    for (const chunk of chunks.values()) {
-      const x0 = chunk.cx * this.#chunkSize;
-      const y0 = chunk.cy * this.#chunkSize;
-      const z0 = chunk.cz * this.#chunkSize;
-
-      for (const [idx, packed] of chunk.packedEntries()) {
-        const { lx, ly, lz } = chunk.fromLinearIndex(idx);
-        entries.push([{
-          x: x0 + lx + dx,
-          y: y0 + ly + dy,
-          z: z0 + lz + dz
-        }, packed]);
-      }
-    }
+    const entries = Array.from(
+      this.#localVoxels(),
+      ([x, y, z, packed]): [VoxelCoord, PackedVoxel] => [
+        {
+          x: x + dx,
+          y: y + dy,
+          z: z + dz
+        },
+        packed
+      ]
+    );
 
     this.#chunks.clear();
     this.#lastChunk = null;
@@ -649,6 +587,39 @@ export class VoxelLayer {
 
     if (chunk) {
       chunk.dirty = true;
+    }
+  }
+
+  markAllDirty(): void {
+    for (const chunk of this.#chunks.values()) {
+      chunk.dirty = true;
+    }
+  }
+
+  markCellDirty(
+    position: Vector3Like
+  ): void {
+    kCellMin.set(position.x - 1, position.y - 1, position.z - 1);
+    kCellMax.set(position.x + 1, position.y + 1, position.z + 1);
+    this.markBoxDirty(kCellMin, kCellMax);
+  }
+
+  markBoxDirty(
+    min: Vector3Like,
+    max: Vector3Like
+  ): void {
+    const shift = this.#chunkShift;
+    const { x, y, z } = this.position;
+    const maxCx = (max.x - x) >> shift;
+    const maxCy = (max.y - y) >> shift;
+    const maxCz = (max.z - z) >> shift;
+
+    for (let cx = (min.x - x) >> shift; cx <= maxCx; cx++) {
+      for (let cy = (min.y - y) >> shift; cy <= maxCy; cy++) {
+        for (let cz = (min.z - z) >> shift; cz <= maxCz; cz++) {
+          this.markChunkDirty(cx, cy, cz);
+        }
+      }
     }
   }
 
@@ -710,20 +681,11 @@ export class VoxelLayer {
       VoxelEntryJSON
     > = {};
 
-    for (const chunk of this.getChunks()) {
-      const x0 = chunk.cx * this.#chunkSize;
-      const y0 = chunk.cy * this.#chunkSize;
-      const z0 = chunk.cz * this.#chunkSize;
-
-      for (const [idx, packed] of chunk.packedEntries()) {
-        const { lx, ly, lz } = chunk.fromLinearIndex(idx);
-        const key: VoxelEntryKey = `${x0 + lx},${y0 + ly},${z0 + lz}`;
-
-        voxels[key] = {
-          block: voxelBlockId(packed),
-          transform: voxelTransform(packed)
-        };
-      }
+    for (const [x, y, z, packed] of this.#localVoxels()) {
+      voxels[`${x},${y},${z}`] = {
+        block: voxelBlockId(packed),
+        transform: voxelTransform(packed)
+      };
     }
 
     return voxels;
@@ -733,7 +695,7 @@ export class VoxelLayer {
     return {
       id: this.id,
       name: this.name,
-      visible: this.#visible,
+      visible: this.visible,
       opacity: this.#opacity,
       compositing: this.compositing,
       order: this.order,
@@ -750,7 +712,7 @@ export class VoxelLayer {
       id: this.id,
       name: this.name,
       order: this.order,
-      visible: this.#visible,
+      visible: this.visible,
       opacity: this.#opacity,
       compositing: this.compositing,
       position: this.position,
@@ -776,27 +738,30 @@ export class VoxelLayer {
   ): void {
     const { overwrite = true } = options;
 
-    for (const chunk of source.getChunks()) {
-      const wx0 = chunk.cx * chunk.size + source.position.x;
-      const wy0 = chunk.cy * chunk.size + source.position.y;
-      const wz0 = chunk.cz * chunk.size + source.position.z;
-
-      for (const [idx, packed] of chunk.packedEntries()) {
-        const { lx, ly, lz } = chunk.fromLinearIndex(idx);
-        const position = {
-          x: wx0 + lx,
-          y: wy0 + ly,
-          z: wz0 + lz
-        };
-
-        if (
-          !overwrite &&
-          this.getPackedVoxelAt(position) !== VOXEL_ABSENT
-        ) {
-          continue;
-        }
-
+    for (const [x, y, z, packed] of source.#localVoxels()) {
+      const position = source.localToWorld({ x, y, z });
+      if (
+        overwrite ||
+        this.getPackedVoxelAt(position) === VOXEL_ABSENT
+      ) {
         this.setPackedVoxelAt(position, packed);
+      }
+    }
+  }
+
+  * #localVoxels(): IterableIterator<[number, number, number, PackedVoxel]> {
+    const size = this.#chunkSize;
+
+    for (const chunk of this.#chunks.values()) {
+      for (const [index, packed] of chunk.packedEntries()) {
+        const { lx, ly, lz } = chunk.fromLinearIndex(index);
+
+        yield [
+          (chunk.cx * size) + lx,
+          (chunk.cy * size) + ly,
+          (chunk.cz * size) + lz,
+          packed
+        ];
       }
     }
   }

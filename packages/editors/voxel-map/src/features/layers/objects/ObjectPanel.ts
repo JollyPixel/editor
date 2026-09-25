@@ -132,7 +132,7 @@ export class ObjectPanel extends LitElement {
     }
 
     const object = this.world
-      .getObjectLayer(this.layerName)
+      .objectLayers.get(this.layerName)
       ?.objects.find((candidate) => candidate.id === this.objectId) ?? null;
     // Snapshot in-place mutations to trigger a Lit update.
     this._object = object === null ? null : { ...object };
@@ -216,7 +216,7 @@ export class ObjectPanel extends LitElement {
     if (!world || !layerName || !objectId) {
       return;
     }
-    world.updateObjectInLayer(layerName, objectId, patch);
+    world.objectLayers.updateObject(layerName, objectId, patch);
   }
 }
 

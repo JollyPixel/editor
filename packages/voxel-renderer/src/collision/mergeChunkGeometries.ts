@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
+// Import Internal Dependencies
+import type { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
+
 export interface MergedChunkGeometry {
   geometry: THREE.BufferGeometry;
   /**
@@ -24,7 +27,7 @@ export function drawnIndices(
 }
 
 export function mergeChunkGeometries(
-  geometries: ReadonlyMap<string, THREE.BufferGeometry>
+  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>
 ): MergedChunkGeometry | null {
   if (geometries.size === 0) {
     return null;

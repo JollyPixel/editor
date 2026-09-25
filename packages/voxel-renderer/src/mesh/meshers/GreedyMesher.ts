@@ -5,10 +5,8 @@ import type {
   BlockVariantFace
 } from "../variants/types.ts";
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
-import type { MeshBuildStats } from "../MeshBuildStats.ts";
 import type { ChunkNeighbourhood } from "../neighbourhood/ChunkNeighbourhood.ts";
 import type {
-  GeometryBufferFactory,
   Mesher,
   MeshPassOptions
 } from "../types.ts";
@@ -18,6 +16,7 @@ import {
 } from "../../world/packedVoxel.ts";
 import { FACE_OFFSETS } from "../../utils/math.ts";
 import { AO_UNOCCLUDED } from "../ambientOcclusion.ts";
+import { FaceEmitter } from "./FaceEmitter.ts";
 
 // CONSTANTS
 const kDirections = 6;
@@ -83,18 +82,16 @@ export class GreedyMesher implements Mesher {
   #visible = new Uint32Array(0);
 
   // Per-chunk state, set by `mesh()` so the passes stay parameter-free.
+  #pass!: MeshPassOptions;
+  #faces!: FaceEmitter;
   #chunk!: VoxelChunk;
   #neighbourhood!: ChunkNeighbourhood;
   #originX = 0;
   #originY = 0;
   #originZ = 0;
-  #stats!: MeshBuildStats;
-  #bufferFor!: GeometryBufferFactory;
-  #ambientOcclusion = false;
 
   #min = [0, 0, 0];
   #max = [-1, -1, -1];
-  #emitted = false;
 
   /**
    * Per-slice extents that avoid sweeping empty parts of terrain bounds.
@@ -122,19 +119,17 @@ export class GreedyMesher implements Mesher {
   }
 
   mesh(
-    options: MeshPassOptions
-  ): boolean {
-    const { chunk } = options;
+    pass: MeshPassOptions
+  ): void {
+    const { chunk } = pass;
 
+    this.#pass = pass;
+    this.#faces = new FaceEmitter(pass);
     this.#chunk = chunk;
-    this.#neighbourhood = options.neighbourhood;
-    this.#originX = options.worldOriginX;
-    this.#originY = options.worldOriginY;
-    this.#originZ = options.worldOriginZ;
-    this.#stats = options.stats;
-    this.#bufferFor = options.bufferFor;
-    this.#ambientOcclusion = options.ambientOcclusion;
-    this.#emitted = false;
+    this.#neighbourhood = pass.neighbourhood;
+    this.#originX = pass.worldOriginX;
+    this.#originY = pass.worldOriginY;
+    this.#originZ = pass.worldOriginZ;
 
     this.#resize(chunk.size);
     this.#localVariants.length = 0;
@@ -146,8 +141,6 @@ export class GreedyMesher implements Mesher {
       }
     }
     this.#clearGrid();
-
-    return this.#emitted;
   }
 
   #resize(
@@ -212,12 +205,11 @@ export class GreedyMesher implements Mesher {
   #fillGrid(): boolean {
     const { size, shift, mask } = this.#chunk;
     const shiftZ = shift * 2;
-    const stats = this.#stats;
+    const stats = this.#pass.stats;
     const rows = this.#rows;
     const min = [size, size, size];
     const max = [-1, -1, -1];
     const { keys, values, capacity } = this.#chunk.store;
-    // Inverted ranges: a slice nothing writes to stays "empty" and is skipped.
     const sliceMinX = this.#sliceMin[0].fill(size);
     const sliceMaxX = this.#sliceMax[0].fill(-1);
     const sliceMinY = this.#sliceMin[1].fill(size);
@@ -274,10 +266,6 @@ export class GreedyMesher implements Mesher {
         rows[bit >> 5] |= 1 << (bit & 31);
       }
 
-      /*
-       * Slices perpendicular to X are indexed by lx and spanned by (ly, lz);
-       * the other two axes follow the same (uAxis, vAxis) order `#sweep()` uses.
-       */
       widenSlice(sliceMinX, sliceMaxX, lx, ly);
       widenSlice(sliceMinY, sliceMaxY, ly, lx);
       widenSlice(sliceMinZ, sliceMaxZ, lz, lx);
@@ -314,30 +302,10 @@ export class GreedyMesher implements Mesher {
     wy: number,
     wz: number
   ): void {
-    const stats = this.#stats;
-
     for (const face of variant.faces) {
-      if (face.merge !== null) {
-        continue;
+      if (face.merge === null) {
+        this.#faces.emitVisible(variant, face, wx, wy, wz);
       }
-
-      const { cull } = face;
-      if (cull >= 0) {
-        const offset = FACE_OFFSETS[cull];
-        const hidden = this.#neighbourhood.isNeighbourFaceHidden(
-          wx + offset[0],
-          wy + offset[1],
-          wz + offset[2],
-          variant,
-          face
-        );
-        if (hidden) {
-          stats.culledFaces++;
-          continue;
-        }
-      }
-
-      this.#emitFace(face, variant, wx, wy, wz);
     }
   }
 
@@ -347,41 +315,9 @@ export class GreedyMesher implements Mesher {
     wy: number,
     wz: number
   ): number {
-    return this.#ambientOcclusion ?
+    return this.#pass.ambientOcclusion ?
       this.#neighbourhood.ambientOcclusionAt(face.cull, wx, wy, wz) :
       AO_UNOCCLUDED;
-  }
-
-  #emitFace(
-    face: BlockVariantFace,
-    variant: BlockVariant,
-    wx: number,
-    wy: number,
-    wz: number
-  ): void {
-    const stats = this.#stats;
-    const ao = this.#aoAt(face, wx, wy, wz);
-
-    if (!face.splittable) {
-      this.#bufferFor(face.slot).addFace(face, wx, wy, wz, ao);
-      stats.faces++;
-      this.#emitted = true;
-
-      return;
-    }
-
-    const pieces = this.#neighbourhood.boundaryFaces(
-      face,
-      wx,
-      wy,
-      wz,
-      variant
-    );
-    for (const piece of pieces) {
-      this.#bufferFor(piece.slot).addFace(piece, wx, wy, wz, ao);
-      stats.faces++;
-      this.#emitted = true;
-    }
   }
 
   #localIndexOf(
@@ -456,7 +392,7 @@ export class GreedyMesher implements Mesher {
     const grid = this.#grid;
     const rows = this.#rows;
     const visible = this.#visible;
-    const stats = this.#stats;
+    const stats = this.#pass.stats;
     const neighbourhood = this.#neighbourhood;
     const localVariants = this.#localVariants;
     const offset = FACE_OFFSETS[direction];
@@ -510,9 +446,9 @@ export class GreedyMesher implements Mesher {
           }
 
           if (face.splittable && !neighbourhood.isVacantAt(nx, cellY, cellZ)) {
-            this.#emitFace(
-              face,
+            this.#faces.emit(
               variant,
+              face,
               nx - offset[0],
               cellY - offset[1],
               cellZ - offset[2]
@@ -547,7 +483,7 @@ export class GreedyMesher implements Mesher {
     const words = this.#words;
     const mask = this.#mask;
     const visible = this.#visible;
-    const stats = this.#stats;
+    const { stats, bufferFor } = this.#pass;
     const uMax = this.#uMax;
 
     for (let u = this.#uMin; u <= uMax; u++) {
@@ -585,7 +521,7 @@ export class GreedyMesher implements Mesher {
           }
           const face = this.#variants.mergeFaceOf((cell >> kAoBits) - 1);
 
-          this.#bufferFor(face.slot).addMergedFace(
+          bufferFor(face.slot).addMergedFace(
             face,
             this.#originX + lx,
             this.#originY + ly,
@@ -596,7 +532,6 @@ export class GreedyMesher implements Mesher {
           );
           stats.faces++;
           stats.mergedFaces += (spanU * spanV) - 1;
-          this.#emitted = true;
         }
       }
     }

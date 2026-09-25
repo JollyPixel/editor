@@ -72,10 +72,10 @@ interface VoxelViewOptions {
 
 ```ts
 class VoxelView {
-  readonly root: THREE.Group;          // container for all chunk meshes
+  readonly root: THREE.Group;          // chunk meshes and inspector overlays
   readonly document: VoxelDocument;
   readonly shapes: BlockShapeRegistry;
-  readonly tilesets: TilesetManager;   // atlas textures over document.tilesets
+  readonly tilesetManager: TilesetManager; // atlases over document.tilesets
   readonly inspector: VoxelInspector;
 
   greedy: boolean;                     // assigning rebuilds every chunk
@@ -94,6 +94,10 @@ The shape registry lives here, not on the document: a block's `shapeId` is
 document state, but the shapes it names are code each client registers for
 itself, and only the mesher, the collider and block previews read them.
 
+Chunk meshes sit in a `"VoxelView:chunks"` group under `root`. A mesh outside
+the view distance has `visible` set to `false`; the inspector's `"wireframe"`
+mode hides the whole group.
+
 ## Methods
 
 ```ts
@@ -102,6 +106,7 @@ tick(deltaTime: number): void;  // rebuilds dirty chunks within the budget
 flush(): void;                  // rebuilds every pending chunk now
 whenIdle(): Promise<void>;       // see VoxelEngine.md#rebuild-budget
 loadTileset(def: TilesetDefinition, texture: TilesetTexture): void;
+load(data: VoxelWorldJSON, options?: VoxelViewLoadOptions): void;
 markAllChunksDirty(source?: string): void;
 dispose(): void;                // frees meshes, materials, textures, listeners
 ```
@@ -111,6 +116,19 @@ command, then registers its atlas. An atlas loaded from outside the edit
 stream is local to this client; use
 [`VoxelDocument.addTileset()`](./VoxelDocument.md) to tell peers about one.
 
+`load()` loads a snapshot into the document together with the atlases it
+uses:
+
+```ts
+interface VoxelViewLoadOptions {
+  mergeLayers?: boolean;
+  tilesets?: Iterable<TilesetSource>; // atlases to register for the snapshot
+}
+```
+
+Sources whose atlas is already loaded are ignored. The others are declared
+with the snapshot and their textures registered before the world is meshed.
+
 `dispose()` unsubscribes from the document and frees the view's own resources.
 It leaves the document alone, since other holders may still be using it.
 
@@ -118,8 +136,9 @@ It leaves the document alone, since other holders may still be using it.
 
 | document | view |
 | --- | --- |
-| `invalidated` | marks every chunk dirty |
-| `command`, tileset actions | re-syncs the atlases, then invalidates materials |
+| `command`, tileset actions | re-syncs the atlases, invalidates their materials, marks every chunk dirty |
+| `command`, `block-defined` / `block-removed` | marks every chunk dirty |
+| `command`, material group actions | updates the group's materials, marks every chunk dirty when one is replaced |
 | `loaded` | clears the meshes, re-syncs atlases, rebuilds everything |
 
 Atlases are re-synced before the command reaches any other listener, so code

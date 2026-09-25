@@ -70,9 +70,15 @@ function verticesOf(
 ): Vertex[] {
   return Array.from({ length: face.vertexCount }, (_, vertexIndex) => {
     return {
-      position: Array.from(face.positions.slice(vertexIndex * 3, vertexIndex * 3 + 3)),
-      uv: Array.from(face.uvs.slice(vertexIndex * 2, vertexIndex * 2 + 2)),
-      tileUv: Array.from(face.tileUvs.slice(vertexIndex * 2, vertexIndex * 2 + 2))
+      position: Array.from(
+        face.positions.slice(vertexIndex * 3, vertexIndex * 3 + 3)
+      ),
+      uv: Array.from(
+        face.uvs.slice(vertexIndex * 2, vertexIndex * 2 + 2)
+      ),
+      tileUv: Array.from(
+        face.tileUvs.slice(vertexIndex * 2, vertexIndex * 2 + 2)
+      )
     };
   });
 }
@@ -95,7 +101,9 @@ function interpolate(
   other: number[],
   fraction: number
 ): number[] {
-  return values.map((value, componentIndex) => value + (other[componentIndex] - value) * fraction);
+  return values.map(
+    (value, componentIndex) => value + (other[componentIndex] - value) * fraction
+  );
 }
 
 function splitPolygon(
@@ -121,9 +129,21 @@ function splitPolygon(
       (startDistance < -kEpsilon && endDistance > kEpsilon)) {
       const fraction = startDistance / (startDistance - endDistance);
       const intersection = {
-        position: interpolate(start.position, end.position, fraction),
-        uv: interpolate(start.uv, end.uv, fraction),
-        tileUv: interpolate(start.tileUv, end.tileUv, fraction)
+        position: interpolate(
+          start.position,
+          end.position,
+          fraction
+        ),
+        uv: interpolate(
+          start.uv,
+          end.uv,
+          fraction
+        ),
+        tileUv: interpolate(
+          start.tileUv,
+          end.tileUv,
+          fraction
+        )
       };
       inside.push(intersection);
       outside.push(intersection);

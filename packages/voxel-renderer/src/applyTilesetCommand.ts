@@ -11,22 +11,39 @@ export interface TilesetDocument {
   readonly blocks: BlockRegistry;
 }
 
+/**
+ * Applies the command and returns it as applied, or null when it changed
+ * nothing.
+ */
 export function applyTilesetCommand(
   document: TilesetDocument,
   command: VoxelTilesetCommand
-): boolean {
+): VoxelTilesetCommand | null {
   const { tilesets } = document;
 
+  let applied: boolean;
   switch (command.action) {
     case "tileset-added":
-      return tilesets.add(command.tileset);
+      applied = tilesets.add(command.tileset);
+      break;
     case "tileset-removed":
-      return tilesets.remove(command.tilesetId);
+      applied = tilesets.remove(command.tilesetId);
+      break;
     case "tileset-resized":
-      return resizeTileset(document, command.tilesetId, command.tileSize);
-    default:
-      return tilesets.updateDefaultTileSize(command.defaultTileSize);
+      applied = resizeTileset(document, command.tilesetId, command.tileSize);
+      break;
+    case "default-tile-size-updated":
+      applied = tilesets.updateDefaultTileSize(command.defaultTileSize);
+      break;
+    default: {
+      const unhandled: never = command;
+      throw new Error(
+        `applyTilesetCommand: unhandled action '${(unhandled as VoxelTilesetCommand).action}'.`
+      );
+    }
   }
+
+  return applied ? command : null;
 }
 
 function resizeTileset(

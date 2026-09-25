@@ -227,10 +227,10 @@ interface VoxelEngineOptions {
 `load()` accepts a separate options object:
 
 ```ts
-interface VoxelLoadOptions {
+interface VoxelViewLoadOptions {
   /** Collapse voxel layers after deserialization. */
   mergeLayers?: boolean;
-  /** Atlases to register before validating the snapshot's tileset list. */
+  /** Atlases to register before the snapshot is meshed. */
   tilesets?: Iterable<TilesetSource>;
 }
 ```
@@ -405,11 +405,11 @@ is different: its blocks are not drawn and do not cull their neighbours until
 Serialises voxel layers, object layers, voxels, the declared tilesets, `defaultTileSize`
 and registered block definitions to a plain JSON object.
 
-#### `load(data: VoxelWorldJSON, options?: VoxelLoadOptions): void`
+#### `load(data: VoxelWorldJSON, options?: VoxelViewLoadOptions): void`
 
 Clears the current world and restores state from a JSON snapshot. The snapshot's
 tilesets and `defaultTileSize` replace the declared ones, atlases of tilesets it no
-longer declares are disposed, then `VoxelLoadOptions.tilesets` are registered. A
+longer declares are disposed, then `options.tilesets` are registered. A
 declared tileset without atlas logs a warning and its faces stay hidden until
 `loadTileset()` registers it. Tile references without `tilesetId` are assigned the
 first declared tileset.
@@ -482,8 +482,9 @@ materials in place; defining or removing one rebuilds every chunk. See
 
 Applies any [command](./commands.md) with
 [`applyVoxelCommand()`](./commands.md#applying-commands), then runs its side
-effects and emits it once on `"command"` with `options.origin`. A
-`block-defined` block is resolved and given the default tileset first. Block
+effects and emits the applied command once on `"command"` with
+`options.origin`. A `block-defined` block is resolved and given the default
+tileset first; a `block-moved` carries the index the block landed on. Block
 definitions and removals mark every chunk dirty; tileset commands dispose the
 atlas of a removed tileset, rebuild the atlas of a resized one and mark every
 chunk dirty. Returns `false` and emits nothing when the command changes

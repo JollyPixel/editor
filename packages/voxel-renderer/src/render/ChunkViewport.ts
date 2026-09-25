@@ -5,7 +5,7 @@ import type * as THREE from "three";
 import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { ViewDistance } from "../world/ViewDistance.ts";
-import type { ViewDistancePolicy } from "../VoxelEngine.types.ts";
+import type { ViewDistancePolicy } from "../VoxelView.ts";
 
 export interface ChunkViewportOptions {
   focus: THREE.Vector3Like | null;

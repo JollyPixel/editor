@@ -8,9 +8,9 @@ import {
 } from "../mesh/index.ts";
 import { AtlasAverages } from "../tileset/AtlasAverages.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
-import type { MaterialCustomizerFn } from "../VoxelEngine.types.ts";
-import { BlockSurface } from "../blocks/BlockSurface.ts";
-import { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
+import type { MaterialCustomizerFn } from "../VoxelView.ts";
+import type { BlockSurface } from "../blocks/BlockSurface.ts";
+import type { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
 import { createAoStrength } from "../mesh/ambientOcclusion.ts";
 import type { MaterialGroup } from "../materials/MaterialGroup.ts";
 import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
@@ -94,17 +94,11 @@ export class ChunkMaterialCache {
   }
 
   resolve(
-    tilesetId: string,
-    opacity: number,
-    surface: BlockSurface | boolean = false
+    geometryKey: ChunkGeometryKey,
+    opacity: number
   ): ChunkMaterial {
-    const resolved = typeof surface === "boolean"
-      ? new BlockSurface({ alphaMode: surface ? "blend" : "opaque" })
-      : surface;
-    const key = new ChunkGeometryKey(
-      tilesetId,
-      resolved
-    ).toString() + `:opacity=${opacity}`;
+    const { tilesetId, surface } = geometryKey;
+    const key = `${geometryKey}:opacity=${opacity}`;
 
     const cached = this.#materials.get(key);
     if (cached) {
@@ -114,14 +108,14 @@ export class ChunkMaterialCache {
     const material = this.#create(
       tilesetId,
       opacity,
-      resolved
+      surface
     );
     this.#materials.set(key, material);
     this.#entries.set(material, {
       key,
       material,
       tilesetId,
-      surface: resolved
+      surface
     });
 
     return material;
@@ -165,7 +159,10 @@ export class ChunkMaterialCache {
       }
 
       const standard = material instanceof THREE.MeshStandardMaterial;
-      if (group !== undefined && standard === this.#usesStandard(group)) {
+      if (
+        group !== undefined &&
+        standard === this.#usesStandard(group)
+      ) {
         group.applyTo(material);
         continue;
       }
@@ -182,8 +179,13 @@ export class ChunkMaterialCache {
     opacity: number,
     surface: BlockSurface
   ): ChunkMaterial {
-    const { texture } = this.#tilesetManager.resolve(tilesetId) ??
-      this.#tilesetManager.atlas(tilesetId);
+    const atlas = this.#tilesetManager.resolve(tilesetId);
+    if (atlas === undefined) {
+      throw new Error(
+        `ChunkMaterialCache: tileset "${tilesetId}" is not loaded.`
+      );
+    }
+    const { texture } = atlas;
     const transparent = opacity < 1 || surface.alphaMode === "blend";
 
     const options = {

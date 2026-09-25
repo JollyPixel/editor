@@ -94,7 +94,7 @@ export function layerTreeNodes(
         data: ref
       };
     }),
-    ...world.getObjectLayers().map((layer): TreeNode<LayerRef> => {
+    ...world.objectLayers.toArray().map((layer): TreeNode<LayerRef> => {
       const ref: LayerRef = {
         kind: "object-layer",
         name: layer.name

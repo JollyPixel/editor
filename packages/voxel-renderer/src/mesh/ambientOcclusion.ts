@@ -11,33 +11,20 @@ const kLevelMask = 0b11;
 const kMaxLevel = 3;
 const kNormalMax = 127;
 
-/**
- * Packed corner levels of a face with no occluder: every corner at level 3.
- */
 export const AO_UNOCCLUDED = 0xFF;
 
-/**
- * First in-plane axis of a face perpendicular to `axis`.
- */
 export function aoUAxis(
   axis: number
 ): number {
   return axis === 0 ? 1 : 0;
 }
 
-/**
- * Second in-plane axis of a face perpendicular to `axis`.
- */
 export function aoVAxis(
   axis: number
 ): number {
   return axis === 2 ? 1 : 2;
 }
 
-/**
- * Brightness level of one face corner from its three in-plane neighbours,
- * 0 (darkest) to 3 (unoccluded). Two occluding sides fully darken the corner.
- */
 export function aoCornerLevel(
   side1: boolean,
   side2: boolean,
@@ -50,10 +37,6 @@ export function aoCornerLevel(
   return kMaxLevel - (Number(side1) + Number(side2) + Number(corner));
 }
 
-/**
- * Packs four corner levels, indexed by `u + (2 * v)` over the face's
- * in-plane axes, into one byte.
- */
 export function packAoCorners(
   u0v0: number,
   u1v0: number,
@@ -66,10 +49,6 @@ export function packAoCorners(
     (u1v1 << (kLevelBits * 3));
 }
 
-/**
- * Bilinear brightness at in-plane position `(u, v)` in 0-1 face space, as the
- * signed-normalized byte stored in the normal attribute's `w`.
- */
 export function aoVertexByte(
   corners: number,
   u: number,
@@ -87,10 +66,6 @@ export function aoVertexByte(
   return Math.round(level * kNormalMax / kMaxLevel);
 }
 
-/**
- * Shared shading uniform: 0 leaves faces untouched, 1 turns a fully occluded
- * corner black.
- */
 export function createAoStrength(
   strength = 0
 ) {
@@ -99,9 +74,6 @@ export function createAoStrength(
 
 export type AoStrengthUniform = ReturnType<typeof createAoStrength>;
 
-/**
- * Albedo multiplier read from the chunk normal attribute's `w`.
- */
 export function aoFactorNode(
   strength: AoStrengthUniform
 ) {

@@ -3,50 +3,94 @@ import { Emitter } from "@openally/emitt";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { applyVoxelCommand } from "../applyVoxelCommand.ts";
+import { applyVoxelCommand } from "./applyVoxelCommand.ts";
+import type {
+  BlockDefinition,
+  BlockProperties,
+  ResolvedBlockDefinition
+} from "./blocks/BlockDefinition.ts";
+import { BlockRegistry } from "./blocks/BlockRegistry.ts";
+import { defineBlock } from "./blocks/applyBlockCommand.ts";
+import type {
+  VoxelCommand,
+  VoxelCommandListener,
+  VoxelCommandOrigin
+} from "./commands.ts";
 import {
-  resolveBlockDefinition,
-  type BlockDefinition,
-  type BlockProperties,
-  type ResolvedBlockDefinition
-} from "../blocks/BlockDefinition.ts";
-import { BlockRegistry } from "../blocks/BlockRegistry.ts";
-import { BlockTextures } from "../blocks/BlockTextures.ts";
-import { applyBlockCommand } from "../blocks/applyBlockCommand.ts";
-import {
-  isVoxelTilesetCommand,
-  type VoxelBlockCommand,
-  type VoxelCommand,
-  type VoxelCommandOrigin
-} from "../commands.ts";
-import { VoxelHistory } from "../history/VoxelHistory.ts";
+  VoxelHistory,
+  type VoxelHistoryOptions
+} from "./history/VoxelHistory.ts";
 import {
   MaterialGroup,
   type MaterialGroupJSON
-} from "../materials/MaterialGroup.ts";
-import { MaterialGroupList } from "../materials/MaterialGroupList.ts";
+} from "./materials/MaterialGroup.ts";
+import { MaterialGroupList } from "./materials/MaterialGroupList.ts";
 import {
   deserializeVoxelWorld,
   serializeVoxelWorld
-} from "../serialization/world.ts";
-import type { VoxelWorldJSON } from "../serialization/types.ts";
-import { TilesetList } from "../tileset/TilesetList.ts";
-import type { TilesetDefinition } from "../tileset/types.ts";
-import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
-import { VoxelWorld } from "../world/VoxelWorld.ts";
-import { DEFAULT_CHUNK_SIZE } from "../world/VoxelChunk.ts";
-import type {
-  VoxelApplyOptions,
-  VoxelDocumentEvents,
-  VoxelDocumentOptions,
-  VoxelInvalidation,
-  VoxelLoadOptions
-} from "./VoxelDocument.types.ts";
+} from "./serialization/world.ts";
+import type { VoxelWorldJSON } from "./serialization/types.ts";
+import { TilesetList } from "./tileset/TilesetList.ts";
+import type { TilesetDefinition } from "./tileset/types.ts";
+import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
+import { VoxelWorld } from "./world/VoxelWorld.ts";
+import { DEFAULT_CHUNK_SIZE } from "./world/VoxelChunk.ts";
 
-type BlockDefinedCommand = Extract<
-  VoxelBlockCommand,
-  { action: "block-defined"; }
->;
+export interface VoxelApplyOptions {
+  /**
+   * @default "local"
+   */
+  origin?: VoxelCommandOrigin;
+}
+
+export interface VoxelLoadOptions {
+  /**
+   * Collapses layers before rendering; higher-priority voxels win overlaps.
+   */
+  mergeLayers?: boolean;
+
+  /**
+   * Tileset definitions declared before loading a world that uses them.
+   */
+  tilesets?: Iterable<TilesetDefinition>;
+}
+
+export type VoxelDocumentEvents = {
+  command: VoxelCommandListener;
+  loaded: () => void;
+};
+
+export interface VoxelDocumentOptions {
+  /**
+   * @default 16
+   */
+  chunkSize?: number;
+
+  layers?: string[];
+  blocks?: BlockDefinition[];
+
+  /**
+   * Tileset definitions declared before any texture is registered for them.
+   */
+  tilesets?: Iterable<TilesetDefinition>;
+
+  materialGroups?: Iterable<MaterialGroupJSON>;
+
+  /**
+   * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.
+   */
+  history?: VoxelHistoryOptions;
+
+  /**
+   * Debug logger; defaults to a no-op implementation.
+   */
+  logger?: VoxelLogger;
+
+  /**
+   * Subscribed to the `"command"` event before any command is applied.
+   */
+  onCommand?: VoxelCommandListener;
+}
 
 export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   readonly world: VoxelWorld;
@@ -106,40 +150,11 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   ): boolean {
     const { origin = "local" } = options;
 
-    const resolved = this.#resolve(command);
-    const applied = resolved !== null && applyVoxelCommand(
-      {
-        world: this.world,
-        blocks: this.blocks,
-        tilesets: this.tilesets,
-        materialGroups: this.materialGroups
-      },
-      resolved,
-      this.#logger
-    );
-    if (!applied) {
+    const applied = applyVoxelCommand(this, command, this.#logger);
+    if (applied === null) {
       return false;
     }
-
-    if (isVoxelTilesetCommand(resolved)) {
-      this.#invalidate(resolved.action);
-    }
-    else if (resolved.action === "block-moved") {
-      this.#emitCommand({
-        ...resolved,
-        toIndex: this.blocks.indexOf(resolved.blockId)
-      }, origin);
-
-      return true;
-    }
-    else if (
-      resolved.action === "block-defined" ||
-      resolved.action === "block-removed"
-    ) {
-      this.#invalidate(resolved.action);
-    }
-
-    this.#emitCommand(resolved, origin);
+    this.#emitCommand(applied, origin);
 
     return true;
   }
@@ -153,15 +168,11 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   defineBlocks(
     defs: Iterable<BlockDefinition>
   ): void {
-    const commands = Array.from(defs, (def) => this.#blockDefined(def));
-    if (commands.length === 0) {
-      return;
-    }
-
-    for (const command of commands) {
-      applyBlockCommand(this.blocks, command);
-    }
-    this.#invalidate("block-defined");
+    const { defaultTilesetId } = this.tilesets;
+    const commands = Array.from(
+      defs,
+      (def) => defineBlock(this.blocks, def, defaultTilesetId)
+    );
 
     for (const command of commands) {
       this.#emitCommand(command, "local");
@@ -264,17 +275,6 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     });
   }
 
-  registerTileset(
-    def: TilesetDefinition
-  ): boolean {
-    if (!this.tilesets.add(def)) {
-      return false;
-    }
-    this.#invalidate("tileset-registered");
-
-    return true;
-  }
-
   save(): VoxelWorldJSON {
     this.#logger.debug("Serializing world to JSON...");
 
@@ -318,47 +318,10 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     this.removeAllListeners();
   }
 
-  #resolve(
-    command: VoxelCommand
-  ): VoxelCommand | null {
-    if (command.action === "block-defined") {
-      return this.#blockDefined(command.block);
-    }
-    if (command.action === "material-group-defined") {
-      const group = MaterialGroup.parse(command.group);
-
-      return group && {
-        action: command.action,
-        group: group.toJSON()
-      };
-    }
-
-    return command;
-  }
-
-  #blockDefined(
-    block: BlockDefinition
-  ): BlockDefinedCommand {
-    const resolved = resolveBlockDefinition(block);
-
-    return {
-      action: "block-defined",
-      block: BlockTextures.of(resolved)
-        .withTileset(this.tilesets.defaultTilesetId)
-        .applyTo(resolved)
-    };
-  }
-
   #emitCommand(
     command: VoxelCommand,
     origin: VoxelCommandOrigin
   ): void {
     this.emit("command", command, { origin });
-  }
-
-  #invalidate(
-    reason: VoxelInvalidation["reason"]
-  ): void {
-    this.emit("invalidated", { reason });
   }
 }

@@ -43,7 +43,7 @@ describe("VoxelEngine - construction", () => {
     const engine = new VoxelEngine({ layers: ["Ground"] });
 
     assert.ok(engine.world.getLayer("Ground"));
-    assert.equal(engine.root.children.length, 0);
+    assert.equal(chunkMeshes(engine).length, 0);
   });
 
   it("subscribes the onCommand option before any command is applied", () => {

@@ -92,6 +92,15 @@ describe("VoxelWorld — dirty propagation", () => {
     assert.equal(dirtyFlags(fixture).b, true);
   });
 
+  it("dirties every layer when one is cloned over them", () => {
+    const fixture = makeTwoLayerWorld();
+    clearAllDirty(fixture.world);
+
+    fixture.world.cloneLayer("A");
+
+    assert.deepEqual(dirtyFlags(fixture), { a: true, b: true });
+  });
+
   it("dirties every layer when visibility actually flips", () => {
     for (const flip of [
       (world: VoxelWorld) => world.setLayerVisible("A", false),

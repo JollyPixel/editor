@@ -6,23 +6,14 @@ import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import {
   VOXEL_ABSENT,
   voxelBlockId,
-  voxelTransform,
-  type PackedVoxel
+  voxelTransform
 } from "../world/packedVoxel.ts";
-import { VoxelTransform } from "../world/VoxelTransform.ts";
 import type {
   VoxelCellChange,
-  VoxelCoord,
   VoxelEditRecorder
 } from "../world/types.ts";
-import type {
-  VoxelRemoveOptions,
-  VoxelSetOptions
-} from "../types.ts";
-import type {
-  VoxelHistoryEntry,
-  VoxelHistoryEvents
-} from "./VoxelHistory.types.ts";
+import type { VoxelPatchCells } from "../world/voxelPatch.ts";
+import { AIR_BLOCK_ID } from "../blocks/BlockId.ts";
 
 // CONSTANTS
 const kDefaultLimit = 10;
@@ -38,6 +29,19 @@ export interface VoxelHistoryOptions {
    */
   limit?: number;
 }
+
+export interface VoxelHistoryEntry {
+  readonly changes: readonly VoxelCellChange[];
+}
+
+export interface VoxelHistoryState {
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+export type VoxelHistoryEvents = {
+  change: (state: VoxelHistoryState) => void;
+};
 
 type ReplayDirection = "undo" | "redo";
 
@@ -204,8 +208,8 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
     entry: VoxelHistoryEntry,
     direction: ReplayDirection
   ): void {
-    const removals = new Map<string, VoxelRemoveOptions[]>();
-    const writes = new Map<string, VoxelSetOptions[]>();
+    const world = this.#world;
+    const patches = new Map<string, VoxelPatchCells>();
 
     for (const change of entry.changes) {
       const [expected, target] = direction === "undo" ?
@@ -213,29 +217,32 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
         [change.before, change.after];
 
       const { layerName, position } = change;
-      const layer = this.#world.getLayer(layerName);
-      if (layer?.getPackedVoxelAt(position) !== expected) {
+      if (world.getLayer(layerName)?.getPackedVoxelAt(position) !== expected) {
         continue;
       }
 
-      if (target === VOXEL_ABSENT) {
-        append(removals, layerName, { position });
+      let cells = patches.get(layerName);
+      if (cells === undefined) {
+        cells = [];
+        patches.set(layerName, cells);
       }
-      else {
-        append(writes, layerName, toSetOptions(position, target));
-      }
+      cells.push(
+        position.x,
+        position.y,
+        position.z,
+        target === VOXEL_ABSENT ? AIR_BLOCK_ID : voxelBlockId(target),
+        target === VOXEL_ABSENT ? 0 : voxelTransform(target)
+      );
     }
 
-    const world = this.#world;
     const recorder = world.recorder;
     world.recorder = null;
     try {
-      for (const [layerName, entries] of removals) {
-        world.removeVoxelBulk(layerName, entries);
-      }
-      for (const [layerName, entries] of writes) {
-        world.setVoxelBulk(layerName, entries);
-      }
+      world.transaction(() => {
+        for (const [layerName, cells] of patches) {
+          world.patchVoxels(layerName, cells);
+        }
+      });
     }
     finally {
       world.recorder = recorder;
@@ -256,34 +263,4 @@ function cellKey(
   const { x, y, z } = change.position;
 
   return `${x},${y},${z}:${change.layerName}`;
-}
-
-function append<T>(
-  map: Map<string, T[]>,
-  key: string,
-  value: T
-): void {
-  const values = map.get(key);
-  if (values === undefined) {
-    map.set(key, [value]);
-  }
-  else {
-    values.push(value);
-  }
-}
-
-function toSetOptions(
-  position: VoxelCoord,
-  packed: PackedVoxel
-): VoxelSetOptions {
-  const transform = VoxelTransform.fromPacked(voxelTransform(packed));
-
-  return {
-    position,
-    blockId: voxelBlockId(packed),
-    rotation: transform.rotation,
-    flipX: transform.flipX,
-    flipZ: transform.flipZ,
-    flipY: transform.flipY
-  };
 }

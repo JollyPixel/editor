@@ -8,6 +8,13 @@ const kInterned = new Array<VoxelTransform | undefined>(kVariantCount);
 
 export const VOXEL_TRANSFORM_MASK = kVariantCount - 1;
 
+export const VoxelRotation = {
+  None: 0,
+  CCW90: 1,
+  Deg180: 2,
+  CW90: 3
+} as const;
+
 /**
  * Quarter turns around Y: 0°, 90° CCW, 180°, 270° CCW.
  */

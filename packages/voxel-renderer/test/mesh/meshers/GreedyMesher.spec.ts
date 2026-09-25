@@ -43,11 +43,11 @@ function makeFixture(
 }
 
 function surfaceArea(
-  geometries: Map<string, THREE.BufferGeometry> | null
+  geometries: ReadonlyMap<unknown, THREE.BufferGeometry>
 ): number {
   let area = 0;
 
-  for (const geometry of geometries?.values() ?? []) {
+  for (const geometry of geometries.values()) {
     const positions = geometry.getAttribute("position").array;
     const { start, count } = geometry.drawRange;
     const indices = geometry.getIndex()!.array.subarray(start, start + count);

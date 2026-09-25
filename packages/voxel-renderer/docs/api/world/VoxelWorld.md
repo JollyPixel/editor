@@ -122,7 +122,7 @@ without wrapping the world. `VoxelEngine` forwards these as local commands. The 
 
 #### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
 
-Creates and appends a new layer with the next available `order`.
+Creates a new layer on top of the stack, with the highest compositing priority.
 
 #### `updateLayer(name: string, options: Partial<VoxelLayerConfigurableOptions>): boolean`
 
@@ -147,9 +147,10 @@ is the highest compositing priority. `toIndex` is truncated and clamped to the
 stack, so an out-of-range index lands the layer at the nearest end. A move that
 leaves the layer where it already sits does nothing and emits nothing.
 
-Both methods re-rank every layer's `order` densely and descending from the
+Every change to the stack (adding, cloning, moving, removing or merging a
+layer) re-ranks every layer's `order` densely and descending from the
 resulting sequence, so `order` is an internal rank rather than a stable
-identifier.
+identifier. Layer ids are unique within the world.
 
 #### `setLayerVisible(name: string, visible: boolean): void`
 
@@ -193,7 +194,9 @@ All layers, sorted highest `order` first.
 #### `cloneLayer(name: string, options?: Partial<VoxelLayerOptions>): VoxelLayer | undefined`
 
 Clones a layer, voxels included, and inserts the copy directly above the source,
-renumbering the whole stack. Other layer options can override the source values.
+renumbering the whole stack and marking every layer's chunks dirty, since the
+copy now covers the layers below it. Other layer options can override the
+source values.
 Returns `undefined` when the source layer does not exist.
 
 `options.name` is optional; when omitted the world derives an unused name from
@@ -295,6 +298,7 @@ world.setVoxelBulk("Ground", [
 #### `removeVoxelBulk(layerName: string, entries: VoxelRemoveOptions[]): void`
 
 Removes several voxels and emits a single `"voxels-removed"` for the batch.
+Removing from a layer that does not exist changes nothing and emits nothing.
 
 #### `transaction<T>(fn: () => T): T`
 
@@ -424,51 +428,32 @@ world.silently(() => deserializeVoxelWorld(snapshot, world));
 ### Object layer management
 
 Object layers hold placed objects (spawn points, trigger zones, etc.) rather than
-voxel data. They are stored by name and serialised as part of `VoxelWorldJSON`.
+voxel data. They live in `world.objectLayers`, a `VoxelObjectLayers` keyed by
+name, and are serialised as part of `VoxelWorldJSON`. Every change emits a
+command on the world's `"command"` event.
 
-#### `addObjectLayer(name: string, options?: { visible?: boolean; order?: number }): VoxelObjectLayerJSON`
+```ts
+class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
+  readonly size: number;
+  toArray(): VoxelObjectLayerJSON[];
+  get(name: string): VoxelObjectLayerJSON | undefined;
+  add(name: string, options?: { visible?: boolean; order?: number; }): VoxelObjectLayerJSON;
+  remove(name: string): boolean;
+  update(name: string, patch: { visible?: boolean; }): boolean;
+  addObject(layerName: string, object: VoxelObjectJSON): boolean;
+  removeObject(layerName: string, objectId: string): boolean;
+  moveObject(fromLayerName: string, objectId: string, toLayerName: string): boolean;
+  updateObject(layerName: string, objectId: string, patch: Partial<VoxelObjectJSON>): boolean;
+}
+```
 
-Creates a new object layer. `order` defaults to the current layer count (appended last).
-Returns the new layer descriptor.
+`add()` defaults `order` to the current object layer count and returns the new
+descriptor. `toArray()` lists the layers in insertion order. The other methods
+return `false` when a named layer or object is not found.
 
-#### `removeObjectLayer(name: string): boolean`
-
-Deletes an object layer by name. Returns `false` if not found.
-
-#### `getObjectLayer(name: string): VoxelObjectLayerJSON | undefined`
-
-Returns the layer descriptor for `name`, or `undefined` if it does not exist.
-
-#### `getObjectLayers(): readonly VoxelObjectLayerJSON[]`
-
-Returns a snapshot array of all object layers in insertion order.
-
-#### `updateObjectLayer(name: string, patch: { visible?: boolean }): boolean`
-
-Applies a partial patch to a named object layer. Returns `false` if not found.
-
-#### `addObjectToLayer(layerName: string, object: VoxelObjectJSON): boolean`
-
-Appends an object to the named layer's `objects` array. Returns `false` if the layer
-does not exist.
-
-#### `removeObjectFromLayer(layerName: string, objectId: string): boolean`
-
-Removes the object with the given `id` from the layer. Returns `false` if the layer or
-object is not found.
-
-#### `moveObjectToLayer(fromLayerName: string, objectId: string, toLayerName: string): boolean`
-
-Moves an object from one object layer to another, keeping the same object
-instance, and emits a single `"object-moved"` command. Returns `false` when either
-layer or the object is not found, or when both names resolve to the same layer.
-
-Prefer this over `removeObjectFromLayer` followed by `addObjectToLayer`: the
+`moveObject()` keeps the same object instance and emits a single
+`"object-moved"` command. It also returns `false` when both names resolve to
+the same layer. Prefer it over `removeObject()` followed by `addObject()`: the
 pair emits two independent commands, so two peers reparenting the same object at
 once would each apply the other's add and leave the object duplicated in two
 layers.
-
-#### `updateObjectInLayer(layerName: string, objectId: string, patch: Partial<VoxelObjectJSON>): boolean`
-
-Merges `patch` into the matching object. Returns `false` if the layer or object is not
-found.

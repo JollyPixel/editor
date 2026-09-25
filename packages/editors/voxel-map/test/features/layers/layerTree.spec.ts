@@ -62,20 +62,22 @@ describe("layerTreeNodes", () => {
           voxelCount: 1234
         }
       ],
-      getObjectLayers: () => [
-        {
-          name: "Triggers",
-          visible: false,
-          objects: [
-            {
-              id: "spawn",
-              name: "Spawn",
-              visible: true,
-              locked: true
-            }
-          ]
-        }
-      ]
+      objectLayers: {
+        toArray: () => [
+          {
+            name: "Triggers",
+            visible: false,
+            objects: [
+              {
+                id: "spawn",
+                name: "Spawn",
+                visible: true,
+                locked: true
+              }
+            ]
+          }
+        ]
+      }
     };
     const nodes = layerTreeNodes(world as unknown as VoxelWorld);
 

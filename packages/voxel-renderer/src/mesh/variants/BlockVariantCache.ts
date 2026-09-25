@@ -102,8 +102,6 @@ export class BlockVariantCache {
 
   #variants = new Map<number, BlockVariant | null>();
   #slots = new Map<string, number>();
-  #tilesetIds: string[] = [];
-  #cutouts: boolean[] = [];
   #geometryKeys: ChunkGeometryKey[] = [];
   #frontFaces = new WeakMap<BlockVariantFace, BlockVariantFace>();
   #faceCoverage = new WeakMap<
@@ -150,8 +148,6 @@ export class BlockVariantCache {
     this.#tilesetVersion = tilesetVersion;
     this.#variants.clear();
     this.#slots.clear();
-    this.#tilesetIds.length = 0;
-    this.#cutouts.length = 0;
     this.#geometryKeys.length = 0;
     this.#frontFaces = new WeakMap();
     this.#faceCoverage = new WeakMap();
@@ -235,18 +231,6 @@ export class BlockVariantCache {
     }
 
     return mask;
-  }
-
-  tilesetIdAt(
-    slot: number
-  ): string {
-    return this.#tilesetIds[slot];
-  }
-
-  isCutoutAt(
-    slot: number
-  ): boolean {
-    return this.#cutouts[slot];
   }
 
   geometryKeyAt(
@@ -348,10 +332,7 @@ export class BlockVariantCache {
 
     let slot = this.#slots.get(key);
     if (slot === undefined) {
-      slot = this.#tilesetIds.length;
-      this.#tilesetIds.push(tilesetId);
-      this.#cutouts.push(!surface.occludes);
-      this.#geometryKeys.push(geometryKey);
+      slot = this.#geometryKeys.push(geometryKey) - 1;
       this.#slots.set(key, slot);
     }
 

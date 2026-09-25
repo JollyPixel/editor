@@ -37,25 +37,25 @@ describe("applyTilesetCommand", () => {
   it("adds and removes tilesets", () => {
     const document = makeDocument();
 
-    assert.equal(applyTilesetCommand(document, {
+    assert.notEqual(applyTilesetCommand(document, {
       action: "tileset-added",
       tileset: { id: "c", src: "c", tileSize: 8 }
-    }), true);
-    assert.equal(applyTilesetCommand(document, {
+    }), null);
+    assert.notEqual(applyTilesetCommand(document, {
       action: "tileset-removed",
       tilesetId: "a"
-    }), true);
+    }), null);
     assert.deepEqual([...document.tilesets.ids()], ["b", "c"]);
   });
 
   it("rescales only the blocks of a resized tileset", () => {
     const document = makeDocument();
 
-    assert.equal(applyTilesetCommand(document, {
+    assert.notEqual(applyTilesetCommand(document, {
       action: "tileset-resized",
       tilesetId: "a",
       tileSize: 32
-    }), true);
+    }), null);
 
     assert.deepEqual(document.blocks.get(1)?.defaultTexture, {
       tilesetId: "a",
@@ -77,21 +77,21 @@ describe("applyTilesetCommand", () => {
       action: "tileset-resized",
       tilesetId: "missing",
       tileSize: 32
-    }), false);
+    }), null);
     assert.equal(applyTilesetCommand(document, {
       action: "tileset-resized",
       tilesetId: "a",
       tileSize: 0
-    }), false);
+    }), null);
   });
 
   it("updates the default tile size", () => {
     const document = makeDocument();
 
-    assert.equal(applyTilesetCommand(document, {
+    assert.notEqual(applyTilesetCommand(document, {
       action: "default-tile-size-updated",
       defaultTileSize: 64
-    }), true);
+    }), null);
     assert.equal(document.tilesets.defaultTileSize, 64);
   });
 });

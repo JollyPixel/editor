@@ -7,7 +7,9 @@ import {
   voxelCellOf,
   voxelPositionOf
 } from "../../src/world/index.ts";
-import { SQRT2_OVER_2 } from "../../src/constants.ts";
+
+// CONSTANTS
+const kSqrt2Over2 = Math.SQRT2 / 2;
 
 describe("voxelCellOf", () => {
   it("keeps a point already on a cell corner", () => {
@@ -78,7 +80,7 @@ describe("voxelPositionOf", () => {
   });
 
   it("resolves a ramp slope hit to the ramp cell, whatever the height", () => {
-    const slope = { x: 0, y: SQRT2_OVER_2, z: -SQRT2_OVER_2 };
+    const slope = { x: 0, y: kSqrt2Over2, z: -kSqrt2Over2 };
 
     assert.deepEqual(
       voxelPositionOf({ x: 3.5, y: 2.3, z: 4.7 }, slope, "back"),
@@ -91,7 +93,7 @@ describe("voxelPositionOf", () => {
   });
 
   it("stacks on top of a ramp slope rather than inside it", () => {
-    const slope = { x: 0, y: SQRT2_OVER_2, z: -SQRT2_OVER_2 };
+    const slope = { x: 0, y: kSqrt2Over2, z: -kSqrt2Over2 };
 
     assert.deepEqual(
       voxelPositionOf({ x: 3.5, y: 2.3, z: 4.7 }, slope, "front"),

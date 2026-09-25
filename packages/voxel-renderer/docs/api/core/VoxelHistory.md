@@ -44,9 +44,10 @@ is dropped. A new entry clears the redo stack.
 
 ## Replay
 
-`undo()` and `redo()` write through `removeVoxelBulk` and `setVoxelBulk`, so
-the world emits ordinary `"voxels-removed"` / `"voxels-set"` commands and the
-engine forwards them as local commands to network adapters.
+`undo()` and `redo()` write one `patchVoxels()` per layer inside a single
+`world.transaction()`, so the world emits an ordinary `"voxels-patched"`
+command per layer and the engine forwards them as local commands to network
+adapters.
 
 A cell is only reverted while it still holds the value the entry left there,
 so an edit a peer made in between is kept. Cells on a layer that no longer

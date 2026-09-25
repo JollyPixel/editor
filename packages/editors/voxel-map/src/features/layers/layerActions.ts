@@ -21,14 +21,14 @@ export function setLayerEntryVisibility(
 ): void {
   switch (ref.kind) {
     case "object":
-      world.updateObjectInLayer(
+      world.objectLayers.updateObject(
         ref.layerName,
         ref.objectId,
         { visible }
       );
       break;
     case "object-layer":
-      world.updateObjectLayer(
+      world.objectLayers.update(
         ref.name,
         { visible }
       );
@@ -51,7 +51,7 @@ export function renameLayerEntry(
     return;
   }
 
-  world.updateObjectInLayer(
+  world.objectLayers.updateObject(
     ref.layerName,
     ref.objectId,
     { name }
@@ -67,7 +67,7 @@ export function setLayerEntryLocked(
     return;
   }
 
-  world.updateObjectInLayer(
+  world.objectLayers.updateObject(
     ref.layerName,
     ref.objectId,
     { locked }
@@ -86,7 +86,7 @@ export function createLayerEntry(
       selection.selectVoxelLayer(result.name);
       break;
     case "object-layer":
-      world.addObjectLayer(result.name);
+      world.objectLayers.add(result.name);
       selection.selectObjectLayer(result.name);
       break;
     default:
@@ -106,7 +106,7 @@ export async function removeLayerEntry(
   ref: LayerRef
 ): Promise<void> {
   if (ref.kind === "object") {
-    world.removeObjectFromLayer(
+    world.objectLayers.removeObject(
       ref.layerName,
       ref.objectId
     );
@@ -127,7 +127,7 @@ export async function removeLayerEntry(
   }
 
   if (ref.kind === "object-layer") {
-    world.removeObjectLayer(ref.name);
+    world.objectLayers.remove(ref.name);
   }
   else {
     world.removeLayer(ref.name);
@@ -213,7 +213,7 @@ function createObject(
     name,
     viewFocus.point
   );
-  world.addObjectToLayer(
+  world.objectLayers.addObject(
     layerName,
     object
   );
@@ -231,7 +231,7 @@ function removalMessage(
     return `Delete the voxel layer "${ref.name}" and everything painted on it?`;
   }
 
-  const count = world.getObjectLayer(
+  const count = world.objectLayers.get(
     ref.name
   )?.objects.length ?? 0;
 

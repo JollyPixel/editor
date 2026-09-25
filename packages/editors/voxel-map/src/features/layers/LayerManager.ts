@@ -256,7 +256,7 @@ export class LayerManager extends LitElement {
 
   async addLayer() {
     const objectLayer = this.selection.objectLayer;
-    const objectLayers = this.world.getObjectLayers();
+    const objectLayers = this.world.objectLayers.toArray();
     const result = await this._addDialog.open({
       canAddObject: objectLayer !== null,
       defaultKind: objectLayer === null ? "voxel-layer" : "object",

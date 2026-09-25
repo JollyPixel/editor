@@ -3,9 +3,6 @@ export class MeshBuildStats {
   hiddenVoxels = 0;
   faces = 0;
   culledFaces = 0;
-  /**
-   * Faces folded into neighbouring greedy quads; 0 when disabled.
-   */
   mergedFaces = 0;
   vertices = 0;
   triangles = 0;
@@ -13,13 +10,12 @@ export class MeshBuildStats {
   bytesPerVertex = 0;
   buildTimeMs = 0;
 
-  /**
-   * Faces emitted per voxel that contributed geometry.
-   */
   get facesPerSolidVoxel(): number {
     const solidVoxels = this.voxels - this.hiddenVoxels;
 
-    return solidVoxels === 0 ? 0 : this.faces / solidVoxels;
+    return solidVoxels === 0
+      ? 0
+      : this.faces / solidVoxels;
   }
 
   reset(): void {

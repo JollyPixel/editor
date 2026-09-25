@@ -254,7 +254,7 @@ describe("VoxelHistory", () => {
     history.undo();
 
     assert.deepEqual(commands.map((command) => command.action), [
-      "voxels-removed"
+      "voxels-patched"
     ]);
     assert.equal(history.canRedo, true);
     assert.equal(history.canUndo, false);

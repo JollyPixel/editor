@@ -150,11 +150,11 @@ interface TilesetDocument {
 function applyTilesetCommand(
   document: TilesetDocument,
   command: VoxelTilesetCommand
-): boolean;
+): VoxelTilesetCommand | null;
 ```
 
 Folds a [tileset command](../core/commands.md#tileset-commands) into a document and
-returns whether it changed. `tileset-resized` also rescales, in `blocks`,
+returns it, or `null` when nothing changed. `tileset-resized` also rescales, in `blocks`,
 every tile reference on that tileset with `rescaleTileRef()`.
 [`applyVoxelCommand()`](../core/commands.md#applying-commands) routes tileset
 commands to it.

@@ -3,8 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelEngine } from "../src/VoxelEngine.ts";
-import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
+import {
+  VoxelEngine,
+  type VoxelEngineOptions
+} from "../src/VoxelEngine.ts";
 import { ViewDistance } from "../src/world/index.ts";
 import { makeFakeCollider } from "./helpers/fakes.ts";
 import {
@@ -36,6 +38,7 @@ interface Snapshot {
 interface Step {
   focus?: typeof kNear;
   viewDistance?: ViewDistance;
+  layerVisible?: boolean;
   expect: Partial<Snapshot>;
 }
 
@@ -133,6 +136,16 @@ const kScenarios: Scenario[] = [
     ]
   },
   {
+    name: "keeps the chunks of a layer hidden out of range hidden when they return",
+    options: kInspected,
+    steps: [
+      { focus: kNear, expect: { built: kFirstPair } },
+      { focus: kFar, expect: { built: kAll, visible: kLastPair } },
+      { layerVisible: false, expect: { built: kFirstPair, visible: [] } },
+      { focus: kNear, expect: { built: [], visible: [], wireframes: [] } }
+    ]
+  },
+  {
     name: "disposes chunks leaving the view distance under the unload policy",
     options: { ...kInspected, viewDistancePolicy: "unload" },
     steps: [
@@ -183,12 +196,15 @@ describe("VoxelEngine - view distance", () => {
     it(name, () => {
       const engine = makeFourChunkEngine(options, meshless);
 
-      steps.forEach(({ focus, viewDistance, expect }, index) => {
+      steps.forEach(({ focus, viewDistance, layerVisible, expect }, index) => {
         if (focus) {
           engine.focus = focus;
         }
         if (viewDistance) {
           engine.viewDistance = viewDistance;
+        }
+        if (layerVisible !== undefined) {
+          engine.world.setLayerVisible("Ground", layerVisible);
         }
         engine.tick(0);
 

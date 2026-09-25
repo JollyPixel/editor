@@ -84,16 +84,12 @@ that travel with the map.
 type VoxelDocumentEvents = {
   command: (command: VoxelCommand, context: VoxelCommandContext) => void;
   loaded: () => void;
-  invalidated: (invalidation: { reason: string; }) => void;
 };
 ```
 
 - `command` carries every edit, with `origin` `"local"` for a change made here
   and `"remote"` for one replayed through `apply()`. This is the stream a sync
   client broadcasts. See [commands](./commands.md).
-- `invalidated` says that everything built from this document is out of date,
-  which happens when a block definition or a tileset changes. A view marks
-  every chunk dirty on it.
 - `loaded` follows `load()`, once the new world is in place.
 
 ## Methods
@@ -111,7 +107,6 @@ blockPropertiesAt(position: THREE.Vector3Like): BlockProperties | undefined;
 addTileset(tileset: TilesetDefinition): boolean;
 removeTileset(tilesetId: string): boolean;
 resizeTileset(tilesetId: string, tileSize: number): boolean;
-registerTileset(def: TilesetDefinition): boolean;
 
 defineMaterialGroup(group: MaterialGroup | MaterialGroupJSON): boolean;
 removeMaterialGroup(groupId: string): boolean;
@@ -122,17 +117,19 @@ dispose(): void;
 ```
 
 `apply()` returns `false` when the command changed nothing, and emits no event
-in that case. A rejected command is never broadcast.
+in that case. A rejected command is never broadcast. An applied command is
+emitted the way it was applied: a `block-defined` block carries the default
+tileset in its texture references, a `block-moved` carries the index the block
+landed on, and a `material-group-defined` group has every field filled in.
 
-`addTileset()` broadcasts a command; `registerTileset()` does not. Use
-`registerTileset()` for a tileset that arrives with its texture rather than
-through an edit, which is what
-[`VoxelView.loadTileset()`](./VoxelView.md) calls.
+`addTileset()` broadcasts a command. A tileset that arrives with its texture
+rather than through an edit is declared with
+[`VoxelView.loadTileset()`](./VoxelView.md), which adds it to `tilesets`
+without a command.
 
 `defineMaterialGroup()` adds or replaces a group and broadcasts it with every
 field filled in. It returns `false` for an invalid finish or one equal to the
-current definition. Neither group method emits `invalidated`; the view
-decides whether a chunk needs rebuilding.
+current definition. The view decides whether a chunk needs rebuilding.
 
 `load()` replaces the world, drops the undo history, and emits `loaded`. The
 snapshot replaces the tileset list and the material groups wholesale, so `options.tilesets`

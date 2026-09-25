@@ -229,16 +229,15 @@ describe("TilesetManager.syncAtlases", () => {
 });
 
 describe("TilesetManager.dispose", () => {
-  it("disposes every texture and clears the declarations", () => {
+  it("disposes every texture and keeps the declarations it does not own", () => {
     const manager = new TilesetManager();
     const texture = countingTexture();
     registerAtlas(manager, makeAtlasDef(), texture.texture);
     manager.dispose();
 
     assert.equal(texture.disposed, 1);
-    assert.equal(manager.defaultTilesetId, null);
-    assert.equal(manager.tilesets.size, 0);
     assert.equal(manager.get("atlas"), undefined);
+    assert.ok(manager.tilesets.has("atlas"));
   });
 });
 

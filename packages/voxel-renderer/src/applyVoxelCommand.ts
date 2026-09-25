@@ -22,18 +22,26 @@ export interface VoxelCommandTarget extends TilesetDocument {
   readonly materialGroups: MaterialGroupList;
 }
 
+/**
+ * Applies the command and returns it as applied, normalized the way peers
+ * should replay it, or null when it changed nothing.
+ */
 export function applyVoxelCommand(
   target: VoxelCommandTarget,
   command: VoxelCommand,
   logger?: VoxelLogger
-): boolean {
+): VoxelCommand | null {
   if (isVoxelLayerCommand(command)) {
     target.world.apply(command, logger);
 
-    return true;
+    return command;
   }
   if (isVoxelBlockCommand(command)) {
-    return applyBlockCommand(target.blocks, command);
+    return applyBlockCommand(
+      target.blocks,
+      command,
+      target.tilesets.defaultTilesetId
+    );
   }
   if (isVoxelMaterialGroupCommand(command)) {
     return applyMaterialGroupCommand(target.materialGroups, command);

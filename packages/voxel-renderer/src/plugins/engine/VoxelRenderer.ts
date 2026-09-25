@@ -6,8 +6,10 @@ import {
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelEngine } from "../../VoxelEngine.ts";
-import type { VoxelEngineOptions } from "../../VoxelEngine.types.ts";
+import {
+  VoxelEngine,
+  type VoxelEngineOptions
+} from "../../VoxelEngine.ts";
 
 export interface VoxelRendererOptions extends VoxelEngineOptions {
   /**

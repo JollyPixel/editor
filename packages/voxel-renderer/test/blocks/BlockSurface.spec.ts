@@ -58,19 +58,19 @@ describe("BlockSurface", () => {
     for (const alphaMode of ["opaque", "blend"] as const) {
       const surface = new BlockSurface({ alphaMode, materialGroup: "gold" });
       const key = new ChunkGeometryKey("atlas", surface).toString();
-      assert.notEqual(key, new ChunkGeometryKey("atlas", alphaMode === "blend").toString());
-      assert.deepEqual(ChunkGeometryKey.parse(key).surface, surface);
+      assert.notEqual(
+        key,
+        new ChunkGeometryKey("atlas", new BlockSurface({ alphaMode })).toString()
+      );
     }
   });
 
-  it("round-trips every policy without grouping different surfaces together", () => {
+  it("keys every policy apart without grouping different surfaces together", () => {
     const keys = new Set<string>();
     for (const alphaMode of ["opaque", "mask", "blend"] as const) {
       for (const side of ["front", "double"] as const) {
         const surface = new BlockSurface({ alphaMode, side, alphaCutoff: 0.3 });
-        const key = new ChunkGeometryKey("atlas", surface);
-        keys.add(key.toString());
-        assert.deepEqual(ChunkGeometryKey.parse(key.toString()).surface, surface);
+        keys.add(new ChunkGeometryKey("atlas", surface).toString());
       }
     }
 

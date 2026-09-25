@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { FACE } from "../../../utils/math.ts";
-import { SQRT2_OVER_2 } from "../../../constants.ts";
+import { SQRT2_OVER_2 } from "./normals.ts";
 import {
   defineFace,
   type FaceDefinition

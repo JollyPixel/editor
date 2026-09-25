@@ -6,8 +6,10 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { VoxelEngine } from "../src/VoxelEngine.ts";
-import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
+import type {
+  VoxelEngine,
+  VoxelEngineOptions
+} from "../src/VoxelEngine.ts";
 import {
   chunkMeshes,
   makeEngine,

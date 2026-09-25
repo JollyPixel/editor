@@ -3,9 +3,13 @@ import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
 import type {
-  VoxelLayerConfigurableOptions,
-  VoxelLayerOptions
+  VoxelLayerCloneOptions,
+  VoxelLayerConfigurableOptions
 } from "./world/VoxelLayer.ts";
+import type {
+  VoxelSetOptions,
+  VoxelRemoveOptions
+} from "./world/VoxelWorld.ts";
 import type { VoxelCoord } from "./world/types.ts";
 import type { VoxelPatchCells } from "./world/voxelPatch.ts";
 import type {
@@ -17,11 +21,6 @@ import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
 } from "./serialization/types.ts";
-import type {
-  VoxelSetOptions,
-  VoxelRemoveOptions,
-  PartialExcept
-} from "./types.ts";
 
 export type VoxelLayerCommand =
   | {
@@ -47,7 +46,7 @@ export type VoxelLayerCommand =
     action: "cloned";
     layerName: string;
     metadata: {
-      options: PartialExcept<VoxelLayerOptions, "name">;
+      options: VoxelLayerCloneOptions;
     };
   }
   | {

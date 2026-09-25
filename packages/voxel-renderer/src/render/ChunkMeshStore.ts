@@ -4,10 +4,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
 import type { VoxelInspector } from "../inspector/index.ts";
-import {
-  VoxelMeshBuilder,
-  ChunkGeometryKey
-} from "../mesh/index.ts";
+import type { VoxelMeshBuilder } from "../mesh/index.ts";
 import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
@@ -144,34 +141,23 @@ export class ChunkMeshStore {
       z: (chunk.cz * chunk.size) + layer.position.z
     };
     const meshes: THREE.Mesh[] = [];
-    if (geometries) {
-      for (const [geometryKey, geometry] of geometries) {
-        const {
-          tilesetId,
-          surface
-        } = ChunkGeometryKey.parse(geometryKey);
-
-        const mesh = new THREE.Mesh(
-          geometry,
-          this.#materials.resolve(
-            tilesetId,
-            layer.opacity,
-            surface
-          )
-        );
-        mesh.name = `voxel_chunk_${key}:${geometryKey}`;
-        mesh.position.set(origin.x, origin.y, origin.z);
-        mesh.castShadow = this.#castShadow;
-        mesh.receiveShadow = this.#receiveShadow;
-        this.#materials.retain(mesh.material);
-        if (!this.#retainVertexData) {
-          mesh.onAfterRender = releaseShaderAttributes;
-        }
-
-        this.#root.add(mesh);
-        mesh.updateWorldMatrix(true, false);
-        meshes.push(mesh);
+    for (const [geometryKey, geometry] of geometries) {
+      const mesh = new THREE.Mesh(
+        geometry,
+        this.#materials.resolve(geometryKey, layer.opacity)
+      );
+      mesh.name = `voxel_chunk_${key}:${geometryKey}`;
+      mesh.position.set(origin.x, origin.y, origin.z);
+      mesh.castShadow = this.#castShadow;
+      mesh.receiveShadow = this.#receiveShadow;
+      this.#materials.retain(mesh.material);
+      if (!this.#retainVertexData) {
+        mesh.onAfterRender = releaseShaderAttributes;
       }
+
+      this.#root.add(mesh);
+      mesh.updateWorldMatrix(true, false);
+      meshes.push(mesh);
     }
 
     this.#entries.set(key, {
@@ -190,7 +176,7 @@ export class ChunkMeshStore {
       }
     );
 
-    if (this.#collider && geometries) {
+    if (this.#collider) {
       const layerPosition = layer.position;
       this.#logger.debug(
         `Rebuilding collision for chunk '${key}' with layer name '${layer.name}'`,
@@ -239,6 +225,9 @@ export class ChunkMeshStore {
     }
 
     entry.visible = !culled;
+    for (const mesh of entry.meshes) {
+      mesh.visible = !culled;
+    }
     this.#inspector.cullChunk(key, culled);
   }
 

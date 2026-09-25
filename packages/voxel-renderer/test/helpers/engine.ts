@@ -2,8 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelEngine } from "../../src/VoxelEngine.ts";
-import type { VoxelEngineOptions } from "../../src/VoxelEngine.types.ts";
+import {
+  VoxelEngine,
+  type VoxelEngineOptions
+} from "../../src/VoxelEngine.ts";
 import { makeBlockDef } from "./blocks.ts";
 import { makeAtlasDef } from "./atlas.ts";
 import { mockTexture } from "./mockTexture.ts";
@@ -53,10 +55,21 @@ export function placeCube(
   engine.world.setVoxel(layerName, { position, blockId });
 }
 
+export function chunkGroup(
+  engine: { root: THREE.Object3D; }
+): THREE.Object3D {
+  const group = engine.root.getObjectByName("VoxelView:chunks");
+  if (!group) {
+    throw new Error("the chunk group must be attached to the engine root");
+  }
+
+  return group;
+}
+
 export function chunkMeshes(
-  engine: VoxelEngine
+  engine: { root: THREE.Object3D; }
 ): THREE.Mesh[] {
-  return engine.root.children.filter(
+  return chunkGroup(engine).children.filter(
     (child): child is THREE.Mesh => child instanceof THREE.Mesh
   );
 }

@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { VoxelLayerCommand, VoxelLayerCommandAction } from "../commands.ts";
+import type {
+  VoxelLayerCommand,
+  VoxelLayerCommandAction
+} from "../commands.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
 import type { VoxelWorld } from "./VoxelWorld.ts";
 
@@ -139,40 +142,40 @@ export function dispatchCommand(
       break;
 
     case "object-layer-added":
-      world.addObjectLayer(
+      world.objectLayers.add(
         cmd.layerName
       );
       break;
 
     case "object-layer-removed":
-      world.removeObjectLayer(
+      world.objectLayers.remove(
         cmd.layerName
       );
       break;
 
     case "object-layer-updated":
-      world.updateObjectLayer(
+      world.objectLayers.update(
         cmd.layerName,
         cmd.metadata.patch
       );
       break;
 
     case "object-added":
-      world.addObjectToLayer(
+      world.objectLayers.addObject(
         cmd.layerName,
         cmd.metadata.object
       );
       break;
 
     case "object-removed":
-      world.removeObjectFromLayer(
+      world.objectLayers.removeObject(
         cmd.layerName,
         cmd.metadata.objectId
       );
       break;
 
     case "object-moved":
-      world.moveObjectToLayer(
+      world.objectLayers.moveObject(
         cmd.metadata.fromLayerName,
         cmd.metadata.objectId,
         cmd.metadata.toLayerName
@@ -180,7 +183,7 @@ export function dispatchCommand(
       break;
 
     case "object-updated":
-      world.updateObjectInLayer(
+      world.objectLayers.updateObject(
         cmd.layerName,
         cmd.metadata.objectId,
         cmd.metadata.patch

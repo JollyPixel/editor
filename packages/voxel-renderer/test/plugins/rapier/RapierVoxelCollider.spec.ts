@@ -16,10 +16,15 @@ import {
 } from "../../../src/plugins/rapier/index.ts";
 import type { VoxelChunkCollision } from "../../../src/collision/index.ts";
 import { VoxelChunk, VoxelTransform } from "../../../src/world/index.ts";
-import { type BlockDefinition, BlockRegistry } from "../../../src/blocks/index.ts";
+import {
+  type BlockDefinition,
+  BlockRegistry,
+  BlockSurface
+} from "../../../src/blocks/index.ts";
 import { BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
 import { Slab } from "../../../src/blocks/shape/library/Slab.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
+import { ChunkGeometryKey } from "../../../src/mesh/index.ts";
 
 // CONSTANTS
 const kNoGeometries = new Map();
@@ -273,9 +278,12 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
   it("builds a single trimesh when a shape hints trimesh", () => {
     const { collider, world } = makeCollider([makeBlockDef(1, "ramp")]);
 
+    const geometries = new Map([
+      [new ChunkGeometryKey("atlas", new BlockSurface()), makeTriangle()]
+    ]);
     collider.rebuildChunk(
       "a",
-      collisionOf(makeChunk([[0, 0, 0], [1, 0, 0]]), new Map([["atlas", makeTriangle()]]))
+      collisionOf(makeChunk([[0, 0, 0], [1, 0, 0]]), geometries)
     );
 
     assert.equal(world.rigidBodies.length, 1);

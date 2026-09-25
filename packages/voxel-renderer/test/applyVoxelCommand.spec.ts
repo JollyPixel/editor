@@ -31,7 +31,7 @@ describe("applyVoxelCommand", () => {
     const emitted: string[] = [];
     target.world.on("command", (command) => emitted.push(command.action));
 
-    assert.equal(applyVoxelCommand(target, makeAddedCommand("Ground")), true);
+    assert.notEqual(applyVoxelCommand(target, makeAddedCommand("Ground")), null);
 
     assert.ok(target.world.getLayer("Ground"));
     assert.deepEqual(emitted, []);
@@ -40,7 +40,7 @@ describe("applyVoxelCommand", () => {
   it("routes a block command to the registry", () => {
     const target = makeTarget();
 
-    assert.equal(applyVoxelCommand(target, blockDefinedCmd({ id: 4 })), true);
+    assert.notEqual(applyVoxelCommand(target, blockDefinedCmd({ id: 4 })), null);
 
     assert.equal(target.blocks.has(4), true);
   });
@@ -52,8 +52,8 @@ describe("applyVoxelCommand", () => {
       tileset: { id: "a", src: "a.png", tileSize: 16 }
     } as const;
 
-    assert.equal(applyVoxelCommand(target, command), true);
-    assert.equal(applyVoxelCommand(target, command), false);
+    assert.notEqual(applyVoxelCommand(target, command), null);
+    assert.equal(applyVoxelCommand(target, command), null);
 
     assert.equal(target.tilesets.get("a")?.tileSize, 16);
   });
@@ -65,14 +65,14 @@ describe("applyVoxelCommand", () => {
       group: { id: "gold", metalness: 1 }
     } as const;
 
-    assert.equal(applyVoxelCommand(target, command), true);
-    assert.equal(applyVoxelCommand(target, command), false);
+    assert.notEqual(applyVoxelCommand(target, command), null);
+    assert.equal(applyVoxelCommand(target, command), null);
     assert.equal(target.materialGroups.get("gold")?.metalness, 1);
 
-    assert.equal(applyVoxelCommand(target, {
+    assert.notEqual(applyVoxelCommand(target, {
       action: "material-group-removed",
       groupId: "gold"
-    }), true);
+    }), null);
     assert.equal(target.materialGroups.has("gold"), false);
   });
 });

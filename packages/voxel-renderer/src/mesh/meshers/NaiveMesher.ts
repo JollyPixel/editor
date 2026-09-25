@@ -8,8 +8,7 @@ import {
   voxelBlockId,
   voxelTransform
 } from "../../world/packedVoxel.ts";
-import { FACE_OFFSETS } from "../../utils/math.ts";
-import { AO_UNOCCLUDED } from "../ambientOcclusion.ts";
+import { FaceEmitter } from "./FaceEmitter.ts";
 
 /**
  * Emits every visible face of every voxel without merging.
@@ -24,22 +23,20 @@ export class NaiveMesher implements Mesher {
   }
 
   mesh(
-    options: MeshPassOptions
-  ): boolean {
+    pass: MeshPassOptions
+  ): void {
     const {
       chunk,
       neighbourhood,
       worldOriginX,
       worldOriginY,
       worldOriginZ,
-      stats,
-      bufferFor,
-      ambientOcclusion
-    } = options;
+      stats
+    } = pass;
     const { shift, mask } = chunk;
     const shiftZ = shift * 2;
     const { keys, values, capacity } = chunk.store;
-    let emitted = false;
+    const faces = new FaceEmitter(pass);
 
     for (let slot = 0; slot < capacity; slot++) {
       const linearIdx = keys[slot];
@@ -47,13 +44,9 @@ export class NaiveMesher implements Mesher {
         continue;
       }
 
-      const lx = linearIdx & mask;
-      const ly = (linearIdx >> shift) & mask;
-      const lz = linearIdx >> shiftZ;
-
-      const wx = worldOriginX + lx;
-      const wy = worldOriginY + ly;
-      const wz = worldOriginZ + lz;
+      const wx = worldOriginX + (linearIdx & mask);
+      const wy = worldOriginY + ((linearIdx >> shift) & mask);
+      const wz = worldOriginZ + (linearIdx >> shiftZ);
 
       stats.voxels++;
       if (!neighbourhood.winsCompositing(wx, wy, wz)) {
@@ -71,49 +64,8 @@ export class NaiveMesher implements Mesher {
       }
 
       for (const face of variant.faces) {
-        const { cull } = face;
-        if (cull >= 0) {
-          const offset = FACE_OFFSETS[cull];
-          const hidden = neighbourhood.isNeighbourFaceHidden(
-            wx + offset[0],
-            wy + offset[1],
-            wz + offset[2],
-            variant,
-            face
-          );
-          if (hidden) {
-            stats.culledFaces++;
-            continue;
-          }
-        }
-
-        const ao = ambientOcclusion ?
-          neighbourhood.ambientOcclusionAt(cull, wx, wy, wz) :
-          AO_UNOCCLUDED;
-
-        if (!face.splittable) {
-          bufferFor(face.slot).addFace(face, wx, wy, wz, ao);
-          stats.faces++;
-          emitted = true;
-
-          continue;
-        }
-
-        const pieces = neighbourhood.boundaryFaces(
-          face,
-          wx,
-          wy,
-          wz,
-          variant
-        );
-        for (const piece of pieces) {
-          bufferFor(piece.slot).addFace(piece, wx, wy, wz, ao);
-          stats.faces++;
-          emitted = true;
-        }
+        faces.emitVisible(variant, face, wx, wy, wz);
       }
     }
-
-    return emitted;
   }
 }

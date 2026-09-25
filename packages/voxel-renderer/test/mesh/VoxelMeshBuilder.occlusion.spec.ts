@@ -9,6 +9,7 @@ import {
   buildGeometries,
   countChunkVertices,
   countLayerVertices,
+  geometryAlphaModes,
   makeMeshFixture,
   place,
   type MeshFixture
@@ -142,7 +143,7 @@ describe("VoxelMeshBuilder - block transparency and covered faces", () => {
       place(fixture, [0, 0, 0]);
       place(fixture, [1, 0, 0], kLeavesId);
 
-      assert.deepEqual([...buildGeometries(fixture).keys()], ["atlas", "atlas:cutout"]);
+      assert.deepEqual(geometryAlphaModes(fixture), ["opaque", "blend"]);
     });
   }
 
@@ -150,7 +151,7 @@ describe("VoxelMeshBuilder - block transparency and covered faces", () => {
     const fixture = makeFixture({ alphaMode: "opaque" });
     place(fixture, [0, 0, 0], kLeavesId);
 
-    assert.deepEqual([...buildGeometries(fixture).keys()], ["atlas"]);
+    assert.deepEqual(geometryAlphaModes(fixture), ["opaque"]);
   });
 
   it("keeps a blended face covered by an opaque voxel of another layer", () => {
@@ -158,7 +159,7 @@ describe("VoxelMeshBuilder - block transparency and covered faces", () => {
     place(fixture.world.addLayer("stone"), [0, 0, 0]);
     place(fixture, [1, 0, 0], kLeavesId);
 
-    assert.deepEqual([...buildGeometries(fixture).keys()], ["atlas:cutout"]);
+    assert.deepEqual(geometryAlphaModes(fixture), ["blend"]);
     assert.equal(countChunkVertices(fixture), 24);
   });
 });

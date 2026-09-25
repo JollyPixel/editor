@@ -77,9 +77,6 @@ export class GeometryBuffer {
     return this.vertexCount >> 2;
   }
 
-  /**
-   * Empties the buffer; later faces are written relative to the origin.
-   */
   reset(
     originX = 0,
     originY = 0,
@@ -92,11 +89,6 @@ export class GeometryBuffer {
     this.#originZ = originZ;
   }
 
-  /**
-   * Appends a face at the voxel's world position, stored relative to the
-   * buffer origin. `ao` packs the face's corner levels (see
-   * `packAoCorners`).
-   */
   // eslint-disable-next-line max-params
   addFace(
     face: BlockVariantFace,
@@ -114,9 +106,6 @@ export class GeometryBuffer {
     }
   }
 
-  /**
-   * Appends a tiled face stretched over `spanU × spanV` voxels.
-   */
   // eslint-disable-next-line max-params
   addMergedFace(
     face: BlockVariantFace,
@@ -130,7 +119,6 @@ export class GeometryBuffer {
     this.#prepareShade(face, ao);
     const merge = face.merge!;
 
-    // Only the two axes in the face plane stretch.
     const sx = merge.axis === 0 ? 1 : spanU;
     const sz = merge.axis === 2 ? 1 : spanV;
     let sy = 1;
@@ -141,17 +129,12 @@ export class GeometryBuffer {
       sy = spanV;
     }
 
-    // Repeat counts follow the tile axes after rotation.
     const repeatU = merge.swapped ? spanV : spanU;
     const repeatV = merge.swapped ? spanU : spanV;
 
     this.#writeTiled(face, wx, wy, wz, sx, sy, sz, repeatU, repeatV);
   }
 
-  /**
-   * Resolves per-vertex brightness, and rotates a quad by one vertex when
-   * its default diagonal would join the two darker corners.
-   */
   #prepareShade(
     face: BlockVariantFace,
     ao: number
