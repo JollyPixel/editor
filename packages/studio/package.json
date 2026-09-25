@@ -29,7 +29,7 @@
     "@jolly-pixel/editor.voxel-map": "workspace:*",
     "@jolly-pixel/editor.voxel-model": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
-    "sirv": "3.0.2",
+    "@openally/servo": "1.1.0",
     "zod": "4.6.5"
   },
   "dependencies": {

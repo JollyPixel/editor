@@ -1,10 +1,16 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { IncomingMessage } from "node:http";
+import type {
+  IncomingMessage,
+  ServerResponse
+} from "node:http";
 
 // Import Third-party Dependencies
-import sirv from "sirv";
+import {
+  compose,
+  servo
+} from "@openally/servo";
 import type {
   Connect,
   Plugin
@@ -22,12 +28,6 @@ import type { EditorPackage } from "./editorManifest.ts";
 export const EDITORS_MODULE_ID = "virtual:jolly-pixel/editors";
 const kResolvedEditorsModuleId = `\0${EDITORS_MODULE_ID}`;
 
-interface PageRoute {
-  name: string;
-  file: string | null;
-  search: string;
-}
-
 export function editorsModule(
   editors: Iterable<EditorDescriptor>
 ): string {
@@ -44,49 +44,13 @@ export function editorsModule(
 export function createEditorPagesHandler(
   editors: Iterable<EditorPackage>
 ): Connect.NextHandleFunction {
-  const pages = new Map(
-    Array.from(editors, (editor) => [
-      editor.name,
-      sirv(editor.dist, {
-        dev: true,
-        etag: true
-      })
-    ])
+  return compose(
+    ...Array.from(editors, (editor) => servo(editor.dist, {
+      prefix: `${EDITOR_PAGES_PREFIX}${editor.name}`,
+      dev: true
+    })),
+    unknownEditorPage
   );
-
-  return (request, response, next) => {
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      next();
-
-      return;
-    }
-
-    const route = parseRoute(request);
-    if (route === null) {
-      next();
-
-      return;
-    }
-
-    const serve = pages.get(route.name);
-    if (serve === undefined) {
-      response.statusCode = 404;
-      response.end();
-
-      return;
-    }
-    if (route.file === null) {
-      response.writeHead(302, {
-        location: `${EDITOR_PAGES_PREFIX}${route.name}/${route.search}`
-      });
-      response.end();
-
-      return;
-    }
-
-    request.url = `/${route.file}${route.search}`;
-    serve(request, response);
-  };
 }
 
 export function editorPagesPlugin(
@@ -126,29 +90,26 @@ export function editorPagesPlugin(
   ];
 }
 
-function parseRoute(
-  request: IncomingMessage
-): PageRoute | null {
-  const url = new URL(request.url ?? "/", "http://localhost");
-  if (!url.pathname.startsWith(EDITOR_PAGES_PREFIX)) {
-    return null;
+function unknownEditorPage(
+  request: IncomingMessage,
+  response: ServerResponse,
+  next?: () => void
+): void {
+  const pathname = URL.parse(
+    request.url ?? "/",
+    "http://localhost"
+  )?.pathname ?? "/";
+
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
+    pathname.startsWith(EDITOR_PAGES_PREFIX) &&
+    pathname.length > EDITOR_PAGES_PREFIX.length
+  ) {
+    response.statusCode = 404;
+    response.end();
+
+    return;
   }
 
-  const remaining = url.pathname.slice(EDITOR_PAGES_PREFIX.length);
-  const slash = remaining.indexOf("/");
-  if (slash === -1) {
-    return remaining === "" ?
-      null :
-      {
-        name: remaining,
-        file: null,
-        search: url.search
-      };
-  }
-
-  return {
-    name: remaining.slice(0, slash),
-    file: remaining.slice(slash + 1),
-    search: url.search
-  };
+  next?.();
 }

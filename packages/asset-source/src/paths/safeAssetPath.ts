@@ -4,23 +4,18 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import {
+  safePath,
+  type PathRejection
+} from "@openally/servo/paths";
 
 // Import Internal Dependencies
 import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
-import { normalizePosix } from "./normalizePosix.ts";
-
-// CONSTANTS
-// eslint-disable-next-line no-control-regex
-const kControlCharacters = /[\u0000-\u001F\u007F]/;
-const kWindowsDrive = /^[a-zA-Z]:/;
 
 export type AssetPathRejection =
+  | PathRejection
   | "empty"
-  | "invalid"
-  | "absolute"
-  | "traversal"
-  | "directory"
-  | "reserved";
+  | "directory";
 
 export function safeAssetPath(
   input: string
@@ -28,33 +23,16 @@ export function safeAssetPath(
   if (input.length === 0) {
     return Err("empty");
   }
-  if (kControlCharacters.test(input)) {
-    return Err("invalid");
-  }
 
-  const posix = input.replaceAll("\\", "/");
-  if (
-    posix.startsWith("/") ||
-    kWindowsDrive.test(posix)
-  ) {
-    return Err("absolute");
+  const result = safePath(input);
+  if (!result.ok) {
+    return Err(result.reason);
   }
-
-  const normalized = normalizePosix(posix);
-  if (
-    normalized === ".." ||
-    normalized.startsWith("../")
-  ) {
-    return Err("traversal");
-  }
-  if (
-    normalized === "." ||
-    normalized.endsWith("/")
-  ) {
+  if (result.directory) {
     return Err("directory");
   }
 
-  return Ok(normalized);
+  return Ok(result.path);
 }
 
 export function normalizeAssetPath(

@@ -1,16 +1,15 @@
 // Import Node.js Dependencies
-import fs from "node:fs/promises";
 import path from "node:path";
+
+// Import Third-party Dependencies
+import { containedPath } from "@openally/servo";
 
 // Import Internal Dependencies
 import { AssetPathEscapeError } from "../../errors/AssetPathEscapeError.ts";
 import { normalizeAssetPath } from "../../paths/index.ts";
-import { toRelativePosix } from "./toRelativePosix.ts";
 
 export class FilesystemPathResolver {
   readonly root: string;
-
-  #realRoot: Promise<string> | null = null;
 
   constructor(
     root: string
@@ -30,44 +29,11 @@ export class FilesystemPathResolver {
   async contained(
     assetPath: string
   ): Promise<string> {
-    const absolute = this.resolve(assetPath);
-    this.#realRoot ??= realPath(this.root)
-      .catch((error) => {
-        this.#realRoot = null;
-        throw error;
-      });
-
-    const root = await this.#realRoot;
-    const real = await realPath(absolute);
-    if (
-      real !== root &&
-      toRelativePosix(root, real) === null
-    ) {
+    const relative = normalizeAssetPath(assetPath);
+    if (await containedPath(this.root, relative) === null) {
       throw new AssetPathEscapeError(assetPath);
     }
 
-    return absolute;
-  }
-}
-
-async function realPath(
-  absolute: string
-): Promise<string> {
-  try {
-    return await fs.realpath(absolute);
-  }
-  catch (error: any) {
-    const parent = path.dirname(absolute);
-    if (
-      error.code !== "ENOENT" ||
-      parent === absolute
-    ) {
-      throw error;
-    }
-
-    return path.join(
-      await realPath(parent),
-      path.basename(absolute)
-    );
+    return path.join(this.root, relative);
   }
 }

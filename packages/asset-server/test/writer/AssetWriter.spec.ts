@@ -81,6 +81,21 @@ describe("AssetWriter — create", () => {
     assert.deepEqual(lifecycleTypes(harness.eventStore), []);
   });
 
+  test("returns a Windows reserved segment as an error without appending", async() => {
+    await using harness = await syncHarness();
+
+    const result = await harness.writer.create({
+      path: "textures/nul.png",
+      data: bytes("x"),
+      actor: kActor
+    });
+
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.val instanceof AssetPathEscapeError);
+    assert.strictEqual(result.val.reason, "reserved");
+    assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+  });
+
   test("returns the state directory as an error without appending", async() => {
     await using harness = await syncHarness();
 

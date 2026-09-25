@@ -1,5 +1,4 @@
 // Import Node.js Dependencies
-import { Buffer } from "node:buffer";
 import type {
   IncomingMessage,
   ServerResponse
@@ -7,29 +6,26 @@ import type {
 
 // Import Third-party Dependencies
 import { ASSET_URL_PREFIX } from "@jolly-pixel/asset";
+import {
+  bytesSource,
+  servo
+} from "@openally/servo";
 
 // Import Internal Dependencies
 import type { AssetSource } from "../AssetSource.ts";
 import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
-import {
-  isStatePath,
-  safeAssetPath,
-  type AssetPathRejection
-} from "../paths/index.ts";
+import { isStatePath } from "../paths/index.ts";
 import {
   DEFAULT_CONTENT_TYPES,
   resolveContentType
 } from "./contentTypes.ts";
 
 // CONSTANTS
-const kRejectionStatus: Readonly<Record<AssetPathRejection, number>> = {
-  empty: 404,
-  directory: 404,
-  invalid: 400,
-  absolute: 403,
-  traversal: 403,
-  reserved: 403
-};
+const kMissingCodes = new Set([
+  "ENOENT",
+  "EISDIR",
+  "ENOTDIR"
+]);
 
 export type AssetStaticHandler = (
   request: IncomingMessage,
@@ -40,8 +36,8 @@ export type AssetStaticHandler = (
 export interface AssetStaticHandlerOptions {
   source: AssetSource;
   /**
-   * URL prefix the workspace is mounted under. A missing trailing slash is
-   * added, so `/assets` and `/assets/` behave the same.
+   * URL prefix the workspace is mounted under. `/assets` and `/assets/`
+   * behave the same.
    * @default ASSET_URL_PREFIX
    */
   prefix?: string;
@@ -56,126 +52,61 @@ export function createAssetStaticHandler(
 ): AssetStaticHandler {
   const {
     source,
+    prefix = ASSET_URL_PREFIX,
     contentTypes
   } = options;
 
-  const prefix = withTrailingSlash(
-    options.prefix ?? ASSET_URL_PREFIX
-  );
   const table = {
     ...DEFAULT_CONTENT_TYPES,
     ...contentTypes
   };
 
-  return function assetStaticHandler(
-    request: IncomingMessage,
-    response: ServerResponse,
-    next: () => void
-  ) {
-    const target = request.url ?? "";
-    if (!target.startsWith(prefix)) {
-      next();
-
-      return;
+  return servo(
+    bytesSource(
+      (assetPath) => readAsset(source, assetPath),
+      { etag: "content" }
+    ),
+    {
+      prefix,
+      methodNotAllowed: "reject",
+      dev: true,
+      index: false,
+      extensions: [],
+      redirect: false,
+      dotfiles: "allow",
+      ignore: (assetPath) => isHidden(source, assetPath),
+      setHeaders: (response, assetPath) => {
+        response.setHeader(
+          "Content-Type",
+          resolveContentType(assetPath, table)
+        );
+      },
+      onNoMatch: (_request, response) => {
+        end(response, 404);
+      },
+      onError: (error, _request, response) => {
+        end(
+          response,
+          error instanceof AssetPathEscapeError ? 403 : 500
+        );
+      }
     }
-
-    if (
-      request.method !== "GET" &&
-      request.method !== "HEAD"
-    ) {
-      response.statusCode = 405;
-      response.setHeader("allow", "GET, HEAD");
-      response.end();
-
-      return;
-    }
-
-    const requested = decodeRequestPath(
-      target.slice(prefix.length)
-    );
-    if (requested === null) {
-      end(response, 400);
-
-      return;
-    }
-
-    const resolved = safeAssetPath(requested);
-    if (!resolved.ok) {
-      end(response, kRejectionStatus[resolved.val]);
-
-      return;
-    }
-
-    const assetPath = resolved.val;
-    if (isHidden(source, assetPath)) {
-      end(response, 404);
-
-      return;
-    }
-
-    void serve(
-      source,
-      assetPath,
-      resolveContentType(assetPath, table),
-      request,
-      response
-    );
-  };
-}
-
-async function serve(
-  source: AssetSource,
-  assetPath: string,
-  contentType: string,
-  request: IncomingMessage,
-  response: ServerResponse
-): Promise<void> {
-  let bytes: Uint8Array;
-  try {
-    bytes = await source.read(assetPath);
-  }
-  catch (error: any) {
-    if (error instanceof AssetPathEscapeError) {
-      end(response, 403);
-    }
-    else {
-      const isMissing = error?.code === "ENOENT" ||
-        error?.code === "EISDIR" ||
-        error?.code === "ENOTDIR";
-      end(
-        response,
-        isMissing ? 404 : 500
-      );
-    }
-
-    return;
-  }
-
-  response.statusCode = 200;
-  response.setHeader("content-type", contentType);
-  response.setHeader("content-length", String(bytes.byteLength));
-  response.end(
-    request.method === "HEAD" ? undefined : Buffer.from(
-      bytes.buffer,
-      bytes.byteOffset,
-      bytes.byteLength
-    )
   );
 }
 
-function decodeRequestPath(
-  target: string
-): string | null {
-  const separator = target.search(/[?#]/);
-  const encoded = separator === -1 ?
-    target :
-    target.slice(0, separator);
-
+async function readAsset(
+  source: AssetSource,
+  assetPath: string
+): Promise<Uint8Array | null> {
   try {
-    return decodeURIComponent(encoded);
+    return await source.read(assetPath);
   }
-  catch {
-    return null;
+  catch (error: any) {
+    if (kMissingCodes.has(error?.code)) {
+      return null;
+    }
+
+    throw error;
   }
 }
 
@@ -193,10 +124,4 @@ function end(
 ): void {
   response.statusCode = statusCode;
   response.end();
-}
-
-function withTrailingSlash(
-  prefix: string
-): string {
-  return prefix.endsWith("/") ? prefix : `${prefix}/`;
 }

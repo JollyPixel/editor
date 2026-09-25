@@ -44,6 +44,12 @@ async function createDist(): Promise<string> {
   await fs.writeFile(path.join(dist, "index.html"), kIndexHtml);
   await fs.writeFile(path.join(dist, "assets", "index.js"), kBundle);
   await fs.writeFile(path.join(parent, "outside.txt"), "secret");
+  await fs.writeFile(path.join(dist, ".env"), "secret");
+  await fs.symlink(
+    parent,
+    path.join(dist, "escape"),
+    "junction"
+  );
 
   return dist;
 }
@@ -118,7 +124,7 @@ describe("createEditorPagesHandler", () => {
     assert.strictEqual(response.status, 200);
     assert.strictEqual(
       response.headers.get("content-type"),
-      "text/html;charset=utf-8"
+      "text/html; charset=utf-8"
     );
     assert.strictEqual(await response.text(), kIndexHtml);
   });
@@ -146,7 +152,7 @@ describe("createEditorPagesHandler", () => {
     assert.strictEqual(response.status, 200);
     assert.strictEqual(
       response.headers.get("content-type"),
-      "text/javascript"
+      "text/javascript; charset=utf-8"
     );
     assert.strictEqual(await response.text(), kBundle);
   });
@@ -185,8 +191,34 @@ describe("createEditorPagesHandler", () => {
       "/editors/voxel-map/..%2foutside.txt"
     );
 
+    assert.strictEqual(response.status, 403);
+    assert.notStrictEqual(await response.text(), "secret");
+  });
+
+  test("hides a symlink leading out of the dist folder", async() => {
+    const response = await server.fetch(
+      "/editors/voxel-map/escape/outside.txt"
+    );
+
     assert.strictEqual(response.status, 404);
     assert.notStrictEqual(await response.text(), "secret");
+  });
+
+  test("hides dotfiles", async() => {
+    const response = await server.fetch("/editors/voxel-map/.env");
+
+    assert.strictEqual(response.status, 404);
+    assert.notStrictEqual(await response.text(), "secret");
+  });
+
+  test("forbids content sniffing", async() => {
+    const response = await server.fetch("/editors/voxel-map/");
+    await response.text();
+
+    assert.strictEqual(
+      response.headers.get("x-content-type-options"),
+      "nosniff"
+    );
   });
 
   test("returns 404 for a missing file", async() => {

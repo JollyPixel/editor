@@ -633,33 +633,15 @@ describe("catalog HTTP handler", () => {
     });
     projection.load();
 
-    const server = http.createServer((request, response) => {
-      createCatalogHandler({ projection })(request, response, () => {
-        response.statusCode = 404;
-        response.end();
-      });
-    });
-    server.listen(0);
-    await new Promise((resolve) => {
-      server.once("listening", resolve);
-    });
-    const { port } = server.address() as { port: number; };
+    await using server = await catalogServer(projection);
+    const response = await fetch(`${server.origin}${CATALOG_URL_PATH}`);
 
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:${port}${CATALOG_URL_PATH}`
-      );
-
-      assert.strictEqual(response.status, 200);
-      assert.strictEqual(
-        response.headers.get("content-type"),
-        "application/json; charset=utf-8"
-      );
-      assert.deepEqual(await response.json(), projection.snapshot());
-    }
-    finally {
-      server.close();
-    }
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(
+      response.headers.get("content-type"),
+      "application/json; charset=utf-8"
+    );
+    assert.deepEqual(await response.json(), projection.snapshot());
   });
 
   test("passes other paths to the next handler", async() => {
@@ -689,23 +671,35 @@ describe("catalog HTTP handler", () => {
     });
     projection.load();
 
-    let payload = "";
-    const response = {
-      statusCode: 0,
-      setHeader: () => void 0,
-      end: (chunk: string) => {
-        payload = chunk;
-      }
-    };
-
-    createCatalogHandler({ projection })(
-      { url: `${CATALOG_URL_PATH}?since=12`, method: "GET" } as never,
-      response as never,
-      () => void 0
+    await using server = await catalogServer(projection);
+    const response = await fetch(
+      `${server.origin}${CATALOG_URL_PATH}?since=12`
     );
 
-    assert.strictEqual(response.statusCode, 200);
-    assert.deepEqual(JSON.parse(payload), projection.snapshot());
+    assert.strictEqual(response.status, 200);
+    assert.deepEqual(await response.json(), projection.snapshot());
+  });
+
+  test("answers 304 while the snapshot is unchanged", async() => {
+    await using harness = await syncHarness();
+    const projection = new CatalogProjection({
+      eventStore: harness.eventStore
+    });
+    projection.load();
+
+    await using server = await catalogServer(projection);
+    const first = await fetch(`${server.origin}${CATALOG_URL_PATH}`);
+    await first.arrayBuffer();
+    const etag = first.headers.get("etag");
+
+    assert.ok(etag !== null);
+    assert.strictEqual(first.headers.get("cache-control"), "no-cache");
+
+    const second = await fetch(`${server.origin}${CATALOG_URL_PATH}`, {
+      headers: { "if-none-match": etag }
+    });
+
+    assert.strictEqual(second.status, 304);
   });
 
   test("refuses a non-GET method", async() => {
@@ -715,24 +709,39 @@ describe("catalog HTTP handler", () => {
     });
     projection.load();
 
-    const headers = new Map<string, string>();
-    let ended = false;
-    const response = {
-      statusCode: 200,
-      setHeader: (key: string, value: string) => headers.set(key, value),
-      end: () => {
-        ended = true;
-      }
-    };
+    await using server = await catalogServer(projection);
+    const response = await fetch(`${server.origin}${CATALOG_URL_PATH}`, {
+      method: "POST"
+    });
 
-    createCatalogHandler({ projection })(
-      { url: CATALOG_URL_PATH, method: "POST" } as never,
-      response as never,
-      () => void 0
-    );
-
-    assert.strictEqual(response.statusCode, 405);
-    assert.strictEqual(headers.get("allow"), "GET, HEAD");
-    assert.strictEqual(ended, true);
+    assert.strictEqual(response.status, 405);
+    assert.strictEqual(response.headers.get("allow"), "GET, HEAD");
   });
 });
+
+async function catalogServer(
+  projection: CatalogProjection
+): Promise<{ origin: string; } & AsyncDisposable> {
+  const handler = createCatalogHandler({ projection });
+  const server = http.createServer((request, response) => {
+    handler(request, response, () => {
+      response.statusCode = 404;
+      response.end();
+    });
+  });
+  server.listen(0, "127.0.0.1");
+  await new Promise((resolve) => {
+    server.once("listening", resolve);
+  });
+  const { port } = server.address() as { port: number; };
+
+  return {
+    origin: `http://127.0.0.1:${port}`,
+    async [Symbol.asyncDispose]() {
+      server.closeAllConnections();
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+    }
+  };
+}

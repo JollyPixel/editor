@@ -1,120 +1,93 @@
 // Import Node.js Dependencies
 import { Buffer } from "node:buffer";
-import type {
-  IncomingMessage,
-  ServerResponse
-} from "node:http";
+import { once } from "node:events";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 
 export interface CapturedResponse {
   statusCode: number;
-  headers: Record<string, string>;
+  headers: http.IncomingHttpHeaders;
   body: Buffer | null;
-  ended: boolean;
-  /**
-   * Resolves once the handler calls `end()`.
-   */
-  done: Promise<CapturedResponse>;
+  nexted: boolean;
 }
 
 export interface RequestOptions {
   method?: string;
   url: string;
+  headers?: Record<string, string>;
 }
 
-/**
- * Minimal `IncomingMessage` stand-in: the handlers read `method` and `url`
- * only.
- */
-export function request(
-  options: RequestOptions
-): IncomingMessage {
-  const {
-    method = "GET",
-    url
-  } = options;
-
-  return {
-    method,
-    url
-  } as IncomingMessage;
-}
+export type ConnectHandler = (
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  next: () => void
+) => void;
 
 /**
- * Captures what a handler writes, exposing `done` because reads through an
- * `AssetSource` finish the response asynchronously.
- */
-export function response(): {
-  captured: CapturedResponse;
-  response: ServerResponse;
-} {
-  let settle: (value: CapturedResponse) => void;
-  const captured: CapturedResponse = {
-    statusCode: 200,
-    headers: {},
-    body: null,
-    ended: false,
-    done: new Promise<CapturedResponse>((resolve) => {
-      settle = resolve;
-    })
-  };
-
-  const target = {
-    get statusCode() {
-      return captured.statusCode;
-    },
-    set statusCode(value: number) {
-      captured.statusCode = value;
-    },
-    setHeader(
-      key: string,
-      value: string
-    ) {
-      captured.headers[key.toLowerCase()] = value;
-    },
-    end(
-      payload?: Buffer | string
-    ) {
-      captured.body = payload === undefined ?
-        null :
-        Buffer.from(payload);
-      captured.ended = true;
-      settle(captured);
-    }
-  };
-
-  return {
-    captured,
-    response: target as unknown as ServerResponse
-  };
-}
-
-/**
- * Runs one request through a connect-style handler and reports whether it
- * passed the request on.
+ * Runs one request through a connect-style handler over a real socket. The
+ * raw `url` is sent as is, so dot segments reach the handler untouched.
  */
 export async function send(
-  handler: (
-    request: IncomingMessage,
-    response: ServerResponse,
-    next: () => void
-  ) => void,
+  handler: ConnectHandler,
   options: RequestOptions
-): Promise<CapturedResponse & { nexted: boolean; }> {
-  const { captured, response: target } = response();
+): Promise<CapturedResponse> {
+  const {
+    method = "GET",
+    url,
+    headers = {}
+  } = options;
+
   let nexted = false;
-
-  handler(
-    request(options),
-    target,
-    () => {
+  const server = http.createServer((request, response) => {
+    handler(request, response, () => {
       nexted = true;
-      captured.ended = true;
-    }
-  );
+      response.statusCode = 204;
+      response.end();
+    });
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
 
-  if (!nexted) {
-    await captured.done;
+  try {
+    const response = await new Promise<http.IncomingMessage>(
+      (resolve, reject) => {
+        const request = http.request({
+          host: "127.0.0.1",
+          port: portOf(server.address()),
+          method,
+          path: url,
+          headers
+        });
+        request.once("response", resolve);
+        request.once("error", reject);
+        request.end();
+      }
+    );
+    const chunks: Buffer[] = [];
+    for await (const chunk of response) {
+      chunks.push(chunk);
+    }
+    const body = Buffer.concat(chunks);
+
+    return {
+      statusCode: response.statusCode ?? 0,
+      headers: response.headers,
+      body: body.byteLength === 0 ? null : body,
+      nexted
+    };
+  }
+  finally {
+    server.closeAllConnections();
+    server.close();
+  }
+}
+
+function portOf(
+  address: string | AddressInfo | null
+): number {
+  if (address === null || typeof address === "string") {
+    throw new Error("Test server is not listening on a TCP port");
   }
 
-  return Object.assign(captured, { nexted });
+  return address.port;
 }

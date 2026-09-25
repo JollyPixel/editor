@@ -80,7 +80,10 @@ describe("createAssetStaticHandler", () => {
     const unknown = await send(handler, { url: "/assets/notes.unknown" });
 
     assert.strictEqual(png.headers["content-type"], "image/png");
-    assert.strictEqual(unknown.headers["content-type"], "text/x-unknown");
+    assert.strictEqual(
+      unknown.headers["content-type"],
+      "text/x-unknown; charset=utf-8"
+    );
   });
 
   test("ignores the query string", async() => {
@@ -168,6 +171,73 @@ describe("createAssetStaticHandler", () => {
     assert.strictEqual(result.statusCode, 400);
   });
 
+  test("revalidates a file with its content ETag", async() => {
+    const handler = createAssetStaticHandler({ source: workspace() });
+
+    const first = await send(handler, { url: "/assets/textures/block.png" });
+    const etag = first.headers.etag;
+    assert.ok(etag !== undefined && !etag.startsWith("W/"));
+
+    const second = await send(handler, {
+      url: "/assets/textures/block.png",
+      headers: { "if-none-match": etag }
+    });
+
+    assert.strictEqual(second.statusCode, 304);
+    assert.strictEqual(second.body, null);
+  });
+
+  test("answers a byte range with 206", async() => {
+    const handler = createAssetStaticHandler({ source: workspace() });
+
+    const result = await send(handler, {
+      url: "/assets/textures/block.png",
+      headers: { range: "bytes=0-2" }
+    });
+
+    assert.strictEqual(result.statusCode, 206);
+    assert.strictEqual(result.headers["content-range"], "bytes 0-2/9");
+    assert.strictEqual(result.body?.toString(), "png");
+  });
+
+  test("asks for revalidation and forbids sniffing", async() => {
+    const handler = createAssetStaticHandler({ source: workspace() });
+
+    const result = await send(handler, { url: "/assets/textures/block.png" });
+
+    assert.strictEqual(result.headers["cache-control"], "no-cache");
+    assert.strictEqual(result.headers["x-content-type-options"], "nosniff");
+  });
+
+  test("serves markup and scripts as an octet stream", async() => {
+    const handler = createAssetStaticHandler({
+      source: new MemoryAssetSource([
+        ["page.html", bytes("<script></script>")],
+        ["code.js", bytes("alert(1)")]
+      ])
+    });
+
+    for (const url of ["/assets/page.html", "/assets/code.js"]) {
+      const result = await send(handler, { url });
+
+      assert.strictEqual(
+        result.headers["content-type"],
+        "application/octet-stream",
+        url
+      );
+    }
+  });
+
+  test("serves a dotfile outside the state directory", async() => {
+    const handler = createAssetStaticHandler({
+      source: new MemoryAssetSource([["textures/.keep", bytes("k")]])
+    });
+
+    const result = await send(handler, { url: "/assets/textures/.keep" });
+
+    assert.strictEqual(result.statusCode, 200);
+  });
+
   test("answers 500 when the source fails for another reason", async() => {
     const source = new MemoryAssetSource();
     source.read = () => Promise.reject(new Error("disk on fire"));
@@ -214,6 +284,20 @@ describe("createAssetStaticHandler — path safety", () => {
       "/assets/%2Fetc%2Fpasswd",
       "/assets/C%3A%2FWindows%2Fwin.ini",
       "/assets/%5C%5Cserver%5Cshare%5Ca.png"
+    ]) {
+      const result = await send(handler, { url });
+
+      assert.strictEqual(result.statusCode, 403, url);
+    }
+  });
+
+  test("answers 403 for a Windows reserved segment", async() => {
+    const handler = createAssetStaticHandler({ source: workspace() });
+
+    for (const url of [
+      "/assets/con.png",
+      "/assets/textures/block.png::$DATA",
+      "/assets/textures/block.png."
     ]) {
       const result = await send(handler, { url });
 

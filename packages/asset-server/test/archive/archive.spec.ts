@@ -225,6 +225,18 @@ describe("readAssetArchive", () => {
     );
   });
 
+  test("rejects a Windows reserved segment", () => {
+    const manifest = {
+      version: 1,
+      assets: [{ ...entry, path: "a.link:stream" }]
+    };
+
+    assert.strictEqual(
+      rejection(zipArchive(manifest, { "a.link:stream": linkContent() })),
+      "unsafe-path"
+    );
+  });
+
   test("rejects a state path, listed or not", () => {
     const listed = {
       version: 1,

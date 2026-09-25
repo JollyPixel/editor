@@ -281,6 +281,9 @@ and `HEAD` returns the same headers without a body. Other methods on that path
 receive `405` with `Allow: GET, HEAD`. Requests for another path are passed to
 `next()`.
 
+The response carries a strong ETag hashed from the snapshot and
+`Cache-Control: no-cache`, so a matching `If-None-Match` answers `304`.
+
 ## Vite plugin
 
 ```ts

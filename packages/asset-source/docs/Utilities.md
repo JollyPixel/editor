@@ -26,10 +26,11 @@ Use it for input that should be rejected without throwing.
 | `absolute` | `/etc/passwd`, `C:/Windows/win.ini`, `\\server\share` |
 | `traversal` | `../secret`, `textures/../../secret` |
 | `directory` | `.`, `textures/` |
+| `reserved` | a segment with `:`, a trailing dot or space, or a Windows device name (`CON`, `nul.png`) |
 
-`AssetPathRejection` also contains `reserved`. `safeAssetPath` does not return
-it. Applications can use it when a valid asset path names an application-owned
-location such as `.jollypixel/`.
+The rules come from `safePath` in `@openally/servo/paths` and apply on every
+platform. Applications also return `reserved` when a valid asset path names an
+application-owned location such as `.jollypixel/`.
 
 ### `normalizeAssetPath`
 
