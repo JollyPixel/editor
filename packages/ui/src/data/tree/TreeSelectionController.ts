@@ -14,6 +14,7 @@ export interface TreeSelectionOptions<TData> {
   visibleRows(): readonly FlatTreeRow<TData>[];
   selected(): string[];
   multiple(): boolean;
+  requireSelection(): boolean;
   interaction(): TreeInteraction;
   setInteraction(next: TreeInteraction): void;
 }
@@ -53,7 +54,8 @@ export class TreeSelectionController<TData> {
       anchorId: this.#anchorId,
       shiftKey: event.shiftKey,
       ctrlKey: event.ctrlKey || event.metaKey,
-      multiple: this.#options.multiple()
+      multiple: this.#options.multiple(),
+      requireSelection: this.#options.requireSelection()
     });
     this.#anchorId = result.anchorId;
     emitDataEvent(this.#host, "jolly-select", { selected: result.selected });
@@ -65,6 +67,7 @@ export class TreeSelectionController<TData> {
     if (
       event.target !== event.currentTarget ||
       this.#consumeSuppressedClick() ||
+      this.#options.requireSelection() ||
       this.#options.selected().length === 0
     ) {
       return;

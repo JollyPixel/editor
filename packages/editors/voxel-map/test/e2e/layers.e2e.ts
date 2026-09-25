@@ -51,6 +51,31 @@ function objectLayers(
     }));
 }
 
+function objectVisibility(
+  page: Page
+): Promise<Array<{ name: string; visible: boolean; objects: boolean[]; }>> {
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.world
+    .objectLayers.toArray()
+    .map((layer) => {
+      return {
+        name: layer.name,
+        visible: layer.visible,
+        objects: layer.objects.map((object) => object.visible)
+      };
+    }));
+}
+
+async function syncFence(
+  page: Page,
+  peer: Page
+): Promise<void> {
+  await page.evaluate(
+    () => window.voxelMapEditor!.workspace.engine.world.addLayer("Fence")
+  );
+  await expect.poll(async() => (await voxelLayers(peer))
+    .some((layer) => layer.name === "Fence")).toBe(true);
+}
+
 function layerRow(
   page: Page,
   name: string
@@ -86,6 +111,20 @@ test("a new voxel layer is listed and selected", async({ page }) => {
     .toEqual(["Caves", "Ground"]);
 });
 
+test("clicking the empty tree area keeps the layer selected", async({ page }) => {
+  const manager = page.locator("layer-manager");
+  const row = layerRow(page, "Ground");
+  const box = await manager.boundingBox();
+  if (box === null) {
+    throw new Error("The layer manager is not rendered");
+  }
+
+  await row.click();
+  await manager.click({ position: { x: 8, y: box.height - 8 } });
+
+  await expect(row).toHaveAttribute("aria-selected", "true");
+});
+
 test("cloning copies the voxels and removing asks first", async({ page }) => {
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
   await layerRow(page, "Ground").click();
@@ -101,6 +140,7 @@ test("cloning copies the voxels and removing asks first", async({ page }) => {
   await confirm.getByRole("button", { name: "Delete" }).click();
 
   await expect(page.getByRole("treeitem")).toHaveCount(1);
+  await expect(layerRow(page, "Ground")).toHaveAttribute("aria-selected", "true");
   expect((await voxelLayers(page)).map((layer) => layer.name)).toEqual(["Ground"]);
 });
 
@@ -129,6 +169,47 @@ test("the eye hides and shows a layer", async({ page }) => {
   await expect.poll(() => blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([null]);
   await row.getByRole("button", { name: "Show" }).click();
   await expect.poll(() => blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
+});
+
+test("hiding a voxel layer stays local to the page", async({ page, peer }) => {
+  test.slow();
+  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await expect.poll(() => blocksAt(peer, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
+
+  await layerRow(page, "Ground").getByRole("button", { name: "Hide" }).click();
+  await expect.poll(() => blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([null]);
+  await syncFence(page, peer);
+
+  expect(await blocksAt(peer, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
+  expect((await voxelLayers(peer))
+    .find((layer) => layer.name === "Ground")?.visible).toBe(true);
+});
+
+test("hiding an object layer or an object stays local to the page", async({ page, peer }) => {
+  test.slow();
+  await addEntry(page, "Objects", "Spawns");
+  await addEntry(page, "Object", "Player");
+  await expect.poll(() => objectVisibility(peer)).toEqual([
+    { name: "Spawns", visible: true, objects: [true] }
+  ]);
+
+  await page.getByRole("treeitem", { name: /^Player/ })
+    .getByRole("button", { name: "Hide" })
+    .click();
+  await layerRow(page, "Spawns")
+    .getByRole("button", { name: "Hide" })
+    .first()
+    .click();
+  await syncFence(page, peer);
+
+  await expect(page.getByRole("treeitem", { name: /^Player/ })
+    .getByRole("button", { name: "Show" })).toBeVisible();
+  expect(await objectVisibility(page)).toEqual([
+    { name: "Spawns", visible: true, objects: [true] }
+  ]);
+  expect(await objectVisibility(peer)).toEqual([
+    { name: "Spawns", visible: true, objects: [true] }
+  ]);
 });
 
 test("objects are added inside the selected object layer and renamed in place", async({ page }) => {

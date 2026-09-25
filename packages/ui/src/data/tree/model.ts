@@ -19,6 +19,7 @@ export interface ResolveSelectionOptions<TData> {
   shiftKey: boolean;
   ctrlKey: boolean;
   multiple: boolean;
+  requireSelection?: boolean;
 }
 
 export interface ResolvedSelection {
@@ -241,7 +242,8 @@ export function resolveSelection<TData>(
     anchorId,
     shiftKey,
     ctrlKey,
-    multiple
+    multiple,
+    requireSelection = false
   } = options;
   const clickedRow = rows.find(
     (row) => row.node.id === clickedId
@@ -298,6 +300,12 @@ export function resolveSelection<TData>(
   if (ctrlKey) {
     if (current.includes(clickedId)) {
       const selected = current.filter((id) => id !== clickedId);
+      if (requireSelection && selected.length === 0) {
+        return {
+          selected: [...current],
+          anchorId: clickedId
+        };
+      }
 
       return {
         selected,

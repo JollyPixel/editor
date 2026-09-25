@@ -16,7 +16,10 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
-import type { SelectionStore } from "../../../state/index.ts";
+import type {
+  LayerVisibilityStore,
+  SelectionStore
+} from "../../../state/index.ts";
 import {
   objectKey,
   objectPatchFromArea,
@@ -37,6 +40,7 @@ export interface ObjectLayerRendererOptions {
   camera: THREE.PerspectiveCamera;
   selection: SelectionStore;
   mapDocument: MapDocument;
+  visibility: LayerVisibilityStore;
 }
 
 /**
@@ -47,6 +51,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
   #mapDocument: MapDocument;
+  #visibility: LayerVisibilityStore;
   #scene: ObjectAreaScene;
   #canvas: HTMLCanvasElement | null = null;
   #controls: BoxControls<AreaBox> | null = null;
@@ -67,9 +72,11 @@ export class ObjectLayerRenderer extends ActorComponent {
     this.#camera = options.camera;
     this.#selection = options.selection;
     this.#mapDocument = options.mapDocument;
+    this.#visibility = options.visibility;
     this.#scene = new ObjectAreaScene({
       actor,
       world: options.world,
+      visibility: options.visibility,
       onRemoving: this.#onAreaRemoving
     });
   }
@@ -93,7 +100,8 @@ export class ObjectLayerRenderer extends ActorComponent {
     this.#subscriptions.push(
       this.#selection.subscribe("change", this.#onSelectionChange),
       this.#mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.#mapDocument.subscribe("reset", this.#onWorldReset)
+      this.#mapDocument.subscribe("reset", this.#onWorldReset),
+      this.#visibility.subscribe("change", this.#onVisibilityChange)
     );
 
     this.#syncAll();
@@ -256,14 +264,9 @@ export class ObjectLayerRenderer extends ActorComponent {
     const picked = this.#pick(event);
     if (picked === null) {
       const activeLayer = this.#selection.objectLayer;
-      this.#selection.current = (
-        activeLayer === null ?
-          null :
-          {
-            kind: "object-layer",
-            name: activeLayer
-          }
-      );
+      if (activeLayer !== null) {
+        this.#selection.selectObjectLayer(activeLayer);
+      }
 
       return;
     }
@@ -323,6 +326,8 @@ export class ObjectLayerRenderer extends ActorComponent {
   }
 
   readonly #onSelectionChange = (): void => this.#updateVisibility();
+
+  readonly #onVisibilityChange = (): void => this.#updateVisibility();
 
   readonly #onWorldReset = (): void => this.#syncAll();
 

@@ -37,7 +37,7 @@ export class LayersPanel extends LitElement {
   `;
 
   @state()
-  declare _selection: LayerSelection;
+  declare _selection: LayerSelection | null;
 
   @query("jolly-folder")
   declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
@@ -156,6 +156,7 @@ export class LayersPanel extends LitElement {
           .selection=${workspace.state.selection}
           .mapDocument=${workspace.mapDocument}
           .presence=${workspace.state.presence}
+          .layerVisibility=${workspace.state.layerVisibility}
           .viewFocus=${workspace.viewFocus}
           style="height:200px;"
         ></layer-manager>

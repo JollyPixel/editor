@@ -28,6 +28,10 @@ import type {
 } from "../model/brushFootprint.ts";
 import { brushToolbarStyles } from "./BrushToolbar.styles.ts";
 import {
+  paintingNoticeOf,
+  type PaintingNotice
+} from "./paintingNotice.ts";
+import {
   BRUSH_AXIS_OPTIONS,
   BRUSH_MODE_OPTIONS,
   BRUSH_PATTERN_OPTIONS,
@@ -72,6 +76,9 @@ export class BrushToolbar extends LitElement {
   @state()
   declare _canRedo: boolean;
 
+  @state({ hasChanged: noticeChanged })
+  declare _notice: PaintingNotice | null;
+
   #size = new FieldBinding<number>(this, {
     read: () => this.#workspace.attached.state.brush.size,
     write: (value) => {
@@ -89,6 +96,10 @@ export class BrushToolbar extends LitElement {
   #workspace = new WorkspaceController(this, (workspace) => {
     const { brush, selection } = workspace.state;
     const { history } = workspace.engine;
+    const refreshSelection = (): void => {
+      this.disabled = selection.voxelLayer === null;
+      this._notice = paintingNoticeOf(selection);
+    };
 
     this._mode = brush.mode;
     this._axis = brush.axis;
@@ -96,7 +107,7 @@ export class BrushToolbar extends LitElement {
     this._ghost = brush.ghost;
     this._canUndo = history.canUndo;
     this._canRedo = history.canRedo;
-    this.disabled = selection.voxelLayer === null;
+    refreshSelection();
 
     history.on("change", this.#onHistoryChange);
 
@@ -116,9 +127,8 @@ export class BrushToolbar extends LitElement {
       brush.subscribe("ghostChange", (ghost) => {
         this._ghost = ghost;
       }),
-      selection.subscribe("change", () => {
-        this.disabled = selection.voxelLayer === null;
-      }),
+      selection.subscribe("change", refreshSelection),
+      workspace.mapDocument.subscribe("layerUpdated", refreshSelection),
       () => history.off("change", this.#onHistoryChange)
     ];
   });
@@ -126,6 +136,7 @@ export class BrushToolbar extends LitElement {
   constructor() {
     super();
     this.disabled = true;
+    this._notice = null;
   }
 
   attach(
@@ -140,6 +151,7 @@ export class BrushToolbar extends LitElement {
     }
 
     return html`
+      ${this.#renderNotice()}
       <jolly-rail
         orientation="horizontal"
         role="toolbar"
@@ -227,6 +239,34 @@ export class BrushToolbar extends LitElement {
     `;
   }
 
+  #renderNotice(): TemplateResult | typeof nothing {
+    const notice = this._notice;
+    if (notice === null) {
+      return nothing;
+    }
+
+    const { resumeLayer } = notice;
+
+    return html`
+      <div class="notice" role="status">
+        <jolly-icon name="warning"></jolly-icon>
+        <span>${notice.message}</span>
+        ${resumeLayer === null ? nothing : html`
+          <button
+            type="button"
+            @click=${() => this.#resume(resumeLayer)}
+          >Paint on ${resumeLayer}</button>
+        `}
+      </div>
+    `;
+  }
+
+  #resume(
+    layerName: string
+  ): void {
+    this.#workspace.attached.state.selection.selectVoxelLayer(layerName);
+  }
+
   #renderChoice<TValue extends string>(
     choice: ChoiceTool<TValue>
   ): TemplateResult {
@@ -275,6 +315,14 @@ export class BrushToolbar extends LitElement {
   #onGhostToggle(): void {
     this.#workspace.attached.state.brush.ghost = !this.#workspace.attached.state.brush.ghost;
   }
+}
+
+function noticeChanged(
+  next: PaintingNotice | null,
+  previous: PaintingNotice | null
+): boolean {
+  return next?.message !== previous?.message ||
+    next?.resumeLayer !== previous?.resumeLayer;
 }
 
 function axisLetters(

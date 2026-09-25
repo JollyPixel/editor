@@ -14,6 +14,7 @@ type TreeOptionKey =
   | "reorderable"
   | "rowDrag"
   | "multiple"
+  | "requireSelection"
   | "renamable"
   | "indentGuides";
 
@@ -33,6 +34,11 @@ const kOptions: GalleryOption<TreeOptionKey>[] = [
     key: "multiple",
     label: "Multi-select",
     initial: true
+  },
+  {
+    key: "requireSelection",
+    label: "Require selection",
+    initial: false
   },
   {
     key: "renamable",

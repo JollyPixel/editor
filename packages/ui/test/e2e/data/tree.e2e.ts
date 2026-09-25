@@ -113,6 +113,24 @@ test.describe("Tree", () => {
     await expect(page.locator(`${kTree} .row[tabindex="0"]`)).toHaveCount(1);
   });
 
+  test("keeps a row selected on empty-area and ctrl clicks when a selection is required", async({ page }) => {
+    const rows = page.locator(`${kTree} .rows`);
+    const camera = rowOf(page, "camera");
+    const { height } = await boxOf(rows);
+
+    await camera.click();
+    await rows.click({ position: { x: 8, y: height - 8 } });
+    await expect(camera).toHaveAttribute("aria-selected", "false");
+
+    await page.locator(kTree).evaluate((element: HTMLElementTagNameMap["jolly-tree"]) => {
+      element.requireSelection = true;
+    });
+    await camera.click();
+    await rows.click({ position: { x: 8, y: height - 8 } });
+    await camera.click({ modifiers: ["Control"] });
+    await expect(camera).toHaveAttribute("aria-selected", "true");
+  });
+
   test("navigates expansion and activation from the keyboard", async({ page }) => {
     const tree = page.locator(kTree);
     const scene = rowOf(page, "scene");

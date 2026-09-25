@@ -78,12 +78,13 @@ jolly-pane[key="paint"]::part(content) {
   position: absolute;
   inset-block-start: 0;
   inset-inline-start: 0;
-  width: 420px;
+  width: 460px;
   height: 220px;
-  background: linear-gradient(
-    to bottom right,
-    rgb(0 0 0 / 80%),
-    transparent 70%
+  background: radial-gradient(
+    ellipse 100% 100% at top left,
+    rgb(0 0 0 / 85%),
+    rgb(0 0 0 / 60%) 45%,
+    transparent
   );
   transition: opacity 200ms ease;
   pointer-events: none;

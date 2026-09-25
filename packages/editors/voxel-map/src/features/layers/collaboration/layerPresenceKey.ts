@@ -11,7 +11,7 @@ export function layerRefPresenceKey(
 }
 
 export function layerPresenceKey(
-  selection: LayerSelection
+  selection: LayerSelection | null
 ): string | null {
   return selection === null
     ? null

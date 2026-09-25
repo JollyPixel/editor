@@ -52,6 +52,13 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare multiple: boolean;
 
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "require-selection"
+  })
+  declare requireSelection: boolean;
+
   @property({ type: Boolean, reflect: true })
   declare reorderable: boolean;
 
@@ -96,6 +103,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.selected = [];
     this.expanded = [];
     this.multiple = false;
+    this.requireSelection = false;
     this.reorderable = false;
     this.rowDrag = false;
     this.renamable = false;
@@ -126,6 +134,7 @@ export class Tree<TData = unknown> extends LitElement {
       visibleRows: () => this.#visibleRows(),
       selected: () => this.selected,
       multiple: () => this.multiple,
+      requireSelection: () => this.requireSelection,
       interaction: () => this._interaction,
       setInteraction: (next) => {
         this._interaction = next;

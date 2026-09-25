@@ -295,17 +295,39 @@ test("the ghost block previews the placement at size one", async({ page }) => {
   });
 });
 
-test("nothing is painted while no voxel layer is selected", async({ page }) => {
+test("an object layer pauses painting until the voxel layer is resumed", async({ page }) => {
   await page.evaluate(() => {
-    window.voxelMapEditor!.workspace.state.selection.clear();
+    const { engine, state } = window.voxelMapEditor!.workspace;
+    engine.world.objectLayers.add("Props");
+    state.selection.selectObjectLayer("Props");
   });
-  const brushTools = page.getByRole("group", { name: "Brush" });
+  const toolbar = page.locator("voxel-brush-toolbar");
+  const brushTools = toolbar.getByRole("group", { name: "Brush" });
+  const notice = toolbar.getByRole("status");
   await expect(brushTools).toHaveAttribute("aria-disabled", "true");
+  await expect(notice).toContainText("Object layer selected");
+
+  await notice.getByRole("button", { name: "Paint on Ground" }).click();
+
+  await expect(brushTools).toHaveAttribute("aria-disabled", "false");
+  await expect(notice).toBeHidden();
+});
+
+test("nothing is painted and a warning is logged without a voxel layer", async({ page }) => {
+  await page.evaluate(() => {
+    window.voxelMapEditor!.workspace.engine.world.removeLayer("Ground");
+  });
+  const toolbar = page.locator("voxel-brush-toolbar");
+  const brushTools = toolbar.getByRole("group", { name: "Brush" });
+  await expect(brushTools).toHaveAttribute("aria-disabled", "true");
+  await expect(toolbar.getByRole("status"))
+    .toContainText("No voxel layer to paint on");
 
   await page.keyboard.press("BracketRight");
   await clickCell(page, { x: 0, y: 0, z: 0 });
   await nextFrames(page);
 
+  await expect(page.locator("jolly-log")).toContainText("No voxel layer to paint on");
   expect(await voxelCount(page)).toBe(0);
   expect((await brushState(page)).size).toBe(1);
 });

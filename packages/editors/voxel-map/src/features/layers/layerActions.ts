@@ -3,7 +3,10 @@ import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { SelectionStore } from "../../state/index.ts";
+import type {
+  LayerVisibilityStore,
+  SelectionStore
+} from "../../state/index.ts";
 import type { ViewFocus } from "../../scene/viewFocus.ts";
 import { createObjectAt } from "./objects/objectArea.ts";
 import type { AddLayerResult } from "./AddLayerDialog.ts";
@@ -12,34 +15,17 @@ import {
   mergeTargetsFor,
   mergeWarnings
 } from "./mergeTargets.ts";
-import type { LayerRef } from "./layerTree.ts";
+import {
+  layerRowId,
+  type LayerRef
+} from "./layerTree.ts";
 
 export function setLayerEntryVisibility(
-  world: VoxelWorld,
+  visibility: LayerVisibilityStore,
   ref: LayerRef,
   visible: boolean
 ): void {
-  switch (ref.kind) {
-    case "object":
-      world.objectLayers.updateObject(
-        ref.layerName,
-        ref.objectId,
-        { visible }
-      );
-      break;
-    case "object-layer":
-      world.objectLayers.update(
-        ref.name,
-        { visible }
-      );
-      break;
-    default:
-      world.updateLayer(
-        ref.name,
-        { visible }
-      );
-      break;
-  }
+  visibility.override(layerRowId(ref), visible);
 }
 
 export function renameLayerEntry(
@@ -102,7 +88,6 @@ export function createLayerEntry(
 
 export async function removeLayerEntry(
   world: VoxelWorld,
-  selection: SelectionStore,
   ref: LayerRef
 ): Promise<void> {
   if (ref.kind === "object") {
@@ -110,7 +95,6 @@ export async function removeLayerEntry(
       ref.layerName,
       ref.objectId
     );
-    selection.selectObjectLayer(ref.layerName);
 
     return;
   }
@@ -132,7 +116,6 @@ export async function removeLayerEntry(
   else {
     world.removeLayer(ref.name);
   }
-  selection.clear();
 }
 
 export function cloneLayerEntry(

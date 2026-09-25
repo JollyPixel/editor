@@ -1,5 +1,6 @@
 export * from "./EditorState.ts";
 export * from "./BrushStore.ts";
+export * from "./LayerVisibilityStore.ts";
 export * from "./PresenceStore.ts";
 export * from "./SelectionStore.ts";
 export * from "./TilesetStore.ts";

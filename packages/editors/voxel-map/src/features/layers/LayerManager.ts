@@ -18,7 +18,11 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
-import type { PresenceStore, SelectionStore } from "../../state/index.ts";
+import type {
+  LayerVisibilityStore,
+  PresenceStore,
+  SelectionStore
+} from "../../state/index.ts";
 import { ViewFocus } from "../../scene/viewFocus.ts";
 import { AddLayerDialog } from "./AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
@@ -60,6 +64,9 @@ export class LayerManager extends LitElement {
 
   @property({ attribute: false })
   declare presence: PresenceStore;
+
+  @property({ attribute: false })
+  declare layerVisibility: LayerVisibilityStore;
 
   @property({ attribute: false })
   declare viewFocus: ViewFocus;
@@ -113,7 +120,8 @@ export class LayerManager extends LitElement {
       this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
       this.mapDocument.subscribe("reset", this.#onLayerUpdated),
       this.selection.subscribe("change", this.#onSelectionChange),
-      this.presence.subscribe("layerSelectionsChange", this.#onLayerUpdated)
+      this.presence.subscribe("layerSelectionsChange", this.#onLayerUpdated),
+      this.layerVisibility.subscribe("change", this.#onLayerUpdated)
     );
 
     this._selected = this.#selectionFromState();
@@ -129,8 +137,9 @@ export class LayerManager extends LitElement {
 
   override render() {
     return html`
-      <div class="tree-host" @click=${this.#onHostClick}>
+      <div class="tree-host">
         <jolly-tree
+          require-selection
           renamable
           reorderable
           row-drag
@@ -181,31 +190,21 @@ export class LayerManager extends LitElement {
 
   #refreshNodes(): void {
     this._nodes = withLayerBadges(
-      layerTreeNodes(this.world),
+      layerTreeNodes(this.world, this.layerVisibility),
       this.presence.layerSelections
     );
-  }
-
-  #onHostClick(
-    event: MouseEvent
-  ): void {
-    const onRow = event.composedPath().some(
-      (node) => node instanceof HTMLElement && node.classList.contains("row")
-    );
-    if (onRow) {
-      return;
-    }
-
-    this.selection.clear();
   }
 
   #onSelect(
     event: CustomEvent<JollySelectDetail>
   ): void {
-    this._selected = event.detail.selected;
+    const [id] = event.detail.selected;
+    if (id === undefined) {
+      return;
+    }
 
-    const ref = this.#selectedRef;
-    this.selection.current = ref === null ? null : layerSelectionOf(ref);
+    this._selected = [id];
+    this.selection.current = layerSelectionOf(layerRefOf(id));
   }
 
   #onToggleExpand(
@@ -223,11 +222,10 @@ export class LayerManager extends LitElement {
     const { visible } = event.detail;
     const ref = layerRefOf(event.detail.id);
     setLayerEntryVisibility(
-      this.world,
+      this.layerVisibility,
       ref,
       visible
     );
-    this.#refreshNodes();
   }
 
   #onRename(
@@ -284,11 +282,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    await removeLayerEntry(
-      this.world,
-      this.selection,
-      ref
-    );
+    await removeLayerEntry(this.world, ref);
   }
 
   #onReparent(

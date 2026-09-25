@@ -22,7 +22,8 @@ The root entry point exports these pure helpers:
 - `findParentId(nodes, id)` returns the parent ID, `null` for a root node, or
   `undefined` for an unknown ID.
 - `isSelfOrDescendant(nodes, sourceId, targetId)` checks ancestry.
-- `resolveSelection(options)` computes the next selected IDs.
+- `resolveSelection(options)` computes the next selected IDs. With
+  `options.requireSelection`, Ctrl+click keeps the last selected row.
 - `resolveRowDropZone(rect, clientY)` resolves `above`, `inside`, or `below`.
   The former `(offsetY, height)` call shape remains supported for compatibility.
 - `canDrop(options)` checks structural reparenting constraints, then the

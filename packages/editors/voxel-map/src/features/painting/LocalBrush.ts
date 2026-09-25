@@ -77,6 +77,7 @@ export class LocalBrush extends ActorComponent {
    */
   onCursorChange?: (cursor: BrushCursor | null) => void;
   onFocusRequest?: (point: THREE.Vector3Like) => void;
+  onPaintBlocked?: () => void;
 
   readonly engine: VoxelEngine;
 
@@ -91,6 +92,7 @@ export class LocalBrush extends ActorComponent {
   #frameCenter: VoxelCoord | null | undefined;
   #staleAimFrames = 0;
   #altClickTravel = 0;
+  #blockedPaintReported = false;
   #unsubscribers: Array<() => void>;
 
   constructor(
@@ -150,7 +152,10 @@ export class LocalBrush extends ActorComponent {
       brush.subscribe("blockChange", markDirty),
       brush.subscribe("rotationModeChange", markDirty),
       brush.subscribe("flipYChange", markDirty),
-      brush.subscribe("ghostChange", markDirty)
+      brush.subscribe("ghostChange", markDirty),
+      selection.subscribe("change", () => {
+        this.#blockedPaintReported = false;
+      })
     ];
   }
 
@@ -253,8 +258,30 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
+    if (this.#selection.voxelLayer === null) {
+      this.#endStroke();
+      this.#preview.hide();
+      if (
+        input.mouse.wasJustPressed("left") ||
+        input.mouse.wasJustPressed("right")
+      ) {
+        this.#reportBlockedPaint();
+      }
+
+      return;
+    }
+
     this.#updateStroke();
     this.#updatePreview();
+  }
+
+  #reportBlockedPaint(): void {
+    if (this.#blockedPaintReported) {
+      return;
+    }
+
+    this.#blockedPaintReported = true;
+    this.onPaintBlocked?.();
   }
 
   #updateStroke(): void {

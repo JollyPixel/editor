@@ -21,6 +21,7 @@ tree.expanded = ["scene"];
 | `selected` | `string[]` | `[]` |
 | `expanded` | `string[]` | `[]` |
 | `multiple` | `boolean` | `false` |
+| `requireSelection` | `boolean` | `false` |
 | `reorderable` | `boolean` | `false` |
 | `rowDrag` | `boolean` | `false` |
 | `renamable` | `boolean` | `false` |
@@ -30,6 +31,11 @@ tree.expanded = ["scene"];
 
 The component does not mutate these arrays after user input. Consumers write
 event details back to the relevant property.
+
+Clicking the empty area below the rows emits `jolly-select` with an empty
+list. `requireSelection` (attribute `require-selection`) disables that, and
+Ctrl+click no longer removes the last selected row. It only filters user
+input: an empty `selected` set by the consumer is still rendered as is.
 
 | Event | Detail |
 |---|---|
