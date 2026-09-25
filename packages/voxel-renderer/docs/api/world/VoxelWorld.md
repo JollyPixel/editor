@@ -302,9 +302,9 @@ Removing from a layer that does not exist changes nothing and emits nothing.
 
 #### `transaction<T>(fn: () => T): T`
 
-Runs `fn` and returns its result. Use it for large writes such as world
-generation. Writes land immediately, but the voxel commands they emit are held
-until `fn` returns:
+Runs `fn` and returns its result. Use it for large writes; for world
+generation, `patchVoxels()` is faster. Writes land immediately, but the voxel
+commands they emit are held until `fn` returns:
 
 - dirty chunks are marked once per touched chunk rather than once per voxel,
   in every layer;
@@ -326,11 +326,24 @@ world.transaction(() => {
 
 #### `patchVoxels(layerName: string, cells: readonly number[]): void`
 
-Applies a flat patch in a transaction. It emits `"voxels-patched"`, or nothing
-when called through `apply()`. `cells` holds `VOXEL_PATCH_STRIDE` (5) numbers
-per cell: `x, y, z, blockId, transform`, in world space. A `blockId` of `0`
+Applies a flat patch and emits it as one `"voxels-patched"`, or nothing when
+called through `apply()`. `cells` holds `VOXEL_PATCH_STRIDE` (5) numbers per
+cell: `x, y, z, blockId, transform`, in world space. A `blockId` of `0`
 removes the voxel. Throws a `RangeError` when the length is not a multiple
 of 5.
+
+This is the fastest way to write generated voxels, faster than `setVoxel` in a
+`transaction()` even counting the time to build the array: the cells are
+written straight to the layer and emitted as given (a copy), without comparing
+each cell to its previous value. Cells that change nothing, or repeat a cell, stay in the
+emitted patch. Dirty chunks are marked once per touched chunk, as in a
+transaction. If a cell has an invalid block id, the cells before it stay
+written and are emitted, then the `RangeError` is thrown.
+
+Inside a `transaction()`, through `apply()`, or while the history records, the
+patch goes through a transaction instead: its cells join the transaction's
+patch, `apply()` returns only the cells that changed, and the history records a
+single undo step.
 
 ```ts
 world.patchVoxels("Ground", [

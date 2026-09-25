@@ -35,7 +35,10 @@ import {
 import type { VoxelLayerCommand } from "../commands/types.ts";
 import { dispatchCommand } from "./dispatchCommand.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
-import { VoxelEditBatch } from "./VoxelEditBatch.ts";
+import {
+  VoxelEditBatch,
+  type VoxelEditWriteOptions
+} from "./VoxelEditBatch.ts";
 import { VoxelObjectLayers } from "./VoxelObjectLayers.ts";
 import { VoxelLayerStack } from "./VoxelLayerStack.ts";
 import {
@@ -43,6 +46,12 @@ import {
   VOXEL_PATCH_STRIDE
 } from "./voxelPatch.ts";
 import { isAir } from "../blocks/BlockId.ts";
+
+// CONSTANTS
+const kUntrackedWrite: VoxelEditWriteOptions = {
+  track: false,
+  record: false
+};
 
 export type VoxelWorldEvents = {
   command: (command: VoxelLayerCommand) => void;
@@ -520,18 +529,26 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     assertVoxelPatchCells(cells);
 
+    const layer = this.getLayer(layerName);
+    const recording = !this.#muted && this.recorder !== null;
+    const direct = this.#batch === null &&
+      this.#captured === null &&
+      !recording;
+    if (layer && direct) {
+      this.#patchLayer(layer, cells);
+
+      return;
+    }
+
     const writes: VoxelWrite[] = [];
     for (let index = 0; index < cells.length; index += VOXEL_PATCH_STRIDE) {
-      const blockId = cells[index + 3];
       writes.push({
         position: {
           x: cells[index],
           y: cells[index + 1],
           z: cells[index + 2]
         },
-        packed: isAir(blockId) ?
-          VOXEL_ABSENT :
-          packVoxel(blockId, cells[index + 4])
+        packed: packPatchCell(cells, index)
       });
     }
 
@@ -702,6 +719,38 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
   }
 
+  #patchLayer(
+    layer: VoxelLayer,
+    cells: readonly number[]
+  ): void {
+    const batch = new VoxelEditBatch(this.chunkSize);
+    const position = { x: 0, y: 0, z: 0 };
+    let written = 0;
+    try {
+      for (; written < cells.length; written += VOXEL_PATCH_STRIDE) {
+        position.x = cells[written];
+        position.y = cells[written + 1];
+        position.z = cells[written + 2];
+        batch.write(
+          layer,
+          position,
+          packPatchCell(cells, written),
+          kUntrackedWrite
+        );
+      }
+    }
+    finally {
+      batch.markDirty(this.#layers.toArray());
+      if (written > 0) {
+        this.#emit({
+          action: "voxels-patched",
+          layerName: layer.name,
+          metadata: { cells: cells.slice(0, written) }
+        });
+      }
+    }
+  }
+
   #store(
     layer: VoxelLayer,
     position: Vector3Like,
@@ -841,6 +890,17 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       layer.markAllDirty();
     }
   }
+}
+
+function packPatchCell(
+  cells: readonly number[],
+  index: number
+): PackedVoxel {
+  const blockId = cells[index + 3];
+
+  return isAir(blockId) ?
+    VOXEL_ABSENT :
+    packVoxel(blockId, cells[index + 4]);
 }
 
 function* layerChunks(

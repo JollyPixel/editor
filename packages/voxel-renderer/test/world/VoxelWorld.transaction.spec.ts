@@ -17,6 +17,8 @@ import { clearAllDirty } from "../helpers/world.ts";
 const kLayer = "Ground";
 const kOrigin = { x: 0, y: 0, z: 0 };
 
+type WriteMode = "direct" | "transaction" | "patch";
+
 function makeWorld(): {
   world: VoxelWorld;
   commands: VoxelLayerCommand[];
@@ -67,12 +69,13 @@ function* randomCells(
 
 /**
  * Seeds every layer, clears the dirty flags, then writes `cells` into layer
- * "A" with or without a transaction and lists the chunks left dirty.
+ * "A" directly, in a transaction or as one patch, then lists the chunks left
+ * dirty.
  */
 function dirtyAfterWrites(
   positions: Record<string, VoxelCoord>,
   cells: VoxelCoord[],
-  batched: boolean
+  mode: WriteMode
 ): string[] {
   const world = new VoxelWorld(4);
   for (const [name, position] of Object.entries(positions)) {
@@ -89,8 +92,11 @@ function dirtyAfterWrites(
       world.setVoxel("A", { position: cell, blockId: 2 });
     }
   }
-  if (batched) {
+  if (mode === "transaction") {
     world.transaction(write);
+  }
+  else if (mode === "patch") {
+    world.patchVoxels("A", cells.flatMap(({ x, y, z }) => [x, y, z, 2, 0]));
   }
   else {
     write();
@@ -250,8 +256,8 @@ describe("VoxelWorld.transaction - dirty chunks", () => {
     const cells = [...randomCells(300, 7)];
 
     assert.deepEqual(
-      dirtyAfterWrites(layers, cells, true),
-      dirtyAfterWrites(layers, cells, false)
+      dirtyAfterWrites(layers, cells, "transaction"),
+      dirtyAfterWrites(layers, cells, "direct")
     );
   });
 
@@ -263,8 +269,8 @@ describe("VoxelWorld.transaction - dirty chunks", () => {
     };
     const cells = [...randomCells(300, 11)];
 
-    const batched = new Set(dirtyAfterWrites(layers, cells, true));
-    const missing = dirtyAfterWrites(layers, cells, false)
+    const batched = new Set(dirtyAfterWrites(layers, cells, "transaction"));
+    const missing = dirtyAfterWrites(layers, cells, "direct")
       .filter((key) => !batched.has(key));
 
     assert.deepEqual(missing, []);
@@ -351,5 +357,118 @@ describe("VoxelWorld.patchVoxels", () => {
 
     assert.deepEqual(world.getVoxelAt(kOrigin), { blockId: 2, transform: 3 });
     assert.deepEqual(commands, []);
+  });
+
+  it("emits a copy of the cells as given in one patch", () => {
+    const { world, commands } = makeWorld();
+    const cells = [
+      0, 0, 0, 2, 0,
+      1, 0, 0, 3, 1,
+      0, 0, 0, 4, 0
+    ];
+
+    world.patchVoxels(kLayer, cells);
+
+    const [command] = commands;
+    assert.equal(commands.length, 1);
+    assert.equal(command?.action, "voxels-patched");
+    assert.equal(command.layerName, kLayer);
+    assert.deepEqual(command.metadata.cells, cells);
+    assert.notEqual(command.metadata.cells, cells);
+    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 4);
+    assert.deepEqual(
+      world.getVoxelAt({ x: 1, y: 0, z: 0 }),
+      { blockId: 3, transform: 1 }
+    );
+  });
+
+  it("emits nothing for an empty patch", () => {
+    const { world, commands } = makeWorld();
+
+    world.patchVoxels(kLayer, []);
+
+    assert.deepEqual(commands, []);
+  });
+
+  it("dirties exactly what the same writes dirty in a transaction", () => {
+    const layers = {
+      A: { x: 1, y: 0, z: -3 },
+      B: { x: -2, y: 1, z: 5 },
+      C: kOrigin
+    };
+    const cells = [...randomCells(300, 13)];
+
+    assert.deepEqual(
+      dirtyAfterWrites(layers, cells, "patch"),
+      dirtyAfterWrites(layers, cells, "transaction")
+    );
+  });
+
+  it("joins an enclosing transaction", () => {
+    const { world, commands } = makeWorld();
+
+    world.transaction(() => {
+      world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+      world.patchVoxels(kLayer, [0, 0, 0, 0, 0]);
+    });
+
+    assert.deepEqual(commands, []);
+    assert.equal(world.getVoxelAt(kOrigin), undefined);
+  });
+
+  it("records one undo step when the history is enabled", () => {
+    const { world } = makeWorld();
+    const history = new VoxelHistory(world, { enabled: true });
+    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+
+    world.patchVoxels(kLayer, [
+      0, 0, 0, 2, 0,
+      0, 0, 0, 3, 0,
+      1, 0, 0, 4, 0
+    ]);
+    history.undo();
+
+    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 1);
+    assert.equal(world.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
+    assert.equal(history.canUndo, true);
+  });
+
+  it("emits the cells written before an invalid block id", () => {
+    const { world, commands } = makeWorld();
+    clearAllDirty(world);
+
+    assert.throws(
+      () => world.patchVoxels(kLayer, [
+        0, 0, 0, 2, 0,
+        1, 0, 0, -5, 0
+      ]),
+      RangeError
+    );
+
+    assert.equal(commands.length, 1);
+    assert.deepEqual(patchOf(commands[0]), [
+      { x: 0, y: 0, z: 0, blockId: 2, transform: 0 }
+    ]);
+    assert.deepEqual(dirtyChunks(world), [`${kLayer}:0,0,0`]);
+  });
+
+  it("throws on an unknown layer and ignores a removal", () => {
+    const { world, commands } = makeWorld();
+
+    assert.throws(
+      () => world.patchVoxels("NoSuch", [0, 0, 0, 1, 0]),
+      /layer "NoSuch" does not exist/
+    );
+    assert.doesNotThrow(() => world.patchVoxels("NoSuch", [0, 0, 0, 0, 0]));
+    assert.deepEqual(commands, []);
+  });
+
+  it("stays quiet inside silently()", () => {
+    const { world, commands } = makeWorld();
+
+    world.silently(() => world.patchVoxels(kLayer, [0, 0, 0, 2, 0]));
+
+    assert.deepEqual(commands, []);
+    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 2);
   });
 });
