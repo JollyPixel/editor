@@ -1,5 +1,21 @@
 # @jolly-pixel/asset-source
 
+## 3.0.0
+
+### Major Changes
+
+- [#781](https://github.com/JollyPixel/editor/pull/781) [`20c529d`](https://github.com/JollyPixel/editor/commit/20c529d199eb0e5a7430c99003872398a065604e) Thanks [@fraxken](https://github.com/fraxken)! - The asset static handler and the catalog handler are built on `@openally/servo`: content ETags with `304`, `Cache-Control: no-cache`, `nosniff`, and byte ranges for assets.
+  `safeAssetPath` now rejects a Windows reserved segment (`:`, trailing dot or space, device name) as `reserved`, so writes, archive imports and every source refuse it, and asset URLs answer `403`.
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+
+### Patch Changes
+
+- Updated dependencies [[`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/asset@2.1.1
+
 ## 2.1.0
 
 ### Minor Changes

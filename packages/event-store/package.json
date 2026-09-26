@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/event-store",
   "description": "Append-only log for JollyPixel's events",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "type": "module",
   "sideEffects": false,
   "imports": {

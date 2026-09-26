@@ -1,5 +1,23 @@
 # @jolly-pixel/ui
 
+## 3.2.0
+
+### Minor Changes
+
+- [#774](https://github.com/JollyPixel/editor/pull/774) [`a54b8a8`](https://github.com/JollyPixel/editor/commit/a54b8a8bdf5597293fcb1a960ed35aeb0a57d603) Thanks [@fraxken](https://github.com/fraxken)! - Add `reorderable` to `jolly-tabs` (`jolly-tab-reorder` event) and `icon`, `icon-only` and `fixed` to `jolly-tab`.
+  A docked `jolly-dock` now keeps its resize handle inside its own edge, sized by `--jolly-dock-handle-size`, and a collapsed one stays visible as that handle.
+
+- [#773](https://github.com/JollyPixel/editor/pull/773) [`6339aea`](https://github.com/JollyPixel/editor/commit/6339aea20bf9777054eec1e6cb828d40fe96c3cc) Thanks [@fraxken](https://github.com/fraxken)! - Add `activateOnDoubleClick` and `beginRename(id)` to `jolly-tree`, so a renamable tree can still open rows on double-click and rename from F2 or an action.
+
+- [#785](https://github.com/JollyPixel/editor/pull/785) [`10f797b`](https://github.com/JollyPixel/editor/commit/10f797bb711798024f7ed82ed6c615e12de54e3d) Thanks [@fraxken](https://github.com/fraxken)! - Add `requireSelection` to `jolly-tree`: empty-area clicks and Ctrl+click on the last selected row no longer clear the selection.
+
+### Patch Changes
+
+- Updated dependencies [[`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/network@5.0.0
+  - @jolly-pixel/color@1.1.1
+  - @jolly-pixel/resize-handle@1.2.1
+
 ## 3.1.0
 
 ### Minor Changes

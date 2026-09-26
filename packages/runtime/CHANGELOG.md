@@ -1,5 +1,23 @@
 # @jolly-pixel/runtime
 
+## 5.3.0
+
+### Minor Changes
+
+- [#771](https://github.com/JollyPixel/editor/pull/771) [`e606d65`](https://github.com/JollyPixel/editor/commit/e606d657b056d1e20f04a30f8cb2305f19fe9865) Thanks [@fraxken](https://github.com/fraxken)! - `Runtime.create()` forwards a `renderer` option to `ThreeRenderer.create()`, and `runtime.renderer` exposes the concrete `ThreeRenderer`.
+  An explicit `output.pixelRatio` or `output.maxPixelRatio` is no longer overwritten by the GPU detection in `load()`.
+
+### Patch Changes
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- Updated dependencies [[`e606d65`](https://github.com/JollyPixel/editor/commit/e606d657b056d1e20f04a30f8cb2305f19fe9865), [`175845f`](https://github.com/JollyPixel/editor/commit/175845ff00ccac8ae8a81472543feb5345b6f2a1), [`46ea926`](https://github.com/JollyPixel/editor/commit/46ea926b7946125a538f7bb885a5a8e0788f9418), [`a54b8a8`](https://github.com/JollyPixel/editor/commit/a54b8a8bdf5597293fcb1a960ed35aeb0a57d603), [`6339aea`](https://github.com/JollyPixel/editor/commit/6339aea20bf9777054eec1e6cb828d40fe96c3cc), [`10f797b`](https://github.com/JollyPixel/editor/commit/10f797bb711798024f7ed82ed6c615e12de54e3d), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/engine@6.1.0
+  - @jolly-pixel/ui@3.2.0
+  - @jolly-pixel/asset@2.1.1
+  - @jolly-pixel/loop@1.0.1
+
 ## 5.2.0
 
 ### Minor Changes

@@ -1,5 +1,41 @@
 # @jolly-pixel/asset-server
 
+## 5.0.0
+
+### Major Changes
+
+- [#782](https://github.com/JollyPixel/editor/pull/782) [`5d64074`](https://github.com/JollyPixel/editor/commit/5d64074fca7103b22c62c1d652baf8e09618e3c4) Thanks [@fraxken](https://github.com/fraxken)! - Add the `catalogArchiveLimits` back-end option (`archiveLimits` on `CatalogExtension`) to set the decoded entry and archive caps of catalog imports.
+  `readAssetArchive` takes `ArchiveLimits`, which replaces `ReadAssetArchiveOptions`; `./client` now exports it with `DEFAULT_ARCHIVE_MAX_*`, and the root exports `AssetBackendTuning`.
+
+- [#781](https://github.com/JollyPixel/editor/pull/781) [`20c529d`](https://github.com/JollyPixel/editor/commit/20c529d199eb0e5a7430c99003872398a065604e) Thanks [@fraxken](https://github.com/fraxken)! - The asset static handler and the catalog handler are built on `@openally/servo`: content ETags with `304`, `Cache-Control: no-cache`, `nosniff`, and byte ranges for assets.
+  `safeAssetPath` now rejects a Windows reserved segment (`:`, trailing dot or space, device name) as `reserved`, so writes, archive imports and every source refuse it, and asset URLs answer `403`.
+
+- [#777](https://github.com/JollyPixel/editor/pull/777) [`d621be0`](https://github.com/JollyPixel/editor/commit/d621be08881b0fc979a7971ecf3712808bb834e5) Thanks [@fraxken](https://github.com/fraxken)! - Catalog API reshaped: `CatalogProjection`/`CatalogClient` expose `dependencies` (read-only `DependencyIndex`) and `dependentsOf` returns live records; `CatalogExtension` takes one `backend`; `CatalogClient.connect()` replaces `catalogRoom()`.
+  `requestId` is required on catalog commands and replies; `CatalogSessionArchive` and `ArchiveImportDisabledError` moved to editor.host.
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+
+### Minor Changes
+
+- [#773](https://github.com/JollyPixel/editor/pull/773) [`3297510`](https://github.com/JollyPixel/editor/commit/3297510657a51f74aa04c24c64274bae3f7d885b) Thanks [@fraxken](https://github.com/fraxken)! - Make `content` optional on a seed entry: `seedAssetSource` takes `handlers` and writes the serialized `create(id)` state of the entry's kind instead.
+  Add the `AssetKindDescriptor` type, a kind's label and icon as plain data.
+
+- [#788](https://github.com/JollyPixel/editor/pull/788) [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e) Thanks [@fraxken](https://github.com/fraxken)! - Add `InvalidAssetDocumentError`, thrown by a kind's `load` when its content is not a document of that kind.
+  `AssetStateStore` logs it at warn level instead of error.
+
+### Patch Changes
+
+- [#786](https://github.com/JollyPixel/editor/pull/786) [`482d8b7`](https://github.com/JollyPixel/editor/commit/482d8b7d9462d8cd57ee09e21f4d650d9f7cbc17) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `exportAssetArchive` loads each document through its kind and rejects with `unreadable-asset` instead of producing an archive that import refuses.
+  Add `PixelDocument.disownUvRegions()` so another document can own UV regions, and an optional `UVMap.clear()` filter; `UVCompound.parts` is now mutable.
+  Export the UV geometry helpers `rectOf()`, `triangleCornerOf()` and `withRotation()`.
+- Updated dependencies [[`20c529d`](https://github.com/JollyPixel/editor/commit/20c529d199eb0e5a7430c99003872398a065604e), [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/asset-source@3.0.0
+  - @jolly-pixel/network@5.0.0
+  - @jolly-pixel/event-store@4.0.0
+  - @jolly-pixel/asset@2.1.1
+
 ## 4.0.0
 
 ### Major Changes

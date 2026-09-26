@@ -1,5 +1,25 @@
 # @jolly-pixel/engine
 
+## 6.1.0
+
+### Minor Changes
+
+- [#771](https://github.com/JollyPixel/editor/pull/771) [`e606d65`](https://github.com/JollyPixel/editor/commit/e606d657b056d1e20f04a30f8cb2305f19fe9865) Thanks [@fraxken](https://github.com/fraxken)! - Add per-camera post-processing: `CameraComponent.postProcessing` returns the output node of a `THREE.RenderPipeline`, which the default render strategy builds, caches, draws inside the camera viewport and disposes.
+
+- [#778](https://github.com/JollyPixel/editor/pull/778) [`46ea926`](https://github.com/JollyPixel/editor/commit/46ea926b7946125a538f7bb885a5a8e0788f9418) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCameraOptions` now extends `CameraOptions`, so `near`, `far`, `viewport`, `depth`, `postProcessing` and the other camera options can be set at creation.
+
+### Patch Changes
+
+- [#770](https://github.com/JollyPixel/editor/pull/770) [`175845f`](https://github.com/JollyPixel/editor/commit/175845ff00ccac8ae8a81472543feb5345b6f2a1) Thanks [@fraxken](https://github.com/fraxken)! - Use `PCFShadowMap` as the default shadow type for `WebGPURenderer`, avoiding the removed `PCFSoftShadowMap` mode and its render warning.
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- Updated dependencies [[`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/asset@2.1.1
+  - @jolly-pixel/controls@2.1.1
+  - @jolly-pixel/loop@1.0.1
+
 ## 6.0.0
 
 ### Major Changes
