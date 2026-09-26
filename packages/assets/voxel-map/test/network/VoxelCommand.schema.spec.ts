@@ -11,8 +11,6 @@ import { MessageParser } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { voxelCommandProtocol } from "#src/network/VoxelCommand.schema.ts";
 import {
-  blockDefinedCmd,
-  blockMovedCmd,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
@@ -55,13 +53,36 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts({ ...voxelSetCmd(), clientId: 42 }), false);
   });
 
-  test("accepts block and world commands", () => {
-    assert.strictEqual(accepts(blockDefinedCmd()), true);
-    assert.strictEqual(accepts(blockMovedCmd()), true);
+  test("accepts a world replacement", () => {
     assert.strictEqual(accepts(worldReplaceCmd()), true);
   });
 
-  test("accepts tileset commands", () => {
+  test("rejects block and material group commands, which belong to tilesets", () => {
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "block-defined",
+      block: { id: 1 }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "block-moved",
+      blockId: 1,
+      toIndex: 0
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "gold" }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-resized",
+      tilesetId: "stone",
+      tileSize: 64
+    }), false);
+  });
+
+  test("accepts tileset links and removals", () => {
     assert.strictEqual(accepts({
       ...kHeader,
       action: "tileset-added",
@@ -69,63 +90,17 @@ describe("voxelCommandProtocol", () => {
     }), true);
     assert.strictEqual(accepts({
       ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", slot: 3, src: "asset-stone", tileSize: 32 }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
       action: "tileset-removed",
       tilesetId: "stone"
     }), true);
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "tileset-resized",
-      tilesetId: "stone",
-      tileSize: 64
-    }), true);
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "default-tile-size-updated",
-      defaultTileSize: 16
-    }), true);
   });
 
-  test("accepts material group commands and rejects an invalid finish", () => {
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "material-group-defined",
-      group: { id: "gold", roughness: 0.3, metalness: 1, emissive: "#FFaa00" }
-    }), true);
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "material-group-removed",
-      groupId: "gold"
-    }), true);
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "material-group-defined",
-      group: { id: "gold", metalness: 2 }
-    }), false);
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "material-group-defined",
-      group: { id: "gold", emissive: "gold" }
-    }), false);
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "material-group-defined",
-      group: { id: "" }
-    }), false);
-  });
-
-  test("rejects an invalid tile size or tileset id", () => {
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "tileset-resized",
-      tilesetId: "stone",
-      tileSize: 1.5
-    }), false);
-    assert.strictEqual(accepts({
-      ...kHeader,
-      action: "tileset-resized",
-      tilesetId: "stone",
-      tileSize: 8192
-    }), false);
+  test("rejects an invalid tile size, slot or tileset id", () => {
     assert.strictEqual(accepts({
       ...kHeader,
       action: "tileset-added",
@@ -134,20 +109,34 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts({
       ...kHeader,
       action: "tileset-added",
+      tileset: { id: "stone", src: "asset-stone", tileSize: 8192 }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
       tileset: { id: "", src: "asset-stone", tileSize: 16 }
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", slot: 128, src: "asset-stone", tileSize: 16 }
     }), false);
   });
 
-  test("tileset-added takes an asset reference instead of a src", () => {
+  test("an asset tileset needs no tile size, a URL tileset does", () => {
     assert.strictEqual(accepts({
       ...kHeader,
       action: "tileset-added",
       tileset: {
         id: "stone",
-        asset: { id: "asset-stone", kind: "pixelart" },
-        tileSize: 32
+        asset: { id: "asset-stone", kind: "tileset" }
       }
     }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "tileset-added",
+      tileset: { id: "stone", src: "asset-stone" }
+    }), false);
     assert.strictEqual(accepts({
       ...kHeader,
       action: "tileset-added",
@@ -158,8 +147,7 @@ describe("voxelCommandProtocol", () => {
       action: "tileset-added",
       tileset: {
         id: "stone",
-        asset: { id: "asset-stone" },
-        tileSize: 32
+        asset: { id: "asset-stone" }
       }
     }), false);
   });
@@ -221,7 +209,7 @@ describe("voxelCommandProtocol", () => {
       ...command,
       data: {
         ...(command as { data: object; }).data,
-        version: 2
+        version: 1
       }
     }), false);
   });

@@ -27,7 +27,7 @@ export interface TileRect {
 }
 
 export interface TileRescale {
-  tilesetId: string;
+  tilesetId?: string;
   from: number;
   to: number;
 }

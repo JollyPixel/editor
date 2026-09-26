@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
-import type {
-  BlockDefinition,
-  BlockShapeID
+import {
+  resolveBlockDefinition,
+  type BlockDefinition,
+  type BlockShapeID,
+  type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -25,4 +27,12 @@ export function makeBlockDef(
     properties: {},
     ...overrides
   };
+}
+
+export function makeResolvedBlockDef(
+  id: number,
+  shapeId: BlockShapeID,
+  overrides: Partial<BlockDefinition> = {}
+): ResolvedBlockDefinition {
+  return resolveBlockDefinition(makeBlockDef(id, shapeId, overrides));
 }

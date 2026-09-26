@@ -16,11 +16,7 @@ import { protocolEvents } from "@jolly-pixel/network";
 import {
   decodeVoxelDocument,
   encodeVoxelDocument,
-  resolveBlockDefinition,
-  VOXEL_BLOCK_COMMAND_ACTIONS,
-  VOXEL_TILESET_COMMAND_ACTIONS,
-  VOXEL_LAYER_COMMAND_ACTIONS,
-  VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS
+  VOXEL_WORLD_COMMAND_ACTIONS
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -34,8 +30,6 @@ import {
 } from "../../src/index.ts";
 import type { VoxelNetworkCommand } from "../../src/network/server.ts";
 import {
-  blockDefinedCmd,
-  blockMovedCmd,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
@@ -367,10 +361,7 @@ describe("voxelMapAssetKind", () => {
 
     assert.strictEqual(commands!.eventType, VOXEL_MAP_COMMAND);
     assert.deepEqual(protocolEvents(commands!.protocol).toSorted(), [
-      ...VOXEL_LAYER_COMMAND_ACTIONS,
-      ...VOXEL_BLOCK_COMMAND_ACTIONS,
-      ...VOXEL_TILESET_COMMAND_ACTIONS,
-      ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
+      ...VOXEL_WORLD_COMMAND_ACTIONS,
       "world-replace"
     ].toSorted());
   });
@@ -457,6 +448,37 @@ describe("voxelMapAssetKind", () => {
     );
   });
 
+  test("a tileset link the server folded at another slot broadcasts a snapshot", () => {
+    const { protocol, state } = live();
+    const header = {
+      seq: 1,
+      timestamp: 1000
+    };
+    const first: VoxelNetworkCommand = {
+      ...header,
+      clientId: "alice",
+      action: "tileset-added",
+      tileset: { id: "grass", slot: 0, asset: tilesetAsset("asset-grass") }
+    };
+    const second: VoxelNetworkCommand = {
+      ...header,
+      clientId: "bob",
+      action: "tileset-added",
+      tileset: { id: "stone", slot: 0, asset: tilesetAsset("asset-stone") }
+    };
+    state.applyCommand(first);
+    state.applyCommand(second);
+
+    assert.deepEqual(protocol.broadcast!(first), {
+      type: "command",
+      data: first
+    });
+    assert.deepEqual(protocol.broadcast!(second), {
+      type: "snapshot",
+      data: state.toJSON()
+    });
+  });
+
   test("live() gives each room its own conflict tracker", () => {
     const first = live().protocol;
     const second = live().protocol;
@@ -474,224 +496,6 @@ describe("voxelMapAssetKind", () => {
   });
 });
 
-describe("voxelMapAssetKind — block definitions", () => {
-  test("a block command survives serialization, so a shape edit outlives the server", async() => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-
-    foldAssetEvent(handler, state, documentEvent(new VoxelMapState(16)));
-    foldAssetEvent(
-      handler,
-      state,
-      event(
-        VOXEL_MAP_COMMAND,
-        blockDefinedCmd({
-          id: 3,
-          shapeId: "slope"
-        })
-      )
-    );
-
-    const document = decodeVoxelDocument(await handler.serialize(state));
-
-    assert.deepEqual(
-      document.blocks?.map((block) => [block.id, block.shapeId]),
-      [[3, "slope"]]
-    );
-  });
-
-  test("replaying the serialized document restores the block table", async() => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const source = handler.create("asset-1");
-    source.blocks.register(makeBlockDef(3, "slope"));
-
-    const restored = handler.create("asset-1");
-    foldAssetEvent(handler, restored, documentEvent(source));
-
-    assert.strictEqual(restored.blocks.get(3)?.shapeId, "slope");
-  });
-
-  test("a later definition of the same id replaces the earlier one", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-
-    foldAssetEvent(
-      handler,
-      state,
-      event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3, shapeId: "cube" }))
-    );
-    foldAssetEvent(
-      handler,
-      state,
-      event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3, shapeId: "slope" }))
-    );
-
-    assert.strictEqual(state.blocks.get(3)?.shapeId, "slope");
-  });
-
-  test("a block-removed command drops the definition", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-
-    foldAssetEvent(
-      handler,
-      state,
-      event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3 }))
-    );
-    foldAssetEvent(
-      handler,
-      state,
-      event(VOXEL_MAP_COMMAND, {
-        action: "block-removed",
-        blockId: 3,
-        clientId: "client-A",
-        seq: 2,
-        timestamp: 2000
-      })
-    );
-
-    assert.strictEqual(state.blocks.has(3), false);
-  });
-
-  test("a document load replaces the block table rather than merging into it", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-    state.blocks.register(makeBlockDef(9, "cube"));
-
-    const source = new VoxelMapState(16);
-    source.blocks.register(
-      resolveBlockDefinition(makeBlockDef(3, "slope"))
-    );
-    foldAssetEvent(handler, state, documentEvent(source));
-
-    assert.strictEqual(state.blocks.has(9), false);
-    assert.strictEqual(state.blocks.get(3)?.shapeId, "slope");
-  });
-
-  test("a delete clears the block table", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-    state.blocks.register(makeBlockDef(3, "slope"));
-
-    foldAssetEvent(handler, state, event(ASSET_DELETED, {
-      path: "world.voxelmap.json",
-      kind: VOXEL_MAP_KIND
-    }));
-
-    assert.deepEqual([...state.blocks.getAll()], []);
-  });
-});
-
-describe("voxelMapAssetKind — material groups", () => {
-  test("a material group command survives serialization", async() => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-
-    foldAssetEvent(handler, state, documentEvent(new VoxelMapState(16)));
-    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
-      action: "material-group-defined",
-      group: { id: "gold", metalness: 1 },
-      clientId: "client-A",
-      seq: 1,
-      timestamp: 1000
-    }));
-
-    const document = decodeVoxelDocument(await handler.serialize(state));
-
-    assert.deepEqual(
-      document.materialGroups?.map((group) => [group.id, group.metalness]),
-      [["gold", 1]]
-    );
-  });
-
-  test("a delete clears the material groups", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-    state.materialGroups.define({ id: "gold" });
-
-    foldAssetEvent(handler, state, event(ASSET_DELETED, {
-      path: "world.voxelmap.json",
-      kind: VOXEL_MAP_KIND
-    }));
-
-    assert.equal(state.materialGroups.size, 0);
-  });
-});
-
-describe("voxelMapAssetKind — block order", () => {
-  function seed(
-    handler: ReturnType<typeof voxelMapAssetKind>,
-    state: VoxelMapState
-  ): void {
-    for (const id of [1, 2, 3]) {
-      foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id })));
-    }
-  }
-
-  test("a block-moved command reorders the block table", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-    seed(handler, state);
-
-    foldAssetEvent(
-      handler,
-      state,
-      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 3, toIndex: 0 }))
-    );
-
-    assert.deepEqual(
-      [...state.blocks].map((block) => block.id),
-      [3, 1, 2]
-    );
-  });
-
-  test("the order survives serialization and a replay of the document", async() => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const source = handler.create("asset-1");
-    seed(handler, source);
-    foldAssetEvent(
-      handler,
-      source,
-      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 1, toIndex: 2 }))
-    );
-
-    const document = decodeVoxelDocument(await handler.serialize(source));
-    assert.deepEqual(document.blocks?.map((block) => block.id), [2, 3, 1]);
-
-    const restored = handler.create("asset-1");
-    foldAssetEvent(handler, restored, documentEvent(source));
-
-    assert.deepEqual(
-      [...restored.blocks].map((block) => block.id),
-      [2, 3, 1]
-    );
-  });
-
-  test("a move replayed after a checkpoint keeps its effect", () => {
-    const handler = voxelMapAssetKind({ chunkSize: 16 });
-    const state = handler.create("asset-1");
-    seed(handler, state);
-    foldAssetEvent(
-      handler,
-      state,
-      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 3, toIndex: 0 }))
-    );
-
-    const replayed = handler.create("asset-1");
-    foldAssetEvent(handler, replayed, documentEvent(state));
-    foldAssetEvent(
-      handler,
-      replayed,
-      event(VOXEL_MAP_COMMAND, blockMovedCmd({ blockId: 1, toIndex: 0 }))
-    );
-
-    assert.deepEqual(
-      [...replayed.blocks].map((block) => block.id),
-      [1, 3, 2]
-    );
-  });
-});
-
 describe("voxelMapAssetKind — tilesets", () => {
   const kHeader = {
     clientId: "client-A",
@@ -699,61 +503,46 @@ describe("voxelMapAssetKind — tilesets", () => {
     timestamp: 1000
   };
 
-  test("tileset commands survive serialization", async() => {
+  test("a linked tileset receives a slot and survives serialization", async() => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    state.blocks.register(makeBlockDef(1, "cube", {
-      defaultTexture: { col: 1, row: 0, tilesetId: "stone" }
-    }));
 
-    for (const command of [
-      {
-        ...kHeader,
-        action: "tileset-added",
-        tileset: {
-          id: "stone",
-          asset: tilesetAsset("asset-stone"),
-          tileSize: 32
-        }
-      },
-      {
-        ...kHeader,
-        action: "tileset-resized",
-        tilesetId: "stone",
-        tileSize: 16
-      },
-      {
-        ...kHeader,
-        action: "default-tile-size-updated",
-        defaultTileSize: 64
+    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
+      ...kHeader,
+      action: "tileset-added",
+      tileset: {
+        id: "stone",
+        asset: tilesetAsset("asset-stone")
       }
-    ]) {
-      foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, command));
-    }
+    }));
 
     const document = decodeVoxelDocument(await handler.serialize(state));
 
     assert.deepEqual(document.tilesets, [
-      { id: "stone", asset: tilesetAsset("asset-stone"), tileSize: 16 }
+      { id: "stone", slot: 0, asset: tilesetAsset("asset-stone") }
     ]);
     assert.deepEqual(handler.dependencies?.(state), [
       tilesetAsset("asset-stone")
     ]);
-    assert.strictEqual(document.defaultTileSize, 64);
-    assert.deepEqual(document.blocks?.[0].defaultTexture, {
-      col: 2,
-      row: 0,
-      tilesetId: "stone",
-      size: 32
-    });
   });
 
-  test("clear forgets the default tile size", () => {
-    const state = new VoxelMapState(16);
-    state.tilesets.updateDefaultTileSize(32);
+  test("a block command is not part of the map stream", () => {
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    state.world.addLayer("Ground");
 
-    state.clear();
+    foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
+      ...kHeader,
+      action: "block-defined",
+      block: makeBlockDef(3, "cube")
+    }));
+    foldAssetEvent(
+      handler,
+      state,
+      event(VOXEL_MAP_COMMAND, voxelSetCmd({ blockId: 3, seq: 2 }))
+    );
 
-    assert.strictEqual(state.tilesets.defaultTileSize, undefined);
+    assert.strictEqual(state.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 3);
+    assert.strictEqual("blocks" in state, false);
   });
 });

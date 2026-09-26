@@ -54,6 +54,30 @@ to one category. `VOXEL_COMMAND_ACTIONS` lists every action;
 each category. `VoxelCommandAction` and the per-category `*CommandAction` types are
 the matching unions.
 
+## World and tileset document commands
+
+A world persists and shares only its layers and its tileset links. Blocks and
+material groups belong to the tileset they come from, so the same vocabulary
+is split a second way:
+
+```ts
+type VoxelWorldCommand =
+  | VoxelLayerCommand
+  | VoxelTilesetCommand;
+
+type TilesetDocumentCommand =
+  | VoxelBlockCommand
+  | VoxelMaterialGroupCommand
+  | { action: "tile-size-updated"; tileSize: number; };
+```
+
+`isVoxelWorldCommand()` and `isTilesetDocumentCommand()` narrow to either
+half; `VOXEL_WORLD_COMMAND_ACTIONS` and `TILESET_DOCUMENT_COMMAND_ACTIONS`
+list them. A sync adapter sends the world half of an engine's command stream
+to the world's room; the tileset half reaches it through a
+[`TilesetDocument`](../tilesets/TilesetDocument.md), which emits the same
+block and material group commands on its own `"command"` event.
+
 ## Applying commands
 
 ```ts
@@ -63,10 +87,19 @@ function applyVoxelCommand(
   logger?: VoxelLogger
 ): VoxelCommand | null;
 
-interface VoxelCommandTarget {
+function applyVoxelWorldCommand(
+  target: VoxelWorldCommandTarget,
+  command: VoxelWorldCommand,
+  logger?: VoxelLogger
+): VoxelWorldCommand | null;
+
+interface VoxelWorldCommandTarget {
   readonly world: VoxelWorld;
-  readonly blocks: BlockRegistry;
   readonly tilesets: TilesetList;
+}
+
+interface VoxelCommandTarget extends VoxelWorldCommandTarget {
+  readonly blocks: BlockRegistry;
   readonly materialGroups: MaterialGroupList;
 }
 ```
@@ -74,9 +107,12 @@ interface VoxelCommandTarget {
 Routes a command to `world.apply()`, `applyBlockCommand()`,
 [`applyMaterialGroupCommand()`](../materials/MaterialGroup.md#commands) or
 [`applyTilesetCommand()`](../tilesets/tilesets.md#tileset-commands) and returns
-the command as applied, or `null` when it changed nothing. It does not emit, rebuild meshes or rescale atlases; use it on
-a headless document such as a server-side state. `engine.apply()` wraps it
-with those side effects and broadcasts the returned command.
+the command as applied, or `null` when it changed nothing. It does not emit,
+rebuild meshes or rescale atlases; use it on a headless document such as a
+server-side state. `applyVoxelWorldCommand()` needs no block registry or
+material groups, which is what a server holding only worlds folds with.
+`engine.apply()` wraps `applyVoxelCommand()` with those side effects and
+broadcasts the returned command.
 
 ```ts
 function applyBlockCommand(
@@ -145,14 +181,14 @@ does not; use the registry for definitions each peer derives on its own.
 ```ts
 type VoxelTilesetCommand =
   | { action: "tileset-added"; tileset: TilesetDefinition; }
-  | { action: "tileset-removed"; tilesetId: string; }
-  | { action: "tileset-resized"; tilesetId: string; tileSize: number; }
-  | { action: "default-tile-size-updated"; defaultTileSize: number; };
+  | { action: "tileset-removed"; tilesetId: string; };
 ```
 
 `engine.apply()` and its shorthands emit them only when the command changed the
-list. `engine.load()`, `engine.loadTileset()` and direct `engine.tilesets`
-mutations do not.
+list. The emitted `tileset-added` carries the definition as declared, with the
+[slot](../tilesets/tilesets.md#definitions) the tileset received.
+`engine.load()`, `engine.loadTileset()` and direct `engine.tilesets`
+mutations do not emit.
 
 ## Material group commands
 

@@ -1,13 +1,15 @@
 # TiledConverter
 
-`TiledConverter` converts a Tiled JSON map into `VoxelWorldJSON`.
+`TiledConverter` converts a Tiled JSON map into a `VoxelWorldJSON` and the
+blocks its tiles were turned into.
 
 - Tile layers become voxel layers.
 - Object layers become voxel object layers.
 - Group layers are flattened recursively.
 
-Generated block definitions are embedded in the result so `VoxelEngine.load()`
-can register them.
+Generated block definitions come back beside the world, one per unique tile;
+pass them to `VoxelEngineOptions.blocks` or `defineBlocks()` before
+`VoxelEngine.load()`.
 
 ## API
 
@@ -23,11 +25,16 @@ interface TiledConverterOptions {
   collidable?: boolean;
 }
 
+interface TiledConversion {
+  world: VoxelWorldJSON;
+  blocks: ResolvedBlockDefinition[];
+}
+
 class TiledConverter {
   convert(
     map: TiledMap,
     options: TiledConverterOptions
-  ): VoxelWorldJSON;
+  ): TiledConversion;
 }
 ```
 

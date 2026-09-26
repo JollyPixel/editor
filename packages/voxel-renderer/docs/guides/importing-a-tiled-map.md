@@ -14,15 +14,15 @@ import {
 } from "@jolly-pixel/voxel.renderer/plugins/tiled/index.js";
 
 const map = await loadJSON<TiledMap>("map.tmj");
-const document = new TiledConverter().convert(map, {
+const { world, blocks } = new TiledConverter().convert(map, {
   resolveTilesetSrc: (_source, id) => `assets/${id}.png`,
   layerMode: "stacked"
 });
 
-const tilesets = await loadTilesets(document.tilesets);
-const engine = new VoxelEngine({ tilesets });
+const tilesets = await loadTilesets(world.tilesets);
+const engine = new VoxelEngine({ tilesets, blocks });
 
-engine.load(document);
+engine.load(world);
 ```
 
 Use `"flat"` when Tiled layers should overlap at y = 0. Use `"stacked"` when
@@ -71,8 +71,8 @@ const runtime = await Runtime.create("canvas", {
 Read the prepared asset during the component lifecycle:
 
 ```ts
-const { world, tilesets } = this.getAsset(VoxelMap.assets.map);
-const engine = new VoxelEngine({ tilesets });
+const { world, blocks, tilesets } = this.getAsset(VoxelMap.assets.map);
+const engine = new VoxelEngine({ tilesets, blocks });
 
 this.actor.object3D.add(engine.root);
 engine.load(world);

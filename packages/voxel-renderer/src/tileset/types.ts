@@ -57,18 +57,24 @@ export interface TilesetAssetReference {
 export interface TilesetDefinition {
   id: string;
   /**
+   * Block id namespace of the tileset inside a world; the first free slot
+   * when omitted on declaration.
+   */
+  slot?: number;
+  /**
    * Image URL. Absent when `asset` holds the pixels.
    */
   src?: string;
   /**
-   * Catalog asset holding the pixels, resolved by the host instead of
-   * `loadTilesets()`.
+   * Catalog asset holding the pixels, tile size and blocks, resolved by the
+   * host instead of `loadTilesets()`.
    */
   asset?: TilesetAssetReference;
   /**
-   * Tile width/height in pixels (tiles are square).
+   * Tile width/height in pixels (tiles are square). Required with `src`;
+   * declared by the host once an `asset` tileset is loaded.
    */
-  tileSize: number;
+  tileSize?: number;
   /**
    * Number of tile columns in the atlas.
    * @default Math.floor(image.width / tileSize)
@@ -82,6 +88,7 @@ export interface TilesetDefinition {
 }
 
 export type ResolvedTilesetDefinition = TilesetDefinition & {
+  tileSize: number;
   cols: number;
   rows: number;
 };

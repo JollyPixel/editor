@@ -1,26 +1,25 @@
 // Import Third-party Dependencies
 import {
-  applyVoxelCommand,
-  BlockRegistry,
+  applyVoxelWorldCommand,
   deserializeVoxelWorld,
-  MaterialGroupList,
   parseVoxelDocument,
   serializeVoxelWorld,
   TilesetList,
   VoxelWorld,
   type TilesetAssetReference,
-  type VoxelCommandTarget,
+  type VoxelWorldCommandTarget,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
-export class VoxelMapState implements VoxelCommandTarget {
+/**
+ * The server's headless world: its layers and its tileset links.
+ */
+export class VoxelMapState implements VoxelWorldCommandTarget {
   readonly world: VoxelWorld;
-  readonly blocks = new BlockRegistry();
   readonly tilesets = new TilesetList();
-  readonly materialGroups = new MaterialGroupList();
 
   constructor(
     chunkSize: number
@@ -30,10 +29,7 @@ export class VoxelMapState implements VoxelCommandTarget {
 
   toJSON(): VoxelWorldJSON {
     return serializeVoxelWorld(this.world, {
-      tilesets: this.tilesets,
-      defaultTileSize: this.tilesets.defaultTileSize,
-      blocks: this.blocks,
-      materialGroups: this.materialGroups
+      tilesets: this.tilesets
     });
   }
 
@@ -41,9 +37,7 @@ export class VoxelMapState implements VoxelCommandTarget {
     document: VoxelWorldJSON
   ): void {
     deserializeVoxelWorld(document, this.world, {
-      blocks: this.blocks,
-      tilesets: this.tilesets,
-      materialGroups: this.materialGroups
+      tilesets: this.tilesets
     });
   }
 
@@ -57,7 +51,7 @@ export class VoxelMapState implements VoxelCommandTarget {
         );
         break;
       default:
-        applyVoxelCommand(this, command);
+        applyVoxelWorldCommand(this, command);
     }
   }
 
@@ -69,8 +63,6 @@ export class VoxelMapState implements VoxelCommandTarget {
 
   clear(): void {
     this.world.clear();
-    this.blocks.clear();
     this.tilesets.clear();
-    this.materialGroups.clear();
   }
 }

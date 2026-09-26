@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { TiledConverter, type TiledMap } from "../../../src/plugins/tiled/index.ts";
+import { VOXEL_WORLD_VERSION } from "../../../src/serialization/index.ts";
 
 function simpleSrc(_src: string, id: string) {
   return `/assets/${id}.png`;
@@ -51,55 +52,54 @@ function makeMinimalMap(
 describe("TiledConverter.convert — output structure", () => {
   const converter = new TiledConverter();
 
-  it("output version is 1", () => {
+  it("output version is the current world version", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    assert.equal(result.version, 1);
+    assert.equal(result.world.version, VOXEL_WORLD_VERSION);
   });
 
   it("chunkSize defaults to 16", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    assert.equal(result.chunkSize, 16);
+    assert.equal(result.world.chunkSize, 16);
   });
 
   it("chunkSize is respected when provided", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc, chunkSize: 8 });
-    assert.equal(result.chunkSize, 8);
+    assert.equal(result.world.chunkSize, 8);
   });
 
   it("tilesets array has one entry with the correct id and src", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    assert.equal(result.tilesets.length, 1);
-    assert.equal(result.tilesets[0].id, "terrain");
-    assert.equal(result.tilesets[0].src, "/assets/terrain.png");
+    assert.equal(result.world.tilesets.length, 1);
+    assert.equal(result.world.tilesets[0].id, "terrain");
+    assert.equal(result.world.tilesets[0].src, "/assets/terrain.png");
   });
 
   it("one VoxelLayerJSON per tile layer", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    assert.equal(result.layers.length, 1);
-    assert.equal(result.layers[0].name, "Ground");
+    assert.equal(result.world.layers.length, 1);
+    assert.equal(result.world.layers[0].name, "Ground");
   });
 
   it("blocks array has one entry per unique non-zero tile", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    assert.ok(result.blocks !== undefined);
-    assert.equal(result.blocks!.length, 3);
+    assert.equal(result.blocks.length, 3);
   });
 
   it("block IDs start at 1", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    const ids = result.blocks!.map((b) => b.id).sort((a, b) => a - b);
+    const ids = result.blocks.map((b) => b.id).sort((a, b) => a - b);
     assert.equal(ids[0], 1);
   });
 
   it("GID=0 (empty tile) is skipped — no voxel at that position", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    const voxels = result.layers[0].voxels;
+    const voxels = result.world.layers[0].voxels;
     assert.equal(voxels["0,0,1"], undefined);
   });
 
   it("non-zero tiles produce voxels at the expected keys", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    const voxels = result.layers[0].voxels;
+    const voxels = result.world.layers[0].voxels;
     assert.ok("0,0,0" in voxels, "expected voxel at 0,0,0");
     assert.ok("1,0,0" in voxels, "expected voxel at 1,0,0");
     assert.ok("1,0,1" in voxels, "expected voxel at 1,0,1");
@@ -140,8 +140,8 @@ describe("TiledConverter.convert — layerMode", () => {
     });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc, layerMode: "flat" });
-    const y0 = Object.keys(result.layers[0].voxels)[0].split(",")[1];
-    const y1 = Object.keys(result.layers[1].voxels)[0].split(",")[1];
+    const y0 = Object.keys(result.world.layers[0].voxels)[0].split(",")[1];
+    const y1 = Object.keys(result.world.layers[1].voxels)[0].split(",")[1];
     assert.equal(y0, "0");
     assert.equal(y1, "0");
   });
@@ -177,8 +177,8 @@ describe("TiledConverter.convert — layerMode", () => {
     });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc, layerMode: "stacked" });
-    const y0 = Object.keys(result.layers[0].voxels)[0].split(",")[1];
-    const y1 = Object.keys(result.layers[1].voxels)[0].split(",")[1];
+    const y0 = Object.keys(result.world.layers[0].voxels)[0].split(",")[1];
+    const y1 = Object.keys(result.world.layers[1].voxels)[0].split(",")[1];
     assert.equal(y0, "0");
     assert.equal(y1, "1");
   });
@@ -215,8 +215,8 @@ describe("TiledConverter.convert — group layers", () => {
     });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc });
-    assert.equal(result.layers.length, 1);
-    assert.equal(result.layers[0].name, "Nested");
+    assert.equal(result.world.layers.length, 1);
+    assert.equal(result.world.layers[0].name, "Nested");
   });
 });
 
@@ -230,7 +230,7 @@ describe("TiledConverter.convert — base64 data", () => {
     const map = makeMinimalMap(base64);
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc });
 
-    const voxels = result.layers[0].voxels;
+    const voxels = result.world.layers[0].voxels;
     assert.ok("0,0,0" in voxels, "GID=1 should produce voxel at 0,0,0");
     assert.ok("0,0,1" in voxels, "GID=2 should produce voxel at 0,0,1");
     assert.ok("1,0,1" in voxels, "GID=3 should produce voxel at 1,0,1");
@@ -352,11 +352,11 @@ describe("TiledConverter.convert — object layers", () => {
     });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc });
-    assert.ok(result.objectLayers !== undefined);
-    assert.equal(result.objectLayers!.length, 1);
-    assert.equal(result.objectLayers![0].name, "Spawns");
+    assert.ok(result.world.objectLayers !== undefined);
+    assert.equal(result.world.objectLayers!.length, 1);
+    assert.equal(result.world.objectLayers![0].name, "Spawns");
 
-    const obj = result.objectLayers![0].objects[0];
+    const obj = result.world.objectLayers![0].objects[0];
     assert.equal(obj.name, "PlayerStart");
     assert.equal(obj.x, 2);
     assert.equal(obj.z, 3);
@@ -369,7 +369,7 @@ describe("TiledConverter.convert — object layers", () => {
       { resolveTilesetSrc: simpleSrc }
     );
 
-    const obj = result.objectLayers![0].objects[0];
+    const obj = result.world.objectLayers![0].objects[0];
     assert.equal(obj.width, 1);
     assert.equal(obj.height, 1);
   });
@@ -380,7 +380,7 @@ describe("TiledConverter.convert — object layers", () => {
       { resolveTilesetSrc: simpleSrc }
     );
 
-    const obj = result.objectLayers![0].objects[0];
+    const obj = result.world.objectLayers![0].objects[0];
     assert.equal(obj.width, 3);
     assert.equal(obj.height, 1);
   });
@@ -391,13 +391,13 @@ describe("TiledConverter.convert — object layers", () => {
       { resolveTilesetSrc: simpleSrc }
     );
 
-    const obj = result.objectLayers![0].objects[0];
+    const obj = result.world.objectLayers![0].objects[0];
     assert.equal(obj.width, 2);
     assert.equal(obj.height, 4);
   });
 
   it("objectLayers is absent when no object layers exist", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    assert.equal(result.objectLayers, undefined);
+    assert.equal(result.world.objectLayers, undefined);
   });
 });

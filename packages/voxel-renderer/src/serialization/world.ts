@@ -1,60 +1,64 @@
 // Import Internal Dependencies
 import { parseVoxelDocument } from "./document.ts";
-import { BlockTextures } from "../blocks/BlockTextures.ts";
-import type { VoxelWorldJSON } from "./types.ts";
+import {
+  VOXEL_WORLD_VERSION,
+  type VoxelWorldJSON
+} from "./types.ts";
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { TilesetDefinition } from "../tileset/types.ts";
 import {
   packVoxel,
   type PackedVoxel
 } from "../world/packedVoxel.ts";
-import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
-import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 import type { TilesetList } from "../tileset/TilesetList.ts";
-import type { MaterialGroup } from "../materials/MaterialGroup.ts";
-import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
 
 export interface VoxelSerializeOptions {
   tilesets?: Iterable<TilesetDefinition>;
-  defaultTileSize?: number;
-  blocks?: Iterable<ResolvedBlockDefinition>;
-  materialGroups?: Iterable<MaterialGroup>;
 }
 
 export interface VoxelDeserializeOptions {
-  blocks?: BlockRegistry;
   tilesets?: TilesetList;
-  materialGroups?: MaterialGroupList;
+}
+
+/**
+ * The stored form of a tileset link. An asset tileset keeps only its id,
+ * slot and reference, since the asset owns the tile size and grid.
+ */
+export function serializeTilesetDefinition(
+  definition: TilesetDefinition
+): TilesetDefinition {
+  const {
+    tileSize: _tileSize,
+    cols: _cols,
+    rows: _rows,
+    ...link
+  } = definition;
+  if (definition.asset !== undefined) {
+    return {
+      ...link,
+      asset: { ...definition.asset }
+    };
+  }
+
+  return { ...definition };
 }
 
 export function serializeVoxelWorld(
   world: VoxelWorld,
   options: VoxelSerializeOptions = {}
 ): VoxelWorldJSON {
-  const document: VoxelWorldJSON = {
-    version: 1,
+  return {
+    version: VOXEL_WORLD_VERSION,
     chunkSize: world.chunkSize,
-    tilesets: [...options.tilesets ?? []],
+    tilesets: Array.from(
+      options.tilesets ?? [],
+      serializeTilesetDefinition
+    ),
     layers: world
       .getLayers()
       .map((layer) => layer.toJSON()),
     objectLayers: world.objectLayers.toArray()
   };
-  if (options.defaultTileSize !== undefined) {
-    document.defaultTileSize = options.defaultTileSize;
-  }
-  if (options.blocks) {
-    document.blocks = [...options.blocks];
-  }
-  const materialGroups = Array.from(
-    options.materialGroups ?? [],
-    (group) => group.toJSON()
-  );
-  if (materialGroups.length > 0) {
-    document.materialGroups = materialGroups;
-  }
-
-  return document;
 }
 
 export function deserializeVoxelWorld(
@@ -62,24 +66,9 @@ export function deserializeVoxelWorld(
   world: VoxelWorld,
   options: VoxelDeserializeOptions = {}
 ): void {
-  const { blocks, tilesets, materialGroups } = options;
-
   const document = parseVoxelDocument(data);
 
-  tilesets?.replace(document.tilesets, document.defaultTileSize);
-  materialGroups?.replace(document.materialGroups ?? []);
-  if (blocks && document.blocks) {
-    blocks.clear();
-    blocks.registerMany(document.blocks);
-  }
-  if (blocks && tilesets) {
-    const fallback = tilesets.defaultTilesetId;
-    blocks.registerMany(
-      [...blocks].map(
-        (block) => BlockTextures.of(block).withTileset(fallback).applyTo(block)
-      )
-    );
-  }
+  options.tilesets?.replace(document.tilesets);
 
   world.clear();
 

@@ -196,15 +196,6 @@ export type VoxelTilesetCommand =
   | {
     action: "tileset-removed";
     tilesetId: string;
-  }
-  | {
-    action: "tileset-resized";
-    tilesetId: string;
-    tileSize: number;
-  }
-  | {
-    action: "default-tile-size-updated";
-    defaultTileSize: number;
   };
 
 export type VoxelTilesetCommandAction = VoxelTilesetCommand["action"];
@@ -229,6 +220,32 @@ export type VoxelCommand =
   | VoxelMaterialGroupCommand;
 
 export type VoxelCommandAction = VoxelCommand["action"];
+
+/**
+ * Commands a world persists and shares: its layers and its tileset links.
+ * Blocks and material groups belong to the tilesets.
+ */
+export type VoxelWorldCommand =
+  | VoxelLayerCommand
+  | VoxelTilesetCommand;
+
+export type VoxelWorldCommandAction = VoxelWorldCommand["action"];
+
+export type TilesetTileSizeCommand = {
+  action: "tile-size-updated";
+  tileSize: number;
+};
+
+/**
+ * Commands a tileset document applies to its own blocks, material groups
+ * and tile size.
+ */
+export type TilesetDocumentCommand =
+  | VoxelBlockCommand
+  | VoxelMaterialGroupCommand
+  | TilesetTileSizeCommand;
+
+export type TilesetDocumentCommandAction = TilesetDocumentCommand["action"];
 
 export type VoxelCommandOrigin = "local" | "remote";
 

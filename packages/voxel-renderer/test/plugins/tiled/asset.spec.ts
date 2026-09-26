@@ -11,6 +11,7 @@ import {
   TiledMapAssetType
 } from "../../../src/plugins/tiled/asset.ts";
 import type { TiledMap } from "../../../src/plugins/tiled/types.ts";
+import { VOXEL_WORLD_VERSION } from "../../../src/serialization/index.ts";
 
 test("TiledMapAssetLoader prepares a catalog record", async(context) => {
   const map: TiledMap = {
@@ -43,6 +44,7 @@ test("TiledMapAssetLoader prepares a catalog record", async(context) => {
     fetchMock.mock.calls[0]?.arguments[0],
     record.source
   );
-  assert.strictEqual(asset.world.version, 1);
+  assert.strictEqual(asset.world.version, VOXEL_WORLD_VERSION);
+  assert.deepStrictEqual(asset.blocks, []);
   assert.deepStrictEqual(asset.tilesets, []);
 });

@@ -17,13 +17,13 @@ const kRecords = [
   },
   {
     id: "asset-block",
-    kind: "pixelart",
-    source: "textures/block.pixelart"
+    kind: "tileset",
+    source: "tilesets/block.tileset.json"
   },
   {
     id: "asset-stone",
-    kind: "pixelart",
-    source: "textures/stone.pixelart"
+    kind: "tileset",
+    source: "tilesets/stone.tileset.json"
   }
 ];
 
@@ -34,7 +34,7 @@ describe("resolveTilesetAsset", () => {
 
   it("ignores records of another kind and unknown ids", () => {
     assert.equal(resolveTilesetAsset("map-1", kRecords), null);
-    assert.equal(resolveTilesetAsset("textures/block.pixelart", kRecords), null);
+    assert.equal(resolveTilesetAsset("tilesets/block.tileset.json", kRecords), null);
   });
 });
 
@@ -45,7 +45,7 @@ describe("resolveTilesetEntries", () => {
         id: "default",
         asset: {
           id: "asset-block",
-          kind: "pixelart"
+          kind: "tileset"
         },
         tileSize: 32
       },
@@ -58,7 +58,7 @@ describe("resolveTilesetEntries", () => {
         id: "unknown",
         asset: {
           id: "asset-missing",
-          kind: "pixelart"
+          kind: "tileset"
         },
         tileSize: 16
       }

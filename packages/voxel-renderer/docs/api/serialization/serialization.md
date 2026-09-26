@@ -27,60 +27,59 @@ interface VoxelLayerJSON {
   voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
 }
 
+const VOXEL_WORLD_VERSION = 2;
+
 interface VoxelWorldJSON {
-  version: 1;
+  version: 2;
   chunkSize: number;
   tilesets: TilesetDefinition[];
-  defaultTileSize?: number;
   layers: VoxelLayerJSON[];
-  blocks?: ResolvedBlockDefinition[];
-  materialGroups?: MaterialGroupJSON[];
   objectLayers?: VoxelObjectLayerJSON[];
 }
 ```
+
+A world stores its layers and the tilesets it links. Blocks, material groups
+and tile sizes belong to the tilesets: a
+[`TilesetDocument`](../tilesets/TilesetDocument.md) carries them, and a host
+projects them into the world's block registry through the tileset's slot.
+Voxels store the projected ids, so a world file is only meaningful with the
+tilesets it links.
 
 Voxel keys contain layer-local coordinates. The layer position locates that
 coordinate space in the world, so changing only `position` moves the layer.
 Documents without `opacity` or `position` load with opacity `1` and a zero position.
 A missing `compositing` loads as `"composite"`; use `"replace"` explicitly for
-cell replacement. Block surface settings are stored in the block definitions.
-Migrate legacy `transparent: true` to `alphaMode: "blend"` before loading old
-content; the renderer no longer reads the legacy property.
+cell replacement.
 
-`blocks` contains definitions embedded by `VoxelEngine.save()` or a converter.
-`materialGroups` stores the [finish](../materials/MaterialGroup.md) of each
-group named by a block's `materialGroup`.
 `objectLayers` stores placed objects such as spawn points and trigger zones.
-`defaultTileSize` is the tile size pre-selected for a new tileset. The mesher
-never reads it, and a value that fails `isTileSize()` is dropped on parse.
 
 ## Serializing a world
 
 ```ts
 interface VoxelSerializeOptions {
   tilesets?: Iterable<TilesetDefinition>;
-  defaultTileSize?: number;
-  blocks?: Iterable<ResolvedBlockDefinition>;
-  materialGroups?: Iterable<MaterialGroup>;
 }
 
 function serializeVoxelWorld(
   world: VoxelWorld,
   options?: VoxelSerializeOptions
 ): VoxelWorldJSON;
+
+function serializeTilesetDefinition(
+  definition: TilesetDefinition
+): TilesetDefinition;
 ```
 
-The world does not own loaded tileset metadata or the block registry, so callers
-pass those collections explicitly. `blocks` is omitted when it is not supplied,
-and `materialGroups` when it is empty.
+The world does not own the tileset list, so callers pass it explicitly. Each
+definition is written through `serializeTilesetDefinition()`: an `asset`
+tileset keeps only its `id`, `slot` and `asset`, since the asset owns the
+tile size and grid; a `src` tileset keeps its `tileSize`, `cols` and `rows`.
 
 ## Deserializing a world
 
 ```ts
 interface VoxelDeserializeOptions {
-  blocks?: BlockRegistry;
   tilesets?: TilesetList;
-  materialGroups?: MaterialGroupList;
 }
 
 function deserializeVoxelWorld(
@@ -96,23 +95,9 @@ and leaves the target unchanged. Voxel keys are layer coordinates, so a document
 saved with another `chunkSize` loads into the world's own chunks; serializing
 the world again writes the world's `chunkSize`.
 
-`options.tilesets` is replaced with the document's tilesets and
-`defaultTileSize`. When both `blocks` and `tilesets` are supplied, tile
-references without `tilesetId` are assigned the first declared tileset.
-
-`options.materialGroups` is replaced with the document's groups, and emptied
-for a document without any. Invalid or duplicate groups are skipped.
-
-Embedded block definitions are registered when `options.blocks` is supplied. A
-document carrying a `blocks` array is authoritative: the registry is emptied
-and refilled from it, after the document has parsed, so a rejected document
-leaves the registry untouched. A document without one leaves the registry
-alone, which keeps a legacy document from wiping a caller's blocks.
-
-The `blocks` array is ordered, and that order is the registry's own rather than
-an ID order. A document round trips it unchanged, so an editor may reorder the
-block table and have the choice persist. See
-[`BlockRegistry` ordering](../blocks/BlockRegistry.md#ordering).
+`options.tilesets` is replaced with the document's tilesets, slots included.
+The block registry is never touched: register the projected blocks of the
+linked tilesets before or after the load.
 
 See [saving and loading worlds](../../guides/saving-and-loading-worlds.md) for
 the application workflow.
@@ -141,11 +126,12 @@ class InvalidVoxelDocumentError extends Error {
 }
 ```
 
-`parseVoxelDocument()` requires version `1`, a positive integer `chunkSize`,
-and a `layers` array. A missing or malformed `tilesets` value becomes an empty
-array. Malformed `blocks`, `materialGroups` and `objectLayers` values are
-omitted. Unknown
-top-level keys are discarded.
+`parseVoxelDocument()` requires version `VOXEL_WORLD_VERSION`, a positive
+integer `chunkSize`, and a `layers` array. Earlier versions are rejected; there
+is no migration. A missing or malformed `tilesets` value becomes an empty
+array. A malformed `objectLayers` value is omitted. Unknown top-level keys,
+including the `blocks`, `materialGroups` and `defaultTileSize` of earlier
+versions, are discarded.
 
 The parser validates the top-level document shape. Collection elements are
 checked later while the world is deserialized; malformed layer or voxel entries

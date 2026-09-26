@@ -3,19 +3,22 @@
 </h1>
 
 <p align="center">
-  Voxel-map assets
+  Voxel-map and tileset assets
 </p>
 
 ## 💃 Getting Started
 
-This workspace-private package stores `.voxelmap.json` worlds. Add `"@jolly-pixel/asset.voxel-map": "workspace:*"` to another workspace's dependencies.
+This workspace-private package stores `.voxelmap.json` worlds and the `.tileset.json` tilesets they link. Add `"@jolly-pixel/asset.voxel-map": "workspace:*"` to another workspace's dependencies.
 
 ## 👀 Usage example
 
-### Register the kind
+### Register the kinds
 
 ```ts
-import { voxelMapAssetKind } from "@jolly-pixel/asset.voxel-map";
+import {
+  tilesetAssetKind,
+  voxelMapAssetKind
+} from "@jolly-pixel/asset.voxel-map";
 import { createAssetBackend } from "@jolly-pixel/asset-server";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
@@ -26,21 +29,23 @@ using eventStore = await EventStore.persistence.sqlite(
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
-  handlers: [voxelMapAssetKind()]
+  handlers: [tilesetAssetKind(), voxelMapAssetKind()]
 });
 ```
 
-The default `chunkSize` is 16. A map saved with another chunk size still loads, and is saved back with the handler's. The handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy.
+A tileset owns its pixels, tile size, block definitions and material groups. A world links tilesets by asset reference and stores only its layers; every linked tileset is a catalog dependency of the world. The default `chunkSize` is 16. A map saved with another chunk size still loads, and is saved back with the handler's. The map handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy on either kind. `tilesetAssetKind({ tileSize, defaultSize })` sets what a tileset created without content holds.
 
-### Connect a world
+### Connect a world and its tilesets
 
-Construct the sync client before joining the room. `document` is a `VoxelDocument`; a `VoxelEngine` can be used when the editor also needs rendering.
+Construct the sync clients before joining the rooms. `document` is a `VoxelDocument`; a `VoxelEngine` can be used when the editor also needs rendering.
 
 ```ts
 import { assetRoomName } from "@jolly-pixel/asset";
 import { Client } from "@jolly-pixel/network/client";
 import { VoxelDocument } from "@jolly-pixel/voxel.renderer";
 import {
+  SyncedTileset,
+  TILESET_KIND,
   VoxelSyncClient,
   type VoxelMapRoom
 } from "@jolly-pixel/asset.voxel-map/network/client.ts";
@@ -49,22 +54,29 @@ const client = new Client();
 const document = new VoxelDocument();
 const room: VoxelMapRoom = client.room(assetRoomName("voxelmap", assetId));
 const sync = new VoxelSyncClient({ room, document });
-
 room.join();
 
-// On teardown: sync.destroy(); room.leave(); client.destroy();
+const tileset = new SyncedTileset(
+  client.room(assetRoomName(TILESET_KIND, tilesetAssetId))
+);
+tileset.ready.then(() => {
+  // tileset.pixels is a PixelDocument, tileset.tileset a TilesetDocument
+});
+
+// On teardown: sync.destroy(); tileset.dispose(); room.leave(); client.destroy();
 ```
 
-The first snapshot loads the document. Local document commands go to the room; accepted remote commands are applied with a remote origin. `sync.replaceWorld(document.save())` sends a full replacement and produces a new snapshot.
+The first snapshot loads each document. Local world commands go to the map room; local pixel edits and block, material group and tile size commands go to the tileset room. Accepted remote commands are applied with a remote origin. `sync.replaceWorld(document.save())` sends a full replacement and produces a new snapshot.
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `tilesetAsset`, the `VOXEL_MAP_ASSET` descriptor, and the kind and event constants for server registration and persistence.
-- `createTilesetDocument(png, definition)` encodes a tileset image and resolves its tile grid; `createVoxelMapDocument({ chunkSize, tileset, blockLimit?, layer? })` encodes a map holding that tileset, up to `blockLimit` (32) blocks from its tiles and one `layer` (`"Ground"`).
-- `@jolly-pixel/asset.voxel-map/network/client.ts` exports `VoxelSyncClient`, `SyncedVoxelMap`, wire types, and tileset helpers.
-- `@jolly-pixel/asset.voxel-map/network/server.ts` exports `VoxelCommandArbiter` and the protocol and snapshot schemas.
+- `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `tilesetAssetKind`, `TilesetState`, `tilesetAsset`, the `VOXEL_MAP_ASSET` and `TILESET_ASSET` descriptors, and the kind and event constants of both kinds for server registration and persistence.
+- `createTilesetDocument({ tileSize?, size?, pixels?, blocks?, materialGroups? })` builds a `TilesetAssetDocument`; `tilesetDocumentFromPng(png, { tileSize?, blockLimit? })` wraps an image with one cube block per tile, up to `blockLimit` (32). `encodeTilesetDocument`, `decodeTilesetDocument` and `parseTilesetDocument` are its codec; a malformed document throws `InvalidTilesetDocumentError`.
+- `createVoxelMapDocument({ chunkSize, tilesets?, layer? })` encodes a map linking the given tilesets, each in the first free slot, with one `layer` (`"Ground"`).
+- `@jolly-pixel/asset.voxel-map/network/client.ts` exports `VoxelSyncClient`, `SyncedVoxelMap`, `voxelMapDocumentKind`, `TilesetSyncClient`, `SyncedTileset`, `tilesetDocumentKind`, `tilesetRoom`, `createTilesetAsset`, the tileset document helpers, wire types, and `tilesetAsset`.
+- `@jolly-pixel/asset.voxel-map/network/server.ts` exports `VoxelCommandArbiter`, `TilesetCommandArbiter`, and the protocol and snapshot schemas of both rooms.
 
-The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The document format and engine commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
+The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The world and tileset document formats and engine commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
 
 ## ✨ Contributors guide
 

@@ -220,14 +220,6 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     return this.view.whenIdle();
   }
 
-  get defaultTileSize(): number | undefined {
-    return this.document.defaultTileSize;
-  }
-
-  set defaultTileSize(defaultTileSize: number) {
-    this.document.defaultTileSize = defaultTileSize;
-  }
-
   init(): void {
     this.view.init();
   }
@@ -308,13 +300,6 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     tilesetId: string
   ): boolean {
     return this.document.removeTileset(tilesetId);
-  }
-
-  resizeTileset(
-    tilesetId: string,
-    tileSize: number
-  ): boolean {
-    return this.document.resizeTileset(tilesetId, tileSize);
   }
 
   loadTileset(

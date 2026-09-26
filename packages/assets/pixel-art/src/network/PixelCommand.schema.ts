@@ -90,56 +90,61 @@ function pixelCommand(
   };
 }
 
+/**
+ * One schema per pixel command, for protocols that embed them.
+ */
+export const pixelCommandSchemas: readonly JSONSchema[] = [
+  pixelCommand("stroke", {
+    color: kRgba8Schema,
+    positions: { type: "array", items: kVec2Schema }
+  }),
+  pixelCommand("resized", {
+    size: kSizeSchema
+  }),
+  pixelCommand("texture-replaced", {
+    size: kSizeSchema,
+    pixels: { type: "string" }
+  }),
+  pixelCommand("global-fill", {
+    fromColor: kRgba8Schema,
+    toColor: kRgba8Schema
+  }),
+  pixelCommand("select-edit", {
+    positions: { type: "array", items: kVec2Schema },
+    colors: { type: "array", items: kRgba8Schema }
+  }),
+  pixelCommand("uv-region-created", {
+    region: uvRegionSchema
+  }),
+  pixelCommand("uv-region-deleted", {
+    id: { type: "string" }
+  }),
+  pixelCommand("uv-region-moved", {
+    id: { type: "string" },
+    face: { type: ["string", "null"], minLength: 1 },
+    rect: textureRectSchema
+  }),
+  pixelCommand("uv-region-state-changed", {
+    region: uvRegionSchema
+  }),
+  pixelCommand(
+    "uv-region-rotated",
+    {
+      id: { type: "string" },
+      face: uvSlotSchema,
+      geometry: uvGeometrySchema
+    },
+    {
+      id: { type: "string" },
+      face: { type: "null" },
+      region: uvRegionSchema
+    }
+  )
+];
+
 export const pixelCommandProtocol: MessageProtocol = defineMessageProtocol({
   schema: {
-    oneOf: [
-      pixelCommand("stroke", {
-        color: kRgba8Schema,
-        positions: { type: "array", items: kVec2Schema }
-      }),
-      pixelCommand("resized", {
-        size: kSizeSchema
-      }),
-      pixelCommand("texture-replaced", {
-        size: kSizeSchema,
-        pixels: { type: "string" }
-      }),
-      pixelCommand("global-fill", {
-        fromColor: kRgba8Schema,
-        toColor: kRgba8Schema
-      }),
-      pixelCommand("select-edit", {
-        positions: { type: "array", items: kVec2Schema },
-        colors: { type: "array", items: kRgba8Schema }
-      }),
-      pixelCommand("uv-region-created", {
-        region: uvRegionSchema
-      }),
-      pixelCommand("uv-region-deleted", {
-        id: { type: "string" }
-      }),
-      pixelCommand("uv-region-moved", {
-        id: { type: "string" },
-        face: { type: ["string", "null"], minLength: 1 },
-        rect: textureRectSchema
-      }),
-      pixelCommand("uv-region-state-changed", {
-        region: uvRegionSchema
-      }),
-      pixelCommand(
-        "uv-region-rotated",
-        {
-          id: { type: "string" },
-          face: uvSlotSchema,
-          geometry: uvGeometrySchema
-        },
-        {
-          id: { type: "string" },
-          face: { type: "null" },
-          region: uvRegionSchema
-        }
-      )
-    ]
+    oneOf: [...pixelCommandSchemas]
   }
 });
 

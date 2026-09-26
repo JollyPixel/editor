@@ -204,11 +204,13 @@ describe("TilesetManager.syncAtlases", () => {
     assert.equal(a.disposed, 1);
   });
 
-  it("rebuilds a resized atlas on the same texture", () => {
+  it("rebuilds the atlas of a tileset declared with another tile size", () => {
     const manager = new TilesetManager();
     const a = countingTexture();
     registerAtlas(manager, makeAtlasDef({ id: "a", cols: undefined, rows: undefined }), a.texture);
-    manager.tilesets.resize("a", 32);
+    manager.tilesets.declare(
+      makeAtlasDef({ id: "a", cols: undefined, rows: undefined, tileSize: 32 })
+    );
 
     assert.deepEqual(manager.syncAtlases(), ["a"]);
     const atlas = manager.atlas("a");

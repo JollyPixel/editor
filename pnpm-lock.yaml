@@ -350,6 +350,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/pixel-draw.renderer':
+        specifier: workspace:*
+        version: link:../../pixel-draw-renderer
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../../voxel-renderer

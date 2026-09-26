@@ -8,7 +8,10 @@ import {
   property,
   query
 } from "lit/decorators.js";
-import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import {
+  DEFAULT_TILE_SIZE,
+  type VoxelEngine
+} from "@jolly-pixel/voxel.renderer";
 import type { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -17,6 +20,7 @@ import type {
   BlockUsageStore,
   TilesetStore
 } from "../../state/index.ts";
+import type { LinkedTilesets } from "./LinkedTilesets.ts";
 import type { TilesetActions } from "./TilesetActions.ts";
 import type { AddTilesetDialog } from "./AddTilesetDialog.ts";
 import type { TilesetEditDialog } from "./TilesetEditDialog.ts";
@@ -33,6 +37,9 @@ export class TilesetDialogs extends LitElement {
 
   @property({ attribute: false })
   declare tilesets: TilesetStore;
+
+  @property({ attribute: false })
+  declare linked: LinkedTilesets;
 
   @property({ attribute: false })
   declare mapDocument: MapDocument;
@@ -62,8 +69,10 @@ export class TilesetDialogs extends LitElement {
       return;
     }
 
+    const active = this.tilesets.activeTilesetId;
     const result = await this._addDialog.open({
-      defaultTileSize: this.tilesets.defaultTileSize,
+      defaultTileSize: (active === null ? undefined : this.linked.tileSizeOf(active)) ??
+        DEFAULT_TILE_SIZE,
       linkable: actions.linkableAssets()
     });
     if (result === null) {
@@ -79,7 +88,6 @@ export class TilesetDialogs extends LitElement {
         this.log.push("Could not add the tileset: it was refused by the map.");
       }
       else {
-        actions.updateDefaultTileSize(result.tileSize);
         this.tilesets.activeTilesetId = tilesetId;
       }
     }
@@ -105,6 +113,7 @@ export class TilesetDialogs extends LitElement {
         .engine=${this.engine}
         .actions=${this.actions}
         .tilesets=${this.tilesets}
+        .linked=${this.linked}
         .mapDocument=${this.mapDocument}
         .usage=${this.usage}
         .log=${this.log}

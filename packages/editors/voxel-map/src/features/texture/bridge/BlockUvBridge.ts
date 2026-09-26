@@ -24,11 +24,17 @@ import {
 import { blockShapeUv } from "../uv/blockShapeUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
 import type { BrushStore } from "../../../state/index.ts";
+import type { BlockWriter } from "../../tilesets/LinkedTilesets.ts";
 
 export interface BlockUvBridgeOptions {
   runLocalRestore?: <T>(fn: () => T) => T;
   brush: BrushStore;
   mapDocument: MapDocumentSignals;
+  /**
+   * Receives the block a moved region resolves to, in world space.
+   * @default the engine
+   */
+  blocks?: BlockWriter;
 }
 
 /**
@@ -37,6 +43,7 @@ export interface BlockUvBridgeOptions {
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #engine: VoxelEngine;
+  readonly #blocks: BlockWriter;
   readonly #selection: BlockUvSelectionSync;
   readonly #runLocalRestore: <T>(fn: () => T) => T;
   #tilesetId: string | null = null;
@@ -52,6 +59,7 @@ export class BlockUvBridge {
   ) {
     this.#uv = uv;
     this.#engine = engine;
+    this.#blocks = options.blocks ?? engine;
     this.#selection = new BlockUvSelectionSync(
       uv,
       options.brush
@@ -184,7 +192,7 @@ export class BlockUvBridge {
 
     this.#applying = true;
     try {
-      this.#engine.defineBlock(updated);
+      this.#blocks.defineBlock(updated);
     }
     finally {
       this.#applying = false;

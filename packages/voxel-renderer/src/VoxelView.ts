@@ -477,7 +477,7 @@ export class VoxelView {
     def: TilesetDefinition,
     texture: TilesetTexture
   ): void {
-    this.document.tilesets.add(def);
+    this.document.tilesets.declare(def);
     this.tilesetManager.registerTexture(def.id, texture);
     this.#logger.debug(
       `Loaded tileset '${def.id}' from '${def.src ?? def.asset?.id}'`

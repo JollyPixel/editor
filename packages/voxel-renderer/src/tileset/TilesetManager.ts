@@ -65,7 +65,10 @@ export class TilesetManager {
         this.#atlases.delete(tilesetId);
         changed.push(tilesetId);
       }
-      else if (declared.tileSize !== atlas.def.tileSize) {
+      else if (
+        declared.tileSize !== undefined &&
+        declared.tileSize !== atlas.def.tileSize
+      ) {
         this.#atlases.set(
           tilesetId,
           new TilesetAtlas(declared, atlas.texture)
@@ -117,9 +120,6 @@ export class TilesetManager {
     return atlas;
   }
 
-  /**
-   * Rebuilds the average tables of atlases whose texture changed since.
-   */
   refreshAverages(): void {
     for (const atlas of this.#atlases.values()) {
       AtlasAverages.peek(atlas.texture)?.refresh();

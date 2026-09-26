@@ -272,7 +272,6 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly pendingRebuilds: number;
   readonly tilesets: TilesetList;
   readonly materialGroups: MaterialGroupList;
-  defaultTileSize: number | undefined;
 }
 ```
 
@@ -377,22 +376,20 @@ The declared tilesets of the world, shared with `tilesetManager`. The first one 
 default for tile references with no explicit `tilesetId`. See
 [TilesetList](../tilesets/tilesets.md#tilesetlist).
 
-#### `defaultTileSize: number | undefined`
-
-The document's preferred tile size for new tilesets. Assigning it applies a
-`default-tile-size-updated` command.
-
 #### `loadTileset(def: TilesetDefinition, texture: TilesetTexture): void`
 
 Registers an already-loaded texture for a tileset, declaring it first when its ID is
-unknown. Prefer passing `VoxelEngineOptions.tilesets` for pre-loading; use this method
-for a texture that arrives after construction. Loading an ID that already has an atlas
-replaces it, which is how a resized source image takes effect. Emits no command.
+unknown and otherwise updating the declaration in place, slot kept. Prefer passing
+`VoxelEngineOptions.tilesets` for pre-loading; use this method for a texture that
+arrives after construction, and to declare the tile size of an `asset` tileset once
+its document is loaded. Loading an ID that already has an atlas replaces it, which is
+how a resized source image or tile grid takes effect. Emits no command.
 
-#### `addTileset(tileset)`, `removeTileset(tilesetId)`, `resizeTileset(tilesetId, tileSize)`
+#### `addTileset(tileset)`, `removeTileset(tilesetId)`
 
-Shorthands for `apply()` with `tileset-added`, `tileset-removed` and
-`tileset-resized`. Each returns whether the list changed.
+Shorthands for `apply()` with `tileset-added` and `tileset-removed`. Each
+returns whether the list changed. A tileset added without `slot` receives the
+lowest free one.
 
 Blocks using a removed tileset keep their voxels and are drawn with the
 [missing-tileset texture](../tilesets/TilesetManager.md#missing-tileset), a
@@ -402,20 +399,19 @@ is different: its blocks are not drawn and do not cull their neighbours until
 
 #### `save(): VoxelWorldJSON`
 
-Serialises voxel layers, object layers, voxels, the declared tilesets, `defaultTileSize`
-and registered block definitions to a plain JSON object.
+Serialises voxel layers, object layers, voxels and the linked tilesets to a plain
+JSON object. Blocks and material groups are not saved: they belong to the
+[tileset documents](../tilesets/TilesetDocument.md) the world links.
 
 #### `load(data: VoxelWorldJSON, options?: VoxelViewLoadOptions): void`
 
 Clears the current world and restores state from a JSON snapshot. The snapshot's
-tilesets and `defaultTileSize` replace the declared ones, atlases of tilesets it no
-longer declares are disposed, then `options.tilesets` are registered. A
-declared tileset without atlas logs a warning and its faces stay hidden until
-`loadTileset()` registers it. Tile references without `tilesetId` are assigned the
-first declared tileset.
+tilesets replace the declared ones, atlases of tilesets it no longer declares are
+disposed, then `options.tilesets` are registered. A declared tileset without atlas
+logs a warning and its faces stay hidden until `loadTileset()` registers it.
 
-A snapshot carrying block definitions replaces the registry with them; one carrying
-none leaves the registry alone.
+The block registry and material groups are left alone; project the linked tilesets'
+blocks into them before or after the load.
 Set `mergeLayers: true` to collapse voxel layers after deserialization.
 `data.chunkSize` is metadata; `load()` keeps the engine's configured chunk size.
 Construct the engine with the snapshot's chunk size when the values must match.

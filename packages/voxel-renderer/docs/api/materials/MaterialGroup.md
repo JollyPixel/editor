@@ -2,8 +2,9 @@
 
 A material group is the surface finish shared by every block whose
 [`BlockSurface`](../blocks/BlockSurface.md) names it in `materialGroup`. The
-finish is stored in the document, next to `blocks`, so it is saved, loaded
-and synced with the map.
+finish is stored in the [tileset document](../tilesets/TilesetDocument.md),
+next to `blocks`, so it is saved, loaded and synced with the tileset; a world
+receives it projected under `"<tilesetId>/<groupId>"`.
 
 ```ts
 import { VoxelEngine } from "@jolly-pixel/voxel.renderer";

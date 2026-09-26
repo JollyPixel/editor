@@ -174,18 +174,21 @@ describe("VoxelDocument - material groups", () => {
     assert.deepEqual(events, []);
   });
 
-  it("saves and restores the groups", () => {
+  it("keeps the groups across a world save and load", () => {
     const document = makeDocument();
     document.defineMaterialGroup({ id: "gold", roughness: 0.3, metalness: 1 });
     const saved = document.save();
 
-    const restored = makeDocument();
-    restored.load(saved);
+    document.load(saved);
 
-    assert.deepEqual(
-      restored.materialGroups.toJSON(),
-      document.materialGroups.toJSON()
-    );
+    assert.equal("materialGroups" in saved, false);
+    assert.deepEqual(document.materialGroups.toJSON(), [{
+      id: "gold",
+      roughness: 0.3,
+      metalness: 1,
+      emissive: "#000000",
+      emissiveIntensity: 1
+    }]);
   });
 });
 

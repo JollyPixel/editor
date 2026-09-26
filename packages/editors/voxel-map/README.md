@@ -19,7 +19,7 @@ $ pnpm install
 $ pnpm --filter @jolly-pixel/editor.voxel-map dev
 ```
 
-The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and the `default` tileset, and `textures/block.pixelart`, holding the pixels of `public/textures/tileset.png` under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded before tilesets referenced asset ids shows its `default` tileset as unlinked.
+The default URL connects to the asset catalog and collaborative sync server configured by Vite. On a first run the server seeds two documents: `maps/overworld.voxelmap.json`, holding a `Ground` layer and a link to the `default` tileset, and `tilesets/block.tileset.json`, holding the pixels of `public/textures/tileset.png`, its tile size and one cube block per tile under the fixed asset id `tileset-default`. Both live under `assets/`; delete that directory to seed it again. A workspace seeded with an earlier document format does not load: seed it again.
 
 The Vite plugin injects the first `voxelmap` of the catalog as the launch target. Add `?target=<assetId>` to open another map and `?max-fps=<n>` to cap the frame rate. Add `?offline` to run the asset back-end inside the page instead of connecting to the server: the editor opens a seeded map as a guest and no socket is opened. The workspace is stored in the browser (IndexedDB), so maps, tilesets and their ids survive a reload, and the last opened map is reopened. A second tab connects to the tab that owns the persistent workspace through BroadcastChannel.
 
@@ -32,7 +32,7 @@ The Map Config folder of the General tab exports the map with its tilesets as on
 
 Its View section sets how this browser draws the map; nothing there is saved in the map. **Lighting** picks Flat, Studio (the default) or Daylight, which adds a sky and a warm sun. **Reflections** lights material groups with a studio environment, which metal needs to show. **Occlusion** darkens corners and rebuilds every chunk. **Shadows** casts sun shadows around the camera. All three are off by default.
 
-The block editor's Material section names a block's material group. **Finish** saves roughness, metalness and glow for the whole group in the map. Block thumbnails show the finish.
+The block editor's Material section names a block's material group. **Finish** saves roughness, metalness and glow for the whole group in the tileset. Block thumbnails show the finish.
 
 ## 🧩 Bootstrap
 
@@ -56,7 +56,7 @@ void bootStandalone(VoxelMapEditor, {
 });
 ```
 
-Its static members accept `voxelmap` targets and declare the pixel-art model
+Its static members accept `voxelmap` targets and declare the tileset document
 kind, so the session leases every tileset of the map in parallel before the
 editor mounts. Offline, the host opens an IndexedDB-backed workspace, seeds it
 with the project of `loadWorldProject()` when it is empty, and mounts the same
@@ -79,8 +79,8 @@ The pieces live under `src/boot/`:
 | Export | Responsibility |
 |---|---|
 | `EditorShell` | Wires `jolly-log` to the state, then attaches the workspace to the panels and the brush toolbar. |
-| `createWorldProject` | Builds the asset handlers and the seed (default tileset and map), shared by the Vite seed and the offline workspace. |
-| `loadWorldProject` | Fetches `textures/tileset.png` and builds the offline project under a random tileset id. |
+| `createWorldProject` | Builds the asset handlers (`tileset`, `voxelmap`, `texture`) and the seed (default tileset and the map linking it), shared by the Vite seed and the offline workspace. |
+| `loadWorldProject` | Fetches `textures/tileset.png` and builds the offline project under a random tileset asset id. |
 
 `map-config-panel` renders `<jolly-archive-actions>` over
 `session.archives()` from `@jolly-pixel/editor.host`, which exports, imports
@@ -101,37 +101,45 @@ the two is the shown tab. Without it, the block library fills the Blocks pane.
 
 The map's tileset list is `engine.tilesets` from `@jolly-pixel/voxel.renderer`;
 `TilesetDirectory` mirrors it, with catalog labels, into the `TilesetStore`
-whenever the `MapDocument` reports `tilesetsChanged` (a tileset command or a
-world reset) or the catalog changes. `TilesetActions` edits it through the engine, which publishes the
-change to the world room.
+whenever the `MapDocument` reports `tilesetsChanged` (a tileset link command
+or a world reset) or the catalog changes. `TilesetActions` links and unlinks
+tilesets through the engine, which publishes the change to the world room.
 
-A tileset is a `pixelart` asset. Its definition links it through
-`asset.id`; `src` is not used to resolve it, so a definition with only a `src`
-loads unlinked. A definition that resolves to no asset is unlinked: its name is
-read-only, and when it has no source image to open it keeps a disabled texture
-tab that cannot be painted but can still be edited and removed. The definition `id` is an internal key that
-blocks reference, and the label shown everywhere is the asset's file name.
+A tileset is a `tileset` asset holding its pixels, tile size, blocks and
+material groups. The map links it through `asset.id` and gives it a `slot`,
+the block id namespace its blocks are projected into. A definition that
+resolves to no asset is unlinked: its name is read-only and it keeps a
+disabled texture tab that can still be edited and removed. The definition `id`
+is an internal key that tile references name, and the label shown everywhere
+is the asset's file name.
+
+`LinkedTilesets` leases each linked tileset from the session and binds it: a
+`TilesetProjection` mirrors the tileset's blocks and material groups into the
+engine under the slot (ids composed with `composeBlockId`, material groups
+prefixed with the tileset id), and a `TilesetAtlasBridge` feeds the engine
+atlas from the tileset's pixels and follows its tile size. Every block or
+material group write in the editor goes through `LinkedTilesets`, which finds
+the owning tileset by slot and writes the tileset-local form into its
+document; the projection brings the change back into the engine. A block
+therefore belongs to one tileset for its whole life, and unlinking a tileset
+takes its blocks out of the map while the asset keeps them.
 
 Tilesets are managed from the texture editor's tab strip, which stays visible
 with a single tileset. Each tab shows its block count as a badge, with the tile
-size in its tooltip. `+` after the tabs creates a blank pixel-art asset (the
-server suffixes a taken path) or links an existing one; the tile size chosen
-there becomes the map's default for the next tileset. The edit button of the
-active tab opens a dialog for that tileset alone: it renames it (a catalog
-rename), changes its tile size and removes it. A session without
-`TilesetActions` hides `+` and opens the dialog read-only. Removing a tileset keeps its asset and leaves its blocks
-without texture; the Block Library outlines those blocks in red and lists them
-above the grid.
+size in its tooltip. `+` after the tabs creates a blank tileset asset (the
+server suffixes a taken path) with the chosen tile size and grid, or links an
+existing one. The edit button of the active tab opens a dialog for that
+tileset alone: it renames it (a catalog rename), changes its tile size (a
+tileset command that rescales its blocks) and removes it. A session without
+`TilesetActions` hides `+` and opens the dialog read-only.
 
-`TilesetAtlases` feeds the engine atlases from the tilesets' pixel documents,
-with no panel involved: each tileset gets a `TilesetAtlasBridge` over the
-`PixelDocument` leased from the session (a local document for an
-unlinked tileset with a source image). The texture editor shows one tab per
-tileset; each tab that can be opened leases the same document and attaches a canvas and the
-presence layers to it. When a peer deletes the asset of an open tab, the tab
-keeps its lease and is labelled `(detached)` until the tileset is removed. Selecting a block activates its tileset's tab. The block editor assigns
-a block to one tileset, keeping its texel position, and sets its UV size, the
-texel side of its region (`TileRef.size`).
+The texture editor shows one tab per tileset; each tab that can be opened
+shares the leased document and attaches a canvas and the presence layers to
+it. When a peer deletes the asset of an open tab, the tab keeps its lease and
+is labelled `(detached)` until the tileset is removed. Selecting a block
+activates its tileset's tab. The block editor picks a block's tileset when
+the block is created and sets its UV size, the texel side of its region
+(`TileRef.size`).
 
 The Block Library grid height can be dragged from its bottom edge; the height
 is stored under `voxel-map:block-library:height`.

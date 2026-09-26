@@ -22,6 +22,7 @@ import {
   type TilesetSource
 } from "../../tileset/index.ts";
 import type { VoxelWorldJSON } from "../../serialization/types.ts";
+import type { ResolvedBlockDefinition } from "../../blocks/BlockDefinition.ts";
 
 export type TiledMapAssetLoaderOptions = Omit<
   TiledConverterOptions,
@@ -30,6 +31,7 @@ export type TiledMapAssetLoaderOptions = Omit<
 
 export interface VoxelTiledMap {
   readonly world: VoxelWorldJSON;
+  readonly blocks: ResolvedBlockDefinition[];
   readonly tilesets: TilesetSource[];
 }
 
@@ -60,7 +62,7 @@ export class TiledMapAssetLoader implements AssetLoader<VoxelTiledMap> {
     const source = pathUtils.parse(record.source);
     const tilemap = await loadJSON<TiledMap>(record.source);
 
-    const world = new TiledConverter().convert(
+    const { world, blocks } = new TiledConverter().convert(
       tilemap,
       {
         resolveTilesetSrc: (src) => source.dir + src.replace(/\.tsx$/, ".png"),
@@ -74,6 +76,7 @@ export class TiledMapAssetLoader implements AssetLoader<VoxelTiledMap> {
 
     return {
       world,
+      blocks,
       tilesets
     };
   }

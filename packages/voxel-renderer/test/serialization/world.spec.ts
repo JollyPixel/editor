@@ -5,18 +5,17 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   deserializeVoxelWorld,
+  serializeTilesetDefinition,
   serializeVoxelWorld,
+  VOXEL_WORLD_VERSION,
   type VoxelWorldJSON
 } from "../../src/serialization/index.ts";
 import { VoxelWorld } from "../../src/world/index.ts";
-import { BlockRegistry, resolveBlockDefinition } from "../../src/blocks/index.ts";
-import type { TilesetDefinition } from "../../src/tileset/index.ts";
-import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
-import { makeBlockDef } from "../helpers/blocks.ts";
 import {
-  MaterialGroup,
-  MaterialGroupList
-} from "../../src/materials/index.ts";
+  TilesetList,
+  type TilesetDefinition
+} from "../../src/tileset/index.ts";
+import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 // CONSTANTS
 const kAtlas: TilesetDefinition = {
@@ -31,6 +30,18 @@ function untrusted(
   document: object
 ): VoxelWorldJSON {
   return JSON.parse(JSON.stringify(document));
+}
+
+function emptyDocument(
+  fields: Partial<VoxelWorldJSON> = {}
+): VoxelWorldJSON {
+  return {
+    version: VOXEL_WORLD_VERSION,
+    chunkSize: 16,
+    tilesets: [],
+    layers: [],
+    ...fields
+  };
 }
 
 function makeRichWorld(): VoxelWorld {
@@ -63,14 +74,58 @@ describe("voxel world round-trip", () => {
     assert.deepEqual(restored.getVoxelAt({ x: 37, y: 3, z: 2 }), makeVoxelEntry(2, 1));
     assert.equal(restored.getLayer("Glass")?.compositing, "replace");
   });
+
+  it("restores the tileset links with their slots", () => {
+    const tilesets = new TilesetList([
+      { id: "ground", slot: 3, asset: { id: "a1", kind: "tileset" } },
+      kAtlas
+    ]);
+    const json = serializeVoxelWorld(new VoxelWorld(16), { tilesets });
+
+    const restored = new TilesetList();
+    deserializeVoxelWorld(untrusted(json), new VoxelWorld(16), {
+      tilesets: restored
+    });
+
+    assert.deepEqual(
+      restored.definitions().map(({ id, slot }) => [id, slot]),
+      [["ground", 3], ["atlas", 0]]
+    );
+    assert.equal(restored.get("ground")?.tileSize, undefined);
+    assert.equal(restored.get("atlas")?.tileSize, 16);
+  });
+});
+
+describe("serializeTilesetDefinition", () => {
+  it("keeps only the link of an asset tileset", () => {
+    assert.deepEqual(
+      serializeTilesetDefinition({
+        id: "ground",
+        slot: 2,
+        asset: { id: "a1", kind: "tileset" },
+        tileSize: 32,
+        cols: 8,
+        rows: 8
+      }),
+      {
+        id: "ground",
+        slot: 2,
+        asset: { id: "a1", kind: "tileset" }
+      }
+    );
+  });
+
+  it("keeps the tile size and grid of a URL tileset", () => {
+    assert.deepEqual(serializeTilesetDefinition(kAtlas), kAtlas);
+  });
 });
 
 describe("serializeVoxelWorld", () => {
-  it("empty world serializes to version=1 with empty layers", () => {
+  it("empty world serializes to the current version with empty layers", () => {
     const world = new VoxelWorld(16);
     const json = serializeVoxelWorld(world);
 
-    assert.equal(json.version, 1);
+    assert.equal(json.version, VOXEL_WORLD_VERSION);
     assert.equal(json.chunkSize, 16);
     assert.deepEqual(json.layers, []);
     assert.deepEqual(json.tilesets, []);
@@ -84,45 +139,12 @@ describe("serializeVoxelWorld", () => {
     assert.equal(json.tilesets[0].id, "atlas");
   });
 
-  it("includes the defaultTileSize only when one is passed", () => {
-    const world = new VoxelWorld(16);
-
-    assert.equal("defaultTileSize" in serializeVoxelWorld(world), false);
-    assert.equal(
-      serializeVoxelWorld(world, { defaultTileSize: 16 }).defaultTileSize,
-      16
-    );
-  });
-
-  it("omits blocks when none are provided", () => {
-    const world = new VoxelWorld(16);
-
-    assert.equal(serializeVoxelWorld(world).blocks, undefined);
-  });
-
-  it("embeds the blocks passed as metadata", () => {
-    const world = new VoxelWorld(16);
-    const registry = new BlockRegistry([makeBlockDef(4, "cube")]);
-    const json = serializeVoxelWorld(world, { blocks: registry });
+  it("writes no block or material group table", () => {
+    const json = serializeVoxelWorld(new VoxelWorld(16));
 
     assert.deepEqual(
-      json.blocks?.map((block) => block.id),
-      [4]
-    );
-  });
-
-  it("embeds material groups only when there are some", () => {
-    const world = new VoxelWorld(16);
-
-    assert.equal(
-      serializeVoxelWorld(world, { materialGroups: [] }).materialGroups,
-      undefined
-    );
-    assert.deepEqual(
-      serializeVoxelWorld(world, {
-        materialGroups: [new MaterialGroup({ id: "gold", metalness: 1 })]
-      }).materialGroups,
-      [new MaterialGroup({ id: "gold", metalness: 1 }).toJSON()]
+      Object.keys(json).sort(),
+      ["chunkSize", "layers", "objectLayers", "tilesets", "version"]
     );
   });
 
@@ -154,32 +176,14 @@ describe("serializeVoxelWorld", () => {
 });
 
 describe("deserializeVoxelWorld", () => {
-  it("replaces the material groups, clearing them when none are saved", () => {
-    const materialGroups = new MaterialGroupList([{ id: "stale" }]);
-    const document: VoxelWorldJSON = {
-      version: 1,
-      chunkSize: 16,
-      tilesets: [],
-      layers: [],
-      materialGroups: [{ id: "gold", metalness: 1 }]
-    };
-
-    deserializeVoxelWorld(document, new VoxelWorld(16), { materialGroups });
-    assert.deepEqual([...materialGroups.ids()], ["gold"]);
-
-    deserializeVoxelWorld(
-      { ...document, materialGroups: undefined },
-      new VoxelWorld(16),
-      { materialGroups }
-    );
-    assert.equal(materialGroups.size, 0);
-  });
-
-  it("throws when version is not 1", () => {
+  it("rejects version 1 documents", () => {
     const world = new VoxelWorld(16);
 
     assert.throws(
-      () => deserializeVoxelWorld(untrusted({ version: 2 }), world),
+      () => deserializeVoxelWorld(
+        untrusted({ version: 1, chunkSize: 16, tilesets: [], layers: [] }),
+        world
+      ),
       /unsupported version/
     );
   });
@@ -187,21 +191,31 @@ describe("deserializeVoxelWorld", () => {
   it("clears the world before restoring", () => {
     const world = new VoxelWorld(16);
     world.addLayer("Existing");
-    deserializeVoxelWorld(
-      { version: 1, chunkSize: 16, tilesets: [], layers: [] },
-      world
-    );
+    deserializeVoxelWorld(emptyDocument(), world);
 
     assert.equal(world.getLayers().length, 0);
+  });
+
+  it("replaces the tileset links, clearing them when none are saved", () => {
+    const tilesets = new TilesetList([kAtlas]);
+
+    deserializeVoxelWorld(
+      emptyDocument({
+        tilesets: [{ id: "ground", asset: { id: "a1", kind: "tileset" } }]
+      }),
+      new VoxelWorld(16),
+      { tilesets }
+    );
+    assert.deepEqual([...tilesets.ids()], ["ground"]);
+
+    deserializeVoxelWorld(emptyDocument(), new VoxelWorld(16), { tilesets });
+    assert.equal(tilesets.size, 0);
   });
 
   it("defaults opacity and compositing for an older save file", () => {
     const world = new VoxelWorld(16);
     deserializeVoxelWorld(
-      {
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
+      emptyDocument({
         layers: [{
           id: "l1",
           name: "Ground",
@@ -209,7 +223,7 @@ describe("deserializeVoxelWorld", () => {
           order: 0,
           voxels: {}
         }]
-      },
+      }),
       world
     );
 
@@ -223,15 +237,12 @@ describe("deserializeVoxelWorld", () => {
     const world = new VoxelWorld(16);
 
     deserializeVoxelWorld(
-      untrusted({
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
+      untrusted(emptyDocument({
         layers: [
           { id: "top", name: "Top", visible: true, order: 7, voxels: {} },
           { id: "ground", name: "Ground", visible: true, order: 2, voxels: {} }
         ]
-      }),
+      })),
       world
     );
 
@@ -246,9 +257,7 @@ describe("deserializeVoxelWorld", () => {
 
     deserializeVoxelWorld(
       untrusted({
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
+        ...emptyDocument(),
         layers: [{
           id: "l1",
           name: "Ground",
@@ -272,7 +281,7 @@ describe("deserializeVoxelWorld", () => {
 
     assert.throws(
       () => deserializeVoxelWorld(
-        untrusted({ version: 1, chunkSize: 16, tilesets: [] }),
+        untrusted({ version: VOXEL_WORLD_VERSION, chunkSize: 16, tilesets: [] }),
         world
       ),
       /layers is not an array/
@@ -290,10 +299,8 @@ describe("deserializeVoxelWorld", () => {
     const world = new VoxelWorld(16);
 
     deserializeVoxelWorld(
-      untrusted({
-        version: 1,
+      untrusted(emptyDocument({
         chunkSize: 8,
-        tilesets: [],
         layers: [{
           id: "l1",
           name: "Ground",
@@ -301,7 +308,7 @@ describe("deserializeVoxelWorld", () => {
           order: 0,
           voxels
         }]
-      }),
+      })),
       world
     );
 
@@ -319,21 +326,20 @@ describe("deserializeVoxelWorld", () => {
     );
   });
 
-  it("leaves the world untouched when the document is invalid", () => {
+  it("leaves the world and tilesets untouched when the document is invalid", () => {
     const world = new VoxelWorld(16);
     world.addLayer("Existing");
+    const tilesets = new TilesetList([kAtlas]);
     assert.throws(
-      () => deserializeVoxelWorld(untrusted({ version: 2 }), world)
+      () => deserializeVoxelWorld(untrusted({ version: 3 }), world, { tilesets })
     );
     assert.equal(world.getLayers().length, 1);
+    assert.equal(tilesets.has("atlas"), true);
   });
 
   it("applies the serialized layer position to local voxel keys", () => {
     const world = new VoxelWorld(16);
-    deserializeVoxelWorld({
-      version: 1,
-      chunkSize: 16,
-      tilesets: [],
+    deserializeVoxelWorld(emptyDocument({
       layers: [{
         id: "ground",
         name: "Ground",
@@ -344,198 +350,9 @@ describe("deserializeVoxelWorld", () => {
           "2,1,5": { block: 1, transform: 0 }
         }
       }]
-    }, world);
+    }), world);
 
     assert.ok(world.getVoxelAt({ x: 22, y: 4, z: 1 }) !== undefined);
     assert.equal(world.getVoxelAt({ x: 2, y: 1, z: 5 }), undefined);
-  });
-
-  it("registers embedded blocks into the provided registry", () => {
-    const world = new VoxelWorld(16);
-    const registry = new BlockRegistry();
-    deserializeVoxelWorld(
-      {
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
-        blocks: [resolveBlockDefinition(makeBlockDef(7, "cube"))],
-        layers: []
-      },
-      world,
-      { blocks: registry }
-    );
-
-    assert.equal(registry.has(7), true);
-  });
-
-  it("overwrites an existing registration with the embedded definition", () => {
-    const world = new VoxelWorld(16);
-    const registry = new BlockRegistry([
-      makeBlockDef(7, "cube", { name: "local" })
-    ]);
-    deserializeVoxelWorld(
-      {
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
-        blocks: [
-          resolveBlockDefinition(
-            makeBlockDef(7, "cube", { name: "embedded" })
-          )
-        ],
-        layers: []
-      },
-      world,
-      { blocks: registry }
-    );
-
-    assert.equal(registry.get(7)?.name, "embedded");
-  });
-
-  it("drops registrations the embedded block table does not name", () => {
-    const world = new VoxelWorld(16);
-    const registry = new BlockRegistry([makeBlockDef(9, "cube")]);
-    deserializeVoxelWorld(
-      {
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
-        blocks: [resolveBlockDefinition(makeBlockDef(7, "cube"))],
-        layers: []
-      },
-      world,
-      { blocks: registry }
-    );
-
-    assert.equal(registry.has(9), false);
-    assert.equal(registry.has(7), true);
-  });
-
-  it("keeps the registry untouched for a document carrying no block table", () => {
-    const world = new VoxelWorld(16);
-    const registry = new BlockRegistry([makeBlockDef(9, "cube")]);
-    deserializeVoxelWorld(
-      {
-        version: 1,
-        chunkSize: 16,
-        tilesets: [],
-        layers: []
-      },
-      world,
-      { blocks: registry }
-    );
-
-    assert.equal(registry.has(9), true);
-  });
-
-  it("leaves the registry alone when the document is rejected", () => {
-    const world = new VoxelWorld(16);
-    const registry = new BlockRegistry([makeBlockDef(9, "cube")]);
-
-    assert.throws(() => deserializeVoxelWorld(
-      {
-        version: 1,
-        chunkSize: 0,
-        tilesets: [],
-        blocks: [resolveBlockDefinition(makeBlockDef(7, "cube"))],
-        layers: []
-      },
-      world,
-      { blocks: registry }
-    ));
-
-    assert.equal(registry.has(9), true);
-    assert.equal(registry.has(7), false);
-  });
-});
-
-describe("block properties round-trip", () => {
-  it("survives a save and load through the registry", () => {
-    const source = new BlockRegistry([
-      makeBlockDef(1, "cube", {
-        properties: { hardness: 5, material: "stone", solid: true }
-      })
-    ]);
-    const json = serializeVoxelWorld(new VoxelWorld(16), { blocks: source });
-
-    const restored = new BlockRegistry();
-    deserializeVoxelWorld(
-      JSON.parse(JSON.stringify(json)),
-      new VoxelWorld(16),
-      { blocks: restored }
-    );
-
-    assert.deepEqual(restored.propertiesOf(1), {
-      hardness: 5,
-      material: "stone",
-      solid: true
-    });
-  });
-
-  it("scrubs non-scalar properties from an untrusted document", () => {
-    const json = JSON.parse(`{
-      "version": 1,
-      "chunkSize": 16,
-      "tilesets": [],
-      "layers": [],
-      "blocks": [{
-        "id": 1,
-        "name": "Hostile",
-        "shapeId": "cube",
-        "faceTextures": {},
-        "collidable": true,
-        "properties": {
-          "kept": "yes",
-          "nested": { "deep": true },
-          "__proto__": { "polluted": true }
-        }
-      }]
-    }`);
-
-    const restored = new BlockRegistry();
-    deserializeVoxelWorld(json, new VoxelWorld(16), { blocks: restored });
-
-    assert.deepEqual(restored.propertiesOf(1), { kept: "yes" });
-    assert.equal(({} as Record<string, unknown>).polluted, undefined);
-  });
-});
-
-describe("serializeVoxelWorld — block order", () => {
-  function ids(
-    registry: BlockRegistry
-  ): number[] {
-    return [...registry].map((block) => block.id);
-  }
-
-  it("writes the registry order, not the id order", () => {
-    const registry = new BlockRegistry([
-      makeBlockDef(1, "cube"),
-      makeBlockDef(2, "cube"),
-      makeBlockDef(3, "cube")
-    ]);
-    registry.moveTo(3, 0);
-
-    const json = serializeVoxelWorld(new VoxelWorld(16), { blocks: registry });
-
-    assert.deepEqual(
-      json.blocks?.map((block) => block.id),
-      [3, 1, 2]
-    );
-  });
-
-  it("restores a non-id order through a round trip", () => {
-    const source = new BlockRegistry([
-      makeBlockDef(1, "cube"),
-      makeBlockDef(2, "cube"),
-      makeBlockDef(3, "cube")
-    ]);
-    source.moveTo(1, 2);
-
-    const json = serializeVoxelWorld(new VoxelWorld(16), { blocks: source });
-    const restored = new BlockRegistry();
-    deserializeVoxelWorld(json, new VoxelWorld(16), { blocks: restored });
-
-    assert.deepEqual(ids(restored), [2, 3, 1]);
-    assert.deepEqual(ids(restored), ids(source));
   });
 });

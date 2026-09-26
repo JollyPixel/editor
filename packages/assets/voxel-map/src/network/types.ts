@@ -5,7 +5,7 @@ import type {
   AssetRoomRejectedMessage
 } from "@jolly-pixel/asset-server/kinds";
 import type {
-  VoxelCommand,
+  VoxelWorldCommand,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
@@ -14,9 +14,13 @@ export interface VoxelWorldReplaceCommand {
   data: VoxelWorldJSON;
 }
 
+/**
+ * A map room carries layer edits, tileset links and whole-world replacements.
+ * Block and material group edits go to the tileset rooms.
+ */
 export type VoxelNetworkCommand =
   & (
-    | VoxelCommand
+    | VoxelWorldCommand
     | VoxelWorldReplaceCommand
   )
   & network.NetworkCommandHeader;

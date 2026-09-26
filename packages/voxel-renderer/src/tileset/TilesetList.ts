@@ -2,17 +2,19 @@
 import type { TilesetDefinition } from "./types.ts";
 import { isTileSize } from "./tileSize.ts";
 import { MISSING_TILESET_ID } from "./missingTileset.ts";
+import {
+  isTilesetSlot,
+  MAX_TILESET_SLOT
+} from "../blocks/BlockId.ts";
 
 export class TilesetList implements Iterable<TilesetDefinition> {
   #definitions = new Map<string, TilesetDefinition>();
-  #defaultTileSize: number | undefined = undefined;
   #version = 0;
 
   constructor(
-    definitions: Iterable<TilesetDefinition> = [],
-    defaultTileSize?: number
+    definitions: Iterable<TilesetDefinition> = []
   ) {
-    this.replace(definitions, defaultTileSize);
+    this.replace(definitions);
   }
 
   get version(): number {
@@ -25,10 +27,6 @@ export class TilesetList implements Iterable<TilesetDefinition> {
 
   get defaultTilesetId(): string | null {
     return this.#definitions.keys().next().value ?? null;
-  }
-
-  get defaultTileSize(): number | undefined {
-    return this.#defaultTileSize;
   }
 
   [Symbol.iterator](): IterableIterator<TilesetDefinition> {
@@ -57,6 +55,36 @@ export class TilesetList implements Iterable<TilesetDefinition> {
     return definition && copyDefinition(definition);
   }
 
+  bySlot(
+    slot: number
+  ): TilesetDefinition | undefined {
+    for (const definition of this.#definitions.values()) {
+      if (definition.slot === slot) {
+        return copyDefinition(definition);
+      }
+    }
+
+    return undefined;
+  }
+
+  freeSlot(
+    reserved: Iterable<number> = []
+  ): number | null {
+    const taken = new Set<number>(reserved);
+    for (const definition of this.#definitions.values()) {
+      if (definition.slot !== undefined) {
+        taken.add(definition.slot);
+      }
+    }
+    for (let slot = 0; slot <= MAX_TILESET_SLOT; slot++) {
+      if (!taken.has(slot)) {
+        return slot;
+      }
+    }
+
+    return null;
+  }
+
   add(
     definition: TilesetDefinition
   ): boolean {
@@ -67,7 +95,32 @@ export class TilesetList implements Iterable<TilesetDefinition> {
       return false;
     }
 
-    this.#definitions.set(definition.id, copyDefinition(definition));
+    const slotted = this.#withSlot(definition);
+    if (slotted === null) {
+      return false;
+    }
+
+    this.#definitions.set(definition.id, slotted);
+    this.#version++;
+
+    return true;
+  }
+
+  declare(
+    definition: TilesetDefinition
+  ): boolean {
+    const current = this.#definitions.get(definition.id);
+    if (current === undefined) {
+      return this.add(definition);
+    }
+    if (!isDeclarable(definition)) {
+      return false;
+    }
+
+    this.#definitions.set(definition.id, copyDefinition({
+      ...definition,
+      slot: current.slot
+    }));
     this.#version++;
 
     return true;
@@ -84,76 +137,56 @@ export class TilesetList implements Iterable<TilesetDefinition> {
     return true;
   }
 
-  resize(
-    tilesetId: string,
-    tileSize: number
-  ): boolean {
-    const current = this.#definitions.get(tilesetId);
-    if (
-      current === undefined ||
-      !isTileSize(tileSize) ||
-      current.tileSize === tileSize
-    ) {
-      return false;
-    }
-
-    const {
-      cols: _cols,
-      rows: _rows,
-      ...source
-    } = current;
-    this.#definitions.set(tilesetId, {
-      ...source,
-      tileSize
-    });
-    this.#version++;
-
-    return true;
-  }
-
-  updateDefaultTileSize(
-    tileSize: number
-  ): boolean {
-    if (!isTileSize(tileSize) || tileSize === this.#defaultTileSize) {
-      return false;
-    }
-
-    this.#defaultTileSize = tileSize;
-    this.#version++;
-
-    return true;
-  }
-
   replace(
-    definitions: Iterable<TilesetDefinition>,
-    defaultTileSize?: number
+    definitions: Iterable<TilesetDefinition>
   ): void {
     this.#definitions.clear();
-    for (const definition of definitions) {
-      if (
-        isDeclarable(definition) &&
-        !this.#definitions.has(definition.id)
-      ) {
-        this.#definitions.set(definition.id, copyDefinition(definition));
+    const candidates = Array.from(definitions).filter(isDeclarable);
+    const claimed = candidates.flatMap(
+      ({ slot }) => (slot === undefined ? [] : [slot])
+    );
+    for (const definition of candidates) {
+      if (this.#definitions.has(definition.id)) {
+        continue;
+      }
+
+      const slotted = this.#withSlot(definition, claimed);
+      if (slotted !== null) {
+        this.#definitions.set(definition.id, slotted);
       }
     }
-    this.#defaultTileSize = isTileSize(defaultTileSize) ?
-      defaultTileSize :
-      undefined;
     this.#version++;
   }
 
   clear(): void {
     this.replace([]);
   }
+
+  #withSlot(
+    definition: TilesetDefinition,
+    reserved: Iterable<number> = []
+  ): TilesetDefinition | null {
+    const slot = definition.slot ?? this.freeSlot(reserved);
+    if (slot === null || this.bySlot(slot) !== undefined) {
+      return null;
+    }
+
+    return copyDefinition({
+      ...definition,
+      slot
+    });
+  }
 }
 
 function isDeclarable(
   definition: TilesetDefinition
 ): boolean {
+  const { slot, tileSize } = definition;
+
   return definition.id.length > 0 &&
     definition.id !== MISSING_TILESET_ID &&
-    isTileSize(definition.tileSize);
+    (slot === undefined || isTilesetSlot(slot)) &&
+    (tileSize === undefined ? definition.asset !== undefined : isTileSize(tileSize));
 }
 
 function copyDefinition(

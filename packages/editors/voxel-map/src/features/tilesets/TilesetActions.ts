@@ -5,19 +5,20 @@ import {
 } from "@jolly-pixel/asset";
 import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/catalog/client";
 import {
-  createPixelArtAsset,
-  PIXEL_ART_EXTENSION
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
-import { tilesetAsset } from "@jolly-pixel/asset.voxel-map/network/client.ts";
-import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
+  createTilesetAsset,
+  createTilesetDocument,
+  tilesetAsset,
+  TILESET_EXTENSION
+} from "@jolly-pixel/asset.voxel-map/network/client.ts";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { TilesetStore } from "../../state/index.ts";
+import type { LinkedTilesets } from "./LinkedTilesets.ts";
 import { isTilesetAsset } from "./tilesetEntries.ts";
 
 // CONSTANTS
-const kTextureDirectory = "textures/";
+const kTilesetDirectory = "tilesets/";
 
 export interface TilesetCatalogWriter {
   records(): Iterable<AssetRecordData>;
@@ -32,8 +33,10 @@ export interface TilesetCatalogWriter {
 
 export type TilesetEngine = Pick<
   VoxelEngine,
-  "addTileset" | "removeTileset" | "resizeTileset" | "defaultTileSize" | "tilesets"
+  "addTileset" | "removeTileset" | "tilesets"
 >;
+
+export type TilesetDocuments = Pick<LinkedTilesets, "resizeTiles">;
 
 export interface CreateTilesetOptions {
   name: string;
@@ -44,13 +47,13 @@ export interface CreateTilesetOptions {
 
 export interface LinkTilesetOptions {
   assetId: string;
-  tileSize: number;
 }
 
 export interface TilesetActionsOptions {
   engine: TilesetEngine;
   catalog: TilesetCatalogWriter;
   store: TilesetStore;
+  documents: TilesetDocuments;
   generateId?: () => string;
 }
 
@@ -58,6 +61,7 @@ export class TilesetActions {
   readonly #engine: TilesetEngine;
   readonly #catalog: TilesetCatalogWriter;
   readonly #store: TilesetStore;
+  readonly #documents: TilesetDocuments;
   readonly #generateId: () => string;
 
   constructor(
@@ -66,6 +70,7 @@ export class TilesetActions {
     this.#engine = options.engine;
     this.#catalog = options.catalog;
     this.#store = options.store;
+    this.#documents = options.documents;
     this.#generateId = options.generateId ?? (() => crypto.randomUUID());
   }
 
@@ -82,20 +87,19 @@ export class TilesetActions {
   async create(
     options: CreateTilesetOptions
   ): Promise<string | null> {
-    const document = createPixelArtDocument({
-      x: options.cols * options.tileSize,
-      y: options.rows * options.tileSize
-    });
-    const assetId = await createPixelArtAsset(
+    const assetId = await createTilesetAsset(
       this.#catalog,
-      `${kTextureDirectory}${options.name.trim()}${PIXEL_ART_EXTENSION}`,
-      document
+      `${kTilesetDirectory}${options.name.trim()}${TILESET_EXTENSION}`,
+      createTilesetDocument({
+        tileSize: options.tileSize,
+        size: {
+          x: options.cols * options.tileSize,
+          y: options.rows * options.tileSize
+        }
+      })
     );
 
-    return this.link({
-      assetId,
-      tileSize: options.tileSize
-    });
+    return this.link({ assetId });
   }
 
   link(
@@ -104,8 +108,7 @@ export class TilesetActions {
     const tilesetId = this.#uniqueTilesetId();
     const added = this.#engine.addTileset({
       id: tilesetId,
-      asset: tilesetAsset(options.assetId),
-      tileSize: options.tileSize
+      asset: tilesetAsset(options.assetId)
     });
 
     return added ? tilesetId : null;
@@ -121,13 +124,7 @@ export class TilesetActions {
     tilesetId: string,
     tileSize: number
   ): boolean {
-    return this.#engine.resizeTileset(tilesetId, tileSize);
-  }
-
-  updateDefaultTileSize(
-    defaultTileSize: number
-  ): void {
-    this.#engine.defaultTileSize = defaultTileSize;
+    return this.#documents.resizeTiles(tilesetId, tileSize);
   }
 
   async rename(

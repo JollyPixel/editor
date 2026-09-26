@@ -92,6 +92,11 @@ export interface VoxelDocumentOptions {
   onCommand?: VoxelCommandListener;
 }
 
+/**
+ * A world with the blocks and material groups its tilesets project into it.
+ * Saving and loading cover the world and its tileset links only; blocks and
+ * material groups are runtime state a host fills from tileset documents.
+ */
 export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   readonly world: VoxelWorld;
   readonly blocks: BlockRegistry;
@@ -230,19 +235,6 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     });
   }
 
-  get defaultTileSize(): number | undefined {
-    return this.tilesets.defaultTileSize;
-  }
-
-  set defaultTileSize(
-    defaultTileSize: number
-  ) {
-    this.apply({
-      action: "default-tile-size-updated",
-      defaultTileSize
-    });
-  }
-
   addTileset(
     tileset: TilesetDefinition
   ): boolean {
@@ -261,25 +253,11 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
     });
   }
 
-  resizeTileset(
-    tilesetId: string,
-    tileSize: number
-  ): boolean {
-    return this.apply({
-      action: "tileset-resized",
-      tilesetId,
-      tileSize
-    });
-  }
-
   save(): VoxelWorldJSON {
     this.#logger.debug("Serializing world to JSON...");
 
     return serializeVoxelWorld(this.world, {
-      tilesets: this.tilesets,
-      defaultTileSize: this.tilesets.defaultTileSize,
-      blocks: this.blocks,
-      materialGroups: this.materialGroups
+      tilesets: this.tilesets
     });
   }
 
@@ -289,9 +267,7 @@ export class VoxelDocument extends Emitter<VoxelDocumentEvents> {
   ): void {
     this.world.silently(
       () => deserializeVoxelWorld(data, this.world, {
-        blocks: this.blocks,
-        tilesets: this.tilesets,
-        materialGroups: this.materialGroups
+        tilesets: this.tilesets
       })
     );
 

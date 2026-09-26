@@ -177,26 +177,34 @@ that claim, for example to `["textures/**"]`.
 Handlers for editable formats live with the domain they serialize rather than
 here, because asset-server does not depend on the renderers. Each claims a
 fixed extension, exported next to its kind (`PIXEL_ART_EXTENSION`,
-`VOXEL_MAP_EXTENSION`, `VOXEL_MODEL_EXTENSION`), so the editors that create
+`TILESET_EXTENSION`, `VOXEL_MAP_EXTENSION`, `VOXEL_MODEL_EXTENSION`), so the
+editors that create
 documents and the server agree on it:
 
 ```ts
 import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
-import { voxelMapAssetKind } from "@jolly-pixel/asset.voxel-map";
+import {
+  tilesetAssetKind,
+  voxelMapAssetKind
+} from "@jolly-pixel/asset.voxel-map";
 
 await createAssetBackend({
   source,
   eventStore,
   handlers: [
     pixelArtAssetKind(),
+    tilesetAssetKind(),
     voxelMapAssetKind(),
     textureAssetKind()
   ]
 });
 ```
 
-Both take `@jolly-pixel/asset-server` as an optional peer dependency, so a
-browser-only consumer of either renderer never installs it.
+`asset.voxel-map` ships two kinds: `tileset` holds a texture with its tile
+size, blocks and material groups, and `voxelmap` holds the layers of a world
+and its links to tilesets, which it lists as dependencies. Both packages take
+`@jolly-pixel/asset-server` as an optional peer dependency, so a browser-only
+consumer of either renderer never installs it.
 
 ## Writing an editable kind
 

@@ -142,6 +142,7 @@ export class BlocksPanel extends LitElement {
           .mapDocument=${workspace.mapDocument}
           .presence=${workspace.state.presence}
           .tilesets=${workspace.state.tilesets}
+          .linked=${workspace.linkedTilesets}
           .usage=${workspace.usage}
           .order=${this._order}
           .layout=${this.hostsTextureEditor ? "compact" : "fill"}

@@ -3,7 +3,7 @@ import {
   AssetSource,
   type AssetRecordData
 } from "@jolly-pixel/asset";
-import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import { TILESET_KIND } from "@jolly-pixel/asset.voxel-map/network/client.ts";
 import type { TilesetDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -12,7 +12,7 @@ import type { TilesetEntry } from "../../state/index.ts";
 export function isTilesetAsset(
   record: AssetRecordData
 ): boolean {
-  return record.kind === PIXEL_ART_KIND;
+  return record.kind === TILESET_KIND;
 }
 
 export function resolveTilesetAsset(

@@ -1,18 +1,22 @@
 // Import Third-party Dependencies
 import {
-  COMMAND_HEADER_REQUIRED,
-  commandHeaderProperties,
   defineMessageProtocol,
   type JSONSchema,
   type MessageProtocol
 } from "@jolly-pixel/network";
 import {
-  MAX_TILE_SIZE,
-  type VoxelBlockCommandAction,
+  MAX_TILESET_SLOT,
+  VOXEL_WORLD_VERSION,
   type VoxelLayerCommandAction,
-  type VoxelMaterialGroupCommandAction,
   type VoxelTilesetCommandAction
 } from "@jolly-pixel/voxel.renderer";
+
+// Import Internal Dependencies
+import {
+  commandVariant,
+  objectSchema,
+  tileSizeSchema
+} from "./schema.ts";
 
 // CONSTANTS
 const kVector3Schema: JSONSchema = {
@@ -60,17 +64,6 @@ const kVoxelObjectProperties: Record<string, JSONSchema> = {
 const kEmptySchema: JSONSchema = {
   type: "object"
 };
-
-function objectSchema(
-  properties: Record<string, JSONSchema>,
-  required: readonly string[] = Object.keys(properties)
-): JSONSchema {
-  return {
-    type: "object",
-    properties,
-    required: [...required]
-  };
-}
 
 const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
   added: objectSchema({
@@ -160,26 +153,35 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
   })
 };
 
-const kBlockCommandProperties: Record<
-  VoxelBlockCommandAction,
-  Record<string, JSONSchema>
-> = {
-  "block-defined": {
-    block: objectSchema({ id: { type: "integer" } })
-  },
-  "block-removed": {
-    blockId: { type: "integer" }
-  },
-  "block-moved": {
-    blockId: { type: "integer" },
-    toIndex: { type: "integer" }
-  }
+const kSlotSchema: JSONSchema = {
+  type: "integer",
+  minimum: 0,
+  maximum: MAX_TILESET_SLOT
 };
 
-const kTileSizeSchema: JSONSchema = {
-  type: "integer",
-  minimum: 1,
-  maximum: MAX_TILE_SIZE
+/**
+ * A tileset link names an asset, or a URL with its tile size.
+ */
+export const tilesetDefinitionSchema: JSONSchema = {
+  ...objectSchema(
+    {
+      id: { type: "string", minLength: 1 },
+      slot: kSlotSchema,
+      src: { type: "string", minLength: 1 },
+      asset: objectSchema({
+        id: { type: "string", minLength: 1 },
+        kind: { type: "string", minLength: 1 }
+      }),
+      tileSize: tileSizeSchema,
+      cols: { type: "integer", minimum: 1 },
+      rows: { type: "integer", minimum: 1 }
+    },
+    ["id"]
+  ),
+  anyOf: [
+    { required: ["src", "tileSize"] },
+    { required: ["asset"] }
+  ]
 };
 
 const kTilesetCommandProperties: Record<
@@ -187,77 +189,21 @@ const kTilesetCommandProperties: Record<
   Record<string, JSONSchema>
 > = {
   "tileset-added": {
-    tileset: {
-      ...objectSchema(
-        {
-          id: { type: "string", minLength: 1 },
-          src: { type: "string", minLength: 1 },
-          asset: objectSchema({
-            id: { type: "string", minLength: 1 },
-            kind: { type: "string", minLength: 1 }
-          }),
-          tileSize: kTileSizeSchema
-        },
-        ["id", "tileSize"]
-      ),
-      anyOf: [
-        { required: ["src"] },
-        { required: ["asset"] }
-      ]
-    }
+    tileset: tilesetDefinitionSchema
   },
   "tileset-removed": {
     tilesetId: { type: "string" }
-  },
-  "tileset-resized": {
-    tilesetId: { type: "string" },
-    tileSize: kTileSizeSchema
-  },
-  "default-tile-size-updated": {
-    defaultTileSize: kTileSizeSchema
-  }
-};
-
-const kUnitSchema: JSONSchema = {
-  type: "number",
-  minimum: 0,
-  maximum: 1
-};
-
-const kMaterialGroupSchema = objectSchema(
-  {
-    id: { type: "string", minLength: 1 },
-    roughness: kUnitSchema,
-    metalness: kUnitSchema,
-    emissive: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-    emissiveIntensity: { type: "number", minimum: 0 }
-  },
-  ["id"]
-);
-
-const kMaterialGroupCommandProperties: Record<
-  VoxelMaterialGroupCommandAction,
-  Record<string, JSONSchema>
-> = {
-  "material-group-defined": {
-    group: kMaterialGroupSchema
-  },
-  "material-group-removed": {
-    groupId: { type: "string", minLength: 1 }
   }
 };
 
 export const voxelWorldSchema: JSONSchema = {
   type: "object",
   properties: {
-    version: { const: 1 },
+    version: { const: VOXEL_WORLD_VERSION },
     chunkSize: { type: "number" },
-    tilesets: { type: "array" },
-    defaultTileSize: { type: "number" },
-    blocks: { type: "array" },
-    materialGroups: {
+    tilesets: {
       type: "array",
-      items: kMaterialGroupSchema
+      items: tilesetDefinitionSchema
     },
     layers: { type: "array" },
     objectLayers: { type: "array" }
@@ -270,25 +216,6 @@ export const voxelWorldSchema: JSONSchema = {
   ]
 };
 
-function commandVariant(
-  action: string,
-  properties: Record<string, JSONSchema>
-): JSONSchema {
-  return {
-    type: "object",
-    properties: {
-      ...commandHeaderProperties,
-      action: { const: action },
-      ...properties
-    },
-    required: [
-      ...COMMAND_HEADER_REQUIRED,
-      "action",
-      ...Object.keys(properties)
-    ]
-  };
-}
-
 export const voxelCommandProtocol: MessageProtocol = defineMessageProtocol({
   schema: {
     oneOf: [
@@ -298,13 +225,7 @@ export const voxelCommandProtocol: MessageProtocol = defineMessageProtocol({
           metadata
         })
       ),
-      ...Object.entries(kBlockCommandProperties).map(
-        ([action, properties]) => commandVariant(action, properties)
-      ),
       ...Object.entries(kTilesetCommandProperties).map(
-        ([action, properties]) => commandVariant(action, properties)
-      ),
-      ...Object.entries(kMaterialGroupCommandProperties).map(
         ([action, properties]) => commandVariant(action, properties)
       ),
       commandVariant("world-replace", {

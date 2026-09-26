@@ -1,13 +1,11 @@
 // Import Third-party Dependencies
 import {
-  type BlockShapeID,
-  resolveBlockDefinition,
+  VOXEL_WORLD_VERSION,
   type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "../../src/network/server.ts";
-import { makeBlockDef } from "./blocks.ts";
 
 type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;
 
@@ -52,28 +50,6 @@ export function voxelSetCmd(
   };
 }
 
-export interface BlockDefinedCmdOptions {
-  id?: number;
-  shapeId?: BlockShapeID;
-  clientId?: string;
-  seq?: number;
-  timestamp?: number;
-}
-
-export function blockDefinedCmd(
-  opts: BlockDefinedCmdOptions = {}
-): Extract<VoxelNetworkCommand, { action: "block-defined"; }> {
-  return {
-    action: "block-defined",
-    block: resolveBlockDefinition(
-      makeBlockDef(opts.id ?? 1, opts.shapeId ?? "cube")
-    ),
-    clientId: opts.clientId ?? "client-A",
-    seq: opts.seq ?? 1,
-    timestamp: opts.timestamp ?? 1000
-  };
-}
-
 export interface WorldReplaceCmdOptions {
   chunkSize?: number;
   clientId?: string;
@@ -87,32 +63,11 @@ export function worldReplaceCmd(
   return {
     action: "world-replace",
     data: {
-      version: 1,
+      version: VOXEL_WORLD_VERSION,
       chunkSize: opts.chunkSize ?? 16,
       tilesets: [],
       layers: []
     },
-    clientId: opts.clientId ?? "client-A",
-    seq: opts.seq ?? 1,
-    timestamp: opts.timestamp ?? 1000
-  };
-}
-
-export interface BlockMovedCmdOptions {
-  blockId?: number;
-  toIndex?: number;
-  clientId?: string;
-  seq?: number;
-  timestamp?: number;
-}
-
-export function blockMovedCmd(
-  opts: BlockMovedCmdOptions = {}
-): Extract<VoxelNetworkCommand, { action: "block-moved"; }> {
-  return {
-    action: "block-moved",
-    blockId: opts.blockId ?? 1,
-    toIndex: opts.toIndex ?? 0,
     clientId: opts.clientId ?? "client-A",
     seq: opts.seq ?? 1,
     timestamp: opts.timestamp ?? 1000

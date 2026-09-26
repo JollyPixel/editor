@@ -82,8 +82,8 @@ export function tilesetRemovalMessage(
     "none placed in the map" :
     `${formatCount(usage.voxels, "voxel")} in the map`;
   const verb = count === 1 ?
-    "uses this tileset and will lose its texture" :
-    "use this tileset and will lose their texture";
+    "comes from this tileset and leaves the map with it" :
+    "come from this tileset and leave the map with it";
 
   return `${formatCount(count, "block")} (${placed}) ${verb}.`;
 }

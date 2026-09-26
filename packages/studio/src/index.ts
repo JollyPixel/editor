@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
 import { PIXEL_ART_ASSET } from "@jolly-pixel/asset.pixel-art";
-import { VOXEL_MAP_ASSET } from "@jolly-pixel/asset.voxel-map";
+import {
+  TILESET_ASSET,
+  VOXEL_MAP_ASSET
+} from "@jolly-pixel/asset.voxel-map";
 import { VOXEL_MODEL_ASSET } from "@jolly-pixel/asset.voxel-model";
 import { rememberQueryUsername } from "@jolly-pixel/editor.host";
 import { showConfirm } from "@jolly-pixel/ui";
@@ -17,6 +20,7 @@ import "./shell/Studio.ts";
 // CONSTANTS
 const kAssetKinds = [
   PIXEL_ART_ASSET,
+  TILESET_ASSET,
   VOXEL_MAP_ASSET,
   VOXEL_MODEL_ASSET
 ];

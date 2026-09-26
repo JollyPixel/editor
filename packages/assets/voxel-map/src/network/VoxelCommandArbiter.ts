@@ -80,22 +80,10 @@ export class VoxelCommandArbiter {
       case "object-updated":
       case "object-moved":
         return `object:${command.metadata.objectId}`;
-      case "block-defined":
-        return `block:${command.block.id}`;
-      case "block-removed":
-      case "block-moved":
-        return `block:${command.blockId}`;
       case "tileset-added":
         return `tileset:${command.tileset.id}`;
       case "tileset-removed":
-      case "tileset-resized":
         return `tileset:${command.tilesetId}`;
-      case "default-tile-size-updated":
-        return "default-tile-size";
-      case "material-group-defined":
-        return `material-group:${command.group.id}`;
-      case "material-group-removed":
-        return `material-group:${command.groupId}`;
       default:
         return null;
     }

@@ -12,11 +12,12 @@ import {
   TILED_FLIPPED_FLAGS
 } from "./TileSet.ts";
 
-import type {
-  VoxelWorldJSON,
-  VoxelObjectLayerJSON,
-  VoxelObjectJSON,
-  VoxelObjectProperties
+import {
+  VOXEL_WORLD_VERSION,
+  type VoxelWorldJSON,
+  type VoxelObjectLayerJSON,
+  type VoxelObjectJSON,
+  type VoxelObjectProperties
 } from "../../serialization/types.ts";
 import {
   VoxelFootprint
@@ -84,13 +85,22 @@ interface ObjectLayerContext {
 }
 
 /**
+ * A converted map: the world with its tileset links, and the blocks the
+ * world's tiles were turned into, one per unique tile.
+ */
+export interface TiledConversion {
+  world: VoxelWorldJSON;
+  blocks: ResolvedBlockDefinition[];
+}
+
+/**
  * Converts Tiled layers and unique tile GIDs into a self-contained snapshot.
  */
 export class TiledConverter {
   convert(
     map: TiledMap,
     options: TiledConverterOptions
-  ): VoxelWorldJSON {
+  ): TiledConversion {
     const tileSets: TileSet[] = [];
     for (const ts of map.tilesets) {
       if (!ts.tileheight) {
@@ -130,19 +140,21 @@ export class TiledConverter {
     const objectLayerCtx: ObjectLayerContext = { map, counter: { value: 0 } };
     convertObjectLayers(map.layers, objectLayers, objectLayerCtx);
 
-    const result: VoxelWorldJSON = {
-      version: 1,
+    const world: VoxelWorldJSON = {
+      version: VOXEL_WORLD_VERSION,
       chunkSize: options.chunkSize ?? 16,
       tilesets,
-      blocks,
       layers
     };
 
     if (objectLayers.length > 0) {
-      result.objectLayers = objectLayers;
+      world.objectLayers = objectLayers;
     }
 
-    return result;
+    return {
+      world,
+      blocks
+    };
   }
 }
 

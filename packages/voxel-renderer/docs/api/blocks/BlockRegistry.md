@@ -69,9 +69,9 @@ invalidates compiled geometry.
 
 The registry keeps definitions in registration order, not ID order, and every
 traversal (`getAll()`, iteration, serialization) follows it. That order is what
-[`serializeVoxelWorld()`](../serialization/serialization.md) writes to the
-document's `blocks` array and what `registerMany()` restores when a document is
-loaded, so a chosen order survives a save.
+[`TilesetDocument.toJSON()`](../tilesets/TilesetDocument.md) writes to its
+`blocks` array and what `registerMany()` restores when the document is loaded,
+so a chosen order survives a save.
 
 `register()` on an ID already present keeps that block's position, so editing a
 definition never moves it.

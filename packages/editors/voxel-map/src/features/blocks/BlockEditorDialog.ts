@@ -13,6 +13,7 @@ import {
 } from "lit/decorators.js";
 import {
   cullsCoveredFaces,
+  localMaterialGroupId,
   type ResolvedBlockDefinition,
   type BlockAlphaMode,
   type BlockSide,
@@ -20,12 +21,11 @@ import {
   type TileRect,
   type VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
-import {
-  Mixed,
-  type Dialog,
-  type JollyChangeDetail,
-  type JollyHeadingChangeDetail,
-  type JollyOption
+import type {
+  Dialog,
+  JollyChangeDetail,
+  JollyHeadingChangeDetail,
+  JollyOption
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -42,8 +42,6 @@ import {
   formatCount
 } from "./blockUsage.ts";
 import {
-  assignBlockTileset,
-  blockTilesetStatus,
   blockTileSize,
   firstFreeTile,
   occupiedTileRects,
@@ -51,6 +49,10 @@ import {
   type TilePosition,
   type TilesetGrid
 } from "../tilesets/blockTilesets.ts";
+import type {
+  LinkedTileset,
+  LinkedTilesets
+} from "../tilesets/LinkedTilesets.ts";
 import { tileSizeSegments } from "../tilesets/tileSizes.ts";
 import {
   blockDefinitionFromDraft,
@@ -77,7 +79,7 @@ const kSideOptions: JollyOption<BlockSide>[] = [
 type BlockEditorMode = "edit" | "create";
 
 interface TextureFieldValues {
-  tilesetId: string | typeof Mixed;
+  tilesetId: string;
   size: number | undefined;
   missing: boolean;
 }
@@ -121,11 +123,15 @@ export class BlockEditorDialog extends LitElement {
 
   @property({ attribute: false })
   declare block: ResolvedBlockDefinition | null;
+
   @property({ attribute: false })
   declare brush: BrushStore;
 
   @property({ attribute: false })
   declare tilesets: TilesetStore;
+
+  @property({ attribute: false })
+  declare linked: LinkedTilesets;
 
   @property({ attribute: false })
   declare usage: BlockUsageStore;
@@ -239,16 +245,22 @@ export class BlockEditorDialog extends LitElement {
     );
   }
 
+  #ownerOf(
+    block: ResolvedBlockDefinition
+  ): LinkedTileset | undefined {
+    return this.linked.ownerOf(block.id);
+  }
+
   #textureValuesOf(
     block: ResolvedBlockDefinition
   ): TextureFieldValues {
-    const status = blockTilesetStatus(block, this.tilesets.ids());
-    const tilesetId = status.kind === "assigned" ? status.tilesetId : "";
+    const owner = this.#ownerOf(block);
+    const tilesetId = owner?.definition.id ?? "";
 
     return {
-      tilesetId: status.kind === "mixed" ? Mixed : tilesetId,
+      tilesetId,
       size: blockTileSize(block) ?? this.#tileSizeOf(tilesetId),
-      missing: status.kind === "missing"
+      missing: owner === undefined
     };
   }
 
@@ -272,7 +284,7 @@ export class BlockEditorDialog extends LitElement {
               .options=${this.#tilesetOptions(texture.missing)}
               .value=${texture.tilesetId}
               .error=${texture.missing ? kMissingTileset : null}
-              ?disabled=${this.#tilesetLocked(texture.missing)}
+              ?disabled=${!creating || this.tilesets.entries.length <= 1}
               @jolly-change=${this.#onTilesetChange}
             ></jolly-select>
             <jolly-select
@@ -398,7 +410,7 @@ export class BlockEditorDialog extends LitElement {
         confirmLabel: "Delete",
         danger: true
       });
-    if (!confirmed || !engine.removeBlock(block.id)) {
+    if (!confirmed || !this.linked.removeBlock(block.id)) {
       return;
     }
 
@@ -450,19 +462,24 @@ export class BlockEditorDialog extends LitElement {
     if (!block) {
       return nothing;
     }
+    const owner = this.#ownerOf(block);
+    const groupName = block.materialGroup === undefined || owner === undefined ?
+      block.materialGroup :
+      localMaterialGroupId(owner.slot, block.materialGroup);
 
     return html`
       <jolly-separator label="Material"></jolly-separator>
       <jolly-text
         label="Group"
         placeholder="None"
-        description="Blocks naming the same group share one finish"
-        .value=${block.materialGroup ?? ""}
+        description="Blocks of the tileset naming the same group share one finish"
+        .value=${groupName ?? ""}
         @jolly-change=${this.#onMaterialGroupChange}
       ></jolly-text>
       ${block.materialGroup === undefined ? nothing : html`
         <block-material-finish
           .engine=${this.engine}
+          .tilesets=${this.linked}
           .mapDocument=${this.mapDocument}
           .groupId=${block.materialGroup}
         ></block-material-finish>
@@ -473,8 +490,13 @@ export class BlockEditorDialog extends LitElement {
   #onMaterialGroupChange(
     event: CustomEvent<JollyChangeDetail<string>>
   ): void {
+    const { block } = this;
+    const owner = block === null ? undefined : this.#ownerOf(block);
     const materialGroup = materialGroupNameOf(event.detail.value);
-    if (materialGroup !== this.block?.materialGroup) {
+    const current = block?.materialGroup === undefined || owner === undefined ?
+      block?.materialGroup :
+      localMaterialGroupId(owner.slot, block.materialGroup);
+    if (materialGroup !== current) {
       this.#applyEdit({ materialGroup });
     }
   }
@@ -506,7 +528,7 @@ export class BlockEditorDialog extends LitElement {
   #tileSizeOf(
     tilesetId: string
   ): number | undefined {
-    return this.tilesets.entry(tilesetId)?.definition.tileSize;
+    return this.linked.tileSizeOf(tilesetId);
   }
 
   #gridOf(
@@ -570,12 +592,6 @@ export class BlockEditorDialog extends LitElement {
     });
   }
 
-  #tilesetLocked(
-    missing: boolean
-  ): boolean {
-    return !missing && this.tilesets.entries.length <= 1;
-  }
-
   #tilesetOptions(
     missing: boolean
   ): JollyOption<string>[] {
@@ -625,25 +641,9 @@ export class BlockEditorDialog extends LitElement {
   #onTilesetChange(
     event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    const tilesetId = event.detail.value;
     if (this._mode === "create") {
-      this._draft = { ...this._draft, tilesetId };
-
-      return;
+      this._draft = { ...this._draft, tilesetId: event.detail.value };
     }
-
-    const target = this.#gridOf(tilesetId);
-    if (!this.block || target === undefined) {
-      return;
-    }
-
-    this.#applyBlock(assignBlockTileset(this.block, {
-      tilesetId,
-      target,
-      sourceOf: (id) => this.#gridOf(id),
-      shape: this.engine.shapeRegistry.get(this.block.shapeId),
-      occupied: this.#occupiedIn(tilesetId, target, this.block.id)
-    }));
   }
 
   #onSizeChange(
@@ -675,19 +675,23 @@ export class BlockEditorDialog extends LitElement {
   #applyBlock(
     updated: ResolvedBlockDefinition
   ): void {
-    this.engine.defineBlock(updated);
-    this.block = updated;
+    this.linked.defineBlock(updated);
+    this.block = this.engine.blockRegistry.get(updated.id) ?? updated;
   }
 
   #confirmCreate(): void {
-    const { blockRegistry } = this.engine;
+    const id = this.linked.nextBlockId(this._draft.tilesetId);
+    if (id === undefined) {
+      return;
+    }
+
     const definition = blockDefinitionFromDraft(
       this._draft,
-      blockRegistry.nextId,
+      id,
       this.#freeTileFor(this._draft)
     );
 
-    this.engine.defineBlock(definition);
+    this.linked.defineBlock(definition);
     this.brush.blockId = definition.id;
     this.close();
   }

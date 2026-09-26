@@ -26,9 +26,12 @@ describe("network entry points", () => {
     assert.strictEqual(typeof client.SelectionGhostSync, "function");
     assert.strictEqual(typeof client.SyncedPixelDocument, "function");
     assert.strictEqual(typeof client.pixelArtDocumentKind, "function");
+    assert.strictEqual(typeof client.isPixelCommandAction, "function");
   });
 
   test("server entry exports the authoritative server API", () => {
     assert.strictEqual(typeof server.applyCommandToBuffer, "function");
+    assert.strictEqual(Array.isArray(server.pixelCommandSchemas), true);
+    assert.strictEqual(typeof server.isPixelCommandAction, "function");
   });
 });

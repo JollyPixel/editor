@@ -1,5 +1,7 @@
 // Import Internal Dependencies
 import type {
+  TilesetDocumentCommand,
+  TilesetDocumentCommandAction,
   VoxelBlockCommand,
   VoxelBlockCommandAction,
   VoxelCommandAction,
@@ -8,7 +10,9 @@ import type {
   VoxelMaterialGroupCommand,
   VoxelMaterialGroupCommandAction,
   VoxelTilesetCommand,
-  VoxelTilesetCommandAction
+  VoxelTilesetCommandAction,
+  VoxelWorldCommand,
+  VoxelWorldCommandAction
 } from "./types.ts";
 
 // CONSTANTS
@@ -41,14 +45,13 @@ const kActionCategories: {
   "block-moved": "block",
   "tileset-added": "tileset",
   "tileset-removed": "tileset",
-  "tileset-resized": "tileset",
-  "default-tile-size-updated": "tileset",
   "material-group-defined": "material-group",
   "material-group-removed": "material-group"
 };
 const kCategoryByAction = new Map<string, CommandCategory>(
   Object.entries(kActionCategories)
 );
+const kTileSizeAction: TilesetDocumentCommandAction = "tile-size-updated";
 
 interface CommandCategories {
   layer: VoxelLayerCommand;
@@ -87,6 +90,19 @@ export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
   ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS
 ];
 
+export const VOXEL_WORLD_COMMAND_ACTIONS:
+readonly VoxelWorldCommandAction[] = [
+  ...VOXEL_LAYER_COMMAND_ACTIONS,
+  ...VOXEL_TILESET_COMMAND_ACTIONS
+];
+
+export const TILESET_DOCUMENT_COMMAND_ACTIONS:
+readonly TilesetDocumentCommandAction[] = [
+  ...VOXEL_BLOCK_COMMAND_ACTIONS,
+  ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
+  kTileSizeAction
+];
+
 export function isVoxelLayerCommand(
   command: { action: string; }
 ): command is VoxelLayerCommand {
@@ -109,6 +125,20 @@ export function isVoxelMaterialGroupCommand(
   command: { action: string; }
 ): command is VoxelMaterialGroupCommand {
   return kCategoryByAction.get(command.action) === "material-group";
+}
+
+export function isVoxelWorldCommand(
+  command: { action: string; }
+): command is VoxelWorldCommand {
+  return isVoxelLayerCommand(command) || isVoxelTilesetCommand(command);
+}
+
+export function isTilesetDocumentCommand(
+  command: { action: string; }
+): command is TilesetDocumentCommand {
+  return isVoxelBlockCommand(command) ||
+    isVoxelMaterialGroupCommand(command) ||
+    command.action === kTileSizeAction;
 }
 
 function actionsOf<TCategory extends CommandCategory>(
