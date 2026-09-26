@@ -127,6 +127,7 @@ describe("resolveMetricFormat", () => {
     assert.equal(formatOf("decimal"), "1234.5");
     assert.equal(formatOf("ms"), "1234.5 ms");
     assert.equal(formatOf("percent"), "1234.5 %");
+    assert.equal(formatOf("bytes"), "1.2 KiB");
   });
 
   it("falls back to whole numbers when a definition names neither", () => {

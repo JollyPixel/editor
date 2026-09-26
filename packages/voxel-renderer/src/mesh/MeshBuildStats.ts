@@ -8,6 +8,7 @@ export class MeshBuildStats {
   triangles = 0;
   geometries = 0;
   bytesPerVertex = 0;
+  bytes = 0;
   buildTimeMs = 0;
 
   get facesPerSolidVoxel(): number {
@@ -28,6 +29,7 @@ export class MeshBuildStats {
     this.triangles = 0;
     this.geometries = 0;
     this.bytesPerVertex = 0;
+    this.bytes = 0;
     this.buildTimeMs = 0;
   }
 
@@ -43,6 +45,7 @@ export class MeshBuildStats {
     this.triangles = source.triangles;
     this.geometries = source.geometries;
     this.bytesPerVertex = source.bytesPerVertex;
+    this.bytes = source.bytes;
     this.buildTimeMs = source.buildTimeMs;
   }
 

@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
+import type { Node } from "three/webgpu";
 import {
-  attribute,
   float,
   uniform
 } from "three/tsl";
+
+// Import Internal Dependencies
+import type { BlockVariantFace } from "./variants/types.ts";
+import { FACE_AXIS } from "../utils/math.ts";
 
 // CONSTANTS
 const kLevelBits = 2;
@@ -66,6 +70,32 @@ export function aoVertexByte(
   return Math.round(level * kNormalMax / kMaxLevel);
 }
 
+export function shadeFace(
+  face: BlockVariantFace,
+  ao: number,
+  shade: Int8Array
+): number {
+  if (ao === AO_UNOCCLUDED || face.cull < 0) {
+    shade.fill(kNormalMax);
+
+    return 0;
+  }
+
+  const axis = FACE_AXIS[face.cull];
+  const uAxis = aoUAxis(axis);
+  const vAxis = aoVAxis(axis);
+  const local = face.positions;
+  const last = face.vertexCount - 1;
+  for (let i = 0; i < 4; i++) {
+    const i3 = (i > last ? last : i) * 3;
+    shade[i] = aoVertexByte(ao, local[i3 + uAxis], local[i3 + vAxis]);
+  }
+
+  return face.vertexCount === 4 && shade[0] + shade[2] < shade[1] + shade[3] ?
+    1 :
+    0;
+}
+
 export function createAoStrength(
   strength = 0
 ) {
@@ -75,9 +105,8 @@ export function createAoStrength(
 export type AoStrengthUniform = ReturnType<typeof createAoStrength>;
 
 export function aoFactorNode(
-  strength: AoStrengthUniform
+  strength: AoStrengthUniform,
+  brightness: Node<"float">
 ) {
-  const brightness = attribute<"vec4">("normal", "vec4").w;
-
   return float(1).sub(strength.mul(float(1).sub(brightness)));
 }

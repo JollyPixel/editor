@@ -315,7 +315,9 @@ metric left behind keeps sampling a disposed subsystem through its `sample()`
 closure.
 
 The runtime registers the `WebGPURenderer` counters itself, under the
-`renderer` group: `calls`, `renderedTriangles`, `geometries` and `textures`.
+`renderer` group: `calls`, `renderedTriangles`, `geometries` and `textures`,
+plus the GPU bytes three.js tracks: `geometryMemory` (vertex and index
+buffers) and `textureMemory`.
 It latches the render counters on every `draw`, which the renderer otherwise
 resets between frames.
 

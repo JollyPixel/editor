@@ -10,6 +10,7 @@ import {
 // Import Internal Dependencies
 import { VoxelEngine } from "../../../src/VoxelEngine.ts";
 import { voxelTransparencyPass } from "../../../src/render/VoxelTransparencyPassNode.ts";
+import { PulledChunkMesh } from "../../../src/mesh/pulling/PulledChunkMesh.ts";
 import type { BlockAlphaMode, BlockSide } from "../../../src/blocks/BlockSurface.ts";
 
 // CONSTANTS
@@ -58,6 +59,7 @@ export interface ProbeOptions {
   side?: BlockSide;
   opacity?: number;
   greedy?: boolean;
+  vertexPulling?: boolean;
   cull?: boolean;
   count?: number;
   reverse?: boolean;
@@ -109,6 +111,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   const engine = new VoxelEngine({
     chunkSize: 4,
     greedy: options.greedy,
+    vertexPulling: options.vertexPulling,
     materialCustomizer(material, tilesetId) {
       if (options.lights) {
         return;
@@ -204,6 +207,10 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   }
   engine.flush();
   const chunks = chunkGroupOf(engine);
+  const pulled = chunks.children.every((child) => child instanceof PulledChunkMesh);
+  if (chunks.children.length === 0 || pulled !== (options.vertexPulling ?? false)) {
+    throw new Error("The chunk meshes do not match the requested vertex pulling mode.");
+  }
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(options.background ?? 0);
   scene.add(engine.root);

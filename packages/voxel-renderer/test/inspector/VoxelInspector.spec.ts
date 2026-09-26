@@ -27,6 +27,7 @@ describe("VoxelInspector - statistics", () => {
       triangles: 0,
       facesPerSolidVoxel: 0,
       bytesPerVertex: 0,
+      bytes: 0,
       buildTimeMs: 0
     });
   });
@@ -44,6 +45,7 @@ describe("VoxelInspector - statistics", () => {
     assert.equal(stats.vertices, 72);
     assert.equal(stats.triangles, 36);
     assert.equal(stats.facesPerSolidVoxel, 6);
+    assert.equal(stats.bytes, 3 * ((24 * stats.bytesPerVertex) + (36 * 4)));
   });
 
   it("drops the statistics of a chunk once its layer is removed", () => {

@@ -77,6 +77,24 @@ export class RendererMetrics implements MetricSource {
         id: "textures",
         label: "textures",
         sample: () => renderer.info.memory.textures
+      },
+      {
+        ...traits,
+        id: "geometryMemory",
+        label: "geometry memory",
+        unit: "bytes",
+        sample: () => {
+          const { attributesSize, indexAttributesSize } = renderer.info.memory;
+
+          return attributesSize + indexAttributesSize;
+        }
+      },
+      {
+        ...traits,
+        id: "textureMemory",
+        label: "texture memory",
+        unit: "bytes",
+        sample: () => renderer.info.memory.texturesSize
       }
     ];
   }

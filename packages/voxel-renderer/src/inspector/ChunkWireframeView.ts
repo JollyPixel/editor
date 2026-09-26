@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { PulledChunkGeometry } from "../mesh/pulling/PulledChunkGeometry.ts";
 import type {
   ChunkInspectorView,
   InspectedChunkEntry
@@ -53,6 +54,7 @@ export class ChunkWireframeView implements ChunkInspectorView {
   #chunks: Iterable<InspectedChunkEntry>;
   #group = new THREE.Group();
   #overlays = new Map<string, THREE.Mesh[]>();
+  #ownedGeometries = new Set<THREE.BufferGeometry>();
   #material: THREE.MeshBasicMaterial | null = null;
 
   #mode: VoxelInspectorMode;
@@ -137,7 +139,13 @@ export class ChunkWireframeView implements ChunkInspectorView {
     const material = this.#resolveMaterial();
     const overlays: THREE.Mesh[] = [];
     for (const mesh of entry.meshes) {
-      const overlay = new THREE.Mesh(mesh.geometry, material);
+      const geometry = mesh.geometry instanceof PulledChunkGeometry ?
+        mesh.geometry.toIndexedGeometry() :
+        mesh.geometry;
+      if (geometry !== mesh.geometry) {
+        this.#ownedGeometries.add(geometry);
+      }
+      const overlay = new THREE.Mesh(geometry, material);
       overlay.position.copy(mesh.position);
       overlay.name = `${mesh.name}:wireframe`;
       overlays.push(overlay);
@@ -156,6 +164,7 @@ export class ChunkWireframeView implements ChunkInspectorView {
 
     for (const overlay of overlays) {
       this.#group.remove(overlay);
+      this.#releaseGeometry(overlay.geometry);
     }
     this.#overlays.delete(key);
   }
@@ -163,6 +172,10 @@ export class ChunkWireframeView implements ChunkInspectorView {
   clear(): void {
     this.#group.clear();
     this.#overlays.clear();
+    for (const geometry of this.#ownedGeometries) {
+      geometry.dispose();
+    }
+    this.#ownedGeometries.clear();
   }
 
   dispose(): void {
@@ -170,6 +183,14 @@ export class ChunkWireframeView implements ChunkInspectorView {
     this.#group.removeFromParent();
     this.#material?.dispose();
     this.#material = null;
+  }
+
+  #releaseGeometry(
+    geometry: THREE.BufferGeometry
+  ): void {
+    if (this.#ownedGeometries.delete(geometry)) {
+      geometry.dispose();
+    }
   }
 
   #resolveMaterial(): THREE.MeshBasicMaterial {

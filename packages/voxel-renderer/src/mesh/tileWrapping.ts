@@ -38,6 +38,18 @@ export type TileWrappedMaterial =
   | THREE.MeshLambertMaterial
   | THREE.MeshStandardMaterial;
 
+type Vec2Node = Node<"vec2">;
+type Vec4Node = Node<"vec4">;
+type FloatNode = Node<"float">;
+type TableNode = ReturnType<typeof texture<"vec4">>;
+
+export interface TileInputs {
+  uv: Vec2Node;
+  region: Vec4Node;
+  vertexRegion: Vec4Node;
+  brightness: FloatNode;
+}
+
 export interface TileShadingOptions {
   surface?: BlockSurface;
   aoStrength?: AoStrengthUniform;
@@ -46,10 +58,9 @@ export interface TileShadingOptions {
   alphaToCoverage?: boolean;
 }
 
-type Vec2Node = Node<"vec2">;
-type Vec4Node = Node<"vec4">;
-type FloatNode = Node<"float">;
-type TableNode = ReturnType<typeof texture<"vec4">>;
+export interface TileClampingOptions extends TileShadingOptions {
+  inputs?: TileInputs;
+}
 
 interface TileSample {
   sampled: Vec4Node;
@@ -64,18 +75,18 @@ interface TileSample {
  */
 export function enableTileClamping(
   material: TileWrappedMaterial,
-  options: TileShadingOptions = {}
+  options: TileClampingOptions = {}
 ): void {
   const { map } = material;
   if (!map) {
     return;
   }
 
-  const tileRegion = attribute<"vec4">("tileRegion", "vec4");
+  const inputs = options.inputs ?? attributeInputs();
   const clamped = clamp(
-    uv(),
-    tileRegion.xy,
-    tileRegion.xy.add(tileRegion.zw)
+    inputs.uv,
+    inputs.region.xy,
+    inputs.region.xy.add(inputs.region.zw)
   );
   const size = atlasSize(map);
 
@@ -83,11 +94,22 @@ export function enableTileClamping(
     material,
     {
       sampled: texture(map, clamped).level(float(0)),
-      texel: uv().mul(size),
+      texel: inputs.uv.mul(size),
       position: clamped.mul(size)
     },
-    options
+    { ...options, inputs }
   );
+}
+
+function attributeInputs(): TileInputs {
+  const region = attribute<"vec4">("tileRegion", "vec4");
+
+  return {
+    uv: uv(),
+    region,
+    vertexRegion: region,
+    brightness: attribute<"vec4">("normal", "vec4").w
+  };
 }
 
 /**
@@ -124,28 +146,29 @@ export function enableTileWrapping(
       texel: uv().mul(regionTexels(map, tileRegion)),
       position: wrapped.mul(atlasSize(map))
     },
-    options
+    { ...options, inputs: attributeInputs() }
   );
 }
 
 function applyTileColor(
   material: TileWrappedMaterial,
   sample: TileSample,
-  options: TileShadingOptions
+  options: TileClampingOptions
 ): void {
   const {
     surface,
     aoStrength,
     averages = null,
     flat = false,
-    alphaToCoverage = false
+    alphaToCoverage = false,
+    inputs = attributeInputs()
   } = options;
   const { map } = material;
   let diffuse = sample.sampled;
   if (averages && map) {
     diffuse = flat ?
-      varying(regionAverage(map, averages)) :
-      footprintAverage(map, averages, sample);
+      varying(regionAverage(map, averages, inputs.vertexRegion)) :
+      footprintAverage(map, averages, sample, inputs.vertexRegion);
   }
   const alphaMode = surface?.alphaMode ?? "opaque";
   const keepsAlpha = (alphaMode === "blend" && !flat) ||
@@ -155,7 +178,7 @@ function applyTileColor(
    * `materialColor` re-samples the atlas at raw UVs; read material.color directly.
    * Opacity is omitted: setupDiffuseColor() applies it after this node.
    */
-  const tint = shadedTint(material, aoStrength);
+  const tint = shadedTint(material, inputs.brightness, aoStrength);
 
   /*
    * The WebGPU build aliases the classic material names onto their node
@@ -175,9 +198,9 @@ function applyTileColor(
 function footprintAverage(
   map: THREE.Texture,
   averages: THREE.Texture,
-  sample: TileSample
+  sample: TileSample,
+  tileRegion: Vec4Node
 ): Vec4Node {
-  const tileRegion = attribute<"vec4">("tileRegion", "vec4");
   const size = atlasSize(map);
   const start = varying(regionStart(tileRegion, size));
   const end = varying(regionStart(tileRegion, size).add(regionTexels(map, tileRegion)));
@@ -243,9 +266,9 @@ function tableAt(
  */
 function regionAverage(
   map: THREE.Texture,
-  averages: THREE.Texture
+  averages: THREE.Texture,
+  tileRegion: Vec4Node
 ): Vec4Node {
-  const tileRegion = attribute<"vec4">("tileRegion", "vec4");
   const size = atlasSize(map);
   const tableSize = size.add(1);
   const start = regionStart(tileRegion, size);
@@ -292,7 +315,7 @@ function atlasSize(
   map: THREE.Texture
 ): Vec2Node {
   // `@types/three` types textureSize() as an untyped node.
-  const size = textureSize(texture(map), int(0)) as unknown as Node<"ivec2">;
+  const size = textureSize(texture(map, vec2(0)), int(0)) as unknown as Node<"ivec2">;
 
   return vec2(size);
 }
@@ -307,11 +330,14 @@ function lerp(
 
 function shadedTint(
   material: TileWrappedMaterial,
+  brightness: FloatNode,
   aoStrength?: AoStrengthUniform
 ) {
   const tint = reference("color", "color", material);
 
-  return aoStrength === undefined ? tint : tint.mul(aoFactorNode(aoStrength));
+  return aoStrength === undefined ?
+    tint :
+    tint.mul(aoFactorNode(aoStrength, brightness));
 }
 
 function configureClassicAlpha(

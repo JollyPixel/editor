@@ -221,6 +221,14 @@ interface VoxelEngineOptions {
   greedy?: boolean;
 
   /**
+   * Store 8 bytes per face and rebuild the vertices in the shader. Ignored
+   * while `greedy` is on.
+   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#vertex-pulling).
+   * @default false
+   */
+  vertexPulling?: boolean;
+
+  /**
    * `"average"` box-filters the texels each pixel covers instead of letting
    * nearest sampling shimmer. Falls back to `"nearest"` when the atlas
    * pixels cannot be read.
@@ -283,6 +291,7 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly history: VoxelHistory; // see VoxelHistory.md
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
+  vertexPulling: boolean; // read/write; assigning rebuilds every chunk
   tileMinification: "average" | "nearest"; // read/write; assigning replaces the materials
   alphaToCoverage: boolean; // read/write; assigning replaces the materials
   castShadow: boolean; // read/write; assigning updates built chunks
@@ -350,8 +359,9 @@ chunk, so a moving camera keeps pulling the nearest chunks forward.
 
 With a finite `viewDistance`, chunks further than that radius from `focus` are
 not meshed at all and stay dirty until they come into range, carrying every
-edit they missed. Chunks already built when they leave the radius follow
-`viewDistancePolicy`.
+edit they missed. A queued chunk that falls out of range before its turn,
+including one queued while `focus` was `null`, is skipped the same way. Chunks
+already built when they leave the radius follow `viewDistancePolicy`.
 
 ```ts
 import { ViewDistance } from "@jolly-pixel/voxel.renderer";

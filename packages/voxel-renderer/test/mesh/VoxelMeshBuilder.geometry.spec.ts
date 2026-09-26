@@ -233,6 +233,7 @@ describe("VoxelMeshBuilder - build statistics", () => {
         triangles: 12,
         geometries: 1,
         bytesPerVertex: 12 + 4 + 4 + 8,
+        bytes: (24 * (12 + 4 + 4 + 8)) + (36 * 4),
         buildTimeMs: 0
       }
     );

@@ -54,6 +54,15 @@ export function voxelMetrics(
       sample: () => stats().facesPerSolidVoxel
     },
     {
+      id: "meshMemory",
+      label: "mesh memory",
+      unit: "bytes",
+      better: "lower",
+      group: kGroup,
+      tile: false,
+      sample: () => stats().bytes
+    },
+    {
       id: "buildTimeMs",
       label: "build time",
       unit: "ms",

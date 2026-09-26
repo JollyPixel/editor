@@ -8,7 +8,7 @@ export interface VoxelMetric {
   /**
    * What the value measures, which a display maps to a formatter.
    */
-  unit?: "count" | "decimal" | "ms" | "percent";
+  unit?: "count" | "decimal" | "ms" | "percent" | "bytes";
   /**
    * Which direction reads as an improvement, for a graph colour ramp.
    */

@@ -8,7 +8,7 @@ interface MetricDefinition {
   id: string;
   label: string;
   format?: (value: number) => string;
-  unit?: "count" | "integer" | "decimal" | "ms" | "percent";
+  unit?: "count" | "integer" | "decimal" | "ms" | "percent" | "bytes";
   group?: string;
   min?: number;
   max?: number;
@@ -79,6 +79,7 @@ and a definition naming neither is formatted as a whole number.
 | `decimal` | `formatDecimal` | `1234.5` |
 | `ms` | `formatMilliseconds` | `1234.5 ms` |
 | `percent` | `formatPercent` | `1234.5 %` |
+| `bytes` | `formatBytes` | `1.2 KiB` |
 
 ## Describing metrics from another package
 

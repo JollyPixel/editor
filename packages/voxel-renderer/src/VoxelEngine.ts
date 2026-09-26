@@ -172,6 +172,14 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.view.greedy = value;
   }
 
+  get vertexPulling(): boolean {
+    return this.view.vertexPulling;
+  }
+
+  set vertexPulling(value: boolean) {
+    this.view.vertexPulling = value;
+  }
+
   get farDistance(): number {
     return this.view.farDistance;
   }

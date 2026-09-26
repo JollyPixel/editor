@@ -70,6 +70,20 @@ const variants = [
       ambientOcclusion: true
     }),
     times: [] as number[]
+  },
+  {
+    name: "pulled",
+    builder: new VoxelMeshBuilder({ ...shared, vertexPulling: true }),
+    times: [] as number[]
+  },
+  {
+    name: "pulled+ao",
+    builder: new VoxelMeshBuilder({
+      ...shared,
+      vertexPulling: true,
+      ambientOcclusion: true
+    }),
+    times: [] as number[]
   }
 ] satisfies { name: string; builder: VoxelMeshBuilder; times: number[]; }[];
 
@@ -92,6 +106,10 @@ console.log(
 );
 for (const { name, builder, times } of variants) {
   const { triangles, vertices, bytesPerVertex } = meshAll(builder);
+  const indexBytes = builder.pullsVertices ?
+    0 :
+    (vertices / 4) * 6 * Uint32Array.BYTES_PER_ELEMENT;
+  const megabytes = ((vertices * bytesPerVertex) + indexBytes) / (1024 * 1024);
   console.log(
     [
       name,
@@ -99,7 +117,8 @@ for (const { name, builder, times } of variants) {
       `median ${median(times).toFixed(1)}ms`,
       `tris ${triangles.toLocaleString("en-US")}`,
       `verts ${vertices.toLocaleString("en-US")}`,
-      `${bytesPerVertex}B/vert`
+      `${bytesPerVertex}B/vert`,
+      `${megabytes.toFixed(1)}MB`
     ].join("  |  ")
   );
 }

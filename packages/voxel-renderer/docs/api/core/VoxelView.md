@@ -47,6 +47,8 @@ interface VoxelViewOptions {
   inspector?: VoxelInspectorOptions;
   /** @default false */
   greedy?: boolean;
+  /** 8 bytes per face, ignored while greedy, see rendering and meshing. @default false */
+  vertexPulling?: boolean;
   /** Distant tiles average the texels they cover, see rendering and meshing. @default "average" */
   tileMinification?: "average" | "nearest";
   /** Mask blocks write coverage as MSAA sample coverage. @default false */
@@ -85,6 +87,7 @@ class VoxelView {
   readonly inspector: VoxelInspector;
 
   greedy: boolean;                     // assigning rebuilds every chunk
+  vertexPulling: boolean;              // assigning rebuilds every chunk
   tileMinification: "average" | "nearest"; // assigning replaces the materials
   alphaToCoverage: boolean;            // assigning replaces the materials
   castShadow: boolean;                 // assigning updates built chunks

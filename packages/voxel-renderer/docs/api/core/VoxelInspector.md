@@ -193,6 +193,8 @@ interface VoxelMeshStats {
   facesPerSolidVoxel: number;
   /** Vertex attributes emitted, in bytes per vertex; indices excluded. */
   bytesPerVertex: number;
+  /** GPU data of the live chunk geometries: attributes, indices, face records. */
+  bytes: number;
   /** Sum of the last build time of every live chunk, not a frame cost. */
   buildTimeMs: number;
 }
@@ -223,9 +225,12 @@ The two derived figures are the ones worth watching for regressions:
   does not, inspect the merge predicates and the blocks in the measured chunks.
 - `bytesPerVertex` is read off the emitted geometries, not off a constant, so an
   attribute that quietly widens (or a dropped one that comes back) shows up here
-  with no code change needed. The current layouts report 19 without greedy
-  meshing and 35 with it. `tileRegion`, `tileRepeat`, and float tile UVs account
-  for the difference.
+  with no code change needed. The current layouts report 28 without greedy
+  meshing, 36 with it, and 2 with vertex pulling. `tileRepeat` and float tile
+  UVs account for the greedy difference.
+- `bytes` is what those geometries upload, index buffers and the face records
+  of [vertex pulling](../../concepts/rendering-and-meshing.md#vertex-pulling)
+  included. It is the figure to compare between meshing modes.
 
 `MeshBuildStats` holds the counters for a single chunk build. `VoxelInspector`
 keeps a copy per chunk key and aggregates them on demand.
@@ -241,6 +246,7 @@ class MeshBuildStats {
   triangles: number;
   geometries: number;
   bytesPerVertex: number;
+  bytes: number;
   buildTimeMs: number;
 
   readonly facesPerSolidVoxel: number;
@@ -280,6 +286,7 @@ here depends on a UI library. It is compatible with `MetricDefinition` of
 | `culledFaces` | percent | culled share of every candidate face |
 | `mergedFaces` | percent | merged share of every emitted face |
 | `facesPerVoxel` | decimal | `mesh.stats.facesPerSolidVoxel` |
+| `meshMemory` | bytes | `mesh.stats.bytes` |
 | `buildTimeMs` | ms | `mesh.stats.buildTimeMs` |
 
 The two shares are the ratios described above, and are `0` before anything is

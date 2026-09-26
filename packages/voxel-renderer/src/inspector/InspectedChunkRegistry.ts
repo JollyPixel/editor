@@ -21,6 +21,7 @@ export interface VoxelMeshStats {
   triangles: number;
   facesPerSolidVoxel: number;
   bytesPerVertex: number;
+  bytes: number;
   buildTimeMs: number;
 }
 
@@ -102,6 +103,7 @@ export class InspectedChunkRegistry {
       triangles: 0,
       facesPerSolidVoxel: 0,
       bytesPerVertex: 0,
+      bytes: 0,
       buildTimeMs: 0
     };
 
@@ -119,6 +121,7 @@ export class InspectedChunkRegistry {
       total.mergedFaces += stats.mergedFaces;
       total.vertices += stats.vertices;
       total.triangles += stats.triangles;
+      total.bytes += stats.bytes;
       total.buildTimeMs += stats.buildTimeMs;
       vertexBytes += stats.bytesPerVertex * stats.vertices;
     }
