@@ -52,7 +52,7 @@ when it encounters either form.
 
 ## Tiled JSON types
 
-The plugin exports the JSON declarations used by `TiledConverter`. Field names
+The package exports the JSON declarations used by `TiledConverter`. Field names
 match Tiled 1.11.x JSON so a parsed `.tmj` value can be typed without an adapter.
 
 `TiledMap` is the root document. Its `layers` field contains `TiledAnyLayer`:
@@ -118,5 +118,5 @@ The tileset declarations also export:
 
 Import all of these types from the package root.
 
-See [importing a Tiled map](../../guides/importing-a-tiled-map.md) for direct and
+See [importing a Tiled map](../guides/importing-a-tiled-map.md) for direct and
 asset-backed loading examples.

@@ -27,6 +27,7 @@ Click on one of the links to access the documentation of the package;
 We provide agnostic renderers and engines (often used by our editors below):
 
 - [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel Engine
+- [@jolly-pixel/voxel.tiled](./packages/voxel-tiled) - Tiled map import for the Voxel Engine (experimental)
 - [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel Art Canvas API
 
 ### Backend

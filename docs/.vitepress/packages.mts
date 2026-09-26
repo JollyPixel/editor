@@ -23,6 +23,7 @@ export const packageGroups: PackageGroup[] = [
     packages: [
       { dir: "three", text: "Three" },
       { dir: "voxel-renderer", text: "Voxel Renderer" },
+      { dir: "voxel-tiled", text: "Voxel Tiled" },
       { dir: "pixel-draw-renderer", text: "Pixel Draw" },
       { dir: "color", text: "Color" },
       { dir: "image", text: "Image" }

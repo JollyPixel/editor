@@ -5,7 +5,13 @@
   },
   "references": [
     {
+      "path": "../asset"
+    },
+    {
       "path": "../engine"
+    },
+    {
+      "path": "../voxel-renderer"
     }
   ]
 }

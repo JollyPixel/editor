@@ -7,12 +7,12 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import {
-  TiledMapAssetType,
-  VoxelRenderer
-} from "@jolly-pixel/voxel.renderer/engine";
+import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
 
-export class VoxelBehavior extends ActorComponent {
+// Import Internal Dependencies
+import { TiledMapAssetType } from "../../src/index.ts";
+
+export class TiledMapBehavior extends ActorComponent {
   static readonly assets = {
     tiledMap: new AssetReference(
       "example.tiled-map",
@@ -25,7 +25,7 @@ export class VoxelBehavior extends ActorComponent {
   ) {
     super({
       actor,
-      typeName: "VoxelBehavior"
+      typeName: "TiledMapBehavior"
     });
   }
 
@@ -33,7 +33,7 @@ export class VoxelBehavior extends ActorComponent {
     const {
       world,
       tilesets
-    } = this.getAsset(VoxelBehavior.assets.tiledMap);
+    } = this.getAsset(TiledMapBehavior.assets.tiledMap);
 
     const vr = this.actor.addComponentAndGet(VoxelRenderer, {
       tilesets

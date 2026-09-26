@@ -103,12 +103,9 @@ visibility and opacity also affect which meshes are built and drawn.
 
 ```mermaid
 flowchart TB
-    Tiled["Tiled .tmj map"] --> Converter["TiledConverter"]
-    Converter --> Snapshot["VoxelWorldJSON<br/>versioned snapshot"]
-    Document["VoxelDocument"] -->|"save()"| Snapshot
+    Document["VoxelDocument"] -->|"save()"| Snapshot["VoxelWorldJSON<br/>versioned snapshot"]
     Snapshot -->|"load()"| Document
     Document -->|"loaded event"| View["VoxelView<br/>clear meshes, sync atlases, rebuild"]
-    Asset["Tiled map asset loader"] --> Converter
     Plugin["VoxelRenderer<br/>engine actor component"] --> Engine["VoxelEngine"]
     Engine --> Document
     Engine --> View
@@ -118,8 +115,7 @@ flowchart TB
 and tileset definitions. `load()` validates the snapshot, replaces document
 state, clears history, and emits `loaded`; the view then clears old meshes,
 syncs atlases, and rebuilds. Texture objects are supplied separately when
-loading a snapshot. `TiledConverter` produces the same snapshot format from a
-Tiled map, and the Tiled asset loader packages it for `@jolly-pixel/asset`.
+loading a snapshot.
 
 `plugins/engine/VoxelRenderer` attaches the root to an engine actor, samples an
 optional focus object, calls `tick()` on update, and disposes the engine when

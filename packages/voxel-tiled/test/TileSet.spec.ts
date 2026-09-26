@@ -9,9 +9,9 @@ import {
   FLIPPED_VERTICAL,
   FLIPPED_ANTI_DIAGONAL,
   TILED_FLIPPED_FLAGS
-} from "../../../src/plugins/tiled/TileSet.ts";
-import type { TiledMapTileset } from "../../../src/plugins/tiled/index.ts";
-import { approxEqual } from "../../helpers/math.ts";
+} from "../src/TileSet.ts";
+import type { TiledMapTileset } from "../src/index.ts";
+import { approxEqual } from "./helpers/math.ts";
 
 function makeTileset(
   firstgid = 1,

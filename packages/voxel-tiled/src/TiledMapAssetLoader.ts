@@ -9,6 +9,12 @@ import {
   loadJSON,
   pathUtils
 } from "@jolly-pixel/engine";
+import {
+  loadTilesets,
+  type ResolvedBlockDefinition,
+  type TilesetSource,
+  type VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
@@ -17,12 +23,6 @@ import {
   type TiledConverterOptions
 } from "./TiledConverter.ts";
 import type { TiledMap } from "./types.ts";
-import {
-  loadTilesets,
-  type TilesetSource
-} from "../../tileset/index.ts";
-import type { VoxelWorldJSON } from "../../serialization/types.ts";
-import type { ResolvedBlockDefinition } from "../../blocks/BlockDefinition.ts";
 
 export type TiledMapAssetLoaderOptions = Omit<
   TiledConverterOptions,
@@ -39,9 +39,6 @@ export const TiledMapAssetType = new AssetType<VoxelTiledMap>("tilemap");
 
 export type VoxelTiledMapAsset = AssetReference<VoxelTiledMap>;
 
-/**
- * Loads a Tiled map and prepares its textures as one runtime asset.
- */
 export class TiledMapAssetLoader implements AssetLoader<VoxelTiledMap> {
   #manager: THREE.LoadingManager | undefined;
   #options: TiledMapAssetLoaderOptions;

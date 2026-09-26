@@ -53,21 +53,15 @@
     "three": "0.186.0"
   },
   "peerDependencies": {
-    "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/engine": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@jolly-pixel/asset": {
-      "optional": true
-    },
     "@jolly-pixel/engine": {
       "optional": true
     }
   },
   "devDependencies": {
     "@dimforge/rapier3d": "0.20.0",
-    "@jolly-pixel/asset": "workspace:*",
-    "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/loop": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",

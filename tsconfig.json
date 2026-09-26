@@ -50,6 +50,9 @@
       "path": "./packages/voxel-renderer"
     },
     {
+      "path": "./packages/voxel-tiled"
+    },
+    {
       "path": "./packages/pixel-draw-renderer"
     },
     {
