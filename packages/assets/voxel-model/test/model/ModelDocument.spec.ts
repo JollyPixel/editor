@@ -8,6 +8,14 @@ import {
   type ModelChange
 } from "#src/model/ModelDocument.ts";
 import { createBlockTransform } from "#src/model/blockTransform.ts";
+import { createBlockUv } from "#src/model/blockUv.ts";
+import type { UVLayoutData } from "#src/network/types.ts";
+
+// CONSTANTS
+const kUv: UVLayoutData = {
+  state: "stacked",
+  rect: { x: 0, y: 0, width: 16, height: 16 }
+};
 
 function recordChanges(
   document: ModelDocument
@@ -40,7 +48,8 @@ describe("ModelDocument", () => {
       id: blockId,
       parentId: folderId,
       name: "Leg",
-      transform: createBlockTransform()
+      transform: createBlockTransform(),
+      uv: createBlockUv()
     });
   });
 
@@ -113,6 +122,32 @@ describe("ModelDocument", () => {
     assert.deepEqual(
       [...document.tree.values()].map((node) => node.id),
       ["f"]
+    );
+  });
+
+  test("adds a block with its UV layout in one command", () => {
+    const document = new ModelDocument();
+    const changes = recordChanges(document);
+
+    const id = document.addBlock({ name: "Arm", uv: kUv });
+
+    assert.equal(changes.length, 1);
+    assert.deepEqual(document.tree.block(id!)?.uv, kUv);
+  });
+
+  test("changes the UV layout of a block only", () => {
+    const document = new ModelDocument();
+    const changes = recordChanges(document);
+    const blockId = document.addBlock({ name: "Arm" })!;
+    const folderId = document.addFolder({ name: "Limbs" })!;
+
+    assert.equal(document.setUv(blockId, kUv), true);
+    assert.equal(document.setUv(folderId, kUv), false);
+
+    assert.deepEqual(document.tree.block(blockId)?.uv, kUv);
+    assert.deepEqual(
+      changes.map((change) => change.command.action),
+      ["node-added", "node-added", "node-uv-changed"]
     );
   });
 });

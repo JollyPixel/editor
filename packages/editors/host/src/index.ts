@@ -11,6 +11,7 @@ export {
   EditorSession,
   IDENTITY_STORAGE_KEY,
   type EditorSessionClient,
+  type EditorSessionArchivesOptions,
   type EditorSessionEvents,
   type EditorIdentityOptions
 } from "./session/EditorSession.ts";
@@ -18,6 +19,8 @@ export * from "./lease/errors/AssetDocumentConflictError.ts";
 export * from "./session/errors/ArchiveImportDisabledError.ts";
 export * from "./session/openCatalog.ts";
 export * from "./session/SessionArchive.ts";
+export * from "./session/EditorArchives.ts";
+export * from "./session/errors/ArchiveRootError.ts";
 export * from "./session/rememberQueryUsername.ts";
 export type { SessionWorkspace } from "./workspace/SessionWorkspace.ts";
 export {

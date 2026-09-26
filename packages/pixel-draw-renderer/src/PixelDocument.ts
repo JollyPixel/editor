@@ -15,7 +15,10 @@ import {
   type HistoryState
 } from "./history/History.ts";
 import type { HistoryEntry } from "./history/HistoryStack.types.ts";
-import { DocumentEdits } from "./sync/DocumentEdits.ts";
+import {
+  DocumentEdits,
+  type UVRegionFilter
+} from "./sync/DocumentEdits.ts";
 import type { FillGlobalCommit } from "./tools/FillEngine.ts";
 import type { SelectEditEntry } from "./tools/SelectEngine.ts";
 import { UVMap } from "./uv/UVMap.ts";
@@ -113,6 +116,22 @@ export class PixelDocument extends Emitter<
     fn: PixelBufferHookListener | undefined
   ) {
     this.#edits.onBufferUpdated = fn;
+  }
+
+  /**
+   * Hands the UV regions `filter` matches to another document until the
+   * returned function is called.
+   */
+  disownUvRegions(
+    filter: UVRegionFilter
+  ): () => void {
+    return this.#edits.disownUvRegions(filter);
+  }
+
+  ownsUvRegion(
+    id: string
+  ): boolean {
+    return this.#edits.ownsUvRegion(id);
   }
 
   size(): Vec2 {

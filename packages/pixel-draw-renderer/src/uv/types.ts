@@ -54,7 +54,7 @@ export interface UVNormalizedRect {
 export interface UVCompound {
   shape: "compound";
   rect: SelectionRect;
-  parts: readonly UVCompoundPart[];
+  parts: UVCompoundPart[];
   rotation?: UVQuarterTurn;
 }
 

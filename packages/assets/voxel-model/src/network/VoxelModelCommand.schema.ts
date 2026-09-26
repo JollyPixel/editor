@@ -7,6 +7,7 @@ import {
   type JSONSchema,
   type MessageProtocol
 } from "@jolly-pixel/network";
+import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art";
 
 // CONSTANTS
 const kNullableIdSchema = defineSchema({
@@ -70,9 +71,10 @@ export const blockNodeSchema = defineSchema({
     parentId: kNullableIdSchema,
     name: { type: "string" },
     transform: blockTransformSchema,
-    flipAxes: mirrorAxesSchema
+    flipAxes: mirrorAxesSchema,
+    uv: uvLayoutSchema
   },
-  required: ["kind", "id", "parentId", "name", "transform"]
+  required: ["kind", "id", "parentId", "name", "transform", "uv"]
 });
 
 export const modelNodeSchema = defineSchema({
@@ -118,6 +120,10 @@ export const voxelModelCommandSchema = defineSchema({
       transform: blockTransformSchema
     }, {
       flipAxes: mirrorAxesSchema
+    }),
+    commandVariant("node-uv-changed", {
+      id: { type: "string" },
+      uv: uvLayoutSchema
     })
   ]
 });

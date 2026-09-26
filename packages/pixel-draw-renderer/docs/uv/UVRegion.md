@@ -54,7 +54,7 @@ type UVCompoundPart =
 type UVCompound = {
   shape: "compound";
   rect: SelectionRect;
-  parts: readonly UVCompoundPart[];
+  parts: UVCompoundPart[];
   rotation?: UVQuarterTurn;
 };
 

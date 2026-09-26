@@ -77,11 +77,14 @@ export function voxelModelAssetKind(
       idMap: ReadonlyMap<string, string>
     ): void {
       const document = state.toJSON();
-      document.texture = {
-        ...document.texture,
-        id: idMap.get(document.texture.id) ?? document.texture.id
-      };
-      state.load(document);
+      const { texture } = document;
+      state.load({
+        ...document,
+        texture: {
+          ...texture,
+          id: idMap.get(texture.id) ?? texture.id
+        }
+      });
     },
 
     commands: {

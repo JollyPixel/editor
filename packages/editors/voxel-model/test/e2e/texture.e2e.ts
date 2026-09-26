@@ -47,6 +47,45 @@ test("the Paint tab swaps the region tools for the drawing tools", async({ page 
   await expect(page.getByTitle("Width")).toBeHidden();
 });
 
+async function switchRegionState(
+  page: Page,
+  state: "Stacked" | "Unfolded" | "Free"
+): Promise<void> {
+  await regionToolbar(page).click();
+  await page.getByRole("menuitem", { name: state }).click();
+  await expect(regionToolbar(page)).toHaveAccessibleName(`Region state: ${state}`);
+}
+
+function storedUvState(
+  page: Page,
+  name: string
+): Promise<string | undefined> {
+  return page.evaluate((blockName) => {
+    const { document } = window.voxelModelEditor!.workspace;
+    const block = [...document.tree.blocks()]
+      .find((candidate) => candidate.name === blockName);
+
+    return block?.uv?.state;
+  }, name);
+}
+
+test("a region state change is stored on the block and reaches a peer", async({ page, peer }) => {
+  test.slow();
+  await treeRow(page, "Block").click();
+  await expect(regionToolbar(page)).toHaveAccessibleName("Region state: Unfolded");
+
+  await switchRegionState(page, "Stacked");
+  expect(await storedUvState(page, "Block")).toBe("stacked");
+
+  await treeRow(peer, "Block").click();
+  await expect(regionToolbar(peer)).toHaveAccessibleName("Region state: Stacked");
+
+  await page.reload();
+  await waitForEditor(page);
+  await treeRow(page, "Block").click();
+  await expect(regionToolbar(page)).toHaveAccessibleName("Region state: Stacked");
+});
+
 test("selecting a block selects its texture region", async({ page }) => {
   await expect(regionToolbar(page)).toBeHidden();
 

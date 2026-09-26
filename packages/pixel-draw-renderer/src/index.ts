@@ -29,6 +29,7 @@ export {
   type PixelDocumentEvent,
   type PixelDocumentOptions
 } from "./PixelDocument.ts";
+export type { UVRegionFilter } from "./sync/DocumentEdits.ts";
 export type { CanvasBufferEvent } from "./buffer/CanvasBuffer.ts";
 export {
   PixelBuffer,

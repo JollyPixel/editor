@@ -4,11 +4,14 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  DEFAULT_UV_SLOTS,
-  PixelDocument
+  PixelDocument,
+  type PixelBufferHookEvent
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   createBlockTransform,
+  createBlockUv,
+  type ModelChange,
+  type UVLayoutData,
   type VoxelModelSnapshot
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
@@ -20,26 +23,41 @@ import { createModelFixture } from "../../fixtures/model.ts";
 // CONSTANTS
 const kTextureSize = { x: 256, y: 256 };
 const kTorsoRegionId = "block-torso";
-const kTorsoSnapshot: VoxelModelSnapshot = {
-  nodes: [
-    {
-      kind: "block",
-      id: "torso",
-      parentId: null,
-      name: "Torso",
-      transform: createBlockTransform()
-    }
-  ]
-};
 
-function createPixels(): PixelDocument {
-  return new PixelDocument({
-    size: kTextureSize
-  });
+function stackedAt(
+  x: number,
+  y = 0
+): UVLayoutData {
+  return {
+    state: "stacked",
+    rect: { x, y, width: 16, height: 16 }
+  };
+}
+
+function torsoSnapshot(
+  uv: UVLayoutData
+): VoxelModelSnapshot {
+  return {
+    nodes: [
+      {
+        kind: "block",
+        id: "torso",
+        parentId: null,
+        name: "Torso",
+        transform: createBlockTransform(),
+        uv
+      }
+    ]
+  };
 }
 
 function createHarness() {
-  const pixels = createPixels();
+  const pixelEvents: PixelBufferHookEvent[] = [];
+  const pixels = new PixelDocument({
+    size: kTextureSize,
+    history: { enabled: true },
+    onBufferUpdated: (event) => pixelEvents.push(event)
+  });
   const { document, blocks, selection, addBlock } = createModelFixture();
   const textures = new BlockTextures({
     pixels,
@@ -47,15 +65,19 @@ function createHarness() {
     blocks,
     selection
   });
+  const changes: ModelChange[] = [];
+  document.on("change", (change) => changes.push(change));
 
   return {
     pixels,
+    pixelEvents,
     uv: pixels.uv,
     document,
     blocks,
     selection,
     addBlock,
-    textures
+    textures,
+    changes
   };
 }
 
@@ -76,7 +98,7 @@ function regionIdOf(
 
 describe("BlockTextures texture", () => {
   test("shares one texture across existing and future blocks", () => {
-    const pixels = createPixels();
+    const pixels = new PixelDocument({ size: kTextureSize });
     const { document, blocks, selection, addBlock } = createModelFixture();
     const before = addBlock();
     new BlockTextures({
@@ -90,23 +112,44 @@ describe("BlockTextures texture", () => {
     assert.ok(before.texture);
     assert.equal(after.texture, before.texture);
   });
+
+  test("owns block regions while attached and gives them back on dispose", () => {
+    const { pixels, textures } = createHarness();
+    const regionId = "block-a";
+
+    assert.equal(pixels.ownsUvRegion(regionId), false);
+    assert.equal(pixels.ownsUvRegion("texture-region"), true);
+    textures.dispose();
+    assert.equal(pixels.ownsUvRegion(regionId), true);
+  });
+
+  test("keeps syncing the texture's own regions", () => {
+    const { pixels, pixelEvents } = createHarness();
+
+    pixels.uv.create({
+      id: "texture-region",
+      width: 4,
+      height: 4
+    });
+
+    assert.deepEqual(
+      pixelEvents.map((event) => event.action),
+      ["uv-region-created"]
+    );
+  });
 });
 
-describe("BlockTextures region binding", () => {
-  test("maps a region created after its block onto the mesh", () => {
+describe("BlockTextures model layouts", () => {
+  test("maps a block's stored UV layout onto the mesh", () => {
     const { addBlock, uv } = createHarness();
-    const block = addBlock({ name: "Block" });
+    const block = addBlock({ uv: stackedAt(0) });
 
-    uv.create({ id: regionIdOf(block), width: 16, height: 16 });
-    uv.move(regionIdOf(block), { x: 0, y: 0, width: 16, height: 16 });
-
+    assert.equal(uv.get(regionIdOf(block))?.name, "Block");
     assert.deepEqual(uvOf(block, 1), [16 / kTextureSize.x, 1]);
   });
 
-  test("maps an existing region onto a block added later", () => {
-    const { document, blocks, uv } = createHarness();
-    uv.create({ id: "block-late", width: 16, height: 16 });
-    uv.move("block-late", { x: 32, y: 0, width: 16, height: 16 });
+  test("maps a remote block added with its UV layout", () => {
+    const { document, blocks } = createHarness();
 
     document.apply({
       action: "node-added",
@@ -115,7 +158,8 @@ describe("BlockTextures region binding", () => {
         id: "late",
         parentId: null,
         name: "Late",
-        transform: createBlockTransform()
+        transform: createBlockTransform(),
+        uv: stackedAt(32)
       }
     });
 
@@ -124,67 +168,186 @@ describe("BlockTextures region binding", () => {
     assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
   });
 
-  test("honors flipAxes already recorded on first mapping", () => {
+  test("shows the default net of a block added without a layout", () => {
+    const { addBlock, uv, changes } = createHarness();
+    const block = addBlock({ name: "Head" });
+
+    assert.equal(uv.get(regionIdOf(block))?.state, "unfolded");
+    assert.equal(uv.get(regionIdOf(block))?.name, "Head");
+    assert.deepEqual(
+      changes.map((change) => change.command.action),
+      ["node-added"]
+    );
+  });
+
+  test("binds the layout of a snapshot block", () => {
+    const { document, blocks, uv } = createHarness();
+    document.load(torsoSnapshot(createBlockUv()));
+
+    assert.equal(uv.get(kTorsoRegionId)?.name, "Torso");
+
+    const block = blocks.get("torso");
+    assert.ok(block);
+    uv.move(kTorsoRegionId, { x: 0, y: 0, width: 48, height: 32 });
+    const [u, v] = uvOf(block, 1);
+    uv.move(kTorsoRegionId, { x: 64, y: 0, width: 48, height: 32 });
+
+    assert.deepEqual(uvOf(block, 1), [u + (64 / kTextureSize.x), v]);
+  });
+
+  test("the model layout wins over a region the texture carries", () => {
+    const { document, uv } = createHarness();
+    uv.create({ id: kTorsoRegionId, width: 16, height: 16 });
+    uv.move(kTorsoRegionId, { x: 64, y: 32, width: 16, height: 16 });
+
+    document.load(torsoSnapshot(stackedAt(0)));
+
+    assert.deepEqual(
+      uv.get(kTorsoRegionId)?.geometryFor("front"),
+      { x: 0, y: 0, width: 16, height: 16 }
+    );
+  });
+
+  test("updates the regions of blocks a reset keeps, without re-creating them", () => {
+    const { document, uv } = createHarness();
+    document.load(torsoSnapshot(stackedAt(0)));
+    const deleted: string[] = [];
+    uv.on("region-deleted", ({ region }) => deleted.push(region.id));
+
+    document.load(torsoSnapshot(stackedAt(32)));
+
+    assert.deepEqual(deleted, []);
+    assert.deepEqual(
+      uv.get(kTorsoRegionId)?.geometryFor("front"),
+      { x: 32, y: 0, width: 16, height: 16 }
+    );
+  });
+
+  test("drops texture regions of blocks the model does not have", () => {
+    const { document, uv } = createHarness();
+    uv.create({ id: "block-ghost", width: 16, height: 16 });
+    uv.create({ id: "unrelated", width: 16, height: 16 });
+
+    document.load(torsoSnapshot(stackedAt(0)));
+
+    assert.equal(uv.get("block-ghost"), undefined);
+    assert.ok(uv.get("unrelated"));
+  });
+
+  test("keeps every block region through a texture snapshot", (context) => {
+    Object.defineProperty(globalThis, "requestAnimationFrame", {
+      value: () => 0,
+      configurable: true
+    });
+    context.after(() => {
+      Reflect.deleteProperty(globalThis, "requestAnimationFrame");
+    });
+    const { pixels, addBlock, uv } = createHarness();
+    const block = addBlock({ uv: stackedAt(32) });
+
+    pixels.loadSnapshot(
+      kTextureSize,
+      new Uint8ClampedArray(kTextureSize.x * kTextureSize.y * 4)
+    );
+
+    assert.deepEqual(
+      uv.get(regionIdOf(block))?.geometryFor("front"),
+      { x: 32, y: 0, width: 16, height: 16 }
+    );
+    assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
+  });
+
+  test("deletes a block's region when the block is removed", () => {
     const { document, addBlock, uv } = createHarness();
-    const block = addBlock({ name: "Block" });
-    const regionId = regionIdOf(block);
-    document.apply({
-      action: "node-transformed",
-      id: block.uuid,
-      transform: block.transform,
-      flipAxes: { x: true, y: false, z: false }
-    });
+    const block = addBlock({ uv: stackedAt(0) });
+    assert.ok(uv.get(regionIdOf(block)));
 
-    uv.create({
-      id: regionId,
-      width: 16,
-      height: 16,
-      state: "free",
-      activeSlots: DEFAULT_UV_SLOTS
-    });
-    uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 }, "right");
-    uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
+    document.remove(block.uuid);
 
-    assert.equal(uvOf(block, 0)[0], 100 / kTextureSize.x);
-    assert.equal(uvOf(block, 16)[0], 16 / kTextureSize.x);
+    assert.equal(uv.get(regionIdOf(block)), undefined);
   });
 });
 
-describe("BlockTextures live region updates", () => {
+describe("BlockTextures UV edits", () => {
   function bound() {
     const harness = createHarness();
-    const block = harness.addBlock({ name: "Block" });
-    const regionId = regionIdOf(block);
-    harness.uv.create({ id: regionId, width: 16, height: 16 });
-    harness.uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 });
+    const block = harness.addBlock({ uv: stackedAt(0) });
+    harness.changes.length = 0;
 
-    return { ...harness, block, regionId };
+    return {
+      ...harness,
+      block,
+      regionId: regionIdOf(block)
+    };
   }
 
-  test("re-applies the region when it moves", () => {
-    const { uv, block, regionId } = bound();
+  test("writes a moved region to the model as one command", () => {
+    const { document, uv, block, regionId, changes } = bound();
 
     uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
 
     assert.deepEqual(uvOf(block, 1), [80 / kTextureSize.x, 1 - (32 / kTextureSize.y)]);
+    assert.deepEqual(document.tree.block(block.uuid)?.uv, stackedAt(64, 32));
+    assert.deepEqual(
+      changes.map((change) => change.command.action),
+      ["node-uv-changed"]
+    );
   });
 
-  test("re-applies the region while it is still being dragged", () => {
-    const { uv, block, regionId } = bound();
+  test("sends no texture command and records no texture history", () => {
+    const { pixels, pixelEvents, uv, regionId } = bound();
+
+    uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
+    uv.rotate(regionId, "cw");
+    uv.setState(regionId, "unfolded");
+
+    assert.deepEqual(pixelEvents, []);
+    assert.equal(pixels.history.canUndo, false);
+  });
+
+  test("applies a remote UV change to the region without echoing it", () => {
+    const { document, uv, block, regionId, changes } = bound();
+
+    document.apply({
+      action: "node-uv-changed",
+      id: block.uuid,
+      uv: stackedAt(64, 32)
+    });
+
+    assert.deepEqual(
+      uv.get(regionId)?.geometryFor("front"),
+      { x: 64, y: 32, width: 16, height: 16 }
+    );
+    assert.deepEqual(
+      changes.map((change) => [change.command.action, change.origin]),
+      [["node-uv-changed", "remote"]]
+    );
+  });
+
+  test("maps a region while it is still being dragged, without a command", () => {
+    const { uv, block, regionId, changes } = bound();
 
     uv.previewMove(regionId, { x: 64, y: 32, width: 16, height: 16 });
 
     assert.deepEqual(uvOf(block, 1), [80 / kTextureSize.x, 1 - (32 / kTextureSize.y)]);
     assert.deepEqual(uv.get(regionId)?.geometryFor("front"), { x: 0, y: 0, width: 16, height: 16 });
+    assert.deepEqual(changes, []);
   });
 
-  test("re-applies a rotated region, turning each face's UVs a quarter clockwise", () => {
-    const { uv, block, regionId } = bound();
+  test("writes a rotated region, turning each face's UVs a quarter clockwise", () => {
+    const { document, uv, block, regionId } = bound();
 
     uv.rotate(regionId, "cw");
 
     assert.deepEqual(uvOf(block, 0), [16 / kTextureSize.x, 1]);
     assert.deepEqual(uvOf(block, 1), [16 / kTextureSize.x, 1 - (16 / kTextureSize.y)]);
+    assert.deepEqual(
+      document.tree.block(block.uuid)?.uv,
+      {
+        state: "stacked",
+        rect: { x: 0, y: 0, width: 16, height: 16, rotation: 1 }
+      }
+    );
   });
 
   test("applies a peer's in-progress drag without touching the region", () => {
@@ -201,7 +364,7 @@ describe("BlockTextures live region updates", () => {
   });
 
   test("ignores regions and peer drags that belong to no block", () => {
-    const { uv, textures } = bound();
+    const { uv, textures, changes } = bound();
     uv.create({ id: "unrelated-region", width: 16, height: 16 });
 
     assert.doesNotThrow(() => uv.move("unrelated-region", { x: 8, y: 8, width: 16, height: 16 }));
@@ -210,19 +373,12 @@ describe("BlockTextures live region updates", () => {
       face: null,
       geometry: { x: 0, y: 0, width: 16, height: 16 }
     }));
+    assert.deepEqual(changes, []);
   });
 
   test("swaps the axis-perpendicular faces and mirrors U on the rest, for an X mirror", () => {
-    const { document, addBlock, uv } = createHarness();
-    const block = addBlock({ name: "Block" });
-    const regionId = regionIdOf(block);
-    uv.create({
-      id: regionId,
-      width: 16,
-      height: 16,
-      state: "free",
-      activeSlots: DEFAULT_UV_SLOTS
-    });
+    const { document, uv, block, regionId } = bound();
+    uv.setState(regionId, "free");
     uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 }, "right");
     uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
     uv.move(regionId, { x: 0, y: 100, width: 16, height: 16 }, "front");
@@ -234,89 +390,37 @@ describe("BlockTextures live region updates", () => {
     assert.equal(uvOf(block, 16)[0], 16 / kTextureSize.x);
     assert.equal(uvOf(block, 17)[0], 0);
   });
-});
 
-describe("BlockTextures regions port", () => {
-  test("create adds an unfolded region named after the block", () => {
-    const { addBlock, uv, textures } = createHarness();
-    const block = addBlock();
+  test("honors flipAxes already recorded on first mapping", () => {
+    const { document, blocks, uv, regionId, block } = bound();
+    uv.setState(regionId, "free");
+    uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 }, "right");
+    uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
 
-    textures.create(block.uuid, "Head");
+    document.apply({
+      action: "node-added",
+      node: {
+        kind: "block",
+        id: "mirrored",
+        parentId: null,
+        name: "Mirrored",
+        transform: createBlockTransform(),
+        flipAxes: { x: true, y: false, z: false },
+        uv: document.tree.block(block.uuid)!.uv
+      }
+    });
 
-    assert.equal(uv.get(regionIdOf(block))?.name, "Head");
-    assert.equal(uv.get(regionIdOf(block))?.state, "unfolded");
-  });
-
-  test("copy clones the source region onto the duplicate", () => {
-    const { addBlock, uv, textures } = createHarness();
-    const source = addBlock({ name: "Block" });
-    const duplicate = addBlock({ name: "Block Copy" });
-    uv.create({ id: regionIdOf(source), width: 16, height: 16 });
-    uv.move(regionIdOf(source), { x: 64, y: 32, width: 16, height: 16 });
-
-    textures.copy(source.uuid, duplicate.uuid, "Block Copy");
-
-    assert.deepEqual(uvOf(duplicate, 1), [80 / kTextureSize.x, 1 - (32 / kTextureSize.y)]);
-    assert.equal(uv.get(regionIdOf(duplicate))?.name, "Block Copy");
-  });
-
-  test("copy falls back to a default region when the source has none", () => {
-    const { addBlock, uv, textures } = createHarness();
-    const source = addBlock();
-    const duplicate = addBlock();
-
-    textures.copy(source.uuid, duplicate.uuid, "Copy");
-
-    assert.ok(uv.get(regionIdOf(duplicate)));
-  });
-
-  test("deletes a block's region when the block is removed", () => {
-    const { document, addBlock, uv, textures } = createHarness();
-    const block = addBlock();
-    textures.create(block.uuid, "Block");
-
-    document.remove(block.uuid);
-
-    assert.equal(uv.get(regionIdOf(block)), undefined);
-  });
-});
-
-describe("BlockTextures missing regions", () => {
-  test("creates and binds a region for a snapshot block that has none", () => {
-    const { document, blocks, uv } = createHarness();
-    document.load(kTorsoSnapshot);
-
-    assert.equal(uv.get(kTorsoRegionId)?.name, "Torso");
-
-    const block = blocks.get("torso");
-    assert.ok(block);
-    uv.move(kTorsoRegionId, { x: 0, y: 0, width: 48, height: 32 });
-    const [u, v] = uvOf(block, 1);
-    uv.move(kTorsoRegionId, { x: 64, y: 0, width: 48, height: 32 });
-
-    assert.deepEqual(uvOf(block, 1), [u + (64 / kTextureSize.x), v]);
-  });
-
-  test("leaves the region the texture already carries untouched", () => {
-    const { document, uv } = createHarness();
-    uv.create({ id: kTorsoRegionId, width: 16, height: 16 });
-    uv.move(kTorsoRegionId, { x: 64, y: 32, width: 16, height: 16 });
-
-    document.load(kTorsoSnapshot);
-
-    assert.deepEqual(
-      uv.get(kTorsoRegionId)?.geometryFor("front"),
-      { x: 64, y: 32, width: 16, height: 16 }
-    );
+    const mirrored = blocks.get("mirrored");
+    assert.ok(mirrored);
+    assert.equal(uvOf(mirrored, 0)[0], 100 / kTextureSize.x);
+    assert.equal(uvOf(mirrored, 16)[0], 16 / kTextureSize.x);
   });
 });
 
 describe("BlockTextures rename", () => {
-  test("a local block rename renames its region", () => {
-    const { document, addBlock, uv, textures } = createHarness();
-    const block = addBlock({ name: "Torso" });
-    textures.create(block.uuid, block.name);
-    uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
+  test("a local block rename renames its region in place", () => {
+    const { document, addBlock, uv } = createHarness();
+    const block = addBlock({ name: "Torso", uv: stackedAt(32) });
     const before = uv.get(regionIdOf(block))?.toJSON();
     assert.ok(before);
 
@@ -328,22 +432,9 @@ describe("BlockTextures rename", () => {
     );
   });
 
-  test("keeps the renamed region mapped onto the mesh", () => {
-    const { document, addBlock, uv, textures } = createHarness();
-    const block = addBlock({ name: "Torso" });
-    textures.create(block.uuid, block.name);
-    document.rename(block.uuid, "Chest");
-
-    uv.setState(regionIdOf(block), "stacked");
-    uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
-
-    assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
-  });
-
-  test("leaves a remote rename to the pixel document sync", () => {
-    const { document, addBlock, uv, textures } = createHarness();
-    const block = addBlock({ name: "Torso" });
-    textures.create(block.uuid, block.name);
+  test("a remote block rename renames its region too", () => {
+    const { document, addBlock, uv } = createHarness();
+    const block = addBlock({ name: "Torso", uv: stackedAt(0) });
 
     document.apply({
       action: "node-renamed",
@@ -352,17 +443,25 @@ describe("BlockTextures rename", () => {
     });
 
     assert.equal(block.name, "Chest");
-    assert.equal(uv.get(regionIdOf(block))?.name, "Torso");
+    assert.equal(uv.get(regionIdOf(block))?.name, "Chest");
+  });
+
+  test("keeps the renamed region mapped onto the mesh", () => {
+    const { document, addBlock, uv } = createHarness();
+    const block = addBlock({ name: "Torso", uv: stackedAt(0) });
+    document.rename(block.uuid, "Chest");
+
+    uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
+
+    assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
   });
 });
 
 describe("BlockTextures selection", () => {
   test("selecting a block selects its region, and the reverse", () => {
-    const { selection, addBlock, uv, textures } = createHarness();
-    const first = addBlock();
-    const second = addBlock();
-    textures.create(first.uuid, "First");
-    textures.create(second.uuid, "Second");
+    const { selection, addBlock, uv } = createHarness();
+    const first = addBlock({ uv: stackedAt(0) });
+    const second = addBlock({ uv: stackedAt(32) });
 
     selection.select(first.uuid);
     assert.equal(uv.selectedRegionId, regionIdOf(first));

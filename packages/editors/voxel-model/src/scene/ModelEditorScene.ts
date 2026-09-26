@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { PeerIdentity } from "@jolly-pixel/ui";
+import type { EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   ModelDocument,
   VoxelModelRoom
@@ -33,9 +34,11 @@ export interface ModelEditorSceneOptions {
   identity: PeerIdentity;
   presence: PresenceStore;
   pixels: PixelDocument;
+  archives: EditorArchives;
 }
 
 export interface ModelWorkspace {
+  archives: EditorArchives;
   document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
@@ -111,7 +114,7 @@ export class ModelEditorScene extends Systems.Scene {
     });
     const hierarchy = new ModelHierarchy({
       document,
-      regions: textures,
+      textureSize: () => pixels.size(),
       poses: blocks
     });
     const collaboration = new ModelCollaboration({
@@ -161,6 +164,7 @@ export class ModelEditorScene extends Systems.Scene {
     );
 
     this.#workspace.resolve({
+      archives: this.#options.archives,
       document,
       blocks,
       selection,

@@ -48,7 +48,9 @@
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@openally/emitt": "1.1.0"
   },
   "devDependencies": {

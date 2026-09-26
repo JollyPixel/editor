@@ -221,10 +221,10 @@ restoreRotation(region: UVRegion | UVRegionData, face?: UVSlot | null): boolean
 ### `clear()`
 
 ```ts
-clear(): void
+clear(filter?: (region: UVRegion) => boolean): void
 ```
 
-Deletes every region and resets cascading placement and the color palette.
+Deletes every region, or only those `filter` accepts. Once the map is empty, cascading placement and the color palette reset.
 
 ### `on(type, listener)` / `off(type, listener)`
 

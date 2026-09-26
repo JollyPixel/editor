@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 import {
   createBlockTransform,
+  createBlockUv,
   type BlockTransformJSON,
   type ModelDocument,
   type VoxelModelCommand
@@ -150,14 +151,16 @@ describe("ModelBlocks projection", () => {
           id: "child",
           parentId: "parent",
           name: "Child",
-          transform: transformAt({ x: 1, y: 0, z: 0 })
+          transform: transformAt({ x: 1, y: 0, z: 0 }),
+          uv: createBlockUv()
         },
         {
           kind: "block",
           id: "parent",
           parentId: null,
           name: "Parent",
-          transform: transformAt({ x: 0, y: 0, z: 0 })
+          transform: transformAt({ x: 0, y: 0, z: 0 }),
+          uv: createBlockUv()
         }
       ]
     });

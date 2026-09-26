@@ -2,20 +2,25 @@
 import type {
   PixelDocument,
   UVMapListener,
+  UVRegion,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   PixelCanvasTexture,
   UVGeometryBinding
 } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
+import {
+  uvLayoutOf,
+  uvRegionOf
+} from "@jolly-pixel/asset.pixel-art";
 import type { UVGhostPayload } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type {
+  BlockNodeJSON,
   ModelChange,
   ModelDocument
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
-import type { BlockRegions } from "../../model/index.ts";
 import type { BlockSelectionStore } from "../../state/index.ts";
 import type {
   ModelBlock,
@@ -28,7 +33,6 @@ import {
 } from "./blockRegionId.ts";
 
 // CONSTANTS
-const kBlockUvSize = { width: 16, height: 16 };
 const kBlockUvColor = "#4488ff";
 
 export interface BlockTexturesOptions {
@@ -38,13 +42,19 @@ export interface BlockTexturesOptions {
   selection: BlockSelectionStore;
 }
 
-export class BlockTextures implements BlockRegions {
+/**
+ * Projects the UV layouts stored on model blocks onto the texture UV map,
+ * and writes UV edits made on the texture back to the model.
+ */
+export class BlockTextures {
   #pixels: PixelDocument;
   #document: ModelDocument;
   #blocks: ModelBlocks;
   #selection: BlockSelectionStore;
   #texture: PixelCanvasTexture;
   #bindings = new Map<string, UVGeometryBinding>();
+  #restoring = false;
+  #releaseBlockRegions: () => void;
 
   #onChange = (
     change: ModelChange
@@ -52,29 +62,27 @@ export class BlockTextures implements BlockRegions {
     const { command } = change;
     switch (command.action) {
       case "node-added":
-        this.#bindByUuid(command.node.id);
+        if (command.node.kind === "block") {
+          this.#project(command.node);
+        }
         break;
       case "node-removed":
-        for (const node of change.removed) {
-          if (node.kind === "block") {
-            this.#unbind(node.id);
-            this.#pixels.uv.delete(
-              blockRegionId(node.id)
-            );
+        this.#restore(() => {
+          for (const node of change.removed) {
+            if (node.kind === "block") {
+              this.#pixels.uv.delete(blockRegionId(node.id));
+            }
           }
-        }
+        });
         break;
       case "node-renamed":
-        if (
-          change.origin === "local" &&
-          this.#blocks.get(command.id) !== undefined
-        ) {
-          this.#pixels.uv.rename(
-            blockRegionId(command.id),
-            command.name
-          );
+      case "node-uv-changed": {
+        const block = this.#document.tree.block(command.id);
+        if (block) {
+          this.#project(block);
         }
         break;
+      }
       case "node-transformed":
         if (command.flipAxes) {
           this.#bindByUuid(command.id);
@@ -85,22 +93,18 @@ export class BlockTextures implements BlockRegions {
     }
   };
 
-  #rebindAll = (): void => {
-    for (const uuid of [...this.#bindings.keys()]) {
-      this.#unbind(uuid);
-    }
-    for (const block of this.#blocks.values()) {
-      this.#bind(block);
-    }
-    this.#createMissingRegions();
-  };
-
-  #createMissingRegions = (): void => {
-    for (const block of this.#blocks.values()) {
-      if (this.#pixels.uv.get(blockRegionId(block.uuid)) === undefined) {
-        this.create(block.uuid, block.name);
+  #rebuild = (): void => {
+    this.#restore(() => {
+      for (const region of [...this.#pixels.uv.regions]) {
+        const uuid = blockUuidFromRegion(region.id);
+        if (uuid !== null && !this.#document.tree.has(uuid)) {
+          this.#pixels.uv.delete(region.id);
+        }
       }
-    }
+      for (const block of this.#document.tree.blocks()) {
+        this.#pixels.uv.restore(regionOf(block));
+      }
+    });
   };
 
   #onResized = (
@@ -122,6 +126,15 @@ export class BlockTextures implements BlockRegions {
     const uuid = blockUuidFromRegion(region.id);
     if (uuid !== null) {
       this.#unbind(uuid);
+    }
+  };
+
+  #onRegionEdited = (
+    event: { region: UVRegion; }
+  ): void => {
+    const uuid = blockUuidFromRegion(event.region.id);
+    if (!this.#restoring && uuid !== null) {
+      this.#document.setUv(uuid, uvLayoutOf(event.region));
     }
   };
 
@@ -161,51 +174,23 @@ export class BlockTextures implements BlockRegions {
       textureCanvas: () => pixels.buffer.canvas()
     });
     this.#blocks.texture = this.#texture.texture;
+    this.#releaseBlockRegions = pixels.disownUvRegions(
+      (id) => blockUuidFromRegion(id) !== null
+    );
 
+    const { uv } = pixels;
     this.#texture.on("resized", this.#onResized);
-    pixels.on("reset", this.#rebindAll);
-    pixels.uv.on("region-created", this.#onRegionCreated);
-    pixels.uv.on("region-deleted", this.#onRegionDeleted);
-    pixels.uv.on("selection-changed", this.#onRegionSelected);
+    uv.on("region-created", this.#onRegionCreated);
+    uv.on("region-deleted", this.#onRegionDeleted);
+    uv.on("region-moved", this.#onRegionEdited);
+    uv.on("region-rotated", this.#onRegionEdited);
+    uv.on("region-state-changed", this.#onRegionEdited);
+    uv.on("selection-changed", this.#onRegionSelected);
     this.#document.on("change", this.#onChange);
-    this.#document.on("reset", this.#rebindAll);
+    this.#document.on("reset", this.#rebuild);
     this.#selection.on("select", this.#onBlockSelected);
 
-    this.#rebindAll();
-  }
-
-  create(
-    uuid: string,
-    name: string
-  ): void {
-    this.#pixels.uv.create({
-      id: blockRegionId(uuid),
-      name,
-      color: kBlockUvColor,
-      ...kBlockUvSize,
-      state: "unfolded"
-    });
-  }
-
-  copy(
-    sourceUuid: string,
-    uuid: string,
-    name: string
-  ): void {
-    const source = this.#pixels.uv.get(
-      blockRegionId(sourceUuid)
-    );
-    if (!source) {
-      this.create(uuid, name);
-
-      return;
-    }
-
-    this.#pixels.uv.restore({
-      ...source.toJSON(),
-      id: blockRegionId(uuid),
-      name
-    });
+    this.#rebuild();
   }
 
   previewPeerDrag(
@@ -226,16 +211,37 @@ export class BlockTextures implements BlockRegions {
     }
 
     const { uv } = this.#pixels;
-    this.#pixels.off("reset", this.#rebindAll);
     uv.off("region-created", this.#onRegionCreated);
     uv.off("region-deleted", this.#onRegionDeleted);
+    uv.off("region-moved", this.#onRegionEdited);
+    uv.off("region-rotated", this.#onRegionEdited);
+    uv.off("region-state-changed", this.#onRegionEdited);
     uv.off("selection-changed", this.#onRegionSelected);
     this.#document.off("change", this.#onChange);
-    this.#document.off("reset", this.#rebindAll);
+    this.#document.off("reset", this.#rebuild);
     this.#selection.off("select", this.#onBlockSelected);
+    this.#releaseBlockRegions();
     this.#blocks.texture = null;
     this.#texture.off("resized", this.#onResized);
     this.#texture.dispose();
+  }
+
+  #restore(
+    fn: () => void
+  ): void {
+    this.#restoring = true;
+    try {
+      fn();
+    }
+    finally {
+      this.#restoring = false;
+    }
+  }
+
+  #project(
+    block: BlockNodeJSON
+  ): void {
+    this.#restore(() => this.#pixels.uv.restore(regionOf(block)));
   }
 
   #bindByUuid(
@@ -280,4 +286,14 @@ export class BlockTextures implements BlockRegions {
     this.#bindings.get(uuid)?.unfollow();
     this.#bindings.delete(uuid);
   }
+}
+
+function regionOf(
+  block: BlockNodeJSON
+): UVRegion {
+  return uvRegionOf(block.uv, {
+    id: blockRegionId(block.id),
+    name: block.name,
+    color: kBlockUvColor
+  });
 }

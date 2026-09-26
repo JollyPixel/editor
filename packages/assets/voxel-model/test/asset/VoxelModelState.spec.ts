@@ -13,6 +13,7 @@ import {
   encodeVoxelModelDocument
 } from "#src/asset/document.ts";
 import { InvalidVoxelModelDocumentError } from "#src/asset/InvalidVoxelModelDocumentError.ts";
+import { InvalidModelTreeError } from "#src/model/InvalidModelTreeError.ts";
 import {
   blockAdded,
   blockNode,
@@ -121,6 +122,21 @@ describe("decodeVoxelModelDocument", () => {
         nodes: []
       })),
       InvalidVoxelModelDocumentError
+    );
+  });
+});
+
+describe("VoxelModelState.load", () => {
+  test("rejects a document whose tree is broken", () => {
+    const state = new VoxelModelState();
+    const document = createVoxelModelDocument({ texture: kTexture });
+
+    assert.throws(
+      () => state.load({
+        ...document,
+        nodes: [folderNode("a", "ghost")]
+      }),
+      InvalidModelTreeError
     );
   });
 });

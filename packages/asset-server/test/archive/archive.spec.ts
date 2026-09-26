@@ -182,6 +182,19 @@ describe("exportAssetArchive", () => {
       AssetArchiveError
     );
   });
+
+  test("refuses a stored document that import would reject", async() => {
+    await using workspace = await archiveWorkspace();
+    const map = await workspace.link("map.link");
+    await workspace.source.write("map.link", linkContent("!"));
+
+    await assert.rejects(
+      exportAssetArchive(workspace.backend, { root: map }),
+      (error: unknown) => error instanceof AssetArchiveError &&
+        error.rejection === "unreadable-asset" &&
+        error.assetId === map
+    );
+  });
 });
 
 describe("readAssetArchive", () => {

@@ -7,10 +7,12 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ModelTree } from "#src/model/ModelTree.ts";
+import { InvalidModelTreeError } from "#src/model/InvalidModelTreeError.ts";
 import { createBlockTransform } from "#src/model/blockTransform.ts";
 import type { VoxelModelCommand } from "#src/network/types.ts";
 import {
   TRANSFORM,
+  UV,
   blockAdded,
   blockNode,
   folderAdded,
@@ -174,6 +176,34 @@ describe("ModelTree", () => {
     assert.deepEqual(tree.block("a")?.flipAxes, flipAxes);
   });
 
+  test("stores the UV layout of a block", () => {
+    const tree = treeOf(blockAdded("a"));
+    const command: VoxelModelCommand = {
+      action: "node-uv-changed",
+      id: "a",
+      uv: UV
+    };
+
+    assert.equal(tree.accepts(command), true);
+    tree.apply(command);
+
+    assert.deepEqual(tree.block("a")?.uv, UV);
+    assert.notStrictEqual(tree.block("a")?.uv, UV);
+  });
+
+  test("rejects a UV layout for a folder or an unknown node", () => {
+    const tree = treeOf(folderAdded("f"));
+
+    assert.equal(
+      tree.accepts({ action: "node-uv-changed", id: "f", uv: UV }),
+      false
+    );
+    assert.equal(
+      tree.accepts({ action: "node-uv-changed", id: "missing", uv: UV }),
+      false
+    );
+  });
+
   test("hands out copies", () => {
     const tree = treeOf(blockAdded("a"));
 
@@ -184,5 +214,40 @@ describe("ModelTree", () => {
     assert.notStrictEqual(tree.block("a"), tree.block("a"));
     assert.notStrictEqual(loaded.block("a"), node);
     assert.deepEqual(loaded.block("a"), node);
+  });
+});
+
+describe("ModelTree.load", () => {
+  test("loads a child listed before its parent", () => {
+    const tree = new ModelTree();
+
+    tree.load([blockNode("arm", "body"), blockNode("body")]);
+
+    assert.equal(tree.get("arm")?.parentId, "body");
+  });
+
+  test("rejects a repeated id, a missing parent and a cycle", () => {
+    const cases = [
+      [blockNode("a"), folderNode("a")],
+      [blockNode("a", "ghost")],
+      [folderNode("a", "b"), folderNode("b", "a")],
+      [folderNode("a", "a")]
+    ];
+
+    for (const nodes of cases) {
+      assert.throws(
+        () => new ModelTree().load(nodes),
+        InvalidModelTreeError
+      );
+    }
+  });
+
+  test("keeps the current nodes when a load is rejected", () => {
+    const tree = treeOf(blockAdded("body"));
+
+    assert.throws(() => tree.load([blockNode("a", "ghost")]));
+
+    assert.ok(tree.has("body"));
+    assert.equal(tree.has("a"), false);
   });
 });

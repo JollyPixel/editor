@@ -44,7 +44,7 @@ test("exports the map, resets the workspace and imports it back", async({ page }
   await openPane(page, "General");
 
   const downloading = page.waitForEvent("download");
-  await page.locator("map-config-panel #export-map").click();
+  await page.locator("map-config-panel #export-archive").click();
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("overworld.zip");
   const archivePath = await download.path();
@@ -89,7 +89,7 @@ test("imports a map and its tileset as a copy", async({ page }) => {
   await openPane(page, "General");
 
   const downloading = page.waitForEvent("download");
-  await page.locator("map-config-panel #export-map").click();
+  await page.locator("map-config-panel #export-archive").click();
   const archivePath = await (await downloading).path();
   await page.locator("map-config-panel input[type=file]")
     .setInputFiles(archivePath);

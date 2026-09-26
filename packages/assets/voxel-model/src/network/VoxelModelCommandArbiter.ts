@@ -44,6 +44,8 @@ export class VoxelModelCommandArbiter {
         ];
       case "node-transformed":
         return [`transform:${command.id}`];
+      case "node-uv-changed":
+        return [`uv:${command.id}`];
       default:
         return [];
     }

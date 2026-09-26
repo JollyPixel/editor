@@ -78,7 +78,12 @@ export class VoxelModelEditor {
       document: target.document,
       identity: session.identity,
       presence: new PresenceStore(),
-      pixels: texture.document
+      pixels: texture.document,
+      archives: session.archives({
+        fallbackName: "model",
+        resetWarning: "Every model and texture stored in this browser is " +
+          "deleted. Export what you want to keep first."
+      })
     });
     const editorRuntime = await EditorRuntime.create(kCanvas, {
       focusCanvas: false,

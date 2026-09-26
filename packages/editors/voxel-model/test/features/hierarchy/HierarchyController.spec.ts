@@ -38,6 +38,10 @@ const kNoMirror = {
   y: false,
   z: false
 };
+const kTextureSize = {
+  x: 256,
+  y: 256
+};
 
 interface DialogAnswers {
   name?: HierarchyNameResult | null;
@@ -64,10 +68,7 @@ function createHarness(
   const { document, blocks, selection } = fixture;
   const hierarchy = new ModelHierarchy({
     document,
-    regions: {
-      create: () => undefined,
-      copy: () => undefined
-    },
+    textureSize: () => kTextureSize,
     poses: blocks
   });
   const calls: DialogCalls = {
@@ -347,10 +348,7 @@ describe("HierarchyController.attach", () => {
       selection,
       hierarchy: new ModelHierarchy({
         document,
-        regions: {
-          create: () => undefined,
-          copy: () => undefined
-        },
+        textureSize: () => kTextureSize,
         poses: blocks
       }),
       presence: new PresenceStore()

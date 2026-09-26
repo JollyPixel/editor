@@ -5,14 +5,16 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
+  blockUvBounds,
   createBlockTransform,
+  createBlockUv,
+  type UVLayoutData,
   type VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/network/client.ts";
 
 // Import Internal Dependencies
 import {
   ModelHierarchy,
-  type BlockRegions,
   type HierarchyNode
 } from "#src/model/index.ts";
 import {
@@ -22,20 +24,24 @@ import {
 
 // CONSTANTS
 const kNoMirror = { x: false, y: false, z: false };
+const kTextureSize = { x: 256, y: 256 };
 
 interface Harness extends ModelFixture {
   hierarchy: ModelHierarchy;
-  regions: string[];
   commands: VoxelModelCommand[];
+}
+
+function layoutAt(
+  x: number
+): UVLayoutData {
+  return {
+    state: "stacked",
+    rect: { x, y: 0, width: 16, height: 16 }
+  };
 }
 
 function createHarness(): Harness {
   const fixture = createModelFixture();
-  const regions: string[] = [];
-  const regionPort: BlockRegions = {
-    create: (uuid, name) => regions.push(`create:${name}:${uuid}`),
-    copy: (sourceUuid, uuid, name) => regions.push(`copy:${name}:${sourceUuid}->${uuid}`)
-  };
   const commands: VoxelModelCommand[] = [];
   fixture.document.on("change", (change) => commands.push(change.command));
 
@@ -43,10 +49,9 @@ function createHarness(): Harness {
     ...fixture,
     hierarchy: new ModelHierarchy({
       document: fixture.document,
-      regions: regionPort,
+      textureSize: () => kTextureSize,
       poses: fixture.blocks
     }),
-    regions,
     commands
   };
 }
@@ -106,14 +111,28 @@ describe("ModelHierarchy.nodes", () => {
 });
 
 describe("ModelHierarchy.createBlock", () => {
-  test("creates the block with one command and gives it its UV region", () => {
-    const { hierarchy, regions, commands } = createHarness();
+  test("creates the block and its UV layout with one command", () => {
+    const { document, hierarchy, commands } = createHarness();
 
     const uuid = hierarchy.createBlock("Head", null);
 
     assert.ok(uuid);
-    assert.deepEqual(regions, [`create:Head:${uuid}`]);
+    assert.deepEqual(document.tree.block(uuid)?.uv, createBlockUv());
     assert.deepEqual(commands.map((command) => command.action), ["node-added"]);
+  });
+
+  test("places the new block's net beside the layouts already in use", () => {
+    const { document, hierarchy } = createHarness();
+
+    const first = hierarchy.createBlock("Head", null);
+    const second = hierarchy.createBlock("Body", null);
+    const net = blockUvBounds(createBlockUv());
+
+    assert.ok(first && second);
+    assert.deepEqual(
+      document.tree.block(second)?.uv,
+      createBlockUv({ x: net.width, y: 0 })
+    );
   });
 
   test("under a block, lands on the parent's position as its child", () => {
@@ -142,11 +161,11 @@ describe("ModelHierarchy.createBlock", () => {
     assert.equal(blocks.get(uuid)?.node.parent, parent.node);
   });
 
-  test("returns null and creates no region under an unknown parent", () => {
-    const { hierarchy, regions } = createHarness();
+  test("returns null and adds nothing under an unknown parent", () => {
+    const { document, hierarchy } = createHarness();
 
     assert.equal(hierarchy.createBlock("Child", "missing"), null);
-    assert.deepEqual(regions, []);
+    assert.equal(document.tree.size, 0);
   });
 });
 
@@ -251,9 +270,13 @@ describe("ModelHierarchy.rename", () => {
 });
 
 describe("ModelHierarchy.duplicate", () => {
-  test("copies a block next to its source with a Copy suffix and a copied region", () => {
-    const { blocks, addBlock, hierarchy, regions } = createHarness();
-    const source = addBlock({ name: "Arm", transform: at(1, 2, 3) });
+  test("copies a block next to its source with a Copy suffix and its UV layout", () => {
+    const { document, blocks, addBlock, hierarchy } = createHarness();
+    const source = addBlock({
+      name: "Arm",
+      transform: at(1, 2, 3),
+      uv: layoutAt(7)
+    });
 
     const duplicateId = hierarchy.duplicate(source.uuid, {
       includeChildren: false,
@@ -263,7 +286,7 @@ describe("ModelHierarchy.duplicate", () => {
     assert.ok(duplicateId);
     assert.equal(blocks.get(duplicateId)?.name, "Arm Copy");
     assert.deepEqual(blocks.get(duplicateId)?.transform, source.transform);
-    assert.deepEqual(regions, [`copy:Arm Copy:${source.uuid}->${duplicateId}`]);
+    assert.deepEqual(document.tree.block(duplicateId)?.uv, layoutAt(7));
   });
 
   test("copies a folder subtree, keeping child names", () => {

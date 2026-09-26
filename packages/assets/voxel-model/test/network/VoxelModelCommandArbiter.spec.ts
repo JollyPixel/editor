@@ -7,6 +7,7 @@ import { VoxelModelCommandArbiter } from "#src/network/VoxelModelCommandArbiter.
 import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
 import {
   TRANSFORM,
+  UV,
   blockAdded,
   networkCommand
 } from "../helpers/commands.ts";
@@ -70,7 +71,15 @@ describe("VoxelModelCommandArbiter.keys", () => {
       ["parent:folder-1", "transform:a", "transform:b"]
     ],
     [networkCommand(blockAdded("n")), []],
-    [networkCommand({ action: "node-removed", id: "n" }), []]
+    [networkCommand({ action: "node-removed", id: "n" }), []],
+    [
+      networkCommand({
+        action: "node-uv-changed",
+        id: "node-1",
+        uv: UV
+      }),
+      ["uv:node-1"]
+    ]
   ];
 
   for (const [command, expected] of cases) {
