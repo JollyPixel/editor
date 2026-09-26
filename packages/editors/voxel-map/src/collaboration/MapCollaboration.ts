@@ -6,7 +6,7 @@ import type { PeerIdentity } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
 import type {
   VoxelMapRoom
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";

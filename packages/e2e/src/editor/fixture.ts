@@ -5,7 +5,7 @@ import {
 } from "@playwright/test";
 import type {
   CatalogClient
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { withCatalog } from "./catalog.ts";

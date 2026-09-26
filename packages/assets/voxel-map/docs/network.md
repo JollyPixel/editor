@@ -1,6 +1,6 @@
 # Voxel-map network API
 
-The browser entry point is `@jolly-pixel/asset.voxel-map/network/client.ts`. Server protocol utilities are exported from `@jolly-pixel/asset.voxel-map/network/server.ts`. Use `assetRoomName("voxelmap", assetId)` to name a map room and `tilesetRoom(client, assetId)` to open a tileset room.
+The browser entry point is `@jolly-pixel/asset.voxel-map/client`. Server protocol utilities are exported from `@jolly-pixel/asset.voxel-map/server`. Use `assetRoomName("voxelmap", assetId)` to name a map room and `tilesetRoom(client, assetId)` to open a tileset room.
 
 ## Map synchronization
 

@@ -6,7 +6,7 @@ import path from "node:path";
 import { defineConfig } from "vite";
 import {
   createAssetWorkspacePlugin
-} from "@jolly-pixel/asset-server/plugins/vite.ts";
+} from "@jolly-pixel/asset-server/node";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import { VOXEL_MAP_KIND } from "@jolly-pixel/asset.voxel-map";

@@ -26,11 +26,7 @@ contract. It does not provide `isIgnored` or `watch`.
 
 ## 🌍 Browser compatibility
 
-`@jolly-pixel/asset-source/core` exports everything except the filesystem
-source and the HTTP handler: the `AssetSource` contract, `MemoryAssetSource`,
-the path and JSON utilities, and the constants. It imports no Node.js builtin,
-so a browser bundle can use it.
-
-```ts
-import { MemoryAssetSource } from "@jolly-pixel/asset-source/core";
-```
+The root entry exports the `AssetSource` contract, `MemoryAssetSource`,
+`IndexedDbAssetSource`, the path and JSON utilities, and the constants. It imports no Node.js builtin, so a
+browser bundle can use it. The filesystem source and the HTTP handler live in
+`@jolly-pixel/asset-source/node`.

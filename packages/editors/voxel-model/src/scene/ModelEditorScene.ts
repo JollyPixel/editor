@@ -7,7 +7,7 @@ import type { EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   ModelDocument,
   VoxelModelRoom
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { ModelHierarchy } from "../model/index.ts";

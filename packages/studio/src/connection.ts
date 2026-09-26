@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import {
   CATALOG_TIMEOUT_MS,
   HOST_PARAMS,

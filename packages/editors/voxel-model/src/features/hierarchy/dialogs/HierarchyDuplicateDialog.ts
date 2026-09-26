@@ -7,7 +7,7 @@ import {
 } from "lit";
 import { state } from "lit/decorators.js";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
-import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {

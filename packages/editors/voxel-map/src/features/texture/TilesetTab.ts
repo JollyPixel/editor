@@ -4,7 +4,7 @@ import type {
   TilesetDocumentListener,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
-import { PixelCollaboration } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import { PixelCollaboration } from "@jolly-pixel/asset.pixel-art/client";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import {
   peerProfileColor,

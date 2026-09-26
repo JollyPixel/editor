@@ -13,7 +13,7 @@ import type {
   UVSlot,
   UVTriangleCorner
 } from "@jolly-pixel/pixel-draw.renderer";
-import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/mesh-texturing/types.ts";
+import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 export type UVSlotBounds = TileBounds;
 

@@ -5,7 +5,7 @@ import {
   PresenceOnlyExtension,
   Server
 } from "@jolly-pixel/network";
-import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/plugins/vite.ts";
+import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/node";
 import { PORTS } from "@jolly-pixel/e2e";
 
 const network = new Server();

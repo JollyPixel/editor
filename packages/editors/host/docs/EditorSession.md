@@ -47,7 +47,7 @@ by the time an editor mounts, a leased target is loaded.
 
 `EditorSession.open()` waits up to five seconds for the network catalog
 snapshot, then throws `CatalogUnavailableError` (from
-`@jolly-pixel/asset-server/catalog/client`) and destroys its client.
+`@jolly-pixel/asset-server/client`) and destroys its client.
 `EditorSession.connect()` accepts `catalogTimeoutMs` for supplied clients;
 without it, the caller owns connection liveness.
 
@@ -76,7 +76,7 @@ later events as updates.
 `identity` contains `username`, `peerId`, and `color`. The username prompt
 remembers the entered username per tab. `assets` is the session's
 [`AssetLeases`](./AssetLeases.md), where panels open their own leases.
-`catalog` comes from `@jolly-pixel/asset-server/catalog/client`.
+`catalog` comes from `@jolly-pixel/asset-server/client`.
 
 ## Identity
 

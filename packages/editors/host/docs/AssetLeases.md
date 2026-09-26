@@ -30,7 +30,7 @@ interface SyncedDocument<TDocument> {
 
 A document kind pairs an asset kind with the factory of its synced document. Asset
 packages export them, such as `pixelArtDocumentKind()` from
-`@jolly-pixel/asset.pixel-art/network/client.ts`.
+`@jolly-pixel/asset.pixel-art/client`.
 
 Create each kind object once and reuse it, for the editor's static `kinds` and
 for every `open` call. Two kind objects for the same asset

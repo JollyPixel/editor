@@ -3,8 +3,12 @@
   "description": "Frame scheduling and time primitives (FrameScheduler, GameLoop)",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",

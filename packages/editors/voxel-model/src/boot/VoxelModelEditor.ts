@@ -6,12 +6,12 @@ import {
   pixelArtDocumentKind,
   type PixelNetworkCommand,
   type PixelServerMessage
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+} from "@jolly-pixel/asset.pixel-art/client";
 import {
   VOXEL_MODEL_KIND,
   voxelModelDocumentKind,
   type ModelDocument
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 import {
   EditorRuntime,
   type AssetLease,

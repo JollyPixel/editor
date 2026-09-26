@@ -3,7 +3,7 @@ import type { Validator } from "ata-validator";
 import {
   readJsonFile,
   type AssetSource
-} from "@jolly-pixel/asset-source/core";
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import type { Logger } from "../logger.ts";

@@ -4,7 +4,7 @@ import {
   createPixelArtAsset,
   PIXEL_ART_EXTENSION,
   type PixelArtRoom
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+} from "@jolly-pixel/asset.pixel-art/client";
 import {
   createPixelArtDocument,
   type PixelArtCanvas,

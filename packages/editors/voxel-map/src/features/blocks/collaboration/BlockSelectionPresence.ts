@@ -3,7 +3,7 @@ import type * as network from "@jolly-pixel/network";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies

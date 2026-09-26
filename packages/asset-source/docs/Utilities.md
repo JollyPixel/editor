@@ -1,7 +1,8 @@
 # Utilities
 
 The package entry point exports helpers for asset paths, workspace state and
-JSON files.
+JSON files. `toRelativePosix` and `DEFAULT_IGNORED_PATHS` are exported from
+`@jolly-pixel/asset-source/node`.
 
 ## Asset paths
 

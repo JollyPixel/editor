@@ -18,7 +18,7 @@ import {
   type VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
-import type { TilesetRoom } from "@jolly-pixel/asset.voxel-map/network/client.ts";
+import type { TilesetRoom } from "@jolly-pixel/asset.voxel-map/client";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies

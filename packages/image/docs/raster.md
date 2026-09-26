@@ -1,14 +1,14 @@
 # Raster API
 
-The browser-only `raster` entry decodes image `Blob` objects to RGBA8 samples
-or an `HTMLCanvasElement`.
+The browser-only `@jolly-pixel/image/browser` entry decodes image `Blob`
+objects to RGBA8 samples or an `HTMLCanvasElement`.
 
 ```ts
 import {
   decodeRaster,
   decodeRasterCanvas,
   type DecodedImage
-} from "@jolly-pixel/image/raster";
+} from "@jolly-pixel/image/browser";
 ```
 
 ## `decodeRaster()`

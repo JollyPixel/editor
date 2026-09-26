@@ -2,7 +2,7 @@
 import type { VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
 import type {
   SyncedVoxelMap
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 import { Emitter } from "@openally/emitt";
 
 export type WorldSourceEvents = {

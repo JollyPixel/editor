@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import type { EditorSessionClient } from "./EditorSession.ts";

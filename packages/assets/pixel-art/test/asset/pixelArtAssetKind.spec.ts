@@ -16,7 +16,7 @@ import {
   type AssetEventData,
   type AssetLiveProtocol,
   type AssetRoomBinding
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 import { protocolEvents } from "@jolly-pixel/network";
 import {
   encodePixelArtDocument,

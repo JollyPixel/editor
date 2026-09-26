@@ -2,7 +2,7 @@
 import type * as THREE from "three";
 import { Emitter } from "@openally/emitt";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
-import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
 import {
   TransformControls,
   type TransformControlsOptions

@@ -17,7 +17,7 @@ import {
   PixelCollaboration,
   type PixelArtRoom,
   type UVGhostPayload
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+} from "@jolly-pixel/asset.pixel-art/client";
 import "@jolly-pixel/ui";
 import {
   peerProfileColor,

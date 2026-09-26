@@ -10,7 +10,7 @@ import {
   createBlockUv,
   type UVLayoutData,
   type VoxelModelCommand
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {

@@ -6,10 +6,10 @@ world.
 
 ```ts
 import Rapier from "@dimforge/rapier3d-compat";
-import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import {
-  RapierVoxelCollider
-} from "@jolly-pixel/voxel.renderer/plugins/rapier/index.js";
+  RapierVoxelCollider,
+  VoxelEngine
+} from "@jolly-pixel/voxel.renderer";
 
 await Rapier.init();
 

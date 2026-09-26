@@ -7,7 +7,7 @@ import {
   type JSONSchema,
   type MessageProtocol
 } from "@jolly-pixel/network";
-import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/network/server.ts";
+import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
 
 // CONSTANTS
 const kNullableIdSchema = defineSchema({

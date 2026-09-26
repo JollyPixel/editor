@@ -3,6 +3,7 @@
   "description": "Common Three.js utilities and components for JollyPixel's workspaces and editors",
   "version": "4.0.0",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

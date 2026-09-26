@@ -41,7 +41,7 @@ consumers validate stored data before treating it as a typed domain event.
 | SQLite | `await persistence.sqlite(location?)` | SQLite connection, optionally backed by a file | Node.js |
 
 The main entry loads the Node-only SQLite backend when its factory is called.
-The separate `@jolly-pixel/event-store/sqlite` entry exposes the SQLite factory,
+The separate `@jolly-pixel/event-store/node` entry exposes the SQLite factory,
 log, and schema directly.
 
 ## Appending an event

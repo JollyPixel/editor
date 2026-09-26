@@ -50,16 +50,15 @@ references nothing omits it. See [dependency edges](./Catalog.md#dependency-edge
 archive as a copy. The handler mutates the loaded state before serialization.
 Kinds with no references can omit it.
 
-Import the handler contract from `@jolly-pixel/asset-server/kinds`. It exposes
+Import the handler contract from `@jolly-pixel/asset-server`. It exposes
 the handler and live protocol types, `foldAssetEvent`, the built-in handlers
-and the asset event helpers, without the back-end, catalog or HTTP modules the
-root entry loads:
+and the asset event helpers:
 
 ```ts
 import {
   foldAssetEvent,
   type AssetKindHandler
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 ```
 
 ## Folding
@@ -103,7 +102,7 @@ error at warn level, so corrupt stored content stays apart from handler bugs,
 which keep the error level:
 
 ```ts
-import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server/kinds";
+import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server";
 
 throw new InvalidAssetDocumentError("voxelmodel", "content is not JSON", {
   cause

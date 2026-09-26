@@ -4,7 +4,7 @@ import {
   pixelsToImageData
 } from "@jolly-pixel/color";
 import { encodePng } from "@jolly-pixel/image";
-import { decodeRaster } from "@jolly-pixel/image/raster";
+import { decodeRaster } from "@jolly-pixel/image/browser";
 
 // Import Internal Dependencies
 import type {

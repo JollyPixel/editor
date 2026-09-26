@@ -8,7 +8,7 @@ import type {
   ModelChange,
   ModelDocument,
   NodeTransformJSON
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import type { BlockPoses } from "../../model/index.ts";

@@ -7,7 +7,7 @@ connect-style middleware, usable with `node:http`, Vite or Express.
 import {
   createAssetStaticHandler,
   FilesystemAssetSource
-} from "@jolly-pixel/asset-source";
+} from "@jolly-pixel/asset-source/node";
 
 const handler = createAssetStaticHandler({
   source: new FilesystemAssetSource("./assets"),

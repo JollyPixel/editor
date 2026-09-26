@@ -9,7 +9,7 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import {
   LogQueue,
   type LogEntry

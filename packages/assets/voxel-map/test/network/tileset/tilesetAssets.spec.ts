@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/catalog/client";
+import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import {

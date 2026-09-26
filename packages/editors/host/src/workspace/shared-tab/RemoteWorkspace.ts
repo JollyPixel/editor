@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
-import type { ClientSocketEvent } from "@jolly-pixel/network/client";
-import { ChannelTransport } from "@jolly-pixel/network/transport/channel.ts";
+import {
+  ChannelTransport,
+  type ClientSocketEvent
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type { StandaloneConnection } from "../../editor/mountStandalone.ts";

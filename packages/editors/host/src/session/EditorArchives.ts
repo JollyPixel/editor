@@ -3,7 +3,7 @@ import { showConfirm } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
   ImportPlan
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { LAUNCH_QUERY_PARAM } from "../launch/sources/QueryLaunchSource.ts";
@@ -116,10 +116,6 @@ export class EditorArchives {
     return this.#workspace?.persistent === false;
   }
 
-  /**
-   * Exports the target and hands the archive to the browser as a download
-   * named after the target path's stem.
-   */
   async download(): Promise<void> {
     const { id, source } = this.#target();
     const blob = await this.#archive.export(id);
@@ -127,11 +123,6 @@ export class EditorArchives {
     this.#browser.save(blob, this.#fileName(source));
   }
 
-  /**
-   * Imports an archive rooted on an `accepts` asset, asking how to handle
-   * assets that already exist, then reloads the editor onto the imported
-   * root. Does nothing when the question is dismissed.
-   */
   async importFile(
     file: Blob
   ): Promise<void> {
@@ -160,9 +151,6 @@ export class EditorArchives {
     location.assign(url.toString());
   }
 
-  /**
-   * Resets the workspace and reloads once the user confirms `resetWarning`.
-   */
   async reset(): Promise<void> {
     if (!await this.#browser.confirmReset(this.#resetWarning)) {
       return;

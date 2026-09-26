@@ -3,7 +3,7 @@ import {
   AssetSource,
   type AssetRecordData
 } from "@jolly-pixel/asset";
-import { TILESET_KIND } from "@jolly-pixel/asset.voxel-map/network/client.ts";
+import { TILESET_KIND } from "@jolly-pixel/asset.voxel-map/client";
 import type { TilesetDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

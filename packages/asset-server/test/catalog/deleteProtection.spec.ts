@@ -8,9 +8,11 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
-import { Server } from "@jolly-pixel/network";
-import { Client } from "@jolly-pixel/network/client";
-import { LoopbackTransport } from "@jolly-pixel/network/transport/loopback.ts";
+import {
+  Client,
+  LoopbackTransport,
+  Server
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {

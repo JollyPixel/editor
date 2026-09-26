@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { showChoice } from "@jolly-pixel/ui";
-import { CatalogUnavailableError } from "@jolly-pixel/asset-server/catalog/client";
+import { CatalogUnavailableError } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { LaunchNotFoundError } from "../launch/errors/LaunchNotFoundError.ts";

@@ -30,6 +30,31 @@ frontend applications use different manifests and scripts.
   output. For published packages, copy the publishing fields and
   `prepublishOnly` script from a comparable library.
 
+## Declare entry points
+
+Every published package declares `exports`, never `main` or `types`. Each
+target is `{ "types": "./dist/<path>.d.ts", "default": "./dist/<path>.js" }`.
+Private packages that ship no build may point a subpath at a `./src/*.ts` file
+instead.
+
+| Subpath | Holds | Examples |
+|---|---|---|
+| `.` | The main surface, safe in a browser whenever the package allows it | `@jolly-pixel/asset-source` |
+| `./client`, `./server` | One side of a collaboration protocol | `@jolly-pixel/network/client`, `@jolly-pixel/asset.pixel-art/server` |
+| `./node`, `./browser` | Code that needs Node.js builtins or the DOM | `@jolly-pixel/asset-server/node`, `@jolly-pixel/image/browser` |
+| Named after an optional peer | An integration that imports an optional peer dependency | `@jolly-pixel/voxel.renderer/engine`, `@jolly-pixel/ui/network` |
+| Named after a feature | A slice kept out of the root because the root registers custom elements, or because it is loaded lazily | `@jolly-pixel/ui/stats`, `@jolly-pixel/editor.host/offline` |
+
+- Use lowercase names with no file extension and no wildcard. `pnpm run lint`
+  runs `scripts/checkExports.ts`, which rejects other keys and targets with no
+  source file.
+- Add a subpath only when a consumer imports it. Export a new helper from the
+  root and rely on tree-shaking instead of adding a subpath for it.
+- Set `"sideEffects": false` when no module runs code on import that a
+  consumer depends on. List the files that do, such as worker entry scripts,
+  instead of omitting the field. Packages that register custom elements keep
+  the default.
+
 ## Verify the workspace
 
 Run from the repository root:

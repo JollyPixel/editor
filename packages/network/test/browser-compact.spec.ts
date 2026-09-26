@@ -10,9 +10,7 @@ import * as esbuild from "esbuild";
 const kNetworkSrcDir = path.join(import.meta.dirname, "..", "src");
 const kEntryPoints = [
   path.join(kNetworkSrcDir, "client", "index.ts"),
-  path.join(kNetworkSrcDir, "index.ts"),
-  path.join(kNetworkSrcDir, "transport", "loopback.ts"),
-  path.join(kNetworkSrcDir, "transport", "channel.ts")
+  path.join(kNetworkSrcDir, "index.ts")
 ];
 
 describe("Network browser compatibility", () => {

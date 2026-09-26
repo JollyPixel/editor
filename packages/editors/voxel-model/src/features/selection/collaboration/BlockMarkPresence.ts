@@ -3,7 +3,7 @@ import {
   PeerMarkTracker,
   type PeerMarkMap
 } from "@jolly-pixel/ui/network";
-import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import type {

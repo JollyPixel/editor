@@ -1,6 +1,6 @@
 # Voxel-model network API
 
-The browser entry point is `@jolly-pixel/asset.voxel-model/network/client.ts`. Server protocol utilities are exported from `@jolly-pixel/asset.voxel-model/network/server.ts`. Use `assetRoomName("voxelmodel", assetId)` to name the room.
+The browser entry point is `@jolly-pixel/asset.voxel-model/client`. Server protocol utilities are exported from `@jolly-pixel/asset.voxel-model/server`. Use `assetRoomName("voxelmodel", assetId)` to name the room.
 
 ## Editable document
 

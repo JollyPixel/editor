@@ -18,7 +18,7 @@ $ pnpm add @jolly-pixel/asset-server
 
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
-import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 import { Server } from "@jolly-pixel/network";
 import {
   createAssetBackend,

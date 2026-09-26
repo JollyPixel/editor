@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
-import type { PixelNetworkCommand } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import type { PixelNetworkCommand } from "@jolly-pixel/asset.pixel-art/client";
 
 // Import Internal Dependencies
 import {

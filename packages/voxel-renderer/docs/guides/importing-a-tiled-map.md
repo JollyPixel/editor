@@ -5,13 +5,11 @@ Use `TiledConverter` when application code already loads the Tiled JSON.
 ```ts
 import { loadJSON } from "@jolly-pixel/engine";
 import {
-  VoxelEngine,
-  loadTilesets
-} from "@jolly-pixel/voxel.renderer";
-import {
   TiledConverter,
+  VoxelEngine,
+  loadTilesets,
   type TiledMap
-} from "@jolly-pixel/voxel.renderer/plugins/tiled/index.js";
+} from "@jolly-pixel/voxel.renderer";
 
 const map = await loadJSON<TiledMap>("map.tmj");
 const { world, blocks } = new TiledConverter().convert(map, {
@@ -42,7 +40,7 @@ import { Runtime } from "@jolly-pixel/runtime";
 import {
   TiledMapAssetLoader,
   TiledMapAssetType
-} from "@jolly-pixel/voxel.renderer/plugins/tiled/asset.ts";
+} from "@jolly-pixel/voxel.renderer/engine";
 
 const mapId = new AssetId("map.intro");
 const catalog = new AssetCatalog([

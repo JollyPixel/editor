@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
 import type {
   TransformControls,
   TransformMode as ControlsMode,

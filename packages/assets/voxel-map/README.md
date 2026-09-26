@@ -48,7 +48,7 @@ import {
   TILESET_KIND,
   VoxelSyncClient,
   type VoxelMapRoom
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 
 const client = new Client();
 const document = new VoxelDocument();
@@ -71,10 +71,10 @@ The first snapshot loads each document. Local world commands go to the map room;
 ## 📚 API
 
 - `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `tilesetAssetKind`, `TilesetState`, `tilesetAsset`, the `VOXEL_MAP_ASSET` and `TILESET_ASSET` descriptors, and the kind and event constants of both kinds for server registration and persistence.
-- `createTilesetDocument({ tileSize?, size?, pixels?, blocks?, materialGroups? })` builds a `TilesetAssetDocument`; `tilesetDocumentFromPng(png, { tileSize?, blockLimit? })` wraps an image with one cube block per tile, up to `blockLimit` (32). `encodeTilesetDocument`, `decodeTilesetDocument` and `parseTilesetDocument` are its codec; a malformed document throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server/kinds`. The decoders are only exported from the package root.
+- `createTilesetDocument({ tileSize?, size?, pixels?, blocks?, materialGroups? })` builds a `TilesetAssetDocument`; `tilesetDocumentFromPng(png, { tileSize?, blockLimit? })` wraps an image with one cube block per tile, up to `blockLimit` (32). `encodeTilesetDocument`, `decodeTilesetDocument` and `parseTilesetDocument` are its codec; a malformed document throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server`. The decoders are only exported from the package root.
 - `createVoxelMapDocument({ chunkSize, tilesets?, layer? })` encodes a map linking the given tilesets, each in the first free slot, with one `layer` (`"Ground"`). Loading a map checks it against `voxelWorldSchema`, tileset links included, before the renderer parses it; a malformed map throws `InvalidAssetDocumentError`.
-- `@jolly-pixel/asset.voxel-map/network/client.ts` exports `VoxelSyncClient`, `SyncedVoxelMap`, `voxelMapDocumentKind`, `TilesetSyncClient`, `SyncedTileset`, `tilesetDocumentKind`, `tilesetRoom`, `createTilesetAsset`, the tileset document builders and encoder, wire types, and `tilesetAsset`.
-- `@jolly-pixel/asset.voxel-map/network/server.ts` exports `VoxelCommandArbiter`, `TilesetCommandArbiter`, and the protocol and snapshot schemas of both rooms.
+- `@jolly-pixel/asset.voxel-map/client` exports `VoxelSyncClient`, `SyncedVoxelMap`, `voxelMapDocumentKind`, `TilesetSyncClient`, `SyncedTileset`, `tilesetDocumentKind`, `tilesetRoom`, `createTilesetAsset`, the tileset document builders and encoder, wire types, and `tilesetAsset`.
+- `@jolly-pixel/asset.voxel-map/server` exports `VoxelCommandArbiter`, `TilesetCommandArbiter`, and the protocol and snapshot schemas of both rooms.
 
 The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The world and tileset document formats and engine commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
 

@@ -13,9 +13,9 @@ import {
   encodeContent,
   foldAssetEvent,
   type AssetEventData
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 import { protocolEvents } from "@jolly-pixel/network";
-import { PIXEL_COMMAND_ACTIONS } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+import { PIXEL_COMMAND_ACTIONS } from "@jolly-pixel/asset.pixel-art/client";
 import { TILESET_DOCUMENT_COMMAND_ACTIONS } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

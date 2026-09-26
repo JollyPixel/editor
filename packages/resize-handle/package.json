@@ -3,8 +3,12 @@
   "description": "Robust resize handles / splitters for your HTML5 apps and websites",
   "version": "1.2.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",

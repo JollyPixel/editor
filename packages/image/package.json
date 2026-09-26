@@ -3,6 +3,7 @@
   "description": "PNG codecs and browser raster decoding",
   "version": "1.1.0",
   "type": "module",
+  "sideEffects": false,
   "imports": {
     "#src/*": "./src/*"
   },
@@ -11,7 +12,7 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./raster": {
+    "./browser": {
       "types": "./dist/raster/index.d.ts",
       "default": "./dist/raster/index.js"
     }

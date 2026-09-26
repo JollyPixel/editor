@@ -4,7 +4,7 @@ import {
   defineSchema,
   type Infer
 } from "@jolly-pixel/network";
-import type { AssetKindDescriptor } from "@jolly-pixel/asset-server/kinds";
+import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { createBlockTransform } from "../model/blockTransform.ts";

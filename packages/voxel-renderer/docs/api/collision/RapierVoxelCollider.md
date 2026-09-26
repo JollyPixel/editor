@@ -1,7 +1,7 @@
 # RapierVoxelCollider
 
 `RapierVoxelCollider` implements `VoxelCollider` with Rapier3D. It is exported
-from `@jolly-pixel/voxel.renderer/plugins/rapier/index.js`.
+from the package root.
 
 ## API
 

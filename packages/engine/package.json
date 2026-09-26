@@ -3,8 +3,12 @@
   "description": "Minimal and opiniated ECS framework on top of three.js.",
   "version": "6.0.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",

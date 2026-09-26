@@ -7,11 +7,11 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  Client,
+  LoopbackTransport,
   Server,
   type ServerOptions
 } from "@jolly-pixel/network";
-import { Client } from "@jolly-pixel/network/client";
-import { LoopbackTransport } from "@jolly-pixel/network/transport/loopback.ts";
 
 // Import Internal Dependencies
 import {

@@ -10,8 +10,8 @@ import {
   ARCHIVE_MIME_TYPE,
   type ImportPlan,
   type ImportReport
-} from "@jolly-pixel/asset-server/catalog/client";
-import { BINARY_KIND } from "@jolly-pixel/asset-server/backend";
+} from "@jolly-pixel/asset-server/client";
+import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import { AssetId } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { AssetKindDescriptor } from "@jolly-pixel/asset-server/kinds";
+import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import {
   createPixelArtDocument,
   createPixelBufferFromPng,

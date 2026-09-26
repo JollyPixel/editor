@@ -3,12 +3,12 @@ import type * as network from "@jolly-pixel/network";
 import type {
   AssetRoomDeletedMessage,
   AssetRoomRejectedMessage
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 import {
   isPixelCommandAction,
   type PixelBufferSnapshot,
   type PixelNetworkCommand
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+} from "@jolly-pixel/asset.pixel-art/client";
 import type {
   TilesetDocumentCommand,
   TilesetDocumentJSON

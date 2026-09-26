@@ -13,7 +13,7 @@ import {
   type ModelChange,
   type UVLayoutData,
   type VoxelModelSnapshot
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { BlockTextures } from "#src/features/texture/BlockTextures.ts";

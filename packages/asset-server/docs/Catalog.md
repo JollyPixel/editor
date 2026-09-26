@@ -201,11 +201,11 @@ base64 content, and each reply goes to the requesting client only.
 
 ## Browser client
 
-`@jolly-pixel/asset-server/catalog/client` exports the room protocol types and
+`@jolly-pixel/asset-server/client` exports the room protocol types and
 constants and `CatalogClient`, with no Node.js dependency.
 
 ```ts
-import { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 const catalog = await CatalogClient.connect(networkClient, {
   timeoutMs: 5_000
@@ -273,7 +273,7 @@ of the bytes `exportArchive` resolves, plus `ArchiveLimits`,
 ## HTTP handler
 
 ```ts
-import { createCatalogHandler } from "@jolly-pixel/asset-server";
+import { createCatalogHandler } from "@jolly-pixel/asset-server/node";
 
 const handler = createCatalogHandler({
   projection,
@@ -294,7 +294,7 @@ The response carries a strong ETag hashed from the snapshot and
 ```ts
 import {
   createAssetCatalogPlugin
-} from "@jolly-pixel/asset-server/plugins/vite.ts";
+} from "@jolly-pixel/asset-server/node";
 
 export default {
   plugins: [createAssetCatalogPlugin({ projection })]

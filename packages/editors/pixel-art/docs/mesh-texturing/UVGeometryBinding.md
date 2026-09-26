@@ -3,7 +3,7 @@
 Projects a `UVRegion` onto a `THREE.BufferGeometry`'s `uv` attribute, and optionally keeps it in step as the user drags the region.
 
 ```ts
-import { UVGeometryBinding } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
+import { UVGeometryBinding } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 const binding = new UVGeometryBinding({
   geometry: mesh.geometry,

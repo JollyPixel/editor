@@ -8,7 +8,7 @@ import type { AssetRecord } from "@jolly-pixel/asset";
 import {
   isStatePath,
   safeAssetPath
-} from "@jolly-pixel/asset-source/core";
+} from "@jolly-pixel/asset-source";
 import { Validator } from "ata-validator";
 import {
   strFromU8,

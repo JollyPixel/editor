@@ -7,14 +7,14 @@ import type {
 import {
   createAssetStaticHandler,
   type AssetStaticHandlerOptions
-} from "@jolly-pixel/asset-source";
+} from "@jolly-pixel/asset-source/node";
 import {
   CATALOG_URL_PATH,
   LAUNCH_ELEMENT_ID,
   type AssetCatalog
 } from "@jolly-pixel/asset";
-import { WebsocketTransport } from "@jolly-pixel/network/transport/websocket.ts";
-import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network/transport/constants.ts";
+import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
+import { WebsocketTransport } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
 import { createCatalogHandler } from "../catalog/httpHandler.ts";

@@ -7,7 +7,7 @@ import {
 import {
   writeJsonFile,
   type AssetSource
-} from "@jolly-pixel/asset-source/core";
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {

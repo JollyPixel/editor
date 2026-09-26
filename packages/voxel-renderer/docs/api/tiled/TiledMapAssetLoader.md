@@ -1,7 +1,8 @@
 # TiledMapAssetLoader
 
 `TiledMapAssetLoader` converts a Tiled map and prepares its atlas textures as one
-`@jolly-pixel/asset` value. This entry point requires the optional peers
+`@jolly-pixel/asset` value. It is exported from
+`@jolly-pixel/voxel.renderer/engine`, which requires the optional peers
 `@jolly-pixel/asset` and `@jolly-pixel/engine`.
 
 ## API

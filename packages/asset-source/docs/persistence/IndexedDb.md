@@ -4,7 +4,7 @@
 store keyed by asset path. It survives a page reload.
 
 ```ts
-import { IndexedDbAssetSource } from "@jolly-pixel/asset-source/indexeddb";
+import { IndexedDbAssetSource } from "@jolly-pixel/asset-source";
 
 const source = await IndexedDbAssetSource.open({
   name: "jolly-workspace:default"
@@ -14,8 +14,9 @@ await source.write("textures/grass.png", bytes);
 source.close();
 ```
 
-The source lives in its own `@jolly-pixel/asset-source/indexeddb` entry, so a
-Node.js program never loads it.
+The source is exported from the package root. It only reaches the `indexedDB`
+global when `open()` or `destroy()` runs, so loading the root in Node.js is
+safe.
 
 ```ts
 IndexedDbAssetSource.open(options): Promise<IndexedDbAssetSource>

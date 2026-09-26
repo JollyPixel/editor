@@ -3,6 +3,9 @@
   "description": "The shared wire for JollyPixel's multiplayer editors",
   "version": "4.0.0",
   "type": "module",
+  "sideEffects": [
+    "./dist/server/extension/worker/WorkerExtensionHost.js"
+  ],
   "imports": {
     "#src/*": "./src/*"
   },
@@ -11,8 +14,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./plugins/*.ts": "./dist/plugins/*.js",
-    "./transport/*.ts": "./dist/transport/*.js",
     "./client": {
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
@@ -20,10 +21,6 @@
     "./node": {
       "types": "./dist/node.d.ts",
       "default": "./dist/node.js"
-    },
-    "./parser": {
-      "types": "./dist/protocol/MessageParser.d.ts",
-      "default": "./dist/protocol/MessageParser.js"
     }
   },
   "scripts": {

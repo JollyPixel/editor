@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 
 export function mirrorSignFromAxes(
   axes: MirrorAxes

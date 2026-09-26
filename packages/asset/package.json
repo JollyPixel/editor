@@ -3,8 +3,12 @@
   "description": "Platform-agnostic asset references and loading orchestration for browser and Node.js runtimes",
   "version": "2.1.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",

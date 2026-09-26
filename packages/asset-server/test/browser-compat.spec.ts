@@ -9,7 +9,7 @@ import * as esbuild from "esbuild";
 // CONSTANTS
 const kSrcDir = path.join(import.meta.dirname, "..", "src");
 const kEntryPoints = [
-  path.join(kSrcDir, "backend.ts")
+  path.join(kSrcDir, "index.ts")
 ];
 
 describe("Asset back-end browser compatibility", () => {

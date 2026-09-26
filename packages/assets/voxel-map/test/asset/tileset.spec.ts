@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server/kinds";
+import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server";
 import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
-import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import * as network from "@jolly-pixel/network/client";
 import {
   promptPeerIdentity,
@@ -218,10 +218,6 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     );
   }
 
-  /**
-   * Export, import and reset flows for the target, named after its current
-   * catalog path.
-   */
   archives(
     options: EditorSessionArchivesOptions
   ): EditorArchives {

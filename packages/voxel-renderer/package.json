@@ -3,24 +3,16 @@
   "description": "Jolly Pixel 3D Voxel Engine and Renderer",
   "version": "6.0.0",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./plugins/engine/index.ts": {
+    "./engine": {
       "types": "./dist/plugins/engine/index.d.ts",
       "default": "./dist/plugins/engine/index.js"
-    },
-    "./plugins/tiled/asset.ts": {
-      "types": "./dist/plugins/tiled/asset.d.ts",
-      "default": "./dist/plugins/tiled/asset.js"
-    },
-    "./plugins/tiled/index.ts": {
-      "types": "./dist/plugins/tiled/index.d.ts",
-      "default": "./dist/plugins/tiled/index.js"
-    },
-    "./plugins/*": "./dist/plugins/*"
+    }
   },
   "scripts": {
     "prepublishOnly": "tsc -b",

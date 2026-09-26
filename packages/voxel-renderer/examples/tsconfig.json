@@ -8,8 +8,8 @@
       "@jolly-pixel/voxel.renderer": [
         "../src/index.ts"
       ],
-      "@jolly-pixel/voxel.renderer/plugins/*": [
-        "../src/plugins/*"
+      "@jolly-pixel/voxel.renderer/engine": [
+        "../src/plugins/engine/index.ts"
       ]
     }
   }
