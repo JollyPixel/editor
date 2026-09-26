@@ -52,11 +52,12 @@ export interface OrbitFlyCameraOptions extends CameraOptions {
   mouseSensitivity?: number;
   maxPitch?: number;
   /**
-   * Units travelled per wheel notch.
+   * Pivot or trail distance changed per wheel notch, in world units.
    */
   scrollSpeed?: number;
   /**
-   * Fraction `moveSpeed` grows per wheel notch while looking around.
+   * Fraction `moveSpeed` grows per wheel notch when scroll is not
+   * adjusting a pivot distance.
    */
   speedAdjustStep?: number;
   /**

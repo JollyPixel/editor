@@ -4,9 +4,8 @@ import {
   clamp,
   mrt,
   output,
+  passTexture,
   positionView,
-  renderOutput,
-  texture,
   vec4
 } from "three/tsl";
 
@@ -14,17 +13,16 @@ import {
 import { SettledSize } from "./SettledSize.ts";
 
 // CONSTANTS
-const kDefaultSamples = 4;
 const kTargetOptions = {
   type: THREE.HalfFloatType,
   minFilter: THREE.LinearFilter,
   magFilter: THREE.LinearFilter
 };
 
-export interface VoxelTransparencyRendererOptions {
+export interface VoxelTransparencyPassOptions {
   /**
    * MSAA sample count of the offscreen targets; 0 disables antialiasing.
-   * @default 4
+   * @default renderer.samples
    */
   samples?: number;
 }
@@ -34,35 +32,30 @@ export interface VoxelTransparencyRendererOptions {
  * Two transparent draws avoid requiring indexed MRT blending on WebGL.
  * Colours are approximate; accumulated coverage is order independent.
  */
-export class VoxelTransparencyRenderer {
-  #renderer: THREE.WebGPURenderer;
-  #opaque: THREE.RenderTarget;
+export class VoxelTransparencyPassNode extends THREE.PassNode {
+  #scene: THREE.Scene;
   #accumulation: THREE.RenderTarget;
   #coverage: THREE.RenderTarget;
-  #depth = new THREE.DepthTexture(1, 1);
-  #quad: THREE.QuadMesh;
-  #material: THREE.NodeMaterial;
-  #size = new THREE.Vector2();
+  #composite: THREE.Node;
+  #accumulationOutput: THREE.MRTNode;
+  #coverageOutput: THREE.MRTNode;
+  #renderer: THREE.Renderer | null = null;
   #allocated = new SettledSize();
-  #outputKey = "";
-  #accumulationOutput;
-  #coverageOutput;
+  #primed = false;
 
   constructor(
-    renderer: THREE.WebGPURenderer,
-    options: VoxelTransparencyRendererOptions = {}
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    options: VoxelTransparencyPassOptions = {}
   ) {
-    const targetOptions = {
-      ...kTargetOptions,
-      samples: options.samples ?? kDefaultSamples
-    };
+    super(THREE.PassNode.COLOR, scene, camera, options);
+    this.transparent = false;
+    this.#scene = scene;
 
-    this.#renderer = renderer;
-    this.#opaque = new THREE.RenderTarget(1, 1, targetOptions);
-    this.#accumulation = new THREE.RenderTarget(1, 1, targetOptions);
-    this.#coverage = new THREE.RenderTarget(1, 1, targetOptions);
-    for (const target of [this.#opaque, this.#accumulation, this.#coverage]) {
-      target.depthTexture = this.#depth;
+    this.#accumulation = new THREE.RenderTarget(1, 1, kTargetOptions);
+    this.#coverage = new THREE.RenderTarget(1, 1, kTargetOptions);
+    for (const target of [this.#accumulation, this.#coverage]) {
+      target.depthTexture = this.renderTarget.depthTexture;
       target.texture.name = "output";
     }
 
@@ -78,81 +71,77 @@ export class VoxelTransparencyRenderer {
     });
     this.#coverageOutput = mrt({ output: vec4(0, 0, 0, output.a) });
 
-    const base = texture(this.#opaque.texture);
-    const accumulated = texture(this.#accumulation.texture);
-    const coverage = texture(this.#coverage.texture).a.clamp(0, 1);
+    const base = this.getTextureNode("output");
+    const accumulated = passTexture(this, this.#accumulation.texture);
+    const coverage = passTexture(this, this.#coverage.texture).a.clamp(0, 1);
     const remaining = coverage.oneMinus();
     const alpha = coverage.add(base.a.mul(remaining));
     const rgb = accumulated.rgb.div(accumulated.a.max(0.000001))
       .mul(coverage).add(base.rgb.mul(remaining));
-    const material = new THREE.NodeMaterial();
-    material.fragmentNode = renderOutput(vec4(rgb, alpha));
-    material.depthTest = false;
-    material.depthWrite = false;
-    this.#material = material;
-    this.#quad = new THREE.QuadMesh(material);
+    this.#composite = vec4(rgb, alpha);
   }
 
-  render(
-    scene: THREE.Scene,
-    camera: THREE.Camera
+  override setup(
+    builder: THREE.NodeBuilder
+  ): THREE.Node {
+    super.setup(builder);
+    this.#renderer = builder.renderer;
+    this.#accumulation.samples = this.renderTarget.samples;
+    this.#coverage.samples = this.renderTarget.samples;
+
+    return this.#composite;
+  }
+
+  override setSize(
+    width: number,
+    height: number
   ): void {
-    const renderer = this.#renderer;
-    const target = renderer.getRenderTarget();
-    const viewport = renderer.getViewport(new THREE.Vector4());
-    const scissor = renderer.getScissor(new THREE.Vector4());
-    const scissorTest = renderer.getScissorTest();
+    if (this.#allocated.request(width, height)) {
+      this.#primed = false;
+    }
+    super.setSize(this.#allocated.width, this.#allocated.height);
+
+    const { width: targetWidth, height: targetHeight } = this.renderTarget;
+    this.#accumulation.setSize(targetWidth, targetHeight);
+    this.#coverage.setSize(targetWidth, targetHeight);
+    if (!this.#primed && this.#renderer) {
+      for (const target of [this.renderTarget, this.#accumulation, this.#coverage]) {
+        this.#renderer.initRenderTarget(target);
+      }
+      this.#primed = true;
+    }
+  }
+
+  override updateBefore(
+    frame: THREE.NodeFrame
+  ): undefined {
+    const renderer = frame.renderer;
+    if (!renderer) {
+      return;
+    }
+
+    const scene = this.#scene;
     const state = {
+      target: renderer.getRenderTarget(),
+      mrt: renderer.getMRT(),
       autoClear: renderer.autoClear,
       opaque: renderer.opaque,
       transparent: renderer.transparent,
-      toneMapping: renderer.toneMapping,
-      outputColorSpace: renderer.outputColorSpace,
       background: scene.background,
       backgroundNode: scene.backgroundNode,
       clearColor: renderer.getClearColor(new THREE.Color()),
       clearAlpha: renderer.getClearAlpha(),
-      mrt: renderer.getMRT(),
       renderObject: renderer.getRenderObjectFunction()
     };
-    if (target) {
-      this.#size.set(target.width, target.height);
-    }
-    else {
-      renderer.getDrawingBufferSize(this.#size);
-    }
-
-    const buffers = [
-      this.#opaque,
-      this.#accumulation,
-      this.#coverage
-    ];
-    if (this.#allocated.request(this.#size.x, this.#size.y, target !== null)) {
-      for (const buffer of buffers) {
-        buffer.setSize(this.#allocated.width, this.#allocated.height);
-      }
-
-      for (const buffer of buffers) {
-        renderer.initRenderTarget(buffer);
-      }
-    }
     try {
-      renderer.autoClear = false;
-      renderer.toneMapping = THREE.NoToneMapping;
-      renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-      renderer.setScissorTest(false);
-      renderer.setMRT(null);
-      renderer.setRenderTarget(this.#opaque);
-      renderer.opaque = true;
-      renderer.transparent = false;
-      renderer.clear();
-      renderer.render(scene, camera);
+      super.updateBefore(frame);
 
-      scene.background = null;
-      scene.backgroundNode = null;
-      renderer.setClearColor(0, 0);
+      renderer.autoClear = false;
       renderer.opaque = false;
       renderer.transparent = true;
+      renderer.setClearColor(0, 0);
+      scene.background = null;
+      scene.backgroundNode = null;
       for (const coverage of [false, true]) {
         renderer.setRenderTarget(coverage ? this.#coverage : this.#accumulation);
         renderer.setMRT(coverage ? this.#coverageOutput : this.#accumulationOutput);
@@ -192,52 +181,35 @@ export class VoxelTransparencyRenderer {
             Object.assign(material, saved);
           }
         });
-        renderer.render(scene, camera);
+        renderer.render(scene, this.camera);
       }
-
-      renderer.setRenderObjectFunction(null);
-      renderer.setMRT(null);
-      renderer.setRenderTarget(target);
-      renderer.setViewport(viewport);
-      renderer.setScissor(scissor);
-      renderer.setScissorTest(scissorTest);
-      renderer.opaque = true;
-      renderer.transparent = true;
-      renderer.toneMapping = state.toneMapping;
-      renderer.outputColorSpace = state.outputColorSpace;
-      const outputKey =
-        `${renderer.currentToneMapping}:${renderer.currentColorSpace}`;
-      if (outputKey !== this.#outputKey) {
-        this.#outputKey = outputKey;
-        this.#material.needsUpdate = true;
-      }
-      this.#quad.render(renderer);
     }
     finally {
       renderer.setRenderObjectFunction(state.renderObject);
       renderer.setMRT(state.mrt);
-      renderer.setRenderTarget(target);
-      renderer.setViewport(viewport);
-      renderer.setScissor(scissor);
-      renderer.setScissorTest(scissorTest);
+      renderer.setRenderTarget(state.target);
       renderer.setClearColor(state.clearColor, state.clearAlpha);
       renderer.autoClear = state.autoClear;
       renderer.opaque = state.opaque;
       renderer.transparent = state.transparent;
-      renderer.toneMapping = state.toneMapping;
-      renderer.outputColorSpace = state.outputColorSpace;
       scene.background = state.background;
       scene.backgroundNode = state.backgroundNode;
     }
   }
 
-  dispose(): void {
-    this.#material.dispose();
-
-    for (const target of [this.#opaque, this.#accumulation, this.#coverage]) {
+  override dispose(): void {
+    for (const target of [this.#accumulation, this.#coverage]) {
       target.depthTexture = null;
       target.dispose();
     }
-    this.#depth.dispose();
+    super.dispose();
   }
+}
+
+export function voxelTransparencyPass(
+  scene: THREE.Scene,
+  camera: THREE.Camera,
+  options: VoxelTransparencyPassOptions = {}
+): VoxelTransparencyPassNode {
+  return new VoxelTransparencyPassNode(scene, camera, options);
 }

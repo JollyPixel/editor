@@ -4,6 +4,7 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import type { RenderComponent } from "./Renderer.ts";
 import type { PostProcessing } from "./PostProcessing.ts";
+import { OffscreenCameraPipeline } from "./OffscreenCameraPipeline.ts";
 
 export interface CameraPipeline {
   render(): void;
@@ -103,5 +104,5 @@ function createRenderPipeline(
   renderer: THREE.WebGPURenderer,
   outputNode: THREE.Node
 ): CameraPipeline {
-  return new THREE.RenderPipeline(renderer, outputNode);
+  return new OffscreenCameraPipeline(renderer, outputNode);
 }

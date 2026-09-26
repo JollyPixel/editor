@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/ui";
 import {
   resolveMetricFormat,
+  type MetricDefinition,
   type StatsRecorder,
   type StatsSnapshot
 } from "@jolly-pixel/ui/stats";
@@ -57,6 +58,11 @@ export interface MetricsPanelOptions {
    * @default true
    */
   collapsible?: boolean;
+  /**
+   * Keeps only the metrics it returns `true` for, including the ones
+   * registered after mounting.
+   */
+  filter?: (definition: MetricDefinition) => boolean;
 }
 
 interface PanelItem {
@@ -69,6 +75,7 @@ export class MetricsPanel {
   readonly container: FacadeContainer;
 
   #recorder: StatsRecorder;
+  #filter: (definition: MetricDefinition) => boolean;
   #pane: Pane | null = null;
   #keyboard: MetricsPanelKeyboard | null = null;
   #toggleKey: string | null = null;
@@ -93,6 +100,7 @@ export class MetricsPanel {
     options: MetricsPanelOptions = {}
   ) {
     this.#recorder = recorder;
+    this.#filter = options.filter ?? (() => true);
     this.#hidden = options.hidden ?? false;
 
     const { target } = options;
@@ -172,7 +180,8 @@ export class MetricsPanel {
     this.#clear();
     this.#revision = this.#recorder.revision;
 
-    for (const group of groupMetrics(this.#recorder.definitions)) {
+    const definitions = this.#recorder.definitions.filter(this.#filter);
+    for (const group of groupMetrics(definitions)) {
       const parent: FacadeContainer = group.title === null ?
         this.container :
         this.#addFolder(group.title);

@@ -6,9 +6,10 @@ import {
 import {
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer/engine";
-import type {
-  VoxelEngine,
-  VoxelWorldJSON
+import {
+  voxelTransparencyPass,
+  type VoxelEngine,
+  type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 import type {
@@ -56,7 +57,6 @@ import {
 import { GridRenderer } from "./GridRenderer.ts";
 import { SceneLighting } from "./SceneLighting.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
-import { installTransparency } from "./installTransparency.ts";
 import { spawnPose } from "./spawnPose.ts";
 import {
   viewFocusPoint,
@@ -81,8 +81,8 @@ export interface EditorSceneOptions {
   viewFocus: ViewFocus;
   session: EditorSceneSession;
   /**
-   * MSAA sample count of the scene compositor.
-   * @default 4
+   * MSAA sample count of the scene transparency pass.
+   * @default renderer.samples
    */
   samples?: number;
 }
@@ -140,14 +140,16 @@ export class EditorScene extends Systems.Scene {
 
     const lighting = new SceneLighting(world.renderer.getSource());
     scene.add(...lighting.lights);
-    this.#disposables.push(
-      installTransparency(world.renderer, samples)
-    );
 
     const camera = world
       .createActor("camera")
       .addComponentAndGet(OrbitFlyCamera, {
-        focusMode: "lock"
+        focusMode: "lock",
+        postProcessing: (context) => voxelTransparencyPass(
+          context.scene,
+          context.camera,
+          samples === undefined ? {} : { samples }
+        )
       });
     this.#camera = camera;
     camera.teleport(spawnPose([]));

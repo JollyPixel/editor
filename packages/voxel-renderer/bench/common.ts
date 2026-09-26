@@ -1,12 +1,12 @@
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
 import type { BlockDefinition } from "../src/blocks/BlockDefinition.ts";
+import { TerrainBlock } from "../examples/scripts/noise-world/blocks.ts";
 import {
-  TerrainBlock,
   generateTerrain,
   type TerrainOptions,
   type TerrainStats
-} from "../examples/scripts/utils/terrain.ts";
+} from "../examples/scripts/noise-world/terrain.ts";
 
 // CONSTANTS
 export const TERRAIN_LAYER = "Terrain";
@@ -37,7 +37,7 @@ export function createBenchEngine(
       src: "memory://terrain",
       tileSize: TILE_SIZE,
       cols: COLS,
-      rows: 2
+      rows: Math.ceil(Object.keys(TerrainBlock).length / COLS)
     },
     mockTexture()
   );

@@ -38,6 +38,12 @@ function probeCases(
   sample("resize shared depth targets", { alpha: 0.5, resize: true }, [192, 192, 192]);
   sample("recover after draw failure", { alpha: 0.5, failDraw: true }, [192, 192, 192]);
   sample("both walls", { alpha: 0.5 }, [192, 192, 192]);
+  sample("downstream node reads the composite", {
+    alpha: 0.5, tint: 0.5
+  }, [96, 96, 96]);
+  sample("opaque MRT keeps the composite", {
+    alpha: 0.5, normals: true, samples: 0
+  }, [192, 192, 192]);
   sample("both walls without multisampling", {
     alpha: 0.5, samples: 0
   }, [192, 192, 192]);

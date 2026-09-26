@@ -176,6 +176,9 @@ is disposed.
   to any pass whose depth or normals are sampled by a later node.
 - The pipeline draws inside the camera's viewport and replaces what lower
   cameras drew there.
+- The pipeline renders into its own target, which is then drawn through the
+  renderer's tone mapping and output color space, so later cameras and
+  overlays draw over it.
 - Pass targets follow the canvas size, not the viewport size.
 - A custom `RenderStrategy` ignores `postProcessing` unless it
   implements it.

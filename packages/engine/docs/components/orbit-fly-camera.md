@@ -84,8 +84,8 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `responsiveness` | `18` | Frame-rate-independent acceleration and braking rate, in 1/s |
 | `mouseSensitivity` | `0.003` | Mouse-look sensitivity |
 | `maxPitch` | `π / 2 - 0.01` | Maximum look-up/down pitch, in radians |
-| `scrollSpeed` | `2.5` | Units travelled per wheel notch |
-| `speedAdjustStep` | `0.15` | Fraction `moveSpeed` grows per wheel notch while looking around ("none"/"lock" only) |
+| `scrollSpeed` | `2.5` | Pivot distance ("lock", while orbiting) or trail distance ("elastic") changed per wheel notch, in world units |
+| `speedAdjustStep` | `0.15` | Fraction `moveSpeed` grows per wheel notch in "none" mode, and in "lock" mode while not orbiting |
 | `focusMode` | `"none"` | `"none"`: no pivot. `"lock"`: `enterOrbitFocus` engages a fixed pivot; scroll adjusts distance, only `exitOrbitFocus` releases it. `"elastic"`: WASD/look pilot a free-floating pivot; scroll trails the camera behind it, reaching 0 (free-fly) at full zoom-in |
 | `minPivotDistance` / `maxPivotDistance` | `1` / `200` | Bounds for the scroll-adjusted pivot distance in "lock" mode; `maxPivotDistance` also doubles as "elastic" mode's max trail distance |
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |
@@ -94,9 +94,9 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `far` | `2000` | Far clipping plane |
 
 Movement is WASD (forward/right) + Space/Shift (up/down); look-around is
-middle-mouse-drag or Alt+left-drag. Ctrl is reserved for other
-scroll-driven interactions (e.g. brush size) so it doesn't dolly or adjust
-`moveSpeed`.
+middle-mouse-drag or Alt+left-drag. The wheel adjusts `moveSpeed`, or the
+pivot/trail distance when a focus mode claims it. Ctrl is reserved for other
+scroll-driven interactions (e.g. brush size), so Ctrl+wheel is ignored.
 
 ## Runtime properties
 

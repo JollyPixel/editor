@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { OrbitFlyCamera } from "@jolly-pixel/engine";
 import { Runtime } from "@jolly-pixel/runtime";
 import {
   VoxelRenderer
@@ -10,7 +11,6 @@ import {
   formatMilliseconds
 } from "@jolly-pixel/ui";
 
-// Registers the declarative controls declared by the example page.
 void Control;
 void Controls;
 import * as THREE from "three/webgpu";
@@ -22,23 +22,28 @@ import {
   type VoxelInspectorMode,
   type VoxelEngine
 } from "../../src/index.ts";
-import { FreeFlyCamera } from "./components/FreeFlyCamera.ts";
+import {
+  Daylight,
+  HORIZON_COLOR
+} from "./noise-world/daylight.ts";
 import {
   generateTerrain,
   type TerrainStats
-} from "./utils/terrain.ts";
-import { createTerrainTileset } from "./utils/terrainAtlas.ts";
+} from "./noise-world/terrain.ts";
+import { createTerrainTileset } from "./noise-world/terrainAtlas.ts";
 import {
   createExamplePane
 } from "./utils/example-switcher.ts";
 
 // CONSTANTS
 const kTerrainLayer = "Terrain";
-const kSkyColor = "#8ec5e8";
+const kAmbientOcclusion = 0.75;
 const kCameraSpeed = 120;
+const kCameraHeight = 110;
+const kCameraTargetHeight = 30;
 
 const kSizeBounds = {
-  default: 256,
+  default: 512,
   min: 256,
   max: 5120
 };
@@ -52,11 +57,9 @@ const kSeedBounds = {
   min: 0,
   max: 0x7FFFFFFF
 };
-// Chunk radius the "view" folder can dial in; 0 means unlimited.
 const kMaxViewDistance = 24;
 
 interface WorldSettings {
-  /** World width and depth in voxels. */
   size: number;
   chunkSize: number;
   seed: number;
@@ -64,11 +67,7 @@ interface WorldSettings {
 
 interface BuildReport {
   terrain: TerrainStats;
-  /** Time spent writing voxels through `VoxelEngine.setVoxel`. */
   generateMs: number;
-  /** Time spent turning every dirty chunk into a THREE.Mesh. */
-  meshMs: number;
-  chunkCount: number;
 }
 
 const settings = readSettings();
@@ -84,44 +83,38 @@ const runtime = await Runtime.create("canvas", {
 const { world } = runtime;
 
 const scene = world.sceneManager.getSource();
-scene.background = new THREE.Color(kSkyColor);
-// Fog hides the world border and keeps distant chunks cheap to look at.
-const fog = new THREE.Fog(kSkyColor, settings.size * 0.5, settings.size * 1.7);
+const fog = new THREE.Fog(HORIZON_COLOR, settings.size * 0.5, settings.size * 1.7);
 scene.fog = fog;
-
-const sun = new THREE.DirectionalLight(new THREE.Color("#fff6e0"), 2.2);
-sun.position.set(settings.size, settings.size * 1.5, settings.size * 0.5);
-scene.add(
-  new THREE.AmbientLight(new THREE.Color("#c6dcff"), 1.7),
-  sun
-);
 
 const center = settings.size / 2;
 const cameraDistance = settings.size * 0.7;
-const cameraActor = world.createActor("camera")
-  .addComponent(FreeFlyCamera, {
-    position: { x: center, y: 70, z: center + cameraDistance },
-    // Faces -Z, tilted down onto the middle of the terrain.
+const flyCamera = world.createActor("camera")
+  .addComponentAndGet(OrbitFlyCamera, {
+    position: { x: center, y: kCameraHeight, z: center + cameraDistance },
     yaw: 0,
-    pitch: Math.atan2(10 - 70, cameraDistance),
+    pitch: Math.atan2(kCameraTargetHeight - kCameraHeight, cameraDistance),
     far: settings.size * 4,
     moveSpeed: kCameraSpeed,
     maxMoveSpeed: kCameraSpeed * 12
   });
+const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
+  camera: flyCamera.camera,
+  scene,
+  renderer: world.renderer.getSource()
+});
 
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
-    /*
-     * Terrain is generated from the origin outwards, so without a focus the
-     * chunks under the camera would be the last ones meshed.
-     */
-    focus: cameraActor.object3D,
+    focus: flyCamera.actor.object3D,
     greedy: true,
     chunkSize: settings.chunkSize,
     layers: [kTerrainLayer],
     blocks: tileset.blocks,
     material: "lambert",
     alphaTest: 0.5,
+    ambientOcclusion: kAmbientOcclusion,
+    castShadow: true,
+    receiveShadow: true,
     tilesets
   });
 
@@ -134,29 +127,24 @@ const worldStats = {
   size: "",
   columns: 0,
   chunkSize: 0,
-  voxels: 0,
-  chunks: 0,
   trees: 0,
-  generateMs: 0,
-  meshMs: 0
+  generateMs: 0
 };
-const meshStats = {
-  vertices: 0,
-  meshes: "",
+const viewStats = {
   drawn: ""
 };
 const view = {
-  /** Radius in chunks; 0 stands for the unlimited default. */
   distance: 0,
   policy: engine.viewDistancePolicy
 };
-// Mirrors the engine so the keyboard shortcuts and the pane never disagree.
 const controls = {
   seed: settings.seed,
   greedy: engine.greedy,
   minification: engine.tileMinification,
   debug: engine.inspector.mode,
-  chunkBounds: engine.inspector.chunkBounds
+  chunkBounds: engine.inspector.chunkBounds,
+  ambientOcclusion: true,
+  shadows: daylight.shadows
 };
 
 const worldFolder = pane.addFolder({ title: "World" });
@@ -164,18 +152,8 @@ worldFolder.addMonitors(worldStats, {
   size: { label: "size" },
   columns: { label: "columns", format: formatCount },
   chunkSize: { label: "chunk size", format: formatCount },
-  voxels: { label: "voxels", format: formatCount },
-  chunks: { label: "chunks", format: formatCount },
   trees: { label: "trees", format: formatCount },
-  generateMs: { label: "generate", format: formatMilliseconds },
-  meshMs: { label: "mesh build", format: formatMilliseconds }
-});
-
-const meshFolder = pane.addFolder({ title: "Mesh" });
-meshFolder.addMonitors(meshStats, {
-  vertices: { label: "mesh verts", format: formatCount },
-  meshes: { label: "meshes" },
-  drawn: { label: "drawn chunks" }
+  generateMs: { label: "generate", format: formatMilliseconds }
 });
 
 const viewFolder = pane.addFolder({ title: "View" });
@@ -196,9 +174,9 @@ viewFolder
     }
   })
   .on("change", () => applyViewDistance());
+viewFolder.addMonitor(viewStats, "drawn", { label: "drawn chunks" });
 
 const controlsFolder = pane.addFolder({ title: "Controls" });
-// A plain number field: the seed range is far too wide for a slider.
 controlsFolder.addBinding(controls, "seed", {
   step: 1,
   label: "seed"
@@ -235,13 +213,24 @@ controlsFolder
   .on("change", ({ value }) => {
     engine.inspector.chunkBounds = value;
   });
+controlsFolder
+  .addBinding(controls, "ambientOcclusion", { label: "ambient occlusion" })
+  .on("change", ({ value }) => {
+    engine.ambientOcclusion = value ? kAmbientOcclusion : 0;
+  });
+controlsFolder
+  .addBinding(controls, "shadows", { label: "shadows" })
+  .on("change", ({ value }) => {
+    daylight.shadows = value;
+    engine.castShadow = value;
+    engine.receiveShadow = value;
+  });
 
-/*
- * Chunks are meshed over several frames (the engine tick is budgeted), so the
- * mesh counters are polled with the renderer counters on the same cadence.
- */
 runtime.metrics.addSource(engine.inspector);
-await runtime.mountMetricsPanel({ target: pane });
+await runtime.mountMetricsPanel({
+  target: pane,
+  filter: (metric) => metric.tile === false
+});
 runtime.stats.subscribe(() => syncStats());
 
 await runtime.load({
@@ -258,7 +247,6 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  // off → wireframe over the textures → wireframe only.
   if (event.code === "KeyG") {
     setDebugMode(engine.inspector.nextMode());
 
@@ -280,10 +268,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-/**
- * Regenerates the world from `seed`. Shared by the `R` key and the Rebuild
- * button, which is why the pane values are pushed back in.
- */
 function rebuild(
   seed: number
 ): void {
@@ -296,10 +280,6 @@ function rebuild(
   pane.refresh();
 }
 
-/**
- * Rebuilds every chunk in the other meshing mode; the textures must look
- * identical while the triangle count drops.
- */
 function setGreedy(
   value: boolean
 ): void {
@@ -307,12 +287,8 @@ function setGreedy(
     return;
   }
 
-  const meshStart = performance.now();
   engine.greedy = value;
   engine.tick(0);
-  if (report !== null) {
-    report.meshMs = performance.now() - meshStart;
-  }
 
   controls.greedy = value;
   console.log(`[noise-world] greedy meshing: ${value}`);
@@ -320,10 +296,6 @@ function setGreedy(
   pane.refresh();
 }
 
-/**
- * Reached from the dropdown and from `G`, which cycles the mode itself — hence
- * the assignment (a no-op for an unchanged mode) before the pane is synced.
- */
 function setDebugMode(
   value: VoxelInspectorMode
 ): void {
@@ -337,10 +309,6 @@ function setDebugMode(
   pane.refresh();
 }
 
-/**
- * A radius of 0 restores the unlimited default. The fog follows the radius so
- * chunks fade out instead of popping at the border.
- */
 function applyViewDistance(): void {
   const { distance, policy } = view;
 
@@ -354,10 +322,6 @@ function applyViewDistance(): void {
     fog.far = settings.size * 1.7;
   }
   else {
-    /*
-     * Ends on the hysteresis border, so a chunk is fully fogged out by the
-     * time it is dropped.
-     */
     fog.far = (distance + 1) * settings.chunkSize;
     fog.near = fog.far * 0.55;
   }
@@ -366,41 +330,24 @@ function applyViewDistance(): void {
   syncStats();
 }
 
-/**
- * Copies the latest build report and mesh counters into the bound state, then
- * repaints both folders.
- */
 function syncStats(): void {
   if (report !== null) {
-    const { terrain, generateMs, meshMs, chunkCount } = report;
+    const { terrain, generateMs } = report;
 
     worldStats.size = `${settings.size} × ${settings.size}`;
     worldStats.columns = terrain.columnCount;
     worldStats.chunkSize = settings.chunkSize;
-    worldStats.voxels = terrain.voxelCount;
-    worldStats.chunks = chunkCount;
     worldStats.trees = terrain.treeCount;
     worldStats.generateMs = generateMs;
-    worldStats.meshMs = meshMs;
   }
 
-  const {
-    vertices, meshes, chunks, culledChunks
-  } = engine.inspector.mesh.stats;
-
-  meshStats.vertices = vertices;
-  meshStats.meshes = `${formatCount(meshes)} / ${formatCount(chunks)}`;
-  meshStats.drawn = `${formatCount(chunks - culledChunks)} / ${formatCount(chunks)}`;
+  const { chunks, culledChunks } = engine.inspector.mesh.stats;
+  viewStats.drawn = `${formatCount(chunks - culledChunks)} / ${formatCount(chunks)}`;
 
   worldFolder.refresh();
-  meshFolder.refresh();
   viewFolder.refresh();
 }
 
-/**
- * Fills the terrain layer from the noise generator and measures the two costs
- * that matter: writing voxels, then meshing every dirty chunk.
- */
 function buildWorld(
   engine: VoxelEngine,
   { seed, size }: WorldSettings
@@ -415,29 +362,17 @@ function buildWorld(
   );
   const generateMs = performance.now() - generateStart;
 
-  /*
-   * The renderer would mesh these chunks on its next update anyway; ticking
-   * here makes the cost measurable instead of hiding it in a frame spike.
-   */
-  const meshStart = performance.now();
   engine.tick(0);
-  const meshMs = performance.now() - meshStart;
 
   const built = {
     terrain,
-    generateMs,
-    meshMs,
-    chunkCount: countChunks(engine)
+    generateMs
   };
   console.log("[noise-world] built", built);
 
   return built;
 }
 
-/**
- * Drops the layer and recreates it empty. Removals are processed by the
- * engine tick, so one is run before the layer comes back.
- */
 function resetLayer(
   engine: VoxelEngine
 ): void {
@@ -445,17 +380,6 @@ function resetLayer(
   engine.tick(0);
 
   engine.world.addLayer(kTerrainLayer);
-}
-
-function countChunks(
-  engine: VoxelEngine
-): number {
-  let total = 0;
-  for (const layer of engine.world.getLayers()) {
-    total += layer.chunkCount;
-  }
-
-  return total;
 }
 
 function readSettings(): WorldSettings {

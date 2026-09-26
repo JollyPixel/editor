@@ -368,6 +368,7 @@ interface MetricsPanelOptions {
   keyboard?: MetricsPanelKeyboard;
   hidden?: boolean;
   collapsible?: boolean;
+  filter?: (definition: MetricDefinition) => boolean;
 }
 ```
 
@@ -381,6 +382,7 @@ interface MetricsPanelOptions {
 | `toggleKey` | none | `KeyboardEvent.code` toggling the readout, through the runtime's keyboard. |
 | `hidden` | `false` | Starts the readout hidden. |
 | `collapsible` | `true` | Enables folding the created pane to its header. |
+| `filter` | none | Keeps only the metrics it accepts, including later ones. Pass `(metric) => metric.tile === false` to leave out the metrics the corner HUD already cycles through. |
 
 ```ts
 const panel = await runtime.mountMetricsPanel({
