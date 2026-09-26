@@ -11,9 +11,10 @@ An immutable texture region mapped onto a mesh. It holds one of three states:
 ```ts
 new UVRegion(data: UVRegionData)
 UVRegion.from(value: UVRegion | UVRegionData): UVRegion
+UVRegion.fromLayout(layout: UVLayoutData, identity: UVRegionIdentity): UVRegion
 ```
 
-`UVRegion.from()` returns an existing instance unchanged or builds one from serialized data. Geometry returned by the region is copied, so callers cannot mutate the stored state.
+`UVRegion.from()` returns an existing instance unchanged or builds one from serialized data. `UVRegion.fromLayout()` builds a region from a [layout](#tolayout) and the identity its owner assigns. Geometry returned by the region is copied, so callers cannot mutate the stored state.
 
 ## Types
 ```ts
@@ -210,6 +211,22 @@ renamed(name: string): UVRegion
 ```
 
 Returns a copy carrying `name`, or `this` when the name is unchanged.
+
+### `toLayout()`
+
+```ts
+toLayout(): UVLayoutData
+
+interface UVRegionIdentity {
+  id: string;
+  name?: string;
+  color: string;
+}
+
+type UVLayoutData = Omit<UVRegionData, keyof UVRegionIdentity>;
+```
+
+Returns the region's geometry without its identity. A document that owns an external region, such as a voxel model block, stores this layout and gives the region its identity when it shows it.
 
 ### `toJSON()`
 

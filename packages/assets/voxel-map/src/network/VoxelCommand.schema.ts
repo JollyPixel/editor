@@ -200,7 +200,7 @@ export const voxelWorldSchema: JSONSchema = {
   type: "object",
   properties: {
     version: { const: VOXEL_WORLD_VERSION },
-    chunkSize: { type: "number" },
+    chunkSize: { type: "integer", minimum: 1 },
     tilesets: {
       type: "array",
       items: tilesetDefinitionSchema

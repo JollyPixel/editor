@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { VOXEL_MAP_KIND } from "../asset/kind.ts";
+import { VOXEL_MAP_KIND } from "../asset/voxelMap.ts";
 import { VoxelSyncClient } from "./VoxelSyncClient.ts";
 import type { VoxelMapRoom } from "./types.ts";
 

@@ -132,6 +132,27 @@ const variant = defineSchema({
 });
 ```
 
+### Parsing other values
+
+`SchemaParser` checks any value against one schema, such as a stored document that re-uses a protocol's fragments:
+
+```ts
+import {
+  describeErrors,
+  SchemaParser
+} from "@jolly-pixel/network";
+
+const worldParser = new SchemaParser(voxelWorldSchema);
+
+const result = worldParser.parse(JSON.parse(text));
+if (result.err) {
+  throw new Error(describeErrors(result.val));
+}
+const world = result.val;
+```
+
+`parse(value)` returns `Ok` with the value typed by `Infer<typeof schema>`, or `Err` with the `ValidationError` list. The schema compiles on the first `parse()`. Like `MessageParser`, it is not exported from `@jolly-pixel/network/client`, so browser clients never bundle the schema compiler.
+
 ## Callbacks
 
 All three are optional. Implement only the ones the feature needs; the room

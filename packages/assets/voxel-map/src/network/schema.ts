@@ -2,15 +2,16 @@
 import {
   COMMAND_HEADER_REQUIRED,
   commandHeaderProperties,
+  defineSchema,
   type JSONSchema
 } from "@jolly-pixel/network";
 import { MAX_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 
-export const tileSizeSchema: JSONSchema = {
+export const tileSizeSchema = defineSchema({
   type: "integer",
   minimum: 1,
   maximum: MAX_TILE_SIZE
-};
+});
 
 export function objectSchema(
   properties: Record<string, JSONSchema>,

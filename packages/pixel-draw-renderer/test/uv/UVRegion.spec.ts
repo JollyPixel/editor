@@ -626,6 +626,36 @@ describe("UVRegion", () => {
     });
   });
 
+  describe("layout", () => {
+    test("a layout is the region without its identity", () => {
+      const region = new UVRegion({
+        state: "stacked",
+        id: "r1",
+        name: "Head",
+        color: "#f00",
+        rect: kRect
+      });
+
+      assert.deepStrictEqual(region.toLayout(), {
+        state: "stacked",
+        rect: kRect
+      });
+    });
+
+    test("fromLayout rebuilds the region with the given identity", () => {
+      const region = UVRegion.fromLayout(makeFree().toLayout(), {
+        id: "r2",
+        name: "Body",
+        color: "#0f0"
+      });
+
+      assert.strictEqual(region.id, "r2");
+      assert.strictEqual(region.name, "Body");
+      assert.strictEqual(region.color, "#0f0");
+      assert.deepStrictEqual(region.toLayout(), makeFree().toLayout());
+    });
+  });
+
   describe("toJSON", () => {
     test("emits an explicit stacked payload", () => {
       assert.deepStrictEqual(makeStacked().toJSON(), {

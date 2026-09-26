@@ -5,9 +5,9 @@ import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
 // Import Internal Dependencies
 import {
   encodeTilesetDocument,
+  TILESET_KIND,
   type TilesetAssetDocument
-} from "../../asset/tileset/document.ts";
-import { TILESET_KIND } from "../../asset/tileset/kind.ts";
+} from "../../asset/tileset.ts";
 import type { TilesetRoom } from "./types.ts";
 
 export type TilesetAssetWriter = Pick<CatalogClient, "create">;

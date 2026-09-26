@@ -33,7 +33,7 @@ import type { TilesetNetworkCommand } from "#src/network/server.ts";
 import {
   makeBlockDef,
   makeResolvedBlockDef
-} from "../../helpers/blocks.ts";
+} from "../helpers/blocks.ts";
 
 // CONSTANTS
 const kHeader = {

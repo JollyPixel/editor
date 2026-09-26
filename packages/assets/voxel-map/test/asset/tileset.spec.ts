@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server/kinds";
 import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -13,13 +14,12 @@ import {
   createTilesetDocument,
   decodeTilesetDocument,
   encodeTilesetDocument,
-  InvalidTilesetDocumentError,
   parseTilesetDocument,
   TILESET_DOCUMENT_VERSION,
   tilesetDocumentFromPng
 } from "#src/index.ts";
-import { makeBlockDef } from "../../helpers/blocks.ts";
-import { opaquePng } from "../../helpers/png.ts";
+import { makeBlockDef } from "../helpers/blocks.ts";
+import { opaquePng } from "../helpers/png.ts";
 
 describe("createTilesetDocument", () => {
   test("defaults to a blank 8 by 8 tile grid at tile size 32", () => {
@@ -97,7 +97,7 @@ describe("tileset document codec", () => {
   test("rejects a document that is not JSON", () => {
     assert.throws(
       () => decodeTilesetDocument(new TextEncoder().encode("{")),
-      InvalidTilesetDocumentError
+      InvalidAssetDocumentError
     );
   });
 
@@ -118,7 +118,7 @@ describe("tileset document codec", () => {
     ] as const) {
       assert.throws(
         () => parseTilesetDocument(broken),
-        InvalidTilesetDocumentError,
+        InvalidAssetDocumentError,
         name
       );
     }

@@ -20,7 +20,7 @@ import {
   pixelArtAssetKind,
   PIXEL_ART_KIND
 } from "#src/index.ts";
-import type { PixelArtState } from "#src/asset/PixelArtState.ts";
+import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 import { command } from "../fixtures/commands.ts";

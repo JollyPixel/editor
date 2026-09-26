@@ -16,7 +16,8 @@ import { protocolEvents } from "@jolly-pixel/network";
 import {
   decodeVoxelDocument,
   encodeVoxelDocument,
-  VOXEL_WORLD_COMMAND_ACTIONS
+  VOXEL_WORLD_COMMAND_ACTIONS,
+  VOXEL_WORLD_VERSION
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -288,6 +289,24 @@ describe("voxelMapAssetKind", () => {
     assert.deepEqual(
       state.world.getLayers().map((layer) => layer.name),
       ["Ground"]
+    );
+  });
+
+  test("a tileset link naming neither a source nor an asset is rejected", () => {
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
+    const content = new TextEncoder().encode(JSON.stringify({
+      version: VOXEL_WORLD_VERSION,
+      chunkSize: 16,
+      tilesets: [{ id: "terrain" }],
+      layers: []
+    }));
+
+    assert.throws(
+      () => handler.load(handler.create("asset-1"), content),
+      {
+        name: "InvalidAssetDocumentError",
+        message: /\/tilesets\/0/
+      }
     );
   });
 

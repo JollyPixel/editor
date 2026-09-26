@@ -11,6 +11,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 // Import Internal Dependencies
 import {
   AssetKindRegistry,
+  InvalidAssetDocumentError,
   type AssetKindHandler
 } from "#src/index.ts";
 import { AssetStateStore } from "#src/state/index.ts";
@@ -216,7 +217,9 @@ describe("AssetStateStore — replay concurrency", () => {
 });
 
 describe("AssetStateStore — fault isolation", () => {
-  function throwingCounterHandler(): AssetKindHandler<CounterState, CounterCommand> {
+  function throwingCounterHandler(
+    error: Error = new Error("corrupt command")
+  ): AssetKindHandler<CounterState, CounterCommand> {
     const inner = counterHandler();
 
     return {
@@ -224,11 +227,40 @@ describe("AssetStateStore — fault isolation", () => {
       commands: {
         ...inner.commands!,
         apply() {
-          throw new Error("corrupt command");
+          throw error;
         }
       }
     };
   }
+
+  test("an invalid document in the replay is logged as a warning", async() => {
+    using eventStore = EventStore.persistence.memory();
+    const { logger, records } = recordingLogger();
+    const states = new AssetStateStore({
+      eventStore,
+      kinds: new AssetKindRegistry([
+        throwingCounterHandler(
+          new InvalidAssetDocumentError("counter", "value is missing")
+        )
+      ]),
+      logger
+    });
+
+    eventStore.writer.append({
+      assetType: "counter",
+      assetId: "a1",
+      eventType: COUNTER_INCREMENTED,
+      eventData: { action: "increment" },
+      actor: kActor
+    }).unwrap();
+
+    await states.acquire("a1", "counter");
+
+    assert.deepEqual(
+      records.map((record) => [record.level, record.message]),
+      [["warn", "asset event not folded"]]
+    );
+  });
 
   test("a throwing replay fold is logged and keeps the last good state", async() => {
     using eventStore = EventStore.persistence.memory();

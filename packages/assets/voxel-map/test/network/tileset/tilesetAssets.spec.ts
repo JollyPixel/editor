@@ -12,10 +12,10 @@ import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/catalog/cli
 import {
   createTilesetAsset,
   createTilesetDocument,
-  decodeTilesetDocument,
   TILESET_KIND,
   tilesetRoom
 } from "#src/network/client.ts";
+import { decodeTilesetDocument } from "#src/asset/tilesetAssetKind.ts";
 import { createMockTilesetRoom } from "../../helpers/tilesetRoom.ts";
 
 describe("tilesetRoom", () => {

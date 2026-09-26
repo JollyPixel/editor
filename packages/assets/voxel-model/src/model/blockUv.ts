@@ -1,13 +1,10 @@
 // Import Third-party Dependencies
-import type {
-  SelectionRect,
-  Vec2
-} from "@jolly-pixel/pixel-draw.renderer";
 import {
-  uvLayoutOf,
-  uvRegionOf,
-  type UVLayoutData
-} from "@jolly-pixel/asset.pixel-art";
+  UVRegion,
+  type SelectionRect,
+  type UVLayoutData,
+  type Vec2
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
 export const BLOCK_UV_SIZE = 16;
@@ -23,7 +20,7 @@ const kLayoutIdentity = {
 export function createBlockUv(
   origin: Vec2 = { x: 0, y: 0 }
 ): UVLayoutData {
-  const stacked = uvRegionOf({
+  const stacked = UVRegion.fromLayout({
     state: "stacked",
     rect: {
       x: origin.x,
@@ -33,13 +30,13 @@ export function createBlockUv(
     }
   }, kLayoutIdentity);
 
-  return uvLayoutOf(stacked.unfold());
+  return stacked.unfold().toLayout();
 }
 
 export function blockUvBounds(
   layout: UVLayoutData
 ): SelectionRect {
-  return uvRegionOf(layout, kLayoutIdentity).bounds;
+  return UVRegion.fromLayout(layout, kLayoutIdentity).bounds;
 }
 
 /**

@@ -6,7 +6,7 @@ import {
 import { TilesetDocument } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { TILESET_KIND } from "../../asset/tileset/kind.ts";
+import { TILESET_KIND } from "../../asset/tileset.ts";
 import { TilesetSyncClient } from "./TilesetSyncClient.ts";
 import type { TilesetRoom } from "./types.ts";
 

@@ -1,29 +1,34 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
-import type {
-  AssetKindHandler,
-  SnapshotPolicy
+import {
+  InvalidAssetDocumentError,
+  type AssetKindHandler,
+  type SnapshotPolicy
 } from "@jolly-pixel/asset-server/kinds";
 import {
   decodePixelArtDocument,
+  deserializePixelBuffer,
   encodePixelArtDocument,
+  InvalidPixelArtDocumentError,
   pixelArtSnapshot,
+  PixelBuffer,
+  serializePixelBuffer,
+  type PixelArtDocumentData,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import {
+  PIXEL_ART_COMMAND,
+  PIXEL_ART_EXTENSION,
+  PIXEL_ART_KIND
+} from "./pixelArt.ts";
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
 import {
   pixelCommandProtocol,
   pixelSnapshotSchema
 } from "../network/PixelCommand.schema.ts";
-import { PixelArtState } from "./PixelArtState.ts";
 import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
-import {
-  PIXEL_ART_COMMAND,
-  PIXEL_ART_EXTENSION,
-  PIXEL_ART_KIND
-} from "./kind.ts";
 import type { PixelNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
@@ -31,6 +36,44 @@ const kDefaultSize: Vec2 = {
   x: 32,
   y: 32
 };
+
+export class PixelArtState {
+  readonly buffer: PixelBuffer;
+
+  #defaultSize: Vec2;
+
+  constructor(
+    size: Vec2
+  ) {
+    this.#defaultSize = size;
+    this.buffer = new PixelBuffer({
+      size
+    });
+  }
+
+  toJSON(): PixelArtDocumentData {
+    return serializePixelBuffer(this.buffer);
+  }
+
+  load(
+    document: PixelArtDocumentData
+  ): void {
+    deserializePixelBuffer(
+      document,
+      this.buffer
+    );
+  }
+
+  clear(): void {
+    const { x, y } = this.#defaultSize;
+
+    this.buffer.replacePixels(
+      new Uint8ClampedArray(x * y * 4),
+      this.#defaultSize
+    );
+    this.buffer.uvRegions.clear();
+  }
+}
 
 export interface PixelArtAssetKindOptions {
   defaultSize?: Vec2;
@@ -62,9 +105,22 @@ export function pixelArtAssetKind(
       state: PixelArtState,
       content: Uint8Array
     ): void {
-      state.load(
-        decodePixelArtDocument(content)
-      );
+      try {
+        state.load(
+          decodePixelArtDocument(content)
+        );
+      }
+      catch (error) {
+        if (error instanceof InvalidPixelArtDocumentError) {
+          throw new InvalidAssetDocumentError(
+            PIXEL_ART_KIND,
+            "content is not a valid pixel-art document",
+            { cause: error }
+          );
+        }
+
+        throw error;
+      }
     },
 
     clear(
