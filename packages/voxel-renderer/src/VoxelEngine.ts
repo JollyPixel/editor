@@ -172,6 +172,36 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.view.greedy = value;
   }
 
+  get farDistance(): number {
+    return this.view.farDistance;
+  }
+
+  set farDistance(
+    value: number
+  ) {
+    this.view.farDistance = value;
+  }
+
+  get lodDistance(): number {
+    return this.view.lodDistance;
+  }
+
+  set lodDistance(
+    value: number
+  ) {
+    this.view.lodDistance = value;
+  }
+
+  get alphaToCoverage(): boolean {
+    return this.view.alphaToCoverage;
+  }
+
+  set alphaToCoverage(
+    value: boolean
+  ) {
+    this.view.alphaToCoverage = value;
+  }
+
   get tileMinification(): TileMinification {
     return this.view.tileMinification;
   }

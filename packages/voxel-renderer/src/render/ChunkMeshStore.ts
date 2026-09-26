@@ -4,7 +4,11 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
 import type { VoxelInspector } from "../inspector/index.ts";
-import type { VoxelMeshBuilder } from "../mesh/index.ts";
+import type {
+  ChunkGeometryKey,
+  DownsampledWorld,
+  VoxelMeshBuilder
+} from "../mesh/index.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { IterableLayerChunk } from "../world/VoxelWorld.ts";
 import type { VoxelCoord } from "../world/types.ts";
@@ -14,6 +18,11 @@ import type {
   ChunkMeshLayout,
   ChunkMeshTarget
 } from "./ChunkMeshLayout.ts";
+import {
+  FULL_DETAIL,
+  type ChunkDetail,
+  type ChunkViewport
+} from "./ChunkViewport.ts";
 
 // CONSTANTS
 const kShaderOnlyAttributes = ["tileRegion", "tileRepeat"];
@@ -23,7 +32,14 @@ export interface ChunkMeshEntry {
   origin: VoxelCoord;
   members: readonly IterableLayerChunk[];
   meshes: THREE.Mesh[];
+  geometryKeys: ChunkGeometryKey[];
   visible: boolean;
+  detail: ChunkDetail;
+}
+
+export interface ChunkLodSource {
+  world: DownsampledWorld;
+  meshBuilder: VoxelMeshBuilder;
 }
 
 export interface ChunkMeshStoreOptions {
@@ -33,6 +49,7 @@ export interface ChunkMeshStoreOptions {
   materials: ChunkMaterialCache;
   inspector: VoxelInspector;
   collider?: VoxelCollider | null;
+  lod?: ChunkLodSource | null;
   logger?: VoxelLogger;
   /**
    * @default false
@@ -53,6 +70,8 @@ export interface ChunkMeshStoreOptions {
  * Materials belong to `ChunkMaterialCache` and are not disposed here.
  */
 export class ChunkMeshStore {
+  viewport: ChunkViewport | null = null;
+
   #entries = new Map<string, ChunkMeshEntry>();
   #placements = new Map<VoxelChunk, string>();
   #root: THREE.Group;
@@ -61,6 +80,7 @@ export class ChunkMeshStore {
   #materials: ChunkMaterialCache;
   #inspector: VoxelInspector;
   #collider: VoxelCollider | null;
+  #lod: ChunkLodSource | null;
   #logger: VoxelLogger;
   #retainVertexData: boolean;
   #castShadow: boolean;
@@ -76,6 +96,7 @@ export class ChunkMeshStore {
       materials,
       inspector,
       collider = null,
+      lod = null,
       logger = NOOP_LOGGER,
       retainVertexData = false,
       castShadow = false,
@@ -88,6 +109,7 @@ export class ChunkMeshStore {
     this.#materials = materials;
     this.#inspector = inspector;
     this.#collider = collider;
+    this.#lod = lod;
     this.#logger = logger;
     this.#retainVertexData = retainVertexData;
     this.#castShadow = castShadow;
@@ -132,6 +154,14 @@ export class ChunkMeshStore {
     return key === undefined ? undefined : this.#entries.get(key)?.target;
   }
 
+  detailOf(
+    chunk: VoxelChunk
+  ): ChunkDetail | undefined {
+    const key = this.#placements.get(chunk);
+
+    return key === undefined ? undefined : this.#entries.get(key)?.detail;
+  }
+
   rebuild(
     target: ChunkMeshTarget
   ): void {
@@ -144,20 +174,32 @@ export class ChunkMeshStore {
     }
 
     this.#logger.debug(`Rebuilding chunk '${key}'`);
-    this.#discard(key);
-
-    const geometries = this.#meshBuilder.buildChunkGeometries(members);
     const [first] = members;
     const origin = this.#layout.originOf(first.layer, first.chunk);
+    const detail = this.viewport?.detailOf(
+      origin,
+      this.#entries.get(key)?.detail
+    ) ?? FULL_DETAIL;
+    this.#discard(key);
+
+    const lod = detail.lod > 0 ? this.#lod : null;
+    const builder = lod === null ? this.#meshBuilder : lod.meshBuilder;
+    const geometries = builder.buildChunkGeometries(
+      lod === null ?
+        members :
+        lod.world.sync(members, (chunk) => this.#isCoarse(chunk))
+    );
     const opacity = target.layer?.opacity ?? 1;
     const meshes: THREE.Mesh[] = [];
+    const geometryKeys: ChunkGeometryKey[] = [];
     for (const [geometryKey, geometry] of geometries) {
       const mesh = new THREE.Mesh(
         geometry,
-        this.#materials.resolve(geometryKey, opacity)
+        this.#materials.resolve(geometryKey, opacity, detail.far)
       );
       mesh.name = `voxel_chunk_${key}:${geometryKey}`;
       mesh.position.set(origin.x, origin.y, origin.z);
+      mesh.scale.setScalar(lod === null ? 1 : lod.world.scale);
       mesh.castShadow = this.#castShadow;
       mesh.receiveShadow = this.#receiveShadow;
       this.#materials.retain(mesh.material);
@@ -168,6 +210,7 @@ export class ChunkMeshStore {
       this.#root.add(mesh);
       mesh.updateWorldMatrix(true, false);
       meshes.push(mesh);
+      geometryKeys.push(geometryKey);
     }
 
     this.#entries.set(key, {
@@ -175,7 +218,9 @@ export class ChunkMeshStore {
       origin,
       members,
       meshes,
-      visible: true
+      geometryKeys,
+      visible: true,
+      detail
     });
     for (const { chunk } of members) {
       this.#placements.set(chunk, key);
@@ -183,14 +228,14 @@ export class ChunkMeshStore {
     this.#inspector.registerChunk(
       key,
       meshes,
-      this.#meshBuilder.stats,
+      builder.stats,
       {
         origin,
         size: first.chunk.size
       }
     );
 
-    if (this.#collider) {
+    if (this.#collider && lod === null) {
       this.#logger.debug(
         `Rebuilding collision for chunk '${key}'`,
         { origin }
@@ -201,6 +246,40 @@ export class ChunkMeshStore {
         chunks: members.map(({ chunk }) => chunk),
         geometries
       });
+    }
+  }
+
+  applyDetails(
+    changes: Iterable<[key: string, detail: ChunkDetail]>
+  ): void {
+    const released: THREE.Material[] = [];
+
+    for (const [key, detail] of changes) {
+      const entry = this.#entries.get(key);
+      if (!entry) {
+        continue;
+      }
+
+      const opacity = entry.target.layer?.opacity ?? 1;
+      entry.meshes.forEach((mesh, index) => {
+        const material = this.#materials.resolve(
+          entry.geometryKeys[index],
+          opacity,
+          detail.far
+        );
+        if (material === mesh.material) {
+          return;
+        }
+
+        this.#materials.retain(material);
+        released.push(mesh.material as THREE.Material);
+        mesh.material = material;
+      });
+      entry.detail = detail;
+    }
+
+    for (const material of released) {
+      this.#materials.release(material);
     }
   }
 
@@ -222,6 +301,7 @@ export class ChunkMeshStore {
     if (entry) {
       this.#disposeMeshes(entry);
       entry.meshes = [];
+      entry.geometryKeys = [];
       entry.visible = false;
     }
   }
@@ -250,6 +330,12 @@ export class ChunkMeshStore {
     }
     this.#entries.clear();
     this.#placements.clear();
+  }
+
+  #isCoarse(
+    chunk: VoxelChunk
+  ): boolean {
+    return (this.detailOf(chunk)?.lod ?? 0) > 0;
   }
 
   * #meshes(): IterableIterator<THREE.Mesh> {

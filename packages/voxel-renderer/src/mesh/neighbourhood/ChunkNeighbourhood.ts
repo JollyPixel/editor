@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import type { VoxelWorld } from "../../world/VoxelWorld.ts";
 import type { VoxelLayer } from "../../world/VoxelLayer.ts";
+import type { MeshableWorld } from "../types.ts";
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
 import { LayerChunkCache } from "./LayerChunkCache.ts";
 import {
@@ -28,7 +28,7 @@ import {
 } from "../../world/packedVoxel.ts";
 
 export interface ChunkNeighbourhoodOptions {
-  world: VoxelWorld;
+  world: MeshableWorld;
   variants: BlockVariantCache;
   minWx: number;
   minWy: number;

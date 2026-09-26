@@ -27,6 +27,7 @@ interface ChunkMaterialEntry {
   material: ChunkMaterial;
   tilesetId: string;
   surface: BlockSurface;
+  far: boolean;
 }
 
 export interface ChunkMaterialCacheOptions {
@@ -52,6 +53,7 @@ export interface ChunkMaterialCacheOptions {
    * @default 0
    */
   ambientOcclusion?: number;
+  alphaToCoverage?: boolean;
 }
 
 /**
@@ -61,6 +63,7 @@ export interface ChunkMaterialCacheOptions {
 export class ChunkMaterialCache {
   tileWrapping: boolean;
   tileAveraging: boolean;
+  alphaToCoverage: boolean;
   readonly aoStrength: ReturnType<typeof createAoStrength>;
 
   #materials = new Map<string, ChunkMaterial>();
@@ -81,7 +84,8 @@ export class ChunkMaterialCache {
       customizer,
       tileWrapping = false,
       tileAveraging = true,
-      ambientOcclusion = 0
+      ambientOcclusion = 0,
+      alphaToCoverage = false
     } = options;
 
     this.#tilesetManager = tilesetManager;
@@ -90,15 +94,17 @@ export class ChunkMaterialCache {
     this.#customizer = customizer;
     this.tileWrapping = tileWrapping;
     this.tileAveraging = tileAveraging;
+    this.alphaToCoverage = alphaToCoverage;
     this.aoStrength = createAoStrength(ambientOcclusion);
   }
 
   resolve(
     geometryKey: ChunkGeometryKey,
-    opacity: number
+    opacity: number,
+    far = false
   ): ChunkMaterial {
     const { tilesetId, surface } = geometryKey;
-    const key = `${geometryKey}:opacity=${opacity}`;
+    const key = `${geometryKey}:opacity=${opacity}:far=${far}`;
 
     const cached = this.#materials.get(key);
     if (cached) {
@@ -108,14 +114,16 @@ export class ChunkMaterialCache {
     const material = this.#create(
       tilesetId,
       opacity,
-      surface
+      surface,
+      far
     );
     this.#materials.set(key, material);
     this.#entries.set(material, {
       key,
       material,
       tilesetId,
-      surface
+      surface,
+      far
     });
 
     return material;
@@ -174,10 +182,12 @@ export class ChunkMaterialCache {
     return evicted;
   }
 
+  // eslint-disable-next-line max-params
   #create(
     tilesetId: string,
     opacity: number,
-    surface: BlockSurface
+    surface: BlockSurface,
+    far: boolean
   ): ChunkMaterial {
     const atlas = this.#tilesetManager.resolve(tilesetId);
     if (atlas === undefined) {
@@ -186,7 +196,10 @@ export class ChunkMaterialCache {
       );
     }
     const { texture } = atlas;
-    const transparent = opacity < 1 || surface.alphaMode === "blend";
+    const blends = surface.alphaMode === "blend" && !far;
+    const transparent = opacity < 1 || blends;
+    const alphaToCoverage = this.alphaToCoverage &&
+      surface.alphaMode === "mask";
 
     const options = {
       map: texture,
@@ -195,6 +208,7 @@ export class ChunkMaterialCache {
       opacity,
       transparent,
       depthWrite: !transparent,
+      alphaToCoverage,
       forceSinglePass: true,
       polygonOffset: !surface.occludes,
       polygonOffsetFactor: surface.occludes ? 0 : kCoveredFaceOffset,
@@ -214,12 +228,13 @@ export class ChunkMaterialCache {
     const enable = this.tileWrapping ?
       enableTileWrapping :
       enableTileClamping;
-    enable(
-      material,
+    enable(material, {
       surface,
-      this.aoStrength,
-      averages
-    );
+      aoStrength: this.aoStrength,
+      averages,
+      flat: far && averages !== null && averages !== undefined,
+      alphaToCoverage
+    });
     group?.applyTo(material);
     this.#customizer?.(
       material,

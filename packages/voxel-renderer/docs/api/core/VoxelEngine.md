@@ -116,6 +116,19 @@ interface VoxelEngineOptions {
    */
   viewDistancePolicy?: "hide" | "unload";
   /**
+   * Distance in world units from `focus` beyond which chunks draw every face
+   * in the flat average colour of its tile and blend blocks opaque.
+   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#detail-distances).
+   * @default Infinity
+   */
+  farDistance?: number;
+  /**
+   * Distance in world units from `focus` beyond which chunks mesh at half
+   * resolution, one block per 2x2x2 cell drawn twice as large.
+   * @default Infinity
+   */
+  lodDistance?: number;
+  /**
    * Undo/redo of voxel edits; see VoxelHistory. Disabled by default.
    */
   history?: VoxelHistoryOptions;
@@ -208,13 +221,21 @@ interface VoxelEngineOptions {
   greedy?: boolean;
 
   /**
-   * `"average"` fades distant faces to the average colour of their tile
-   * instead of letting nearest sampling shimmer. Falls back to `"nearest"`
-   * when the atlas pixels cannot be read.
+   * `"average"` box-filters the texels each pixel covers instead of letting
+   * nearest sampling shimmer. Falls back to `"nearest"` when the atlas
+   * pixels cannot be read.
    * See [rendering and meshing](../../concepts/rendering-and-meshing.md#distant-tiles).
    * @default "average"
    */
   tileMinification?: "average" | "nearest";
+
+  /**
+   * Mask blocks turn their texel coverage into MSAA sample coverage, which
+   * softens distant cutout edges. Needs a multisampled target and an opaque
+   * canvas, since the coverage is also written as alpha.
+   * @default false
+   */
+  alphaToCoverage?: boolean;
 
   /**
    * Pre-loaded atlases, registered synchronously during construction. Use
@@ -263,12 +284,15 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
   tileMinification: "average" | "nearest"; // read/write; assigning replaces the materials
+  alphaToCoverage: boolean; // read/write; assigning replaces the materials
   castShadow: boolean; // read/write; assigning updates built chunks
   receiveShadow: boolean; // read/write; assigning updates built chunks
   ambientOcclusion: number; // read/write; switching on or off rebuilds every chunk
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";
+  farDistance: number; // world units; applied on the next tick
+  lodDistance: number; // world units; applied on the next tick
   readonly pendingRebuilds: number;
   readonly tilesets: TilesetList;
   readonly materialGroups: MaterialGroupList;
@@ -341,6 +365,18 @@ engine.viewDistance = new ViewDistance({
   chunks: 12,
   shape: "sphere",
   hysteresis: 2
+});
+```
+
+Inside the view distance, `farDistance` and `lodDistance` (world units from
+`focus` to a chunk centre) lower the detail of far chunks: flat tile colours
+with opaque blend blocks, then half-resolution meshes. See
+[detail distances](../../concepts/rendering-and-meshing.md#detail-distances).
+
+```ts
+const engine = new VoxelEngine({
+  farDistance: 8 * chunkSize,
+  lodDistance: 12 * chunkSize
 });
 ```
 

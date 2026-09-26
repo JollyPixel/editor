@@ -47,8 +47,10 @@ interface VoxelViewOptions {
   inspector?: VoxelInspectorOptions;
   /** @default false */
   greedy?: boolean;
-  /** Distant tiles fade to their average colour, see rendering and meshing. @default "average" */
+  /** Distant tiles average the texels they cover, see rendering and meshing. @default "average" */
   tileMinification?: "average" | "nearest";
+  /** Mask blocks write coverage as MSAA sample coverage. @default false */
+  alphaToCoverage?: boolean;
   /** Preloaded atlases, see loadTilesets. */
   tilesets?: Iterable<TilesetSource>;
   /** @default 8 */
@@ -57,6 +59,10 @@ interface VoxelViewOptions {
   viewDistance?: number | ViewDistanceOptions;
   /** @default "hide" */
   viewDistancePolicy?: "hide" | "unload";
+  /** World units from focus; far chunks draw flat tile colours. @default Infinity */
+  farDistance?: number;
+  /** World units from focus; far chunks mesh at half resolution. @default Infinity */
+  lodDistance?: number;
   /** @default false */
   retainVertexData?: boolean;
   /** @default false */
@@ -80,12 +86,15 @@ class VoxelView {
 
   greedy: boolean;                     // assigning rebuilds every chunk
   tileMinification: "average" | "nearest"; // assigning replaces the materials
+  alphaToCoverage: boolean;            // assigning replaces the materials
   castShadow: boolean;                 // assigning updates built chunks
   receiveShadow: boolean;              // assigning updates built chunks
   ambientOcclusion: number;            // switching on or off rebuilds every chunk
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   viewDistancePolicy: "hide" | "unload";
+  farDistance: number;                 // world units; applied on the next tick
+  lodDistance: number;                 // world units; applied on the next tick
   readonly pendingRebuilds: number;
 }
 ```

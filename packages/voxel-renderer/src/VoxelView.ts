@@ -22,7 +22,10 @@ import {
   VoxelInspector,
   type VoxelInspectorOptions
 } from "./inspector/index.ts";
-import { VoxelMeshBuilder } from "./mesh/index.ts";
+import {
+  DownsampledWorld,
+  VoxelMeshBuilder
+} from "./mesh/index.ts";
 import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
 import {
   ChunkMeshLayout,
@@ -40,6 +43,9 @@ import type {
 } from "./tileset/types.ts";
 import type { VoxelWorldJSON } from "./serialization/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
+import { FACE_OFFSETS } from "./utils/math.ts";
+import type { VoxelChunk } from "./world/VoxelChunk.ts";
+import type { VoxelLayer } from "./world/VoxelLayer.ts";
 import {
   ViewDistance,
   type ViewDistanceOptions
@@ -114,13 +120,34 @@ export interface VoxelViewOptions {
 
   /**
    * How atlas tiles are drawn once a screen pixel covers several texels.
-   * `"average"` fades distant faces toward the average colour of their tile,
-   * which stops the moire and shimmer that `"nearest"` shows far away.
-   * Needs readable atlas pixels (a 2D canvas, same-origin images); falls
-   * back to `"nearest"` otherwise.
+   * `"average"` box-filters the texels each pixel covers, which stops the
+   * moire and shimmer that `"nearest"` shows far away.
+   *
+   * Needs readable atlas pixels (a 2D canvas, same-origin images); falls back to `"nearest" otherwise.
    * @default "average"
    */
   tileMinification?: TileMinification;
+
+  /**
+   * Mask blocks write their texel coverage as MSAA sample coverage.
+   * Needs a multisampled target and an opaque canvas.
+   * @default false
+   */
+  alphaToCoverage?: boolean;
+
+  /**
+   * World units from `focus` beyond which chunks draw flat tile colours
+   * and blend blocks opaque.
+   * @default Infinity
+   */
+  farDistance?: number;
+
+  /**
+   * World units from `focus` beyond which chunks mesh at half resolution,
+   * one block per 2x2x2 cell.
+   * @default Infinity
+   */
+  lodDistance?: number;
 
   /**
    * Preloaded atlases (see `loadTilesets`) registered synchronously during
@@ -189,10 +216,13 @@ export class VoxelView {
   focus: THREE.Vector3Like | null = null;
   viewDistance: ViewDistance;
   viewDistancePolicy: ViewDistancePolicy;
+  farDistance: number;
+  lodDistance: number;
 
   #chunkGroup = new THREE.Group();
   #layout: ChunkMeshLayout;
   #meshBuilder: VoxelMeshBuilder;
+  #lodBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
   #meshes: ChunkMeshStore;
   #queue = new ChunkRebuildQueue();
@@ -263,6 +293,9 @@ export class VoxelView {
       rebuildBudgetMs = 8,
       viewDistance,
       viewDistancePolicy = "hide",
+      farDistance = Infinity,
+      lodDistance = Infinity,
+      alphaToCoverage = false,
       retainVertexData = false,
       castShadow = false,
       receiveShadow = false,
@@ -280,6 +313,8 @@ export class VoxelView {
       ViewDistance.Unlimited :
       ViewDistance.from(viewDistance);
     this.viewDistancePolicy = viewDistancePolicy;
+    this.farDistance = farDistance;
+    this.lodDistance = lodDistance;
     this.#logger = logger.child({
       namespace: "VoxelView"
     });
@@ -302,8 +337,7 @@ export class VoxelView {
       tilesets: document.tilesets
     });
 
-    this.#meshBuilder = new VoxelMeshBuilder({
-      world: document.world,
+    const builderOptions = {
       blockRegistry: document.blocks,
       shapeRegistry: this.shapes,
       tilesetManager: this.tilesetManager,
@@ -311,6 +345,15 @@ export class VoxelView {
       greedy,
       ambientOcclusion: ambientOcclusion > 0,
       logger: this.#logger
+    };
+    this.#meshBuilder = new VoxelMeshBuilder({
+      ...builderOptions,
+      world: document.world
+    });
+    const lodWorld = new DownsampledWorld(document.world);
+    this.#lodBuilder = new VoxelMeshBuilder({
+      ...builderOptions,
+      world: lodWorld
     });
 
     this.#collider = collider?.({
@@ -325,7 +368,8 @@ export class VoxelView {
       customizer: materialCustomizer,
       tileWrapping: greedy,
       tileAveraging: tileMinification === "average",
-      ambientOcclusion
+      ambientOcclusion,
+      alphaToCoverage
     });
     this.#layout = new ChunkMeshLayout(document.world);
     this.#meshes = new ChunkMeshStore({
@@ -335,6 +379,10 @@ export class VoxelView {
       materials: this.#materials,
       inspector: this.inspector,
       collider: this.#collider,
+      lod: {
+        world: lodWorld,
+        meshBuilder: this.#lodBuilder
+      },
       logger: this.#logger,
       retainVertexData,
       castShadow,
@@ -347,6 +395,12 @@ export class VoxelView {
         this.#meshes.unload(key);
         for (const { chunk } of entry.members) {
           chunk.dirty = true;
+        }
+      },
+      relevel: (_key, entry) => {
+        for (const { layer, chunk } of entry.members) {
+          chunk.dirty = true;
+          this.#dirtyCoarseNeighbours(layer, chunk);
         }
       }
     });
@@ -370,6 +424,7 @@ export class VoxelView {
   ): void {
     this.tilesetManager.refreshAverages();
     const viewport = this.#viewport();
+    this.#meshes.viewport = viewport;
 
     this.#visibility.update(viewport);
     this.#enqueueDirtyChunks(viewport);
@@ -381,7 +436,10 @@ export class VoxelView {
   }
 
   flush(): void {
-    this.#enqueueDirtyChunks(this.#viewport());
+    const viewport = this.#viewport();
+    this.#meshes.viewport = viewport;
+    this.#visibility.update(viewport);
+    this.#enqueueDirtyChunks(viewport);
     this.#queue.drain(
       0,
       (target) => this.#meshes.rebuild(target)
@@ -413,6 +471,7 @@ export class VoxelView {
     }
 
     this.#meshBuilder.greedy = value;
+    this.#lodBuilder.greedy = value;
     this.#materials.tileWrapping = value;
     this.#materials.invalidate();
     this.#clearChunkMeshes();
@@ -436,6 +495,22 @@ export class VoxelView {
     this.markAllChunksDirty("tileMinification");
   }
 
+  get alphaToCoverage(): boolean {
+    return this.#materials.alphaToCoverage;
+  }
+
+  set alphaToCoverage(
+    value: boolean
+  ) {
+    if (value === this.#materials.alphaToCoverage) {
+      return;
+    }
+
+    this.#materials.alphaToCoverage = value;
+    this.#materials.invalidate();
+    this.markAllChunksDirty("alphaToCoverage");
+  }
+
   get ambientOcclusion(): number {
     return this.#materials.aoStrength.value;
   }
@@ -449,6 +524,7 @@ export class VoxelView {
     const enabled = strength > 0;
     if (enabled !== this.#meshBuilder.ambientOcclusion) {
       this.#meshBuilder.ambientOcclusion = enabled;
+      this.#lodBuilder.ambientOcclusion = enabled;
       this.markAllChunksDirty("ambientOcclusion");
     }
   }
@@ -561,7 +637,9 @@ export class VoxelView {
       focus: this.focus,
       viewDistance: this.viewDistance,
       policy: this.viewDistancePolicy,
-      chunkSize: this.document.world.chunkSize
+      chunkSize: this.document.world.chunkSize,
+      farDistance: this.farDistance,
+      lodDistance: this.lodDistance
     });
   }
 
@@ -615,6 +693,25 @@ export class VoxelView {
     this.#meshes.remove(target.key);
 
     return false;
+  }
+
+  #dirtyCoarseNeighbours(
+    layer: VoxelLayer,
+    chunk: VoxelChunk
+  ): void {
+    for (const [dx, dy, dz] of FACE_OFFSETS) {
+      const neighbour = layer.getChunk(
+        chunk.cx + dx,
+        chunk.cy + dy,
+        chunk.cz + dz
+      );
+      if (
+        neighbour !== undefined &&
+        (this.#meshes.detailOf(neighbour)?.lod ?? 0) > 0
+      ) {
+        neighbour.dirty = true;
+      }
+    }
   }
 
   #clearChunkMeshes(): void {

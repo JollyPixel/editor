@@ -13,8 +13,6 @@ import {
 
 void Control;
 void Controls;
-import * as THREE from "three/webgpu";
-
 // Import Internal Dependencies
 import {
   loadTilesets,
@@ -22,10 +20,8 @@ import {
   type VoxelInspectorMode,
   type VoxelEngine
 } from "../../src/index.ts";
-import {
-  Daylight,
-  HORIZON_COLOR
-} from "./noise-world/daylight.ts";
+import { temporalAntialiasing } from "./noise-world/antialiasing.ts";
+import { Daylight } from "./noise-world/daylight.ts";
 import {
   generateTerrain,
   type TerrainStats
@@ -58,6 +54,16 @@ const kSeedBounds = {
   max: 0x7FFFFFFF
 };
 const kMaxViewDistance = 24;
+const kFog = {
+  density: 3,
+  floor: 24,
+  height: 64
+};
+const kFogDensityScale = 0.001;
+const kDefaultViewChunks = 8;
+const kFarChunks = 14;
+const kLodChunks = 20;
+const kMaxDetailChunks = 40;
 
 interface WorldSettings {
   size: number;
@@ -83,8 +89,6 @@ const runtime = await Runtime.create("canvas", {
 const { world } = runtime;
 
 const scene = world.sceneManager.getSource();
-const fog = new THREE.Fog(HORIZON_COLOR, settings.size * 0.5, settings.size * 1.7);
-scene.fog = fog;
 
 const center = settings.size / 2;
 const cameraDistance = settings.size * 0.7;
@@ -100,7 +104,12 @@ const flyCamera = world.createActor("camera")
 const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
   camera: flyCamera.camera,
   scene,
-  renderer: world.renderer.getSource()
+  renderer: world.renderer.getSource(),
+  fog: {
+    density: kFog.density * kFogDensityScale,
+    floor: kFog.floor,
+    height: kFog.height
+  }
 });
 
 const voxelMap = world.createActor("map")
@@ -115,6 +124,9 @@ const voxelMap = world.createActor("map")
     ambientOcclusion: kAmbientOcclusion,
     castShadow: true,
     receiveShadow: true,
+    viewDistance: kDefaultViewChunks,
+    farDistance: kFarChunks * settings.chunkSize,
+    lodDistance: kLodChunks * settings.chunkSize,
     tilesets
   });
 
@@ -134,8 +146,10 @@ const viewStats = {
   drawn: ""
 };
 const view = {
-  distance: 0,
-  policy: engine.viewDistancePolicy
+  distance: kDefaultViewChunks,
+  policy: engine.viewDistancePolicy,
+  far: kFarChunks,
+  lod: kLodChunks
 };
 const controls = {
   seed: settings.seed,
@@ -144,8 +158,12 @@ const controls = {
   debug: engine.inspector.mode,
   chunkBounds: engine.inspector.chunkBounds,
   ambientOcclusion: true,
-  shadows: daylight.shadows
+  shadows: daylight.shadows,
+  alphaToCoverage: engine.alphaToCoverage,
+  traa: true
 };
+const traaPipeline = temporalAntialiasing();
+flyCamera.postProcessing = traaPipeline;
 
 const worldFolder = pane.addFolder({ title: "World" });
 worldFolder.addMonitors(worldStats, {
@@ -174,7 +192,57 @@ viewFolder
     }
   })
   .on("change", () => applyViewDistance());
+viewFolder
+  .addBinding(view, "far", {
+    label: "flat tiles",
+    min: 0,
+    max: kMaxDetailChunks,
+    step: 1
+  })
+  .on("change", () => applyDetailDistances());
+viewFolder
+  .addBinding(view, "lod", {
+    label: "half resolution",
+    min: 0,
+    max: kMaxDetailChunks,
+    step: 1
+  })
+  .on("change", () => applyDetailDistances());
 viewFolder.addMonitor(viewStats, "drawn", { label: "drawn chunks" });
+applyViewDistance();
+
+const fogControls = { ...kFog };
+const fogFolder = pane.addFolder({ title: "Fog" });
+fogFolder
+  .addBinding(fogControls, "density", {
+    label: "density",
+    min: 0,
+    max: 10,
+    step: 0.25
+  })
+  .on("change", ({ value }) => {
+    daylight.fog.density.value = value * kFogDensityScale;
+  });
+fogFolder
+  .addBinding(fogControls, "floor", {
+    label: "floor",
+    min: 0,
+    max: 128,
+    step: 1
+  })
+  .on("change", ({ value }) => {
+    daylight.fog.floor.value = value;
+  });
+fogFolder
+  .addBinding(fogControls, "height", {
+    label: "height",
+    min: 8,
+    max: 256,
+    step: 8
+  })
+  .on("change", ({ value }) => {
+    daylight.fog.height.value = value;
+  });
 
 const controlsFolder = pane.addFolder({ title: "Controls" });
 controlsFolder.addBinding(controls, "seed", {
@@ -225,6 +293,14 @@ controlsFolder
     engine.castShadow = value;
     engine.receiveShadow = value;
   });
+controlsFolder
+  .addBinding(controls, "alphaToCoverage", { label: "alpha to coverage" })
+  .on("change", ({ value }) => {
+    engine.alphaToCoverage = value;
+  });
+controlsFolder
+  .addBinding(controls, "traa", { label: "TRAA [T]" })
+  .on("change", ({ value }) => setTemporalAntialiasing(value));
 
 runtime.metrics.addSource(engine.inspector);
 await runtime.mountMetricsPanel({
@@ -265,6 +341,13 @@ document.addEventListener("keydown", (event) => {
 
   if (event.code === "KeyM") {
     setGreedy(!engine.greedy);
+
+    return;
+  }
+
+  if (event.code === "KeyT") {
+    setTemporalAntialiasing(!controls.traa);
+    pane.refresh();
   }
 });
 
@@ -309,6 +392,24 @@ function setDebugMode(
   pane.refresh();
 }
 
+function setTemporalAntialiasing(
+  value: boolean
+): void {
+  controls.traa = value;
+  flyCamera.postProcessing = value ? traaPipeline : null;
+  console.log(`[noise-world] TRAA: ${value}`);
+}
+
+function applyDetailDistances(): void {
+  const { far, lod } = view;
+
+  engine.farDistance = far === 0 ? Infinity : far * settings.chunkSize;
+  engine.lodDistance = lod === 0 ? Infinity : lod * settings.chunkSize;
+  console.log(
+    `[noise-world] flat tiles: ${far || "never"}, half resolution: ${lod || "never"}`
+  );
+}
+
 function applyViewDistance(): void {
   const { distance, policy } = view;
 
@@ -318,12 +419,10 @@ function applyViewDistance(): void {
   engine.viewDistancePolicy = policy;
 
   if (distance === 0) {
-    fog.near = settings.size * 0.5;
-    fog.far = settings.size * 1.7;
+    daylight.fog.unveil();
   }
   else {
-    fog.far = (distance + 1) * settings.chunkSize;
-    fog.near = fog.far * 0.55;
+    daylight.fog.veil(distance * settings.chunkSize, settings.chunkSize);
   }
 
   console.log(`[noise-world] view distance: ${distance || "unlimited"} (${policy})`);

@@ -2,14 +2,14 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import type {
-  IterableLayerChunk,
-  VoxelWorld
-} from "../world/VoxelWorld.ts";
+import type { IterableLayerChunk } from "../world/VoxelWorld.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
-import type { MeshPassOptions } from "./types.ts";
+import type {
+  MeshableWorld,
+  MeshPassOptions
+} from "./types.ts";
 import type { ChunkGeometryKey } from "./ChunkGeometryKey.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
@@ -25,7 +25,7 @@ const kMaxWindowChunkSize = 64;
 
 export interface VoxelMeshBuilderOptions {
   alphaTest?: number;
-  world: VoxelWorld;
+  world: MeshableWorld;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
@@ -51,7 +51,7 @@ export class VoxelMeshBuilder {
 
   ambientOcclusion: boolean;
 
-  #world: VoxelWorld;
+  #world: MeshableWorld;
   #variants: BlockVariantCache;
   #greedyMesher: GreedyMesher;
   #naiveMesher: NaiveMesher;

@@ -141,20 +141,22 @@ engine.greedy = false;
 
 ### Tile wrapping for custom materials
 
-Greedy meshing uses tile-space UVs across merged faces. `enableTileWrapping()`
-modifies a supported custom material so one atlas cell repeats instead of
-stretching.
-
 ```ts
 type TileWrappedMaterial =
   | THREE.MeshLambertMaterial
   | THREE.MeshStandardMaterial;
 
+interface TileShadingOptions {
+  surface?: BlockSurface;
+  aoStrength?: UniformNode<number>;
+  averages?: THREE.Texture | null; // AtlasAverages.texture of the map
+  flat?: boolean;                  // every face draws its tile average
+  alphaToCoverage?: boolean;       // mask surfaces write coverage as alpha
+}
+
 function enableTileWrapping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface,
-  aoStrength?: UniformNode<number>,
-  averages?: THREE.Texture | null
+  options?: TileShadingOptions
 ): void;
 ```
 
@@ -174,9 +176,7 @@ The export is available for compatible custom material setup.
 ```ts
 function enableTileClamping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface,
-  aoStrength?: UniformNode<number>,
-  averages?: THREE.Texture | null
+  options?: TileShadingOptions
 ): void;
 ```
 
@@ -188,8 +188,9 @@ reference a rect at a fractional tile offset.
 The optional `surface` applies alpha-mode and mask-cutoff behavior to the
 shader. The optional `aoStrength`, a TSL `uniform()`, multiplies the color by
 the baked ambient occlusion. The optional `averages`, an
-`AtlasAverages.texture`, turns on [distant tile](#distant-tiles) fading. The
-engine supplies all three when creating chunk materials.
+`AtlasAverages.texture`, turns on [distant tile](#distant-tiles) filtering,
+and `flat` draws the tile average on every face. The engine supplies them
+when creating chunk materials.
 
 ## Distant tiles
 
@@ -199,12 +200,13 @@ tiles. Once a screen pixel covers several texels, nearest sampling picks one of
 them almost at random, so far terrain shimmers and shows moire as the camera
 moves.
 
-With `tileMinification: "average"` (the default), chunk materials fade each
-face toward the average colour of its atlas rect instead. The blend weight is
-`log2(footprint) / log2(rectSize)`, where `footprint` is the texels covered by
-one pixel. It is 0 up close and reaches the full average when one pixel covers
-the whole tile: the two ends of a mip chain, without mipmaps or atlas padding.
-Rects at fractional offsets, spans and rotations all work, because the
+With `tileMinification: "average"` (the default), chunk materials box-filter
+the texels each pixel covers instead. The footprint comes from the screen
+derivatives of the texel coordinate, so a face seen at a grazing angle averages
+a long thin rect rather than a square, and the rect is clamped to the face's
+atlas rect so no neighbouring tile leaks in. A pixel covering less than one
+texel keeps the level 0 sample, and the filter fades in between one and two
+texels. Rects at fractional offsets, spans and rotations all work, because the
 average comes from a summed-area table rather than per-tile storage.
 
 ```ts
@@ -224,16 +226,55 @@ class AtlasAverages {
 reads the pixels from `DataTexture` data or through a 2D canvas, and returns
 null when that is impossible (no canvas, cross-origin image). The face then
 keeps plain nearest sampling. The table costs 16 bytes per atlas texel, and it
-is released when its source texture is disposed.
+is released when its source texture is disposed. The table is bilinear inside
+each texel, so the shader reads it at fractional coordinates with four nearest
+taps per corner: sixteen taps per pixel. Sums are 32-bit floats, which keeps
+the average exact to well under a colour step on atlases up to 1024 texels a
+side.
 
 RGB is averaged in linear space and weighted by alpha, so transparent texels
-do not darken the colour. Cutout (`"mask"`) surfaces still test the level 0
-alpha, so their silhouettes do not thin out with distance, though their edges
-still alias.
+do not darken the colour. Cutout (`"mask"`) surfaces test the filtered
+coverage against their cutoff, so distant foliage fills in rather than
+sparkling. With `alphaToCoverage` the coverage also becomes MSAA sample
+coverage, which softens the edges; it needs a multisampled target and an
+opaque canvas, because the coverage is written as alpha.
 
 `refresh()` rebuilds the table when the source texture's `version` moved,
 which `TilesetAtlas.updateImage()` does. `VoxelView.tick()` refreshes every
 atlas through `TilesetManager.refreshAverages()`.
+
+## Detail distances
+
+Two distances, measured in world units from `focus` to a chunk centre, trade
+detail for stability far away. Both default to `Infinity`.
+
+```ts
+const engine = new VoxelEngine({
+  farDistance: 14 * chunkSize,
+  lodDistance: 20 * chunkSize
+});
+
+engine.farDistance = Infinity; // back to full detail on the next tick
+```
+
+Beyond `farDistance` a chunk draws every face in the flat average colour of
+its tile, and its blend blocks turn opaque, since a whole tile covers a pixel
+or two by then and its transparency cannot be seen. Only materials change: the
+chunk is not remeshed, and each material variant is shared by every far chunk.
+
+Beyond `lodDistance` a chunk is remeshed from a copy of the world at half
+resolution (`DownsampledWorld`): each 2x2x2 cell becomes one block of its
+most frequent kind, drawn twice as large, so a distant slope stops being a
+staircase of sub-pixel faces. The copy is resampled per chunk when the source
+chunk's revision moved, including the neighbouring chunks so boundary faces
+still cull. A coarse block covers every voxel of its cell, so it can stand up
+to one voxel proud of a full-resolution neighbour; a coarse chunk therefore
+keeps its boundary faces toward such neighbours and is remeshed when one of
+them returns to full resolution. Colliders keep the full-resolution geometry
+built before the chunk went far and are refreshed once it comes back.
+
+A chunk keeps its reduced detail until it comes half a chunk closer than the
+threshold, so a chunk sitting on the border does not flip every tick.
 
 ## Ambient occlusion
 
