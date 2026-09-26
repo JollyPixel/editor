@@ -8,7 +8,10 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { ChunkMaterialCache } from "../../src/render/index.ts";
 import { BlockSurface } from "../../src/blocks/index.ts";
-import { ChunkGeometryKey } from "../../src/mesh/index.ts";
+import {
+  ChunkGeometryKey,
+  FaceTemplateTable
+} from "../../src/mesh/index.ts";
 import { MaterialGroupList } from "../../src/materials/index.ts";
 import {
   AtlasAverages,
@@ -318,5 +321,49 @@ describe("ChunkMaterialCache — alpha to coverage", () => {
     assert.equal(cache.resolve(keyOf("atlas", kMask), 1).alphaToCoverage, true);
     assert.equal(cache.resolve(keyOf("atlas"), 1).alphaToCoverage, false);
     assert.equal(cache.resolve(keyOf("atlas", kBlend), 1).alphaToCoverage, false);
+  });
+});
+
+describe("ChunkMaterialCache — vertex pulling", () => {
+  function positionNodeOf(
+    material: THREE.Material
+  ): unknown {
+    return (material as { positionNode?: unknown; }).positionNode ?? null;
+  }
+
+  it("pulls vertices from the face templates when enabled", () => {
+    const cache = makeCache({
+      vertexPulling: true,
+      faceTemplates: new FaceTemplateTable()
+    });
+
+    assert.notEqual(positionNodeOf(cache.resolve(keyOf("atlas"), 1)), null);
+  });
+
+  it("samples the atlas from its color node only", () => {
+    const cache = makeCache({
+      vertexPulling: true,
+      faceTemplates: new FaceTemplateTable()
+    });
+    const material = cache.resolve(keyOf("atlas"), 1);
+
+    assert.equal(material.map, null);
+    assert.ok((material as { colorNode?: unknown; }).colorNode);
+  });
+
+  it("keeps attribute vertices while tile wrapping", () => {
+    const cache = makeCache({
+      vertexPulling: true,
+      tileWrapping: true,
+      faceTemplates: new FaceTemplateTable()
+    });
+
+    assert.equal(positionNodeOf(cache.resolve(keyOf("atlas"), 1)), null);
+  });
+
+  it("keeps attribute vertices without a template table", () => {
+    const cache = makeCache({ vertexPulling: true });
+
+    assert.equal(positionNodeOf(cache.resolve(keyOf("atlas"), 1)), null);
   });
 });

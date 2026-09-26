@@ -154,6 +154,7 @@ const view = {
 const controls = {
   seed: settings.seed,
   greedy: engine.greedy,
+  vertexPulling: engine.vertexPulling,
   minification: engine.tileMinification,
   debug: engine.inspector.mode,
   chunkBounds: engine.inspector.chunkBounds,
@@ -256,6 +257,9 @@ controlsFolder
   .addBinding(controls, "greedy", { label: "greedy [M]" })
   .on("change", ({ value }) => setGreedy(value));
 controlsFolder
+  .addBinding(controls, "vertexPulling", { label: "vertex pulling [P]" })
+  .on("change", ({ value }) => setVertexPulling(value));
+controlsFolder
   .addBinding(controls, "minification", {
     options: {
       average: "average",
@@ -345,6 +349,12 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (event.code === "KeyP") {
+    setVertexPulling(!engine.vertexPulling);
+
+    return;
+  }
+
   if (event.code === "KeyT") {
     setTemporalAntialiasing(!controls.traa);
     pane.refresh();
@@ -375,6 +385,22 @@ function setGreedy(
 
   controls.greedy = value;
   console.log(`[noise-world] greedy meshing: ${value}`);
+  syncStats();
+  pane.refresh();
+}
+
+function setVertexPulling(
+  value: boolean
+): void {
+  if (engine.vertexPulling === value) {
+    return;
+  }
+
+  engine.vertexPulling = value;
+  engine.tick(0);
+
+  controls.vertexPulling = value;
+  console.log(`[noise-world] vertex pulling: ${value}`);
   syncStats();
   pane.refresh();
 }

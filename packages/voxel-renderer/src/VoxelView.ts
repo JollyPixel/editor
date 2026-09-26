@@ -24,6 +24,7 @@ import {
 } from "./inspector/index.ts";
 import {
   DownsampledWorld,
+  FaceTemplateTable,
   VoxelMeshBuilder
 } from "./mesh/index.ts";
 import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
@@ -117,6 +118,8 @@ export interface VoxelViewOptions {
    * @default false
    */
   greedy?: boolean;
+
+  vertexPulling?: boolean;
 
   /**
    * How atlas tiles are drawn once a screen pixel covers several texels.
@@ -223,6 +226,7 @@ export class VoxelView {
   #layout: ChunkMeshLayout;
   #meshBuilder: VoxelMeshBuilder;
   #lodBuilder: VoxelMeshBuilder;
+  #faceTemplates = new FaceTemplateTable();
   #materials: ChunkMaterialCache;
   #meshes: ChunkMeshStore;
   #queue = new ChunkRebuildQueue();
@@ -232,6 +236,8 @@ export class VoxelView {
   #rebuildBudgetMs: number;
   #logger: VoxelLogger;
   #stagedTilesets: TilesetSource[] = [];
+  #scannedViewport: ChunkViewport | null = null;
+  #scannedRevisions = new Map<VoxelLayer, number>();
 
   #onCommand = (
     command: VoxelCommand
@@ -289,6 +295,7 @@ export class VoxelView {
       inspector,
       tilesets,
       greedy = false,
+      vertexPulling = false,
       tileMinification = "average",
       rebuildBudgetMs = 8,
       viewDistance,
@@ -343,6 +350,8 @@ export class VoxelView {
       tilesetManager: this.tilesetManager,
       alphaTest,
       greedy,
+      vertexPulling,
+      faceTemplates: this.#faceTemplates,
       ambientOcclusion: ambientOcclusion > 0,
       logger: this.#logger
     };
@@ -369,7 +378,9 @@ export class VoxelView {
       tileWrapping: greedy,
       tileAveraging: tileMinification === "average",
       ambientOcclusion,
-      alphaToCoverage
+      alphaToCoverage,
+      faceTemplates: this.#faceTemplates,
+      vertexPulling
     });
     this.#layout = new ChunkMeshLayout(document.world);
     this.#meshes = new ChunkMeshStore({
@@ -430,7 +441,7 @@ export class VoxelView {
     this.#enqueueDirtyChunks(viewport);
     this.#queue.drain(
       this.#rebuildBudgetMs,
-      (target) => this.#meshes.rebuild(target)
+      (target) => this.#rebuildAdmitted(target, viewport)
     );
     this.#settleIdleWaiters();
   }
@@ -442,7 +453,7 @@ export class VoxelView {
     this.#enqueueDirtyChunks(viewport);
     this.#queue.drain(
       0,
-      (target) => this.#meshes.rebuild(target)
+      (target) => this.#rebuildAdmitted(target, viewport)
     );
     this.#settleIdleWaiters();
   }
@@ -476,6 +487,23 @@ export class VoxelView {
     this.#materials.invalidate();
     this.#clearChunkMeshes();
     this.markAllChunksDirty("greedy");
+  }
+
+  get vertexPulling(): boolean {
+    return this.#meshBuilder.vertexPulling;
+  }
+
+  set vertexPulling(value: boolean) {
+    if (value === this.#meshBuilder.vertexPulling) {
+      return;
+    }
+
+    this.#meshBuilder.vertexPulling = value;
+    this.#lodBuilder.vertexPulling = value;
+    this.#materials.vertexPulling = value;
+    this.#materials.invalidate();
+    this.#clearChunkMeshes();
+    this.markAllChunksDirty("vertexPulling");
   }
 
   get tileMinification(): TileMinification {
@@ -602,6 +630,7 @@ export class VoxelView {
     this.inspector.dispose();
     this.#collider?.dispose();
     this.#materials.dispose();
+    this.#faceTemplates.dispose();
     this.tilesetManager.dispose();
   }
 
@@ -656,6 +685,43 @@ export class VoxelView {
       }
     }
 
+    if (this.#dirtyChunksChangedSinceScan(viewport)) {
+      grew = this.#enqueueAdmittedDirtyChunks(viewport) || grew;
+    }
+
+    if (viewport.focus === null) {
+      return;
+    }
+
+    if (grew || this.#queue.focusMovedSinceSort(viewport)) {
+      this.#queue.sortBy(viewport);
+    }
+  }
+
+  #dirtyChunksChangedSinceScan(
+    viewport: ChunkViewport
+  ): boolean {
+    if (
+      this.#scannedViewport === null ||
+      viewport.differsFrom(this.#scannedViewport)
+    ) {
+      return true;
+    }
+
+    const layers = this.document.world.getLayers();
+
+    return layers.length !== this.#scannedRevisions.size ||
+      layers.some(
+        (layer) => this.#scannedRevisions.get(layer) !== layer.dirtyRevision
+      );
+  }
+
+  #enqueueAdmittedDirtyChunks(
+    viewport: ChunkViewport
+  ): boolean {
+    const { world } = this.document;
+    let grew = false;
+
     for (const { layer, chunk } of world.getAllDirtyChunks()) {
       const origin = this.#layout.originOf(layer, chunk);
       if (!viewport.contains(origin, false)) {
@@ -673,13 +739,31 @@ export class VoxelView {
       }
     }
 
-    if (viewport.focus === null) {
-      return;
+    this.#scannedViewport = viewport;
+    this.#scannedRevisions.clear();
+    for (const layer of world.getLayers()) {
+      this.#scannedRevisions.set(layer, layer.dirtyRevision);
     }
 
-    if (grew || this.#queue.focusMovedSinceSort(viewport)) {
-      this.#queue.sortBy(viewport);
+    return grew;
+  }
+
+  #rebuildAdmitted(
+    target: ChunkMeshTarget,
+    viewport: ChunkViewport
+  ): void {
+    if (!viewport.contains(target.origin, false)) {
+      const members = this.#layout.membersOf(target);
+      if (members.length > 0) {
+        for (const { chunk } of members) {
+          chunk.dirty = true;
+        }
+
+        return;
+      }
     }
+
+    this.#meshes.rebuild(target);
   }
 
   #retire(
@@ -717,6 +801,7 @@ export class VoxelView {
   #clearChunkMeshes(): void {
     this.#meshes.clear();
     this.#visibility.reset();
+    this.#scannedViewport = null;
   }
 
   #rebuildAllChunks(

@@ -4,10 +4,12 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
 import type { VoxelInspector } from "../inspector/index.ts";
-import type {
-  ChunkGeometryKey,
-  DownsampledWorld,
-  VoxelMeshBuilder
+import {
+  PulledChunkGeometry,
+  PulledChunkMesh,
+  type ChunkGeometryKey,
+  type DownsampledWorld,
+  type VoxelMeshBuilder
 } from "../mesh/index.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { IterableLayerChunk } from "../world/VoxelWorld.ts";
@@ -193,10 +195,10 @@ export class ChunkMeshStore {
     const meshes: THREE.Mesh[] = [];
     const geometryKeys: ChunkGeometryKey[] = [];
     for (const [geometryKey, geometry] of geometries) {
-      const mesh = new THREE.Mesh(
-        geometry,
-        this.#materials.resolve(geometryKey, opacity, detail.far)
-      );
+      const material = this.#materials.resolve(geometryKey, opacity, detail.far);
+      const mesh = geometry instanceof PulledChunkGeometry ?
+        new PulledChunkMesh(geometry, material) :
+        new THREE.Mesh(geometry, material);
       mesh.name = `voxel_chunk_${key}:${geometryKey}`;
       mesh.position.set(origin.x, origin.y, origin.z);
       mesh.scale.setScalar(lod === null ? 1 : lod.world.scale);
@@ -244,7 +246,7 @@ export class ChunkMeshStore {
       this.#collider.rebuildChunk(key, {
         origin,
         chunks: members.map(({ chunk }) => chunk),
-        geometries
+        geometries: collisionGeometries(geometries)
       });
     }
   }
@@ -378,6 +380,22 @@ export class ChunkMeshStore {
       }
     }
   }
+}
+
+function collisionGeometries(
+  geometries: Map<ChunkGeometryKey, THREE.BufferGeometry>
+): Map<ChunkGeometryKey, THREE.BufferGeometry> {
+  const result = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
+  for (const [key, geometry] of geometries) {
+    result.set(
+      key,
+      geometry instanceof PulledChunkGeometry ?
+        geometry.toIndexedGeometry() :
+        geometry
+    );
+  }
+
+  return result;
 }
 
 function releaseShaderAttributes(

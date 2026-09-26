@@ -6,6 +6,7 @@ import type {
 } from "../variants/types.ts";
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
 import type { ChunkNeighbourhood } from "../neighbourhood/ChunkNeighbourhood.ts";
+import type { GeometryBuffer } from "../GeometryBuffer.ts";
 import type {
   Mesher,
   MeshPassOptions
@@ -60,7 +61,7 @@ function lowestBitIndex(
 /**
  * Merges identical full boundary quads using six dense-grid sweeps.
  */
-export class GreedyMesher implements Mesher {
+export class GreedyMesher implements Mesher<GeometryBuffer> {
   #variants: BlockVariantCache;
 
   #grid = new Int32Array(0);
@@ -82,7 +83,7 @@ export class GreedyMesher implements Mesher {
   #visible = new Uint32Array(0);
 
   // Per-chunk state, set by `mesh()` so the passes stay parameter-free.
-  #pass!: MeshPassOptions;
+  #pass!: MeshPassOptions<GeometryBuffer>;
   #faces!: FaceEmitter;
   #chunk!: VoxelChunk;
   #neighbourhood!: ChunkNeighbourhood;
@@ -119,7 +120,7 @@ export class GreedyMesher implements Mesher {
   }
 
   mesh(
-    pass: MeshPassOptions
+    pass: MeshPassOptions<GeometryBuffer>
   ): void {
     const { chunk } = pass;
 

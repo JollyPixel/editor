@@ -55,6 +55,8 @@ are released from JavaScript memory unless `retainVertexData` is set. Layer
 opacity is stored on materials. The material cache distinguishes exact
 opacity values and resolved surface policies.
 
+[Vertex pulling](#vertex-pulling) replaces this layout with 8 bytes per face.
+
 Opaque and masked geometry write depth at layer opacity `1`. Blended blocks
 and faded layers use blending without depth writes. Mask coverage is tested
 before layer opacity; low-alpha blend texels and faint layers are preserved.
@@ -191,6 +193,79 @@ the baked ambient occlusion. The optional `averages`, an
 `AtlasAverages.texture`, turns on [distant tile](#distant-tiles) filtering,
 and `flat` draws the tile average on every face. The engine supplies them
 when creating chunk materials.
+
+## Vertex pulling
+
+With `vertexPulling: true`, and greedy meshing off, a chunk geometry stores one
+8-byte record per face instead of four 28-byte vertices and six 4-byte indices.
+The vertex shader rebuilds each corner from that record and a shared table of
+face templates.
+
+```ts
+const engine = new VoxelEngine({
+  vertexPulling: true
+});
+
+// Changing the mode rebuilds every chunk and replaces the materials.
+engine.vertexPulling = false;
+```
+
+A pulled chunk geometry draws one instance of six vertices per face. The face
+records sit in an `RG32UI` data texture owned by the geometry, at most 2048
+texels wide, and the shader reads them by instance index:
+
+| Channel | Bits | Content |
+|---|---|---|
+| R | 0-29 | Cell x, y and z relative to the chunk origin, 10 bits each |
+| G | 0-21 | Face template ID |
+| G | 22-29 | [Ambient occlusion](#ambient-occlusion) level of each corner, 2 bits each |
+| G | 30 | Quad diagonal flip |
+
+A face template holds what every copy of a compiled face shares: up to four
+block-local corners with their atlas coordinates, the atlas rect, the normal
+and the ambient occlusion axes. Templates take 8 `RGBA32F` texels (128 bytes)
+each, in one texture shared by full-detail and coarse chunks. Faces with the
+same content share a template whatever block they come from, including the
+triangles cut from partially covered boundary faces. The table only grows: an
+edit that changes a face's content, such as a tileset resize, adds templates,
+and the table is released with the view.
+
+A `bench/mesh-compare.bench.ts` run on 266k voxels (256² terrain, chunk size
+256) meshed 372k faces:
+
+| Mode | Build (min) | Vertex and index data |
+|---|---:|---:|
+| naive | 145 ms | 48.2 MB |
+| greedy | 226 ms | 28.3 MB |
+| pulled | 141 ms | 2.8 MB |
+
+Build time stays at the naive cost, since meshing is dominated by neighbour
+lookups rather than vertex writes. GPU frame time was not measured.
+
+At runtime, the inspector's `meshMemory` metric reports the same figure for
+the live chunks. Three.js files pulled faces under texture memory rather than
+geometry memory, so the renderer's `geometryMemory` alone overstates the
+saving.
+
+The rest of the engine keeps working on pulled chunks:
+
+- Raycasts decode the faces on the CPU and return the same hits as a classic
+  chunk mesh, without `uv`.
+- Colliders receive indexed `position` geometry expanded from the face records,
+  relative to the chunk origin.
+- The inspector wireframe draws an expanded copy, disposed with the overlay.
+- Shadow and transparency passes reuse the material's `positionNode`.
+
+Limits:
+
+- Greedy meshing takes precedence: `vertexPulling` has no effect while `greedy`
+  is on.
+- Pulled geometry has no `uv` or `tileRegion` attribute. Its six-vertex
+  `position` attribute holds corner indices and its `normal` attribute is
+  zero-filled. A `materialCustomizer` that reads geometry attributes, or
+  replaces `positionNode`, breaks the pulled layout.
+- Faces share no vertices, so the GPU runs six vertex invocations per face
+  instead of four.
 
 ## Distant tiles
 

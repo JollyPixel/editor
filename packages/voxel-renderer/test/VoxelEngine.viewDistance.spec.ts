@@ -229,6 +229,37 @@ describe("VoxelEngine - view distance", () => {
     assert.equal(lastChunk.voxelCount, 2);
   });
 
+  it("skips queued chunks the view distance no longer admits", (t) => {
+    let clock = 0;
+    t.mock.method(performance, "now", () => clock++);
+    const engine = makeFourChunkEngine({
+      viewDistance: kTight,
+      rebuildBudgetMs: 1
+    });
+    engine.tick(0);
+
+    engine.focus = kNear;
+    for (let i = 0; i < 4; i++) {
+      engine.tick(0);
+    }
+
+    const { built, visible } = snapshot(engine);
+    assert.deepEqual(built, kFirstPair);
+    assert.deepEqual(visible, kFirstPair);
+    assert.equal(engine.world.getLayer("Ground")!.getChunk(3, 0, 0)!.dirty, true);
+  });
+
+  it("meshes a chunk edited in range while chunks beyond it stay dirty", () => {
+    const engine = makeFourChunkEngine({ viewDistance: kTight });
+    engine.focus = kNear;
+    engine.tick(0);
+
+    placeCube(engine, "Ground", { x: 1, y: 5, z: 1 });
+    engine.tick(0);
+
+    assert.ok(snapshot(engine).built.includes("0,1,0"));
+  });
+
   it("keeps colliders for chunks the view distance unloads", () => {
     const fake = makeFakeCollider();
     const engine = makeFourChunkEngine({

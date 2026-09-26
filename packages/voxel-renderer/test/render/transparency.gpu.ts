@@ -12,6 +12,18 @@ import { chromium } from "@playwright/test";
 // Import Internal Dependencies
 import type { ProbeOptions } from "./fixtures/transparency.ts";
 
+interface MeshMode {
+  greedy: boolean;
+  vertexPulling: boolean;
+}
+
+// CONSTANTS
+const kMeshModes: MeshMode[] = [
+  { greedy: false, vertexPulling: false },
+  { greedy: true, vertexPulling: false },
+  { greedy: false, vertexPulling: true }
+];
+
 interface ProbeCase {
   name: string;
   options: ProbeOptions;
@@ -19,14 +31,14 @@ interface ProbeCase {
 }
 
 function probeCases(
-  greedy: boolean,
+  mode: MeshMode,
   reverse: boolean
 ): ProbeCase[] {
   const cases: ProbeCase[] = [];
   const settings = {
-    greedy, reverse, forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1"
+    ...mode, reverse, forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1"
   };
-  const suffix = `greedy=${greedy}, reverse=${reverse}`;
+  const suffix = `greedy=${mode.greedy}, pulling=${mode.vertexPulling}, reverse=${reverse}`;
   function sample(
     name: string,
     options: ProbeOptions,
@@ -124,15 +136,15 @@ it("composites voxel alpha on the GPU", {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => {
-      if (message.type() === "error") {
+      if (message.type() === "error" || message.text().includes("not found on geometry")) {
         errors.push(message.text());
       }
     });
     await page.goto(`http://127.0.0.1:${address.port}`);
     const cases: ProbeCase[] = [];
-    for (const greedy of [false, true]) {
+    for (const mode of kMeshModes) {
       for (const reverse of [false, true]) {
-        cases.push(...probeCases(greedy, reverse));
+        cases.push(...probeCases(mode, reverse));
       }
     }
     const samples = await page.evaluate(async(cases) => {
@@ -153,23 +165,26 @@ it("composites voxel alpha on the GPU", {
           `${testCase.name}: expected ${testCase.expected}, received ${samples[sampleIndex]}`);
       }
     }
-    const colored = await page.evaluate(async(forceWebGL) => {
+    const colored = await page.evaluate(async({ forceWebGL, modes }) => {
       const modulePath = "/probe.js";
       const { probe }: typeof import("./fixtures/transparency.ts") = await import(modulePath);
       const result: number[][] = [];
-      for (const greedy of [false, true]) {
+      for (const mode of modes) {
         for (const reverse of [false, true]) {
           for (const reverseDrawOrder of [false, true]) {
             result.push(await probe({
               alpha: 0.5, count: 2, startZ: 3, colored: true,
-              greedy, reverse, reverseDrawOrder, side: "front", forceWebGL
+              ...mode, reverse, reverseDrawOrder, side: "front", forceWebGL
             }));
           }
         }
       }
 
       return result;
-    }, process.env.VOXEL_TEST_WEBGPU !== "1");
+    }, {
+      forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1",
+      modes: kMeshModes
+    });
     assert.deepEqual(errors, []);
     for (let sampleIndex = 0; sampleIndex < colored.length; sampleIndex += 2) {
       const pixel = colored[sampleIndex];

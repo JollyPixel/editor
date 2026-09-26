@@ -27,6 +27,7 @@ function inspectorOf(
       triangles: 0,
       facesPerSolidVoxel: 0,
       bytesPerVertex: 0,
+      bytes: 0,
       buildTimeMs: 0,
       ...stats
     }
@@ -74,6 +75,16 @@ describe("voxelMetrics", () => {
 
     assert.equal(sampleOf(metrics, "culledFaces"), 0);
     assert.equal(sampleOf(metrics, "mergedFaces"), 0);
+  });
+
+  it("reports mesh memory in bytes", () => {
+    const metrics = voxelMetrics(inspectorOf({ bytes: 2048 }));
+
+    assert.equal(sampleOf(metrics, "meshMemory"), 2048);
+    assert.equal(
+      metrics.find(({ id }) => id === "meshMemory")?.unit,
+      "bytes"
+    );
   });
 
   it("names every metric once", () => {

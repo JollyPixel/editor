@@ -4,18 +4,15 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { BlockVariantFace } from "./variants/types.ts";
 import type { QuadIndex } from "./QuadIndex.ts";
+import type { FaceBuffer } from "./types.ts";
 import {
   AO_UNOCCLUDED,
-  aoUAxis,
-  aoVAxis,
-  aoVertexByte
+  shadeFace
 } from "./ambientOcclusion.ts";
-import { FACE_AXIS } from "../utils/math.ts";
 
 // CONSTANTS
 const kInitialVertices = 4096;
 const kIndicesPerQuad = 6;
-const kUnoccludedShade = 127;
 
 export const TILE_REPEAT_SCALE = 65535;
 
@@ -34,7 +31,7 @@ export interface GeometryBufferOptions {
 /**
  * Reusable typed-array accumulator for one tileset's geometry.
  */
-export class GeometryBuffer {
+export class GeometryBuffer implements FaceBuffer {
   vertexCount = 0;
   triangleCount = 0;
 
@@ -75,6 +72,17 @@ export class GeometryBuffer {
 
   get quadCount(): number {
     return this.vertexCount >> 2;
+  }
+
+  get bytesPerVertex(): number {
+    const uvBytes = this.tiled ?
+      (2 * Float32Array.BYTES_PER_ELEMENT) + (2 * Uint16Array.BYTES_PER_ELEMENT) :
+      2 * Uint16Array.BYTES_PER_ELEMENT;
+
+    return (3 * Float32Array.BYTES_PER_ELEMENT) +
+      (4 * Int8Array.BYTES_PER_ELEMENT) +
+      (4 * Uint16Array.BYTES_PER_ELEMENT) +
+      uvBytes;
   }
 
   reset(
@@ -139,27 +147,7 @@ export class GeometryBuffer {
     face: BlockVariantFace,
     ao: number
   ): void {
-    const shade = this.#shade;
-    this.#start = 0;
-    if (ao === AO_UNOCCLUDED || face.cull < 0) {
-      shade.fill(kUnoccludedShade);
-
-      return;
-    }
-
-    const axis = FACE_AXIS[face.cull];
-    const uAxis = aoUAxis(axis);
-    const vAxis = aoVAxis(axis);
-    const local = face.positions;
-    const last = face.vertexCount - 1;
-    for (let i = 0; i < 4; i++) {
-      const i3 = (i > last ? last : i) * 3;
-      shade[i] = aoVertexByte(ao, local[i3 + uAxis], local[i3 + vAxis]);
-    }
-
-    if (face.vertexCount === 4 && shade[0] + shade[2] < shade[1] + shade[3]) {
-      this.#start = 1;
-    }
+    this.#start = shadeFace(face, ao, this.#shade);
   }
 
   #reserve(): number {

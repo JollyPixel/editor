@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import {
+  formatBytes,
   formatCount,
   formatDecimal,
   formatInteger,
@@ -13,7 +14,8 @@ const kUnitFormats: Record<MetricUnit, (value: number) => string> = {
   integer: formatInteger,
   decimal: formatDecimal,
   ms: formatMilliseconds,
-  percent: formatPercent
+  percent: formatPercent,
+  bytes: formatBytes
 };
 
 export type MetricAggregation =
@@ -28,7 +30,8 @@ export type MetricUnit =
   | "integer"
   | "decimal"
   | "ms"
-  | "percent";
+  | "percent"
+  | "bytes";
 
 export interface MetricPalette {
   ink?: string;

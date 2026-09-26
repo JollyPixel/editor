@@ -7,12 +7,16 @@ import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type {
+  FaceBuffer,
   MeshableWorld,
   MeshPassOptions
 } from "./types.ts";
 import type { ChunkGeometryKey } from "./ChunkGeometryKey.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
+import { FaceTemplateTable } from "./pulling/FaceTemplateTable.ts";
+import { PulledFaceBuffer } from "./pulling/PulledFaceBuffer.ts";
+import { PulledChunkGeometry } from "./pulling/PulledChunkGeometry.ts";
 import { QuadIndex } from "./QuadIndex.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
 import { GreedyMesher } from "./meshers/GreedyMesher.ts";
@@ -39,6 +43,8 @@ export interface VoxelMeshBuilderOptions {
    * @default false
    */
   ambientOcclusion?: boolean;
+  vertexPulling?: boolean;
+  faceTemplates?: FaceTemplateTable;
   logger?: VoxelLogger;
 }
 
@@ -51,11 +57,14 @@ export class VoxelMeshBuilder {
 
   ambientOcclusion: boolean;
 
+  readonly faceTemplates: FaceTemplateTable;
+
   #world: MeshableWorld;
   #variants: BlockVariantCache;
   #greedyMesher: GreedyMesher;
   #naiveMesher: NaiveMesher;
   #greedy: boolean;
+  #vertexPulling: boolean;
   #quadIndex = new QuadIndex();
   #origin: [number, number, number] = [0, 0, 0];
   #buffers: (GeometryBuffer | undefined)[] = [];
@@ -65,6 +74,17 @@ export class VoxelMeshBuilder {
       buffer = new GeometryBuffer({ tiled: this.#greedy });
       buffer.reset(...this.#origin);
       this.#buffers[slot] = buffer;
+    }
+
+    return buffer;
+  };
+  #pulledBuffers: (PulledFaceBuffer | undefined)[] = [];
+  #pulledBufferFor = (slot: number): PulledFaceBuffer => {
+    let buffer = this.#pulledBuffers[slot];
+    if (buffer === undefined) {
+      buffer = new PulledFaceBuffer(this.faceTemplates);
+      buffer.reset(...this.#origin);
+      this.#pulledBuffers[slot] = buffer;
     }
 
     return buffer;
@@ -90,6 +110,8 @@ export class VoxelMeshBuilder {
   ) {
     this.#world = options.world;
     this.#greedy = options.greedy ?? false;
+    this.#vertexPulling = options.vertexPulling ?? false;
+    this.faceTemplates = options.faceTemplates ?? new FaceTemplateTable();
     this.ambientOcclusion = options.ambientOcclusion ?? false;
     this.#variants = new BlockVariantCache({
       blockRegistry: options.blockRegistry,
@@ -115,6 +137,20 @@ export class VoxelMeshBuilder {
 
     this.#greedy = value;
     this.#buffers = [];
+  }
+
+  get vertexPulling(): boolean {
+    return this.#vertexPulling;
+  }
+
+  set vertexPulling(
+    value: boolean
+  ) {
+    this.#vertexPulling = value;
+  }
+
+  get pullsVertices(): boolean {
+    return this.#vertexPulling && !this.#greedy;
   }
 
   buildChunkGeometries(
@@ -148,10 +184,9 @@ export class VoxelMeshBuilder {
     this.#origin = [worldOriginX, worldOriginY, worldOriginZ];
     this.#resetBuffers();
 
-    const mesher = this.#greedy ? this.#greedyMesher : this.#naiveMesher;
     for (const member of drawn) {
       neighbourhood.self = member.layer;
-      const pass: MeshPassOptions = {
+      const pass: MeshPassOptions<GeometryBuffer> = {
         chunk: member.chunk,
         neighbourhood,
         worldOriginX,
@@ -161,7 +196,15 @@ export class VoxelMeshBuilder {
         bufferFor: this.#bufferFor,
         ambientOcclusion: this.ambientOcclusion
       };
-      mesher.mesh(pass);
+      if (this.#greedy) {
+        this.#greedyMesher.mesh(pass);
+      }
+      else if (this.#vertexPulling) {
+        this.#naiveMesher.mesh({ ...pass, bufferFor: this.#pulledBufferFor });
+      }
+      else {
+        this.#naiveMesher.mesh(pass);
+      }
     }
 
     const geometries = this.#collectGeometries();
@@ -170,8 +213,12 @@ export class VoxelMeshBuilder {
     return geometries;
   }
 
+  #activeBuffers(): readonly (FaceBuffer | undefined)[] {
+    return this.pullsVertices ? this.#pulledBuffers : this.#buffers;
+  }
+
   #resetBuffers(): void {
-    for (const buffer of this.#buffers) {
+    for (const buffer of this.#activeBuffers()) {
       buffer?.reset(...this.#origin);
     }
   }
@@ -179,9 +226,10 @@ export class VoxelMeshBuilder {
   #collectGeometries(): Map<ChunkGeometryKey, THREE.BufferGeometry> {
     const result = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
     const { stats } = this;
+    const buffers = this.#activeBuffers();
 
-    for (let slot = 0; slot < this.#buffers.length; slot++) {
-      const buffer = this.#buffers[slot];
+    for (let slot = 0; slot < buffers.length; slot++) {
+      const buffer = buffers[slot];
       if (buffer === undefined || buffer.vertexCount === 0) {
         continue;
       }
@@ -190,7 +238,8 @@ export class VoxelMeshBuilder {
       stats.vertices += buffer.vertexCount;
       stats.triangles += buffer.triangleCount;
       stats.geometries++;
-      stats.bytesPerVertex = bytesPerVertex(geometry);
+      stats.bytesPerVertex = buffer.bytesPerVertex;
+      stats.bytes += byteLengthOf(geometry);
       result.set(this.#variants.geometryKeyAt(slot), geometry);
     }
 
@@ -198,14 +247,16 @@ export class VoxelMeshBuilder {
   }
 }
 
-function bytesPerVertex(
+function byteLengthOf(
   geometry: THREE.BufferGeometry
 ): number {
-  let total = 0;
-
+  let bytes = geometry.index?.array.byteLength ?? 0;
   for (const attribute of Object.values(geometry.attributes)) {
-    total += attribute.itemSize * attribute.array.BYTES_PER_ELEMENT;
+    bytes += attribute.array.byteLength;
+  }
+  if (geometry instanceof PulledChunkGeometry) {
+    bytes += (geometry.faces.image.data as Uint32Array).byteLength;
   }
 
-  return total;
+  return bytes;
 }

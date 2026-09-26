@@ -165,9 +165,11 @@ export class VoxelLayer {
   #pendingRemoval: VoxelChunk[] = [];
   #dirtyChunks = new Set<VoxelChunk>();
   #dirtySubscriptions = new Map<VoxelChunk, () => void>();
+  #dirtyRevision = 0;
   #trackDirty = (chunk: VoxelChunk, dirty: boolean): void => {
     if (dirty) {
       this.#dirtyChunks.add(chunk);
+      this.#dirtyRevision++;
     }
     else {
       this.#dirtyChunks.delete(chunk);
@@ -632,6 +634,13 @@ export class VoxelLayer {
    */
   * getDirtyChunks(): IterableIterator<VoxelChunk> {
     yield* this.#dirtyChunks;
+  }
+
+  /**
+   * Increments whenever a chunk of this layer becomes dirty.
+   */
+  get dirtyRevision(): number {
+    return this.#dirtyRevision;
   }
 
   * drainPendingRemovals(): IterableIterator<VoxelChunk> {

@@ -43,6 +43,7 @@ export interface MeshFixtureOptions {
   greedy?: boolean;
   chunkSize?: number;
   ambientOcclusion?: boolean;
+  vertexPulling?: boolean;
 }
 
 export function makeMeshFixture(
@@ -51,7 +52,8 @@ export function makeMeshFixture(
   const {
     greedy = false,
     chunkSize = CHUNK_SIZE,
-    ambientOcclusion = false
+    ambientOcclusion = false,
+    vertexPulling = false
   } = options;
 
   const world = new VoxelWorld(chunkSize);
@@ -72,7 +74,8 @@ export function makeMeshFixture(
     shapeRegistry: BlockShapeRegistry.createDefault(),
     tilesetManager,
     greedy,
-    ambientOcclusion
+    ambientOcclusion,
+    vertexPulling
   });
 
   return { world, layer, builder, blockRegistry, tilesetManager };

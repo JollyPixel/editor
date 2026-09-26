@@ -68,6 +68,8 @@ class VoxelLayer {
   readonly chunkCount: number;
   // stored voxels across all chunks
   readonly voxelCount: number;
+  // increments whenever a chunk becomes dirty
+  readonly dirtyRevision: number;
 
   // world-space position of the layer origin
   position: VoxelCoord;

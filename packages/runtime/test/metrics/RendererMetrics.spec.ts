@@ -13,7 +13,13 @@ import { RuntimeMetrics } from "../../src/metrics/RuntimeMetrics.ts";
 interface FakeRenderer {
   info: {
     render: { drawCalls: number; triangles: number; };
-    memory: { geometries: number; textures: number; };
+    memory: {
+      geometries: number;
+      textures: number;
+      attributesSize: number;
+      indexAttributesSize: number;
+      texturesSize: number;
+    };
   };
 }
 
@@ -26,7 +32,10 @@ function makeRenderer(): FakeRenderer {
       },
       memory: {
         geometries: 4,
-        textures: 2
+        textures: 2,
+        attributesSize: 4096,
+        indexAttributesSize: 1024,
+        texturesSize: 2048
       }
     }
   };
@@ -105,13 +114,27 @@ describe("RendererMetrics", () => {
     assert.equal(sampleOf(metrics, "textures"), 2);
   });
 
+  it("reads GPU memory in bytes, vertex and index buffers together", () => {
+    const renderer = makeRenderer();
+    const metrics = metricsOf(renderer);
+
+    assert.equal(sampleOf(metrics, "geometryMemory"), 5120);
+    assert.equal(sampleOf(metrics, "textureMemory"), 2048);
+
+    renderer.info.memory.attributesSize = 0;
+    assert.equal(sampleOf(metrics, "geometryMemory"), 1024);
+  });
+
   it("files every metric under one group, outside the tile", () => {
     const metrics = metricsOf(makeRenderer());
 
     for (const metric of metrics.metrics) {
       assert.equal(metric.group, "renderer");
       assert.equal(metric.tile, false);
-      assert.equal(metric.unit, "count");
+      assert.equal(
+        metric.unit,
+        metric.id.endsWith("Memory") ? "bytes" : "count"
+      );
     }
   });
 
