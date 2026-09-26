@@ -5,12 +5,25 @@ import type * as THREE from "three";
 import type { ViewDistance } from "../world/ViewDistance.ts";
 import type { ViewDistancePolicy } from "../VoxelView.ts";
 
+export interface ChunkDetail {
+  readonly far: boolean;
+  readonly lod: number;
+}
+
 export interface ChunkViewportOptions {
   focus: THREE.Vector3Like | null;
   viewDistance: ViewDistance;
   policy: ViewDistancePolicy;
   chunkSize: number;
+  farDistance?: number;
+  lodDistance?: number;
 }
+
+// CONSTANTS
+export const FULL_DETAIL: ChunkDetail = Object.freeze({
+  far: false,
+  lod: 0
+});
 
 /**
  * Immutable snapshot of where the camera looks from and how far chunks stay
@@ -22,6 +35,8 @@ export class ChunkViewport {
   readonly viewDistance: ViewDistance;
   readonly policy: ViewDistancePolicy;
   readonly chunkSize: number;
+  readonly farDistance: number;
+  readonly lodDistance: number;
 
   #offset = {
     x: 0,
@@ -36,7 +51,9 @@ export class ChunkViewport {
       focus,
       viewDistance,
       policy,
-      chunkSize
+      chunkSize,
+      farDistance = Infinity,
+      lodDistance = Infinity
     } = options;
 
     this.focus = focus === null ? null : {
@@ -47,10 +64,17 @@ export class ChunkViewport {
     this.viewDistance = viewDistance;
     this.policy = policy;
     this.chunkSize = chunkSize;
+    this.farDistance = farDistance;
+    this.lodDistance = lodDistance;
   }
 
   get unbounded(): boolean {
     return this.focus === null || this.viewDistance.unlimited;
+  }
+
+  get detailed(): boolean {
+    return this.focus !== null &&
+      (Number.isFinite(this.farDistance) || Number.isFinite(this.lodDistance));
   }
 
   contains(
@@ -67,6 +91,29 @@ export class ChunkViewport {
     return retain ?
       this.viewDistance.retains(x, y, z, chunkSize) :
       this.viewDistance.admits(x, y, z, chunkSize);
+  }
+
+  detailOf(
+    origin: THREE.Vector3Like,
+    current: ChunkDetail = FULL_DETAIL
+  ): ChunkDetail {
+    if (!this.detailed) {
+      return FULL_DETAIL;
+    }
+
+    const distance = Math.sqrt(this.distanceSquaredTo(origin));
+    const far = this.#beyond(distance, this.farDistance, current.far);
+    const lod = this.#beyond(distance, this.lodDistance, current.lod > 0) ?
+      1 :
+      0;
+    if (far === current.far && lod === current.lod) {
+      return current;
+    }
+
+    return {
+      far,
+      lod
+    };
   }
 
   distanceSquaredTo(
@@ -101,7 +148,19 @@ export class ChunkViewport {
     return other === null ||
       other.viewDistance !== this.viewDistance ||
       other.policy !== this.policy ||
+      other.farDistance !== this.farDistance ||
+      other.lodDistance !== this.lodDistance ||
       this.focusMovedFrom(other.focus);
+  }
+
+  #beyond(
+    distance: number,
+    threshold: number,
+    currently: boolean
+  ): boolean {
+    const hysteresis = currently ? this.chunkSize / 2 : 0;
+
+    return distance > threshold - hysteresis;
   }
 
   #centerOffset(

@@ -1,10 +1,16 @@
 // Import Internal Dependencies
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
+import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type { GeometryBuffer } from "./GeometryBuffer.ts";
 import type { MeshBuildStats } from "./MeshBuildStats.ts";
 import type { ChunkNeighbourhood } from "./neighbourhood/ChunkNeighbourhood.ts";
 
 export type GeometryBufferFactory = (slot: number) => GeometryBuffer;
+
+export interface MeshableWorld {
+  readonly chunkSize: number;
+  getLayers(): readonly VoxelLayer[];
+}
 
 export interface MeshPassOptions {
   chunk: VoxelChunk;

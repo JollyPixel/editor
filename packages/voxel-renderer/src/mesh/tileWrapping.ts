@@ -2,6 +2,7 @@
 import type * as THREE from "three";
 import type { Node } from "three/webgpu";
 import {
+  abs,
   attribute,
   clamp,
   dFdx,
@@ -10,8 +11,6 @@ import {
   floor,
   Fn,
   int,
-  length,
-  log2,
   max,
   reference,
   round,
@@ -32,26 +31,40 @@ import {
   type AoStrengthUniform
 } from "./ambientOcclusion.ts";
 
+// CONSTANTS
+const kMinimumWeight = 1e-6;
+
 export type TileWrappedMaterial =
   | THREE.MeshLambertMaterial
   | THREE.MeshStandardMaterial;
 
+export interface TileShadingOptions {
+  surface?: BlockSurface;
+  aoStrength?: AoStrengthUniform;
+  averages?: THREE.Texture | null;
+  flat?: boolean;
+  alphaToCoverage?: boolean;
+}
+
 type Vec2Node = Node<"vec2">;
 type Vec4Node = Node<"vec4">;
+type FloatNode = Node<"float">;
+type TableNode = ReturnType<typeof texture<"vec4">>;
+
+interface TileSample {
+  sampled: Vec4Node;
+  texel: Vec2Node;
+  position: Vec2Node;
+}
 
 /**
  * Confines each face's samples to its own atlas rect. MSAA can shade a
  * partially covered pixel from a point outside the triangle, whose
  * interpolated UV would otherwise read a neighbouring tile.
- *
- * With `averages` (an `AtlasAverages` table), distant faces fade to the
- * average colour of their rect instead of aliasing.
  */
 export function enableTileClamping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface,
-  aoStrength?: AoStrengthUniform,
-  averages?: THREE.Texture | null
+  options: TileShadingOptions = {}
 ): void {
   const { map } = material;
   if (!map) {
@@ -59,34 +72,30 @@ export function enableTileClamping(
   }
 
   const tileRegion = attribute<"vec4">("tileRegion", "vec4");
-  const sampled = texture(
-    map,
-    clamp(
-      uv(),
-      tileRegion.xy,
-      tileRegion.xy.add(tileRegion.zw)
-    )
-  ).level(float(0));
+  const clamped = clamp(
+    uv(),
+    tileRegion.xy,
+    tileRegion.xy.add(tileRegion.zw)
+  );
+  const size = atlasSize(map);
 
   applyTileColor(
     material,
-    sampled,
-    uv().mul(atlasSize(map)),
-    surface,
-    aoStrength,
-    averages
+    {
+      sampled: texture(map, clamped).level(float(0)),
+      texel: uv().mul(size),
+      position: clamped.mul(size)
+    },
+    options
   );
 }
 
 /**
  * Repeats atlas tiles across greedy quads using WebGPU-compatible TSL nodes.
- * `averages` behaves as in `enableTileClamping()`.
  */
 export function enableTileWrapping(
   material: TileWrappedMaterial,
-  surface?: BlockSurface,
-  aoStrength?: AoStrengthUniform,
-  averages?: THREE.Texture | null
+  options: TileShadingOptions = {}
 ): void {
   const { map } = material;
   if (!map) {
@@ -104,37 +113,43 @@ export function enableTileWrapping(
   // `mix()` only exposes a scalar TS overload, so the vec2 form is expanded manually.
   const edgeMask = step(tileRepeat, tileCoord);
   const tileFrac = tileFracBase.add(vec2(1).sub(tileFracBase).mul(edgeMask));
+  const wrapped = tileRegion.xy.add(tileFrac.mul(tileRegion.zw));
 
-  // Force LOD 0: the UV discontinuity at each repeat causes derivative spikes.
-  const sampled = texture(
-    map,
-    tileRegion.xy.add(tileFrac.mul(tileRegion.zw))
-  ).level(float(0));
-
-  // The unwrapped UV counts tile repeats, so it stays continuous.
   applyTileColor(
     material,
-    sampled,
-    uv().mul(regionTexels(map, tileRegion)),
-    surface,
-    aoStrength,
-    averages
+    {
+      // Force LOD 0: the UV discontinuity at each repeat causes derivative spikes.
+      sampled: texture(map, wrapped).level(float(0)),
+      // The unwrapped UV counts tile repeats, so it stays continuous.
+      texel: uv().mul(regionTexels(map, tileRegion)),
+      position: wrapped.mul(atlasSize(map))
+    },
+    options
   );
 }
 
-// eslint-disable-next-line max-params
 function applyTileColor(
   material: TileWrappedMaterial,
-  sampled: Vec4Node,
-  texelCoord: Vec2Node,
-  surface?: BlockSurface,
-  aoStrength?: AoStrengthUniform,
-  averages?: THREE.Texture | null
+  sample: TileSample,
+  options: TileShadingOptions
 ): void {
+  const {
+    surface,
+    aoStrength,
+    averages = null,
+    flat = false,
+    alphaToCoverage = false
+  } = options;
   const { map } = material;
-  const diffuse = averages && map ?
-    fadeToAverage(map, averages, sampled, texelCoord) :
-    sampled;
+  let diffuse = sample.sampled;
+  if (averages && map) {
+    diffuse = flat ?
+      varying(regionAverage(map, averages)) :
+      footprintAverage(map, averages, sample);
+  }
+  const alphaMode = surface?.alphaMode ?? "opaque";
+  const keepsAlpha = (alphaMode === "blend" && !flat) ||
+    (alphaMode === "mask" && alphaToCoverage);
 
   /*
    * `materialColor` re-samples the atlas at raw UVs; read material.color directly.
@@ -147,43 +162,79 @@ function applyTileColor(
    * variants, so `colorNode` exists at runtime but not on the classic type.
    */
   (material as { colorNode?: unknown; }).colorNode = Fn(() => {
-    // The level 0 alpha keeps cutout silhouettes stable at any distance.
     if (surface?.alphaMode === "mask") {
-      sampled.a.lessThan(surface.alphaCutoff).discard();
+      diffuse.a.lessThan(surface.alphaCutoff).discard();
     }
-    const alpha = surface && surface.alphaMode !== "blend" ?
-      float(1) : diffuse.a;
+    const alpha = keepsAlpha ? diffuse.a : float(1);
 
     return vec4(tint, float(1)).mul(vec4(diffuse.rgb, alpha));
   })();
-  configureClassicAlpha(material, surface);
+  configureClassicAlpha(material, surface, flat);
 }
 
-/**
- * Blends the level 0 sample toward the face rect's average colour as one
- * screen pixel covers more texels, reaching it when the pixel covers the
- * whole rect: the two ends of a mip chain, without mipmaps.
- */
-function fadeToAverage(
+function footprintAverage(
   map: THREE.Texture,
   averages: THREE.Texture,
-  sampled: Vec4Node,
-  texelCoord: Vec2Node
+  sample: TileSample
 ): Vec4Node {
   const tileRegion = attribute<"vec4">("tileRegion", "vec4");
-  const texels = varying(regionTexels(map, tileRegion));
-  const average = varying(regionAverage(map, averages, tileRegion));
+  const size = atlasSize(map);
+  const start = varying(regionStart(tileRegion, size));
+  const end = varying(regionStart(tileRegion, size).add(regionTexels(map, tileRegion)));
 
-  const footprint = max(
-    length(dFdx(texelCoord)),
-    length(dFdy(texelCoord))
+  const footprint = abs(dFdx(sample.texel)).add(abs(dFdy(sample.texel)));
+  const half = max(footprint, float(1)).mul(0.5);
+  const low = clamp(sample.position.sub(half), start, end);
+  const high = clamp(sample.position.add(half), start, end);
+
+  const table = texture<"vec4">(averages);
+  const tableSize = size.add(1);
+  const sum = tableAt(table, tableSize, high.x, high.y)
+    .sub(tableAt(table, tableSize, low.x, high.y))
+    .sub(tableAt(table, tableSize, high.x, low.y))
+    .add(tableAt(table, tableSize, low.x, low.y));
+  const extent = high.sub(low);
+  const area = max(extent.x.mul(extent.y), float(kMinimumWeight));
+  const average = vec4(
+    sum.rgb.div(max(sum.a, float(kMinimumWeight))),
+    sum.a.div(area)
   );
-  const level = log2(max(footprint, float(1)));
-  const lastLevel = log2(max(max(texels.x, texels.y), float(2)));
-  const weight = clamp(level.div(lastLevel), float(0), float(1));
 
-  // `mix()` only exposes a scalar TS overload, so the vec4 form is expanded manually.
-  return sampled.add(average.sub(sampled).mul(weight));
+  const weight = clamp(
+    max(footprint.x, footprint.y).sub(1),
+    float(0),
+    float(1)
+  );
+
+  return lerp(sample.sampled, average, weight);
+}
+
+function tableAt(
+  table: TableNode,
+  tableSize: Vec2Node,
+  x: FloatNode,
+  y: FloatNode
+): Vec4Node {
+  const x0 = floor(x);
+  const y0 = floor(y);
+  const fx = x.sub(x0);
+  const fy = y.sub(y0);
+  const x1 = x0.add(1);
+  const y1 = y0.add(1);
+
+  function tap(
+    tx: FloatNode,
+    ty: FloatNode
+  ): Vec4Node {
+    return table
+      .sample(vec2(tx, ty).add(0.5).div(tableSize))
+      .level(float(0));
+  }
+
+  const bottom = lerp(tap(x0, y0), tap(x1, y0), fx);
+  const top = lerp(tap(x0, y1), tap(x1, y1), fx);
+
+  return lerp(bottom, top, fy);
 }
 
 /**
@@ -192,23 +243,23 @@ function fadeToAverage(
  */
 function regionAverage(
   map: THREE.Texture,
-  averages: THREE.Texture,
-  tileRegion: Vec4Node
+  averages: THREE.Texture
 ): Vec4Node {
+  const tileRegion = attribute<"vec4">("tileRegion", "vec4");
   const size = atlasSize(map);
   const tableSize = size.add(1);
-  const start = round(tileRegion.xy.mul(size).sub(0.5));
+  const start = regionStart(tileRegion, size);
   const extent = regionTexels(map, tileRegion);
   const end = start.add(extent);
+  const table = texture<"vec4">(averages);
 
   function corner(
-    x: Node<"float">,
-    y: Node<"float">
+    x: FloatNode,
+    y: FloatNode
   ): Vec4Node {
-    return texture(
-      averages,
-      vec2(x, y).add(0.5).div(tableSize)
-    ).level(float(0));
+    return table
+      .sample(vec2(x, y).add(0.5).div(tableSize))
+      .level(float(0));
   }
 
   const sum = corner(end.x, end.y)
@@ -217,7 +268,14 @@ function regionAverage(
     .add(corner(start.x, start.y));
   const coverage = sum.a.div(max(extent.x.mul(extent.y), float(1)));
 
-  return vec4(sum.rgb.div(max(sum.a, float(1e-6))), coverage);
+  return vec4(sum.rgb.div(max(sum.a, float(kMinimumWeight))), coverage);
+}
+
+function regionStart(
+  tileRegion: Vec4Node,
+  size: Vec2Node
+): Vec2Node {
+  return round(tileRegion.xy.mul(size).sub(0.5));
 }
 
 /**
@@ -238,6 +296,15 @@ function atlasSize(
 
   return vec2(size);
 }
+
+function lerp(
+  from: Vec4Node,
+  to: Vec4Node,
+  weight: FloatNode
+): Vec4Node {
+  return from.add(to.sub(from).mul(weight));
+}
+
 function shadedTint(
   material: TileWrappedMaterial,
   aoStrength?: AoStrengthUniform
@@ -249,11 +316,12 @@ function shadedTint(
 
 function configureClassicAlpha(
   material: TileWrappedMaterial,
-  surface?: BlockSurface
+  surface: BlockSurface | undefined,
+  flat: boolean
 ): void {
   if (
     !surface ||
-    surface.alphaMode === "blend"
+    (surface.alphaMode === "blend" && !flat)
   ) {
     return;
   }
@@ -271,5 +339,5 @@ function configureClassicAlpha(
    * The color node holds references to this material and atlas. Classic
    * materials converted by WebGPURenderer must keep those bindings separate.
    */
-  material.customProgramCacheKey = () => `${material.uuid}:${JSON.stringify(surface)}`;
+  material.customProgramCacheKey = () => `${material.uuid}:${JSON.stringify(surface)}:${flat}`;
 }

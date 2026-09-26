@@ -269,3 +269,54 @@ describe("ChunkMaterialCache — tile averaging", () => {
     assert.ok((material as { colorNode?: unknown; }).colorNode);
   });
 });
+
+describe("ChunkMaterialCache — far materials", () => {
+  it("keeps the far variant apart from the near one", () => {
+    const cache = makeCache();
+
+    assert.notEqual(cache.resolve(keyOf("atlas"), 1), cache.resolve(keyOf("atlas"), 1, true));
+    assert.equal(cache.resolve(keyOf("atlas"), 1, true), cache.resolve(keyOf("atlas"), 1, true));
+  });
+
+  it("draws far blend surfaces opaque, writing depth", () => {
+    const material = makeCache().resolve(keyOf("atlas", kBlend), 1, true);
+
+    assert.equal(material.transparent, false);
+    assert.equal(material.depthWrite, true);
+  });
+
+  it("keeps a translucent layer blended even when far", () => {
+    const material = makeCache().resolve(keyOf("atlas"), 0.5, true);
+
+    assert.equal(material.transparent, true);
+    assert.equal(material.depthWrite, false);
+  });
+
+  it("evicts far variants with their tileset", () => {
+    const cache = makeCache();
+    const far = cache.resolve(keyOf("atlas"), 1, true);
+
+    cache.invalidate("atlas");
+
+    assert.notEqual(cache.resolve(keyOf("atlas"), 1, true), far);
+  });
+});
+
+describe("ChunkMaterialCache — alpha to coverage", () => {
+  const kMask = new BlockSurface({ alphaMode: "mask" });
+
+  it("is off by default", () => {
+    const cache = makeCache();
+
+    assert.equal(cache.alphaToCoverage, false);
+    assert.equal(cache.resolve(keyOf("atlas", kMask), 1).alphaToCoverage, false);
+  });
+
+  it("enables it on mask materials only", () => {
+    const cache = makeCache({ alphaToCoverage: true });
+
+    assert.equal(cache.resolve(keyOf("atlas", kMask), 1).alphaToCoverage, true);
+    assert.equal(cache.resolve(keyOf("atlas"), 1).alphaToCoverage, false);
+    assert.equal(cache.resolve(keyOf("atlas", kBlend), 1).alphaToCoverage, false);
+  });
+});

@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
+  cameraFar,
   clamp,
   mrt,
   output,
@@ -13,6 +14,7 @@ import {
 import { SettledSize } from "./SettledSize.ts";
 
 // CONSTANTS
+const kDepthWeightRange = 10;
 const kTargetOptions = {
   type: THREE.HalfFloatType,
   minFilter: THREE.LinearFilter,
@@ -59,10 +61,13 @@ export class VoxelTransparencyPassNode extends THREE.PassNode {
       target.texture.name = "output";
     }
 
+    const depth = positionView.z.abs()
+      .div(cameraFar)
+      .mul(kDepthWeightRange)
+      .add(1);
     const weight = clamp(
       output.a.add(0.01).pow(3).mul(32)
-        .div(positionView.z.abs().mul(0.01).add(1)
-          .pow(2)),
+        .div(depth.pow(2)),
       0.01,
       32
     );

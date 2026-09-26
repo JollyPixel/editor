@@ -1,31 +1,25 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
-  color,
-  dot,
-  float,
-  max,
-  mix,
   normalize,
-  positionLocal,
-  pow,
-  smoothstep,
-  vec3
+  positionLocal
 } from "three/tsl";
 import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
 
-// CONSTANTS
-export const HORIZON_COLOR = "#d9e6f2";
+// Import Internal Dependencies
+import {
+  HorizonFog,
+  type HorizonFogOptions
+} from "./fog.ts";
+import {
+  skyColor,
+  SUN_DIRECTION
+} from "./sky.ts";
 
-const kSunDirection = new THREE.Vector3(-0.62, 0.55, 0.56).normalize();
-const kSkyBlue = "#9cc4ea";
-const kZenith = "#3c74bd";
-const kGround = "#c7d3df";
-const kGlowSharpness = 12;
-const kGlowStrength = 0.45;
+// CONSTANTS
 const kShadowRadius = 128;
 const kShadowMapSize = 4096;
 const kShadowSnap = 4;
@@ -34,11 +28,13 @@ export interface DaylightOptions {
   camera: THREE.Camera;
   scene: THREE.Scene;
   renderer: THREE.WebGPURenderer;
+  fog?: HorizonFogOptions;
 }
 
 export class Daylight extends ActorComponent {
   readonly hemisphere = new THREE.HemisphereLight("#bcd6f2", "#8a7454", 1.15);
   readonly sun = new THREE.DirectionalLight("#ffe2b8", 2.7);
+  readonly fog: HorizonFog;
 
   #camera: THREE.Camera;
   #renderer: THREE.WebGPURenderer;
@@ -54,16 +50,19 @@ export class Daylight extends ActorComponent {
       typeName: "Daylight"
     });
 
-    const { camera, scene, renderer } = options;
+    const { camera, scene, renderer, fog } = options;
     this.#camera = camera;
     this.#renderer = renderer;
+    this.fog = new HorizonFog(fog);
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
 
     scene.background = null;
-    scene.backgroundNode = createSkyBackground(kSunDirection);
+    scene.backgroundNode = skyColor(normalize(positionLocal), SUN_DIRECTION);
+    scene.fog = null;
+    scene.fogNode = this.fog.node;
 
     const { shadow } = this.sun;
     shadow.mapSize.set(kShadowMapSize, kShadowMapSize);
@@ -81,13 +80,12 @@ export class Daylight extends ActorComponent {
   }
 
   get shadows(): boolean {
-    return this.sun.castShadow;
+    return this.#renderer.shadowMap.enabled;
   }
 
   set shadows(
     value: boolean
   ) {
-    this.sun.castShadow = value;
     this.#renderer.shadowMap.enabled = value;
   }
 
@@ -104,36 +102,10 @@ export class Daylight extends ActorComponent {
 
     this.sun.target.position.copy(this.#focus);
     this.sun.position
-      .copy(kSunDirection)
+      .copy(SUN_DIRECTION)
       .multiplyScalar(kShadowRadius * 2)
       .add(this.#focus);
   }
-}
-
-function createSkyBackground(
-  sunDirection: THREE.Vector3
-): THREE.Node {
-  const direction = normalize(positionLocal);
-  const up = direction.y;
-  const glow = pow(max(dot(direction, vec3(sunDirection)), 0), float(kGlowSharpness))
-    .mul(kGlowStrength);
-  const lower = mix(
-    color(HORIZON_COLOR),
-    color(kSkyBlue),
-    smoothstep(float(0), float(0.2), up)
-  );
-  const gradient = mix(
-    lower,
-    color(kZenith),
-    smoothstep(float(0.2), float(0.75), up)
-  );
-  const below = mix(
-    gradient,
-    color(kGround),
-    smoothstep(float(0), float(-0.25), up)
-  );
-
-  return below.add(vec3(1, 0.9, 0.7).mul(glow));
 }
 
 function snap(
