@@ -4,7 +4,7 @@ import type { TilesetDocument } from "@jolly-pixel/voxel.renderer";
 import {
   tilesetDocumentKind,
   type TilesetRoom
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 import type { AssetLeases } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies

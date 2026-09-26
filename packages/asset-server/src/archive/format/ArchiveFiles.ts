@@ -4,7 +4,7 @@ import {
   Ok,
   type Result
 } from "@openally/result";
-import { isStatePath } from "@jolly-pixel/asset-source/core";
+import { isStatePath } from "@jolly-pixel/asset-source";
 import { unzipSync } from "fflate";
 
 // Import Internal Dependencies

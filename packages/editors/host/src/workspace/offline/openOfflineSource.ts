@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import {
+  IndexedDbAssetSource,
   MemoryAssetSource,
   type AssetSource
-} from "@jolly-pixel/asset-source/core";
-import { IndexedDbAssetSource } from "@jolly-pixel/asset-source/indexeddb";
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import type { OfflineStorage } from "./OfflineWorkspace.ts";

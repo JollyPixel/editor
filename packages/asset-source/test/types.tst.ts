@@ -7,12 +7,14 @@ import {
 
 // Import Internal Dependencies
 import {
+  MemoryAssetSource,
+  type AssetSource
+} from "#src/index.ts";
+import {
   DEFAULT_IGNORED_PATHS,
   FilesystemAssetSource,
-  MemoryAssetSource,
-  type AssetSource,
   type FilesystemAssetSourceOptions
-} from "#src/index.ts";
+} from "#src/node.ts";
 
 declare const source: AssetSource;
 declare const filesystemSource: FilesystemAssetSource;

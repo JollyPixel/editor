@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import { BINARY_KIND } from "@jolly-pixel/asset-server/backend";
+import { BINARY_KIND } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {

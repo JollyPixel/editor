@@ -6,11 +6,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { BINARY_KIND } from "@jolly-pixel/asset-server/backend";
+import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import {
   CATALOG_ROOM,
   CatalogClient
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 import { AssetNotFoundError } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies

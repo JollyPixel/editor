@@ -10,7 +10,7 @@ import { indexedDB } from "fake-indexeddb";
 import {
   BINARY_KIND,
   type AssetSeedMap
-} from "@jolly-pixel/asset-server/backend";
+} from "@jolly-pixel/asset-server";
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies

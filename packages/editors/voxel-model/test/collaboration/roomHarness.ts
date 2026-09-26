@@ -4,7 +4,7 @@ import { Emitter } from "@openally/emitt";
 import type {
   VoxelModelRoom,
   VoxelModelServerMessage
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 type RoomEvents = network.RoomEventMap<VoxelModelServerMessage>;
 

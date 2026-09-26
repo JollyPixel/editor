@@ -8,13 +8,13 @@ import {
 import {
   PixelCanvasTexture,
   UVGeometryBinding
-} from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
-import type { UVGhostPayload } from "@jolly-pixel/asset.pixel-art/network/client.ts";
+} from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+import type { UVGhostPayload } from "@jolly-pixel/asset.pixel-art/client";
 import type {
   BlockNodeJSON,
   ModelChange,
   ModelDocument
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import type { BlockSelectionStore } from "../../state/index.ts";

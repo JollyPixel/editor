@@ -7,7 +7,7 @@ ticks the engine during `update()`, and removes and disposes it during
 `@jolly-pixel/engine`.
 
 ```ts
-import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/plugins/engine/index.ts";
+import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
 
 const renderer = actor.addComponentAndGet(VoxelRenderer, {
   focus: cameraActor.object3D,

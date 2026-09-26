@@ -13,7 +13,7 @@ import {
   AssetPathEscapeError,
   isStatePath,
   safeAssetPath
-} from "@jolly-pixel/asset-source/core";
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";

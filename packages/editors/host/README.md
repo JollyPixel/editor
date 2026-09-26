@@ -47,7 +47,7 @@ import {
 } from "@jolly-pixel/editor.host";
 import {
   pixelArtDocumentKind
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+} from "@jolly-pixel/asset.pixel-art/client";
 
 class MyEditor {
   static readonly accepts = "voxelmap";

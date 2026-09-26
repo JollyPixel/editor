@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { CHANNEL_TRANSPORT_TAG } from "@jolly-pixel/network/transport/channel.ts";
+import { CHANNEL_TRANSPORT_TAG } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { parseOwnerMessage } from "#src/workspace/shared-tab/protocol.ts";

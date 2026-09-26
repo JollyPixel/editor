@@ -11,7 +11,7 @@ import {
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies

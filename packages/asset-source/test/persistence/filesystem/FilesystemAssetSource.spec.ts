@@ -8,7 +8,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 // Import Internal Dependencies
-import { FilesystemAssetSource } from "#src/index.ts";
+import { FilesystemAssetSource } from "#src/node.ts";
 import { tempWorkspace } from "../../helpers/tempWorkspace.ts";
 import {
   bytes,

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { AssetRoom } from "@jolly-pixel/asset";
-import type { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import {

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { STATE_DIRECTORY } from "@jolly-pixel/asset-source/core";
+import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 
 export const IDENTITY_SIDECAR_PATH = `${STATE_DIRECTORY}/assets.json`;
 export const PROJECTION_STATE_PATH = `${STATE_DIRECTORY}/state.json`;

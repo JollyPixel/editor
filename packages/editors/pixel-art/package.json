@@ -9,8 +9,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./mesh-texturing/*.ts": "./dist/mesh-texturing/*.js",
-    "./change-tracking/*.ts": "./dist/change-tracking/*.js"
+    "./mesh-texturing": {
+      "types": "./dist/mesh-texturing/index.d.ts",
+      "default": "./dist/mesh-texturing/index.js"
+    }
   },
   "imports": {
     "#src/*": "./src/*"

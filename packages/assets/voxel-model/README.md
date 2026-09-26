@@ -24,7 +24,7 @@ import {
   encodeVoxelModelDocument,
   voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
-import { createAssetWorkspacePlugin } from "@jolly-pixel/asset-server/plugins/vite.ts";
+import { createAssetWorkspacePlugin } from "@jolly-pixel/asset-server/node";
 import { defineConfig } from "vite";
 
 const texture = {
@@ -51,7 +51,7 @@ export default defineConfig({
 });
 ```
 
-`createVoxelModelDocument({ texture, blocks? })` creates a version 2 document. `texture` is a required pixel-art asset reference. A block's `position` is its pivot point, relative to its parent's pivot, and `pivotOffset` is where that pivot sits on the box, from the box center along the box's own axes. A block's `scale` applies around its pivot and carries its child blocks. Children never skew: each child takes its parent's scale on the same axis, whatever its rotation. It starts with one root block named `Block` unless `blocks` supplies root names; `blocks: []` creates an empty tree. Each block carries a UV layout, `createBlockUv()` by default. `decodeVoxelModelDocument()` throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server/kinds` when the bytes are not JSON or do not match `voxelModelDocumentSchema`: version 2, every node shaped as in a snapshot, and `texture` an asset reference. Loading the document then throws `InvalidModelTreeError` when an id repeats, a parent is missing or a node is its own ancestor, and keeps the previous tree.
+`createVoxelModelDocument({ texture, blocks? })` creates a version 2 document. `texture` is a required pixel-art asset reference. A block's `position` is its pivot point, relative to its parent's pivot, and `pivotOffset` is where that pivot sits on the box, from the box center along the box's own axes. A block's `scale` applies around its pivot and carries its child blocks. Children never skew: each child takes its parent's scale on the same axis, whatever its rotation. It starts with one root block named `Block` unless `blocks` supplies root names; `blocks: []` creates an empty tree. Each block carries a UV layout, `createBlockUv()` by default. `decodeVoxelModelDocument()` throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server` when the bytes are not JSON or do not match `voxelModelDocumentSchema`: version 2, every node shaped as in a snapshot, and `texture` an asset reference. Loading the document then throws `InvalidModelTreeError` when an id repeats, a parent is missing or a node is its own ancestor, and keeps the previous tree.
 
 ### Connect a model
 
@@ -61,7 +61,7 @@ import { Client } from "@jolly-pixel/network/client";
 import {
   SyncedModelDocument,
   type VoxelModelRoom
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 const client = new Client();
 const room: VoxelModelRoom = client.room(assetRoomName("voxelmodel", assetId));
@@ -79,8 +79,8 @@ const blockId = synced.document.addBlock({ name: "Body" });
 ## 📚 API
 
 - `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, the document codec and `voxelModelDocumentSchema`, `VoxelModelState`, `ModelTree`, `ModelDocument`, the `VOXEL_MODEL_ASSET` descriptor, and the kind and event constants.
-- `@jolly-pixel/asset.voxel-model/network/client.ts` exports `ModelSyncClient`, `SyncedModelDocument`, `voxelModelDocumentKind`, and model types.
-- `@jolly-pixel/asset.voxel-model/network/server.ts` exports `VoxelModelCommandArbiter` and the command and snapshot schemas.
+- `@jolly-pixel/asset.voxel-model/client` exports `ModelSyncClient`, `SyncedModelDocument`, `voxelModelDocumentKind`, and model types.
+- `@jolly-pixel/asset.voxel-model/server` exports `VoxelModelCommandArbiter` and the command and snapshot schemas.
 
 The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command shapes and sync behavior, and [architecture](./ARCHITECTURE.md) for tree and arbitration rules.
 

@@ -3,7 +3,7 @@ import type {
   ModelNodeJSON,
   ModelNodeKind,
   ModelTreeReader
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // CONSTANTS
 const kFallbackNames: Record<ModelNodeKind, string> = {

@@ -24,3 +24,6 @@ export {
 } from "./mesh/tileWrapping.ts";
 
 export { FACE as Face } from "./utils/math.ts";
+
+export * from "./plugins/rapier/index.ts";
+export * from "./plugins/tiled/index.ts";

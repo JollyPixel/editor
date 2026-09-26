@@ -3,7 +3,7 @@ import { showChoice } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
   ImportPlan
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 
 /**
  * Asks how to import an archive whose assets partly exist already. Resolves

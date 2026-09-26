@@ -3,6 +3,7 @@
   "description": "Append-only log for JollyPixel's events",
   "version": "3.0.0",
   "type": "module",
+  "sideEffects": false,
   "imports": {
     "#src/*": "./src/*"
   },
@@ -11,9 +12,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./sqlite": {
-      "types": "./dist/persistence/sqlite/index.d.ts",
-      "default": "./dist/persistence/sqlite/index.js"
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
     }
   },
   "scripts": {

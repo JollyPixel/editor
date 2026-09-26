@@ -15,7 +15,7 @@ interface FilesystemAssetSourceOptions {
 ```
 
 ```ts
-import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 
 const source = new FilesystemAssetSource("./assets", {
   ignore: ["generated/**"]

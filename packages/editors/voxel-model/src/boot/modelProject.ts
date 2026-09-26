@@ -2,7 +2,7 @@
 import type {
   AssetKindHandler,
   AssetSeedMap
-} from "@jolly-pixel/asset-server/backend";
+} from "@jolly-pixel/asset-server";
 import {
   PIXEL_ART_KIND,
   pixelArtAssetKind

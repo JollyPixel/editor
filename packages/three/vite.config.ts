@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/network";
 import {
   createWebSocketNetworkPlugin
-} from "@jolly-pixel/network/plugins/vite.ts";
+} from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
 import {

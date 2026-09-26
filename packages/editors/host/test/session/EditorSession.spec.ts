@@ -18,7 +18,7 @@ import {
   CATALOG_ROOM,
   CatalogUnavailableError,
   type CatalogExportCommand
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { EditorSession } from "#src/session/EditorSession.ts";

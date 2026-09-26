@@ -3,7 +3,7 @@ import * as THREE from "three";
 import {
   ModelDocument,
   type AddBlockOptions
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {

@@ -10,12 +10,14 @@ import {
   type AssetKindHandler,
   type AssetSeedMap,
   type SnapshotPolicy
-} from "@jolly-pixel/asset-server/backend";
-import { IndexedDbAssetSource } from "@jolly-pixel/asset-source/indexeddb";
+} from "@jolly-pixel/asset-server";
+import { IndexedDbAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
-import { Server } from "@jolly-pixel/network";
-import type { ClientSocket } from "@jolly-pixel/network/client";
-import { LoopbackTransport } from "@jolly-pixel/network/transport/loopback.ts";
+import {
+  LoopbackTransport,
+  Server,
+  type ClientSocket
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { StandaloneConnection } from "../../editor/mountStandalone.ts";

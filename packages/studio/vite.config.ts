@@ -11,7 +11,7 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   createAssetWorkspacePlugin
-} from "@jolly-pixel/asset-server/plugins/vite.ts";
+} from "@jolly-pixel/asset-server/node";
 import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies

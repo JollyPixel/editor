@@ -17,8 +17,8 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("src/index.ts", import.meta.url))
       },
       {
-        find: /^@jolly-pixel\/voxel\.renderer\/plugins\/(.*)$/,
-        replacement: fileURLToPath(new URL("src/plugins/$1", import.meta.url))
+        find: /^@jolly-pixel\/voxel\.renderer\/engine$/,
+        replacement: fileURLToPath(new URL("src/plugins/engine/index.ts", import.meta.url))
       }
     ]
   },

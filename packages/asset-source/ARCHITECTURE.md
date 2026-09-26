@@ -30,10 +30,10 @@ the filesystem adapter supplies both. The HTTP handler accepts any
 | `MemoryAssetSource` | A `Map` owned by one instance | Until the instance is discarded | Sorted keys; no watcher |
 | `IndexedDbAssetSource` | One IndexedDB `files` object store | Persists across page reloads | Keys from the store; no watcher |
 
-The browser-safe `@jolly-pixel/asset-source/core` entry exports the contract,
-memory adapter, path helpers and JSON helpers. The main entry also exports the
-filesystem adapter and HTTP handler. IndexedDB has its own
-`@jolly-pixel/asset-source/indexeddb` entry.
+The browser-safe main entry exports the contract, the memory and IndexedDB
+adapters, path helpers and JSON helpers. The Node-only
+`@jolly-pixel/asset-source/node` entry exports the filesystem adapter and HTTP
+handler.
 
 ## Path and storage lifecycle
 

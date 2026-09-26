@@ -10,10 +10,10 @@ import { IDBFactory } from "fake-indexeddb";
 
 // Import Internal Dependencies
 import {
-  FilesystemAssetSource,
   MemoryAssetSource,
   type AssetSource
 } from "#src/index.ts";
+import { FilesystemAssetSource } from "#src/node.ts";
 import { IndexedDbAssetSource } from "#src/persistence/indexeddb/IndexedDbAssetSource.ts";
 import { tempWorkspace } from "./helpers/tempWorkspace.ts";
 import {

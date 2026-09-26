@@ -4,9 +4,9 @@ export * from "./writer/index.ts";
 export * from "./catalog/index.ts";
 export * from "./archive/index.ts";
 export * from "./rooms/index.ts";
-export * from "./workspace/index.ts";
 export * from "./createAssetBackend.ts";
 export * from "./logger.ts";
+export * from "./workspace/seedAssetSource.ts";
 export {
   EVENTS_DB_PATH,
   IDENTITY_SIDECAR_PATH,

@@ -2,7 +2,7 @@
 import type {
   BlockTransformJSON,
   Vector3JSON
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 export function parseBlockTransformJSON(
   value: unknown

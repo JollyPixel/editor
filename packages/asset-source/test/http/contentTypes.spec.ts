@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_CONTENT_TYPE,
   resolveContentType
-} from "#src/index.ts";
+} from "#src/node.ts";
 
 describe("resolveContentType", () => {
   test("matches on the lowercased extension", () => {

@@ -19,11 +19,11 @@ import {
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import { STATE_GITIGNORE_PATH } from "#src/index.ts";
 import {
   createAssetWorkspace,
-  STATE_GITIGNORE_PATH,
   type AssetWorkspace
-} from "#src/index.ts";
+} from "#src/node.ts";
 import { tempWorkspace } from "../helpers/tempWorkspace.ts";
 import {
   counterHandler,

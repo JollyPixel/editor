@@ -4,7 +4,7 @@ import type {
   ReactiveControllerHost
 } from "lit";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
-import { decodeRasterCanvas } from "@jolly-pixel/image/raster";
+import { decodeRasterCanvas } from "@jolly-pixel/image/browser";
 
 // Import Internal Dependencies
 import { showImportTextureDialog } from "./importTextureDialog.ts";

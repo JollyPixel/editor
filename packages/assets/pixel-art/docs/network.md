@@ -1,6 +1,6 @@
 # Pixel-art network API
 
-The browser entry point is `@jolly-pixel/asset.pixel-art/network/client.ts`. Server protocol utilities are exported from `@jolly-pixel/asset.pixel-art/network/server.ts`. A room represents one asset named `pixelart:<assetId>`.
+The browser entry point is `@jolly-pixel/asset.pixel-art/client`. Server protocol utilities are exported from `@jolly-pixel/asset.pixel-art/server`. A room represents one asset named `pixelart:<assetId>`.
 
 ## Document synchronization
 

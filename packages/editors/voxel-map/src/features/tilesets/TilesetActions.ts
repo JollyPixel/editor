@@ -3,13 +3,13 @@ import {
   AssetSource,
   type AssetRecordData
 } from "@jolly-pixel/asset";
-import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/catalog/client";
+import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
 import {
   createTilesetAsset,
   createTilesetDocument,
   tilesetAsset,
   TILESET_EXTENSION
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

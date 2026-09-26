@@ -5,7 +5,7 @@ import type { ThemePreferences } from "@jolly-pixel/ui";
 import {
   PIXEL_ART_KIND,
   type SyncedPixelDocument
-} from "@jolly-pixel/asset.pixel-art/network/client.ts";
+} from "@jolly-pixel/asset.pixel-art/client";
 import {
   QueryParams,
   type EditorContext,

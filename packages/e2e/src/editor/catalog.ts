@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network/client";
-import { CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 export async function withCatalog<T>(
   socketUrl: string,

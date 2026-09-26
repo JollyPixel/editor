@@ -11,7 +11,7 @@ import {
   foldAssetEvent,
   type AssetEventData,
   type AssetLiveProtocol
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 import { protocolEvents } from "@jolly-pixel/network";
 import {
   decodeVoxelDocument,

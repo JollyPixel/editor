@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type {
   ModelChange,
   ModelDocument
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import type {

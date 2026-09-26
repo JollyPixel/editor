@@ -2,10 +2,8 @@
 import path from "node:path";
 
 // Import Third-party Dependencies
-import {
-  FilesystemAssetSource,
-  type AssetSource
-} from "@jolly-pixel/asset-source";
+import type { AssetSource } from "@jolly-pixel/asset-source";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   Server,

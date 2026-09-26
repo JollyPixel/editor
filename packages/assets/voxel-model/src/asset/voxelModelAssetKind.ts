@@ -9,7 +9,7 @@ import {
   InvalidAssetDocumentError,
   type AssetKindHandler,
   type SnapshotPolicy
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {

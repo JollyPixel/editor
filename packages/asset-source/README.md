@@ -41,7 +41,7 @@ $ yarn add @jolly-pixel/asset-source
 ```ts
 import {
   FilesystemAssetSource
-} from "@jolly-pixel/asset-source";
+} from "@jolly-pixel/asset-source/node";
 
 const source = new FilesystemAssetSource("./assets");
 
@@ -95,8 +95,10 @@ interface AssetSource {
 > [!NOTE]
 > 
 > The filesystem source provides both optional methods. The memory and IndexedDB
-> sources provide neither. The browser-safe `core` entry exports the contract,
-> memory source and utilities without loading Node.js builtins.
+> sources provide neither. The root entry is browser-safe: it exports the
+> contract, the memory and IndexedDB sources and utilities. The filesystem
+> source and the HTTP handler are exported from
+> `@jolly-pixel/asset-source/node`.
 
 ### ✂️ Utilities
 

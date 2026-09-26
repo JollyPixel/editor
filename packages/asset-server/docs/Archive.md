@@ -9,7 +9,7 @@ import {
   importAssetArchive,
   planAssetImport,
   readAssetArchive
-} from "@jolly-pixel/asset-server/backend";
+} from "@jolly-pixel/asset-server";
 
 const bytes = await exportAssetArchive(backend, { root: mapId });
 
@@ -96,7 +96,7 @@ Pure: decodes and validates without a back-end. `AssetArchive` holds `root`,
 `DEFAULT_ARCHIVE_MAX_BYTES` (64 MiB). The catalog room reads archives with
 the `catalogArchiveLimits` back-end option. The constants and
 `ArchiveLimits` are also exported by the browser-safe
-`@jolly-pixel/asset-server/catalog/client` entry, so an exporter can check
+`@jolly-pixel/asset-server/client` entry, so an exporter can check
 an archive before sending it.
 
 | `rejection` | Cause |

@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer
-} from "@jolly-pixel/voxel.renderer/plugins/engine/index.ts";
+} from "@jolly-pixel/voxel.renderer/engine";
 import type {
   VoxelEngine,
   VoxelWorldJSON
@@ -18,7 +18,7 @@ import type {
 import type {
   SyncedVoxelMap,
   VoxelMapRoom
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
 import {

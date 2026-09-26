@@ -3,7 +3,7 @@ import {
   CATALOG_CHANGED,
   CATALOG_SNAPSHOT,
   type CatalogMessage
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 import type {
   AssetRecordData,
   AssetReferenceData

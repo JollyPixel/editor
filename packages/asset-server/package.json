@@ -3,6 +3,7 @@
   "description": "Back-end asset orchestration: event-sourced projection, reconciliation and catalog delivery",
   "version": "4.0.0",
   "type": "module",
+  "sideEffects": false,
   "imports": {
     "#src/*": "./src/*"
   },
@@ -11,19 +12,14 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./backend": {
-      "types": "./dist/backend.d.ts",
-      "default": "./dist/backend.js"
-    },
-    "./catalog/client": {
+    "./client": {
       "types": "./dist/catalog/client/index.d.ts",
       "default": "./dist/catalog/client/index.js"
     },
-    "./kinds": {
-      "types": "./dist/kinds/contract.d.ts",
-      "default": "./dist/kinds/contract.js"
-    },
-    "./plugins/*.ts": "./dist/plugins/*.js"
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    }
   },
   "scripts": {
     "prepublishOnly": "tsc -b",

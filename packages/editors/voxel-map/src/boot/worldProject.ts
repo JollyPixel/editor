@@ -4,7 +4,7 @@ import {
   type AssetBackendTuning,
   type AssetKindHandler,
   type AssetSeedMap
-} from "@jolly-pixel/asset-server/backend";
+} from "@jolly-pixel/asset-server";
 import {
   createVoxelMapDocument,
   encodeTilesetDocument,

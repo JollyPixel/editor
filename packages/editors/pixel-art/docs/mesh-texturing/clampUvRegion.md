@@ -7,7 +7,7 @@ import * as THREE from "three/webgpu";
 import {
   clampUvRegion,
   UVGeometryBinding
-} from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
+} from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),

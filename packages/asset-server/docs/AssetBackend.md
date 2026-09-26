@@ -96,10 +96,10 @@ is persisted.
 
 ## Browser entry
 
-`@jolly-pixel/asset-server/backend` exports `createAssetBackend`, the kind
-handlers, the event helpers, the writer, the asset rooms, `seedAssetSource`
-and `silentLogger`. It leaves out `createAssetWorkspace`, the HTTP handlers and
-the Vite plugins, and imports no Node.js builtin.
+The root entry exports `createAssetBackend`, the kind handlers, the event
+helpers, the writer, the catalog, the asset rooms, `seedAssetSource` and
+`silentLogger`, and imports no Node.js builtin. `createAssetWorkspace`, the
+HTTP handlers and the Vite plugins live in `@jolly-pixel/asset-server/node`.
 
 With a `MemoryAssetSource`, a memory event store and a
 [`LoopbackTransport`](../../network/docs/Transports.md#loopbacktransport), the
@@ -109,8 +109,8 @@ whole back-end runs inside a page:
 import {
   createAssetBackend,
   type AssetEventDataMap
-} from "@jolly-pixel/asset-server/backend";
-import { MemoryAssetSource } from "@jolly-pixel/asset-source/core";
+} from "@jolly-pixel/asset-server";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import { Server } from "@jolly-pixel/network";
 

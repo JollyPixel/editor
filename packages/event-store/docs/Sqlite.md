@@ -32,12 +32,12 @@ safe in a browser bundle as long as the SQLite factory is not called.
 Node.js applications can import the factory directly:
 
 ```ts
-import { createSqliteEventStore } from "@jolly-pixel/event-store/sqlite";
+import { createSqliteEventStore } from "@jolly-pixel/event-store/node";
 
 using store = await createSqliteEventStore("./events.sqlite");
 ```
 
-The `./sqlite` entry point also exports `SQL_SCHEMA` and `SqliteEventLog` for
+The `./node` entry point also exports `SQL_SCHEMA` and `SqliteEventLog` for
 applications that manage their own `DatabaseSync` connection:
 
 ```ts
@@ -46,7 +46,7 @@ import { createEventStore } from "@jolly-pixel/event-store";
 import {
   SQL_SCHEMA,
   SqliteEventLog
-} from "@jolly-pixel/event-store/sqlite";
+} from "@jolly-pixel/event-store/node";
 
 const database = new DatabaseSync("./events.sqlite");
 database.exec(SQL_SCHEMA);

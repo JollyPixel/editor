@@ -116,8 +116,7 @@ The tileset declarations also export:
 - `TiledTransformations` and `TiledTerrain`.
 - `TiledWangSet`, `TiledWangColor`, and `TiledWangTile`.
 
-Import all of these types from
-`@jolly-pixel/voxel.renderer/plugins/tiled/index.js`.
+Import all of these types from the package root.
 
 See [importing a Tiled map](../../guides/importing-a-tiled-map.md) for direct and
 asset-backed loading examples.

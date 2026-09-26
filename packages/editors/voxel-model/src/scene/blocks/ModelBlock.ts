@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/network/client.ts";
-import { clampUvRegion } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
+import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
+import { clampUvRegion } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 // Import Internal Dependencies
 import { BlockNode } from "./BlockNode.ts";

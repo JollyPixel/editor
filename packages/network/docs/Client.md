@@ -137,7 +137,7 @@ The client itself emits `"ready"` when the socket opens and `"unauthorized"` whe
 By default `message` hands you the payload the server sent, untouched and typed only by the `ServerMessage` parameter. Pass a parser to have the room check it instead:
 
 ```ts
-import { MessageParser } from "@jolly-pixel/network/parser";
+import { MessageParser } from "@jolly-pixel/network";
 
 const room = client.room("voxel-map", {
   parser: new MessageParser(voxelServerMessages)

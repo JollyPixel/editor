@@ -6,7 +6,7 @@ import type { PeerIdentity } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
 import type {
   VoxelModelRoom
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import type { ModelBlocks } from "../scene/index.ts";

@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { indexedDB } from "fake-indexeddb";
-import { BINARY_KIND } from "@jolly-pixel/asset-server/backend";
-import { CATALOG_ROOM, CatalogClient } from "@jolly-pixel/asset-server/catalog/client";
+import { BINARY_KIND } from "@jolly-pixel/asset-server";
+import { CATALOG_ROOM, CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { openSharedTabWorkspace } from "#src/workspace/shared-tab/openSharedTabWorkspace.ts";

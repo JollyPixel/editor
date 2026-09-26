@@ -5,7 +5,7 @@ import {
   type CatalogImportOptions,
   type ImportPlan,
   type ImportReport
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";

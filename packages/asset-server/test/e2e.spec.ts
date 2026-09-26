@@ -10,7 +10,7 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 import {
   Server,
   type ClientHandle
@@ -20,7 +20,6 @@ import { AssetRoom } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import {
   createAssetBackend,
-  createCatalogHandler,
   encodeContent,
   CATALOG_APPLIED,
   CATALOG_CHANGED,
@@ -32,6 +31,7 @@ import {
   PROJECTION_STATE_PATH,
   STATE_GITIGNORE_PATH
 } from "#src/index.ts";
+import { createCatalogHandler } from "#src/node.ts";
 import { tempWorkspace } from "./helpers/tempWorkspace.ts";
 import {
   linkContent,

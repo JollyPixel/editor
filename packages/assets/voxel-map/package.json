@@ -3,17 +3,18 @@
   "description": "Voxel-map assets",
   "version": "1.0.0",
   "type": "module",
+  "sideEffects": false,
   "private": true,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./network/client.ts": {
+    "./client": {
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
     },
-    "./network/server.ts": {
+    "./server": {
       "types": "./dist/network/server.d.ts",
       "default": "./dist/network/server.js"
     }

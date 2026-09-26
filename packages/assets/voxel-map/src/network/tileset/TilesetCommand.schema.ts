@@ -8,7 +8,7 @@ import {
 import {
   pixelCommandSchemas,
   pixelSnapshotSchema
-} from "@jolly-pixel/asset.pixel-art/network/server.ts";
+} from "@jolly-pixel/asset.pixel-art/server";
 import {
   MAX_LOCAL_BLOCK_ID,
   type TilesetTileSizeCommand,

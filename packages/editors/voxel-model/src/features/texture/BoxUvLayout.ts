@@ -4,8 +4,8 @@ import {
   DEFAULT_UV_SLOTS,
   type UVSlot
 } from "@jolly-pixel/pixel-draw.renderer";
-import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
-import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 
 // CONSTANTS
 const kFaceVertexCount = 4;

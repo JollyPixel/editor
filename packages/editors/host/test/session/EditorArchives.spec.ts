@@ -11,7 +11,7 @@ import type {
   ImportConflictPolicy,
   ImportPlan,
   ImportReport
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies

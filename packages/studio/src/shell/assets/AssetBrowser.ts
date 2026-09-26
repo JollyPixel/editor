@@ -14,7 +14,7 @@ import {
 import {
   ARCHIVE_MIME_TYPE,
   type CatalogClient
-} from "@jolly-pixel/asset-server/catalog/client";
+} from "@jolly-pixel/asset-server/client";
 import {
   LocalStorageAdapter,
   type JollyChangeDetail,

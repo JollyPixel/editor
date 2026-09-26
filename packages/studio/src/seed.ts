@@ -3,7 +3,7 @@ import {
   textureAssetKind,
   type AssetKindHandler,
   type AssetSeedMap
-} from "@jolly-pixel/asset-server/backend";
+} from "@jolly-pixel/asset-server";
 import {
   createPixelArtDocument,
   PIXEL_ART_KIND,

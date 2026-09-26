@@ -1,7 +1,5 @@
 // Import Third-party Dependencies
-import {
-  DEFAULT_WEBSOCKET_PATH
-} from "@jolly-pixel/network/transport/constants.ts";
+import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 
 export const PORTS = {
   pixelArt: 3000,

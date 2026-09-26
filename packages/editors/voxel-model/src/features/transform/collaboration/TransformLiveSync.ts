@@ -6,7 +6,7 @@ import {
 import type {
   BlockTransformJSON,
   VoxelModelRoom
-} from "@jolly-pixel/asset.voxel-model/network/client.ts";
+} from "@jolly-pixel/asset.voxel-model/client";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies

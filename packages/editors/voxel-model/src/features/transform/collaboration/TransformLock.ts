@@ -2,7 +2,7 @@
 import { PresenceChannel } from "@jolly-pixel/network/client";
 import { Emitter } from "@openally/emitt";
 import type { PresencePeer } from "@jolly-pixel/ui";
-import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
 import {
   peerProfileColor,
   readUsername

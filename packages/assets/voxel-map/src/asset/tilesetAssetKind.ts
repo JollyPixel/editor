@@ -9,8 +9,8 @@ import {
   InvalidAssetDocumentError,
   type AssetKindHandler,
   type SnapshotPolicy
-} from "@jolly-pixel/asset-server/kinds";
-import { applyCommandToBuffer } from "@jolly-pixel/asset.pixel-art/network/server.ts";
+} from "@jolly-pixel/asset-server";
+import { applyCommandToBuffer } from "@jolly-pixel/asset.pixel-art/server";
 import {
   deserializePixelBuffer,
   parsePixelArtDocument,

@@ -2,7 +2,7 @@
 
 `createAssetWorkspace` assembles what a host needs to edit an asset
 workspace live: a source, an event log, the back-end, and the network server
-its rooms are attached to.
+its rooms are attached to. Import it from `@jolly-pixel/asset-server/node`.
 
 ```ts
 createAssetWorkspace(options: AssetWorkspaceOptions): Promise<AssetWorkspace>
@@ -164,7 +164,7 @@ the routes.
 ```ts
 import {
   createAssetWorkspacePlugin
-} from "@jolly-pixel/asset-server/plugins/vite.ts";
+} from "@jolly-pixel/asset-server/node";
 
 export default defineConfig({
   plugins: [

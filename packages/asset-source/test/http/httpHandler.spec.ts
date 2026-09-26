@@ -8,10 +8,10 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   AssetPathEscapeError,
-  createAssetStaticHandler,
   MemoryAssetSource,
   STATE_DIRECTORY
 } from "#src/index.ts";
+import { createAssetStaticHandler } from "#src/node.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { send } from "../helpers/http.ts";
 

@@ -3,7 +3,7 @@ import type * as network from "@jolly-pixel/network";
 import type {
   AssetRoomDeletedMessage,
   AssetRoomRejectedMessage
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 import type {
   VoxelWorldCommand,
   VoxelWorldJSON

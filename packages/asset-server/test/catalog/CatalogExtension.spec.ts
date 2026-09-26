@@ -21,7 +21,6 @@ import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
 import {
   CatalogExtension,
   CatalogProjection,
-  createCatalogHandler,
   encodeContent,
   CATALOG_APPLIED,
   CATALOG_CHANGED,
@@ -36,6 +35,7 @@ import {
   CATALOG_SNAPSHOT,
   type CatalogCommand
 } from "#src/index.ts";
+import { createCatalogHandler } from "#src/node.ts";
 import {
   archiveBackend,
   syncHarness,

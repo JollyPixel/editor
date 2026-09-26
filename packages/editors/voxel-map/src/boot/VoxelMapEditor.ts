@@ -10,7 +10,7 @@ import {
   VOXEL_MAP_KIND,
   voxelMapDocumentKind,
   type SyncedVoxelMap
-} from "@jolly-pixel/asset.voxel-map/network/client.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
 import { EditorState } from "../state/index.ts";

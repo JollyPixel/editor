@@ -8,7 +8,7 @@ import {
   InvalidAssetDocumentError,
   type AssetKindHandler,
   type SnapshotPolicy
-} from "@jolly-pixel/asset-server/kinds";
+} from "@jolly-pixel/asset-server";
 import {
   applyVoxelWorldCommand,
   DEFAULT_CHUNK_SIZE,

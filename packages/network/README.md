@@ -22,7 +22,7 @@ $ npm i @jolly-pixel/network
 import * as network from "@jolly-pixel/network";
 import {
   createWebSocketNetworkPlugin
-} from "@jolly-pixel/network/plugins/vite.ts";
+} from "@jolly-pixel/network/node";
 
 export default {
   plugins: [

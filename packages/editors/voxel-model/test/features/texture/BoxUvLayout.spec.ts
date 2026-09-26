@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { DEFAULT_UV_SLOTS } from "@jolly-pixel/pixel-draw.renderer";
-import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/network/client.ts";
+import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { BoxUvLayout } from "#src/features/texture/BoxUvLayout.ts";

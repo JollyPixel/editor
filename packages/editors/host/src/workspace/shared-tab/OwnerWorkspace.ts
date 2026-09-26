@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { ChannelTransportHost } from "@jolly-pixel/network/transport/channel.ts";
+import { ChannelTransportHost } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { StandaloneConnection } from "../../editor/mountStandalone.ts";

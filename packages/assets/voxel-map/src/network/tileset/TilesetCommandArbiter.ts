@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
-import { PixelCommandArbiter } from "@jolly-pixel/asset.pixel-art/network/server.ts";
+import { PixelCommandArbiter } from "@jolly-pixel/asset.pixel-art/server";
 import type { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
 import { localBlock } from "@jolly-pixel/voxel.renderer";
 

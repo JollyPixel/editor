@@ -2,7 +2,7 @@
 import { Runtime } from "@jolly-pixel/runtime";
 import {
   VoxelRenderer
-} from "@jolly-pixel/voxel.renderer/plugins/engine/index.ts";
+} from "@jolly-pixel/voxel.renderer/engine";
 import {
   Control,
   Controls,
