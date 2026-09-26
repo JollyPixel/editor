@@ -3,26 +3,20 @@ import {
   Camera3DControls,
   Systems
 } from "@jolly-pixel/engine";
-import {
-  TiledMapAssetLoader,
-  TiledMapAssetType
-} from "@jolly-pixel/voxel.renderer/engine";
 import { Runtime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelBehavior } from "./components/VoxelMap.ts";
 import {
-  createExamplePane
-} from "./utils/example-switcher.ts";
+  TiledMapAssetLoader,
+  TiledMapAssetType
+} from "../../src/index.ts";
+import { TiledMapBehavior } from "./TiledMapBehavior.ts";
 
-/**
- * Declares and constructs the tiled-map example scene.
- */
 class TiledScene extends Systems.Scene {
   constructor() {
     super("tiled", {
-      assets: [VoxelBehavior.assets]
+      assets: [TiledMapBehavior.assets]
     });
   }
 
@@ -55,7 +49,7 @@ class TiledScene extends Systems.Scene {
       });
 
     this.world.createActor("map")
-      .addComponent(VoxelBehavior);
+      .addComponent(TiledMapBehavior);
   }
 }
 
@@ -86,6 +80,3 @@ await runtime.load({
   skipLoadingScreen: true
 })
   .catch(console.error);
-
-const pane = createExamplePane();
-pane.hidden = true;

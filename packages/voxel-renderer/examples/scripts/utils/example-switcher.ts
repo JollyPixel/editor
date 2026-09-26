@@ -12,7 +12,6 @@ const kExamples: Record<string, string> = {
   Physics: "/",
   "Block Shapes": "/shapes.html",
   "Tileset UV": "/tileset.html",
-  "Tiled Map": "/tiled.html",
   "Noise World": "/noise-world.html",
   "Transparency & Light": "/transparency.html"
 };

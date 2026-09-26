@@ -1,8 +1,4 @@
 /**
- * Tiled 1.11 JSON types with field names matching the upstream schema.
- */
-
-/**
  * Base fields shared by every Tiled custom property variant.
  */
 export interface TiledPropertyBase {
@@ -40,7 +36,6 @@ export type TiledProperties = TiledProperty[];
 
 export interface TiledMap {
   type?: "map";
-  // JSON format version (since 1.6 saved as string)
   version: string;
   tiledversion?: string;
 
@@ -53,14 +48,10 @@ export interface TiledMap {
   infinite: boolean;
 
   orientation: "orthogonal" | "isometric" | "staggered" | "hexagonal";
-  // orthogonal only
   renderorder?: "right-down" | "right-up" | "left-down" | "left-up";
 
-  // hex maps only
   hexsidelength?: number;
-  // staggered/hex only
   staggeraxis?: "x" | "y";
-  // staggered/hex only
   staggerindex?: "odd" | "even";
 
   parallaxoriginx?: number;
@@ -69,7 +60,6 @@ export interface TiledMap {
   nextlayerid: number;
   nextobjectid: number;
 
-  // #RRGGBB or #AARRGGBB
   backgroundcolor?: string;
 
   /**
@@ -85,19 +75,13 @@ export interface TiledMap {
 }
 
 interface TiledLayerBase {
-  // unique across all layers
   id: number;
   name: string;
-  // 0..1
   opacity: number;
   visible: boolean;
-  // always 0 in tiles
   x: number;
-  // always 0 in tiles
   y: number;
-  // in pixels
   offsetx?: number;
-  // in pixels
   offsety?: number;
 
   parallaxx?: number;
@@ -117,13 +101,9 @@ interface TiledLayerBase {
 export interface TiledTileLayer extends TiledLayerBase {
   type: "tilelayer";
   data: number[] | string;
-  // for tilelayer only
   encoding?: "csv" | "base64";
-  // empty string means no compression
   compression?: "zlib" | "gzip" | "zstd" | "";
-  // rows (same as map for fixed-size)
   height: number;
-  // cols (same as map for fixed-size)
   width: number;
   chunks?: TiledChunk[];
 }
@@ -143,11 +123,8 @@ export interface TiledObjectLayer extends TiledLayerBase {
 export interface TiledImageLayer extends TiledLayerBase {
   type: "imagelayer";
   image?: string;
-  // #RRGGBB
   transparentcolor?: string;
-  // since 1.8
   repeatx?: boolean;
-  // since 1.8
   repeaty?: boolean;
   imageheight?: number;
   imagewidth?: number;
@@ -168,37 +145,24 @@ export type TiledAnyLayer =
   | TiledGroupLayer;
 
 export interface TiledChunk {
-  // GIDs or base64-encoded
   data: number[] | string;
-  // in tiles
   height: number;
-  // in tiles
   width: number;
-  // tile coords
   x: number;
-  // tile coords
   y: number;
 }
 
 export interface TiledObject {
-  // unique across all objects
   id: number;
   name: string;
-  // class of the object (1.10 uses `type` again)
   type?: string;
   visible: boolean;
-  // degrees clockwise
   rotation: number;
-  // pixels
   x: number;
-  // pixels
   y: number;
-  // pixels
   width: number;
-  // pixels
   height: number;
 
-  // when object represents a tile
   gid?: number;
   ellipse?: boolean;
   point?: boolean;
@@ -258,9 +222,7 @@ export interface TiledText {
 }
 
 export interface TiledPoint {
-  // pixels (relative to object position)
   x: number;
-  // pixels (relative to object position)
   y: number;
 }
 
@@ -274,7 +236,6 @@ export interface TiledMapTileset extends TiledTilesetCommon {
 
 export interface TiledTileset extends TiledTilesetCommon {
   type?: "tileset";
-  // JSON format version (since 1.6 as string)
   version: string;
 }
 
@@ -287,15 +248,11 @@ export interface TiledTilesetCommon {
 
   class?: string;
 
-  // used for tiles in this set
   image?: string;
   imagewidth?: number;
   imageheight?: number;
-  // px
   margin?: number;
-  // px
   spacing?: number;
-  // #RRGGBB
   transparentcolor?: string;
 
   tilerendersize?: "tile" | "grid";
@@ -317,9 +274,7 @@ export interface TiledTilesetCommon {
   grid?: TiledGrid;
   tileoffset?: TiledTileOffset;
   transformations?: TiledTransformations;
-  // optional (deprecated by Wang sets)
   terrains?: TiledTerrain[];
-  // since 1.1.5
   wangsets?: TiledWangSet[];
 
   tiledversion?: string;
@@ -327,9 +282,7 @@ export interface TiledTilesetCommon {
 }
 
 export interface TiledGrid {
-  // cell height
   height: number;
-  // cell width
   width: number;
   /**
    * @default "orthogonal"
@@ -338,9 +291,7 @@ export interface TiledGrid {
 }
 
 export interface TiledTileOffset {
-  // horizontal px offset
   x: number;
-  // vertical px offset (positive is down)
   y: number;
 }
 
@@ -352,11 +303,8 @@ export interface TiledTransformations {
 }
 
 export interface TiledTile {
-  // local id within the tileset
   id: number;
-  // class of tile (1.10 uses `type` again)
   type?: string;
-  // for image collection tilesets
   image?: string;
   imagewidth?: number;
   imageheight?: number;
@@ -367,7 +315,6 @@ export interface TiledTile {
   height?: number;
 
   /** Collision/object shapes for this tile (optional) */
-  // layer with type objectgroup
   objectgroup?: TiledObjectLayer;
 
   probability?: number;
@@ -381,26 +328,20 @@ export interface TiledTile {
 }
 
 export interface TiledFrame {
-  // ms
   duration: number;
-  // local tile id
   tileid: number;
 }
 
 export interface TiledTerrain {
   name: string;
-  // local tile id
   tile: number;
   properties?: TiledProperties;
 }
 
 export interface TiledWangSet {
   name: string;
-  // since 1.5
   type: "corner" | "edge" | "mixed";
-  // local tile id representing the set
   tile: number;
-  // since 1.5
   colors: TiledWangColor[];
   properties?: TiledProperties;
   class?: string;
@@ -409,12 +350,9 @@ export interface TiledWangSet {
 
 export interface TiledWangColor {
   name: string;
-  // #RRGGBB or #AARRGGBB
   color: string;
-  // local tile id representing the color
   tile: number;
   probability: number;
-  // since 1.5
   properties?: TiledProperties;
   class?: string;
 }
@@ -422,14 +360,12 @@ export interface TiledWangColor {
 export interface TiledWangTile {
   tileid: number;
   /** Array of Wang color indexes (uchar[8]) */
-  // length 8 expected
   wangid: number[];
 }
 
 export interface TiledObjectTemplate {
   type: "template";
   object: TiledObject;
-  // external tileset used by the template (optional)
   tileset?: TiledTileset | TiledMapTileset;
 }
 

@@ -2,9 +2,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { VOXEL_WORLD_VERSION } from "@jolly-pixel/voxel.renderer";
+
 // Import Internal Dependencies
-import { TiledConverter, type TiledMap } from "../../../src/plugins/tiled/index.ts";
-import { VOXEL_WORLD_VERSION } from "../../../src/serialization/index.ts";
+import { TiledConverter, type TiledMap } from "../src/index.ts";
 
 function simpleSrc(_src: string, id: string) {
   return `/assets/${id}.png`;

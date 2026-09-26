@@ -25,7 +25,6 @@
 - Opaque, masked, and blended block surfaces with configurable sides and mask cutoff
 - `save()` / `load()` round-trips the full world state as plain JSON
 - Optional undo/redo of voxel edits (`history: { enabled: true }`), grouped per stroke with `begin()` / `commit()`
-- `TiledConverter` to import Tiled `.tmj` maps in `"stacked"` or `"flat"` layer modes
 - Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
 - Inspector (`engine.inspector`) exposing live face/triangle counts and a wireframe view of the meshed chunks
@@ -127,8 +126,7 @@ does not depend on an ECS runtime.
 - [Loading tilesets](docs/guides/loading-and-restoring-tilesets.md),
   [creating custom shapes](docs/guides/creating-custom-shapes.md), and
   [saving worlds](docs/guides/saving-and-loading-worlds.md).
-- [Adding physics](docs/guides/adding-physics.md),
-  [Tiled import](docs/guides/importing-a-tiled-map.md)
+- [Adding physics](docs/guides/adding-physics.md).
 
 ### Core and world API
 
@@ -166,15 +164,12 @@ does not depend on an ECS runtime.
 ### Serialization and integration API
 
 - [Serialization, document codec, and voxel objects](docs/api/serialization/serialization.md).
-- [`TiledConverter`](docs/api/tiled/TiledConverter.md), including its JSON types.
-- [`TiledMapAssetLoader`](docs/api/tiled/TiledMapAssetLoader.md), which packages a
-  converted map as one `@jolly-pixel/asset` value.
 - [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md), the `@jolly-pixel/engine`
   actor component wrapping a `VoxelEngine`.
 
 ## 🚀 Running the examples
 
-Seven interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
+Five interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
 
 ```bash
 pnpm --filter @jolly-pixel/voxel.renderer dev
@@ -187,7 +182,6 @@ Then open one of these URLs in your browser:
 | `http://localhost:5173/` | `demo-physics.ts` | A 32×32 voxel terrain with a raised platform and a Rapier3D physics sphere you can roll around with arrow keys |
 | `http://localhost:5173/tileset.html` | `demo-tileset.ts` | Every tile in `Tileset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
 | `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
-| `http://localhost:5173/tiled.html` | `demo-tiled.ts` | A multi-layer Tiled `.tmj` map imported via `TiledConverter` in `"stacked"` mode with WASD camera navigation |
 | `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with live renderer and mesh counters - the benchmark example |
 | `http://localhost:5173/transparency.html` | `demo-transparency.ts` | A diorama for checking transparency and lighting: blended water and glass, cutout leaves/grates/windows with explicit alpha modes, an alpha-gradient probe for `alphaTest`, and live light, material and layer controls |
 

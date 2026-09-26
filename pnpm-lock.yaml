@@ -914,12 +914,6 @@ importers:
       '@dimforge/rapier3d':
         specifier: 0.20.0
         version: 0.20.0
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../asset
-      '@jolly-pixel/asset-source':
-        specifier: workspace:*
-        version: link:../asset-source
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../engine
@@ -935,6 +929,24 @@ importers:
       simplex-noise:
         specifier: 4.0.3
         version: 4.0.3
+
+  packages/voxel-tiled:
+    devDependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@jolly-pixel/voxel.renderer':
+        specifier: workspace:*
+        version: link:../voxel-renderer
+      three:
+        specifier: 0.186.0
+        version: 0.186.0
 
 packages:
 

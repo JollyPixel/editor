@@ -30,9 +30,6 @@ export interface TileProps {
   flippedAD: boolean;
 }
 
-/**
- * Converts Tiled GIDs to local coordinates and normalized UV regions.
- */
 export class TileSet {
   static find(
     tilesets: TileSet[],
@@ -113,7 +110,6 @@ export class TileSet {
       y: Math.floor(localId / cols)
     };
 
-    // Normalised UV (0–1 per tile), Y-flipped for WebGL origin.
     const uvX = coords.x / cols;
     const uvY = 1.0 - (coords.y + 1) / rows;
 

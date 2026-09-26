@@ -4,14 +4,14 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetId, AssetRecord } from "@jolly-pixel/asset";
+import { VOXEL_WORLD_VERSION } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
   TiledMapAssetLoader,
   TiledMapAssetType
-} from "../../../src/plugins/tiled/asset.ts";
-import type { TiledMap } from "../../../src/plugins/tiled/types.ts";
-import { VOXEL_WORLD_VERSION } from "../../../src/serialization/index.ts";
+} from "../src/TiledMapAssetLoader.ts";
+import type { TiledMap } from "../src/types.ts";
 
 test("TiledMapAssetLoader prepares a catalog record", async(context) => {
   const map: TiledMap = {

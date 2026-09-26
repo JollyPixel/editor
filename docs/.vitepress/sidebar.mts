@@ -26,8 +26,7 @@ const kTitleOverrides = new Map([
   ["ui", "UI"],
   ["uv", "UV"],
   ["dom", "DOM"],
-  ["asset-server", "Asset Server"],
-  ["tiled", "Tiled"]
+  ["asset-server", "Asset Server"]
 ]);
 
 const kRootFiles = new Map([

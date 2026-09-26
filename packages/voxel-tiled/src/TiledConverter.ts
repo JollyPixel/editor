@@ -1,3 +1,18 @@
+// Import Third-party Dependencies
+import {
+  VOXEL_WORLD_VERSION,
+  VoxelFootprint,
+  type BlockShapeID,
+  type ResolvedBlockDefinition,
+  type TilesetDefinition,
+  type VoxelEntryKey,
+  type VoxelLayerJSON,
+  type VoxelObjectJSON,
+  type VoxelObjectLayerJSON,
+  type VoxelObjectProperties,
+  type VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
+
 // Import Internal Dependencies
 import type {
   TiledMap,
@@ -11,24 +26,6 @@ import {
   TileSet,
   TILED_FLIPPED_FLAGS
 } from "./TileSet.ts";
-
-import {
-  VOXEL_WORLD_VERSION,
-  type VoxelWorldJSON,
-  type VoxelObjectLayerJSON,
-  type VoxelObjectJSON,
-  type VoxelObjectProperties
-} from "../../serialization/types.ts";
-import {
-  VoxelFootprint
-} from "../../serialization/VoxelFootprint.ts";
-import type {
-  VoxelLayerJSON,
-  VoxelEntryKey
-} from "../../world/VoxelLayer.ts";
-import type { TilesetDefinition } from "../../tileset/types.ts";
-import type { ResolvedBlockDefinition } from "../../blocks/BlockDefinition.ts";
-import type { BlockShapeID } from "../../blocks/shape/BlockShape.ts";
 
 export interface TiledConverterOptions {
   /**
@@ -93,9 +90,6 @@ export interface TiledConversion {
   blocks: ResolvedBlockDefinition[];
 }
 
-/**
- * Converts Tiled layers and unique tile GIDs into a self-contained snapshot.
- */
 export class TiledConverter {
   convert(
     map: TiledMap,
@@ -158,9 +152,6 @@ export class TiledConverter {
   }
 }
 
-/**
- * Derives an ID from the tileset name, source filename, or position.
- */
 function deriveTilesetId(
   tileset: TiledMapTileset,
   index: number
@@ -169,7 +160,6 @@ function deriveTilesetId(
     return tileset.name;
   }
   if (tileset.source) {
-    // Strip directory prefix by splitting on path separators, then strip extension.
     const filename = tileset.source.split(/[/\\]/).at(-1) ?? tileset.source;
     const dotIndex = filename.lastIndexOf(".");
 
@@ -300,7 +290,6 @@ function convertTileLayer(
     const col = i % cols;
     const row = Math.floor(i / cols);
 
-    // Pack the three Tiled flip bits (H=4, V=2, AD=1) into a 3-bit transform value.
     const transform = (gid >>> 29) & 0x7;
     const key: VoxelEntryKey = `${col},${voxelY},${row}`;
 
@@ -345,7 +334,6 @@ function convertObjectLayer(
     const result: VoxelObjectJSON = {
       id: String(obj.id),
       name: obj.name,
-      // Pixel → voxel-space: divide by tile size; Tiled Y maps to 3-D Z.
       x: obj.x / ctx.map.tilewidth,
       y: 0,
       z: obj.y / ctx.map.tileheight,
@@ -406,7 +394,6 @@ function decodeBase64GIDs(
   let bytes: Uint8Array;
 
   if (typeof Buffer === "undefined") {
-    // Browser: use atob
     const binary = atob(base64);
     bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
@@ -414,12 +401,10 @@ function decodeBase64GIDs(
     }
   }
   else {
-    // Node.js: use Buffer
     const buf = Buffer.from(base64, "base64");
     bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
   }
 
-  // GIDs are stored as 4-byte unsigned little-endian integers.
   const view = new DataView(bytes.buffer, bytes.byteOffset);
   const count = bytes.byteLength / 4;
   const gids: number[] = new Array(count);
@@ -431,10 +416,6 @@ function decodeBase64GIDs(
   return gids;
 }
 
-/**
- * Flattens Tiled custom properties to a plain key→scalar map.
- * `color`, `object`, and `class` property types are skipped (not JSON-primitive).
- */
 function flattenProperties(
   properties?: TiledProperty[]
 ): VoxelObjectProperties | undefined {
