@@ -4,6 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { TilesetList } from "../../src/tileset/index.ts";
+import { MAX_TILESET_SLOT } from "../../src/blocks/index.ts";
+
+// CONSTANTS
+const kAsset = { id: "a1", kind: "tileset" };
 
 describe("TilesetList", () => {
   it("keeps declaration order and the first id as default", () => {
@@ -35,35 +39,98 @@ describe("TilesetList", () => {
     assert.equal(list.size, 1);
   });
 
-  it("resizes and drops the stored grid", () => {
-    const list = new TilesetList([{ id: "a", src: "a", tileSize: 16, cols: 4, rows: 4 }]);
+  it("declares an asset tileset without a tile size but not a URL one", () => {
+    const list = new TilesetList();
 
-    assert.equal(list.resize("a", 16), false);
-    assert.equal(list.resize("missing", 32), false);
-    assert.equal(list.resize("a", 32), true);
-    assert.deepEqual(list.get("a"), { id: "a", src: "a", tileSize: 32 });
+    assert.equal(list.add({ id: "asset", asset: kAsset }), true);
+    assert.equal(list.add({ id: "url", src: "url.png" }), false);
+    assert.equal(list.get("asset")?.tileSize, undefined);
   });
 
-  it("keeps the asset reference of a resized tileset, copied", () => {
-    const asset = { id: "a1", kind: "pixelart" };
-    const list = new TilesetList([{ id: "a", asset, tileSize: 16 }]);
-    asset.id = "mutated";
+  it("gives each tileset the lowest free slot", () => {
+    const list = new TilesetList([
+      { id: "a", asset: kAsset },
+      { id: "b", src: "b", tileSize: 16, slot: 2 },
+      { id: "c", asset: kAsset }
+    ]);
 
-    assert.equal(list.resize("a", 32), true);
+    assert.deepEqual(
+      list.definitions().map(({ id, slot }) => [id, slot]),
+      [["a", 0], ["b", 2], ["c", 1]]
+    );
+    assert.equal(list.freeSlot(), 3);
+    assert.equal(list.bySlot(2)?.id, "b");
+    assert.equal(list.bySlot(3), undefined);
+  });
+
+  it("rejects a taken or invalid slot", () => {
+    const list = new TilesetList([{ id: "a", asset: kAsset, slot: 1 }]);
+
+    assert.equal(list.add({ id: "b", asset: kAsset, slot: 1 }), false);
+    assert.equal(list.add({ id: "c", asset: kAsset, slot: -1 }), false);
+    assert.equal(list.add({ id: "d", asset: kAsset, slot: MAX_TILESET_SLOT + 1 }), false);
+    assert.equal(list.add({ id: "e", asset: kAsset, slot: 1.5 }), false);
+    assert.equal(list.size, 1);
+  });
+
+  it("reuses the slot of a removed tileset", () => {
+    const list = new TilesetList([
+      { id: "a", asset: kAsset },
+      { id: "b", asset: kAsset }
+    ]);
+    list.remove("a");
+
+    assert.equal(list.freeSlot(), 0);
+    list.add({ id: "c", asset: kAsset });
+    assert.equal(list.get("c")?.slot, 0);
+  });
+
+  it("skips reserved slots when looking for a free one", () => {
+    const list = new TilesetList([{ id: "a", asset: kAsset }]);
+
+    assert.equal(list.freeSlot([1, 2]), 3);
+  });
+
+  it("keeps explicit slots on replace when a slotless tileset comes first", () => {
+    const list = new TilesetList([
+      { id: "a", asset: kAsset },
+      { id: "b", asset: kAsset, slot: 0 }
+    ]);
+
+    assert.deepEqual(
+      [...list].map(({ id, slot }) => [id, slot]),
+      [["a", 1], ["b", 0]]
+    );
+  });
+
+  it("declares a tile size onto an asset tileset while keeping its slot", () => {
+    const list = new TilesetList([
+      { id: "a", asset: kAsset, slot: 4 }
+    ]);
+
+    assert.equal(list.declare({ id: "a", asset: kAsset, tileSize: 32, slot: 7 }), true);
     assert.deepEqual(list.get("a"), {
       id: "a",
-      asset: { id: "a1", kind: "pixelart" },
-      tileSize: 32
+      asset: kAsset,
+      tileSize: 32,
+      slot: 4
     });
   });
 
-  it("updates the default tile size once", () => {
+  it("adds an undeclared tileset on declare and rejects an invalid one", () => {
     const list = new TilesetList();
-    assert.equal(list.defaultTileSize, undefined);
 
-    assert.equal(list.updateDefaultTileSize(64), true);
-    assert.equal(list.updateDefaultTileSize(64), false);
-    assert.equal(list.defaultTileSize, 64);
+    assert.equal(list.declare({ id: "a", src: "a", tileSize: 16 }), true);
+    assert.equal(list.declare({ id: "a", src: "a", tileSize: 0 }), false);
+    assert.equal(list.get("a")?.tileSize, 16);
+  });
+
+  it("copies the asset reference it stores", () => {
+    const asset = { id: "a1", kind: "tileset" };
+    const list = new TilesetList([{ id: "a", asset, tileSize: 16 }]);
+    asset.id = "mutated";
+
+    assert.deepEqual(list.get("a")?.asset, { id: "a1", kind: "tileset" });
   });
 
   it("skips undeclarable definitions on replace", () => {

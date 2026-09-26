@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  resolveBlockDefinition,
+  VOXEL_WORLD_VERSION,
   VoxelDocument,
   type VoxelCommand,
   type VoxelCommandOrigin,
@@ -42,14 +42,18 @@ function record(
 }
 
 function makeEmptySnapshot(): VoxelWorldJSON {
-  return { version: 1, chunkSize: 16, tilesets: [], layers: [] };
+  return {
+    version: VOXEL_WORLD_VERSION,
+    chunkSize: 16,
+    tilesets: [],
+    layers: []
+  };
 }
 
 function snapshotWithTileset(): VoxelWorldJSON {
   return {
     ...makeEmptySnapshot(),
-    tilesets: [{ id: "stone", src: "asset-stone", tileSize: 32 }],
-    defaultTileSize: 16
+    tilesets: [{ id: "stone", src: "asset-stone", tileSize: 32 }]
   };
 }
 
@@ -230,7 +234,6 @@ describe("VoxelSyncClient — snapshot loading", () => {
     room.simulateSnapshot(snapshotWithTileset());
 
     assert.deepEqual(document.tilesets.definitions().map(({ id }) => id), ["stone"]);
-    assert.equal(document.defaultTileSize, 16);
     assert.equal(document.world.getLayer("Ground"), undefined);
     assert.equal(room.sentCommands.length, 0);
   });
@@ -280,159 +283,6 @@ describe("VoxelSyncClient — destroy", () => {
   });
 });
 
-describe("VoxelSyncClient — block commands", () => {
-  it("publishes a local definition", () => {
-    const document = makeDocument();
-    const room = createMockRoom();
-    new VoxelSyncClient({ room, document });
-
-    document.defineBlock(makeBlockDef(4, "slope"));
-
-    assert.equal(room.sentCommands.length, 1);
-    const [command] = room.sentCommands;
-    assert.equal(
-      command.action === "block-defined" ? command.block.shapeId : null,
-      "slope"
-    );
-    assert.equal(command.clientId, "client-A");
-  });
-
-  it("publishes a local removal, and nothing for an unknown id", () => {
-    const document = makeDocument();
-    document.defineBlock(makeBlockDef(4, "cube"));
-    const room = createMockRoom();
-    new VoxelSyncClient({ room, document });
-
-    document.removeBlock(99);
-    assert.equal(room.sentCommands.length, 0);
-
-    document.removeBlock(4);
-    const [command] = room.sentCommands;
-    assert.equal(
-      command.action === "block-removed" ? command.blockId : null,
-      4
-    );
-  });
-
-  it("publishes one command per block of a batch", () => {
-    const document = makeDocument();
-    const room = createMockRoom();
-    new VoxelSyncClient({ room, document });
-
-    document.defineBlocks([
-      makeBlockDef(4, "slope"),
-      makeBlockDef(5, "cube")
-    ]);
-
-    assert.deepEqual(
-      room.sentCommands.map((command) => command.action),
-      ["block-defined", "block-defined"]
-    );
-  });
-
-  it("registers a peer definition without re-publishing it", () => {
-    const document = makeDocument();
-    const received = record(document);
-    const room = createMockRoom();
-    new VoxelSyncClient({ room, document });
-
-    room.simulateCommand({
-      ...kPeerHeader,
-      action: "block-defined",
-      block: resolveBlockDefinition(makeBlockDef(4, "slope"))
-    });
-
-    assert.equal(document.blocks.get(4)?.shapeId, "slope");
-    assert.deepEqual(
-      received.map(({ command, origin }) => [command.action, origin]),
-      [["block-defined", "remote"]]
-    );
-    assert.equal(room.sentCommands.length, 0);
-  });
-
-  it("stays quiet when a peer removal names an unknown block", () => {
-    const document = makeDocument();
-    const received = record(document);
-    const room = createMockRoom();
-    new VoxelSyncClient({ room, document });
-
-    room.simulateCommand({
-      ...kPeerHeader,
-      action: "block-removed",
-      blockId: 99
-    });
-
-    assert.equal(received.length, 0);
-  });
-
-  it("ignores the echo of its own block command", () => {
-    const document = makeDocument();
-    const room = createMockRoom("client-A");
-    new VoxelSyncClient({ room, document });
-
-    room.simulateCommand({
-      ...kPeerHeader,
-      clientId: "client-A",
-      action: "block-defined",
-      block: resolveBlockDefinition(makeBlockDef(4, "slope"))
-    });
-
-    assert.equal(document.blocks.has(4), false);
-  });
-});
-
-describe("VoxelSyncClient — block reorder", () => {
-  function makeDocumentWithBlocks(): VoxelDocument {
-    const document = makeDocument();
-    document.defineBlocks([
-      makeBlockDef(1, "cube"),
-      makeBlockDef(2, "cube"),
-      makeBlockDef(3, "cube")
-    ]);
-
-    return document;
-  }
-
-  function ids(
-    document: VoxelDocument
-  ): number[] {
-    return [...document.blocks].map((block) => block.id);
-  }
-
-  it("publishes a local move", () => {
-    const document = makeDocumentWithBlocks();
-    const room = createMockRoom();
-    new VoxelSyncClient({ room, document });
-
-    document.moveBlock(3, 0);
-
-    assert.equal(room.sentCommands.length, 1);
-    const [command] = room.sentCommands;
-    assert.deepEqual(
-      command.action === "block-moved" ?
-        [command.blockId, command.toIndex] :
-        null,
-      [3, 0]
-    );
-  });
-
-  it("applies a peer move without re-publishing it", () => {
-    const document = makeDocumentWithBlocks();
-    const room = createMockRoom();
-    new VoxelSyncClient({ room, document });
-
-    room.simulateCommand({
-      ...kPeerHeader,
-      action: "block-moved",
-      blockId: 1,
-      toIndex: 2
-    });
-
-    assert.deepEqual(ids(document), [2, 3, 1]);
-    assert.equal(room.sentCommands.length, 0);
-  });
-});
-
 describe("VoxelSyncClient — tilesets", () => {
   function makeClient() {
     const document = makeDocument();
@@ -461,28 +311,6 @@ describe("VoxelSyncClient — tilesets", () => {
     assert.equal(room.sentCommands.length, 0);
   });
 
-  it("rescales the document blocks on a remote resize without echoing them", () => {
-    const { document, room } = makeClient();
-    document.blocks.register(makeBlockDef(1, "cube", {
-      defaultTexture: { col: 1, row: 1, tilesetId: "stone" }
-    }));
-
-    room.simulateCommand({
-      ...kPeerHeader,
-      action: "tileset-resized",
-      tilesetId: "stone",
-      tileSize: 16
-    });
-
-    assert.deepEqual(document.blocks.get(1)?.defaultTexture, {
-      col: 2,
-      row: 2,
-      tilesetId: "stone",
-      size: 32
-    });
-    assert.equal(room.sentCommands.length, 0);
-  });
-
   it("sends a local tileset change", () => {
     const { document, received, room } = makeClient();
 
@@ -501,6 +329,25 @@ describe("VoxelSyncClient — tilesets", () => {
     const { document, room } = makeClient();
 
     assert.equal(document.removeTileset("missing"), false);
+    assert.equal(room.sentCommands.length, 0);
+  });
+});
+
+describe("VoxelSyncClient — block commands stay local", () => {
+  it("keeps a local block definition off the wire", () => {
+    const document = makeDocument();
+    const received = record(document);
+    const room = createMockRoom();
+    new VoxelSyncClient({ room, document });
+
+    document.defineBlock(makeBlockDef(4, "slope"));
+    document.defineMaterialGroup({ id: "gold" });
+
+    assert.equal(document.blocks.get(4)?.shapeId, "slope");
+    assert.deepEqual(
+      received.map(({ command }) => command.action),
+      ["block-defined", "material-group-defined"]
+    );
     assert.equal(room.sentCommands.length, 0);
   });
 });

@@ -1,8 +1,6 @@
 // Import Internal Dependencies
 import type { VoxelLayerJSON } from "../world/VoxelLayer.ts";
 import type { TilesetDefinition } from "../tileset/types.ts";
-import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
-import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
 
 export type VoxelObjectProperties = Record<
   string,
@@ -33,13 +31,12 @@ export interface VoxelObjectLayerJSON {
   objects: VoxelObjectJSON[];
 }
 
+export const VOXEL_WORLD_VERSION = 2;
+
 export interface VoxelWorldJSON {
-  version: 1;
+  version: typeof VOXEL_WORLD_VERSION;
   chunkSize: number;
   tilesets: TilesetDefinition[];
-  defaultTileSize?: number;
-  blocks?: ResolvedBlockDefinition[];
-  materialGroups?: MaterialGroupJSON[];
   layers: VoxelLayerJSON[];
   objectLayers?: VoxelObjectLayerJSON[];
 }

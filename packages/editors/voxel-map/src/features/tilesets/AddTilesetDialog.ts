@@ -42,7 +42,6 @@ export type AddTilesetResult =
   | {
     kind: "link";
     assetId: string;
-    tileSize: number;
   };
 
 export interface AddTilesetContext {
@@ -138,12 +137,6 @@ export class AddTilesetDialog extends LitElement {
             @jolly-change=${this.#onSourceChange}
           ></jolly-button-group>
           ${linking ? this.#renderLinkFields() : this.#renderCreateFields()}
-          <jolly-button-group
-            label="Tile size"
-            .options=${tileSizeSegments(this._tileSize)}
-            .value=${this._tileSize}
-            @jolly-change=${this.#onTileSizeChange}
-          ></jolly-button-group>
           ${linking ? nothing : this.#renderGridFields()}
         </div>
 
@@ -168,6 +161,12 @@ export class AddTilesetDialog extends LitElement {
         .value=${this._name}
         @jolly-change=${this.#onNameChange}
       ></jolly-text>
+      <jolly-button-group
+        label="Tile size"
+        .options=${tileSizeSegments(this._tileSize)}
+        .value=${this._tileSize}
+        @jolly-change=${this.#onTileSizeChange}
+      ></jolly-button-group>
     `;
   }
 
@@ -272,8 +271,7 @@ export class AddTilesetDialog extends LitElement {
     this.#resolve(this._source === "link" ?
       {
         kind: "link",
-        assetId: this._assetId,
-        tileSize: this._tileSize
+        assetId: this._assetId
       } :
       {
         kind: "create",

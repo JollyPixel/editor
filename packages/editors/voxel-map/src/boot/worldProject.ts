@@ -6,16 +6,15 @@ import {
   type AssetSeedMap
 } from "@jolly-pixel/asset-server/backend";
 import {
-  PIXEL_ART_KIND,
-  pixelArtAssetKind
-} from "@jolly-pixel/asset.pixel-art";
-import {
-  createTilesetDocument,
   createVoxelMapDocument,
+  encodeTilesetDocument,
   tilesetAsset,
+  tilesetAssetKind,
+  tilesetDocumentFromPng,
+  TILESET_KIND,
   VOXEL_MAP_KIND,
   voxelMapAssetKind,
-  type TilesetDocument
+  type TilesetAssetDocument
 } from "@jolly-pixel/asset.voxel-map";
 import {
   DEFAULT_CHUNK_SIZE,
@@ -41,12 +40,9 @@ export interface WorldProject {
 }
 
 export function createDefaultTileset(
-  png: Uint8Array,
-  assetId: string
-): Promise<TilesetDocument> {
-  return createTilesetDocument(png, {
-    id: DEFAULT_TILESET_ID,
-    asset: tilesetAsset(assetId),
+  png: Uint8Array
+): Promise<TilesetAssetDocument> {
+  return tilesetDocumentFromPng(png, {
     tileSize: DEFAULT_TILE_SIZE
   });
 }
@@ -55,26 +51,31 @@ export async function createWorldProject(
   tilesetPng: Uint8Array,
   tilesetAssetId: string
 ): Promise<WorldProject> {
-  const tileset = await createDefaultTileset(tilesetPng, tilesetAssetId);
+  const tileset = await createDefaultTileset(tilesetPng);
 
   return {
     handlers: [
-      pixelArtAssetKind({ defaultSize: tileset.size }),
+      tilesetAssetKind(),
       voxelMapAssetKind(),
       textureAssetKind()
     ],
     seed: {
-      "textures/block.pixelart": {
+      "tilesets/block.tileset.json": {
         id: tilesetAssetId,
-        kind: PIXEL_ART_KIND,
-        content: () => tileset.content
+        kind: TILESET_KIND,
+        content: () => encodeTilesetDocument(tileset)
       },
       "maps/overworld.voxelmap.json": {
         id: crypto.randomUUID(),
         kind: VOXEL_MAP_KIND,
         content: () => createVoxelMapDocument({
           chunkSize: DEFAULT_CHUNK_SIZE,
-          tileset: tileset.definition
+          tilesets: [
+            {
+              id: DEFAULT_TILESET_ID,
+              asset: tilesetAsset(tilesetAssetId)
+            }
+          ]
         })
       }
     },

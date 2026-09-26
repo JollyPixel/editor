@@ -14,6 +14,7 @@ import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/index.ts";
+import type { LinkedTilesets } from "../tilesets/LinkedTilesets.ts";
 import {
   customFinishSource,
   materialFinishSource,
@@ -22,6 +23,11 @@ import {
 
 // CONSTANTS
 const kMetalHint = "Turn on Reflections in General to see metal";
+
+export type MaterialGroupWriter = Pick<
+  LinkedTilesets,
+  "defineMaterialGroup" | "removeMaterialGroup"
+>;
 
 @customElement("block-material-finish")
 export class BlockMaterialFinish extends LitElement {
@@ -35,6 +41,9 @@ export class BlockMaterialFinish extends LitElement {
 
   @property({ attribute: false })
   declare engine: VoxelEngine;
+
+  @property({ attribute: false })
+  declare tilesets: MaterialGroupWriter;
 
   @property({ attribute: false })
   declare mapDocument: MapDocumentSignals;
@@ -52,10 +61,10 @@ export class BlockMaterialFinish extends LitElement {
         this.engine.materialGroups.get(this.groupId)
     ),
     define: (group) => {
-      this.engine.defineMaterialGroup(group);
+      this.tilesets.defineMaterialGroup(group);
     },
     remove: (groupId) => {
-      this.engine.removeMaterialGroup(groupId);
+      this.tilesets.removeMaterialGroup(groupId);
     }
   };
 
@@ -109,7 +118,7 @@ export class BlockMaterialFinish extends LitElement {
       <jolly-checkbox
         align="end"
         label="Finish"
-        description="Saves a finish with the map for the whole group"
+        description="Saves a finish with the tileset for the whole group"
         .value=${this.#custom.value}
         @jolly-change=${this.#custom.commit}
       ></jolly-checkbox>

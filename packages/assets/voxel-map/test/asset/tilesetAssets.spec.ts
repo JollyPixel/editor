@@ -8,11 +8,13 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   encodeVoxelDocument,
+  VOXEL_WORLD_VERSION,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
+  TILESET_KIND,
   tilesetAsset,
   voxelMapAssetKind,
   VoxelMapState
@@ -29,31 +31,31 @@ function assetWorld(
   assetId: string
 ): VoxelWorldJSON {
   return {
-    version: 1,
+    version: VOXEL_WORLD_VERSION,
     chunkSize: 16,
     tilesets: [
-      { id: "default", asset: tilesetAsset(assetId), tileSize: 32 }
+      { id: "default", slot: 0, asset: tilesetAsset(assetId) }
     ],
     layers: []
   };
 }
 
 describe("tilesetAsset", () => {
-  test("references a pixel-art asset", () => {
+  test("references a tileset asset", () => {
     assert.deepEqual(tilesetAsset("asset-1"), {
       id: "asset-1",
-      kind: "pixelart"
+      kind: TILESET_KIND
     });
   });
 });
 
 describe("VoxelMapState tilesets", () => {
-  test("load keeps the asset of every tileset", () => {
+  test("load keeps the link of every tileset", () => {
     const state = new VoxelMapState(16);
     state.load(assetWorld("tileset-default"));
 
     assert.deepEqual(state.toJSON().tilesets, [
-      { id: "default", asset: tilesetAsset("tileset-default"), tileSize: 32 }
+      { id: "default", slot: 0, asset: tilesetAsset("tileset-default") }
     ]);
     assert.deepEqual(state.dependencies(), [tilesetAsset("tileset-default")]);
   });
@@ -63,7 +65,7 @@ describe("VoxelMapState tilesets", () => {
     state.applyCommand({
       ...kHeader,
       action: "tileset-added",
-      tileset: { id: "stone", asset: tilesetAsset("asset-stone"), tileSize: 32 }
+      tileset: { id: "stone", asset: tilesetAsset("asset-stone") }
     });
 
     assert.deepEqual(state.dependencies(), [tilesetAsset("asset-stone")]);

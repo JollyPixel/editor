@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
 import { CommandSync } from "@jolly-pixel/network/client";
-import type {
-  VoxelCommandListener,
-  VoxelDocument,
-  VoxelWorldJSON
+import {
+  isVoxelWorldCommand,
+  type VoxelCommandListener,
+  type VoxelDocument,
+  type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -18,6 +19,11 @@ export interface VoxelSyncClientOptions {
   document: VoxelDocument;
 }
 
+/**
+ * Sends the world commands of a document to its room and applies the room's
+ * back. Block and material group commands stay local: they are projected
+ * from tileset documents, which have rooms of their own.
+ */
 export class VoxelSyncClient extends CommandSync<
   VoxelNetworkCommand,
   VoxelWorldJSON,
@@ -26,7 +32,7 @@ export class VoxelSyncClient extends CommandSync<
   #document: VoxelDocument;
 
   #sendLocalCommand: VoxelCommandListener = (command, { origin }) => {
-    if (origin === "local") {
+    if (origin === "local" && isVoxelWorldCommand(command)) {
       this.send(command);
     }
   };

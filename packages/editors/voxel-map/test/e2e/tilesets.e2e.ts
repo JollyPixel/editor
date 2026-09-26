@@ -67,7 +67,7 @@ test("a single tileset keeps its tab, and the add button creates a new one", asy
 test("the tab edit button renames the tileset asset", async({ page, target }) => {
   const editor = await editTileset(page, "tileset");
   const name = textField(editor, "Name");
-  await name.fill("terrain.pixelart");
+  await name.fill("terrain.tileset.json");
   await name.press("Enter");
 
   await expect(editor).toBeHidden();
@@ -83,12 +83,14 @@ test("removing a tileset flags the blocks left without texture", async({ page })
   await editor.getByRole("button", { name: "Remove" }).click();
   await expect(editor.getByRole("alert")).toContainText("Remove \"tileset\"?");
   await expect(editor.getByRole("alert"))
-    .toContainText("The texture asset is kept.");
+    .toContainText("The tileset asset is kept.");
   await expect(page.locator("dialog[open]")).toHaveCount(1);
   await editor.getByRole("button", { name: "Remove" }).click();
 
   await expect.poll(() => tilesetSources(page)).toEqual([]);
   await expect(editor).toBeHidden();
   await expect(page.getByRole("button", { name: "Add tileset" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /without tileset/ })).toBeVisible();
+  await expect.poll(() => page.evaluate(
+    () => [...window.voxelMapEditor!.workspace.engine.blockRegistry].length
+  )).toBe(0);
 });

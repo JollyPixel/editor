@@ -89,13 +89,13 @@ describe("blockUsage", () => {
     );
     assert.equal(
       tilesetRemovalMessage({ tilesetId: "a", blocks: [1], voxels: 0 }),
-      "1 block (none placed in the map) uses this tileset " +
-      "and will lose its texture."
+      "1 block (none placed in the map) comes from this tileset " +
+      "and leaves the map with it."
     );
     assert.equal(
       tilesetRemovalMessage({ tilesetId: "a", blocks: [1, 2], voxels: 2048 }),
-      "2 blocks (2,048 voxels in the map) use this tileset " +
-      "and will lose their texture."
+      "2 blocks (2,048 voxels in the map) come from this tileset " +
+      "and leave the map with it."
     );
   });
 

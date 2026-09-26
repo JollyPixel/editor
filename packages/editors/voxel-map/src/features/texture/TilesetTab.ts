@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type {
   TilesetDefinition,
+  TilesetDocumentListener,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
 import { PixelCollaboration } from "@jolly-pixel/asset.pixel-art/network/client.ts";
@@ -12,19 +13,19 @@ import {
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
-import {
-  definitionsEqual,
-  type BrushStore
-} from "../../state/index.ts";
+import type { BrushStore } from "../../state/index.ts";
 import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
-import type { TilesetTexture } from "../tilesets/TilesetTextures.ts";
+import type {
+  BlockWriter,
+  LinkedTileset
+} from "../tilesets/LinkedTilesets.ts";
 
 export interface TilesetTabOptions {
   canvas: PixelArtCanvas;
   engine: VoxelEngine;
-  definition: TilesetDefinition;
+  linked: LinkedTileset;
   assetId: string | null;
-  texture: TilesetTexture;
+  blocks: BlockWriter;
   brush: BrushStore;
   mapDocument: MapDocument;
 }
@@ -32,33 +33,44 @@ export interface TilesetTabOptions {
 export class TilesetTab {
   readonly canvas: PixelArtCanvas;
   readonly assetId: string | null;
-  readonly #texture: TilesetTexture;
+  readonly #linked: LinkedTileset;
   readonly #uvBridge: BlockUvBridge;
-  readonly #collaboration: PixelCollaboration | null;
+  readonly #collaboration: PixelCollaboration;
   #definition: TilesetDefinition;
+
+  readonly #onTilesetCommand: TilesetDocumentListener = (command) => {
+    if (command.action === "tile-size-updated") {
+      this.#apply();
+    }
+  };
+
+  readonly #onTilesetLoaded = (): void => {
+    this.#apply();
+  };
 
   constructor(
     options: TilesetTabOptions
   ) {
-    const { canvas, engine, definition, texture } = options;
+    const { canvas, engine, linked } = options;
 
     this.canvas = canvas;
     this.assetId = options.assetId;
-    this.#texture = texture;
-    this.#definition = definition;
-    this.#collaboration = texture.room === undefined ?
-      null :
-      new PixelCollaboration({
-        room: texture.room,
-        canvas,
-        label: (_clientId, profile) => readUsername(profile),
-        color: peerProfileColor
-      });
+    this.#linked = linked;
+    this.#definition = linked.definition;
+    this.#collaboration = new PixelCollaboration({
+      room: linked.opened.room,
+      canvas,
+      label: (_clientId, profile) => readUsername(profile),
+      color: peerProfileColor
+    });
     this.#uvBridge = new BlockUvBridge(canvas.uv, engine, {
       runLocalRestore: (fn) => canvas.runLocalRestore(fn),
       brush: options.brush,
-      mapDocument: options.mapDocument
+      mapDocument: options.mapDocument,
+      blocks: options.blocks
     });
+    linked.opened.tileset.on("command", this.#onTilesetCommand);
+    linked.opened.tileset.on("loaded", this.#onTilesetLoaded);
     this.#apply();
   }
 
@@ -69,24 +81,21 @@ export class TilesetTab {
   update(
     definition: TilesetDefinition
   ): void {
-    if (definitionsEqual(definition, this.#definition)) {
-      return;
-    }
-
     this.#definition = definition;
     this.#apply();
   }
 
   dispose(): void {
+    this.#linked.opened.tileset.off("command", this.#onTilesetCommand);
+    this.#linked.opened.tileset.off("loaded", this.#onTilesetLoaded);
     this.#uvBridge.dispose();
-    this.#collaboration?.destroy();
-    this.#texture.release();
+    this.#collaboration.destroy();
   }
 
   #apply(): void {
     this.#uvBridge.setActiveTileset(
       this.#definition.id,
-      this.#definition.tileSize
+      this.#linked.opened.tileset.tileSize
     );
   }
 }

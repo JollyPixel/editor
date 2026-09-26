@@ -161,3 +161,27 @@ voxel with `removeVoxel()` instead.
 
 Packed reads return `VOXEL_ABSENT` for air, while object reads return
 `undefined`. See [packed voxel values](../world/VoxelChunk.md#packed-voxel-values).
+
+## Block ids
+
+```ts
+const LOCAL_BLOCK_ID_BITS = 16;
+const MAX_LOCAL_BLOCK_ID = 0xFFFF;
+const MAX_TILESET_SLOT = 0x7F;
+
+function composeBlockId(slot: number, localId: number): number;
+function tilesetSlotOf(blockId: number): number;
+function localBlockIdOf(blockId: number): number;
+function isTilesetSlot(value: unknown): value is number;
+function isLocalBlockId(value: unknown): value is number;
+```
+
+A world block id is a tileset [slot](../tilesets/tilesets.md#definitions) in
+the high bits and the block's id inside that tileset in the low 16 bits, which
+together fit the 23 bits a voxel stores. Slot `0` keeps a local id unchanged,
+so a scene that defines its blocks in code needs no slots at all.
+`composeBlockId()` throws `RangeError` for a slot above `MAX_TILESET_SLOT`, a
+local id of `0` or above `MAX_LOCAL_BLOCK_ID`, or a non-integer. The two
+accessors split an id back. A host projecting a
+[`TilesetDocument`](../tilesets/TilesetDocument.md) into a world uses them
+through [`projectTilesetBlock()`](../tilesets/tilesets.md#projecting-a-tileset-into-a-world).

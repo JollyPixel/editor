@@ -25,19 +25,12 @@ import type { MapDocument } from "../../document/index.ts";
 import type {
   BlockUsageStore,
   BrushStore,
-  TilesetEntry,
   TilesetStore
 } from "../../state/index.ts";
-import {
-  blockFocusTilesetId,
-  countBlocksPerTileset
-} from "../tilesets/blockTilesets.ts";
+import { countBlocksPerTileset } from "../tilesets/blockTilesets.ts";
+import type { LinkedTilesets } from "../tilesets/LinkedTilesets.ts";
 import type { TilesetActions } from "../tilesets/TilesetActions.ts";
 import type { TilesetDialogs } from "../tilesets/TilesetDialogs.ts";
-import type {
-  TilesetTexture,
-  TilesetTextures
-} from "../tilesets/TilesetTextures.ts";
 import { TilesetTab } from "./TilesetTab.ts";
 import {
   tilesetTabLabels,
@@ -95,7 +88,7 @@ export class TextureEditor extends LitElement {
   declare engine: VoxelEngine;
 
   @property({ attribute: false })
-  declare textures: TilesetTextures;
+  declare linked: LinkedTilesets;
 
   @property({ type: Boolean })
   declare active: boolean;
@@ -147,6 +140,7 @@ export class TextureEditor extends LitElement {
     this.#subscriptions.push(
       this.tilesets.subscribe("change", this.#requestSync),
       this.tilesets.subscribe("activeChange", this.#reconcile),
+      this.linked.subscribe("change", this.#requestSync),
       this.brush.subscribe("blockChange", this.#onBlockChange),
       this.mapDocument.subscribe(
         "blockRegistryChanged",
@@ -167,7 +161,7 @@ export class TextureEditor extends LitElement {
   override updated(
     changed: PropertyValues<this>
   ) {
-    if (changed.has("engine") || changed.has("textures")) {
+    if (changed.has("engine") || changed.has("linked")) {
       this.#disposeTabs();
     }
     if (changed.has("active") && this.active) {
@@ -192,7 +186,7 @@ export class TextureEditor extends LitElement {
       await this.#adoptPanel(panel);
     }
 
-    const { engine, textures } = this;
+    const { engine, linked } = this;
     if (panel === null || panel !== this.#panel) {
       return;
     }
@@ -213,8 +207,8 @@ export class TextureEditor extends LitElement {
       }
 
       const labels = tilesetTabLabels(entry, { blocks });
-      const texture = openTexture(textures, entry);
-      if (texture === null) {
+      const opened = linked.open(definition.id);
+      if (opened === undefined) {
         this.#showPlaceholder(panel, definition.id, labels);
         continue;
       }
@@ -226,16 +220,16 @@ export class TextureEditor extends LitElement {
         {
           id: definition.id,
           ...labels,
-          document: texture.document
+          document: opened.opened.pixels
         },
         { activate: false }
       );
       this.#tabs.set(definition.id, new TilesetTab({
         canvas,
         engine,
-        definition,
+        linked: opened,
         assetId,
-        texture,
+        blocks: linked,
         brush: this.brush,
         mapDocument: this.mapDocument
       }));
@@ -243,7 +237,7 @@ export class TextureEditor extends LitElement {
 
     const kept = new Set(entries.map((entry) => entry.definition.id));
     for (const [tilesetId, tab] of this.#tabs) {
-      if (!kept.has(tilesetId)) {
+      if (!kept.has(tilesetId) || !linked.has(tilesetId)) {
         panel.removeTexture(tilesetId);
         tab.dispose();
         this.#tabs.delete(tilesetId);
@@ -341,7 +335,7 @@ export class TextureEditor extends LitElement {
       return;
     }
 
-    const tilesetId = blockFocusTilesetId(block, this.tilesets.ids());
+    const tilesetId = this.linked.ownerOf(block.id)?.definition.id ?? null;
     if (!force && tilesetId === this.#followedTilesetId) {
       return;
     }
@@ -388,6 +382,7 @@ export class TextureEditor extends LitElement {
         .engine=${this.engine}
         .actions=${this.actions}
         .tilesets=${this.tilesets}
+        .linked=${this.linked}
         .mapDocument=${this.mapDocument}
         .usage=${this.usage}
         .log=${this.log}
@@ -406,24 +401,6 @@ export class TextureEditor extends LitElement {
         >Add tileset</jolly-button>
       </div>
     `;
-  }
-}
-
-function openTexture(
-  textures: TilesetTextures,
-  entry: TilesetEntry
-): TilesetTexture | null {
-  try {
-    return textures.open(entry);
-  }
-  catch (error) {
-    console.error(
-      "TextureEditor: cannot open tileset",
-      entry.definition.id,
-      error
-    );
-
-    return null;
   }
 }
 

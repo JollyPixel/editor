@@ -10,9 +10,12 @@ import {
   pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 import {
-  createTilesetDocument,
   createVoxelMapDocument,
+  encodeTilesetDocument,
   tilesetAsset,
+  tilesetAssetKind,
+  tilesetDocumentFromPng,
+  TILESET_KIND,
   VOXEL_MAP_KIND,
   voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
@@ -47,31 +50,35 @@ export interface StudioProject {
 export async function createStudioProject(
   tilesetPng: Uint8Array
 ): Promise<StudioProject> {
-  const tileset = await createTilesetDocument(tilesetPng, {
-    id: kTilesetId,
-    asset: tilesetAsset(kTilesetAssetId),
+  const tileset = await tilesetDocumentFromPng(tilesetPng, {
     tileSize: DEFAULT_TILE_SIZE
   });
 
   return {
     handlers: [
-      pixelArtAssetKind({ defaultSize: tileset.size }),
+      pixelArtAssetKind(),
+      tilesetAssetKind(),
       voxelMapAssetKind(),
       voxelModelAssetKind(),
       textureAssetKind()
     ],
     seed: {
-      "textures/tileset.pixelart": {
+      "tilesets/tileset.tileset.json": {
         id: kTilesetAssetId,
-        kind: PIXEL_ART_KIND,
-        content: () => tileset.content
+        kind: TILESET_KIND,
+        content: () => encodeTilesetDocument(tileset)
       },
       "maps/overworld.voxelmap.json": {
         id: kMapAssetId,
         kind: VOXEL_MAP_KIND,
         content: () => createVoxelMapDocument({
           chunkSize: DEFAULT_CHUNK_SIZE,
-          tileset: tileset.definition
+          tilesets: [
+            {
+              id: kTilesetId,
+              asset: tilesetAsset(kTilesetAssetId)
+            }
+          ]
         })
       },
       "textures/model.pixelart": {

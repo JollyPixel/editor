@@ -3,7 +3,6 @@ import type { Page } from "@playwright/test";
 import {
   buttonGroup,
   dialogTitle,
-  selectField,
   titledDialog
 } from "@jolly-pixel/e2e";
 
@@ -17,10 +16,8 @@ import { seedVoxels } from "./support/scene.ts";
 import {
   blockTileCenter,
   clickTexel,
-  createBlankTileset,
   setTextureMode,
-  texturePanel,
-  textureState
+  texturePanel
 } from "./support/texture.ts";
 
 function brushBlock(
@@ -186,33 +183,6 @@ test("a lone tileset leaves the tileset field disabled", async({ page }) => {
 
   await expect(titledDialog(page, first).locator("jolly-select[disabled]"))
     .toHaveCount(1);
-});
-
-test("moving a block to another tileset shows that tileset texture", async({ page }) => {
-  await page.getByRole("button", { name: "Add tileset", exact: true }).click();
-  await createBlankTileset(page, "stone");
-
-  const stoneId = await page.evaluate(() => window.voxelMapEditor!.workspace
-    .state.tilesets.entries
-    .find((entry) => entry.label === "stone")!
-    .definition.id);
-  const [first, second] = await blockNames(page);
-  const panel = texturePanel(page);
-  const library = page.getByRole("listbox", { name: "Blocks" });
-  await library.getByRole("option", { name: second, exact: true }).click();
-  await library.getByRole("option", { name: first, exact: true }).dblclick();
-  await expect.poll(async() => (await textureState(panel)).activeTextureId)
-    .not.toBe(stoneId);
-
-  const editor = titledDialog(page, first);
-  await expect(editor.locator("jolly-select[disabled]")).toHaveCount(0);
-  await selectField(editor, "Tileset")
-    .selectOption({ label: "stone" });
-
-  await expect.poll(() => textureState(panel)).toMatchObject({
-    activeTextureId: stoneId,
-    selectedRegionId: "block-1"
-  });
 });
 
 test("the UV size group resizes the block tiles", async({ page }) => {

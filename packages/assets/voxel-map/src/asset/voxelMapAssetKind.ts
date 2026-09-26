@@ -115,8 +115,7 @@ export function voxelMapAssetKind(
               id
             }
           };
-        }),
-        state.tilesets.defaultTileSize
+        })
       );
     },
 
@@ -138,7 +137,10 @@ export function voxelMapAssetKind(
           snapshot: () => state.toJSON(),
           arbitrate: (command) => arbiter.admit(command),
           broadcast(command) {
-            if (command.action === "world-replace") {
+            if (
+              command.action === "world-replace" ||
+              !landedAsSent(state, command)
+            ) {
               return {
                 type: "snapshot",
                 data: state.toJSON()
@@ -154,4 +156,16 @@ export function voxelMapAssetKind(
       }
     }
   };
+}
+
+function landedAsSent(
+  state: VoxelMapState,
+  command: VoxelNetworkCommand
+): boolean {
+  if (command.action !== "tileset-added") {
+    return true;
+  }
+  const { id, slot } = command.tileset;
+
+  return state.tilesets.get(id)?.slot === slot;
 }

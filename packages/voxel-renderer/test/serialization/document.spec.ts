@@ -8,12 +8,13 @@ import {
   encodeVoxelDocument,
   InvalidVoxelDocumentError,
   parseVoxelDocument,
+  VOXEL_WORLD_VERSION,
   type VoxelWorldJSON
 } from "../../src/serialization/index.ts";
 
 // CONSTANTS
 const kEmptyDocument: VoxelWorldJSON = {
-  version: 1,
+  version: VOXEL_WORLD_VERSION,
   chunkSize: 16,
   tilesets: [],
   layers: []
@@ -29,7 +30,7 @@ describe("parseVoxelDocument", () => {
 
   it("defaults a missing tilesets field to an empty array", () => {
     const document = parseVoxelDocument({
-      version: 1,
+      version: VOXEL_WORLD_VERSION,
       chunkSize: 16,
       layers: []
     });
@@ -37,30 +38,10 @@ describe("parseVoxelDocument", () => {
     assert.deepEqual(document.tilesets, []);
   });
 
-  it("keeps a positive integer defaultTileSize", () => {
-    const document = parseVoxelDocument({
-      ...kEmptyDocument,
-      defaultTileSize: 64
-    });
-
-    assert.equal(document.defaultTileSize, 64);
-  });
-
-  it("drops a defaultTileSize that is not a positive integer", () => {
-    for (const defaultTileSize of [0, -16, 12.5, "32"]) {
-      const document = parseVoxelDocument({
-        ...kEmptyDocument,
-        defaultTileSize
-      });
-
-      assert.equal("defaultTileSize" in document, false);
-    }
-  });
-
   it("rejects a chunkSize that is not a number", () => {
     assert.throws(
       () => parseVoxelDocument({
-        version: 1,
+        version: VOXEL_WORLD_VERSION,
         chunkSize: "16",
         layers: []
       }),
@@ -68,20 +49,9 @@ describe("parseVoxelDocument", () => {
     );
   });
 
-  it("drops a blocks field that is not an array", () => {
-    const document = parseVoxelDocument({
-      version: 1,
-      chunkSize: 16,
-      layers: [],
-      blocks: "not-a-list"
-    });
-
-    assert.equal(document.blocks, undefined);
-  });
-
   it("drops an objectLayers field that is not an array", () => {
     const document = parseVoxelDocument({
-      version: 1,
+      version: VOXEL_WORLD_VERSION,
       chunkSize: 16,
       layers: [],
       objectLayers: 42
@@ -90,11 +60,14 @@ describe("parseVoxelDocument", () => {
     assert.equal(document.objectLayers, undefined);
   });
 
-  it("drops unknown top-level fields", () => {
+  it("drops unknown and retired top-level fields", () => {
     const document = parseVoxelDocument({
-      version: 1,
+      version: VOXEL_WORLD_VERSION,
       chunkSize: 16,
       layers: [],
+      blocks: [],
+      materialGroups: [],
+      defaultTileSize: 32,
       __proto__polluted: true,
       whatever: "kept out"
     });
@@ -110,10 +83,11 @@ describe("parseVoxelDocument", () => {
   for (const [reason, payload] of [
     ["payload is not an object", null],
     ["payload is not an object", 42],
-    ["unsupported version", { version: 2, chunkSize: 16, layers: [] }],
-    ["chunkSize is not a positive integer", { version: 1, chunkSize: 0, layers: [] }],
-    ["chunkSize is not a positive integer", { version: 1, chunkSize: 1.5, layers: [] }],
-    ["layers is not an array", { version: 1, chunkSize: 16 }]
+    ["unsupported version", { version: 1, chunkSize: 16, layers: [] }],
+    ["unsupported version", { version: 3, chunkSize: 16, layers: [] }],
+    ["chunkSize is not a positive integer", { version: 2, chunkSize: 0, layers: [] }],
+    ["chunkSize is not a positive integer", { version: 2, chunkSize: 1.5, layers: [] }],
+    ["layers is not an array", { version: 2, chunkSize: 16 }]
   ] as const) {
     it(`rejects ${JSON.stringify(payload)} with "${reason}"`, () => {
       assert.throws(

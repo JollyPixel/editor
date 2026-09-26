@@ -13,7 +13,7 @@ describe("definitionsEqual and entriesEqual", () => {
     id: "stone",
     asset: {
       id: "asset-stone",
-      kind: "pixelart"
+      kind: "tileset"
     },
     tileSize: 16
   };
@@ -23,7 +23,7 @@ describe("definitionsEqual and entriesEqual", () => {
       tileSize: 16,
       asset: {
         id: "asset-stone",
-        kind: "pixelart"
+        kind: "tileset"
       },
       id: "stone"
     }), true);
@@ -33,7 +33,7 @@ describe("definitionsEqual and entriesEqual", () => {
       ...kDefinition,
       asset: {
         id: "asset-granite",
-        kind: "pixelart"
+        kind: "tileset"
       }
     }), false);
   });

@@ -1,10 +1,12 @@
 # Tilesets
 
 Tileset definitions describe atlas images. A [`TilesetList`](#tilesetlist)
-holds the ones a world declares, `loadTilesets()` fetches their images,
+holds the ones a world links, `loadTilesets()` fetches their images,
 [`TilesetManager`](./TilesetManager.md) registers them, and
 [`TilesetAtlas`](./TilesetAtlas.md) provides the texture and UV data used by
-materials.
+materials. The blocks, material groups and tile size a tileset carries live in
+a [`TilesetDocument`](./TilesetDocument.md), projected into a world through
+its [slot](#projecting-a-tileset-into-a-world).
 
 ## Definitions
 
@@ -16,14 +18,16 @@ interface TilesetAssetReference {
 
 interface TilesetDefinition {
   id: string;
+  slot?: number;
   src?: string;
   asset?: TilesetAssetReference;
-  tileSize: number;
+  tileSize?: number;
   cols?: number;
   rows?: number;
 }
 
 type ResolvedTilesetDefinition = TilesetDefinition & {
+  tileSize: number;
   cols: number;
   rows: number;
 };
@@ -33,9 +37,14 @@ A tileset takes its pixels from the `src` image URL, or from the catalog asset
 named by `asset`. `loadTilesets()` only fetches `src`; the host resolves
 `asset` and registers the texture itself.
 
-Tiles are square and `tileSize` is measured in pixels. Missing row and column
-counts are derived from the image by
-[`resolveTilesetDefinition()`](./TilesetAtlas.md).
+`slot` is the block id namespace the tileset owns inside the world, from `0`
+to `MAX_TILESET_SLOT` (127). A definition declared without one receives the
+lowest free slot. Tiles are square and `tileSize` is measured in pixels. A
+`src` tileset must declare it; an `asset` tileset may leave it out, since the
+asset owns it, and the host declares it with the texture through
+`VoxelEngine.loadTileset()`. Missing row and column counts are derived from
+the image by [`resolveTilesetDefinition()`](./TilesetAtlas.md), which throws
+for a definition still without tile size.
 
 ## Tile references
 
@@ -60,7 +69,7 @@ function resolveTileRef(
 ```
 
 A missing `tilesetId` selects the first declared tileset; the engine fills it
-in when it loads or defines a block. `size` is the
+in when it defines a block. `size` is the
 square texture region side in texels, anchored at the tile's top-left corner,
 and defaults to the tileset `tileSize`. `rotation` turns the tile image
 inside the face by clockwise quarter turns in image space, where y points down.
@@ -98,7 +107,7 @@ function isTileSize(value: unknown): value is number;
 ```
 
 A tile size is an integer from 1 to `MAX_TILE_SIZE`. `DEFAULT_TILE_SIZE` is
-used when a document sets no `defaultTileSize`.
+the tile size of a `TilesetDocument` created without one.
 
 ## TilesetList
 
@@ -107,63 +116,114 @@ class TilesetList implements Iterable<TilesetDefinition> {
   readonly version: number;
   readonly size: number;
   readonly defaultTilesetId: string | null;
-  readonly defaultTileSize: number | undefined;
 
-  constructor(
-    definitions?: Iterable<TilesetDefinition>,
-    defaultTileSize?: number
-  );
+  constructor(definitions?: Iterable<TilesetDefinition>);
   definitions(): TilesetDefinition[];
   ids(): Set<string>;
   has(tilesetId: string): boolean;
   get(tilesetId: string): TilesetDefinition | undefined;
+  bySlot(slot: number): TilesetDefinition | undefined;
+  freeSlot(reserved?: Iterable<number>): number | null;
   add(definition: TilesetDefinition): boolean;
+  declare(definition: TilesetDefinition): boolean;
   remove(tilesetId: string): boolean;
-  resize(tilesetId: string, tileSize: number): boolean;
-  updateDefaultTileSize(tileSize: number): boolean;
-  replace(
-    definitions: Iterable<TilesetDefinition>,
-    defaultTileSize?: number
-  ): void;
+  replace(definitions: Iterable<TilesetDefinition>): void;
   clear(): void;
 }
 ```
 
-The ordered tilesets a world declares, whether or not their texture is loaded.
-Definitions are copied in and out. `defaultTilesetId` is the first ID.
+The ordered tilesets a world links, whether or not their texture is loaded.
+Definitions are copied in and out, always with a `slot`. `defaultTilesetId`
+is the first ID.
 
-`add()` refuses an empty ID, a known ID or an invalid tile size. `resize()`
-refuses an unknown ID, an invalid or unchanged size, and drops the stored
-`cols` and `rows`. Each mutator returns whether the list changed, and
-`version` increases on every change. `replace()` skips the definitions `add()`
-would refuse, keeps the first definition of a duplicated ID and ignores an
-invalid `defaultTileSize`.
+`add()` refuses an empty ID, a known ID, a taken or invalid slot, a `src`
+tileset without tile size and an invalid tile size; it fills a missing slot
+with `freeSlot()`, the lowest one neither held by a tileset nor listed in
+`reserved` (`null` once all 128 are taken). `declare()` adds an unknown definition and otherwise replaces the
+known one in place, keeping its slot: this is how a host declares the tile
+size of an `asset` tileset once loaded. Each mutator returns whether the list
+changed, and `version` increases on every change. `replace()` skips the
+definitions `add()` would refuse and keeps the first definition of a
+duplicated ID; a definition without a slot never takes one another definition
+of the same call declares.
 
 ## Tileset commands
 
 ```ts
-interface TilesetDocument {
-  readonly tilesets: TilesetList;
-  readonly blocks: BlockRegistry;
-}
-
 function applyTilesetCommand(
-  document: TilesetDocument,
+  target: VoxelWorldCommandTarget,
   command: VoxelTilesetCommand
 ): VoxelTilesetCommand | null;
 ```
 
-Folds a [tileset command](../core/commands.md#tileset-commands) into a document and
-returns it, or `null` when nothing changed. `tileset-resized` also rescales, in `blocks`,
-every tile reference on that tileset with `rescaleTileRef()`.
+Folds a [tileset command](../core/commands.md#tileset-commands) into
+`target.tilesets` and returns it, or `null` when nothing changed. A
+`tileset-added` comes back with the definition as declared, slot included.
+A tileset added without a slot never gets one that voxels of `target.world`
+still use, so the voxels a removed tileset left behind are not given the new
+tileset's blocks.
 [`applyVoxelCommand()`](../core/commands.md#applying-commands) routes tileset
 commands to it.
+
+## Projecting a tileset into a world
+
+A [`TilesetDocument`](./TilesetDocument.md) numbers its blocks from `1` and
+its tile references name no tileset. A world sees them through the tileset's
+slot:
+
+```ts
+type TilesetProjection = Pick<TilesetDefinition, "id"> & { slot: number; };
+
+function projectTilesetBlock(
+  tileset: TilesetProjection,
+  block: ResolvedBlockDefinition
+): ResolvedBlockDefinition;
+function projectTilesetBlocks(
+  tileset: TilesetProjection,
+  blocks: Iterable<ResolvedBlockDefinition>
+): ResolvedBlockDefinition[];
+function localTilesetBlock(
+  tileset: TilesetProjection,
+  block: ResolvedBlockDefinition
+): ResolvedBlockDefinition;
+function belongsToTileset(
+  tileset: Pick<TilesetProjection, "slot">,
+  blockId: number
+): boolean;
+
+function projectTilesetMaterialGroup(
+  tileset: TilesetProjection,
+  group: MaterialGroupJSON
+): MaterialGroupJSON;
+function projectTilesetMaterialGroups(
+  tileset: TilesetProjection,
+  groups: Iterable<MaterialGroupJSON>
+): MaterialGroupJSON[];
+function projectedMaterialGroupId(
+  tileset: TilesetProjection,
+  groupId: string
+): string;
+function localMaterialGroupId(
+  tileset: TilesetProjection,
+  groupId: string
+): string;
+```
+
+`projectTilesetBlock()` gives a block the id
+[`composeBlockId(slot, block.id)`](../blocks/BlockDefinition.md#block-ids),
+names the tileset in every tile reference and prefixes its material group
+with `"<tilesetId>/"`. `localTilesetBlock()` is the inverse.
+`belongsToTileset()` tells whether a world block id was projected from the
+slot. Material groups are projected the same way, so two tilesets may both
+define a `"metal"` group. Register the projected blocks and groups on the
+engine with `defineBlocks()` and `defineMaterialGroup()`; replay a tileset
+document's commands the same way to keep a world in step with it.
 
 ## Rescaling and tile rectangles
 
 ```ts
 interface TileRescale {
-  tilesetId: string;
+  tilesetId?: string;
   from: number;
   to: number;
 }
@@ -174,7 +234,8 @@ function rescaleTileRef(ref: ResolvedTileRef, rescale: TileRescale): ResolvedTil
 `rescaleTileRef()` keeps a reference on the same texels when its tileset grid
 changes from `from` to `to` pixels: `col` and `row` are multiplied by
 `from / to` and may become fractional, and a missing `size` becomes `from`.
-References to another tileset are returned unchanged.
+References to another tileset are returned unchanged; a rescale without
+`tilesetId` matches the references that name none, as in a tileset document.
 
 ```ts
 interface TileBounds {
@@ -283,5 +344,7 @@ shows initial loading and saved-world restoration.
 
 ## Classes
 
+- [`TilesetDocument`](./TilesetDocument.md) is one tileset's blocks, material
+  groups and tile size.
 - [`TilesetManager`](./TilesetManager.md) registers loaded atlas textures.
 - [`TilesetAtlas`](./TilesetAtlas.md) is one atlas: its grid, texture and UVs.

@@ -49,12 +49,10 @@ import {
   TilesetActions,
   type TilesetCatalogWriter
 } from "../features/tilesets/TilesetActions.ts";
-import { TilesetAtlases } from "../features/tilesets/TilesetAtlases.ts";
+import { LinkedTilesets } from "../features/tilesets/LinkedTilesets.ts";
 import {
-  LocalTilesetTextures,
-  SessionTilesetTextures,
-  type TilesetTextures
-} from "../features/tilesets/TilesetTextures.ts";
+  SessionTilesetSources
+} from "../features/tilesets/TilesetSources.ts";
 import { GridRenderer } from "./GridRenderer.ts";
 import { SceneLighting } from "./SceneLighting.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
@@ -98,7 +96,7 @@ export interface VoxelMapWorkspace {
   lighting: SceneLighting;
   localBrush: LocalBrush;
   tilesetActions: TilesetActions;
-  textures: TilesetTextures;
+  linkedTilesets: LinkedTilesets;
   viewFocus: ViewFocus;
   archives: EditorArchives;
   loadWorld(data: VoxelWorldJSON): void;
@@ -200,20 +198,17 @@ export class EditorScene extends Systems.Scene {
       catalog: session.catalog,
       mapDocument
     });
+    const linkedTilesets = new LinkedTilesets({
+      engine,
+      store: state.tilesets,
+      sources: new SessionTilesetSources(session.assets),
+      mapDocument
+    });
     const tilesetActions = new TilesetActions({
       engine,
       catalog: session.catalog,
-      store: state.tilesets
-    });
-    const textures = new SessionTilesetTextures(
-      session.assets,
-      new LocalTilesetTextures(engine)
-    );
-    const atlases = new TilesetAtlases({
-      engine,
       store: state.tilesets,
-      textures,
-      mapDocument
+      documents: linkedTilesets
     });
 
     viewFocus.provider = () => viewFocusPoint(camera.camera, engine.root);
@@ -311,7 +306,7 @@ export class EditorScene extends Systems.Scene {
       () => shortcuts.dispose(),
       () => historyShortcuts.dispose(),
       () => collaboration.dispose(),
-      () => atlases.dispose(),
+      () => linkedTilesets.dispose(),
       () => tilesetDirectory.dispose(),
       () => usage.dispose(),
       () => layerVisibility.dispose(),
@@ -335,7 +330,7 @@ export class EditorScene extends Systems.Scene {
       lighting,
       localBrush,
       tilesetActions,
-      textures,
+      linkedTilesets,
       viewFocus,
       archives: session.archives,
       loadWorld: (data) => {

@@ -17,9 +17,8 @@ const kStone = {
   id: "stone",
   asset: {
     id: "asset-stone",
-    kind: "pixelart"
-  },
-  tileSize: 16
+    kind: "tileset"
+  }
 };
 
 class FakeCatalog extends Emitter<{ change: () => void; }> {
@@ -32,7 +31,7 @@ class FakeCatalog extends Emitter<{ change: () => void; }> {
 
 function setup() {
   const store = new TilesetStore();
-  const tilesets = new TilesetList([], 16);
+  const tilesets = new TilesetList();
   const mapDocument = new Emitter<MapDocumentEvents>();
   const catalog = new FakeCatalog();
   const directory = new TilesetDirectory({
@@ -56,30 +55,30 @@ describe("TilesetDirectory", () => {
     const { store } = setup();
 
     assert.deepEqual(ids(store), []);
-    assert.equal(store.defaultTileSize, 16);
   });
 
   it("refreshes when the document reports a tileset change", () => {
     const { store, tilesets, mapDocument } = setup();
 
-    tilesets.replace([kStone], 16);
+    tilesets.replace([kStone]);
     assert.deepEqual(ids(store), []);
 
     mapDocument.emit("tilesetsChanged");
     assert.deepEqual(ids(store), ["stone"]);
+    assert.equal(store.entries[0].definition.slot, 0);
   });
 
   it("relabels entries when the catalog changes", () => {
     const { store, tilesets, mapDocument, catalog } = setup();
-    tilesets.replace([kStone], 16);
+    tilesets.replace([kStone]);
     mapDocument.emit("tilesetsChanged");
     assert.equal(store.entries[0].assetId, null);
 
     catalog.list = [
       {
         id: "asset-stone",
-        kind: "pixelart",
-        source: "textures/granite.pixelart"
+        kind: "tileset",
+        source: "tilesets/granite.tileset.json"
       } as AssetRecordData
     ];
     catalog.emit("change");
@@ -92,7 +91,7 @@ describe("TilesetDirectory", () => {
     const { store, tilesets, mapDocument, catalog, directory } = setup();
 
     directory.dispose();
-    tilesets.replace([kStone], 16);
+    tilesets.replace([kStone]);
     mapDocument.emit("tilesetsChanged");
     catalog.emit("change");
 

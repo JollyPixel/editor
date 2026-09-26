@@ -28,6 +28,7 @@ import type {
   TilesetEntry,
   TilesetStore
 } from "../../state/index.ts";
+import type { LinkedTilesets } from "./LinkedTilesets.ts";
 import type { TilesetActions } from "./TilesetActions.ts";
 import { rescaleLeavesBlocksOffGrid } from "./blockTilesets.ts";
 import { tileSizeSegments } from "./tileSizes.ts";
@@ -95,6 +96,9 @@ export class TilesetEditDialog extends LitElement {
   declare tilesets: TilesetStore;
 
   @property({ attribute: false })
+  declare linked: LinkedTilesets;
+
+  @property({ attribute: false })
   declare mapDocument: MapDocument;
 
   @property({ attribute: false })
@@ -125,6 +129,7 @@ export class TilesetEditDialog extends LitElement {
     super.connectedCallback();
     this.#subscriptions.push(
       this.tilesets.subscribe("change", this.#refresh),
+      this.linked.subscribe("change", this.#refresh),
       this.mapDocument.subscribe("blockRegistryChanged", this.#refresh),
       this.usage.subscribe("change", this.#refresh)
     );
@@ -187,6 +192,7 @@ export class TilesetEditDialog extends LitElement {
     entry: TilesetEntry
   ) {
     const { definition } = entry;
+    const tileSize = this.linked.tileSizeOf(definition.id);
     const usage = this.usage.tilesetUsageOf(definition.id);
     const renamable = this.actions !== null && entry.assetId !== null;
     const pendingTileSize = this._pendingTileSize;
@@ -204,9 +210,9 @@ export class TilesetEditDialog extends LitElement {
         ></jolly-text>
         <jolly-button-group
           label="Tile size"
-          .options=${tileSizeSegments(definition.tileSize)}
-          .value=${pendingTileSize ?? definition.tileSize}
-          ?disabled=${this.actions === null}
+          .options=${tileSizeSegments(tileSize)}
+          .value=${pendingTileSize ?? tileSize}
+          ?disabled=${this.actions === null || tileSize === undefined}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
             this.#resize(entry, event.detail.value);
           }}
@@ -219,7 +225,7 @@ export class TilesetEditDialog extends LitElement {
               @click=${() => {
                 this._pendingTileSize = null;
               }}
-            >Keep ${definition.tileSize}</jolly-button>
+            >Keep ${tileSize}</jolly-button>
             <jolly-button
               variant="accent"
               @click=${() => this.#applyPendingTileSize(entry)}
@@ -259,12 +265,13 @@ export class TilesetEditDialog extends LitElement {
     tileSize: number
   ): void {
     const { definition } = entry;
-    if (this.actions === null) {
+    const from = this.linked.tileSizeOf(definition.id);
+    if (this.actions === null || from === undefined) {
       return;
     }
 
     this._pendingTileSize = null;
-    if (tileSize === definition.tileSize) {
+    if (tileSize === from) {
       return;
     }
 
@@ -272,7 +279,7 @@ export class TilesetEditDialog extends LitElement {
       this.engine.blockRegistry,
       {
         tilesetId: definition.id,
-        from: definition.tileSize,
+        from,
         to: tileSize
       }
     );
@@ -306,7 +313,7 @@ export class TilesetEditDialog extends LitElement {
     const confirmed = tilesetIsUnused(usage) ||
       await this._dialog.confirmInline({
         message: `Remove "${entry.label}"? ` +
-          `${tilesetRemovalMessage(usage)} The texture asset is kept.`,
+          `${tilesetRemovalMessage(usage)} The tileset asset is kept.`,
         confirmLabel: "Remove",
         danger: true
       });

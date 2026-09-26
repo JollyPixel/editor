@@ -20,7 +20,7 @@ import {
 } from "../scene/EditorScene.ts";
 import { ViewFocus } from "../scene/index.ts";
 import { EditorShell } from "./EditorShell.ts";
-import { TILESET_TEXTURE_KIND } from "../features/tilesets/TilesetTextures.ts";
+import { TILESET_DOCUMENT_KIND } from "../features/tilesets/TilesetSources.ts";
 import {
   mountInspectorControls
 } from "../features/performance/index.ts";
@@ -50,7 +50,7 @@ export class VoxelMapEditor {
   static readonly identity = {
     title: "Join voxel map"
   };
-  static readonly kinds = [kMapKind, TILESET_TEXTURE_KIND];
+  static readonly kinds = [kMapKind, TILESET_DOCUMENT_KIND];
 
   static async mount(
     context: EditorContext

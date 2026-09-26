@@ -12,6 +12,7 @@ export function definitionsEqual(
   right: TilesetDefinition
 ): boolean {
   return left.id === right.id &&
+    left.slot === right.slot &&
     left.src === right.src &&
     left.asset?.id === right.asset?.id &&
     left.asset?.kind === right.asset?.kind &&

@@ -20,7 +20,6 @@ import {
   blockDefinedCmd,
   makeAddedCommand
 } from "./helpers/networkCommands.ts";
-import { resolveBlockDefinition } from "../src/blocks/index.ts";
 
 interface Emission {
   action: string;
@@ -145,25 +144,21 @@ describe("VoxelEngine - tilesets", () => {
       { id: "atlas", src: "/atlas.png", tileSize: 16 },
       { id: "later", src: "later-asset", tileSize: 32 }
     ];
-    data.defaultTileSize = 64;
 
     engine.load(data);
 
     assert.deepEqual(engine.tilesets.definitions().map((def) => def.id), ["atlas", "later"]);
-    assert.equal(engine.defaultTileSize, 64);
     assert.ok(engine.tilesetManager.get("atlas"));
     assert.equal(engine.tilesetManager.get("later"), undefined);
   });
 
-  it("saves declared tilesets and the default tile size", () => {
+  it("saves declared tilesets", () => {
     const engine = makeEngine();
     engine.addTileset({ id: "later", src: "later-asset", tileSize: 32 });
-    engine.defaultTileSize = 8;
 
     const data = engine.save();
 
     assert.deepEqual(data.tilesets.map((def) => def.id), ["atlas", "later"]);
-    assert.equal(data.defaultTileSize, 8);
   });
 
   it("drops the atlas of a tileset missing from a loaded document", () => {
@@ -176,14 +171,17 @@ describe("VoxelEngine - tilesets", () => {
     assert.equal(engine.tilesetManager.get("atlas"), undefined);
   });
 
-  it("fills the missing tileset of loaded and defined blocks", () => {
+  it("keeps the blocks defined before a world loads", () => {
     const engine = makeEngine();
-    const data = engine.save();
-    data.blocks = [
-      resolveBlockDefinition(makeBlockDef(9, "cube", { defaultTexture: { col: 1, row: 0 } }))
-    ];
+    engine.defineBlock(makeBlockDef(9, "cube"));
 
-    engine.load(data);
+    engine.load(engine.save());
+
+    assert.equal(engine.blockRegistry.has(9), true);
+  });
+
+  it("fills the missing tileset of a defined block", () => {
+    const engine = makeEngine();
     engine.defineBlock({
       id: 10,
       name: "new",
@@ -191,7 +189,6 @@ describe("VoxelEngine - tilesets", () => {
       defaultTexture: [0, 0]
     });
 
-    assert.equal(engine.blockRegistry.get(9)?.defaultTexture?.tilesetId, "atlas");
     assert.equal(engine.blockRegistry.get(10)?.defaultTexture?.tilesetId, "atlas");
   });
 
@@ -201,7 +198,6 @@ describe("VoxelEngine - tilesets", () => {
 
     assert.equal(engine.addTileset({ id: "b", src: "b", tileSize: 16 }), true);
     assert.equal(engine.addTileset({ id: "b", src: "b", tileSize: 16 }), false);
-    assert.equal(engine.resizeTileset("b", 16), false);
     assert.equal(engine.removeTileset("b"), true);
     assert.equal(engine.removeTileset("b"), false);
 
@@ -211,23 +207,14 @@ describe("VoxelEngine - tilesets", () => {
     );
   });
 
-  it("rescales block tiles and rebuilds the atlas on resize", () => {
+  it("rebuilds the atlas of a tileset loaded again with another tile size", () => {
     const engine = makeEngine();
-    engine.defineBlock({
-      id: 5,
-      name: "tile",
-      shapeId: "cube",
-      defaultTexture: { tilesetId: "atlas", col: 2, row: 1 }
-    });
+    const slot = engine.tilesets.get("atlas")?.slot;
 
-    assert.equal(engine.resizeTileset("atlas", 32), true);
+    engine.loadTileset({ id: "atlas", src: "/atlas.png", tileSize: 32 }, mockTexture());
 
-    assert.deepEqual(engine.blockRegistry.get(5)?.defaultTexture, {
-      tilesetId: "atlas",
-      col: 1,
-      row: 0.5,
-      size: 16
-    });
+    assert.equal(engine.tilesets.get("atlas")?.slot, slot);
+    assert.equal(engine.tilesets.get("atlas")?.tileSize, 32);
     assert.equal(engine.tilesetManager.atlas("atlas").def.tileSize, 32);
   });
 

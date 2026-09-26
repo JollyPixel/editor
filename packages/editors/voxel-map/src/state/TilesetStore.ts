@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -15,15 +14,10 @@ export type TilesetStoreEvents = {
 
 export class TilesetStore extends Emitter<TilesetStoreEvents> {
   #entries: readonly TilesetEntry[] = [];
-  #defaultTileSize = DEFAULT_TILE_SIZE;
   #activeTilesetId: string | null = null;
 
   get entries(): readonly TilesetEntry[] {
     return this.#entries;
-  }
-
-  get defaultTileSize(): number {
-    return this.#defaultTileSize;
   }
 
   get firstTilesetId(): string | null {
@@ -61,13 +55,10 @@ export class TilesetStore extends Emitter<TilesetStoreEvents> {
   }
 
   replace(
-    entries: readonly TilesetEntry[],
-    defaultTileSize = DEFAULT_TILE_SIZE
+    entries: readonly TilesetEntry[]
   ): void {
-    const changed = !entriesEqual(this.#entries, entries) ||
-      defaultTileSize !== this.#defaultTileSize;
+    const changed = !entriesEqual(this.#entries, entries);
     this.#entries = [...entries];
-    this.#defaultTileSize = defaultTileSize;
 
     const active = this.#activeTilesetId;
     if (active === null || this.entry(active) === undefined) {

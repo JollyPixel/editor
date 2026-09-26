@@ -50,7 +50,7 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
     username: "Guest",
     layers: ["Ground"],
     blocks: 32,
-    tilesets: ["textures/block.pixelart"]
+    tilesets: ["tilesets/block.tileset.json"]
   });
   expect(sockets).toEqual([]);
 });

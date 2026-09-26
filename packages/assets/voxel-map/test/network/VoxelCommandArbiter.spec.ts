@@ -5,8 +5,6 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelCommandArbiter, type VoxelNetworkCommand } from "../../src/network/server.ts";
 import {
-  blockDefinedCmd,
-  blockMovedCmd,
   makeAddedCommand,
   voxelSetCmd
 } from "../helpers/networkCommands.ts";
@@ -103,62 +101,6 @@ describe("VoxelCommandArbiter", () => {
     const other = voxelSetCmd({
       timestamp: 1000,
       x: 1
-    });
-
-    assert.strictEqual(admitted(arbiter, other), other);
-  });
-});
-
-describe("VoxelCommandArbiter — block commands", () => {
-  test("keys a block command by its block id", () => {
-    assert.strictEqual(
-      VoxelCommandArbiter.key(blockDefinedCmd({ id: 4 })),
-      "block:4"
-    );
-    assert.strictEqual(
-      VoxelCommandArbiter.key({
-        action: "block-removed",
-        blockId: 4,
-        clientId: "client-A",
-        seq: 1,
-        timestamp: 1000
-      }),
-      "block:4"
-    );
-  });
-
-  test("rejects an older edit of the same block", () => {
-    const arbiter = new VoxelCommandArbiter();
-
-    commit(arbiter, blockDefinedCmd({
-      id: 4,
-      clientId: "late",
-      timestamp: 2000
-    }));
-
-    assert.strictEqual(
-      admitted(arbiter, blockDefinedCmd({
-        id: 4,
-        clientId: "early",
-        timestamp: 1000
-      })),
-      null
-    );
-  });
-
-  test("different blocks do not contend", () => {
-    const arbiter = new VoxelCommandArbiter();
-
-    commit(arbiter, blockDefinedCmd({
-      id: 4,
-      clientId: "late",
-      timestamp: 2000
-    }));
-
-    const other = blockDefinedCmd({
-      id: 5,
-      clientId: "early",
-      timestamp: 1000
     });
 
     assert.strictEqual(admitted(arbiter, other), other);
@@ -453,45 +395,6 @@ describe("VoxelCommandArbiter — object commands", () => {
   });
 });
 
-describe("VoxelCommandArbiter — block reorder", () => {
-  test("keys a block move by its block id", () => {
-    assert.strictEqual(
-      VoxelCommandArbiter.key(blockMovedCmd({ blockId: 4, toIndex: 2 })),
-      "block:4"
-    );
-  });
-
-  test("rejects a move older than the last edit of the same block", () => {
-    const arbiter = new VoxelCommandArbiter();
-
-    commit(arbiter, blockDefinedCmd({
-      id: 4,
-      clientId: "late",
-      timestamp: 2000
-    }));
-
-    assert.strictEqual(
-      admitted(arbiter, blockMovedCmd({
-        blockId: 4,
-        toIndex: 0,
-        clientId: "early",
-        timestamp: 1000
-      })),
-      null
-    );
-  });
-
-  test("admits moves of different blocks", () => {
-    const arbiter = new VoxelCommandArbiter();
-    const first = blockMovedCmd({ blockId: 1, toIndex: 2, timestamp: 2000 });
-    const second = blockMovedCmd({ blockId: 2, toIndex: 0, timestamp: 1000 });
-
-    commit(arbiter, first);
-
-    assert.strictEqual(admitted(arbiter, second), second);
-  });
-});
-
 describe("VoxelCommandArbiter — tileset commands", () => {
   const kHeader = {
     clientId: "client-A",
@@ -507,38 +410,8 @@ describe("VoxelCommandArbiter — tileset commands", () => {
     }), "tileset:stone");
     assert.strictEqual(VoxelCommandArbiter.key({
       ...kHeader,
-      action: "tileset-resized",
-      tilesetId: "stone",
-      tileSize: 32
+      action: "tileset-removed",
+      tilesetId: "stone"
     }), "tileset:stone");
-  });
-
-  test("keys the default tile size as one entry", () => {
-    assert.strictEqual(VoxelCommandArbiter.key({
-      ...kHeader,
-      action: "default-tile-size-updated",
-      defaultTileSize: 32
-    }), "default-tile-size");
-  });
-});
-
-describe("VoxelCommandArbiter — material group commands", () => {
-  const kHeader = {
-    clientId: "client-A",
-    seq: 1,
-    timestamp: 1000
-  };
-
-  test("keys a material group command by its group id", () => {
-    assert.strictEqual(VoxelCommandArbiter.key({
-      ...kHeader,
-      action: "material-group-defined",
-      group: { id: "gold" }
-    }), "material-group:gold");
-    assert.strictEqual(VoxelCommandArbiter.key({
-      ...kHeader,
-      action: "material-group-removed",
-      groupId: "gold"
-    }), "material-group:gold");
   });
 });

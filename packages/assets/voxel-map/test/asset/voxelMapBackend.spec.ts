@@ -21,6 +21,11 @@ import {
 
 // Import Internal Dependencies
 import {
+  createTilesetDocument,
+  encodeTilesetDocument,
+  TILESET_KIND,
+  tilesetAsset,
+  tilesetAssetKind,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND,
   voxelMapAssetKind,
@@ -234,6 +239,65 @@ describe("voxel-map asset kind over a real back-end", () => {
       );
 
       await server.close();
+    }
+    finally {
+      await fs.rm(root, {
+        recursive: true,
+        force: true
+      });
+    }
+  });
+
+  test("a map linking a tileset asset records the dependency edge", async() => {
+    const root = await fs.mkdtemp(
+      path.join(os.tmpdir(), "jolly-voxel-map-asset-")
+    );
+
+    try {
+      using eventStore = EventStore.persistence.memory();
+      await fs.mkdir(path.join(root, "textures"), { recursive: true });
+      await fs.writeFile(
+        path.join(root, "textures/stone.tileset.json"),
+        encodeTilesetDocument(createTilesetDocument({ tileSize: 8 }))
+      );
+
+      await using backend = await createAssetBackend({
+        source: new FilesystemAssetSource(root),
+        eventStore,
+        handlers: [
+          tilesetAssetKind(),
+          voxelMapAssetKind({ chunkSize: kChunkSize })
+        ],
+        watch: false
+      });
+      const tileset = backend.catalog.snapshot().assets
+        .find((entry) => entry.kind === TILESET_KIND)!;
+
+      const linked = new VoxelMapState(kChunkSize);
+      linked.tilesets.add({
+        id: "stone",
+        asset: tilesetAsset(tileset.id)
+      });
+      const mapId = "map-linked";
+      (await backend.writer.create({
+        path: "maps/linked.voxelmap.json",
+        kind: VOXEL_MAP_KIND,
+        data: encodeVoxelDocument(linked.toJSON()),
+        assetId: mapId,
+        actor: {
+          type: "user",
+          id: "u1"
+        }
+      })).unwrap();
+
+      assert.deepEqual(
+        backend.catalog.dependencies.dependenciesOf(mapId),
+        [tilesetAsset(tileset.id)]
+      );
+      assert.deepEqual(
+        backend.catalog.dependencies.dependentsOf(tileset.id),
+        [mapId]
+      );
     }
     finally {
       await fs.rm(root, {

@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { blocksFromTileset } from "../../src/blocks/index.ts";
+import {
+  blocksFromTileset,
+  composeBlockId
+} from "../../src/blocks/index.ts";
 import type { ResolvedTilesetDefinition } from "../../src/tileset/index.ts";
 
 // CONSTANTS
@@ -33,6 +36,24 @@ describe("blocksFromTileset", () => {
       col: 3,
       row: 1
     });
+  });
+
+  it("projects the ids into the tileset slot", () => {
+    const blocks = Array.from(
+      blocksFromTileset({ ...kTerrain, slot: 2 }, { limit: 2 })
+    );
+
+    assert.deepEqual(
+      blocks.map((block) => block.id),
+      [composeBlockId(2, 1), composeBlockId(2, 2)]
+    );
+  });
+
+  it("names no tileset when the grid has no id", () => {
+    const [block] = blocksFromTileset({ cols: 1, rows: 1 });
+
+    assert.equal(block.id, 1);
+    assert.deepEqual(block.defaultTexture, { col: 0, row: 0 });
   });
 
   it("stops at the requested limit", () => {

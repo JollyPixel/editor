@@ -4,6 +4,8 @@ export * from "./TilesetAtlas.ts";
 export * from "./missingTileset.ts";
 export * from "./TilesetManager.ts";
 export * from "./TilesetList.ts";
+export * from "./TilesetDocument.ts";
+export * from "./projectTileset.ts";
 export * from "./tileSize.ts";
 export * from "./tileRef.ts";
 export * from "./AtlasAverages.ts";

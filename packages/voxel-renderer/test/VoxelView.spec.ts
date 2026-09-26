@@ -63,14 +63,14 @@ describe("VoxelView - document subscriptions", () => {
 
   it("syncs the atlases before a tileset command reaches other listeners", () => {
     const { document, view } = makePair();
-    const seen: Array<number | undefined> = [];
+    const seen: boolean[] = [];
     document.on("command", () => {
-      seen.push(view.tilesetManager.get("atlas")?.def.tileSize);
+      seen.push(view.tilesetManager.get("atlas") !== undefined);
     });
 
-    document.resizeTileset("atlas", 32);
+    document.removeTileset("atlas");
 
-    assert.deepEqual(seen, [32]);
+    assert.deepEqual(seen, [false]);
   });
 
   it("drops an atlas whose tileset the document removed", () => {

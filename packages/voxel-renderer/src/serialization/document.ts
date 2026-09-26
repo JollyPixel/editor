@@ -2,8 +2,10 @@
 import {
   InvalidVoxelDocumentError
 } from "./errors/InvalidVoxelDocumentError.ts";
-import { isTileSize } from "../tileset/tileSize.ts";
-import type { VoxelWorldJSON } from "./types.ts";
+import {
+  VOXEL_WORLD_VERSION,
+  type VoxelWorldJSON
+} from "./types.ts";
 
 export function parseVoxelDocument(
   value: unknown
@@ -16,13 +18,10 @@ export function parseVoxelDocument(
   const version = fields.get("version");
   const chunkSize = fields.get("chunkSize");
   const layers = fields.get("layers");
-  const blocks = fields.get("blocks");
   const objectLayers = fields.get("objectLayers");
   const tilesets = fields.get("tilesets");
-  const defaultTileSize = fields.get("defaultTileSize");
-  const materialGroups = fields.get("materialGroups");
 
-  if (version !== 1) {
+  if (version !== VOXEL_WORLD_VERSION) {
     throw new InvalidVoxelDocumentError(
       `unsupported version ${String(version)}`
     );
@@ -46,15 +45,6 @@ export function parseVoxelDocument(
     tilesets: Array.isArray(tilesets) ? tilesets : [],
     layers
   };
-  if (isTileSize(defaultTileSize)) {
-    document.defaultTileSize = defaultTileSize;
-  }
-  if (Array.isArray(blocks)) {
-    document.blocks = blocks;
-  }
-  if (Array.isArray(materialGroups)) {
-    document.materialGroups = materialGroups;
-  }
   if (Array.isArray(objectLayers)) {
     document.objectLayers = objectLayers;
   }

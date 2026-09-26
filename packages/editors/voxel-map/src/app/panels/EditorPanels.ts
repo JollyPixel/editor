@@ -79,7 +79,7 @@ export class EditorPanels {
     textureEditor.tilesets = workspace.state.tilesets;
     textureEditor.mapDocument = workspace.mapDocument;
     textureEditor.engine = workspace.engine;
-    textureEditor.textures = workspace.textures;
+    textureEditor.linked = workspace.linkedTilesets;
     textureEditor.actions = workspace.tilesetActions;
     textureEditor.usage = workspace.usage;
     textureEditor.log = workspace.state.log;

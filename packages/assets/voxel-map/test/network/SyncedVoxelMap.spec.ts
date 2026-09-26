@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
+import {
+  VOXEL_WORLD_VERSION,
+  type VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
@@ -18,7 +21,7 @@ import { createMockRoom } from "../helpers/room.ts";
 
 // CONSTANTS
 const kSnapshot: VoxelWorldJSON = {
-  version: 1,
+  version: VOXEL_WORLD_VERSION,
   chunkSize: 16,
   tilesets: [{ id: "stone", src: "asset-stone", tileSize: 32 }],
   layers: []

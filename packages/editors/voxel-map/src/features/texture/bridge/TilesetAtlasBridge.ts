@@ -4,6 +4,8 @@ import type {
   ResolvedBlockDefinition,
   TilesetAtlas,
   TilesetDefinition,
+  TilesetDocument,
+  TilesetDocumentListener,
   TilesetImage,
   VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
@@ -16,19 +18,28 @@ import type {
 import type { MapDocument } from "../../../document/index.ts";
 import { findBlocksReferencingTileset } from "../uv/blockTextureTiles.ts";
 import { definitionsEqual } from "../../../state/index.ts";
+import type { BlockWriter } from "../../tilesets/LinkedTilesets.ts";
 
 export interface TilesetAtlasBridgeOptions {
   engine: VoxelEngine;
-  document: PixelDocument;
+  pixels: PixelDocument;
+  tileset: TilesetDocument;
   definition: TilesetDefinition;
   mapDocument: MapDocument;
+  blocks: BlockWriter;
   scheduler?: (callback: () => void) => void;
 }
 
+/**
+ * Pushes a tileset's pixels into the engine atlas declared for it and keeps
+ * the alpha mode of the blocks drawn from it in step with the pixels.
+ */
 export class TilesetAtlasBridge {
   readonly #engine: VoxelEngine;
-  readonly #document: PixelDocument;
+  readonly #pixels: PixelDocument;
+  readonly #tileset: TilesetDocument;
   readonly #mapDocument: MapDocument;
+  readonly #blocks: BlockWriter;
   readonly #scheduler: (callback: () => void) => void;
   readonly #unsubscribe: () => void;
   #definition: TilesetDefinition;
@@ -47,6 +58,12 @@ export class TilesetAtlasBridge {
 
   readonly #onSurfaceChanged = (): void => {
     this.#needsFullSync = true;
+  };
+
+  readonly #onTilesetCommand: TilesetDocumentListener = (command) => {
+    if (command.action === "tile-size-updated") {
+      this.#needsFullSync = true;
+    }
   };
 
   readonly #onBlockRegistryChanged = (): void => {
@@ -68,15 +85,19 @@ export class TilesetAtlasBridge {
     options: TilesetAtlasBridgeOptions
   ) {
     this.#engine = options.engine;
-    this.#document = options.document;
+    this.#pixels = options.pixels;
+    this.#tileset = options.tileset;
     this.#definition = options.definition;
     this.#mapDocument = options.mapDocument;
+    this.#blocks = options.blocks;
     this.#scheduler = options.scheduler ??
       ((callback) => requestAnimationFrame(callback));
 
-    this.#document.on("changed", this.#onChanged);
-    this.#document.on("resized", this.#onSurfaceChanged);
-    this.#document.on("replaced", this.#onSurfaceChanged);
+    this.#pixels.on("changed", this.#onChanged);
+    this.#pixels.on("resized", this.#onSurfaceChanged);
+    this.#pixels.on("replaced", this.#onSurfaceChanged);
+    this.#tileset.on("loaded", this.#onSurfaceChanged);
+    this.#tileset.on("command", this.#onTilesetCommand);
     this.#unsubscribe = this.#mapDocument.subscribe(
       "blockRegistryChanged",
       this.#onBlockRegistryChanged
@@ -107,7 +128,7 @@ export class TilesetAtlasBridge {
       return;
     }
 
-    this.#atlas.updateImage(this.#document.buffer.canvas());
+    this.#atlas.updateImage(this.#pixels.buffer.canvas());
     this.syncTransparency();
   }
 
@@ -119,12 +140,11 @@ export class TilesetAtlasBridge {
     }
 
     const engine = this.#engine;
-    const definition = this.#definition;
     const affected = findBlocksReferencingTileset(
       engine.blockRegistry.getAll(),
       (shapeId) => engine.shapeRegistry.get(shapeId),
-      definition.id,
-      definition.tileSize
+      this.#definition.id,
+      this.#tileset.tileSize
     );
 
     const updates: ResolvedBlockDefinition[] = [];
@@ -134,7 +154,7 @@ export class TilesetAtlasBridge {
       }
 
       const transparent = geometries.some(
-        (geometry) => this.#document.hasTransparency(geometry)
+        (geometry) => this.#pixels.hasTransparency(geometry)
       );
       const alphaMode = transparent ? "blend" : "opaque";
       if (
@@ -149,7 +169,7 @@ export class TilesetAtlasBridge {
 
     this.#syncing = true;
     try {
-      engine.defineBlocks(updates);
+      this.#blocks.defineBlocks(updates);
     }
     finally {
       this.#syncing = false;
@@ -158,9 +178,11 @@ export class TilesetAtlasBridge {
 
   destroy(): void {
     this.#running = false;
-    this.#document.off("changed", this.#onChanged);
-    this.#document.off("resized", this.#onSurfaceChanged);
-    this.#document.off("replaced", this.#onSurfaceChanged);
+    this.#pixels.off("changed", this.#onChanged);
+    this.#pixels.off("resized", this.#onSurfaceChanged);
+    this.#pixels.off("replaced", this.#onSurfaceChanged);
+    this.#tileset.off("loaded", this.#onSurfaceChanged);
+    this.#tileset.off("command", this.#onTilesetCommand);
     this.#unsubscribe();
     this.#atlas = null;
   }
@@ -190,7 +212,7 @@ export class TilesetAtlasBridge {
       return;
     }
 
-    this.#atlas.updateImage(this.#document.buffer.canvas());
+    this.#atlas.updateImage(this.#pixels.buffer.canvas());
     this.#pendingTransparency = this.#pendingTransparency === null ?
       dirty :
       rectsUnion(this.#pendingTransparency, dirty);
@@ -206,8 +228,8 @@ export class TilesetAtlasBridge {
 
   #registerAtlas(): void {
     const definition = this.#definition;
-    const { tileSize } = definition;
-    const size = this.#document.size();
+    const { tileSize } = this.#tileset;
+    const size = this.#pixels.size();
     const cols = Math.floor(size.x / tileSize);
     const rows = Math.floor(size.y / tileSize);
     const current = this.#atlas?.def;
@@ -220,7 +242,7 @@ export class TilesetAtlasBridge {
     }
 
     const texture = new THREE.Texture<TilesetImage>(
-      this.#document.buffer.canvas()
+      this.#pixels.buffer.canvas()
     );
     texture.needsUpdate = true;
     const {

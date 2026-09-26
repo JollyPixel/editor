@@ -17,16 +17,25 @@ import {
 } from "./tileRef.ts";
 
 /**
- * Fills in a missing tile grid, flooring partial tiles out of it.
+ * Fills in a missing tile grid, flooring partial tiles out of it. Throws
+ * when the definition declares no tile size.
  */
 export function resolveTilesetDefinition(
   def: TilesetDefinition,
   size: AtlasSize
 ): ResolvedTilesetDefinition {
+  const { tileSize } = def;
+  if (tileSize === undefined) {
+    throw new Error(
+      `Tileset '${def.id}' declares no tile size; load its asset first.`
+    );
+  }
+
   return {
     ...def,
-    cols: def.cols ?? Math.floor(size.width / def.tileSize),
-    rows: def.rows ?? Math.floor(size.height / def.tileSize)
+    tileSize,
+    cols: def.cols ?? Math.floor(size.width / tileSize),
+    rows: def.rows ?? Math.floor(size.height / tileSize)
   };
 }
 

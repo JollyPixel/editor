@@ -27,7 +27,7 @@ import type {
   RotationMode,
   TilesetStore
 } from "../../state/index.ts";
-import { blocksWithoutTileset } from "../tilesets/blockTilesets.ts";
+import type { LinkedTilesets } from "../tilesets/LinkedTilesets.ts";
 import {
   formatCount,
   orphanVoxelsMessage,
@@ -58,7 +58,6 @@ export interface BlockSelectionChangeDetail {
 }
 
 // CONSTANTS
-const kMissingTileset = "Missing tileset";
 const kRotationOptions: JollyOption<RotationMode>[] = [
   { label: "Auto", value: "auto" },
   { label: "0°", value: VoxelRotation.None },
@@ -143,6 +142,9 @@ export class BlockLibrary extends LitElement {
   declare tilesets: TilesetStore;
 
   @property({ attribute: false })
+  declare linked: LinkedTilesets;
+
+  @property({ attribute: false })
   declare usage: BlockUsageStore;
 
   @property({ type: String })
@@ -165,9 +167,6 @@ export class BlockLibrary extends LitElement {
 
   @state()
   private declare _marks: PeerMarkMap<number>;
-
-  @state()
-  private declare _problems: ReadonlyMap<number, string>;
 
   @state()
   private declare _unused: ReadonlySet<number>;
@@ -204,7 +203,6 @@ export class BlockLibrary extends LitElement {
     this._blocks = [];
     this._shownBlocks = [];
     this._marks = new Map();
-    this._problems = new Map();
     this._unused = new Set();
   }
 
@@ -226,10 +224,6 @@ export class BlockLibrary extends LitElement {
     this.#refreshMarks();
   };
 
-  readonly #onTilesetsChange = () => {
-    this.#refreshProblems();
-  };
-
   readonly #onUsageChange = () => {
     this.#refreshUsage();
   };
@@ -243,7 +237,6 @@ export class BlockLibrary extends LitElement {
       this.brush.subscribe("flipYChange", this.#onBrushOptionChange),
       this.presence.subscribe("blockSelectionsChange", this.#onMarksChange),
       this.presence.subscribe("peersChange", this.#onMarksChange),
-      this.tilesets.subscribe("change", this.#onTilesetsChange),
       this.usage.subscribe("change", this.#onUsageChange)
     );
     this.#refreshMarks();
@@ -272,14 +265,12 @@ export class BlockLibrary extends LitElement {
 
   override render() {
     return html`
-      ${this.#renderProblems()}
       ${this.#renderOrphans()}
       <block-library-viewport
         .engine=${this.engine}
         .blocks=${this._shownBlocks}
         .marks=${this._marks}
         .selectedId=${this._selectedId}
-        .problems=${this._problems}
         .unused=${this._unused}
         .reorderable=${isReorderable(this.order)}
         .layout=${this.layout}
@@ -308,33 +299,11 @@ export class BlockLibrary extends LitElement {
         .engine=${this.engine}
         .brush=${this.brush}
         .tilesets=${this.tilesets}
+        .linked=${this.linked}
         .usage=${this.usage}
         .mapDocument=${this.mapDocument}
         .block=${this._selectedBlock}
       ></block-editor-dialog>
-    `;
-  }
-
-  #renderProblems() {
-    const count = this._problems.size;
-    if (count === 0) {
-      return nothing;
-    }
-
-    const [firstId] = this._problems.keys();
-
-    return html`
-      <button
-        type="button"
-        class="problems"
-        title="Select the first block without tileset"
-        @click=${() => {
-          this.brush.blockId = firstId;
-        }}
-      >
-        <jolly-icon name="warning"></jolly-icon>
-        <span>${count} block${count === 1 ? "" : "s"} without tileset</span>
-      </button>
     `;
   }
 
@@ -391,7 +360,7 @@ export class BlockLibrary extends LitElement {
   #onBlockMove(
     event: CustomEvent<BlockMoveDetail>
   ): void {
-    this.engine.moveBlock(event.detail.id, event.detail.toIndex);
+    this.linked.moveBlock(event.detail.id, event.detail.toIndex);
   }
 
   #onBlockCreate(): void {
@@ -453,7 +422,6 @@ export class BlockLibrary extends LitElement {
       ...this.engine.blockRegistry.getAll()
     ];
     this.#refreshShownBlocks();
-    this.#refreshProblems();
   }
 
   #refreshUsage(): void {
@@ -483,14 +451,6 @@ export class BlockLibrary extends LitElement {
     }
 
     this._shownBlocks = next;
-  }
-
-  #refreshProblems(): void {
-    const missing = blocksWithoutTileset(this._blocks, this.tilesets.ids());
-
-    this._problems = new Map(
-      missing.map((block) => [block.id, kMissingTileset])
-    );
   }
 }
 
