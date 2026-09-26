@@ -1,5 +1,26 @@
 # @jolly-pixel/three
 
+## 4.1.0
+
+### Minor Changes
+
+- [#769](https://github.com/JollyPixel/editor/pull/769) [`4eb05ad`](https://github.com/JollyPixel/editor/commit/4eb05ad0723a9cc386cb7232009aa9a8a2fb6ebc) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add the `boxSilhouette` highlight technique, exported as `HighlightBoxSilhouette`: a camera-facing outline for box meshes, built from watertight edge geometry instead of an outline pass.
+  `MeshHighlightAppearance` gains `occludedOpacityScale` to dim any indicator's portion hidden behind other geometry, and overlay factories can read `peer` to render a local indicator above a peer one on the same geometry.
+
+- [#772](https://github.com/JollyPixel/editor/pull/772) [`4981bb9`](https://github.com/JollyPixel/editor/commit/4981bb99fb740a52641452686674df6f0f4a1b6f) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `TransformControls` gains a `slab` axis handle kind: a square tip, half as deep as it is wide by default, for resize-style handles that should read differently from the scale cube.
+  
+  `MeshHighlightAppearance` gains `renderOrder` and `xrayDepthWrite`. The box silhouette uses them to place its overlays in the render order, with peer indicators one step below, and to keep writing depth under xray so later transparent passes, such as a grid, stay hidden behind the outline. Its occluded pass never writes depth.
+  
+  Fix `HighlightBoxSilhouette` throwing on a color change after the camera sat inside the box, which kept a late-joining peer from seeing existing selections.
+
+### Patch Changes
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- Updated dependencies [[`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/network@5.0.0
+
 ## 4.0.0
 
 ### Major Changes
