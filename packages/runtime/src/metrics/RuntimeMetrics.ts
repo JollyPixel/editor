@@ -7,16 +7,21 @@ import type {
 
 // Import Internal Dependencies
 import type { MetricsPanel } from "./MetricsPanel.ts";
+import type { RendererMetrics } from "./RendererMetrics.ts";
 
 export class RuntimeMetrics {
   readonly recorder: StatsRecorder;
+  readonly renderer: RendererMetrics;
 
   #panel: MetricsPanel | null = null;
 
   constructor(
-    recorder: StatsRecorder
+    recorder: StatsRecorder,
+    renderer: RendererMetrics
   ) {
     this.recorder = recorder;
+    this.renderer = renderer;
+    recorder.addSource(renderer);
   }
 
   get revision(): number {

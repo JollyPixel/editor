@@ -246,6 +246,12 @@ renderer.on("draw", ({ source }) => {
 });
 ```
 
+`source.info.render` is only valid inside a `"draw"` handler. Three.js resets
+it at the start of every animation-loop tick, including ticks a frame cap
+skips. Under `@jolly-pixel/runtime`, read the latched
+[renderer counters](../../../runtime/docs/api/Runtime.md#renderer-counters)
+instead.
+
 `clear()` clears the frame buffer without rendering.
 
 `renderComponents` lists the registered cameras in registration order.

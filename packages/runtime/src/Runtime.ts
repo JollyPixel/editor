@@ -106,7 +106,6 @@ export class Runtime<
   #viewHelper: ViewHelperOptions | null;
   #statsOverlay: MountedPerformanceStats | null = null;
   #metricsPanel: MetricsPanel | null = null;
-  #rendererMetrics: RendererMetrics;
   #focusHintOverlay: MountedFocusHint | null = null;
   #viewHelperOverlay: MountedViewHelper | null = null;
 
@@ -121,7 +120,7 @@ export class Runtime<
   };
 
   #captureRendererFrame = () => {
-    this.#rendererMetrics.captureFrame();
+    this.metrics.renderer.captureFrame();
   };
 
   private constructor(
@@ -136,11 +135,10 @@ export class Runtime<
     this.overlay = new OverlayLayer(canvas, options.overlay);
 
     this.stats = new StatsRecorder();
-    this.metrics = new RuntimeMetrics(this.stats);
-    this.#rendererMetrics = new RendererMetrics(
-      renderer.getSource()
+    this.metrics = new RuntimeMetrics(
+      this.stats,
+      new RendererMetrics(renderer.getSource())
     );
-    this.metrics.addSource(this.#rendererMetrics);
     renderer.on("draw", this.#captureRendererFrame);
 
     this.#focusCanvas = options.focusCanvas ?? true;
