@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import type * as THREE from "three/webgpu";
 import {
+  rectOf,
   rotationOf,
+  withRotation,
   type UVSlot,
   type UVGeometry,
   type UVMap,
@@ -11,11 +13,8 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import {
-  applyUvGeometry,
-  applyUvRect
-} from "./applyUvGeometry.ts";
-import type { FaceRanges } from "./types.ts";
+import { applyUvGeometry } from "./applyUvGeometry.ts";
+import type { FaceRanges, FaceVertexRange } from "./types.ts";
 
 export interface UVGeometryBindingOptions {
   geometry: THREE.BufferGeometry;
@@ -28,6 +27,7 @@ export class UVGeometryBinding {
   readonly #geometry: THREE.BufferGeometry;
   readonly #faceRanges: FaceRanges;
   readonly #baseUv: Float32Array;
+  readonly #wholeMesh: readonly FaceVertexRange[];
 
   #region: UVRegion;
   #textureSize: Vec2;
@@ -90,6 +90,12 @@ export class UVGeometryBinding {
       this.#baseUv[index * 2] = uvAttribute.getX(index);
       this.#baseUv[index * 2 + 1] = uvAttribute.getY(index);
     }
+    this.#wholeMesh = [
+      {
+        start: 0,
+        count: uvAttribute.count
+      }
+    ];
 
     this.#applyRegion();
   }
@@ -116,38 +122,20 @@ export class UVGeometryBinding {
     face: UVSlot | null,
     geometry: UVGeometry
   ): void {
-    const uvAttribute = this.#geometry.getAttribute("uv");
-
-    if (face === null) {
-      applyUvRect({
-        uvAttribute,
-        baseUv: this.#baseUv,
-        rect: "shape" in geometry ? geometry.rect : geometry,
-        rotation: rotationOf(geometry),
-        textureSize: this.#textureSize,
-        ranges: [
-          {
-            start: 0,
-            count: uvAttribute.count
-          }
-        ]
-      });
+    const ranges = face === null ? this.#wholeMesh : this.#faceRanges[face];
+    if (!ranges || ranges.length === 0) {
+      return;
     }
-    else {
-      const ranges = this.#faceRanges[face];
-      if (!ranges || ranges.length === 0) {
-        return;
-      }
-      applyUvGeometry(
-        uvAttribute,
-        this.#baseUv,
+
+    applyUvGeometry(
+      this.#geometry,
+      this.#baseUv,
+      face === null ?
+        withRotation(rectOf(geometry), rotationOf(geometry)) :
         geometry,
-        this.#textureSize,
-        ranges
-      );
-    }
-
-    uvAttribute.needsUpdate = true;
+      this.#textureSize,
+      ranges
+    );
   }
 
   preview(
@@ -156,7 +144,7 @@ export class UVGeometryBinding {
   ): void {
     if (face === null) {
       this.#applySlots(
-        this.#region.withRect("shape" in geometry ? geometry.rect : geometry)
+        this.#region.withRect(rectOf(geometry))
       );
 
       return;

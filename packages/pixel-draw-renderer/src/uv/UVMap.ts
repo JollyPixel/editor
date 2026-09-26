@@ -164,6 +164,20 @@ export class UVMap extends Emitter<
   create(
     options: UVRegionCreateOptions
   ): UVRegion {
+    const region = this.#build(options);
+
+    this.#regions.set(region);
+    this.emit("region-created", {
+      region
+    });
+    this.emit("changed");
+
+    return region;
+  }
+
+  #build(
+    options: UVRegionCreateOptions
+  ): UVRegion {
     const size = this.#getCanvasSize();
     const width = clamp(options.width, 1, Math.max(1, size.x));
     const height = clamp(options.height, 1, Math.max(1, size.y));
@@ -201,9 +215,8 @@ export class UVMap extends Emitter<
     const activeFaces = [
       ...(activeSlots ?? DEFAULT_UV_SLOTS)
     ];
-    let region: UVRegion;
     if (state === "stacked") {
-      region = hasTopology ?
+      return hasTopology ?
         new UVRegion({
           ...identity,
           state,
@@ -217,25 +230,17 @@ export class UVMap extends Emitter<
           rect
         });
     }
-    else {
-      const spread = new UVRegion({
-        ...identity,
-        state: "free",
-        activeFaces,
-        faces
-      });
-      region = state === "unfolded" ?
-        this.#clamped(spread.unfold()) :
-        spread;
-    }
 
-    this.#regions.set(region);
-    this.emit("region-created", {
-      region
+    const spread = new UVRegion({
+      ...identity,
+      state: "free",
+      activeFaces,
+      faces
     });
-    this.emit("changed");
 
-    return region;
+    return state === "unfolded" ?
+      this.#clamped(spread.unfold()) :
+      spread;
   }
 
   restore(
@@ -430,12 +435,18 @@ export class UVMap extends Emitter<
     );
   }
 
-  clear(): void {
-    for (const id of [...this.#regions.keys()]) {
-      this.delete(id);
+  clear(
+    filter: (region: UVRegion) => boolean = () => true
+  ): void {
+    for (const region of [...this.#regions.values()]) {
+      if (filter(region)) {
+        this.delete(region.id);
+      }
     }
-    this.#cascadeIndex = 0;
-    this.#palette.reset();
+    if (this.#regions.size === 0) {
+      this.#cascadeIndex = 0;
+      this.#palette.reset();
+    }
   }
 
   #replace(

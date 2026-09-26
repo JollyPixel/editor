@@ -127,6 +127,54 @@ is `persistent` and offers `reset()`, which closes the workspace and deletes
 what the browser stored.
 Shared follower tabs set `canReset` to `false`; reset from the owner tab.
 
+### EditorArchives
+
+`EditorArchives` wraps `archive` and `workspace` for an editor's export,
+import and reset buttons; each button calls one flow.
+
+```ts
+archives(options: EditorSessionArchivesOptions): EditorArchives;
+```
+
+`session.archives()` builds one for the session's target and `accepts` kind;
+the editor gives only the `fallbackName`, the `resetWarning` and, optionally,
+the `browser`. The target is read from the catalog on each call, so a
+renamed target downloads under its new path.
+
+```ts
+const archives = session.archives({
+  fallbackName: "model",
+  resetWarning: "Every model stored here is deleted."
+});
+
+await archives.download();
+await archives.importFile(file);
+await archives.reset();
+```
+
+| Member | Role |
+|---|---|
+| `canImport` / `canReset` / `volatile` | whether to offer import and reset, and whether edits are lost on reload |
+| `download()` | exports the target and saves it as the target path's stem with `.zip`, or `fallbackName` |
+| `importFile(file)` | rejects with `ArchiveRootError` before anything is written when the archive root is not an `accepts` asset; asks how to handle assets that already exist, imports, remembers the root as the last opened asset, then reloads onto it; does nothing when the question is dismissed |
+| `reset()` | asks to confirm `resetWarning`, resets the workspace and reloads |
+
+Downloads, dialogs and navigation go through the `browser` option, an
+`EditorArchiveBrowser`; it defaults to the DOM and `window.location`.
+
+### ArchiveActions
+
+`<jolly-archive-actions>` renders the export, import and reset buttons of an
+`EditorArchives`, the notice of a volatile workspace, and the error of the last
+failed flow. It renders nothing until `archives` is set. Importing
+`@jolly-pixel/editor.host/ui` defines it; the root entry point does not.
+
+```ts
+import "@jolly-pixel/editor.host/ui";
+
+html`<jolly-archive-actions .archives=${archives}></jolly-archive-actions>`;
+```
+
 ## Dependencies
 
 ```ts

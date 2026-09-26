@@ -4,11 +4,13 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
 import { createBlockTransform } from "./blockTransform.ts";
+import { createBlockUv } from "./blockUv.ts";
 import type {
   BlockTransformJSON,
   MirrorAxes,
   ModelNodeJSON,
   NodeTransformJSON,
+  UVLayoutData,
   VoxelModelCommand,
   VoxelModelSnapshot
 } from "../network/types.ts";
@@ -34,6 +36,7 @@ export interface AddFolderOptions {
 
 export interface AddBlockOptions extends AddFolderOptions {
   transform?: BlockTransformJSON;
+  uv?: UVLayoutData;
 }
 
 export class ModelDocument extends Emitter<ModelDocumentEvents> {
@@ -48,7 +51,8 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       id = crypto.randomUUID(),
       name,
       parentId = null,
-      transform = createBlockTransform()
+      transform = createBlockTransform(),
+      uv = createBlockUv()
     } = options;
     const added = this.#commit({
       action: "node-added",
@@ -57,7 +61,8 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
         id,
         parentId,
         name,
-        transform
+        transform,
+        uv
       }
     });
 
@@ -128,6 +133,17 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       id,
       transform,
       ...(flipAxes ? { flipAxes } : {})
+    });
+  }
+
+  setUv(
+    id: string,
+    uv: UVLayoutData
+  ): boolean {
+    return this.#commit({
+      action: "node-uv-changed",
+      id,
+      uv
     });
   }
 

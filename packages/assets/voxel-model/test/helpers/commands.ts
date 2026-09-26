@@ -7,12 +7,17 @@ import type {
   BlockNodeJSON,
   BlockTransformJSON,
   FolderNodeJSON,
+  UVLayoutData,
   VoxelModelCommand,
   VoxelModelNetworkCommand
 } from "#src/network/types.ts";
 
 // CONSTANTS
 export const TRANSFORM: BlockTransformJSON = createBlockTransform();
+export const UV: UVLayoutData = {
+  state: "stacked",
+  rect: { x: 0, y: 0, width: 16, height: 16 }
+};
 
 let seq = 0;
 
@@ -40,7 +45,8 @@ export function blockNode(
     id,
     parentId,
     name: id,
-    transform: TRANSFORM
+    transform: TRANSFORM,
+    uv: UV
   };
 }
 

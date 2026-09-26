@@ -25,6 +25,10 @@ import {
   CatalogSessionArchive,
   type SessionArchive
 } from "./SessionArchive.ts";
+import {
+  EditorArchives,
+  type EditorArchivesOptions
+} from "./EditorArchives.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 import {
   CATALOG_TIMEOUT_MS,
@@ -67,6 +71,11 @@ export interface EditorSessionConnectOptions extends EditorSessionTarget {
 export interface EditorSessionParts extends EditorSessionConnectOptions {
   catalog: CatalogClient;
 }
+
+export type EditorSessionArchivesOptions = Pick<
+  EditorArchivesOptions,
+  "fallbackName" | "resetWarning" | "browser"
+>;
 
 interface SessionDependency {
   readonly lease: AssetLease<unknown>;
@@ -142,6 +151,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   readonly targetReady: Promise<void>;
 
   #client: EditorSessionClient;
+  #accepts: string;
   #kinds = new Map<string, AssetDocumentKind<unknown>>();
   #dependencies = new Map<string, SessionDependency>();
   #disposed = false;
@@ -163,6 +173,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       canImport: this.workspace?.persistent ?? true
     });
     this.#client = options.client;
+    this.#accepts = options.accepts;
     for (const kind of options.kinds) {
       this.#kinds.set(kind.kind, kind);
     }
@@ -205,6 +216,23 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       kind,
       this.target.record.id
     );
+  }
+
+  /**
+   * Export, import and reset flows for the target, named after its current
+   * catalog path.
+   */
+  archives(
+    options: EditorSessionArchivesOptions
+  ): EditorArchives {
+    return new EditorArchives({
+      ...options,
+      archive: this.archive,
+      workspace: this.workspace,
+      accepts: this.#accepts,
+      target: () => this.catalog.record(this.target.record.id) ??
+        this.target.record
+    });
   }
 
   * dependencies(): IterableIterator<AssetDependency> {

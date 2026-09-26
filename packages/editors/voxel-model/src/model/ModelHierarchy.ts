@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
+import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   createBlockTransform,
+  createBlockUv,
+  nextBlockUvOrigin,
   type BlockTransformJSON,
   type MirrorAxes,
   type ModelDocument,
@@ -13,18 +16,6 @@ import {
   buildHierarchyNodes,
   type HierarchyNode
 } from "./hierarchyNodes.ts";
-
-export interface BlockRegions {
-  create(
-    uuid: string,
-    name: string
-  ): void;
-  copy(
-    sourceUuid: string,
-    uuid: string,
-    name: string
-  ): void;
-}
 
 export interface BlockPoses {
   under(
@@ -39,7 +30,7 @@ export interface BlockPoses {
 
 export interface ModelHierarchyOptions {
   document: ModelDocument;
-  regions: BlockRegions;
+  textureSize(): Vec2;
   poses: BlockPoses;
 }
 
@@ -54,14 +45,14 @@ export interface RemoveOptions {
 
 export class ModelHierarchy {
   #document: ModelDocument;
-  #regions: BlockRegions;
+  #textureSize: () => Vec2;
   #poses: BlockPoses;
 
   constructor(
     options: ModelHierarchyOptions
   ) {
     this.#document = options.document;
-    this.#regions = options.regions;
+    this.#textureSize = options.textureSize;
     this.#poses = options.poses;
   }
 
@@ -79,16 +70,14 @@ export class ModelHierarchy {
     name: string,
     parentId: string | null
   ): string | null {
-    const id = this.#document.addBlock({
+    const layouts = [...this.#document.tree.blocks()].map((block) => block.uv);
+
+    return this.#document.addBlock({
       name,
       parentId,
-      transform: createBlockTransform()
+      transform: createBlockTransform(),
+      uv: createBlockUv(nextBlockUvOrigin(layouts, this.#textureSize()))
     });
-    if (id !== null) {
-      this.#regions.create(id, name);
-    }
-
-    return id;
   }
 
   createFolder(
@@ -239,15 +228,11 @@ export class ModelHierarchy {
       return null;
     }
 
-    const uuid = this.#document.addBlock({
+    return this.#document.addBlock({
       name,
       parentId,
-      transform: source.transform
+      transform: source.transform,
+      uv: source.uv
     });
-    if (uuid !== null) {
-      this.#regions.copy(sourceUuid, uuid, name);
-    }
-
-    return uuid;
   }
 }

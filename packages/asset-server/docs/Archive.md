@@ -69,7 +69,10 @@ exportAssetArchive(
 Flushes the root and every asset of its closure before reading them, so
 pending edits of a dependency are part of the archive. Without `root` the
 whole workspace is exported. An unknown `root` rejects with
-`AssetArchiveError`.
+`AssetArchiveError`. Each stored document is loaded into a throwaway state of
+its kind, the same check [`planAssetImport`](#planassetimport) runs, so an
+export never produces an archive its import refuses: a document that does not
+load rejects with `unreadable-asset` and the `assetId` at fault.
 
 ## readAssetArchive
 

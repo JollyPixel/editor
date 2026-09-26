@@ -35,6 +35,13 @@ import {
   groupPositionsByColor
 } from "../buffer/colorGroups.ts";
 
+export type UVRegionFilter = (id: string) => boolean;
+
+type UVRegionHookEvent = Extract<
+  PixelBufferHookEvent,
+  { action: `uv-region-${string}`; }
+>;
+
 export interface DocumentEditsOptions {
   buffer: CanvasBuffer;
   history: History;
@@ -52,6 +59,7 @@ export class DocumentEdits {
   #onReset: () => void;
   #isApplyingRemote = false;
   #isReplayingHistory = false;
+  #disowned = new Set<UVRegionFilter>();
 
   constructor(
     options: DocumentEditsOptions
@@ -92,6 +100,34 @@ export class DocumentEdits {
     fn: PixelBufferHookListener | undefined
   ) {
     this.#onBufferUpdated = fn;
+  }
+
+  disownUvRegions(
+    filter: UVRegionFilter
+  ): () => void {
+    this.#disowned.add(filter);
+
+    return () => {
+      this.#disowned.delete(filter);
+    };
+  }
+
+  ownsUvRegion(
+    id: string
+  ): boolean {
+    for (const disowns of this.#disowned) {
+      if (disowns(id)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  #tracksUv(
+    region: UVRegion
+  ): boolean {
+    return !this.#isApplyingRemote && this.ownsUvRegion(region.id);
   }
 
   commitStroke(
@@ -259,6 +295,10 @@ export class DocumentEdits {
   applyRemoteCommand(
     event: PixelBufferHookEvent
   ): void {
+    if (isUvRegionEvent(event) && !this.ownsUvRegion(uvRegionIdOf(event))) {
+      return;
+    }
+
     this.#isApplyingRemote = true;
     try {
       this.#applyRemote(event);
@@ -283,9 +323,11 @@ export class DocumentEdits {
     this.#isApplyingRemote = true;
     try {
       this.#buffer.replacePixels(pixels, size);
-      this.#uvMap.clear();
+      this.#uvMap.clear((region) => this.ownsUvRegion(region.id));
       for (const region of uvRegions) {
-        this.#uvMap.restore(region);
+        if (this.ownsUvRegion(region.id)) {
+          this.#uvMap.restore(region);
+        }
       }
       this.#history.clear();
     }
@@ -461,7 +503,7 @@ export class DocumentEdits {
   #handleUvCreated(
     region: UVRegion
   ): void {
-    if (this.#isApplyingRemote) {
+    if (!this.#tracksUv(region)) {
       return;
     }
     const data = region.toJSON();
@@ -480,7 +522,7 @@ export class DocumentEdits {
   #handleUvDeleted(
     region: UVRegion
   ): void {
-    if (this.#isApplyingRemote) {
+    if (!this.#tracksUv(region)) {
       return;
     }
     if (!this.#isReplayingHistory) {
@@ -502,7 +544,7 @@ export class DocumentEdits {
     face: UVSlot | null,
     previousRect: SelectionRect
   ): void {
-    if (this.#isApplyingRemote) {
+    if (!this.#tracksUv(region)) {
       return;
     }
     const rect = region.rectFor(face ?? "front");
@@ -529,7 +571,7 @@ export class DocumentEdits {
     region: UVRegion,
     previous: UVRegionData
   ): void {
-    if (this.#isApplyingRemote) {
+    if (!this.#tracksUv(region)) {
       return;
     }
     const data = region.toJSON();
@@ -552,7 +594,7 @@ export class DocumentEdits {
     previous: UVRegionData,
     face: UVSlot | null
   ): void {
-    if (this.#isApplyingRemote) {
+    if (!this.#tracksUv(region)) {
       return;
     }
     const data = region.toJSON();
@@ -598,4 +640,18 @@ export class DocumentEdits {
       );
     }
   }
+}
+
+function isUvRegionEvent(
+  event: PixelBufferHookEvent
+): event is UVRegionHookEvent {
+  return event.action.startsWith("uv-region-");
+}
+
+function uvRegionIdOf(
+  event: UVRegionHookEvent
+): string {
+  return "id" in event.metadata ?
+    event.metadata.id :
+    event.metadata.region.id;
 }

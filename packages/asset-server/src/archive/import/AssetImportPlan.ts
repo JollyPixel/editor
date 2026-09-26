@@ -20,10 +20,8 @@ import type {
 } from "./AssetImport.ts";
 import { archiveEntryOf } from "../format/ArchiveManifest.ts";
 import { AssetArchiveError } from "../errors/AssetArchiveError.ts";
-import { UnknownAssetKindError } from "../../kinds/errors/UnknownAssetKindError.ts";
-import type { AssetKindRegistry } from "../../kinds/AssetKindRegistry.ts";
+import { readableAsset } from "../readableAsset.ts";
 import type { CatalogProjection } from "../../catalog/CatalogProjection.ts";
-import { asError } from "../../utils/asError.ts";
 
 export class AssetImportPlan {
   readonly root: AssetReferenceData | undefined;
@@ -40,7 +38,7 @@ export class AssetImportPlan {
     const archived = new Set(archive.assets.map((asset) => asset.id));
 
     for (const asset of archive.assets) {
-      const readable = dryRun(backend.kinds, asset);
+      const readable = readableAsset(backend.kinds, asset);
       if (!readable.ok) {
         return readable;
       }
@@ -123,35 +121,4 @@ export class AssetImportPlan {
       });
     }
   }
-}
-
-function dryRun(
-  kinds: AssetKindRegistry,
-  asset: AssetArchiveAsset
-): Result<void, AssetImportError> {
-  if (!kinds.has(asset.kind)) {
-    const error = new UnknownAssetKindError(asset.kind);
-
-    return Err(error);
-  }
-
-  const handler = kinds.get(asset.kind);
-  try {
-    handler.load(handler.create(asset.id), asset.data);
-  }
-  catch (cause) {
-    const error = new AssetArchiveError(
-      "unreadable-asset",
-      `Asset "${asset.path}" is not a readable "${asset.kind}": ` +
-      `${asError(cause).message}`,
-      {
-        assetId: asset.id,
-        cause
-      }
-    );
-
-    return Err(error);
-  }
-
-  return Ok(undefined);
 }

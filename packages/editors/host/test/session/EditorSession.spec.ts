@@ -13,8 +13,11 @@ import {
   type AssetReferenceData
 } from "@jolly-pixel/asset";
 import {
+  CATALOG_APPLIED,
+  CATALOG_EXPORT,
   CATALOG_ROOM,
-  CatalogUnavailableError
+  CatalogUnavailableError,
+  type CatalogExportCommand
 } from "@jolly-pixel/asset-server/catalog/client";
 
 // Import Internal Dependencies
@@ -438,3 +441,62 @@ describe("EditorSession target document", () => {
     assert.equal(lease.document.disposed, true);
   });
 });
+
+describe("EditorSession archives", () => {
+  test("downloads the target under its current catalog path", async() => {
+    const { client, session } = await connect();
+    const saved: string[] = [];
+    const archives = session.archives({
+      fallbackName: "map",
+      resetWarning: "",
+      browser: {
+        location: {
+          href: "http://localhost/",
+          assign: () => undefined,
+          reload: () => undefined
+        },
+        save: (_blob, fileName) => {
+          saved.push(fileName);
+        },
+        askConflictPolicy: () => Promise.resolve(null),
+        confirmReset: () => Promise.resolve(false)
+      }
+    });
+    const catalog = client.fakeRoom(CATALOG_ROOM);
+    catalog.receive(changedMessage("map", {
+      ...kMap,
+      source: "maps/overworld.voxelmap.json"
+    }));
+
+    const downloading = archives.download();
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
+    const command = catalog.sent.find(isExportCommand);
+    assert.ok(command);
+    catalog.receive({
+      type: CATALOG_APPLIED,
+      requestId: command.requestId,
+      command: CATALOG_EXPORT,
+      content: {
+        type: "inline",
+        encoding: "base64",
+        data: ""
+      }
+    });
+    await downloading;
+
+    assert.equal(command.root, "map");
+    assert.deepEqual(saved, ["overworld.zip"]);
+    session.dispose();
+  });
+});
+
+function isExportCommand(
+  message: unknown
+): message is CatalogExportCommand & { requestId: string; } {
+  return typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === CATALOG_EXPORT;
+}

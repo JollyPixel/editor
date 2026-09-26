@@ -53,3 +53,7 @@ Each helper takes `room` and `canvas`; cursor also needs `label` and `color`, wh
 `PixelCommandArbiter.admit(buffer, command)` returns an admission or `null`. `applyCommandToBuffer(buffer, command)` is the fold operation used by the kind handler. `pixelCommandProtocol` validates live and replayed commands; `pixelSnapshotSchema` describes snapshots. Conflict keys and the append order are described in [architecture](../ARCHITECTURE.md).
 
 For restricted rooms, use the `pixelart` extension and its command actions in an `@jolly-pixel/network` rights table. Resolve a user's role from a trusted server session; client-supplied identity is metadata. See [network rights](../../../network/docs/Rights.md).
+
+## UV layouts
+
+`uvRegionSchema` validates a UV region. `uvLayoutSchema` validates the same geometry without `id`, `name` and `color`, typed as `UVLayoutData`, for a document that stores UV regions a texture disowns with `PixelDocument.disownUvRegions()`. `uvLayoutOf(region)` drops a region's identity and `uvRegionOf(layout, { id, name?, color })` restores one. All are exported from the root entry point.

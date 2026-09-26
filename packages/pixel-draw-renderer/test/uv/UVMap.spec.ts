@@ -370,6 +370,20 @@ describe("UVMap — clear", () => {
     assert.strictEqual(restored, 1);
     assert.deepStrictEqual([...map.regions].map((region) => region.id), [first.id]);
   });
+
+  test("a filter deletes matching regions and keeps cascading placement", () => {
+    const map = makeMap();
+    const kept = map.create({ id: "kept", width: 4, height: 4 });
+    map.create({ id: "gone", width: 4, height: 4 });
+
+    map.clear((region) => region.id === "gone");
+
+    assert.deepStrictEqual([...map.regions].map((region) => region.id), [kept.id]);
+    assert.notDeepStrictEqual(
+      map.create({ width: 4, height: 4 }).rectFor("front"),
+      { x: 0, y: 0, width: 4, height: 4 }
+    );
+  });
 });
 
 describe("UVMap — on/off", () => {

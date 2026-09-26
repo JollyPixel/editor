@@ -4,6 +4,7 @@ import type {
   AssetRoomDeletedMessage,
   AssetRoomRejectedMessage
 } from "@jolly-pixel/asset-server/kinds";
+import type { UVLayoutData } from "@jolly-pixel/asset.pixel-art";
 
 // Import Internal Dependencies
 import type {
@@ -21,6 +22,8 @@ export type Vector3JSON = network.Infer<typeof vector3Schema>;
 export type MirrorAxes = network.Infer<typeof mirrorAxesSchema>;
 export type BlockTransformJSON = network.Infer<typeof blockTransformSchema>;
 export type NodeTransformJSON = network.Infer<typeof nodeTransformSchema>;
+
+export type { UVLayoutData };
 
 export type FolderNodeJSON = network.Infer<typeof folderNodeSchema>;
 export type BlockNodeJSON = network.Infer<typeof blockNodeSchema>;

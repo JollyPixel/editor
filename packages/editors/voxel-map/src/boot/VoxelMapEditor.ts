@@ -24,7 +24,6 @@ import { TILESET_TEXTURE_KIND } from "../features/tilesets/TilesetTextures.ts";
 import {
   mountInspectorControls
 } from "../features/performance/index.ts";
-import { MapArchives } from "../features/map-config/MapArchives.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
@@ -82,12 +81,10 @@ export class VoxelMapEditor {
         identity: session.identity,
         catalog: session.catalog,
         assets: session.assets,
-        archives: new MapArchives({
-          archive: session.archive,
-          workspace: session.workspace,
-          accepts: VoxelMapEditor.accepts,
-          target: () => session.catalog.record(session.target.record.id) ??
-            session.target.record
+        archives: session.archives({
+          fallbackName: "map",
+          resetWarning: "Every map and tileset stored in this browser is " +
+            "deleted. Export what you want to keep first."
         })
       },
       samples: editorRuntime.samples

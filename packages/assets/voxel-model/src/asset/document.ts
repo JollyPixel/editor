@@ -7,6 +7,7 @@ import type {
   VoxelModelSnapshot
 } from "../network/types.ts";
 import { createBlockTransform } from "../model/blockTransform.ts";
+import { createBlockUv } from "../model/blockUv.ts";
 import { InvalidVoxelModelDocumentError } from "./InvalidVoxelModelDocumentError.ts";
 
 // CONSTANTS
@@ -86,7 +87,8 @@ function createBlockNode(
     id: crypto.randomUUID(),
     parentId: null,
     name,
-    transform: createBlockTransform()
+    transform: createBlockTransform(),
+    uv: createBlockUv()
   };
 }
 

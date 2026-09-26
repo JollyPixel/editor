@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  createBlockUv,
   createVoxelModelDocument,
   decodeVoxelModelDocument,
   encodeVoxelModelDocument,
@@ -35,7 +36,8 @@ describe("createVoxelModelDocument", () => {
         size: { x: 1, y: 1, z: 1 },
         scale: { x: 1, y: 1, z: 1 },
         rotation: { x: 0, y: 0, z: 0 }
-      }
+      },
+      uv: createBlockUv()
     });
   });
 

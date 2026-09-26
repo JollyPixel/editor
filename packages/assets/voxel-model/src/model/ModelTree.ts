@@ -5,6 +5,7 @@ import type {
   ModelNodeJSON,
   VoxelModelCommand
 } from "../network/types.ts";
+import { InvalidModelTreeError } from "./InvalidModelTreeError.ts";
 
 export type ModelTreeReader = Pick<
   ModelTree,
@@ -141,6 +142,7 @@ export class ModelTree {
           !this.#isWithin(command.parentId, command.id) &&
           command.transforms.every(({ id }) => this.#isBlock(id));
       case "node-transformed":
+      case "node-uv-changed":
         return this.#isBlock(command.id);
     }
   }
@@ -176,16 +178,33 @@ export class ModelTree {
           this.#patchBlock(command.id, { flipAxes: { ...command.flipAxes } });
         }
         break;
+
+      case "node-uv-changed":
+        this.#patchBlock(command.id, { uv: structuredClone(command.uv) });
+        break;
     }
   }
 
+  /**
+   * Replaces every node, or throws `InvalidModelTreeError` and keeps the
+   * current nodes when an id repeats, a parent is missing or a node is its
+   * own ancestor.
+   */
   load(
     nodes: Iterable<ModelNodeJSON>
   ): void {
-    this.#nodes.clear();
+    const loaded = new Map<string, ModelNodeJSON>();
     for (const node of nodes) {
-      this.#nodes.set(node.id, structuredClone(node));
+      if (loaded.has(node.id)) {
+        throw new InvalidModelTreeError(node.id, "is listed twice");
+      }
+      loaded.set(node.id, structuredClone(node));
     }
+    for (const node of loaded.values()) {
+      assertRooted(loaded, node);
+    }
+
+    this.#nodes = loaded;
   }
 
   clear(): void {
@@ -235,7 +254,7 @@ export class ModelTree {
 
   #patchBlock(
     id: string,
-    patch: Partial<Pick<BlockNodeJSON, "transform" | "flipAxes">>
+    patch: Partial<Pick<BlockNodeJSON, "transform" | "flipAxes" | "uv">>
   ): void {
     const node = this.#nodes.get(id);
     if (node?.kind === "block") {
@@ -248,5 +267,23 @@ export class ModelTree {
     transform: BlockTransformJSON
   ): void {
     this.#patchBlock(id, { transform: structuredClone(transform) });
+  }
+}
+
+function assertRooted(
+  nodes: ReadonlyMap<string, ModelNodeJSON>,
+  node: ModelNodeJSON
+): void {
+  let parentId = node.parentId;
+  for (let step = 0; parentId !== null; step++) {
+    if (parentId === node.id || step >= nodes.size) {
+      throw new InvalidModelTreeError(node.id, "is its own ancestor");
+    }
+
+    const parent = nodes.get(parentId);
+    if (parent === undefined) {
+      throw new InvalidModelTreeError(node.id, `has no parent ${parentId}`);
+    }
+    parentId = parent.parentId;
   }
 }

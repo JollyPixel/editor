@@ -13,6 +13,7 @@ import { voxelModelCommandProtocol } from "#src/network/VoxelModelCommand.schema
 import type { VoxelModelCommand } from "#src/network/types.ts";
 import {
   TRANSFORM,
+  UV,
   blockNode,
   folderNode
 } from "../helpers/commands.ts";
@@ -47,6 +48,11 @@ const kCommands: readonly VoxelModelCommand[] = [
     action: "node-transformed",
     id: "node-1",
     transform: TRANSFORM
+  },
+  {
+    action: "node-uv-changed",
+    id: "node-1",
+    uv: UV
   }
 ];
 
@@ -147,6 +153,36 @@ describe("voxelModelCommandProtocol", () => {
         action: "node-added",
         node: { kind: "block", id: "b", parentId: null, name: "b" }
       }),
+      false
+    );
+  });
+
+  test("requires a valid UV layout on a block", () => {
+    const { uv: _uv, ...unmapped } = blockNode("node-1");
+    const added = {
+      ...kHeader,
+      action: "node-added",
+      node: blockNode("node-1")
+    };
+
+    assert.strictEqual(accepts(added), true);
+    assert.strictEqual(accepts({ ...added, node: unmapped }), false);
+    assert.strictEqual(
+      accepts({ ...added, node: { ...added.node, uv: { state: "stacked" } } }),
+      false
+    );
+  });
+
+  test("rejects a UV change without a valid layout", () => {
+    const command = {
+      ...kHeader,
+      action: "node-uv-changed",
+      id: "node-1"
+    };
+
+    assert.strictEqual(accepts(command), false);
+    assert.strictEqual(
+      accepts({ ...command, uv: { state: "unfolded" } }),
       false
     );
   });

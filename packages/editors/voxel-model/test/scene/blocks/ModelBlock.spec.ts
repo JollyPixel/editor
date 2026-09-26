@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { ModelBlock } from "#src/scene/blocks/ModelBlock.ts";
@@ -12,7 +12,7 @@ import { NEUTRAL_HIGHLIGHT_COLOR } from "#src/scene/blocks/PivotMarker.ts";
 // CONSTANTS
 const kEpsilon = 1e-6;
 
-type TexturedMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+type TexturedMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicNodeMaterial>;
 
 function assertEulerClose(
   actual: THREE.Euler,

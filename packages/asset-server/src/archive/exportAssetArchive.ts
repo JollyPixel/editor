@@ -20,6 +20,7 @@ import {
   encodeArchiveManifest
 } from "./format/ArchiveManifest.ts";
 import { AssetArchiveError } from "./errors/AssetArchiveError.ts";
+import { readableAsset } from "./readableAsset.ts";
 
 export interface ExportAssetArchiveOptions {
   root?: string;
@@ -47,8 +48,17 @@ export async function exportAssetArchive(
     }
 
     const entry = archiveEntryOf(record);
+    const data = await backend.source.read(entry.path);
+    const readable = readableAsset(backend.kinds, {
+      ...entry,
+      data
+    });
+    if (!readable.ok) {
+      throw readable.val;
+    }
+
     assets.push(entry);
-    files[entry.path] = await backend.source.read(entry.path);
+    files[entry.path] = data;
   }
 
   files[ASSET_ARCHIVE_MANIFEST_PATH] = encodeArchiveManifest({

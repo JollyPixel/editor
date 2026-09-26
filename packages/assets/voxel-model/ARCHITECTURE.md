@@ -12,7 +12,7 @@ flowchart TB
     Room --> State["VoxelModelState"]
 ```
 
-`ModelTree.accepts()` requires unused IDs and existing parents. A move cannot place a node in its own subtree; transforms target blocks. Removing a node removes its descendants. A move can carry block transforms in the same command when the transform parent changes.
+`ModelTree.accepts()` requires unused IDs and existing parents. A move cannot place a node in its own subtree; transforms and UV layouts target blocks. Removing a node removes its descendants. A move can carry block transforms in the same command when the transform parent changes.
 
 ## Collision keys
 
@@ -22,6 +22,7 @@ flowchart LR
     Move["node-moved"] --> Parent["parent:id"]
     Move --> Transform["transform:id for each rewritten block"]
     Edit["node-transformed"] --> Transform
+    Uv["node-uv-changed"] --> UvKey["uv:id"]
     AddRemove["node-added / node-removed"] --> Order["Tree validation and room order"]
 ```
 

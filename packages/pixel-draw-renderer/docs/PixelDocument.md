@@ -41,6 +41,17 @@ onBufferUpdated: PixelBufferHookListener | undefined;
 
 `onBufferUpdated` receives every local command, including undo and redo replay. Remote commands and snapshots never reach it.
 
+## UV ownership
+
+```ts
+type UVRegionFilter = (id: string) => boolean;
+
+disownUvRegions(filter: UVRegionFilter): () => void;
+ownsUvRegion(id: string): boolean;
+```
+
+The document owns every UV region until `disownUvRegions` hands the ones `filter` matches to another document; calling the returned function takes them back. Several filters can be active at once. A disowned region stays editable, but its changes emit no command and record no history, and remote UV commands and snapshot regions with its id are ignored. Snapshots keep it in place. Owned regions and pixel edits are unaffected.
+
 ## Events
 
 | Event | Payload | When |

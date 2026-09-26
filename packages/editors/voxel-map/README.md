@@ -82,10 +82,9 @@ The pieces live under `src/boot/`:
 | `createWorldProject` | Builds the asset handlers and the seed (default tileset and map), shared by the Vite seed and the offline workspace. |
 | `loadWorldProject` | Fetches `textures/tileset.png` and builds the offline project under a random tileset id. |
 
-`MapArchives` (`src/features/map-config/`) adapts the session's `archive` and
-`workspace` ports for `map-config-panel`: the download name comes from the
-map path, an import remembers its root as last opened, and `launchUrl` builds
-the `?target=` reload.
+`map-config-panel` renders `<jolly-archive-actions>` over
+`session.archives()` from `@jolly-pixel/editor.host`, which exports, imports
+and resets the map workspace.
 
 ### Panels
 

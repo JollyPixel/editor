@@ -76,6 +76,10 @@ The part of a UV map addressed by an interaction or change. A target identifies 
 
 The pixel area a fill may touch when `FillTool.uvClip` is on. Seeded inside one or more UV slots, it is the union of those slots; seeded outside, it is every pixel outside all slots. Membership uses pixel centers, active slots, and every region regardless of view visibility. `clearTexture()` keeps the same slot pixels by default.
 
+### UV Ownership
+
+Which document stores a UV region. By default the pixel document stores every region, and UV edits become commands and history entries. An external region is stored by another document, such as a model; the pixel document only shows and edits it, and ignores that region in its own commands and snapshots.
+
 ### UV Movement Scope
 
 Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions have region scope; free regions have slot scope.

@@ -11,7 +11,10 @@ import type {
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type { PeerIdentity } from "@jolly-pixel/ui";
-import type { AssetLeases } from "@jolly-pixel/editor.host";
+import type {
+  AssetLeases,
+  EditorArchives
+} from "@jolly-pixel/editor.host";
 import type {
   SyncedVoxelMap,
   VoxelMapRoom
@@ -47,7 +50,6 @@ import {
   type TilesetCatalogWriter
 } from "../features/tilesets/TilesetActions.ts";
 import { TilesetAtlases } from "../features/tilesets/TilesetAtlases.ts";
-import type { MapArchives } from "../features/map-config/MapArchives.ts";
 import {
   LocalTilesetTextures,
   SessionTilesetTextures,
@@ -73,7 +75,7 @@ export interface EditorSceneSession {
   identity: PeerIdentity;
   catalog: TilesetCatalog & TilesetCatalogWriter;
   assets: AssetLeases;
-  archives: MapArchives;
+  archives: EditorArchives;
 }
 
 export interface EditorSceneOptions {
@@ -98,7 +100,7 @@ export interface VoxelMapWorkspace {
   tilesetActions: TilesetActions;
   textures: TilesetTextures;
   viewFocus: ViewFocus;
-  archives: MapArchives;
+  archives: EditorArchives;
   loadWorld(data: VoxelWorldJSON): void;
   teleportToPeer(clientId: string): void;
 }

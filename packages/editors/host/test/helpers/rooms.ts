@@ -31,6 +31,7 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
   readonly role = "editor";
   readonly rights: RoomRights = {};
   readonly access: Right = "write";
+  readonly sent: unknown[] = [];
   joins = 0;
   leaves = 0;
 
@@ -45,8 +46,10 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
     return this.access;
   }
 
-  send(): void {
-    return void 0;
+  send(
+    message: unknown
+  ): void {
+    this.sent.push(message);
   }
 
   updatePresence(
