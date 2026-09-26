@@ -21,6 +21,13 @@ export interface RendererMetricsOptions {
   tile?: boolean;
 }
 
+export interface RendererFrameStats {
+  drawCalls: number;
+  triangles: number;
+  geometries: number;
+  textures: number;
+}
+
 type MetricTraits = Pick<
   MetricDefinition,
   "unit" | "better" | "group" | "tile"
@@ -51,17 +58,13 @@ export class RendererMetrics implements MetricSource {
         ...traits,
         id: "calls",
         label: "draw calls",
-        sample: () => (this.#captured ?
-          this.#calls :
-          renderer.info.render.drawCalls)
+        sample: () => this.frame.drawCalls
       },
       {
         ...traits,
         id: "renderedTriangles",
         label: "rendered tris",
-        sample: () => (this.#captured ?
-          this.#triangles :
-          renderer.info.render.triangles)
+        sample: () => this.frame.triangles
       },
       {
         ...traits,
@@ -76,6 +79,17 @@ export class RendererMetrics implements MetricSource {
         sample: () => renderer.info.memory.textures
       }
     ];
+  }
+
+  get frame(): RendererFrameStats {
+    const { render, memory } = this.#renderer.info;
+
+    return {
+      drawCalls: this.#captured ? this.#calls : render.drawCalls,
+      triangles: this.#captured ? this.#triangles : render.triangles,
+      geometries: memory.geometries,
+      textures: memory.textures
+    };
   }
 
   captureFrame(): void {

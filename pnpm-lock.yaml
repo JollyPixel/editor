@@ -926,9 +926,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../ui
-      simplex-noise:
-        specifier: 4.0.3
-        version: 4.0.3
+      math:
+        specifier: 0.1.0
+        version: 0.1.0
 
   packages/voxel-tiled:
     devDependencies:
@@ -3415,6 +3415,9 @@ packages:
     engines: {node: '>= 20'}
     hasBin: true
 
+  math@0.1.0:
+    resolution: {integrity: sha512-hq5KkLblFiR8OO8ZYqPK02mBqrXuxJ6hwvhL3ZM9OFkAR82/20n4H768SWl4yVVrufh8VijEm42D4V9N8hDa2g==}
+
   mathml-tag-names@4.0.0:
     resolution: {integrity: sha512-aa6AU2Pcx0VP/XWnh8IGL0SYSgQHDT6Ucror2j2mXeFAlN3ahaNs8EZtG1YiticMkSLj3Gt6VPFfZogt7G5iFQ==}
 
@@ -3787,9 +3790,6 @@ packages:
   signal-exit@4.1.0:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
-
-  simplex-noise@4.0.3:
-    resolution: {integrity: sha512-qSE2I4AngLQG7BXqoZj51jokT4WUXe8mOBrvfOXpci8+6Yu44+/dD5zqDpOx3Ux792eamTd2lLcI8jqFntk/lg==}
 
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
@@ -6556,6 +6556,8 @@ snapshots:
 
   marked@16.4.2: {}
 
+  math@0.1.0: {}
+
   mathml-tag-names@4.0.0: {}
 
   mdast-util-to-hast@13.2.1:
@@ -6968,8 +6970,6 @@ snapshots:
   signal-exit@3.0.7: {}
 
   signal-exit@4.1.0: {}
-
-  simplex-noise@4.0.3: {}
 
   sisteransi@1.0.5: {}
 

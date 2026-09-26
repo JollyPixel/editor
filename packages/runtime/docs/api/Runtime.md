@@ -288,6 +288,7 @@ feeds both the corner HUD and the readout panel.
 ```ts
 class RuntimeMetrics {
   readonly recorder: StatsRecorder;
+  readonly renderer: RendererMetrics;
   readonly revision: number;
   readonly panel: MetricsPanel | null;
 
@@ -318,6 +319,38 @@ The runtime registers the `WebGPURenderer` counters itself, under the
 It latches the render counters on every `draw`, which the renderer otherwise
 resets between frames.
 
+### Renderer counters
+
+`renderer.info.render` is only meaningful inside a `"draw"` handler. Three.js
+resets it at the start of every animation-loop tick, including the ticks the
+`maxFps` cap skips, so a read from another loop mostly sees zero. Read
+`runtime.metrics.renderer.frame` instead:
+
+```ts
+interface RendererFrameStats {
+  drawCalls: number;
+  triangles: number;
+  geometries: number;
+  textures: number;
+}
+
+const { drawCalls, triangles } = runtime.metrics.renderer.frame;
+```
+
+`drawCalls` and `triangles` come from the last drawn frame. `geometries` and
+`textures` are read live, because the renderer never resets them. Each read
+returns a new object.
+
+To refresh a display at the recorder's pace rather than every frame, subscribe
+to `runtime.stats`. The listener runs after each refresh window, once every
+`sample()` has been read:
+
+```ts
+const unsubscribe = runtime.stats.subscribe(() => {
+  const { drawCalls } = runtime.metrics.renderer.frame;
+});
+```
+
 ### The readout panel
 
 `mountMetricsPanel()` builds a full readout from the metric definitions: one
@@ -335,6 +368,7 @@ interface MetricsPanelOptions {
   keyboard?: MetricsPanelKeyboard;
   hidden?: boolean;
   collapsible?: boolean;
+  filter?: (definition: MetricDefinition) => boolean;
 }
 ```
 
@@ -348,6 +382,7 @@ interface MetricsPanelOptions {
 | `toggleKey` | none | `KeyboardEvent.code` toggling the readout, through the runtime's keyboard. |
 | `hidden` | `false` | Starts the readout hidden. |
 | `collapsible` | `true` | Enables folding the created pane to its header. |
+| `filter` | none | Keeps only the metrics it accepts, including later ones. Pass `(metric) => metric.tile === false` to leave out the metrics the corner HUD already cycles through. |
 
 ```ts
 const panel = await runtime.mountMetricsPanel({

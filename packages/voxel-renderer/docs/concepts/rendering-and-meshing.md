@@ -59,7 +59,7 @@ Opaque and masked geometry write depth at layer opacity `1`. Blended blocks
 and faded layers use blending without depth writes. Mask coverage is tested
 before layer opacity; low-alpha blend texels and faint layers are preserved.
 See [BlockSurface](../api/blocks/BlockSurface.md) for defaults and
-[VoxelTransparencyRenderer](../api/core/VoxelTransparencyRenderer.md) for scene
+[VoxelTransparencyPassNode](../api/core/VoxelTransparencyPassNode.md) for scene
 integration and the limits of weighted color compositing.
 
 ## Culling covered faces

@@ -1,10 +1,13 @@
 export * from "./VoxelEngine.ts";
 export * from "./VoxelDocument.ts";
 export * from "./VoxelView.ts";
-export { VoxelTransparencyRenderer } from "./render/VoxelTransparencyRenderer.ts";
+export {
+  VoxelTransparencyPassNode,
+  voxelTransparencyPass
+} from "./render/VoxelTransparencyPassNode.ts";
 export type {
-  VoxelTransparencyRendererOptions
-} from "./render/VoxelTransparencyRenderer.ts";
+  VoxelTransparencyPassOptions
+} from "./render/VoxelTransparencyPassNode.ts";
 export * from "./commands/index.ts";
 
 export * from "./blocks/index.ts";

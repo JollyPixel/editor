@@ -503,5 +503,5 @@ inferring the policy from the material opacity, and reads
 `surface.materialGroup` to tune grouped blocks apart on a shared atlas. It runs
 after the document finish of a [material group](../materials/MaterialGroup.md)
 is applied, so it can override it on a new material. To composite overlapping
-blended chunks, install [VoxelTransparencyRenderer](./VoxelTransparencyRenderer.md)
-in the application render loop.
+blended chunks, render the scene through a
+[VoxelTransparencyPassNode](./VoxelTransparencyPassNode.md).

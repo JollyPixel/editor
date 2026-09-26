@@ -34,7 +34,7 @@ tileset and is removed from the resolved definition.
 `alphaCutoff`, and `materialGroup`. Opaque blocks ignore texture alpha. Masked blocks discard
 uncovered texels before applying the layer fade. Blended blocks preserve
 fractional alpha and do not write depth; use
-[`VoxelTransparencyRenderer`](../core/VoxelTransparencyRenderer.md) to
+[`VoxelTransparencyPassNode`](../core/VoxelTransparencyPassNode.md) to
 composite overlapping surfaces without triangle sorting.
 
 `cullCoveredFaces` defaults to `true` for opaque blocks and `false` for

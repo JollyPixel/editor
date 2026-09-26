@@ -66,6 +66,6 @@
     "@jolly-pixel/loop": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
-    "simplex-noise": "4.0.3"
+    "math": "0.1.0"
   }
 }

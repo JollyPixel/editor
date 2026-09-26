@@ -1,10 +1,45 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import {
+  mrt,
+  normalView,
+  output,
+  vec4
+} from "three/tsl";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../../../src/VoxelEngine.ts";
-import { VoxelTransparencyRenderer } from "../../../src/render/VoxelTransparencyRenderer.ts";
+import { voxelTransparencyPass } from "../../../src/render/VoxelTransparencyPassNode.ts";
 import type { BlockAlphaMode, BlockSide } from "../../../src/blocks/BlockSurface.ts";
+
+// CONSTANTS
+const kSettleFrames = 6;
+
+function renderFrames(
+  renderer: THREE.WebGPURenderer,
+  frames: number,
+  draw: () => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let remaining = frames;
+    void renderer.setAnimationLoop(() => {
+      try {
+        draw();
+      }
+      catch (error) {
+        void renderer.setAnimationLoop(null);
+        reject(error);
+
+        return;
+      }
+      remaining--;
+      if (remaining === 0) {
+        void renderer.setAnimationLoop(null);
+        resolve();
+      }
+    });
+  });
+}
 
 function chunkGroupOf(
   engine: VoxelEngine
@@ -38,6 +73,8 @@ export interface ProbeOptions {
   resize?: boolean;
   failDraw?: boolean;
   samples?: number;
+  tint?: number;
+  normals?: boolean;
   gray?: number;
   lights?: ProbeLights;
 }
@@ -60,10 +97,6 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     throw new Error("The native WebGPU probe fell back to WebGL.");
   }
   renderer.toneMapping = THREE.NoToneMapping;
-  const pipeline = new VoxelTransparencyRenderer(
-    renderer,
-    options.samples === undefined ? {} : { samples: options.samples }
-  );
   const target = new THREE.RenderTarget(32, 32);
   renderer.setRenderTarget(target);
   const canvas = document.createElement("canvas");
@@ -200,6 +233,21 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   camera.position.set(0.5, 0.5, options.reverse ? -10 : 10);
   camera.lookAt(0.5, 0.5, 0.5);
   camera.updateMatrixWorld();
+  const transparency = voxelTransparencyPass(
+    scene,
+    camera,
+    { samples: options.samples ?? 4 }
+  );
+  if (options.normals) {
+    transparency.setMRT(mrt({ output, normal: normalView }));
+  }
+  const pipeline = new THREE.RenderPipeline(
+    renderer,
+    options.tint === undefined ?
+      transparency :
+      transparency.mul(vec4(options.tint, options.tint, options.tint, 1))
+  );
+  pipeline.outputColorTransform = false;
   const initialBackground = scene.background;
   const initialClearColor = renderer.getClearColor(new THREE.Color());
   const initialClearAlpha = renderer.getClearAlpha();
@@ -232,7 +280,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       renderer.setRenderObjectFunction(renderObject);
       let caught: unknown;
       try {
-        pipeline.render(scene, camera);
+        await renderFrames(renderer, 1, () => pipeline.render());
       }
       catch (error) {
         caught = error;
@@ -244,12 +292,16 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       verifyState();
       renderer.setRenderObjectFunction(null);
     }
-    pipeline.render(scene, camera);
+    await renderFrames(renderer, 1, () => pipeline.render());
     verifyState();
     if (options.resize) {
+      renderer.setSize(64, 64);
       target.setSize(64, 64);
-      pipeline.render(scene, camera);
+      await renderFrames(renderer, kSettleFrames + 2, () => pipeline.render());
       verifyState();
+      if (transparency.renderTarget.width !== 64) {
+        throw new Error("The pass did not adopt the settled size.");
+      }
     }
     const center = target.width / 2;
     const pixels = await renderer.readRenderTargetPixelsAsync(target, center, center, 1, 1);

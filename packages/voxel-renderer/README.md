@@ -120,7 +120,7 @@ does not depend on an ECS runtime.
   meshing.
 - [World model](docs/concepts/world-model.md): layers, chunks, compositing, and
   ownership.
-- [Transparency](docs/api/core/VoxelTransparencyRenderer.md): scene compositing, setup, and limitations.
+- [Transparency](docs/api/core/VoxelTransparencyPassNode.md): scene compositing, setup, and limitations.
 - [Rendering and meshing](docs/concepts/rendering-and-meshing.md): dirty chunk
   rebuilds, geometry layout, and greedy meshing.
 - [Loading tilesets](docs/guides/loading-and-restoring-tilesets.md),
@@ -182,25 +182,25 @@ Then open one of these URLs in your browser:
 | `http://localhost:5173/` | `demo-physics.ts` | A 32×32 voxel terrain with a raised platform and a Rapier3D physics sphere you can roll around with arrow keys |
 | `http://localhost:5173/tileset.html` | `demo-tileset.ts` | Every tile in `Tileset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
 | `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
-| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with live renderer and mesh counters - the benchmark example |
+| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world (oceans, plains, snowy ridged mountains) generated with the `math` noise helpers, with live renderer and mesh counters - the benchmark example |
 | `http://localhost:5173/transparency.html` | `demo-transparency.ts` | A diorama for checking transparency and lighting: blended water and glass, cutout leaves/grates/windows with explicit alpha modes, an alpha-gradient probe for `alphaTest`, and live light, material and layer controls |
 
 ## 🧪 Benchmarks
 
 ### Noise-world benchmark
 
-Use `noise-world.html` to measure the renderer under load. It builds a heightmap world from simplex noise and reports two separate costs: voxel writes via `setVoxel` and chunk meshing for dirty chunks.
+Use `noise-world.html` to measure the renderer under load. It builds a heightmap world from layered simplex noise (continents, ridged mountains, domain warp) and reports two separate costs: voxel writes via `setVoxel` and chunk meshing for dirty chunks.
 
 It is configurable from the query string:
 
 ```text
-/noise-world.html?size=512&chunk=32&seed=42
+/noise-world.html?size=1024&chunk=32&seed=42
 ```
 
 | Param | Default | Effect |
 |---|---:|---|
-| `size` | `256` | World width/depth in voxels (`size²` columns) |
-| `chunk` | `16` | `chunkSize`; trades draw calls against rebuild cost |
+| `size` | `512` | World width/depth in voxels (`size²` columns) |
+| `chunk` | `32` | `chunkSize`; trades draw calls against rebuild cost |
 | `seed` | `1337` | Terrain seed; the same seed always yields the same world |
 
 ### Headless benchmark

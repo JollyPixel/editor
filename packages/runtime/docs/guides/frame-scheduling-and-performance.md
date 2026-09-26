@@ -113,6 +113,19 @@ definition names its own `label`, the `unit` a display formats it with, and the
 The renderer's own counters are registered by the runtime, under the
 `renderer` group.
 
+## Read renderer counters outside a draw
+
+Three.js resets `renderer.info.render` at the start of every animation-loop
+tick, including ticks the frame cap skips. A draw-call counter read from its
+own `requestAnimationFrame` loop therefore flickers between zero and the real
+count. Read the counters the runtime latched on the last `draw` instead:
+
+```ts
+const { drawCalls, triangles } = runtime.metrics.renderer.frame;
+```
+
+See [renderer counters](../api/Runtime.md#renderer-counters).
+
 ## Show a full readout
 
 A HUD showing one metric at a time is not a readout. Add a panel listing every

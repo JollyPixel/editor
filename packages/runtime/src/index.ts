@@ -17,7 +17,8 @@ export type {
 export { RuntimeMetrics } from "./metrics/RuntimeMetrics.ts";
 export {
   RendererMetrics,
-  type RendererMetricsOptions
+  type RendererMetricsOptions,
+  type RendererFrameStats
 } from "./metrics/RendererMetrics.ts";
 export type {
   MetricsPanel,

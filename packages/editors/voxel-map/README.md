@@ -222,8 +222,8 @@ match their alpha. An explicitly selected Cutout mode is preserved. This
 automatic scan can override an Opaque or Blended selection when its texture
 does not match; use the renderer API directly when that policy must be fixed.
 
-The scene uses weighted blended transparency through
-[VoxelTransparencyRenderer](../../voxel-renderer/docs/api/core/VoxelTransparencyRenderer.md).
+The scene camera uses weighted blended transparency as its post-processing,
+through [VoxelTransparencyPassNode](../../voxel-renderer/docs/api/core/VoxelTransparencyPassNode.md).
 Overlapping colors are approximate, and each retained surface adds coverage.
 Thumbnail previews use ordinary Three.js blending.
 

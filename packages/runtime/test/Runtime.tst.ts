@@ -124,6 +124,9 @@ test("every metric goes through runtime.metrics", () => {
   expect(runtime.metrics.addSource).type.not.toBeCallableWith({
     metrics: [{ label: "chunks" }]
   });
+  expect(
+    runtime.metrics.renderer.frame
+  ).type.toBe<RuntimePackage.RendererFrameStats>();
 });
 
 test("runtime.overlay mounts content and returns a disposer", () => {
