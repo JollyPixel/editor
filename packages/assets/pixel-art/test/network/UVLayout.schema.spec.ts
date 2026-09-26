@@ -13,11 +13,11 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import * as root from "#src/index.ts";
+import * as server from "#src/network/server.ts";
 import {
   uvLayoutSchema,
   uvRegionSchema
-} from "#src/asset/UVLayout.schema.ts";
+} from "#src/network/UVLayout.schema.ts";
 
 // CONSTANTS
 const kRect = { x: 0, y: 0, width: 8, height: 8 };
@@ -92,7 +92,7 @@ describe("network/UVLayout.schema", () => {
     }), true);
   });
 
-  test("the root entry point exports the layout schema", () => {
-    assert.equal(root.uvLayoutSchema, uvLayoutSchema);
+  test("the server entry point exports the layout schema", () => {
+    assert.equal(server.uvLayoutSchema, uvLayoutSchema);
   });
 });

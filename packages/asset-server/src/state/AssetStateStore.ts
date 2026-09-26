@@ -6,6 +6,7 @@ import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import { ASSET_CHECKPOINT_EVENT_TYPES } from "../events/AssetEvents.ts";
 import { foldAssetEvent } from "../kinds/foldAssetEvent.ts";
+import { InvalidAssetDocumentError } from "../kinds/errors/InvalidAssetDocumentError.ts";
 import {
   silentLogger,
   type Logger
@@ -160,14 +161,19 @@ export class AssetStateStore {
       foldAssetEvent(handler, state, event);
     }
     catch (error) {
-      this.#logger
-        .withMetadata({
-          assetId: event.assetId,
-          eventId: event.eventId,
-          eventType: event.eventType,
-          reason: asError(error).message
-        })
-        .error("asset event not folded");
+      const log = this.#logger.withMetadata({
+        assetId: event.assetId,
+        eventId: event.eventId,
+        eventType: event.eventType,
+        reason: asError(error).message
+      });
+
+      if (error instanceof InvalidAssetDocumentError) {
+        log.warn("asset event not folded");
+      }
+      else {
+        log.error("asset event not folded");
+      }
     }
   }
 }

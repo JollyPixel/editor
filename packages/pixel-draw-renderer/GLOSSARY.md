@@ -80,6 +80,10 @@ The pixel area a fill may touch when `FillTool.uvClip` is on. Seeded inside one 
 
 Which document stores a UV region. By default the pixel document stores every region, and UV edits become commands and history entries. An external region is stored by another document, such as a model; the pixel document only shows and edits it, and ignores that region in its own commands and snapshots.
 
+### UV Layout
+
+A UV region's geometry without its identity (`id`, `name`, `color`). The owner of an external region stores its layout, and the region is rebuilt from that layout and an identity when shown.
+
 ### UV Movement Scope
 
 Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions have region scope; free regions have slot scope.

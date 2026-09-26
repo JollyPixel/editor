@@ -2,7 +2,7 @@ export * from "./types.ts";
 export {
   PIXEL_ART_EXTENSION,
   PIXEL_ART_KIND
-} from "../asset/kind.ts";
+} from "../asset/pixelArt.ts";
 export * from "./pixelCommandActions.ts";
 export * from "./PixelSyncClient.ts";
 export * from "./SyncedPixelDocument.ts";

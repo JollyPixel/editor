@@ -14,7 +14,7 @@ import {
   uvGeometrySchema,
   uvRegionSchema,
   uvSlotSchema
-} from "../asset/UVLayout.schema.ts";
+} from "./UVLayout.schema.ts";
 
 // CONSTANTS
 const kVec2Schema = defineSchema({

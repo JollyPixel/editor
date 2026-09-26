@@ -96,6 +96,20 @@ it, logs `asset event not folded` at error level and moves on, so a corrupt row
 neither aborts a replay nor escapes the append of a live command. Handlers need
 no `try`/`catch` of their own.
 
+`load` throws `InvalidAssetDocumentError` when the content is not a document of
+its kind. The error carries the handler's `kind`; its message names the reason
+and `cause` keeps the underlying decoder error. `AssetStateStore` logs this
+error at warn level, so corrupt stored content stays apart from handler bugs,
+which keep the error level:
+
+```ts
+import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server/kinds";
+
+throw new InvalidAssetDocumentError("voxelmodel", "content is not JSON", {
+  cause
+});
+```
+
 `TState` defaults to `unknown`, so a handler declared without it must narrow
 its own state before use. Pass the state type to keep every hook checked
 against the others.

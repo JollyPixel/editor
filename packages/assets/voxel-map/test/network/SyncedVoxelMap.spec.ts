@@ -16,7 +16,7 @@ import {
   SyncedVoxelMap,
   voxelMapDocumentKind
 } from "#src/network/SyncedVoxelMap.ts";
-import { VOXEL_MAP_KIND } from "#src/asset/kind.ts";
+import { VOXEL_MAP_KIND } from "#src/asset/voxelMap.ts";
 import { createMockRoom } from "../helpers/room.ts";
 
 // CONSTANTS

@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PIXEL_ART_KIND } from "../asset/kind.ts";
+import { PIXEL_ART_KIND } from "../asset/pixelArt.ts";
 import type {
   PixelNetworkCommand,
   PixelServerMessage

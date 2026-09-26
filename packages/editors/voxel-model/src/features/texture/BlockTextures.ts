@@ -1,18 +1,14 @@
 // Import Third-party Dependencies
-import type {
-  PixelDocument,
-  UVMapListener,
+import {
   UVRegion,
-  Vec2
+  type PixelDocument,
+  type UVMapListener,
+  type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   PixelCanvasTexture,
   UVGeometryBinding
 } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
-import {
-  uvLayoutOf,
-  uvRegionOf
-} from "@jolly-pixel/asset.pixel-art";
 import type { UVGhostPayload } from "@jolly-pixel/asset.pixel-art/network/client.ts";
 import type {
   BlockNodeJSON,
@@ -134,7 +130,7 @@ export class BlockTextures {
   ): void => {
     const uuid = blockUuidFromRegion(event.region.id);
     if (!this.#restoring && uuid !== null) {
-      this.#document.setUv(uuid, uvLayoutOf(event.region));
+      this.#document.setUv(uuid, event.region.toLayout());
     }
   };
 
@@ -291,7 +287,7 @@ export class BlockTextures {
 function regionOf(
   block: BlockNodeJSON
 ): UVRegion {
-  return uvRegionOf(block.uv, {
+  return UVRegion.fromLayout(block.uv, {
     id: blockRegionId(block.id),
     name: block.name,
     color: kBlockUvColor

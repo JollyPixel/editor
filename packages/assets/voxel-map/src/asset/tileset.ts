@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
+import type { AssetKindDescriptor } from "@jolly-pixel/asset-server/kinds";
 import {
   createPixelArtDocument,
   createPixelBufferFromPng,
-  parsePixelArtDocument,
   serializePixelBuffer,
   type PixelArtDocumentData,
   type Vec2
@@ -10,20 +10,46 @@ import {
 import {
   blocksFromTileset,
   DEFAULT_TILE_SIZE,
-  isTileSize,
   TilesetDocument,
   type BlockDefinition,
   type MaterialGroupJSON,
-  type ResolvedBlockDefinition
+  type ResolvedBlockDefinition,
+  type TilesetAssetReference
 } from "@jolly-pixel/voxel.renderer";
 
-// Import Internal Dependencies
-import { InvalidTilesetDocumentError } from "./InvalidTilesetDocumentError.ts";
-
 // CONSTANTS
+export const TILESET_KIND = "tileset";
+export const TILESET_COMMAND = "tileset.command";
+export const TILESET_EXTENSION = ".tileset.json";
 export const TILESET_DOCUMENT_VERSION = 1;
 const kDefaultGridSize = 8;
 const kDefaultBlockLimit = 32;
+
+export const TILESET_ASSET: AssetKindDescriptor = {
+  kind: TILESET_KIND,
+  label: "Tileset",
+  icon: {
+    svg: `
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="1.5"
+        fill="currentColor"
+        opacity="0.35"
+      />
+      <path
+        class="tone-ink"
+        d="M9 3v18M15 3v18M3 9h18M3 15h18"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+      />
+    `,
+    tone: "amber"
+  }
+};
 
 /**
  * The stored form of a tileset: its pixels, tile size, blocks and material
@@ -63,6 +89,15 @@ export interface TilesetFromPngOptions {
    * @default 32
    */
   blockLimit?: number;
+}
+
+export function tilesetAsset(
+  assetId: string
+): TilesetAssetReference {
+  return {
+    id: assetId,
+    kind: TILESET_KIND
+  };
 }
 
 export function createTilesetDocument(
@@ -119,77 +154,8 @@ export async function tilesetDocumentFromPng(
   });
 }
 
-export function parseTilesetDocument(
-  value: unknown
-): TilesetAssetDocument {
-  if (typeof value !== "object" || value === null) {
-    throw new InvalidTilesetDocumentError("payload is not an object");
-  }
-
-  const fields: Map<string, unknown> = new Map(Object.entries(value));
-  const version = fields.get("version");
-  const tileSize = fields.get("tileSize");
-  const blocks = fields.get("blocks");
-  const materialGroups = fields.get("materialGroups");
-
-  if (version !== TILESET_DOCUMENT_VERSION) {
-    throw new InvalidTilesetDocumentError(
-      `unsupported version ${String(version)}`
-    );
-  }
-  if (!isTileSize(tileSize)) {
-    throw new InvalidTilesetDocumentError("tileSize is not a valid tile size");
-  }
-  if (!Array.isArray(blocks)) {
-    throw new InvalidTilesetDocumentError("blocks is not an array");
-  }
-  if (!Array.isArray(materialGroups)) {
-    throw new InvalidTilesetDocumentError("materialGroups is not an array");
-  }
-
-  let pixels: PixelArtDocumentData;
-  try {
-    pixels = parsePixelArtDocument(fields.get("pixels"));
-  }
-  catch (error) {
-    throw new InvalidTilesetDocumentError("pixels are invalid", { cause: error });
-  }
-
-  let document: TilesetDocument;
-  try {
-    document = new TilesetDocument({
-      tileSize,
-      blocks,
-      materialGroups
-    });
-  }
-  catch (error) {
-    throw new InvalidTilesetDocumentError("blocks are invalid", { cause: error });
-  }
-
-  return {
-    version,
-    pixels,
-    ...document.toJSON()
-  };
-}
-
 export function encodeTilesetDocument(
   document: TilesetAssetDocument
 ): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(document));
-}
-
-export function decodeTilesetDocument(
-  content: Uint8Array
-): TilesetAssetDocument {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(new TextDecoder().decode(content));
-  }
-  catch (error) {
-    throw new InvalidTilesetDocumentError("payload is not JSON", { cause: error });
-  }
-
-  return parseTilesetDocument(parsed);
 }

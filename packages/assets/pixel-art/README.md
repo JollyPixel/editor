@@ -58,9 +58,9 @@ await synced.ready;
 
 ## 📚 API
 
-- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, the kind and event constants for server registration, and the document builders `createPixelArtDocument(size)` and `pixelArtDocumentFromPng(png)` for seeds and fixtures.
+- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, the kind and event constants for server registration, and the document builders `createPixelArtDocument(size)` and `pixelArtDocumentFromPng(png)` for seeds and fixtures. Loading malformed content throws `InvalidAssetDocumentError`, with the renderer error as `cause`.
 - `@jolly-pixel/asset.pixel-art/network/client.ts` exports `SyncedPixelDocument`, `PixelSyncClient`, `pixelArtRoom`, `createPixelArtAsset`, `PixelCollaboration`, presence helpers, and wire types.
-- `@jolly-pixel/asset.pixel-art/network/server.ts` exports `PixelCommandArbiter`, `applyCommandToBuffer`, and the command and snapshot schemas.
+- `@jolly-pixel/asset.pixel-art/network/server.ts` exports `PixelCommandArbiter`, `applyCommandToBuffer`, and the command, snapshot and UV layout schemas.
 
 The package root imports server dependencies. Browser code should use the client entry point. The [network API](./docs/network.md) covers commands, snapshots, notices, and presence helpers. [Architecture](./ARCHITECTURE.md) covers replay and conflict handling. The pixel document format and codec are documented by [pixel-draw.renderer](../../pixel-draw-renderer/docs/serialization/index.md).
 

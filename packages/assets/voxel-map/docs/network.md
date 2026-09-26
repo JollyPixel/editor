@@ -30,6 +30,6 @@ The browser entry point is `@jolly-pixel/asset.voxel-map/network/client.ts`. Ser
 
 `TilesetCommandArbiter.admit(state, command)` hands pixel commands to a `PixelCommandArbiter` over `state.pixels` and keys document commands per block, material group or tile size; `key(command)` returns that key. A `block-defined` whose block the renderer `localBlock()` refuses is rejected. The [architecture page](../ARCHITECTURE.md) lists the key rules of both rooms.
 
-`voxelCommandProtocol` and `tilesetCommandProtocol` validate command messages. `voxelWorldSchema` and `tilesetSnapshotSchema` check the snapshot headers; the renderer parses the full world document. `VoxelMapState.applyCommand()` applies commands to the headless world and tileset list; `TilesetState.applyCommand()` applies them to the pixel buffer or the tileset document.
+`voxelCommandProtocol` and `tilesetCommandProtocol` validate command messages. `voxelWorldSchema` and `tilesetSnapshotSchema` check the snapshot headers; `voxelWorldSchema` also checks a stored map before the renderer parses the full world document. `VoxelMapState.applyCommand()` applies commands to the headless world and tileset list; `TilesetState.applyCommand()` applies them to the pixel buffer or the tileset document.
 
 Access policies use the `voxelmap` and `tileset` extensions and protocol action names such as `voxel-set`, `stroke` and `block-defined`. Resolve roles from a trusted server session when access control matters. See [network rights](../../../network/docs/Rights.md).

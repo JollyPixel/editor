@@ -2,6 +2,8 @@
 
 Each directory in `packages/assets` owns one editable format. Its `src/asset/` code defines the kind, stored state, codec integration, and asset dependencies. Its `src/network/` code defines the edit protocol and client sync. A format can keep other domain code elsewhere, such as voxel-model's `src/model/`.
 
+Each kind keeps two files in `src/asset/`. `<kind>.ts` holds what an editor may import: the kind constants, the descriptor and the document builders. `<kind>AssetKind.ts` holds what only the server loads: the state, the document decoder and the kind handler. Decoders check stored documents with the kind's JSON Schemas through `SchemaParser` from `@jolly-pixel/network`, and stay out of the client entry point so editors never bundle the schema compiler. A malformed document throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server/kinds`, so the server can tell corrupt content from a handler bug.
+
 ```mermaid
 flowchart TB
     Editor["Editor or client"]

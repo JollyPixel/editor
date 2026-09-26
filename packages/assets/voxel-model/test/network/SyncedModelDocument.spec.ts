@@ -10,7 +10,7 @@ import {
   SyncedModelDocument,
   voxelModelDocumentKind
 } from "#src/network/SyncedModelDocument.ts";
-import { VOXEL_MODEL_KIND } from "#src/asset/kind.ts";
+import { VOXEL_MODEL_KIND } from "#src/asset/voxelModel.ts";
 import { createMockRoom } from "../helpers/room.ts";
 import { networkCommand } from "../helpers/commands.ts";
 

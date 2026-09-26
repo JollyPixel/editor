@@ -1,31 +1,135 @@
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
-import type {
-  AssetKindHandler,
-  SnapshotPolicy
+import type { AssetReferenceData } from "@jolly-pixel/asset";
+import {
+  describeErrors,
+  SchemaParser,
+  type ConflictResolver
+} from "@jolly-pixel/network";
+import {
+  InvalidAssetDocumentError,
+  type AssetKindHandler,
+  type SnapshotPolicy
 } from "@jolly-pixel/asset-server/kinds";
 
 // Import Internal Dependencies
 import {
+  encodeVoxelModelDocument,
   VOXEL_MODEL_COMMAND,
+  VOXEL_MODEL_DOCUMENT_VERSION,
   VOXEL_MODEL_EXTENSION,
-  VOXEL_MODEL_KIND
-} from "./kind.ts";
-import { VoxelModelState } from "./VoxelModelState.ts";
-import {
-  decodeVoxelModelDocument,
-  encodeVoxelModelDocument
-} from "./document.ts";
+  VOXEL_MODEL_KIND,
+  voxelModelDocumentSchema,
+  type VoxelModelDocument
+} from "./voxelModel.ts";
+import { ModelTree } from "../model/ModelTree.ts";
 import {
   voxelModelCommandProtocol,
   voxelModelSnapshotSchema
 } from "../network/VoxelModelCommand.schema.ts";
 import { VoxelModelCommandArbiter } from "../network/VoxelModelCommandArbiter.ts";
-import type { VoxelModelNetworkCommand } from "../network/types.ts";
+import type {
+  VoxelModelCommand,
+  VoxelModelNetworkCommand,
+  VoxelModelSnapshot
+} from "../network/types.ts";
+
+// CONSTANTS
+const kDocumentParser = new SchemaParser(voxelModelDocumentSchema);
+
+export function decodeVoxelModelDocument(
+  content: Uint8Array
+): VoxelModelDocument {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(content));
+  }
+  catch (error) {
+    throw new InvalidAssetDocumentError(
+      VOXEL_MODEL_KIND,
+      "content is not JSON",
+      { cause: error }
+    );
+  }
+
+  const result = kDocumentParser.parse(parsed);
+  if (result.err) {
+    throw new InvalidAssetDocumentError(
+      VOXEL_MODEL_KIND,
+      describeErrors(result.val)
+    );
+  }
+
+  return result.val;
+}
+
+export class VoxelModelState {
+  #tree = new ModelTree();
+  #texture: AssetReferenceData | null = null;
+
+  get texture(): AssetReferenceData | null {
+    return this.#texture === null ?
+      null :
+      { ...this.#texture };
+  }
+
+  load(
+    document: VoxelModelDocument
+  ): void {
+    this.#tree.load(document.nodes);
+    this.#texture = {
+      id: document.texture.id,
+      kind: document.texture.kind
+    };
+  }
+
+  clear(): void {
+    this.#tree.clear();
+    this.#texture = null;
+  }
+
+  accepts(
+    command: VoxelModelCommand
+  ): boolean {
+    return this.#tree.accepts(command);
+  }
+
+  applyCommand(
+    command: VoxelModelCommand
+  ): void {
+    this.#tree.apply(command);
+  }
+
+  dependencies(): AssetReferenceData[] {
+    return this.#texture === null
+      ? []
+      : [{ ...this.#texture }];
+  }
+
+  snapshot(): VoxelModelSnapshot {
+    return {
+      nodes: this.#tree.toJSON()
+    };
+  }
+
+  toJSON(): VoxelModelDocument {
+    if (this.#texture === null) {
+      throw new InvalidAssetDocumentError(
+        VOXEL_MODEL_KIND,
+        "texture is missing"
+      );
+    }
+
+    return {
+      version: VOXEL_MODEL_DOCUMENT_VERSION,
+      ...this.snapshot(),
+      texture: { ...this.#texture }
+    };
+  }
+}
 
 export interface VoxelModelAssetKindOptions {
   snapshot?: SnapshotPolicy;
-  conflictResolver?: network.ConflictResolver<VoxelModelNetworkCommand>;
+  conflictResolver?: ConflictResolver<VoxelModelNetworkCommand>;
 }
 
 export function voxelModelAssetKind(
@@ -51,7 +155,9 @@ export function voxelModelAssetKind(
       state: VoxelModelState,
       content: Uint8Array
     ): void {
-      state.load(decodeVoxelModelDocument(content));
+      state.load(
+        decodeVoxelModelDocument(content)
+      );
     },
 
     clear(
@@ -63,7 +169,9 @@ export function voxelModelAssetKind(
     serialize(
       state: VoxelModelState
     ): Promise<Uint8Array> {
-      return Promise.resolve(encodeVoxelModelDocument(state.toJSON()));
+      return Promise.resolve(
+        encodeVoxelModelDocument(state.toJSON())
+      );
     },
 
     dependencies(
@@ -104,7 +212,9 @@ export function voxelModelAssetKind(
           snapshotSchema: voxelModelSnapshotSchema,
           snapshot: () => state.snapshot(),
           arbitrate(command) {
-            return state.accepts(command) ? arbiter.admit(command) : null;
+            return state.accepts(command)
+              ? arbiter.admit(command)
+              : null;
           }
         };
       }

@@ -4,7 +4,7 @@ import type {
   AssetRoomDeletedMessage,
   AssetRoomRejectedMessage
 } from "@jolly-pixel/asset-server/kinds";
-import type { UVLayoutData } from "@jolly-pixel/asset.pixel-art";
+import type { UVLayoutData } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type {

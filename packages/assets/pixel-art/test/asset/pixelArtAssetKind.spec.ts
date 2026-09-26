@@ -12,6 +12,7 @@ import {
   ASSET_DELETED,
   encodeContent,
   foldAssetEvent,
+  InvalidAssetDocumentError,
   type AssetEventData,
   type AssetLiveProtocol,
   type AssetRoomBinding
@@ -31,7 +32,7 @@ import {
   PIXEL_ART_EXTENSION,
   PIXEL_ART_KIND
 } from "#src/index.ts";
-import type { PixelArtState } from "#src/asset/PixelArtState.ts";
+import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
 // CONSTANTS
@@ -222,7 +223,7 @@ describe("pixelArtAssetKind", () => {
         size: 2,
         content: encodeContent(new TextEncoder().encode("{{"))
       }));
-    });
+    }, InvalidAssetDocumentError);
     assert.deepEqual(state.buffer.samplePixel(1, 1), kRedTuple);
   });
 

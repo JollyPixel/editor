@@ -56,4 +56,4 @@ For restricted rooms, use the `pixelart` extension and its command actions in an
 
 ## UV layouts
 
-`uvRegionSchema` validates a UV region. `uvLayoutSchema` validates the same geometry without `id`, `name` and `color`, typed as `UVLayoutData`, for a document that stores UV regions a texture disowns with `PixelDocument.disownUvRegions()`. `uvLayoutOf(region)` drops a region's identity and `uvRegionOf(layout, { id, name?, color })` restores one. All are exported from the root entry point.
+`uvRegionSchema` validates a UV region. `uvLayoutSchema` validates the same geometry without `id`, `name` and `color`, typed as `UVLayoutData` from `@jolly-pixel/pixel-draw.renderer`, for a document that stores UV regions a texture disowns with `PixelDocument.disownUvRegions()`. `UVRegion.toLayout()` and `UVRegion.fromLayout()` convert between the two. Both schemas are exported from the server entry point.

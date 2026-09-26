@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   defineMessageProtocol,
+  defineSchema,
   type JSONSchema,
   type MessageProtocol
 } from "@jolly-pixel/network";
@@ -23,11 +24,11 @@ import {
 } from "../schema.ts";
 
 // CONSTANTS
-const kUnitSchema: JSONSchema = {
+const kUnitSchema = defineSchema({
   type: "number",
   minimum: 0,
   maximum: 1
-};
+});
 
 const kBlockCommandProperties: Record<
   VoxelBlockCommandAction,
@@ -53,16 +54,17 @@ const kBlockCommandProperties: Record<
   }
 };
 
-export const materialGroupSchema: JSONSchema = objectSchema(
-  {
+export const materialGroupSchema = defineSchema({
+  type: "object",
+  properties: {
     id: { type: "string", minLength: 1 },
     roughness: kUnitSchema,
     metalness: kUnitSchema,
     emissive: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
     emissiveIntensity: { type: "number", minimum: 0 }
   },
-  ["id"]
-);
+  required: ["id"]
+});
 
 const kMaterialGroupCommandProperties: Record<
   VoxelMaterialGroupCommandAction,

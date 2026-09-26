@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { VOXEL_MODEL_KIND } from "../asset/kind.ts";
+import { VOXEL_MODEL_KIND } from "../asset/voxelModel.ts";
 import { ModelDocument } from "../model/ModelDocument.ts";
 import { ModelSyncClient } from "./ModelSyncClient.ts";
 import type { VoxelModelRoom } from "./types.ts";

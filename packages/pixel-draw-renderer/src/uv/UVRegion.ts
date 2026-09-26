@@ -39,11 +39,15 @@ export type {
 } from "./types.ts";
 export { DEFAULT_UV_SLOTS } from "./types.ts";
 
-interface UVRegionIdentity {
+export interface UVRegionIdentity {
   id: string;
   name?: string;
   color: string;
 }
+
+type WithoutIdentity<TRegion> = TRegion extends unknown ?
+  Omit<TRegion, keyof UVRegionIdentity> :
+  never;
 
 export type UVRegionData =
   | (UVRegionIdentity & {
@@ -58,6 +62,12 @@ export type UVRegionData =
     faces: Record<UVSlot, UVGeometry>;
     activeFaces?: UVSlot[];
   });
+
+/**
+ * A UV region without its identity: the geometry an external owner stores
+ * for a region the pixel document only shows.
+ */
+export type UVLayoutData = WithoutIdentity<UVRegionData>;
 
 export interface UVRegionSlot {
   slot: UVSlot | null;
@@ -165,6 +175,16 @@ export class UVRegion {
     value: UVRegion | UVRegionData
   ): UVRegion {
     return value instanceof UVRegion ? value : new UVRegion(value);
+  }
+
+  static fromLayout(
+    layout: UVLayoutData,
+    identity: UVRegionIdentity
+  ): UVRegion {
+    return new UVRegion({
+      ...layout,
+      ...identity
+    });
   }
 
   constructor(
@@ -524,6 +544,17 @@ export class UVRegion {
         ...this.#activeFaces
       ]
     });
+  }
+
+  toLayout(): UVLayoutData {
+    const {
+      id: _id,
+      name: _name,
+      color: _color,
+      ...layout
+    } = this.toJSON();
+
+    return layout;
   }
 
   toJSON(): UVRegionData {

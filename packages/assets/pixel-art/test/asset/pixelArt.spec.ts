@@ -12,7 +12,7 @@ import { decodePixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
 import {
   createPixelArtDocument,
   pixelArtDocumentFromPng
-} from "#src/asset/document.ts";
+} from "#src/asset/pixelArt.ts";
 import { pixelArtAssetKind } from "#src/asset/pixelArtAssetKind.ts";
 import { opaquePng } from "../helpers/png.ts";
 

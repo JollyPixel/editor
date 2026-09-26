@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import type { UVRegionData } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelArtState } from "#src/asset/PixelArtState.ts";
+import { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 
 // CONSTANTS
 const kRegion: UVRegionData = {
