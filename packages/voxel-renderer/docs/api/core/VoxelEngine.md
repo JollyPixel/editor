@@ -161,6 +161,11 @@ interface VoxelEngineOptions {
    */
   ambientOcclusion?: number;
   /**
+   * Meshes chunks in Web Workers over shared memory. See Mesh workers below.
+   * Ignored, with a warning, when the page is not cross-origin isolated.
+   */
+  meshWorkers?: MeshWorkerOptions;
+  /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports
    * roughness and metalness maps but is more expensive to render; "lambert"
@@ -323,7 +328,7 @@ lifecycle.
 
 ### Rebuild budget
 
-`tick()` spends at most `rebuildBudgetMs` (default `8` ms) per frame and defers the rest. Set to `0` to rebuild everything synchronously. `init()` and `load()` always rebuild the whole world synchronously regardless. Use `flush()` when meshes must be ready before the next line runs.
+`tick()` spends at most `rebuildBudgetMs` (default `8` ms) per frame and defers the rest. Set to `0` to rebuild everything synchronously. `init()` and `load()` rebuild the whole world synchronously, unless [mesh workers](#mesh-workers) are running. Use `flush()` when meshes must be ready before the next line runs.
 
 ```ts
 const engine = new VoxelEngine({ rebuildBudgetMs: 8 });
@@ -332,8 +337,8 @@ engine.focus = focusPoint;  // prioritize chunks near this point
 engine.pendingRebuilds;     // 0 once the world is up to date
 ```
 
-`pendingRebuilds` only counts queued chunks: a chunk edited since the last tick
-is dirty but not queued yet. `whenIdle()` also waits for those. It resolves at
+`pendingRebuilds` counts queued chunks and builds running in mesh workers, not
+chunks edited since the last tick: those are dirty but not queued yet. `whenIdle()` also waits for those. It resolves at
 once when nothing inside the view distance is dirty or queued, otherwise at the
 end of the first `tick()` or `flush()` that leaves nothing to mesh. Chunks
 beyond the view distance do not hold it back. It never resolves after
@@ -343,6 +348,63 @@ beyond the view distance do not hold it back. It never resolves after
 engine.world.setVoxel("Ground", { position, blockId });
 await engine.whenIdle();    // the new voxel is meshed
 ```
+
+### Mesh workers
+
+`meshWorkers` moves chunk meshing to Web Workers. The application provides the
+worker script, which calls `runMeshWorker()` on its global scope:
+
+```ts
+// meshWorker.ts
+import { runMeshWorker } from "@jolly-pixel/voxel.renderer";
+
+runMeshWorker(self);
+```
+
+```ts
+const engine = new VoxelEngine({
+  meshWorkers: {
+    count: 4,
+    createWorker: () => new Worker(
+      new URL("./meshWorker.ts", import.meta.url),
+      { type: "module" }
+    )
+  }
+});
+```
+
+```ts
+interface MeshWorkerOptions {
+  createWorker: () => MeshWorkerPort; // a browser Worker satisfies MeshWorkerPort
+  count?: number;                     // default: navigator.hardwareConcurrency - 1, at least 1
+}
+
+function runMeshWorker(scope: MeshWorkerScope): void; // self, or any MessagePort
+```
+
+Workers read chunk storage through `SharedArrayBuffer`, so the page must be
+cross-origin isolated (`Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`). Without isolation the option is
+ignored, a warning is logged, and meshing stays on the main thread. Workers
+are created on the first rebuild.
+
+With workers running:
+
+- `tick()` dispatches queued chunks to the workers and installs their meshes on
+  a later `tick()`. Each worker holds two builds at a time and is handed the
+  next queued chunk as soon as one finishes.
+- `init()` and `load()` queue the world instead of meshing it; await
+  `whenIdle()` while ticking to know when it is drawn.
+- `flush()` still meshes every pending chunk on the main thread, including the
+  ones running in a worker, whose results are then dropped.
+- A build is dropped and its chunk remeshed when a chunk it read, or a block,
+  shape or tileset definition, changed while it ran.
+- Half-resolution chunks (`lodDistance`) are meshed on the main thread.
+- A worker `error` event stops every worker; running and later builds fall
+  back to the main thread and the error is logged.
+
+Custom shapes reach workers as data: their `faces` and the six `occludes()`
+answers.
 
 ### Focus
 

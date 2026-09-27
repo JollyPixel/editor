@@ -33,6 +33,10 @@ import {
   type ChunkMeshTarget
 } from "./render/ChunkMeshLayout.ts";
 import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";
+import {
+  ChunkMeshWorkers,
+  type MeshWorkerOptions
+} from "./render/ChunkMeshWorkers.ts";
 import { ChunkRebuildQueue } from "./render/ChunkRebuildQueue.ts";
 import { ChunkViewport } from "./render/ChunkViewport.ts";
 import { ChunkVisibility } from "./render/ChunkVisibility.ts";
@@ -206,6 +210,8 @@ export interface VoxelViewOptions {
    * @default false
    */
   receiveShadow?: boolean;
+
+  meshWorkers?: MeshWorkerOptions;
 }
 
 export class VoxelView {
@@ -229,6 +235,7 @@ export class VoxelView {
   #faceTemplates = new FaceTemplateTable();
   #materials: ChunkMaterialCache;
   #meshes: ChunkMeshStore;
+  #workers: ChunkMeshWorkers | null = null;
   #queue = new ChunkRebuildQueue();
   #idleWaiters: Array<() => void> = [];
   #visibility: ChunkVisibility;
@@ -306,7 +313,8 @@ export class VoxelView {
       retainVertexData = false,
       castShadow = false,
       receiveShadow = false,
-      ambientOcclusion: requestedAo = 0
+      ambientOcclusion: requestedAo = 0,
+      meshWorkers
     } = options;
     const ambientOcclusion = THREE.MathUtils.clamp(requestedAo, 0, 1);
 
@@ -399,10 +407,23 @@ export class VoxelView {
       castShadow,
       receiveShadow
     });
+    this.#workers = ChunkMeshWorkers.create(meshWorkers, {
+      world: document.world,
+      meshBuilder: this.#meshBuilder,
+      definitions: {
+        blockRegistry: document.blocks,
+        shapeRegistry: this.shapes,
+        tilesetManager: this.tilesetManager,
+        alphaTest
+      },
+      logger: this.#logger,
+      onCapacity: () => this.#refillWorkers()
+    });
     this.#visibility = new ChunkVisibility({
       meshes: this.#meshes,
       unload: (key, entry) => {
         this.#queue.cancel(key);
+        this.#workers?.cancel(key);
         this.#meshes.unload(key);
         for (const { chunk } of entry.members) {
           chunk.dirty = true;
@@ -438,10 +459,11 @@ export class VoxelView {
     this.#meshes.viewport = viewport;
 
     this.#visibility.update(viewport);
+    this.#workers?.installInto(this.#meshes);
     this.#enqueueDirtyChunks(viewport);
     this.#queue.drain(
       this.#rebuildBudgetMs,
-      (target) => this.#rebuildAdmitted(target, viewport)
+      (target) => this.#rebuildAdmitted(target, viewport, this.#offloads())
     );
     this.#settleIdleWaiters();
   }
@@ -450,16 +472,20 @@ export class VoxelView {
     const viewport = this.#viewport();
     this.#meshes.viewport = viewport;
     this.#visibility.update(viewport);
+    this.#workers?.installInto(this.#meshes);
+    for (const target of this.#workers?.reclaim() ?? []) {
+      this.#queue.push(target);
+    }
     this.#enqueueDirtyChunks(viewport);
     this.#queue.drain(
       0,
-      (target) => this.#rebuildAdmitted(target, viewport)
+      (target) => this.#rebuildAdmitted(target, viewport, false)
     );
     this.#settleIdleWaiters();
   }
 
   get pendingRebuilds(): number {
-    return this.#queue.size;
+    return this.#queue.size + (this.#workers?.pending ?? 0);
   }
 
   whenIdle(): Promise<void> {
@@ -627,6 +653,7 @@ export class VoxelView {
     this.document.off("loaded", this.#onLoaded);
     this.#queue.clear();
     this.#clearChunkMeshes();
+    this.#workers?.dispose();
     this.inspector.dispose();
     this.#collider?.dispose();
     this.#materials.dispose();
@@ -635,7 +662,7 @@ export class VoxelView {
   }
 
   #isIdle(): boolean {
-    if (this.#queue.size > 0) {
+    if (this.pendingRebuilds > 0) {
       return false;
     }
 
@@ -750,8 +777,9 @@ export class VoxelView {
 
   #rebuildAdmitted(
     target: ChunkMeshTarget,
-    viewport: ChunkViewport
-  ): void {
+    viewport: ChunkViewport,
+    offload: boolean
+  ): boolean {
     if (!viewport.contains(target.origin, false)) {
       const members = this.#layout.membersOf(target);
       if (members.length > 0) {
@@ -759,11 +787,42 @@ export class VoxelView {
           chunk.dirty = true;
         }
 
-        return;
+        return true;
       }
     }
 
-    this.#meshes.rebuild(target);
+    const workers = this.#workers;
+    if (!offload || workers === null) {
+      this.#meshes.rebuild(target);
+
+      return true;
+    }
+    if (!workers.hasCapacity) {
+      return false;
+    }
+
+    const plan = this.#meshes.plan(target);
+    if (plan !== null && (plan.lod !== null || !workers.dispatch(plan))) {
+      this.#meshes.build(plan);
+    }
+
+    return true;
+  }
+
+  #refillWorkers(): void {
+    const { viewport } = this.#meshes;
+    if (viewport === null || !this.#offloads()) {
+      return;
+    }
+
+    this.#queue.drain(
+      this.#rebuildBudgetMs,
+      (target) => this.#rebuildAdmitted(target, viewport, true)
+    );
+  }
+
+  #offloads(): boolean {
+    return this.#workers !== null && !this.#workers.broken;
   }
 
   #retire(
@@ -774,6 +833,7 @@ export class VoxelView {
     }
 
     this.#queue.cancel(target.key);
+    this.#workers?.cancel(target.key);
     this.#meshes.remove(target.key);
 
     return false;
@@ -799,6 +859,7 @@ export class VoxelView {
   }
 
   #clearChunkMeshes(): void {
+    this.#workers?.reclaim();
     this.#meshes.clear();
     this.#visibility.reset();
     this.#scannedViewport = null;
@@ -810,8 +871,11 @@ export class VoxelView {
     this.#logger.debug("Rebuilding all chunks...", { source });
 
     this.#queue.clear();
+    this.#workers?.reclaim();
     this.markAllChunksDirty(source);
-    this.flush();
+    if (!this.#offloads()) {
+      this.flush();
+    }
   }
 
   #syncAtlases(): void {

@@ -1,5 +1,29 @@
 // Import Internal Dependencies
 import type { BlockSurface } from "../../blocks/BlockSurface.ts";
+import type {
+  ResolvedTilesetDefinition,
+  TileRotation,
+  TileSpan,
+  TilesetUVRegion
+} from "../../tileset/types.ts";
+
+export interface TilesetUvSource {
+  readonly def: ResolvedTilesetDefinition;
+  uvFor(
+    col: number,
+    row: number,
+    size?: number,
+    span?: Readonly<TileSpan>,
+    rotation?: TileRotation
+  ): TilesetUVRegion;
+}
+
+export interface TilesetResolver {
+  readonly version: number;
+  resolve(
+    tilesetId?: string
+  ): TilesetUvSource | undefined;
+}
 
 /**
  * World-axis mapping for a full quad that greedy meshing can stretch.

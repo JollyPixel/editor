@@ -53,6 +53,12 @@ const kSeedBounds = {
   min: 0,
   max: 0x7FFFFFFF
 };
+const kMaxWorkers = 32;
+const kWorkersBySize: ReadonlyArray<readonly [maxSize: number, workers: number]> = [
+  [512, 1],
+  [1024, 2],
+  [Infinity, 4]
+];
 const kMaxViewDistance = 24;
 const kFog = {
   density: 3,
@@ -69,11 +75,13 @@ interface WorldSettings {
   size: number;
   chunkSize: number;
   seed: number;
+  workers: number;
 }
 
 interface BuildReport {
   terrain: TerrainStats;
   generateMs: number;
+  meshMs: number;
 }
 
 const settings = readSettings();
@@ -91,7 +99,10 @@ const { world } = runtime;
 const scene = world.sceneManager.getSource();
 
 const center = settings.size / 2;
-const cameraDistance = settings.size * 0.7;
+const cameraDistance = Math.min(
+  settings.size / 4,
+  kDefaultViewChunks * settings.chunkSize / 2
+);
 const flyCamera = world.createActor("camera")
   .addComponentAndGet(OrbitFlyCamera, {
     position: { x: center, y: kCameraHeight, z: center + cameraDistance },
@@ -115,7 +126,8 @@ const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
     focus: flyCamera.actor.object3D,
-    greedy: true,
+    greedy: false,
+    vertexPulling: true,
     chunkSize: settings.chunkSize,
     layers: [kTerrainLayer],
     blocks: tileset.blocks,
@@ -127,10 +139,23 @@ const voxelMap = world.createActor("map")
     viewDistance: kDefaultViewChunks,
     farDistance: kFarChunks * settings.chunkSize,
     lodDistance: kLodChunks * settings.chunkSize,
-    tilesets
+    tilesets,
+    meshWorkers: settings.workers > 0 ?
+      {
+        count: settings.workers,
+        createWorker: () => new Worker(
+          new URL("./noise-world/meshWorker.ts", import.meta.url),
+          { type: "module" }
+        )
+      } :
+      undefined
   });
 
 const { engine } = voxelMap;
+const chunkMeshes = engine.root.getObjectByName("VoxelView:chunks");
+if (chunkMeshes) {
+  daylight.watchCasters(chunkMeshes);
+}
 const pane = createExamplePane({ title: "Noise World" });
 
 let report: BuildReport | null = null;
@@ -140,7 +165,9 @@ const worldStats = {
   columns: 0,
   chunkSize: 0,
   trees: 0,
-  generateMs: 0
+  workers: settings.workers,
+  generateMs: 0,
+  meshMs: 0
 };
 const viewStats = {
   drawn: ""
@@ -172,7 +199,9 @@ worldFolder.addMonitors(worldStats, {
   columns: { label: "columns", format: formatCount },
   chunkSize: { label: "chunk size", format: formatCount },
   trees: { label: "trees", format: formatCount },
-  generateMs: { label: "generate", format: formatMilliseconds }
+  workers: { label: "mesh workers", format: formatCount },
+  generateMs: { label: "generate", format: formatMilliseconds },
+  meshMs: { label: "mesh", format: formatMilliseconds }
 });
 
 const viewFolder = pane.addFolder({ title: "View" });
@@ -457,13 +486,14 @@ function applyViewDistance(): void {
 
 function syncStats(): void {
   if (report !== null) {
-    const { terrain, generateMs } = report;
+    const { terrain, generateMs, meshMs } = report;
 
     worldStats.size = `${settings.size} × ${settings.size}`;
     worldStats.columns = terrain.columnCount;
     worldStats.chunkSize = settings.chunkSize;
     worldStats.trees = terrain.treeCount;
     worldStats.generateMs = generateMs;
+    worldStats.meshMs = meshMs;
   }
 
   const { chunks, culledChunks } = engine.inspector.mesh.stats;
@@ -487,13 +517,18 @@ function buildWorld(
   );
   const generateMs = performance.now() - generateStart;
 
-  engine.tick(0);
-
-  const built = {
+  const built: BuildReport = {
     terrain,
-    generateMs
+    generateMs,
+    meshMs: 0
   };
-  console.log("[noise-world] built", built);
+  const meshStart = performance.now();
+  engine.tick(0);
+  void engine.whenIdle().then(() => {
+    built.meshMs = performance.now() - meshStart;
+    console.log("[noise-world] meshed", built);
+    syncStats();
+  });
 
   return built;
 }
@@ -509,12 +544,27 @@ function resetLayer(
 
 function readSettings(): WorldSettings {
   const params = new URLSearchParams(window.location.search);
+  const size = readInt(params, "size", kSizeBounds);
 
   return {
-    size: readInt(params, "size", kSizeBounds),
+    size,
     chunkSize: readInt(params, "chunk", kChunkBounds),
-    seed: readInt(params, "seed", kSeedBounds)
+    seed: readInt(params, "seed", kSeedBounds),
+    workers: readInt(params, "workers", {
+      default: defaultWorkerCount(size),
+      min: 0,
+      max: kMaxWorkers
+    })
   };
+}
+
+function defaultWorkerCount(
+  size: number
+): number {
+  const [, workers] = kWorkersBySize.find(([maxSize]) => size <= maxSize)!;
+  const spareCores = Math.max(1, navigator.hardwareConcurrency - 1);
+
+  return Math.min(workers, spareCores);
 }
 
 function readInt(

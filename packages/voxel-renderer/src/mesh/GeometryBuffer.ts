@@ -4,7 +4,11 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { BlockVariantFace } from "./variants/types.ts";
 import type { QuadIndex } from "./QuadIndex.ts";
-import type { FaceBuffer } from "./types.ts";
+import type {
+  ChunkMeshAttribute,
+  FaceBuffer,
+  QuadMeshData
+} from "./types.ts";
 import {
   AO_UNOCCLUDED,
   shadeFace
@@ -259,42 +263,58 @@ export class GeometryBuffer implements FaceBuffer {
    * Copies written ranges into exact-size geometry attributes that draw
    * through the shared `quadIndex`.
    */
-  toGeometry(
-    quadIndex: QuadIndex
-  ): THREE.BufferGeometry {
+  toMeshData(): QuadMeshData {
     const { vertexCount, tiled } = this;
-    const geometry = new THREE.BufferGeometry();
-
-    geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(this.#positions.slice(0, vertexCount * 3), 3)
-    );
-    geometry.setAttribute(
-      "normal",
-      new THREE.BufferAttribute(this.#normals.slice(0, vertexCount * 4), 4, true)
-    );
-    geometry.setAttribute(
-      "uv",
+    const attributes: ChunkMeshAttribute[] = [
+      {
+        name: "position",
+        array: this.#positions.slice(0, vertexCount * 3),
+        itemSize: 3,
+        normalized: false
+      },
+      {
+        name: "normal",
+        array: this.#normals.slice(0, vertexCount * 4),
+        itemSize: 4,
+        normalized: true
+      },
       tiled ?
-        new THREE.BufferAttribute(this.#tileUvs.slice(0, vertexCount * 2), 2) :
-        new THREE.BufferAttribute(this.#atlasUvs.slice(0, vertexCount * 2), 2, true)
-    );
-    geometry.setAttribute(
-      "tileRegion",
-      new THREE.BufferAttribute(this.#regions.slice(0, vertexCount * 4), 4, true)
-    );
+        {
+          name: "uv",
+          array: this.#tileUvs.slice(0, vertexCount * 2),
+          itemSize: 2,
+          normalized: false
+        } :
+        {
+          name: "uv",
+          array: this.#atlasUvs.slice(0, vertexCount * 2),
+          itemSize: 2,
+          normalized: true
+        },
+      {
+        name: "tileRegion",
+        array: this.#regions.slice(0, vertexCount * 4),
+        itemSize: 4,
+        normalized: true
+      }
+    ];
     if (tiled) {
-      geometry.setAttribute(
-        "tileRepeat",
-        new THREE.BufferAttribute(this.#repeats.slice(0, vertexCount * 2), 2, true)
-      );
+      attributes.push({
+        name: "tileRepeat",
+        array: this.#repeats.slice(0, vertexCount * 2),
+        itemSize: 2,
+        normalized: true
+      });
     }
 
-    const quads = this.quadCount;
-    geometry.setIndex(quadIndex.forQuads(quads));
-    geometry.setDrawRange(0, quads * kIndicesPerQuad);
-
-    return geometry;
+    return {
+      kind: "quads",
+      attributes,
+      vertexCount,
+      triangleCount: this.triangleCount,
+      quadCount: this.quadCount,
+      bytesPerVertex: this.bytesPerVertex
+    };
   }
 
   #growVertices(
@@ -317,6 +337,35 @@ export class GeometryBuffer implements FaceBuffer {
     }
     this.#vertexCapacity = capacity;
   }
+}
+
+export function createQuadGeometry(
+  data: QuadMeshData,
+  quadIndex: QuadIndex
+): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  for (const { name, array, itemSize, normalized } of data.attributes) {
+    geometry.setAttribute(
+      name,
+      new THREE.BufferAttribute(array, itemSize, normalized)
+    );
+  }
+
+  geometry.setIndex(quadIndex.forQuads(data.quadCount));
+  geometry.setDrawRange(0, data.quadCount * kIndicesPerQuad);
+
+  return geometry;
+}
+
+export function quadMeshBytes(
+  data: QuadMeshData
+): number {
+  let bytes = data.quadCount * kIndicesPerQuad * Uint32Array.BYTES_PER_ELEMENT;
+  for (const { array } of data.attributes) {
+    bytes += array.byteLength;
+  }
+
+  return bytes;
 }
 
 function grow<

@@ -46,6 +46,7 @@ common operations and exposes `document` and `view` for callers that need them.
 | Geometry | `VoxelMeshBuilder` | Reads world, block, shape, and atlas data; returns chunk geometries |
 | Scene objects | `ChunkMeshStore` | Creates and disposes chunk meshes under `VoxelView.root` |
 | Physics | `VoxelCollider` | Optional adapter receives rebuilt chunk geometry |
+| Worker meshing | `ChunkMeshWorkers` | Optional; sends shared chunk storage to Web Workers running `runMeshWorker()`, installs their results |
 
 ## Edit to rendered chunk
 

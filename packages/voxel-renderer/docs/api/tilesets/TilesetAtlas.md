@@ -23,6 +23,15 @@ function resolveTilesetDefinition(
   definition: TilesetDefinition,
   size: AtlasSize
 ): ResolvedTilesetDefinition;
+
+function tileUvRegion(
+  definition: ResolvedTilesetDefinition,
+  col: number,
+  row: number,
+  size?: number,
+  span?: Readonly<TileSpan>,
+  rotation?: TileRotation
+): TilesetUVRegion;
 ```
 
 The constructor resolves `cols` and `rows` from the image with
@@ -38,6 +47,8 @@ partial tiles at the image edge out of the derived ones.
 `uvFor()` returns the texture rect of a `size` by `size` texel square (default
 `def.tileSize`) anchored at the top-left of tile `(col, row)`. `col` and `row`
 may be fractional. The rect is inset by half a texel on each side.
+`tileUvRegion()` computes the same rect from a resolved definition alone, for
+code without a texture such as a mesh worker.
 
 `span` stretches the square to the [`tileFootprint()`](./tilesets.md) of
 `size`, growing right and down from the same corner. A ramp slope on 16-texel

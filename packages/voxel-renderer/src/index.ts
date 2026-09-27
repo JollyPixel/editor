@@ -21,6 +21,12 @@ export * from "./inspector/index.ts";
 export * from "./history/index.ts";
 export type { VoxelLogger } from "./utils/logger.ts";
 export { MeshBuildStats } from "./mesh/index.ts";
+export { runMeshWorker } from "./mesh/workers/runMeshWorker.ts";
+export type {
+  MeshWorkerPort,
+  MeshWorkerScope
+} from "./mesh/workers/protocol.ts";
+export type { MeshWorkerOptions } from "./render/ChunkMeshWorkers.ts";
 export {
   enableTileWrapping,
   type TileWrappedMaterial

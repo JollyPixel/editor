@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type { PulledMeshData } from "../types.ts";
 import type { FaceTemplateTable } from "./FaceTemplateTable.ts";
 
 // CONSTANTS
@@ -14,6 +15,7 @@ const kCellMask = (1 << PULLED_CELL_BITS) - 1;
 const kTemplateMask = (1 << PULLED_TEMPLATE_BITS) - 1;
 const kFlipShift = PULLED_TEMPLATE_BITS + PULLED_AO_BITS;
 const kQuadCorners = [0, 1, 2, 0, 2, 3];
+const kCornerCount = 4;
 const kQuadTriangles = [[0, 1, 2], [0, 2, 3]];
 
 const kA = new THREE.Vector3();
@@ -41,6 +43,31 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     const [width, height] = textureSize(faceCount);
 
     return width * height * PULLED_FACE_WORDS;
+  }
+
+  static byteLength(
+    data: PulledMeshData
+  ): number {
+    return data.words.byteLength +
+      (kCornerCount * 3 * Float32Array.BYTES_PER_ELEMENT * 2) +
+      (kQuadCorners.length * Uint16Array.BYTES_PER_ELEMENT);
+  }
+
+  static fromMeshData(
+    data: PulledMeshData,
+    templates: FaceTemplateTable
+  ): PulledChunkGeometry {
+    const [minX, minY, minZ, maxX, maxY, maxZ] = data.bounds;
+
+    return new PulledChunkGeometry({
+      words: data.words,
+      faceCount: data.faceCount,
+      templates,
+      bounds: new THREE.Box3(
+        new THREE.Vector3(minX, minY, minZ),
+        new THREE.Vector3(maxX, maxY, maxZ)
+      )
+    });
   }
 
   readonly faces: THREE.DataTexture;
@@ -81,13 +108,18 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     this.setAttribute(
       "position",
       new THREE.BufferAttribute(
-        new Float32Array(kQuadCorners.flatMap((corner) => [corner, 0, 0])),
+        new Float32Array(kCornerCount * 3).map(
+          (_, index) => (index % 3 === 0 ? index / 3 : 0)
+        ),
         3
       )
     );
     this.setAttribute(
       "normal",
-      new THREE.BufferAttribute(new Float32Array(kQuadCorners.length * 3), 3)
+      new THREE.BufferAttribute(new Float32Array(kCornerCount * 3), 3)
+    );
+    this.setIndex(
+      new THREE.BufferAttribute(new Uint16Array(kQuadCorners), 1)
     );
     this.instanceCount = faceCount;
     this.boundingBox = bounds.clone();

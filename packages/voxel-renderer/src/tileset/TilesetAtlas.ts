@@ -39,6 +39,29 @@ export function resolveTilesetDefinition(
   };
 }
 
+// eslint-disable-next-line max-params
+export function tileUvRegion(
+  def: ResolvedTilesetDefinition,
+  col: number,
+  row: number,
+  size: number = def.tileSize,
+  span: Readonly<TileSpan> = UNIT_TILE_SPAN,
+  rotation: TileRotation = 0
+): TilesetUVRegion {
+  const { cols, rows, tileSize } = def;
+  const width = cols * tileSize;
+  const height = rows * tileSize;
+  const footprint = tileFootprint(size, span, rotation);
+  const bottom = ((rows - row) * tileSize) - footprint.height;
+
+  return {
+    offsetU: ((col * tileSize) + 0.5) / width,
+    offsetV: (bottom + 0.5) / height,
+    scaleU: (footprint.width - 1) / width,
+    scaleV: (footprint.height - 1) / height
+  };
+}
+
 export class TilesetAtlas<
   TTexture extends THREE.Texture<AtlasSize> = TilesetTexture
 > {
@@ -61,22 +84,11 @@ export class TilesetAtlas<
   uvFor(
     col: number,
     row: number,
-    size: number = this.def.tileSize,
-    span: Readonly<TileSpan> = UNIT_TILE_SPAN,
-    rotation: TileRotation = 0
+    size?: number,
+    span?: Readonly<TileSpan>,
+    rotation?: TileRotation
   ): TilesetUVRegion {
-    const { cols, rows, tileSize } = this.def;
-    const width = cols * tileSize;
-    const height = rows * tileSize;
-    const footprint = tileFootprint(size, span, rotation);
-    const bottom = ((rows - row) * tileSize) - footprint.height;
-
-    return {
-      offsetU: ((col * tileSize) + 0.5) / width,
-      offsetV: (bottom + 0.5) / height,
-      scaleU: (footprint.width - 1) / width,
-      scaleV: (footprint.height - 1) / height
-    };
+    return tileUvRegion(this.def, col, row, size, span, rotation);
   }
 
   updateImage(

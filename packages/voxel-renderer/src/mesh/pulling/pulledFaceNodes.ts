@@ -166,6 +166,8 @@ export function enableVertexPulling(
 
     return nodes.position;
   })();
+  (material as { castShadowPositionNode?: unknown; })
+    .castShadowPositionNode = nodes.position;
 
   return {
     uv: varying(nodes.uv),

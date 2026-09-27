@@ -12,6 +12,9 @@ class VoxelStore {
   readonly capacity: number;
   readonly keys: Int32Array;
   readonly values: Uint32Array;
+  readonly shared: boolean;
+
+  static fromArrays(keys: Int32Array, values: Uint32Array, size: number): VoxelStore;
 
   constructor(initialCapacity?: number);
   get(key: number): PackedVoxel;
@@ -21,6 +24,7 @@ class VoxelStore {
   clear(): void;
   copyFrom(source: VoxelStore): void;
   reserve(size: number): void;
+  share(): void;
 }
 ```
 
@@ -40,6 +44,18 @@ arrays and can be written to and grown independently.
 
 `reserve()` grows the table once so `size` entries fit without another rehash.
 It never shrinks the store.
+
+## Shared memory
+
+`share()` moves `keys` and `values` into `SharedArrayBuffer`s, and every array
+the store allocates afterwards (growth, `copyFrom()`) stays shared. It is a
+no-op once `shared` is `true`. The view calls it on the chunks a
+[mesh worker](../core/VoxelEngine.md#mesh-workers) reads.
+
+`fromArrays()` wraps existing arrays without copying them. The arrays must have
+the same power-of-two length of at least `16`, otherwise it throws a
+`RangeError`. A worker uses it to read a store it received; writes made by the
+owner stay visible until the owner grows the store and replaces its arrays.
 
 ## Direct iteration
 

@@ -24,6 +24,7 @@ class TilesetManager {
 }
 
 const MISSING_TILESET_ID = "$missing";
+const MISSING_TILESET_DEFINITION: Readonly<ResolvedTilesetDefinition>; // 16 px, one tile
 type MissingTilesetAtlas = TilesetAtlas<THREE.DataTexture>;
 ```
 

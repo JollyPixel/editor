@@ -41,7 +41,7 @@ function drainAll(
   queue: ChunkRebuildQueue
 ): ChunkMeshTarget[] {
   const rebuilt: ChunkMeshTarget[] = [];
-  queue.drain(0, (target) => void rebuilt.push(target));
+  queue.drain(0, (target) => rebuilt.push(target) > 0);
 
   return rebuilt;
 }
@@ -111,10 +111,31 @@ describe("ChunkRebuildQueue — drain", () => {
     let rebuilt = 0;
     queue.drain(Number.MIN_VALUE, () => {
       rebuilt++;
+
+      return true;
     });
 
     assert.equal(rebuilt, 1);
     assert.equal(queue.size, 1);
+  });
+
+  it("keeps a deferred target queued and stops draining", () => {
+    const queue = new ChunkRebuildQueue();
+    const first = targetAt(0);
+    const second = targetAt(1);
+    queue.push(first);
+    queue.push(second);
+
+    const offered: ChunkMeshTarget[] = [];
+    queue.drain(0, (target) => {
+      offered.push(target);
+
+      return false;
+    });
+
+    assert.deepEqual(offered, [first]);
+    assert.equal(queue.size, 2);
+    assert.deepEqual(drainAll(queue), [first, second]);
   });
 
   it("resumes where the previous drain stopped", () => {
@@ -123,7 +144,7 @@ describe("ChunkRebuildQueue — drain", () => {
     queue.push(targetAt(0));
     queue.push(second);
 
-    queue.drain(Number.MIN_VALUE, () => void 0);
+    queue.drain(Number.MIN_VALUE, () => true);
 
     assert.deepEqual(drainAll(queue), [second]);
   });

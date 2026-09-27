@@ -22,6 +22,33 @@ export class VoxelStore {
   #shift: number;
   #size = 0;
   #growAt: number;
+  #shared = false;
+
+  static fromArrays(
+    keys: Int32Array,
+    values: Uint32Array,
+    size: number
+  ): VoxelStore {
+    const capacity = keys.length;
+    if (
+      capacity < kInitialCapacity ||
+      (capacity & (capacity - 1)) !== 0 ||
+      values.length !== capacity
+    ) {
+      throw new RangeError(
+        `VoxelStore: arrays need one power-of-two capacity, got ${capacity} keys and ${values.length} values.`
+      );
+    }
+
+    const store = new VoxelStore(0);
+    store.#keys = keys;
+    store.#values = values;
+    store.#resize(capacity);
+    store.#size = size;
+    store.#shared = isSharedBuffer(keys.buffer);
+
+    return store;
+  }
 
   constructor(
     initialCapacity: number = kInitialCapacity
@@ -39,6 +66,24 @@ export class VoxelStore {
 
   get size(): number {
     return this.#size;
+  }
+
+  get shared(): boolean {
+    return this.#shared;
+  }
+
+  share(): void {
+    if (this.#shared) {
+      return;
+    }
+
+    const keys = allocateKeys(this.#keys.length, true);
+    const values = allocateValues(this.#values.length, true);
+    keys.set(this.#keys);
+    values.set(this.#values);
+    this.#keys = keys;
+    this.#values = values;
+    this.#shared = true;
   }
 
   /**
@@ -173,11 +218,9 @@ export class VoxelStore {
     const capacity = source.capacity;
 
     if (this.#keys.length !== capacity) {
-      this.#keys = new Int32Array(capacity);
-      this.#values = new Uint32Array(capacity);
-      this.#mask = capacity - 1;
-      this.#shift = 32 - Math.log2(capacity);
-      this.#growAt = growThreshold(capacity);
+      this.#keys = allocateKeys(capacity, this.#shared);
+      this.#values = allocateValues(capacity, this.#shared);
+      this.#resize(capacity);
     }
 
     this.#keys.set(source.keys);
@@ -198,6 +241,14 @@ export class VoxelStore {
     }
   }
 
+  #resize(
+    capacity: number
+  ): void {
+    this.#mask = capacity - 1;
+    this.#shift = 32 - Math.log2(capacity);
+    this.#growAt = growThreshold(capacity);
+  }
+
   #grow(): void {
     this.#rehash(this.#keys.length * 2);
   }
@@ -208,11 +259,9 @@ export class VoxelStore {
     const oldKeys = this.#keys;
     const oldValues = this.#values;
 
-    this.#keys = new Int32Array(capacity).fill(kFreeKey);
-    this.#values = new Uint32Array(capacity);
-    this.#mask = capacity - 1;
-    this.#shift = 32 - Math.log2(capacity);
-    this.#growAt = growThreshold(capacity);
+    this.#keys = allocateKeys(capacity, this.#shared).fill(kFreeKey);
+    this.#values = allocateValues(capacity, this.#shared);
+    this.#resize(capacity);
 
     const keys = this.#keys;
     const values = this.#values;
@@ -230,6 +279,35 @@ export class VoxelStore {
       values[slot] = oldValues[i];
     }
   }
+}
+
+function allocateKeys(
+  capacity: number,
+  shared: boolean
+): Int32Array {
+  return shared ?
+    new Int32Array(
+      new SharedArrayBuffer(capacity * Int32Array.BYTES_PER_ELEMENT)
+    ) :
+    new Int32Array(capacity);
+}
+
+function allocateValues(
+  capacity: number,
+  shared: boolean
+): Uint32Array {
+  return shared ?
+    new Uint32Array(
+      new SharedArrayBuffer(capacity * Uint32Array.BYTES_PER_ELEMENT)
+    ) :
+    new Uint32Array(capacity);
+}
+
+function isSharedBuffer(
+  buffer: ArrayBufferLike
+): boolean {
+  return typeof SharedArrayBuffer !== "undefined" &&
+    buffer instanceof SharedArrayBuffer;
 }
 
 function nextPowerOfTwo(

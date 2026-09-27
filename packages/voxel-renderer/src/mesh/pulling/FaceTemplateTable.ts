@@ -23,10 +23,23 @@ const kNormalTexel = 6;
 const kUnorm16 = 65535;
 const kSnorm8 = 127;
 
+export type FaceTemplate = Pick<
+  BlockVariantFace,
+  | "cull"
+  | "vertexCount"
+  | "positions"
+  | "uvs"
+  | "region"
+  | "normalX"
+  | "normalY"
+  | "normalZ"
+>;
+
 export class FaceTemplateTable {
   readonly node: TextureNode;
 
-  #ids = new WeakMap<BlockVariantFace, number>();
+  #ids = new WeakMap<FaceTemplate, number>();
+  #faces: FaceTemplate[] = [];
   #contentIds = new Map<string, number>();
   #data: Float32Array<ArrayBuffer>;
   #texture: THREE.DataTexture;
@@ -47,7 +60,7 @@ export class FaceTemplateTable {
   }
 
   idOf(
-    face: BlockVariantFace
+    face: FaceTemplate
   ): number {
     const known = this.#ids.get(face);
     if (known !== undefined) {
@@ -63,6 +76,23 @@ export class FaceTemplateTable {
     this.#ids.set(face, id);
 
     return id;
+  }
+
+  templatesSince(
+    id: number
+  ): FaceTemplate[] {
+    return this.#faces.slice(id).map((face) => {
+      return {
+        cull: face.cull,
+        vertexCount: face.vertexCount,
+        positions: face.positions,
+        uvs: face.uvs,
+        region: face.region,
+        normalX: face.normalX,
+        normalY: face.normalY,
+        normalZ: face.normalZ
+      };
+    });
   }
 
   copyVertexTo(
@@ -97,7 +127,7 @@ export class FaceTemplateTable {
   }
 
   #append(
-    face: BlockVariantFace
+    face: FaceTemplate
   ): number {
     const id = this.#count;
     if (id >= MAX_FACE_TEMPLATES) {
@@ -108,6 +138,7 @@ export class FaceTemplateTable {
 
     this.#reserve(id + 1);
     writeTemplate(this.#data, id * kTemplateFloats, face);
+    this.#faces.push(face);
     this.#count = id + 1;
     this.#texture.needsUpdate = true;
 
@@ -155,7 +186,7 @@ function createTexture(
 function writeTemplate(
   data: Float32Array,
   offset: number,
-  face: BlockVariantFace
+  face: FaceTemplate
 ): void {
   const { positions, uvs, region } = face;
   const last = face.vertexCount - 1;
@@ -184,7 +215,7 @@ function writeTemplate(
 }
 
 function contentKey(
-  face: BlockVariantFace
+  face: FaceTemplate
 ): string {
   const parts: number[] = [face.cull, face.vertexCount];
   for (let i = 0; i < face.vertexCount * 3; i++) {

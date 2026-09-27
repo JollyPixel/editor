@@ -1,6 +1,8 @@
 // Import Internal Dependencies
-import type { VoxelLayer } from "../../world/VoxelLayer.ts";
-import type { MeshableWorld } from "../types.ts";
+import type {
+  MeshableLayer,
+  MeshableWorld
+} from "../types.ts";
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
 import { LayerChunkCache } from "./LayerChunkCache.ts";
 import {
@@ -48,7 +50,7 @@ export class ChunkNeighbourhood {
 
   #variants: BlockVariantCache;
   #layerCount: number;
-  #selfLayer: VoxelLayer | null = null;
+  #selfLayer: MeshableLayer | null = null;
   #selfIndex = -1;
   #selfOpaque = true;
   #self: LayerChunkCache | null = null;
@@ -90,12 +92,12 @@ export class ChunkNeighbourhood {
     this.#layerCount = layers.length;
   }
 
-  get self(): VoxelLayer | null {
+  get self(): MeshableLayer | null {
     return this.#selfLayer;
   }
 
   set self(
-    layer: VoxelLayer
+    layer: MeshableLayer
   ) {
     this.#selfLayer = layer;
     this.#selfIndex = this.layers.findIndex(

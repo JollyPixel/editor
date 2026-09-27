@@ -20,11 +20,13 @@ import {
   uv,
   varying,
   vec2,
+  vec3,
   vec4
 } from "three/tsl";
 
 // Import Internal Dependencies
 import type { BlockSurface } from "../blocks/BlockSurface.ts";
+import { shadowPassSwitch } from "./ShadowPassSwitchNode.ts";
 import { TILE_REPEAT_SCALE } from "./GeometryBuffer.ts";
 import {
   aoFactorNode,
@@ -184,7 +186,7 @@ function applyTileColor(
    * The WebGPU build aliases the classic material names onto their node
    * variants, so `colorNode` exists at runtime but not on the classic type.
    */
-  (material as { colorNode?: unknown; }).colorNode = Fn(() => {
+  const color = Fn(() => {
     if (surface?.alphaMode === "mask") {
       diffuse.a.lessThan(surface.alphaCutoff).discard();
     }
@@ -192,7 +194,29 @@ function applyTileColor(
 
     return vec4(tint, float(1)).mul(vec4(diffuse.rgb, alpha));
   })();
+  (material as { colorNode?: unknown; }).colorNode = shadowPassSwitch(
+    color,
+    casterColor(sample.sampled, surface, keepsAlpha)
+  );
   configureClassicAlpha(material, surface, flat);
+}
+
+function casterColor(
+  sampled: Vec4Node,
+  surface: BlockSurface | undefined,
+  keepsAlpha: boolean
+): Vec4Node {
+  if (surface?.alphaMode !== "mask" && !keepsAlpha) {
+    return vec4(1);
+  }
+
+  return Fn(() => {
+    if (surface?.alphaMode === "mask") {
+      sampled.a.lessThan(surface.alphaCutoff).discard();
+    }
+
+    return vec4(vec3(1), keepsAlpha ? sampled.a : float(1));
+  })();
 }
 
 function footprintAverage(

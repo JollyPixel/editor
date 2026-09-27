@@ -96,7 +96,7 @@ describe("PulledChunkGeometry - classic parity", () => {
     });
   }
 
-  it("draws one instance of six corner vertices per face", () => {
+  it("draws one instance of an indexed four-corner quad per face", () => {
     const classic = buildGeometries(buildMixedWorld({}));
     const pulled = pulledGeometries(buildMixedWorld({ vertexPulling: true }));
 
@@ -104,9 +104,10 @@ describe("PulledChunkGeometry - classic parity", () => {
       const pulledGeometry = [...pulled].find(([other]) => String(other) === String(key))![1];
       assert.equal(pulledGeometry.instanceCount, geometry.getAttribute("position").count / 4);
       assert.equal(pulledGeometry.faceCount, pulledGeometry.instanceCount);
+      const corners = pulledGeometry.getAttribute("position");
+      assert.equal(corners.count, 4);
       assert.deepEqual(
-        Array.from(pulledGeometry.getAttribute("position").array)
-          .filter((_, index) => index % 3 === 0),
+        Array.from(pulledGeometry.getIndex()!.array, (index) => corners.getX(index)),
         [0, 1, 2, 0, 2, 3]
       );
     }
@@ -125,12 +126,12 @@ describe("PulledChunkGeometry - classic parity", () => {
     assert.equal(pulled.builder.stats.bytesPerVertex, 2);
   });
 
-  it("counts eight bytes per face plus each chunk's six-vertex quad", () => {
+  it("counts eight bytes per face plus each chunk's indexed quad", () => {
     const pulled = buildMixedWorld({ vertexPulling: true });
     buildGeometries(pulled);
     const { faces, geometries, bytes } = pulled.builder.stats;
 
-    assert.equal(bytes, (faces * 8) + (geometries * 6 * 3 * 4 * 2));
+    assert.equal(bytes, (faces * 8) + (geometries * ((4 * 3 * 4 * 2) + (6 * 2))));
   });
 
   it("keeps building classic geometry while greedy meshing is on", () => {
