@@ -1,9 +1,7 @@
 // Import Internal Dependencies
-import type { MessageProtocols } from "../../protocol/MessageProtocol.ts";
-import type {
-  ClientHandle,
-  PeerMetadata
-} from "../../protocol/types.ts";
+import type { MessageProtocols } from "../../protocol/message/MessageProtocol.ts";
+import type { PeerMetadata } from "../../protocol/types.ts";
+import type { ClientHandle } from "../../transport/ClientHandle.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 
 export interface RoomPeer {

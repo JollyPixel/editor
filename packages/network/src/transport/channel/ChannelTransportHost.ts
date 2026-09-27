@@ -1,8 +1,8 @@
 // Import Internal Dependencies
-import type { ClientSocket } from "../../client/Client.ts";
+import type { ClientSocket } from "../ClientSocket.ts";
 import {
   CHANNEL_TRANSPORT_TAG,
-  isChannelTransportMessage,
+  parseChannelTransportMessage,
   toPlainEvent,
   type ChannelPort,
   type ChannelTransportMessage
@@ -17,6 +17,9 @@ const kSocketEvents = [
 ] as const;
 
 export interface ChannelTransportHostOptions {
+  /**
+   * Port shared with `ChannelTransport` clients, started when it has `start()`.
+   */
   port: ChannelPort;
   /**
    * Opens the connection each remote client is relayed to, usually
@@ -24,6 +27,8 @@ export interface ChannelTransportHostOptions {
    */
   open: () => ClientSocket;
   /**
+   * Id clients pass as `host` to reach this host.
+   * Messages addressed to other ids are ignored.
    * @default crypto.randomUUID()
    */
   id?: string;
@@ -42,9 +47,9 @@ export class ChannelTransportHost {
   #closed = false;
 
   readonly #onMessage = (event: { data: unknown; }): void => {
-    const message = event.data;
+    const message = parseChannelTransportMessage(event.data);
     if (
-      !isChannelTransportMessage(message) ||
+      message === undefined ||
       message.host !== this.id
     ) {
       return;

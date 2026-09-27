@@ -7,20 +7,20 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import type {
-  Infer,
-  JSONSchema,
-  ValidationError
+import {
+  VALIDATOR_OPTIONS,
+  type Infer,
+  type JSONSchema,
+  type ValidationError
 } from "./schema.ts";
-
-// CONSTANTS
-const kValidatorOptions = { useDefaults: false };
 
 /**
  * Checks values against one JSON Schema. The schema compiles on the first
  * `parse()`, so constructing a parser at module load costs nothing.
  */
-export class SchemaParser<const TSchema extends JSONSchema> {
+export class SchemaParser<
+  const TSchema extends JSONSchema
+> {
   readonly schema: TSchema;
 
   #validator: Validator<Infer<TSchema>>;
@@ -31,7 +31,7 @@ export class SchemaParser<const TSchema extends JSONSchema> {
     this.schema = schema;
     this.#validator = new Validator<Infer<TSchema>>(
       schema,
-      kValidatorOptions
+      VALIDATOR_OPTIONS
     );
   }
 
@@ -40,6 +40,8 @@ export class SchemaParser<const TSchema extends JSONSchema> {
   ): Result<Infer<TSchema>, readonly ValidationError[]> {
     const result = this.#validator.validate(value);
 
-    return result.valid ? Ok(result.data) : Err(result.errors);
+    return result.valid
+      ? Ok(result.data)
+      : Err(result.errors);
   }
 }

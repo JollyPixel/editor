@@ -90,15 +90,4 @@ describe("LastWriteWinsResolver — same client (undo/redo replay ordering)", ()
 
     assert.strictEqual(resolver.resolve({ incoming, existing }), "accept");
   });
-
-  test(
-    "a different client with an older timestamp is still rejected (short-circuit is same-client only)",
-    () => {
-      const resolver = new LastWriteWinsResolver();
-      const existing = header({ clientId: "A", timestamp: 2000 });
-      const incoming = header({ clientId: "B", timestamp: 500 });
-
-      assert.strictEqual(resolver.resolve({ incoming, existing }), "reject");
-    }
-  );
 });

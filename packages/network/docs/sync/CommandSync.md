@@ -9,7 +9,7 @@ type CommandBody<TCommand extends NetworkCommandHeader> =
 class CommandSync<
   TCommand extends NetworkCommandHeader,
   TSnapshot,
-  TNotice extends NetworkServerNotice = never
+  TNotice extends NetworkServerNoticeOf<TNotice> = never
 > extends Emitter<{
   ready: () => void;
   snapshot: (snapshot: TSnapshot) => void;
@@ -31,11 +31,13 @@ class CommandSync<
 ## Messages
 
 ```ts
-type NetworkServerMessage<TCommand, TSnapshot, TNotice extends NetworkServerNotice = never> =
+type NetworkServerMessage<TCommand, TSnapshot, TNotice extends NetworkServerNoticeOf<TNotice> = never> =
   | { type: "snapshot"; data: TSnapshot; }
   | { type: "command"; data: TCommand; }
   | TNotice;
 ```
+
+A notice's `type` must be a literal other than `"snapshot"` and `"command"`. `NetworkServerNoticeOf<TNotice>` resolves to `never` for a notice whose `type` could collide with one, such as `{ type: string }`, so the constraint fails at compile time.
 
 - `snapshot` emits `"snapshot"`, then `"ready"` once, the first time.
 - `command` emits `"command"` unless its `clientId` is `room.clientId`.
@@ -56,5 +58,5 @@ class CounterSync extends CommandSync<CounterCommand, CounterSnapshot> {
 }
 ```
 
-- `send(body, timestamp?)` builds `{ ...body, clientId: room.clientId, seq, timestamp }`, where `seq` increments per instance and `timestamp` defaults to `Date.now()`. Pass `timestamp` when the original event time must survive, as in replay flows.
-- `destroy()` removes the room listener. It does not call `room.leave()`.
+- `send(body, timestamp?)` builds `{ ...body, clientId: room.clientId, seq, timestamp }`, where `seq` increments per instance and `timestamp` defaults to `Date.now()`. Pass `timestamp` when the original event time must survive, as in replay flows. While `room.clientId` is `null`, bodies are held and sent on the room's next `sync`.
+- `destroy()` removes the room listeners and discards held bodies. It does not call `room.leave()`.

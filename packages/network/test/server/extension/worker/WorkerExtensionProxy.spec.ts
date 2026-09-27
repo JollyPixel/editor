@@ -72,7 +72,7 @@ describe("WorkerExtensionProxy — readiness", () => {
     await flushMacrotask();
     assert.equal(transports[0].sent.length, 1);
 
-    const sent = transports[0].sent[0] as { type: string; id: string; method: string; };
+    const sent = transports[0].dispatched();
     assert.equal(sent.type, "dispatch");
     assert.equal(sent.method, "onMessage");
 
@@ -118,7 +118,7 @@ describe("WorkerExtensionProxy — hooks the worker does not implement", () => {
     const pending = proxy.onMessage("A", { hello: "world" }, createContext());
     await flushMacrotask();
 
-    const sent = transports[0].sent[0] as { type: string; id: string; method: string; };
+    const sent = transports[0].dispatched();
     assert.equal(sent.method, "onMessage");
 
     transports[0].simulateMessage({ type: "dispatch-result", id: sent.id, ok: true });
@@ -158,7 +158,7 @@ describe("WorkerExtensionProxy — context-call routing", () => {
       const pending = proxy.onMessage("A", {}, context);
       transports[0].simulateMessage(readyMessage());
       await flushMacrotask();
-      const dispatchMsg = transports[0].sent[0] as { id: string; };
+      const dispatchMsg = transports[0].dispatched();
 
       transports[0].simulateMessage(
         { type: "context-call", method: "room.broadcast", args: [{ hello: "world" }] }
@@ -178,7 +178,8 @@ describe("WorkerExtensionProxy — context-call routing", () => {
 });
 
 describe("WorkerExtensionProxy — crash and restart", () => {
-  test("a dispatch that times out rejects and spawns a fresh worker", async() => {
+  test("a dispatch that times out rejects and spawns a fresh worker", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     const { factory, transports } = createFakeTransportFactory();
     const proxy = new WorkerExtensionProxy(
       createDescriptor({ rpcTimeoutMs: 10 }),
@@ -187,6 +188,8 @@ describe("WorkerExtensionProxy — crash and restart", () => {
 
     const pending = proxy.onMessage("A", {}, createContext());
     transports[0].simulateMessage(readyMessage());
+    await flushMacrotask();
+    t.mock.timers.tick(10);
 
     await assert.rejects(pending, /timed out/);
     assert.equal(transports.length, 2);
@@ -211,7 +214,8 @@ describe("WorkerExtensionProxy — crash and restart", () => {
 
   test(
     "exceeding the restart cap marks the extension dead; further dispatches are dropped without spawning",
-    async() => {
+    async(t) => {
+      t.mock.timers.enable({ apis: ["setTimeout"] });
       const { factory, transports } = createFakeTransportFactory();
       const proxy = new WorkerExtensionProxy(
         createDescriptor({ rpcTimeoutMs: 5, maxRestarts: 1, restartWindowMs: 60_000 }),
@@ -220,11 +224,15 @@ describe("WorkerExtensionProxy — crash and restart", () => {
 
       const first = proxy.onMessage("A", {}, createContext());
       transports[0].simulateMessage(readyMessage());
+      await flushMacrotask();
+      t.mock.timers.tick(5);
       await assert.rejects(first, /timed out/);
       assert.equal(transports.length, 2);
 
       const second = proxy.onMessage("A", {}, createContext());
       transports[1].simulateMessage(readyMessage());
+      await flushMacrotask();
+      t.mock.timers.tick(5);
       await assert.rejects(second, /timed out/);
       assert.equal(transports.length, 2);
 
@@ -274,7 +282,7 @@ describe("WorkerExtensionProxy — identity", () => {
 
     const pending = proxy.onMessage("A", {}, createContext());
     await flushMacrotask();
-    const sent = transports[0].sent[0] as { id: string; identity: unknown; };
+    const sent = transports[0].dispatched();
     transports[0].simulateMessage({
       type: "dispatch-result",
       id: sent.id,

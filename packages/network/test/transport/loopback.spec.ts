@@ -3,67 +3,25 @@ import {
   describe,
   test
 } from "node:test";
+import { setImmediate } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
   Server,
   Client,
-  Extension,
-  type ClientHandle
+  type PeerIdentity
 } from "#src/index.ts";
 import { LoopbackTransport } from "#src/transport/loopback.ts";
-import { OPAQUE_PROTOCOLS } from "../helpers/protocols.ts";
-
-class RecordingExtension extends Extension {
-  readonly protocols = OPAQUE_PROTOCOLS;
-  readonly id = "test-ns";
-  readonly name = "test-ns";
-  connected: ClientHandle[] = [];
-  disconnected: string[] = [];
-  messages: { clientId: string; payload: unknown; }[] = [];
-
-  override onClientConnect(
-    client: ClientHandle
-  ): void {
-    this.connected.push(client);
-  }
-
-  override onClientDisconnect(
-    clientId: string
-  ): void {
-    this.disconnected.push(clientId);
-  }
-
-  override onMessage(
-    clientId: string,
-    payload: unknown
-  ): void {
-    this.messages.push({ clientId, payload });
-  }
-}
-
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 2000
-): Promise<void> {
-  const start = Date.now();
-  while (!predicate()) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error("waitFor: timed out");
-    }
-    await new Promise((resolve) => {
-      setTimeout(resolve, 5);
-    });
-  }
-}
+import { RecordingExtension } from "../helpers/RecordingExtension.ts";
+import { waitFor } from "../helpers/waitFor.ts";
 
 function createLoopback(): {
   transport: LoopbackTransport;
   extension: RecordingExtension;
 } {
   const server = new Server();
-  const extension = new RecordingExtension();
+  const extension = new RecordingExtension("test-ns");
   server.register(extension);
 
   return {
@@ -84,7 +42,7 @@ describe("LoopbackTransport + Client (integration)", () => {
     assert.equal(client.ready, false);
     await waitFor(() => extension.connected.length === 1);
     assert.equal(client.ready, true);
-    assert.equal(room.clientId, extension.connected[0].id);
+    assert.equal(room.clientId, extension.clients[0].id);
 
     let received: unknown;
     room.on("message", (payload) => {
@@ -95,7 +53,7 @@ describe("LoopbackTransport + Client (integration)", () => {
     await waitFor(() => extension.messages.length === 1);
     assert.deepEqual(extension.messages[0].payload, { hello: "world" });
 
-    extension.connected[0].send({ type: "ack" });
+    extension.clients[0].send({ type: "ack" });
     assert.equal(received, undefined);
     await waitFor(() => received !== undefined);
     assert.deepEqual(received, { type: "ack" });
@@ -125,11 +83,11 @@ describe("LoopbackTransport + Client (integration)", () => {
     });
     clientB.room("test-ns").join();
     await waitFor(() => joined.length === 1);
-    assert.deepEqual(joined, [extension.connected[1].id]);
+    assert.deepEqual(joined, [extension.clients[1].id]);
 
     clientB.destroy();
     await waitFor(() => left.length === 1);
-    assert.deepEqual(left, [extension.connected[1].id]);
+    assert.deepEqual(left, [extension.clients[1].id]);
 
     clientA.destroy();
   });
@@ -152,5 +110,28 @@ describe("LoopbackTransport + Client (integration)", () => {
 
     await waitFor(() => unauthorized === 1);
     assert.equal(client.ready, false);
+  });
+
+  test("a socket closed before authentication settles never opens a session", async() => {
+    const { promise, resolve } = Promise.withResolvers<PeerIdentity>();
+    const server = new Server({
+      auth: {
+        authenticate: () => promise
+      }
+    });
+
+    const socket = new LoopbackTransport({ server }).connect();
+    const events: string[] = [];
+    socket.addEventListener("open", () => events.push("open"));
+    socket.addEventListener("close", (event) => events.push(`close:${event.code}`));
+
+    socket.close();
+    resolve({
+      subject: "A",
+      role: "default"
+    });
+    await setImmediate();
+
+    assert.deepEqual(events, ["close:1000"]);
   });
 });

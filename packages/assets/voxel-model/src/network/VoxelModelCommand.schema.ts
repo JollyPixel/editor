@@ -2,10 +2,9 @@
 import {
   COMMAND_HEADER_REQUIRED,
   commandHeaderProperties,
-  defineMessageProtocol,
   defineSchema,
-  type JSONSchema,
-  type MessageProtocol
+  MessageProtocol,
+  type JSONSchema
 } from "@jolly-pixel/network";
 import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
 
@@ -128,10 +127,8 @@ export const voxelModelCommandSchema = defineSchema({
   ]
 });
 
-export const voxelModelCommandProtocol: MessageProtocol = defineMessageProtocol({
-  schema: {
-    oneOf: voxelModelCommandSchema.oneOf.map(networkVariant)
-  }
+export const voxelModelCommandProtocol: MessageProtocol = new MessageProtocol({
+  oneOf: voxelModelCommandSchema.oneOf.map(networkVariant)
 });
 
 /**

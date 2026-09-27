@@ -87,7 +87,7 @@ describe("WorkerExtensionProxy — real worker_threads.Worker (e2e)", () => {
 
         await proxy.onMessage("A", { compute: true }, createContext(room));
         assert.equal(sent.length, 1);
-        assert.equal((sent[0] as { type: string; }).type, "result");
+        assert.partialDeepStrictEqual(sent[0], { type: "result" });
         sent.length = 0;
 
         await proxy.onMessage("A", { hello: "world" }, createContext(room));

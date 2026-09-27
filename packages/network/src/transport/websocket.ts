@@ -22,22 +22,23 @@ import {
   UNAUTHORIZED_CLOSE_REASON,
   WEBSOCKET_PROTOCOL
 } from "./constants.ts";
-import type {
-  ClientHandle
-} from "../protocol/types.ts";
-
-function selectProtocol(
-  protocols: Set<string>
-): string | false {
-  return protocols.has(WEBSOCKET_PROTOCOL) ? WEBSOCKET_PROTOCOL : false;
-}
+import type { ClientHandle } from "./ClientHandle.ts";
 
 export interface WebsocketTransportOptions {
   /**
-   * WebSocket upgrade path, kept separate from Vite HMR.
+   * WebSocket upgrade path, matched exactly against the request pathname.
+   * Upgrades on other paths are left to other listeners, such as Vite HMR.
    */
   path: string;
+  /**
+   * HTTP server whose "upgrade" events are handled.
+   * Closing it terminates every connected client.
+   */
   httpServer: HttpServer | Http2SecureServer;
+  /**
+   * Server that authenticates upgrades and receives client connections,
+   * messages and disconnects. Its logger is reused by the transport.
+   */
   server: Server;
 }
 
@@ -62,7 +63,11 @@ export class WebsocketTransport {
     // Manual upgrade filtering requires `noServer` mode.
     this.#wss = new WebSocketServer({
       noServer: true,
-      handleProtocols: selectProtocol
+      handleProtocols(protocols) {
+        return protocols.has(WEBSOCKET_PROTOCOL)
+          ? WEBSOCKET_PROTOCOL
+          : false;
+      }
     });
     this.#wss.on(
       "error",
@@ -96,26 +101,15 @@ export class WebsocketTransport {
 
     const clientId = randomUUID();
 
-    void Promise
-      .resolve(this.#server.authenticate({
+    void this.#server
+      .authenticate({
         clientId,
         url: req.url ?? "",
         headers: req.headers
-      }))
-      .catch((error): null => {
-        this.#logger.withError(error).error("authentication provider failed");
-
-        return null;
       })
       .then((identity) => {
         this.#wss.handleUpgrade(req, socket, head, (ws) => {
           if (identity === null) {
-            this.#logger
-              .withMetadata({
-                clientId,
-                outcome: "unauthorized"
-              })
-              .warn("client rejected");
             ws.close(
               UNAUTHORIZED_CLOSE_CODE,
               UNAUTHORIZED_CLOSE_REASON
@@ -136,7 +130,10 @@ export class WebsocketTransport {
   #onHttpServerClose(
     httpServer: HttpServer | Http2SecureServer
   ): void {
-    httpServer.off("upgrade", this.#onUpgrade);
+    httpServer.off(
+      "upgrade",
+      this.#onUpgrade
+    );
     for (const client of this.#wss.clients) {
       client.terminate();
     }
@@ -150,7 +147,9 @@ export class WebsocketTransport {
   ): void {
     const handle: ClientHandle = {
       id: clientId,
-      send: (data) => socket.send(JSON.stringify(data))
+      send(data) {
+        socket.send(JSON.stringify(data));
+      }
     };
 
     this.#server.handleConnect(
@@ -170,7 +169,9 @@ export class WebsocketTransport {
     );
     socket.on(
       "error",
-      (error) => this.#logger.withError(error).error("client socket error")
+      (error) => this.#logger
+        .withError(error)
+        .error("client socket error")
     );
   }
 }

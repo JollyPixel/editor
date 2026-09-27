@@ -8,10 +8,17 @@ export interface NetworkServerNotice {
   type: string;
 }
 
+type NetworkSyncMessageType = "snapshot" | "command";
+
+export type NetworkServerNoticeOf<TNotice extends NetworkServerNotice> =
+  [Extract<NetworkSyncMessageType, TNotice["type"]>] extends [never] ?
+    NetworkServerNotice :
+    never;
+
 export type NetworkServerMessage<
   TCommand,
   TSnapshot,
-  TNotice extends NetworkServerNotice = never
+  TNotice extends NetworkServerNoticeOf<TNotice> = never
 > =
   | { type: "snapshot"; data: TSnapshot; }
   | { type: "command"; data: TCommand; }

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { RoomMessageParser } from "../protocol/MessageParser.ts";
+import type { RoomMessageParser } from "../protocol/message/MessageParser.ts";
 import type { ValidationError } from "../protocol/schema.ts";
 import type {
   PeerMetadata,
@@ -21,12 +21,7 @@ export interface RoomSyncEvent {
   clientIds: string[];
 }
 
-export interface RoomDeniedEvent {
-  event: string;
-  reason: string;
-}
-
-export interface RoomErrorEvent {
+export interface RoomRejectionEvent {
   event: string;
   reason: string;
 }
@@ -36,27 +31,44 @@ export interface RoomMalformedEvent {
   errors: readonly ValidationError[];
 }
 
-export interface RoomOptions<ServerMessage = unknown> {
-  parser?: RoomMessageParser<ServerMessage>;
+export interface RoomOptions<TServerMessage = unknown> {
+  parser?: RoomMessageParser<TServerMessage>;
 }
 
-export type RoomEventMap<ServerMessage = unknown> = {
-  message: (payload: ServerMessage) => void;
-  sync: (event: RoomSyncEvent) => void;
-  "peer-joined": (event: RoomPeerEvent) => void;
-  "peer-left": (event: RoomPeerEvent) => void;
-  "peer-presence": (event: RoomPeerPresenceEvent) => void;
-  denied: (event: RoomDeniedEvent) => void;
-  error: (event: RoomErrorEvent) => void;
-  malformed: (event: RoomMalformedEvent) => void;
+export type RoomEventMap<TServerMessage = unknown> = {
+  message: (
+    payload: TServerMessage
+  ) => void;
+  sync: (
+    event: RoomSyncEvent
+  ) => void;
+  "peer-joined": (
+    event: RoomPeerEvent
+  ) => void;
+  "peer-left": (
+    event: RoomPeerEvent
+  ) => void;
+  "peer-presence": (
+    event: RoomPeerPresenceEvent
+  ) => void;
+  denied: (
+    event: RoomRejectionEvent
+  ) => void;
+  error: (
+    event: RoomRejectionEvent
+  ) => void;
+  malformed: (
+    event: RoomMalformedEvent
+  ) => void;
+  left: () => void;
 };
 
 export interface Room<
-  ClientMessage = unknown,
-  ServerMessage = unknown
+  TClientMessage = unknown,
+  TServerMessage = unknown
 > {
   readonly id: string;
-  readonly clientId: string;
+  readonly clientId: string | null;
   readonly peers: ReadonlyMap<string, Peer>;
   readonly role: string;
   readonly rights: RoomRights;
@@ -67,19 +79,19 @@ export interface Room<
   ): Right;
   join(): void;
   send(
-    payload: ClientMessage
+    payload: TClientMessage
   ): void;
   updatePresence(
     patch: PeerMetadata
   ): void;
   leave(): void;
 
-  on<K extends keyof RoomEventMap<ServerMessage>>(
+  on<K extends keyof RoomEventMap<TServerMessage>>(
     type: K,
-    listener: RoomEventMap<ServerMessage>[K]
+    listener: RoomEventMap<TServerMessage>[K]
   ): void;
-  off<K extends keyof RoomEventMap<ServerMessage>>(
+  off<K extends keyof RoomEventMap<TServerMessage>>(
     type: K,
-    listener: RoomEventMap<ServerMessage>[K]
+    listener: RoomEventMap<TServerMessage>[K]
   ): void;
 }

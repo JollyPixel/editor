@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
 import {
-  defineMessageProtocol,
   defineSchema,
-  type JSONSchema,
-  type MessageProtocol
+  MessageProtocol,
+  type JSONSchema
 } from "@jolly-pixel/network";
 import {
   pixelCommandSchemas,
@@ -99,19 +98,17 @@ export const tilesetSnapshotSchema: JSONSchema = {
   ]
 };
 
-export const tilesetCommandProtocol: MessageProtocol = defineMessageProtocol({
-  schema: {
-    oneOf: [
-      ...pixelCommandSchemas,
-      ...Object.entries(kBlockCommandProperties).map(
-        ([action, properties]) => commandVariant(action, properties)
-      ),
-      ...Object.entries(kMaterialGroupCommandProperties).map(
-        ([action, properties]) => commandVariant(action, properties)
-      ),
-      commandVariant(kTileSizeAction, {
-        tileSize: tileSizeSchema
-      })
-    ]
-  }
+export const tilesetCommandProtocol: MessageProtocol = new MessageProtocol({
+  oneOf: [
+    ...pixelCommandSchemas,
+    ...Object.entries(kBlockCommandProperties).map(
+      ([action, properties]) => commandVariant(action, properties)
+    ),
+    ...Object.entries(kMaterialGroupCommandProperties).map(
+      ([action, properties]) => commandVariant(action, properties)
+    ),
+    commandVariant(kTileSizeAction, {
+      tileSize: tileSizeSchema
+    })
+  ]
 });

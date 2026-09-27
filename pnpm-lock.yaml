@@ -759,6 +759,13 @@ importers:
       ws:
         specifier: 8.21.3
         version: 8.21.3
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/ws':
+        specifier: 8.18.1
+        version: 8.18.1
 
   packages/pixel-draw-renderer:
     dependencies:

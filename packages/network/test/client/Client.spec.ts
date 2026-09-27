@@ -10,92 +10,18 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   Client,
-  MessageParser
+  UNAUTHORIZED_CLOSE_CODE
 } from "#src/index.ts";
-import { actionCommandProtocol } from "../helpers/protocols.ts";
-
-type Listener = (event: any) => void;
-
-class FakeWebSocket {
-  static instances: FakeWebSocket[] = [];
-
-  url: string;
-  sent: string[] = [];
-  closed = false;
-  #listeners = new Map<string, Listener[]>();
-
-  constructor(
-    url: string
-  ) {
-    this.url = url;
-    FakeWebSocket.instances.push(this);
-  }
-
-  addEventListener(
-    type: string,
-    handler: Listener
-  ): void {
-    const handlers = this.#listeners.get(type) ?? [];
-    handlers.push(handler);
-    this.#listeners.set(type, handlers);
-  }
-
-  send(
-    data: string
-  ): void {
-    this.sent.push(data);
-  }
-
-  close(): void {
-    this.closed = true;
-  }
-
-  open(): void {
-    this.#emit("open", {});
-  }
-
-  receive(
-    data: unknown
-  ): void {
-    this.#emit("message", { data: JSON.stringify(data) });
-  }
-
-  #emit(
-    type: string,
-    event: unknown
-  ): void {
-    for (const handler of this.#listeners.get(type) ?? []) {
-      handler(event);
-    }
-  }
-}
-
-const originalWebSocket = globalThis.WebSocket;
-
-beforeEach(() => {
-  FakeWebSocket.instances = [];
-  // @ts-expect-error - test double, not a full WebSocket implementation
-  globalThis.WebSocket = FakeWebSocket;
-});
-
-afterEach(() => {
-  globalThis.WebSocket = originalWebSocket;
-});
-
-function createOpenClient(
-  options: ConstructorParameters<typeof Client>[0] = { url: "ws://localhost/ws-sync" }
-): { client: Client; socket: FakeWebSocket; } {
-  const client = new Client(options);
-  const socket = FakeWebSocket.instances[0]!;
-  socket.open();
-
-  return { client, socket };
-}
+import {
+  FakeSocket,
+  createClient,
+  createOpenClient
+} from "../helpers/FakeSocket.ts";
+import { captureLogger } from "../helpers/captureLogger.ts";
 
 describe("Client — ready", () => {
   test("ready is false until the socket opens, then dispatches a \"ready\" event", () => {
-    const client = new Client({ url: "ws://localhost/ws-sync" });
-    const socket = FakeWebSocket.instances[0]!;
+    const { client, socket } = createClient();
 
     assert.equal(client.ready, false);
 
@@ -110,8 +36,7 @@ describe("Client — ready", () => {
   });
 
   test("queued messages flush before \"ready\" fires", () => {
-    const client = new Client({ url: "ws://localhost/ws-sync" });
-    const socket = FakeWebSocket.instances[0]!;
+    const { client, socket } = createClient();
     client.room("pixel-draw").join();
 
     let sentBeforeReady = -1;
@@ -127,7 +52,6 @@ describe("Client — ready", () => {
 describe("Client — join profile", () => {
   test("includes the connection's profile on every room's join envelope", () => {
     const { client, socket } = createOpenClient({
-      url: "ws://localhost/ws-sync",
       profile: { username: "alice" }
     });
 
@@ -147,176 +71,35 @@ describe("Client — join profile", () => {
     client.room("pixel-draw").join();
 
     assert.deepEqual(
-      JSON.parse(socket.sent[0]!),
+      JSON.parse(socket.sent[0]),
       { room: "pixel-draw", kind: "join", profile: {}, presence: {} }
     );
   });
 });
 
-describe("Client — peers mirror", () => {
-  test("populates peers from a sync envelope", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "sync",
-      self: "A",
-      rights: { "voxel-set": "read" },
-      members: [
-        {
-          clientId: "B",
-          role: "viewer",
-          profile: { username: "bob" },
-          presence: { cursor: { x: 1, y: 2 } }
-        }
-      ]
-    });
-
-    assert.deepEqual([...room.peers.entries()], [
-      [
-        "B",
-        {
-          clientId: "B",
-          role: "viewer",
-          profile: { username: "bob" },
-          presence: { cursor: { x: 1, y: 2 } }
-        }
-      ]
-    ]);
-    assert.strictEqual(room.clientId, "A");
-    assert.strictEqual(room.can("voxel-set"), "read");
-    assert.strictEqual(room.can("unknown"), "void");
-    assert.strictEqual(room.access, "read");
-  });
-
-  test("keeps the local client out of peers while adopting its own role", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    const synced: string[][] = [];
-    room.on("sync", (event) => synced.push(event.clientIds));
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "sync",
-      self: "A",
-      rights: { "voxel-set": "write" },
-      members: [
-        { clientId: "A", role: "editor", profile: {}, presence: {} },
-        { clientId: "B", role: "viewer", profile: {}, presence: {} }
-      ]
-    });
-
-    assert.deepEqual([...room.peers.keys()], ["B"]);
-    assert.deepEqual(synced, [["B"]]);
-    assert.strictEqual(room.role, "editor");
-    assert.strictEqual(room.access, "write");
-  });
-
-  test("sync fires \"sync\" with the peers already present", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    const synced: string[][] = [];
-    room.on("sync", (event) => synced.push(event.clientIds));
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "sync",
-      self: "A",
-      role: "default",
-
-      rights: {},
-      members: [
-        { clientId: "B", role: "default", profile: {}, presence: {} },
-        { clientId: "C", role: "default", profile: {}, presence: {} }
-      ]
-    });
-
-    assert.deepEqual(synced, [["B", "C"]]);
-  });
-
-  test("peer-joined adds to peers and fires \"peer-joined\"", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    const joined: string[] = [];
-    room.on("peer-joined", (event) => joined.push(event.clientId));
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "peer-joined",
-      clientId: "B",
-      role: "editor",
-      profile: { username: "bob" },
-      presence: {}
-    });
-
-    assert.deepEqual(joined, ["B"]);
-    assert.deepEqual(room.peers.get("B"), {
-      clientId: "B",
-      role: "editor",
-      profile: { username: "bob" },
-      presence: {}
-    });
-  });
-
-  test("peer-left removes from peers and fires \"peer-left\"", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    const left: string[] = [];
-    room.on("peer-left", (event) => left.push(event.clientId));
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "peer-joined",
-      clientId: "B",
-      role: "default",
-      profile: {},
-      presence: {}
-    });
-    socket.receive({
-      room: "pixel-draw",
-      kind: "peer-left",
-      clientId: "B"
-    });
-
-    assert.deepEqual(left, ["B"]);
-    assert.equal(room.peers.has("B"), false);
-  });
-
-  test("peer-presence merges into the existing peer's presence and fires \"peer-presence\"", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    const updates: { clientId: string; patch: unknown; }[] = [];
-    room.on("peer-presence", (event) => updates.push({
-      clientId: event.clientId,
-      patch: event.patch
-    }));
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "peer-joined",
-      clientId: "B",
-      role: "default",
-      profile: { username: "bob" },
-      presence: {}
-    });
-    socket.receive({
-      room: "pixel-draw",
-      kind: "peer-presence",
-      clientId: "B",
-      patch: { cursor: { x: 3, y: 4 } }
-    });
-
-    assert.deepEqual(updates, [{ clientId: "B", patch: { cursor: { x: 3, y: 4 } } }]);
-    assert.deepEqual(room.peers.get("B")?.presence, { cursor: { x: 3, y: 4 } });
-  });
-});
-
 describe("Client — default url", () => {
   const originalLocation = globalThis.location;
+  const originalWebSocket = globalThis.WebSocket;
+  const urls: string[] = [];
+
+  class UrlRecordingSocket extends FakeSocket {
+    constructor(
+      url: string
+    ) {
+      super();
+      urls.push(url);
+    }
+  }
+
+  beforeEach(() => {
+    urls.length = 0;
+    // @ts-expect-error - test double, not a full WebSocket implementation
+    globalThis.WebSocket = UrlRecordingSocket;
+  });
 
   afterEach(() => {
     globalThis.location = originalLocation;
+    globalThis.WebSocket = originalWebSocket;
   });
 
   test("derives a ws:// url from location when none is provided", () => {
@@ -324,9 +107,8 @@ describe("Client — default url", () => {
     globalThis.location = { protocol: "http:", host: "localhost:5173" };
 
     new Client({});
-    const socket = FakeWebSocket.instances[0]!;
 
-    assert.equal(socket.url, "ws://localhost:5173/ws-sync");
+    assert.deepEqual(urls, ["ws://localhost:5173/ws-sync"]);
   });
 
   test("derives a wss:// url from location when the page is https", () => {
@@ -334,152 +116,45 @@ describe("Client — default url", () => {
     globalThis.location = { protocol: "https:", host: "example.com" };
 
     new Client({});
-    const socket = FakeWebSocket.instances[0]!;
 
-    assert.equal(socket.url, "wss://example.com/ws-sync");
+    assert.deepEqual(urls, ["wss://example.com/ws-sync"]);
   });
 });
 
-describe("Client — denied", () => {
-  test("fires \"denied\" with the event name and reason", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    const denials: { event: string; reason: string; }[] = [];
-    room.on("denied", (event) => denials.push(event));
+describe("Client — connection lifecycle", () => {
+  test("warns once the socket closes unexpectedly, then drops outgoing messages", () => {
+    const { logger, warnings } = captureLogger();
+    const { client, socket } = createOpenClient({ logger });
 
-    socket.receive({
-      room: "pixel-draw",
-      kind: "denied",
-      event: "$join",
-      reason: "role \"viewer\" is not permitted to join this room"
-    });
+    socket.serverClose({ code: 1006, reason: "gone" });
+    client.room("pixel-draw").join();
 
-    assert.deepEqual(denials, [{
-      event: "$join",
-      reason: "role \"viewer\" is not permitted to join this room"
-    }]);
-  });
-});
-
-describe("Client — error", () => {
-  test("fires \"error\" with the event name and reason, distinct from \"denied\"", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    const errors: { event: string; reason: string; }[] = [];
-    const denials: { event: string; reason: string; }[] = [];
-    room.on("error", (event) => errors.push(event));
-    room.on("denied", (event) => denials.push(event));
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "error",
-      event: "pixel-set",
-      reason: "disk full"
-    });
-
-    assert.deepEqual(errors, [{
-      event: "pixel-set",
-      reason: "disk full"
-    }]);
-    assert.deepEqual(denials, []);
-  });
-});
-
-describe("Client — updatePresence", () => {
-  test("sends a presence envelope carrying the patch once joined", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    room.join();
-    socket.sent.length = 0;
-
-    room.updatePresence({ cursor: { x: 9, y: 9 } });
-
-    assert.deepEqual(
-      socket.sent.map((raw) => JSON.parse(raw)),
-      [{ room: "pixel-draw", kind: "presence", patch: { cursor: { x: 9, y: 9 } } }]
-    );
-  });
-
-  test("merges presence set before join into the join envelope", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-
-    room.updatePresence({ cursor: { x: 1, y: 1 } });
-    room.updatePresence({ cursor: null, tool: "brush" });
+    assert.equal(client.ready, false);
     assert.deepEqual(socket.sent, []);
-
-    room.join();
-
-    assert.deepEqual(
-      socket.sent.map((raw) => JSON.parse(raw)),
-      [{
-        room: "pixel-draw",
-        kind: "join",
-        profile: {},
-        presence: { cursor: null, tool: "brush" }
-      }]
-    );
+    assert.equal(warnings.length, 2);
+    assert.match(warnings[0], /WebSocket closed unexpectedly/);
+    assert.match(warnings[1], /dropped message on a closed socket/);
   });
 
-  test("peer-joined seeds the peer presence", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
+  test("destroy closes the socket without warning", () => {
+    const { logger, warnings } = captureLogger();
+    const { client } = createOpenClient({ logger });
 
-    socket.receive({
-      room: "pixel-draw",
-      kind: "peer-joined",
-      clientId: "B",
-      role: "default",
-      profile: {},
-      presence: { cursor: { x: 4, y: 5 } }
-    });
+    client.destroy();
 
-    assert.deepEqual(room.peers.get("B")?.presence, { cursor: { x: 4, y: 5 } });
-  });
-});
-
-describe("Client — room parser", () => {
-  test("emits parsed messages and reports rejected payloads as \"malformed\"", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw", {
-      parser: new MessageParser(actionCommandProtocol)
-    });
-    room.join();
-
-    const messages: unknown[] = [];
-    const malformed: unknown[] = [];
-    room.on("message", (payload) => messages.push(payload));
-    room.on("malformed", (event) => malformed.push(event.payload));
-
-    socket.receive({
-      room: "pixel-draw",
-      kind: "message",
-      payload: { action: "voxel-set" }
-    });
-    socket.receive({
-      room: "pixel-draw",
-      kind: "message",
-      payload: { action: "unheard-of" }
-    });
-
-    assert.deepEqual(messages, [{ action: "voxel-set" }]);
-    assert.deepEqual(malformed, [{ action: "unheard-of" }]);
+    assert.equal(client.ready, false);
+    assert.deepEqual(warnings, []);
   });
 
-  test("passes payloads straight through when no parser is supplied", () => {
-    const { client, socket } = createOpenClient();
-    const room = client.room("pixel-draw");
-    room.join();
+  test("an unauthorized close emits \"unauthorized\" without warning", () => {
+    const { logger, warnings } = captureLogger();
+    const { client, socket } = createClient({ logger });
+    let unauthorized = 0;
+    client.on("unauthorized", () => unauthorized++);
 
-    const messages: unknown[] = [];
-    room.on("message", (payload) => messages.push(payload));
+    socket.serverClose({ code: UNAUTHORIZED_CLOSE_CODE, reason: "unauthorized" });
 
-    socket.receive({
-      room: "pixel-draw",
-      kind: "message",
-      payload: { anything: true }
-    });
-
-    assert.deepEqual(messages, [{ anything: true }]);
+    assert.equal(unauthorized, 1);
+    assert.deepEqual(warnings, []);
   });
 });

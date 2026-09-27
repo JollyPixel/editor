@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import pino from "pino";
-import {
-  LogLayer,
-  type ILogLayer
-} from "loglayer";
+import { LogLayer } from "loglayer";
 import { PinoTransport } from "@loglayer/transport-pino";
 
-export type Logger = ILogLayer;
+// Import Internal Dependencies
+import type { Logger } from "../logger.ts";
+
+export type { Logger };
 
 export function createLogger(
   name = "network"

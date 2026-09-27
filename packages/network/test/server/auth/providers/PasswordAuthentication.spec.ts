@@ -48,10 +48,12 @@ describe("PasswordAuthentication — optional password", () => {
   });
 
   test("falls through to the server default role when no credential is offered", async() => {
-    assert.deepEqual(await auth.authenticate(request()), {
-      subject: "client-1",
-      role: "viewer"
-    });
+    for (const headers of [request().headers, {}]) {
+      assert.deepEqual(await auth.authenticate({ ...request(), headers }), {
+        subject: "client-1",
+        role: "viewer"
+      });
+    }
   });
 
   test("rejects a wrong password rather than falling through", async() => {

@@ -5,20 +5,23 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { Result } from "@openally/result";
+
 // Import Internal Dependencies
 import {
   describeEnvelopeParseError,
   Envelope,
   type ClientEnvelope,
   type EnvelopeParseError
-} from "#src/protocol/Envelope.ts";
+} from "#src/protocol/envelope/Envelope.ts";
 
 function errorOf(
-  result: { ok: boolean; val: unknown; }
+  result: Result<unknown, EnvelopeParseError>
 ): EnvelopeParseError {
-  assert.equal(result.ok, false);
+  assert.ok(!result.ok);
 
-  return result.val as EnvelopeParseError;
+  return result.val;
 }
 
 describe("Envelope.parseClient", () => {
@@ -176,10 +179,15 @@ describe("Envelope.parseServer", () => {
       room: "pixel-draw",
       kind: "sync",
       self: "a",
-      role: "default",
-
       rights: {},
-      members: [{ clientId: 42 }]
+      members: [
+        {
+          clientId: 42,
+          role: "default",
+          profile: {},
+          presence: {}
+        }
+      ]
     });
 
     assert.equal(errorOf(result).reason, "malformed");
@@ -190,7 +198,9 @@ describe("Envelope.parseServer", () => {
       room: "pixel-draw",
       kind: "peer-joined",
       clientId: 42,
-      identity: {}
+      role: "default",
+      profile: {},
+      presence: {}
     });
 
     assert.equal(errorOf(result).reason, "malformed");
@@ -221,11 +231,10 @@ describe("Envelope.stringify", () => {
     const envelope: ClientEnvelope = { room: "pixel-draw", kind: "leave" };
     const stringified = Envelope.stringify(envelope);
 
-    assert.equal(stringified.ok, true);
-    const raw = (stringified as { val: string; }).val;
-    assert.equal(typeof raw, "string");
+    assert.ok(stringified.ok);
+    assert.equal(typeof stringified.val, "string");
 
-    const parsed = Envelope.parseClient(raw);
+    const parsed = Envelope.parseClient(stringified.val);
     assert.equal(parsed.ok, true);
     assert.deepEqual(parsed.val, envelope);
   });
@@ -240,7 +249,7 @@ describe("Envelope.stringify", () => {
       payload: circular
     });
 
-    assert.equal(result.ok, false);
-    assert.match((result as { val: string; }).val, /circular/i);
+    assert.ok(!result.ok);
+    assert.match(result.val, /circular/i);
   });
 });

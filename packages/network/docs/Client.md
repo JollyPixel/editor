@@ -7,7 +7,7 @@ import * as network from "@jolly-pixel/network";
 
 const client = new network.Client({
   profile: { username: "alice" },
-  credential: password
+  socket: () => network.connectWebSocket({ credential: password })
 });
 
 const room = client.room("echo");
@@ -24,23 +24,28 @@ new Client(options?: ClientOptions)
 
 interface ClientOptions {
   /**
+   * Untrusted, presentational metadata attached to every join.
+   */
+  profile?: PeerMetadata;
+  logger?: Logger;
+  /**
+   * Opens the connection.
+   * @default () => connectWebSocket()
+   */
+  socket?: () => ClientSocket;
+}
+
+function connectWebSocket(options?: WebSocketConnectOptions): ClientSocket;
+
+interface WebSocketConnectOptions {
+  /**
    * @default `${wss|ws}://${location.host}/ws-sync`
    */
   url?: string;
   /**
-   * Untrusted, presentational metadata attached to every join.
-   */
-  profile?: PeerMetadata;
-  /**
    * Opaque credential offered during the handshake.
    */
   credential?: string;
-  logger?: Logger;
-  /**
-   * Opens the connection in place of a `WebSocket`. `url` and `credential`
-   * are ignored when it is set.
-   */
-  socket?: () => ClientSocket;
 }
 
 interface ClientSocket {
@@ -59,12 +64,11 @@ interface ClientSocketEvent {
 }
 ```
 
-- `id` — stable connection id, reused across every room.
-- `ready` — whether the socket finished opening. The `"ready"` event fires once at that point.
-- `room(name, options?)` — returns the handle for `name`; the same name always returns the same instance, and only the first call's options apply. It does not join.
-- `destroy()` — closes the socket.
+- `ready` — whether the socket is open. The `"ready"` event fires once at that point, after the messages queued while connecting are flushed.
+- `room(name, options?)` — returns the handle for `name`; the same name returns the same instance until that handle leaves, and only the first call's options apply. It does not join.
+- `destroy()` — closes the socket. Messages sent once the socket is closing or closed are dropped with a warning.
 
-A `WebSocket` satisfies `ClientSocket`. `socket` exists for a server living in the same process: see [LoopbackTransport](./Transports.md#loopbacktransport).
+`connectWebSocket()` opens the default `WebSocket` connection; pass it through `socket` to change the url or offer a credential. Any other `ClientSocket` works too, such as a server living in the same process: see [LoopbackTransport](./Transports.md#loopbacktransport).
 
 `profile` is untrusted: the server never reads a role or a user id from it. The connection's role comes from [authentication](./Authentication.md), and `credential` is what the server's provider inspects to decide it.
 
@@ -73,23 +77,23 @@ A `WebSocket` satisfies `ClientSocket`. `socket` exists for a server living in t
 Obtained from `client.room()`, never constructed directly.
 
 ```ts
-interface Room<ClientMessage = unknown, ServerMessage = unknown> {
+interface Room<TClientMessage = unknown, TServerMessage = unknown> {
   readonly id: string;
-  readonly clientId: string;
+  readonly clientId: string | null;
   readonly peers: ReadonlyMap<string, Peer>;
 
   join(): void;
-  send(payload: ClientMessage): void;
+  send(payload: TClientMessage): void;
   updatePresence(patch: PeerMetadata): void;
   leave(): void;
 
-  on<K extends keyof RoomEventMap<ServerMessage>>(
+  on<K extends keyof RoomEventMap<TServerMessage>>(
     type: K,
-    listener: RoomEventMap<ServerMessage>[K]
+    listener: RoomEventMap<TServerMessage>[K]
   ): void;
-  off<K extends keyof RoomEventMap<ServerMessage>>(
+  off<K extends keyof RoomEventMap<TServerMessage>>(
     type: K,
-    listener: RoomEventMap<ServerMessage>[K]
+    listener: RoomEventMap<TServerMessage>[K]
   ): void;
 }
 
@@ -100,17 +104,17 @@ interface Peer {
   readonly presence: PeerMetadata;
 }
 
-interface RoomOptions<ServerMessage = unknown> {
-  parser?: RoomMessageParser<ServerMessage>;
+interface RoomOptions<TServerMessage = unknown> {
+  parser?: RoomMessageParser<TServerMessage>;
 }
 ```
 
-- `join()` — joins on the server, carrying the client's profile and the presence set so far. No-op once joined.
+- `join()` — joins on the server, carrying the client's profile and the presence set so far. No-op once joined; throws once the handle has left.
 - `send(payload)` — sends a room-scoped message; the payload passes through untouched.
 - `updatePresence(patch)` — per-room dynamic metadata (cursor position, ...), shallow-merged server-side and relayed to peers as `"peer-presence"`. Before `join()` it is only merged locally and sent with the join, so it never needs re-publishing on `"sync"`. Clear a field with `null`: `undefined` is dropped by JSON.
-- `leave()` — leaves, clears the local peer cache, drops the room from the client.
-- `peers` — remote peers only, never the local client. Seeded on join, then kept current by the peer events.
-- `clientId` — the id peers see, learned from the server on join. Before that it is a local placeholder.
+- `leave()` — sends the leave if joined, clears the peers, `clientId`, `role` and `rights`, emits `"left"` and drops the handle from the client. The handle is spent: `client.room(name)` returns a new one. Calling it again is a no-op.
+- `peers` — remote peers only, never the local client. Replaced by each `sync`, then kept current by the peer events. A presence patch replaces the `Peer` object rather than mutating it.
+- `clientId` — the id peers see, learned from the server on join. `null` until then and after `leave()`.
 - `role`, `rights`, `can(event)`, `access` — this connection's own access, resolved server-side and delivered with the join snapshot. See [Rights](./Rights.md#reading-rights-on-the-client).
 
 ## Events
@@ -127,8 +131,9 @@ Any number of listeners per event; `off` removes only the listener passed in. Li
 | `denied` | `{ event, reason }` | the server refused one of your own actions on rights grounds |
 | `error` | `{ event, reason }` | server-side extension flow failed (persistence, infrastructure), or the room refused your payload |
 | `malformed` | `{ payload, errors }` | an inbound payload failed this room's parser (only with `options.parser`) |
+| `left` | none | this handle called `leave()`; `peers` is already empty |
 
-`denied` and `error` share a shape but not a meaning: `denied` means you aren't allowed, `error` means it broke.
+`denied` and `error` share the `RoomRejectionEvent` shape but not a meaning: `denied` means you aren't allowed, `error` means it broke.
 
 The client itself emits `"ready"` when the socket opens and `"unauthorized"` when the server refused the handshake — see [Authentication](./Authentication.md#rejection).
 

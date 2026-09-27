@@ -131,6 +131,6 @@ const client = new Client({
 
 `ChannelTransport` is also exported from `@jolly-pixel/network/client`, for tabs that only connect.
 
-A port is anything with `postMessage` and `message` listeners: a `BroadcastChannel`, a `MessagePort` (started for you) or a `Worker`. Transport messages carry `CHANNEL_TRANSPORT_TAG`, so the port can carry other messages too, and `isChannelTransportMessage` tells them apart.
+A port is anything with `postMessage` and `message` listeners: a `BroadcastChannel`, a `MessagePort` (started for you) or a `Worker`. Transport messages carry `CHANNEL_TRANSPORT_TAG`, so the port can carry other messages too, and `isChannelTransportMessage` tells them apart. It checks the whole message shape, so a tagged message with a missing or mistyped field is ignored.
 
 The transport does not find its host. Share `host.id` over the same port, or any other way, before connecting. A socket opened before the host listens never opens.

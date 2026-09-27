@@ -27,6 +27,16 @@ function tracker() {
   return new ConflictTracker(new LastWriteWinsResolver());
 }
 
+function commit(
+  conflicts: ReturnType<typeof tracker>,
+  command: NetworkCommandHeader,
+  keys: readonly string[]
+): void {
+  const admission = conflicts.admit(command, keys);
+  assert.ok(admission);
+  admission.commit();
+}
+
 describe("ConflictTracker.admit", () => {
   test("admits a command with no history at its keys", () => {
     const command = header();
@@ -36,7 +46,7 @@ describe("ConflictTracker.admit", () => {
 
   test("admits a command with no keys", () => {
     const conflicts = tracker();
-    conflicts.admit(header({ timestamp: 900 }), ["k"])!.commit();
+    commit(conflicts, header({ timestamp: 900 }), ["k"]);
 
     assert.notStrictEqual(
       conflicts.admit(header({ clientId: "B", timestamp: 100 }), []),
@@ -46,7 +56,7 @@ describe("ConflictTracker.admit", () => {
 
   test("rejects when any key holds a newer command", () => {
     const conflicts = tracker();
-    conflicts.admit(header({ timestamp: 900 }), ["k2"])!.commit();
+    commit(conflicts, header({ timestamp: 900 }), ["k2"]);
 
     assert.strictEqual(
       conflicts.admit(header({ clientId: "B", timestamp: 500 }), ["k1", "k2"]),
@@ -56,7 +66,7 @@ describe("ConflictTracker.admit", () => {
 
   test("keys are tracked independently", () => {
     const conflicts = tracker();
-    conflicts.admit(header({ timestamp: 900 }), ["k1"])!.commit();
+    commit(conflicts, header({ timestamp: 900 }), ["k1"]);
 
     assert.notStrictEqual(
       conflicts.admit(header({ clientId: "B", timestamp: 100 }), ["k2"]),
@@ -78,7 +88,7 @@ describe("ConflictTracker.admit", () => {
 describe("ConflictTracker.admitEach", () => {
   test("returns the indices of the keys that accept", () => {
     const conflicts = tracker();
-    conflicts.admit(header({ timestamp: 900 }), ["b"])!.commit();
+    commit(conflicts, header({ timestamp: 900 }), ["b"]);
 
     const { indices } = conflicts.admitEach(
       header({ clientId: "B", timestamp: 500 }),
@@ -90,7 +100,7 @@ describe("ConflictTracker.admitEach", () => {
 
   test("commit records only the accepted keys", () => {
     const conflicts = tracker();
-    conflicts.admit(header({ timestamp: 900 }), ["b"])!.commit();
+    commit(conflicts, header({ timestamp: 900 }), ["b"]);
 
     conflicts.admitEach(
       header({ clientId: "B", timestamp: 500 }),

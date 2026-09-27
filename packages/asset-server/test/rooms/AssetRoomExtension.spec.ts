@@ -8,7 +8,6 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   MessageParser,
-  protocolEvents,
   type ClientHandle,
   type RoomContext,
   type RoomPeer
@@ -168,7 +167,7 @@ describe("AssetRoomExtension", () => {
 
     assert.strictEqual(extension.id, "counter:asset-1");
     assert.strictEqual(extension.name, "counter");
-    assert.deepEqual(protocolEvents(extension.protocols.inbound!), ["increment"]);
+    assert.deepEqual(extension.protocols.inbound!.events, ["increment"]);
   });
 
   test("sends the protocol snapshot to a connecting client", () => {
@@ -366,7 +365,7 @@ describe("AssetRoomExtension — rejection", () => {
     const { extension } = harness();
 
     assert.ok(
-      protocolEvents(extension.protocols.outbound!).includes(ASSET_ROOM_REJECTED)
+      extension.protocols.outbound!.events.includes(ASSET_ROOM_REJECTED)
     );
     const parser = new MessageParser(extension.protocols.outbound!);
     assert.strictEqual(
@@ -382,7 +381,7 @@ describe("AssetRoomExtension — deletion", () => {
     const { extension } = harness();
 
     assert.ok(
-      protocolEvents(extension.protocols.outbound!).includes(ASSET_ROOM_DELETED)
+      extension.protocols.outbound!.events.includes(ASSET_ROOM_DELETED)
     );
     const parser = new MessageParser(extension.protocols.outbound!);
     assert.strictEqual(parser.parse({ type: ASSET_ROOM_DELETED }).ok, true);

@@ -10,7 +10,7 @@ export async function withCatalog<T>(
   fn: (catalog: CatalogClient) => Promise<T>
 ): Promise<T> {
   const client = new network.Client({
-    url: socketUrl
+    socket: () => network.connectWebSocket({ url: socketUrl })
   });
 
   try {

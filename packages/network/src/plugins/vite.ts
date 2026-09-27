@@ -10,9 +10,26 @@ import type { RightsMap } from "../server/rights/RightsTable.ts";
 import type { AuthenticationProvider } from "../server/auth/AuthenticationProvider.ts";
 
 export interface WebsocketVitePluginOptions {
+  /**
+   * Extensions registered on the server, including a provided `server`.
+   * @default []
+   */
   extensions?: Extension[];
+  /**
+   * Role rights table, ignored when `server` is provided.
+   * Every role gets "write" when omitted.
+   */
   rights?: RightsMap;
+  /**
+   * Fallback role handed to `auth`, ignored when `server` is provided.
+   * Must be a role of `rights` when both are set.
+   * @default "default"
+   */
   defaultRole?: string;
+  /**
+   * Authentication provider, ignored when `server` is provided.
+   * @default BypassAuthentication
+   */
   auth?: AuthenticationProvider;
   /**
    * Server to mount, constructed internally when omitted.

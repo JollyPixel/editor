@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { MessageParser } from "@jolly-pixel/network";
+import {
+  MessageParser,
+  MessageProtocol
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -87,7 +90,7 @@ describe("pixelCommandProtocol", () => {
     const parser = new MessageParser(pixelCommandProtocol);
     const parsed = parser.parse(kStroke);
 
-    assert.ok(parser.events.includes("stroke"));
+    assert.ok(pixelCommandProtocol.events.includes("stroke"));
     assert.strictEqual(parsed.ok, true);
     assert.strictEqual(parsed.val.event, "stroke");
   });
@@ -178,12 +181,10 @@ describe("pixelCommandProtocol: uv regions", () => {
 
 describe("pixelSnapshotSchema", () => {
   test("validates the snapshot's uv regions", () => {
-    const parser = new MessageParser({
-      schema: {
-        title: "snapshot",
-        ...pixelSnapshotSchema
-      }
-    });
+    const parser = new MessageParser(new MessageProtocol({
+      title: "snapshot",
+      ...pixelSnapshotSchema
+    }));
     const snapshot = {
       size: { x: 4, y: 4 },
       pixels: ""

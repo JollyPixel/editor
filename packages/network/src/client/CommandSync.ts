@@ -6,7 +6,7 @@ import type { Room } from "./Room.ts";
 import type {
   NetworkCommandHeader,
   NetworkServerMessage,
-  NetworkServerNotice
+  NetworkServerNoticeOf
 } from "../sync/types.ts";
 
 export type CommandBody<TCommand extends NetworkCommandHeader> =
@@ -17,6 +17,17 @@ export type CommandBody<TCommand extends NetworkCommandHeader> =
 type SyncMessage<TCommand, TSnapshot> =
   | { type: "snapshot"; data: TSnapshot; }
   | { type: "command"; data: TCommand; };
+
+interface PendingCommand<TCommand extends NetworkCommandHeader> {
+  body: CommandBody<TCommand>;
+  timestamp: number;
+}
+
+function isSyncMessage<TCommand, TSnapshot>(
+  message: { type: string; }
+): message is SyncMessage<TCommand, TSnapshot> {
+  return message.type === "snapshot" || message.type === "command";
+}
 
 export type CommandSyncEventMap<
   TCommand,
@@ -32,7 +43,7 @@ export type CommandSyncEventMap<
 export class CommandSync<
   TCommand extends NetworkCommandHeader,
   TSnapshot,
-  TNotice extends NetworkServerNotice = never
+  TNotice extends NetworkServerNoticeOf<TNotice> = never
 > extends Emitter<CommandSyncEventMap<TCommand, TSnapshot, TNotice>> {
   readonly room: Room<
     TCommand,
@@ -41,22 +52,30 @@ export class CommandSync<
 
   #seq = 0;
   #ready = false;
+  #pending: PendingCommand<TCommand>[] = [];
 
   #onMessage = (
     message: NetworkServerMessage<TCommand, TSnapshot, TNotice>
   ): void => {
-    if (message.type !== "snapshot" && message.type !== "command") {
-      this.emit("notice", message as TNotice);
+    if (!isSyncMessage<TCommand, TSnapshot>(message)) {
+      this.emit("notice", message);
 
       return;
     }
 
-    const synced = message as SyncMessage<TCommand, TSnapshot>;
-    if (synced.type === "snapshot") {
-      this.#handleSnapshot(synced.data);
+    if (message.type === "snapshot") {
+      this.#handleSnapshot(message.data);
     }
     else {
-      this.#handleCommand(synced.data);
+      this.#handleCommand(message.data);
+    }
+  };
+
+  #onSync = (): void => {
+    const pending = this.#pending;
+    this.#pending = [];
+    for (const { body, timestamp } of pending) {
+      this.send(body, timestamp);
     }
   };
 
@@ -66,6 +85,7 @@ export class CommandSync<
     super();
     this.room = room;
     this.room.on("message", this.#onMessage);
+    this.room.on("sync", this.#onSync);
   }
 
   get ready(): boolean {
@@ -76,9 +96,19 @@ export class CommandSync<
     body: CommandBody<TCommand>,
     timestamp: number = Date.now()
   ): void {
+    const clientId = this.room.clientId;
+    if (clientId === null) {
+      this.#pending.push({
+        body,
+        timestamp
+      });
+
+      return;
+    }
+
     this.room.send({
       ...body,
-      clientId: this.room.clientId,
+      clientId,
       seq: ++this.#seq,
       timestamp
     } as unknown as TCommand);
@@ -86,6 +116,8 @@ export class CommandSync<
 
   destroy(): void {
     this.room.off("message", this.#onMessage);
+    this.room.off("sync", this.#onSync);
+    this.#pending = [];
   }
 
   #handleCommand(

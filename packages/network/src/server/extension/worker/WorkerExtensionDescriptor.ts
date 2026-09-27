@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { MessageProtocols } from "../../../protocol/MessageProtocol.ts";
+import type { MessageProtocols } from "../../../protocol/message/MessageProtocol.ts";
 
 export interface WorkerExtensionDescriptor {
   id: string;

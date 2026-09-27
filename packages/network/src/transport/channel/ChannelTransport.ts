@@ -2,10 +2,10 @@
 import type {
   ClientSocket,
   ClientSocketEvent
-} from "../../client/Client.ts";
+} from "../ClientSocket.ts";
 import { ChannelSocket } from "./ChannelSocket.ts";
 import {
-  isChannelTransportMessage,
+  parseChannelTransportMessage,
   type ChannelPort
 } from "./protocol.ts";
 
@@ -13,9 +13,13 @@ import {
 const kGoingAwayCloseCode = 1001;
 
 export interface ChannelTransportOptions {
+  /**
+   * Port shared with the `ChannelTransportHost`, started when it has `start()`.
+   */
   port: ChannelPort;
   /**
    * Id of the `ChannelTransportHost` that serves the connections.
+   * Messages from other hosts on the same port are ignored.
    */
   host: string;
 }
@@ -31,10 +35,9 @@ export class ChannelTransport {
   #closed = false;
 
   readonly #onMessage = (event: { data: unknown; }): void => {
-    const message = event.data;
+    const message = parseChannelTransportMessage(event.data);
     if (
-      isChannelTransportMessage(message) &&
-      message.type === "event" &&
+      message?.type === "event" &&
       message.host === this.#host
     ) {
       this.#sockets.get(

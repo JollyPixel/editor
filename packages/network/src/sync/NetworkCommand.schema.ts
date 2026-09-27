@@ -2,9 +2,15 @@
 import { defineSchema } from "../protocol/schema.ts";
 
 export const commandHeaderProperties = {
-  clientId: { type: "string" },
-  seq: { type: "number" },
-  timestamp: { type: "number" }
+  clientId: {
+    type: "string"
+  },
+  seq: {
+    type: "number"
+  },
+  timestamp: {
+    type: "number"
+  }
 } as const;
 
 export const COMMAND_HEADER_REQUIRED = [

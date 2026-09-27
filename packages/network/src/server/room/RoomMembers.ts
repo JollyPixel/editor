@@ -1,9 +1,7 @@
 // Import Internal Dependencies
-import type { Envelope } from "../../protocol/Envelope.ts";
-import type {
-  ClientHandle,
-  PeerMetadata
-} from "../../protocol/types.ts";
+import type { Envelope } from "../../protocol/envelope/Envelope.ts";
+import type { PeerMetadata } from "../../protocol/types.ts";
+import type { ClientHandle } from "../../transport/ClientHandle.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 
 export interface PeerRecord {

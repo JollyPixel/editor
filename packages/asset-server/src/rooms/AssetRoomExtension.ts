@@ -160,22 +160,15 @@ function assetRoomProtocols(
   command: network.MessageProtocol,
   snapshot: network.JSONSchema
 ): network.MessageProtocols {
-  const outbound = network.serverMessageProtocol({
-    command,
-    snapshot
-  });
-
   return {
     inbound: command,
-    outbound: {
-      ...outbound,
-      schema: {
-        oneOf: [
-          ...network.variantsOf(outbound.schema),
-          assetRoomDeletedSchema,
-          assetRoomRejectedSchema
-        ]
-      }
-    }
+    outbound: network.serverMessageProtocol({
+      command,
+      snapshot,
+      notices: [
+        assetRoomDeletedSchema,
+        assetRoomRejectedSchema
+      ]
+    })
   };
 }

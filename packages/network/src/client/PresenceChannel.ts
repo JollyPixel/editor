@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type {
@@ -8,10 +9,34 @@ import type {
   RoomPeerPresenceEvent
 } from "./Room.ts";
 
+type PresenceDecodeFn<T> = (value: unknown) => T | undefined;
+
+export type PresenceDecoder<T> =
+  | PresenceDecodeFn<T>
+  | z.core.$ZodType<T>;
+
 export interface PresenceChannelOptions<T> {
   key: string;
-  decode: (value: unknown) => T | undefined;
+  /**
+   * A function returning `undefined` for an unusable value, or a zod schema
+   * (classic or mini) whose failed parse counts as `undefined`.
+   */
+  decode: PresenceDecoder<T>;
   equals?: (left: T, right: T) => boolean;
+}
+
+function toDecodeFn<T>(
+  decoder: PresenceDecoder<T>
+): PresenceDecodeFn<T> {
+  if (typeof decoder === "function") {
+    return decoder;
+  }
+
+  return (value) => {
+    const result = z.safeParse(decoder, value);
+
+    return result.success ? result.data : undefined;
+  };
 }
 
 export interface PresenceChange<T> {
@@ -27,27 +52,25 @@ export class PresenceChannel<T> extends Emitter<PresenceChannelEventMap<T>> {
   readonly key: string;
 
   #room: Room;
-  #decode: (value: unknown) => T | undefined;
+  #decode: PresenceDecodeFn<T>;
   #equals: (left: T, right: T) => boolean;
   #values = new Map<string, T>();
   #published: { value: T; } | undefined;
 
-  #onSync = (): void => {
-    for (const clientId of [...this.#values.keys()]) {
-      if (!this.#room.peers.has(clientId)) {
-        this.#remove(clientId);
-      }
+  #reconcile = (): void => {
+    const clientIds = new Set([
+      ...this.#values.keys(),
+      ...this.#room.peers.keys()
+    ]);
+    for (const clientId of clientIds) {
+      this.#refresh(clientId);
     }
-    this.#replayPeers();
   };
 
   #onPeerJoined = (
     event: RoomPeerEvent
   ): void => {
-    const peer = this.#room.peers.get(event.clientId);
-    if (peer) {
-      this.#apply(event.clientId, peer.presence[this.key]);
-    }
+    this.#refresh(event.clientId);
   };
 
   #onPeerLeft = (
@@ -71,14 +94,15 @@ export class PresenceChannel<T> extends Emitter<PresenceChannelEventMap<T>> {
     super();
     this.key = options.key;
     this.#room = room;
-    this.#decode = options.decode;
+    this.#decode = toDecodeFn(options.decode);
     this.#equals = options.equals ?? Object.is;
 
-    room.on("sync", this.#onSync);
+    room.on("sync", this.#reconcile);
+    room.on("left", this.#reconcile);
     room.on("peer-joined", this.#onPeerJoined);
     room.on("peer-left", this.#onPeerLeft);
     room.on("peer-presence", this.#onPeerPresence);
-    this.#replayPeers();
+    this.#reconcile();
   }
 
   get values(): ReadonlyMap<string, T> {
@@ -104,7 +128,8 @@ export class PresenceChannel<T> extends Emitter<PresenceChannelEventMap<T>> {
   }
 
   destroy(): void {
-    this.#room.off("sync", this.#onSync);
+    this.#room.off("sync", this.#reconcile);
+    this.#room.off("left", this.#reconcile);
     this.#room.off("peer-joined", this.#onPeerJoined);
     this.#room.off("peer-left", this.#onPeerLeft);
     this.#room.off("peer-presence", this.#onPeerPresence);
@@ -114,10 +139,17 @@ export class PresenceChannel<T> extends Emitter<PresenceChannelEventMap<T>> {
     }
   }
 
-  #replayPeers(): void {
-    for (const [clientId, peer] of this.#room.peers) {
-      this.#apply(clientId, peer.presence[this.key]);
+  #refresh(
+    clientId: string
+  ): void {
+    const peer = this.#room.peers.get(clientId);
+    if (peer === undefined) {
+      this.#remove(clientId);
+
+      return;
     }
+
+    this.#apply(clientId, peer.presence[this.key]);
   }
 
   #apply(
@@ -128,6 +160,11 @@ export class PresenceChannel<T> extends Emitter<PresenceChannelEventMap<T>> {
     if (value === undefined) {
       this.#remove(clientId);
 
+      return;
+    }
+
+    const previous = this.#values.get(clientId);
+    if (previous !== undefined && this.#equals(previous, value)) {
       return;
     }
 

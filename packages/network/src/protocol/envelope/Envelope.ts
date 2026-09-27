@@ -17,7 +17,7 @@ import {
   describeErrors,
   type Infer,
   type ValidationError
-} from "./schema.ts";
+} from "../schema.ts";
 
 export type ClientEnvelope = Infer<typeof clientEnvelopeSchema>;
 export type ServerEnvelope = Infer<typeof serverEnvelopeSchema>;
@@ -29,25 +29,13 @@ export type EnvelopeParseError =
   | { reason: "invalid-json"; message: string; }
   | { reason: "malformed"; errors: readonly ValidationError[]; };
 
-function isClientEnvelope(
-  value: unknown
-): value is ClientEnvelope {
-  return clientValidator.isValid(value) === true;
-}
-
-function isServerEnvelope(
-  value: unknown
-): value is ServerEnvelope {
-  return serverValidator.isValid(value) === true;
-}
-
-function malformed(
-  errors: readonly ValidationError[]
-): EnvelopeParseError {
-  return {
-    reason: "malformed",
-    errors
-  };
+interface CompiledValidator {
+  isValid(
+    value: unknown
+  ): boolean;
+  validate(
+    value: unknown
+  ): { readonly errors: readonly ValidationError[]; };
 }
 
 function parseJson(
@@ -66,6 +54,27 @@ function parseJson(
     });
 }
 
+function envelopeParser<TEnvelope extends Envelope>(
+  validator: CompiledValidator
+): (raw: unknown) => Result<TEnvelope, EnvelopeParseError> {
+  function isEnvelope(
+    value: unknown
+  ): value is TEnvelope {
+    return validator.isValid(value) === true;
+  }
+
+  return (raw) => parseJson(raw).andThen((value) => {
+    if (isEnvelope(value)) {
+      return Ok(value);
+    }
+
+    return Err<EnvelopeParseError>({
+      reason: "malformed",
+      errors: validator.validate(value).errors
+    });
+  });
+}
+
 export function describeEnvelopeParseError(
   error: EnvelopeParseError
 ): string {
@@ -75,33 +84,8 @@ export function describeEnvelopeParseError(
 }
 
 export const Envelope = {
-  parseClient(
-    raw: unknown
-  ): Result<ClientEnvelope, EnvelopeParseError> {
-    return parseJson(raw).andThen((value) => {
-      if (isClientEnvelope(value)) {
-        return Ok(value);
-      }
-
-      return Err(
-        malformed(clientValidator.validate(value).errors)
-      );
-    });
-  },
-
-  parseServer(
-    raw: unknown
-  ): Result<ServerEnvelope, EnvelopeParseError> {
-    return parseJson(raw).andThen((value) => {
-      if (isServerEnvelope(value)) {
-        return Ok(value);
-      }
-
-      return Err(
-        malformed(serverValidator.validate(value).errors)
-      );
-    });
-  },
+  parseClient: envelopeParser<ClientEnvelope>(clientValidator),
+  parseServer: envelopeParser<ServerEnvelope>(serverValidator),
 
   stringify(
     envelope: Envelope

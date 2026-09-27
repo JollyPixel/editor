@@ -1,27 +1,24 @@
 // Import Third-party Dependencies
 import {
-  defineMessageProtocol,
+  MessageProtocol,
   OPAQUE_PROTOCOLS,
   type JSONSchema,
-  type MessageProtocol,
   type MessageProtocols
 } from "@jolly-pixel/network";
 
 export { OPAQUE_PROTOCOLS };
 
-export const counterIncrementProtocol: MessageProtocol = defineMessageProtocol({
-  schema: {
-    oneOf: [
-      {
-        title: "increment",
-        type: "object",
-        properties: {
-          increment: { type: "boolean" }
-        },
-        required: ["increment"]
-      }
-    ]
-  }
+export const counterIncrementProtocol: MessageProtocol = new MessageProtocol({
+  oneOf: [
+    {
+      title: "increment",
+      type: "object",
+      properties: {
+        increment: { type: "boolean" }
+      },
+      required: ["increment"]
+    }
+  ]
 });
 
 export const counterProtocols: MessageProtocols = {
@@ -29,38 +26,34 @@ export const counterProtocols: MessageProtocols = {
   outbound: null
 };
 
-export const counterCommandProtocol: MessageProtocol = defineMessageProtocol({
-  schema: {
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          action: { const: "increment" }
-        },
-        required: ["action"]
-      }
-    ]
-  }
+export const counterCommandProtocol: MessageProtocol = new MessageProtocol({
+  oneOf: [
+    {
+      type: "object",
+      properties: {
+        action: { const: "increment" }
+      },
+      required: ["action"]
+    }
+  ]
 });
 
 export const counterSnapshotSchema: JSONSchema = {
   type: "object"
 };
 
-export const linkCommandProtocol: MessageProtocol = defineMessageProtocol({
-  schema: {
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          action: { const: "set" },
-          targets: {
-            type: "array",
-            items: { type: "string" }
-          }
-        },
-        required: ["action", "targets"]
-      }
-    ]
-  }
+export const linkCommandProtocol: MessageProtocol = new MessageProtocol({
+  oneOf: [
+    {
+      type: "object",
+      properties: {
+        action: { const: "set" },
+        targets: {
+          type: "array",
+          items: { type: "string" }
+        }
+      },
+      required: ["action", "targets"]
+    }
+  ]
 });

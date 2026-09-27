@@ -4,7 +4,7 @@ import type {
   ClientSocket,
   ClientSocketEvent,
   ClientSocketEventType
-} from "../client/Client.ts";
+} from "./ClientSocket.ts";
 import {
   UNAUTHORIZED_CLOSE_CODE,
   UNAUTHORIZED_CLOSE_REASON
@@ -15,9 +15,126 @@ const kLoopbackUrl = "loopback:";
 const kNormalCloseCode = 1000;
 
 type SocketListener = (event: ClientSocketEvent) => void;
+type LoopbackSocketState = "connecting" | "open" | "closed";
 
 export interface LoopbackTransportOptions {
   server: Server;
+}
+
+class LoopbackSocket implements ClientSocket {
+  readonly id = crypto.randomUUID();
+
+  readonly #server: Server;
+  readonly #listeners = new Map<
+    ClientSocketEventType,
+    SocketListener[]
+  >();
+  #state: LoopbackSocketState = "connecting";
+
+  constructor(
+    server: Server
+  ) {
+    this.#server = server;
+
+    void this.#open();
+  }
+
+  send(
+    data: string
+  ): void {
+    if (this.#state === "open") {
+      void this.#server.handleMessage(this.id, data);
+    }
+  }
+
+  close(): void {
+    this.#terminate({
+      code: kNormalCloseCode,
+      reason: ""
+    });
+  }
+
+  addEventListener(
+    type: ClientSocketEventType,
+    listener: SocketListener
+  ): void {
+    const registered = this.#listeners.get(type) ?? [];
+    registered.push(listener);
+
+    this.#listeners.set(
+      type,
+      registered
+    );
+  }
+
+  async #open(): Promise<void> {
+    const identity = await this.#server.authenticate({
+      clientId: this.id,
+      url: kLoopbackUrl,
+      headers: {}
+    });
+    if (this.#state === "closed") {
+      return;
+    }
+    if (identity === null) {
+      this.#terminate({
+        code: UNAUTHORIZED_CLOSE_CODE,
+        reason: UNAUTHORIZED_CLOSE_REASON
+      });
+
+      return;
+    }
+
+    this.#state = "open";
+    this.#server.handleConnect(
+      {
+        id: this.id,
+        send: (data) => this.#deliver(data)
+      },
+      identity
+    );
+    this.#emit("open");
+  }
+
+  #deliver(
+    data: unknown
+  ): void {
+    const raw = JSON.stringify(data);
+
+    queueMicrotask(() => {
+      if (this.#state !== "closed") {
+        this.#emit("message", { data: raw });
+      }
+    });
+  }
+
+  #terminate(
+    event: ClientSocketEvent
+  ): void {
+    if (this.#state === "closed") {
+      return;
+    }
+
+    const wasOpen = this.#state === "open";
+    this.#state = "closed";
+    if (wasOpen) {
+      void this.#server.handleDisconnect(this.id);
+    }
+
+    queueMicrotask(
+      () => this.#emit("close", event)
+    );
+  }
+
+  #emit(
+    type: ClientSocketEventType,
+    event: ClientSocketEvent = {}
+  ): void {
+    const registered = this.#listeners.get(type) ?? [];
+    for (const listener of registered) {
+      listener(event);
+    }
+  }
 }
 
 /**
@@ -35,92 +152,6 @@ export class LoopbackTransport {
   }
 
   connect(): ClientSocket {
-    const server = this.#server;
-    const clientId = crypto.randomUUID();
-    const listeners = new Map<ClientSocketEventType, SocketListener[]>();
-    let connected = false;
-    let closed = false;
-
-    function emit(
-      type: ClientSocketEventType,
-      event: ClientSocketEvent = {}
-    ): void {
-      for (const listener of listeners.get(type) ?? []) {
-        listener(event);
-      }
-    }
-
-    function close(
-      event: ClientSocketEvent
-    ): void {
-      if (closed) {
-        return;
-      }
-      closed = true;
-      if (connected) {
-        void server.handleDisconnect(clientId);
-      }
-      queueMicrotask(() => emit("close", event));
-    }
-
-    void Promise
-      .resolve()
-      .then(() => server.authenticate({
-        clientId,
-        url: kLoopbackUrl,
-        headers: {}
-      }))
-      .catch((error): null => {
-        server.logger.withError(error).error("authentication provider failed");
-
-        return null;
-      })
-      .then((identity) => {
-        if (closed) {
-          return;
-        }
-        if (identity === null) {
-          close({
-            code: UNAUTHORIZED_CLOSE_CODE,
-            reason: UNAUTHORIZED_CLOSE_REASON
-          });
-
-          return;
-        }
-
-        connected = true;
-        server.handleConnect(
-          {
-            id: clientId,
-            send: (data) => {
-              const raw = JSON.stringify(data);
-              queueMicrotask(() => {
-                if (!closed) {
-                  emit("message", { data: raw });
-                }
-              });
-            }
-          },
-          identity
-        );
-        emit("open");
-      });
-
-    return {
-      send: (data) => {
-        if (connected && !closed) {
-          void server.handleMessage(clientId, data);
-        }
-      },
-      close: () => close({
-        code: kNormalCloseCode,
-        reason: ""
-      }),
-      addEventListener: (type, listener) => {
-        const registered = listeners.get(type) ?? [];
-        registered.push(listener);
-        listeners.set(type, registered);
-      }
-    };
+    return new LoopbackSocket(this.#server);
   }
 }

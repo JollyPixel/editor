@@ -3,7 +3,7 @@ import {
   describeEnvelopeParseError,
   Envelope,
   type ClientEnvelope
-} from "../protocol/Envelope.ts";
+} from "../protocol/envelope/Envelope.ts";
 import { errorMessage } from "./errors.ts";
 import {
   createLogger,
@@ -27,7 +27,7 @@ import {
   EnvelopeDispatcher,
   type DispatchOutcome
 } from "./EnvelopeDispatcher.ts";
-import type { ClientHandle } from "../protocol/types.ts";
+import type { ClientHandle } from "../transport/ClientHandle.ts";
 
 interface EnvelopeFields {
   clientId: string;
@@ -104,13 +104,32 @@ export class Server {
     await this.close();
   }
 
-  authenticate(
+  async authenticate(
     attempt: AuthenticationAttempt
-  ): PeerIdentity | null | Promise<PeerIdentity | null> {
-    return this.#auth.authenticate({
-      ...attempt,
-      defaultRole: this.#rights.defaultRole
-    });
+  ): Promise<PeerIdentity | null> {
+    let identity: PeerIdentity | null = null;
+    try {
+      identity = await this.#auth.authenticate({
+        ...attempt,
+        defaultRole: this.#rights.defaultRole
+      });
+    }
+    catch (error) {
+      this.logger
+        .withError(error)
+        .error("authentication provider failed");
+    }
+
+    if (identity === null) {
+      this.logger
+        .withMetadata({
+          clientId: attempt.clientId,
+          outcome: "unauthorized"
+        })
+        .warn("client rejected");
+    }
+
+    return identity;
   }
 
   handleConnect(

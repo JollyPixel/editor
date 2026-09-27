@@ -11,7 +11,13 @@ export type {
   ValidationError
 };
 
-export function defineSchema<const S extends JSONSchema>(
+export const VALIDATOR_OPTIONS = {
+  useDefaults: false
+} as const;
+
+export function defineSchema<
+  const S extends JSONSchema
+>(
   schema: S
 ): S {
   return schema;

@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
-  defineMessageProtocol,
-  type JSONSchema,
-  type MessageProtocol
+  MessageProtocol,
+  type JSONSchema
 } from "@jolly-pixel/network";
 import {
   MAX_TILESET_SLOT,
@@ -216,21 +215,19 @@ export const voxelWorldSchema: JSONSchema = {
   ]
 };
 
-export const voxelCommandProtocol: MessageProtocol = defineMessageProtocol({
-  schema: {
-    oneOf: [
-      ...Object.entries(kLayerMetadataSchemas).map(
-        ([action, metadata]) => commandVariant(action, {
-          layerName: { type: "string" },
-          metadata
-        })
-      ),
-      ...Object.entries(kTilesetCommandProperties).map(
-        ([action, properties]) => commandVariant(action, properties)
-      ),
-      commandVariant("world-replace", {
-        data: voxelWorldSchema
+export const voxelCommandProtocol: MessageProtocol = new MessageProtocol({
+  oneOf: [
+    ...Object.entries(kLayerMetadataSchemas).map(
+      ([action, metadata]) => commandVariant(action, {
+        layerName: { type: "string" },
+        metadata
       })
-    ]
-  }
+    ),
+    ...Object.entries(kTilesetCommandProperties).map(
+      ([action, properties]) => commandVariant(action, properties)
+    ),
+    commandVariant("world-replace", {
+      data: voxelWorldSchema
+    })
+  ]
 });

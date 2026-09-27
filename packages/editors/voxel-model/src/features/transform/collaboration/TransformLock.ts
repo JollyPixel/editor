@@ -63,12 +63,13 @@ export class TransformLock extends Emitter<TransformLockEvents> {
       .filter(([, lockedUuid]) => lockedUuid === uuid)
       .map(([clientId]) => clientId);
 
-    if (this.#heldUuid === uuid) {
-      candidates.push(this.#room.clientId);
+    const localId = this.#room.clientId;
+    if (this.#heldUuid === uuid && localId !== null) {
+      candidates.push(localId);
     }
 
     const [winner] = candidates.sort((left, right) => left.localeCompare(right));
-    if (winner === undefined || winner === this.#room.clientId) {
+    if (winner === undefined || winner === localId) {
       return null;
     }
 

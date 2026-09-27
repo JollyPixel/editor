@@ -11,7 +11,7 @@ import type {
 import { RightsTable } from "../rights/RightsTable.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
 import { RoomMembers } from "./RoomMembers.ts";
-import { MessageParser } from "../../protocol/MessageParser.ts";
+import { MessageParser } from "../../protocol/message/MessageParser.ts";
 import {
   JOIN_EVENT,
   MESSAGE_EVENT,
@@ -20,10 +20,10 @@ import {
 import { describeErrors } from "../../protocol/schema.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type {
-  ClientHandle,
   PeerMetadata,
   RoomRights
 } from "../../protocol/types.ts";
+import type { ClientHandle } from "../../transport/ClientHandle.ts";
 
 interface AuthorizeOptions {
   clientId: string;
@@ -66,11 +66,9 @@ export class ServerRoom {
       room: this.id
     });
 
-    const { inbound, outbound } = MessageParser.fromProtocols(
-      extension.protocols
-    );
-    this.#inbound = inbound;
-    this.#outbound = outbound;
+    const { inbound, outbound } = extension.protocols;
+    this.#inbound = inbound === null ? null : new MessageParser(inbound);
+    this.#outbound = outbound === null ? null : new MessageParser(outbound);
 
     this.#roomBroadcast = {
       broadcast: (payload) => this.#broadcast(payload),
@@ -123,10 +121,11 @@ export class ServerRoom {
   rightsFor(
     role: string
   ): RoomRights {
+    const { inbound, outbound } = this.#extension.protocols;
     const events = new Set([
       PRESENCE_EVENT,
-      ...this.#inbound?.events ?? [],
-      ...this.#outbound?.events ?? []
+      ...inbound?.events ?? [],
+      ...outbound?.events ?? []
     ]);
 
     return this.#rights.resolve(role, events);

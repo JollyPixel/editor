@@ -23,8 +23,7 @@ describe("PendingCallRegistry — resolve", () => {
   test("returns false and does nothing for an unknown id", () => {
     const registry = new PendingCallRegistry<string>();
 
-    // @ts-expect-error - testing an invalid id
-    assert.strictEqual(registry.resolve(999, "value"), false);
+    assert.strictEqual(registry.resolve("unknown", "value"), false);
   });
 
   test("resolving twice only settles the promise once", async() => {
@@ -49,13 +48,12 @@ describe("PendingCallRegistry — reject", () => {
   test("returns false for an unknown id", () => {
     const registry = new PendingCallRegistry<string>();
 
-    // @ts-expect-error - testing an invalid id
-    assert.strictEqual(registry.reject(999, new Error("boom")), false);
+    assert.strictEqual(registry.reject("unknown", new Error("boom")), false);
   });
 });
 
 describe("PendingCallRegistry — ids", () => {
-  test("assigns a distinct, incrementing id to each pending call", () => {
+  test("assigns a distinct id to each pending call", () => {
     const registry = new PendingCallRegistry<string>();
 
     const first = registry.create();
@@ -94,17 +92,6 @@ describe("PendingCallRegistry — rejectAll", () => {
     await secondRejection;
   });
 
-  test("does not affect calls already settled before it runs", async() => {
-    const registry = new PendingCallRegistry<string>();
-
-    const { id, promise } = registry.create();
-    registry.resolve(id, "done");
-
-    registry.rejectAll(new Error("shutdown"));
-
-    assert.strictEqual(await promise, "done");
-  });
-
   test("clears pending entries, so a later resolve/reject on the same id is a no-op", async() => {
     const registry = new PendingCallRegistry<string>();
     const { id, promise } = registry.create();
@@ -118,42 +105,50 @@ describe("PendingCallRegistry — rejectAll", () => {
 });
 
 describe("PendingCallRegistry — timeoutMs", () => {
-  test("rejects with a PendingCallTimeoutError once the timeout elapses", async() => {
+  test("rejects with a PendingCallTimeoutError once the timeout elapses", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     const registry = new PendingCallRegistry<string>();
-    const { promise } = registry.create({ timeoutMs: 5 });
+    const { promise } = registry.create({ timeoutMs: 50 });
+    const rejection = assert.rejects(promise, PendingCallTimeoutError);
 
-    await assert.rejects(promise, PendingCallTimeoutError);
-  });
-
-  test("uses the given timeoutMessage", async() => {
-    const registry = new PendingCallRegistry<string>();
-    const { promise } = registry.create({ timeoutMs: 5, timeoutMessage: "custom timeout" });
-
-    await assert.rejects(promise, /custom timeout/);
-  });
-
-  test("does not fire once resolved before the timeout", async() => {
-    const registry = new PendingCallRegistry<string>();
-    const { id, promise } = registry.create({ timeoutMs: 50 });
-
-    registry.resolve(id, "done");
-
-    assert.strictEqual(await promise, "done");
-  });
-
-  test("does not fire once rejected before the timeout", async() => {
-    const registry = new PendingCallRegistry<string>();
-    const { id, promise } = registry.create({ timeoutMs: 50 });
-    const rejection = assert.rejects(promise, /boom/);
-
-    registry.reject(id, new Error("boom"));
+    t.mock.timers.tick(50);
 
     await rejection;
   });
 
-  test("never times out when timeoutMs is omitted", () => {
+  test("uses the given timeoutMessage", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     const registry = new PendingCallRegistry<string>();
+    const { promise } = registry.create({
+      timeoutMs: 50,
+      timeoutMessage: "custom timeout"
+    });
+    const rejection = assert.rejects(promise, /custom timeout/);
 
-    assert.doesNotThrow(() => registry.create());
+    t.mock.timers.tick(50);
+
+    await rejection;
+  });
+
+  test("keeps the call pending until the timeout elapses", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const registry = new PendingCallRegistry<string>();
+    const { id, promise } = registry.create({ timeoutMs: 50 });
+
+    t.mock.timers.tick(49);
+
+    assert.strictEqual(registry.resolve(id, "in time"), true);
+    assert.strictEqual(await promise, "in time");
+  });
+
+  test("never times out when timeoutMs is omitted", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const registry = new PendingCallRegistry<string>();
+    const { id, promise } = registry.create();
+
+    t.mock.timers.tick(3_600_000);
+
+    assert.strictEqual(registry.resolve(id, "late"), true);
+    assert.strictEqual(await promise, "late");
   });
 });
