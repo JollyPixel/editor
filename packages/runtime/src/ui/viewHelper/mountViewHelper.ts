@@ -79,7 +79,7 @@ export function mountViewHelper(
   };
 }
 
-export function findViewHelperCamera(
+function findViewHelperCamera(
   components: Iterable<Systems.RenderComponent>
 ): THREE.Camera | null {
   let primary: Systems.RenderComponent | null = null;
@@ -92,7 +92,7 @@ export function findViewHelperCamera(
   return primary?.threeCamera ?? null;
 }
 
-export function resolveViewHelperLocation(
+function resolveViewHelperLocation(
   position: ViewHelperPosition,
   inset: number
 ): ViewHelperLocation {

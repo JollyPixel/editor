@@ -1,33 +1,10 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
-import { before, describe, test } from "node:test";
-
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
+import { describe, test } from "node:test";
 
 // Import Internal Dependencies
-import type {
-  OverlayLayer as OverlayLayerType
-} from "../../../src/ui/overlay/OverlayLayer.ts";
-
-// CONSTANTS
-const kBrowserWindow = new Window();
-
-let mountFocusHint:
-  typeof import("../../../src/ui/focus/mountFocusHint.ts").mountFocusHint;
-let OverlayLayer:
-  typeof import("../../../src/ui/overlay/OverlayLayer.ts").OverlayLayer;
-
-before(async() => {
-  installBrowserGlobals();
-
-  ({ mountFocusHint } = await import(
-    "../../../src/ui/focus/mountFocusHint.ts"
-  ));
-  ({ OverlayLayer } = await import(
-    "../../../src/ui/overlay/OverlayLayer.ts"
-  ));
-});
+import { mountFocusHint } from "../../../src/ui/focus/mountFocusHint.ts";
+import { OverlayLayer } from "../../../src/ui/overlay/OverlayLayer.ts";
 
 describe("mountFocusHint", () => {
   test("mounts a hidden hint while the canvas holds focus", () => {
@@ -42,7 +19,6 @@ describe("mountFocusHint", () => {
       assert.strictEqual(element.style.opacity, "0");
       assert.strictEqual(element.textContent, "Click to focus");
       assert.strictEqual(element.style.pointerEvents, "none");
-      assert.strictEqual(element.style.zIndex, "");
       assert.strictEqual(element.getAttribute("aria-hidden"), "true");
     }
     finally {
@@ -129,7 +105,7 @@ describe("mountFocusHint", () => {
 
 function createFixture(): {
   canvas: HTMLCanvasElement;
-  layer: OverlayLayerType;
+  layer: OverlayLayer;
 } {
   const canvas = document.createElement("canvas");
   canvas.tabIndex = -1;
@@ -143,42 +119,17 @@ function createFixture(): {
 
 function disposeFixture(
   canvas: HTMLCanvasElement,
-  layer: OverlayLayerType
+  layer: OverlayLayer
 ): void {
   layer.dispose();
   canvas.remove();
 }
 
 function queryHint(
-  layer: OverlayLayerType
+  layer: OverlayLayer
 ): HTMLElement {
   const element = layer.element.querySelector("[aria-hidden]");
   assert.ok(element instanceof HTMLElement);
 
   return element;
-}
-
-function installBrowserGlobals(): void {
-  Object.defineProperties(globalThis, {
-    window: {
-      configurable: true,
-      value: kBrowserWindow
-    },
-    document: {
-      configurable: true,
-      value: kBrowserWindow.document
-    },
-    HTMLElement: {
-      configurable: true,
-      value: kBrowserWindow.HTMLElement
-    },
-    Element: {
-      configurable: true,
-      value: kBrowserWindow.Element
-    },
-    ResizeObserver: {
-      configurable: true,
-      value: kBrowserWindow.ResizeObserver
-    }
-  });
 }

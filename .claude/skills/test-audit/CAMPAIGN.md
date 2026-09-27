@@ -76,9 +76,9 @@ fixtures through one owner. With each lane, remove the test-only production
 seams it unlocks: injection parameters, timer or clock hooks, getters, reset
 exports, `window` globals, and indirection layers. Keep moved suites inside
 the package's `test-only` glob and suffix; a probe that must stay out of the
-unit run (such as `*.gpu.ts`) needs its own script. When an e2e suite moves or
-gains a dependency, update its paths filter in
-`.github/workflows/node.js.yml`. Put durable test-ownership rules in the
+unit run (such as `*.gpu.ts`) needs its own script. An e2e suite's CI trigger
+follows its `package.json` dependencies, so declare every workspace package
+it exercises. Put durable test-ownership rules in the
 workspace's `AGENTS.md`, drawn from mistakes this campaign actually found.
 
 Done when every lane plan is applied and each lane's keepers pass.

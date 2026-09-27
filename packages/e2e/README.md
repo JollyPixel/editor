@@ -120,8 +120,10 @@ the package without a workspace cycle.
    suite's seed documents, and `expect`.
 4. Write `test/e2e/<feature>.e2e.ts` against that `test`. Keep domain helpers
    (scene, painting, hierarchy) in the suite's `test/e2e/support/`.
-5. Add the suite to the `e2e` matrix in `.github/workflows/node.js.yml`: a path
-   filter in the `changes` job and an entry in its `SUITES` list.
+5. CI picks the suite up from its `test:e2e` script and runs it when the
+   package or one of its workspace dependencies changes
+   (`scripts/ciE2eMatrix.ts`). To keep it out of CI, add a `--skip` entry in
+   `.github/workflows/node.js.yml`.
 
 ## ✨ Contributors guide
 

@@ -2,79 +2,36 @@
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
+// Import Internal Dependencies
+import { OverlayLayer } from "../../../src/ui/overlay/OverlayLayer.ts";
 
 // CONSTANTS
-const kBrowserWindow = new Window();
 const kObservers: Array<FakeResizeObserver> = [];
 
 class FakeResizeObserver {
-  callback: () => void;
-  targets: Array<Element> = [];
-  disconnected = false;
+  observing = false;
 
-  constructor(
-    callback: () => void
-  ) {
-    this.callback = callback;
+  constructor() {
     kObservers.push(this);
   }
 
-  observe(
-    target: Element
-  ): void {
-    this.targets.push(target);
+  observe(): void {
+    this.observing = true;
   }
 
   disconnect(): void {
-    this.disconnected = true;
+    this.observing = false;
   }
 }
 
-let OverlayLayer:
-  typeof import("../../../src/ui/overlay/OverlayLayer.ts").OverlayLayer;
-
-before(async() => {
-  installBrowserGlobals();
-
-  ({ OverlayLayer } = await import(
-    "../../../src/ui/overlay/OverlayLayer.ts"
-  ));
+before(() => {
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    value: FakeResizeObserver
+  });
 });
 
 describe("OverlayLayer", () => {
-  test("tracks the canvas box from document.body by default", () => {
-    const canvas = createCanvas();
-    let rect = createRect(10, 20, 300, 200);
-    canvas.getBoundingClientRect = () => rect;
-
-    const layer = new OverlayLayer(canvas);
-
-    try {
-      assert.strictEqual(layer.element.parentElement, document.body);
-      assert.strictEqual(layer.element.style.position, "fixed");
-      assert.strictEqual(layer.element.style.pointerEvents, "none");
-      assertBox(layer.element, "10px", "20px", "300px", "200px");
-
-      const observer = kObservers.at(-1);
-      assert.ok(observer);
-      assert.deepEqual(observer.targets, [canvas]);
-
-      rect = createRect(10, 20, 180, 200);
-      observer.callback();
-      assertBox(layer.element, "10px", "20px", "180px", "200px");
-
-      rect = createRect(0, 0, 640, 480);
-      window.dispatchEvent(new window.Event("resize"));
-      assertBox(layer.element, "0px", "0px", "640px", "480px");
-    }
-    finally {
-      layer.dispose();
-      canvas.remove();
-    }
-  });
-
   test("fills a container element without tracking", () => {
     const container = document.createElement("div");
     const canvas = createCanvas(container);
@@ -205,7 +162,7 @@ describe("OverlayLayer", () => {
     window.dispatchEvent(new window.Event("scroll"));
 
     assert.strictEqual(layer.element.isConnected, false);
-    assert.strictEqual(observer?.disconnected, true);
+    assert.strictEqual(observer?.observing, false);
     assert.strictEqual(calls, callsAfterDispose);
 
     canvas.remove();
@@ -242,52 +199,4 @@ function createRect(
     bottom: y + height,
     toJSON: () => null
   };
-}
-
-function assertBox(
-  element: HTMLElement,
-  left: string,
-  top: string,
-  width: string,
-  height: string
-): void {
-  assert.deepEqual(
-    {
-      left: element.style.left,
-      top: element.style.top,
-      width: element.style.width,
-      height: element.style.height
-    },
-    {
-      left,
-      top,
-      width,
-      height
-    }
-  );
-}
-
-function installBrowserGlobals(): void {
-  Object.defineProperties(globalThis, {
-    window: {
-      configurable: true,
-      value: kBrowserWindow
-    },
-    document: {
-      configurable: true,
-      value: kBrowserWindow.document
-    },
-    HTMLElement: {
-      configurable: true,
-      value: kBrowserWindow.HTMLElement
-    },
-    Element: {
-      configurable: true,
-      value: kBrowserWindow.Element
-    },
-    ResizeObserver: {
-      configurable: true,
-      value: FakeResizeObserver
-    }
-  });
 }

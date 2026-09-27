@@ -43,8 +43,8 @@ On CI a failed test retries once.
 ## Ports
 
 `PORTS` gives each suite its own port, so dev servers can run side by side:
-`pixelArt` 3000, `ui` 3001, `voxelMap` 3002, `voxelModel` 3003, `studio` 3004.
-Vite configs read the same table for `server.port`.
+`pixelArt` 3000, `ui` 3001, `voxelMap` 3002, `voxelModel` 3003, `studio` 3004,
+`runtime` 3005. Vite configs read the same table for `server.port`.
 
 - `baseUrl(port)`: `http://localhost:<port>`.
 - `socketUrl(port)`: the sync server websocket, `ws://localhost:<port>/ws-sync`.

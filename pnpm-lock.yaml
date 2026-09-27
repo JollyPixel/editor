@@ -812,6 +812,9 @@ importers:
         specifier: ^0.186.0
         version: 0.186.0
     devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../e2e
       electron:
         specifier: 44.4.2
         version: 44.4.2(supports-color@10.2.2)

@@ -9,90 +9,73 @@ import {
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { Window } from "happy-dom";
 import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import type {
-  ViewHelperHost
+import {
+  mountViewHelper,
+  type ViewHelperHost,
+  type ViewHelperPosition
 } from "../../../src/ui/viewHelper/mountViewHelper.ts";
 
 // CONSTANTS
-const kBrowserWindow = new Window();
+const kLocations: Array<[ViewHelperPosition, HelperLocation]> = [
+  [
+    "top-left",
+    {
+      top: 12,
+      bottom: 0,
+      left: 12,
+      right: 0
+    }
+  ],
+  [
+    "top-right",
+    {
+      top: 12,
+      bottom: 0,
+      left: null,
+      right: 12
+    }
+  ],
+  [
+    "bottom-left",
+    {
+      top: null,
+      bottom: 12,
+      left: 12,
+      right: 0
+    }
+  ],
+  [
+    "bottom-right",
+    {
+      top: null,
+      bottom: 12,
+      left: null,
+      right: 12
+    }
+  ]
+];
 
 type DrawHandler = Systems.RendererEvents["draw"];
-type ViewHelperModule = typeof import(
-  "../../../src/ui/viewHelper/mountViewHelper.ts"
-);
 
-let mountViewHelper: ViewHelperModule["mountViewHelper"];
-let findViewHelperCamera: ViewHelperModule["findViewHelperCamera"];
-let resolveViewHelperLocation: ViewHelperModule["resolveViewHelperLocation"];
+interface HelperLocation {
+  top: number | null;
+  bottom: number | null;
+  left: number | null;
+  right: number | null;
+}
 
-before(async() => {
-  installBrowserGlobals();
-
-  ({
-    mountViewHelper,
-    findViewHelperCamera,
-    resolveViewHelperLocation
-  } = await import("../../../src/ui/viewHelper/mountViewHelper.ts"));
-});
-
-describe("findViewHelperCamera", () => {
-  test("returns null without render components", () => {
-    assert.equal(findViewHelperCamera([]), null);
-  });
-
-  test("returns the camera of the lowest-depth component", () => {
-    const overlay = createRenderComponent(10);
-    const main = createRenderComponent(-1);
-    const secondary = createRenderComponent(0);
-
-    assert.equal(
-      findViewHelperCamera([overlay, main, secondary]),
-      main.threeCamera
-    );
-  });
-
-  test("keeps the first component when depths are equal", () => {
-    const first = createRenderComponent(0);
-    const second = createRenderComponent(0);
-
-    assert.equal(
-      findViewHelperCamera([first, second]),
-      first.threeCamera
-    );
-  });
-});
-
-describe("resolveViewHelperLocation", () => {
-  test("anchors each corner with the inset", () => {
-    assert.deepEqual(resolveViewHelperLocation("top-left", 4), {
-      top: 4,
-      bottom: 0,
-      left: 4,
-      right: 0
-    });
-    assert.deepEqual(resolveViewHelperLocation("top-right", 4), {
-      top: 4,
-      bottom: 0,
-      left: null,
-      right: 4
-    });
-    assert.deepEqual(resolveViewHelperLocation("bottom-left", 4), {
-      top: null,
-      bottom: 4,
-      left: 4,
-      right: 0
-    });
-    assert.deepEqual(resolveViewHelperLocation("bottom-right", 4), {
-      top: null,
-      bottom: 4,
-      left: null,
-      right: 4
-    });
-  });
+before(() => {
+  Object.defineProperty(
+    HTMLCanvasElement.prototype,
+    "getContext",
+    {
+      configurable: true,
+      value: createContext2DStub
+    }
+  );
 });
 
 describe("mountViewHelper", () => {
@@ -119,24 +102,33 @@ describe("mountViewHelper", () => {
     assert.equal(renderer.source.renders[0].camera, main.threeCamera);
   });
 
-  test("applies the position and inset to the helper location", () => {
+  test("binds the first of equally deep cameras", () => {
     const renderer = new FakeRenderer();
-    renderer.renderComponents.push(createRenderComponent(0));
-    const mounted = mountViewHelper(renderer, {
-      position: "top-left",
-      inset: 12
-    });
+    const first = createRenderComponent(0);
+    renderer.renderComponents.push(first, createRenderComponent(0));
+    const mounted = mountViewHelper(renderer);
 
     renderer.draw();
     mounted.dispose();
 
-    assert.deepEqual(renderer.source.renders[0].location, {
-      top: 12,
-      bottom: 0,
-      left: 12,
-      right: 0
-    });
+    assert.equal(renderer.source.renders[0].camera, first.threeCamera);
   });
+
+  for (const [position, location] of kLocations) {
+    test(`anchors a ${position} helper with the inset`, () => {
+      const renderer = new FakeRenderer();
+      renderer.renderComponents.push(createRenderComponent(0));
+      const mounted = mountViewHelper(renderer, {
+        position,
+        inset: 12
+      });
+
+      renderer.draw();
+      mounted.dispose();
+
+      assert.deepEqual(renderer.source.renders[0].location, location);
+    });
+  }
 
   test("rebinds to a new lowest-depth camera", () => {
     const renderer = new FakeRenderer();
@@ -169,7 +161,7 @@ describe("mountViewHelper", () => {
 
 interface RenderedHelper {
   camera: THREE.Camera;
-  location: unknown;
+  location: HelperLocation;
 }
 
 class FakeSource {
@@ -238,26 +230,5 @@ function createContext2DStub(): unknown {
   return new Proxy({}, {
     get: () => () => undefined,
     set: () => true
-  });
-}
-
-function installBrowserGlobals(): void {
-  Object.defineProperty(
-    kBrowserWindow.HTMLCanvasElement.prototype,
-    "getContext",
-    {
-      configurable: true,
-      value: createContext2DStub
-    }
-  );
-  Object.defineProperties(globalThis, {
-    window: {
-      configurable: true,
-      value: kBrowserWindow
-    },
-    document: {
-      configurable: true,
-      value: kBrowserWindow.document
-    }
   });
 }

@@ -73,19 +73,10 @@ describe("RendererMetrics", () => {
     metrics.captureFrame();
     renderer.info.render.drawCalls = 0;
     renderer.info.render.triangles = 0;
+    renderer.info.memory.textures = 5;
 
     assert.equal(sampleOf(metrics, "calls"), 12);
     assert.equal(sampleOf(metrics, "renderedTriangles"), 300);
-  });
-
-  it("exposes the captured frame outside a draw", () => {
-    const renderer = makeRenderer();
-    const metrics = metricsOf(renderer);
-
-    metrics.captureFrame();
-    renderer.info.render.drawCalls = 0;
-    renderer.info.memory.textures = 5;
-
     assert.deepEqual(metrics.frame, {
       drawCalls: 12,
       triangles: 300,

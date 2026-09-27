@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Runtime e2e</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 300vh;
+    }
+
+    #viewport {
+      width: 480px;
+      height: 270px;
+      margin: 40px 0 0 60px;
+    }
+
+    #game {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <main id="viewport">
+    <canvas id="game" tabindex="-1"></canvas>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+
+</html>

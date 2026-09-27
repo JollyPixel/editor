@@ -6,7 +6,8 @@ export const PORTS = {
   ui: 3001,
   voxelMap: 3002,
   voxelModel: 3003,
-  studio: 3004
+  studio: 3004,
+  runtime: 3005
 } as const;
 
 export function baseUrl(

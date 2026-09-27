@@ -461,8 +461,9 @@ theme, and opt-out examples.
 ## Lifecycle
 
 `start()` is idempotent. It focuses the canvas, attaches the configured focus
-listeners, connects and starts the world, then starts the game loop. Each frame
-updates performance statistics when present and calls `world.tick()`.
+listeners, clears the input exit flag, connects and starts the world, then
+starts the game loop. Each frame updates performance statistics when present
+and calls `world.tick()`.
 
 `stop()` is also idempotent. It stops and disconnects the world, stops the loop,
 marks input as exited, and removes the focus listeners.
