@@ -14,6 +14,7 @@ const kCellMask = (1 << PULLED_CELL_BITS) - 1;
 const kTemplateMask = (1 << PULLED_TEMPLATE_BITS) - 1;
 const kFlipShift = PULLED_TEMPLATE_BITS + PULLED_AO_BITS;
 const kQuadCorners = [0, 1, 2, 0, 2, 3];
+const kCornerCount = 4;
 const kQuadTriangles = [[0, 1, 2], [0, 2, 3]];
 
 const kA = new THREE.Vector3();
@@ -81,13 +82,18 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     this.setAttribute(
       "position",
       new THREE.BufferAttribute(
-        new Float32Array(kQuadCorners.flatMap((corner) => [corner, 0, 0])),
+        new Float32Array(kCornerCount * 3).map(
+          (_, index) => (index % 3 === 0 ? index / 3 : 0)
+        ),
         3
       )
     );
     this.setAttribute(
       "normal",
-      new THREE.BufferAttribute(new Float32Array(kQuadCorners.length * 3), 3)
+      new THREE.BufferAttribute(new Float32Array(kCornerCount * 3), 3)
+    );
+    this.setIndex(
+      new THREE.BufferAttribute(new Uint16Array(kQuadCorners), 1)
     );
     this.instanceCount = faceCount;
     this.boundingBox = bounds.clone();

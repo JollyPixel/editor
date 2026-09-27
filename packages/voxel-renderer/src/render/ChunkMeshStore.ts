@@ -398,9 +398,19 @@ function collisionGeometries(
   return result;
 }
 
+// eslint-disable-next-line max-params
 function releaseShaderAttributes(
-  this: THREE.Mesh
+  this: THREE.Mesh,
+  _renderer: unknown,
+  _scene: THREE.Scene,
+  _camera: THREE.Camera,
+  _geometry: THREE.BufferGeometry,
+  material: THREE.Material
 ): void {
+  if (material !== this.material) {
+    return;
+  }
+
   for (const name of kShaderOnlyAttributes) {
     const attribute = this.geometry.getAttribute(name);
     if (attribute instanceof THREE.BufferAttribute) {

@@ -194,6 +194,12 @@ the baked ambient occlusion. The optional `averages`, an
 and `flat` draws the tile average on every face. The engine supplies them
 when creating chunk materials.
 
+Both helpers give the shadow pass its own color graph. Opaque surfaces cast
+with a constant color, mask surfaces discard on the raw atlas texel alpha, and
+neither reads the distant tile filter or ambient occlusion. A
+`materialCustomizer` that replaces `colorNode` also replaces what the shadow
+pass evaluates.
+
 ## Vertex pulling
 
 With `vertexPulling: true`, and greedy meshing off, a chunk geometry stores one
@@ -210,7 +216,8 @@ const engine = new VoxelEngine({
 engine.vertexPulling = false;
 ```
 
-A pulled chunk geometry draws one instance of six vertices per face. The face
+A pulled chunk geometry draws one instance of an indexed four-corner quad per
+face. The face
 records sit in an `RG32UI` data texture owned by the geometry, at most 2048
 texels wide, and the shader reads them by instance index:
 
@@ -254,18 +261,17 @@ The rest of the engine keeps working on pulled chunks:
 - Colliders receive indexed `position` geometry expanded from the face records,
   relative to the chunk origin.
 - The inspector wireframe draws an expanded copy, disposed with the overlay.
-- Shadow and transparency passes reuse the material's `positionNode`.
+- Transparency passes reuse the material's `positionNode`. The shadow pass
+  uses `castShadowPositionNode`, which computes the position only.
 
 Limits:
 
 - Greedy meshing takes precedence: `vertexPulling` has no effect while `greedy`
   is on.
-- Pulled geometry has no `uv` or `tileRegion` attribute. Its six-vertex
-  `position` attribute holds corner indices and its `normal` attribute is
-  zero-filled. A `materialCustomizer` that reads geometry attributes, or
+- Pulled geometry has no `uv` or `tileRegion` attribute. Its four-vertex
+  `position` attribute holds corner indices, drawn through a six-entry index,
+  and its `normal` attribute is zero-filled. A `materialCustomizer` that reads geometry attributes, or
   replaces `positionNode`, breaks the pulled layout.
-- Faces share no vertices, so the GPU runs six vertex invocations per face
-  instead of four.
 
 ## Distant tiles
 

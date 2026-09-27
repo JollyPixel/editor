@@ -115,7 +115,8 @@ const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
     focus: flyCamera.actor.object3D,
-    greedy: true,
+    greedy: false,
+    vertexPulling: true,
     chunkSize: settings.chunkSize,
     layers: [kTerrainLayer],
     blocks: tileset.blocks,
@@ -131,6 +132,10 @@ const voxelMap = world.createActor("map")
   });
 
 const { engine } = voxelMap;
+const chunkMeshes = engine.root.getObjectByName("VoxelView:chunks");
+if (chunkMeshes) {
+  daylight.watchCasters(chunkMeshes);
+}
 const pane = createExamplePane({ title: "Noise World" });
 
 let report: BuildReport | null = null;
