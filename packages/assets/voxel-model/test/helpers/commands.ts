@@ -3,10 +3,13 @@ import type { NetworkCommandHeader } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { createBlockTransform } from "#src/model/blockTransform.ts";
+import { createMaterialSurface } from "#src/model/materialSurface.ts";
 import type {
   BlockNodeJSON,
   BlockTransformJSON,
   FolderNodeJSON,
+  MaterialFolderJSON,
+  ModelMaterialJSON,
   UVLayoutData,
   VoxelModelCommand,
   VoxelModelNetworkCommand
@@ -79,5 +82,50 @@ export function folderAdded(
   return {
     action: "node-added",
     node: folderNode(id, parentId)
+  };
+}
+
+export function material(
+  id: string,
+  parentId: string | null = null
+): ModelMaterialJSON {
+  return {
+    kind: "material",
+    id,
+    parentId,
+    name: id,
+    surface: createMaterialSurface()
+  };
+}
+
+export function materialFolder(
+  id: string,
+  parentId: string | null = null
+): MaterialFolderJSON {
+  return {
+    kind: "folder",
+    id,
+    parentId,
+    name: id
+  };
+}
+
+export function materialAdded(
+  id: string,
+  parentId: string | null = null
+): VoxelModelCommand {
+  return {
+    action: "material-added",
+    material: material(id, parentId)
+  };
+}
+
+export function materialFolderAdded(
+  id: string,
+  parentId: string | null = null
+): VoxelModelCommand {
+  return {
+    action: "material-folder-added",
+    folder: materialFolder(id, parentId)
   };
 }

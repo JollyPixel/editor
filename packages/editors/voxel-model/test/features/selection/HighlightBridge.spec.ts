@@ -5,20 +5,12 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import { HighlightBoxSilhouette } from "@jolly-pixel/three";
-import type { OrbitFlyCamera } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { HighlightBridge } from "#src/features/selection/HighlightBridge.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { PresenceStore } from "#src/state/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
-
-function stubCamera(): OrbitFlyCamera {
-  return {
-    threeCamera: new THREE.PerspectiveCamera(),
-    depth: 0
-  } as unknown as OrbitFlyCamera;
-}
 
 function stubRenderer(): THREE.WebGPURenderer {
   return { render: () => void 0 } as unknown as THREE.WebGPURenderer;
@@ -46,7 +38,7 @@ function createHarness() {
   const highlight = new HighlightBridge({
     renderer: stubRenderer(),
     scene,
-    camera: stubCamera(),
+    camera: new THREE.PerspectiveCamera(),
     blocks,
     selection,
     presence
@@ -163,7 +155,7 @@ describe("HighlightBridge block lifecycle", () => {
     new HighlightBridge({
       renderer: stubRenderer(),
       scene,
-      camera: stubCamera(),
+      camera: new THREE.PerspectiveCamera(),
       blocks,
       selection,
       presence

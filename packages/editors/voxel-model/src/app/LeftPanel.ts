@@ -6,7 +6,11 @@ import {
   type PropertyValues,
   type TemplateResult
 } from "lit";
-import { state, query } from "lit/decorators.js";
+import {
+  property,
+  query,
+  state
+} from "lit/decorators.js";
 import type {
   Mode,
   PixelArtCanvas,
@@ -18,6 +22,7 @@ import {
   type PixelArtRoom,
   type UVGhostPayload
 } from "@jolly-pixel/asset.pixel-art/client";
+import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 import "@jolly-pixel/ui";
 import {
   peerProfileColor,
@@ -48,6 +53,9 @@ export class LeftPanel extends LitElement {
   @state()
   private declare _canvas: PixelArtCanvas | null;
 
+  @property({ attribute: false })
+  declare model: ModelDocument | null;
+
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
 
@@ -77,6 +85,7 @@ export class LeftPanel extends LitElement {
     super();
     this.mode = "build";
     this._canvas = null;
+    this.model = null;
   }
 
   setTexture(
@@ -155,6 +164,7 @@ export class LeftPanel extends LitElement {
       <jolly-model-editor-build
         ?hidden=${this.mode !== "build"}
         .canvas=${this._canvas}
+        .model=${this.model}
       ></jolly-model-editor-build>
       <pixel-draw-panel></pixel-draw-panel>
     `;

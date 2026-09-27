@@ -57,16 +57,26 @@ async function expectLabelColumn(
     .toBeGreaterThanOrEqual(80);
 }
 
-async function expectStableLockedLabel(
+async function expectStableLockedLayout(
   page: Page,
   tag: string
 ): Promise<void> {
-  const [plain, locked] = await Promise.all([
-    boxOf(row(page, tag, "default").locator(".label")),
-    boxOf(row(page, tag, "locked").locator(".label"))
-  ]);
+  const plain = row(page, tag, "default");
+  const locked = row(page, tag, "locked");
+  const [plainLabel, lockedLabel, plainValue, lockedValue, plainRow, lockedRow] =
+    await Promise.all([
+      boxOf(plain.locator(".label")),
+      boxOf(locked.locator(".label")),
+      boxOf(plain.locator(".value")),
+      boxOf(locked.locator(".value")),
+      boxOf(plain),
+      boxOf(locked)
+    ]);
 
-  expect(locked.x).toBe(plain.x);
+  expect(lockedLabel.x).toBe(plainLabel.x);
+  expect(lockedValue.x).toBe(plainValue.x);
+  expect(lockedValue.width).toBe(plainValue.width);
+  expect(lockedRow.height).toBe(plainRow.height);
 }
 
 async function expectPeerChips(
@@ -87,7 +97,7 @@ test.describe("controls: state matrix", () => {
       await test.step("rows and label column", async() => {
         await expect(page.locator(tag)).toHaveCount(colored ? 11 : 9);
         await expectLabelColumn(page, tag);
-        await expectStableLockedLabel(page, tag);
+        await expectStableLockedLayout(page, tag);
       });
 
       await test.step("state attributes", async() => {
@@ -146,17 +156,17 @@ test.describe("controls: state matrix", () => {
         });
       }
 
-      await test.step("lock glyph and peer chip tooltips", async() => {
-        const gutter = row(page, tag, "locked").locator(".gutter");
+      await test.step("lock and peer chip tooltips", async() => {
+        const locked = row(page, tag, "locked");
+        const tint = locked.locator(".row");
         const chip = row(page, tag, "peers").locator(".chip").first();
 
-        await expect(gutter.locator("jolly-icon"))
-          .toHaveAttribute("name", "lock");
-        await expect(gutter.locator(".revert")).toHaveCount(0);
-        await expect(gutter).toHaveAttribute("data-tooltip", /Held by/);
+        await expect(locked.locator(".gutter jolly-icon")).toHaveCount(0);
+        await expect(locked.locator(".chip")).toHaveCount(0);
+        await expect(tint).toHaveAttribute("data-tooltip", /Held by/);
         await expect(chip).toHaveAttribute("data-tooltip", "Linus");
 
-        for (const target of [gutter, chip]) {
+        for (const target of [tint, chip]) {
           await expect.poll(
             () => styleOf(target, "opacity", "::after")
           ).toBe("0");
@@ -190,19 +200,15 @@ test.describe("controls: state matrix", () => {
 
         await expect(locked).toHaveCSS("box-shadow", /inset/);
         await expect(locked).not.toHaveCSS("background-color", kTransparent);
-        await expect(locked).toHaveCSS("padding-block-start", "2px");
-        await expect(locked).toHaveCSS("padding-block-end", "2px");
+        await expect(locked).toHaveCSS("padding-block-start", "0px");
         expect(await styleOf(locked, "--jolly-locked-ring")).not.toBe("");
-        expect(
-          await styleOf(locked.locator(".chip").first(), "background-color")
-        ).not.toBe(kTransparent);
 
         const [field, inner, value] = await Promise.all([
           boxOf(locked),
           boxOf(tint),
           boxOf(input)
         ]);
-        expect(inner.y - field.y).toBe(2);
+        expect(inner.y).toBe(field.y);
         expect(value.y).toBeGreaterThanOrEqual(field.y);
         expect(value.y + value.height)
           .toBeLessThanOrEqual(field.y + field.height);
@@ -216,12 +222,12 @@ test.describe("controls: state matrix", () => {
 
       await expect(page.locator(tag)).toHaveCount(9);
       await expectLabelColumn(page, tag);
-      await expectStableLockedLabel(page, tag);
+      await expectStableLockedLayout(page, tag);
       await expect(row(page, tag, "mixed")).toHaveAttribute("mixed", "");
       await expect(row(page, tag, "modified")).toHaveAttribute("modified", "");
       await expect(row(page, tag, "locked")).toHaveAttribute("locked", "");
       await expect(row(page, tag, "locked"))
-        .toHaveCSS("padding-block-start", "2px");
+        .toHaveCSS("padding-block-start", "0px");
       await expectPeerChips(page, tag);
     });
   }

@@ -6,26 +6,52 @@ import {
   type TemplateResult
 } from "lit";
 import { query } from "lit/decorators.js";
+import type {
+  ContextMenu,
+  Tree
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import "./hierarchyIcons.ts";
+import "../../shared/actionIcons.ts";
 import "./dialogs/HierarchyNameDialog.ts";
 import "./dialogs/HierarchyDuplicateDialog.ts";
-import "./dialogs/HierarchyDeleteDialog.ts";
+import "../../shared/DeleteDialog.ts";
 import {
   HierarchyController,
   type HierarchyWorkspace
 } from "./HierarchyController.ts";
 import type { HierarchyNameDialog } from "./dialogs/HierarchyNameDialog.ts";
 import type { HierarchyDuplicateDialog } from "./dialogs/HierarchyDuplicateDialog.ts";
-import type { HierarchyDeleteDialog } from "./dialogs/HierarchyDeleteDialog.ts";
+import type { DeleteDialog } from "../../shared/DeleteDialog.ts";
+import { ContextMenuController } from "../../shared/ContextMenuController.ts";
+
+// CONSTANTS
+export const SHOW_MATERIAL_EVENT = "show-material";
 
 export class HierarchyPanel extends LitElement {
   #tree = new HierarchyController(this, {
     promptName: (context) => this.nameDialog.open(context),
     promptDuplicate: (context) => this.duplicateDialog.open(context),
-    promptDelete: (context) => this.deleteDialog.open(context)
+    promptDelete: (context) => this.deleteDialog.open(context),
+    beginRename: (id) => this.tree.beginRename(id),
+    showMaterial: () => this.dispatchEvent(
+      new CustomEvent(SHOW_MATERIAL_EVENT, {
+        bubbles: true,
+        composed: true
+      })
+    )
   });
+
+  #menu = new ContextMenuController(
+    () => this.rowMenu,
+    (id) => this.#tree.menuFor(id)
+  );
+
+  @query("jolly-tree")
+  declare private tree: Tree;
+
+  @query("jolly-context-menu")
+  declare private rowMenu: ContextMenu;
 
   @query("jolly-model-editor-name-dialog")
   declare private nameDialog: HierarchyNameDialog;
@@ -34,7 +60,7 @@ export class HierarchyPanel extends LitElement {
   declare private duplicateDialog: HierarchyDuplicateDialog;
 
   @query("jolly-model-editor-delete-dialog")
-  declare private deleteDialog: HierarchyDeleteDialog;
+  declare private deleteDialog: DeleteDialog;
 
   static override styles = css`
     :host {
@@ -57,6 +83,10 @@ export class HierarchyPanel extends LitElement {
       flex: 1 1 auto;
       overflow: auto;
       padding-inline: var(--jolly-space-1, 4px);
+    }
+
+    jolly-tree::part(grip) {
+      display: none;
     }
   `;
 
@@ -92,7 +122,7 @@ export class HierarchyPanel extends LitElement {
         ></jolly-button>
         <jolly-button
           slot="actions"
-          icon="block-duplicate"
+          icon="action-duplicate"
           icon-only
           label="Duplicate"
           title="Duplicate"
@@ -101,7 +131,7 @@ export class HierarchyPanel extends LitElement {
         ></jolly-button>
         <jolly-button
           slot="actions"
-          icon="block-delete"
+          icon="action-delete"
           icon-only
           label="Delete"
           title="Delete"
@@ -115,6 +145,9 @@ export class HierarchyPanel extends LitElement {
           reorderable
           row-drag
           renamable
+          @jolly-activate=${this.#tree.handleActivate}
+          @jolly-activate-swatch=${this.#tree.handleActivateSwatch}
+          @jolly-context-request=${this.#menu.onContextRequest}
           @jolly-select=${this.#tree.handleSelect}
           @jolly-toggle-expand=${this.#tree.handleToggleExpand}
           @jolly-rename=${this.#tree.handleRename}
@@ -124,6 +157,10 @@ export class HierarchyPanel extends LitElement {
       <jolly-model-editor-name-dialog></jolly-model-editor-name-dialog>
       <jolly-model-editor-duplicate-dialog></jolly-model-editor-duplicate-dialog>
       <jolly-model-editor-delete-dialog></jolly-model-editor-delete-dialog>
+      <jolly-context-menu
+        label="Hierarchy actions"
+        @jolly-context-action=${this.#menu.onContextAction}
+      ></jolly-context-menu>
     `;
   }
 }

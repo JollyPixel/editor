@@ -45,6 +45,25 @@ test.describe("Floating", () => {
     await expect.poll(() => widthOf(floating)).toBe(width + 8);
   });
 
+  test("a button in the pane actions is clicked, not dragged", async({ page }) => {
+    const floating = page.locator("jolly-floating");
+    const title = await boxOf(floating.locator("jolly-pane .title"));
+    await hold(page, {
+      x: title.x + 5,
+      y: title.y + 5
+    }, {
+      x: 60,
+      y: 40
+    }, 1);
+    await page.mouse.up();
+    await expect(floating).not.toHaveAttribute("x", "280");
+
+    await floating.getByRole("button", { name: "Reset position" }).click();
+
+    await expect(floating).toHaveAttribute("x", "280");
+    await expect(floating).toHaveAttribute("y", "48");
+  });
+
   test("the corner handle resizes both axes from one drag", async({ page }) => {
     const floating = page.locator("jolly-floating");
     const corner = floating.locator(".resize-handle.corner");

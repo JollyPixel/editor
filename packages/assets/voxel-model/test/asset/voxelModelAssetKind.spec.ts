@@ -49,7 +49,8 @@ describe("VoxelModelState", () => {
       nodes: [
         folderNode("f"),
         { ...blockNode("a", "f"), name: "Skull" }
-      ]
+      ],
+      materials: []
     });
   });
 
@@ -122,6 +123,7 @@ describe("decodeVoxelModelDocument", () => {
       () => decodeVoxelModelDocument(encode({
         version: 2,
         nodes: [],
+        materials: [],
         texture: "tex"
       })),
       InvalidAssetDocumentError
@@ -129,7 +131,16 @@ describe("decodeVoxelModelDocument", () => {
     assert.throws(
       () => decodeVoxelModelDocument(encode({
         version: 2,
-        nodes: []
+        nodes: [],
+        materials: []
+      })),
+      InvalidAssetDocumentError
+    );
+    assert.throws(
+      () => decodeVoxelModelDocument(encode({
+        version: 2,
+        nodes: [],
+        texture: kTexture
       })),
       InvalidAssetDocumentError
     );
@@ -146,6 +157,7 @@ describe("decodeVoxelModelDocument", () => {
           name: "Block"
         }
       ],
+      materials: [],
       texture: kTexture
     }));
 

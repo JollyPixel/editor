@@ -7,6 +7,7 @@ import type {
   ModelDocument
 } from "../model/ModelDocument.ts";
 import type {
+  MaterialEntryJSON,
   ModelNodeJSON,
   VoxelModelCommand,
   VoxelModelNetworkCommand
@@ -16,6 +17,8 @@ import { voxelModelWriteKeys } from "./VoxelModelCommandKeys.ts";
 interface ModelInverse {
   readonly added: readonly string[];
   readonly previous: readonly ModelNodeJSON[];
+  readonly addedMaterials: readonly string[];
+  readonly previousMaterials: readonly MaterialEntryJSON[];
 }
 
 export class ModelReconciler implements CommandReconciler<VoxelModelNetworkCommand> {
@@ -44,7 +47,9 @@ export class ModelReconciler implements CommandReconciler<VoxelModelNetworkComma
   ): void {
     this.#inverses.set(command, {
       added: addedIds(change.command),
-      previous: change.previous
+      previous: change.previous,
+      addedMaterials: addedMaterialIds(change.command),
+      previousMaterials: change.previousMaterials
     });
   }
 
@@ -62,6 +67,9 @@ export class ModelReconciler implements CommandReconciler<VoxelModelNetworkComma
     const nodes = new Map(
       [...this.#document.tree.values()].map((node) => [node.id, node])
     );
+    const materials = new Map(
+      [...this.#document.tree.materials.values()].map((entry) => [entry.id, entry])
+    );
     for (const inverse of inverses.reverse()) {
       for (const id of inverse!.added) {
         nodes.delete(id);
@@ -69,10 +77,17 @@ export class ModelReconciler implements CommandReconciler<VoxelModelNetworkComma
       for (const node of inverse!.previous) {
         nodes.set(node.id, node);
       }
+      for (const id of inverse!.addedMaterials) {
+        materials.delete(id);
+      }
+      for (const entry of inverse!.previousMaterials) {
+        materials.set(entry.id, entry);
+      }
     }
 
     this.#document.load({
-      nodes: [...nodes.values()]
+      nodes: [...nodes.values()],
+      materials: [...materials.values()]
     });
 
     return true;
@@ -83,7 +98,9 @@ export class ModelReconciler implements CommandReconciler<VoxelModelNetworkComma
   ): boolean {
     const inverse: ModelInverse = {
       added: addedIds(command),
-      previous: this.#document.tree.imagesOf(command)
+      previous: this.#document.tree.imagesOf(command),
+      addedMaterials: addedMaterialIds(command),
+      previousMaterials: this.#document.tree.materialImagesOf(command)
     };
     if (!this.#document.apply(command)) {
       this.#inverses.delete(command);
@@ -100,4 +117,17 @@ function addedIds(
   command: VoxelModelCommand
 ): string[] {
   return command.action === "node-added" ? [command.node.id] : [];
+}
+
+function addedMaterialIds(
+  command: VoxelModelCommand
+): string[] {
+  switch (command.action) {
+    case "material-added":
+      return [command.material.id];
+    case "material-folder-added":
+      return [command.folder.id];
+    default:
+      return [];
+  }
 }

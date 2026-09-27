@@ -35,7 +35,6 @@ export class HighlightPassRenderer implements MeshHighlightRenderer {
     this.#highlight = options.highlight;
     this.#overlays = new ObjectOverlayRenderer({
       registry: options.overlayRegistry,
-      renderScene: () => void 0,
       camera: options.camera
     });
   }

@@ -11,6 +11,9 @@ import {
 import { Mixed } from "../../src/field/mixed.ts";
 import type { CollaboratorPresence } from "../../src/peer/types.ts";
 
+// CONSTANTS
+const kSelf = "self";
+
 function peer(
   clientId: string,
   editing?: string
@@ -87,7 +90,7 @@ describe("Field.resolveHolder", () => {
     const held = peer("ada");
 
     assert.equal(
-      resolveHolder([peer("linus", "x")], held),
+      resolveHolder([peer("linus", "x")], held, kSelf),
       held
     );
   });
@@ -99,7 +102,8 @@ describe("Field.resolveHolder", () => {
         peer("linus", "position.x"),
         peer("grace", "position.y")
       ],
-      null
+      null,
+      kSelf
     );
 
     assert.equal(holder?.clientId, "linus");
@@ -107,13 +111,13 @@ describe("Field.resolveHolder", () => {
 
   test("is null when peers are present but none is editing", () => {
     assert.equal(
-      resolveHolder([peer("ada"), peer("linus")], null),
+      resolveHolder([peer("ada"), peer("linus")], null, kSelf),
       null
     );
   });
 
   test("is null with no peers at all", () => {
-    assert.equal(resolveHolder([], null), null);
+    assert.equal(resolveHolder([], null, kSelf), null);
   });
 });
 
@@ -123,7 +127,7 @@ describe("Field.splitPeerChips", () => {
       peer("a"),
       peer("b")
     ];
-    const { shown, overflow } = splitPeerChips(peers, 3);
+    const { shown, overflow } = splitPeerChips(peers, 3, kSelf);
 
     assert.equal(shown.length, 2);
     assert.equal(overflow, 0);
@@ -132,7 +136,8 @@ describe("Field.splitPeerChips", () => {
   test("shows every peer when exactly at the limit", () => {
     const { shown, overflow } = splitPeerChips(
       [peer("a"), peer("b"), peer("c")],
-      3
+      3,
+      kSelf
     );
 
     assert.equal(shown.length, 3);
@@ -147,7 +152,7 @@ describe("Field.splitPeerChips", () => {
       peer("d"),
       peer("e")
     ];
-    const { shown, overflow } = splitPeerChips(peers, 3);
+    const { shown, overflow } = splitPeerChips(peers, 3, kSelf);
 
     assert.deepEqual(
       shown.map((entry) => entry.clientId),
@@ -156,9 +161,24 @@ describe("Field.splitPeerChips", () => {
     assert.equal(overflow, 2);
   });
 
+  test("gives the local peer no chip and no overflow count", () => {
+    const { shown, overflow } = splitPeerChips(
+      [peer("self"), peer("a"), peer("b"), peer("c")],
+      3,
+      "self"
+    );
+
+    assert.deepEqual(
+      shown.map((entry) => entry.clientId),
+      ["a", "b", "c"]
+    );
+    assert.equal(overflow, 0);
+    assert.deepEqual(splitPeerChips([peer("self")], 3, "self").shown, []);
+  });
+
   test("copies rather than aliasing the input", () => {
     const peers = [peer("a")];
-    const { shown } = splitPeerChips(peers, 3);
+    const { shown } = splitPeerChips(peers, 3, kSelf);
 
     assert.notEqual(shown, peers);
   });

@@ -57,6 +57,9 @@ export class HighlightResolver {
     if (this.#state.hovered !== null) {
       objectIds.add(this.#state.hovered);
     }
+    for (const id of this.#state.emphasized) {
+      objectIds.add(id);
+    }
     for (const id of this.#peerSelections?.selectedObjectIds() ?? []) {
       objectIds.add(id);
     }
@@ -113,7 +116,7 @@ export class HighlightResolver {
       };
     }
 
-    if (objectId === this.#state.hovered) {
+    if (objectId === this.#state.hovered || this.#state.emphasized.has(objectId)) {
       return {
         objectId,
         target,

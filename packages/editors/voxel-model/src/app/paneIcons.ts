@@ -2,6 +2,9 @@
 import { svg } from "lit";
 import { registerIcon } from "@jolly-pixel/ui";
 
+// Import Internal Dependencies
+import "../shared/actionIcons.ts";
+
 registerIcon("model-build", svg`
   <path
     class="tone-fill"

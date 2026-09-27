@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import {
   BLOCK_UV_SIZE,
   blockUvBounds,
+  blockUvExtent,
   createBlockUv,
   nextBlockUvOrigin
 } from "#src/model/blockUv.ts";
@@ -46,6 +47,25 @@ describe("createBlockUv", () => {
       x: 32,
       y: 16
     });
+  });
+});
+
+describe("blockUvExtent", () => {
+  test("reaches the farthest right and bottom edges of all layouts", () => {
+    const extent = blockUvExtent([
+      createBlockUv(),
+      createBlockUv({ x: 40, y: 0 }),
+      createBlockUv({ x: 0, y: 20 })
+    ]);
+
+    assert.deepEqual(extent, {
+      x: 40 + kNet.width,
+      y: 20 + kNet.height
+    });
+  });
+
+  test("is empty without layouts", () => {
+    assert.deepEqual(blockUvExtent([]), { x: 0, y: 0 });
   });
 });
 

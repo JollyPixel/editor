@@ -164,6 +164,7 @@ export class Tree<TData = unknown> extends LitElement {
         aria-multiselectable=${this.multiple ? "true" : "false"}
         @keydown=${this.#onKeyDown}
         @click=${(event: MouseEvent) => this.#selection.onRowsClick(event)}
+        @contextmenu=${this.#onRowsContextMenu}
       >${rows.map((row) => this.#renderRow(row, row.node.id === activeId))}</div>
     `;
   }
@@ -201,6 +202,7 @@ export class Tree<TData = unknown> extends LitElement {
         style=${rowStyle}
         @click=${(event: MouseEvent) => this.#selection.onRowClick(event, node.id)}
         @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, node.id)}
+        @contextmenu=${(event: MouseEvent) => this.#onRowContextMenu(event, node.id)}
         @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, node.id)}
       >
         ${isBranch ? html`
@@ -221,6 +223,7 @@ export class Tree<TData = unknown> extends LitElement {
           `}
           ${this.#renderLabel(node)}
           ${node.detail ? html`<span class="detail">${node.detail}</span>` : nothing}
+          ${this.#renderSwatch(node)}
           ${this.#renderBadges(node)}
           ${node.visible === undefined ? nothing : html`
             <button
@@ -247,6 +250,7 @@ export class Tree<TData = unknown> extends LitElement {
           ${this.reorderable ? html`
             <button
               class="grip"
+              part="grip"
               type="button"
               tabindex="-1"
               aria-hidden="true"
@@ -309,6 +313,42 @@ export class Tree<TData = unknown> extends LitElement {
     `;
   }
 
+  #renderSwatch(
+    node: TreeNode<TData>
+  ): TemplateResult | typeof nothing {
+    const swatch = node.swatch;
+    if (swatch === undefined) {
+      return nothing;
+    }
+
+    const empty = swatch.color === undefined;
+    const face = [
+      empty ? "" : `--jolly-tree-swatch-color: ${swatch.color}`,
+      swatch.ring === undefined ? "" : `--jolly-tree-swatch-ring: ${swatch.ring}`
+    ].filter(Boolean).join("; ");
+
+    return html`
+      <button
+        class="swatch"
+        type="button"
+        tabindex="-1"
+        aria-label=${swatch.title}
+        title=${swatch.title}
+        data-empty=${empty ? "true" : nothing}
+        style=${face}
+        @click=${(event: Event) => this.#onActivateSwatch(event, node.id)}
+      ></button>
+    `;
+  }
+
+  #onActivateSwatch(
+    event: Event,
+    id: string
+  ): void {
+    event.stopPropagation();
+    emitDataEvent(this, "jolly-activate-swatch", { id });
+  }
+
   #renderLabel(
     node: TreeNode<TData>
   ): TemplateResult {
@@ -325,6 +365,9 @@ export class Tree<TData = unknown> extends LitElement {
         type="text"
         .value=${node.label}
         aria-label="Rename"
+        @pointerdown=${stopPropagation}
+        @click=${stopPropagation}
+        @dblclick=${stopPropagation}
         @keydown=${this.#onRenameKeyDown}
         @blur=${(event: FocusEvent) => this.#commitRename(event.target, node)}
         @focus=${this.#onRenameFocus}
@@ -430,6 +473,45 @@ export class Tree<TData = unknown> extends LitElement {
       row?.focus();
     });
   }
+
+  #onRowContextMenu(
+    event: MouseEvent,
+    id: string
+  ): void {
+    const row = event.currentTarget;
+    if (this._interaction.kind !== "idle" || !(row instanceof HTMLElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    if (!this.selected.includes(id)) {
+      this.#selection.selectSingle(id);
+    }
+    row.focus();
+
+    const fromPointer = event.button === 2;
+    const rect = row.getBoundingClientRect();
+    emitDataEvent(this, "jolly-context-request", {
+      id,
+      x: fromPointer ? event.clientX : rect.left,
+      y: fromPointer ? event.clientY : rect.bottom
+    });
+  }
+
+  readonly #onRowsContextMenu = (
+    event: MouseEvent
+  ): void => {
+    if (event.target !== event.currentTarget || this._interaction.kind !== "idle") {
+      return;
+    }
+
+    event.preventDefault();
+    emitDataEvent(this, "jolly-context-request", {
+      id: null,
+      x: event.clientX,
+      y: event.clientY
+    });
+  };
 
   #onRowDoubleClick(
     event: MouseEvent,
@@ -538,6 +620,12 @@ export class Tree<TData = unknown> extends LitElement {
         break;
     }
   };
+}
+
+function stopPropagation(
+  event: Event
+): void {
+  event.stopPropagation();
 }
 
 declare global {

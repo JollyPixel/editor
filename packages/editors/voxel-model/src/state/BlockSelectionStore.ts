@@ -4,13 +4,16 @@ import { Emitter } from "@openally/emitt";
 export type BlockSelectionEvents = {
   select: (uuid: string | null) => void;
   hover: (uuid: string | null) => void;
+  emphasize: (uuids: readonly string[]) => void;
 };
 
-export type BlockMark = keyof BlockSelectionEvents;
+/** The marks peers see; an emphasis stays with this person. */
+export type BlockMark = "select" | "hover";
 
 export class BlockSelectionStore extends Emitter<BlockSelectionEvents> {
   #selected: string | null = null;
   #hovered: string | null = null;
+  #emphasized: readonly string[] = [];
 
   get selected(): string | null {
     return this.#selected;
@@ -18,6 +21,10 @@ export class BlockSelectionStore extends Emitter<BlockSelectionEvents> {
 
   get hovered(): string | null {
     return this.#hovered;
+  }
+
+  get emphasized(): readonly string[] {
+    return this.#emphasized;
   }
 
   select(
@@ -37,6 +44,17 @@ export class BlockSelectionStore extends Emitter<BlockSelectionEvents> {
     this.emit("hover", uuid);
   }
 
+  emphasize(
+    uuids: Iterable<string>
+  ): void {
+    const next = [...new Set(uuids)];
+    if (next.length === 0 && this.#emphasized.length === 0) {
+      return;
+    }
+    this.#emphasized = next;
+    this.emit("emphasize", next);
+  }
+
   forget(
     uuid: string
   ): void {
@@ -45,6 +63,9 @@ export class BlockSelectionStore extends Emitter<BlockSelectionEvents> {
     }
     if (this.#hovered === uuid) {
       this.hover(null);
+    }
+    if (this.#emphasized.includes(uuid)) {
+      this.emphasize(this.#emphasized.filter((emphasized) => emphasized !== uuid));
     }
   }
 }

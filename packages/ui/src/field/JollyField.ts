@@ -305,32 +305,28 @@ export abstract class JollyField<TValue> extends LitElement {
   }
 
   override render(): TemplateResult {
+    const holder = this.holder;
+
     return html`
-      <div class="row">
+      <div
+        class="row"
+        data-tooltip=${holder === null ? nothing : `Held by ${holder.displayName}`}
+      >
         <div class="leading">
-          ${this.#renderGutter()}
+          <span class="gutter"></span>
           ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
         </div>
         <div class="content">
           <div class="value">${this.renderValue()}</div>
           <div class="trailing">
             ${this.#renderRevert()}
-            ${this.#renderPeers()}
+            ${holder === null ? this.#renderPeers() : nothing}
           </div>
         </div>
       </div>
       ${this.#renderDescription()}
       ${this.#renderError()}
     `;
-  }
-
-  #renderGutter(): TemplateResult {
-    const holder = this.holder;
-    if (holder !== null) {
-      return this.#renderLock(holder);
-    }
-
-    return html`<span class="gutter"></span>`;
   }
 
   #renderRevert(): TemplateResult | typeof nothing {
@@ -357,27 +353,14 @@ export abstract class JollyField<TValue> extends LitElement {
     this.emitChange(this.default);
   }
 
-  #renderLock(
-    holder: CollaboratorPresence
-  ): TemplateResult {
-    const label = `Held by ${holder.displayName}`;
-
-    return html`
-      <span class="gutter" data-tooltip=${label}>
-        <jolly-icon name="lock" label=${label}></jolly-icon>
-      </span>
-    `;
-  }
-
   #renderPeers(): TemplateResult | typeof nothing {
-    if (this.peers.length === 0) {
-      return nothing;
-    }
-
     const {
       shown,
       overflow
-    } = splitPeerChips(this.peers, kMaxChips);
+    } = splitPeerChips(this.peers, kMaxChips, this.#lock.selfId);
+    if (shown.length === 0) {
+      return nothing;
+    }
 
     return html`
       <span class="peers">

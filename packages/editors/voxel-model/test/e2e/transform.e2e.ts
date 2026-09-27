@@ -96,7 +96,7 @@ test("a child reads and writes its position in the active space", async({ page }
   await chooseMode(page, "Angle");
   await enterAxes(page, { y: 90 });
 
-  await addNode(page, "Block", "Arm");
+  await addNode(page, "Block", "Arm", { under: "Block" });
 
   await chooseMode(page, "Pos");
   await enterAxes(page, { x: 1 });
@@ -113,7 +113,7 @@ test("a child reads and writes its position in the active space", async({ page }
 });
 
 test("clicking the viewport selects a block, and empty space clears it", async({ page }) => {
-  await addNode(page, "Block", "Arm", { asChild: false });
+  await addNode(page, "Block", "Arm");
   await enterAxes(page, { x: -2, y: 1 });
   await treeRow(page, "Block").click();
 

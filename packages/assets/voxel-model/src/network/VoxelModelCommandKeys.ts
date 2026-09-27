@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type {
+  MaterialSurfacePatchJSON,
   VoxelModelCommand,
   VoxelModelNetworkCommand
 } from "./types.ts";
@@ -24,6 +25,18 @@ export function voxelModelConflictKeys(
       return [`transform:${command.id}`];
     case "node-uv-changed":
       return [`uv:${command.id}`];
+    case "node-material-changed":
+      return [`material:${command.id}`];
+    case "material-added":
+    case "material-folder-added":
+    case "material-removed":
+      return [];
+    case "material-moved":
+      return [`material-parent:${command.id}`];
+    case "material-renamed":
+      return [`material-name:${command.id}`];
+    case "material-changed":
+      return materialSurfaceKeys(command.id, command.surface);
   }
 }
 
@@ -39,7 +52,20 @@ export function voxelModelWriteKeys(
         [`transform:${command.id}`, `flip:${command.id}`];
     case "node-uv-changed":
       return [`uv:${command.id}`];
+    case "node-material-changed":
+      return [`material:${command.id}`];
+    case "material-renamed":
+      return [`material-name:${command.id}`];
+    case "material-changed":
+      return materialSurfaceKeys(command.id, command.surface);
     default:
       return null;
   }
+}
+
+function materialSurfaceKeys(
+  id: string,
+  surface: MaterialSurfacePatchJSON
+): string[] {
+  return Object.keys(surface).map((field) => `material-surface:${id}:${field}`);
 }

@@ -8,6 +8,7 @@ import type {
   Object3D,
   Vector3Like
 } from "three";
+import type { MaterialSurfaceJSON } from "@jolly-pixel/asset.voxel-model/client";
 import { pressAt } from "@jolly-pixel/e2e";
 import { nextFrames } from "@jolly-pixel/e2e/editor";
 
@@ -71,6 +72,31 @@ export async function outline(
   });
 }
 
+export async function materialOutline(
+  page: Page
+): Promise<string[]> {
+  const editor = await editorOf(page);
+
+  return editor.evaluate(({ workspace }) => {
+    const { materials } = workspace.document.tree;
+    const lines: string[] = [];
+
+    function visit(
+      parentId: string | null,
+      depth: number
+    ): void {
+      for (const entry of materials.childrenOf(parentId)) {
+        const suffix = entry.kind === "folder" ? "/" : "";
+        lines.push(`${"  ".repeat(depth)}${entry.name}${suffix}`);
+        visit(entry.id, depth + 1);
+      }
+    }
+    visit(null, 0);
+
+    return lines;
+  });
+}
+
 export async function selectedBlock(
   page: Page
 ): Promise<string | null> {
@@ -81,6 +107,52 @@ export async function selectedBlock(
     const uuid = selection.selected;
 
     return uuid === null ? null : blocks.get(uuid)?.name ?? null;
+  });
+}
+
+export async function blockSurface(
+  page: Page,
+  name: string,
+  source: "scene" | "document" = "scene"
+): Promise<MaterialSurfaceJSON | null> {
+  const editor = await editorOf(page);
+
+  return editor.evaluate(({ workspace }, query) => {
+    if (query.source === "scene") {
+      return [...workspace.blocks.values()]
+        .find((block) => block.name === query.name)?.surface ?? null;
+    }
+
+    const { tree } = workspace.document;
+    const node = [...tree.blocks()].find((block) => block.name === query.name);
+
+    return node?.materialId === undefined ?
+      null :
+      tree.materials.material(node.materialId)?.surface ?? null;
+  }, { name, source });
+}
+
+export async function emphasizedBlocks(
+  page: Page
+): Promise<string[]> {
+  const editor = await editorOf(page);
+
+  return editor.evaluate(({ workspace }) => workspace.selection.emphasized
+    .map((uuid) => workspace.blocks.get(uuid)?.name ?? uuid));
+}
+
+export async function materialUses(
+  page: Page
+): Promise<Array<[string, number]>> {
+  const editor = await editorOf(page);
+
+  return editor.evaluate(({ workspace }) => {
+    const { tree } = workspace.document;
+    const uses = tree.materialUses();
+
+    return [...tree.materials.materials()].map(
+      (material): [string, number] => [material.name, uses.get(material.id) ?? 0]
+    );
   });
 }
 

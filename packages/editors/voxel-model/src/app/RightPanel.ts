@@ -13,6 +13,8 @@ import type { HierarchyPanel } from "../features/hierarchy/HierarchyPanel.ts";
 import type { TransformPanel } from "../features/transform/TransformPanel.ts";
 import "../features/hierarchy/HierarchyPanel.ts";
 import "../features/transform/TransformPanel.ts";
+import type { ViewPanel } from "../features/view/ViewPanel.ts";
+import "../features/view/ViewPanel.ts";
 import { WorkspaceController } from "../shared/WorkspaceController.ts";
 
 export class RightPanel extends LitElement {
@@ -31,6 +33,9 @@ export class RightPanel extends LitElement {
 
   @query("jolly-model-editor-hierarchy")
   declare private hierarchyElement: HierarchyPanel;
+
+  @query("jolly-model-editor-view")
+  declare private viewElement: ViewPanel;
 
   @state()
   private declare _peers: readonly PresencePeer[];
@@ -70,6 +75,7 @@ export class RightPanel extends LitElement {
     await this.updateComplete;
     this.transformElement.attach(workspace);
     this.hierarchyElement.attach(workspace);
+    this.viewElement.attach(workspace);
   }
 
   readonly #onPeerSelect = (
@@ -109,6 +115,7 @@ export class RightPanel extends LitElement {
         <jolly-model-editor-transform></jolly-model-editor-transform>
       </jolly-folder>
       <jolly-model-editor-hierarchy></jolly-model-editor-hierarchy>
+      <jolly-model-editor-view></jolly-model-editor-view>
       ${this.#renderCollaborators()}
       ${this.#renderFile()}
     `;

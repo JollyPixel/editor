@@ -425,6 +425,79 @@ describe("hover", () => {
   });
 });
 
+describe("emphasize", () => {
+  test("outlines every emphasized id like a hover, and clears with an empty list", () => {
+    const { state, mesh, group } = createStateWithMeshAndGroup();
+    const changes: string[][] = [];
+    state.addEventListener("emphasisChange", (event) => {
+      changes.push([...event.detail.objectIds]);
+    });
+
+    state.emphasize(["mesh-1", "group-1"]);
+
+    assert.deepStrictEqual([...state.emphasized], ["mesh-1", "group-1"]);
+    assert.ok((mesh.children[0] as HighlightOutline).material.opacity < 1);
+    assert.ok(group.children.at(-1) instanceof HighlightBoundingBox);
+
+    state.emphasize([]);
+
+    assert.strictEqual(state.emphasized.size, 0);
+    assert.strictEqual(mesh.children.length, 0);
+    assert.strictEqual(group.children.length, 1);
+    assert.deepStrictEqual(changes, [["mesh-1", "group-1"], ["mesh-1", "group-1"]]);
+  });
+
+  test("leaves the selected id to its own overlay and gives it back once deselected", () => {
+    const { state, mesh } = createStateWithMeshAndGroup();
+    state.emphasize(["mesh-1"]);
+    state.select("mesh-1");
+
+    assert.strictEqual(mesh.children.length, 1);
+    assert.strictEqual((mesh.children[0] as HighlightOutline).material.opacity, 1);
+
+    state.select(null);
+
+    assert.strictEqual(mesh.children.length, 1);
+    assert.ok((mesh.children[0] as HighlightOutline).material.opacity < 1);
+  });
+
+  test("throws for an unknown id without changing the group, and ignores a repeat", () => {
+    const { state } = createStateWithMeshAndGroup();
+    let changes = 0;
+    state.addEventListener("emphasisChange", () => changes++);
+    state.emphasize(["mesh-1"]);
+
+    assert.throws(() => state.emphasize(["mesh-1", "missing"]));
+    state.emphasize(["mesh-1"]);
+
+    assert.deepStrictEqual([...state.emphasized], ["mesh-1"]);
+    assert.strictEqual(changes, 1);
+  });
+
+  test("keeps the group's overlays while another id is hovered or selected", () => {
+    const { state, mesh } = createStateWithMeshAndGroup();
+    state.emphasize(["mesh-1"]);
+    const outline = mesh.children[0];
+
+    state.hover("group-1");
+    state.select("group-1");
+    state.hover(null);
+
+    assert.strictEqual(mesh.children.length, 1);
+    assert.strictEqual(mesh.children[0], outline);
+  });
+
+  test("drops an unregistered id from the group", () => {
+    const { state, group } = createStateWithMeshAndGroup();
+    state.emphasize(["mesh-1", "group-1"]);
+
+    state.unregister("mesh-1");
+
+    assert.deepStrictEqual([...state.emphasized], ["group-1"]);
+    assert.strictEqual(group.children.length, 2);
+  });
+});
+
 describe("unregister", () => {
   test("clears an active selection and forgets the id", () => {
     const { state, mesh } = createStateWithMeshAndGroup();

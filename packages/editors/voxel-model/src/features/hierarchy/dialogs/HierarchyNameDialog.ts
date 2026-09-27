@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import { state } from "lit/decorators.js";
@@ -9,23 +8,21 @@ import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  HierarchyDialog,
-  type HierarchyDialogFrame
-} from "./HierarchyDialog.ts";
+  EditorDialog,
+  type EditorDialogFrame
+} from "../../../shared/EditorDialog.ts";
 
 export interface HierarchyNameContext {
   heading: string;
   fieldLabel: string;
   defaultName: string;
-  offerAddAsChild: boolean;
 }
 
 export interface HierarchyNameResult {
   name: string;
-  addAsChild: boolean;
 }
 
-export class HierarchyNameDialog extends HierarchyDialog<
+export class HierarchyNameDialog extends EditorDialog<
   HierarchyNameContext,
   HierarchyNameResult
 > {
@@ -38,22 +35,14 @@ export class HierarchyNameDialog extends HierarchyDialog<
   @state()
   declare private name: string;
 
-  @state()
-  declare private offerAddAsChild: boolean;
-
-  @state()
-  declare private addAsChild: boolean;
-
   constructor() {
     super();
     this.heading = "";
     this.fieldLabel = "";
     this.name = "";
-    this.offerAddAsChild = false;
-    this.addAsChild = true;
   }
 
-  protected get frame(): HierarchyDialogFrame {
+  protected get frame(): EditorDialogFrame {
     return {
       heading: this.heading,
       confirmLabel: "OK",
@@ -67,14 +56,11 @@ export class HierarchyNameDialog extends HierarchyDialog<
     this.heading = context.heading;
     this.fieldLabel = context.fieldLabel;
     this.name = context.defaultName;
-    this.offerAddAsChild = context.offerAddAsChild;
-    this.addAsChild = true;
   }
 
   protected result(): HierarchyNameResult {
     return {
-      name: this.name.trim(),
-      addAsChild: this.offerAddAsChild && this.addAsChild
+      name: this.name.trim()
     };
   }
 
@@ -90,13 +76,6 @@ export class HierarchyNameDialog extends HierarchyDialog<
         @jolly-input=${this.#onName}
         @jolly-change=${this.#onName}
       ></jolly-text>
-      ${this.offerAddAsChild ? html`
-        <jolly-checkbox
-          label="Add as child of selection"
-          .value=${this.addAsChild}
-          @jolly-change=${this.#onAddAsChild}
-        ></jolly-checkbox>
-      ` : nothing}
     `;
   }
 
@@ -104,12 +83,6 @@ export class HierarchyNameDialog extends HierarchyDialog<
     event: CustomEvent<JollyChangeDetail<string>>
   ): void {
     this.name = event.detail.value;
-  }
-
-  #onAddAsChild(
-    event: CustomEvent<JollyChangeDetail<boolean>>
-  ): void {
-    this.addAsChild = event.detail.value;
   }
 }
 

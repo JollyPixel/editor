@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
+import {
+  createMaterialSurface,
+  type BlockTransformJSON,
+  type MaterialSurfaceJSON
+} from "@jolly-pixel/asset.voxel-model/client";
 import { clampUvRegion } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 // Import Internal Dependencies
@@ -8,12 +12,12 @@ import { BlockNode } from "./BlockNode.ts";
 import { PivotMarker } from "./PivotMarker.ts";
 import { RenderOrder } from "../renderOrder.ts";
 import { plainVector3 } from "./plainVector3.ts";
+import { paintBlockSurface } from "./paintBlockSurface.ts";
 
 // CONSTANTS
 const kTransformRoundDecimals = 2;
 const kDefaultEmphasisOwner = "default";
 const kLocalPivotOwner = "local";
-const kSelectionGhostOpacity = 1;
 export const SELECTION_HIGHLIGHT_COLOR = 0xff00ff;
 
 export interface ModelBlockOptions {
@@ -24,17 +28,18 @@ export interface ModelBlockOptions {
   size?: THREE.Vector3;
   scale?: THREE.Vector3;
   rotation?: THREE.Euler;
-  color?: THREE.ColorRepresentation;
   texture?: THREE.Texture | null;
 }
 
-type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicNodeMaterial>;
+type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardNodeMaterial>;
 
 export class ModelBlock {
   readonly node = new BlockNode();
   readonly mesh: BlockMesh;
 
   #size: THREE.Vector3;
+  #surface: MaterialSurfaceJSON | null = null;
+  #lit = true;
   #pivotOffset = new THREE.Vector3();
   #pivotMarker = new PivotMarker();
   #selectionTextureGhost: BlockMesh | null = null;
@@ -48,7 +53,6 @@ export class ModelBlock {
       size = new THREE.Vector3(1, 1, 1),
       scale = new THREE.Vector3(1, 1, 1),
       rotation,
-      color = 0xffffff,
       name,
       texture = null,
       uuid
@@ -67,8 +71,7 @@ export class ModelBlock {
     this.#size = size.clone();
     this.mesh = new THREE.Mesh(
       new THREE.BoxGeometry(size.x, size.y, size.z),
-      new THREE.MeshBasicNodeMaterial({
-        color,
+      new THREE.MeshStandardNodeMaterial({
         alphaTest: 0.01,
         side: THREE.DoubleSide,
         map: texture
@@ -76,6 +79,7 @@ export class ModelBlock {
     );
     this.mesh.name = name || `mesh_${this.node.uuid}`;
     clampUvRegion(this.mesh);
+    this.#paint();
     this.moveBoxAroundPivot(pivotOffset);
 
     this.node.add(this.mesh, this.#pivotMarker.object);
@@ -124,6 +128,28 @@ export class ModelBlock {
       this.#selectionTextureGhost.material.map = texture;
       this.#selectionTextureGhost.material.needsUpdate = true;
     }
+  }
+
+  get lit(): boolean {
+    return this.#lit;
+  }
+
+  set lit(
+    lit: boolean
+  ) {
+    this.#lit = lit;
+    this.#paint();
+  }
+
+  get surface(): MaterialSurfaceJSON | null {
+    return this.#surface === null ? null : { ...this.#surface };
+  }
+
+  set surface(
+    surface: MaterialSurfaceJSON | null
+  ) {
+    this.#surface = surface === null ? null : { ...surface };
+    this.#paint();
   }
 
   get position(): THREE.Vector3 {
@@ -338,22 +364,42 @@ export class ModelBlock {
   #createTextureGhost(): BlockMesh {
     const ghost = new THREE.Mesh(
       this.mesh.geometry,
-      new THREE.MeshBasicNodeMaterial({
+      new THREE.MeshStandardNodeMaterial({
         map: this.mesh.material.map,
-        color: this.mesh.material.color,
         side: THREE.FrontSide,
         transparent: true,
-        opacity: kSelectionGhostOpacity,
         depthTest: false,
         depthWrite: true
       })
     );
+    paintBlockSurface(ghost.material, this.#shownSurface(), this.#lit);
     clampUvRegion(ghost);
     ghost.name = "selection-texture-ghost";
     ghost.renderOrder = RenderOrder.selectionGhost;
     this.mesh.add(ghost);
 
     return ghost;
+  }
+
+  #shownSurface(): MaterialSurfaceJSON {
+    return this.#surface ?? createMaterialSurface();
+  }
+
+  #paint(): void {
+    const surface = this.#shownSurface();
+    const target = this.mesh.material;
+    const transparent = surface.opacity < 1;
+    if (target.transparent !== transparent) {
+      target.transparent = transparent;
+      target.depthWrite = !transparent;
+      target.needsUpdate = true;
+    }
+    paintBlockSurface(target, surface, this.#lit);
+
+    const ghost = this.#selectionTextureGhost;
+    if (ghost !== null) {
+      paintBlockSurface(ghost.material, surface, this.#lit);
+    }
   }
 
   #disposeTextureGhost(

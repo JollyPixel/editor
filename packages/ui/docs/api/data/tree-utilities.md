@@ -29,6 +29,10 @@ The root entry point exports these pure helpers:
 - `canDrop(options)` checks structural reparenting constraints, then the
   optional `options.accept` domain veto.
 - `resolveReparent(options)` returns a reparented tree.
+- `resolveReparentMoves(options)` returns the same drop as `ReparentMove`
+  steps `{ id, parentId, beforeId? }` for a store that moves one node at a
+  time. Applied in order, each step lands its node before `beforeId`, a sibling
+  already in place, or last without one. A refused drop gives no steps.
 
 `ResolveReparentOptions.accept` is a `TreeDropAccept`, the same predicate
 shape `jolly-tree` takes as its `acceptDrop` property.

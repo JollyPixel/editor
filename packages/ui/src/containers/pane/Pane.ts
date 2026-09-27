@@ -598,10 +598,16 @@ function contentBottom(
 function isInteractiveTarget(
   event: PointerEvent
 ): boolean {
-  const { target } = event;
+  for (const node of event.composedPath()) {
+    if (node === event.currentTarget) {
+      return false;
+    }
+    if (node instanceof Element && node.matches(kInteractive)) {
+      return true;
+    }
+  }
 
-  return target instanceof Element &&
-    target.closest(kInteractive) !== null;
+  return false;
 }
 
 declare global {

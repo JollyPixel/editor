@@ -85,6 +85,23 @@ describe("HighlightResolver", () => {
     assert.strictEqual(indicator.source, "peer");
   });
 
+  test("draws an emphasized object as a local hover, under a peer's selection", () => {
+    const { state, selections, hovers, resolver } = createHarness();
+    state.emphasize(["box", "sphere"]);
+    hovers.hover("peer-a", "box");
+    selections.select("peer-b", "sphere");
+
+    assert.deepStrictEqual(
+      resolver.resolve().map(({ objectId, role, source, color }) => {
+        return { objectId, role, source, color };
+      }),
+      [
+        { objectId: "box", role: "hover", source: "local", color: "#00ff00" },
+        { objectId: "sphere", role: "selection", source: "peer", color: "#0000ff" }
+      ]
+    );
+  });
+
   test("keeps local hover and peer selection on separate objects", () => {
     const { state, selections, resolver } = createHarness();
     state.hover("box");

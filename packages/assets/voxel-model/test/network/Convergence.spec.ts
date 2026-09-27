@@ -20,6 +20,7 @@ import {
   TRANSFORM,
   blockAdded,
   folderAdded,
+  materialAdded,
   networkCommand
 } from "../helpers/commands.ts";
 import { LiveRoom } from "../helpers/liveRoom.ts";
@@ -29,6 +30,15 @@ function nodeIds(
   nodes: Iterable<{ id: string; }>
 ): string[] {
   return [...nodes].map((node) => node.id).sort();
+}
+
+function snapshotOf(
+  document: ModelDocument
+) {
+  return {
+    nodes: [...document.tree.values()],
+    materials: [...document.tree.materials.values()]
+  };
 }
 
 function setup() {
@@ -136,5 +146,50 @@ describe("voxel-model convergence", () => {
       [...document.tree.values()],
       server.state.snapshot().nodes
     );
+  });
+
+  test("a rebased pending material removal keeps the rest of the library", () => {
+    const { server, document, deliver, flush } = setup();
+    server.receive("A", networkCommand(materialAdded("iron"), { clientId: "A" }));
+    server.receive("A", networkCommand(materialAdded("glass"), { clientId: "A" }));
+    server.receive("A", networkCommand({
+      action: "node-material-changed",
+      id: "M",
+      materialId: "glass"
+    }, { clientId: "A" }));
+    deliver();
+
+    document.removeMaterial("glass");
+    server.receive("A", networkCommand(blockAdded("Z"), { clientId: "A" }));
+    deliver();
+
+    assert.strictEqual(document.tree.materials.has("glass"), false);
+    assert.strictEqual(document.tree.materials.has("iron"), true);
+    assert.strictEqual(document.tree.materialIdOf("M"), undefined);
+
+    flush();
+    deliver();
+
+    assert.deepStrictEqual(snapshotOf(document), server.state.snapshot());
+  });
+
+  test("a newer local surface change survives an older peer change of the same field", () => {
+    const { server, document, deliver, flush } = setup();
+    server.receive("A", networkCommand(materialAdded("glass"), { clientId: "A" }));
+    deliver();
+
+    document.changeMaterial("glass", { opacity: 0.5 });
+    server.receive("A", networkCommand({
+      action: "material-changed",
+      id: "glass",
+      surface: { opacity: 0.1, roughness: 0.2 }
+    }, { clientId: "A", timestamp: 1 }));
+    flush();
+    deliver();
+
+    const surface = document.tree.materials.material("glass")?.surface;
+    assert.strictEqual(surface?.opacity, 0.5);
+    assert.strictEqual(surface?.roughness, 0.2);
+    assert.deepStrictEqual(snapshotOf(document), server.state.snapshot());
   });
 });

@@ -35,6 +35,12 @@ export interface ResolveReparentOptions<TData> {
   accept?: TreeDropAccept | null;
 }
 
+export interface ReparentMove {
+  id: string;
+  parentId: string | null;
+  beforeId?: string;
+}
+
 export interface ResolveDepthDropOptions<TData> {
   nodes: TreeNode<TData>[];
   movedIds: string[];
@@ -660,6 +666,30 @@ export function resolveReparent<TData>(
   }
 
   return insert(withoutMoved);
+}
+
+export function resolveReparentMoves<TData>(
+  options: ResolveReparentOptions<TData>
+): ReparentMove[] {
+  const next = resolveReparent(options);
+  if (next === options.nodes) {
+    return [];
+  }
+
+  const snapshot = new TreeSnapshot(next);
+  const parentId = snapshot.parentId(options.movedIds[0]) ?? null;
+  const siblings = parentId === null ? next : snapshot.node(parentId)?.children ?? [];
+  const moved = new Set(options.movedIds);
+  const moves: ReparentMove[] = [];
+  for (let index = siblings.length - 1; index >= 0; index--) {
+    const { id } = siblings[index];
+    const beforeId = siblings[index + 1]?.id;
+    if (moved.has(id)) {
+      moves.push(beforeId === undefined ? { id, parentId } : { id, parentId, beforeId });
+    }
+  }
+
+  return moves;
 }
 
 export function resolveRename(

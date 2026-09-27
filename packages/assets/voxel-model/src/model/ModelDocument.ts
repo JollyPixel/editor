@@ -5,8 +5,12 @@ import { Emitter } from "@openally/emitt";
 import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
 import { createBlockTransform } from "./blockTransform.ts";
 import { createBlockUv } from "./blockUv.ts";
+import { createMaterialSurface } from "./materialSurface.ts";
 import type {
   BlockTransformJSON,
+  MaterialEntryJSON,
+  MaterialSurfaceJSON,
+  MaterialSurfacePatchJSON,
   MirrorAxes,
   ModelNodeJSON,
   NodeTransformJSON,
@@ -22,6 +26,7 @@ export interface ModelChange {
   origin: ModelOrigin;
   removed: readonly ModelNodeJSON[];
   previous: readonly ModelNodeJSON[];
+  previousMaterials: readonly MaterialEntryJSON[];
 }
 
 export type ModelDocumentEvents = {
@@ -33,11 +38,37 @@ export interface AddFolderOptions {
   id?: string;
   name: string;
   parentId?: string | null;
+  /** The sibling to land before; last when omitted. */
+  beforeId?: string;
 }
 
 export interface AddBlockOptions extends AddFolderOptions {
   transform?: BlockTransformJSON;
   uv?: UVLayoutData;
+  materialId?: string;
+}
+
+export interface AddMaterialFolderOptions {
+  id?: string;
+  name: string;
+  parentId?: string | null;
+  /** The sibling to land before; last when omitted. */
+  beforeId?: string;
+}
+
+export interface AddMaterialOptions extends AddMaterialFolderOptions {
+  surface?: MaterialSurfaceJSON;
+}
+
+export interface RemoveMaterialOptions {
+  /** Removes only the folder and lifts its entries into its place. */
+  keepContents?: boolean;
+}
+
+export interface MoveOptions {
+  transforms?: Iterable<NodeTransformJSON>;
+  /** The sibling to land before; last when omitted. */
+  beforeId?: string;
 }
 
 export class ModelDocument extends Emitter<ModelDocumentEvents> {
@@ -53,7 +84,9 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       name,
       parentId = null,
       transform = createBlockTransform(),
-      uv = createBlockUv()
+      uv = createBlockUv(),
+      materialId,
+      beforeId
     } = options;
     const added = this.#commit({
       action: "node-added",
@@ -63,8 +96,10 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
         parentId,
         name,
         transform,
-        uv
-      }
+        uv,
+        ...(materialId === undefined ? {} : { materialId })
+      },
+      ...(beforeId === undefined ? {} : { beforeId })
     });
 
     return added ? id : null;
@@ -76,7 +111,8 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     const {
       id = crypto.randomUUID(),
       name,
-      parentId = null
+      parentId = null,
+      beforeId
     } = options;
     const added = this.#commit({
       action: "node-added",
@@ -85,7 +121,8 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
         id,
         parentId,
         name
-      }
+      },
+      ...(beforeId === undefined ? {} : { beforeId })
     });
 
     return added ? id : null;
@@ -114,13 +151,19 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
   move(
     id: string,
     parentId: string | null,
-    transforms: Iterable<NodeTransformJSON> = []
+    options: MoveOptions = {}
   ): boolean {
+    const {
+      transforms = [],
+      beforeId
+    } = options;
+
     return this.#commit({
       action: "node-moved",
       id,
       parentId,
-      transforms: [...transforms]
+      transforms: [...transforms],
+      ...(beforeId === undefined ? {} : { beforeId })
     });
   }
 
@@ -148,6 +191,111 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     });
   }
 
+  assignMaterial(
+    id: string,
+    materialId: string | null
+  ): boolean {
+    return this.#commit({
+      action: "node-material-changed",
+      id,
+      materialId
+    });
+  }
+
+  addMaterial(
+    options: AddMaterialOptions
+  ): string | null {
+    const {
+      id = crypto.randomUUID(),
+      name,
+      parentId = null,
+      beforeId,
+      surface = createMaterialSurface()
+    } = options;
+    const added = this.#commit({
+      action: "material-added",
+      material: {
+        kind: "material",
+        id,
+        parentId,
+        name,
+        surface
+      },
+      ...(beforeId === undefined ? {} : { beforeId })
+    });
+
+    return added ? id : null;
+  }
+
+  addMaterialFolder(
+    options: AddMaterialFolderOptions
+  ): string | null {
+    const {
+      id = crypto.randomUUID(),
+      name,
+      parentId = null,
+      beforeId
+    } = options;
+    const added = this.#commit({
+      action: "material-folder-added",
+      folder: {
+        kind: "folder",
+        id,
+        parentId,
+        name
+      },
+      ...(beforeId === undefined ? {} : { beforeId })
+    });
+
+    return added ? id : null;
+  }
+
+  moveMaterial(
+    id: string,
+    parentId: string | null,
+    beforeId?: string
+  ): boolean {
+    return this.#commit({
+      action: "material-moved",
+      id,
+      parentId,
+      ...(beforeId === undefined ? {} : { beforeId })
+    });
+  }
+
+  removeMaterial(
+    id: string,
+    options: RemoveMaterialOptions = {}
+  ): boolean {
+    return this.#commit({
+      action: "material-removed",
+      id,
+      ...(options.keepContents === true ? { keepContents: true } : {})
+    });
+  }
+
+  renameMaterial(
+    id: string,
+    name: string
+  ): boolean {
+    return this.#commit({
+      action: "material-renamed",
+      id,
+      name
+    });
+  }
+
+  changeMaterial(
+    id: string,
+    surface: MaterialSurfacePatchJSON
+  ): boolean {
+    return this.#commit({
+      action: "material-changed",
+      id,
+      surface
+    });
+  }
+
   apply(
     command: VoxelModelCommand
   ): boolean {
@@ -162,7 +310,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
   load(
     snapshot: VoxelModelSnapshot
   ): void {
-    this.#tree.load(snapshot.nodes);
+    this.#tree.load(snapshot);
     this.emit("reset");
   }
 
@@ -182,12 +330,14 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     origin: ModelOrigin
   ): void {
     const previous = this.#tree.imagesOf(command);
+    const previousMaterials = this.#tree.materialImagesOf(command);
     this.#tree.apply(command);
     this.emit("change", {
       command,
       origin,
       removed: command.action === "node-removed" ? previous : [],
-      previous
+      previous,
+      previousMaterials
     });
   }
 }

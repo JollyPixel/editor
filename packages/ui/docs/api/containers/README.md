@@ -1,5 +1,6 @@
 # Containers API
 
+- [`jolly-context-menu`](./context-menu.md), exported as `ContextMenu`
 - [`jolly-dialog`](./dialog.md), exported as `Dialog`
 - [`jolly-dock`](./dock.md), exported as `Dock`
 - [`jolly-dock-layout`](./dock-layout.md), exported as `DockLayout`

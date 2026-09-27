@@ -254,6 +254,22 @@ describe("PixelCanvasTexture", () => {
         { x: 0, y: 0, width: 32, height: 32 }
       );
     });
+
+    test("a new size releases the GPU storage and uploads again", () => {
+      const bridge = new PixelCanvasTexture(source, { flush: "manual" });
+      let released = 0;
+      bridge.texture.addEventListener("dispose", () => {
+        released++;
+      });
+      const { version } = bridge.texture;
+
+      source.emit("resized", { size: { x: 128, y: 32 } });
+      source.swapCanvas({ x: 32, y: 32 });
+
+      assert.strictEqual(released, 2);
+      assert.ok(bridge.texture.version > version);
+      assert.strictEqual(bridge.texture.image, source.textureCanvas());
+    });
   });
 
   describe("dispose", () => {

@@ -39,6 +39,22 @@ export function blockUvBounds(
   return UVRegion.fromLayout(layout, kLayoutIdentity).bounds;
 }
 
+export function blockUvExtent(
+  layouts: Iterable<UVLayoutData>
+): Vec2 {
+  const extent = {
+    x: 0,
+    y: 0
+  };
+  for (const layout of layouts) {
+    const bounds = blockUvBounds(layout);
+    extent.x = Math.max(extent.x, bounds.x + bounds.width);
+    extent.y = Math.max(extent.y, bounds.y + bounds.height);
+  }
+
+  return extent;
+}
+
 /**
  * The origin of the first cell, row by row within `textureSize`, where a
  * default block net overlaps none of `layouts`. Falls back to the texture

@@ -35,6 +35,17 @@ renderer.setAnimationLoop(() => {
 Pass `null` to `select()` or `hover()` to clear that state. Passing an unknown
 id throws without changing the current state.
 
+`emphasize(ids)` outlines a group of objects the way a local hover does, for
+example every object sharing a property the user points at. An empty list
+clears it, `emphasized` holds the current ids, and an unknown id throws without
+changing the group. The selected or hovered object keeps its own outline, a
+peer's selection wins over the group, and the group wins over a peer's hover.
+
+```ts
+highlight.emphasize(["crate", "barrel"]);
+highlight.emphasize([]);
+```
+
 ## Connect picking and UI
 
 Use the same ids in the scene, outliner, and network layer. A raycast handler
@@ -58,7 +69,7 @@ highlight.addEventListener("change", ({ detail }) => {
 ```
 
 `selectionChange` and `hoverChange` are plain events. The unified `change`
-event and the `targetsChange`, `appearanceChange`, `techniqueChange`,
+event and the `emphasisChange`, `targetsChange`, `appearanceChange`, `techniqueChange`,
 `peerChange`, and `visibilityChange` events include `{ kind, objectIds }` in
 `detail`.
 
@@ -172,7 +183,9 @@ state.technique = "highlight";
 `HighlightResolver`, `ObjectOverlayRenderer`, and `HighlightPassRenderer` are
 exported for applications that need a custom composition. Supply
 `rendererFactory` to `MeshHighlight` to replace the built-in strategy creation
-without reimplementing state ownership.
+without reimplementing state ownership. An `ObjectOverlayRenderer` without
+`renderScene` only places its overlays, for a scene the application draws
+itself.
 
 Call `highlight.dispose()` to release renderers, overlays, visibility, chips,
 registries, and state. A disposed `MeshHighlight` cannot be reused.

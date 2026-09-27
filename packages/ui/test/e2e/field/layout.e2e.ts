@@ -40,10 +40,10 @@ test("label-less fields inset their value symmetrically", async({ page }) => {
       .toBeGreaterThan(plain.start);
   });
 
-  await test.step("the lock stays clear of the value", async() => {
+  await test.step("a lock leaves the value where it is", async() => {
     const locked = row("unlabeled+locked");
-    await expect(locked.locator(".gutter jolly-icon")).toBeVisible();
-    expect((await insets(locked)).start).toBeGreaterThan(plain.start);
+    await expect(locked).toHaveAttribute("locked", "");
+    expect(await insets(locked)).toEqual(plain);
   });
 
   await test.step("stacked layout drops the empty label line", async() => {

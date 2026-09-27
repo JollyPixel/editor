@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type {
-  ModelNodeJSON,
+  ModelMaterialJSON,
   ModelNodeKind,
   ModelTreeReader
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -17,6 +17,8 @@ export interface HierarchyNode {
   id: string;
   name: string;
   kind: HierarchyNodeKind;
+  /** `null` for a block without a material and for a folder. */
+  material: ModelMaterialJSON | null;
   children: HierarchyNode[];
 }
 
@@ -31,11 +33,14 @@ export function buildHierarchyNodes(
   function build(
     parentId: string | null
   ): HierarchyNode[] {
-    return foldersFirst(byParent.get(parentId) ?? []).map((node) => {
+    return (byParent.get(parentId) ?? []).map((node) => {
       return {
         id: node.id,
         name: node.name || kFallbackNames[node.kind],
         kind: node.kind,
+        material: node.kind === "block" && node.materialId !== undefined ?
+          tree.materials.material(node.materialId) ?? null :
+          null,
         children: build(node.id)
       };
     });
@@ -63,13 +68,4 @@ export function findHierarchyNode(
   }
 
   return null;
-}
-
-function foldersFirst(
-  nodes: readonly ModelNodeJSON[]
-): ModelNodeJSON[] {
-  return [
-    ...nodes.filter((node) => node.kind === "folder"),
-    ...nodes.filter((node) => node.kind === "block")
-  ];
 }

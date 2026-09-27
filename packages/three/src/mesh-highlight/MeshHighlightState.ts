@@ -55,6 +55,7 @@ export interface MeshHighlightStateOptions {
 export type MeshHighlightStateChangeKind =
   | "selection"
   | "hover"
+  | "emphasis"
   | "targets"
   | "appearance"
   | "technique";
@@ -67,6 +68,7 @@ export interface MeshHighlightStateChangeEventDetail {
 export interface MeshHighlightStateEventMap {
   selectionChange: Event;
   hoverChange: Event;
+  emphasisChange: CustomEvent<MeshHighlightStateChangeEventDetail>;
   targetsChange: CustomEvent<MeshHighlightStateChangeEventDetail>;
   appearanceChange: CustomEvent<MeshHighlightStateChangeEventDetail>;
   techniqueChange: CustomEvent<MeshHighlightStateChangeEventDetail>;
@@ -87,6 +89,13 @@ export interface MeshHighlightState {
   ): void;
 }
 
+type OverlayStyle = "selected" | "hovered";
+
+interface StyledOverlay {
+  style: OverlayStyle;
+  overlay: HighlightOverlay | null;
+}
+
 export class MeshHighlightState extends EventTarget {
   #targets = new Map<string, SelectableObject>();
   #techniques = new Map<string, HighlightTechnique>();
@@ -96,9 +105,9 @@ export class MeshHighlightState extends EventTarget {
   #renderOverlays: boolean;
 
   #selectedId: string | null = null;
-  #selectedOverlay: HighlightOverlay | null = null;
   #hoveredId: string | null = null;
-  #hoverOverlay: HighlightOverlay | null = null;
+  #emphasizedIds: ReadonlySet<string> = new Set();
+  #overlays = new Map<string, StyledOverlay>();
 
   constructor(
     options: MeshHighlightStateOptions = {}
@@ -130,6 +139,10 @@ export class MeshHighlightState extends EventTarget {
     return this.#hoveredId;
   }
 
+  get emphasized(): ReadonlySet<string> {
+    return this.#emphasizedIds;
+  }
+
   get appearance(): MeshHighlightAppearance {
     return this.#appearance;
   }
@@ -144,7 +157,7 @@ export class MeshHighlightState extends EventTarget {
     const previous = this.#appearance;
     this.#appearance = appearance;
     try {
-      this.#rebuildActiveOverlays();
+      this.#syncOverlays(this.#styles(), "all");
     }
     catch (error) {
       this.#appearance = previous;
@@ -176,8 +189,8 @@ export class MeshHighlightState extends EventTarget {
     }
 
     try {
-      if (id === this.#selectedId || id === this.#hoveredId) {
-        this.#rebuildActiveOverlays();
+      if (this.#overlays.has(id)) {
+        this.#syncOverlays(this.#styles(), new Set([id]));
       }
     }
     catch (error) {
@@ -208,6 +221,9 @@ export class MeshHighlightState extends EventTarget {
     if (this.#hoveredId === id) {
       this.hover(null);
     }
+    if (this.#emphasizedIds.has(id)) {
+      this.emphasize([...this.#emphasizedIds].filter((emphasizedId) => emphasizedId !== id));
+    }
     this.#targets.delete(id);
     this.#techniques.delete(id);
     this.#dispatchChange("targets", [id]);
@@ -220,27 +236,9 @@ export class MeshHighlightState extends EventTarget {
       return;
     }
 
-    const selectedOverlay = this.#buildOverlay(id, "selected");
-    let hoverOverlay: HighlightOverlay | null;
-    try {
-      hoverOverlay = this.#buildOverlay(
-        id === this.#hoveredId ? null : this.#hoveredId,
-        "hovered"
-      );
-    }
-    catch (error) {
-      selectedOverlay?.dispose();
-      throw error;
-    }
+    this.#syncOverlays(this.#styles({ selectedId: id }));
     const previousId = this.#selectedId;
-    const previousSelectedOverlay = this.#selectedOverlay;
-    const previousHoverOverlay = this.#hoverOverlay;
-
     this.#selectedId = id;
-    this.#selectedOverlay = selectedOverlay;
-    this.#hoverOverlay = hoverOverlay;
-    previousSelectedOverlay?.dispose();
-    previousHoverOverlay?.dispose();
 
     this.dispatchEvent(
       new Event("selectionChange")
@@ -262,7 +260,7 @@ export class MeshHighlightState extends EventTarget {
     const previous = this.#technique;
     this.#technique = technique;
     try {
-      this.#rebuildActiveOverlays();
+      this.#syncOverlays(this.#styles(), "all");
     }
     catch (error) {
       this.#technique = previous;
@@ -278,29 +276,42 @@ export class MeshHighlightState extends EventTarget {
       return;
     }
 
-    const overlay = this.#buildOverlay(
-      id !== null && id !== this.#selectedId ? id : null,
-      "hovered"
-    );
+    this.#syncOverlays(this.#styles({ hoveredId: id }));
     const previousId = this.#hoveredId;
-    const previousOverlay = this.#hoverOverlay;
-
     this.#hoveredId = id;
-    this.#hoverOverlay = overlay;
-    previousOverlay?.dispose();
 
     this.dispatchEvent(new Event("hoverChange"));
     this.#dispatchChange("hover", changedIds(previousId, id));
   }
 
+  emphasize(
+    ids: Iterable<string>
+  ): void {
+    const next = new Set(ids);
+    for (const id of next) {
+      this.#requireTarget(id);
+    }
+
+    const previous = this.#emphasizedIds;
+    const changed = [...symmetricDifference(previous, next)];
+    if (changed.length === 0) {
+      return;
+    }
+
+    this.#syncOverlays(this.#styles({ emphasizedIds: next }));
+    this.#emphasizedIds = next;
+    this.#dispatchChange("emphasis", changed);
+  }
+
   dispose(): void {
     this.dispatchEvent(new Event("dispose"));
-    this.#selectedOverlay?.dispose();
-    this.#hoverOverlay?.dispose();
-    this.#selectedOverlay = null;
-    this.#hoverOverlay = null;
+    for (const { overlay } of this.#overlays.values()) {
+      overlay?.dispose();
+    }
+    this.#overlays.clear();
     this.#selectedId = null;
     this.#hoveredId = null;
+    this.#emphasizedIds = new Set();
     this.#targets.clear();
     this.#techniques.clear();
   }
@@ -317,39 +328,75 @@ export class MeshHighlightState extends EventTarget {
     return this.#targets.get(id);
   }
 
-  #rebuildActiveOverlays(): void {
-    let selectedOverlay: HighlightOverlay | null = null;
-    let hoverOverlay: HighlightOverlay | null = null;
+  #styles(
+    changes: {
+      selectedId?: string | null;
+      hoveredId?: string | null;
+      emphasizedIds?: ReadonlySet<string>;
+    } = {}
+  ): Map<string, OverlayStyle> {
+    const {
+      selectedId = this.#selectedId,
+      hoveredId = this.#hoveredId,
+      emphasizedIds = this.#emphasizedIds
+    } = changes;
+    const styles = new Map<string, OverlayStyle>();
+    for (const id of emphasizedIds) {
+      styles.set(id, "hovered");
+    }
+    if (hoveredId !== null) {
+      styles.set(hoveredId, "hovered");
+    }
+    if (selectedId !== null) {
+      styles.set(selectedId, "selected");
+    }
 
+    return styles;
+  }
+
+  #syncOverlays(
+    styles: ReadonlyMap<string, OverlayStyle>,
+    rebuild: ReadonlySet<string> | "all" = new Set()
+  ): void {
+    const built = new Map<string, StyledOverlay>();
     try {
-      selectedOverlay = this.#buildOverlay(this.#selectedId, "selected");
-      const hoveredId = this.#hoveredId === this.#selectedId ?
-        null : this.#hoveredId;
-      hoverOverlay = this.#buildOverlay(
-        hoveredId,
-        "hovered"
-      );
+      for (const [id, style] of styles) {
+        const current = this.#overlays.get(id);
+        const stale = rebuild === "all" || rebuild.has(id);
+        if (current?.style !== style || stale) {
+          built.set(id, {
+            style,
+            overlay: this.#buildOverlay(id, style)
+          });
+        }
+      }
     }
     catch (error) {
-      selectedOverlay?.dispose();
-      hoverOverlay?.dispose();
+      for (const { overlay } of built.values()) {
+        overlay?.dispose();
+      }
       throw error;
     }
 
-    this.#selectedOverlay?.dispose();
-    this.#hoverOverlay?.dispose();
-    this.#selectedOverlay = selectedOverlay;
-    this.#hoverOverlay = hoverOverlay;
+    const next = new Map<string, StyledOverlay>();
+    for (const [id, current] of this.#overlays) {
+      if (!styles.has(id) || built.has(id)) {
+        current.overlay?.dispose();
+      }
+    }
+    for (const id of styles.keys()) {
+      const overlay = built.get(id) ?? this.#overlays.get(id);
+      if (overlay !== undefined) {
+        next.set(id, overlay);
+      }
+    }
+    this.#overlays = next;
   }
 
   #buildOverlay(
-    id: string | null,
-    state: "selected" | "hovered"
+    id: string,
+    state: OverlayStyle
   ): HighlightOverlay | null {
-    if (id === null) {
-      return null;
-    }
-
     const target = this.#requireTarget(id);
     if (
       !this.#renderOverlays ||
@@ -417,4 +464,20 @@ function changedIds(
   nextId: string | null
 ): string[] {
   return [...new Set([previousId, nextId].filter((id) => id !== null))];
+}
+
+function* symmetricDifference(
+  left: ReadonlySet<string>,
+  right: ReadonlySet<string>
+): IterableIterator<string> {
+  for (const id of left) {
+    if (!right.has(id)) {
+      yield id;
+    }
+  }
+  for (const id of right) {
+    if (!left.has(id)) {
+      yield id;
+    }
+  }
 }

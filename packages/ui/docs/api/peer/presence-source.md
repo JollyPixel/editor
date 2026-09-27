@@ -69,7 +69,8 @@ locks.
 While focused, a field publishes its path and other clients render it locked in
 the holder's color. The local peer never locks its own field, and local focus
 beats a remote claim: contention shows as a peer chip rather than a lock bar, so
-neither user loses the field they are typing in.
+neither user loses the field they are typing in. Chips name other peers only; a
+field never shows a chip for its own user.
 
 A claim releases on blur, on disconnection, and when `path` changes under a
 focused field. A peer's claims also disappear with `peer-left`, so a closed tab

@@ -75,7 +75,7 @@ function at(
 }
 
 describe("ModelHierarchy.nodes", () => {
-  test("lists folders first, then blocks under their folder or block parent", () => {
+  test("lists nodes in document order under their folder or block parent", () => {
     const { document, addBlock, hierarchy } = createHarness();
     addBlock({ name: "Body" });
     const folderId = document.addFolder({ name: "Arms" });
@@ -83,10 +83,10 @@ describe("ModelHierarchy.nodes", () => {
     addBlock({ name: "Hand", parentId: arm.uuid });
 
     assert.deepEqual(shapeOf(hierarchy.nodes()), [
-      ["Arms", [["Arm", ["Hand"]]]],
-      "Body"
+      "Body",
+      ["Arms", [["Arm", ["Hand"]]]]
     ]);
-    assert.equal(hierarchy.nodes()[0].kind, "folder");
+    assert.equal(hierarchy.nodes()[1].kind, "folder");
   });
 
   test("nests folders under folders, and a folder under a block beside its children", () => {
@@ -97,8 +97,21 @@ describe("ModelHierarchy.nodes", () => {
     hierarchy.createFolder("Inner", outer);
 
     assert.deepEqual(shapeOf(hierarchy.nodes()), [
-      ["Body", [["Outer", ["Inner"]], "Head"]]
+      ["Body", ["Head", ["Outer", ["Inner"]]]]
     ]);
+  });
+
+  test("carries a block's material, and none for a folder", () => {
+    const { document, addBlock, hierarchy } = createHarness();
+    const metalId = document.addMaterial({ name: "Metal" })!;
+    addBlock({ name: "Plain" });
+    addBlock({ name: "Metal", materialId: metalId });
+    document.addFolder({ name: "Limbs" });
+
+    assert.deepEqual(
+      hierarchy.nodes().map((node) => node.material?.id ?? null),
+      [null, metalId, null]
+    );
   });
 
   test("labels unnamed nodes by kind", () => {
@@ -244,6 +257,19 @@ describe("ModelHierarchy.move", () => {
     assert.partialDeepStrictEqual(commands[0], { transforms: [] });
   });
 
+  test("places a node before a sibling, or last without one", () => {
+    const { addBlock, hierarchy } = createHarness();
+    addBlock({ name: "A" });
+    const b = addBlock({ name: "B" });
+    const c = addBlock({ name: "C" });
+
+    hierarchy.move(c.uuid, null, b.uuid);
+    assert.deepEqual(shapeOf(hierarchy.nodes()), ["A", "C", "B"]);
+
+    hierarchy.move(c.uuid, null);
+    assert.deepEqual(shapeOf(hierarchy.nodes()), ["A", "B", "C"]);
+  });
+
   test("refuses to move a node into its own subtree", () => {
     const { document, hierarchy } = createHarness();
     const outer = hierarchy.createFolder("Outer", null);
@@ -289,6 +315,20 @@ describe("ModelHierarchy.duplicate", () => {
     assert.deepEqual(document.tree.block(duplicateId)?.uv, layoutAt(7));
   });
 
+  test("points the copy of a block to the same material", () => {
+    const { document, addBlock, hierarchy } = createHarness();
+    const metalId = document.addMaterial({ name: "Metal" })!;
+    const source = addBlock({ materialId: metalId });
+
+    const duplicateId = hierarchy.duplicate(source.uuid, {
+      includeChildren: false,
+      mirrorAxes: kNoMirror
+    });
+
+    assert.equal(document.tree.block(duplicateId!)?.materialId, metalId);
+    assert.equal(document.tree.materials.size, 1);
+  });
+
   test("copies a folder subtree, keeping child names", () => {
     const { addBlock, hierarchy } = createHarness();
     const folderId = hierarchy.createFolder("Limbs", null);
@@ -320,6 +360,46 @@ describe("ModelHierarchy.duplicate", () => {
       ["Body", ["Head"]],
       "Body Copy"
     ]);
+  });
+
+  test("lands right after its source among its siblings", () => {
+    const { addBlock, hierarchy } = createHarness();
+    const folderId = hierarchy.createFolder("Limbs", null);
+    const arm = addBlock({ name: "Arm", parentId: folderId });
+    addBlock({ name: "Leg", parentId: folderId });
+    const torso = addBlock({ name: "Torso" });
+    addBlock({ name: "Head" });
+
+    hierarchy.duplicate(arm.uuid, {
+      includeChildren: false,
+      mirrorAxes: kNoMirror
+    });
+    hierarchy.duplicate(torso.uuid, {
+      includeChildren: false,
+      mirrorAxes: kNoMirror
+    });
+
+    assert.deepEqual(shapeOf(hierarchy.nodes()), [
+      ["Limbs", ["Arm", "Arm Copy", "Leg"]],
+      "Torso",
+      "Torso Copy",
+      "Head"
+    ]);
+  });
+
+  test("adds a copy in place as one command", () => {
+    const { document, addBlock, hierarchy } = createHarness();
+    const arm = addBlock({ name: "Arm" });
+    addBlock({ name: "Leg" });
+    const actions: string[] = [];
+    document.on("change", (change) => actions.push(change.command.action));
+
+    hierarchy.duplicate(arm.uuid, {
+      includeChildren: false,
+      mirrorAxes: kNoMirror
+    });
+
+    assert.deepEqual(actions, ["node-added"]);
   });
 
   test("mirrors every duplicated block when an axis is requested", () => {
@@ -377,6 +457,19 @@ describe("ModelHierarchy.remove", () => {
     assert.equal(blocks.get(middle.uuid), undefined);
     assert.equal(document.tree.transformParentOf(leaf.uuid), root.uuid);
     assert.deepStrictEqual(leaf.worldPosition, new THREE.Vector3(7, 0, 0));
+  });
+
+  test("without children, puts them where the removed node stood", () => {
+    const { addBlock, hierarchy } = createHarness();
+    addBlock({ name: "First" });
+    const group = hierarchy.createFolder("Group", null);
+    addBlock({ name: "Last" });
+    addBlock({ name: "A", parentId: group });
+    addBlock({ name: "B", parentId: group });
+
+    hierarchy.remove(group!, { withChildren: false });
+
+    assert.deepEqual(shapeOf(hierarchy.nodes()), ["First", "A", "B", "Last"]);
   });
 
   test("without children, promotes the blocks a child folder carries", () => {

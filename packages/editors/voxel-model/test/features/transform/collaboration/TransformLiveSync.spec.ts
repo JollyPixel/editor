@@ -7,6 +7,7 @@ import {
 
 // Import Internal Dependencies
 import { TransformLiveSync } from "#src/features/transform/collaboration/TransformLiveSync.ts";
+import { parseBlockTransformJSON } from "#src/features/transform/collaboration/blockTransformCodec.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { createRoomHarness } from "../../../collaboration/roomHarness.ts";
 import { createModelFixture } from "../../../fixtures/model.ts";
@@ -57,6 +58,16 @@ function clearLive(
     clientId: "bob",
     patch: { transformLive: null }
   });
+}
+
+function liveX(
+  frame: unknown
+): number | null {
+  if (typeof frame !== "object" || frame === null) {
+    return null;
+  }
+
+  return parseBlockTransformJSON(Reflect.get(frame, "transform"))?.position.x ?? null;
 }
 
 function isGlowing(
@@ -184,18 +195,30 @@ describe("TransformLiveSync", () => {
     assert.equal(block.position.x, 5);
   });
 
-  test("publishes a throttled live transform, and null on clear", (t) => {
-    t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+  test("publishes a throttled live transform that ends on the latest one, and null on clear", (t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 1000 });
     const harness = createHarness();
     const block = harness.addBlock();
+    function at(
+      x: number
+    ) {
+      return {
+        ...block.transform,
+        position: { x, y: 0, z: 0 }
+      };
+    }
 
-    harness.sync.publish(block.uuid, block.transform);
-    harness.sync.publish(block.uuid, block.transform);
+    harness.sync.publish(block.uuid, at(1));
+    harness.sync.publish(block.uuid, at(2));
+    harness.sync.publish(block.uuid, at(3));
+    t.mock.timers.tick(50);
+    harness.sync.publish(block.uuid, at(4));
     harness.sync.clear();
+    t.mock.timers.tick(50);
 
     assert.deepEqual(
-      harness.published.map((patch) => patch.transformLive && "uuid"),
-      ["uuid", null]
+      harness.published.map((patch) => liveX(patch.transformLive)),
+      [1, 3, null]
     );
     harness.sync.dispose();
   });

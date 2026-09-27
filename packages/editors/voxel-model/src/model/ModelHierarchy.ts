@@ -4,6 +4,7 @@ import {
   createBlockTransform,
   createBlockUv,
   nextBlockUvOrigin,
+  type AddFolderOptions,
   type BlockTransformJSON,
   type MirrorAxes,
   type ModelDocument,
@@ -99,7 +100,8 @@ export class ModelHierarchy {
 
   move(
     id: string,
-    parentId: string | null
+    parentId: string | null,
+    beforeId?: string
   ): void {
     const { tree } = this.#document;
     const parentUuid = tree.enclosingBlockOf(parentId);
@@ -112,7 +114,10 @@ export class ModelHierarchy {
         };
       });
 
-    this.#document.move(id, parentId, transforms);
+    this.#document.move(id, parentId, {
+      transforms,
+      beforeId
+    });
   }
 
   duplicate(
@@ -128,8 +133,11 @@ export class ModelHierarchy {
     const duplicatedUuids: string[] = [];
     const duplicateId = this.#duplicateNode(
       source,
-      source.parentId,
-      `${source.name} Copy`,
+      {
+        name: `${source.name} Copy`,
+        parentId: source.parentId,
+        beforeId: this.#document.tree.nextSiblingOf(source.id)
+      },
       options.includeChildren,
       duplicatedUuids
     );
@@ -162,7 +170,7 @@ export class ModelHierarchy {
 
     if (!options.withChildren) {
       for (const child of tree.childrenOf(id)) {
-        this.move(child.id, node.parentId);
+        this.move(child.id, node.parentId, id);
       }
     }
     this.#document.remove(id);
@@ -187,8 +195,7 @@ export class ModelHierarchy {
 
   #duplicateNode(
     node: ModelNodeJSON,
-    parentId: string | null,
-    name: string,
+    copy: AddFolderOptions,
     includeChildren: boolean,
     duplicatedUuids: string[]
   ): string | null {
@@ -196,8 +203,13 @@ export class ModelHierarchy {
       this.#document.tree.childrenOf(node.id) :
       [];
     const duplicateId = node.kind === "folder" ?
-      this.createFolder(name, parentId) :
-      this.#duplicateBlock(node.id, name, parentId);
+      this.#document.addFolder(copy) :
+      this.#document.addBlock({
+        ...copy,
+        transform: node.transform,
+        uv: node.uv,
+        materialId: node.materialId
+      });
     if (duplicateId === null) {
       return null;
     }
@@ -208,31 +220,15 @@ export class ModelHierarchy {
     for (const child of children) {
       this.#duplicateNode(
         child,
-        duplicateId,
-        child.name,
+        {
+          name: child.name,
+          parentId: duplicateId
+        },
         true,
         duplicatedUuids
       );
     }
 
     return duplicateId;
-  }
-
-  #duplicateBlock(
-    sourceUuid: string,
-    name: string,
-    parentId: string | null
-  ): string | null {
-    const source = this.#document.tree.block(sourceUuid);
-    if (source === undefined) {
-      return null;
-    }
-
-    return this.#document.addBlock({
-      name,
-      parentId,
-      transform: source.transform,
-      uv: source.uv
-    });
   }
 }

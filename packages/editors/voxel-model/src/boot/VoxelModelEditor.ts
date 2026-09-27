@@ -18,13 +18,17 @@ import {
   type EditorContext,
   type EditorSession
 } from "@jolly-pixel/editor.host";
+import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   ModelEditorScene,
   type ModelWorkspace
 } from "../scene/ModelEditorScene.ts";
-import { PresenceStore } from "../state/index.ts";
+import {
+  PresenceStore,
+  ViewSettingsStore
+} from "../state/index.ts";
 import { EditorShell } from "./EditorShell.ts";
 
 // CONSTANTS
@@ -79,6 +83,9 @@ export class VoxelModelEditor {
       identity: session.identity,
       presence: new PresenceStore(),
       pixels: texture.document,
+      view: new ViewSettingsStore({
+        storage: new LocalStorageAdapter()
+      }),
       archives: session.archives({
         fallbackName: "model",
         resetWarning: "Every model and texture stored in this browser is " +

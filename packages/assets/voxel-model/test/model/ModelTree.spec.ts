@@ -9,14 +9,22 @@ import assert from "node:assert/strict";
 import { ModelTree } from "#src/model/ModelTree.ts";
 import { InvalidModelTreeError } from "#src/model/InvalidModelTreeError.ts";
 import { createBlockTransform } from "#src/model/blockTransform.ts";
-import type { VoxelModelCommand } from "#src/network/types.ts";
+import { createMaterialSurface } from "#src/model/materialSurface.ts";
+import type {
+  VoxelModelCommand,
+  VoxelModelSnapshot
+} from "#src/network/types.ts";
 import {
   TRANSFORM,
   UV,
   blockAdded,
   blockNode,
   folderAdded,
-  folderNode
+  folderNode,
+  material,
+  materialAdded,
+  materialFolder,
+  materialFolderAdded
 } from "../helpers/commands.ts";
 
 function treeOf(
@@ -39,7 +47,7 @@ describe("ModelTree", () => {
       blockAdded("arm", "limbs")
     );
 
-    assert.deepEqual(tree.toJSON(), [
+    assert.deepEqual(tree.toJSON().nodes, [
       blockNode("body"),
       folderNode("limbs", "body"),
       blockNode("arm", "limbs")
@@ -145,6 +153,89 @@ describe("ModelTree", () => {
     assert.deepEqual(tree.block("arm")?.transform, transform);
   });
 
+  test("places a moved node before a sibling, or last without one", () => {
+    const tree = treeOf(
+      blockAdded("a"),
+      folderAdded("f"),
+      blockAdded("b"),
+      blockAdded("c", "f")
+    );
+
+    tree.apply({
+      action: "node-moved",
+      id: "c",
+      parentId: null,
+      transforms: [],
+      beforeId: "a"
+    });
+    assert.deepEqual(
+      tree.childrenOf(null).map((node) => node.id),
+      ["c", "a", "f", "b"]
+    );
+
+    tree.apply({
+      action: "node-moved",
+      id: "a",
+      parentId: null,
+      transforms: []
+    });
+    assert.deepEqual(
+      tree.childrenOf(null).map((node) => node.id),
+      ["c", "f", "b", "a"]
+    );
+  });
+
+  test("places an added node before a sibling, and rejects a slot that is not one", () => {
+    const tree = treeOf(
+      blockAdded("a"),
+      folderAdded("f"),
+      blockAdded("b", "f")
+    );
+    function addedBefore(
+      beforeId: string
+    ): VoxelModelCommand {
+      return {
+        action: "node-added",
+        node: blockNode("c"),
+        beforeId
+      };
+    }
+
+    assert.equal(tree.accepts(addedBefore("b")), false);
+    assert.equal(tree.accepts(addedBefore("missing")), false);
+    tree.apply(addedBefore("f"));
+
+    assert.deepEqual(
+      tree.childrenOf(null).map((node) => node.id),
+      ["a", "c", "f"]
+    );
+  });
+
+  test("rejects a move before a node that is not a sibling under the new parent", () => {
+    const tree = treeOf(
+      folderAdded("f"),
+      blockAdded("a"),
+      blockAdded("b", "f")
+    );
+
+    function movedBefore(
+      beforeId: string
+    ): Extract<VoxelModelCommand, { action: "node-moved"; }> {
+      return {
+        action: "node-moved",
+        id: "a",
+        parentId: null,
+        transforms: [],
+        beforeId
+      };
+    }
+
+    assert.equal(tree.accepts(movedBefore("f")), true);
+    assert.equal(tree.accepts(movedBefore("a")), false);
+    assert.equal(tree.accepts(movedBefore("b")), false);
+    assert.equal(tree.accepts(movedBefore("missing")), false);
+  });
+
   test("removes a node with its whole subtree", () => {
     const tree = treeOf(
       blockAdded("body"),
@@ -156,7 +247,7 @@ describe("ModelTree", () => {
     tree.apply({ action: "node-removed", id: "body" });
 
     assert.deepEqual(
-      tree.toJSON().map((node) => node.id),
+      tree.toJSON().nodes.map((node) => node.id),
       ["prop"]
     );
   });
@@ -204,12 +295,220 @@ describe("ModelTree", () => {
     );
   });
 
+  test("points a block to a material and back to none", () => {
+    const tree = treeOf(materialAdded("glass"), blockAdded("a"));
+
+    tree.apply({ action: "node-material-changed", id: "a", materialId: "glass" });
+    assert.equal(tree.block("a")?.materialId, "glass");
+
+    tree.apply({ action: "node-material-changed", id: "a", materialId: null });
+    assert.equal("materialId" in (tree.block("a") ?? {}), false);
+  });
+
+  test("rejects a material for a folder, an unknown node or an unknown material", () => {
+    const tree = treeOf(materialAdded("glass"), folderAdded("f"), blockAdded("a"));
+
+    assert.equal(
+      tree.accepts({ action: "node-material-changed", id: "f", materialId: "glass" }),
+      false
+    );
+    assert.equal(
+      tree.accepts({ action: "node-material-changed", id: "missing", materialId: null }),
+      false
+    );
+    assert.equal(
+      tree.accepts({ action: "node-material-changed", id: "a", materialId: "ghost" }),
+      false
+    );
+    assert.equal(
+      tree.accepts({
+        action: "node-added",
+        node: { ...blockNode("b"), materialId: "ghost" }
+      }),
+      false
+    );
+  });
+
+  test("renames and resurfaces a material, and rejects a repeated or unknown id", () => {
+    const tree = treeOf(materialAdded("glass"));
+
+    tree.apply({ action: "material-renamed", id: "glass", name: "Chrome" });
+    tree.apply({ action: "material-changed", id: "glass", surface: { metalness: 1 } });
+    tree.apply({ action: "material-changed", id: "glass", surface: { roughness: 0.2 } });
+
+    assert.deepEqual(tree.materials.get("glass"), {
+      ...material("glass"),
+      name: "Chrome",
+      surface: createMaterialSurface({ metalness: 1, roughness: 0.2 })
+    });
+    assert.equal(
+      tree.accepts({ action: "material-changed", id: "glass", surface: {} }),
+      false
+    );
+    assert.equal(tree.accepts(materialAdded("glass")), false);
+    assert.equal(
+      tree.accepts({ action: "material-renamed", id: "ghost", name: "x" }),
+      false
+    );
+    assert.equal(tree.accepts({ action: "material-removed", id: "ghost" }), false);
+  });
+
+  test("leaves the blocks of a removed material without one", () => {
+    const tree = treeOf(
+      materialAdded("glass"),
+      materialAdded("metal"),
+      { action: "node-added", node: { ...blockNode("a"), materialId: "glass" } },
+      { action: "node-added", node: { ...blockNode("b"), materialId: "metal" } }
+    );
+
+    tree.apply({ action: "material-removed", id: "glass" });
+
+    assert.equal(tree.materials.has("glass"), false);
+    assert.equal(tree.block("a")?.materialId, undefined);
+    assert.equal(tree.block("b")?.materialId, "metal");
+  });
+
+  test("nests materials in folders and orders siblings", () => {
+    const tree = treeOf(
+      materialFolderAdded("metals"),
+      materialAdded("glass"),
+      materialAdded("steel", "metals"),
+      { action: "material-added", material: material("gold", "metals"), beforeId: "steel" }
+    );
+
+    tree.apply({ action: "material-moved", id: "glass", parentId: "metals", beforeId: "gold" });
+
+    assert.deepEqual(
+      tree.materials.childrenOf("metals").map(({ id }) => id),
+      ["glass", "gold", "steel"]
+    );
+    assert.deepEqual(tree.materials.childrenOf(null).map(({ id }) => id), ["metals"]);
+    assert.deepEqual([...tree.materials.materials()].map(({ id }) => id), ["glass", "gold", "steel"]);
+  });
+
+  test("reads the material of a block, and none for a folder or an unknown id", () => {
+    const tree = treeOf(
+      materialAdded("glass"),
+      { action: "node-added", node: { ...blockNode("body"), materialId: "glass" } },
+      blockAdded("arm"),
+      folderAdded("limbs")
+    );
+
+    assert.equal(tree.materialIdOf("body"), "glass");
+    assert.equal(tree.materialIdOf("arm"), undefined);
+    assert.equal(tree.materialIdOf("limbs"), undefined);
+    assert.equal(tree.materialIdOf("missing"), undefined);
+    assert.deepEqual(tree.blocksUsing("glass"), ["body"]);
+    assert.deepEqual(tree.blocksUsing("missing"), []);
+  });
+
+  test("finds the next sibling of a node or material, skipping other parents", () => {
+    const tree = treeOf(
+      blockAdded("body"),
+      folderAdded("limbs", "body"),
+      blockAdded("head"),
+      materialFolderAdded("metals"),
+      materialAdded("steel", "metals"),
+      materialAdded("glass"),
+      materialAdded("gold", "metals")
+    );
+
+    assert.equal(tree.nextSiblingOf("body"), "head");
+    assert.equal(tree.nextSiblingOf("head"), undefined);
+    assert.equal(tree.nextSiblingOf("missing"), undefined);
+    assert.equal(tree.materials.nextSiblingOf("steel"), "gold");
+    assert.equal(tree.materials.nextSiblingOf("metals"), "glass");
+  });
+
+  test("rejects a material parent that is not a folder, a cycle and a foreign sibling", () => {
+    const tree = treeOf(
+      materialFolderAdded("metals"),
+      materialFolderAdded("alloys", "metals"),
+      materialAdded("glass"),
+      blockAdded("a")
+    );
+
+    const rejected: VoxelModelCommand[] = [
+      materialAdded("steel", "glass"),
+      materialFolderAdded("rare", "ghost"),
+      { action: "material-moved", id: "metals", parentId: "alloys" },
+      { action: "material-moved", id: "metals", parentId: "metals" },
+      { action: "material-moved", id: "glass", parentId: "metals", beforeId: "glass" },
+      { action: "material-moved", id: "glass", parentId: null, beforeId: "alloys" },
+      { action: "material-changed", id: "metals", surface: createMaterialSurface() },
+      { action: "node-material-changed", id: "a", materialId: "metals" }
+    ];
+
+    for (const command of rejected) {
+      assert.equal(tree.accepts(command), false, command.action);
+    }
+    assert.equal(
+      tree.accepts({ action: "material-moved", id: "alloys", parentId: null, beforeId: "glass" }),
+      true
+    );
+  });
+
+  test("removes a folder with its content and leaves the blocks of its materials without one", () => {
+    const tree = treeOf(
+      materialFolderAdded("metals"),
+      materialFolderAdded("alloys", "metals"),
+      materialAdded("bronze", "alloys"),
+      materialAdded("glass"),
+      { action: "node-added", node: { ...blockNode("a"), materialId: "bronze" } },
+      { action: "node-added", node: { ...blockNode("b"), materialId: "glass" } }
+    );
+
+    tree.apply({ action: "material-removed", id: "metals" });
+
+    assert.deepEqual([...tree.materials.values()].map(({ id }) => id), ["glass"]);
+    assert.equal(tree.block("a")?.materialId, undefined);
+    assert.equal(tree.block("b")?.materialId, "glass");
+  });
+
+  test("removes a folder alone and puts its contents in its place, keeping their blocks", () => {
+    const tree = treeOf(
+      materialAdded("glass"),
+      materialFolderAdded("metals"),
+      materialAdded("steel", "metals"),
+      materialAdded("gold", "metals"),
+      materialAdded("wood"),
+      { action: "node-added", node: { ...blockNode("a"), materialId: "steel" } }
+    );
+
+    tree.apply({ action: "material-removed", id: "metals", keepContents: true });
+
+    assert.deepEqual(
+      [...tree.materials.values()].map(({ id, parentId }) => [id, parentId]),
+      [["glass", null], ["steel", null], ["gold", null], ["wood", null]]
+    );
+    assert.equal(tree.block("a")?.materialId, "steel");
+    assert.equal(
+      tree.accepts({ action: "material-removed", id: "glass", keepContents: true }),
+      false
+    );
+  });
+
+  test("counts the blocks using each material, unused ones included", () => {
+    const tree = treeOf(
+      materialAdded("glass"),
+      materialAdded("metal"),
+      { action: "node-added", node: { ...blockNode("a"), materialId: "glass" } },
+      { action: "node-added", node: { ...blockNode("b"), materialId: "glass" } },
+      blockAdded("c")
+    );
+
+    assert.deepEqual(
+      tree.materialUses(),
+      new Map([["glass", 2], ["metal", 0]])
+    );
+  });
+
   test("hands out copies", () => {
     const tree = treeOf(blockAdded("a"));
 
     const node = blockNode("a");
     const loaded = new ModelTree();
-    loaded.load([node]);
+    loaded.load({ nodes: [node], materials: [] });
 
     assert.notStrictEqual(tree.block("a"), tree.block("a"));
     assert.notStrictEqual(loaded.block("a"), node);
@@ -221,34 +520,48 @@ describe("ModelTree.load", () => {
   test("loads a child listed before its parent", () => {
     const tree = new ModelTree();
 
-    tree.load([blockNode("arm", "body"), blockNode("body")]);
+    tree.load({
+      nodes: [blockNode("arm", "body"), blockNode("body")],
+      materials: []
+    });
 
     assert.equal(tree.get("arm")?.parentId, "body");
   });
 
-  test("rejects a repeated id, a missing parent and a cycle", () => {
-    const cases = [
-      [blockNode("a"), folderNode("a")],
-      [blockNode("a", "ghost")],
-      [folderNode("a", "b"), folderNode("b", "a")],
-      [folderNode("a", "a")]
+  test("rejects a repeated id, a missing parent or material and a cycle", () => {
+    const cases: VoxelModelSnapshot[] = [
+      { nodes: [blockNode("a"), folderNode("a")], materials: [] },
+      { nodes: [blockNode("a", "ghost")], materials: [] },
+      { nodes: [folderNode("a", "b"), folderNode("b", "a")], materials: [] },
+      { nodes: [folderNode("a", "a")], materials: [] },
+      { nodes: [{ ...blockNode("a"), materialId: "ghost" }], materials: [material("glass")] },
+      { nodes: [], materials: [material("glass"), material("glass")] },
+      { nodes: [], materials: [material("glass"), material("steel", "glass")] },
+      { nodes: [], materials: [material("steel", "ghost")] },
+      { nodes: [], materials: [materialFolder("a", "b"), materialFolder("b", "a")] },
+      { nodes: [{ ...blockNode("a"), materialId: "metals" }], materials: [materialFolder("metals")] }
     ];
 
-    for (const nodes of cases) {
+    for (const snapshot of cases) {
       assert.throws(
-        () => new ModelTree().load(nodes),
+        () => new ModelTree().load(snapshot),
         InvalidModelTreeError
       );
     }
   });
 
-  test("keeps the current nodes when a load is rejected", () => {
-    const tree = treeOf(blockAdded("body"));
+  test("keeps the current nodes and materials when a load is rejected", () => {
+    const tree = treeOf(materialAdded("glass"), blockAdded("body"));
 
-    assert.throws(() => tree.load([blockNode("a", "ghost")]));
+    assert.throws(() => tree.load({
+      nodes: [blockNode("a", "ghost")],
+      materials: [material("metal")]
+    }));
 
     assert.ok(tree.has("body"));
     assert.equal(tree.has("a"), false);
+    assert.ok(tree.materials.has("glass"));
+    assert.equal(tree.materials.has("metal"), false);
   });
 });
 
@@ -280,6 +593,58 @@ describe("ModelTree.imagesOf", () => {
     );
     assert.deepEqual(
       tree.imagesOf({ action: "node-renamed", id: "missing", name: "B" }),
+      []
+    );
+  });
+
+  test("returns the blocks a material removal clears", () => {
+    const tree = treeOf(
+      materialFolderAdded("metals"),
+      materialAdded("iron", "metals"),
+      materialAdded("glass"),
+      { action: "node-added", node: { ...blockNode("a"), materialId: "iron" } },
+      { action: "node-added", node: { ...blockNode("b"), materialId: "glass" } }
+    );
+
+    assert.deepEqual(
+      tree.imagesOf({ action: "material-removed", id: "metals" }).map((node) => node.id),
+      ["a"]
+    );
+    assert.deepEqual(
+      tree.imagesOf({ action: "material-removed", id: "metals", keepContents: true }),
+      []
+    );
+    assert.deepEqual(
+      tree.imagesOf({ action: "material-renamed", id: "glass", name: "Glass" }),
+      []
+    );
+  });
+});
+
+describe("ModelTree.materialImagesOf", () => {
+  test("returns the library entries a command changes, as they are before it", () => {
+    const tree = treeOf(
+      materialFolderAdded("metals"),
+      materialAdded("iron", "metals"),
+      materialAdded("glass")
+    );
+
+    assert.deepEqual(tree.materialImagesOf(materialAdded("gold")), []);
+    assert.deepEqual(tree.materialImagesOf(blockAdded("a")), []);
+    assert.deepEqual(
+      tree.materialImagesOf({ action: "material-removed", id: "metals" }),
+      [materialFolder("metals"), material("iron", "metals")]
+    );
+    assert.deepEqual(
+      tree.materialImagesOf({ action: "material-removed", id: "metals", keepContents: true }),
+      [materialFolder("metals"), material("iron", "metals")]
+    );
+    assert.deepEqual(
+      tree.materialImagesOf({ action: "material-changed", id: "glass", surface: { opacity: 0.5 } }),
+      [material("glass")]
+    );
+    assert.deepEqual(
+      tree.materialImagesOf({ action: "material-moved", id: "missing", parentId: null }),
       []
     );
   });

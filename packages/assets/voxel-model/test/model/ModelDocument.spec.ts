@@ -9,6 +9,11 @@ import {
 } from "#src/model/ModelDocument.ts";
 import { createBlockTransform } from "#src/model/blockTransform.ts";
 import { createBlockUv } from "#src/model/blockUv.ts";
+import {
+  createMaterialSurface,
+  holdsSurfacePatch,
+  materialSurfaceChanges
+} from "#src/model/materialSurface.ts";
 import type { UVLayoutData } from "#src/network/types.ts";
 
 // CONSTANTS
@@ -145,7 +150,8 @@ describe("ModelDocument", () => {
           parentId: null,
           name: "Limbs"
         }
-      ]
+      ],
+      materials: []
     });
 
     assert.equal(resets, 1);
@@ -180,5 +186,73 @@ describe("ModelDocument", () => {
       changes.map((change) => change.command.action),
       ["node-added", "node-added", "node-uv-changed"]
     );
+  });
+
+  test("adds a material with the default surface and blocks pointing to it", () => {
+    const document = new ModelDocument();
+
+    const glass = document.addMaterial({ name: "Glass" })!;
+    const plain = document.addBlock({ name: "Plain" })!;
+    const window = document.addBlock({ name: "Window", materialId: glass })!;
+
+    assert.deepEqual(document.tree.materials.material(glass)?.surface, createMaterialSurface());
+    assert.equal(document.tree.block(plain)?.materialId, undefined);
+    assert.equal(document.tree.block(window)?.materialId, glass);
+    assert.equal(document.addBlock({ name: "Ghost", materialId: "missing" }), null);
+  });
+
+  test("keeps a name another material already has, told apart by its id", () => {
+    const document = new ModelDocument();
+    const first = document.addMaterial({ name: "Glow" })!;
+    const second = document.addMaterial({
+      name: "Glow",
+      surface: createMaterialSurface({ emissive: "#ff0000" })
+    })!;
+
+    assert.notEqual(first, second);
+    assert.deepEqual(
+      [...document.tree.materials.values()].map(({ name }) => name),
+      ["Glow", "Glow"]
+    );
+  });
+
+  test("tells whether a surface already holds every field of a patch", () => {
+    const surface = createMaterialSurface({ opacity: 0.5 });
+
+    assert.equal(holdsSurfacePatch(surface, { opacity: 0.5 }), true);
+    assert.equal(holdsSurfacePatch(surface, { opacity: 0.5, roughness: 0.2 }), false);
+  });
+
+  test("lists the surface fields that changed", () => {
+    const surface = createMaterialSurface();
+
+    assert.deepEqual(materialSurfaceChanges(surface, { ...surface }), {});
+    assert.deepEqual(
+      materialSurfaceChanges(surface, { ...surface, opacity: 0.5, emissive: "#ff0000" }),
+      { opacity: 0.5, emissive: "#ff0000" }
+    );
+  });
+
+  test("sorts materials into folders, moves them and deletes a folder with its content", () => {
+    const document = new ModelDocument();
+    const metals = document.addMaterialFolder({ name: "Metals" })!;
+    const glass = document.addMaterial({ name: "Glass" })!;
+    const steel = document.addMaterial({ name: "Steel", parentId: metals })!;
+    const gold = document.addMaterial({ name: "Gold", parentId: metals, beforeId: steel })!;
+    const bolt = document.addBlock({ name: "Bolt", materialId: steel })!;
+
+    assert.equal(document.moveMaterial(glass, null, metals), true);
+    assert.equal(document.moveMaterial(metals, metals), false);
+    assert.equal(document.addMaterial({ name: "Lost", parentId: glass }), null);
+    assert.deepEqual(
+      [...document.tree.materials.values()].map(({ name }) => name),
+      ["Glass", "Metals", "Gold", "Steel"]
+    );
+
+    document.removeMaterial(metals);
+
+    assert.deepEqual([...document.tree.materials.values()].map(({ id }) => id), [glass]);
+    assert.equal(document.tree.materials.has(gold), false);
+    assert.equal(document.tree.block(bolt)?.materialId, undefined);
   });
 });
