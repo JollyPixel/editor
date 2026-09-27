@@ -77,7 +77,7 @@ describe("AssetSource", () => {
   });
 
   describe("serialization", () => {
-    test("round-trips through toString and JSON", () => {
+    test("serializes as the full source", () => {
       const source = new AssetSource("maps/world.voxelmap.json");
 
       assert.strictEqual(String(source), "maps/world.voxelmap.json");

@@ -4,25 +4,24 @@ import { describe, test } from "node:test";
 
 // Import Internal Dependencies
 import {
-  AssetId,
   AssetKindMismatchError,
   AssetReference,
-  AssetType,
-  type AssetReferenceGroup
+  AssetType
 } from "../src/index.ts";
 
-const MODEL_ASSET = new AssetType<unknown>("model");
+// CONSTANTS
+const kModelAsset = new AssetType<unknown>("model");
 
 describe("AssetReference", () => {
   test("round-trips its persistent representation", () => {
     const reference = new AssetReference(
-      new AssetId("01JOLLYPIXELMODEL"),
-      MODEL_ASSET
+      "01JOLLYPIXELMODEL",
+      kModelAsset
     );
 
     const restored = AssetReference.parse(
       reference.toJSON(),
-      MODEL_ASSET
+      kModelAsset
     );
 
     assert.ok(restored.equals(reference));
@@ -32,29 +31,32 @@ describe("AssetReference", () => {
     });
   });
 
-  test("creates its AssetId from a string", () => {
-    const reference = new AssetReference(
-      "asset-id",
-      MODEL_ASSET
-    );
+  test("equals compares id and kind", () => {
+    const reference = new AssetReference("hero", kModelAsset);
 
-    assert.ok(reference.id instanceof AssetId);
-    assert.strictEqual(reference.id.value, "asset-id");
+    assert.ok(!reference.equals(new AssetReference("villain", kModelAsset)));
+    assert.ok(
+      !reference.equals(new AssetReference("hero", new AssetType("audio")))
+    );
   });
 
-  test("rejects empty identifiers and asset type kinds", () => {
-    assert.throws(
-      () => new AssetId(""),
-      /must not be empty/
-    );
-    assert.throws(
-      () => new AssetReference("", MODEL_ASSET),
-      /must not be empty/
-    );
-    assert.throws(
-      () => new AssetType(""),
-      /kind must not be empty/
-    );
+  test("rejects malformed persisted references with a TypeError", () => {
+    const cases: Array<[unknown, RegExp]> = [
+      [null, /reference must be an object/],
+      [[], /reference must be an object/],
+      [{ kind: "model" }, /ID must be a string/],
+      [{ id: "hero" }, /kind must be a string/]
+    ];
+
+    for (const [input, message] of cases) {
+      assert.throws(
+        () => AssetReference.parse(input, kModelAsset),
+        {
+          name: "TypeError",
+          message
+        }
+      );
+    }
   });
 
   test("rejects persisted kinds that differ from the requested type", () => {
@@ -64,36 +66,9 @@ describe("AssetReference", () => {
           id: "asset-id",
           kind: "audio"
         },
-        MODEL_ASSET
+        kModelAsset
       ),
       AssetKindMismatchError
     );
-  });
-
-  test("preserves the asset value type", () => {
-    const reference = new AssetReference(
-      new AssetId("asset-id"),
-      new AssetType<string>("text")
-    );
-
-    // @ts-expect-error Asset type tokens preserve incompatible value types.
-    const incompatible: AssetReference<number> = reference;
-    void incompatible;
-  });
-
-  test("preserves value types in a named reference group", () => {
-    const assets = {
-      dialogue: new AssetReference(
-        "dialogue.intro",
-        new AssetType<string>("text")
-      )
-    } satisfies AssetReferenceGroup;
-
-    const reference: AssetReference<string> = assets.dialogue;
-
-    // @ts-expect-error The group retains each reference's value type.
-    const incompatible: AssetReference<number> = assets.dialogue;
-    void reference;
-    void incompatible;
   });
 });

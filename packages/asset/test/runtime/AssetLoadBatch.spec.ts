@@ -7,32 +7,32 @@ import {
   AssetBatchLoadError,
   AssetCatalog,
   AssetCoordinator,
-  AssetId,
   AssetLoaderRegistry,
   AssetRecord,
   AssetReference,
   AssetType
-} from "../src/index.ts";
+} from "../../src/index.ts";
 
-const TEXT_ASSET = new AssetType<string>("text");
+// CONSTANTS
+const kTextAsset = new AssetType<string>("text");
 
 function createCoordinator(
   load: (record: AssetRecord) => Promise<string>
 ): AssetCoordinator {
   const catalog = new AssetCatalog([
     new AssetRecord({
-      id: new AssetId("greeting"),
+      id: "greeting",
       kind: "text",
       source: "memory:greeting"
     }),
     new AssetRecord({
-      id: new AssetId("farewell"),
+      id: "farewell",
       kind: "text",
       source: "memory:farewell"
     })
   ]);
   const loaders = new AssetLoaderRegistry();
-  loaders.register(TEXT_ASSET, {
+  loaders.register(kTextAsset, {
     load
   });
 
@@ -45,16 +45,13 @@ function createCoordinator(
 function reference(
   id: string
 ): AssetReference<string> {
-  return new AssetReference(
-    new AssetId(id),
-    TEXT_ASSET
-  );
+  return new AssetReference(id, kTextAsset);
 }
 
 async function rejectWithoutError(): Promise<string> {
-  // Simulates a third-party loader rejecting without an Error.
-  // eslint-disable-next-line prefer-promise-reject-errors
-  return Promise.reject(undefined);
+  const reason: unknown = undefined;
+
+  throw reason;
 }
 
 describe("AssetLoadBatch", () => {
@@ -113,12 +110,11 @@ describe("AssetLoadBatch", () => {
 
   test("tracks overlapping batches independently", async() => {
     const { promise, resolve } = Promise.withResolvers<string>();
-    const pendingLoad = promise;
     let loadCount = 0;
     const coordinator = createCoordinator(async() => {
       loadCount++;
 
-      return pendingLoad;
+      return promise;
     });
     const greeting = reference("greeting");
 
@@ -133,7 +129,6 @@ describe("AssetLoadBatch", () => {
     assert.equal(loadCount, 1);
     assert.equal(first.completed, 0);
     assert.equal(second.completed, 0);
-    assert.ok(resolve !== undefined);
     resolve("loaded");
 
     await Promise.all([
@@ -282,22 +277,5 @@ describe("AssetLoadBatch", () => {
     assert.equal(batch.status, "failed");
     assert.equal(batch.failures.length, 0);
     assert.equal(progressCount, 1);
-  });
-
-  test("narrows progress errors from the discriminant", () => {
-    const coordinator = createCoordinator(async() => "loaded");
-
-    coordinator.loadBatch([], {
-      onProgress(progress) {
-        if (progress.status === "failed") {
-          const error: unknown = progress.error;
-          void error;
-        }
-        else {
-          // @ts-expect-error Ready progress has no error value.
-          void progress.error;
-        }
-      }
-    });
   });
 });

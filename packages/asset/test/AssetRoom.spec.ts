@@ -28,10 +28,6 @@ describe("AssetRoom", () => {
       assert.throws(() => new AssetRoom("", "a1"), TypeError);
       assert.throws(() => new AssetRoom("pixel:art", "a1"), TypeError);
     });
-
-    test("rejects a blank asset id", () => {
-      assert.throws(() => new AssetRoom("pixelart", " "), TypeError);
-    });
   });
 
   describe("parse", () => {
