@@ -50,8 +50,8 @@ runtime token for that kind and the value returned by its loader. Sharing one
 token object lets TypeScript carry `TValue` from a reference to its loader and
 handle.
 
-Catalog resolution compares the persisted kinds. Loader and store lookup also
-check token identity, which catches two incompatible runtime definitions that
+Catalog resolution compares the persisted kinds. Loader lookup and loaded
+values also check token identity, which catches two incompatible runtime definitions that
 reuse the same kind string.
 
 ## Manifest boundary

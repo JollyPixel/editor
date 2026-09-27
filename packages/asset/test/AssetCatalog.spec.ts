@@ -6,24 +6,16 @@ import { describe, test } from "node:test";
 import {
   AssetAlreadyExistsError,
   AssetCatalog,
-  AssetFetchError,
   AssetId,
   AssetKindMismatchError,
-  AssetKindNotFoundError,
   AssetNotFoundError,
   AssetRecord,
   AssetReference,
   AssetType,
-  CATALOG_URL_PATH,
   UnsupportedAssetManifestError
 } from "../src/index.ts";
-import {
-  mockOrigin,
-  MOCK_ORIGIN
-} from "./helpers/mockOrigin.ts";
 
 // CONSTANTS
-const kCatalogUrl = `${MOCK_ORIGIN}${CATALOG_URL_PATH}`;
 const kHeroRecord = {
   id: "hero-model",
   kind: "model",
@@ -64,34 +56,37 @@ describe("AssetCatalog", () => {
     assert.equal(record.revision, "sha256:abc");
   });
 
-  test("rejects malformed manifests with a TypeError", () => {
-    const cases: Array<[unknown, RegExp]> = [
-      [null, /manifest must be an object/],
-      [[], /manifest must be an object/],
-      [{ assets: [] }, /version must be a number/],
-      [{ version: "1", assets: [] }, /version must be a number/],
-      [{ version: 1 }, /assets must be an array/],
-      [
-        {
-          version: 1,
-          assets: [{ id: "hero-model", kind: "model" }]
-        },
-        /source must be a string/
-      ]
+  test("rejects malformed manifests with a ZodError", () => {
+    const cases: unknown[] = [
+      null,
+      [],
+      { assets: [] },
+      { version: "1", assets: [] },
+      { version: 1 },
+      {
+        version: 1,
+        assets: [{ id: "hero-model", kind: "model" }]
+      }
     ];
 
-    for (const [input, message] of cases) {
+    for (const input of cases) {
       assert.throws(
         () => AssetCatalog.parse(input),
-        {
-          name: "TypeError",
-          message
-        }
+        { name: "ZodError" }
       );
     }
   });
 
-  test("rejects unsupported manifest versions", () => {
+  test("rejects unsupported versions before reading assets", () => {
+    assert.throws(
+      () => AssetCatalog.parse({
+        version: 2
+      }),
+      {
+        name: "UnsupportedAssetManifestError",
+        version: 2
+      }
+    );
     assert.throws(
       () => AssetCatalog.parse({
         version: 2,
@@ -106,7 +101,12 @@ describe("AssetCatalog", () => {
 
     assert.throws(
       () => catalog.add(heroRecord()),
-      AssetAlreadyExistsError
+      (error: unknown) => {
+        assert.ok(error instanceof AssetAlreadyExistsError);
+        assert.equal(error.id.value, "hero-model");
+
+        return true;
+      }
     );
   });
 
@@ -141,18 +141,41 @@ describe("AssetCatalog", () => {
 
     assert.throws(
       () => catalog.resolve(reference),
-      AssetKindMismatchError
+      (error: unknown) => {
+        assert.ok(error instanceof AssetKindMismatchError);
+        assert.equal(error.id.value, "hero-model");
+        assert.equal(error.expectedKind, "audio");
+        assert.equal(error.actualKind, "model");
+
+        return true;
+      }
     );
   });
 
-  test("updates a source without changing its stable identifier", () => {
+  test("set inserts a new record or replaces the one with its ID", () => {
+    const catalog = new AssetCatalog();
+    const moved = heroRecord("project:/characters/hero.glb");
+
+    catalog.set(heroRecord());
+    catalog.set(moved);
+
+    assert.equal(catalog.size, 1);
+    assert.equal(catalog.get("hero-model"), moved);
+  });
+
+  test("find returns undefined where get throws", () => {
     const catalog = new AssetCatalog([heroRecord()]);
 
-    catalog.replace(heroRecord("project:/characters/hero.glb"));
+    assert.equal(catalog.find("hero-model")?.kind, "model");
+    assert.equal(catalog.find("villain"), undefined);
+    assert.throws(
+      () => catalog.get("villain"),
+      (error: unknown) => {
+        assert.ok(error instanceof AssetNotFoundError);
+        assert.equal(error.id.value, "villain");
 
-    assert.equal(
-      catalog.get(new AssetId("hero-model")).source,
-      "project:/characters/hero.glb"
+        return true;
+      }
     );
   });
 
@@ -160,8 +183,8 @@ describe("AssetCatalog", () => {
     const record = heroRecord();
     const catalog = new AssetCatalog([record]);
 
-    assert.equal(catalog.remove(record.id), record);
-    assert.equal(catalog.has(record.id), false);
+    assert.equal(catalog.remove("hero-model"), record);
+    assert.equal(catalog.has("hero-model"), false);
     assert.throws(
       () => catalog.get(record.id),
       AssetNotFoundError
@@ -208,119 +231,5 @@ describe("AssetCatalog kind lookup", () => {
     assert.equal(iterator.next().value?.id.value, "asset-0");
     catalog.remove(new AssetId("asset-1"));
     assert.equal(iterator.next().done, true);
-  });
-
-  test("firstOfKind returns the first matching record", () => {
-    const catalog = catalogOf("texture", "model", "model");
-
-    assert.equal(
-      catalog.firstOfKind("model").id.value,
-      "asset-1"
-    );
-  });
-
-  test("firstOfKind throws when no record matches", () => {
-    assert.throws(
-      () => catalogOf("model").firstOfKind("texture"),
-      (error: AssetKindNotFoundError) => {
-        assert.ok(error instanceof AssetKindNotFoundError);
-        assert.equal(error.name, "AssetKindNotFoundError");
-        assert.equal(
-          error.message,
-          "The catalog holds no \"texture\" asset."
-        );
-        assert.equal(error.kind, "texture");
-
-        return true;
-      }
-    );
-  });
-});
-
-describe("AssetCatalog.fetch", () => {
-  const origin = mockOrigin();
-
-  test("parses the manifest served by the catalog endpoint", async() => {
-    origin.intercept(CATALOG_URL_PATH).reply(200, kManifest);
-
-    const catalog = await AssetCatalog.fetch(kCatalogUrl);
-
-    assert.deepEqual(catalog.toJSON(), kManifest);
-  });
-
-  test("requests CATALOG_URL_PATH when no url is given", async(t) => {
-    const fetchMock = t.mock.method(
-      globalThis,
-      "fetch",
-      async() => Response.json(kManifest)
-    );
-
-    await AssetCatalog.fetch();
-
-    assert.deepEqual(
-      fetchMock.mock.calls.map((call) => call.arguments),
-      [[CATALOG_URL_PATH]]
-    );
-  });
-
-  test("throws AssetFetchError on a non-2xx status", async() => {
-    origin.intercept(CATALOG_URL_PATH).reply(404, "");
-
-    await assert.rejects(
-      () => AssetCatalog.fetch(kCatalogUrl),
-      (error: AssetFetchError) => {
-        assert.ok(error instanceof AssetFetchError);
-        assert.equal(
-          error.message,
-          `Request to "${kCatalogUrl}" responded with 404.`
-        );
-        assert.equal(error.status, 404);
-        assert.equal(error.url, kCatalogUrl);
-        assert.equal(error.record, null);
-
-        return true;
-      }
-    );
-  });
-
-  test("propagates JSON-decoding errors", async() => {
-    origin.intercept(CATALOG_URL_PATH).reply(200, "not json", {
-      headers: {
-        "content-type": "application/json"
-      }
-    });
-
-    await assert.rejects(
-      () => AssetCatalog.fetch(kCatalogUrl),
-      SyntaxError
-    );
-  });
-
-  test("propagates manifest validation errors", async() => {
-    origin.intercept(CATALOG_URL_PATH).reply(200, {
-      version: 1
-    });
-
-    await assert.rejects(
-      () => AssetCatalog.fetch(kCatalogUrl),
-      {
-        name: "TypeError",
-        message: "Asset manifest assets must be an array."
-      }
-    );
-  });
-
-  test("propagates transport failures", async() => {
-    origin
-      .intercept(CATALOG_URL_PATH)
-      .replyWithError(new Error("socket hang up"));
-
-    await assert.rejects(
-      () => AssetCatalog.fetch(kCatalogUrl),
-      {
-        name: "TypeError",
-        message: "fetch failed"
-      }
-    );
   });
 });

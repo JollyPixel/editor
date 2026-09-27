@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { AssetCatalog } from "../AssetCatalog.ts";
-import type { AssetHandle } from "./AssetHandle.ts";
+import { AssetHandle } from "./AssetHandle.ts";
+import { AssetId } from "../AssetId.ts";
 import {
   type AssetLoadBatch,
   type AssetLoadBatchOptions,
@@ -11,14 +12,11 @@ import type { AssetLoadContext } from "./AssetLoader.ts";
 import type { AssetLoaderRegistry } from "./AssetLoaderRegistry.ts";
 import type { AssetRecord } from "../AssetRecord.ts";
 import type { AssetReference } from "../AssetReference.ts";
-import {
-  AssetStore
-} from "./AssetStore.ts";
+import { AssetStore } from "./AssetStore.ts";
 
 export interface AssetCoordinatorOptions {
   catalog: AssetCatalog;
   loaders: AssetLoaderRegistry;
-  store?: AssetStore;
 }
 
 /**
@@ -27,14 +25,14 @@ export interface AssetCoordinatorOptions {
 export class AssetCoordinator {
   readonly catalog: AssetCatalog;
   readonly loaders: AssetLoaderRegistry;
-  readonly store: AssetStore;
+
+  #store = new AssetStore();
 
   constructor(
     options: AssetCoordinatorOptions
   ) {
     this.catalog = options.catalog;
     this.loaders = options.loaders;
-    this.store = options.store ?? new AssetStore();
   }
 
   request<TValue>(
@@ -42,7 +40,10 @@ export class AssetCoordinator {
   ): AssetHandle<TValue> {
     this.catalog.resolve(reference);
 
-    return this.store.request(reference);
+    return new AssetHandle(
+      reference,
+      this.#store
+    );
   }
 
   get<TValue>(
@@ -50,19 +51,19 @@ export class AssetCoordinator {
   ): TValue {
     this.catalog.resolve(reference);
 
-    return this.store.get(reference);
+    return this.#store.get(reference);
   }
 
   async load<TValue>(
     reference: AssetReference<TValue>,
-    options: AssetLoadContext = {}
+    context: AssetLoadContext = {}
   ): Promise<TValue> {
     const record = this.catalog.resolve(reference);
 
-    return this.#loadResolved(
+    return this.#load(
       reference,
       record,
-      options
+      context
     );
   }
 
@@ -70,46 +71,54 @@ export class AssetCoordinator {
     references: Iterable<AssetReference<unknown>>,
     options: AssetLoadBatchOptions = {}
   ): AssetLoadBatch {
-    const dependencies = new Map<string, AssetLoadBatchTask>();
+    const context: AssetLoadContext = {
+      signal: options.signal
+    };
+    const tasks = new Map<string, AssetLoadBatchTask>();
 
     for (const reference of references) {
       const record = this.catalog.resolve(reference);
-      this.store.request(reference);
+      const ready = this.#store.statusOf(
+        reference
+      ) === "ready";
 
-      if (!dependencies.has(reference.id.value)) {
-        const task = {
+      if (!tasks.has(record.id.value)) {
+        tasks.set(record.id.value, {
           record,
-          ready: this.store.statusOf(reference) === "ready",
+          ready,
           load: async() => {
-            await this.#loadResolved(
+            await this.#load(
               reference,
               record,
-              {}
+              context
             );
           }
-        };
-
-        dependencies.set(
-          reference.id.value,
-          task
-        );
+        });
       }
     }
 
     return startAssetLoadBatch(
-      dependencies.values(),
+      tasks.values(),
       options
     );
   }
 
-  async #loadResolved<TValue>(
+  evict(
+    id: AssetId | string
+  ): unknown | undefined {
+    return this.#store.evict(
+      AssetId.from(id)
+    );
+  }
+
+  async #load<TValue>(
     reference: AssetReference<TValue>,
     record: AssetRecord,
     context: AssetLoadContext
   ): Promise<TValue> {
     const loader = this.loaders.get(reference.type);
 
-    return this.store.load(
+    return this.#store.load(
       reference,
       () => loader.load(record, context)
     );

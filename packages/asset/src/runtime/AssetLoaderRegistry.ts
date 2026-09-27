@@ -18,7 +18,10 @@ interface AssetLoaderEntry {
  * Maps each persistent asset kind to its runtime loader.
  */
 export class AssetLoaderRegistry {
-  #loaders = new Map<string, AssetLoaderEntry>();
+  #loaders = new Map<
+    string,
+    AssetLoaderEntry
+  >();
 
   get size(): number {
     return this.#loaders.size;
@@ -48,7 +51,9 @@ export class AssetLoaderRegistry {
   has(
     type: AssetType<unknown>
   ): boolean {
-    return this.#loaders.get(type.kind)?.type === type;
+    return this.#loaders.get(
+      type.kind
+    )?.type === type;
   }
 
   get<TValue>(

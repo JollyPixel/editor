@@ -13,7 +13,8 @@ class AssetType<TValue = unknown> {
 }
 ```
 
-The constructor throws `TypeError` for an empty or whitespace-only kind.
+The constructor throws `TypeError` for an empty or whitespace-only kind, or a
+kind containing a colon.
 
 Define and share one token for each kind:
 
@@ -26,6 +27,7 @@ export const MODEL_ASSET = new AssetType<Model>("model");
 ```
 
 The kind string is persisted. The token object is a runtime contract used by
-`AssetReference`, `AssetLoaderRegistry`, and `AssetStore`. Two `AssetType`
-instances with the same kind are still different tokens; using both in one
-runtime scope throws `AssetTypeMismatchError`.
+`AssetReference`, `AssetLoaderRegistry`, and `AssetCoordinator`. Two
+`AssetType` instances with the same kind are still different tokens. Loading
+through a token other than the registered one, or reading a loaded asset
+through another token, throws `AssetTypeMismatchError`.

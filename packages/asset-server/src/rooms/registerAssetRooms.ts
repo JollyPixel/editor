@@ -87,10 +87,7 @@ export function registerAssetRooms(
     }
 
     const assetId = id.value;
-    if (
-      !catalog.catalog.has(id) ||
-      catalog.catalog.get(id).kind !== kind
-    ) {
+    if (catalog.catalog.find(id)?.kind !== kind) {
       return refuse("unknown asset");
     }
 

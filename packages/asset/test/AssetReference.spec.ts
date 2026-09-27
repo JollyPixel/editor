@@ -40,21 +40,18 @@ describe("AssetReference", () => {
     );
   });
 
-  test("rejects malformed persisted references with a TypeError", () => {
-    const cases: Array<[unknown, RegExp]> = [
-      [null, /reference must be an object/],
-      [[], /reference must be an object/],
-      [{ kind: "model" }, /ID must be a string/],
-      [{ id: "hero" }, /kind must be a string/]
+  test("rejects malformed persisted references with a ZodError", () => {
+    const cases: unknown[] = [
+      null,
+      [],
+      { kind: "model" },
+      { id: "hero" }
     ];
 
-    for (const [input, message] of cases) {
+    for (const input of cases) {
       assert.throws(
         () => AssetReference.parse(input, kModelAsset),
-        {
-          name: "TypeError",
-          message
-        }
+        { name: "ZodError" }
       );
     }
   });

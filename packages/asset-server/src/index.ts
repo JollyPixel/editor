@@ -5,6 +5,7 @@ export * from "./catalog/index.ts";
 export * from "./archive/index.ts";
 export * from "./rooms/index.ts";
 export * from "./createAssetBackend.ts";
+export * from "./launch.ts";
 export * from "./logger.ts";
 export * from "./workspace/seedAssetSource.ts";
 export {

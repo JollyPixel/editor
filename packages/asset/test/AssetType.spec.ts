@@ -6,13 +6,15 @@ import { describe, test } from "node:test";
 import { AssetType } from "../src/index.ts";
 
 describe("AssetType", () => {
-  test("rejects a blank kind", () => {
-    assert.throws(
-      () => new AssetType(" "),
-      {
-        name: "TypeError",
-        message: /kind must not be empty/
-      }
-    );
+  test("rejects a blank kind or a kind with a colon", () => {
+    for (const kind of [" ", "pixel:art"]) {
+      assert.throws(
+        () => new AssetType(kind),
+        {
+          name: "TypeError",
+          message: /kind must be non-empty without a colon/
+        }
+      );
+    }
   });
 });

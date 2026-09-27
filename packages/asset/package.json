@@ -40,7 +40,7 @@
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
-  "devDependencies": {
-    "undici": "8.10.2"
+  "dependencies": {
+    "zod": "4.6.5"
   }
 }

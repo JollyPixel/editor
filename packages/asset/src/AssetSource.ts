@@ -2,7 +2,9 @@ export class AssetSource {
   static from(
     source: string | AssetSource
   ): AssetSource {
-    return typeof source === "string" ? new AssetSource(source) : source;
+    return typeof source === "string"
+      ? new AssetSource(source)
+      : source;
   }
 
   readonly directory: string;

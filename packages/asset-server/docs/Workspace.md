@@ -155,9 +155,8 @@ const handler = createAssetStaticHandler({
 [`kinds.contentTypes()`](./AssetKinds.md#registry) collects what each kind
 declares. The handler merges it over its `DEFAULT_CONTENT_TYPES`.
 
-`@jolly-pixel/asset` exports `ASSET_URL_PREFIX`, `CATALOG_URL_PATH` and
-`assetSourceUrl(source)` so the browser builds the same URLs without repeating
-the routes.
+`@jolly-pixel/asset` exports `ASSET_URL_PREFIX` and `CATALOG_URL_PATH` so
+the browser uses the same routes without repeating them.
 
 ## Vite plugin
 
@@ -215,7 +214,7 @@ createAssetWorkspacePlugin({
 It receives the requested page URL and the current `AssetCatalog`, and returns
 an asset ID or `undefined`. The ID is written into the page head as
 `<script type="application/json" id="jolly-launch">{"target":"<id>"}</script>`,
-where `LAUNCH_ELEMENT_ID` from `@jolly-pixel/asset` names the element. Nothing
+where the exported `LAUNCH_ELEMENT_ID` names the element. Nothing
 is injected for `undefined`.
 
 Use `onReady`, or pass your own `server`, when the dev server also hosts rooms

@@ -69,7 +69,7 @@ await batch.done;
 const model = hero.get();
 ```
 
-Concurrent batches share the store's in-flight promise. Each batch still owns
+Concurrent batches share the coordinator's in-flight promise. Each batch still owns
 its progress and failure state.
 
 For one explicit dynamic asset, `load()` returns the value and accepts an
@@ -82,20 +82,20 @@ const model = await assets.load(heroReference, {
 });
 ```
 
-The loader decides how to apply the signal. `loadBatch()` has no cancellation
-option.
+The loader decides how to apply the signal. `loadBatch()` accepts the same
+`signal` option and passes it to every loader it starts.
 
 ## Replace loaded content
 
-Replacing a catalog record does not change a value already held by the store.
-Evict it explicitly and dispose the returned platform resource when required:
+Replacing a catalog record does not change a value already loaded by the
+coordinator. Evict it explicitly and dispose the returned platform resource
+when required:
 
 ```ts
-catalog.replace(updatedRecord);
+catalog.set(updatedRecord);
 
-const value = assets.store.evict(updatedRecord.id);
+const value = assets.evict(updatedRecord.id);
 disposeModel(value);
 ```
 
-`evict()` and `clear()` remove store entries. They do not abort in-flight I/O
-or dispose values.
+`evict()` does not abort in-flight I/O or dispose values.

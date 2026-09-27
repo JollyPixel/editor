@@ -109,9 +109,7 @@ export class CatalogProjection extends Emitter<
   record(
     assetId: string
   ): AssetRecord | undefined {
-    const id = new AssetId(assetId);
-
-    return this.#catalog.has(id) ? this.#catalog.get(id) : undefined;
+    return this.#catalog.find(assetId);
   }
 
   snapshot(): AssetManifestData {
@@ -188,12 +186,7 @@ export class CatalogProjection extends Emitter<
     record: AssetRecord,
     eventType: AssetEventType
   ): CatalogChange {
-    if (this.#catalog.has(record.id)) {
-      this.#catalog.replace(record);
-    }
-    else {
-      this.#catalog.add(record);
-    }
+    this.#catalog.set(record);
 
     const assetId = record.id.value;
     const change: CatalogChange = {

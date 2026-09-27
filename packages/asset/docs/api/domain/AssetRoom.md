@@ -20,11 +20,12 @@ class AssetRoom {
 }
 ```
 
-The constructor throws a `TypeError` when `kind` is empty or contains a colon.
+The constructor throws a `TypeError` when `kind` is blank or contains a colon.
 `assetId` is wrapped with `AssetId.from()`, which rejects a blank identifier.
 
 `parse()` splits at the first colon, so later colons stay in the asset ID. It
-returns `null` when the separator, the kind, or the asset ID is missing.
+returns `null` when the separator is missing or when the constructor would
+reject either half.
 
 `equals()` compares kind and asset ID. `toJSON()` and `toString()` both return
 the room name.

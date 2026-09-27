@@ -3,50 +3,11 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 // Import Internal Dependencies
+import { AssetBatchLoadError } from "../../src/index.ts";
 import {
-  AssetBatchLoadError,
-  AssetCatalog,
-  AssetCoordinator,
-  AssetLoaderRegistry,
-  AssetRecord,
-  AssetReference,
-  AssetType
-} from "../../src/index.ts";
-
-// CONSTANTS
-const kTextAsset = new AssetType<string>("text");
-
-function createCoordinator(
-  load: (record: AssetRecord) => Promise<string>
-): AssetCoordinator {
-  const catalog = new AssetCatalog([
-    new AssetRecord({
-      id: "greeting",
-      kind: "text",
-      source: "memory:greeting"
-    }),
-    new AssetRecord({
-      id: "farewell",
-      kind: "text",
-      source: "memory:farewell"
-    })
-  ]);
-  const loaders = new AssetLoaderRegistry();
-  loaders.register(kTextAsset, {
-    load
-  });
-
-  return new AssetCoordinator({
-    catalog,
-    loaders
-  });
-}
-
-function reference(
-  id: string
-): AssetReference<string> {
-  return new AssetReference(id, kTextAsset);
-}
+  createCoordinator,
+  textReference as reference
+} from "../helpers/coordinator.ts";
 
 async function rejectWithoutError(): Promise<string> {
   const reason: unknown = undefined;
@@ -255,6 +216,23 @@ describe("AssetLoadBatch", () => {
       }
     );
     assert.equal(batch.status, "failed");
+  });
+
+  test("forwards its abort signal to every loader", async() => {
+    const controller = new AbortController();
+    const received: Array<AbortSignal | undefined> = [];
+    const coordinator = createCoordinator(async(record, context) => {
+      received.push(context.signal);
+
+      return record.source;
+    });
+
+    await coordinator.loadBatch(
+      [reference("greeting"), reference("farewell")],
+      { signal: controller.signal }
+    ).done;
+
+    assert.deepEqual(received, [controller.signal, controller.signal]);
   });
 
   test("does not report progress callback errors as load failures", async() => {

@@ -9,18 +9,15 @@ All of them extend `Error` and set `name` to the class name.
 |---|---|
 | `AssetAlreadyExistsError` | `AssetCatalog.add()` receives an existing ID |
 | `AssetNotFoundError` | A catalog operation cannot find the requested ID |
-| `AssetKindMismatchError` | A reference's expected kind differs from persisted or stored data |
-| `AssetKindNotFoundError` | `AssetCatalog.firstOfKind()` matches no record |
+| `AssetKindMismatchError` | A reference's expected kind differs from the persisted kind |
 | `UnsupportedAssetManifestError` | `AssetCatalog.parse()` receives a version other than `1` |
-| `AssetFetchError` | `AssetCatalog.fetch()` or `AssetRecord.fetch()` gets a non-2xx status |
 
-`AssetKindNotFoundError.kind` contains the requested kind. `AssetFetchError`
-carries the requested `url`, HTTP `status`, and `record`. Its `record` is
-`null` for catalog requests. Transport errors from the global `fetch`
-propagate unchanged.
+`AssetAlreadyExistsError` and `AssetNotFoundError` carry the `id`.
+`AssetKindMismatchError` carries the `id`, `expectedKind`, and `actualKind`.
+`UnsupportedAssetManifestError` carries the `version`.
 
-Invalid persistence shapes and empty string values throw `TypeError` rather
-than a package-specific error.
+A malformed shape passed to a `parse()` method throws a `ZodError`. Blank
+values, and asset kinds containing a colon, throw `TypeError`.
 
 ## Loader and store configuration
 
@@ -29,9 +26,11 @@ than a package-specific error.
 | `AssetLoaderAlreadyExistsError` | A registry already has a loader for the kind |
 | `AssetLoaderNotFoundError` | A load uses a kind with no registered loader |
 | `AssetTypeMismatchError` | The same kind is used through another `AssetType` token |
-| `AssetNotReadyError` | Synchronous access occurs before an entry is ready |
+| `AssetNotReadyError` | Synchronous access occurs before an asset is ready |
 
-`AssetNotReadyError.status` contains the current `AssetStatus`.
+The loader errors and `AssetTypeMismatchError` carry the `kind`.
+`AssetNotReadyError` carries the `id` and the current `AssetStatus` as
+`status`.
 
 ## Batch failure
 

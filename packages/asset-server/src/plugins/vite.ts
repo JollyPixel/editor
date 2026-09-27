@@ -10,7 +10,6 @@ import {
 } from "@jolly-pixel/asset-source/node";
 import {
   CATALOG_URL_PATH,
-  LAUNCH_ELEMENT_ID,
   type AssetCatalog
 } from "@jolly-pixel/asset";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
@@ -19,6 +18,7 @@ import { WebsocketTransport } from "@jolly-pixel/network/node";
 // Import Internal Dependencies
 import { createCatalogHandler } from "../catalog/httpHandler.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
+import { LAUNCH_ELEMENT_ID } from "../launch.ts";
 import {
   createAssetWorkspace,
   type AssetWorkspace,

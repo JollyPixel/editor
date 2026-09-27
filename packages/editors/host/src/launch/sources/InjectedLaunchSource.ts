@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LAUNCH_ELEMENT_ID } from "@jolly-pixel/asset";
+import { LAUNCH_ELEMENT_ID } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { EditorLaunch } from "../EditorLaunch.ts";
