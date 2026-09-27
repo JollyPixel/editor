@@ -12,7 +12,6 @@ import {
   type AssetEventData,
   type AssetLiveProtocol
 } from "@jolly-pixel/asset-server";
-import { protocolEvents } from "@jolly-pixel/network";
 import {
   decodeVoxelDocument,
   encodeVoxelDocument,
@@ -379,7 +378,7 @@ describe("voxelMapAssetKind", () => {
     const { commands } = voxelMapAssetKind();
 
     assert.strictEqual(commands!.eventType, VOXEL_MAP_COMMAND);
-    assert.deepEqual(protocolEvents(commands!.protocol).toSorted(), [
+    assert.deepEqual(commands!.protocol.events.toSorted(), [
       ...VOXEL_WORLD_COMMAND_ACTIONS,
       "world-replace"
     ].toSorted());

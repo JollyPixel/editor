@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   MessageParser,
-  defineMessageProtocol,
+  MessageProtocol,
   type JSONSchema
 } from "@jolly-pixel/network";
 
@@ -26,19 +26,17 @@ function accepts(
   schema: JSONSchema,
   payload: unknown
 ): boolean {
-  const protocol = defineMessageProtocol({
-    schema: {
-      oneOf: [
-        {
-          type: "object",
-          properties: {
-            action: { const: "check" },
-            value: schema
-          },
-          required: ["action", "value"]
-        }
-      ]
-    }
+  const protocol = new MessageProtocol({
+    oneOf: [
+      {
+        type: "object",
+        properties: {
+          action: { const: "check" },
+          value: schema
+        },
+        required: ["action", "value"]
+      }
+    ]
   });
 
   return new MessageParser(protocol).parse({

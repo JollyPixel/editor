@@ -1,5 +1,24 @@
 // Import Internal Dependencies
-import { defineSchema } from "./schema.ts";
+import { defineSchema } from "../schema.ts";
+
+// CONSTANTS
+const kRoomProperties = {
+  room: {
+    type: "string"
+  }
+} as const;
+const kRoomRequired = [
+  "room",
+  "kind"
+] as const;
+const kOutcomeProperties = {
+  event: {
+    type: "string"
+  },
+  reason: {
+    type: "string"
+  }
+} as const;
 
 export const rightSchema = defineSchema({
   enum: [
@@ -21,8 +40,12 @@ export const roomRightsSchema = defineSchema({
 export const peerSchema = defineSchema({
   type: "object",
   properties: {
-    clientId: { type: "string" },
-    role: { type: "string" },
+    clientId: {
+      type: "string"
+    },
+    role: {
+      type: "string"
+    },
     profile: peerMetadataSchema,
     presence: peerMetadataSchema
   },
@@ -37,39 +60,38 @@ export const peerSchema = defineSchema({
 export const joinEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "join" },
+    ...kRoomProperties,
+    kind: {
+      const: "join"
+    },
     profile: peerMetadataSchema,
     presence: peerMetadataSchema
   },
-  required: [
-    "room",
-    "kind"
-  ]
+  required: kRoomRequired
 });
 
 export const leaveEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "leave" }
+    ...kRoomProperties,
+    kind: {
+      const: "leave"
+    }
   },
-  required: [
-    "room",
-    "kind"
-  ]
+  required: kRoomRequired
 });
 
 export const messageEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "message" },
+    ...kRoomProperties,
+    kind: {
+      const: "message"
+    },
     payload: {}
   },
   required: [
-    "room",
-    "kind",
+    ...kRoomRequired,
     "payload"
   ]
 });
@@ -77,13 +99,14 @@ export const messageEnvelopeSchema = defineSchema({
 export const presenceEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "presence" },
+    ...kRoomProperties,
+    kind: {
+      const: "presence"
+    },
     patch: peerMetadataSchema
   },
   required: [
-    "room",
-    "kind",
+    ...kRoomRequired,
     "patch"
   ]
 });
@@ -91,9 +114,13 @@ export const presenceEnvelopeSchema = defineSchema({
 export const syncEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "sync" },
-    self: { type: "string" },
+    ...kRoomProperties,
+    kind: {
+      const: "sync"
+    },
+    self: {
+      type: "string"
+    },
     rights: roomRightsSchema,
     members: {
       type: "array",
@@ -101,8 +128,7 @@ export const syncEnvelopeSchema = defineSchema({
     }
   },
   required: [
-    "room",
-    "kind",
+    ...kRoomRequired,
     "self",
     "rights",
     "members"
@@ -112,33 +138,31 @@ export const syncEnvelopeSchema = defineSchema({
 export const peerJoinedEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "peer-joined" },
-    clientId: { type: "string" },
-    role: { type: "string" },
-    profile: peerMetadataSchema,
-    presence: peerMetadataSchema
+    ...kRoomProperties,
+    kind: {
+      const: "peer-joined"
+    },
+    ...peerSchema.properties
   },
   required: [
-    "room",
-    "kind",
-    "clientId",
-    "role",
-    "profile",
-    "presence"
+    ...kRoomRequired,
+    ...peerSchema.required
   ]
 });
 
 export const peerLeftEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "peer-left" },
-    clientId: { type: "string" }
+    ...kRoomProperties,
+    kind: {
+      const: "peer-left"
+    },
+    clientId: {
+      type: "string"
+    }
   },
   required: [
-    "room",
-    "kind",
+    ...kRoomRequired,
     "clientId"
   ]
 });
@@ -146,14 +170,17 @@ export const peerLeftEnvelopeSchema = defineSchema({
 export const peerPresenceEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "peer-presence" },
-    clientId: { type: "string" },
+    ...kRoomProperties,
+    kind: {
+      const: "peer-presence"
+    },
+    clientId: {
+      type: "string"
+    },
     patch: peerMetadataSchema
   },
   required: [
-    "room",
-    "kind",
+    ...kRoomRequired,
     "clientId",
     "patch"
   ]
@@ -162,14 +189,14 @@ export const peerPresenceEnvelopeSchema = defineSchema({
 export const deniedEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "denied" },
-    event: { type: "string" },
-    reason: { type: "string" }
+    ...kRoomProperties,
+    kind: {
+      const: "denied"
+    },
+    ...kOutcomeProperties
   },
   required: [
-    "room",
-    "kind",
+    ...kRoomRequired,
     "event",
     "reason"
   ]
@@ -178,14 +205,14 @@ export const deniedEnvelopeSchema = defineSchema({
 export const errorEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
-    room: { type: "string" },
-    kind: { const: "error" },
-    event: { type: "string" },
-    reason: { type: "string" }
+    ...kRoomProperties,
+    kind: {
+      const: "error"
+    },
+    ...kOutcomeProperties
   },
   required: [
-    "room",
-    "kind",
+    ...kRoomRequired,
     "event",
     "reason"
   ]

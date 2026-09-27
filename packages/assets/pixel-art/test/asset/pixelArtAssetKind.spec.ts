@@ -17,7 +17,6 @@ import {
   type AssetLiveProtocol,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
-import { protocolEvents } from "@jolly-pixel/network";
 import {
   encodePixelArtDocument,
   PixelBuffer,
@@ -255,7 +254,7 @@ describe("pixelArtAssetKind", () => {
     const { commands } = pixelArtAssetKind();
 
     assert.strictEqual(commands!.eventType, PIXEL_ART_COMMAND);
-    assert.deepEqual(protocolEvents(commands!.protocol), [
+    assert.deepEqual(commands!.protocol.events, [
       "stroke",
       "resized",
       "texture-replaced",

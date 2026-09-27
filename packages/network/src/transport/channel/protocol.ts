@@ -1,11 +1,52 @@
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
-import type {
-  ClientSocketEvent,
-  ClientSocketEventType
-} from "../../client/Client.ts";
+import type { ClientSocketEvent } from "../ClientSocket.ts";
 
 // CONSTANTS
 export const CHANNEL_TRANSPORT_TAG = "jolly-pixel.channel-transport";
+
+const kAddressShape = {
+  tag: z.literal(CHANNEL_TRANSPORT_TAG),
+  host: z.string(),
+  socket: z.string()
+};
+
+const kSocketEventTypeSchema = z.enum([
+  "open",
+  "message",
+  "error",
+  "close"
+]);
+
+const kSocketEventSchema = z.object({
+  data: z.optional(z.unknown()),
+  code: z.optional(z.number()),
+  reason: z.optional(z.string())
+});
+
+const kChannelTransportMessageSchema = z.discriminatedUnion("type", [
+  z.object({
+    ...kAddressShape,
+    type: z.literal("connect")
+  }),
+  z.object({
+    ...kAddressShape,
+    type: z.literal("send"),
+    data: z.string()
+  }),
+  z.object({
+    ...kAddressShape,
+    type: z.literal("close")
+  }),
+  z.object({
+    ...kAddressShape,
+    type: z.literal("event"),
+    event: kSocketEventTypeSchema,
+    data: kSocketEventSchema
+  })
+]);
 
 type PortListener = (event: { data: unknown; }) => void;
 
@@ -32,29 +73,22 @@ export interface ChannelPort {
   start?(): void;
 }
 
-interface ChannelTransportAddress {
-  tag: typeof CHANNEL_TRANSPORT_TAG;
-  host: string;
-  socket: string;
-}
+export type ChannelTransportMessage = z.infer<
+  typeof kChannelTransportMessageSchema
+>;
 
-export type ChannelTransportMessage =
-  | ChannelTransportAddress & { type: "connect"; }
-  | ChannelTransportAddress & { type: "send"; data: string; }
-  | ChannelTransportAddress & { type: "close"; }
-  | ChannelTransportAddress & {
-    type: "event";
-    event: ClientSocketEventType;
-    data: ClientSocketEvent;
-  };
+export function parseChannelTransportMessage(
+  value: unknown
+): ChannelTransportMessage | undefined {
+  const result = kChannelTransportMessageSchema.safeParse(value);
+
+  return result.success ? result.data : undefined;
+}
 
 export function isChannelTransportMessage(
   value: unknown
 ): value is ChannelTransportMessage {
-  return typeof value === "object" &&
-    value !== null &&
-    "tag" in value &&
-    value.tag === CHANNEL_TRANSPORT_TAG;
+  return kChannelTransportMessageSchema.safeParse(value).success;
 }
 
 export function toPlainEvent(

@@ -48,12 +48,26 @@ Use `AnyExtension` (`Extension<unknown>`) wherever you need to hold an extension
 ## Message protocols
 
 ```ts
-interface MessageProtocol {
-  readonly schema: JSONSchema;
+class MessageProtocol<TSchema extends JSONSchema = JSONSchema> {
+  static readonly EMPTY: MessageProtocol;
+
+  readonly schema: TSchema;
+  get variants(): readonly MessageVariant[];
+  get events(): readonly string[];
+
+  constructor(schema: TSchema, options?: MessageProtocolOptions);
+}
+
+interface MessageProtocolOptions {
   /**
    * @default "action"
    */
-  readonly discriminator?: string;
+  discriminator?: string;
+}
+
+interface MessageVariant {
+  readonly event: string;
+  readonly schema: JSONSchema;
 }
 
 interface MessageProtocols {
@@ -62,38 +76,36 @@ interface MessageProtocols {
 }
 ```
 
-A protocol's schema is a union (`oneOf` or `anyOf`) whose variants each name one event. A variant names its event with a `const` on the discriminator property, or with an explicit `title` when the name can't be read off a single property:
+A protocol's schema is a union (`oneOf` or `anyOf`) whose variants each name one event. A lone schema counts as a single variant. A variant names its event with a `const` on the discriminator property, or with an explicit `title` when the name can't be read off a single property:
 
 ```ts
-const voxelCommands = defineMessageProtocol({
-  schema: defineSchema({
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          action: { const: "voxel-set" },
-          layerName: { type: "string" }
-        },
-        required: ["action", "layerName"]
+const voxelCommands = new MessageProtocol({
+  oneOf: [
+    {
+      type: "object",
+      properties: {
+        action: { const: "voxel-set" },
+        layerName: { type: "string" }
       },
-      {
-        type: "object",
-        properties: { action: { const: "voxel-removed" } },
-        required: ["action"]
-      }
-    ]
-  })
+      required: ["action", "layerName"]
+    },
+    {
+      type: "object",
+      properties: { action: { const: "voxel-removed" } },
+      required: ["action"]
+    }
+  ]
 });
 
 type VoxelCommand = InferMessage<typeof voxelCommands>;
 ```
 
-`InferMessage` derives the TypeScript union from the schema, so `Extension<VoxelCommand>` receives a message that is already narrowed by the time `onMessage` runs. `protocolEvents(protocol)` returns the event names a protocol declares, which is what [rights](./Rights.md) rules match against. A variant that names no event throws `InvalidMessageProtocolError` when the room is built, not on the first message.
+`InferMessage` derives the TypeScript union from the schema, so `Extension<VoxelCommand>` receives a message that is already narrowed by the time `onMessage` runs. `events` lists the event names the protocol declares, which is what [rights](./Rights.md) rules match against, and `variants` pairs each name with its schema. The constructor reads every event name, so a variant that names none throws `InvalidMessageProtocolError` where the protocol is defined, not when a room is built.
 
-Two protocols are shipped for the cases that have no domain schema of their own:
+Two protocol pairs are shipped for the cases that have no domain schema of their own:
 
-- `OPAQUE_PROTOCOLS` — `{ inbound: null, outbound: null }`. Payloads pass through unparsed, exactly as before this API existed. A server with a rights table refuses to register an extension whose `inbound` is `null`, because a payload it never parses is a payload it cannot gate; the error is `UngatedExtensionError`, raised at registration.
-- `NO_MESSAGE_PROTOCOLS` — built on `NO_MESSAGES`, a schema nothing matches. Use it for a room that carries no domain messages at all.
+- `OPAQUE_PROTOCOLS`: `{ inbound: null, outbound: null }`. Payloads pass through unparsed, exactly as before this API existed. A server with a rights table refuses to register an extension whose `inbound` is `null`, because a payload it never parses is a payload it cannot gate; the error is `UngatedExtensionError`, raised at registration.
+- `NO_MESSAGE_PROTOCOLS`: both sides are `MessageProtocol.EMPTY`, a protocol nothing matches. Use it for a room that carries no domain messages at all.
 
 ### Inbound
 
@@ -106,6 +118,12 @@ The room parses a client payload against `inbound.schema` before anything else r
 Most extensions emit the `NetworkServerMessage` shape (`{ type: "snapshot" | "command", data }`). `serverMessageProtocol()` builds the matching outbound protocol from the inbound one, mapping a snapshot to the reserved `$snapshot` event and each command to its own inner event name:
 
 ```ts
+interface ServerMessageProtocolOptions {
+  command: MessageProtocol;
+  snapshot: JSONSchema;
+  notices?: readonly JSONSchema[];
+}
+
 const protocols: MessageProtocols = {
   inbound: voxelCommands,
   outbound: serverMessageProtocol({
@@ -116,6 +134,8 @@ const protocols: MessageProtocols = {
 ```
 
 A rule on `voxel.renderer.voxel-set` then covers both directions of that command.
+
+`notices` appends the variants of the `TNotice` member of `NetworkServerMessage`. Each notice names its event with a `title` or a `const` on its `type` property.
 
 ### Command headers
 

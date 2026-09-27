@@ -1,33 +1,30 @@
 // Import Internal Dependencies
 import {
-  defineMessageProtocol,
-  serverMessageProtocol,
+  MessageProtocol,
   OPAQUE_PROTOCOLS,
   type MessageProtocols
-} from "#src/protocol/MessageProtocol.ts";
-import { defineSchema } from "#src/protocol/schema.ts";
+} from "#src/protocol/message/MessageProtocol.ts";
+import { serverMessageProtocol } from "#src/sync/serverMessageProtocol.ts";
 
 export { OPAQUE_PROTOCOLS };
 
-export const actionCommandProtocol = defineMessageProtocol({
-  schema: defineSchema({
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          action: { const: "voxel-set" }
-        },
-        required: ["action"]
+export const actionCommandProtocol = new MessageProtocol({
+  oneOf: [
+    {
+      type: "object",
+      properties: {
+        action: { const: "voxel-set" }
       },
-      {
-        type: "object",
-        properties: {
-          action: { const: "object-added" }
-        },
-        required: ["action"]
-      }
-    ]
-  })
+      required: ["action"]
+    },
+    {
+      type: "object",
+      properties: {
+        action: { const: "object-added" }
+      },
+      required: ["action"]
+    }
+  ]
 });
 
 export const actionProtocols: MessageProtocols = {

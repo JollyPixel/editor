@@ -156,6 +156,7 @@ describe("lifecycle", () => {
   test("destroy() unsubscribes from every room event", () => {
     const { room, sync } = setup();
     assert.deepEqual(room.subscribedEvents(), [
+      "left",
       "peer-joined",
       "peer-left",
       "peer-presence",

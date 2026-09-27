@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { defineSchema } from "../../../protocol/schema.ts";
+import { peerMetadataSchema } from "../../../protocol/envelope/Envelope.schema.ts";
 
 const kIdentifier = { type: "string" } as const;
 const kIdentity = {
@@ -13,7 +14,21 @@ const kIdentity = {
     "role"
   ]
 } as const;
-const kAnyObject = { type: "object" } as const;
+const kRoomPeer = {
+  type: "object",
+  properties: {
+    clientId: kIdentifier,
+    identity: kIdentity,
+    profile: peerMetadataSchema,
+    presence: peerMetadataSchema
+  },
+  required: [
+    "clientId",
+    "identity",
+    "profile",
+    "presence"
+  ]
+} as const;
 
 export const hostWorkerDataSchema = defineSchema({
   type: "object",
@@ -42,7 +57,7 @@ export const mainToWorkerSchema = defineSchema({
           type: "array",
           prefixItems: [
             kIdentifier,
-            kAnyObject
+            kRoomPeer
           ],
           minItems: 2
         }

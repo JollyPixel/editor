@@ -6,45 +6,22 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PasswordAuthentication } from "#src/node.ts";
+import { createClient } from "../../helpers/clientHandle.ts";
 import {
+  PresenceOnlyExtension,
   RightsTable,
   Server,
   UnknownDefaultRoleError,
-  type AuthenticationProvider,
-  type ClientHandle
+  type AuthenticationProvider
 } from "#src/index.ts";
-import { WEBSOCKET_AUTH_PROTOCOL_PREFIX } from "#src/transport/constants.ts";
-import { PresenceOnlyExtension } from "#src/server/extension/PresenceOnlyExtension.ts";
-
-function createClient(
-  id: string
-): { client: ClientHandle; sent: unknown[]; } {
-  const sent: unknown[] = [];
-
-  return {
-    client: {
-      id,
-      send: (data) => sent.push(data)
-    },
-    sent
-  };
-}
 
 function attempt(
-  clientId: string,
-  credential?: string
+  clientId: string
 ): Parameters<Server["authenticate"]>[0] {
   return {
     clientId,
     url: "/ws-sync",
-    headers: credential === undefined ?
-      {} :
-      {
-        "sec-websocket-protocol":
-          `jolly-pixel, ${WEBSOCKET_AUTH_PROTOCOL_PREFIX}` +
-          Buffer.from(credential, "utf8").toString("base64url")
-      }
+    headers: {}
   };
 }
 
@@ -89,30 +66,6 @@ describe("Server — defaultRole", () => {
 });
 
 describe("Server — authenticate", () => {
-  test("elevates a client offering the right password", async() => {
-    await using server = new Server({
-      rights: {
-        viewer: { "presence.*": "read" },
-        editor: { "presence.*": "write" }
-      },
-      defaultRole: "viewer",
-      auth: new PasswordAuthentication({
-        password: "hunter2",
-        role: "editor"
-      })
-    });
-
-    assert.deepEqual(await server.authenticate(attempt("A", "hunter2")), {
-      subject: "A",
-      role: "editor"
-    });
-    assert.deepEqual(await server.authenticate(attempt("B")), {
-      subject: "B",
-      role: "viewer"
-    });
-    assert.strictEqual(await server.authenticate(attempt("C", "wrong")), null);
-  });
-
   test("awaits an asynchronous provider", async() => {
     const auth: AuthenticationProvider = {
       authenticate: (request) => Promise.resolve({
@@ -126,6 +79,25 @@ describe("Server — authenticate", () => {
       subject: "user:A",
       role: "default"
     });
+  });
+
+  test("refuses the client when the provider throws or rejects", async() => {
+    const providers: AuthenticationProvider[] = [
+      {
+        authenticate: () => {
+          throw new Error("provider down");
+        }
+      },
+      {
+        authenticate: () => Promise.reject(new Error("provider down"))
+      }
+    ];
+
+    for (const auth of providers) {
+      await using server = new Server({ auth });
+
+      assert.strictEqual(await server.authenticate(attempt("A")), null);
+    }
   });
 });
 
@@ -162,7 +134,10 @@ describe("Server — the authenticated role drives rights", () => {
 
   test("the join envelope cannot raise the connection's role", async() => {
     await using server = new Server({
-      rights: { viewer: { "presence.$join": "void" } },
+      rights: {
+        viewer: { "presence.$join": "void" },
+        admin: { "presence.$join": "write" }
+      },
       defaultRole: "viewer"
     });
     server.register(new PresenceOnlyExtension("lobby", "presence"));

@@ -4,15 +4,8 @@ import type {
   peerSchema,
   rightSchema,
   roomRightsSchema
-} from "./Envelope.schema.ts";
+} from "./envelope/Envelope.schema.ts";
 import type { Infer } from "./schema.ts";
-
-export interface ClientHandle {
-  readonly id: string;
-  send(
-    data: unknown
-  ): void;
-}
 
 export type PeerMetadata = Infer<typeof peerMetadataSchema>;
 export type Peer = Readonly<Infer<typeof peerSchema>>;

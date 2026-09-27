@@ -3,6 +3,10 @@ import type {
   WorkerTransport,
   WorkerTransportFactory
 } from "#src/server/extension/worker/WorkerTransport.ts";
+import {
+  isMainToWorkerMessage,
+  type MainToWorkerMessage
+} from "#src/server/extension/worker/protocol.ts";
 
 /**
  * In-memory WorkerTransport double: no real thread, no real postMessage. Tests
@@ -21,6 +25,17 @@ export class FakeWorkerTransport implements WorkerTransport {
     message: unknown
   ): void {
     this.sent.push(message);
+  }
+
+  dispatched(
+    index = 0
+  ): MainToWorkerMessage {
+    const message = this.sent[index];
+    if (!isMainToWorkerMessage(message)) {
+      throw new Error(`Message ${index} is not a worker dispatch.`);
+    }
+
+    return message;
   }
 
   onMessage(

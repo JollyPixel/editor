@@ -97,9 +97,11 @@ A client with no credential offers only `jolly-pixel`.
 
 ```ts
 const client = new Client({
-  url: "ws://localhost:5173/ws-sync",
-  credential: password,
-  profile: { username: "alice" }
+  profile: { username: "alice" },
+  socket: () => connectWebSocket({
+    url: "ws://localhost:5173/ws-sync",
+    credential: password
+  })
 });
 ```
 
@@ -107,7 +109,7 @@ const client = new Client({
 
 ## Rejection
 
-A refused connection completes the handshake and is then closed with code `4401` before any session or room exists. `Client` surfaces that as `"unauthorized"`:
+A refused connection completes the handshake and is then closed with code `4401` before any session or room exists. A provider that throws or rejects refuses the connection the same way. `Client` surfaces that as `"unauthorized"`:
 
 ```ts
 client.on("unauthorized", () => promptForPassword());

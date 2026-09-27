@@ -4,10 +4,8 @@ import picomatch from "picomatch";
 // Import Internal Dependencies
 import { RightsGate } from "./RightsGate.ts";
 import { UnknownDefaultRoleError } from "../errors.ts";
+import { DEFAULT_ROLE } from "../../protocol/constants.ts";
 import type { Right } from "../../protocol/types.ts";
-
-// CONSTANTS
-const kImplicitDefaultRole = "default";
 
 export type RightsMap = Record<string, Record<string, Right>>;
 
@@ -29,7 +27,7 @@ export class RightsTable {
     table?: RightsMap,
     defaultRole?: string
   ) {
-    this.defaultRole = defaultRole ?? kImplicitDefaultRole;
+    this.defaultRole = defaultRole ?? DEFAULT_ROLE;
 
     if (!table || Object.keys(table).length === 0) {
       this.#rules = undefined;

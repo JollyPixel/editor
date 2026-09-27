@@ -114,9 +114,9 @@ a browser bundle. `@jolly-pixel/network` is an optional peer dependency: core
 never imports it.
 
 The local `clientId` is supplied by the host and stamped into every presence
-patch. It is deliberately not `room.clientId`, which is a client-local UUID no
-peer ever receives, while the id peers are keyed by is minted separately per
-connection by the transport. Peers are matched on the stamped id, so both sides
+patch. It is deliberately not `room.clientId`, which is `null` until the join
+is admitted and is minted per connection by the transport, so it changes on
+every reconnect. Peers are matched on the stamped id, so both sides
 agree.
 
 `dispose()` detaches from the room and drops its listeners.

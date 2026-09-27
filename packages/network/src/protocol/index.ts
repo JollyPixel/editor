@@ -14,25 +14,10 @@ export {
   type EnvelopeKind,
   type EnvelopeParseError,
   type ServerEnvelope
-} from "./Envelope.ts";
-export {
-  defineMessageProtocol,
-  discriminatorOf,
-  eventNameOf,
-  InvalidMessageProtocolError,
-  NO_MESSAGE_PROTOCOLS,
-  NO_MESSAGES,
-  OPAQUE_PROTOCOLS,
-  protocolEvents,
-  serverMessageProtocol,
-  variantsOf,
-  type InferMessage,
-  type MessageProtocol,
-  type MessageProtocols,
-  type ServerMessageProtocolOptions
-} from "./MessageProtocol.ts";
+} from "./envelope/Envelope.ts";
+export * from "./message/MessageProtocol.ts";
+export * from "./message/errors/InvalidMessageProtocolError.ts";
 export type {
-  MessageParsers,
   ParsedMessage,
   RoomMessageParser
-} from "./MessageParser.ts";
+} from "./message/MessageParser.ts";

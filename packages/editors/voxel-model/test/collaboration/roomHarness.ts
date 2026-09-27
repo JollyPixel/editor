@@ -37,13 +37,14 @@ export interface RoomHarness {
 }
 
 export function createRoomHarness(): RoomHarness {
+  const localId = "local";
   const peers = new Map<string, network.Peer>();
   const events = new Emitter<RoomEvents>();
   const published: network.PeerMetadata[] = [];
 
   const room: VoxelModelRoom = {
     id: "model-room",
-    clientId: "local",
+    clientId: localId,
     peers,
     role: "default",
     rights: {},
@@ -82,7 +83,7 @@ export function createRoomHarness(): RoomHarness {
     },
     emitSync() {
       events.emit("sync", {
-        self: room.clientId,
+        self: localId,
         clientIds: [...peers.keys()]
       });
     },

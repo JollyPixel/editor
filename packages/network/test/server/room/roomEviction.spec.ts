@@ -3,212 +3,22 @@ import {
   describe,
   test
 } from "node:test";
+import { setImmediate as flush } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { identityOf } from "../../helpers/identity.ts";
 import {
+  AssetExtension,
+  client,
+  harness,
+  join
+} from "../../helpers/dynamicRooms.ts";
+import {
   Server,
-  Extension,
-  type ClientHandle,
-  type MessageProtocols,
   type RoomResolution
 } from "#src/index.ts";
-import {
-  actionProtocols,
-  OPAQUE_PROTOCOLS
-} from "../../helpers/protocols.ts";
-
-class AssetExtension extends Extension {
-  readonly id: string;
-  readonly name: string;
-  readonly protocols: MessageProtocols;
-  disposed = 0;
-  messages: unknown[] = [];
-
-  constructor(
-    id: string,
-    name: string,
-    protocols: MessageProtocols = OPAQUE_PROTOCOLS
-  ) {
-    super();
-    this.id = id;
-    this.name = name;
-    this.protocols = protocols;
-  }
-
-  override onMessage(
-    _clientId: string,
-    payload: unknown
-  ): void {
-    this.messages.push(payload);
-  }
-
-  override dispose(): void {
-    this.disposed += 1;
-  }
-}
-
-function client(
-  id: string
-): ClientHandle {
-  return { id, send: () => void 0 };
-}
-
-interface Harness {
-  server: Server;
-  created: string[];
-  evicted: string[];
-  extensions: Map<string, AssetExtension>;
-}
-
-function harness(
-  options: { graceMs?: number; kinds?: string[]; } = {}
-): Harness {
-  const created: string[] = [];
-  const evicted: string[] = [];
-  const extensions = new Map<string, AssetExtension>();
-  const kinds = options.kinds ?? ["pixelart"];
-
-  const server = new Server({
-    roomGraceMs: options.graceMs ?? 1_000
-  });
-  server.setRoomResolver((name): RoomResolution | null => {
-    const separator = name.indexOf(":");
-    if (separator === -1) {
-      return null;
-    }
-
-    const kind = name.slice(0, separator);
-    const assetId = name.slice(separator + 1);
-    if (!kinds.includes(kind) || assetId.length === 0) {
-      return null;
-    }
-
-    created.push(name);
-    const extension = new AssetExtension(name, kind);
-    extensions.set(name, extension);
-
-    return {
-      extension,
-      onEvict: () => {
-        evicted.push(name);
-      }
-    };
-  });
-
-  return { server, created, evicted, extensions };
-}
-
-function flush(): Promise<void> {
-  return new Promise((resolve) => {
-    setImmediate(resolve);
-  });
-}
-
-async function join(
-  server: Server,
-  clientId: string,
-  room: string
-): Promise<void> {
-  server.handleConnect(client(clientId), identityOf(client(clientId)));
-  await server.handleMessage(clientId, { room, kind: "join" });
-}
-
-describe("Server — dynamic room resolution", () => {
-  test("a join creates the room once and a second joiner reuses it", async() => {
-    const { server, created, extensions } = harness();
-
-    await join(server, "A", "pixelart:asset-1");
-    const first = extensions.get("pixelart:asset-1");
-    await join(server, "B", "pixelart:asset-1");
-
-    assert.deepEqual(created, ["pixelart:asset-1"]);
-    assert.strictEqual(extensions.get("pixelart:asset-1"), first);
-    await server.close();
-  });
-
-  test("an unregistered kind is refused", async() => {
-    const { server, created } = harness();
-
-    await join(server, "A", "voxelmap:asset-1");
-
-    assert.deepEqual(created, []);
-    await server.close();
-  });
-
-  test("a name the resolver rejects is refused", async() => {
-    const { server, created } = harness();
-
-    await join(server, "A", "pixelart:");
-
-    assert.deepEqual(created, []);
-    await server.close();
-  });
-
-  test("a message to a never-joined dynamic room is dropped", async() => {
-    const { server, created } = harness();
-
-    server.handleConnect(client("A"), identityOf(client("A")));
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "message",
-      payload: { hello: "world" }
-    });
-
-    assert.deepEqual(created, []);
-    await server.close();
-  });
-
-  test("without a resolver, a join to an unknown room is dropped", async() => {
-    const server = new Server();
-
-    server.handleConnect(client("A"), identityOf(client("A")));
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "join"
-    });
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "message",
-      payload: {}
-    });
-
-    await server.close();
-  });
-
-  test("a resolver that throws leaves the envelope dropped", async() => {
-    const server = new Server();
-    server.setRoomResolver(() => {
-      throw new Error("resolver exploded");
-    });
-
-    server.handleConnect(client("A"), identityOf(client("A")));
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "join"
-    });
-
-    await server.close();
-  });
-
-  test("a resolved room routes messages to its extension", async() => {
-    const { server, extensions } = harness();
-
-    await join(server, "A", "pixelart:asset-1");
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "message",
-      payload: { stroke: 1 }
-    });
-
-    assert.deepEqual(
-      extensions.get("pixelart:asset-1")?.messages,
-      [{ stroke: 1 }]
-    );
-    await server.close();
-  });
-});
+import { actionProtocols } from "../../helpers/protocols.ts";
 
 describe("Server — room eviction", () => {
   test("a rejoin inside the grace period keeps the same extension", async(t) => {
@@ -378,11 +188,10 @@ describe("Server — room lifetime regressions", () => {
       };
     });
 
-    server.handleConnect(client("A"), identityOf(client("A")));
+    server.handleConnect(client("A"), identityOf(client("A"), "guest"));
     await server.handleMessage("A", {
       room: "kind:asset-1",
-      kind: "join",
-      identity: { role: "guest" }
+      kind: "join"
     });
 
     t.mock.timers.tick(1_000);
@@ -415,7 +224,7 @@ describe("Server — room lifetime regressions", () => {
   test("a rejoin waits for the previous eviction to flush", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const order: string[] = [];
-    let release: (() => void) | null = null;
+    const eviction = Promise.withResolvers<void>();
     const server = new Server({ roomGraceMs: 1_000 });
     server.setRoomResolver((name): RoomResolution => {
       order.push("resolve");
@@ -432,11 +241,8 @@ describe("Server — room lifetime regressions", () => {
           }
           order.push("evict:start");
 
-          return new Promise<void>((resolve) => {
-            release = () => {
-              order.push("evict:end");
-              resolve();
-            };
+          return eviction.promise.then(() => {
+            order.push("evict:end");
           });
         }
       };
@@ -461,7 +267,7 @@ describe("Server — room lifetime regressions", () => {
     // the resolver must not have run again while the flush is pending
     assert.deepEqual(order, ["resolve", "evict:start"]);
 
-    release!();
+    eviction.resolve();
     await rejoin;
 
     assert.deepEqual(
@@ -470,94 +276,6 @@ describe("Server — room lifetime regressions", () => {
     );
 
     t.mock.timers.reset();
-    await server.close();
-  });
-});
-
-describe("dynamic rooms — concurrent joins", () => {
-  test("a slow resolution does not hold up a join on another room", async() => {
-    const order: string[] = [];
-    const server = new Server();
-    server.setRoomResolver(async(name): Promise<RoomResolution> => {
-      if (name === "pixelart:slow") {
-        await new Promise((resolve) => {
-          setTimeout(resolve, 30);
-        });
-      }
-      order.push(name);
-
-      return { extension: new AssetExtension(name, "pixelart") };
-    });
-
-    server.handleConnect(client("A"), identityOf(client("A")));
-    const slow = server.handleMessage("A", {
-      room: "pixelart:slow",
-      kind: "join"
-    });
-    const fast = server.handleMessage("A", {
-      room: "pixelart:fast",
-      kind: "join"
-    });
-
-    await Promise.all([slow, fast]);
-
-    assert.deepEqual(order, ["pixelart:fast", "pixelart:slow"]);
-    await server.close();
-  });
-
-  test("a message still lands after the join it followed on the same room", async() => {
-    const { server, extensions } = harness();
-    const room = "pixelart:a1";
-
-    server.handleConnect(client("A"), identityOf(client("A")));
-    const join = server.handleMessage("A", { room, kind: "join" });
-    const message = server.handleMessage("A", {
-      room,
-      kind: "message",
-      payload: { action: "stroke" }
-    });
-
-    await Promise.all([join, message]);
-
-    assert.deepEqual(
-      extensions.get(room)!.messages,
-      [{ action: "stroke" }]
-    );
-    await server.close();
-  });
-
-  test("a disconnect waits for the joins still in flight", async() => {
-    const order: string[] = [];
-    const server = new Server();
-    server.setRoomResolver(async(name): Promise<RoomResolution> => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 20);
-      });
-      const extension = new AssetExtension(name, "pixelart");
-      function connect() {
-        order.push("join");
-      }
-      function disconnect() {
-        order.push("leave");
-      }
-
-      return {
-        extension: Object.assign(extension, {
-          onClientConnect: connect,
-          onClientDisconnect: disconnect
-        })
-      };
-    });
-
-    server.handleConnect(client("A"), identityOf(client("A")));
-    const join = server.handleMessage("A", {
-      room: "pixelart:a1",
-      kind: "join"
-    });
-    await server.handleDisconnect("A");
-    await join;
-
-    assert.deepEqual(order, ["join", "leave"]);
     await server.close();
   });
 });

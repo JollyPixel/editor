@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { ClientHandle } from "../protocol/types.ts";
+import type { ClientHandle } from "../transport/ClientHandle.ts";
 import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
 
 export interface ClientSession {
@@ -59,7 +59,7 @@ export class ClientSessions {
   enqueue(
     clientId: string,
     task: () => Promise<void>,
-    lane = ""
+    lane: string
   ): Promise<void> {
     let lanes = this.#queues.get(clientId);
     if (lanes === undefined) {

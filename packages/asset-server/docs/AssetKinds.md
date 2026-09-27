@@ -276,8 +276,8 @@ envelope. `voxel-map` uses it to answer a `world-replace` with a full
 snapshot.
 
 The room derives its `protocols` from both schemas: `commands.protocol` is
-inbound, and outbound is `serverMessageProtocol({ command, snapshot })` plus
-the `deleted` and `rejected` notices. A configured rights table checks each
+inbound, and outbound is `serverMessageProtocol({ command, snapshot, notices })`
+with the `deleted` and `rejected` notices. A configured rights table checks each
 message under `${kind}.${action}`; a payload naming no declared action is
 checked under `${kind}.invalid`.
 

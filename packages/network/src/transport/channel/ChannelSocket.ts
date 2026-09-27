@@ -3,7 +3,7 @@ import type {
   ClientSocket,
   ClientSocketEvent,
   ClientSocketEventType
-} from "../../client/Client.ts";
+} from "../ClientSocket.ts";
 import {
   CHANNEL_TRANSPORT_TAG,
   type ChannelPort,
@@ -16,9 +16,20 @@ const kNormalCloseCode = 1000;
 type SocketListener = (event: ClientSocketEvent) => void;
 
 export interface ChannelSocketOptions {
+  /**
+   * Port the socket posts its connect, send and close messages to.
+   */
   port: ChannelPort;
+  /**
+   * Id of the `ChannelTransportHost` the messages are addressed to.
+   */
   host: string;
-  onClose: (id: string) => void;
+  /**
+   * Called once with the socket id when either side closes the socket.
+   */
+  onClose: (
+    id: string
+  ) => void;
 }
 
 export class ChannelSocket implements ClientSocket {
@@ -27,7 +38,10 @@ export class ChannelSocket implements ClientSocket {
   readonly #port: ChannelPort;
   readonly #host: string;
   readonly #onClose: (id: string) => void;
-  readonly #listeners = new Map<ClientSocketEventType, SocketListener[]>();
+  readonly #listeners = new Map<
+    ClientSocketEventType,
+    SocketListener[]
+  >();
   #closed = false;
 
   constructor(

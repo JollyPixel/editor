@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { MessageParser } from "@jolly-pixel/network";
+import {
+  MessageParser,
+  MessageProtocol
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -114,12 +117,10 @@ describe("tilesetCommandProtocol", () => {
 
 describe("tilesetSnapshotSchema", () => {
   test("requires pixels next to the document fields", () => {
-    const parser = new MessageParser({
-      schema: {
-        title: "snapshot",
-        ...tilesetSnapshotSchema
-      }
-    });
+    const parser = new MessageParser(new MessageProtocol({
+      title: "snapshot",
+      ...tilesetSnapshotSchema
+    }));
     const snapshot = {
       tileSize: 8,
       pixels: { size: { x: 8, y: 8 }, pixels: "" },

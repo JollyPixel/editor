@@ -9,7 +9,6 @@ import http from "node:http";
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
-  protocolEvents,
   Server,
   type ClientHandle,
   type RoomPeer,
@@ -264,7 +263,7 @@ describe("CatalogExtension — broadcast", () => {
     });
 
     assert.deepEqual(
-      protocolEvents(extension.protocols.inbound!),
+      extension.protocols.inbound!.events,
       [
         CATALOG_CREATE,
         CATALOG_RENAME,
@@ -275,7 +274,7 @@ describe("CatalogExtension — broadcast", () => {
       ]
     );
     assert.deepEqual(
-      protocolEvents(extension.protocols.outbound!),
+      extension.protocols.outbound!.events,
       [CATALOG_SNAPSHOT, CATALOG_CHANGED, CATALOG_APPLIED, CATALOG_REJECTED]
     );
     extension.dispose();

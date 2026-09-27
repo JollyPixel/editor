@@ -7,7 +7,7 @@ import {
   NO_MESSAGE_PROTOCOLS,
   OPAQUE_PROTOCOLS,
   type MessageProtocols
-} from "../../protocol/MessageProtocol.ts";
+} from "../../protocol/message/MessageProtocol.ts";
 
 // CONSTANTS
 const kDefaultExtensionName = "presence-only";

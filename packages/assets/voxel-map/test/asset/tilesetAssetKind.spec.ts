@@ -14,7 +14,6 @@ import {
   foldAssetEvent,
   type AssetEventData
 } from "@jolly-pixel/asset-server";
-import { protocolEvents } from "@jolly-pixel/network";
 import { PIXEL_COMMAND_ACTIONS } from "@jolly-pixel/asset.pixel-art/client";
 import { TILESET_DOCUMENT_COMMAND_ACTIONS } from "@jolly-pixel/voxel.renderer";
 
@@ -197,7 +196,7 @@ describe("tilesetAssetKind", () => {
     const { commands } = tilesetAssetKind();
 
     assert.strictEqual(commands!.eventType, TILESET_COMMAND);
-    assert.deepEqual(protocolEvents(commands!.protocol).toSorted(), [
+    assert.deepEqual(commands!.protocol.events.toSorted(), [
       ...PIXEL_COMMAND_ACTIONS,
       ...TILESET_DOCUMENT_COMMAND_ACTIONS
     ].toSorted());

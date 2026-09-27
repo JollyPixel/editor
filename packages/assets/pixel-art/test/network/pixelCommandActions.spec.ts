@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { protocolEvents } from "@jolly-pixel/network";
-
 // Import Internal Dependencies
 import {
   isPixelCommandAction,
@@ -19,7 +16,7 @@ describe("PIXEL_COMMAND_ACTIONS", () => {
   test("names exactly the actions the protocol accepts", () => {
     assert.deepEqual(
       [...PIXEL_COMMAND_ACTIONS].toSorted(),
-      protocolEvents(pixelCommandProtocol).toSorted()
+      pixelCommandProtocol.events.toSorted()
     );
   });
 

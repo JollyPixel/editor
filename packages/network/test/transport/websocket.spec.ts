@@ -15,57 +15,12 @@ import assert from "node:assert/strict";
 import {
   Server,
   Client,
-  Extension,
-  type ClientHandle
+  connectWebSocket
 } from "#src/index.ts";
 import { WebsocketTransport } from "#src/transport/websocket.ts";
-import {
-  DEFAULT_WEBSOCKET_PATH
-} from "#src/transport/constants.ts";
-import { OPAQUE_PROTOCOLS } from "../helpers/protocols.ts";
-
-class RecordingExtension extends Extension {
-  readonly protocols = OPAQUE_PROTOCOLS;
-  readonly id = "test-ns";
-  readonly name = "test-ns";
-  connected: ClientHandle[] = [];
-  disconnected: string[] = [];
-  messages: { clientId: string; payload: unknown; }[] = [];
-
-  override onClientConnect(
-    client: ClientHandle
-  ): void {
-    this.connected.push(client);
-  }
-
-  override onClientDisconnect(
-    clientId: string
-  ): void {
-    this.disconnected.push(clientId);
-  }
-
-  override onMessage(
-    clientId: string,
-    payload: unknown
-  ): void {
-    this.messages.push({ clientId, payload });
-  }
-}
-
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 2000
-): Promise<void> {
-  const start = Date.now();
-  while (!predicate()) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error("waitFor: timed out");
-    }
-    await new Promise((resolve) => {
-      setTimeout(resolve, 10);
-    });
-  }
-}
+import { DEFAULT_WEBSOCKET_PATH } from "#src/transport/constants.ts";
+import { RecordingExtension } from "../helpers/RecordingExtension.ts";
+import { waitFor } from "../helpers/waitFor.ts";
 
 describe("WebsocketTransport + Client (integration)", () => {
   let httpServer: HttpServer;
@@ -90,20 +45,22 @@ describe("WebsocketTransport + Client (integration)", () => {
 
   test("joins, exchanges messages, and leaves over a real WebSocket", async() => {
     const server = new Server();
-    const extension = new RecordingExtension();
+    const extension = new RecordingExtension("test-ns");
     server.register(extension);
 
     new WebsocketTransport({ httpServer, server, path: DEFAULT_WEBSOCKET_PATH });
 
-    const client = new Client({ url: `ws://127.0.0.1:${port}${DEFAULT_WEBSOCKET_PATH}` });
+    const client = new Client({
+      socket: () => connectWebSocket({ url: `ws://127.0.0.1:${port}${DEFAULT_WEBSOCKET_PATH}` })
+    });
     const room = client.room("test-ns");
     room.join();
 
-    assert.equal(typeof client.id, "string");
-    assert.ok(client.id.length > 0);
-    assert.equal(room.clientId, client.id);
+    assert.equal(room.clientId, null);
 
     await waitFor(() => extension.connected.length === 1);
+    await waitFor(() => room.clientId !== null);
+    assert.equal(room.clientId, extension.clients[0].id);
 
     let received: unknown;
     room.on("message", (payload) => {
@@ -114,7 +71,7 @@ describe("WebsocketTransport + Client (integration)", () => {
     await waitFor(() => extension.messages.length === 1);
     assert.deepEqual(extension.messages[0].payload, { hello: "world" });
 
-    extension.connected[0].send({ type: "ack" });
+    extension.clients[0].send({ type: "ack" });
     await waitFor(() => received !== undefined);
     assert.deepEqual(received, { type: "ack" });
 
@@ -126,12 +83,14 @@ describe("WebsocketTransport + Client (integration)", () => {
 
   test("two real clients get peer-joined/peer-left over the wire", async() => {
     const server = new Server();
-    const extension = new RecordingExtension();
+    const extension = new RecordingExtension("test-ns");
     server.register(extension);
 
     new WebsocketTransport({ httpServer, server, path: "/ws-sync-peers" });
 
-    const clientA = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
+    const clientA = new Client({
+      socket: () => connectWebSocket({ url: `ws://127.0.0.1:${port}/ws-sync-peers` })
+    });
     const roomA = clientA.room("test-ns");
     roomA.join();
     const joined: string[] = [];
@@ -139,13 +98,13 @@ describe("WebsocketTransport + Client (integration)", () => {
 
     await waitFor(() => extension.connected.length === 1);
 
-    const clientB = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
+    const clientB = new Client({
+      socket: () => connectWebSocket({ url: `ws://127.0.0.1:${port}/ws-sync-peers` })
+    });
     clientB.room("test-ns").join();
 
-    assert.notEqual(clientA.id, clientB.id);
-
     await waitFor(() => joined.length === 1);
-    assert.deepEqual(joined, [extension.connected[1].id]);
+    assert.deepEqual(joined, [extension.clients[1].id]);
 
     const left: string[] = [];
     roomA.on("peer-left", (event) => left.push(event.clientId));
@@ -153,35 +112,8 @@ describe("WebsocketTransport + Client (integration)", () => {
 
     await waitFor(() => extension.disconnected.length === 1);
     await waitFor(() => left.length === 1);
-    assert.deepEqual(left, [extension.connected[1].id]);
+    assert.deepEqual(left, [extension.clients[1].id]);
 
     clientA.destroy();
-  });
-
-  test("a room a client never joined never sees it", async() => {
-    const server = new Server();
-    const joined = new RecordingExtension();
-    class UnusedExtension extends Extension {
-      readonly protocols = OPAQUE_PROTOCOLS;
-      readonly id = "unused";
-      readonly name = "unused";
-      connected: ClientHandle[] = [];
-      override onClientConnect(client: ClientHandle): void {
-        this.connected.push(client);
-      }
-    }
-    const unused = new UnusedExtension();
-    server.register(joined);
-    server.register(unused);
-
-    new WebsocketTransport({ httpServer, server, path: "/ws-sync-2" });
-
-    const client = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-2` });
-    client.room("test-ns").join();
-
-    await waitFor(() => joined.connected.length === 1);
-    assert.deepEqual(unused.connected, []);
-
-    client.destroy();
   });
 });

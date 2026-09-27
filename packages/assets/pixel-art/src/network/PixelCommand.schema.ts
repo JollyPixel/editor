@@ -2,10 +2,9 @@
 import {
   COMMAND_HEADER_REQUIRED,
   commandHeaderProperties,
-  defineMessageProtocol,
   defineSchema,
-  type JSONSchema,
-  type MessageProtocol
+  MessageProtocol,
+  type JSONSchema
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -142,10 +141,8 @@ export const pixelCommandSchemas: readonly JSONSchema[] = [
   )
 ];
 
-export const pixelCommandProtocol: MessageProtocol = defineMessageProtocol({
-  schema: {
-    oneOf: [...pixelCommandSchemas]
-  }
+export const pixelCommandProtocol: MessageProtocol = new MessageProtocol({
+  oneOf: [...pixelCommandSchemas]
 });
 
 export const pixelSnapshotSchema: JSONSchema = {

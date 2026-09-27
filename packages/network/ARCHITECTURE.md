@@ -79,7 +79,7 @@ rules:
 | `presence` | `Room.updatePresence()` | One room membership | Shared only with members allowed to read `$presence`. |
 
 The schemas in
-[`Envelope.schema.ts`](./src/protocol/Envelope.schema.ts) are the source of
+[`Envelope.schema.ts`](./src/protocol/envelope/Envelope.schema.ts) are the source of
 both the TypeScript envelope types and the checked-in validators. The server
 parses only client envelope kinds and the browser parses only server envelope
 kinds. An envelope sent in the wrong direction is rejected before routing.

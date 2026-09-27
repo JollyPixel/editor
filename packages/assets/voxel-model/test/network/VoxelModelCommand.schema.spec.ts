@@ -71,7 +71,7 @@ function accepts(
 describe("voxelModelCommandProtocol", () => {
   test("declares one event per command action", () => {
     assert.deepStrictEqual(
-      new MessageParser(voxelModelCommandProtocol).events,
+      voxelModelCommandProtocol.events,
       kCommands.map((command) => command.action)
     );
   });

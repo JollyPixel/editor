@@ -9,8 +9,6 @@ import assert from "node:assert/strict";
 import {
   Server,
   Client,
-  Extension,
-  type ClientHandle,
   type ClientSocketEvent
 } from "#src/index.ts";
 import {
@@ -20,56 +18,15 @@ import {
   isChannelTransportMessage,
   type ChannelPort
 } from "#src/transport/channel.ts";
+import { parseChannelTransportMessage } from "#src/transport/channel/protocol.ts";
 import { LoopbackTransport } from "#src/transport/loopback.ts";
-import { OPAQUE_PROTOCOLS } from "../helpers/protocols.ts";
-
-class RecordingExtension extends Extension {
-  readonly protocols = OPAQUE_PROTOCOLS;
-  readonly id = "test-ns";
-  readonly name = "test-ns";
-  connected: ClientHandle[] = [];
-  disconnected: string[] = [];
-  messages: unknown[] = [];
-
-  override onClientConnect(
-    client: ClientHandle
-  ): void {
-    this.connected.push(client);
-  }
-
-  override onClientDisconnect(
-    clientId: string
-  ): void {
-    this.disconnected.push(clientId);
-  }
-
-  override onMessage(
-    _clientId: string,
-    payload: unknown
-  ): void {
-    this.messages.push(payload);
-  }
-}
-
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 2000
-): Promise<void> {
-  const start = Date.now();
-  while (!predicate()) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error("waitFor: timed out");
-    }
-    await new Promise((resolve) => {
-      setTimeout(resolve, 5);
-    });
-  }
-}
+import { RecordingExtension } from "../helpers/RecordingExtension.ts";
+import { waitFor } from "../helpers/waitFor.ts";
 
 function createRelay(
   server = new Server()
 ) {
-  const extension = new RecordingExtension();
+  const extension = new RecordingExtension("test-ns");
   server.register(extension);
   const channel = new MessageChannel();
   const loopback = new LoopbackTransport({ server });
@@ -134,9 +91,12 @@ describe("ChannelTransport + ChannelTransportHost", () => {
     await waitFor(() => client.ready);
     room.send({ hello: "world" });
     await waitFor(() => relay.extension.messages.length === 1);
-    assert.deepEqual(relay.extension.messages, [{ hello: "world" }]);
+    assert.deepEqual(
+      relay.extension.messages.map(({ payload }) => payload),
+      [{ hello: "world" }]
+    );
 
-    relay.extension.connected[0].send({ type: "ack" });
+    relay.extension.clients[0].send({ type: "ack" });
     await waitFor(() => received !== undefined);
     assert.deepEqual(received, { type: "ack" });
 
@@ -215,6 +175,58 @@ describe("ChannelTransport + ChannelTransportHost", () => {
     port.deliver({ tag: CHANNEL_TRANSPORT_TAG, type: "connect", host: "host-a", socket: "s1" });
     assert.strictEqual(opened, 1);
     host.close();
+  });
+
+  test("tagged messages with a malformed shape are rejected", () => {
+    const address = {
+      tag: CHANNEL_TRANSPORT_TAG,
+      host: "host-a",
+      socket: "s1"
+    };
+
+    assert.strictEqual(isChannelTransportMessage({ ...address, type: "connect" }), true);
+    assert.strictEqual(isChannelTransportMessage({ ...address, type: "send", data: "x" }), true);
+    assert.strictEqual(
+      isChannelTransportMessage({ ...address, type: "event", event: "close", data: { code: 1000 } }),
+      true
+    );
+
+    assert.strictEqual(isChannelTransportMessage({ tag: CHANNEL_TRANSPORT_TAG, type: "connect" }), false);
+    assert.strictEqual(isChannelTransportMessage({ ...address, host: 1, type: "connect" }), false);
+    assert.strictEqual(isChannelTransportMessage({ ...address, type: "unknown" }), false);
+    assert.strictEqual(isChannelTransportMessage({ ...address, type: "send" }), false);
+    assert.strictEqual(isChannelTransportMessage({ ...address, type: "send", data: {} }), false);
+    assert.strictEqual(
+      isChannelTransportMessage({ ...address, type: "event", event: "unknown", data: {} }),
+      false
+    );
+    assert.strictEqual(isChannelTransportMessage({ ...address, type: "event", event: "close" }), false);
+    assert.strictEqual(
+      isChannelTransportMessage({ ...address, type: "event", event: "close", data: { code: "1000" } }),
+      false
+    );
+  });
+
+  test("parsing keeps only the fields of the message shape", () => {
+    const message = parseChannelTransportMessage({
+      tag: CHANNEL_TRANSPORT_TAG,
+      host: "host-a",
+      socket: "s1",
+      type: "event",
+      event: "message",
+      data: { data: "payload", extra: true },
+      extra: true
+    });
+
+    assert.deepEqual(message, {
+      tag: CHANNEL_TRANSPORT_TAG,
+      host: "host-a",
+      socket: "s1",
+      type: "event",
+      event: "message",
+      data: { data: "payload" }
+    });
+    assert.strictEqual(parseChannelTransportMessage({ type: "connect" }), undefined);
   });
 
   test("a socket ignores events once it is closed", async() => {

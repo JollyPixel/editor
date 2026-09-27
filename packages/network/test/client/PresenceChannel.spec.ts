@@ -5,12 +5,15 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import {
   PresenceChannel,
   type PresenceChange
 } from "#src/index.ts";
-import { FakeRoom } from "../helpers/FakeRoom.ts";
+import { RoomHarness } from "../helpers/RoomHarness.ts";
 
 function decodeTool(
   value: unknown
@@ -19,9 +22,9 @@ function decodeTool(
 }
 
 function setup(
-  room = new FakeRoom()
+  harness = new RoomHarness()
 ) {
-  const channel = new PresenceChannel(room, {
+  const channel = new PresenceChannel(harness.room, {
     key: "tool",
     decode: decodeTool
   });
@@ -29,7 +32,7 @@ function setup(
   channel.on("change", (change) => changes.push(change));
 
   return {
-    room,
+    harness,
     channel,
     changes
   };
@@ -37,11 +40,11 @@ function setup(
 
 describe("PresenceChannel", () => {
   test("replays the peers already in the room", () => {
-    const room = new FakeRoom();
-    room.addPeer("B", { tool: "brush" });
-    room.addPeer("C", {});
+    const harness = new RoomHarness();
+    harness.peerJoined("B", { tool: "brush" });
+    harness.peerJoined("C");
 
-    const channel = new PresenceChannel(room, {
+    const channel = new PresenceChannel(harness.room, {
       key: "tool",
       decode: decodeTool
     });
@@ -50,23 +53,22 @@ describe("PresenceChannel", () => {
   });
 
   test("applies patches carrying its key and ignores the others", () => {
-    const { room, channel, changes } = setup();
-    room.addPeer("B");
+    const { harness, channel, changes } = setup();
+    harness.peerJoined("B");
 
-    room.presence("B", { cursor: { x: 1, y: 1 } });
-    room.presence("B", { tool: "fill" });
+    harness.peerPresence("B", { cursor: { x: 1, y: 1 } });
+    harness.peerPresence("B", { tool: "fill" });
 
     assert.deepEqual(changes, [{ clientId: "B", value: "fill" }]);
     assert.strictEqual(channel.values.get("B"), "fill");
   });
 
   test("an undecodable value removes the peer value", () => {
-    const { room, channel, changes } = setup();
-    room.addPeer("B", { tool: "brush" });
-    room.emit("peer-joined", { clientId: "B" });
+    const { harness, channel, changes } = setup();
+    harness.peerJoined("B", { tool: "brush" });
 
-    room.presence("B", { tool: null });
-    room.presence("B", { tool: 42 });
+    harness.peerPresence("B", { tool: null });
+    harness.peerPresence("B", { tool: 42 });
 
     assert.deepEqual(changes, [
       { clientId: "B", value: "brush" },
@@ -76,33 +78,28 @@ describe("PresenceChannel", () => {
   });
 
   test("peer-joined reads the join presence", () => {
-    const { room, changes } = setup();
-    room.addPeer("B", { tool: "line" });
+    const { harness, changes } = setup();
 
-    room.emit("peer-joined", { clientId: "B" });
+    harness.peerJoined("B", { tool: "line" });
 
     assert.deepEqual(changes, [{ clientId: "B", value: "line" }]);
   });
 
   test("peer-left removes the peer value", () => {
-    const { room, channel, changes } = setup();
-    room.addPeer("B", { tool: "brush" });
-    room.emit("peer-joined", { clientId: "B" });
+    const { harness, channel, changes } = setup();
+    harness.peerJoined("B", { tool: "brush" });
 
-    room.removePeer("B");
+    harness.peerLeft("B");
 
     assert.deepEqual(changes.at(-1), { clientId: "B", value: undefined });
     assert.strictEqual(channel.values.size, 0);
   });
 
   test("sync replays members and drops peers that are gone", () => {
-    const { room, channel, changes } = setup();
-    room.addPeer("B", { tool: "brush" });
-    room.emit("peer-joined", { clientId: "B" });
-    room.peers.clear();
-    room.addPeer("C", { tool: "fill" });
+    const { harness, channel, changes } = setup();
+    harness.peerJoined("B", { tool: "brush" });
 
-    room.emit("sync", { self: "self", clientIds: ["C"] });
+    harness.admit("self", { C: { tool: "fill" } });
 
     assert.deepEqual(changes.slice(1), [
       { clientId: "B", value: undefined },
@@ -111,11 +108,35 @@ describe("PresenceChannel", () => {
     assert.deepEqual([...channel.values], [["C", "fill"]]);
   });
 
+  test("sync leaves unchanged values quiet", () => {
+    const { harness, changes } = setup();
+    harness.peerJoined("B", { tool: "brush" });
+
+    harness.admit("self", { B: { tool: "brush" } });
+
+    assert.deepEqual(changes, [{ clientId: "B", value: "brush" }]);
+  });
+
+  test("leaving the room removes every value", () => {
+    const { harness, channel, changes } = setup();
+    harness.peerJoined("B", { tool: "brush" });
+
+    harness.room.leave();
+
+    assert.deepEqual(changes.at(-1), { clientId: "B", value: undefined });
+    assert.strictEqual(channel.values.size, 0);
+  });
+
   test("publish skips a value equal to the last published one", () => {
-    const room = new FakeRoom();
-    const channel = new PresenceChannel(room, {
+    const harness = new RoomHarness();
+    harness.room.join();
+    const channel = new PresenceChannel(harness.room, {
       key: "cursor",
-      decode: (value): { x: number; } | undefined => value as { x: number; },
+      decode: (value): { x: number; } | undefined => (
+        typeof value === "object" && value !== null && "x" in value && typeof value.x === "number" ?
+          { x: value.x } :
+          undefined
+      ),
       equals: (left, right) => left.x === right.x
     });
 
@@ -123,24 +144,46 @@ describe("PresenceChannel", () => {
     assert.strictEqual(channel.publish({ x: 1 }), false);
     assert.strictEqual(channel.publish({ x: 2 }), true);
 
-    assert.deepEqual(room.patches, [
+    assert.deepEqual(harness.patches, [
       { cursor: { x: 1 } },
       { cursor: { x: 2 } }
     ]);
   });
 
   test("destroy removes every value and stops listening", () => {
-    const { room, channel, changes } = setup();
-    room.addPeer("B", { tool: "brush" });
-    room.emit("peer-joined", { clientId: "B" });
+    const { harness, channel, changes } = setup();
+    harness.peerJoined("B", { tool: "brush" });
 
     channel.destroy();
-    room.presence("B", { tool: "fill" });
+    harness.peerPresence("B", { tool: "fill" });
 
     assert.deepEqual(changes, [
       { clientId: "B", value: "brush" },
       { clientId: "B", value: undefined }
     ]);
+    assert.strictEqual(channel.values.size, 0);
+  });
+
+  test("a zod schema decodes values and drops the ones it rejects", () => {
+    const harness = new RoomHarness();
+    harness.peerJoined("B", { cursor: { x: 1, y: 2, extra: true } });
+    harness.peerJoined("C", { cursor: { x: "1", y: 2 } });
+
+    const channel = new PresenceChannel(harness.room, {
+      key: "cursor",
+      decode: z.object({
+        x: z.number(),
+        y: z.number()
+      })
+    });
+    const changes: PresenceChange<{ x: number; y: number; }>[] = [];
+    channel.on("change", (change) => changes.push(change));
+
+    assert.deepEqual([...channel.values], [["B", { x: 1, y: 2 }]]);
+
+    harness.peerPresence("B", { cursor: null });
+
+    assert.deepEqual(changes, [{ clientId: "B", value: undefined }]);
     assert.strictEqual(channel.values.size, 0);
   });
 });

@@ -28,7 +28,8 @@
     "build": "tsc -b",
     "build:schemas": "node scripts/compileSchemas.ts",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
   },
@@ -62,7 +63,8 @@
     "picomatch": "4.0.7",
     "pino": "10.3.1",
     "ts-pattern": "5.9.0",
-    "ws": "8.21.3"
+    "ws": "8.21.3",
+    "zod": "4.6.5"
   },
   "peerDependencies": {
     "vite": "^8.0.0"
@@ -71,5 +73,8 @@
     "vite": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@types/ws": "8.18.1"
   }
 }

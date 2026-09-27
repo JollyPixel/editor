@@ -8,7 +8,7 @@ import type {
   ClientSession,
   ClientSessions
 } from "./ClientSessions.ts";
-import type { ClientEnvelope } from "../protocol/Envelope.ts";
+import type { ClientEnvelope } from "../protocol/envelope/Envelope.ts";
 
 export interface DispatchOutcome {
   outcome: "joined" | "left" | "handled" | "ignored" | "dropped";

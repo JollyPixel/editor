@@ -35,7 +35,7 @@ new Server({
 });
 ```
 
-Omit both `rights` and `defaultRole` and an implicit `"default"` role applies, with `"write"` everywhere.
+Omit both `rights` and `defaultRole` and an implicit `"default"` role (exported as `DEFAULT_ROLE`) applies, with `"write"` everywhere. A client `Room` also reports `DEFAULT_ROLE` until its join is admitted.
 
 ## Keys
 
@@ -46,7 +46,7 @@ Keys are `${extension.name}.${event}`.
 - `*` matches anything, including `.`; every other character is literal.
 - First matching pattern wins, in declaration order — put exceptions before catch-alls.
 
-Domain event names come from the extension's [message protocols](./Extension.md#message-protocols): each schema variant names one event, and `protocolEvents(protocol)` lists them. An event name that appears in no variant can never match a message, so a rule mentioning it is dead.
+Domain event names come from the extension's [message protocols](./Extension.md#message-protocols): each schema variant names one event, and `protocol.events` lists them. An event name that appears in no variant can never match a message, so a rule mentioning it is dead.
 
 `$message` is not a rights key. It is the `event` field on the `"error"` envelope a client gets back when its payload fails the room's inbound schema.
 

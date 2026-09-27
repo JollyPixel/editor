@@ -3,6 +3,7 @@ import {
   describe,
   test
 } from "node:test";
+import { setImmediate as flush } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
@@ -15,39 +16,53 @@ function handle(
   return { id, send: () => void 0 };
 }
 
-function flush(): Promise<void> {
-  return new Promise((resolve) => {
-    setImmediate(resolve);
-  });
-}
-
 describe("ClientSessions", () => {
   test("opens and closes a session", () => {
     const sessions = new ClientSessions();
 
     sessions.open(handle("A"), identityOf(handle("A")));
     assert.strictEqual(sessions.size, 1);
-    assert.deepEqual([...sessions.get("A")!.rooms], []);
+    const session = sessions.get("A");
+    assert.ok(session);
+    assert.deepEqual([...session.rooms], []);
 
     sessions.close("A");
     assert.strictEqual(sessions.get("A"), undefined);
     assert.strictEqual(sessions.size, 0);
   });
 
-  test("runs a client's tasks in arrival order", async() => {
+  test("clear drops every session and pending lane", () => {
     const sessions = new ClientSessions();
+    const gate = Promise.withResolvers<void>();
+
+    sessions.open(handle("A"), identityOf(handle("A")));
+    sessions.open(handle("B"), identityOf(handle("B")));
+    sessions.enqueue("A", () => gate.promise, "room-1");
+    sessions.clear();
+
+    assert.strictEqual(sessions.size, 0);
+    assert.strictEqual(sessions.pending, 0);
+    gate.resolve();
+  });
+});
+
+describe("ClientSessions — lanes", () => {
+  test("keeps arrival order within one lane", async() => {
+    const sessions = new ClientSessions();
+    const gate = Promise.withResolvers<void>();
     const order: string[] = [];
 
     const first = sessions.enqueue("A", async() => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10);
-      });
+      await gate.promise;
       order.push("first");
-    });
+    }, "room-1");
     const second = sessions.enqueue("A", async() => {
       order.push("second");
-    });
+    }, "room-1");
+    await flush();
+    assert.deepEqual(order, []);
 
+    gate.resolve();
     await Promise.all([first, second]);
     assert.deepEqual(order, ["first", "second"]);
   });
@@ -56,133 +71,85 @@ describe("ClientSessions", () => {
     const sessions = new ClientSessions();
     const order: string[] = [];
 
-    const failing = sessions.enqueue("A", () => Promise.reject(new Error("boom")));
+    const failing = sessions.enqueue(
+      "A",
+      () => Promise.reject(new Error("boom")),
+      "room-1"
+    );
     const next = sessions.enqueue("A", async() => {
       order.push("next");
-    });
+    }, "room-1");
 
     await assert.rejects(failing, /boom/);
     await next;
     assert.deepEqual(order, ["next"]);
   });
 
-  test("interleaved clients do not share a queue", async() => {
-    const sessions = new ClientSessions();
-    const order: string[] = [];
-
-    const slow = sessions.enqueue("A", async() => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 20);
-      });
-      order.push("A");
-    });
-    const fast = sessions.enqueue("B", async() => {
-      order.push("B");
-    });
-
-    await Promise.all([slow, fast]);
-    assert.deepEqual(order, ["B", "A"]);
-  });
-
-  test("a settled queue prunes itself so a disconnect leaks nothing", async() => {
-    const sessions = new ClientSessions();
-
-    sessions.open(handle("A"), identityOf(handle("A")));
-    await sessions.enqueue("A", async() => void 0);
-    sessions.close("A");
-    await flush();
-
-    assert.strictEqual(sessions.pending, 0);
-    assert.strictEqual(sessions.size, 0);
-  });
-
-  test("clear drops every session", () => {
-    const sessions = new ClientSessions();
-
-    sessions.open(handle("A"), identityOf(handle("A")));
-    sessions.open(handle("B"), identityOf(handle("B")));
-    sessions.clear();
-
-    assert.strictEqual(sessions.size, 0);
-  });
-});
-
-describe("ClientSessions — lanes", () => {
   test("a slow lane does not hold up another lane of the same client", async() => {
     const sessions = new ClientSessions();
+    const gate = Promise.withResolvers<void>();
     const order: string[] = [];
 
     const slow = sessions.enqueue("A", async() => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 20);
-      });
+      await gate.promise;
       order.push("slow");
     }, "room-1");
-    const fast = sessions.enqueue("A", async() => {
+    sessions.enqueue("A", async() => {
       order.push("fast");
     }, "room-2");
+    await flush();
+    assert.deepEqual(order, ["fast"]);
 
-    await Promise.all([slow, fast]);
+    gate.resolve();
+    await slow;
     assert.deepEqual(order, ["fast", "slow"]);
-  });
-
-  test("keeps arrival order within one lane", async() => {
-    const sessions = new ClientSessions();
-    const order: string[] = [];
-
-    const first = sessions.enqueue("A", async() => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10);
-      });
-      order.push("first");
-    }, "room-1");
-    const second = sessions.enqueue("A", async() => {
-      order.push("second");
-    }, "room-1");
-
-    await Promise.all([first, second]);
-    assert.deepEqual(order, ["first", "second"]);
   });
 
   test("the same lane name on two clients stays independent", async() => {
     const sessions = new ClientSessions();
+    const gate = Promise.withResolvers<void>();
     const order: string[] = [];
 
     const slow = sessions.enqueue("A", async() => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 20);
-      });
+      await gate.promise;
       order.push("A");
     }, "room-1");
-    const fast = sessions.enqueue("B", async() => {
+    sessions.enqueue("B", async() => {
       order.push("B");
     }, "room-1");
+    await flush();
+    assert.deepEqual(order, ["B"]);
 
-    await Promise.all([slow, fast]);
+    gate.resolve();
+    await slow;
     assert.deepEqual(order, ["B", "A"]);
   });
 
   test("drain settles every lane the client holds", async() => {
     const sessions = new ClientSessions();
+    const gate = Promise.withResolvers<void>();
     const order: string[] = [];
+    let drained = false;
 
     sessions.enqueue("A", async() => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 20);
-      });
+      await gate.promise;
       order.push("slow");
     }, "room-1");
-    sessions.enqueue("A", () => Promise.reject(new Error("boom")), "room-2");
+    sessions.enqueue(
+      "A",
+      () => Promise.reject(new Error("boom")),
+      "room-2"
+    ).catch(() => void 0);
 
-    await sessions.drain("A");
+    const draining = sessions.drain("A").then(() => {
+      drained = true;
+    });
+    await flush();
+    assert.strictEqual(drained, false);
 
+    gate.resolve();
+    await draining;
     assert.deepEqual(order, ["slow"]);
-  });
-
-  test("drain on a client with no work resolves", async() => {
-    const sessions = new ClientSessions();
-
-    await sessions.drain("nobody");
   });
 
   test("every settled lane prunes itself", async() => {

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  defineMessageProtocol,
+  MessageProtocol,
   type MessageProtocols
 } from "@jolly-pixel/network";
 
@@ -22,9 +22,8 @@ import { assetInlineContentSchema } from "../events/AssetEvents.schema.ts";
 // CONSTANTS
 const kString = { type: "string" } as const;
 
-export const catalogCommandProtocol = defineMessageProtocol({
-  discriminator: "type",
-  schema: {
+export const catalogCommandProtocol = new MessageProtocol(
+  {
     oneOf: [
       {
         type: "object",
@@ -117,12 +116,14 @@ export const catalogCommandProtocol = defineMessageProtocol({
         ]
       }
     ]
+  },
+  {
+    discriminator: "type"
   }
-});
+);
 
-export const catalogMessageProtocol = defineMessageProtocol({
-  discriminator: "type",
-  schema: {
+export const catalogMessageProtocol = new MessageProtocol(
+  {
     oneOf: [
       {
         type: "object",
@@ -180,8 +181,11 @@ export const catalogMessageProtocol = defineMessageProtocol({
         ]
       }
     ]
+  },
+  {
+    discriminator: "type"
   }
-});
+);
 
 export const catalogProtocols: MessageProtocols = {
   inbound: catalogCommandProtocol,
