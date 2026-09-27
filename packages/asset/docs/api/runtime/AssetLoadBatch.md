@@ -11,7 +11,7 @@ type AssetLoadBatchStatus =
   | "ready"
   | "failed";
 
-interface AssetLoadBatchOptions {
+interface AssetLoadBatchOptions extends AssetLoadContext {
   onProgress?: (progress: AssetLoadProgress) => void;
 }
 
@@ -26,7 +26,8 @@ interface AssetLoadBatch {
 
 `AssetCoordinator.loadBatch()` snapshots its input. Duplicate IDs count once.
 Ready assets are included in `total` and the initial `completed` count. An empty
-batch starts ready with both counts set to zero.
+batch starts ready with both counts set to zero. `signal` is passed to every
+loader the batch starts.
 
 Await `done` before synchronously reading every asset required by the
 operation:
@@ -76,14 +77,15 @@ interface AssetLoadFailure {
 }
 ```
 
-The batch waits for every task. If at least one asset fails, `done` rejects with
-`AssetBatchLoadError`, `status` becomes `"failed"`, and `failures` contains each
-failed record and rejection value.
+`failures` grows while the batch runs, in settlement order. The batch waits
+for every task. If at least one asset fails, `done` rejects with
+`AssetBatchLoadError`, `status` becomes `"failed"`, and `failures` contains
+each failed record and rejection value.
 
-A later batch retries assets left in the store's failed state.
+A later batch retries assets left in the failed state.
 
 ## Concurrent batches
 
 Each batch owns its status, counts, and failures. Concurrent batches can
-contain the same reference. They observe the same in-flight store promise and
-count its result independently.
+contain the same reference. They observe the same in-flight promise and count
+its result independently.

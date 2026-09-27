@@ -31,7 +31,6 @@ flowchart TB
     Catalog["AssetCatalog"]
     Record["AssetRecord<br/>source + revision"]
     Loader["AssetLoader"]
-    Store["AssetStore"]
     Handle["AssetHandle<br/>asset value"]
 
     Scene --> Reference
@@ -39,8 +38,8 @@ flowchart TB
     Coordinator -->|"resolve"| Catalog
     Catalog --> Record
     Record -->|"source"| Loader
-    Loader -->|"runtime value"| Store
-    Store --> Handle
+    Loader -->|"runtime value"| Coordinator
+    Coordinator --> Handle
     Handle -->|"synchronous access"| Scene
 ```
 
@@ -122,18 +121,17 @@ These APIs are primarily for runtime integrations, editor tools, and explicit
 dynamic loading.
 
 - [`AssetCoordinator`](./docs/api/runtime/AssetCoordinator.md): resolves
-  references and starts loads.
+  references, starts loads, and owns loaded values.
 - [`AssetLoader`](./docs/api/runtime/AssetLoader.md) and
   [`AssetLoaderRegistry`](./docs/api/runtime/AssetLoaderRegistry.md): produce
   runtime values for registered asset types.
-- [`AssetStore`](./docs/api/runtime/AssetStore.md) and
-  [`AssetHandle`](./docs/api/runtime/AssetHandle.md): own and expose runtime
-  state.
+- [`AssetHandle`](./docs/api/runtime/AssetHandle.md): exposes one asset's
+  runtime state.
 - [`AssetLoadBatch`](./docs/api/runtime/AssetLoadBatch.md): tracks one fixed
   loading operation.
 
 The reference also covers [package errors](./docs/api/errors.md) and the
-[room-name and URL helpers](./docs/api/integration-utilities.md) shared with
+[room-name and URL constants](./docs/api/integration-utilities.md) shared with
 server and collaboration packages.
 
 ## ✨ Contributors guide

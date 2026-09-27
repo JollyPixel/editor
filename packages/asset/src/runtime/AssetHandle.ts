@@ -1,9 +1,12 @@
 // Import Internal Dependencies
 import type { AssetReference } from "../AssetReference.ts";
-import type {
-  AssetStatus,
-  AssetStore
-} from "./AssetStore.ts";
+import type { AssetStore } from "./AssetStore.ts";
+
+export type AssetStatus =
+  | "unloaded"
+  | "loading"
+  | "ready"
+  | "failed";
 
 /**
  * Provides synchronous typed access to one entry in an AssetStore.

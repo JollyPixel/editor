@@ -1,21 +1,25 @@
 // Import Internal Dependencies
 import { AssetId } from "./AssetId.ts";
+import { assertAssetKind } from "./assertAssetKind.ts";
 
 export class AssetRoom {
   static parse(
     roomName: string
   ): AssetRoom | null {
     const separator = roomName.indexOf(":");
-    if (separator <= 0) {
+    if (separator === -1) {
       return null;
     }
 
-    const assetId = roomName.slice(separator + 1);
-    if (assetId.trim().length === 0) {
+    try {
+      return new AssetRoom(
+        roomName.slice(0, separator),
+        roomName.slice(separator + 1)
+      );
+    }
+    catch {
       return null;
     }
-
-    return new AssetRoom(roomName.slice(0, separator), assetId);
   }
 
   readonly kind: string;
@@ -25,9 +29,7 @@ export class AssetRoom {
     kind: string,
     assetId: string | AssetId
   ) {
-    if (kind.length === 0 || kind.includes(":")) {
-      throw new TypeError("Asset room kind must be non-empty without a colon.");
-    }
+    assertAssetKind(kind);
 
     this.kind = kind;
     this.assetId = AssetId.from(assetId);
@@ -36,7 +38,12 @@ export class AssetRoom {
   equals(
     other: AssetRoom
   ): boolean {
-    return this.kind === other.kind && this.assetId.equals(other.assetId);
+    const hasEqualKind = this.kind === other.kind;
+    const hasEqualAssetId = this.assetId.equals(
+      other.assetId
+    );
+
+    return hasEqualKind && hasEqualAssetId;
   }
 
   toJSON(): string {

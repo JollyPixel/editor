@@ -24,13 +24,10 @@ describe("AssetRoom", () => {
       assert.strictEqual(new AssetRoom("pixelart", assetId).assetId, assetId);
     });
 
-    test("rejects an empty kind or a kind with a colon", () => {
+    test("rejects a blank kind or a kind with a colon", () => {
       assert.throws(() => new AssetRoom("", "a1"), TypeError);
+      assert.throws(() => new AssetRoom(" ", "a1"), TypeError);
       assert.throws(() => new AssetRoom("pixel:art", "a1"), TypeError);
-    });
-
-    test("rejects a blank asset id", () => {
-      assert.throws(() => new AssetRoom("pixelart", " "), TypeError);
     });
   });
 
@@ -49,6 +46,7 @@ describe("AssetRoom", () => {
     test("returns null for a missing separator or an empty half", () => {
       assert.strictEqual(AssetRoom.parse("pixelart"), null);
       assert.strictEqual(AssetRoom.parse(":a1"), null);
+      assert.strictEqual(AssetRoom.parse(" :a1"), null);
       assert.strictEqual(AssetRoom.parse("pixelart:"), null);
       assert.strictEqual(AssetRoom.parse("pixelart: "), null);
     });

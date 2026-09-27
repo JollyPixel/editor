@@ -1,35 +1,38 @@
 // Import Internal Dependencies
 import type { AssetRecord } from "../AssetRecord.ts";
-import {
-  AssetBatchLoadError,
-  type AssetLoadFailure
-} from "../errors/AssetBatchLoadError.ts";
+import { AssetBatchLoadError } from "../errors/AssetBatchLoadError.ts";
+import type { AssetLoadContext } from "./AssetLoader.ts";
 
 export type AssetLoadBatchStatus =
   | "loading"
   | "ready"
   | "failed";
 
-interface AssetLoadProgressBase {
-  readonly completed: number;
-  readonly total: number;
+export interface AssetLoadFailure {
   readonly record: AssetRecord;
-}
-
-interface ReadyAssetLoadProgress extends AssetLoadProgressBase {
-  readonly status: "ready";
-}
-
-interface FailedAssetLoadProgress extends AssetLoadProgressBase {
-  readonly status: "failed";
   readonly error: unknown;
 }
 
-export type AssetLoadProgress =
-  | ReadyAssetLoadProgress
-  | FailedAssetLoadProgress;
+interface ReadyAssetLoadOutcome {
+  readonly record: AssetRecord;
+  readonly status: "ready";
+}
 
-export interface AssetLoadBatchOptions {
+interface FailedAssetLoadOutcome extends AssetLoadFailure {
+  readonly status: "failed";
+}
+
+interface AssetLoadCounts {
+  readonly completed: number;
+  readonly total: number;
+}
+
+export type AssetLoadProgress = (
+  | ReadyAssetLoadOutcome
+  | FailedAssetLoadOutcome
+) & AssetLoadCounts;
+
+export interface AssetLoadBatchOptions extends AssetLoadContext {
   onProgress?: (
     progress: AssetLoadProgress
   ) => void;
@@ -47,25 +50,6 @@ export interface AssetLoadBatchTask {
   readonly record: AssetRecord;
   readonly ready: boolean;
   load(): Promise<void>;
-}
-
-interface ReadyAssetLoadResult {
-  readonly record: AssetRecord;
-  readonly status: "ready";
-}
-
-interface FailedAssetLoadResult extends AssetLoadFailure {
-  readonly status: "failed";
-}
-
-type AssetLoadResult =
-  | ReadyAssetLoadResult
-  | FailedAssetLoadResult;
-
-function isFailedAssetLoadResult(
-  result: AssetLoadResult
-): result is FailedAssetLoadResult {
-  return result.status === "failed";
 }
 
 /**
@@ -97,12 +81,11 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
     if (pendingTasks.length === 0) {
       this.#status = "ready";
       this.done = Promise.resolve();
-
-      return;
     }
-
-    this.#status = "loading";
-    this.done = this.#run(pendingTasks);
+    else {
+      this.#status = "loading";
+      this.done = this.#run(pendingTasks);
+    }
   }
 
   get status(): AssetLoadBatchStatus {
@@ -120,11 +103,8 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
   async #run(
     tasks: readonly AssetLoadBatchTask[]
   ): Promise<void> {
-    const results = await Promise.all(
+    await Promise.all(
       tasks.map((task) => this.#runTask(task))
-    );
-    this.#failures = results.filter(
-      isFailedAssetLoadResult
     );
 
     if (this.#hasProgressError) {
@@ -145,18 +125,22 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
 
   async #runTask(
     task: AssetLoadBatchTask
-  ): Promise<AssetLoadResult> {
-    let result: AssetLoadResult;
+  ): Promise<void> {
+    let outcome: ReadyAssetLoadOutcome | FailedAssetLoadOutcome;
 
     try {
       await task.load();
-      result = {
+      outcome = {
         record: task.record,
         status: "ready"
       };
     }
     catch (error: unknown) {
-      result = {
+      this.#failures.push({
+        record: task.record,
+        error
+      });
+      outcome = {
         record: task.record,
         status: "failed",
         error
@@ -165,12 +149,10 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
 
     this.#completed++;
     this.#reportProgress({
-      ...result,
+      ...outcome,
       completed: this.#completed,
       total: this.total
     });
-
-    return result;
   }
 
   #reportProgress(

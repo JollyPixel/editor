@@ -1,10 +1,5 @@
 // Import Internal Dependencies
-import type { AssetRecord } from "../AssetRecord.ts";
-
-export interface AssetLoadFailure {
-  readonly record: AssetRecord;
-  readonly error: unknown;
-}
+import type { AssetLoadFailure } from "../runtime/AssetLoadBatch.ts";
 
 /**
  * Collects every failure produced by one requested asset batch.

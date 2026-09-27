@@ -45,7 +45,7 @@ interface AssetReferenceData {
 
 `toJSON()` returns a new data object. `parse()` validates unknown input and
 checks that the persisted kind equals `type.kind`. A mismatched kind throws
-`AssetKindMismatchError`; invalid fields throw `TypeError`.
+`AssetKindMismatchError`; a malformed shape throws a `ZodError`.
 
 ```ts
 const heroModel = new AssetReference(

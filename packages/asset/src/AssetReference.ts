@@ -1,9 +1,18 @@
+// Import Third-party Dependencies
+import * as z from "zod";
+
 // Import Internal Dependencies
 import { AssetId } from "./AssetId.ts";
 import {
   AssetKindMismatchError
 } from "./errors/AssetKindMismatchError.ts";
 import type { AssetType } from "./AssetType.ts";
+
+// CONSTANTS
+const kAssetReferenceSchema = z.object({
+  id: z.string(),
+  kind: z.string()
+});
 
 export interface AssetReferenceData {
   readonly id: string;
@@ -55,35 +64,17 @@ export class AssetReference<
     input: unknown,
     type: AssetType<TValue>
   ): AssetReference<TValue> {
-    if (
-      typeof input !== "object" ||
-      input === null ||
-      Array.isArray(input)
-    ) {
-      throw new TypeError("Asset reference must be an object.");
-    }
-    if (
-      !("id" in input) ||
-      typeof input.id !== "string"
-    ) {
-      throw new TypeError("Asset reference ID must be a string.");
-    }
-    if (
-      !("kind" in input) ||
-      typeof input.kind !== "string"
-    ) {
-      throw new TypeError("Asset reference kind must be a string.");
-    }
-    const id = new AssetId(input.id);
-    if (input.kind !== type.kind) {
+    const data = kAssetReferenceSchema.parse(input);
+    const id = new AssetId(data.id);
+    if (data.kind !== type.kind) {
       throw new AssetKindMismatchError(
         id,
         type.kind,
-        input.kind
+        data.kind
       );
     }
 
-    return new AssetReference<TValue>(
+    return new AssetReference(
       id,
       type
     );

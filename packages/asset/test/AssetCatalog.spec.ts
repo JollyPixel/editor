@@ -4,62 +4,116 @@ import { describe, test } from "node:test";
 
 // Import Internal Dependencies
 import {
+  AssetAlreadyExistsError,
   AssetCatalog,
   AssetId,
   AssetKindMismatchError,
-  AssetKindNotFoundError,
+  AssetNotFoundError,
   AssetRecord,
   AssetReference,
-  AssetType
+  AssetType,
+  UnsupportedAssetManifestError
 } from "../src/index.ts";
 
+// CONSTANTS
+const kHeroRecord = {
+  id: "hero-model",
+  kind: "model",
+  source: "project:/models/hero.glb",
+  revision: "sha256:abc"
+};
+const kManifest = {
+  version: 1,
+  assets: [kHeroRecord]
+};
+
+function heroRecord(
+  source = kHeroRecord.source
+): AssetRecord {
+  return new AssetRecord({
+    id: kHeroRecord.id,
+    kind: kHeroRecord.kind,
+    source
+  });
+}
+
 describe("AssetCatalog", () => {
-  test("round-trips a versioned manifest", () => {
+  test("serializes records into a versioned manifest", () => {
     const catalog = new AssetCatalog([
-      new AssetRecord({
-        id: "hero-model",
-        kind: "model",
-        source: "project:/models/hero.glb",
-        revision: "sha256:abc"
-      })
+      new AssetRecord(kHeroRecord)
     ]);
 
-    const restored = AssetCatalog.parse(catalog.toJSON());
-    const record = restored.get(
+    assert.deepEqual(catalog.toJSON(), kManifest);
+  });
+
+  test("restores records from a manifest", () => {
+    const record = AssetCatalog.parse(kManifest).get(
       new AssetId("hero-model")
     );
 
+    assert.equal(record.kind, "model");
     assert.equal(record.source, "project:/models/hero.glb");
     assert.equal(record.revision, "sha256:abc");
-    assert.deepEqual(
-      restored.toJSON(),
-      catalog.toJSON()
+  });
+
+  test("rejects malformed manifests with a ZodError", () => {
+    const cases: unknown[] = [
+      null,
+      [],
+      { assets: [] },
+      { version: "1", assets: [] },
+      { version: 1 },
+      {
+        version: 1,
+        assets: [{ id: "hero-model", kind: "model" }]
+      }
+    ];
+
+    for (const input of cases) {
+      assert.throws(
+        () => AssetCatalog.parse(input),
+        { name: "ZodError" }
+      );
+    }
+  });
+
+  test("rejects unsupported versions before reading assets", () => {
+    assert.throws(
+      () => AssetCatalog.parse({
+        version: 2
+      }),
+      {
+        name: "UnsupportedAssetManifestError",
+        version: 2
+      }
+    );
+    assert.throws(
+      () => AssetCatalog.parse({
+        version: 2,
+        assets: []
+      }),
+      UnsupportedAssetManifestError
     );
   });
 
   test("rejects duplicate identifiers", () => {
-    const catalog = new AssetCatalog();
-    const record = new AssetRecord({
-      id: "hero-model",
-      kind: "model",
-      source: "project:/models/hero.glb"
-    });
-    catalog.add(record);
+    const catalog = new AssetCatalog([heroRecord()]);
 
     assert.throws(
-      () => catalog.add(record),
-      /already exists/
+      () => catalog.add(heroRecord()),
+      (error: unknown) => {
+        assert.ok(error instanceof AssetAlreadyExistsError);
+        assert.equal(error.id.value, "hero-model");
+
+        return true;
+      }
     );
   });
 
   test("iterates over records in insertion order", () => {
-    const first = new AssetRecord({
-      id: "hero-model",
-      kind: "model",
-      source: "project:/models/hero.glb"
-    });
+    const first = heroRecord();
     const second = new AssetRecord({
-      id: new AssetId("theme-music"),
+      id: "theme-music",
       kind: "audio",
       source: "project:/audio/theme.ogg"
     });
@@ -72,72 +126,68 @@ describe("AssetCatalog", () => {
       Array.from(catalog),
       [first, second]
     );
-
-    const copiedCatalog = new AssetCatalog(catalog);
     assert.deepEqual(
-      Array.from(copiedCatalog),
+      Array.from(new AssetCatalog(catalog)),
       [first, second]
     );
   });
 
   test("validates the kind expected by a scene reference", () => {
-    const catalog = new AssetCatalog([
-      new AssetRecord({
-        id: new AssetId("hero-model"),
-        kind: "model",
-        source: "project:/models/hero.glb"
-      })
-    ]);
+    const catalog = new AssetCatalog([heroRecord()]);
     const reference = new AssetReference(
-      new AssetId("hero-model"),
+      "hero-model",
       new AssetType<unknown>("audio")
     );
 
     assert.throws(
       () => catalog.resolve(reference),
-      AssetKindMismatchError
+      (error: unknown) => {
+        assert.ok(error instanceof AssetKindMismatchError);
+        assert.equal(error.id.value, "hero-model");
+        assert.equal(error.expectedKind, "audio");
+        assert.equal(error.actualKind, "model");
+
+        return true;
+      }
     );
   });
 
-  test("updates a source without changing its stable identifier", () => {
-    const id = new AssetId("hero-model");
-    const catalog = new AssetCatalog([
-      new AssetRecord({
-        id,
-        kind: "model",
-        source: "project:/models/hero.glb"
-      })
-    ]);
+  test("set inserts a new record or replaces the one with its ID", () => {
+    const catalog = new AssetCatalog();
+    const moved = heroRecord("project:/characters/hero.glb");
 
-    catalog.replace(new AssetRecord({
-      id,
-      kind: "model",
-      source: "project:/characters/hero.glb"
-    }));
+    catalog.set(heroRecord());
+    catalog.set(moved);
 
-    assert.equal(
-      catalog.get(id).source,
-      "project:/characters/hero.glb"
+    assert.equal(catalog.size, 1);
+    assert.equal(catalog.get("hero-model"), moved);
+  });
+
+  test("find returns undefined where get throws", () => {
+    const catalog = new AssetCatalog([heroRecord()]);
+
+    assert.equal(catalog.find("hero-model")?.kind, "model");
+    assert.equal(catalog.find("villain"), undefined);
+    assert.throws(
+      () => catalog.get("villain"),
+      (error: unknown) => {
+        assert.ok(error instanceof AssetNotFoundError);
+        assert.equal(error.id.value, "villain");
+
+        return true;
+      }
     );
   });
 
-  test("parses unknown persistence input", () => {
+  test("removes a record and returns it", () => {
+    const record = heroRecord();
+    const catalog = new AssetCatalog([record]);
+
+    assert.equal(catalog.remove("hero-model"), record);
+    assert.equal(catalog.has("hero-model"), false);
     assert.throws(
-      () => AssetCatalog.parse({
-        version: 1,
-        assets: [{
-          id: "hero-model",
-          kind: "model"
-        }]
-      }),
-      /source must be a string/
-    );
-    assert.throws(
-      () => AssetCatalog.parse({
-        version: 2,
-        assets: []
-      }),
-      /version "2" is not supported/
+      () => catalog.get(record.id),
+      AssetNotFoundError
     );
   });
 });
@@ -181,31 +231,5 @@ describe("AssetCatalog kind lookup", () => {
     assert.equal(iterator.next().value?.id.value, "asset-0");
     catalog.remove(new AssetId("asset-1"));
     assert.equal(iterator.next().done, true);
-  });
-
-  test("firstOfKind returns the first matching record", () => {
-    const catalog = catalogOf("texture", "model", "model");
-
-    assert.equal(
-      catalog.firstOfKind("model").id.value,
-      "asset-1"
-    );
-  });
-
-  test("firstOfKind throws when no record matches", () => {
-    assert.throws(
-      () => catalogOf("model").firstOfKind("texture"),
-      (error: AssetKindNotFoundError) => {
-        assert.ok(error instanceof AssetKindNotFoundError);
-        assert.equal(error.name, "AssetKindNotFoundError");
-        assert.equal(
-          error.message,
-          'The catalog holds no "texture" asset.'
-        );
-        assert.equal(error.kind, "texture");
-
-        return true;
-      }
-    );
   });
 });

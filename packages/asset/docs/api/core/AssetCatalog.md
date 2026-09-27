@@ -8,19 +8,17 @@ component data.
 
 ```ts
 class AssetCatalog implements Iterable<AssetRecord> {
-  static async fetch(url?: string): Promise<AssetCatalog>;
-
   readonly size: number;
 
   constructor(records?: Iterable<AssetRecord>);
 
   add(record: AssetRecord): this;
-  has(id: AssetId): boolean;
-  replace(record: AssetRecord): this;
-  remove(id: AssetId): AssetRecord;
-  get(id: AssetId): AssetRecord;
+  set(record: AssetRecord): this;
+  has(id: AssetId | string): boolean;
+  find(id: AssetId | string): AssetRecord | undefined;
+  get(id: AssetId | string): AssetRecord;
+  remove(id: AssetId | string): AssetRecord;
   byKind(kind: string): IterableIterator<AssetRecord>;
-  firstOfKind(kind: string): AssetRecord;
   resolve(reference: AssetReference<unknown>): AssetRecord;
   toJSON(): AssetManifestData;
 
@@ -28,34 +26,30 @@ class AssetCatalog implements Iterable<AssetRecord> {
 }
 ```
 
-`fetch()` requests `CATALOG_URL_PATH` by default and passes the JSON response
-to `parse()`. It throws `AssetFetchError` for non-2xx responses. Transport and
-JSON-decoding errors propagate unchanged, as do errors from `parse()`.
-
 Initial records pass through the same duplicate-ID check as `add()`.
 
 | Operation | Result | Failure |
 |---|---|---|
 | `add(record)` | Inserts the record and returns the catalog | `AssetAlreadyExistsError` |
+| `set(record)` | Inserts the record, or replaces the one with its ID, and returns the catalog | None |
 | `has(id)` | Reports whether the ID exists | None |
-| `replace(record)` | Replaces an existing record and returns the catalog | `AssetNotFoundError` |
-| `remove(id)` | Removes and returns the record | `AssetNotFoundError` |
+| `find(id)` | Returns the record, or `undefined` | None |
 | `get(id)` | Returns the record | `AssetNotFoundError` |
+| `remove(id)` | Removes and returns the record | `AssetNotFoundError` |
 | `byKind(kind)` | Iterates the records of one kind, in insertion order | None |
-| `firstOfKind(kind)` | Returns the first record of one kind | `AssetKindNotFoundError` |
 | `resolve(reference)` | Returns the record after checking its kind | `AssetNotFoundError` or `AssetKindMismatchError` |
 
 Replacing or removing a record does not evict a value already held by an
-`AssetStore`. See [catalog changes](../../concepts/runtime-loading-architecture.md#catalog-changes)
+`AssetCoordinator`. See [catalog changes](../../concepts/runtime-loading-architecture.md#catalog-changes)
 for the runtime invalidation sequence.
 
 ## Iteration
 
 `byKind()` is lazy. A matching record removed before the iterator reaches it
-is skipped. `firstOfKind()` returns the first matching record:
+is skipped. Destructure it to read the first matching record:
 
 ```ts
-const world = catalog.firstOfKind("voxelmap");
+const [world] = catalog.byKind("voxelmap");
 ```
 
 Direct iteration preserves insertion order:
@@ -94,6 +88,7 @@ interface AssetManifestData {
 }
 ```
 
-`AssetCatalog.parse()` validates unknown input and parses every
-[`AssetRecord`](../domain/AssetRecord.md) before constructing the catalog.
-Unsupported versions throw `UnsupportedAssetManifestError`.
+`AssetCatalog.parse()` reads `version` first and throws
+`UnsupportedAssetManifestError` for any version other than `1`. It then parses
+every [`AssetRecord`](../domain/AssetRecord.md) before constructing the
+catalog. A malformed manifest throws a `ZodError`.

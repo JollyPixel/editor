@@ -8,7 +8,6 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
-import { LAUNCH_ELEMENT_ID } from "@jolly-pixel/asset";
 import type {
   HtmlTagDescriptor,
   IndexHtmlTransformContext,
@@ -22,6 +21,7 @@ import {
   type AssetLaunchRequest,
   type AssetWorkspacePluginOptions
 } from "#src/plugins/vite.ts";
+import { LAUNCH_ELEMENT_ID } from "#src/launch.ts";
 import type { AssetEventDataMap } from "#src/index.ts";
 
 interface PluginHarness extends AsyncDisposable {

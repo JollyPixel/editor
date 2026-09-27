@@ -5,7 +5,9 @@ export class AssetId {
   static from(
     id: string | AssetId
   ): AssetId {
-    return typeof id === "string" ? new AssetId(id) : id;
+    return typeof id === "string"
+      ? new AssetId(id)
+      : id;
   }
 
   readonly value: string;
@@ -14,7 +16,9 @@ export class AssetId {
     value: string
   ) {
     if (value.trim().length === 0) {
-      throw new TypeError("Asset identifier must not be empty.");
+      throw new TypeError(
+        "Asset identifier must not be empty."
+      );
     }
 
     this.value = value;

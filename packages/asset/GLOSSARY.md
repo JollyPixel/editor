@@ -74,15 +74,12 @@ buffer, or text document.
 A consumer's synchronous access point to an asset value. A handle also exposes
 whether the value is unloaded, loading, ready, or failed.
 
-### Asset Store
-
-The runtime owner of loaded values and in-flight loads. A shared store prevents
-the same asset from being loaded twice at the same time.
-
 ### Asset Coordinator
 
-The application service that connects references, catalog records, loaders,
-and the store. It starts explicit single-asset loads and load batches.
+The application service that connects references, catalog records, and
+loaders. It owns loaded values and in-flight loads, so the same asset is never
+loaded twice at the same time, and starts explicit single-asset loads and load
+batches.
 
 ### Asset Dependency
 
@@ -103,7 +100,8 @@ progress and failures while sharing loaded values with other batches.
   **asset record** for catalog metadata.
 - Use **asset kind** for persisted categorization and **asset type** for the
   runtime value contract.
-- Use **catalog** for persistent records and **store** for runtime state.
+- Use **catalog** for persistent records and **coordinator** for runtime
+  state.
 - Use **loader** for I/O and decoding and **coordinator** for dispatch and
   loading operations.
 - Use **dependency** for one required reference and **load batch** for the

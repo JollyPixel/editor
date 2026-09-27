@@ -4,8 +4,8 @@ export type {
   AssetLoadBatch,
   AssetLoadBatchOptions,
   AssetLoadBatchStatus,
+  AssetLoadFailure,
   AssetLoadProgress
 } from "./AssetLoadBatch.ts";
 export * from "./AssetLoader.ts";
 export * from "./AssetLoaderRegistry.ts";
-export * from "./AssetStore.ts";

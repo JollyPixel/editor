@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { assertAssetKind } from "./assertAssetKind.ts";
+
 // CONSTANTS
 declare const kAssetValueTypeBrand: unique symbol;
 
@@ -14,9 +17,7 @@ export class AssetType<
   constructor(
     kind: string
   ) {
-    if (kind.trim().length === 0) {
-      throw new TypeError("Asset type kind must not be empty.");
-    }
+    assertAssetKind(kind);
 
     this.kind = kind;
   }
