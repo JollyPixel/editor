@@ -73,6 +73,8 @@ interface VoxelViewOptions {
   receiveShadow?: boolean;
   /** 0 (off) to 1. @default 0 */
   ambientOcclusion?: number;
+  /** Mesh chunks in Web Workers, see VoxelEngine.md#mesh-workers. */
+  meshWorkers?: MeshWorkerOptions;
 }
 ```
 
@@ -114,7 +116,7 @@ mode hides the whole group.
 
 ```ts
 init(): void;                   // builds meshes for voxels already present
-tick(deltaTime: number): void;  // rebuilds dirty chunks within the budget
+tick(deltaTime: number): void;  // rebuilds dirty chunks within the budget, or dispatches them to mesh workers
 flush(): void;                  // rebuilds every pending chunk now
 whenIdle(): Promise<void>;       // see VoxelEngine.md#rebuild-budget
 loadTileset(def: TilesetDefinition, texture: TilesetTexture): void;

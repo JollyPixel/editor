@@ -9,6 +9,7 @@ import {
   PulledChunkMesh,
   type ChunkGeometryKey,
   type DownsampledWorld,
+  type MeshBuildStats,
   type VoxelMeshBuilder
 } from "../mesh/index.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
@@ -42,6 +43,14 @@ export interface ChunkMeshEntry {
 export interface ChunkLodSource {
   world: DownsampledWorld;
   meshBuilder: VoxelMeshBuilder;
+}
+
+export interface ChunkRebuildPlan {
+  target: ChunkMeshTarget;
+  members: readonly IterableLayerChunk[];
+  origin: VoxelCoord;
+  detail: ChunkDetail;
+  lod: ChunkLodSource | null;
 }
 
 export interface ChunkMeshStoreOptions {
@@ -167,12 +176,33 @@ export class ChunkMeshStore {
   rebuild(
     target: ChunkMeshTarget
   ): void {
+    const plan = this.plan(target);
+    if (plan !== null) {
+      this.build(plan);
+    }
+  }
+
+  build(
+    plan: ChunkRebuildPlan
+  ): void {
+    const builder = plan.lod === null ? this.#meshBuilder : plan.lod.meshBuilder;
+    const geometries = builder.buildChunkGeometries(
+      plan.lod === null ?
+        plan.members :
+        plan.lod.world.sync(plan.members, (chunk) => this.#isCoarse(chunk))
+    );
+    this.install(plan, geometries, builder.stats);
+  }
+
+  plan(
+    target: ChunkMeshTarget
+  ): ChunkRebuildPlan | null {
     const { key } = target;
     const members = this.#layout.membersOf(target);
     if (members.length === 0) {
       this.remove(key);
 
-      return;
+      return null;
     }
 
     this.#logger.debug(`Rebuilding chunk '${key}'`);
@@ -182,15 +212,32 @@ export class ChunkMeshStore {
       origin,
       this.#entries.get(key)?.detail
     ) ?? FULL_DETAIL;
+
+    return {
+      target,
+      members,
+      origin,
+      detail,
+      lod: detail.lod > 0 ? this.#lod : null
+    };
+  }
+
+  install(
+    plan: ChunkRebuildPlan,
+    geometries: Map<ChunkGeometryKey, THREE.BufferGeometry>,
+    stats: MeshBuildStats
+  ): void {
+    const {
+      target,
+      members,
+      origin,
+      detail,
+      lod
+    } = plan;
+    const { key } = target;
+    const [first] = members;
     this.#discard(key);
 
-    const lod = detail.lod > 0 ? this.#lod : null;
-    const builder = lod === null ? this.#meshBuilder : lod.meshBuilder;
-    const geometries = builder.buildChunkGeometries(
-      lod === null ?
-        members :
-        lod.world.sync(members, (chunk) => this.#isCoarse(chunk))
-    );
     const opacity = target.layer?.opacity ?? 1;
     const meshes: THREE.Mesh[] = [];
     const geometryKeys: ChunkGeometryKey[] = [];
@@ -230,7 +277,7 @@ export class ChunkMeshStore {
     this.#inspector.registerChunk(
       key,
       meshes,
-      builder.stats,
+      stats,
       {
         origin,
         size: first.chunk.size

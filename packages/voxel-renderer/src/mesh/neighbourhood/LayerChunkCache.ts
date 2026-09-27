@@ -1,6 +1,8 @@
 // Import Internal Dependencies
-import type { VoxelChunk } from "../../world/VoxelChunk.ts";
-import type { VoxelLayer } from "../../world/VoxelLayer.ts";
+import type {
+  MeshableChunk,
+  MeshableLayer
+} from "../types.ts";
 import {
   VOXEL_ABSENT,
   type PackedVoxel
@@ -11,7 +13,7 @@ const kSpan = 3;
 const kUnresolved = -2;
 
 export interface LayerChunkCacheOptions {
-  layer: VoxelLayer;
+  layer: MeshableLayer;
   chunkSize: number;
   minWx: number;
   minWy: number;
@@ -27,7 +29,7 @@ export interface LayerChunkCacheOptions {
  * Prefetches a 3×3×3 chunk window for hot-path voxel lookup.
  */
 export class LayerChunkCache {
-  readonly layer: VoxelLayer;
+  readonly layer: MeshableLayer;
   readonly opaque: boolean;
   readonly empty: boolean = true;
 
@@ -43,12 +45,12 @@ export class LayerChunkCache {
   /**
    * Pre-filled with `null` rather than left holey, so reads stay monomorphic.
    */
-  #chunks: (VoxelChunk | null)[] = new Array(kSpan ** 3).fill(null);
+  #chunks: (MeshableChunk | null)[] = new Array(kSpan ** 3).fill(null);
 
   #centreWx: number;
   #centreWy: number;
   #centreWz: number;
-  #centreChunk: VoxelChunk | null = null;
+  #centreChunk: MeshableChunk | null = null;
 
   #window: Int32Array | null = null;
   #pendingWindow: Int32Array | null = null;

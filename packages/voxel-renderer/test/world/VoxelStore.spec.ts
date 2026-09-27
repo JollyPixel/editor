@@ -354,3 +354,55 @@ describe("VoxelStore reserve", () => {
     assert.equal(store.capacity, capacity);
   });
 });
+
+describe("VoxelStore shared memory", () => {
+  it("moves its entries into SharedArrayBuffers", () => {
+    const store = new VoxelStore();
+    store.set(3, 30);
+    store.set(99, 990);
+
+    store.share();
+
+    assert.equal(store.shared, true);
+    assert.ok(store.keys.buffer instanceof SharedArrayBuffer);
+    assert.ok(store.values.buffer instanceof SharedArrayBuffer);
+    assert.deepEqual(collect(store), new Map([[3, 30], [99, 990]]));
+  });
+
+  it("stays shared when it grows", () => {
+    const store = new VoxelStore();
+    store.share();
+
+    for (let key = 0; key < 100; key++) {
+      store.set(key, key);
+    }
+
+    assert.ok(store.keys.buffer instanceof SharedArrayBuffer);
+    assert.ok(store.values.buffer instanceof SharedArrayBuffer);
+    assert.equal(store.get(99), 99);
+  });
+
+  it("reads another store's arrays and sees its later writes", () => {
+    const owner = new VoxelStore();
+    owner.set(7, 70);
+    owner.share();
+
+    const view = VoxelStore.fromArrays(owner.keys, owner.values, owner.size);
+    owner.set(8, 80);
+
+    assert.equal(view.shared, true);
+    assert.equal(view.get(7), 70);
+    assert.equal(view.get(8), 80);
+  });
+
+  it("rejects arrays that are not one power-of-two table", () => {
+    assert.throws(
+      () => VoxelStore.fromArrays(new Int32Array(24), new Uint32Array(24), 0),
+      RangeError
+    );
+    assert.throws(
+      () => VoxelStore.fromArrays(new Int32Array(16), new Uint32Array(32), 0),
+      RangeError
+    );
+  });
+});

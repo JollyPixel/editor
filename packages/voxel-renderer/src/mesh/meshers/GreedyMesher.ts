@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import type { VoxelChunk } from "../../world/VoxelChunk.ts";
 import type {
   BlockVariant,
   BlockVariantFace
@@ -8,6 +7,7 @@ import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
 import type { ChunkNeighbourhood } from "../neighbourhood/ChunkNeighbourhood.ts";
 import type { GeometryBuffer } from "../GeometryBuffer.ts";
 import type {
+  MeshableChunk,
   Mesher,
   MeshPassOptions
 } from "../types.ts";
@@ -85,7 +85,7 @@ export class GreedyMesher implements Mesher<GeometryBuffer> {
   // Per-chunk state, set by `mesh()` so the passes stay parameter-free.
   #pass!: MeshPassOptions<GeometryBuffer>;
   #faces!: FaceEmitter;
-  #chunk!: VoxelChunk;
+  #chunk!: MeshableChunk;
   #neighbourhood!: ChunkNeighbourhood;
   #originX = 0;
   #originY = 0;

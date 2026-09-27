@@ -12,7 +12,7 @@ interface PendingRebuild {
 
 export type ChunkRebuildFn = (
   target: ChunkMeshTarget
-) => void;
+) => boolean;
 
 /**
  * Mesh targets awaiting a rebuild, drained nearest-to-focus first under a
@@ -20,6 +20,7 @@ export type ChunkRebuildFn = (
  */
 export class ChunkRebuildQueue {
   #pending: PendingRebuild[] = [];
+  #head = 0;
   #queued = new Map<string, PendingRebuild>();
   #lastSortFocus: THREE.Vector3Like | null = null;
 
@@ -59,6 +60,7 @@ export class ChunkRebuildQueue {
 
   clear(): void {
     this.#pending = [];
+    this.#head = 0;
     this.#queued.clear();
     this.#lastSortFocus = null;
   }
@@ -74,6 +76,7 @@ export class ChunkRebuildQueue {
   sortBy(
     viewport: ChunkViewport
   ): void {
+    this.#compact();
     for (const pending of this.#pending) {
       pending.distance = viewport.distanceSquaredTo(
         pending.target.origin
@@ -91,32 +94,51 @@ export class ChunkRebuildQueue {
     rebuild: ChunkRebuildFn
   ): void {
     const pending = this.#pending;
-    if (pending.length === 0) {
+    if (this.#head >= pending.length) {
       return;
     }
 
     const deadline = budgetMs > 0
       ? performance.now() + budgetMs
       : Infinity;
-    let index = 0;
+    let index = this.#head;
 
     while (index < pending.length) {
-      const next = pending[index++];
+      const next = pending[index];
       const { key } = next.target;
       if (this.#queued.get(key) !== next) {
+        index++;
         continue;
       }
       this.#queued.delete(key);
 
-      rebuild(next.target);
+      if (!rebuild(next.target)) {
+        if (!this.#queued.has(key)) {
+          this.#queued.set(key, next);
+        }
+        break;
+      }
+      index++;
 
       if (performance.now() >= deadline) {
         break;
       }
     }
 
-    this.#pending = index < pending.length
-      ? pending.slice(index)
-      : [];
+    this.#head = index;
+    if (index >= pending.length) {
+      this.#pending = [];
+      this.#head = 0;
+    }
+    else if (index > pending.length >> 1) {
+      this.#compact();
+    }
+  }
+
+  #compact(): void {
+    if (this.#head > 0) {
+      this.#pending = this.#pending.slice(this.#head);
+      this.#head = 0;
+    }
   }
 }

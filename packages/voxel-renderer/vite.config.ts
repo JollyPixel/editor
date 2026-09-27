@@ -7,6 +7,12 @@ import checker from "vite-plugin-checker";
 import glsl from "vite-plugin-glsl";
 import wasm from "vite-plugin-wasm";
 
+// CONSTANTS
+const kCrossOriginIsolation = {
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Embedder-Policy": "require-corp"
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
@@ -23,7 +29,14 @@ export default defineConfig({
     ]
   },
   server: {
-    allowedHosts: true
+    allowedHosts: true,
+    headers: kCrossOriginIsolation
+  },
+  preview: {
+    headers: kCrossOriginIsolation
+  },
+  worker: {
+    format: "es"
   },
   plugins: [
     checker({

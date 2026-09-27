@@ -1,4 +1,18 @@
-export class MeshBuildStats {
+export interface MeshBuildCounts {
+  voxels: number;
+  hiddenVoxels: number;
+  faces: number;
+  culledFaces: number;
+  mergedFaces: number;
+  vertices: number;
+  triangles: number;
+  geometries: number;
+  bytesPerVertex: number;
+  bytes: number;
+  buildTimeMs: number;
+}
+
+export class MeshBuildStats implements MeshBuildCounts {
   voxels = 0;
   hiddenVoxels = 0;
   faces = 0;
@@ -34,7 +48,7 @@ export class MeshBuildStats {
   }
 
   copyFrom(
-    source: MeshBuildStats
+    source: Readonly<MeshBuildCounts>
   ): void {
     this.voxels = source.voxels;
     this.hiddenVoxels = source.hiddenVoxels;
@@ -47,6 +61,22 @@ export class MeshBuildStats {
     this.bytesPerVertex = source.bytesPerVertex;
     this.bytes = source.bytes;
     this.buildTimeMs = source.buildTimeMs;
+  }
+
+  toJSON(): MeshBuildCounts {
+    return {
+      voxels: this.voxels,
+      hiddenVoxels: this.hiddenVoxels,
+      faces: this.faces,
+      culledFaces: this.culledFaces,
+      mergedFaces: this.mergedFaces,
+      vertices: this.vertices,
+      triangles: this.triangles,
+      geometries: this.geometries,
+      bytesPerVertex: this.bytesPerVertex,
+      bytes: this.bytes,
+      buildTimeMs: this.buildTimeMs
+    };
   }
 
   clone(): MeshBuildStats {

@@ -203,6 +203,9 @@ It is configurable from the query string:
 | `size` | `512` | World width/depth in voxels (`size²` columns) |
 | `chunk` | `32` | `chunkSize`; trades draw calls against rebuild cost |
 | `seed` | `1337` | Terrain seed; the same seed always yields the same world |
+| `workers` | `1` up to 512, `2` up to 1024, `4` above | Mesh workers, capped at `hardwareConcurrency - 1`; `0` meshes on the main thread |
+
+The examples dev server sends `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers, which mesh workers need for `SharedArrayBuffer`.
 
 ### Headless benchmark
 
@@ -211,8 +214,11 @@ The browser HUD is only a sanity check; Vite's checker inflates timings. Run hea
 ```bash
 pnpm run bench
 pnpm run bench --greedy
+pnpm run bench --workers 8
 pnpm run bench:compare
 ```
+
+`--workers N` meshes in N `worker_threads` ticked at 60 fps; `main thread` then reports the event loop busy time instead of the flush duration.
 
 Use the minimum of three runs when comparing numbers, since single runs can drift a lot on a throttled machine.
 

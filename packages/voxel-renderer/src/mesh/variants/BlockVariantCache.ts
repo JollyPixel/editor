@@ -4,7 +4,6 @@ import type { BlockShape } from "../../blocks/shape/BlockShape.ts";
 import type {
   BlockShapeRegistry
 } from "../../blocks/shape/BlockShapeRegistry.ts";
-import type { TilesetManager } from "../../tileset/TilesetManager.ts";
 import type {
   TileRotation,
   TilesetUVRegion
@@ -24,7 +23,8 @@ import {
 } from "../../blocks/shape/shapeSlots.ts";
 import type {
   BlockVariant,
-  BlockVariantFace
+  BlockVariantFace,
+  TilesetResolver
 } from "./types.ts";
 import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
 import {
@@ -81,7 +81,7 @@ export interface BlockVariantCacheOptions {
   alphaTest?: number;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
-  tilesetManager: TilesetManager;
+  tilesetManager: TilesetResolver;
   /**
    * Receives a warning for each `faceTextures` key no slot of the block's
    * shape can use.
@@ -95,7 +95,7 @@ export interface BlockVariantCacheOptions {
 export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
-  #tilesetManager: TilesetManager;
+  #tilesetManager: TilesetResolver;
   #alphaTest: number;
   #logger: VoxelLogger;
   #checkedSlots = new WeakMap<ResolvedBlockDefinition, BlockShape>();

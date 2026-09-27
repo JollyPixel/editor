@@ -90,6 +90,16 @@ side of the world is meshed first.
 `init()` and `load()` rebuild the complete world synchronously. Use `flush()`
 when callers need current meshes before continuing.
 
+With [`meshWorkers`](../api/core/VoxelEngine.md#mesh-workers), the queue feeds
+Web Workers instead. A job carries the chunk and its 26 neighbours in every
+visible layer as `SharedArrayBuffer` views of their `VoxelStore`, so nothing is
+copied in; the worker runs the same mesher and transfers the typed arrays back.
+The main thread only builds the Three.js objects. A job records the revision of
+every chunk it read: if one changed before the result is installed, the result
+is dropped and the chunk meshed again, which also covers a worker reading a
+store mid-write. Vertex pulling works in workers; each worker numbers its own
+face templates and the main thread maps them into the shared table.
+
 ## View distance
 
 `viewDistance` bounds the work to a chunk radius around `focus`. It is

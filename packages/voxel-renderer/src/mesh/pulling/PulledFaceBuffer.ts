@@ -1,9 +1,8 @@
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
-import type { FaceBuffer } from "../types.ts";
-import type { QuadIndex } from "../QuadIndex.ts";
+import type {
+  FaceBuffer,
+  PulledMeshData
+} from "../types.ts";
 import type { BlockVariantFace } from "../variants/types.ts";
 import {
   AO_UNOCCLUDED,
@@ -110,23 +109,28 @@ export class PulledFaceBuffer implements FaceBuffer {
     this.#maxZ = Math.max(this.#maxZ, z + 1);
   }
 
-  toGeometry(
-    _quadIndex: QuadIndex
-  ): PulledChunkGeometry {
+  toMeshData(): PulledMeshData {
     const words = new Uint32Array(
       PulledChunkGeometry.wordCapacity(this.#faceCount)
     );
     words.set(this.#words.subarray(0, this.#faceCount * PULLED_FACE_WORDS));
 
-    return new PulledChunkGeometry({
+    return {
+      kind: "pulled",
       words,
       faceCount: this.#faceCount,
-      templates: this.#templates,
-      bounds: new THREE.Box3(
-        new THREE.Vector3(this.#minX, this.#minY, this.#minZ),
-        new THREE.Vector3(this.#maxX, this.#maxY, this.#maxZ)
-      )
-    });
+      vertexCount: this.vertexCount,
+      triangleCount: this.triangleCount,
+      bytesPerVertex: this.bytesPerVertex,
+      bounds: [
+        this.#minX,
+        this.#minY,
+        this.#minZ,
+        this.#maxX,
+        this.#maxY,
+        this.#maxZ
+      ]
+    };
   }
 
   #reserve(): number {

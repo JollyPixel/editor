@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type { PulledMeshData } from "../types.ts";
 import type { FaceTemplateTable } from "./FaceTemplateTable.ts";
 
 // CONSTANTS
@@ -42,6 +43,31 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     const [width, height] = textureSize(faceCount);
 
     return width * height * PULLED_FACE_WORDS;
+  }
+
+  static byteLength(
+    data: PulledMeshData
+  ): number {
+    return data.words.byteLength +
+      (kCornerCount * 3 * Float32Array.BYTES_PER_ELEMENT * 2) +
+      (kQuadCorners.length * Uint16Array.BYTES_PER_ELEMENT);
+  }
+
+  static fromMeshData(
+    data: PulledMeshData,
+    templates: FaceTemplateTable
+  ): PulledChunkGeometry {
+    const [minX, minY, minZ, maxX, maxY, maxZ] = data.bounds;
+
+    return new PulledChunkGeometry({
+      words: data.words,
+      faceCount: data.faceCount,
+      templates,
+      bounds: new THREE.Box3(
+        new THREE.Vector3(minX, minY, minZ),
+        new THREE.Vector3(maxX, maxY, maxZ)
+      )
+    });
   }
 
   readonly faces: THREE.DataTexture;

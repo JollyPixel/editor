@@ -2,18 +2,23 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import type { IterableLayerChunk } from "../world/VoxelWorld.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
-import type { TilesetManager } from "../tileset/TilesetManager.ts";
+import type { TilesetResolver } from "./variants/types.ts";
 import type {
+  ChunkMeshData,
   FaceBuffer,
+  MeshableLayerChunk,
   MeshableWorld,
   MeshPassOptions
 } from "./types.ts";
 import type { ChunkGeometryKey } from "./ChunkGeometryKey.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
-import { GeometryBuffer } from "./GeometryBuffer.ts";
+import {
+  GeometryBuffer,
+  createQuadGeometry,
+  quadMeshBytes
+} from "./GeometryBuffer.ts";
 import { FaceTemplateTable } from "./pulling/FaceTemplateTable.ts";
 import { PulledFaceBuffer } from "./pulling/PulledFaceBuffer.ts";
 import { PulledChunkGeometry } from "./pulling/PulledChunkGeometry.ts";
@@ -32,7 +37,7 @@ export interface VoxelMeshBuilderOptions {
   world: MeshableWorld;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
-  tilesetManager: TilesetManager;
+  tilesetManager: TilesetResolver;
   /**
    * Enables greedy face merging and tiled geometry attributes.
    * @default false
@@ -154,16 +159,57 @@ export class VoxelMeshBuilder {
   }
 
   buildChunkGeometries(
-    members: readonly IterableLayerChunk[]
+    members: readonly MeshableLayerChunk[]
   ): Map<ChunkGeometryKey, THREE.BufferGeometry> {
+    const result = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
+    for (const [key, data] of this.buildChunkMeshData(members)) {
+      result.set(key, this.createGeometry(data));
+    }
+
+    return result;
+  }
+
+  buildChunkMeshData(
+    members: readonly MeshableLayerChunk[]
+  ): Map<ChunkGeometryKey, ChunkMeshData> {
+    const result = new Map<ChunkGeometryKey, ChunkMeshData>();
+    const startedAt = performance.now();
+    if (!this.#mesh(members)) {
+      return result;
+    }
+
+    this.#activeBuffers().forEach((buffer, slot) => {
+      if (buffer === undefined || buffer.vertexCount === 0) {
+        return;
+      }
+
+      const data = buffer.toMeshData();
+      this.#count(data);
+      result.set(this.#variants.geometryKeyAt(slot), data);
+    });
+    this.stats.buildTimeMs = performance.now() - startedAt;
+
+    return result;
+  }
+
+  createGeometry(
+    data: ChunkMeshData
+  ): THREE.BufferGeometry {
+    return data.kind === "quads" ?
+      createQuadGeometry(data, this.#quadIndex) :
+      PulledChunkGeometry.fromMeshData(data, this.faceTemplates);
+  }
+
+  #mesh(
+    members: readonly MeshableLayerChunk[]
+  ): boolean {
     const { stats } = this;
     stats.reset();
 
     const drawn = members.filter(({ chunk }) => chunk.voxelCount > 0);
     if (drawn.length === 0) {
-      return new Map();
+      return false;
     }
-    const startedAt = performance.now();
     this.#variants.refresh();
 
     const chunkSize = this.#world.chunkSize;
@@ -207,10 +253,7 @@ export class VoxelMeshBuilder {
       }
     }
 
-    const geometries = this.#collectGeometries();
-    stats.buildTimeMs = performance.now() - startedAt;
-
-    return geometries;
+    return true;
   }
 
   #activeBuffers(): readonly (FaceBuffer | undefined)[] {
@@ -223,40 +266,16 @@ export class VoxelMeshBuilder {
     }
   }
 
-  #collectGeometries(): Map<ChunkGeometryKey, THREE.BufferGeometry> {
-    const result = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
+  #count(
+    data: ChunkMeshData
+  ): void {
     const { stats } = this;
-    const buffers = this.#activeBuffers();
-
-    for (let slot = 0; slot < buffers.length; slot++) {
-      const buffer = buffers[slot];
-      if (buffer === undefined || buffer.vertexCount === 0) {
-        continue;
-      }
-
-      const geometry = buffer.toGeometry(this.#quadIndex);
-      stats.vertices += buffer.vertexCount;
-      stats.triangles += buffer.triangleCount;
-      stats.geometries++;
-      stats.bytesPerVertex = buffer.bytesPerVertex;
-      stats.bytes += byteLengthOf(geometry);
-      result.set(this.#variants.geometryKeyAt(slot), geometry);
-    }
-
-    return result;
+    stats.vertices += data.vertexCount;
+    stats.triangles += data.triangleCount;
+    stats.geometries++;
+    stats.bytesPerVertex = data.bytesPerVertex;
+    stats.bytes += data.kind === "quads" ?
+      quadMeshBytes(data) :
+      PulledChunkGeometry.byteLength(data);
   }
-}
-
-function byteLengthOf(
-  geometry: THREE.BufferGeometry
-): number {
-  let bytes = geometry.index?.array.byteLength ?? 0;
-  for (const attribute of Object.values(geometry.attributes)) {
-    bytes += attribute.array.byteLength;
-  }
-  if (geometry instanceof PulledChunkGeometry) {
-    bytes += (geometry.faces.image.data as Uint32Array).byteLength;
-  }
-
-  return bytes;
 }

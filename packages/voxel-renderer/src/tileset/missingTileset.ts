@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { TilesetAtlas } from "./TilesetAtlas.ts";
+import type { ResolvedTilesetDefinition } from "./types.ts";
 
 // CONSTANTS
 export const MISSING_TILESET_ID = "$missing";
@@ -10,6 +11,12 @@ const kSize = 16;
 const kCrossHalfWidth = 1;
 const kBackground = [255, 23, 68, 255];
 const kCross = [255, 255, 255, 255];
+export const MISSING_TILESET_DEFINITION: Readonly<ResolvedTilesetDefinition> = Object.freeze({
+  id: MISSING_TILESET_ID,
+  tileSize: kSize,
+  cols: 1,
+  rows: 1
+});
 
 export type MissingTilesetAtlas = TilesetAtlas<THREE.DataTexture>;
 
@@ -27,13 +34,5 @@ export function createMissingTilesetAtlas(): MissingTilesetAtlas {
   const texture = new THREE.DataTexture(data, kSize, kSize);
   texture.needsUpdate = true;
 
-  return new TilesetAtlas(
-    {
-      id: MISSING_TILESET_ID,
-      tileSize: kSize,
-      cols: 1,
-      rows: 1
-    },
-    texture
-  );
+  return new TilesetAtlas(MISSING_TILESET_DEFINITION, texture);
 }
