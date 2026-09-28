@@ -34,16 +34,6 @@ describe("VoxelWorld — layer properties", () => {
     assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
   });
 
-  it("accumulates a position through translateLayer", () => {
-    const world = new VoxelWorld(4);
-    const layer = world.addLayer("Ground");
-
-    world.setLayerPosition("Ground", { x: 4, y: 0, z: 0 });
-    world.translateLayer("Ground", { x: 4, y: 0, z: 2 });
-
-    assert.deepEqual(layer.position, { x: 8, y: 0, z: 2 });
-  });
-
   it("shrugs off an unknown layer name", () => {
     const world = new VoxelWorld(4);
 

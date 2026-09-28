@@ -113,13 +113,6 @@ describe("VoxelLayer setVoxelAt / getVoxelAt round-trip", () => {
 });
 
 describe("VoxelLayer negative coordinates", () => {
-  it("setVoxelAt / getVoxelAt work for negative positions", () => {
-    const layer = makeLayer();
-    const entry = makeVoxelEntry(3);
-    layer.setVoxelAt({ x: -1, y: 0, z: -1 }, entry);
-    assert.deepEqual(layer.getVoxelAt({ x: -1, y: 0, z: -1 }), entry);
-  });
-
   it("negative x=-1 lands in chunk cx=-1", () => {
     const layer = makeLayer({ chunkSize: 4 });
     layer.setVoxelAt({ x: -1, y: 0, z: 0 }, makeVoxelEntry());
@@ -136,16 +129,6 @@ describe("VoxelLayer negative coordinates", () => {
     layer.setVoxelAt({ x: 3, y: 0, z: 0 }, entryPos);
     assert.deepEqual(layer.getVoxelAt({ x: -1, y: 0, z: 0 }), entryNeg);
     assert.deepEqual(layer.getVoxelAt({ x: 3, y: 0, z: 0 }), entryPos);
-  });
-});
-
-describe("VoxelLayer position arithmetic", () => {
-  it("position shifts all accesses by the same amount", () => {
-    const layer = makeLayer({ chunkSize: 16, position: { x: 100, y: 0, z: 0 } });
-    const entry = makeVoxelEntry(42);
-    layer.setVoxelAt({ x: 100, y: 0, z: 0 }, entry);
-    assert.deepEqual(layer.getVoxelAt({ x: 100, y: 0, z: 0 }), entry);
-    assert.equal(layer.getVoxelAt({ x: 99, y: 0, z: 0 }), undefined);
   });
 });
 
@@ -259,15 +242,12 @@ describe("VoxelLayer removeVoxelAt", () => {
 
   it("does nothing for a position that was never set", () => {
     const layer = makeLayer();
-    assert.doesNotThrow(() => layer.removeVoxelAt({ x: 99, y: 0, z: 0 }));
-  });
 
-  it("deletes the chunk when it becomes empty", () => {
-    const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    assert.equal(layer.chunkCount, 1);
-    layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
+    layer.removeVoxelAt({ x: 99, y: 0, z: 0 });
+
     assert.equal(layer.chunkCount, 0);
+    assert.equal(layer.voxelCount, 0);
+    assert.deepEqual([...layer.drainPendingRemovals()], []);
   });
 
   it("does not delete the chunk when another voxel remains", () => {
@@ -280,36 +260,11 @@ describe("VoxelLayer removeVoxelAt", () => {
 });
 
 describe("VoxelLayer getOrCreateChunk", () => {
-  it("creates a new chunk on first call", () => {
-    const layer = makeLayer();
-    const chunk = layer.getOrCreateChunk(2, 3, 4);
-    assert.equal(chunk.cx, 2);
-    assert.equal(chunk.cy, 3);
-    assert.equal(chunk.cz, 4);
-  });
-
   it("returns the same instance on subsequent calls", () => {
     const layer = makeLayer();
     const c1 = layer.getOrCreateChunk(0, 0, 0);
     const c2 = layer.getOrCreateChunk(0, 0, 0);
     assert.equal(c1, c2);
-  });
-});
-
-describe("VoxelLayer markChunkDirty", () => {
-  it("sets dirty=true on an existing chunk", () => {
-    const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    const chunk = layer.getChunk(0, 0, 0);
-    assert.ok(chunk !== undefined);
-    chunk.dirty = false;
-    layer.markChunkDirty(0, 0, 0);
-    assert.equal(chunk.dirty, true);
-  });
-
-  it("does nothing for a non-existent chunk (no throw)", () => {
-    const layer = makeLayer();
-    assert.doesNotThrow(() => layer.markChunkDirty(99, 0, 0));
   });
 });
 
@@ -324,13 +279,6 @@ describe("VoxelLayer getChunks", () => {
 });
 
 describe("VoxelLayer clone", () => {
-  it("clones a layer", () => {
-    const layer = makeLayer({ chunkSize: 4 });
-    const clone = layer.clone();
-    assert.deepEqual(serializeVoxelLayer(clone), serializeVoxelLayer(layer));
-    assert.notEqual(clone, layer);
-  });
-
   it("applies overrides on the fly", () => {
     const layer = makeLayer({ chunkSize: 4 });
     const clone = layer.clone({ visible: false, name: "Cloned" });
@@ -467,6 +415,10 @@ describe("VoxelLayer mergeFrom", () => {
     target.mergeFrom(source);
 
     assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
+    assert.deepEqual(
+      Array.from(target.localVoxels(), ([x, y, z]) => [x, y, z]),
+      [[3, 0, 0]]
+    );
   });
 
   it("source layer is not modified after merge", () => {

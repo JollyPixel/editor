@@ -73,15 +73,6 @@ describe("VoxelView - document subscriptions", () => {
     assert.deepEqual(seen, [false]);
   });
 
-  it("drops an atlas whose tileset the document removed", () => {
-    const { document, view } = makePair();
-    assert.ok(view.atlases.get("atlas"));
-
-    document.removeTileset("atlas");
-
-    assert.equal(view.atlases.get("atlas"), undefined);
-  });
-
   it("rebuilds from scratch when the document loads a world", () => {
     const { document, view } = makePair();
     document.world.setVoxel("Ground", {

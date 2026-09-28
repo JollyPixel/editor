@@ -179,15 +179,6 @@ describe("TilesetAtlases.resolve", () => {
       [255, 23, 68, 255]
     );
   });
-
-  it("never declares the reserved id", () => {
-    const manager = new TilesetAtlases();
-
-    assert.equal(
-      manager.tilesets.add(makeAtlasDef({ id: MISSING_TILESET_ID })),
-      false
-    );
-  });
 });
 
 describe("TilesetAtlases.syncAtlases", () => {

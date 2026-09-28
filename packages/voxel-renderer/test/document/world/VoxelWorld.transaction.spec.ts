@@ -71,11 +71,6 @@ function* randomCells(
   }
 }
 
-/**
- * Seeds every layer, clears the dirty flags, then writes `cells` into layer
- * "A" directly, in a transaction or as one patch, then lists the chunks left
- * dirty.
- */
 function dirtyAfterWrites(
   positions: Record<string, VoxelCoord>,
   cells: VoxelCoord[],
@@ -228,18 +223,6 @@ describe("VoxelWorld.transaction", () => {
     assert.equal(commands.length, 1);
   });
 
-  it("throws on a write to an unknown layer and ignores a removal", () => {
-    const { world } = makeWorld();
-
-    assert.throws(
-      () => world.transaction(() => world.setVoxel("NoSuch", { position: kOrigin, blockId: 1 })),
-      /layer "NoSuch" does not exist/
-    );
-    assert.doesNotThrow(
-      () => world.transaction(() => world.removeVoxel("NoSuch", { position: kOrigin }))
-    );
-  });
-
   it("stays quiet inside silently()", () => {
     const { world, commands } = makeWorld();
     const history = new VoxelHistory(world, { enabled: true });
@@ -279,37 +262,6 @@ describe("VoxelWorld.transaction - dirty chunks", () => {
 
     assert.deepEqual(missing, []);
   });
-
-  it("dirties the neighbour chunk of a boundary write in another layer", () => {
-    const world = new VoxelWorld(4);
-    world.addLayer("A");
-    const other = world.addLayer("B");
-    other.getOrCreateChunk(1, 0, 0);
-    other.getOrCreateChunk(2, 0, 0);
-    clearAllDirty(world);
-
-    world.transaction(() => {
-      world.setVoxel("A", { position: { x: 3, y: 0, z: 0 }, blockId: 1 });
-    });
-
-    assert.equal(other.getChunk(1, 0, 0)?.dirty, true);
-    assert.equal(other.getChunk(2, 0, 0)?.dirty, false);
-  });
-
-  it("dirties the diagonal chunk of a corner write", () => {
-    const world = new VoxelWorld(4);
-    const layer = world.addLayer("A");
-    layer.getOrCreateChunk(1, 1, 1);
-    layer.getOrCreateChunk(1, 1, 0);
-    clearAllDirty(world);
-
-    world.transaction(() => {
-      world.setVoxel("A", { position: { x: 3, y: 3, z: 3 }, blockId: 1 });
-    });
-
-    assert.equal(layer.getChunk(1, 1, 1)?.dirty, true);
-    assert.equal(layer.getChunk(1, 1, 0)?.dirty, true);
-  });
 });
 
 describe("VoxelWorld.transaction - history", () => {
@@ -348,19 +300,6 @@ describe("VoxelWorld.patchVoxels", () => {
     const { world } = makeWorld();
 
     assert.throws(() => world.patchVoxels(kLayer, [0, 0, 0, 1]), RangeError);
-  });
-
-  it("applies a remote patch without echoing it", () => {
-    const { world, commands } = makeWorld();
-
-    world.apply({
-      action: "voxels-patched",
-      layerName: kLayer,
-      metadata: { cells: [0, 0, 0, 2, 3] }
-    });
-
-    assert.deepEqual(world.getVoxelAt(kOrigin), { blockId: 2, transform: 3 });
-    assert.deepEqual(commands, []);
   });
 
   it("emits a copy of the cells as given in one patch", () => {

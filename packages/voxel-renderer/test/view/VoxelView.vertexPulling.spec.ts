@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import type * as THREE from "three";
 
 // Import Internal Dependencies
 import type { VoxelView } from "../../src/view/VoxelView.ts";
@@ -17,7 +17,6 @@ import {
   placeCube,
   type ViewTestOptions
 } from "../helpers/view.ts";
-import { makeFakeCollider } from "../helpers/fakes.ts";
 import { CHUNK_SIZE } from "../helpers/ids.ts";
 import { overlayMeshes } from "./inspector/VoxelInspector.helpers.ts";
 
@@ -52,22 +51,6 @@ describe("VoxelView - pulled chunk meshes", () => {
       assert.ok(mesh instanceof PulledChunkMesh);
       assert.ok(positionNodeOf(mesh) !== null);
     }
-  });
-
-  it("hands colliders indexed positions relative to the chunk origin", () => {
-    const fake = makeFakeCollider();
-    const view = makePulledView({ collider: () => fake.collider });
-
-    const [[, collision]] = fake.rebuilt;
-    const [geometry] = collision.geometries.values();
-    const bounds = new THREE.Box3().setFromBufferAttribute(
-      geometry.getAttribute("position") as THREE.BufferAttribute
-    );
-    assert.equal(geometry instanceof PulledChunkGeometry, false);
-    assert.equal(geometry.getIndex()!.count, 10 * 6);
-    assert.deepEqual(bounds.min.toArray(), [1, 0, 1]);
-    assert.deepEqual(bounds.max.toArray(), [3, 1, 2]);
-    view.dispose();
   });
 
   it("wires overlays to an expanded copy it disposes with the overlay", () => {

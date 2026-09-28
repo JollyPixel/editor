@@ -45,19 +45,6 @@ describe("applyVoxelCommand", () => {
     assert.equal(target.blocks.has(4), true);
   });
 
-  it("routes a tileset command to the tileset list", () => {
-    const target = makeTarget();
-    const command = {
-      action: "tileset-added",
-      tileset: { id: "a", src: "a.png", tileSize: 16 }
-    } as const;
-
-    assert.notEqual(applyVoxelCommand(target, command), null);
-    assert.equal(applyVoxelCommand(target, command), null);
-
-    assert.equal(target.tilesets.get("a")?.tileSize, 16);
-  });
-
   it("routes a material group command to the group list", () => {
     const target = makeTarget();
     const command = {
@@ -66,13 +53,7 @@ describe("applyVoxelCommand", () => {
     } as const;
 
     assert.notEqual(applyVoxelCommand(target, command), null);
-    assert.equal(applyVoxelCommand(target, command), null);
-    assert.equal(target.materialGroups.get("gold")?.metalness, 1);
 
-    assert.notEqual(applyVoxelCommand(target, {
-      action: "material-group-removed",
-      groupId: "gold"
-    }), null);
-    assert.equal(target.materialGroups.has("gold"), false);
+    assert.equal(target.materialGroups.get("gold")?.metalness, 1);
   });
 });

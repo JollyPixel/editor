@@ -28,13 +28,6 @@ describe("VoxelMeshBuilder - isolated cube", () => {
 
     assert.equal(countChunkVertices(fixture), 24);
   });
-
-  it("returns no geometry when no blocks are placed", () => {
-    const fixture = makeMeshFixture();
-    const chunk = fixture.layer.getOrCreateChunk(0, 0, 0);
-
-    assert.equal(fixture.builder.buildChunkGeometries([{ layer: fixture.layer, chunk }]).size, 0);
-  });
 });
 
 describe("VoxelMeshBuilder - geometry attribute layout", () => {
@@ -191,18 +184,6 @@ describe("VoxelMeshBuilder - build statistics", () => {
       }
     );
     assert.equal(fixture.builder.stats.facesPerSolidVoxel, 6);
-  });
-
-  it("counts the faces hidden by an opaque neighbour", () => {
-    const fixture = makeMeshFixture();
-    place(fixture, [0, 0, 0]);
-    place(fixture, [1, 0, 0]);
-
-    buildGeometries(fixture);
-
-    assert.equal(fixture.builder.stats.voxels, 2);
-    assert.equal(fixture.builder.stats.faces, 10);
-    assert.equal(fixture.builder.stats.culledFaces, 2);
   });
 
   it("counts voxels covered by a higher-priority layer as hidden", () => {

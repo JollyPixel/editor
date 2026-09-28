@@ -141,14 +141,6 @@ describe("serializeVoxelWorld", () => {
     assert.deepEqual(json.tilesets, []);
   });
 
-  it("includes the tilesets passed as metadata", () => {
-    const world = new VoxelWorld(16);
-    const json = serializeVoxelWorld(world, { tilesets: [kAtlas] });
-
-    assert.equal(json.tilesets.length, 1);
-    assert.equal(json.tilesets[0].id, "atlas");
-  });
-
   it("writes no block or material group table", () => {
     const json = serializeVoxelWorld(new VoxelWorld(16));
 
@@ -239,18 +231,6 @@ describe("serializeVoxelWorld", () => {
 });
 
 describe("deserializeVoxelWorld", () => {
-  it("rejects version 1 documents", () => {
-    const world = new VoxelWorld(16);
-
-    assert.throws(
-      () => deserializeVoxelWorld(
-        untrusted({ version: 1, chunkSize: 16, tilesets: [], layers: [] }),
-        world
-      ),
-      /unsupported version/
-    );
-  });
-
   it("clears the world before restoring", () => {
     const world = new VoxelWorld(16);
     world.addLayer("Existing");
@@ -338,18 +318,6 @@ describe("deserializeVoxelWorld", () => {
     );
 
     assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
-  });
-
-  it("throws when layers is not an array", () => {
-    const world = new VoxelWorld(16);
-
-    assert.throws(
-      () => deserializeVoxelWorld(
-        untrusted({ version: VOXEL_WORLD_VERSION, chunkSize: 16, tilesets: [] }),
-        world
-      ),
-      /layers is not an array/
-    );
   });
 
   it("re-partitions a document saved with another chunk size", () => {

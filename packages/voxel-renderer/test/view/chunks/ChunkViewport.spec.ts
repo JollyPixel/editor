@@ -32,7 +32,7 @@ function makeViewport(
   });
 }
 
-describe("ChunkViewport — unbounded", () => {
+describe("ChunkViewport - unbounded", () => {
   it("is unbounded without a focus", () => {
     assert.equal(makeViewport(null, new ViewDistance({ chunks: 1 })).unbounded, true);
   });
@@ -46,7 +46,7 @@ describe("ChunkViewport — unbounded", () => {
   });
 });
 
-describe("ChunkViewport — contains", () => {
+describe("ChunkViewport - contains", () => {
   it("admits a chunk inside the radius", () => {
     const viewport = makeViewport(
       { x: 2, y: 2, z: 2 },
@@ -81,13 +81,13 @@ describe("ChunkViewport — contains", () => {
       { x: 2, y: 2, z: 2 },
       new ViewDistance({ chunks: 1, hysteresis: 0 })
     );
+    const cornerInsideCenterOutside = originOf(0, { x: 5, y: 0, z: 0 });
 
-    assert.equal(viewport.contains(originOf(0), false), true);
-    assert.equal(viewport.contains(originOf(0, { x: 40, y: 0, z: 0 }), false), false);
+    assert.equal(viewport.contains(cornerInsideCenterOutside, false), false);
   });
 });
 
-describe("ChunkViewport — distanceSquaredTo", () => {
+describe("ChunkViewport - distanceSquaredTo", () => {
   it("orders chunks by their distance to the focus", () => {
     const viewport = makeViewport({ x: 2, y: 2, z: 2 });
 
@@ -98,7 +98,7 @@ describe("ChunkViewport — distanceSquaredTo", () => {
   });
 });
 
-describe("ChunkViewport — focusMovedFrom", () => {
+describe("ChunkViewport - focusMovedFrom", () => {
   it("treats a missing previous focus as a move", () => {
     assert.equal(makeViewport({ x: 0, y: 0, z: 0 }).focusMovedFrom(null), true);
   });
@@ -114,7 +114,7 @@ describe("ChunkViewport — focusMovedFrom", () => {
   });
 });
 
-describe("ChunkViewport — differsFrom", () => {
+describe("ChunkViewport - differsFrom", () => {
   it("differs from no previous viewport", () => {
     assert.equal(makeViewport({ x: 0, y: 0, z: 0 }).differsFrom(null), true);
   });
@@ -151,7 +151,7 @@ describe("ChunkViewport — differsFrom", () => {
   });
 });
 
-describe("ChunkViewport — focus copy", () => {
+describe("ChunkViewport - focus copy", () => {
   it("copies the focus so a caller may keep mutating its vector", () => {
     const focus = { x: 0, y: 0, z: 0 };
     const viewport = makeViewport(focus);
@@ -162,7 +162,7 @@ describe("ChunkViewport — focus copy", () => {
   });
 });
 
-describe("ChunkViewport — isFar", () => {
+describe("ChunkViewport - isFar", () => {
   function detailViewport(
     focus: { x: number; y: number; z: number; } | null,
     distances: { farDistance?: number; } = {}

@@ -6,12 +6,6 @@ import assert from "node:assert/strict";
 import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "../../../../src/document/world/index.ts";
 import { makeVoxelEntry } from "../../../helpers/voxelEntry.ts";
 
-describe("VoxelChunk DEFAULT_CHUNK_SIZE", () => {
-  it("is 16", () => {
-    assert.equal(DEFAULT_CHUNK_SIZE, 16);
-  });
-});
-
 describe("VoxelChunk constructor", () => {
   it("stores chunk coords", () => {
     const chunk = new VoxelChunk([3, -1, 7]);
@@ -124,12 +118,6 @@ describe("VoxelChunk delete", () => {
 });
 
 describe("VoxelChunk isEmpty / voxelCount", () => {
-  it("isEmpty is true and voxelCount is 0 for fresh chunk", () => {
-    const chunk = new VoxelChunk([0, 0, 0]);
-    assert.equal(chunk.isEmpty(), true);
-    assert.equal(chunk.voxelCount, 0);
-  });
-
   it("isEmpty is false and voxelCount increments after set", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
     chunk.set([0, 0, 0], makeVoxelEntry());

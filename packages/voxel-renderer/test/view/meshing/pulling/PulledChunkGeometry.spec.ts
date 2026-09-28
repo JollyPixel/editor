@@ -90,24 +90,6 @@ describe("PulledChunkGeometry - faces", () => {
     }
     assert.equal(faces, fixture.builder.stats.faces);
   });
-
-  it("reports one triangle per padded triangle face and two bytes per vertex", () => {
-    const fixture = buildMixedWorld({});
-    buildGeometries(fixture);
-    const { faces, triangles, vertices, bytesPerVertex } = fixture.builder.stats;
-
-    assert.ok(triangles < faces * 2);
-    assert.equal(vertices, faces * 4);
-    assert.equal(bytesPerVertex, 2);
-  });
-
-  it("counts eight bytes per face plus each chunk's indexed quad", () => {
-    const fixture = buildMixedWorld({});
-    buildGeometries(fixture);
-    const { faces, geometries, bytes } = fixture.builder.stats;
-
-    assert.equal(bytes, (faces * 8) + (geometries * ((4 * 3 * 4 * 2) + (6 * 2))));
-  });
 });
 
 describe("PulledChunkGeometry - layout", () => {

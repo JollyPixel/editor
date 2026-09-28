@@ -91,7 +91,7 @@ describe("VoxelView - collider wiring", () => {
     assert.ok(fake.live.has(ground[0]));
   });
 
-  it("hands colliders vertices relative to the chunk origin", () => {
+  it("hands colliders indexed vertices relative to the chunk origin", () => {
     const { view, fake } = makeCollidingView();
     view.document.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
     placeCube(view, "Ground", { x: 10, y: 2, z: 3 });
@@ -106,6 +106,7 @@ describe("VoxelView - collider wiring", () => {
     const [{ cx, cy, cz }] = collision.chunks;
     assert.deepEqual([cx, cy, cz], [2, 0, 0]);
     assert.deepEqual(collision.origin, { x: 9, y: 2, z: 3 });
+    assert.equal(geometry.getIndex()!.count, 6 * 6);
     assert.equal(bounds.min.x, 1);
     assert.equal(bounds.max.x, 2);
   });

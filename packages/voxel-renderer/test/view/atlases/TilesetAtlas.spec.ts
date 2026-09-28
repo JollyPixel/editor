@@ -2,10 +2,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as THREE from "three";
+
 // Import Internal Dependencies
 import { resolveTilesetDefinition, TilesetAtlas } from "../../../src/view/atlases/index.ts";
 import { type TilesetTexture } from "../../../src/document/tilesets/index.ts";
-import { mockTexture } from "../../helpers/mockTexture.ts";
+import { mockTexture, readableTexture } from "../../helpers/mockTexture.ts";
 import { approxEqual } from "../../helpers/math.ts";
 
 // CONSTANTS
@@ -54,6 +57,8 @@ describe("TilesetAtlas", () => {
     const atlas = new TilesetAtlas(kDefinition, texture);
 
     assert.equal(atlas.texture, texture);
+    assert.equal(texture.magFilter, THREE.NearestFilter);
+    assert.equal(texture.minFilter, THREE.NearestFilter);
     assert.equal(texture.generateMipmaps, false);
     assert.equal(texture.colorSpace, "srgb");
   });
@@ -110,13 +115,14 @@ describe("TilesetAtlas.uvFor", () => {
 
 describe("TilesetAtlas.updateImage", () => {
   it("replaces the image and flags it for re-upload", () => {
-    const texture = mockTexture(64, 64);
+    const texture = readableTexture(64, 64);
     const atlas = new TilesetAtlas<TilesetTexture>(kDefinition, texture);
+    const version = texture.version;
 
     const next = { width: 64, height: 64 } as unknown as HTMLCanvasElement;
     atlas.updateImage(next);
 
     assert.equal(texture.image, next);
-    assert.equal(texture.needsUpdate, true);
+    assert.ok(texture.version > version);
   });
 });

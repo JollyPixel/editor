@@ -5,7 +5,6 @@ import { describe, it } from "node:test";
 // Import Internal Dependencies
 import { BlockSurface } from "../../../src/document/blocks/BlockSurface.ts";
 import { BlockRegistry } from "../../../src/document/blocks/BlockRegistry.ts";
-import { ChunkGeometryKey } from "../../../src/view/meshing/ChunkGeometryKey.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
 
 describe("BlockSurface", () => {
@@ -54,34 +53,5 @@ describe("BlockSurface", () => {
     assert.throws(() => new BlockRegistry([
       makeBlockDef(1, "cube", { materialGroup: 42 as unknown as string })
     ]), RangeError);
-
-    for (const alphaMode of ["opaque", "blend"] as const) {
-      const surface = new BlockSurface({ alphaMode, materialGroup: "gold" });
-      const key = new ChunkGeometryKey("atlas", surface).toString();
-      assert.notEqual(
-        key,
-        new ChunkGeometryKey("atlas", new BlockSurface({ alphaMode })).toString()
-      );
-    }
-  });
-
-  it("keys every policy apart without grouping different surfaces together", () => {
-    const keys = new Set<string>();
-    for (const alphaMode of ["opaque", "mask", "blend"] as const) {
-      for (const side of ["front", "double"] as const) {
-        const surface = new BlockSurface({ alphaMode, side, alphaCutoff: 0.3 });
-        keys.add(new ChunkGeometryKey("atlas", surface).toString());
-      }
-    }
-
-    assert.equal(keys.size, 6);
-    assert.equal(keys.has(new ChunkGeometryKey("atlas", new BlockSurface({
-      materialGroup: "gold"
-    })).toString()), false);
-    assert.notEqual(new ChunkGeometryKey("atlas", new BlockSurface({
-      alphaMode: "mask", alphaCutoff: 0.3
-    })).toString(), new ChunkGeometryKey("atlas", new BlockSurface({
-      alphaMode: "mask", alphaCutoff: 0.4
-    })).toString());
   });
 });

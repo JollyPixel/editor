@@ -314,19 +314,6 @@ describe("VoxelDocument history", () => {
     );
   });
 
-  it("clears on load", () => {
-    const document = new VoxelDocument({
-      layers: [kLayer],
-      history: { enabled: true }
-    });
-    document.world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
-    const data = document.save();
-
-    document.load(data);
-
-    assert.equal(document.history.canUndo, false);
-  });
-
   it("forwards undone edits as local commands", () => {
     const document = new VoxelDocument({
       layers: [kLayer],

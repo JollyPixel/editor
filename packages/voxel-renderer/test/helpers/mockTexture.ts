@@ -16,9 +16,6 @@ export function mockTexture(
   } as unknown as THREE.Texture<HTMLImageElement>;
 }
 
-/**
- * Atlas texture whose RGBA8 pixels `AtlasAverages` can read without a canvas.
- */
 export function readableTexture(
   width = 64,
   height = 64,

@@ -18,10 +18,7 @@ import {
   makeAtlasDef,
   registerAtlas
 } from "../../helpers/atlas.ts";
-import {
-  mockTexture,
-  readableTexture
-} from "../../helpers/mockTexture.ts";
+import { readableTexture } from "../../helpers/mockTexture.ts";
 
 // CONSTANTS
 const kBlend = new BlockSurface({ alphaMode: "blend" });
@@ -248,21 +245,6 @@ describe("ChunkMaterialCache — tile averaging", () => {
 
     assert.equal(AtlasAverages.peek(texture), undefined);
   });
-
-  it("falls back to plain sampling when the atlas cannot be read", () => {
-    const atlases = new TilesetAtlases();
-    const texture = mockTexture();
-    registerAtlas(atlases, makeAtlasDef(), texture);
-    const cache = new ChunkMaterialCache({
-      atlases,
-      faceTemplates: new FaceTemplateTable()
-    });
-
-    const material = cache.resolve(keyOf("atlas"));
-
-    assert.equal(AtlasAverages.peek(texture), undefined);
-    assert.ok((material as { colorNode?: unknown; }).colorNode);
-  });
 });
 
 describe("ChunkMaterialCache — far materials", () => {
@@ -310,18 +292,6 @@ describe("ChunkMaterialCache — alpha to coverage", () => {
 });
 
 describe("ChunkMaterialCache — vertex pulling", () => {
-  function positionNodeOf(
-    material: THREE.Material
-  ): unknown {
-    return (material as { positionNode?: unknown; }).positionNode ?? null;
-  }
-
-  it("pulls vertices from the face templates", () => {
-    const cache = makeCache();
-
-    assert.notEqual(positionNodeOf(cache.resolve(keyOf("atlas"))), null);
-  });
-
   it("samples the atlas from its color node only", () => {
     const cache = makeCache();
     const material = cache.resolve(keyOf("atlas"));

@@ -17,14 +17,13 @@ function makeShape(
 }
 
 describe("BlockShapeRegistry (empty)", () => {
-  it("has returns false for any id", () => {
+  it("knows no shape until one is registered", () => {
     const registry = new BlockShapeRegistry();
-    assert.equal(registry.has("cube"), false);
-  });
 
-  it("get returns undefined for any id", () => {
-    const registry = new BlockShapeRegistry();
+    assert.equal(registry.has("cube"), false);
     assert.equal(registry.get("cube"), undefined);
+    assert.deepEqual([...registry.getAll()], []);
+    assert.deepEqual([...registry.ids()], []);
   });
 });
 
@@ -138,11 +137,6 @@ describe("BlockShapeRegistry.createDefault", () => {
 });
 
 describe("BlockShapeRegistry.getAll", () => {
-  it("is empty for a fresh registry", () => {
-    const registry = new BlockShapeRegistry();
-    assert.deepEqual([...registry.getAll()], []);
-  });
-
   it("yields the registered shapes in registration order", () => {
     const registry = new BlockShapeRegistry();
     const first = makeShape("first");
@@ -175,46 +169,14 @@ describe("BlockShapeRegistry[Symbol.iterator]", () => {
 
     assert.deepEqual([...registry], [...registry.getAll()]);
   });
-
-  it("is iterable with for...of", () => {
-    const registry = new BlockShapeRegistry();
-    registry.register(makeShape("only"));
-
-    const ids: string[] = [];
-    for (const shape of registry) {
-      ids.push(shape.id);
-    }
-
-    assert.deepEqual(ids, ["only"]);
-  });
 });
 
 describe("BlockShapeRegistry.ids", () => {
-  it("is empty for a fresh registry", () => {
-    const registry = new BlockShapeRegistry();
-    assert.deepEqual([...registry.ids()], []);
-  });
-
   it("includes a custom shape registered after createDefault", () => {
     const registry = BlockShapeRegistry.createDefault();
     const builtIn = [...registry.ids()];
     registry.register(makeShape("myShape"));
 
     assert.deepEqual([...registry.ids()], [...builtIn, "myShape"]);
-  });
-});
-
-describe("BlockShapeRegistry version", () => {
-  it("starts at 0 and increments on every register", () => {
-    const registry = new BlockShapeRegistry();
-    assert.equal(registry.version, 0);
-
-    registry.register({
-      id: "custom",
-      collisionHint: "box",
-      faces: [],
-      occludes: () => false
-    });
-    assert.equal(registry.version, 1);
   });
 });

@@ -83,26 +83,6 @@ export function place(
   layer.setVoxelAt({ x, y, z }, { blockId, transform });
 }
 
-export function fillBox(
-  fixture: MeshFixture,
-  options: {
-    from: Vec3Tuple;
-    to: Vec3Tuple;
-    blockId?: number;
-    transform?: number;
-  }
-): void {
-  const { from, to, blockId = CUBE_ID, transform = 0 } = options;
-
-  for (let x = from[0]; x <= to[0]; x++) {
-    for (let y = from[1]; y <= to[1]; y++) {
-      for (let z = from[2]; z <= to[2]; z++) {
-        place(fixture, [x, y, z], blockId, transform);
-      }
-    }
-  }
-}
-
 export function buildChunk(
   fixture: MeshFixture,
   chunkCoords: Vec3Tuple = [0, 0, 0]
@@ -113,7 +93,7 @@ export function buildChunk(
   return chunk ? builder.buildChunkGeometries([{ layer, chunk }]) : new Map();
 }
 
-export function countVertices(
+function countVertices(
   geometries: ReadonlyMap<ChunkGeometryKey, PulledChunkGeometry>
 ): number {
   let total = 0;
@@ -124,7 +104,7 @@ export function countVertices(
   return total;
 }
 
-export function countLayerVertices(
+function countLayerVertices(
   fixture: MeshFixture,
   layer: VoxelLayer
 ): number {

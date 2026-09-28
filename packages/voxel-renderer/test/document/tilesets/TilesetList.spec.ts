@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TilesetList } from "../../../src/document/tilesets/index.ts";
+import {
+  MISSING_TILESET_ID,
+  TilesetList
+} from "../../../src/document/tilesets/index.ts";
 import { MAX_TILESET_SLOT } from "../../../src/document/blocks/index.ts";
 
 // CONSTANTS
@@ -37,6 +40,16 @@ describe("TilesetList", () => {
     assert.equal(list.add({ id: "a", src: "x", tileSize: 16 }), true);
     assert.equal(list.add({ id: "a", src: "y", tileSize: 16 }), false);
     assert.equal(list.size, 1);
+  });
+
+  it("never declares the reserved id", () => {
+    const list = new TilesetList();
+
+    assert.equal(
+      list.add({ id: MISSING_TILESET_ID, src: "x", tileSize: 16 }),
+      false
+    );
+    assert.equal(list.size, 0);
   });
 
   it("declares an asset tileset without a tile size but not a URL one", () => {

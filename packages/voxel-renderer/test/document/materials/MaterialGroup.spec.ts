@@ -122,6 +122,11 @@ describe("MaterialGroupList", () => {
       action: "material-group-removed",
       groupId: "missing"
     }), null);
+    assert.notEqual(list.apply({
+      action: "material-group-removed",
+      groupId: "gold"
+    }), null);
+    assert.equal(list.has("gold"), false);
   });
 
   it("removes a group once", () => {

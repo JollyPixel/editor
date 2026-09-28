@@ -123,7 +123,7 @@ describe("VoxelMeshBuilder - block transparency and covered faces", () => {
     });
   }
 
-  it("splits blended faces into a cutout geometry", () => {
+  it("splits blended faces into their own geometry", () => {
     const fixture = makeFixture({ ...kBlend, cullCoveredFaces: false });
     place(fixture, [0, 0, 0]);
     place(fixture, [1, 0, 0], kLeavesId);

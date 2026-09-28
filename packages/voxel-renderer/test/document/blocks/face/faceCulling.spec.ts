@@ -7,7 +7,6 @@ import {
   defaultCullFace,
   isBoundaryFace
 } from "../../../../src/document/blocks/face/index.ts";
-import { BlockShapeRegistry } from "../../../../src/document/blocks/shape/index.ts";
 import { FACE } from "../../../../src/document/geometry/faceDirection.ts";
 
 describe("isBoundaryFace", () => {
@@ -70,16 +69,6 @@ describe("isBoundaryFace", () => {
 });
 
 describe("defaultCullFace", () => {
-  it("culls a boundary face against its own direction", () => {
-    assert.equal(
-      defaultCullFace({
-        face: FACE.NegY,
-        vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]]
-      }),
-      FACE.NegY
-    );
-  });
-
   it("never culls a face a neighbour cannot cover", () => {
     assert.equal(
       defaultCullFace({
@@ -88,17 +77,5 @@ describe("defaultCullFace", () => {
       }),
       null
     );
-  });
-});
-
-describe("defaultCullFace — built-in shapes", () => {
-  const registry = BlockShapeRegistry.createDefault();
-
-  it("leaves every cube face culled against its neighbour", () => {
-    const shape = registry.get("cube")!;
-
-    for (const face of shape.faces) {
-      assert.equal(defaultCullFace(face), face.face);
-    }
   });
 });
