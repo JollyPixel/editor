@@ -58,18 +58,27 @@ interface AssetRoomBinding<TState> {
 ## Commands
 
 A room overwrites `clientId` on each object message with the sender's
-server-side id, validates it against the kind's `commands.protocol` and
-arbitrates it through its live protocol. A client-supplied `clientId` is never
-trusted.
+server-side id, lowers a numeric `timestamp` ahead of the server clock to the
+server time, validates the message against the kind's `commands.protocol`
+and arbitrates it through its live protocol. A client-supplied `clientId` is
+never trusted, and a future `timestamp` cannot outrank later edits.
 An accepted command is appended to `events`, then committed and broadcast.
 The `network` server never touches the event store.
 
+The author applied its command before sending it. When arbitration returns
+`null`, or admits a narrowed command (a different object than it received),
+the room sends the author alone a fresh `{ type: "snapshot", data }` so its
+state matches the room again.
+
 When the append fails, the room commits and broadcasts nothing and sends the
-author alone:
+author alone the notice below, then a snapshot:
 
 ```ts
 { type: "rejected", reason: string }
 ```
+
+`AssetRoomNotice` is the union of the `deleted` and `rejected` notices, for
+the `TNotice` parameter of a client's `NetworkServerMessage`.
 
 `ASSET_ROOM_REJECTED` holds the `"rejected"` type. Like the deleted notice, it
 is added to the kind's outbound protocol and filtered under

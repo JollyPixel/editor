@@ -211,11 +211,7 @@ export function voxelModelAssetKind(
         return {
           snapshotSchema: voxelModelSnapshotSchema,
           snapshot: () => state.snapshot(),
-          arbitrate(command) {
-            return state.accepts(command)
-              ? arbiter.admit(command)
-              : null;
-          }
+          arbitrate: (command) => arbiter.admit(state, command)
         };
       }
     }

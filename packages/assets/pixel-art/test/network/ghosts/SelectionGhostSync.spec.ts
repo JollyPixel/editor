@@ -183,6 +183,18 @@ describe("SelectionGhostSync — remote peers", () => {
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { selectionGhost: "not-an-object" } });
     room.emit("peer-presence", { clientId: "peer-B", patch: { selectionGhost: { phase: "unknown" } } });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { selectionGhost: { phase: "creating", rect: {} } }
+    });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { selectionGhost: { ...kMoving, mask: ["x"] } }
+    });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { selectionGhost: { ...kMoving, blankSource: "yes" } }
+    });
 
     assert.strictEqual(outlines.set.mock.callCount(), 0);
   });

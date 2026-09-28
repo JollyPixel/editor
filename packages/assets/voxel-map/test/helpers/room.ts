@@ -4,19 +4,19 @@ import type { VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type {
-  VoxelNetworkCommand,
-  VoxelServerMessage
+  VoxelMapNetworkCommand,
+  VoxelMapServerMessage
 } from "#src/network/types.ts";
 
-export interface MockRoom extends network.Room<VoxelNetworkCommand, VoxelServerMessage> {
-  sentCommands: VoxelNetworkCommand[];
+export interface MockRoom extends network.Room<VoxelMapNetworkCommand, VoxelMapServerMessage> {
+  sentCommands: VoxelMapNetworkCommand[];
   left: boolean;
-  simulateCommand(cmd: VoxelNetworkCommand): void;
+  simulateCommand(cmd: VoxelMapNetworkCommand): void;
   simulateSnapshot(snapshot: VoxelWorldJSON): void;
 }
 
 export function createMockRoom(clientId = "client-A"): MockRoom {
-  const sentCommands: VoxelNetworkCommand[] = [];
+  const sentCommands: VoxelMapNetworkCommand[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
 
   function emit(type: string, payload: unknown): void {

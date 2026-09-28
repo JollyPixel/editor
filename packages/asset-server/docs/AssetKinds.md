@@ -271,7 +271,9 @@ lands, so a conflict tracker never records a command the store refused. The
 append folds through `commands.apply` before it resolves, so state is current
 by the time peers hear about the change.
 
-`broadcast` overrides the default `{ type: "command", data: command }`
+An arbitration that returns `null` or a narrowed command also sends the
+author a snapshot; return the received command itself when it is admitted
+whole. `broadcast` overrides the default `{ type: "command", data: command }`
 envelope. `voxel-map` uses it to answer a `world-replace` with a full
 snapshot.
 

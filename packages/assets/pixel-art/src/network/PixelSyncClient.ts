@@ -1,46 +1,54 @@
 // Import Third-party Dependencies
-import {
-  CommandSync,
-  type Room
-} from "@jolly-pixel/network/client";
+import { CommandSync } from "@jolly-pixel/network/client";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
   decodePixelBytes,
-  type PixelDocument,
   type PixelBufferHookEvent,
-  type PixelBufferHookListener
+  type PixelBufferHookListener,
+  type PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type {
-  PixelAssetNotice,
+  PixelArtRoom,
   PixelBufferSnapshot,
-  PixelNetworkCommand,
-  PixelServerMessage
+  PixelNetworkCommand
 } from "./types.ts";
 
-export type PixelSyncTarget = Pick<
+export interface PixelSyncTarget extends Pick<
   PixelDocument,
-  "onBufferUpdated" | "applyRemoteCommand" | "loadSnapshot"
->;
+  "applyRemoteCommand" | "loadSnapshot"
+> {
+  on(event: "buffer-updated", listener: PixelBufferHookListener): unknown;
+  off(event: "buffer-updated", listener: PixelBufferHookListener): unknown;
+}
 
 export interface PixelSyncClientOptions {
-  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  room: PixelArtRoom;
   document: PixelSyncTarget;
+}
+
+export function loadPixelSnapshot(
+  target: Pick<PixelDocument, "loadSnapshot">,
+  snapshot: PixelBufferSnapshot
+): void {
+  target.loadSnapshot(
+    snapshot.size,
+    decodePixelBytes(snapshot.pixels),
+    snapshot.uvRegions
+  );
 }
 
 export class PixelSyncClient extends CommandSync<
   PixelNetworkCommand,
   PixelBufferSnapshot,
-  PixelAssetNotice
+  AssetRoomNotice
 > {
   #document: PixelSyncTarget;
-  #previousHandler: PixelBufferHookListener | undefined;
 
-  #handleBufferUpdated = (
+  #sendLocalCommand = (
     event: PixelBufferHookEvent
   ): void => {
-    this.#previousHandler?.(event);
-
     const { originTimestamp, ...body } = event;
     this.send(body, originTimestamp);
   };
@@ -52,18 +60,13 @@ export class PixelSyncClient extends CommandSync<
     const { document } = options;
 
     this.#document = document;
-    this.#previousHandler = document.onBufferUpdated;
-    document.onBufferUpdated = this.#handleBufferUpdated;
-    this.on("snapshot", (snapshot) => document.loadSnapshot(
-      snapshot.size,
-      decodePixelBytes(snapshot.pixels),
-      snapshot.uvRegions
-    ));
+    document.on("buffer-updated", this.#sendLocalCommand);
+    this.on("snapshot", (snapshot) => loadPixelSnapshot(document, snapshot));
     this.on("command", (command) => document.applyRemoteCommand(command));
   }
 
   override destroy(): void {
-    this.#document.onBufferUpdated = this.#previousHandler;
+    this.#document.off("buffer-updated", this.#sendLocalCommand);
     super.destroy();
   }
 }

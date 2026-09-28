@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { Room } from "@jolly-pixel/network/client";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -12,13 +11,12 @@ import type {
   PeerLabel
 } from "./peerAppearance.ts";
 import type {
-  PixelNetworkCommand,
-  PixelServerMessage,
+  PixelArtRoom,
   UVGhostPayload
 } from "./types.ts";
 
 export interface PixelCollaborationOptions {
-  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  room: PixelArtRoom;
   canvas: PixelArtCanvas;
   label: PeerLabel;
   color: PeerColor;

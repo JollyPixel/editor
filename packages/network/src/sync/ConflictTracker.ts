@@ -16,7 +16,8 @@ export class ConflictTracker<
   THeader extends NetworkCommandHeader = NetworkCommandHeader
 > {
   #resolver: ConflictResolver<THeader>;
-  #lastByKey = new Map<string, THeader>();
+  #lastByKey = new Map<string, NetworkCommandHeader>();
+  #floor: NetworkCommandHeader | undefined;
 
   constructor(
     resolver: ConflictResolver<THeader>
@@ -57,22 +58,40 @@ export class ConflictTracker<
     };
   }
 
+  reset(
+    command: NetworkCommandHeader
+  ): void {
+    this.#lastByKey.clear();
+    this.#floor = headerOf(command);
+  }
+
   #accepts(
     key: string,
     incoming: THeader
   ): boolean {
     return this.#resolver.resolve({
       incoming,
-      existing: this.#lastByKey.get(key)
+      existing: this.#lastByKey.get(key) ?? this.#floor
     }) === "accept";
   }
 
   #record(
     keys: readonly string[],
-    command: THeader
+    command: NetworkCommandHeader
   ): void {
+    const header = headerOf(command);
     for (const key of keys) {
-      this.#lastByKey.set(key, command);
+      this.#lastByKey.set(key, header);
     }
   }
+}
+
+function headerOf(
+  command: NetworkCommandHeader
+): NetworkCommandHeader {
+  return {
+    clientId: command.clientId,
+    seq: command.seq,
+    timestamp: command.timestamp
+  };
 }

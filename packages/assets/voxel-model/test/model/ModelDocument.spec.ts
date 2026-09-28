@@ -84,6 +84,25 @@ describe("ModelDocument", () => {
     );
   });
 
+  test("skips a remote command the local tree rejects", () => {
+    const document = new ModelDocument();
+    const a = document.addFolder({ id: "a", name: "A" });
+    const b = document.addFolder({ id: "b", name: "B" });
+    document.move(b!, a);
+    const changes = recordChanges(document);
+
+    const applied = document.apply({
+      action: "node-moved",
+      id: "a",
+      parentId: "b",
+      transforms: []
+    });
+
+    assert.equal(applied, false);
+    assert.equal(document.tree.get("a")?.parentId, null);
+    assert.deepEqual(changes, []);
+  });
+
   test("reports every node a removal takes with it", () => {
     const document = new ModelDocument();
     const folderId = document.addFolder({ name: "Limbs" });

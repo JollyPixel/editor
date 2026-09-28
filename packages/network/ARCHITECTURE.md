@@ -268,7 +268,7 @@ model above:
 - [`PresenceChannel`](./docs/PresenceChannel.md) exposes one typed presence
   field per peer.
 - [`CommandSync`](./docs/sync/CommandSync.md) stamps commands and suppresses a
-  client's own echoes.
+  client's own echoes, except those a snapshot overtook.
 - [`ConflictTracker`](./docs/sync/Conflicts.md) applies server-side conflict
   rules before an extension commits a command.
 

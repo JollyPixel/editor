@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { CommandSync } from "@jolly-pixel/network/client";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
   isVoxelWorldCommand,
   type VoxelCommandListener,
@@ -9,9 +10,8 @@ import {
 
 // Import Internal Dependencies
 import type {
-  VoxelAssetNotice,
-  VoxelMapRoom,
-  VoxelNetworkCommand
+  VoxelMapNetworkCommand,
+  VoxelMapRoom
 } from "./types.ts";
 
 export interface VoxelSyncClientOptions {
@@ -19,15 +19,10 @@ export interface VoxelSyncClientOptions {
   document: VoxelDocument;
 }
 
-/**
- * Sends the world commands of a document to its room and applies the room's
- * back. Block and material group commands stay local: they are projected
- * from tileset documents, which have rooms of their own.
- */
 export class VoxelSyncClient extends CommandSync<
-  VoxelNetworkCommand,
+  VoxelMapNetworkCommand,
   VoxelWorldJSON,
-  VoxelAssetNotice
+  AssetRoomNotice
 > {
   #document: VoxelDocument;
 
@@ -64,7 +59,7 @@ export class VoxelSyncClient extends CommandSync<
   }
 
   #applyRemote(
-    command: VoxelNetworkCommand
+    command: VoxelMapNetworkCommand
   ): void {
     if (command.action === "world-replace") {
       return;

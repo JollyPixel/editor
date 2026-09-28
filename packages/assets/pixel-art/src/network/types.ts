@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
-import type {
-  AssetRoomDeletedMessage,
-  AssetRoomRejectedMessage
-} from "@jolly-pixel/asset-server";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
   PixelBufferHookEvent,
   PixelBufferSnapshot,
@@ -16,14 +13,15 @@ export type { PixelBufferSnapshot };
 
 export type PixelNetworkCommand = PixelBufferHookEvent & network.NetworkCommandHeader;
 
-export type PixelAssetNotice =
-  | AssetRoomDeletedMessage
-  | AssetRoomRejectedMessage;
-
 export type PixelServerMessage = network.NetworkServerMessage<
   PixelNetworkCommand,
   PixelBufferSnapshot,
-  PixelAssetNotice
+  AssetRoomNotice
+>;
+
+export type PixelArtRoom = network.Room<
+  PixelNetworkCommand,
+  PixelServerMessage
 >;
 
 export interface UVGhostPayload {

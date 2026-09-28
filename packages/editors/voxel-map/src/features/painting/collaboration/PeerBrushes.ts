@@ -9,8 +9,8 @@ import {
   type Room
 } from "@jolly-pixel/network/client";
 import type {
-  VoxelNetworkCommand,
-  VoxelServerMessage
+  VoxelMapNetworkCommand,
+  VoxelMapServerMessage
 } from "@jolly-pixel/asset.voxel-map/client";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
@@ -26,12 +26,12 @@ import type { BrushStyle } from "../model/BrushStyle.ts";
 const kPresenceCursorKey = "brush";
 
 export interface PeerBrushesOptions {
-  room: Room<VoxelNetworkCommand, VoxelServerMessage>;
+  room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
   brush: BrushStore;
 }
 
 export class PeerBrushes extends ActorComponent {
-  #room: Room<VoxelNetworkCommand, VoxelServerMessage>;
+  #room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
   #channel: PresenceChannel<BrushCursor | null>;
   #brush: BrushStore;
   #meshes = new Map<string, BrushMesh>();

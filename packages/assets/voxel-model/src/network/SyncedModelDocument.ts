@@ -6,24 +6,27 @@ import type { VoxelModelRoom } from "./types.ts";
 
 export class SyncedModelDocument {
   readonly document: ModelDocument;
-  readonly sync: ModelSyncClient;
   readonly ready: Promise<void>;
+
+  #sync: ModelSyncClient;
+
+  get loaded(): boolean {
+    return this.#sync.ready;
+  }
 
   constructor(
     room: VoxelModelRoom
   ) {
     this.document = new ModelDocument();
-    this.sync = new ModelSyncClient({
+    this.#sync = new ModelSyncClient({
       room,
       document: this.document
     });
-    this.ready = new Promise((resolve) => {
-      this.sync.once("ready", resolve);
-    });
+    this.ready = this.#sync.whenReady();
   }
 
   dispose(): void {
-    this.sync.destroy();
+    this.#sync.destroy();
   }
 }
 

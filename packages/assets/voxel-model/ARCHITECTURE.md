@@ -26,4 +26,4 @@ flowchart LR
     AddRemove["node-added / node-removed"] --> Order["Tree validation and room order"]
 ```
 
-The default resolver is last write wins. The server checks tree constraints before arbitration and commits accepted conflict keys after the event append. See the [network API](./docs/network.md) for command shapes and sync behavior.
+The default resolver is last write wins. The arbiter checks tree constraints through `state.accepts()` before the conflict keys, and the room commits accepted keys after the event append. Clients check the same constraints on remote commands: one their tree refuses is skipped, and the room's snapshot to the author of a refused command brings both sides back in line. See the [network API](./docs/network.md) for command shapes and sync behavior.

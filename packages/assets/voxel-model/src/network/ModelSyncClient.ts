@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { CommandSync } from "@jolly-pixel/network/client";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import type {
@@ -7,7 +8,6 @@ import type {
   ModelDocument
 } from "../model/ModelDocument.ts";
 import type {
-  VoxelModelAssetNotice,
   VoxelModelNetworkCommand,
   VoxelModelRoom,
   VoxelModelSnapshot
@@ -21,7 +21,7 @@ export interface ModelSyncClientOptions {
 export class ModelSyncClient extends CommandSync<
   VoxelModelNetworkCommand,
   VoxelModelSnapshot,
-  VoxelModelAssetNotice
+  AssetRoomNotice
 > {
   #document: ModelDocument;
 

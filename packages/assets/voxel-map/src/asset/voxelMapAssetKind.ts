@@ -35,22 +35,16 @@ import {
   voxelWorldSchema
 } from "../network/VoxelCommand.schema.ts";
 import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
-import type { VoxelNetworkCommand } from "../network/types.ts";
+import type { VoxelMapNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
 const kWorldParser = new SchemaParser(voxelWorldSchema);
-/**
- * Uses a slower snapshot cadence for bursty, expensive terrain serialization.
- */
 const kDefaultSnapshot: SnapshotPolicy = {
   delay: 5_000,
   maxDelay: 60_000
 };
 
-/**
- * The server's headless world: its layers and its tileset links.
- */
 export class VoxelMapState implements VoxelWorldCommandTarget {
   readonly world: VoxelWorld;
   readonly tilesets = new TilesetList();
@@ -76,7 +70,7 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
   }
 
   applyCommand(
-    command: VoxelNetworkCommand
+    command: VoxelMapNetworkCommand
   ): void {
     switch (command.action) {
       case "world-replace":
@@ -103,13 +97,7 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
 
 export interface VoxelMapDocumentOptions {
   chunkSize: number;
-  /**
-   * Tileset links declared in order; each receives the first free slot.
-   */
   tilesets?: Iterable<TilesetDefinition>;
-  /**
-   * @default "Ground"
-   */
   layer?: string;
 }
 
@@ -132,22 +120,14 @@ export function createVoxelMapDocument(
 }
 
 export interface VoxelMapAssetKindOptions {
-  /**
-   * Chunk size of the server-side world. A document saved with another size
-   * is re-partitioned on load and saved back with this one.
-   * @default 16
-   */
   chunkSize?: number;
-  /**
-   * @default 5s quiet period, 60s maximum
-   */
   snapshot?: SnapshotPolicy;
-  conflictResolver?: ConflictResolver<VoxelNetworkCommand>;
+  conflictResolver?: ConflictResolver<VoxelMapNetworkCommand>;
 }
 
 export function voxelMapAssetKind(
   options: VoxelMapAssetKindOptions = {}
-): AssetKindHandler<VoxelMapState, VoxelNetworkCommand> {
+): AssetKindHandler<VoxelMapState, VoxelMapNetworkCommand> {
   const {
     chunkSize = DEFAULT_CHUNK_SIZE,
     snapshot = kDefaultSnapshot,
@@ -233,7 +213,7 @@ export function voxelMapAssetKind(
         return {
           snapshotSchema: voxelWorldSchema,
           snapshot: () => state.toJSON(),
-          arbitrate: (command) => arbiter.admit(command),
+          arbitrate: (command) => arbiter.admit(state, command),
           broadcast(command) {
             if (
               command.action === "world-replace" ||
@@ -284,7 +264,7 @@ function decodeVoxelMapDocument(
 
 function landedAsSent(
   state: VoxelMapState,
-  command: VoxelNetworkCommand
+  command: VoxelMapNetworkCommand
 ): boolean {
   if (command.action !== "tileset-added") {
     return true;

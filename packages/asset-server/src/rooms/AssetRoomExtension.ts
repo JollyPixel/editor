@@ -109,6 +109,8 @@ export class AssetRoomExtension<
 
     const arbitration = this.#protocol.arbitrate(command);
     if (arbitration === null) {
+      this.#resync(clientId, context.room);
+
       return;
     }
 
@@ -124,6 +126,7 @@ export class AssetRoomExtension<
         type: ASSET_ROOM_REJECTED,
         reason: appended.val.message
       } satisfies AssetRoomRejectedMessage);
+      this.#resync(clientId, context.room);
 
       return;
     }
@@ -135,6 +138,19 @@ export class AssetRoomExtension<
         data: arbitration.command
       }
     );
+    if (arbitration.command !== command) {
+      this.#resync(clientId, context.room);
+    }
+  }
+
+  #resync(
+    clientId: string,
+    room: network.RoomBroadcast
+  ): void {
+    room.sendTo(clientId, {
+      type: "snapshot",
+      data: this.#protocol.snapshot()
+    });
   }
 }
 
@@ -148,6 +164,17 @@ function withAuthor(
     Array.isArray(payload)
   ) {
     return payload;
+  }
+
+  if (
+    "timestamp" in payload &&
+    typeof payload.timestamp === "number"
+  ) {
+    return {
+      ...payload,
+      clientId,
+      timestamp: Math.min(payload.timestamp, Date.now())
+    };
   }
 
   return {

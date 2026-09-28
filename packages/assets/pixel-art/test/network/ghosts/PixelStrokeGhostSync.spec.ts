@@ -91,14 +91,14 @@ describe("PixelStrokeGhostSync — local strokes", () => {
     assert.deepStrictEqual(room.presenceUpdates, [{ strokeGhost: [kPixel] }]);
   });
 
-  test("an empty stroke progress cancels the pending report", async() => {
+  test("an empty stroke progress drops the pending report and clears the ghost", async() => {
     const { room, host } = setup();
 
     host.onStrokeProgress?.([kPixel]);
     host.onStrokeProgress?.([]);
     await nextFrame();
 
-    assert.deepStrictEqual(room.presenceUpdates, []);
+    assert.deepStrictEqual(room.presenceUpdates, [{ strokeGhost: null }]);
   });
 });
 
@@ -116,6 +116,10 @@ describe("PixelStrokeGhostSync — remote peers", () => {
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost: "not-an-array" } });
     room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost: [{ x: 1 }] } });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { strokeGhost: [{ x: 1, y: 1, color: "red" }] }
+    });
 
     assert.strictEqual(strokes.set.mock.callCount(), 0);
   });

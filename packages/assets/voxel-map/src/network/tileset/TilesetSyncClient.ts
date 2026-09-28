@@ -1,59 +1,46 @@
 // Import Third-party Dependencies
 import { CommandSync } from "@jolly-pixel/network/client";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
-  decodePixelBytes,
-  type PixelBufferHookEvent,
-  type PixelBufferHookListener,
-  type PixelDocument
-} from "@jolly-pixel/pixel-draw.renderer";
+  isPixelCommand,
+  loadPixelSnapshot,
+  type PixelSyncTarget
+} from "@jolly-pixel/asset.pixel-art/client";
+import type { PixelBufferHookEvent } from "@jolly-pixel/pixel-draw.renderer";
 import type {
   TilesetDocument,
   TilesetDocumentListener
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  isPixelNetworkCommand,
-  type TilesetAssetNotice,
-  type TilesetNetworkCommand,
-  type TilesetRoom,
-  type TilesetSnapshot
+import type {
+  TilesetNetworkCommand,
+  TilesetRoom,
+  TilesetSnapshot
 } from "./types.ts";
-
-export type TilesetPixelsTarget = Pick<
-  PixelDocument,
-  "onBufferUpdated" | "applyRemoteCommand" | "loadSnapshot"
->;
 
 export interface TilesetSyncClientOptions {
   room: TilesetRoom;
-  pixels: TilesetPixelsTarget;
+  pixels: PixelSyncTarget;
   tileset: TilesetDocument;
 }
 
-/**
- * Keeps a tileset's pixels and document in step with its room. Local pixel
- * edits and local document commands go out; remote ones come back in.
- */
 export class TilesetSyncClient extends CommandSync<
   TilesetNetworkCommand,
   TilesetSnapshot,
-  TilesetAssetNotice
+  AssetRoomNotice
 > {
-  #pixels: TilesetPixelsTarget;
+  #pixels: PixelSyncTarget;
   #tileset: TilesetDocument;
-  #previousHandler: PixelBufferHookListener | undefined;
 
-  #handleBufferUpdated = (
+  #sendPixelCommand = (
     event: PixelBufferHookEvent
   ): void => {
-    this.#previousHandler?.(event);
-
     const { originTimestamp, ...body } = event;
     this.send(body, originTimestamp);
   };
 
-  #sendLocalCommand: TilesetDocumentListener = (command, { origin }) => {
+  #sendTilesetCommand: TilesetDocumentListener = (command, { origin }) => {
     if (origin === "local") {
       this.send(command);
     }
@@ -67,16 +54,15 @@ export class TilesetSyncClient extends CommandSync<
 
     this.#pixels = pixels;
     this.#tileset = tileset;
-    this.#previousHandler = pixels.onBufferUpdated;
-    pixels.onBufferUpdated = this.#handleBufferUpdated;
-    tileset.on("command", this.#sendLocalCommand);
+    pixels.on("buffer-updated", this.#sendPixelCommand);
+    tileset.on("command", this.#sendTilesetCommand);
     this.on("snapshot", (snapshot) => this.#loadSnapshot(snapshot));
     this.on("command", (command) => this.#applyRemote(command));
   }
 
   override destroy(): void {
-    this.#pixels.onBufferUpdated = this.#previousHandler;
-    this.#tileset.off("command", this.#sendLocalCommand);
+    this.#pixels.off("buffer-updated", this.#sendPixelCommand);
+    this.#tileset.off("command", this.#sendTilesetCommand);
     super.destroy();
   }
 
@@ -86,17 +72,13 @@ export class TilesetSyncClient extends CommandSync<
     const { pixels, ...document } = snapshot;
 
     this.#tileset.load(document);
-    this.#pixels.loadSnapshot(
-      pixels.size,
-      decodePixelBytes(pixels.pixels),
-      pixels.uvRegions
-    );
+    loadPixelSnapshot(this.#pixels, pixels);
   }
 
   #applyRemote(
     command: TilesetNetworkCommand
   ): void {
-    if (isPixelNetworkCommand(command)) {
+    if (isPixelCommand(command)) {
       this.#pixels.applyRemoteCommand(command);
 
       return;

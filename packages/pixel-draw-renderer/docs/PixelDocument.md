@@ -39,7 +39,7 @@ readonly history: History;
 onBufferUpdated: PixelBufferHookListener | undefined;
 ```
 
-`onBufferUpdated` receives every local command, including undo and redo replay. Remote commands and snapshots never reach it.
+`onBufferUpdated` receives every local command, including undo and redo replay. Remote commands and snapshots never reach it. It holds one listener; subscribe to `buffer-updated` to observe the same commands alongside it.
 
 ## UV ownership
 
@@ -56,6 +56,7 @@ The document owns every UV region until `disownUvRegions` hands the ones `filter
 
 | Event | Payload | When |
 |---|---|---|
+| `buffer-updated` | `PixelBufferHookEvent` | a local command was emitted, right after `onBufferUpdated` |
 | `changed` | `{ bounds }` | pixels were written |
 | `resized` | `{ size }` | the texture was resized |
 | `replaced` | `{ size }` | all pixels were replaced (texture load, remote replace, snapshot, history) |

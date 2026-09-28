@@ -73,6 +73,33 @@ describe("SyncedModelDocument", () => {
     synced.dispose();
   });
 
+  test("converges on concurrent moves forming a cycle once the server resyncs", () => {
+    const room = createMockRoom();
+    const synced = new SyncedModelDocument(room);
+    const folderA = { kind: "folder" as const, id: "a", parentId: null, name: "A" };
+    const folderB = { kind: "folder" as const, id: "b", parentId: null, name: "B" };
+    room.deliverSnapshot({ nodes: [folderA, folderB] });
+
+    synced.document.move("b", "a");
+    synced.document.rename("a", "Renamed");
+    room.deliverCommand(networkCommand({
+      action: "node-moved",
+      id: "a",
+      parentId: "b",
+      transforms: []
+    }, { clientId: "client-B" }));
+    room.deliverSnapshot({
+      nodes: [folderB, { ...folderA, parentId: "b" }]
+    });
+    room.deliverCommand(room.sent[1]);
+
+    const { tree } = synced.document;
+    assert.strictEqual(tree.get("a")?.parentId, "b");
+    assert.strictEqual(tree.get("b")?.parentId, null);
+    assert.strictEqual(tree.get("a")?.name, "Renamed");
+    synced.dispose();
+  });
+
   test("stops forwarding local edits once disposed", () => {
     const room = createMockRoom();
     const synced = new SyncedModelDocument(room);

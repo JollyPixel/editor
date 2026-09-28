@@ -15,10 +15,6 @@ export type SyncedVoxelMapOptions = Pick<
   "chunkSize" | "layers" | "blocks" | "history" | "logger"
 >;
 
-/**
- * The voxel data of a map together with the client that keeps it in step with
- * its room. Holders read and edit `voxels`; the room belongs to the lease.
- */
 export class SyncedVoxelMap {
   readonly voxels: VoxelDocument;
   readonly ready: Promise<void>;
@@ -38,14 +34,9 @@ export class SyncedVoxelMap {
       room,
       document: this.voxels
     });
-    this.ready = new Promise((resolve) => {
-      this.#sync.once("ready", resolve);
-    });
+    this.ready = this.#sync.whenReady();
   }
 
-  /**
-   * Broadcasts a whole new world, replacing what every holder has.
-   */
   replaceWorld(
     data: VoxelWorldJSON
   ): void {

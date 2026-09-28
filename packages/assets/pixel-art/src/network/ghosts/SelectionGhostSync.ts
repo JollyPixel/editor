@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { Room } from "@jolly-pixel/network/client";
 import type {
   PixelArtCanvas,
   SelectionProgressEvent
@@ -11,17 +10,22 @@ import {
   type PeerGhostLayer
 } from "./PeerGhostStream.ts";
 import {
-  peerProfile,
-  type PeerColor
+  isBooleanArray,
+  isSelectionRect
+} from "./presenceGuards.ts";
+import {
+  peerStyle,
+  type PeerColor,
+  type PeerStyle
 } from "../peerAppearance.ts";
 import type {
+  PixelArtRoom,
   PixelNetworkCommand,
-  PixelServerMessage,
   SelectionGhostPayload
 } from "../types.ts";
 
 export interface SelectionGhostSyncOptions {
-  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  room: PixelArtRoom;
   canvas: PixelArtCanvas;
   color: PeerColor;
 }
@@ -34,15 +38,18 @@ function isSelectionGhostPayload(
   }
 
   if (value.phase === "creating") {
-    return "rect" in value && typeof value.rect === "object" && value.rect !== null;
+    return "rect" in value && isSelectionRect(value.rect);
   }
 
   if (value.phase === "moving") {
     return "sourceRect" in value &&
       "liveRect" in value &&
       "mask" in value &&
-      Array.isArray(value.mask) &&
-      "blankSource" in value;
+      "blankSource" in value &&
+      isSelectionRect(value.sourceRect) &&
+      isSelectionRect(value.liveRect) &&
+      isBooleanArray(value.mask) &&
+      typeof value.blankSource === "boolean";
   }
 
   return false;
@@ -55,9 +62,8 @@ function decodeSelectionGhost(
 }
 
 export class SelectionGhostSync {
-  #room: Room<PixelNetworkCommand, PixelServerMessage>;
   #canvas: PixelArtCanvas;
-  #color: PeerColor;
+  #colorOf: PeerStyle;
   #stream: PeerGhostStream<SelectionGhostPayload>;
 
   #onSelectionProgress = (
@@ -79,9 +85,8 @@ export class SelectionGhostSync {
   ) {
     const { canvas } = options;
 
-    this.#room = options.room;
     this.#canvas = canvas;
-    this.#color = options.color;
+    this.#colorOf = peerStyle(options.room, options.color);
     this.#stream = new PeerGhostStream({
       room: options.room,
       key: "selectionGhost",
@@ -144,12 +149,6 @@ export class SelectionGhostSync {
         floatingSelections.clearAll();
       }
     };
-  }
-
-  #colorOf(
-    clientId: string
-  ): string {
-    return this.#color(clientId, peerProfile(this.#room, clientId));
   }
 
   #reconcile(

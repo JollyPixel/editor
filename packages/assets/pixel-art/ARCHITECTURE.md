@@ -28,4 +28,4 @@ flowchart TB
     Unkeyed --> Admission
 ```
 
-Selection edits keep colors aligned with admitted positions. The arbiter also checks selection lengths, UV data, and allowed buffer sizes. Room presence carries cursors and edit previews; it does not enter the event log or mutate the buffer. See the [network API](./docs/network.md) for the client contract.
+Selection edits keep colors aligned with admitted positions. A resize or texture replacement resets the pixel keys to its own timestamp. The arbiter also checks selection lengths, UV data, and allowed buffer sizes. Room presence carries cursors and edit previews; it does not enter the event log or mutate the buffer. See the [network API](./docs/network.md) for the client contract.

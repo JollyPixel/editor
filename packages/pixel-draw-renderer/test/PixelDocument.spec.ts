@@ -73,6 +73,25 @@ describe("PixelDocument", () => {
       assert.deepEqual(pixelAt(doc, 0, 0), [255, 0, 0, 255]);
     });
 
+    test("emits buffer-updated with the hook command, and not for remote commands", () => {
+      const hooked: PixelBufferHookEvent[] = [];
+      const emitted: PixelBufferHookEvent[] = [];
+      const doc = createDocument(hooked);
+      doc.on("buffer-updated", (event) => emitted.push(event));
+
+      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.applyRemoteCommand({
+        action: "stroke",
+        metadata: { color: kRed, positions: [{ x: 2, y: 3 }] }
+      });
+      doc.onBufferUpdated = undefined;
+      doc.commitPixels([{ x: 1, y: 0 }], kRed);
+
+      assert.equal(hooked.length, 1);
+      assert.deepEqual(emitted.map(({ action }) => action), ["stroke", "stroke"]);
+      assert.equal(emitted[0], hooked[0]);
+    });
+
     test("forwards history changes as an event", () => {
       const doc = createDocument();
       const states: boolean[] = [];

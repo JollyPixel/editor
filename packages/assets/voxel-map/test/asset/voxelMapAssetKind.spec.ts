@@ -28,7 +28,7 @@ import {
   voxelMapAssetKind,
   VoxelMapState
 } from "../../src/index.ts";
-import type { VoxelNetworkCommand } from "../../src/network/server.ts";
+import type { VoxelMapNetworkCommand } from "../../src/network/server.ts";
 import {
   voxelSetCmd,
   worldReplaceCmd
@@ -36,13 +36,14 @@ import {
 import { makeBlockDef } from "../helpers/blocks.ts";
 
 interface LiveHarness {
-  protocol: AssetLiveProtocol<VoxelNetworkCommand>;
+  protocol: AssetLiveProtocol<VoxelMapNetworkCommand>;
   state: VoxelMapState;
 }
 
 function live(): LiveHarness {
   const handler = voxelMapAssetKind({ chunkSize: 16 });
   const state = handler.create("asset-1");
+  state.world.addLayer("Ground");
 
   return {
     state,
@@ -57,7 +58,7 @@ function live(): LiveHarness {
 
 function event(
   eventType: string,
-  eventData: AssetEventData | VoxelNetworkCommand | unknown
+  eventData: AssetEventData | VoxelMapNetworkCommand | unknown
 ): EventStore.Event {
   return {
     eventId: 1,
@@ -91,7 +92,7 @@ function documentEvent(
 function positionDelta(
   layerName: string,
   delta: { x: number; y: number; z: number; }
-): VoxelNetworkCommand {
+): VoxelMapNetworkCommand {
   return {
     action: "position-updated",
     layerName,
@@ -472,13 +473,13 @@ describe("voxelMapAssetKind", () => {
       seq: 1,
       timestamp: 1000
     };
-    const first: VoxelNetworkCommand = {
+    const first: VoxelMapNetworkCommand = {
       ...header,
       clientId: "alice",
       action: "tileset-added",
       tileset: { id: "grass", slot: 0, asset: tilesetAsset("asset-grass") }
     };
-    const second: VoxelNetworkCommand = {
+    const second: VoxelMapNetworkCommand = {
       ...header,
       clientId: "bob",
       action: "tileset-added",

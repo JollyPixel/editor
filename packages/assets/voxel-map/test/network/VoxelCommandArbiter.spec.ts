@@ -2,26 +2,88 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  TilesetList,
+  VoxelWorld,
+  type VoxelWorldCommandTarget
+} from "@jolly-pixel/voxel.renderer";
+
 // Import Internal Dependencies
-import { VoxelCommandArbiter, type VoxelNetworkCommand } from "../../src/network/server.ts";
+import { VoxelCommandArbiter, type VoxelMapNetworkCommand } from "../../src/network/server.ts";
 import {
   makeAddedCommand,
-  voxelSetCmd
+  voxelSetCmd,
+  worldReplaceCmd
 } from "../helpers/networkCommands.ts";
+
+function createState(): VoxelWorldCommandTarget {
+  const world = new VoxelWorld(16);
+  world.addLayer("Ground");
+
+  return {
+    world,
+    tilesets: new TilesetList()
+  };
+}
 
 function admitted(
   arbiter: VoxelCommandArbiter,
-  command: VoxelNetworkCommand
-): VoxelNetworkCommand | null {
-  return arbiter.admit(command)?.command ?? null;
+  command: VoxelMapNetworkCommand,
+  state = createState()
+): VoxelMapNetworkCommand | null {
+  return arbiter.admit(state, command)?.command ?? null;
 }
 
 function commit(
   arbiter: VoxelCommandArbiter,
-  command: VoxelNetworkCommand
+  command: VoxelMapNetworkCommand,
+  state = createState()
 ): void {
-  arbiter.admit(command)!.commit();
+  arbiter.admit(state, command)!.commit();
 }
+
+describe("VoxelCommandArbiter — state checks", () => {
+  test("rejects a voxel write to a layer the world does not have", () => {
+    const arbiter = new VoxelCommandArbiter();
+
+    assert.strictEqual(
+      admitted(arbiter, voxelSetCmd({ layerName: "Missing" })),
+      null
+    );
+  });
+
+  test("rejects a world-replace whose layers cannot be loaded", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const replace = worldReplaceCmd();
+    assert.strictEqual(replace.action, "world-replace");
+    const broken: VoxelMapNetworkCommand = {
+      ...replace,
+      data: {
+        ...replace.data,
+        layers: JSON.parse("[{}]")
+      }
+    };
+
+    assert.strictEqual(admitted(arbiter, broken), null);
+    assert.strictEqual(admitted(arbiter, replace), replace);
+  });
+
+  test("a committed world-replace supersedes every recorded voxel", () => {
+    const arbiter = new VoxelCommandArbiter();
+    commit(arbiter, voxelSetCmd({ timestamp: 100 }));
+    commit(arbiter, worldReplaceCmd({ clientId: "client-B", timestamp: 500 }));
+
+    assert.strictEqual(
+      admitted(arbiter, voxelSetCmd({ x: 9, y: 9, z: 9, clientId: "client-C", timestamp: 400 })),
+      null
+    );
+    assert.notStrictEqual(
+      admitted(arbiter, voxelSetCmd({ clientId: "client-C", timestamp: 600 })),
+      null
+    );
+  });
+});
 
 describe("VoxelCommandArbiter", () => {
   test("keys a voxel command by layer and position", () => {
@@ -37,7 +99,7 @@ describe("VoxelCommandArbiter", () => {
 
   test("structural commands have no key and are always accepted", () => {
     const arbiter = new VoxelCommandArbiter();
-    const added: VoxelNetworkCommand = {
+    const added: VoxelMapNetworkCommand = {
       ...makeAddedCommand("Ground"),
       clientId: "client-A",
       seq: 1,
@@ -111,7 +173,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   function voxelsSetCmd(
     xs: number[],
     opts: { clientId?: string; timestamp?: number; } = {}
-  ): VoxelNetworkCommand {
+  ): VoxelMapNetworkCommand {
     return {
       action: "voxels-set",
       layerName: "Ground",
@@ -204,7 +266,7 @@ describe("VoxelCommandArbiter — patch commands", () => {
   function voxelsPatchedCmd(
     xs: number[],
     opts: { clientId?: string; timestamp?: number; } = {}
-  ): VoxelNetworkCommand {
+  ): VoxelMapNetworkCommand {
     return {
       action: "voxels-patched",
       layerName: "Ground",
@@ -339,7 +401,7 @@ describe("VoxelCommandArbiter — object commands", () => {
 
   test("resolves two concurrent moves of one object to a single winner", () => {
     const arbiter = new VoxelCommandArbiter();
-    const moveToProps: VoxelNetworkCommand = {
+    const moveToProps: VoxelMapNetworkCommand = {
       ...header,
       action: "object-moved",
       layerName: "Spawns",
@@ -349,7 +411,7 @@ describe("VoxelCommandArbiter — object commands", () => {
         toLayerName: "Props"
       }
     };
-    const moveToDeco: VoxelNetworkCommand = {
+    const moveToDeco: VoxelMapNetworkCommand = {
       ...moveToProps,
       clientId: "client-B",
       timestamp: 900,
@@ -368,7 +430,7 @@ describe("VoxelCommandArbiter — object commands", () => {
 
   test("leaves a different object unaffected", () => {
     const arbiter = new VoxelCommandArbiter();
-    const first: VoxelNetworkCommand = {
+    const first: VoxelMapNetworkCommand = {
       ...header,
       action: "object-moved",
       layerName: "Spawns",
@@ -378,7 +440,7 @@ describe("VoxelCommandArbiter — object commands", () => {
         toLayerName: "Props"
       }
     };
-    const second: VoxelNetworkCommand = {
+    const second: VoxelMapNetworkCommand = {
       ...first,
       clientId: "client-B",
       timestamp: 900,

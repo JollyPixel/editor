@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelModelCommandArbiter } from "#src/network/VoxelModelCommandArbiter.ts";
+import {
+  VoxelModelCommandArbiter,
+  type VoxelModelArbiterState
+} from "#src/network/VoxelModelCommandArbiter.ts";
 import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
 import {
   TRANSFORM,
@@ -12,18 +15,24 @@ import {
   networkCommand
 } from "../helpers/commands.ts";
 
+// CONSTANTS
+const kAcceptAll: VoxelModelArbiterState = {
+  accepts: () => true
+};
+
 function admitted(
   arbiter: VoxelModelCommandArbiter,
-  command: VoxelModelNetworkCommand
+  command: VoxelModelNetworkCommand,
+  state = kAcceptAll
 ): VoxelModelNetworkCommand | null {
-  return arbiter.admit(command)?.command ?? null;
+  return arbiter.admit(state, command)?.command ?? null;
 }
 
 function commit(
   arbiter: VoxelModelCommandArbiter,
   command: VoxelModelNetworkCommand
 ): void {
-  arbiter.admit(command)!.commit();
+  arbiter.admit(kAcceptAll, command)!.commit();
 }
 
 function transformed(
@@ -90,6 +99,15 @@ describe("VoxelModelCommandArbiter.keys", () => {
 });
 
 describe("VoxelModelCommandArbiter.admit / commit", () => {
+  it("rejects a command the state does not accept", () => {
+    const arbiter = new VoxelModelCommandArbiter();
+
+    assert.equal(
+      admitted(arbiter, transformed(), { accepts: () => false }),
+      null
+    );
+  });
+
   it("accepts the first command for a key", () => {
     const arbiter = new VoxelModelCommandArbiter();
     const command = transformed();

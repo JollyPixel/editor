@@ -117,3 +117,46 @@ describe("ConflictTracker.admitEach", () => {
     );
   });
 });
+
+describe("ConflictTracker.reset", () => {
+  test("forgets every key and resolves unseen keys against the reset command", () => {
+    const conflicts = tracker();
+    commit(conflicts, header({ timestamp: 900 }), ["k"]);
+
+    conflicts.reset(header({ clientId: "R", timestamp: 500 }));
+
+    assert.notStrictEqual(
+      conflicts.admit(header({ clientId: "B", timestamp: 600 }), ["k"]),
+      null
+    );
+    assert.strictEqual(
+      conflicts.admit(header({ clientId: "B", timestamp: 400 }), ["other"]),
+      null
+    );
+  });
+});
+
+describe("ConflictTracker resolver context", () => {
+  test("passes only the header of the recorded command as existing", () => {
+    const seen: unknown[] = [];
+    const conflicts = new ConflictTracker({
+      resolve(ctx) {
+        seen.push(ctx.existing);
+
+        return "accept";
+      }
+    });
+    const admission = conflicts.admit(
+      { ...header(), action: "paint", pixels: [1, 2, 3] },
+      ["k"]
+    );
+    admission?.commit();
+
+    conflicts.admit(header({ clientId: "B" }), ["k"]);
+
+    assert.deepStrictEqual(seen, [
+      undefined,
+      { clientId: "A", seq: 1, timestamp: 1000 }
+    ]);
+  });
+});

@@ -1,13 +1,12 @@
 // Import Third-party Dependencies
 import {
   PresenceChannel,
-  type PresenceChange,
-  type Room
+  type PresenceChange
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { PeerGhostLeaser } from "./PeerGhostLeaser.ts";
 import type {
+  PixelArtRoom,
   PixelNetworkCommand,
   PixelServerMessage
 } from "../types.ts";
@@ -19,7 +18,7 @@ export interface PeerGhostLayer<T> {
 }
 
 export interface PeerGhostStreamOptions<T> {
-  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  room: PixelArtRoom;
   key: string;
   decode: (value: unknown) => T | undefined;
   layer: PeerGhostLayer<T>;
@@ -27,11 +26,10 @@ export interface PeerGhostStreamOptions<T> {
 }
 
 export class PeerGhostStream<T> {
-  #room: Room<PixelNetworkCommand, PixelServerMessage>;
+  #room: PixelArtRoom;
   #channel: PresenceChannel<T | null>;
   #layer: PeerGhostLayer<T>;
   #reconcile: ((command: PixelNetworkCommand) => void) | undefined;
-  #leaser: PeerGhostLeaser;
   #pending: T | undefined;
   #frame: number | undefined;
 
@@ -39,14 +37,11 @@ export class PeerGhostStream<T> {
     change: PresenceChange<T | null>
   ): void => {
     if (change.value === undefined || change.value === null) {
-      this.#leaser.cancel(change.clientId);
       this.#layer.remove(change.clientId);
-
-      return;
     }
-
-    this.#layer.set(change.clientId, change.value);
-    this.#leaser.renew(change.clientId);
+    else {
+      this.#layer.set(change.clientId, change.value);
+    }
   };
 
   #onMessage = (
@@ -66,9 +61,6 @@ export class PeerGhostStream<T> {
     this.#room = options.room;
     this.#layer = options.layer;
     this.#reconcile = options.reconcile;
-    this.#leaser = new PeerGhostLeaser({
-      onExpire: (clientId) => this.#layer.remove(clientId)
-    });
     this.#channel = new PresenceChannel<T | null>(options.room, {
       key: options.key,
       decode: options.decode,
@@ -115,7 +107,6 @@ export class PeerGhostStream<T> {
   }
 
   clearRemote(): void {
-    this.#leaser.clear();
     this.#layer.clearAll();
   }
 
