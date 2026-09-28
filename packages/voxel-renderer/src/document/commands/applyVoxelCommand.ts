@@ -6,7 +6,8 @@ import type { TilesetList } from "../tilesets/TilesetList.ts";
 import {
   isVoxelBlockCommand,
   isVoxelLayerCommand,
-  isVoxelMaterialGroupCommand
+  isVoxelMaterialGroupCommand,
+  isVoxelTemplateCommand
 } from "./categories.ts";
 import type {
   VoxelCommand,
@@ -36,13 +37,16 @@ export function applyVoxelWorldCommand(
   logger?: VoxelLogger
 ): VoxelWorldCommand | null {
   const { world, tilesets } = target;
-  if (isVoxelLayerCommand(command)) {
+  if (isVoxelLayerCommand(command) || isVoxelTemplateCommand(command)) {
     return world.apply(command, logger);
   }
 
   return tilesets.apply(
     command,
-    () => Array.from(world.countBlocks().keys(), tilesetSlotOf)
+    () => [
+      ...world.countBlocks().keys(),
+      ...world.templates.countBlocks().keys()
+    ].map(tilesetSlotOf)
   );
 }
 

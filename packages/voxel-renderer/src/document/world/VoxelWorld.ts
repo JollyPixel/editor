@@ -28,6 +28,7 @@ import {
   type VoxelWriteMode
 } from "./editing/VoxelWriter.ts";
 import { VoxelObjectLayers } from "./objects/VoxelObjectLayers.ts";
+import { VoxelTemplates } from "./templates/VoxelTemplates.ts";
 import {
   VoxelTransform,
   type VoxelTransformOptions
@@ -39,18 +40,20 @@ import {
 import type {
   VoxelEditCommand,
   VoxelLayerCommand,
-  VoxelLayerStructureCommand
+  VoxelLayerStructureCommand,
+  VoxelWorldContentCommand
 } from "../commands/types.ts";
 import {
   isVoxelEditCommand,
-  isVoxelObjectLayerCommand
+  isVoxelObjectLayerCommand,
+  isVoxelTemplateCommand
 } from "../commands/categories.ts";
 import type { VoxelPatchCells } from "./editing/voxelPatch.ts";
 import { assertPowerOfTwoChunkSize } from "./storage/chunkSize.ts";
 import type { VoxelLogger } from "../../VoxelLogger.ts";
 
 export type VoxelWorldEvents = {
-  command: (command: VoxelLayerCommand) => void;
+  command: (command: VoxelWorldContentCommand) => void;
 };
 
 export type IterableLayerChunk = {
@@ -78,8 +81,9 @@ export type VoxelLayerRestoreOptions = Omit<
 export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   readonly chunkSize: number;
   readonly objectLayers = new VoxelObjectLayers(
-    (command) => this.#dispatch(command)
+    (command) => this.#dispatch(command) !== null
   );
+  readonly templates: VoxelTemplates;
 
   #layers = new VoxelLayerStack();
   #writer: VoxelWriter;
@@ -96,6 +100,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       chunkSize,
       layers: this.#layers,
       publish: (command) => this.#publish(command)
+    });
+    this.templates = new VoxelTemplates({
+      chunkSize,
+      layer: (name) => this.getLayer(name),
+      dispatch: (command) => this.#dispatch(command) !== null,
+      patch: (layerName, cells) => this.patchVoxels(layerName, cells)
     });
   }
 
@@ -430,9 +440,9 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   }
 
   apply(
-    command: VoxelLayerCommand,
+    command: VoxelWorldContentCommand,
     logger?: VoxelLogger
-  ): VoxelLayerCommand | null {
+  ): VoxelWorldContentCommand | null {
     this.#writer.flush();
     if (
       isVoxelEditCommand(command) &&
@@ -482,11 +492,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   clear(): void {
     this.#layers.clear();
     this.objectLayers.clear();
+    this.templates.clear();
   }
 
   #dispatch(
-    command: VoxelLayerCommand
-  ): VoxelLayerCommand | null {
+    command: VoxelWorldContentCommand
+  ): VoxelWorldContentCommand | null {
     const applied = this.#execute(command, this.#silent ? "silent" : "live");
     if (applied !== null && !this.#silent) {
       this.#writer.flush();
@@ -505,9 +516,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   }
 
   #execute(
-    command: VoxelLayerCommand,
+    command: VoxelWorldContentCommand,
     mode: VoxelWriteMode
-  ): VoxelLayerCommand | null {
+  ): VoxelWorldContentCommand | null {
+    if (isVoxelTemplateCommand(command)) {
+      return this.templates.apply(command);
+    }
     if (isVoxelEditCommand(command)) {
       return this.#writer.write(this.getLayer(command.layerName), command, mode);
     }

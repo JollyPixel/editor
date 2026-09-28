@@ -34,10 +34,25 @@ export interface VoxelLayerJSON extends VoxelLayerMetadataJSON {
   chunks: VoxelChunkJSON[];
 }
 
+export interface VoxelTemplateJSON {
+  id: string;
+  name: string;
+  pivot: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  properties?: Record<string, any>;
+  chunkSize: number;
+  palette: VoxelEntryJSON[];
+  chunks: VoxelChunkJSON[];
+}
+
 export interface VoxelWorldJSON {
   version: typeof VOXEL_WORLD_VERSION;
   chunkSize: number;
   tilesets: TilesetDefinition[];
   layers: VoxelLayerJSON[];
   objectLayers?: VoxelObjectLayerJSON[];
+  templates?: VoxelTemplateJSON[];
 }

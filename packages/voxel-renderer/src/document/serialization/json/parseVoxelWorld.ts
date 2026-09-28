@@ -9,8 +9,11 @@ import {
 import {
   VOXEL_WORLD_VERSION,
   type VoxelLayerJSON,
+  type VoxelTemplateJSON,
   type VoxelWorldJSON
 } from "../types.ts";
+
+type Fail = (reason: string, cause?: unknown) => never;
 
 export function parseVoxelWorld(
   value: unknown
@@ -24,6 +27,7 @@ export function parseVoxelWorld(
   const layers = readField(value, "layers");
   const objectLayers = readField(value, "objectLayers");
   const tilesets = readField(value, "tilesets");
+  const templates = readField(value, "templates");
 
   if (version !== VOXEL_WORLD_VERSION) {
     throw new InvalidVoxelWorldError(
@@ -56,8 +60,62 @@ export function parseVoxelWorld(
   if (Array.isArray(objectLayers)) {
     document.objectLayers = objectLayers;
   }
+  if (templates !== undefined) {
+    if (!Array.isArray(templates)) {
+      throw new InvalidVoxelWorldError("templates is not an array");
+    }
+    document.templates = [];
+    for (let index = 0; index < templates.length; index++) {
+      const template: unknown = templates[index];
+      assertVoxelTemplate(template, `template ${index}`);
+      document.templates.push(template);
+    }
+  }
 
   return document;
+}
+
+export function parseVoxelTemplate(
+  value: unknown
+): VoxelTemplateJSON {
+  assertVoxelTemplate(value, "template");
+
+  return value;
+}
+
+function assertVoxelTemplate(
+  value: unknown,
+  label: string
+): asserts value is VoxelTemplateJSON {
+  if (typeof value !== "object" || value === null) {
+    throw new InvalidVoxelWorldError(`${label} is not an object`);
+  }
+
+  const id = readField(value, "id");
+  const fail: Fail = failure(
+    typeof id === "string" ? `template "${id}"` : label
+  );
+  const chunkSize = readField(value, "chunkSize");
+  const properties = readField(value, "properties");
+  if (typeof id !== "string") {
+    fail("id is not a string");
+  }
+  if (typeof readField(value, "name") !== "string") {
+    fail("name is not a string");
+  }
+  if (!isCoordinate(readField(value, "pivot"))) {
+    fail("pivot is not a coordinate");
+  }
+  if (
+    properties !== undefined &&
+    (typeof properties !== "object" || properties === null)
+  ) {
+    fail("properties is not an object");
+  }
+  if (!isPowerOfTwo(chunkSize)) {
+    fail("chunkSize is not a power of two");
+  }
+  assertVoxelGrid(value, chunkSize ** 3, fail);
 }
 
 function assertVoxelLayer(
@@ -70,24 +128,9 @@ function assertVoxelLayer(
   }
 
   const id = readField(value, "id");
-  const where = typeof id === "string" ? `layer "${id}"` : `layer ${index}`;
-  function fail(
-    reason: string,
-    cause?: unknown
-  ): never {
-    throw new InvalidVoxelWorldError(`${where}: ${reason}`, { cause });
-  }
-
-  function failOnRange(
-    error: unknown,
-    subject: string
-  ): never {
-    if (error instanceof RangeError) {
-      fail(`${subject}: ${error.message}`, error);
-    }
-
-    throw error;
-  }
+  const fail: Fail = failure(
+    typeof id === "string" ? `layer "${id}"` : `layer ${index}`
+  );
 
   if (typeof id !== "string") {
     fail("id is not a string");
@@ -102,6 +145,24 @@ function assertVoxelLayer(
     fail("order is not a number");
   }
   assertLayerOptions(value, fail);
+  assertVoxelGrid(value, cellCount, fail);
+}
+
+function assertVoxelGrid(
+  value: object,
+  cellCount: number,
+  fail: Fail
+): void {
+  function failOnRange(
+    error: unknown,
+    subject: string
+  ): never {
+    if (error instanceof RangeError) {
+      fail(`${subject}: ${error.message}`, error);
+    }
+
+    throw error;
+  }
 
   const palette = readField(value, "palette");
   if (!Array.isArray(palette)) {
@@ -171,7 +232,7 @@ function assertVoxelLayer(
 
 function assertLayerOptions(
   value: object,
-  fail: (reason: string) => never
+  fail: Fail
 ): void {
   const compositing = readField(value, "compositing");
   if (
@@ -183,16 +244,7 @@ function assertLayerOptions(
   }
 
   const position = readField(value, "position");
-  if (
-    position !== undefined &&
-    (
-      typeof position !== "object" ||
-      position === null ||
-      !Number.isFinite(readField(position, "x")) ||
-      !Number.isFinite(readField(position, "y")) ||
-      !Number.isFinite(readField(position, "z"))
-    )
-  ) {
+  if (position !== undefined && !isCoordinate(position)) {
     fail("position is not a coordinate");
   }
 
@@ -203,6 +255,24 @@ function assertLayerOptions(
   ) {
     fail("properties is not an object");
   }
+}
+
+function failure(
+  where: string
+): Fail {
+  return (reason, cause) => {
+    throw new InvalidVoxelWorldError(`${where}: ${reason}`, { cause });
+  };
+}
+
+function isCoordinate(
+  value: unknown
+): boolean {
+  return typeof value === "object" &&
+    value !== null &&
+    Number.isFinite(readField(value, "x")) &&
+    Number.isFinite(readField(value, "y")) &&
+    Number.isFinite(readField(value, "z"));
 }
 
 function readField(

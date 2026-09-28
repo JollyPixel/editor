@@ -8,3 +8,6 @@ export * from "./VoxelWorld.ts";
 export * from "./objects/VoxelObjectLayers.ts";
 export * from "./objects/VoxelFootprint.ts";
 export * from "./objects/types.ts";
+export * from "./templates/VoxelTemplate.ts";
+export * from "./templates/VoxelTemplates.ts";
+export * from "./templates/types.ts";

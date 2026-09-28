@@ -13,9 +13,17 @@ import {
 import { VoxelCommandArbiter, type VoxelMapNetworkCommand } from "../../src/network/server.ts";
 import {
   makeAddedCommand,
+  templateCommands,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
+
+// CONSTANTS
+const kHeader = {
+  clientId: "client-A",
+  seq: 1,
+  timestamp: 1000
+};
 
 function createState(): VoxelWorldCommandTarget {
   const world = new VoxelWorld(16);
@@ -67,6 +75,23 @@ describe("VoxelCommandArbiter — state checks", () => {
 
     assert.strictEqual(admitted(arbiter, broken), null);
     assert.strictEqual(admitted(arbiter, replace), replace);
+  });
+
+  test("rejects a template whose voxels cannot be decoded", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const [defined] = templateCommands();
+    assert.ok(defined.action === "template-defined");
+    const command: VoxelMapNetworkCommand = { ...kHeader, ...defined };
+    const broken: VoxelMapNetworkCommand = {
+      ...command,
+      template: {
+        ...defined.template,
+        palette: []
+      }
+    };
+
+    assert.strictEqual(admitted(arbiter, broken), null);
+    assert.strictEqual(admitted(arbiter, command), command);
   });
 
   test("a committed world-replace supersedes every recorded voxel", () => {
@@ -457,13 +482,16 @@ describe("VoxelCommandArbiter — object commands", () => {
   });
 });
 
-describe("VoxelCommandArbiter — tileset commands", () => {
-  const kHeader = {
-    clientId: "client-A",
-    seq: 1,
-    timestamp: 1000
-  };
+describe("VoxelCommandArbiter — template commands", () => {
+  test("keys every template command by its template id", () => {
+    assert.deepEqual(
+      templateCommands().map((command) => VoxelCommandArbiter.key({ ...kHeader, ...command })),
+      ["template:pair", "template:pair", "template:pair"]
+    );
+  });
+});
 
+describe("VoxelCommandArbiter — tileset commands", () => {
   test("keys a tileset command by its tileset id", () => {
     assert.strictEqual(VoxelCommandArbiter.key({
       ...kHeader,

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../../src/document/world/index.ts";
 import { FACE } from "../../../src/document/geometry/faceDirection.ts";
-import type { VoxelLayerCommand } from "../../../src/document/commands/index.ts";
+import type { VoxelWorldContentCommand } from "../../../src/document/commands/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
 import {
   eraseVoxel,
@@ -159,7 +159,7 @@ describe("VoxelWorld — layer ordering", () => {
     world.addLayer("A");
     world.addLayer("B");
 
-    const events: VoxelLayerCommand[] = [];
+    const events: VoxelWorldContentCommand[] = [];
     world.on("command", (event) => events.push(event));
 
     world.moveLayerTo("B", 99);

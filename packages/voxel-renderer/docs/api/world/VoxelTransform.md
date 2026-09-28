@@ -76,6 +76,18 @@ without allocating.
 
 Compares the packed forms.
 
+#### `followedBy(outer: VoxelTransform): VoxelTransform`
+
+The transform that applies this one, then `outer`. Placing a turned
+[template](./VoxelTemplates.md) composes each voxel's transform with the
+placement transform this way.
+
+#### `transformOffset(offset: Vector3Like): Vector3Like`
+
+Moves a whole-cell offset, measured from the cell the transform turns around,
+the way the transform moves a block inside its cell. Rotation turns x and z;
+`flipX`, `flipZ` and `flipY` negate one axis. Returns a new object.
+
 #### `toJSON(): number`
 
 Returns `packed`, so a transform serializes as the number a chunk stores.

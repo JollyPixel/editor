@@ -21,6 +21,8 @@ import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
 } from "../world/objects/types.ts";
+import type { VoxelTemplatePatch } from "../world/templates/types.ts";
+import type { VoxelTemplateJSON } from "../serialization/types.ts";
 
 export type VoxelLayerStructureCommand =
   | {
@@ -180,6 +182,23 @@ export type VoxelLayerCommand =
 
 export type VoxelLayerCommandAction = VoxelLayerCommand["action"];
 
+export type VoxelTemplateCommand =
+  | {
+    action: "template-defined";
+    template: VoxelTemplateJSON;
+  }
+  | {
+    action: "template-updated";
+    templateId: string;
+    patch: VoxelTemplatePatch;
+  }
+  | {
+    action: "template-removed";
+    templateId: string;
+  };
+
+export type VoxelTemplateCommandAction = VoxelTemplateCommand["action"];
+
 export type VoxelBlockCommand =
   | {
     action: "block-defined";
@@ -224,6 +243,7 @@ export type VoxelMaterialGroupCommandAction =
 
 export type VoxelCommand =
   | VoxelLayerCommand
+  | VoxelTemplateCommand
   | VoxelBlockCommand
   | VoxelTilesetCommand
   | VoxelMaterialGroupCommand;
@@ -231,11 +251,18 @@ export type VoxelCommand =
 export type VoxelCommandAction = VoxelCommand["action"];
 
 /**
- * Commands a world persists and shares: its layers and its tileset links.
+ * Commands a `VoxelWorld` applies and emits: its layers and templates.
+ */
+export type VoxelWorldContentCommand =
+  | VoxelLayerCommand
+  | VoxelTemplateCommand;
+
+/**
+ * Commands a world persists and shares: its content and its tileset links.
  * Blocks and material groups belong to the tilesets.
  */
 export type VoxelWorldCommand =
-  | VoxelLayerCommand
+  | VoxelWorldContentCommand
   | VoxelTilesetCommand;
 
 export type VoxelWorldCommandAction = VoxelWorldCommand["action"];

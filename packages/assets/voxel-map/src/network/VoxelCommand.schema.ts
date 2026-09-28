@@ -7,6 +7,7 @@ import {
   MAX_TILESET_SLOT,
   VOXEL_WORLD_VERSION,
   type VoxelLayerCommandAction,
+  type VoxelTemplateCommandAction,
   type VoxelTilesetCommandAction
 } from "@jolly-pixel/voxel.renderer";
 
@@ -152,6 +153,39 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
   })
 };
 
+const kTemplateSchema: JSONSchema = objectSchema(
+  {
+    id: { type: "string", minLength: 1 },
+    name: { type: "string" },
+    pivot: kVector3Schema,
+    properties: { type: "object" },
+    chunkSize: { type: "integer", minimum: 1 },
+    palette: { type: "array" },
+    chunks: { type: "array" }
+  },
+  ["id", "name", "pivot", "chunkSize", "palette", "chunks"]
+);
+
+const kTemplateCommandProperties: Record<
+  VoxelTemplateCommandAction,
+  Record<string, JSONSchema>
+> = {
+  "template-defined": {
+    template: kTemplateSchema
+  },
+  "template-updated": {
+    templateId: { type: "string" },
+    patch: objectSchema({
+      name: { type: "string" },
+      pivot: kVector3Schema,
+      properties: { type: "object" }
+    }, [])
+  },
+  "template-removed": {
+    templateId: { type: "string" }
+  }
+};
+
 const kSlotSchema: JSONSchema = {
   type: "integer",
   minimum: 0,
@@ -212,7 +246,11 @@ export const voxelWorldSchema: JSONSchema = {
         required: ["palette", "chunks"]
       }
     },
-    objectLayers: { type: "array" }
+    objectLayers: { type: "array" },
+    templates: {
+      type: "array",
+      items: kTemplateSchema
+    }
   },
   required: [
     "version",
@@ -229,6 +267,9 @@ export const voxelCommandProtocol: MessageProtocol = new MessageProtocol({
         layerName: { type: "string" },
         metadata
       })
+    ),
+    ...Object.entries(kTemplateCommandProperties).map(
+      ([action, properties]) => networkCommand(action, properties)
     ),
     ...Object.entries(kTilesetCommandProperties).map(
       ([action, properties]) => networkCommand(action, properties)

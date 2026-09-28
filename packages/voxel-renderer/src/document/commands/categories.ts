@@ -11,6 +11,8 @@ import type {
   VoxelMaterialGroupCommand,
   VoxelMaterialGroupCommandAction,
   VoxelObjectLayerCommand,
+  VoxelTemplateCommand,
+  VoxelTemplateCommandAction,
   VoxelTilesetCommand,
   VoxelTilesetCommandAction,
   VoxelWorldCommand,
@@ -42,6 +44,9 @@ const kActionCategories: {
   "object-removed": "layer",
   "object-moved": "layer",
   "object-updated": "layer",
+  "template-defined": "template",
+  "template-updated": "template",
+  "template-removed": "template",
   "block-defined": "block",
   "block-removed": "block",
   "block-moved": "block",
@@ -64,6 +69,7 @@ const kEditActions = new Set<string>([
 
 interface CommandCategories {
   layer: VoxelLayerCommand;
+  template: VoxelTemplateCommand;
   block: VoxelBlockCommand;
   tileset: VoxelTilesetCommand;
   "material-group": VoxelMaterialGroupCommand;
@@ -83,6 +89,9 @@ type CategoryOf<TAction extends VoxelCommandAction> = {
 export const VOXEL_LAYER_COMMAND_ACTIONS:
 readonly VoxelLayerCommandAction[] = actionsOf("layer");
 
+export const VOXEL_TEMPLATE_COMMAND_ACTIONS:
+readonly VoxelTemplateCommandAction[] = actionsOf("template");
+
 export const VOXEL_BLOCK_COMMAND_ACTIONS:
 readonly VoxelBlockCommandAction[] = actionsOf("block");
 
@@ -94,6 +103,7 @@ readonly VoxelMaterialGroupCommandAction[] = actionsOf("material-group");
 
 export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
+  ...VOXEL_TEMPLATE_COMMAND_ACTIONS,
   ...VOXEL_BLOCK_COMMAND_ACTIONS,
   ...VOXEL_TILESET_COMMAND_ACTIONS,
   ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS
@@ -102,6 +112,7 @@ export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
 export const VOXEL_WORLD_COMMAND_ACTIONS:
 readonly VoxelWorldCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
+  ...VOXEL_TEMPLATE_COMMAND_ACTIONS,
   ...VOXEL_TILESET_COMMAND_ACTIONS
 ];
 
@@ -130,6 +141,12 @@ export function isVoxelObjectLayerCommand(
   return isVoxelLayerCommand(command) && command.action.startsWith("object-");
 }
 
+export function isVoxelTemplateCommand(
+  command: { action: string; }
+): command is VoxelTemplateCommand {
+  return kCategoryByAction.get(command.action) === "template";
+}
+
 export function isVoxelBlockCommand(
   command: { action: string; }
 ): command is VoxelBlockCommand {
@@ -151,7 +168,9 @@ export function isVoxelMaterialGroupCommand(
 export function isVoxelWorldCommand(
   command: { action: string; }
 ): command is VoxelWorldCommand {
-  return isVoxelLayerCommand(command) || isVoxelTilesetCommand(command);
+  return isVoxelLayerCommand(command) ||
+    isVoxelTemplateCommand(command) ||
+    isVoxelTilesetCommand(command);
 }
 
 export function isTilesetDocumentCommand(

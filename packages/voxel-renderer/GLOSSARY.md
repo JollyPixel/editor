@@ -63,6 +63,12 @@ highest-priority visible layer. During rendering, a higher layer hides a lower
 voxel in the same cell only when its block fills the cell with opaque geometry,
 or when the higher layer uses `"replace"` compositing.
 
+### Voxel Template
+
+A named group of voxels saved with the world and never drawn. Placing a
+template copies its voxels into a voxel layer around its pivot, optionally
+turned or mirrored; the placed voxels keep no link to the template.
+
 ### Layer Offset
 
 A world-space translation applied to every voxel in one layer. Changing the
@@ -162,6 +168,8 @@ culling does not change the world or the voxels stored in that chunk.
 - Use **world**, **voxel layer**, and **chunk** for the three levels of voxel
   organization.
 - Use **voxel layer** for block cells and **object layer** for placed objects.
+- Use **voxel template** for saved voxels meant to be copied into a layer, not
+  *prefab*, which suggests placed copies that follow later edits.
 - Use **layer compositing** for overlap between layers and **occlusion** for
   coverage between neighboring shapes.
 - Qualify **face culling** and **chunk culling** instead of using *culling* on

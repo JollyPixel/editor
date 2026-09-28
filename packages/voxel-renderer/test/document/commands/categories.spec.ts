@@ -10,6 +10,7 @@ import {
   isVoxelLayerCommand,
   isVoxelObjectLayerCommand,
   isVoxelMaterialGroupCommand,
+  isVoxelTemplateCommand,
   isVoxelTilesetCommand,
   isVoxelWorldCommand,
   TILESET_DOCUMENT_COMMAND_ACTIONS,
@@ -17,6 +18,7 @@ import {
   VOXEL_COMMAND_ACTIONS,
   VOXEL_LAYER_COMMAND_ACTIONS,
   VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
+  VOXEL_TEMPLATE_COMMAND_ACTIONS,
   VOXEL_TILESET_COMMAND_ACTIONS,
   VOXEL_WORLD_COMMAND_ACTIONS
 } from "../../../src/document/commands/index.ts";
@@ -27,6 +29,7 @@ describe("command guards", () => {
       const command = { action };
       const matches = [
         isVoxelLayerCommand(command),
+        isVoxelTemplateCommand(command),
         isVoxelBlockCommand(command),
         isVoxelTilesetCommand(command),
         isVoxelMaterialGroupCommand(command)
@@ -61,6 +64,7 @@ describe("command guards", () => {
     assert.equal(
       new Set(VOXEL_COMMAND_ACTIONS).size,
       VOXEL_LAYER_COMMAND_ACTIONS.length +
+      VOXEL_TEMPLATE_COMMAND_ACTIONS.length +
       VOXEL_BLOCK_COMMAND_ACTIONS.length +
       VOXEL_TILESET_COMMAND_ACTIONS.length +
       VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.length

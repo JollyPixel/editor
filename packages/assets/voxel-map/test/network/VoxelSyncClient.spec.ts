@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   VOXEL_WORLD_VERSION,
   VoxelDocument,
+  serializeVoxelTemplate,
   type VoxelCommand,
   type VoxelCommandOrigin,
   type VoxelWorldJSON
@@ -206,6 +207,26 @@ describe("VoxelSyncClient — remote commands", () => {
       undefined
     );
     assert.equal(received.length, 0);
+  });
+
+  it("sends a local template and applies a peer's to the same template", () => {
+    const local = makeDocument();
+    const localRoom = createMockRoom("client-A");
+    new VoxelSyncClient({ room: localRoom, document: local });
+    const remote = makeDocument();
+    const remoteRoom = createMockRoom("client-B");
+    new VoxelSyncClient({ room: remoteRoom, document: remote });
+    local.world.setVoxel("Ground", { position: { x: 3, y: 1, z: 0 }, blockId: 2 });
+
+    const template = local.world.templates.createFromLayer("Ground", { name: "One" });
+    for (const command of localRoom.sentCommands) {
+      remoteRoom.simulateCommand(JSON.parse(JSON.stringify(command)));
+    }
+
+    assert.ok(template !== undefined);
+    const received = remote.world.templates.get(template.id);
+    assert.ok(received !== undefined);
+    assert.deepEqual(serializeVoxelTemplate(received), serializeVoxelTemplate(template));
   });
 
   it("ignores a world-replace command", () => {

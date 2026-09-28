@@ -44,6 +44,23 @@ function layerWith(
   };
 }
 
+function templateWith(
+  fields: object
+): object {
+  return {
+    ...kEmptyWorld,
+    templates: [{
+      id: "t1",
+      name: "Steps",
+      pivot: { x: 0, y: 0, z: 0 },
+      chunkSize: 4,
+      palette: [{ block: 1, transform: 0 }],
+      chunks: [{ at: [0, 0, 0], runs: [64, 1] }],
+      ...fields
+    }]
+  };
+}
+
 function chunkWith(
   chunk: object
 ): object {
@@ -90,6 +107,12 @@ describe("parseVoxelWorld", () => {
     });
 
     assert.deepEqual(document.tilesets, []);
+  });
+
+  it("keeps well formed templates", () => {
+    const document = templateWith({});
+
+    assert.deepEqual(parseVoxelWorld(document), document);
   });
 
   it("drops an objectLayers field that is not an array", () => {
@@ -175,7 +198,16 @@ describe("parseVoxelWorld", () => {
     ["chunk [0,0,0]: runs cover more than 4096 cells", originChunkWith({ runs: [5000, 1] })],
     ["chunk [0,0,0]: run 0 has value 0 outside the palette", originChunkWith({ cells: [0], runs: [1, 0] })],
     ["chunk [0,0,0]: runs assign 1 cells instead of 2", originChunkWith({ cells: [0, 1], runs: [1, 1] })],
-    ["chunk [0,0,0]: cell 0 lies past 4095", originChunkWith({ cells: [4096], runs: [1, 1] })]
+    ["chunk [0,0,0]: cell 0 lies past 4095", originChunkWith({ cells: [4096], runs: [1, 1] })],
+    ["templates is not an array", { ...kEmptyWorld, templates: {} }],
+    ["template 0 is not an object", { ...kEmptyWorld, templates: [null] }],
+    ["template 0: id is not a string", templateWith({ id: 1 })],
+    ["template \"t1\": pivot is not a coordinate", templateWith({ pivot: undefined })],
+    ["template \"t1\": chunkSize is not a power of two", templateWith({ chunkSize: 12 })],
+    [
+      "template \"t1\": chunk [0,0,0]: runs cover more than 64 cells",
+      templateWith({ chunks: [{ at: [0, 0, 0], runs: kFullChunk }] })
+    ]
   ] as const).entries()) {
     it(`rejects case ${index} with "${reason}"`, () => {
       assert.throws(

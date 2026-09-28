@@ -9,7 +9,10 @@ import {
   type VoxelCoord
 } from "../../../src/document/world/index.ts";
 import { VoxelHistory } from "../../../src/document/VoxelHistory.ts";
-import type { VoxelLayerCommand } from "../../../src/document/commands/index.ts";
+import {
+  isVoxelLayerCommand,
+  type VoxelWorldContentCommand
+} from "../../../src/document/commands/index.ts";
 import { recordCommands } from "../../helpers/fakes.ts";
 import {
   clearAllDirty,
@@ -25,7 +28,7 @@ type WriteMode = "direct" | "transaction" | "patch";
 
 function makeWorld(): {
   world: VoxelWorld;
-  commands: VoxelLayerCommand[];
+  commands: VoxelWorldContentCommand[];
 } {
   const world = new VoxelWorld(4);
   world.addLayer(kLayer);
@@ -34,7 +37,7 @@ function makeWorld(): {
 }
 
 function patchOf(
-  command: VoxelLayerCommand | undefined
+  command: VoxelWorldContentCommand | undefined
 ): unknown[] {
   assert.equal(command?.action, "voxels-patched");
 
@@ -129,7 +132,10 @@ describe("VoxelWorld.transaction", () => {
       world.setVoxelBulk(kLayer, [{ position: { x: 1, y: 2, z: 3 }, blockId: 9 }]);
     });
 
-    assert.deepEqual(commands.map(({ layerName }) => layerName), [kLayer, "Top"]);
+    assert.deepEqual(
+      commands.filter(isVoxelLayerCommand).map(({ layerName }) => layerName),
+      [kLayer, "Top"]
+    );
     assert.deepEqual(patchOf(commands[0]), [
       { x: 0, y: 0, z: 0, blockId: 4, transform: 1 },
       { x: 1, y: 2, z: 3, blockId: 9, transform: 0 }

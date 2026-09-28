@@ -11,6 +11,7 @@ import { MessageParser } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { voxelCommandProtocol } from "#src/network/VoxelCommand.schema.ts";
 import {
+  templateCommands,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
@@ -196,6 +197,26 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts(layerCommand("object-added", {
       object: { id: "o1" }
     })), false);
+  });
+
+  test("accepts the template commands a world emits", () => {
+    const commands = templateCommands();
+
+    assert.deepEqual(
+      commands.map(({ action }) => action),
+      ["template-defined", "template-updated", "template-removed"]
+    );
+    for (const command of commands) {
+      assert.strictEqual(accepts({ ...kHeader, ...command }), true, command.action);
+    }
+  });
+
+  test("rejects a template without a pivot", () => {
+    const [defined] = templateCommands();
+    assert.ok(defined.action === "template-defined");
+    const { pivot, ...template } = defined.template;
+
+    assert.strictEqual(accepts({ ...kHeader, ...defined, template }), false);
   });
 
   test("rejects an unknown reorder direction", () => {

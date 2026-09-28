@@ -28,6 +28,7 @@ document.off("command", onCommand);
 ```ts
 type VoxelCommand =
   | VoxelLayerCommand
+  | VoxelTemplateCommand
   | VoxelBlockCommand
   | VoxelTilesetCommand
   | VoxelMaterialGroupCommand;
@@ -46,25 +47,29 @@ interface VoxelCommandContext {
 replayed with `document.apply(command, { origin: "remote" })`. A network adapter
 sends only local commands; UI listeners usually ignore the origin.
 
-`isVoxelLayerCommand()`, `isVoxelBlockCommand()`, `isVoxelTilesetCommand()` and
-`isVoxelMaterialGroupCommand()` narrow a command (or any `{ action: string }`)
+`isVoxelLayerCommand()`, `isVoxelTemplateCommand()`, `isVoxelBlockCommand()`,
+`isVoxelTilesetCommand()` and `isVoxelMaterialGroupCommand()` narrow a command (or any `{ action: string }`)
 to one category. Within layer commands, `isVoxelEditCommand()` and
 `isVoxelObjectLayerCommand()` narrow to the
 [voxel edit and object layer subsets](#layer-commands). `VOXEL_COMMAND_ACTIONS` lists every action;
-`VOXEL_LAYER_COMMAND_ACTIONS`, `VOXEL_BLOCK_COMMAND_ACTIONS`,
+`VOXEL_LAYER_COMMAND_ACTIONS`, `VOXEL_TEMPLATE_COMMAND_ACTIONS`, `VOXEL_BLOCK_COMMAND_ACTIONS`,
 `VOXEL_TILESET_COMMAND_ACTIONS` and `VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS` list
 each category. `VoxelCommandAction` and the per-category `*CommandAction` types are
 the matching unions.
 
 ## World and tileset document commands
 
-A world persists and shares only its layers and its tileset links. Blocks and
+A world persists and shares only its layers, templates and tileset links. Blocks and
 material groups belong to the tileset they come from, so the same vocabulary
 is split a second way:
 
 ```ts
-type VoxelWorldCommand =
+type VoxelWorldContentCommand =
   | VoxelLayerCommand
+  | VoxelTemplateCommand;
+
+type VoxelWorldCommand =
+  | VoxelWorldContentCommand
   | VoxelTilesetCommand;
 
 type TilesetDocumentCommand =
@@ -168,6 +173,27 @@ type VoxelLayerCommand =
 | `"object-removed"` | `{ objectId: string }` | |
 | `"object-moved"` | `{ objectId: string; fromLayerName: string; toLayerName: string }` | `layerName` is the source layer. |
 | `"object-updated"` | `{ objectId: string; patch: Partial<VoxelObjectJSON> }` | |
+
+## Template commands
+
+```ts
+type VoxelTemplateCommand =
+  | { action: "template-defined"; template: VoxelTemplateJSON; }
+  | { action: "template-updated"; templateId: string; patch: VoxelTemplatePatch; }
+  | { action: "template-removed"; templateId: string; };
+```
+
+`VoxelWorld` emits them for [`world.templates`](../world/VoxelTemplates.md)
+changes and applies them through `world.apply()`.
+
+| Action | Notes |
+|---|---|
+| `"template-defined"` | Carries the whole template in its [saved form](../serialization/serialization.md#templates), voxels included, so a peer does not need the source layer. Replaces a template with the same id. |
+| `"template-updated"` | Changes `name`, `pivot` or `properties`, never the voxels. |
+| `"template-removed"` | Emitted only for an id that existed. |
+
+Placing a template emits a `"voxels-patched"` layer command, not a template
+command.
 
 ## Block commands
 

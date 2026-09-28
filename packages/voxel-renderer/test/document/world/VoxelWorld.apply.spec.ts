@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../../../src/document/world/index.ts";
-import type { VoxelLayerCommand } from "../../../src/document/commands/index.ts";
+import {
+  isVoxelLayerCommand,
+  type VoxelLayerCommand
+} from "../../../src/document/commands/index.ts";
 import { makeLogger } from "../../helpers/fakes.ts";
 
 // CONSTANTS
@@ -92,7 +95,11 @@ describe("VoxelWorld.apply - applied command", () => {
     const world = new VoxelWorld(4);
     layers.forEach((name) => world.addLayer(name));
     const emitted: VoxelLayerCommand[] = [];
-    world.on("command", (command) => emitted.push(command));
+    world.on("command", (command) => {
+      if (isVoxelLayerCommand(command)) {
+        emitted.push(command);
+      }
+    });
 
     return { world, emitted };
   }

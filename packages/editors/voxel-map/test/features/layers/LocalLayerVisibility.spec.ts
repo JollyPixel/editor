@@ -7,6 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import {
+  isVoxelLayerCommand,
   VoxelWorld,
   type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
@@ -29,8 +30,10 @@ function setup() {
   const mapDocument = new Emitter<MapDocumentEvents>();
   const commands: VoxelLayerCommand[] = [];
   world.on("command", (command) => {
-    commands.push(command);
-    mapDocument.emit("layerUpdated", command);
+    if (isVoxelLayerCommand(command)) {
+      commands.push(command);
+      mapDocument.emit("layerUpdated", command);
+    }
   });
 
   const visibility = new LayerVisibilityStore();

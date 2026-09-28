@@ -2,6 +2,7 @@
 import * as network from "@jolly-pixel/network";
 import {
   deserializeVoxelWorld,
+  parseVoxelTemplate,
   parseVoxelWorld,
   TilesetList,
   VOXEL_PATCH_STRIDE,
@@ -38,6 +39,11 @@ type WorldReplaceCommand = Extract<
   { action: "world-replace"; }
 >;
 
+type TemplateDefinedCommand = Extract<
+  VoxelMapNetworkCommand,
+  { action: "template-defined"; }
+>;
+
 export interface VoxelCommandArbiterOptions {
   conflictResolver?: network.ConflictResolver<VoxelMapNetworkCommand>;
 }
@@ -59,6 +65,9 @@ export class VoxelCommandArbiter {
   ): network.Admission<VoxelMapNetworkCommand> | null {
     if (command.action === "world-replace") {
       return this.#admitWorldReplace(state, command);
+    }
+    if (command.action === "template-defined" && !parses(command)) {
+      return null;
     }
     if (
       kVoxelWriteActions.has(command.action) &&
@@ -107,6 +116,11 @@ export class VoxelCommandArbiter {
       case "object-updated":
       case "object-moved":
         return `object:${command.metadata.objectId}`;
+      case "template-defined":
+        return `template:${command.template.id}`;
+      case "template-updated":
+      case "template-removed":
+        return `template:${command.templateId}`;
       case "tileset-added":
         return `tileset:${command.tileset.id}`;
       case "tileset-removed":
@@ -203,6 +217,19 @@ function loads(
       new VoxelWorld(chunkSize),
       { tilesets: new TilesetList() }
     );
+
+    return true;
+  }
+  catch {
+    return false;
+  }
+}
+
+function parses(
+  command: TemplateDefinedCommand
+): boolean {
+  try {
+    parseVoxelTemplate(command.template);
 
     return true;
   }

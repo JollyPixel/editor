@@ -1,6 +1,6 @@
 # VoxelWorld
 
-`VoxelWorld` owns voxel layers, object layers, and chunk lifecycle. Read
+`VoxelWorld` owns voxel layers, object layers, templates, and chunk lifecycle. Read
 [the world model](../../concepts/world-model.md) for the ownership and compositing
 rules.
 
@@ -81,8 +81,12 @@ Other sizes throw a `RangeError`.
 
 ```ts
 readonly chunkSize: number;
+readonly objectLayers: VoxelObjectLayers;
+readonly templates: VoxelTemplates;
 recorder: VoxelEditRecorder | null;
 ```
+
+`templates` holds the world's [voxel templates](./VoxelTemplates.md).
 
 `recorder` receives the cells changed by each non-silent `setVoxel`,
 `removeVoxel`, `setVoxelBulk` and `removeVoxelBulk` call, read before the
@@ -106,11 +110,14 @@ interface VoxelCellChange {
 
 ```ts
 type VoxelWorldEvents = {
-  command: (command: VoxelLayerCommand) => void;
+  command: (command: VoxelWorldContentCommand) => void;
 };
+
+type VoxelWorldContentCommand = VoxelLayerCommand | VoxelTemplateCommand;
 ```
 
-Every mutating method below emits a [layer command](../core/commands.md#layer-commands)
+Every mutating method below emits a [layer command](../core/commands.md#layer-commands),
+and every template change a [template command](../core/commands.md#template-commands),
 on `"command"`, so an editor or a network adapter can mirror local edits
 without wrapping the world. [`VoxelDocument`](../core/VoxelDocument.md#events)
 forwards these as local commands. The exceptions are `restoreLayer`,
@@ -382,7 +389,7 @@ Marks every chunk of every layer dirty for rebuild.
 
 #### `clear(): void`
 
-Removes all voxel layers and object layers.
+Removes all voxel layers, object layers and templates.
 
 ### Block counts
 
@@ -406,9 +413,9 @@ Voxels of `blockId` across all layers; `0` when none.
 
 ### Commands
 
-#### `apply(command: VoxelLayerCommand, logger?: VoxelLogger): VoxelLayerCommand | null`
+#### `apply(command: VoxelWorldContentCommand, logger?: VoxelLogger): VoxelWorldContentCommand | null`
 
-Replays a layer command onto this world without emitting it, so a network
+Replays a layer or template command onto this world without emitting it, so a network
 adapter cannot echo it back. Every action of the union is handled; an unknown
 one throws. On a document, prefer
 [`document.apply()`](../core/VoxelDocument.md#methods), which emits it once with

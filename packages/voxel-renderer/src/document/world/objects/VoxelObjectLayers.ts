@@ -3,14 +3,11 @@ import type {
   VoxelObjectJSON,
   VoxelObjectLayerJSON
 } from "./types.ts";
-import type {
-  VoxelLayerCommand,
-  VoxelObjectLayerCommand
-} from "../../commands/types.ts";
+import type { VoxelObjectLayerCommand } from "../../commands/types.ts";
 
 export type VoxelObjectLayerDispatch = (
   command: VoxelObjectLayerCommand
-) => VoxelLayerCommand | null;
+) => boolean;
 
 /**
  * Named layers of free-standing objects, keyed by layer name. Every change
@@ -64,7 +61,7 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
       action: "object-layer-removed",
       layerName: name,
       metadata: {}
-    }) !== null;
+    });
   }
 
   update(
@@ -75,7 +72,7 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
       action: "object-layer-updated",
       layerName: name,
       metadata: { patch }
-    }) !== null;
+    });
   }
 
   addObject(
@@ -86,7 +83,7 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
       action: "object-added",
       layerName,
       metadata: { object }
-    }) !== null;
+    });
   }
 
   removeObject(
@@ -97,7 +94,7 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
       action: "object-removed",
       layerName,
       metadata: { objectId }
-    }) !== null;
+    });
   }
 
   moveObject(
@@ -113,7 +110,7 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
         fromLayerName,
         toLayerName
       }
-    }) !== null;
+    });
   }
 
   updateObject(
@@ -125,7 +122,7 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
       action: "object-updated",
       layerName,
       metadata: { objectId, patch }
-    }) !== null;
+    });
   }
 
   apply(

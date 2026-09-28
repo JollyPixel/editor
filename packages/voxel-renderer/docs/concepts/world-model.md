@@ -2,7 +2,8 @@
 
 A `VoxelWorld` contains named `VoxelLayer` instances. Each layer divides its
 voxel data into fixed-size `VoxelChunk` instances and stores placed objects in
-separate object layers.
+separate object layers. [Voxel templates](../api/world/VoxelTemplates.md) are
+saved with the world outside the layer stack and never drawn.
 
 ```text
 VoxelWorld
@@ -10,6 +11,7 @@ VoxelWorld
   |     +-- VoxelChunk
   |           +-- VoxelStore
   +-- VoxelObjectLayerJSON
+  +-- VoxelTemplate
 ```
 
 ## Layer compositing
