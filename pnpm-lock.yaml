@@ -274,8 +274,8 @@ importers:
         specifier: 0.8.3
         version: 0.8.3
       js-base64:
-        specifier: 3.9.3
-        version: 3.9.3
+        specifier: 3.9.4
+        version: 3.9.4
       loglayer:
         specifier: 9.4.0
         version: 9.4.0
@@ -779,8 +779,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       js-base64:
-        specifier: 3.9.3
-        version: 3.9.3
+        specifier: 3.9.4
+        version: 3.9.4
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -806,8 +806,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       '@pmndrs/detect-gpu':
-        specifier: 6.0.22
-        version: 6.0.22
+        specifier: 6.0.23
+        version: 6.0.23
       three:
         specifier: ^0.186.0
         version: 0.186.0
@@ -1907,8 +1907,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@pmndrs/detect-gpu@6.0.22':
-    resolution: {integrity: sha512-CRoNJOwHg0Xlp/67seTqvWYXhHro3p1YLmkx50eezt/hjlz97nA1HF7fPiJbpH8qghpsr0dFNV2W80v46OFbHg==}
+  '@pmndrs/detect-gpu@6.0.23':
+    resolution: {integrity: sha512-kkWgtg7Vq3V+J9F5Ad4MolQenoQrE6Lb2VTbepenTDqjVQwYHQ2+YWYAIylHGYMlzSkmEmpYZzf7aRRE4adSmQ==}
 
   '@pnpm/deps.graph-sequencer@1100.0.1':
     resolution: {integrity: sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A==}
@@ -3236,8 +3236,8 @@ packages:
   jju@1.4.0:
     resolution: {integrity: sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA==}
 
-  js-base64@3.9.3:
-    resolution: {integrity: sha512-uwYQp+VJ38FVvtim6qNbit6e9uT6dwWQ4Y1+H9TxhW5hcHjpHwoxlR0nMpqUmIFOmu4VqMxwdJA88gIVuZJQ/g==}
+  js-base64@3.9.4:
+    resolution: {integrity: sha512-PtOMXpEGuP0RRiRXsjzHzl44dMHxSu2CPvAhinupR1tBa88me+1DPqsobl7eupn5UukjLkln1ZnAOAOXOrYG0Q==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -5061,7 +5061,7 @@ snapshots:
     dependencies:
       playwright: 1.63.0
 
-  '@pmndrs/detect-gpu@6.0.22': {}
+  '@pmndrs/detect-gpu@6.0.23': {}
 
   '@pnpm/deps.graph-sequencer@1100.0.1': {}
 
@@ -6409,7 +6409,7 @@ snapshots:
 
   jju@1.4.0: {}
 
-  js-base64@3.9.3: {}
+  js-base64@3.9.4: {}
 
   js-tokens@4.0.0: {}
 
