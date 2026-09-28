@@ -21,8 +21,3 @@ export interface RuntimeAssetLoaderDefinition<
     manager: THREE.LoadingManager
   ): AssetLoader<TValue>;
 }
-
-export interface ResolvedRuntimeAssetOptions {
-  readonly catalog: AssetCatalog;
-  readonly loaders?: Iterable<RuntimeAssetLoaderDefinition>;
-}

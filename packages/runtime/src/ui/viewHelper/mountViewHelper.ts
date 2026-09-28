@@ -3,6 +3,11 @@ import type * as THREE from "three/webgpu";
 import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 import type { Systems } from "@jolly-pixel/engine";
 
+// Import Internal Dependencies
+import {
+  resolveOverlayAlignment
+} from "../overlay/resolveOverlayAnchor.ts";
+
 // CONSTANTS
 const kDefaultPosition = "bottom-right";
 const kDefaultInset = 0;
@@ -96,12 +101,12 @@ function resolveViewHelperLocation(
   position: ViewHelperPosition,
   inset: number
 ): ViewHelperLocation {
-  const [vertical, horizontal] = position.split("-");
+  const [vertical, horizontal] = resolveOverlayAlignment(position);
 
   return {
-    top: vertical === "top" ? inset : null,
-    bottom: vertical === "bottom" ? inset : 0,
-    left: horizontal === "left" ? inset : null,
-    right: horizontal === "right" ? inset : 0
+    top: vertical === "start" ? inset : null,
+    bottom: vertical === "end" ? inset : 0,
+    left: horizontal === "start" ? inset : null,
+    right: horizontal === "end" ? inset : 0
   };
 }

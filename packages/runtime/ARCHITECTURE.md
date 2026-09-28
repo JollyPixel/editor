@@ -1,200 +1,189 @@
 # Runtime architecture
 
-`Runtime` is the browser-facing composition layer for the engine. It creates a
-renderer and world for a canvas, connects asset loading to scene loading, and
-drives the world through a scheduled game loop. The web and Electron guides use
-the same runtime code.
+`Runtime` puts the engine in a browser page. It creates the renderer and world
+for a canvas, prepares assets, and drives the world from a scheduled game loop.
+The web and Electron guides use the same runtime code.
 
-## Workspace map
+## What the runtime composes
 
 ```mermaid
 flowchart TB
-    App["Application<br/>canvas · options · scenes"]
-    Catalog[("Asset catalog")]
-    Files[("Asset files")]
-
-    subgraph RuntimePackage["@jolly-pixel/runtime"]
-        Runtime["Runtime<br/>create · load · start · stop · dispose"]
-        Bootstrap["bootstrapRuntime<br/>device · startup assets · initial scene"]
-        Assets["AssetCoordinator<br/>catalog · loader registry"]
-        SceneLoader["RuntimeSceneLoader"]
-        Loop["GameLoop<br/>FrameScheduler"]
-        FrameSource["AnimationLoopFrameSource"]
-        Overlay["OverlayLayer<br/>HUD · focus hint"]
-        Screen["RuntimeLoadingScreen"]
-        Metrics["StatsRecorder · RuntimeMetrics"]
-    end
-
-    subgraph Engine["@jolly-pixel/engine"]
-        World["World<br/>input · audio · context"]
-        SceneManager["SceneManager"]
-        Renderer["ThreeRenderer"]
-    end
-
-    App --> Runtime
-    Runtime --> Bootstrap
-    Runtime --> Assets
-    Runtime --> World
-    Runtime --> Loop
-    Runtime --> Overlay
-    Runtime --> Metrics
-    Bootstrap --> Screen
-    Catalog --> Assets
-    Assets -->|"asset references"| Files
-    Bootstrap -->|"loadBatch"| Assets
-    Bootstrap -->|"loadScene"| SceneManager
-    SceneManager -->|"scene assets"| SceneLoader
-    SceneLoader --> Assets
-    World --> SceneManager
-    World --> Renderer
-    Loop --> FrameSource
-    FrameSource -->|"setAnimationLoop"| Renderer
-    Loop -->|"FrameSchedule"| World
-    Renderer -->|"draw event"| Metrics
+    App["Application"] --> Runtime["Runtime"]
+    Runtime --> Engine["World and ThreeRenderer<br/>@jolly-pixel/engine"]
+    Runtime --> Assets["AssetCoordinator<br/>@jolly-pixel/asset"]
+    Runtime --> Loop["GameLoop<br/>@jolly-pixel/loop"]
+    Runtime --> UI["Loading screen, overlays, metrics<br/>@jolly-pixel/ui"]
 ```
 
-The package owns the wiring. `World` owns engine services, `SceneManager` owns
-scene state, `AssetCoordinator` owns catalog-based loading, and `GameLoop` owns
-frame scheduling. Runtime also creates a shared Three.js `LoadingManager` for
-its default and custom asset loaders.
+Runtime owns the wiring; each part keeps its behavior in its own package. The
+sections below follow one part at a time.
 
-| Boundary | Runtime's role | Owner of the underlying behavior |
+| Part | Runtime's role | Owner of the behavior |
 |---|---|---|
 | Canvas and renderer | Resolve the canvas and create `ThreeRenderer` | Engine renderer |
-| Assets | Resolve a catalog, register loaders, and install `RuntimeSceneLoader` | `@jolly-pixel/asset` and `SceneManager` |
-| Frames | Adapt renderer animation callbacks and pass schedules to `world.tick()` | `@jolly-pixel/loop` and `World` |
-| Browser UI | Mount the loading screen, overlays, and optional readouts | Runtime and `@jolly-pixel/ui` |
+| Assets | Resolve the catalog and add custom loaders to the engine defaults | `@jolly-pixel/asset` and the engine loaders |
+| Scenes | Await the initial scene during `load()` | Engine `SceneManager` |
+| Frames | Feed renderer animation callbacks to `world.tick()` | `@jolly-pixel/loop` and `World` |
+| Browser UI | Mount the loading screen, overlays, and readouts | Runtime and `@jolly-pixel/ui` |
 
-## Creation and startup
+## Assets
+
+```mermaid
+flowchart TB
+    Option["assets.catalog<br/>AssetCatalog, URL, or nothing"] --> Catalog["AssetCatalog"]
+    Defaults["createDefaultAssetLoaders()<br/>model, font, audio, texture"] --> Registry["AssetLoaderRegistry"]
+    Custom["assets.loaders<br/>custom definitions"] --> Registry
+    Catalog --> Coordinator["AssetCoordinator<br/>world.assetCoordinator"]
+    Registry --> Coordinator
+    Coordinator --> Startup["load({ assets })<br/>startup batch"]
+    Coordinator --> Scenes["SceneManager<br/>scene.assets batch"]
+    Coordinator --> Components["ActorComponent.getAsset()"]
+```
+
+`Runtime.create()` fetches and parses a catalog URL once; no catalog means an
+empty one. Every loader shares the Three.js `LoadingManager` exposed as
+`runtime.manager`. Runtime loads the startup batch itself; the engine loads
+scene assets.
+
+## Creation
+
+```mermaid
+flowchart TB
+    Create["Runtime.create(target, options)"] --> Canvas["Resolve the canvas<br/>element or CSS selector"]
+    Canvas --> Catalog["Resolve the asset catalog"]
+    Catalog --> Renderer["Create ThreeRenderer"]
+    Renderer --> Build["Build the overlay layer, metrics,<br/>World, and GameLoop"]
+    Build --> Stats{"includePerformanceStats?"}
+    Stats -->|"yes"| Mount["Mount the HUD<br/>and the optional readout panel"]
+    Stats -->|"no"| Created["Stopped runtime"]
+    Mount --> Created
+```
+
+`create()` rejects on an invalid canvas target, a failed catalog request or
+manifest, or a renderer failure. The catalog resolves first, so a failed
+request rejects before any renderer exists. Nothing runs until `load()` or
+`start()`.
+
+## Startup
+
+```mermaid
+flowchart TB
+    Load["runtime.load(options)"] --> Skip{"skipLoadingScreen?"}
+    Skip -->|"no"| Screen["Mount the loading screen"]
+    Skip -->|"yes"| Show["Show the canvas"]
+    Screen --> Prepare["In parallel: screen entrance,<br/>GPU detection, minimum delay"]
+    Show --> Device["GPU detection"]
+    Prepare --> Batch["Load the startup assets"]
+    Device --> Batch
+    Batch --> Scene["Load the initial scene<br/>await SceneLoad.done"]
+    Scene --> Complete["Complete the loading screen"]
+    Complete --> Start["runtime.start()"]
+```
+
+GPU detection sets the FPS cap and, unless the renderer options fix it, the
+pixel ratio. Without a screen, the entrance, delay, and completion steps do
+nothing. Any failure rejects `load()`, leaves the runtime stopped, and is shown
+on the screen when one is mounted.
+
+## Scene loading
 
 ```mermaid
 sequenceDiagram
-    participant App as Application
-    participant Runtime
-    participant Catalog as Asset catalog
-    participant Renderer as ThreeRenderer
-    participant World
-    participant Loader as RuntimeSceneLoader
-    participant Screen as Loading screen
-    participant GPU as GPU detection
-    participant Assets as AssetCoordinator
+    participant Caller as load() or gameplay code
     participant Scenes as SceneManager
+    participant Assets as AssetCoordinator
+    participant Tick as Next world tick
 
-    App->>Runtime: create(canvas, options)
-    Runtime->>Runtime: resolve canvas
-    Runtime->>Catalog: use instance, fetch URL, or create empty catalog
-    Catalog-->>Runtime: AssetCatalog
-    Runtime->>Renderer: create(canvas)
-    Runtime->>Assets: register default and custom loaders
-    Runtime->>World: construct(renderer, sceneManager, assets)
-    Runtime->>Loader: install on SceneManager
-    Runtime-->>App: runtime
-
-    App->>Runtime: load(startup assets, initial scene)
-    Runtime->>Screen: mount
-    par startup entrance
-        Runtime->>Screen: start entrance
-    and
-        Runtime->>GPU: detect tier, set FPS cap and pixel ratio
-    and
-        Runtime->>Screen: wait minimum loading delay
-    end
-    Runtime->>Assets: loadBatch(startup assets)
-    Assets-->>Runtime: progress
-    Runtime->>Screen: update progress
-    opt initial scene supplied
-        Runtime->>Scenes: loadScene(scene)
-        Scenes->>Loader: load scene assets
-        Loader->>Assets: loadBatch(scene.assets)
-        Loader-->>Scenes: progress, then ready or failed
-        Scenes-->>Runtime: sceneLoadChanged
-    end
-    Runtime->>Screen: complete
-    Runtime->>World: connect and start
-    Runtime->>Runtime: start GameLoop
-    Runtime-->>App: load resolves
+    Caller->>Scenes: loadScene(scene)
+    Scenes->>Assets: loadBatch(scene.assets)
+    Assets-->>Scenes: progress per asset
+    Scenes-->>Caller: sceneLoadChanged
+    Assets-->>Scenes: batch done
+    Scenes-->>Caller: status ready, SceneLoad.done resolves
+    Tick->>Scenes: beginFrame()
+    Scenes->>Scenes: activate the scene, status active
 ```
 
-The screen entrance, GPU detection, and minimum delay run together. Startup
-assets load next; the optional initial scene's assets load after them. With
-`skipLoadingScreen`, the canvas is shown immediately and device configuration,
-assets, and scene preparation run in the same order without a screen or delay.
-An asset or scene failure rejects `load()` and prevents `start()`. When a screen
-is mounted, it displays the error.
-
-The initial scene can be `ready` when `load()` resolves without yet being
-active. `SceneManager` activates ready scenes in `beginFrame()` on the next
-world tick. Its progress and status are reported through `sceneLoadChanged`;
-`RuntimeSceneLoader` forwards batch progress from `AssetCoordinator`.
+The engine owns this flow. Runtime awaits it for the initial scene and forwards
+its progress to the loading screen. A ready scene becomes active on the next
+`beginFrame()`, so `load()` can resolve before the scene's `awake()` runs.
 
 ## Frame path
 
 ```mermaid
 sequenceDiagram
-    participant Renderer as Three.js renderer
-    participant Source as AnimationLoopFrameSource
-    participant Loop as GameLoop / FrameScheduler
+    participant Renderer as ThreeRenderer
+    participant Scheduler as GameLoop
     participant Runtime
-    participant Stats as StatsRecorder
     participant World
-    participant Scenes as SceneManager
 
-    Renderer->>Source: animation callback(time)
-    Source->>Loop: frame time
-    Loop->>Loop: advance schedule
-    Loop->>Runtime: frame(schedule)
-    Runtime->>Stats: begin()
-    Runtime->>World: tick(schedule)
-    World->>Scenes: beginFrame() / activate ready scenes
-    loop scheduled fixed steps
-        World->>World: update input
-        World->>Scenes: fixedUpdate(fixedDelta)
-    end
+    Renderer->>Scheduler: animation callback, through AnimationLoopFrameSource
+    Scheduler->>Runtime: frame(schedule)
+    Runtime->>World: tick(schedule), timed by runtime.stats
+    World->>World: beginFrame, input, fixed steps
     opt schedule.render
-        World->>Scenes: update(frameDelta, alpha)
         World->>Renderer: draw(scene)
-        Renderer-->>Runtime: draw event / capture renderer counters
+        Renderer-->>Runtime: draw event, RuntimeMetrics latches counters
     end
-    World->>Scenes: endFrame()
     World-->>Runtime: exit requested?
-    Runtime->>Stats: end()
     opt exit requested
         Runtime->>Runtime: stop()
     end
 ```
 
-The loop uses the renderer's `setAnimationLoop()` through
-`AnimationLoopFrameSource`. `FrameScheduler` decides the fixed step count and
-whether to render. `World.tick()` updates input even when there are no fixed
-steps, and draws only when `schedule.render` is true. Runtime records each
-scheduled frame; the renderer's draw event captures draw calls and triangle
-counts for `RuntimeMetrics`.
+`FrameScheduler`, inside `GameLoop`, decides the fixed step count and whether
+to render; the `maxFps` cap skips rendering while fixed steps still run.
+`World.tick()` updates input even when no fixed step is due.
 
-## Lifetime and browser surfaces
+## Metrics
+
+```mermaid
+flowchart TB
+    Draw["Renderer draw event"] --> Renderer["RendererMetrics<br/>runtime.metrics.renderer"]
+    Renderer --> Recorder["StatsRecorder<br/>runtime.stats"]
+    Sources["Other sources and metrics<br/>runtime.metrics.addSource()"] --> Recorder
+    Frames["Every frame<br/>stats.begin() and stats.end()"] --> Recorder
+    Recorder --> HUD["Corner HUD<br/>includePerformanceStats"]
+    Recorder --> Panel["Readout panel<br/>mountMetricsPanel()"]
+```
+
+One recorder feeds every display. `RuntimeMetrics` registers the renderer
+counters, latches them on each draw, and owns the readout panel. The recorder
+and the counters exist even when nothing is mounted.
+
+## Lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Created: Runtime.create resolves
-    Created --> Running: start() or successful load()
-    Running --> Stopped: stop() or input exit
+    [*] --> Stopped: Runtime.create resolves
     Stopped --> Running: start() or successful load()
-    Created --> Disposed: dispose()
-    Running --> Disposed: dispose()
+    Running --> Stopped: stop() or input exit
     Stopped --> Disposed: dispose()
+    Running --> Disposed: dispose()
     Disposed --> [*]
 ```
 
-`start()` focuses the canvas, mounts enabled focus and view helpers, connects
-the world, and starts the loop. `stop()` stops the world and loop, disconnects
-input and resize observation, and removes running-only helpers and focus
-listeners. Both methods are idempotent. `dispose()` also removes the HUD,
-metrics panel, overlay layer, and renderer resources; the instance must not be
-reused.
+`start()` focuses the canvas, attaches the focus listeners, focus hint, and view
+helper, then connects the world and starts the loop. `stop()` stops the world
+and loop and releases everything `start()` attached. Both are idempotent;
+`dispose()` also removes the HUD, readout panel, overlay layer, and renderer
+resources.
 
-The overlay layer follows the canvas by default or fills a supplied container.
-It holds the optional performance HUD and focus hint. The view helper draws
-inside the renderer's canvas after frames. `StatsRecorder` and `RuntimeMetrics`
-exist even when no HUD or panel is mounted.
+## Browser surfaces
+
+```mermaid
+flowchart TB
+    Canvas["Canvas"] --> Container{"overlay.container set?"}
+    Container -->|"no"| Tracked["Fixed layer on the body<br/>follows the canvas box"]
+    Container -->|"yes"| Contained["Layer filling the container"]
+    Tracked --> Content["HUD, focus hint,<br/>runtime.overlay.mount()"]
+    Contained --> Content
+    Canvas --> ViewHelper["View helper<br/>drawn inside the canvas"]
+```
+
+The overlay layer holds what is drawn above the canvas and never takes pointer
+events itself. The view helper renders into the canvas after each draw. The
+loading screen mounts in `loadingContainer`, outside the overlay.
 
 Details: [runtime API](./docs/api/Runtime.md),
 [asset options](./docs/api/runtime-assets.md),

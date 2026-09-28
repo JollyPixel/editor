@@ -11,7 +11,6 @@ import type {
   SceneLoadOptions,
   SceneLoadStatus
 } from "./SceneLoad.ts";
-import type { SceneLoadDriver } from "./SceneLoader.ts";
 import type { WorldDefaultContext } from "../World.ts";
 
 type SceneLoadChangeHandler<TContext> = (
@@ -23,7 +22,7 @@ type SceneLoadChangeHandler<TContext> = (
  */
 export class ManagedSceneLoad<
   TContext = WorldDefaultContext
-> implements SceneLoad<TContext>, SceneLoadDriver<TContext> {
+> implements SceneLoad<TContext> {
   readonly scene: Scene<TContext>;
 
   #status: SceneLoadStatus = "requested";
@@ -33,6 +32,7 @@ export class ManagedSceneLoad<
   #currentAsset: AssetRecord | null = null;
   #error: Error | null = null;
   #onChange: SceneLoadChangeHandler<TContext>;
+  #done = Promise.withResolvers<void>();
 
   constructor(
     scene: Scene<TContext>,
@@ -42,10 +42,11 @@ export class ManagedSceneLoad<
     this.scene = scene;
     this.#activationAllowed = options.activation !== "manual";
     this.#onChange = onChange;
+    this.#done.promise.catch(() => undefined);
   }
 
-  get load(): SceneLoad<TContext> {
-    return this;
+  get done(): Promise<void> {
+    return this.#done.promise;
   }
 
   get status(): SceneLoadStatus {
@@ -91,6 +92,7 @@ export class ManagedSceneLoad<
 
     this.#status = "cancelled";
     this.#notify();
+    this.#done.reject(new Error("Scene load was cancelled."));
   }
 
   start(
@@ -128,6 +130,7 @@ export class ManagedSceneLoad<
     this.#status = "ready";
     this.#completed = this.#total;
     this.#notify();
+    this.#done.resolve();
   }
 
   fail(
@@ -140,6 +143,7 @@ export class ManagedSceneLoad<
     this.#status = "failed";
     this.#error = error;
     this.#notify();
+    this.#done.reject(error);
   }
 
   activate(): void {

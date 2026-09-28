@@ -71,6 +71,48 @@ interface PanelItem {
   dispose(): void;
 }
 
+interface Visibility {
+  hidden: boolean;
+}
+
+class PanelItems implements Visibility {
+  #items: PanelItem[] = [];
+  #hidden = false;
+
+  get hidden(): boolean {
+    return this.#hidden;
+  }
+
+  set hidden(
+    value: boolean
+  ) {
+    this.#hidden = value;
+    for (const item of this.#items) {
+      item.hidden = value;
+    }
+  }
+
+  add(
+    item: PanelItem
+  ): void {
+    item.hidden = this.#hidden;
+    this.#items.push(item);
+  }
+
+  refresh(): void {
+    for (const item of this.#items) {
+      item.refresh();
+    }
+  }
+
+  clear(): void {
+    for (const item of this.#items) {
+      item.dispose();
+    }
+    this.#items = [];
+  }
+}
+
 export class MetricsPanel {
   readonly container: FacadeContainer;
 
@@ -79,10 +121,10 @@ export class MetricsPanel {
   #pane: Pane | null = null;
   #keyboard: MetricsPanelKeyboard | null = null;
   #toggleKey: string | null = null;
-  #items: PanelItem[] = [];
+  #items = new PanelItems();
+  #visibility: Visibility;
   #values: StatsSnapshot = {};
   #revision = -1;
-  #hidden: boolean;
   #unsubscribe: (() => void) | null = null;
 
   #onToggleKey = (
@@ -101,11 +143,12 @@ export class MetricsPanel {
   ) {
     this.#recorder = recorder;
     this.#filter = options.filter ?? (() => true);
-    this.#hidden = options.hidden ?? false;
 
-    const { target } = options;
+    const { target, hidden = false } = options;
     if (target !== undefined && !(target instanceof HTMLElement)) {
       this.container = target;
+      this.#items.hidden = hidden;
+      this.#visibility = this.#items;
     }
     else {
       this.#pane = new Pane({
@@ -115,9 +158,10 @@ export class MetricsPanel {
         floating: options.floating,
         storageKey: options.storageKey,
         collapsible: options.collapsible ?? true,
-        hidden: this.#hidden
+        hidden
       });
       this.container = this.#pane;
+      this.#visibility = this.#pane;
     }
 
     this.#sync(recorder.snapshot());
@@ -134,22 +178,13 @@ export class MetricsPanel {
   }
 
   get hidden(): boolean {
-    return this.#pane === null ? this.#hidden : this.#pane.hidden;
+    return this.#visibility.hidden;
   }
 
   set hidden(
     value: boolean
   ) {
-    this.#hidden = value;
-    if (this.#pane === null) {
-      for (const item of this.#items) {
-        item.hidden = value;
-      }
-
-      return;
-    }
-
-    this.#pane.hidden = value;
+    this.#visibility.hidden = value;
   }
 
   dispose(): void {
@@ -159,7 +194,7 @@ export class MetricsPanel {
       this.#keyboard.off(this.#toggleKey, this.#onToggleKey);
     }
     this.#keyboard = null;
-    this.#clear();
+    this.#items.clear();
     this.#pane?.dispose();
     this.#pane = null;
   }
@@ -171,13 +206,11 @@ export class MetricsPanel {
     if (this.#revision !== this.#recorder.revision) {
       this.#build();
     }
-    for (const item of this.#items) {
-      item.refresh();
-    }
+    this.#items.refresh();
   }
 
   #build(): void {
-    this.#clear();
+    this.#items.clear();
     this.#revision = this.#recorder.revision;
 
     const definitions = this.#recorder.definitions.filter(this.#filter);
@@ -193,12 +226,9 @@ export class MetricsPanel {
           format: resolveMetricFormat(definition)
         });
         if (parent === this.container) {
-          this.#items.push(monitor);
+          this.#items.add(monitor);
         }
       }
-    }
-    if (this.#pane === null) {
-      this.hidden = this.#hidden;
     }
   }
 
@@ -206,15 +236,8 @@ export class MetricsPanel {
     title: string
   ): FacadeFolder {
     const folder = this.container.addFolder({ title });
-    this.#items.push(folder);
+    this.#items.add(folder);
 
     return folder;
-  }
-
-  #clear(): void {
-    for (const item of this.#items) {
-      item.dispose();
-    }
-    this.#items = [];
   }
 }

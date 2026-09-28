@@ -7,7 +7,3 @@ export {
   type SceneLoadOptions,
   type SceneLoadStatus
 } from "./SceneLoad.ts";
-export {
-  type SceneLoader,
-  type SceneLoadDriver
-} from "./SceneLoader.ts";

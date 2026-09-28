@@ -22,7 +22,7 @@ test("internal runtime helpers are absent from the package API", () => {
   expect<"loadRuntime">().type.not.toBeAssignableTo<
     keyof typeof RuntimePackage
   >();
-  expect<"resolveRuntimeCanvas">().type.not.toBeAssignableTo<
+  expect<"resolveElement">().type.not.toBeAssignableTo<
     keyof typeof RuntimePackage
   >();
   expect<"resolveOverlayAnchor">().type.not.toBeAssignableTo<
@@ -30,6 +30,18 @@ test("internal runtime helpers are absent from the package API", () => {
   >();
   expect<"mountFocusHint">().type.not.toBeAssignableTo<
     keyof typeof RuntimePackage
+  >();
+});
+
+test("Runtime.create accepts a canvas or a selector", () => {
+  expect<HTMLCanvasElement>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeCanvasTarget
+  >();
+  expect<string>().type.toBeAssignableTo<
+    RuntimePackage.RuntimeCanvasTarget
+  >();
+  expect<HTMLDivElement>().type.not.toBeAssignableTo<
+    RuntimePackage.RuntimeCanvasTarget
   >();
 });
 

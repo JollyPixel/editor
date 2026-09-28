@@ -87,7 +87,7 @@ class GameScene extends Systems.Scene {
 }
 ```
 
-The JollyPixel runtime loads `scene.assets` before activating the scene. The
+The engine's `SceneManager` loads `scene.assets` before activating the scene. The
 catalog supplies the source for `"hero-model"`; gameplay code keeps the stable
 reference. The [game developer guide](./docs/guides/using-assets-in-a-game.md)
 shows the matching catalog and runtime setup.

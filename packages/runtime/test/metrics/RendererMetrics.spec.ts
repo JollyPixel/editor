@@ -4,11 +4,9 @@ import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
-import { StatsRecorder } from "@jolly-pixel/ui/stats";
 
 // Import Internal Dependencies
 import { RendererMetrics } from "../../src/metrics/RendererMetrics.ts";
-import { RuntimeMetrics } from "../../src/metrics/RuntimeMetrics.ts";
 
 interface FakeRenderer {
   info: {
@@ -83,17 +81,6 @@ describe("RendererMetrics", () => {
       geometries: 4,
       textures: 5
     });
-  });
-
-  it("registers its metrics through the runtime registry", () => {
-    const registry = new RuntimeMetrics(
-      new StatsRecorder(),
-      metricsOf(makeRenderer())
-    );
-    const ids = registry.recorder.definitions.map(({ id }) => id);
-
-    assert.ok(ids.includes("calls"));
-    assert.ok(ids.includes("textures"));
   });
 
   it("reads memory counters live, which the renderer never resets", () => {

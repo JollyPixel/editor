@@ -26,9 +26,6 @@ export type {
   MetricsPanelOptions
 } from "./metrics/MetricsPanel.ts";
 export type {
-  RuntimeCanvasTarget
-} from "./resolveRuntimeCanvas.ts";
-export type {
   RuntimeLoadOptions
 } from "./bootstrap/bootstrapRuntime.ts";
 export type {

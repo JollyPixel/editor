@@ -2,8 +2,8 @@
 
 The engine consumes the platform-agnostic types from `@jolly-pixel/asset`.
 Scenes declare what they need, `SceneManager` owns replacement and additive
-load requests, and a platform loader performs the I/O. ECS lifecycle methods
-stay synchronous.
+load requests and loads them through the world's `AssetCoordinator`, and a
+loader performs the I/O. ECS lifecycle methods stay synchronous.
 
 ## Declaring scene assets
 
@@ -46,8 +46,8 @@ class BattleScene extends Systems.Scene {
 
 `Scene.assets` is declarative data. `SceneManager.loadScene()` and
 `SceneManager.appendScene()` create a `SceneLoad` that tracks readiness and
-progress. The runtime prepares those references, then `SceneManager` activates
-the scene at a frame boundary.
+progress. `SceneManager` prepares those references through
+`world.assetCoordinator`, then activates the scene at a frame boundary.
 
 `SceneOptions.assets` accepts individual references and named reference groups.
 Groups are flattened once into the scene's immutable `assets` array.
@@ -75,15 +75,25 @@ an implicit load inside the ECS lifecycle.
 | `AssetTypes.model` | `model` | `AssetLoaders.model` | OBJ, FBX, glTF, GLB |
 | `AssetTypes.font` | `font` | `AssetLoaders.font` | Three.js typeface JSON |
 | `AUDIO_ASSET` | `audio` | `AudioAssetLoader` | Formats supported by `THREE.AudioLoader` |
+| `TEXTURE_ASSET` | `texture` | `TextureAssetLoader` | Formats supported by `THREE.TextureLoader` |
 
-The runtime registers these browser loaders by default. A custom
-`AssetLoaderRegistry` can replace that set through `RuntimeOptions.assets`.
+`createDefaultAssetLoaders(manager)` returns an `AssetLoaderRegistry` holding
+these loaders, all sharing the given Three.js `LoadingManager`. The runtime
+starts from it and registers custom loaders on top.
+
+```ts
+const loaders = createDefaultAssetLoaders(new THREE.LoadingManager());
+const coordinator = new AssetCoordinator({
+  catalog,
+  loaders
+});
+```
 
 ## Responsibility boundary
 
 - `@jolly-pixel/asset` owns IDs, catalogs, references, handles, stores, and batches.
-- `@jolly-pixel/engine` owns scene requests and reads prepared handles synchronously.
-- `@jolly-pixel/runtime` performs browser asset I/O and reports progress to the engine.
+- `@jolly-pixel/engine` owns the built-in loaders, loads scene assets through the world's coordinator, and reads prepared handles synchronously.
+- `@jolly-pixel/runtime` resolves the catalog, composes the coordinator, and loads startup assets.
 
 See the [`@jolly-pixel/asset` README](../../asset/README.md) for the catalog
 format and lower-level APIs.

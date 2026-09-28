@@ -35,6 +35,7 @@ export interface SceneLoad<
   readonly total: number;
   readonly currentAsset: AssetRecord | null;
   readonly error: Error | null;
+  readonly done: Promise<void>;
 
   allowActivation(): void;
   cancel(): void;

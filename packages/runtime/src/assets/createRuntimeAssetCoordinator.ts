@@ -1,49 +1,23 @@
 // Import Third-party Dependencies
 import {
   AssetCoordinator,
-  AssetLoaderRegistry
+  type AssetCatalog
 } from "@jolly-pixel/asset";
-import {
-  AssetLoaders,
-  AssetTypes,
-  AUDIO_ASSET,
-  AudioAssetLoader,
-  TEXTURE_ASSET,
-  TextureAssetLoader
-} from "@jolly-pixel/engine";
-import * as THREE from "three/webgpu";
+import { createDefaultAssetLoaders } from "@jolly-pixel/engine";
+import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type {
-  ResolvedRuntimeAssetOptions
+  RuntimeAssetLoaderDefinition
 } from "./RuntimeAssetOptions.ts";
 
-/**
- * Composes the asset coordinator and default browser loaders used by Runtime.
- */
 export function createRuntimeAssetCoordinator(
   manager: THREE.LoadingManager,
-  options: ResolvedRuntimeAssetOptions
+  catalog: AssetCatalog,
+  definitions: Iterable<RuntimeAssetLoaderDefinition> = []
 ): AssetCoordinator {
-  const loaders = new AssetLoaderRegistry()
-    .register(
-      AssetTypes.model,
-      new AssetLoaders.model(manager)
-    )
-    .register(
-      AssetTypes.font,
-      new AssetLoaders.font(manager)
-    )
-    .register(
-      AUDIO_ASSET,
-      new AudioAssetLoader(manager)
-    )
-    .register(
-      TEXTURE_ASSET,
-      new TextureAssetLoader(manager)
-    );
-
-  for (const definition of options.loaders ?? []) {
+  const loaders = createDefaultAssetLoaders(manager);
+  for (const definition of definitions) {
     loaders.register(
       definition.type,
       definition.create(manager)
@@ -51,7 +25,7 @@ export function createRuntimeAssetCoordinator(
   }
 
   return new AssetCoordinator({
-    catalog: options.catalog,
+    catalog,
     loaders
   });
 }

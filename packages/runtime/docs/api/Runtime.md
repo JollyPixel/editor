@@ -282,20 +282,20 @@ mounted.dispose();
 
 ## Metrics
 
-`runtime.metrics` is the registry every metric goes through, so one recorder
-feeds both the corner HUD and the readout panel.
+`runtime.metrics` is the registry every metric goes through, so one recorder,
+`runtime.stats`, feeds both the corner HUD and the readout panel.
 
 ```ts
 class RuntimeMetrics {
-  readonly recorder: StatsRecorder;
   readonly renderer: RendererMetrics;
-  readonly revision: number;
   readonly panel: MetricsPanel | null;
 
   addMetric(definition: MetricDefinition): () => void;
   addSource(source: MetricSource): () => void;
   removeMetric(id: string): boolean;
   track(id: string, value: number): void;
+  mountPanel(options?: MetricsPanelOptions): Promise<MetricsPanel>;
+  dispose(): void;
 }
 ```
 
@@ -340,8 +340,8 @@ const { drawCalls, triangles } = runtime.metrics.renderer.frame;
 ```
 
 `drawCalls` and `triangles` come from the last drawn frame. `geometries` and
-`textures` are read live, because the renderer never resets them. Each read
-returns a new object.
+`textures` are read live, because the renderer never resets them. Each read of
+`frame` returns a new object.
 
 To refresh a display at the recorder's pace rather than every frame, subscribe
 to `runtime.stats`. The listener runs after each refresh window, once every
@@ -397,12 +397,15 @@ panel.container.addFolder({ title: "inspector" });
 
 `panel.container` is the container the rows were added to, so a consumer adds
 controls of its own beside them. Mounting a second panel disposes the first.
+`mountMetricsPanel()` forwards to `runtime.metrics.mountPanel()` with the
+world keyboard as the default `keyboard`. `runtime.metrics.panel` holds the
+mounted panel until `dispose()`.
 
 ## Services
 
 `world` exposes the renderer, input, scene manager, audio service, application
-context, and asset coordinator. The runtime installs its scene loader on the
-world's `SceneManager` during construction.
+context, and asset coordinator. `SceneManager` loads scene assets through that
+coordinator.
 
 `renderer` is the same object as `world.renderer`, typed as the concrete
 `ThreeRenderer`, so its `renderStrategy` needs no `instanceof` check.
