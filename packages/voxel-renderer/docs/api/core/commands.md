@@ -3,7 +3,8 @@
 Every change to a voxel document is a `VoxelCommand`. A
 [`VoxelDocument`](./VoxelDocument.md) emits each one on its `"command"` event
 and replays one with `apply()`, so a single listener and a single entry point
-cover layers, voxels, objects, blocks, tilesets and material groups.
+cover layers, voxels, objects, blocks, tilesets, material groups and blend
+groups.
 
 ```ts
 import {
@@ -31,7 +32,8 @@ type VoxelCommand =
   | VoxelTemplateCommand
   | VoxelBlockCommand
   | VoxelTilesetCommand
-  | VoxelMaterialGroupCommand;
+  | VoxelMaterialGroupCommand
+  | VoxelBlendGroupCommand;
 
 type VoxelCommandListener = (
   command: VoxelCommand,
@@ -48,20 +50,21 @@ replayed with `document.apply(command, { origin: "remote" })`. A network adapter
 sends only local commands; UI listeners usually ignore the origin.
 
 `isVoxelLayerCommand()`, `isVoxelTemplateCommand()`, `isVoxelBlockCommand()`,
-`isVoxelTilesetCommand()` and `isVoxelMaterialGroupCommand()` narrow a command (or any `{ action: string }`)
+`isVoxelTilesetCommand()`, `isVoxelMaterialGroupCommand()` and
+`isVoxelBlendGroupCommand()` narrow a command (or any `{ action: string }`)
 to one category. Within layer commands, `isVoxelEditCommand()` and
 `isVoxelObjectLayerCommand()` narrow to the
 [voxel edit and object layer subsets](#layer-commands). `VOXEL_COMMAND_ACTIONS` lists every action;
 `VOXEL_LAYER_COMMAND_ACTIONS`, `VOXEL_TEMPLATE_COMMAND_ACTIONS`, `VOXEL_BLOCK_COMMAND_ACTIONS`,
-`VOXEL_TILESET_COMMAND_ACTIONS` and `VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS` list
-each category. `VoxelCommandAction` and the per-category `*CommandAction` types are
+`VOXEL_TILESET_COMMAND_ACTIONS`, `VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS` and
+`VOXEL_BLEND_GROUP_COMMAND_ACTIONS` list each category. `VoxelCommandAction` and the per-category `*CommandAction` types are
 the matching unions.
 
 ## World and tileset document commands
 
-A world persists and shares only its layers, templates and tileset links. Blocks and
-material groups belong to the tileset they come from, so the same vocabulary
-is split a second way:
+A world persists and shares only its layers, templates and tileset links. Blocks,
+material groups and blend groups belong to the tileset they come from, so the
+same vocabulary is split a second way:
 
 ```ts
 type VoxelWorldContentCommand =
@@ -75,6 +78,7 @@ type VoxelWorldCommand =
 type TilesetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand
+  | VoxelBlendGroupCommand
   | { action: "tile-size-updated"; tileSize: number; };
 ```
 
@@ -83,7 +87,7 @@ half; `VOXEL_WORLD_COMMAND_ACTIONS` and `TILESET_DOCUMENT_COMMAND_ACTIONS`
 list them. A sync adapter sends the world half of a document's command stream
 to the world's room; the tileset half reaches it through a
 [`TilesetDocument`](../tilesets/TilesetDocument.md), which emits the same
-block and material group commands on its own `"command"` event.
+block, material group and blend group commands on its own `"command"` event.
 
 ## Applying commands
 
@@ -108,16 +112,18 @@ interface VoxelWorldCommandTarget {
 interface VoxelCommandTarget extends VoxelWorldCommandTarget {
   readonly blocks: BlockRegistry;
   readonly materialGroups: MaterialGroupList;
+  readonly blendGroups: BlendGroupList;
 }
 ```
 
 Routes a command to [`world.apply()`](../world/VoxelWorld.md#commands),
 [`blocks.apply()`](../blocks/BlockRegistry.md#api),
-[`materialGroups.apply()`](../materials/MaterialGroup.md#commands) or
+[`materialGroups.apply()`](../materials/MaterialGroup.md#commands),
+[`blendGroups.apply()`](../materials/BlendGroup.md#commands) or
 [`tilesets.apply()`](../tilesets/tilesets.md#tileset-commands) and returns
 the command as applied, or `null` when it changed nothing. It does not emit;
 use it on a headless state such as a server's. `applyVoxelWorldCommand()`
-needs no block registry or material groups, which is what a server holding
+needs no block registry or groups, which is what a server holding
 only worlds folds with. [`document.apply()`](./VoxelDocument.md#methods) wraps
 `applyVoxelCommand()` and broadcasts the returned command; a
 [`VoxelView`](./VoxelView.md) listening to the document rebuilds meshes and
@@ -241,3 +247,15 @@ type VoxelMaterialGroupCommand =
 `document.defineMaterialGroup()`, `removeMaterialGroup()` and `apply()` emit
 them when the list changed. The emitted definition has every finish field
 filled in. See [MaterialGroup](../materials/MaterialGroup.md).
+
+## Blend group commands
+
+```ts
+type VoxelBlendGroupCommand =
+  | { action: "blend-group-defined"; group: BlendGroupJSON; }
+  | { action: "blend-group-removed"; groupId: string; };
+```
+
+`document.defineBlendGroup()`, `removeBlendGroup()` and `apply()` emit them
+when the list changed. The emitted definition has every setting filled in.
+See [BlendGroup](../materials/BlendGroup.md).

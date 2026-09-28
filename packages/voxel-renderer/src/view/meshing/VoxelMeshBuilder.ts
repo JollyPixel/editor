@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { BlockRegistry } from "../../document/blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeRegistry.ts";
+import type { BlendGroupList } from "../../document/materials/BlendGroupList.ts";
 import type { TilesetResolver } from "./variants/types.ts";
 import type {
   MeshableLayerChunk,
@@ -32,6 +33,7 @@ export interface VoxelMeshBuilderOptions {
    */
   ambientOcclusion?: boolean;
   faceTemplates?: FaceTemplateTable;
+  blendGroups?: BlendGroupList;
   logger?: VoxelLogger;
 }
 
@@ -51,12 +53,17 @@ export class VoxelMeshBuilder {
   #mesher: ChunkMesher;
   #origin: [number, number, number] = [0, 0, 0];
   #buffers: (PulledFaceBuffer | undefined)[] = [];
-  #bufferFor = (slot: number): PulledFaceBuffer => {
-    let buffer = this.#buffers[slot];
+  #bufferFor = (slot: number, blended = false): PulledFaceBuffer => {
+    const target = blended ? this.#variants.blendedSlotOf(slot) : slot;
+    let buffer = this.#buffers[target];
     if (buffer === undefined) {
-      buffer = new PulledFaceBuffer(this.faceTemplates);
+      buffer = new PulledFaceBuffer(
+        this.faceTemplates,
+        undefined,
+        this.#variants.geometryKeyAt(target).blended
+      );
       buffer.reset(...this.#origin);
-      this.#buffers[slot] = buffer;
+      this.#buffers[target] = buffer;
     }
 
     return buffer;
@@ -87,6 +94,7 @@ export class VoxelMeshBuilder {
       blockRegistry: options.blockRegistry,
       shapeRegistry: options.shapeRegistry,
       atlases: options.atlases,
+      blendGroups: options.blendGroups,
       alphaTest: options.alphaTest,
       logger: options.logger
     });

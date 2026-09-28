@@ -18,6 +18,11 @@ export interface PulledMeshData {
   readonly words: Uint32Array<ArrayBuffer>;
   readonly faceCount: number;
   readonly bounds: PulledMeshBounds;
+  /**
+   * RGBA floats, `PULLED_BLEND_TEXELS` texels per entry, entry 0 unused.
+   * Present when faces use the blended four-word layout.
+   */
+  readonly blendPalette?: Float32Array<ArrayBuffer>;
 }
 
 export interface MeshableStore {

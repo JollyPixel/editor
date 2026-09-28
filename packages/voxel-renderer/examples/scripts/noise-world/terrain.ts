@@ -19,7 +19,8 @@ import {
 } from "./blocks.ts";
 import {
   createNoiseLayer,
-  hash2D
+  hash2D,
+  type NoiseLayer
 } from "./noise.ts";
 import {
   TREE_MAX_RADIUS,
@@ -48,8 +49,14 @@ const kNoiseSalt = {
   hills: 3,
   warp: 4,
   forest: 5,
-  grove: 6
+  grove: 6,
+  patches: 7
 } as const;
+const kPatchScale = 16;
+const kSnowJitter = 3;
+const kBeachPatch = 0.35;
+const kBeachReach = 3;
+const kDirtPatch = -0.45;
 
 export interface TerrainOptions {
   seed?: number;
@@ -74,6 +81,8 @@ export interface TerrainStats {
 interface ColumnContext {
   write: TerrainWriter;
   heights: Int16Array;
+  patches: NoiseLayer;
+  patchFrequency: number;
   size: number;
   waterLevel: number;
   snowLevel: number;
@@ -107,6 +116,8 @@ export function generateTerrain(
   const context: ColumnContext = {
     write,
     heights,
+    patches: createNoiseLayer(seed, kNoiseSalt.patches),
+    patchFrequency: frequency * kPatchScale,
     size,
     waterLevel,
     snowLevel,
@@ -156,20 +167,31 @@ export function generateTerrain(
   return stats;
 }
 
+/**
+ * `patch`, a -1 to 1 noise sample, roughens the snow line and scatters
+ * beach and dirt patches.
+ */
 export function surfaceBlockAt(
   height: number,
   waterLevel: number,
   snowLevel: number,
-  isCliff = false
+  isCliff = false,
+  patch = 0
 ): TerrainBlockId {
-  if (height >= snowLevel) {
+  if (height >= snowLevel + Math.round(patch * kSnowJitter)) {
     return TerrainBlock.Snow;
   }
   if (isCliff) {
     return TerrainBlock.Stone;
   }
+  if (
+    height <= waterLevel + 1 ||
+    (height <= waterLevel + kBeachReach && patch > kBeachPatch)
+  ) {
+    return TerrainBlock.Sand;
+  }
 
-  return height <= waterLevel + 1 ? TerrainBlock.Sand : TerrainBlock.Grass;
+  return patch < kDirtPatch ? TerrainBlock.Dirt : TerrainBlock.Grass;
 }
 
 type HeightmapOptions = Required<
@@ -261,7 +283,8 @@ function fillColumn(
     height,
     waterLevel,
     snowLevel,
-    height - lowest >= kCliffHeight
+    height - lowest >= kCliffHeight,
+    patchAt(context, x, z)
   );
   const soil = surface === TerrainBlock.Sand ? TerrainBlock.Sand : TerrainBlock.Dirt;
   const floor = Math.max(0, lowest - 1);
@@ -330,7 +353,23 @@ function canGrowTree(
   const isCliff = height - lowestNeighbour(context, x, z) >= kCliffHeight;
 
   return height > waterLevel + 2 &&
-    surfaceBlockAt(height, waterLevel, snowLevel, isCliff) === TerrainBlock.Grass;
+    surfaceBlockAt(
+      height,
+      waterLevel,
+      snowLevel,
+      isCliff,
+      patchAt(context, x, z)
+    ) === TerrainBlock.Grass;
+}
+
+function patchAt(
+  context: ColumnContext,
+  x: number,
+  z: number
+): number {
+  const { patches, patchFrequency } = context;
+
+  return patches.sample(x * patchFrequency, z * patchFrequency);
 }
 
 function chooseSpecies(

@@ -12,7 +12,13 @@ import {
   type MaterialGroupJSON
 } from "./materials/MaterialGroup.ts";
 import type { MaterialGroupList } from "./materials/MaterialGroupList.ts";
+import {
+  BlendGroup,
+  type BlendGroupJSON
+} from "./materials/BlendGroup.ts";
+import type { BlendGroupList } from "./materials/BlendGroupList.ts";
 import type {
+  VoxelBlendGroupCommand,
   VoxelBlockCommand,
   VoxelCommandContext,
   VoxelCommandOrigin,
@@ -21,7 +27,8 @@ import type {
 
 export type BlockCatalogCommand =
   | VoxelBlockCommand
-  | VoxelMaterialGroupCommand;
+  | VoxelMaterialGroupCommand
+  | VoxelBlendGroupCommand;
 
 export type BlockDocumentEvents<TCommand> = {
   command: (command: TCommand, context: VoxelCommandContext) => void;
@@ -42,14 +49,17 @@ export abstract class BlockDocument<
 > extends Emitter<BlockDocumentEvents<TCommand>> {
   readonly blocks: BlockRegistry;
   readonly materialGroups: MaterialGroupList;
+  readonly blendGroups: BlendGroupList;
 
   constructor(
     blocks: BlockRegistry,
-    materialGroups: MaterialGroupList
+    materialGroups: MaterialGroupList,
+    blendGroups: BlendGroupList
   ) {
     super();
     this.blocks = blocks;
     this.materialGroups = materialGroups;
+    this.blendGroups = blendGroups;
   }
 
   apply(
@@ -118,6 +128,24 @@ export abstract class BlockDocument<
   ): boolean {
     return this.apply({
       action: "material-group-removed",
+      groupId
+    });
+  }
+
+  defineBlendGroup(
+    group: BlendGroup | BlendGroupJSON
+  ): boolean {
+    return this.apply({
+      action: "blend-group-defined",
+      group: group instanceof BlendGroup ? group.toJSON() : group
+    });
+  }
+
+  removeBlendGroup(
+    groupId: string
+  ): boolean {
+    return this.apply({
+      action: "blend-group-removed",
       groupId
     });
   }

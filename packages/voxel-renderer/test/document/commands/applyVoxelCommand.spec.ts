@@ -8,7 +8,10 @@ import {
   type VoxelCommandTarget
 } from "../../../src/document/commands/index.ts";
 import { BlockRegistry } from "../../../src/document/blocks/index.ts";
-import { MaterialGroupList } from "../../../src/document/materials/index.ts";
+import {
+  BlendGroupList,
+  MaterialGroupList
+} from "../../../src/document/materials/index.ts";
 import { TilesetList } from "../../../src/document/tilesets/index.ts";
 import { VoxelWorld } from "../../../src/document/world/index.ts";
 import {
@@ -21,7 +24,8 @@ function makeTarget(): VoxelCommandTarget {
     world: new VoxelWorld(4),
     blocks: new BlockRegistry(),
     tilesets: new TilesetList(),
-    materialGroups: new MaterialGroupList()
+    materialGroups: new MaterialGroupList(),
+    blendGroups: new BlendGroupList()
   };
 }
 
@@ -55,5 +59,17 @@ describe("applyVoxelCommand", () => {
     assert.notEqual(applyVoxelCommand(target, command), null);
 
     assert.equal(target.materialGroups.get("gold")?.metalness, 1);
+  });
+
+  it("routes a blend group command to the blend group list", () => {
+    const target = makeTarget();
+    const command = {
+      action: "blend-group-defined",
+      group: { id: "grass", width: 3 }
+    } as const;
+
+    assert.notEqual(applyVoxelCommand(target, command), null);
+
+    assert.equal(target.blendGroups.get("grass")?.width, 3);
   });
 });

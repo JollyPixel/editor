@@ -231,6 +231,7 @@ describe("tilesetAssetKind", () => {
     const snapshot = protocol.snapshot() as Record<string, unknown>;
 
     assert.deepEqual(Object.keys(snapshot).toSorted(), [
+      "blendGroups",
       "blocks",
       "materialGroups",
       "pixels",

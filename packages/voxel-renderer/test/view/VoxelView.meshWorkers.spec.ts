@@ -16,6 +16,7 @@ import {
   type ViewTestOptions
 } from "../helpers/view.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
+import type { BlockDefinition } from "../../src/document/blocks/index.ts";
 import { makeLogger } from "../helpers/fakes.ts";
 import {
   CUBE_ID,
@@ -34,24 +35,40 @@ import {
 // CONSTANTS
 const kGround = "Ground";
 const kWater = "Water";
+const kSandId = 5;
 const kViews = new Set<VoxelView>();
+
+function worldBlocks(
+  blendGroups: Partial<Record<number, string>> = {}
+): BlockDefinition[] {
+  return [
+    makeBlockDef(CUBE_ID, "cube", { blendGroup: blendGroups[CUBE_ID] }),
+    makeBlockDef(RAMP_ID, "ramp"),
+    makeBlockDef(STAIR_ID, "stair"),
+    makeBlockDef(LEAVES_ID, "cube", { alphaMode: "mask" }),
+    makeBlockDef(kSandId, "cube", {
+      defaultTexture: { col: 1, row: 0 },
+      blendGroup: blendGroups[kSandId]
+    })
+  ];
+}
 
 function makeWorld(
   options: ViewTestOptions = {}
 ): VoxelView {
   const view = makeView({
     layers: [kGround, kWater],
-    blocks: [
-      makeBlockDef(CUBE_ID, "cube"),
-      makeBlockDef(RAMP_ID, "ramp"),
-      makeBlockDef(STAIR_ID, "stair"),
-      makeBlockDef(LEAVES_ID, "cube", { alphaMode: "mask" })
-    ],
+    blocks: worldBlocks(),
     ...options
   });
   for (let x = -3; x < 9; x++) {
     for (let z = -2; z < 7; z++) {
-      placeCube(view, kGround, { x, y: 0, z });
+      placeCube(
+        view,
+        kGround,
+        { x, y: 0, z },
+        ((x * 3) + z) % 7 === 0 ? kSandId : CUBE_ID
+      );
       if ((x + z) % 3 === 0) {
         placeCube(view, kGround, { x, y: 1, z }, RAMP_ID);
       }
@@ -110,14 +127,23 @@ describe("VoxelView - mesh workers", () => {
 
   for (const options of [
     {},
-    { lighting: { ambientOcclusion: 1 } }
+    { lighting: { ambientOcclusion: 1 } },
+    {
+      blocks: worldBlocks({ [CUBE_ID]: "ground", [kSandId]: "sand" }),
+      blendGroups: [{ id: "ground" }, { id: "sand", pattern: "bayer" }]
+    }
   ] satisfies ViewTestOptions[]) {
     it(`builds the main-thread geometry with ${JSON.stringify(options)}`, async() => {
       const workers = inProcessWorkers();
       const view = await makeWorkerWorld(workers, options);
 
+      const snapshot = meshSnapshot(view);
       assert.ok(buildRequests(workers) > 0);
-      assert.deepEqual(meshSnapshot(view), mainThreadSnapshot(options));
+      assert.deepEqual(snapshot, mainThreadSnapshot(options));
+      assert.equal(
+        [...snapshot.values()].some(({ blends }) => blends.length > 0),
+        "blendGroups" in options
+      );
     });
   }
 

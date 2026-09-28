@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   isTilesetDocumentCommand,
+  isVoxelBlendGroupCommand,
   isVoxelBlockCommand,
   isVoxelEditCommand,
   isVoxelLayerCommand,
@@ -14,6 +15,7 @@ import {
   isVoxelTilesetCommand,
   isVoxelWorldCommand,
   TILESET_DOCUMENT_COMMAND_ACTIONS,
+  VOXEL_BLEND_GROUP_COMMAND_ACTIONS,
   VOXEL_BLOCK_COMMAND_ACTIONS,
   VOXEL_COMMAND_ACTIONS,
   VOXEL_LAYER_COMMAND_ACTIONS,
@@ -32,7 +34,8 @@ describe("command guards", () => {
         isVoxelTemplateCommand(command),
         isVoxelBlockCommand(command),
         isVoxelTilesetCommand(command),
-        isVoxelMaterialGroupCommand(command)
+        isVoxelMaterialGroupCommand(command),
+        isVoxelBlendGroupCommand(command)
       ].filter(Boolean);
 
       assert.equal(matches.length, 1, action);
@@ -68,7 +71,8 @@ describe("command guards", () => {
       VOXEL_TEMPLATE_COMMAND_ACTIONS.length +
       VOXEL_BLOCK_COMMAND_ACTIONS.length +
       VOXEL_TILESET_COMMAND_ACTIONS.length +
-      VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.length
+      VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.length +
+      VOXEL_BLEND_GROUP_COMMAND_ACTIONS.length
     );
   });
 

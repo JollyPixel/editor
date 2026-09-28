@@ -42,6 +42,11 @@ export interface BlockDefinition extends BlockSurfaceOptions {
    */
   cullCoveredFaces?: boolean;
   /**
+   * Blend group whose rules fade this block's top and bottom faces into
+   * neighbouring blocks of other groups. Ungrouped blocks never blend.
+   */
+  blendGroup?: string;
+  /**
    * Tileset used by tile references that omit one; dropped once resolved.
    */
   defaultTilesetId?: string;
@@ -98,6 +103,12 @@ export function resolveBlockDefinition(
 ): ResolvedBlockDefinition {
   // Validate policy at the registry boundary, including imported documents.
   new BlockSurface(def);
+  if (
+    def.blendGroup !== undefined &&
+    (typeof def.blendGroup !== "string" || def.blendGroup === "")
+  ) {
+    throw new RangeError("Blend group must be a non-empty string.");
+  }
   const {
     faceTextures = {},
     defaultTexture,

@@ -7,6 +7,9 @@ import type { FaceTemplateTable } from "./FaceTemplateTable.ts";
 
 // CONSTANTS
 export const PULLED_FACE_WORDS = 2;
+export const PULLED_BLENDED_FACE_WORDS = 4;
+export const PULLED_BLEND_TEXELS = 2;
+export const PULLED_MAX_BLEND_ENTRIES = 255;
 export const PULLED_FACE_ROW = 2048;
 export const PULLED_CELL_BITS = 10;
 export const PULLED_TEMPLATE_BITS = 22;
@@ -34,21 +37,35 @@ export interface PulledChunkGeometryOptions {
   faceCount: number;
   templates: FaceTemplateTable;
   bounds: THREE.Box3;
+  /**
+   * Switches faces to the blended four-word layout.
+   */
+  blendPalette?: Float32Array<ArrayBuffer>;
 }
 
 export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
   static wordCapacity(
-    faceCount: number
+    faceCount: number,
+    faceWords = PULLED_FACE_WORDS
   ): number {
     const [width, height] = textureSize(faceCount);
 
-    return width * height * PULLED_FACE_WORDS;
+    return width * height * faceWords;
+  }
+
+  static faceWordsOf(
+    data: Pick<PulledMeshData, "blendPalette">
+  ): number {
+    return data.blendPalette === undefined ?
+      PULLED_FACE_WORDS :
+      PULLED_BLENDED_FACE_WORDS;
   }
 
   static byteLength(
     data: PulledMeshData
   ): number {
     return data.words.byteLength +
+      (data.blendPalette?.byteLength ?? 0) +
       (kCornerCount * 3 * Float32Array.BYTES_PER_ELEMENT * 2) +
       (kQuadCorners.length * Uint16Array.BYTES_PER_ELEMENT);
   }
@@ -66,13 +83,16 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
       bounds: new THREE.Box3(
         new THREE.Vector3(minX, minY, minZ),
         new THREE.Vector3(maxX, maxY, maxZ)
-      )
+      ),
+      blendPalette: data.blendPalette
     });
   }
 
   readonly faces: THREE.DataTexture;
   readonly faceCount: number;
+  readonly faceWords: number;
   readonly templates: FaceTemplateTable;
+  readonly blends: THREE.DataTexture | null;
 
   #words: Uint32Array<ArrayBuffer>;
 
@@ -81,9 +101,16 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
   ) {
     super();
 
-    const { words, faceCount, templates, bounds } = options;
+    const {
+      words,
+      faceCount,
+      templates,
+      bounds,
+      blendPalette
+    } = options;
+    const faceWords = PulledChunkGeometry.faceWordsOf({ blendPalette });
     const [width, height] = textureSize(faceCount);
-    const capacity = width * height * PULLED_FACE_WORDS;
+    const capacity = width * height * faceWords;
     if (words.length !== capacity) {
       throw new RangeError(
         `PulledChunkGeometry: expected ${capacity} words for ${faceCount} faces, received ${words.length}.`
@@ -91,19 +118,31 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     }
 
     this.faceCount = faceCount;
+    this.faceWords = faceWords;
     this.templates = templates;
     this.#words = words;
-    this.faces = new THREE.DataTexture(
-      words,
-      width,
-      height,
-      THREE.RGIntegerFormat,
-      THREE.UnsignedIntType
+    this.faces = dataTexture(
+      new THREE.DataTexture(
+        words,
+        width,
+        height,
+        faceWords === PULLED_FACE_WORDS ?
+          THREE.RGIntegerFormat :
+          THREE.RGBAIntegerFormat,
+        THREE.UnsignedIntType
+      )
     );
-    this.faces.minFilter = THREE.NearestFilter;
-    this.faces.magFilter = THREE.NearestFilter;
-    this.faces.generateMipmaps = false;
-    this.faces.needsUpdate = true;
+    this.blends = blendPalette === undefined ?
+      null :
+      dataTexture(
+        new THREE.DataTexture(
+          blendPalette,
+          blendPalette.length / 4,
+          1,
+          THREE.RGBAFormat,
+          THREE.FloatType
+        )
+      );
 
     this.setAttribute(
       "position",
@@ -131,7 +170,7 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     corner: number,
     target: THREE.Vector3
   ): THREE.Vector3 {
-    const offset = face * PULLED_FACE_WORDS;
+    const offset = face * this.faceWords;
     const cell = this.#words[offset];
     const packed = this.#words[offset + 1];
     const flip = packed >>> kFlipShift;
@@ -212,6 +251,7 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
 
   override dispose(): void {
     this.faces.dispose();
+    this.blends?.dispose();
     super.dispose();
   }
 
@@ -242,7 +282,7 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
       return null;
     }
 
-    const template = this.#words[(face * PULLED_FACE_WORDS) + 1] & kTemplateMask;
+    const template = this.#words[(face * this.faceWords) + 1] & kTemplateMask;
     const surfaceNormal = this.templates.copyNormalTo(template, new THREE.Vector3());
     if (surfaceNormal.dot(kRay.direction) > 0) {
       surfaceNormal.multiplyScalar(-1);
@@ -272,4 +312,15 @@ function textureSize(
   const width = Math.max(1, Math.min(faceCount, PULLED_FACE_ROW));
 
   return [width, Math.max(1, Math.ceil(faceCount / width))];
+}
+
+function dataTexture(
+  texture: THREE.DataTexture
+): THREE.DataTexture {
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+
+  return texture;
 }

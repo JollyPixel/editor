@@ -16,6 +16,8 @@ import type {
 } from "../commands/types.ts";
 import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
 import { MaterialGroupList } from "../materials/MaterialGroupList.ts";
+import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
+import { BlendGroupList } from "../materials/BlendGroupList.ts";
 import { localBlock } from "./projectTileset.ts";
 import { rescaleTileRef } from "./tileRef.ts";
 import {
@@ -27,6 +29,10 @@ export interface TilesetDocumentJSON {
   tileSize: number;
   blocks: ResolvedBlockDefinition[];
   materialGroups: MaterialGroupJSON[];
+  /**
+   * @default []
+   */
+  blendGroups?: BlendGroupJSON[];
 }
 
 export interface TilesetDocumentOptions {
@@ -48,6 +54,12 @@ export interface TilesetDocumentOptions {
    * @default []
    */
   materialGroups?: Iterable<MaterialGroupJSON>;
+
+  /**
+   * Blend groups the blocks can name through `blendGroup`.
+   * @default []
+   */
+  blendGroups?: Iterable<BlendGroupJSON>;
 }
 
 export type TilesetDocumentListener = (
@@ -58,9 +70,10 @@ export type TilesetDocumentListener = (
 export type TilesetDocumentEvents = BlockDocumentEvents<TilesetDocumentCommand>;
 
 /**
- * The blocks, material groups and tile size of one tileset. Tile references
- * name no tileset: they are relative to the tileset's own atlas, and block
- * ids are local to it until a world projects them into a slot.
+ * The blocks, material groups, blend groups and tile size of one tileset.
+ * Tile references name no tileset: they are relative to the tileset's own
+ * atlas, and block ids are local to it until a world projects them into a
+ * slot.
  */
 export class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
   #tileSize: number;
@@ -71,14 +84,16 @@ export class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
     const {
       tileSize = DEFAULT_TILE_SIZE,
       blocks = [],
-      materialGroups = []
+      materialGroups = [],
+      blendGroups = []
     } = options;
     if (!isTileSize(tileSize)) {
       throw new RangeError(`Invalid tile size ${tileSize}.`);
     }
     super(
       new BlockRegistry(Array.from(blocks, localBlock)),
-      new MaterialGroupList(materialGroups)
+      new MaterialGroupList(materialGroups),
+      new BlendGroupList(blendGroups)
     );
 
     this.#tileSize = tileSize;
@@ -101,7 +116,8 @@ export class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
     return {
       tileSize: this.#tileSize,
       blocks: [...this.blocks],
-      materialGroups: this.materialGroups.toJSON()
+      materialGroups: this.materialGroups.toJSON(),
+      blendGroups: this.blendGroups.toJSON()
     };
   }
 
@@ -117,6 +133,7 @@ export class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
     this.blocks.clear();
     this.blocks.registerMany(blocks);
     this.materialGroups.replace(data.materialGroups);
+    this.blendGroups.replace(data.blendGroups ?? []);
     this.emit("loaded");
   }
 
@@ -149,6 +166,9 @@ export class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
       case "material-group-defined":
       case "material-group-removed":
         return this.materialGroups.apply(command);
+      case "blend-group-defined":
+      case "blend-group-removed":
+        return this.blendGroups.apply(command);
       case "tile-size-updated":
         return this.#resizeTiles(command.tileSize) ? command : null;
       default: {

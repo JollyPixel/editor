@@ -7,7 +7,14 @@ import {
   type VoxelLayer,
   VoxelWorld
 } from "../../src/document/world/index.ts";
-import { BlockRegistry } from "../../src/document/blocks/index.ts";
+import {
+  BlockRegistry,
+  type BlockDefinition
+} from "../../src/document/blocks/index.ts";
+import {
+  BlendGroupList,
+  type BlendGroupJSON
+} from "../../src/document/materials/index.ts";
 import { BlockShapeRegistry } from "../../src/document/blocks/shape/index.ts";
 import { TilesetAtlases } from "../../src/view/atlases/index.ts";
 import {
@@ -40,6 +47,8 @@ export interface MeshFixture {
 export interface MeshFixtureOptions {
   chunkSize?: number;
   ambientOcclusion?: boolean;
+  blocks?: BlockDefinition[];
+  blendGroups?: BlendGroupJSON[];
 }
 
 export function makeMeshFixture(
@@ -47,7 +56,9 @@ export function makeMeshFixture(
 ): MeshFixture {
   const {
     chunkSize = CHUNK_SIZE,
-    ambientOcclusion = false
+    ambientOcclusion = false,
+    blocks = [],
+    blendGroups = []
   } = options;
 
   const world = new VoxelWorld(chunkSize);
@@ -56,7 +67,8 @@ export function makeMeshFixture(
   const blockRegistry = new BlockRegistry([
     makeBlockDef(CUBE_ID, "cube", { name: "Cube" }),
     makeBlockDef(RAMP_ID, "ramp", { name: "Ramp" }),
-    makeBlockDef(STAIR_ID, "stair", { name: "Stair" })
+    makeBlockDef(STAIR_ID, "stair", { name: "Stair" }),
+    ...blocks
   ]);
 
   const atlases = new TilesetAtlases();
@@ -67,6 +79,7 @@ export function makeMeshFixture(
     blockRegistry,
     shapeRegistry: BlockShapeRegistry.createDefault(),
     atlases,
+    blendGroups: new BlendGroupList(blendGroups),
     ambientOcclusion
   });
 

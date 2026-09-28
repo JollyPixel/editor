@@ -1,12 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import {
-  NodeUpdateType,
-  TextureNode,
-  type Node,
-  type NodeBuilder,
-  type NodeFrame
-} from "three/webgpu";
+import type { Node } from "three/webgpu";
 import {
   float,
   floor,
@@ -14,9 +8,11 @@ import {
   instanceIndex,
   int,
   ivec2,
+  modelPosition,
   normalLocal,
   positionGeometry,
   positionPrevious,
+  round,
   textureLoad,
   textureSize,
   uint,
@@ -28,6 +24,7 @@ import {
 
 // Import Internal Dependencies
 import type { TileInputs } from "../../shading/tileShading.ts";
+import { ChunkTextureNode } from "./ChunkTextureNode.ts";
 import {
   FACE_TEMPLATE_TEXELS,
   FACE_TEMPLATES_PER_ROW,
@@ -35,9 +32,10 @@ import {
 } from "./FaceTemplateTable.ts";
 import {
   PULLED_AO_BITS,
+  PULLED_BLEND_TEXELS,
   PULLED_CELL_BITS,
   PULLED_TEMPLATE_BITS,
-  PulledChunkGeometry
+  type PulledChunkGeometry
 } from "./PulledChunkGeometry.ts";
 
 // CONSTANTS
@@ -51,6 +49,8 @@ const kShadeMax = 127;
 const kUvTexel = 4;
 const kRegionTexel = 5;
 const kNormalTexel = 6;
+const kBlendIndexBits = 8;
+const kBlendIndexMask = (1 << kBlendIndexBits) - 1;
 const kPlaceholder = new THREE.DataTexture(
   new Uint32Array(2),
   1,
@@ -58,21 +58,38 @@ const kPlaceholder = new THREE.DataTexture(
   THREE.RGIntegerFormat,
   THREE.UnsignedIntType
 );
+const kBlendPlaceholder = new THREE.DataTexture(
+  new Float32Array(PULLED_BLEND_TEXELS * 4),
+  PULLED_BLEND_TEXELS,
+  1,
+  THREE.RGBAFormat,
+  THREE.FloatType
+);
 
 type FloatNode = Node<"float">;
+type Vec2Node = Node<"vec2">;
 type Vec3Node = Node<"vec3">;
 type Vec4Node = Node<"vec4">;
 
 export interface PulledFaceNodes {
   position: Vec3Node;
   normal: Vec3Node;
-  uv: Node<"vec2">;
+  uv: Vec2Node;
   region: Vec4Node;
   brightness: FloatNode;
   faceBrightness: FloatNode;
+  /**
+   * Template vertex along the face's AO `u` and `v` axes.
+   */
+  plane: Vec2Node;
+  /**
+   * World cell along `u`, `v` and the face's normal axis.
+   */
+  cell: Vec3Node;
+  blendIndices: readonly [Vec4Node, Vec4Node];
 }
 
-class ChunkFaceNode extends TextureNode {
+class ChunkFaceNode extends ChunkTextureNode {
   constructor(
     value: THREE.Texture = kPlaceholder,
     uvNode: Node | null = null,
@@ -80,35 +97,30 @@ class ChunkFaceNode extends TextureNode {
     biasNode: Node | null = null
   ) {
     super(value, uvNode, levelNode, biasNode);
-    Object.defineProperty(this, "updateType", {
-      get: () => NodeUpdateType.OBJECT,
-      set: () => undefined
-    });
   }
 
-  override setup(
-    builder: NodeBuilder
-  ) {
-    this.value = facesOf(builder.object);
-
-    return super.setup(builder);
-  }
-
-  override update(
-    frame: NodeFrame
-  ): boolean | undefined {
-    this.value = facesOf(frame.object);
-
-    return super.update(frame);
+  protected pick(
+    geometry: PulledChunkGeometry | null
+  ): THREE.Texture {
+    return geometry?.faces ?? kPlaceholder;
   }
 }
 
-function facesOf(
-  object: THREE.Object3D | null
-): THREE.Texture {
-  const geometry = object instanceof THREE.Mesh ? object.geometry : null;
+class ChunkBlendNode extends ChunkTextureNode {
+  constructor(
+    value: THREE.Texture = kBlendPlaceholder,
+    uvNode: Node | null = null,
+    levelNode: Node | null = null,
+    biasNode: Node | null = null
+  ) {
+    super(value, uvNode, levelNode, biasNode);
+  }
 
-  return geometry instanceof PulledChunkGeometry ? geometry.faces : kPlaceholder;
+  protected pick(
+    geometry: PulledChunkGeometry | null
+  ): THREE.Texture {
+    return geometry?.blends ?? kBlendPlaceholder;
+  }
 }
 
 export function pulledFaceNodes(
@@ -141,24 +153,41 @@ export function pulledFaceNodes(
   const normal = texel(int(kNormalTexel));
   const cornerMask = oneHot(corner);
   const local = vertex.xyz;
+  const axes = int(normal.w);
+  const uAxis = axisMask(axes.mod(int(4)));
+  const vAxis = axisMask(axes.div(int(4)));
+  const plane = vec2(local.dot(uAxis), local.dot(vAxis));
+  const cellPosition = vec3(
+    float(cell.bitAnd(uint(kCellMask))),
+    float(cell.shiftRight(uint(PULLED_CELL_BITS)).bitAnd(uint(kCellMask))),
+    float(cell.shiftRight(uint(PULLED_CELL_BITS * 2)).bitAnd(uint(kCellMask)))
+  );
+  const worldCell = cellPosition.add(round(modelPosition));
 
   return {
-    position: vec3(
-      float(cell.bitAnd(uint(kCellMask))),
-      float(cell.shiftRight(uint(PULLED_CELL_BITS)).bitAnd(uint(kCellMask))),
-      float(cell.shiftRight(uint(PULLED_CELL_BITS * 2)).bitAnd(uint(kCellMask)))
-    ).add(local),
+    position: cellPosition.add(local),
     normal: normal.xyz,
     uv: vec2(vertex.w, vs.dot(cornerMask)),
     region: texel(int(kRegionTexel)),
-    brightness: shade(ao, local, int(normal.w)),
-    faceBrightness: faceShade(ao)
+    brightness: shade(ao, plane),
+    faceBrightness: faceShade(ao),
+    plane,
+    cell: vec3(
+      worldCell.dot(uAxis),
+      worldCell.dot(vAxis),
+      worldCell.dot(vec3(1).sub(uAxis).sub(vAxis))
+    ),
+    blendIndices: [
+      blendIndicesOf(uint(data.z)),
+      blendIndicesOf(uint(data.w))
+    ]
   };
 }
 
 export function enableVertexPulling(
   material: THREE.Material,
-  templates: FaceTemplateTable
+  templates: FaceTemplateTable,
+  blended = false
 ): TileInputs {
   const nodes = pulledFaceNodes(templates);
 
@@ -171,13 +200,40 @@ export function enableVertexPulling(
   (material as { castShadowPositionNode?: unknown; })
     .castShadowPositionNode = nodes.position;
 
-  return {
+  const inputs: TileInputs = {
     uv: varying(nodes.uv),
     region: varying(nodes.region),
     vertexRegion: nodes.region,
     brightness: varying(nodes.brightness),
     faceBrightness: varying(nodes.faceBrightness)
   };
+  if (blended) {
+    inputs.blend = {
+      plane: varying(nodes.plane),
+      cell: varying(nodes.cell),
+      indices: [
+        varying(nodes.blendIndices[0]),
+        varying(nodes.blendIndices[1])
+      ],
+      palette: new ChunkBlendNode()
+    };
+  }
+
+  return inputs;
+}
+
+function blendIndicesOf(
+  word: Node<"uint">
+): Vec4Node {
+  function index(
+    slot: number
+  ): FloatNode {
+    return float(
+      word.shiftRight(uint(slot * kBlendIndexBits)).bitAnd(uint(kBlendIndexMask))
+    );
+  }
+
+  return vec4(index(0), index(1), index(2), index(3));
 }
 
 function oneHot(
@@ -193,11 +249,10 @@ function oneHot(
 
 function shade(
   ao: Node<"uint">,
-  local: Vec3Node,
-  axes: Node<"int">
+  plane: Vec2Node
 ): FloatNode {
-  const u = local.dot(axisMask(axes.mod(int(4))));
-  const v = local.dot(axisMask(axes.div(int(4))));
+  const u = plane.x;
+  const v = plane.y;
   const c00 = level(ao, 0);
   const c10 = level(ao, 1);
   const c01 = level(ao, 2);

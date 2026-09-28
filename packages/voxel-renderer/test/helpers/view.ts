@@ -34,6 +34,7 @@ export function createView(
     layers,
     blocks,
     materialGroups,
+    blendGroups,
     history,
     onCommand,
     ...viewOptions
@@ -43,6 +44,7 @@ export function createView(
     layers,
     blocks,
     materialGroups,
+    blendGroups,
     history,
     onCommand,
     logger: viewOptions.logger

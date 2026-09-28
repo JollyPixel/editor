@@ -24,6 +24,8 @@ import {
 } from "./VoxelHistory.ts";
 import type { MaterialGroupJSON } from "./materials/MaterialGroup.ts";
 import { MaterialGroupList } from "./materials/MaterialGroupList.ts";
+import type { BlendGroupJSON } from "./materials/BlendGroup.ts";
+import { BlendGroupList } from "./materials/BlendGroupList.ts";
 import {
   deserializeVoxelWorld,
   serializeVoxelWorld
@@ -84,6 +86,12 @@ export interface VoxelDocumentOptions {
   materialGroups?: Iterable<MaterialGroupJSON>;
 
   /**
+   * Blend groups the blocks can name through `blendGroup`.
+   * @default []
+   */
+  blendGroups?: Iterable<BlendGroupJSON>;
+
+  /**
    * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.
    */
   history?: VoxelHistoryOptions;
@@ -100,9 +108,10 @@ export interface VoxelDocumentOptions {
 }
 
 /**
- * A world with the blocks and material groups its tilesets project into it.
- * Saving and loading cover the world and its tileset links only; blocks and
- * material groups are runtime state a host fills from tileset documents.
+ * A world with the blocks, material groups and blend groups its tilesets
+ * project into it. Saving and loading cover the world and its tileset links
+ * only; blocks and groups are runtime state a host fills from tileset
+ * documents.
  */
 export class VoxelDocument extends BlockDocument<VoxelCommand> {
   readonly world: VoxelWorld;
@@ -120,13 +129,15 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
       blocks = [],
       tilesets = [],
       materialGroups = [],
+      blendGroups = [],
       history,
       logger = NOOP_LOGGER,
       onCommand
     } = options;
     super(
       new BlockRegistry(blocks),
-      new MaterialGroupList(materialGroups)
+      new MaterialGroupList(materialGroups),
+      new BlendGroupList(blendGroups)
     );
 
     if (onCommand) {

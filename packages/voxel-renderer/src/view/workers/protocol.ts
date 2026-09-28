@@ -49,6 +49,7 @@ export type MeshWorkerRequest =
 export interface MeshWorkerGeometry {
   tilesetId: string;
   surface: BlockSurfaceOptions;
+  blended: boolean;
   data: PulledMeshData;
 }
 

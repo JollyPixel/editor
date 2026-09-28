@@ -38,6 +38,13 @@ Every face is one 8-byte record that the vertex shader expands into a quad (see
 [vertex pulling](#vertex-pulling)); triangles repeat their last corner. The
 material cache distinguishes resolved surface policies.
 
+Faces touching a block of another [blend group](../api/materials/BlendGroup.md)
+go to a separate blended geometry of the same tileset and surface, with a
+`:blended` key suffix. Its records take 16 bytes: the extra 8 bytes hold one
+palette index per in-plane neighbour, and the geometry carries a small
+per-chunk palette of the neighbours' atlas rects and blend settings. Faces
+without such a neighbour keep the 8-byte layout and the plain material.
+
 Opaque and masked geometry write depth. Blended blocks use blending without
 depth writes, and low-alpha blend texels are preserved.
 See [BlockSurface](../api/blocks/BlockSurface.md) for defaults and

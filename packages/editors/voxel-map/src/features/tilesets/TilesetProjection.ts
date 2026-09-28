@@ -3,7 +3,9 @@ import {
   belongsToTileset,
   composeBlockId,
   localBlockIdOf,
+  projectedBlendGroupId,
   projectedMaterialGroupId,
+  projectTilesetBlendGroup,
   projectTilesetBlock,
   projectTilesetBlocks,
   projectTilesetMaterialGroup,
@@ -18,12 +20,15 @@ export type ProjectionEngine = Pick<
   VoxelDocument,
   | "blocks"
   | "materialGroups"
+  | "blendGroups"
   | "defineBlock"
   | "defineBlocks"
   | "removeBlock"
   | "moveBlock"
   | "defineMaterialGroup"
   | "removeMaterialGroup"
+  | "defineBlendGroup"
+  | "removeBlendGroup"
 >;
 
 export interface TilesetProjectionOptions {
@@ -33,9 +38,9 @@ export interface TilesetProjectionOptions {
 }
 
 /**
- * Mirrors a tileset document's blocks and material groups into the world
- * engine under the tileset's slot, and keeps them there as the document
- * changes.
+ * Mirrors a tileset document's blocks, material groups and blend groups
+ * into the world engine under the tileset's slot, and keeps them there as
+ * the document changes.
  */
 export class TilesetProjection {
   readonly #engine: ProjectionEngine;
@@ -80,7 +85,7 @@ export class TilesetProjection {
 
   projectAll(): void {
     const engine = this.#engine;
-    const { blocks, materialGroups } = this.#tileset;
+    const { blocks, materialGroups, blendGroups } = this.#tileset;
 
     for (const block of [...engine.blocks]) {
       if (
@@ -101,6 +106,17 @@ export class TilesetProjection {
         projectTilesetMaterialGroup(this.#slot, group.toJSON())
       );
     }
+    for (const group of [...engine.blendGroups]) {
+      const local = this.#localGroupId(group.id);
+      if (local !== null && !blendGroups.has(local)) {
+        engine.removeBlendGroup(group.id);
+      }
+    }
+    for (const group of blendGroups) {
+      engine.defineBlendGroup(
+        projectTilesetBlendGroup(this.#slot, group.toJSON())
+      );
+    }
     engine.defineBlocks(projectTilesetBlocks(this.#slot, blocks));
   }
 
@@ -115,6 +131,11 @@ export class TilesetProjection {
     for (const group of [...engine.materialGroups]) {
       if (this.#localGroupId(group.id) !== null) {
         engine.removeMaterialGroup(group.id);
+      }
+    }
+    for (const group of [...engine.blendGroups]) {
+      if (this.#localGroupId(group.id) !== null) {
+        engine.removeBlendGroup(group.id);
       }
     }
   }
@@ -150,6 +171,16 @@ export class TilesetProjection {
       case "material-group-removed":
         engine.removeMaterialGroup(
           projectedMaterialGroupId(this.#slot, command.groupId)
+        );
+        break;
+      case "blend-group-defined":
+        engine.defineBlendGroup(
+          projectTilesetBlendGroup(this.#slot, command.group)
+        );
+        break;
+      case "blend-group-removed":
+        engine.removeBlendGroup(
+          projectedBlendGroupId(this.#slot, command.groupId)
         );
         break;
       case "tile-size-updated":

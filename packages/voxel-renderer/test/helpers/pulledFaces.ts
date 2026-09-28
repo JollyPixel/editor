@@ -6,7 +6,6 @@ import {
   FACE_TEMPLATE_TEXELS,
   PULLED_AO_BITS,
   PULLED_CELL_BITS,
-  PULLED_FACE_WORDS,
   PULLED_TEMPLATE_BITS,
   type PulledChunkGeometry
 } from "../../src/view/meshing/index.ts";
@@ -47,8 +46,8 @@ function pulledFaces(
   const faces: PulledFace[] = [];
 
   for (let face = 0; face < geometry.faceCount; face++) {
-    const cell = words[face * PULLED_FACE_WORDS];
-    const packed = words[(face * PULLED_FACE_WORDS) + 1];
+    const cell = words[face * geometry.faceWords];
+    const packed = words[(face * geometry.faceWords) + 1];
     const template = packed & kTemplateMask;
     const regionOffset = (template * kTemplateFloats) + (kRegionTexel * 4);
 
@@ -134,4 +133,58 @@ function faceShade(
   }
 
   return Math.round(sum / 4 * kSnorm8 / kAoMaxLevel) / kSnorm8;
+}
+
+export interface PulledBlendEntry {
+  region: number[];
+  width: number;
+  strength: number;
+  pattern: number;
+  inverted: boolean;
+}
+
+export interface PulledBlendedFace {
+  cell: [number, number, number];
+  normalY: number;
+  neighbours: (PulledBlendEntry | null)[];
+}
+
+export function blendedFaces(
+  geometry: PulledChunkGeometry
+): PulledBlendedFace[] {
+  const words = geometry.faces.image.data as Uint32Array;
+  const templates = geometry.templates.texture.image.data as Float32Array;
+  const palette = geometry.blends?.image.data as Float32Array;
+  const faces: PulledBlendedFace[] = [];
+
+  for (let face = 0; face < geometry.faceCount; face++) {
+    const offset = face * geometry.faceWords;
+    const cell = words[offset];
+    const template = words[offset + 1] & kTemplateMask;
+    const neighbours: (PulledBlendEntry | null)[] = [];
+    for (let i = 0; i < 8; i++) {
+      const word = words[offset + 2 + (i >> 2)];
+      const index = (word >>> ((i & 3) * 8)) & 0xFF;
+      const entry = palette.subarray(index * 8, (index + 1) * 8);
+      neighbours.push(index === 0 ? null : {
+        region: Array.from(entry.subarray(0, 4), (value) => Math.round(value * kUnorm16)),
+        width: entry[4],
+        strength: entry[5],
+        pattern: entry[6],
+        inverted: entry[7] === 1
+      });
+    }
+
+    faces.push({
+      cell: [
+        cell & kCellMask,
+        (cell >>> PULLED_CELL_BITS) & kCellMask,
+        (cell >>> (PULLED_CELL_BITS * 2)) & kCellMask
+      ],
+      normalY: templates[(template * kTemplateFloats) + (kNormalTexel * 4) + 1],
+      neighbours
+    });
+  }
+
+  return faces;
 }

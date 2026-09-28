@@ -23,6 +23,13 @@ import type {
 } from "../variants/types.ts";
 import { splitBoundaryFace } from "./splitBoundaryFace.ts";
 import {
+  blendsFace,
+  FACE_BLEND_OFFSETS,
+  type FaceBlendNeighbour,
+  type FaceBlendNeighbours
+} from "../faceBlend.ts";
+import type { BlendGroup } from "../../../document/materials/BlendGroup.ts";
+import {
   voxelBlockId,
   voxelTransform,
   VOXEL_ABSENT,
@@ -53,6 +60,7 @@ export class ChunkNeighbourhood {
   #selfLayer: MeshableLayer | null = null;
   #selfIndex = -1;
   #self: LayerChunkCache | null = null;
+  #blendCell: [number, number, number] = [0, 0, 0];
 
   constructor(
     options: ChunkNeighbourhoodOptions
@@ -222,6 +230,109 @@ export class ChunkNeighbourhood {
         this.#occluderAt(x + ux, y + uy + vy, z + vz)
       )
     );
+  }
+
+  /**
+   * Fills `out` with the blend neighbour of each `FACE_BLEND_OFFSETS` cell,
+   * or null. A neighbour blends when its group bleeds onto this face's
+   * group, its matching face shares this face's atlas and is not covered.
+   * Returns false, leaving `out` untouched, when the face cannot blend.
+   */
+  blendNeighboursAt(
+    variant: BlockVariant,
+    face: BlockVariantFace,
+    position: readonly [wx: number, wy: number, wz: number],
+    out: FaceBlendNeighbours
+  ): boolean {
+    const group = variant.blend;
+    if (group === null || !blendsFace(face)) {
+      return false;
+    }
+
+    const axis = FACE_AXIS[face.cull];
+    const uAxis = aoUAxis(axis);
+    const vAxis = aoVAxis(axis);
+    const cell = this.#blendCell;
+    let found = false;
+    for (let i = 0; i < FACE_BLEND_OFFSETS.length; i++) {
+      const [du, dv] = FACE_BLEND_OFFSETS[i];
+      cell[0] = position[0];
+      cell[1] = position[1];
+      cell[2] = position[2];
+      cell[uAxis] += du;
+      cell[vAxis] += dv;
+
+      const neighbour = this.#blendNeighbourAt(cell, face, group);
+      out[i] = neighbour;
+      found ||= neighbour !== null;
+    }
+
+    return found;
+  }
+
+  #blendNeighbourAt(
+    cell: readonly [number, number, number],
+    face: BlockVariantFace,
+    group: BlendGroup
+  ): FaceBlendNeighbour | null {
+    const packed = this.#visibleAt(cell[0], cell[1], cell[2]);
+    if (packed === VOXEL_ABSENT) {
+      return null;
+    }
+
+    const neighbour = this.#variants.get(
+      voxelBlockId(packed),
+      voxelTransform(packed)
+    );
+    if (neighbour === null || neighbour.blend === null) {
+      return null;
+    }
+
+    const strength = neighbour.blend.bleedOnto(group);
+    if (strength === 0) {
+      return null;
+    }
+
+    const { tilesetId } = this.#variants.geometryKeyAt(face.slot);
+    const matching = neighbour.faces.find((candidate) => (
+      candidate.cull === face.cull &&
+      this.#variants.geometryKeyAt(candidate.slot).tilesetId === tilesetId
+    ));
+    if (matching === undefined) {
+      return null;
+    }
+
+    const offset = FACE_OFFSETS[face.cull];
+    const covered = this.isNeighbourFaceHidden(
+      cell[0] + offset[0],
+      cell[1] + offset[1],
+      cell[2] + offset[2],
+      neighbour,
+      matching
+    );
+
+    return covered ? null : {
+      region: matching.region,
+      group: neighbour.blend,
+      strength,
+      inverted: strength < 1 && neighbour.blend.id > group.id
+    };
+  }
+
+  #visibleAt(
+    wx: number,
+    wy: number,
+    wz: number
+  ): PackedVoxel {
+    const layers = this.layers;
+    for (let i = 0; i < this.#layerCount; i++) {
+      const packed = layers[i].packedAt(wx, wy, wz);
+      if (packed !== VOXEL_ABSENT) {
+        return packed;
+      }
+    }
+
+    return VOXEL_ABSENT;
   }
 
   #occluderAt(

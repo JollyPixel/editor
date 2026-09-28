@@ -9,6 +9,7 @@ import {
   localTilesetBlock,
   projectedMaterialGroupId,
   projectTilesetBlock,
+  projectTilesetBlendGroups,
   projectTilesetBlocks,
   projectTilesetMaterialGroups,
   type TilesetProjection
@@ -27,11 +28,12 @@ const kStone: TilesetProjection = {
 const kLocalBlock = resolveBlockDefinition(makeBlockDef(5, "cube", {
   faceTextures: { top: { col: 1, row: 1 } },
   defaultTexture: { col: 2, row: 0 },
-  materialGroup: "gold"
+  materialGroup: "gold",
+  blendGroup: "grass"
 }));
 
 describe("projectTilesetBlock", () => {
-  it("gives the block its world id, tileset and material group", () => {
+  it("gives the block its world id, tileset and group names", () => {
     const projected = projectTilesetBlock(kStone, kLocalBlock);
 
     assert.equal(projected.id, composeBlockId(3, 5));
@@ -44,15 +46,17 @@ describe("projectTilesetBlock", () => {
       top: { tilesetId: "stone", col: 1, row: 1 }
     });
     assert.equal(projected.materialGroup, "stone/gold");
+    assert.equal(projected.blendGroup, "stone/grass");
   });
 
-  it("leaves a block without material group untouched on that field", () => {
+  it("leaves a block without groups untouched on those fields", () => {
     const projected = projectTilesetBlock(
       kStone,
       resolveBlockDefinition(makeBlockDef(1, "cube"))
     );
 
     assert.equal("materialGroup" in projected, false);
+    assert.equal("blendGroup" in projected, false);
   });
 
   it("projects every block of a tileset", () => {
@@ -89,6 +93,21 @@ describe("material group ids", () => {
     assert.deepEqual(
       projectTilesetMaterialGroups(kStone, [{ id: "gold", metalness: 1 }]),
       [{ id: "stone/gold", metalness: 1 }]
+    );
+  });
+});
+
+describe("projectTilesetBlendGroups", () => {
+  it("prefixes the group and the groups it excludes", () => {
+    assert.deepEqual(
+      projectTilesetBlendGroups(kStone, [
+        { id: "grass", exclude: ["sand"] },
+        { id: "sand" }
+      ]),
+      [
+        { id: "stone/grass", exclude: ["stone/sand"] },
+        { id: "stone/sand" }
+      ]
     );
   });
 });

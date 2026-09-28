@@ -2,8 +2,10 @@
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import { tilesetSlotOf } from "../blocks/BlockId.ts";
 import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
+import type { BlendGroupList } from "../materials/BlendGroupList.ts";
 import type { TilesetList } from "../tilesets/TilesetList.ts";
 import {
+  isVoxelBlendGroupCommand,
   isVoxelBlockCommand,
   isVoxelLayerCommand,
   isVoxelMaterialGroupCommand,
@@ -24,6 +26,7 @@ export interface VoxelWorldCommandTarget {
 export interface VoxelCommandTarget extends VoxelWorldCommandTarget {
   readonly blocks: BlockRegistry;
   readonly materialGroups: MaterialGroupList;
+  readonly blendGroups: BlendGroupList;
 }
 
 /**
@@ -64,6 +67,9 @@ export function applyVoxelCommand(
   }
   if (isVoxelMaterialGroupCommand(command)) {
     return target.materialGroups.apply(command);
+  }
+  if (isVoxelBlendGroupCommand(command)) {
+    return target.blendGroups.apply(command);
   }
 
   return applyVoxelWorldCommand(target, command, logger);

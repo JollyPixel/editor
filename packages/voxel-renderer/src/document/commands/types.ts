@@ -17,6 +17,7 @@ import type {
 } from "../blocks/BlockDefinition.ts";
 import type { TilesetDefinition } from "../tilesets/types.ts";
 import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
+import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
 import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
@@ -251,12 +252,25 @@ export type VoxelMaterialGroupCommand =
 export type VoxelMaterialGroupCommandAction =
   VoxelMaterialGroupCommand["action"];
 
+export type VoxelBlendGroupCommand =
+  | {
+    action: "blend-group-defined";
+    group: BlendGroupJSON;
+  }
+  | {
+    action: "blend-group-removed";
+    groupId: string;
+  };
+
+export type VoxelBlendGroupCommandAction = VoxelBlendGroupCommand["action"];
+
 export type VoxelCommand =
   | VoxelLayerCommand
   | VoxelTemplateCommand
   | VoxelBlockCommand
   | VoxelTilesetCommand
-  | VoxelMaterialGroupCommand;
+  | VoxelMaterialGroupCommand
+  | VoxelBlendGroupCommand;
 
 export type VoxelCommandAction = VoxelCommand["action"];
 
@@ -269,7 +283,7 @@ export type VoxelWorldContentCommand =
 
 /**
  * Commands a world persists and shares: its content and its tileset links.
- * Blocks and material groups belong to the tilesets.
+ * Blocks, material groups and blend groups belong to the tilesets.
  */
 export type VoxelWorldCommand =
   | VoxelWorldContentCommand
@@ -283,12 +297,13 @@ export type TilesetTileSizeCommand = {
 };
 
 /**
- * Commands a tileset document applies to its own blocks, material groups
- * and tile size.
+ * Commands a tileset document applies to its own blocks, material groups,
+ * blend groups and tile size.
  */
 export type TilesetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand
+  | VoxelBlendGroupCommand
   | TilesetTileSizeCommand;
 
 export type TilesetDocumentCommandAction = TilesetDocumentCommand["action"];
