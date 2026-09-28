@@ -43,6 +43,8 @@ or `translateLayer()` so the world recalculates cross-layer face culling.
 `localBounds()`, `worldBounds()`, and `worldCenter()` describe the content rather
 than the origin. `VoxelWorld.rebaseLayer()` moves the origin and rewrites local
 storage so content remains at the same world positions.
+`VoxelWorld.transformLayer()` turns or mirrors the content around its center
+and rewrites the voxels; a layer stores no rotation of its own.
 
 ## Ownership
 

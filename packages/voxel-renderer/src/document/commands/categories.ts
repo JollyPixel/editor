@@ -35,6 +35,7 @@ const kActionCategories: {
   "voxels-set": "layer",
   "voxels-removed": "layer",
   "voxels-patched": "layer",
+  "layer-transformed": "layer",
   reordered: "layer",
   "layer-moved": "layer",
   "object-layer-added": "layer",
@@ -64,7 +65,8 @@ const kEditActions = new Set<string>([
   "voxel-removed",
   "voxels-set",
   "voxels-removed",
-  "voxels-patched"
+  "voxels-patched",
+  "layer-transformed"
 ] satisfies VoxelEditCommand["action"][]);
 
 interface CommandCategories {

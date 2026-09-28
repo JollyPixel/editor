@@ -118,6 +118,7 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
       items: { type: "integer" }
     }
   }),
+  "layer-transformed": objectSchema(kVoxelTransformProperties),
   reordered: objectSchema({
     direction: { enum: ["up", "down"] }
   }),

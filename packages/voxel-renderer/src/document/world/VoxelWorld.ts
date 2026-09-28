@@ -240,6 +240,17 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     });
   }
 
+  transformLayer(
+    name: string,
+    transform: VoxelTransformOptions
+  ): void {
+    this.#dispatch({
+      action: "layer-transformed",
+      layerName: name,
+      metadata: transformFields(transform)
+    });
+  }
+
   cloneLayer(
     name: string,
     options: Partial<VoxelLayerOptions> = {}
@@ -456,12 +467,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       return null;
     }
 
-    return this.#execute(
-      command.action === "voxel-set" ?
-        voxelSetCommand(command.layerName, command.metadata) :
-        command,
-      "replay"
-    );
+    return this.#execute(normalized(command), "replay");
   }
 
   getAllDirtyChunks(): IterableIterator<IterableLayerChunk> {
@@ -717,7 +723,6 @@ function voxelSetCommand(
   options: VoxelSetOptions
 ): VoxelEditCommand {
   const { position, blockId } = options;
-  const transform = VoxelTransform.fromPacked(VoxelTransform.pack(options));
 
   return {
     action: "voxel-set",
@@ -725,11 +730,43 @@ function voxelSetCommand(
     metadata: {
       position,
       blockId,
-      rotation: transform.rotation,
-      flipX: transform.flipX,
-      flipZ: transform.flipZ,
-      flipY: transform.flipY
+      ...transformFields(options)
     }
+  };
+}
+
+function normalized(
+  command: VoxelWorldContentCommand
+): VoxelWorldContentCommand {
+  switch (command.action) {
+    case "voxel-set":
+      return voxelSetCommand(command.layerName, command.metadata);
+    case "layer-transformed":
+      return {
+        action: "layer-transformed",
+        layerName: command.layerName,
+        metadata: transformFields(command.metadata)
+      };
+    default:
+      return command;
+  }
+}
+
+function transformFields(
+  options: VoxelTransformOptions
+): Required<VoxelTransformOptions> {
+  const {
+    rotation,
+    flipX,
+    flipZ,
+    flipY
+  } = VoxelTransform.fromPacked(VoxelTransform.pack(options));
+
+  return {
+    rotation,
+    flipX,
+    flipZ,
+    flipY
   };
 }
 

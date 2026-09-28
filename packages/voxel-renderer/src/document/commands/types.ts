@@ -123,6 +123,16 @@ export type VoxelEditCommand =
     metadata: {
       cells: VoxelPatchCells;
     };
+  }
+  | {
+    action: "layer-transformed";
+    layerName: string;
+    metadata: {
+      rotation: number;
+      flipX: boolean;
+      flipZ: boolean;
+      flipY: boolean;
+    };
   };
 
 export type VoxelObjectLayerCommand =

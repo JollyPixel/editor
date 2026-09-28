@@ -61,6 +61,19 @@ describe("VoxelCommandArbiter — state checks", () => {
     );
   });
 
+  test("admits a layer transform only for a layer the world has", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const transform: VoxelMapNetworkCommand = {
+      ...kHeader,
+      action: "layer-transformed",
+      layerName: "Ground",
+      metadata: { rotation: 1, flipX: false, flipZ: false, flipY: false }
+    };
+
+    assert.strictEqual(admitted(arbiter, { ...transform, layerName: "Missing" }), null);
+    assert.strictEqual(admitted(arbiter, transform), transform);
+  });
+
   test("rejects a world-replace whose layers cannot be loaded", () => {
     const arbiter = new VoxelCommandArbiter();
     const replace = worldReplaceCmd();

@@ -182,6 +182,13 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts(layerCommand("voxels-patched", {})), false);
   });
 
+  test("accepts a layer transform carrying every transform field", () => {
+    const transform = { rotation: 1, flipX: false, flipZ: false, flipY: true };
+
+    assert.strictEqual(accepts(layerCommand("layer-transformed", transform)), true);
+    assert.strictEqual(accepts(layerCommand("layer-transformed", { rotation: 1 })), false);
+  });
+
   test("accepts a position update carrying a position or a delta", () => {
     const delta = { x: 1, y: 0, z: 0 };
 

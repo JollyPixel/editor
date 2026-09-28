@@ -52,7 +52,8 @@ describe("command guards", () => {
       "voxel-removed",
       "voxels-set",
       "voxels-removed",
-      "voxels-patched"
+      "voxels-patched",
+      "layer-transformed"
     ]);
     assert.equal(objects.length, 7);
     assert.ok([...edits, ...objects].every(

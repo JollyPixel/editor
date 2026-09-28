@@ -178,6 +178,21 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
     });
   }
 
+  transform(
+    id: string,
+    transform: VoxelTransformOptions
+  ): boolean {
+    const template = this.#templates.get(id);
+    const resolved = VoxelTransform.fromPacked(VoxelTransform.pack(transform));
+    if (template === undefined || resolved.equals(VoxelTransform.Identity)) {
+      return false;
+    }
+
+    return this.define(
+      serializeVoxelTemplate(template.transformed(resolved), this.#chunkSize)
+    );
+  }
+
   remove(
     id: string
   ): boolean {
@@ -187,11 +202,6 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
     });
   }
 
-  /**
-   * Copies the template voxels into an existing layer as one voxel patch.
-   * Returns `false` when the template or layer is unknown, or when no cell
-   * would be written.
-   */
   place(
     id: string,
     options: VoxelTemplatePlaceOptions

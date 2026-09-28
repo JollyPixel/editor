@@ -40,6 +40,16 @@ const kVoxelCommands: VoxelLayerCommand[] = [
     action: "voxels-removed",
     layerName: "Gone",
     metadata: { entries: [{ position: kOrigin }] }
+  },
+  {
+    action: "layer-transformed",
+    layerName: "Gone",
+    metadata: {
+      rotation: 1,
+      flipX: false,
+      flipZ: false,
+      flipY: false
+    }
   }
 ];
 

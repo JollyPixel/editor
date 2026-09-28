@@ -146,7 +146,7 @@ document forwards as local commands.
 ```ts
 type VoxelLayerCommand =
   | VoxelLayerStructureCommand  // added, removed, updated, cloned, merged, position-*, reordered, layer-moved
-  | VoxelEditCommand            // voxel-set, voxel-removed, voxels-set, voxels-removed, voxels-patched
+  | VoxelEditCommand            // voxel-set, voxel-removed, voxels-set, voxels-removed, voxels-patched, layer-transformed
   | VoxelObjectLayerCommand;    // object-layer-*, object-*
 ```
 
@@ -164,6 +164,7 @@ type VoxelLayerCommand =
 | `"voxels-set"` | `{ entries: VoxelSetOptions[] }` | Bulk placement |
 | `"voxels-removed"` | `{ entries: VoxelRemoveOptions[] }` | Bulk removal |
 | `"voxels-patched"` | `{ cells: VoxelPatchCells }` | Emitted by `transaction()` and `patchVoxels()`. Five numbers per cell: `x, y, z, blockId, transform`; block `0` removes the voxel. |
+| `"layer-transformed"` | `{ rotation, flipX, flipZ, flipY }` | Emitted by `transformLayer()`. Peers turn their own copy of the layer around its content center. |
 | `"reordered"` | `{ direction: "up" \| "down" }` | One step; `"up"` raises priority. |
 | `"layer-moved"` | `{ toIndex: number }` | Absolute position, already clamped. |
 | `"object-layer-added"` | `{}` | |
@@ -193,7 +194,8 @@ changes and applies them through `world.apply()`.
 | `"template-removed"` | Emitted only for an id that existed. |
 
 Placing a template emits a `"voxels-patched"` layer command, not a template
-command.
+command. Transforming a stored template emits `"template-defined"` with the
+turned voxels.
 
 ## Block commands
 

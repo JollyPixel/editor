@@ -35,6 +35,7 @@ class VoxelTemplate {
     position: Vector3Like,
     transform?: VoxelTransform
   ): IterableIterator<VoxelTemplateVoxel>;
+  transformed(transform: VoxelTransform): VoxelTemplate;
   countBlocks(): Map<number, number>;
   withPatch(patch: VoxelTemplatePatch): VoxelTemplate;
 }
@@ -66,6 +67,10 @@ when `positions` does not hold three numbers per voxel.
 transform becomes `voxelTransform.followedBy(transform)`, so turned blocks keep
 facing the right way.
 
+`transformed()` returns a copy whose voxels are the placed voxels turned
+around the pivot, shifted back so the lowest corner is `0, 0, 0`. The pivot
+cell moves with them.
+
 `withPatch()` returns a copy with another `name`, `pivot` or `properties`.
 
 ## `VoxelTemplates`
@@ -81,6 +86,7 @@ class VoxelTemplates implements Iterable<VoxelTemplate> {
   ): VoxelTemplate | undefined;
   define(template: VoxelTemplateJSON): boolean;
   update(id: string, patch: VoxelTemplatePatch): boolean;
+  transform(id: string, transform: VoxelTransformOptions): boolean;
   remove(id: string): boolean;
   place(id: string, options: VoxelTemplatePlaceOptions): boolean;
   countBlocks(): Map<number, number>;
@@ -134,6 +140,13 @@ Emit `"template-updated"` and `"template-removed"`. Both return `false` and emit
 nothing when the template does not exist. A patched `pivot` is
 template-local. Voxels are never updated in place:
 define the template again to change them.
+
+### `transform(id, transform)`
+
+Turns and mirrors the stored voxels around the pivot with
+[`transformed()`](#voxeltemplate) and emits `"template-defined"` with the
+result. `transform` takes `VoxelTransformOptions`. Returns `false` and emits
+nothing for the identity transform or an unknown template.
 
 ### `place(id, options)`
 

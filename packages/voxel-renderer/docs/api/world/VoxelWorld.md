@@ -193,6 +193,26 @@ Moves the layer origin to `position` while preserving every voxel's world-space
 location. Local chunk storage is rewritten and all layers are marked dirty.
 No-op if the layer is not found.
 
+#### `transformLayer(name: string, transform: VoxelTransformOptions): void`
+
+Turns and mirrors every voxel of the layer around the center of its voxel
+bounds, so the content stays where it is. Each cell's offset from the center
+goes through [`transformOffset()`](./VoxelTransform.md#methods) and each voxel's
+own transform becomes `voxelTransform.followedBy(transform)`, so turned blocks
+keep facing the right way. The layer position is unchanged and plays no part.
+
+When one of the X and Z extents is odd and the other even, a quarter turn
+around the exact center would land between cells. The pivot then moves half a
+cell to a fixed grid of points that every later turn or flip of the layer
+reuses, so any sequence that composes to the identity (four quarter turns, a
+turn and its inverse, a flip twice) restores the voxels exactly. In that case
+a 180° turn or a flip along the moved axis also shifts the content by one cell.
+
+The voxels are rewritten, so the change is one
+[history](../core/VoxelHistory.md) step and emits one `"layer-transformed"`
+command, or a `"voxels-patched"` command inside a `transaction()`. No-op, with
+no command, for the identity transform, an empty layer or an unknown layer.
+
 #### `getLayer(name: string): VoxelLayer | undefined`
 
 #### `getLayers(): readonly VoxelLayer[]`

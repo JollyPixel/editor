@@ -213,3 +213,34 @@ describe("VoxelWorld.templates.place", () => {
     assert.equal(history.canUndo, false);
   });
 });
+
+describe("VoxelWorld.templates.transform", () => {
+  it("turns the stored voxels around the pivot", () => {
+    const world = makeWorld();
+    const { id } = world.templates.createFromLayer("Source", { name: "Steps" })!;
+
+    assert.equal(world.templates.transform(id, { rotation: 1 }), true);
+
+    const template = world.templates.get(id);
+    assert.deepEqual(template?.size, { x: 1, y: 2, z: 3 });
+    assert.deepEqual(template?.pivot, { x: 0, y: 0, z: 1 });
+
+    world.templates.place(id, {
+      layerName: "Target",
+      position: { x: 0, y: 0, z: 0 }
+    });
+    assert.deepEqual(blockAt(world, { x: 0, y: 0, z: 1 }), [1, kQuarterTurn]);
+    assert.deepEqual(blockAt(world, { x: 0, y: 0, z: 0 }), [2, VoxelTransform.pack({ rotation: 2 })]);
+    assert.deepEqual(blockAt(world, { x: 0, y: 1, z: -1 }), [3, kQuarterTurn]);
+  });
+
+  it("changes nothing for the identity or an unknown template", () => {
+    const world = makeWorld();
+    const { id } = world.templates.createFromLayer("Source", { name: "Steps" })!;
+    const commands = recordCommands(world);
+
+    assert.equal(world.templates.transform(id, {}), false);
+    assert.equal(world.templates.transform("nope", { rotation: 1 }), false);
+    assert.deepEqual(commands, []);
+  });
+});

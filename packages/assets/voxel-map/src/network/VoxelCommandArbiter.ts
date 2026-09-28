@@ -21,7 +21,8 @@ const kVoxelWriteActions = new Set<string>([
   "voxel-removed",
   "voxels-set",
   "voxels-removed",
-  "voxels-patched"
+  "voxels-patched",
+  "layer-transformed"
 ]);
 
 type BulkCommand = Extract<

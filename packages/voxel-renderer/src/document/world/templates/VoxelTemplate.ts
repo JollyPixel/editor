@@ -157,6 +157,26 @@ export class VoxelTemplate {
     }
   }
 
+  transformed(
+    transform: VoxelTransform
+  ): VoxelTemplate {
+    const positions: number[] = [];
+    const voxels: PackedVoxel[] = [];
+    for (const [x, y, z, packed] of this.placedVoxels(this.pivot, transform)) {
+      positions.push(x, y, z);
+      voxels.push(packed);
+    }
+
+    return new VoxelTemplate({
+      id: this.id,
+      name: this.name,
+      pivot: this.pivot,
+      properties: this.properties,
+      positions,
+      voxels
+    });
+  }
+
   countBlocks(): Map<number, number> {
     const counts = new Map<number, number>();
     for (const packed of this.#voxels) {
