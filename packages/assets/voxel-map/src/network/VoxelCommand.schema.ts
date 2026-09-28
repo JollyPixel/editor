@@ -201,7 +201,17 @@ export const voxelWorldSchema: JSONSchema = {
       type: "array",
       items: tilesetDefinitionSchema
     },
-    layers: { type: "array" },
+    layers: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          palette: { type: "array" },
+          chunks: { type: "array" }
+        },
+        required: ["palette", "chunks"]
+      }
+    },
     objectLayers: { type: "array" }
   },
   required: [

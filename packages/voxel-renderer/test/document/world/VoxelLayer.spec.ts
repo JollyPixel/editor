@@ -10,6 +10,7 @@ import {
 import { AIR_BLOCK_ID } from "../../../src/document/blocks/index.ts";
 import { serializeVoxelLayer } from "../../../src/document/serialization/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
+import { voxelContent } from "../../helpers/world.ts";
 
 // CONSTANTS
 const kOutOfRangeCoord = 1 << 20;
@@ -229,7 +230,7 @@ describe("VoxelLayer coordinates and bounds", () => {
     assert.deepEqual(layer.position, { x: 10, y: 2, z: -3 });
     assert.equal(layer.getVoxelAt({ x: 10, y: 2, z: -3 })?.blockId, 1);
     assert.equal(layer.getVoxelAt({ x: 12, y: 2, z: -3 })?.blockId, 2);
-    assert.deepEqual(Object.keys(serializeVoxelLayer(layer).voxels).sort(), [
+    assert.deepEqual(Array.from(layer.localVoxels(), ([x, y, z]) => `${x},${y},${z}`).sort(), [
       "0,0,0",
       "2,0,0"
     ]);
@@ -381,7 +382,7 @@ describe("VoxelLayer clone", () => {
 
     assert.equal(clone.chunkCount, layer.chunkCount);
     assert.deepEqual(clone.getVoxelAt({ x: 1, y: 2, z: 3 }), entry);
-    assert.deepEqual(serializeVoxelLayer(clone).voxels, serializeVoxelLayer(layer).voxels);
+    assert.deepEqual(voxelContent(clone), voxelContent(layer));
   });
 
   it("shares no voxel storage with the source", () => {

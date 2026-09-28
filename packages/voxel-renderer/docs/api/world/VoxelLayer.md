@@ -64,6 +64,8 @@ class VoxelLayer {
   // visible with an opacity above 0
   readonly effectivelyVisible: boolean;
 
+  // edge length of every chunk, in voxels
+  readonly chunkSize: number;
   // number of currently allocated chunks
   readonly chunkCount: number;
   // stored voxels across all chunks
@@ -208,6 +210,14 @@ Iterate only the chunks whose `dirty` flag is set, without visiting clean ones.
 
 Write layer-local `positions` (x, y, z triples) with their packed voxels. Each
 chunk's storage is sized once for everything it receives.
+
+### `loadPackedChunk(cx: number, cy: number, cz: number, cells: ArrayLike<number>, voxels: ArrayLike<PackedVoxel>): void`
+
+Write whole cells into one chunk, creating it when needed. `cells` holds
+linear indices within the chunk (see `VoxelChunk.linearIndex()`), each below
+`chunkSize³`, and `voxels` the packed voxel for each. The chunk is resolved and
+sized once, which makes this the fastest way to fill a layer whose chunk layout
+is known. Empty `cells` creates no chunk.
 
 ### `getChunks(): IterableIterator<VoxelChunk>`
 

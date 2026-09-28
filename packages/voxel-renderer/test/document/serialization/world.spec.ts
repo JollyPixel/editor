@@ -10,7 +10,10 @@ import {
   VOXEL_WORLD_VERSION,
   type VoxelWorldJSON
 } from "../../../src/document/serialization/index.ts";
-import { VoxelWorld } from "../../../src/document/world/index.ts";
+import {
+  voxelBlockId,
+  VoxelWorld
+} from "../../../src/document/world/index.ts";
 import { TilesetList, type TilesetDefinition } from "../../../src/document/tilesets/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
 
@@ -70,6 +73,17 @@ describe("voxel world round-trip", () => {
     assert.deepEqual(serializeVoxelWorld(restored), json);
     assert.deepEqual(restored.getVoxelAt({ x: 37, y: 3, z: 2 }), makeVoxelEntry(2, 1));
     assert.equal(restored.getLayer("Glass")?.compositing, "replace");
+  });
+
+  it("widens the chunk bounds over every restored voxel", () => {
+    const restored = new VoxelWorld(16);
+    deserializeVoxelWorld(untrusted(serializeVoxelWorld(makeRichWorld())), restored);
+
+    const chunk = restored.getLayer("Ground")?.getChunk(0, 0, 1);
+    assert.ok(chunk !== undefined);
+    assert.equal(chunk.mayContain(0, 0, 0), true);
+    assert.equal(chunk.mayContain(5, 3, 2), true);
+    assert.equal(chunk.mayContain(6, 0, 0), false);
   });
 
   it("restores the tileset links with their slots", () => {
@@ -145,21 +159,52 @@ describe("serializeVoxelWorld", () => {
     );
   });
 
-  it("serializes a single voxel correctly", () => {
+  it("writes a lone voxel as one sparse chunk over the layer palette", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
     layer.setVoxelAt({ x: 3, y: 2, z: 1 }, makeVoxelEntry(5, 3));
 
-    const json = serializeVoxelWorld(world);
+    const { palette, chunks } = serializeVoxelWorld(world).layers[0];
 
-    assert.equal(json.layers.length, 1);
-    const layerJson = json.layers[0];
-    assert.equal(layerJson.name, "Ground");
-    assert.equal(layerJson.voxels["3,2,1"]?.block, 5);
-    assert.equal(layerJson.voxels["3,2,1"]?.transform, 3);
+    assert.deepEqual(palette, [{ block: 5, transform: 3 }]);
+    assert.deepEqual(chunks, [{ at: [0, 0, 0], cells: [291], runs: [1, 1] }]);
   });
 
-  it("stores voxel keys in layer-local space", () => {
+  it("lists the most frequent voxel first in the palette", () => {
+    const world = new VoxelWorld(16);
+    const layer = world.addLayer("Ground");
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(2));
+    for (let x = 1; x < 4; x++) {
+      layer.setVoxelAt({ x, y: 0, z: 0 }, makeVoxelEntry(9, 1));
+    }
+
+    assert.deepEqual(serializeVoxelWorld(world).layers[0].palette, [
+      { block: 9, transform: 1 },
+      { block: 2, transform: 0 }
+    ]);
+  });
+
+  it("writes a filled slab as dense runs", () => {
+    const world = new VoxelWorld(4);
+    const layer = world.addLayer("Ground");
+    for (let x = 0; x < 4; x++) {
+      for (let z = 0; z < 4; z++) {
+        layer.setVoxelAt({ x, y: 0, z }, makeVoxelEntry(x < 2 ? 1 : 2));
+      }
+    }
+
+    assert.deepEqual(serializeVoxelWorld(world).layers[0].chunks, [{
+      at: [0, 0, 0],
+      runs: [
+        2, 1, 2, 2, 12, 0,
+        2, 1, 2, 2, 12, 0,
+        2, 1, 2, 2, 12, 0,
+        2, 1, 2, 2, 12, 0
+      ]
+    }]);
+  });
+
+  it("stores chunks in layer-local space", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
     layer.position = { x: 16, y: 0, z: 0 };
@@ -167,8 +212,30 @@ describe("serializeVoxelWorld", () => {
 
     const json = serializeVoxelWorld(world);
 
-    assert.ok("0,0,0" in json.layers[0].voxels);
-    assert.equal(json.layers[0].voxels["16,0,0"], undefined);
+    assert.deepEqual(json.layers[0].chunks, [
+      { at: [0, 0, 0], cells: [0], runs: [1, 1] }
+    ]);
+  });
+
+  it("writes the same document whatever order the voxels were placed in", () => {
+    const entries: [number, number, number, number][] = [
+      [40, 0, 0, 3],
+      [0, 0, 0, 2],
+      [0, 20, -5, 1],
+      [1, 0, 0, 2]
+    ];
+    const forward = new VoxelWorld(16);
+    const backward = new VoxelWorld(16);
+    const a = forward.addLayer("Ground");
+    const b = backward.addLayer("Ground");
+    for (const [x, y, z, block] of entries) {
+      a.setVoxelAt({ x, y, z }, makeVoxelEntry(block));
+    }
+    for (const [x, y, z, block] of [...entries].reverse()) {
+      b.setVoxelAt({ x, y, z }, makeVoxelEntry(block));
+    }
+
+    assert.deepEqual(serializeVoxelWorld(backward), serializeVoxelWorld(forward));
   });
 });
 
@@ -218,7 +285,8 @@ describe("deserializeVoxelWorld", () => {
           name: "Ground",
           visible: true,
           order: 0,
-          voxels: {}
+          palette: [],
+          chunks: []
         }]
       }),
       world
@@ -236,8 +304,8 @@ describe("deserializeVoxelWorld", () => {
     deserializeVoxelWorld(
       untrusted(emptyDocument({
         layers: [
-          { id: "top", name: "Top", visible: true, order: 7, voxels: {} },
-          { id: "ground", name: "Ground", visible: true, order: 2, voxels: {} }
+          { id: "top", name: "Top", visible: true, order: 7, palette: [], chunks: [] },
+          { id: "ground", name: "Ground", visible: true, order: 2, palette: [], chunks: [] }
         ]
       })),
       world
@@ -249,7 +317,7 @@ describe("deserializeVoxelWorld", () => {
     );
   });
 
-  it("skips malformed coordinate keys", () => {
+  it("ignores unknown layer and chunk fields", () => {
     const world = new VoxelWorld(16);
 
     deserializeVoxelWorld(
@@ -260,17 +328,15 @@ describe("deserializeVoxelWorld", () => {
           name: "Ground",
           visible: true,
           order: 0,
-          voxels: {
-            "not,a,number": { block: 1, transform: 0 },
-            "0,0,0": { block: 2, transform: 0 }
-          }
+          tint: "red",
+          palette: [{ block: 2, transform: 0 }],
+          chunks: [{ at: [0, 0, 0], cells: [0], runs: [1, 1], lod: 2 }]
         }]
       }),
       world
     );
 
     assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
-    assert.equal(world.getLayer("Ground")?.voxelCount, 1);
   });
 
   it("throws when layers is not an array", () => {
@@ -286,13 +352,6 @@ describe("deserializeVoxelWorld", () => {
   });
 
   it("re-partitions a document saved with another chunk size", () => {
-    const voxels = {
-      "0,0,0": { block: 1, transform: 0 },
-      "7,0,0": { block: 2, transform: 0 },
-      "8,0,0": { block: 3, transform: 0 },
-      "15,9,-1": { block: 4, transform: 0 },
-      "16,0,0": { block: 5, transform: 0 }
-    };
     const world = new VoxelWorld(16);
 
     deserializeVoxelWorld(
@@ -303,7 +362,15 @@ describe("deserializeVoxelWorld", () => {
           name: "Ground",
           visible: true,
           order: 0,
-          voxels
+          palette: [1, 2, 3, 4, 5].map((block) => {
+            return { block, transform: 0 };
+          }),
+          chunks: [
+            { at: [0, 0, 0], cells: [0, 6], runs: [1, 1, 1, 2] },
+            { at: [1, 0, 0], cells: [0], runs: [1, 3] },
+            { at: [1, 1, -1], cells: [463], runs: [1, 4] },
+            { at: [2, 0, 0], cells: [0], runs: [1, 5] }
+          ]
         }]
       })),
       world
@@ -313,14 +380,18 @@ describe("deserializeVoxelWorld", () => {
     assert.ok(layer !== undefined);
     assert.equal(layer.voxelCount, 5);
     assert.equal(layer.chunkCount, 3);
-    assert.equal(world.getVoxelAt({ x: 15, y: 9, z: -1 })?.blockId, 4);
-
-    const json = serializeVoxelWorld(world);
-    assert.equal(json.chunkSize, 16);
     assert.deepEqual(
-      Object.keys(json.layers[0].voxels).sort(),
-      Object.keys(voxels).sort()
+      Array.from(layer.localVoxels(), ([x, y, z, packed]) => [x, y, z, voxelBlockId(packed)])
+        .sort((p, q) => p[3] - q[3]),
+      [
+        [0, 0, 0, 1],
+        [7, 0, 0, 2],
+        [8, 0, 0, 3],
+        [15, 9, -1, 4],
+        [16, 0, 0, 5]
+      ]
     );
+    assert.equal(serializeVoxelWorld(world).chunkSize, 16);
   });
 
   it("leaves the world and tilesets untouched when the document is invalid", () => {
@@ -334,6 +405,29 @@ describe("deserializeVoxelWorld", () => {
     assert.equal(tilesets.has("atlas"), true);
   });
 
+  it("leaves the world untouched when a chunk does not fit its chunk size", () => {
+    const world = new VoxelWorld(16);
+    world.addLayer("Existing");
+    const tilesets = new TilesetList([kAtlas]);
+
+    assert.throws(
+      () => deserializeVoxelWorld(untrusted(emptyDocument({
+        chunkSize: 32,
+        layers: [{
+          id: "l1",
+          name: "Ground",
+          visible: true,
+          order: 0,
+          palette: [{ block: 1, transform: 0 }],
+          chunks: [{ at: [1000, 0, 0], cells: [0], runs: [1, 1] }]
+        }]
+      })), world, { tilesets }),
+      /layer "l1", chunk \[1000,0,0\] does not fit a world with chunkSize 16/
+    );
+    assert.deepEqual(world.getLayers().map(({ name }) => name), ["Existing"]);
+    assert.equal(tilesets.has("atlas"), true);
+  });
+
   it("applies the serialized layer position to local voxel keys", () => {
     const world = new VoxelWorld(16);
     deserializeVoxelWorld(emptyDocument({
@@ -343,9 +437,8 @@ describe("deserializeVoxelWorld", () => {
         visible: true,
         order: 0,
         position: { x: 20, y: 3, z: -4 },
-        voxels: {
-          "2,1,5": { block: 1, transform: 0 }
-        }
+        palette: [{ block: 1, transform: 0 }],
+        chunks: [{ at: [0, 0, 0], cells: [1298], runs: [1, 1] }]
       }]
     }), world);
 

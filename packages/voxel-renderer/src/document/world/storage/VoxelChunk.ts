@@ -196,6 +196,49 @@ export class VoxelChunk {
     }
   }
 
+  loadPackedEntries(
+    cells: ArrayLike<number>,
+    voxels: ArrayLike<PackedVoxel>
+  ): void {
+    const { shift, mask } = this;
+    const count = cells.length;
+    if (count === 0) {
+      return;
+    }
+
+    this.store.reserve(this.store.size + count);
+
+    let minX = this.#minX;
+    let minY = this.#minY;
+    let minZ = this.#minZ;
+    let maxX = this.#maxX;
+    let maxY = this.#maxY;
+    let maxZ = this.#maxZ;
+    for (let i = 0; i < count; i++) {
+      const cell = cells[i];
+      this.store.set(cell, voxels[i]);
+
+      const lx = cell & mask;
+      const ly = (cell >> shift) & mask;
+      const lz = cell >> (shift * 2);
+      minX = Math.min(minX, lx);
+      minY = Math.min(minY, ly);
+      minZ = Math.min(minZ, lz);
+      maxX = Math.max(maxX, lx);
+      maxY = Math.max(maxY, ly);
+      maxZ = Math.max(maxZ, lz);
+    }
+
+    this.#minX = minX;
+    this.#minY = minY;
+    this.#minZ = minZ;
+    this.#maxX = maxX;
+    this.#maxY = maxY;
+    this.#maxZ = maxZ;
+    this.dirty = true;
+    this.#revision++;
+  }
+
   mayContain(
     lx: number,
     ly: number,

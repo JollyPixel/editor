@@ -9,14 +9,18 @@ and chunk meshes.
 ## World document
 
 ```ts
-type VoxelEntryKey = `${number},${number},${number}`;
-
 interface VoxelEntryJSON {
   block: number;
   transform: number;
 }
 
-interface VoxelLayerJSON {
+interface VoxelChunkJSON {
+  at: [number, number, number];
+  cells?: number[];
+  runs: number[];
+}
+
+interface VoxelLayerMetadataJSON {
   compositing?: "replace" | "composite";
   id: string;
   name: string;
@@ -25,13 +29,17 @@ interface VoxelLayerJSON {
   order: number;
   position?: VoxelCoord;
   properties?: Record<string, any>;
-  voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
 }
 
-const VOXEL_WORLD_VERSION = 2;
+interface VoxelLayerJSON extends VoxelLayerMetadataJSON {
+  palette: VoxelEntryJSON[];
+  chunks: VoxelChunkJSON[];
+}
+
+const VOXEL_WORLD_VERSION = 3;
 
 interface VoxelWorldJSON {
-  version: 2;
+  version: 3;
   chunkSize: number;
   tilesets: TilesetDefinition[];
   layers: VoxelLayerJSON[];
@@ -46,8 +54,35 @@ projects them into the world's block registry through the tileset's slot.
 Voxels store the projected ids, so a world file is only meaningful with the
 tilesets it links.
 
-Voxel keys contain layer-local coordinates. The layer position locates that
-coordinate space in the world, so changing only `position` moves the layer.
+Each layer lists its distinct voxels once in `palette`, most frequent first.
+Chunks then store palette values: `v >= 1` means `palette[v - 1]` and `0`
+means air.
+
+- `at` is the chunk coordinate in units of `chunkSize`, in layer-local
+  space. The layer position locates that space in the world, so changing only
+  `position` moves the layer.
+- A cell index is `x + y * S + z * S * S` for local coordinates in a chunk of
+  size `S`.
+- A dense chunk has only `runs`: `[length, value]` pairs covering all
+  `S³` cells in index order, air included.
+- A sparse chunk adds `cells`, the occupied cell indices in ascending order,
+  written as gaps: the first index is `cells[0]`, and each next one is
+  `previous + cells[k] + 1`. Its `runs` assign values of `1` or more to
+  those cells.
+
+The writer picks whichever encoding needs fewer numbers for each chunk.
+
+```json
+{
+  "id": "layer_1", "name": "Terrain", "visible": true, "order": 0,
+  "palette": [{ "block": 65537, "transform": 0 }, { "block": 65538, "transform": 0 }],
+  "chunks": [
+    { "at": [0, 0, 0], "runs": [256, 2, 3840, 0] },
+    { "at": [1, 0, 0], "cells": [17, 0, 0, 14], "runs": [3, 1, 1, 2] }
+  ]
+}
+```
+
 Documents without `opacity` or `position` load with opacity `1` and a zero position.
 A missing `compositing` loads as `"composite"`; use `"replace"` explicitly for
 cell replacement.
@@ -75,8 +110,9 @@ function serializeTilesetDefinition(
 ): TilesetDefinition;
 ```
 
-`serializeVoxelLayer()` writes one layer, voxels keyed by layer-local
-coordinates; `serializeVoxelWorld()` calls it for each layer.
+`serializeVoxelLayer()` writes one layer with its palette and chunks;
+`serializeVoxelWorld()` calls it for each layer. The output does not depend on
+the order voxels were placed in.
 
 The world does not own the tileset list, so callers pass it explicitly. Each
 definition is written through `serializeTilesetDefinition()`: an `asset`
@@ -99,9 +135,10 @@ function deserializeVoxelWorld(
 
 The function validates `data`, then replaces the world's voxel and object
 layers. It throws `InvalidVoxelWorldError` when the document is malformed,
-and leaves the target unchanged. Voxel keys are layer coordinates, so a document
-saved with another `chunkSize` loads into the world's own chunks; serializing
-the world again writes the world's `chunkSize`.
+and leaves the target unchanged. A document saved with another `chunkSize`
+loads into the world's own chunks; serializing the world again writes the
+world's `chunkSize`. A chunk that falls outside the world's chunk range once
+re-partitioned is rejected before anything changes.
 
 Layers are restored with [`world.restoreLayer()`](../world/VoxelWorld.md) and
 object layers with `world.objectLayers.restore()`, so deserializing emits no
@@ -138,19 +175,31 @@ class InvalidVoxelWorldError extends Error {
 }
 ```
 
-`parseVoxelWorld()` requires version `VOXEL_WORLD_VERSION`, a positive
-integer `chunkSize`, and a `layers` array. Earlier versions are rejected; there
-is no migration. A missing or malformed `tilesets` value becomes an empty
-array. A malformed `objectLayers` value is omitted. Unknown top-level keys,
-including the `blocks`, `materialGroups` and `defaultTileSize` of earlier
-versions, are discarded.
+`parseVoxelWorld()` validates the whole document and throws on the first
+problem, naming the layer and chunk:
 
-The parser validates the top-level document shape. Collection elements are
-checked later while the world is deserialized; malformed layer or voxel entries
-are skipped there.
+- `version` is `VOXEL_WORLD_VERSION`. Earlier versions are rejected; there
+  is no migration.
+- `chunkSize` is a power of two.
+- Each layer has a string `id` and `name`, a boolean `visible` and a numeric
+  `order`; `opacity`, `compositing`, `position` and `properties` are
+  typed when present.
+- Each palette entry has a block id in `1..MAX_BLOCK_ID` and a transform in
+  `0..255`.
+- Each `at` is an integer triple within the layer chunk range (±1024 on X
+  and Z, ±512 on Y), and appears once per layer.
+- Run lengths are at least `1` and values at most `palette.length`. Dense
+  runs cover exactly `S³` cells. Sparse runs assign values of `1` or more
+  to every cell, and the last cell is below `S³`.
 
-`encodeVoxelWorld()` returns UTF-8 JSON bytes. `decodeVoxelWorld()` parses
-those bytes and then applies `parseVoxelWorld()`. All three functions throw
+A missing or malformed `tilesets` value becomes an empty array. A malformed
+`objectLayers` value is omitted. Unknown top-level keys, including the
+`blocks`, `materialGroups` and `defaultTileSize` of earlier versions, are
+discarded. Unknown layer and chunk keys are ignored.
+
+`encodeVoxelWorld()` returns UTF-8 JSON bytes. `decodeVoxelWorld()` accepts
+bytes starting with `{`, after an optional byte order mark and whitespace,
+parses them and then applies `parseVoxelWorld()`. All three functions throw
 `InvalidVoxelWorldError`, whose message starts with `Invalid voxel world: `;
 decoding errors are available through its `cause`.
 

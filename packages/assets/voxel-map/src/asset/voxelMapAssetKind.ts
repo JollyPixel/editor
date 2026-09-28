@@ -12,8 +12,10 @@ import {
 import {
   applyVoxelWorldCommand,
   DEFAULT_CHUNK_SIZE,
+  decodeVoxelWorld,
   deserializeVoxelWorld,
   encodeVoxelWorld,
+  InvalidVoxelWorldError,
   parseVoxelWorld,
   serializeVoxelWorld,
   TilesetList,
@@ -239,19 +241,23 @@ export function voxelMapAssetKind(
 function decodeVoxelMapDocument(
   content: Uint8Array
 ): VoxelWorldJSON {
-  let parsed: unknown;
+  let document: VoxelWorldJSON;
   try {
-    parsed = JSON.parse(new TextDecoder().decode(content));
+    document = decodeVoxelWorld(content);
   }
   catch (error) {
+    if (!(error instanceof InvalidVoxelWorldError)) {
+      throw error;
+    }
+
     throw new InvalidAssetDocumentError(
       VOXEL_MAP_KIND,
-      "payload is not JSON",
+      error.message,
       { cause: error }
     );
   }
 
-  const result = kWorldParser.parse(parsed);
+  const result = kWorldParser.parse(document);
   if (result.err) {
     throw new InvalidAssetDocumentError(
       VOXEL_MAP_KIND,
@@ -259,7 +265,7 @@ function decodeVoxelMapDocument(
     );
   }
 
-  return parseVoxelWorld(result.val);
+  return document;
 }
 
 function landedAsSent(

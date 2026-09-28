@@ -10,6 +10,12 @@ import {
 import { assertPowerOfTwoChunkSize } from "./storage/chunkSize.ts";
 import { VoxelChunk } from "./storage/VoxelChunk.ts";
 import {
+  CHUNK_BIAS_XZ,
+  CHUNK_BIAS_Y,
+  inChunkRange,
+  packChunkKey
+} from "./storage/chunkKey.ts";
+import {
   packVoxel,
   unpackVoxel,
   VOXEL_ABSENT,
@@ -20,45 +26,9 @@ import type {
   VoxelCoord
 } from "./types.ts";
 
-/*
- * CONSTANTS
- * Chunk coordinates are packed into a single int32 so the chunk map keeps
- * Smi keys: 11 bits for X and Z, 10 for Y, since voxel worlds are far wider
- * than they are tall. Creating a chunk outside that range throws rather than
- * aliasing onto another one.
- */
-const kChunkBitsY = 10;
-const kChunkBitsXZ = 11;
-const kChunkBiasY = 1 << (kChunkBitsY - 1);
-const kChunkBiasXZ = 1 << (kChunkBitsXZ - 1);
-const kChunkSpanY = 1 << kChunkBitsY;
-const kChunkSpanXZ = 1 << kChunkBitsXZ;
+// CONSTANTS
 const kCellMin = new Vector3();
 const kCellMax = new Vector3();
-
-/**
- * Packs validated chunk coordinates into disjoint biased int32 fields.
- */
-function packChunkKey(
-  cx: number,
-  cy: number,
-  cz: number
-): number {
-  return ((cx + kChunkBiasXZ) << (kChunkBitsY + kChunkBitsXZ)) |
-    ((cy + kChunkBiasY) << kChunkBitsXZ) |
-    (cz + kChunkBiasXZ);
-}
-
-/** Unsigned compares catch both ends of each range in one test. */
-function inChunkRange(
-  cx: number,
-  cy: number,
-  cz: number
-): boolean {
-  return (cx + kChunkBiasXZ) >>> 0 < kChunkSpanXZ &&
-    (cy + kChunkBiasY) >>> 0 < kChunkSpanY &&
-    (cz + kChunkBiasXZ) >>> 0 < kChunkSpanXZ;
-}
 
 export interface VoxelLayerConfigurableOptions {
   /** Cell replacement or optical compositing. Defaults to "composite". */
@@ -192,6 +162,10 @@ export class VoxelLayer {
     this.#opacity = MathUtils.clamp(value, 0, 1);
   }
 
+  get chunkSize(): number {
+    return this.#chunkSize;
+  }
+
   get effectivelyVisible(): boolean {
     return this.visible && this.#opacity > 0;
   }
@@ -244,7 +218,7 @@ export class VoxelLayer {
     if (!inChunkRange(cx, cy, cz)) {
       throw new RangeError(
         `VoxelLayer: chunk (${cx}, ${cy}, ${cz}) is out of range ` +
-        `(±${kChunkBiasXZ} on X/Z, ±${kChunkBiasY} on Y).`
+        `(±${CHUNK_BIAS_XZ} on X/Z, ±${CHUNK_BIAS_Y} on Y).`
       );
     }
 
@@ -416,6 +390,20 @@ export class VoxelLayer {
         packed[i]
       );
     }
+  }
+
+  loadPackedChunk(
+    cx: number,
+    cy: number,
+    cz: number,
+    cells: ArrayLike<number>,
+    voxels: ArrayLike<PackedVoxel>
+  ): void {
+    if (cells.length === 0) {
+      return;
+    }
+
+    this.getOrCreateChunk(cx, cy, cz).loadPackedEntries(cells, voxels);
   }
 
   removeVoxelAt(
