@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import type { PulledChunkGeometry } from "../../src/mesh/index.ts";
 import {
   chunkGroup,
   chunkMeshes,
@@ -25,16 +26,19 @@ describe("VoxelInspector - wireframe", () => {
     assert.equal(findGroup(engine), undefined);
   });
 
-  it("adds one wireframe per chunk mesh, sharing its geometry", () => {
+  it("adds one wireframe per chunk mesh, drawing each of its faces", () => {
     const engine = makeInspectorEngine();
     engine.inspector.mode = "overlay";
 
     const [mesh] = chunkMeshes(engine);
     const overlays = overlayMeshes(engine);
+    const { faceCount } = mesh.geometry as PulledChunkGeometry;
 
     assert.equal(overlays.length, 1);
     assert.equal(mesh.visible, true);
-    assert.equal(overlays[0].geometry, mesh.geometry);
+    assert.equal(overlays[0].geometry.getAttribute("position").count, faceCount * 4);
+    assert.equal(overlays[0].geometry.getIndex()?.count, faceCount * 6);
+    assert.deepEqual(overlays[0].position, mesh.position);
     assert.ok(wireframeMaterial(overlays[0]).wireframe);
   });
 
@@ -62,19 +66,23 @@ describe("VoxelInspector - wireframe", () => {
     assert.equal(chunkGroup(engine).visible, false);
   });
 
-  it("removes the wireframe of a chunk that is rebuilt", () => {
+  it("replaces and disposes the wireframe of a chunk that is rebuilt", () => {
     const engine = makeInspectorEngine();
     engine.inspector.mode = "overlay";
+    const [before] = overlayMeshes(engine);
+    let disposed = false;
+    before.geometry.addEventListener("dispose", () => {
+      disposed = true;
+    });
 
     engine.markAllChunksDirty("test");
     engine.tick(0);
 
     const overlays = overlayMeshes(engine);
     assert.equal(overlays.length, 1);
-    assert.equal(
-      overlays[0].geometry,
-      chunkMeshes(engine)[0].geometry
-    );
+    assert.notEqual(overlays[0], before);
+    assert.equal(overlays[0].name, `${chunkMeshes(engine)[0].name}:wireframe`);
+    assert.equal(disposed, true);
   });
 
   it("starts in the mode passed through the engine options", () => {

@@ -69,7 +69,7 @@ or no tileset at all).
 The missing-tileset atlas is a generated 16x16 single-tile texture, red with a
 white cross. It is created on first use, shared, and disposed by `dispose()`.
 Its faces are meshed under `MISSING_TILESET_ID`, which is also the `tilesetId`
-a `materialCustomizer` receives for them. The ID is reserved:
+a `rendering.customizer` receives for them. The ID is reserved:
 `TilesetList.add()` refuses it, so it is never declared or serialized.
 
 ```ts

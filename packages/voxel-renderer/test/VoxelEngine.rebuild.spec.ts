@@ -57,7 +57,7 @@ describe("VoxelEngine - chunk rebuild orchestration", () => {
   });
 
   it("flush() ignores the budget", () => {
-    const engine = makeGroundEngine({ rebuildBudgetMs: Number.MIN_VALUE });
+    const engine = makeGroundEngine({ meshing: { budgetMs: Number.MIN_VALUE } });
     fillChunks(engine, "Ground", 6);
 
     engine.flush();
@@ -90,7 +90,7 @@ describe("VoxelEngine - chunk rebuild orchestration", () => {
   });
 
   it("does not rebuild a chunk unloaded while it was queued", () => {
-    const engine = makeGroundEngine({ rebuildBudgetMs: Number.MIN_VALUE });
+    const engine = makeGroundEngine({ meshing: { budgetMs: Number.MIN_VALUE } });
     fillChunks(engine, "Ground", 3);
     engine.tick(0);
     assert.equal(engine.pendingRebuilds, 2);
@@ -126,7 +126,7 @@ describe("VoxelEngine - chunk rebuild orchestration", () => {
   });
 
   it("whenIdle() resolves once the budgeted queue drains", async() => {
-    const engine = makeGroundEngine({ rebuildBudgetMs: Number.MIN_VALUE });
+    const engine = makeGroundEngine({ meshing: { budgetMs: Number.MIN_VALUE } });
     fillChunks(engine, "Ground", 3);
     let idle = false;
     const pending = engine.whenIdle().then(() => {

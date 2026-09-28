@@ -1,30 +1,18 @@
-// Import Third-party Dependencies
-import type * as THREE from "three";
-
 // Import Internal Dependencies
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetResolver } from "./variants/types.ts";
 import type {
-  ChunkMeshData,
-  FaceBuffer,
   MeshableLayerChunk,
   MeshableWorld,
-  MeshPassOptions
+  PulledMeshData
 } from "./types.ts";
 import type { ChunkGeometryKey } from "./ChunkGeometryKey.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
-import {
-  GeometryBuffer,
-  createQuadGeometry,
-  quadMeshBytes
-} from "./GeometryBuffer.ts";
 import { FaceTemplateTable } from "./pulling/FaceTemplateTable.ts";
 import { PulledFaceBuffer } from "./pulling/PulledFaceBuffer.ts";
 import { PulledChunkGeometry } from "./pulling/PulledChunkGeometry.ts";
-import { QuadIndex } from "./QuadIndex.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
-import { GreedyMesher } from "./meshers/GreedyMesher.ts";
 import { NaiveMesher } from "./meshers/NaiveMesher.ts";
 import { ChunkNeighbourhood } from "./neighbourhood/ChunkNeighbourhood.ts";
 import type { VoxelLogger } from "../utils/logger.ts";
@@ -39,16 +27,10 @@ export interface VoxelMeshBuilderOptions {
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetResolver;
   /**
-   * Enables greedy face merging and tiled geometry attributes.
-   * @default false
-   */
-  greedy?: boolean;
-  /**
-   * Bakes per-vertex ambient occlusion into the normal attribute's `w`.
+   * Bakes per-vertex ambient occlusion into each face record.
    * @default false
    */
   ambientOcclusion?: boolean;
-  vertexPulling?: boolean;
   faceTemplates?: FaceTemplateTable;
   logger?: VoxelLogger;
 }
@@ -66,30 +48,15 @@ export class VoxelMeshBuilder {
 
   #world: MeshableWorld;
   #variants: BlockVariantCache;
-  #greedyMesher: GreedyMesher;
-  #naiveMesher: NaiveMesher;
-  #greedy: boolean;
-  #vertexPulling: boolean;
-  #quadIndex = new QuadIndex();
+  #mesher: NaiveMesher;
   #origin: [number, number, number] = [0, 0, 0];
-  #buffers: (GeometryBuffer | undefined)[] = [];
-  #bufferFor = (slot: number): GeometryBuffer => {
+  #buffers: (PulledFaceBuffer | undefined)[] = [];
+  #bufferFor = (slot: number): PulledFaceBuffer => {
     let buffer = this.#buffers[slot];
-    if (buffer === undefined) {
-      buffer = new GeometryBuffer({ tiled: this.#greedy });
-      buffer.reset(...this.#origin);
-      this.#buffers[slot] = buffer;
-    }
-
-    return buffer;
-  };
-  #pulledBuffers: (PulledFaceBuffer | undefined)[] = [];
-  #pulledBufferFor = (slot: number): PulledFaceBuffer => {
-    let buffer = this.#pulledBuffers[slot];
     if (buffer === undefined) {
       buffer = new PulledFaceBuffer(this.faceTemplates);
       buffer.reset(...this.#origin);
-      this.#pulledBuffers[slot] = buffer;
+      this.#buffers[slot] = buffer;
     }
 
     return buffer;
@@ -114,8 +81,6 @@ export class VoxelMeshBuilder {
     options: VoxelMeshBuilderOptions
   ) {
     this.#world = options.world;
-    this.#greedy = options.greedy ?? false;
-    this.#vertexPulling = options.vertexPulling ?? false;
     this.faceTemplates = options.faceTemplates ?? new FaceTemplateTable();
     this.ambientOcclusion = options.ambientOcclusion ?? false;
     this.#variants = new BlockVariantCache({
@@ -125,43 +90,13 @@ export class VoxelMeshBuilder {
       alphaTest: options.alphaTest,
       logger: options.logger
     });
-    this.#greedyMesher = new GreedyMesher(this.#variants);
-    this.#naiveMesher = new NaiveMesher(this.#variants);
-  }
-
-  get greedy(): boolean {
-    return this.#greedy;
-  }
-
-  set greedy(
-    value: boolean
-  ) {
-    if (value === this.#greedy) {
-      return;
-    }
-
-    this.#greedy = value;
-    this.#buffers = [];
-  }
-
-  get vertexPulling(): boolean {
-    return this.#vertexPulling;
-  }
-
-  set vertexPulling(
-    value: boolean
-  ) {
-    this.#vertexPulling = value;
-  }
-
-  get pullsVertices(): boolean {
-    return this.#vertexPulling && !this.#greedy;
+    this.#mesher = new NaiveMesher(this.#variants);
   }
 
   buildChunkGeometries(
     members: readonly MeshableLayerChunk[]
-  ): Map<ChunkGeometryKey, THREE.BufferGeometry> {
-    const result = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
+  ): Map<ChunkGeometryKey, PulledChunkGeometry> {
+    const result = new Map<ChunkGeometryKey, PulledChunkGeometry>();
     for (const [key, data] of this.buildChunkMeshData(members)) {
       result.set(key, this.createGeometry(data));
     }
@@ -171,15 +106,15 @@ export class VoxelMeshBuilder {
 
   buildChunkMeshData(
     members: readonly MeshableLayerChunk[]
-  ): Map<ChunkGeometryKey, ChunkMeshData> {
-    const result = new Map<ChunkGeometryKey, ChunkMeshData>();
+  ): Map<ChunkGeometryKey, PulledMeshData> {
+    const result = new Map<ChunkGeometryKey, PulledMeshData>();
     const startedAt = performance.now();
     if (!this.#mesh(members)) {
       return result;
     }
 
-    this.#activeBuffers().forEach((buffer, slot) => {
-      if (buffer === undefined || buffer.vertexCount === 0) {
+    this.#buffers.forEach((buffer, slot) => {
+      if (buffer === undefined || buffer.faceCount === 0) {
         return;
       }
 
@@ -193,11 +128,9 @@ export class VoxelMeshBuilder {
   }
 
   createGeometry(
-    data: ChunkMeshData
-  ): THREE.BufferGeometry {
-    return data.kind === "quads" ?
-      createQuadGeometry(data, this.#quadIndex) :
-      PulledChunkGeometry.fromMeshData(data, this.faceTemplates);
+    data: PulledMeshData
+  ): PulledChunkGeometry {
+    return PulledChunkGeometry.fromMeshData(data, this.faceTemplates);
   }
 
   #mesh(
@@ -228,11 +161,13 @@ export class VoxelMeshBuilder {
     });
 
     this.#origin = [worldOriginX, worldOriginY, worldOriginZ];
-    this.#resetBuffers();
+    for (const buffer of this.#buffers) {
+      buffer?.reset(...this.#origin);
+    }
 
     for (const member of drawn) {
       neighbourhood.self = member.layer;
-      const pass: MeshPassOptions<GeometryBuffer> = {
+      this.#mesher.mesh({
         chunk: member.chunk,
         neighbourhood,
         worldOriginX,
@@ -241,41 +176,20 @@ export class VoxelMeshBuilder {
         stats,
         bufferFor: this.#bufferFor,
         ambientOcclusion: this.ambientOcclusion
-      };
-      if (this.#greedy) {
-        this.#greedyMesher.mesh(pass);
-      }
-      else if (this.#vertexPulling) {
-        this.#naiveMesher.mesh({ ...pass, bufferFor: this.#pulledBufferFor });
-      }
-      else {
-        this.#naiveMesher.mesh(pass);
-      }
+      });
     }
 
     return true;
   }
 
-  #activeBuffers(): readonly (FaceBuffer | undefined)[] {
-    return this.pullsVertices ? this.#pulledBuffers : this.#buffers;
-  }
-
-  #resetBuffers(): void {
-    for (const buffer of this.#activeBuffers()) {
-      buffer?.reset(...this.#origin);
-    }
-  }
-
   #count(
-    data: ChunkMeshData
+    data: PulledMeshData
   ): void {
     const { stats } = this;
     stats.vertices += data.vertexCount;
     stats.triangles += data.triangleCount;
     stats.geometries++;
     stats.bytesPerVertex = data.bytesPerVertex;
-    stats.bytes += data.kind === "quads" ?
-      quadMeshBytes(data) :
-      PulledChunkGeometry.byteLength(data);
+    stats.bytes += PulledChunkGeometry.byteLength(data);
   }
 }

@@ -22,7 +22,6 @@ function inspectorOf(
       hiddenVoxels: 0,
       faces: 0,
       culledFaces: 0,
-      mergedFaces: 0,
       vertices: 0,
       triangles: 0,
       facesPerSolidVoxel: 0,
@@ -62,19 +61,10 @@ describe("voxelMetrics", () => {
     assert.equal(sampleOf(metrics, "culledFaces"), 25);
   });
 
-  it("reports merged faces as a share of every emitted face", () => {
-    const metrics = voxelMetrics(
-      inspectorOf({ faces: 1, mergedFaces: 3 })
-    );
-
-    assert.equal(sampleOf(metrics, "mergedFaces"), 75);
-  });
-
   it("reports a zero share when nothing was built", () => {
     const metrics = voxelMetrics(inspectorOf({}));
 
     assert.equal(sampleOf(metrics, "culledFaces"), 0);
-    assert.equal(sampleOf(metrics, "mergedFaces"), 0);
   });
 
   it("reports mesh memory in bytes", () => {

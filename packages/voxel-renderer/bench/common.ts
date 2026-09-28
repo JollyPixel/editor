@@ -26,8 +26,7 @@ const kFrameMs = 1000 / 60;
  */
 export function createBenchEngine(
   chunkSize: number,
-  greedy = false,
-  meshWorkers?: MeshWorkerOptions
+  workers?: MeshWorkerOptions
 ): VoxelEngine {
   const engine = new VoxelEngine({
     chunkSize,
@@ -36,9 +35,12 @@ export function createBenchEngine(
       WATER_LAYER
     ],
     blocks: terrainBlocks(),
-    alphaTest: 0.5,
-    greedy,
-    meshWorkers
+    rendering: {
+      alphaTest: 0.5
+    },
+    meshing: {
+      workers
+    }
   });
   engine.loadTileset(
     {

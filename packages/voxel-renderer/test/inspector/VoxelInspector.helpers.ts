@@ -25,7 +25,7 @@ export function makeInspectorEngine(
   const engine = makeEngine({
     layers: ["Ground"],
     inspector,
-    rebuildBudgetMs: 0
+    meshing: { budgetMs: 0 }
   });
   for (let x = 0; x < voxels; x++) {
     placeCube(engine, "Ground", { x, y: 0, z: 0 });

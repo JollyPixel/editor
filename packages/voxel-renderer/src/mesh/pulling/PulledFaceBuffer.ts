@@ -1,8 +1,5 @@
 // Import Internal Dependencies
-import type {
-  FaceBuffer,
-  PulledMeshData
-} from "../types.ts";
+import type { PulledMeshData } from "../types.ts";
 import type { BlockVariantFace } from "../variants/types.ts";
 import {
   AO_UNOCCLUDED,
@@ -21,7 +18,7 @@ import {
 const kInitialFaces = 1024;
 const kVerticesPerFace = 4;
 
-export class PulledFaceBuffer implements FaceBuffer {
+export class PulledFaceBuffer {
   vertexCount = 0;
   triangleCount = 0;
 
@@ -116,7 +113,6 @@ export class PulledFaceBuffer implements FaceBuffer {
     words.set(this.#words.subarray(0, this.#faceCount * PULLED_FACE_WORDS));
 
     return {
-      kind: "pulled",
       words,
       faceCount: this.#faceCount,
       vertexCount: this.vertexCount,

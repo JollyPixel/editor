@@ -38,8 +38,8 @@ describe("VoxelEngine - shadows", () => {
   it("builds chunk meshes without shadows by default", () => {
     const engine = makeEngine();
 
-    assert.equal(engine.castShadow, false);
-    assert.equal(engine.receiveShadow, false);
+    assert.equal(engine.lighting.castShadow, false);
+    assert.equal(engine.lighting.receiveShadow, false);
     assert.ok(chunkMeshes(engine).length > 0);
     assert.deepEqual(
       new Set(shadowFlags(engine).flat()),
@@ -49,8 +49,10 @@ describe("VoxelEngine - shadows", () => {
 
   it("applies the constructor flags to built chunk meshes", () => {
     const engine = makeEngine({
-      castShadow: true,
-      receiveShadow: true
+      lighting: {
+        castShadow: true,
+        receiveShadow: true
+      }
     });
 
     assert.deepEqual(
@@ -62,18 +64,18 @@ describe("VoxelEngine - shadows", () => {
   it("updates built chunk meshes when assigned", () => {
     const engine = makeEngine();
 
-    engine.castShadow = true;
+    engine.lighting.castShadow = true;
     assert.ok(shadowFlags(engine).every(([cast, receive]) => cast && !receive));
 
-    engine.receiveShadow = true;
-    engine.castShadow = false;
+    engine.lighting.receiveShadow = true;
+    engine.lighting.castShadow = false;
     assert.ok(shadowFlags(engine).every(([cast, receive]) => !cast && receive));
   });
 
   it("applies the assigned flags to chunks built afterwards", () => {
     const engine = makeEngine();
-    engine.castShadow = true;
-    engine.receiveShadow = true;
+    engine.lighting.castShadow = true;
+    engine.lighting.receiveShadow = true;
 
     placeCube(engine, "Ground", { x: 40, y: 0, z: 0 });
     engine.tick(0);

@@ -10,6 +10,7 @@ import {
   TilesetManager
 } from "../../../src/tileset/index.ts";
 import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
+import type { BlockVariantFace } from "../../../src/mesh/variants/types.ts";
 import { VoxelTransform } from "../../../src/world/index.ts";
 import {
   FACE,
@@ -250,7 +251,7 @@ describe("BlockVariantCache - missing tileset", () => {
     assert.equal(variant.occlusionMask, kAllFaces);
     variant.faces.forEach((face, index) => {
       assert.equal(cache.geometryKeyAt(face.slot).tilesetId, MISSING_TILESET_ID);
-      assert.deepEqual(face.tileUvs, plain.faces[index].tileUvs);
+      assert.deepEqual(tileUvsOf(face), tileUvsOf(plain.faces[index]));
     });
   });
 
@@ -291,17 +292,18 @@ describe("BlockVariantCache - tile rotation", () => {
 
     assert.equal(rotated.faces.length, plain.faces.length);
     rotated.faces.forEach((face, index) => {
-      const source = plain.faces[index].tileUvs;
+      const source = tileUvsOf(plain.faces[index]);
+      const turned = tileUvsOf(face);
       for (let i = 0; i < face.vertexCount; i++) {
         assert.deepEqual(
-          [face.tileUvs[i * 2], face.tileUvs[(i * 2) + 1]],
+          [turned[i * 2], turned[(i * 2) + 1]],
           [source[(i * 2) + 1], 1 - source[i * 2]]
         );
       }
       assert.equal(
-        face.merge === null,
-        plain.faces[index].merge === null,
-        "a whole-tile face stays mergeable once rotated"
+        face.full,
+        plain.faces[index].full,
+        "a whole-tile face stays full once rotated"
       );
     });
   });
@@ -368,3 +370,17 @@ describe("BlockVariantCache - unknown faceTextures keys", () => {
     assert.deepEqual(warnings, []);
   });
 });
+
+function tileUvsOf(
+  face: BlockVariantFace
+): number[] {
+  const [offsetU, offsetV, scaleU, scaleV] = face.region;
+
+  return Array.from(face.uvs, (uv, i) => {
+    const tile = i % 2 === 0 ?
+      (uv - offsetU) / scaleU :
+      (uv - offsetV) / scaleV;
+
+    return Math.round(tile * 1000) / 1000;
+  });
+}

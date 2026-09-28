@@ -49,9 +49,7 @@ function build(
   world: SharedVoxelWorld,
   request: MeshBuildRequest
 ): void {
-  builder.greedy = request.greedy;
   builder.ambientOcclusion = request.ambientOcclusion;
-  builder.vertexPulling = request.vertexPulling;
 
   const knownTemplates = builder.faceTemplates.count;
   const members = world.load(request);
@@ -69,14 +67,7 @@ function build(
       },
       data
     });
-    if (data.kind === "quads") {
-      for (const { array } of data.attributes) {
-        transfer.push(array.buffer);
-      }
-    }
-    else {
-      transfer.push(data.words.buffer);
-    }
+    transfer.push(data.words.buffer);
   }
 
   scope.postMessage(

@@ -69,11 +69,13 @@ const engine = new VoxelEngine({
   chunkSize: 16,
   blocks: tileset.blocks,
   tilesets,
-  material: materialType,
-  alphaTest: materialState.alphaTest,
-  materialCustomizer: (material) => {
-    materials.add(material);
-    applyMaterialState(material);
+  rendering: {
+    material: materialType,
+    alphaTest: materialState.alphaTest,
+    customizer: (material) => {
+      materials.add(material);
+      applyMaterialState(material);
+    }
   }
 });
 
@@ -144,7 +146,6 @@ const alphaState = {
 };
 
 const debugState = {
-  greedy: engine.greedy,
   mode: engine.inspector.mode
 };
 
@@ -174,9 +175,6 @@ lightFolder
 
 const meshFolder = pane.addFolder({ title: "Mesh" });
 meshFolder
-  .addBinding(debugState, "greedy", { label: "greedy [M]" })
-  .on("change", ({ value }) => setGreedy(value));
-meshFolder
   .addBinding(debugState, "mode", {
     label: "debug [G]",
     options: { off: "off", overlay: "overlay", wireframe: "wireframe" }
@@ -186,9 +184,6 @@ meshFolder
 document.addEventListener("keydown", (event) => {
   if (event.code === "KeyG") {
     setDebugMode(engine.inspector.nextMode());
-  }
-  else if (event.code === "KeyM") {
-    setGreedy(!engine.greedy);
   }
 });
 
@@ -260,20 +255,6 @@ function updateLayer(
    */
   engine.flush();
   syncStats();
-}
-
-function setGreedy(
-  value: boolean
-): void {
-  if (engine.greedy === value) {
-    return;
-  }
-
-  engine.greedy = value;
-  engine.flush();
-  debugState.greedy = value;
-  syncStats();
-  pane.refresh();
 }
 
 function setDebugMode(

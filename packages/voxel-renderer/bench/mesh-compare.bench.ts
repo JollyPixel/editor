@@ -9,7 +9,7 @@ import {
 } from "./common.ts";
 
 /**
- * Naive vs greedy, with and without ambient occlusion, on one world, interleaved inside a single process.
+ * Meshing with and without ambient occlusion on one world, interleaved inside a single process.
  *
  * Separate process runs can drift heavily under thermal throttling. Alternating
  * variants on the same chunks cancels most machine drift; reporting min keeps
@@ -44,43 +44,14 @@ const shared = {
 };
 const variants = [
   {
-    name: "naive",
-    builder: new VoxelMeshBuilder({ ...shared, greedy: false }),
+    name: "plain",
+    builder: new VoxelMeshBuilder(shared),
     times: [] as number[]
   },
   {
-    name: "greedy",
-    builder: new VoxelMeshBuilder({ ...shared, greedy: true }),
-    times: [] as number[]
-  },
-  {
-    name: "naive+ao",
+    name: "ao",
     builder: new VoxelMeshBuilder({
       ...shared,
-      greedy: false,
-      ambientOcclusion: true
-    }),
-    times: [] as number[]
-  },
-  {
-    name: "greedy+ao",
-    builder: new VoxelMeshBuilder({
-      ...shared,
-      greedy: true,
-      ambientOcclusion: true
-    }),
-    times: [] as number[]
-  },
-  {
-    name: "pulled",
-    builder: new VoxelMeshBuilder({ ...shared, vertexPulling: true }),
-    times: [] as number[]
-  },
-  {
-    name: "pulled+ao",
-    builder: new VoxelMeshBuilder({
-      ...shared,
-      vertexPulling: true,
       ambientOcclusion: true
     }),
     times: [] as number[]
@@ -105,11 +76,8 @@ console.log(
   `chunk ${chunkSize}, ${rounds} rounds`
 );
 for (const { name, builder, times } of variants) {
-  const { triangles, vertices, bytesPerVertex } = meshAll(builder);
-  const indexBytes = builder.pullsVertices ?
-    0 :
-    (vertices / 4) * 6 * Uint32Array.BYTES_PER_ELEMENT;
-  const megabytes = ((vertices * bytesPerVertex) + indexBytes) / (1024 * 1024);
+  const { triangles, vertices, bytes } = meshAll(builder);
+  const megabytes = bytes / (1024 * 1024);
   console.log(
     [
       name,
@@ -117,7 +85,6 @@ for (const { name, builder, times } of variants) {
       `median ${median(times).toFixed(1)}ms`,
       `tris ${triangles.toLocaleString("en-US")}`,
       `verts ${vertices.toLocaleString("en-US")}`,
-      `${bytesPerVertex}B/vert`,
       `${megabytes.toFixed(1)}MB`
     ].join("  |  ")
   );
@@ -125,10 +92,10 @@ for (const { name, builder, times } of variants) {
 
 function meshAll(
   builder: VoxelMeshBuilder
-): { triangles: number; vertices: number; bytesPerVertex: number; } {
+): { triangles: number; vertices: number; bytes: number; } {
   let triangles = 0;
   let vertices = 0;
-  let bytesPerVertex = 0;
+  let bytes = 0;
 
   for (const { layer, chunk } of engine.world.getAllChunks()) {
     const geometries = builder.buildChunkGeometries([{ layer, chunk }]);
@@ -138,14 +105,14 @@ function meshAll(
 
     triangles += builder.stats.triangles;
     vertices += builder.stats.vertices;
-    bytesPerVertex = builder.stats.bytesPerVertex;
+    bytes += builder.stats.bytes;
     // Builder buffers are reused; dispose per-chunk geometries to avoid accumulation.
     for (const geometry of geometries.values()) {
       geometry.dispose();
     }
   }
 
-  return { triangles, vertices, bytesPerVertex };
+  return { triangles, vertices, bytes };
 }
 
 function median(

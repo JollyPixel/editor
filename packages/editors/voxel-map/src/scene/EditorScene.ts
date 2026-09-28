@@ -165,7 +165,9 @@ export class EditorScene extends Systems.Scene {
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
         document: session.map.voxels,
-        material: "lambert",
+        rendering: {
+          material: "lambert"
+        },
         tilesets: []
       });
 
@@ -173,7 +175,7 @@ export class EditorScene extends Systems.Scene {
       renderer: world.renderer.getSource(),
       scene,
       lighting,
-      chunks: engine
+      chunks: engine.lighting
     });
     environment.apply(state.view.settings);
     this.#environment = environment;

@@ -7,7 +7,6 @@ const kEpsilon = 1e-7;
 interface Vertex {
   position: number[];
   uv: number[];
-  tileUv: number[];
 }
 
 interface SplitBoundaryOptions {
@@ -75,9 +74,6 @@ function verticesOf(
       ),
       uv: Array.from(
         face.uvs.slice(vertexIndex * 2, vertexIndex * 2 + 2)
-      ),
-      tileUv: Array.from(
-        face.tileUvs.slice(vertexIndex * 2, vertexIndex * 2 + 2)
       )
     };
   });
@@ -138,11 +134,6 @@ function splitPolygon(
           start.uv,
           end.uv,
           fraction
-        ),
-        tileUv: interpolate(
-          start.tileUv,
-          end.tileUv,
-          fraction
         )
       };
       inside.push(intersection);
@@ -193,11 +184,6 @@ function triangulate(
       uvs: new Uint16Array(
         triangle.flatMap((vertex) => vertex.uv.map(Math.round))
       ),
-      tileUvs: new Float32Array(
-        triangle.flatMap((vertex) => vertex.tileUv)
-      ),
-      merge: null,
-      mergeId: -1,
       full: false,
       splittable: false
     });

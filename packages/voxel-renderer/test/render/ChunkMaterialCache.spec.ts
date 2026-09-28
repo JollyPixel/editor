@@ -21,7 +21,10 @@ import {
   makeAtlasDef,
   registerAtlas
 } from "../helpers/atlas.ts";
-import { readableTexture } from "../helpers/mockTexture.ts";
+import {
+  mockTexture,
+  readableTexture
+} from "../helpers/mockTexture.ts";
 
 // CONSTANTS
 const kBlend = new BlockSurface({ alphaMode: "blend" });
@@ -41,6 +44,7 @@ function makeCache(
 
   return new ChunkMaterialCache({
     tilesetManager,
+    faceTemplates: new FaceTemplateTable(),
     ...options
   });
 }
@@ -215,7 +219,10 @@ describe("ChunkMaterialCache — invalidate", () => {
     const tilesetManager = new TilesetManager();
     registerAtlas(tilesetManager);
     registerAtlas(tilesetManager, makeAtlasDef({ id: "other", src: "/other.png" }));
-    const cache = new ChunkMaterialCache({ tilesetManager });
+    const cache = new ChunkMaterialCache({
+      tilesetManager,
+      faceTemplates: new FaceTemplateTable()
+    });
     const kept = cache.resolve(keyOf("other"), 1);
 
     cache.invalidate("atlas");
@@ -242,6 +249,7 @@ describe("ChunkMaterialCache — tile averaging", () => {
     registerAtlas(tilesetManager, makeAtlasDef(), texture);
     const cache = new ChunkMaterialCache({
       tilesetManager,
+      faceTemplates: new FaceTemplateTable(),
       tileAveraging
     });
 
@@ -266,9 +274,17 @@ describe("ChunkMaterialCache — tile averaging", () => {
   });
 
   it("falls back to plain sampling when the atlas cannot be read", () => {
-    const material = makeCache().resolve(keyOf("atlas"), 1);
+    const tilesetManager = new TilesetManager();
+    const texture = mockTexture();
+    registerAtlas(tilesetManager, makeAtlasDef(), texture);
+    const cache = new ChunkMaterialCache({
+      tilesetManager,
+      faceTemplates: new FaceTemplateTable()
+    });
 
-    assert.ok(material.map);
+    const material = cache.resolve(keyOf("atlas"), 1);
+
+    assert.equal(AtlasAverages.peek(texture), undefined);
     assert.ok((material as { colorNode?: unknown; }).colorNode);
   });
 });
@@ -331,39 +347,17 @@ describe("ChunkMaterialCache — vertex pulling", () => {
     return (material as { positionNode?: unknown; }).positionNode ?? null;
   }
 
-  it("pulls vertices from the face templates when enabled", () => {
-    const cache = makeCache({
-      vertexPulling: true,
-      faceTemplates: new FaceTemplateTable()
-    });
+  it("pulls vertices from the face templates", () => {
+    const cache = makeCache();
 
     assert.notEqual(positionNodeOf(cache.resolve(keyOf("atlas"), 1)), null);
   });
 
   it("samples the atlas from its color node only", () => {
-    const cache = makeCache({
-      vertexPulling: true,
-      faceTemplates: new FaceTemplateTable()
-    });
+    const cache = makeCache();
     const material = cache.resolve(keyOf("atlas"), 1);
 
     assert.equal(material.map, null);
     assert.ok((material as { colorNode?: unknown; }).colorNode);
-  });
-
-  it("keeps attribute vertices while tile wrapping", () => {
-    const cache = makeCache({
-      vertexPulling: true,
-      tileWrapping: true,
-      faceTemplates: new FaceTemplateTable()
-    });
-
-    assert.equal(positionNodeOf(cache.resolve(keyOf("atlas"), 1)), null);
-  });
-
-  it("keeps attribute vertices without a template table", () => {
-    const cache = makeCache({ vertexPulling: true });
-
-    assert.equal(positionNodeOf(cache.resolve(keyOf("atlas"), 1)), null);
   });
 });

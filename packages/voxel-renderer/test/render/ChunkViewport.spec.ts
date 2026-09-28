@@ -3,10 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  ChunkViewport,
-  FULL_DETAIL
-} from "../../src/render/index.ts";
+import { ChunkViewport } from "../../src/render/index.ts";
 import { ViewDistance } from "../../src/world/index.ts";
 
 // CONSTANTS
@@ -165,10 +162,10 @@ describe("ChunkViewport — focus copy", () => {
   });
 });
 
-describe("ChunkViewport — detailOf", () => {
+describe("ChunkViewport — isFar", () => {
   function detailViewport(
     focus: { x: number; y: number; z: number; } | null,
-    distances: { farDistance?: number; lodDistance?: number; } = {}
+    distances: { farDistance?: number; } = {}
   ): ChunkViewport {
     return new ChunkViewport({
       focus,
@@ -179,50 +176,35 @@ describe("ChunkViewport — detailOf", () => {
     });
   }
 
-  it("keeps full detail without distances", () => {
+  it("keeps every chunk near without a far distance", () => {
     const viewport = detailViewport({ x: 2, y: 2, z: 2 });
 
     assert.equal(viewport.detailed, false);
-    assert.equal(viewport.detailOf(originOf(10)), FULL_DETAIL);
+    assert.equal(viewport.isFar(originOf(10)), false);
   });
 
-  it("keeps full detail without a focus", () => {
+  it("keeps every chunk near without a focus", () => {
     const viewport = detailViewport(null, { farDistance: 1 });
 
     assert.equal(viewport.detailed, false);
-    assert.equal(viewport.detailOf(originOf(10)), FULL_DETAIL);
+    assert.equal(viewport.isFar(originOf(10)), false);
   });
 
   it("flags chunks beyond farDistance", () => {
     const viewport = detailViewport({ x: 2, y: 2, z: 2 }, { farDistance: 6 });
 
-    assert.deepEqual(viewport.detailOf(originOf(1)), { far: false, lod: 0 });
-    assert.deepEqual(viewport.detailOf(originOf(2)), { far: true, lod: 0 });
+    assert.equal(viewport.isFar(originOf(1)), false);
+    assert.equal(viewport.isFar(originOf(2)), true);
   });
 
-  it("meshes chunks beyond lodDistance at the next level", () => {
-    const viewport = detailViewport({ x: 2, y: 2, z: 2 }, { lodDistance: 6 });
-
-    assert.deepEqual(viewport.detailOf(originOf(1)), { far: false, lod: 0 });
-    assert.deepEqual(viewport.detailOf(originOf(2)), { far: false, lod: 1 });
-  });
-
-  it("keeps a reduced chunk until it comes half a chunk closer", () => {
+  it("keeps a far chunk far until it comes half a chunk closer", () => {
     const viewport = detailViewport({ x: 2, y: 2, z: 2 }, { farDistance: 6 });
-    const reduced = { far: true, lod: 0 };
     const nearBorder = originOf(0, { x: 5, y: 0, z: 0 });
     const wellInside = originOf(0, { x: 3, y: 0, z: 0 });
 
-    assert.equal(viewport.detailOf(nearBorder), FULL_DETAIL);
-    assert.equal(viewport.detailOf(nearBorder, reduced), reduced);
-    assert.deepEqual(viewport.detailOf(wellInside, reduced), FULL_DETAIL);
-  });
-
-  it("returns the current detail object when nothing changed", () => {
-    const viewport = detailViewport({ x: 2, y: 2, z: 2 }, { farDistance: 6, lodDistance: 6 });
-    const current = { far: true, lod: 1 };
-
-    assert.equal(viewport.detailOf(originOf(3), current), current);
+    assert.equal(viewport.isFar(nearBorder), false);
+    assert.equal(viewport.isFar(nearBorder, true), true);
+    assert.equal(viewport.isFar(wellInside, true), false);
   });
 
   it("differs from a viewport with other detail distances", () => {
@@ -231,6 +213,5 @@ describe("ChunkViewport — detailOf", () => {
 
     assert.equal(viewport.differsFrom(detailViewport(focus, { farDistance: 6 })), false);
     assert.equal(viewport.differsFrom(detailViewport(focus, { farDistance: 8 })), true);
-    assert.equal(viewport.differsFrom(detailViewport(focus, { farDistance: 6, lodDistance: 8 })), true);
   });
 });

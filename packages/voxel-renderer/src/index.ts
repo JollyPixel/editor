@@ -2,6 +2,18 @@ export * from "./VoxelEngine.ts";
 export * from "./VoxelDocument.ts";
 export * from "./VoxelView.ts";
 export {
+  VoxelLighting,
+  VoxelRange,
+  VoxelRendering,
+  type MaterialCustomizerFn,
+  type TileMinification,
+  type ViewDistancePolicy,
+  type VoxelLightingOptions,
+  type VoxelMeshingOptions,
+  type VoxelRangeOptions,
+  type VoxelRenderingOptions
+} from "./settings/index.ts";
+export {
   VoxelTransparencyPassNode,
   voxelTransparencyPass
 } from "./render/VoxelTransparencyPassNode.ts";
@@ -27,11 +39,6 @@ export type {
   MeshWorkerScope
 } from "./mesh/workers/protocol.ts";
 export type { MeshWorkerOptions } from "./render/ChunkMeshWorkers.ts";
-export {
-  enableTileWrapping,
-  type TileWrappedMaterial
-} from "./mesh/tileWrapping.ts";
-
 export { FACE as Face } from "./utils/math.ts";
 
 export * from "./plugins/rapier/index.ts";

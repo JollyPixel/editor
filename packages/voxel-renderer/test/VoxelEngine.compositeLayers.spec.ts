@@ -9,6 +9,7 @@ import type * as THREE from "three";
 import type { VoxelEngine } from "../src/VoxelEngine.ts";
 import {
   chunkMeshes,
+  faceCountOf,
   makeEngine,
   placeCube
 } from "./helpers/engine.ts";
@@ -24,11 +25,11 @@ function meshKeys(
     .sort();
 }
 
-function trianglesOf(
+function facesOf(
   engine: VoxelEngine
 ): number {
   return chunkMeshes(engine).reduce(
-    (total, mesh) => total + (mesh.geometry.drawRange.count / 3),
+    (total, mesh) => total + faceCountOf(mesh),
     0
   );
 }
@@ -55,10 +56,10 @@ describe("VoxelEngine - composite layers", () => {
     engine.flush();
 
     assert.deepEqual(meshKeys(engine), ["cell:0,0,0"]);
-    assert.equal(trianglesOf(engine), 20);
+    assert.equal(facesOf(engine), 10);
   });
 
-  it("draws as many triangles as one layer holding every voxel", () => {
+  it("draws as many faces as one layer holding every voxel", () => {
     const layered = makeLayeredEngine();
     const single = makeEngine({ layers: ["Ground"] });
     placeCube(single, "Ground", { x: 0, y: 0, z: 0 });
@@ -67,7 +68,7 @@ describe("VoxelEngine - composite layers", () => {
     layered.flush();
     single.flush();
 
-    assert.equal(trianglesOf(layered), trianglesOf(single));
+    assert.equal(facesOf(layered), facesOf(single));
   });
 
   it("keeps a faded layer in its own mesh at the layer opacity", () => {
@@ -104,7 +105,7 @@ describe("VoxelEngine - composite layers", () => {
     engine.tick(0);
 
     assert.deepEqual(meshKeys(engine), ["cell:0,0,0"]);
-    assert.equal(trianglesOf(engine), 12);
+    assert.equal(facesOf(engine), 6);
   });
 
   it("removes the cell mesh once no layer draws in it", () => {
@@ -126,7 +127,7 @@ describe("VoxelEngine - composite layers", () => {
     engine.tick(0);
 
     assert.deepEqual(meshKeys(engine), ["cell:0,0,0", "cell:1,0,0"]);
-    assert.equal(trianglesOf(engine), 24);
+    assert.equal(facesOf(engine), 12);
   });
 
   it("hands a layer that fades over to its own mesh", () => {
@@ -151,7 +152,7 @@ describe("VoxelEngine - composite layers", () => {
     engine.tick(0);
 
     assert.deepEqual(meshKeys(engine), ["cell:0,0,0"]);
-    assert.equal(trianglesOf(engine), 12);
+    assert.equal(facesOf(engine), 6);
   });
 
   it("rebuilds the cell without a removed layer", () => {
@@ -162,6 +163,6 @@ describe("VoxelEngine - composite layers", () => {
     engine.tick(0);
 
     assert.deepEqual(meshKeys(engine), ["cell:0,0,0"]);
-    assert.equal(trianglesOf(engine), 12);
+    assert.equal(facesOf(engine), 6);
   });
 });

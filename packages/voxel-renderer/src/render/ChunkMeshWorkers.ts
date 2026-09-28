@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import type * as THREE from "three";
-
 // Import Internal Dependencies
 import { BlockSurface } from "../blocks/BlockSurface.ts";
 import {
@@ -8,6 +5,7 @@ import {
   MeshBuildStats,
   PULLED_FACE_WORDS,
   PULLED_TEMPLATE_BITS,
+  type PulledChunkGeometry,
   type PulledMeshData,
   type VoxelMeshBuilder
 } from "../mesh/index.ts";
@@ -58,7 +56,7 @@ export type ChunkMeshWorkersOptions = MeshWorkerOptions & ChunkMeshWorkersContex
 export interface BuiltChunkMesh {
   kind: "built";
   plan: ChunkRebuildPlan;
-  geometries: Map<ChunkGeometryKey, THREE.BufferGeometry>;
+  geometries: Map<ChunkGeometryKey, PulledChunkGeometry>;
   stats: MeshBuildStats;
 }
 
@@ -330,9 +328,7 @@ export class ChunkMeshWorkers {
       type: "build",
       id: job.id,
       chunkSize,
-      greedy: meshBuilder.greedy,
       ambientOcclusion: meshBuilder.ambientOcclusion,
-      vertexPulling: meshBuilder.vertexPulling,
       layers,
       members: members.map(({ layer, chunk }) => {
         return {
@@ -461,11 +457,9 @@ export class ChunkMeshWorkers {
   ): BuiltChunkMesh {
     const { meshBuilder } = this.#options;
     const { plan, slot } = job;
-    const geometries = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
+    const geometries = new Map<ChunkGeometryKey, PulledChunkGeometry>();
     for (const { tilesetId, surface, data } of response.geometries) {
-      if (data.kind === "pulled") {
-        remapTemplates(data, slot.templateIds);
-      }
+      remapTemplates(data, slot.templateIds);
       geometries.set(
         new ChunkGeometryKey(tilesetId, new BlockSurface(surface)),
         meshBuilder.createGeometry(data)

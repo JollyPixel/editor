@@ -34,7 +34,6 @@ interface PairCase {
   name: string;
   leaves: Partial<BlockDefinition>;
   row: number[];
-  greedy?: boolean;
   vertices: number;
   culledFaces: number;
 }
@@ -76,14 +75,6 @@ const kPairCases: PairCase[] = [
     culledFaces: 0
   },
   {
-    name: "a blended block keeps covered faces under the greedy mesher",
-    leaves: { ...kBlend, cullCoveredFaces: false },
-    row: [kLeavesId, kLeavesId],
-    greedy: true,
-    vertices: 32,
-    culledFaces: 0
-  },
-  {
     name: "a blended run keeps the boundary on both sides of its middle",
     leaves: { ...kBlend, cullCoveredFaces: false },
     row: [kLeavesId, kLeavesId, kLeavesId],
@@ -114,10 +105,9 @@ const kPairCases: PairCase[] = [
 ];
 
 function makeFixture(
-  leaves: Partial<BlockDefinition>,
-  greedy = false
+  leaves: Partial<BlockDefinition>
 ): MeshFixture {
-  const fixture = makeMeshFixture({ greedy });
+  const fixture = makeMeshFixture();
   fixture.blockRegistry.register(makeBlockDef(kLeavesId, "cube", leaves));
   fixture.blockRegistry.register(
     makeBlockDef(kGrateId, "cube", { ...kBlend, cullCoveredFaces: true })
@@ -127,9 +117,9 @@ function makeFixture(
 }
 
 describe("VoxelMeshBuilder - block transparency and covered faces", () => {
-  for (const { name, leaves, row, greedy, vertices, culledFaces } of kPairCases) {
+  for (const { name, leaves, row, vertices, culledFaces } of kPairCases) {
     it(name, () => {
-      const fixture = makeFixture(leaves, greedy);
+      const fixture = makeFixture(leaves);
       row.forEach((blockId, x) => place(fixture, [x, 0, 0], blockId));
 
       assert.equal(countChunkVertices(fixture), vertices);
@@ -137,15 +127,13 @@ describe("VoxelMeshBuilder - block transparency and covered faces", () => {
     });
   }
 
-  for (const greedy of [false, true]) {
-    it(`splits blended faces into a cutout geometry (greedy=${greedy})`, () => {
-      const fixture = makeFixture({ ...kBlend, cullCoveredFaces: false }, greedy);
-      place(fixture, [0, 0, 0]);
-      place(fixture, [1, 0, 0], kLeavesId);
+  it("splits blended faces into a cutout geometry", () => {
+    const fixture = makeFixture({ ...kBlend, cullCoveredFaces: false });
+    place(fixture, [0, 0, 0]);
+    place(fixture, [1, 0, 0], kLeavesId);
 
-      assert.deepEqual(geometryAlphaModes(fixture), ["opaque", "blend"]);
-    });
-  }
+    assert.deepEqual(geometryAlphaModes(fixture), ["opaque", "blend"]);
+  });
 
   it("emits a single geometry when no block is transparent", () => {
     const fixture = makeFixture({ alphaMode: "opaque" });
@@ -262,19 +250,17 @@ describe("VoxelMeshBuilder - partial boundary faces", () => {
     ["a blended ramp does not cull an opaque triangle", [kRampId], [kGlassRampId], 0]
   ];
 
-  for (const greedy of [false, true]) {
-    for (const [name, left, right, culledFaces] of kPartialCases) {
-      it(`${name} (greedy=${greedy})`, () => {
-        const fixture = makeMeshFixture({ greedy });
-        fixture.blockRegistry.register(makeBlockDef(kGlassRampId, "ramp", kBlend));
-        place(fixture, [0, 0, 0], left[0], new VoxelTransform(left[1]).packed);
-        place(fixture, [1, 0, 0], right[0], new VoxelTransform(right[1]).packed);
+  for (const [name, left, right, culledFaces] of kPartialCases) {
+    it(name, () => {
+      const fixture = makeMeshFixture();
+      fixture.blockRegistry.register(makeBlockDef(kGlassRampId, "ramp", kBlend));
+      place(fixture, [0, 0, 0], left[0], new VoxelTransform(left[1]).packed);
+      place(fixture, [1, 0, 0], right[0], new VoxelTransform(right[1]).packed);
 
-        buildGeometries(fixture);
+      buildGeometries(fixture);
 
-        assert.equal(fixture.builder.stats.culledFaces, culledFaces);
-      });
-    }
+      assert.equal(fixture.builder.stats.culledFaces, culledFaces);
+    });
   }
 
   it("culls a flipped stair like the rotation it mirrors", () => {

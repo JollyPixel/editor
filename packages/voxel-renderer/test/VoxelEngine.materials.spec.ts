@@ -119,17 +119,19 @@ describe("VoxelEngine - material groups", () => {
     groups: Array<string | undefined>
   ): VoxelEngine {
     const engine = meshedGround({}, {
-      material: "standard",
       blocks: [
         makeBlockDef(kCubeId, "cube"),
         makeBlockDef(kGoldId, "cube", { materialGroup: groups[1] })
       ],
-      materialCustomizer(material, _tilesetId, surface) {
-        if (
-          material instanceof THREE.MeshStandardMaterial &&
-          surface.materialGroup === "gold"
-        ) {
-          material.metalness = 1;
+      rendering: {
+        material: "standard",
+        customizer(material, _tilesetId, surface) {
+          if (
+            material instanceof THREE.MeshStandardMaterial &&
+            surface.materialGroup === "gold"
+          ) {
+            material.metalness = 1;
+          }
         }
       }
     });
@@ -223,13 +225,13 @@ describe("VoxelEngine - document material group finishes", () => {
 
 describe("VoxelEngine - tile minification", () => {
   it("fades distant tiles to their average colour by default", () => {
-    assert.equal(meshedGround().tileMinification, "average");
+    assert.equal(meshedGround().rendering.tileMinification, "average");
   });
 
   it("honours the constructor option", () => {
-    const engine = meshedGround({}, { tileMinification: "nearest" });
+    const engine = meshedGround({}, { rendering: { tileMinification: "nearest" } });
 
-    assert.equal(engine.tileMinification, "nearest");
+    assert.equal(engine.rendering.tileMinification, "nearest");
   });
 
   it("replaces chunk materials when switched", () => {
@@ -237,10 +239,10 @@ describe("VoxelEngine - tile minification", () => {
     engine.flush();
     const [before] = materialsOf(engine);
 
-    engine.tileMinification = "nearest";
+    engine.rendering.tileMinification = "nearest";
     engine.flush();
 
-    assert.equal(engine.tileMinification, "nearest");
+    assert.equal(engine.rendering.tileMinification, "nearest");
     assert.notEqual(materialsOf(engine)[0], before);
   });
 });

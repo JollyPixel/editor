@@ -6,9 +6,9 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
+import type {
   VoxelEngine,
-  type VoxelEngineOptions
+  VoxelEngineOptions
 } from "../src/VoxelEngine.ts";
 import {
   PulledChunkGeometry,
@@ -28,8 +28,7 @@ function makePulledEngine(
 ): VoxelEngine {
   const engine = makeEngine({
     layers: ["Ground"],
-    rebuildBudgetMs: 0,
-    vertexPulling: true,
+    meshing: { budgetMs: 0 },
     ...options
   });
   placeCube(engine, "Ground", { x: 1, y: 0, z: 1 });
@@ -45,12 +44,8 @@ function positionNodeOf(
   return (mesh.material as { positionNode?: unknown; }).positionNode ?? null;
 }
 
-describe("VoxelEngine - vertex pulling", () => {
-  it("is off by default", () => {
-    assert.equal(new VoxelEngine().vertexPulling, false);
-  });
-
-  it("draws pulled chunk meshes whose material pulls the vertices", () => {
+describe("VoxelEngine - pulled chunk meshes", () => {
+  it("draws every chunk as a pulled mesh whose material pulls the vertices", () => {
     const engine = makePulledEngine();
     const meshes = chunkMeshes(engine);
 
@@ -59,49 +54,6 @@ describe("VoxelEngine - vertex pulling", () => {
       assert.ok(mesh instanceof PulledChunkMesh);
       assert.ok(positionNodeOf(mesh) !== null);
     }
-  });
-
-  it("switches meshes and materials back and forth at runtime", () => {
-    const engine = makePulledEngine();
-    const pulled = chunkMeshes(engine)[0].material;
-
-    engine.vertexPulling = false;
-    engine.tick(0);
-    const [classic] = chunkMeshes(engine);
-    assert.equal(engine.vertexPulling, false);
-    assert.equal(classic instanceof PulledChunkMesh, false);
-    assert.equal(positionNodeOf(classic), null);
-    assert.notEqual(classic.material, pulled);
-
-    engine.vertexPulling = true;
-    engine.tick(0);
-    assert.ok(chunkMeshes(engine)[0] instanceof PulledChunkMesh);
-  });
-
-  it("gives way to greedy meshing", () => {
-    const engine = makePulledEngine({ greedy: true });
-
-    for (const mesh of chunkMeshes(engine)) {
-      assert.equal(mesh instanceof PulledChunkMesh, false);
-      assert.equal(positionNodeOf(mesh), null);
-    }
-
-    engine.greedy = false;
-    engine.tick(0);
-    assert.ok(chunkMeshes(engine)[0] instanceof PulledChunkMesh);
-  });
-
-  it("raycasts the engine root like classic chunk meshes", () => {
-    const ray = new THREE.Raycaster(
-      new THREE.Vector3(2.5, 5, 1.5),
-      new THREE.Vector3(0, -1, 0)
-    );
-
-    const [hit] = ray.intersectObject(makePulledEngine().root, true);
-
-    assert.equal(hit.point.y, 1);
-    assert.deepEqual(hit.normal?.toArray(), [0, 1, 0]);
-    assert.ok(hit.object instanceof PulledChunkMesh);
   });
 
   it("hands colliders indexed positions relative to the chunk origin", () => {
@@ -136,26 +88,16 @@ describe("VoxelEngine - vertex pulling", () => {
     assert.equal(disposed, true);
   });
 
-  it("shares one face template table with coarse chunks", () => {
-    const engine = makeEngine({
-      layers: ["Ground"],
-      rebuildBudgetMs: 0,
-      vertexPulling: true,
-      lodDistance: 10
-    });
-    for (const x of [0, 3 * CHUNK_SIZE]) {
-      for (let dx = 0; dx < 2; dx++) {
-        placeCube(engine, "Ground", { x: x + dx, y: 0, z: 0 });
-      }
-    }
-    engine.focus = { x: 2, y: 2, z: 2 };
+  it("shares one face template table and material across chunks", () => {
+    const engine = makePulledEngine();
+    placeCube(engine, "Ground", { x: 3 * CHUNK_SIZE, y: 0, z: 0 });
     engine.flush();
 
     const [near, far] = [...chunkMeshes(engine)]
       .sort((a, b) => a.position.x - b.position.x);
     assert.ok(near.geometry instanceof PulledChunkGeometry);
     assert.ok(far.geometry instanceof PulledChunkGeometry);
-    assert.equal(far.scale.x, 2);
+    assert.notEqual(near.geometry, far.geometry);
     assert.equal(near.geometry.templates, far.geometry.templates);
     assert.equal(near.material, far.material);
   });

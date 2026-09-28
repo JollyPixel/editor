@@ -32,10 +32,7 @@ import {
   FACE_OPPOSITE
 } from "../../utils/math.ts";
 import { splitBoundaryFace } from "../neighbourhood/splitBoundaryFace.ts";
-import {
-  describeMerge,
-  indexMergeFaces
-} from "./faceMerge.ts";
+import { isFullQuad } from "./fullQuad.ts";
 import {
   transformFace,
   rotateVertex,
@@ -108,8 +105,6 @@ export class BlockVariantCache {
     BlockVariantFace,
     WeakMap<BlockVariant, boolean>
   >();
-  #mergeIds = new Map<string, number>();
-  #mergeFaces: BlockVariantFace[] = [];
 
   /**
    * Flat occlusion cache indexed by block and transform.
@@ -151,8 +146,6 @@ export class BlockVariantCache {
     this.#geometryKeys.length = 0;
     this.#frontFaces = new WeakMap();
     this.#faceCoverage = new WeakMap();
-    this.#mergeIds.clear();
-    this.#mergeFaces.length = 0;
     this.#occlusion.fill(kOcclusionUnknown);
   }
 
@@ -248,45 +241,6 @@ export class BlockVariantCache {
       ...key.surface,
       side: "front"
     }));
-  }
-
-  mergeFaceOf(
-    mergeId: number
-  ): BlockVariantFace {
-    return this.#mergeFaces[mergeId];
-  }
-
-  #mergeIdOf(
-    face: BlockVariantFace
-  ): number {
-    const { axis, uAxis, vAxis } = face.merge!;
-    const { positions, tileUvs, region } = face;
-    const corners = new Array<number>(8);
-    for (let i = 0; i < 4; i++) {
-      const corner = (positions[(i * 3) + vAxis] << 1) |
-        positions[(i * 3) + uAxis];
-      corners[corner * 2] = tileUvs[i * 2];
-      corners[(corner * 2) + 1] = tileUvs[(i * 2) + 1];
-    }
-
-    const key = [
-      face.slot,
-      face.cull,
-      axis,
-      face.normalX,
-      face.normalY,
-      face.normalZ,
-      ...region,
-      ...corners
-    ].join(",");
-
-    let mergeId = this.#mergeIds.get(key);
-    if (mergeId === undefined) {
-      mergeId = this.#mergeFaces.push(face) - 1;
-      this.#mergeIds.set(key, mergeId);
-    }
-
-    return mergeId;
   }
 
   frontFaceOf(
@@ -434,12 +388,6 @@ export class BlockVariantCache {
     const selfOcclusionMask = pending ?
       0 :
       this.#occlusionMask(shape, voxelTransform);
-    const mergeFaces = indexMergeFaces(faces);
-    for (const face of mergeFaces) {
-      if (face !== undefined) {
-        face.mergeId = this.#mergeIdOf(face);
-      }
-    }
 
     return {
       blockId,
@@ -447,14 +395,7 @@ export class BlockVariantCache {
       occlusionMask: surface.occludes ? selfOcclusionMask : 0,
       selfOcclusionMask,
       keepsCoveredFaces: !cullsCoveredFaces(blockDef),
-      surface,
-      mergeFaces,
-      sweepIndex: 0,
-      /*
-       * No mesher epoch is ever negative, so a freshly compiled variant always
-       * reads as "not yet seen in this chunk".
-       */
-      sweepEpoch: -1
+      surface
     };
   }
 
@@ -518,7 +459,6 @@ export class BlockVariantCache {
       faceDef.normal,
       voxelTransform
     );
-    const merge = describeMerge(cull, positions, tileUvs);
 
     return {
       cull,
@@ -527,16 +467,13 @@ export class BlockVariantCache {
       indexCount: vertexCount === 4 ? 6 : 3,
       positions,
       uvs,
-      tileUvs,
       region: new Uint16Array([
         toUnorm16(Math.fround(uvRegion.offsetU)),
         toUnorm16(Math.fround(uvRegion.offsetV)),
         toUnorm16(Math.fround(uvRegion.scaleU)),
         toUnorm16(Math.fround(uvRegion.scaleV))
       ]),
-      merge,
-      mergeId: -1,
-      full: merge !== null,
+      full: isFullQuad(cull, positions, tileUvs),
       splittable: cull >= 0 && surface.side !== "front",
       normalX: toSnorm8(normal[0]),
       normalY: toSnorm8(normal[1]),

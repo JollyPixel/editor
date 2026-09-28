@@ -68,7 +68,6 @@ const kFog = {
 const kFogDensityScale = 0.001;
 const kDefaultViewChunks = 8;
 const kFarChunks = 14;
-const kLodChunks = 20;
 const kMaxDetailChunks = 40;
 
 interface WorldSettings {
@@ -126,29 +125,34 @@ const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
     focus: flyCamera.actor.object3D,
-    greedy: false,
-    vertexPulling: true,
     chunkSize: settings.chunkSize,
     layers: [kTerrainLayer],
     blocks: tileset.blocks,
-    material: "lambert",
-    alphaTest: 0.5,
-    ambientOcclusion: kAmbientOcclusion,
-    castShadow: true,
-    receiveShadow: true,
-    viewDistance: kDefaultViewChunks,
-    farDistance: kFarChunks * settings.chunkSize,
-    lodDistance: kLodChunks * settings.chunkSize,
     tilesets,
-    meshWorkers: settings.workers > 0 ?
-      {
-        count: settings.workers,
-        createWorker: () => new Worker(
-          new URL("./noise-world/meshWorker.ts", import.meta.url),
-          { type: "module" }
-        )
-      } :
-      undefined
+    rendering: {
+      material: "lambert",
+      alphaTest: 0.5
+    },
+    lighting: {
+      ambientOcclusion: kAmbientOcclusion,
+      castShadow: true,
+      receiveShadow: true
+    },
+    range: {
+      viewDistance: kDefaultViewChunks,
+      farDistance: kFarChunks
+    },
+    meshing: {
+      workers: settings.workers > 0 ?
+        {
+          count: settings.workers,
+          createWorker: () => new Worker(
+            new URL("./noise-world/meshWorker.ts", import.meta.url),
+            { type: "module" }
+          )
+        } :
+        undefined
+    }
   });
 
 const { engine } = voxelMap;
@@ -174,20 +178,17 @@ const viewStats = {
 };
 const view = {
   distance: kDefaultViewChunks,
-  policy: engine.viewDistancePolicy,
-  far: kFarChunks,
-  lod: kLodChunks
+  policy: engine.range.policy,
+  far: kFarChunks
 };
 const controls = {
   seed: settings.seed,
-  greedy: engine.greedy,
-  vertexPulling: engine.vertexPulling,
-  minification: engine.tileMinification,
+  minification: engine.rendering.tileMinification,
   debug: engine.inspector.mode,
   chunkBounds: engine.inspector.chunkBounds,
   ambientOcclusion: true,
   shadows: daylight.shadows,
-  alphaToCoverage: engine.alphaToCoverage,
+  alphaToCoverage: engine.rendering.alphaToCoverage,
   traa: true
 };
 const traaPipeline = temporalAntialiasing();
@@ -229,15 +230,7 @@ viewFolder
     max: kMaxDetailChunks,
     step: 1
   })
-  .on("change", () => applyDetailDistances());
-viewFolder
-  .addBinding(view, "lod", {
-    label: "half resolution",
-    min: 0,
-    max: kMaxDetailChunks,
-    step: 1
-  })
-  .on("change", () => applyDetailDistances());
+  .on("change", () => applyFarDistance());
 viewFolder.addMonitor(viewStats, "drawn", { label: "drawn chunks" });
 applyViewDistance();
 
@@ -283,12 +276,6 @@ controlsFolder
   .addButton({ title: "Rebuild [R]" })
   .on("click", () => rebuild(controls.seed));
 controlsFolder
-  .addBinding(controls, "greedy", { label: "greedy [M]" })
-  .on("change", ({ value }) => setGreedy(value));
-controlsFolder
-  .addBinding(controls, "vertexPulling", { label: "vertex pulling [P]" })
-  .on("change", ({ value }) => setVertexPulling(value));
-controlsFolder
   .addBinding(controls, "minification", {
     options: {
       average: "average",
@@ -297,7 +284,7 @@ controlsFolder
     label: "far tiles [N]"
   })
   .on("change", ({ value }) => {
-    engine.tileMinification = value;
+    engine.rendering.tileMinification = value;
   });
 controlsFolder
   .addBinding(controls, "debug", {
@@ -317,19 +304,19 @@ controlsFolder
 controlsFolder
   .addBinding(controls, "ambientOcclusion", { label: "ambient occlusion" })
   .on("change", ({ value }) => {
-    engine.ambientOcclusion = value ? kAmbientOcclusion : 0;
+    engine.lighting.ambientOcclusion = value ? kAmbientOcclusion : 0;
   });
 controlsFolder
   .addBinding(controls, "shadows", { label: "shadows" })
   .on("change", ({ value }) => {
     daylight.shadows = value;
-    engine.castShadow = value;
-    engine.receiveShadow = value;
+    engine.lighting.castShadow = value;
+    engine.lighting.receiveShadow = value;
   });
 controlsFolder
   .addBinding(controls, "alphaToCoverage", { label: "alpha to coverage" })
   .on("change", ({ value }) => {
-    engine.alphaToCoverage = value;
+    engine.rendering.alphaToCoverage = value;
   });
 controlsFolder
   .addBinding(controls, "traa", { label: "TRAA [T]" })
@@ -366,20 +353,8 @@ document.addEventListener("keydown", (event) => {
     controls.minification = controls.minification === "average" ?
       "nearest" :
       "average";
-    engine.tileMinification = controls.minification;
+    engine.rendering.tileMinification = controls.minification;
     pane.refresh();
-
-    return;
-  }
-
-  if (event.code === "KeyM") {
-    setGreedy(!engine.greedy);
-
-    return;
-  }
-
-  if (event.code === "KeyP") {
-    setVertexPulling(!engine.vertexPulling);
 
     return;
   }
@@ -398,38 +373,6 @@ function rebuild(
 
   resetLayer(engine);
   report = buildWorld(engine, settings);
-  syncStats();
-  pane.refresh();
-}
-
-function setGreedy(
-  value: boolean
-): void {
-  if (engine.greedy === value) {
-    return;
-  }
-
-  engine.greedy = value;
-  engine.tick(0);
-
-  controls.greedy = value;
-  console.log(`[noise-world] greedy meshing: ${value}`);
-  syncStats();
-  pane.refresh();
-}
-
-function setVertexPulling(
-  value: boolean
-): void {
-  if (engine.vertexPulling === value) {
-    return;
-  }
-
-  engine.vertexPulling = value;
-  engine.tick(0);
-
-  controls.vertexPulling = value;
-  console.log(`[noise-world] vertex pulling: ${value}`);
   syncStats();
   pane.refresh();
 }
@@ -455,23 +398,20 @@ function setTemporalAntialiasing(
   console.log(`[noise-world] TRAA: ${value}`);
 }
 
-function applyDetailDistances(): void {
-  const { far, lod } = view;
+function applyFarDistance(): void {
+  const { far } = view;
 
-  engine.farDistance = far === 0 ? Infinity : far * settings.chunkSize;
-  engine.lodDistance = lod === 0 ? Infinity : lod * settings.chunkSize;
-  console.log(
-    `[noise-world] flat tiles: ${far || "never"}, half resolution: ${lod || "never"}`
-  );
+  engine.range.farDistance = far === 0 ? Infinity : far;
+  console.log(`[noise-world] flat tiles: ${far || "never"}`);
 }
 
 function applyViewDistance(): void {
   const { distance, policy } = view;
 
-  engine.viewDistance = distance === 0 ?
+  engine.range.viewDistance = distance === 0 ?
     ViewDistance.Unlimited :
     new ViewDistance({ chunks: distance });
-  engine.viewDistancePolicy = policy;
+  engine.range.policy = policy;
 
   if (distance === 0) {
     daylight.fog.unveil();

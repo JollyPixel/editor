@@ -33,12 +33,14 @@ import type {
   TilesetDefinition,
   TilesetTexture
 } from "./tileset/types.ts";
-import type { ViewDistance } from "./world/ViewDistance.ts";
 import type { VoxelWorld } from "./world/VoxelWorld.ts";
+import type {
+  VoxelLighting,
+  VoxelRange,
+  VoxelRendering
+} from "./settings/index.ts";
 import {
   VoxelView,
-  type TileMinification,
-  type ViewDistancePolicy,
   type VoxelViewLoadOptions,
   type VoxelViewOptions
 } from "./VoxelView.ts";
@@ -148,106 +150,16 @@ export class VoxelEngine extends Emitter<VoxelEngineEvents> {
     this.view.focus = focus;
   }
 
-  get viewDistance(): ViewDistance {
-    return this.view.viewDistance;
+  get range(): VoxelRange {
+    return this.view.range;
   }
 
-  set viewDistance(viewDistance: ViewDistance) {
-    this.view.viewDistance = viewDistance;
+  get lighting(): VoxelLighting {
+    return this.view.lighting;
   }
 
-  get viewDistancePolicy(): ViewDistancePolicy {
-    return this.view.viewDistancePolicy;
-  }
-
-  set viewDistancePolicy(policy: ViewDistancePolicy) {
-    this.view.viewDistancePolicy = policy;
-  }
-
-  get greedy(): boolean {
-    return this.view.greedy;
-  }
-
-  set greedy(value: boolean) {
-    this.view.greedy = value;
-  }
-
-  get vertexPulling(): boolean {
-    return this.view.vertexPulling;
-  }
-
-  set vertexPulling(value: boolean) {
-    this.view.vertexPulling = value;
-  }
-
-  get farDistance(): number {
-    return this.view.farDistance;
-  }
-
-  set farDistance(
-    value: number
-  ) {
-    this.view.farDistance = value;
-  }
-
-  get lodDistance(): number {
-    return this.view.lodDistance;
-  }
-
-  set lodDistance(
-    value: number
-  ) {
-    this.view.lodDistance = value;
-  }
-
-  get alphaToCoverage(): boolean {
-    return this.view.alphaToCoverage;
-  }
-
-  set alphaToCoverage(
-    value: boolean
-  ) {
-    this.view.alphaToCoverage = value;
-  }
-
-  get tileMinification(): TileMinification {
-    return this.view.tileMinification;
-  }
-
-  set tileMinification(
-    value: TileMinification
-  ) {
-    this.view.tileMinification = value;
-  }
-
-  get ambientOcclusion(): number {
-    return this.view.ambientOcclusion;
-  }
-
-  set ambientOcclusion(
-    value: number
-  ) {
-    this.view.ambientOcclusion = value;
-  }
-
-  get castShadow(): boolean {
-    return this.view.castShadow;
-  }
-
-  set castShadow(
-    value: boolean
-  ) {
-    this.view.castShadow = value;
-  }
-
-  get receiveShadow(): boolean {
-    return this.view.receiveShadow;
-  }
-
-  set receiveShadow(
-    value: boolean
-  ) {
-    this.view.receiveShadow = value;
+  get rendering(): VoxelRendering {
+    return this.view.rendering;
   }
 
   get pendingRebuilds(): number {

@@ -13,9 +13,9 @@ import {
   AO_UNOCCLUDED
 } from "../../src/mesh/ambientOcclusion.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
+import { expandPulled } from "../helpers/pulledFaces.ts";
 import {
   buildChunk,
-  fillBox,
   makeMeshFixture,
   place,
   type MeshFixture,
@@ -27,7 +27,6 @@ const kCutoutId = 6;
 const kSlabId = 7;
 const kLit = 127;
 const kOneSide = 85;
-const kTwoLevelsDown = 42;
 const kUp: Vec3Tuple = [0, 127, 0];
 const kPosX: Vec3Tuple = [127, 0, 0];
 
@@ -37,10 +36,9 @@ interface ShadedVertex {
 }
 
 function makeFixture(
-  greedy: boolean,
   ambientOcclusion = true
 ): MeshFixture {
-  const fixture = makeMeshFixture({ greedy, ambientOcclusion });
+  const fixture = makeMeshFixture({ ambientOcclusion });
   fixture.blockRegistry.register(
     makeBlockDef(kCutoutId, "cube", {
       alphaMode: "mask",
@@ -56,7 +54,7 @@ function geometriesOf(
   fixture: MeshFixture,
   chunk: Vec3Tuple = [0, 0, 0]
 ): THREE.BufferGeometry[] {
-  return [...buildChunk(fixture, chunk).values()];
+  return [...buildChunk(fixture, chunk).values()].map(expandPulled);
 }
 
 function shadedVertices(
@@ -102,15 +100,6 @@ function shadesAt(
   return [...new Set(shades)];
 }
 
-function upFacingQuadsAt(
-  geometries: THREE.BufferGeometry[],
-  y: number
-): number {
-  return shadedVertices(geometries, kUp)
-    .filter(({ position }) => position[1] === y)
-    .length / 4;
-}
-
 describe("ambient occlusion corner rule", () => {
   it("drops one level per occluder and darkens fully between two sides", () => {
     assert.equal(aoCornerLevel(false, false, false), 3);
@@ -132,127 +121,96 @@ describe("ambient occlusion corner rule", () => {
   });
 });
 
-for (const greedy of [false, true]) {
-  describe(`ambient occlusion baking (${greedy ? "greedy" : "naive"})`, () => {
-    it("leaves every vertex lit when disabled", () => {
-      const fixture = makeFixture(greedy, false);
-      place(fixture, [1, 0, 1]);
-      place(fixture, [2, 1, 1]);
-      place(fixture, [1, 1, 2]);
+describe("ambient occlusion baking", () => {
+  it("leaves every vertex lit when disabled", () => {
+    const fixture = makeFixture(false);
+    place(fixture, [1, 0, 1]);
+    place(fixture, [2, 1, 1]);
+    place(fixture, [1, 1, 2]);
 
-      const shades = shadedVertices(geometriesOf(fixture), kUp);
+    const shades = shadedVertices(geometriesOf(fixture), kUp);
 
-      assert.deepEqual([...new Set(shades.map(({ shade }) => shade))], [kLit]);
-    });
-
-    it("darkens the corners beside one occluding side", () => {
-      const fixture = makeFixture(greedy);
-      place(fixture, [1, 0, 1]);
-      place(fixture, [2, 1, 1]);
-
-      const top = shadedVertices(geometriesOf(fixture), kUp);
-
-      assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
-      assert.deepEqual(shadesAt(top, [2, 1, 2]), [kOneSide]);
-      assert.deepEqual(shadesAt(top, [1, 1, 1]), [kLit]);
-      assert.deepEqual(shadesAt(top, [1, 1, 2]), [kLit]);
-    });
-
-    it("turns a corner black between two occluding sides", () => {
-      const fixture = makeFixture(greedy);
-      place(fixture, [1, 0, 1]);
-      place(fixture, [2, 1, 1]);
-      place(fixture, [1, 1, 2]);
-
-      const top = shadedVertices(geometriesOf(fixture), kUp);
-
-      assert.deepEqual(shadesAt(top, [2, 1, 2]), [0]);
-      assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
-      assert.deepEqual(shadesAt(top, [1, 1, 2]), [kOneSide]);
-      assert.deepEqual(shadesAt(top, [1, 1, 1]), [kLit]);
-    });
-
-    it("casts nothing from a cutout block", () => {
-      const fixture = makeFixture(greedy);
-      place(fixture, [1, 0, 1]);
-      place(fixture, [2, 1, 1], kCutoutId);
-
-      const top = shadedVertices(geometriesOf(fixture), kUp)
-        .filter(({ position }) => position[1] === 1);
-
-      assert.deepEqual([...new Set(top.map(({ shade }) => shade))], [kLit]);
-    });
-
-    it("splits each quad along the diagonal joining its brighter corners", () => {
-      const fixture = makeFixture(greedy);
-      place(fixture, [1, 0, 1]);
-      place(fixture, [2, 1, 2]);
-      place(fixture, [0, 1, 0]);
-
-      for (const geometry of geometriesOf(fixture)) {
-        const normals = geometry.getAttribute("normal").array;
-        for (let quad = 0; quad < normals.length; quad += 16) {
-          const diagonal = normals[quad + 3] + normals[quad + 11];
-          const opposite = normals[quad + 7] + normals[quad + 15];
-
-          assert.ok(diagonal >= opposite);
-        }
-      }
-      const top = shadedVertices(geometriesOf(fixture), kUp);
-      assert.deepEqual(shadesAt(top, [2, 1, 2]), [kOneSide]);
-      assert.deepEqual(shadesAt(top, [1, 1, 1]), [kOneSide]);
-    });
-
-    it("interpolates across a partial face", () => {
-      const fixture = makeFixture(greedy);
-      place(fixture, [1, 0, 1], kSlabId);
-      place(fixture, [2, 1, 1]);
-
-      const side = shadedVertices(geometriesOf(fixture), kPosX)
-        .filter(({ position }) => position[0] === 2);
-
-      assert.deepEqual(shadesAt(side, [2, 0, 1]), [kLit]);
-      assert.deepEqual(shadesAt(side, [2, 0.5, 1]), [106]);
-    });
-
-    it("samples occluders across a chunk corner", () => {
-      const fixture = makeFixture(greedy);
-      place(fixture, [3, 0, 3]);
-      place(fixture, [4, 1, 4]);
-
-      const top = shadedVertices(geometriesOf(fixture), kUp);
-
-      assert.deepEqual(shadesAt(top, [4, 1, 4]), [kOneSide]);
-      assert.deepEqual(shadesAt(top, [3, 1, 3]), [kLit]);
-    });
-  });
-}
-
-describe("ambient occlusion with greedy merging", () => {
-  it("keeps cells with different occlusion in separate quads", () => {
-    const off = makeFixture(true, false);
-    const on = makeFixture(true);
-    for (const fixture of [off, on]) {
-      fillBox(fixture, { from: [0, 0, 1], to: [3, 0, 1] });
-      place(fixture, [0, 1, 2]);
-    }
-
-    assert.equal(upFacingQuadsAt(geometriesOf(off), 1), 1);
-    assert.ok(upFacingQuadsAt(geometriesOf(on), 1) > 1);
+    assert.deepEqual([...new Set(shades.map(({ shade }) => shade))], [kLit]);
   });
 
-  it("still merges cells that share the same occlusion", () => {
-    const fixture = makeFixture(true);
-    fillBox(fixture, { from: [0, 0, 1], to: [3, 0, 1] });
-    fillBox(fixture, { from: [-1, 1, 2], to: [4, 1, 2] });
+  it("darkens the corners beside one occluding side", () => {
+    const fixture = makeFixture();
+    place(fixture, [1, 0, 1]);
+    place(fixture, [2, 1, 1]);
 
-    const geometries = geometriesOf(fixture);
-    const top = shadedVertices(geometries, kUp)
+    const top = shadedVertices(geometriesOf(fixture), kUp);
+
+    assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
+    assert.deepEqual(shadesAt(top, [2, 1, 2]), [kOneSide]);
+    assert.deepEqual(shadesAt(top, [1, 1, 1]), [kLit]);
+    assert.deepEqual(shadesAt(top, [1, 1, 2]), [kLit]);
+  });
+
+  it("turns a corner black between two occluding sides", () => {
+    const fixture = makeFixture();
+    place(fixture, [1, 0, 1]);
+    place(fixture, [2, 1, 1]);
+    place(fixture, [1, 1, 2]);
+
+    const top = shadedVertices(geometriesOf(fixture), kUp);
+
+    assert.deepEqual(shadesAt(top, [2, 1, 2]), [0]);
+    assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
+    assert.deepEqual(shadesAt(top, [1, 1, 2]), [kOneSide]);
+    assert.deepEqual(shadesAt(top, [1, 1, 1]), [kLit]);
+  });
+
+  it("casts nothing from a cutout block", () => {
+    const fixture = makeFixture();
+    place(fixture, [1, 0, 1]);
+    place(fixture, [2, 1, 1], kCutoutId);
+
+    const top = shadedVertices(geometriesOf(fixture), kUp)
       .filter(({ position }) => position[1] === 1);
 
-    assert.equal(upFacingQuadsAt(geometries, 1), 1);
-    assert.deepEqual(shadesAt(top, [0, 1, 2]), [kTwoLevelsDown]);
-    assert.deepEqual(shadesAt(top, [4, 1, 2]), [kTwoLevelsDown]);
-    assert.deepEqual(shadesAt(top, [0, 1, 1]), [kLit]);
+    assert.deepEqual([...new Set(top.map(({ shade }) => shade))], [kLit]);
+  });
+
+  it("splits each quad along the diagonal joining its brighter corners", () => {
+    const fixture = makeFixture();
+    place(fixture, [1, 0, 1]);
+    place(fixture, [2, 1, 2]);
+    place(fixture, [0, 1, 0]);
+
+    for (const geometry of geometriesOf(fixture)) {
+      const normals = geometry.getAttribute("normal").array;
+      for (let quad = 0; quad < normals.length; quad += 16) {
+        const diagonal = normals[quad + 3] + normals[quad + 11];
+        const opposite = normals[quad + 7] + normals[quad + 15];
+
+        assert.ok(diagonal >= opposite);
+      }
+    }
+    const top = shadedVertices(geometriesOf(fixture), kUp);
+    assert.deepEqual(shadesAt(top, [2, 1, 2]), [kOneSide]);
+    assert.deepEqual(shadesAt(top, [1, 1, 1]), [kOneSide]);
+  });
+
+  it("interpolates across a partial face", () => {
+    const fixture = makeFixture();
+    place(fixture, [1, 0, 1], kSlabId);
+    place(fixture, [2, 1, 1]);
+
+    const side = shadedVertices(geometriesOf(fixture), kPosX)
+      .filter(({ position }) => position[0] === 2);
+
+    assert.deepEqual(shadesAt(side, [2, 0, 1]), [kLit]);
+    assert.deepEqual(shadesAt(side, [2, 0.5, 1]), [106]);
+  });
+
+  it("samples occluders across a chunk corner", () => {
+    const fixture = makeFixture();
+    place(fixture, [3, 0, 3]);
+    place(fixture, [4, 1, 4]);
+
+    const top = shadedVertices(geometriesOf(fixture), kUp);
+
+    assert.deepEqual(shadesAt(top, [4, 1, 4]), [kOneSide]);
+    assert.deepEqual(shadesAt(top, [3, 1, 3]), [kLit]);
   });
 });

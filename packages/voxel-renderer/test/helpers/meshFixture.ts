@@ -1,9 +1,6 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type * as THREE from "three";
-
 // Import Internal Dependencies
 import {
   type VoxelChunk,
@@ -15,7 +12,8 @@ import { BlockShapeRegistry } from "../../src/blocks/shape/index.ts";
 import { TilesetManager } from "../../src/tileset/index.ts";
 import {
   VoxelMeshBuilder,
-  type ChunkGeometryKey
+  type ChunkGeometryKey,
+  type PulledChunkGeometry
 } from "../../src/mesh/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 import { registerAtlas } from "./atlas.ts";
@@ -40,20 +38,16 @@ export interface MeshFixture {
 }
 
 export interface MeshFixtureOptions {
-  greedy?: boolean;
   chunkSize?: number;
   ambientOcclusion?: boolean;
-  vertexPulling?: boolean;
 }
 
 export function makeMeshFixture(
   options: MeshFixtureOptions = {}
 ): MeshFixture {
   const {
-    greedy = false,
     chunkSize = CHUNK_SIZE,
-    ambientOcclusion = false,
-    vertexPulling = false
+    ambientOcclusion = false
   } = options;
 
   const world = new VoxelWorld(chunkSize);
@@ -73,9 +67,7 @@ export function makeMeshFixture(
     blockRegistry,
     shapeRegistry: BlockShapeRegistry.createDefault(),
     tilesetManager,
-    greedy,
-    ambientOcclusion,
-    vertexPulling
+    ambientOcclusion
   });
 
   return { world, layer, builder, blockRegistry, tilesetManager };
@@ -114,7 +106,7 @@ export function fillBox(
 export function buildChunk(
   fixture: MeshFixture,
   chunkCoords: Vec3Tuple = [0, 0, 0]
-): Map<ChunkGeometryKey, THREE.BufferGeometry> {
+): Map<ChunkGeometryKey, PulledChunkGeometry> {
   const { layer, builder } = fixture;
   const chunk = layer.getChunk(...chunkCoords);
 
@@ -122,11 +114,11 @@ export function buildChunk(
 }
 
 export function countVertices(
-  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>
+  geometries: ReadonlyMap<ChunkGeometryKey, PulledChunkGeometry>
 ): number {
   let total = 0;
   for (const geometry of geometries.values()) {
-    total += geometry.getAttribute("position").count;
+    total += geometry.faceCount * 4;
   }
 
   return total;
@@ -162,7 +154,7 @@ export function getChunk(
 export function buildGeometries(
   fixture: MeshFixture,
   chunkCoords: Vec3Tuple = [0, 0, 0]
-): Map<ChunkGeometryKey, THREE.BufferGeometry> {
+): Map<ChunkGeometryKey, PulledChunkGeometry> {
   const geometries = buildChunk(fixture, chunkCoords);
   assert.ok(geometries.size > 0);
 
@@ -181,7 +173,7 @@ export function geometryAlphaModes(
 export function firstGeometry(
   fixture: MeshFixture,
   chunkCoords: Vec3Tuple = [0, 0, 0]
-): THREE.BufferGeometry {
+): PulledChunkGeometry {
   const [geometry] = buildGeometries(fixture, chunkCoords).values();
 
   return geometry;

@@ -3,17 +3,16 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  enableTileClamping,
-  enableTileWrapping,
+  enableTileShading,
   enableVertexPulling,
   type FaceTemplateTable
 } from "../mesh/index.ts";
 import { AtlasAverages } from "../tileset/AtlasAverages.ts";
-import type { TilesetManager } from "../tileset/TilesetManager.ts";
-import type { MaterialCustomizerFn } from "../VoxelView.ts";
-import type { BlockSurface } from "../blocks/BlockSurface.ts";
-import type { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
 import { createAoStrength } from "../mesh/ambientOcclusion.ts";
+import type { TilesetManager } from "../tileset/TilesetManager.ts";
+import type { MaterialCustomizerFn } from "../settings/VoxelRendering.ts";
+import type { ChunkGeometryKey } from "../mesh/ChunkGeometryKey.ts";
+import type { BlockSurface } from "../blocks/BlockSurface.ts";
 import type { MaterialGroup } from "../materials/MaterialGroup.ts";
 import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
 
@@ -34,17 +33,13 @@ interface ChunkMaterialEntry {
 
 export interface ChunkMaterialCacheOptions {
   tilesetManager: TilesetManager;
+  faceTemplates: FaceTemplateTable;
   materialGroups?: MaterialGroupList;
   /**
    * @default "lambert"
    */
   type?: "lambert" | "standard";
   customizer?: MaterialCustomizerFn;
-  /**
-   * Greedy quads need tile-local UV repetition.
-   * @default false
-   */
-  tileWrapping?: boolean;
   /**
    * Distant faces fade to the average colour of their atlas rect.
    * @default true
@@ -56,8 +51,6 @@ export interface ChunkMaterialCacheOptions {
    */
   ambientOcclusion?: number;
   alphaToCoverage?: boolean;
-  faceTemplates?: FaceTemplateTable;
-  vertexPulling?: boolean;
 }
 
 /**
@@ -65,12 +58,10 @@ export interface ChunkMaterialCacheOptions {
  * Layer opacity is applied through materials instead of vertex colors.
  */
 export class ChunkMaterialCache {
-  tileWrapping: boolean;
   tileAveraging: boolean;
   alphaToCoverage: boolean;
-  vertexPulling: boolean;
   readonly aoStrength: ReturnType<typeof createAoStrength>;
-  readonly faceTemplates: FaceTemplateTable | null;
+  readonly faceTemplates: FaceTemplateTable;
 
   #materials = new Map<string, ChunkMaterial>();
   #entries = new Map<THREE.Material, ChunkMaterialEntry>();
@@ -85,25 +76,21 @@ export class ChunkMaterialCache {
   ) {
     const {
       tilesetManager,
+      faceTemplates,
       materialGroups,
       type = "lambert",
       customizer,
-      tileWrapping = false,
       tileAveraging = true,
       ambientOcclusion = 0,
-      alphaToCoverage = false,
-      faceTemplates = null,
-      vertexPulling = false
+      alphaToCoverage = false
     } = options;
 
     this.#tilesetManager = tilesetManager;
     this.#materialGroups = materialGroups;
     this.#type = type;
     this.#customizer = customizer;
-    this.tileWrapping = tileWrapping;
     this.tileAveraging = tileAveraging;
     this.alphaToCoverage = alphaToCoverage;
-    this.vertexPulling = vertexPulling;
     this.faceTemplates = faceTemplates;
     this.aoStrength = createAoStrength(ambientOcclusion);
   }
@@ -235,26 +222,15 @@ export class ChunkMaterialCache {
     const averages = this.tileAveraging ?
       AtlasAverages.of(texture)?.texture :
       null;
-    const templates = this.vertexPulling && !this.tileWrapping ?
-      this.faceTemplates :
-      null;
-    const inputs = templates === null ?
-      undefined :
-      enableVertexPulling(material, templates);
-    const enable = this.tileWrapping ?
-      enableTileWrapping :
-      enableTileClamping;
-    enable(material, {
+    const inputs = enableVertexPulling(material, this.faceTemplates);
+    enableTileShading(material, inputs, {
       surface,
       aoStrength: this.aoStrength,
       averages,
       flat: far && averages !== null && averages !== undefined,
-      alphaToCoverage,
-      inputs
+      alphaToCoverage
     });
-    if (inputs !== undefined) {
-      material.map = null;
-    }
+    material.map = null;
     group?.applyTo(material);
     this.#customizer?.(
       material,

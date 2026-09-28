@@ -60,25 +60,26 @@ const engine = new VoxelEngine({
 });
 ```
 
-See [MaterialGroup](../materials/MaterialGroup.md). The `materialCustomizer`
+See [MaterialGroup](../materials/MaterialGroup.md). The `rendering.customizer`
 also receives the surface, so host code can still read the group:
 
 ```ts
 const engine = new VoxelEngine({
-  material: "standard",
-  materialCustomizer(material, _tilesetId, surface) {
-    if (
-      material instanceof THREE.MeshStandardMaterial &&
-      surface.materialGroup === "gold"
-    ) {
-      material.metalness = 1;
+  rendering: {
+    material: "standard",
+    customizer(material, _tilesetId, surface) {
+      if (
+        material instanceof THREE.MeshStandardMaterial &&
+        surface.materialGroup === "gold"
+      ) {
+        material.metalness = 1;
+      }
     }
   }
 });
 ```
 
-Each group adds a draw call per chunk and greedy faces never merge across
-groups.
+Each group adds a draw call per chunk.
 
 The legacy block property `transparent` has been removed. Use
 `alphaMode: "blend"` for smooth transparency, or `alphaMode: "mask"` for

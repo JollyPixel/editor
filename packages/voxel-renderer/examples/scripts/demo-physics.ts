@@ -138,8 +138,10 @@ const voxelMap = world.createActor("map")
       chunkSize: 16,
       layers: ["Ground"],
       blocks: voxelBlocks,
-      alphaTest: 0.5,
-      material: "lambert",
+      rendering: {
+        alphaTest: 0.5,
+        material: "lambert"
+      },
       // VoxelEngine only sees the VoxelCollider interface; Rapier lives here.
       collider: (context) => new RapierVoxelCollider({
         api: RAPIER,

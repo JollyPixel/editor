@@ -5,11 +5,10 @@ import * as THREE from "three";
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
 import type { VoxelInspector } from "../inspector/index.ts";
 import {
-  PulledChunkGeometry,
   PulledChunkMesh,
   type ChunkGeometryKey,
-  type DownsampledWorld,
   type MeshBuildStats,
+  type PulledChunkGeometry,
   type VoxelMeshBuilder
 } from "../mesh/index.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
@@ -21,14 +20,7 @@ import type {
   ChunkMeshLayout,
   ChunkMeshTarget
 } from "./ChunkMeshLayout.ts";
-import {
-  FULL_DETAIL,
-  type ChunkDetail,
-  type ChunkViewport
-} from "./ChunkViewport.ts";
-
-// CONSTANTS
-const kShaderOnlyAttributes = ["tileRegion", "tileRepeat"];
+import type { ChunkViewport } from "./ChunkViewport.ts";
 
 export interface ChunkMeshEntry {
   target: ChunkMeshTarget;
@@ -37,20 +29,14 @@ export interface ChunkMeshEntry {
   meshes: THREE.Mesh[];
   geometryKeys: ChunkGeometryKey[];
   visible: boolean;
-  detail: ChunkDetail;
-}
-
-export interface ChunkLodSource {
-  world: DownsampledWorld;
-  meshBuilder: VoxelMeshBuilder;
+  far: boolean;
 }
 
 export interface ChunkRebuildPlan {
   target: ChunkMeshTarget;
   members: readonly IterableLayerChunk[];
   origin: VoxelCoord;
-  detail: ChunkDetail;
-  lod: ChunkLodSource | null;
+  far: boolean;
 }
 
 export interface ChunkMeshStoreOptions {
@@ -60,12 +46,7 @@ export interface ChunkMeshStoreOptions {
   materials: ChunkMaterialCache;
   inspector: VoxelInspector;
   collider?: VoxelCollider | null;
-  lod?: ChunkLodSource | null;
   logger?: VoxelLogger;
-  /**
-   * @default false
-   */
-  retainVertexData?: boolean;
   /**
    * @default false
    */
@@ -91,9 +72,7 @@ export class ChunkMeshStore {
   #materials: ChunkMaterialCache;
   #inspector: VoxelInspector;
   #collider: VoxelCollider | null;
-  #lod: ChunkLodSource | null;
   #logger: VoxelLogger;
-  #retainVertexData: boolean;
   #castShadow: boolean;
   #receiveShadow: boolean;
 
@@ -107,9 +86,7 @@ export class ChunkMeshStore {
       materials,
       inspector,
       collider = null,
-      lod = null,
       logger = NOOP_LOGGER,
-      retainVertexData = false,
       castShadow = false,
       receiveShadow = false
     } = options;
@@ -120,9 +97,7 @@ export class ChunkMeshStore {
     this.#materials = materials;
     this.#inspector = inspector;
     this.#collider = collider;
-    this.#lod = lod;
     this.#logger = logger;
-    this.#retainVertexData = retainVertexData;
     this.#castShadow = castShadow;
     this.#receiveShadow = receiveShadow;
   }
@@ -165,14 +140,6 @@ export class ChunkMeshStore {
     return key === undefined ? undefined : this.#entries.get(key)?.target;
   }
 
-  detailOf(
-    chunk: VoxelChunk
-  ): ChunkDetail | undefined {
-    const key = this.#placements.get(chunk);
-
-    return key === undefined ? undefined : this.#entries.get(key)?.detail;
-  }
-
   rebuild(
     target: ChunkMeshTarget
   ): void {
@@ -185,13 +152,8 @@ export class ChunkMeshStore {
   build(
     plan: ChunkRebuildPlan
   ): void {
-    const builder = plan.lod === null ? this.#meshBuilder : plan.lod.meshBuilder;
-    const geometries = builder.buildChunkGeometries(
-      plan.lod === null ?
-        plan.members :
-        plan.lod.world.sync(plan.members, (chunk) => this.#isCoarse(chunk))
-    );
-    this.install(plan, geometries, builder.stats);
+    const geometries = this.#meshBuilder.buildChunkGeometries(plan.members);
+    this.install(plan, geometries, this.#meshBuilder.stats);
   }
 
   plan(
@@ -208,31 +170,29 @@ export class ChunkMeshStore {
     this.#logger.debug(`Rebuilding chunk '${key}'`);
     const [first] = members;
     const origin = this.#layout.originOf(first.layer, first.chunk);
-    const detail = this.viewport?.detailOf(
+    const far = this.viewport?.isFar(
       origin,
-      this.#entries.get(key)?.detail
-    ) ?? FULL_DETAIL;
+      this.#entries.get(key)?.far
+    ) ?? false;
 
     return {
       target,
       members,
       origin,
-      detail,
-      lod: detail.lod > 0 ? this.#lod : null
+      far
     };
   }
 
   install(
     plan: ChunkRebuildPlan,
-    geometries: Map<ChunkGeometryKey, THREE.BufferGeometry>,
+    geometries: Map<ChunkGeometryKey, PulledChunkGeometry>,
     stats: MeshBuildStats
   ): void {
     const {
       target,
       members,
       origin,
-      detail,
-      lod
+      far
     } = plan;
     const { key } = target;
     const [first] = members;
@@ -242,19 +202,13 @@ export class ChunkMeshStore {
     const meshes: THREE.Mesh[] = [];
     const geometryKeys: ChunkGeometryKey[] = [];
     for (const [geometryKey, geometry] of geometries) {
-      const material = this.#materials.resolve(geometryKey, opacity, detail.far);
-      const mesh = geometry instanceof PulledChunkGeometry ?
-        new PulledChunkMesh(geometry, material) :
-        new THREE.Mesh(geometry, material);
+      const material = this.#materials.resolve(geometryKey, opacity, far);
+      const mesh = new PulledChunkMesh(geometry, material);
       mesh.name = `voxel_chunk_${key}:${geometryKey}`;
       mesh.position.set(origin.x, origin.y, origin.z);
-      mesh.scale.setScalar(lod === null ? 1 : lod.world.scale);
       mesh.castShadow = this.#castShadow;
       mesh.receiveShadow = this.#receiveShadow;
       this.#materials.retain(mesh.material);
-      if (!this.#retainVertexData) {
-        mesh.onAfterRender = releaseShaderAttributes;
-      }
 
       this.#root.add(mesh);
       mesh.updateWorldMatrix(true, false);
@@ -269,7 +223,7 @@ export class ChunkMeshStore {
       meshes,
       geometryKeys,
       visible: true,
-      detail
+      far
     });
     for (const { chunk } of members) {
       this.#placements.set(chunk, key);
@@ -284,7 +238,7 @@ export class ChunkMeshStore {
       }
     );
 
-    if (this.#collider && lod === null) {
+    if (this.#collider) {
       this.#logger.debug(
         `Rebuilding collision for chunk '${key}'`,
         { origin }
@@ -298,12 +252,12 @@ export class ChunkMeshStore {
     }
   }
 
-  applyDetails(
-    changes: Iterable<[key: string, detail: ChunkDetail]>
+  applyFar(
+    changes: Iterable<[key: string, far: boolean]>
   ): void {
     const released: THREE.Material[] = [];
 
-    for (const [key, detail] of changes) {
+    for (const [key, far] of changes) {
       const entry = this.#entries.get(key);
       if (!entry) {
         continue;
@@ -314,7 +268,7 @@ export class ChunkMeshStore {
         const material = this.#materials.resolve(
           entry.geometryKeys[index],
           opacity,
-          detail.far
+          far
         );
         if (material === mesh.material) {
           return;
@@ -324,7 +278,7 @@ export class ChunkMeshStore {
         released.push(mesh.material as THREE.Material);
         mesh.material = material;
       });
-      entry.detail = detail;
+      entry.far = far;
     }
 
     for (const material of released) {
@@ -381,12 +335,6 @@ export class ChunkMeshStore {
     this.#placements.clear();
   }
 
-  #isCoarse(
-    chunk: VoxelChunk
-  ): boolean {
-    return (this.detailOf(chunk)?.lod ?? 0) > 0;
-  }
-
   * #meshes(): IterableIterator<THREE.Mesh> {
     for (const entry of this.#entries.values()) {
       yield* entry.meshes;
@@ -430,39 +378,12 @@ export class ChunkMeshStore {
 }
 
 function collisionGeometries(
-  geometries: Map<ChunkGeometryKey, THREE.BufferGeometry>
+  geometries: Map<ChunkGeometryKey, PulledChunkGeometry>
 ): Map<ChunkGeometryKey, THREE.BufferGeometry> {
   const result = new Map<ChunkGeometryKey, THREE.BufferGeometry>();
   for (const [key, geometry] of geometries) {
-    result.set(
-      key,
-      geometry instanceof PulledChunkGeometry ?
-        geometry.toIndexedGeometry() :
-        geometry
-    );
+    result.set(key, geometry.toIndexedGeometry());
   }
 
   return result;
-}
-
-// eslint-disable-next-line max-params
-function releaseShaderAttributes(
-  this: THREE.Mesh,
-  _renderer: unknown,
-  _scene: THREE.Scene,
-  _camera: THREE.Camera,
-  _geometry: THREE.BufferGeometry,
-  material: THREE.Material
-): void {
-  if (material !== this.material) {
-    return;
-  }
-
-  for (const name of kShaderOnlyAttributes) {
-    const attribute = this.geometry.getAttribute(name);
-    if (attribute instanceof THREE.BufferAttribute) {
-      attribute.array = attribute.array.slice(0, 0);
-    }
-  }
-  this.onAfterRender = THREE.Object3D.prototype.onAfterRender;
 }

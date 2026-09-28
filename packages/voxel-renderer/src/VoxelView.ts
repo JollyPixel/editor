@@ -2,7 +2,6 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { BlockSurface } from "./blocks/BlockSurface.ts";
 import type { BlockShape } from "./blocks/shape/BlockShape.ts";
 import { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
 import type {
@@ -23,7 +22,6 @@ import {
   type VoxelInspectorOptions
 } from "./inspector/index.ts";
 import {
-  DownsampledWorld,
   FaceTemplateTable,
   VoxelMeshBuilder
 } from "./mesh/index.ts";
@@ -33,13 +31,19 @@ import {
   type ChunkMeshTarget
 } from "./render/ChunkMeshLayout.ts";
 import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";
-import {
-  ChunkMeshWorkers,
-  type MeshWorkerOptions
-} from "./render/ChunkMeshWorkers.ts";
+import { ChunkMeshWorkers } from "./render/ChunkMeshWorkers.ts";
 import { ChunkRebuildQueue } from "./render/ChunkRebuildQueue.ts";
 import { ChunkViewport } from "./render/ChunkViewport.ts";
 import { ChunkVisibility } from "./render/ChunkVisibility.ts";
+import {
+  VoxelLighting,
+  VoxelRange,
+  VoxelRendering,
+  type VoxelLightingOptions,
+  type VoxelMeshingOptions,
+  type VoxelRangeOptions,
+  type VoxelRenderingOptions
+} from "./settings/index.ts";
 import { TilesetManager } from "./tileset/TilesetManager.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type {
@@ -48,27 +52,7 @@ import type {
 } from "./tileset/types.ts";
 import type { VoxelWorldJSON } from "./serialization/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
-import { FACE_OFFSETS } from "./utils/math.ts";
-import type { VoxelChunk } from "./world/VoxelChunk.ts";
 import type { VoxelLayer } from "./world/VoxelLayer.ts";
-import {
-  ViewDistance,
-  type ViewDistanceOptions
-} from "./world/ViewDistance.ts";
-
-export type ViewDistancePolicy =
-  | "hide"
-  | "unload";
-
-export type MaterialCustomizerFn = (
-  material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
-  tilesetId: string,
-  surface: BlockSurface
-) => void;
-
-export type TileMinification =
-  | "average"
-  | "nearest";
 
 export interface VoxelViewLoadOptions
   extends Omit<VoxelLoadOptions, "tilesets"> {
@@ -85,27 +69,15 @@ export interface VoxelViewOptions {
   collider?: VoxelColliderFactory;
 
   /**
-   * Chunk material type.
-   * @default "lambert"
-   */
-  material?: "lambert" | "standard";
-
-  /**
-   * Called once for each new material with its tileset ID and surface;
-   * `surface.materialGroup` tells grouped blocks apart.
-   */
-  materialCustomizer?: MaterialCustomizerFn;
-
-  /**
    * Shapes registered after the defaults from `BlockShapeRegistry`.
    */
   shapes?: BlockShape[];
 
   /**
-   * Alpha-test cutoff; 0 disables fragment discards.
-   * @default 0.1
+   * Preloaded atlases (see `loadTilesets`) registered synchronously during
+   * construction.
    */
-  alphaTest?: number;
+  tilesets?: Iterable<TilesetSource>;
 
   /**
    * Debug logger; defaults to a no-op implementation.
@@ -118,100 +90,26 @@ export interface VoxelViewOptions {
   inspector?: VoxelInspectorOptions;
 
   /**
-   * Enables greedy merging; incompatible with custom UV shader compilation.
-   * @default false
+   * Chunk materials and atlas sampling; `tileMinification` and
+   * `alphaToCoverage` stay assignable through `view.rendering`.
    */
-  greedy?: boolean;
-
-  vertexPulling?: boolean;
+  rendering?: VoxelRenderingOptions;
 
   /**
-   * How atlas tiles are drawn once a screen pixel covers several texels.
-   * `"average"` box-filters the texels each pixel covers, which stops the
-   * moire and shimmer that `"nearest"` shows far away.
-   *
-   * Needs readable atlas pixels (a 2D canvas, same-origin images); falls back to `"nearest" otherwise.
-   * @default "average"
+   * Baked ambient occlusion and shadows, assignable through `view.lighting`.
    */
-  tileMinification?: TileMinification;
+  lighting?: VoxelLightingOptions;
 
   /**
-   * Mask blocks write their texel coverage as MSAA sample coverage.
-   * Needs a multisampled target and an opaque canvas.
-   * @default false
+   * Which chunks around `focus` are meshed, drawn and drawn flat, assignable
+   * through `view.range`.
    */
-  alphaToCoverage?: boolean;
+  range?: VoxelRangeOptions;
 
   /**
-   * World units from `focus` beyond which chunks draw flat tile colours
-   * and blend blocks opaque.
-   * @default Infinity
+   * Rebuild budget and mesh workers.
    */
-  farDistance?: number;
-
-  /**
-   * World units from `focus` beyond which chunks mesh at half resolution,
-   * one block per 2x2x2 cell.
-   * @default Infinity
-   */
-  lodDistance?: number;
-
-  /**
-   * Preloaded atlases (see `loadTilesets`) registered synchronously during
-   * construction.
-   */
-  tilesets?: Iterable<TilesetSource>;
-
-  /**
-   * Per-tick rebuild budget in milliseconds; 0 drains the queue.
-   * @default 8
-   */
-  rebuildBudgetMs?: number;
-
-  /**
-   * Chunk radius around `focus` kept meshed and drawn, as a radius in chunks
-   * or a full `ViewDistance` description. Ignored while `focus` is null.
-   * @default Infinity
-   */
-  viewDistance?: number | ViewDistanceOptions;
-
-  /**
-   * What happens to a chunk that leaves the view distance: `"hide"` keeps its
-   * geometry ready to show again, `"unload"` frees it and remeshes on return.
-   * @default "hide"
-   */
-  viewDistancePolicy?: ViewDistancePolicy;
-
-  /**
-   * Keeps the shader-only `tileRegion` and `tileRepeat` chunk attributes in
-   * JavaScript memory after their first render uploads them. Raycasting and
-   * colliders never read them; a renderer that did not draw the chunk first
-   * cannot upload them once released.
-   * @default false
-   */
-  retainVertexData?: boolean;
-
-  /**
-   * Strength of the ambient occlusion baked into chunk vertices, from 0 (off)
-   * to 1 (fully occluded corners turn black). Darkens the albedo, so it
-   * shades direct and indirect light alike.
-   * @default 0
-   */
-  ambientOcclusion?: number;
-
-  /**
-   * Chunk meshes cast shadows; assignable later through `castShadow`.
-   * @default false
-   */
-  castShadow?: boolean;
-
-  /**
-   * Chunk meshes receive shadows; assignable later through `receiveShadow`.
-   * @default false
-   */
-  receiveShadow?: boolean;
-
-  meshWorkers?: MeshWorkerOptions;
+  meshing?: VoxelMeshingOptions;
 }
 
 export class VoxelView {
@@ -221,17 +119,15 @@ export class VoxelView {
   readonly shapes: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
   readonly inspector: VoxelInspector;
+  readonly range: VoxelRange;
+  readonly lighting: VoxelLighting;
+  readonly rendering: VoxelRendering;
 
   focus: THREE.Vector3Like | null = null;
-  viewDistance: ViewDistance;
-  viewDistancePolicy: ViewDistancePolicy;
-  farDistance: number;
-  lodDistance: number;
 
   #chunkGroup = new THREE.Group();
   #layout: ChunkMeshLayout;
   #meshBuilder: VoxelMeshBuilder;
-  #lodBuilder: VoxelMeshBuilder;
   #faceTemplates = new FaceTemplateTable();
   #materials: ChunkMaterialCache;
   #meshes: ChunkMeshStore;
@@ -293,43 +189,41 @@ export class VoxelView {
     options: VoxelViewOptions = {}
   ) {
     const {
-      material = "lambert",
-      materialCustomizer,
       collider,
       shapes = [],
-      alphaTest = 0.1,
       logger = NOOP_LOGGER,
       inspector,
       tilesets,
-      greedy = false,
-      vertexPulling = false,
-      tileMinification = "average",
-      rebuildBudgetMs = 8,
-      viewDistance,
-      viewDistancePolicy = "hide",
-      farDistance = Infinity,
-      lodDistance = Infinity,
-      alphaToCoverage = false,
-      retainVertexData = false,
-      castShadow = false,
-      receiveShadow = false,
-      ambientOcclusion: requestedAo = 0,
-      meshWorkers
+      rendering = {},
+      lighting = {},
+      range,
+      meshing = {}
     } = options;
-    const ambientOcclusion = THREE.MathUtils.clamp(requestedAo, 0, 1);
+    const {
+      material = "lambert",
+      customizer,
+      alphaTest = 0.1,
+      alphaToCoverage = false,
+      tileMinification = "average"
+    } = rendering;
+    const {
+      castShadow = false,
+      receiveShadow = false
+    } = lighting;
+    const ambientOcclusion = THREE.MathUtils.clamp(
+      lighting.ambientOcclusion ?? 0,
+      0,
+      1
+    );
+    const { budgetMs = 8, workers } = meshing;
 
     this.document = document;
     this.root.name = "VoxelView";
     this.#chunkGroup.name = "VoxelView:chunks";
     this.root.add(this.#chunkGroup);
 
-    this.#rebuildBudgetMs = rebuildBudgetMs;
-    this.viewDistance = viewDistance === undefined ?
-      ViewDistance.Unlimited :
-      ViewDistance.from(viewDistance);
-    this.viewDistancePolicy = viewDistancePolicy;
-    this.farDistance = farDistance;
-    this.lodDistance = lodDistance;
+    this.#rebuildBudgetMs = budgetMs;
+    this.range = new VoxelRange(range);
     this.#logger = logger.child({
       namespace: "VoxelView"
     });
@@ -352,25 +246,15 @@ export class VoxelView {
       tilesets: document.tilesets
     });
 
-    const builderOptions = {
+    this.#meshBuilder = new VoxelMeshBuilder({
+      world: document.world,
       blockRegistry: document.blocks,
       shapeRegistry: this.shapes,
       tilesetManager: this.tilesetManager,
       alphaTest,
-      greedy,
-      vertexPulling,
       faceTemplates: this.#faceTemplates,
       ambientOcclusion: ambientOcclusion > 0,
       logger: this.#logger
-    };
-    this.#meshBuilder = new VoxelMeshBuilder({
-      ...builderOptions,
-      world: document.world
-    });
-    const lodWorld = new DownsampledWorld(document.world);
-    this.#lodBuilder = new VoxelMeshBuilder({
-      ...builderOptions,
-      world: lodWorld
     });
 
     this.#collider = collider?.({
@@ -380,15 +264,13 @@ export class VoxelView {
 
     this.#materials = new ChunkMaterialCache({
       tilesetManager: this.tilesetManager,
+      faceTemplates: this.#faceTemplates,
       materialGroups: document.materialGroups,
       type: material,
-      customizer: materialCustomizer,
-      tileWrapping: greedy,
+      customizer,
       tileAveraging: tileMinification === "average",
       ambientOcclusion,
-      alphaToCoverage,
-      faceTemplates: this.#faceTemplates,
-      vertexPulling
+      alphaToCoverage
     });
     this.#layout = new ChunkMeshLayout(document.world);
     this.#meshes = new ChunkMeshStore({
@@ -398,16 +280,11 @@ export class VoxelView {
       materials: this.#materials,
       inspector: this.inspector,
       collider: this.#collider,
-      lod: {
-        world: lodWorld,
-        meshBuilder: this.#lodBuilder
-      },
       logger: this.#logger,
-      retainVertexData,
       castShadow,
       receiveShadow
     });
-    this.#workers = ChunkMeshWorkers.create(meshWorkers, {
+    this.#workers = ChunkMeshWorkers.create(workers, {
       world: document.world,
       meshBuilder: this.#meshBuilder,
       definitions: {
@@ -428,13 +305,19 @@ export class VoxelView {
         for (const { chunk } of entry.members) {
           chunk.dirty = true;
         }
-      },
-      relevel: (_key, entry) => {
-        for (const { layer, chunk } of entry.members) {
-          chunk.dirty = true;
-          this.#dirtyCoarseNeighbours(layer, chunk);
-        }
       }
+    });
+
+    const remesh = (source: string) => this.markAllChunksDirty(source);
+    this.lighting = new VoxelLighting({
+      meshBuilder: this.#meshBuilder,
+      materials: this.#materials,
+      meshes: this.#meshes,
+      remesh
+    });
+    this.rendering = new VoxelRendering({
+      materials: this.#materials,
+      remesh
     });
 
     for (const { def, texture } of tilesets ?? []) {
@@ -496,111 +379,6 @@ export class VoxelView {
     return new Promise((resolve) => {
       this.#idleWaiters.push(resolve);
     });
-  }
-
-  get greedy(): boolean {
-    return this.#meshBuilder.greedy;
-  }
-
-  set greedy(value: boolean) {
-    if (value === this.#meshBuilder.greedy) {
-      return;
-    }
-
-    this.#meshBuilder.greedy = value;
-    this.#lodBuilder.greedy = value;
-    this.#materials.tileWrapping = value;
-    this.#materials.invalidate();
-    this.#clearChunkMeshes();
-    this.markAllChunksDirty("greedy");
-  }
-
-  get vertexPulling(): boolean {
-    return this.#meshBuilder.vertexPulling;
-  }
-
-  set vertexPulling(value: boolean) {
-    if (value === this.#meshBuilder.vertexPulling) {
-      return;
-    }
-
-    this.#meshBuilder.vertexPulling = value;
-    this.#lodBuilder.vertexPulling = value;
-    this.#materials.vertexPulling = value;
-    this.#materials.invalidate();
-    this.#clearChunkMeshes();
-    this.markAllChunksDirty("vertexPulling");
-  }
-
-  get tileMinification(): TileMinification {
-    return this.#materials.tileAveraging ? "average" : "nearest";
-  }
-
-  set tileMinification(
-    value: TileMinification
-  ) {
-    const averaging = value === "average";
-    if (averaging === this.#materials.tileAveraging) {
-      return;
-    }
-
-    this.#materials.tileAveraging = averaging;
-    this.#materials.invalidate();
-    this.markAllChunksDirty("tileMinification");
-  }
-
-  get alphaToCoverage(): boolean {
-    return this.#materials.alphaToCoverage;
-  }
-
-  set alphaToCoverage(
-    value: boolean
-  ) {
-    if (value === this.#materials.alphaToCoverage) {
-      return;
-    }
-
-    this.#materials.alphaToCoverage = value;
-    this.#materials.invalidate();
-    this.markAllChunksDirty("alphaToCoverage");
-  }
-
-  get ambientOcclusion(): number {
-    return this.#materials.aoStrength.value;
-  }
-
-  set ambientOcclusion(
-    value: number
-  ) {
-    const strength = THREE.MathUtils.clamp(value, 0, 1);
-    this.#materials.aoStrength.value = strength;
-
-    const enabled = strength > 0;
-    if (enabled !== this.#meshBuilder.ambientOcclusion) {
-      this.#meshBuilder.ambientOcclusion = enabled;
-      this.#lodBuilder.ambientOcclusion = enabled;
-      this.markAllChunksDirty("ambientOcclusion");
-    }
-  }
-
-  get castShadow(): boolean {
-    return this.#meshes.castShadow;
-  }
-
-  set castShadow(
-    value: boolean
-  ) {
-    this.#meshes.castShadow = value;
-  }
-
-  get receiveShadow(): boolean {
-    return this.#meshes.receiveShadow;
-  }
-
-  set receiveShadow(
-    value: boolean
-  ) {
-    this.#meshes.receiveShadow = value;
   }
 
   loadTileset(
@@ -689,13 +467,15 @@ export class VoxelView {
   }
 
   #viewport(): ChunkViewport {
+    const { chunkSize } = this.document.world;
+    const { viewDistance, policy, farDistance } = this.range;
+
     return new ChunkViewport({
       focus: this.focus,
-      viewDistance: this.viewDistance,
-      policy: this.viewDistancePolicy,
-      chunkSize: this.document.world.chunkSize,
-      farDistance: this.farDistance,
-      lodDistance: this.lodDistance
+      viewDistance,
+      policy,
+      chunkSize,
+      farDistance: farDistance * chunkSize
     });
   }
 
@@ -802,7 +582,7 @@ export class VoxelView {
     }
 
     const plan = this.#meshes.plan(target);
-    if (plan !== null && (plan.lod !== null || !workers.dispatch(plan))) {
+    if (plan !== null && !workers.dispatch(plan)) {
       this.#meshes.build(plan);
     }
 
@@ -837,25 +617,6 @@ export class VoxelView {
     this.#meshes.remove(target.key);
 
     return false;
-  }
-
-  #dirtyCoarseNeighbours(
-    layer: VoxelLayer,
-    chunk: VoxelChunk
-  ): void {
-    for (const [dx, dy, dz] of FACE_OFFSETS) {
-      const neighbour = layer.getChunk(
-        chunk.cx + dx,
-        chunk.cy + dy,
-        chunk.cz + dz
-      );
-      if (
-        neighbour !== undefined &&
-        (this.#meshes.detailOf(neighbour)?.lod ?? 0) > 0
-      ) {
-        neighbour.dirty = true;
-      }
-    }
   }
 
   #clearChunkMeshes(): void {

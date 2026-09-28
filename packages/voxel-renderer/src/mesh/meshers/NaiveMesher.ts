@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
-import type {
-  Mesher,
-  MeshPassOptions
-} from "../types.ts";
+import type { MeshPassOptions } from "../types.ts";
 import {
   voxelBlockId,
   voxelTransform
@@ -13,7 +10,7 @@ import { FaceEmitter } from "./FaceEmitter.ts";
 /**
  * Emits every visible face of every voxel without merging.
  */
-export class NaiveMesher implements Mesher {
+export class NaiveMesher {
   #variants: BlockVariantCache;
 
   constructor(

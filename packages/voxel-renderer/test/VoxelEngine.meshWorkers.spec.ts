@@ -80,9 +80,11 @@ async function makeWorkerWorld(
 ): Promise<VoxelEngine> {
   const engine = makeWorld({
     ...options,
-    meshWorkers: {
-      createWorker: workers.createWorker,
-      count: 2
+    meshing: {
+      workers: {
+        createWorker: workers.createWorker,
+        count: 2
+      }
     }
   });
   engine.init();
@@ -110,9 +112,7 @@ describe("VoxelEngine - mesh workers", () => {
 
   for (const options of [
     {},
-    { greedy: true },
-    { ambientOcclusion: 1 },
-    { vertexPulling: true, ambientOcclusion: 1 }
+    { lighting: { ambientOcclusion: 1 } }
   ] satisfies VoxelEngineOptions[]) {
     it(`builds the main-thread geometry with ${JSON.stringify(options)}`, async() => {
       const workers = inProcessWorkers();
@@ -126,7 +126,7 @@ describe("VoxelEngine - mesh workers", () => {
   it("defers init meshing to the workers", async() => {
     const workers = inProcessWorkers();
     const engine = makeWorld({
-      meshWorkers: { createWorker: workers.createWorker }
+      meshing: { workers: { createWorker: workers.createWorker } }
     });
 
     engine.init();
@@ -183,7 +183,7 @@ describe("VoxelEngine - mesh workers", () => {
   it("flushes synchronously and ignores the builds still running", async() => {
     const workers = inProcessWorkers();
     const engine = makeWorld({
-      meshWorkers: { createWorker: workers.createWorker }
+      meshing: { workers: { createWorker: workers.createWorker } }
     });
     engine.init();
     engine.tick(0);
@@ -200,7 +200,7 @@ describe("VoxelEngine - mesh workers", () => {
   it("rebuilds chunks whose running build used replaced block definitions", async() => {
     const workers = inProcessWorkers();
     const engine = makeWorld({
-      meshWorkers: { createWorker: workers.createWorker }
+      meshing: { workers: { createWorker: workers.createWorker } }
     });
     const redefined = makeBlockDef(CUBE_ID, "cube", {
       defaultTexture: { col: 1, row: 0 }
@@ -224,7 +224,7 @@ describe("VoxelEngine - mesh workers", () => {
     logger.error = (message) => void errors.push(message);
     const engine = makeWorld({
       logger,
-      meshWorkers: { createWorker: workers.createWorker }
+      meshing: { workers: { createWorker: workers.createWorker } }
     });
     engine.init();
     engine.tick(0);
@@ -247,7 +247,7 @@ describe("VoxelEngine - mesh workers", () => {
     const warnings: string[] = [];
     const engine = makeWorld({
       logger: makeLogger(warnings),
-      meshWorkers: { createWorker: workers.createWorker }
+      meshing: { workers: { createWorker: workers.createWorker } }
     });
 
     engine.init();

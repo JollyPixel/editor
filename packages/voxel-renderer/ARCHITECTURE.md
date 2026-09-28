@@ -76,7 +76,7 @@ Voxel writes dirty the affected chunk and boundary neighbours across layers,
 because an edit can expose or cover their faces. Block definition or tileset
 changes invalidate all chunks. On each `tick()`, the view removes deleted chunks,
 updates view-distance visibility, queues eligible dirty chunks, and drains the
-queue within `rebuildBudgetMs` (8 ms by default). `flush()` drains the eligible
+queue within `meshing.budgetMs` (8 ms by default). `flush()` drains the eligible
 queue immediately. `init()` and document loads mark the whole world dirty and
 flush chunks eligible for the current view distance.
 
@@ -88,16 +88,16 @@ When a chunk moves to another target, the view rebuilds or removes the one it
 left.
 
 `VoxelMeshBuilder` resolves block shapes, textures, and neighbouring cells,
-then runs the naive mesher or optional greedy mesher. The resulting geometries
-are grouped by tileset and surface policy. `ChunkMeshStore` replaces the old
+then emits one 8-byte record per visible face. The resulting vertex-pulled
+geometries are grouped by tileset and surface policy. `ChunkMeshStore` replaces the old
 meshes, gets materials from `ChunkMaterialCache`, registers inspector metrics,
 and passes the geometry to a configured `VoxelCollider`. The collider interface
 keeps physics backend selection outside the core; a Rapier implementation is
 provided in `plugins/rapier`.
 
-When `focus` and a finite `viewDistance` are set, chunks outside the range stay
-dirty until they enter it. Previously built chunks are hidden or unloaded by
-`viewDistancePolicy`; unloading a visual mesh retains its collider. Layer
+When `focus` and a finite `range.viewDistance` are set, chunks outside the range
+stay dirty until they enter it. Previously built chunks are hidden or unloaded by
+`range.policy`; unloading a visual mesh retains its collider. Layer
 visibility and opacity also affect which meshes are built and drawn.
 
 ## Save, load, and integrations

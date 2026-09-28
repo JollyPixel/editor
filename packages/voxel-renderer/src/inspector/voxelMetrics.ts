@@ -32,19 +32,6 @@ export function voxelMetrics(
       }
     },
     {
-      id: "mergedFaces",
-      label: "merged",
-      unit: "percent",
-      better: "higher",
-      group: kGroup,
-      tile: false,
-      sample: () => {
-        const { faces, mergedFaces } = stats();
-
-        return share(mergedFaces, faces + mergedFaces);
-      }
-    },
-    {
       id: "facesPerVoxel",
       label: "faces/voxel",
       unit: "decimal",

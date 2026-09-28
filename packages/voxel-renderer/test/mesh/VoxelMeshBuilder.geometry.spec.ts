@@ -2,18 +2,23 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type * as THREE from "three";
+
 // Import Internal Dependencies
 import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
 import {
   buildGeometries,
   countChunkVertices,
-  fillBox,
   firstGeometry,
   getChunk,
   makeMeshFixture,
-  place
+  place,
+  type MeshFixture,
+  type Vec3Tuple
 } from "../helpers/meshFixture.ts";
 import { RAMP_ID as kRampId } from "../helpers/ids.ts";
+import { expandPulled } from "../helpers/pulledFaces.ts";
 import type { BlockDefinition } from "../../src/blocks/index.ts";
 
 describe("VoxelMeshBuilder - isolated cube", () => {
@@ -39,8 +44,8 @@ describe("VoxelMeshBuilder - isolated cube", () => {
       place(fixture, [0, 0, 0]);
     }
 
-    const a = firstGeometry(opaque);
-    const b = firstGeometry(translucent);
+    const a = expandedGeometry(opaque);
+    const b = expandedGeometry(translucent);
 
     assert.deepEqual(a.getAttribute("position").array, b.getAttribute("position").array);
     assert.deepEqual(a.getAttribute("uv").array, b.getAttribute("uv").array);
@@ -48,30 +53,10 @@ describe("VoxelMeshBuilder - isolated cube", () => {
 });
 
 describe("VoxelMeshBuilder - geometry attribute layout", () => {
-  it("keeps position in float32, narrows the rest and emits no color", () => {
-    const fixture = makeMeshFixture();
-    place(fixture, [0, 0, 0]);
-    const geometry = firstGeometry(fixture);
-
-    assert.ok(geometry.getAttribute("position").array instanceof Float32Array);
-
-    const normals = geometry.getAttribute("normal");
-    assert.ok(normals.array instanceof Int8Array);
-    assert.equal(normals.normalized, true);
-    assert.equal(normals.itemSize, 4);
-
-    const uvs = geometry.getAttribute("uv");
-    assert.ok(uvs.array instanceof Uint16Array);
-    assert.equal(uvs.normalized, true);
-    assert.equal(uvs.itemSize, 2);
-
-    assert.equal(geometry.getAttribute("color"), undefined);
-  });
-
   it("round-trips axis-aligned normals exactly", () => {
     const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);
-    const normals = firstGeometry(fixture).getAttribute("normal");
+    const normals = expandedGeometry(fixture).getAttribute("normal");
 
     for (let i = 0; i < normals.count; i++) {
       for (const component of [normals.getX(i), normals.getY(i), normals.getZ(i)]) {
@@ -86,7 +71,7 @@ describe("VoxelMeshBuilder - geometry attribute layout", () => {
   it("keeps uv within one 16-bit step of the atlas rect", () => {
     const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);
-    const uvs = firstGeometry(fixture).getAttribute("uv");
+    const uvs = expandedGeometry(fixture).getAttribute("uv");
 
     const region = fixture.tilesetManager.atlas().uvFor(DEFAULT_TEXTURE.col, DEFAULT_TEXTURE.row);
     const step = 1 / 65535;
@@ -127,7 +112,7 @@ describe("VoxelMeshBuilder - geometry attribute layout", () => {
   it("pads a triangle into a quad whose second half is degenerate", () => {
     const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0], kRampId);
-    const positions = firstGeometry(fixture).getAttribute("position");
+    const positions = expandedGeometry(fixture).getAttribute("position");
     const quads = positions.count / 4;
     let padded = 0;
 
@@ -148,34 +133,18 @@ describe("VoxelMeshBuilder - geometry attribute layout", () => {
   });
 });
 
-describe("VoxelMeshBuilder - greedy toggle", () => {
-  it("is off by default and switches meshing mode at runtime", () => {
-    const fixture = makeMeshFixture();
-    fillBox(fixture, { from: [0, 0, 0], to: [3, 0, 3] });
-    assert.equal(fixture.builder.greedy, false);
-    const naive = countChunkVertices(fixture);
-
-    fixture.builder.greedy = true;
-    assert.ok(countChunkVertices(fixture) < naive);
-
-    fixture.builder.greedy = false;
-    assert.equal(countChunkVertices(fixture), naive);
-  });
-});
-
 describe("VoxelMeshBuilder - buffers are reused between chunks", () => {
   it("builds each chunk with only its own faces, in chunk-local space", () => {
     const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);
     place(fixture, [4, 0, 0]);
 
-    const first = firstGeometry(fixture, [0, 0, 0]);
-    const second = firstGeometry(fixture, [1, 0, 0]);
+    const first = expandedGeometry(fixture, [0, 0, 0]);
+    const second = expandedGeometry(fixture, [1, 0, 0]);
 
     for (const geometry of [first, second]) {
       geometry.computeBoundingBox();
       assert.equal(geometry.getAttribute("position").count, 24);
-      assert.equal(geometry.drawRange.count, 36);
       assert.deepEqual(geometry.boundingBox!.min.toArray(), [0, 0, 0]);
       assert.deepEqual(geometry.boundingBox!.max.toArray(), [1, 1, 1]);
     }
@@ -201,7 +170,7 @@ describe("VoxelMeshBuilder - precompiled geometry follows registry changes", () 
   it("recomputes UVs when a tileset declares another tile size", () => {
     const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);
-    const before = firstGeometry(fixture).getAttribute("uv").getX(1);
+    const before = expandedGeometry(fixture).getAttribute("uv").getX(1);
 
     fixture.tilesetManager.tilesets.declare({
       id: "atlas",
@@ -210,7 +179,7 @@ describe("VoxelMeshBuilder - precompiled geometry follows registry changes", () 
     });
     fixture.tilesetManager.syncAtlases();
 
-    assert.notEqual(firstGeometry(fixture).getAttribute("uv").getX(1), before);
+    assert.notEqual(expandedGeometry(fixture).getAttribute("uv").getX(1), before);
   });
 });
 
@@ -228,12 +197,11 @@ describe("VoxelMeshBuilder - build statistics", () => {
         hiddenVoxels: 0,
         faces: 6,
         culledFaces: 0,
-        mergedFaces: 0,
         vertices: 24,
         triangles: 12,
         geometries: 1,
-        bytesPerVertex: 12 + 4 + 4 + 8,
-        bytes: (24 * (12 + 4 + 4 + 8)) + (36 * 4),
+        bytesPerVertex: 8 / 4,
+        bytes: (6 * 8) + (4 * 3 * 4 * 2) + (6 * 2),
         buildTimeMs: 0
       }
     );
@@ -284,7 +252,7 @@ function rampSlopeVs(
   const fixture = makeMeshFixture();
   fixture.blockRegistry.register(block);
   place(fixture, [0, 0, 0], block.id);
-  const geometry = firstGeometry(fixture);
+  const geometry = expandedGeometry(fixture);
   const normals = geometry.getAttribute("normal");
   const uvs = geometry.getAttribute("uv");
   const values: number[] = [];
@@ -295,4 +263,11 @@ function rampSlopeVs(
   }
 
   return values;
+}
+
+function expandedGeometry(
+  fixture: MeshFixture,
+  chunkCoords: Vec3Tuple = [0, 0, 0]
+): THREE.BufferGeometry {
+  return expandPulled(firstGeometry(fixture, chunkCoords));
 }

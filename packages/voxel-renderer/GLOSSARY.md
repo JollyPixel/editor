@@ -96,7 +96,7 @@ change how its block shape appears while keeping the same block definition.
 ### Face
 
 One surface of a block shape. A face has an orientation and texture mapping,
-and may take part in occlusion or greedy meshing.
+and may take part in occlusion.
 
 ### Transparent Block
 
@@ -149,12 +149,6 @@ covers.
 Leaving an occluded face out of a generated mesh. Face culling reduces the
 amount of geometry while leaving both voxels in the world.
 
-### Greedy Meshing
-
-An optional meshing mode that joins adjacent compatible flat faces into larger
-rectangles. Merging stays inside one chunk, while slopes, poles, and transformed
-voxels remain separate. The stored voxels do not change.
-
 ### View Distance
 
 The chunk radius around the engine's focus that is kept active for rendering.
@@ -182,5 +176,4 @@ culling does not change the world or the voxels stored in that chunk.
   grid, and **atlas** for the loaded texture used for rendering.
 - Use **transparent block** for texture holes and **layer opacity** for the
   translucency of a whole layer.
-- Use **meshing** for generating chunk surfaces and **greedy meshing** for the
-  mode that joins compatible faces.
+- Use **meshing** for generating chunk surfaces.

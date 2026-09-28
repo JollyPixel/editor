@@ -16,7 +16,6 @@ export interface VoxelMeshStats {
   hiddenVoxels: number;
   faces: number;
   culledFaces: number;
-  mergedFaces: number;
   vertices: number;
   triangles: number;
   facesPerSolidVoxel: number;
@@ -98,7 +97,6 @@ export class InspectedChunkRegistry {
       hiddenVoxels: 0,
       faces: 0,
       culledFaces: 0,
-      mergedFaces: 0,
       vertices: 0,
       triangles: 0,
       facesPerSolidVoxel: 0,
@@ -118,7 +116,6 @@ export class InspectedChunkRegistry {
       total.hiddenVoxels += stats.hiddenVoxels;
       total.faces += stats.faces;
       total.culledFaces += stats.culledFaces;
-      total.mergedFaces += stats.mergedFaces;
       total.vertices += stats.vertices;
       total.triangles += stats.triangles;
       total.bytes += stats.bytes;

@@ -82,7 +82,7 @@ describe("VoxelEngine - collider wiring", () => {
     placeCube(engine, "Ground", { x: 1, y: 0, z: 0 });
     placeCube(engine, "Top", { x: 1, y: 0, z: 0 });
 
-    engine.tick(0);
+    engine.flush();
 
     const groundId = engine.world.getLayer("Ground")!.id;
     const ground = fake.rebuilt.find(([key]) => key === `layer:${groundId}:0,0,0`);

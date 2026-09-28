@@ -12,18 +12,6 @@ import { chromium } from "@playwright/test";
 // Import Internal Dependencies
 import type { ProbeOptions } from "./fixtures/transparency.ts";
 
-interface MeshMode {
-  greedy: boolean;
-  vertexPulling: boolean;
-}
-
-// CONSTANTS
-const kMeshModes: MeshMode[] = [
-  { greedy: false, vertexPulling: false },
-  { greedy: true, vertexPulling: false },
-  { greedy: false, vertexPulling: true }
-];
-
 interface ProbeCase {
   name: string;
   options: ProbeOptions;
@@ -31,14 +19,13 @@ interface ProbeCase {
 }
 
 function probeCases(
-  mode: MeshMode,
   reverse: boolean
 ): ProbeCase[] {
   const cases: ProbeCase[] = [];
   const settings = {
-    ...mode, reverse, forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1"
+    reverse, forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1"
   };
-  const suffix = `greedy=${mode.greedy}, pulling=${mode.vertexPulling}, reverse=${reverse}`;
+  const suffix = `reverse=${reverse}`;
   function sample(
     name: string,
     options: ProbeOptions,
@@ -142,10 +129,8 @@ it("composites voxel alpha on the GPU", {
     });
     await page.goto(`http://127.0.0.1:${address.port}`);
     const cases: ProbeCase[] = [];
-    for (const mode of kMeshModes) {
-      for (const reverse of [false, true]) {
-        cases.push(...probeCases(mode, reverse));
-      }
+    for (const reverse of [false, true]) {
+      cases.push(...probeCases(reverse));
     }
     const samples = await page.evaluate(async(cases) => {
       const modulePath = "/probe.js";
@@ -165,25 +150,22 @@ it("composites voxel alpha on the GPU", {
           `${testCase.name}: expected ${testCase.expected}, received ${samples[sampleIndex]}`);
       }
     }
-    const colored = await page.evaluate(async({ forceWebGL, modes }) => {
+    const colored = await page.evaluate(async({ forceWebGL }) => {
       const modulePath = "/probe.js";
       const { probe }: typeof import("./fixtures/transparency.ts") = await import(modulePath);
       const result: number[][] = [];
-      for (const mode of modes) {
-        for (const reverse of [false, true]) {
-          for (const reverseDrawOrder of [false, true]) {
-            result.push(await probe({
-              alpha: 0.5, count: 2, startZ: 3, colored: true,
-              ...mode, reverse, reverseDrawOrder, side: "front", forceWebGL
-            }));
-          }
+      for (const reverse of [false, true]) {
+        for (const reverseDrawOrder of [false, true]) {
+          result.push(await probe({
+            alpha: 0.5, count: 2, startZ: 3, colored: true,
+            reverse, reverseDrawOrder, side: "front", forceWebGL
+          }));
         }
       }
 
       return result;
     }, {
-      forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1",
-      modes: kMeshModes
+      forceWebGL: process.env.VOXEL_TEST_WEBGPU !== "1"
     });
     assert.deepEqual(errors, []);
     for (let sampleIndex = 0; sampleIndex < colored.length; sampleIndex += 2) {

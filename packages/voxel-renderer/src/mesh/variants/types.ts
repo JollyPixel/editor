@@ -26,20 +26,6 @@ export interface TilesetResolver {
 }
 
 /**
- * World-axis mapping for a full quad that greedy meshing can stretch.
- */
-export interface BlockFaceMerge {
-  /** World axis the face is perpendicular to (0 = x, 1 = y, 2 = z). */
-  axis: number;
-  uAxis: number;
-  vAxis: number;
-  /**
-   * True when tile U follows `vAxis` after rotation or mirroring.
-   */
-  swapped: boolean;
-}
-
-/**
  * Polygon with transforms, winding, and atlas UVs compiled into its data.
  */
 export interface BlockVariantFace {
@@ -51,23 +37,13 @@ export interface BlockVariantFace {
   /** `vertexCount × 3` block-local positions in 0-1 space. */
   positions: Float32Array;
   /**
-   * Unsigned-normalized atlas UVs emitted by the non-tiled path.
+   * Unsigned-normalized atlas UVs.
    */
   uvs: Uint16Array;
-  /**
-   * Float tile-space UVs that greedy quads scale beyond 1 for repetition.
-   */
-  tileUvs: Float32Array;
   /**
    * Unsigned-normalized `[offsetU, offsetV, scaleU, scaleV]` atlas rect.
    */
   region: Uint16Array;
-  merge: BlockFaceMerge | null;
-  /**
-   * Shared by mergeable faces that look identical once stretched, whatever
-   * block or transform they come from; -1 when the face never merges.
-   */
-  mergeId: number;
   full: boolean;
   /**
    * True when a neighbour's footprint may split this boundary face.
@@ -97,13 +73,4 @@ export interface BlockVariant {
    */
   selfOcclusionMask: number;
   keepsCoveredFaces: boolean;
-  /**
-   * Mergeable full-quad face for each world-space direction.
-   */
-  mergeFaces: readonly (BlockVariantFace | undefined)[];
-  /**
-   * Per-mesher scratch index valid only while `sweepEpoch` matches.
-   */
-  sweepIndex: number;
-  sweepEpoch: number;
 }

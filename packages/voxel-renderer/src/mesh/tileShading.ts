@@ -3,7 +3,6 @@ import type * as THREE from "three";
 import type { Node } from "three/webgpu";
 import {
   abs,
-  attribute,
   clamp,
   dFdx,
   dFdy,
@@ -14,10 +13,8 @@ import {
   max,
   reference,
   round,
-  step,
   texture,
   textureSize,
-  uv,
   varying,
   vec2,
   vec3,
@@ -27,7 +24,6 @@ import {
 // Import Internal Dependencies
 import type { BlockSurface } from "../blocks/BlockSurface.ts";
 import { shadowPassSwitch } from "./ShadowPassSwitchNode.ts";
-import { TILE_REPEAT_SCALE } from "./GeometryBuffer.ts";
 import {
   aoFactorNode,
   type AoStrengthUniform
@@ -36,7 +32,7 @@ import {
 // CONSTANTS
 const kMinimumWeight = 1e-6;
 
-export type TileWrappedMaterial =
+export type TileShadedMaterial =
   | THREE.MeshLambertMaterial
   | THREE.MeshStandardMaterial;
 
@@ -60,8 +56,8 @@ export interface TileShadingOptions {
   alphaToCoverage?: boolean;
 }
 
-export interface TileClampingOptions extends TileShadingOptions {
-  inputs?: TileInputs;
+interface TileColorOptions extends TileShadingOptions {
+  inputs: TileInputs;
 }
 
 interface TileSample {
@@ -75,16 +71,16 @@ interface TileSample {
  * partially covered pixel from a point outside the triangle, whose
  * interpolated UV would otherwise read a neighbouring tile.
  */
-export function enableTileClamping(
-  material: TileWrappedMaterial,
-  options: TileClampingOptions = {}
+export function enableTileShading(
+  material: TileShadedMaterial,
+  inputs: TileInputs,
+  options: TileShadingOptions = {}
 ): void {
   const { map } = material;
   if (!map) {
     return;
   }
 
-  const inputs = options.inputs ?? attributeInputs();
   const clamped = clamp(
     inputs.uv,
     inputs.region.xy,
@@ -99,63 +95,17 @@ export function enableTileClamping(
       texel: inputs.uv.mul(size),
       position: clamped.mul(size)
     },
-    { ...options, inputs }
-  );
-}
-
-function attributeInputs(): TileInputs {
-  const region = attribute<"vec4">("tileRegion", "vec4");
-
-  return {
-    uv: uv(),
-    region,
-    vertexRegion: region,
-    brightness: attribute<"vec4">("normal", "vec4").w
-  };
-}
-
-/**
- * Repeats atlas tiles across greedy quads using WebGPU-compatible TSL nodes.
- */
-export function enableTileWrapping(
-  material: TileWrappedMaterial,
-  options: TileShadingOptions = {}
-): void {
-  const { map } = material;
-  if (!map) {
-    return;
-  }
-
-  const tileRegion = attribute<"vec4">("tileRegion", "vec4");
-  const tileRepeat = attribute<"vec2">("tileRepeat", "vec2")
-    .mul(TILE_REPEAT_SCALE)
-    .round();
-
-  // Fold tile-space UVs into 0..1, while preserving the far edge.
-  const tileCoord = clamp(uv(), vec2(0), tileRepeat);
-  const tileFracBase = tileCoord.sub(floor(tileCoord));
-  // `mix()` only exposes a scalar TS overload, so the vec2 form is expanded manually.
-  const edgeMask = step(tileRepeat, tileCoord);
-  const tileFrac = tileFracBase.add(vec2(1).sub(tileFracBase).mul(edgeMask));
-  const wrapped = tileRegion.xy.add(tileFrac.mul(tileRegion.zw));
-
-  applyTileColor(
-    material,
     {
-      // Force LOD 0: the UV discontinuity at each repeat causes derivative spikes.
-      sampled: texture(map, wrapped).level(float(0)),
-      // The unwrapped UV counts tile repeats, so it stays continuous.
-      texel: uv().mul(regionTexels(map, tileRegion)),
-      position: wrapped.mul(atlasSize(map))
-    },
-    { ...options, inputs: attributeInputs() }
+      ...options,
+      inputs
+    }
   );
 }
 
 function applyTileColor(
-  material: TileWrappedMaterial,
+  material: TileShadedMaterial,
   sample: TileSample,
-  options: TileClampingOptions
+  options: TileColorOptions
 ): void {
   const {
     surface,
@@ -163,7 +113,7 @@ function applyTileColor(
     averages = null,
     flat = false,
     alphaToCoverage = false,
-    inputs = attributeInputs()
+    inputs
   } = options;
   const { map } = material;
   let diffuse = sample.sampled;
@@ -353,7 +303,7 @@ function lerp(
 }
 
 function shadedTint(
-  material: TileWrappedMaterial,
+  material: TileShadedMaterial,
   brightness: FloatNode,
   aoStrength?: AoStrengthUniform
 ) {
@@ -365,7 +315,7 @@ function shadedTint(
 }
 
 function configureClassicAlpha(
-  material: TileWrappedMaterial,
+  material: TileShadedMaterial,
   surface: BlockSurface | undefined,
   flat: boolean
 ): void {

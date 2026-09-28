@@ -14,7 +14,7 @@ import {
  * Headless replay of `demo-noise-world`: generate terrain, then mesh dirty
  * chunks. Measures the same two phases shown in the demo HUD.
  *
- * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3] [--greedy] [--workers 0]
+ * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3] [--workers 0]
  */
 const { values } = parseArgs({
   options: {
@@ -22,19 +22,16 @@ const { values } = parseArgs({
     chunk: { type: "string", default: "256" },
     seed: { type: "string", default: "1337" },
     runs: { type: "string", default: "3" },
-    greedy: { type: "boolean", default: false },
     workers: { type: "string", default: "0" }
   }
 });
 
 const runs = Number(values.runs);
-const greedy = values.greedy;
 const workers = Number(values.workers);
 
 for (let run = 0; run < runs; run++) {
   const engine = createBenchEngine(
     Number(values.chunk),
-    greedy,
     workers > 0 ? nodeMeshWorkers(workers) : undefined
   );
 
@@ -58,7 +55,6 @@ for (let run = 0; run < runs; run++) {
   console.log(
     [
       `run ${run + 1}/${runs}`,
-      greedy ? "greedy" : "naive ",
       `voxels ${terrain.voxelCount.toLocaleString("en-US")}`,
       `generate ${generateMs.toFixed(1)}ms`,
       `mesh ${meshMs.toFixed(1)}ms`,

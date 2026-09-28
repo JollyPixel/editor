@@ -1,15 +1,25 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
+  attribute,
+  float,
   mrt,
+  normalWorld,
   output,
+  uv,
+  vec4,
   velocity
 } from "three/tsl";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../../../src/VoxelEngine.ts";
 import type { BlockShapeID } from "../../../src/blocks/shape/BlockShape.ts";
-import { PulledChunkMesh } from "../../../src/mesh/pulling/PulledChunkMesh.ts";
+import {
+  enableVertexPulling,
+  PulledChunkGeometry,
+  PulledChunkMesh
+} from "../../../src/mesh/index.ts";
+import { expandPulled } from "../../helpers/pulledFaces.ts";
 
 // CONSTANTS
 const kSize = 64;
@@ -28,17 +38,18 @@ const kShapes: BlockShapeID[] = [
   "stairCornerOuter"
 ];
 
+export type ParityChannel =
+  | "uv"
+  | "normal"
+  | "shade"
+  | "lit"
+  | "velocity";
+
 export interface ParityOptions {
   forceWebGL: boolean;
-  vertexPulling: boolean;
-  ambientOcclusion?: number;
-  far?: boolean;
-  shadows?: boolean;
-  /**
-   * Reads the motion vectors of a camera move instead of the colours, in
-   * quarter pixels.
-   */
-  velocity?: boolean;
+  expanded: boolean;
+  channel: ParityChannel;
+  ambientOcclusion?: boolean;
 }
 
 function renderFrames(
@@ -63,19 +74,62 @@ async function atlasImage(): Promise<HTMLImageElement> {
   const canvas = document.createElement("canvas");
   canvas.width = kAtlasTexels;
   canvas.height = kAtlasTexels;
-  const context = canvas.getContext("2d")!;
-  for (let y = 0; y < kAtlasTexels; y++) {
-    for (let x = 0; x < kAtlasTexels; x++) {
-      const seed = (x * 37) + (y * 91);
-      context.fillStyle = `rgb(${(seed * 53) % 256}, ${(seed * 97) % 256}, ${(seed * 29) % 256})`;
-      context.fillRect(x, y, 1, 1);
-    }
-  }
   const image = new Image();
   image.src = canvas.toDataURL();
   await image.decode();
 
   return image;
+}
+
+function probeMaterial(
+  channel: ParityChannel,
+  pulled: PulledChunkGeometry | null
+): THREE.NodeMaterial {
+  const material = channel === "lit" ?
+    new THREE.MeshLambertNodeMaterial() :
+    new THREE.MeshBasicNodeMaterial();
+  const inputs = pulled === null ?
+    { uv: uv(), brightness: attribute<"vec4">("normal", "vec4").w } :
+    enableVertexPulling(material, pulled.templates);
+
+  if (channel === "uv") {
+    material.colorNode = vec4(inputs.uv, float(0), float(1));
+  }
+  else if (channel === "normal") {
+    material.colorNode = vec4(normalWorld.mul(0.5).add(0.5), float(1));
+  }
+  else if (channel === "shade") {
+    material.colorNode = vec4(inputs.brightness, inputs.brightness, inputs.brightness, float(1));
+  }
+  else {
+    material.colorNode = vec4(float(1));
+  }
+
+  return material;
+}
+
+function swapProbeMeshes(
+  chunks: THREE.Object3D,
+  options: ParityOptions
+): THREE.Group {
+  const probes = new THREE.Group();
+  for (const child of chunks.children) {
+    if (!(child instanceof PulledChunkMesh)) {
+      throw new Error("The chunk meshes are not vertex pulled.");
+    }
+
+    const { geometry } = child;
+    const mesh = options.expanded ?
+      new THREE.Mesh(expandPulled(geometry), probeMaterial(options.channel, null)) :
+      new PulledChunkMesh(geometry, probeMaterial(options.channel, geometry));
+    mesh.position.copy(child.position);
+    mesh.castShadow = options.channel === "lit";
+    mesh.receiveShadow = options.channel === "lit";
+    probes.add(mesh);
+  }
+  chunks.visible = false;
+
+  return probes;
 }
 
 export async function renderParityScene(
@@ -92,19 +146,18 @@ export async function renderParityScene(
     throw new Error("The native WebGPU probe fell back to WebGL.");
   }
   renderer.toneMapping = THREE.NoToneMapping;
-  renderer.shadowMap.enabled = options.shadows ?? false;
-  const target = options.velocity ?
+  const lit = options.channel === "lit";
+  renderer.shadowMap.enabled = lit;
+  const target = options.channel === "velocity" ?
     velocityTarget(renderer) :
-    new THREE.RenderTarget(kSize, kSize);
+    new THREE.RenderTarget(kSize, kSize, { type: THREE.FloatType });
   renderer.setRenderTarget(target);
 
   const engine = new VoxelEngine({
     chunkSize: 8,
-    vertexPulling: options.vertexPulling,
-    ambientOcclusion: options.ambientOcclusion ?? 0,
-    farDistance: options.far ? 0 : Infinity,
-    castShadow: options.shadows ?? false,
-    receiveShadow: options.shadows ?? false,
+    lighting: {
+      ambientOcclusion: options.ambientOcclusion ? 1 : 0
+    },
     blocks: kShapes.map((shapeId, index) => {
       return {
         id: index + 1,
@@ -122,7 +175,6 @@ export async function renderParityScene(
     { id: "atlas", src: "", tileSize: 2 },
     new THREE.Texture(await atlasImage())
   );
-  engine.tilesetManager.atlas("atlas").texture.needsUpdate = true;
   const layer = engine.world.addLayer("parity");
   for (let x = 0; x < 6; x++) {
     for (let z = 0; z < 6; z++) {
@@ -140,35 +192,29 @@ export async function renderParityScene(
     });
   });
   layer.setVoxelAt({ x: 1, y: 2, z: 0 }, { blockId: 1, transform: 0 });
-  if (options.shadows) {
+  if (lit) {
     for (let x = 1; x < 4; x++) {
       for (let z = 1; z < 4; z++) {
         layer.setVoxelAt({ x, y: 4, z }, { blockId: 1, transform: 0 });
       }
     }
   }
-  if (options.far) {
-    engine.focus = { x: 100, y: 100, z: 100 };
-  }
   engine.flush();
 
   const chunks = engine.root.getObjectByName("VoxelView:chunks")!;
-  const pulled = chunks.children.every((child) => child instanceof PulledChunkMesh);
-  if (pulled !== options.vertexPulling) {
-    throw new Error("The chunk meshes do not match the requested vertex pulling mode.");
-  }
+  const probes = swapProbeMeshes(chunks, options);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x102030);
   const directional = new THREE.DirectionalLight(0xffffff, 2);
   directional.position.set(3, 8, 5);
-  directional.castShadow = options.shadows ?? false;
+  directional.castShadow = lit;
   directional.shadow.camera.left = -8;
   directional.shadow.camera.right = 8;
   directional.shadow.camera.top = 8;
   directional.shadow.camera.bottom = -8;
   scene.add(
-    engine.root,
+    probes,
     new THREE.AmbientLight(0xffffff, 0.8),
     directional
   );
@@ -181,14 +227,14 @@ export async function renderParityScene(
     let frame = 0;
     await renderFrames(renderer, 3, () => {
       frame++;
-      if (options.velocity && frame === 3) {
+      if (options.channel === "velocity" && frame === 3) {
         camera.position.set(8, 7.5, 11);
         camera.lookAt(2.5, 1, 2.5);
         camera.updateMatrixWorld();
       }
       renderer.render(scene, camera);
     });
-    if (options.velocity) {
+    if (options.channel === "velocity") {
       const halves = await renderer.readRenderTargetPixelsAsync(
         target, 0, 0, kSize, kSize, 1
       );
@@ -200,9 +246,15 @@ export async function renderParityScene(
     }
     const pixels = await renderer.readRenderTargetPixelsAsync(target, 0, 0, kSize, kSize);
 
-    return Array.from(pixels);
+    return Array.from(pixels as Float32Array, (value) => Math.round(value * 1024));
   }
   finally {
+    for (const probe of probes.children as THREE.Mesh[]) {
+      (probe.material as THREE.Material).dispose();
+      if (options.expanded) {
+        probe.geometry.dispose();
+      }
+    }
     engine.dispose();
     target.dispose();
     renderer.dispose();

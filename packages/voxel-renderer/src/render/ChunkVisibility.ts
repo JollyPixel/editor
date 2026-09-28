@@ -3,18 +3,9 @@ import type {
   ChunkMeshEntry,
   ChunkMeshStore
 } from "./ChunkMeshStore.ts";
-import {
-  FULL_DETAIL,
-  type ChunkDetail,
-  type ChunkViewport
-} from "./ChunkViewport.ts";
+import type { ChunkViewport } from "./ChunkViewport.ts";
 
 export type ChunkUnloadFn = (
-  key: string,
-  entry: ChunkMeshEntry
-) => void;
-
-export type ChunkRelevelFn = (
   key: string,
   entry: ChunkMeshEntry
 ) => void;
@@ -22,7 +13,6 @@ export type ChunkRelevelFn = (
 export interface ChunkVisibilityOptions {
   meshes: ChunkMeshStore;
   unload: ChunkUnloadFn;
-  relevel?: ChunkRelevelFn;
 }
 
 /**
@@ -32,7 +22,6 @@ export interface ChunkVisibilityOptions {
 export class ChunkVisibility {
   #meshes: ChunkMeshStore;
   #unload: ChunkUnloadFn;
-  #relevel: ChunkRelevelFn;
   #last: ChunkViewport | null = null;
 
   constructor(
@@ -40,7 +29,6 @@ export class ChunkVisibility {
   ) {
     this.#meshes = options.meshes;
     this.#unload = options.unload;
-    this.#relevel = options.relevel ?? (() => void 0);
   }
 
   reset(): void {
@@ -63,7 +51,7 @@ export class ChunkVisibility {
       return;
     }
     this.#last = viewport;
-    const swaps: [string, ChunkDetail][] = [];
+    const swaps: [string, boolean][] = [];
 
     for (const [key, entry] of this.#meshes) {
       const inView = viewport.contains(entry.origin, entry.visible);
@@ -80,39 +68,27 @@ export class ChunkVisibility {
         continue;
       }
 
-      const detail = viewport.detailOf(entry.origin, entry.detail);
-      if (detail === entry.detail) {
-        continue;
-      }
-      if (detail.lod === entry.detail.lod) {
-        swaps.push([key, detail]);
-      }
-      else {
-        this.#relevel(key, entry);
+      const far = viewport.isFar(entry.origin, entry.far);
+      if (far !== entry.far) {
+        swaps.push([key, far]);
       }
     }
 
-    this.#meshes.applyDetails(swaps);
+    this.#meshes.applyFar(swaps);
   }
 
   #restore(): void {
-    const swaps: [string, ChunkDetail][] = [];
+    const swaps: [string, boolean][] = [];
 
     for (const [key, entry] of this.#meshes) {
       if (!entry.visible) {
         this.#meshes.cull(key, false);
       }
-      if (entry.meshes.length === 0) {
-        continue;
-      }
-      if (entry.detail.lod > 0) {
-        this.#relevel(key, entry);
-      }
-      else if (entry.detail.far) {
-        swaps.push([key, FULL_DETAIL]);
+      if (entry.meshes.length > 0 && entry.far) {
+        swaps.push([key, false]);
       }
     }
 
-    this.#meshes.applyDetails(swaps);
+    this.#meshes.applyFar(swaps);
   }
 }

@@ -2,4 +2,4 @@
 "@jolly-pixel/voxel.renderer": minor
 ---
 
-Add an `ambientOcclusion` strength option and accessor to `VoxelView` and `VoxelEngine` that bakes per-vertex corner occlusion into chunk meshes.
+Add a `lighting.ambientOcclusion` strength that bakes per-corner occlusion into chunk faces.

@@ -185,8 +185,6 @@ interface VoxelMeshStats {
   faces: number;
   /** Faces skipped because an opaque neighbour occludes them. */
   culledFaces: number;
-  /** Voxel faces greedy meshing folded into a neighbour's quad; 0 when off. */
-  mergedFaces: number;
   vertices: number;
   triangles: number;
   /** faces / (voxels - hiddenVoxels). */
@@ -208,29 +206,18 @@ const { faces, culledFaces } = engine.inspector.mesh.stats;
 const ratio = (culledFaces / (faces + culledFaces)) * 100;
 ```
 
-With [greedy meshing](../../concepts/rendering-and-meshing.md#greedy-meshing) on,
-`faces` counts quads
-rather than voxel faces, and `mergedFaces` is how many extra voxel faces those
-quads absorbed. `faces + mergedFaces` is therefore what the naive builder would
-have emitted, which makes the merge ratio readable the same way:
+The derived figures are the ones worth watching for regressions:
 
-```ts
-const { faces, mergedFaces } = engine.inspector.mesh.stats;
-const ratio = (mergedFaces / (faces + mergedFaces)) * 100;
-```
-
-The two derived figures are the ones worth watching for regressions:
-
-- `facesPerSolidVoxel` should decrease when greedy meshing combines faces. If it
-  does not, inspect the merge predicates and the blocks in the measured chunks.
-- `bytesPerVertex` is read off the emitted geometries, not off a constant, so an
-  attribute that quietly widens (or a dropped one that comes back) shows up here
-  with no code change needed. The current layouts report 28 without greedy
-  meshing, 36 with it, and 2 with vertex pulling. `tileRepeat` and float tile
-  UVs account for the greedy difference.
-- `bytes` is what those geometries upload, index buffers and the face records
-  of [vertex pulling](../../concepts/rendering-and-meshing.md#vertex-pulling)
-  included. It is the figure to compare between meshing modes.
+- `facesPerSolidVoxel` rises when culling stops hiding faces between
+  neighbours. If it does, inspect the occlusion masks of the blocks in the
+  measured chunks.
+- `bytesPerVertex` is read off the emitted face records, not off a constant, so
+  a record that quietly widens shows up here with no code change needed. The
+  current layout reports 2: one 8-byte
+  [face record](../../concepts/rendering-and-meshing.md#vertex-pulling) per
+  four-corner quad.
+- `bytes` is what those geometries upload: the face records plus the shared
+  four-corner quad.
 
 `MeshBuildStats` holds the counters for a single chunk build. `VoxelInspector`
 keeps a copy per chunk key and aggregates them on demand.

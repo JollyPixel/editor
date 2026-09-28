@@ -16,8 +16,7 @@
 - Named layers with explicit visual compositing or cell replacement
 - Toggle visibility, reorder, add/remove layers, and move them in world space
 - Face culling between adjacent solid voxels to keep triangle counts low
-- Optional greedy meshing (`greedy: true`) merging coplanar identical faces - about 3x fewer triangles on terrain
-- Optional vertex pulling (`vertexPulling: true`) storing 8 bytes per face and rebuilding vertices in the shader - about 17x less chunk geometry memory than naive meshing
+- Vertex pulling: 8 bytes per face, vertices rebuilt in the shader - about 17x less chunk geometry memory than per-vertex attributes
 - Many built-in block shapes (cube, slabs, ramp, corners, pole, stairs) and a `BlockShape` interface for custom geometry
 - Per-block transforms via a packed byte - 90° Y rotations and X/Z flips without duplicating definitions
 - Multiple tilesets at different resolutions; tiles referenced by `{ tilesetId, col, row }`
@@ -123,7 +122,7 @@ does not depend on an ECS runtime.
   ownership.
 - [Transparency](docs/api/core/VoxelTransparencyPassNode.md): scene compositing, setup, and limitations.
 - [Rendering and meshing](docs/concepts/rendering-and-meshing.md): dirty chunk
-  rebuilds, geometry layout, and greedy meshing.
+  rebuilds and geometry layout.
 - [Loading tilesets](docs/guides/loading-and-restoring-tilesets.md),
   [creating custom shapes](docs/guides/creating-custom-shapes.md), and
   [saving worlds](docs/guides/saving-and-loading-worlds.md).
@@ -213,7 +212,6 @@ The browser HUD is only a sanity check; Vite's checker inflates timings. Run hea
 
 ```bash
 pnpm run bench
-pnpm run bench --greedy
 pnpm run bench --workers 8
 pnpm run bench:compare
 ```

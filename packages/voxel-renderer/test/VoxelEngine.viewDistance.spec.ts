@@ -55,8 +55,11 @@ function makeFourChunkEngine(
 ): VoxelEngine {
   const settings: VoxelEngineOptions = {
     layers: ["Ground"],
-    rebuildBudgetMs: 0,
-    ...options
+    ...options,
+    meshing: {
+      budgetMs: 0,
+      ...options.meshing
+    }
   };
   const engine = meshless
     ? new VoxelEngine({ chunkSize: kChunkSize, ...settings })
@@ -93,7 +96,7 @@ function pick(
 }
 
 const kInspected: VoxelEngineOptions = {
-  viewDistance: kTight,
+  range: { viewDistance: kTight },
   inspector: {
     mode: "overlay",
     chunkBounds: true
@@ -147,7 +150,13 @@ const kScenarios: Scenario[] = [
   },
   {
     name: "disposes chunks leaving the view distance under the unload policy",
-    options: { ...kInspected, viewDistancePolicy: "unload" },
+    options: {
+      ...kInspected,
+      range: {
+        viewDistance: kTight,
+        policy: "unload"
+      }
+    },
     steps: [
       { focus: kNear, expect: { built: kFirstPair } },
       { focus: kFar, expect: { built: kLastPair, bounds: kLastPair, chunks: 2 } },
@@ -156,7 +165,7 @@ const kScenarios: Scenario[] = [
   },
   {
     name: "applies a widened view distance without waiting for the focus",
-    options: { viewDistance: kTight },
+    options: { range: { viewDistance: kTight } },
     steps: [
       { focus: kNear, expect: { built: kFirstPair } },
       { viewDistance: new ViewDistance({ chunks: 4, hysteresis: 0 }), expect: { built: kAll } }
@@ -168,7 +177,7 @@ const kScenarios: Scenario[] = [
   },
   {
     name: "meshes every chunk while no focus is set",
-    options: { viewDistance: 1 },
+    options: { range: { viewDistance: 1 } },
     steps: [{ expect: { built: kAll } }]
   },
   {
@@ -182,7 +191,13 @@ const kScenarios: Scenario[] = [
   },
   {
     name: "unloads the bounds of meshless chunks",
-    options: { ...kInspected, viewDistancePolicy: "unload" },
+    options: {
+      ...kInspected,
+      range: {
+        viewDistance: kTight,
+        policy: "unload"
+      }
+    },
     meshless: true,
     steps: [
       { focus: kNear, expect: { bounds: kFirstPair } },
@@ -201,7 +216,7 @@ describe("VoxelEngine - view distance", () => {
           engine.focus = focus;
         }
         if (viewDistance) {
-          engine.viewDistance = viewDistance;
+          engine.range.viewDistance = viewDistance;
         }
         if (layerVisible !== undefined) {
           engine.world.setLayerVisible("Ground", layerVisible);
@@ -214,7 +229,7 @@ describe("VoxelEngine - view distance", () => {
   }
 
   it("leaves chunks beyond the view distance dirty and meshes their missed edits later", () => {
-    const engine = makeFourChunkEngine({ viewDistance: 1 });
+    const engine = makeFourChunkEngine({ range: { viewDistance: 1 } });
     const lastChunk = engine.world.getLayer("Ground")!.getChunk(3, 0, 0)!;
     engine.focus = kNear;
     engine.tick(0);
@@ -233,8 +248,8 @@ describe("VoxelEngine - view distance", () => {
     let clock = 0;
     t.mock.method(performance, "now", () => clock++);
     const engine = makeFourChunkEngine({
-      viewDistance: kTight,
-      rebuildBudgetMs: 1
+      range: { viewDistance: kTight },
+      meshing: { budgetMs: 1 }
     });
     engine.tick(0);
 
@@ -250,7 +265,7 @@ describe("VoxelEngine - view distance", () => {
   });
 
   it("meshes a chunk edited in range while chunks beyond it stay dirty", () => {
-    const engine = makeFourChunkEngine({ viewDistance: kTight });
+    const engine = makeFourChunkEngine({ range: { viewDistance: kTight } });
     engine.focus = kNear;
     engine.tick(0);
 
@@ -263,8 +278,10 @@ describe("VoxelEngine - view distance", () => {
   it("keeps colliders for chunks the view distance unloads", () => {
     const fake = makeFakeCollider();
     const engine = makeFourChunkEngine({
-      viewDistance: kTight,
-      viewDistancePolicy: "unload",
+      range: {
+        viewDistance: kTight,
+        policy: "unload"
+      },
       collider: () => fake.collider
     });
     engine.focus = kNear;

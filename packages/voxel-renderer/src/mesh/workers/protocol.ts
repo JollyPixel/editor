@@ -2,7 +2,7 @@
 import type { BlockSurfaceOptions } from "../../blocks/BlockSurface.ts";
 import type { VoxelCoord } from "../../world/types.ts";
 import type { MeshBuildCounts } from "../MeshBuildStats.ts";
-import type { ChunkMeshData } from "../types.ts";
+import type { PulledMeshData } from "../types.ts";
 import type { FaceTemplate } from "../pulling/FaceTemplateTable.ts";
 import type { MeshDefinitions } from "./MeshDefinitions.ts";
 
@@ -38,9 +38,7 @@ export interface MeshBuildRequest {
   type: "build";
   id: number;
   chunkSize: number;
-  greedy: boolean;
   ambientOcclusion: boolean;
-  vertexPulling: boolean;
   layers: MeshWorkerLayer[];
   members: MeshWorkerMember[];
 }
@@ -52,7 +50,7 @@ export type MeshWorkerRequest =
 export interface MeshWorkerGeometry {
   tilesetId: string;
   surface: BlockSurfaceOptions;
-  data: ChunkMeshData;
+  data: PulledMeshData;
 }
 
 export interface MeshBuildResponse {

@@ -10,6 +10,7 @@ import type {
 } from "../src/commands/index.ts";
 import {
   chunkMeshes,
+  faceCountOf,
   makeEngine,
   placeCube
 } from "./helpers/engine.ts";
@@ -231,10 +232,7 @@ describe("VoxelEngine - tilesets", () => {
     const meshes = chunkMeshes(engine);
     assert.equal(meshes.length, 1);
     assert.ok(meshes[0].name.includes(MISSING_TILESET_ID));
-    assert.equal(
-      meshes[0].geometry.getAttribute("position").count,
-      6 * 4
-    );
+    assert.equal(faceCountOf(meshes[0]), 6);
   });
 
   it("keeps culling against a block drawn with the missing texture", () => {
@@ -251,9 +249,9 @@ describe("VoxelEngine - tilesets", () => {
 
     assert.deepEqual(
       chunkMeshes(engine)
-        .map((mesh) => mesh.geometry.getAttribute("position").count)
+        .map(faceCountOf)
         .sort(),
-      [5 * 4, 5 * 4]
+      [5, 5]
     );
   });
 
@@ -270,6 +268,6 @@ describe("VoxelEngine - tilesets", () => {
 
     const meshes = chunkMeshes(engine);
     assert.equal(meshes.length, 1);
-    assert.equal(meshes[0].geometry.getAttribute("position").count, 6 * 4);
+    assert.equal(faceCountOf(meshes[0]), 6);
   });
 });

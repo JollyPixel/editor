@@ -12,7 +12,7 @@ import {
   FACE_TEMPLATE_TEXELS,
   PULLED_FACE_WORDS,
   PULLED_TEMPLATE_BITS,
-  PulledChunkGeometry
+  type PulledChunkGeometry
 } from "../../src/mesh/index.ts";
 import { chunkMeshes } from "./engine.ts";
 
@@ -100,7 +100,7 @@ export function meshSnapshot(
 ): Map<string, MeshSnapshot> {
   const snapshot = new Map<string, MeshSnapshot>();
   for (const mesh of chunkMeshes(engine)) {
-    const { geometry } = mesh;
+    const geometry = mesh.geometry as PulledChunkGeometry;
     const attributes: Record<string, number[]> = {};
     for (const [name, attribute] of Object.entries(geometry.attributes)) {
       attributes[name] = Array.from(attribute.array);
@@ -108,7 +108,7 @@ export function meshSnapshot(
     snapshot.set(mesh.name, {
       drawCount: geometry.drawRange.count,
       attributes,
-      faces: geometry instanceof PulledChunkGeometry ? pulledFaces(geometry) : []
+      faces: pulledFaces(geometry)
     });
   }
 

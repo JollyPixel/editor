@@ -58,8 +58,6 @@ export interface ProbeOptions {
   mode?: BlockAlphaMode;
   side?: BlockSide;
   opacity?: number;
-  greedy?: boolean;
-  vertexPulling?: boolean;
   cull?: boolean;
   count?: number;
   reverse?: boolean;
@@ -110,22 +108,22 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   context.fillRect(0, 0, 1, 1);
   const engine = new VoxelEngine({
     chunkSize: 4,
-    greedy: options.greedy,
-    vertexPulling: options.vertexPulling,
-    materialCustomizer(material, tilesetId) {
-      if (options.lights) {
-        return;
-      }
+    rendering: {
+      customizer(material, tilesetId) {
+        if (options.lights) {
+          return;
+        }
 
-      let color = 0xffffff;
-      if (tilesetId === "stone") {
-        color = 0x00ff00;
+        let color = 0xffffff;
+        if (tilesetId === "stone") {
+          color = 0x00ff00;
+        }
+        else if (options.colored) {
+          color = tilesetId === "atlas" ? 0xff0000 : 0x0000ff;
+        }
+        material.emissive.set(color);
+        material.color.setRGB(0, 0, 0);
       }
-      else if (options.colored) {
-        color = tilesetId === "atlas" ? 0xff0000 : 0x0000ff;
-      }
-      material.emissive.set(color);
-      material.color.setRGB(0, 0, 0);
     },
     blocks: [{
       id: 1,
@@ -208,8 +206,8 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   engine.flush();
   const chunks = chunkGroupOf(engine);
   const pulled = chunks.children.every((child) => child instanceof PulledChunkMesh);
-  if (chunks.children.length === 0 || pulled !== (options.vertexPulling ?? false)) {
-    throw new Error("The chunk meshes do not match the requested vertex pulling mode.");
+  if (chunks.children.length === 0 || !pulled) {
+    throw new Error("The chunk meshes are not vertex pulled.");
   }
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(options.background ?? 0);

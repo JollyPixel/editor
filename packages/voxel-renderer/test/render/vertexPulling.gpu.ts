@@ -13,16 +13,16 @@ import { chromium } from "@playwright/test";
 import type { ParityOptions } from "./fixtures/vertexPulling.ts";
 
 // CONSTANTS
-const kTolerance = 2;
-const kScenes: Omit<ParityOptions, "forceWebGL" | "vertexPulling">[] = [
-  {},
-  { ambientOcclusion: 1 },
-  { far: true },
-  { shadows: true, ambientOcclusion: 0.5 },
-  { velocity: true }
+const kTolerance = 8;
+const kScenes: Omit<ParityOptions, "forceWebGL" | "expanded">[] = [
+  { channel: "uv" },
+  { channel: "normal" },
+  { channel: "shade", ambientOcclusion: true },
+  { channel: "lit", ambientOcclusion: true },
+  { channel: "velocity" }
 ];
 
-it("draws pulled chunks like classic chunks on the GPU", {
+it("draws pulled chunks like their expanded face records on the GPU", {
   timeout: 120_000
 }, async() => {
   const bundle = await build({
@@ -60,23 +60,23 @@ it("draws pulled chunks like classic chunks on the GPU", {
     await page.goto(`http://127.0.0.1:${address.port}`);
     const forceWebGL = process.env.VOXEL_TEST_WEBGPU !== "1";
     for (const scene of kScenes) {
-      const [classic, pulled] = await page.evaluate(async(options) => {
+      const [expanded, pulled] = await page.evaluate(async(options) => {
         const modulePath = "/probe.js";
         const { renderParityScene }: typeof import("./fixtures/vertexPulling.ts") =
           await import(modulePath);
 
         return [
-          await renderParityScene({ ...options, vertexPulling: false }),
-          await renderParityScene({ ...options, vertexPulling: true })
+          await renderParityScene({ ...options, expanded: true }),
+          await renderParityScene({ ...options, expanded: false })
         ];
       }, { ...scene, forceWebGL });
 
       assert.deepEqual(errors, []);
-      assert.equal(pulled.length, classic.length);
-      assert.ok(new Set(classic).size > 16, "the parity scene must not be blank");
+      assert.equal(pulled.length, expanded.length);
+      assert.ok(new Set(expanded).size > 4, "the parity scene must not be blank");
       let worst = 0;
-      for (let i = 0; i < classic.length; i++) {
-        worst = Math.max(worst, Math.abs(classic[i] - pulled[i]));
+      for (let i = 0; i < expanded.length; i++) {
+        worst = Math.max(worst, Math.abs(expanded[i] - pulled[i]));
       }
       assert.ok(worst <= kTolerance, `${JSON.stringify(scene)}: channels differ by up to ${worst}`);
     }

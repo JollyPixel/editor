@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type { PulledChunkGeometry } from "../../src/mesh/index.ts";
 import {
   VoxelEngine,
   type VoxelEngineOptions
@@ -72,6 +73,12 @@ export function chunkMeshes(
   return chunkGroup(engine).children.filter(
     (child): child is THREE.Mesh => child instanceof THREE.Mesh
   );
+}
+
+export function faceCountOf(
+  mesh: THREE.Mesh
+): number {
+  return (mesh.geometry as PulledChunkGeometry).faceCount;
 }
 
 export function chunkCoordsOf(

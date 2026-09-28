@@ -84,12 +84,6 @@ interface VoxelEngineOptions {
 ```
 
 ```ts
-type MaterialCustomizerFn = (
-  material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
-  tilesetId: string,
-  surface: BlockSurface
-) => void;
-
 interface VoxelEngineOptions {
   /**
    * Must be a power of two because every world-to-chunk conversion is a shift and a
@@ -98,40 +92,31 @@ interface VoxelEngineOptions {
    */
   chunkSize?: number;
   /**
-   * Milliseconds tick() may spend rebuilding dirty chunks before deferring the
-   * rest to the next frame. 0 rebuilds everything in the same tick.
-   * @default 8
+   * Optional list of layer names to create on initialization.
    */
-  rebuildBudgetMs?: number;
-  /**
-   * Chunk radius around `focus` kept meshed and drawn, as a radius in chunks or
-   * a full ViewDistance description. Ignored while `focus` is null.
-   * @default Infinity
-   */
-  viewDistance?: number | ViewDistanceOptions;
-  /**
-   * What happens to a chunk that leaves the view distance: "hide" keeps its
-   * geometry ready to show again, "unload" frees it and remeshes on return.
-   * @default "hide"
-   */
-  viewDistancePolicy?: "hide" | "unload";
-  /**
-   * Distance in world units from `focus` beyond which chunks draw every face
-   * in the flat average colour of its tile and blend blocks opaque.
-   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#detail-distances).
-   * @default Infinity
-   */
-  farDistance?: number;
-  /**
-   * Distance in world units from `focus` beyond which chunks mesh at half
-   * resolution, one block per 2x2x2 cell drawn twice as large.
-   * @default Infinity
-   */
-  lodDistance?: number;
+  layers?: string[];
+  /** Optional initial block definitions to register. */
+  blocks?: BlockDefinition[];
   /**
    * Undo/redo of voxel edits; see VoxelHistory. Disabled by default.
    */
   history?: VoxelHistoryOptions;
+  /**
+   * Subscribed to the `"command"` event before the constructor creates any
+   * layer. See [commands](./commands.md).
+   */
+  onCommand?: VoxelCommandListener;
+  /**
+   * Optional logger instance for debug output. Structural type (`child()` +
+   * `debug()`) so `Systems.Logger` satisfies it without an import.
+   * Defaults to a no-op logger.
+   */
+  logger?: VoxelLogger;
+  /**
+   * Pre-loaded atlases, registered synchronously during construction. Use
+   * `loadTilesets()` to fetch them before constructing `VoxelEngine`.
+   */
+  tilesets?: Iterable<TilesetSource>;
   /**
    * Enables collision when provided, disabled by default so no physics backend
    * is required. Called once during construction with the registries.
@@ -139,123 +124,49 @@ interface VoxelEngineOptions {
    */
   collider?: VoxelColliderFactory;
   /**
-   * Keeps the shader-only tileRegion and tileRepeat attributes in memory after
-   * the first render uploads them. Raycasting and colliders never read them.
-   * @default false
-   */
-  retainVertexData?: boolean;
-  /**
-   * Chunk meshes cast shadows. Chunks built later inherit the flag.
-   * @default false
-   */
-  castShadow?: boolean;
-  /**
-   * Chunk meshes receive shadows. Chunks built later inherit the flag.
-   * @default false
-   */
-  receiveShadow?: boolean;
-  /**
-   * Strength of the ambient occlusion baked into chunk vertices, clamped to
-   * 0 (off) through 1. See the rendering and meshing concept page.
-   * @default 0
-   */
-  ambientOcclusion?: number;
-  /**
-   * Meshes chunks in Web Workers over shared memory. See Mesh workers below.
-   * Ignored, with a warning, when the page is not cross-origin isolated.
-   */
-  meshWorkers?: MeshWorkerOptions;
-  /**
-   * @default "lambert"
-   * The type of material to use for rendering chunks. "standard" supports
-   * roughness and metalness maps but is more expensive to render; "lambert"
-   * is faster but only supports a simple diffuse map.
-   */
-  material?: "lambert" | "standard";
-
-  /**
-   * Optional callback to customize each material after it is created.
-   * Called with the material instance and the tileset ID it corresponds to
-   */
-  materialCustomizer?: MaterialCustomizerFn;
-
-  /**
-   * Optional list of layer names to create on initialization.
-   */
-  layers?: string[];
-  /** Optional initial block definitions to register. */
-  blocks?: BlockDefinition[];
-  /**
    * Optional block shapes to register in addition to the default
    * shapes provided by BlockShapeRegistry.createDefault().
    */
   shapes?: BlockShape[];
-  /**
-   * Default texture coverage cutoff for mask blocks without alphaCutoff.
-   * Applied before layer fading; opaque and blend modes ignore it.
-   * @default 0.1
-   */
-  alphaTest?: number;
-
-  /**
-   * Optional logger instance for debug output. Structural type (`child()` +
-   * `debug()`) so `Systems.Logger` satisfies it without an import.
-   * Defaults to a no-op logger.
-   */
-  logger?: VoxelLogger;
-
-  /**
-   * Subscribed to the `"command"` event before the constructor creates any
-   * layer. See [commands](./commands.md).
-   */
-  onCommand?: VoxelCommandListener;
-
   /**
    * Initial state of the inspector (`engine.inspector`). Mesh counters are
    * always collected; this only decides whether the wireframe is drawn from
    * the start. See [`VoxelInspector`](./VoxelInspector.md).
    */
   inspector?: VoxelInspectorOptions;
-
-  /**
-   * Merge coplanar identical block faces into the largest quads possible
-   * instead of one quad per voxel face.
-   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#greedy-meshing).
-   * @default false
-   */
-  greedy?: boolean;
-
-  /**
-   * Store 8 bytes per face and rebuild the vertices in the shader. Ignored
-   * while `greedy` is on.
-   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#vertex-pulling).
-   * @default false
-   */
-  vertexPulling?: boolean;
-
-  /**
-   * `"average"` box-filters the texels each pixel covers instead of letting
-   * nearest sampling shimmer. Falls back to `"nearest"` when the atlas
-   * pixels cannot be read.
-   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#distant-tiles).
-   * @default "average"
-   */
-  tileMinification?: "average" | "nearest";
-
-  /**
-   * Mask blocks turn their texel coverage into MSAA sample coverage, which
-   * softens distant cutout edges. Needs a multisampled target and an opaque
-   * canvas, since the coverage is also written as alpha.
-   * @default false
-   */
-  alphaToCoverage?: boolean;
-
-  /**
-   * Pre-loaded atlases, registered synchronously during construction. Use
-   * `loadTilesets()` to fetch them before constructing `VoxelEngine`.
-   */
-  tilesets?: Iterable<TilesetSource>;
+  /** Material type, customizer, alphaTest, alphaToCoverage, tileMinification. */
+  rendering?: VoxelRenderingOptions;
+  /** ambientOcclusion, castShadow, receiveShadow. */
+  lighting?: VoxelLightingOptions;
+  /** viewDistance, policy, farDistance. */
+  range?: VoxelRangeOptions;
+  /** budgetMs, workers. */
+  meshing?: VoxelMeshingOptions;
 }
+```
+
+The four groups are described in [`VoxelViewOptions`](./VoxelView.md#voxelviewoptions):
+
+```ts
+const engine = new VoxelEngine({
+  layers: ["Ground"],
+  rendering: {
+    material: "standard",
+    alphaTest: 0.5
+  },
+  lighting: {
+    ambientOcclusion: 0.75,
+    castShadow: true,
+    receiveShadow: true
+  },
+  range: {
+    viewDistance: 8,
+    farDistance: 6
+  },
+  meshing: {
+    budgetMs: 4
+  }
+});
 ```
 
 `load()` accepts a separate options object:
@@ -295,22 +206,20 @@ class VoxelEngine extends Emitter<VoxelEngineEvents> {
   readonly inspector: VoxelInspector;
   readonly history: VoxelHistory; // see VoxelHistory.md
 
-  greedy: boolean; // read/write; assigning rebuilds every chunk
-  vertexPulling: boolean; // read/write; assigning rebuilds every chunk
-  tileMinification: "average" | "nearest"; // read/write; assigning replaces the materials
-  alphaToCoverage: boolean; // read/write; assigning replaces the materials
-  castShadow: boolean; // read/write; assigning updates built chunks
-  receiveShadow: boolean; // read/write; assigning updates built chunks
-  ambientOcclusion: number; // read/write; switching on or off rebuilds every chunk
+  readonly rendering: VoxelRendering; // see VoxelView.md#settings
+  readonly lighting: VoxelLighting;
+  readonly range: VoxelRange;
   focus: THREE.Vector3Like | null;
-  viewDistance: ViewDistance;
-  viewDistancePolicy: "hide" | "unload";
-  farDistance: number; // world units; applied on the next tick
-  lodDistance: number; // world units; applied on the next tick
   readonly pendingRebuilds: number;
   readonly tilesets: TilesetList;
   readonly materialGroups: MaterialGroupList;
 }
+```
+
+```ts
+engine.lighting.ambientOcclusion = 0.5;
+engine.rendering.tileMinification = "nearest";
+engine.range.farDistance = 10;
 ```
 
 ## Lifecycle
@@ -328,10 +237,14 @@ lifecycle.
 
 ### Rebuild budget
 
-`tick()` spends at most `rebuildBudgetMs` (default `8` ms) per frame and defers the rest. Set to `0` to rebuild everything synchronously. `init()` and `load()` rebuild the whole world synchronously, unless [mesh workers](#mesh-workers) are running. Use `flush()` when meshes must be ready before the next line runs.
+`tick()` spends at most `meshing.budgetMs` (default `8` ms) per frame and defers the rest. Set to `0` to rebuild everything synchronously. `init()` and `load()` rebuild the whole world synchronously, unless [mesh workers](#mesh-workers) are running. Use `flush()` when meshes must be ready before the next line runs.
 
 ```ts
-const engine = new VoxelEngine({ rebuildBudgetMs: 8 });
+const engine = new VoxelEngine({
+  meshing: {
+    budgetMs: 8
+  }
+});
 
 engine.focus = focusPoint;  // prioritize chunks near this point
 engine.pendingRebuilds;     // 0 once the world is up to date
@@ -351,7 +264,7 @@ await engine.whenIdle();    // the new voxel is meshed
 
 ### Mesh workers
 
-`meshWorkers` moves chunk meshing to Web Workers. The application provides the
+`meshing.workers` moves chunk meshing to Web Workers. The application provides the
 worker script, which calls `runMeshWorker()` on its global scope:
 
 ```ts
@@ -363,12 +276,14 @@ runMeshWorker(self);
 
 ```ts
 const engine = new VoxelEngine({
-  meshWorkers: {
-    count: 4,
-    createWorker: () => new Worker(
-      new URL("./meshWorker.ts", import.meta.url),
-      { type: "module" }
-    )
+  meshing: {
+    workers: {
+      count: 4,
+      createWorker: () => new Worker(
+        new URL("./meshWorker.ts", import.meta.url),
+        { type: "module" }
+      )
+    }
   }
 });
 ```
@@ -399,7 +314,6 @@ With workers running:
   ones running in a worker, whose results are then dropped.
 - A build is dropped and its chunk remeshed when a chunk it read, or a block,
   shape or tileset definition, changed while it ran.
-- Half-resolution chunks (`lodDistance`) are meshed on the main thread.
 - A worker `error` event stops every worker; running and later builds fall
   back to the main thread and the error is logged.
 
@@ -419,36 +333,39 @@ chunk, so a moving camera keeps pulling the nearest chunks forward.
 
 ### View distance
 
-With a finite `viewDistance`, chunks further than that radius from `focus` are
-not meshed at all and stay dirty until they come into range, carrying every
-edit they missed. A queued chunk that falls out of range before its turn,
-including one queued while `focus` was `null`, is skipped the same way. Chunks
-already built when they leave the radius follow `viewDistancePolicy`.
+With a finite `range.viewDistance`, chunks further than that radius from
+`focus` are not meshed at all and stay dirty until they come into range,
+carrying every edit they missed. A queued chunk that falls out of range before
+its turn, including one queued while `focus` was `null`, is skipped the same
+way. Chunks already built when they leave the radius follow `range.policy`.
 
 ```ts
 import { ViewDistance } from "@jolly-pixel/voxel.renderer";
 
 const engine = new VoxelEngine({
-  viewDistance: 8,             // radius in chunks
-  viewDistancePolicy: "hide"   // or "unload"
+  range: {
+    viewDistance: 8, // radius in chunks
+    policy: "hide"   // or "unload"
+  }
 });
 
-engine.viewDistance = new ViewDistance({
+engine.range.viewDistance = new ViewDistance({
   chunks: 12,
   shape: "sphere",
   hysteresis: 2
 });
 ```
 
-Inside the view distance, `farDistance` and `lodDistance` (world units from
-`focus` to a chunk centre) lower the detail of far chunks: flat tile colours
-with opaque blend blocks, then half-resolution meshes. See
-[detail distances](../../concepts/rendering-and-meshing.md#detail-distances).
+Inside the view distance, chunks further than `range.farDistance` (in chunks,
+from `focus` to a chunk centre) draw flat tile colours with opaque blend
+blocks. The switch only swaps materials, so it never remeshes a chunk. See
+[far distance](../../concepts/rendering-and-meshing.md#far-distance).
 
 ```ts
 const engine = new VoxelEngine({
-  farDistance: 8 * chunkSize,
-  lodDistance: 12 * chunkSize
+  range: {
+    farDistance: 8
+  }
 });
 ```
 
@@ -471,7 +388,7 @@ chunks to be meshed.
 detects the swap and reapplies it on the next tick.
 
 The [rendering and meshing](../../concepts/rendering-and-meshing.md) concept
-explains the chunk geometry layout, rebuild queue, and greedy meshing tradeoffs.
+explains the chunk geometry layout and the rebuild queue.
 
 ## Methods
 

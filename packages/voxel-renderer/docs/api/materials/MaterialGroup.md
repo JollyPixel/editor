@@ -64,11 +64,11 @@ of bounds; `parse()` returns `null` instead. `with()` returns a new group.
 ## Rendering
 
 A block whose group is defined is drawn with a `MeshStandardMaterial` carrying
-the finish, even when the view's `material` is `"lambert"`. Blocks without a
+the finish, even when the view's `rendering.material` is `"lambert"`. Blocks without a
 group, or naming a group the document does not define, keep the view's
 material. `applyTo()` writes only the emissive fields on a Lambert material.
 
-The `materialCustomizer` runs after the finish is applied, so host code can
+The `rendering.customizer` runs after the finish is applied, so host code can
 still override it when a material is created. Editing a finish afterwards
 updates the existing materials in place, without the customizer. Defining or
 removing a group rebuilds every chunk.

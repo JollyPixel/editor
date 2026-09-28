@@ -46,13 +46,14 @@ for (const remove of [false, true]) {
     assert.equal(shared.reduce((area, piece) => area + projectedArea(piece), 0), remove ? 0 : 0.5);
     assert.deepEqual(face.positions, originalPositions);
     for (const piece of exposed) {
-      assert.equal(piece.merge, null);
+      const [offsetU, offsetV, scaleU, scaleV] = piece.region;
+      assert.equal(piece.full, false);
       for (let vertexIndex = 0; vertexIndex < piece.vertexCount; vertexIndex++) {
+        const u = piece.uvs[vertexIndex * 2];
+        const v = piece.uvs[vertexIndex * 2 + 1];
         assert.ok(piece.positions[vertexIndex * 3 + 1] >= 0.5);
-        assert.ok(piece.tileUvs[vertexIndex * 2] >= 0);
-        assert.ok(piece.tileUvs[vertexIndex * 2] <= 1);
-        assert.ok(piece.tileUvs[vertexIndex * 2 + 1] >= 0);
-        assert.ok(piece.tileUvs[vertexIndex * 2 + 1] <= 1);
+        assert.ok(u >= offsetU - 1 && u <= offsetU + scaleU + 1);
+        assert.ok(v >= offsetV - 1 && v <= offsetV + scaleV + 1);
       }
     }
   });

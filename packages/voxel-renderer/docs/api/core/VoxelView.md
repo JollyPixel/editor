@@ -31,52 +31,74 @@ view.tick(deltaTime);
 
 ## VoxelViewOptions
 
+Options are grouped by concern. `rendering`, `lighting` and `range` have a
+runtime object of the same name (see [Settings](#settings)).
+
 ```ts
 interface VoxelViewOptions {
   /** Collision factory called once with the registries; disabled when omitted. */
   collider?: VoxelColliderFactory;
+  /** Shapes registered after the defaults from BlockShapeRegistry. */
+  shapes?: BlockShape[];
+  /** Preloaded atlases, see loadTilesets. */
+  tilesets?: Iterable<TilesetSource>;
+  logger?: VoxelLogger;
+  inspector?: VoxelInspectorOptions;
+  rendering?: VoxelRenderingOptions;
+  lighting?: VoxelLightingOptions;
+  range?: VoxelRangeOptions;
+  meshing?: VoxelMeshingOptions;
+}
+
+type MaterialCustomizerFn = (
+  material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
+  tilesetId: string,
+  surface: BlockSurface
+) => void;
+
+interface VoxelRenderingOptions {
   /** @default "lambert" */
   material?: "lambert" | "standard";
   /** Called once for each new material with its tileset ID and surface. */
-  materialCustomizer?: MaterialCustomizerFn;
-  /** Shapes registered after the defaults from BlockShapeRegistry. */
-  shapes?: BlockShape[];
+  customizer?: MaterialCustomizerFn;
   /** @default 0.1 */
   alphaTest?: number;
-  logger?: VoxelLogger;
-  inspector?: VoxelInspectorOptions;
-  /** @default false */
-  greedy?: boolean;
-  /** 8 bytes per face, ignored while greedy, see rendering and meshing. @default false */
-  vertexPulling?: boolean;
-  /** Distant tiles average the texels they cover, see rendering and meshing. @default "average" */
-  tileMinification?: "average" | "nearest";
   /** Mask blocks write coverage as MSAA sample coverage. @default false */
   alphaToCoverage?: boolean;
-  /** Preloaded atlases, see loadTilesets. */
-  tilesets?: Iterable<TilesetSource>;
-  /** @default 8 */
-  rebuildBudgetMs?: number;
-  /** @default Infinity */
-  viewDistance?: number | ViewDistanceOptions;
-  /** @default "hide" */
-  viewDistancePolicy?: "hide" | "unload";
-  /** World units from focus; far chunks draw flat tile colours. @default Infinity */
-  farDistance?: number;
-  /** World units from focus; far chunks mesh at half resolution. @default Infinity */
-  lodDistance?: number;
-  /** @default false */
-  retainVertexData?: boolean;
+  /** Distant tiles average the texels they cover, see rendering and meshing. @default "average" */
+  tileMinification?: "average" | "nearest";
+}
+
+interface VoxelLightingOptions {
+  /** 0 (off) to 1. @default 0 */
+  ambientOcclusion?: number;
   /** @default false */
   castShadow?: boolean;
   /** @default false */
   receiveShadow?: boolean;
-  /** 0 (off) to 1. @default 0 */
-  ambientOcclusion?: number;
+}
+
+interface VoxelRangeOptions {
+  /** Radius in chunks around focus. @default Infinity */
+  viewDistance?: number | ViewDistanceOptions | ViewDistance;
+  /** @default "hide" */
+  policy?: "hide" | "unload";
+  /** Chunks from focus; far chunks draw flat tile colours. @default Infinity */
+  farDistance?: number;
+}
+
+interface VoxelMeshingOptions {
+  /** Per-tick rebuild budget in milliseconds; 0 drains the queue. @default 8 */
+  budgetMs?: number;
   /** Mesh chunks in Web Workers, see VoxelEngine.md#mesh-workers. */
-  meshWorkers?: MeshWorkerOptions;
+  workers?: MeshWorkerOptions;
 }
 ```
+
+A `customizer` must leave the material's `positionNode` alone, because chunk
+vertices are rebuilt in the vertex shader (see
+[vertex pulling](../../concepts/rendering-and-meshing.md#vertex-pulling)). The
+material's `map` is `null`: the atlas is sampled by its color node.
 
 ## Properties
 
@@ -87,22 +109,37 @@ class VoxelView {
   readonly shapes: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager; // atlases over document.tilesets
   readonly inspector: VoxelInspector;
-
-  greedy: boolean;                     // assigning rebuilds every chunk
-  vertexPulling: boolean;              // assigning rebuilds every chunk
-  tileMinification: "average" | "nearest"; // assigning replaces the materials
-  alphaToCoverage: boolean;            // assigning replaces the materials
-  castShadow: boolean;                 // assigning updates built chunks
-  receiveShadow: boolean;              // assigning updates built chunks
-  ambientOcclusion: number;            // switching on or off rebuilds every chunk
+  readonly rendering: VoxelRendering;
+  readonly lighting: VoxelLighting;
+  readonly range: VoxelRange;
   focus: THREE.Vector3Like | null;
-  viewDistance: ViewDistance;
-  viewDistancePolicy: "hide" | "unload";
-  farDistance: number;                 // world units; applied on the next tick
-  lodDistance: number;                 // world units; applied on the next tick
   readonly pendingRebuilds: number;
 }
 ```
+
+## Settings
+
+```ts
+class VoxelRendering {
+  tileMinification: "average" | "nearest"; // assigning replaces the materials
+  alphaToCoverage: boolean;                // assigning replaces the materials
+}
+
+class VoxelLighting {
+  ambientOcclusion: number; // clamped to 0..1; switching on or off rebuilds every chunk
+  castShadow: boolean;      // assigning updates built chunks
+  receiveShadow: boolean;   // assigning updates built chunks
+}
+
+class VoxelRange {
+  viewDistance: ViewDistance;
+  policy: "hide" | "unload";
+  farDistance: number;      // chunks; applied on the next tick
+}
+```
+
+`material`, `customizer`, `alphaTest` and the `meshing` group are read once at
+construction.
 
 The shape registry lives here, not on the document: a block's `shapeId` is
 document state, but the shapes it names are code each client registers for

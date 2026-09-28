@@ -27,7 +27,7 @@ import {
 } from "three/tsl";
 
 // Import Internal Dependencies
-import type { TileInputs } from "../tileWrapping.ts";
+import type { TileInputs } from "../tileShading.ts";
 import {
   FACE_TEMPLATE_TEXELS,
   FACE_TEMPLATES_PER_ROW,

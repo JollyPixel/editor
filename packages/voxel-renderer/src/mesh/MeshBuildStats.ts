@@ -3,7 +3,6 @@ export interface MeshBuildCounts {
   hiddenVoxels: number;
   faces: number;
   culledFaces: number;
-  mergedFaces: number;
   vertices: number;
   triangles: number;
   geometries: number;
@@ -17,7 +16,6 @@ export class MeshBuildStats implements MeshBuildCounts {
   hiddenVoxels = 0;
   faces = 0;
   culledFaces = 0;
-  mergedFaces = 0;
   vertices = 0;
   triangles = 0;
   geometries = 0;
@@ -38,7 +36,6 @@ export class MeshBuildStats implements MeshBuildCounts {
     this.hiddenVoxels = 0;
     this.faces = 0;
     this.culledFaces = 0;
-    this.mergedFaces = 0;
     this.vertices = 0;
     this.triangles = 0;
     this.geometries = 0;
@@ -54,7 +51,6 @@ export class MeshBuildStats implements MeshBuildCounts {
     this.hiddenVoxels = source.hiddenVoxels;
     this.faces = source.faces;
     this.culledFaces = source.culledFaces;
-    this.mergedFaces = source.mergedFaces;
     this.vertices = source.vertices;
     this.triangles = source.triangles;
     this.geometries = source.geometries;
@@ -69,7 +65,6 @@ export class MeshBuildStats implements MeshBuildCounts {
       hiddenVoxels: this.hiddenVoxels,
       faces: this.faces,
       culledFaces: this.culledFaces,
-      mergedFaces: this.mergedFaces,
       vertices: this.vertices,
       triangles: this.triangles,
       geometries: this.geometries,

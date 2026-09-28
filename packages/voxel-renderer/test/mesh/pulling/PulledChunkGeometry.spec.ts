@@ -8,8 +8,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   PulledChunkGeometry,
-  PulledChunkMesh,
-  type ChunkGeometryKey
+  PulledChunkMesh
 } from "../../../src/mesh/index.ts";
 import {
   buildGeometries,
@@ -22,6 +21,7 @@ import {
   RAMP_ID,
   STAIR_ID
 } from "../../helpers/ids.ts";
+import { expandPulled } from "../../helpers/pulledFaces.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;
@@ -43,109 +43,76 @@ function buildMixedWorld(
   return fixture;
 }
 
-function pulledGeometries(
-  fixture: MeshFixture
-): Map<ChunkGeometryKey, PulledChunkGeometry> {
-  const result = new Map<ChunkGeometryKey, PulledChunkGeometry>();
-  for (const [key, geometry] of buildGeometries(fixture)) {
-    assert.ok(geometry instanceof PulledChunkGeometry);
-    result.set(key, geometry);
-  }
-
-  return result;
-}
-
-function assertSameVertices(
-  classic: THREE.BufferGeometry,
-  pulled: PulledChunkGeometry
+function assertSameExpansion(
+  geometry: PulledChunkGeometry
 ): void {
-  const expanded = pulled.toIndexedGeometry();
-  const expected = classic.getAttribute("position").array;
-  const actual = expanded.getAttribute("position").array;
-  assert.equal(actual.length, expected.length);
-  for (let i = 0; i < expected.length; i++) {
+  const expected = expandPulled(geometry);
+  const actual = geometry.toIndexedGeometry();
+  const expectedPositions = expected.getAttribute("position").array;
+  const actualPositions = actual.getAttribute("position").array;
+  assert.equal(actualPositions.length, expectedPositions.length);
+  for (let i = 0; i < expectedPositions.length; i++) {
     assert.ok(
-      Math.abs(actual[i] - expected[i]) < kEpsilon,
-      `vertex component ${i}: expected ${expected[i]}, received ${actual[i]}`
+      Math.abs(actualPositions[i] - expectedPositions[i]) < kEpsilon,
+      `vertex component ${i}: expected ${expectedPositions[i]}, received ${actualPositions[i]}`
     );
   }
-
-  const { start, count } = classic.drawRange;
   assert.deepEqual(
-    Array.from(expanded.getIndex()!.array),
-    Array.from(classic.getIndex()!.array.subarray(start, start + count))
+    Array.from(actual.getIndex()!.array),
+    Array.from(expected.getIndex()!.array)
   );
 }
 
-describe("PulledChunkGeometry - classic parity", () => {
+describe("PulledChunkGeometry - faces", () => {
   for (const ambientOcclusion of [false, true]) {
-    it(`expands to the classic vertices and indices (ambientOcclusion=${ambientOcclusion})`, () => {
-      const classic = buildGeometries(buildMixedWorld({ ambientOcclusion }));
-      const pulled = pulledGeometries(
-        buildMixedWorld({ ambientOcclusion, vertexPulling: true })
-      );
+    it(`expands to the vertices its face records describe (ambientOcclusion=${ambientOcclusion})`, () => {
+      const geometries = buildGeometries(buildMixedWorld({ ambientOcclusion }));
 
-      assert.deepEqual(
-        [...pulled.keys()].map(String),
-        [...classic.keys()].map(String)
-      );
-      for (const [key, geometry] of classic) {
-        const pulledGeometry = [...pulled].find(([other]) => String(other) === String(key))![1];
-        assertSameVertices(geometry, pulledGeometry);
+      for (const geometry of geometries.values()) {
+        assertSameExpansion(geometry);
       }
     });
   }
 
   it("draws one instance of an indexed four-corner quad per face", () => {
-    const classic = buildGeometries(buildMixedWorld({}));
-    const pulled = pulledGeometries(buildMixedWorld({ vertexPulling: true }));
+    const fixture = buildMixedWorld({});
+    let faces = 0;
 
-    for (const [key, geometry] of classic) {
-      const pulledGeometry = [...pulled].find(([other]) => String(other) === String(key))![1];
-      assert.equal(pulledGeometry.instanceCount, geometry.getAttribute("position").count / 4);
-      assert.equal(pulledGeometry.faceCount, pulledGeometry.instanceCount);
-      const corners = pulledGeometry.getAttribute("position");
+    for (const geometry of buildGeometries(fixture).values()) {
+      assert.equal(geometry.faceCount, geometry.instanceCount);
+      faces += geometry.faceCount;
+      const corners = geometry.getAttribute("position");
       assert.equal(corners.count, 4);
       assert.deepEqual(
-        Array.from(pulledGeometry.getIndex()!.array, (index) => corners.getX(index)),
+        Array.from(geometry.getIndex()!.array, (index) => corners.getX(index)),
         [0, 1, 2, 0, 2, 3]
       );
     }
+    assert.equal(faces, fixture.builder.stats.faces);
   });
 
-  it("reports the classic triangle count and two bytes per vertex", () => {
-    const classic = buildMixedWorld({});
-    const pulled = buildMixedWorld({ vertexPulling: true });
-    buildGeometries(classic);
-    buildGeometries(pulled);
+  it("reports one triangle per padded triangle face and two bytes per vertex", () => {
+    const fixture = buildMixedWorld({});
+    buildGeometries(fixture);
+    const { faces, triangles, vertices, bytesPerVertex } = fixture.builder.stats;
 
-    assert.ok(pulled.builder.stats.triangles < pulled.builder.stats.faces * 2);
-    assert.equal(pulled.builder.stats.triangles, classic.builder.stats.triangles);
-    assert.equal(pulled.builder.stats.vertices, classic.builder.stats.vertices);
-    assert.equal(classic.builder.stats.bytesPerVertex, 28);
-    assert.equal(pulled.builder.stats.bytesPerVertex, 2);
+    assert.ok(triangles < faces * 2);
+    assert.equal(vertices, faces * 4);
+    assert.equal(bytesPerVertex, 2);
   });
 
   it("counts eight bytes per face plus each chunk's indexed quad", () => {
-    const pulled = buildMixedWorld({ vertexPulling: true });
-    buildGeometries(pulled);
-    const { faces, geometries, bytes } = pulled.builder.stats;
+    const fixture = buildMixedWorld({});
+    buildGeometries(fixture);
+    const { faces, geometries, bytes } = fixture.builder.stats;
 
     assert.equal(bytes, (faces * 8) + (geometries * ((4 * 3 * 4 * 2) + (6 * 2))));
-  });
-
-  it("keeps building classic geometry while greedy meshing is on", () => {
-    const fixture = buildMixedWorld({ vertexPulling: true, greedy: true });
-
-    for (const geometry of buildGeometries(fixture).values()) {
-      assert.equal(geometry instanceof PulledChunkGeometry, false);
-    }
   });
 });
 
 describe("PulledChunkGeometry - layout", () => {
   it("packs faces into an RG32UI texture at most 2048 texels wide", () => {
-    const fixture = makeMeshFixture({ chunkSize: 32, vertexPulling: true });
+    const fixture = makeMeshFixture({ chunkSize: 32 });
     for (let x = 0; x < 32; x += 2) {
       for (let y = 0; y < 6; y += 2) {
         for (let z = 0; z < 32; z += 2) {
@@ -153,7 +120,7 @@ describe("PulledChunkGeometry - layout", () => {
         }
       }
     }
-    const [geometry] = pulledGeometries(fixture).values();
+    const [geometry] = buildGeometries(fixture).values();
 
     assert.equal(geometry.faceCount, 16 * 3 * 16 * 6);
     assert.equal(geometry.faces.image.width, 2048);
@@ -164,19 +131,19 @@ describe("PulledChunkGeometry - layout", () => {
   });
 
   it("sizes the texture to the face count below one row", () => {
-    const fixture = makeMeshFixture({ vertexPulling: true });
+    const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);
-    const [geometry] = pulledGeometries(fixture).values();
+    const [geometry] = buildGeometries(fixture).values();
 
     assert.equal(geometry.faces.image.width, 6);
     assert.equal(geometry.faces.image.height, 1);
   });
 
   it("bounds the cells its faces occupy", () => {
-    const fixture = makeMeshFixture({ chunkSize: 8, vertexPulling: true });
+    const fixture = makeMeshFixture({ chunkSize: 8 });
     place(fixture, [1, 2, 3]);
     place(fixture, [4, 5, 6]);
-    const [geometry] = pulledGeometries(fixture).values();
+    const [geometry] = buildGeometries(fixture).values();
 
     assert.deepEqual(geometry.boundingBox!.min.toArray(), [1, 2, 3]);
     assert.deepEqual(geometry.boundingBox!.max.toArray(), [5, 6, 7]);
@@ -184,9 +151,9 @@ describe("PulledChunkGeometry - layout", () => {
   });
 
   it("disposes its face texture with the geometry", () => {
-    const fixture = makeMeshFixture({ vertexPulling: true });
+    const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);
-    const [geometry] = pulledGeometries(fixture).values();
+    const [geometry] = buildGeometries(fixture).values();
     let disposed = false;
     geometry.faces.addEventListener("dispose", () => {
       disposed = true;
@@ -198,7 +165,7 @@ describe("PulledChunkGeometry - layout", () => {
   });
 
   it("rejects a word array that does not fill the texture", () => {
-    const fixture = makeMeshFixture({ vertexPulling: true });
+    const fixture = makeMeshFixture();
 
     assert.throws(() => new PulledChunkGeometry({
       words: new Uint32Array(3),
@@ -211,15 +178,15 @@ describe("PulledChunkGeometry - layout", () => {
 
 describe("PulledChunkMesh - raycast", () => {
   function meshes(
-    options: MeshFixtureOptions
+    expanded: boolean
   ): THREE.Mesh[] {
-    const fixture = buildMixedWorld(options);
+    const fixture = buildMixedWorld({});
 
-    return [...buildGeometries(fixture)].map(([, geometry]) => {
+    return [...buildGeometries(fixture).values()].map((geometry) => {
       const material = new THREE.MeshBasicMaterial();
-      const mesh = geometry instanceof PulledChunkGeometry ?
-        new PulledChunkMesh(geometry, material) :
-        new THREE.Mesh(geometry, material);
+      const mesh = expanded ?
+        new THREE.Mesh(expandPulled(geometry), material) :
+        new PulledChunkMesh(geometry, material);
       mesh.position.set(10, -2, 4);
       mesh.updateMatrixWorld(true);
 
@@ -243,9 +210,9 @@ describe("PulledChunkMesh - raycast", () => {
   ];
 
   for (const [index, ray] of rays.entries()) {
-    it(`hits what the classic mesh hits (ray ${index})`, () => {
-      const expected = hits(meshes({}), ray);
-      const actual = hits(meshes({ vertexPulling: true }), ray);
+    it(`hits what the expanded mesh hits (ray ${index})`, () => {
+      const expected = hits(meshes(true), ray);
+      const actual = hits(meshes(false), ray);
 
       assert.ok(expected.length > 0);
       assert.equal(actual.length, expected.length);
@@ -262,6 +229,6 @@ describe("PulledChunkMesh - raycast", () => {
   it("misses outside the bounding volume", () => {
     const ray = new THREE.Ray(new THREE.Vector3(-50, 50, -50), new THREE.Vector3(0, 1, 0));
 
-    assert.equal(hits(meshes({ vertexPulling: true }), ray).length, 0);
+    assert.equal(hits(meshes(false), ray).length, 0);
   });
 });
