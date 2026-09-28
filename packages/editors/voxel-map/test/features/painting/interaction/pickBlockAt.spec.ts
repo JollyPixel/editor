@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type {
   VoxelCoord,
-  VoxelEngine
+  VoxelView
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -27,20 +27,22 @@ function footprint(
 
 function createEngine(
   blocks: Record<string, number>
-): VoxelEngine {
+): VoxelView {
   const engine = {
-    world: {
-      getVoxelAt(position: VoxelCoord) {
-        const blockId = blocks[cellKey(position)];
+    document: {
+      world: {
+        getVoxelAt(position: VoxelCoord) {
+          const blockId = blocks[cellKey(position)];
 
-        return blockId === undefined ?
-          undefined :
-          { blockId, transform: 0 };
+          return blockId === undefined ?
+            undefined :
+            { blockId, transform: 0 };
+        }
       }
     }
   };
 
-  return engine as unknown as VoxelEngine;
+  return engine as unknown as VoxelView;
 }
 
 function cellKey(

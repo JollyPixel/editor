@@ -10,7 +10,7 @@ import * as THREE from "three";
 import {
   BlockRegistry,
   BlockShapeRegistry,
-  TilesetManager,
+  TilesetAtlases,
   VoxelTransform
 } from "@jolly-pixel/voxel.renderer";
 
@@ -20,7 +20,7 @@ import { TileOpacityProbe } from "../../../../src/features/blocks/tileOpacity.ts
 import type { GhostTarget } from "../../../../src/features/painting/model/ghostTarget.ts";
 
 function ghostOf(): GhostBlock {
-  const tilesetManager = new TilesetManager();
+  const atlases = new TilesetAtlases();
 
   return new GhostBlock({
     blockRegistry: new BlockRegistry([
@@ -31,8 +31,8 @@ function ghostOf(): GhostBlock {
       }
     ]),
     shapeRegistry: BlockShapeRegistry.createDefault(),
-    tilesetManager,
-    tileOpacity: new TileOpacityProbe(tilesetManager, () => null)
+    atlases,
+    tileOpacity: new TileOpacityProbe(atlases, () => null)
   });
 }
 

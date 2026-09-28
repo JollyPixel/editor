@@ -1,9 +1,9 @@
 # VoxelRenderer
 
-`VoxelRenderer` adapts `VoxelEngine` to the JollyPixel actor-component
-lifecycle. It attaches the engine root and initializes it during `awake()`,
-ticks the engine during `update()`, and removes and disposes it during
-`destroy()`. This entry point requires the optional peer
+`VoxelRenderer` runs a [`VoxelView`](../core/VoxelView.md) through the
+JollyPixel actor-component lifecycle. It attaches the view root and
+initializes it during `awake()`, ticks the view during `update()`, and removes
+and disposes it during `destroy()`. This entry point requires the optional peer
 `@jolly-pixel/engine`.
 
 ```ts
@@ -12,11 +12,13 @@ import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
 const renderer = actor.addComponentAndGet(VoxelRenderer, {
   focus: cameraActor.object3D,
   tilesets,
-  blocks,
-  layers: ["Ground"]
+  document: {
+    blocks,
+    layers: ["Ground"]
+  }
 });
 
-renderer.engine.world.setVoxel("Ground", {
+renderer.document.world.setVoxel("Ground", {
   position: { x: 0, y: 0, z: 0 },
   blockId: 1
 });
@@ -25,12 +27,15 @@ renderer.engine.world.setVoxel("Ground", {
 ## API
 
 ```ts
-interface VoxelRendererOptions extends VoxelEngineOptions {
+interface VoxelRendererOptions extends VoxelViewOptions {
+  /** A document to draw, or the options of one the renderer builds. */
+  document?: VoxelDocument | VoxelDocumentOptions;
   focus?: THREE.Object3D | null;
 }
 
 class VoxelRenderer extends ActorComponent {
-  readonly engine: VoxelEngine;
+  readonly document: VoxelDocument;
+  readonly view: VoxelView;
   focus: THREE.Object3D | null;
 
   constructor(actor: Actor<any>, options?: VoxelRendererOptions);
@@ -40,6 +45,12 @@ class VoxelRenderer extends ActorComponent {
 }
 ```
 
-The actor world's logger is used unless `options.logger` is supplied. When a
-focus object is set, its world position is converted to engine-root local
-coordinates on every update before the engine ticks.
+A document passed as an instance belongs to its owner: `destroy()` disposes the
+view only. A document built from options, or from nothing, belongs to the
+renderer and is disposed with it. Pass an instance to draw a document that
+outlives the actor, such as one synchronized over the network.
+
+The actor world's logger is used unless `options.logger` is supplied; it is
+handed to the document the renderer builds and to the view. When a focus
+object is set, its world position is converted to view-root local coordinates
+on every update before the view ticks.

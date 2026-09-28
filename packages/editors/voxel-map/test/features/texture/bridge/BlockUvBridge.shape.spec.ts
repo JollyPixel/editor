@@ -28,7 +28,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("sizes a pole region to the width of the pole", () => {
     const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("pole"));
+    engine.document.blocks.register(shapedBlock("pole"));
 
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -57,7 +57,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("puts a slab side on the half of the tile its geometry covers", () => {
     const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("slabBottom"));
+    engine.document.blocks.register(shapedBlock("slabBottom"));
 
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -87,7 +87,7 @@ describe("BlockUvBridge / shape footprint", () => {
   it("keeps every shape's faces on the tile they came from once freed", () => {
     for (const shape of BlockShapeRegistry.createDefault()) {
       const { engine, bridgeOptions } = makeFakeVoxelEngine();
-      engine.blockRegistry.register(shapedBlock(shape.id));
+      engine.document.blocks.register(shapedBlock(shape.id));
 
       const uv = makeUv();
       const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -95,7 +95,7 @@ describe("BlockUvBridge / shape footprint", () => {
         bridge.setActiveTileset("atlas", 16);
         uv.setState("block-1", "free");
 
-        const { faceTextures } = engine.blockRegistry.get(1)!;
+        const { faceTextures } = engine.document.blocks.get(1)!;
         assert.ok(
           Object.keys(faceTextures).length > 0,
           `${shape.id} wrote no face texture`
@@ -116,7 +116,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("resizes the region when the block changes shape", () => {
     const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("cube"));
+    engine.document.blocks.register(shapedBlock("cube"));
 
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -124,7 +124,7 @@ describe("BlockUvBridge / shape footprint", () => {
       bridge.setActiveTileset("atlas", 16);
       assert.equal(uv.get("block-1")!.rectFor("front").width, 16);
 
-      engine.defineBlock(shapedBlock("pole"));
+      engine.document.defineBlock(shapedBlock("pole"));
       uv.setState("block-1", "free");
 
       assert.deepEqual(uv.get("block-1")!.rectFor("front"), {
@@ -141,7 +141,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("keeps a region stacked when the block changes to a non-box shape", () => {
     const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("cube"));
+    engine.document.blocks.register(shapedBlock("cube"));
 
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -149,7 +149,7 @@ describe("BlockUvBridge / shape footprint", () => {
       bridge.setActiveTileset("atlas", 16);
       assert.equal(uv.get("block-1")!.state, "stacked");
 
-      engine.defineBlock(shapedBlock("stair"));
+      engine.document.defineBlock(shapedBlock("stair"));
 
       const region = uv.get("block-1")!;
       assert.equal(
@@ -172,7 +172,7 @@ describe("BlockUvBridge / shape footprint", () => {
   it("keeps every face's size across a stack round-trip", () => {
     for (const shapeId of ["pole", "poleY", "slabBottom", "slabTop", "stair"]) {
       const { engine, bridgeOptions } = makeFakeVoxelEngine();
-      engine.blockRegistry.register(shapedBlock(shapeId));
+      engine.document.blocks.register(shapedBlock(shapeId));
 
       const uv = makeUv();
       const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -199,7 +199,7 @@ describe("BlockUvBridge / shape footprint", () => {
   it("keeps every face's size across a serialized stack round-trip", () => {
     for (const shapeId of ["pole", "poleY", "slabBottom", "slabTop", "stair"]) {
       const { engine, bridgeOptions } = makeFakeVoxelEngine();
-      engine.blockRegistry.register(shapedBlock(shapeId));
+      engine.document.blocks.register(shapedBlock(shapeId));
 
       const uv = makeUv();
       const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -226,7 +226,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("stacks a pole onto its largest face, not its smallest", () => {
     const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("pole"));
+    engine.document.blocks.register(shapedBlock("pole"));
 
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -252,7 +252,7 @@ describe("BlockUvBridge / shape footprint", () => {
   it("stacks onto the tile the block already used", () => {
     for (const shapeId of ["cube", "pole", "slabBottom"]) {
       const { engine, bridgeOptions } = makeFakeVoxelEngine();
-      engine.blockRegistry.register(shapedBlock(shapeId));
+      engine.document.blocks.register(shapedBlock(shapeId));
 
       const uv = makeUv();
       const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -261,7 +261,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
         uv.setState("block-1", "stacked");
 
-        const { defaultTexture } = engine.blockRegistry.get(1)!;
+        const { defaultTexture } = engine.document.blocks.get(1)!;
         assert.deepEqual(
           { col: defaultTexture!.col, row: defaultTexture!.row },
           { col: 2, row: 1 },
@@ -276,7 +276,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("keeps a stacked ramp slope on one square tile", () => {
     const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("ramp"));
+    engine.document.blocks.register(shapedBlock("ramp"));
 
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -299,7 +299,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
   it("gives a free ramp slope its true length", () => {
     const { engine, bridgeOptions } = makeFakeVoxelEngine();
-    engine.blockRegistry.register(shapedBlock("ramp"));
+    engine.document.blocks.register(shapedBlock("ramp"));
 
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
@@ -321,7 +321,7 @@ describe("BlockUvBridge / shape footprint", () => {
         height: 16
       });
 
-      const block = engine.blockRegistry.get(1)!;
+      const block = engine.document.blocks.get(1)!;
       assert.deepEqual(
         block.faceTextures.top,
         { col: 2, row: 1, tilesetId: "atlas" }

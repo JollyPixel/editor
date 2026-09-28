@@ -18,7 +18,7 @@ import {
   loadTilesets,
   ViewDistance,
   type VoxelInspectorMode,
-  type VoxelEngine
+  type VoxelView
 } from "../../src/index.ts";
 import { temporalAntialiasing } from "./noise-world/antialiasing.ts";
 import { Daylight } from "./noise-world/daylight.ts";
@@ -125,9 +125,11 @@ const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
     focus: flyCamera.actor.object3D,
-    chunkSize: settings.chunkSize,
-    layers: [kTerrainLayer],
-    blocks: tileset.blocks,
+    document: {
+      chunkSize: settings.chunkSize,
+      layers: [kTerrainLayer],
+      blocks: tileset.blocks
+    },
     tilesets,
     rendering: {
       material: "lambert",
@@ -155,8 +157,8 @@ const voxelMap = world.createActor("map")
     }
   });
 
-const { engine } = voxelMap;
-const chunkMeshes = engine.root.getObjectByName("VoxelView:chunks");
+const { view: voxels } = voxelMap;
+const chunkMeshes = voxels.root.getObjectByName("VoxelView:chunks");
 if (chunkMeshes) {
   daylight.watchCasters(chunkMeshes);
 }
@@ -178,17 +180,17 @@ const viewStats = {
 };
 const view = {
   distance: kDefaultViewChunks,
-  policy: engine.range.policy,
+  policy: voxels.range.policy,
   far: kFarChunks
 };
 const controls = {
   seed: settings.seed,
-  minification: engine.rendering.tileMinification,
-  debug: engine.inspector.mode,
-  chunkBounds: engine.inspector.chunkBounds,
+  minification: voxels.rendering.tileMinification,
+  debug: voxels.inspector.mode,
+  chunkBounds: voxels.inspector.chunkBounds,
   ambientOcclusion: true,
   shadows: daylight.shadows,
-  alphaToCoverage: engine.rendering.alphaToCoverage,
+  alphaToCoverage: voxels.rendering.alphaToCoverage,
   traa: true
 };
 const traaPipeline = temporalAntialiasing();
@@ -284,7 +286,7 @@ controlsFolder
     label: "far tiles [N]"
   })
   .on("change", ({ value }) => {
-    engine.rendering.tileMinification = value;
+    voxels.rendering.tileMinification = value;
   });
 controlsFolder
   .addBinding(controls, "debug", {
@@ -299,30 +301,30 @@ controlsFolder
 controlsFolder
   .addBinding(controls, "chunkBounds", { label: "chunk bounds" })
   .on("change", ({ value }) => {
-    engine.inspector.chunkBounds = value;
+    voxels.inspector.chunkBounds = value;
   });
 controlsFolder
   .addBinding(controls, "ambientOcclusion", { label: "ambient occlusion" })
   .on("change", ({ value }) => {
-    engine.lighting.ambientOcclusion = value ? kAmbientOcclusion : 0;
+    voxels.lighting.ambientOcclusion = value ? kAmbientOcclusion : 0;
   });
 controlsFolder
   .addBinding(controls, "shadows", { label: "shadows" })
   .on("change", ({ value }) => {
     daylight.shadows = value;
-    engine.lighting.castShadow = value;
-    engine.lighting.receiveShadow = value;
+    voxels.lighting.castShadow = value;
+    voxels.lighting.receiveShadow = value;
   });
 controlsFolder
   .addBinding(controls, "alphaToCoverage", { label: "alpha to coverage" })
   .on("change", ({ value }) => {
-    engine.rendering.alphaToCoverage = value;
+    voxels.rendering.alphaToCoverage = value;
   });
 controlsFolder
   .addBinding(controls, "traa", { label: "TRAA [T]" })
   .on("change", ({ value }) => setTemporalAntialiasing(value));
 
-runtime.metrics.addSource(engine.inspector);
+runtime.metrics.addSource(voxels.inspector);
 await runtime.mountMetricsPanel({
   target: pane,
   filter: (metric) => metric.tile === false
@@ -333,7 +335,7 @@ await runtime.load({
   skipLoadingScreen: true
 });
 
-report = buildWorld(engine, settings);
+report = buildWorld(voxels, settings);
 syncStats();
 
 document.addEventListener("keydown", (event) => {
@@ -344,7 +346,7 @@ document.addEventListener("keydown", (event) => {
   }
 
   if (event.code === "KeyG") {
-    setDebugMode(engine.inspector.nextMode());
+    setDebugMode(voxels.inspector.nextMode());
 
     return;
   }
@@ -353,7 +355,7 @@ document.addEventListener("keydown", (event) => {
     controls.minification = controls.minification === "average" ?
       "nearest" :
       "average";
-    engine.rendering.tileMinification = controls.minification;
+    voxels.rendering.tileMinification = controls.minification;
     pane.refresh();
 
     return;
@@ -371,8 +373,8 @@ function rebuild(
   settings.seed = seed;
   controls.seed = seed;
 
-  resetLayer(engine);
-  report = buildWorld(engine, settings);
+  resetLayer(voxels);
+  report = buildWorld(voxels, settings);
   syncStats();
   pane.refresh();
 }
@@ -380,7 +382,7 @@ function rebuild(
 function setDebugMode(
   value: VoxelInspectorMode
 ): void {
-  engine.inspector.mode = value;
+  voxels.inspector.mode = value;
   if (controls.debug === value) {
     return;
   }
@@ -401,17 +403,17 @@ function setTemporalAntialiasing(
 function applyFarDistance(): void {
   const { far } = view;
 
-  engine.range.farDistance = far === 0 ? Infinity : far;
+  voxels.range.farDistance = far === 0 ? Infinity : far;
   console.log(`[noise-world] flat tiles: ${far || "never"}`);
 }
 
 function applyViewDistance(): void {
   const { distance, policy } = view;
 
-  engine.range.viewDistance = distance === 0 ?
+  voxels.range.viewDistance = distance === 0 ?
     ViewDistance.Unlimited :
     new ViewDistance({ chunks: distance });
-  engine.range.policy = policy;
+  voxels.range.policy = policy;
 
   if (distance === 0) {
     daylight.fog.unveil();
@@ -436,7 +438,7 @@ function syncStats(): void {
     worldStats.meshMs = meshMs;
   }
 
-  const { chunks, culledChunks } = engine.inspector.mesh.stats;
+  const { chunks, culledChunks } = voxels.inspector.mesh.stats;
   viewStats.drawn = `${formatCount(chunks - culledChunks)} / ${formatCount(chunks)}`;
 
   worldFolder.refresh();
@@ -444,12 +446,12 @@ function syncStats(): void {
 }
 
 function buildWorld(
-  engine: VoxelEngine,
+  voxels: VoxelView,
   { seed, size }: WorldSettings
 ): BuildReport {
   const generateStart = performance.now();
   const terrain = generateTerrain(
-    (position, blockId) => engine.world.setVoxel(
+    (position, blockId) => voxels.document.world.setVoxel(
       kTerrainLayer,
       { position, blockId }
     ),
@@ -463,8 +465,8 @@ function buildWorld(
     meshMs: 0
   };
   const meshStart = performance.now();
-  engine.tick(0);
-  void engine.whenIdle().then(() => {
+  voxels.tick(0);
+  void voxels.whenIdle().then(() => {
     built.meshMs = performance.now() - meshStart;
     console.log("[noise-world] meshed", built);
     syncStats();
@@ -474,12 +476,12 @@ function buildWorld(
 }
 
 function resetLayer(
-  engine: VoxelEngine
+  voxels: VoxelView
 ): void {
-  engine.world.removeLayer(kTerrainLayer);
-  engine.tick(0);
+  voxels.document.world.removeLayer(kTerrainLayer);
+  voxels.tick(0);
 
-  engine.world.addLayer(kTerrainLayer);
+  voxels.document.world.addLayer(kTerrainLayer);
 }
 
 function readSettings(): WorldSettings {

@@ -22,6 +22,21 @@ export default defineConfig(typescriptConfig({
       rules: {
         "max-classes-per-file": "off"
       }
+    },
+    {
+      files: ["packages/voxel-renderer/src/document/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error", {
+            patterns: [
+              {
+                group: ["**/view/**", "three/webgpu", "three/tsl"],
+                message: "The voxel document stays headless: it never imports the view."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }));

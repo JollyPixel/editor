@@ -16,18 +16,7 @@ import {
 } from "../../../src/features/tilesets/TilesetProjection.ts";
 
 function makeEngine(): ProjectionEngine {
-  const document = new VoxelDocument();
-
-  return {
-    blockRegistry: document.blocks,
-    materialGroups: document.materialGroups,
-    defineBlock: (def) => document.defineBlock(def),
-    defineBlocks: (defs) => document.defineBlocks(defs),
-    removeBlock: (id) => document.removeBlock(id),
-    moveBlock: (id, toIndex) => document.moveBlock(id, toIndex),
-    defineMaterialGroup: (group) => document.defineMaterialGroup(group),
-    removeMaterialGroup: (id) => document.removeMaterialGroup(id)
-  };
+  return new VoxelDocument();
 }
 
 function makeTileset(): TilesetDocument {
@@ -55,7 +44,7 @@ function makeTileset(): TilesetDocument {
 function ids(
   engine: ProjectionEngine
 ): number[] {
-  return [...engine.blockRegistry].map((block) => block.id);
+  return [...engine.blocks].map((block) => block.id);
 }
 
 describe("TilesetProjection", () => {
@@ -68,7 +57,7 @@ describe("TilesetProjection", () => {
       slot: { id: "terrain", slot: 2 }
     });
 
-    const grass = engine.blockRegistry.get(composeBlockId(2, 1));
+    const grass = engine.blocks.get(composeBlockId(2, 1));
     assert.deepEqual(ids(engine), [composeBlockId(2, 1), composeBlockId(2, 2)]);
     assert.deepEqual(grass?.defaultTexture, {
       col: 0,
@@ -115,7 +104,7 @@ describe("TilesetProjection", () => {
 
     tileset.resizeTiles(32);
 
-    assert.deepEqual(engine.blockRegistry.get(2)?.defaultTexture, {
+    assert.deepEqual(engine.blocks.get(2)?.defaultTexture, {
       col: 0.5,
       row: 0,
       size: 16,

@@ -1,0 +1,55 @@
+// Import Third-party Dependencies
+import * as THREE from "three";
+
+// Import Internal Dependencies
+import type { TilesetDefinition } from "../../document/tilesets/types.ts";
+
+export interface TilesetSource {
+  def: TilesetDefinition;
+  texture: THREE.Texture<HTMLImageElement>;
+}
+
+export interface TextureSourceLoader {
+  loadAsync(
+    url: string
+  ): Promise<THREE.Texture<HTMLImageElement>>;
+}
+
+export interface LoadTilesetsOptions {
+  manager?: THREE.LoadingManager;
+  loader?: TextureSourceLoader;
+}
+
+/**
+ * Fetches atlas textures so they can be registered synchronously
+ */
+export function loadTilesets(
+  definitions: Iterable<TilesetDefinition>,
+  options: LoadTilesetsOptions = {}
+): Promise<TilesetSource[]> {
+  const {
+    manager,
+    loader = new THREE.TextureLoader(manager)
+  } = options;
+
+  const unique = new Map<string, TilesetDefinition & { src: string; }>();
+  for (const def of definitions) {
+    if (def.src !== undefined && !unique.has(def.id)) {
+      unique.set(def.id, {
+        ...def,
+        src: def.src
+      });
+    }
+  }
+
+  return Promise.all(
+    [...unique.values()].map(
+      async(def) => {
+        return {
+          def,
+          texture: await loader.loadAsync(def.src)
+        };
+      }
+    )
+  );
+}

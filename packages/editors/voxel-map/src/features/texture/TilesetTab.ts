@@ -2,7 +2,7 @@
 import type {
   TilesetDefinition,
   TilesetDocumentListener,
-  VoxelEngine
+  VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import { PixelCollaboration } from "@jolly-pixel/asset.pixel-art/client";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
@@ -22,7 +22,7 @@ import type {
 
 export interface TilesetTabOptions {
   canvas: PixelArtCanvas;
-  engine: VoxelEngine;
+  engine: VoxelView;
   linked: LinkedTileset;
   assetId: string | null;
   blocks: BlockWriter;

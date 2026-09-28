@@ -1,0 +1,231 @@
+// Import Third-party Dependencies
+import type * as THREE from "three";
+
+// Import Internal Dependencies
+import {
+  BlockDocument,
+  type BlockCatalogCommand,
+  type BlockDocumentEvents
+} from "./BlockDocument.ts";
+import { applyVoxelCommand } from "./commands/applyVoxelCommand.ts";
+import type {
+  BlockDefinition,
+  BlockProperties,
+  ResolvedBlockDefinition
+} from "./blocks/BlockDefinition.ts";
+import { BlockRegistry } from "./blocks/BlockRegistry.ts";
+import type {
+  VoxelCommand,
+  VoxelCommandListener
+} from "./commands/types.ts";
+import {
+  VoxelHistory,
+  type VoxelHistoryOptions
+} from "./VoxelHistory.ts";
+import type { MaterialGroupJSON } from "./materials/MaterialGroup.ts";
+import { MaterialGroupList } from "./materials/MaterialGroupList.ts";
+import {
+  deserializeVoxelWorld,
+  serializeVoxelWorld
+} from "./serialization/world.ts";
+import type { VoxelWorldJSON } from "./serialization/types.ts";
+import { TilesetList } from "./tilesets/TilesetList.ts";
+import type { TilesetDefinition } from "./tilesets/types.ts";
+import { NOOP_LOGGER, type VoxelLogger } from "../VoxelLogger.ts";
+import { VoxelWorld } from "./world/VoxelWorld.ts";
+import { DEFAULT_CHUNK_SIZE } from "./world/storage/VoxelChunk.ts";
+
+export interface VoxelLoadOptions {
+  /**
+   * Collapses layers before rendering; higher-priority voxels win overlaps.
+   */
+  mergeLayers?: boolean;
+
+  /**
+   * Tileset definitions declared before loading a world that uses them.
+   */
+  tilesets?: Iterable<TilesetDefinition>;
+}
+
+export type VoxelDocumentEvents = BlockDocumentEvents<VoxelCommand>;
+
+export interface VoxelDocumentOptions {
+  /**
+   * Chunk edge length in voxels; must be a power of two.
+   * @default 16
+   */
+  chunkSize?: number;
+
+  /**
+   * Layer names added in order, so the last one ends up on top.
+   * @default []
+   */
+  layers?: string[];
+
+  /**
+   * Block definitions registered before any command is applied.
+   * @default []
+   */
+  blocks?: BlockDefinition[];
+
+  /**
+   * Tileset definitions declared before any texture is registered for them.
+   */
+  tilesets?: Iterable<TilesetDefinition>;
+
+  /**
+   * Material groups the blocks can name through `materialGroup`.
+   * @default []
+   */
+  materialGroups?: Iterable<MaterialGroupJSON>;
+
+  /**
+   * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.
+   */
+  history?: VoxelHistoryOptions;
+
+  /**
+   * Debug logger; defaults to a no-op implementation.
+   */
+  logger?: VoxelLogger;
+
+  /**
+   * Subscribed to the `"command"` event before any command is applied.
+   */
+  onCommand?: VoxelCommandListener;
+}
+
+/**
+ * A world with the blocks and material groups its tilesets project into it.
+ * Saving and loading cover the world and its tileset links only; blocks and
+ * material groups are runtime state a host fills from tileset documents.
+ */
+export class VoxelDocument extends BlockDocument<VoxelCommand> {
+  readonly world: VoxelWorld;
+  readonly tilesets: TilesetList;
+  readonly history: VoxelHistory;
+
+  #logger: VoxelLogger;
+
+  constructor(
+    options: VoxelDocumentOptions = {}
+  ) {
+    const {
+      chunkSize = DEFAULT_CHUNK_SIZE,
+      layers = [],
+      blocks = [],
+      tilesets = [],
+      materialGroups = [],
+      history,
+      logger = NOOP_LOGGER,
+      onCommand
+    } = options;
+    super(
+      new BlockRegistry(blocks),
+      new MaterialGroupList(materialGroups)
+    );
+
+    if (onCommand) {
+      this.on("command", onCommand);
+    }
+
+    this.#logger = logger.child({
+      namespace: "VoxelDocument"
+    });
+
+    this.world = new VoxelWorld(chunkSize);
+    this.world.on(
+      "command",
+      (command) => this.emit("command", command, { origin: "local" })
+    );
+    layers.forEach((name) => this.world.addLayer(name));
+    this.history = new VoxelHistory(this.world, history);
+
+    this.tilesets = new TilesetList();
+    for (const tileset of tilesets) {
+      this.tilesets.add(tileset);
+    }
+  }
+
+  get chunkSize(): number {
+    return this.world.chunkSize;
+  }
+
+  blockAt(
+    position: THREE.Vector3Like
+  ): ResolvedBlockDefinition | undefined {
+    const entry = this.world.getVoxelAt(position);
+
+    return entry && this.blocks.get(entry.blockId);
+  }
+
+  blockPropertiesAt(
+    position: THREE.Vector3Like
+  ): BlockProperties | undefined {
+    const entry = this.world.getVoxelAt(position);
+
+    return entry && this.blocks.propertiesOf(entry.blockId);
+  }
+
+  addTileset(
+    tileset: TilesetDefinition
+  ): boolean {
+    return this.apply({
+      action: "tileset-added",
+      tileset
+    });
+  }
+
+  removeTileset(
+    tilesetId: string
+  ): boolean {
+    return this.apply({
+      action: "tileset-removed",
+      tilesetId
+    });
+  }
+
+  save(): VoxelWorldJSON {
+    this.#logger.debug("Serializing world to JSON...");
+
+    return serializeVoxelWorld(this.world, {
+      tilesets: this.tilesets
+    });
+  }
+
+  load(
+    data: VoxelWorldJSON,
+    options: VoxelLoadOptions = {}
+  ): void {
+    this.world.silently(
+      () => deserializeVoxelWorld(data, this.world, {
+        tilesets: this.tilesets
+      })
+    );
+
+    for (const def of options.tilesets ?? []) {
+      this.tilesets.add(def);
+    }
+
+    if (options.mergeLayers) {
+      this.world.mergeAllLayers();
+    }
+
+    this.history.clear();
+    this.emit("loaded");
+  }
+
+  dispose(): void {
+    this.#logger.debug("Disposing VoxelDocument.");
+    this.history.dispose();
+    this.tilesets.clear();
+    this.world.removeAllListeners();
+    this.removeAllListeners();
+  }
+
+  protected fold(
+    command: VoxelCommand | BlockCatalogCommand
+  ): VoxelCommand | null {
+    return applyVoxelCommand(this, command, this.#logger);
+  }
+}

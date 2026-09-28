@@ -7,9 +7,9 @@ next to `blocks`, so it is saved, loaded and synced with the tileset; a world
 receives it projected under `"<tilesetId>/<groupId>"`.
 
 ```ts
-import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import { VoxelDocument } from "@jolly-pixel/voxel.renderer";
 
-const engine = new VoxelEngine({
+const document = new VoxelDocument({
   blocks: [
     { id: 1, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
   ],
@@ -18,7 +18,7 @@ const engine = new VoxelEngine({
   ]
 });
 
-engine.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
+document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 ```
 
 ```ts
@@ -78,7 +78,7 @@ metalness near `1` renders dark.
 
 ## MaterialGroupList
 
-`VoxelDocument.materialGroups` and `VoxelEngine.materialGroups` hold the
+`VoxelDocument.materialGroups` and `TilesetDocument.materialGroups` hold the
 groups of a document.
 
 ```ts
@@ -91,6 +91,7 @@ class MaterialGroupList implements Iterable<MaterialGroup> {
   has(groupId: string): boolean;
   get(groupId: string): MaterialGroup | undefined;
   define(group: MaterialGroup | MaterialGroupJSON): boolean;
+  apply(command: VoxelMaterialGroupCommand): VoxelMaterialGroupCommand | null;
   remove(groupId: string): boolean;
   replace(groups: Iterable<unknown>): void;
   clear(): void;
@@ -101,18 +102,12 @@ class MaterialGroupList implements Iterable<MaterialGroup> {
 `define()` returns `false` for an invalid group or one equal to the current
 definition. `replace()` and the constructor skip invalid entries and keep the
 first of duplicate IDs. Mutating the list directly emits no command; use
-`engine.defineMaterialGroup()` for an edit that should sync.
+`document.defineMaterialGroup()` for an edit that should sync.
 
 ## Commands
 
-```ts
-function applyMaterialGroupCommand(
-  groups: MaterialGroupList,
-  command: VoxelMaterialGroupCommand
-): VoxelMaterialGroupCommand | null;
-```
-
-Applies a `material-group-defined` or `material-group-removed`
-[command](../core/commands.md#material-group-commands) to a list. Returns the
+`apply()` applies a `material-group-defined` or `material-group-removed`
+[command](../core/commands.md#material-group-commands) to the list without
+emitting it. Returns the
 command as applied, a defined group with every field filled in, or `null` when
 the list did not change.

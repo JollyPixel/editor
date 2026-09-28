@@ -27,7 +27,7 @@
 - Optional undo/redo of voxel edits (`history: { enabled: true }`), grouped per stroke with `begin()` / `commit()`
 - Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
-- Inspector (`engine.inspector`) exposing live face/triangle counts and a wireframe view of the meshed chunks
+- Inspector (`view.inspector`) exposing live face/triangle counts and a wireframe view of the meshed chunks
 
 ## 💃 Getting Started
 
@@ -41,12 +41,13 @@ $ yarn add @jolly-pixel/voxel.renderer
 
 ## 👀 Usage example
 
-Load atlas textures before creating the engine:
+Load atlas textures before creating the view:
 
 ```ts
 import {
   Face,
-  VoxelEngine,
+  VoxelDocument,
+  VoxelView,
   loadTilesets,
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -80,22 +81,24 @@ const blocks: BlockDefinition[] = [
   }
 ];
 
-const engine = new VoxelEngine({
-  tilesets,
+const document = new VoxelDocument({
   layers: ["Ground"],
   blocks
 });
+const view = new VoxelView(document, {
+  tilesets
+});
 
-scene.add(engine.root);
-engine.init();
+scene.add(view.root);
+view.init();
 ```
 
-Place voxels through the engine:
+Place voxels through the document; the view picks the edits up:
 
 ```ts
 for (let x = 0; x < 8; x++) {
   for (let z = 0; z < 8; z++) {
-    engine.world.setVoxel("Ground", {
+    document.world.setVoxel("Ground", {
       position: {
         x,
         y: 0,
@@ -107,10 +110,11 @@ for (let x = 0; x < 8; x++) {
 }
 ```
 
-Call `engine.tick(deltaTime)` from the application's frame loop. Remove
-`engine.root` and call `engine.dispose()` during teardown. ECS applications can
-wrap these calls in a component local to the application; the renderer package
-does not depend on an ECS runtime.
+Call `view.tick(deltaTime)` from the application's frame loop. Remove
+`view.root` and call `view.dispose()` during teardown; `view.dispose()` leaves
+the document alone, so call `document.dispose()` once nothing else uses it.
+ECS applications can wrap these calls in a component local to the application;
+the renderer package does not depend on an ECS runtime.
 
 ## 📚 Documentation
 
@@ -118,6 +122,8 @@ does not depend on an ECS runtime.
 
 - [Glossary](GLOSSARY.md): shared vocabulary for worlds, blocks, layers, and
   meshing.
+- [Architecture](ARCHITECTURE.md): the document and view layers and the
+  source layout.
 - [World model](docs/concepts/world-model.md): layers, chunks, compositing, and
   ownership.
 - [Transparency](docs/api/core/VoxelTransparencyPassNode.md): scene compositing, setup, and limitations.
@@ -130,9 +136,8 @@ does not depend on an ECS runtime.
 
 ### Core and world API
 
-- [`VoxelDocument`](docs/api/core/VoxelDocument.md) (voxel data, headless),
-  [`VoxelView`](docs/api/core/VoxelView.md) (the meshes drawn from it), and
-  [`VoxelEngine`](docs/api/core/VoxelEngine.md) (both together).
+- [`VoxelDocument`](docs/api/core/VoxelDocument.md) (voxel data, headless) and
+  [`VoxelView`](docs/api/core/VoxelView.md) (the meshes drawn from it).
 - [`VoxelInspector`, mesh and block statistics](docs/api/core/VoxelInspector.md),
   [`VoxelHistory` undo/redo](docs/api/core/VoxelHistory.md), and
   [commands](docs/api/core/commands.md).
@@ -155,7 +160,7 @@ does not depend on an ECS runtime.
   [`buildShapeGeometry`](docs/api/blocks/buildShapeGeometry.md),
   [shape slots](docs/api/blocks/shapeSlots.md),
   [tilesets](docs/api/tilesets/tilesets.md),
-  [`TilesetManager`](docs/api/tilesets/TilesetManager.md), and
+  [`TilesetAtlases`](docs/api/tilesets/TilesetAtlases.md), and
   [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md).
 - [Rendering, meshing, and tile wrapping](docs/concepts/rendering-and-meshing.md),
   [`VoxelCollider`](docs/api/collision/VoxelCollider.md), and
@@ -163,9 +168,9 @@ does not depend on an ECS runtime.
 
 ### Serialization and integration API
 
-- [Serialization, document codec, and voxel objects](docs/api/serialization/serialization.md).
+- [Serialization, world codec, and voxel objects](docs/api/serialization/serialization.md).
 - [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md), the `@jolly-pixel/engine`
-  actor component wrapping a `VoxelEngine`.
+  actor component wrapping a `VoxelDocument` and a `VoxelView`.
 
 ## 🚀 Running the examples
 
@@ -231,18 +236,20 @@ world.logger.setLevel("debug");
 world.logger.enableNamespace("*");
 ```
 
-Pass a custom logger to `VoxelEngine` when it is not hosted by a runtime:
+Pass a custom logger to `VoxelDocument` and `VoxelView` when they are not
+hosted by a runtime:
 
 ```ts
 import { Systems } from "@jolly-pixel/engine";
-import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import { VoxelDocument, VoxelView } from "@jolly-pixel/voxel.renderer";
 
-const engine = new VoxelEngine({
-  logger: new Systems.Logger({
-    level: "trace",
-    namespaces: ["*"]
-  })
+const logger = new Systems.Logger({
+  level: "trace",
+  namespaces: ["*"]
 });
+
+const document = new VoxelDocument({ logger });
+const view = new VoxelView(document, { logger });
 ```
 
 ## Contributors guide

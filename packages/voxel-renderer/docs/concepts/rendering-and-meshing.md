@@ -7,8 +7,8 @@ configured time budget, while `flush()` rebuilds it immediately.
 
 The view reads a [`VoxelDocument`](../api/core/VoxelDocument.md) and subscribes
 to it; the document holds the voxels and knows nothing about meshes.
-[`VoxelEngine`](../api/core/VoxelEngine.md) composes the pair for applications
-that want a single object.
+Inside the JollyPixel engine,
+[`VoxelRenderer`](../api/engine/VoxelRenderer.md) builds and drives the pair.
 
 See the [`VoxelView` reference](../api/core/VoxelView.md) for lifecycle methods
 and configuration.
@@ -72,7 +72,7 @@ side of the world is meshed first.
 `init()` and `load()` rebuild the complete world synchronously. Use `flush()`
 when callers need current meshes before continuing.
 
-With [`meshing.workers`](../api/core/VoxelEngine.md#mesh-workers), the queue
+With [`meshing.workers`](../api/core/VoxelView.md#mesh-workers), the queue
 feeds Web Workers instead. A job carries the chunk and its 26 neighbours in
 every visible layer as `SharedArrayBuffer` views of their `VoxelStore`, so
 nothing is copied in; the worker runs the same mesher and transfers the face
@@ -135,7 +135,7 @@ the live chunks. Three.js files the face records under texture memory rather
 than geometry memory, so the renderer's `geometryMemory` alone understates the
 cost.
 
-The rest of the engine works on the face records:
+The rest of the package works on the face records:
 
 - Raycasts decode the faces on the CPU. Hits carry no `uv`.
 - Colliders receive indexed `position` geometry expanded from the face records,
@@ -217,7 +217,7 @@ an opaque canvas, because the coverage is written as alpha.
 
 `refresh()` rebuilds the table when the source texture's `version` moved,
 which `TilesetAtlas.updateImage()` does. `VoxelView.tick()` refreshes every
-atlas through `TilesetManager.refreshAverages()`.
+atlas through `TilesetAtlases.refreshAverages()`.
 
 ## Far distance
 
@@ -225,13 +225,13 @@ atlas through `TilesetManager.refreshAverages()`.
 detail for stability far away. It defaults to `Infinity`.
 
 ```ts
-const engine = new VoxelEngine({
+const view = new VoxelView(document, {
   range: {
     farDistance: 14
   }
 });
 
-engine.range.farDistance = Infinity; // back to full detail on the next tick
+view.range.farDistance = Infinity; // back to full detail on the next tick
 ```
 
 Beyond it a chunk draws every face in the flat average colour of its tile,
@@ -250,14 +250,14 @@ creases between blocks darken without a post-processing pass. It is a strength
 from `0` (off, the default) to `1`, where a fully enclosed corner turns black.
 
 ```ts
-const engine = new VoxelEngine({
+const view = new VoxelView(document, {
   lighting: {
     ambientOcclusion: 0.5
   }
 });
 
 // Switching on or off rebuilds every chunk; other changes only update a uniform.
-engine.lighting.ambientOcclusion = 0.8;
+view.lighting.ambientOcclusion = 0.8;
 ```
 
 Each face corner looks at the three cells around it in the layer in front of

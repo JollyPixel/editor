@@ -2,7 +2,16 @@
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { type VoxelLayer, VoxelWorld } from "../../src/world/index.ts";
+import {
+  type VoxelCoord,
+  type VoxelEntry,
+  type VoxelLayer,
+  VoxelWorld
+} from "../../src/document/world/index.ts";
+import {
+  serializeVoxelLayer,
+  type VoxelLayerJSON
+} from "../../src/document/serialization/index.ts";
 import { makeVoxelEntry } from "./voxelEntry.ts";
 
 export interface TwoLayerWorld {
@@ -11,12 +20,41 @@ export interface TwoLayerWorld {
   b: VoxelLayer;
 }
 
+export function writeVoxel(
+  world: VoxelWorld,
+  layerName: string,
+  position: VoxelCoord,
+  entry: VoxelEntry = makeVoxelEntry()
+): void {
+  world.silently(() => world.patchVoxels(layerName, [
+    position.x,
+    position.y,
+    position.z,
+    entry.blockId,
+    entry.transform
+  ]));
+}
+
+export function eraseVoxel(
+  world: VoxelWorld,
+  layerName: string,
+  position: VoxelCoord
+): void {
+  world.silently(() => world.patchVoxels(layerName, [
+    position.x,
+    position.y,
+    position.z,
+    0,
+    0
+  ]));
+}
+
 export function makeTwoLayerWorld(): TwoLayerWorld {
   const world = new VoxelWorld(4);
   const a = world.addLayer("A");
   const b = world.addLayer("B");
-  world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
-  world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeVoxelEntry());
+  writeVoxel(world, "A", { x: 0, y: 0, z: 0 });
+  writeVoxel(world, "B", { x: 8, y: 0, z: 0 });
 
   return { world, a, b };
 }
@@ -41,8 +79,8 @@ export function dirtyFlags(
 
 export function withoutId(
   layer: VoxelLayer
-): Omit<ReturnType<VoxelLayer["toJSON"]>, "id"> {
-  const { id, ...rest } = layer.toJSON();
+): Omit<VoxelLayerJSON, "id"> {
+  const { id, ...rest } = serializeVoxelLayer(layer);
 
   return rest;
 }

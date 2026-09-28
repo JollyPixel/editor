@@ -2,7 +2,7 @@
 
 Tileset definitions describe atlas images. A [`TilesetList`](#tilesetlist)
 holds the ones a world links, `loadTilesets()` fetches their images,
-[`TilesetManager`](./TilesetManager.md) registers them, and
+[`TilesetAtlases`](./TilesetAtlases.md) registers them, and
 [`TilesetAtlas`](./TilesetAtlas.md) provides the texture and UV data used by
 materials. The blocks, material groups and tile size a tileset carries live in
 a [`TilesetDocument`](./TilesetDocument.md), projected into a world through
@@ -42,8 +42,8 @@ to `MAX_TILESET_SLOT` (127). A definition declared without one receives the
 lowest free slot. Tiles are square and `tileSize` is measured in pixels. A
 `src` tileset must declare it; an `asset` tileset may leave it out, since the
 asset owns it, and the host declares it with the texture through
-`VoxelEngine.loadTileset()`. Missing row and column counts are derived from
-the image by [`resolveTilesetDefinition()`](./TilesetAtlas.md), which throws
+[`VoxelView.loadTileset()`](../core/VoxelView.md#methods). Missing row and
+column counts are derived from the image by [`resolveTilesetDefinition()`](./TilesetAtlas.md), which throws
 for a definition still without tile size.
 
 ## Tile references
@@ -68,7 +68,7 @@ function resolveTileRef(
 ): ResolvedTileRef;
 ```
 
-A missing `tilesetId` selects the first declared tileset; the engine fills it
+A missing `tilesetId` selects the first declared tileset; the document fills it
 in when it defines a block. `size` is the
 square texture region side in texels, anchored at the tile's top-left corner,
 and defaults to the tileset `tileSize`. `rotation` turns the tile image
@@ -150,20 +150,21 @@ of the same call declares.
 ## Tileset commands
 
 ```ts
-function applyTilesetCommand(
-  target: VoxelWorldCommandTarget,
-  command: VoxelTilesetCommand
-): VoxelTilesetCommand | null;
+class TilesetList {
+  apply(
+    command: VoxelTilesetCommand,
+    slotsInUse?: () => Iterable<number>
+  ): VoxelTilesetCommand | null;
+}
 ```
 
-Folds a [tileset command](../core/commands.md#tileset-commands) into
-`target.tilesets` and returns it, or `null` when nothing changed. A
-`tileset-added` comes back with the definition as declared, slot included.
-A tileset added without a slot never gets one that voxels of `target.world`
-still use, so the voxels a removed tileset left behind are not given the new
-tileset's blocks.
+Folds a [tileset command](../core/commands.md#tileset-commands) into the list
+and returns it, or `null` when nothing changed. A `tileset-added` comes back
+with the definition as declared, slot included. A tileset added without a slot
+never gets one `slotsInUse()` returns.
 [`applyVoxelCommand()`](../core/commands.md#applying-commands) routes tileset
-commands to it.
+commands to it with the slots voxels of the world still use, so the voxels a
+removed tileset left behind are not given the new tileset's blocks.
 
 ## Projecting a tileset into a world
 
@@ -216,7 +217,7 @@ with `"<tilesetId>/"`. `localTilesetBlock()` is the inverse.
 `belongsToTileset()` tells whether a world block id was projected from the
 slot. Material groups are projected the same way, so two tilesets may both
 define a `"metal"` group. Register the projected blocks and groups on the
-engine with `defineBlocks()` and `defineMaterialGroup()`; replay a tileset
+`VoxelDocument` with `defineBlocks()` and `defineMaterialGroup()`; replay a tileset
 document's commands the same way to keep a world in step with it.
 
 ## Rescaling and tile rectangles
@@ -308,7 +309,7 @@ tile-local UV the same way; the mesher applies it to every face vertex.
 
 ## Loading textures
 
-Use `loadTilesets()` before constructing a `VoxelEngine`.
+Use `loadTilesets()` before constructing a [`VoxelView`](../core/VoxelView.md).
 
 ```ts
 interface TilesetSource {
@@ -337,7 +338,7 @@ Definitions are fetched in parallel. A duplicate ID is fetched once, and a
 definition without `src` is skipped. The
 optional `manager` reports Three.js loading progress; `loader` allows callers
 to supply a compatible texture loader. Pass the result through
-`VoxelEngineOptions.tilesets`.
+`VoxelViewOptions.tilesets`.
 
 The [loading and restoring tilesets guide](../../guides/loading-and-restoring-tilesets.md)
 shows initial loading and saved-world restoration.
@@ -346,5 +347,5 @@ shows initial loading and saved-world restoration.
 
 - [`TilesetDocument`](./TilesetDocument.md) is one tileset's blocks, material
   groups and tile size.
-- [`TilesetManager`](./TilesetManager.md) registers loaded atlas textures.
+- [`TilesetAtlases`](./TilesetAtlases.md) registers loaded atlas textures.
 - [`TilesetAtlas`](./TilesetAtlas.md) is one atlas: its grid, texture and UVs.

@@ -1,7 +1,7 @@
 # BlockDefinition
 
 `BlockDefinition` is the authoring form accepted by `BlockRegistry.register()`
-and `VoxelEngineOptions.blocks`. Only `id`, `name`, and `shapeId` are required.
+and `VoxelDocumentOptions.blocks`. Only `id`, `name`, and `shapeId` are required.
 
 ```ts
 interface BlockDefinition extends BlockSurfaceOptions {
@@ -109,7 +109,7 @@ authored.
 
 Because values are flat scalars, a copy is shallow and cheap. Read them with
 [`BlockRegistry.propertiesOf()`](./BlockRegistry.md) or, keyed by a world
-position, with [`VoxelEngine.blockPropertiesAt()`](../core/VoxelEngine.md).
+position, with [`VoxelDocument.blockPropertiesAt()`](../core/VoxelDocument.md#methods).
 
 ## ResolvedBlockDefinition
 

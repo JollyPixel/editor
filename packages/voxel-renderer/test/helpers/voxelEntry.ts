@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { VoxelEntry } from "../../src/world/index.ts";
+import type { VoxelEntry } from "../../src/document/world/index.ts";
 
 export function makeVoxelEntry(
   blockId = 1,

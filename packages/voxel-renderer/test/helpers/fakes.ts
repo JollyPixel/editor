@@ -1,7 +1,7 @@
 // Import Internal Dependencies
-import type { VoxelCollider } from "../../src/collision/index.ts";
-import type { VoxelObjectJSON } from "../../src/serialization/index.ts";
-import type { VoxelLogger } from "../../src/utils/logger.ts";
+import type { VoxelCollider } from "../../src/view/collision/index.ts";
+import type { VoxelObjectJSON } from "../../src/document/world/index.ts";
+import type { VoxelLogger } from "../../src/VoxelLogger.ts";
 
 export interface CommandSource<TCommand> {
   on(

@@ -1,9 +1,10 @@
 # Serialization
 
 The serialization API defines the persisted world shape, converts live worlds,
-and validates voxel documents received as objects or UTF-8 JSON bytes. Most
-applications use `VoxelEngine.save()` and `VoxelEngine.load()`, which also
-update materials and chunk meshes.
+and validates voxel worlds received as objects or UTF-8 JSON bytes. Most
+applications use [`VoxelDocument.save()`](../core/VoxelDocument.md#methods) and
+[`VoxelView.load()`](../core/VoxelView.md#methods), which also update materials
+and chunk meshes.
 
 ## World document
 
@@ -65,10 +66,17 @@ function serializeVoxelWorld(
   options?: VoxelSerializeOptions
 ): VoxelWorldJSON;
 
+function serializeVoxelLayer(
+  layer: VoxelLayer
+): VoxelLayerJSON;
+
 function serializeTilesetDefinition(
   definition: TilesetDefinition
 ): TilesetDefinition;
 ```
+
+`serializeVoxelLayer()` writes one layer, voxels keyed by layer-local
+coordinates; `serializeVoxelWorld()` calls it for each layer.
 
 The world does not own the tileset list, so callers pass it explicitly. Each
 definition is written through `serializeTilesetDefinition()`: an `asset`
@@ -90,10 +98,14 @@ function deserializeVoxelWorld(
 ```
 
 The function validates `data`, then replaces the world's voxel and object
-layers. It throws `InvalidVoxelDocumentError` when the document is malformed,
+layers. It throws `InvalidVoxelWorldError` when the document is malformed,
 and leaves the target unchanged. Voxel keys are layer coordinates, so a document
 saved with another `chunkSize` loads into the world's own chunks; serializing
 the world again writes the world's `chunkSize`.
+
+Layers are restored with [`world.restoreLayer()`](../world/VoxelWorld.md) and
+object layers with `world.objectLayers.restore()`, so deserializing emits no
+command, even outside `world.silently()`.
 
 `options.tilesets` is replaced with the document's tilesets, slots included.
 The block registry is never touched: register the projected blocks of the
@@ -102,23 +114,23 @@ linked tilesets before or after the load.
 See [saving and loading worlds](../../guides/saving-and-loading-worlds.md) for
 the application workflow.
 
-## Document codec
+## World codec
 
-The document codec validates unknown input and converts voxel documents to or
+The world codec validates unknown input and converts voxel worlds to or
 from UTF-8 JSON bytes.
 
 ```ts
-function parseVoxelDocument(value: unknown): VoxelWorldJSON;
+function parseVoxelWorld(value: unknown): VoxelWorldJSON;
 
-function encodeVoxelDocument(
+function encodeVoxelWorld(
   document: VoxelWorldJSON
 ): Uint8Array;
 
-function decodeVoxelDocument(
+function decodeVoxelWorld(
   data: Uint8Array
 ): VoxelWorldJSON;
 
-class InvalidVoxelDocumentError extends Error {
+class InvalidVoxelWorldError extends Error {
   constructor(
     reason: string,
     options?: { cause?: unknown }
@@ -126,7 +138,7 @@ class InvalidVoxelDocumentError extends Error {
 }
 ```
 
-`parseVoxelDocument()` requires version `VOXEL_WORLD_VERSION`, a positive
+`parseVoxelWorld()` requires version `VOXEL_WORLD_VERSION`, a positive
 integer `chunkSize`, and a `layers` array. Earlier versions are rejected; there
 is no migration. A missing or malformed `tilesets` value becomes an empty
 array. A malformed `objectLayers` value is omitted. Unknown top-level keys,
@@ -137,9 +149,10 @@ The parser validates the top-level document shape. Collection elements are
 checked later while the world is deserialized; malformed layer or voxel entries
 are skipped there.
 
-`encodeVoxelDocument()` returns UTF-8 JSON bytes. `decodeVoxelDocument()` parses
-those bytes and then applies `parseVoxelDocument()`. All three functions throw
-`InvalidVoxelDocumentError`; decoding errors are available through its `cause`.
+`encodeVoxelWorld()` returns UTF-8 JSON bytes. `decodeVoxelWorld()` parses
+those bytes and then applies `parseVoxelWorld()`. All three functions throw
+`InvalidVoxelWorldError`, whose message starts with `Invalid voxel world: `;
+decoding errors are available through its `cause`.
 
 ## Voxel objects
 

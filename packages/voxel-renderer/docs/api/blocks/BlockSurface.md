@@ -36,8 +36,8 @@ The instance is frozen. Invalid modes, sides, non-finite cutoffs outside
 `[0, 1]`, or an empty or non-string material group throw `RangeError`. Cutoffs are validated even for modes that do not
 use them. `BlockRegistry.register()` validates the same settings.
 
-`VoxelEngineOptions.alphaTest` supplies the cutoff for mask blocks without an
-explicit `alphaCutoff`. Constructing `BlockSurface` directly uses `0.1`.
+`VoxelViewOptions.rendering.alphaTest` supplies the cutoff for mask blocks
+without an explicit `alphaCutoff`. Constructing `BlockSurface` directly uses `0.1`.
 Registry definitions retain optional settings; construct a surface when you
 need their resolved defaults.
 
@@ -49,7 +49,7 @@ A material group lets one atlas carry materials tuned apart. Declaring the
 group's finish in the document makes it travel with the map:
 
 ```ts
-const engine = new VoxelEngine({
+const document = new VoxelDocument({
   blocks: [
     { id: 1, name: "Sandstone", shapeId: "cube", defaultTexture },
     { id: 2, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
@@ -64,7 +64,7 @@ See [MaterialGroup](../materials/MaterialGroup.md). The `rendering.customizer`
 also receives the surface, so host code can still read the group:
 
 ```ts
-const engine = new VoxelEngine({
+const view = new VoxelView(document, {
   rendering: {
     material: "standard",
     customizer(material, _tilesetId, surface) {

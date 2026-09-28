@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
 import {
-  createBenchEngine,
+  createBenchView,
   flushed,
   nodeMeshWorkers,
   populateTerrain,
@@ -30,13 +30,13 @@ const runs = Number(values.runs);
 const workers = Number(values.workers);
 
 for (let run = 0; run < runs; run++) {
-  const engine = createBenchEngine(
+  const view = createBenchView(
     Number(values.chunk),
     workers > 0 ? nodeMeshWorkers(workers) : undefined
   );
 
   const generateStart = performance.now();
-  const terrain = populateTerrain(engine, {
+  const terrain = populateTerrain(view, {
     seed: Number(values.seed),
     size: Number(values.size)
   });
@@ -44,10 +44,10 @@ for (let run = 0; run < runs; run++) {
 
   // Without workers, `flush()` meshes in one pass instead of frame-budgeted ticks.
   const meshStart = performance.now();
-  const mainMs = workers > 0 ? await settle(engine) : flushed(engine);
+  const mainMs = workers > 0 ? await settle(view) : flushed(view);
   const meshMs = performance.now() - meshStart;
 
-  const { triangles, vertices } = engine.inspector.mesh.stats;
+  const { triangles, vertices } = view.inspector.mesh.stats;
   // Geometry memory is mostly `arrayBuffers`; `heapUsed` alone under-reports cost.
   const {
     heapUsed, arrayBuffers, rss
@@ -67,7 +67,7 @@ for (let run = 0; run < runs; run++) {
     ].join("  |  ")
   );
 
-  engine.dispose();
+  view.dispose();
 }
 
 function mb(

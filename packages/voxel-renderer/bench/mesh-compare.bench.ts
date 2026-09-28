@@ -2,9 +2,9 @@
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
-import { VoxelMeshBuilder } from "../src/mesh/index.ts";
+import { VoxelMeshBuilder } from "../src/view/meshing/index.ts";
 import {
-  createBenchEngine,
+  createBenchView,
   populateTerrain
 } from "./common.ts";
 
@@ -30,17 +30,17 @@ const size = Number(values.size);
 const chunkSize = Number(values.chunk);
 const rounds = Number(values.rounds);
 
-const engine = createBenchEngine(chunkSize);
-const terrain = populateTerrain(engine, {
+const view = createBenchView(chunkSize);
+const terrain = populateTerrain(view, {
   seed: Number(values.seed),
   size
 });
 
 const shared = {
-  world: engine.world,
-  blockRegistry: engine.blockRegistry,
-  shapeRegistry: engine.shapeRegistry,
-  tilesetManager: engine.tilesetManager
+  world: view.document.world,
+  blockRegistry: view.document.blocks,
+  shapeRegistry: view.shapes,
+  atlases: view.atlases
 };
 const variants = [
   {
@@ -97,7 +97,7 @@ function meshAll(
   let vertices = 0;
   let bytes = 0;
 
-  for (const { layer, chunk } of engine.world.getAllChunks()) {
+  for (const { layer, chunk } of view.document.world.getAllChunks()) {
     const geometries = builder.buildChunkGeometries([{ layer, chunk }]);
     if (geometries === null) {
       continue;

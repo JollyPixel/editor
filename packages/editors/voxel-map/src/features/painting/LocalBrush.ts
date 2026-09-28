@@ -4,7 +4,7 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import type { VoxelCoord, VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import type { VoxelCoord, VoxelView } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { BrushStore, SelectionStore } from "../../state/index.ts";
@@ -42,7 +42,7 @@ const kAltClickTravelThreshold = 6;
 const kStaleAimFrames = 2;
 
 export interface LocalBrushOptions {
-  engine: VoxelEngine;
+  engine: VoxelView;
   camera: THREE.PerspectiveCamera;
   brush: BrushStore;
   selection: SelectionStore;
@@ -79,7 +79,7 @@ export class LocalBrush extends ActorComponent {
   onFocusRequest?: (point: THREE.Vector3Like) => void;
   onPaintBlocked?: () => void;
 
-  readonly engine: VoxelEngine;
+  readonly engine: VoxelView;
 
   #camera: THREE.PerspectiveCamera;
   #brush: BrushStore;
@@ -130,10 +130,10 @@ export class LocalBrush extends ActorComponent {
       camera,
       brush,
       ghost: {
-        blockRegistry: engine.blockRegistry,
-        shapeRegistry: engine.shapeRegistry,
-        tilesetManager: engine.tilesetManager,
-        tileOpacity: new TileOpacityProbe(engine.tilesetManager)
+        blockRegistry: engine.document.blocks,
+        shapeRegistry: engine.shapes,
+        atlases: engine.atlases,
+        tileOpacity: new TileOpacityProbe(engine.atlases)
       },
       ...color === undefined ? {} : { color },
       onCursorChange: (cursor) => this.onCursorChange?.(cursor)
@@ -142,9 +142,9 @@ export class LocalBrush extends ActorComponent {
     const markAimStale = () => {
       this.#staleAimFrames = kStaleAimFrames;
     };
-    engine.on("command", markAimStale);
+    engine.document.on("command", markAimStale);
     this.#unsubscribers = [
-      () => engine.off("command", markAimStale),
+      () => engine.document.off("command", markAimStale),
       brush.subscribe("sizeChange", markDirty),
       brush.subscribe("axisChange", markDirty),
       brush.subscribe("patternChange", markDirty),
@@ -374,7 +374,7 @@ export class LocalBrush extends ActorComponent {
     });
 
     this.#stroke = stroke;
-    this.engine.history.begin();
+    this.engine.document.history.begin();
     const cursor = this.#aimAtPlane(stroke);
     const target = cursor === null ?
       stroke.origin :
@@ -404,7 +404,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     this.#stroke = null;
-    this.engine.history.commit();
+    this.engine.document.history.commit();
   }
 
   #apply(
@@ -504,7 +504,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     const stroke = this.#stroke;
-    const layer = this.engine.world.getLayer(layerName);
+    const layer = this.engine.document.world.getLayer(layerName);
 
     return ghostTargetOf({
       enabled: this.#brush.ghost,

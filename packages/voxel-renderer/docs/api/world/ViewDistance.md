@@ -1,8 +1,9 @@
 # ViewDistance
 
-Immutable chunk radius around [`VoxelEngine.focus`](../core/VoxelEngine.md#view-distance),
+Immutable chunk radius around [`VoxelView.focus`](../core/VoxelView.md#view-distance),
 with separate enter and leave radii so a chunk on the border does not flip
-every tick. Distances are measured in world units between the focus and a
+every tick. It is set with `range.viewDistance` in the
+[view options](../core/VoxelView.md#voxelviewoptions) or on `view.range`. Distances are measured in world units between the focus and a
 chunk center.
 
 ## Constructor
@@ -22,7 +23,7 @@ interface ViewDistanceOptions {
 
 A negative `chunks` or `hysteresis` throws a `RangeError`.
 
-`ViewDistance.Unlimited` is the shared instance the engine starts with, and
+`ViewDistance.Unlimited` is the shared instance a view starts with, and
 `ViewDistance.from()` accepts either a radius or an options object:
 
 ```ts
@@ -58,5 +59,5 @@ plus one more `hysteresis` of drift.
 
 #### `equals(other: ViewDistance): boolean`
 
-Compares by value. The engine compares by identity instead, so assigning an
+Compares by value. The view compares by identity instead, so assigning an
 equal but distinct instance still triggers a visibility pass.

@@ -1,0 +1,292 @@
+// Import Third-party Dependencies
+import * as THREE from "three";
+
+// Import Internal Dependencies
+import {
+  enableVertexPulling,
+  type FaceTemplateTable
+} from "../meshing/pulling/index.ts";
+import { enableTileShading } from "./tileShading.ts";
+import { AtlasAverages } from "../atlases/AtlasAverages.ts";
+import { createAoStrength } from "./ambientOcclusionNodes.ts";
+import type { TilesetAtlases } from "../atlases/TilesetAtlases.ts";
+import type { ChunkGeometryKey } from "../meshing/ChunkGeometryKey.ts";
+import type { BlockSurface } from "../../document/blocks/BlockSurface.ts";
+import type { MaterialGroup } from "../../document/materials/MaterialGroup.ts";
+import type { MaterialGroupList } from "../../document/materials/MaterialGroupList.ts";
+
+// CONSTANTS
+const kCoveredFaceOffset = -1;
+
+export type ChunkMaterial =
+  | THREE.MeshLambertMaterial
+  | THREE.MeshStandardMaterial;
+
+export type MaterialCustomizerFn = (
+  material: ChunkMaterial,
+  tilesetId: string,
+  surface: BlockSurface
+) => void;
+
+interface ChunkMaterialEntry {
+  key: string;
+  material: ChunkMaterial;
+  tilesetId: string;
+  surface: BlockSurface;
+  far: boolean;
+}
+
+export interface ChunkMaterialCacheOptions {
+  atlases: TilesetAtlases;
+  faceTemplates: FaceTemplateTable;
+  materialGroups?: MaterialGroupList;
+  /**
+   * @default "lambert"
+   */
+  type?: "lambert" | "standard";
+  customizer?: MaterialCustomizerFn;
+  /**
+   * Distant faces fade to the average colour of their atlas rect.
+   * @default true
+   */
+  tileAveraging?: boolean;
+  /**
+   * Ambient occlusion strength shared by every chunk material, 0 to 1.
+   * @default 0
+   */
+  ambientOcclusion?: number;
+  alphaToCoverage?: boolean;
+}
+
+/**
+ * Caches shared chunk materials by atlas, exact opacity, and surface policy.
+ * Layer opacity is applied through materials instead of vertex colors.
+ */
+export class ChunkMaterialCache {
+  tileAveraging: boolean;
+  alphaToCoverage: boolean;
+  readonly aoStrength: ReturnType<typeof createAoStrength>;
+  readonly faceTemplates: FaceTemplateTable;
+
+  #materials = new Map<string, ChunkMaterial>();
+  #entries = new Map<THREE.Material, ChunkMaterialEntry>();
+  #references = new Map<THREE.Material, number>();
+  #atlases: TilesetAtlases;
+  #materialGroups: MaterialGroupList | undefined;
+  #type: "lambert" | "standard";
+  #customizer?: MaterialCustomizerFn;
+
+  constructor(
+    options: ChunkMaterialCacheOptions
+  ) {
+    const {
+      atlases,
+      faceTemplates,
+      materialGroups,
+      type = "lambert",
+      customizer,
+      tileAveraging = true,
+      ambientOcclusion = 0,
+      alphaToCoverage = false
+    } = options;
+
+    this.#atlases = atlases;
+    this.#materialGroups = materialGroups;
+    this.#type = type;
+    this.#customizer = customizer;
+    this.tileAveraging = tileAveraging;
+    this.alphaToCoverage = alphaToCoverage;
+    this.faceTemplates = faceTemplates;
+    this.aoStrength = createAoStrength(ambientOcclusion);
+  }
+
+  resolve(
+    geometryKey: ChunkGeometryKey,
+    opacity: number,
+    far = false
+  ): ChunkMaterial {
+    const { tilesetId, surface } = geometryKey;
+    const key = `${geometryKey}:opacity=${opacity}:far=${far}`;
+
+    const cached = this.#materials.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const material = this.#create(
+      tilesetId,
+      opacity,
+      surface,
+      far
+    );
+    this.#materials.set(key, material);
+    this.#entries.set(material, {
+      key,
+      material,
+      tilesetId,
+      surface,
+      far
+    });
+
+    return material;
+  }
+
+  retain(
+    material: THREE.Material
+  ): void {
+    this.#references.set(
+      material,
+      (this.#references.get(material) ?? 0) + 1
+    );
+  }
+
+  release(
+    material: THREE.Material
+  ): void {
+    const remaining = (this.#references.get(material) ?? 1) - 1;
+    if (remaining > 0) {
+      this.#references.set(material, remaining);
+
+      return;
+    }
+    if (this.#entries.has(material)) {
+      this.#evict(material);
+
+      return;
+    }
+    this.#references.delete(material);
+  }
+
+  refreshGroup(
+    groupId: string
+  ): boolean {
+    const group = this.#materialGroups?.get(groupId);
+    let evicted = false;
+
+    for (const { material, surface } of this.#entries.values()) {
+      if (surface.materialGroup !== groupId) {
+        continue;
+      }
+
+      const standard = material instanceof THREE.MeshStandardMaterial;
+      if (
+        group !== undefined &&
+        standard === this.#usesStandard(group)
+      ) {
+        group.applyTo(material);
+        continue;
+      }
+
+      this.#evict(material);
+      evicted = true;
+    }
+
+    return evicted;
+  }
+
+  // eslint-disable-next-line max-params
+  #create(
+    tilesetId: string,
+    opacity: number,
+    surface: BlockSurface,
+    far: boolean
+  ): ChunkMaterial {
+    const atlas = this.#atlases.resolve(tilesetId);
+    if (atlas === undefined) {
+      throw new Error(
+        `ChunkMaterialCache: tileset "${tilesetId}" is not loaded.`
+      );
+    }
+    const { texture } = atlas;
+    const blends = surface.alphaMode === "blend" && !far;
+    const transparent = opacity < 1 || blends;
+    const alphaToCoverage = this.alphaToCoverage &&
+      surface.alphaMode === "mask";
+
+    const options = {
+      map: texture,
+      side: surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide,
+      alphaTest: 0,
+      opacity,
+      transparent,
+      depthWrite: !transparent,
+      alphaToCoverage,
+      forceSinglePass: true,
+      polygonOffset: !surface.occludes,
+      polygonOffsetFactor: surface.occludes ? 0 : kCoveredFaceOffset,
+      polygonOffsetUnits: surface.occludes ? 0 : kCoveredFaceOffset
+    };
+
+    const group = surface.materialGroup === undefined ?
+      undefined :
+      this.#materialGroups?.get(surface.materialGroup);
+    const material = this.#usesStandard(group) ?
+      new THREE.MeshStandardMaterial(options) :
+      new THREE.MeshLambertMaterial(options);
+
+    const averages = this.tileAveraging ?
+      AtlasAverages.of(texture)?.texture :
+      null;
+    const inputs = enableVertexPulling(material, this.faceTemplates);
+    enableTileShading(material, inputs, {
+      surface,
+      aoStrength: this.aoStrength,
+      averages,
+      flat: far && averages !== null && averages !== undefined,
+      alphaToCoverage
+    });
+    material.map = null;
+    group?.applyTo(material);
+    this.#customizer?.(
+      material,
+      tilesetId,
+      surface
+    );
+
+    return material;
+  }
+
+  invalidate(
+    tilesetId?: string
+  ): void {
+    if (tilesetId === undefined) {
+      this.dispose();
+
+      return;
+    }
+
+    for (const { material, tilesetId: id } of this.#entries.values()) {
+      if (id === tilesetId) {
+        this.#evict(material);
+      }
+    }
+  }
+
+  dispose(): void {
+    for (const material of this.#materials.values()) {
+      material.dispose();
+    }
+
+    this.#materials.clear();
+    this.#entries.clear();
+    this.#references.clear();
+  }
+
+  #usesStandard(
+    group: MaterialGroup | undefined
+  ): boolean {
+    return this.#type === "standard" || group !== undefined;
+  }
+
+  #evict(
+    material: THREE.Material
+  ): void {
+    const entry = this.#entries.get(material);
+    if (entry !== undefined) {
+      this.#materials.delete(entry.key);
+      this.#entries.delete(material);
+    }
+    this.#references.delete(material);
+    material.dispose();
+  }
+}

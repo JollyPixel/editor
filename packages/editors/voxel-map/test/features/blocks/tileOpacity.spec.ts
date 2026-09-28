@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 import {
   TilesetList,
-  TilesetManager,
+  TilesetAtlases,
   type TilesetImage
 } from "@jolly-pixel/voxel.renderer";
 
@@ -54,7 +54,7 @@ function canvasOf(
 function setup(
   pixels: PixelBuffer | null
 ) {
-  const tilesetManager = new TilesetManager({
+  const atlases = new TilesetAtlases({
     tilesets: new TilesetList([
       {
         id: "atlas",
@@ -64,10 +64,10 @@ function setup(
     ])
   });
   const texture = new THREE.Texture<TilesetImage>(canvasOf(4, 2));
-  tilesetManager.registerTexture("atlas", texture);
+  atlases.registerTexture("atlas", texture);
 
   let reads = 0;
-  const probe = new TileOpacityProbe(tilesetManager, () => {
+  const probe = new TileOpacityProbe(atlases, () => {
     reads++;
 
     return pixels;

@@ -31,8 +31,8 @@ command stream, and draws nothing.
 
 The Three.js side of a document: the chunk meshes, their materials, the atlas
 textures, the shape registry, the collider and the inspector. `VoxelView`
-subscribes to a document and keeps the meshes in step with it. `VoxelEngine`
-composes a document and a view into one object.
+subscribes to a document and keeps the meshes in step with it. Several views
+can draw one document.
 
 ### Chunk
 
@@ -151,7 +151,7 @@ amount of geometry while leaving both voxels in the world.
 
 ### View Distance
 
-The chunk radius around the engine's focus that is kept active for rendering.
+The chunk radius around the view's focus that is kept active for rendering.
 Chunks outside the radius remain unmeshed, are hidden, or are unloaded according
 to their current state and the configured policy.
 

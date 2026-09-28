@@ -9,7 +9,7 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
-import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -40,7 +40,7 @@ export class BlockMaterialFinish extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare tilesets: MaterialGroupWriter;
@@ -58,7 +58,7 @@ export class BlockMaterialFinish extends LitElement {
     group: () => (
       this.groupId === undefined ?
         undefined :
-        this.engine.materialGroups.get(this.groupId)
+        this.engine.document.materialGroups.get(this.groupId)
     ),
     define: (group) => {
       this.tilesets.defineMaterialGroup(group);

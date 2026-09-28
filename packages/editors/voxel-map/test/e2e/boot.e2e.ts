@@ -9,9 +9,9 @@ test("opens the requested world with its layer, blocks and tileset", async({ pag
     const { engine } = window.voxelMapEditor!.workspace;
 
     return {
-      layers: engine.world.getLayers().map((layer) => layer.name),
-      blocks: engine.blockRegistry.size,
-      tilesets: engine.tilesets.definitions().map((tileset) => tileset.asset?.id)
+      layers: engine.document.world.getLayers().map((layer) => layer.name),
+      blocks: engine.document.blocks.size,
+      tilesets: engine.document.tilesets.definitions().map((tileset) => tileset.asset?.id)
     };
   });
 

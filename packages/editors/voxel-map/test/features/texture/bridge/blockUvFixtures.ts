@@ -2,7 +2,7 @@
 import {
   BlockRegistry,
   BlockShapeRegistry,
-  type VoxelEngine,
+  type VoxelView,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import { UVMap } from "@jolly-pixel/pixel-draw.renderer";
@@ -39,7 +39,7 @@ export function makeBlock(
 }
 
 export function makeFakeVoxelEngine(): {
-  engine: VoxelEngine;
+  engine: VoxelView;
   dirtyReasons: string[];
   bridgeOptions: FakeBridgeOptions;
 } {
@@ -49,11 +49,10 @@ export function makeFakeVoxelEngine(): {
     mapDocument: new Emitter<MapDocumentEvents>()
   };
   const registry = new BlockRegistry();
-  const fake = {
-    blockRegistry: registry,
-    shapeRegistry: BlockShapeRegistry.createDefault(),
+  const document = {
+    blocks: registry,
     defineBlock: (def: ResolvedBlockDefinition) => {
-      fake.defineBlocks([def]);
+      document.defineBlocks([def]);
     },
     defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
       const resolved = [...defs];
@@ -66,14 +65,18 @@ export function makeFakeVoxelEngine(): {
         bridgeOptions.mapDocument.emit("blockRegistryChanged");
       }
       dirtyReasons.push("block-defined");
-    },
+    }
+  };
+  const fake = {
+    document,
+    shapes: BlockShapeRegistry.createDefault(),
     markAllChunksDirty: (reason: string) => {
       dirtyReasons.push(reason);
     }
   };
 
   return {
-    engine: fake as unknown as VoxelEngine,
+    engine: fake as unknown as VoxelView,
     dirtyReasons,
     bridgeOptions
   };

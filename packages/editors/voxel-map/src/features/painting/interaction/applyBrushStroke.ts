@@ -2,7 +2,7 @@
 import {
   VoxelTransform,
   type VoxelCoord,
-  type VoxelEngine,
+  type VoxelView,
   type VoxelEntry
 } from "@jolly-pixel/voxel.renderer";
 
@@ -14,7 +14,7 @@ import type {
 } from "../model/BrushStroke.ts";
 
 export function applyBrushStroke(
-  engine: VoxelEngine,
+  engine: VoxelView,
   stroke: BrushStroke,
   centers: Iterable<VoxelCoord>,
   brushSize: number
@@ -35,7 +35,7 @@ export function applyBrushStroke(
     return false;
   }
 
-  const { world } = engine;
+  const { world } = engine.document;
   const layer = world.getLayer(stroke.layerName);
   if (stroke.paint) {
     const paint = stroke.paint;

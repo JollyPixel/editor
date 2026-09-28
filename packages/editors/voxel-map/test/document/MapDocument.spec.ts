@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type {
   VoxelCommand,
-  VoxelEngineEvents,
+  VoxelDocumentEvents,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
@@ -46,7 +46,7 @@ class FakeWorldSource
 }
 
 function setup() {
-  const engine = new Emitter<VoxelEngineEvents>();
+  const engine = new Emitter<VoxelDocumentEvents>();
   const source = new FakeWorldSource();
   const mapDocument = new MapDocument({ commands: engine, source });
   const seen: string[] = [];

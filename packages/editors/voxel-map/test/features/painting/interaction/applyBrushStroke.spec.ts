@@ -8,7 +8,7 @@ import {
 // Import Third-party Dependencies
 import type {
   VoxelCoord,
-  VoxelEngine
+  VoxelView
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -16,7 +16,7 @@ import { applyBrushStroke } from "../../../../src/features/painting/interaction/
 import { BrushStroke } from "../../../../src/features/painting/model/BrushStroke.ts";
 
 interface FakeEngine {
-  engine: VoxelEngine;
+  engine: VoxelView;
   removed: string[];
 }
 
@@ -38,13 +38,15 @@ function createColumnEngine(
     }
   };
   const engine = {
-    world: {
-      getLayer: () => layer,
-      removeVoxelBulk(
-        _layerName: string,
-        entries: { position: VoxelCoord; }[]
-      ) {
-        removed.push(...entries.map((entry) => cellKey(entry.position)));
+    document: {
+      world: {
+        getLayer: () => layer,
+        removeVoxelBulk(
+          _layerName: string,
+          entries: { position: VoxelCoord; }[]
+        ) {
+          removed.push(...entries.map((entry) => cellKey(entry.position)));
+        }
       }
     },
     flush() {
@@ -53,7 +55,7 @@ function createColumnEngine(
   };
 
   return {
-    engine: engine as unknown as VoxelEngine,
+    engine: engine as unknown as VoxelView,
     removed
   };
 }

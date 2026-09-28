@@ -1,0 +1,197 @@
+// Import Node.js Dependencies
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import * as THREE from "three";
+
+// Import Internal Dependencies
+import {
+  drawnIndices,
+  mergeChunkGeometries
+} from "../../../src/view/collision/index.ts";
+import { BlockSurface } from "../../../src/document/blocks/index.ts";
+import { ChunkGeometryKey } from "../../../src/view/meshing/index.ts";
+
+function key(
+  tilesetId: string
+): ChunkGeometryKey {
+  return new ChunkGeometryKey(tilesetId, new BlockSurface());
+}
+
+function makeGeometry(
+  positions: number[],
+  indices: number[]
+): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
+  geometry.setIndex(indices);
+
+  return geometry;
+}
+
+function makeTriangle(
+  offset = 0
+): THREE.BufferGeometry {
+  return makeGeometry(
+    [offset, 0, 0, offset + 1, 0, 0, offset, 1, 0],
+    [0, 1, 2]
+  );
+}
+
+describe("mergeChunkGeometries", () => {
+  it("returns null for an empty map", () => {
+    assert.equal(mergeChunkGeometries(new Map()), null);
+  });
+
+  it("returns the input geometry unowned on the single-tileset fast path", () => {
+    const geometry = makeTriangle();
+
+    const merged = mergeChunkGeometries(new Map([[key("atlas"), geometry]]));
+
+    assert.ok(merged);
+    assert.equal(merged.geometry, geometry, "no copy should be allocated");
+    assert.equal(merged.owned, false);
+  });
+
+  it("concatenates positions and returns an owned geometry", () => {
+    const merged = mergeChunkGeometries(new Map([
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
+    ]));
+
+    assert.ok(merged);
+    assert.equal(merged.owned, true);
+    assert.equal(merged.geometry.getAttribute("position").count, 6);
+  });
+
+  it("offsets indices of subsequent geometries by the preceding vertex count", () => {
+    const merged = mergeChunkGeometries(new Map([
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
+    ]));
+
+    assert.ok(merged);
+    const index = merged.geometry.getIndex();
+    assert.ok(index);
+    assert.deepEqual(
+      [...index.array],
+      [0, 1, 2, 3, 4, 5],
+      "second triangle's indices must be shifted by 3"
+    );
+  });
+
+  it("keeps only collision-relevant attributes", () => {
+    const first = makeTriangle(0);
+    first.setAttribute(
+      "uv",
+      new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2)
+    );
+
+    const merged = mergeChunkGeometries(new Map([
+      [key("a"), first],
+      [key("b"), makeTriangle(10)]
+    ]));
+
+    assert.ok(merged);
+    assert.equal(merged.geometry.getAttribute("uv"), undefined);
+  });
+
+  it("skips non-indexed geometries", () => {
+    const nonIndexed = new THREE.BufferGeometry();
+    nonIndexed.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)
+    );
+
+    const merged = mergeChunkGeometries(new Map([
+      [key("a"), makeTriangle(0)],
+      [key("b"), nonIndexed]
+    ]));
+
+    assert.ok(merged);
+    assert.equal(merged.geometry.getAttribute("position").count, 3);
+  });
+
+  it("returns null when every geometry is skipped", () => {
+    const nonIndexed = new THREE.BufferGeometry();
+    nonIndexed.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute([0, 0, 0], 3)
+    );
+    const other = new THREE.BufferGeometry();
+    other.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute([1, 1, 1], 3)
+    );
+
+    const merged = mergeChunkGeometries(new Map([
+      [key("a"), nonIndexed],
+      [key("b"), other]
+    ]));
+
+    assert.equal(merged, null);
+  });
+});
+
+describe("mergeChunkGeometries — buffer types", () => {
+  it("allocates typed arrays rather than boxed number arrays", () => {
+    const merged = mergeChunkGeometries(new Map([
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
+    ]));
+
+    assert.ok(merged);
+    const index = merged.geometry.getIndex();
+    assert.ok(index);
+    assert.ok(
+      merged.geometry.getAttribute("position").array instanceof Float32Array
+    );
+    assert.ok(index.array instanceof Uint32Array);
+  });
+
+  it("preserves every vertex of every source geometry", () => {
+    const merged = mergeChunkGeometries(new Map([
+      [key("a"), makeTriangle(0)],
+      [key("b"), makeTriangle(10)]
+    ]));
+
+    assert.ok(merged);
+    assert.deepEqual(
+      [...merged.geometry.getAttribute("position").array],
+      [0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0, 0, 11, 0, 0, 10, 1, 0]
+    );
+  });
+});
+
+describe("mergeChunkGeometries draw range", () => {
+  it("merges only the indices each geometry draws", () => {
+    const shared = [0, 1, 2, 0, 2, 1];
+    const a = makeGeometry([0, 0, 0, 1, 0, 0, 0, 1, 0], shared);
+    const b = makeGeometry([5, 0, 0, 6, 0, 0, 5, 1, 0], shared);
+    a.setDrawRange(0, 3);
+    b.setDrawRange(0, 3);
+
+    const merged = mergeChunkGeometries(new Map([[key("a"), a], [key("b"), b]]));
+
+    assert.deepEqual([...merged!.geometry.getIndex()!.array], [0, 1, 2, 3, 4, 5]);
+  });
+});
+
+describe("drawnIndices", () => {
+  it("clamps the draw range to the index", () => {
+    const geometry = makeTriangle();
+    geometry.setDrawRange(1, 10);
+
+    assert.deepEqual([...drawnIndices(geometry)!], [1, 2]);
+  });
+
+  it("returns null for a non-indexed geometry", () => {
+    const geometry = new THREE.BufferGeometry();
+
+    assert.equal(drawnIndices(geometry), null);
+  });
+});

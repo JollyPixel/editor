@@ -2,11 +2,8 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  TilesetManager,
-  loadTilesets,
-  type TilesetUVRegion
-} from "../../src/tileset/index.ts";
+import { TilesetAtlases, loadTilesets } from "../../src/view/atlases/index.ts";
+import { type TilesetUVRegion } from "../../src/document/tilesets/index.ts";
 import {
   type LabelEntry,
   createLabel,
@@ -23,9 +20,9 @@ const kCols = 3;
 const kRows = 3;
 const kGap = 1.15;
 
-// ── TilesetManager setup ───────────────────────────────────────────────────────
+// ── TilesetAtlases setup ───────────────────────────────────────────────────────
 
-const tilesetManager = new TilesetManager();
+const atlases = new TilesetAtlases();
 
 for (const { def, texture } of await loadTilesets([
   {
@@ -34,17 +31,17 @@ for (const { def, texture } of await loadTilesets([
     tileSize: 32
   }
 ])) {
-  tilesetManager.tilesets.add(def);
-  tilesetManager.registerTexture(def.id, texture);
+  atlases.tilesets.add(def);
+  atlases.registerTexture(def.id, texture);
 }
 
-console.log("[tileset-demo] Tileset loaded. defaultTilesetId:", tilesetManager.defaultTilesetId);
+console.log("[tileset-demo] Tileset loaded. defaultTilesetId:", atlases.defaultTilesetId);
 
 /*
  * // Log all UV regions for verification
  * for (let row = 0; row < kRows; row++) {
  *   for (let col = 0; col < kCols; col++) {
- *     const uv = tilesetManager.atlas().uvFor(col, row);
+ *     const uv = atlases.atlas().uvFor(col, row);
  *     console.log(`  tile(col=${col}, row=${row}):`, uv);
  *   }
  * }
@@ -81,7 +78,7 @@ scene.add(dirLight);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const texture = tilesetManager.atlas().texture;
+const texture = atlases.atlas().texture;
 
 /**
  * Creates a MeshLambertMaterial for a single tile.
@@ -113,7 +110,7 @@ const labelEntries: LabelEntry[] = [];
 
 for (let row = 0; row < kRows; row++) {
   for (let col = 0; col < kCols; col++) {
-    const uv = tilesetManager.atlas().uvFor(col, row);
+    const uv = atlases.atlas().uvFor(col, row);
     const mesh = new THREE.Mesh(kQuadGeo, createTileMaterial(uv));
     mesh.position.set(col * kGap, 0, -row * kGap);
     scene.add(mesh);

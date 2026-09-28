@@ -10,7 +10,7 @@ import {
   tilesetAsset,
   TILESET_EXTENSION
 } from "@jolly-pixel/asset.voxel-map/client";
-import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import type { VoxelDocument } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { TilesetStore } from "../../state/index.ts";
@@ -32,7 +32,7 @@ export interface TilesetCatalogWriter {
 }
 
 export type TilesetEngine = Pick<
-  VoxelEngine,
+  VoxelDocument,
   "addTileset" | "removeTileset" | "tilesets"
 >;
 

@@ -95,7 +95,7 @@ export class BrushToolbar extends LitElement {
 
   #workspace = new WorkspaceController(this, (workspace) => {
     const { brush, selection } = workspace.state;
-    const { history } = workspace.engine;
+    const { history } = workspace.engine.document;
     const refreshSelection = (): void => {
       this.disabled = selection.voxelLayer === null;
       this._notice = paintingNoticeOf(selection);
@@ -305,11 +305,11 @@ export class BrushToolbar extends LitElement {
   }
 
   #onUndo(): void {
-    this.#workspace.current?.engine.history.undo();
+    this.#workspace.current?.engine.document.history.undo();
   }
 
   #onRedo(): void {
-    this.#workspace.current?.engine.history.redo();
+    this.#workspace.current?.engine.document.history.redo();
   }
 
   #onGhostToggle(): void {

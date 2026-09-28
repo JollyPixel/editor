@@ -6,15 +6,15 @@ import {
   type VoxelChunk,
   type VoxelLayer,
   VoxelWorld
-} from "../../src/world/index.ts";
-import { BlockRegistry } from "../../src/blocks/index.ts";
-import { BlockShapeRegistry } from "../../src/blocks/shape/index.ts";
-import { TilesetManager } from "../../src/tileset/index.ts";
+} from "../../src/document/world/index.ts";
+import { BlockRegistry } from "../../src/document/blocks/index.ts";
+import { BlockShapeRegistry } from "../../src/document/blocks/shape/index.ts";
+import { TilesetAtlases } from "../../src/view/atlases/index.ts";
 import {
   VoxelMeshBuilder,
   type ChunkGeometryKey,
   type PulledChunkGeometry
-} from "../../src/mesh/index.ts";
+} from "../../src/view/meshing/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 import { registerAtlas } from "./atlas.ts";
 import {
@@ -34,7 +34,7 @@ export interface MeshFixture {
   layer: VoxelLayer;
   builder: VoxelMeshBuilder;
   blockRegistry: BlockRegistry;
-  tilesetManager: TilesetManager;
+  atlases: TilesetAtlases;
 }
 
 export interface MeshFixtureOptions {
@@ -59,18 +59,18 @@ export function makeMeshFixture(
     makeBlockDef(STAIR_ID, "stair", { name: "Stair" })
   ]);
 
-  const tilesetManager = new TilesetManager();
-  registerAtlas(tilesetManager);
+  const atlases = new TilesetAtlases();
+  registerAtlas(atlases);
 
   const builder = new VoxelMeshBuilder({
     world,
     blockRegistry,
     shapeRegistry: BlockShapeRegistry.createDefault(),
-    tilesetManager,
+    atlases,
     ambientOcclusion
   });
 
-  return { world, layer, builder, blockRegistry, tilesetManager };
+  return { world, layer, builder, blockRegistry, atlases };
 }
 
 export function place(

@@ -2,19 +2,19 @@
 import { setImmediate } from "node:timers/promises";
 
 // Import Internal Dependencies
-import { runMeshWorker } from "../../src/mesh/workers/runMeshWorker.ts";
+import { runMeshWorker } from "../../src/view/workers/runMeshWorker.ts";
 import type {
   MeshWorkerPort,
   MeshWorkerRequest
-} from "../../src/mesh/workers/protocol.ts";
-import type { VoxelEngine } from "../../src/VoxelEngine.ts";
+} from "../../src/view/workers/protocol.ts";
+import type { VoxelView } from "../../src/view/VoxelView.ts";
 import {
   FACE_TEMPLATE_TEXELS,
   PULLED_FACE_WORDS,
   PULLED_TEMPLATE_BITS,
   type PulledChunkGeometry
-} from "../../src/mesh/index.ts";
-import { chunkMeshes } from "./engine.ts";
+} from "../../src/view/meshing/index.ts";
+import { chunkMeshes } from "./view.ts";
 
 // CONSTANTS
 const kTemplateFloats = FACE_TEMPLATE_TEXELS * 4;
@@ -71,15 +71,15 @@ export function buildRequests(
 }
 
 export async function meshInWorkers(
-  engine: VoxelEngine
+  view: VoxelView
 ): Promise<void> {
   const state = { idle: false };
-  void engine.view.whenIdle().then(() => {
+  void view.whenIdle().then(() => {
     state.idle = true;
   });
 
   for (let turn = 0; turn < 1_000; turn++) {
-    engine.tick(0);
+    view.tick(0);
     await setImmediate();
     if (state.idle) {
       return;
@@ -96,10 +96,10 @@ export interface MeshSnapshot {
 }
 
 export function meshSnapshot(
-  engine: VoxelEngine
+  view: VoxelView
 ): Map<string, MeshSnapshot> {
   const snapshot = new Map<string, MeshSnapshot>();
-  for (const mesh of chunkMeshes(engine)) {
+  for (const mesh of chunkMeshes(view)) {
     const geometry = mesh.geometry as PulledChunkGeometry;
     const attributes: Record<string, number[]> = {};
     for (const [name, attribute] of Object.entries(geometry.attributes)) {

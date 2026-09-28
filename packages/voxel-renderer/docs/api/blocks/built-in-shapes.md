@@ -1,6 +1,6 @@
 # Built-in shapes
 
-All shapes below are registered automatically by `VoxelEngine`. They are also available
+All shapes below are registered automatically by `VoxelView`. They are also available
 standalone via `BlockShapeRegistry.createDefault()`.
 
 ## Class exports
@@ -83,14 +83,14 @@ the `+Y`/`-Y` occlusion directions so face culling against neighbours remains ac
 
 ```ts
 // Ceiling ramp — same geometry as "ramp" but mounted upside-down
-engine.world.setVoxel("Ceiling", {
+document.world.setVoxel("Ceiling", {
   position: { x: 2, y: 4, z: 0 },
   blockId: myRampBlock,
   flipY: true
 });
 
 // Inverted inner-corner stair
-engine.world.setVoxel("Ceiling", {
+document.world.setVoxel("Ceiling", {
   position: { x: 3, y: 4, z: 0 },
   blockId: myStairBlock,
   rotation: VoxelRotation.CW90,

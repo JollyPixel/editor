@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import type { BlockDefinition } from "../../src/blocks/index.ts";
-import type { BlockShapeID } from "../../src/blocks/shape/index.ts";
+import type { BlockDefinition } from "../../src/document/blocks/index.ts";
+import type { BlockShapeID } from "../../src/document/blocks/shape/index.ts";
 
 // CONSTANTS
 export const DEFAULT_TEXTURE = {

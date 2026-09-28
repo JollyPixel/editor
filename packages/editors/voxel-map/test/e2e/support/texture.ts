@@ -21,7 +21,7 @@ export function blockTileCenter(
 ): Promise<TexturePoint> {
   return page.evaluate((id) => {
     const { engine, linkedTilesets } = window.voxelMapEditor!.workspace;
-    const texture = engine.blockRegistry.get(id)!.defaultTexture!;
+    const texture = engine.document.blocks.get(id)!.defaultTexture!;
     const tileSize = linkedTilesets.tileSizeOf(texture.tilesetId ?? "");
     if (tileSize === undefined) {
       throw new Error(`Block ${id} has no loaded tileset.`);

@@ -1,44 +1,49 @@
-export * from "./VoxelEngine.ts";
-export * from "./VoxelDocument.ts";
-export * from "./VoxelView.ts";
+export * from "./document/BlockDocument.ts";
+export * from "./document/VoxelDocument.ts";
+export * from "./document/commands/index.ts";
+export * from "./document/world/index.ts";
+export * from "./document/geometry/index.ts";
+export * from "./document/blocks/index.ts";
+export * from "./document/tilesets/index.ts";
+export * from "./document/materials/index.ts";
+export * from "./document/VoxelHistory.ts";
+export * from "./document/serialization/index.ts";
+
+export * from "./view/VoxelView.ts";
 export {
   VoxelLighting,
   VoxelRange,
   VoxelRendering,
-  type MaterialCustomizerFn,
+  ViewDistance,
   type TileMinification,
+  type ViewDistanceOptions,
   type ViewDistancePolicy,
+  type ViewDistanceShape,
   type VoxelLightingOptions,
   type VoxelMeshingOptions,
   type VoxelRangeOptions,
   type VoxelRenderingOptions
-} from "./settings/index.ts";
-export {
-  VoxelTransparencyPassNode,
-  voxelTransparencyPass
-} from "./render/VoxelTransparencyPassNode.ts";
-export type {
-  VoxelTransparencyPassOptions
-} from "./render/VoxelTransparencyPassNode.ts";
-export * from "./commands/index.ts";
-
-export * from "./blocks/index.ts";
-export * from "./collision/index.ts";
-export * from "./materials/index.ts";
-export * from "./serialization/index.ts";
-export * from "./tileset/index.ts";
-export * from "./world/index.ts";
-
-export * from "./inspector/index.ts";
-export * from "./history/index.ts";
-export type { VoxelLogger } from "./utils/logger.ts";
-export { MeshBuildStats } from "./mesh/index.ts";
-export { runMeshWorker } from "./mesh/workers/runMeshWorker.ts";
+} from "./view/options/index.ts";
+export type { MaterialCustomizerFn } from "./view/shading/ChunkMaterialCache.ts";
+export * from "./view/atlases/index.ts";
+export * from "./view/collision/index.ts";
+export * from "./view/inspector/index.ts";
+export { MeshBuildStats } from "./view/meshing/index.ts";
+export { runMeshWorker } from "./view/workers/runMeshWorker.ts";
 export type {
   MeshWorkerPort,
   MeshWorkerScope
-} from "./mesh/workers/protocol.ts";
-export type { MeshWorkerOptions } from "./render/ChunkMeshWorkers.ts";
-export { FACE as Face } from "./utils/math.ts";
+} from "./view/workers/protocol.ts";
+export type { MeshWorkerOptions } from "./view/workers/ChunkMeshWorkers.ts";
+export {
+  VoxelTransparencyPassNode,
+  voxelTransparencyPass
+} from "./view/postprocess/VoxelTransparencyPassNode.ts";
+export type {
+  VoxelTransparencyPassOptions
+} from "./view/postprocess/VoxelTransparencyPassNode.ts";
+
+export type { VoxelLogger } from "./VoxelLogger.ts";
+export { FACE as Face } from "./document/geometry/faceDirection.ts";
 
 export * from "./plugins/rapier/index.ts";

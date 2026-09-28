@@ -15,7 +15,8 @@ This experimental package is private to the workspace. It converts Tiled `.tmj` 
 ```ts
 import { loadJSON } from "@jolly-pixel/engine";
 import {
-  VoxelEngine,
+  VoxelDocument,
+  VoxelView,
   loadTilesets
 } from "@jolly-pixel/voxel.renderer";
 import {
@@ -29,11 +30,10 @@ const { world, blocks } = new TiledConverter().convert(map, {
   layerMode: "stacked"
 });
 
-const engine = new VoxelEngine({
-  tilesets: await loadTilesets(world.tilesets),
-  blocks
+const view = new VoxelView(new VoxelDocument({ blocks }), {
+  tilesets: await loadTilesets(world.tilesets)
 });
-engine.load(world);
+view.load(world);
 ```
 
 ## 📚 Documentation

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  encodeVoxelDocument,
+  encodeVoxelWorld,
   VOXEL_WORLD_VERSION,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
@@ -102,7 +102,7 @@ describe("voxelMapAssetKind dependencies", () => {
     const state = handler.create("map");
     handler.load(
       state,
-      encodeVoxelDocument(assetWorld("tileset-default"))
+      encodeVoxelWorld(assetWorld("tileset-default"))
     );
 
     assert.deepEqual(handler.dependencies?.(state), [

@@ -15,8 +15,8 @@ import {
   foldAssetEvent
 } from "@jolly-pixel/asset-server";
 import {
-  decodeVoxelDocument,
-  encodeVoxelDocument
+  decodeVoxelWorld,
+  encodeVoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -50,14 +50,14 @@ function seededDocument(): Uint8Array {
   const state = new VoxelMapState(kChunkSize);
   state.world.addLayer("Ground");
 
-  return encodeVoxelDocument(state.toJSON());
+  return encodeVoxelWorld(state.toJSON());
 }
 
 function stateFromFile(
   data: Uint8Array
 ): VoxelMapState {
   const state = new VoxelMapState(kChunkSize);
-  state.load(decodeVoxelDocument(data));
+  state.load(decodeVoxelWorld(data));
 
   return state;
 }
@@ -282,7 +282,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       (await backend.writer.create({
         path: "maps/linked.voxelmap.json",
         kind: VOXEL_MAP_KIND,
-        data: encodeVoxelDocument(linked.toJSON()),
+        data: encodeVoxelWorld(linked.toJSON()),
         assetId: mapId,
         actor: {
           type: "user",

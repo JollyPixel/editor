@@ -36,9 +36,9 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
       target: session.target.record.source,
       persistent: session.workspace?.persistent,
       username: session.identity.username,
-      layers: engine.world.getLayers().map((layer) => layer.name),
-      blocks: engine.blockRegistry.size,
-      tilesets: engine.tilesets.definitions().map(
+      layers: engine.document.world.getLayers().map((layer) => layer.name),
+      blocks: engine.document.blocks.size,
+      tilesets: engine.document.tilesets.definitions().map(
         (tileset) => session.catalog.record(tileset.asset?.id ?? "")?.source
       )
     };
@@ -112,7 +112,7 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
   const before = await page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
     const mapId = session.target.record.id;
-    const [tileset] = workspace.engine.tilesets.definitions();
+    const [tileset] = workspace.engine.document.tilesets.definitions();
     const textureId = tileset.asset!.id;
 
     return {
@@ -149,7 +149,7 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
 
     return {
       mapId: session.target.record.id,
-      textureId: workspace.engine.tilesets.definitions()[0].asset!.id
+      textureId: workspace.engine.document.tilesets.definitions()[0].asset!.id
     };
   })).toEqual({
     mapId: before.mapId,

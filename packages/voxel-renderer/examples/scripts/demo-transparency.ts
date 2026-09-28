@@ -4,7 +4,8 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   loadTilesets,
-  VoxelEngine,
+  VoxelDocument,
+  VoxelView,
   type VoxelInspectorMode
 } from "../../src/index.ts";
 import {
@@ -29,7 +30,7 @@ import {
 // CONSTANTS
 const kCenter = WORLD_SIZE / 2;
 const kSunRadius = WORLD_SIZE * 1.8;
-/** Mirrors `VoxelEngine`'s own quantisation, so the alpha warning is exact. */
+/** Mirrors `VoxelView`'s own quantisation, so the alpha warning is exact. */
 const kOpacitySteps = 32;
 
 type ChunkMaterial = THREE.MeshLambertMaterial | THREE.MeshStandardMaterial;
@@ -65,9 +66,11 @@ const materialState = {
   metalness: 0
 };
 
-const engine = new VoxelEngine({
+const voxelDocument = new VoxelDocument({
   chunkSize: 16,
-  blocks: tileset.blocks,
+  blocks: tileset.blocks
+});
+const voxels = new VoxelView(voxelDocument, {
   tilesets,
   rendering: {
     material: materialType,
@@ -79,8 +82,8 @@ const engine = new VoxelEngine({
   }
 });
 
-buildScene(engine);
-engine.init();
+buildScene(voxelDocument.world);
+voxels.init();
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 
@@ -95,7 +98,7 @@ const { camera, controls } = createOrbitCamera(
   { x: kCenter, y: 18, z: kCenter + 26 },
   { x: kCenter, y: 3, z: kCenter }
 );
-scene.add(engine.root);
+scene.add(voxels.root);
 
 const ambient = new THREE.AmbientLight("#c6dcff", 0.9);
 const hemisphere = new THREE.HemisphereLight("#9fd4ff", "#4a3a2a", 0.8);
@@ -146,7 +149,7 @@ const alphaState = {
 };
 
 const debugState = {
-  mode: engine.inspector.mode
+  mode: voxels.inspector.mode
 };
 
 const layersFolder = pane.addFolder({ title: "Layers" });
@@ -183,7 +186,7 @@ meshFolder
 
 document.addEventListener("keydown", (event) => {
   if (event.code === "KeyG") {
-    setDebugMode(engine.inspector.nextMode());
+    setDebugMode(voxels.inspector.nextMode());
   }
 });
 
@@ -211,7 +214,7 @@ await startLoop({
       updateSun();
     }
 
-    engine.tick(deltaTime);
+    voxels.tick(deltaTime);
     if (frame++ % 30 === 0) {
       syncStats();
     }
@@ -248,19 +251,19 @@ function updateLayer(
   name: string,
   options: { visible?: boolean; opacity?: number; }
 ): void {
-  engine.world.updateLayer(name, options);
+  voxelDocument.world.updateLayer(name, options);
   /*
    * An opacity change dirties every layer; flush so the panel and the frame
    * never disagree about what the scene looks like.
    */
-  engine.flush();
+  voxels.flush();
   syncStats();
 }
 
 function setDebugMode(
   value: VoxelInspectorMode
 ): void {
-  engine.inspector.mode = value;
+  voxels.inspector.mode = value;
   if (debugState.mode === value) {
     return;
   }
@@ -285,7 +288,7 @@ function opacityBucket(
 }
 
 function syncStats(): void {
-  const { faces, culledFaces, triangles } = engine.inspector.mesh.stats;
+  const { faces, culledFaces, triangles } = voxels.inspector.mesh.stats;
   const candidates = faces + culledFaces;
 
   meshState.faces = faces;

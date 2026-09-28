@@ -2,8 +2,8 @@
 import type {
   VoxelBlockCommand,
   VoxelLayerCommand
-} from "../../src/commands/index.ts";
-import { resolveBlockDefinition } from "../../src/blocks/index.ts";
+} from "../../src/document/commands/index.ts";
+import { resolveBlockDefinition } from "../../src/document/blocks/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 
 type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;

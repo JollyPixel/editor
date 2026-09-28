@@ -6,7 +6,8 @@ Extend `BlockShapeBase`, register the instance, then reference its ID from a
 ```ts
 import {
   BlockShapeBase,
-  VoxelEngine,
+  VoxelDocument,
+  VoxelView,
   defineFace,
   type Face,
   type FaceDefinition
@@ -24,7 +25,8 @@ class MyShape extends BlockShapeBase {
   ];
 }
 
-const engine = new VoxelEngine({
+const document = new VoxelDocument();
+const view = new VoxelView(document, {
   shapes: [new MyShape()]
 });
 ```
@@ -48,17 +50,17 @@ correctly hides nothing. Implement `BlockShape` directly, or override
 [`BlockShapeBase`](../api/blocks/BlockShapeBase.md). An incorrect `true` result
 removes visible geometry from neighbouring blocks.
 
-Registering through `engine.shapeRegistry` is also supported:
+Registering through `view.shapes` is also supported:
 
 ```ts
-engine.shapeRegistry.register(new MyShape());
+view.shapes.register(new MyShape());
 ```
 
 Register the shape before placing blocks that use it. Then add a matching block
 definition:
 
 ```ts
-engine.blockRegistry.register({
+document.blocks.register({
   id: 10,
   name: "Custom",
   shapeId: "myShape",

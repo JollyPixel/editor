@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/voxel.renderer/engine";
 import {
   voxelTransparencyPass,
-  type VoxelEngine,
+  type VoxelView,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type { PeerIdentity } from "@jolly-pixel/ui";
@@ -91,7 +91,7 @@ export interface VoxelMapWorkspace {
   state: EditorState;
   mapDocument: MapDocument;
   usage: BlockUsageStore;
-  engine: VoxelEngine;
+  engine: VoxelView;
   gridRenderer: GridRenderer;
   lighting: SceneLighting;
   localBrush: LocalBrush;
@@ -161,7 +161,7 @@ export class EditorScene extends Systems.Scene {
     };
     keyboard.on(kExitOrbitFocusKey, exitOrbitFocus);
 
-    const { engine } = world
+    const { view: engine } = world
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
         document: session.map.voxels,
@@ -188,7 +188,7 @@ export class EditorScene extends Systems.Scene {
       })
     });
     const layerVisibility = new LocalLayerVisibility({
-      world: engine.world,
+      world: engine.document.world,
       mapDocument,
       visibility: state.layerVisibility
     });
@@ -198,7 +198,7 @@ export class EditorScene extends Systems.Scene {
     });
     const tilesetDirectory = new TilesetDirectory({
       store: state.tilesets,
-      tilesets: engine.tilesets,
+      tilesets: engine.document.tilesets,
       catalog: session.catalog,
       mapDocument
     });
@@ -209,7 +209,7 @@ export class EditorScene extends Systems.Scene {
       mapDocument
     });
     const tilesetActions = new TilesetActions({
-      engine,
+      engine: engine.document,
       catalog: session.catalog,
       store: state.tilesets,
       documents: linkedTilesets
@@ -264,19 +264,19 @@ export class EditorScene extends Systems.Scene {
     });
     const historyShortcuts = new HistoryShortcuts({
       keyboard,
-      history: engine.history
+      history: engine.document.history
     });
 
     world.createActor("gizmo")
       .addComponent(VoxelLayerGizmo, {
-        world: engine.world,
+        world: engine.document.world,
         camera: camera.camera,
         selection: state.selection,
         mapDocument
       });
     world.createActor("object-layer-renderer")
       .addComponent(ObjectLayerRenderer, {
-        world: engine.world,
+        world: engine.document.world,
         camera: camera.camera,
         selection: state.selection,
         mapDocument,
@@ -368,15 +368,15 @@ export class EditorScene extends Systems.Scene {
   }
 
   #reconcileSelection(
-    engine: VoxelEngine
+    engine: VoxelView
   ): void {
     this.#options.state.selection.reconcile(
-      layerSelectionsOf(engine.world)
+      layerSelectionsOf(engine.document.world)
     );
   }
 
   #spawnCamera(
-    engine: VoxelEngine
+    engine: VoxelView
   ): void {
     const camera = this.#camera;
     if (!this.#spawnPending || camera === undefined) {
@@ -386,7 +386,7 @@ export class EditorScene extends Systems.Scene {
     this.#spawnPending = false;
     camera.exitOrbitFocus();
     camera.teleport(
-      spawnPose(engine.world.getLayers(), {
+      spawnPose(engine.document.world.getLayers(), {
         fov: camera.camera.fov
       })
     );

@@ -79,7 +79,7 @@ class VoxelLayer {
 
 These properties are mutable in the TypeScript API because deserialization and
 world management update them. Application code should use the corresponding
-`VoxelWorld` or `VoxelEngine` methods so mesh invalidation and commands still run.
+`VoxelWorld` methods so mesh invalidation and commands still run.
 
 > **`position`** - locates the layer-local origin in world space. Always use
 > `VoxelWorld.setLayerPosition` or `translateLayer` so chunks are marked dirty.
@@ -97,28 +97,11 @@ serialization.
 Mask coverage is tested against texture alpha before the layer fade. Layers
 continue fading below `alphaTest`; blend mode has no alpha cutoff.
 
-## Methods
-
-### `toJSON(): VoxelLayerJSON`
-
-Returns the serializable layer state.
-
-```ts
-interface VoxelLayerJSON {
-  id: string;
-  name: string;
-  visible: boolean;
-  opacity?: number;
-  order: number;
-  position?: { x: number; y: number; z: number; };
-  properties?: Record<string, any>;
-  voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
-}
-```
-
 > [!NOTE]
-> Used by `serializeVoxelWorld()`. See
-> [serialization](../serialization/serialization.md).
+> A layer has no `toJSON()`: `serializeVoxelLayer(layer)` returns its
+> `VoxelLayerJSON`. See [serialization](../serialization/serialization.md#serializing-a-world).
+
+## Methods
 
 ### `countBlocks(): Map<number, number>`
 
@@ -171,6 +154,7 @@ layer.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: 3, transform: 0 });
 ### `setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel): void`
 
 Allocation-free `setVoxelAt`, taking the value `packVoxel()` produces.
+`VOXEL_ABSENT` removes the voxel, like `removeVoxelAt()`.
 
 ### `removeVoxelAt(position: Vector3Like): void`
 
@@ -238,8 +222,7 @@ for (const chunk of layer.getChunks()) {
 ### `clone(options?: Partial<VoxelLayerOptions>): VoxelLayer`
 
 Creates a detached copy of the layer, including its voxels and properties. Use
-`VoxelWorld.cloneLayer()` or `VoxelEngine.cloneLayer()` when the clone should be
-added to a world.
+`VoxelWorld.cloneLayer()` when the clone should be added to a world.
 
 The copy owns its own chunks, position and properties; editing it never reaches
 the source. `options.chunkSize` is ignored, since the copied chunks are built
@@ -248,7 +231,7 @@ for the source's chunk size.
 ### `mergeFrom(source: VoxelLayer, options?: VoxelLayerMergeOptions): void`
 
 Copies every voxel from `source` into this layer, resolved in world space so
-layer positions are honoured. Prefer the world or engine merge method when the
+layer positions are honoured. Prefer the world merge method when the
 operation must update world state or emit commands.
 
 `options.overwrite` defaults to `true`, letting source voxels replace target

@@ -31,7 +31,7 @@ function setup(
   const { engine, bridgeOptions } = makeFakeVoxelEngine();
   const uv = makeUv();
 
-  engine.defineBlock({
+  engine.document.defineBlock({
     id: 1,
     name: "Stair",
     shapeId: "stair",
@@ -131,7 +131,7 @@ describe("BlockUvBridge — stairs", () => {
       uv.setState("block-1", "free");
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
 
-      const updated = engine.blockRegistry.get(1)!;
+      const updated = engine.document.blocks.get(1)!;
 
       assert.deepEqual(
         {
@@ -172,7 +172,7 @@ describe("BlockUvBridge — stairs", () => {
         "a 16x8 tread must not become the block's shared rectangle"
       );
 
-      const { defaultTexture } = engine.blockRegistry.get(1)!;
+      const { defaultTexture } = engine.document.blocks.get(1)!;
       assert.deepEqual(
         { col: defaultTexture!.col, row: defaultTexture!.row },
         { col: 0, row: 0 }

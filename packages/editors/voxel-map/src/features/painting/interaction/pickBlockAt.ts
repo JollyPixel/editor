@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type {
   VoxelCoord,
-  VoxelEngine
+  VoxelView
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -11,10 +11,10 @@ import {
 } from "../model/brushFootprint.ts";
 
 export function pickBlockAt(
-  engine: VoxelEngine,
+  engine: VoxelView,
   footprint: BrushFootprint
 ): number | null {
-  const { world } = engine;
+  const { world } = engine.document;
 
   for (const cell of footprintOf(footprint)) {
     const entry = world.getVoxelAt(cell);

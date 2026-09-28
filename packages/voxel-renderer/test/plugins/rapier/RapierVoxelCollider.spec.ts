@@ -14,17 +14,18 @@ import {
   type RapierRigidBodyDesc,
   RapierVoxelCollider
 } from "../../../src/plugins/rapier/index.ts";
-import type { VoxelChunkCollision } from "../../../src/collision/index.ts";
-import { VoxelChunk, VoxelTransform } from "../../../src/world/index.ts";
+import type { VoxelChunkCollision } from "../../../src/view/collision/index.ts";
+import { VoxelChunk } from "../../../src/document/world/index.ts";
+import { VoxelTransform } from "../../../src/document/geometry/index.ts";
 import {
   type BlockDefinition,
   BlockRegistry,
   BlockSurface
-} from "../../../src/blocks/index.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
-import { Slab } from "../../../src/blocks/shape/library/Slab.ts";
+} from "../../../src/document/blocks/index.ts";
+import { BlockShapeRegistry } from "../../../src/document/blocks/shape/index.ts";
+import { Slab } from "../../../src/document/blocks/shape/library/Slab.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
-import { ChunkGeometryKey } from "../../../src/mesh/index.ts";
+import { ChunkGeometryKey } from "../../../src/view/meshing/index.ts";
 
 // CONSTANTS
 const kNoGeometries = new Map();

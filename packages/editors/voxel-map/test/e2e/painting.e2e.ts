@@ -263,7 +263,7 @@ test("the ghost block previews the placement at size one", async({ page }) => {
 test("an object layer pauses painting until the voxel layer is resumed", async({ page }) => {
   await page.evaluate(() => {
     const { engine, state } = window.voxelMapEditor!.workspace;
-    engine.world.objectLayers.add("Props");
+    engine.document.world.objectLayers.add("Props");
     state.selection.selectObjectLayer("Props");
   });
   const toolbar = page.locator("voxel-brush-toolbar");
@@ -280,7 +280,7 @@ test("an object layer pauses painting until the voxel layer is resumed", async({
 
 test("nothing is painted and a warning is logged without a voxel layer", async({ page }) => {
   await page.evaluate(() => {
-    window.voxelMapEditor!.workspace.engine.world.removeLayer("Ground");
+    window.voxelMapEditor!.workspace.engine.document.world.removeLayer("Ground");
   });
   const toolbar = page.locator("voxel-brush-toolbar");
   const brushTools = toolbar.getByRole("group", { name: "Brush" });

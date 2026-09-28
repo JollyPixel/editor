@@ -1,11 +1,12 @@
 # Loading and restoring tilesets
 
-Fetch tileset images before constructing the engine. This keeps asynchronous
+Fetch tileset images before constructing the view. This keeps asynchronous
 work outside ECS lifecycle methods.
 
 ```ts
 import {
-  VoxelEngine,
+  VoxelDocument,
+  VoxelView,
   loadTilesets
 } from "@jolly-pixel/voxel.renderer";
 
@@ -17,7 +18,8 @@ const tilesets = await loadTilesets([
   }
 ]);
 
-const engine = new VoxelEngine({
+const document = new VoxelDocument();
+const view = new VoxelView(document, {
   tilesets
 });
 ```
@@ -26,7 +28,7 @@ Tile references without a `tilesetId` use the first declared tileset.
 
 ## Restore a saved world
 
-Load the atlases named by the document before calling `load()`:
+Load the atlases named by the snapshot before calling `load()`:
 
 ```ts
 const snapshot = JSON.parse(
@@ -34,27 +36,29 @@ const snapshot = JSON.parse(
 ) as VoxelWorldJSON;
 
 const tilesets = await loadTilesets(snapshot.tilesets);
-const engine = new VoxelEngine({
-  chunkSize: snapshot.chunkSize,
+const document = new VoxelDocument({
+  chunkSize: snapshot.chunkSize
+});
+const view = new VoxelView(document, {
   tilesets
 });
 
-engine.load(snapshot);
+view.load(snapshot);
 ```
 
-If the engine already exists, fetch only the missing definitions and pass them
+If the view already exists, fetch only the missing definitions and pass them
 with the load operation:
 
 ```ts
 const missing = snapshot.tilesets.filter(
-  (definition) => !engine.tilesetManager.get(definition.id)
+  (definition) => !view.atlases.get(definition.id)
 );
 
-engine.load(snapshot, {
+view.load(snapshot, {
   tilesets: await loadTilesets(missing)
 });
 ```
 
-`load()` declares every tileset of the document. One without atlas logs a
-warning and its faces stay hidden until `engine.loadTileset()` registers it. See the [tileset reference](../api/tilesets/tilesets.md) for the
+`load()` declares every tileset of the snapshot. One without atlas logs a
+warning and its faces stay hidden until `view.loadTileset()` registers it. See the [tileset reference](../api/tilesets/tilesets.md) for the
 underlying loading and registration APIs.

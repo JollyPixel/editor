@@ -97,7 +97,7 @@ callback, scene background, and material settings, including when rendering
 throws. Existing render-object callbacks run during scene draws.
 
 `dispose()` releases its render targets. The caller owns the scene, camera,
-renderer, and voxel engine.
+renderer, and voxel view.
 
 ## Color and coverage
 
@@ -116,6 +116,6 @@ Their original blend equations are temporarily replaced, so additive effects
 need a separate render pass. Render overlays after the pipeline if they must
 bypass its depth and coverage rules.
 
-`VoxelEngine` alone does not install the node. The voxel-map editor sets it as
+`VoxelView` alone does not install the node. The voxel-map editor sets it as
 its scene camera's post-processing. The block-library thumbnail renderer uses
 ordinary Three.js material blending.

@@ -9,11 +9,11 @@ import {
   PULLED_FACE_WORDS,
   PULLED_TEMPLATE_BITS,
   type PulledChunkGeometry
-} from "../../src/mesh/index.ts";
+} from "../../src/view/meshing/index.ts";
 import {
   AO_UNOCCLUDED,
   aoVertexByte
-} from "../../src/mesh/ambientOcclusion.ts";
+} from "../../src/view/meshing/ambientOcclusion.ts";
 
 // CONSTANTS
 const kCellMask = (1 << PULLED_CELL_BITS) - 1;

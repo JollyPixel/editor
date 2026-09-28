@@ -11,7 +11,7 @@ import {
   type ResolvedBlockDefinition,
   type BlockShapeRegistry,
   type MaterialGroupList,
-  type TilesetManager
+  type TilesetAtlases
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -43,7 +43,7 @@ let checkerTexture: THREE.DataTexture | null = null;
 
 export interface BlockPreviewSources {
   shapeRegistry: BlockShapeRegistry;
-  tilesetManager: TilesetManager;
+  atlases: TilesetAtlases;
   tileOpacity: TileOpacityProbe;
   materialGroups?: MaterialGroupList;
 }
@@ -170,7 +170,7 @@ export function buildBlockGeometry(
   sources: BlockPreviewSources,
   transform: VoxelTransform = VoxelTransform.Identity
 ): THREE.BufferGeometry | null {
-  const { shapeRegistry, tilesetManager } = sources;
+  const { shapeRegistry, atlases } = sources;
   const shape = shapeRegistry.get(block.shapeId);
   if (!shape) {
     return null;
@@ -203,7 +203,7 @@ export function buildBlockGeometry(
       continue;
     }
 
-    const region = tilesetManager
+    const region = atlases
       .get(tileRef.tilesetId)
       ?.uvFor(
         tileRef.col,
@@ -239,7 +239,7 @@ export function textureOf(
   block: ResolvedBlockDefinition,
   sources: BlockPreviewSources
 ): THREE.Texture | null {
-  return sources.tilesetManager
+  return sources.atlases
     .get(block.defaultTexture?.tilesetId)
     ?.texture ?? null;
 }
