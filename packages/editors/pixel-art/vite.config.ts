@@ -20,39 +20,63 @@ import {
 } from "./examples/scripts/config.ts";
 
 // CONSTANTS
+const kE2EMode = "e2e";
 const kCatalogMaxContentBytes = 32 * 1024 * 1024;
+const kWorkspaceBrowserEntries = [
+  "@jolly-pixel/asset.pixel-art/client",
+  "@jolly-pixel/color",
+  "@jolly-pixel/editor.host",
+  "@jolly-pixel/engine",
+  "@jolly-pixel/image",
+  "@jolly-pixel/image/browser",
+  "@jolly-pixel/pixel-draw.renderer",
+  "@jolly-pixel/runtime",
+  "@jolly-pixel/ui",
+  "@jolly-pixel/ui/icon",
+  "@jolly-pixel/ui/network"
+];
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  root: "examples",
-  server: {
-    port: PORTS.pixelArt,
-    strictPort: true,
-    allowedHosts: true
-  },
-  plugins: [
-    checker({
-      typescript: true
-    }),
-    createAssetWorkspacePlugin({
-      root: import.meta.dirname,
-      source: new MemoryAssetSource(),
-      eventStore: EventStore.persistence.memory(),
-      handlers: [
-        pixelArtAssetKind({
-          defaultSize: TEXTURE_SIZE
-        })
-      ],
-      seed: {
-        [DEMO_ASSET_PATH]: {
-          id: DEMO_ASSET_ID,
-          kind: PIXEL_ART_KIND
+export default defineConfig(({ mode }) => {
+  const e2e = mode === kE2EMode;
+
+  return {
+    root: "examples",
+    server: {
+      port: PORTS.pixelArt,
+      strictPort: true,
+      allowedHosts: true
+    },
+    optimizeDeps: e2e ?
+      {
+        include: kWorkspaceBrowserEntries,
+        force: true
+      } :
+      undefined,
+    plugins: [
+      checker({
+        typescript: !e2e
+      }),
+      createAssetWorkspacePlugin({
+        root: import.meta.dirname,
+        source: new MemoryAssetSource(),
+        eventStore: EventStore.persistence.memory(),
+        handlers: [
+          pixelArtAssetKind({
+            defaultSize: TEXTURE_SIZE
+          })
+        ],
+        seed: {
+          [DEMO_ASSET_PATH]: {
+            id: DEMO_ASSET_ID,
+            kind: PIXEL_ART_KIND
+          }
+        },
+        launch: () => DEMO_ASSET_ID,
+        backend: {
+          catalogMaxContentBytes: kCatalogMaxContentBytes
         }
-      },
-      launch: () => DEMO_ASSET_ID,
-      backend: {
-        catalogMaxContentBytes: kCatalogMaxContentBytes
-      }
-    })
-  ]
+      })
+    ]
+  };
 });

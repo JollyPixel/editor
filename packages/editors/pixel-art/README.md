@@ -82,6 +82,8 @@ pnpm --filter @jolly-pixel/editor.pixel-art test:e2e
 
 Playwright drives the `examples/` demo (started automatically via `webServer`) and exercises paint, fill, select, move, colors, history, and import/export through the actual UI, not internal APIs.
 
+The suite serves the demo with `vite --mode e2e` (`pnpm run dev:e2e`). That mode skips the TypeScript checker and pre-bundles the workspace packages the browser imports (`kWorkspaceBrowserEntries` in `vite.config.ts`), see the [e2e README](../../e2e/README.md#-starting-a-new-suite). Add any new `@jolly-pixel/*` entry point the demo or `src/` imports to that list.
+
 Each test creates its own blank canvas through the catalog and opens the demo on it, so tests share no state. Only the `3D preview` tests boot the runtime; they pass `?max-fps=` (`kRuntimeMaxFps` in `test/e2e/fixtures.ts`) to the demo. Headless Chromium renders that scene in software at roughly 300ms a frame, so any cap above ~2 fps renders back to back, starves the main thread and stalls every dispatched input event.
 
 ## Contributors Guide

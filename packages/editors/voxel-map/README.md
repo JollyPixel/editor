@@ -156,7 +156,10 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map build
 `test-only` runs the Node.js tests without producing the HTML coverage report.
 
 `test:e2e` runs the Playwright suite in `test/e2e`. It starts `pnpm run dev:e2e`,
-a Vite server on port 3002 whose asset workspace lives in memory. Each test
+a Vite server on port 3002 whose asset workspace lives in memory and whose
+workspace dependencies are pre-bundled (`kWorkspaceBrowserEntries` in
+`vite.config.ts`, see the [e2e README](../../e2e/README.md#-starting-a-new-suite)).
+Add any new `@jolly-pixel/*` entry point `src/` imports to that list. Each test
 creates its own tileset and world through the catalog, then opens
 `/?target=<assetId>&max-fps=<n>`. In dev builds the opened editor is exposed as
 `window.voxelMapEditor`.

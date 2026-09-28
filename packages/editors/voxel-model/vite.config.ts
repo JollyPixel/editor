@@ -18,6 +18,23 @@ import { createModelProject } from "./src/boot/modelProject.ts";
 // CONSTANTS
 const kE2EMode = "e2e";
 const kTextureAssetId = "model-texture";
+const kWorkspaceBrowserEntries = [
+  "@jolly-pixel/asset.pixel-art",
+  "@jolly-pixel/asset.pixel-art/client",
+  "@jolly-pixel/asset.voxel-model",
+  "@jolly-pixel/asset.voxel-model/client",
+  "@jolly-pixel/editor.host",
+  "@jolly-pixel/editor.host/ui",
+  "@jolly-pixel/editor.pixel-art",
+  "@jolly-pixel/editor.pixel-art/mesh-texturing",
+  "@jolly-pixel/engine",
+  "@jolly-pixel/network/client",
+  "@jolly-pixel/pixel-draw.renderer",
+  "@jolly-pixel/three",
+  "@jolly-pixel/ui",
+  "@jolly-pixel/ui/icon",
+  "@jolly-pixel/ui/network"
+];
 
 export default defineConfig(({ mode }) => {
   const e2e = mode === kE2EMode;
@@ -29,6 +46,12 @@ export default defineConfig(({ mode }) => {
       {
         port: PORTS.voxelModel,
         strictPort: true
+      } :
+      undefined,
+    optimizeDeps: e2e ?
+      {
+        include: kWorkspaceBrowserEntries,
+        force: true
       } :
       undefined,
     plugins: [
