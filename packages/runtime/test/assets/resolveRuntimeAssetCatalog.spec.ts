@@ -10,17 +10,20 @@ import {
 
 // Import Internal Dependencies
 import {
-  resolveRuntimeAssetOptions
-} from "../../src/assets/resolveRuntimeAssetOptions.ts";
+  resolveRuntimeAssetCatalog
+} from "../../src/assets/resolveRuntimeAssetCatalog.ts";
 
-describe("resolveRuntimeAssetOptions", () => {
+describe("resolveRuntimeAssetCatalog", () => {
   test("keeps an existing catalog", async() => {
     const catalog = new AssetCatalog();
-    const resolved = await resolveRuntimeAssetOptions({
-      catalog
-    });
 
-    assert.strictEqual(resolved.catalog, catalog);
+    assert.strictEqual(await resolveRuntimeAssetCatalog(catalog), catalog);
+  });
+
+  test("creates an empty catalog when none is given", async() => {
+    const catalog = await resolveRuntimeAssetCatalog();
+
+    assert.strictEqual(catalog.size, 0);
   });
 
   test("fetches and parses a catalog path", async(context) => {
@@ -39,16 +42,14 @@ describe("resolveRuntimeAssetOptions", () => {
       }))
     );
 
-    const resolved = await resolveRuntimeAssetOptions({
-      catalog: "/assets.json"
-    });
+    const catalog = await resolveRuntimeAssetCatalog("/assets.json");
 
     assert.strictEqual(fetchMock.mock.callCount(), 1);
     assert.strictEqual(
       fetchMock.mock.calls[0].arguments[0],
       "/assets.json"
     );
-    assert.strictEqual(resolved.catalog.size, 1);
+    assert.strictEqual(catalog.size, 1);
   });
 
   test("reports an unsuccessful catalog response", async(context) => {
@@ -62,9 +63,7 @@ describe("resolveRuntimeAssetOptions", () => {
     );
 
     await assert.rejects(
-      () => resolveRuntimeAssetOptions({
-        catalog: "/missing-assets.json"
-      }),
+      () => resolveRuntimeAssetCatalog("/missing-assets.json"),
       /Asset catalog.*404 Not Found/
     );
   });
@@ -77,9 +76,7 @@ describe("resolveRuntimeAssetOptions", () => {
     );
 
     await assert.rejects(
-      () => resolveRuntimeAssetOptions({
-        catalog: "/assets.json"
-      }),
+      () => resolveRuntimeAssetCatalog("/assets.json"),
       SyntaxError
     );
   });
@@ -95,9 +92,9 @@ describe("resolveRuntimeAssetOptions", () => {
     );
 
     await assert.rejects(
-      () => resolveRuntimeAssetOptions({
-        catalog: new URL("https://example.com/assets.json")
-      }),
+      () => resolveRuntimeAssetCatalog(
+        new URL("https://example.com/assets.json")
+      ),
       UnsupportedAssetManifestError
     );
   });

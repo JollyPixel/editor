@@ -3,18 +3,18 @@ import { beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { resolveRuntimeCanvas } from "../src/resolveRuntimeCanvas.ts";
+import { resolveElement } from "../src/resolveElement.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("resolveRuntimeCanvas", () => {
-  test("returns the canvas element as is", () => {
+describe("resolveElement", () => {
+  test("returns the element as is", () => {
     const canvas = document.createElement("canvas");
 
     assert.strictEqual(
-      resolveRuntimeCanvas(canvas),
+      resolveElement(canvas, HTMLCanvasElement),
       canvas
     );
   });
@@ -27,14 +27,26 @@ describe("resolveRuntimeCanvas", () => {
     document.body.appendChild(container);
 
     assert.strictEqual(
-      resolveRuntimeCanvas("#game-container > canvas"),
+      resolveElement("#game-container > canvas", HTMLCanvasElement),
       canvas
+    );
+  });
+
+  test("queries the given document", () => {
+    const other = document.implementation.createHTMLDocument();
+    const container = other.createElement("div");
+    container.id = "host";
+    other.body.appendChild(container);
+
+    assert.strictEqual(
+      resolveElement("#host", HTMLElement, other),
+      container
     );
   });
 
   test("throws when the selector matches nothing", () => {
     assert.throws(
-      () => resolveRuntimeCanvas("#missing > canvas"),
+      () => resolveElement("#missing > canvas", HTMLCanvasElement),
       {
         message: 'No element matching the selector "#missing > canvas" ' +
           "was found."
@@ -42,28 +54,30 @@ describe("resolveRuntimeCanvas", () => {
     );
   });
 
-  test("throws when the selector matches a non canvas element", () => {
+  test("throws when the selector matches another element type", () => {
     const container = document.createElement("div");
     container.id = "game-container";
     document.body.appendChild(container);
 
     assert.throws(
-      () => resolveRuntimeCanvas("#game-container"),
+      () => resolveElement("#game-container", HTMLCanvasElement),
       {
+        name: "TypeError",
         message: 'The element matching the selector "#game-container" ' +
           "is not an HTMLCanvasElement."
       }
     );
   });
 
-  test("throws when the element is not a canvas", () => {
+  test("throws when the element has another type", () => {
     assert.throws(
-      () => resolveRuntimeCanvas(
-        document.createElement("div") as unknown as HTMLCanvasElement
+      () => resolveElement(
+        document.createElement("div") as unknown as HTMLCanvasElement,
+        HTMLCanvasElement
       ),
       {
-        message: "An HTMLCanvasElement or a CSS selector is required to " +
-          "create a Runtime instance."
+        name: "TypeError",
+        message: "Expected an HTMLCanvasElement or a CSS selector."
       }
     );
   });

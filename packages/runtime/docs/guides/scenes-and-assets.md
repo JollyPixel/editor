@@ -1,7 +1,7 @@
 # Scenes and assets
 
-Runtime connects the engine's scene manager to the asset coordinator. A scene's
-declared assets are prepared before the scene becomes active.
+The engine's scene manager loads a scene's declared assets through the
+runtime's asset coordinator before the scene becomes active.
 
 ## Configure the catalog
 
@@ -71,8 +71,8 @@ const load = runtime.world.sceneManager.loadScene(
 );
 ```
 
-The runtime prepares `scene.assets` in the background and updates the returned
-`SceneLoad`. Call `load.allowActivation()` when a manually controlled load may
+`SceneManager` prepares `scene.assets` in the background and updates the
+returned `SceneLoad`; `await load.done` waits until it is ready. Call `load.allowActivation()` when a manually controlled load may
 replace the active scene. Activation occurs at a frame boundary.
 
 The engine's [SceneManager documentation](../../../engine/docs/systems/scene-manager.md)

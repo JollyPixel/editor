@@ -6,63 +6,72 @@ import assert from "node:assert/strict";
 import {
   AssetCatalog,
   AssetCoordinator,
-  AssetLoaderRegistry
+  AssetLoaderRegistry,
+  AssetNotFoundError,
+  AssetRecord,
+  AssetReference,
+  AssetType
 } from "@jolly-pixel/asset";
 import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { Runtime } from "../src/Runtime.ts";
-import { RuntimeSceneLoader } from "../src/assets/RuntimeSceneLoader.ts";
+import type { Runtime } from "../src/Runtime.ts";
 import { bootstrapRuntime } from "../src/bootstrap/bootstrapRuntime.ts";
+
+// CONSTANTS
+const kPendingAsset = new AssetType<string>("pending");
 
 class TestScene extends Systems.Scene {
 }
 
-function createFakeRuntime(
-  sceneLoader?: Systems.SceneLoader
-) {
+function createFakeRuntime() {
   const canvas = document.createElement("canvas");
   const coordinator = new AssetCoordinator({
-    catalog: new AssetCatalog(),
-    loaders: new AssetLoaderRegistry()
+    catalog: new AssetCatalog([
+      new AssetRecord({
+        id: "pending",
+        kind: kPendingAsset.kind,
+        source: "pending.bin"
+      })
+    ]),
+    loaders: new AssetLoaderRegistry().register(kPendingAsset, {
+      load: () => new Promise<string>(() => void 0)
+    })
   });
   const sceneManager = new Systems.SceneManager();
-  sceneManager.setSceneLoader(
-    sceneLoader ?? new RuntimeSceneLoader(coordinator)
-  );
 
   const startCalls: string[] = [];
   const setPixelRatio = mock.fn((_ratio: number) => void 0);
-  const runtime = Object.assign(
-    Object.create(Runtime.prototype),
-    {
-      canvas,
-      // configureRuntimeDevice writes the detected refresh rate here.
-      loop: { scheduler: { maxFps: Infinity } },
-      world: {
-        renderer: {
-          getSource: () => {
-            return { setPixelRatio };
-          }
-        },
-        assetCoordinator: coordinator,
-        sceneManager
-      },
-      start: () => {
-        startCalls.push("start");
+  const world = {
+    logger: new Systems.Logger(),
+    renderer: {
+      getSource: () => {
+        return { setPixelRatio };
       }
+    },
+    assetCoordinator: coordinator,
+    sceneManager
+  };
+  sceneManager.bindWorld(world as any);
+
+  const runtime = {
+    canvas,
+    loop: { scheduler: { maxFps: Infinity } },
+    world,
+    start: () => {
+      startCalls.push("start");
     }
-  ) as Runtime;
+  } as unknown as Runtime;
 
   return { runtime, startCalls, setPixelRatio };
 }
 
-describe("Runtime.load (skipLoadingScreen)", () => {
+describe("bootstrapRuntime (skipLoadingScreen)", () => {
   test("never mounts the loading screen and shows the canvas immediately", async() => {
     const container = document.createElement("div");
     const { runtime, startCalls } = createFakeRuntime();
 
-    await runtime.load({
+    await bootstrapRuntime(runtime, {
       skipLoadingScreen: true,
       loadingContainer: container
     });
@@ -72,20 +81,34 @@ describe("Runtime.load (skipLoadingScreen)", () => {
     assert.deepStrictEqual(startCalls, ["start"]);
   });
 
+  test("waits for the initial scene before starting", async() => {
+    const { runtime, startCalls } = createFakeRuntime();
+    const scene = new TestScene("empty");
+
+    await bootstrapRuntime(runtime, {
+      skipLoadingScreen: true,
+      scene
+    });
+
+    assert.strictEqual(runtime.world.sceneManager.sceneLoad?.scene, scene);
+    assert.strictEqual(runtime.world.sceneManager.sceneLoad?.status, "ready");
+    assert.deepStrictEqual(startCalls, ["start"]);
+  });
+
   test("rethrows failures without building a loading screen error panel", async() => {
     const container = document.createElement("div");
-    const { runtime, startCalls } = createFakeRuntime({
-      load: (driver) => driver.fail(new Error("scene load failed"))
+    const { runtime, startCalls } = createFakeRuntime();
+    const scene = new TestScene("failing", {
+      assets: [new AssetReference("missing", kPendingAsset)]
     });
-    const scene = new TestScene("failing", { assets: [] });
 
     await assert.rejects(
-      () => runtime.load({
+      () => bootstrapRuntime(runtime, {
         skipLoadingScreen: true,
         loadingContainer: container,
         scene
       }),
-      /scene load failed/
+      AssetNotFoundError
     );
 
     assert.strictEqual(container.childElementCount, 0);
@@ -93,20 +116,22 @@ describe("Runtime.load (skipLoadingScreen)", () => {
   });
 
   test("rejects without starting when the initial scene load is cancelled", { timeout: 5_000 }, async() => {
-    const { runtime, startCalls } = createFakeRuntime({
-      load: (driver) => {
-        queueMicrotask(() => driver.load.cancel());
-      }
+    const { runtime, startCalls } = createFakeRuntime();
+    const { sceneManager } = runtime.world;
+    const scene = new TestScene("cancelled", {
+      assets: [new AssetReference("pending", kPendingAsset)]
     });
-    const scene = new TestScene("cancelled", { assets: [] });
+    sceneManager.once("sceneLoadRequested", (load) => {
+      queueMicrotask(() => load.cancel());
+    });
 
     await assert.rejects(
-      () => runtime.load({
+      () => bootstrapRuntime(runtime, {
         skipLoadingScreen: true,
         scene
       }),
       {
-        message: "Initial scene loading was cancelled."
+        message: "Scene load was cancelled."
       }
     );
 
@@ -114,11 +139,11 @@ describe("Runtime.load (skipLoadingScreen)", () => {
   });
 });
 
-describe("Runtime.load (pixel ratio)", () => {
+describe("bootstrapRuntime (pixel ratio)", () => {
   test("adapts the pixel ratio to the device by default", async() => {
     const { runtime, setPixelRatio } = createFakeRuntime();
 
-    await runtime.load({ skipLoadingScreen: true });
+    await bootstrapRuntime(runtime, { skipLoadingScreen: true });
 
     assert.strictEqual(setPixelRatio.mock.callCount(), 1);
   });

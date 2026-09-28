@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { resolveElement } from "../../resolveElement.ts";
 import {
   resolveOverlayAnchor,
   type OverlayPosition
@@ -59,7 +60,7 @@ export class OverlayLayer {
     }
     else {
       this.#mountContained(
-        resolveOverlayContainer(options.container, document)
+        resolveElement(options.container, HTMLElement, document)
       );
     }
   }
@@ -125,28 +126,4 @@ export class OverlayLayer {
     });
     container.append(this.element);
   }
-}
-
-function resolveOverlayContainer(
-  target: OverlayContainerTarget,
-  document: Document
-): HTMLElement {
-  if (typeof target !== "string") {
-    return target;
-  }
-
-  const element = document.querySelector(target);
-  if (element === null) {
-    throw new Error(
-      `No overlay container matching the selector "${target}" was found.`
-    );
-  }
-  if (!(element instanceof HTMLElement)) {
-    throw new Error(
-      `The overlay container matching the selector "${target}" is not ` +
-      "an HTMLElement."
-    );
-  }
-
-  return element;
 }

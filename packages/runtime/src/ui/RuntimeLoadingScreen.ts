@@ -32,7 +32,7 @@ export class RuntimeLoadingScreen {
     );
     const loading = existing === null
       ? createLoading(container)
-      : parseLoading(existing);
+      : assertLoading(existing);
 
     return new RuntimeLoadingScreen(
       canvas,
@@ -86,13 +86,13 @@ function createLoading(
   container: HTMLElement
 ): Loading {
   const element = document.createElement("jolly-loading");
-  const loading = parseLoading(element);
+  const loading = assertLoading(element);
   container.appendChild(loading);
 
   return loading;
 }
 
-function parseLoading(
+function assertLoading(
   element: Element
 ): Loading {
   if (!(element instanceof Loading)) {

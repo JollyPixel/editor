@@ -2,27 +2,11 @@
 import { AssetCatalog } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type {
-  ResolvedRuntimeAssetOptions,
-  RuntimeAssetCatalog,
-  RuntimeAssetOptions
-} from "./RuntimeAssetOptions.ts";
+import type { RuntimeAssetCatalog } from "./RuntimeAssetOptions.ts";
 
-export async function resolveRuntimeAssetOptions(
-  options: RuntimeAssetOptions = {}
-): Promise<ResolvedRuntimeAssetOptions> {
-  return {
-    catalog: await resolveRuntimeAssetCatalog(options.catalog),
-    loaders: options.loaders
-  };
-}
-
-async function resolveRuntimeAssetCatalog(
-  input: RuntimeAssetCatalog | undefined
+export async function resolveRuntimeAssetCatalog(
+  input: RuntimeAssetCatalog = new AssetCatalog()
 ): Promise<AssetCatalog> {
-  if (input === undefined) {
-    return new AssetCatalog();
-  }
   if (input instanceof AssetCatalog) {
     return input;
   }

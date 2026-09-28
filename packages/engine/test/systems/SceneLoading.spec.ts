@@ -1,15 +1,23 @@
 // Import Node.js Dependencies
 import { beforeEach, describe, mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
+
+// Import Third-party Dependencies
+import {
+  AssetBatchLoadError,
+  AssetNotFoundError
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { Actor } from "../../src/actor/index.ts";
 import { Logger } from "../../src/systems/Logger.ts";
 import { Scene } from "../../src/systems/scene/Scene.ts";
 import { SceneManager } from "../../src/systems/scene/SceneManager.ts";
-import type {
-  SceneLoadDriver
-} from "../../src/systems/scene/SceneLoader.ts";
+import {
+  createSceneAssets,
+  type SceneAssets
+} from "../sceneAssets.ts";
 
 class ConcreteScene extends Scene {
   awakeSpy = mock.fn();
@@ -19,12 +27,14 @@ class ConcreteScene extends Scene {
   }
 }
 
-function createSceneManager(): SceneManager {
+function createSceneManager(
+  assets: SceneAssets = createSceneAssets()
+): SceneManager {
   const sceneManager = new SceneManager();
   const world = {
     logger: new Logger(),
     sceneManager,
-    assetCoordinator: {},
+    assetCoordinator: assets.coordinator,
     createActor(name: string) {
       return new Actor(this as any, {
         name
@@ -43,16 +53,74 @@ describe("Systems.SceneManager loading", () => {
     Scene.Id.clear();
   });
 
-  describe("appendScene", () => {
-    test("waits for its assets before appending the scene", () => {
+  describe("loadScene", () => {
+    test("reports asset progress until the scene is ready", async() => {
+      const assets = createSceneAssets(["a", "b"]);
+      const sceneManager = createSceneManager(assets);
+      const scene = new ConcreteScene("level", {
+        assets: [assets.reference("a"), assets.reference("b")]
+      });
+
+      const load = sceneManager.loadScene(scene);
+      assert.strictEqual(load.status, "loading");
+      assert.strictEqual(load.completed, 0);
+      assert.strictEqual(load.total, 2);
+
+      assets.loader.resolve("a");
+      await setImmediate();
+      assert.strictEqual(load.completed, 1);
+      assert.strictEqual(load.currentAsset?.id.value, "a");
+
+      assets.loader.resolve("b");
+      await load.done;
+      assert.strictEqual(load.status, "ready");
+      assert.strictEqual(load.completed, 2);
+    });
+
+    test("is ready synchronously when it declares no assets", () => {
       const sceneManager = createSceneManager();
-      const appended = new ConcreteScene("prefab");
-      let driver!: SceneLoadDriver;
-      sceneManager.setSceneLoader({
-        load(sceneLoadDriver) {
-          driver = sceneLoadDriver;
-          driver.start(0, 1);
-        }
+
+      const load = sceneManager.loadScene(new ConcreteScene("empty"));
+
+      assert.strictEqual(load.status, "ready");
+      assert.strictEqual(sceneManager.hasPendingScene, true);
+    });
+
+    test("fails when an asset is missing from the catalog", async() => {
+      const assets = createSceneAssets();
+      const sceneManager = createSceneManager(assets);
+      const scene = new ConcreteScene("level", {
+        assets: [assets.reference("missing")]
+      });
+
+      const load = sceneManager.loadScene(scene);
+
+      assert.strictEqual(load.status, "failed");
+      assert.ok(load.error instanceof AssetNotFoundError);
+      await assert.rejects(load.done, AssetNotFoundError);
+    });
+
+    test("rejects done when a newer request cancels it", async() => {
+      const assets = createSceneAssets(["a"]);
+      const sceneManager = createSceneManager(assets);
+      const first = new ConcreteScene("first", {
+        assets: [assets.reference("a")]
+      });
+
+      const load = sceneManager.loadScene(first);
+      sceneManager.loadScene(new ConcreteScene("second"));
+
+      assert.strictEqual(load.status, "cancelled");
+      await assert.rejects(load.done, /Scene load was cancelled/);
+    });
+  });
+
+  describe("appendScene", () => {
+    test("waits for its assets before appending the scene", async() => {
+      const assets = createSceneAssets(["a"]);
+      const sceneManager = createSceneManager(assets);
+      const appended = new ConcreteScene("prefab", {
+        assets: [assets.reference("a")]
       });
 
       const load = sceneManager.appendScene(appended);
@@ -62,7 +130,8 @@ describe("Systems.SceneManager loading", () => {
       assert.strictEqual(sceneManager.getScene(appended.id), null);
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
 
-      driver.ready();
+      assets.loader.resolve("a");
+      await load.done;
       sceneManager.beginFrame();
 
       assert.strictEqual(load.status, "active");
@@ -89,22 +158,21 @@ describe("Systems.SceneManager loading", () => {
       assert.strictEqual(sceneManager.getScene(appended.id), appended);
     });
 
-    test("loads different appended scenes independently", () => {
-      const sceneManager = createSceneManager();
-      const first = new ConcreteScene("first");
-      const second = new ConcreteScene("second");
-      const drivers: SceneLoadDriver[] = [];
-      sceneManager.setSceneLoader({
-        load(driver) {
-          drivers.push(driver);
-          driver.start(0, 1);
-        }
+    test("loads different appended scenes independently", async() => {
+      const assets = createSceneAssets(["a", "b"]);
+      const sceneManager = createSceneManager(assets);
+      const first = new ConcreteScene("first", {
+        assets: [assets.reference("a")]
+      });
+      const second = new ConcreteScene("second", {
+        assets: [assets.reference("b")]
       });
 
       const firstLoad = sceneManager.appendScene(first);
       const secondLoad = sceneManager.appendScene(second);
-      drivers[0]!.ready();
-      drivers[1]!.ready();
+      assets.loader.resolve("a");
+      assets.loader.resolve("b");
+      await Promise.all([firstLoad.done, secondLoad.done]);
       sceneManager.beginFrame();
 
       assert.strictEqual(firstLoad.status, "active");
@@ -113,22 +181,22 @@ describe("Systems.SceneManager loading", () => {
       assert.strictEqual(sceneManager.getScene(second.id), second);
     });
 
-    test("does not append a scene when its loader fails", () => {
-      const sceneManager = createSceneManager();
-      const appended = new ConcreteScene("prefab");
-      const error = new Error("load failed");
-      sceneManager.setSceneLoader({
-        load(driver) {
-          driver.start(0, 1);
-          driver.fail(error);
-        }
+    test("does not append a scene when an asset fails", async() => {
+      const assets = createSceneAssets(["a"]);
+      const sceneManager = createSceneManager(assets);
+      const appended = new ConcreteScene("prefab", {
+        assets: [assets.reference("a")]
       });
+      const error = new Error("load failed");
 
       const load = sceneManager.appendScene(appended);
+      assets.loader.reject("a", error);
+      await assert.rejects(load.done, AssetBatchLoadError);
       sceneManager.beginFrame();
 
       assert.strictEqual(load.status, "failed");
-      assert.strictEqual(load.error, error);
+      assert.ok(load.error instanceof AssetBatchLoadError);
+      assert.strictEqual(load.error.failures[0]?.error, error);
       assert.strictEqual(sceneManager.getScene(appended.id), null);
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
     });
@@ -136,12 +204,10 @@ describe("Systems.SceneManager loading", () => {
 
   describe("additive cancellation", () => {
     test("removeScene cancels an unfinished request", () => {
-      const sceneManager = createSceneManager();
-      const appended = new ConcreteScene("prefab");
-      sceneManager.setSceneLoader({
-        load(driver) {
-          driver.start(0, 1);
-        }
+      const assets = createSceneAssets(["a"]);
+      const sceneManager = createSceneManager(assets);
+      const appended = new ConcreteScene("prefab", {
+        assets: [assets.reference("a")]
       });
 
       const load = sceneManager.appendScene(appended);
@@ -153,29 +219,20 @@ describe("Systems.SceneManager loading", () => {
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
     });
 
-    test("replacement cancels an unfinished request", () => {
-      const sceneManager = createSceneManager();
-      const appended = new ConcreteScene("prefab");
-      const replacement = new ConcreteScene("next");
-      let appendedDriver!: SceneLoadDriver;
-      sceneManager.setSceneLoader({
-        load(driver) {
-          if (driver.load.scene === appended) {
-            appendedDriver = driver;
-            driver.start(0, 1);
-          }
-          else {
-            driver.start(0, 0);
-            driver.ready();
-          }
-        }
+    test("replacement cancels an unfinished request", async() => {
+      const assets = createSceneAssets(["a"]);
+      const sceneManager = createSceneManager(assets);
+      const appended = new ConcreteScene("prefab", {
+        assets: [assets.reference("a")]
       });
+      const replacement = new ConcreteScene("next");
 
       const appendedLoad = sceneManager.appendScene(appended);
       sceneManager.loadScene(replacement);
       sceneManager.beginFrame();
 
-      appendedDriver.ready();
+      assets.loader.resolve("a");
+      await assert.rejects(appendedLoad.done);
       sceneManager.beginFrame();
 
       assert.strictEqual(appendedLoad.status, "cancelled");

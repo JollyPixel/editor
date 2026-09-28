@@ -38,8 +38,8 @@ export class RendererMetrics implements MetricSource {
 
   #renderer: THREE.WebGPURenderer;
   #captured = false;
-  #calls = 0;
-  #triangles = 0;
+  #capturedDrawCalls = 0;
+  #capturedTriangles = 0;
 
   constructor(
     renderer: THREE.WebGPURenderer,
@@ -58,13 +58,13 @@ export class RendererMetrics implements MetricSource {
         ...traits,
         id: "calls",
         label: "draw calls",
-        sample: () => this.frame.drawCalls
+        sample: () => this.#drawCalls
       },
       {
         ...traits,
         id: "renderedTriangles",
         label: "rendered tris",
-        sample: () => this.frame.triangles
+        sample: () => this.#triangles
       },
       {
         ...traits,
@@ -100,21 +100,33 @@ export class RendererMetrics implements MetricSource {
   }
 
   get frame(): RendererFrameStats {
-    const { render, memory } = this.#renderer.info;
+    const { memory } = this.#renderer.info;
 
     return {
-      drawCalls: this.#captured ? this.#calls : render.drawCalls,
-      triangles: this.#captured ? this.#triangles : render.triangles,
+      drawCalls: this.#drawCalls,
+      triangles: this.#triangles,
       geometries: memory.geometries,
       textures: memory.textures
     };
+  }
+
+  get #drawCalls(): number {
+    return this.#captured ?
+      this.#capturedDrawCalls :
+      this.#renderer.info.render.drawCalls;
+  }
+
+  get #triangles(): number {
+    return this.#captured ?
+      this.#capturedTriangles :
+      this.#renderer.info.render.triangles;
   }
 
   captureFrame(): void {
     const { render } = this.#renderer.info;
 
     this.#captured = true;
-    this.#calls = render.drawCalls;
-    this.#triangles = render.triangles;
+    this.#capturedDrawCalls = render.drawCalls;
+    this.#capturedTriangles = render.triangles;
   }
 }

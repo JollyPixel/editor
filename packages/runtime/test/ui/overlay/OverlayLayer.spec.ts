@@ -83,7 +83,7 @@ describe("OverlayLayer", () => {
           container: "#missing"
         }),
         {
-          message: "No overlay container matching the selector " +
+          message: "No element matching the selector " +
             "\"#missing\" was found."
         }
       );

@@ -1,3 +1,16 @@
+// CONSTANTS
+const kAlignments: Record<OverlayPosition, OverlayAlignment> = {
+  "top-left": ["start", "start"],
+  "top-center": ["start", "center"],
+  "top-right": ["start", "end"],
+  "middle-left": ["center", "start"],
+  center: ["center", "center"],
+  "middle-right": ["center", "end"],
+  "bottom-left": ["end", "start"],
+  "bottom-center": ["end", "center"],
+  "bottom-right": ["end", "end"]
+};
+
 export type OverlayPosition =
   | "top-left"
   | "top-center"
@@ -17,14 +30,24 @@ export interface OverlayAnchor {
   transform: string;
 }
 
-type AxisAlignment = "start" | "center" | "end";
+export type AxisAlignment = "start" | "center" | "end";
+
+export type OverlayAlignment = readonly [
+  vertical: AxisAlignment,
+  horizontal: AxisAlignment
+];
+
+export function resolveOverlayAlignment(
+  position: OverlayPosition
+): OverlayAlignment {
+  return kAlignments[position];
+}
 
 export function resolveOverlayAnchor(
   position: OverlayPosition,
   inset: number
 ): OverlayAnchor {
-  const vertical = verticalAlignment(position);
-  const horizontal = horizontalAlignment(position);
+  const [vertical, horizontal] = kAlignments[position];
   const offset = `${inset}px`;
 
   return {
@@ -58,30 +81,4 @@ function centerTransform(
   }
 
   return `translate(${x}, ${y})`;
-}
-
-function verticalAlignment(
-  position: OverlayPosition
-): AxisAlignment {
-  if (position.startsWith("top")) {
-    return "start";
-  }
-  if (position.startsWith("bottom")) {
-    return "end";
-  }
-
-  return "center";
-}
-
-function horizontalAlignment(
-  position: OverlayPosition
-): AxisAlignment {
-  if (position.endsWith("left")) {
-    return "start";
-  }
-  if (position.endsWith("right")) {
-    return "end";
-  }
-
-  return "center";
 }

@@ -12,10 +12,12 @@ const load = this.actor.world.sceneManager.loadScene(
 );
 ```
 
-`loadScene()` requests a replacement and returns a `SceneLoad` immediately. The
-runtime loads the assets declared by `scene.assets` and reports progress through
-that object. Once the load is ready, `SceneManager` replaces the current scene
-at the next frame boundary.
+`loadScene()` requests a replacement and returns a `SceneLoad` immediately.
+`SceneManager` loads the assets declared by `scene.assets` as one batch of the
+world's `AssetCoordinator` and reports progress through that object. A scene
+whose assets are all loaded, or that declares none, is `ready` before
+`loadScene()` returns. Once the load is ready, `SceneManager` replaces the
+current scene at the next frame boundary.
 
 ```ts
 load.status;
@@ -23,10 +25,17 @@ load.completed;
 load.total;
 load.currentAsset;
 load.error;
+
+await load.done;
 ```
 
 The status is one of `requested`, `loading`, `ready`, `failed`, `cancelled`, or
 `active`. Starting another replacement cancels an unfinished replacement.
+
+`done` resolves when the load becomes `ready`. It rejects with `error` when the
+load fails, for example with `AssetNotFoundError` for an asset missing from the
+catalog or `AssetBatchLoadError` when a loader fails, and with an `Error` when
+the load is cancelled. An unobserved rejection is not reported as unhandled.
 
 ## Holding activation for a transition
 
@@ -105,6 +114,7 @@ interface SceneLoad<TContext> {
   readonly total: number;
   readonly currentAsset: AssetRecord | null;
   readonly error: Error | null;
+  readonly done: Promise<void>;
 
   allowActivation(): void;
   cancel(): void;

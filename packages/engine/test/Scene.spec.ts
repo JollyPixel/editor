@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  AssetBatchLoadError,
   AssetId,
   AssetReference,
   AssetType,
@@ -16,7 +17,10 @@ import { Logger } from "../src/systems/Logger.ts";
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
 import { SceneManager } from "../src/systems/scene/SceneManager.ts";
-import type { SceneLoadDriver } from "../src/systems/scene/SceneLoader.ts";
+import {
+  createSceneAssets,
+  type SceneAssets
+} from "./sceneAssets.ts";
 
 // CONSTANTS
 const kDeltaTime = 1 / 60;
@@ -48,12 +52,14 @@ class ConcreteScene extends Scene {
   }
 }
 
-function createSceneSetup() {
+function createSceneSetup(
+  assets: SceneAssets = createSceneAssets()
+) {
   const sm = new SceneManager();
   const world = {
     logger: new Logger(),
     sceneManager: sm,
-    assetCoordinator: {},
+    assetCoordinator: assets.coordinator,
     createActor(name: string) {
       return new Actor(this as any, { name });
     }
@@ -318,15 +324,11 @@ describe("Scene", () => {
       assert.strictEqual(sm.currentScene, scene);
     });
 
-    test("waits for a configured loader before queuing the scene", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-      let driver!: SceneLoadDriver;
-      sm.setSceneLoader({
-        load(sceneLoadDriver) {
-          driver = sceneLoadDriver;
-          driver.start(0, 2);
-        }
+    test("waits for its assets before queuing the scene", async() => {
+      const assets = createSceneAssets(["a", "b"]);
+      const { sm } = createSceneSetup(assets);
+      const scene = new ConcreteScene("test", {
+        assets: [assets.reference("a"), assets.reference("b")]
       });
 
       const load = sm.loadScene(scene);
@@ -336,21 +338,19 @@ describe("Scene", () => {
       assert.strictEqual(load.total, 2);
       assert.strictEqual(sm.hasPendingScene, false);
 
-      driver.ready();
+      assets.loader.resolve("a");
+      assets.loader.resolve("b");
+      await load.done;
       assert.strictEqual(load.status, "ready");
       assert.strictEqual(load.completed, 2);
       assert.strictEqual(sm.hasPendingScene, true);
     });
 
-    test("keeps a manually allowed load waiting until assets are ready", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-      let driver!: SceneLoadDriver;
-      sm.setSceneLoader({
-        load(sceneLoadDriver) {
-          driver = sceneLoadDriver;
-          driver.start(0, 1);
-        }
+    test("keeps a manually allowed load waiting until assets are ready", async() => {
+      const assets = createSceneAssets(["a"]);
+      const { sm } = createSceneSetup(assets);
+      const scene = new ConcreteScene("test", {
+        assets: [assets.reference("a")]
       });
       const load = sm.loadScene(scene, {
         activation: "manual"
@@ -360,28 +360,28 @@ describe("Scene", () => {
       sm.beginFrame();
       assert.strictEqual(sm.currentScene, null);
 
-      driver.ready();
+      assets.loader.resolve("a");
+      await load.done;
       sm.beginFrame();
       assert.strictEqual(sm.currentScene, scene);
       assert.strictEqual(load.status, "active");
     });
 
-    test("cancels an older replacement request", () => {
-      const { sm } = createSceneSetup();
-      const first = new ConcreteScene("first");
-      const second = new ConcreteScene("second");
-      const drivers: SceneLoadDriver[] = [];
-      sm.setSceneLoader({
-        load(driver) {
-          drivers.push(driver);
-          driver.start(0, 1);
-        }
+    test("cancels an older replacement request", async() => {
+      const assets = createSceneAssets(["a", "b"]);
+      const { sm } = createSceneSetup(assets);
+      const first = new ConcreteScene("first", {
+        assets: [assets.reference("a")]
+      });
+      const second = new ConcreteScene("second", {
+        assets: [assets.reference("b")]
       });
 
       const firstLoad = sm.loadScene(first);
       const secondLoad = sm.loadScene(second);
-      drivers[0]!.ready();
-      drivers[1]!.ready();
+      assets.loader.resolve("a");
+      assets.loader.resolve("b");
+      await secondLoad.done;
       sm.beginFrame();
 
       assert.strictEqual(firstLoad.status, "cancelled");
@@ -389,22 +389,22 @@ describe("Scene", () => {
       assert.strictEqual(sm.currentScene, second);
     });
 
-    test("retains loader failures without replacing the scene", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-      const error = new Error("load failed");
-      sm.setSceneLoader({
-        load(driver) {
-          driver.start(0, 1);
-          driver.fail(error);
-        }
+    test("retains asset failures without replacing the scene", async() => {
+      const assets = createSceneAssets(["a"]);
+      const { sm } = createSceneSetup(assets);
+      const scene = new ConcreteScene("test", {
+        assets: [assets.reference("a")]
       });
+      const error = new Error("load failed");
 
       const load = sm.loadScene(scene);
+      assets.loader.reject("a", error);
+      await assert.rejects(load.done);
       sm.beginFrame();
 
       assert.strictEqual(load.status, "failed");
-      assert.strictEqual(load.error, error);
+      assert.ok(load.error instanceof AssetBatchLoadError);
+      assert.strictEqual(load.error.failures[0]?.error, error);
       assert.strictEqual(sm.currentScene, null);
       assert.strictEqual(sm.hasPendingScene, false);
     });

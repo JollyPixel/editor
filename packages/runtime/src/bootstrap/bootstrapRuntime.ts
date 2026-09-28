@@ -68,31 +68,22 @@ export async function bootstrapRuntime<
     maxFps
   };
 
+  let loadingScreen: RuntimeLoadingScreen | null = null;
   if (skipLoadingScreen) {
     runtime.canvas.style.opacity = "1";
-
-    await configureRuntimeDevice(runtime, deviceOptions);
-    await loadInitialAssets(runtime, null, assets);
-
-    if (scene !== undefined) {
-      await loadInitialScene(runtime.world.sceneManager, null, scene);
-    }
-
-    runtime.start();
-
-    return;
   }
-
-  const loadingScreen = RuntimeLoadingScreen.mount(
-    runtime.canvas,
-    loadingContainer
-  );
+  else {
+    loadingScreen = RuntimeLoadingScreen.mount(
+      runtime.canvas,
+      loadingContainer
+    );
+  }
 
   try {
     await Promise.all([
-      loadingScreen.start(),
+      loadingScreen?.start(),
       configureRuntimeDevice(runtime, deviceOptions),
-      waitForLoadingDelay(loadingDelay)
+      waitForLoadingDelay(skipLoadingScreen ? 0 : loadingDelay)
     ]);
 
     await loadInitialAssets(
@@ -109,12 +100,12 @@ export async function bootstrapRuntime<
       );
     }
 
-    await loadingScreen.complete();
+    await loadingScreen?.complete();
     runtime.start();
   }
   catch (value: unknown) {
     const error = toError(value);
-    loadingScreen.error(error);
+    loadingScreen?.error(error);
 
     throw error;
   }
@@ -138,19 +129,14 @@ async function loadInitialAssets<TContext>(
   await batch.done;
 }
 
-function loadInitialScene<TContext>(
+async function loadInitialScene<TContext>(
   sceneManager: Systems.SceneManager<TContext>,
   loadingScreen: RuntimeLoadingScreen | null,
   scene: Systems.Scene<TContext>
 ): Promise<void> {
   const sceneLoad = sceneManager.loadScene(scene);
-  const {
-    promise,
-    resolve,
-    reject
-  } = Promise.withResolvers<void>();
 
-  function handleChange(
+  function reportProgress(
     changedLoad: Systems.SceneLoad<TContext>
   ): void {
     if (changedLoad !== sceneLoad) {
@@ -164,40 +150,17 @@ function loadInitialScene<TContext>(
     if (sceneLoad.currentAsset !== null) {
       loadingScreen?.setAsset(sceneLoad.currentAsset);
     }
-
-    if (
-      sceneLoad.status === "ready" ||
-      sceneLoad.status === "active"
-    ) {
-      sceneManager.off(
-        "sceneLoadChanged",
-        handleChange
-      );
-      resolve();
-    }
-    else if (sceneLoad.status === "failed") {
-      sceneManager.off(
-        "sceneLoadChanged",
-        handleChange
-      );
-      reject(sceneLoad.error);
-    }
-    else if (sceneLoad.status === "cancelled") {
-      sceneManager.off(
-        "sceneLoadChanged",
-        handleChange
-      );
-      reject(new Error("Initial scene loading was cancelled."));
-    }
   }
 
-  sceneManager.on(
-    "sceneLoadChanged",
-    handleChange
-  );
-  handleChange(sceneLoad);
+  sceneManager.on("sceneLoadChanged", reportProgress);
+  reportProgress(sceneLoad);
 
-  return promise;
+  try {
+    await sceneLoad.done;
+  }
+  finally {
+    sceneManager.off("sceneLoadChanged", reportProgress);
+  }
 }
 
 function waitForLoadingDelay(

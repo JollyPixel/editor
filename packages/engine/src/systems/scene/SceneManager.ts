@@ -19,7 +19,6 @@ import type {
   SceneLoad,
   SceneLoadOptions
 } from "./SceneLoad.ts";
-import type { SceneLoader } from "./SceneLoader.ts";
 
 export type AppendedSceneEntry<TContext> = {
   scene: Scene<TContext>;
@@ -72,7 +71,6 @@ export class SceneManager<
 
   #currentScene: Scene<TContext> | null = null;
   #sceneStartPending = false;
-  #sceneLoader: SceneLoader<TContext> | null = null;
   #world: World<any, TContext> | null = null;
   #logger!: Logger;
 
@@ -119,12 +117,6 @@ export class SceneManager<
     this.#logger = world.logger.child({
       namespace: "Systems.SceneManager"
     });
-  }
-
-  setSceneLoader(
-    loader: SceneLoader<TContext>
-  ): void {
-    this.#sceneLoader = loader;
   }
 
   awake() {
@@ -214,23 +206,24 @@ export class SceneManager<
   #startSceneLoad(
     load: ManagedSceneLoad<TContext>
   ): void {
-    const { scene } = load;
-    if (this.#sceneLoader === null) {
-      load.start(0, scene.assets.length);
-      if (scene.assets.length === 0) {
+    try {
+      const batch = this.#world!.assetCoordinator.loadBatch(
+        load.scene.assets,
+        {
+          onProgress: (progress) => load.report(progress)
+        }
+      );
+      load.start(batch.completed, batch.total);
+
+      if (batch.status === "ready") {
         load.ready();
       }
       else {
-        load.fail(
-          new Error("No scene loader is configured.")
+        void batch.done.then(
+          () => load.ready(),
+          (value: unknown) => load.fail(toError(value))
         );
       }
-
-      return;
-    }
-
-    try {
-      this.#sceneLoader.load(load);
     }
     catch (value: unknown) {
       load.fail(toError(value));

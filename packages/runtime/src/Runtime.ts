@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import type { AssetCatalog } from "@jolly-pixel/asset";
 import {
   Systems,
   type GlobalAudio
@@ -21,19 +22,11 @@ import {
 import {
   createRuntimeAssetCoordinator
 } from "./assets/createRuntimeAssetCoordinator.ts";
-import type {
-  ResolvedRuntimeAssetOptions,
-  RuntimeAssetOptions
-} from "./assets/RuntimeAssetOptions.ts";
-import { RuntimeSceneLoader } from "./assets/RuntimeSceneLoader.ts";
+import type { RuntimeAssetOptions } from "./assets/RuntimeAssetOptions.ts";
 import {
-  resolveRuntimeAssetOptions
-} from "./assets/resolveRuntimeAssetOptions.ts";
-import {
-  resolveRuntimeCanvas,
-  type RuntimeCanvasTarget
-} from "./resolveRuntimeCanvas.ts";
-import { RendererMetrics } from "./metrics/RendererMetrics.ts";
+  resolveRuntimeAssetCatalog
+} from "./assets/resolveRuntimeAssetCatalog.ts";
+import { resolveElement } from "./resolveElement.ts";
 import { RuntimeMetrics } from "./metrics/RuntimeMetrics.ts";
 import type {
   MetricsPanel,
@@ -45,8 +38,7 @@ import type {
 } from "./stats/mountPerformanceStats.ts";
 import {
   mountFocusHint,
-  type FocusHintOptions,
-  type MountedFocusHint
+  type FocusHintOptions
 } from "./ui/focus/mountFocusHint.ts";
 import {
   OverlayLayer,
@@ -54,15 +46,14 @@ import {
 } from "./ui/overlay/OverlayLayer.ts";
 import {
   mountViewHelper,
-  type MountedViewHelper,
   type ViewHelperOptions
 } from "./ui/viewHelper/mountViewHelper.ts";
 
 // CONSTANTS
 const kDefaultStatsPosition = "top-left";
 const kDefaultStatsInset = 8;
-// Runtimes created with an explicit pixel ratio keep it through `load()`.
-const kFixedPixelRatio = new WeakSet<object>();
+
+export type RuntimeCanvasTarget = HTMLCanvasElement | string;
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -96,64 +87,45 @@ export class Runtime<
 
   readonly canvas: HTMLCanvasElement;
   readonly overlay: OverlayLayer;
-  readonly stats: StatsRecorder;
+  readonly stats = new StatsRecorder();
   readonly metrics: RuntimeMetrics;
   readonly manager = new THREE.LoadingManager();
 
-  #isRunning = false;
   #focusCanvas: boolean;
   #focusHint: FocusHintOptions | null;
   #viewHelper: ViewHelperOptions | null;
+  #adaptivePixelRatio: boolean;
+  #session: AbortController | null = null;
   #statsOverlay: MountedPerformanceStats | null = null;
-  #metricsPanel: MetricsPanel | null = null;
-  #focusHintOverlay: MountedFocusHint | null = null;
-  #viewHelperOverlay: MountedViewHelper | null = null;
-
-  #focusCanvasHandler = () => {
-    if (document.activeElement !== this.canvas) {
-      this.canvas.focus();
-    }
-  };
-
-  #preventKeypressDefaultHandler = (event: KeyboardEvent) => {
-    event.preventDefault();
-  };
-
-  #captureRendererFrame = () => {
-    this.metrics.renderer.captureFrame();
-  };
 
   private constructor(
     canvas: HTMLCanvasElement,
     renderer: Systems.ThreeRenderer,
-    sceneManager: Systems.SceneManager<TContext>,
-    options: RuntimeOptions<TContext>,
-    assets: ResolvedRuntimeAssetOptions
+    catalog: AssetCatalog,
+    options: RuntimeOptions<TContext>
   ) {
     this.canvas = canvas;
     this.renderer = renderer;
     this.overlay = new OverlayLayer(canvas, options.overlay);
+    this.metrics = new RuntimeMetrics(this.stats, renderer);
 
-    this.stats = new StatsRecorder();
-    this.metrics = new RuntimeMetrics(
-      this.stats,
-      new RendererMetrics(renderer.getSource())
-    );
-    renderer.on("draw", this.#captureRendererFrame);
-
+    const output = options.renderer?.output;
+    this.#adaptivePixelRatio = output?.pixelRatio === undefined &&
+      output?.maxPixelRatio === undefined;
     this.#focusCanvas = options.focusCanvas ?? true;
     this.#focusHint = resolveToggleOptions(options.focusHint);
     this.#viewHelper = resolveToggleOptions(options.viewHelper);
-    const assetCoordinator = createRuntimeAssetCoordinator(
-      this.manager,
-      assets
-    );
+
     this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,
-      sceneManager,
+      sceneManager: new Systems.SceneManager<TContext>(),
       context: options.context,
       audio: options.audio,
-      assetCoordinator
+      assetCoordinator: createRuntimeAssetCoordinator(
+        this.manager,
+        catalog,
+        options.assets?.loaders
+      )
     });
     this.loop = new GameLoop({
       source: new AnimationLoopFrameSource(
@@ -161,9 +133,6 @@ export class Runtime<
       ),
       ...options.loop
     });
-    sceneManager.setSceneLoader(
-      new RuntimeSceneLoader(assetCoordinator)
-    );
   }
 
   static async create<
@@ -172,29 +141,19 @@ export class Runtime<
     target: RuntimeCanvasTarget,
     options: RuntimeOptions<TContext> = Object.create(null)
   ): Promise<Runtime<TContext>> {
-    const canvas = resolveRuntimeCanvas(target);
-
-    const sceneManager = new Systems.SceneManager<TContext>();
-    const assets = await resolveRuntimeAssetOptions(options.assets);
+    const canvas = resolveElement(target, HTMLCanvasElement);
+    const catalog = await resolveRuntimeAssetCatalog(options.assets?.catalog);
     const renderer = await Systems.ThreeRenderer.create(
       canvas,
       options.renderer
     );
-    const output = options.renderer?.output;
 
     const runtime = new Runtime(
       canvas,
       renderer,
-      sceneManager,
-      options,
-      assets
+      catalog,
+      options
     );
-    if (
-      output?.pixelRatio !== undefined ||
-      output?.maxPixelRatio !== undefined
-    ) {
-      kFixedPixelRatio.add(runtime);
-    }
     await runtime.#initializePerformanceStats(
       options.includePerformanceStats
     );
@@ -203,14 +162,14 @@ export class Runtime<
   }
 
   get running() {
-    return this.#isRunning;
+    return this.#session !== null;
   }
 
   load(
     options: RuntimeLoadOptions<TContext> = {}
   ): Promise<void> {
     return bootstrapRuntime(this, options, {
-      adaptivePixelRatio: !kFixedPixelRatio.has(this)
+      adaptivePixelRatio: this.#adaptivePixelRatio
     });
   }
 
@@ -228,50 +187,50 @@ export class Runtime<
     }
   }
 
-  async mountMetricsPanel(
+  mountMetricsPanel(
     options: MetricsPanelOptions = {}
   ): Promise<MetricsPanel> {
-    const { MetricsPanel } = await import("./metrics/MetricsPanel.ts");
-
-    this.#metricsPanel?.dispose();
-    this.#metricsPanel = new MetricsPanel(this.stats, {
+    return this.metrics.mountPanel({
       keyboard: this.world.input.keyboard,
       ...options
     });
-    this.metrics.attachPanel(this.#metricsPanel);
-
-    return this.#metricsPanel;
   }
 
   start() {
-    if (this.#isRunning) {
+    if (this.#session !== null) {
       return;
     }
 
-    this.#isRunning = true;
+    this.#session = new AbortController();
+    const { signal } = this.#session;
+
     this.canvas.focus();
     this.canvas.addEventListener(
       "keypress",
-      this.#preventKeypressDefaultHandler
+      (event) => event.preventDefault(),
+      { signal }
     );
     if (this.#focusCanvas) {
       document.addEventListener(
         "click",
-        this.#focusCanvasHandler
+        () => this.#focusCanvasElement(),
+        { signal }
       );
     }
     if (this.#focusHint !== null) {
-      this.#focusHintOverlay = mountFocusHint(
+      const focusHint = mountFocusHint(
         this.canvas,
         this.overlay,
         this.#focusHint
       );
+      signal.addEventListener("abort", () => focusHint.dispose());
     }
     if (this.#viewHelper !== null) {
-      this.#viewHelperOverlay = mountViewHelper(
+      const viewHelper = mountViewHelper(
         this.world.renderer,
         this.#viewHelper
       );
+      signal.addEventListener("abort", () => viewHelper.dispose());
     }
 
     this.world.input.exited = false;
@@ -290,43 +249,32 @@ export class Runtime<
   }
 
   stop() {
-    if (!this.#isRunning) {
+    const session = this.#session;
+    if (session === null) {
       return;
     }
 
-    this.#isRunning = false;
+    this.#session = null;
     this.world.stop();
     this.world.input.exited = true;
     this.loop.stop();
-
-    this.canvas.removeEventListener(
-      "keypress",
-      this.#preventKeypressDefaultHandler
-    );
-    if (this.#focusCanvas) {
-      document.removeEventListener(
-        "click",
-        this.#focusCanvasHandler
-      );
-    }
-    this.#focusHintOverlay?.dispose();
-    this.#focusHintOverlay = null;
-    this.#viewHelperOverlay?.dispose();
-    this.#viewHelperOverlay = null;
-
+    session.abort();
     this.world.disconnect();
   }
 
   dispose() {
     this.stop();
-    this.world.renderer.off("draw", this.#captureRendererFrame);
     this.#statsOverlay?.dispose();
     this.#statsOverlay = null;
-    this.#metricsPanel?.dispose();
-    this.#metricsPanel = null;
-    this.metrics.attachPanel(null);
+    this.metrics.dispose();
     this.overlay.dispose();
     this.world.dispose();
+  }
+
+  #focusCanvasElement(): void {
+    if (document.activeElement !== this.canvas) {
+      this.canvas.focus();
+    }
   }
 
   async #initializePerformanceStats(

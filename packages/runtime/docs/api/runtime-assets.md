@@ -42,8 +42,8 @@ const runtime = await Runtime.create("canvas", {
 
 ## Loaders
 
-Runtime registers the engine's model, font, audio, and texture loaders. Each
-custom definition receives the same Three.js `LoadingManager` available as
+Runtime starts from the engine's `createDefaultAssetLoaders()` registry: the
+model, font, audio, and texture loaders. Each custom definition receives the same Three.js `LoadingManager` available as
 `runtime.manager`.
 
 A custom definition that uses an already registered asset type causes runtime

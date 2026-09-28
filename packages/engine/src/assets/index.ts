@@ -10,6 +10,7 @@ import {
 
 export * from "./audio.ts";
 export * from "./texture.ts";
+export * from "./createDefaultAssetLoaders.ts";
 export {
   ModelAssetLoader,
   ModelAssetType,

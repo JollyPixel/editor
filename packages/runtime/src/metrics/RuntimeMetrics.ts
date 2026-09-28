@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { Systems } from "@jolly-pixel/engine";
 import type {
   MetricDefinition,
   MetricSource,
@@ -6,60 +7,82 @@ import type {
 } from "@jolly-pixel/ui/stats";
 
 // Import Internal Dependencies
-import type { MetricsPanel } from "./MetricsPanel.ts";
-import type { RendererMetrics } from "./RendererMetrics.ts";
+import type {
+  MetricsPanel,
+  MetricsPanelOptions
+} from "./MetricsPanel.ts";
+import { RendererMetrics } from "./RendererMetrics.ts";
+
+export type RuntimeMetricsRenderer = Pick<
+  Systems.ThreeRenderer,
+  "getSource" | "on" | "off"
+>;
 
 export class RuntimeMetrics {
-  readonly recorder: StatsRecorder;
   readonly renderer: RendererMetrics;
 
+  #recorder: StatsRecorder;
+  #source: RuntimeMetricsRenderer;
   #panel: MetricsPanel | null = null;
+
+  #captureFrame = () => {
+    this.renderer.captureFrame();
+  };
 
   constructor(
     recorder: StatsRecorder,
-    renderer: RendererMetrics
+    renderer: RuntimeMetricsRenderer
   ) {
-    this.recorder = recorder;
-    this.renderer = renderer;
-    recorder.addSource(renderer);
-  }
-
-  get revision(): number {
-    return this.recorder.revision;
+    this.#recorder = recorder;
+    this.#source = renderer;
+    this.renderer = new RendererMetrics(renderer.getSource());
+    recorder.addSource(this.renderer);
+    renderer.on("draw", this.#captureFrame);
   }
 
   get panel(): MetricsPanel | null {
     return this.#panel;
   }
 
-  attachPanel(
-    panel: MetricsPanel | null
-  ): void {
-    this.#panel = panel;
+  async mountPanel(
+    options: MetricsPanelOptions = {}
+  ): Promise<MetricsPanel> {
+    const { MetricsPanel } = await import("./MetricsPanel.ts");
+
+    this.#panel?.dispose();
+    this.#panel = new MetricsPanel(this.#recorder, options);
+
+    return this.#panel;
   }
 
   addMetric(
     definition: MetricDefinition
   ): () => void {
-    return this.recorder.addMetric(definition);
+    return this.#recorder.addMetric(definition);
   }
 
   addSource(
     source: MetricSource
   ): () => void {
-    return this.recorder.addSource(source);
+    return this.#recorder.addSource(source);
   }
 
   removeMetric(
     id: string
   ): boolean {
-    return this.recorder.removeMetric(id);
+    return this.#recorder.removeMetric(id);
   }
 
   track(
     id: string,
     value: number
   ): void {
-    this.recorder.track(id, value);
+    this.#recorder.track(id, value);
+  }
+
+  dispose(): void {
+    this.#source.off("draw", this.#captureFrame);
+    this.#panel?.dispose();
+    this.#panel = null;
   }
 }

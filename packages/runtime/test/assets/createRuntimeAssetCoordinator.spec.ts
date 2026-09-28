@@ -25,9 +25,7 @@ describe("createRuntimeAssetCoordinator", () => {
   test("registers the default engine asset loaders", () => {
     const coordinator = createRuntimeAssetCoordinator(
       new THREE.LoadingManager(),
-      {
-        catalog: new AssetCatalog()
-      }
+      new AssetCatalog()
     );
 
     assert.strictEqual(
@@ -55,21 +53,19 @@ describe("createRuntimeAssetCoordinator", () => {
     let receivedManager: THREE.LoadingManager | undefined;
     const coordinator = createRuntimeAssetCoordinator(
       manager,
-      {
-        catalog,
-        loaders: [
-          {
-            type: customType,
-            create: (loaderManager) => {
-              receivedManager = loaderManager;
+      catalog,
+      [
+        {
+          type: customType,
+          create: (loaderManager) => {
+            receivedManager = loaderManager;
 
-              return {
-                load: async() => "loaded"
-              };
-            }
+            return {
+              load: async() => "loaded"
+            };
           }
-        ]
-      }
+        }
+      ]
     );
 
     assert.strictEqual(coordinator.catalog, catalog);
@@ -84,15 +80,13 @@ describe("createRuntimeAssetCoordinator", () => {
     assert.throws(
       () => createRuntimeAssetCoordinator(
         new THREE.LoadingManager(),
-        {
-          catalog: new AssetCatalog(),
-          loaders: [
-            {
-              type: AssetTypes.model,
-              create: (manager) => new AssetLoaders.model(manager)
-            }
-          ]
-        }
+        new AssetCatalog(),
+        [
+          {
+            type: AssetTypes.model,
+            create: (manager) => new AssetLoaders.model(manager)
+          }
+        ]
       ),
       AssetLoaderAlreadyExistsError
     );
