@@ -2,27 +2,24 @@
 import type { VoxelObjectLayerJSON } from "../world/objects/types.ts";
 import type { TilesetDefinition } from "../tilesets/types.ts";
 
-export const VOXEL_WORLD_VERSION = 2;
-
-/**
- * Sparse serialized voxel key containing its layer-local position.
- */
-export type VoxelEntryKey = `${number},${number},${number}`;
+export const VOXEL_WORLD_VERSION = 3;
 
 export interface VoxelEntryJSON {
   block: number;
   transform: number;
 }
 
-export interface VoxelLayerJSON {
+export interface VoxelChunkJSON {
+  at: [number, number, number];
+  cells?: number[];
+  runs: number[];
+}
+
+export interface VoxelLayerMetadataJSON {
   compositing?: "replace" | "composite";
   id: string;
   name: string;
   visible: boolean;
-  /**
-   * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
-   * Absent in files serialized before this field existed; treat as `1`.
-   */
   opacity?: number;
   order: number;
   position?: {
@@ -31,7 +28,11 @@ export interface VoxelLayerJSON {
     z: number;
   };
   properties?: Record<string, any>;
-  voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
+}
+
+export interface VoxelLayerJSON extends VoxelLayerMetadataJSON {
+  palette: VoxelEntryJSON[];
+  chunks: VoxelChunkJSON[];
 }
 
 export interface VoxelWorldJSON {

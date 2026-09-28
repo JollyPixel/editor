@@ -59,7 +59,11 @@ export function makeView(
     blocks: [
       makeBlockDef(CUBE_ID, "cube", { name: "Cube" })
     ],
-    ...options
+    ...options,
+    meshing: {
+      budgetMs: 0,
+      ...options.meshing
+    }
   });
   view.loadTileset(makeAtlasDef(), mockTexture());
 

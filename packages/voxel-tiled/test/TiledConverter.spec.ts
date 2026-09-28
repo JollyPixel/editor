@@ -3,13 +3,32 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { VOXEL_WORLD_VERSION } from "@jolly-pixel/voxel.renderer";
+import {
+  deserializeVoxelWorld,
+  VOXEL_WORLD_VERSION,
+  VoxelWorld,
+  type VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { TiledConverter, type TiledMap } from "../src/index.ts";
 
 function simpleSrc(_src: string, id: string) {
   return `/assets/${id}.png`;
+}
+
+function voxelKeys(
+  document: VoxelWorldJSON,
+  layerIndex: number
+): string[] {
+  const world = new VoxelWorld(document.chunkSize);
+  deserializeVoxelWorld(document, world);
+
+  const { id } = document.layers[layerIndex];
+  const layer = world.getLayers().find((candidate) => candidate.id === id);
+  assert.ok(layer !== undefined);
+
+  return Array.from(layer.localVoxels(), ([x, y, z]) => `${x},${y},${z}`).sort();
 }
 
 function makeMinimalMap(
@@ -95,16 +114,12 @@ describe("TiledConverter.convert — output structure", () => {
 
   it("GID=0 (empty tile) is skipped — no voxel at that position", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    const voxels = result.world.layers[0].voxels;
-    assert.equal(voxels["0,0,1"], undefined);
+    assert.equal(voxelKeys(result.world, 0).includes("0,0,1"), false);
   });
 
   it("non-zero tiles produce voxels at the expected keys", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    const voxels = result.world.layers[0].voxels;
-    assert.ok("0,0,0" in voxels, "expected voxel at 0,0,0");
-    assert.ok("1,0,0" in voxels, "expected voxel at 1,0,0");
-    assert.ok("1,0,1" in voxels, "expected voxel at 1,0,1");
+    assert.deepEqual(voxelKeys(result.world, 0), ["0,0,0", "1,0,0", "1,0,1"]);
   });
 });
 
@@ -142,8 +157,8 @@ describe("TiledConverter.convert — layerMode", () => {
     });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc, layerMode: "flat" });
-    const y0 = Object.keys(result.world.layers[0].voxels)[0].split(",")[1];
-    const y1 = Object.keys(result.world.layers[1].voxels)[0].split(",")[1];
+    const y0 = voxelKeys(result.world, 0)[0].split(",")[1];
+    const y1 = voxelKeys(result.world, 1)[0].split(",")[1];
     assert.equal(y0, "0");
     assert.equal(y1, "0");
   });
@@ -179,8 +194,8 @@ describe("TiledConverter.convert — layerMode", () => {
     });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc, layerMode: "stacked" });
-    const y0 = Object.keys(result.world.layers[0].voxels)[0].split(",")[1];
-    const y1 = Object.keys(result.world.layers[1].voxels)[0].split(",")[1];
+    const y0 = voxelKeys(result.world, 0)[0].split(",")[1];
+    const y1 = voxelKeys(result.world, 1)[0].split(",")[1];
     assert.equal(y0, "0");
     assert.equal(y1, "1");
   });
@@ -232,11 +247,7 @@ describe("TiledConverter.convert — base64 data", () => {
     const map = makeMinimalMap(base64);
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc });
 
-    const voxels = result.world.layers[0].voxels;
-    assert.ok("0,0,0" in voxels, "GID=1 should produce voxel at 0,0,0");
-    assert.ok("0,0,1" in voxels, "GID=2 should produce voxel at 0,0,1");
-    assert.ok("1,0,1" in voxels, "GID=3 should produce voxel at 1,0,1");
-    assert.equal(voxels["1,0,0"], undefined, "GID=0 (empty) should have no voxel");
+    assert.deepEqual(voxelKeys(result.world, 0), ["0,0,0", "0,0,1", "1,0,1"]);
   });
 });
 

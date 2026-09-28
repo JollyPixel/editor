@@ -126,6 +126,11 @@ position is empty. This is what the mesh builder calls once per voxel face.
 
 ### `setPackedAt(lx: number, ly: number, lz: number, packed: PackedVoxel): void`
 
+### `loadPackedEntries(cells: ArrayLike<number>, voxels: ArrayLike<PackedVoxel>): void`
+
+Write `voxels` at the linear indices in `cells`, reserving storage once and
+widening the bounds from the indices. Indices must be below `size³`.
+
 ### `mayContain(lx: number, ly: number, lz: number): boolean`
 
 `false` when the position is provably empty, using a conservative bounding box

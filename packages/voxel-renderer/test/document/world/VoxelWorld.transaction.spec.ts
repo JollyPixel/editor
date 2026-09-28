@@ -10,10 +10,10 @@ import {
 } from "../../../src/document/world/index.ts";
 import { VoxelHistory } from "../../../src/document/VoxelHistory.ts";
 import type { VoxelLayerCommand } from "../../../src/document/commands/index.ts";
-import { serializeVoxelLayer } from "../../../src/document/serialization/index.ts";
 import { recordCommands } from "../../helpers/fakes.ts";
 import {
   clearAllDirty,
+  voxelContent,
   writeVoxel
 } from "../../helpers/world.ts";
 
@@ -212,8 +212,8 @@ describe("VoxelWorld.transaction", () => {
       remote.apply(command);
     }
     assert.deepEqual(
-      serializeVoxelLayer(remote.getLayer(kLayer)!).voxels,
-      serializeVoxelLayer(world.getLayer(kLayer)!).voxels
+      voxelContent(remote.getLayer(kLayer)!),
+      voxelContent(world.getLayer(kLayer)!)
     );
   });
 

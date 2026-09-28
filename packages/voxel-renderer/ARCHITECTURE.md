@@ -100,6 +100,10 @@ flowchart TB
 ```
 
 `save()` serializes the world's layers, object layers and tileset links.
+The snapshot stores each layer as a palette plus run-length encoded chunks
+(see [serialization](./docs/api/serialization/serialization.md)). Saving
+captures chunks as sorted cells and packed voxels, and loading writes them back
+chunk by chunk when the chunk sizes match.
 `load()` validates the snapshot, replaces document state, clears history, and
 emits `loaded`; the view then clears old meshes, syncs atlases, and rebuilds.
 `view.load()` registers the textures of the snapshot's tilesets before the

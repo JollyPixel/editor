@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
 import {
+  DEFAULT_CHUNK_SIZE,
+  serializeVoxelLayer,
   VOXEL_WORLD_VERSION,
   VoxelFootprint,
+  VoxelLayer,
   type BlockShapeID,
   type ResolvedBlockDefinition,
   type TilesetDefinition,
-  type VoxelEntryKey,
   type VoxelLayerJSON,
   type VoxelObjectJSON,
   type VoxelObjectLayerJSON,
@@ -136,7 +138,7 @@ export class TiledConverter {
 
     const world: VoxelWorldJSON = {
       version: VOXEL_WORLD_VERSION,
-      chunkSize: options.chunkSize ?? 16,
+      chunkSize: options.chunkSize ?? DEFAULT_CHUNK_SIZE,
       tilesets,
       layers
     };
@@ -270,7 +272,14 @@ function convertTileLayer(
   layerOrder: number
 ): VoxelLayerJSON {
   const data = decodeLayerData(layer);
-  const voxels: Record<VoxelEntryKey, { block: number; transform: number; }> = Object.create(null);
+  const voxelLayer = new VoxelLayer({
+    id: `tiled_layer_${layer.id}`,
+    name: layer.name,
+    visible: layer.visible,
+    order: layerOrder,
+    chunkSize: ctx.options.chunkSize ?? DEFAULT_CHUNK_SIZE,
+    properties: flattenProperties(layer.properties)
+  });
 
   const voxelY = ctx.options.layerMode === "stacked" ? ctx.counter.value : 0;
   const cols = layer.width ?? ctx.map.width;
@@ -287,23 +296,20 @@ function convertTileLayer(
       continue;
     }
 
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-
-    const transform = (gid >>> 29) & 0x7;
-    const key: VoxelEntryKey = `${col},${voxelY},${row}`;
-
-    voxels[key] = { block: blockId, transform };
+    voxelLayer.setVoxelAt(
+      {
+        x: i % cols,
+        y: voxelY,
+        z: Math.floor(i / cols)
+      },
+      {
+        blockId,
+        transform: (gid >>> 29) & 0x7
+      }
+    );
   }
 
-  return {
-    id: `tiled_layer_${layer.id}`,
-    name: layer.name,
-    visible: layer.visible,
-    order: layerOrder,
-    properties: flattenProperties(layer.properties),
-    voxels
-  };
+  return serializeVoxelLayer(voxelLayer);
 }
 
 function convertObjectLayers(

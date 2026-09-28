@@ -329,7 +329,7 @@ describe("voxelMapAssetKind", () => {
     assert.equal(state.world.getVoxelAt({ x: 20, y: 0, z: -3 })?.blockId, 4);
     const saved = decodeVoxelWorld(await handler.serialize(state));
     assert.equal(saved.chunkSize, 16);
-    assert.deepEqual(Object.keys(saved.layers[0].voxels), ["20,0,-3"]);
+    assert.deepEqual(saved.layers[0].chunks.map(({ at }) => at), [[1, 0, -1]]);
   });
 
   test("serialize round-trips through apply", async() => {

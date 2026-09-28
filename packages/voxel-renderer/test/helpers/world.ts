@@ -84,3 +84,11 @@ export function withoutId(
 
   return rest;
 }
+
+export function voxelContent(
+  layer: VoxelLayer
+): Pick<VoxelLayerJSON, "palette" | "chunks"> {
+  const { palette, chunks } = serializeVoxelLayer(layer);
+
+  return { palette, chunks };
+}
