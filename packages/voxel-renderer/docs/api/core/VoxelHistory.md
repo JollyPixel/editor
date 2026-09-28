@@ -1,16 +1,17 @@
 # VoxelHistory
 
-Undo/redo of voxel edits, exposed as `engine.history`. Disabled by default.
+Undo/redo of voxel edits, exposed as [`document.history`](./VoxelDocument.md#properties).
+Disabled by default.
 
 ```ts
-const engine = new VoxelEngine({
+const document = new VoxelDocument({
   layers: ["Ground"],
   history: { enabled: true, limit: 10 }
 });
 
-engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
-engine.history.undo();
-engine.history.redo();
+document.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+document.history.undo();
+document.history.redo();
 ```
 
 ## Options
@@ -34,7 +35,7 @@ A `limit` that is not a positive integer throws a `RangeError`.
 Only local voxel edits made through [`VoxelWorld`](../world/VoxelWorld.md):
 `setVoxel`, `removeVoxel`, `setVoxelBulk` and `removeVoxelBulk`. Layer,
 object, block and tileset commands are not recorded. Silent writes are not
-recorded either: the `*At` primitives, `engine.load()`, and commands replayed
+recorded either: direct `VoxelLayer` writes, `document.load()`, and commands replayed
 with `apply()`, including those from peers.
 
 Each call becomes one entry unless it happens inside `begin()` / `commit()`
@@ -46,7 +47,7 @@ is dropped. A new entry clears the redo stack.
 
 `undo()` and `redo()` write one `patchVoxels()` per layer inside a single
 `world.transaction()`, so the world emits an ordinary `"voxels-patched"`
-command per layer and the engine forwards them as local commands to network
+command per layer and the document forwards them as local commands to network
 adapters.
 
 A cell is only reverted while it still holds the value the entry left there,
@@ -79,11 +80,11 @@ Returns `false` when there is nothing to replay or a group is open.
 
 #### `clear(): void`
 
-Drops both stacks. `engine.load()` calls it.
+Drops both stacks. `document.load()` calls it.
 
 #### `dispose(): void`
 
-Detaches from the world and removes every listener. `engine.dispose()` calls
+Detaches from the world and removes every listener. `document.dispose()` calls
 it.
 
 ## Events
@@ -97,7 +98,7 @@ type VoxelHistoryEvents = {
 Emitted after every push, undo, redo and non-empty clear.
 
 ```ts
-engine.history.on("change", ({ canUndo, canRedo }) => {
+document.history.on("change", ({ canUndo, canRedo }) => {
   undoButton.disabled = !canUndo;
   redoButton.disabled = !canRedo;
 });

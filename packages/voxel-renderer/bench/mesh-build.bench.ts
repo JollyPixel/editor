@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
 import {
-  createBenchEngine,
+  createBenchView,
   flushed,
   nodeMeshWorkers,
   populateTerrain,
@@ -14,7 +14,7 @@ import {
  * Headless replay of `demo-noise-world`: generate terrain, then mesh dirty
  * chunks. Measures the same two phases shown in the demo HUD.
  *
- * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3] [--greedy] [--workers 0]
+ * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3] [--workers 0]
  */
 const { values } = parseArgs({
   options: {
@@ -22,24 +22,21 @@ const { values } = parseArgs({
     chunk: { type: "string", default: "256" },
     seed: { type: "string", default: "1337" },
     runs: { type: "string", default: "3" },
-    greedy: { type: "boolean", default: false },
     workers: { type: "string", default: "0" }
   }
 });
 
 const runs = Number(values.runs);
-const greedy = values.greedy;
 const workers = Number(values.workers);
 
 for (let run = 0; run < runs; run++) {
-  const engine = createBenchEngine(
+  const view = createBenchView(
     Number(values.chunk),
-    greedy,
     workers > 0 ? nodeMeshWorkers(workers) : undefined
   );
 
   const generateStart = performance.now();
-  const terrain = populateTerrain(engine, {
+  const terrain = populateTerrain(view, {
     seed: Number(values.seed),
     size: Number(values.size)
   });
@@ -47,10 +44,10 @@ for (let run = 0; run < runs; run++) {
 
   // Without workers, `flush()` meshes in one pass instead of frame-budgeted ticks.
   const meshStart = performance.now();
-  const mainMs = workers > 0 ? await settle(engine) : flushed(engine);
+  const mainMs = workers > 0 ? await settle(view) : flushed(view);
   const meshMs = performance.now() - meshStart;
 
-  const { triangles, vertices } = engine.inspector.mesh.stats;
+  const { triangles, vertices } = view.inspector.mesh.stats;
   // Geometry memory is mostly `arrayBuffers`; `heapUsed` alone under-reports cost.
   const {
     heapUsed, arrayBuffers, rss
@@ -58,7 +55,6 @@ for (let run = 0; run < runs; run++) {
   console.log(
     [
       `run ${run + 1}/${runs}`,
-      greedy ? "greedy" : "naive ",
       `voxels ${terrain.voxelCount.toLocaleString("en-US")}`,
       `generate ${generateMs.toFixed(1)}ms`,
       `mesh ${meshMs.toFixed(1)}ms`,
@@ -71,7 +67,7 @@ for (let run = 0; run < runs; run++) {
     ].join("  |  ")
   );
 
-  engine.dispose();
+  view.dispose();
 }
 
 function mb(

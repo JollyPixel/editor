@@ -2,7 +2,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import type {
-  VoxelEngine,
+  VoxelView,
   ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
@@ -30,7 +30,7 @@ export class BlockShapePreview extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare block: ResolvedBlockDefinition | null;
@@ -81,9 +81,9 @@ export class BlockShapePreview extends LitElement {
     }
 
     this.#renderer = new BlockPreviewRenderer(this._well, {
-      shapeRegistry: this.engine.shapeRegistry,
-      tilesetManager: this.engine.tilesetManager,
-      materialGroups: this.engine.materialGroups
+      shapeRegistry: this.engine.shapes,
+      atlases: this.engine.atlases,
+      materialGroups: this.engine.document.materialGroups
     });
     this.#renderer.block = this.block;
     this.#renderer.onContextLost = () => this.#build();

@@ -11,11 +11,11 @@ import {
   MaterialGroupList,
   TilesetDocument,
   TilesetList,
-  TilesetManager,
+  TilesetAtlases,
   type ResolvedBlockDefinition,
   type TilesetDefinition,
   type TilesetTexture,
-  type VoxelEngine
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import type { TilesetRoom } from "@jolly-pixel/asset.voxel-map/client";
@@ -75,35 +75,37 @@ function makePixels(): PixelDocument {
   return fake as unknown as PixelDocument;
 }
 
-function makeEngine(): VoxelEngine {
+function makeEngine(): VoxelView {
   const tilesets = new TilesetList();
-  const tilesetManager = new TilesetManager({ tilesets });
+  const atlases = new TilesetAtlases({ tilesets });
   const blockRegistry = new BlockRegistry();
   const materialGroups = new MaterialGroupList();
   const fake = {
-    tilesets,
-    tilesetManager,
-    blockRegistry,
-    materialGroups,
-    shapeRegistry: BlockShapeRegistry.createDefault(),
-    defineBlock: (def: ResolvedBlockDefinition) => {
-      blockRegistry.register(def);
+    document: {
+      tilesets,
+      blocks: blockRegistry,
+      materialGroups,
+      defineBlock: (def: ResolvedBlockDefinition) => {
+        blockRegistry.register(def);
+      },
+      defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
+        blockRegistry.registerMany(defs);
+      },
+      removeBlock: (id: number) => blockRegistry.unregister(id),
+      moveBlock: (id: number, toIndex: number) => blockRegistry.moveTo(id, toIndex),
+      defineMaterialGroup: (group: MaterialGroup) => materialGroups.define(group),
+      removeMaterialGroup: (id: string) => materialGroups.remove(id)
     },
-    defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
-      blockRegistry.registerMany(defs);
-    },
-    removeBlock: (id: number) => blockRegistry.unregister(id),
-    moveBlock: (id: number, toIndex: number) => blockRegistry.moveTo(id, toIndex),
-    defineMaterialGroup: (group: MaterialGroup) => materialGroups.define(group),
-    removeMaterialGroup: (id: string) => materialGroups.remove(id),
+    atlases,
+    shapes: BlockShapeRegistry.createDefault(),
     loadTileset: (def: TilesetDefinition, texture: TilesetTexture) => {
       tilesets.declare(def);
-      tilesetManager.registerTexture(def.id, texture);
+      atlases.registerTexture(def.id, texture);
     },
     markAllChunksDirty: () => void 0
   };
 
-  return fake as unknown as VoxelEngine;
+  return fake as unknown as VoxelView;
 }
 
 class FakeSources implements TilesetSources {
@@ -170,12 +172,12 @@ describe("LinkedTilesets", () => {
 
     assert.equal(linked.has("terrain"), true);
     assert.equal(linked.tileSizeOf("terrain"), 16);
-    assert.deepEqual(engine.blockRegistry.get(composeBlockId(1, 1))?.defaultTexture, {
+    assert.deepEqual(engine.document.blocks.get(composeBlockId(1, 1))?.defaultTexture, {
       col: 0,
       row: 0,
       tilesetId: "terrain"
     });
-    assert.equal(engine.tilesets.get("terrain")?.tileSize, 16);
+    assert.equal(engine.document.tilesets.get("terrain")?.tileSize, 16);
   });
 
   it("finds the owner of a world block id by its slot", () => {
@@ -202,11 +204,11 @@ describe("LinkedTilesets", () => {
     const local = sources.opened.get("rock")?.tileset.blocks.get(3);
     assert.deepEqual(local?.defaultTexture, { col: 1, row: 1 });
     assert.equal(local?.materialGroup, "wet");
-    assert.equal(engine.blockRegistry.get(id)?.materialGroup, "rock/wet");
+    assert.equal(engine.document.blocks.get(id)?.materialGroup, "rock/wet");
     assert.equal(sources.opened.get("terrain")?.tileset.blocks.has(3), false);
 
     assert.equal(linked.removeBlock(id), true);
-    assert.equal(engine.blockRegistry.has(id), false);
+    assert.equal(engine.document.blocks.has(id), false);
     assert.equal(linked.defineBlock({ id: composeBlockId(9, 1), name: "x", shapeId: "cube" }), false);
   });
 
@@ -217,10 +219,10 @@ describe("LinkedTilesets", () => {
       new MaterialGroup({ id: "rock/wet", roughness: 0.2 })
     ), true);
     assert.equal(sources.opened.get("rock")?.tileset.materialGroups.get("wet")?.roughness, 0.2);
-    assert.equal(engine.materialGroups.get("rock/wet")?.roughness, 0.2);
+    assert.equal(engine.document.materialGroups.get("rock/wet")?.roughness, 0.2);
 
     assert.equal(linked.removeMaterialGroup("rock/wet"), true);
-    assert.equal(engine.materialGroups.has("rock/wet"), false);
+    assert.equal(engine.document.materialGroups.has("rock/wet"), false);
     assert.equal(linked.defineMaterialGroup(new MaterialGroup({ id: "loose" })), false);
   });
 
@@ -229,7 +231,7 @@ describe("LinkedTilesets", () => {
     linked.defineBlock({ id: composeBlockId(2, 2), name: "b", shapeId: "cube" });
     linked.defineBlock({ id: composeBlockId(2, 3), name: "c", shapeId: "cube" });
 
-    const engineIds = [...engine.blockRegistry].map((block) => block.id);
+    const engineIds = [...engine.document.blocks].map((block) => block.id);
     assert.equal(linked.moveBlock(composeBlockId(2, 3), engineIds.indexOf(composeBlockId(2, 1))), true);
 
     assert.deepEqual(
@@ -250,7 +252,7 @@ describe("LinkedTilesets", () => {
     );
     assert.equal(linked.moveBlock(composeBlockId(2, 2), 1), true);
     assert.deepEqual(
-      [...engine.blockRegistry].map((block) => block.id),
+      [...engine.document.blocks].map((block) => block.id),
       [composeBlockId(2, 3), composeBlockId(2, 2), composeBlockId(2, 1)]
     );
   });
@@ -263,13 +265,13 @@ describe("LinkedTilesets", () => {
       asset: { id: "asset-moss", kind: "tileset" }
     };
 
-    engine.tilesets.remove("terrain");
+    engine.document.tilesets.remove("terrain");
     store.replace([entry(replacement)]);
 
     assert.equal(linked.has("terrain"), false);
     assert.equal(linked.has("moss"), true);
     assert.equal(
-      engine.blockRegistry.get(composeBlockId(1, 1))?.defaultTexture?.tilesetId,
+      engine.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.tilesetId,
       "moss"
     );
   });
@@ -279,7 +281,7 @@ describe("LinkedTilesets", () => {
 
     assert.equal(linked.resizeTiles("terrain", 32), true);
     assert.equal(linked.tileSizeOf("terrain"), 32);
-    assert.equal(engine.blockRegistry.get(composeBlockId(1, 1))?.defaultTexture?.size, 16);
+    assert.equal(engine.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.size, 16);
     assert.equal(linked.resizeTiles("missing", 32), false);
   });
 
@@ -293,8 +295,8 @@ describe("LinkedTilesets", () => {
     store.replace([entry(kTerrain)]);
 
     assert.deepEqual(sources.released, ["asset-rock"]);
-    assert.equal(engine.blockRegistry.has(composeBlockId(2, 1)), false);
-    assert.equal(engine.blockRegistry.has(composeBlockId(1, 1)), true);
+    assert.equal(engine.document.blocks.has(composeBlockId(2, 1)), false);
+    assert.equal(engine.document.blocks.has(composeBlockId(1, 1)), true);
     assert.equal(linked.has("rock"), false);
     assert.equal(changes, 1);
   });

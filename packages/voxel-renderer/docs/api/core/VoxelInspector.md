@@ -1,21 +1,23 @@
 # VoxelInspector
 
-`VoxelEngine.inspector` exposes a `VoxelInspector`: live mesh statistics, block
-statistics read from the world, an optional wireframe view of the geometry the
-mesh builder produced, and an outline of every chunk boundary.
+[`VoxelView.inspector`](./VoxelView.md#properties) exposes a `VoxelInspector`:
+live mesh statistics, block statistics read from the world, an optional
+wireframe view of the geometry the mesh builder produced, and an outline of
+every chunk boundary.
 
 ```ts
-import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import { VoxelDocument, VoxelView } from "@jolly-pixel/voxel.renderer";
 
-const engine = new VoxelEngine({ layers: ["Ground"] });
+const document = new VoxelDocument({ layers: ["Ground"] });
+const view = new VoxelView(document);
 
 // Draw the wireframe over the textured chunks.
-engine.inspector.mode = "overlay";
+view.inspector.mode = "overlay";
 
-const { faces, culledFaces, triangles } = engine.inspector.mesh.stats;
+const { faces, culledFaces, triangles } = view.inspector.mesh.stats;
 console.log(`${faces} faces, ${culledFaces} culled, ${triangles} triangles`);
 
-const { voxels, unusedBlocks } = engine.inspector.blocks.stats;
+const { voxels, unusedBlocks } = view.inspector.blocks.stats;
 console.log(`${voxels} voxels, ${unusedBlocks.length} unused blocks`);
 ```
 
@@ -63,7 +65,7 @@ interface VoxelMeshInspector {
 interface VoxelMetric {
   id: string;
   label: string;
-  unit?: "count" | "decimal" | "ms" | "percent";
+  unit?: "count" | "decimal" | "ms" | "percent" | "bytes";
   better?: "higher" | "lower";
   group?: string;
   tile?: boolean;
@@ -76,8 +78,8 @@ interface InspectedChunkBounds {
 }
 ```
 
-`VoxelEngine` builds its inspector with its own `root`, `world` and
-`blockRegistry`; the view groups are attached under `parent`.
+`VoxelView` builds its inspector with its own `root` and the document's `world`
+and `blocks`; the view groups are attached under `parent`.
 
 `registerChunk()` copies the supplied statistics. Re-registering a key replaces
 its meshes and counters. `unregisterChunk()` ignores unknown keys. `clear()`
@@ -97,21 +99,21 @@ outlined.
 Wireframes reuse the chunk geometries. Switching modes never re-meshes
 anything and costs no extra vertex memory, only one draw call per chunk mesh.
 While a mode other than `"off"` is active, a `THREE.Group` named
-`"VoxelInspector"` holds them under `engine.root`.
+`"VoxelInspector"` holds them under `view.root`.
 
 ```ts
 // Cycle off → overlay → wireframe → off, e.g. from a keybinding.
-document.addEventListener("keydown", (event) => {
+window.addEventListener("keydown", (event) => {
   if (event.code === "KeyG") {
-    engine.inspector.nextMode();
+    view.inspector.nextMode();
   }
 });
 
 // Booleans work too: `enabled = true` selects "overlay".
-engine.inspector.enabled = false;
+view.inspector.enabled = false;
 ```
 
-The initial state comes from `VoxelEngineOptions.inspector`:
+The initial state comes from `VoxelViewOptions.inspector`:
 
 ```ts
 interface VoxelInspectorOptions {
@@ -135,19 +137,18 @@ independent of `mode`: the outlines show over normally rendered chunks, over
 the wireframe overlay, or on their own.
 
 ```ts
-const engine = new VoxelEngine({
-  layers: ["Ground"],
+const view = new VoxelView(document, {
   inspector: { chunkBounds: true }
 });
 
 // Or at any time.
-engine.inspector.chunkBounds = true;
+view.inspector.chunkBounds = true;
 ```
 
 Each box is a `THREE.LineSegments` sharing one unit-cube edge geometry and one
 material, positioned on the chunk origin and scaled to the chunk size, so the
 cost is a draw call per chunk and nothing else. They live in a `THREE.Group`
-named `"VoxelInspector:chunkBounds"` under `engine.root`, attached only while
+named `"VoxelInspector:chunkBounds"` under `view.root`, attached only while
 the flag is on.
 
 A box follows the chunk it outlines. A chunk hidden by the
@@ -185,8 +186,6 @@ interface VoxelMeshStats {
   faces: number;
   /** Faces skipped because an opaque neighbour occludes them. */
   culledFaces: number;
-  /** Voxel faces greedy meshing folded into a neighbour's quad; 0 when off. */
-  mergedFaces: number;
   vertices: number;
   triangles: number;
   /** faces / (voxels - hiddenVoxels). */
@@ -204,33 +203,22 @@ interface VoxelMeshStats {
 ratio directly readable:
 
 ```ts
-const { faces, culledFaces } = engine.inspector.mesh.stats;
+const { faces, culledFaces } = view.inspector.mesh.stats;
 const ratio = (culledFaces / (faces + culledFaces)) * 100;
 ```
 
-With [greedy meshing](../../concepts/rendering-and-meshing.md#greedy-meshing) on,
-`faces` counts quads
-rather than voxel faces, and `mergedFaces` is how many extra voxel faces those
-quads absorbed. `faces + mergedFaces` is therefore what the naive builder would
-have emitted, which makes the merge ratio readable the same way:
+The derived figures are the ones worth watching for regressions:
 
-```ts
-const { faces, mergedFaces } = engine.inspector.mesh.stats;
-const ratio = (mergedFaces / (faces + mergedFaces)) * 100;
-```
-
-The two derived figures are the ones worth watching for regressions:
-
-- `facesPerSolidVoxel` should decrease when greedy meshing combines faces. If it
-  does not, inspect the merge predicates and the blocks in the measured chunks.
-- `bytesPerVertex` is read off the emitted geometries, not off a constant, so an
-  attribute that quietly widens (or a dropped one that comes back) shows up here
-  with no code change needed. The current layouts report 28 without greedy
-  meshing, 36 with it, and 2 with vertex pulling. `tileRepeat` and float tile
-  UVs account for the greedy difference.
-- `bytes` is what those geometries upload, index buffers and the face records
-  of [vertex pulling](../../concepts/rendering-and-meshing.md#vertex-pulling)
-  included. It is the figure to compare between meshing modes.
+- `facesPerSolidVoxel` rises when culling stops hiding faces between
+  neighbours. If it does, inspect the occlusion masks of the blocks in the
+  measured chunks.
+- `bytesPerVertex` is read off the emitted face records, not off a constant, so
+  a record that quietly widens shows up here with no code change needed. The
+  current layout reports 2: one 8-byte
+  [face record](../../concepts/rendering-and-meshing.md#vertex-pulling) per
+  four-corner quad.
+- `bytes` is what those geometries upload: the face records plus the shared
+  four-corner quad.
 
 `MeshBuildStats` holds the counters for a single chunk build. `VoxelInspector`
 keeps a copy per chunk key and aggregates them on demand.
@@ -241,7 +229,6 @@ class MeshBuildStats {
   hiddenVoxels: number;
   faces: number;
   culledFaces: number;
-  mergedFaces: number;
   vertices: number;
   triangles: number;
   geometries: number;
@@ -269,12 +256,12 @@ performance recorder can sample, so a host displays them without restating a
 label, a unit or a derived ratio.
 
 ```ts
-runtime.metrics.addSource(engine.inspector);
+runtime.metrics.addSource(view.inspector);
 ```
 
 `VoxelMetric` is declared by this package and matched structurally, so nothing
 here depends on a UI library. It is compatible with `MetricDefinition` of
-`@jolly-pixel/ui/stats`, which `test/inspector/VoxelMetric.tst.ts` pins.
+`@jolly-pixel/ui/stats`, which `test/view/inspector/VoxelMetric.tst.ts` pins.
 
 | Metric | Unit | Value |
 |---|---|---|
@@ -284,12 +271,11 @@ here depends on a UI library. It is compatible with `MetricDefinition` of
 | `faces` | count | `mesh.stats.faces` |
 | `meshTriangles` | count | `mesh.stats.triangles` |
 | `culledFaces` | percent | culled share of every candidate face |
-| `mergedFaces` | percent | merged share of every emitted face |
 | `facesPerVoxel` | decimal | `mesh.stats.facesPerSolidVoxel` |
 | `meshMemory` | bytes | `mesh.stats.bytes` |
 | `buildTimeMs` | ms | `mesh.stats.buildTimeMs` |
 
-The two shares are the ratios described above, and are `0` before anything is
+The culled share is the ratio described above, and is `0` before anything is
 built. Every metric samples the live statistics, so one registration keeps
 following rebuilds. They are filed under the `voxel` group and set
 `tile: false`, which keeps them in a full readout rather than in a HUD
@@ -297,8 +283,8 @@ cycling one metric at a time.
 
 ## Block statistics
 
-`inspector.blocks` reads the voxels stored in `engine.world` and joins them
-with `engine.blockRegistry`. Results are computed on each call and follow
+`inspector.blocks` reads the voxels stored in `document.world` and joins them
+with `document.blocks`. Results are computed on each call and follow
 edits, remote commands and `load()` immediately, with no rebuild needed.
 
 ```ts
@@ -364,7 +350,7 @@ tileset (face textures or default texture), and the voxels of those blocks.
 A block spanning two tilesets counts toward both.
 
 ```ts
-const { voxels, layers } = engine.inspector.blocks.usageOf(blockId);
+const { voxels, layers } = view.inspector.blocks.usageOf(blockId);
 if (voxels > 0) {
   console.warn(`Block used by ${voxels} voxels in ${layers.length} layers`);
 }

@@ -8,7 +8,7 @@ import {
   BlockShapeRegistry,
   MaterialGroupList,
   TilesetList,
-  TilesetManager,
+  TilesetAtlases,
   VoxelTransform,
   resolveBlockDefinition,
   type BlockDefinition,
@@ -28,7 +28,7 @@ import { TileOpacityProbe } from "../../../src/features/blocks/tileOpacity.ts";
 
 // CONSTANTS
 const kCubeSlots = ["right", "left", "top", "bottom", "front", "back"];
-const kSources = sourcesOf(new TilesetManager());
+const kSources = sourcesOf(new TilesetAtlases());
 const kTextured = texturedSources();
 const kPainted = {
   tilesetId: "atlas",
@@ -42,12 +42,12 @@ const kBlank = {
 };
 
 function sourcesOf(
-  tilesetManager: TilesetManager
+  atlases: TilesetAtlases
 ): BlockPreviewSources {
   return {
     shapeRegistry: BlockShapeRegistry.createDefault(),
-    tilesetManager,
-    tileOpacity: new TileOpacityProbe(tilesetManager, () => {
+    atlases,
+    tileOpacity: new TileOpacityProbe(atlases, () => {
       const data = new Uint8ClampedArray(4 * 2 * 4);
       for (let index = 0; index < data.length; index += 4) {
         data[index + 3] = (index / 4) % 4 < 2 ? 255 : 0;
@@ -63,7 +63,7 @@ function sourcesOf(
 }
 
 function texturedSources(): BlockPreviewSources {
-  const tilesetManager = new TilesetManager({
+  const atlases = new TilesetAtlases({
     tilesets: new TilesetList([
       {
         id: "atlas",
@@ -75,12 +75,12 @@ function texturedSources(): BlockPreviewSources {
   const canvas = document.createElement("canvas");
   canvas.width = 4;
   canvas.height = 2;
-  tilesetManager.registerTexture(
+  atlases.registerTexture(
     "atlas",
     new THREE.Texture<TilesetImage>(canvas)
   );
 
-  return sourcesOf(tilesetManager);
+  return sourcesOf(atlases);
 }
 
 function blockOf(

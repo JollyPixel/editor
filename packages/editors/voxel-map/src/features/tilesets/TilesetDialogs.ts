@@ -10,7 +10,7 @@ import {
 } from "lit/decorators.js";
 import {
   DEFAULT_TILE_SIZE,
-  type VoxelEngine
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type { LogQueue } from "@jolly-pixel/ui";
 
@@ -30,7 +30,7 @@ import "./TilesetEditDialog.ts";
 @customElement("tileset-dialogs")
 export class TilesetDialogs extends LitElement {
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare actions: TilesetActions | null;

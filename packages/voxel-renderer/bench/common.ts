@@ -4,9 +4,10 @@ import { setTimeout } from "node:timers/promises";
 import { Worker } from "node:worker_threads";
 
 // Import Internal Dependencies
-import { VoxelEngine } from "../src/VoxelEngine.ts";
-import type { MeshWorkerOptions } from "../src/render/ChunkMeshWorkers.ts";
-import type { BlockDefinition } from "../src/blocks/BlockDefinition.ts";
+import { VoxelDocument } from "../src/document/VoxelDocument.ts";
+import { VoxelView } from "../src/view/VoxelView.ts";
+import type { MeshWorkerOptions } from "../src/view/workers/ChunkMeshWorkers.ts";
+import type { BlockDefinition } from "../src/document/blocks/BlockDefinition.ts";
 import { TerrainBlock } from "../examples/scripts/noise-world/blocks.ts";
 import {
   generateTerrain,
@@ -22,25 +23,29 @@ export const COLS = 4;
 const kFrameMs = 1000 / 60;
 
 /**
- * Creates a `VoxelEngine` pre-wired for terrain generation benchmarks.
+ * Creates a `VoxelView` pre-wired for terrain generation benchmarks.
  */
-export function createBenchEngine(
+export function createBenchView(
   chunkSize: number,
-  greedy = false,
-  meshWorkers?: MeshWorkerOptions
-): VoxelEngine {
-  const engine = new VoxelEngine({
+  workers?: MeshWorkerOptions
+): VoxelView {
+  const document = new VoxelDocument({
     chunkSize,
     layers: [
       TERRAIN_LAYER,
       WATER_LAYER
     ],
-    blocks: terrainBlocks(),
-    alphaTest: 0.5,
-    greedy,
-    meshWorkers
+    blocks: terrainBlocks()
   });
-  engine.loadTileset(
+  const view = new VoxelView(document, {
+    rendering: {
+      alphaTest: 0.5
+    },
+    meshing: {
+      workers
+    }
+  });
+  view.loadTileset(
     {
       id: "terrain",
       src: "memory://terrain",
@@ -51,18 +56,18 @@ export function createBenchEngine(
     mockTexture()
   );
 
-  return engine;
+  return view;
 }
 
 /**
  * Populates terrain and routes water voxels to `WATER_LAYER`.
  */
 export function populateTerrain(
-  engine: VoxelEngine,
+  view: VoxelView,
   options: TerrainOptions
 ): TerrainStats {
   return generateTerrain(
-    (position, blockId) => engine.world.setVoxel(
+    (position, blockId) => view.document.world.setVoxel(
       blockId === TerrainBlock.Water ? WATER_LAYER : TERRAIN_LAYER,
       {
         position,
@@ -133,24 +138,24 @@ export function nodeMeshWorkers(
 }
 
 export function flushed(
-  engine: VoxelEngine
+  view: VoxelView
 ): number {
   const start = performance.now();
-  engine.flush();
+  view.flush();
 
   return performance.now() - start;
 }
 
 export async function settle(
-  engine: VoxelEngine,
+  view: VoxelView,
   frameMs = kFrameMs
 ): Promise<number> {
   const idle = performance.eventLoopUtilization();
   do {
     const start = performance.now();
-    engine.tick(0);
+    view.tick(0);
     await setTimeout(Math.max(0, frameMs - (performance.now() - start)));
-  } while (engine.pendingRebuilds > 0);
+  } while (view.pendingRebuilds > 0);
 
   return performance.eventLoopUtilization(idle).active;
 }

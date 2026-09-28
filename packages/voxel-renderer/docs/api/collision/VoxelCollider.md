@@ -1,7 +1,8 @@
 # VoxelCollider
 
-`VoxelCollider` is the contract between `VoxelEngine` and a physics backend.
-Collision is disabled unless `VoxelEngineOptions.collider` supplies a factory.
+`VoxelCollider` is the contract between [`VoxelView`](../core/VoxelView.md) and
+a physics backend. Collision is disabled unless `VoxelViewOptions.collider`
+supplies a factory.
 
 ## API
 
@@ -30,6 +31,8 @@ type VoxelColliderFactory = (
   context: VoxelColliderContext
 ) => VoxelCollider;
 ```
+
+The view calls the factory once with `document.blocks` and `view.shapes`.
 
 `rebuildChunk()` replaces any collider registered under `key`.
 `removeChunk()` is a no-op for an unknown key. Implementations own their physics

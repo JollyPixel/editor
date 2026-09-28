@@ -5,7 +5,7 @@ import type {
   BlockShapeRegistry,
   MaterialGroupList,
   ResolvedBlockDefinition,
-  TilesetManager
+  TilesetAtlases
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -27,7 +27,7 @@ const kOpacityCheckIntervalMs = 250;
 
 export interface BlockPreviewRendererOptions {
   shapeRegistry: BlockShapeRegistry;
-  tilesetManager: TilesetManager;
+  atlases: TilesetAtlases;
   materialGroups?: MaterialGroupList;
 }
 
@@ -59,8 +59,8 @@ export class BlockPreviewRenderer {
     this.#container = container;
     this.#sources = {
       shapeRegistry: options.shapeRegistry,
-      tilesetManager: options.tilesetManager,
-      tileOpacity: new TileOpacityProbe(options.tilesetManager),
+      atlases: options.atlases,
+      tileOpacity: new TileOpacityProbe(options.atlases),
       materialGroups: options.materialGroups
     };
     this.#materialGroupsVersion = options.materialGroups?.version ?? -1;

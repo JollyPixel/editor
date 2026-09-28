@@ -19,7 +19,7 @@ import {
   type BlockSide,
   type BlockShapeID,
   type TileRect,
-  type VoxelEngine
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type {
   Dialog,
@@ -119,7 +119,7 @@ export class BlockEditorDialog extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare block: ResolvedBlockDefinition | null;
@@ -415,7 +415,7 @@ export class BlockEditorDialog extends LitElement {
     }
 
     this.close();
-    const [next] = engine.blockRegistry.getAll();
+    const [next] = engine.document.blocks.getAll();
     if (next !== undefined) {
       this.brush.blockId = next.id;
     }
@@ -541,7 +541,7 @@ export class BlockEditorDialog extends LitElement {
       return undefined;
     }
 
-    const atlas = this.engine.tilesetManager.get(tilesetId)?.def;
+    const atlas = this.engine.atlases.get(tilesetId)?.def;
 
     return {
       tileSize,
@@ -555,7 +555,8 @@ export class BlockEditorDialog extends LitElement {
     grid: TilesetGrid,
     ignoredBlockId?: number
   ): TileRect[] {
-    const { blockRegistry, shapeRegistry } = this.engine;
+    const { shapes: shapeRegistry } = this.engine;
+    const { blocks: blockRegistry } = this.engine.document;
     const blocks = [...blockRegistry.getAll()]
       .filter((block) => block.id !== ignoredBlockId);
 
@@ -587,7 +588,7 @@ export class BlockEditorDialog extends LitElement {
       return [];
     }
 
-    return [...this.engine.shapeRegistry.ids()].map((id) => {
+    return [...this.engine.shapes.ids()].map((id) => {
       return { label: id, value: id };
     });
   }
@@ -676,7 +677,7 @@ export class BlockEditorDialog extends LitElement {
     updated: ResolvedBlockDefinition
   ): void {
     this.linked.defineBlock(updated);
-    this.block = this.engine.blockRegistry.get(updated.id) ?? updated;
+    this.block = this.engine.document.blocks.get(updated.id) ?? updated;
   }
 
   #confirmCreate(): void {

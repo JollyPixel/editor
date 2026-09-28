@@ -11,12 +11,12 @@ import {
   type TilesetDocumentCommand,
   type TilesetDocumentListener,
   type TilesetProjection as TilesetSlot,
-  type VoxelEngine
+  type VoxelDocument
 } from "@jolly-pixel/voxel.renderer";
 
 export type ProjectionEngine = Pick<
-  VoxelEngine,
-  | "blockRegistry"
+  VoxelDocument,
+  | "blocks"
   | "materialGroups"
   | "defineBlock"
   | "defineBlocks"
@@ -82,7 +82,7 @@ export class TilesetProjection {
     const engine = this.#engine;
     const { blocks, materialGroups } = this.#tileset;
 
-    for (const block of [...engine.blockRegistry]) {
+    for (const block of [...engine.blocks]) {
       if (
         belongsToTileset(this.#slot, block.id) &&
         !blocks.has(localBlockIdOf(block.id))
@@ -107,7 +107,7 @@ export class TilesetProjection {
   unprojectAll(): void {
     const engine = this.#engine;
 
-    for (const block of [...engine.blockRegistry]) {
+    for (const block of [...engine.blocks]) {
       if (belongsToTileset(this.#slot, block.id)) {
         engine.removeBlock(block.id);
       }
@@ -175,7 +175,7 @@ export class TilesetProjection {
   ): number {
     const positions: number[] = [];
     let index = 0;
-    for (const block of this.#engine.blockRegistry) {
+    for (const block of this.#engine.blocks) {
       if (belongsToTileset(this.#slot, block.id)) {
         positions.push(index);
       }

@@ -1,0 +1,148 @@
+// Import Node.js Dependencies
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import * as THREE from "three";
+
+// Import Internal Dependencies
+import type { VoxelView } from "../../../src/view/VoxelView.ts";
+import { VoxelInspector } from "../../../src/view/inspector/index.ts";
+import { MeshBuildStats } from "../../../src/view/meshing/index.ts";
+import { BlockRegistry } from "../../../src/document/blocks/index.ts";
+import { VoxelWorld } from "../../../src/document/world/index.ts";
+import {
+  createView,
+  makeView,
+  fillChunks,
+  placeCube
+} from "../../helpers/view.ts";
+import { CHUNK_SIZE as kChunkSize } from "../../helpers/ids.ts";
+import {
+  findGroup,
+  inspectorGroup,
+  makeInspectorView
+} from "./VoxelInspector.helpers.ts";
+
+// CONSTANTS
+const kBoundsGroup = "VoxelInspector:chunkBounds";
+
+function boundsBoxes(
+  view: VoxelView
+): THREE.LineSegments[] {
+  return inspectorGroup(view, kBoundsGroup).children.filter(
+    (child): child is THREE.LineSegments => child instanceof THREE.LineSegments
+  );
+}
+
+function makeBoundsView(
+  chunks = 1
+): VoxelView {
+  const view = makeInspectorView({ inspector: { chunkBounds: true } });
+  fillChunks(view, "Ground", chunks);
+  view.tick(0);
+
+  return view;
+}
+
+describe("VoxelInspector - chunk bounds", () => {
+  it("is off by default and toggles its boxes independently of the mode", () => {
+    const view = makeInspectorView();
+    assert.equal(view.inspector.chunkBounds, false);
+    assert.equal(findGroup(view, kBoundsGroup), undefined);
+
+    view.inspector.chunkBounds = true;
+    assert.equal(view.inspector.mode, "off");
+    assert.equal(boundsBoxes(view).length, 1);
+    assert.equal(findGroup(view), undefined);
+
+    view.inspector.chunkBounds = false;
+    assert.equal(findGroup(view, kBoundsGroup), undefined);
+
+    view.inspector.chunkBounds = true;
+    assert.equal(boundsBoxes(view).length, 1);
+  });
+
+  it("places one box per chunk on its origin, sharing geometry and material", () => {
+    const boxes = boundsBoxes(makeBoundsView(3));
+
+    assert.deepEqual(
+      boxes.map((box) => box.position.x).sort((a, b) => a - b),
+      [0, kChunkSize, kChunkSize * 2]
+    );
+    for (const box of boxes) {
+      assert.equal(box.position.y, 0);
+      assert.equal(box.position.z, 0);
+      assert.deepEqual(box.scale.toArray(), [kChunkSize, kChunkSize, kChunkSize]);
+      assert.equal(box.geometry, boxes[0].geometry);
+      assert.equal(box.material, boxes[0].material);
+    }
+  });
+
+  it("shifts the box by the layer position", () => {
+    const view = makeView({ inspector: { chunkBounds: true } });
+    view.document.world.addLayer("Shifted").position = { x: 10, y: 20, z: 30 };
+    placeCube(view, "Shifted", { x: 10, y: 20, z: 30 });
+    view.tick(0);
+
+    const [box] = boundsBoxes(view);
+    assert.deepEqual(box.position.toArray(), [10, 20, 30]);
+  });
+
+  it("copies bounds passed to registerChunk", () => {
+    const parent = new THREE.Group();
+    const inspector = new VoxelInspector(
+      {
+        parent,
+        solids: new THREE.Group(),
+        world: new VoxelWorld(kChunkSize),
+        blockRegistry: new BlockRegistry()
+      },
+      { chunkBounds: true }
+    );
+    const origin = { x: 1, y: 2, z: 3 };
+
+    inspector.registerChunk("chunk", [], new MeshBuildStats(), { origin, size: 4 });
+    origin.x = 99;
+    inspector.chunkBounds = false;
+    inspector.chunkBounds = true;
+
+    const group = parent.getObjectByName(kBoundsGroup);
+    assert.ok(group);
+    const [box] = group.children;
+    assert.ok(box instanceof THREE.LineSegments);
+    assert.deepEqual(box.position.toArray(), [1, 2, 3]);
+    assert.equal(box.scale.x, 4);
+  });
+
+  it("outlines a chunk that produced no geometry", () => {
+    const view = createView({
+      chunkSize: kChunkSize,
+      layers: ["Ground"],
+      inspector: { chunkBounds: true }
+    });
+    fillChunks(view, "Ground", 1);
+    view.tick(0);
+
+    assert.equal(view.inspector.mesh.stats.chunks, 1);
+    assert.equal(view.inspector.mesh.stats.meshes, 0);
+    assert.equal(boundsBoxes(view).length, 1);
+  });
+
+  it("drops the box of a chunk whose layer is removed", () => {
+    const view = makeBoundsView();
+
+    view.document.world.removeLayer("Ground");
+    view.tick(0);
+
+    assert.equal(boundsBoxes(view).length, 0);
+  });
+
+  it("detaches the bounds group on dispose", () => {
+    const view = makeBoundsView();
+
+    view.dispose();
+
+    assert.equal(findGroup(view, kBoundsGroup), undefined);
+  });
+});

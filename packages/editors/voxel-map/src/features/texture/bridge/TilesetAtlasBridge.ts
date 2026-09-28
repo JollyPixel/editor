@@ -7,7 +7,7 @@ import type {
   TilesetDocument,
   TilesetDocumentListener,
   TilesetImage,
-  VoxelEngine
+  VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type {
   PixelDocument,
@@ -21,7 +21,7 @@ import { definitionsEqual } from "../../../state/index.ts";
 import type { BlockWriter } from "../../tilesets/LinkedTilesets.ts";
 
 export interface TilesetAtlasBridgeOptions {
-  engine: VoxelEngine;
+  engine: VoxelView;
   pixels: PixelDocument;
   tileset: TilesetDocument;
   definition: TilesetDefinition;
@@ -35,7 +35,7 @@ export interface TilesetAtlasBridgeOptions {
  * the alpha mode of the blocks drawn from it in step with the pixels.
  */
 export class TilesetAtlasBridge {
-  readonly #engine: VoxelEngine;
+  readonly #engine: VoxelView;
   readonly #pixels: PixelDocument;
   readonly #tileset: TilesetDocument;
   readonly #mapDocument: MapDocument;
@@ -141,8 +141,8 @@ export class TilesetAtlasBridge {
 
     const engine = this.#engine;
     const affected = findBlocksReferencingTileset(
-      engine.blockRegistry.getAll(),
-      (shapeId) => engine.shapeRegistry.get(shapeId),
+      engine.document.blocks.getAll(),
+      (shapeId) => engine.shapes.get(shapeId),
       this.#definition.id,
       this.#tileset.tileSize
     );
@@ -188,7 +188,7 @@ export class TilesetAtlasBridge {
   }
 
   #bind(): void {
-    this.#atlas = this.#engine.tilesetManager.get(this.#definition.id) ?? null;
+    this.#atlas = this.#engine.atlases.get(this.#definition.id) ?? null;
     this.#needsFullSync = true;
     this.#flush();
   }
@@ -257,7 +257,7 @@ export class TilesetAtlasBridge {
       },
       texture
     );
-    this.#atlas = this.#engine.tilesetManager.atlas(definition.id);
+    this.#atlas = this.#engine.atlases.atlas(definition.id);
   }
 }
 

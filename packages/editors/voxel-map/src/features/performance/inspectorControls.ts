@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type { MetricsPanel } from "@jolly-pixel/runtime";
 import type {
-  VoxelEngine,
+  VoxelView,
   VoxelInspectorMode
 } from "@jolly-pixel/voxel.renderer";
 
@@ -14,7 +14,7 @@ const kDebugModeOptions: Record<VoxelInspectorMode, VoxelInspectorMode> = {
 
 export interface InspectorControlsOptions {
   panel: MetricsPanel;
-  engine: VoxelEngine;
+  engine: VoxelView;
 }
 
 export function mountInspectorControls(

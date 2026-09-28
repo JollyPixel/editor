@@ -62,6 +62,6 @@ const textures = BlockTextures.of(block);
 const tile = textures.forSlot("top.1");
 
 const assigned = textures
-  .withTileset(engine.tilesets.defaultTilesetId)
+  .withTileset(document.tilesets.defaultTilesetId)
   .applyTo(block);
 ```

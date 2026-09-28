@@ -1,52 +1,60 @@
 # Voxel renderer architecture
 
-`VoxelEngine` composes a headless `VoxelDocument` with a Three.js `VoxelView`.
-Applications can use the document alone to edit, serialize, or synchronize voxel
-state. The view observes that state and owns the meshes, materials, and optional
-collision adapter needed to draw it.
+The package has two layers. `src/document` is the headless `VoxelDocument`:
+world, blocks, tilesets, materials, history, commands and serialization. It
+never imports the view, which a lint rule enforces. `src/view` is the Three.js
+`VoxelView` that observes a document and owns the meshes, materials, atlases,
+workers and optional collision adapter needed to draw it. `plugins/engine`
+wraps both in a JollyPixel actor component.
 
 ## Workspace map
 
 ```mermaid
 flowchart TB
-    App["Application or engine plugin"] --> Engine["VoxelEngine<br/>document + view facade"]
-    Engine --> Document["VoxelDocument<br/>editable state and commands"]
-    Engine --> View["VoxelView<br/>render lifecycle"]
+    App["Application or VoxelRenderer"] --> Document["VoxelDocument<br/>editable state and commands"]
+    App --> View["VoxelView<br/>render lifecycle"]
+    View -. "observes" .-> Document
 
     Document --> World["VoxelWorld<br/>layers, chunks, packed voxels"]
-    Document --> Definitions["BlockRegistry + TilesetList<br/>block and atlas declarations"]
+    Document --> Definitions["BlockRegistry, MaterialGroupList, TilesetList<br/>block, finish and tileset declarations"]
     Document --> History["VoxelHistory<br/>optional undo / redo"]
 
-    View --> Builder["VoxelMeshBuilder<br/>visible chunk geometry"]
-    View --> Store["ChunkMeshStore<br/>Three.js meshes"]
-    View --> Atlases["TilesetManager + ChunkMaterialCache<br/>textures and materials"]
+    View --> Pipeline["ChunkPipeline<br/>dirty scan, queue, visibility, workers"]
+    View --> Atlases["TilesetAtlases + ChunkMaterialCache<br/>textures and materials"]
+    Pipeline --> Builder["VoxelMeshBuilder<br/>vertex-pulled chunk geometry"]
+    Pipeline --> Store["ChunkMeshStore<br/>Three.js meshes"]
     Store --> Root["THREE.Group<br/>VoxelView.root"]
     Store --> Collider["VoxelCollider<br/>optional physics adapter"]
-
-    World -. "dirty chunks" .-> View
-    Definitions -. "block and tileset changes" .-> View
-    World --> Builder
-    Definitions --> Builder
-    Atlases --> Builder
-    Builder --> Store
-    Atlases --> Store
 ```
 
-The document owns `VoxelWorld`, block definitions, tileset declarations, and
-history. A world contains ordered `VoxelLayer` instances; each layer stores
-voxels in `VoxelChunk` instances backed by a sparse `VoxelStore`. The view owns
-the Three.js root, shape registry, loaded atlas textures, rebuild queue, mesh
-store, materials, inspector, and optional collider. `VoxelEngine` forwards the
-common operations and exposes `document` and `view` for callers that need them.
+| Folder | Holds |
+|---|---|
+| `document/world` | `VoxelWorld`, `VoxelLayer`, chunk `storage/`, the `editing/` write path, object layers |
+| `document/blocks`, `tilesets`, `materials` | Definitions, tileset links and documents, projection between tileset and world ids |
+| `document/commands`, `serialization` | Command types and appliers, the `VoxelWorldJSON` codec |
+| `document/geometry` | Face directions, `VoxelTransform`, rotations, voxel picking helpers |
+| `view/chunks` | `ChunkPipeline`, mesh targets, rebuild queue, viewport, visibility, mesh store |
+| `view/meshing`, `shading` | CPU face emission and the pulled face format, TSL nodes and chunk materials |
+| `view/workers`, `atlases`, `options` | Mesh workers, atlas textures, `rendering` / `lighting` / `range` settings |
 
-| Concern | Owner | Boundary |
-|---|---|---|
-| Voxel and layer edits | `VoxelWorld` | Marks affected chunks dirty and emits layer commands |
-| Block and tileset edits | `VoxelDocument` | Applies commands and emits invalidation events |
-| Geometry | `VoxelMeshBuilder` | Reads world, block, shape, and atlas data; returns chunk geometries |
-| Scene objects | `ChunkMeshStore` | Creates and disposes chunk meshes under `VoxelView.root` |
-| Physics | `VoxelCollider` | Optional adapter receives rebuilt chunk geometry |
-| Worker meshing | `ChunkMeshWorkers` | Optional; sends shared chunk storage to Web Workers running `runMeshWorker()`, installs their results |
+## Commands
+
+```mermaid
+flowchart TB
+    Edit["world.setVoxel(), addLayer(), objectLayers.add()"] --> Dispatch["VoxelWorld: build the command"]
+    Remote["document.apply(command, { origin })"] --> Apply["applyVoxelCommand()"]
+    Apply --> Execute
+    Dispatch --> Execute["execute: mutate, return the command as applied or null"]
+    Execute --> Writer["VoxelWriter<br/>batches, records, marks dirty"]
+    Execute --> Event["document 'command' event"]
+```
+
+Every aggregate applies its own commands and returns them as applied:
+`VoxelWorld` (layers, voxels, object layers), `BlockRegistry`,
+`MaterialGroupList` and `TilesetList`. `VoxelDocument` and `TilesetDocument`
+share `BlockDocument`, which emits an applied command once with its origin.
+A local world edit is emitted as `"local"`; `apply()` replays a peer command
+without the world re-emitting it.
 
 ## Edit to rendered chunk
 
@@ -55,50 +63,30 @@ sequenceDiagram
     participant App as Application
     participant Document as VoxelDocument / VoxelWorld
     participant View as VoxelView
-    participant Queue as ChunkRebuildQueue
-    participant Builder as VoxelMeshBuilder
+    participant Pipeline as ChunkPipeline
     participant Store as ChunkMeshStore
 
-    App->>Document: setVoxel(...) or apply(command)
+    App->>Document: world.setVoxel(...) or apply(command)
     Document->>Document: change state and mark affected chunks dirty
     Document-->>App: command event
     App->>View: tick(deltaTime)
-    View->>View: update visibility and find dirty chunks
-    View->>Queue: enqueue the mesh targets of in-range, visible chunks
-    Queue->>Store: rebuild(target) within time budget
-    Store->>Builder: buildChunkGeometries(layer chunks of the target)
-    Builder-->>Store: geometry by tileset and surface policy
-    Store->>Store: replace meshes and update inspector
+    View->>Pipeline: tick(viewport)
+    Pipeline->>Pipeline: update visibility, install worker builds, queue dirty chunks
+    Pipeline->>Store: rebuild(target, viewport) within the budget
+    Store->>Store: build geometry, replace meshes, update inspector and collider
     Note over Store: Updated meshes live under view.root
 ```
 
 Voxel writes dirty the affected chunk and boundary neighbours across layers,
 because an edit can expose or cover their faces. Block definition or tileset
-changes invalidate all chunks. On each `tick()`, the view removes deleted chunks,
-updates view-distance visibility, queues eligible dirty chunks, and drains the
-queue within `rebuildBudgetMs` (8 ms by default). `flush()` drains the eligible
-queue immediately. `init()` and document loads mark the whole world dirty and
-flush chunks eligible for the current view distance.
+changes invalidate all chunks. `flush()` drains the queue at once; `init()` and
+a document load mark the whole world dirty and flush it unless mesh workers are
+running.
 
-`ChunkMeshLayout` maps each dirty layer chunk to a mesh target. Visible layers
-at opacity `1` whose position is a multiple of the chunk size share one target
-per chunk cell, so overlapping layers cost one set of meshes and draw calls.
-Faded layers and layers off the chunk grid keep one target per layer chunk.
-When a chunk moves to another target, the view rebuilds or removes the one it
-left.
-
-`VoxelMeshBuilder` resolves block shapes, textures, and neighbouring cells,
-then runs the naive mesher or optional greedy mesher. The resulting geometries
-are grouped by tileset and surface policy. `ChunkMeshStore` replaces the old
-meshes, gets materials from `ChunkMaterialCache`, registers inspector metrics,
-and passes the geometry to a configured `VoxelCollider`. The collider interface
-keeps physics backend selection outside the core; a Rapier implementation is
-provided in `plugins/rapier`.
-
-When `focus` and a finite `viewDistance` are set, chunks outside the range stay
-dirty until they enter it. Previously built chunks are hidden or unloaded by
-`viewDistancePolicy`; unloading a visual mesh retains its collider. Layer
-visibility and opacity also affect which meshes are built and drawn.
+`ChunkMeshLayout` maps each dirty layer chunk to a mesh target: a `"cell"`
+target shared by the aligned opaque layers of one chunk cell, or a `"layer"`
+target for a faded or off-grid layer chunk. When a chunk moves to another
+target, the pipeline rebuilds or removes the one it left.
 
 ## Save, load, and integrations
 
@@ -107,26 +95,25 @@ flowchart TB
     Document["VoxelDocument"] -->|"save()"| Snapshot["VoxelWorldJSON<br/>versioned snapshot"]
     Snapshot -->|"load()"| Document
     Document -->|"loaded event"| View["VoxelView<br/>clear meshes, sync atlases, rebuild"]
-    Plugin["VoxelRenderer<br/>engine actor component"] --> Engine["VoxelEngine"]
-    Engine --> Document
-    Engine --> View
+    Plugin["VoxelRenderer<br/>engine actor component"] --> Document
+    Plugin --> View
 ```
 
-`save()` serializes the world's layers and object layers together with block
-and tileset definitions. `load()` validates the snapshot, replaces document
-state, clears history, and emits `loaded`; the view then clears old meshes,
-syncs atlases, and rebuilds. Texture objects are supplied separately when
-loading a snapshot.
+`save()` serializes the world's layers, object layers and tileset links.
+`load()` validates the snapshot, replaces document state, clears history, and
+emits `loaded`; the view then clears old meshes, syncs atlases, and rebuilds.
+`view.load()` registers the textures of the snapshot's tilesets before the
+document loads it.
 
-`plugins/engine/VoxelRenderer` attaches the root to an engine actor, samples an
-optional focus object, calls `tick()` on update, and disposes the engine when
-the component is destroyed. Direct Three.js users can instead add
-`engine.root` to a scene and drive `init()`, `tick()`, and `dispose()` themselves.
+`plugins/engine/VoxelRenderer` attaches `view.root` to an actor, samples an
+optional focus object, ticks the view on update, and on destroy disposes the
+view and, when it built it, the document. Direct Three.js users add
+`view.root` to a scene and drive `init()`, `tick()` and `dispose()` themselves.
 
 Details: [world model](./docs/concepts/world-model.md),
 [rendering and meshing](./docs/concepts/rendering-and-meshing.md),
 [`VoxelDocument`](./docs/api/core/VoxelDocument.md),
 [`VoxelView`](./docs/api/core/VoxelView.md),
-[`VoxelEngine`](./docs/api/core/VoxelEngine.md),
+[`VoxelRenderer`](./docs/api/engine/VoxelRenderer.md),
 [serialization](./docs/api/serialization/serialization.md), and
 [physics integration](./docs/guides/adding-physics.md).

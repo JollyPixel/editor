@@ -114,7 +114,7 @@ export class GhostBlock extends THREE.Group {
   #adopt(
     block: ResolvedBlockDefinition
   ): void {
-    const { version } = this.#sources.tilesetManager;
+    const { version } = this.#sources.atlases;
     if (block === this.#block && version === this.#tilesetVersion) {
       return;
     }

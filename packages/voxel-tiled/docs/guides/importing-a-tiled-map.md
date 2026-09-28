@@ -5,7 +5,8 @@ Use `TiledConverter` when application code already loads the Tiled JSON.
 ```ts
 import { loadJSON } from "@jolly-pixel/engine";
 import {
-  VoxelEngine,
+  VoxelDocument,
+  VoxelView,
   loadTilesets
 } from "@jolly-pixel/voxel.renderer";
 import {
@@ -20,9 +21,10 @@ const { world, blocks } = new TiledConverter().convert(map, {
 });
 
 const tilesets = await loadTilesets(world.tilesets);
-const engine = new VoxelEngine({ tilesets, blocks });
+const document = new VoxelDocument({ blocks });
+const view = new VoxelView(document, { tilesets });
 
-engine.load(world);
+view.load(world);
 ```
 
 Use `"flat"` when Tiled layers should overlap at y = 0. Use `"stacked"` when
@@ -72,10 +74,12 @@ Read the prepared asset during the component lifecycle:
 
 ```ts
 const { world, blocks, tilesets } = this.getAsset(VoxelMap.assets.map);
-const engine = new VoxelEngine({ tilesets, blocks });
+const renderer = this.actor.addComponentAndGet(VoxelRenderer, {
+  tilesets,
+  document: { blocks }
+});
 
-this.actor.object3D.add(engine.root);
-engine.load(world);
+renderer.view.load(world);
 ```
 
 See [`TiledConverter`](../api/TiledConverter.md) for conversion options.

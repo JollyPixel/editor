@@ -2,7 +2,7 @@
 import * as network from "@jolly-pixel/network";
 import {
   deserializeVoxelWorld,
-  parseVoxelDocument,
+  parseVoxelWorld,
   TilesetList,
   VOXEL_PATCH_STRIDE,
   VoxelWorld,
@@ -199,7 +199,7 @@ function loads(
 ): boolean {
   try {
     deserializeVoxelWorld(
-      parseVoxelDocument(data),
+      parseVoxelWorld(data),
       new VoxelWorld(chunkSize),
       { tilesets: new TilesetList() }
     );

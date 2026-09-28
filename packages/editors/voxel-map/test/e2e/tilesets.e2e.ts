@@ -22,7 +22,7 @@ import {
 function tilesetSources(
   page: Page
 ): Promise<string[]> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.tilesets
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.tilesets
     .definitions()
     .map((definition) => definition.asset?.id ?? ""));
 }
@@ -91,6 +91,6 @@ test("removing a tileset flags the blocks left without texture", async({ page })
   await expect(editor).toBeHidden();
   await expect(page.getByRole("button", { name: "Add tileset" })).toBeVisible();
   await expect.poll(() => page.evaluate(
-    () => [...window.voxelMapEditor!.workspace.engine.blockRegistry].length
+    () => [...window.voxelMapEditor!.workspace.engine.document.blocks].length
   )).toBe(0);
 });

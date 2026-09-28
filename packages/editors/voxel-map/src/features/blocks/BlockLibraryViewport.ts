@@ -2,7 +2,7 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type {
-  VoxelEngine,
+  VoxelView,
   ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
@@ -69,7 +69,7 @@ export class BlockLibraryViewport extends LitElement {
   static override styles = blockLibraryViewportStyles;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare blocks: ResolvedBlockDefinition[];
@@ -442,9 +442,9 @@ export class BlockLibraryViewport extends LitElement {
   #build(): void {
     this.#renderer?.dispose();
     this.#renderer = new BlockLibraryRenderer(this._scroller, {
-      shapeRegistry: this.engine.shapeRegistry,
-      tilesetManager: this.engine.tilesetManager,
-      materialGroups: this.engine.materialGroups,
+      shapeRegistry: this.engine.shapes,
+      atlases: this.engine.atlases,
+      materialGroups: this.engine.document.materialGroups,
       blocks: this.blocks
     });
     this.#renderer.onLayoutChange = () => this.#syncGrid();

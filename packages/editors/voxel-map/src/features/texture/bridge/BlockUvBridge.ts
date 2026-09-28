@@ -2,7 +2,7 @@
 import {
   resolvedBlockTextureSlots,
   type ResolvedBlockDefinition,
-  type VoxelEngine
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type {
   UVMap,
@@ -42,7 +42,7 @@ export interface BlockUvBridgeOptions {
  */
 export class BlockUvBridge {
   readonly #uv: UVMap;
-  readonly #engine: VoxelEngine;
+  readonly #engine: VoxelView;
   readonly #blocks: BlockWriter;
   readonly #selection: BlockUvSelectionSync;
   readonly #runLocalRestore: <T>(fn: () => T) => T;
@@ -54,12 +54,12 @@ export class BlockUvBridge {
 
   constructor(
     uv: UVMap,
-    engine: VoxelEngine,
+    engine: VoxelView,
     options: BlockUvBridgeOptions
   ) {
     this.#uv = uv;
     this.#engine = engine;
-    this.#blocks = options.blocks ?? engine;
+    this.#blocks = options.blocks ?? engine.document;
     this.#selection = new BlockUvSelectionSync(
       uv,
       options.brush
@@ -105,10 +105,10 @@ export class BlockUvBridge {
       return [];
     }
 
-    return [...this.#engine.blockRegistry.getAll()].filter(
+    return [...this.#engine.document.blocks.getAll()].filter(
       (block) => blockUsesTileset(
         block,
-        this.#engine.shapeRegistry.get(block.shapeId),
+        this.#engine.shapes.get(block.shapeId),
         tilesetId
       )
     );
@@ -119,7 +119,7 @@ export class BlockUvBridge {
   ): UVRegion {
     return blockUvRegion(
       block,
-      this.#engine.shapeRegistry.get(block.shapeId),
+      this.#engine.shapes.get(block.shapeId),
       this.#tileSize
     );
   }
@@ -178,14 +178,14 @@ export class BlockUvBridge {
       return;
     }
 
-    const block = this.#engine.blockRegistry.get(blockId);
+    const block = this.#engine.document.blocks.get(blockId);
     if (!block) {
       return;
     }
 
     const updated = blockFromUvRegion(
       block,
-      this.#engine.shapeRegistry.get(block.shapeId),
+      this.#engine.shapes.get(block.shapeId),
       region,
       this.#tileSize
     );
@@ -271,7 +271,7 @@ export class BlockUvBridge {
       return false;
     }
 
-    const shape = this.#engine.shapeRegistry.get(block.shapeId);
+    const shape = this.#engine.shapes.get(block.shapeId);
     if (shape === undefined || blockShapeUv(shape).isBox) {
       return false;
     }
@@ -301,11 +301,11 @@ export class BlockUvBridge {
       return undefined;
     }
 
-    const block = this.#engine.blockRegistry.get(blockId);
+    const block = this.#engine.document.blocks.get(blockId);
     if (!block) {
       return undefined;
     }
-    const shape = this.#engine.shapeRegistry.get(block.shapeId);
+    const shape = this.#engine.shapes.get(block.shapeId);
 
     return shape && resolvedBlockTextureSlots(block, shape).length > 0 ?
       block :
@@ -322,7 +322,7 @@ export class BlockUvBridge {
       return;
     }
 
-    const block = this.#engine.blockRegistry.get(blockId);
+    const block = this.#engine.document.blocks.get(blockId);
     if (!block) {
       return;
     }

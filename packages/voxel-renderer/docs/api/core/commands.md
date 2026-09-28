@@ -1,13 +1,13 @@
 # Commands
 
-Every change to a voxel document is a `VoxelCommand`. The engine emits each one
-on its `"command"` event and replays one with `apply()`, so a single listener
-and a single entry point cover layers, voxels, objects, blocks, tilesets and
-material groups.
+Every change to a voxel document is a `VoxelCommand`. A
+[`VoxelDocument`](./VoxelDocument.md) emits each one on its `"command"` event
+and replays one with `apply()`, so a single listener and a single entry point
+cover layers, voxels, objects, blocks, tilesets and material groups.
 
 ```ts
 import {
-  VoxelEngine,
+  VoxelDocument,
   isVoxelLayerCommand,
   type VoxelCommandListener
 } from "@jolly-pixel/voxel.renderer";
@@ -18,11 +18,11 @@ const onCommand: VoxelCommandListener = (command, { origin }) => {
   }
 };
 
-const engine = new VoxelEngine({ onCommand });
+const document = new VoxelDocument({ onCommand });
 
-// Or subscribe later; the engine is an Emitter.
-engine.on("command", onCommand);
-engine.off("command", onCommand);
+// Or subscribe later; the document is an Emitter.
+document.on("command", onCommand);
+document.off("command", onCommand);
 ```
 
 ```ts
@@ -42,13 +42,15 @@ interface VoxelCommandContext {
 }
 ```
 
-`origin` is `"local"` for a change made on this engine and `"remote"` for one
-replayed with `engine.apply(command, { origin: "remote" })`. A network adapter
+`origin` is `"local"` for a change made on this document and `"remote"` for one
+replayed with `document.apply(command, { origin: "remote" })`. A network adapter
 sends only local commands; UI listeners usually ignore the origin.
 
 `isVoxelLayerCommand()`, `isVoxelBlockCommand()`, `isVoxelTilesetCommand()` and
 `isVoxelMaterialGroupCommand()` narrow a command (or any `{ action: string }`)
-to one category. `VOXEL_COMMAND_ACTIONS` lists every action;
+to one category. Within layer commands, `isVoxelEditCommand()` and
+`isVoxelObjectLayerCommand()` narrow to the
+[voxel edit and object layer subsets](#layer-commands). `VOXEL_COMMAND_ACTIONS` lists every action;
 `VOXEL_LAYER_COMMAND_ACTIONS`, `VOXEL_BLOCK_COMMAND_ACTIONS`,
 `VOXEL_TILESET_COMMAND_ACTIONS` and `VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS` list
 each category. `VoxelCommandAction` and the per-category `*CommandAction` types are
@@ -73,7 +75,7 @@ type TilesetDocumentCommand =
 
 `isVoxelWorldCommand()` and `isTilesetDocumentCommand()` narrow to either
 half; `VOXEL_WORLD_COMMAND_ACTIONS` and `TILESET_DOCUMENT_COMMAND_ACTIONS`
-list them. A sync adapter sends the world half of an engine's command stream
+list them. A sync adapter sends the world half of a document's command stream
 to the world's room; the tileset half reaches it through a
 [`TilesetDocument`](../tilesets/TilesetDocument.md), which emits the same
 block and material group commands on its own `"command"` event.
@@ -104,22 +106,25 @@ interface VoxelCommandTarget extends VoxelWorldCommandTarget {
 }
 ```
 
-Routes a command to `world.apply()`, `applyBlockCommand()`,
-[`applyMaterialGroupCommand()`](../materials/MaterialGroup.md#commands) or
-[`applyTilesetCommand()`](../tilesets/tilesets.md#tileset-commands) and returns
-the command as applied, or `null` when it changed nothing. It does not emit,
-rebuild meshes or rescale atlases; use it on a headless document such as a
-server-side state. `applyVoxelWorldCommand()` needs no block registry or
-material groups, which is what a server holding only worlds folds with.
-`engine.apply()` wraps `applyVoxelCommand()` with those side effects and
-broadcasts the returned command.
+Routes a command to [`world.apply()`](../world/VoxelWorld.md#commands),
+[`blocks.apply()`](../blocks/BlockRegistry.md#api),
+[`materialGroups.apply()`](../materials/MaterialGroup.md#commands) or
+[`tilesets.apply()`](../tilesets/tilesets.md#tileset-commands) and returns
+the command as applied, or `null` when it changed nothing. It does not emit;
+use it on a headless state such as a server's. `applyVoxelWorldCommand()`
+needs no block registry or material groups, which is what a server holding
+only worlds folds with. [`document.apply()`](./VoxelDocument.md#methods) wraps
+`applyVoxelCommand()` and broadcasts the returned command; a
+[`VoxelView`](./VoxelView.md) listening to the document rebuilds meshes and
+atlases.
 
 ```ts
-function applyBlockCommand(
-  registry: BlockRegistry,
-  command: VoxelBlockCommand,
-  defaultTilesetId: string | null
-): VoxelBlockCommand | null;
+class BlockRegistry {
+  apply(
+    command: VoxelBlockCommand,
+    defaultTilesetId?: string | null
+  ): VoxelBlockCommand | null;
+}
 ```
 
 Registers, unregisters or moves a block. A defined block gets
@@ -131,7 +136,14 @@ registry did not change.
 
 `VoxelLayerCommand` is keyed on `action` and always carries `layerName` and
 `metadata`. `VoxelWorld` emits them on its own `"command"` event, which the
-engine forwards as local commands.
+document forwards as local commands.
+
+```ts
+type VoxelLayerCommand =
+  | VoxelLayerStructureCommand  // added, removed, updated, cloned, merged, position-*, reordered, layer-moved
+  | VoxelEditCommand            // voxel-set, voxel-removed, voxels-set, voxels-removed, voxels-patched
+  | VoxelObjectLayerCommand;    // object-layer-*, object-*
+```
 
 | `action` | `metadata` shape | Notes |
 |---|---|---|
@@ -172,8 +184,8 @@ type VoxelBlockCommand =
 | `"block-removed"` | Emitted only for an ID that was registered. |
 | `"block-moved"` | The emitted `toIndex` is where the block landed, already clamped. |
 
-`engine.defineBlock()`, `defineBlocks()`, `removeBlock()`, `moveBlock()` and
-`apply()` emit them. A direct `engine.blockRegistry.register()` or `moveTo()`
+`document.defineBlock()`, `defineBlocks()`, `removeBlock()`, `moveBlock()` and
+`apply()` emit them. A direct `document.blocks.register()` or `moveTo()`
 does not; use the registry for definitions each peer derives on its own.
 
 ## Tileset commands
@@ -184,11 +196,11 @@ type VoxelTilesetCommand =
   | { action: "tileset-removed"; tilesetId: string; };
 ```
 
-`engine.apply()` and its shorthands emit them only when the command changed the
-list. The emitted `tileset-added` carries the definition as declared, with the
-[slot](../tilesets/tilesets.md#definitions) the tileset received.
-`engine.load()`, `engine.loadTileset()` and direct `engine.tilesets`
-mutations do not emit.
+`document.apply()` and its shorthands emit them only when the command changed
+the list. The emitted `tileset-added` carries the definition as declared, with
+the [slot](../tilesets/tilesets.md#definitions) the tileset received.
+`document.load()`, `view.load()`, `view.loadTileset()` and direct
+`document.tilesets` mutations do not emit.
 
 ## Material group commands
 
@@ -198,6 +210,6 @@ type VoxelMaterialGroupCommand =
   | { action: "material-group-removed"; groupId: string; };
 ```
 
-`engine.defineMaterialGroup()`, `removeMaterialGroup()` and `apply()` emit
+`document.defineMaterialGroup()`, `removeMaterialGroup()` and `apply()` emit
 them when the list changed. The emitted definition has every finish field
 filled in. See [MaterialGroup](../materials/MaterialGroup.md).

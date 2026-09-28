@@ -135,12 +135,16 @@ const voxelMap = world.createActor("map")
   .addComponentAndGet(
     VoxelRenderer,
     {
-      chunkSize: 16,
-      layers: ["Ground"],
-      blocks: voxelBlocks,
-      alphaTest: 0.5,
-      material: "lambert",
-      // VoxelEngine only sees the VoxelCollider interface; Rapier lives here.
+      document: {
+        chunkSize: 16,
+        layers: ["Ground"],
+        blocks: voxelBlocks
+      },
+      rendering: {
+        alphaTest: 0.5,
+        material: "lambert"
+      },
+      // VoxelView only sees the VoxelCollider interface; Rapier lives here.
       collider: (context) => new RapierVoxelCollider({
         api: RAPIER,
         world: rapierWorld,
@@ -156,7 +160,7 @@ const voxelMap = world.createActor("map")
  */
 for (let x = 0; x < kTerrainSize; x++) {
   for (let z = 0; z < kTerrainSize; z++) {
-    voxelMap.engine.world.setVoxel("Ground", { position: { x, y: 0, z }, blockId: 1 });
+    voxelMap.document.world.setVoxel("Ground", { position: { x, y: 0, z }, blockId: 1 });
   }
 }
 
@@ -168,7 +172,7 @@ for (let x = 0; x < kTerrainSize; x++) {
 for (let y = 1; y <= kPlatformHeight; y++) {
   for (let x = kPlatformMin; x <= kPlatformMax; x++) {
     for (let z = kPlatformMin; z <= kPlatformMax; z++) {
-      voxelMap.engine.world.setVoxel("Ground", { position: { x, y, z }, blockId: 1 });
+      voxelMap.document.world.setVoxel("Ground", { position: { x, y, z }, blockId: 1 });
     }
   }
 }
@@ -180,7 +184,7 @@ function place(
   blockId: number,
   rotation = 0
 ): void {
-  voxelMap.engine.world.setVoxel("Ground", {
+  voxelMap.document.world.setVoxel("Ground", {
     position: { x, y, z },
     blockId,
     rotation

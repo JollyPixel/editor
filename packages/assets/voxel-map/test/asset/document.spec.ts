@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { decodeVoxelDocument } from "@jolly-pixel/voxel.renderer";
+import { decodeVoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
@@ -16,7 +16,7 @@ import {
 
 describe("createVoxelMapDocument", () => {
   test("links the tilesets in slot order and opens one layer", () => {
-    const document = decodeVoxelDocument(
+    const document = decodeVoxelWorld(
       createVoxelMapDocument({
         chunkSize: 16,
         tilesets: [
@@ -35,7 +35,7 @@ describe("createVoxelMapDocument", () => {
   });
 
   test("names the layer and links nothing by default", () => {
-    const document = decodeVoxelDocument(
+    const document = decodeVoxelWorld(
       createVoxelMapDocument({
         chunkSize: 8,
         layer: "Terrain"

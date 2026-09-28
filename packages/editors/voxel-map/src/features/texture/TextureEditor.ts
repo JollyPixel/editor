@@ -11,7 +11,7 @@ import {
   query
 } from "lit/decorators.js";
 import type { PixelArtCanvasOptions } from "@jolly-pixel/pixel-draw.renderer";
-import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 import {
   PixelDrawPanel,
   type TextureChangeDetail,
@@ -85,7 +85,7 @@ export class TextureEditor extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare linked: LinkedTilesets;
@@ -192,7 +192,7 @@ export class TextureEditor extends LitElement {
     }
 
     const { entries } = this.tilesets;
-    const counts = countBlocksPerTileset(engine.blockRegistry.getAll());
+    const counts = countBlocksPerTileset(engine.document.blocks.getAll());
     for (const entry of entries) {
       const { definition, assetId } = entry;
       const blocks = counts.get(definition.id) ?? 0;
@@ -330,7 +330,7 @@ export class TextureEditor extends LitElement {
   #followSelectedBlock(
     force: boolean
   ): void {
-    const block = this.engine.blockRegistry.get(this.brush.blockId);
+    const block = this.engine.document.blocks.get(this.brush.blockId);
     if (block === undefined) {
       return;
     }

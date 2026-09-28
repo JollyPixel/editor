@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 
 // Import Internal Dependencies
-import type { BlockShape } from "../../src/blocks/shape/BlockShape.ts";
+import type { BlockShape } from "../../src/document/blocks/shape/BlockShape.ts";
 import {
   type LabelEntry,
   createLabel,
@@ -24,7 +24,7 @@ import {
   Stair,
   StairCornerInner,
   StairCornerOuter
-} from "../../src/blocks/shape/library/index.ts";
+} from "../../src/document/blocks/shape/library/index.ts";
 
 // CONSTANTS
 const kGap = 2.5;

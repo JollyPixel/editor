@@ -37,7 +37,7 @@ A tileset owns its pixels, tile size, block definitions and material groups. A w
 
 ### Connect a world and its tilesets
 
-Construct the sync clients before joining the rooms. `document` is a `VoxelDocument`; a `VoxelEngine` can be used when the editor also needs rendering.
+Construct the sync clients before joining the rooms. `document` is a `VoxelDocument`; draw it with a `VoxelView` when the editor also needs rendering.
 
 ```ts
 import { assetRoomName } from "@jolly-pixel/asset";
@@ -76,7 +76,7 @@ The first snapshot loads each document. Local world commands go to the map room;
 - `@jolly-pixel/asset.voxel-map/client` exports `VoxelSyncClient`, `SyncedVoxelMap`, `voxelMapDocumentKind`, `TilesetSyncClient`, `SyncedTileset`, `tilesetDocumentKind`, `tilesetRoom`, `createTilesetAsset`, the tileset document builders and encoder, wire types, and `tilesetAsset`.
 - `@jolly-pixel/asset.voxel-map/server` exports `VoxelCommandArbiter`, `TilesetCommandArbiter`, and the protocol and snapshot schemas of both rooms.
 
-The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The world and tileset document formats and engine commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
+The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The world and tileset document formats and voxel commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
 
 ## ✨ Contributors guide
 

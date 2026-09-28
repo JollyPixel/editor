@@ -5,7 +5,7 @@ import type {
   ResolvedBlockDefinition,
   BlockShapeRegistry,
   MaterialGroupList,
-  TilesetManager
+  TilesetAtlases
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -42,7 +42,7 @@ export interface CellEntry {
 
 export interface BlockLibraryRendererOptions {
   shapeRegistry: BlockShapeRegistry;
-  tilesetManager: TilesetManager;
+  atlases: TilesetAtlases;
   materialGroups?: MaterialGroupList;
   blocks?: ResolvedBlockDefinition[];
 }
@@ -58,7 +58,7 @@ export class BlockLibraryRenderer {
   #camera: THREE.PerspectiveCamera;
   #cells: CellEntry[] = [];
   #sources: BlockPreviewSources;
-  #tilesetManager: TilesetManager;
+  #atlases: TilesetAtlases;
   #opacityCheckAt = 0;
   #raf = -1;
   #rot = 0;
@@ -83,13 +83,13 @@ export class BlockLibraryRenderer {
   ) {
     this.#sources = {
       shapeRegistry: options.shapeRegistry,
-      tilesetManager: options.tilesetManager,
-      tileOpacity: new TileOpacityProbe(options.tilesetManager),
+      atlases: options.atlases,
+      tileOpacity: new TileOpacityProbe(options.atlases),
       materialGroups: options.materialGroups
     };
     this.#materialGroupsVersion = options.materialGroups?.version ?? -1;
-    this.#tilesetManager = options.tilesetManager;
-    this.#tilesetVersion = options.tilesetManager.version;
+    this.#atlases = options.atlases;
+    this.#tilesetVersion = options.atlases.version;
     this.#container = container;
 
     this.#renderer = new THREE.WebGLRenderer({
@@ -267,7 +267,7 @@ export class BlockLibraryRenderer {
     time: number
   ): void {
     const groupsVersion = this.#sources.materialGroups?.version ?? -1;
-    if (this.#tilesetVersion !== this.#tilesetManager.version) {
+    if (this.#tilesetVersion !== this.#atlases.version) {
       this.#rebuildCells();
     }
     else if (groupsVersion !== this.#materialGroupsVersion) {
@@ -328,7 +328,7 @@ export class BlockLibraryRenderer {
   }
 
   #rebuildCells(): void {
-    this.#tilesetVersion = this.#tilesetManager.version;
+    this.#tilesetVersion = this.#atlases.version;
     const blocks = this.#cells.map((cell) => cell.block);
     for (const cell of this.#cells) {
       this.#removeCell(cell);

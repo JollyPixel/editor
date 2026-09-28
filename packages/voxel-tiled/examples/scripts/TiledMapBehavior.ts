@@ -39,7 +39,7 @@ export class TiledMapBehavior extends ActorComponent {
       tilesets
     });
 
-    vr.engine.load(world, {
+    vr.view.load(world, {
       mergeLayers: true
     });
   }

@@ -32,9 +32,11 @@ tileset.defineMaterialGroup({ id: "gold", metalness: 1 });
 
 ```ts
 interface TilesetDocumentOptions {
-  /** @default 32 */
+  /** Tile edge length in pixels, from 1 to `MAX_TILE_SIZE`. @default 32 */
   tileSize?: number;
+  /** Blocks with tileset-local ids; tileset ids in their tile references are dropped. */
   blocks?: Iterable<BlockDefinition>;
+  /** Material groups the blocks can name through `materialGroup`. */
   materialGroups?: Iterable<MaterialGroupJSON>;
 }
 
@@ -49,21 +51,22 @@ type TilesetDocumentEvents = {
   loaded: () => void;
 };
 
-class TilesetDocument extends Emitter<TilesetDocumentEvents> {
+class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
   readonly blocks: BlockRegistry;
   readonly materialGroups: MaterialGroupList;
   readonly tileSize: number;
 
   constructor(options?: TilesetDocumentOptions);
 
-  apply(command: TilesetDocumentCommand, options?: { origin?: "local" | "remote"; }): boolean;
-
+  // from BlockDocument
+  apply(command: TilesetDocumentCommand, options?: VoxelApplyOptions): boolean;
   defineBlock(def: BlockDefinition): boolean;
   defineBlocks(defs: Iterable<BlockDefinition>): void;
   removeBlock(blockId: number): boolean;
   moveBlock(blockId: number, toIndex: number): boolean;
   defineMaterialGroup(group: MaterialGroup | MaterialGroupJSON): boolean;
   removeMaterialGroup(groupId: string): boolean;
+
   resizeTiles(tileSize: number): boolean;
 
   toJSON(): TilesetDocumentJSON;
@@ -88,10 +91,11 @@ the resolved block with no tileset id in its references.
 and emits it under `origin` (default `"local"`) when it changed something;
 it returns `false` and emits nothing otherwise. A `block-defined` command is
 applied through `localBlock()`, so a definition arriving from a peer with
-tileset ids in its references is stored without them. The shorthands build
-the matching command: `defineBlock()` registers or replaces a block,
-`moveBlock()` reorders one, `defineMaterialGroup()` adds or replaces a group
-with every finish field filled in.
+tileset ids in its references is stored without them. The shorthands come
+from `BlockDocument`, the base [`VoxelDocument`](../core/VoxelDocument.md#methods)
+shares, and build the matching command: `defineBlock()` registers or replaces
+a block, `moveBlock()` reorders one, `defineMaterialGroup()` adds or replaces a
+group with every finish field filled in.
 
 `resizeTiles()` changes the tile grid and rescales every block with
 [`rescaleTileRef()`](./tilesets.md#rescaling-and-tile-rectangles) so it keeps

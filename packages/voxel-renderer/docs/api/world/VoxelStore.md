@@ -50,7 +50,7 @@ It never shrinks the store.
 `share()` moves `keys` and `values` into `SharedArrayBuffer`s, and every array
 the store allocates afterwards (growth, `copyFrom()`) stays shared. It is a
 no-op once `shared` is `true`. The view calls it on the chunks a
-[mesh worker](../core/VoxelEngine.md#mesh-workers) reads.
+[mesh worker](../core/VoxelView.md#mesh-workers) reads.
 
 `fromArrays()` wraps existing arrays without copying them. The arrays must have
 the same power-of-two length of at least `16`, otherwise it throws a

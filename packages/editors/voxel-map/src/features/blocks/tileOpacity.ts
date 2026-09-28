@@ -2,7 +2,7 @@
 import type {
   ResolvedTileRef,
   TilesetImage,
-  TilesetManager,
+  TilesetAtlases,
   TilesetTexture
 } from "@jolly-pixel/voxel.renderer";
 
@@ -82,15 +82,15 @@ export function readImagePixels(
 }
 
 export class TileOpacityProbe {
-  #tilesetManager: TilesetManager;
+  #atlases: TilesetAtlases;
   #reader: ImagePixelReader;
   #caches = new WeakMap<TilesetTexture, ProbeCache>();
 
   constructor(
-    tilesetManager: TilesetManager,
+    atlases: TilesetAtlases,
     reader: ImagePixelReader = readImagePixels
   ) {
-    this.#tilesetManager = tilesetManager;
+    this.#atlases = atlases;
     this.#reader = reader;
   }
 
@@ -102,7 +102,7 @@ export class TileOpacityProbe {
       return true;
     }
 
-    const atlas = this.#tilesetManager.get(ref.tilesetId);
+    const atlas = this.#atlases.get(ref.tilesetId);
     if (atlas === undefined) {
       return true;
     }

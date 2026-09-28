@@ -37,5 +37,5 @@ Its default layer mode is `"stacked"`; direct `TiledConverter` calls default to
 `"flat"`.
 
 Register `TiledMapAssetType` and the loader with the runtime asset system. The
-returned `blocks` and `tilesets` can be passed to `VoxelEngine`, and `world`
-to `VoxelEngine.load()`.
+returned `blocks` can be passed to `VoxelDocument`, `tilesets` to `VoxelView`,
+and `world` to `VoxelView.load()`.

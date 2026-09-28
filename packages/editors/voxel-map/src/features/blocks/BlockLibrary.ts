@@ -7,7 +7,7 @@ import {
 } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
-  type VoxelEngine,
+  type VoxelView,
   type ResolvedBlockDefinition,
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
@@ -127,7 +127,7 @@ export class BlockLibrary extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare brush: BrushStore;
@@ -340,7 +340,7 @@ export class BlockLibrary extends LitElement {
       danger: true
     });
     if (confirmed) {
-      removeBlockVoxels(this.engine.world, new Set(orphanBlocks));
+      removeBlockVoxels(this.engine.document.world, new Set(orphanBlocks));
     }
   }
 
@@ -402,7 +402,7 @@ export class BlockLibrary extends LitElement {
   #resolveSelection(): void {
     this._selectedId = this.brush.blockId;
     this.#refreshMarks();
-    const block = this.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
+    const block = this.engine.document.blocks.get(this._selectedId ?? 0) ?? null;
     if (block === this._selectedBlock) {
       return;
     }
@@ -419,7 +419,7 @@ export class BlockLibrary extends LitElement {
 
   #refreshBlocks(): void {
     this._blocks = [
-      ...this.engine.blockRegistry.getAll()
+      ...this.engine.document.blocks.getAll()
     ];
     this.#refreshShownBlocks();
   }

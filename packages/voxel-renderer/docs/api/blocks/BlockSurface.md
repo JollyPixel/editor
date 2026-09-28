@@ -36,8 +36,8 @@ The instance is frozen. Invalid modes, sides, non-finite cutoffs outside
 `[0, 1]`, or an empty or non-string material group throw `RangeError`. Cutoffs are validated even for modes that do not
 use them. `BlockRegistry.register()` validates the same settings.
 
-`VoxelEngineOptions.alphaTest` supplies the cutoff for mask blocks without an
-explicit `alphaCutoff`. Constructing `BlockSurface` directly uses `0.1`.
+`VoxelViewOptions.rendering.alphaTest` supplies the cutoff for mask blocks
+without an explicit `alphaCutoff`. Constructing `BlockSurface` directly uses `0.1`.
 Registry definitions retain optional settings; construct a surface when you
 need their resolved defaults.
 
@@ -49,7 +49,7 @@ A material group lets one atlas carry materials tuned apart. Declaring the
 group's finish in the document makes it travel with the map:
 
 ```ts
-const engine = new VoxelEngine({
+const document = new VoxelDocument({
   blocks: [
     { id: 1, name: "Sandstone", shapeId: "cube", defaultTexture },
     { id: 2, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
@@ -60,25 +60,26 @@ const engine = new VoxelEngine({
 });
 ```
 
-See [MaterialGroup](../materials/MaterialGroup.md). The `materialCustomizer`
+See [MaterialGroup](../materials/MaterialGroup.md). The `rendering.customizer`
 also receives the surface, so host code can still read the group:
 
 ```ts
-const engine = new VoxelEngine({
-  material: "standard",
-  materialCustomizer(material, _tilesetId, surface) {
-    if (
-      material instanceof THREE.MeshStandardMaterial &&
-      surface.materialGroup === "gold"
-    ) {
-      material.metalness = 1;
+const view = new VoxelView(document, {
+  rendering: {
+    material: "standard",
+    customizer(material, _tilesetId, surface) {
+      if (
+        material instanceof THREE.MeshStandardMaterial &&
+        surface.materialGroup === "gold"
+      ) {
+        material.metalness = 1;
+      }
     }
   }
 });
 ```
 
-Each group adds a draw call per chunk and greedy faces never merge across
-groups.
+Each group adds a draw call per chunk.
 
 The legacy block property `transparent` has been removed. Use
 `alphaMode: "blend"` for smooth transparency, or `alphaMode: "mask"` for

@@ -114,15 +114,27 @@ type VoxelWorldEvents = {
 
 Every mutating method below emits a [layer command](../core/commands.md#layer-commands)
 on `"command"`, so an editor or a network adapter can mirror local edits
-without wrapping the world. `VoxelEngine` forwards these as local commands. The exceptions are the `*At` write primitives
-(`setVoxelAt`, `setPackedVoxelAt`, `removeVoxelAt`), `setLayerVisible`,
-`setLayerOpacity`, `mergeAllLayers` and `clear`, which stay silent.
+without wrapping the world. [`VoxelDocument`](../core/VoxelDocument.md#events)
+forwards these as local commands. The exceptions are `restoreLayer`,
+`setLayerVisible`, `setLayerOpacity`, `mergeAllLayers`, `markAllDirty` and
+`clear`, which stay silent. Each emitting method builds its command and applies
+it through the same path as `apply()`.
 
 ### Methods
 
 #### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
 
 Creates a new layer on top of the stack, with the highest compositing priority.
+
+#### `restoreLayer(options: VoxelLayerRestoreOptions): VoxelLayer`
+
+Puts a layer on top of the stack with the given `id`, `name` and optional
+`position`, `visible`, `opacity`, `compositing` and `properties`, without
+emitting a command. Deserialization uses it.
+
+```ts
+type VoxelLayerRestoreOptions = Omit<VoxelLayerOptions, "chunkSize" | "order">;
+```
 
 #### `updateLayer(name: string, options: Partial<VoxelLayerConfigurableOptions>): boolean`
 
@@ -356,18 +368,6 @@ for (const { x, y, z, blockId } of voxelPatchCells(command.metadata.cells)) {
 }
 ```
 
-#### `setVoxelAt(layerName: string, position: THREE.Vector3Like, entry: VoxelEntry): void`
-
-#### `setPackedVoxelAt(layerName: string, position: THREE.Vector3Like, packed: PackedVoxel): void`
-
-Writes a voxel directly and marks the affected and neighbouring chunks of every layer dirty for face re-evaluation.
-Throws if the layer is not found. Emits nothing: prefer `setVoxel` unless you are
-loading data peers already have.
-
-#### `removeVoxelAt(layerName: string, position: THREE.Vector3Like): void`
-
-Removes a voxel without emitting. No-op if the layer is not found.
-
 #### `getAllChunks(): IterableIterator<IterableLayerChunk>`
 
 Iterates over every chunk across all layers.
@@ -387,6 +387,10 @@ interface IterableLayerChunk {
 
 Consumes chunks whose meshes must be removed because their layer disappeared or
 the chunk became empty. This is renderer-facing lifecycle plumbing.
+
+#### `markAllDirty(): void`
+
+Marks every chunk of every layer dirty for rebuild.
 
 #### `clear(): void`
 
@@ -418,8 +422,9 @@ Voxels of `blockId` across all layers; `0` when none.
 
 Replays a layer command onto this world without emitting it, so a network
 adapter cannot echo it back. Every action of the union is handled; an unknown
-one throws. On an engine, prefer `engine.apply()`, which emits it once with its
-origin.
+one throws. On a document, prefer
+[`document.apply()`](../core/VoxelDocument.md#methods), which emits it once with
+its origin.
 
 Returns the command the world would have emitted for the same local change, or
 `null` when nothing changed. A `layer-moved` index comes back clamped, a
@@ -429,46 +434,59 @@ they keep their place in the stream.
 
 A voxel command naming a layer this world no longer has is dropped rather than
 thrown, since a peer can still be painting a layer that was just merged or
-removed here. The optional `logger` receives a warning for each dropped command;
-without one the drop is silent. Local writes through `setVoxel` and
-`setPackedVoxelAt` still throw for an unknown layer, which stays a programming
-error.
+removed here, and `apply()` returns `null`. The optional `logger` receives a
+warning for each dropped command
+(`VoxelWorld: dropped '<action>' for unknown layer '<name>'.`); without one the
+drop is silent. Local writes that place a voxel, such as `setVoxel`, still
+throw for an unknown layer, which stays a programming error.
 
 #### `silently<T>(fn: () => T): T`
 
 Runs `fn` with the `"command"` event muted and returns its result. Use it for
-mutations peers already know about, such as deserializing a document. Nesting
-is safe.
+mutations peers already know about. Nesting is safe.
 
 ```ts
-world.silently(() => deserializeVoxelWorld(snapshot, world));
+world.silently(() => world.setVoxel("Ground", { position, blockId: 1 }));
 ```
+
+#### `unrecorded<T>(fn: () => T): T`
+
+Runs `fn` and returns its result; edits made inside are not handed to
+`recorder`. [`VoxelHistory`](../core/VoxelHistory.md) replays undo and redo
+through it.
 
 ### Object layer management
 
 Object layers hold placed objects (spawn points, trigger zones, etc.) rather than
 voxel data. They live in `world.objectLayers`, a `VoxelObjectLayers` keyed by
 name, and are serialised as part of `VoxelWorldJSON`. Every change emits a
-command on the world's `"command"` event.
+command on the world's `"command"` event, except `apply()` and `restore()`.
 
 ```ts
 class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
   readonly size: number;
   toArray(): VoxelObjectLayerJSON[];
   get(name: string): VoxelObjectLayerJSON | undefined;
-  add(name: string, options?: { visible?: boolean; order?: number; }): VoxelObjectLayerJSON;
+  add(name: string): VoxelObjectLayerJSON;
   remove(name: string): boolean;
   update(name: string, patch: { visible?: boolean; }): boolean;
   addObject(layerName: string, object: VoxelObjectJSON): boolean;
   removeObject(layerName: string, objectId: string): boolean;
   moveObject(fromLayerName: string, objectId: string, toLayerName: string): boolean;
   updateObject(layerName: string, objectId: string, patch: Partial<VoxelObjectJSON>): boolean;
+  apply(command: VoxelObjectLayerCommand): VoxelObjectLayerCommand | null;
+  restore(layers: Iterable<VoxelObjectLayerJSON>): void;
 }
 ```
 
-`add()` defaults `order` to the current object layer count and returns the new
-descriptor. `toArray()` lists the layers in insertion order. The other methods
-return `false` when a named layer or object is not found.
+`add()` creates a visible layer whose `order` is the current object layer count
+and returns the new descriptor. `toArray()` lists the layers in insertion order.
+The other methods return `false` when a named layer or object is not found.
+
+`apply()` applies an [object layer command](../core/commands.md#layer-commands)
+without dispatching it and returns it, or `null` when it changed nothing.
+`restore()` replaces every layer, copying each object list, and emits nothing;
+deserialization uses it.
 
 `moveObject()` keeps the same object instance and emits a single
 `"object-moved"` command. It also returns `false` when both names resolve to

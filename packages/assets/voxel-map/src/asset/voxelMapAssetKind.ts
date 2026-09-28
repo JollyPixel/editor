@@ -13,8 +13,8 @@ import {
   applyVoxelWorldCommand,
   DEFAULT_CHUNK_SIZE,
   deserializeVoxelWorld,
-  encodeVoxelDocument,
-  parseVoxelDocument,
+  encodeVoxelWorld,
+  parseVoxelWorld,
   serializeVoxelWorld,
   TilesetList,
   VoxelWorld,
@@ -75,7 +75,7 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
     switch (command.action) {
       case "world-replace":
         this.load(
-          parseVoxelDocument(command.data)
+          parseVoxelWorld(command.data)
         );
         break;
       default:
@@ -116,7 +116,7 @@ export function createVoxelMapDocument(
   }
   state.world.addLayer(layer);
 
-  return encodeVoxelDocument(state.toJSON());
+  return encodeVoxelWorld(state.toJSON());
 }
 
 export interface VoxelMapAssetKindOptions {
@@ -164,7 +164,7 @@ export function voxelMapAssetKind(
       state: VoxelMapState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeVoxelDocument(state.toJSON())
+        encodeVoxelWorld(state.toJSON())
       );
     },
 
@@ -259,7 +259,7 @@ function decodeVoxelMapDocument(
     );
   }
 
-  return parseVoxelDocument(result.val);
+  return parseVoxelWorld(result.val);
 }
 
 function landedAsSent(

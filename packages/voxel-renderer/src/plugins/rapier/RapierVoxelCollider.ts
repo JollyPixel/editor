@@ -2,20 +2,20 @@
 import type {
   VoxelCollider,
   VoxelChunkCollision
-} from "../../collision/VoxelCollider.ts";
-import type { BlockRegistry } from "../../blocks/BlockRegistry.ts";
-import type { BlockShape } from "../../blocks/shape/BlockShape.ts";
-import type { BlockShapeRegistry } from "../../blocks/shape/BlockShapeRegistry.ts";
-import type { VoxelChunk } from "../../world/VoxelChunk.ts";
+} from "../../view/collision/VoxelCollider.ts";
+import type { BlockRegistry } from "../../document/blocks/BlockRegistry.ts";
+import type { BlockShape } from "../../document/blocks/shape/BlockShape.ts";
+import type { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeRegistry.ts";
+import type { VoxelChunk } from "../../document/world/storage/VoxelChunk.ts";
 import {
   voxelBlockId,
   voxelTransform
-} from "../../world/packedVoxel.ts";
-import { VoxelTransform } from "../../world/VoxelTransform.ts";
+} from "../../document/world/storage/packedVoxel.ts";
+import { VoxelTransform } from "../../document/geometry/VoxelTransform.ts";
 import {
   mirrorsWinding,
   rotateVertex
-} from "../../mesh/variants/rotation.ts";
+} from "../../document/geometry/rotation.ts";
 
 /**
  * Structural Rapier3D subset that keeps the WASM module consumer-owned.

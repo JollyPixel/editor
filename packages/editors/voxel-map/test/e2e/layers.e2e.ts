@@ -28,7 +28,7 @@ interface LayerSummary {
 function voxelLayers(
   page: Page
 ): Promise<LayerSummary[]> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.world
     .getLayers()
     .map((layer) => {
       return {
@@ -42,7 +42,7 @@ function voxelLayers(
 function objectLayers(
   page: Page
 ): Promise<Array<{ name: string; objects: string[]; }>> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -55,7 +55,7 @@ function objectLayers(
 function objectVisibility(
   page: Page
 ): Promise<Array<{ name: string; visible: boolean; objects: boolean[]; }>> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -71,7 +71,7 @@ async function syncFence(
   peer: Page
 ): Promise<void> {
   await page.evaluate(
-    () => window.voxelMapEditor!.workspace.engine.world.addLayer("Fence")
+    () => window.voxelMapEditor!.workspace.engine.document.world.addLayer("Fence")
   );
   await expect.poll(async() => (await voxelLayers(peer))
     .some((layer) => layer.name === "Fence")).toBe(true);

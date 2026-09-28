@@ -12,7 +12,7 @@ import {
   state
 } from "lit/decorators.js";
 import type {
-  VoxelEngine,
+  VoxelView,
   VoxelTilesetUsage
 } from "@jolly-pixel/voxel.renderer";
 import type {
@@ -87,7 +87,7 @@ export class TilesetEditDialog extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelEngine;
+  declare engine: VoxelView;
 
   @property({ attribute: false })
   declare actions: TilesetActions | null;
@@ -276,7 +276,7 @@ export class TilesetEditDialog extends LitElement {
     }
 
     const offGrid = rescaleLeavesBlocksOffGrid(
-      this.engine.blockRegistry,
+      this.engine.document.blocks,
       {
         tilesetId: definition.id,
         from,

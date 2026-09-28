@@ -7,9 +7,9 @@ next to `blocks`, so it is saved, loaded and synced with the tileset; a world
 receives it projected under `"<tilesetId>/<groupId>"`.
 
 ```ts
-import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+import { VoxelDocument } from "@jolly-pixel/voxel.renderer";
 
-const engine = new VoxelEngine({
+const document = new VoxelDocument({
   blocks: [
     { id: 1, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
   ],
@@ -18,7 +18,7 @@ const engine = new VoxelEngine({
   ]
 });
 
-engine.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
+document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 ```
 
 ```ts
@@ -64,11 +64,11 @@ of bounds; `parse()` returns `null` instead. `with()` returns a new group.
 ## Rendering
 
 A block whose group is defined is drawn with a `MeshStandardMaterial` carrying
-the finish, even when the view's `material` is `"lambert"`. Blocks without a
+the finish, even when the view's `rendering.material` is `"lambert"`. Blocks without a
 group, or naming a group the document does not define, keep the view's
 material. `applyTo()` writes only the emissive fields on a Lambert material.
 
-The `materialCustomizer` runs after the finish is applied, so host code can
+The `rendering.customizer` runs after the finish is applied, so host code can
 still override it when a material is created. Editing a finish afterwards
 updates the existing materials in place, without the customizer. Defining or
 removing a group rebuilds every chunk.
@@ -78,7 +78,7 @@ metalness near `1` renders dark.
 
 ## MaterialGroupList
 
-`VoxelDocument.materialGroups` and `VoxelEngine.materialGroups` hold the
+`VoxelDocument.materialGroups` and `TilesetDocument.materialGroups` hold the
 groups of a document.
 
 ```ts
@@ -91,6 +91,7 @@ class MaterialGroupList implements Iterable<MaterialGroup> {
   has(groupId: string): boolean;
   get(groupId: string): MaterialGroup | undefined;
   define(group: MaterialGroup | MaterialGroupJSON): boolean;
+  apply(command: VoxelMaterialGroupCommand): VoxelMaterialGroupCommand | null;
   remove(groupId: string): boolean;
   replace(groups: Iterable<unknown>): void;
   clear(): void;
@@ -101,18 +102,12 @@ class MaterialGroupList implements Iterable<MaterialGroup> {
 `define()` returns `false` for an invalid group or one equal to the current
 definition. `replace()` and the constructor skip invalid entries and keep the
 first of duplicate IDs. Mutating the list directly emits no command; use
-`engine.defineMaterialGroup()` for an edit that should sync.
+`document.defineMaterialGroup()` for an edit that should sync.
 
 ## Commands
 
-```ts
-function applyMaterialGroupCommand(
-  groups: MaterialGroupList,
-  command: VoxelMaterialGroupCommand
-): VoxelMaterialGroupCommand | null;
-```
-
-Applies a `material-group-defined` or `material-group-removed`
-[command](../core/commands.md#material-group-commands) to a list. Returns the
+`apply()` applies a `material-group-defined` or `material-group-removed`
+[command](../core/commands.md#material-group-commands) to the list without
+emitting it. Returns the
 command as applied, a defined group with every field filled in, or `null` when
 the list did not change.

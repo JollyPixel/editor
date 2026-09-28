@@ -13,8 +13,8 @@ import {
   type AssetLiveProtocol
 } from "@jolly-pixel/asset-server";
 import {
-  decodeVoxelDocument,
-  encodeVoxelDocument,
+  decodeVoxelWorld,
+  encodeVoxelWorld,
   VOXEL_WORLD_COMMAND_ACTIONS,
   VOXEL_WORLD_VERSION
 } from "@jolly-pixel/voxel.renderer";
@@ -78,7 +78,7 @@ function event(
 function documentEvent(
   state: VoxelMapState
 ): EventStore.Event {
-  const data = encodeVoxelDocument(state.toJSON());
+  const data = encodeVoxelWorld(state.toJSON());
 
   return event(ASSET_CREATED, {
     path: "world.voxelmap.json",
@@ -150,18 +150,10 @@ describe("voxelMapAssetKind", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = new VoxelMapState(16);
     source.world.addLayer("Ground");
-    source.world.setVoxelAt(
-      "Ground",
-      {
-        x: 1,
-        y: 2,
-        z: 3
-      },
-      {
-        blockId: 7,
-        transform: 0
-      }
-    );
+    source.world.setVoxel("Ground", {
+      position: { x: 1, y: 2, z: 3 },
+      blockId: 7
+    });
     source.tilesets.add({
       id: "default",
       src: "textures/tileset.png",
@@ -324,18 +316,10 @@ describe("voxelMapAssetKind", () => {
   test("a document saved with another chunk size loads", async() => {
     const source = new VoxelMapState(32);
     source.world.addLayer("Ground");
-    source.world.setVoxelAt(
-      "Ground",
-      {
-        x: 20,
-        y: 0,
-        z: -3
-      },
-      {
-        blockId: 4,
-        transform: 0
-      }
-    );
+    source.world.setVoxel("Ground", {
+      position: { x: 20, y: 0, z: -3 },
+      blockId: 4
+    });
     const handler = voxelMapAssetKind();
     const state = handler.create("asset-1");
 
@@ -343,7 +327,7 @@ describe("voxelMapAssetKind", () => {
 
     assert.equal(state.world.chunkSize, 16);
     assert.equal(state.world.getVoxelAt({ x: 20, y: 0, z: -3 })?.blockId, 4);
-    const saved = decodeVoxelDocument(await handler.serialize(state));
+    const saved = decodeVoxelWorld(await handler.serialize(state));
     assert.equal(saved.chunkSize, 16);
     assert.deepEqual(Object.keys(saved.layers[0].voxels), ["20,0,-3"]);
   });
@@ -535,7 +519,7 @@ describe("voxelMapAssetKind — tilesets", () => {
       }
     }));
 
-    const document = decodeVoxelDocument(await handler.serialize(state));
+    const document = decodeVoxelWorld(await handler.serialize(state));
 
     assert.deepEqual(document.tilesets, [
       { id: "stone", slot: 0, asset: tilesetAsset("asset-stone") }

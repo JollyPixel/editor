@@ -1,9 +1,0 @@
-export * from "./BlockDefinition.ts";
-export * from "./BlockTextures.ts";
-export * from "./BlockSurface.ts";
-export * from "./blocksFromTileset.ts";
-export * from "./BlockId.ts";
-export * from "./BlockRegistry.ts";
-export { applyBlockCommand } from "./applyBlockCommand.ts";
-export * from "./face/index.ts";
-export * from "./shape/index.ts";

@@ -10,7 +10,7 @@ import {
   type MaterialGroup,
   type TilesetDefinition,
   type TilesetProjection as TilesetSlot,
-  type VoxelEngine
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
@@ -28,7 +28,7 @@ import type {
 } from "./TilesetSources.ts";
 
 export interface LinkedTilesetsOptions {
-  engine: VoxelEngine;
+  engine: VoxelView;
   store: TilesetStore;
   sources: TilesetSources;
   mapDocument: MapDocument;
@@ -70,7 +70,7 @@ interface Binding extends LinkedTileset {
 export class LinkedTilesets
   extends Emitter<LinkedTilesetsEvents>
   implements BlockWriter {
-  readonly #engine: VoxelEngine;
+  readonly #engine: VoxelView;
   readonly #store: TilesetStore;
   readonly #sources: TilesetSources;
   readonly #mapDocument: MapDocument;
@@ -196,7 +196,7 @@ export class LinkedTilesets
 
     let localIndex = 0;
     let index = 0;
-    for (const block of this.#engine.blockRegistry) {
+    for (const block of this.#engine.document.blocks) {
       if (block.id === blockId) {
         continue;
       }
@@ -311,7 +311,7 @@ export class LinkedTilesets
       slot: definition.slot
     };
     const projection = new TilesetProjection({
-      engine: this.#engine,
+      engine: this.#engine.document,
       tileset: opened.tileset,
       slot
     });

@@ -1,7 +1,8 @@
 # BlockRegistry
 
 `BlockRegistry` maps numeric block IDs to resolved block definitions.
-`VoxelEngine.blockRegistry` exposes the engine's registry.
+[`VoxelDocument.blocks`](../core/VoxelDocument.md#properties) exposes the
+document's registry.
 
 ## API
 
@@ -23,6 +24,10 @@ class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   ): this;
   unregister(id: number): boolean;
   clear(): void;
+  apply(
+    command: VoxelBlockCommand,
+    defaultTilesetId?: string | null
+  ): VoxelBlockCommand | null;
   moveTo(id: number, toIndex: number): boolean;
   indexOf(id: number): number;
   get(id: number): ResolvedBlockDefinition | undefined;
@@ -45,25 +50,12 @@ saved document or converter output embeds block definitions.
 recycled, so a removed ID cannot later name a different block while a peer
 still references it.
 
-## Ordering
-
-The registry keeps definitions in registration order, not ID order, and every
-traversal (, iteration, serialization) follows it. That order is what
-[](../serialization/serialization.md) writes to the
-document's  array and what  restores when a document is
-loaded, so a chosen order survives a save.
-
- on an ID already present keeps that block's position, so editing a
-definition never moves it.
-
- relocates a block to , clamping out-of-range values to the
-first or last position. It returns  for an unknown ID and for a move that
-would leave the order unchanged, and only bumps  when it returns
-. The order carries no rendering meaning: moving a block never
-invalidates compiled geometry.
-
- returns a block's current position, or  when it is unknown.
- is the number of registered definitions.
+`apply()` folds a [block command](../core/commands.md#block-commands) and
+returns it as applied, or `null` when nothing changed. A `block-defined` block
+is resolved and its tile references without `tilesetId` get
+`defaultTilesetId`; a `block-moved` comes back with the index the block landed
+on. [`applyVoxelCommand()`](../core/commands.md#applying-commands) routes block
+commands to it.
 
 ## Ordering
 
@@ -101,7 +93,7 @@ the registry and skips the resolution rules.
 `propertiesOf()` returns a fresh copy of a block's custom properties, which the
 caller owns and may mutate. It returns `undefined` for an unregistered ID, and
 an empty object for a block that has none. Use
-[`VoxelEngine.blockPropertiesAt()`](../core/VoxelEngine.md#blockpropertiesatposition-threevector3like-blockproperties--undefined)
+[`VoxelDocument.blockPropertiesAt()`](../core/VoxelDocument.md#methods)
 to look them up by world position instead of by ID.
 
 ## Creating blocks from a tileset
@@ -143,9 +135,9 @@ function blocksFromTileset(
 `collidable: false`; use `map` when the atlas represents solid terrain.
 
 ```ts
-const definition = engine.tilesetManager.atlas().def;
+const definition = view.atlases.atlas().def;
 
-engine.blockRegistry.registerMany(
+document.blocks.registerMany(
   blocksFromTileset(definition, {
     limit: 32,
     map: () => ({ collidable: true })

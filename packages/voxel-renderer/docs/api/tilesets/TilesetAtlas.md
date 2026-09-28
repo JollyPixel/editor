@@ -1,7 +1,7 @@
 # TilesetAtlas
 
 One registered atlas: its resolved grid and the texture chunk materials sample.
-Obtain it from [`TilesetManager.get()` or `atlas()`](./TilesetManager.md).
+Obtain it from [`TilesetAtlases.get()` or `atlas()`](./TilesetAtlases.md).
 
 ```ts
 class TilesetAtlas<TTexture extends THREE.Texture<AtlasSize> = TilesetTexture> {
@@ -37,7 +37,7 @@ function tileUvRegion(
 The constructor resolves `cols` and `rows` from the image with
 `resolveTilesetDefinition()`, then sets nearest-neighbour filtering, sRGB color
 space and no mipmaps on `texture`. The atlas does not own the texture:
-[`TilesetManager`](./TilesetManager.md) disposes it.
+[`TilesetAtlases`](./TilesetAtlases.md) disposes it.
 
 `resolveTilesetDefinition()` keeps explicit `cols` and `rows` and floors the
 partial tiles at the image edge out of the derived ones.
@@ -66,7 +66,7 @@ materials keep the same texture object. The new image must keep the
 dimensions the atlas was built with.
 
 ```ts
-const atlas = engine.tilesetManager.atlas();
+const atlas = view.atlases.atlas();
 
 atlas.updateImage(editor.textureCanvas());
 ```

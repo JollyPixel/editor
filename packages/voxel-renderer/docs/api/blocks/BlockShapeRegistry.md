@@ -1,7 +1,8 @@
 # BlockShapeRegistry
 
-`BlockShapeRegistry` maps shape IDs to implementations. `VoxelEngine` creates a
-registry containing all [built-in shapes](./built-in-shapes.md).
+`BlockShapeRegistry` maps shape IDs to implementations. Each
+[`VoxelView`](../core/VoxelView.md#properties) creates one, exposed as
+`view.shapes`, containing all [built-in shapes](./built-in-shapes.md).
 
 ## API
 

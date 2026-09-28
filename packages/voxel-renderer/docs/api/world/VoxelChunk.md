@@ -81,7 +81,7 @@ class VoxelChunk {
   readonly shift: number;
   readonly mask: number;
 
-  // set true on any write; cleared by VoxelEngine when the chunk is queued
+  // set true on any write; cleared by VoxelView when the chunk is queued
   // for rebuild, so an edit during the rebuild is not swallowed
   dirty: boolean;
 

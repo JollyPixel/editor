@@ -7,8 +7,8 @@ configured time budget, while `flush()` rebuilds it immediately.
 
 The view reads a [`VoxelDocument`](../api/core/VoxelDocument.md) and subscribes
 to it; the document holds the voxels and knows nothing about meshes.
-[`VoxelEngine`](../api/core/VoxelEngine.md) composes the pair for applications
-that want a single object.
+Inside the JollyPixel engine,
+[`VoxelRenderer`](../api/engine/VoxelRenderer.md) builds and drives the pair.
 
 See the [`VoxelView` reference](../api/core/VoxelView.md) for lifecycle methods
 and configuration.
@@ -19,8 +19,7 @@ Layers composite into shared meshes. Every visible layer at opacity `1`
 whose position is a multiple of the chunk size draws into one set of meshes
 per chunk cell, so stacking layers does not multiply chunks, geometries, or
 draw calls. Faces are still culled and composited per layer, as described in
-the [world model](./world-model.md#layer-compositing), and greedy merging
-stays within a layer.
+the [world model](./world-model.md#layer-compositing).
 
 A layer drawn with opacity below `1`, or moved off the chunk grid, keeps a set
 of meshes per layer chunk. Changing its opacity or position moves its voxels
@@ -35,27 +34,10 @@ surface: alpha mode, sides, mask cutoff and material group. Plain opaque/front
 geometry is named after the tileset ID; other surfaces append a `:surface=`
 suffix. Tileset IDs must not contain `:surface=`.
 
-The non-greedy layout uses 28 bytes per vertex:
-
-| Attribute | Type | Items | Bytes | Notes |
-|---|---|---:|---:|---|
-| `position` | `float32` | 3 | 12 | Relative to the chunk origin |
-| `normal` | normalized `int8` | 4 | 4 | Fourth byte holds [ambient occlusion](#ambient-occlusion), 1 when lit |
-| `uv` | normalized `uint16` | 2 | 4 | Atlas coordinates |
-| `tileRegion` | normalized `uint16` | 4 | 8 | Atlas offset and scale |
-
-Every face is stored as a quad: triangles repeat their last vertex, and all
-chunk geometries share CPU quad-index storage. Each geometry owns a separate
-index attribute limited to its used indices, so Three.js can release its GPU
-buffer independently when the geometry is disposed.
-Vertices are not shared between faces, so a cube has 24 vertices. `position`
-remains `float32` because raycasting and `mergeChunkGeometries()` read it
-directly. Once a chunk has rendered, its `tileRegion` and `tileRepeat` arrays
-are released from JavaScript memory unless `retainVertexData` is set. Layer
-opacity is stored on materials. The material cache distinguishes exact
-opacity values and resolved surface policies.
-
-[Vertex pulling](#vertex-pulling) replaces this layout with 8 bytes per face.
+Every face is one 8-byte record that the vertex shader expands into a quad (see
+[vertex pulling](#vertex-pulling)); triangles repeat their last corner. Layer
+opacity is stored on materials. The material cache distinguishes exact opacity
+values and resolved surface policies.
 
 Opaque and masked geometry write depth at layer opacity `1`. Blended blocks
 and faded layers use blending without depth writes. Mask coverage is tested
@@ -81,7 +63,7 @@ the retained face wins the depth test.
 
 ## Rebuild scheduling
 
-`tick()` spends at most `rebuildBudgetMs` on dirty chunks during one frame.
+`tick()` spends at most `meshing.budgetMs` on dirty chunks during one frame.
 The default is 8 ms. A value of `0` rebuilds the entire queue. `focus`
 prioritizes chunks near a camera or other point of interest; without it the
 queue follows the order chunks were created in, which usually means the far
@@ -90,146 +72,41 @@ side of the world is meshed first.
 `init()` and `load()` rebuild the complete world synchronously. Use `flush()`
 when callers need current meshes before continuing.
 
-With [`meshWorkers`](../api/core/VoxelEngine.md#mesh-workers), the queue feeds
-Web Workers instead. A job carries the chunk and its 26 neighbours in every
-visible layer as `SharedArrayBuffer` views of their `VoxelStore`, so nothing is
-copied in; the worker runs the same mesher and transfers the typed arrays back.
-The main thread only builds the Three.js objects. A job records the revision of
-every chunk it read: if one changed before the result is installed, the result
-is dropped and the chunk meshed again, which also covers a worker reading a
-store mid-write. Vertex pulling works in workers; each worker numbers its own
-face templates and the main thread maps them into the shared table.
+With [`meshing.workers`](../api/core/VoxelView.md#mesh-workers), the queue
+feeds Web Workers instead. A job carries the chunk and its 26 neighbours in
+every visible layer as `SharedArrayBuffer` views of their `VoxelStore`, so
+nothing is copied in; the worker runs the same mesher and transfers the face
+records back. The main thread only builds the Three.js objects. A job records
+the revision of every chunk it read: if one changed before the result is
+installed, the result is dropped and the chunk meshed again, which also covers
+a worker reading a store mid-write. Each worker numbers its own face templates
+and the main thread maps them into the shared table.
 
 ## View distance
 
-`viewDistance` bounds the work to a chunk radius around `focus`. It is
+`range.viewDistance` bounds the work to a chunk radius around `focus`. It is
 unlimited by default, and the whole mechanism is inert while `focus` is
 `null`.
 
 Chunks outside the radius are never meshed, and stay dirty so they are built
 with all their pending edits the moment they come into range. Built chunks
-that leave the radius are hidden (`viewDistancePolicy: "hide"`, the default)
-or disposed and remeshed on return (`"unload"`). A one-chunk hysteresis keeps
-a chunk on the border from flipping every tick.
+that leave the radius are hidden (`range.policy: "hide"`, the default) or
+disposed and remeshed on return (`"unload"`). A one-chunk hysteresis keeps a
+chunk on the border from flipping every tick.
 
 Colliders are not affected: a chunk unloaded by the view distance keeps its
 collision, so physics is independent of the camera. Frustum culling still
 applies on top, and it is what removes the chunks behind the camera; view
 distance is about how much is meshed and drawn at all.
 
-## Greedy meshing
-
-With `greedy: true`, adjacent faces that look identical are merged into the
-largest available rectangle, whatever block or transform they come from.
-Merging stays inside one chunk and applies to full, flat faces such as cubes
-and slabs. Slopes and poles remain separate. Double-sided faces merge where
-they open onto air; against a neighbour they may need polygon splitting.
-
-Greedy mode uses 36 bytes per vertex:
-
-| Attribute | Type | Items | Bytes | Notes |
-|---|---|---:|---:|---|
-| `uv` | `float32` | 2 | 8 | Tile space (`0..span`) |
-| `tileRegion` | normalized `uint16` | 4 | 8 | Atlas offset and scale |
-| `tileRepeat` | normalized `uint16` | 2 | 4 | Repeat count per axis, rescaled by 65535 in the shader |
-
-The extra attributes let the shader repeat one atlas tile across a merged face.
-A `materialCustomizer` that replaces `onBeforeCompile` or remaps texture UVs
-conflicts with this shader modification.
-
-Greedy meshing allocates a scratch grid proportional to `chunkSize³`. Large
-chunks increase that cost. With ambient occlusion enabled, faces only merge
-when their corner shading matches.
-
-```ts
-const engine = new VoxelEngine({
-  chunkSize: 32,
-  greedy: true
-});
-
-// Changing the mode rebuilds every chunk and replaces the materials.
-engine.greedy = false;
-```
-
-### Tile wrapping for custom materials
-
-```ts
-type TileWrappedMaterial =
-  | THREE.MeshLambertMaterial
-  | THREE.MeshStandardMaterial;
-
-interface TileShadingOptions {
-  surface?: BlockSurface;
-  aoStrength?: UniformNode<number>;
-  averages?: THREE.Texture | null; // AtlasAverages.texture of the map
-  flat?: boolean;                  // every face draws its tile average
-  alphaToCoverage?: boolean;       // mask surfaces write coverage as alpha
-}
-
-function enableTileWrapping(
-  material: TileWrappedMaterial,
-  options?: TileShadingOptions
-): void;
-```
-
-The material must already have a `map`. The function does nothing when the map
-is missing. It installs a Three.js TSL color node that reads the `tileRegion`
-and `tileRepeat` geometry attributes emitted by greedy meshing.
-
-The shader samples mip level 0 because UV wrapping introduces derivative
-discontinuities at each repeat. Calling code should not replace the material's
-`onBeforeCompile` or remap its texture UVs after enabling wrapping.
-
-Applications normally use this indirectly through `VoxelEngine({ greedy: true })`.
-The export is available for compatible custom material setup.
-
-### Tile clamping
-
-```ts
-function enableTileClamping(
-  material: TileWrappedMaterial,
-  options?: TileShadingOptions
-): void;
-```
-
-Chunk materials outside greedy mode get `enableTileClamping()` instead. It
-confines each face's samples to the `tileRegion` attribute's rect, so an MSAA
-sample taken outside the triangle cannot read a neighbouring tile. It also lets a face
-reference a rect at a fractional tile offset.
-
-The optional `surface` applies alpha-mode and mask-cutoff behavior to the
-shader. The optional `aoStrength`, a TSL `uniform()`, multiplies the color by
-the baked ambient occlusion. The optional `averages`, an
-`AtlasAverages.texture`, turns on [distant tile](#distant-tiles) filtering,
-and `flat` draws the tile average on every face. The engine supplies them
-when creating chunk materials.
-
-Both helpers give the shadow pass its own color graph. Opaque surfaces cast
-with a constant color, mask surfaces discard on the raw atlas texel alpha, and
-neither reads the distant tile filter or ambient occlusion. A
-`materialCustomizer` that replaces `colorNode` also replaces what the shadow
-pass evaluates.
-
 ## Vertex pulling
 
-With `vertexPulling: true`, and greedy meshing off, a chunk geometry stores one
-8-byte record per face instead of four 28-byte vertices and six 4-byte indices.
-The vertex shader rebuilds each corner from that record and a shared table of
-face templates.
+A chunk geometry stores one 8-byte record per face. The vertex shader rebuilds
+each corner from that record and a shared table of face templates.
 
-```ts
-const engine = new VoxelEngine({
-  vertexPulling: true
-});
-
-// Changing the mode rebuilds every chunk and replaces the materials.
-engine.vertexPulling = false;
-```
-
-A pulled chunk geometry draws one instance of an indexed four-corner quad per
-face. The face
-records sit in an `RG32UI` data texture owned by the geometry, at most 2048
-texels wide, and the shader reads them by instance index:
+A chunk geometry draws one instance of an indexed four-corner quad per face.
+The face records sit in an `RG32UI` data texture owned by the geometry, at most
+2048 texels wide, and the shader reads them by instance index:
 
 | Channel | Bits | Content |
 |---|---|---|
@@ -241,64 +118,72 @@ texels wide, and the shader reads them by instance index:
 A face template holds what every copy of a compiled face shares: up to four
 block-local corners with their atlas coordinates, the atlas rect, the normal
 and the ambient occlusion axes. Templates take 8 `RGBA32F` texels (128 bytes)
-each, in one texture shared by full-detail and coarse chunks. Faces with the
-same content share a template whatever block they come from, including the
+each, in one texture shared by every chunk of the view. Faces with the same
+content share a template whatever block they come from, including the
 triangles cut from partially covered boundary faces. The table only grows: an
 edit that changes a face's content, such as a tileset resize, adds templates,
 and the table is released with the view.
 
 A `bench/mesh-compare.bench.ts` run on 266k voxels (256² terrain, chunk size
-256) meshed 372k faces:
-
-| Mode | Build (min) | Vertex and index data |
-|---|---:|---:|
-| naive | 145 ms | 48.2 MB |
-| greedy | 226 ms | 28.3 MB |
-| pulled | 141 ms | 2.8 MB |
-
-Build time stays at the naive cost, since meshing is dominated by neighbour
-lookups rather than vertex writes. GPU frame time was not measured.
+256) meshed 372k faces in 141 ms (min) into 2.8 MB of face records. The
+per-vertex attribute layout it replaced took 48.2 MB for the same faces, at
+about the same build time: meshing is dominated by neighbour lookups rather
+than vertex writes. GPU frame time was not measured.
 
 At runtime, the inspector's `meshMemory` metric reports the same figure for
-the live chunks. Three.js files pulled faces under texture memory rather than
-geometry memory, so the renderer's `geometryMemory` alone overstates the
-saving.
+the live chunks. Three.js files the face records under texture memory rather
+than geometry memory, so the renderer's `geometryMemory` alone understates the
+cost.
 
-The rest of the engine keeps working on pulled chunks:
+The rest of the package works on the face records:
 
-- Raycasts decode the faces on the CPU and return the same hits as a classic
-  chunk mesh, without `uv`.
+- Raycasts decode the faces on the CPU. Hits carry no `uv`.
 - Colliders receive indexed `position` geometry expanded from the face records,
   relative to the chunk origin.
 - The inspector wireframe draws an expanded copy, disposed with the overlay.
 - Transparency passes reuse the material's `positionNode`. The shadow pass
   uses `castShadowPositionNode`, which computes the position only.
 
-Limits:
+Chunk geometry has no `uv` or `tileRegion` attribute. Its four-vertex
+`position` attribute holds corner indices, drawn through a six-entry index,
+and its `normal` attribute is zero-filled. A `rendering.customizer` that reads
+geometry attributes, or replaces `positionNode`, breaks the layout.
 
-- Greedy meshing takes precedence: `vertexPulling` has no effect while `greedy`
-  is on.
-- Pulled geometry has no `uv` or `tileRegion` attribute. Its four-vertex
-  `position` attribute holds corner indices, drawn through a six-entry index,
-  and its `normal` attribute is zero-filled. A `materialCustomizer` that reads geometry attributes, or
-  replaces `positionNode`, breaks the pulled layout.
+### Tile shading
+
+Every chunk material gets a TSL color node that confines each face's samples
+to its atlas rect, so an MSAA sample taken outside the triangle cannot read a
+neighbouring tile. It also lets a face reference a rect at a fractional tile
+offset. The node applies the surface's alpha mode and mask cutoff, multiplies
+the color by the baked [ambient occlusion](#ambient-occlusion), and filters
+[distant tiles](#distant-tiles).
+
+The shadow pass gets its own color graph. Opaque surfaces cast with a constant
+color, mask surfaces discard on the raw atlas texel alpha, and neither reads
+the distant tile filter or ambient occlusion. A `rendering.customizer` that
+replaces `colorNode` also replaces what the shadow pass evaluates.
 
 ## Distant tiles
 
-Atlases are sampled with nearest filtering at mip level 0, with no mipmaps: a
-wrapped greedy UV jumps at every repeat, and mips would blend neighbouring
-tiles. Once a screen pixel covers several texels, nearest sampling picks one of
-them almost at random, so far terrain shimmers and shows moire as the camera
-moves.
+Atlases are sampled with nearest filtering at mip level 0, with no mipmaps:
+mips would blend neighbouring tiles. Once a screen pixel covers several
+texels, nearest sampling picks one of them almost at random, so far terrain
+shimmers and shows moire as the camera moves.
 
-With `tileMinification: "average"` (the default), chunk materials box-filter
-the texels each pixel covers instead. The footprint comes from the screen
-derivatives of the texel coordinate, so a face seen at a grazing angle averages
-a long thin rect rather than a square, and the rect is clamped to the face's
-atlas rect so no neighbouring tile leaks in. A pixel covering less than one
-texel keeps the level 0 sample, and the filter fades in between one and two
-texels. Rects at fractional offsets, spans and rotations all work, because the
-average comes from a summed-area table rather than per-tile storage.
+With `rendering.tileMinification: "average"` (the default), chunk materials
+box-filter the texels around each pixel instead. The box spans two pixel
+footprints, about the support of trilinear mipmapping: a one-pixel box still
+turns tile borders into lines and flickers under TRAA jitter. The footprint
+comes from the screen derivatives of the texel coordinate, so a face seen at a grazing angle
+averages a long thin rect rather than a square, and the rect is clamped to the
+face's atlas rect so no neighbouring tile leaks in. A pixel covering less than
+one texel keeps the level 0 sample, and the filter fades in between one and
+two texels. Rects at fractional offsets, spans and rotations all work, because
+the average comes from a summed-area table rather than per-tile storage.
+
+Baked ambient occlusion is filtered the same way. As the box grows to cover a
+face, the per-vertex shading fades to the face's mean corner level, so the
+darkened creases of a distant staircase do not alias into lines.
 
 ```ts
 class AtlasAverages {
@@ -326,60 +211,53 @@ side.
 RGB is averaged in linear space and weighted by alpha, so transparent texels
 do not darken the colour. Cutout (`"mask"`) surfaces test the filtered
 coverage against their cutoff, so distant foliage fills in rather than
-sparkling. With `alphaToCoverage` the coverage also becomes MSAA sample
-coverage, which softens the edges; it needs a multisampled target and an
-opaque canvas, because the coverage is written as alpha.
+sparkling. With `rendering.alphaToCoverage` the coverage also becomes MSAA
+sample coverage, which softens the edges; it needs a multisampled target and
+an opaque canvas, because the coverage is written as alpha.
 
 `refresh()` rebuilds the table when the source texture's `version` moved,
 which `TilesetAtlas.updateImage()` does. `VoxelView.tick()` refreshes every
-atlas through `TilesetManager.refreshAverages()`.
+atlas through `TilesetAtlases.refreshAverages()`.
 
-## Detail distances
+## Far distance
 
-Two distances, measured in world units from `focus` to a chunk centre, trade
-detail for stability far away. Both default to `Infinity`.
+`range.farDistance`, measured in chunks from `focus` to a chunk centre, trades
+detail for stability far away. It defaults to `Infinity`.
 
 ```ts
-const engine = new VoxelEngine({
-  farDistance: 14 * chunkSize,
-  lodDistance: 20 * chunkSize
+const view = new VoxelView(document, {
+  range: {
+    farDistance: 14
+  }
 });
 
-engine.farDistance = Infinity; // back to full detail on the next tick
+view.range.farDistance = Infinity; // back to full detail on the next tick
 ```
 
-Beyond `farDistance` a chunk draws every face in the flat average colour of
-its tile, and its blend blocks turn opaque, since a whole tile covers a pixel
-or two by then and its transparency cannot be seen. Only materials change: the
-chunk is not remeshed, and each material variant is shared by every far chunk.
+Beyond it a chunk draws every face in the flat average colour of its tile,
+shaded by its mean ambient occlusion, and
+its blend blocks turn opaque, since a whole tile covers a pixel or two by then
+and its transparency cannot be seen. Only materials change: the chunk is not
+remeshed, and each material variant is shared by every far chunk.
 
-Beyond `lodDistance` a chunk is remeshed from a copy of the world at half
-resolution (`DownsampledWorld`): each 2x2x2 cell becomes one block of its
-most frequent kind, drawn twice as large, so a distant slope stops being a
-staircase of sub-pixel faces. The copy is resampled per chunk when the source
-chunk's revision moved, including the neighbouring chunks so boundary faces
-still cull. A coarse block covers every voxel of its cell, so it can stand up
-to one voxel proud of a full-resolution neighbour; a coarse chunk therefore
-keeps its boundary faces toward such neighbours and is remeshed when one of
-them returns to full resolution. Colliders keep the full-resolution geometry
-built before the chunk went far and are refreshed once it comes back.
-
-A chunk keeps its reduced detail until it comes half a chunk closer than the
-threshold, so a chunk sitting on the border does not flip every tick.
+A chunk stays far until it comes half a chunk closer than the threshold, so a
+chunk sitting on the border does not flip every tick.
 
 ## Ambient occlusion
 
-`ambientOcclusion` bakes contact shading into chunk vertices, so creases
-between blocks darken without a post-processing pass. It is a strength from
-`0` (off, the default) to `1`, where a fully enclosed corner turns black.
+`lighting.ambientOcclusion` bakes contact shading into the face records, so
+creases between blocks darken without a post-processing pass. It is a strength
+from `0` (off, the default) to `1`, where a fully enclosed corner turns black.
 
 ```ts
-const engine = new VoxelEngine({
-  ambientOcclusion: 0.5
+const view = new VoxelView(document, {
+  lighting: {
+    ambientOcclusion: 0.5
+  }
 });
 
 // Switching on or off rebuilds every chunk; other changes only update a uniform.
-engine.ambientOcclusion = 0.8;
+view.lighting.ambientOcclusion = 0.8;
 ```
 
 Each face corner looks at the three cells around it in the layer in front of
@@ -394,10 +272,8 @@ the shading stays symmetric.
 - Only faces on the voxel boundary receive occlusion. Ramp slopes and the inner
   step of a stair stay lit, since their crease lies inside a single cell.
 - The shading multiplies the albedo, so it darkens direct and indirect light
-  alike. A `materialCustomizer` that replaces `colorNode` drops it.
+  alike. A `rendering.customizer` that replaces `colorNode` drops it.
 
-Baking roughly doubles chunk build time; a
-`bench/mesh-compare.bench.ts` run on 190k voxels took 124 ms instead of 64 ms.
-Greedy meshing merges fewer faces (310k triangles instead of 168k in that
-run). An edit on a chunk edge or corner also rebuilds the diagonal chunks
-that sample it.
+Baking roughly doubles chunk build time; a `bench/mesh-compare.bench.ts` run
+on 190k voxels took 124 ms instead of 64 ms. An edit on a chunk edge or corner
+also rebuilds the diagonal chunks that sample it.

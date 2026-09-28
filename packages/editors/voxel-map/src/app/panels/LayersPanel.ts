@@ -94,7 +94,7 @@ export class LayersPanel extends LitElement {
 
   get #canMergeVoxelLayer(): boolean {
     return this.#canEditVoxelLayer &&
-      this.#workspace.attached.engine.world.getLayers().length > 1;
+      this.#workspace.attached.engine.document.world.getLayers().length > 1;
   }
 
   override render() {
@@ -152,7 +152,7 @@ export class LayersPanel extends LitElement {
         ></jolly-button>
 
         <layer-manager
-          .world=${workspace.engine.world}
+          .world=${workspace.engine.document.world}
           .selection=${workspace.state.selection}
           .mapDocument=${workspace.mapDocument}
           .presence=${workspace.state.presence}
@@ -176,14 +176,14 @@ export class LayersPanel extends LitElement {
     switch (selection.kind) {
       case "voxel-layer":
         return html`<layer-panel
-          .world=${workspace.engine.world}
+          .world=${workspace.engine.document.world}
           .selection=${workspace.state.selection}
           .mapDocument=${workspace.mapDocument}
           .layerName=${selection.name}
         ></layer-panel>`;
       case "object":
         return html`<object-panel
-          .world=${workspace.engine.world}
+          .world=${workspace.engine.document.world}
           .mapDocument=${workspace.mapDocument}
           .layerName=${selection.layerName}
           .objectId=${selection.objectId}

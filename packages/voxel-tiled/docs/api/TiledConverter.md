@@ -8,8 +8,8 @@ blocks its tiles were turned into.
 - Group layers are flattened recursively.
 
 Generated block definitions come back beside the world, one per unique tile;
-pass them to `VoxelEngineOptions.blocks` or `defineBlocks()` before
-`VoxelEngine.load()`.
+pass them to `VoxelDocumentOptions.blocks` or `VoxelDocument.defineBlocks()`
+before `VoxelView.load()`.
 
 ## API
 
