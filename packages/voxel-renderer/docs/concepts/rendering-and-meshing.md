@@ -171,13 +171,19 @@ texels, nearest sampling picks one of them almost at random, so far terrain
 shimmers and shows moire as the camera moves.
 
 With `rendering.tileMinification: "average"` (the default), chunk materials
-box-filter the texels each pixel covers instead. The footprint comes from the
-screen derivatives of the texel coordinate, so a face seen at a grazing angle
+box-filter the texels around each pixel instead. The box spans two pixel
+footprints, about the support of trilinear mipmapping: a one-pixel box still
+turns tile borders into lines and flickers under TRAA jitter. The footprint
+comes from the screen derivatives of the texel coordinate, so a face seen at a grazing angle
 averages a long thin rect rather than a square, and the rect is clamped to the
 face's atlas rect so no neighbouring tile leaks in. A pixel covering less than
 one texel keeps the level 0 sample, and the filter fades in between one and
 two texels. Rects at fractional offsets, spans and rotations all work, because
 the average comes from a summed-area table rather than per-tile storage.
+
+Baked ambient occlusion is filtered the same way. As the box grows to cover a
+face, the per-vertex shading fades to the face's mean corner level, so the
+darkened creases of a distant staircase do not alias into lines.
 
 ```ts
 class AtlasAverages {
@@ -228,7 +234,8 @@ const engine = new VoxelEngine({
 engine.range.farDistance = Infinity; // back to full detail on the next tick
 ```
 
-Beyond it a chunk draws every face in the flat average colour of its tile, and
+Beyond it a chunk draws every face in the flat average colour of its tile,
+shaded by its mean ambient occlusion, and
 its blend blocks turn opaque, since a whole tile covers a pixel or two by then
 and its transparency cannot be seen. Only materials change: the chunk is not
 remeshed, and each material variant is shared by every far chunk.

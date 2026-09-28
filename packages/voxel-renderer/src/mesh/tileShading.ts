@@ -31,6 +31,7 @@ import {
 
 // CONSTANTS
 const kMinimumWeight = 1e-6;
+const kFootprintScale = 2;
 
 export type TileShadedMaterial =
   | THREE.MeshLambertMaterial
@@ -46,6 +47,7 @@ export interface TileInputs {
   region: Vec4Node;
   vertexRegion: Vec4Node;
   brightness: FloatNode;
+  faceBrightness: FloatNode;
 }
 
 export interface TileShadingOptions {
@@ -117,10 +119,21 @@ function applyTileColor(
   } = options;
   const { map } = material;
   let diffuse = sample.sampled;
-  if (averages && map) {
-    diffuse = flat ?
-      varying(regionAverage(map, averages, inputs.vertexRegion)) :
-      footprintAverage(map, averages, sample, inputs.vertexRegion);
+  let brightness = inputs.brightness;
+  if (averages && map && flat) {
+    diffuse = varying(regionAverage(map, averages, inputs.vertexRegion));
+    brightness = inputs.faceBrightness;
+  }
+  else if (averages && map) {
+    const footprint = abs(dFdx(sample.texel)).add(abs(dFdy(sample.texel)));
+    diffuse = footprintAverage(
+      map,
+      averages,
+      sample,
+      inputs.vertexRegion,
+      footprint
+    );
+    brightness = minifiedBrightness(map, inputs, footprint);
   }
   const alphaMode = surface?.alphaMode ?? "opaque";
   const keepsAlpha = (alphaMode === "blend" && !flat) ||
@@ -130,7 +143,7 @@ function applyTileColor(
    * `materialColor` re-samples the atlas at raw UVs; read material.color directly.
    * Opacity is omitted: setupDiffuseColor() applies it after this node.
    */
-  const tint = shadedTint(material, inputs.brightness, aoStrength);
+  const tint = shadedTint(material, brightness, aoStrength);
 
   /*
    * The WebGPU build aliases the classic material names onto their node
@@ -169,18 +182,23 @@ function casterColor(
   })();
 }
 
+/**
+ * Box-filters the face rect over `kFootprintScale` pixel footprints. A
+ * one-pixel box still aliases tile borders and TRAA jitter; two pixels
+ * matches the support of trilinear mipmapping.
+ */
 function footprintAverage(
   map: THREE.Texture,
   averages: THREE.Texture,
   sample: TileSample,
-  tileRegion: Vec4Node
+  tileRegion: Vec4Node,
+  footprint: Vec2Node
 ): Vec4Node {
   const size = atlasSize(map);
   const start = varying(regionStart(tileRegion, size));
   const end = varying(regionStart(tileRegion, size).add(regionTexels(map, tileRegion)));
 
-  const footprint = abs(dFdx(sample.texel)).add(abs(dFdy(sample.texel)));
-  const half = max(footprint, float(1)).mul(0.5);
+  const half = max(footprint.mul(kFootprintScale), float(1)).mul(0.5);
   const low = clamp(sample.position.sub(half), start, end);
   const high = clamp(sample.position.add(half), start, end);
 
@@ -204,6 +222,28 @@ function footprintAverage(
   );
 
   return lerp(sample.sampled, average, weight);
+}
+
+/**
+ * Fades per-vertex AO to its face average by the share of the face the
+ * filter box spans, so corner gradients do not alias into lines once a
+ * face covers a few pixels.
+ */
+function minifiedBrightness(
+  map: THREE.Texture,
+  inputs: TileInputs,
+  footprint: Vec2Node
+): FloatNode {
+  const faces = footprint.div(varying(regionTexels(map, inputs.vertexRegion)));
+  const weight = clamp(
+    max(faces.x, faces.y).mul(kFootprintScale),
+    float(0),
+    float(1)
+  );
+
+  return inputs.brightness.add(
+    inputs.faceBrightness.sub(inputs.brightness).mul(weight)
+  );
 }
 
 function tableAt(

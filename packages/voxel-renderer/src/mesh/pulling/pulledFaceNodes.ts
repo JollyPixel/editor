@@ -69,6 +69,7 @@ export interface PulledFaceNodes {
   uv: Node<"vec2">;
   region: Vec4Node;
   brightness: FloatNode;
+  faceBrightness: FloatNode;
 }
 
 class ChunkFaceNode extends TextureNode {
@@ -150,7 +151,8 @@ export function pulledFaceNodes(
     normal: normal.xyz,
     uv: vec2(vertex.w, vs.dot(cornerMask)),
     region: texel(int(kRegionTexel)),
-    brightness: shade(ao, local, int(normal.w))
+    brightness: shade(ao, local, int(normal.w)),
+    faceBrightness: faceShade(ao)
   };
 }
 
@@ -173,7 +175,8 @@ export function enableVertexPulling(
     uv: varying(nodes.uv),
     region: varying(nodes.region),
     vertexRegion: nodes.region,
-    brightness: varying(nodes.brightness)
+    brightness: varying(nodes.brightness),
+    faceBrightness: varying(nodes.faceBrightness)
   };
 }
 
@@ -206,7 +209,27 @@ function shade(
     .add(iu.mul(v).mul(c01))
     .add(u.mul(v).mul(c11));
 
-  return floor(mixed.mul(kShadeMax / kAoMaxLevel).add(0.5)).div(kShadeMax);
+  return quantizeShade(mixed);
+}
+
+/**
+ * Mean of the four corner levels, the value `shade` averages to over the face.
+ */
+function faceShade(
+  ao: Node<"uint">
+): FloatNode {
+  const sum = level(ao, 0)
+    .add(level(ao, 1))
+    .add(level(ao, 2))
+    .add(level(ao, 3));
+
+  return quantizeShade(sum.mul(0.25));
+}
+
+function quantizeShade(
+  value: FloatNode
+): FloatNode {
+  return floor(value.mul(kShadeMax / kAoMaxLevel).add(0.5)).div(kShadeMax);
 }
 
 function level(

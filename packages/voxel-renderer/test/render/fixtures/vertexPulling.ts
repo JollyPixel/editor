@@ -42,6 +42,7 @@ export type ParityChannel =
   | "uv"
   | "normal"
   | "shade"
+  | "faceShade"
   | "lit"
   | "velocity";
 
@@ -89,11 +90,19 @@ function probeMaterial(
     new THREE.MeshLambertNodeMaterial() :
     new THREE.MeshBasicNodeMaterial();
   const inputs = pulled === null ?
-    { uv: uv(), brightness: attribute<"vec4">("normal", "vec4").w } :
+    {
+      uv: uv(),
+      brightness: attribute<"vec4">("normal", "vec4").w,
+      faceBrightness: attribute<"float">("faceShade", "float")
+    } :
     enableVertexPulling(material, pulled.templates);
 
   if (channel === "uv") {
     material.colorNode = vec4(inputs.uv, float(0), float(1));
+  }
+  else if (channel === "faceShade") {
+    const shade = inputs.faceBrightness;
+    material.colorNode = vec4(shade, shade, shade, float(1));
   }
   else if (channel === "normal") {
     material.colorNode = vec4(normalWorld.mul(0.5).add(0.5), float(1));

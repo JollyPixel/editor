@@ -26,6 +26,9 @@ const kRegionTexel = 5;
 const kNormalTexel = 6;
 const kUnorm16 = 65535;
 const kSnorm8 = 127;
+const kAoLevelBits = 2;
+const kAoLevelMask = 0b11;
+const kAoMaxLevel = 3;
 const kQuadIndices = [0, 1, 2, 0, 2, 3];
 
 export interface PulledFace {
@@ -76,6 +79,7 @@ export function expandPulled(
   const positions = new Float32Array(faces.length * 4 * 3);
   const normals = new Int8Array(faces.length * 4 * 4);
   const uvs = new Uint16Array(faces.length * 4 * 2);
+  const faceShades = new Float32Array(faces.length * 4);
   const indices = new Uint32Array(faces.length * 6);
 
   faces.forEach(({ cell, template, ao, flip }, face) => {
@@ -105,6 +109,7 @@ export function expandPulled(
         templates[offset + (kUvTexel * 4) + source] * kUnorm16
       );
     }
+    faceShades.fill(faceShade(ao), face * 4, (face * 4) + 4);
     kQuadIndices.forEach((index, i) => {
       indices[(face * 6) + i] = (face * 4) + index;
     });
@@ -114,7 +119,19 @@ export function expandPulled(
   expanded.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   expanded.setAttribute("normal", new THREE.BufferAttribute(normals, 4, true));
   expanded.setAttribute("uv", new THREE.BufferAttribute(uvs, 2, true));
+  expanded.setAttribute("faceShade", new THREE.BufferAttribute(faceShades, 1));
   expanded.setIndex(new THREE.BufferAttribute(indices, 1));
 
   return expanded;
+}
+
+function faceShade(
+  ao: number
+): number {
+  let sum = 0;
+  for (let corner = 0; corner < 4; corner++) {
+    sum += (ao >>> (corner * kAoLevelBits)) & kAoLevelMask;
+  }
+
+  return Math.round(sum / 4 * kSnorm8 / kAoMaxLevel) / kSnorm8;
 }

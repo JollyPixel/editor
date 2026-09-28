@@ -18,6 +18,7 @@ const kScenes: Omit<ParityOptions, "forceWebGL" | "expanded">[] = [
   { channel: "uv" },
   { channel: "normal" },
   { channel: "shade", ambientOcclusion: true },
+  { channel: "faceShade", ambientOcclusion: true },
   { channel: "lit", ambientOcclusion: true },
   { channel: "velocity" }
 ];
