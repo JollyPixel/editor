@@ -28,7 +28,7 @@ class BlockSurface {
 |---|---|---|
 | `alphaMode` | `"opaque"` | Ignores texture alpha. `"mask"` discards uncovered texels; `"blend"` preserves fractional alpha. |
 | `side` | `"front"` for opaque, `"double"` otherwise | Shows outward faces only, or both outward and inward faces. |
-| `alphaCutoff` | `0.1` for mask, `0` otherwise | Mask texels below the cutoff are discarded before layer opacity is applied. |
+| `alphaCutoff` | `0.1` for mask, `0` otherwise | Mask texels below the cutoff are discarded. |
 | `materialGroup` | None | Gives the block its own chunk material on the same atlas, shared with every block naming the same group. |
 | `occludes` | Derived | True only for opaque surfaces; the shape still determines which boundaries are covered. |
 

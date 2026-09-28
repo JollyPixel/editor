@@ -61,9 +61,6 @@ describe("transparency boundaries", () => {
 
       fixture.world.updateLayer("upper", { compositing: "replace" });
       assert.equal(countChunkVertices(fixture), 0);
-
-      fixture.world.updateLayer("upper", { opacity: 0.5 });
-      assert.equal(countChunkVertices(fixture), 24);
     });
   }
 });

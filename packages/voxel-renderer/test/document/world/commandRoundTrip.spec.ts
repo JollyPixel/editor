@@ -74,7 +74,7 @@ function spawns(
 const kCases: RoundTripCase[] = [
   {
     name: "adds a layer with its options",
-    act: (world) => world.addLayer("Deco", { visible: false, opacity: 0.5 }),
+    act: (world) => world.addLayer("Deco", { visible: false, compositing: "replace" }),
     actions: ["added"]
   },
   {

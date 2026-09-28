@@ -59,8 +59,7 @@ export interface ChunkMaterialCacheOptions {
 }
 
 /**
- * Caches shared chunk materials by atlas, exact opacity, and surface policy.
- * Layer opacity is applied through materials instead of vertex colors.
+ * Caches shared chunk materials by atlas and surface policy.
  */
 export class ChunkMaterialCache {
   tileAveraging: boolean;
@@ -102,11 +101,10 @@ export class ChunkMaterialCache {
 
   resolve(
     geometryKey: ChunkGeometryKey,
-    opacity: number,
     far = false
   ): ChunkMaterial {
     const { tilesetId, surface } = geometryKey;
-    const key = `${geometryKey}:opacity=${opacity}:far=${far}`;
+    const key = `${geometryKey}:far=${far}`;
 
     const cached = this.#materials.get(key);
     if (cached) {
@@ -115,7 +113,6 @@ export class ChunkMaterialCache {
 
     const material = this.#create(
       tilesetId,
-      opacity,
       surface,
       far
     );
@@ -184,10 +181,8 @@ export class ChunkMaterialCache {
     return evicted;
   }
 
-  // eslint-disable-next-line max-params
   #create(
     tilesetId: string,
-    opacity: number,
     surface: BlockSurface,
     far: boolean
   ): ChunkMaterial {
@@ -199,7 +194,7 @@ export class ChunkMaterialCache {
     }
     const { texture } = atlas;
     const blends = surface.alphaMode === "blend" && !far;
-    const transparent = opacity < 1 || blends;
+    const transparent = blends;
     const alphaToCoverage = this.alphaToCoverage &&
       surface.alphaMode === "mask";
 
@@ -207,7 +202,6 @@ export class ChunkMaterialCache {
       map: texture,
       side: surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide,
       alphaTest: 0,
-      opacity,
       transparent,
       depthWrite: !transparent,
       alphaToCoverage,

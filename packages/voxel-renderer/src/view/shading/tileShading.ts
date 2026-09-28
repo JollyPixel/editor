@@ -141,7 +141,6 @@ function applyTileColor(
 
   /*
    * `materialColor` re-samples the atlas at raw UVs; read material.color directly.
-   * Opacity is omitted: setupDiffuseColor() applies it after this node.
    */
   const tint = shadedTint(material, brightness, aoStrength);
 
@@ -367,12 +366,12 @@ function configureClassicAlpha(
   }
 
   const alpha = surface.alphaMode === "mask" ?
-    `if (diffuseColor.a < opacity * ${surface.alphaCutoff.toFixed(8)}) discard;` :
+    `if (diffuseColor.a < ${surface.alphaCutoff.toFixed(8)}) discard;` :
     "";
   material.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <map_fragment>",
-      `#include <map_fragment>\n${alpha}\ndiffuseColor.a = opacity;`
+      `#include <map_fragment>\n${alpha}\ndiffuseColor.a = 1.0;`
     );
   };
   /**

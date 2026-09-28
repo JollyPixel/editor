@@ -30,7 +30,6 @@ export interface LayerChunkCacheOptions {
  */
 export class LayerChunkCache {
   readonly layer: MeshableLayer;
-  readonly opaque: boolean;
   readonly empty: boolean = true;
 
   #size: number;
@@ -66,7 +65,6 @@ export class LayerChunkCache {
     const { layer, chunkSize, minWx, minWy, minWz } = options;
 
     this.layer = layer;
-    this.opaque = layer.opacity >= 1;
 
     const shift = Math.log2(chunkSize);
     this.#size = chunkSize;

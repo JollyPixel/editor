@@ -35,21 +35,6 @@ describe("VoxelMeshBuilder - isolated cube", () => {
 
     assert.equal(fixture.builder.buildChunkGeometries([{ layer: fixture.layer, chunk }]).size, 0);
   });
-
-  it("emits identical geometry for an opaque and a translucent layer", () => {
-    const opaque = makeMeshFixture();
-    const translucent = makeMeshFixture();
-    translucent.layer.opacity = 0.25;
-    for (const fixture of [opaque, translucent]) {
-      place(fixture, [0, 0, 0]);
-    }
-
-    const a = expandedGeometry(opaque);
-    const b = expandedGeometry(translucent);
-
-    assert.deepEqual(a.getAttribute("position").array, b.getAttribute("position").array);
-    assert.deepEqual(a.getAttribute("uv").array, b.getAttribute("uv").array);
-  });
 });
 
 describe("VoxelMeshBuilder - geometry attribute layout", () => {

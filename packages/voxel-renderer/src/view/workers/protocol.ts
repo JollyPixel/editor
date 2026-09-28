@@ -16,7 +16,6 @@ export interface MeshWorkerChunk {
 }
 
 export interface MeshWorkerLayer {
-  opacity: number;
   compositing: "replace" | "composite";
   position: VoxelCoord;
   chunks: MeshWorkerChunk[];

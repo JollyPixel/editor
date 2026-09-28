@@ -34,53 +34,20 @@ describe("VoxelLayer constructor", () => {
     assert.equal(layer.order, 2);
   });
 
-  it("defaults to a visible, opaque, empty layer at the origin", () => {
+  it("defaults to a visible, empty layer at the origin", () => {
     const layer = makeLayer();
 
     assert.equal(layer.visible, true);
-    assert.equal(layer.opacity, 1);
     assert.deepEqual(layer.position, { x: 0, y: 0, z: 0 });
     assert.equal(layer.chunkCount, 0);
   });
 
   it("respects explicit options", () => {
-    const layer = makeLayer({ visible: false, opacity: 0.5, position: { x: 16, y: 0, z: -8 } });
+    const layer = makeLayer({ visible: false, position: { x: 16, y: 0, z: -8 } });
 
     assert.equal(layer.visible, false);
-    assert.equal(layer.opacity, 0.5);
     assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
   });
-});
-
-describe("VoxelLayer opacity", () => {
-  for (const [requested, expected] of [[5, 1], [-5, 0]]) {
-    it(`clamps ${requested} to ${expected} in the constructor and the setter`, () => {
-      const layer = makeLayer();
-      layer.opacity = requested;
-
-      assert.equal(layer.opacity, expected);
-      assert.equal(makeLayer({ opacity: requested }).opacity, expected);
-    });
-  }
-
-  const kEffectiveVisibility: [boolean, number, boolean][] = [
-    [true, 1, true],
-    [true, 0.5, true],
-    [true, 0, false],
-    [false, 1, false],
-    [false, 0, false]
-  ];
-
-  for (const [visible, opacity, expected] of kEffectiveVisibility) {
-    const state = expected ? "visible" : "hidden";
-    it(`is effectively ${state} when visible=${visible} and opacity=${opacity}`, () => {
-      const layer = makeLayer();
-      layer.visible = visible;
-      layer.opacity = opacity;
-
-      assert.equal(layer.effectivelyVisible, expected);
-    });
-  }
 });
 
 describe("VoxelLayer.markBoxDirty", () => {

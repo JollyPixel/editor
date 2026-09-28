@@ -314,23 +314,11 @@ describe("VoxelWorld — compositing", () => {
     assert.deepEqual(world.getVoxelAt({ x: 5, y: 0, z: 0 }), entry);
   });
 
-  it("skips a layer that is invisible or fully transparent", () => {
-    for (const hide of [
-      (layer: { visible: boolean; }) => void (layer.visible = false),
-      (layer: { opacity: number; }) => void (layer.opacity = 0)
-    ]) {
-      const { world, top, baseEntry } = stacked();
-      hide(top);
+  it("skips an invisible layer", () => {
+    const { world, top, baseEntry } = stacked();
+    top.visible = false;
 
-      assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
-    }
-  });
-
-  it("keeps a partly transparent layer in the running", () => {
-    const { world, top, topEntry } = stacked();
-    top.opacity = 0.5;
-
-    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
+    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
   });
 
   it("names the layer the winning voxel came from", () => {
@@ -340,7 +328,7 @@ describe("VoxelWorld — compositing", () => {
     assert.deepEqual(winner?.entry, topEntry);
     assert.equal(winner?.layer, top);
 
-    top.opacity = 0;
+    top.visible = false;
     assert.equal(world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 })?.layer, base);
   });
 });

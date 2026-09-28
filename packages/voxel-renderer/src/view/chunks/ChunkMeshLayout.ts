@@ -28,12 +28,6 @@ export type ChunkMeshTarget =
   | CellMeshTarget
   | LayerMeshTarget;
 
-export function opacityOf(
-  target: ChunkMeshTarget
-): number {
-  return target.kind === "layer" ? target.layer.opacity : 1;
-}
-
 export class ChunkMeshLayout {
   #world: VoxelWorld;
 
@@ -50,7 +44,6 @@ export class ChunkMeshLayout {
     const { x, y, z } = layer.position;
 
     return layer.visible &&
-      layer.opacity >= 1 &&
       x % size === 0 &&
       y % size === 0 &&
       z % size === 0;
@@ -73,7 +66,7 @@ export class ChunkMeshLayout {
     layer: VoxelLayer,
     chunk: VoxelChunk
   ): ChunkMeshTarget | null {
-    if (!layer.effectivelyVisible) {
+    if (!layer.visible) {
       return null;
     }
 
@@ -113,7 +106,7 @@ export class ChunkMeshLayout {
     if (target.kind === "layer") {
       const { layer } = target;
       const chunk = layers.includes(layer) &&
-        layer.effectivelyVisible &&
+        layer.visible &&
         !this.composites(layer) ?
         layer.getChunk(target.cx, target.cy, target.cz) :
         undefined;

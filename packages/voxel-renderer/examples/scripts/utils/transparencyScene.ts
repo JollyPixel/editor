@@ -8,7 +8,6 @@ export const WORLD_SIZE = 24;
 
 export interface LayerSpec {
   name: TransparencyLayerName;
-  opacity: number;
   /** Shown in the HUD next to the layer's own controls. */
   hint: string;
 }
@@ -45,10 +44,10 @@ export type TransparencyLayerName =
 
 /** Creation order is compositing order: later layers win over earlier ones. */
 export const LAYER_SPECS: readonly LayerSpec[] = [
-  { name: TransparencyLayer.Ground, opacity: 1, hint: "opaque" },
-  { name: TransparencyLayer.Water, opacity: 0.55, hint: "blended" },
-  { name: TransparencyLayer.Glass, opacity: 0.35, hint: "blended" },
-  { name: TransparencyLayer.Foliage, opacity: 1, hint: "cutout" }
+  { name: TransparencyLayer.Ground, hint: "opaque" },
+  { name: TransparencyLayer.Water, hint: "blended" },
+  { name: TransparencyLayer.Glass, hint: "blended" },
+  { name: TransparencyLayer.Foliage, hint: "cutout" }
 ];
 
 /**
@@ -57,8 +56,8 @@ export const LAYER_SPECS: readonly LayerSpec[] = [
  * tall cutout trees at the back — nothing solid stands in front of the glass.
  */
 export const SCENE_LABELS: readonly SceneLabel[] = [
-  { text: "water · layer opacity", x: 5.5, y: 5.2, z: 18.5 },
-  { text: "glass · layer opacity", x: 15, y: 7.2, z: 18 },
+  { text: "water · blend", x: 5.5, y: 5.2, z: 18.5 },
+  { text: "glass · blend", x: 15, y: 7.2, z: 18 },
   { text: "texture alpha ignored (opaque)", x: 6, y: 9.6, z: 5 },
   { text: "texture alpha tested (mask)", x: 15, y: 9.6, z: 5 },
   { text: "shapes · sun angle", x: 4, y: 4, z: 11 },
@@ -282,8 +281,8 @@ function buildTree(
 export function buildScene(
   world: VoxelWorld
 ): void {
-  for (const { name, opacity } of LAYER_SPECS) {
-    world.addLayer(name, { opacity });
+  for (const { name } of LAYER_SPECS) {
+    world.addLayer(name);
   }
 
   buildGround(world);

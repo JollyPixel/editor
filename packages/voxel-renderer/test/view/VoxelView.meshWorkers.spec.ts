@@ -66,7 +66,7 @@ function makeWorld(
   for (let x = 0; x < 6; x++) {
     placeCube(view, kWater, { x, y: 1, z: 5 });
   }
-  view.document.world.getLayer(kWater)!.opacity = 0.5;
+  view.document.world.setLayerPosition(kWater, { x: 0, y: 1, z: 0 });
   kViews.add(view);
 
   return view;

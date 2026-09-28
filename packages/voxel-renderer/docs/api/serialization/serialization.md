@@ -25,7 +25,6 @@ interface VoxelLayerMetadataJSON {
   id: string;
   name: string;
   visible: boolean;
-  opacity?: number;
   order: number;
   position?: VoxelCoord;
   properties?: Record<string, any>;
@@ -83,7 +82,8 @@ The writer picks whichever encoding needs fewer numbers for each chunk.
 }
 ```
 
-Documents without `opacity` or `position` load with opacity `1` and a zero position.
+Documents without `position` load with a zero position, and a layer `opacity`
+from older documents is ignored.
 A missing `compositing` loads as `"composite"`; use `"replace"` explicitly for
 cell replacement.
 
@@ -182,7 +182,7 @@ problem, naming the layer and chunk:
   is no migration.
 - `chunkSize` is a power of two.
 - Each layer has a string `id` and `name`, a boolean `visible` and a numeric
-  `order`; `opacity`, `compositing`, `position` and `properties` are
+  `order`; `compositing`, `position` and `properties` are
   typed when present.
 - Each palette entry has a block id in `1..MAX_BLOCK_ID` and a transform in
   `0..255`.

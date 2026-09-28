@@ -197,16 +197,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
   }
 
-  setLayerOpacity(
-    name: string,
-    opacity: number
-  ): void {
-    const layer = this.getLayer(name);
-    if (layer) {
-      this.#updateLayerOpacity(layer, opacity);
-    }
-  }
-
   setLayerPosition(
     name: string,
     position: VoxelCoord
@@ -610,9 +600,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     if (options.visible !== undefined) {
       this.#updateLayerVisibility(layer, options.visible);
     }
-    if (options.opacity !== undefined) {
-      this.#updateLayerOpacity(layer, options.opacity);
-    }
     if (
       options.compositing !== undefined &&
       options.compositing !== layer.compositing
@@ -691,7 +678,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     position: Vector3Like
   ): VoxelLayer | undefined {
     return this.#layers.toArray().find(
-      (layer) => layer.effectivelyVisible &&
+      (layer) => layer.visible &&
         layer.getPackedVoxelAt(position) !== VOXEL_ABSENT
     );
   }
@@ -700,30 +687,14 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layer: VoxelLayer,
     visible: boolean
   ): void {
-    const flipped = layer.visible !== visible;
-    layer.visible = visible;
-    this.#markLayerChanged(layer, flipped);
-  }
-
-  #updateLayerOpacity(
-    layer: VoxelLayer,
-    opacity: number
-  ): void {
-    const wasOccluding = layer.opacity >= 1;
-    layer.opacity = opacity;
-    this.#markLayerChanged(layer, wasOccluding !== layer.opacity >= 1);
-  }
-
-  #markLayerChanged(
-    layer: VoxelLayer,
-    affectsOtherLayers: boolean
-  ): void {
-    if (affectsOtherLayers) {
-      this.markAllDirty();
-    }
-    else {
+    if (layer.visible === visible) {
       layer.markAllDirty();
+
+      return;
     }
+
+    layer.visible = visible;
+    this.markAllDirty();
   }
 }
 

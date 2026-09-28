@@ -63,10 +63,8 @@ ramp slope therefore resolves to the ramp cell and places above it.
 ## `VoxelWorld`
 
 Top-level container for a layered voxel scene. World reads examine layers from
-highest `order` to lowest. The first visible layer with `opacity > 0` that has a
-voxel at a given position wins. A layer with `opacity === 0` is skipped exactly
-like an invisible one. Render-time compositing applies separate rules for
-partially opaque layers, described in the
+highest `order` to lowest. The first visible layer that has a voxel at a given
+position wins. Render-time compositing applies separate rules, described in the
 [world model](../../concepts/world-model.md#layer-compositing).
 
 ### Constructor
@@ -116,7 +114,7 @@ Every mutating method below emits a [layer command](../core/commands.md#layer-co
 on `"command"`, so an editor or a network adapter can mirror local edits
 without wrapping the world. [`VoxelDocument`](../core/VoxelDocument.md#events)
 forwards these as local commands. The exceptions are `restoreLayer`,
-`setLayerVisible`, `setLayerOpacity`, `mergeAllLayers`, `markAllDirty` and
+`setLayerVisible`, `mergeAllLayers`, `markAllDirty` and
 `clear`, which stay silent. Each emitting method builds its command and applies
 it through the same path as `apply()`.
 
@@ -129,7 +127,7 @@ Creates a new layer on top of the stack, with the highest compositing priority.
 #### `restoreLayer(options: VoxelLayerRestoreOptions): VoxelLayer`
 
 Puts a layer on top of the stack with the given `id`, `name` and optional
-`position`, `visible`, `opacity`, `compositing` and `properties`, without
+`position`, `visible`, `compositing` and `properties`, without
 emitting a command. Deserialization uses it.
 
 ```ts
@@ -138,7 +136,7 @@ type VoxelLayerRestoreOptions = Omit<VoxelLayerOptions, "chunkSize" | "order">;
 
 #### `updateLayer(name: string, options: Partial<VoxelLayerConfigurableOptions>): boolean`
 
-Updates visibility, opacity, or properties. Returns `false` when the layer does
+Updates visibility, compositing, or properties. Returns `false` when the layer does
 not exist.
 
 #### `removeLayer(name: string): boolean`
@@ -169,15 +167,6 @@ identifier. Layer ids are unique within the world.
 Hidden layers are skipped during compositing and mesh rebuild. Marks all chunks in
 every layer dirty when visibility actually flips, since cross-layer face culling
 changes with it; otherwise only the layer's own chunks.
-
-#### `setLayerOpacity(name: string, opacity: number): void`
-
-Sets a layer's rendered translucency (clamped to `[0, 1]`). A layer with `opacity < 1`
-is occluded only by its own voxels (like glass): nothing in another layer culls its
-faces, and it hides neither neighbouring faces nor the voxels it covers; `opacity === 0`
-is treated exactly like `visible = false`. Marks only the layer's own chunks dirty for a
-same-bucket change (e.g. `0.4 → 0.6`), or every layer's chunks when the change crosses the
-`opacity === 1` occlusion boundary. No-op if the layer is not found.
 
 #### `setLayerPosition(name: string, position: VoxelCoord): void`
 
@@ -230,10 +219,9 @@ the same layer.
 
 Overlapping voxels are resolved by stack position: the layer with the higher
 `order` wins, whichever of the two is the source. A merge therefore never
-changes what an opaque stack looks like, in either direction. Opacity is not
-modelled, so a translucent layer that visually blends is treated as opaque here.
+changes what an opaque stack looks like, in either direction.
 
-The target keeps its own `opacity`, `visible` and position. The source's
+The target keeps its own `visible` and position. The source's
 `properties` are folded in behind the target's, so keys already present on the
 target win and the rest carry over.
 
@@ -245,7 +233,7 @@ for an empty world.
 
 #### `getVoxelAt(position: THREE.Vector3Like): VoxelEntry | undefined`
 
-Composited read. Returns the voxel from the highest-priority visible layer (`opacity > 0`)
+Composited read. Returns the voxel from the highest-priority visible layer
 at that position. Returns `undefined` for air.
 
 #### `getPackedVoxelAt(position: THREE.Vector3Like): PackedVoxel`
@@ -255,7 +243,7 @@ Allocation-free `getVoxelAt`, returning `VOXEL_ABSENT` (`-1`) for air.
 #### `getVoxelWithLayerAt(position: THREE.Vector3Like): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
 
 Same compositing rules as `getVoxelAt`, but also returns the owning `VoxelLayer` so callers
-can inspect layer-level properties (e.g. `opacity`) of the resolved voxel.
+can inspect layer-level properties (e.g. `properties`) of the resolved voxel.
 
 #### `getVoxelNeighbour(position: THREE.Vector3Like, face: Face): VoxelEntry | undefined`
 
@@ -398,8 +386,8 @@ Removes all voxel layers and object layers.
 
 ### Block counts
 
-Counts cover the stored voxels of every layer, whatever their visibility,
-opacity or compositing. They are computed from per-chunk histograms cached
+Counts cover the stored voxels of every layer, whatever their visibility or
+compositing. They are computed from per-chunk histograms cached
 against `VoxelChunk.revision`, so only chunks written since the last query are
 rescanned. [`VoxelInspector.blocks`](../core/VoxelInspector.md#block-statistics)
 builds its registry-aware statistics on top of them.

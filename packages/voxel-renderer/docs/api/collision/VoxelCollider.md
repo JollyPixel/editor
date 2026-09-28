@@ -41,9 +41,8 @@ handles and release all remaining resources from `dispose()`.
 `rebuildChunk()` runs whenever the view meshes a key, including one that
 draws no face; the map is then empty. A key covers one chunk cell: `chunks`
 holds the layer chunks drawn there, highest compositing priority first, and
-every one of them starts at the world-space `origin`. Layers at opacity `1`
-on the chunk grid share a key; a faded layer or one off the chunk grid gets a
-key of its own with a single chunk. Voxels hidden by a higher layer stay in
+every one of them starts at the world-space `origin`. Layers on the chunk
+grid share a key; a layer off the chunk grid gets a key of its own with a single chunk. Voxels hidden by a higher layer stay in
 their chunk, so a collider sees them too.
 
 The map follows renderer draw groups, keyed by `ChunkGeometryKey` (`tilesetId`
@@ -84,8 +83,7 @@ Each block shape supplies one collision hint:
 
 Blocks with `collidable: false` are skipped whatever their hint.
 
-Layer opacity does not affect collision until it reaches `0`, which behaves as
-a hidden layer and removes its colliders.
+Hiding a layer removes its colliders.
 
 See [adding physics](../../guides/adding-physics.md) for setup with the bundled
 Rapier implementation.

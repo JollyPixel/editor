@@ -20,7 +20,6 @@ export interface VoxelLayerMetadataJSON {
   id: string;
   name: string;
   visible: boolean;
-  opacity?: number;
   order: number;
   position?: {
     x: number;

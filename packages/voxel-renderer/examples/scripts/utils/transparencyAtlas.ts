@@ -16,7 +16,7 @@ type TilePainter = (
 /**
  * Blocks of the transparency diorama. The three groups behave differently
  * under alpha: fully opaque texels, cutout texels (holes the `alphaTest`
- * discards), and opaque texels whose translucency comes from the layer.
+ * discards), and translucent texels that blend.
  */
 export const TransparencyBlock = {
   Stone: 1,
@@ -25,7 +25,7 @@ export const TransparencyBlock = {
   Plank: 4,
   Log: 5,
   Ruby: 6,
-  // Opaque texels — translucency is the layer's, not the texture's.
+  // Translucent texels, blended.
   Glass: 7,
   Water: 8,
   // Cutout texels — holes come from the atlas alpha channel.
@@ -170,14 +170,14 @@ function paintAlphaRamp(
   }
 }
 
-/** Glass: fully opaque texels, plus a frame so the pane edges stay readable. */
+/** Glass: translucent texels, plus a frame so the pane edges stay readable. */
 function paintGlass(
   context: CanvasRenderingContext2D,
   size: number
 ): void {
-  context.fillStyle = "#bfe9ff";
+  context.fillStyle = "rgba(191, 233, 255, 0.35)";
   context.fillRect(0, 0, size, size);
-  context.fillStyle = "#8fd0ee";
+  context.fillStyle = "rgba(143, 208, 238, 0.8)";
   context.fillRect(0, 0, size, 1);
   context.fillRect(0, size - 1, size, 1);
   context.fillRect(0, 0, 1, size);
@@ -199,12 +199,13 @@ const kBlockSpecs: BlockSpec[] = [
   { id: TransparencyBlock.Plank, name: "Plank", shapeId: "cube", paint: striped("#a9793f", "#8d6231") },
   { id: TransparencyBlock.Log, name: "Log", shapeId: "cube", paint: striped("#6d5136", "#57402b", true) },
   { id: TransparencyBlock.Ruby, name: "Ruby", shapeId: "cube", paint: speckled("#d4404a", "#b8303a", 0.15) },
-  { id: TransparencyBlock.Glass, name: "Glass", shapeId: "cube", paint: paintGlass },
+  { id: TransparencyBlock.Glass, name: "Glass", shapeId: "cube", paint: paintGlass, alphaMode: "blend" },
   {
     id: TransparencyBlock.Water,
     name: "Water",
     shapeId: "cube",
-    paint: striped("#3f7fd0", "#5a95dd"),
+    paint: striped("rgba(63, 127, 208, 0.55)", "rgba(90, 149, 221, 0.55)"),
+    alphaMode: "blend",
     collidable: false
   },
   {

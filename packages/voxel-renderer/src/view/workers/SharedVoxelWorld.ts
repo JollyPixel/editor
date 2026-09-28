@@ -12,8 +12,7 @@ import type {
 import { SharedVoxelChunk } from "./SharedVoxelChunk.ts";
 
 export class SharedVoxelLayer implements MeshableLayer {
-  readonly effectivelyVisible = true;
-  readonly opacity: number;
+  readonly visible = true;
   readonly compositing: "replace" | "composite";
   readonly position: Readonly<VoxelCoord>;
 
@@ -23,7 +22,6 @@ export class SharedVoxelLayer implements MeshableLayer {
     layer: MeshWorkerLayer,
     chunkSize: number
   ) {
-    this.opacity = layer.opacity;
     this.compositing = layer.compositing;
     this.position = layer.position;
     for (const chunk of layer.chunks) {
