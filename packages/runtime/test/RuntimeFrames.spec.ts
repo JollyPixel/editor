@@ -1,33 +1,10 @@
 // Import Node.js Dependencies
-import {
-  before,
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { setImmediate } from "node:timers/promises";
 
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
-
 // Import Internal Dependencies
-import type { Runtime } from "../src/Runtime.ts";
-
-// CONSTANTS
-const kBrowserWindow = new Window();
-
-let RuntimeClass: typeof import("../src/Runtime.ts").Runtime;
-
-before(async() => {
-  Object.assign(globalThis, {
-    window: kBrowserWindow,
-    document: kBrowserWindow.document,
-    HTMLElement: kBrowserWindow.HTMLElement,
-    customElements: kBrowserWindow.customElements
-  });
-
-  ({ Runtime: RuntimeClass } = await import("../src/Runtime.ts"));
-});
+import { Runtime } from "../src/Runtime.ts";
 
 class SteppedWorld {
   #listeners: Array<() => void> = [];
@@ -51,7 +28,7 @@ function steppedRuntime(
   world: SteppedWorld
 ): Runtime {
   return Object.assign(
-    Object.create(RuntimeClass.prototype),
+    Object.create(Runtime.prototype),
     { world }
   ) as Runtime;
 }

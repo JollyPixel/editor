@@ -2,145 +2,21 @@ name: Node.js CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   changes:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
     outputs:
       e2e: ${{ steps.e2e.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        id: filter
-        with:
-          base: ${{ github.ref }}
-          filters: |
-            ui:
-              - 'packages/e2e/**'
-              - 'packages/ui/**'
-              - 'packages/resize-handle/**'
-              - 'package.json'
-              - '.npmrc'
-              - 'pnpm-workspace.yaml'
-              - 'pnpm-lock.yaml'
-              - 'tsconfig.json'
-              - 'tsconfig/**'
-              - '.github/workflows/node.js.yml'
-            pixel-art:
-              - 'packages/e2e/**'
-              - 'packages/editors/pixel-art/**'
-              - 'packages/pixel-draw-renderer/**'
-              - 'packages/network/**'
-              - 'packages/event-store/**'
-              - 'packages/engine/**'
-              - 'packages/runtime/**'
-              - 'packages/resize-handle/**'
-              - 'package.json'
-              - '.npmrc'
-              - 'pnpm-workspace.yaml'
-              - 'pnpm-lock.yaml'
-              - 'tsconfig.json'
-              - 'tsconfig/**'
-              - '.github/workflows/node.js.yml'
-            voxel-map:
-              - 'packages/e2e/**'
-              - 'packages/editors/voxel-map/**'
-              - 'packages/editors/pixel-art/**'
-              - 'packages/voxel-renderer/**'
-              - 'packages/pixel-draw-renderer/**'
-              - 'packages/assets/**'
-              - 'packages/asset/**'
-              - 'packages/asset-server/**'
-              - 'packages/asset-source/**'
-              - 'packages/network/**'
-              - 'packages/event-store/**'
-              - 'packages/engine/**'
-              - 'packages/runtime/**'
-              - 'packages/three/**'
-              - 'packages/ui/**'
-              - 'packages/resize-handle/**'
-              - 'package.json'
-              - '.npmrc'
-              - 'pnpm-workspace.yaml'
-              - 'pnpm-lock.yaml'
-              - 'tsconfig.json'
-              - 'tsconfig/**'
-              - '.github/workflows/node.js.yml'
-            voxel-model:
-              - 'packages/e2e/**'
-              - 'packages/editors/voxel-model/**'
-              - 'packages/editors/pixel-art/**'
-              - 'packages/editors/host/**'
-              - 'packages/pixel-draw-renderer/**'
-              - 'packages/assets/**'
-              - 'packages/asset/**'
-              - 'packages/asset-server/**'
-              - 'packages/asset-source/**'
-              - 'packages/network/**'
-              - 'packages/event-store/**'
-              - 'packages/engine/**'
-              - 'packages/runtime/**'
-              - 'packages/three/**'
-              - 'packages/ui/**'
-              - 'package.json'
-              - '.npmrc'
-              - 'pnpm-workspace.yaml'
-              - 'pnpm-lock.yaml'
-              - 'tsconfig.json'
-              - 'tsconfig/**'
-              - '.github/workflows/node.js.yml'
-      - name: Select e2e suites
-        id: e2e
-        env:
-          CHANGES: ${{ steps.filter.outputs.changes }}
-          # TODO: enable voxel-map and voxel-model once their CI-only timeouts are fixed
-          SUITES: |
-            [
-              {
-                "changesOutput": "ui",
-                "filter": "@jolly-pixel/ui",
-                "artifactPath": "packages/ui/test-results",
-                "enabled": true
-              },
-              {
-                "changesOutput": "pixel-art",
-                "filter": "@jolly-pixel/editor.pixel-art",
-                "artifactPath": "packages/editors/pixel-art/test-results",
-                "enabled": true
-              },
-              {
-                "changesOutput": "voxel-map",
-                "filter": "@jolly-pixel/editor.voxel-map",
-                "artifactPath": "packages/editors/voxel-map/test-results",
-                "enabled": false
-              },
-              {
-                "changesOutput": "voxel-model",
-                "filter": "@jolly-pixel/editor.voxel-model",
-                "artifactPath": "packages/editors/voxel-model/test-results",
-                "enabled": false
-              }
-            ]
-        run: |
-          matrix=$(jq -nc --argjson changes "$CHANGES" --argjson suites "$SUITES" '
-            [$suites[] | select(.enabled and (.changesOutput | IN($changes[])))]
-          ')
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [24.x]
-      fail-fast: false
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -148,16 +24,34 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: build dependencies
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          install: 'false'
+      - name: Select e2e suites
+        id: e2e
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && 'HEAD~1' || github.event.before }}
+        # TODO: enable voxel-map and voxel-model once their CI-only timeouts are fixed
+        run: |
+          matrix=$(node scripts/ciE2eMatrix.ts --base "$BASE" \
+            --skip @jolly-pixel/editor.voxel-map \
+            --skip @jolly-pixel/editor.voxel-model \
+            --skip @jolly-pixel/studio)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Build dependencies
         run: pnpm run build
       - name: Run lint
         run: pnpm run lint
@@ -169,7 +63,7 @@ jobs:
   e2e:
     needs: changes
     if: needs.changes.outputs.e2e != '[]'
-    name: e2e (${{ matrix.suite.changesOutput }})
+    name: e2e (${{ matrix.suite.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -182,17 +76,9 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - name: Use Node.js 24.x
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24.x
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Build dependencies
-        run: pnpm run build
+      - uses: ./.github/actions/setup
+      - name: Build ${{ matrix.suite.filter }} and its dependencies
+        run: pnpm --filter "${{ matrix.suite.filter }}..." --if-present run build
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: Run E2E tests
@@ -201,7 +87,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ matrix.suite.changesOutput }}-e2e-results
+          name: ${{ matrix.suite.name }}-e2e-results
           path: ${{ matrix.suite.artifactPath }}
           if-no-files-found: ignore
           retention-days: 7

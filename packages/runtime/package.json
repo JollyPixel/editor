@@ -12,10 +12,12 @@
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
-    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "dev": "vite",
+    "dev:e2e": "vite --config vite.e2e.config.ts",
+    "test:e2e": "playwright test",
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
@@ -51,6 +53,7 @@
     "three": "^0.186.0"
   },
   "devDependencies": {
+    "@jolly-pixel/e2e": "workspace:*",
     "electron": "44.4.2"
   }
 }

@@ -11,7 +11,8 @@ import {
 import {
   AssetTypes,
   AssetLoaders,
-  AUDIO_ASSET
+  AUDIO_ASSET,
+  TEXTURE_ASSET
 } from "@jolly-pixel/engine";
 import * as THREE from "three/webgpu";
 
@@ -39,6 +40,10 @@ describe("createRuntimeAssetCoordinator", () => {
     );
     assert.strictEqual(
       coordinator.loaders.has(AUDIO_ASSET),
+      true
+    );
+    assert.strictEqual(
+      coordinator.loaders.has(TEXTURE_ASSET),
       true
     );
   });
@@ -71,10 +76,6 @@ describe("createRuntimeAssetCoordinator", () => {
     assert.strictEqual(receivedManager, manager);
     assert.strictEqual(
       coordinator.loaders.has(customType),
-      true
-    );
-    assert.strictEqual(
-      coordinator.loaders.has(AssetTypes.model),
       true
     );
   });

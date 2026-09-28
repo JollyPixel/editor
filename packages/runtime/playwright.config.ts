@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/e2e";
 
 export default defineE2EConfig({
-  port: PORTS.pixelArt,
-  command: "pnpm run dev:e2e"
+  port: PORTS.runtime,
+  command: "pnpm run dev:e2e",
+  ciWorkers: 2
 });

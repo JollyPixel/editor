@@ -1,22 +1,9 @@
 // Import Node.js Dependencies
-import { before, beforeEach, describe, test } from "node:test";
+import { beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
-
-const kBrowserWindow = new Window();
-
-let resolveRuntimeCanvasFn:
-  typeof import("../src/resolveRuntimeCanvas.ts").resolveRuntimeCanvas;
-
-before(async() => {
-  installBrowserGlobals();
-
-  ({ resolveRuntimeCanvas: resolveRuntimeCanvasFn } = await import(
-    "../src/resolveRuntimeCanvas.ts"
-  ));
-});
+// Import Internal Dependencies
+import { resolveRuntimeCanvas } from "../src/resolveRuntimeCanvas.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -27,7 +14,7 @@ describe("resolveRuntimeCanvas", () => {
     const canvas = document.createElement("canvas");
 
     assert.strictEqual(
-      resolveRuntimeCanvasFn(canvas),
+      resolveRuntimeCanvas(canvas),
       canvas
     );
   });
@@ -40,14 +27,14 @@ describe("resolveRuntimeCanvas", () => {
     document.body.appendChild(container);
 
     assert.strictEqual(
-      resolveRuntimeCanvasFn("#game-container > canvas"),
+      resolveRuntimeCanvas("#game-container > canvas"),
       canvas
     );
   });
 
   test("throws when the selector matches nothing", () => {
     assert.throws(
-      () => resolveRuntimeCanvasFn("#missing > canvas"),
+      () => resolveRuntimeCanvas("#missing > canvas"),
       {
         message: 'No element matching the selector "#missing > canvas" ' +
           "was found."
@@ -61,7 +48,7 @@ describe("resolveRuntimeCanvas", () => {
     document.body.appendChild(container);
 
     assert.throws(
-      () => resolveRuntimeCanvasFn("#game-container"),
+      () => resolveRuntimeCanvas("#game-container"),
       {
         message: 'The element matching the selector "#game-container" ' +
           "is not an HTMLCanvasElement."
@@ -71,7 +58,7 @@ describe("resolveRuntimeCanvas", () => {
 
   test("throws when the element is not a canvas", () => {
     assert.throws(
-      () => resolveRuntimeCanvasFn(
+      () => resolveRuntimeCanvas(
         document.createElement("div") as unknown as HTMLCanvasElement
       ),
       {
@@ -81,20 +68,3 @@ describe("resolveRuntimeCanvas", () => {
     );
   });
 });
-
-function installBrowserGlobals(): void {
-  Object.defineProperties(globalThis, {
-    window: {
-      configurable: true,
-      value: kBrowserWindow
-    },
-    document: {
-      configurable: true,
-      value: kBrowserWindow.document
-    },
-    HTMLCanvasElement: {
-      configurable: true,
-      value: kBrowserWindow.HTMLCanvasElement
-    }
-  });
-}

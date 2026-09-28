@@ -274,6 +274,7 @@ export class Runtime<
       );
     }
 
+    this.world.input.exited = false;
     this.world.connect();
     this.world.start();
     this.loop.start({

@@ -24,6 +24,26 @@ const kTilesetFile = path.join(
   "textures",
   "tileset.png"
 );
+const kWorkspaceBrowserEntries = [
+  "@jolly-pixel/asset",
+  "@jolly-pixel/asset-server",
+  "@jolly-pixel/asset.pixel-art/client",
+  "@jolly-pixel/asset.voxel-map",
+  "@jolly-pixel/asset.voxel-map/client",
+  "@jolly-pixel/color",
+  "@jolly-pixel/editor.host",
+  "@jolly-pixel/editor.host/ui",
+  "@jolly-pixel/editor.pixel-art",
+  "@jolly-pixel/engine",
+  "@jolly-pixel/network/client",
+  "@jolly-pixel/pixel-draw.renderer",
+  "@jolly-pixel/resize-handle",
+  "@jolly-pixel/three",
+  "@jolly-pixel/ui",
+  "@jolly-pixel/ui/network",
+  "@jolly-pixel/voxel.renderer",
+  "@jolly-pixel/voxel.renderer/engine"
+];
 
 const project = await createWorldProject(
   await fs.readFile(kTilesetFile),
@@ -44,6 +64,12 @@ export default defineConfig(({ mode }) => {
       {
         allowedHosts: true
       },
+    optimizeDeps: e2e ?
+      {
+        include: kWorkspaceBrowserEntries,
+        force: true
+      } :
+      undefined,
     plugins: staticHosting ? [] : [
       createAssetWorkspacePlugin({
         root: path.join(import.meta.dirname, "assets"),

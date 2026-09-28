@@ -133,9 +133,9 @@ claims dependency-backed behavior (Three.js, Lit, happy-dom, node:sqlite),
 inspect the dependency source or types in `node_modules` directly.
 
 CI routing lives in `.github/workflows/node.js.yml`: every unit, type, lint,
-and typecheck script runs on every change, while e2e suites run through a
-path-filtered matrix. The voxel-map and voxel-model e2e suites are currently
-disabled there, so their Playwright tests are proven only locally; weigh that
+and typecheck script runs on every change, while e2e suites run when their
+package or a workspace dependency changes (`scripts/ciE2eMatrix.ts`). The
+voxel-map, voxel-model and studio e2e suites are currently skipped there, so their Playwright tests are proven only locally; weigh that
 before retiring a unit test whose only other proof is one of those suites.
 
 ## Discovery
