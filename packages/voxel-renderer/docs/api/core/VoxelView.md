@@ -354,8 +354,8 @@ provides the texture.
 
 ```ts
 interface VoxelViewLoadOptions {
-  /** Collapse voxel layers after deserialization. */
-  mergeLayers?: boolean;
+  /** Collapse voxel layers after deserialization, except the named ones. */
+  mergeLayers?: boolean | VoxelMergeAllLayersOptions;
   /** Atlases to register before the snapshot is meshed. */
   tilesets?: Iterable<TilesetSource>;
 }

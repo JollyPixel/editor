@@ -10,7 +10,10 @@ import type {
 } from "../../src/document/commands/index.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 import { makeAtlasDef } from "../helpers/atlas.ts";
-import { recordCommands } from "../helpers/fakes.ts";
+import {
+  makeLogger,
+  recordCommands
+} from "../helpers/fakes.ts";
 import {
   blockDefinedCmd,
   makeAddedCommand
@@ -387,6 +390,36 @@ describe("VoxelDocument.load", () => {
       [...document.tilesets].map((def) => def.id).sort(),
       ["atlas", "stone"]
     );
+  });
+
+  it("merges every layer except the ones it is told to keep", () => {
+    const source = makeDocument(["Base", "Ground", "Water", "Top"]);
+    const document = makeDocument([]);
+
+    document.load(source.save(), {
+      mergeLayers: { except: ["Water"] }
+    });
+
+    assert.deepEqual(
+      document.world.getLayers().map((layer) => layer.name),
+      ["Top", "Water", "Base"]
+    );
+  });
+
+  it("warns about a kept layer the loaded world does not have", () => {
+    const warnings: string[] = [];
+    const document = new VoxelDocument({
+      chunkSize: CHUNK_SIZE,
+      logger: makeLogger(warnings)
+    });
+
+    document.load(makeDocument(["Base", "Top"]).save(), {
+      mergeLayers: { except: ["Water"] }
+    });
+
+    assert.equal(document.world.getLayers().length, 1);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /'Water'/);
   });
 
   it("drops the history of the world it replaced", () => {

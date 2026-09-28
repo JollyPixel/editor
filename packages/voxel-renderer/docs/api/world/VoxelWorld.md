@@ -252,11 +252,25 @@ The target keeps its own `visible` and position. The source's
 `properties` are folded in behind the target's, so keys already present on the
 target win and the rest carry over.
 
-#### `mergeAllLayers(): VoxelLayer | null`
+#### `mergeAllLayers(options?: VoxelMergeAllLayersOptions): VoxelLayer[]`
 
-Collapses all voxel layers into the lowest-order layer. Higher-order voxels win at
-overlapping world positions, and every other voxel layer is removed. Returns `null`
-for an empty world.
+```ts
+interface VoxelMergeAllLayersOptions {
+  except?: Iterable<string>;
+}
+```
+
+Collapses the voxel layers into the lowest-order layer. Higher-order voxels win at
+overlapping world positions, and every other merged layer is removed. Properties
+of the removed layers are folded in behind the target's, as with `mergeLayer`.
+
+Layers named in `except` are left alone and keep their place in the stack. Each
+unbroken run of layers between them merges on its own into the lowest layer of
+that run, so a kept layer still covers the layers below it and stays covered by
+the ones above it. Names that match no layer are ignored.
+
+Returns the resulting layers, highest `order` first: one per run, or an empty
+array for an empty world or when every layer is excluded.
 
 #### `getVoxelAt(position: THREE.Vector3Like): VoxelEntry | undefined`
 

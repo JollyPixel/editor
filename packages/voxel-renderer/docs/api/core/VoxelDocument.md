@@ -188,11 +188,16 @@ tileset list wholesale and leaves `blocks` and `materialGroups` alone, so
 ```ts
 interface VoxelLoadOptions {
   /** Collapses layers; higher-priority voxels win overlaps. */
-  mergeLayers?: boolean;
+  mergeLayers?: boolean | VoxelMergeAllLayersOptions;
   /** Declared after the snapshot replaced the list. */
   tilesets?: Iterable<TilesetDefinition>;
 }
 ```
+
+`mergeLayers: { except: ["Water"] }` keeps the named layers apart and merges
+the layers on each side of them separately, as
+[`VoxelWorld.mergeAllLayers()`](../world/VoxelWorld.md#methods)
+does. A name the loaded world has no layer for logs a warning.
 
 `data.chunkSize` is metadata: `load()` keeps the document's chunk size.
 Deserialization is silent, so restoring a snapshot emits no command.

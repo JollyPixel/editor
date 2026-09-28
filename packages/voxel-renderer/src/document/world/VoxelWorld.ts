@@ -70,6 +70,10 @@ export interface VoxelRemoveOptions {
   position: Vector3Like;
 }
 
+export interface VoxelMergeAllLayersOptions {
+  except?: Iterable<string>;
+}
+
 export type VoxelLayerRestoreOptions = Omit<
   VoxelLayerOptions,
   "chunkSize" | "order"
@@ -286,19 +290,30 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }) !== null;
   }
 
-  mergeAllLayers(): VoxelLayer | null {
-    if (this.#layers.size <= 1) {
-      return this.#layers.at(0) ?? null;
+  mergeAllLayers(
+    options: VoxelMergeAllLayersOptions = {}
+  ): VoxelLayer[] {
+    const excluded = new Set(options.except);
+    const size = this.#layers.size;
+    const merged: VoxelLayer[] = [];
+    let target: VoxelLayer | null = null;
+    for (const layer of [...this.#layers].reverse()) {
+      if (excluded.has(layer.name)) {
+        target = null;
+      }
+      else if (target) {
+        this.#merge(layer, target);
+      }
+      else {
+        target = layer;
+        merged.unshift(layer);
+      }
+    }
+    if (this.#layers.size < size) {
+      this.markAllDirty();
     }
 
-    const [target, ...sources] = [...this.#layers].reverse();
-    for (const source of sources) {
-      target.mergeFrom(source, { overwrite: true });
-      this.#layers.detach(source);
-    }
-    target.markAllDirty();
-
-    return target;
+    return merged;
   }
 
   getLayers(): readonly VoxelLayer[] {
@@ -595,11 +610,14 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       case "position-rebased":
         layer.rebase(command.metadata.position);
         break;
-      case "merged":
-        if (!this.#merge(layer, command.metadata.targetLayerName)) {
+      case "merged": {
+        const target = this.getLayer(command.metadata.targetLayerName);
+        if (!target || target === layer) {
           return false;
         }
+        this.#merge(layer, target);
         break;
+      }
       default:
         throw new Error(
           `VoxelWorld: unhandled action '${command.action}'.`
@@ -675,13 +693,8 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
 
   #merge(
     source: VoxelLayer,
-    targetName: string
-  ): boolean {
-    const target = this.getLayer(targetName);
-    if (!target || source === target) {
-      return false;
-    }
-
+    target: VoxelLayer
+  ): void {
     target.mergeFrom(source, {
       overwrite: source.order > target.order
     });
@@ -690,8 +703,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       ...target.properties
     };
     this.#layers.detach(source);
-
-    return true;
   }
 
   #compositedLayerAt(
