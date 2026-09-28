@@ -91,17 +91,14 @@ describe("PeerGhostStream — remote peers", () => {
     assert.deepStrictEqual(callsOf(layer.set), [["peer-B", "ghost"]]);
   });
 
-  test("clears a ghost after 1500ms without renewal", (t) => {
+  test("keeps a still ghost until the peer clears it", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { room, layer } = setup();
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { testGhost: "ghost" } });
-    t.mock.timers.tick(1499);
+    t.mock.timers.tick(60_000);
+
     assert.strictEqual(layer.remove.mock.callCount(), 0);
-
-    t.mock.timers.tick(1);
-
-    assert.deepStrictEqual(callsOf(layer.remove), [["peer-B"]]);
   });
 
   test("null, an undecodable payload and peer-left remove the ghost", () => {

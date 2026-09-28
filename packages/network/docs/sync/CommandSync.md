@@ -1,6 +1,6 @@
 # CommandSync
 
-Sends stamped commands over a `Room` and emits what the server sends back, without the client's own echoes.
+Sends stamped commands over a `Room` and emits what the server sends back, without the client's own echoes of commands its state already holds.
 
 ```ts
 type CommandBody<TCommand extends NetworkCommandHeader> =
@@ -21,6 +21,7 @@ class CommandSync<
   readonly room: Room<TCommand, NetworkServerMessage<TCommand, TSnapshot, TNotice>>;
   readonly ready: boolean;
 
+  whenReady(): Promise<void>;
   send(body: CommandBody<TCommand>, timestamp?: number): void;
   destroy(): void;
 }
@@ -39,8 +40,8 @@ type NetworkServerMessage<TCommand, TSnapshot, TNotice extends NetworkServerNoti
 
 A notice's `type` must be a literal other than `"snapshot"` and `"command"`. `NetworkServerNoticeOf<TNotice>` resolves to `never` for a notice whose `type` could collide with one, such as `{ type: string }`, so the constraint fails at compile time.
 
-- `snapshot` emits `"snapshot"`, then `"ready"` once, the first time.
-- `command` emits `"command"` unless its `clientId` is `room.clientId`.
+- `snapshot` emits `"snapshot"`, then `"ready"` once, the first time. `whenReady()` returns one promise that resolves at that moment.
+- `command` emits `"command"` unless its `clientId` is `room.clientId` and it was sent after the last snapshot. A snapshot replaces local state, so own commands sent before it (held ones included) and echoed after it are emitted like peer commands; they are the ones the snapshot does not contain yet.
 - Any other `type` emits `"notice"` with the whole message, for server notices such as the asset room's `rejected` and `deleted`.
 
 ## Usage

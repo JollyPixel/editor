@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { VoxelNetworkCommand } from "../../src/network/server.ts";
+import type { VoxelMapNetworkCommand } from "../../src/network/server.ts";
 
 type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;
 
@@ -32,7 +32,7 @@ export interface VoxelSetCmdOptions {
 
 export function voxelSetCmd(
   opts: VoxelSetCmdOptions = {}
-): VoxelNetworkCommand {
+): VoxelMapNetworkCommand {
   return {
     action: "voxel-set",
     layerName: opts.layerName ?? "Ground",
@@ -59,7 +59,7 @@ export interface WorldReplaceCmdOptions {
 
 export function worldReplaceCmd(
   opts: WorldReplaceCmdOptions = {}
-): VoxelNetworkCommand {
+): VoxelMapNetworkCommand {
   return {
     action: "world-replace",
     data: {

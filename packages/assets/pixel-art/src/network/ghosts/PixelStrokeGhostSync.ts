@@ -1,27 +1,20 @@
 // Import Third-party Dependencies
-import type { Room } from "@jolly-pixel/network/client";
-import {
-  isVec2,
-  type PeerStrokePixel,
-  type PixelArtCanvas
+import type {
+  PeerStrokePixel,
+  PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PeerGhostStream } from "./PeerGhostStream.ts";
+import { isPeerStrokePixel } from "./presenceGuards.ts";
 import type {
-  PixelNetworkCommand,
-  PixelServerMessage
+  PixelArtRoom,
+  PixelNetworkCommand
 } from "../types.ts";
 
 export interface PixelStrokeGhostSyncOptions {
-  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  room: PixelArtRoom;
   canvas: PixelArtCanvas;
-}
-
-function isPeerStrokePixel(
-  value: unknown
-): value is PeerStrokePixel {
-  return isVec2(value) && "color" in value;
 }
 
 function decodeStrokeGhost(
@@ -42,7 +35,7 @@ export class PixelStrokeGhostSync {
   ): void => {
     this.#previousHandler?.(pixels);
     if (pixels.length === 0) {
-      this.#stream.cancelPending();
+      this.#stream.clearLocal();
     }
     else {
       this.#stream.report(pixels);

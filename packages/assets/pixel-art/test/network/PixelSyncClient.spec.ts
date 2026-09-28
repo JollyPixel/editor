@@ -7,10 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  PixelBufferHookEvent,
-  PixelBufferHookListener
-} from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelBufferHookEvent } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
@@ -18,10 +15,8 @@ import {
   command,
   gray
 } from "../fixtures/commands.ts";
-import {
-  asDocument,
-  createPixelArtCanvas
-} from "../helpers/canvas.ts";
+import { createPixelArtCanvas } from "../helpers/canvas.ts";
+import { MockEmitter } from "../helpers/emitter.ts";
 import { callsOf } from "../helpers/mock.ts";
 import { MockRoom } from "../helpers/room.ts";
 
@@ -31,12 +26,15 @@ const kResized: PixelBufferHookEvent = {
   metadata: { size: { x: 1, y: 1 } }
 };
 
+class Host extends MockEmitter<{
+  "buffer-updated": (event: PixelBufferHookEvent) => void;
+}> {
+  applyRemoteCommand = mock.fn();
+  loadSnapshot = mock.fn();
+}
+
 function createHost() {
-  return {
-    onBufferUpdated: undefined as PixelBufferHookListener | undefined,
-    applyRemoteCommand: mock.fn(),
-    loadSnapshot: mock.fn()
-  };
+  return new Host();
 }
 
 function setup() {
@@ -44,7 +42,7 @@ function setup() {
   const host = createHost();
   const client = new PixelSyncClient({
     room,
-    document: asDocument(host)
+    document: host
   });
 
   return {
@@ -54,32 +52,27 @@ function setup() {
   };
 }
 
-describe("PixelSyncClient — document hook", () => {
-  test("chains the existing onBufferUpdated handler", () => {
-    const room = new MockRoom();
-    const host = createHost();
-    const previous = mock.fn<PixelBufferHookListener>();
-    host.onBufferUpdated = previous;
-    new PixelSyncClient({ room, document: asDocument(host) });
+describe("PixelSyncClient — document events", () => {
+  test("sends each buffer-updated command", () => {
+    const { room, host } = setup();
 
-    host.onBufferUpdated?.(kResized);
+    host.emit("buffer-updated", kResized);
 
-    assert.deepStrictEqual(callsOf(previous), [[kResized]]);
     assert.strictEqual(room.sent.length, 1);
   });
 
-  test("destroy restores the previous handler and stops sending", () => {
-    const room = new MockRoom();
-    const host = createHost();
-    const previous = mock.fn<PixelBufferHookListener>();
-    host.onBufferUpdated = previous;
-    const client = new PixelSyncClient({ room, document: asDocument(host) });
+  test("keeps the document onBufferUpdated hook free", () => {
+    const { manager: canvas } = createPixelArtCanvas();
+    const hooked: PixelBufferHookEvent[] = [];
+    canvas.document.onBufferUpdated = (event) => hooked.push(event);
+    const room = new MockRoom({ clientId: "client-A" });
+    new PixelSyncClient({ room, document: canvas.document });
 
-    client.destroy();
-    host.onBufferUpdated?.(kResized);
+    canvas.document.commitPixels([{ x: 0, y: 0 }], gray(1));
 
-    assert.strictEqual(host.onBufferUpdated, previous);
-    assert.strictEqual(room.sent.length, 0);
+    assert.strictEqual(hooked.length, 1);
+    assert.strictEqual(room.sent.length, 1);
+    canvas.destroy();
   });
 });
 
@@ -88,8 +81,8 @@ describe("PixelSyncClient — local mutations", () => {
     t.mock.timers.enable({ apis: ["Date"], now: 1000 });
     const { room, host } = setup();
 
-    host.onBufferUpdated?.(kResized);
-    host.onBufferUpdated?.(kResized);
+    host.emit("buffer-updated", kResized);
+    host.emit("buffer-updated", kResized);
 
     assert.deepStrictEqual(room.sent, [
       command("resized", kResized.metadata, { clientId: "client-A", seq: 1, timestamp: 1000 }),
@@ -158,14 +151,13 @@ describe("PixelSyncClient — remote messages", () => {
 });
 
 describe("PixelSyncClient — destroy", () => {
-  test("restores the document hook and stops handling room messages", () => {
+  test("stops sending document commands and handling room messages", () => {
     const { room, host, client } = setup();
 
     client.destroy();
     room.deliverSnapshot();
-    host.onBufferUpdated?.(kResized);
+    host.emit("buffer-updated", kResized);
 
-    assert.strictEqual(host.onBufferUpdated, undefined);
     assert.strictEqual(host.loadSnapshot.mock.callCount(), 0);
     assert.strictEqual(room.sent.length, 0);
   });

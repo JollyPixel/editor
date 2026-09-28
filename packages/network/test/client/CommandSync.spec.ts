@@ -92,6 +92,45 @@ describe("CommandSync", () => {
     assert.deepEqual(commands, [remote("peer")]);
   });
 
+  test("after a snapshot, emits own echoes of commands sent before it", () => {
+    const { harness, sync } = setup();
+    const seqs: number[] = [];
+    sync.on("command", (command) => seqs.push(command.seq));
+
+    sync.send({ action: "set", value: 1 });
+    sync.send({ action: "set", value: 2 });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 1 } });
+    harness.serverMessage({ type: "snapshot", data: { value: 1 } });
+    sync.send({ action: "set", value: 3 });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 3 } });
+
+    assert.deepEqual(seqs, [2]);
+  });
+
+  test("counts held commands in the replay range of a snapshot", () => {
+    const { harness, sync } = setup({ admitted: false });
+    const seqs: number[] = [];
+    sync.on("command", (command) => seqs.push(command.seq));
+
+    sync.send({ action: "set", value: 1 });
+    harness.serverMessage({ type: "snapshot", data: { value: 0 } });
+    harness.admit("A");
+    harness.serverMessage({ type: "command", data: { ...remote("A"), seq: 1 } });
+
+    assert.deepEqual(seqs, [1]);
+  });
+
+  test("whenReady resolves on the first snapshot", async() => {
+    const { harness, sync } = setup();
+    const ready = sync.whenReady();
+
+    harness.serverMessage({ type: "snapshot", data: { value: 1 } });
+
+    await ready;
+    assert.strictEqual(sync.whenReady(), ready);
+  });
+
   test("emits every snapshot, and ready once after the first", () => {
     const { harness, sync } = setup();
     const events: string[] = [];

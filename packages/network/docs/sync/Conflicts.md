@@ -5,7 +5,7 @@ Server-side resolution of concurrent edits to the same key. `ConflictTracker` ke
 ```ts
 interface ConflictContext<Header extends NetworkCommandHeader> {
   incoming: Header;
-  existing: Header | undefined;
+  existing: NetworkCommandHeader | undefined;
 }
 
 interface ConflictResolver<Header extends NetworkCommandHeader> {
@@ -29,10 +29,11 @@ class ConflictTracker<THeader extends NetworkCommandHeader> {
   constructor(resolver: ConflictResolver<THeader>);
   admit<TCommand extends THeader>(command: TCommand, keys: readonly string[]): Admission<TCommand> | null;
   admitEach(command: THeader, keys: readonly string[]): PartialAdmission;
+  reset(command: NetworkCommandHeader): void;
 }
 ```
 
-Both are generic over `Header` for stronger typing (`LastWriteWinsResolver<PixelNetworkCommand>`), but only the three `NetworkCommandHeader` fields are ever read — never the payload.
+Both are generic over `Header` for stronger typing of `incoming` (`LastWriteWinsResolver<PixelNetworkCommand>`). The tracker records only the three `NetworkCommandHeader` fields of a committed command, so `existing` never carries a payload.
 
 ## LastWriteWinsResolver
 
@@ -48,6 +49,7 @@ Neither method mutates the tracker. `commit()` records the command at the admitt
 
 - `admit(command, keys)` admits the whole command, or returns `null` when any key rejects it. A command with no keys is always admitted.
 - `admitEach(command, keys)` resolves every key on its own and returns the `indices` that accept, for commands that can be narrowed to their winning entries (a stroke, a bulk voxel edit). `commit()` records only those keys.
+- `reset(command)` forgets every key and resolves any key against `command` until it is recorded again, for a command that replaces the whole state (a resize, a world replacement).
 
 ```ts
 const { indices, commit } = tracker.admitEach(stroke, stroke.positions.map(pixelKey));

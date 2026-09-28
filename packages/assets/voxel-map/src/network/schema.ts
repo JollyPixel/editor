@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import {
-  COMMAND_HEADER_REQUIRED,
-  commandHeaderProperties,
+  commandVariant,
   defineSchema,
+  withCommandHeader,
   type JSONSchema
 } from "@jolly-pixel/network";
 import { MAX_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
@@ -24,24 +24,9 @@ export function objectSchema(
   };
 }
 
-/**
- * A command message: the network header, one action and its own fields.
- */
-export function commandVariant(
+export function networkCommand(
   action: string,
   properties: Record<string, JSONSchema>
 ): JSONSchema {
-  return {
-    type: "object",
-    properties: {
-      ...commandHeaderProperties,
-      action: { const: action },
-      ...properties
-    },
-    required: [
-      ...COMMAND_HEADER_REQUIRED,
-      "action",
-      ...Object.keys(properties)
-    ]
-  };
+  return withCommandHeader(commandVariant(action, properties));
 }

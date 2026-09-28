@@ -17,7 +17,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  commandVariant,
+  networkCommand,
   objectSchema,
   tileSizeSchema
 } from "../schema.ts";
@@ -102,12 +102,12 @@ export const tilesetCommandProtocol: MessageProtocol = new MessageProtocol({
   oneOf: [
     ...pixelCommandSchemas,
     ...Object.entries(kBlockCommandProperties).map(
-      ([action, properties]) => commandVariant(action, properties)
+      ([action, properties]) => networkCommand(action, properties)
     ),
     ...Object.entries(kMaterialGroupCommandProperties).map(
-      ([action, properties]) => commandVariant(action, properties)
+      ([action, properties]) => networkCommand(action, properties)
     ),
-    commandVariant(kTileSizeAction, {
+    networkCommand(kTileSizeAction, {
       tileSize: tileSizeSchema
     })
   ]

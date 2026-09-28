@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   PresenceChannel,
-  type PresenceChange,
-  type Room
+  type PresenceChange
 } from "@jolly-pixel/network/client";
 import {
   isVec2,
@@ -13,17 +12,15 @@ import {
 
 // Import Internal Dependencies
 import {
-  peerProfile,
+  peerStyle,
   type PeerColor,
-  type PeerLabel
+  type PeerLabel,
+  type PeerStyle
 } from "./peerAppearance.ts";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage
-} from "./types.ts";
+import type { PixelArtRoom } from "./types.ts";
 
 export interface PixelCursorSyncOptions {
-  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  room: PixelArtRoom;
   canvas: PixelArtCanvas;
   label: PeerLabel;
   color: PeerColor;
@@ -36,11 +33,10 @@ function decodeCursor(
 }
 
 export class PixelCursorSync {
-  #room: Room<PixelNetworkCommand, PixelServerMessage>;
   #canvas: PixelArtCanvas;
   #channel: PresenceChannel<Vec2 | null>;
-  #label: PeerLabel;
-  #color: PeerColor;
+  #labelOf: PeerStyle;
+  #colorOf: PeerStyle;
   #previousHandler: ((pos: Vec2 | null) => void) | undefined;
 
   #handleCursorMove = (
@@ -64,10 +60,9 @@ export class PixelCursorSync {
   constructor(
     options: PixelCursorSyncOptions
   ) {
-    this.#room = options.room;
     this.#canvas = options.canvas;
-    this.#label = options.label;
-    this.#color = options.color;
+    this.#labelOf = peerStyle(options.room, options.label);
+    this.#colorOf = peerStyle(options.room, options.color);
     this.#channel = new PresenceChannel(options.room, {
       key: "cursor",
       decode: decodeCursor,
@@ -91,12 +86,10 @@ export class PixelCursorSync {
     clientId: string,
     pos: Vec2 | null
   ): void {
-    const profile = peerProfile(this.#room, clientId);
-
     this.#canvas.peerPresence.cursors.set(clientId, {
       pos,
-      color: this.#color(clientId, profile),
-      label: this.#label(clientId, profile)
+      color: this.#colorOf(clientId),
+      label: this.#labelOf(clientId)
     });
   }
 }

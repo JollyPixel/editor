@@ -21,6 +21,10 @@ export type PixelSelectEditCommand = Extract<
   PixelNetworkCommand,
   { action: "select-edit"; }
 >;
+export type PixelReplacementCommand = Extract<
+  PixelNetworkCommand,
+  { action: "resized" | "texture-replaced"; }
+>;
 export type PixelUvRegionCommand = Extract<
   PixelNetworkCommand,
   {
@@ -125,9 +129,9 @@ export class PixelCommandArbiter {
       case "resized":
       case "texture-replaced":
         return buffer.acceptsSize(command.metadata.size) ?
-          this.#regionTracker.admit(command, []) :
+          this.#admitReplacement(command) :
           null;
-      default:
+      case "global-fill":
         return this.#regionTracker.admit(command, []);
     }
   }
@@ -138,6 +142,12 @@ export class PixelCommandArbiter {
     const { indices, commit } = this.#admitPositions(command);
     if (indices.length === 0) {
       return null;
+    }
+    if (indices.length === command.metadata.positions.length) {
+      return {
+        command,
+        commit
+      };
     }
 
     return {
@@ -164,6 +174,12 @@ export class PixelCommandArbiter {
     if (indices.length === 0) {
       return null;
     }
+    if (indices.length === metadata.positions.length) {
+      return {
+        command,
+        commit
+      };
+    }
 
     return {
       command: {
@@ -174,6 +190,15 @@ export class PixelCommandArbiter {
         }
       },
       commit
+    };
+  }
+
+  #admitReplacement(
+    command: PixelReplacementCommand
+  ): network.Admission<PixelNetworkCommand> {
+    return {
+      command,
+      commit: () => this.#pixelTracker.reset(command)
     };
   }
 

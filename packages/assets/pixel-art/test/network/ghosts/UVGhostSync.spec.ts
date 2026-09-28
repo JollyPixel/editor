@@ -114,6 +114,16 @@ describe("UVGhostSync — local drag", () => {
 
     assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: null }]);
   });
+
+  test("a committed drag clears presence too", async() => {
+    const { room, events } = setup();
+
+    events.emit("region-dragging", kPayload);
+    events.emit("region-drag-ended", { id: kPayload.id, committed: true });
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: null }]);
+  });
 });
 
 describe("UVGhostSync — remote peers", () => {

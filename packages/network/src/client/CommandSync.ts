@@ -51,8 +51,12 @@ export class CommandSync<
   >;
 
   #seq = 0;
+  #replayUpTo = 0;
   #ready = false;
   #pending: PendingCommand<TCommand>[] = [];
+  #whenReady = new Promise<void>((resolve) => {
+    this.once("ready", resolve);
+  });
 
   #onMessage = (
     message: NetworkServerMessage<TCommand, TSnapshot, TNotice>
@@ -92,6 +96,10 @@ export class CommandSync<
     return this.#ready;
   }
 
+  whenReady(): Promise<void> {
+    return this.#whenReady;
+  }
+
   send(
     body: CommandBody<TCommand>,
     timestamp: number = Date.now()
@@ -123,7 +131,10 @@ export class CommandSync<
   #handleCommand(
     command: TCommand
   ): void {
-    if (command.clientId !== this.room.clientId) {
+    if (
+      command.clientId !== this.room.clientId ||
+      command.seq <= this.#replayUpTo
+    ) {
       this.emit("command", command);
     }
   }
@@ -131,6 +142,7 @@ export class CommandSync<
   #handleSnapshot(
     snapshot: TSnapshot
   ): void {
+    this.#replayUpTo = this.#seq + this.#pending.length;
     this.emit("snapshot", snapshot);
 
     if (!this.#ready) {

@@ -19,6 +19,10 @@ export interface AssetRoomRejectedMessage {
   readonly reason: string;
 }
 
+export type AssetRoomNotice =
+  | AssetRoomDeletedMessage
+  | AssetRoomRejectedMessage;
+
 export interface AssetArbitration<TCommand = unknown> {
   readonly command: TCommand;
   commit?(): void;

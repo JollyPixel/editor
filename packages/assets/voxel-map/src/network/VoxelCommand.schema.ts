@@ -12,7 +12,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  commandVariant,
+  networkCommand,
   objectSchema,
   tileSizeSchema
 } from "./schema.ts";
@@ -158,9 +158,6 @@ const kSlotSchema: JSONSchema = {
   maximum: MAX_TILESET_SLOT
 };
 
-/**
- * A tileset link names an asset, or a URL with its tile size.
- */
 export const tilesetDefinitionSchema: JSONSchema = {
   ...objectSchema(
     {
@@ -218,15 +215,15 @@ export const voxelWorldSchema: JSONSchema = {
 export const voxelCommandProtocol: MessageProtocol = new MessageProtocol({
   oneOf: [
     ...Object.entries(kLayerMetadataSchemas).map(
-      ([action, metadata]) => commandVariant(action, {
+      ([action, metadata]) => networkCommand(action, {
         layerName: { type: "string" },
         metadata
       })
     ),
     ...Object.entries(kTilesetCommandProperties).map(
-      ([action, properties]) => commandVariant(action, properties)
+      ([action, properties]) => networkCommand(action, properties)
     ),
-    commandVariant("world-replace", {
+    networkCommand("world-replace", {
       data: voxelWorldSchema
     })
   ]

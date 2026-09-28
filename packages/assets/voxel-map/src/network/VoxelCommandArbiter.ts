@@ -1,29 +1,49 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
 import {
+  deserializeVoxelWorld,
+  parseVoxelDocument,
+  TilesetList,
   VOXEL_PATCH_STRIDE,
-  type VoxelLayerCommand
+  VoxelWorld,
+  type VoxelLayerCommand,
+  type VoxelWorldCommandTarget,
+  type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { VoxelNetworkCommand } from "./types.ts";
+import type { VoxelMapNetworkCommand } from "./types.ts";
+
+// CONSTANTS
+const kVoxelWriteActions = new Set<string>([
+  "voxel-set",
+  "voxel-removed",
+  "voxels-set",
+  "voxels-removed",
+  "voxels-patched"
+]);
 
 type BulkCommand = Extract<
-  VoxelNetworkCommand,
+  VoxelMapNetworkCommand,
   { action: "voxels-set" | "voxels-removed"; }
 >;
 
 type PatchCommand = Extract<
-  VoxelNetworkCommand,
+  VoxelMapNetworkCommand,
   { action: "voxels-patched"; }
 >;
 
+type WorldReplaceCommand = Extract<
+  VoxelMapNetworkCommand,
+  { action: "world-replace"; }
+>;
+
 export interface VoxelCommandArbiterOptions {
-  conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
+  conflictResolver?: network.ConflictResolver<VoxelMapNetworkCommand>;
 }
 
 export class VoxelCommandArbiter {
-  #tracker: network.ConflictTracker<VoxelNetworkCommand>;
+  #tracker: network.ConflictTracker<VoxelMapNetworkCommand>;
 
   constructor(
     options: VoxelCommandArbiterOptions = {}
@@ -34,8 +54,19 @@ export class VoxelCommandArbiter {
   }
 
   admit(
-    command: VoxelNetworkCommand
-  ): network.Admission<VoxelNetworkCommand> | null {
+    state: VoxelWorldCommandTarget,
+    command: VoxelMapNetworkCommand
+  ): network.Admission<VoxelMapNetworkCommand> | null {
+    if (command.action === "world-replace") {
+      return this.#admitWorldReplace(state, command);
+    }
+    if (
+      kVoxelWriteActions.has(command.action) &&
+      "layerName" in command &&
+      state.world.getLayer(command.layerName) === undefined
+    ) {
+      return null;
+    }
     if (isBulkCommand(command)) {
       return this.#admitEntries(command);
     }
@@ -43,15 +74,11 @@ export class VoxelCommandArbiter {
       return this.#admitPatch(command);
     }
 
-    const keys = command.action === "world-replace" ?
-      [] :
-      VoxelCommandArbiter.keys(command);
-
-    return this.#tracker.admit(command, keys);
+    return this.#tracker.admit(command, VoxelCommandArbiter.keys(command));
   }
 
   static keys(
-    command: VoxelLayerCommand | VoxelNetworkCommand
+    command: VoxelLayerCommand | VoxelMapNetworkCommand
   ): string[] {
     if (isBulkCommand(command)) {
       return command.metadata.entries.map(
@@ -68,7 +95,7 @@ export class VoxelCommandArbiter {
   }
 
   static key(
-    command: VoxelLayerCommand | VoxelNetworkCommand
+    command: VoxelLayerCommand | VoxelMapNetworkCommand
   ): string | null {
     switch (command.action) {
       case "voxel-set":
@@ -87,6 +114,20 @@ export class VoxelCommandArbiter {
       default:
         return null;
     }
+  }
+
+  #admitWorldReplace(
+    state: VoxelWorldCommandTarget,
+    command: WorldReplaceCommand
+  ): network.Admission<VoxelMapNetworkCommand> | null {
+    if (!loads(command.data, state.world.chunkSize)) {
+      return null;
+    }
+
+    return {
+      command,
+      commit: () => this.#tracker.reset(command)
+    };
   }
 
   #admitEntries<TCommand extends BulkCommand>(
@@ -152,6 +193,24 @@ export class VoxelCommandArbiter {
   }
 }
 
+function loads(
+  data: VoxelWorldJSON,
+  chunkSize: number
+): boolean {
+  try {
+    deserializeVoxelWorld(
+      parseVoxelDocument(data),
+      new VoxelWorld(chunkSize),
+      { tilesets: new TilesetList() }
+    );
+
+    return true;
+  }
+  catch {
+    return false;
+  }
+}
+
 function patchKeys(
   layerName: string,
   cells: readonly number[]
@@ -169,7 +228,7 @@ function patchKeys(
 }
 
 function isBulkCommand<
-  TCommand extends VoxelLayerCommand | VoxelNetworkCommand
+  TCommand extends VoxelLayerCommand | VoxelMapNetworkCommand
 >(
   command: TCommand
 ): command is Extract<

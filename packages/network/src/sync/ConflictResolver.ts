@@ -5,7 +5,7 @@ export interface ConflictContext<
   Header extends NetworkCommandHeader = NetworkCommandHeader
 > {
   incoming: Header;
-  existing: Header | undefined;
+  existing: NetworkCommandHeader | undefined;
 }
 
 export interface ConflictResolver<
@@ -28,7 +28,6 @@ export class LastWriteWinsResolver<
       return "accept";
     }
 
-    // Accept same-client replay in sequence because timestamps may be old.
     if (incoming.clientId === existing.clientId) {
       return "accept";
     }
@@ -41,7 +40,6 @@ export class LastWriteWinsResolver<
       return "reject";
     }
 
-    // Tie-break: lexicographically greater clientId wins.
     return incoming.clientId >= existing.clientId ? "accept" : "reject";
   }
 }

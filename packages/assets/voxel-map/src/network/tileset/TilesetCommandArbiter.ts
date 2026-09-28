@@ -1,14 +1,16 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
-import { PixelCommandArbiter } from "@jolly-pixel/asset.pixel-art/server";
+import {
+  isPixelCommand,
+  PixelCommandArbiter
+} from "@jolly-pixel/asset.pixel-art/server";
 import type { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
 import { localBlock } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  isPixelNetworkCommand,
-  type TilesetDocumentNetworkCommand,
-  type TilesetNetworkCommand
+import type {
+  TilesetDocumentNetworkCommand,
+  TilesetNetworkCommand
 } from "./types.ts";
 
 export interface TilesetCommandArbiterOptions {
@@ -19,10 +21,6 @@ export interface TilesetArbiterState {
   readonly pixels: PixelBuffer;
 }
 
-/**
- * Pixel commands are arbitrated per pixel and UV region as in a pixel-art
- * room; document commands collide per block, material group or tile size.
- */
 export class TilesetCommandArbiter {
   #pixels: PixelCommandArbiter;
   #tracker: network.ConflictTracker;
@@ -42,7 +40,7 @@ export class TilesetCommandArbiter {
     state: TilesetArbiterState,
     command: TilesetNetworkCommand
   ): network.Admission<TilesetNetworkCommand> | null {
-    if (isPixelNetworkCommand(command)) {
+    if (isPixelCommand(command)) {
       return this.#pixels.admit(state.pixels, command);
     }
     if (!isFoldable(command)) {

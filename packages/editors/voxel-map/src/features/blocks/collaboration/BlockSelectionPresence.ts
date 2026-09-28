@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
 import type {
-  VoxelNetworkCommand,
-  VoxelServerMessage
+  VoxelMapNetworkCommand,
+  VoxelMapServerMessage
 } from "@jolly-pixel/asset.voxel-map/client";
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
 
@@ -12,8 +12,8 @@ import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 
 export interface BlockSelectionPresenceOptions {
   room: network.Room<
-    VoxelNetworkCommand,
-    VoxelServerMessage
+    VoxelMapNetworkCommand,
+    VoxelMapServerMessage
   >;
   brush: BrushStore;
   presence: PresenceStore;

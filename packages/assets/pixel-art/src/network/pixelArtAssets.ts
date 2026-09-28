@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { Room } from "@jolly-pixel/network/client";
 import { AssetRoom } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import {
@@ -9,12 +8,8 @@ import {
 
 // Import Internal Dependencies
 import { PIXEL_ART_KIND } from "../asset/pixelArt.ts";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage
-} from "./types.ts";
+import type { PixelArtRoom } from "./types.ts";
 
-export type PixelArtRoom = Room<PixelNetworkCommand, PixelServerMessage>;
 export type PixelArtAssetWriter = Pick<CatalogClient, "create">;
 
 export interface PixelArtRoomSource {

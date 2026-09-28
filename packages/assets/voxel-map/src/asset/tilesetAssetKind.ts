@@ -10,7 +10,10 @@ import {
   type AssetKindHandler,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-import { applyCommandToBuffer } from "@jolly-pixel/asset.pixel-art/server";
+import {
+  applyCommandToBuffer,
+  isPixelCommand
+} from "@jolly-pixel/asset.pixel-art/server";
 import {
   deserializePixelBuffer,
   parsePixelArtDocument,
@@ -42,10 +45,9 @@ import {
   tilesetSnapshotSchema
 } from "../network/tileset/TilesetCommand.schema.ts";
 import { TilesetCommandArbiter } from "../network/tileset/TilesetCommandArbiter.ts";
-import {
-  isPixelNetworkCommand,
-  type TilesetNetworkCommand,
-  type TilesetSnapshot
+import type {
+  TilesetNetworkCommand,
+  TilesetSnapshot
 } from "../network/tileset/types.ts";
 
 // CONSTANTS
@@ -140,9 +142,6 @@ export interface TilesetStateOptions {
   tileSize: number;
 }
 
-/**
- * The server's headless tileset: its pixel buffer and its tileset document.
- */
 export class TilesetState {
   readonly pixels: PixelBuffer;
   readonly document: TilesetDocument;
@@ -192,7 +191,7 @@ export class TilesetState {
   applyCommand(
     command: TilesetNetworkCommand
   ): void {
-    if (isPixelNetworkCommand(command)) {
+    if (isPixelCommand(command)) {
       applyCommandToBuffer(this.pixels, command);
 
       return;
@@ -214,15 +213,7 @@ export class TilesetState {
 }
 
 export interface TilesetAssetKindOptions {
-  /**
-   * Tile size of a tileset created without content.
-   * @default 32
-   */
   tileSize?: number;
-  /**
-   * Pixel size of a tileset created without content.
-   * @default 8 by 8 tiles
-   */
   defaultSize?: Vec2;
   snapshot?: SnapshotPolicy;
   conflictResolver?: ConflictResolver;

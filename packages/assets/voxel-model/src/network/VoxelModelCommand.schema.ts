@@ -1,10 +1,9 @@
 // Import Third-party Dependencies
 import {
-  COMMAND_HEADER_REQUIRED,
-  commandHeaderProperties,
+  commandVariant,
   defineSchema,
   MessageProtocol,
-  type JSONSchema
+  withCommandHeader
 } from "@jolly-pixel/network";
 import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
 
@@ -128,59 +127,5 @@ export const voxelModelCommandSchema = defineSchema({
 });
 
 export const voxelModelCommandProtocol: MessageProtocol = new MessageProtocol({
-  oneOf: voxelModelCommandSchema.oneOf.map(networkVariant)
+  oneOf: voxelModelCommandSchema.oneOf.map(withCommandHeader)
 });
-
-/**
- * Shape of one command as it travels without its network header, so `Infer`
- * yields the bare command union the editor works with.
- */
-type CommandVariant<
-  TAction extends string,
-  TRequired extends Record<string, JSONSchema>,
-  TOptional extends Record<string, JSONSchema>
-> = {
-  [keyword: string]: unknown;
-  type: "object";
-  properties: { action: { const: TAction; }; } & TRequired & TOptional;
-  required: ("action" | Extract<keyof TRequired, string>)[];
-};
-
-function commandVariant<
-  const TAction extends string,
-  const TRequired extends Record<string, JSONSchema>,
-  const TOptional extends Record<string, JSONSchema> = Record<never, never>
->(
-  action: TAction,
-  properties: TRequired,
-  optionalProperties: TOptional = {} as TOptional
-): CommandVariant<TAction, TRequired, TOptional> {
-  return {
-    type: "object",
-    properties: {
-      action: { const: action },
-      ...properties,
-      ...optionalProperties
-    },
-    required: [
-      "action",
-      ...Object.keys(properties) as Extract<keyof TRequired, string>[]
-    ]
-  };
-}
-
-function networkVariant(
-  variant: JSONSchema
-): JSONSchema {
-  return {
-    ...variant,
-    properties: {
-      ...commandHeaderProperties,
-      ...variant.properties
-    },
-    required: [
-      ...COMMAND_HEADER_REQUIRED,
-      ...variant.required ?? []
-    ]
-  };
-}

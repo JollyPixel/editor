@@ -60,7 +60,7 @@ describe("PixelCommandArbiter — pixels", () => {
       positions: [{ x: 1, y: 1 }]
     });
 
-    assert.deepStrictEqual(accept(arbiter, buffer, stroke), stroke);
+    assert.strictEqual(accept(arbiter, buffer, stroke), stroke);
   });
 
   test("accepts a newer stroke from another client at the same pixel", () => {
@@ -190,6 +190,30 @@ describe("PixelCommandArbiter — pixels", () => {
     assert.strictEqual(accept(arbiter, buffer, command("resized", { size: { x: 99, y: 4 } })), null);
     assert.strictEqual(accept(arbiter, buffer, command("resized", { size: { x: 0, y: 4 } })), null);
     assert.notStrictEqual(accept(arbiter, buffer, command("resized", { size: { x: 8, y: 8 } })), null);
+  });
+
+  test("a replacement supersedes every pixel, rejecting older strokes from others", () => {
+    const { arbiter, buffer } = setup();
+    accept(arbiter, buffer, command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }]
+    }, { clientId: "A", timestamp: 100 }));
+    accept(arbiter, buffer, command("texture-replaced", {
+      size: { x: 4, y: 4 },
+      pixels: ""
+    }, { clientId: "B", timestamp: 500 }));
+
+    const older = command("stroke", {
+      color: gray(2),
+      positions: [{ x: 3, y: 3 }]
+    }, { clientId: "C", timestamp: 400 });
+    const newer = command("stroke", {
+      color: gray(2),
+      positions: [{ x: 3, y: 3 }]
+    }, { clientId: "C", timestamp: 600 });
+
+    assert.strictEqual(accept(arbiter, buffer, older), null);
+    assert.strictEqual(accept(arbiter, buffer, newer), newer);
   });
 });
 

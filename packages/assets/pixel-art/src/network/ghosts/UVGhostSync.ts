@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { Room } from "@jolly-pixel/network/client";
 import {
   isUVGeometry,
   isUVSlot,
@@ -10,24 +9,20 @@ import {
 // Import Internal Dependencies
 import { PeerGhostStream } from "./PeerGhostStream.ts";
 import {
-  peerProfile,
-  type PeerColor
+  peerStyle,
+  type PeerColor,
+  type PeerStyle
 } from "../peerAppearance.ts";
 import type {
+  PixelArtRoom,
   PixelNetworkCommand,
-  PixelServerMessage,
   UVGhostPayload
 } from "../types.ts";
 
 export interface UVGhostSyncOptions {
-  room: Room<PixelNetworkCommand, PixelServerMessage>;
+  room: PixelArtRoom;
   canvas: PixelArtCanvas;
   color: PeerColor;
-  /**
-   * Called with a remote peer's in-progress drag, on top of the built-in
-   * SVG ghost overlay. Lets a host mirror the drag onto something else
-   * (a 3D preview, for example) without waiting for the drag to commit.
-   */
   onRemoteRegionDragging?: (payload: UVGhostPayload) => void;
 }
 
@@ -56,9 +51,8 @@ function decodeUVGhost(
 }
 
 export class UVGhostSync {
-  #room: Room<PixelNetworkCommand, PixelServerMessage>;
   #canvas: PixelArtCanvas;
-  #color: PeerColor;
+  #colorOf: PeerStyle;
   #stream: PeerGhostStream<UVGhostPayload>;
   #onRemoteRegionDragging: ((payload: UVGhostPayload) => void) | undefined;
 
@@ -80,15 +74,8 @@ export class UVGhostSync {
     }
   };
 
-  #onRegionDragEnded = (
-    event: { id: string; committed: boolean; }
-  ): void => {
-    if (this.#stream.pending?.id === event.id) {
-      this.#stream.cancelPending();
-    }
-    if (!event.committed) {
-      this.#stream.clearLocal();
-    }
+  #onRegionDragEnded = (): void => {
+    this.#stream.clearLocal();
   };
 
   constructor(
@@ -97,9 +84,8 @@ export class UVGhostSync {
     const { canvas } = options;
     const { uv } = canvas.peerPresence;
 
-    this.#room = options.room;
     this.#canvas = canvas;
-    this.#color = options.color;
+    this.#colorOf = peerStyle(options.room, options.color);
     this.#onRemoteRegionDragging = options.onRemoteRegionDragging;
     this.#stream = new PeerGhostStream({
       room: options.room,
@@ -128,12 +114,6 @@ export class UVGhostSync {
     this.#canvas.uv.off("region-moved", this.#onRegionMoved);
     this.#canvas.uv.off("region-drag-ended", this.#onRegionDragEnded);
     this.#stream.destroy();
-  }
-
-  #colorOf(
-    clientId: string
-  ): string {
-    return this.#color(clientId, peerProfile(this.#room, clientId));
   }
 
   #reconcile(

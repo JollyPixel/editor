@@ -11,6 +11,10 @@ export interface VoxelModelCommandArbiterOptions {
   conflictResolver?: network.ConflictResolver<VoxelModelNetworkCommand>;
 }
 
+export interface VoxelModelArbiterState {
+  accepts(command: VoxelModelCommand): boolean;
+}
+
 export class VoxelModelCommandArbiter {
   #tracker: network.ConflictTracker<VoxelModelNetworkCommand>;
 
@@ -23,8 +27,13 @@ export class VoxelModelCommandArbiter {
   }
 
   admit<TCommand extends VoxelModelNetworkCommand>(
+    state: VoxelModelArbiterState,
     command: TCommand
   ): network.Admission<TCommand> | null {
+    if (!state.accepts(command)) {
+      return null;
+    }
+
     return this.#tracker.admit(
       command,
       VoxelModelCommandArbiter.keys(command)
@@ -35,6 +44,9 @@ export class VoxelModelCommandArbiter {
     command: VoxelModelCommand | VoxelModelNetworkCommand
   ): string[] {
     switch (command.action) {
+      case "node-added":
+      case "node-removed":
+        return [];
       case "node-renamed":
         return [`name:${command.id}`];
       case "node-moved":
@@ -46,8 +58,6 @@ export class VoxelModelCommandArbiter {
         return [`transform:${command.id}`];
       case "node-uv-changed":
         return [`uv:${command.id}`];
-      default:
-        return [];
     }
   }
 }

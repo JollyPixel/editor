@@ -50,4 +50,4 @@ flowchart TB
     TilesetAction -->|"tile size"| Size["tile-size"]
 ```
 
-Bulk voxel commands arbitrate each cell and retain the entries that win; strokes do the same per pixel, as in a pixel-art room. The default resolver is last write wins. The room commits admissions after a successful append; `commands.apply` then folds the command into state. `world-replace` loads a full document and broadcasts a fresh snapshot. See the [network API](./docs/network.md) for command and client details.
+Bulk voxel commands arbitrate each cell and retain the entries that win; strokes do the same per pixel, as in a pixel-art room. The default resolver is last write wins. The room commits admissions after a successful append; `commands.apply` then folds the command into state. `world-replace` is admitted only when its document loads into a scratch world; it then loads into state, resets the conflict keys to its timestamp and broadcasts a fresh snapshot. A voxel write to a missing layer is refused. See the [network API](./docs/network.md) for command and client details.

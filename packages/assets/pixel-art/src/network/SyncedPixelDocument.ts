@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { Room } from "@jolly-pixel/network/client";
 import {
   PixelDocument,
   type Vec2
@@ -8,10 +7,7 @@ import {
 // Import Internal Dependencies
 import { PIXEL_ART_KIND } from "../asset/pixelArt.ts";
 import { PixelSyncClient } from "./PixelSyncClient.ts";
-import type {
-  PixelNetworkCommand,
-  PixelServerMessage
-} from "./types.ts";
+import type { PixelArtRoom } from "./types.ts";
 
 // CONSTANTS
 const kInitialSize: Vec2 = { x: 1, y: 1 };
@@ -24,38 +20,47 @@ export interface SyncedPixelDocumentOptions {
   };
 }
 
+export function blankPixelDocument(
+  options: SyncedPixelDocumentOptions = {}
+): PixelDocument {
+  return new PixelDocument({
+    size: kInitialSize,
+    maxSize: options.maxSize,
+    history: options.history
+  });
+}
+
 export class SyncedPixelDocument {
   readonly document: PixelDocument;
-  readonly sync: PixelSyncClient;
   readonly ready: Promise<void>;
 
+  #sync: PixelSyncClient;
+
+  get loaded(): boolean {
+    return this.#sync.ready;
+  }
+
   constructor(
-    room: Room<PixelNetworkCommand, PixelServerMessage>,
+    room: PixelArtRoom,
     options: SyncedPixelDocumentOptions = {}
   ) {
-    this.document = new PixelDocument({
-      size: kInitialSize,
-      maxSize: options.maxSize,
-      history: options.history
-    });
-    this.sync = new PixelSyncClient({
+    this.document = blankPixelDocument(options);
+    this.#sync = new PixelSyncClient({
       room,
       document: this.document
     });
-    this.ready = new Promise((resolve) => {
-      this.sync.once("ready", resolve);
-    });
+    this.ready = this.#sync.whenReady();
   }
 
   dispose(): void {
-    this.sync.destroy();
+    this.#sync.destroy();
   }
 }
 
 export interface PixelArtDocumentKind {
   readonly kind: typeof PIXEL_ART_KIND;
   createDocument(
-    room: Room<PixelNetworkCommand, PixelServerMessage>
+    room: PixelArtRoom
   ): SyncedPixelDocument;
 }
 

@@ -277,7 +277,7 @@ describe("AssetRoomExtension", () => {
     assert.deepEqual(committed, []);
   });
 
-  test("a rejected append sends the rejected notice to the author only", async() => {
+  test("a rejected append sends the rejected notice then a snapshot to the author only", async() => {
     const { extension, context, direct } = harness({ appends: false });
 
     await extension.onMessage("alice", { action: "increment" }, context);
@@ -289,8 +289,80 @@ describe("AssetRoomExtension", () => {
           type: ASSET_ROOM_REJECTED,
           reason: "disk full"
         }
+      },
+      {
+        clientId: "alice",
+        payload: {
+          type: "snapshot",
+          data: { value: 7 }
+        }
       }
     ]);
+  });
+
+  test("resyncs the author alone when arbitration refuses a command", async() => {
+    const { extension, context, direct } = harness({ accepts: false });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.deepEqual(direct, [
+      {
+        clientId: "alice",
+        payload: {
+          type: "snapshot",
+          data: { value: 7 }
+        }
+      }
+    ]);
+  });
+
+  test("resyncs the author after broadcasting a narrowed command", async() => {
+    const { extension, context, broadcast, direct } = harness({
+      protocol: {
+        arbitrate: (command) => {
+          return {
+            command: {
+              ...command
+            }
+          };
+        }
+      }
+    });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.strictEqual(broadcast.length, 1);
+    assert.deepEqual(direct, [
+      {
+        clientId: "alice",
+        payload: {
+          type: "snapshot",
+          data: { value: 7 }
+        }
+      }
+    ]);
+  });
+
+  test("clamps a timestamp ahead of the server clock", async(t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 5_000 });
+    const { extension, context, appended } = harness();
+
+    await extension.onMessage("alice", {
+      action: "increment",
+      timestamp: 9_000
+    }, context);
+    await extension.onMessage("alice", {
+      action: "increment",
+      timestamp: 1_000
+    }, context);
+
+    assert.deepEqual(
+      appended.map(({ eventData }) => eventData),
+      [
+        { action: "increment", clientId: "alice", timestamp: 5_000 },
+        { action: "increment", clientId: "alice", timestamp: 1_000 }
+      ]
+    );
   });
 
   test("a successful append sends no rejected notice", async() => {

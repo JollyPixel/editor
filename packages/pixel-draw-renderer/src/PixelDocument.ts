@@ -51,6 +51,7 @@ export interface PixelDocumentOptions {
 }
 
 export type PixelDocumentEvent = CanvasBufferEvent & {
+  "buffer-updated": (event: PixelBufferHookEvent) => void;
   "draw-end": () => void;
   "history-changed": (state: HistoryState) => void;
   reset: () => void;
@@ -64,6 +65,7 @@ export class PixelDocument extends Emitter<
   readonly history: History;
 
   #edits: DocumentEdits;
+  #onBufferUpdated: PixelBufferHookListener | undefined;
 
   constructor(
     options: PixelDocumentOptions
@@ -101,7 +103,11 @@ export class PixelDocument extends Emitter<
       onDrawEnd: () => this.emit("draw-end"),
       onReset: () => this.emit("reset")
     });
-    this.#edits.onBufferUpdated = options.onBufferUpdated;
+    this.#onBufferUpdated = options.onBufferUpdated;
+    this.#edits.onBufferUpdated = (event) => {
+      this.#onBufferUpdated?.(event);
+      this.emit("buffer-updated", event);
+    };
 
     this.buffer.on("changed", (event) => this.emit("changed", event));
     this.buffer.on("resized", (event) => this.emit("resized", event));
@@ -109,19 +115,15 @@ export class PixelDocument extends Emitter<
   }
 
   get onBufferUpdated(): PixelBufferHookListener | undefined {
-    return this.#edits.onBufferUpdated;
+    return this.#onBufferUpdated;
   }
 
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
   ) {
-    this.#edits.onBufferUpdated = fn;
+    this.#onBufferUpdated = fn;
   }
 
-  /**
-   * Hands the UV regions `filter` matches to another document until the
-   * returned function is called.
-   */
   disownUvRegions(
     filter: UVRegionFilter
   ): () => void {

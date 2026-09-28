@@ -33,7 +33,7 @@ await createAssetBackend({
 });
 ```
 
-A tileset owns its pixels, tile size, block definitions and material groups. A world links tilesets by asset reference and stores only its layers; every linked tileset is a catalog dependency of the world. The default `chunkSize` is 16. A map saved with another chunk size still loads, and is saved back with the handler's. The map handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy on either kind. `tilesetAssetKind({ tileSize, defaultSize })` sets what a tileset created without content holds.
+A tileset owns its pixels, tile size, block definitions and material groups. A world links tilesets by asset reference and stores only its layers; every linked tileset is a catalog dependency of the world. The default `chunkSize` is 16. A map saved with another chunk size still loads, and is saved back with the handler's. The map handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy on either kind. `tilesetAssetKind({ tileSize, defaultSize })` sets what a tileset created without content holds: 32-pixel tiles on an 8 by 8 tile grid by default.
 
 ### Connect a world and its tilesets
 

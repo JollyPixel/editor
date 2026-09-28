@@ -1,13 +1,14 @@
 // Import Third-party Dependencies
 import {
-  COMMAND_HEADER_REQUIRED,
-  commandHeaderProperties,
+  commandVariant,
   defineSchema,
   MessageProtocol,
+  withCommandHeader,
   type JSONSchema
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import type { PixelCommandAction } from "./pixelCommandActions.ts";
 import {
   textureRectSchema,
   uvGeometrySchema,
@@ -56,6 +57,57 @@ const kRgba8Schema = defineSchema({
   ]
 });
 
+const kPixelCommandMetadata: Record<
+  PixelCommandAction,
+  readonly Record<string, JSONSchema>[]
+> = {
+  stroke: [{
+    color: kRgba8Schema,
+    positions: { type: "array", items: kVec2Schema }
+  }],
+  resized: [{
+    size: kSizeSchema
+  }],
+  "texture-replaced": [{
+    size: kSizeSchema,
+    pixels: { type: "string" }
+  }],
+  "global-fill": [{
+    fromColor: kRgba8Schema,
+    toColor: kRgba8Schema
+  }],
+  "select-edit": [{
+    positions: { type: "array", items: kVec2Schema },
+    colors: { type: "array", items: kRgba8Schema }
+  }],
+  "uv-region-created": [{
+    region: uvRegionSchema
+  }],
+  "uv-region-deleted": [{
+    id: { type: "string" }
+  }],
+  "uv-region-moved": [{
+    id: { type: "string" },
+    face: { type: ["string", "null"], minLength: 1 },
+    rect: textureRectSchema
+  }],
+  "uv-region-state-changed": [{
+    region: uvRegionSchema
+  }],
+  "uv-region-rotated": [
+    {
+      id: { type: "string" },
+      face: uvSlotSchema,
+      geometry: uvGeometrySchema
+    },
+    {
+      id: { type: "string" },
+      face: { type: "null" },
+      region: uvRegionSchema
+    }
+  ]
+};
+
 function metadataSchema(
   properties: Record<string, JSONSchema>
 ): JSONSchema {
@@ -68,78 +120,18 @@ function metadataSchema(
 
 function pixelCommand(
   action: string,
-  ...variants: Record<string, JSONSchema>[]
+  variants: readonly Record<string, JSONSchema>[]
 ): JSONSchema {
-  return {
-    type: "object",
-    properties: {
-      ...commandHeaderProperties,
-      seq: { type: "integer", minimum: 0 },
-      action: { const: action },
-      metadata: variants.length === 1 ?
-        metadataSchema(variants[0]) :
-        { oneOf: variants.map(metadataSchema) },
-      originTimestamp: { type: "number" }
-    },
-    required: [
-      ...COMMAND_HEADER_REQUIRED,
-      "action",
-      "metadata"
-    ]
-  };
+  return withCommandHeader(commandVariant(action, {
+    metadata: variants.length === 1 ?
+      metadataSchema(variants[0]) :
+      { oneOf: variants.map(metadataSchema) }
+  }));
 }
 
-/**
- * One schema per pixel command, for protocols that embed them.
- */
-export const pixelCommandSchemas: readonly JSONSchema[] = [
-  pixelCommand("stroke", {
-    color: kRgba8Schema,
-    positions: { type: "array", items: kVec2Schema }
-  }),
-  pixelCommand("resized", {
-    size: kSizeSchema
-  }),
-  pixelCommand("texture-replaced", {
-    size: kSizeSchema,
-    pixels: { type: "string" }
-  }),
-  pixelCommand("global-fill", {
-    fromColor: kRgba8Schema,
-    toColor: kRgba8Schema
-  }),
-  pixelCommand("select-edit", {
-    positions: { type: "array", items: kVec2Schema },
-    colors: { type: "array", items: kRgba8Schema }
-  }),
-  pixelCommand("uv-region-created", {
-    region: uvRegionSchema
-  }),
-  pixelCommand("uv-region-deleted", {
-    id: { type: "string" }
-  }),
-  pixelCommand("uv-region-moved", {
-    id: { type: "string" },
-    face: { type: ["string", "null"], minLength: 1 },
-    rect: textureRectSchema
-  }),
-  pixelCommand("uv-region-state-changed", {
-    region: uvRegionSchema
-  }),
-  pixelCommand(
-    "uv-region-rotated",
-    {
-      id: { type: "string" },
-      face: uvSlotSchema,
-      geometry: uvGeometrySchema
-    },
-    {
-      id: { type: "string" },
-      face: { type: "null" },
-      region: uvRegionSchema
-    }
-  )
-];
+export const pixelCommandSchemas: readonly JSONSchema[] = Object.entries(
+  kPixelCommandMetadata
+).map(([action, variants]) => pixelCommand(action, variants));
 
 export const pixelCommandProtocol: MessageProtocol = new MessageProtocol({
   oneOf: [...pixelCommandSchemas]

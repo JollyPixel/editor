@@ -139,18 +139,18 @@ A rule on `voxel.renderer.voxel-set` then covers both directions of that command
 
 ### Command headers
 
-Commands stamped by [CommandSync](./sync/CommandSync.md) carry `clientId`, `seq` and `timestamp`. Spread the shipped fragments into a variant rather than restating them:
+Commands stamped by [CommandSync](./sync/CommandSync.md) carry `clientId`, `seq` (an integer from 0) and `timestamp`. `commandVariant(action, required, optional?)` builds one command without the header, typed for `Infer`; `withCommandHeader(variant)` adds the header properties and requires them:
 
 ```ts
-const variant = defineSchema({
-  type: "object",
-  properties: {
-    ...commandHeaderProperties,
-    action: { const: "voxel-set" }
-  },
-  required: [...COMMAND_HEADER_REQUIRED, "action"]
+const renamed = commandVariant("renamed", { id: { type: "string" }, name: { type: "string" } });
+type Renamed = Infer<typeof renamed>;
+
+const protocol = new MessageProtocol({
+  oneOf: [withCommandHeader(renamed)]
 });
 ```
+
+`commandHeaderProperties` and `COMMAND_HEADER_REQUIRED` are the same fragments, for a variant built by hand.
 
 ### Parsing other values
 

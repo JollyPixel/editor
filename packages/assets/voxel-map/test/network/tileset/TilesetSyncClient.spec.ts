@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import type { PixelSyncTarget } from "@jolly-pixel/asset.pixel-art/client";
 import {
   encodePixelBytes,
   type PixelBufferHookEvent,
@@ -18,7 +19,6 @@ import { TilesetDocument } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import {
   TilesetSyncClient,
-  type TilesetPixelsTarget,
   type TilesetSnapshot
 } from "#src/network/client.ts";
 import {
@@ -46,10 +46,32 @@ interface LoadedSnapshot {
   uvRegions: readonly (UVRegionData | { toJSON(): UVRegionData; })[];
 }
 
-class PixelsRecorder implements TilesetPixelsTarget {
-  onBufferUpdated: PixelBufferHookListener | undefined;
+class PixelsRecorder implements PixelSyncTarget {
+  readonly listeners = new Set<PixelBufferHookListener>();
   readonly remote: PixelBufferHookEvent[] = [];
   readonly loaded: LoadedSnapshot[] = [];
+
+  on(
+    _event: "buffer-updated",
+    listener: PixelBufferHookListener
+  ): void {
+    this.listeners.add(listener);
+  }
+
+  off(
+    _event: "buffer-updated",
+    listener: PixelBufferHookListener
+  ): void {
+    this.listeners.delete(listener);
+  }
+
+  emitLocal(
+    event: PixelBufferHookEvent
+  ): void {
+    for (const listener of this.listeners) {
+      listener(event);
+    }
+  }
 
   applyRemoteCommand(
     event: PixelBufferHookEvent
@@ -88,10 +110,6 @@ function harness() {
   return { room, pixels, tileset, client };
 }
 
-function noop(): void {
-  return void 0;
-}
-
 describe("TilesetSyncClient", () => {
   it("loads a snapshot into the pixels and the document, then is ready", () => {
     const { room, pixels, tileset, client } = harness();
@@ -122,7 +140,7 @@ describe("TilesetSyncClient", () => {
   it("sends local pixel edits and local document commands with one seq", () => {
     const { room, pixels, tileset } = harness();
 
-    pixels.onBufferUpdated?.({
+    pixels.emitLocal({
       action: "stroke",
       metadata: { color: kBlack, positions: [{ x: 0, y: 0 }] },
       originTimestamp: 42
@@ -175,23 +193,13 @@ describe("TilesetSyncClient", () => {
     assert.equal(tileset.blocks.has(2), true);
   });
 
-  it("destroy restores the pixel hook and stops forwarding", () => {
+  it("destroy unsubscribes from the pixels and stops forwarding", () => {
     const { room, pixels, tileset, client } = harness();
-    const previous: PixelBufferHookListener = noop;
-    const chained = new PixelsRecorder();
-    chained.onBufferUpdated = previous;
-    const wired = new TilesetSyncClient({
-      room,
-      pixels: chained,
-      tileset: new TilesetDocument()
-    });
 
-    wired.destroy();
     client.destroy();
     tileset.defineBlock(makeBlockDef(3, "cube"));
 
-    assert.equal(chained.onBufferUpdated, previous);
-    assert.equal(pixels.onBufferUpdated, undefined);
+    assert.equal(pixels.listeners.size, 0);
     assert.equal(room.sentCommands.length, 0);
   });
 });

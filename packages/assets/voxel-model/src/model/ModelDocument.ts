@@ -149,8 +149,13 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
 
   apply(
     command: VoxelModelCommand
-  ): void {
+  ): boolean {
+    if (!this.#tree.accepts(command)) {
+      return false;
+    }
     this.#apply(command, "remote");
+
+    return true;
   }
 
   load(

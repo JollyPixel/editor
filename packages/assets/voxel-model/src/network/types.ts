@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
-import type {
-  AssetRoomDeletedMessage,
-  AssetRoomRejectedMessage
-} from "@jolly-pixel/asset-server";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type { UVLayoutData } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -35,14 +32,10 @@ export type VoxelModelCommandAction = VoxelModelCommand["action"];
 export type VoxelModelNetworkCommand = VoxelModelCommand & network.NetworkCommandHeader;
 export type VoxelModelSnapshot = network.Infer<typeof voxelModelSnapshotSchema>;
 
-export type VoxelModelAssetNotice =
-  | AssetRoomDeletedMessage
-  | AssetRoomRejectedMessage;
-
 export type VoxelModelServerMessage = network.NetworkServerMessage<
   VoxelModelNetworkCommand,
   VoxelModelSnapshot,
-  VoxelModelAssetNotice
+  AssetRoomNotice
 >;
 
 export type VoxelModelRoom = network.Room<

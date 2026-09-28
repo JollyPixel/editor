@@ -26,3 +26,9 @@ export function isPixelCommandAction(
 ): action is PixelCommandAction {
   return Object.hasOwn(kActions, action);
 }
+
+export function isPixelCommand<TCommand extends { action: string; }>(
+  command: TCommand
+): command is Extract<TCommand, { action: PixelCommandAction; }> {
+  return isPixelCommandAction(command.action);
+}
