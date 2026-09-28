@@ -10,6 +10,11 @@ import type {
 } from "../../src/document/commands/index.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 import { makeAtlasDef } from "../helpers/atlas.ts";
+import { recordCommands } from "../helpers/fakes.ts";
+import {
+  blockDefinedCmd,
+  makeAddedCommand
+} from "../helpers/networkCommands.ts";
 import {
   CHUNK_SIZE,
   CUBE_ID,
@@ -46,9 +51,10 @@ function trace(
 }
 
 describe("VoxelDocument - block definitions", () => {
-  it("emits one command per definition of a batch", () => {
+  it("emits the resolved definition of each block of a batch", () => {
     const document = makeDocument();
     const events = trace(document);
+    const commands = recordCommands(document);
 
     document.defineBlocks([
       makeBlockDef(LEAVES_ID, "cube", { name: "Leaves" }),
@@ -58,6 +64,10 @@ describe("VoxelDocument - block definitions", () => {
     assert.deepEqual(events, [
       { event: "command", action: "block-defined", origin: "local" },
       { event: "command", action: "block-defined", origin: "local" }
+    ]);
+    assert.deepEqual(commands, [
+      { action: "block-defined", block: document.blocks.get(LEAVES_ID) },
+      { action: "block-defined", block: document.blocks.get(LEAVES_ID + 1) }
     ]);
   });
 
@@ -77,6 +87,42 @@ describe("VoxelDocument - block definitions", () => {
 
     const stored = document.blocks.get(LEAVES_ID);
     assert.equal(stored?.defaultTexture?.tilesetId, "atlas");
+  });
+});
+
+describe("VoxelDocument - block lookup by position", () => {
+  it("joins a placed voxel to its definition and properties", () => {
+    const document = makeDocument();
+    document.defineBlock(
+      makeBlockDef(LEAVES_ID, "cube", {
+        name: "Leaves",
+        properties: { hardness: 1, flammable: true }
+      })
+    );
+    document.world.setVoxel("Ground", {
+      position: { x: 1, y: 2, z: 3 },
+      blockId: LEAVES_ID
+    });
+
+    assert.equal(document.blockAt({ x: 1, y: 2, z: 3 })?.name, "Leaves");
+    assert.deepEqual(
+      document.blockPropertiesAt({ x: 1, y: 2, z: 3 }),
+      { hardness: 1, flammable: true }
+    );
+  });
+
+  it("reports air and a voxel whose block was unregistered as absent", () => {
+    const document = makeDocument();
+    document.world.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: CUBE_ID
+    });
+    document.removeBlock(CUBE_ID);
+
+    for (const position of [{ x: 9, y: 9, z: 9 }, { x: 0, y: 0, z: 0 }]) {
+      assert.equal(document.blockAt(position), undefined);
+      assert.equal(document.blockPropertiesAt(position), undefined);
+    }
   });
 });
 
@@ -136,8 +182,105 @@ describe("VoxelDocument.apply", () => {
     const document = makeDocument();
     const events = trace(document);
 
+    assert.equal(document.addTileset(makeAtlasDef()), false);
     assert.equal(document.removeTileset("unknown"), false);
     assert.deepEqual(events, []);
+  });
+});
+
+describe("VoxelDocument - command origin", () => {
+  it("subscribes the onCommand option before any command is applied", () => {
+    const origins: VoxelCommandOrigin[] = [];
+    const document = new VoxelDocument({
+      chunkSize: CHUNK_SIZE,
+      onCommand: (_command, { origin }) => origins.push(origin)
+    });
+
+    document.world.addLayer("Ground");
+
+    assert.deepEqual(origins, ["local"]);
+  });
+
+  it("tags a local world mutation as local", () => {
+    const document = makeDocument([]);
+    const events = trace(document);
+
+    document.world.addLayer("Ground");
+
+    assert.deepEqual(events, [
+      { event: "command", action: "added", origin: "local" }
+    ]);
+  });
+
+  it("defaults apply() to a local origin", () => {
+    const document = makeDocument();
+    const events = trace(document);
+
+    document.apply({
+      action: "tileset-added",
+      tileset: { id: "b", src: "b", tileSize: 16 }
+    });
+
+    assert.deepEqual(events, [
+      { event: "command", action: "tileset-added", origin: "local" }
+    ]);
+  });
+
+  const kRemoteCommands: VoxelCommand[] = [
+    makeAddedCommand("Remote"),
+    {
+      action: "voxels-set",
+      layerName: "Ground",
+      metadata: { entries: [{ position: { x: 5, y: 0, z: 5 }, blockId: 1 }] }
+    },
+    {
+      action: "reordered",
+      layerName: "Ground",
+      metadata: { direction: "up" }
+    },
+    blockDefinedCmd({ id: 4 })
+  ];
+
+  for (const command of kRemoteCommands) {
+    it(`applies a remote '${command.action}' once, tagged remote`, () => {
+      const document = makeDocument(["Ground", "Top"]);
+      const events = trace(document);
+
+      assert.equal(document.apply(command, { origin: "remote" }), true);
+
+      assert.deepEqual(events, [
+        { event: "command", action: command.action, origin: "remote" }
+      ]);
+    });
+  }
+
+  it("neither reports nor emits a remote layer command that changes nothing", () => {
+    const document = makeDocument(["Ground", "Top"]);
+    const events = trace(document);
+
+    assert.equal(document.apply({
+      action: "reordered",
+      layerName: "Ground",
+      metadata: { direction: "down" }
+    }, { origin: "remote" }), false);
+
+    assert.deepEqual(events, []);
+  });
+
+  it("keeps tagging local mutations as local after a remote command", () => {
+    const document = makeDocument();
+    const events = trace(document);
+
+    document.apply(makeAddedCommand("Remote"), { origin: "remote" });
+    document.world.setVoxel("Ground", {
+      position: { x: 1, y: 0, z: 0 },
+      blockId: CUBE_ID
+    });
+
+    assert.deepEqual(events, [
+      { event: "command", action: "added", origin: "remote" },
+      { event: "command", action: "voxel-set", origin: "local" }
+    ]);
   });
 });
 
@@ -192,7 +335,27 @@ describe("VoxelDocument - material groups", () => {
   });
 });
 
+describe("VoxelDocument.save", () => {
+  it("saves declared tilesets", () => {
+    const document = makeDocument();
+    document.addTileset({ id: "later", src: "later-asset", tileSize: 32 });
+
+    const data = document.save();
+
+    assert.deepEqual(data.tilesets.map((def) => def.id), ["atlas", "later"]);
+  });
+});
+
 describe("VoxelDocument.load", () => {
+  it("keeps the blocks defined before a world loads", () => {
+    const document = makeDocument();
+    document.defineBlock(makeBlockDef(9, "cube"));
+
+    document.load(document.save());
+
+    assert.equal(document.blocks.has(9), true);
+  });
+
   it("replays the world without emitting its commands, then announces it", () => {
     const source = makeDocument();
     source.world.setVoxel("Ground", {

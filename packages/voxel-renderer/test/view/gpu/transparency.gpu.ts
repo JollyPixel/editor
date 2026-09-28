@@ -52,12 +52,6 @@ function probeCases(
   sample("low alpha", { alpha: 0.02, side: "front" }, [5, 5, 5]);
   sample("opaque ignores texture alpha", { alpha: 0.02, mode: "opaque" }, [255, 255, 255]);
   sample("mask discards uncovered texels", { alpha: 0.02, mode: "mask" }, [0, 0, 0]);
-  sample("mask coverage before fading", {
-    alpha: 0.5, mode: "mask", side: "front", opacity: 0.02
-  }, [5, 5, 5]);
-  sample("blend multiplies layer opacity", {
-    alpha: 0.5, side: "front", opacity: 0.1
-  }, [13, 13, 13]);
   for (const cull of [false, true]) {
     sample(`chunk boundary cull=${cull}`, {
       alpha: 0.5, startZ: 3, count: 2, cull

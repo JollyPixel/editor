@@ -16,10 +16,9 @@ import type { IterableLayerChunk } from "../../document/world/VoxelWorld.ts";
 import type { VoxelCoord } from "../../document/world/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../../VoxelLogger.ts";
 import type { ChunkMaterialCache } from "../shading/ChunkMaterialCache.ts";
-import {
-  opacityOf,
-  type ChunkMeshLayout,
-  type ChunkMeshTarget
+import type {
+  ChunkMeshLayout,
+  ChunkMeshTarget
 } from "./ChunkMeshLayout.ts";
 import type { ChunkViewport } from "./ChunkViewport.ts";
 
@@ -196,11 +195,10 @@ export class ChunkMeshStore {
     const [first] = members;
     this.#discard(key);
 
-    const opacity = opacityOf(target);
     const meshes: THREE.Mesh[] = [];
     const geometryKeys: ChunkGeometryKey[] = [];
     for (const [geometryKey, geometry] of geometries) {
-      const material = this.#materials.resolve(geometryKey, opacity, far);
+      const material = this.#materials.resolve(geometryKey, far);
       const mesh = new PulledChunkMesh(geometry, material);
       mesh.name = `voxel_chunk_${key}:${geometryKey}`;
       mesh.position.set(origin.x, origin.y, origin.z);
@@ -261,11 +259,9 @@ export class ChunkMeshStore {
         continue;
       }
 
-      const opacity = opacityOf(entry.target);
       entry.meshes.forEach((mesh, index) => {
         const material = this.#materials.resolve(
           entry.geometryKeys[index],
-          opacity,
           far
         );
         if (material === mesh.material) {

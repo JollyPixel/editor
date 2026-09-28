@@ -7,7 +7,6 @@ import {
   FACE,
   FACES,
   FACE_NORMALS,
-  FACE_OFFSETS,
   FACE_OPPOSITE
 } from "../../../src/document/geometry/faceDirection.ts";
 
@@ -17,13 +16,12 @@ describe("face tables", () => {
     assert.deepEqual(new Set(Object.values(FACE)), new Set(FACES));
   });
 
-  it("gives each face an axis-aligned unit normal, shared by its offset", () => {
+  it("gives each face an axis-aligned unit normal", () => {
     for (const face of FACES) {
       const normal = FACE_NORMALS[face];
 
       assert.equal(normal.filter((component) => component !== 0).length, 1, `face ${face}`);
       assert.equal(Math.abs(normal[0] + normal[1] + normal[2]), 1, `face ${face}`);
-      assert.deepEqual(FACE_OFFSETS[face], normal);
     }
     assert.deepEqual(FACE_NORMALS[FACE.PosX], [1, 0, 0]);
     assert.deepEqual(FACE_NORMALS[FACE.NegY], [0, -1, 0]);

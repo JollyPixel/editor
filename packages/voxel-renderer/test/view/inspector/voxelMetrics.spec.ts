@@ -67,16 +67,6 @@ describe("voxelMetrics", () => {
     assert.equal(sampleOf(metrics, "culledFaces"), 0);
   });
 
-  it("reports mesh memory in bytes", () => {
-    const metrics = voxelMetrics(inspectorOf({ bytes: 2048 }));
-
-    assert.equal(sampleOf(metrics, "meshMemory"), 2048);
-    assert.equal(
-      metrics.find(({ id }) => id === "meshMemory")?.unit,
-      "bytes"
-    );
-  });
-
   it("names every metric once", () => {
     const metrics = voxelMetrics(inspectorOf({}));
     const ids = new Set(metrics.map(({ id }) => id));

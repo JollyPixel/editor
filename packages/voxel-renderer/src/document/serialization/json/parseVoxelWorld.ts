@@ -173,11 +173,6 @@ function assertLayerOptions(
   value: object,
   fail: (reason: string) => never
 ): void {
-  const opacity = readField(value, "opacity");
-  if (opacity !== undefined && !Number.isFinite(opacity)) {
-    fail("opacity is not a number");
-  }
-
   const compositing = readField(value, "compositing");
   if (
     compositing !== undefined &&

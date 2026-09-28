@@ -15,23 +15,17 @@ VoxelWorld
 ## Layer compositing
 
 Voxel layers are evaluated from the highest `order` to the lowest. World reads
-return the first visible layer with `opacity > 0` and a stored voxel at the
-requested position.
+return the first visible layer with a stored voxel at the requested position.
 
 Mesh generation also uses each layer's `compositing` policy. The default
-`"composite"` suppresses a lower voxel only when the higher layer has opacity
-`1` and its block has opaque geometry covering all six cell boundaries. Glass,
-cutout blocks, and partial shapes preserve the lower voxel. `"replace"`
-suppresses lower voxels for any occupied cell in a layer at opacity `1`.
-Both policies preserve lower voxels when the higher layer is faded.
+`"composite"` suppresses a lower voxel only when the higher layer's block has
+opaque geometry covering all six cell boundaries. Glass, cutout blocks, and
+partial shapes preserve the lower voxel. `"replace"` suppresses lower voxels
+for any occupied cell.
 
-An opacity below `1` also scopes face occlusion to the layer itself during mesh
-generation. Its voxels cull only faces in that same layer and do not hide
-neighbouring faces in other layers. Interior faces in the partially opaque
-layer are still culled because drawing coincident blended faces produces a
-checkerboard through the volume. An opacity of `0` behaves like
-`visible = false`. Collision is unchanged for partially transparent layers and
-removed only when the layer is hidden.
+A hidden layer is left out of world reads, meshing, and collision.
+Translucency belongs to blocks: see `alphaMode` in
+[BlockSurface](../api/blocks/BlockSurface.md).
 
 ## Coordinates and positions
 

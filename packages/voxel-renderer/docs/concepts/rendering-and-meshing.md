@@ -15,15 +15,15 @@ and configuration.
 
 ## Layers sharing chunk meshes
 
-Layers composite into shared meshes. Every visible layer at opacity `1`
-whose position is a multiple of the chunk size draws into one set of meshes
+Layers composite into shared meshes. Every visible layer whose position is a
+multiple of the chunk size draws into one set of meshes
 per chunk cell, so stacking layers does not multiply chunks, geometries, or
 draw calls. Faces are still culled and composited per layer, as described in
 the [world model](./world-model.md#layer-compositing).
 
-A layer drawn with opacity below `1`, or moved off the chunk grid, keeps a set
-of meshes per layer chunk. Changing its opacity or position moves its voxels
-between the shared cell meshes and its own.
+A layer moved off the chunk grid keeps a set of meshes per layer chunk.
+Changing its position moves its voxels between the shared cell meshes and its
+own.
 
 ## Chunk geometry layout
 
@@ -35,13 +35,11 @@ geometry is named after the tileset ID; other surfaces append a `:surface=`
 suffix. Tileset IDs must not contain `:surface=`.
 
 Every face is one 8-byte record that the vertex shader expands into a quad (see
-[vertex pulling](#vertex-pulling)); triangles repeat their last corner. Layer
-opacity is stored on materials. The material cache distinguishes exact opacity
-values and resolved surface policies.
+[vertex pulling](#vertex-pulling)); triangles repeat their last corner. The
+material cache distinguishes resolved surface policies.
 
-Opaque and masked geometry write depth at layer opacity `1`. Blended blocks
-and faded layers use blending without depth writes. Mask coverage is tested
-before layer opacity; low-alpha blend texels and faint layers are preserved.
+Opaque and masked geometry write depth. Blended blocks use blending without
+depth writes, and low-alpha blend texels are preserved.
 See [BlockSurface](../api/blocks/BlockSurface.md) for defaults and
 [VoxelTransparencyPassNode](../api/core/VoxelTransparencyPassNode.md) for scene
 integration and the limits of weighted color compositing.

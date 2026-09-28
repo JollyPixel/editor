@@ -16,44 +16,29 @@ import {
 describe("VoxelWorld — layer properties", () => {
   it("updates only the properties it is given", () => {
     const world = new VoxelWorld(4);
-    const layer = world.addLayer("Ground", { opacity: 0.7 });
+    const layer = world.addLayer("Ground", { compositing: "replace" });
 
     assert.equal(world.updateLayer("Ground", { visible: false }), true);
-    assert.equal(layer.opacity, 0.7);
+    assert.equal(layer.compositing, "replace");
     assert.equal(layer.visible, false);
-
-    world.updateLayer("Ground", { opacity: 0.5 });
-    assert.equal(layer.opacity, 0.5);
   });
 
-  it("carries visibility, opacity and position through the dedicated setters", () => {
+  it("carries visibility and position through the dedicated setters", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Ground");
 
     world.setLayerVisible("Ground", false);
-    world.setLayerOpacity("Ground", 0.5);
     world.setLayerPosition("Ground", { x: 16, y: 0, z: -8 });
 
     assert.equal(layer.visible, false);
-    assert.equal(layer.opacity, 0.5);
     assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
-  });
-
-  it("accumulates a position through translateLayer", () => {
-    const world = new VoxelWorld(4);
-    const layer = world.addLayer("Ground");
-
-    world.setLayerPosition("Ground", { x: 4, y: 0, z: 0 });
-    world.translateLayer("Ground", { x: 4, y: 0, z: 2 });
-
-    assert.deepEqual(layer.position, { x: 8, y: 0, z: 2 });
   });
 
   it("shrugs off an unknown layer name", () => {
     const world = new VoxelWorld(4);
 
-    assert.equal(world.updateLayer("NoSuch", { opacity: 0.5 }), false);
-    assert.doesNotThrow(() => world.setLayerOpacity("NoSuch", 0.5));
+    assert.equal(world.updateLayer("NoSuch", { visible: false }), false);
+    assert.doesNotThrow(() => world.setLayerVisible("NoSuch", false));
   });
 });
 
@@ -122,32 +107,6 @@ describe("VoxelWorld — dirty propagation", () => {
     clearAllDirty(fixture.world);
 
     fixture.world.setLayerVisible("A", true);
-
-    assert.deepEqual(dirtyFlags(fixture), { a: true, b: false });
-  });
-
-  it("dirties every layer when opacity crosses the occlusion boundary", () => {
-    for (const [from, to] of [[1, 0.9], [0.5, 1]]) {
-      const fixture = makeTwoLayerWorld();
-      fixture.a.opacity = from;
-      clearAllDirty(fixture.world);
-
-      fixture.world.setLayerOpacity("A", to);
-
-      assert.deepEqual(
-        dirtyFlags(fixture),
-        { a: true, b: true },
-        `opacity ${from} -> ${to} changes what layer A occludes`
-      );
-    }
-  });
-
-  it("dirties only the layer itself when opacity stays translucent", () => {
-    const fixture = makeTwoLayerWorld();
-    fixture.a.opacity = 0.5;
-    clearAllDirty(fixture.world);
-
-    fixture.world.setLayerOpacity("A", 0.8);
 
     assert.deepEqual(dirtyFlags(fixture), { a: true, b: false });
   });

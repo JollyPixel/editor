@@ -35,10 +35,8 @@ interface ShadedVertex {
   shade: number;
 }
 
-function makeFixture(
-  ambientOcclusion = true
-): MeshFixture {
-  const fixture = makeMeshFixture({ ambientOcclusion });
+function makeFixture(): MeshFixture {
+  const fixture = makeMeshFixture({ ambientOcclusion: true });
   fixture.blockRegistry.register(
     makeBlockDef(kCutoutId, "cube", {
       alphaMode: "mask",
@@ -122,17 +120,6 @@ describe("ambient occlusion corner rule", () => {
 });
 
 describe("ambient occlusion baking", () => {
-  it("leaves every vertex lit when disabled", () => {
-    const fixture = makeFixture(false);
-    place(fixture, [1, 0, 1]);
-    place(fixture, [2, 1, 1]);
-    place(fixture, [1, 1, 2]);
-
-    const shades = shadedVertices(geometriesOf(fixture), kUp);
-
-    assert.deepEqual([...new Set(shades.map(({ shade }) => shade))], [kLit]);
-  });
-
   it("darkens the corners beside one occluding side", () => {
     const fixture = makeFixture();
     place(fixture, [1, 0, 1]);

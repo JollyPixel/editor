@@ -85,7 +85,7 @@ running.
 
 `ChunkMeshLayout` maps each dirty layer chunk to a mesh target: a `"cell"`
 target shared by the aligned opaque layers of one chunk cell, or a `"layer"`
-target for a faded or off-grid layer chunk. When a chunk moves to another
+target for an off-grid layer chunk. When a chunk moves to another
 target, the pipeline rebuilds or removes the one it left.
 
 ## Save, load, and integrations

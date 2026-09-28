@@ -48,8 +48,7 @@ export interface MeshableChunk {
 }
 
 export interface MeshableLayer {
-  readonly effectivelyVisible: boolean;
-  readonly opacity: number;
+  readonly visible: boolean;
   readonly compositing: "replace" | "composite";
   readonly position: Readonly<VoxelCoord>;
   getChunk(

@@ -19,13 +19,11 @@ import { VoxelChunk } from "../../../src/document/world/index.ts";
 import { VoxelTransform } from "../../../src/document/geometry/index.ts";
 import {
   type BlockDefinition,
-  BlockRegistry,
-  BlockSurface
+  BlockRegistry
 } from "../../../src/document/blocks/index.ts";
 import { BlockShapeRegistry } from "../../../src/document/blocks/shape/index.ts";
 import { Slab } from "../../../src/document/blocks/shape/library/Slab.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
-import { ChunkGeometryKey } from "../../../src/view/meshing/index.ts";
 
 // CONSTANTS
 const kNoGeometries = new Map();
@@ -147,17 +145,6 @@ function collisionOf(
   };
 }
 
-function makeTriangle(): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    "position",
-    new THREE.BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]), 3)
-  );
-  geometry.setIndex([0, 1, 2]);
-
-  return geometry;
-}
-
 function xsOf(
   vertices: Float32Array
 ): number[] {
@@ -222,21 +209,25 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
     assert.equal(world.colliderCalls[0].desc.hx, 0.5);
   });
 
-  const kEmptyCases: [string, BlockDefinition[], Cell[]][] = [
-    ["an empty chunk", [], []],
+  const kEmptyCases: [string, BlockDefinition[], Cell[][]][] = [
+    ["no chunk", [makeBlockDef(1, "cube")], []],
+    ["an empty chunk", [], [[]]],
     [
       "a chunk whose only block is not collidable",
       [makeBlockDef(1, "cube", { collidable: false })],
-      [[0, 0, 0]]
+      [[[0, 0, 0]]]
     ],
-    ["a chunk whose block is not registered", [], [[0, 0, 0, 99]]]
+    ["a chunk whose block is not registered", [], [[[0, 0, 0, 99]]]]
   ];
 
-  for (const [name, blocks, cells] of kEmptyCases) {
+  for (const [name, blocks, chunks] of kEmptyCases) {
     it(`creates no body for ${name}`, () => {
       const { collider, world } = makeCollider(blocks);
 
-      collider.rebuildChunk("a", collisionOf(makeChunk(cells)));
+      collider.rebuildChunk(
+        "a",
+        collisionOf(chunks.map((cells) => makeChunk(cells)))
+      );
 
       assert.equal(world.rigidBodies.length, 0);
     });
@@ -295,29 +286,17 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
     );
   });
 
-  it("creates no body without chunks", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
-
-    collider.rebuildChunk("a", collisionOf([]));
-
-    assert.equal(world.rigidBodies.length, 0);
-  });
-
-  it("builds a single trimesh when a shape hints trimesh", () => {
+  it("merges adjacent trimesh blocks into one body with one trimesh", () => {
     const { collider, world } = makeCollider([makeBlockDef(1, "ramp")]);
 
-    const geometries = new Map([
-      [new ChunkGeometryKey("atlas", new BlockSurface()), makeTriangle()]
-    ]);
-    collider.rebuildChunk(
-      "a",
-      collisionOf(makeChunk([[0, 0, 0], [1, 0, 0]]), geometries)
-    );
+    collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0], [1, 0, 0]])));
 
     assert.equal(world.rigidBodies.length, 1);
     assert.equal(world.colliderCalls.length, 1);
-    assert.ok(world.colliderCalls[0].desc.vertices instanceof Float32Array);
-    assert.ok(world.colliderCalls[0].desc.indices instanceof Uint32Array);
+    const { vertices } = world.colliderCalls[0].desc;
+    assert.ok(vertices);
+    assert.equal(Math.min(...xsOf(vertices)), 0);
+    assert.equal(Math.max(...xsOf(vertices)), 2);
   });
 
   it("builds the trimesh from shape faces without render geometry", () => {

@@ -66,8 +66,14 @@ describe("SettledSize", () => {
     size.request(800, 600);
     requestFor(size, kSettleFrames, 640, 600);
 
-    assert.equal(size.request(641, 600), false);
+    assert.deepEqual(
+      requestFor(size, kSettleFrames, 641, 600),
+      Array.from({ length: kSettleFrames }, () => false)
+    );
     assert.deepEqual([size.width, size.height], [800, 600]);
+
+    assert.equal(size.request(641, 600), true);
+    assert.deepEqual([size.width, size.height], [641, 600]);
   });
 
   it("adopts an immediate request at once", () => {

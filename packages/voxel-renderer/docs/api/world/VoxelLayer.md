@@ -14,12 +14,6 @@ interface VoxelLayerConfigurableOptions {
    */
   visible?: boolean;
   /**
-   * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
-   * Values are clamped to `[0, 1]`.
-   * @default 1
-   */
-  opacity?: number;
-  /**
    * Arbitrary layer properties.
    * @default {}
    */
@@ -60,9 +54,6 @@ class VoxelLayer {
   name: string;
   order: number;
   visible: boolean;
-  opacity: number;
-  // visible with an opacity above 0
-  readonly effectivelyVisible: boolean;
 
   // edge length of every chunk, in voxels
   readonly chunkSize: number;
@@ -86,18 +77,12 @@ world management update them. Application code should use the corresponding
 > **`position`** - locates the layer-local origin in world space. Always use
 > `VoxelWorld.setLayerPosition` or `translateLayer` so chunks are marked dirty.
 
-> **`opacity`** - `1` = fully opaque (default), `0` = hidden (same as `visible = false`). Values below `0` or above `1` are clamped. Faded layers (`0 < opacity < 1`) cull faces only within their own layer and remain solid for collision. Always use `VoxelWorld.setLayerOpacity` or `updateLayer` to apply changes.
-
-`compositing` defaults to `"composite"`: at opacity `1`, only a block whose
-opaque shape covers all six cell boundaries suppresses lower voxels in the
-same cell. `"replace"` suppresses them for any occupying block at opacity `1`,
-including masked and blended blocks. Faded layers preserve lower voxels in
-both modes. Change this through `world.updateLayer(name, { compositing })` to
+`compositing` defaults to `"composite"`: only a block whose opaque shape covers
+all six cell boundaries suppresses lower voxels in the same cell. `"replace"`
+suppresses them for any occupying block, including masked and blended blocks.
+Change this through `world.updateLayer(name, { compositing })` to
 mark all layers dirty and emit the update. The setting survives cloning and
 serialization.
-
-Mask coverage is tested against texture alpha before the layer fade. Layers
-continue fading below `alphaTest`; blend mode has no alpha cutoff.
 
 > [!NOTE]
 > A layer has no `toJSON()`: `serializeVoxelLayer(layer)` returns its

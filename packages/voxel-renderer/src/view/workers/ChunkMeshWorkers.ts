@@ -287,7 +287,7 @@ export class ChunkMeshWorkers {
     const indices = new Map<VoxelLayer, number>();
 
     for (const layer of world.getLayers()) {
-      const chunks = layer.effectivelyVisible ?
+      const chunks = layer.visible ?
         this.#shareWindow(job, layer) :
         [];
       if (chunks.length === 0) {
@@ -297,7 +297,6 @@ export class ChunkMeshWorkers {
       const { position } = layer;
       indices.set(layer, layers.length);
       layers.push({
-        opacity: layer.opacity,
         compositing: layer.compositing,
         position: {
           x: position.x,

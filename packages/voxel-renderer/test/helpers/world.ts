@@ -14,7 +14,7 @@ import {
 } from "../../src/document/serialization/index.ts";
 import { makeVoxelEntry } from "./voxelEntry.ts";
 
-export interface TwoLayerWorld {
+interface TwoLayerWorld {
   world: VoxelWorld;
   a: VoxelLayer;
   b: VoxelLayer;

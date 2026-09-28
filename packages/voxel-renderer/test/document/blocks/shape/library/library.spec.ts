@@ -21,7 +21,6 @@ import {
   type BlockShape,
   BlockShapeRegistry
 } from "../../../../../src/document/blocks/shape/index.ts";
-import { defaultCullFace } from "../../../../../src/document/blocks/face/index.ts";
 
 interface ShapeCase {
   shape: BlockShape;
@@ -139,7 +138,7 @@ describe("Built-in shapes", () => {
         assert.equal(shape.collisionHint, collisionHint);
         assert.equal(shape.faces.length, faces);
         assert.equal(
-          shape.faces.filter((face) => defaultCullFace(face) !== null).length,
+          shape.faces.filter((face) => face.cull !== null).length,
           cullable
         );
       });

@@ -27,7 +27,6 @@ export function restoreVoxelWorld(
       id: layerData.id,
       name: layerData.name,
       visible: layerData.visible,
-      opacity: layerData.opacity,
       compositing: layerData.compositing,
       position: layerData.position,
       properties: layerData.properties

@@ -31,7 +31,7 @@ const kAoLevelMask = 0b11;
 const kAoMaxLevel = 3;
 const kQuadIndices = [0, 1, 2, 0, 2, 3];
 
-export interface PulledFace {
+interface PulledFace {
   cell: [number, number, number];
   template: number;
   ao: number;
@@ -39,7 +39,7 @@ export interface PulledFace {
   region: [number, number, number, number];
 }
 
-export function pulledFaces(
+function pulledFaces(
   geometry: PulledChunkGeometry
 ): PulledFace[] {
   const words = geometry.faces.image.data as Uint32Array;

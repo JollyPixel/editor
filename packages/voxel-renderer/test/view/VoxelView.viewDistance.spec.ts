@@ -271,7 +271,9 @@ describe("VoxelView - view distance", () => {
     placeCube(view, "Ground", { x: 1, y: 5, z: 1 });
     view.tick(0);
 
+    const beyond = view.document.world.getLayer("Ground")!.getChunk(3, 0, 0)!;
     assert.ok(snapshot(view).built.includes("0,1,0"));
+    assert.equal(beyond.dirty, true);
   });
 
   it("keeps colliders for chunks the view distance unloads", () => {

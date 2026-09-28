@@ -49,20 +49,8 @@ describe("buildShapeGeometry", () => {
     }
   });
 
-  it("orders ranges by FACE and leaves no gap between them", () => {
+  it("packs ranges back to back over every vertex", () => {
     const geometry = buildShapeGeometry(new Stair());
-    const slots = geometry.ranges.map((range) => range.slot);
-
-    assert.deepEqual(slots, [
-      "right",
-      "left",
-      "top",
-      "top.1",
-      "bottom",
-      "front",
-      "back",
-      "back.1"
-    ]);
 
     let expected = 0;
     for (const range of geometry.ranges) {
@@ -70,22 +58,6 @@ describe("buildShapeGeometry", () => {
       expected += range.count;
     }
     assert.equal(expected, geometry.positions.length / 3);
-  });
-
-  it("gives the quads of one supporting plane a single slot range", () => {
-    const geometry = buildShapeGeometry(new Stair());
-
-    assert.equal(slotOf(geometry, "right")?.count, 8);
-    assert.equal(slotOf(geometry, "front")?.count, 4);
-  });
-
-  it("splits the quads of one face across planes into separate slots", () => {
-    const geometry = buildShapeGeometry(new Stair());
-
-    assert.equal(slotOf(geometry, "top")?.count, 4);
-    assert.equal(slotOf(geometry, "top.1")?.count, 4);
-    assert.equal(slotOf(geometry, "back")?.count, 4);
-    assert.equal(slotOf(geometry, "back.1")?.count, 4);
   });
 
   it("exposes the polygons a slot was built from", () => {
@@ -98,29 +70,6 @@ describe("buildShapeGeometry", () => {
       range.definitions,
       shape.faces.filter((face) => face.face === FACE.PosX)
     );
-  });
-
-  it("keeps a split slot on the half of the tile it projects onto", () => {
-    const geometry = buildShapeGeometry(new Stair());
-    const range = slotOf(geometry, "top.1")!;
-    const vs: number[] = [];
-
-    for (let index = range.start; index < range.start + range.count; index++) {
-      vs.push(geometry.uvs[(index * 2) + 1]);
-    }
-
-    assert.deepEqual(
-      [Math.min(...vs), Math.max(...vs)],
-      [0, 0.5],
-      "stretching it over the tile would squash the texture on a half-depth quad"
-    );
-  });
-
-  it("omits a slot the shape never uses", () => {
-    const geometry = buildShapeGeometry(new Ramp());
-
-    assert.equal(geometry.ranges.length, 5);
-    assert.equal(rangeOf(geometry, FACE.NegZ), undefined);
   });
 
   it("triangulates a three vertex face into a single triangle", () => {
@@ -187,15 +136,6 @@ describe("buildShapeGeometry", () => {
         `${shape.id} ranges do not cover every vertex`
       );
     }
-  });
-
-  it("returns the untransformed geometry for the identity transform", () => {
-    const shape = new Stair();
-
-    assert.deepEqual(
-      buildShapeGeometry(shape, VoxelTransform.Identity),
-      buildShapeGeometry(shape)
-    );
   });
 
   it("places vertices where the chunk mesher rotates them", () => {

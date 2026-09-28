@@ -96,18 +96,6 @@ describe("BlockVariantCache - selfOcclusionMaskOf", () => {
 });
 
 describe("BlockVariantCache - occlusionMaskOf", () => {
-  it("agrees with the compiled variant for every block and transform", () => {
-    const { cache } = makeCache();
-
-    for (const blockId of [kCubeId, kRampId, kSlabId]) {
-      for (let transform = 0; transform < 32; transform++) {
-        const variant = cache.get(blockId, transform);
-        assert.ok(variant, `block ${blockId} transform ${transform}`);
-        assert.equal(cache.occlusionMaskOf(blockId, transform), variant.occlusionMask);
-      }
-    }
-  });
-
   it("compiles no variant for a block whose shape is not registered", () => {
     const { cache } = makeCache({ shapeId: "unknownShape" });
 

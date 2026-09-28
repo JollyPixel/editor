@@ -8,7 +8,6 @@ import { makeBlockDef } from "../../helpers/blocks.ts";
 import {
   buildGeometries,
   countChunkVertices,
-  countLayerVertices,
   geometryAlphaModes,
   makeMeshFixture,
   place,
@@ -124,7 +123,7 @@ describe("VoxelMeshBuilder - block transparency and covered faces", () => {
     });
   }
 
-  it("splits blended faces into a cutout geometry", () => {
+  it("splits blended faces into their own geometry", () => {
     const fixture = makeFixture({ ...kBlend, cullCoveredFaces: false });
     place(fixture, [0, 0, 0]);
     place(fixture, [1, 0, 0], kLeavesId);
@@ -149,58 +148,13 @@ describe("VoxelMeshBuilder - block transparency and covered faces", () => {
   });
 });
 
-describe("VoxelMeshBuilder - layer opacity and occlusion", () => {
-  it("a neighbour in a translucent layer does not occlude", () => {
-    const fixture = makeMeshFixture();
-    place(fixture.world.addLayer("glass", { opacity: 0.5 }), [1, 0, 0]);
-    place(fixture, [0, 0, 0]);
-
-    assert.equal(countChunkVertices(fixture), 24);
-  });
-
-  it("a neighbour in an opaque layer occludes", () => {
+describe("VoxelMeshBuilder - occlusion across layers", () => {
+  it("a neighbour in another layer occludes", () => {
     const fixture = makeMeshFixture();
     place(fixture.world.addLayer("solid"), [1, 0, 0]);
     place(fixture, [0, 0, 0]);
 
     assert.equal(countChunkVertices(fixture), 20);
-  });
-
-  it("a translucent layer keeps every face against an opaque neighbour", () => {
-    const fixture = makeMeshFixture();
-    const glass = fixture.world.addLayer("glass", { opacity: 0.5 });
-    place(glass, [0, 0, 0]);
-    place(fixture, [1, 0, 0]);
-
-    assert.equal(countLayerVertices(fixture, glass), 24);
-  });
-
-  it("a translucent layer still occludes itself", () => {
-    const fixture = makeMeshFixture();
-    fixture.layer.opacity = 0.5;
-    place(fixture, [0, 0, 0]);
-    place(fixture, [1, 0, 0]);
-
-    assert.equal(countChunkVertices(fixture), 40);
-  });
-
-  it("an opaque neighbour occludes through a translucent voxel sharing its cell", () => {
-    const fixture = makeMeshFixture();
-    place(fixture.world.addLayer("glass", { opacity: 0.5 }), [1, 0, 0]);
-    place(fixture.world.addLayer("stone"), [1, 0, 0]);
-    place(fixture, [0, 0, 0]);
-
-    assert.equal(countChunkVertices(fixture), 20);
-  });
-
-  it("a translucent layer does not suppress a lower-priority voxel it covers", () => {
-    const fixture = makeMeshFixture();
-    const glass = fixture.world.addLayer("glass", { opacity: 0.5 });
-    place(fixture, [0, 0, 0]);
-    place(glass, [0, 0, 0]);
-
-    assert.equal(countLayerVertices(fixture, glass), 24);
-    assert.equal(countChunkVertices(fixture), 24);
   });
 });
 

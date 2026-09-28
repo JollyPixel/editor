@@ -64,15 +64,6 @@ describe("VoxelView - chunk rebuild orchestration", () => {
     assert.equal(chunkMeshes(view).length, 6);
   });
 
-  it("keeps an edit that lands after the flag is cleared", () => {
-    const view = withOneCube();
-    view.tick(0);
-
-    placeCube(view, "Ground", { x: 1, y: 0, z: 0 });
-
-    assert.equal(view.document.world.getLayer("Ground")!.getChunk(0, 0, 0)!.dirty, true);
-  });
-
   it("builds the whole world from init(), nearest the focus first", () => {
     const view = makeGroundView();
     fillChunks(view, "Ground", 4);

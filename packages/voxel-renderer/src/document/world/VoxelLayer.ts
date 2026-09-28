@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   Box3,
-  MathUtils,
   Vector3,
   type Vector3Like
 } from "three";
@@ -38,14 +37,6 @@ export interface VoxelLayerConfigurableOptions {
    * @default true
    */
   visible?: boolean;
-  /**
-   * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
-   * Values are clamped to `[0, 1]`. A layer with `opacity < 1` is occluded
-   * only by its own voxels (like glass): nothing in another layer culls its
-   * faces, and it hides neither neighbouring faces nor the voxels it covers.
-   * @default 1
-   */
-  opacity?: number;
   /**
    * Arbitrary layer properties.
    * @default {}
@@ -96,7 +87,6 @@ export class VoxelLayer {
   properties: Record<string, any> = {};
   visible: boolean;
 
-  #opacity: number;
   #chunks = new Map<number, VoxelChunk>();
   #chunkSize: number;
   #chunkShift: number;
@@ -131,7 +121,6 @@ export class VoxelLayer {
       order,
       chunkSize,
       visible = true,
-      opacity = 1,
       compositing = "composite",
       position = { x: 0, y: 0, z: 0 },
       properties = {}
@@ -146,28 +135,13 @@ export class VoxelLayer {
     this.#chunkShift = Math.log2(chunkSize);
     this.#chunkMask = chunkSize - 1;
     this.visible = visible;
-    this.#opacity = MathUtils.clamp(opacity, 0, 1);
     this.compositing = compositing;
     this.position = structuredClone(position);
     this.properties = structuredClone(properties);
   }
 
-  get opacity() {
-    return this.#opacity;
-  }
-
-  set opacity(
-    value: number
-  ) {
-    this.#opacity = MathUtils.clamp(value, 0, 1);
-  }
-
   get chunkSize(): number {
     return this.#chunkSize;
-  }
-
-  get effectivelyVisible(): boolean {
-    return this.visible && this.#opacity > 0;
   }
 
   #worldToChunk(
@@ -654,7 +628,6 @@ export class VoxelLayer {
       name: this.name,
       order: this.order,
       visible: this.visible,
-      opacity: this.#opacity,
       compositing: this.compositing,
       position: this.position,
       properties: this.properties,

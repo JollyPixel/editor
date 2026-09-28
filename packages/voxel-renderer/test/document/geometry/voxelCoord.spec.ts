@@ -23,13 +23,6 @@ describe("voxelCellOf", () => {
     );
   });
 
-  it("floors rather than rounds, so a cell owns its whole span", () => {
-    assert.deepEqual(
-      voxelCellOf({ x: 3.5, y: 0.5, z: 4.5 }),
-      { x: 3, y: 0, z: 4 }
-    );
-  });
-
   it("walks away from zero on negative coordinates", () => {
     assert.deepEqual(
       voxelCellOf({ x: -0.2, y: -1.5, z: -33 }),

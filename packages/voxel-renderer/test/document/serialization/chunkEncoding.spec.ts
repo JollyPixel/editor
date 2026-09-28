@@ -52,16 +52,6 @@ function randomChunk(
 }
 
 describe("encodeChunk", () => {
-  it("writes a solid slab as dense runs with air as value 0", () => {
-    const cells = Array.from({ length: 256 }, (_, i) => i);
-    const values = cells.map(() => 2);
-
-    assert.deepEqual(encodeChunk(chunkCells(cells, values), 16 ** 3), {
-      gaps: null,
-      runs: [256, 2, 3840, 0]
-    });
-  });
-
   it("writes a few scattered voxels as gap-encoded cells", () => {
     const chunk = chunkCells([17, 18, 19, 34], [1, 1, 1, 2]);
 

@@ -52,7 +52,6 @@ export class ChunkNeighbourhood {
   #layerCount: number;
   #selfLayer: MeshableLayer | null = null;
   #selfIndex = -1;
-  #selfOpaque = true;
   #self: LayerChunkCache | null = null;
 
   constructor(
@@ -70,7 +69,7 @@ export class ChunkNeighbourhood {
     const { chunkSize } = world;
 
     for (const candidate of world.getLayers()) {
-      if (!candidate.effectivelyVisible) {
+      if (!candidate.visible) {
         continue;
       }
 
@@ -103,7 +102,6 @@ export class ChunkNeighbourhood {
     this.#selfIndex = this.layers.findIndex(
       (cache) => cache.layer === layer
     );
-    this.#selfOpaque = layer.opacity >= 1;
     this.#self = this.layers[this.#selfIndex] ?? null;
   }
 
@@ -118,10 +116,6 @@ export class ChunkNeighbourhood {
     for (let i = 0; i < this.#layerCount; i++) {
       if (i === selfIndex) {
         return true;
-      }
-
-      if (!layers[i].opaque) {
-        continue;
       }
 
       const packed = layers[i].packedAt(wx, wy, wz);
@@ -144,21 +138,10 @@ export class ChunkNeighbourhood {
     variant: BlockVariant,
     face: BlockVariantFace
   ): boolean {
-    if (!this.#selfOpaque) {
-      const cache = this.#self;
-
-      return cache !== null &&
-        this.#occludes(cache.packedAt(nx, ny, nz), variant, face);
-    }
-
     const layers = this.layers;
 
     for (let i = 0; i < this.#layerCount; i++) {
       const cache = layers[i];
-      if (!cache.opaque) {
-        continue;
-      }
-
       const neighbour = cache.packedAt(nx, ny, nz);
       if (neighbour !== VOXEL_ABSENT) {
         if (this.#occludes(neighbour, variant, face)) {
@@ -246,19 +229,9 @@ export class ChunkNeighbourhood {
     wy: number,
     wz: number
   ): boolean {
-    if (!this.#selfOpaque) {
-      const cache = this.#self;
-
-      return cache !== null && this.#castsOcclusion(cache.packedAt(wx, wy, wz));
-    }
-
     const layers = this.layers;
     for (let i = 0; i < this.#layerCount; i++) {
       const cache = layers[i];
-      if (!cache.opaque) {
-        continue;
-      }
-
       const packed = cache.packedAt(wx, wy, wz);
       if (packed === VOXEL_ABSENT) {
         continue;
@@ -358,7 +331,7 @@ export class ChunkNeighbourhood {
           faces = faces.flatMap((piece) => this.#split(piece, boundary, remove));
         }
       }
-      if (cache.opaque && cache.layer.compositing === "replace") {
+      if (cache.layer.compositing === "replace") {
         break;
       }
     }

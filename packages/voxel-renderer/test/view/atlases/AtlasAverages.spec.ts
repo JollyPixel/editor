@@ -17,10 +17,6 @@ const kRed: Rgba = [255, 0, 0, 255];
 const kBlue: Rgba = [0, 0, 255, 255];
 const kClear: Rgba = [0, 255, 0, 0];
 
-/**
- * Builds a linear-space texture from rows listed top to bottom, the way an
- * image reads.
- */
 function textureFromRows(
   rows: Rgba[][],
   flipY = true

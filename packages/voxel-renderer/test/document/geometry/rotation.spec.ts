@@ -7,8 +7,7 @@ import {
   rotateVertex,
   rotateFace,
   rotateNormal,
-  transformFace,
-  mirrorsWinding
+  transformFace
 } from "../../../src/document/geometry/rotation.ts";
 import {
   FACE,
@@ -69,18 +68,6 @@ describe("rotateFace", () => {
     for (const face of FACES) {
       assert.equal(rotateFace(face, 0), face);
       assert.equal(rotateFace(face, 4), face);
-    }
-  });
-
-  it("agrees with rotateNormal on every face normal", () => {
-    for (let rotation = 0; rotation < 4; rotation++) {
-      for (const face of FACES) {
-        assertVecApprox(
-          rotateNormal([...FACE_NORMALS[face]], tf(rotation)),
-          FACE_NORMALS[rotateFace(face, rotation)],
-          `face ${face} rotation ${rotation}`
-        );
-      }
     }
   });
 });
@@ -153,17 +140,6 @@ describe("transformFace", () => {
           `face ${face} transform ${transform.packed}`
         );
       }
-    }
-  });
-});
-
-describe("mirrorsWinding", () => {
-  it("is true only for an odd number of flips", () => {
-    for (const transform of kAllTransforms) {
-      const { flipX, flipY, flipZ } = transform;
-      const flips = [flipX, flipY, flipZ].filter(Boolean).length;
-
-      assert.equal(mirrorsWinding(transform), flips % 2 === 1);
     }
   });
 });

@@ -30,8 +30,6 @@ import {
 // CONSTANTS
 const kCenter = WORLD_SIZE / 2;
 const kSunRadius = WORLD_SIZE * 1.8;
-/** Mirrors `VoxelView`'s own quantisation, so the alpha warning is exact. */
-const kOpacitySteps = 32;
 
 type ChunkMaterial = THREE.MeshLambertMaterial | THREE.MeshStandardMaterial;
 
@@ -51,9 +49,8 @@ const tilesets = await loadTilesets([tileset.definition]);
 
 /**
  * Every material the engine mints, kept so the panel can drive `alphaTest` and
- * the shading knobs at runtime. They are created lazily, one per
- * (tileset, opacity bucket), which is why the customizer also applies the
- * current state to each newcomer.
+ * the shading knobs at runtime. They are created lazily, which is why the
+ * customizer also applies the current state to each newcomer.
  */
 const materials = new Set<ChunkMaterial>();
 
@@ -114,12 +111,11 @@ const labelEntries: LabelEntry[] = SCENE_LABELS.map(
 
 const pane = createExamplePane({ title: "Transparency & Light" });
 
-const layerState = LAYER_SPECS.map(({ name, opacity, hint }) => {
+const layerState = LAYER_SPECS.map(({ name, hint }) => {
   return {
     name,
     hint,
-    visible: true,
-    opacity
+    visible: true
   };
 });
 
@@ -143,11 +139,6 @@ const meshState = {
   triangles: 0
 };
 
-/** Layers the current `alphaTest` erases outright, if any. */
-const alphaState = {
-  hidden: "—"
-};
-
 const debugState = {
   mode: voxels.inspector.mode
 };
@@ -156,10 +147,7 @@ const layersFolder = pane.addFolder({ title: "Layers" });
 for (const layer of layerState) {
   layersFolder
     .addBinding(layer, "visible", { label: `${layer.name} on` })
-    .on("change", ({ value }) => updateLayer(layer.name, { visible: value }));
-  layersFolder
-    .addBinding(layer, "opacity", { label: `${layer.name} α`, min: 0, max: 1, step: 0.01 })
-    .on("change", ({ value }) => updateLayer(layer.name, { opacity: value }));
+    .on("change", ({ value }) => updateLayer(layer.name, value));
 }
 
 const lightFolder = pane.addFolder({ title: "Light" });
@@ -249,13 +237,9 @@ function applyMaterialState(
 
 function updateLayer(
   name: string,
-  options: { visible?: boolean; opacity?: number; }
+  visible: boolean
 ): void {
-  voxelDocument.world.updateLayer(name, options);
-  /*
-   * An opacity change dirties every layer; flush so the panel and the frame
-   * never disagree about what the scene looks like.
-   */
+  voxelDocument.world.updateLayer(name, { visible });
   voxels.flush();
   syncStats();
 }
@@ -272,21 +256,6 @@ function setDebugMode(
   pane.refresh();
 }
 
-/**
- * A blended layer is drawn with `texel.a × material.opacity`, so a layer whose
- * opacity sits at or below `alphaTest` is discarded in full — it vanishes
- * instead of fading, which looks exactly like a broken layer.
- */
-function opacityBucket(
-  opacity: number
-): number {
-  if (opacity >= 1) {
-    return 1;
-  }
-
-  return Math.min(kOpacitySteps - 1, Math.max(0, Math.round(opacity * kOpacitySteps))) / kOpacitySteps;
-}
-
 function syncStats(): void {
   const { faces, culledFaces, triangles } = voxels.inspector.mesh.stats;
   const candidates = faces + culledFaces;
@@ -294,11 +263,6 @@ function syncStats(): void {
   meshState.faces = faces;
   meshState.culled = candidates === 0 ? 0 : (culledFaces / candidates) * 100;
   meshState.triangles = triangles;
-
-  const hidden = layerState
-    .filter(({ visible, opacity }) => visible && opacityBucket(opacity) <= materialState.alphaTest)
-    .map(({ name }) => name);
-  alphaState.hidden = hidden.length === 0 ? "—" : hidden.join(", ");
 
   meshFolder.refresh();
 }

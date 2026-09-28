@@ -91,13 +91,6 @@ describe("mergeWarnings", () => {
     assert.match(warnings[0], /hidden/);
   });
 
-  test("treats a fully transparent layer as hidden", () => {
-    const world = makeWorld();
-    world.updateLayer("B", { opacity: 0 });
-
-    assert.match(mergeWarnings(world, "B")[0], /hidden/);
-  });
-
   test("reports both reasons at once", () => {
     const world = makeWorld();
     world.updateLayer("B", {

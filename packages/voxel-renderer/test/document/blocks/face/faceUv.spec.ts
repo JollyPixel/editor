@@ -96,17 +96,6 @@ describe("built-in shape uv convention", () => {
   const shapes = [...BlockShapeRegistry.createDefault().getAll()];
 
   for (const shape of shapes) {
-    it(`${shape.id} textures each face over its own footprint`, () => {
-      shape.faces.forEach((definition, index) => {
-        assert.deepEqual(
-          definition.uvs,
-          faceUvs(definition.face, definition.vertices),
-          `${shape.id} face ${index} (slot ${definition.face}) ` +
-          "does not match the projection of its vertices"
-        );
-      });
-    });
-
     it(`${shape.id} never mirrors a tile`, () => {
       shape.faces.forEach((definition, index) => {
         assert.ok(

@@ -33,11 +33,14 @@ describe("BlockRegistry — air is reserved", () => {
   });
 
   it("leaves a registry that rejected a definition untouched", () => {
-    assert.throws(() => new BlockRegistry([makeDef(0)]));
+    const registry = new BlockRegistry([makeDef(1)]);
+    const { version, nextId, size } = registry;
 
-    const registry = new BlockRegistry();
-    assert.equal(registry.nextId, 1);
-    assert.equal(registry.version, 0);
+    assert.throws(() => registry.register(makeDef(0)));
+
+    assert.equal(registry.version, version);
+    assert.equal(registry.nextId, nextId);
+    assert.equal(registry.size, size);
   });
 });
 

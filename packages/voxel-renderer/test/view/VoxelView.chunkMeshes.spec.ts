@@ -46,28 +46,23 @@ describe("VoxelView - chunk meshes", () => {
     assert.deepEqual(mesh.position.toArray(), [9, 2, 3]);
   });
 
-  it("disposes each chunk index on its own", () => {
+  it("disposes an emptied chunk's geometry, and the rest with the view", () => {
     const view = buildOneChunk();
     placeCube(view, "Ground", { x: 8, y: 0, z: 0 });
     view.flush();
-    const disposed: Array<THREE.BufferAttribute | null> = [];
-    const [first, second] = chunkMeshes(view);
-    for (const mesh of [first, second]) {
-      mesh.geometry.addEventListener("dispose", () => {
-        disposed.push(mesh.geometry.getIndex());
-      });
-    }
-    const firstIndex = first.geometry.getIndex();
-    const secondIndex = second.geometry.getIndex();
+    const disposed: string[] = [];
+    const [first, second] = [...chunkMeshes(view)]
+      .sort((a, b) => a.position.x - b.position.x);
+    first.geometry.addEventListener("dispose", () => disposed.push("first"));
+    second.geometry.addEventListener("dispose", () => disposed.push("second"));
 
     view.document.world.removeVoxel("Ground", { position: { x: 4, y: 0, z: 0 } });
     view.tick(0);
 
-    assert.deepEqual(disposed, [firstIndex]);
-    assert.equal(second.geometry.getIndex(), secondIndex);
+    assert.deepEqual(disposed, ["first"]);
 
     view.dispose();
 
-    assert.deepEqual(disposed, [firstIndex, secondIndex]);
+    assert.deepEqual(disposed, ["first", "second"]);
   });
 });

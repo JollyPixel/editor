@@ -48,8 +48,8 @@ layer changes, and edits along a chunk boundary can mark chunks dirty.
 
 ### Voxel Layer
 
-A named, ordered collection of voxels. A voxel layer has its own visibility,
-opacity, and world-space offset, and divides its voxel data into chunks.
+A named, ordered collection of voxels. A voxel layer has its own visibility
+and world-space offset, and divides its voxel data into chunks.
 
 ### Object Layer
 
@@ -59,20 +59,14 @@ zones. Object layers are saved with the world and do not produce voxel meshes.
 ### Layer Compositing
 
 The rules for overlapping voxel layers. World reads use the voxel from the
-highest-priority visible layer whose opacity is above `0`. During rendering,
-only fully opaque layers hide voxels in lower-priority layers; partially opaque
-layers are drawn with the layers below them.
+highest-priority visible layer. During rendering, a higher layer hides a lower
+voxel in the same cell only when its block fills the cell with opaque geometry,
+or when the higher layer uses `"replace"` compositing.
 
 ### Layer Offset
 
 A world-space translation applied to every voxel in one layer. Changing the
 offset moves the layer without rewriting its stored voxel positions.
-
-### Layer Opacity
-
-The translucency applied to a whole voxel layer. An opacity of `1` is fully
-opaque, `0` hides the layer, and values between them allow lower layers to
-remain visible.
 
 ## Blocks and appearance
 
@@ -174,6 +168,6 @@ culling does not change the world or the voxels stored in that chunk.
   its own.
 - Use **tileset** for the source image grid, **tile** for one image in that
   grid, and **atlas** for the loaded texture used for rendering.
-- Use **transparent block** for texture holes and **layer opacity** for the
-  translucency of a whole layer.
+- Use **transparent block** for texture holes and translucency. Layers are
+  either visible or hidden.
 - Use **meshing** for generating chunk surfaces.

@@ -336,7 +336,7 @@ interface VoxelTilesetUsage {
 | `orphanBlocks` | stored ids missing from the registry, ascending |
 | `orphanVoxels` | voxels whose block id is in `orphanBlocks` |
 
-Stored voxels are counted, not rendered ones: hidden layers, faded layers and
+Stored voxels are counted, not rendered ones: hidden layers and
 voxels covered by a `"replace"` layer all count. The mesh `hiddenVoxels`
 counter gives the rendered side.
 

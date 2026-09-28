@@ -58,7 +58,6 @@ export interface ProbeOptions {
   alpha: number;
   mode?: BlockAlphaMode;
   side?: BlockSide;
-  opacity?: number;
   cull?: boolean;
   count?: number;
   reverse?: boolean;
@@ -189,7 +188,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       defaultTexture: { tilesetId: "stone", col: 0, row: 0 }
     });
   }
-  const layer = view.document.world.addLayer("test", { opacity: options.opacity ?? 1 });
+  const layer = view.document.world.addLayer("test");
   if (options.backing) {
     layer.setVoxelAt({
       x: 0,

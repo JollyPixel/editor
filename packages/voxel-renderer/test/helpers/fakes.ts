@@ -3,7 +3,7 @@ import type { VoxelCollider } from "../../src/view/collision/index.ts";
 import type { VoxelObjectJSON } from "../../src/document/world/index.ts";
 import type { VoxelLogger } from "../../src/VoxelLogger.ts";
 
-export interface CommandSource<TCommand> {
+interface CommandSource<TCommand> {
   on(
     event: "command",
     listener: (command: TCommand) => void

@@ -21,7 +21,7 @@ function makeTarget(): VoxelWorldCommandTarget {
   };
 }
 
-describe("applyTilesetCommand", () => {
+describe("applyVoxelWorldCommand - tilesets", () => {
   it("adds and removes tilesets", () => {
     const target = makeTarget();
 

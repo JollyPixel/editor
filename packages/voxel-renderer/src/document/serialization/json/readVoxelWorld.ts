@@ -35,7 +35,6 @@ function readVoxelLayer(
     id: layer.id,
     name: layer.name,
     visible: layer.visible,
-    opacity: layer.opacity,
     compositing: layer.compositing,
     order: layer.order,
     position: layer.position,

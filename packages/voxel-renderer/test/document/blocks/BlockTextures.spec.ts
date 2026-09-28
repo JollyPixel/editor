@@ -16,7 +16,8 @@ function makeBlock(): ResolvedBlockDefinition {
     shapeId: "cube",
     faceTextures: {
       top: { tilesetId: "b", col: 1, row: 0 },
-      "front.1": { tilesetId: "b", col: 2, row: 0 }
+      "front.1": { tilesetId: "b", col: 2, row: 0 },
+      "top.1": { tilesetId: "b", col: 3, row: 0 }
     },
     defaultTexture: { col: 0, row: 0 }
   });
@@ -27,6 +28,7 @@ describe("BlockTextures", () => {
     assert.deepEqual([...BlockTextures.of(makeBlock())], [
       { tilesetId: "b", col: 1, row: 0 },
       { tilesetId: "b", col: 2, row: 0 },
+      { tilesetId: "b", col: 3, row: 0 },
       { col: 0, row: 0 }
     ]);
   });
@@ -39,9 +41,9 @@ describe("BlockTextures", () => {
 describe("BlockTextures.forSlot", () => {
   const textures = BlockTextures.of(makeBlock());
 
-  it("takes the exact slot first", () => {
+  it("takes the exact slot before its base slot", () => {
     assert.equal(textures.forSlot("top")?.col, 1);
-    assert.equal(textures.forSlot("front.1")?.col, 2);
+    assert.equal(textures.forSlot("top.1")?.col, 3);
   });
 
   it("falls back to the base slot, then to the default texture", () => {

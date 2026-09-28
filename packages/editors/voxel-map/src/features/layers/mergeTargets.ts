@@ -62,7 +62,7 @@ export function mergeWarnings(
       "target's own, and the target wins where both define a key."
     );
   }
-  if (!source.visible || source.opacity === 0) {
+  if (!source.visible) {
     warnings.push(
       "It is hidden, so its voxels become visible once merged."
     );

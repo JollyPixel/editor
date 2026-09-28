@@ -28,50 +28,28 @@ function materialsOf(
 }
 
 function meshedGround(
-  layerOptions: { opacity?: number; } = {},
   engineOptions: ViewTestOptions = {}
 ): VoxelView {
   const view = makeView(engineOptions);
-  view.document.world.addLayer("Ground", layerOptions);
+  view.document.world.addLayer("Ground");
   placeCube(view, "Ground", { x: 0, y: 0, z: 0 });
 
   return view;
 }
 
-describe("VoxelView - layer opacity on the material", () => {
-  it("renders a fully opaque layer with an opaque front-sided material", () => {
+describe("VoxelView - chunk materials", () => {
+  it("renders an opaque block with an opaque front-sided material", () => {
     const view = meshedGround();
     view.flush();
 
     const [material] = materialsOf(view);
     assert.equal(material.transparent, false);
-    assert.equal(material.opacity, 1);
     assert.equal(material.depthWrite, true);
     assert.equal(material.side, THREE.FrontSide);
   });
 
-  it("carries the layer opacity on a blended front-sided material", () => {
-    const view = meshedGround({ opacity: 0.5 });
-    view.flush();
-
-    const [material] = materialsOf(view);
-    assert.equal(material.transparent, true);
-    assert.equal(material.opacity, 0.5);
-    assert.equal(material.depthWrite, false);
-    assert.equal(material.side, THREE.FrontSide);
-  });
-
-  it("keeps an almost-opaque layer out of the opaque material bucket", () => {
-    const view = meshedGround({ opacity: 0.999 });
-    view.flush();
-
-    const [material] = materialsOf(view);
-    assert.equal(material.transparent, true);
-    assert.ok(material.opacity < 1);
-  });
-
   it("gives transparent blocks their own double-sided mesh on an opaque layer", () => {
-    const view = meshedGround({}, {
+    const view = meshedGround({
       blocks: [
         makeBlockDef(kCubeId, "cube"),
         makeBlockDef(kLeavesId, "cube", { alphaMode: "blend" })
@@ -95,19 +73,6 @@ describe("VoxelView - layer opacity on the material", () => {
     assert.equal(solidMaterial.side, THREE.FrontSide);
     assert.equal(cutoutMaterial.side, THREE.DoubleSide);
   });
-
-  it("preserves distinct layer opacities", () => {
-    const view = makeView();
-    view.document.world.addLayer("A", { opacity: 0.5 });
-    view.document.world.addLayer("B", { opacity: 0.5001 });
-    placeCube(view, "A", { x: 0, y: 0, z: 0 });
-    placeCube(view, "B", { x: 8, y: 0, z: 0 });
-    view.flush();
-
-    const [first, second] = materialsOf(view);
-    assert.notEqual(first, second);
-    assert.deepEqual([first.opacity, second.opacity].sort(), [0.5, 0.5001]);
-  });
 });
 
 describe("VoxelView - material groups", () => {
@@ -116,7 +81,7 @@ describe("VoxelView - material groups", () => {
   function goldView(
     groups: Array<string | undefined>
   ): VoxelView {
-    const view = meshedGround({}, {
+    const view = meshedGround({
       blocks: [
         makeBlockDef(kCubeId, "cube"),
         makeBlockDef(kGoldId, "cube", { materialGroup: groups[1] })
@@ -162,7 +127,7 @@ describe("VoxelView - document material group finishes", () => {
   const kGoldId = 5;
 
   function lambertGold(): VoxelView {
-    const view = meshedGround({}, {
+    const view = meshedGround({
       blocks: [
         makeBlockDef(kCubeId, "cube"),
         makeBlockDef(kGoldId, "cube", { materialGroup: "gold" })
@@ -227,7 +192,7 @@ describe("VoxelView - tile minification", () => {
   });
 
   it("honours the constructor option", () => {
-    const view = meshedGround({}, { rendering: { tileMinification: "nearest" } });
+    const view = meshedGround({ rendering: { tileMinification: "nearest" } });
 
     assert.equal(view.rendering.tileMinification, "nearest");
   });

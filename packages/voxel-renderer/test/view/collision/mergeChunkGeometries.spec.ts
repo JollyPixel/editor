@@ -57,7 +57,7 @@ describe("mergeChunkGeometries", () => {
     assert.equal(merged.owned, false);
   });
 
-  it("concatenates positions and returns an owned geometry", () => {
+  it("merges into owned typed buffers with offset indices", () => {
     const merged = mergeChunkGeometries(new Map([
       [key("a"), makeTriangle(0)],
       [key("b"), makeTriangle(10)]
@@ -65,23 +65,16 @@ describe("mergeChunkGeometries", () => {
 
     assert.ok(merged);
     assert.equal(merged.owned, true);
-    assert.equal(merged.geometry.getAttribute("position").count, 6);
-  });
-
-  it("offsets indices of subsequent geometries by the preceding vertex count", () => {
-    const merged = mergeChunkGeometries(new Map([
-      [key("a"), makeTriangle(0)],
-      [key("b"), makeTriangle(10)]
-    ]));
-
-    assert.ok(merged);
+    const positions = merged.geometry.getAttribute("position").array;
     const index = merged.geometry.getIndex();
     assert.ok(index);
+    assert.ok(positions instanceof Float32Array);
+    assert.ok(index.array instanceof Uint32Array);
     assert.deepEqual(
-      [...index.array],
-      [0, 1, 2, 3, 4, 5],
-      "second triangle's indices must be shifted by 3"
+      [...positions],
+      [0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0, 0, 11, 0, 0, 10, 1, 0]
     );
+    assert.deepEqual([...index.array], [0, 1, 2, 3, 4, 5]);
   });
 
   it("keeps only collision-relevant attributes", () => {
@@ -134,36 +127,6 @@ describe("mergeChunkGeometries", () => {
     ]));
 
     assert.equal(merged, null);
-  });
-});
-
-describe("mergeChunkGeometries — buffer types", () => {
-  it("allocates typed arrays rather than boxed number arrays", () => {
-    const merged = mergeChunkGeometries(new Map([
-      [key("a"), makeTriangle(0)],
-      [key("b"), makeTriangle(10)]
-    ]));
-
-    assert.ok(merged);
-    const index = merged.geometry.getIndex();
-    assert.ok(index);
-    assert.ok(
-      merged.geometry.getAttribute("position").array instanceof Float32Array
-    );
-    assert.ok(index.array instanceof Uint32Array);
-  });
-
-  it("preserves every vertex of every source geometry", () => {
-    const merged = mergeChunkGeometries(new Map([
-      [key("a"), makeTriangle(0)],
-      [key("b"), makeTriangle(10)]
-    ]));
-
-    assert.ok(merged);
-    assert.deepEqual(
-      [...merged.geometry.getAttribute("position").array],
-      [0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0, 0, 11, 0, 0, 10, 1, 0]
-    );
   });
 });
 
